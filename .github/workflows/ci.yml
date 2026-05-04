@@ -61,3 +61,23 @@ jobs:
 
       - name: Check for pending migrations
         run: echo "n" | pnpm migrate:create | grep "No schema changes detected"
+
+  test:
+    strategy:
+      matrix:
+        node-version: [22.x]
+
+    name: Run tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js environment
+        uses: ./.github/actions/setup-project
+        with:
+          node-version: ${{ matrix.node-version }}
+          gh-font-read-token: ${{ secrets.GH_FONT_READ }}
+
+      - name: Run tests
+        run: pnpm test:run

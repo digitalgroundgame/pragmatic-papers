@@ -11,7 +11,7 @@ const collectionPrefixMap: Partial<Record<CollectionSlug, string>> = {
 type Props = {
   collection: keyof typeof collectionPrefixMap
   slug: string
-  req: PayloadRequest
+  req?: PayloadRequest
 }
 
 // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
@@ -20,13 +20,11 @@ export const generatePreviewPath = ({ collection, slug }: Props) => {
   if (slug === undefined || slug === null) {
     return null
   }
-  // Encode to support slugs with special characters
-  const encodedSlug = encodeURIComponent(slug)
-
+  // URLSearchParams handles encoding; no need to pre-encode
   const encodedParams = new URLSearchParams({
-    slug: encodedSlug,
+    slug: slug,
     collection,
-    path: `${collectionPrefixMap[collection]}/${encodedSlug}`,
+    path: `${collectionPrefixMap[collection]}/${slug}`,
     previewSecret: process.env.PREVIEW_SECRET || "",
   })
 

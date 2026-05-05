@@ -62,6 +62,7 @@ export const ImageMedia: React.FC<ImageMediaProps> = ({
   loading,
   fill,
   style,
+  unoptimized = true,
   ...props
 }) => {
   if (!media.url) return null
@@ -102,6 +103,7 @@ export const ImageMedia: React.FC<ImageMediaProps> = ({
       sizes={sizes}
       quality={quality}
       priority={priority}
+      unoptimized={unoptimized}
       fetchPriority={priority ? "high" : undefined}
       loading={loading}
       placeholder="blur"

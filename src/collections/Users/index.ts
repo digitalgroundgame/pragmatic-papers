@@ -121,6 +121,10 @@ export const Users: CollectionConfig = {
           value: "writer",
         },
         {
+          label: "Narrator",
+          value: "narrator",
+        },
+        {
           label: "Member",
           value: "member",
         },

@@ -1,7 +1,7 @@
 "use client"
 
 import type { RecommendedArticleCandidate } from "@/app/(frontend)/recommended-articles.json/route"
-import React, { useEffect, useState } from "react"
+import React, { useEffect, useRef, useState } from "react"
 import { HoverPrefetchLink } from "@/components/Link/HoverPrefetchLink"
 import { ImageMedia } from "@/components/Media/ImageMedia"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -31,11 +31,35 @@ function weightedSampleWithoutReplacement<T extends { engagementScore: number }>
 export function RecommendedArticles({
   currentArticleSlug,
 }: RecommendedArticlesProps): React.ReactNode {
+  const sectionRef = useRef<HTMLElement>(null)
   const [sampled, setSampled] = useState<RecommendedArticleCandidate[] | null>(null)
+  const [shouldFetch, setShouldFetch] = useState(false)
+
+  // Defer fetch until the section approaches the viewport so we don't compete
+  // with LCP resources during initial page load.
+  useEffect(() => {
+    const el = sectionRef.current
+    if (!el) return
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry?.isIntersecting) {
+          setShouldFetch(true)
+          observer.disconnect()
+        }
+      },
+      { rootMargin: "300px" },
+    )
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [])
 
   useEffect(() => {
+    if (!shouldFetch) return
     let cancelled = false
-    fetch("/recommended-articles.json", { cache: "no-store" })
+    fetch("/recommended-articles.json", {
+      cache: "no-store",
+      priority: "low",
+    } as RequestInit)
       .then((r) => r.json() as Promise<{ candidates: RecommendedArticleCandidate[] }>)
       .then(({ candidates }) => {
         if (cancelled) return
@@ -48,12 +72,12 @@ export function RecommendedArticles({
     return () => {
       cancelled = true
     }
-  }, [currentArticleSlug])
+  }, [shouldFetch, currentArticleSlug])
 
   if (sampled && sampled.length === 0) return null
 
   return (
-    <section className="mt-12 border-t pt-8" aria-label="Recommended articles">
+    <section ref={sectionRef} className="mt-12 border-t pt-8" aria-label="Recommended articles">
       <h2 className="text-muted-foreground mb-4 font-sans text-xs font-bold tracking-wider uppercase">
         Recommended
       </h2>

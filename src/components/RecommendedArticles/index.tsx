@@ -44,9 +44,7 @@ export async function RecommendedArticles({
 
   return (
     <section className="mt-12 border-t pt-8" aria-label="Recommended articles">
-      <h2 className="text-muted-foreground mb-4 font-sans text-xs font-bold tracking-wider uppercase">
-        Recommended
-      </h2>
+      <h2 className="mb-4">Recommended</h2>
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
         {articles.map((article) => (
           <HoverPrefetchLink

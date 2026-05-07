@@ -1,10 +1,11 @@
 "use client"
 
 import type { RecommendedArticleCandidate } from "@/app/(frontend)/recommended-articles.json/route"
-import React, { useEffect, useRef, useState } from "react"
+import React, { useEffect, useState } from "react"
 import { HoverPrefetchLink } from "@/components/Link/HoverPrefetchLink"
 import { ImageMedia } from "@/components/Media/ImageMedia"
 import { Skeleton } from "@/components/ui/skeleton"
+import { useInView } from "@/utilities/useInView"
 
 interface RecommendedArticlesProps {
   currentArticleSlug: string
@@ -14,6 +15,29 @@ const DISPLAY_COUNT = 4
 
 // Efraimidis–Spirakis weighted sampling without replacement: for each item,
 // draw u ~ Uniform(0,1) and compute key = u^(1/w); take the top-k by key.
+let cachedCandidates: RecommendedArticleCandidate[] | null = null
+let inflightFetch: Promise<RecommendedArticleCandidate[]> | null = null
+
+function getCandidates(): Promise<RecommendedArticleCandidate[]> {
+  if (cachedCandidates) return Promise.resolve(cachedCandidates)
+  if (inflightFetch) return inflightFetch
+  inflightFetch = fetch("/recommended-articles.json", {
+    cache: "no-store",
+    priority: "low",
+  } as RequestInit)
+    .then((r) => r.json() as Promise<{ candidates: RecommendedArticleCandidate[] }>)
+    .then(({ candidates }) => {
+      cachedCandidates = candidates
+      inflightFetch = null
+      return candidates
+    })
+    .catch((e) => {
+      inflightFetch = null
+      throw e
+    })
+  return inflightFetch
+}
+
 function weightedSampleWithoutReplacement<T extends { engagementScore: number }>(
   items: T[],
   k: number,
@@ -31,37 +55,16 @@ function weightedSampleWithoutReplacement<T extends { engagementScore: number }>
 export function RecommendedArticles({
   currentArticleSlug,
 }: RecommendedArticlesProps): React.ReactNode {
-  const sectionRef = useRef<HTMLElement>(null)
-  const [sampled, setSampled] = useState<RecommendedArticleCandidate[] | null>(null)
-  const [shouldFetch, setShouldFetch] = useState(false)
-
   // Defer fetch until the section approaches the viewport so we don't compete
   // with LCP resources during initial page load.
-  useEffect(() => {
-    const el = sectionRef.current
-    if (!el) return
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry?.isIntersecting) {
-          setShouldFetch(true)
-          observer.disconnect()
-        }
-      },
-      { rootMargin: "300px" },
-    )
-    observer.observe(el)
-    return () => observer.disconnect()
-  }, [])
+  const { ref: sectionRef, inView } = useInView<HTMLElement>({ rootMargin: "300px" })
+  const [sampled, setSampled] = useState<RecommendedArticleCandidate[] | null>(null)
 
   useEffect(() => {
-    if (!shouldFetch) return
+    if (!inView) return
     let cancelled = false
-    fetch("/recommended-articles.json", {
-      cache: "no-store",
-      priority: "low",
-    } as RequestInit)
-      .then((r) => r.json() as Promise<{ candidates: RecommendedArticleCandidate[] }>)
-      .then(({ candidates }) => {
+    getCandidates()
+      .then((candidates) => {
         if (cancelled) return
         const filtered = candidates.filter((c) => c.slug !== currentArticleSlug)
         setSampled(weightedSampleWithoutReplacement(filtered, DISPLAY_COUNT))
@@ -72,7 +75,7 @@ export function RecommendedArticles({
     return () => {
       cancelled = true
     }
-  }, [shouldFetch, currentArticleSlug])
+  }, [inView, currentArticleSlug])
 
   if (sampled && sampled.length === 0) return null
 

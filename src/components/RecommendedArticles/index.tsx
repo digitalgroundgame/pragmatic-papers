@@ -2,8 +2,10 @@ import type { Article, Media } from "@/payload-types"
 import configPromise from "@payload-config"
 import React from "react"
 import { getPayload } from "payload"
-import { HoverPrefetchLink } from "@/components/Link/HoverPrefetchLink"
-import { ImageMedia } from "@/components/Media/ImageMedia"
+import {
+  RecommendedArticlesList,
+  type RecommendedArticleCandidate,
+} from "./RecommendedArticlesList"
 
 interface RecommendedArticlesProps {
   currentArticleSlug: string
@@ -24,10 +26,9 @@ export async function RecommendedArticles({
   const rankings = recommendations?.rankings
   if (!rankings || rankings.length === 0) return null
 
-  const articles = rankings
+  const candidates: RecommendedArticleCandidate[] = rankings
     .filter((r): r is typeof r & { article: Article } => typeof r.article === "object")
     .filter((r) => r.article.slug !== currentArticleSlug)
-    .slice(0, DISPLAY_COUNT)
     .map((r) => {
       const article = r.article
       const metaImage = article.meta?.image
@@ -37,44 +38,11 @@ export async function RecommendedArticles({
         metaImage:
           typeof metaImage === "object" && metaImage !== null ? (metaImage as Media) : null,
         metaDescription: article.meta?.description ?? null,
+        engagementScore: r.engagementScore,
       }
     })
 
-  if (articles.length === 0) return null
+  if (candidates.length === 0) return null
 
-  return (
-    <section className="mt-12 border-t pt-8" aria-label="Recommended articles">
-      <h2 className="text-muted-foreground mb-4 font-sans text-xs font-bold tracking-wider uppercase">
-        Recommended
-      </h2>
-      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-        {articles.map((article) => (
-          <HoverPrefetchLink
-            key={article.slug}
-            href={`/articles/${article.slug}`}
-            className="group flex flex-col gap-2"
-          >
-            {article.metaImage && (
-              <div className="aspect-video overflow-hidden rounded-sm border">
-                <ImageMedia
-                  media={article.metaImage}
-                  variant="medium"
-                  sizes="(min-width: 640px) 320px, 100vw"
-                  className="h-full w-full object-cover object-center group-hover:opacity-80"
-                />
-              </div>
-            )}
-            <h3 className="text-primary group-hover:text-primary/80 font-display text-lg leading-none font-bold">
-              {article.title}
-            </h3>
-            {article.metaDescription && (
-              <p className="text-primary line-clamp-2 font-serif text-sm">
-                {article.metaDescription}
-              </p>
-            )}
-          </HoverPrefetchLink>
-        ))}
-      </div>
-    </section>
-  )
+  return <RecommendedArticlesList candidates={candidates} displayCount={DISPLAY_COUNT} />
 }

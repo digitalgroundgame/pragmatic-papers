@@ -18,6 +18,7 @@ const nextConfig: NextConfig = {
   output: "standalone",
   images: {
     qualities: [80],
+    formats: ["image/avif", "image/webp"],
     remotePatterns: [
       {
         protocol: NEXT_PUBLIC_SERVER_URL.protocol.slice(0, -1) as "http" | "https",

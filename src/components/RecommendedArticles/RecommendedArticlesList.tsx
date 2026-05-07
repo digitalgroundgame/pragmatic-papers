@@ -4,6 +4,7 @@ import type { Media } from "@/payload-types"
 import React, { useEffect, useState } from "react"
 import { HoverPrefetchLink } from "@/components/Link/HoverPrefetchLink"
 import { ImageMedia } from "@/components/Media/ImageMedia"
+import { Skeleton } from "@/components/ui/skeleton"
 
 export interface RecommendedArticleCandidate {
   slug: string
@@ -44,7 +45,7 @@ export function RecommendedArticlesList({
     setSampled(weightedSampleWithoutReplacement(candidates, displayCount))
   }, [candidates, displayCount])
 
-  if (!sampled || sampled.length === 0) return null
+  if (sampled && sampled.length === 0) return null
 
   return (
     <section className="mt-12 border-t pt-8" aria-label="Recommended articles">
@@ -52,32 +53,41 @@ export function RecommendedArticlesList({
         Recommended
       </h2>
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-        {sampled.map((article) => (
-          <HoverPrefetchLink
-            key={article.slug}
-            href={`/articles/${article.slug}`}
-            className="group flex flex-col gap-2"
-          >
-            {article.metaImage && (
-              <div className="aspect-video overflow-hidden rounded-sm border">
-                <ImageMedia
-                  media={article.metaImage}
-                  variant="medium"
-                  sizes="(min-width: 640px) 320px, 100vw"
-                  className="h-full w-full object-cover object-center group-hover:opacity-80"
-                />
+        {sampled === null
+          ? Array.from({ length: Math.min(displayCount, candidates.length) }).map((_, i) => (
+              <div key={i} className="flex flex-col gap-2" aria-hidden>
+                <Skeleton className="aspect-video w-full" />
+                <Skeleton className="h-5 w-3/4" />
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-5/6" />
               </div>
-            )}
-            <h3 className="text-primary group-hover:text-primary/80 font-display text-lg leading-none font-bold">
-              {article.title}
-            </h3>
-            {article.metaDescription && (
-              <p className="text-primary line-clamp-2 font-serif text-sm">
-                {article.metaDescription}
-              </p>
-            )}
-          </HoverPrefetchLink>
-        ))}
+            ))
+          : sampled.map((article) => (
+              <HoverPrefetchLink
+                key={article.slug}
+                href={`/articles/${article.slug}`}
+                className="group flex flex-col gap-2"
+              >
+                {article.metaImage && (
+                  <div className="aspect-video overflow-hidden rounded-sm border">
+                    <ImageMedia
+                      media={article.metaImage}
+                      variant="medium"
+                      sizes="(min-width: 640px) 320px, 100vw"
+                      className="h-full w-full object-cover object-center group-hover:opacity-80"
+                    />
+                  </div>
+                )}
+                <h3 className="text-primary group-hover:text-primary/80 font-display text-lg leading-none font-bold">
+                  {article.title}
+                </h3>
+                {article.metaDescription && (
+                  <p className="text-primary line-clamp-2 font-serif text-sm">
+                    {article.metaDescription}
+                  </p>
+                )}
+              </HoverPrefetchLink>
+            ))}
       </div>
     </section>
   )

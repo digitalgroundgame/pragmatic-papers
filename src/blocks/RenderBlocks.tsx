@@ -5,11 +5,21 @@ import type { Page } from "@/payload-types"
 import { CallToActionBlock } from "@/blocks/CallToAction/Component"
 import { CollectionGridBlock } from "@/blocks/CollectionGrid/Component"
 import { ContentBlock } from "@/blocks/Content/Component"
-import { ContributorsBlock } from "@/blocks/Contributors/Component"
-import { FormBlock } from "@/blocks/Form/Component"
 import { MediaBlock } from "@/blocks/MediaBlock/Component"
-import { TimelineBlock } from "@/blocks/Timeline/Component"
-import { VolumeViewBlock } from "@/blocks/VolumeViewBlock/component"
+import dynamic from "next/dynamic"
+
+// Lazy-loaded blocks: heavy or rarely-used. SSR stays on by default, so the
+// HTML/LCP path is unchanged — only the client-side hydration chunk is split.
+const ContributorsBlock = dynamic(() =>
+  import("@/blocks/Contributors/Component").then((mod) => mod.ContributorsBlock),
+)
+const FormBlock = dynamic(() => import("@/blocks/Form/Component").then((mod) => mod.FormBlock))
+const TimelineBlock = dynamic(() =>
+  import("@/blocks/Timeline/Component").then((mod) => mod.TimelineBlock),
+)
+const VolumeViewBlock = dynamic(() =>
+  import("@/blocks/VolumeViewBlock/component").then((mod) => mod.VolumeViewBlock),
+)
 
 interface RenderBlocksProps {
   blocks: Page["layout"][number][]

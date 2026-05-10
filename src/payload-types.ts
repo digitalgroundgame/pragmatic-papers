@@ -44,7 +44,7 @@ export type MenuField =
  */
 export type PopulatedAuthors =
   | {
-      id: string;
+      id: number;
       name?: string | null;
       slug: string;
       affiliation?: string | null;

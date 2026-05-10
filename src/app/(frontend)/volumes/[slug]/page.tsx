@@ -44,7 +44,7 @@ interface Args {
   }>
 }
 
-const queryVolumeBySlug = cache(async ({ slug }: { slug: string }) => {
+const queryVolumeBySlug = cache(async (slug: string) => {
   const { isEnabled: draft } = await draftMode()
 
   const payload: Payload = await getPayload({ config: configPromise })
@@ -68,7 +68,7 @@ const queryVolumeBySlug = cache(async ({ slug }: { slug: string }) => {
 
 export async function generateMetadata({ params: paramsPromise }: Args): Promise<Metadata> {
   const { slug = "" } = await paramsPromise
-  const volume = await queryVolumeBySlug({ slug })
+  const volume = await queryVolumeBySlug(slug)
 
   return generateMeta({ doc: volume, canonicalPath: `/volumes/${slug}` })
 }
@@ -79,7 +79,7 @@ export default async function VolumePage({
   const { isEnabled: draft } = await draftMode()
   const { slug = "" } = await paramsPromise
   const url = "/volumes/" + slug
-  const volume = await queryVolumeBySlug({ slug })
+  const volume = await queryVolumeBySlug(slug)
 
   if (!volume) return <PayloadRedirects url={url} />
 
@@ -91,7 +91,7 @@ export default async function VolumePage({
 
   if (!articles) return <PayloadRedirects url={url} />
 
-  const seen = new Set<string>()
+  const seen = new Set<number>()
   const volumeAuthors = articles
     ?.flatMap((article) => article.populatedAuthors ?? [])
     .filter((a) => {

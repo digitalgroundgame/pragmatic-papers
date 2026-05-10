@@ -75,6 +75,31 @@ export const Media: CollectionConfig = {
         hidden: true,
       },
     },
+    {
+      name: "narrator",
+      type: "relationship",
+      relationTo: "users",
+      filterOptions: {
+        role: {
+          equals: "narrator",
+        },
+      },
+      admin: {
+        description: "User who recorded this narration",
+        condition: (_, siblingData) => siblingData?.mimeType?.startsWith("audio/"),
+      },
+    },
+    {
+      name: "duration",
+      type: "number",
+      admin: {
+        description: "Duration in seconds (auto-populated from the audio file)",
+        condition: (_, siblingData) => siblingData?.mimeType?.startsWith("audio/"),
+        components: {
+          Field: "@/collections/Media/components/DurationField#DurationField",
+        },
+      },
+    },
   ],
   hooks: {
     beforeChange: [
@@ -93,7 +118,8 @@ export const Media: CollectionConfig = {
   upload: {
     // Upload to the public/media directory in Next.js making them publicly accessible even outside of Payload
     staticDir: path.resolve(dirname, "../../../public/media"),
-    adminThumbnail: "thumbnail",
+    adminThumbnail: ({ doc }: { doc: Partial<MediaType> }) =>
+      doc.sizes?.thumbnail?.url || "thumbnail",
     formatOptions: {
       format: "webp",
     },

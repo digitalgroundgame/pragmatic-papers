@@ -55,6 +55,12 @@ interface CreatePagesResult {
   volumesPage: Page
 }
 
+interface AboutContributors {
+  chiefEditorIds: number[]
+  editorIds: number[]
+  writerIds: number[]
+}
+
 /** Hero richText with a heading containing the page name (for pageHero type). */
 const createHeroRichTextHeading = (pageTitle: string, tag: "h1" | "h2" | "h3" | "h4" = "h1") => ({
   root: {
@@ -87,7 +93,10 @@ const createHeroRichTextHeading = (pageTitle: string, tag: "h1" | "h2" | "h3" | 
   },
 })
 
-export const createPages = async (payload: Payload): Promise<CreatePagesResult> => {
+export const createPages = async (
+  payload: Payload,
+  contributors?: AboutContributors,
+): Promise<CreatePagesResult> => {
   const pageConfigs: Record<
     "about" | "articles" | "contact" | "privacyPolicy" | "termsOfUse" | "volumes",
     PageConfig
@@ -138,6 +147,41 @@ export const createPages = async (payload: Payload): Promise<CreatePagesResult> 
 
   const { about, articles, contact, privacyPolicy, termsOfUse, volumes } = pageConfigs
 
+  const aboutLayout: PageData["layout"] = [
+    {
+      blockType: "content",
+      columns: [
+        {
+          size: "full",
+          richText: createRichTextContent(about.content),
+          enableLink: false,
+        },
+      ],
+    },
+  ]
+
+  if (contributors?.chiefEditorIds.length) {
+    aboutLayout.push({
+      blockType: "contributors",
+      title: "Chief Editors",
+      people: contributors.chiefEditorIds,
+    })
+  }
+  if (contributors?.editorIds.length) {
+    aboutLayout.push({
+      blockType: "contributors",
+      title: "Editors",
+      people: contributors.editorIds,
+    })
+  }
+  if (contributors?.writerIds.length) {
+    aboutLayout.push({
+      blockType: "contributors",
+      title: "Authors",
+      people: contributors.writerIds,
+    })
+  }
+
   const aboutPage = await createOrUpdatePage(payload, {
     title: about.title,
     slug: about.slug,
@@ -147,18 +191,7 @@ export const createPages = async (payload: Payload): Promise<CreatePagesResult> 
       links: [],
       media: null,
     },
-    layout: [
-      {
-        blockType: "content",
-        columns: [
-          {
-            size: "full",
-            richText: createRichTextContent(about.content),
-            enableLink: false,
-          },
-        ],
-      },
-    ],
+    layout: aboutLayout,
     meta: {
       title: about.title,
       description: about.description,

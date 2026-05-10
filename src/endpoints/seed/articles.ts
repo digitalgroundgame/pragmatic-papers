@@ -9,6 +9,7 @@ interface CreateArticleOptions {
   topics?: number[]
   slug: string
   heroImage?: number | null
+  narration?: number | null
   meta?: {
     title?: string | null
     description?: string | null
@@ -38,6 +39,7 @@ export async function createArticle(
     try {
       return await payload.create({
         collection: "articles",
+        draft: true,
         ...(context && { context }),
         data: {
           title: options.title,
@@ -45,6 +47,7 @@ export async function createArticle(
           authors: options.authors,
           topics: options.topics,
           heroImage: options.heroImage || undefined,
+          narration: options.narration || undefined,
           _status: "published",
           publishedAt: new Date().toISOString(),
           slug: options.slug,

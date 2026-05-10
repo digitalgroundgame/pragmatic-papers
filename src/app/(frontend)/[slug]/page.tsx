@@ -39,7 +39,7 @@ export async function generateStaticParams(): Promise<{ slug: string }[]> {
   return params
 }
 
-const queryPageBySlug = cache(async ({ slug }: { slug: string }) => {
+const queryPageBySlug = cache(async (slug: string) => {
   const { isEnabled: draft } = await draftMode()
 
   const payload = await getPayload({ config: configPromise })
@@ -62,9 +62,7 @@ const queryPageBySlug = cache(async ({ slug }: { slug: string }) => {
 
 export async function generateMetadata({ params: paramsPromise }: Args): Promise<Metadata> {
   const { slug = "home" } = await paramsPromise
-  const page = await queryPageBySlug({
-    slug,
-  })
+  const page = await queryPageBySlug(slug)
 
   const canonicalPath = slug === "home" ? "/" : `/${slug}`
   return generateMeta({ doc: page, canonicalPath })
@@ -85,9 +83,7 @@ export default async function Page({ params, searchParams }: Args): Promise<Reac
   const { p: pageString } = await searchParams
   const pageNumber = pageString ? Math.max(Number(pageString) || 1, 1) : undefined
   const url = `/${slug}${pageNumber ? `?p=${pageNumber}` : ""}`
-  let page: RequiredDataFromCollectionSlug<"pages"> | null = await queryPageBySlug({
-    slug,
-  })
+  let page: RequiredDataFromCollectionSlug<"pages"> | null = await queryPageBySlug(slug)
   const { socials } = await getCachedGlobal("footer", 1)()
 
   // Remove this code once your website is seeded

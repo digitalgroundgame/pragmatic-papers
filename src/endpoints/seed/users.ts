@@ -8,6 +8,7 @@ export interface SeededUsers {
   editor: User
   writer1: User
   writer2: User
+  narrator: User
 }
 
 type UserData = RequiredDataFromCollection<User> &
@@ -154,5 +155,22 @@ export const createUsers = async (payload: Payload, media: Media[]): Promise<See
     "writer2",
   )
 
-  return { admin, chiefEditor, editor, writer1, writer2 }
+  const narrator = await createUser(
+    payload,
+    {
+      email: "narrator@example.com",
+      password: "password123",
+      name: "Alex Narrator",
+      slug: "alex-narrator",
+      role: "narrator",
+      affiliation: "Voice Artist",
+      biography: createRichTextFromString(
+        "A professional voice artist specializing in academic and educational content narration.",
+      ),
+      profileImage: media[2]?.id,
+    },
+    "narrator",
+  )
+
+  return { admin, chiefEditor, editor, writer1, writer2, narrator }
 }

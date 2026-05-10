@@ -78,7 +78,7 @@ export function RecommendedArticles({
 
   return (
     <section ref={sectionRef} className="mt-12 border-t pt-8" aria-label="Recommended articles">
-      <h2 className="text-muted-foreground mb-4 font-sans text-xs font-bold tracking-wider uppercase">
+      <h2 className="mb-4">Recommended</h2>
         Recommended
       </h2>
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">

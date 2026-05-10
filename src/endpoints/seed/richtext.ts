@@ -126,7 +126,7 @@ export const createRichTextContent = createRichTextFromString
  */
 export function createRichTextFromParagraphs(
   paragraphs: string[],
-  addSpacing = true,
+  addSpacing = false,
 ): LexicalContent {
   const children: SerializedLexicalNode[] = []
 

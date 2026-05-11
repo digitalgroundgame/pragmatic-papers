@@ -24,6 +24,7 @@ export default buildConfig({
   logger: {
     options: {
       level: process.env.PAYLOAD_LOG_LEVEL || "info",
+      transport: process.env.NODE_ENV !== "production" ? { target: "pino-pretty" } : undefined,
     },
   },
   admin: {

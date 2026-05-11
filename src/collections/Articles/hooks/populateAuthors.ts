@@ -12,9 +12,7 @@ export const populateAuthors: CollectionAfterReadHook<Article> = async ({
   if (context.skipAfterRead) return doc
   if (!doc.authors || !doc.authors.length) return doc
 
-  const authorIds = doc.authors.map((author) =>
-    typeof author === "number" ? author : author?.id,
-  )
+  const authorIds = doc.authors.map((author) => (typeof author === "number" ? author : author?.id))
 
   if (!authorIds.length) return doc
 
@@ -50,10 +48,6 @@ export const populateAuthors: CollectionAfterReadHook<Article> = async ({
         profileImage: populatedAuthor.profileImage,
         socials: populatedAuthor.socials,
       }))
-      payload.logger.debug(
-        { articleId: doc.id, count: populatedAuthors.length },
-        `Populated authors for article ${doc.id}`,
-      )
     }
   } catch (error) {
     payload.logger.error({ err: error, authorIds, articleId: doc.id }, "Failed to populate authors")

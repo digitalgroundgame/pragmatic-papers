@@ -30,6 +30,9 @@ import * as migration_20260323_043247_add_seo_to_topics from "./20260323_043247_
 import * as migration_20260326_061304_add_social_links_component_to_footer from "./20260326_061304_add_social_links_component_to_footer"
 import * as migration_20260326_115012_header_actions_array from "./20260326_115012_header_actions_array"
 import * as migration_20260424_022531_add_timeline_block from "./20260424_022531_add_timeline_block"
+import * as migration_20260430_004324_add_contributors_block from "./20260430_004324_add_contributors_block"
+import * as migration_20260504_065125_add_narration_to_articles from "./20260504_065125_add_narration_to_articles"
+import * as migration_20260510_190018_virtualize_populatedAuthors from "./20260510_190018_virtualize_populatedAuthors"
 
 export const migrations = [
   {
@@ -191,5 +194,20 @@ export const migrations = [
     up: migration_20260424_022531_add_timeline_block.up,
     down: migration_20260424_022531_add_timeline_block.down,
     name: "20260424_022531_add_timeline_block",
+  },
+  {
+    up: migration_20260430_004324_add_contributors_block.up,
+    down: migration_20260430_004324_add_contributors_block.down,
+    name: "20260430_004324_add_contributors_block",
+  },
+  {
+    up: migration_20260504_065125_add_narration_to_articles.up,
+    down: migration_20260504_065125_add_narration_to_articles.down,
+    name: "20260504_065125_add_narration_to_articles",
+  },
+  {
+    up: migration_20260510_190018_virtualize_populatedAuthors.up,
+    down: migration_20260510_190018_virtualize_populatedAuthors.down,
+    name: "20260510_190018_virtualize_populatedAuthors",
   },
 ]

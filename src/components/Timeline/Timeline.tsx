@@ -1,8 +1,8 @@
 import { CMSLink } from "@/components/Link/CMSLink2"
-import { ImageMedia } from "@/components/Media/ImageMedia"
 import { getLinkFieldUrl } from "@/utilities/getLinkFieldUrl"
 import { cn } from "@/utilities/utils"
 
+import { Media } from "@/components/Media"
 import { Separator } from "@/components/ui/separator"
 import { TimelineEventReveal } from "./TimelineEventReveal"
 import type { TimelineAvatar, TimelineBaseProps, TimelineEvent } from "./types"
@@ -25,7 +25,7 @@ const Citation: React.FC<Pick<TimelineEvent, "date" | "enableCitation" | "citati
 }
 
 const Avatar: React.FC<{ media: TimelineAvatar }> = ({ media }) => (
-  <ImageMedia
+  <Media
     media={media}
     variant="thumbnail"
     sizes="64px"

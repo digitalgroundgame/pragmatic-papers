@@ -141,7 +141,7 @@
     @apply bg-background text-foreground;
   }
   html {
-    @apply scroll-smooth font-sans;
+    @apply scroll-pt-20 scroll-smooth font-sans;
   }
   h1,
   h2,

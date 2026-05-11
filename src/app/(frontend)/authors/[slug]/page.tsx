@@ -33,7 +33,7 @@ export async function generateStaticParams(): Promise<{ slug: string | null | un
       and: [
         {
           role: {
-            in: ["writer", "editor", "chief-editor"],
+            in: ["writer", "editor", "chief-editor", "narrator"],
           },
         },
         {
@@ -71,7 +71,7 @@ const queryUserBySlug = cache(async (slug: string): Promise<User | null> => {
       and: [
         {
           role: {
-            in: ["writer", "editor", "chief-editor"],
+            in: ["writer", "editor", "chief-editor", "narrator"],
           },
         },
         {

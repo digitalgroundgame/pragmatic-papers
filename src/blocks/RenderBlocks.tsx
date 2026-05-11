@@ -5,6 +5,7 @@ import type { Page } from "@/payload-types"
 import { CallToActionBlock } from "@/blocks/CallToAction/Component"
 import { CollectionGridBlock } from "@/blocks/CollectionGrid/Component"
 import { ContentBlock } from "@/blocks/Content/Component"
+import { ContributorsBlock } from "@/blocks/Contributors/Component"
 import { FormBlock } from "@/blocks/Form/Component"
 import { MediaBlock } from "@/blocks/MediaBlock/Component"
 import { TimelineBlock } from "@/blocks/Timeline/Component"
@@ -25,6 +26,8 @@ export const RenderBlocks: React.FC<RenderBlocksProps> = ({ blocks, pageNumber }
           return <CollectionGridBlock key={key} {...block} priority={index === 0 || index === 1} />
         } else if (blockType === "content") {
           return <ContentBlock key={key} {...block} />
+        } else if (blockType === "contributors") {
+          return <ContributorsBlock key={key} {...block} />
         } else if (blockType === "cta") {
           return <CallToActionBlock key={key} {...block} />
         } else if (blockType === "formBlock") {

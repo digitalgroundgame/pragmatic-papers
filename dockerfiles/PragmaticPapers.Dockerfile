@@ -172,6 +172,7 @@ RUN echo '#!/bin/sh' > /app/start.sh && \
     echo 'echo "Database: PostgreSQL"' >> /app/start.sh && \
     echo 'echo "Port: $PORT"' >> /app/start.sh && \
     echo 'echo "Hostname: $HOSTNAME"' >> /app/start.sh && \
+    echo 'echo "Log Level: ${PAYLOAD_LOG_LEVEL:-info (default)}"' >> /app/start.sh && \
     echo 'echo "Storage: $([ \"$USE_LOCAL_STORAGE\" = \"true\" ] && echo \"Local\" || echo \"S3\")"' >> /app/start.sh && \
     echo 'echo "========================================="' >> /app/start.sh && \
     echo 'echo "Starting Next.js server..."' >> /app/start.sh && \

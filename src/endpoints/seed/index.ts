@@ -73,6 +73,7 @@ export const seed = async (
                 "editor@example.com",
                 "writer1@example.com",
                 "writer2@example.com",
+                "narrator@example.com",
               ],
             },
           },

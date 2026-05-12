@@ -1,12 +1,11 @@
 import { AdminBar } from "@/components/AdminBar"
 import { Footer } from "@/Footer/Component"
 import { Header } from "@/Header/Component"
-import { ThemeProviderClient } from "@/providers/ThemeProviderClient"
 import { getServerSideURL } from "@/utilities/getURL"
 import { mergeOpenGraph } from "@/utilities/mergeOpenGraph"
 import { cn } from "@/utilities/utils"
 import { GoogleAnalytics } from "@next/third-parties/google"
-import { getTheme } from "@teispace/next-themes/server"
+import { ThemeProvider } from "@wrksz/themes/next"
 import type { Metadata } from "next"
 import { Geist } from "next/font/google"
 import localFont from "next/font/local"
@@ -33,7 +32,6 @@ export default async function RootLayout({
 }: {
   children: React.ReactNode
 }): Promise<React.ReactElement> {
-  const initialTheme = await getTheme()
   return (
     <html
       className={cn(FKScreamer.variable, geist.variable)}
@@ -48,14 +46,19 @@ export default async function RootLayout({
         <link href="/apple-touch-icon.png" rel="apple-touch-icon" sizes="180x180" />
       </head>
       <body className="flex min-h-screen flex-col">
-        <ThemeProviderClient initialTheme={initialTheme}>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
           <AdminBar />
           <Header />
           <main role="main" className="my-6 flex-1">
             {children}
           </main>
           <Footer />
-        </ThemeProviderClient>
+        </ThemeProvider>
       </body>
       <GoogleAnalytics gaId={process.env.NEXT_PUBLIC_GOOGLE_ANALYTICS_ID} />
     </html>

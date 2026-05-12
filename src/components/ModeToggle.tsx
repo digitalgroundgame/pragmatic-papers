@@ -1,6 +1,6 @@
 "use client"
 
-import { useTheme } from "@teispace/next-themes"
+import { useTheme } from "@wrksz/themes/client"
 import { Moon, Sun } from "lucide-react"
 import React from "react"
 

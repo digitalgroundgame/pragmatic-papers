@@ -96,9 +96,11 @@ export default async function AuthorsIndexPage({ searchParams }: Args): Promise<
               <AuthorList authors={authors} />
             </div>
             {totalPages > 1 && currentPage && (
-              <div className="mt-6 flex justify-center">
-                <Pagination page={currentPage} totalPages={totalPages} />
-              </div>
+              <Pagination
+                className="mt-6 flex justify-center"
+                page={currentPage}
+                totalPages={totalPages}
+              />
             )}
           </>
         )}

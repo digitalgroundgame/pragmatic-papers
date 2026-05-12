@@ -275,6 +275,7 @@ export const Articles: CollectionConfig = {
       name: "populatedAuthors",
       interfaceName: "PopulatedAuthors",
       type: "array",
+      virtual: true,
       access: {
         update: () => false,
       },
@@ -285,7 +286,7 @@ export const Articles: CollectionConfig = {
       fields: [
         {
           name: "id",
-          type: "text",
+          type: "number",
           required: true,
         },
         {

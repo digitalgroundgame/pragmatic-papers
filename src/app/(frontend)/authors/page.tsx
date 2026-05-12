@@ -48,7 +48,7 @@ async function queryAuthors(): Promise<NonNullable<PopulatedAuthors>> {
   })
 
   return docs.map((doc) => ({
-    id: String(doc.id),
+    id: doc.id,
     name: doc.name,
     slug: doc.slug,
     affiliation: doc.affiliation,

@@ -1,4 +1,5 @@
 import { AdminBar } from "@/components/AdminBar"
+import { Breadcrumbs } from "@/components/Breadcrumbs"
 import { Footer } from "@/Footer/Component"
 import { Header } from "@/Header/Component"
 import { getServerSideURL } from "@/utilities/getURL"
@@ -11,7 +12,6 @@ import { Geist } from "next/font/google"
 import localFont from "next/font/local"
 import React from "react"
 import "./globals.css"
-import { Breadcrumbs } from "@/components/Breadcrumbs"
 
 const FKScreamer = localFont({
   src: "../../../public/fonts/FKScreamer-Bold.woff2",

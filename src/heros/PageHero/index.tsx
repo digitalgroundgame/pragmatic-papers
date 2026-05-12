@@ -17,7 +17,7 @@ type PageHeroType =
 
 export const PageHero: React.FC<PageHeroType> = ({ children, richText }) => {
   return (
-    <div className="mx-auto max-w-xl px-4">
+    <div className="container max-w-3xl">
       {children || (richText && <RichText data={richText} enableGutter={false} />)}
       <Separator className="my-6" />
     </div>

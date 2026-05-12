@@ -2,10 +2,10 @@ import type { Metadata } from "next"
 
 import { PayloadRedirects } from "@/components/PayloadRedirects"
 import { homeStatic } from "@/endpoints/seed/home-static"
+import { queryPageBySlug } from "@/utilities/queries"
 import configPromise from "@payload-config"
 import { draftMode } from "next/headers"
 import { getPayload, type RequiredDataFromCollectionSlug } from "payload"
-import { cache } from "react"
 
 import { RenderBlocks } from "@/blocks/RenderBlocks"
 import { JsonLd } from "@/components/JsonLd"
@@ -38,27 +38,6 @@ export async function generateStaticParams(): Promise<{ slug: string }[]> {
 
   return params
 }
-
-const queryPageBySlug = cache(async (slug: string) => {
-  const { isEnabled: draft } = await draftMode()
-
-  const payload = await getPayload({ config: configPromise })
-
-  const result = await payload.find({
-    collection: "pages",
-    draft,
-    limit: 1,
-    pagination: false,
-    overrideAccess: draft,
-    where: {
-      slug: {
-        equals: slug,
-      },
-    },
-  })
-
-  return result.docs?.[0] || null
-})
 
 export async function generateMetadata({ params: paramsPromise }: Args): Promise<Metadata> {
   const { slug = "home" } = await paramsPromise

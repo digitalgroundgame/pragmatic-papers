@@ -41,7 +41,7 @@ export const VolumeViewBlock: React.FC<
     })
 
     return (
-      <div className="mx-auto my-4 max-w-xl space-y-8 px-4" id={id ?? undefined}>
+      <div className="container my-4 max-w-3xl space-y-8" id={id ?? undefined}>
         {introContent && (
           <RichText className="font-display" data={introContent} enableGutter={false} />
         )}

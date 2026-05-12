@@ -14,7 +14,7 @@ export const ArticleRecommendations: GlobalConfig = {
       type: "ui",
       admin: {
         components: {
-          Field: "@/globals/ArticleRecommendations/components/RunNowField",
+          Field: "@/globals/ArticleRecommendations/components/RunNowField#RunNowField",
         },
       },
     },

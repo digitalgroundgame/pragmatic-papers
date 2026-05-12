@@ -23,6 +23,9 @@ This repo uses some additional tools:
 
 ### Quick Start
 
+> [!NOTE]
+> If you run into issues onboarding please open a pull request
+
 1. [Clone the repo](https://github.com/digitalgroundgame/pragmatic-papers.git) and `cd` into it.
 2. _(Optional)_ Set up the private display font — see [Private Font Setup](#private-font-setup) below. Don't worry you can come back to this later.
 3. Run `pnpm install`. The preinstall hook copies `apps/pragmatic-papers/.env` from `.env.example` if missing.

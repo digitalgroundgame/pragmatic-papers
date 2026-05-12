@@ -46,7 +46,7 @@ interface Args {
   }>
 }
 
-const queryArticleBySlug = cache(async ({ slug }: { slug: string }) => {
+const queryArticleBySlug = cache(async (slug: string) => {
   const { isEnabled: draft } = await draftMode()
 
   const payload = await getPayload({ config: configPromise })
@@ -69,7 +69,7 @@ const queryArticleBySlug = cache(async ({ slug }: { slug: string }) => {
 
 export async function generateMetadata({ params: paramsPromise }: Args): Promise<Metadata> {
   const { slug = "" } = await paramsPromise
-  const article = await queryArticleBySlug({ slug })
+  const article = await queryArticleBySlug(slug)
 
   return generateMeta({ doc: article, canonicalPath: `/articles/${slug}` })
 }
@@ -78,15 +78,15 @@ export default async function Article({ params: paramsPromise }: Args): Promise<
   const { isEnabled: draft } = await draftMode()
   const { slug = "" } = await paramsPromise
   const url = "/articles/" + slug
-  const article = await queryArticleBySlug({ slug })
+  const article = await queryArticleBySlug(slug)
 
   if (!article) return <PayloadRedirects url={url} />
 
   const { footnotes, content, populatedAuthors, enableMathRendering, topics } = article
 
   return (
-    <div className="mx-auto max-w-2xl space-y-6 px-4 pb-16 md:px-1">
-      <article className="space-y-6">
+    <>
+      <article className="mx-auto max-w-2xl space-y-6 px-4 md:px-1">
         <JsonLd
           data={[
             buildArticleJsonLd(article, url),
@@ -112,8 +112,7 @@ export default async function Article({ params: paramsPromise }: Args): Promise<
         <TopicsList topics={topics} />
         <AuthorList aria-label="Article Authors" authors={populatedAuthors} />
       </article>
-
       <RecommendedArticles currentArticleSlug={slug} />
-    </div>
+    </>
   )
 }

@@ -79,8 +79,6 @@ export function RecommendedArticles({
   return (
     <section ref={sectionRef} className="mt-12 border-t pt-8" aria-label="Recommended articles">
       <h2 className="mb-4">Recommended</h2>
-        Recommended
-      </h2>
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
         {sampled === null
           ? Array.from({ length: DISPLAY_COUNT }).map((_, i) => (

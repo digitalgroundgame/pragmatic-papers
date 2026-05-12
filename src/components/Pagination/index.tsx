@@ -1,4 +1,3 @@
-"use client"
 import {
   Pagination as PaginationComponent,
   PaginationContent,

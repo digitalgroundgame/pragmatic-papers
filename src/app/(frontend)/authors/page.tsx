@@ -93,30 +93,28 @@ async function AuthorContent({ page }: { page: number }) {
 
 function AuthorContentSkeleton() {
   return (
-    <div className="space-y-4">
-      <div>
-        <div className="mb-4 flex items-center justify-between">
-          <h2>Meet the Authors</h2>
-          <Skeleton className="mx-auto h-5 w-48" />
-        </div>
-        <div className="flex flex-col gap-4">
-          {Array.from({ length: AUTHORS_PER_PAGE }).map((_, i) => (
-            <div key={i} className="flex gap-4 rounded-sm border p-4">
-              <Skeleton className="size-24 shrink-0 rounded-sm" />
-              <div className="flex flex-1 flex-col justify-between gap-3 space-y-2">
-                <div className="space-y-1">
-                  <Skeleton className="h-5 w-48" />
-                  <Skeleton className="h-4 w-full" />
-                  <Skeleton className="h-4 w-3/4" />
-                </div>
-                <div className="flex gap-3">
-                  <Skeleton className="size-4 rounded-full" />
-                  <Skeleton className="size-4 rounded-full" />
-                </div>
+    <div>
+      <div className="mb-4 flex items-center justify-between">
+        <h2>Meet the Authors</h2>
+        <Skeleton className="h-5 w-48" />
+      </div>
+      <div className="flex flex-col gap-4">
+        {Array.from({ length: AUTHORS_PER_PAGE }).map((_, i) => (
+          <div key={i} className="flex gap-4 rounded-sm border p-4">
+            <Skeleton className="size-24 shrink-0 rounded-sm" />
+            <div className="flex flex-1 flex-col justify-between gap-3 space-y-2">
+              <div className="space-y-1">
+                <Skeleton className="h-5 w-48" />
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-3/4" />
+              </div>
+              <div className="flex gap-3">
+                <Skeleton className="size-4 rounded-full" />
+                <Skeleton className="size-4 rounded-full" />
               </div>
             </div>
-          ))}
-        </div>
+          </div>
+        ))}
       </div>
     </div>
   )

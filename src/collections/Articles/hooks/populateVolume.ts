@@ -27,11 +27,6 @@ export const populateVolume: CollectionAfterReadHook<Article> = async ({
       title: volume.title ?? undefined,
       publishedAt: volume.publishedAt ?? undefined,
     }
-
-    payload.logger.debug(
-      { articleId: doc.id, volumeId: volume.id },
-      `Populated volume for article ${doc.id}`,
-    )
   } catch (error) {
     payload.logger.error({ err: error, articleId: doc.id }, "Failed to populate volume")
   }

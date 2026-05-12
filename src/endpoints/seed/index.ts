@@ -1,6 +1,8 @@
 import type { Media, User } from "@/payload-types"
 import type { Payload } from "payload"
 import { createArticle, getWriterOrThrow, validateWriters } from "./articles"
+import { createBannerBlocksArticle } from "./features/banners"
+import { createCodeBlocksArticle } from "./features/code-blocks"
 import { createCollectionGridHomePage } from "./features/collection-grid"
 import { createFootnotesArticle } from "./features/footnotes"
 import { createMathBlocksArticle } from "./features/math-blocks"
@@ -71,6 +73,7 @@ export const seed = async (
                 "editor@example.com",
                 "writer1@example.com",
                 "writer2@example.com",
+                "narrator@example.com",
               ],
             },
           },
@@ -186,16 +189,7 @@ export const seed = async (
     {
       name: "Creating feature articles...",
       fn: async () => {
-        const [
-          richTextShowcase,
-          footnotes,
-          socialEmbed,
-          legacySocialEmbed,
-          mediaCollage,
-          mathBlocks,
-          timeline,
-          narrationDemo,
-        ] = await Promise.all([
+        ctx.featureArticles = await Promise.all([
           createRichTextShowcaseArticle(payload, [ctx.writer1, ctx.writer2], ctx.media, [
             ctx.topics[3]!,
             ctx.topics[4]!,
@@ -235,17 +229,15 @@ export const seed = async (
             ctx.topics[3]!,
             ctx.topics[7]!,
           ]),
+          createBannerBlocksArticle(payload, [ctx.writer1, ctx.writer2], ctx.media, [
+            ctx.topics[3]!,
+            ctx.topics[7]!,
+          ]),
+          createCodeBlocksArticle(payload, [ctx.writer1, ctx.writer2], ctx.media, [
+            ctx.topics[2]!,
+            ctx.topics[7]!,
+          ]),
         ])
-        ctx.featureArticles = [
-          richTextShowcase,
-          footnotes,
-          socialEmbed,
-          legacySocialEmbed,
-          mediaCollage,
-          mathBlocks,
-          timeline,
-          narrationDemo,
-        ]
       },
     },
     {

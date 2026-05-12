@@ -1,10 +1,9 @@
 "use client"
 
 import type { RecommendedArticleCandidate } from "@/app/(frontend)/recommended-articles.json/route"
-import React, { useEffect, useRef, useState } from "react"
-import { HoverPrefetchLink } from "@/components/Link/HoverPrefetchLink"
 import { ImageMedia } from "@/components/Media/ImageMedia"
 import { Skeleton } from "@/components/ui/skeleton"
+import React, { useEffect, useRef, useState } from "react"
 
 interface RecommendedArticlesProps {
   currentArticleSlug: string
@@ -90,7 +89,7 @@ export function RecommendedArticles({
               </div>
             ))
           : sampled.map((article) => (
-              <HoverPrefetchLink
+              <a
                 key={article.slug}
                 href={`/articles/${article.slug}`}
                 className="group flex flex-col gap-2"
@@ -113,7 +112,7 @@ export function RecommendedArticles({
                     {article.metaDescription}
                   </p>
                 )}
-              </HoverPrefetchLink>
+              </a>
             ))}
       </div>
     </section>

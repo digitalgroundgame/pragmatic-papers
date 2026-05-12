@@ -11,7 +11,13 @@ import { createNarrationDemoArticle } from "./features/narration-demo"
 import { createRichTextShowcaseArticle } from "./features/rich-text-showcase"
 import { createLegacySocialEmbedArticle, createSocialEmbedArticle } from "./features/social-embeds"
 import { createTimelineArticle } from "./features/timeline"
-import { createMediaFromURL } from "./media"
+import { createMediaFromFile } from "./media"
+import path from "node:path"
+import { fileURLToPath } from "node:url"
+
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
+const imagesDir = path.resolve(__dirname, "images")
 import { createMenus } from "./menus"
 import { createPages } from "./pages"
 import { createLoremIpsumContent, generateLoremIspumSentence } from "./richtext"
@@ -90,14 +96,12 @@ export const seed = async (
     {
       name: "Uploading media...",
       fn: async () => {
-        const IMAGE_BASE =
-          "https://raw.githubusercontent.com/payloadcms/payload/refs/heads/main/templates/website/src/endpoints/seed"
         const ALT = "Curving abstract shapes with an orange and blue gradient"
         ctx.media = await Promise.all([
-          createMediaFromURL(payload, `${IMAGE_BASE}/image-post1.webp`, ALT),
-          createMediaFromURL(payload, `${IMAGE_BASE}/image-post2.webp`, ALT),
-          createMediaFromURL(payload, `${IMAGE_BASE}/image-post3.webp`, ALT),
-          createMediaFromURL(payload, `${IMAGE_BASE}/image-hero1.webp`, ALT),
+          createMediaFromFile(payload, path.join(imagesDir, "image-post1.webp"), ALT),
+          createMediaFromFile(payload, path.join(imagesDir, "image-post2.webp"), ALT),
+          createMediaFromFile(payload, path.join(imagesDir, "image-post3.webp"), ALT),
+          createMediaFromFile(payload, path.join(imagesDir, "image-hero1.webp"), ALT),
         ])
       },
     },

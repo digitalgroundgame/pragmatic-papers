@@ -41,7 +41,8 @@ Seed scripts populate the database with sample content for development. Rather t
 ### Media Utilities (`media.ts`)
 
 - `fetchFileByURL(url)` - Fetches a file from URL, returns Payload File object
-- `createMediaFromURL(payload, url, alt, additionalData?)` - Fetches and creates media in one call; strips `additionalData` on the final retry attempt
+- `createMediaFromURL(payload, url, alt, additionalData?)` - Fetches and creates media from a URL in one call
+- `createMediaFromFile(payload, path, alt, additionalData?)` - Reads and creates media from a local file in one call
   - `additionalData` is `Partial<Omit<Media, "id" | "alt">>` — supports any optional Media field (e.g. `{ caption: LexicalContent }`)
 
 ### Article Utilities (`articles.ts`)
@@ -123,15 +124,21 @@ When generating a seed from article JSON:
 6. **Create helper functions** - Extract repeated block patterns into reusable functions
 7. **Follow existing patterns** - Reference `features/footnotes.ts` or `features/media-collage.ts` as examples
 
-### Important: Media URLs
+### Important: Media URLs vs Local Files
 
 ⚠️ **Do NOT use URLs from article JSON** (e.g., `/api/media/file/image.jpg`) - these point to the local development server and won't work in seed scripts.
 
 **Instead:**
 
-- Ask the user to provide external URLs for each media item
-- Use publicly accessible URLs (CDN, GitHub raw, image hosting services, etc.)
-- Example: `https://raw.githubusercontent.com/org/repo/main/image.jpg`
+1. **Use local files (Preferred for reliability):**
+   - Place images in `src/endpoints/seed/images/`
+   - Use `createMediaFromFile(payload, filePath, alt, additionalData?)`
+   - Example: `createMediaFromFile(payload, path.join(imagesDir, 'my-image.webp'), 'Alt text')`
+
+2. **Use external URLs:**
+   - Use publicly accessible URLs (CDN, GitHub raw, image hosting services, etc.)
+   - Use `createMediaFromURL(payload, url, alt, additionalData?)`
+   - Example: `https://raw.githubusercontent.com/org/repo/main/image.jpg`
 
 ## Seed File Structure
 

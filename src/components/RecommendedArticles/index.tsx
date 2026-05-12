@@ -35,7 +35,11 @@ export async function RecommendedArticles({
         slug: article.slug ?? "",
         title: article.title,
         metaImage:
-          typeof metaImage === "object" && metaImage !== null ? (metaImage as Media) : null,
+          typeof metaImage === "object" &&
+          metaImage !== null &&
+          metaImage.mimeType?.startsWith("image/")
+            ? (metaImage as Media & { mimeType: `image/${string}` })
+            : null,
         metaDescription: article.meta?.description ?? null,
       }
     })

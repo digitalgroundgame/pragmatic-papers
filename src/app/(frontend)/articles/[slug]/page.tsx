@@ -85,8 +85,8 @@ export default async function Article({ params: paramsPromise }: Args): Promise<
   const { footnotes, content, populatedAuthors, enableMathRendering, topics } = article
 
   return (
-    <div className="mx-auto max-w-2xl space-y-6 px-4 pb-16 md:px-1">
-      <article className="space-y-6">
+    <>
+      <article className="mx-auto max-w-2xl space-y-6 px-4 md:px-1">
         <JsonLd
           data={[
             buildArticleJsonLd(article, url),
@@ -112,8 +112,7 @@ export default async function Article({ params: paramsPromise }: Args): Promise<
         <TopicsList topics={topics} />
         <AuthorList aria-label="Article Authors" authors={populatedAuthors} />
       </article>
-
       <RecommendedArticles currentArticleSlug={slug} />
-    </div>
+    </>
   )
 }

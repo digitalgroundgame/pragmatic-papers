@@ -6,7 +6,7 @@ import { getPayload } from "payload"
 export interface RecommendedArticleCandidate {
   slug: string
   title: string
-  metaImage: Media | null
+  metaImage: (Media & { mimeType: `image/${string}` }) | null
   metaDescription: string | null
   engagementScore: number
 }
@@ -27,7 +27,9 @@ export async function GET(_request: NextRequest): Promise<Response> {
         slug: article.slug ?? "",
         title: article.title,
         metaImage:
-          typeof metaImage === "object" && metaImage !== null ? (metaImage as Media) : null,
+          typeof metaImage === "object" && metaImage !== null
+            ? (metaImage as Media & { mimeType: `image/${string}` })
+            : null,
         metaDescription: article.meta?.description ?? null,
         engagementScore: r.engagementScore,
       }

@@ -2,10 +2,10 @@ import type { Metadata } from "next"
 
 import { PayloadRedirects } from "@/components/PayloadRedirects"
 import { homeStatic } from "@/endpoints/seed/home-static"
+import { queryPageBySlug } from "@/utilities/queries"
 import configPromise from "@payload-config"
 import { draftMode } from "next/headers"
 import { getPayload, type RequiredDataFromCollectionSlug } from "payload"
-import { cache } from "react"
 
 import { RenderBlocks } from "@/blocks/RenderBlocks"
 import { JsonLd } from "@/components/JsonLd"
@@ -39,32 +39,9 @@ export async function generateStaticParams(): Promise<{ slug: string }[]> {
   return params
 }
 
-const queryPageBySlug = cache(async ({ slug }: { slug: string }) => {
-  const { isEnabled: draft } = await draftMode()
-
-  const payload = await getPayload({ config: configPromise })
-
-  const result = await payload.find({
-    collection: "pages",
-    draft,
-    limit: 1,
-    pagination: false,
-    overrideAccess: draft,
-    where: {
-      slug: {
-        equals: slug,
-      },
-    },
-  })
-
-  return result.docs?.[0] || null
-})
-
 export async function generateMetadata({ params: paramsPromise }: Args): Promise<Metadata> {
   const { slug = "home" } = await paramsPromise
-  const page = await queryPageBySlug({
-    slug,
-  })
+  const page = await queryPageBySlug(slug)
 
   const canonicalPath = slug === "home" ? "/" : `/${slug}`
   return generateMeta({ doc: page, canonicalPath })
@@ -85,9 +62,7 @@ export default async function Page({ params, searchParams }: Args): Promise<Reac
   const { p: pageString } = await searchParams
   const pageNumber = pageString ? Math.max(Number(pageString) || 1, 1) : undefined
   const url = `/${slug}${pageNumber ? `?p=${pageNumber}` : ""}`
-  let page: RequiredDataFromCollectionSlug<"pages"> | null = await queryPageBySlug({
-    slug,
-  })
+  let page: RequiredDataFromCollectionSlug<"pages"> | null = await queryPageBySlug(slug)
   const { socials } = await getCachedGlobal("footer", 1)()
 
   // Remove this code once your website is seeded

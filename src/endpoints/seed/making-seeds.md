@@ -278,7 +278,7 @@ Add your seed to `index.ts`:
 import { createMyFeatureArticle } from "./features/my-feature"
 
 // In the seed() function (inside a step fn, where ctx is available):
-await createMyFeatureArticle(payload, ctx.writer1, ctx.media, [ctx.topics[0]!, ctx.topics[3]!])
+await createMyFeatureArticle(payload, ctx.writers[0]!, ctx.media, [ctx.topics[0]!, ctx.topics[3]!])
 ```
 
 ---

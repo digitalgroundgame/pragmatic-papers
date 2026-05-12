@@ -46,7 +46,7 @@ interface Args {
   }>
 }
 
-const queryArticleBySlug = cache(async ({ slug }: { slug: string }) => {
+const queryArticleBySlug = cache(async (slug: string) => {
   const { isEnabled: draft } = await draftMode()
 
   const payload = await getPayload({ config: configPromise })
@@ -69,7 +69,7 @@ const queryArticleBySlug = cache(async ({ slug }: { slug: string }) => {
 
 export async function generateMetadata({ params: paramsPromise }: Args): Promise<Metadata> {
   const { slug = "" } = await paramsPromise
-  const article = await queryArticleBySlug({ slug })
+  const article = await queryArticleBySlug(slug)
 
   return generateMeta({ doc: article, canonicalPath: `/articles/${slug}` })
 }
@@ -78,7 +78,7 @@ export default async function Article({ params: paramsPromise }: Args): Promise<
   const { isEnabled: draft } = await draftMode()
   const { slug = "" } = await paramsPromise
   const url = "/articles/" + slug
-  const article = await queryArticleBySlug({ slug })
+  const article = await queryArticleBySlug(slug)
 
   if (!article) return <PayloadRedirects url={url} />
 

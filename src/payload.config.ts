@@ -23,6 +23,12 @@ const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
 
 export default buildConfig({
+  logger: {
+    options: {
+      level: process.env.PAYLOAD_LOG_LEVEL || "info",
+      transport: process.env.NODE_ENV !== "production" ? { target: "pino-pretty" } : undefined,
+    },
+  },
   admin: {
     components: {
       // The `BeforeLogin` component renders a message that you see while logging into your admin panel.

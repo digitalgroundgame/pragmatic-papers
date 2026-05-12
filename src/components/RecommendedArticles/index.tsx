@@ -1,9 +1,8 @@
+import { ImageMedia } from "@/components/Media/ImageMedia"
 import type { Article, Media } from "@/payload-types"
 import configPromise from "@payload-config"
-import React from "react"
 import { getPayload } from "payload"
-import { HoverPrefetchLink } from "@/components/Link/HoverPrefetchLink"
-import { ImageMedia } from "@/components/Media/ImageMedia"
+import React from "react"
 
 interface RecommendedArticlesProps {
   currentArticleSlug: string
@@ -51,7 +50,7 @@ export async function RecommendedArticles({
       <h2 className="mb-4">Recommended</h2>
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
         {articles.map((article) => (
-          <HoverPrefetchLink
+          <a
             key={article.slug}
             href={`/articles/${article.slug}`}
             className="group flex flex-col gap-2"
@@ -74,7 +73,7 @@ export async function RecommendedArticles({
                 {article.metaDescription}
               </p>
             )}
-          </HoverPrefetchLink>
+          </a>
         ))}
       </div>
     </section>

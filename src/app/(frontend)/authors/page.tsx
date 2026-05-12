@@ -21,7 +21,7 @@ export const metadata: Metadata = {
   }),
 }
 
-const AUTHORS_PER_PAGE = 6
+const AUTHORS_PER_PAGE = 5
 
 const queryAuthors = cache(async (page: number = 1) => {
   const { isEnabled: draft } = await draftMode()
@@ -79,32 +79,26 @@ export default async function AuthorsIndexPage({ searchParams }: Args): Promise<
         </p>
       </header>
 
-      <section aria-label="All authors" className="mt-6">
-        {authors.length === 0 ? (
-          <p className="text-muted-foreground text-sm">No authors available yet.</p>
-        ) : (
-          <>
-            <div className="flex justify-center">
-              <PageRange
-                collectionLabels={{ plural: "Authors", singular: "Author" }}
-                currentPage={currentPage}
-                limit={AUTHORS_PER_PAGE}
-                totalDocs={totalDocs}
-              />
-            </div>
-            <div className="mt-4 flex flex-col gap-4">
-              <AuthorList authors={authors} />
-            </div>
-            {totalPages > 1 && currentPage && (
-              <Pagination
-                className="mt-6 flex justify-center"
-                page={currentPage}
-                totalPages={totalPages}
-              />
-            )}
-          </>
-        )}
-      </section>
+      {authors.length === 0 ? (
+        <p className="text-muted-foreground text-center text-sm">No authors found.</p>
+      ) : (
+        <>
+          <PageRange
+            collectionLabels={{ plural: "Authors", singular: "Author" }}
+            currentPage={currentPage}
+            limit={AUTHORS_PER_PAGE}
+            totalDocs={totalDocs}
+          />
+          <AuthorList aria-label="All authors" className="flex flex-col gap-4" authors={authors} />
+          {totalPages > 1 && currentPage && (
+            <Pagination
+              className="mt-6 flex justify-center"
+              page={currentPage}
+              totalPages={totalPages}
+            />
+          )}
+        </>
+      )}
     </article>
   )
 }

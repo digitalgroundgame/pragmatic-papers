@@ -12,9 +12,6 @@ import { Home } from "lucide-react"
 import { useSelectedLayoutSegments } from "next/navigation"
 import { Fragment, type ReactElement } from "react"
 
-// constants
-
-// helpers
 const formatBreadcrumbLabel = (segment: string): string => {
   return decodeURIComponent(segment)
     .split("-")
@@ -43,7 +40,7 @@ export const Breadcrumbs = (): ReactElement | null => {
   const lastSegmentIndex = segmentItems.length - 1
 
   return (
-    <Breadcrumb className="container mb-4">
+    <Breadcrumb className="container mb-4 max-w-3xl">
       <BreadcrumbList className="flex-nowrap">
         <BreadcrumbItem>
           <BreadcrumbLink href="/">

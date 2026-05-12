@@ -1,10 +1,13 @@
 import type { Media, User } from "@/payload-types"
 import type { Payload } from "payload"
 import { createArticle, getWriterOrThrow, validateWriters } from "./articles"
+import { createBannerBlocksArticle } from "./features/banners"
+import { createCodeBlocksArticle } from "./features/code-blocks"
 import { createCollectionGridHomePage } from "./features/collection-grid"
 import { createFootnotesArticle } from "./features/footnotes"
 import { createMathBlocksArticle } from "./features/math-blocks"
 import { createMediaCollageArticle } from "./features/media-collage"
+import { createNarrationDemoArticle } from "./features/narration-demo"
 import { createRichTextShowcaseArticle } from "./features/rich-text-showcase"
 import { createLegacySocialEmbedArticle, createSocialEmbedArticle } from "./features/social-embeds"
 import { createTimelineArticle } from "./features/timeline"
@@ -18,8 +21,11 @@ import { createVolumes } from "./volumes"
 
 interface SeedContext {
   media: Media[]
+  chiefEditor: User
+  editor: User
   writer1: User
   writer2: User
+  narrator: User
   topics: number[]
   volume1Articles: number[]
   volume2Articles: number[]
@@ -67,6 +73,7 @@ export const seed = async (
                 "editor@example.com",
                 "writer1@example.com",
                 "writer2@example.com",
+                "narrator@example.com",
               ],
             },
           },
@@ -97,9 +104,15 @@ export const seed = async (
     {
       name: "Creating users...",
       fn: async () => {
-        const { writer1, writer2 } = await createUsers(payload, ctx.media)
+        const { chiefEditor, editor, writer1, writer2, narrator } = await createUsers(
+          payload,
+          ctx.media,
+        )
+        ctx.chiefEditor = chiefEditor
+        ctx.editor = editor
         ctx.writer1 = writer1
         ctx.writer2 = writer2
+        ctx.narrator = narrator
         validateWriters([writer1, writer2])
       },
     },
@@ -176,16 +189,7 @@ export const seed = async (
     {
       name: "Creating feature articles...",
       fn: async () => {
-        const [
-          richTextShowcase,
-          footnotes,
-          socialEmbed,
-          legacySocialEmbed,
-          mediaCollage,
-          mathBlocks,
-          timeline,
-
-        ] = await Promise.all([
+        ctx.featureArticles = await Promise.all([
           createRichTextShowcaseArticle(payload, [ctx.writer1, ctx.writer2], ctx.media, [
             ctx.topics[3]!,
             ctx.topics[4]!,
@@ -221,16 +225,19 @@ export const seed = async (
             ctx.topics[3]!,
             ctx.topics[7]!,
           ]),
+          createNarrationDemoArticle(payload, ctx.writer1, ctx.narrator, ctx.media, [
+            ctx.topics[3]!,
+            ctx.topics[7]!,
+          ]),
+          createBannerBlocksArticle(payload, [ctx.writer1, ctx.writer2], ctx.media, [
+            ctx.topics[3]!,
+            ctx.topics[7]!,
+          ]),
+          createCodeBlocksArticle(payload, [ctx.writer1, ctx.writer2], ctx.media, [
+            ctx.topics[2]!,
+            ctx.topics[7]!,
+          ]),
         ])
-        ctx.featureArticles = [
-          richTextShowcase,
-          footnotes,
-          socialEmbed,
-          legacySocialEmbed,
-          mediaCollage,
-          mathBlocks,
-          timeline,
-        ]
       },
     },
     {
@@ -261,7 +268,7 @@ export const seed = async (
               volumeNumber: 3,
               title: "Volume 3: Feature Demonstrations",
               description:
-                "A collection of articles demonstrating the platform's feature set, including footnotes, social embeds, and media collages.",
+                "A collection of articles demonstrating the platform's feature set, including footnotes, social embeds, media collages, and audio narration.",
               editorsNoteContent:
                 "This volume showcases the full range of content features available to authors on Pragmatic Papers.",
               articleIds: ctx.featureArticles,
@@ -290,7 +297,11 @@ export const seed = async (
           privacyPolicyPage,
           termsOfUsePage,
           volumesPage,
-        } = await createPages(payload)
+        } = await createPages(payload, {
+          chiefEditorIds: [ctx.chiefEditor.id],
+          editorIds: [ctx.editor.id],
+          writerIds: [ctx.writer1.id, ctx.writer2.id],
+        })
         await createMenus(payload, {
           homePage,
           aboutPage,

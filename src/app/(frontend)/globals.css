@@ -43,6 +43,9 @@
   --brand-foreground: oklch(0.592 0.2125 32.7);
   /* 7.11:1 contrast ratio for WCAG 2.1 AAA */
   --brand-high-contrast: oklch(0.4827 0.16 32.7);
+  --error: oklch(0.58 0.22 27);
+  --success: oklch(0.55 0.18 150);
+  --warning: oklch(0.7 0.18 80);
 }
 
 .dark {
@@ -82,6 +85,9 @@
   --brand-foreground: oklch(0.6567 0.2311 32.7);
   /* 7:1 contrast ratio for WCAG 2.1 AAA */
   --brand-high-contrast: oklch(0.69 0.18 32.7);
+  --error: oklch(0.704 0.191 22.216);
+  --success: oklch(0.65 0.18 150);
+  --warning: oklch(0.78 0.16 80);
 }
 
 @theme inline {
@@ -128,6 +134,9 @@
   --color-brand: var(--brand);
   --color-brand-foreground: var(--brand-foreground);
   --color-brand-high-contrast: var(--brand-high-contrast);
+  --color-error: var(--error);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
   /* FK Screamer ligatures render incorrectly at 30px and below, so bumping 3xl to 32px. Overriding this core utilty to prevent us from accidently using it at 30px. */
   --text-3xl: 2rem;
   --text-3xl--line-height: calc(2.25 / 2);
@@ -141,7 +150,7 @@
     @apply bg-background text-foreground;
   }
   html {
-    @apply scroll-smooth font-sans;
+    @apply scroll-pt-20 scroll-smooth font-sans;
   }
   h1,
   h2,

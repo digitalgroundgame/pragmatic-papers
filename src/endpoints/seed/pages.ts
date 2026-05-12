@@ -1,6 +1,7 @@
 import type { Page } from "@/payload-types"
 import type { Payload, RequiredDataFromCollectionSlug } from "payload"
 
+import { createContactForm } from "./forms"
 import { createRichTextContent } from "./richtext"
 
 type PageData = RequiredDataFromCollectionSlug<"pages">
@@ -54,6 +55,12 @@ interface CreatePagesResult {
   volumesPage: Page
 }
 
+interface AboutContributors {
+  chiefEditorIds: number[]
+  editorIds: number[]
+  writerIds: number[]
+}
+
 /** Hero richText with a heading containing the page name (for pageHero type). */
 const createHeroRichTextHeading = (pageTitle: string, tag: "h1" | "h2" | "h3" | "h4" = "h1") => ({
   root: {
@@ -86,7 +93,10 @@ const createHeroRichTextHeading = (pageTitle: string, tag: "h1" | "h2" | "h3" | 
   },
 })
 
-export const createPages = async (payload: Payload): Promise<CreatePagesResult> => {
+export const createPages = async (
+  payload: Payload,
+  contributors?: AboutContributors,
+): Promise<CreatePagesResult> => {
   const pageConfigs: Record<
     "about" | "articles" | "contact" | "privacyPolicy" | "termsOfUse" | "volumes",
     PageConfig
@@ -137,6 +147,41 @@ export const createPages = async (payload: Payload): Promise<CreatePagesResult> 
 
   const { about, articles, contact, privacyPolicy, termsOfUse, volumes } = pageConfigs
 
+  const aboutLayout: PageData["layout"] = [
+    {
+      blockType: "content",
+      columns: [
+        {
+          size: "full",
+          richText: createRichTextContent(about.content),
+          enableLink: false,
+        },
+      ],
+    },
+  ]
+
+  if (contributors?.chiefEditorIds.length) {
+    aboutLayout.push({
+      blockType: "contributors",
+      title: "Chief Editors",
+      people: contributors.chiefEditorIds,
+    })
+  }
+  if (contributors?.editorIds.length) {
+    aboutLayout.push({
+      blockType: "contributors",
+      title: "Editors",
+      people: contributors.editorIds,
+    })
+  }
+  if (contributors?.writerIds.length) {
+    aboutLayout.push({
+      blockType: "contributors",
+      title: "Authors",
+      people: contributors.writerIds,
+    })
+  }
+
   const aboutPage = await createOrUpdatePage(payload, {
     title: about.title,
     slug: about.slug,
@@ -146,18 +191,7 @@ export const createPages = async (payload: Payload): Promise<CreatePagesResult> 
       links: [],
       media: null,
     },
-    layout: [
-      {
-        blockType: "content",
-        columns: [
-          {
-            size: "full",
-            richText: createRichTextContent(about.content),
-            enableLink: false,
-          },
-        ],
-      },
-    ],
+    layout: aboutLayout,
     meta: {
       title: about.title,
       description: about.description,
@@ -195,47 +229,7 @@ export const createPages = async (payload: Payload): Promise<CreatePagesResult> 
     publishedAt: new Date().toISOString(),
   })
 
-  const contactForm = await payload.create({
-    collection: "forms",
-    data: {
-      title: "Contact Form",
-      fields: [
-        {
-          blockType: "text",
-          name: "name",
-          label: "Name",
-          required: true,
-          width: 100,
-        },
-        {
-          blockType: "email",
-          name: "email",
-          label: "Email",
-          required: true,
-          width: 100,
-        },
-        {
-          blockType: "text",
-          name: "subject",
-          label: "Subject",
-          required: true,
-          width: 100,
-        },
-        {
-          blockType: "textarea",
-          name: "message",
-          label: "Message",
-          required: true,
-          width: 100,
-        },
-      ],
-      submitButtonLabel: "Send Message",
-      confirmationType: "message",
-      confirmationMessage: createRichTextContent(
-        "Thank you for reaching out! We will get back to you as soon as possible.",
-      ),
-    },
-  })
+  const contactForm = await createContactForm(payload)
 
   const contactPage = await createOrUpdatePage(payload, {
     title: contact.title,

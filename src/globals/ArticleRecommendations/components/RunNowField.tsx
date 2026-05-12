@@ -3,7 +3,7 @@
 import { Button, toast } from "@payloadcms/ui"
 import React, { useState } from "react"
 
-export default function RunNowField(): React.ReactNode {
+export function RunNowField(): React.ReactNode {
   const [loading, setLoading] = useState(false)
 
   const onClick = async (): Promise<void> => {

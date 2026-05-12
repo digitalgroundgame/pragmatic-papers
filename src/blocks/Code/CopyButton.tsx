@@ -17,18 +17,17 @@ export function CopyButton({ code }: { code: string }) {
   }
 
   return (
-    <div className="flex justify-end align-middle">
-      <Button
-        className="flex gap-1"
-        variant="secondary"
-        onClick={async () => {
-          await navigator.clipboard.writeText(code)
-          updateCopyStatus()
-        }}
-      >
-        <p>{text}</p>
-        <Copy className="size-4" />
-      </Button>
-    </div>
+    <Button
+      className="flex gap-1 justify-self-end"
+      variant="secondary"
+      size="sm"
+      onClick={async () => {
+        await navigator.clipboard.writeText(code)
+        updateCopyStatus()
+      }}
+    >
+      <p>{text}</p>
+      <Copy className="size-4" />
+    </Button>
   )
 }

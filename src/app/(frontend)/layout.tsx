@@ -1,4 +1,5 @@
 import { AdminBar } from "@/components/AdminBar"
+import { Breadcrumbs } from "@/components/Breadcrumbs"
 import { Footer } from "@/Footer/Component"
 import { Header } from "@/Header/Component"
 import { getServerSideURL } from "@/utilities/getURL"
@@ -55,6 +56,7 @@ export default async function RootLayout({
           <AdminBar />
           <Header />
           <main role="main" className="my-6 flex-1">
+            <Breadcrumbs />
             {children}
           </main>
           <Footer />

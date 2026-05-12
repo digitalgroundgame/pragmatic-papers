@@ -18,6 +18,7 @@ type VolumeData = RequiredDataFromCollectionSlug<"volumes">
 
 async function createOrUpdateVolume(payload: Payload, data: VolumeData): Promise<Volume> {
   const maxAttempts = 3
+  let lastError: unknown
 
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     const isLastAttempt = attempt === maxAttempts
@@ -34,6 +35,7 @@ async function createOrUpdateVolume(payload: Payload, data: VolumeData): Promise
 
       return await payload.create({ collection: "volumes", data })
     } catch (err) {
+      lastError = err
       const message = err instanceof Error ? err.message : String(err)
       const isSlugConflict = message.toLowerCase().includes("slug")
 
@@ -54,21 +56,22 @@ async function createOrUpdateVolume(payload: Payload, data: VolumeData): Promise
         return await payload.update({ collection: "volumes", id: existingVolume.id, data })
       }
 
-      if (attempt < maxAttempts) {
+      if (isLastAttempt) {
+        payload.logger.warn(
+          `Volume create attempt ${attempt}/${maxAttempts} (minimal fields) failed for "${data.slug}". Error: ${message}`,
+        )
+      } else {
         payload.logger.warn(
           `Volume create attempt ${attempt}/${maxAttempts} failed for "${data.slug}", retrying. Error: ${message}`,
         )
         await new Promise((resolve) => setTimeout(resolve, 500 * attempt))
-      } else {
-        payload.logger.warn(
-          `Failed to create volume "${data.slug}" with full data, retrying with minimal fields. Error: ${message}`,
-        )
       }
     }
   }
 
-  // Unreachable — TypeScript requires explicit return/throw after the loop
-  throw new Error(`Failed to create volume "${data.slug}" after ${maxAttempts} attempts`)
+  throw new Error(`Failed to create volume "${data.slug}" after ${maxAttempts} attempts`, {
+    cause: lastError,
+  })
 }
 
 export const createVolumes = async (

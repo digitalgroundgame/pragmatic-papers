@@ -48,10 +48,6 @@ export const populateAuthors: CollectionAfterReadHook<Article> = async ({
         profileImage: populatedAuthor.profileImage,
         socials: populatedAuthor.socials,
       }))
-      payload.logger.debug(
-        { articleId: doc.id, count: populatedAuthors.length },
-        `Populated authors for article ${doc.id}`,
-      )
     }
   } catch (error) {
     payload.logger.error({ err: error, authorIds, articleId: doc.id }, "Failed to populate authors")

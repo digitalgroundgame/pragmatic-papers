@@ -68,19 +68,19 @@ export const Volumes: CollectionConfig = {
       required: true,
     },
     {
+      name: "volumeNumber",
+      type: "number",
+      defaultValue: getNextVolumeNumber,
+      admin: {
+        position: "sidebar",
+      },
+      required: true,
+    },
+    {
       type: "tabs",
       tabs: [
         {
           fields: [
-            {
-              name: "volumeNumber",
-              type: "number",
-              defaultValue: getNextVolumeNumber,
-              admin: {
-                position: "sidebar",
-              },
-              required: true,
-            },
             {
               name: "description",
               type: "textarea",

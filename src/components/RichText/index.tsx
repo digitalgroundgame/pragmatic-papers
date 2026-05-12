@@ -1,6 +1,6 @@
 import { BannerBlock } from "@/blocks/Banner/Component"
 import { CallToActionBlock } from "@/blocks/CallToAction/Component"
-import { CodeBlock, type CodeBlockProps } from "@/blocks/Code/Component"
+import { CodeBlock } from "@/blocks/Code/Component"
 import { FootnoteBlock } from "@/blocks/Footnote/Component"
 import { MathBlock, type MathBlockProps } from "@/blocks/Math/Component"
 import { LightboxMediaBlock } from "@/blocks/MediaBlock/LightboxMediaBlock"
@@ -18,6 +18,7 @@ import { SquiggleRuleBlock } from "@/blocks/SquiggleRule/Component"
 import { TimelineBlock } from "@/blocks/Timeline/Component"
 import type {
   BannerBlock as BannerBlockProps,
+  CodeBlock as CodeBlockProps,
   CallToActionBlock as CTABlockProps,
   FootnoteBlock as FootnoteBlockProps,
   MediaBlock as MediaBlockProps,

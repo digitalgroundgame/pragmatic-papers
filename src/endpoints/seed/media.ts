@@ -25,6 +25,11 @@ export async function fetchFileByURL(url: string): Promise<File> {
     webp: "image/webp",
     gif: "image/gif",
     svg: "image/svg+xml",
+    mp3: "audio/mpeg",
+    ogg: "audio/ogg",
+    wav: "audio/wav",
+    m4a: "audio/mp4",
+    flac: "audio/flac",
   }
 
   const baseName = url.split("/").pop() || `file-${Date.now()}`

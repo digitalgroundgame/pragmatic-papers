@@ -1,7 +1,7 @@
+import { AuthorList } from "@/components/Authors/AuthorList"
 import { LivePreviewListener } from "@/components/LivePreviewListener"
 import { PageRange } from "@/components/PageRange"
 import { Pagination } from "@/components/Pagination"
-import { AuthorList } from "@/components/Authors/AuthorList"
 import type { PopulatedAuthorsSelect } from "@/payload-types"
 import { getServerSideURL } from "@/utilities/getURL"
 import { mergeOpenGraph } from "@/utilities/mergeOpenGraph"
@@ -68,16 +68,6 @@ export default async function AuthorsIndexPage({ searchParams }: Args): Promise<
 
   const { docs: authors, totalDocs, totalPages, page: currentPage } = await queryAuthors(page)
 
-  const mappedAuthors = authors.map((doc) => ({
-    id: String(doc.id),
-    name: doc.name,
-    slug: doc.slug,
-    affiliation: doc.affiliation,
-    biography: doc.biography,
-    profileImage: doc.profileImage,
-    socials: doc.socials,
-  }))
-
   return (
     <article className="mx-auto max-w-3xl space-y-6 px-4">
       {draft && <LivePreviewListener />}
@@ -103,7 +93,7 @@ export default async function AuthorsIndexPage({ searchParams }: Args): Promise<
               />
             </div>
             <div className="mt-4 flex flex-col gap-4">
-              <AuthorList authors={mappedAuthors} />
+              <AuthorList authors={authors} />
             </div>
             {totalPages > 1 && currentPage && (
               <div className="mt-6 flex justify-center">

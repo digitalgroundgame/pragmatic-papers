@@ -44,7 +44,7 @@ export type MenuField =
  */
 export type PopulatedAuthors =
   | {
-      id: string;
+      id: number;
       name?: string | null;
       slug: string;
       affiliation?: string | null;
@@ -335,6 +335,7 @@ export interface Page {
     | CollectionGridBlock
     | CallToActionBlock
     | ContentBlock
+    | ContributorsBlock
     | MediaBlock
     | TimelineBlock
     | VolumeView
@@ -436,18 +437,20 @@ export interface Article {
     description?: string | null;
   };
   heroImage?: (number | null) | Media;
-  enableMathRendering?: boolean | null;
-  publishedAt?: string | null;
-  authors?: (number | User)[] | null;
-  createdBy?: (number | null) | User;
-  populatedAuthors?: PopulatedAuthors;
-  populatedVolume?: PopulatedVolume;
-  topics?: (number | Topic)[] | null;
   /**
    * When enabled, the slug will auto-generate from the title field on save and autosave.
    */
   generateSlug?: boolean | null;
   slug: string;
+  enableMathRendering?: boolean | null;
+  publishedAt?: string | null;
+  authors?: (number | User)[] | null;
+  topics?: (number | Topic)[] | null;
+  narration?: (number | null) | Media;
+  createdBy?: (number | null) | User;
+  populatedAuthors?: PopulatedAuthors;
+  populatedVolume?: PopulatedVolume;
+  populatedNarrator?: PopulatedNarrator;
   updatedAt: string;
   createdAt: string;
   _status?: ('draft' | 'published') | null;
@@ -534,6 +537,14 @@ export interface Media {
    */
   blurDataURL?: string | null;
   createdBy?: (number | null) | User;
+  /**
+   * User who recorded this narration
+   */
+  narrator?: (number | null) | User;
+  /**
+   * Duration in seconds (auto-populated from the audio file)
+   */
+  duration?: number | null;
   updatedAt: string;
   createdAt: string;
   url?: string | null;
@@ -634,7 +645,7 @@ export interface User {
   slug: string;
   profileImage?: (number | null) | Media;
   socials?: MenuField;
-  role?: ('admin' | 'chief-editor' | 'editor' | 'writer' | 'member') | null;
+  role?: ('admin' | 'chief-editor' | 'editor' | 'writer' | 'narrator' | 'member') | null;
   updatedAt: string;
   createdAt: string;
   email: string;
@@ -664,6 +675,15 @@ export interface PopulatedVolume {
   volumeNumber?: number | null;
   title?: string | null;
   publishedAt?: string | null;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "PopulatedNarrator".
+ */
+export interface PopulatedNarrator {
+  id?: number | null;
+  name?: string | null;
+  slug?: string | null;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -781,6 +801,17 @@ export interface ContentBlock {
   id?: string | null;
   blockName?: string | null;
   blockType: 'content';
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "ContributorsBlock".
+ */
+export interface ContributorsBlock {
+  title: string;
+  people: (number | User)[];
+  id?: string | null;
+  blockName?: string | null;
+  blockType: 'contributors';
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -1365,6 +1396,7 @@ export interface PagesSelect<T extends boolean = true> {
         collectionGrid?: T | CollectionGridBlockSelect<T>;
         cta?: T | CallToActionBlockSelect<T>;
         content?: T | ContentBlockSelect<T>;
+        contributors?: T | ContributorsBlockSelect<T>;
         mediaBlock?: T | MediaBlockSelect<T>;
         timeline?: T | TimelineBlockSelect<T>;
         volumeView?: T | VolumeViewSelect<T>;
@@ -1457,6 +1489,16 @@ export interface ContentBlockSelect<T extends boolean = true> {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "ContributorsBlock_select".
+ */
+export interface ContributorsBlockSelect<T extends boolean = true> {
+  title?: T;
+  people?: T;
+  id?: T;
+  blockName?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "MediaBlock_select".
  */
 export interface MediaBlockSelect<T extends boolean = true> {
@@ -1539,15 +1581,17 @@ export interface ArticlesSelect<T extends boolean = true> {
         description?: T;
       };
   heroImage?: T;
+  generateSlug?: T;
+  slug?: T;
   enableMathRendering?: T;
   publishedAt?: T;
   authors?: T;
+  topics?: T;
+  narration?: T;
   createdBy?: T;
   populatedAuthors?: T | PopulatedAuthorsSelect<T>;
   populatedVolume?: T | PopulatedVolumeSelect<T>;
-  topics?: T;
-  generateSlug?: T;
-  slug?: T;
+  populatedNarrator?: T | PopulatedNarratorSelect<T>;
   updatedAt?: T;
   createdAt?: T;
   _status?: T;
@@ -1597,6 +1641,15 @@ export interface PopulatedVolumeSelect<T extends boolean = true> {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "PopulatedNarrator_select".
+ */
+export interface PopulatedNarratorSelect<T extends boolean = true> {
+  id?: T;
+  name?: T;
+  slug?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "volumes_select".
  */
 export interface VolumesSelect<T extends boolean = true> {
@@ -1628,6 +1681,8 @@ export interface MediaSelect<T extends boolean = true> {
   caption?: T;
   blurDataURL?: T;
   createdBy?: T;
+  narrator?: T;
+  duration?: T;
   updatedAt?: T;
   createdAt?: T;
   url?: T;

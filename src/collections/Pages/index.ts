@@ -4,6 +4,7 @@ import { authenticatedOrPublished } from "@/access/authenticatedOrPublished"
 import { CollectionGrid } from "@/blocks/CollectionGrid/config"
 import { CallToAction } from "@/blocks/CallToAction/config"
 import { Content } from "@/blocks/Content/config"
+import { Contributors } from "@/blocks/Contributors/config"
 import { FormBlock } from "@/blocks/Form/config"
 import { MediaBlock } from "@/blocks/MediaBlock/config"
 import { Timeline } from "@/blocks/Timeline/config"
@@ -78,6 +79,7 @@ export const Pages: CollectionConfig<"pages"> = {
                 CollectionGrid,
                 CallToAction,
                 Content,
+                Contributors,
                 MediaBlock,
                 Timeline,
                 VolumeView,

@@ -37,8 +37,8 @@ function parsePath(pathname: string): { routeKey: string; docSlug: string | unde
   return { routeKey: "pages", docSlug: first || "home" }
 }
 
-async function queryDocId(routeKey: string, docSlug: string): Promise<string | undefined> {
-  const queries: Record<string, (slug: string) => Promise<{ id: number | string } | null>> = {
+async function queryDocId(routeKey: string, docSlug: string): Promise<number | undefined> {
+  const queries: Record<string, (slug: string) => Promise<{ id: number } | null>> = {
     articles: queryArticleBySlug,
     volumes: queryVolumeBySlug,
     authors: queryUserBySlug,
@@ -46,7 +46,7 @@ async function queryDocId(routeKey: string, docSlug: string): Promise<string | u
     pages: queryPageBySlug,
   }
   const doc = await queries[routeKey]?.(docSlug)
-  return doc?.id != null ? String(doc.id) : undefined
+  return doc?.id ?? undefined
 }
 
 export async function AdminBar(): Promise<React.ReactNode> {
@@ -64,7 +64,7 @@ export async function AdminBar(): Promise<React.ReactNode> {
     ? { plural: routeConfig.plural, singular: routeConfig.singular }
     : undefined
 
-  const id = docSlug ? await queryDocId(routeKey, docSlug) : undefined
+  const docId = docSlug ? await queryDocId(routeKey, docSlug) : undefined
 
   return (
     <div className="h-8 w-full bg-black text-white">
@@ -72,7 +72,7 @@ export async function AdminBar(): Promise<React.ReactNode> {
         preview={isEnabled}
         collectionSlug={collectionSlug}
         collectionLabels={collectionLabels}
-        id={id}
+        id={docId ? String(docId) : undefined}
       />
     </div>
   )

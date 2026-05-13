@@ -30,10 +30,9 @@ export const updateRecommendationsTask: TaskConfig<"updateRecommendations"> = {
     const startedAt = Date.now()
     log.info("[recommendations] === starting update run ===")
 
-    const buildEnv = process.env.BUILD_ENV
-    if (buildEnv !== "staging" && buildEnv !== "production") {
+    if (process.env.NODE_ENV !== "production") {
       log.info(
-        `[recommendations] BUILD_ENV=${buildEnv ?? "(unset)"} — seeding random rankings instead of querying GA4`,
+        "[recommendations] non-production environment — seeding random rankings instead of querying GA4",
       )
       const count = await seedRandomRankings(payload)
       const elapsedMs = Date.now() - startedAt

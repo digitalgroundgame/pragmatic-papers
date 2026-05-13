@@ -1,6 +1,7 @@
 import type { Page } from "@/payload-types"
 import type { Payload, RequiredDataFromCollectionSlug } from "payload"
 
+import { createContactForm } from "./forms"
 import { createRichTextContent } from "./richtext"
 
 type PageData = RequiredDataFromCollectionSlug<"pages">
@@ -228,47 +229,7 @@ export const createPages = async (
     publishedAt: new Date().toISOString(),
   })
 
-  const contactForm = await payload.create({
-    collection: "forms",
-    data: {
-      title: "Contact Form",
-      fields: [
-        {
-          blockType: "text",
-          name: "name",
-          label: "Name",
-          required: true,
-          width: 100,
-        },
-        {
-          blockType: "email",
-          name: "email",
-          label: "Email",
-          required: true,
-          width: 100,
-        },
-        {
-          blockType: "text",
-          name: "subject",
-          label: "Subject",
-          required: true,
-          width: 100,
-        },
-        {
-          blockType: "textarea",
-          name: "message",
-          label: "Message",
-          required: true,
-          width: 100,
-        },
-      ],
-      submitButtonLabel: "Send Message",
-      confirmationType: "message",
-      confirmationMessage: createRichTextContent(
-        "Thank you for reaching out! We will get back to you as soon as possible.",
-      ),
-    },
-  })
+  const contactForm = await createContactForm(payload)
 
   const contactPage = await createOrUpdatePage(payload, {
     title: contact.title,

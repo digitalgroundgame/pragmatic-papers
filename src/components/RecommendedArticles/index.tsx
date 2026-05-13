@@ -1,8 +1,10 @@
-import { ImageMedia } from "@/components/Media/ImageMedia"
-import type { Article, Media } from "@/payload-types"
+import type { Article } from "@/payload-types"
 import configPromise from "@payload-config"
 import { getPayload } from "payload"
 import React from "react"
+
+import { Media } from "@/components/Media"
+import { TimeAgo } from "@/components/TimeAgo"
 
 interface RecommendedArticlesProps {
   currentArticleSlug: string
@@ -24,55 +26,44 @@ export async function RecommendedArticles({
   if (!rankings || rankings.length === 0) return null
 
   const articles = rankings
-    .filter((r): r is typeof r & { article: Article } => typeof r.article === "object")
-    .filter((r) => r.article.slug !== currentArticleSlug)
+    .map((r) => r.article)
+    .filter((r): r is Article => typeof r === "object")
+    .filter((r) => r.slug !== currentArticleSlug)
     .slice(0, DISPLAY_COUNT)
-    .map((r) => {
-      const article = r.article
-      const metaImage = article.meta?.image
-      return {
-        slug: article.slug ?? "",
-        title: article.title,
-        metaImage:
-          typeof metaImage === "object" &&
-          metaImage !== null &&
-          metaImage.mimeType?.startsWith("image/")
-            ? (metaImage as Media & { mimeType: `image/${string}` })
-            : null,
-        metaDescription: article.meta?.description ?? null,
-      }
-    })
 
   if (articles.length === 0) return null
 
   return (
-    <section className="mt-12 border-t pt-8" aria-label="Recommended articles">
+    <section className="container mt-12 max-w-3xl border-t pt-8" aria-label="Recommended articles">
       <h2 className="mb-4">Recommended</h2>
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
         {articles.map((article) => (
           <a
             key={article.slug}
             href={`/articles/${article.slug}`}
-            className="group flex flex-col gap-2"
+            className="group flex flex-row gap-x-4 gap-y-2 md:flex-col"
           >
-            {article.metaImage && (
-              <div className="aspect-video overflow-hidden rounded-sm border">
-                <ImageMedia
-                  media={article.metaImage}
+            {article.meta?.image && (
+              <div className="aspect-square size-24 rounded-sm border md:aspect-video md:size-auto">
+                <Media
+                  media={article.meta.image}
                   variant="medium"
                   sizes="(min-width: 640px) 320px, 100vw"
                   className="h-full w-full object-cover object-center group-hover:opacity-80"
                 />
               </div>
             )}
-            <h3 className="text-primary group-hover:text-primary/80 font-display text-lg leading-none font-bold">
-              {article.title}
-            </h3>
-            {article.metaDescription && (
-              <p className="text-primary line-clamp-2 font-serif text-sm">
-                {article.metaDescription}
-              </p>
-            )}
+            <div className="flex flex-col gap-2">
+              <h3 className="text-primary group-hover:text-primary/80 md:text-2xl">
+                {article.title}
+              </h3>
+              {article.meta?.description && (
+                <p className="text-primary line-clamp-2 hidden font-serif text-sm md:block">
+                  {article.meta.description}
+                </p>
+              )}
+              <TimeAgo publishedAt={article.publishedAt} />
+            </div>
           </a>
         ))}
       </div>

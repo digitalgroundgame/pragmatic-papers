@@ -7,6 +7,29 @@ import { LightboxMediaBlock } from "@/blocks/MediaBlock/LightboxMediaBlock"
 import type { ParentDocContext } from "@/blocks/SocialEmbed/types"
 import { SquiggleRuleBlock } from "@/blocks/SquiggleRule/Component"
 import { TimelineBlock } from "@/blocks/Timeline/Component"
+import type {
+  BannerBlock as BannerBlockProps,
+  CallToActionBlock as CTABlockProps,
+  FootnoteBlock as FootnoteBlockProps,
+  MediaBlock as MediaBlockProps,
+  MediaCollageBlock as MediaCollageBlockProps,
+  SocialEmbedBlock as SocialEmbedBlockProps,
+  SquiggleRuleBlock as SquiggleRuleBlockProps,
+  TimelineBlock as TimelineBlockProps,
+} from "@/payload-types"
+import { cn } from "@/utilities/utils"
+import type {
+  DefaultNodeTypes,
+  DefaultTypedEditorState,
+  SerializedBlockNode,
+  SerializedInlineBlockNode,
+  SerializedLinkNode,
+} from "@payloadcms/richtext-lexical"
+import {
+  RichText as ConvertRichText,
+  type JSXConvertersFunction,
+  LinkJSXConverter,
+} from "@payloadcms/richtext-lexical/react"
 import dynamic from "next/dynamic"
 
 // Lazy-loaded blocks: heavy deps (prism-react-renderer, better-react-mathjax,
@@ -35,29 +58,6 @@ const TwitterEmbedBlock = dynamic(() =>
 const YouTubeEmbedBlock = dynamic(() =>
   import("@/blocks/SocialEmbed/embeds/YouTubeEmbed").then((mod) => mod.YouTubeEmbedBlock),
 )
-import type {
-  BannerBlock as BannerBlockProps,
-  CallToActionBlock as CTABlockProps,
-  FootnoteBlock as FootnoteBlockProps,
-  MediaBlock as MediaBlockProps,
-  MediaCollageBlock as MediaCollageBlockProps,
-  SocialEmbedBlock as SocialEmbedBlockProps,
-  SquiggleRuleBlock as SquiggleRuleBlockProps,
-  TimelineBlock as TimelineBlockProps,
-} from "@/payload-types"
-import { cn } from "@/utilities/utils"
-import type {
-  DefaultNodeTypes,
-  DefaultTypedEditorState,
-  SerializedBlockNode,
-  SerializedInlineBlockNode,
-  SerializedLinkNode,
-} from "@payloadcms/richtext-lexical"
-import {
-  RichText as ConvertRichText,
-  type JSXConvertersFunction,
-  LinkJSXConverter,
-} from "@payloadcms/richtext-lexical/react"
 
 type NodeTypes =
   | DefaultNodeTypes

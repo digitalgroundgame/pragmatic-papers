@@ -4,11 +4,11 @@ import type { CodeBlock as CodeBlockType } from "@/payload-types"
 import { cn } from "@/utilities/utils"
 import { Code } from "./Component.client"
 
-type Props = CodeBlockType & {
+export type CodeBlockProps = CodeBlockType & {
   className?: string
 }
 
-export const CodeBlock: React.FC<Props> = ({ className, code, language }) => {
+export const CodeBlock: React.FC<CodeBlockProps> = ({ className, code, language }) => {
   return (
     <div className={cn("not-prose", className)}>
       <Code code={code} language={language ?? "typescript"} />

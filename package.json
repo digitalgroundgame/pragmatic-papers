@@ -5,6 +5,7 @@
   "license": "MIT",
   "type": "module",
   "scripts": {
+    "preinstall": "node scripts/copy-env.mjs",
     "install:env": "node scripts/install-with-env.mjs",
     "postinstall": "node scripts/install-fonts.mjs",
     "build": "cross-env NODE_OPTIONS=--no-deprecation next build",

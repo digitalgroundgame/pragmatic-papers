@@ -1,14 +1,13 @@
-import { copyFileSync, existsSync, readFileSync } from "fs"
+import { readFileSync } from "fs"
 import { dirname, resolve } from "path"
 import process from "process"
 import { spawnSync } from "child_process"
 import { fileURLToPath } from "url"
-import { blue, gray, green, red } from "./ansi.mjs"
+import { blue, green, red } from "./ansi.mjs"
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const root = resolve(__dirname, "..")
 const envPath = resolve(root, ".env")
-const exampleEnvPath = resolve(root, ".env.example")
 
 const run = (command, args) => {
   const result = spawnSync(command, args, {
@@ -56,19 +55,7 @@ const parseEnv = (contents) => {
 }
 
 console.warn(`${blue("●")} Loading install environment...`)
-
-if (!existsSync(envPath)) {
-  if (!existsSync(exampleEnvPath)) {
-    console.error(`${red("✗")} No .env.example found`)
-    process.exit(1)
-  }
-
-  copyFileSync(exampleEnvPath, envPath)
-  console.warn(`${green("✔")} Copied .env.example → .env`)
-} else {
-  console.warn(gray("○ .env already exists"))
-}
-
+run("node", [resolve(__dirname, "copy-env.mjs")])
 parseEnv(readFileSync(envPath, "utf8"))
 console.warn(`${green("✔")} Loaded .env`)
 

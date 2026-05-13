@@ -28,7 +28,7 @@ This repo uses some additional tools:
 
 1. [Clone the repo](https://github.com/digitalgroundgame/pragmatic-papers.git) and `cd` into it.
 2. _(Optional)_ Set up the private display font — see [Private Font Setup](#private-font-setup) below. Don't worry you can come back to this later.
-3. Run `pnpm install`. The preinstall hook copies `apps/pragmatic-papers/.env` from `.env.example` if missing.
+3. Run `pnpm install:env`. The wrapper copies `.env` from `.env.example` if missing, loads it, then runs `pnpm install`.
 4. Start dev:
 
 ```bash
@@ -43,24 +43,19 @@ The `@digitalgroundgame/fonts` package contains the proprietary display font. It
 
 If you do have access, create a **Classic GitHub Personal Access Token (PAT)** at [GitHub Settings → Tokens](https://github.com/settings/tokens) with the `read:packages` scope.
 
-The project `.npmrc` references `GH_FONT_READ` — you just need that variable set before running `pnpm install`. Choose whichever method suits you:
+The project `.npmrc` references `GH_FONT_READ`. Add the token to your local `.env`:
 
-- **Mac/Linux — shell profile** (applies to every terminal automatically):
+```dotenv
+GH_FONT_READ=ghp_your_token_here
+```
 
-  ```bash
-  # ~/.zshrc or ~/.bashrc
-  export GH_FONT_READ=ghp_your_token_here
-  ```
+Then run the install wrapper:
 
-- **Windows (PowerShell)** — set permanently for your user:
+```bash
+pnpm install:env
+```
 
-  ```powershell
-  [System.Environment]::SetEnvironmentVariable("GH_FONT_READ", "ghp_your_token_here", "User")
-  ```
-
-  Alternatively, open **System Properties → Advanced → Environment Variables** (search "environment variables" in the Start menu) and add `GH_FONT_READ` under "User variables".
-
-Restart your terminal after setting the variable, then re-run `pnpm install`. You should see `✓ Fonts copied to public/fonts` in the output.
+This keeps the GitHub Packages token scoped to the project instead of requiring a global shell or machine environment variable. You should see `✓ Fonts copied to public/fonts` in the output.
 
 ## Seeding the Database
 

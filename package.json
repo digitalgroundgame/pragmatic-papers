@@ -5,7 +5,7 @@
   "license": "MIT",
   "type": "module",
   "scripts": {
-    "preinstall": "node scripts/copy-env.mjs",
+    "install:env": "node scripts/install-with-env.mjs",
     "postinstall": "node scripts/install-fonts.mjs",
     "build": "cross-env NODE_OPTIONS=--no-deprecation next build",
     "postbuild": "next-sitemap --config next-sitemap.config.cjs",
@@ -24,7 +24,7 @@
     "format": "prettier --check .",
     "format:fix": "prettier --write .",
     "payload": "cross-env NODE_OPTIONS=--no-deprecation PAYLOAD_CONFIG_PATH=src/payload.config.ts payload",
-    "reinstall": "cross-env NODE_OPTIONS=--no-deprecation rm -rf node_modules && pnpm install",
+    "reinstall": "cross-env NODE_OPTIONS=--no-deprecation rm -rf node_modules && pnpm install:env",
     "start": "cross-env NODE_OPTIONS=--no-deprecation next start",
     "check-types": "cross-env NODE_OPTIONS=--no-deprecation tsc --noEmit",
     "ci": "payload migrate && pnpm build",

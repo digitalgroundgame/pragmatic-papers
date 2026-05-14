@@ -5,6 +5,7 @@ import { toRoman } from "@/utilities/toRoman"
 import { formBuilderPlugin } from "@payloadcms/plugin-form-builder"
 import { nestedDocsPlugin } from "@payloadcms/plugin-nested-docs"
 import { redirectsPlugin } from "@payloadcms/plugin-redirects"
+import { searchPlugin } from "@payloadcms/plugin-search"
 import { seoPlugin } from "@payloadcms/plugin-seo"
 import { type GenerateTitle, type GenerateURL } from "@payloadcms/plugin-seo/types"
 import { FixedToolbarFeature, HeadingFeature, lexicalEditor } from "@payloadcms/richtext-lexical"
@@ -32,7 +33,34 @@ const generateURL: GenerateURL<Volume | Article | Page | Topic> = ({ doc }) => {
   return doc?.slug ? `${url}/${doc.slug}` : url
 }
 
+const beforeSync: NonNullable<Parameters<typeof searchPlugin>[0]["beforeSync"]> = ({
+  originalDoc,
+  searchDoc,
+}) => {
+  const title =
+    (originalDoc.title as string | undefined) || (originalDoc.name as string | undefined) || ""
+  const meta = originalDoc.meta as Record<string, unknown> | undefined
+  const excerpt =
+    (meta?.description as string | undefined) ||
+    (originalDoc.description as string | undefined) ||
+    ""
+  const slug = (originalDoc.slug as string | undefined) || ""
+
+  return { ...searchDoc, title, excerpt, slug }
+}
+
 export const plugins: Plugin[] = [
+  searchPlugin({
+    collections: ["articles", "pages", "volumes", "topics"],
+    beforeSync,
+    searchOverrides: {
+      fields: ({ defaultFields }) => [
+        ...defaultFields,
+        { name: "excerpt", type: "text", admin: { readOnly: true } },
+        { name: "slug", type: "text", admin: { readOnly: true } },
+      ],
+    },
+  }),
   redirectsPlugin({
     collections: ["pages", "volumes", "articles"],
     overrides: {

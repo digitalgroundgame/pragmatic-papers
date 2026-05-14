@@ -203,6 +203,7 @@ export interface Config {
     users: User;
     webhooks: Webhook;
     topics: Topic;
+    search: Search;
     redirects: Redirect;
     forms: Form;
     'form-submissions': FormSubmission;
@@ -222,6 +223,7 @@ export interface Config {
     users: UsersSelect<false> | UsersSelect<true>;
     webhooks: WebhooksSelect<false> | WebhooksSelect<true>;
     topics: TopicsSelect<false> | TopicsSelect<true>;
+    search: SearchSelect<false> | SearchSelect<true>;
     redirects: RedirectsSelect<false> | RedirectsSelect<true>;
     forms: FormsSelect<false> | FormsSelect<true>;
     'form-submissions': FormSubmissionsSelect<false> | FormSubmissionsSelect<true>;
@@ -1119,6 +1121,38 @@ export interface Webhook {
   createdAt: string;
 }
 /**
+ * This is a collection of automatically created search results. These results are used by the global site search and will be updated automatically as documents in the CMS are created or updated.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "search".
+ */
+export interface Search {
+  id: number;
+  title?: string | null;
+  priority?: number | null;
+  doc:
+    | {
+        relationTo: 'articles';
+        value: number | Article;
+      }
+    | {
+        relationTo: 'pages';
+        value: number | Page;
+      }
+    | {
+        relationTo: 'volumes';
+        value: number | Volume;
+      }
+    | {
+        relationTo: 'topics';
+        value: number | Topic;
+      };
+  excerpt?: string | null;
+  slug?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "redirects".
  */
@@ -1321,6 +1355,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'topics';
         value: number | Topic;
+      } | null)
+    | ({
+        relationTo: 'search';
+        value: number | Search;
       } | null)
     | ({
         relationTo: 'redirects';
@@ -1866,6 +1904,19 @@ export interface TopicsSelect<T extends boolean = true> {
         description?: T;
       };
   generateSlug?: T;
+  slug?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "search_select".
+ */
+export interface SearchSelect<T extends boolean = true> {
+  title?: T;
+  priority?: T;
+  doc?: T;
+  excerpt?: T;
   slug?: T;
   updatedAt?: T;
   createdAt?: T;

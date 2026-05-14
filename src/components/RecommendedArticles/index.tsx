@@ -44,7 +44,7 @@ export async function RecommendedArticles({
             className="group flex flex-row gap-x-4 gap-y-2 md:flex-col"
           >
             {article.meta?.image && (
-              <div className="aspect-square size-24 rounded-sm border md:aspect-video md:size-auto">
+              <div className="aspect-square size-24 min-w-24 overflow-hidden rounded-sm border md:aspect-video md:size-auto">
                 <Media
                   media={article.meta.image}
                   variant="medium"

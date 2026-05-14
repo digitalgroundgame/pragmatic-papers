@@ -10,7 +10,7 @@ describe("Payload database", () => {
   })
 
   afterAll(async () => {
-    await payload.db.destroy()
+    await payload.db.destroy?.()
   })
 
   it("connects and returns a valid find result from the users collection", async () => {

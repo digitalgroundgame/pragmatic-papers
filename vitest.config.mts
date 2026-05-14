@@ -1,5 +1,9 @@
 import react from "@vitejs/plugin-react"
+import path from "path"
+import { fileURLToPath } from "url"
 import { defineConfig } from "vitest/config"
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 export default defineConfig({
   test: {
@@ -15,7 +19,12 @@ export default defineConfig({
         },
       },
       {
-        resolve: { tsconfigPaths: true },
+        resolve: {
+          tsconfigPaths: true,
+          // tsconfig maps "react" → @types/react for type-checking, but that package has
+          // no runtime exports. Override it here so Vite resolves to the actual runtime package.
+          alias: { react: path.resolve(__dirname, "node_modules/react") },
+        },
         test: {
           name: "integration",
           environment: "node",

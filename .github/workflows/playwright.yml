@@ -46,7 +46,7 @@ jobs:
         run: pnpm exec playwright install --with-deps chromium
 
       - name: Run Playwright tests
-        run: pnpm test:e2e -- --project=chromium
+        run: pnpm exec playwright test --config=playwright.config.ts --project=chromium
 
       - uses: actions/upload-artifact@v4
         if: ${{ !cancelled() }}

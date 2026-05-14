@@ -1,5 +1,5 @@
 "use client"
-import { useTheme } from "next-themes"
+import { useTheme } from "@wrksz/themes/client"
 import { Highlight, themes } from "prism-react-renderer"
 import React from "react"
 import { CopyButton } from "./CopyButton"

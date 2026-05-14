@@ -1,6 +1,7 @@
 "use client"
 
 import type { RecommendedArticleCandidate } from "@/app/(frontend)/recommended-articles.json/route"
+import { sendGAEvent } from "@next/third-parties/google"
 import React, { useEffect, useState } from "react"
 import { Media } from "@/components/Media"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -67,7 +68,14 @@ export function RecommendedArticles({
       .then((candidates) => {
         if (cancelled) return
         const filtered = candidates.filter((c) => c.slug !== currentArticleSlug)
-        setSampled(weightedSampleWithoutReplacement(filtered, DISPLAY_COUNT))
+        const picks = weightedSampleWithoutReplacement(filtered, DISPLAY_COUNT)
+        setSampled(picks)
+        if (picks.length > 0) {
+          sendGAEvent("event", "recommended_section_view", {
+            source_slug: currentArticleSlug,
+            count: picks.length,
+          })
+        }
       })
       .catch(() => {
         if (!cancelled) setSampled([])
@@ -99,11 +107,18 @@ export function RecommendedArticles({
                 </div>
               </div>
             ))
-          : sampled.map((article) => (
+          : sampled.map((article, index) => (
               <a
                 key={article.slug}
                 href={`/articles/${article.slug}`}
                 className="group flex flex-row gap-x-4 gap-y-2 md:flex-col"
+                onClick={() => {
+                  sendGAEvent("event", "recommended_article_click", {
+                    source_slug: currentArticleSlug,
+                    target_slug: article.slug,
+                    position: index + 1,
+                  })
+                }}
               >
                 {article.metaImage && (
                   <div className="aspect-square size-24 min-w-24 overflow-hidden rounded-sm border md:aspect-video md:size-auto">

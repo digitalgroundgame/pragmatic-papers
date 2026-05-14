@@ -81,10 +81,10 @@ export function RecommendedArticles({
               <div key={i} className="flex flex-row gap-x-4 gap-y-2 md:flex-col" aria-hidden>
                 <Skeleton className="aspect-square size-24 min-w-24 rounded-sm md:aspect-video md:size-auto md:w-full" />
                 <div className="flex flex-1 flex-col gap-2">
-                  <Skeleton className="h-5 w-3/4 md:h-7" />
-                  <Skeleton className="hidden h-4 w-full md:block" />
-                  <Skeleton className="hidden h-4 w-5/6 md:block" />
-                  <Skeleton className="h-3 w-20" />
+                  <Skeleton className="h-6 w-3/4" />
+                  <Skeleton className="hidden h-5 w-full md:block" />
+                  <Skeleton className="hidden h-5 w-5/6 md:block" />
+                  <Skeleton className="mt-1 h-4 w-20" />
                 </div>
               </div>
             ))

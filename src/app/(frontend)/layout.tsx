@@ -1,12 +1,13 @@
 import { AdminBar } from "@/components/AdminBar"
+import { Breadcrumbs } from "@/components/Breadcrumbs"
 import { Footer } from "@/Footer/Component"
 import { Header } from "@/Header/Component"
 import { getServerSideURL } from "@/utilities/getURL"
 import { mergeOpenGraph } from "@/utilities/mergeOpenGraph"
 import { cn } from "@/utilities/utils"
 import { GoogleAnalytics } from "@next/third-parties/google"
+import { ThemeProvider } from "@wrksz/themes/next"
 import type { Metadata } from "next"
-import { ThemeProvider } from "next-themes"
 import { Geist } from "next/font/google"
 import localFont from "next/font/local"
 import React from "react"
@@ -55,6 +56,7 @@ export default async function RootLayout({
           <AdminBar />
           <Header />
           <main role="main" className="my-6 flex-1">
+            <Breadcrumbs />
             {children}
           </main>
           <Footer />

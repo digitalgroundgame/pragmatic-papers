@@ -2,8 +2,9 @@ import { AuthorArticleCard } from "@/components/Articles/AuthorArticleCard"
 import { LivePreviewListener } from "@/components/LivePreviewListener"
 import { Pagination } from "@/components/Pagination"
 import { PayloadRedirects } from "@/components/PayloadRedirects"
-import type { Topic, Volume } from "@/payload-types"
+import type { Volume } from "@/payload-types"
 import { generateMeta } from "@/utilities/generateMeta"
+import { queryTopicBySlug } from "@/utilities/queries"
 import config from "@payload-config"
 import type { Metadata } from "next"
 import { draftMode } from "next/headers"
@@ -36,28 +37,6 @@ export async function generateStaticParams(): Promise<{ slug: string | null | un
 
   return docs.map(({ slug }) => ({ slug }))
 }
-
-const queryTopicBySlug = cache(async (slug: string): Promise<Topic | null> => {
-  const { isEnabled: draft } = await draftMode()
-
-  const payload = await getPayload({ config })
-
-  const { docs } = await payload.find({
-    collection: "topics",
-    draft,
-    limit: 1,
-    overrideAccess: draft,
-    pagination: false,
-    where: {
-      slug: {
-        equals: slug,
-      },
-    },
-    depth: 0,
-  })
-
-  return docs[0] || null
-})
 
 const ARTICLES_PER_PAGE = 5
 const queryArticlesByTopic = cache(async (topicId: number, page: number = 1) => {

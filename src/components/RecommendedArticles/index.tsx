@@ -16,29 +16,6 @@ const DISPLAY_COUNT = 4
 
 // Efraimidis–Spirakis weighted sampling without replacement: for each item,
 // draw u ~ Uniform(0,1) and compute key = u^(1/w); take the top-k by key.
-let cachedCandidates: RecommendedArticleCandidate[] | null = null
-let inflightFetch: Promise<RecommendedArticleCandidate[]> | null = null
-
-function getCandidates(): Promise<RecommendedArticleCandidate[]> {
-  if (cachedCandidates) return Promise.resolve(cachedCandidates)
-  if (inflightFetch) return inflightFetch
-  inflightFetch = fetch("/recommended-articles.json", {
-    cache: "no-store",
-    priority: "low",
-  } as RequestInit)
-    .then((r) => r.json() as Promise<{ candidates: RecommendedArticleCandidate[] }>)
-    .then(({ candidates }) => {
-      cachedCandidates = candidates
-      inflightFetch = null
-      return candidates
-    })
-    .catch((e) => {
-      inflightFetch = null
-      throw e
-    })
-  return inflightFetch
-}
-
 function weightedSampleWithoutReplacement<T extends { engagementScore: number }>(
   items: T[],
   k: number,
@@ -64,8 +41,12 @@ export function RecommendedArticles({
   useEffect(() => {
     if (!inView) return
     let cancelled = false
-    getCandidates()
-      .then((candidates) => {
+    fetch("/recommended-articles.json", {
+      cache: "no-store",
+      priority: "low",
+    } as RequestInit)
+      .then((r) => r.json() as Promise<{ candidates: RecommendedArticleCandidate[] }>)
+      .then(({ candidates }) => {
         if (cancelled) return
         const filtered = candidates.filter((c) => c.slug !== currentArticleSlug)
         const picks = weightedSampleWithoutReplacement(filtered, DISPLAY_COUNT)

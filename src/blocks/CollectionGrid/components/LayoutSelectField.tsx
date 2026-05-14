@@ -41,12 +41,15 @@ export const LayoutSelectField: React.FC<LayoutSelectFieldProps> = (props) => {
 
   // Keep a ref to the current slot row count so the effect below doesn't
   // need to subscribe to it (avoiding re-runs every time a row is added).
-  const rowCountRef = useRef(0)
-  rowCountRef.current = useFormFields(([fields]) => {
+  const rowCount = useFormFields(([fields]) => {
     const slotsField = fields[slotsPath]
     return slotsField && "rows" in slotsField && Array.isArray(slotsField.rows)
       ? slotsField.rows.length
       : 0
+  })
+  const rowCountRef = useRef(rowCount)
+  useEffect(() => {
+    rowCountRef.current = rowCount
   })
 
   const prevLayoutRef = useRef(layoutValue)
@@ -58,13 +61,13 @@ export const LayoutSelectField: React.FC<LayoutSelectFieldProps> = (props) => {
     const requiredCount = slotCounts[layoutValue] || 0
     if (!requiredCount) return
 
-    const rowCount = rowCountRef.current
-    if (rowCount < requiredCount) {
-      for (let i = rowCount; i < requiredCount; i++) {
+    const count = rowCountRef.current
+    if (count < requiredCount) {
+      for (let i = count; i < requiredCount; i++) {
         addFieldRow({ path: slotsPath, rowIndex: i, schemaPath: slotsSchemaPath })
       }
-    } else if (rowCount > requiredCount) {
-      for (let i = rowCount - 1; i >= requiredCount; i--) {
+    } else if (count > requiredCount) {
+      for (let i = count - 1; i >= requiredCount; i--) {
         removeFieldRow({ path: slotsPath, rowIndex: i })
       }
     }

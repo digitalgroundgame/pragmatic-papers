@@ -20,12 +20,9 @@ interface TwitterEmbedClientProps {
 
 export function TwitterEmbedClient({ targetId }: TwitterEmbedClientProps): React.ReactNode {
   const pathname = usePathname()
-  const [ready, setReady] = useState(false)
-
-  // If the script is already present (client nav / HMR), mark ready.
-  useEffect(() => {
-    if (window.twttr?.widgets?.load) setReady(true)
-  }, [])
+  const [ready, setReady] = useState(
+    () => typeof window !== "undefined" && !!window.twttr?.widgets?.load,
+  )
 
   // Transform to iframe when ready, when markup changes, and on navigation.
   useEffect(() => {

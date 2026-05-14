@@ -5,7 +5,6 @@ import { useDebounce } from "@/utilities/useDebounce"
 import { TextField, useField } from "@payloadcms/ui"
 import { CheckCircle2, XCircle } from "lucide-react"
 import type { TextFieldClientComponent } from "payload"
-import { useEffect, useState } from "react"
 
 /**
  * A custom TextField component for validating social media URLs.
@@ -16,16 +15,9 @@ import { useEffect, useState } from "react"
 export const URLField: TextFieldClientComponent = ({ path, ...props }) => {
   const { value } = useField<string>({ path })
   const debouncedValue = useDebounce(value || "", 500)
-  const [isValid, setIsValid] = useState<boolean | null>(null)
 
-  useEffect(() => {
-    if (!debouncedValue || debouncedValue.trim() === "") {
-      return setIsValid(null)
-    }
-
-    const platform = detectPlatform(debouncedValue)
-    setIsValid(platform !== null)
-  }, [debouncedValue])
+  const isValid: boolean | null =
+    !debouncedValue || debouncedValue.trim() === "" ? null : detectPlatform(debouncedValue) !== null
 
   return (
     <div className="url-field-wrapper">

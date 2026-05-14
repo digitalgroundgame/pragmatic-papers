@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
 
-export function middleware(request: NextRequest): ReturnType<typeof NextResponse.next> {
+export function proxy(request: NextRequest): ReturnType<typeof NextResponse.next> {
   const requestHeaders = new Headers(request.headers)
   requestHeaders.set("x-pathname", request.nextUrl.pathname)
   return NextResponse.next({ request: { headers: requestHeaders } })

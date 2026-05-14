@@ -1,5 +1,10 @@
 import { withPayload } from "@payloadcms/next/withPayload"
 import type { NextConfig } from "next"
+import path from "path"
+import { fileURLToPath } from "url"
+
+const __filename = fileURLToPath(import.meta.url)
+const dirname = path.dirname(__filename)
 
 const NEXT_PUBLIC_SERVER_URL = new URL(
   process.env.NEXT_PUBLIC_SERVER_URL || "http://localhost:8000",
@@ -11,6 +16,11 @@ const NEXT_PUBLIC_SUPABASE_URL = new URL(
 
 const nextConfig: NextConfig = {
   output: "standalone",
+  // Temporarily required on Windows until Next.js fixes Turbopack Sass resolution.
+  // See: https://github.com/vercel/next.js/issues/86431
+  sassOptions: {
+    loadPaths: ["./node_modules/@payloadcms/ui/dist/scss/"],
+  },
   images: {
     qualities: [80],
     remotePatterns: [
@@ -110,6 +120,7 @@ const nextConfig: NextConfig = {
     ]
   },
   turbopack: {
+    root: path.resolve(dirname),
     resolveExtensions: [".mdx", ".tsx", ".ts", ".jsx", ".js", ".mjs", ".json"],
     rules: {
       "*.svg": {

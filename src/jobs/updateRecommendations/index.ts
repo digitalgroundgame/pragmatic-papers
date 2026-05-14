@@ -8,6 +8,7 @@ import {
   MIN_TOTAL_USERS,
   readGA4Env,
   scoreArticles,
+  seedRandomRankings,
   writeRankings,
 } from "./logic"
 
@@ -28,6 +29,18 @@ export const updateRecommendationsTask: TaskConfig<"updateRecommendations"> = {
     const log = payload.logger
     const startedAt = Date.now()
     log.info("[recommendations] === starting update run ===")
+
+    if (process.env.NODE_ENV !== "production") {
+      log.info(
+        "[recommendations] non-production environment — seeding random rankings instead of querying GA4",
+      )
+      const count = await seedRandomRankings(payload)
+      const elapsedMs = Date.now() - startedAt
+      log.info(
+        `[recommendations] === done — seeded ${count} random rankings in ${(elapsedMs / 1000).toFixed(1)}s ===`,
+      )
+      return { output: { count } }
+    }
 
     log.debug("[recommendations] step 1/5: reading GA4 credentials from env")
     const { propertyId, clientEmail, privateKey } = readGA4Env()

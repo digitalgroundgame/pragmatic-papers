@@ -71,6 +71,20 @@ export const queryVolumeBySlug = cache(async (slug: string) => {
   return docs[0] || null
 })
 
+export const queryArticleBySlug = cache(async (slug: string) => {
+  const { isEnabled: draft } = await draftMode()
+  const payload = await getPayloadConfig()
+  const { docs } = await payload.find({
+    collection: "articles",
+    draft,
+    limit: 1,
+    overrideAccess: draft,
+    pagination: false,
+    where: { slug: { equals: slug } },
+  })
+  return docs[0] || null
+})
+
 export const queryPageBySlug = cache(async (slug: string) => {
   const { isEnabled: draft } = await draftMode()
   const payload = await getPayloadConfig()

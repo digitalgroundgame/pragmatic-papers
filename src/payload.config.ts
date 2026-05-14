@@ -8,7 +8,9 @@ import { Volumes } from "@/collections/Volumes"
 import { Webhooks } from "@/collections/Webhooks"
 import { defaultLexical } from "@/fields/defaultLexical"
 import { Footer } from "@/Footer/config"
+import { ArticleRecommendations } from "@/globals/ArticleRecommendations/config"
 import { Header } from "@/Header/config"
+import { updateRecommendationsTask } from "@/jobs/updateRecommendations"
 import { plugins } from "@/plugins"
 import { getServerSideURL } from "@/utilities/getURL"
 import { postgresAdapter } from "@payloadcms/db-postgres"
@@ -87,7 +89,7 @@ export default buildConfig({
   }),
   collections: [Pages, Articles, Volumes, Media, Categories, Users, Webhooks, Topics],
   cors: [getServerSideURL()].filter(Boolean),
-  globals: [Header, Footer],
+  globals: [Header, Footer, ArticleRecommendations],
   plugins: [...plugins],
   secret: process.env.PAYLOAD_SECRET,
   sharp: sharp as unknown as SharpDependency,
@@ -105,6 +107,21 @@ export default buildConfig({
         })
       },
     },
+    {
+      path: "/article-recommendations/run",
+      method: "post",
+      handler: async (req) => {
+        if (!req.user) {
+          return Response.json({ error: "Unauthorized" }, { status: 401 })
+        }
+        const job = await req.payload.jobs.queue({
+          task: "updateRecommendations",
+          input: {},
+        })
+        const result = await req.payload.jobs.run({ queue: "default", limit: 1 })
+        return Response.json({ jobId: job.id, result })
+      },
+    },
   ],
   jobs: {
     access: {
@@ -119,6 +136,7 @@ export default buildConfig({
         return authHeader === `Bearer ${process.env.CRON_SECRET}`
       },
     },
-    tasks: [],
+    autoRun: [{ cron: "*/5 * * * *", queue: "default" }],
+    tasks: [updateRecommendationsTask],
   },
 })

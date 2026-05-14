@@ -1,5 +1,6 @@
 import type { Media, User } from "@/payload-types"
 import type { Payload } from "payload"
+import { seedRandomRankings } from "@/jobs/updateRecommendations/logic"
 import { createArticle, getWriterOrThrow, validateWriters } from "./articles"
 import { createBannerBlocksArticle } from "./features/banners"
 import { createCodeBlocksArticle } from "./features/code-blocks"
@@ -322,6 +323,12 @@ export const seed = async (
           termsOfUsePage,
           volumesPage,
         })
+      },
+    },
+    {
+      name: "Seeding article recommendations...",
+      fn: async () => {
+        await seedRandomRankings(payload)
       },
     },
   ]

@@ -1,5 +1,4 @@
-import type { NextRequest } from "next/server"
-import { NextResponse } from "next/server"
+import { type NextRequest, NextResponse } from "next/server"
 
 export function proxy(request: NextRequest): ReturnType<typeof NextResponse.next> {
   const requestHeaders = new Headers(request.headers)

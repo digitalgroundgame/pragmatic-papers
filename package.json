@@ -36,6 +36,7 @@
   },
   "dependencies": {
     "@base-ui/react": "^1.2.0",
+    "@google-analytics/data": "^5.2.2",
     "@next/third-parties": "^15.3.6",
     "@payloadcms/admin-bar": "^3.79.0",
     "@payloadcms/db-postgres": "^3.79.0",

@@ -2,7 +2,7 @@
   "$schema": "https://json.schemastore.org/tsconfig",
   "compilerOptions": {
     "esModuleInterop": true,
-    "incremental": false,
+    "incremental": true,
     "isolatedModules": true,
     "lib": ["es2022", "DOM", "DOM.Iterable"],
     "moduleDetection": "force",
@@ -12,17 +12,13 @@
     "strict": true,
     "target": "ES2022",
     "noImplicitOverride": true,
-    "strictNullChecks": true,
     "forceConsistentCasingInFileNames": true,
     "sourceMap": true,
     "module": "ESNext",
     "moduleResolution": "Bundler",
     "allowJs": true,
-    "jsx": "preserve",
+    "jsx": "react-jsx",
     "noEmit": true,
-    "declaration": false,
-    "declarationMap": false,
-
     "baseUrl": ".",
     "plugins": [
       {
@@ -39,10 +35,11 @@
     "**/*.ts",
     "**/*.tsx",
     ".next/types/**/*.ts",
+    "next-env.d.ts",
     "redirects.js",
     "next.config.ts",
     "next-sitemap.config.cjs",
-    "scripts/install-fonts.cjs"
+    ".next/dev/types/**/*.ts"
   ],
   "exclude": ["node_modules"]
 }

@@ -9,14 +9,14 @@ import { Separator } from "@/components/ui/separator"
 import type { Article } from "@/payload-types"
 import { formatDateTime } from "@/utilities/formatDateTime"
 import { generateMeta } from "@/utilities/generateMeta"
+import { queryVolumeBySlug } from "@/utilities/queries"
 import { buildBreadcrumbJsonLd, buildVolumeJsonLd } from "@/utilities/structuredData"
 import { toRoman } from "@/utilities/toRoman"
 import configPromise from "@payload-config"
 import type { Metadata } from "next"
 import { draftMode } from "next/headers"
-import type { Payload } from "payload"
 import { getPayload } from "payload"
-import React, { cache } from "react"
+import React from "react"
 
 export async function generateStaticParams(): Promise<{ slug: string | null | undefined }[]> {
   const payload = await getPayload({ config: configPromise })
@@ -43,28 +43,6 @@ interface Args {
     slug?: string
   }>
 }
-
-const queryVolumeBySlug = cache(async (slug: string) => {
-  const { isEnabled: draft } = await draftMode()
-
-  const payload: Payload = await getPayload({ config: configPromise })
-
-  const result = await payload.find({
-    collection: "volumes",
-    draft,
-    limit: 1,
-    overrideAccess: draft,
-    pagination: false,
-    where: {
-      slug: {
-        equals: slug,
-      },
-    },
-    depth: 2,
-  })
-
-  return result.docs?.[0] || null
-})
 
 export async function generateMetadata({ params: paramsPromise }: Args): Promise<Metadata> {
   const { slug = "" } = await paramsPromise

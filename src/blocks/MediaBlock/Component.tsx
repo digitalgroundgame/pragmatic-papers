@@ -68,7 +68,7 @@ export const MediaBlock: React.FC<StyledMediaBlockProps> = ({ sizes, ...props })
     variant = "medium",
     disableInnerContainer,
   } = props
-  if (typeof media === "number") return null
+  if (typeof media === "number" || !media) return null
 
   sizes = sizes || "(max-width: 768px) 100vw, 800px"
 

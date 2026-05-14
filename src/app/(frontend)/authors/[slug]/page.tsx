@@ -9,11 +9,12 @@ import { PayloadRedirects } from "@/components/PayloadRedirects"
 import RichText from "@/components/RichText"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Separator } from "@/components/ui/separator"
-import type { Article as ArticleType, User, Volume } from "@/payload-types"
+import type { Article as ArticleType, Volume } from "@/payload-types"
 import { getInitials } from "@/utilities/getInitials"
 import { getMediaUrl } from "@/utilities/getMediaUrl"
 import { getServerSideURL } from "@/utilities/getURL"
 import { mergeOpenGraph } from "@/utilities/mergeOpenGraph"
+import { queryUserBySlug } from "@/utilities/queries"
 import { buildBreadcrumbJsonLd, buildPersonJsonLd } from "@/utilities/structuredData"
 import config from "@payload-config"
 import type { Metadata } from "next"
@@ -56,36 +57,6 @@ interface Args {
     p?: string
   }>
 }
-
-const queryUserBySlug = cache(async (slug: string): Promise<User | null> => {
-  const { isEnabled: draft } = await draftMode()
-
-  const payload = await getPayload({ config })
-
-  const { docs } = await payload.find({
-    collection: "users",
-    draft,
-    limit: 1,
-    pagination: false,
-    where: {
-      and: [
-        {
-          role: {
-            in: ["writer", "editor", "chief-editor", "narrator"],
-          },
-        },
-        {
-          slug: {
-            equals: slug,
-          },
-        },
-      ],
-    },
-    depth: 1,
-  })
-
-  return docs[0] || null
-})
 
 const ARTICLES_PER_PAGE = 5
 const queryArticlesByAuthor = cache(async (userId: number, page: number = 1) => {

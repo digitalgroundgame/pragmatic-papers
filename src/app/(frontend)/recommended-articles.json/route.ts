@@ -8,6 +8,7 @@ export interface RecommendedArticleCandidate {
   title: string
   metaImage: (Media & { mimeType: `image/${string}` }) | null
   metaDescription: string | null
+  publishedAt: string | null
   engagementScore: number
 }
 
@@ -31,6 +32,7 @@ export async function GET(_request: NextRequest): Promise<Response> {
             ? (metaImage as Media & { mimeType: `image/${string}` })
             : null,
         metaDescription: article.meta?.description ?? null,
+        publishedAt: article.publishedAt ?? null,
         engagementScore: r.engagementScore,
       }
     })

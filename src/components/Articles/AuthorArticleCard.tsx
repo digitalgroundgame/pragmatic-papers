@@ -3,12 +3,12 @@ import React from "react"
 import { HoverPrefetchLink } from "@/components/Link/HoverPrefetchLink"
 import { Media } from "@/components/Media"
 import { Card, CardContent } from "@/components/ui/card"
-import type { Article, Volume } from "@/payload-types"
+import type { Article, PopulatedVolume } from "@/payload-types"
 import { cn } from "@/utilities/utils"
 
 export interface AuthorArticleCardProps {
   article: Article
-  volume?: Volume
+  volume?: PopulatedVolume
   className?: string
 }
 

@@ -12,13 +12,14 @@ import { PayloadRedirects } from "@/components/PayloadRedirects"
 import RichText from "@/components/RichText"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Separator } from "@/components/ui/separator"
-import type { Article as ArticleType, User } from "@/payload-types"
+import type { Article as ArticleType } from "@/payload-types"
 import { getVolumeByArticleId } from "@/utilities/contentQueries"
 import { getInitials } from "@/utilities/getInitials"
 import { getMediaUrl } from "@/utilities/getMediaUrl"
 import { getServerSideURL } from "@/utilities/getURL"
 import { mergeOpenGraph } from "@/utilities/mergeOpenGraph"
 import { parsePageNumber } from "@/utilities/parsePageNumber"
+import { queryUserBySlug } from "@/utilities/queries"
 import { buildBreadcrumbJsonLd, buildPersonJsonLd } from "@/utilities/structuredData"
 import type { Metadata } from "next"
 import { draftMode } from "next/headers"
@@ -53,35 +54,6 @@ const queryAuthorSlugs = cache(async (): Promise<{ slug: string | null | undefin
   })
 
   return docs.map(({ slug }) => ({ slug }))
-})
-
-const queryUserBySlug = cache(async (slug: string): Promise<User | null> => {
-  const { isEnabled: draft } = await draftMode()
-  const payload = await getPayload({ config })
-
-  const { docs } = await payload.find({
-    collection: "users",
-    draft,
-    limit: 1,
-    pagination: false,
-    where: {
-      and: [
-        {
-          role: {
-            in: AUTHOR_ROLES,
-          },
-        },
-        {
-          slug: {
-            equals: slug,
-          },
-        },
-      ],
-    },
-    depth: 1,
-  })
-
-  return docs[0] || null
 })
 
 const queryArticlesByAuthor = cache(async (userId: number, page: number, limit: number) => {

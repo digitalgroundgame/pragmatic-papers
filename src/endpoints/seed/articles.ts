@@ -9,6 +9,7 @@ interface CreateArticleOptions {
   topics?: number[]
   slug: string
   heroImage?: number | null
+  narration?: number | null
   meta?: {
     title?: string | null
     description?: string | null
@@ -25,7 +26,10 @@ interface CreateArticleOptions {
  * fields (content, authors, topics, heroImage, meta) are stripped to maximise
  * the chance of success with only the scalar fields Drizzle can always handle.
  *
- * @param context - Optional context object passed to Payload's create operation (e.g., to skip hooks)
+ * Always passes `skipAfterRead: true` to skip the `populateVolume` afterRead hook,
+ * which would fail during seeding since no volumes exist yet.
+ *
+ * @param context - Optional context merged into the Payload create operation context
  */
 export async function createArticle(
   payload: Payload,
@@ -38,13 +42,14 @@ export async function createArticle(
     try {
       return await payload.create({
         collection: "articles",
-        ...(context && { context }),
+        context: { skipAfterRead: true, ...context },
         data: {
           title: options.title,
           content: options.content,
           authors: options.authors,
           topics: options.topics,
           heroImage: options.heroImage || undefined,
+          narration: options.narration || undefined,
           _status: "published",
           publishedAt: new Date().toISOString(),
           slug: options.slug,

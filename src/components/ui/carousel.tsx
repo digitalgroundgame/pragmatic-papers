@@ -97,11 +97,12 @@ const Carousel = React.forwardRef<
       return
     }
 
-    onSelect(api)
+    React.startTransition(() => onSelect(api))
     api.on("reInit", onSelect)
     api.on("select", onSelect)
 
     return () => {
+      api?.off("reInit", onSelect)
       api?.off("select", onSelect)
     }
   }, [api, onSelect])
@@ -188,7 +189,7 @@ const CarouselPrevious = React.forwardRef<HTMLButtonElement, React.ComponentProp
         className={cn(
           "absolute h-8 w-8 rounded-sm",
           orientation === "horizontal"
-            ? "top-1/2 -left-12 -translate-y-1/2"
+            ? "top-1/2 -left-12 -translate-y-1/2 active:not-aria-[haspopup]:-translate-y-[calc(50%-1px)]"
             : "-top-12 left-1/2 -translate-x-1/2 rotate-90",
           className,
         )}
@@ -216,7 +217,7 @@ const CarouselNext = React.forwardRef<HTMLButtonElement, React.ComponentProps<ty
         className={cn(
           "absolute h-8 w-8 rounded-sm",
           orientation === "horizontal"
-            ? "top-1/2 -right-12 -translate-y-1/2"
+            ? "top-1/2 -right-12 -translate-y-1/2 active:not-aria-[haspopup]:-translate-y-[calc(50%-1px)]"
             : "-bottom-12 left-1/2 -translate-x-1/2 rotate-90",
           className,
         )}

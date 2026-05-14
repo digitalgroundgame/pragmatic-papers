@@ -20,8 +20,9 @@ import { Timeline } from "@/blocks/Timeline/config"
 import { detectMathBlocks } from "@/collections/Articles/hooks/detectMathBlocks"
 import { generateFootnotes } from "@/collections/Articles/hooks/generateFootnotes"
 import { populateAuthors } from "@/collections/Articles/hooks/populateAuthors"
-import { populateVolume } from "@/collections/Articles/hooks/populateVolume"
 import { populateMetaImageFromHero } from "@/collections/Articles/hooks/populateMetaImageFromHero"
+import { populateNarrator } from "@/collections/Articles/hooks/populateNarrator"
+import { populateVolume } from "@/collections/Articles/hooks/populateVolume"
 import { revalidateArticle, revalidateDelete } from "@/collections/Articles/hooks/revalidateArticle"
 import {
   draftVersions,
@@ -33,6 +34,7 @@ import { footnotesArrayField } from "@/fields/footnotes"
 import { menu } from "@/fields/menu"
 import { seoTab } from "@/fields/seoTab"
 import { type Article } from "@/payload-types"
+
 import {
   AlignFeature,
   BlockquoteFeature,
@@ -142,6 +144,7 @@ export const Articles: CollectionConfig = {
         position: "sidebar",
       },
     },
+    slugField(),
     {
       name: "enableMathRendering",
       type: "checkbox",
@@ -181,6 +184,28 @@ export const Articles: CollectionConfig = {
       },
     },
     {
+      name: "topics",
+      type: "relationship",
+      admin: {
+        position: "sidebar",
+      },
+      hasMany: true,
+      relationTo: "topics",
+    },
+    {
+      name: "narration",
+      type: "upload",
+      admin: {
+        position: "sidebar",
+      },
+      filterOptions: {
+        mimeType: {
+          contains: "audio",
+        },
+      },
+      relationTo: "media",
+    },
+    {
       name: "createdBy",
       type: "relationship",
       relationTo: "users",
@@ -199,6 +224,7 @@ export const Articles: CollectionConfig = {
       name: "populatedAuthors",
       interfaceName: "PopulatedAuthors",
       type: "array",
+      virtual: true,
       access: {
         update: () => false,
       },
@@ -209,7 +235,7 @@ export const Articles: CollectionConfig = {
       fields: [
         {
           name: "id",
-          type: "text",
+          type: "number",
           required: true,
         },
         {
@@ -262,15 +288,23 @@ export const Articles: CollectionConfig = {
       ],
     },
     {
-      name: "topics",
-      type: "relationship",
-      admin: {
-        position: "sidebar",
+      name: "populatedNarrator",
+      interfaceName: "PopulatedNarrator",
+      type: "group",
+      virtual: true,
+      access: {
+        update: () => false,
       },
-      hasMany: true,
-      relationTo: "topics",
+      admin: {
+        disabled: true,
+        readOnly: true,
+      },
+      fields: [
+        { name: "id", type: "number" },
+        { name: "name", type: "text" },
+        { name: "slug", type: "text" },
+      ],
     },
-    slugField(),
   ],
   hooks: {
     beforeChange: [
@@ -280,7 +314,7 @@ export const Articles: CollectionConfig = {
       populateMetaImageFromHero,
     ],
     afterChange: [revalidateArticle],
-    afterRead: [populateAuthors, populateVolume],
+    afterRead: [populateAuthors, populateVolume, populateNarrator],
     afterDelete: [revalidateDelete],
   },
   versions: draftVersions,

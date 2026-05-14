@@ -1,5 +1,4 @@
 import config from "@payload-config"
-import { cache } from "react"
 
 import { ArticleCard } from "@/components/ArticleCard"
 import { AuthorList } from "@/components/Authors/AuthorList"
@@ -9,9 +8,10 @@ import { LivePreviewListener } from "@/components/LivePreviewListener"
 import { PayloadRedirects } from "@/components/PayloadRedirects"
 import RichText from "@/components/RichText"
 import { Separator } from "@/components/ui/separator"
-import type { Article, Volume } from "@/payload-types"
+import type { Article } from "@/payload-types"
 import { formatDateTime } from "@/utilities/formatDateTime"
 import { generateMeta } from "@/utilities/generateMeta"
+import { queryVolumeBySlug } from "@/utilities/queries"
 import { buildBreadcrumbJsonLd, buildVolumeJsonLd } from "@/utilities/structuredData"
 import { toRoman } from "@/utilities/toRoman"
 import type { Metadata } from "next"
@@ -19,7 +19,7 @@ import { draftMode } from "next/headers"
 import { getPayload } from "payload"
 import React from "react"
 
-const queryVolumeSlugs = cache(async (): Promise<{ slug: string | null | undefined }[]> => {
+export async function generateStaticParams(): Promise<{ slug: string | null | undefined }[]> {
   const payload = await getPayload({ config })
   const { docs } = await payload.find({
     collection: "volumes",
@@ -33,31 +33,6 @@ const queryVolumeSlugs = cache(async (): Promise<{ slug: string | null | undefin
   })
 
   return docs.map(({ slug }) => ({ slug }))
-})
-
-const queryVolumeBySlug = cache(async (slug: string): Promise<Volume | null> => {
-  const { isEnabled: draft } = await draftMode()
-  const payload = await getPayload({ config })
-
-  const { docs } = await payload.find({
-    collection: "volumes",
-    draft,
-    limit: 1,
-    overrideAccess: draft,
-    pagination: false,
-    where: {
-      slug: {
-        equals: slug,
-      },
-    },
-    depth: 2,
-  })
-
-  return docs[0] || null
-})
-
-export async function generateStaticParams(): Promise<{ slug: string | null | undefined }[]> {
-  return queryVolumeSlugs()
 }
 
 interface Args {
@@ -91,7 +66,7 @@ export default async function VolumePage({
 
   if (!articles) return <PayloadRedirects url={url} />
 
-  const seen = new Set<string>()
+  const seen = new Set<number>()
   const volumeAuthors = articles
     ?.flatMap((article) => article.populatedAuthors ?? [])
     .filter((a) => {

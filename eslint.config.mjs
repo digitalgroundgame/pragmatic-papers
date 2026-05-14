@@ -1,16 +1,15 @@
-import js from "@eslint/js"
+import eslintConfigNext from "eslint-config-next/core-web-vitals"
+import eslintConfigNextTypescript from "eslint-config-next/typescript"
 import eslintConfigPrettier from "eslint-config-prettier"
-import pluginNext from "@next/eslint-plugin-next"
-import jsxA11y from "eslint-plugin-jsx-a11y"
 import pluginReact from "eslint-plugin-react"
-import pluginReactHooks from "eslint-plugin-react-hooks"
 import globals from "globals"
-import tseslint from "typescript-eslint"
 
-export default [
-  js.configs.recommended,
-  ...tseslint.configs.recommended,
+const eslintConfig = [
+  ...eslintConfigNext,
+  ...eslintConfigNextTypescript,
   {
+    plugins: { react: pluginReact },
+    settings: { react: { version: "detect" } },
     rules: {
       // Allow console.warn and console.error until we set up something like sentry
       "no-console": ["warn", { allow: ["warn", "error"] }],
@@ -35,23 +34,6 @@ export default [
       "@typescript-eslint/no-require-imports": "error",
       "@typescript-eslint/prefer-ts-expect-error": "error",
       "prefer-const": ["error"],
-    },
-  },
-  pluginReact.configs.flat.recommended,
-  {
-    languageOptions: {
-      globals: {
-        ...globals.serviceworker,
-        ...globals.browser,
-      },
-    },
-    settings: { react: { version: "detect" } },
-    rules: {
-      // Overrides from recommended
-      "react/react-in-jsx-scope": "off", // not needed with new JSX transform
-      "react/prop-types": "off",
-      "react/display-name": "off",
-      // Additions not in recommended
       "react/jsx-boolean-value": ["error", "never"],
       "react/jsx-curly-brace-presence": ["error", { props: "never", children: "ignore" }],
       "react/no-danger": "warn",
@@ -93,21 +75,15 @@ export default [
           },
         },
       ],
+      // Intentionally using <a> instead of next/link to avoid RSC Vary headers
+      // that prevent Cloudflare free-tier from caching page responses.
+      "@next/next/no-html-link-for-pages": "off",
     },
-  },
-  jsxA11y.flatConfigs.recommended,
-  pluginNext.flatConfig.recommended,
-  pluginNext.flatConfig.coreWebVitals,
-  {
-    plugins: { "react-hooks": pluginReactHooks },
-    rules: pluginReactHooks.configs.recommended.rules,
   },
   // Add Node.js globals for config files (e.g. next-sitemap.config.cjs uses process.env and module.exports)
   {
     files: ["**/*.config.js", "**/*.config.cjs", "**/*.config.mjs"],
-    languageOptions: {
-      globals: { ...globals.node },
-    },
+    languageOptions: { globals: { ...globals.node } },
   },
   {
     ignores: [
@@ -117,15 +93,10 @@ export default [
       "out/**",
       "**/next-env.d.ts",
       "src/migrations/**",
+      "src/payload-types.ts",
     ],
   },
-  // Intentionally using <a> instead of next/link to avoid RSC Vary headers
-  // that prevent Cloudflare free-tier from caching page responses.
-  {
-    rules: {
-      "@next/next/no-html-link-for-pages": "off",
-    },
-  },
-  // Prettier config must be last to disable conflicting rules
   eslintConfigPrettier,
 ]
+
+export default eslintConfig

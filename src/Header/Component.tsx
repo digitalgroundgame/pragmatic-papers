@@ -86,9 +86,8 @@ export async function Header(): Promise<React.JSX.Element> {
               <HeaderActions actions={actions} className="hidden lg:flex" />
               <Sheet>
                 <SheetTrigger
-                  className="lg:hidden"
                   render={
-                    <Button variant="ghost" size="icon">
+                    <Button variant="ghost" size="icon" className="lg:hidden">
                       <User className="size-6" />
                       <span className="sr-only">Account</span>
                     </Button>

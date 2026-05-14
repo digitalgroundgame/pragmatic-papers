@@ -1,25 +1,25 @@
 import config from "@payload-config"
-import { cache } from "react"
 
 import { AuthorList } from "@/components/Authors/AuthorList"
 import { FootnoteList } from "@/components/FootnoteList"
 import { JsonLd } from "@/components/JsonLd"
 import { LivePreviewListener } from "@/components/LivePreviewListener"
 import { PayloadRedirects } from "@/components/PayloadRedirects"
+import { RecommendedArticles } from "@/components/RecommendedArticles"
 import RichText from "@/components/RichText"
 import { TopicsList } from "@/components/Topics/TopicsList"
 import { Separator } from "@/components/ui/separator"
 import { ArticleHero } from "@/heros/ArticleHero"
-import type { Article as ArticleType } from "@/payload-types"
 import { MathJaxProvider } from "@/providers/MathJaxProvider"
 import { generateMeta } from "@/utilities/generateMeta"
+import { queryArticleBySlug } from "@/utilities/queries"
 import { buildArticleJsonLd, buildBreadcrumbJsonLd } from "@/utilities/structuredData"
 import type { Metadata } from "next"
 import { draftMode } from "next/headers"
 import { getPayload } from "payload"
 import React from "react"
 
-const queryArticleSlugs = cache(async (): Promise<{ slug: string | null | undefined }[]> => {
+export async function generateStaticParams(): Promise<{ slug: string | null | undefined }[]> {
   const payload = await getPayload({ config })
   const { docs } = await payload.find({
     collection: "articles",
@@ -36,31 +36,6 @@ const queryArticleSlugs = cache(async (): Promise<{ slug: string | null | undefi
   })
 
   return docs.map(({ slug }) => ({ slug }))
-})
-
-const queryArticleBySlug = cache(async (slug: string): Promise<ArticleType | null> => {
-  const { isEnabled: draft } = await draftMode()
-  const payload = await getPayload({ config })
-
-  const { docs } = await payload.find({
-    collection: "articles",
-    draft,
-    limit: 1,
-    overrideAccess: draft,
-    pagination: false,
-    where: {
-      slug: {
-        equals: slug,
-      },
-    },
-    depth: 0,
-  })
-
-  return docs[0] || null
-})
-
-export async function generateStaticParams(): Promise<{ slug: string | null | undefined }[]> {
-  return queryArticleSlugs()
 }
 
 interface Args {
@@ -87,31 +62,34 @@ export default async function Article({ params: paramsPromise }: Args): Promise<
   const { footnotes, content, populatedAuthors, enableMathRendering, topics } = article
 
   return (
-    <article className="mx-auto max-w-2xl space-y-6 px-4 md:px-1">
-      <JsonLd
-        data={[
-          buildArticleJsonLd(article, url),
-          buildBreadcrumbJsonLd([{ name: article.meta?.title || article.title, path: url }]),
-        ]}
-      />
-      {/* Allows redirects for valid pages too */}
-      <PayloadRedirects disableNotFound url={url} />
-
-      {draft && <LivePreviewListener />}
-
-      <ArticleHero article={article} />
-      <MathJaxProvider enableMathRendering={enableMathRendering}>
-        <RichText
-          data={content}
-          enableGutter={false}
-          className="drop-cap"
-          parentDoc={{ collection: "articles", id: article.id }}
+    <>
+      <article className="mx-auto max-w-2xl space-y-6 px-4 md:px-1">
+        <JsonLd
+          data={[
+            buildArticleJsonLd(article, url),
+            buildBreadcrumbJsonLd([{ name: article.meta?.title || article.title, path: url }]),
+          ]}
         />
-      </MathJaxProvider>
-      <FootnoteList footnotes={footnotes} />
-      <Separator />
-      <TopicsList topics={topics} />
-      <AuthorList aria-label="Article Authors" authors={populatedAuthors} />
-    </article>
+        {/* Allows redirects for valid pages too */}
+        <PayloadRedirects disableNotFound url={url} />
+
+        {draft && <LivePreviewListener />}
+
+        <ArticleHero article={article} />
+        <MathJaxProvider enableMathRendering={enableMathRendering}>
+          <RichText
+            data={content}
+            enableGutter={false}
+            className="drop-cap"
+            parentDoc={{ collection: "articles", id: article.id }}
+          />
+        </MathJaxProvider>
+        <FootnoteList footnotes={footnotes} />
+        <Separator />
+        <TopicsList topics={topics} />
+        <AuthorList aria-label="Article Authors" authors={populatedAuthors} />
+      </article>
+      <RecommendedArticles currentArticleSlug={slug} />
+    </>
   )
 }

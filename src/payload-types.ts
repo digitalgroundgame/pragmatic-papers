@@ -44,7 +44,7 @@ export type MenuField =
  */
 export type PopulatedAuthors =
   | {
-      id: string;
+      id: number;
       name?: string | null;
       slug: string;
       affiliation?: string | null;
@@ -238,10 +238,14 @@ export interface Config {
   globals: {
     header: Header;
     footer: Footer;
+    'article-recommendations': ArticleRecommendation;
+    'payload-jobs-stats': PayloadJobsStat;
   };
   globalsSelect: {
     header: HeaderSelect<false> | HeaderSelect<true>;
     footer: FooterSelect<false> | FooterSelect<true>;
+    'article-recommendations': ArticleRecommendationsSelect<false> | ArticleRecommendationsSelect<true>;
+    'payload-jobs-stats': PayloadJobsStatsSelect<false> | PayloadJobsStatsSelect<true>;
   };
   locale: null;
   widgets: {
@@ -250,6 +254,7 @@ export interface Config {
   user: User;
   jobs: {
     tasks: {
+      updateRecommendations: TaskUpdateRecommendations;
       schedulePublish: TaskSchedulePublish;
       inline: {
         input: unknown;
@@ -437,18 +442,20 @@ export interface Article {
     description?: string | null;
   };
   heroImage?: (number | null) | Media;
-  enableMathRendering?: boolean | null;
-  publishedAt?: string | null;
-  authors?: (number | User)[] | null;
-  createdBy?: (number | null) | User;
-  populatedAuthors?: PopulatedAuthors;
-  populatedVolume?: PopulatedVolume;
-  topics?: (number | Topic)[] | null;
   /**
    * When enabled, the slug will auto-generate from the title field on save and autosave.
    */
   generateSlug?: boolean | null;
   slug: string;
+  enableMathRendering?: boolean | null;
+  publishedAt?: string | null;
+  authors?: (number | User)[] | null;
+  topics?: (number | Topic)[] | null;
+  narration?: (number | null) | Media;
+  createdBy?: (number | null) | User;
+  populatedAuthors?: PopulatedAuthors;
+  populatedVolume?: PopulatedVolume;
+  populatedNarrator?: PopulatedNarrator;
   updatedAt: string;
   createdAt: string;
   _status?: ('draft' | 'published') | null;
@@ -535,6 +542,14 @@ export interface Media {
    */
   blurDataURL?: string | null;
   createdBy?: (number | null) | User;
+  /**
+   * User who recorded this narration
+   */
+  narrator?: (number | null) | User;
+  /**
+   * Duration in seconds (auto-populated from the audio file)
+   */
+  duration?: number | null;
   updatedAt: string;
   createdAt: string;
   url?: string | null;
@@ -635,7 +650,7 @@ export interface User {
   slug: string;
   profileImage?: (number | null) | Media;
   socials?: MenuField;
-  role?: ('admin' | 'chief-editor' | 'editor' | 'writer' | 'member') | null;
+  role?: ('admin' | 'chief-editor' | 'editor' | 'writer' | 'narrator' | 'member') | null;
   updatedAt: string;
   createdAt: string;
   email: string;
@@ -665,6 +680,15 @@ export interface PopulatedVolume {
   volumeNumber?: number | null;
   title?: string | null;
   publishedAt?: string | null;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "PopulatedNarrator".
+ */
+export interface PopulatedNarrator {
+  id?: number | null;
+  name?: string | null;
+  slug?: string | null;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -1210,7 +1234,7 @@ export interface PayloadJob {
     | {
         executedAt: string;
         completedAt: string;
-        taskSlug: 'inline' | 'schedulePublish';
+        taskSlug: 'inline' | 'updateRecommendations' | 'schedulePublish';
         taskID: string;
         input?:
           | {
@@ -1243,10 +1267,19 @@ export interface PayloadJob {
         id?: string | null;
       }[]
     | null;
-  taskSlug?: ('inline' | 'schedulePublish') | null;
+  taskSlug?: ('inline' | 'updateRecommendations' | 'schedulePublish') | null;
   queue?: string | null;
   waitUntil?: string | null;
   processing?: boolean | null;
+  meta?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -1562,15 +1595,17 @@ export interface ArticlesSelect<T extends boolean = true> {
         description?: T;
       };
   heroImage?: T;
+  generateSlug?: T;
+  slug?: T;
   enableMathRendering?: T;
   publishedAt?: T;
   authors?: T;
+  topics?: T;
+  narration?: T;
   createdBy?: T;
   populatedAuthors?: T | PopulatedAuthorsSelect<T>;
   populatedVolume?: T | PopulatedVolumeSelect<T>;
-  topics?: T;
-  generateSlug?: T;
-  slug?: T;
+  populatedNarrator?: T | PopulatedNarratorSelect<T>;
   updatedAt?: T;
   createdAt?: T;
   _status?: T;
@@ -1620,6 +1655,15 @@ export interface PopulatedVolumeSelect<T extends boolean = true> {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "PopulatedNarrator_select".
+ */
+export interface PopulatedNarratorSelect<T extends boolean = true> {
+  id?: T;
+  name?: T;
+  slug?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "volumes_select".
  */
 export interface VolumesSelect<T extends boolean = true> {
@@ -1651,6 +1695,8 @@ export interface MediaSelect<T extends boolean = true> {
   caption?: T;
   blurDataURL?: T;
   createdBy?: T;
+  narrator?: T;
+  duration?: T;
   updatedAt?: T;
   createdAt?: T;
   url?: T;
@@ -2025,6 +2071,7 @@ export interface PayloadJobsSelect<T extends boolean = true> {
   queue?: T;
   waitUntil?: T;
   processing?: T;
+  meta?: T;
   updatedAt?: T;
   createdAt?: T;
 }
@@ -2085,6 +2132,47 @@ export interface Footer {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "article-recommendations".
+ */
+export interface ArticleRecommendation {
+  id: number;
+  lastUpdated?: string | null;
+  /**
+   * Ranked articles by engagement score. Updated automatically by the recommendations script.
+   */
+  rankings?:
+    | {
+        article: number | Article;
+        /**
+         * Volume-normalized scrolledUsers * recency decay
+         */
+        engagementScore: number;
+        id?: string | null;
+      }[]
+    | null;
+  updatedAt?: string | null;
+  createdAt?: string | null;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "payload-jobs-stats".
+ */
+export interface PayloadJobsStat {
+  id: number;
+  stats?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  updatedAt?: string | null;
+  createdAt?: string | null;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "header_select".
  */
 export interface HeaderSelect<T extends boolean = true> {
@@ -2108,6 +2196,33 @@ export interface FooterSelect<T extends boolean = true> {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "article-recommendations_select".
+ */
+export interface ArticleRecommendationsSelect<T extends boolean = true> {
+  lastUpdated?: T;
+  rankings?:
+    | T
+    | {
+        article?: T;
+        engagementScore?: T;
+        id?: T;
+      };
+  updatedAt?: T;
+  createdAt?: T;
+  globalType?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "payload-jobs-stats_select".
+ */
+export interface PayloadJobsStatsSelect<T extends boolean = true> {
+  stats?: T;
+  updatedAt?: T;
+  createdAt?: T;
+  globalType?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "collections_widget".
  */
 export interface CollectionsWidget {
@@ -2115,6 +2230,16 @@ export interface CollectionsWidget {
     [k: string]: unknown;
   };
   width: 'full';
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "TaskUpdateRecommendations".
+ */
+export interface TaskUpdateRecommendations {
+  input?: unknown;
+  output: {
+    count: number;
+  };
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema

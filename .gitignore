@@ -69,3 +69,4 @@ devenv.local.nix
 .claude
 
 .eslintcache
+tsconfig.tsbuildinfo

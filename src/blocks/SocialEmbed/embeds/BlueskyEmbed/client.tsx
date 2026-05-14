@@ -17,12 +17,7 @@ interface BlueskyEmbedClientProps {
 
 export function BlueskyEmbedClient({ targetId }: BlueskyEmbedClientProps): React.ReactNode {
   const pathname = usePathname()
-  const [ready, setReady] = useState(false)
-
-  // If the script is already present (client nav / HMR), mark ready.
-  useEffect(() => {
-    if (window.bluesky?.scan) setReady(true)
-  }, [])
+  const [ready, setReady] = useState(() => typeof window !== "undefined" && !!window.bluesky?.scan)
 
   // Transform to iframe when ready, when markup changes, and on navigation.
   useEffect(() => {

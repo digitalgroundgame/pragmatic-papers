@@ -43,14 +43,14 @@ jobs:
 
           # Wait up to 15 minutes (90 * 10s)
           for i in {1..90}; do
-            # Safely capture JSON response
-            API_RESPONSE=$(curl -sL "$URL/api/version" || echo "curl_failed")
+            # Safely capture headers without exiting on grep failure
+            HEADERS=$(curl -sI -L "$URL" || echo "curl_failed")
             
-            if [ "$API_RESPONSE" == "curl_failed" ]; then
-              echo "⚠️  Connection failed to $URL/api/version ($i/90)"
+            if [ "$HEADERS" == "curl_failed" ]; then
+              echo "⚠️  Connection failed to $URL ($i/90)"
             else
-              # Parse the commit SHA using jq
-              LIVE_SHA=$(echo "$API_RESPONSE" | jq -r '.commit // empty' 2>/dev/null || echo "")
+              # Extract header value case-insensitively and safely
+              LIVE_SHA=$(echo "$HEADERS" | grep -i "x-current-commit" | awk '{print $2}' | tr -d '\r\n' || echo "")
               
               if [ "$LIVE_SHA" == "$EXPECTED_SHA" ]; then
                 echo "✅ Fresh deployment is live!"
@@ -58,8 +58,8 @@ jobs:
               fi
               
               if [ -z "$LIVE_SHA" ]; then
-                echo "⚠️  Version API did not return a commit SHA. ($i/90)"
-                echo "    Ensure DEPLOY_COMMIT_SHA is set in Coolify."
+                echo "⚠️  Header 'x-current-commit' is missing. ($i/90)"
+                echo "    Ensure NEXT_PUBLIC_COMMIT_SHA is set in Coolify."
               else
                 echo "⏳ Old deployment active (Live: ${LIVE_SHA:0:7}, Expected: ${EXPECTED_SHA:0:7}). ($i/90)"
               fi

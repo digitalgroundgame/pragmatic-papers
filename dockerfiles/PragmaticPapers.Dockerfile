@@ -125,7 +125,7 @@ RUN . /tmp/build.env && \
 FROM node:${NODE_VERSION}-alpine AS runner
 WORKDIR /app
 # dumb-init ensures proper signal handling (SIGTERM) for Node.js
-RUN apk add --no-cache dumb-init curl
+RUN apk add --no-cache dumb-init
 
 # Set production environment
 ENV NODE_ENV=production
@@ -146,10 +146,6 @@ ENV FORCE_COLOR=0
 # Create non-root user for security
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nextjs
-
-# Copy post-deployment notification script
-COPY dockerfiles/scripts/notify-github.sh /usr/local/bin/notify-github.sh
-RUN chmod +x /usr/local/bin/notify-github.sh
 
 # Copy the standalone Next.js build
 # The standalone build includes a minimal server.js and only necessary node_modules

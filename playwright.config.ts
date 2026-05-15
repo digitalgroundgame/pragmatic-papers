@@ -48,7 +48,7 @@ export default defineConfig({
     // },
   ],
   webServer: {
-    command: "pnpm dev:next",
+    command: "pnpm dev",
     url: "http://localhost:8000",
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,

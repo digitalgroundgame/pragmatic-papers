@@ -17,6 +17,15 @@ function isVolume(obj: Volume | Article | Page | Topic): obj is Volume {
   return (obj as Volume).volumeNumber !== undefined
 }
 
+interface LexicalTextNode { type?: string; text?: string; children?: LexicalTextNode[] }
+
+function lexicalToPlainText(node: LexicalTextNode | undefined | null): string {
+  if (!node) return ""
+  if (typeof node.text === "string") return node.text
+  if (!Array.isArray(node.children)) return ""
+  return node.children.map(lexicalToPlainText).join(" ")
+}
+
 export const generateTitle: GenerateTitle<Volume | Article | Page | Topic> = ({ doc }) => {
   if (isVolume(doc)) {
     return doc?.volumeNumber
@@ -65,7 +74,10 @@ const beforeSync: BeforeSync = ({ originalDoc, searchDoc }) => {
     (originalDoc.profileImage as number | null | undefined) ??
     null
 
-  return { ...searchDoc, title, excerpt, slug, authors, image }
+  const content = originalDoc.content as { root?: LexicalTextNode } | undefined
+  const body = lexicalToPlainText(content?.root).replace(/\s+/g, " ").trim()
+
+  return { ...searchDoc, title, excerpt, slug, authors, image, body }
 }
 
 export const plugins: Plugin[] = [
@@ -85,6 +97,7 @@ export const plugins: Plugin[] = [
         { name: "slug", type: "text", admin: { readOnly: true } },
         { name: "authors", type: "text", admin: { readOnly: true } },
         { name: "image", type: "upload", relationTo: "media", admin: { readOnly: true } },
+        { name: "body", type: "textarea", admin: { readOnly: true, hidden: true } },
       ],
     },
   }),

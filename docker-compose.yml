@@ -1,5 +1,6 @@
 services:
   payload-pragmatic:
+    container_name: payload-pragmatic
     build:
       context: .
       dockerfile: dockerfiles/PragmaticPapers.Dockerfile
@@ -29,6 +30,7 @@ services:
         condition: service_healthy
 
   postgres-pragmatic:
+    container_name: postgres-pragmatic
     image: postgres:15-alpine
     restart: always
     environment:

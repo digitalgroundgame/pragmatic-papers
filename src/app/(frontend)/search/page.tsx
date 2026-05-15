@@ -183,17 +183,17 @@ export default async function SearchPage({ searchParams }: Args): Promise<React.
                         </p>
                       )}
                       <div className="text-muted-foreground mt-auto flex items-center gap-2 text-xs">
-                        <span className="capitalize">{`In ${relationTo}`}</span>
+                        <span className="capitalize">{relationTo}</span>
                         {result.topics && (
                           <>
                             <span>{"•"}</span>
-                            <span>{`In ${arrayStringToPlainText(result.topics, ", ")}`}</span>
+                            <span>{`${arrayStringToPlainText(result.topics, ", ", "&")}`}</span>
                           </>
                         )}
                         {result.authors && (
                           <>
                             <span>{"•"}</span>
-                            <span>{`By ${arrayStringToPlainText(result.authors, ", ")}`}</span>
+                            <span>{`by ${arrayStringToPlainText(result.authors, ", ", "&")}`}</span>
                           </>
                         )}
                       </div>

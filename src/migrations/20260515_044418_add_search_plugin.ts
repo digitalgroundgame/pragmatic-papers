@@ -9,7 +9,9 @@ export async function up({ db, payload, req }: MigrateUpArgs): Promise<void> {
   	"excerpt" varchar,
   	"slug" varchar,
   	"authors" varchar,
+  	"topics" varchar,
   	"image_id" integer,
+  	"body" varchar,
   	"updated_at" timestamp(3) with time zone DEFAULT now() NOT NULL,
   	"created_at" timestamp(3) with time zone DEFAULT now() NOT NULL
   );
@@ -43,7 +45,16 @@ export async function up({ db, payload, req }: MigrateUpArgs): Promise<void> {
   CREATE INDEX "search_rels_volumes_id_idx" ON "search_rels" USING btree ("volumes_id");
   CREATE INDEX "search_rels_topics_id_idx" ON "search_rels" USING btree ("topics_id");
   ALTER TABLE "payload_locked_documents_rels" ADD CONSTRAINT "payload_locked_documents_rels_search_fk" FOREIGN KEY ("search_id") REFERENCES "public"."search"("id") ON DELETE cascade ON UPDATE no action;
-  CREATE INDEX "payload_locked_documents_rels_search_id_idx" ON "payload_locked_documents_rels" USING btree ("search_id");`)
+  CREATE INDEX "payload_locked_documents_rels_search_id_idx" ON "payload_locked_documents_rels" USING btree ("search_id");
+  ALTER TABLE "search" ADD COLUMN "search_vector" tsvector
+    GENERATED ALWAYS AS (
+      setweight(to_tsvector('english', coalesce("title", '')),   'A') ||
+      setweight(to_tsvector('english', coalesce("authors", '')), 'B') ||
+      setweight(to_tsvector('english', coalesce("excerpt", '')), 'C') ||
+      setweight(to_tsvector('english', coalesce("topics", '')), 'D') ||
+      setweight(to_tsvector('english', coalesce("body", '')), 'E')
+    ) STORED;
+  CREATE INDEX "search_search_vector_idx" ON "search" USING GIN ("search_vector");`)
 }
 
 export async function down({ db, payload, req }: MigrateDownArgs): Promise<void> {

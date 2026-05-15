@@ -1150,6 +1150,7 @@ export interface Search {
   excerpt?: string | null;
   slug?: string | null;
   authors?: string | null;
+  topics?: string | null;
   image?: (number | null) | Media;
   body?: string | null;
   updatedAt: string;
@@ -1922,6 +1923,7 @@ export interface SearchSelect<T extends boolean = true> {
   excerpt?: T;
   slug?: T;
   authors?: T;
+  topics?: T;
   image?: T;
   body?: T;
   updatedAt?: T;

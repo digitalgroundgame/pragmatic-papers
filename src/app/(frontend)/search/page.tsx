@@ -16,6 +16,7 @@ interface SearchResult {
   excerpt?: string | null
   slug?: string | null
   authors?: string | null
+  topics?: string | null
   image?: MediaType | number | null
   doc?: { relationTo: string; value: unknown } | null
 }
@@ -183,6 +184,12 @@ export default async function SearchPage({ searchParams }: Args): Promise<React.
                       )}
                       <div className="text-muted-foreground mt-auto flex items-center gap-2 text-xs">
                         <span className="capitalize">{`in ${relationTo}`}</span>
+                        {result.topics && (
+                          <>
+                            <span>{"•"}</span>
+                            <span>{result.topics}</span>
+                          </>
+                        )}
                         {result.authors && (
                           <>
                             <span>{"•"}</span>

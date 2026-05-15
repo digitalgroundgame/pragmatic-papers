@@ -8058,6 +8058,12 @@
           "primaryKey": false,
           "notNull": false
         },
+        "topics": {
+          "name": "topics",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
         "image_id": {
           "name": "image_id",
           "type": "integer",
@@ -12905,6 +12911,6 @@
     "tables": {},
     "columns": {}
   },
-  "id": "bb59711e-484c-4ecd-ba72-303be20eb63d",
+  "id": "a3181c0a-bcc0-4d14-bdcd-68295227c442",
   "prevId": "00000000-0000-0000-0000-000000000000"
 }

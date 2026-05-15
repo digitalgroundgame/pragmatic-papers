@@ -63,7 +63,7 @@ const nextConfig: NextConfig = {
         headers: [
           {
             key: "x-current-commit",
-            value: process.env.DEPLOY_COMMIT_SHA || "unknown",
+            value: process.env.NEXT_PUBLIC_COMMIT_SHA || "unknown",
           },
         ],
       },

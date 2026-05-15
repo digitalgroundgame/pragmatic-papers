@@ -59,7 +59,7 @@ jobs:
               
               if [ -z "$LIVE_SHA" ]; then
                 echo "⚠️  Header 'x-current-commit' is missing. ($i/90)"
-                echo "    Ensure DEPLOY_COMMIT_SHA is set in Coolify."
+                echo "    Ensure NEXT_PUBLIC_COMMIT_SHA is set in Coolify."
               else
                 echo "⏳ Old deployment active (Live: ${LIVE_SHA:0:7}, Expected: ${EXPECTED_SHA:0:7}). ($i/90)"
               fi

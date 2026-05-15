@@ -53,22 +53,23 @@ const querySearch = cache(async (rawQuery: string, page: number) => {
   }
   const drizzle = (payload.db as unknown as { drizzle: DrizzleExec }).drizzle
 
-  const ranked = await drizzle.execute<{ id: number; rank: number }>(sql`
-    SELECT id,
-           ts_rank_cd(search_vector, websearch_to_tsquery('english', ${query})) AS rank
-      FROM search
-     WHERE search_vector @@ websearch_to_tsquery('english', ${query})
-     ORDER BY rank DESC, priority DESC NULLS LAST
-     LIMIT ${RESULTS_PER_PAGE} OFFSET ${offset}
-  `)
+  const [ranked, countResult] = await Promise.all([
+    drizzle.execute<{ id: number; rank: number }>(sql`
+      SELECT id,
+             ts_rank_cd(search_vector, websearch_to_tsquery('english', ${query})) AS rank
+        FROM search
+       WHERE search_vector @@ websearch_to_tsquery('english', ${query})
+       ORDER BY rank DESC, priority DESC NULLS LAST
+       LIMIT ${RESULTS_PER_PAGE} OFFSET ${offset}
+    `),
+    drizzle.execute<{ count: number }>(sql`
+      SELECT COUNT(*)::int AS count
+        FROM search
+       WHERE search_vector @@ websearch_to_tsquery('english', ${query})
+    `),
+  ])
 
   const ids = ranked.rows.map((r) => r.id)
-
-  const countResult = await drizzle.execute<{ count: number }>(sql`
-    SELECT COUNT(*)::int AS count
-      FROM search
-     WHERE search_vector @@ websearch_to_tsquery('english', ${query})
-  `)
   const totalDocs = countResult.rows[0]?.count ?? 0
   const totalPages = Math.max(1, Math.ceil(totalDocs / RESULTS_PER_PAGE))
 

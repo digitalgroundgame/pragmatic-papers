@@ -41,21 +41,28 @@ jobs:
           EXPECTED_SHA="${{ github.sha }}"
           echo "Waiting for $URL to serve commit $EXPECTED_SHA..."
 
-          # Wait up to 15 minutes (90 * 10s) - builds can take a while
+          # Wait up to 15 minutes (90 * 10s)
           for i in {1..90}; do
-            # Fetch headers, find x-current-commit, extract value, remove whitespace/CR
-            # Use -L to follow redirects if necessary
-            LIVE_SHA=$(curl -sI -L "$URL" | grep -i "x-current-commit" | awk '{print $2}' | tr -d '\r\n')
+            # Safely capture headers without exiting on grep failure
+            HEADERS=$(curl -sI -L "$URL" || echo "curl_failed")
             
-            if [ "$LIVE_SHA" == "$EXPECTED_SHA" ]; then
-              echo "✅ Fresh deployment is live!"
-              exit 0
-            fi
-            
-            if [ -z "$LIVE_SHA" ]; then
-              echo "⚠️ URL is not responding or header is missing. ($i/90)"
+            if [ "$HEADERS" == "curl_failed" ]; then
+              echo "⚠️  Connection failed to $URL ($i/90)"
             else
-              echo "⏳ Old deployment still active (Live: ${LIVE_SHA:0:7}, Expected: ${EXPECTED_SHA:0:7}). ($i/90)"
+              # Extract header value case-insensitively and safely
+              LIVE_SHA=$(echo "$HEADERS" | grep -i "x-current-commit" | awk '{print $2}' | tr -d '\r\n' || echo "")
+              
+              if [ "$LIVE_SHA" == "$EXPECTED_SHA" ]; then
+                echo "✅ Fresh deployment is live!"
+                exit 0
+              fi
+              
+              if [ -z "$LIVE_SHA" ]; then
+                echo "⚠️  Header 'x-current-commit' is missing. ($i/90)"
+                echo "    Ensure NEXT_PUBLIC_COMMIT_SHA is set in Coolify."
+              else
+                echo "⏳ Old deployment active (Live: ${LIVE_SHA:0:7}, Expected: ${EXPECTED_SHA:0:7}). ($i/90)"
+              fi
             fi
             
             sleep 10

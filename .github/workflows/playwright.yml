@@ -38,11 +38,7 @@ jobs:
         shell: bash
         run: |
           URL="${{ steps.set-url.outputs.base_url }}"
-          if [ "${{ github.event_name }}" == "pull_request" ]; then
-            EXPECTED_SHA="${{ github.event.pull_request.head.sha }}"
-          else
-            EXPECTED_SHA="${{ github.sha }}"
-          fi
+          EXPECTED_SHA="${{ github.sha }}"
           echo "Waiting for $URL to serve commit $EXPECTED_SHA..."
 
           # Wait up to 15 minutes (90 * 10s)

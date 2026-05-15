@@ -133,10 +133,6 @@ ENV NEXT_TELEMETRY_DISABLED=1
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
-# Embed commit SHA so /api/version returns the correct value regardless of Coolify runtime config
-ARG DEPLOY_COMMIT_SHA=unknown
-ENV DEPLOY_COMMIT_SHA=${DEPLOY_COMMIT_SHA}
-
 # Enable Next.js logging
 ENV NEXT_PRIVATE_DEBUG_CACHE=1
 

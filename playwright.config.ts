@@ -11,7 +11,7 @@ export default defineConfig({
   workers: process.env.CI ? 1 : undefined,
   reporter: "html",
   use: {
-    baseURL: "http://localhost:8000",
+    baseURL: process.env.PLAYWRIGHT_TEST_BASE_URL || "http://localhost:8000",
     trace: "on-first-retry",
   },
   projects: [
@@ -47,9 +47,11 @@ export default defineConfig({
     //   use: { ...devices['Desktop Chrome'], channel: 'chrome' },
     // },
   ],
-  webServer: {
-    command: "pnpm dev:next",
-    url: "http://localhost:8000",
-    reuseExistingServer: !process.env.CI,
-  },
+  webServer: process.env.PLAYWRIGHT_TEST_BASE_URL
+    ? undefined
+    : {
+        command: "pnpm dev:next",
+        url: "http://localhost:8000",
+        reuseExistingServer: !process.env.CI,
+      },
 })

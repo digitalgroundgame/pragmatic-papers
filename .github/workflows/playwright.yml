@@ -12,29 +12,18 @@ jobs:
     timeout-minutes: 60
     runs-on: ubuntu-latest
 
-    services:
-      postgres:
-        image: postgres:15-alpine
-        env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: pragmatic-papers
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-
-    env:
-      DATABASE_URI: postgres://postgres:postgres@localhost:5432/pragmatic-papers
-      PAYLOAD_SECRET: ${{ secrets.PAYLOAD_SECRET }}
-      NEXT_PUBLIC_SERVER_URL: http://localhost:8000
-      USE_LOCAL_STORAGE: "true"
-
     steps:
       - uses: actions/checkout@v4
+
+      - name: Set Base URL
+        id: set-url
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" == "pull_request" ]; then
+            echo "base_url=https://pr-${{ github.event.number }}.pragmaticpapers.com" >> $GITHUB_OUTPUT
+          else
+            echo "base_url=https://staging.pragmaticpapers.com" >> $GITHUB_OUTPUT
+          fi
 
       - name: Set up Node.js environment
         uses: ./.github/actions/setup-project
@@ -42,11 +31,30 @@ jobs:
           node-version: "24.x"
           gh-font-read-token: ${{ secrets.GH_FONT_READ }}
 
+      - name: Wait for Staging URL
+        shell: bash
+        run: |
+          URL="${{ steps.set-url.outputs.base_url }}"
+          echo "Waiting for $URL to be live..."
+          # Wait up to 10 minutes (60 * 10s)
+          for i in {1..60}; do
+            if curl -s --head --fail "$URL" > /dev/null; then
+              echo "URL is live!"
+              exit 0
+            fi
+            echo "Still waiting... ($i/60)"
+            sleep 10
+          done
+          echo "Timed out waiting for $URL"
+          exit 1
+
       - name: Install Playwright browsers
         run: pnpm exec playwright install --with-deps chromium
 
       - name: Run Playwright tests
         run: pnpm exec playwright test --config=playwright.config.ts --project=chromium
+        env:
+          PLAYWRIGHT_TEST_BASE_URL: ${{ steps.set-url.outputs.base_url }}
 
       - uses: actions/upload-artifact@v4
         if: ${{ !cancelled() }}

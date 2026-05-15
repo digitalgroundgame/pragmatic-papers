@@ -16,6 +16,7 @@ services:
       FORCE_COLOR: "1"
       NEXT_TELEMETRY_DISABLED: "1"
       WATCHPACK_POLLING: "true"
+      FORCE_COLOR: "1"
     ports:
       - "8000:8000"
     networks:

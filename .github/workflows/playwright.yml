@@ -34,7 +34,7 @@ jobs:
       USE_LOCAL_STORAGE: "true"
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Set up Node.js environment
         uses: ./.github/actions/setup-project
@@ -48,7 +48,7 @@ jobs:
       - name: Run Playwright tests
         run: pnpm exec playwright test --config=playwright.config.ts --project=chromium
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: ${{ !cancelled() }}
         with:
           name: playwright-report

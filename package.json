@@ -27,6 +27,8 @@
     "reinstall": "cross-env NODE_OPTIONS=--no-deprecation rm -rf node_modules && pnpm install",
     "start": "cross-env NODE_OPTIONS=--no-deprecation next start",
     "check-types": "cross-env NODE_OPTIONS=--no-deprecation tsc --noEmit",
+    "check:schema": "cross-env NODE_OPTIONS=--no-deprecation tsx scripts/validate-schema.ts",
+    "check:all": "pnpm run lint:ci && pnpm run check-types && pnpm run format && pnpm run check:schema",
     "ci": "payload migrate && pnpm build",
     "migrate": "payload migrate",
     "migrate:create": "payload migrate:create",

@@ -1,5 +1,5 @@
-name: "Setup PNPM"
-description: "Sets up Node.js, PNPM, and installs dependencies"
+name: "Setup Project"
+description: "Sets up Node.js, PNPM, installs dependencies, and hydrates the environment"
 
 inputs:
   node-version:
@@ -32,3 +32,7 @@ runs:
     - name: Install dependencies
       shell: bash
       run: pnpm install --frozen-lockfile
+
+    - name: Hydrate environment
+      shell: bash
+      run: node scripts/copy-env.mjs

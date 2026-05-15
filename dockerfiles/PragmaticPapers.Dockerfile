@@ -117,9 +117,6 @@ RUN /usr/local/bin/modify-database-uri.sh && \
 # Runs migrations and then builds
 # Source the potentially modified DATABASE_URI before building
 RUN . /tmp/build.env && \
-    echo "--- BUILD LOGGING ---" && \
-    echo "NEXT_PUBLIC_COMMIT_SHA: ${NEXT_PUBLIC_COMMIT_SHA}" && \
-    echo "---------------------" && \
     pnpm install --frozen-lockfile && \
     pnpm payload migrate && \
     pnpm build

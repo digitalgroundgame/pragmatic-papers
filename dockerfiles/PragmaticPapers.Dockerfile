@@ -28,6 +28,7 @@ ENV GH_FONT_READ=${GH_FONT_READ}
 # Using cache mount for pnpm store to speed up builds
 # Set CI=true to prevent pnpm from requiring TTY
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
+    pnpm config set store-dir /pnpm/store && \
     CI=true pnpm install --frozen-lockfile
 
 # ============================================
@@ -114,7 +115,10 @@ RUN /usr/local/bin/modify-database-uri.sh && \
 # Build application with migrations
 # Runs migrations and then builds
 # Source the potentially modified DATABASE_URI before building
-RUN . /tmp/build.env && \
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
+    --mount=type=cache,id=nextjs,target=/app/.next/cache \
+    . /tmp/build.env && \
+    pnpm config set store-dir /pnpm/store && \
     pnpm install --frozen-lockfile && \
     pnpm payload migrate && \
     pnpm build

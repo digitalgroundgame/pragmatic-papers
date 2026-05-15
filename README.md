@@ -28,11 +28,16 @@ This repo uses some additional tools:
 
 1. [Clone the repo](https://github.com/digitalgroundgame/pragmatic-papers.git) and `cd` into it.
 2. _(Optional)_ Set up the private display font — see [Private Font Setup](#private-font-setup) below. Don't worry you can come back to this later.
-3. Run `pnpm install`. The preinstall hook copies `.env` from `.env.example` if missing.
-4. Start dev:
+3. Create `.env` from `.env.example` if it does not exist:
 
 ```bash
- pnpm dev
+cp .env.example .env
+```
+
+4. Start dev. The container installs dependencies on startup:
+
+```bash
+pnpm dev
 ```
 
 5. Open [http://localhost:8000](http://localhost:8000).

@@ -31,21 +31,34 @@ jobs:
           node-version: "24.x"
           gh-font-read-token: ${{ secrets.GH_FONT_READ }}
 
-      - name: Wait for Staging URL
+      - name: Wait for Fresh Staging Deployment
         shell: bash
         run: |
           URL="${{ steps.set-url.outputs.base_url }}"
-          echo "Waiting for $URL to be live..."
-          # Wait up to 10 minutes (60 * 10s)
-          for i in {1..60}; do
-            if curl -s --head --fail "$URL" > /dev/null; then
-              echo "URL is live!"
+          EXPECTED_SHA="${{ github.sha }}"
+          echo "Waiting for $URL to serve commit $EXPECTED_SHA..."
+
+          # Wait up to 15 minutes (90 * 10s) - builds can take a while
+          for i in {1..90}; do
+            # Fetch headers, find x-current-commit, extract value, remove whitespace/CR
+            # Use -L to follow redirects if necessary
+            LIVE_SHA=$(curl -sI -L "$URL" | grep -i "x-current-commit" | awk '{print $2}' | tr -d '\r\n')
+            
+            if [ "$LIVE_SHA" == "$EXPECTED_SHA" ]; then
+              echo "✅ Fresh deployment is live!"
               exit 0
             fi
-            echo "Still waiting... ($i/60)"
+            
+            if [ -z "$LIVE_SHA" ]; then
+              echo "⚠️ URL is not responding or header is missing. ($i/90)"
+            else
+              echo "⏳ Old deployment still active (Live: ${LIVE_SHA:0:7}, Expected: ${EXPECTED_SHA:0:7}). ($i/90)"
+            fi
+            
             sleep 10
           done
-          echo "Timed out waiting for $URL"
+
+          echo "❌ Timed out waiting for fresh deployment on $URL"
           exit 1
 
       - name: Install Playwright browsers

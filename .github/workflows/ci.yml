@@ -38,6 +38,26 @@ jobs:
 
     name: Run static checks
     runs-on: ubuntu-latest
+    env:
+      DATABASE_URI: postgres://postgres:postgres@localhost:5432/pragmatic-papers
+      NEXT_PUBLIC_SERVER_URL: http://localhost:8000
+      PAYLOAD_SECRET: ci-payload-secret
+      USE_LOCAL_STORAGE: "true"
+
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: pragmatic-papers
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d pragmatic-papers"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
 
     steps:
       - uses: actions/checkout@v4

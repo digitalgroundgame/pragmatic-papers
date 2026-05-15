@@ -1,6 +1,5 @@
 services:
-  app:
-    container_name: pragmatic-papers-next-dev
+  payload-pragmatic:
     build:
       context: .
       dockerfile: dockerfiles/PragmaticPapers.Dockerfile
@@ -12,11 +11,10 @@ services:
     env_file:
       - .env
     environment:
-      DATABASE_URI: postgres://postgres:postgres@postgres-pragmatic-papers:5432/pragmatic-papers
+      DATABASE_URI: postgres://postgres:postgres@postgres-pragmatic:5432/pragmatic-papers
       FORCE_COLOR: "1"
       NEXT_TELEMETRY_DISABLED: "1"
       WATCHPACK_POLLING: "true"
-      FORCE_COLOR: "1"
     ports:
       - "8000:8000"
     networks:
@@ -27,11 +25,10 @@ services:
       - pragmatic_papers_node_modules:/app/node_modules
       - pragmatic_papers_pnpm_store:/pnpm/store
     depends_on:
-      postgres-pragmatic-papers:
+      postgres-pragmatic:
         condition: service_healthy
 
-  postgres-pragmatic-papers:
-    container_name: pragmatic-papers-postgres-dev
+  postgres-pragmatic:
     image: postgres:15-alpine
     restart: always
     environment:

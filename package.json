@@ -11,7 +11,7 @@
     "dev:db-nuke": "docker compose -p pragmatic-papers -f docker-compose.yml down && docker volume rm pragmatic_papers_postgres_data",
     "dev:prod": "cross-env NODE_OPTIONS=--no-deprecation rm -rf .next && pnpm build && pnpm start",
     "dev:pretty": "pnpm dev | pino-pretty",
-    "dev": "docker compose -p pragmatic-papers -f docker-compose.yml up --no-log-prefix --attach app",
+    "dev": "docker compose -p pragmatic-papers -f docker-compose.yml up --no-log-prefix --attach payload-pragmatic",
     "generate:importmap": "cross-env NODE_OPTIONS=--no-deprecation payload generate:importmap",
     "generate:types": "cross-env NODE_OPTIONS=--no-deprecation payload generate:types",
     "lint": "cross-env NODE_OPTIONS=--no-deprecation eslint .",

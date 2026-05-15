@@ -50,9 +50,9 @@ export async function up({ db, payload, req }: MigrateUpArgs): Promise<void> {
     GENERATED ALWAYS AS (
       setweight(to_tsvector('english', coalesce("title", '')),   'A') ||
       setweight(to_tsvector('english', coalesce("authors", '')), 'B') ||
+      setweight(to_tsvector('english', coalesce("topics", '')),  'C') ||
       setweight(to_tsvector('english', coalesce("excerpt", '')), 'C') ||
-      setweight(to_tsvector('english', coalesce("topics", '')), 'D') ||
-      setweight(to_tsvector('english', coalesce("body", '')), 'E')
+      setweight(to_tsvector('english', coalesce("body", '')),    'D')
     ) STORED;
   CREATE INDEX "search_search_vector_idx" ON "search" USING GIN ("search_vector");`)
 }

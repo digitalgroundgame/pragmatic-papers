@@ -3,6 +3,7 @@ import { PageRange } from "@/components/PageRange"
 import { Pagination } from "@/components/Pagination"
 import type { Media as MediaType } from "@/payload-types"
 import configPromise from "@payload-config"
+import { sql } from "@payloadcms/db-postgres"
 import type { Metadata } from "next"
 import { draftMode } from "next/headers"
 import type { PaginatedDocs } from "payload"
@@ -20,6 +21,7 @@ interface SearchResult {
 }
 
 const RESULTS_PER_PAGE = 10
+const MAX_QUERY_LENGTH = 200
 
 function collectionHref(relationTo: string, slug: string): string {
   if (relationTo === "articles") return `/articles/${slug}`
@@ -28,20 +30,78 @@ function collectionHref(relationTo: string, slug: string): string {
   return `/${slug}`
 }
 
-const querySearch = cache(async (query: string, page: number) => {
+const querySearch = cache(async (rawQuery: string, page: number) => {
   const { isEnabled: draft } = await draftMode()
   const payload = await getPayload({ config: configPromise })
-  const result: PaginatedDocs<SearchResult> = await payload.find({
+  const query = rawQuery.slice(0, MAX_QUERY_LENGTH).trim()
+
+  if (!query) {
+    return payload.find({
+      collection: "search",
+      draft,
+      depth: 1,
+      limit: RESULTS_PER_PAGE,
+      page,
+      overrideAccess: draft,
+      sort: "-priority",
+    })
+  }
+
+  const offset = (page - 1) * RESULTS_PER_PAGE
+
+  // Using offset means we have to query the total result count separately.
+  // You could try to use a window func to avoid making two queries but in some cases
+  // this ends up making query performance worse.
+  const [ranked, countResult] = await Promise.all([
+    payload.db.drizzle.execute<{ id: number; rank: number }>(sql`
+      SELECT id,
+             ts_rank_cd(search_vector, websearch_to_tsquery('english', ${query})) AS rank
+        FROM search
+       WHERE search_vector @@ websearch_to_tsquery('english', ${query})
+       ORDER BY rank DESC, priority DESC NULLS LAST
+       LIMIT ${RESULTS_PER_PAGE} OFFSET ${offset}
+    `),
+    payload.db.drizzle.execute<{ count: number }>(sql`
+      SELECT COUNT(*)::int AS count
+        FROM search
+       WHERE search_vector @@ websearch_to_tsquery('english', ${query})
+    `),
+  ])
+
+  const ids = ranked.rows.map((r) => r.id)
+  const totalDocs = countResult.rows[0]?.count ?? 0
+  const totalPages = Math.max(1, Math.ceil(totalDocs / RESULTS_PER_PAGE))
+
+  const emptyPage: PaginatedDocs<SearchResult> = {
+    docs: [],
+    totalDocs,
+    totalPages,
+    page,
+    limit: RESULTS_PER_PAGE,
+    pagingCounter: offset + 1,
+    hasPrevPage: page > 1,
+    hasNextPage: page < totalPages,
+    prevPage: page > 1 ? page - 1 : null,
+    nextPage: page < totalPages ? page + 1 : null,
+  }
+
+  if (ids.length === 0) return emptyPage
+
+  const { docs } = await payload.find({
     collection: "search",
     draft,
     depth: 1,
     limit: RESULTS_PER_PAGE,
-    page,
+    where: { id: { in: ids } },
     overrideAccess: draft,
-    sort: "-priority",
-    where: query ? { or: [{ title: { like: query } }, { authors: { like: query } }] } : undefined,
+    pagination: false,
   })
-  return result
+
+  // Preserve ts_rank ordering — payload.find won't honor it.
+  const byId = new Map(docs.map((d) => [d.id, d as unknown as SearchResult]))
+  const sorted = ids.map((id) => byId.get(id)).filter((d): d is SearchResult => Boolean(d))
+
+  return { ...emptyPage, docs: sorted }
 })
 
 export const metadata: Metadata = { title: "Search | The Pragmatic Papers" }

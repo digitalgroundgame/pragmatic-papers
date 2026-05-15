@@ -124,7 +124,7 @@ export const AudioMedia: React.FC<AudioMediaProps> = ({ media, onDurationChange 
       <span className="text-muted-foreground shrink-0 text-xs tabular-nums">
         {`${formatTime(currentTime)} / ${formatTime(duration)}`}
       </span>
-      { }
+      {}
       <audio ref={audioRef} src={media.url} preload="metadata">
         {/* <track kind="captions" src={captionSrc || undefined} default={!!captionSrc} /> */}
       </audio>

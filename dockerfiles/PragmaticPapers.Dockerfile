@@ -62,7 +62,6 @@ ARG S3_ENDPOINT
 ARG NEXT_PUBLIC_GOOGLE_ANALYTICS_ID
 ARG NEXT_PUBLIC_SERVER_URL
 ARG NEXT_PUBLIC_SUPABASE_URL
-ARG NEXT_PUBLIC_COMMIT_SHA
 
 # Coolify-specific configuration
 # COOLIFY_FQDN is automatically set by Coolify (e.g., "pr-330.pragmaticpapers.com")

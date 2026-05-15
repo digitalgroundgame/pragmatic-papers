@@ -59,15 +59,6 @@ const nextConfig: NextConfig = {
   async headers() {
     return [
       {
-        source: "/:path*",
-        headers: [
-          {
-            key: "x-current-commit",
-            value: process.env.NEXT_PUBLIC_COMMIT_SHA || "unknown",
-          },
-        ],
-      },
-      {
         // Payload admin panel: never cache — always requires a fresh authenticated response.
         // CDN-Cache-Control is Vercel-specific and prevents edge caching in addition to the browser.
         source: "/admin/:path*",

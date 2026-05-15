@@ -115,6 +115,7 @@ RUN /usr/local/bin/modify-database-uri.sh && \
 # Build application with migrations
 # Runs migrations and then builds
 # Source the potentially modified DATABASE_URI before building
+# Cache test trigger 1
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
     --mount=type=cache,id=nextjs,target=/app/.next/cache \
     . /tmp/build.env && \

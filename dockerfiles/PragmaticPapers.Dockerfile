@@ -8,8 +8,9 @@ ARG NODE_VERSION=22.21.1
 FROM node:${NODE_VERSION}-alpine AS base
 # Install dependencies for native modules and Git-backed development checks.
 RUN apk add --no-cache git libc6-compat
+COPY package.json ./
 # Enable and install the pinned pnpm version used by this repo.
-RUN corepack enable && corepack prepare pnpm@10.33.0 --activate
+RUN corepack enable && corepack prepare "$(node -p "require('./package.json').packageManager")" --activate
 WORKDIR /app
 
 # ============================================

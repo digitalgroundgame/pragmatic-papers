@@ -48,13 +48,12 @@ const querySearch = cache(async (rawQuery: string, page: number) => {
   }
 
   const offset = (page - 1) * RESULTS_PER_PAGE
-  interface DrizzleExec {
-    execute: <T = Record<string, unknown>>(query: object) => Promise<{ rows: T[] }>
-  }
-  const drizzle = (payload.db as unknown as { drizzle: DrizzleExec }).drizzle
 
+  // Using offset means we have to query the total result count separately.
+  // You could try to use a window func to avoid making two queries but in some cases
+  // this ends up making query performance worse.
   const [ranked, countResult] = await Promise.all([
-    drizzle.execute<{ id: number; rank: number }>(sql`
+    payload.db.drizzle.execute<{ id: number; rank: number }>(sql`
       SELECT id,
              ts_rank_cd(search_vector, websearch_to_tsquery('english', ${query})) AS rank
         FROM search
@@ -62,7 +61,7 @@ const querySearch = cache(async (rawQuery: string, page: number) => {
        ORDER BY rank DESC, priority DESC NULLS LAST
        LIMIT ${RESULTS_PER_PAGE} OFFSET ${offset}
     `),
-    drizzle.execute<{ count: number }>(sql`
+    payload.db.drizzle.execute<{ count: number }>(sql`
       SELECT COUNT(*)::int AS count
         FROM search
        WHERE search_vector @@ websearch_to_tsquery('english', ${query})

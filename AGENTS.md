@@ -10,8 +10,7 @@ This file provides guidance to tools like Claude Code (claude.ai/code) when work
 
 ### Development
 
-- `pnpm dev` — starts everything (Postgres via Docker + Next.js dev server on port 8000)
-- `pnpm dev:db` / `pnpm dev:db-down` — start/stop Postgres container
+- `pnpm dev` — starts everything in Docker Compose (Postgres + Next.js dev server on port 8000)
 - `pnpm dev:db-nuke` — stop Postgres and delete volume data
 
 ### Quality Checks

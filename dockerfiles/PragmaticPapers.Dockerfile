@@ -117,6 +117,9 @@ RUN /usr/local/bin/modify-database-uri.sh && \
 # Runs migrations and then builds
 # Source the potentially modified DATABASE_URI before building
 RUN . /tmp/build.env && \
+    echo "--- BUILD LOGGING ---" && \
+    echo "NEXT_PUBLIC_COMMIT_SHA: ${NEXT_PUBLIC_COMMIT_SHA}" && \
+    echo "---------------------" && \
     pnpm install --frozen-lockfile && \
     pnpm payload migrate && \
     pnpm build
@@ -189,8 +192,4 @@ EXPOSE 3000
 # Use dumb-init to handle signals properly (SIGTERM, etc.)
 ENTRYPOINT ["dumb-init", "--"]
 # Start using the startup script for better log visibility and to ensure environment variables are sourced
-CMD ["/app/start.sh"]
-ter log visibility and to ensure environment variables are sourced
-CMD ["/app/start.sh"]
-ced
 CMD ["/app/start.sh"]

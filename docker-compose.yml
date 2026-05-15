@@ -13,6 +13,7 @@ services:
       - .env
     environment:
       DATABASE_URI: postgres://postgres:postgres@postgres-pragmatic-papers:5432/pragmatic-papers
+      FORCE_COLOR: "1"
       NEXT_TELEMETRY_DISABLED: "1"
       WATCHPACK_POLLING: "true"
     ports:

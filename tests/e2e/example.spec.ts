@@ -13,6 +13,6 @@ test("logo is visible", async ({ page }) => {
   await page.goto("/")
 
   // Look for the logo by alt text or accessible name
-  const logo = page.getByRole("link", { name: /Link to Home/i })
+  const logo = page.getByRole("link", { name: /The Pragmatic Papers/i })
   await expect(logo).toBeVisible()
 })

@@ -90,7 +90,6 @@ ENV S3_ENDPOINT=${S3_ENDPOINT}
 ENV NEXT_PUBLIC_GOOGLE_ANALYTICS_ID=${NEXT_PUBLIC_GOOGLE_ANALYTICS_ID}
 ENV NEXT_PUBLIC_SERVER_URL=${NEXT_PUBLIC_SERVER_URL}
 ENV NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}
-ENV NEXT_PUBLIC_COMMIT_SHA=${NEXT_PUBLIC_COMMIT_SHA}
 
 # Coolify-specific environment variables
 ENV COOLIFY_FQDN=${COOLIFY_FQDN}
@@ -191,6 +190,8 @@ ENTRYPOINT ["dumb-init", "--"]
 # Start using the startup script for better log visibility and to ensure environment variables are sourced
 CMD ["/app/start.sh"]
 ter log visibility and to ensure environment variables are sourced
+CMD ["/app/start.sh"]
+ced
 CMD ["/app/start.sh"]
 ced
 CMD ["/app/start.sh"]

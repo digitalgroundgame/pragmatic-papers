@@ -31,6 +31,9 @@ jobs:
           node-version: "24.x"
           gh-font-read-token: ${{ secrets.GH_FONT_READ }}
 
+      - name: Install Playwright browsers
+        run: pnpm exec playwright install --with-deps chromium
+
       - name: Wait for Fresh Staging Deployment
         shell: bash
         run: |
@@ -60,9 +63,6 @@ jobs:
 
           echo "❌ Timed out waiting for fresh deployment on $URL"
           exit 1
-
-      - name: Install Playwright browsers
-        run: pnpm exec playwright install --with-deps chromium
 
       - name: Run Playwright tests
         run: pnpm exec playwright test --config=playwright.config.ts --project=chromium

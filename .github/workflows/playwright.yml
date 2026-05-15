@@ -1,10 +1,14 @@
 name: Playwright Tests
 
 on:
-  push:
-    branches: [main]
-  pull_request:
-    branches: [main, dev]
+  repository_dispatch:
+    types: [coolify-deploy-success]
+  workflow_dispatch:
+    inputs:
+      url:
+        description: "URL to test (e.g., https://staging.pragmaticpapers.com)"
+        required: true
+        default: "https://staging.pragmaticpapers.com"
 
 jobs:
   test:
@@ -19,10 +23,10 @@ jobs:
         id: set-url
         shell: bash
         run: |
-          if [ "${{ github.event_name }}" == "pull_request" ]; then
-            echo "base_url=https://pr-${{ github.event.number }}.pragmaticpapers.com" >> $GITHUB_OUTPUT
+          if [ "${{ github.event_name }}" == "repository_dispatch" ]; then
+            echo "base_url=${{ github.event.client_payload.url }}" >> $GITHUB_OUTPUT
           else
-            echo "base_url=https://staging.pragmaticpapers.com" >> $GITHUB_OUTPUT
+            echo "base_url=${{ github.event.inputs.url }}" >> $GITHUB_OUTPUT
           fi
 
       - name: Set up Node.js environment
@@ -33,47 +37,6 @@ jobs:
 
       - name: Install Playwright browsers
         run: pnpm exec playwright install --with-deps chromium
-
-      - name: Wait for Fresh Staging Deployment
-        shell: bash
-        run: |
-          URL="${{ steps.set-url.outputs.base_url }}"
-          if [ "${{ github.event_name }}" == "pull_request" ]; then
-            EXPECTED_SHA="${{ github.event.pull_request.head.sha }}"
-          else
-            EXPECTED_SHA="${{ github.sha }}"
-          fi
-          echo "Waiting for $URL to serve commit $EXPECTED_SHA..."
-
-          # Wait up to 15 minutes (90 * 10s)
-          for i in {1..90}; do
-            # Safely capture JSON response
-            API_RESPONSE=$(curl -sL "$URL/api/version" || echo "curl_failed")
-            
-            if [ "$API_RESPONSE" == "curl_failed" ]; then
-              echo "⚠️  Connection failed to $URL/api/version ($i/90)"
-            else
-              # Parse the commit SHA using jq
-              LIVE_SHA=$(echo "$API_RESPONSE" | jq -r '.commit // empty' 2>/dev/null || echo "")
-              
-              if [ "$LIVE_SHA" == "$EXPECTED_SHA" ]; then
-                echo "✅ Fresh deployment is live!"
-                exit 0
-              fi
-              
-              if [ -z "$LIVE_SHA" ]; then
-                echo "⚠️  Version API did not return a commit SHA. ($i/90)"
-                echo "    Ensure DEPLOY_COMMIT_SHA is set in Coolify."
-              else
-                echo "⏳ Old deployment active (Live: ${LIVE_SHA:0:7}, Expected: ${EXPECTED_SHA:0:7}). ($i/90)"
-              fi
-            fi
-            
-            sleep 10
-          done
-
-          echo "❌ Timed out waiting for fresh deployment on $URL"
-          exit 1
 
       - name: Run Playwright tests
         run: pnpm exec playwright test --config=playwright.config.ts --project=chromium

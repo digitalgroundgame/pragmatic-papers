@@ -189,9 +189,3 @@ EXPOSE 3000
 ENTRYPOINT ["dumb-init", "--"]
 # Start using the startup script for better log visibility and to ensure environment variables are sourced
 CMD ["/app/start.sh"]
-ter log visibility and to ensure environment variables are sourced
-CMD ["/app/start.sh"]
-ced
-CMD ["/app/start.sh"]
-ced
-CMD ["/app/start.sh"]

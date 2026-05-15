@@ -77,7 +77,7 @@ export async function Header(): Promise<React.JSX.Element> {
             </Sheet>
             <a
               href="/"
-              aria-label="Link to Home"
+              aria-label="The Pragmatic Papers"
               className="inline-flex items-center justify-center"
             >
               <Logo />

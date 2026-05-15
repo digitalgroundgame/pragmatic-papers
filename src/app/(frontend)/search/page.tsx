@@ -2,6 +2,7 @@ import { Media, isMedia } from "@/components/Media"
 import { PageRange } from "@/components/PageRange"
 import { Pagination } from "@/components/Pagination"
 import type { Media as MediaType } from "@/payload-types"
+import { arrayStringToPlainText } from "@/utilities/formatAuthors"
 import configPromise from "@payload-config"
 import { sql } from "@payloadcms/db-postgres"
 import type { Metadata } from "next"
@@ -157,7 +158,6 @@ export default async function SearchPage({ searchParams }: Args): Promise<React.
               const href = collectionHref(relationTo, result.slug ?? "")
 
               const image = isMedia(result.image) ? result.image : null
-
               return (
                 <li key={result.id} className="border-b pb-4 last:border-0">
                   <div className="flex gap-4">
@@ -183,17 +183,17 @@ export default async function SearchPage({ searchParams }: Args): Promise<React.
                         </p>
                       )}
                       <div className="text-muted-foreground mt-auto flex items-center gap-2 text-xs">
-                        <span className="capitalize">{`in ${relationTo}`}</span>
+                        <span className="capitalize">{`In ${relationTo}`}</span>
                         {result.topics && (
                           <>
                             <span>{"•"}</span>
-                            <span>{result.topics}</span>
+                            <span>{`In ${arrayStringToPlainText(result.topics, ", ")}`}</span>
                           </>
                         )}
                         {result.authors && (
                           <>
                             <span>{"•"}</span>
-                            <span>{`by ${result.authors}`}</span>
+                            <span>{`By ${arrayStringToPlainText(result.authors, ", ")}`}</span>
                           </>
                         )}
                       </div>

@@ -1,2 +1,1 @@
-pnpm lint-staged
-pnpm check-types
+sh scripts/docker-husky.sh "pnpm lint-staged && pnpm check-types"

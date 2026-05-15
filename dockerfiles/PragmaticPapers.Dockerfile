@@ -6,8 +6,8 @@ ARG NODE_VERSION=22.21.1
 # Base stage - setup pnpm and dependencies
 # ============================================
 FROM node:${NODE_VERSION}-alpine AS base
-# Install dependencies for native modules (required for sharp and other native deps)
-RUN apk add --no-cache libc6-compat
+# Install dependencies for native modules and Git-backed development checks.
+RUN apk add --no-cache git libc6-compat
 # Enable pnpm via corepack
 RUN corepack enable
 WORKDIR /app

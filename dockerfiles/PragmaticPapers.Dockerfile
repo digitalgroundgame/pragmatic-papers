@@ -17,12 +17,14 @@ WORKDIR /app
 # ============================================
 FROM base AS installer
 WORKDIR /app
-# Copy entire project
-COPY . .
 
 # GitHub Packages auth (set GH_FONT_READ as build arg in Coolify for staging/prod)
 ARG GH_FONT_READ
 ENV GH_FONT_READ=${GH_FONT_READ}
+
+# Copy dependency manifests first for layer caching
+# Changes to source files won't bust this layer
+COPY package.json pnpm-lock.yaml ./
 
 # Install dependencies with frozen lockfile
 # Using cache mount for pnpm store to speed up builds
@@ -31,15 +33,14 @@ RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
     pnpm config set store-dir /pnpm/store && \
     CI=true pnpm install --frozen-lockfile
 
+# Copy remaining source code (cache miss here won't re-trigger install)
+COPY . .
+
 # ============================================
 # Builder stage - build the application
 # ============================================
 FROM base AS builder
 WORKDIR /app
-
-# Install PostgreSQL client for database operations
-# Only needed if we're copying databases during build
-RUN apk add --no-cache postgresql-client
 
 # Copy installed node_modules from installer
 COPY --from=installer /app/ .
@@ -98,6 +99,11 @@ ENV COPY_SOURCE_DATABASE=${COPY_SOURCE_DATABASE}
 ENV SOURCE_DATABASE_URI=${SOURCE_DATABASE_URI}
 ENV FORCE_DATABASE_COPY=${FORCE_DATABASE_COPY}
 
+# Install PostgreSQL client only for preview deployments (database copy operations)
+RUN if [ "$BUILD_ENV" = "preview" ]; then \
+        apk add --no-cache postgresql-client; \
+    fi
+
 # --- PREVIEW ISOLATION LOGIC ---
 # 1. If BUILD_ENV=preview, modify-database-uri.sh generates a unique DB name based on PR number.
 # 2. We store this NEW_DATABASE_URI in /tmp/build.env to persist it.
@@ -116,11 +122,8 @@ RUN /usr/local/bin/modify-database-uri.sh && \
 # Runs migrations and then builds
 # Source the potentially modified DATABASE_URI before building
 # Cache test trigger 1
-RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
-    --mount=type=cache,id=nextjs,target=/app/.next/cache \
+RUN --mount=type=cache,id=nextjs,target=/app/.next/cache \
     . /tmp/build.env && \
-    pnpm config set store-dir /pnpm/store && \
-    pnpm install --frozen-lockfile && \
     pnpm payload migrate && \
     pnpm build
 

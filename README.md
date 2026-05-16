@@ -16,7 +16,7 @@ pnpm
 
 This repo uses some additional tools:
 
-- [Turborepo](https://turbo.build/repo) for monorepo management
+- [Next.js](https://nextjs.org/) for the web framework
 - [TypeScript](https://www.typescriptlang.org/) for static type checking
 - [ESLint](https://eslint.org/) for code linting
 - [Prettier](https://prettier.io) for code formatting
@@ -34,10 +34,10 @@ This repo uses some additional tools:
 cp .env.example .env
 ```
 
-4. Start dev. The container installs dependencies on startup:
+4. Install dependencies and start dev:
 
 ```bash
-pnpm dev
+pnpm install && pnpm dev
 ```
 
 5. Open [http://localhost:8000](http://localhost:8000).
@@ -93,7 +93,7 @@ Read more about [Seeding The Database](https://github.com/digitalgroundgame/prag
 Here are the most important scripts available in the root `package.json`:
 
 - `pnpm dev`: Start the application in development mode.
-- `pnpm dev:db-nuke`: Stop the container _and_ remove the database volume.
+- `pnpm dev:db-nuke`: Drop the database schema and re-run migrations (equivalent to a fresh database).
 - `pnpm lint`: Lint files with `eslint`.
 - `pnpm format`: Format files with `prettier`.
 - `pnpm check-types`: Runs typescript compiler in no emit mode to check for type errors.

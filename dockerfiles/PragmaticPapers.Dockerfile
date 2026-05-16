@@ -13,11 +13,6 @@ COPY package.json ./
 RUN corepack enable && corepack prepare "$(node -p "require('./package.json').packageManager")" --activate
 WORKDIR /app
 
-# Pre-download pnpm so it doesn't fetch on first use in each stage
-# (corepack's shims auto-detect from package.json's "packageManager" field)
-COPY package.json ./
-RUN corepack prepare "$(node -p "require('./package.json').packageManager")" --activate && rm package.json
-
 # ============================================
 # Builder stage - install deps and build
 # ============================================

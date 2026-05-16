@@ -9,7 +9,7 @@ export default defineConfig({
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
   workers: process.env.CI ? 1 : undefined,
-  reporter: "html",
+  reporter: process.env.CI ? [["github"], ["html"]] : "html",
   use: {
     baseURL: process.env.PLAYWRIGHT_BASE_URL || "http://localhost:8000",
     trace: "on-first-retry",

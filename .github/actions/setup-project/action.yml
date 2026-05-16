@@ -34,3 +34,11 @@ runs:
       run: pnpm install --frozen-lockfile
       env:
         GH_FONT_READ: ${{ inputs.gh-font-read-token }}
+    - name: Create .env file
+      run: |
+        cat > .env << EOF
+        DATABASE_URI=postgres://postgres:postgres@localhost:5432/pragmatic-papers
+        PAYLOAD_SECRET=${{ secrets.PAYLOAD_SECRET }}
+        NEXT_PUBLIC_SERVER_URL=http://localhost:8000
+        USE_LOCAL_STORAGE=true
+        EOF

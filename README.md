@@ -48,13 +48,31 @@ The `@digitalgroundgame/fonts` package contains the proprietary display font. It
 
 If you do have access, create a **Classic GitHub Personal Access Token (PAT)** at [GitHub Settings → Tokens](https://github.com/settings/tokens) with the `read:packages` scope.
 
-The project `.npmrc` references `GH_FONT_READ`. Put the token in `.env` before the first `pnpm dev` so the container can install the private package:
+The project `.npmrc` references `GH_FONT_READ` — you just need that variable set before running `pnpm install`. Choose whichever method suits you:
 
-```bash
-GH_FONT_READ=ghp_your_token_here
-```
+- **Mac/Linux — shell profile** (applies to every terminal automatically):
 
-Restart `pnpm dev` after updating `.env`. You should see `✓ Fonts copied to public/fonts` in the install output.
+  ```bash
+  # ~/.zshrc or ~/.bashrc
+  export GH_FONT_READ=ghp_your_token_here
+  ```
+
+- **Windows (PowerShell)** — set permanently for your user:
+
+  ```powershell
+  [System.Environment]::SetEnvironmentVariable("GH_FONT_READ", "ghp_your_token_here", "User")
+  ```
+
+  Alternatively, open **System Properties → Advanced → Environment Variables** (search "environment variables" in the Start menu) and add `GH_FONT_READ` under "User variables".
+
+Restart your terminal after setting the variable, then re-run `pnpm install`. You should see `✓ Fonts copied to public/fonts` in the output.
+
+> [!TIP]
+> Font Caching & Env Variables
+>
+> The Situation: This font gets cached twice—once as a package in the >pnpm store and once in the /public/fonts/ directory.
+>
+> The Workaround: You don't need to pollute your global environment. Just use a temporary export in your terminal session for local builds.
 
 ## Seeding the Database
 

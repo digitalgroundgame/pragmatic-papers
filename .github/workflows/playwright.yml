@@ -41,6 +41,7 @@ jobs:
         with:
           node-version: "24.x"
           gh-font-read-token: ${{ secrets.GH_FONT_READ }}
+          payload-secret: ${{ secrets.PAYLOAD_SECRET }}
 
       - name: Run database migrations
         run: pnpm payload migrate

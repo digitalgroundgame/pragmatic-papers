@@ -18,7 +18,7 @@ import {
   MenuOption,
   type TriggerFn,
 } from "@payloadcms/richtext-lexical/lexical/react/LexicalTypeaheadMenuPlugin"
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import React, { useCallback, useEffect, useMemo, useState } from "react"
 import { createPortal } from "react-dom"
 
 import type { FootnoteBlock } from "@/payload-types"
@@ -91,12 +91,12 @@ class FootnoteMenuOption extends MenuOption {
 const FootnoteShortcutPlugin: React.FC = () => {
   const [editor] = useLexicalComposerContext()
   const [queryString, setQueryString] = useState<string | null>(null)
-  const sourcesRef = useRef<FootnoteSource[]>([])
+  const [sources, setSources] = useState<FootnoteSource[]>([])
 
   useEffect(() => {
     return editor.registerUpdateListener(({ editorState }) => {
       editorState.read(() => {
-        sourcesRef.current = collectFootnoteSources()
+        setSources(collectFootnoteSources())
       })
     })
   }, [editor])
@@ -104,11 +104,11 @@ const FootnoteShortcutPlugin: React.FC = () => {
   const options = useMemo(() => {
     if (queryString === null) return []
     const q = queryString.toLowerCase().trim()
-    return sourcesRef.current
+    return sources
       .filter((s) => (q ? s.note.toLowerCase().includes(q) : true))
       .slice(0, MAX_SUGGESTIONS)
       .map((s) => new FootnoteMenuOption(s))
-  }, [queryString])
+  }, [queryString, sources])
 
   useEffect(() => {
     return editor.registerNodeTransform(TextNode, (textNode) => {

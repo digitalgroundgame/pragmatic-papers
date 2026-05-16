@@ -10,14 +10,12 @@ interface RedditOEmbedClientProps {
 
 export function RedditEmbedClient({ targetId }: RedditOEmbedClientProps): React.ReactNode {
   const pathname = usePathname()
-  const [ready, setReady] = useState(false)
-
-  useEffect(() => {
-    const existing = document.querySelector<HTMLScriptElement>(
+  const [ready, setReady] = useState(() => {
+    if (typeof window === "undefined") return false
+    return !!document.querySelector<HTMLScriptElement>(
       'script[src="https://embed.reddit.com/widgets.js"]',
     )
-    if (existing) setReady(true)
-  }, [])
+  })
 
   useEffect(() => {
     if (!ready) return

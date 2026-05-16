@@ -34,16 +34,17 @@ export const MediaCarousel: React.FC<MediaCarouselProps> = ({
       return
     }
 
-    // Set initial index
     if (initialIndex > 0) {
       api.scrollTo(initialIndex, true)
     }
 
-    setCurrent(api.selectedScrollSnap())
+    React.startTransition(() => setCurrent(api.selectedScrollSnap()))
 
-    api.on("select", () => {
-      setCurrent(api.selectedScrollSnap())
-    })
+    const handleSelect = () => setCurrent(api.selectedScrollSnap())
+    api.on("select", handleSelect)
+    return () => {
+      api.off("select", handleSelect)
+    }
   }, [api, initialIndex])
 
   const validImages = images.filter((img) => img !== null)

@@ -1,5 +1,5 @@
 "use client"
-import { useTheme } from "next-themes"
+import { useTheme } from "@wrksz/themes/client"
 import { Highlight, themes } from "prism-react-renderer"
 import React from "react"
 import { CopyButton } from "./CopyButton"
@@ -11,7 +11,7 @@ type Props = {
 }
 
 export const Code: React.FC<Props> = ({ code, language = "" }) => {
-  const { theme } = useTheme()
+  const { resolvedTheme } = useTheme()
 
   if (!code) return null
 
@@ -19,7 +19,7 @@ export const Code: React.FC<Props> = ({ code, language = "" }) => {
     <Highlight
       code={code}
       language={language}
-      theme={theme === "dark" ? themes.vsDark : themes.vsLight}
+      theme={resolvedTheme === "dark" ? themes.vsDark : themes.vsLight}
     >
       {({ getLineProps, getTokenProps, tokens }) => (
         <pre className="bg-background overflow-x-auto rounded-sm border p-3 text-sm">

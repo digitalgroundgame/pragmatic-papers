@@ -18,7 +18,7 @@ export const LightboxMediaBlock: React.FC<LightboxMediaBlockProps> = ({
   media,
   ...props
 }) => {
-  if (typeof media === "number") return null
+  if (typeof media === "number" || !media) return null
 
   return (
     <Dialog>

@@ -17,7 +17,7 @@ export const revalidateArticle: CollectionAfterChangeHook<Article> = ({
 
       revalidatePath(path)
       revalidatePath("/feed.volumes")
-      revalidateTag("volumes-sitemap")
+      revalidateTag("volumes-sitemap", "max")
     }
 
     // If the article was previously published, we need to revalidate the old path
@@ -28,7 +28,7 @@ export const revalidateArticle: CollectionAfterChangeHook<Article> = ({
 
       revalidatePath(oldPath)
       revalidatePath("/feed.volumes")
-      revalidateTag("volumes-sitemap")
+      revalidateTag("volumes-sitemap", "max")
     }
   }
   return doc
@@ -40,7 +40,7 @@ export const revalidateDelete: CollectionAfterDeleteHook<Article> = ({ doc, req:
 
     revalidatePath(path)
     revalidatePath("/feed.volumes")
-    revalidateTag("volumes-sitemap")
+    revalidateTag("volumes-sitemap", "max")
   }
 
   return doc

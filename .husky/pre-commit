@@ -1,1 +1,1 @@
-pnpm lint-staged
+sh scripts/docker-husky.sh "pnpm lint-staged"

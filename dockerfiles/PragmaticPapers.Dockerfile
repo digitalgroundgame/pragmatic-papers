@@ -30,8 +30,7 @@ COPY package.json pnpm-lock.yaml ./
 # Using cache mount for pnpm store to speed up builds
 # Set CI=true to prevent pnpm from requiring TTY
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
-    pnpm config set store-dir /pnpm/store && \
-    CI=true pnpm install --frozen-lockfile
+    CI=true pnpm install --frozen-lockfile --store-dir /pnpm/store
 
 # Copy remaining source code (cache miss here won't re-trigger install)
 COPY . .

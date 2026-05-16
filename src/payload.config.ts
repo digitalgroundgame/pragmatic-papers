@@ -18,7 +18,7 @@ import path from "path"
 import { buildConfig, type PayloadRequest, type SharpDependency } from "payload"
 import sharp from "sharp"
 import { fileURLToPath } from "url"
-console.warn("=== BUILD CACHE LOG: pragmatic-papers ===")
+
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
 

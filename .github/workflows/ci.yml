@@ -38,6 +38,11 @@ jobs:
 
     name: Run static checks
     runs-on: ubuntu-latest
+    env:
+      DATABASE_URI: postgres://postgres:postgres@localhost:5432/pragmatic-papers
+      NEXT_PUBLIC_SERVER_URL: http://localhost:8000
+      PAYLOAD_SECRET: ci-payload-secret
+      USE_LOCAL_STORAGE: "true"
 
     steps:
       - uses: actions/checkout@v4

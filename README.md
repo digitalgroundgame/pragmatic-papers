@@ -28,11 +28,16 @@ This repo uses some additional tools:
 
 1. [Clone the repo](https://github.com/digitalgroundgame/pragmatic-papers.git) and `cd` into it.
 2. _(Optional)_ Set up the private display font — see [Private Font Setup](#private-font-setup) below. Don't worry you can come back to this later.
-3. Run `pnpm install`. The preinstall hook copies `apps/pragmatic-papers/.env` from `.env.example` if missing.
-4. Start dev:
+3. Create `.env` from `.env.example` if it does not exist:
 
 ```bash
- pnpm dev
+cp .env.example .env
+```
+
+4. Start dev. The container installs dependencies on startup:
+
+```bash
+pnpm dev
 ```
 
 5. Open [http://localhost:8000](http://localhost:8000).
@@ -43,24 +48,13 @@ The `@digitalgroundgame/fonts` package contains the proprietary display font. It
 
 If you do have access, create a **Classic GitHub Personal Access Token (PAT)** at [GitHub Settings → Tokens](https://github.com/settings/tokens) with the `read:packages` scope.
 
-The project `.npmrc` references `GH_FONT_READ` — you just need that variable set before running `pnpm install`. Choose whichever method suits you:
+The project `.npmrc` references `GH_FONT_READ`. Put the token in `.env` before the first `pnpm dev` so the container can install the private package:
 
-- **Mac/Linux — shell profile** (applies to every terminal automatically):
+```bash
+GH_FONT_READ=ghp_your_token_here
+```
 
-  ```bash
-  # ~/.zshrc or ~/.bashrc
-  export GH_FONT_READ=ghp_your_token_here
-  ```
-
-- **Windows (PowerShell)** — set permanently for your user:
-
-  ```powershell
-  [System.Environment]::SetEnvironmentVariable("GH_FONT_READ", "ghp_your_token_here", "User")
-  ```
-
-  Alternatively, open **System Properties → Advanced → Environment Variables** (search "environment variables" in the Start menu) and add `GH_FONT_READ` under "User variables".
-
-Restart your terminal after setting the variable, then re-run `pnpm install`. You should see `✓ Fonts copied to public/fonts` in the output.
+Restart `pnpm dev` after updating `.env`. You should see `✓ Fonts copied to public/fonts` in the install output.
 
 ## Seeding the Database
 
@@ -81,8 +75,6 @@ Read more about [Seeding The Database](https://github.com/digitalgroundgame/prag
 Here are the most important scripts available in the root `package.json`:
 
 - `pnpm dev`: Start the application in development mode.
-- `pnpm dev:db`: Start the development docker container. This happens automatically when running `pnpm dev`.
-- `pnpm dev:db-down`: Stop the development docker container.
 - `pnpm dev:db-nuke`: Stop the container _and_ remove the database volume.
 - `pnpm lint`: Lint files with `eslint`.
 - `pnpm format`: Format files with `prettier`.

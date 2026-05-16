@@ -1,34 +1,4 @@
 services:
-  payload-pragmatic:
-    container_name: payload-pragmatic
-    build:
-      context: .
-      dockerfile: dockerfiles/PragmaticPapers.Dockerfile
-      target: base
-    command: >
-      sh -c "pnpm config set store-dir /pnpm/store &&
-      CI=true pnpm install --frozen-lockfile --network-concurrency=4 &&
-      NODE_OPTIONS=--no-deprecation pnpm exec next dev -H 0.0.0.0 -p 8000"
-    env_file:
-      - .env
-    environment:
-      DATABASE_URI: postgres://postgres:postgres@postgres-pragmatic:5432/pragmatic-papers
-      FORCE_COLOR: "1"
-      NEXT_TELEMETRY_DISABLED: "1"
-      WATCHPACK_POLLING: "true"
-    ports:
-      - "8000:8000"
-    networks:
-      - pragmatic_papers_public
-      - pragmatic_papers_dev
-    volumes:
-      - .:/app
-      - pragmatic_papers_node_modules:/app/node_modules
-      - pragmatic_papers_pnpm_store:/pnpm/store
-    depends_on:
-      postgres-pragmatic:
-        condition: service_healthy
-
   postgres-pragmatic:
     container_name: postgres-pragmatic
     image: postgres:15-alpine
@@ -37,8 +7,8 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: pragmatic-papers
-    networks:
-      - pragmatic_papers_dev
+    ports:
+      - "9000:5432"
     volumes:
       - pragmatic_papers_postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -48,16 +18,5 @@ services:
       retries: 10
 
 volumes:
-  pragmatic_papers_node_modules:
-    name: pragmatic_papers_node_modules
-  pragmatic_papers_pnpm_store:
-    name: pragmatic_papers_pnpm_store
   pragmatic_papers_postgres_data:
     name: pragmatic_papers_postgres_data
-
-networks:
-  pragmatic_papers_public:
-    name: pragmatic_papers_public
-  pragmatic_papers_dev:
-    name: pragmatic_papers_dev
-    internal: true

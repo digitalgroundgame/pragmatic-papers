@@ -28,6 +28,11 @@ if (existsSync(placeholder) && readFileSync(placeholder).byteLength !== 0) {
 }
 
 console.warn(`${yellow("⚠")} @digitalgroundgame/fonts not found`)
-writeFileSync(placeholder, "")
+// Write minimal valid woff2 so Turbopack doesn't choke on an empty file
+const header = Buffer.alloc(48)
+header.writeUInt32BE(0x774F4632, 0)  // signature "wOF2"
+header.writeUInt32BE(0x00010000, 4)  // sfVersion
+header.writeUInt32BE(48, 8)           // total length
+writeFileSync(placeholder, header)
 console.warn(`${green("✔")} Using placeholder font file`)
 process.exit(0)

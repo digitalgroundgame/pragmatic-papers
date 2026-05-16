@@ -24,6 +24,7 @@ jobs:
         with:
           node-version: "24.x"
           gh-font-read-token: ${{ secrets.GH_FONT_READ }}
+          payload-secret: ci-payload-secret
 
       - name: Lint
         run: pnpm run lint:ci
@@ -49,6 +50,7 @@ jobs:
         with:
           node-version: "24.x"
           gh-font-read-token: ${{ secrets.GH_FONT_READ }}
+          payload-secret: ci-unit-test-secret
 
       - name: Run unit tests
         run: pnpm test:unit -- --run
@@ -85,6 +87,7 @@ jobs:
         with:
           node-version: "24.x"
           gh-font-read-token: ${{ secrets.GH_FONT_READ }}
+          payload-secret: ci-integration-secret
 
       - name: Run integration tests
         run: pnpm test:integration -- --run

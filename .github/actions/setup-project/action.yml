@@ -13,6 +13,10 @@ inputs:
     description: Whether to restore Next.js build cache
     required: false
     default: "false"
+  payload-secret:
+    description: "Payload CMS secret key"
+    required: false
+    default: ""
 
 runs:
   using: composite
@@ -35,10 +39,11 @@ runs:
       env:
         GH_FONT_READ: ${{ inputs.gh-font-read-token }}
     - name: Create .env file
+      shell: bash
       run: |
         cat > .env << EOF
         DATABASE_URI=postgres://postgres:postgres@localhost:5432/pragmatic-papers
-        PAYLOAD_SECRET=${{ secrets.PAYLOAD_SECRET }}
+        PAYLOAD_SECRET=${{ inputs.payload-secret }}
         NEXT_PUBLIC_SERVER_URL=http://localhost:8000
         USE_LOCAL_STORAGE=true
         EOF

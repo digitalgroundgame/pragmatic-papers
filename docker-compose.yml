@@ -29,6 +29,66 @@ services:
       postgres-pragmatic:
         condition: service_healthy
 
+  test-pragmatic:
+    container_name: test-pragmatic
+    build:
+      context: .
+      dockerfile: dockerfiles/PragmaticPapers.Dockerfile
+      target: base
+    command: >
+      sh -c "pnpm config set store-dir /pnpm/store &&
+      CI=true pnpm install --frozen-lockfile --network-concurrency=4 &&
+      pnpm test:ci"
+    env_file:
+      - .env
+    environment:
+      DATABASE_URI: postgres://postgres:postgres@postgres-pragmatic:5432/pragmatic-papers
+      FORCE_COLOR: "1"
+      NEXT_TELEMETRY_DISABLED: "1"
+    networks:
+      - pragmatic_papers_public
+      - pragmatic_papers_dev
+    volumes:
+      - .:/app
+      - pragmatic_papers_node_modules:/app/node_modules
+      - pragmatic_papers_pnpm_store:/pnpm/store
+    depends_on:
+      postgres-pragmatic:
+        condition: service_healthy
+    profiles:
+      - test
+
+  e2e-pragmatic:
+    container_name: e2e-pragmatic
+    image: mcr.microsoft.com/playwright:v1.60.0-noble
+    command: >
+      sh -c "corepack enable &&
+      corepack install &&
+      pnpm config set store-dir /pnpm/store &&
+      CI=true pnpm install --frozen-lockfile --network-concurrency=4 &&
+      pnpm test:e2e"
+    env_file:
+      - .env
+    environment:
+      DATABASE_URI: postgres://postgres:postgres@postgres-pragmatic:5432/pragmatic-papers
+      FORCE_COLOR: "1"
+      NEXT_TELEMETRY_DISABLED: "1"
+      PLAYWRIGHT_BASE_URL: http://payload-pragmatic:8000
+      PLAYWRIGHT_SKIP_SERVER: "1"
+    networks:
+      - pragmatic_papers_public
+      - pragmatic_papers_dev
+    volumes:
+      - .:/app
+      - pragmatic_papers_node_modules:/app/node_modules
+      - pragmatic_papers_pnpm_store:/pnpm/store
+    working_dir: /app
+    depends_on:
+      payload-pragmatic:
+        condition: service_started
+    profiles:
+      - test
+
   postgres-pragmatic:
     container_name: postgres-pragmatic
     image: postgres:15-alpine

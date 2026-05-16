@@ -13,6 +13,34 @@ const src = resolve(
 const dest = resolve(__dirname, "../public/fonts")
 const placeholder = resolve(dest, "FKScreamer-Bold.woff2")
 
+const envExample = resolve(__dirname, "../.env.example")
+const envFile = resolve(__dirname, "../.env")
+const npmrcFile = resolve(__dirname, "../.npmrc")
+
+if (!existsSync(envFile) && existsSync(envExample)) {
+  cpSync(envExample, envFile)
+  console.warn(`${green("✔")} Created .env from .env.example`)
+}
+
+if (!existsSync(npmrcFile)) {
+  writeFileSync(
+    npmrcFile,
+    [
+      "legacy-peer-deps=true",
+      "enable-pre-post-scripts=true",
+      "@digitalgroundgame:registry=https://npm.pkg.github.com",
+      "//npm.pkg.github.com/:_authToken=ghp_REPLACE_WITH_YOUR_TOKEN",
+    ].join("\n") + "\n",
+  )
+  console.warn(`${yellow("⚠")} Created .npmrc with a placeholder GitHub token`)
+  console.warn(
+    `${yellow("⚠")} Edit .npmrc and replace the auth token with your GitHub personal access token (needs read:packages scope)`,
+  )
+  console.warn(
+    `   ${gray("→")} Create one at https://github.com/settings/tokens`,
+  )
+}
+
 console.warn(`${blue("●")} Installing fonts...`)
 mkdirSync(dest, { recursive: true })
 

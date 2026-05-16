@@ -1,6 +1,6 @@
 # Dockerfile for Pragmatic Papers (Next.js + Payload CMS)
 # Based on official Next.js Docker deployment guides
-ARG NODE_VERSION=22.21.1
+ARG NODE_VERSION=24.15.0
 
 # ============================================
 # Base stage - setup pnpm and dependencies

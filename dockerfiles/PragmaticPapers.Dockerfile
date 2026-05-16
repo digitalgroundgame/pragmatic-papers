@@ -28,7 +28,7 @@ ARG GH_FONT_READ
 ENV GH_FONT_READ=${GH_FONT_READ}
 
 # Copy dependency manifests and preinstall scripts first for layer caching
-COPY package.json pnpm-lock.yaml /app/
+COPY package.json pnpm-lock.yaml .npmrc /app/
 COPY scripts /app/scripts
 
 # Install dependencies with frozen lockfile

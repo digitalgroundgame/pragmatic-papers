@@ -1,4 +1,4 @@
-import { cpSync, existsSync, mkdirSync, readFileSync } from "fs"
+import { cpSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "fs"
 import { dirname, resolve } from "path"
 import process from "process"
 import { fileURLToPath } from "url"
@@ -27,6 +27,7 @@ if (existsSync(placeholder) && readFileSync(placeholder).byteLength !== 0) {
   process.exit(0)
 }
 
-console.warn(`${yellow("⚠")} @digitalgroundgame/fonts not found — skipping font install`)
-console.warn(`${gray("○")} Layout handles missing font gracefully`)
+console.warn(`${yellow("⚠")} @digitalgroundgame/fonts not found`)
+writeFileSync(placeholder, "")
+console.warn(`${green("✔")} Using placeholder font file`)
 process.exit(0)

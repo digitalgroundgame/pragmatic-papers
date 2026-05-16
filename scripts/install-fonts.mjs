@@ -1,4 +1,4 @@
-import { cpSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "fs"
+import { cpSync, existsSync, mkdirSync, readFileSync } from "fs"
 import { dirname, resolve } from "path"
 import process from "process"
 import { fileURLToPath } from "url"
@@ -27,12 +27,6 @@ if (existsSync(placeholder) && readFileSync(placeholder).byteLength !== 0) {
   process.exit(0)
 }
 
-console.warn(`${yellow("⚠")} @digitalgroundgame/fonts not found`)
-// Write minimal valid woff2 so Turbopack doesn't choke on an empty file
-const header = Buffer.alloc(48)
-header.writeUInt32BE(0x774F4632, 0)  // signature "wOF2"
-header.writeUInt32BE(0x00010000, 4)  // sfVersion
-header.writeUInt32BE(48, 8)           // total length
-writeFileSync(placeholder, header)
-console.warn(`${green("✔")} Using placeholder font file`)
+console.warn(`${yellow("⚠")} @digitalgroundgame/fonts not found — skipping font install`)
+console.warn(`${gray("○")} Layout handles missing font gracefully`)
 process.exit(0)

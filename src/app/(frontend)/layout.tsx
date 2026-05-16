@@ -10,16 +10,23 @@ import { ThemeProvider } from "@wrksz/themes/next"
 import type { Metadata } from "next"
 import { Geist } from "next/font/google"
 import localFont from "next/font/local"
+import { existsSync } from "fs"
+import { join } from "path"
 import React from "react"
 import "./globals.css"
 
-const FKScreamer = localFont({
-  src: "../../../public/fonts/FKScreamer-Bold.woff2",
-  weight: "700",
-  display: "swap",
-  fallback: ["fantasy", "sans-serif"],
-  variable: "--font-display",
-})
+const fontPath = join(process.cwd(), "public/fonts/FKScreamer-Bold.woff2")
+const hasFKScreamer = existsSync(fontPath)
+
+const FKScreamer = hasFKScreamer
+  ? localFont({
+      src: "../../../public/fonts/FKScreamer-Bold.woff2",
+      weight: "700",
+      display: "swap",
+      fallback: ["fantasy", "sans-serif"],
+      variable: "--font-display",
+    })
+  : { className: "", variable: "", style: {} }
 
 const geist = Geist({
   weight: ["400", "600"],

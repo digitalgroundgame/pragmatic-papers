@@ -8,7 +8,7 @@ Read about our current initiatives on the wiki: [Pragmatic Papers Developement W
 
 ```Bash
 docker
-Node.js version 22+
+Node.js version 24.15.0+
 pnpm
 ```
 

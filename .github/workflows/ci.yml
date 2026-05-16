@@ -5,38 +5,8 @@ on:
     branches: [main, dev]
 
 jobs:
-  # build:
-  #   strategy:
-  #     matrix:
-  #       node-version: [20.x, 22.x, 24.x]
-  #       # See supported Node.js release schedule at https://nodejs.org/en/about/releases/
-
-  #   name: Build with ${{ matrix.node-version }}
-  #   runs-on: ubuntu-latest
-  #   # Use Vercel Remote Caching
-  #   env:
-  #     TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
-  #     TURBO_TEAM: ${{ vars.TURBO_TEAM }}
-
-  #   steps:
-  #     - uses: actions/checkout@v4
-
-  #     - name: Set up Node.js environment
-  #       uses: ./.github/actions/setup-project
-  #       with:
-  #         node-version: ${{ matrix.node-version }}
-
-  #     - name: Build Next.js
-  #       run: pnpm run build
-  #       env:
-  #         NEXT_PUBLIC_SENTRY_DISABLED: "true" # Only upload Sentry source maps in deployment
-
   static:
-    strategy:
-      matrix:
-        node-version: [22.x]
-
-    name: Run static checks
+    name: Static checks
     runs-on: ubuntu-latest
     env:
       DATABASE_URI: postgres://postgres:postgres@localhost:5432/pragmatic-papers
@@ -45,20 +15,20 @@ jobs:
       USE_LOCAL_STORAGE: "true"
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
-          fetch-depth: 0 # Retrieve Git history, needed to verify commits
+          fetch-depth: 0
 
       - name: Set up Node.js environment
         uses: ./.github/actions/setup-project
         with:
-          node-version: ${{ matrix.node-version }}
+          node-version: "24.x"
           gh-font-read-token: ${{ secrets.GH_FONT_READ }}
 
-      - name: Linter
+      - name: Lint
         run: pnpm run lint:ci
 
-      - name: Type checking
+      - name: Type check
         run: pnpm run check-types
 
       - name: Check migration order
@@ -66,3 +36,55 @@ jobs:
 
       - name: Check for pending migrations
         run: echo "n" | pnpm migrate:create | grep "No schema changes detected"
+
+  unit-tests:
+    name: Unit tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up Node.js environment
+        uses: ./.github/actions/setup-project
+        with:
+          node-version: "24.x"
+          gh-font-read-token: ${{ secrets.GH_FONT_READ }}
+
+      - name: Run unit tests
+        run: pnpm test:unit -- --run
+
+  integration-tests:
+    name: Integration tests
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: pragmatic-papers
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URI: postgres://postgres:postgres@localhost:5432/pragmatic-papers
+      PAYLOAD_SECRET: ci-integration-secret
+      USE_LOCAL_STORAGE: "true"
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up Node.js environment
+        uses: ./.github/actions/setup-project
+        with:
+          node-version: "24.x"
+          gh-font-read-token: ${{ secrets.GH_FONT_READ }}
+
+      - name: Run integration tests
+        run: pnpm test:integration -- --run

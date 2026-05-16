@@ -66,7 +66,7 @@ services:
       corepack install &&
       pnpm config set store-dir /pnpm/store &&
       CI=true pnpm install --frozen-lockfile --network-concurrency=4 &&
-      pnpm test:e2e"
+      pnpm test:e2e:ci"
     env_file:
       - .env
     environment:
@@ -92,7 +92,6 @@ services:
   postgres-pragmatic:
     container_name: postgres-pragmatic
     image: postgres:15-alpine
-    restart: always
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres

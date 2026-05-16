@@ -29,11 +29,11 @@
     "migrate:redo": "node scripts/redo-last-migration.mjs",
     "migrate:status": "payload migrate:status",
     "prepare": "husky",
-    "test": "docker compose -p pragmatic-papers -f docker-compose.yml --profile test up --build --exit-code-from test-pragmatic test-pragmatic",
+    "test": "docker compose -p pragmatic-papers -f docker-compose.yml --profile test up --build --abort-on-container-exit --exit-code-from test-pragmatic test-pragmatic; docker compose -p pragmatic-papers -f docker-compose.yml --profile test down",
     "test:ci": "vitest run",
     "test:unit": "vitest --project unit",
     "test:integration": "vitest --project integration",
-    "test:e2e": "docker compose -p pragmatic-papers -f docker-compose.yml --profile test up --exit-code-from e2e-pragmatic e2e-pragmatic",
+    "test:e2e": "docker compose -p pragmatic-papers -f docker-compose.yml --profile test up --abort-on-container-exit --exit-code-from e2e-pragmatic e2e-pragmatic; docker compose -p pragmatic-papers -f docker-compose.yml --profile test down",
     "test:e2e:ci": "playwright test --config=playwright.config.ts --project=chromium"
   },
   "dependencies": {

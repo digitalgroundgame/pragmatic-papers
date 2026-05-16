@@ -24,7 +24,7 @@ ENV GH_FONT_READ=${GH_FONT_READ}
 
 # Copy dependency manifests first for layer caching
 # Changes to source files won't bust this layer
-COPY package.json pnpm-lock.yaml scripts/ ./
+COPY package.json pnpm-lock.yaml scripts ./
 
 # Install dependencies with frozen lockfile
 # Using cache mount for pnpm store to speed up builds

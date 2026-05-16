@@ -1,3 +1,4 @@
+import bundleAnalyzer from "@next/bundle-analyzer"
 import { withPayload } from "@payloadcms/next/withPayload"
 import type { NextConfig } from "next"
 import path from "path"
@@ -5,6 +6,10 @@ import { fileURLToPath } from "url"
 
 const __filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(__filename)
+
+const withBundleAnalyzer = bundleAnalyzer({
+  enabled: process.env.ANALYZE === "true",
+})
 
 const NEXT_PUBLIC_SERVER_URL = new URL(
   process.env.NEXT_PUBLIC_SERVER_URL || "http://localhost:8000",
@@ -23,6 +28,7 @@ const nextConfig: NextConfig = {
   },
   images: {
     qualities: [80],
+    formats: ["image/avif", "image/webp"],
     remotePatterns: [
       {
         protocol: NEXT_PUBLIC_SERVER_URL.protocol.slice(0, -1) as "http" | "https",
@@ -131,4 +137,4 @@ const nextConfig: NextConfig = {
   },
 }
 
-export default withPayload(nextConfig, { devBundleServerPackages: false })
+export default withBundleAnalyzer(withPayload(nextConfig, { devBundleServerPackages: false }))

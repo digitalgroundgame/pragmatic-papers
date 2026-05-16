@@ -1,10 +1,9 @@
 "use client"
-import { getClientSideURL } from "@/utilities/getURL"
-import { RefreshRouteOnSave as PayloadLivePreview } from "@payloadcms/live-preview-react"
-import { useRouter } from "next/navigation"
-import React from "react"
+import dynamic from "next/dynamic"
 
-export const LivePreviewListener: React.FC = () => {
-  const router = useRouter()
-  return <PayloadLivePreview refresh={router.refresh} serverURL={getClientSideURL()} />
-}
+// Loaded only when actually rendered (i.e. draft mode). Keeps
+// @payloadcms/live-preview-react out of every route's main bundle.
+export const LivePreviewListener = dynamic(
+  () => import("./Inner").then((m) => m.LivePreviewListenerInner),
+  { ssr: false },
+)

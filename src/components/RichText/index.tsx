@@ -1,24 +1,14 @@
 import { BannerBlock } from "@/blocks/Banner/Component"
 import { CallToActionBlock } from "@/blocks/CallToAction/Component"
-import { CodeBlock } from "@/blocks/Code/Component"
+import type { CodeBlockProps } from "@/blocks/Code/Component"
 import { FootnoteBlock } from "@/blocks/Footnote/Component"
-import { MathBlock, type MathBlockProps } from "@/blocks/Math/Component"
+import type { MathBlockProps } from "@/blocks/Math/Component"
 import { LightboxMediaBlock } from "@/blocks/MediaBlock/LightboxMediaBlock"
-import { MediaCollageBlock } from "@/blocks/MediaCollageBlock/component"
-import {
-  BlueskyEmbedBlock,
-  RedditEmbedBlock,
-  SocialEmbedBlock,
-  TikTokEmbedBlock,
-  TwitterEmbedBlock,
-  YouTubeEmbedBlock,
-} from "@/blocks/SocialEmbed"
 import type { ParentDocContext } from "@/blocks/SocialEmbed/types"
 import { SquiggleRuleBlock } from "@/blocks/SquiggleRule/Component"
 import { TimelineBlock } from "@/blocks/Timeline/Component"
 import type {
   BannerBlock as BannerBlockProps,
-  CodeBlock as CodeBlockProps,
   CallToActionBlock as CTABlockProps,
   FootnoteBlock as FootnoteBlockProps,
   MediaBlock as MediaBlockProps,
@@ -40,6 +30,34 @@ import {
   type JSXConvertersFunction,
   LinkJSXConverter,
 } from "@payloadcms/richtext-lexical/react"
+import dynamic from "next/dynamic"
+
+// Lazy-loaded blocks: heavy deps (prism-react-renderer, better-react-mathjax,
+// embla-carousel, embed SDKs) only download when an article actually contains
+// the block. SSR stays on by default, so HTML and LCP are unaffected.
+const CodeBlock = dynamic(() => import("@/blocks/Code/Component").then((mod) => mod.CodeBlock))
+const MathBlock = dynamic(() => import("@/blocks/Math/Component").then((mod) => mod.MathBlock))
+const MediaCollageBlock = dynamic(() =>
+  import("@/blocks/MediaCollageBlock/component").then((mod) => mod.MediaCollageBlock),
+)
+const SocialEmbedBlock = dynamic(() =>
+  import("@/blocks/SocialEmbed/Component").then((mod) => mod.SocialEmbedBlock),
+)
+const BlueskyEmbedBlock = dynamic(() =>
+  import("@/blocks/SocialEmbed/embeds/BlueskyEmbed").then((mod) => mod.BlueskyEmbedBlock),
+)
+const RedditEmbedBlock = dynamic(() =>
+  import("@/blocks/SocialEmbed/embeds/RedditEmbed").then((mod) => mod.RedditEmbedBlock),
+)
+const TikTokEmbedBlock = dynamic(() =>
+  import("@/blocks/SocialEmbed/embeds/TikTokEmbed").then((mod) => mod.TikTokEmbedBlock),
+)
+const TwitterEmbedBlock = dynamic(() =>
+  import("@/blocks/SocialEmbed/embeds/TwitterEmbed").then((mod) => mod.TwitterEmbedBlock),
+)
+const YouTubeEmbedBlock = dynamic(() =>
+  import("@/blocks/SocialEmbed/embeds/YouTubeEmbed").then((mod) => mod.YouTubeEmbedBlock),
+)
 
 type NodeTypes =
   | DefaultNodeTypes

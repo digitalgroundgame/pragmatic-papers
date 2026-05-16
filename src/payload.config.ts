@@ -12,6 +12,7 @@ import { ArticleRecommendations } from "@/globals/ArticleRecommendations/config"
 import { Header } from "@/Header/config"
 import { updateRecommendationsTask } from "@/jobs/updateRecommendations"
 import { plugins } from "@/plugins"
+import { searchVectorAfterSchemaInit } from "@/plugins/searchVector"
 import { getServerSideURL } from "@/utilities/getURL"
 import { postgresAdapter } from "@payloadcms/db-postgres"
 import path from "path"
@@ -86,6 +87,7 @@ export default buildConfig({
     pool: {
       connectionString: process.env.DATABASE_URI,
     },
+    afterSchemaInit: [searchVectorAfterSchemaInit],
   }),
   collections: [Pages, Articles, Volumes, Media, Categories, Users, Webhooks, Topics],
   cors: [getServerSideURL()].filter(Boolean),

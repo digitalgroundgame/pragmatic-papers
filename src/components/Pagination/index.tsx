@@ -11,11 +11,12 @@ import { cn } from "@/utilities/utils"
 import React from "react"
 
 export const Pagination: React.FC<{
+  buildHref?: (page: number) => string
   className?: string
   page: number
   totalPages: number
 }> = (props) => {
-  const { className, page, totalPages } = props
+  const { buildHref = (p) => `?p=${p}`, className, page, totalPages } = props
   const hasNextPage = page < totalPages
   const hasPrevPage = page > 1
 
@@ -29,7 +30,7 @@ export const Pagination: React.FC<{
           <PaginationItem>
             <PaginationPrevious
               variant={!hasPrevPage ? "disabled" : "default"}
-              href={`?p=${page - 1}`}
+              href={buildHref(page - 1)}
             />
           </PaginationItem>
 
@@ -41,19 +42,19 @@ export const Pagination: React.FC<{
 
           {hasPrevPage && (
             <PaginationItem>
-              <PaginationLink href={`?p=${page - 1}`}>{page - 1}</PaginationLink>
+              <PaginationLink href={buildHref(page - 1)}>{page - 1}</PaginationLink>
             </PaginationItem>
           )}
 
           <PaginationItem>
-            <PaginationLink isActive href={`?p=${page}`}>
+            <PaginationLink isActive href={buildHref(page)}>
               {page}
             </PaginationLink>
           </PaginationItem>
 
           {hasNextPage && (
             <PaginationItem>
-              <PaginationLink href={`?p=${page + 1}`}>{page + 1}</PaginationLink>
+              <PaginationLink href={buildHref(page + 1)}>{page + 1}</PaginationLink>
             </PaginationItem>
           )}
 
@@ -66,7 +67,7 @@ export const Pagination: React.FC<{
           <PaginationItem>
             <PaginationNext
               variant={!hasNextPage ? "disabled" : "default"}
-              href={`?p=${page + 1}`}
+              href={buildHref(page + 1)}
             />
           </PaginationItem>
         </PaginationContent>

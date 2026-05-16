@@ -58,4 +58,8 @@ if (existsSync(placeholder) && readFileSync(placeholder).byteLength !== 0) {
 console.warn(`${yellow("⚠")} @digitalgroundgame/fonts not found`)
 writeFileSync(placeholder, "")
 console.warn(`${green("✔")} Using placeholder font file`)
+console.warn(
+  `${yellow("⚠")} To install real fonts, configure .npmrc with your GitHub token, then run:`,
+)
+console.warn(gray("   → pnpm install"))
 process.exit(0)

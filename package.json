@@ -13,7 +13,7 @@
     "dev:db-down": "docker compose -p pragmatic-papers -f docker-compose.yml down",
     "dev:next": "cross-env NODE_OPTIONS=--no-deprecation next dev -p 8000 --turbopack",
     "dev:prod": "cross-env NODE_OPTIONS=--no-deprecation rm -rf .next && pnpm build && pnpm start",
-    "dev": "node scripts/dev.mjs",
+    "dev": "docker compose -p pragmatic-papers -f docker-compose.yml up -d & pnpm dev:next",
     "generate:importmap": "cross-env NODE_OPTIONS=--no-deprecation payload generate:importmap",
     "generate:types": "cross-env NODE_OPTIONS=--no-deprecation payload generate:types",
     "lint": "cross-env NODE_OPTIONS=--no-deprecation eslint .",

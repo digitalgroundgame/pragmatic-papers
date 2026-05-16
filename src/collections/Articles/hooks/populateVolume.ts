@@ -5,7 +5,7 @@ export const populateVolume: CollectionAfterReadHook<Article> = async ({
   doc,
   req: { payload, context },
 }) => {
-  if (context.skipAfterRead) return doc
+  if (context.skipAfterRead || context.skipPopulateVolume) return doc
   if (!doc.id) return doc
 
   try {

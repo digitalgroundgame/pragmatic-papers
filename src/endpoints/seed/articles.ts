@@ -26,8 +26,8 @@ interface CreateArticleOptions {
  * fields (content, authors, topics, heroImage, meta) are stripped to maximise
  * the chance of success with only the scalar fields Drizzle can always handle.
  *
- * Always passes `skipAfterRead: true` to skip the `populateVolume` afterRead hook,
- * which would fail during seeding since no volumes exist yet.
+ * Always passes `skipPopulateVolume: true` to skip the `populateVolume` afterRead hook,
+ * which would otherwise query volumes that don't exist yet during seeding.
  *
  * @param context - Optional context merged into the Payload create operation context
  */
@@ -42,7 +42,7 @@ export async function createArticle(
     try {
       return await payload.create({
         collection: "articles",
-        context: { skipAfterRead: true, ...context },
+        context: { skipPopulateVolume: true, ...context },
         data: {
           title: options.title,
           content: options.content,

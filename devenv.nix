@@ -2,8 +2,6 @@
 
 {  packages = [ pkgs.git ];
   
-  dotenv.disableHint = true;
-
   languages.javascript = {
     enable = true;
     pnpm.enable = true;

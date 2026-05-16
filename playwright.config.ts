@@ -4,6 +4,7 @@ import dotenv from "dotenv"
 dotenv.config()
 
 export default defineConfig({
+  globalSetup: "./tests/setup/e2e-global-setup.ts",
   testDir: "./tests/e2e",
   fullyParallel: true,
   forbidOnly: !!process.env.CI,

@@ -13,14 +13,6 @@ const src = resolve(
 const dest = resolve(__dirname, "../public/fonts")
 const placeholder = resolve(dest, "FKScreamer-Bold.woff2")
 
-const envExample = resolve(__dirname, "../.env.example")
-const envFile = resolve(__dirname, "../.env")
-
-if (!existsSync(envFile) && existsSync(envExample)) {
-  cpSync(envExample, envFile)
-  console.warn(`${green("✔")} Created .env from .env.example`)
-}
-
 console.warn(`${blue("●")} Installing fonts...`)
 mkdirSync(dest, { recursive: true })
 

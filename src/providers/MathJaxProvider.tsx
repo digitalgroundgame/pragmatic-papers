@@ -7,10 +7,16 @@ const MathJaxContext = dynamic(
   },
 )
 
+export const MathJaxProviderRoot: React.FC<{
+  children?: React.ReactNode
+}> = ({ children }) => {
+  return <MathJaxContext version={3}>{children}</MathJaxContext>
+}
+
 export const MathJaxProvider: React.FC<{
   enableMathRendering: boolean | null | undefined
   children: React.ReactNode
 }> = ({ enableMathRendering, children }) => {
   if (!enableMathRendering) return children
-  return <MathJaxContext>{children}</MathJaxContext>
+  return <MathJaxProviderRoot>{children}</MathJaxProviderRoot>
 }

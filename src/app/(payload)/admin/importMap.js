@@ -41,10 +41,14 @@ import { FootnotesPreview as FootnotesPreview_78f98036fa74f92e38dd688ebeae2fd5 }
 import { RowLabel as RowLabel_b9b9938cf466765c7ed61773d838e057 } from '@/fields/menu/RowLabel'
 import { BlurDataURLField as BlurDataURLField_3bf98f0d72a9b7fcf13045923bb48189 } from '@/collections/Media/components/BlurDataURLField'
 import { DurationField as DurationField_eac2b3e17fa524aff4add76374d4c8eb } from '@/collections/Media/components/DurationField'
+import { LinkToDoc as LinkToDoc_aead06e4cbf6b2620c5c51c9ab283634 } from '@payloadcms/plugin-search/client'
+import { ReindexButton as ReindexButton_aead06e4cbf6b2620c5c51c9ab283634 } from '@payloadcms/plugin-search/client'
+import { RunNowField as RunNowField_a9d86fb0496ebd76a3dd880c805864b5 } from '@/globals/ArticleRecommendations/components/RunNowField'
 import { PaperIconAdmin as PaperIconAdmin_de5f3b464da8d97ce80441fdb9ee9751 } from '@/components/Logo/icons/PaperIcon'
 import { LogomarkIcon as LogomarkIcon_715cf00332be8c15b8f2b121ec0215b0 } from '@/components/Logo/icons/LogomarkIcon'
 import { default as default_1a7510af427896d367a49dbf838d2de6 } from '@/components/BeforeDashboard'
 import { default as default_8a7ab0eb7ab5c511aba12e68480bfe5e } from '@/components/BeforeLogin'
+import { MathJaxProviderRoot as MathJaxProviderRoot_5e6ec76a4009b641df710b8874095c4b } from '@/providers/MathJaxProvider'
 import { S3ClientUploadHandler as S3ClientUploadHandler_f97aa6c64367fa259c5bc0567239ef24 } from '@payloadcms/storage-s3/client'
 import { CollectionCards as CollectionCards_f9c02e79a4aed9a3924487c0cd4cafb1 } from '@payloadcms/next/rsc'
 
@@ -93,10 +97,14 @@ export const importMap = {
   "@/fields/menu/RowLabel#RowLabel": RowLabel_b9b9938cf466765c7ed61773d838e057,
   "@/collections/Media/components/BlurDataURLField#BlurDataURLField": BlurDataURLField_3bf98f0d72a9b7fcf13045923bb48189,
   "@/collections/Media/components/DurationField#DurationField": DurationField_eac2b3e17fa524aff4add76374d4c8eb,
+  "@payloadcms/plugin-search/client#LinkToDoc": LinkToDoc_aead06e4cbf6b2620c5c51c9ab283634,
+  "@payloadcms/plugin-search/client#ReindexButton": ReindexButton_aead06e4cbf6b2620c5c51c9ab283634,
+  "@/globals/ArticleRecommendations/components/RunNowField#RunNowField": RunNowField_a9d86fb0496ebd76a3dd880c805864b5,
   "@/components/Logo/icons/PaperIcon#PaperIconAdmin": PaperIconAdmin_de5f3b464da8d97ce80441fdb9ee9751,
   "@/components/Logo/icons/LogomarkIcon#LogomarkIcon": LogomarkIcon_715cf00332be8c15b8f2b121ec0215b0,
   "@/components/BeforeDashboard#default": default_1a7510af427896d367a49dbf838d2de6,
   "@/components/BeforeLogin#default": default_8a7ab0eb7ab5c511aba12e68480bfe5e,
+  "@/providers/MathJaxProvider#MathJaxProviderRoot": MathJaxProviderRoot_5e6ec76a4009b641df710b8874095c4b,
   "@payloadcms/storage-s3/client#S3ClientUploadHandler": S3ClientUploadHandler_f97aa6c64367fa259c5bc0567239ef24,
   "@payloadcms/next/rsc#CollectionCards": CollectionCards_f9c02e79a4aed9a3924487c0cd4cafb1
 }

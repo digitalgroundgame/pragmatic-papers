@@ -1,15 +1,16 @@
+import { GithubIcon, LinkedinIcon, XIcon } from "@/components/SocialLinks/icons"
 import type { MenuField } from "@/payload-types"
 import { cn } from "@/utilities/utils"
-import { Github, Globe, Linkedin, type LucideIcon, Twitter } from "lucide-react"
+import { Globe } from "lucide-react"
 
 export type SocialIconKey = "twitter" | "linkedin" | "github" | "generic"
 
-export const SocialIconMap: Record<SocialIconKey, LucideIcon> = {
-  twitter: Twitter,
-  linkedin: Linkedin,
-  github: Github,
+export const SocialIconMap = {
+  twitter: XIcon,
+  linkedin: LinkedinIcon,
+  github: GithubIcon,
   generic: Globe,
-} as const
+}
 
 export interface AuthorSocialLink {
   id: string

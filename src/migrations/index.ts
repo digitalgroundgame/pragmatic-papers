@@ -33,6 +33,8 @@ import * as migration_20260424_022531_add_timeline_block from "./20260424_022531
 import * as migration_20260430_004324_add_contributors_block from "./20260430_004324_add_contributors_block"
 import * as migration_20260504_065125_add_narration_to_articles from "./20260504_065125_add_narration_to_articles"
 import * as migration_20260510_190018_virtualize_populatedAuthors from "./20260510_190018_virtualize_populatedAuthors"
+import * as migration_20260512_232738_add_recommendation_algorithm from "./20260512_232738_add_recommendation_algorithm"
+import * as migration_20260515_044418_add_search_plugin from "./20260515_044418_add_search_plugin"
 
 export const migrations = [
   {
@@ -209,5 +211,15 @@ export const migrations = [
     up: migration_20260510_190018_virtualize_populatedAuthors.up,
     down: migration_20260510_190018_virtualize_populatedAuthors.down,
     name: "20260510_190018_virtualize_populatedAuthors",
+  },
+  {
+    up: migration_20260512_232738_add_recommendation_algorithm.up,
+    down: migration_20260512_232738_add_recommendation_algorithm.down,
+    name: "20260512_232738_add_recommendation_algorithm",
+  },
+  {
+    up: migration_20260515_044418_add_search_plugin.up,
+    down: migration_20260515_044418_add_search_plugin.down,
+    name: "20260515_044418_add_search_plugin",
   },
 ]

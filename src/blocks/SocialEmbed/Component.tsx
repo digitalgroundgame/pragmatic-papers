@@ -4,43 +4,16 @@ import { RedditEmbedBlock } from "@/blocks/SocialEmbed/embeds/RedditEmbed"
 import { TikTokEmbedBlock } from "@/blocks/SocialEmbed/embeds/TikTokEmbed"
 import { TwitterEmbedBlock } from "@/blocks/SocialEmbed/embeds/TwitterEmbed"
 import { YouTubeEmbedBlock } from "@/blocks/SocialEmbed/embeds/YouTubeEmbed"
-import { getPlatformDisplayName } from "@/blocks/SocialEmbed/helpers/getPlatformDisplayName"
 import { shouldRevalidate } from "@/blocks/SocialEmbed/helpers/snapshotFreshness"
 import type { ParentDocContext } from "@/blocks/SocialEmbed/types"
-import type { SocialEmbedBlock as SocialEmbedBlockProps, SocialPlatform } from "@/payload-types"
+import type { SocialEmbedBlock as SocialEmbedBlockProps } from "@/payload-types"
 import React from "react"
 
 export type SocialEmbedRenderProps = SocialEmbedBlockProps & {
   parentDoc?: ParentDocContext
 }
 
-type EmbedComponent = (props: SocialEmbedRenderProps) => React.ReactNode | Promise<React.ReactNode>
-
-const embeds: Record<SocialPlatform, EmbedComponent> = {
-  bluesky: BlueskyEmbedBlock,
-  reddit: RedditEmbedBlock,
-  tiktok: TikTokEmbedBlock,
-  twitter: TwitterEmbedBlock,
-  youtube: YouTubeEmbedBlock,
-} as const
-
-export function getEmbedBlock(platform: SocialPlatform): EmbedComponent | null {
-  return embeds[platform] ?? null
-}
-
 export async function SocialEmbedBlock(props: SocialEmbedRenderProps): Promise<React.ReactNode> {
-  const displayName = getPlatformDisplayName(props.platform)
-  const EmbedBlock = getEmbedBlock(props.platform)
-  if (!EmbedBlock) {
-    return (
-      <EmbedError
-        url={props.url}
-        message="Social Media platform is not supported."
-        displayName={displayName}
-      />
-    )
-  }
-
   let snapshot = props.snapshot
   if (shouldRevalidate(props.snapshot) && props.parentDoc && props.id) {
     const { revalidateSnapshot } = await import("@/blocks/SocialEmbed/hooks/revalidateSnapshot")
@@ -53,5 +26,24 @@ export async function SocialEmbedBlock(props: SocialEmbedRenderProps): Promise<R
     })
   }
 
-  return <EmbedBlock {...props} snapshot={snapshot} />
+  switch (props.platform) {
+    case "bluesky":
+      return <BlueskyEmbedBlock {...props} snapshot={snapshot} />
+    case "reddit":
+      return <RedditEmbedBlock {...props} snapshot={snapshot} />
+    case "tiktok":
+      return <TikTokEmbedBlock {...props} snapshot={snapshot} />
+    case "twitter":
+      return <TwitterEmbedBlock {...props} snapshot={snapshot} />
+    case "youtube":
+      return <YouTubeEmbedBlock {...props} snapshot={snapshot} />
+    default:
+      return (
+        <EmbedError
+          url={props.url}
+          message="Social Media platform is not supported."
+          displayName={props.platform}
+        />
+      )
+  }
 }

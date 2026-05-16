@@ -1,11 +1,12 @@
-import { formatDistanceToNow } from "date-fns"
+import type { Article, CollectionGridSlots, Media as MediaType } from "@/payload-types"
 import React from "react"
 
 import { HoverPrefetchLink } from "@/components/Link/HoverPrefetchLink"
 import { isMedia, Media } from "@/components/Media"
 import type { ImageVariant } from "@/components/Media/ImageMedia"
-import type { Article, CollectionGridSlots, Media as MediaType } from "@/payload-types"
+import { TimeAgo } from "@/components/TimeAgo"
 import { cn } from "@/utilities/utils"
+
 export type ImagePosition = "above" | "below" | "left" | "right" | "none"
 
 export interface CollectionTileProps extends React.ComponentProps<"div"> {
@@ -56,8 +57,6 @@ export const CollectionTile: React.FC<CollectionTileProps> = ({
       ?.map((a) => a.name)
       .filter((a) => Boolean(a))
       .join(", ") ?? null
-
-  const timeAgo = publishedAt && formatDistanceToNow(new Date(publishedAt), { addSuffix: true })
 
   return (
     <HoverPrefetchLink
@@ -117,8 +116,7 @@ export const CollectionTile: React.FC<CollectionTileProps> = ({
           </p>
         )}
 
-        {/* Timestamp */}
-        {timeAgo && <p className="text-muted-foreground mt-1 font-sans text-xs">{timeAgo}</p>}
+        <TimeAgo publishedAt={publishedAt} />
       </div>
     </HoverPrefetchLink>
   )

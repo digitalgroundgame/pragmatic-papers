@@ -1,5 +1,6 @@
 import type { Media, User } from "@/payload-types"
 import type { Payload } from "payload"
+import { seedRandomRankings } from "@/jobs/updateRecommendations/logic"
 import { createArticle, getWriterOrThrow, validateWriters } from "./articles"
 import { createBannerBlocksArticle } from "./features/banners"
 import { createCodeBlocksArticle } from "./features/code-blocks"
@@ -200,55 +201,75 @@ export const seed = async (
     {
       name: "Creating feature articles...",
       fn: async () => {
-        ctx.featureArticles = await Promise.all([
-          createRichTextShowcaseArticle(payload, [ctx.writers[0]!, ctx.writers[1]!], ctx.media, [
-            ctx.topics[3]!,
-            ctx.topics[4]!,
-            ctx.topics[7]!,
-          ]),
-          createFootnotesArticle(
+        ctx.featureArticles = []
+        ctx.featureArticles.push(
+          await createRichTextShowcaseArticle(
+            payload,
+            [ctx.writers[0]!, ctx.writers[1]!],
+            ctx.media,
+            [ctx.topics[3]!, ctx.topics[4]!, ctx.topics[7]!],
+          ),
+        )
+        ctx.featureArticles.push(
+          await createFootnotesArticle(
             payload,
             [ctx.writers[0]!, ctx.writers[1]!],
             ctx.media,
             ctx.volume1Articles[0]!,
             [ctx.topics[0]!, ctx.topics[3]!, ctx.topics[4]!],
           ),
-          createSocialEmbedArticle(payload, ctx.writers[0]!, ctx.media, [
+        )
+        ctx.featureArticles.push(
+          await createSocialEmbedArticle(payload, ctx.writers[0]!, ctx.media, [
             ctx.topics[0]!,
             ctx.topics[1]!,
             ctx.topics[7]!,
           ]),
-          createLegacySocialEmbedArticle(payload, ctx.writers[0]!, ctx.media, [
+        )
+        ctx.featureArticles.push(
+          await createLegacySocialEmbedArticle(payload, ctx.writers[0]!, ctx.media, [
             ctx.topics[0]!,
             ctx.topics[1]!,
             ctx.topics[10]!,
           ]),
-          createMediaCollageArticle(payload, ctx.writers[0]!, ctx.media, [
+        )
+        ctx.featureArticles.push(
+          await createMediaCollageArticle(payload, ctx.writers[0]!, ctx.media, [
             ctx.topics[3]!,
             ctx.topics[7]!,
           ]),
-          createMathBlocksArticle(payload, [ctx.writers[0]!, ctx.writers[1]!], ctx.media, [
+        )
+        ctx.featureArticles.push(
+          await createMathBlocksArticle(payload, [ctx.writers[0]!, ctx.writers[1]!], ctx.media, [
             ctx.topics[2]!,
             ctx.topics[3]!,
             ctx.topics[5]!,
           ]),
-          createTimelineArticle(payload, [ctx.writers[0]!, ctx.writers[1]!], ctx.media, [
+        )
+        ctx.featureArticles.push(
+          await createTimelineArticle(payload, [ctx.writers[0]!, ctx.writers[1]!], ctx.media, [
             ctx.topics[3]!,
             ctx.topics[7]!,
           ]),
-          createNarrationDemoArticle(payload, ctx.writers[0]!, ctx.narrator, ctx.media, [
+        )
+        ctx.featureArticles.push(
+          await createNarrationDemoArticle(payload, ctx.writers[0]!, ctx.narrator, ctx.media, [
             ctx.topics[3]!,
             ctx.topics[7]!,
           ]),
-          createBannerBlocksArticle(payload, [ctx.writers[0]!, ctx.writers[1]!], ctx.media, [
+        )
+        ctx.featureArticles.push(
+          await createBannerBlocksArticle(payload, [ctx.writers[0]!, ctx.writers[1]!], ctx.media, [
             ctx.topics[3]!,
             ctx.topics[7]!,
           ]),
-          createCodeBlocksArticle(payload, [ctx.writers[0]!, ctx.writers[1]!], ctx.media, [
+        )
+        ctx.featureArticles.push(
+          await createCodeBlocksArticle(payload, [ctx.writers[0]!, ctx.writers[1]!], ctx.media, [
             ctx.topics[2]!,
             ctx.topics[7]!,
           ]),
-        ])
+        )
       },
     },
     {
@@ -322,6 +343,12 @@ export const seed = async (
           termsOfUsePage,
           volumesPage,
         })
+      },
+    },
+    {
+      name: "Seeding article recommendations...",
+      fn: async () => {
+        await seedRandomRankings(payload)
       },
     },
   ]

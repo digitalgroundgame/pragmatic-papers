@@ -11,8 +11,9 @@ import { LightboxMediaBlock } from "../MediaBlock/LightboxMediaBlock"
 export const MediaCollageBlock: React.FC<MediaCollageBlockType> = (props) => {
   const { layout } = props
 
-  const images = props.images.filter(
-    (img): img is { media: MediaType; id?: string | null } => typeof img.media !== "number",
+  const images = (props.images ?? []).filter(
+    (img): img is { media: MediaType; id?: string | null } =>
+      typeof img.media !== "number" && !!img.media,
   )
 
   if (!images.length) return null

@@ -6,6 +6,7 @@ node_modules
 
 # Local env files
 .env
+.envrc
 .env.local
 .env.development.local
 .env.test.local
@@ -68,3 +69,11 @@ devenv.local.nix
 .claude
 
 .eslintcache
+tsconfig.tsbuildinfo
+
+# Playwright
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+/playwright/.auth/

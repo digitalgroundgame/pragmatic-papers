@@ -12,38 +12,32 @@ RUN apk add --no-cache libc6-compat
 RUN corepack enable
 WORKDIR /app
 
+# Pre-download pnpm so it doesn't fetch on first use in each stage
+# (corepack's shims auto-detect from package.json's "packageManager" field)
+COPY package.json ./
+RUN corepack prepare "$(node -p "require('./package.json').packageManager")" --activate && rm package.json
+
 # ============================================
-# Installer stage - install dependencies only
+# Builder stage - install deps and build
 # ============================================
-FROM base AS installer
+FROM base AS builder
 WORKDIR /app
 
 # GitHub Packages auth (set GH_FONT_READ as build arg in Coolify for staging/prod)
 ARG GH_FONT_READ
 ENV GH_FONT_READ=${GH_FONT_READ}
 
-# Copy dependency manifests first for layer caching
-# Changes to source files won't bust this layer
+# Copy dependency manifests and preinstall scripts first for layer caching
 COPY package.json pnpm-lock.yaml /app/
 COPY scripts /app/scripts
 
 # Install dependencies with frozen lockfile
 # Using cache mount for pnpm store to speed up builds
-# Set CI=true to prevent pnpm from requiring TTY
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
     CI=true pnpm install --frozen-lockfile --store-dir /pnpm/store
 
 # Copy remaining source code (cache miss here won't re-trigger install)
 COPY . .
-
-# ============================================
-# Builder stage - build the application
-# ============================================
-FROM base AS builder
-WORKDIR /app
-
-# Copy installed node_modules from installer
-COPY --from=installer /app/ .
 
 # Copy database utility scripts
 COPY dockerfiles/scripts/modify-database-uri.sh /usr/local/bin/modify-database-uri.sh

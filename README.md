@@ -16,7 +16,7 @@ pnpm
 
 This repo uses some additional tools:
 
-- [Turborepo](https://turbo.build/repo) for monorepo management
+- [Next.js](https://nextjs.org/) for the web framework
 - [TypeScript](https://www.typescriptlang.org/) for static type checking
 - [ESLint](https://eslint.org/) for code linting
 - [Prettier](https://prettier.io) for code formatting
@@ -34,10 +34,10 @@ This repo uses some additional tools:
 cp .env.example .env
 ```
 
-4. Start dev. The container installs dependencies on startup:
+4. Install dependencies and start dev:
 
 ```bash
-pnpm dev
+pnpm install && pnpm dev
 ```
 
 5. Open [http://localhost:8000](http://localhost:8000).
@@ -48,13 +48,31 @@ The `@digitalgroundgame/fonts` package contains the proprietary display font. It
 
 If you do have access, create a **Classic GitHub Personal Access Token (PAT)** at [GitHub Settings → Tokens](https://github.com/settings/tokens) with the `read:packages` scope.
 
-The project `.npmrc` references `GH_FONT_READ`. Put the token in `.env` before the first `pnpm dev` so the container can install the private package:
+The project `.npmrc` references `GH_FONT_READ` — you just need that variable set before running `pnpm install`. Choose whichever method suits you:
 
-```bash
-GH_FONT_READ=ghp_your_token_here
-```
+- **Mac/Linux — shell profile** (applies to every terminal automatically):
 
-Restart `pnpm dev` after updating `.env`. You should see `✓ Fonts copied to public/fonts` in the install output.
+  ```bash
+  # ~/.zshrc or ~/.bashrc
+  export GH_FONT_READ=ghp_your_token_here
+  ```
+
+- **Windows (PowerShell)** — set permanently for your user:
+
+  ```powershell
+  [System.Environment]::SetEnvironmentVariable("GH_FONT_READ", "ghp_your_token_here", "User")
+  ```
+
+  Alternatively, open **System Properties → Advanced → Environment Variables** (search "environment variables" in the Start menu) and add `GH_FONT_READ` under "User variables".
+
+Restart your terminal after setting the variable, then re-run `pnpm install`. You should see `✓ Fonts copied to public/fonts` in the output.
+
+> [!TIP]
+> Font Caching & Env Variables
+>
+> The Situation: This font gets cached twice—once as a package in the >pnpm store and once in the /public/fonts/ directory.
+>
+> The Workaround: You don't need to pollute your global environment. Just use a temporary export in your terminal session for local builds.
 
 ## Seeding the Database
 
@@ -75,7 +93,7 @@ Read more about [Seeding The Database](https://github.com/digitalgroundgame/prag
 Here are the most important scripts available in the root `package.json`:
 
 - `pnpm dev`: Start the application in development mode.
-- `pnpm dev:db-nuke`: Stop the container _and_ remove the database volume.
+- `pnpm dev:db-nuke`: Drop the database schema and re-run migrations (equivalent to a fresh database).
 - `pnpm lint`: Lint files with `eslint`.
 - `pnpm format`: Format files with `prettier`.
 - `pnpm check-types`: Runs typescript compiler in no emit mode to check for type errors.

@@ -35,7 +35,7 @@
     "test:ci": "vitest run",
     "test:unit": "vitest --project unit",
     "test:integration": "vitest --project integration",
-    "test:e2e": "playwright test --config=playwright.config.ts"
+    "test:e2e": "pnpm dev:db && playwright test --config=playwright.config.ts && pnpm dev:db-down"
   },
   "dependencies": {
     "@base-ui/react": "^1.4.1",

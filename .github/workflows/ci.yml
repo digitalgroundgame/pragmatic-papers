@@ -36,7 +36,7 @@ jobs:
         run: pnpm exec tsx scripts/check-migration-order.ts
 
       - name: Check for pending migrations
-        run: echo "n" | pnpm migrate:create | grep "No schema changes detected"
+        run: node scripts/check-pending-migrations.mjs
 
   unit-tests:
     name: Unit tests

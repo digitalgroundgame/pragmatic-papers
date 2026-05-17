@@ -33,26 +33,23 @@ ARG GH_FONT_READ
 ENV GH_FONT_READ=${GH_FONT_READ}
 
 # 1. First, only copy files that determine the dependency tree (lockfile)
-# This allows caching the download of all dependencies independently of package.json changes.
-# We also copy .npmrc as it may contain registry and auth configuration.
 COPY pnpm-lock.yaml .npmrc ./
 
 # 2. Fetch dependencies into the pnpm store using a cache mount.
-# This layer will only be re-run if pnpm-lock.yaml or .npmrc changes.
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
-    pnpm fetch --store-dir /pnpm/store
+    echo "--- PHASE: FETCHING DEPENDENCIES ---" && \
+    pnpm fetch --store-dir /pnpm/store && \
+    echo "--- COMPLETED: FETCHING DEPENDENCIES ---"
 
 # 3. Copy package.json and necessary post-install scripts.
-# We only copy the scripts needed for the 'postinstall' hook to avoid busting cache 
-# when unrelated scripts (like tests or migration helpers) are modified.
 COPY package.json ./
 COPY scripts/install-fonts.mjs scripts/ansi.mjs ./scripts/
 
 # 4. Install dependencies from the store (offline)
-# HUSKY=0 skips husky installation which is not needed in Docker.
-# This step handles linking and building native modules like 'sharp'.
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
-    HUSKY=0 CI=true pnpm install --frozen-lockfile --offline --store-dir /pnpm/store
+    echo "--- PHASE: INSTALLING DEPENDENCIES (OFFLINE) ---" && \
+    HUSKY=0 CI=true pnpm install --frozen-lockfile --offline --store-dir /pnpm/store && \
+    echo "--- COMPLETED: INSTALLING DEPENDENCIES ---"
 
 # Copy remaining source code (cache miss here won't re-trigger install)
 COPY . .
@@ -134,9 +131,11 @@ RUN /usr/local/bin/modify-database-uri.sh && \
 # Runs migrations and then builds
 # Source the potentially modified DATABASE_URI before building
 RUN --mount=type=cache,id=nextjs,target=/app/.next/cache \
+    echo "--- PHASE: BUILDING NEXT.JS ---" && \
     . /tmp/build.env && \
     pnpm payload migrate && \
-    pnpm build
+    pnpm build && \
+    echo "--- COMPLETED: BUILDING NEXT.JS ---"
 
 # ============================================
 # Runner stage - minimal production runtime

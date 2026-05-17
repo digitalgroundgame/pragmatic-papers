@@ -127,13 +127,11 @@ RUN /usr/local/bin/modify-database-uri.sh && \
         /usr/local/bin/copy-database.sh; \
     fi
 
-# Build application with migrations
-# Runs migrations and then builds
+# Build application
 # Source the potentially modified DATABASE_URI before building
 RUN --mount=type=cache,id=nextjs,target=/app/.next/cache \
     echo "--- PHASE: BUILDING NEXT.JS ---" && \
     . /tmp/build.env && \
-    pnpm payload migrate && \
     pnpm build && \
     echo "--- COMPLETED: BUILDING NEXT.JS ---"
 
@@ -143,7 +141,8 @@ RUN --mount=type=cache,id=nextjs,target=/app/.next/cache \
 FROM node:${NODE_VERSION}-alpine AS runner
 WORKDIR /app
 # dumb-init ensures proper signal handling (SIGTERM) for Node.js
-RUN apk add --no-cache dumb-init
+# libc6-compat is required for sharp and other native modules on Alpine
+RUN apk add --no-cache dumb-init libc6-compat
 
 # Set production environment
 ENV NODE_ENV=production
@@ -170,33 +169,31 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 # Copy public folder (images, fonts, etc.)
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 
+# 3. Sharp Optimization for Standalone Mode
+# Next.js standalone does not always bundle native dependencies like sharp effectively.
+# We explicitly install it in the runner stage and set NEXT_SHARP_PATH.
+RUN npm install sharp
+ENV NEXT_SHARP_PATH=/app/node_modules/sharp
+
+# 1. Migration Support at Runtime
+# We install pnpm and tsx, and copy the source code/migrations to the runner stage.
+# This allows us to run 'pnpm payload migrate' in the startup script.
+RUN npm install -g pnpm tsx
+COPY --from=builder --chown=nextjs:nodejs /app/package.json /app/pnpm-lock.yaml ./
+COPY --from=builder --chown=nextjs:nodejs /app/src ./src
+
 # PERSISTENCE FIX: Copy the unique DATABASE_URI from the Builder stage to the Runner stage
 COPY --from=builder --chown=nextjs:nodejs /tmp/build.env /app/build.env
 
 # Prepare media directory for local storage deployments
+# We also ensure all app files are owned by the nextjs user
 RUN mkdir -p /app/public/media && \
-  chown -R nextjs:nodejs /app/public/media && \
+  chown -R nextjs:nodejs /app && \
   chmod -R 755 /app/public/media
 
-# STARTUP SCRIPT: Sources the isolated DB URI if it exists, otherwise uses defaults
-RUN echo '#!/bin/sh' > /app/start.sh && \
-    echo 'set -e' >> /app/start.sh && \
-    # Source the build.env to get the potentially modified DATABASE_URI for preview deployments
-    echo 'if [ -f /app/build.env ]; then . /app/build.env; fi' >> /app/start.sh && \
-    echo 'echo "========================================="' >> /app/start.sh && \
-    echo 'echo "Starting Pragmatic Papers Application"' >> /app/start.sh && \
-    echo 'echo "Node version: $(node --version)"' >> /app/start.sh && \
-    echo 'echo "Environment: $NODE_ENV"' >> /app/start.sh && \
-    echo 'echo "Database: PostgreSQL"' >> /app/start.sh && \
-    echo 'echo "Port: $PORT"' >> /app/start.sh && \
-    echo 'echo "Hostname: $HOSTNAME"' >> /app/start.sh && \
-    echo 'echo "Log Level: ${PAYLOAD_LOG_LEVEL:-info (default)}"' >> /app/start.sh && \
-    echo 'echo "Storage: $([ \"$USE_LOCAL_STORAGE\" = \"true\" ] && echo \"Local\" || echo \"S3\")"' >> /app/start.sh && \
-    echo 'echo "========================================="' >> /app/start.sh && \
-    echo 'echo "Starting Next.js server..."' >> /app/start.sh && \
-    echo 'exec node --trace-warnings server.js' >> /app/start.sh && \
-    chmod +x /app/start.sh && \
-    chown nextjs:nodejs /app/start.sh
+# STARTUP SCRIPT: Run migrations and start the server
+COPY --from=builder --chown=nextjs:nodejs /app/dockerfiles/scripts/start.sh /app/start.sh
+RUN chmod +x /app/start.sh
 
 # Switch to non-root user
 USER nextjs

@@ -10,7 +10,8 @@ const uri = container.getConnectionUri()
 process.env.DATABASE_URI = uri
 process.env.PAYLOAD_SECRET ??= "test-secret-for-e2e-tests"
 process.env.USE_LOCAL_STORAGE ??= "true"
-process.env.NEXT_PUBLIC_SERVER_URL ??= "http://localhost:8000"
+process.env.PORT ??= "8001"
+process.env.NEXT_PUBLIC_SERVER_URL ??= `http://localhost:${process.env.PORT}`
 
 console.warn(`Test database started at ${uri}`)
 

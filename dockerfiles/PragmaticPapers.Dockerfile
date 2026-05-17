@@ -12,7 +12,12 @@ RUN apk add --no-cache libc6-compat
 # Setup pnpm environment
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
-RUN corepack enable
+
+# Enable corepack and install the specific pnpm version from package.json
+# We use a bind mount to read package.json without adding it to the image layer
+RUN --mount=type=bind,source=package.json,target=package.json \
+    corepack enable && \
+    corepack prepare "$(node -p "require('./package.json').packageManager")" --activate
 
 WORKDIR /app
 
@@ -33,10 +38,8 @@ ENV GH_FONT_READ=${GH_FONT_READ}
 COPY pnpm-lock.yaml .npmrc ./
 
 # 2. Fetch dependencies into the pnpm store using a cache mount.
-# We mount both the global store and the project's virtual store (node_modules/.pnpm).
-# pnpm fetch needs to populate the virtual store for the cache to be fully utilized during install.
+# This layer will only be re-run if pnpm-lock.yaml or .npmrc changes.
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
-    --mount=type=cache,id=pnpm-virtual-store,target=/app/node_modules/.pnpm \
     pnpm fetch --store-dir /pnpm/store
 
 # 3. Copy package.json and necessary post-install scripts.
@@ -49,7 +52,6 @@ COPY scripts/install-fonts.mjs scripts/ansi.mjs ./scripts/
 # HUSKY=0 skips husky installation which is not needed in Docker.
 # This step handles linking and building native modules like 'sharp'.
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
-    --mount=type=cache,id=pnpm-virtual-store,target=/app/node_modules/.pnpm \
     HUSKY=0 CI=true pnpm install --frozen-lockfile --offline --store-dir /pnpm/store
 
 # Copy remaining source code (cache miss here won't re-trigger install)

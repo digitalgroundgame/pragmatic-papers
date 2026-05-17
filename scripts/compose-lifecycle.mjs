@@ -4,20 +4,33 @@ const NODE_OPTIONS = "--no-deprecation"
 const COMPOSE_PROJECT = "pragmatic-papers"
 const COMPOSE_FILE = "docker-compose.yml"
 
+const colors = {
+  dim: (s) => `\x1b[2m${s}\x1b[22m`,
+  cyan: (s) => `\x1b[36m${s}\x1b[0m`,
+  red: (s) => `\x1b[31m${s}\x1b[0m`,
+  green: (s) => `\x1b[32m${s}\x1b[0m`,
+}
+
+function log(...args) {
+  console.warn(colors.dim("[lifecycle]"), ...args)
+}
+
 function composeUp() {
-  console.warn("[compose-lifecycle] Starting Docker...")
+  log(colors.cyan("Starting Docker services..."))
   execSync(
     `docker compose -p ${COMPOSE_PROJECT} -f ${COMPOSE_FILE} up -d`,
     { stdio: "inherit" },
   )
+  log(colors.cyan("Docker services are up"))
 }
 
 function composeDown() {
-  console.warn("\n[compose-lifecycle] Stopping Docker...")
+  log(colors.cyan("Stopping Docker services..."))
   execSync(
     `docker compose -p ${COMPOSE_PROJECT} -f ${COMPOSE_FILE} down`,
     { stdio: "inherit" },
   )
+  log(colors.cyan("Docker services stopped"))
 }
 
 const args = process.argv.slice(2)

@@ -141,8 +141,7 @@ RUN --mount=type=cache,id=nextjs,target=/app/.next/cache \
 FROM node:${NODE_VERSION}-alpine AS runner
 WORKDIR /app
 # dumb-init ensures proper signal handling (SIGTERM) for Node.js
-# libc6-compat is required for sharp and other native modules on Alpine
-RUN apk add --no-cache dumb-init libc6-compat
+RUN apk add --no-cache dumb-init
 
 # Set production environment
 ENV NODE_ENV=production
@@ -169,12 +168,6 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 # Copy public folder (images, fonts, etc.)
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 
-# 3. Sharp Optimization for Standalone Mode
-# Next.js standalone does not always bundle native dependencies like sharp effectively.
-# We explicitly install it in the runner stage and set NEXT_SHARP_PATH.
-RUN npm install sharp
-ENV NEXT_SHARP_PATH=/app/node_modules/sharp
-
 # 1. Migration Support at Runtime
 # We install pnpm and tsx, and copy the source code/migrations to the runner stage.
 # This allows us to run 'pnpm payload migrate' in the startup script.
@@ -183,17 +176,17 @@ COPY --from=builder --chown=nextjs:nodejs /app/package.json /app/pnpm-lock.yaml 
 COPY --from=builder --chown=nextjs:nodejs /app/src ./src
 
 # PERSISTENCE FIX: Copy the unique DATABASE_URI from the Builder stage to the Runner stage
-COPY --from=builder --chown=nextjs:nodejs /tmp/build.env /app/build.env
+COPY --from=builder --chown=nextjs:nodejs /tmp/build.env ./build.env
 
 # Prepare media directory for local storage deployments
 # We also ensure all app files are owned by the nextjs user
-RUN mkdir -p /app/public/media && \
-  chown -R nextjs:nodejs /app && \
-  chmod -R 755 /app/public/media
+RUN mkdir -p public/media && \
+  chown -R nextjs:nodejs . && \
+  chmod -R 755 public/media
 
 # STARTUP SCRIPT: Run migrations and start the server
-COPY --from=builder --chown=nextjs:nodejs /app/dockerfiles/scripts/start.sh /app/start.sh
-RUN chmod +x /app/start.sh
+COPY --from=builder --chown=nextjs:nodejs /app/dockerfiles/scripts/start.sh ./start.sh
+RUN chmod +x ./start.sh
 
 # Switch to non-root user
 USER nextjs
@@ -202,4 +195,4 @@ EXPOSE 3000
 # Use dumb-init to handle signals properly (SIGTERM, etc.)
 ENTRYPOINT ["dumb-init", "--"]
 # Start using the startup script for better log visibility and to ensure environment variables are sourced
-CMD ["/app/start.sh"]
+CMD ["./start.sh"]

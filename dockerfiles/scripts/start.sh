@@ -2,8 +2,8 @@
 set -e
 
 # Source the build.env to get the potentially modified DATABASE_URI for preview deployments
-if [ -f /app/build.env ]; then
-  . /app/build.env
+if [ -f ./build.env ]; then
+  . ./build.env
 fi
 
 echo "========================================="

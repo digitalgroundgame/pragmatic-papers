@@ -12,23 +12,7 @@ jobs:
     timeout-minutes: 60
     runs-on: ubuntu-latest
 
-    services:
-      postgres:
-        image: postgres:15-alpine
-        env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: pragmatic-papers
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-
     env:
-      DATABASE_URI: postgres://postgres:postgres@localhost:5432/pragmatic-papers
       PAYLOAD_SECRET: ${{ secrets.PAYLOAD_SECRET }}
       NEXT_PUBLIC_SERVER_URL: http://localhost:8000
       USE_LOCAL_STORAGE: "true"
@@ -42,9 +26,6 @@ jobs:
           node-version: "24.x"
           gh-font-read-token: ${{ secrets.GH_FONT_READ }}
           payload-secret: ${{ secrets.PAYLOAD_SECRET }}
-
-      - name: Run database migrations
-        run: pnpm payload migrate
 
       - name: Cache Playwright browsers
         uses: actions/cache@v5

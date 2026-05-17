@@ -31,11 +31,11 @@
     "migrate:redo": "node scripts/redo-last-migration.mjs",
     "migrate:status": "payload migrate:status",
     "prepare": "husky",
-    "test": "pnpm dev:db && vitest && pnpm dev:db-down",
+    "test": "vitest",
     "test:ci": "vitest run",
     "test:unit": "vitest --project unit",
     "test:integration": "vitest --project integration",
-    "test:e2e": "pnpm dev:db && playwright test --config=playwright.config.ts && pnpm dev:db-down"
+    "test:e2e": "node scripts/test-e2e.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.4.1",
@@ -84,6 +84,7 @@
     "@eslint/js": "^9.39.4",
     "@next/eslint-plugin-next": "16.2.4",
     "@playwright/test": "^1.60.0",
+    "@testcontainers/postgresql": "^11.14.0",
     "@tailwindcss/container-queries": "^0.1.1",
     "@tailwindcss/postcss": "^4.2.4",
     "@tailwindcss/typography": "^0.5.19",
@@ -111,6 +112,7 @@
     "prettier": "^3.8.3",
     "prettier-plugin-tailwindcss": "^0.7.3",
     "tailwindcss": "^4.2.4",
+    "testcontainers": "^11.14.0",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.59.0",

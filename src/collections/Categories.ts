@@ -22,15 +22,6 @@ export const Categories: CollectionConfig = {
       type: "text",
       required: true,
     },
-    {
-      name: "testMigrationTrigger",
-      type: "checkbox",
-      defaultValue: false,
-      admin: {
-        description:
-          "This field exists solely to trigger a pending migration for testing CI workflows.",
-      },
-    },
     slugField(),
   ],
 }

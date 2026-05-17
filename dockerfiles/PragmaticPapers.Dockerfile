@@ -183,6 +183,10 @@ RUN addgroup --system --gid 1001 nodejs && \
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 
 # 2. OVERLAY the full production node_modules
+# We first remove the pruned node_modules from the standalone build to avoid conflicts
+# (e.g. symlinks vs directories) when copying the full hoisted version.
+RUN rm -rf node_modules
+
 # This "un-prunes" the node_modules directory, ensuring all CLI tools (like payload/bin.js)
 # and runtime dependencies are available for migrations.
 COPY --from=prod-deps --chown=nextjs:nodejs /app/node_modules ./node_modules

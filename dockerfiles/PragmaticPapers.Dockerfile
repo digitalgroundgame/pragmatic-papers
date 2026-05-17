@@ -144,6 +144,7 @@ ARG GH_FONT_READ
 ENV GH_FONT_READ=${GH_FONT_READ}
 
 COPY pnpm-lock.yaml .npmrc package.json ./
+COPY scripts/install-fonts.mjs scripts/ansi.mjs ./scripts/
 # We use hoisted node-linker to ensure a standard node_modules structure without symlinks.
 # This makes the node_modules directory portable and ensures CLI tools like payload are available.
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store \

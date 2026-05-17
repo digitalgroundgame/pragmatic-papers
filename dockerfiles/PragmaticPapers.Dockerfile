@@ -10,14 +10,13 @@ FROM node:${NODE_VERSION}-alpine AS base
 RUN apk add --no-cache libc6-compat
 
 # Setup pnpm environment
-ENV PNPM_HOME="/pnpm"
-ENV PATH="$PNPM_HOME:$PATH"
+ENV PNPM_HOME="/pnpm" \
+    PATH="/pnpm:$PATH"
 
 # Enable corepack and install the specific pnpm version from package.json
-# We use a bind mount to read package.json without adding it to the image layer
 RUN --mount=type=bind,source=package.json,target=package.json \
-    corepack enable && \
-    corepack prepare "$(node -p "require('./package.json').packageManager")" --activate
+    corepack enable \
+    && corepack prepare "$(node -p "require('./package.json').packageManager")" --activate
 
 WORKDIR /app
 
@@ -37,9 +36,9 @@ COPY pnpm-lock.yaml .npmrc ./
 
 # 2. Fetch dependencies into the pnpm store using a cache mount.
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
-    echo "--- PHASE: FETCHING DEPENDENCIES ---" && \
-    pnpm fetch --store-dir /pnpm/store && \
-    echo "--- COMPLETED: FETCHING DEPENDENCIES ---"
+    echo "--- PHASE: FETCHING DEPENDENCIES ---" \
+    && pnpm fetch --store-dir /pnpm/store \
+    && echo "--- COMPLETED: FETCHING DEPENDENCIES ---"
 
 # 3. Copy package.json and necessary post-install scripts.
 COPY package.json ./
@@ -47,9 +46,9 @@ COPY scripts/install-fonts.mjs scripts/ansi.mjs ./scripts/
 
 # 4. Install dependencies from the store (offline)
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
-    echo "--- PHASE: INSTALLING DEPENDENCIES (OFFLINE) ---" && \
-    HUSKY=0 CI=true pnpm install --frozen-lockfile --offline --store-dir /pnpm/store && \
-    echo "--- COMPLETED: INSTALLING DEPENDENCIES ---"
+    echo "--- PHASE: INSTALLING DEPENDENCIES (OFFLINE) ---" \
+    && HUSKY=0 CI=true pnpm install --frozen-lockfile --offline --store-dir /pnpm/store \
+    && echo "--- COMPLETED: INSTALLING DEPENDENCIES ---"
 
 # Copy remaining source code
 COPY . .
@@ -59,43 +58,49 @@ COPY dockerfiles/scripts/modify-database-uri.sh /usr/local/bin/modify-database-u
 COPY dockerfiles/scripts/copy-database.sh /usr/local/bin/copy-database.sh
 RUN chmod +x /usr/local/bin/modify-database-uri.sh /usr/local/bin/copy-database.sh
 
-# Build Arguments
+# --- BUILD CONFIGURATION ---
 ARG NODE_ENV=production
 ARG BUILD_ENV=production
 ARG DATABASE_URI
 ARG PAYLOAD_SECRET
+ARG NEXT_PUBLIC_SERVER_URL
+ARG NEXT_TELEMETRY_DISABLED=1
+
+# --- STORAGE & S3 ---
 ARG USE_LOCAL_STORAGE=false
 ARG S3_REGION
 ARG S3_BUCKET
 ARG S3_ACCESS_KEY_ID
 ARG S3_SECRET_ACCESS_KEY
 ARG S3_ENDPOINT
+
+# --- PUBLIC / CLIENT-SIDE ---
 ARG NEXT_PUBLIC_GOOGLE_ANALYTICS_ID
-ARG NEXT_PUBLIC_SERVER_URL
 ARG NEXT_PUBLIC_SUPABASE_URL
 
-# Coolify-specific configuration
+# --- COOLIFY & DEPLOYMENT ---
 ARG COOLIFY_FQDN=
 ARG COPY_SOURCE_DATABASE=false
 ARG SOURCE_DATABASE_URI
 ARG FORCE_DATABASE_COPY=false
 
-# Environment Variables
-ENV NODE_ENV=${NODE_ENV}
-ENV BUILD_ENV=${BUILD_ENV}
-ENV NEXT_TELEMETRY_DISABLED=1
-ENV DATABASE_ADAPTER=postgres
-ENV DATABASE_URI=${DATABASE_URI}
-ENV PAYLOAD_SECRET=${PAYLOAD_SECRET}
-ENV USE_LOCAL_STORAGE=${USE_LOCAL_STORAGE}
-ENV S3_REGION=${S3_REGION}
-ENV S3_BUCKET=${S3_BUCKET}
-ENV S3_ACCESS_KEY_ID=${S3_ACCESS_KEY_ID}
-ENV S3_SECRET_ACCESS_KEY=${S3_SECRET_ACCESS_KEY}
-ENV S3_ENDPOINT=${S3_ENDPOINT}
-ENV NEXT_PUBLIC_GOOGLE_ANALYTICS_ID=${NEXT_PUBLIC_GOOGLE_ANALYTICS_ID}
-ENV NEXT_PUBLIC_SERVER_URL=${NEXT_PUBLIC_SERVER_URL}
-ENV NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}
+# --- ENVIRONMENT MAPPING ---
+# We map ARGs to ENVs so they are available during the 'pnpm build' phase
+ENV NODE_ENV=${NODE_ENV} \
+    BUILD_ENV=${BUILD_ENV} \
+    NEXT_TELEMETRY_DISABLED=${NEXT_TELEMETRY_DISABLED} \
+    DATABASE_ADAPTER=postgres \
+    DATABASE_URI=${DATABASE_URI} \
+    PAYLOAD_SECRET=${PAYLOAD_SECRET} \
+    USE_LOCAL_STORAGE=${USE_LOCAL_STORAGE} \
+    S3_REGION=${S3_REGION} \
+    S3_BUCKET=${S3_BUCKET} \
+    S3_ACCESS_KEY_ID=${S3_ACCESS_KEY_ID} \
+    S3_SECRET_ACCESS_KEY=${S3_SECRET_ACCESS_KEY} \
+    S3_ENDPOINT=${S3_ENDPOINT} \
+    NEXT_PUBLIC_GOOGLE_ANALYTICS_ID=${NEXT_PUBLIC_GOOGLE_ANALYTICS_ID} \
+    NEXT_PUBLIC_SERVER_URL=${NEXT_PUBLIC_SERVER_URL} \
+    NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}
 
 # Install PostgreSQL client for database operations during build
 RUN apk add --no-cache postgresql-client
@@ -111,10 +116,11 @@ RUN /usr/local/bin/modify-database-uri.sh && \
     pnpm payload migrate && \
     echo "--- COMPLETED: DATABASE MIGRATIONS ---"
 
-# Build application
+# --- NEXT.JS BUILD ---
 RUN --mount=type=cache,id=nextjs,target=/app/.next/cache \
     echo "--- PHASE: BUILDING NEXT.JS ---" && \
     if [ -f /tmp/database_uri.env ]; then . /tmp/database_uri.env; fi && \
+    export DATABASE_URI=$DATABASE_URI && \
     pnpm build && \
     echo "--- COMPLETED: BUILDING NEXT.JS ---"
 
@@ -123,30 +129,29 @@ RUN --mount=type=cache,id=nextjs,target=/app/.next/cache \
 # ============================================
 FROM node:${NODE_VERSION}-alpine AS runner
 WORKDIR /app
-RUN apk add --no-cache dumb-init libc6-compat
 
-# Set production environment
-ENV NODE_ENV=production
-ENV NEXT_TELEMETRY_DISABLED=1
-ENV PORT=3000
-ENV HOSTNAME="0.0.0.0"
+# Production environment
+ENV NODE_ENV=production \
+    NEXT_TELEMETRY_DISABLED=1 \
+    PORT=3000 \
+    HOSTNAME="0.0.0.0"
 
-# Create non-root user
-RUN addgroup --system --gid 1001 nodejs && \
-    adduser --system --uid 1001 nextjs
+# Install runtime dependencies and create non-root user
+RUN apk add --no-cache dumb-init libc6-compat \
+    && addgroup --system --gid 1001 nodejs \
+    && adduser --system --uid 1001 nextjs
 
 # Copy the standalone Next.js build
-# This includes the pruned node_modules required for runtime
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 
-# Prepare media directory
-RUN mkdir -p public/media && \
-    chown -R nextjs:nodejs . && \
-    chmod -R 755 public/media
+# Prepare media directory and set permissions
+RUN mkdir -p public/media \
+    && chown -R nextjs:nodejs . \
+    && chmod -R 755 public/media
 
-# STARTUP SCRIPT
+# Startup script configuration
 COPY --from=builder --chown=nextjs:nodejs /app/dockerfiles/scripts/start.sh ./start.sh
 RUN chmod +x ./start.sh
 

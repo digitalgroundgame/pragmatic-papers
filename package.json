@@ -31,7 +31,7 @@
     "migrate:redo": "node scripts/redo-last-migration.mjs",
     "migrate:status": "payload migrate:status",
     "prepare": "husky",
-    "test": "vitest",
+    "test": "pnpm dev:db && vitest && pnpm dev:db-down",
     "test:ci": "vitest run",
     "test:unit": "vitest --project unit",
     "test:integration": "vitest --project integration",

@@ -222,9 +222,4 @@ export const migrations = [
     down: migration_20260515_044418_add_search_plugin.down,
     name: "20260515_044418_add_search_plugin",
   },
-  {
-    up: migration_20260517_145913.up,
-    down: migration_20260517_145913.down,
-    name: "20260517_145913",
-  },
 ]

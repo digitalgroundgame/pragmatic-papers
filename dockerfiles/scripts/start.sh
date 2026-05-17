@@ -1,11 +1,6 @@
 #!/bin/sh
 set -e
 
-# Source the build.env to get the potentially modified DATABASE_URI for preview deployments
-if [ -f ./build.env ]; then
-  . ./build.env
-fi
-
 echo "========================================="
 echo "Starting Pragmatic Papers Application"
 echo "Node version: $(node --version)"
@@ -13,48 +8,31 @@ echo "Environment: $NODE_ENV"
 echo "Database: PostgreSQL"
 echo "Port: $PORT"
 echo "Hostname: $HOSTNAME"
-echo "Log Level: ${PAYLOAD_LOG_LEVEL:-info (default)}"
 echo "Storage: $([ "$USE_LOCAL_STORAGE" = "true" ] && echo "Local" || echo "S3")"
 echo "========================================="
 
-# 1. Database Connectivity Check & Migrations
-# We use a simple retry loop to wait for the database to be ready.
-# This is crucial in environments where the DB container might start slightly after the app.
-echo "Checking database connectivity..."
-MAX_RETRIES=5
+# 1. Basic Database Connectivity Check
+# This ensures the DB is reachable before Node starts, but we don't run migrations here.
+# Migrations are now handled in the build stage.
+echo "Verifying database reachability..."
+# Extract host and port from DATABASE_URI (primitive sh parser)
+DB_HOST=$(echo $DATABASE_URI | sed -e 's|.*@||' -e 's|/.*||' -e 's|:.*||')
+DB_PORT=$(echo $DATABASE_URI | sed -e 's|.*:||' -e 's|/.*||')
+DB_PORT=${DB_PORT:-5432}
+
+MAX_RETRIES=10
 RETRY_COUNT=0
 
-# Note: We use the local payload binary directly to avoid dependency on global pnpm/cross-env
-# Next.js standalone build puts node_modules in the root of the standalone folder
-PAYLOAD_BIN="./node_modules/payload/bin.js"
-export NODE_OPTIONS=--no-deprecation
-export PAYLOAD_CONFIG_PATH=src/payload.config.ts
-
-until tsx "$PAYLOAD_BIN" migrate:status || [ $RETRY_COUNT -eq $MAX_RETRIES ]; do
+until nc -z "$DB_HOST" "$DB_PORT" || [ $RETRY_COUNT -eq $MAX_RETRIES ]; do
   RETRY_COUNT=$((RETRY_COUNT+1))
-  echo "Database not ready yet... (Attempt $RETRY_COUNT/$MAX_RETRIES)"
-  sleep 5
+  echo "Waiting for database at $DB_HOST:$DB_PORT... ($RETRY_COUNT/$MAX_RETRIES)"
+  sleep 3
 done
 
 if [ $RETRY_COUNT -eq $MAX_RETRIES ]; then
-  echo "ERROR: Could not connect to the database after $MAX_RETRIES attempts."
-  echo "Check your DATABASE_URI and network settings."
-  exit 1
-fi
-
-echo "Running database migrations..."
-if tsx "$PAYLOAD_BIN" migrate; then
-  echo "Migrations completed successfully."
-else
-  echo "========================================="
-  echo "CRITICAL ERROR: Database migrations failed!"
-  echo "The application will not start to prevent data corruption."
-  echo "Check the logs above for specific Drizzle/Payload errors."
-  echo "========================================="
-  exit 1
+  echo "WARNING: Could not verify database reachability. Attempting to start anyway..."
 fi
 
 # 2. Start the Next.js server
 echo "Starting Next.js server..."
-# Using exec to replace the shell process with the Node.js process
-exec node --trace-warnings server.js
+exec node server.js

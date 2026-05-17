@@ -51,7 +51,7 @@ RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
     HUSKY=0 CI=true pnpm install --frozen-lockfile --offline --store-dir /pnpm/store && \
     echo "--- COMPLETED: INSTALLING DEPENDENCIES ---"
 
-# Copy remaining source code (cache miss here won't re-trigger install)
+# Copy remaining source code
 COPY . .
 
 # Copy database utility scripts
@@ -75,11 +75,7 @@ ARG NEXT_PUBLIC_SERVER_URL
 ARG NEXT_PUBLIC_SUPABASE_URL
 
 # Coolify-specific configuration
-# COOLIFY_FQDN is automatically set by Coolify (e.g., "pr-330.pragmaticpapers.com")
-# When BUILD_ENV=preview, we extract the prefix and append it to database names
-# This creates unique databases for each preview deployment (e.g., "pragmatic_papers_pr_330")
 ARG COOLIFY_FQDN=
-# Database copy configuration for preview deployments
 ARG COPY_SOURCE_DATABASE=false
 ARG SOURCE_DATABASE_URI
 ARG FORCE_DATABASE_COPY=false
@@ -101,65 +97,32 @@ ENV NEXT_PUBLIC_GOOGLE_ANALYTICS_ID=${NEXT_PUBLIC_GOOGLE_ANALYTICS_ID}
 ENV NEXT_PUBLIC_SERVER_URL=${NEXT_PUBLIC_SERVER_URL}
 ENV NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}
 
-# Coolify-specific environment variables
-ENV COOLIFY_FQDN=${COOLIFY_FQDN}
-# Database copy environment variables
-ENV COPY_SOURCE_DATABASE=${COPY_SOURCE_DATABASE}
-ENV SOURCE_DATABASE_URI=${SOURCE_DATABASE_URI}
-ENV FORCE_DATABASE_COPY=${FORCE_DATABASE_COPY}
+# Install PostgreSQL client for database operations during build
+RUN apk add --no-cache postgresql-client
 
-# Install PostgreSQL client only for preview deployments (database copy operations)
-RUN if [ "$BUILD_ENV" = "preview" ]; then \
-        apk add --no-cache postgresql-client; \
-    fi
-
-# --- PREVIEW ISOLATION LOGIC ---
-# 1. If BUILD_ENV=preview, modify-database-uri.sh generates a unique DB name based on PR number.
-# 2. We store this NEW_DATABASE_URI in /tmp/build.env to persist it.
-# 3. copy-database.sh clones the staging DB into this new isolated PR database.
+# --- DATABASE PREPARATION & MIGRATION ---
+# 1. Isolated Preview Logic (clones DB for PRs)
+# 2. Migration Logic (runs on the final target DB)
 RUN /usr/local/bin/modify-database-uri.sh && \
-    if [ -f /tmp/database_uri.env ]; then \
-        . /tmp/database_uri.env && \
-        echo "export DATABASE_URI='$DATABASE_URI'" > /tmp/build.env && \
-        /usr/local/bin/copy-database.sh; \
-    else \
-        echo "export DATABASE_URI='$DATABASE_URI'" > /tmp/build.env && \
-        /usr/local/bin/copy-database.sh; \
-    fi
+    if [ -f /tmp/database_uri.env ]; then . /tmp/database_uri.env; fi && \
+    /usr/local/bin/copy-database.sh && \
+    echo "--- PHASE: DATABASE MIGRATIONS ---" && \
+    export DATABASE_URI=$DATABASE_URI && \
+    pnpm payload migrate && \
+    echo "--- COMPLETED: DATABASE MIGRATIONS ---"
 
 # Build application
-# Source the potentially modified DATABASE_URI before building
 RUN --mount=type=cache,id=nextjs,target=/app/.next/cache \
     echo "--- PHASE: BUILDING NEXT.JS ---" && \
-    . /tmp/build.env && \
+    if [ -f /tmp/database_uri.env ]; then . /tmp/database_uri.env; fi && \
     pnpm build && \
     echo "--- COMPLETED: BUILDING NEXT.JS ---"
-
-# ============================================
-# Production dependencies stage (hoisted)
-# ============================================
-FROM base AS prod-deps
-# GitHub Packages auth (needed if optional fonts are to be fetched)
-ARG GH_FONT_READ
-ENV GH_FONT_READ=${GH_FONT_READ}
-
-COPY pnpm-lock.yaml .npmrc package.json ./
-COPY scripts/install-fonts.mjs scripts/ansi.mjs ./scripts/
-# We use hoisted node-linker to ensure a standard node_modules structure without symlinks.
-# This makes the node_modules directory portable and ensures CLI tools like payload are available.
-RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
-    echo "--- PHASE: INSTALLING PRODUCTION DEPENDENCIES (HOISTED) ---" && \
-    pnpm install --prod --frozen-lockfile --config.node-linker=hoisted --store-dir /pnpm/store --ignore-scripts && \
-    node scripts/install-fonts.mjs && \
-    echo "--- COMPLETED: INSTALLING PRODUCTION DEPENDENCIES ---"
 
 # ============================================
 # Runner stage - minimal production runtime
 # ============================================
 FROM node:${NODE_VERSION}-alpine AS runner
 WORKDIR /app
-# dumb-init ensures proper signal handling (SIGTERM) for Node.js
-# libc6-compat is required for native modules like sharp on Alpine
 RUN apk add --no-cache dumb-init libc6-compat
 
 # Set production environment
@@ -168,57 +131,26 @@ ENV NEXT_TELEMETRY_DISABLED=1
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
-# Enable Next.js logging
-ENV NEXT_PRIVATE_DEBUG_CACHE=1
-
-# Force all logs to stdout/stderr for Docker
-ENV FORCE_COLOR=0
-
-# Create non-root user for security
+# Create non-root user
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nextjs
 
-# 1. Copy the standalone Next.js build first
-# The standalone build includes a minimal server.js and a PRUNED node_modules.
+# Copy the standalone Next.js build
+# This includes the pruned node_modules required for runtime
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
-
-# 2. OVERLAY the full production node_modules
-# We first remove the pruned node_modules from the standalone build to avoid conflicts
-# (e.g. symlinks vs directories) when copying the full hoisted version.
-RUN rm -rf node_modules
-
-# This "un-prunes" the node_modules directory, ensuring all CLI tools (like payload/bin.js)
-# and runtime dependencies are available for migrations.
-COPY --from=prod-deps --chown=nextjs:nodejs /app/node_modules ./node_modules
-
-# 3. Copy static assets and public folder
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 
-# 4. Migration Support at Runtime
-# We install tsx and copy the source code to the runner stage.
-# This allows us to run 'payload migrate' in the startup script using tsx.
-RUN npm install -g tsx
-COPY --from=builder --chown=nextjs:nodejs /app/src ./src
-
-# PERSISTENCE FIX: Copy the unique DATABASE_URI from the Builder stage to the Runner stage
-COPY --from=builder --chown=nextjs:nodejs /tmp/build.env ./build.env
-
-# Prepare media directory for local storage deployments
-# We also ensure all app files are owned by the nextjs user
+# Prepare media directory
 RUN mkdir -p public/media && \
-  chown -R nextjs:nodejs . && \
-  chmod -R 755 public/media
+    chown -R nextjs:nodejs . && \
+    chmod -R 755 public/media
 
-# STARTUP SCRIPT: Run migrations and start the server
+# STARTUP SCRIPT
 COPY --from=builder --chown=nextjs:nodejs /app/dockerfiles/scripts/start.sh ./start.sh
 RUN chmod +x ./start.sh
 
-# Switch to non-root user
 USER nextjs
-# Expose port for Next.js application
 EXPOSE 3000
-# Use dumb-init to handle signals properly (SIGTERM, etc.)
 ENTRYPOINT ["dumb-init", "--"]
-# Start using the startup script for better log visibility and to ensure environment variables are sourced
 CMD ["./start.sh"]

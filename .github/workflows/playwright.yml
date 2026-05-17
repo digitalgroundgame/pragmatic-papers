@@ -35,10 +35,10 @@ jobs:
           key: playwright-${{ hashFiles('pnpm-lock.yaml') }}
 
       - name: Install Playwright browsers
-        run: pnpm exec playwright install --with-deps chromium
+        run: pnpm exec playwright install --with-deps chromium firefox webkit
 
       - name: Run Playwright tests
-        run: pnpm test:e2e --project=chromium
+        run: pnpm test:e2e
 
       - uses: actions/upload-artifact@v7
         if: ${{ !cancelled() }}

@@ -169,9 +169,9 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 
 # 1. Migration Support at Runtime
-# We install pnpm and tsx, and copy the source code/migrations to the runner stage.
-# This allows us to run 'pnpm payload migrate' in the startup script.
-RUN npm install -g pnpm tsx
+# We install tsx, and copy the source code/migrations to the runner stage.
+# This allows us to run 'payload migrate' in the startup script using tsx.
+RUN npm install -g tsx
 COPY --from=builder --chown=nextjs:nodejs /app/package.json /app/pnpm-lock.yaml ./
 COPY --from=builder --chown=nextjs:nodejs /app/src ./src
 

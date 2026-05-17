@@ -24,8 +24,13 @@ echo "Checking database connectivity..."
 MAX_RETRIES=5
 RETRY_COUNT=0
 
-# Note: We use 'pnpm payload migrate:status' as a lightweight connectivity test
-until pnpm payload migrate:status || [ $RETRY_COUNT -eq $MAX_RETRIES ]; do
+# Note: We use the local payload binary directly to avoid dependency on global pnpm/cross-env
+# Next.js standalone build puts node_modules in the root of the standalone folder
+PAYLOAD_BIN="./node_modules/payload/bin.js"
+export NODE_OPTIONS=--no-deprecation
+export PAYLOAD_CONFIG_PATH=src/payload.config.ts
+
+until tsx "$PAYLOAD_BIN" migrate:status || [ $RETRY_COUNT -eq $MAX_RETRIES ]; do
   RETRY_COUNT=$((RETRY_COUNT+1))
   echo "Database not ready yet... (Attempt $RETRY_COUNT/$MAX_RETRIES)"
   sleep 5
@@ -38,7 +43,7 @@ if [ $RETRY_COUNT -eq $MAX_RETRIES ]; then
 fi
 
 echo "Running database migrations..."
-if pnpm payload migrate; then
+if tsx "$PAYLOAD_BIN" migrate; then
   echo "Migrations completed successfully."
 else
   echo "========================================="

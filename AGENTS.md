@@ -21,6 +21,13 @@ This file provides guidance to tools like Claude Code (claude.ai/code) when work
 - `pnpm format` / `pnpm format:fix` — Prettier check/fix
 - `pnpm check-types` — TypeScript type checking
 
+### Testing
+
+- `pnpm test` — run all tests (Vitest)
+- `pnpm test:unit` — run unit tests
+- `pnpm test:integration` — run integration tests (uses Testcontainers)
+- `pnpm test:e2e` — run Playwright E2E tests (uses Testcontainers)
+
 ### Build & Payload
 
 - `pnpm build` — build the application
@@ -106,4 +113,4 @@ This file provides guidance to tools like Claude Code (claude.ai/code) when work
 ### Testing your changes
 
 - run linting and type-checks
-- No unit or integration test framework set up yet - ignore for now
+- run unit and integration tests as needed, _skip running e2e_.

@@ -1082,10 +1082,6 @@ export interface Category {
   id: number;
   title: string;
   /**
-   * This field exists solely to trigger a pending migration for testing CI workflows.
-   */
-  testMigrationTrigger?: boolean | null;
-  /**
    * When enabled, the slug will auto-generate from the title field on save and autosave.
    */
   generateSlug?: boolean | null;
@@ -1835,7 +1831,6 @@ export interface MediaSelect<T extends boolean = true> {
  */
 export interface CategoriesSelect<T extends boolean = true> {
   title?: T;
-  testMigrationTrigger?: T;
   generateSlug?: T;
   slug?: T;
   parent?: T;

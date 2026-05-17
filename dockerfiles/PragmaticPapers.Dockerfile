@@ -149,7 +149,8 @@ COPY scripts/install-fonts.mjs scripts/ansi.mjs ./scripts/
 # This makes the node_modules directory portable and ensures CLI tools like payload are available.
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
     echo "--- PHASE: INSTALLING PRODUCTION DEPENDENCIES (HOISTED) ---" && \
-    HUSKY=0 pnpm install --prod --frozen-lockfile --config.node-linker=hoisted --store-dir /pnpm/store && \
+    pnpm install --prod --frozen-lockfile --config.node-linker=hoisted --store-dir /pnpm/store --ignore-scripts && \
+    node scripts/install-fonts.mjs && \
     echo "--- COMPLETED: INSTALLING PRODUCTION DEPENDENCIES ---"
 
 # ============================================

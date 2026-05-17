@@ -35,7 +35,6 @@ import * as migration_20260504_065125_add_narration_to_articles from "./20260504
 import * as migration_20260510_190018_virtualize_populatedAuthors from "./20260510_190018_virtualize_populatedAuthors"
 import * as migration_20260512_232738_add_recommendation_algorithm from "./20260512_232738_add_recommendation_algorithm"
 import * as migration_20260515_044418_add_search_plugin from "./20260515_044418_add_search_plugin"
-import * as migration_20260517_145913 from "./20260517_145913"
 
 export const migrations = [
   {

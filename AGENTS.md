@@ -113,4 +113,4 @@ This file provides guidance to tools like Claude Code (claude.ai/code) when work
 ### Testing your changes
 
 - run linting and type-checks
-- run unit and integration tests as needed
+- run unit and integration tests as needed, _skip running e2e_.

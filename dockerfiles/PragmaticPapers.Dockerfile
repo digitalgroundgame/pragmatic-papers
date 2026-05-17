@@ -112,7 +112,6 @@ RUN /usr/local/bin/modify-database-uri.sh && \
     if [ -f /tmp/database_uri.env ]; then . /tmp/database_uri.env; fi && \
     /usr/local/bin/copy-database.sh && \
     echo "--- PHASE: DATABASE MIGRATIONS ---" && \
-    export DATABASE_URI=$DATABASE_URI && \
     pnpm payload migrate && \
     echo "--- COMPLETED: DATABASE MIGRATIONS ---"
 
@@ -120,7 +119,6 @@ RUN /usr/local/bin/modify-database-uri.sh && \
 RUN --mount=type=cache,id=nextjs,target=/app/.next/cache \
     echo "--- PHASE: BUILDING NEXT.JS ---" && \
     if [ -f /tmp/database_uri.env ]; then . /tmp/database_uri.env; fi && \
-    export DATABASE_URI=$DATABASE_URI && \
     pnpm build && \
     echo "--- COMPLETED: BUILDING NEXT.JS ---"
 

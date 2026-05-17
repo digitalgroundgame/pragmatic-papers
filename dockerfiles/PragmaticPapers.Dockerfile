@@ -33,10 +33,10 @@ ENV GH_FONT_READ=${GH_FONT_READ}
 COPY pnpm-lock.yaml .npmrc ./
 
 # 2. Fetch dependencies into the pnpm store using a cache mount.
-# This layer will only be re-run if pnpm-lock.yaml or .npmrc changes.
-# We use 'corepack prepare' with a dummy package.json or just rely on default pnpm 
-# for the fetch step to avoid busting cache with package.json changes.
+# We mount both the global store and the project's virtual store (node_modules/.pnpm).
+# pnpm fetch needs to populate the virtual store for the cache to be fully utilized during install.
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
+    --mount=type=cache,id=pnpm-virtual-store,target=/app/node_modules/.pnpm \
     pnpm fetch --store-dir /pnpm/store
 
 # 3. Copy package.json and necessary post-install scripts.
@@ -49,6 +49,7 @@ COPY scripts/install-fonts.mjs scripts/ansi.mjs ./scripts/
 # HUSKY=0 skips husky installation which is not needed in Docker.
 # This step handles linking and building native modules like 'sharp'.
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
+    --mount=type=cache,id=pnpm-virtual-store,target=/app/node_modules/.pnpm \
     HUSKY=0 CI=true pnpm install --frozen-lockfile --offline --store-dir /pnpm/store
 
 # Copy remaining source code (cache miss here won't re-trigger install)

@@ -3,34 +3,53 @@
 ARG NODE_VERSION=24.15.0
 
 # ============================================
-# Base stage - setup pnpm and dependencies
+# Base stage - setup pnpm and environment
 # ============================================
 FROM node:${NODE_VERSION}-alpine AS base
-# Install dependencies for native modules and Git-backed development checks.
-RUN apk add --no-cache git libc6-compat
-COPY package.json ./
-# Enable and install the pinned pnpm version used by this repo.
-RUN corepack enable && corepack prepare "$(node -p "require('./package.json').packageManager")" --activate
+# Install dependencies for native modules (libc6-compat is required for many node native modules on Alpine)
+RUN apk add --no-cache libc6-compat
+
+# Setup pnpm environment
+ENV PNPM_HOME="/pnpm"
+ENV PATH="$PNPM_HOME:$PATH"
+RUN corepack enable
+
 WORKDIR /app
 
 # ============================================
 # Builder stage - install deps and build
 # ============================================
 FROM base AS builder
-WORKDIR /app
+# Install git for development checks/metadata during build if needed
+RUN apk add --no-cache git
 
 # GitHub Packages auth (set GH_FONT_READ as build arg in Coolify for staging/prod)
 ARG GH_FONT_READ
 ENV GH_FONT_READ=${GH_FONT_READ}
 
-# Copy dependency manifests and preinstall scripts first for layer caching
-COPY package.json pnpm-lock.yaml .npmrc /app/
-COPY scripts /app/scripts
+# 1. First, only copy files that determine the dependency tree (lockfile)
+# This allows caching the download of all dependencies independently of package.json changes.
+# We also copy .npmrc as it may contain registry and auth configuration.
+COPY pnpm-lock.yaml .npmrc ./
 
-# Install dependencies with frozen lockfile
-# Using cache mount for pnpm store to speed up builds
+# 2. Fetch dependencies into the pnpm store using a cache mount.
+# This layer will only be re-run if pnpm-lock.yaml or .npmrc changes.
+# We use 'corepack prepare' with a dummy package.json or just rely on default pnpm 
+# for the fetch step to avoid busting cache with package.json changes.
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
-    CI=true pnpm install --frozen-lockfile --store-dir /pnpm/store
+    pnpm fetch --store-dir /pnpm/store
+
+# 3. Copy package.json and necessary post-install scripts.
+# We only copy the scripts needed for the 'postinstall' hook to avoid busting cache 
+# when unrelated scripts (like tests or migration helpers) are modified.
+COPY package.json ./
+COPY scripts/install-fonts.mjs scripts/ansi.mjs ./scripts/
+
+# 4. Install dependencies from the store (offline)
+# HUSKY=0 skips husky installation which is not needed in Docker.
+# This step handles linking and building native modules like 'sharp'.
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
+    HUSKY=0 CI=true pnpm install --frozen-lockfile --offline --store-dir /pnpm/store
 
 # Copy remaining source code (cache miss here won't re-trigger install)
 COPY . .

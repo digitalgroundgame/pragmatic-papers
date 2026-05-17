@@ -9,10 +9,6 @@ inputs:
     description: "GitHub Token for private font packages"
     required: false
     default: ""
-  restore-nextjs-cache:
-    description: Whether to restore Next.js build cache
-    required: false
-    default: "false"
   payload-secret:
     description: "Payload CMS secret key"
     required: false

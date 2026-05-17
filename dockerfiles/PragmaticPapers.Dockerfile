@@ -136,12 +136,29 @@ RUN --mount=type=cache,id=nextjs,target=/app/.next/cache \
     echo "--- COMPLETED: BUILDING NEXT.JS ---"
 
 # ============================================
+# Production dependencies stage (hoisted)
+# ============================================
+FROM base AS prod-deps
+# GitHub Packages auth (needed if optional fonts are to be fetched)
+ARG GH_FONT_READ
+ENV GH_FONT_READ=${GH_FONT_READ}
+
+COPY pnpm-lock.yaml .npmrc package.json ./
+# We use hoisted node-linker to ensure a standard node_modules structure without symlinks.
+# This makes the node_modules directory portable and ensures CLI tools like payload are available.
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
+    echo "--- PHASE: INSTALLING PRODUCTION DEPENDENCIES (HOISTED) ---" && \
+    pnpm install --prod --frozen-lockfile --config.node-linker=hoisted --store-dir /pnpm/store && \
+    echo "--- COMPLETED: INSTALLING PRODUCTION DEPENDENCIES ---"
+
+# ============================================
 # Runner stage - minimal production runtime
 # ============================================
 FROM node:${NODE_VERSION}-alpine AS runner
 WORKDIR /app
 # dumb-init ensures proper signal handling (SIGTERM) for Node.js
-RUN apk add --no-cache dumb-init
+# libc6-compat is required for native modules like sharp on Alpine
+RUN apk add --no-cache dumb-init libc6-compat
 
 # Set production environment
 ENV NODE_ENV=production
@@ -159,20 +176,23 @@ ENV FORCE_COLOR=0
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nextjs
 
-# Copy the standalone Next.js build
-# The standalone build includes a minimal server.js and only necessary node_modules
+# 1. Copy the standalone Next.js build first
+# The standalone build includes a minimal server.js and a PRUNED node_modules.
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
-# Copy static assets (required for standalone mode)
-# These are not included in standalone by default as they should be served by CDN
+
+# 2. OVERLAY the full production node_modules
+# This "un-prunes" the node_modules directory, ensuring all CLI tools (like payload/bin.js)
+# and runtime dependencies are available for migrations.
+COPY --from=prod-deps --chown=nextjs:nodejs /app/node_modules ./node_modules
+
+# 3. Copy static assets and public folder
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
-# Copy public folder (images, fonts, etc.)
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 
-# 1. Migration Support at Runtime
-# We install tsx, and copy the source code/migrations to the runner stage.
+# 4. Migration Support at Runtime
+# We install tsx and copy the source code to the runner stage.
 # This allows us to run 'payload migrate' in the startup script using tsx.
 RUN npm install -g tsx
-COPY --from=builder --chown=nextjs:nodejs /app/package.json /app/pnpm-lock.yaml ./
 COPY --from=builder --chown=nextjs:nodejs /app/src ./src
 
 # PERSISTENCE FIX: Copy the unique DATABASE_URI from the Builder stage to the Runner stage

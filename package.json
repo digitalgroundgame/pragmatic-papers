@@ -8,7 +8,7 @@
     "postinstall": "node scripts/install-fonts.mjs",
     "build": "cross-env NODE_OPTIONS=--no-deprecation next build",
     "postbuild": "next-sitemap --config next-sitemap.config.cjs",
-    "dev": "node --no-deprecation scripts/compose-lifecycle.mjs next dev -p 8000 --turbopack",
+    "dev": "pnpm dev:db && pnpm dev:next && pnpm dev:db-down",
     "dev:db": "docker compose -p pragmatic-papers -f docker-compose.yml up -d",
     "dev:db-nuke": "pnpm dev:db && echo y | pnpm payload migrate:fresh && pnpm dev:db-down",
     "dev:db-down": "docker compose -p pragmatic-papers -f docker-compose.yml down",
@@ -31,11 +31,11 @@
     "migrate:redo": "node scripts/redo-last-migration.mjs",
     "migrate:status": "payload migrate:status",
     "prepare": "husky",
-    "test": "node --no-deprecation scripts/compose-lifecycle.mjs vitest",
+    "test": "pnpm dev:db && vitest && pnpm dev:db-down",
     "test:ci": "vitest run",
     "test:unit": "vitest --project unit",
     "test:integration": "vitest --project integration",
-    "test:e2e": "node --no-deprecation scripts/compose-lifecycle.mjs playwright test --config=playwright.config.ts"
+    "test:e2e": "pnpm dev:db && playwright test --config=playwright.config.ts && pnpm dev:db-down"
   },
   "dependencies": {
     "@base-ui/react": "^1.4.1",

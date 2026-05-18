@@ -1,16 +1,10 @@
 import type { Access, FieldAccess } from "payload"
-import { isAdmin } from "./checkRole"
+import { atLeast } from "./roles"
 
 export const admin: Access = ({ req: { user } }) => {
-  if (!user) {
-    return false
-  }
-  return isAdmin(user)
+  return atLeast(user, "admin")
 }
 
 export const adminFieldLevel: FieldAccess = ({ req: { user } }) => {
-  if (!user) {
-    return false
-  }
-  return isAdmin(user)
+  return atLeast(user, "admin")
 }

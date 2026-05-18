@@ -1,5 +1,5 @@
 import type { Access } from "payload"
-import { isAdmin } from "./checkRole"
+import { atLeast } from "./roles"
 
 export const adminOrSelf: Access = ({ req: { user } }) => {
   if (!user) {
@@ -7,7 +7,7 @@ export const adminOrSelf: Access = ({ req: { user } }) => {
   }
 
   return (
-    isAdmin(user) || {
+    atLeast(user, "admin") || {
       id: { equals: user.id },
     }
   )

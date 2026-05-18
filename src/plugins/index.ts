@@ -87,7 +87,7 @@ const beforeSync: BeforeSync = ({ originalDoc, searchDoc }) => {
     null
 
   const content = originalDoc.content as { root?: LexicalTextNode } | undefined
-  const body = lexicalToPlainText(content?.root).replace(/\s+/g, " ").trim()
+  const body = lexicalToPlainText(content?.root).replace(/\s+/g, " ").trim().slice(0, 39000)
 
   return { ...searchDoc, title, excerpt, slug, authors, topics, image, body }
 }

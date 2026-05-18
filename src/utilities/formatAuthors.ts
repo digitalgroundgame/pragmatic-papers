@@ -1,6 +1,17 @@
 // eslint-disable-next-line @typescript-eslint/consistent-type-imports
 import { Article } from "@/payload-types"
 
+export function arrayToPlaintText(list: string[], conjunction = "and"): string {
+  if (!list.length) return ""
+  if (list.length === 1) return list[0] ?? ""
+  if (list.length === 2) return `${list[0]} ${conjunction} ${list[1]}`
+  return `${list.slice(0, -1).join(", ")} ${conjunction} ${list[list.length - 1]}`
+}
+
+export function arrayStringToPlainText(list: string, sep = ",", conjunction = "and"): string {
+  return arrayToPlaintText(list.split(sep), conjunction)
+}
+
 /**
  * Formats an array of populatedAuthors from Articles into a prettified string.
  * @param authors - The populatedAuthors array from an Article.
@@ -15,11 +26,6 @@ export const formatAuthors = (
   authors: NonNullable<NonNullable<Article["populatedAuthors"]>[number]>[],
 ): string => {
   // Ensure we don't have any authors without a name
-  const authorNames = authors.map((author) => author.name).filter(Boolean)
-
-  if (authorNames.length === 0) return ""
-  if (authorNames.length === 1) return authorNames[0] ?? ""
-  if (authorNames.length === 2) return `${authorNames[0]} and ${authorNames[1]}`
-
-  return `${authorNames.slice(0, -1).join(", ")} and ${authorNames[authorNames.length - 1]}`
+  const authorNames = authors.map((author) => author.name).filter(Boolean) as string[]
+  return arrayToPlaintText(authorNames)
 }

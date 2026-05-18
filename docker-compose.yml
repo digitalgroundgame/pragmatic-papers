@@ -1,6 +1,6 @@
 services:
-  postgres-pragmatic-papers:
-    container_name: pragmatic-papers-postgres-dev
+  postgres-pragmatic:
+    container_name: postgres-pragmatic
     image: postgres:15-alpine
     restart: always
     environment:
@@ -11,6 +11,11 @@ services:
       - "9000:5432"
     volumes:
       - pragmatic_papers_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d pragmatic-papers"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
 
 volumes:
   pragmatic_papers_postgres_data:

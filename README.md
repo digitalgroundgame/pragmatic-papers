@@ -8,7 +8,7 @@ Read about our current initiatives on the wiki: [Pragmatic Papers Developement W
 
 ```Bash
 docker
-Node.js version 22+
+Node.js version 24.15.0+
 pnpm
 ```
 
@@ -16,7 +16,7 @@ pnpm
 
 This repo uses some additional tools:
 
-- [Turborepo](https://turbo.build/repo) for monorepo management
+- [Next.js](https://nextjs.org/) for the web framework
 - [TypeScript](https://www.typescriptlang.org/) for static type checking
 - [ESLint](https://eslint.org/) for code linting
 - [Prettier](https://prettier.io) for code formatting
@@ -28,11 +28,16 @@ This repo uses some additional tools:
 
 1. [Clone the repo](https://github.com/digitalgroundgame/pragmatic-papers.git) and `cd` into it.
 2. _(Optional)_ Set up the private display font — see [Private Font Setup](#private-font-setup) below. Don't worry you can come back to this later.
-3. Run `pnpm install`. The preinstall hook copies `apps/pragmatic-papers/.env` from `.env.example` if missing.
-4. Start dev:
+3. Create `.env` from `.env.example` if it does not exist:
 
 ```bash
- pnpm dev
+cp .env.example .env
+```
+
+4. Install dependencies and start dev:
+
+```bash
+pnpm install && pnpm dev
 ```
 
 5. Open [http://localhost:8000](http://localhost:8000).
@@ -62,6 +67,13 @@ The project `.npmrc` references `GH_FONT_READ` — you just need that variable s
 
 Restart your terminal after setting the variable, then re-run `pnpm install`. You should see `✓ Fonts copied to public/fonts` in the output.
 
+> [!TIP]
+> Font Caching & Env Variables
+>
+> The Situation: This font gets cached twice—once as a package in the >pnpm store and once in the /public/fonts/ directory.
+>
+> The Workaround: You don't need to pollute your global environment. Just use a temporary export in your terminal session for local builds.
+
 ## Seeding the Database
 
 In order to see some basic content and website functionality it is key to seed your development database with mock content.
@@ -81,9 +93,7 @@ Read more about [Seeding The Database](https://github.com/digitalgroundgame/prag
 Here are the most important scripts available in the root `package.json`:
 
 - `pnpm dev`: Start the application in development mode.
-- `pnpm dev:db`: Start the development docker container. This happens automatically when running `pnpm dev`.
-- `pnpm dev:db-down`: Stop the development docker container.
-- `pnpm dev:db-nuke`: Stop the container _and_ remove the database volume.
+- `pnpm dev:db-nuke`: Drop the database schema and re-run migrations (equivalent to a fresh database).
 - `pnpm lint`: Lint files with `eslint`.
 - `pnpm format`: Format files with `prettier`.
 - `pnpm check-types`: Runs typescript compiler in no emit mode to check for type errors.

@@ -4,7 +4,6 @@ import { MegaMenu } from "@/components/MegaMenu"
 import { Menu } from "@/components/Menu"
 import { SocialLinks } from "@/components/SocialLinks"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import { LinkButton } from "@/components/ui/link-button"
 import {
   Sheet,
@@ -15,9 +14,10 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet"
 import { HeaderActions } from "@/Header/HeaderActions/Component"
+import { SearchForm } from "@/Header/SearchForm/Component"
 import type { Footer, Header } from "@/payload-types"
 import { getCachedGlobal } from "@/utilities/getGlobals"
-import { SearchIcon, TextSearch, User, XIcon } from "lucide-react"
+import { TextSearch, User, XIcon } from "lucide-react"
 import React from "react"
 
 export async function Header(): Promise<React.JSX.Element> {
@@ -58,19 +58,7 @@ export async function Header(): Promise<React.JSX.Element> {
                     }
                   />
                 </SheetHeader>
-                <div className="bg-muted mx-4 mb-6 flex items-center gap-2 rounded-sm border px-3 py-2">
-                  <Input
-                    type="search"
-                    placeholder="Search Coming Soon…"
-                    disabled
-                    aria-label="Search box"
-                    className="border-none bg-transparent"
-                  />
-                  <Button variant="ghost" size="icon" disabled tabIndex={-1}>
-                    <SearchIcon className="size-5" />
-                    <span className="sr-only">Search</span>
-                  </Button>
-                </div>
+                <SearchForm />
                 <Menu menu={navItems} layout="stacked" slot={SheetClose} />
                 <SocialLinks socials={socials} className="px-4 py-3" />
               </SheetContent>
@@ -86,9 +74,8 @@ export async function Header(): Promise<React.JSX.Element> {
               <HeaderActions actions={actions} className="hidden lg:flex" />
               <Sheet>
                 <SheetTrigger
-                  className="lg:hidden"
                   render={
-                    <Button variant="ghost" size="icon">
+                    <Button variant="ghost" size="icon" className="lg:hidden">
                       <User className="size-6" />
                       <span className="sr-only">Account</span>
                     </Button>

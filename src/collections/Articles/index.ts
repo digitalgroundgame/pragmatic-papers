@@ -20,6 +20,7 @@ import { Timeline } from "@/blocks/Timeline/config"
 import { detectMathBlocks } from "@/collections/Articles/hooks/detectMathBlocks"
 import { generateFootnotes } from "@/collections/Articles/hooks/generateFootnotes"
 import { populateAuthors } from "@/collections/Articles/hooks/populateAuthors"
+import { populateTopics } from "@/collections/Articles/hooks/populateTopics"
 import { populateMetaImageFromHero } from "@/collections/Articles/hooks/populateMetaImageFromHero"
 import { populateNarrator } from "@/collections/Articles/hooks/populateNarrator"
 import { populateVolume } from "@/collections/Articles/hooks/populateVolume"
@@ -275,6 +276,7 @@ export const Articles: CollectionConfig = {
       name: "populatedAuthors",
       interfaceName: "PopulatedAuthors",
       type: "array",
+      virtual: true,
       access: {
         update: () => false,
       },
@@ -285,7 +287,7 @@ export const Articles: CollectionConfig = {
       fields: [
         {
           name: "id",
-          type: "text",
+          type: "number",
           required: true,
         },
         {
@@ -372,7 +374,7 @@ export const Articles: CollectionConfig = {
       populateMetaImageFromHero,
     ],
     afterChange: [revalidateArticle],
-    afterRead: [populateAuthors, populateVolume, populateNarrator],
+    afterRead: [populateAuthors, populateTopics, populateVolume, populateNarrator],
     afterDelete: [revalidateDelete],
   },
   versions: {

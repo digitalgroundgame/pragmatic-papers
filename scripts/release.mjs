@@ -10,11 +10,22 @@ const __dirname = dirname(fileURLToPath(import.meta.url))
 const root = join(__dirname, "..")
 const pkgPath = join(root, "package.json")
 
-const version = process.argv[2]
+const args = process.argv.slice(2)
+const version = args.find((a) => /^\d+\.\d+\.\d+$/.test(a))
+const phaseArg = (() => {
+  const i = args.indexOf("--phase")
+  return i !== -1 ? parseInt(args[i + 1], 10) : 1
+})()
 
-if (!version || !/^\d+\.\d+\.\d+$/.test(version)) {
-  console.error(`${red("✖")} Usage: pnpm release <version>`)
+if (!version) {
+  console.error(`${red("✖")} Usage: pnpm release <version> [--phase <1|2|3>]`)
   console.error(`${red("✖")} Example: pnpm release 2.2.0`)
+  console.error(`${red("✖")} Example: pnpm release 2.2.0 --phase 2`)
+  process.exit(1)
+}
+
+if (![1, 2, 3].includes(phaseArg)) {
+  console.error(`${red("✖")} --phase must be 1, 2, or 3`)
   process.exit(1)
 }
 
@@ -46,10 +57,19 @@ function ask(question) {
   })
 }
 
+function prState(prUrl) {
+  const match = prUrl.match(/github\.com\/([^/]+)\/([^/]+)\/pull\/(\d+)/)
+  if (!match) throw new Error(`Cannot parse PR URL: ${prUrl}`)
+  const [, owner, repo, number] = match
+  return capture(
+    `gh api repos/${owner}/${repo}/pulls/${number} --jq 'if .merged then "MERGED" else (.state | ascii_upcase) end'`,
+  )
+}
+
 async function waitForMerge(prUrl) {
   while (true) {
     await ask(`${yellow("?")} Press Enter once the PR has been merged: `)
-    const state = capture(`gh pr view "${prUrl}" --json state --jq '.state'`)
+    const state = prState(prUrl)
     if (state === "MERGED") {
       console.warn(`${green("✔")} PR merged`)
       return
@@ -60,38 +80,42 @@ async function waitForMerge(prUrl) {
 
 // ── Phase 1: Branch, version bump, PR → dev ────────────────────────────────
 
-console.warn(`\n${blue("●")} Phase 1: Creating release branch and PR to dev\n`)
+if (phaseArg <= 1) {
+  console.warn(`\n${blue("●")} Phase 1: Creating release branch and PR to dev\n`)
 
-run(`git checkout dev`)
-run(`git pull origin dev`)
-run(`git checkout -b ${branch}`)
+  run(`git checkout dev`)
+  run(`git pull origin dev`)
+  run(`git checkout -b ${branch}`)
 
-const pkg = JSON.parse(readFileSync(pkgPath, "utf8"))
-const prev = pkg.version
-pkg.version = version
-writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + "\n")
-console.warn(`${green("✔")} Bumped package.json: ${gray(prev)} → ${green(version)}`)
+  const pkg = JSON.parse(readFileSync(pkgPath, "utf8"))
+  const prev = pkg.version
+  pkg.version = version
+  writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + "\n")
+  console.warn(`${green("✔")} Bumped package.json: ${gray(prev)} → ${green(version)}`)
 
-run(`git add package.json`)
-run(`git commit -m "Chore: Bump package.json to ${tag}"`)
-run(`git push origin ${branch}`)
+  run(`git add package.json`)
+  run(`git commit -m "Chore: Bump package.json to ${tag}"`)
+  run(`git push origin ${branch}`)
 
-const devPrUrl = capture(`gh pr create -f -B dev`)
-console.warn(`\n${green("✔")} PR to dev: ${devPrUrl}`)
+  const devPrUrl = capture(`gh pr create -f -B dev`)
+  console.warn(`\n${green("✔")} PR to dev: ${devPrUrl}`)
 
-await waitForMerge(devPrUrl)
+  await waitForMerge(devPrUrl)
+}
 
 // ── Phase 2: PR dev → main ─────────────────────────────────────────────────
 
-console.warn(`\n${blue("●")} Phase 2: Creating PR dev → main\n`)
+if (phaseArg <= 2) {
+  console.warn(`\n${blue("●")} Phase 2: Creating PR dev → main\n`)
 
-run(`git checkout dev`)
-run(`git pull origin dev`)
+  run(`git checkout dev`)
+  run(`git pull origin dev`)
 
-const mainPrUrl = capture(`gh pr create -f -B main`)
-console.warn(`\n${green("✔")} PR to main: ${mainPrUrl}`)
+  const mainPrUrl = capture(`gh pr create -f -B main`)
+  console.warn(`\n${green("✔")} PR to main: ${mainPrUrl}`)
 
-await waitForMerge(mainPrUrl)
+  await waitForMerge(mainPrUrl)
+}
 
 // ── Phase 3: Tag and release ───────────────────────────────────────────────
 

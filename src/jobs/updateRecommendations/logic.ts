@@ -61,7 +61,11 @@ export function readGA4Env(): {
 } {
   const propertyId = process.env.GA4_PROPERTY_ID
   const clientEmail = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL
+  // Some deployment platforms double-escape backslashes in env vars, producing
+  // \\n (three chars) instead of \n (two chars). Replace both levels.
   const privateKey = process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY?.replace(/\\n/g, "\n")
+    ?.replace(/\\n/g, "\n")
+    ?.trim()
   if (!propertyId || !clientEmail || !privateKey) {
     throw new Error(
       "Missing required env vars: GA4_PROPERTY_ID, GOOGLE_SERVICE_ACCOUNT_EMAIL, GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY",

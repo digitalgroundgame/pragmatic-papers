@@ -35,8 +35,7 @@
     "test:ci": "vitest run",
     "test:unit": "vitest --project unit",
     "test:integration": "vitest --project integration",
-    "test:e2e": "node scripts/test-e2e.mjs",
-    "release": "node scripts/release.mjs"
+    "test:e2e": "node scripts/test-e2e.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.4.1",

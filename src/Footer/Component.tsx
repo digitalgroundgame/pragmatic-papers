@@ -1,3 +1,4 @@
+import { NewsletterSignupBlock } from "@/blocks/NewsletterSignup/Component"
 import { Logo } from "@/components/Logo"
 import { Menu } from "@/components/Menu"
 import { ModeToggle } from "@/components/ModeToggle"
@@ -11,6 +12,7 @@ export async function Footer(): Promise<React.ReactElement> {
 
   return (
     <footer className="container mt-6 space-y-1 py-2">
+      <NewsletterSignupBlock blockType="newsletterSignup" />
       <div className="flex flex-col justify-between gap-2 border-t pt-2 md:flex-row md:items-center">
         <a href="/" className="flex-1">
           <Logo size="sm" />

@@ -257,6 +257,7 @@ export interface Config {
   jobs: {
     tasks: {
       updateRecommendations: TaskUpdateRecommendations;
+      scheduleNewsletter: TaskScheduleNewsletter;
       schedulePublish: TaskSchedulePublish;
       inline: {
         input: unknown;
@@ -344,6 +345,7 @@ export interface Page {
     | ContentBlock
     | ContributorsBlock
     | MediaBlock
+    | NewsletterSignupBlock
     | TimelineBlock
     | VolumeView
     | FormBlock
@@ -832,6 +834,18 @@ export interface MediaBlock {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "NewsletterSignupBlock".
+ */
+export interface NewsletterSignupBlock {
+  heading?: string | null;
+  description?: string | null;
+  buttonLabel?: string | null;
+  id?: string | null;
+  blockName?: string | null;
+  blockType: 'newsletterSignup';
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "TimelineBlock".
  */
 export interface TimelineBlock {
@@ -1272,7 +1286,7 @@ export interface PayloadJob {
     | {
         executedAt: string;
         completedAt: string;
-        taskSlug: 'inline' | 'updateRecommendations' | 'schedulePublish';
+        taskSlug: 'inline' | 'updateRecommendations' | 'scheduleNewsletter' | 'schedulePublish';
         taskID: string;
         input?:
           | {
@@ -1305,7 +1319,7 @@ export interface PayloadJob {
         id?: string | null;
       }[]
     | null;
-  taskSlug?: ('inline' | 'updateRecommendations' | 'schedulePublish') | null;
+  taskSlug?: ('inline' | 'updateRecommendations' | 'scheduleNewsletter' | 'schedulePublish') | null;
   queue?: string | null;
   waitUntil?: string | null;
   processing?: boolean | null;
@@ -1454,6 +1468,7 @@ export interface PagesSelect<T extends boolean = true> {
         content?: T | ContentBlockSelect<T>;
         contributors?: T | ContributorsBlockSelect<T>;
         mediaBlock?: T | MediaBlockSelect<T>;
+        newsletterSignup?: T | NewsletterSignupBlockSelect<T>;
         timeline?: T | TimelineBlockSelect<T>;
         volumeView?: T | VolumeViewSelect<T>;
         formBlock?: T | FormBlockSelect<T>;
@@ -1559,6 +1574,17 @@ export interface ContributorsBlockSelect<T extends boolean = true> {
  */
 export interface MediaBlockSelect<T extends boolean = true> {
   media?: T;
+  id?: T;
+  blockName?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "NewsletterSignupBlock_select".
+ */
+export interface NewsletterSignupBlockSelect<T extends boolean = true> {
+  heading?: T;
+  description?: T;
+  buttonLabel?: T;
   id?: T;
   blockName?: T;
 }
@@ -2296,6 +2322,18 @@ export interface CollectionsWidget {
  */
 export interface TaskUpdateRecommendations {
   input?: unknown;
+  output: {
+    count: number;
+  };
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "TaskScheduleNewsletter".
+ */
+export interface TaskScheduleNewsletter {
+  input: {
+    volumeId: number;
+  };
   output: {
     count: number;
   };

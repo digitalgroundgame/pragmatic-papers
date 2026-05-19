@@ -33,6 +33,7 @@ import { checkArticles } from "./hooks/checkArticles"
 import { getNextVolumeNumber } from "./hooks/getNextVolumeNumber"
 import { pushToWebhooks } from "./hooks/pushToWebhooks"
 import { revalidateArticle, revalidateDelete } from "./hooks/revalidateVolumes"
+import { scheduleNewsletter } from "./hooks/scheduleNewsletter"
 import { setDefaultSeoTitle } from "./hooks/seoTitle"
 
 export const Volumes: CollectionConfig = {
@@ -180,7 +181,7 @@ export const Volumes: CollectionConfig = {
     }),
   ],
   hooks: {
-    afterChange: [revalidateArticle, pushToWebhooks],
+    afterChange: [revalidateArticle, pushToWebhooks, scheduleNewsletter],
     afterDelete: [revalidateDelete],
     beforeChange: [setDefaultSeoTitle],
   },

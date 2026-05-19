@@ -11,34 +11,13 @@ interface FeedShellProps {
   initialNextCursor: number | null
 }
 
-const AUTOPLAY_STORAGE_KEY = "feed:autoplay"
-
-function readStoredAutoPlay(defaultValue: boolean): boolean {
-  if (typeof window === "undefined") return defaultValue
-  try {
-    const v = window.localStorage.getItem(AUTOPLAY_STORAGE_KEY)
-    if (v === "0") return false
-    if (v === "1") return true
-  } catch {
-    /* ignore */
-  }
-  return defaultValue
-}
-
-function persistAutoPlay(value: boolean): void {
-  if (typeof window === "undefined") return
-  try {
-    window.localStorage.setItem(AUTOPLAY_STORAGE_KEY, value ? "1" : "0")
-  } catch {
-    /* ignore */
-  }
-}
-
 export function FeedShell({ initialItems, initialNextCursor }: FeedShellProps): React.ReactNode {
   const [articles, setArticles] = useState<FeedArticle[]>(initialItems)
   const [nextCursor, setNextCursor] = useState<number | null>(initialNextCursor)
   const [activeIndex, setActiveIndex] = useState(0)
-  const [autoPlayEnabled, setAutoPlayEnabled] = useState<boolean>(() => readStoredAutoPlay(true))
+  // Auto-play is always on at session start. Tap-to-pause is session-only:
+  // a reload returns to the playing state by design.
+  const [autoPlayEnabled, setAutoPlayEnabled] = useState<boolean>(true)
   const [interactionPauseCount, setInteractionPauseCount] = useState(0)
 
   const scrollerRef = useRef<HTMLDivElement>(null)
@@ -110,11 +89,7 @@ export function FeedShell({ initialItems, initialNextCursor }: FeedShellProps): 
   )
 
   const toggleAutoPlay = useCallback(() => {
-    setAutoPlayEnabled((v) => {
-      const next = !v
-      persistAutoPlay(next)
-      return next
-    })
+    setAutoPlayEnabled((v) => !v)
   }, [])
 
   const scrollToNextArticle = useCallback(() => {

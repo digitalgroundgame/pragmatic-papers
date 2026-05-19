@@ -21,7 +21,7 @@ export function HeroPage({ article, topInset }: HeroPageProps): React.ReactNode 
   const excerpt = article.meta?.description ?? null
 
   return (
-    <div className="relative h-dvh w-full overflow-hidden bg-black">
+    <div className="relative h-full w-full overflow-hidden bg-black">
       {article.heroImage && typeof article.heroImage !== "number" ? (
         <div className="absolute inset-0">
           <Media

@@ -131,7 +131,7 @@ describe("chunkArticle", () => {
 
   it("attaches a pending heading to the following full-bleed block instead of a standalone page", () => {
     const pages = chunkArticle(
-      makeArticle([paragraph(SHORT), heading("Math Section"), block("displayMathBlock")]),
+      makeArticle([paragraph(SHORT), heading("Gallery Section"), block("mediaBlock")]),
     )
     expect(pages.map((p) => p.kind)).toEqual(["hero", "content", "block"])
     const last = pages[2]
@@ -176,5 +176,63 @@ describe("chunkArticle", () => {
     // Verifies the slug fix: the old chunker had "form" hard-coded and missed this.
     const pages = chunkArticle(makeArticle([paragraph(SHORT), block("formBlock")]))
     expect(pages.map((p) => p.kind)).toEqual(["hero", "content", "block"])
+  })
+
+  it("renders displayMathBlock inline (no longer full-bleed)", () => {
+    const pages = chunkArticle(
+      makeArticle([paragraph(SHORT), block("displayMathBlock"), paragraph(SHORT)]),
+    )
+    expect(pages.map((p) => p.kind)).toEqual(["hero", "content"])
+  })
+
+  it("splits a Timeline block into pages of 3 events each", () => {
+    const events = Array.from({ length: 7 }, (_, i) => ({
+      date: `2020-01-0${i + 1}`,
+      title: `Event ${i + 1}`,
+    }))
+    const tl = block("timeline", { events })
+    const pages = chunkArticle(makeArticle([tl]))
+    // 7 events → ceil(7/3) = 3 pages, plus the hero
+    const blocks = pages.filter(
+      (p): p is Extract<typeof p, { kind: "block" }> => p.kind === "block",
+    )
+    expect(blocks).toHaveLength(3)
+    for (const b of blocks) expect(b.blockType).toBe("timeline")
+    // First page has 3 events, last has 1
+    const firstEvents = (blocks[0]?.node.fields as { events?: unknown[] }).events ?? []
+    const lastEvents = (blocks[2]?.node.fields as { events?: unknown[] }).events ?? []
+    expect(firstEvents).toHaveLength(3)
+    expect(lastEvents).toHaveLength(1)
+  })
+
+  it("promotes a Lexical table node to a full-bleed page with synthetic blockType 'table'", () => {
+    const table: LexicalNode = {
+      type: "table",
+      version: 1,
+      children: [
+        {
+          type: "tablerow",
+          version: 1,
+          children: [
+            { type: "tablecell", version: 1, headerState: 1, children: [paragraph("Col A")] },
+            { type: "tablecell", version: 1, headerState: 1, children: [paragraph("Col B")] },
+          ],
+        },
+        {
+          type: "tablerow",
+          version: 1,
+          children: [
+            { type: "tablecell", version: 1, headerState: 0, children: [paragraph("a1")] },
+            { type: "tablecell", version: 1, headerState: 0, children: [paragraph("b1")] },
+          ],
+        },
+      ],
+    }
+    const pages = chunkArticle(makeArticle([paragraph(SHORT), table]))
+    expect(pages.map((p) => p.kind)).toEqual(["hero", "content", "block"])
+    const last = pages[2]
+    if (last?.kind === "block") {
+      expect(last.blockType).toBe("table")
+    }
   })
 })

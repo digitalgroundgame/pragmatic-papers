@@ -15,7 +15,10 @@ interface ArticleViewProps {
   article: FeedArticle
   active: boolean
   initialPage: number
+  /** The effective enabled flag (user toggle AND no interaction pause). */
   autoPlayEnabled: boolean
+  /** The user-facing toggle state — what the play/pause button reflects. */
+  userAutoPlayEnabled: boolean
   onAutoPlayToggle: () => void
   onPageChange: (pageIndex: number) => void
   onEndReached: () => void
@@ -29,6 +32,7 @@ export function ArticleView({
   active,
   initialPage,
   autoPlayEnabled,
+  userAutoPlayEnabled,
   onAutoPlayToggle,
   onPageChange,
   onEndReached,
@@ -126,19 +130,19 @@ export function ArticleView({
 
   const view = (
     <div
-      className="relative h-dvh w-full overflow-hidden bg-black"
+      className="relative h-full w-full overflow-hidden bg-black"
       onPointerDown={onPointerDown}
       onPointerUp={onPointerUp}
       onPointerCancel={() => {
         swipeStartRef.current = null
       }}
     >
-      <div ref={emblaRef} className="h-dvh overflow-hidden">
-        <div className="flex h-dvh" style={{ touchAction: "pan-y pinch-zoom" }}>
+      <div ref={emblaRef} className="h-full overflow-hidden">
+        <div className="flex h-full" style={{ touchAction: "pan-y pinch-zoom" }}>
           {pages.map((page, i) => (
             <div
               key={i}
-              className="relative h-dvh w-full shrink-0 grow-0 basis-full"
+              className="relative h-full w-full shrink-0 grow-0 basis-full"
               role="group"
               aria-roledescription="page"
               aria-label={`Page ${i + 1} of ${pages.length}`}
@@ -168,7 +172,7 @@ export function ArticleView({
           />
         </div>
         <div className="pointer-events-auto">
-          <AutoPlayToggle isPlaying={autoPlayEnabled} onToggle={onAutoPlayToggle} />
+          <AutoPlayToggle isPlaying={userAutoPlayEnabled} onToggle={onAutoPlayToggle} />
         </div>
       </div>
     </div>

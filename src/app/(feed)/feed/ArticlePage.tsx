@@ -38,7 +38,7 @@ export function ArticleContentPage({
   if (page.kind !== "content") return null
 
   return (
-    <div className="relative h-dvh w-full overflow-hidden bg-black text-white">
+    <div className="relative h-full w-full overflow-hidden bg-black text-white">
       <div
         className="absolute inset-0 flex flex-col justify-center"
         style={{
@@ -77,7 +77,7 @@ export function ArticleBlockPage({
   const FeedComponent = getFeedBlockBehavior(page.blockType).FeedComponent
 
   return (
-    <div className="relative flex h-dvh w-full flex-col overflow-hidden bg-black text-white">
+    <div className="relative flex h-full w-full flex-col overflow-hidden bg-black text-white">
       {heading && (
         <div className="px-5" style={{ paddingTop: topInset + 16 }}>
           <div className="mx-auto w-full max-w-3xl">

@@ -58,6 +58,22 @@ export function chunkArticle(article: FeedArticle): ArticlePageItem[] {
   }
 
   for (const node of rootChildren) {
+    // Lexical native `table` nodes aren't Payload blocks. Promote them to
+    // a virtual full-bleed block keyed as "table" so the registry can
+    // route rendering through FeedTableRowReflow.
+    if (node.type === "table") {
+      flushBuffer()
+      const page: BlockPageKind = {
+        kind: "block",
+        node,
+        blockType: "table",
+        headingNode: pendingHeading ?? undefined,
+      }
+      pages.push(page)
+      pendingHeading = null
+      continue
+    }
+
     const blockType = getBlockType(node)
     const behavior = blockType ? getFeedBlockBehavior(blockType) : null
 

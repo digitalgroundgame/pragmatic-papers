@@ -1,7 +1,8 @@
 "use client"
 
-import React, { useCallback, useEffect, useRef, useState } from "react"
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { ArticleView } from "./ArticleView"
+import { FeedShellContext, type FeedShellContextValue } from "./FeedShellContext"
 import { usePageMemory } from "./hooks/usePageMemory"
 import type { FeedArticle, FeedBatch } from "./types"
 
@@ -38,6 +39,7 @@ export function FeedShell({ initialItems, initialNextCursor }: FeedShellProps): 
   const [nextCursor, setNextCursor] = useState<number | null>(initialNextCursor)
   const [activeIndex, setActiveIndex] = useState(0)
   const [autoPlayEnabled, setAutoPlayEnabled] = useState<boolean>(() => readStoredAutoPlay(true))
+  const [interactionPauseCount, setInteractionPauseCount] = useState(0)
 
   const scrollerRef = useRef<HTMLDivElement>(null)
   const sectionRefs = useRef<Map<number, HTMLElement>>(new Map())
@@ -152,37 +154,53 @@ export function FeedShell({ initialItems, initialNextCursor }: FeedShellProps): 
     }
   }, [])
 
+  const contextValue = useMemo<FeedShellContextValue>(
+    () => ({
+      pauseAutoPlay: () => setInteractionPauseCount((c) => c + 1),
+      resumeAutoPlay: () => setInteractionPauseCount((c) => Math.max(0, c - 1)),
+    }),
+    [],
+  )
+
+  const effectiveAutoPlay = autoPlayEnabled && interactionPauseCount === 0
+
   return (
-    <div
-      ref={scrollerRef}
-      className="h-dvh w-full snap-y snap-mandatory overflow-y-auto overscroll-y-contain bg-black"
-      style={{ scrollSnapType: "y mandatory" }}
-    >
-      {articles.map((article, i) => {
-        const inWindow = Math.abs(i - activeIndex) <= 1
-        return (
-          <section
-            key={article.id}
-            data-idx={i}
-            ref={registerSection(i)}
-            className="relative h-dvh w-full snap-start snap-always"
-          >
-            {inWindow ? (
-              <ArticleView
-                article={article}
-                active={i === activeIndex}
-                initialPage={memory.get(article.id)}
-                autoPlayEnabled={autoPlayEnabled}
-                onAutoPlayToggle={toggleAutoPlay}
-                onPageChange={(pageIndex) => handlePageChange(article.id, pageIndex)}
-                onEndReached={scrollToNextArticle}
-              />
-            ) : (
-              <div className="h-dvh w-full bg-black" aria-hidden />
-            )}
-          </section>
-        )
-      })}
-    </div>
+    <FeedShellContext.Provider value={contextValue}>
+      <div className="h-dvh w-full bg-black md:flex md:items-center md:justify-center">
+        <div
+          ref={scrollerRef}
+          className="h-dvh w-full snap-y snap-mandatory overflow-y-auto overscroll-y-contain bg-black md:my-4 md:h-[min(844px,calc(100dvh-2rem))] md:w-[min(420px,calc(100vw-2rem))] md:rounded-3xl md:shadow-2xl md:ring-1 md:ring-white/10"
+          style={{ scrollSnapType: "y mandatory" }}
+        >
+          {articles.map((article, i) => {
+            const inWindow = Math.abs(i - activeIndex) <= 1
+            return (
+              <section
+                key={article.id}
+                data-idx={i}
+                ref={registerSection(i)}
+                className="relative h-full w-full snap-start snap-always"
+                style={{ height: "100%" }}
+              >
+                {inWindow ? (
+                  <ArticleView
+                    article={article}
+                    active={i === activeIndex}
+                    initialPage={memory.get(article.id)}
+                    autoPlayEnabled={effectiveAutoPlay}
+                    userAutoPlayEnabled={autoPlayEnabled}
+                    onAutoPlayToggle={toggleAutoPlay}
+                    onPageChange={(pageIndex) => handlePageChange(article.id, pageIndex)}
+                    onEndReached={scrollToNextArticle}
+                  />
+                ) : (
+                  <div className="h-full w-full bg-black" aria-hidden />
+                )}
+              </section>
+            )
+          })}
+        </div>
+      </div>
+    </FeedShellContext.Provider>
   )
 }

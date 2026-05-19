@@ -1,0 +1,135 @@
+import { describe, expect, it, beforeAll, afterAll } from "vitest"
+import type { Payload } from "payload"
+import type { Article } from "@/payload-types"
+import { getPayload, createUser, destroyPayload } from "../helpers/testUsers"
+import { ARTICLE_CONTENT } from "../fixtures/content"
+
+describe("field-level access", () => {
+  let payload: Payload
+
+  beforeAll(async () => {
+    payload = await getPayload()
+  })
+
+  afterAll(async () => {
+    await destroyPayload()
+  })
+
+  describe("editorFieldLevel on publishedAt (Articles)", () => {
+    it("allows editor to update publishedAt", async () => {
+      const editor = await createUser("editor")
+
+      const article = await payload.create({
+        collection: "articles",
+        overrideAccess: true,
+        context: { disableRevalidate: true },
+        data: {
+          title: "PublishedAt Editor - fieldLevel",
+          content: ARTICLE_CONTENT,
+          _status: "draft",
+        } as unknown as Article,
+      })
+
+      const updated = await payload.update({
+        collection: "articles",
+        id: article.id,
+        overrideAccess: false,
+        user: editor,
+        context: { disableRevalidate: true },
+        data: { publishedAt: new Date().toISOString() },
+      })
+
+      expect(updated.publishedAt).toBeDefined()
+    })
+
+    it("denies writer from updating publishedAt", async () => {
+      const writer = await createUser("writer")
+
+      const article = await payload.create({
+        collection: "articles",
+        overrideAccess: true,
+        context: { disableRevalidate: true },
+        data: {
+          title: "PublishedAt Writer - fieldLevel",
+          content: ARTICLE_CONTENT,
+          _status: "draft",
+        } as unknown as Article,
+        user: writer,
+      })
+
+      const updated = await payload.update({
+        collection: "articles",
+        id: article.id,
+        overrideAccess: false,
+        user: writer,
+        context: { disableRevalidate: true },
+        data: { publishedAt: new Date().toISOString() },
+      })
+
+      expect(updated.publishedAt).toBeNull()
+    })
+  })
+
+  describe("adminFieldLevel on role (Users)", () => {
+    it("allows admin to update another user's role", async () => {
+      const admin = await createUser("admin")
+      const target = await createUser("member")
+
+      const updated = await payload.update({
+        collection: "users",
+        id: target.id,
+        overrideAccess: false,
+        user: admin,
+        context: { disableRevalidate: true },
+        data: { role: "narrator" },
+      })
+
+      expect(updated.role).toBe("narrator")
+    })
+
+    it("denies non-admin user from updating their own role", async () => {
+      const editor = await createUser("editor")
+
+      const updated = await payload.update({
+        collection: "users",
+        id: editor.id,
+        overrideAccess: false,
+        user: editor,
+        context: { disableRevalidate: true },
+        data: { role: "narrator" },
+      })
+
+      expect(updated.role).toBe("editor")
+    })
+  })
+
+  describe("never-updatable fields (() => false)", () => {
+    it("denies admin from updating createdBy on articles", async () => {
+      const admin = await createUser("admin")
+      const writer = await createUser("writer")
+
+      const article = await payload.create({
+        collection: "articles",
+        overrideAccess: true,
+        context: { disableRevalidate: true },
+        data: {
+          title: "CreatedBy Field - fieldLevel",
+          content: ARTICLE_CONTENT,
+          _status: "draft",
+        } as unknown as Article,
+        user: writer,
+      })
+
+      const updated = await payload.update({
+        collection: "articles",
+        id: article.id,
+        overrideAccess: false,
+        user: admin,
+        context: { disableRevalidate: true },
+        data: { createdBy: admin.id },
+      })
+
+      expect(updated.createdBy).toEqual(article.createdBy)
+    })
+  })
+})

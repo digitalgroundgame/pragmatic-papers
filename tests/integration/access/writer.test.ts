@@ -1,27 +1,20 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-import { getPayloadConfig } from "@/utilities/getPayloadConfig"
+import { describe, expect, it, beforeAll, afterAll } from "vitest"
 import type { Payload } from "payload"
-import { beforeAll, describe, expect, it } from "vitest"
+import { getPayload, createUser, destroyPayload } from "../helpers/testUsers"
 
 describe("writer access", () => {
   let payload: Payload
 
   beforeAll(async () => {
-    payload = await getPayloadConfig()
+    payload = await getPayload()
+  })
+
+  afterAll(async () => {
+    await destroyPayload()
   })
 
   it("allows writer to create a topic", async () => {
-    const writer = await payload.create({
-      collection: "users",
-      overrideAccess: true,
-      context: { disableRevalidate: true },
-      data: {
-        email: "writer-topic-writer@example.com",
-        password: "test-password",
-        name: "Writer Topic - writer",
-        role: "writer",
-      },
-    } as any)
+    const writer = await createUser("writer")
 
     const topic = await payload.create({
       collection: "topics",
@@ -32,21 +25,11 @@ describe("writer access", () => {
     })
 
     expect(topic).toBeDefined()
-    expect((topic as any).name).toBe("Topic by Writer - writer")
+    expect(topic.name).toBe("Topic by Writer - writer")
   })
 
   it("allows editor to create a topic (writer+)", async () => {
-    const editor = await payload.create({
-      collection: "users",
-      overrideAccess: true,
-      context: { disableRevalidate: true },
-      data: {
-        email: "editor-topic-writer@example.com",
-        password: "test-password",
-        name: "Editor Topic - writer",
-        role: "editor",
-      },
-    } as any)
+    const editor = await createUser("editor")
 
     const topic = await payload.create({
       collection: "topics",
@@ -60,17 +43,7 @@ describe("writer access", () => {
   })
 
   it("allows admin to create a topic (writer+)", async () => {
-    const admin = await payload.create({
-      collection: "users",
-      overrideAccess: true,
-      context: { disableRevalidate: true },
-      data: {
-        email: "admin-topic-writer@example.com",
-        password: "test-password",
-        name: "Admin Topic - writer",
-        role: "admin",
-      },
-    } as any)
+    const admin = await createUser("admin")
 
     const topic = await payload.create({
       collection: "topics",
@@ -84,17 +57,7 @@ describe("writer access", () => {
   })
 
   it("denies narrator from creating a topic (narrator < writer)", async () => {
-    const narrator = await payload.create({
-      collection: "users",
-      overrideAccess: true,
-      context: { disableRevalidate: true },
-      data: {
-        email: "narrator-topic-writer@example.com",
-        password: "test-password",
-        name: "Narrator Topic - writer",
-        role: "narrator",
-      },
-    } as any)
+    const narrator = await createUser("narrator")
 
     await expect(
       payload.create({
@@ -108,17 +71,7 @@ describe("writer access", () => {
   })
 
   it("denies member from creating a topic (member < writer)", async () => {
-    const member = await payload.create({
-      collection: "users",
-      overrideAccess: true,
-      context: { disableRevalidate: true },
-      data: {
-        email: "member-topic-writer@example.com",
-        password: "test-password",
-        name: "Member Topic - writer",
-        role: "member",
-      },
-    } as any)
+    const member = await createUser("member")
 
     await expect(
       payload.create({
@@ -136,7 +89,7 @@ describe("writer access", () => {
       payload.create({
         collection: "topics",
         overrideAccess: false,
-        user: undefined as any,
+        user: undefined,
         draft: true,
         data: { name: "Should Not Create Topic Anon - writer" },
       }),

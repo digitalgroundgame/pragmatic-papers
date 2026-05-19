@@ -1,27 +1,20 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-import { getPayloadConfig } from "@/utilities/getPayloadConfig"
+import { describe, expect, it, beforeAll, afterAll } from "vitest"
 import type { Payload } from "payload"
-import { beforeAll, describe, expect, it } from "vitest"
+import { getPayload, createUser, destroyPayload } from "../helpers/testUsers"
 
 describe("editor access", () => {
   let payload: Payload
 
   beforeAll(async () => {
-    payload = await getPayloadConfig()
+    payload = await getPayload()
+  })
+
+  afterAll(async () => {
+    await destroyPayload()
   })
 
   it("allows editor to update a topic", async () => {
-    const editor = await payload.create({
-      collection: "users",
-      overrideAccess: true,
-      context: { disableRevalidate: true },
-      data: {
-        email: "editor-update-topic-editor@example.com",
-        password: "test-password",
-        name: "Editor Update - editor",
-        role: "editor",
-      },
-    } as any)
+    const editor = await createUser("editor")
 
     const topic = await payload.create({
       collection: "topics",
@@ -38,21 +31,11 @@ describe("editor access", () => {
       data: { name: "Updated by Editor" },
     })
 
-    expect((updated as any).name).toBe("Updated by Editor")
+    expect(updated.name).toBe("Updated by Editor")
   })
 
   it("allows chief-editor to update a topic (editor+)", async () => {
-    const chiefEditor = await payload.create({
-      collection: "users",
-      overrideAccess: true,
-      context: { disableRevalidate: true },
-      data: {
-        email: "chief-editor-update-topic-editor@example.com",
-        password: "test-password",
-        name: "Chief Editor Update - editor",
-        role: "chief-editor",
-      },
-    } as any)
+    const chiefEditor = await createUser("chief-editor")
 
     const topic = await payload.create({
       collection: "topics",
@@ -69,21 +52,11 @@ describe("editor access", () => {
       data: { name: "Updated by Chief Editor" },
     })
 
-    expect((updated as any).name).toBe("Updated by Chief Editor")
+    expect(updated.name).toBe("Updated by Chief Editor")
   })
 
   it("allows admin to update a topic (editor+)", async () => {
-    const admin = await payload.create({
-      collection: "users",
-      overrideAccess: true,
-      context: { disableRevalidate: true },
-      data: {
-        email: "admin-update-topic-editor@example.com",
-        password: "test-password",
-        name: "Admin Update - editor",
-        role: "admin",
-      },
-    } as any)
+    const admin = await createUser("admin")
 
     const topic = await payload.create({
       collection: "topics",
@@ -100,21 +73,11 @@ describe("editor access", () => {
       data: { name: "Updated by Admin" },
     })
 
-    expect((updated as any).name).toBe("Updated by Admin")
+    expect(updated.name).toBe("Updated by Admin")
   })
 
   it("allows editor to delete a topic", async () => {
-    const editor = await payload.create({
-      collection: "users",
-      overrideAccess: true,
-      context: { disableRevalidate: true },
-      data: {
-        email: "editor-delete-topic-editor@example.com",
-        password: "test-password",
-        name: "Editor Delete - editor",
-        role: "editor",
-      },
-    } as any)
+    const editor = await createUser("editor")
 
     const topic = await payload.create({
       collection: "topics",
@@ -134,17 +97,7 @@ describe("editor access", () => {
   })
 
   it("denies writer from updating a topic (writer < editor)", async () => {
-    const writer = await payload.create({
-      collection: "users",
-      overrideAccess: true,
-      context: { disableRevalidate: true },
-      data: {
-        email: "writer-no-update-editor@example.com",
-        password: "test-password",
-        name: "Writer No Update - editor",
-        role: "writer",
-      },
-    } as any)
+    const writer = await createUser("writer")
 
     const topic = await payload.create({
       collection: "topics",
@@ -165,17 +118,7 @@ describe("editor access", () => {
   })
 
   it("denies writer from deleting a topic (writer < editor)", async () => {
-    const writer = await payload.create({
-      collection: "users",
-      overrideAccess: true,
-      context: { disableRevalidate: true },
-      data: {
-        email: "writer-no-delete-editor@example.com",
-        password: "test-password",
-        name: "Writer No Delete - editor",
-        role: "writer",
-      },
-    } as any)
+    const writer = await createUser("writer")
 
     const topic = await payload.create({
       collection: "topics",

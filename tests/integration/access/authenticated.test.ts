@@ -1,13 +1,16 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-import { getPayloadConfig } from "@/utilities/getPayloadConfig"
+import { describe, expect, it, beforeAll, afterAll } from "vitest"
 import type { Payload } from "payload"
-import { beforeAll, describe, expect, it } from "vitest"
+import { getPayload, createUser, destroyPayload } from "../helpers/testUsers"
 
 describe("authenticated and anyone access", () => {
   let payload: Payload
 
   beforeAll(async () => {
-    payload = await getPayloadConfig()
+    payload = await getPayload()
+  })
+
+  afterAll(async () => {
+    await destroyPayload()
   })
 
   describe("anyone (read)", () => {
@@ -23,7 +26,7 @@ describe("authenticated and anyone access", () => {
         collection: "topics",
         id: topic.id,
         overrideAccess: false,
-        user: undefined as any,
+        user: undefined,
       })
 
       expect(result.id).toBe(topic.id)
@@ -41,7 +44,7 @@ describe("authenticated and anyone access", () => {
         collection: "categories",
         id: category.id,
         overrideAccess: false,
-        user: undefined as any,
+        user: undefined,
       })
 
       expect(result.id).toBe(category.id)
@@ -50,17 +53,7 @@ describe("authenticated and anyone access", () => {
 
   describe("authenticated (create/update/delete on categories)", () => {
     it("allows any logged-in user to create a category", async () => {
-      const member = await payload.create({
-        collection: "users",
-        overrideAccess: true,
-        context: { disableRevalidate: true },
-        data: {
-          email: "member-auth-auth@example.com",
-          password: "test-password",
-          name: "Member Auth - auth",
-          role: "member",
-        },
-      } as any)
+      const member = await createUser("member")
 
       const category = await payload.create({
         collection: "categories",
@@ -71,7 +64,7 @@ describe("authenticated and anyone access", () => {
       })
 
       expect(category).toBeDefined()
-      expect((category as any).title).toBe("Category by Member Auth - auth")
+      expect(category.title).toBe("Category by Member Auth - auth")
     })
 
     it("denies unauthenticated users from creating a category", async () => {
@@ -79,7 +72,7 @@ describe("authenticated and anyone access", () => {
         payload.create({
           collection: "categories",
           overrideAccess: false,
-          user: undefined as any,
+          user: undefined,
           draft: true,
           data: { title: "Should Not Create Category - auth" },
         }),
@@ -87,17 +80,7 @@ describe("authenticated and anyone access", () => {
     })
 
     it("allows any logged-in user to update a category", async () => {
-      const narrator = await payload.create({
-        collection: "users",
-        overrideAccess: true,
-        context: { disableRevalidate: true },
-        data: {
-          email: "narrator-auth-auth@example.com",
-          password: "test-password",
-          name: "Narrator Auth - auth",
-          role: "narrator",
-        },
-      } as any)
+      const narrator = await createUser("narrator")
 
       const category = await payload.create({
         collection: "categories",
@@ -114,7 +97,7 @@ describe("authenticated and anyone access", () => {
         data: { title: "Updated by Narrator" },
       })
 
-      expect((updated as any).title).toBe("Updated by Narrator")
+      expect(updated.title).toBe("Updated by Narrator")
     })
 
     it("denies unauthenticated users from updating a category", async () => {
@@ -130,7 +113,7 @@ describe("authenticated and anyone access", () => {
           collection: "categories",
           id: category.id,
           overrideAccess: false,
-          user: undefined as any,
+          user: undefined,
           data: { title: "Should Not Update" },
         }),
       ).rejects.toThrow()

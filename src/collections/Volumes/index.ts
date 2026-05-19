@@ -14,7 +14,7 @@ import {
   UnorderedListFeature,
 } from "@payloadcms/richtext-lexical"
 
-import { editor } from "@/access/editor"
+import { editor } from "@/access/roles"
 import { Banner } from "@/blocks/Banner/config"
 import { Code } from "@/blocks/Code/config"
 import { MediaBlock } from "@/blocks/MediaBlock/config"

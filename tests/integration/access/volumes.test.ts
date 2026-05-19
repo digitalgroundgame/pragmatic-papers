@@ -1,10 +1,9 @@
 import { describe, expect, it, beforeAll, afterAll } from "vitest"
 import type { Payload } from "payload"
-import type { Article } from "@/payload-types"
+import type { Volume } from "@/payload-types"
 import { getPayload, createUser, destroyPayload } from "../helpers/testUsers"
-import { ARTICLE_CONTENT } from "../fixtures/content"
 
-describe("authenticatedOrPublished access", () => {
+describe("volumes authenticatedOrPublished access", () => {
   let payload: Payload
 
   beforeAll(async () => {
@@ -15,24 +14,22 @@ describe("authenticatedOrPublished access", () => {
     await destroyPayload()
   })
 
-  it("allows authenticated user to read a draft article", async () => {
+  it("allows authenticated user to read a draft volume", async () => {
     const member = await createUser("member")
-    const writer = await createUser("writer")
 
     const draft = await payload.create({
-      collection: "articles",
+      collection: "volumes",
       overrideAccess: true,
       context: { disableRevalidate: true },
       data: {
-        title: "Draft Article AoP - aop",
-        content: ARTICLE_CONTENT,
+        title: "Draft Volume AoP - volumes",
+        description: "Draft volume description",
         _status: "draft",
-      } as unknown as Article,
-      user: writer,
+      } as unknown as Volume,
     })
 
     const result = await payload.findByID({
-      collection: "articles",
+      collection: "volumes",
       id: draft.id,
       overrideAccess: false,
       user: member,
@@ -41,22 +38,22 @@ describe("authenticatedOrPublished access", () => {
     expect(result.id).toBe(draft.id)
   })
 
-  it("allows authenticated user to read a published article", async () => {
+  it("allows authenticated user to read a published volume", async () => {
     const member = await createUser("member")
 
     const published = await payload.create({
-      collection: "articles",
+      collection: "volumes",
       overrideAccess: true,
       context: { disableRevalidate: true },
       data: {
-        title: "Published Article AoP - aop",
-        content: ARTICLE_CONTENT,
+        title: "Published Volume AoP - volumes",
+        description: "Published volume description",
         _status: "published",
-      } as unknown as Article,
+      } as unknown as Volume,
     })
 
     const result = await payload.findByID({
-      collection: "articles",
+      collection: "volumes",
       id: published.id,
       overrideAccess: false,
       user: member,
@@ -65,20 +62,20 @@ describe("authenticatedOrPublished access", () => {
     expect(result.id).toBe(published.id)
   })
 
-  it("allows unauthenticated user to read a published article", async () => {
+  it("allows unauthenticated user to read a published volume", async () => {
     const published = await payload.create({
-      collection: "articles",
+      collection: "volumes",
       overrideAccess: true,
       context: { disableRevalidate: true },
       data: {
-        title: "Published Anon AoP - aop",
-        content: ARTICLE_CONTENT,
+        title: "Published Anon Volume AoP - volumes",
+        description: "Published anon volume description",
         _status: "published",
-      } as unknown as Article,
+      } as unknown as Volume,
     })
 
     const result = await payload.findByID({
-      collection: "articles",
+      collection: "volumes",
       id: published.id,
       overrideAccess: false,
       user: undefined,
@@ -87,21 +84,21 @@ describe("authenticatedOrPublished access", () => {
     expect(result.id).toBe(published.id)
   })
 
-  it("denies unauthenticated user from reading a draft article", async () => {
+  it("denies unauthenticated user from reading a draft volume", async () => {
     const draft = await payload.create({
-      collection: "articles",
+      collection: "volumes",
       overrideAccess: true,
       context: { disableRevalidate: true },
       data: {
-        title: "Draft Anon AoP - aop",
-        content: ARTICLE_CONTENT,
+        title: "Draft Anon Volume AoP - volumes",
+        description: "Draft anon volume description",
         _status: "draft",
-      } as unknown as Article,
+      } as unknown as Volume,
     })
 
     await expect(
       payload.findByID({
-        collection: "articles",
+        collection: "volumes",
         id: draft.id,
         overrideAccess: false,
         user: undefined,

@@ -1,4 +1,4 @@
-import { adminFieldLevel } from "@/access/admins"
+import { adminFieldLevel } from "@/access/roles"
 import { menu } from "@/fields/menu"
 import { revalidateHeader } from "@/Header/hooks/revalidateHeader"
 import type { GlobalConfig } from "payload"

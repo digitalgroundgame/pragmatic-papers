@@ -1,44 +1,23 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-import { getPayloadConfig } from "@/utilities/getPayloadConfig"
+import { describe, expect, it, beforeAll, afterAll } from "vitest"
 import type { Payload } from "payload"
-import { beforeAll, describe, expect, it } from "vitest"
-
-const ARTICLE_CONTENT = {
-  root: {
-    type: "root",
-    children: [
-      {
-        type: "paragraph",
-        children: [{ type: "text", text: "Test content" }],
-        direction: null,
-        format: "",
-      },
-    ],
-    direction: null,
-    format: "",
-  },
-}
+import type { Article } from "@/payload-types"
+import { getPayload, createUser, destroyPayload } from "../helpers/testUsers"
+import { ARTICLE_CONTENT } from "../fixtures/content"
 
 describe("editor and writer access", () => {
   let payload: Payload
 
   beforeAll(async () => {
-    payload = await getPayloadConfig()
+    payload = await getPayload()
+  })
+
+  afterAll(async () => {
+    await destroyPayload()
   })
 
   describe("editorOrSelf access", () => {
     it("allows editor to delete any article", async () => {
-      const editor = await payload.create({
-        collection: "users",
-        overrideAccess: true,
-        context: { disableRevalidate: true },
-        data: {
-          email: "editor-eos-eos@example.com",
-          password: "test-password",
-          name: "Editor EoS - eos",
-          role: "editor",
-        },
-      } as any)
+      const editor = await createUser("editor")
 
       const article = await payload.create({
         collection: "articles",
@@ -48,8 +27,8 @@ describe("editor and writer access", () => {
           title: "Article Editor Delete EoS - eos",
           content: ARTICLE_CONTENT,
           _status: "draft",
-        },
-      } as any)
+        } as unknown as Article,
+      })
 
       const deleted = await payload.delete({
         collection: "articles",
@@ -63,17 +42,7 @@ describe("editor and writer access", () => {
     })
 
     it("allows writer to delete their own article", async () => {
-      const writer = await payload.create({
-        collection: "users",
-        overrideAccess: true,
-        context: { disableRevalidate: true },
-        data: {
-          email: "writer-eos-eos@example.com",
-          password: "test-password",
-          name: "Writer EoS - eos",
-          role: "writer",
-        },
-      } as any)
+      const writer = await createUser("writer")
 
       const article = await payload.create({
         collection: "articles",
@@ -84,9 +53,9 @@ describe("editor and writer access", () => {
           content: ARTICLE_CONTENT,
           _status: "draft",
           createdBy: writer.id,
-        },
+        } as unknown as Article,
         user: writer,
-      } as any)
+      })
 
       const deleted = await payload.delete({
         collection: "articles",
@@ -100,29 +69,8 @@ describe("editor and writer access", () => {
     })
 
     it("denies writer from deleting another user's article", async () => {
-      const writerA = await payload.create({
-        collection: "users",
-        overrideAccess: true,
-        context: { disableRevalidate: true },
-        data: {
-          email: "writer-a-eos-eos@example.com",
-          password: "test-password",
-          name: "Writer A EoS - eos",
-          role: "writer",
-        },
-      } as any)
-
-      const writerB = await payload.create({
-        collection: "users",
-        overrideAccess: true,
-        context: { disableRevalidate: true },
-        data: {
-          email: "writer-b-eos-eos@example.com",
-          password: "test-password",
-          name: "Writer B EoS - eos",
-          role: "writer",
-        },
-      } as any)
+      const writerA = await createUser("writer")
+      const writerB = await createUser("writer")
 
       const article = await payload.create({
         collection: "articles",
@@ -133,9 +81,9 @@ describe("editor and writer access", () => {
           content: ARTICLE_CONTENT,
           _status: "draft",
           createdBy: writerA.id,
-        },
+        } as unknown as Article,
         user: writerA,
-      } as any)
+      })
 
       await expect(
         payload.delete({
@@ -151,17 +99,7 @@ describe("editor and writer access", () => {
 
   describe("restrictWritersToDraftOnly access", () => {
     it("allows editor to update any article regardless of status", async () => {
-      const editor = await payload.create({
-        collection: "users",
-        overrideAccess: true,
-        context: { disableRevalidate: true },
-        data: {
-          email: "editor-rwtd-eos@example.com",
-          password: "test-password",
-          name: "Editor Rwtd - eos",
-          role: "editor",
-        },
-      } as any)
+      const editor = await createUser("editor")
 
       const published = await payload.create({
         collection: "articles",
@@ -171,8 +109,8 @@ describe("editor and writer access", () => {
           title: "Published Article Rwtd - eos",
           content: ARTICLE_CONTENT,
           _status: "published",
-        },
-      } as any)
+        } as unknown as Article,
+      })
 
       const updated = await payload.update({
         collection: "articles",
@@ -183,21 +121,11 @@ describe("editor and writer access", () => {
         data: { title: "Updated Published by Editor" },
       })
 
-      expect((updated as any).title).toBe("Updated Published by Editor")
+      expect(updated.title).toBe("Updated Published by Editor")
     })
 
     it("allows writer to update their own draft article", async () => {
-      const writer = await payload.create({
-        collection: "users",
-        overrideAccess: true,
-        context: { disableRevalidate: true },
-        data: {
-          email: "writer-draft-eos@example.com",
-          password: "test-password",
-          name: "Writer Draft - eos",
-          role: "writer",
-        },
-      } as any)
+      const writer = await createUser("writer")
 
       const draft = await payload.create({
         collection: "articles",
@@ -208,9 +136,9 @@ describe("editor and writer access", () => {
           content: ARTICLE_CONTENT,
           _status: "draft",
           createdBy: writer.id,
-        },
+        } as unknown as Article,
         user: writer,
-      } as any)
+      })
 
       const updated = await payload.update({
         collection: "articles",
@@ -221,21 +149,11 @@ describe("editor and writer access", () => {
         data: { title: "Updated Draft by Writer" },
       })
 
-      expect((updated as any).title).toBe("Updated Draft by Writer")
+      expect(updated.title).toBe("Updated Draft by Writer")
     })
 
     it("denies writer from updating their own published article", async () => {
-      const writer = await payload.create({
-        collection: "users",
-        overrideAccess: true,
-        context: { disableRevalidate: true },
-        data: {
-          email: "writer-pub-eos@example.com",
-          password: "test-password",
-          name: "Writer Pub Rwtd - eos",
-          role: "writer",
-        },
-      } as any)
+      const writer = await createUser("writer")
 
       const published = await payload.create({
         collection: "articles",
@@ -246,9 +164,9 @@ describe("editor and writer access", () => {
           content: ARTICLE_CONTENT,
           _status: "published",
           createdBy: writer.id,
-        },
+        } as unknown as Article,
         user: writer,
-      } as any)
+      })
 
       await expect(
         payload.update({
@@ -263,29 +181,8 @@ describe("editor and writer access", () => {
     })
 
     it("denies writer from updating another user's draft article", async () => {
-      const writerA = await payload.create({
-        collection: "users",
-        overrideAccess: true,
-        context: { disableRevalidate: true },
-        data: {
-          email: "writer-a-rwtd-eos@example.com",
-          password: "test-password",
-          name: "Writer A Rwtd - eos",
-          role: "writer",
-        },
-      } as any)
-
-      const writerB = await payload.create({
-        collection: "users",
-        overrideAccess: true,
-        context: { disableRevalidate: true },
-        data: {
-          email: "writer-b-rwtd-eos@example.com",
-          password: "test-password",
-          name: "Writer B Rwtd - eos",
-          role: "writer",
-        },
-      } as any)
+      const writerA = await createUser("writer")
+      const writerB = await createUser("writer")
 
       const draft = await payload.create({
         collection: "articles",
@@ -296,9 +193,9 @@ describe("editor and writer access", () => {
           content: ARTICLE_CONTENT,
           _status: "draft",
           createdBy: writerA.id,
-        },
+        } as unknown as Article,
         user: writerA,
-      } as any)
+      })
 
       await expect(
         payload.update({

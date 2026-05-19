@@ -1,9 +1,11 @@
 import { PostgreSqlContainer } from "@testcontainers/postgresql"
 import { execSync } from "node:child_process"
 
+const TEMPLATE_DB = "pp_template"
+
 export async function setup(): Promise<() => Promise<void>> {
   const container = await new PostgreSqlContainer("postgres:15-alpine")
-    .withDatabase("pragmatic-papers-test")
+    .withDatabase(TEMPLATE_DB)
     .start()
 
   const uri = container.getConnectionUri()
@@ -15,7 +17,7 @@ export async function setup(): Promise<() => Promise<void>> {
   console.warn(`Integration test database started at ${uri}`)
 
   try {
-    console.warn("Running database migrations for integration tests...")
+    console.warn("Running database migrations on template database...")
     execSync("pnpm payload migrate", {
       env: process.env,
       stdio: "inherit",
@@ -25,6 +27,15 @@ export async function setup(): Promise<() => Promise<void>> {
     await container.stop()
     throw error
   }
+
+  delete (process.env as { DATABASE_URI?: string }).DATABASE_URI
+
+  const parsed = new URL(uri)
+  process.env.PG_HOST = parsed.hostname
+  process.env.PG_PORT = parsed.port
+  process.env.PG_USER = parsed.username
+  process.env.PG_PASSWORD = parsed.password
+  process.env.PG_TEMPLATE_DB = TEMPLATE_DB
 
   return async (): Promise<void> => {
     await container.stop()

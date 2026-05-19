@@ -10,6 +10,7 @@ import path from "path"
 import { fileURLToPath } from "url"
 
 import { anyone, staff } from "@/access/roles"
+import { canDeleteMedia } from "@/access/canDeleteMedia"
 import { editorOrSelf } from "@/access/editorOrSelf"
 
 import type { Media as MediaType } from "@/payload-types"
@@ -36,7 +37,7 @@ export const Media: CollectionConfig = {
   ],
   access: {
     create: staff,
-    delete: editorOrSelf,
+    delete: canDeleteMedia,
     read: anyone,
     update: editorOrSelf,
   },
@@ -50,6 +51,15 @@ export const Media: CollectionConfig = {
         {
           label: "Content",
           fields: [
+            {
+              name: "deletionNotice",
+              type: "ui",
+              admin: {
+                components: {
+                  Field: "@/collections/Media/components/DeletionNotice#DeletionNotice",
+                },
+              },
+            },
             {
               name: "alt",
               type: "text",
@@ -148,8 +158,7 @@ export const Media: CollectionConfig = {
   upload: {
     // Upload to the public/media directory in Next.js making them publicly accessible even outside of Payload
     staticDir: path.resolve(dirname, "../../../public/media"),
-    adminThumbnail: ({ doc }: { doc: Partial<MediaType> }) =>
-      doc.sizes?.thumbnail?.url || "thumbnail",
+    adminThumbnail: ({ doc }: { doc: Partial<MediaType> }) => doc.sizes?.thumbnail?.url || "",
     formatOptions: {
       format: "webp",
     },

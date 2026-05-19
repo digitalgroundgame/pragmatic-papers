@@ -15,7 +15,7 @@ export const protectPublishedMedia: CollectionBeforeDeleteHook = async ({
         ? `Cannot delete: used in ${docList}`
         : `Cannot delete: used in ${refs.length} published documents`
 
-    payload.logger.error(
+    payload.logger.warn(
       { refs, mediaId: id },
       `Media deletion blocked \u2014 in use in published content`,
     )

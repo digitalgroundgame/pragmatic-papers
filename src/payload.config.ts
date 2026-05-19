@@ -87,9 +87,13 @@ export default buildConfig({
     pool: {
       connectionString: process.env.DATABASE_URI,
     },
-    // Disable auto-push in tests — migrations are run explicitly.
-    // Defaults to on in dev for convenience (schema syncs without manual migration).
-    push: process.env.PAYLOAD_PUSH_SCHEMA !== "false",
+    /**
+     * Allow list: prevents schema push in production and test.
+     * - Uses a realistic static schema for testing
+     * - Eliminates "Pulling schema from database..." log noise
+     */
+    push: process.env.NODE_ENV === "development",
+
     afterSchemaInit: [searchVectorAfterSchemaInit],
   }),
   collections: [Pages, Articles, Volumes, Media, Categories, Users, Webhooks, Topics],

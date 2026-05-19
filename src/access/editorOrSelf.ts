@@ -18,10 +18,16 @@ export const restrictWritersToDraftOnly: Access = ({ req: { user } }) => {
     return false
   }
 
-  return (
-    atLeast(user, "editor") || {
-      createdBy: { equals: user.id },
-      _status: { equals: "draft" },
-    }
-  )
+  if (atLeast(user, "editor")) {
+    return true
+  }
+
+  if (user.role !== "writer") {
+    return false
+  }
+
+  return {
+    createdBy: { equals: user.id },
+    _status: { equals: "draft" },
+  }
 }

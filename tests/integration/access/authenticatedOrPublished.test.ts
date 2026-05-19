@@ -194,4 +194,51 @@ describe("authenticatedOrPublished access", () => {
     expect(result.docs).toHaveLength(1)
     expect(result.docs.map((d) => d.id)).toEqual([published.id])
   })
+
+  it("denies unauthenticated user from updating an article", async () => {
+    const article = await payload.create({
+      collection: "articles",
+      overrideAccess: true,
+      context: { disableRevalidate: true },
+      data: {
+        title: "Unauthenticated Update AoP - aop",
+        content: ARTICLE_CONTENT,
+        _status: "draft",
+      } as unknown as Article,
+    })
+
+    await expect(
+      payload.update({
+        collection: "articles",
+        id: article.id,
+        overrideAccess: false,
+        user: undefined,
+        context: { disableRevalidate: true },
+        data: { title: "Should Not Update" },
+      }),
+    ).rejects.toThrow()
+  })
+
+  it("denies unauthenticated user from deleting an article", async () => {
+    const article = await payload.create({
+      collection: "articles",
+      overrideAccess: true,
+      context: { disableRevalidate: true },
+      data: {
+        title: "Unauthenticated Delete AoP - aop",
+        content: ARTICLE_CONTENT,
+        _status: "draft",
+      } as unknown as Article,
+    })
+
+    await expect(
+      payload.delete({
+        collection: "articles",
+        id: article.id,
+        overrideAccess: false,
+        user: undefined,
+        context: { disableRevalidate: true },
+      }),
+    ).rejects.toThrow()
+  })
 })

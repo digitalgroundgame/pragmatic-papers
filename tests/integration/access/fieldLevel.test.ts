@@ -62,6 +62,9 @@ describe("field-level access", () => {
         data: { publishedAt: new Date().toISOString() },
       })
 
+      // Field-level access denial is a silent drop — Payload returns the
+      // response with the field value nulled/unchanged rather than throwing.
+      // This differs from collection-level denial which throws a NotFound error.
       expect(updated.publishedAt).toBeNull()
     })
   })
@@ -95,6 +98,7 @@ describe("field-level access", () => {
         data: { role: "narrator" },
       })
 
+      // Same silent-drop behavior: the role field is ignored, not thrown.
       expect(updated.role).toBe("editor")
     })
   })

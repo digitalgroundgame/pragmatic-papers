@@ -91,4 +91,41 @@ describe("writer access", () => {
       }),
     ).rejects.toThrow()
   })
+
+  it("denies unauthenticated from updating a topic", async () => {
+    const topic = await payload.create({
+      collection: "topics",
+      overrideAccess: true,
+      draft: true,
+      data: { name: "Anon Update Topic - writer" },
+    })
+
+    await expect(
+      payload.update({
+        collection: "topics",
+        id: topic.id,
+        overrideAccess: false,
+        user: undefined,
+        data: { name: "Should Not Update" },
+      }),
+    ).rejects.toThrow()
+  })
+
+  it("denies unauthenticated from deleting a topic", async () => {
+    const topic = await payload.create({
+      collection: "topics",
+      overrideAccess: true,
+      draft: true,
+      data: { name: "Anon Delete Topic - writer" },
+    })
+
+    await expect(
+      payload.delete({
+        collection: "topics",
+        id: topic.id,
+        overrideAccess: false,
+        user: undefined,
+      }),
+    ).rejects.toThrow()
+  })
 })

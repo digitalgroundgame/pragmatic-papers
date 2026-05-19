@@ -204,5 +204,61 @@ describe("editor and writer access", () => {
         }),
       ).rejects.toThrow()
     })
+
+    it("denies narrator from updating any article", async () => {
+      const narrator = await createUser("narrator")
+
+      const draft = await payload.create({
+        collection: "articles",
+        overrideAccess: true,
+        context: { disableRevalidate: true },
+        data: {
+          title: "Draft Narrator Rwtd - eos",
+          content: ARTICLE_CONTENT,
+          _status: "draft",
+          createdBy: narrator.id,
+        } as unknown as Article,
+        user: narrator,
+      })
+
+      await expect(
+        payload.update({
+          collection: "articles",
+          id: draft.id,
+          overrideAccess: false,
+          user: narrator,
+          context: { disableRevalidate: true },
+          data: { title: "Should Not Update as Narrator" },
+        }),
+      ).rejects.toThrow()
+    })
+
+    it("denies member from updating any article", async () => {
+      const member = await createUser("member")
+
+      const draft = await payload.create({
+        collection: "articles",
+        overrideAccess: true,
+        context: { disableRevalidate: true },
+        data: {
+          title: "Draft Member Rwtd - eos",
+          content: ARTICLE_CONTENT,
+          _status: "draft",
+          createdBy: member.id,
+        } as unknown as Article,
+        user: member,
+      })
+
+      await expect(
+        payload.update({
+          collection: "articles",
+          id: draft.id,
+          overrideAccess: false,
+          user: member,
+          context: { disableRevalidate: true },
+          data: { title: "Should Not Update as Member" },
+        }),
+      ).rejects.toThrow()
+    })
   })
 })

@@ -37,6 +37,10 @@ describe("atLeast", () => {
     expect(atLeast({ role: null } as any, "member")).toBe(false)
   })
 
+  it("returns false when user has an unrecognized role", () => {
+    expect(atLeast(user("supervillain"), "member")).toBe(false)
+  })
+
   it("returns false when user is undefined", () => {
     expect(atLeast(undefined as any, "member")).toBe(false)
   })

@@ -114,5 +114,23 @@ describe("authenticated and anyone access", () => {
         }),
       ).rejects.toThrow()
     })
+
+    it("denies unauthenticated users from deleting a category", async () => {
+      const category = await payload.create({
+        collection: "categories",
+        overrideAccess: true,
+        draft: true,
+        data: { title: "Category No Delete - auth" },
+      })
+
+      await expect(
+        payload.delete({
+          collection: "categories",
+          id: category.id,
+          overrideAccess: false,
+          user: undefined,
+        }),
+      ).rejects.toThrow()
+    })
   })
 })

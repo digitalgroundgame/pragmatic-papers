@@ -27,6 +27,9 @@ describe("adminOrSelf access", () => {
     const member = await createUser("member")
     const otherUser = await createUser("member")
 
+    // Payload's findByID with overrideAccess: false throws a NotFound-like
+    // error when the record is filtered out by access control (same as if it
+    // didn't exist), rather than returning null.
     await expect(
       payload.findByID({
         collection: "users",

@@ -175,4 +175,67 @@ describe("volumes authenticatedOrPublished access", () => {
     expect(result.docs).toHaveLength(1)
     expect(result.docs.map((d) => d.id)).toEqual([published.id])
   })
+
+  it("denies unauthenticated user from creating a volume", async () => {
+    await expect(
+      payload.create({
+        collection: "volumes",
+        overrideAccess: false,
+        context: { disableRevalidate: true },
+        data: {
+          title: "Unauthenticated Create Volume - volumes",
+          description: "Should not create",
+          _status: "draft",
+        } as unknown as Volume,
+        user: undefined,
+      }),
+    ).rejects.toThrow()
+  })
+
+  it("denies unauthenticated user from updating a volume", async () => {
+    const volume = await payload.create({
+      collection: "volumes",
+      overrideAccess: true,
+      context: { disableRevalidate: true },
+      data: {
+        title: "Unauthenticated Update Volume - volumes",
+        description: "Should not update",
+        _status: "draft",
+      } as unknown as Volume,
+    })
+
+    await expect(
+      payload.update({
+        collection: "volumes",
+        id: volume.id,
+        overrideAccess: false,
+        user: undefined,
+        context: { disableRevalidate: true },
+        data: { title: "Should Not Update" },
+      }),
+    ).rejects.toThrow()
+  })
+
+  it("denies unauthenticated user from deleting a volume", async () => {
+    const volume = await payload.create({
+      collection: "volumes",
+      overrideAccess: true,
+      context: { disableRevalidate: true },
+      data: {
+        title: "Unauthenticated Delete Volume - volumes",
+        description: "Should not delete",
+        _status: "draft",
+      } as unknown as Volume,
+    })
+
+    await expect(
+      payload.delete({
+        collection: "volumes",
+        id: volume.id,
+        overrideAccess: false,
+        user: undefined,
+        context: { disableRevalidate: true },
+      }),
+    ).rejects.toThrow()
+  })
 })

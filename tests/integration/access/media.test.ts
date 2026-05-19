@@ -11,6 +11,30 @@ describe("media editorOrSelf access", () => {
     payload = await getPayload()
   })
 
+  describe("read", () => {
+    it("allows unauthenticated user to read media", async () => {
+      const admin = await createUser("admin")
+
+      const media = await payload.create({
+        collection: "media",
+        overrideAccess: true,
+        context: { disableRevalidate: true },
+        file: testFile(),
+        data: { alt: "Public Media - media" } as unknown as Media,
+        user: admin,
+      })
+
+      const result = await payload.findByID({
+        collection: "media",
+        id: media.id,
+        overrideAccess: false,
+        user: undefined,
+      })
+
+      expect(result.id).toBe(media.id)
+    })
+  })
+
   describe("create", () => {
     it("denies unauthenticated user from creating media", async () => {
       await expect(
@@ -21,6 +45,53 @@ describe("media editorOrSelf access", () => {
           file: testFile(),
           data: { alt: "Unauthenticated Create" } as unknown as Media,
           user: undefined,
+        }),
+      ).rejects.toThrow()
+    })
+
+    it("denies unauthenticated user from updating media", async () => {
+      const admin = await createUser("admin")
+
+      const media = await payload.create({
+        collection: "media",
+        overrideAccess: true,
+        context: { disableRevalidate: true },
+        file: testFile(),
+        data: { alt: "Unauthenticated Update Media - media" } as unknown as Media,
+        user: admin,
+      })
+
+      await expect(
+        payload.update({
+          collection: "media",
+          id: media.id,
+          overrideAccess: false,
+          user: undefined,
+          context: { disableRevalidate: true },
+          data: { alt: "Should Not Update" },
+        }),
+      ).rejects.toThrow()
+    })
+
+    it("denies unauthenticated user from deleting media", async () => {
+      const admin = await createUser("admin")
+
+      const media = await payload.create({
+        collection: "media",
+        overrideAccess: true,
+        context: { disableRevalidate: true },
+        file: testFile(),
+        data: { alt: "Unauthenticated Delete Media - media" } as unknown as Media,
+        user: admin,
+      })
+
+      await expect(
+        payload.delete({
+          collection: "media",
+          id: media.id,
+          overrideAccess: false,
+          user: undefined,
+          context: { disableRevalidate: true },
         }),
       ).rejects.toThrow()
     })

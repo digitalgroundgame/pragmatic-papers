@@ -83,4 +83,43 @@ describe("admin access", () => {
       }),
     ).rejects.toThrow()
   })
+
+  it("denies unauthenticated from creating a user", async () => {
+    await expect(
+      payload.create({
+        collection: "users",
+        overrideAccess: false,
+        user: undefined,
+        context: { disableRevalidate: true },
+        data: {
+          email: "denied-anon-admin@example.com",
+          password: "test-password",
+          name: "Should Not Create Anon - admin",
+        } as unknown as User,
+      }),
+    ).rejects.toThrow()
+  })
+
+  it("denies unauthenticated from deleting a user", async () => {
+    const target = await payload.create({
+      collection: "users",
+      overrideAccess: true,
+      context: { disableRevalidate: true },
+      data: {
+        email: "delete-target-admin@example.com",
+        password: "test-password",
+        name: "Delete Target - admin",
+      } as unknown as User,
+    })
+
+    await expect(
+      payload.delete({
+        collection: "users",
+        id: target.id,
+        overrideAccess: false,
+        user: undefined,
+        context: { disableRevalidate: true },
+      }),
+    ).rejects.toThrow()
+  })
 })

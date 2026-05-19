@@ -1,6 +1,6 @@
 import { describe, expect, it, beforeAll } from "vitest"
 import type { Payload } from "payload"
-import type { Article, Media } from "@/payload-types"
+import type { Article, Media, User } from "@/payload-types"
 import { getPayload, createUser } from "../helpers/testUsers"
 import { ARTICLE_CONTENT } from "../fixtures/content"
 import { MINIMAL_PNG } from "../fixtures/media"
@@ -90,5 +90,146 @@ describe("narrator access", () => {
     })
 
     expect(media.id).toBeDefined()
+  })
+
+  it("denies narrator from updating media (narrator < editor, editorOrSelf gate)", async () => {
+    const narrator = await createUser("narrator")
+
+    const media = await payload.create({
+      collection: "media",
+      overrideAccess: true,
+      context: { disableRevalidate: true },
+      file: {
+        data: MINIMAL_PNG,
+        mimetype: "image/png",
+        name: "test.png",
+        size: MINIMAL_PNG.length,
+      },
+      data: { alt: "Media Narrator Update - narrator" } as unknown as Media,
+    })
+
+    await expect(
+      payload.update({
+        collection: "media",
+        id: media.id,
+        overrideAccess: false,
+        user: narrator,
+        context: { disableRevalidate: true },
+        data: { alt: "Should Not Update" },
+      }),
+    ).rejects.toThrow()
+  })
+
+  it("denies narrator from deleting media (narrator < editor, editorOrSelf gate)", async () => {
+    const narrator = await createUser("narrator")
+
+    const media = await payload.create({
+      collection: "media",
+      overrideAccess: true,
+      context: { disableRevalidate: true },
+      file: {
+        data: MINIMAL_PNG,
+        mimetype: "image/png",
+        name: "test.png",
+        size: MINIMAL_PNG.length,
+      },
+      data: { alt: "Media Narrator Delete - narrator" } as unknown as Media,
+    })
+
+    await expect(
+      payload.delete({
+        collection: "media",
+        id: media.id,
+        overrideAccess: false,
+        user: narrator,
+        context: { disableRevalidate: true },
+      }),
+    ).rejects.toThrow()
+  })
+
+  it("denies narrator from deleting an article (narrator < editor, editorOrSelf gate)", async () => {
+    const narrator = await createUser("narrator")
+    const writer = await createUser("writer")
+
+    const article = await payload.create({
+      collection: "articles",
+      overrideAccess: true,
+      context: { disableRevalidate: true },
+      data: {
+        title: "Article Narrator Delete - narrator",
+        content: ARTICLE_CONTENT,
+        _status: "draft",
+      } as unknown as Article,
+      user: writer,
+    })
+
+    await expect(
+      payload.delete({
+        collection: "articles",
+        id: article.id,
+        overrideAccess: false,
+        user: narrator,
+        context: { disableRevalidate: true },
+      }),
+    ).rejects.toThrow()
+  })
+
+  it("denies narrator from updating a topic (narrator < editor)", async () => {
+    const narrator = await createUser("narrator")
+
+    const topic = await payload.create({
+      collection: "topics",
+      overrideAccess: true,
+      draft: true,
+      data: { name: "Topic Narrator Update - narrator" },
+    })
+
+    await expect(
+      payload.update({
+        collection: "topics",
+        id: topic.id,
+        overrideAccess: false,
+        user: narrator,
+        data: { name: "Should Not Update" },
+      }),
+    ).rejects.toThrow()
+  })
+
+  it("denies narrator from deleting a topic (narrator < editor)", async () => {
+    const narrator = await createUser("narrator")
+
+    const topic = await payload.create({
+      collection: "topics",
+      overrideAccess: true,
+      draft: true,
+      data: { name: "Topic Narrator Delete - narrator" },
+    })
+
+    await expect(
+      payload.delete({
+        collection: "topics",
+        id: topic.id,
+        overrideAccess: false,
+        user: narrator,
+      }),
+    ).rejects.toThrow()
+  })
+
+  it("denies narrator from creating a user (narrator < admin)", async () => {
+    const narrator = await createUser("narrator")
+
+    await expect(
+      payload.create({
+        collection: "users",
+        overrideAccess: false,
+        user: narrator,
+        context: { disableRevalidate: true },
+        data: {
+          email: "narrator-created@example.com",
+          password: "test-password",
+          name: "Should Not Create - narrator",
+        } as unknown as User,
+      }),
+    ).rejects.toThrow()
   })
 })

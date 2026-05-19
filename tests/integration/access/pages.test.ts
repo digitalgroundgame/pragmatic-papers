@@ -191,4 +191,67 @@ describe("pages authenticatedOrPublished access", () => {
     expect(result.docs).toHaveLength(1)
     expect(result.docs.map((d) => d.id)).toEqual([published.id])
   })
+
+  it("denies unauthenticated user from creating a page", async () => {
+    await expect(
+      payload.create({
+        collection: "pages",
+        overrideAccess: false,
+        context: { disableRevalidate: true },
+        data: {
+          title: "Unauthenticated Create Page - pages",
+          ...MINIMAL_PAGE,
+          _status: "draft",
+        } as unknown as Page,
+        user: undefined,
+      }),
+    ).rejects.toThrow()
+  })
+
+  it("denies unauthenticated user from updating a page", async () => {
+    const page = await payload.create({
+      collection: "pages",
+      overrideAccess: true,
+      context: { disableRevalidate: true },
+      data: {
+        title: "Unauthenticated Update Page - pages",
+        ...MINIMAL_PAGE,
+        _status: "draft",
+      } as unknown as Page,
+    })
+
+    await expect(
+      payload.update({
+        collection: "pages",
+        id: page.id,
+        overrideAccess: false,
+        user: undefined,
+        context: { disableRevalidate: true },
+        data: { title: "Should Not Update" },
+      }),
+    ).rejects.toThrow()
+  })
+
+  it("denies unauthenticated user from deleting a page", async () => {
+    const page = await payload.create({
+      collection: "pages",
+      overrideAccess: true,
+      context: { disableRevalidate: true },
+      data: {
+        title: "Unauthenticated Delete Page - pages",
+        ...MINIMAL_PAGE,
+        _status: "draft",
+      } as unknown as Page,
+    })
+
+    await expect(
+      payload.delete({
+        collection: "pages",
+        id: page.id,
+        overrideAccess: false,
+        user: undefined,
+        context: { disableRevalidate: true },
+      }),
+    ).rejects.toThrow()
+  })
 })

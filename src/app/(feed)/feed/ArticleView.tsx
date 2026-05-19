@@ -208,7 +208,14 @@ export function ArticleView({
             onJump={handleJump}
           />
         </div>
-        <FeedByline article={article} />
+        <div
+          className={cn(
+            "transition-opacity duration-300 ease-out",
+            currentPage?.kind === "hero" ? "pointer-events-none opacity-0" : "opacity-100",
+          )}
+        >
+          <FeedByline article={article} />
+        </div>
       </div>
 
       {/* Center pause/play flash — purely visual, fades out quickly */}

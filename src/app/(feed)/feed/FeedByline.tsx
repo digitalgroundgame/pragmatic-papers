@@ -59,9 +59,13 @@ export function FeedByline({ article, className }: FeedBylineProps): React.React
 
   return (
     <div className={cn("flex items-center gap-2 px-1", className)} aria-hidden="true">
-      <Avatar size="sm" className="aspect-square shrink-0 rounded-full ring-1 ring-white/40">
+      <Avatar
+        size="sm"
+        className="shrink-0 overflow-hidden rounded-full ring-1 ring-white/40 after:rounded-full"
+      >
         <AvatarImage
           src={heroImageUrl ?? undefined}
+          className="rounded-full"
           render={
             heroImageObj ? <Media media={heroImageObj} sizes="32px" variant="square" /> : undefined
           }

@@ -1,7 +1,7 @@
-import { describe, expect, it, beforeAll, afterAll } from "vitest"
+import { describe, expect, it, beforeAll } from "vitest"
 import type { Payload } from "payload"
 import type { Article } from "@/payload-types"
-import { getPayload, createUser, destroyPayload } from "../helpers/testUsers"
+import { getPayload, createUser } from "../helpers/testUsers"
 import { ARTICLE_CONTENT } from "../fixtures/content"
 
 describe("field-level access", () => {
@@ -9,10 +9,6 @@ describe("field-level access", () => {
 
   beforeAll(async () => {
     payload = await getPayload()
-  })
-
-  afterAll(async () => {
-    await destroyPayload()
   })
 
   describe("editorFieldLevel on publishedAt (Articles)", () => {

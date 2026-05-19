@@ -1,7 +1,7 @@
-import { describe, expect, it, beforeAll, afterAll } from "vitest"
+import { describe, expect, it, beforeAll } from "vitest"
 import type { Payload } from "payload"
 import type { Media } from "@/payload-types"
-import { getPayload, createUser, destroyPayload } from "../helpers/testUsers"
+import { getPayload, createUser } from "../helpers/testUsers"
 
 const MINIMAL_PNG = Buffer.from(
   "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==",
@@ -22,10 +22,6 @@ describe("media editorOrSelf access", () => {
 
   beforeAll(async () => {
     payload = await getPayload()
-  })
-
-  afterAll(async () => {
-    await destroyPayload()
   })
 
   describe("delete", () => {

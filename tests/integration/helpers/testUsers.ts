@@ -18,13 +18,6 @@ export async function getPayload(): Promise<Payload> {
   return payloadInstance
 }
 
-export async function destroyPayload(): Promise<void> {
-  if (payloadInstance) {
-    await payloadInstance.db.destroy?.()
-    payloadInstance = null
-  }
-}
-
 export type Role = NonNullable<User["role"]>
 
 export async function createUser(role: Role): Promise<User> {

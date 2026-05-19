@@ -1,16 +1,12 @@
-import { describe, expect, it, beforeAll, afterAll } from "vitest"
+import { describe, expect, it, beforeAll } from "vitest"
 import type { Payload } from "payload"
-import { getPayload, createUser, destroyPayload } from "../helpers/testUsers"
+import { getPayload, createUser } from "../helpers/testUsers"
 
 describe("authenticated and anyone access", () => {
   let payload: Payload
 
   beforeAll(async () => {
     payload = await getPayload()
-  })
-
-  afterAll(async () => {
-    await destroyPayload()
   })
 
   describe("anyone (read)", () => {

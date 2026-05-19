@@ -1,17 +1,13 @@
-import { describe, expect, it, beforeAll, afterAll } from "vitest"
+import { describe, expect, it, beforeAll } from "vitest"
 import type { Payload } from "payload"
 import type { User } from "@/payload-types"
-import { getPayload, createUser, destroyPayload } from "../helpers/testUsers"
+import { getPayload, createUser } from "../helpers/testUsers"
 
 describe("admin access", () => {
   let payload: Payload
 
   beforeAll(async () => {
     payload = await getPayload()
-  })
-
-  afterAll(async () => {
-    await destroyPayload()
   })
 
   it("allows admin to create a user", async () => {

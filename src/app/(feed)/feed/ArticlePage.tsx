@@ -3,7 +3,6 @@
 import RichText from "@/components/RichText"
 import type { DefaultTypedEditorState } from "@payloadcms/richtext-lexical"
 import React from "react"
-import { FeedByline } from "./FeedByline"
 import { getFeedBlockBehavior } from "./blocks/registry"
 import type { ArticlePageItem, FeedArticle, LexicalNode } from "./types"
 
@@ -25,8 +24,6 @@ function headingText(node: LexicalNode): string {
   return children.map((c) => (typeof c.text === "string" ? c.text : headingText(c))).join("")
 }
 
-const BYLINE_RESERVE_PX = 26 // bottom watermark line-height + safe-area inset
-
 interface ArticleContentPageProps {
   article: FeedArticle
   page: ArticlePageItem
@@ -46,7 +43,7 @@ export function ArticleContentPage({
         className="absolute inset-0 flex flex-col justify-center"
         style={{
           paddingTop: topInset + 16,
-          paddingBottom: `calc(max(env(safe-area-inset-bottom), 16px) + ${BYLINE_RESERVE_PX}px)`,
+          paddingBottom: "max(env(safe-area-inset-bottom), 16px)",
         }}
       >
         <div className="mx-auto w-full max-w-2xl px-5">
@@ -59,7 +56,6 @@ export function ArticleContentPage({
           </div>
         </div>
       </div>
-      <FeedByline article={article} />
     </div>
   )
 }
@@ -95,7 +91,7 @@ export function ArticleBlockPage({
         className="flex flex-1 items-center justify-center overflow-hidden px-4"
         style={{
           paddingTop: heading ? 12 : topInset + 16,
-          paddingBottom: `calc(max(env(safe-area-inset-bottom), 16px) + ${BYLINE_RESERVE_PX}px)`,
+          paddingBottom: "max(env(safe-area-inset-bottom), 16px)",
         }}
       >
         <div className="feed-prose w-full max-w-3xl">
@@ -110,7 +106,6 @@ export function ArticleBlockPage({
           )}
         </div>
       </div>
-      <FeedByline article={article} />
     </div>
   )
 }

@@ -6,6 +6,7 @@ import useEmblaCarousel from "embla-carousel-react"
 import { Pause, Play } from "lucide-react"
 import React, { useCallback, useEffect, useRef, useState } from "react"
 import { ArticleBlockPage, ArticleContentPage } from "./ArticlePage"
+import { FeedByline } from "./FeedByline"
 import { HeroPage } from "./HeroPage"
 import { PageProgress } from "./PageProgress"
 import { useArticlePages } from "./hooks/useArticlePages"
@@ -25,7 +26,7 @@ interface ArticleViewProps {
   onEndReached: () => void
 }
 
-const TOP_INSET = 28 // progress bar row height + a little breathing room
+const TOP_INSET = 64 // progress bar + article byline row + breathing room
 const SWIPE_PAST_END_PX = 60 // forward-swipe distance that triggers next-article on last page
 const TAP_MAX_MOVE_PX = 8 // pointer movement under this counts as a tap, not a drag
 const TAP_MAX_MS = 350 // and only if the press is shorter than this
@@ -196,10 +197,10 @@ export function ArticleView({
       </div>
 
       <div
-        className="pointer-events-none absolute inset-x-0 top-0 z-20 flex items-center gap-2 px-3"
+        className="pointer-events-none absolute inset-x-0 top-0 z-20 flex flex-col gap-2 px-3"
         style={{ paddingTop: "max(env(safe-area-inset-top), 8px)" }}
       >
-        <div className="pointer-events-auto flex-1">
+        <div className="pointer-events-auto">
           <PageProgress
             total={pages.length}
             activeIndex={pageIndex}
@@ -207,6 +208,7 @@ export function ArticleView({
             onJump={handleJump}
           />
         </div>
+        <FeedByline article={article} />
       </div>
 
       {/* Center pause/play flash — purely visual, fades out quickly */}

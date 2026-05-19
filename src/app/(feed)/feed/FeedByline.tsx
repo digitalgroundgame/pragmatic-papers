@@ -1,17 +1,21 @@
 "use client"
 
+import { Media } from "@/components/Media"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { cn } from "@/utilities/utils"
 import React, { useEffect, useRef, useState } from "react"
 import type { FeedArticle } from "./types"
 
 interface FeedBylineProps {
   article: FeedArticle
+  className?: string
 }
 
-// TikTok-style watermark anchored to the bottom of every interior page
-// (content + block). Marquees horizontally if the line overflows the
-// viewport. Stays pointer-events-none so taps fall through to the
-// underlying article view.
-export function FeedByline({ article }: FeedBylineProps): React.ReactNode {
+// Article-level identity banner that sits at the top of the article view,
+// just under the page progress bars. Shows the hero thumbnail, the
+// article title, and the author byline; marquees horizontally when the
+// line overflows.
+export function FeedByline({ article, className }: FeedBylineProps): React.ReactNode {
   const containerRef = useRef<HTMLDivElement | null>(null)
   const textRef = useRef<HTMLSpanElement | null>(null)
   const [marquee, setMarquee] = useState<{ shift: number; duration: number } | null>(null)
@@ -20,8 +24,11 @@ export function FeedByline({ article }: FeedBylineProps): React.ReactNode {
     .map((a) => (typeof a === "object" && a.name ? a.name : ""))
     .filter(Boolean)
   const title = article.title
+  const heroImage = article.heroImage
+  const heroImageObj = heroImage && typeof heroImage !== "number" ? heroImage : null
+  const heroImageUrl =
+    heroImageObj?.sizes?.square?.url ?? heroImageObj?.sizes?.thumbnail?.url ?? heroImageObj?.url
 
-  // Decide whether to animate by measuring overflow on mount + on resize.
   useEffect(() => {
     const container = containerRef.current
     const text = textRef.current
@@ -46,35 +53,44 @@ export function FeedByline({ article }: FeedBylineProps): React.ReactNode {
     return () => ro.disconnect()
   }, [authorNames.length, title])
 
-  if (authorNames.length === 0 && !title) return null
+  if (!title && authorNames.length === 0) return null
 
-  const line = [authorNames.join(", "), title].filter(Boolean).join(" · ")
+  const line = [title, authorNames.join(", ")].filter(Boolean).join(" · ")
 
   return (
-    <div
-      ref={containerRef}
-      className="pointer-events-none absolute right-0 bottom-0 left-0 overflow-hidden px-5"
-      style={{ paddingBottom: "max(env(safe-area-inset-bottom), 6px)" }}
-      aria-hidden="true"
-    >
-      <span
-        ref={textRef}
-        className={
-          marquee
-            ? "text-foreground/45 feed-marquee inline-block font-sans text-[11px] tracking-wide whitespace-nowrap"
-            : "text-foreground/45 block truncate font-sans text-[11px] tracking-wide"
-        }
-        style={
-          marquee
-            ? ({
-                "--feed-marquee-shift": `${marquee.shift}px`,
-                "--feed-marquee-duration": `${marquee.duration}s`,
-              } as React.CSSProperties)
-            : undefined
-        }
-      >
-        {line}
-      </span>
+    <div className={cn("flex items-center gap-2 px-1", className)} aria-hidden="true">
+      <Avatar size="sm" className="aspect-square shrink-0 rounded-full ring-1 ring-white/40">
+        <AvatarImage
+          src={heroImageUrl ?? undefined}
+          render={
+            heroImageObj ? <Media media={heroImageObj} sizes="32px" variant="square" /> : undefined
+          }
+        />
+        <AvatarFallback className="rounded-full bg-black/40 text-[10px] text-white">
+          {title.slice(0, 1).toUpperCase()}
+        </AvatarFallback>
+      </Avatar>
+      <div ref={containerRef} className="min-w-0 flex-1 overflow-hidden">
+        <span
+          ref={textRef}
+          className={
+            marquee
+              ? "feed-marquee inline-block font-sans text-[12px] whitespace-nowrap text-white"
+              : "block truncate font-sans text-[12px] text-white"
+          }
+          style={
+            marquee
+              ? ({
+                  textShadow: "0 1px 2px rgba(0,0,0,0.6)",
+                  "--feed-marquee-shift": `${marquee.shift}px`,
+                  "--feed-marquee-duration": `${marquee.duration}s`,
+                } as React.CSSProperties)
+              : { textShadow: "0 1px 2px rgba(0,0,0,0.6)" }
+          }
+        >
+          {line}
+        </span>
+      </div>
     </div>
   )
 }

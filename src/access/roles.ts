@@ -1,4 +1,4 @@
-import type { Access, AccessArgs, FieldAccess, PayloadRequest } from "payload"
+import type { Access, AccessArgs, FieldAccess } from "payload"
 import type { User } from "@/payload-types"
 
 export type Role = NonNullable<User["role"]>
@@ -57,6 +57,6 @@ export const writerFieldLevel: FieldAccess = ({ req: { user } }) => {
   return atLeast(user, "writer")
 }
 
-export const staff = ({ req: { user } }: { req: PayloadRequest }): boolean => {
+export const staff = ({ req: { user } }: AccessArgs<User>): boolean => {
   return isStaff(user)
 }

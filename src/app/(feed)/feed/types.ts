@@ -11,6 +11,8 @@ export type FeedArticle = Pick<
   | "content"
   | "populatedAuthors"
   | "populatedVolume"
+  | "topics"
+  | "meta"
   | "footnotes"
 >
 

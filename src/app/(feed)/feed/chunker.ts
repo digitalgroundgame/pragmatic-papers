@@ -1,36 +1,13 @@
+import { getFeedBlockBehavior } from "./blocks/registry"
 import type { ArticlePageItem, BlockPageKind, FeedArticle, LexicalNode, ProseChunk } from "./types"
 
-const FULL_BLEED_BLOCK_TYPES = new Set([
-  "mediaBlock",
-  "mediaCollage",
-  "socialEmbed",
-  "timeline",
-  "displayMathBlock",
-  "cta",
-  "contributors",
-  "collectionGrid",
-  "form",
-  "volumeView",
-  "twitterEmbed",
-  "youtubeEmbed",
-  "redditEmbed",
-  "blueSkyEmbed",
-  "tiktokEmbed",
-])
-
 const HEADING_TYPES = new Set(["heading"])
-
 const TARGET_WORDS_PER_PAGE = 180
 
 function getBlockType(node: LexicalNode): string | null {
   if (node.type !== "block") return null
   const fields = node.fields as { blockType?: string } | undefined
   return fields?.blockType ?? null
-}
-
-function isFullBleedBlock(node: LexicalNode): boolean {
-  const blockType = getBlockType(node)
-  return blockType !== null && FULL_BLEED_BLOCK_TYPES.has(blockType)
 }
 
 function isHeading(node: LexicalNode): boolean {
@@ -58,17 +35,6 @@ function countWordsInNodes(nodes: LexicalNode[]): number {
   return total
 }
 
-function makeSyntheticMediaBlock(media: unknown): LexicalNode {
-  return {
-    type: "block",
-    version: 1,
-    fields: {
-      blockType: "mediaBlock",
-      media,
-    },
-  }
-}
-
 export function chunkArticle(article: FeedArticle): ArticlePageItem[] {
   const pages: ArticlePageItem[] = [{ kind: "hero", article }]
 
@@ -93,30 +59,32 @@ export function chunkArticle(article: FeedArticle): ArticlePageItem[] {
 
   for (const node of rootChildren) {
     const blockType = getBlockType(node)
+    const behavior = blockType ? getFeedBlockBehavior(blockType) : null
 
-    // mediaCollage → split into one page per image so no block is bigger than the screen.
-    if (blockType === "mediaCollage") {
+    // Split: one page per synthetic node returned from the sidecar.
+    // The pending heading attaches to only the first emitted page.
+    if (behavior?.placement === "split" && behavior.split) {
       flushBuffer()
-      const fields = node.fields as { images?: Array<{ media?: unknown }> } | undefined
-      const images = fields?.images ?? []
+      const syntheticNodes = behavior.split(node)
       let first = true
-      for (const img of images) {
-        if (!img?.media) continue
+      for (const synth of syntheticNodes) {
+        const synthType = getBlockType(synth) ?? blockType!
         const page: BlockPageKind = {
           kind: "block",
-          node: makeSyntheticMediaBlock(img.media),
-          blockType: "mediaBlock",
+          node: synth,
+          blockType: synthType,
           headingNode: first && pendingHeading ? pendingHeading : undefined,
         }
         pages.push(page)
         first = false
       }
-      // If the collage had no images, fall back to rendering the original block
+      // No images / empty split: fall back to rendering the original block full-bleed
+      // so we don't silently drop content.
       if (first) {
         const page: BlockPageKind = {
           kind: "block",
           node,
-          blockType: "mediaCollage",
+          blockType: blockType!,
           headingNode: pendingHeading ?? undefined,
         }
         pages.push(page)
@@ -125,7 +93,8 @@ export function chunkArticle(article: FeedArticle): ArticlePageItem[] {
       continue
     }
 
-    if (isFullBleedBlock(node)) {
+    // Full-bleed: own page.
+    if (behavior?.placement === "full-bleed") {
       flushBuffer()
       const page: BlockPageKind = {
         kind: "block",
@@ -145,7 +114,7 @@ export function chunkArticle(article: FeedArticle): ArticlePageItem[] {
       continue
     }
 
-    // Normal prose: drop the pending heading at the top of the next chunk.
+    // Inline (registered or default): rides in prose.
     if (pendingHeading) {
       buffer.push(pendingHeading)
       bufferWords += countWordsInNode(pendingHeading)
@@ -170,4 +139,4 @@ export function chunkArticle(article: FeedArticle): ArticlePageItem[] {
   return pages
 }
 
-export const __test__ = { TARGET_WORDS_PER_PAGE, FULL_BLEED_BLOCK_TYPES }
+export const __test__ = { TARGET_WORDS_PER_PAGE }

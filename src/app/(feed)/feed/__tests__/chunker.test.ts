@@ -165,4 +165,16 @@ describe("chunkArticle", () => {
     expect(blocks[0]?.headingNode?.type).toBe("heading")
     expect(blocks[1]?.headingNode).toBeUndefined()
   })
+
+  it("treats a block without a registered sidecar as inline (rides in prose)", () => {
+    // "code" has no sidecar — should not break a prose chunk.
+    const pages = chunkArticle(makeArticle([paragraph(SHORT), block("code"), paragraph(SHORT)]))
+    expect(pages.map((p) => p.kind)).toEqual(["hero", "content"])
+  })
+
+  it("routes Form block to a full-bleed page via the sidecar (slug formBlock)", () => {
+    // Verifies the slug fix: the old chunker had "form" hard-coded and missed this.
+    const pages = chunkArticle(makeArticle([paragraph(SHORT), block("formBlock")]))
+    expect(pages.map((p) => p.kind)).toEqual(["hero", "content", "block"])
+  })
 })

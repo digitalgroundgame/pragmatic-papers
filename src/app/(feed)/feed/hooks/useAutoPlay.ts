@@ -1,14 +1,13 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
+import { getFeedBlockBehavior } from "../blocks/registry"
 import type { ArticlePageItem } from "../types"
 
 const WPM = 220
 const MIN_MS = 3500
 const HERO_MS = 4500
 const BLOCK_MS = 6000
-const HEAVY_BLOCK_MS = 8000
-const HEAVY_BLOCK_TYPES = new Set(["socialEmbed", "timeline", "mediaCollage"])
 
 export function getPageDurationMs(page: ArticlePageItem): number {
   switch (page.kind) {
@@ -19,7 +18,7 @@ export function getPageDurationMs(page: ArticlePageItem): number {
       return Math.max(MIN_MS, fromWords)
     }
     case "block":
-      return HEAVY_BLOCK_TYPES.has(page.blockType) ? HEAVY_BLOCK_MS : BLOCK_MS
+      return getFeedBlockBehavior(page.blockType).durationMs ?? BLOCK_MS
   }
 }
 

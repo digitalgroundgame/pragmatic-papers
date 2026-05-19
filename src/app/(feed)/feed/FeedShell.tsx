@@ -166,10 +166,10 @@ export function FeedShell({ initialItems, initialNextCursor }: FeedShellProps): 
 
   return (
     <FeedShellContext.Provider value={contextValue}>
-      <div className="h-dvh w-full bg-black md:flex md:items-center md:justify-center">
+      <div className="bg-background h-dvh w-full md:flex md:items-center md:justify-center">
         <div
           ref={scrollerRef}
-          className="h-dvh w-full snap-y snap-mandatory overflow-y-auto overscroll-y-contain bg-black md:my-4 md:h-[min(844px,calc(100dvh-2rem))] md:w-[min(420px,calc(100vw-2rem))] md:rounded-3xl md:shadow-2xl md:ring-1 md:ring-white/10"
+          className="bg-background h-dvh w-full snap-y snap-mandatory overflow-y-auto overscroll-y-contain md:my-4 md:h-[min(844px,calc(100dvh-2rem))] md:w-[min(420px,calc(100vw-2rem))] md:rounded-3xl md:shadow-2xl md:ring-1 md:ring-white/10"
           style={{ scrollSnapType: "y mandatory" }}
         >
           {articles.map((article, i) => {
@@ -194,7 +194,7 @@ export function FeedShell({ initialItems, initialNextCursor }: FeedShellProps): 
                     onEndReached={scrollToNextArticle}
                   />
                 ) : (
-                  <div className="h-full w-full bg-black" aria-hidden />
+                  <div className="bg-background h-full w-full" aria-hidden />
                 )}
               </section>
             )

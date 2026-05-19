@@ -18,8 +18,8 @@ export default async function FeedPage(): Promise<React.ReactNode> {
 
   if (batch.items.length === 0) {
     return (
-      <div className="flex h-dvh w-full items-center justify-center px-6">
-        <Empty className="border-white/10 bg-white/5 text-white">
+      <div className="bg-background flex h-dvh w-full items-center justify-center px-6">
+        <Empty className="border-border bg-muted/30 text-foreground">
           <EmptyHeader>
             <EmptyTitle>Nothing to read yet</EmptyTitle>
             <EmptyDescription>

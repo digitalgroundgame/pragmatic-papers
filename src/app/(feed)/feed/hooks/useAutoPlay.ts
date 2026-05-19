@@ -39,6 +39,19 @@ export function useAutoPlay({
   onAdvance: () => void
 }): { progress: number } {
   const [progress, setProgress] = useState(0)
+  // `lastResetKey` tracks the (page, active) identity so we can flush
+  // `progress` synchronously to 0 when the user lands on a new page —
+  // before the RAF-driven update can paint a frame of stale fill.
+  // See https://react.dev/learn/you-might-not-need-an-effect#adjusting-some-state-when-a-prop-changes
+  const [lastResetKey, setLastResetKey] = useState<{
+    page: ArticlePageItem | undefined
+    active: boolean
+  }>({ page, active })
+  if (lastResetKey.page !== page || lastResetKey.active !== active) {
+    setLastResetKey({ page, active })
+    if (progress !== 0) setProgress(0)
+  }
+
   const elapsedRef = useRef(0)
   const onAdvanceRef = useRef(onAdvance)
 
@@ -47,17 +60,14 @@ export function useAutoPlay({
     onAdvanceRef.current = onAdvance
   }, [onAdvance])
 
-  // Reset accumulated time when the user lands on a new page or leaves/enters this article.
-  // Toggling `enabled` alone (pause/resume) must NOT reset elapsed.
+  // Reset accumulated time when the user lands on a new page or leaves/enters
+  // this article. Toggling `enabled` alone (pause/resume) must NOT reset.
   useEffect(() => {
     elapsedRef.current = 0
   }, [page, active])
 
   useEffect(() => {
-    if (!page) {
-      const id = requestAnimationFrame(() => setProgress(0))
-      return () => cancelAnimationFrame(id)
-    }
+    if (!page) return
 
     const duration = getPageDurationMs(page)
 

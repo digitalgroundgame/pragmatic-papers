@@ -3,6 +3,7 @@
 import { Media } from "@/components/Media"
 import { formatDateTime } from "@/utilities/formatDateTime"
 import React from "react"
+import { FeedActionColumn } from "./FeedActionColumn"
 import type { FeedArticle } from "./types"
 
 interface HeroPageProps {
@@ -53,6 +54,10 @@ export function HeroPage({ article, topInset }: HeroPageProps): React.ReactNode 
         </p>
 
         <div className="flex-1" />
+
+        <div className="mb-3 flex justify-end">
+          <FeedActionColumn article={article} />
+        </div>
 
         <div className="rounded-2xl border border-white/15 bg-white/10 p-4 backdrop-blur-md">
           {volume?.title && (

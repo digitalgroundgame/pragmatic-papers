@@ -30,19 +30,20 @@ export default function FeedRootLayout({
   children: React.ReactNode
 }): React.ReactElement {
   return (
-    <html
-      className={cn(FKScreamer.variable, geist.variable, "dark")}
-      lang="en"
-      suppressHydrationWarning
-    >
+    <html className={cn(FKScreamer.variable, geist.variable)} lang="en" suppressHydrationWarning>
       <head>
         <link href="/manifest.json" rel="manifest" />
         <link href="/favicon.ico" rel="icon" sizes="32x32" />
         <link href="/favicon.svg" rel="icon" type="image/svg+xml" />
         <link href="/apple-touch-icon.png" rel="apple-touch-icon" sizes="180x180" />
       </head>
-      <body className="bg-black text-white">
-        <ThemeProvider attribute="class" defaultTheme="dark" disableTransitionOnChange>
+      <body className="bg-background text-foreground">
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
           <AdminBar />
           {children}
         </ThemeProvider>
@@ -52,7 +53,6 @@ export default function FeedRootLayout({
 }
 
 export const viewport: Viewport = {
-  themeColor: "#000000",
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",

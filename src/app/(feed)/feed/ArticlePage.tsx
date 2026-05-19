@@ -3,6 +3,7 @@
 import RichText from "@/components/RichText"
 import type { DefaultTypedEditorState } from "@payloadcms/richtext-lexical"
 import React from "react"
+import { FeedByline } from "./FeedByline"
 import { getFeedBlockBehavior } from "./blocks/registry"
 import type { ArticlePageItem, FeedArticle, LexicalNode } from "./types"
 
@@ -24,6 +25,8 @@ function headingText(node: LexicalNode): string {
   return children.map((c) => (typeof c.text === "string" ? c.text : headingText(c))).join("")
 }
 
+const BYLINE_RESERVE_PX = 26 // bottom watermark line-height + safe-area inset
+
 interface ArticleContentPageProps {
   article: FeedArticle
   page: ArticlePageItem
@@ -38,16 +41,16 @@ export function ArticleContentPage({
   if (page.kind !== "content") return null
 
   return (
-    <div className="relative h-full w-full overflow-hidden bg-black text-white">
+    <div className="bg-background text-foreground relative h-full w-full overflow-hidden">
       <div
         className="absolute inset-0 flex flex-col justify-center"
         style={{
           paddingTop: topInset + 16,
-          paddingBottom: "max(env(safe-area-inset-bottom), 16px)",
+          paddingBottom: `calc(max(env(safe-area-inset-bottom), 16px) + ${BYLINE_RESERVE_PX}px)`,
         }}
       >
         <div className="mx-auto w-full max-w-2xl px-5">
-          <div className="feed-prose text-white">
+          <div className="feed-prose">
             <RichText
               data={makeRoot(page.nodes)}
               enableGutter={false}
@@ -56,6 +59,7 @@ export function ArticleContentPage({
           </div>
         </div>
       </div>
+      <FeedByline article={article} />
     </div>
   )
 }
@@ -77,11 +81,11 @@ export function ArticleBlockPage({
   const FeedComponent = getFeedBlockBehavior(page.blockType).FeedComponent
 
   return (
-    <div className="relative flex h-full w-full flex-col overflow-hidden bg-black text-white">
+    <div className="bg-background text-foreground relative flex h-full w-full flex-col overflow-hidden">
       {heading && (
         <div className="px-5" style={{ paddingTop: topInset + 16 }}>
           <div className="mx-auto w-full max-w-3xl">
-            <h2 className="font-display text-2xl leading-tight text-white sm:text-3xl">
+            <h2 className="font-display text-foreground text-2xl leading-tight sm:text-3xl">
               {heading}
             </h2>
           </div>
@@ -91,10 +95,10 @@ export function ArticleBlockPage({
         className="flex flex-1 items-center justify-center overflow-hidden px-4"
         style={{
           paddingTop: heading ? 12 : topInset + 16,
-          paddingBottom: "max(env(safe-area-inset-bottom), 16px)",
+          paddingBottom: `calc(max(env(safe-area-inset-bottom), 16px) + ${BYLINE_RESERVE_PX}px)`,
         }}
       >
-        <div className="feed-prose w-full max-w-3xl text-white">
+        <div className="feed-prose w-full max-w-3xl">
           {FeedComponent ? (
             <FeedComponent node={page.node} article={article} />
           ) : (
@@ -106,6 +110,7 @@ export function ArticleBlockPage({
           )}
         </div>
       </div>
+      <FeedByline article={article} />
     </div>
   )
 }

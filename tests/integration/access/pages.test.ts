@@ -117,4 +117,78 @@ describe("pages authenticatedOrPublished access", () => {
       }),
     ).rejects.toThrow()
   })
+
+  it("allows authenticated user to find both draft and published pages", async () => {
+    const member = await createUser("member")
+
+    const draft = await payload.create({
+      collection: "pages",
+      overrideAccess: true,
+      context: { disableRevalidate: true },
+      data: {
+        title: "Draft Find Page AoP - pages",
+        ...MINIMAL_PAGE,
+        _status: "draft",
+      } as unknown as Page,
+    })
+
+    const published = await payload.create({
+      collection: "pages",
+      overrideAccess: true,
+      context: { disableRevalidate: true },
+      data: {
+        title: "Published Find Page AoP - pages",
+        ...MINIMAL_PAGE,
+        _status: "published",
+      } as unknown as Page,
+    })
+
+    const result = await payload.find({
+      collection: "pages",
+      overrideAccess: false,
+      user: member,
+      where: {
+        id: { in: [draft.id, published.id] },
+      },
+    })
+
+    expect(result.docs).toHaveLength(2)
+    expect(result.docs.map((d) => d.id)).toEqual(expect.arrayContaining([draft.id, published.id]))
+  })
+
+  it("filters draft pages for unauthenticated user find", async () => {
+    const draft = await payload.create({
+      collection: "pages",
+      overrideAccess: true,
+      context: { disableRevalidate: true },
+      data: {
+        title: "Draft Find Anon Page AoP - pages",
+        ...MINIMAL_PAGE,
+        _status: "draft",
+      } as unknown as Page,
+    })
+
+    const published = await payload.create({
+      collection: "pages",
+      overrideAccess: true,
+      context: { disableRevalidate: true },
+      data: {
+        title: "Published Find Anon Page AoP - pages",
+        ...MINIMAL_PAGE,
+        _status: "published",
+      } as unknown as Page,
+    })
+
+    const result = await payload.find({
+      collection: "pages",
+      overrideAccess: false,
+      user: undefined,
+      where: {
+        id: { in: [draft.id, published.id] },
+      },
+    })
+
+    expect(result.docs).toHaveLength(1)
+    expect(result.docs.map((d) => d.id)).toEqual([published.id])
+  })
 })

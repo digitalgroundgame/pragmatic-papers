@@ -101,4 +101,78 @@ describe("volumes authenticatedOrPublished access", () => {
       }),
     ).rejects.toThrow()
   })
+
+  it("allows authenticated user to find both draft and published volumes", async () => {
+    const member = await createUser("member")
+
+    const draft = await payload.create({
+      collection: "volumes",
+      overrideAccess: true,
+      context: { disableRevalidate: true },
+      data: {
+        title: "Draft Find Volume AoP - volumes",
+        description: "Draft find volume description",
+        _status: "draft",
+      } as unknown as Volume,
+    })
+
+    const published = await payload.create({
+      collection: "volumes",
+      overrideAccess: true,
+      context: { disableRevalidate: true },
+      data: {
+        title: "Published Find Volume AoP - volumes",
+        description: "Published find volume description",
+        _status: "published",
+      } as unknown as Volume,
+    })
+
+    const result = await payload.find({
+      collection: "volumes",
+      overrideAccess: false,
+      user: member,
+      where: {
+        id: { in: [draft.id, published.id] },
+      },
+    })
+
+    expect(result.docs).toHaveLength(2)
+    expect(result.docs.map((d) => d.id)).toEqual(expect.arrayContaining([draft.id, published.id]))
+  })
+
+  it("filters draft volumes for unauthenticated user find", async () => {
+    const draft = await payload.create({
+      collection: "volumes",
+      overrideAccess: true,
+      context: { disableRevalidate: true },
+      data: {
+        title: "Draft Find Anon Volume AoP - volumes",
+        description: "Draft find anon volume description",
+        _status: "draft",
+      } as unknown as Volume,
+    })
+
+    const published = await payload.create({
+      collection: "volumes",
+      overrideAccess: true,
+      context: { disableRevalidate: true },
+      data: {
+        title: "Published Find Anon Volume AoP - volumes",
+        description: "Published find anon volume description",
+        _status: "published",
+      } as unknown as Volume,
+    })
+
+    const result = await payload.find({
+      collection: "volumes",
+      overrideAccess: false,
+      user: undefined,
+      where: {
+        id: { in: [draft.id, published.id] },
+      },
+    })
+
+    expect(result.docs).toHaveLength(1)
+    expect(result.docs.map((d) => d.id)).toEqual([published.id])
+  })
 })

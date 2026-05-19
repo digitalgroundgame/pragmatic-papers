@@ -37,6 +37,7 @@ export interface BlockPageKind {
   kind: "block"
   node: LexicalNode
   blockType: string
+  headingNode?: LexicalNode
 }
 
 export type ArticlePageItem = HeroPageKind | ProseChunk | BlockPageKind

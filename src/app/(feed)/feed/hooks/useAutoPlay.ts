@@ -40,28 +40,44 @@ export function useAutoPlay({
   onAdvance: () => void
 }): { progress: number } {
   const [progress, setProgress] = useState(0)
+  const elapsedRef = useRef(0)
   const onAdvanceRef = useRef(onAdvance)
 
-  // Keep the latest onAdvance accessible from the RAF tick without restarting the timer.
+  // Keep the latest onAdvance reachable from the RAF tick without restarting the timer.
   useEffect(() => {
     onAdvanceRef.current = onAdvance
   }, [onAdvance])
 
+  // Reset accumulated time when the user lands on a new page or leaves/enters this article.
+  // Toggling `enabled` alone (pause/resume) must NOT reset elapsed.
   useEffect(() => {
-    if (!active || !enabled || !page || prefersReducedMotion()) {
-      // Subscribing to "no animation" means we want a clean 0 state. Schedule it
-      // as an effect outcome so we don't violate the set-state-in-effect rule.
+    elapsedRef.current = 0
+  }, [page, active])
+
+  useEffect(() => {
+    if (!page) {
       const id = requestAnimationFrame(() => setProgress(0))
       return () => cancelAnimationFrame(id)
     }
 
     const duration = getPageDurationMs(page)
-    const start = performance.now()
-    let rafId = 0
 
+    if (!active || !enabled || prefersReducedMotion()) {
+      // Paused — sync the displayed progress to the preserved elapsed value and stop.
+      const id = requestAnimationFrame(() =>
+        setProgress(Math.min(1, elapsedRef.current / duration)),
+      )
+      return () => cancelAnimationFrame(id)
+    }
+
+    let lastFrame: number | null = null
+    let rafId = 0
     const tick = (now: number): void => {
-      const elapsed = now - start
-      const next = Math.min(1, elapsed / duration)
+      if (lastFrame !== null) {
+        elapsedRef.current += now - lastFrame
+      }
+      lastFrame = now
+      const next = Math.min(1, elapsedRef.current / duration)
       setProgress(next)
       if (next >= 1) {
         rafId = 0
@@ -70,7 +86,6 @@ export function useAutoPlay({
       }
       rafId = requestAnimationFrame(tick)
     }
-
     rafId = requestAnimationFrame(tick)
     return () => {
       if (rafId !== 0) cancelAnimationFrame(rafId)

@@ -115,6 +115,12 @@ export function FeedShell({ initialItems, initialNextCursor }: FeedShellProps): 
     })
   }, [])
 
+  const scrollToNextArticle = useCallback(() => {
+    const scroller = scrollerRef.current
+    if (!scroller) return
+    scroller.scrollBy({ top: scroller.clientHeight, behavior: "smooth" })
+  }, [])
+
   // Keyboard: ArrowUp/Down navigate articles; Space toggles auto-play
   useEffect(() => {
     const scroller = scrollerRef.current
@@ -169,6 +175,7 @@ export function FeedShell({ initialItems, initialNextCursor }: FeedShellProps): 
                 autoPlayEnabled={autoPlayEnabled}
                 onAutoPlayToggle={toggleAutoPlay}
                 onPageChange={(pageIndex) => handlePageChange(article.id, pageIndex)}
+                onEndReached={scrollToNextArticle}
               />
             ) : (
               <div className="h-dvh w-full bg-black" aria-hidden />

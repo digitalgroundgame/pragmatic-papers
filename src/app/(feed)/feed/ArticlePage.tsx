@@ -18,8 +18,9 @@ function makeRoot(nodes: LexicalNode[]): DefaultTypedEditorState {
   } as unknown as DefaultTypedEditorState
 }
 
-function makeBlockRoot(node: LexicalNode): DefaultTypedEditorState {
-  return makeRoot([node])
+function headingText(node: LexicalNode): string {
+  const children = Array.isArray(node.children) ? (node.children as LexicalNode[]) : []
+  return children.map((c) => (typeof c.text === "string" ? c.text : headingText(c))).join("")
 }
 
 interface ArticleContentPageProps {
@@ -38,10 +39,13 @@ export function ArticleContentPage({
   return (
     <div className="relative h-dvh w-full overflow-hidden bg-black text-white">
       <div
-        className="absolute inset-0 overflow-y-auto overscroll-contain"
-        style={{ paddingTop: topInset + 24, paddingBottom: 32 }}
+        className="absolute inset-0 flex flex-col justify-center"
+        style={{
+          paddingTop: topInset + 16,
+          paddingBottom: "max(env(safe-area-inset-bottom), 16px)",
+        }}
       >
-        <div className="mx-auto max-w-2xl px-5">
+        <div className="mx-auto w-full max-w-2xl px-5">
           <div className="feed-prose text-white">
             <RichText
               data={makeRoot(page.nodes)}
@@ -68,15 +72,29 @@ export function ArticleBlockPage({
 }: ArticleBlockPageProps): React.ReactNode {
   if (page.kind !== "block") return null
 
+  const heading = page.headingNode ? headingText(page.headingNode) : null
+
   return (
-    <div className="relative flex h-dvh w-full items-center justify-center overflow-hidden bg-black text-white">
+    <div className="relative flex h-dvh w-full flex-col overflow-hidden bg-black text-white">
+      {heading && (
+        <div className="px-5" style={{ paddingTop: topInset + 16 }}>
+          <div className="mx-auto w-full max-w-3xl">
+            <h2 className="font-display text-2xl leading-tight text-white sm:text-3xl">
+              {heading}
+            </h2>
+          </div>
+        </div>
+      )}
       <div
-        className="w-full max-w-3xl overflow-y-auto px-4"
-        style={{ paddingTop: topInset + 24, paddingBottom: 32, maxHeight: "100dvh" }}
+        className="flex flex-1 items-center justify-center overflow-hidden px-4"
+        style={{
+          paddingTop: heading ? 12 : topInset + 16,
+          paddingBottom: "max(env(safe-area-inset-bottom), 16px)",
+        }}
       >
-        <div className="feed-prose text-white">
+        <div className="feed-prose w-full max-w-3xl text-white">
           <RichText
-            data={makeBlockRoot(page.node)}
+            data={makeRoot([page.node])}
             enableGutter={false}
             parentDoc={{ collection: "articles", id: article.id }}
           />

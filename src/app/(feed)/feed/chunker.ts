@@ -20,7 +20,7 @@ const FULL_BLEED_BLOCK_TYPES = new Set([
 
 const HEADING_TYPES = new Set(["heading"])
 
-const TARGET_WORDS_PER_PAGE = 110
+const TARGET_WORDS_PER_PAGE = 180
 
 function getBlockType(node: LexicalNode): string | null {
   if (node.type !== "block") return null
@@ -58,15 +58,15 @@ function countWordsInNodes(nodes: LexicalNode[]): number {
   return total
 }
 
-function flushChunk(chunk: LexicalNode[], pages: ArticlePageItem[]): void {
-  if (chunk.length === 0) return
-  const wordCount = countWordsInNodes(chunk)
-  const page: ProseChunk = {
-    kind: "content",
-    nodes: [...chunk],
-    wordCount,
+function makeSyntheticMediaBlock(media: unknown): LexicalNode {
+  return {
+    type: "block",
+    version: 1,
+    fields: {
+      blockType: "mediaBlock",
+      media,
+    },
   }
-  pages.push(page)
 }
 
 export function chunkArticle(article: FeedArticle): ArticlePageItem[] {
@@ -77,39 +77,96 @@ export function chunkArticle(article: FeedArticle): ArticlePageItem[] {
 
   let buffer: LexicalNode[] = []
   let bufferWords = 0
+  let pendingHeading: LexicalNode | null = null
+
+  const flushBuffer = (): void => {
+    if (buffer.length === 0) return
+    const chunk: ProseChunk = {
+      kind: "content",
+      nodes: [...buffer],
+      wordCount: countWordsInNodes(buffer),
+    }
+    pages.push(chunk)
+    buffer = []
+    bufferWords = 0
+  }
 
   for (const node of rootChildren) {
-    if (isFullBleedBlock(node)) {
-      flushChunk(buffer, pages)
-      buffer = []
-      bufferWords = 0
-      const blockPage: BlockPageKind = {
-        kind: "block",
-        node,
-        blockType: getBlockType(node)!,
+    const blockType = getBlockType(node)
+
+    // mediaCollage → split into one page per image so no block is bigger than the screen.
+    if (blockType === "mediaCollage") {
+      flushBuffer()
+      const fields = node.fields as { images?: Array<{ media?: unknown }> } | undefined
+      const images = fields?.images ?? []
+      let first = true
+      for (const img of images) {
+        if (!img?.media) continue
+        const page: BlockPageKind = {
+          kind: "block",
+          node: makeSyntheticMediaBlock(img.media),
+          blockType: "mediaBlock",
+          headingNode: first && pendingHeading ? pendingHeading : undefined,
+        }
+        pages.push(page)
+        first = false
       }
-      pages.push(blockPage)
+      // If the collage had no images, fall back to rendering the original block
+      if (first) {
+        const page: BlockPageKind = {
+          kind: "block",
+          node,
+          blockType: "mediaCollage",
+          headingNode: pendingHeading ?? undefined,
+        }
+        pages.push(page)
+      }
+      pendingHeading = null
       continue
     }
 
-    if (isHeading(node) && buffer.length > 0) {
-      flushChunk(buffer, pages)
-      buffer = []
-      bufferWords = 0
+    if (isFullBleedBlock(node)) {
+      flushBuffer()
+      const page: BlockPageKind = {
+        kind: "block",
+        node,
+        blockType: blockType!,
+        headingNode: pendingHeading ?? undefined,
+      }
+      pages.push(page)
+      pendingHeading = null
+      continue
+    }
+
+    // Defer headings — never emit them on a page alone. They join whatever comes next.
+    if (isHeading(node)) {
+      flushBuffer()
+      pendingHeading = node
+      continue
+    }
+
+    // Normal prose: drop the pending heading at the top of the next chunk.
+    if (pendingHeading) {
+      buffer.push(pendingHeading)
+      bufferWords += countWordsInNode(pendingHeading)
+      pendingHeading = null
     }
 
     const nodeWords = countWordsInNode(node)
     if (bufferWords + nodeWords > TARGET_WORDS_PER_PAGE && buffer.length > 0) {
-      flushChunk(buffer, pages)
-      buffer = [node]
-      bufferWords = nodeWords
-    } else {
-      buffer.push(node)
-      bufferWords += nodeWords
+      flushBuffer()
     }
+    buffer.push(node)
+    bufferWords += nodeWords
   }
 
-  flushChunk(buffer, pages)
+  // Tail: a heading that never found a follower still has to go somewhere.
+  if (pendingHeading) {
+    buffer.push(pendingHeading)
+    pendingHeading = null
+  }
+  flushBuffer()
+
   return pages
 }
 

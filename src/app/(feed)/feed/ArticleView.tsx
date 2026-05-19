@@ -18,9 +18,11 @@ interface ArticleViewProps {
   autoPlayEnabled: boolean
   onAutoPlayToggle: () => void
   onPageChange: (pageIndex: number) => void
+  onEndReached: () => void
 }
 
 const TOP_INSET = 28 // progress bar row height + a little breathing room
+const SWIPE_PAST_END_PX = 60 // forward-swipe distance that triggers next-article on last page
 
 export function ArticleView({
   article,
@@ -29,6 +31,7 @@ export function ArticleView({
   autoPlayEnabled,
   onAutoPlayToggle,
   onPageChange,
+  onEndReached,
 }: ArticleViewProps): React.ReactNode {
   const pages = useArticlePages(article)
   const [emblaRef, emblaApi] = useEmblaCarousel({
@@ -40,7 +43,6 @@ export function ArticleView({
     watchDrag: active,
   })
   const [pageIndex, setPageIndex] = useState(Math.min(initialPage, Math.max(0, pages.length - 1)))
-  const userInteractedRef = useRef(false)
 
   // Keep embla's drag listener in sync with whether this article is active.
   useEffect(() => {
@@ -50,26 +52,30 @@ export function ArticleView({
 
   useEffect(() => {
     if (!emblaApi) return
-    const onSelect = () => {
+    const onSelect = (): void => {
       const idx = emblaApi.selectedScrollSnap()
       setPageIndex(idx)
       onPageChange(idx)
     }
-    const onPointerDown = () => {
-      userInteractedRef.current = true
-    }
     emblaApi.on("select", onSelect)
-    emblaApi.on("pointerDown", onPointerDown)
     onSelect()
     return () => {
       emblaApi.off("select", onSelect)
-      emblaApi.off("pointerDown", onPointerDown)
     }
   }, [emblaApi, onPageChange])
 
+  const onEndReachedRef = useRef(onEndReached)
+  useEffect(() => {
+    onEndReachedRef.current = onEndReached
+  }, [onEndReached])
+
   const advance = useCallback(() => {
     if (!emblaApi) return
-    if (emblaApi.canScrollNext()) emblaApi.scrollNext()
+    if (emblaApi.canScrollNext()) {
+      emblaApi.scrollNext()
+    } else {
+      onEndReachedRef.current()
+    }
   }, [emblaApi])
 
   const currentPage: ArticlePageItem | undefined = pages[pageIndex]
@@ -82,14 +88,12 @@ export function ArticleView({
 
   const handleJump = useCallback(
     (i: number) => {
-      userInteractedRef.current = true
       emblaApi?.scrollTo(i)
     },
     [emblaApi],
   )
 
-  // When the active flag toggles back on (user scrolled back to this article),
-  // restore the remembered page if Embla isn't already there.
+  // Restore the remembered page when this article becomes active again.
   useEffect(() => {
     if (!emblaApi || !active) return
     const desired = Math.min(initialPage, Math.max(0, pages.length - 1))
@@ -98,10 +102,39 @@ export function ArticleView({
     }
   }, [active, emblaApi, initialPage, pages.length])
 
+  // Detect a forward swipe past the last page and treat it as "go to next article".
+  // Embla can't advance past the last snap, but the user's intent is clear, so we
+  // call onEndReached to scroll the vertical container.
+  const swipeStartRef = useRef<{ x: number; y: number } | null>(null)
+  const onPointerDown = useCallback((e: React.PointerEvent) => {
+    swipeStartRef.current = { x: e.clientX, y: e.clientY }
+  }, [])
+  const onPointerUp = useCallback(
+    (e: React.PointerEvent) => {
+      const start = swipeStartRef.current
+      swipeStartRef.current = null
+      if (!start || !emblaApi) return
+      const dx = start.x - e.clientX
+      const dy = Math.abs(start.y - e.clientY)
+      // Forward swipe (left) + mostly horizontal + on last page.
+      if (dx > SWIPE_PAST_END_PX && dx > dy * 1.5 && !emblaApi.canScrollNext()) {
+        onEndReachedRef.current()
+      }
+    },
+    [emblaApi],
+  )
+
   const view = (
-    <div className="relative h-dvh w-full overflow-hidden bg-black">
+    <div
+      className="relative h-dvh w-full overflow-hidden bg-black"
+      onPointerDown={onPointerDown}
+      onPointerUp={onPointerUp}
+      onPointerCancel={() => {
+        swipeStartRef.current = null
+      }}
+    >
       <div ref={emblaRef} className="h-dvh overflow-hidden">
-        <div className="flex h-dvh touch-pan-y">
+        <div className="flex h-dvh" style={{ touchAction: "pan-y pinch-zoom" }}>
           {pages.map((page, i) => (
             <div
               key={i}

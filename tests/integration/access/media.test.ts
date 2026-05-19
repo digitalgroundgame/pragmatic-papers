@@ -2,26 +2,28 @@ import { describe, expect, it, beforeAll } from "vitest"
 import type { Payload } from "payload"
 import type { Media } from "@/payload-types"
 import { getPayload, createUser } from "../helpers/testUsers"
-
-const MINIMAL_PNG = Buffer.from(
-  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==",
-  "base64",
-)
-
-function testFile(name = "test.png") {
-  return {
-    name,
-    data: MINIMAL_PNG,
-    mimetype: "image/png" as const,
-    size: MINIMAL_PNG.length,
-  }
-}
+import { testFile } from "../fixtures/media"
 
 describe("media editorOrSelf access", () => {
   let payload: Payload
 
   beforeAll(async () => {
     payload = await getPayload()
+  })
+
+  describe("create", () => {
+    it("denies unauthenticated user from creating media", async () => {
+      await expect(
+        payload.create({
+          collection: "media",
+          overrideAccess: false,
+          context: { disableRevalidate: true },
+          file: testFile(),
+          data: { alt: "Unauthenticated Create" } as unknown as Media,
+          user: undefined,
+        }),
+      ).rejects.toThrow()
+    })
   })
 
   describe("delete", () => {

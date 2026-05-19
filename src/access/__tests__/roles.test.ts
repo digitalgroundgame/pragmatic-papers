@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { describe, expect, it } from "vitest"
-import { atLeast, isStaff } from "@/access/roles"
+import { atLeast, isStaff, staff } from "@/access/roles"
 
 describe("atLeast", () => {
   const user = (role: string) => ({ role }) as any
@@ -63,5 +63,23 @@ describe("isStaff", () => {
 
   it("returns false when user is undefined", () => {
     expect(isStaff(undefined as any)).toBe(false)
+  })
+})
+
+describe("staff (wrapper function)", () => {
+  const req = (user: any) => ({ req: { user, payload: {} } }) as any
+
+  it("allows narrator and above", () => {
+    for (const role of ["narrator", "writer", "editor", "chief-editor", "admin"]) {
+      expect(staff(req({ role })), `Role ${role} should be staff`).toBe(true)
+    }
+  })
+
+  it("denies member", () => {
+    expect(staff(req({ role: "member" }))).toBe(false)
+  })
+
+  it("denies unauthenticated", () => {
+    expect(staff(req(null))).toBe(false)
   })
 })

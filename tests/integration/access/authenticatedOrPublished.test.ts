@@ -11,6 +11,22 @@ describe("authenticatedOrPublished access", () => {
     payload = await getPayload()
   })
 
+  it("denies unauthenticated user from creating an article", async () => {
+    await expect(
+      payload.create({
+        collection: "articles",
+        overrideAccess: false,
+        context: { disableRevalidate: true },
+        data: {
+          title: "Unauthenticated Create",
+          content: ARTICLE_CONTENT,
+          _status: "draft",
+        } as unknown as Article,
+        user: undefined,
+      }),
+    ).rejects.toThrow()
+  })
+
   it("allows authenticated user to read a draft article", async () => {
     const member = await createUser("member")
     const writer = await createUser("writer")

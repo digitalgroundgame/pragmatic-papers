@@ -8,7 +8,7 @@ import {
 import path from "path"
 import { fileURLToPath } from "url"
 
-import { anyone, writer } from "@/access/roles"
+import { anyone, staff } from "@/access/roles"
 import { editorOrSelf } from "@/access/editorOrSelf"
 
 import type { Media as MediaType } from "@/payload-types"
@@ -28,7 +28,7 @@ export const Media: CollectionConfig = {
     },
   ],
   access: {
-    create: writer,
+    create: staff,
     delete: editorOrSelf,
     read: anyone,
     update: editorOrSelf,

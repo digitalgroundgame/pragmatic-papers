@@ -52,9 +52,6 @@ export function ArticleView({
     loop: false,
     containScroll: "trimSnaps",
     duration: 18,
-    // Lower than the default (10): less wrist motion needed before a horizontal
-    // drag activates, so swipes feel quicker without hijacking vertical scroll.
-    dragThreshold: 4,
     startIndex: Math.min(initialPage, Math.max(0, pages.length - 1)),
     watchDrag: active,
   })

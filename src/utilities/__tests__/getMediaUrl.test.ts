@@ -18,15 +18,15 @@ describe("getMediaUrl", () => {
     expect(getMediaUrl("")).toBe("")
   })
 
-  it("keeps relative URLs relative by default but percent-encodes them", () => {
+  it("keeps relative URLs relative and unencoded by default", () => {
     expect(getMediaUrl("/media/hello.png")).toBe("/media/hello.png")
-    expect(getMediaUrl("/media/hello world.png")).toBe("/media/hello%20world.png")
-    expect(getMediaUrl("/media/hello world (1).png")).toBe("/media/hello%20world%20(1).png")
+    expect(getMediaUrl("/media/hello world.png")).toBe("/media/hello world.png")
+    expect(getMediaUrl("/media/hello world (1).png")).toBe("/media/hello world (1).png")
   })
 
-  it("keeps absolute URLs absolute and percent-encodes them", () => {
+  it("keeps absolute URLs absolute and unencoded by default", () => {
     expect(getMediaUrl("https://s3.amazonaws.com/bucket/hello world.png")).toBe(
-      "https://s3.amazonaws.com/bucket/hello%20world.png",
+      "https://s3.amazonaws.com/bucket/hello world.png",
     )
   })
 
@@ -46,12 +46,25 @@ describe("getMediaUrl", () => {
     )
   })
 
-  it("converts relative URL to absolute URL when absolute option is true", () => {
+  it("converts relative URL to absolute URL and percent-encodes when absolute option is true", () => {
     expect(getMediaUrl("/media/hello.png", { absolute: true })).toBe(
       "http://localhost:8000/media/hello.png",
     )
     expect(getMediaUrl("media/hello world.png", { absolute: true })).toBe(
       "http://localhost:8000/media/hello%20world.png",
+    )
+  })
+
+  it("percent-encodes when encode option is explicitly true", () => {
+    expect(getMediaUrl("/media/hello world.png", { encode: true })).toBe("/media/hello%20world.png")
+    expect(getMediaUrl("https://s3.amazonaws.com/bucket/hello world.png", { encode: true })).toBe(
+      "https://s3.amazonaws.com/bucket/hello%20world.png",
+    )
+  })
+
+  it("does not percent-encode when encode option is explicitly false even if absolute is true", () => {
+    expect(getMediaUrl("/media/hello world.png", { absolute: true, encode: false })).toBe(
+      "http://localhost:8000/media/hello world.png",
     )
   })
 
@@ -73,8 +86,8 @@ describe("getMediaUrl", () => {
     )
   })
 
-  it("handles non-ASCII unicode characters correctly", () => {
-    expect(getMediaUrl("/media/изображение.png")).toBe(
+  it("handles non-ASCII unicode characters correctly when encode is true", () => {
+    expect(getMediaUrl("/media/изображение.png", { encode: true })).toBe(
       "/media/%D0%B8%D0%B7%D0%BE%D0%B1%D1%80%D0%B0%D0%B6%D0%B5%D0%BD%D0%B8%D0%B5.png",
     )
   })

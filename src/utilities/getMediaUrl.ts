@@ -3,6 +3,7 @@ import { getServerSideURL } from "./getURL"
 export interface GetMediaUrlOptions {
   cacheTag?: string | null
   absolute?: boolean
+  encode?: boolean
 }
 
 export const getMediaUrl = (
@@ -13,12 +14,14 @@ export const getMediaUrl = (
 
   let cacheTag: string | null = null
   let absolute = false
+  let encode = false
 
   if (typeof optionsOrCacheTag === "string") {
     cacheTag = optionsOrCacheTag
   } else if (optionsOrCacheTag && typeof optionsOrCacheTag === "object") {
     cacheTag = optionsOrCacheTag.cacheTag ?? null
     absolute = optionsOrCacheTag.absolute ?? false
+    encode = optionsOrCacheTag.encode ?? absolute
   }
 
   let formattedUrl = url
@@ -44,9 +47,13 @@ export const getMediaUrl = (
     formattedUrl = `${formattedUrl}${separator}${cacheTag}`
   }
 
-  try {
-    return encodeURI(formattedUrl)
-  } catch {
-    return formattedUrl
+  if (encode) {
+    try {
+      return encodeURI(formattedUrl)
+    } catch {
+      return formattedUrl
+    }
   }
+
+  return formattedUrl
 }

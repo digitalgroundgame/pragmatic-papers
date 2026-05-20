@@ -69,13 +69,25 @@ describe("countWordsInNode", () => {
 describe("chunkArticle", () => {
   it("always emits a hero page first", () => {
     const pages = chunkArticle(makeArticle([]))
-    expect(pages).toHaveLength(1)
     expect(pages[0]?.kind).toBe("hero")
+  })
+
+  it("always emits a thanks page as the last page", () => {
+    const cases: FeedArticle[] = [
+      makeArticle([]),
+      makeArticle([paragraph(SHORT)]),
+      makeArticle([paragraph(SHORT), block("mediaBlock")]),
+      makeArticle([paragraph(LONG_120), heading("S"), paragraph(LONG_120)]),
+    ]
+    for (const article of cases) {
+      const pages = chunkArticle(article)
+      expect(pages[pages.length - 1]?.kind).toBe("thanks")
+    }
   })
 
   it("groups short prose into a single content page", () => {
     const pages = chunkArticle(makeArticle([paragraph(SHORT), paragraph(SHORT)]))
-    expect(pages.map((p) => p.kind)).toEqual(["hero", "content"])
+    expect(pages.map((p) => p.kind)).toEqual(["hero", "content", "thanks"])
   })
 
   it("splits prose that exceeds the per-page word target", () => {
@@ -90,7 +102,7 @@ describe("chunkArticle", () => {
     const pages = chunkArticle(
       makeArticle([paragraph(SHORT), block("mediaBlock"), paragraph(SHORT)]),
     )
-    expect(pages.map((p) => p.kind)).toEqual(["hero", "content", "block", "content"])
+    expect(pages.map((p) => p.kind)).toEqual(["hero", "content", "block", "content", "thanks"])
     const blockPage = pages.find((p) => p.kind === "block")!
     expect(blockPage.kind).toBe("block")
     if (blockPage.kind === "block") {
@@ -101,27 +113,27 @@ describe("chunkArticle", () => {
   it("keeps inline blocks like footnotes inside the prose chunk", () => {
     // banners / squiggleRule / code aren't in the full-bleed set; they ride with prose
     const pages = chunkArticle(makeArticle([paragraph(SHORT), block("banner"), paragraph(SHORT)]))
-    expect(pages.map((p) => p.kind)).toEqual(["hero", "content"])
+    expect(pages.map((p) => p.kind)).toEqual(["hero", "content", "thanks"])
   })
 
   it("starts a new page when a heading appears mid-buffer", () => {
     const pages = chunkArticle(
       makeArticle([paragraph(SHORT), heading("Section A"), paragraph(SHORT)]),
     )
-    expect(pages.map((p) => p.kind)).toEqual(["hero", "content", "content"])
+    expect(pages.map((p) => p.kind)).toEqual(["hero", "content", "content", "thanks"])
   })
 
   it("doesn't create an empty content page when the article ends on a block", () => {
     const pages = chunkArticle(makeArticle([paragraph(SHORT), block("socialEmbed")]))
-    expect(pages.map((p) => p.kind)).toEqual(["hero", "content", "block"])
+    expect(pages.map((p) => p.kind)).toEqual(["hero", "content", "block", "thanks"])
   })
 
   it("never emits a heading on a page by itself; it joins the next content chunk", () => {
     const pages = chunkArticle(
       makeArticle([paragraph(SHORT), heading("Section A"), paragraph(SHORT)]),
     )
-    // [hero, prose(p1), prose(heading+p2)]
-    expect(pages.map((p) => p.kind)).toEqual(["hero", "content", "content"])
+    // [hero, prose(p1), prose(heading+p2), thanks]
+    expect(pages.map((p) => p.kind)).toEqual(["hero", "content", "content", "thanks"])
     const second = pages[2]
     expect(second?.kind).toBe("content")
     if (second?.kind === "content") {
@@ -133,7 +145,7 @@ describe("chunkArticle", () => {
     const pages = chunkArticle(
       makeArticle([paragraph(SHORT), heading("Gallery Section"), block("mediaBlock")]),
     )
-    expect(pages.map((p) => p.kind)).toEqual(["hero", "content", "block"])
+    expect(pages.map((p) => p.kind)).toEqual(["hero", "content", "block", "thanks"])
     const last = pages[2]
     if (last?.kind === "block") {
       expect(last.headingNode?.type).toBe("heading")
@@ -145,8 +157,15 @@ describe("chunkArticle", () => {
       images: [{ media: 1 }, { media: 2 }, { media: 3 }],
     })
     const pages = chunkArticle(makeArticle([paragraph(SHORT), collage]))
-    // [hero, prose, image1, image2, image3]
-    expect(pages.map((p) => p.kind)).toEqual(["hero", "content", "block", "block", "block"])
+    // [hero, prose, image1, image2, image3, thanks]
+    expect(pages.map((p) => p.kind)).toEqual([
+      "hero",
+      "content",
+      "block",
+      "block",
+      "block",
+      "thanks",
+    ])
     const imagePages = pages.filter((p) => p.kind === "block")
     for (const p of imagePages) {
       if (p.kind === "block") {
@@ -169,20 +188,20 @@ describe("chunkArticle", () => {
   it("treats a block without a registered sidecar as inline (rides in prose)", () => {
     // "code" has no sidecar — should not break a prose chunk.
     const pages = chunkArticle(makeArticle([paragraph(SHORT), block("code"), paragraph(SHORT)]))
-    expect(pages.map((p) => p.kind)).toEqual(["hero", "content"])
+    expect(pages.map((p) => p.kind)).toEqual(["hero", "content", "thanks"])
   })
 
   it("routes Form block to a full-bleed page via the sidecar (slug formBlock)", () => {
     // Verifies the slug fix: the old chunker had "form" hard-coded and missed this.
     const pages = chunkArticle(makeArticle([paragraph(SHORT), block("formBlock")]))
-    expect(pages.map((p) => p.kind)).toEqual(["hero", "content", "block"])
+    expect(pages.map((p) => p.kind)).toEqual(["hero", "content", "block", "thanks"])
   })
 
   it("renders displayMathBlock inline (no longer full-bleed)", () => {
     const pages = chunkArticle(
       makeArticle([paragraph(SHORT), block("displayMathBlock"), paragraph(SHORT)]),
     )
-    expect(pages.map((p) => p.kind)).toEqual(["hero", "content"])
+    expect(pages.map((p) => p.kind)).toEqual(["hero", "content", "thanks"])
   })
 
   it("splits a Timeline block into pages of 3 events each", () => {
@@ -229,7 +248,7 @@ describe("chunkArticle", () => {
       ],
     }
     const pages = chunkArticle(makeArticle([paragraph(SHORT), table]))
-    expect(pages.map((p) => p.kind)).toEqual(["hero", "content", "block"])
+    expect(pages.map((p) => p.kind)).toEqual(["hero", "content", "block", "thanks"])
     const last = pages[2]
     if (last?.kind === "block") {
       expect(last.blockType).toBe("table")

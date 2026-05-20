@@ -7,8 +7,10 @@ import { Pause, Play } from "lucide-react"
 import React, { useCallback, useEffect, useRef, useState } from "react"
 import { ArticleBlockPage, ArticleContentPage } from "./ArticlePage"
 import { FeedByline } from "./FeedByline"
+import { FeedSettingsMenu } from "./FeedSettingsMenu"
 import { HeroPage } from "./HeroPage"
 import { PageProgress } from "./PageProgress"
+import { ThanksPage } from "./ThanksPage"
 import { useArticlePages } from "./hooks/useArticlePages"
 import { useAutoPlay } from "./hooks/useAutoPlay"
 import type { ArticlePageItem, FeedArticle } from "./types"
@@ -191,6 +193,7 @@ export function ArticleView({
               {page.kind === "block" && (
                 <ArticleBlockPage article={article} page={page} topInset={TOP_INSET} />
               )}
+              {page.kind === "thanks" && <ThanksPage article={article} topInset={TOP_INSET} />}
             </div>
           ))}
         </div>
@@ -208,13 +211,18 @@ export function ArticleView({
             onJump={handleJump}
           />
         </div>
-        <div
-          className={cn(
-            "transition-opacity duration-300 ease-out",
-            currentPage?.kind === "hero" ? "pointer-events-none opacity-0" : "opacity-100",
-          )}
-        >
-          <FeedByline article={article} />
+        <div className="flex items-center gap-2">
+          <div
+            className={cn(
+              "min-w-0 flex-1 transition-opacity duration-300 ease-out",
+              currentPage?.kind === "hero" ? "pointer-events-none opacity-0" : "opacity-100",
+            )}
+          >
+            <FeedByline article={article} />
+          </div>
+          <div className="pointer-events-auto shrink-0">
+            <FeedSettingsMenu />
+          </div>
         </div>
       </div>
 

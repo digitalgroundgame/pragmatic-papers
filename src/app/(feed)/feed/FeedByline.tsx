@@ -61,7 +61,7 @@ export function FeedByline({ article, className }: FeedBylineProps): React.React
     <div className={cn("flex items-center gap-2 px-1", className)} aria-hidden="true">
       <Avatar
         size="sm"
-        className="shrink-0 overflow-hidden rounded-full ring-1 ring-white/40 after:rounded-full"
+        className="shrink-0 overflow-hidden rounded-full ring-1 ring-white/30 after:rounded-full"
       >
         <AvatarImage
           src={heroImageUrl ?? undefined}
@@ -79,8 +79,8 @@ export function FeedByline({ article, className }: FeedBylineProps): React.React
           ref={textRef}
           className={
             marquee
-              ? "feed-marquee inline-block font-sans text-[12px] whitespace-nowrap text-white"
-              : "block truncate font-sans text-[12px] text-white"
+              ? "feed-marquee inline-block font-sans text-[12px] whitespace-nowrap text-white/70"
+              : "block truncate font-sans text-[12px] text-white/70"
           }
           style={
             marquee

@@ -1,4 +1,14 @@
 import type { Article } from "@/payload-types"
+import type { AdSlot } from "./ads/registry"
+
+export type { AdSlot } from "./ads/registry"
+
+export interface FeedNextArticle {
+  slug: string
+  title: string
+  heroImageUrl: string | null
+  authorName: string | null
+}
 
 export type FeedArticle = Pick<
   Article,
@@ -14,7 +24,9 @@ export type FeedArticle = Pick<
   | "topics"
   | "meta"
   | "footnotes"
->
+> & {
+  nextArticle?: FeedNextArticle | null
+}
 
 export interface LexicalNode {
   type: string
@@ -40,9 +52,18 @@ export interface BlockPageKind {
   headingNode?: LexicalNode
 }
 
-export type ArticlePageItem = HeroPageKind | ProseChunk | BlockPageKind
+export interface ThanksPageKind {
+  kind: "thanks"
+  article: FeedArticle
+}
+
+export type ArticlePageItem = HeroPageKind | ProseChunk | BlockPageKind | ThanksPageKind
 
 export interface FeedBatch {
   items: FeedArticle[]
   nextCursor: number | null
 }
+
+export type FeedSlot =
+  | { kind: "article"; key: string; article: FeedArticle }
+  | { kind: "ad"; key: string; ad: AdSlot }

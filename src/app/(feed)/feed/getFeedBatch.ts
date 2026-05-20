@@ -1,5 +1,6 @@
 import { getPayloadConfig } from "@/utilities/getPayloadConfig"
-import type { FeedArticle, FeedBatch } from "./types"
+import type { Article, Media } from "@/payload-types"
+import type { FeedArticle, FeedBatch, FeedNextArticle } from "./types"
 
 const PAGE_SIZE = 8
 
@@ -51,6 +52,80 @@ export function rankFeed<T extends { publishedAt?: string | null }>(items: T[], 
   return out
 }
 
+function pickHeroImageUrl(image: number | Media | null | undefined): string | null {
+  if (!image || typeof image === "number") return null
+  return image.sizes?.square?.url ?? image.sizes?.thumbnail?.url ?? image.url ?? null
+}
+
+function toFeedNextArticle(doc: Article): FeedNextArticle {
+  const authorName =
+    (doc.populatedAuthors ?? [])
+      .map((a) => (typeof a === "object" ? a.name : null))
+      .find(Boolean) ?? null
+  return {
+    slug: doc.slug ?? "",
+    title: doc.title ?? "",
+    heroImageUrl: pickHeroImageUrl(doc.heroImage),
+    authorName,
+  }
+}
+
+export async function resolveNextArticle(
+  current: FeedArticle,
+  cache: Map<string, FeedNextArticle | null> = new Map(),
+): Promise<FeedNextArticle | null> {
+  const payload = await getPayloadConfig()
+  const primaryAuthor = (current.populatedAuthors ?? []).find(
+    (a) => typeof a === "object" && typeof a.id === "number",
+  )
+  const authorId = primaryAuthor && typeof primaryAuthor === "object" ? primaryAuthor.id : undefined
+
+  if (authorId !== undefined) {
+    const key = `author:${authorId}:not:${current.slug ?? ""}`
+    if (cache.has(key)) return cache.get(key) ?? null
+    const res = await payload.find({
+      collection: "articles",
+      draft: false,
+      overrideAccess: false,
+      where: {
+        and: [
+          { _status: { equals: "published" } },
+          { authors: { equals: authorId } },
+          { slug: { not_equals: current.slug ?? "" } },
+        ],
+      },
+      sort: "-publishedAt",
+      limit: 1,
+      depth: 1,
+    })
+    const doc = res.docs[0] as Article | undefined
+    if (doc) {
+      const out = toFeedNextArticle(doc)
+      cache.set(key, out)
+      return out
+    }
+    cache.set(key, null)
+  }
+
+  const fallbackKey = `fallback:not:${current.slug ?? ""}`
+  if (cache.has(fallbackKey)) return cache.get(fallbackKey) ?? null
+  const fallback = await payload.find({
+    collection: "articles",
+    draft: false,
+    overrideAccess: false,
+    where: {
+      and: [{ _status: { equals: "published" } }, { slug: { not_equals: current.slug ?? "" } }],
+    },
+    sort: "-publishedAt",
+    limit: 1,
+    depth: 1,
+  })
+  const doc = fallback.docs[0] as Article | undefined
+  const out = doc ? toFeedNextArticle(doc) : null
+  cache.set(fallbackKey, out)
+  return out
+}
+
 export async function getFeedBatch({
   cursor,
   limit = PAGE_SIZE,
@@ -75,8 +150,16 @@ export async function getFeedBatch({
 
   const ranked = rankFeed(res.docs as FeedArticle[], seed ?? page * 9973)
 
+  const nextCache = new Map<string, FeedNextArticle | null>()
+  const withNext = await Promise.all(
+    ranked.map(async (article) => ({
+      ...article,
+      nextArticle: await resolveNextArticle(article, nextCache),
+    })),
+  )
+
   return {
-    items: ranked,
+    items: withNext,
     nextCursor: res.hasNextPage ? page + 1 : null,
   }
 }

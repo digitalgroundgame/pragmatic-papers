@@ -115,7 +115,7 @@ export async function generateMetadata({ params }: Args): Promise<Metadata> {
   const profileImage = user?.profileImage
   const ogImage =
     profileImage && typeof profileImage !== "number"
-      ? getMediaUrl(profileImage.sizes?.og?.url || profileImage.url)
+      ? getMediaUrl(profileImage.sizes?.og?.url || profileImage.url, { absolute: true })
       : undefined
 
   const serverUrl = getServerSideURL()

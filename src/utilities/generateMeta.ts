@@ -12,7 +12,9 @@ export const generateMeta = async (args: {
 }): Promise<Metadata> => {
   const { doc, canonicalPath } = args
   const ogImage =
-    typeof doc?.meta?.image === "object" ? getMediaUrl(doc?.meta?.image?.sizes?.og?.url) : undefined
+    typeof doc?.meta?.image === "object"
+      ? getMediaUrl(doc?.meta?.image?.sizes?.og?.url, { absolute: true })
+      : undefined
 
   const title = doc?.meta?.title ? doc?.meta?.title : "The Pragmatic Papers"
   const canonicalUrl = `${getServerSideURL()}${canonicalPath}`

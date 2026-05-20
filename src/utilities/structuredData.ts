@@ -37,7 +37,7 @@ export type JsonLdData = WithContext<Thing>
 
 function getImageUrl(media: Media | number | null | undefined): string | undefined {
   if (!media || typeof media === "number") return undefined
-  return getMediaUrl(media.sizes?.og?.url || media.url) || undefined
+  return getMediaUrl(media.sizes?.og?.url || media.url, { absolute: true }) || undefined
 }
 
 export function buildArticleJsonLd(article: Article, path: string): WithContext<ArticleLeaf> {

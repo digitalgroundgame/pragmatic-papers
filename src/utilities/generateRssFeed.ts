@@ -15,19 +15,10 @@ import {
   type HTMLConvertersFunction,
 } from "@payloadcms/richtext-lexical/html"
 import { Feed } from "feed"
+import { getMediaUrl } from "./getMediaUrl"
 import { getServerSideURL } from "./getURL"
 
 const SITE_URL = getServerSideURL()
-
-const getMediaUrl = (url: string) => {
-  const absolute =
-    url.startsWith("http://") || url.startsWith("https://") ? url : `${SITE_URL}${url}`
-  try {
-    return new URL(absolute).href
-  } catch {
-    return absolute
-  }
-}
 
 const resolveMedia = (media: number | Media): Media | null =>
   typeof media === "object" ? media : null
@@ -35,7 +26,7 @@ const resolveMedia = (media: number | Media): Media | null =>
 const mediaBlockToHTML = ({ node }: { node: SerializedBlockNode<MediaBlock> }): string => {
   const media = resolveMedia(node.fields.media)
   if (!media?.url) return ""
-  const src = getMediaUrl(media.url)
+  const src = getMediaUrl(media.url, { absolute: true })
   const alt = media.alt ?? ""
   const widthAttr = media.width ? ` width="${media.width}"` : ""
   const heightAttr = media.height ? ` height="${media.height}"` : ""
@@ -51,7 +42,7 @@ const mediaCollageBlockToHTML = ({
     .map(({ media }) => {
       const resolved = resolveMedia(media)
       if (!resolved?.url) return ""
-      const src = getMediaUrl(resolved.url)
+      const src = getMediaUrl(resolved.url, { absolute: true })
       const alt = resolved.alt ?? ""
       return `<img src="${src}" alt="${alt}" style="max-width:100%;height:auto;" />`
     })
@@ -234,7 +225,7 @@ export const generateArticleFeed = (articles: Article[]): string => {
         date: new Date(article.publishedAt),
         image:
           article.meta?.image && typeof article.meta.image !== "string"
-            ? getMediaUrl((article.meta.image as Media).url ?? "")
+            ? getMediaUrl((article.meta.image as Media).url ?? "", { absolute: true })
             : undefined,
         author: article.populatedAuthors?.map((author) => ({
           name: author.name || "",
@@ -277,7 +268,7 @@ export const generateVolumeFeed = (volumes: Volume[]): string => {
         date: new Date(volume.publishedAt),
         image:
           volume.meta?.image && typeof volume.meta.image !== "string"
-            ? getMediaUrl((volume.meta.image as Media).url ?? "")
+            ? getMediaUrl((volume.meta.image as Media).url ?? "", { absolute: true })
             : undefined,
         content: formatVolumeContent(volume),
         extensions: [

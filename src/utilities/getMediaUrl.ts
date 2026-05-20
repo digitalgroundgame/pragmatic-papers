@@ -1,12 +1,52 @@
-export const getMediaUrl = (url: string | null | undefined, cacheTag?: string | null): string => {
+import { getServerSideURL } from "./getURL"
+
+export interface GetMediaUrlOptions {
+  cacheTag?: string | null
+  absolute?: boolean
+}
+
+export const getMediaUrl = (
+  url: string | null | undefined,
+  optionsOrCacheTag?: GetMediaUrlOptions | string | null,
+): string => {
   if (!url) return ""
 
-  if (url.startsWith("http://") || url.startsWith("https://")) {
-    return cacheTag ? `${url}?${cacheTag}` : url
+  let cacheTag: string | null = null
+  let absolute = false
+
+  if (typeof optionsOrCacheTag === "string") {
+    cacheTag = optionsOrCacheTag
+  } else if (optionsOrCacheTag && typeof optionsOrCacheTag === "object") {
+    cacheTag = optionsOrCacheTag.cacheTag ?? null
+    absolute = optionsOrCacheTag.absolute ?? false
   }
 
-  // Relative paths are served locally via next/image's internal route — no upstream
-  // HTTP fetch, no private-IP SSRF block, and no query string needed (next/image has
-  // its own TTL cache so the cache tag isn't necessary for local files).
-  return url
+  let formattedUrl = url
+
+  // Prepend site URL if absolute path is requested and path is relative
+  if (absolute && !url.startsWith("http://") && !url.startsWith("https://")) {
+    const siteUrl = getServerSideURL()
+    const needsSlash = !siteUrl.endsWith("/") && !url.startsWith("/")
+    const duplicateSlash = siteUrl.endsWith("/") && url.startsWith("/")
+
+    if (duplicateSlash) {
+      formattedUrl = `${siteUrl}${url.slice(1)}`
+    } else if (needsSlash) {
+      formattedUrl = `${siteUrl}/${url}`
+    } else {
+      formattedUrl = `${siteUrl}${url}`
+    }
+  }
+
+  // Appending cache tag to absolute URLs (matching original behavior)
+  if (cacheTag && (formattedUrl.startsWith("http://") || formattedUrl.startsWith("https://"))) {
+    const separator = formattedUrl.includes("?") ? "&" : "?"
+    formattedUrl = `${formattedUrl}${separator}${cacheTag}`
+  }
+
+  try {
+    return encodeURI(formattedUrl)
+  } catch {
+    return formattedUrl
+  }
 }

@@ -21,7 +21,7 @@ export function FeedSettingsMenu(): React.ReactNode {
             variant="ghost"
             size="icon"
             aria-label="Open feed menu"
-            className="h-8 w-8 rounded-full border border-white/15 bg-white/10 text-white backdrop-blur-md hover:bg-white/20 hover:text-white"
+            className="h-8 w-8 rounded-full text-white hover:bg-white/10 hover:text-white"
           >
             <MoreVertical className="size-4" />
           </Button>

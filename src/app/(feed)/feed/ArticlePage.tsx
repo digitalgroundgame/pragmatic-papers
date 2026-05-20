@@ -1,6 +1,7 @@
 "use client"
 
 import RichText from "@/components/RichText"
+import { SquiggleStatic } from "@/components/ui/squiggle"
 import type { DefaultTypedEditorState } from "@payloadcms/richtext-lexical"
 import React from "react"
 import { getFeedBlockBehavior } from "./blocks/registry"
@@ -28,12 +29,14 @@ interface ArticleContentPageProps {
   article: FeedArticle
   page: ArticlePageItem
   topInset: number
+  isLast: boolean
 }
 
 export function ArticleContentPage({
   article,
   page,
   topInset,
+  isLast,
 }: ArticleContentPageProps): React.ReactNode {
   if (page.kind !== "content") return null
 
@@ -53,6 +56,7 @@ export function ArticleContentPage({
               enableGutter={false}
               parentDoc={{ collection: "articles", id: article.id }}
             />
+            {isLast && <SquiggleStatic size="small" />}
           </div>
         </div>
       </div>
@@ -64,12 +68,14 @@ interface ArticleBlockPageProps {
   article: FeedArticle
   page: ArticlePageItem
   topInset: number
+  isLast: boolean
 }
 
 export function ArticleBlockPage({
   article,
   page,
   topInset,
+  isLast,
 }: ArticleBlockPageProps): React.ReactNode {
   if (page.kind !== "block") return null
 
@@ -104,6 +110,7 @@ export function ArticleBlockPage({
               parentDoc={{ collection: "articles", id: article.id }}
             />
           )}
+          {isLast && <SquiggleStatic size="small" />}
         </div>
       </div>
     </div>

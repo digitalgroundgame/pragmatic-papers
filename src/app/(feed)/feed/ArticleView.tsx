@@ -10,7 +10,6 @@ import { FeedByline } from "./FeedByline"
 import { FeedSettingsMenu } from "./FeedSettingsMenu"
 import { HeroPage } from "./HeroPage"
 import { PageProgress } from "./PageProgress"
-import { ThanksPage } from "./ThanksPage"
 import { useArticlePages } from "./hooks/useArticlePages"
 import { useAutoPlay } from "./hooks/useAutoPlay"
 import type { ArticlePageItem, FeedArticle } from "./types"
@@ -175,24 +174,36 @@ export function ArticleView({
     >
       <div ref={emblaRef} className="h-full overflow-hidden">
         <div className="flex h-full" style={{ touchAction: "pan-y pinch-zoom" }}>
-          {pages.map((page, i) => (
-            <div
-              key={i}
-              className="relative h-full w-full shrink-0 grow-0 basis-full"
-              role="group"
-              aria-roledescription="page"
-              aria-label={`Page ${i + 1} of ${pages.length}`}
-            >
-              {page.kind === "hero" && <HeroPage article={article} topInset={TOP_INSET} />}
-              {page.kind === "content" && (
-                <ArticleContentPage article={article} page={page} topInset={TOP_INSET} />
-              )}
-              {page.kind === "block" && (
-                <ArticleBlockPage article={article} page={page} topInset={TOP_INSET} />
-              )}
-              {page.kind === "thanks" && <ThanksPage article={article} topInset={TOP_INSET} />}
-            </div>
-          ))}
+          {pages.map((page, i) => {
+            const isLast = i === pages.length - 1
+            return (
+              <div
+                key={i}
+                className="relative h-full w-full shrink-0 grow-0 basis-full"
+                role="group"
+                aria-roledescription="page"
+                aria-label={`Page ${i + 1} of ${pages.length}`}
+              >
+                {page.kind === "hero" && <HeroPage article={article} topInset={TOP_INSET} />}
+                {page.kind === "content" && (
+                  <ArticleContentPage
+                    article={article}
+                    page={page}
+                    topInset={TOP_INSET}
+                    isLast={isLast}
+                  />
+                )}
+                {page.kind === "block" && (
+                  <ArticleBlockPage
+                    article={article}
+                    page={page}
+                    topInset={TOP_INSET}
+                    isLast={isLast}
+                  />
+                )}
+              </div>
+            )
+          })}
         </div>
       </div>
 

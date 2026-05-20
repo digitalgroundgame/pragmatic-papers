@@ -152,8 +152,6 @@ export function chunkArticle(article: FeedArticle): ArticlePageItem[] {
   }
   flushBuffer()
 
-  pages.push({ kind: "thanks", article })
-
   return pages
 }
 

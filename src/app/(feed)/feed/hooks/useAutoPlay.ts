@@ -8,7 +8,6 @@ const WPM = 220
 const MIN_MS = 3500
 const HERO_MS = 4500
 const BLOCK_MS = 6000
-const THANKS_MS = 6000
 
 export function getPageDurationMs(page: ArticlePageItem): number {
   switch (page.kind) {
@@ -20,8 +19,6 @@ export function getPageDurationMs(page: ArticlePageItem): number {
     }
     case "block":
       return getFeedBlockBehavior(page.blockType).durationMs ?? BLOCK_MS
-    case "thanks":
-      return THANKS_MS
   }
 }
 

@@ -80,16 +80,16 @@ describe("Full-Text Search Integration", () => {
       overrideAccess: true,
     })
 
-    // Verify exactly one search document was created for our article
     expect(searchDocs.length).toBe(1)
     const searchDoc = searchDocs[0]!
 
-    // The body field must have been truncated to ≤ 39 000 characters so the
-    // Postgres `tsvector` column stays within the indexable size limit.
     expect(searchDoc.body!.length).toBeLessThanOrEqual(39000)
 
-    // Bypass Payload's query layer and hit Postgres directly to confirm that the
-    // `search_vector` tsvector column was populated and can match our keyword.
+    // Bypass Payload's query layer and hit Postgres directly. The `search_vector` tsvector
+    // column is a native PostgreSQL column managed at the database level (via a schema hook in
+    // src/plugins/searchVector.ts) and is not exposed to the standard Payload API.
+    // Querying it directly using Drizzle's execute helper mirrors how the application executes
+    // search queries in all environments, including production (see src/app/(frontend)/search/page.tsx).
     const db = (payload.db as unknown as DatabaseAdapterWithDrizzle).drizzle
     const ftsResult = await db.execute(sql`
       SELECT id 

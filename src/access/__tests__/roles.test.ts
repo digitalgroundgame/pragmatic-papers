@@ -23,20 +23,25 @@ describe("role groupings", () => {
     expect(STAFF_ROLES).not.toContain("member")
   })
 
-  it("defines the correct roles for ADMIN_ROLES", () => {
+  it("ADMIN_ROLES includes admin and chief-editor only (update if new roles are added to User)", () => {
     expect(ADMIN_ROLES).toEqual(["admin", "chief-editor"])
+    expect(ADMIN_ROLES).not.toContain("editor")
+    expect(ADMIN_ROLES).not.toContain("writer")
+    expect(ADMIN_ROLES).not.toContain("narrator")
+    expect(ADMIN_ROLES).not.toContain("member")
   })
 
-  it("defines the correct roles for EDITOR_ROLES", () => {
+  it("EDITOR_ROLES includes admin, chief-editor, and editor only (update if new roles are added to User)", () => {
     expect(EDITOR_ROLES).toEqual(["admin", "chief-editor", "editor"])
+    expect(EDITOR_ROLES).not.toContain("writer")
+    expect(EDITOR_ROLES).not.toContain("narrator")
+    expect(EDITOR_ROLES).not.toContain("member")
   })
 
-  it("defines the correct roles for WRITER_ROLES", () => {
+  it("WRITER_ROLES includes all roles with content creation rights (update if new roles are added to User)", () => {
     expect(WRITER_ROLES).toEqual(["admin", "chief-editor", "editor", "writer"])
-  })
-
-  it("defines the correct roles for STAFF_ROLES", () => {
-    expect(STAFF_ROLES).toEqual(["admin", "chief-editor", "editor", "writer", "narrator"])
+    expect(WRITER_ROLES).not.toContain("narrator")
+    expect(WRITER_ROLES).not.toContain("member")
   })
 })
 

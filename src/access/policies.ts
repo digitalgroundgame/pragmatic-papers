@@ -1,6 +1,7 @@
 import type { Access, Where } from "payload"
 import { hasRole, ADMIN_ROLES, EDITOR_ROLES, STAFF_ROLES } from "./roles"
 
+/** Allows admins, or the user matching their own user record (by id). */
 export const adminOrSelf: Access = ({ req: { user } }) => {
   if (!user) {
     return false
@@ -13,6 +14,7 @@ export const adminOrSelf: Access = ({ req: { user } }) => {
   )
 }
 
+/** Allows editors+, or the user who created the document. */
 export const editorOrSelf: Access = ({ req: { user } }) => {
   if (!user) {
     return false

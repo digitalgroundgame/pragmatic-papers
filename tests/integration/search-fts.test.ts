@@ -98,7 +98,6 @@ describe("Full-Text Search Integration", () => {
       AND id = ${searchDoc.id}
     `)
 
-    // If the row is found, the FTS index correctly contains the keyword
     expect(ftsResult.rows.length).toBe(1)
   })
 })

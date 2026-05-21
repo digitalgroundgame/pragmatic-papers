@@ -12,6 +12,7 @@ import {
   STAFF_ROLES,
 } from "@/access/roles"
 import type { User } from "@/payload-types"
+import { staffOrPublished } from "../policies"
 
 const makeUser = (role?: User["role"] | string | null): User => ({ role }) as User
 const makeArgs = (user: User | null) => ({ req: { user } }) as Parameters<typeof staff>[0]
@@ -132,5 +133,29 @@ describe("staff (wrapper function)", () => {
 
   it("denies unauthenticated", () => {
     expect(staff(makeArgs(null))).toBe(false)
+  })
+})
+
+describe("staffOrPublished policy", () => {
+  it("allows all staff roles to read all documents", () => {
+    for (const role of ["narrator", "writer", "editor", "chief-editor", "admin"]) {
+      expect(staffOrPublished(makeArgs(makeUser(role)))).toBe(true)
+    }
+  })
+
+  it("restricts member role to published documents", () => {
+    expect(staffOrPublished(makeArgs(makeUser("member")))).toEqual({
+      _status: {
+        equals: "published",
+      },
+    })
+  })
+
+  it("restricts anonymous users to published documents", () => {
+    expect(staffOrPublished(makeArgs(null))).toEqual({
+      _status: {
+        equals: "published",
+      },
+    })
   })
 })

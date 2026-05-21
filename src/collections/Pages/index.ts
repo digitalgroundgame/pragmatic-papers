@@ -1,6 +1,6 @@
 import type { CollectionConfig } from "payload"
 
-import { authenticatedOrPublished } from "@/access/policies"
+import { staffOrPublished } from "@/access/policies"
 import { CollectionGrid } from "@/blocks/CollectionGrid/config"
 import { CallToAction } from "@/blocks/CallToAction/config"
 import { Content } from "@/blocks/Content/config"
@@ -29,7 +29,7 @@ export const Pages: CollectionConfig<"pages"> = {
   access: {
     create: admin,
     delete: admin,
-    read: authenticatedOrPublished,
+    read: staffOrPublished,
     update: admin,
   },
   // This config controls what's populated by default when a page is referenced

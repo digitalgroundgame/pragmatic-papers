@@ -1,5 +1,5 @@
 import type { Access, Where } from "payload"
-import { hasRole, ADMIN_ROLES, EDITOR_ROLES } from "./roles"
+import { hasRole, ADMIN_ROLES, EDITOR_ROLES, STAFF_ROLES } from "./roles"
 
 export const adminOrSelf: Access = ({ req: { user } }) => {
   if (!user) {
@@ -43,8 +43,8 @@ export const restrictWritersToDraftOnly: Access = ({ req: { user } }) => {
   }
 }
 
-export const authenticatedOrPublished: Access = ({ req: { user } }) => {
-  if (user) {
+export const staffOrPublished: Access = ({ req: { user } }) => {
+  if (hasRole(user, STAFF_ROLES)) {
     return true
   }
 

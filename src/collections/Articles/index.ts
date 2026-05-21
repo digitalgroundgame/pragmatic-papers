@@ -1,8 +1,4 @@
-import {
-  authenticatedOrPublished,
-  editorOrSelf,
-  restrictWritersToDraftOnly,
-} from "@/access/policies"
+import { staffOrPublished, editorOrSelf, restrictWritersToDraftOnly } from "@/access/policies"
 import { editorFieldLevel, writer } from "@/access/roles"
 import { Banner } from "@/blocks/Banner/config"
 import { Code } from "@/blocks/Code/config"
@@ -76,7 +72,7 @@ export const Articles: CollectionConfig = {
   access: {
     create: writer,
     delete: editorOrSelf,
-    read: authenticatedOrPublished,
+    read: staffOrPublished,
     update: restrictWritersToDraftOnly,
   },
   admin: {

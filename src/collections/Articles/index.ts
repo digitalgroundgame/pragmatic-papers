@@ -1,4 +1,8 @@
-import { staffOrPublished, editorOrSelf, restrictWritersToDraftOnly } from "@/access/policies"
+import {
+  isPublishedUnlessStaff,
+  isCreatedByUnlessEditor,
+  isDraftUnlessEditor,
+} from "@/access/policies"
 import { editorFieldLevel, writer } from "@/access/roles"
 import { Banner } from "@/blocks/Banner/config"
 import { Code } from "@/blocks/Code/config"
@@ -71,9 +75,9 @@ export const Articles: CollectionConfig = {
   slug: "articles",
   access: {
     create: writer,
-    delete: editorOrSelf,
-    read: staffOrPublished,
-    update: restrictWritersToDraftOnly,
+    delete: isCreatedByUnlessEditor,
+    read: isPublishedUnlessStaff,
+    update: isDraftUnlessEditor,
   },
   admin: {
     defaultColumns: ["title", "slug", "updatedAt"],

@@ -19,7 +19,7 @@ const MINIMAL_PAGE = {
   ],
 } as const
 
-describe("pages staffOrPublished access", () => {
+describe("pages isPublishedUnlessStaff access", () => {
   let payload: Payload
 
   beforeAll(async () => {

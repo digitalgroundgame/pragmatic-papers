@@ -4,7 +4,7 @@ import type { Media } from "@/payload-types"
 import { getPayload, createUser } from "../helpers/testUsers"
 import { testFile } from "../fixtures/media"
 
-describe("media editorOrSelf access", () => {
+describe("media isCreatedByUnlessEditor access", () => {
   let payload: Payload
 
   beforeAll(async () => {

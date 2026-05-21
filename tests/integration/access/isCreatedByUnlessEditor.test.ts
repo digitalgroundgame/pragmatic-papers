@@ -11,7 +11,7 @@ describe("editor and writer access", () => {
     payload = await getPayload()
   })
 
-  describe("editorOrSelf access", () => {
+  describe("isCreatedByUnlessEditor access", () => {
     it("allows editor to delete any article", async () => {
       const editor = await createUser("editor")
 
@@ -93,7 +93,7 @@ describe("editor and writer access", () => {
     })
   })
 
-  describe("restrictWritersToDraftOnly access", () => {
+  describe("isDraftUnlessEditor access", () => {
     it("allows editor to update any article regardless of status", async () => {
       const editor = await createUser("editor")
 

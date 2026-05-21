@@ -3,7 +3,7 @@ import type { Payload } from "payload"
 import type { Volume } from "@/payload-types"
 import { getPayload, createUser } from "../helpers/testUsers"
 
-describe("volumes staffOrPublished access", () => {
+describe("volumes isPublishedUnlessStaff access", () => {
   let payload: Payload
 
   beforeAll(async () => {

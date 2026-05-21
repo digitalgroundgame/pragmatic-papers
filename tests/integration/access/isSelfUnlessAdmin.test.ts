@@ -2,7 +2,7 @@ import { describe, expect, it, beforeAll } from "vitest"
 import type { Payload } from "payload"
 import { getPayload, createUser } from "../helpers/testUsers"
 
-describe("adminOrSelf access", () => {
+describe("isSelfUnlessAdmin access", () => {
   let payload: Payload
 
   beforeAll(async () => {

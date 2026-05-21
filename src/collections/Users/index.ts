@@ -1,4 +1,4 @@
-import { adminOrSelf } from "@/access/policies"
+import { isSelfUnlessAdmin } from "@/access/policies"
 import { admin, adminFieldLevel, staff } from "@/access/roles"
 import { revalidateUser } from "@/collections/Users/hooks/revalidateUser"
 import { menu } from "@/fields/menu"
@@ -20,8 +20,8 @@ export const Users: CollectionConfig = {
     admin: staff,
     create: admin,
     delete: admin,
-    read: adminOrSelf,
-    update: adminOrSelf,
+    read: isSelfUnlessAdmin,
+    update: isSelfUnlessAdmin,
   },
   admin: {
     defaultColumns: ["name", "role", "email"],

@@ -1,6 +1,6 @@
 import type { CollectionConfig } from "payload"
 
-import { authenticatedOrPublished } from "@/access/authenticatedOrPublished"
+import { authenticatedOrPublished } from "@/access/policies"
 import { CollectionGrid } from "@/blocks/CollectionGrid/config"
 import { CallToAction } from "@/blocks/CallToAction/config"
 import { Content } from "@/blocks/Content/config"

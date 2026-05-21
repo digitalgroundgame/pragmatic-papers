@@ -1,6 +1,9 @@
-import { authenticatedOrPublished } from "@/access/authenticatedOrPublished"
+import {
+  authenticatedOrPublished,
+  editorOrSelf,
+  restrictWritersToDraftOnly,
+} from "@/access/policies"
 import { editorFieldLevel, writer } from "@/access/roles"
-import { editorOrSelf, restrictWritersToDraftOnly } from "@/access/editorOrSelf"
 import { Banner } from "@/blocks/Banner/config"
 import { Code } from "@/blocks/Code/config"
 import { FootnoteBlock } from "@/blocks/Footnote/config"

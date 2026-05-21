@@ -1,4 +1,4 @@
-import { adminOrSelf } from "@/access/adminOrSelf"
+import { adminOrSelf } from "@/access/policies"
 import { admin, adminFieldLevel, staff } from "@/access/roles"
 import { revalidateUser } from "@/collections/Users/hooks/revalidateUser"
 import { menu } from "@/fields/menu"

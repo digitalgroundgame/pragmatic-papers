@@ -9,7 +9,7 @@ import path from "path"
 import { fileURLToPath } from "url"
 
 import { anyone, staff } from "@/access/roles"
-import { editorOrSelf } from "@/access/editorOrSelf"
+import { editorOrSelf } from "@/access/policies"
 
 import type { Media as MediaType } from "@/payload-types"
 import { regenerateBlurHandler } from "./endpoints/regenerateBlur"

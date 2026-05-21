@@ -20,7 +20,7 @@ import { Code } from "@/blocks/Code/config"
 import { MediaBlock } from "@/blocks/MediaBlock/config"
 import { SquiggleRule } from "@/blocks/SquiggleRule/config"
 
-import { authenticatedOrPublished } from "@/access/authenticatedOrPublished"
+import { authenticatedOrPublished } from "@/access/policies"
 import { generatePreviewPath } from "@/utilities/generatePreviewPath"
 import {
   MetaDescriptionField,

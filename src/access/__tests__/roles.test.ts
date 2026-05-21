@@ -1,49 +1,99 @@
 import { describe, expect, it } from "vitest"
-import { atLeast, isStaff, staff } from "@/access/roles"
+import {
+  hasRole,
+  isStaff,
+  staff,
+  admin,
+  editor,
+  writer,
+  ADMIN_ROLES,
+  EDITOR_ROLES,
+  WRITER_ROLES,
+  STAFF_ROLES,
+} from "@/access/roles"
 import type { User } from "@/payload-types"
 
 const makeUser = (role?: User["role"] | string | null): User => ({ role }) as User
 const makeArgs = (user: User | null) => ({ req: { user } }) as Parameters<typeof staff>[0]
 
-describe("atLeast", () => {
-  it("returns true when user role equals the required role", () => {
-    expect(atLeast(makeUser("admin"), "admin")).toBe(true)
-    expect(atLeast(makeUser("editor"), "editor")).toBe(true)
-    expect(atLeast(makeUser("writer"), "writer")).toBe(true)
-    expect(atLeast(makeUser("narrator"), "narrator")).toBe(true)
-    expect(atLeast(makeUser("member"), "member")).toBe(true)
+describe("role groupings", () => {
+  it("defines the correct roles for ADMIN_ROLES", () => {
+    expect(ADMIN_ROLES).toEqual(["admin", "chief-editor"])
   })
 
-  it("returns true when user role is above the required role", () => {
-    expect(atLeast(makeUser("admin"), "editor")).toBe(true)
-    expect(atLeast(makeUser("chief-editor"), "editor")).toBe(true)
-    expect(atLeast(makeUser("editor"), "writer")).toBe(true)
-    expect(atLeast(makeUser("writer"), "narrator")).toBe(true)
-    expect(atLeast(makeUser("narrator"), "member")).toBe(true)
+  it("defines the correct roles for EDITOR_ROLES", () => {
+    expect(EDITOR_ROLES).toEqual(["admin", "chief-editor", "editor"])
   })
 
-  it("returns false when user role is below the required role", () => {
-    expect(atLeast(makeUser("member"), "narrator")).toBe(false)
-    expect(atLeast(makeUser("narrator"), "writer")).toBe(false)
-    expect(atLeast(makeUser("writer"), "editor")).toBe(false)
-    expect(atLeast(makeUser("editor"), "admin")).toBe(false)
+  it("defines the correct roles for WRITER_ROLES", () => {
+    expect(WRITER_ROLES).toEqual(["admin", "chief-editor", "editor", "writer"])
   })
 
-  it("treats admin and chief-editor as equivalent (both level 4)", () => {
-    expect(atLeast(makeUser("admin"), "chief-editor")).toBe(true)
-    expect(atLeast(makeUser("chief-editor"), "admin")).toBe(true)
+  it("defines the correct roles for STAFF_ROLES", () => {
+    expect(STAFF_ROLES).toEqual(["admin", "chief-editor", "editor", "writer", "narrator"])
+  })
+})
+
+describe("hasRole", () => {
+  it("returns true when user role is in the allowed roles list", () => {
+    expect(hasRole(makeUser("admin"), ADMIN_ROLES)).toBe(true)
+    expect(hasRole(makeUser("chief-editor"), ADMIN_ROLES)).toBe(true)
+    expect(hasRole(makeUser("editor"), EDITOR_ROLES)).toBe(true)
+  })
+
+  it("returns false when user role is not in the allowed roles list", () => {
+    expect(hasRole(makeUser("editor"), ADMIN_ROLES)).toBe(false)
+    expect(hasRole(makeUser("writer"), EDITOR_ROLES)).toBe(false)
   })
 
   it("returns false when user has no role", () => {
-    expect(atLeast(makeUser(null), "member")).toBe(false)
-  })
-
-  it("returns false when user has an unrecognized role", () => {
-    expect(atLeast(makeUser("supervillain"), "member")).toBe(false)
+    expect(hasRole(makeUser(null), ["member"])).toBe(false)
   })
 
   it("returns false when user is undefined", () => {
-    expect(atLeast(undefined, "member")).toBe(false)
+    expect(hasRole(undefined, ["member"])).toBe(false)
+  })
+})
+
+describe("admin helper", () => {
+  it("allows admin and chief-editor", () => {
+    expect(admin(makeArgs(makeUser("admin")))).toBe(true)
+    expect(admin(makeArgs(makeUser("chief-editor")))).toBe(true)
+  })
+
+  it("denies editor, writer, narrator, and member", () => {
+    expect(admin(makeArgs(makeUser("editor")))).toBe(false)
+    expect(admin(makeArgs(makeUser("writer")))).toBe(false)
+    expect(admin(makeArgs(makeUser("narrator")))).toBe(false)
+    expect(admin(makeArgs(makeUser("member")))).toBe(false)
+  })
+})
+
+describe("editor helper", () => {
+  it("allows admin, chief-editor, and editor", () => {
+    expect(editor(makeArgs(makeUser("admin")))).toBe(true)
+    expect(editor(makeArgs(makeUser("chief-editor")))).toBe(true)
+    expect(editor(makeArgs(makeUser("editor")))).toBe(true)
+  })
+
+  it("denies writer, narrator, and member", () => {
+    expect(editor(makeArgs(makeUser("writer")))).toBe(false)
+    expect(editor(makeArgs(makeUser("narrator")))).toBe(false)
+    expect(editor(makeArgs(makeUser("member")))).toBe(false)
+  })
+})
+
+describe("writer helper", () => {
+  it("allows admin, chief-editor, editor, and writer", () => {
+    expect(writer(makeArgs(makeUser("admin")))).toBe(true)
+    expect(writer(makeArgs(makeUser("chief-editor")))).toBe(true)
+    expect(writer(makeArgs(makeUser("editor")))).toBe(true)
+    expect(writer(makeArgs(makeUser("writer")))).toBe(true)
+  })
+
+  it("denies narrator and member", () => {
+    expect(writer(makeArgs(makeUser("narrator")))).toBe(false)
+    expect(writer(makeArgs(makeUser("member")))).toBe(false)
   })
 })
 

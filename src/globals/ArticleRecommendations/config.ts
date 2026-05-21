@@ -1,12 +1,15 @@
 import type { GlobalConfig } from "payload"
+import { hasRole, ADMIN_ROLES } from "@/access/roles"
 
 export const ArticleRecommendations: GlobalConfig = {
   slug: "article-recommendations",
   access: {
-    read: () => true,
+    read: ({ req: { user } }) => hasRole(user, ADMIN_ROLES),
+    update: ({ req: { user } }) => hasRole(user, ADMIN_ROLES),
   },
   admin: {
     group: "System",
+    hidden: ({ user }) => !hasRole(user, ADMIN_ROLES),
   },
   fields: [
     {

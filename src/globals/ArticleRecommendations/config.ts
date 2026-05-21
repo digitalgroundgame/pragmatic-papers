@@ -4,7 +4,7 @@ import { hasRole, ADMIN_ROLES } from "@/access/roles"
 export const ArticleRecommendations: GlobalConfig = {
   slug: "article-recommendations",
   access: {
-    read: ({ req: { user } }) => hasRole(user, ADMIN_ROLES),
+    read: () => true,
     update: ({ req: { user } }) => hasRole(user, ADMIN_ROLES),
   },
   admin: {

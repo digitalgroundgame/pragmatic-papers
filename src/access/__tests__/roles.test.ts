@@ -18,6 +18,11 @@ const makeUser = (role?: User["role"] | string | null): User => ({ role }) as Us
 const makeArgs = (user: User | null) => ({ req: { user } }) as Parameters<typeof staff>[0]
 
 describe("role groupings", () => {
+  it("STAFF_ROLES includes all roles except member (update if new roles are added to User)", () => {
+    expect(STAFF_ROLES).toEqual(["admin", "chief-editor", "editor", "writer", "narrator"])
+    expect(STAFF_ROLES).not.toContain("member")
+  })
+
   it("defines the correct roles for ADMIN_ROLES", () => {
     expect(ADMIN_ROLES).toEqual(["admin", "chief-editor"])
   })

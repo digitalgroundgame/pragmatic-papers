@@ -39,8 +39,10 @@ import { FootnoteLabel as FootnoteLabel_2845bbc260cbb0202b7c6ec591d344dc } from 
 import { AlignFeatureClient as AlignFeatureClient_e70f5e05f09f93e00b997edb1ef0c864 } from '@payloadcms/richtext-lexical/client'
 import { FootnotesPreview as FootnotesPreview_78f98036fa74f92e38dd688ebeae2fd5 } from '@/blocks/Footnote/FootnotesPreview'
 import { RowLabel as RowLabel_b9b9938cf466765c7ed61773d838e057 } from '@/fields/menu/RowLabel'
+import { DeletionNotice as DeletionNotice_8579feffe3388cd4abea6f9219edec3e } from '@/collections/Media/components/DeletionNotice'
 import { BlurDataURLField as BlurDataURLField_3bf98f0d72a9b7fcf13045923bb48189 } from '@/collections/Media/components/BlurDataURLField'
 import { DurationField as DurationField_eac2b3e17fa524aff4add76374d4c8eb } from '@/collections/Media/components/DurationField'
+import { ReferencesView as ReferencesView_c329fcebdf040acacbee1d48915ea93f } from '@/collections/Media/components/ReferencesView'
 import { LinkToDoc as LinkToDoc_aead06e4cbf6b2620c5c51c9ab283634 } from '@payloadcms/plugin-search/client'
 import { ReindexButton as ReindexButton_aead06e4cbf6b2620c5c51c9ab283634 } from '@payloadcms/plugin-search/client'
 import { RunNowField as RunNowField_a9d86fb0496ebd76a3dd880c805864b5 } from '@/globals/ArticleRecommendations/components/RunNowField'
@@ -95,8 +97,10 @@ export const importMap = {
   "@payloadcms/richtext-lexical/client#AlignFeatureClient": AlignFeatureClient_e70f5e05f09f93e00b997edb1ef0c864,
   "@/blocks/Footnote/FootnotesPreview#FootnotesPreview": FootnotesPreview_78f98036fa74f92e38dd688ebeae2fd5,
   "@/fields/menu/RowLabel#RowLabel": RowLabel_b9b9938cf466765c7ed61773d838e057,
+  "@/collections/Media/components/DeletionNotice#DeletionNotice": DeletionNotice_8579feffe3388cd4abea6f9219edec3e,
   "@/collections/Media/components/BlurDataURLField#BlurDataURLField": BlurDataURLField_3bf98f0d72a9b7fcf13045923bb48189,
   "@/collections/Media/components/DurationField#DurationField": DurationField_eac2b3e17fa524aff4add76374d4c8eb,
+  "@/collections/Media/components/ReferencesView#ReferencesView": ReferencesView_c329fcebdf040acacbee1d48915ea93f,
   "@payloadcms/plugin-search/client#LinkToDoc": LinkToDoc_aead06e4cbf6b2620c5c51c9ab283634,
   "@payloadcms/plugin-search/client#ReindexButton": ReindexButton_aead06e4cbf6b2620c5c51c9ab283634,
   "@/globals/ArticleRecommendations/components/RunNowField#RunNowField": RunNowField_a9d86fb0496ebd76a3dd880c805864b5,

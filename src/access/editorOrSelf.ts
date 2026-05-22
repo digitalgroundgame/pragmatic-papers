@@ -1,4 +1,4 @@
-import type { Access } from "payload"
+import type { Access, Where } from "payload"
 import { atLeast } from "./roles"
 
 export const editorOrSelf: Access = ({ req: { user } }) => {
@@ -27,7 +27,6 @@ export const restrictWritersToDraftOnly: Access = ({ req: { user } }) => {
   }
 
   return {
-    createdBy: { equals: user.id },
-    _status: { equals: "draft" },
+    and: [{ createdBy: { equals: user.id } } as Where, { _status: { equals: "draft" } } as Where],
   }
 }

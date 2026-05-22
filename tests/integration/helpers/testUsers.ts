@@ -3,19 +3,13 @@ import { getPayloadConfig } from "@/utilities/getPayloadConfig"
 import type { User } from "@/payload-types"
 import type { Payload } from "payload"
 
-let payloadInstance: Payload | null = null
-let payloadInitPromise: Promise<Payload> | null = null
+let payloadPromise: Promise<Payload> | null = null
 
-export async function getPayload(): Promise<Payload> {
-  if (payloadInitPromise) {
-    return await payloadInitPromise
+export function getPayload(): Promise<Payload> {
+  if (!payloadPromise) {
+    payloadPromise = getPayloadConfig()
   }
-  if (!payloadInstance) {
-    payloadInitPromise = getPayloadConfig()
-    payloadInstance = await payloadInitPromise
-    payloadInitPromise = null
-  }
-  return payloadInstance
+  return payloadPromise
 }
 
 export type Role = NonNullable<User["role"]>

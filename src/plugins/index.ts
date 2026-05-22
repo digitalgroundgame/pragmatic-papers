@@ -5,6 +5,8 @@ import { toRoman } from "@/utilities/toRoman"
 import { formBuilderPlugin } from "@payloadcms/plugin-form-builder"
 import { nestedDocsPlugin } from "@payloadcms/plugin-nested-docs"
 import { redirectsPlugin } from "@payloadcms/plugin-redirects"
+import { searchPlugin } from "@payloadcms/plugin-search"
+import type { BeforeSync } from "@payloadcms/plugin-search/types"
 import { seoPlugin } from "@payloadcms/plugin-seo"
 import { type GenerateTitle, type GenerateURL } from "@payloadcms/plugin-seo/types"
 import { FixedToolbarFeature, HeadingFeature, lexicalEditor } from "@payloadcms/richtext-lexical"
@@ -13,6 +15,19 @@ import { type Plugin } from "payload"
 
 function isVolume(obj: Volume | Article | Page | Topic): obj is Volume {
   return (obj as Volume).volumeNumber !== undefined
+}
+
+interface LexicalTextNode {
+  type?: string
+  text?: string
+  children?: LexicalTextNode[]
+}
+
+function lexicalToPlainText(node: LexicalTextNode | undefined | null): string {
+  if (!node) return ""
+  if (typeof node.text === "string") return node.text
+  if (!Array.isArray(node.children)) return ""
+  return node.children.map(lexicalToPlainText).join(" ")
 }
 
 export const generateTitle: GenerateTitle<Volume | Article | Page | Topic> = ({ doc }) => {
@@ -32,7 +47,73 @@ const generateURL: GenerateURL<Volume | Article | Page | Topic> = ({ doc }) => {
   return doc?.slug ? `${url}/${doc.slug}` : url
 }
 
+const beforeSync: BeforeSync = ({ originalDoc, searchDoc }) => {
+  const title =
+    (originalDoc.title as string | undefined) || (originalDoc.name as string | undefined) || ""
+  const meta = originalDoc.meta as Record<string, unknown> | undefined
+  const excerpt =
+    (meta?.description as string | undefined) ||
+    (originalDoc.description as string | undefined) ||
+    ""
+  const slug = (originalDoc.slug as string | undefined) || ""
+
+  const populatedAuthors = originalDoc.populatedAuthors as
+    | { name?: string | null }[]
+    | undefined
+    | null
+  const authors = populatedAuthors
+    ? populatedAuthors
+        .map((a) => a.name)
+        .filter(Boolean)
+        .join(", ")
+    : ""
+
+  const topicsRaw = originalDoc.topics as ({ name?: string | null } | number)[] | undefined | null
+  const topics = Array.isArray(topicsRaw)
+    ? topicsRaw
+        .map((t) => (typeof t === "object" && t !== null ? t.name : null))
+        .filter(Boolean)
+        .join(", ")
+    : ""
+
+  // Prefer heroImage, fall back to meta image, then profileImage (users)
+  const image =
+    (originalDoc.heroImage as number | null | undefined) ??
+    ((originalDoc.meta as Record<string, unknown> | undefined)?.image as
+      | number
+      | null
+      | undefined) ??
+    (originalDoc.profileImage as number | null | undefined) ??
+    null
+
+  const content = originalDoc.content as { root?: LexicalTextNode } | undefined
+  const body = lexicalToPlainText(content?.root).replace(/\s+/g, " ").trim().slice(0, 39000)
+
+  return { ...searchDoc, title, excerpt, slug, authors, topics, image, body }
+}
+
 export const plugins: Plugin[] = [
+  searchPlugin({
+    collections: ["articles", "pages", "volumes", "topics"],
+    defaultPriorities: {
+      articles: 40,
+      volumes: 30,
+      pages: 20,
+      topics: 10,
+    },
+    beforeSync,
+    searchOverrides: {
+      fields: ({ defaultFields }) => [
+        ...defaultFields,
+        { name: "excerpt", type: "text", admin: { readOnly: true } },
+        { name: "slug", type: "text", admin: { readOnly: true } },
+        { name: "authors", type: "text", admin: { readOnly: true } },
+        { name: "topics", type: "text", admin: { readOnly: true } },
+        { name: "image", type: "upload", relationTo: "media", admin: { readOnly: true } },
+        { name: "body", type: "textarea", admin: { readOnly: true, hidden: true } },
+      ],
+    },
+  }),
   redirectsPlugin({
     collections: ["pages", "volumes", "articles"],
     overrides: {

@@ -10,8 +10,7 @@ This file provides guidance to tools like Claude Code (claude.ai/code) when work
 
 ### Development
 
-- `pnpm dev` — starts everything (Postgres via Docker + Next.js dev server on port 8000)
-- `pnpm dev:db` / `pnpm dev:db-down` — start/stop Postgres container
+- `pnpm dev` — starts everything in Docker Compose (Postgres + Next.js dev server on port 8000)
 - `pnpm dev:db-nuke` — stop Postgres and delete volume data
 
 ### Quality Checks
@@ -21,6 +20,13 @@ This file provides guidance to tools like Claude Code (claude.ai/code) when work
 - `pnpm lint:fix` — auto-fix lint issues
 - `pnpm format` / `pnpm format:fix` — Prettier check/fix
 - `pnpm check-types` — TypeScript type checking
+
+### Testing
+
+- `pnpm test` — run all tests (Vitest)
+- `pnpm test:unit` — run unit tests
+- `pnpm test:integration` — run integration tests (uses Testcontainers)
+- `pnpm test:e2e` — run Playwright E2E tests (uses Testcontainers)
 
 ### Build & Payload
 
@@ -107,4 +113,4 @@ This file provides guidance to tools like Claude Code (claude.ai/code) when work
 ### Testing your changes
 
 - run linting and type-checks
-- No unit or integration test framework set up yet - ignore for now
+- run unit and integration tests as needed, _skip running e2e_.

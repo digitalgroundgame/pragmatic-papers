@@ -23,8 +23,12 @@ if (existsSync(src)) {
   process.exit(0)
 }
 
-if (existsSync(placeholder) && readFileSync(placeholder).byteLength !== 0) {
-  console.warn(gray("○ Fonts already installed"))
+if (existsSync(placeholder)) {
+  const currentFont = readFileSync(placeholder)
+  const isPlaceholder = currentFont.equals(readFileSync(blankFont))
+  console.warn(
+    gray(`○ Fonts already installed (${isPlaceholder ? "placeholder" : "real"})`),
+  )
   process.exit(0)
 }
 

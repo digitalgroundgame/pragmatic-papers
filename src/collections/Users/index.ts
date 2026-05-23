@@ -24,7 +24,7 @@ export const Users: CollectionConfig = {
     update: isSelfOrAdmin,
   },
   admin: {
-    defaultColumns: ["name", "role", "email"],
+    defaultColumns: ["name", "roles", "email"],
     useAsTitle: "name",
   },
   auth: true,
@@ -92,10 +92,11 @@ export const Users: CollectionConfig = {
       },
     }),
     {
-      name: "role",
+      name: "roles",
       type: "select",
+      hasMany: true,
       saveToJWT: true,
-      defaultValue: "member",
+      defaultValue: ["member"],
       access: {
         update: adminFieldLevel,
       },

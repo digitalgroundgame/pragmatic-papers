@@ -1,24 +1,24 @@
 import type { Access, AccessArgs, FieldAccess } from "payload"
 import type { User } from "@/payload-types"
 
-export type Role = NonNullable<User["role"]>
-
-export const ADMIN_ROLES: Role[] = ["admin", "chief-editor"]
-export const EDITOR_ROLES: Role[] = ["admin", "chief-editor", "editor"]
-export const WRITER_ROLES: Role[] = ["admin", "chief-editor", "editor", "writer"]
-export const STAFF_ROLES: Role[] = ["admin", "chief-editor", "editor", "writer", "narrator"]
-
-export const hasRole = (user: User | null | undefined, roles: Role[]): boolean => {
-  if (!user?.role) return false
-  return roles.includes(user.role as Role)
-}
+export type Role = "admin" | "chief-editor" | "editor" | "writer" | "narrator" | "member"
 
 export const isAdmin = (user: User | null | undefined): boolean => {
-  return hasRole(user, ADMIN_ROLES)
+  if (!user?.roles) return false
+  const roles = user.roles as Role[]
+  return roles.includes("admin") || roles.includes("chief-editor")
+}
+
+export const hasRole = (user: User | null | undefined, roleOrRoles: Role | Role[]): boolean => {
+  if (isAdmin(user)) return true
+  if (!user?.roles) return false
+
+  const targetRoles = Array.isArray(roleOrRoles) ? roleOrRoles : [roleOrRoles]
+  return (user.roles as Role[]).some((r) => targetRoles.includes(r))
 }
 
 export const isStaff = (user: User | null | undefined): boolean => {
-  return hasRole(user, STAFF_ROLES)
+  return hasRole(user, ["editor", "writer", "narrator"])
 }
 
 export const anyone: Access = () => true
@@ -30,27 +30,27 @@ export const authenticated: isAuthenticated = ({ req: { user } }) => {
 }
 
 export const admin: Access = ({ req: { user } }) => {
-  return hasRole(user, ADMIN_ROLES)
+  return isAdmin(user)
 }
 
 export const adminFieldLevel: FieldAccess = ({ req: { user } }) => {
-  return hasRole(user, ADMIN_ROLES)
+  return isAdmin(user)
 }
 
 export const editor: Access = ({ req: { user } }) => {
-  return hasRole(user, EDITOR_ROLES)
+  return hasRole(user, "editor")
 }
 
 export const editorFieldLevel: FieldAccess = ({ req: { user } }) => {
-  return hasRole(user, EDITOR_ROLES)
+  return hasRole(user, "editor")
 }
 
 export const writer: Access = ({ req: { user } }) => {
-  return hasRole(user, WRITER_ROLES)
+  return hasRole(user, "writer")
 }
 
 export const writerFieldLevel: FieldAccess = ({ req: { user } }) => {
-  return hasRole(user, WRITER_ROLES)
+  return hasRole(user, "writer")
 }
 
 export const staff = ({ req: { user } }: AccessArgs<User>): boolean => {

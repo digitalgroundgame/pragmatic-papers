@@ -79,8 +79,8 @@ export const Media: CollectionConfig = {
       type: "relationship",
       relationTo: "users",
       filterOptions: {
-        role: {
-          equals: "narrator",
+        roles: {
+          in: ["narrator", "admin", "chief-editor"],
         },
       },
       admin: {

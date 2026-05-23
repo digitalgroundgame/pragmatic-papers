@@ -228,8 +228,8 @@ export const Articles: CollectionConfig = {
       hasMany: true,
       relationTo: "users",
       filterOptions: {
-        role: {
-          in: ["writer", "editor", "chief-editor"],
+        roles: {
+          in: ["writer", "admin", "chief-editor"],
         },
       },
     },

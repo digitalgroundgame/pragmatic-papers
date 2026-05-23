@@ -1,5 +1,5 @@
 import type { Access, Where } from "payload"
-import { hasRole, ADMIN_ROLES, EDITOR_ROLES, STAFF_ROLES } from "./roles"
+import { hasRole, isAdmin, isStaff } from "./roles"
 
 /**
  * Access Control Policies
@@ -16,7 +16,7 @@ export const isSelfOrAdmin: Access = ({ req: { user } }) => {
   }
 
   return (
-    hasRole(user, ADMIN_ROLES) || {
+    isAdmin(user) || {
       id: { equals: user.id },
     }
   )
@@ -29,7 +29,7 @@ export const isCreatedByOrEditor: Access = ({ req: { user } }) => {
   }
 
   return (
-    hasRole(user, EDITOR_ROLES) || {
+    hasRole(user, "editor") || {
       createdBy: { equals: user.id },
     }
   )
@@ -41,11 +41,11 @@ export const isDraftOrEditor: Access = ({ req: { user } }) => {
     return false
   }
 
-  if (hasRole(user, EDITOR_ROLES)) {
+  if (hasRole(user, "editor")) {
     return true
   }
 
-  if (user.role !== "writer") {
+  if (!hasRole(user, "writer")) {
     return false
   }
 
@@ -56,7 +56,7 @@ export const isDraftOrEditor: Access = ({ req: { user } }) => {
 
 /** Allows staff to view all statuses, while restricting others to published items only. */
 export const isPublishedOrStaff: Access = ({ req: { user } }) => {
-  if (hasRole(user, STAFF_ROLES)) {
+  if (isStaff(user)) {
     return true
   }
 

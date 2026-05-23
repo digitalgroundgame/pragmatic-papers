@@ -13,6 +13,10 @@ export const hasRole = (user: User | null | undefined, roles: Role[]): boolean =
   return roles.includes(user.role as Role)
 }
 
+export const isAdmin = (user: User | null | undefined): boolean => {
+  return hasRole(user, ADMIN_ROLES)
+}
+
 export const isStaff = (user: User | null | undefined): boolean => {
   return hasRole(user, STAFF_ROLES)
 }

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest"
 import {
   hasRole,
+  isAdmin,
   isStaff,
   staff,
   admin,
@@ -105,6 +106,28 @@ describe("writer helper", () => {
   it("denies narrator and member", () => {
     expect(writer(makeArgs(makeUser("narrator")))).toBe(false)
     expect(writer(makeArgs(makeUser("member")))).toBe(false)
+  })
+})
+
+describe("isAdmin", () => {
+  it("returns true for admin and chief-editor", () => {
+    expect(isAdmin(makeUser("admin"))).toBe(true)
+    expect(isAdmin(makeUser("chief-editor"))).toBe(true)
+  })
+
+  it("returns false for editor, writer, narrator, and member", () => {
+    expect(isAdmin(makeUser("editor"))).toBe(false)
+    expect(isAdmin(makeUser("writer"))).toBe(false)
+    expect(isAdmin(makeUser("narrator"))).toBe(false)
+    expect(isAdmin(makeUser("member"))).toBe(false)
+  })
+
+  it("returns false when user has no role", () => {
+    expect(isAdmin(makeUser(null))).toBe(false)
+  })
+
+  it("returns false when user is undefined", () => {
+    expect(isAdmin(undefined)).toBe(false)
   })
 })
 

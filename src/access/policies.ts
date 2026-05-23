@@ -1,5 +1,5 @@
 import type { Access, Where } from "payload"
-import { hasRole, isAdmin, isStaff } from "./roles"
+import { hasRoleOrAdmin, isAdmin, isStaff } from "./roles"
 
 /**
  * Access Control Policies
@@ -29,23 +29,26 @@ export const isCreatedByOrEditor: Access = ({ req: { user } }) => {
   }
 
   return (
-    hasRole(user, "editor") || {
+    hasRoleOrAdmin(user, "editor") || {
       createdBy: { equals: user.id },
     }
   )
 }
 
-/** Restricts updates to drafts only for writers (and requires ownership), while allowing editors. */
+/**
+ * Restricts updates to drafts only for writers (and requires ownership), while allowing editors.
+ * All other roles (such as narrators and members) are implicitly denied update access.
+ */
 export const isDraftOrEditor: Access = ({ req: { user } }) => {
   if (!user) {
     return false
   }
 
-  if (hasRole(user, "editor")) {
+  if (hasRoleOrAdmin(user, "editor")) {
     return true
   }
 
-  if (!hasRole(user, "writer")) {
+  if (!hasRoleOrAdmin(user, "writer")) {
     return false
   }
 

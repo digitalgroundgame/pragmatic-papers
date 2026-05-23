@@ -4,7 +4,7 @@ import type { Article } from "@/payload-types"
 import { getPayload, createUser } from "../helpers/testUsers"
 import { ARTICLE_CONTENT } from "../fixtures/content"
 
-describe("isPublishedUnlessStaff access", () => {
+describe("isPublishedOrStaff access", () => {
   let payload: Payload
 
   beforeAll(async () => {

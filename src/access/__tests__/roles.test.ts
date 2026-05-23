@@ -1,8 +1,7 @@
 import { describe, expect, it } from "vitest"
-import { hasRole, isAdmin, isStaff, admin, editor, writer } from "@/access/roles"
+import { hasRole, hasRoleOrAdmin, isAdmin, isStaff, admin, editor, writer } from "@/access/roles"
 import type { User } from "@/payload-types"
 import type { AccessArgs } from "payload"
-import { isPublishedOrStaff } from "../policies"
 
 const makeUser = (roleOrRoles?: string | string[] | null): User => {
   if (!roleOrRoles) return { roles: [] } as unknown as User
@@ -35,10 +34,10 @@ describe("isAdmin", () => {
 })
 
 describe("hasRole", () => {
-  it("allows admin/chief-editor automatically", () => {
-    expect(hasRole(makeUser("admin"), "writer")).toBe(true)
-    expect(hasRole(makeUser("chief-editor"), "writer")).toBe(true)
-    expect(hasRole(makeUser("admin"), "editor")).toBe(true)
+  it("does NOT allow admin/chief-editor automatically (pure role check)", () => {
+    expect(hasRole(makeUser("admin"), "writer")).toBe(false)
+    expect(hasRole(makeUser("chief-editor"), "writer")).toBe(false)
+    expect(hasRole(makeUser("admin"), "admin")).toBe(true)
   })
 
   it("returns true when user has the specific role", () => {
@@ -61,6 +60,24 @@ describe("hasRole", () => {
     expect(hasRole(multiUser, "writer")).toBe(true)
     expect(hasRole(multiUser, "narrator")).toBe(true)
     expect(hasRole(multiUser, "editor")).toBe(false)
+  })
+})
+
+describe("hasRoleOrAdmin", () => {
+  it("allows admin/chief-editor automatically", () => {
+    expect(hasRoleOrAdmin(makeUser("admin"), "writer")).toBe(true)
+    expect(hasRoleOrAdmin(makeUser("chief-editor"), "writer")).toBe(true)
+    expect(hasRoleOrAdmin(makeUser("admin"), "editor")).toBe(true)
+  })
+
+  it("returns true when non-admin user has the specific role", () => {
+    expect(hasRoleOrAdmin(makeUser("editor"), "editor")).toBe(true)
+    expect(hasRoleOrAdmin(makeUser("writer"), "writer")).toBe(true)
+  })
+
+  it("returns false when non-admin user does not have the specific role", () => {
+    expect(hasRoleOrAdmin(makeUser("editor"), "writer")).toBe(false)
+    expect(hasRoleOrAdmin(makeUser("writer"), "editor")).toBe(false)
   })
 })
 
@@ -128,29 +145,5 @@ describe("writer helper access", () => {
   it("denies narrator and member", () => {
     expect(writer(makeArgs(makeUser("narrator")))).toBe(false)
     expect(writer(makeArgs(makeUser("member")))).toBe(false)
-  })
-})
-
-describe("isPublishedOrStaff policy", () => {
-  it("allows all staff roles to read all documents", () => {
-    for (const role of ["narrator", "writer", "editor", "chief-editor", "admin"]) {
-      expect(isPublishedOrStaff(makeArgs(makeUser(role)))).toBe(true)
-    }
-  })
-
-  it("restricts member role to published documents", () => {
-    expect(isPublishedOrStaff(makeArgs(makeUser("member")))).toEqual({
-      _status: {
-        equals: "published",
-      },
-    })
-  })
-
-  it("restricts anonymous users to published documents", () => {
-    expect(isPublishedOrStaff(makeArgs(null))).toEqual({
-      _status: {
-        equals: "published",
-      },
-    })
   })
 })

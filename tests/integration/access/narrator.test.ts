@@ -92,7 +92,7 @@ describe("narrator access", () => {
     expect(media.id).toBeDefined()
   })
 
-  it("denies narrator from updating media (narrator < editor, isCreatedByUnlessEditor gate)", async () => {
+  it("denies narrator from updating media (narrator < editor, isCreatedByOrEditor gate)", async () => {
     const narrator = await createUser("narrator")
 
     const media = await payload.create({
@@ -120,7 +120,7 @@ describe("narrator access", () => {
     ).rejects.toThrow()
   })
 
-  it("denies narrator from deleting media (narrator < editor, isCreatedByUnlessEditor gate)", async () => {
+  it("denies narrator from deleting media (narrator < editor, isCreatedByOrEditor gate)", async () => {
     const narrator = await createUser("narrator")
 
     const media = await payload.create({
@@ -147,7 +147,7 @@ describe("narrator access", () => {
     ).rejects.toThrow()
   })
 
-  it("denies narrator from deleting an article (narrator < editor, isCreatedByUnlessEditor gate)", async () => {
+  it("denies narrator from deleting an article (narrator < editor, isCreatedByOrEditor gate)", async () => {
     const narrator = await createUser("narrator")
     const writer = await createUser("writer")
 

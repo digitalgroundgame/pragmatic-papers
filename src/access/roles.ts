@@ -60,6 +60,14 @@ export const writerFieldLevel: FieldAccess = ({ req: { user } }) => {
   return hasRoleOrAdmin(user, "writer")
 }
 
+export const writerOrEditor: Access = ({ req: { user } }) => {
+  return hasRoleOrAdmin(user, ["writer", "editor"])
+}
+
+export const writerOrEditorFieldLevel: FieldAccess = ({ req: { user } }) => {
+  return hasRoleOrAdmin(user, ["writer", "editor"])
+}
+
 export const staff = ({ req: { user } }: AccessArgs<User>): boolean => {
   return isStaff(user)
 }

@@ -1,4 +1,4 @@
-import { anyone, editor, writer } from "@/access/roles"
+import { anyone, editor, writerOrEditor } from "@/access/roles"
 import {
   MetaDescriptionField,
   MetaImageField,
@@ -12,7 +12,7 @@ import { slugField } from "payload"
 export const Topics: CollectionConfig = {
   slug: "topics",
   access: {
-    create: writer,
+    create: writerOrEditor,
     delete: editor,
     read: anyone,
     update: editor,

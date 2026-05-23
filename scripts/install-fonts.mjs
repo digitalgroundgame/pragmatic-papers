@@ -12,6 +12,7 @@ const src = resolve(
 )
 const dest = resolve(__dirname, "../public/fonts")
 const placeholder = resolve(dest, "FKScreamer-Bold.woff2")
+const blankFont = resolve(__dirname, "AdobeBlank.woff2")
 
 console.warn(`${blue("●")} Installing fonts...`)
 mkdirSync(dest, { recursive: true })
@@ -28,6 +29,6 @@ if (existsSync(placeholder) && readFileSync(placeholder).byteLength !== 0) {
 }
 
 console.warn(`${yellow("⚠")} @digitalgroundgame/fonts not found`)
-writeFileSync(placeholder, "")
+writeFileSync(placeholder, readFileSync(blankFont))
 console.warn(`${green("✔")} Using placeholder font file`)
 process.exit(0)

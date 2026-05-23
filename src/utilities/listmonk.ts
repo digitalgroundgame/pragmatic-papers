@@ -10,10 +10,14 @@
  *   LISTMONK_API_USER                   admin/API user
  *   LISTMONK_API_TOKEN                  admin/API token
  *   LISTMONK_NEWSLETTER_LIST_ID         numeric ID of the "Newsletter" list
+ *                                       (used by the admin /api/campaigns calls)
+ *   LISTMONK_NEWSLETTER_LIST_UUID       UUID of the same list (used by the
+ *                                       public /api/public/subscription endpoint,
+ *                                       which only accepts list_uuids not list_ids)
  *   NEWSLETTER_FROM_EMAIL               e.g. "Pragmatic Papers <newsletter@newsletter.example.com>"
  *   LISTMONK_WELCOME_TX_TEMPLATE_ID     numeric ID of a Listmonk transactional
- *                                       template whose body is `{{ .Tx.Data.body }}`
- *                                       (passthrough for our pre-rendered HTML)
+ *                                       template (optional; only used by the
+ *                                       deferred mid-drip welcome flow)
  */
 
 const REQUIRED_ENV = [
@@ -21,6 +25,7 @@ const REQUIRED_ENV = [
   "LISTMONK_API_USER",
   "LISTMONK_API_TOKEN",
   "LISTMONK_NEWSLETTER_LIST_ID",
+  "LISTMONK_NEWSLETTER_LIST_UUID",
   "NEWSLETTER_FROM_EMAIL",
 ] as const
 
@@ -29,6 +34,7 @@ interface ListmonkConfig {
   apiUser: string
   apiToken: string
   newsletterListId: number
+  newsletterListUuid: string
   fromEmail: string
   welcomeTxTemplateId?: number
 }
@@ -42,6 +48,7 @@ function readConfig(): ListmonkConfig {
     apiUser: process.env.LISTMONK_API_USER!,
     apiToken: process.env.LISTMONK_API_TOKEN!,
     newsletterListId: Number(process.env.LISTMONK_NEWSLETTER_LIST_ID),
+    newsletterListUuid: process.env.LISTMONK_NEWSLETTER_LIST_UUID!,
     fromEmail: process.env.NEWSLETTER_FROM_EMAIL!,
     welcomeTxTemplateId: process.env.LISTMONK_WELCOME_TX_TEMPLATE_ID
       ? Number(process.env.LISTMONK_WELCOME_TX_TEMPLATE_ID)
@@ -162,15 +169,15 @@ export interface SubscribeMemberInput {
 export async function subscribeMember(input: SubscribeMemberInput): Promise<void> {
   const cfg = readConfig()
   // The /public endpoint mirrors what Listmonk's hosted form does; it triggers
-  // double-opt-in if the list is configured for it.
+  // double-opt-in if the list is configured for it. It only accepts list_uuids
+  // (not list_ids) — that's why we keep the UUID alongside the numeric id.
   const res = await fetch(`${cfg.baseUrl}/api/public/subscription`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       email: input.email,
       name: input.name ?? input.email.split("@")[0],
-      list_uuids: [],
-      list_ids: [cfg.newsletterListId],
+      list_uuids: [cfg.newsletterListUuid],
     }),
     cache: "no-store",
   })

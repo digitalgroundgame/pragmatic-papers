@@ -2,6 +2,8 @@
 
 import * as React from "react"
 
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 import type { NewsletterSignupBlock as Props } from "@/payload-types"
 
 type Status = "idle" | "submitting" | "success" | "error"
@@ -10,6 +12,7 @@ export const NewsletterSignupBlock: React.FC<Props> = ({ heading, description, b
   const [email, setEmail] = React.useState("")
   const [status, setStatus] = React.useState<Status>("idle")
   const [message, setMessage] = React.useState<string | null>(null)
+  const disabled = status === "submitting" || status === "success"
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>): Promise<void> => {
     e.preventDefault()
@@ -38,14 +41,14 @@ export const NewsletterSignupBlock: React.FC<Props> = ({ heading, description, b
   }
 
   return (
-    <section className="container my-8 rounded-lg border border-neutral-200 bg-neutral-50 p-6">
+    <section className="bg-card text-card-foreground container my-8 rounded-lg border p-6">
       {heading ? <h3 className="m-0 text-xl font-semibold">{heading}</h3> : null}
-      {description ? <p className="mt-2 text-sm text-neutral-700">{description}</p> : null}
+      {description ? <p className="text-muted-foreground mt-2 text-sm">{description}</p> : null}
       <form onSubmit={handleSubmit} className="mt-4 flex flex-col gap-2 sm:flex-row">
         <label htmlFor="newsletter-email" className="sr-only">
           Email address
         </label>
-        <input
+        <Input
           id="newsletter-email"
           name="email"
           type="email"
@@ -56,20 +59,16 @@ export const NewsletterSignupBlock: React.FC<Props> = ({ heading, description, b
           onChange={(e) => setEmail(e.target.value)}
           placeholder="you@example.com"
           maxLength={254}
-          className="flex-1 rounded-md border border-neutral-300 bg-white px-3 py-2 text-sm"
-          disabled={status === "submitting" || status === "success"}
+          className="flex-1"
+          disabled={disabled}
         />
-        <button
-          type="submit"
-          disabled={status === "submitting" || status === "success"}
-          className="rounded-md bg-neutral-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
-        >
+        <Button type="submit" disabled={disabled}>
           {status === "submitting" ? "Subscribing…" : (buttonLabel ?? "Subscribe")}
-        </button>
+        </Button>
       </form>
       {message ? (
         <p
-          className={`mt-3 text-sm ${status === "error" ? "text-red-600" : "text-neutral-700"}`}
+          className={`mt-3 text-sm ${status === "error" ? "text-destructive" : "text-muted-foreground"}`}
           role={status === "error" ? "alert" : "status"}
         >
           {message}

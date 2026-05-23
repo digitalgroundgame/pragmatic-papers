@@ -13,7 +13,7 @@ import {
   STAFF_ROLES,
 } from "@/access/roles"
 import type { User } from "@/payload-types"
-import { isPublishedUnlessStaff } from "../policies"
+import { isPublishedOrStaff } from "../policies"
 
 const makeUser = (role?: User["role"] | string | null): User => ({ role }) as User
 const makeArgs = (user: User | null) => ({ req: { user } }) as Parameters<typeof staff>[0]
@@ -169,15 +169,15 @@ describe("staff (wrapper function)", () => {
   })
 })
 
-describe("isPublishedUnlessStaff policy", () => {
+describe("isPublishedOrStaff policy", () => {
   it("allows all staff roles to read all documents", () => {
     for (const role of ["narrator", "writer", "editor", "chief-editor", "admin"]) {
-      expect(isPublishedUnlessStaff(makeArgs(makeUser(role)))).toBe(true)
+      expect(isPublishedOrStaff(makeArgs(makeUser(role)))).toBe(true)
     }
   })
 
   it("restricts member role to published documents", () => {
-    expect(isPublishedUnlessStaff(makeArgs(makeUser("member")))).toEqual({
+    expect(isPublishedOrStaff(makeArgs(makeUser("member")))).toEqual({
       _status: {
         equals: "published",
       },
@@ -185,7 +185,7 @@ describe("isPublishedUnlessStaff policy", () => {
   })
 
   it("restricts anonymous users to published documents", () => {
-    expect(isPublishedUnlessStaff(makeArgs(null))).toEqual({
+    expect(isPublishedOrStaff(makeArgs(null))).toEqual({
       _status: {
         equals: "published",
       },

@@ -20,7 +20,7 @@ import { Code } from "@/blocks/Code/config"
 import { MediaBlock } from "@/blocks/MediaBlock/config"
 import { SquiggleRule } from "@/blocks/SquiggleRule/config"
 
-import { isPublishedUnlessStaff } from "@/access/policies"
+import { isPublishedOrStaff } from "@/access/policies"
 import { generatePreviewPath } from "@/utilities/generatePreviewPath"
 import {
   MetaDescriptionField,
@@ -40,7 +40,7 @@ export const Volumes: CollectionConfig = {
   access: {
     create: editor,
     delete: editor,
-    read: isPublishedUnlessStaff,
+    read: isPublishedOrStaff,
     update: editor,
   },
   admin: {

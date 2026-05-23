@@ -5,12 +5,12 @@ import { hasRole, ADMIN_ROLES, EDITOR_ROLES, STAFF_ROLES } from "./roles"
  * Access Control Policies
  *
  * Naming Conventions:
- * - Complex state and ownership checks with role exceptions use the format `is[Condition]Unless[ExemptRole]`
- *   or `is[State]Unless[ExemptRole]` (e.g., `isCreatedByUnlessEditor`, `isPublishedUnlessStaff`, `isDraftUnlessEditor`, `isSelfUnlessAdmin`).
+ * - Complex state and ownership checks with role exceptions use `is[Condition]Or[Role]` format
+ *   (e.g., `isCreatedByOrEditor`, `isPublishedOrStaff`, `isDraftOrEditor`, `isSelfOrAdmin`).
  */
 
 /** Allows admins, or the user matching their own user record (by id). */
-export const isSelfUnlessAdmin: Access = ({ req: { user } }) => {
+export const isSelfOrAdmin: Access = ({ req: { user } }) => {
   if (!user) {
     return false
   }
@@ -23,7 +23,7 @@ export const isSelfUnlessAdmin: Access = ({ req: { user } }) => {
 }
 
 /** Allows editors+, or the user who created the document. */
-export const isCreatedByUnlessEditor: Access = ({ req: { user } }) => {
+export const isCreatedByOrEditor: Access = ({ req: { user } }) => {
   if (!user) {
     return false
   }
@@ -36,7 +36,7 @@ export const isCreatedByUnlessEditor: Access = ({ req: { user } }) => {
 }
 
 /** Restricts updates to drafts only for writers (and requires ownership), while allowing editors. */
-export const isDraftUnlessEditor: Access = ({ req: { user } }) => {
+export const isDraftOrEditor: Access = ({ req: { user } }) => {
   if (!user) {
     return false
   }
@@ -55,7 +55,7 @@ export const isDraftUnlessEditor: Access = ({ req: { user } }) => {
 }
 
 /** Allows staff to view all statuses, while restricting others to published items only. */
-export const isPublishedUnlessStaff: Access = ({ req: { user } }) => {
+export const isPublishedOrStaff: Access = ({ req: { user } }) => {
   if (hasRole(user, STAFF_ROLES)) {
     return true
   }

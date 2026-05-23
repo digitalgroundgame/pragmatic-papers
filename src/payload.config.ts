@@ -1,3 +1,4 @@
+import { isAdmin } from "@/access/roles"
 import { Articles } from "@/collections/Articles"
 import { Categories } from "@/collections/Categories"
 import { Media } from "@/collections/Media"
@@ -116,7 +117,7 @@ export default buildConfig({
       path: "/article-recommendations/run",
       method: "post",
       handler: async (req) => {
-        if (!req.user) {
+        if (!isAdmin(req.user)) {
           return Response.json({ error: "Unauthorized" }, { status: 401 })
         }
         const job = await req.payload.jobs.queue({

@@ -12,7 +12,7 @@ export function getPayload(): Promise<Payload> {
   return payloadPromise
 }
 
-export type Role = NonNullable<User["role"]>
+export type Role = "admin" | "chief-editor" | "editor" | "writer" | "narrator" | "member"
 
 export async function createUser(role: Role): Promise<User> {
   const payload = await getPayload()
@@ -25,7 +25,7 @@ export async function createUser(role: Role): Promise<User> {
       email: `test-${role}-${suffix}@example.com`,
       password: "test-password",
       name: `${role} test user ${suffix}`,
-      role,
+      roles: [role],
     } as unknown as User,
   })
   return result

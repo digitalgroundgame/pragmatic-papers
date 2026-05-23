@@ -69,8 +69,8 @@ describe("field-level access", () => {
     })
   })
 
-  describe("adminFieldLevel on role (Users)", () => {
-    it("allows admin to update another user's role", async () => {
+  describe("adminFieldLevel on roles (Users)", () => {
+    it("allows admin to update another user's roles", async () => {
       const admin = await createUser("admin")
       const target = await createUser("member")
 
@@ -80,13 +80,13 @@ describe("field-level access", () => {
         overrideAccess: false,
         user: admin,
         context: { disableRevalidate: true },
-        data: { role: "narrator" },
+        data: { roles: ["narrator"] },
       })
 
-      expect(updated.role).toBe("narrator")
+      expect(updated.roles).toContain("narrator")
     })
 
-    it("denies non-admin user from updating their own role", async () => {
+    it("denies non-admin user from updating their own roles", async () => {
       const editor = await createUser("editor")
 
       const updated = await payload.update({
@@ -95,11 +95,12 @@ describe("field-level access", () => {
         overrideAccess: false,
         user: editor,
         context: { disableRevalidate: true },
-        data: { role: "narrator" },
+        data: { roles: ["narrator"] },
       })
 
-      // Same silent-drop behavior: the role field is ignored, not thrown.
-      expect(updated.role).toBe("editor")
+      // Same silent-drop behavior: the roles field is ignored, not thrown.
+      expect(updated.roles).toContain("editor")
+      expect(updated.roles).not.toContain("narrator")
     })
   })
 

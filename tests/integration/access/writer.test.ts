@@ -24,7 +24,7 @@ describe("writer access", () => {
     expect(topic.name).toBe("Topic by Writer - writer")
   })
 
-  it("allows editor to create a topic (writer+)", async () => {
+  it("allows editor to create a topic", async () => {
     const editor = await createUser("editor")
 
     const topic = await payload.create({
@@ -38,7 +38,7 @@ describe("writer access", () => {
     expect(topic).toBeDefined()
   })
 
-  it("allows admin to create a topic (writer+)", async () => {
+  it("allows admin to create a topic", async () => {
     const admin = await createUser("admin")
 
     const topic = await payload.create({
@@ -52,7 +52,7 @@ describe("writer access", () => {
     expect(topic).toBeDefined()
   })
 
-  it("denies narrator from creating a topic (narrator < writer)", async () => {
+  it("denies narrator from creating a topic", async () => {
     const narrator = await createUser("narrator")
 
     await expect(
@@ -66,7 +66,7 @@ describe("writer access", () => {
     ).rejects.toThrow()
   })
 
-  it("denies member from creating a topic (member < writer)", async () => {
+  it("denies member from creating a topic", async () => {
     const member = await createUser("member")
 
     await expect(

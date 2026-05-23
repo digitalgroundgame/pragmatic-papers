@@ -1,6 +1,5 @@
-import { authenticatedOrPublished } from "@/access/authenticatedOrPublished"
+import { isPublishedOrStaff, isCreatedByOrEditor, isDraftOrEditor } from "@/access/policies"
 import { editorFieldLevel, writer } from "@/access/roles"
-import { editorOrSelf, restrictWritersToDraftOnly } from "@/access/editorOrSelf"
 import { Banner } from "@/blocks/Banner/config"
 import { Code } from "@/blocks/Code/config"
 import { FootnoteBlock } from "@/blocks/Footnote/config"
@@ -72,9 +71,9 @@ export const Articles: CollectionConfig = {
   slug: "articles",
   access: {
     create: writer,
-    delete: editorOrSelf,
-    read: authenticatedOrPublished,
-    update: restrictWritersToDraftOnly,
+    delete: isCreatedByOrEditor,
+    read: isPublishedOrStaff,
+    update: isDraftOrEditor,
   },
   admin: {
     defaultColumns: ["title", "slug", "updatedAt"],
@@ -229,8 +228,8 @@ export const Articles: CollectionConfig = {
       hasMany: true,
       relationTo: "users",
       filterOptions: {
-        role: {
-          in: ["writer", "editor", "chief-editor"],
+        roles: {
+          in: ["writer", "admin", "chief-editor"],
         },
       },
     },

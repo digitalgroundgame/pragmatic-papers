@@ -4,7 +4,7 @@ import type { Article } from "@/payload-types"
 import { getPayload, createUser } from "../helpers/testUsers"
 import { ARTICLE_CONTENT } from "../fixtures/content"
 
-describe("authenticatedOrPublished access", () => {
+describe("isPublishedOrStaff access", () => {
   let payload: Payload
 
   beforeAll(async () => {
@@ -27,9 +27,9 @@ describe("authenticatedOrPublished access", () => {
     ).rejects.toThrow()
   })
 
-  it("allows authenticated user to read a draft article", async () => {
-    const member = await createUser("member")
+  it("allows staff user to read a draft article", async () => {
     const writer = await createUser("writer")
+    const narrator = await createUser("narrator")
 
     const draft = await payload.create({
       collection: "articles",
@@ -47,10 +47,36 @@ describe("authenticatedOrPublished access", () => {
       collection: "articles",
       id: draft.id,
       overrideAccess: false,
-      user: member,
+      user: narrator,
     })
 
     expect(result.id).toBe(draft.id)
+  })
+
+  it("denies member user from reading a draft article", async () => {
+    const member = await createUser("member")
+    const writer = await createUser("writer")
+
+    const draft = await payload.create({
+      collection: "articles",
+      overrideAccess: true,
+      context: { disableRevalidate: true },
+      data: {
+        title: "Draft Article AoP - aop member read",
+        content: ARTICLE_CONTENT,
+        _status: "draft",
+      } as unknown as Article,
+      user: writer,
+    })
+
+    await expect(
+      payload.findByID({
+        collection: "articles",
+        id: draft.id,
+        overrideAccess: false,
+        user: member,
+      }),
+    ).rejects.toThrow()
   })
 
   it("allows authenticated user to read a published article", async () => {
@@ -121,8 +147,8 @@ describe("authenticatedOrPublished access", () => {
     ).rejects.toThrow()
   })
 
-  it("allows authenticated user to find both draft and published articles", async () => {
-    const member = await createUser("member")
+  it("allows staff user to find both draft and published articles", async () => {
+    const narrator = await createUser("narrator")
 
     const draft = await payload.create({
       collection: "articles",
@@ -149,7 +175,7 @@ describe("authenticatedOrPublished access", () => {
     const result = await payload.find({
       collection: "articles",
       overrideAccess: false,
-      user: member,
+      user: narrator,
       where: {
         id: { in: [draft.id, published.id] },
       },
@@ -157,6 +183,44 @@ describe("authenticatedOrPublished access", () => {
 
     expect(result.docs).toHaveLength(2)
     expect(result.docs.map((d) => d.id)).toEqual(expect.arrayContaining([draft.id, published.id]))
+  })
+
+  it("filters draft articles for member user find", async () => {
+    const member = await createUser("member")
+
+    const draft = await payload.create({
+      collection: "articles",
+      overrideAccess: true,
+      context: { disableRevalidate: true },
+      data: {
+        title: "Draft Find Member AoP - aop",
+        content: ARTICLE_CONTENT,
+        _status: "draft",
+      } as unknown as Article,
+    })
+
+    const published = await payload.create({
+      collection: "articles",
+      overrideAccess: true,
+      context: { disableRevalidate: true },
+      data: {
+        title: "Published Find Member AoP - aop",
+        content: ARTICLE_CONTENT,
+        _status: "published",
+      } as unknown as Article,
+    })
+
+    const result = await payload.find({
+      collection: "articles",
+      overrideAccess: false,
+      user: member,
+      where: {
+        id: { in: [draft.id, published.id] },
+      },
+    })
+
+    expect(result.docs).toHaveLength(1)
+    expect(result.docs.map((d) => d.id)).toEqual([published.id])
   })
 
   it("filters draft articles for unauthenticated user find", async () => {

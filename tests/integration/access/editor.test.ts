@@ -92,7 +92,7 @@ describe("editor access", () => {
     expect(deleted.id).toBe(topic.id)
   })
 
-  it("denies writer from updating a topic (writer < editor)", async () => {
+  it("denies writer from updating a topic", async () => {
     const writer = await createUser("writer")
 
     const topic = await payload.create({
@@ -113,7 +113,7 @@ describe("editor access", () => {
     ).rejects.toThrow()
   })
 
-  it("denies writer from deleting a topic (writer < editor)", async () => {
+  it("denies writer from deleting a topic", async () => {
     const writer = await createUser("writer")
 
     const topic = await payload.create({

@@ -32,7 +32,7 @@ ARG GH_FONT_READ
 ENV GH_FONT_READ=${GH_FONT_READ}
 
 # 1. First, only copy files that determine the dependency tree (lockfile)
-COPY pnpm-lock.yaml .npmrc ./
+COPY pnpm-lock.yaml .npmrc pnpm-workspace.yaml ./
 
 # 2. Fetch dependencies into the pnpm store using a cache mount.
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store \

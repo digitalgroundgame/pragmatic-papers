@@ -8,10 +8,8 @@ overrides:
 allowBuilds:
   canvas: true
   core-js-pure: true
-  cpu-features: true
   esbuild: true
   msw: true
   protobufjs: true
   sharp: true
-  ssh2: true
   unrs-resolver: true

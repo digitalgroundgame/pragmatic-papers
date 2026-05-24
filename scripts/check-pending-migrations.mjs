@@ -33,7 +33,9 @@ try {
     console.warn(`${green("✔")} No pending migrations detected.`)
     process.exit(0)
   } else {
-    console.error(`${red("✖")} Pending migrations detected! Please run 'pnpm payload migrate:create' locally and commit the result.`)
+    console.error(
+      `${red("✖")} Pending migrations detected! Please run 'pnpm payload migrate:create' locally and commit the result.`,
+    )
     console.warn(output)
     process.exit(1)
   }

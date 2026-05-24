@@ -1,4 +1,4 @@
-import { cpSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "fs"
+import { cpSync, existsSync, mkdirSync, readFileSync } from "fs"
 import { dirname, resolve } from "path"
 import process from "process"
 import { fileURLToPath } from "url"
@@ -6,8 +6,7 @@ import { blue, gray, green, yellow } from "./ansi.mjs"
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 
-const FALLBACK_FONT_FAMILY = "Inter"
-const FALLBACK_FONT_WEIGHT = "700"
+const fallbackFont = resolve(__dirname, "Inter-Bold.woff2")
 
 const src = resolve(
   __dirname,
@@ -51,47 +50,6 @@ if (!process.env.GH_FONT_READ) {
   )
 }
 
-const FALLBACK_FONT_URL = `https://fonts.googleapis.com/css2?family=${FALLBACK_FONT_FAMILY}:wght@${FALLBACK_FONT_WEIGHT}&display=swap`
-
-let downloaded = false
-
-try {
-  console.warn(gray(`  -> Downloading ${FALLBACK_FONT_FAMILY} as fallback...`))
-  const cssResp = await fetch(FALLBACK_FONT_URL, {
-    headers: {
-      "User-Agent":
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-    },
-  })
-  const css = await cssResp.text()
-
-  const latinMatch = css.match(
-    /url\(([^)]+)\) format\('woff2'\)[^}]*unicode-range:\s*U\+0000-00FF/,
-  )
-  const url = latinMatch?.[1]
-
-  if (url) {
-    console.warn(gray(`  -> Fetching woff2 from Google Fonts CDN...`))
-    const fontResp = await fetch(url)
-    if (fontResp.ok) {
-      const buffer = Buffer.from(await fontResp.arrayBuffer())
-      writeFileSync(fontPath, buffer)
-      console.warn(`${green("✔")} Downloaded ${FALLBACK_FONT_FAMILY} Bold as fallback font (${(buffer.byteLength / 1024).toFixed(1)} KB)`)
-      downloaded = true
-    }
-  }
-} catch (err) {
-  console.warn(gray(`  -> Download failed: ${err.message}`))
-}
-
-if (!downloaded) {
-  console.warn(`${yellow("⚠")} Could not download fallback font.`)
-  console.warn(
-    gray(
-      `  To use the real fonts, set GH_FONT_READ to a valid GitHub PAT and run 'pnpm reinstall'.
-  Otherwise, ensure network access to download the fallback font.`,
-    ),
-  )
-}
-
+cpSync(fallbackFont, fontPath)
+console.warn(`${green("✔")} Copied Inter Bold as fallback font`)
 process.exit(0)

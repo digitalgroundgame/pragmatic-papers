@@ -6,13 +6,15 @@ import { blue, gray, green, yellow } from "./ansi.mjs"
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 
+const FALLBACK_FONT_FAMILY = "Inter"
+const FALLBACK_FONT_WEIGHT = "700"
+
 const src = resolve(
   __dirname,
   "../node_modules/@digitalgroundgame/fonts/assets/FKScreamer-2.0.3/woff2-static",
 )
 const dest = resolve(__dirname, "../public/fonts")
-const placeholder = resolve(dest, "FKScreamer-Bold.woff2")
-const blankFont = resolve(__dirname, "AdobeBlank.woff2")
+const fontPath = resolve(dest, "FKScreamer-Bold.woff2")
 
 console.warn(`${blue("●")} Installing fonts...`)
 mkdirSync(dest, { recursive: true })
@@ -23,27 +25,7 @@ if (existsSync(src)) {
   process.exit(0)
 }
 
-if (existsSync(placeholder)) {
-  const currentFont = readFileSync(placeholder)
-  const isAdobeBlank = currentFont.equals(readFileSync(blankFont))
-  const isOldPlaceholder = currentFont.byteLength < 1000 && !isAdobeBlank
-
-  if (isAdobeBlank) {
-    console.warn(gray("○ Fonts already installed (placeholder)"))
-    console.warn(
-      gray(
-        `  Note: To install the real fonts, set the GH_FONT_READ environment variable\n  to a valid GitHub PAT (read:packages scope) and run 'pnpm reinstall'.`,
-      ),
-    )
-    process.exit(0)
-  }
-
-  if (isOldPlaceholder) {
-    writeFileSync(placeholder, readFileSync(blankFont))
-    console.warn(`${green("✔")} Updated placeholder font file`)
-    process.exit(0)
-  }
-
+if (existsSync(fontPath) && readFileSync(fontPath).byteLength > 1000) {
   console.warn(gray("○ Fonts already installed (real)"))
   process.exit(0)
 }
@@ -69,12 +51,47 @@ if (!process.env.GH_FONT_READ) {
   )
 }
 
-console.warn(
-  gray(
-    `  -> Falling back to using a blank placeholder font file so Next.js does not crash during build.`,
-  ),
-)
+const FALLBACK_FONT_URL = `https://fonts.googleapis.com/css2?family=${FALLBACK_FONT_FAMILY}:wght@${FALLBACK_FONT_WEIGHT}&display=swap`
 
-writeFileSync(placeholder, readFileSync(blankFont))
-console.warn(`${green("✔")} Using placeholder font file`)
+let downloaded = false
+
+try {
+  console.warn(gray(`  -> Downloading ${FALLBACK_FONT_FAMILY} as fallback...`))
+  const cssResp = await fetch(FALLBACK_FONT_URL, {
+    headers: {
+      "User-Agent":
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    },
+  })
+  const css = await cssResp.text()
+
+  const latinMatch = css.match(
+    /url\(([^)]+)\) format\('woff2'\)[^}]*unicode-range:\s*U\+0000-00FF/,
+  )
+  const url = latinMatch?.[1]
+
+  if (url) {
+    console.warn(gray(`  -> Fetching woff2 from Google Fonts CDN...`))
+    const fontResp = await fetch(url)
+    if (fontResp.ok) {
+      const buffer = Buffer.from(await fontResp.arrayBuffer())
+      writeFileSync(fontPath, buffer)
+      console.warn(`${green("✔")} Downloaded ${FALLBACK_FONT_FAMILY} Bold as fallback font (${(buffer.byteLength / 1024).toFixed(1)} KB)`)
+      downloaded = true
+    }
+  }
+} catch (err) {
+  console.warn(gray(`  -> Download failed: ${err.message}`))
+}
+
+if (!downloaded) {
+  console.warn(`${yellow("⚠")} Could not download fallback font.`)
+  console.warn(
+    gray(
+      `  To use the real fonts, set GH_FONT_READ to a valid GitHub PAT and run 'pnpm reinstall'.
+  Otherwise, ensure network access to download the fallback font.`,
+    ),
+  )
+}
+
 process.exit(0)

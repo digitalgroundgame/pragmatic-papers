@@ -19,7 +19,6 @@ const FKScreamer = localFont({
   display: "swap",
   fallback: ["fantasy", "sans-serif"],
   variable: "--font-display",
-  adjustFontFallback: false,
 })
 
 const geist = Geist({

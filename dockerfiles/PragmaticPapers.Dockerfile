@@ -60,7 +60,6 @@ RUN chmod +x /usr/local/bin/modify-database-uri.sh /usr/local/bin/copy-database.
 
 # --- BUILD CONFIGURATION ---
 ARG NODE_ENV=production
-ARG BUILD_ENV=production
 ARG DATABASE_URI
 ARG PAYLOAD_SECRET
 ARG NEXT_PUBLIC_SERVER_URL

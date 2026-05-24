@@ -25,10 +25,21 @@ if (existsSync(src)) {
 
 if (existsSync(placeholder)) {
   const currentFont = readFileSync(placeholder)
-  const isPlaceholder = currentFont.equals(readFileSync(blankFont))
-  console.warn(
-    gray(`○ Fonts already installed (${isPlaceholder ? "placeholder" : "real"})`),
-  )
+  const isAdobeBlank = currentFont.equals(readFileSync(blankFont))
+  const isOldPlaceholder = currentFont.byteLength < 1000 && !isAdobeBlank
+
+  if (isAdobeBlank) {
+    console.warn(gray("○ Fonts already installed (placeholder)"))
+    process.exit(0)
+  }
+
+  if (isOldPlaceholder) {
+    writeFileSync(placeholder, readFileSync(blankFont))
+    console.warn(`${green("✔")} Updated placeholder font file`)
+    process.exit(0)
+  }
+
+  console.warn(gray("○ Fonts already installed (real)"))
   process.exit(0)
 }
 

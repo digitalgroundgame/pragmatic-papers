@@ -63,8 +63,8 @@ parse_postgres_uri() {
     # Extract host:port (after @)
     local host_port=$(echo "$userpass_hostport" | sed 's/.*@//')
     
-    # Extract user:password (before @)
-    local user_pass=$(echo "$userpass_hostport" | sed 's/@.*//')
+    # Extract user:password (before last @)
+    local user_pass=$(echo "$userpass_hostport" | sed 's/\(.*\)@.*/\1/')
     
     # Extract user (before :)
     local user=$(echo "$user_pass" | sed 's/:.*//')

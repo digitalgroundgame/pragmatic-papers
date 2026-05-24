@@ -1,6 +1,11 @@
 #!/bin/sh
 set -e
 
+# Source database URI override if present (for preview deployments)
+if [ -f build.env ]; then
+    . build.env
+fi
+
 echo "========================================="
 echo "Starting Pragmatic Papers Application"
 echo "Node version: $(node --version)"

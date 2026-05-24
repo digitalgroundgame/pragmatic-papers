@@ -30,6 +30,11 @@ if (existsSync(placeholder)) {
 
   if (isAdobeBlank) {
     console.warn(gray("○ Fonts already installed (placeholder)"))
+    console.warn(
+      gray(
+        `  Note: To install the real fonts, set the GH_FONT_READ environment variable\n  to a valid GitHub PAT (read:packages scope) and run 'pnpm reinstall'.`,
+      ),
+    )
     process.exit(0)
   }
 

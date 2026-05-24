@@ -109,7 +109,7 @@ RUN apk add --no-cache postgresql-client
 # 1. Isolated Preview Logic (clones DB for PRs)
 # 2. Migration Logic (runs on the final target DB)
 RUN /usr/local/bin/modify-database-uri.sh && \
-    if [ -f /tmp/database_uri.env ]; then . /tmp/database_uri.env; fi && \
+    if [ -f /tmp/build.env ]; then . /tmp/build.env; fi && \
     /usr/local/bin/copy-database.sh && \
     echo "--- PHASE: DATABASE MIGRATIONS ---" && \
     pnpm payload migrate && \
@@ -118,7 +118,7 @@ RUN /usr/local/bin/modify-database-uri.sh && \
 # --- NEXT.JS BUILD ---
 RUN --mount=type=cache,id=nextjs,target=/app/.next/cache \
     echo "--- PHASE: BUILDING NEXT.JS ---" && \
-    if [ -f /tmp/database_uri.env ]; then . /tmp/database_uri.env; fi && \
+    if [ -f /tmp/build.env ]; then . /tmp/build.env; fi && \
     pnpm build && \
     echo "--- COMPLETED: BUILDING NEXT.JS ---"
 
@@ -143,6 +143,7 @@ RUN apk add --no-cache dumb-init libc6-compat \
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
+COPY --from=builder --chown=nextjs:nodejs /tmp/build.env ./build.env
 
 # Prepare media directory and set permissions
 RUN mkdir -p public/media \

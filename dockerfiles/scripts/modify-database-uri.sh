@@ -13,6 +13,8 @@ if [ "$BUILD_ENV" != "preview" ]; then
     echo "BUILD_ENV is not 'preview' (current: ${BUILD_ENV:-not set})"
     echo "Skipping DATABASE_URI modification"
     echo "DATABASE_URI: $DATABASE_URI"
+    # Write default to build.env so COPY in Dockerfile doesn't fail
+    echo "export DATABASE_URI='$DATABASE_URI'" > /tmp/build.env
     exit 0
 fi
 
@@ -22,6 +24,7 @@ echo "BUILD_ENV: preview - proceeding with DATABASE_URI modification"
 if [ -z "$COOLIFY_FQDN" ]; then
     echo "COOLIFY_FQDN is not set, using DATABASE_URI as-is"
     echo "DATABASE_URI: $DATABASE_URI"
+    echo "export DATABASE_URI='$DATABASE_URI'" > /tmp/build.env
     exit 0
 fi
 
@@ -74,8 +77,8 @@ echo "New database name: $NEW_DB_NAME"
 echo "Modified DATABASE_URI: $NEW_DATABASE_URI"
 
 # Export the modified DATABASE_URI for subsequent commands
-# We'll write it to a file that can be sourced
-echo "export DATABASE_URI='$NEW_DATABASE_URI'" > /tmp/database_uri.env
+# Write to /tmp/build.env (persisted to runtime via COPY in Dockerfile)
+echo "export DATABASE_URI='$NEW_DATABASE_URI'" > /tmp/build.env
 
 echo "========================================"
 echo "Database URI modification complete"

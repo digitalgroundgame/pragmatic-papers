@@ -1,5 +1,5 @@
 import { isPublishedOrStaff, isCreatedByOrEditor, isDraftOrEditor } from "@/access/policies"
-import { editorFieldLevel, writer } from "@/access/roles"
+import { editorFieldLevel, writerOrEditor } from "@/access/roles"
 import { Banner } from "@/blocks/Banner/config"
 import { Code } from "@/blocks/Code/config"
 import { FootnoteBlock } from "@/blocks/Footnote/config"
@@ -70,7 +70,7 @@ const setPublishedAtDefault: FieldHook<Article, Article["publishedAt"]> = ({
 export const Articles: CollectionConfig = {
   slug: "articles",
   access: {
-    create: writer,
+    create: writerOrEditor,
     delete: isCreatedByOrEditor,
     read: isPublishedOrStaff,
     update: isDraftOrEditor,
@@ -229,7 +229,7 @@ export const Articles: CollectionConfig = {
       relationTo: "users",
       filterOptions: {
         roles: {
-          in: ["writer", "admin", "chief-editor"],
+          in: ["writer", "editor", "chief-editor", "admin"],
         },
       },
     },

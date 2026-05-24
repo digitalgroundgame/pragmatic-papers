@@ -1,6 +1,8 @@
 import { describe, expect, it, beforeAll } from "vitest"
 import type { Payload } from "payload"
 import { getPayload, createUser } from "../helpers/testUsers"
+import type { Article } from "@/payload-types"
+import { ARTICLE_CONTENT } from "../fixtures/content"
 
 describe("editor access", () => {
   let payload: Payload
@@ -131,5 +133,24 @@ describe("editor access", () => {
         user: writer,
       }),
     ).rejects.toThrow()
+  })
+
+  it("allows editor to create an article", async () => {
+    const editor = await createUser("editor")
+
+    const article = await payload.create({
+      collection: "articles",
+      overrideAccess: false,
+      user: editor,
+      context: { disableRevalidate: true },
+      data: {
+        title: "Article Created by Editor",
+        content: ARTICLE_CONTENT,
+        _status: "draft",
+      } as unknown as Article,
+    })
+
+    expect(article).toBeDefined()
+    expect(article.title).toBe("Article Created by Editor")
   })
 })

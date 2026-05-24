@@ -103,6 +103,13 @@ TARGET_DB=$(echo "$TARGET_PARSED" | cut -d'|' -f5)
 echo "Source: $SOURCE_USER@$SOURCE_HOST:$SOURCE_PORT/$SOURCE_DB"
 echo "Target: $TARGET_USER@$TARGET_HOST:$TARGET_PORT/$TARGET_DB"
 
+# Guard against source and target being the exact same database
+if [ "$SOURCE_HOST" = "$TARGET_HOST" ] && [ "$SOURCE_PORT" = "$TARGET_PORT" ] && [ "$SOURCE_DB" = "$TARGET_DB" ]; then
+    echo "Source and target are the same database ($SOURCE_DB@$SOURCE_HOST:$SOURCE_PORT)"
+    echo "Skipping database copy to avoid dropping production data"
+    exit 0
+fi
+
 # Export PGPASSWORD for psql/createdb commands
 export PGPASSWORD="$TARGET_PASSWORD"
 

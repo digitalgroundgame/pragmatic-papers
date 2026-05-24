@@ -43,7 +43,33 @@ if (existsSync(placeholder)) {
   process.exit(0)
 }
 
-console.warn(`${yellow("⚠")} @digitalgroundgame/fonts not found`)
+console.warn(`${yellow("⚠")} Optional dependency @digitalgroundgame/fonts is not installed.`)
+if (!process.env.GH_FONT_READ) {
+  console.warn(
+    gray(
+      `  Reason: The GH_FONT_READ environment variable is not set.
+  This token is required to authenticate with the GitHub Packages registry
+  to install the private @digitalgroundgame/fonts package.
+  To resolve this, set GH_FONT_READ to a valid GitHub Personal Access Token (PAT)
+  with read:packages scope, and then run 'pnpm reinstall'.`,
+    ),
+  )
+} else {
+  console.warn(
+    gray(
+      `  Reason: GH_FONT_READ is set, but the package was not found.
+  This can happen if the token is invalid/expired, or if optional dependencies
+  were skipped. Run 'pnpm reinstall' to force a fresh install and verify the token.`,
+    ),
+  )
+}
+
+console.warn(
+  gray(
+    `  -> Falling back to using a blank placeholder font file so Next.js does not crash during build.`,
+  ),
+)
+
 writeFileSync(placeholder, readFileSync(blankFont))
 console.warn(`${green("✔")} Using placeholder font file`)
 process.exit(0)

@@ -29,18 +29,30 @@ function articleExcerpt(article: Article): string {
   return `A new piece from Volume ${article.populatedVolume?.volumeNumber ?? ""}.`
 }
 
-function heroImageUrl(article: Article): string | null {
+/**
+ * Pipes the hero image through /_next/image so email clients fetch a
+ * width-capped, quality-80 version instead of the full-res original (which
+ * can be megabytes for high-res cover art). Both local-storage and Supabase
+ * sources are allowed by remotePatterns in next.config.ts; quality 80 matches
+ * the qualities allowlist there.
+ *
+ * Width 1120 = 2× the email's 560px max-width, so Retina mail clients still
+ * look sharp without serving 4K source files.
+ */
+function heroImageUrl(article: Article, siteUrl: string): string | null {
   const hero = article.heroImage
   if (!hero || typeof hero === "number") return null
-  const url = getMediaUrl(hero.url)
-  if (!url) return null
-  return url.startsWith("http") ? url : `${process.env.NEXT_PUBLIC_SERVER_URL ?? ""}${url}`
+  const raw = getMediaUrl(hero.url)
+  if (!raw) return null
+  const absoluteSrc = raw.startsWith("http") ? raw : `${siteUrl}${raw}`
+  const params = new URLSearchParams({ url: absoluteSrc, w: "1120", q: "80" })
+  return `${siteUrl}/_next/image?${params.toString()}`
 }
 
 export function VolumeArticleEmail(props: VolumeArticleEmailProps): React.ReactElement {
   const { article, volume, dayIndex, totalDays, siteUrl } = props
   const excerpt = articleExcerpt(article)
-  const heroUrl = heroImageUrl(article)
+  const heroUrl = heroImageUrl(article, siteUrl)
   const articleUrl = `${siteUrl}/articles/${article.slug}`
   const volumeUrl = `${siteUrl}/volumes/${volume.slug}`
 

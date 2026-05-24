@@ -29,11 +29,11 @@ import {
   OverviewField,
   PreviewField,
 } from "@payloadcms/plugin-seo/fields"
+import { scheduleNewsletterEndpoint } from "./endpoints/scheduleNewsletter"
 import { checkArticles } from "./hooks/checkArticles"
 import { getNextVolumeNumber } from "./hooks/getNextVolumeNumber"
 import { pushToWebhooks } from "./hooks/pushToWebhooks"
 import { revalidateArticle, revalidateDelete } from "./hooks/revalidateVolumes"
-import { scheduleNewsletter } from "./hooks/scheduleNewsletter"
 import { setDefaultSeoTitle } from "./hooks/seoTitle"
 
 export const Volumes: CollectionConfig = {
@@ -175,13 +175,25 @@ export const Volumes: CollectionConfig = {
         ],
       },
     },
+    {
+      name: "scheduleNewsletter",
+      type: "ui",
+      admin: {
+        position: "sidebar",
+        components: {
+          Field:
+            "@/collections/Volumes/components/ScheduleNewsletterButton#ScheduleNewsletterButton",
+        },
+      },
+    },
     slugField({
       useAsSlug: "volumeNumber",
       slugify: ({ valueToSlugify }) => String(valueToSlugify || ""),
     }),
   ],
+  endpoints: [scheduleNewsletterEndpoint],
   hooks: {
-    afterChange: [revalidateArticle, pushToWebhooks, scheduleNewsletter],
+    afterChange: [revalidateArticle, pushToWebhooks],
     afterDelete: [revalidateDelete],
     beforeChange: [setDefaultSeoTitle],
   },

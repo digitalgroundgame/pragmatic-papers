@@ -1,8 +1,8 @@
 import { render } from "@react-email/render"
-import { cookies } from "next/headers"
 import { type NextRequest } from "next/server"
-import { getPayload } from "payload"
+import { getPayload, type PayloadRequest } from "payload"
 
+import { isEditor } from "@/access/checkRole"
 import configPromise from "@payload-config"
 import { MidDripWelcomeEmail } from "@/emails/MidDripWelcome"
 import { VolumeArticleEmail } from "@/emails/VolumeArticle"
@@ -11,7 +11,7 @@ import { getServerSideURL } from "@/utilities/getURL"
 import type { Article, Volume } from "@/payload-types"
 
 /**
- * Admin-only HTML preview of the daily Volume-article email.
+ * Editor-only HTML preview of the daily Volume-article email.
  *
  * URL: /email-preview/<volumeId>/<dayIndex>
  *   - volumeId: numeric Volume id
@@ -19,26 +19,31 @@ import type { Article, Volume } from "@/payload-types"
  *     preview the mid-drip welcome template instead.
  *
  * Renders the same HTML Listmonk will receive, so editors can spot-check
- * the template before publishing a Volume.
+ * the template before publishing a Volume. Restricted to editor+ roles
+ * (editor, chief-editor, admin) — writers don't publish Volumes and don't
+ * need this preview.
  */
 export async function GET(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ volume: string; day: string }> },
 ): Promise<Response> {
   const { volume: volumeParam, day: dayParam } = await params
 
-  const cookieStore = await cookies()
-  const token = cookieStore.get("payload-token")?.value
-  if (!token) return new Response("Unauthorized", { status: 401 })
-
   const payload = await getPayload({ config: configPromise })
-  const meRes = await fetch(`${getServerSideURL()}/api/users/me`, {
-    headers: { Authorization: `JWT ${token}` },
-    cache: "no-store",
-  })
-  if (!meRes.ok) return new Response("Unauthorized", { status: 401 })
-  const me = (await meRes.json()) as { user?: { role?: string } }
-  if (!me.user) return new Response("Unauthorized", { status: 401 })
+  let user
+  try {
+    const auth = await payload.auth({
+      req: req as unknown as PayloadRequest,
+      headers: req.headers,
+    })
+    user = auth.user
+  } catch (err) {
+    payload.logger.error({ err }, "[email-preview] auth failed")
+    return new Response("Unauthorized", { status: 401 })
+  }
+  if (!user || !isEditor(user)) {
+    return new Response("Unauthorized", { status: 401 })
+  }
 
   const volumeId = Number(volumeParam)
   if (!Number.isFinite(volumeId)) return new Response("Invalid volume id", { status: 400 })

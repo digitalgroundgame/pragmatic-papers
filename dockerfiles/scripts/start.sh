@@ -2,8 +2,8 @@
 set -e
 
 # Source database URI override if present (for preview deployments)
-if [ -f build.env ]; then
-    . build.env
+if [ -f /app/build.env ]; then
+    . /app/build.env
 fi
 
 echo "========================================="

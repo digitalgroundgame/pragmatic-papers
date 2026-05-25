@@ -1,0 +1,36 @@
+name: Release
+
+on:
+  push:
+    branches: [main]
+    paths: [package.json]
+
+jobs:
+  release:
+    name: Tag and release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 2
+
+      - name: Check for version bump
+        id: version
+        run: |
+          CURRENT=$(jq -r .version package.json)
+          PREVIOUS=$(git show HEAD~1:package.json 2>/dev/null | jq -r .version || echo "")
+          echo "tag=v$CURRENT" >> "$GITHUB_OUTPUT"
+          if [ "$CURRENT" != "$PREVIOUS" ]; then
+            echo "bumped=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "bumped=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Create release
+        if: steps.version.outputs.bumped == 'true'
+        run: gh release create "${{ steps.version.outputs.tag }}" --target main --title "${{ steps.version.outputs.tag }}" --notes ""
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

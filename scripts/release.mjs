@@ -4,18 +4,22 @@ import { dirname, join } from "path"
 import process from "process"
 import * as readline from "readline"
 import { fileURLToPath } from "url"
+import { parseArgs } from "node:util"
 import { blue, gray, green, red, yellow } from "./ansi.mjs"
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const root = join(__dirname, "..")
 const pkgPath = join(root, "package.json")
 
-const args = process.argv.slice(2)
-const version = args.find((a) => /^\d+\.\d+\.\d+$/.test(a))
-const phaseArg = (() => {
-  const i = args.indexOf("--phase")
-  return i !== -1 ? parseInt(args[i + 1], 10) : 1
-})()
+const { values, positionals } = parseArgs({
+  args: process.argv.slice(2),
+  options: {
+    phase: { type: "string", default: "1" },
+  },
+  allowPositionals: true,
+})
+const version = positionals.find((a) => /^\d+\.\d+\.\d+$/.test(a))
+const phaseArg = parseInt(values.phase, 10)
 
 if (!version) {
   console.error(`${red("✖")} Usage: pnpm release <version> [--phase <1|2|3>]`)

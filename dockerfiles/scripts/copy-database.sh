@@ -63,8 +63,8 @@ parse_postgres_uri() {
     # Extract host:port (after @)
     local host_port=$(echo "$userpass_hostport" | sed 's/.*@//')
     
-    # Extract user:password (before @)
-    local user_pass=$(echo "$userpass_hostport" | sed 's/@.*//')
+    # Extract user:password (before last @)
+    local user_pass=$(echo "$userpass_hostport" | sed 's/\(.*\)@.*/\1/')
     
     # Extract user (before :)
     local user=$(echo "$user_pass" | sed 's/:.*//')
@@ -104,6 +104,7 @@ echo "Source: $SOURCE_USER@$SOURCE_HOST:$SOURCE_PORT/$SOURCE_DB"
 echo "Target: $TARGET_USER@$TARGET_HOST:$TARGET_PORT/$TARGET_DB"
 
 # Guard against source and target being the same database
+# Guard against source and target being the exact same database
 if [ "$SOURCE_HOST" = "$TARGET_HOST" ] && [ "$SOURCE_PORT" = "$TARGET_PORT" ] && [ "$SOURCE_DB" = "$TARGET_DB" ]; then
     echo "Source and target are the same database ($SOURCE_DB@$SOURCE_HOST:$SOURCE_PORT)"
     echo "Skipping database copy to avoid dropping production data"

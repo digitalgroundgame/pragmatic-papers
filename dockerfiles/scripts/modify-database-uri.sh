@@ -3,6 +3,7 @@ set -e
 
 # Script to modify DATABASE_URI by appending a suffix based on COOLIFY_FQDN
 # This is useful for preview deployments where each PR gets a unique database
+# Always writes /tmp/database_uri.env so the runner stage can source it
 
 echo "========================================"
 echo "Database URI Modifier"
@@ -15,6 +16,8 @@ if [ "$BUILD_ENV" != "preview" ]; then
     echo "DATABASE_URI: $DATABASE_URI"
     # Write default to build.env so COPY in Dockerfile doesn't fail
     echo "export DATABASE_URI='$DATABASE_URI'" > /tmp/build.env
+    # Always write the env file so COPY in runner stage works
+    echo "export DATABASE_URI='$DATABASE_URI'" > /tmp/database_uri.env
     exit 0
 fi
 
@@ -25,6 +28,8 @@ if [ -z "$COOLIFY_FQDN" ]; then
     echo "COOLIFY_FQDN is not set, using DATABASE_URI as-is"
     echo "DATABASE_URI: $DATABASE_URI"
     echo "export DATABASE_URI='$DATABASE_URI'" > /tmp/build.env
+    # Always write the env file so COPY in runner stage works
+    echo "export DATABASE_URI='$DATABASE_URI'" > /tmp/database_uri.env
     exit 0
 fi
 

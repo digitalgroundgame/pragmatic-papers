@@ -123,12 +123,14 @@ if (phaseArg <= 2) {
 
 // ── Phase 3: Tag and release ───────────────────────────────────────────────
 
-console.warn(`\n${blue("●")} Phase 3: Tagging and creating release\n`)
+if (phaseArg <= 3) {
+  console.warn(`\n${blue("●")} Phase 3: Tagging and creating release\n`)
 
-run(`git checkout main`)
-run(`git pull origin main`)
-run(`git tag ${tag} -m "${tag}" -s`)
-run(`git push origin ${tag}`)
+  run(`git checkout main`)
+  run(`git pull origin main`)
+  run(`git tag ${tag} -m "${tag}" -s`)
+  run(`git push origin ${tag}`)
 
-const releaseUrl = capture(`gh release create ${tag} --target main -t "${tag}"`)
-console.warn(`\n${green("✔")} Release created: ${releaseUrl}`)
+  const releaseUrl = capture(`gh release create ${tag} --target main -t "${tag}"`)
+  console.warn(`\n${green("✔")} Release created: ${releaseUrl}`)
+}

@@ -28,6 +28,7 @@ FROM base AS builder
 RUN apk add --no-cache git
 
 # GitHub Packages auth — marked as BuildKit secret in Coolify (not baked into layers)
+# Coolify auto-injects --mount=type=secret into every RUN instruction: https://coolify.io/docs/knowledge-base/environment-variables#docker-build-secrets
 
 # 1. First, only copy files that determine the dependency tree (lockfile)
 COPY pnpm-lock.yaml .npmrc ./
@@ -58,6 +59,7 @@ RUN chmod +x /usr/local/bin/modify-database-uri.sh /usr/local/bin/copy-database.
 
 # --- BUILD CONFIGURATION ---
 # Secrets (DATABASE_URI, PAYLOAD_SECRET, S3 creds) are injected via Coolify BuildKit secrets — not baked into layers
+# Coolify auto-injects --mount=type=secret into every RUN instruction: https://coolify.io/docs/knowledge-base/environment-variables#docker-build-secrets
 ARG NODE_ENV=production
 ARG BUILD_ENV=production
 ARG NEXT_PUBLIC_SERVER_URL

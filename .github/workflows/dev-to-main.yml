@@ -1,0 +1,43 @@
+name: Dev to Main PR
+
+on:
+  push:
+    branches: [dev]
+    paths: [package.json]
+
+jobs:
+  open-pr:
+    name: Open PR dev → main
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 2
+
+      - name: Check for version bump
+        id: version
+        run: |
+          CURRENT=$(jq -r .version package.json)
+          PREVIOUS=$(git show HEAD~1:package.json 2>/dev/null | jq -r .version || echo "")
+          echo "tag=v$CURRENT" >> "$GITHUB_OUTPUT"
+          if [ "$CURRENT" != "$PREVIOUS" ]; then
+            echo "bumped=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "bumped=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Open PR dev → main
+        if: steps.version.outputs.bumped == 'true'
+        run: |
+          EXISTING=$(gh pr list --base main --head dev --json number --jq length)
+          if [ "$EXISTING" = "0" ]; then
+            gh pr create --base main --head dev --title "Release ${{ steps.version.outputs.tag }}" --body ""
+          else
+            echo "PR already exists, skipping"
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

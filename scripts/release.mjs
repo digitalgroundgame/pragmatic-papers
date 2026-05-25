@@ -84,7 +84,7 @@ async function waitForMerge(prUrl) {
 
 // ── Phase 1: Branch, version bump, PR → dev ────────────────────────────────
 
-if (phaseArg <= 1) {
+if (phaseArg === 1) {
   console.warn(`\n${blue("●")} Phase 1: Creating release branch and PR to dev\n`)
 
   run(`git checkout dev`)
@@ -109,7 +109,7 @@ if (phaseArg <= 1) {
 
 // ── Phase 2: PR dev → main ─────────────────────────────────────────────────
 
-if (phaseArg <= 2) {
+if (phaseArg === 2) {
   console.warn(`\n${blue("●")} Phase 2: Creating PR dev → main\n`)
 
   run(`git checkout dev`)
@@ -123,7 +123,7 @@ if (phaseArg <= 2) {
 
 // ── Phase 3: Tag and release ───────────────────────────────────────────────
 
-if (phaseArg <= 3) {
+if (phaseArg === 3) {
   console.warn(`\n${blue("●")} Phase 3: Tagging and creating release\n`)
 
   run(`git checkout main`)

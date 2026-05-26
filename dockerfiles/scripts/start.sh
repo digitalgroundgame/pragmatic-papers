@@ -5,8 +5,6 @@ set -e
 if [ -f build.env ]; then
     . build.env
 fi
-# Source the isolated DATABASE_URI if it exists (preview deployments)
-if [ -f /app/database_uri.env ]; then . /app/database_uri.env; fi
 
 echo "========================================="
 echo "Starting Pragmatic Papers Application"

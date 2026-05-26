@@ -24,6 +24,7 @@ if (existsSync(src)) {
   process.exit(0)
 }
 
+// Inter-Bold.woff2 fallback is ~74KB; anything under 1000 bytes is a stale empty placeholder
 if (existsSync(fontPath) && readFileSync(fontPath).byteLength > 1000) {
   console.warn(gray("○ Fonts already installed (real)"))
   process.exit(0)

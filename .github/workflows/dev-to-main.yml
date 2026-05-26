@@ -18,6 +18,14 @@ jobs:
         with:
           fetch-depth: 2
 
+      - name: Check actor permissions
+        id: perms
+        run: |
+          LEVEL=$(gh api "repos/${{ github.repository }}/collaborators/${{ github.actor }}/permission" --jq .permission)
+          echo "level=$LEVEL" >> "$GITHUB_OUTPUT"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Check for version bump
         id: version
         run: |
@@ -31,7 +39,7 @@ jobs:
           fi
 
       - name: Open PR dev → main
-        if: steps.version.outputs.bumped == 'true'
+        if: steps.version.outputs.bumped == 'true' && (steps.perms.outputs.level == 'admin' || steps.perms.outputs.level == 'maintain')
         run: |
           EXISTING=$(gh pr list --base main --head dev --json number --jq length)
           if [ "$EXISTING" = "0" ]; then

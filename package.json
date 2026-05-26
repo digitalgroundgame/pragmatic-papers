@@ -28,6 +28,7 @@
     "ci": "payload migrate && pnpm build",
     "migrate": "payload migrate",
     "migrate:create": "payload migrate:create",
+    "postmigrate:create": "prettier --write src/migrations",
     "migrate:redo": "node scripts/redo-last-migration.mjs",
     "migrate:status": "payload migrate:status",
     "prepare": "husky",

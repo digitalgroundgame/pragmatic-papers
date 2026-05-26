@@ -89,6 +89,12 @@ export interface CreateCampaignInput {
   bodyHtml: string
   /** ISO 8601; Listmonk schedules at this wall-clock instant. */
   sendAt: string
+  /**
+   * Admin-only string tags attached to the campaign. Used by the newsletter
+   * job for idempotency identifiers (e.g. "vol-12", "art-5") — these show
+   * as chips in Listmonk's admin UI but never go to recipients.
+   */
+  tags?: string[]
 }
 
 interface ListmonkCampaign {
@@ -96,12 +102,14 @@ interface ListmonkCampaign {
   name: string
   status: string
   send_at: string | null
+  tags: string[] | null
 }
 
 export interface ScheduledCampaignSummary {
   id: number
   name: string
   sendAt: Date
+  tags: string[]
 }
 
 /**
@@ -125,6 +133,7 @@ export async function createScheduledCampaign(input: CreateCampaignInput): Promi
       send_at: input.sendAt,
       type: "regular",
       messenger: "email",
+      tags: input.tags ?? [],
     }),
   })
   await listmonkFetch<ListmonkCampaign>(`/campaigns/${created.id}/status`, {
@@ -136,10 +145,10 @@ export async function createScheduledCampaign(input: CreateCampaignInput): Promi
 
 /**
  * Returns all `scheduled` or `running` campaigns on the newsletter list with a
- * non-null send_at. Used by the job for two things:
+ * non-null send_at, including tags. Used by the job for:
  *   - latest send_at across the result = baseline for the queue-overlap policy
- *   - existing campaign names = idempotency check (skip days already scheduled
- *     so retries don't create duplicates)
+ *   - tag-based identifiers (vol-<N>, art-<id>) = idempotency check so retries
+ *     and reorders don't create duplicates
  */
 export async function listScheduledCampaigns(): Promise<ScheduledCampaignSummary[]> {
   const cfg = readConfig()
@@ -152,7 +161,12 @@ export async function listScheduledCampaigns(): Promise<ScheduledCampaignSummary
   })
   return data.results
     .filter((c) => c.send_at !== null)
-    .map((c) => ({ id: c.id, name: c.name, sendAt: new Date(c.send_at!) }))
+    .map((c) => ({
+      id: c.id,
+      name: c.name,
+      sendAt: new Date(c.send_at!),
+      tags: c.tags ?? [],
+    }))
 }
 
 export interface SubscribeMemberInput {

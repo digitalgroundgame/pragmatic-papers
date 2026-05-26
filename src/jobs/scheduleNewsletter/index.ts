@@ -5,7 +5,14 @@ import { VolumeArticleEmail } from "@/emails/VolumeArticle"
 import type { Article, Volume } from "@/payload-types"
 import { getServerSideURL } from "@/utilities/getURL"
 import { createScheduledCampaign, listScheduledCampaigns } from "@/utilities/listmonk"
-import { campaignName, campaignNameVolumePrefix, nextWeekday7amET } from "./schedule"
+import {
+  articleTag,
+  campaignName,
+  NEWSLETTER_TAG,
+  nextWeekday7amET,
+  parseArticleIdFromTag,
+  volumeTag,
+} from "./schedule"
 
 export const scheduleNewsletterTask: TaskConfig<"scheduleNewsletter"> = {
   slug: "scheduleNewsletter",
@@ -38,10 +45,21 @@ export const scheduleNewsletterTask: TaskConfig<"scheduleNewsletter"> = {
     }
 
     const existingCampaigns = await listScheduledCampaigns()
-    const prefix = campaignNameVolumePrefix(volume.volumeNumber)
-    const existingForThisVolume = new Set(
-      existingCampaigns.filter((c) => c.name.startsWith(prefix)).map((c) => c.name),
-    )
+    // Idempotency by Listmonk campaign tags. Each campaign carries:
+    //   - NEWSLETTER_TAG (so we ignore anything not created by us)
+    //   - vol-<N>          (scope to this Volume)
+    //   - art-<articleId>  (the actual idempotency key)
+    // Tags are admin-only metadata in Listmonk — never sent to recipients.
+    const thisVolumeTag = volumeTag(volume.volumeNumber)
+    const existingArticleIds = new Set<number>()
+    for (const c of existingCampaigns) {
+      if (!c.tags.includes(NEWSLETTER_TAG)) continue
+      if (!c.tags.includes(thisVolumeTag)) continue
+      for (const tag of c.tags) {
+        const articleId = parseArticleIdFromTag(tag)
+        if (articleId !== null) existingArticleIds.add(articleId)
+      }
+    }
 
     // Baseline = latest existing send across the entire list, or now if nothing
     // is queued. Honors the queue overlap policy: a new Volume's day-1 lands
@@ -53,19 +71,26 @@ export const scheduleNewsletterTask: TaskConfig<"scheduleNewsletter"> = {
     )
     const baseline = latestAny && latestAny > now ? latestAny : now
     log.info(
-      `[newsletter] baseline = ${baseline.toISOString()} (existing campaigns on list: ${existingCampaigns.length}, this volume: ${existingForThisVolume.size})`,
+      `[newsletter] baseline = ${baseline.toISOString()} (existing campaigns on list: ${existingCampaigns.length}, this volume: ${existingArticleIds.size})`,
     )
 
     const siteUrl = getServerSideURL()
     let cursor = baseline
     let count = 0
-    for (const [i, article] of articles.entries()) {
-      cursor = nextWeekday7amET(cursor)
-      const name = campaignName(volume.volumeNumber, i, article.title)
-      if (existingForThisVolume.has(name)) {
-        log.info(`[newsletter]   day ${i + 1}: already scheduled (idempotent skip): "${name}"`)
+    // Scheduling is append-only: existing campaigns keep their send_at, new
+    // articles get appended after `baseline`. Cursor only advances on actual
+    // create — skipped iterations don't burn calendar days. Day number shown
+    // to subscribers = (existing already-scheduled) + (new this run).
+    for (const article of articles) {
+      if (existingArticleIds.has(article.id)) {
+        log.info(
+          `[newsletter]   article #${article.id} "${article.title}" already scheduled — skip`,
+        )
         continue
       }
+      cursor = nextWeekday7amET(cursor)
+      const sendDayIndex = existingArticleIds.size + count // 0-based
+      const name = campaignName(volume.volumeNumber, sendDayIndex, articles.length, article.title)
       const bodyHtml = await render(
         VolumeArticleEmail({
           article,
@@ -74,7 +99,7 @@ export const scheduleNewsletterTask: TaskConfig<"scheduleNewsletter"> = {
             volumeNumber: volume.volumeNumber,
             slug: volume.slug ?? "",
           },
-          dayIndex: i + 1,
+          dayIndex: sendDayIndex + 1,
           totalDays: articles.length,
           siteUrl,
         }),
@@ -84,9 +109,10 @@ export const scheduleNewsletterTask: TaskConfig<"scheduleNewsletter"> = {
         subject: article.title,
         bodyHtml,
         sendAt: cursor.toISOString(),
+        tags: [NEWSLETTER_TAG, thisVolumeTag, articleTag(article.id)],
       })
       log.info(
-        `[newsletter]   day ${i + 1}: created campaign #${id} send_at=${cursor.toISOString()}`,
+        `[newsletter]   day ${sendDayIndex + 1}: created campaign #${id} for article #${article.id} send_at=${cursor.toISOString()}`,
       )
       count++
     }

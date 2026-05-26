@@ -77,17 +77,45 @@ export function nextWeekday7amET(after: Date): Date {
 }
 
 /**
- * Deterministic, idempotent campaign name. The job uses this to detect
- * already-scheduled days on retry and skip them.
+ * Human-readable campaign name shown in Listmonk's admin UI. Purely
+ * cosmetic — idempotency is driven by tags, not by parsing this string.
+ * Format: "Volume <N> · Day <K> of <Total> · <title>"
  */
-export function campaignName(volumeNumber: number, dayIndex: number, articleTitle: string): string {
-  return `Volume ${volumeNumber} · Day ${dayIndex + 1} · ${articleTitle}`
+export function campaignName(
+  volumeNumber: number,
+  dayIndex: number,
+  totalDays: number,
+  articleTitle: string,
+): string {
+  return `Volume ${volumeNumber} · Day ${dayIndex + 1} of ${totalDays} · ${articleTitle}`
 }
 
 /**
- * Just the prefix of campaignName() — used to find existing campaigns for
- * a given Volume across all days, regardless of article title.
+ * Tag identifying any newsletter campaign created by this job. Lets us
+ * distinguish "campaigns we made" from any other scheduled work in
+ * Listmonk that happens to be on the same list.
  */
-export function campaignNameVolumePrefix(volumeNumber: number): string {
-  return `Volume ${volumeNumber} · Day `
+export const NEWSLETTER_TAG = "newsletter"
+
+/** Tag for a specific Volume — combined with NEWSLETTER_TAG, narrows to one Volume. */
+export function volumeTag(volumeNumber: number): string {
+  return `vol-${volumeNumber}`
+}
+
+/** Tag carrying the article identity — the actual idempotency key. */
+export function articleTag(articleId: number): string {
+  return `art-${articleId}`
+}
+
+const ARTICLE_TAG_RE = /^art-(\d+)$/
+
+/**
+ * Extract an article ID from a single tag string if it matches `art-<id>`.
+ * Returns null for any other tag.
+ */
+export function parseArticleIdFromTag(tag: string): number | null {
+  const m = tag.match(ARTICLE_TAG_RE)
+  if (!m?.[1]) return null
+  const id = Number(m[1])
+  return Number.isFinite(id) ? id : null
 }

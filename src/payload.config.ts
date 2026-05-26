@@ -88,9 +88,6 @@ export default buildConfig({
     pool: {
       connectionString: process.env.DATABASE_URI,
     },
-    // Allow list: prevent schema push in prod/test for static schema determinism and noise reduction
-    push: process.env.NODE_ENV === "development",
-
     // prevent schema push in prod/test for static schema determinism and noise reduction
     push: process.env.NODE_ENV === "development",
     afterSchemaInit: [searchVectorAfterSchemaInit],

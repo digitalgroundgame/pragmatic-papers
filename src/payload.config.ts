@@ -88,6 +88,8 @@ export default buildConfig({
     pool: {
       connectionString: process.env.DATABASE_URI,
     },
+    // prevent schema push in prod/test for static schema determinism and noise reduction
+    push: process.env.NODE_ENV === "development",
     afterSchemaInit: [searchVectorAfterSchemaInit],
   }),
   collections: [Pages, Articles, Volumes, Media, Categories, Users, Webhooks, Topics],

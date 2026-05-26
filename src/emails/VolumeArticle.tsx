@@ -36,8 +36,10 @@ function articleExcerpt(article: Article): string {
  * sources are allowed by remotePatterns in next.config.ts; quality 80 matches
  * the qualities allowlist there.
  *
- * Width 1120 = 2× the email's 560px max-width, so Retina mail clients still
- * look sharp without serving 4K source files.
+ * Width must be one of Next's default deviceSizes ([640, 750, 828, 1080,
+ * 1200, 1920, ...]) or /_next/image returns 400. 1080 is just under 2× the
+ * email's 560px max-width — Retina mail clients still render sharp without
+ * us serving 4K source files.
  */
 function heroImageUrl(article: Article, siteUrl: string): string | null {
   const hero = article.heroImage
@@ -45,7 +47,7 @@ function heroImageUrl(article: Article, siteUrl: string): string | null {
   const raw = getMediaUrl(hero.url)
   if (!raw) return null
   const absoluteSrc = raw.startsWith("http") ? raw : `${siteUrl}${raw}`
-  const params = new URLSearchParams({ url: absoluteSrc, w: "1120", q: "80" })
+  const params = new URLSearchParams({ url: absoluteSrc, w: "1080", q: "80" })
   return `${siteUrl}/_next/image?${params.toString()}`
 }
 

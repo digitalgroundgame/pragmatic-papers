@@ -141,6 +141,9 @@ COPY --from=builder --chown=nextjs:nodejs /tmp/build.env ./build.env
 # PERSISTENCE FIX: Carry the isolated DATABASE_URI from builder to runner
 COPY --from=builder --chown=nextjs:nodejs /tmp/database_uri.env /app/database_uri.env
 
+# PERSISTENCE FIX: Carry the isolated DATABASE_URI from builder to runner
+COPY --from=builder --chown=nextjs:nodejs /tmp/database_uri.env /app/database_uri.env
+
 # Prepare media directory and set permissions
 RUN mkdir -p public/media \
     && chown -R nextjs:nodejs . \

@@ -1,0 +1,130 @@
+import { render } from "@react-email/render"
+import type { Payload } from "payload"
+
+import { VolumeArticleEmail } from "@/emails/VolumeArticle"
+import type { Article, Volume } from "@/payload-types"
+import { getServerSideURL } from "@/utilities/getURL"
+import { createScheduledCampaign, listScheduledCampaigns } from "@/utilities/listmonk"
+import {
+  articleTag,
+  campaignName,
+  NEWSLETTER_TAG,
+  nextWeekday7amET,
+  parseArticleIdFromTag,
+  volumeTag,
+} from "./helpers"
+
+/**
+ * Schedules one Listmonk campaign per published article in a Volume.
+ *
+ * Behavior:
+ *   - Idempotent: articles already scheduled (matched by Listmonk tag
+ *     "art-<id>") are skipped. Safe to retry; safe to call after reordering
+ *     Volume.articles in the admin.
+ *   - Append-only: new articles always get send_at values after any existing
+ *     scheduled campaigns on the list (queue-overlap policy).
+ *   - 7am ET, weekdays only.
+ *   - Each campaign is tagged ["newsletter", "vol-<N>", "art-<articleId>"]
+ *     so admins can filter the dashboard but recipients never see them.
+ *
+ * Throws if Listmonk is unreachable, env config is missing, or the Volume
+ * isn't found / has no published articles. The endpoint caller surfaces
+ * the error to the editor's toast.
+ *
+ * @returns count of newly-created campaigns (0 if all articles were
+ *          already scheduled)
+ */
+export async function scheduleVolumeNewsletter(
+  payload: Payload,
+  volumeId: number,
+): Promise<{ count: number }> {
+  const log = payload.logger
+  log.info(`[newsletter] === scheduling campaigns for volume id=${volumeId} ===`)
+
+  const volume = (await payload.findByID({
+    collection: "volumes",
+    id: volumeId,
+    depth: 2,
+    overrideAccess: true,
+  })) as Volume
+
+  const articles = (volume.articles ?? []).filter(
+    (a): a is Article =>
+      typeof a === "object" && a !== null && (a as Article)._status === "published",
+  )
+
+  if (articles.length === 0) {
+    log.warn(`[newsletter] volume ${volumeId} has no published articles; nothing to schedule`)
+    return { count: 0 }
+  }
+
+  const existingCampaigns = await listScheduledCampaigns()
+  // Idempotency by Listmonk campaign tags. Tags are admin-only metadata —
+  // never sent to recipients.
+  const thisVolumeTag = volumeTag(volume.volumeNumber)
+  const existingArticleIds = new Set<number>()
+  for (const c of existingCampaigns) {
+    if (!c.tags.includes(NEWSLETTER_TAG)) continue
+    if (!c.tags.includes(thisVolumeTag)) continue
+    for (const tag of c.tags) {
+      const articleId = parseArticleIdFromTag(tag)
+      if (articleId !== null) existingArticleIds.add(articleId)
+    }
+  }
+
+  // Baseline = latest existing send across the entire list, or now if nothing
+  // is queued. Honors the queue-overlap policy: a new Volume's day-1 lands
+  // the weekday after whatever's currently scheduled.
+  const now = new Date()
+  const latestAny = existingCampaigns.reduce<Date | null>(
+    (acc, c) => (!acc || c.sendAt > acc ? c.sendAt : acc),
+    null,
+  )
+  const baseline = latestAny && latestAny > now ? latestAny : now
+  log.info(
+    `[newsletter] baseline = ${baseline.toISOString()} (existing campaigns on list: ${existingCampaigns.length}, this volume: ${existingArticleIds.size})`,
+  )
+
+  const siteUrl = getServerSideURL()
+  let cursor = baseline
+  let count = 0
+  // Scheduling is append-only: existing campaigns keep their send_at, new
+  // articles get appended after `baseline`. Cursor only advances on actual
+  // create — skipped iterations don't burn calendar days.
+  for (const article of articles) {
+    if (existingArticleIds.has(article.id)) {
+      log.info(`[newsletter]   article #${article.id} "${article.title}" already scheduled — skip`)
+      continue
+    }
+    cursor = nextWeekday7amET(cursor)
+    const sendDayIndex = existingArticleIds.size + count // 0-based
+    const name = campaignName(volume.volumeNumber, sendDayIndex, articles.length, article.title)
+    const bodyHtml = await render(
+      VolumeArticleEmail({
+        article,
+        volume: {
+          title: volume.title,
+          volumeNumber: volume.volumeNumber,
+          slug: volume.slug ?? "",
+        },
+        dayIndex: sendDayIndex + 1,
+        totalDays: articles.length,
+        siteUrl,
+      }),
+    )
+    const id = await createScheduledCampaign({
+      name,
+      subject: article.title,
+      bodyHtml,
+      sendAt: cursor.toISOString(),
+      tags: [NEWSLETTER_TAG, thisVolumeTag, articleTag(article.id)],
+    })
+    log.info(
+      `[newsletter]   day ${sendDayIndex + 1}: created campaign #${id} for article #${article.id} send_at=${cursor.toISOString()}`,
+    )
+    count++
+  }
+
+  log.info(`[newsletter] === done — created ${count} campaigns for volume ${volumeId} ===`)
+  return { count }
+}

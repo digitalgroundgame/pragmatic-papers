@@ -10,7 +10,6 @@ import { defaultLexical } from "@/fields/defaultLexical"
 import { Footer } from "@/Footer/config"
 import { ArticleRecommendations } from "@/globals/ArticleRecommendations/config"
 import { Header } from "@/Header/config"
-import { scheduleNewsletterTask } from "@/jobs/scheduleNewsletter"
 import { updateRecommendationsTask } from "@/jobs/updateRecommendations"
 import { plugins } from "@/plugins"
 import { searchVectorAfterSchemaInit } from "@/plugins/searchVector"
@@ -142,6 +141,6 @@ export default buildConfig({
       },
     },
     autoRun: [{ cron: "*/5 * * * *", queue: "default" }],
-    tasks: [updateRecommendationsTask, scheduleNewsletterTask],
+    tasks: [updateRecommendationsTask],
   },
 })

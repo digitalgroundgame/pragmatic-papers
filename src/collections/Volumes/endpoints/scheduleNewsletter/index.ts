@@ -2,13 +2,15 @@ import type { Endpoint, PayloadRequest } from "payload"
 
 import { isEditor } from "@/access/checkRole"
 import type { Volume } from "@/payload-types"
+import { scheduleVolumeNewsletter } from "./logic"
 
 /**
  * POST /api/volumes/:id/schedule-newsletter
  *
- * Editor-only. Enqueues + runs the scheduleNewsletter job for this Volume,
+ * Editor-only. Synchronously runs the newsletter scheduling for this Volume,
  * which creates one daily Listmonk campaign per article. Idempotent — the
- * job skips days already scheduled, so clicking the button twice is safe.
+ * underlying function skips articles already scheduled (by campaign tag),
+ * so clicking the button twice is safe.
  *
  * Requires the Volume to be published. The auto-on-publish hook was removed
  * in favor of this manual trigger because editors typically edit Volumes
@@ -45,19 +47,13 @@ export const scheduleNewsletterEndpoint: Endpoint = {
       )
     }
 
-    const job = await req.payload.jobs.queue({
-      task: "scheduleNewsletter",
-      input: { volumeId },
-    })
-    const result = await req.payload.jobs.run({ queue: "default", limit: 1 })
-
-    // The job's output schema declares { count: number } — surface it to the UI.
-    interface JobResult {
-      jobStatus?: Record<string, { output?: { count?: number } }>
+    try {
+      const { count } = await scheduleVolumeNewsletter(req.payload, volumeId)
+      return Response.json({ count })
+    } catch (err) {
+      req.payload.logger.error({ err }, "[newsletter] schedule failed")
+      const message = err instanceof Error ? err.message : "Unknown error"
+      return Response.json({ error: `Failed to schedule newsletter: ${message}` }, { status: 500 })
     }
-    const jobResult = result as JobResult
-    const count = jobResult.jobStatus?.[String(job.id)]?.output?.count
-
-    return Response.json({ jobId: job.id, count })
   },
 }

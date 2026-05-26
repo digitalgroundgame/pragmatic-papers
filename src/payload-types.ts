@@ -257,7 +257,6 @@ export interface Config {
   jobs: {
     tasks: {
       updateRecommendations: TaskUpdateRecommendations;
-      scheduleNewsletter: TaskScheduleNewsletter;
       schedulePublish: TaskSchedulePublish;
       inline: {
         input: unknown;
@@ -1286,7 +1285,7 @@ export interface PayloadJob {
     | {
         executedAt: string;
         completedAt: string;
-        taskSlug: 'inline' | 'updateRecommendations' | 'scheduleNewsletter' | 'schedulePublish';
+        taskSlug: 'inline' | 'updateRecommendations' | 'schedulePublish';
         taskID: string;
         input?:
           | {
@@ -1319,7 +1318,7 @@ export interface PayloadJob {
         id?: string | null;
       }[]
     | null;
-  taskSlug?: ('inline' | 'updateRecommendations' | 'scheduleNewsletter' | 'schedulePublish') | null;
+  taskSlug?: ('inline' | 'updateRecommendations' | 'schedulePublish') | null;
   queue?: string | null;
   waitUntil?: string | null;
   processing?: boolean | null;
@@ -2322,18 +2321,6 @@ export interface CollectionsWidget {
  */
 export interface TaskUpdateRecommendations {
   input?: unknown;
-  output: {
-    count: number;
-  };
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "TaskScheduleNewsletter".
- */
-export interface TaskScheduleNewsletter {
-  input: {
-    volumeId: number;
-  };
   output: {
     count: number;
   };

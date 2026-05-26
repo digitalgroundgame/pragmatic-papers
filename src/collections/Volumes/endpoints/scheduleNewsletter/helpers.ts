@@ -1,9 +1,10 @@
 /**
- * Pure helpers for computing 7am-ET weekday send times.
+ * Pure helpers for the newsletter scheduling logic:
+ *   - 7am-ET weekday send-time math (DST-correct)
+ *   - Listmonk campaign tag identifiers used for idempotency
  *
- * The newsletter sends one campaign per weekday at 7:00 America/New_York,
- * which observes DST. Implemented without a TZ library by probing
- * Intl.DateTimeFormat for the NY offset on the target calendar date.
+ * Kept separate from logic.ts so they're trivially testable without
+ * Listmonk or Payload dependencies.
  */
 
 function nyParts(date: Date): { year: number; month: number; day: number; weekday: number } {
@@ -47,25 +48,24 @@ function nyHour(date: Date): number {
 }
 
 /**
- * Returns the UTC instant of 7:00 America/New_York on the given NY calendar
- * date. DST-correct: probes the NY offset on the same day and adjusts.
+ * UTC instant of 7:00 America/New_York on the given NY calendar date.
+ * DST-correct: probes the NY offset on the same day and adjusts.
  */
 export function sevenAmEtAsUtc(year: number, month: number, day: number): Date {
   const probe = new Date(Date.UTC(year, month, day, 12))
   const hour = nyHour(probe)
-  // If 12:00 UTC shows as hour H in NY, then NY is (12 - H) hours ahead of UTC.
-  // For NY this is always negative (NY is behind UTC). 7am NY in UTC = 7 - (H - 12) = 19 - H.
+  // If 12:00 UTC shows as hour H in NY, NY is (12 - H) hours behind UTC.
+  // 7am NY in UTC = 7 - (H - 12) = 19 - H.
   return new Date(Date.UTC(year, month, day, 19 - hour))
 }
 
 /**
- * Returns the UTC instant of 7am ET on the next NY weekday strictly after the
- * given Date's NY calendar date. Weekends (Sat/Sun) are skipped.
+ * UTC instant of 7am ET on the next NY weekday strictly after the given Date's
+ * NY calendar date. Weekends (Sat/Sun) are skipped.
  */
 export function nextWeekday7amET(after: Date): Date {
   const p = nyParts(after)
   let cursor = new Date(Date.UTC(p.year, p.month, p.day + 1, 12))
-  // Loop has a finite upper bound (≤3 iterations: at most 3 days of weekend).
   for (let i = 0; i < 7; i++) {
     const cp = nyParts(cursor)
     if (cp.weekday >= 1 && cp.weekday <= 5) {
@@ -77,8 +77,8 @@ export function nextWeekday7amET(after: Date): Date {
 }
 
 /**
- * Human-readable campaign name shown in Listmonk's admin UI. Purely
- * cosmetic — idempotency is driven by tags, not by parsing this string.
+ * Human-readable campaign name shown in Listmonk's admin UI. Purely cosmetic
+ * — idempotency is driven by tags, not by parsing this string.
  * Format: "Volume <N> · Day <K> of <Total> · <title>"
  */
 export function campaignName(
@@ -91,7 +91,7 @@ export function campaignName(
 }
 
 /**
- * Tag identifying any newsletter campaign created by this job. Lets us
+ * Tag identifying any campaign created by this scheduler. Lets us
  * distinguish "campaigns we made" from any other scheduled work in
  * Listmonk that happens to be on the same list.
  */

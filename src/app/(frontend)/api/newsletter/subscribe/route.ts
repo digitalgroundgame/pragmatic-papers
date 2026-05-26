@@ -1,13 +1,14 @@
 import { type NextRequest } from "next/server"
 
 import { subscribeMember } from "@/utilities/listmonk"
+import { verifyTurnstileToken } from "@/utilities/turnstile"
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 export async function POST(req: NextRequest): Promise<Response> {
-  let body: { email?: unknown }
+  let body: { email?: unknown; turnstileToken?: unknown }
   try {
-    body = (await req.json()) as { email?: unknown }
+    body = (await req.json()) as { email?: unknown; turnstileToken?: unknown }
   } catch {
     return Response.json({ error: "Invalid JSON" }, { status: 400 })
   }
@@ -15,6 +16,19 @@ export async function POST(req: NextRequest): Promise<Response> {
   const email = typeof body.email === "string" ? body.email.trim().toLowerCase() : ""
   if (!email || email.length > 254 || !EMAIL_RE.test(email)) {
     return Response.json({ error: "Please enter a valid email address." }, { status: 400 })
+  }
+
+  const token = typeof body.turnstileToken === "string" ? body.turnstileToken : ""
+  const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || undefined
+  const turnstileOk = await verifyTurnstileToken({ token, ip }).catch((err) => {
+    console.error("[newsletter] turnstile verify failed", err)
+    return false
+  })
+  if (!turnstileOk) {
+    return Response.json(
+      { error: "Verification failed. Please refresh and try again." },
+      { status: 400 },
+    )
   }
 
   try {

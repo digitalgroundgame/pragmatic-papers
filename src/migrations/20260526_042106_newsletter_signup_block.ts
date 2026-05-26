@@ -2,9 +2,7 @@ import { MigrateUpArgs, MigrateDownArgs, sql } from "@payloadcms/db-postgres"
 
 export async function up({ db, payload, req }: MigrateUpArgs): Promise<void> {
   await db.execute(sql`
-   ALTER TYPE "public"."enum_payload_jobs_log_task_slug" ADD VALUE 'scheduleNewsletter' BEFORE 'schedulePublish';
-  ALTER TYPE "public"."enum_payload_jobs_task_slug" ADD VALUE 'scheduleNewsletter' BEFORE 'schedulePublish';
-  CREATE TABLE "pages_blocks_newsletter_signup" (
+   CREATE TABLE "pages_blocks_newsletter_signup" (
   	"_order" integer NOT NULL,
   	"_parent_id" integer NOT NULL,
   	"_path" text NOT NULL,
@@ -40,13 +38,5 @@ export async function up({ db, payload, req }: MigrateUpArgs): Promise<void> {
 export async function down({ db, payload, req }: MigrateDownArgs): Promise<void> {
   await db.execute(sql`
    DROP TABLE "pages_blocks_newsletter_signup" CASCADE;
-  DROP TABLE "_pages_v_blocks_newsletter_signup" CASCADE;
-  ALTER TABLE "payload_jobs_log" ALTER COLUMN "task_slug" SET DATA TYPE text;
-  DROP TYPE "public"."enum_payload_jobs_log_task_slug";
-  CREATE TYPE "public"."enum_payload_jobs_log_task_slug" AS ENUM('inline', 'updateRecommendations', 'schedulePublish');
-  ALTER TABLE "payload_jobs_log" ALTER COLUMN "task_slug" SET DATA TYPE "public"."enum_payload_jobs_log_task_slug" USING "task_slug"::"public"."enum_payload_jobs_log_task_slug";
-  ALTER TABLE "payload_jobs" ALTER COLUMN "task_slug" SET DATA TYPE text;
-  DROP TYPE "public"."enum_payload_jobs_task_slug";
-  CREATE TYPE "public"."enum_payload_jobs_task_slug" AS ENUM('inline', 'updateRecommendations', 'schedulePublish');
-  ALTER TABLE "payload_jobs" ALTER COLUMN "task_slug" SET DATA TYPE "public"."enum_payload_jobs_task_slug" USING "task_slug"::"public"."enum_payload_jobs_task_slug";`)
+  DROP TABLE "_pages_v_blocks_newsletter_signup" CASCADE;`)
 }

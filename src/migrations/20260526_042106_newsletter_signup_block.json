@@ -13109,7 +13109,7 @@
     "public.enum_payload_jobs_log_task_slug": {
       "name": "enum_payload_jobs_log_task_slug",
       "schema": "public",
-      "values": ["inline", "updateRecommendations", "scheduleNewsletter", "schedulePublish"]
+      "values": ["inline", "updateRecommendations", "schedulePublish"]
     },
     "public.enum_payload_jobs_log_state": {
       "name": "enum_payload_jobs_log_state",
@@ -13119,7 +13119,7 @@
     "public.enum_payload_jobs_task_slug": {
       "name": "enum_payload_jobs_task_slug",
       "schema": "public",
-      "values": ["inline", "updateRecommendations", "scheduleNewsletter", "schedulePublish"]
+      "values": ["inline", "updateRecommendations", "schedulePublish"]
     },
     "public.enum_header_nav_items_link_type": {
       "name": "enum_header_nav_items_link_type",
@@ -13182,6 +13182,6 @@
     "tables": {},
     "columns": {}
   },
-  "id": "ebb68f90-314a-49e1-9a46-86ce1ef4fbe2",
+  "id": "e5e64d44-2b6b-4369-83e0-c0088a2c8efd",
   "prevId": "00000000-0000-0000-0000-000000000000"
 }

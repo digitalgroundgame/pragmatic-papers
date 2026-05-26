@@ -3,10 +3,6 @@ import { execSync } from "node:child_process"
 
 const TEMPLATE_DB = "pp_template"
 
-// DB connection and find-shape validation was previously tested in a dedicated
-// smoke test (payload.test.ts). Every integration test now implicitly proves
-// both the connection and basic payload operations work, so the file was
-// removed as redundant.
 export async function setup(): Promise<() => Promise<void>> {
   const container = await new PostgreSqlContainer("postgres:15-alpine")
     .withDatabase(TEMPLATE_DB)

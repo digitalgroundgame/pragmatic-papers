@@ -9,7 +9,7 @@ if [ -n "${DATABASE_URI:-}" ]; then
     URI_TMP=${DATABASE_URI#postgresql://}
     URI_TMP=${URI_TMP#postgres://}
     if [ "$URI_TMP" != "$DATABASE_URI" ]; then
-        DB_NAME=$(echo "$URI_TMP" | sed 's/.*\///' | sed 's/\?.*//')
+        DB_NAME=$(echo "$URI_TMP" | sed 's/.*\///' | sed 's/?.*//')
     fi
 fi
 

@@ -55,6 +55,9 @@ jobs:
       - name: Run unit tests
         run: pnpm test:unit -- --run
 
+      - name: Run script tests
+        run: pnpm test:scripts -- --run
+
   integration-tests:
     name: Integration tests
     runs-on: ubuntu-latest

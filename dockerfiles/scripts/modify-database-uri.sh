@@ -16,8 +16,6 @@ if [ "$BUILD_ENV" != "preview" ]; then
     echo "DATABASE_URI: $DATABASE_URI"
     # Write default to build.env so COPY in Dockerfile doesn't fail
     echo "export DATABASE_URI='$DATABASE_URI'" > /tmp/build.env
-    # Always write the env file so COPY in runner stage works
-    echo "export DATABASE_URI='$DATABASE_URI'" > /tmp/database_uri.env
     exit 0
 fi
 
@@ -27,9 +25,8 @@ echo "BUILD_ENV: preview - proceeding with DATABASE_URI modification"
 if [ -z "$COOLIFY_FQDN" ]; then
     echo "COOLIFY_FQDN is not set, using DATABASE_URI as-is"
     echo "DATABASE_URI: $DATABASE_URI"
-    echo "export DATABASE_URI='$DATABASE_URI'" > /tmp/build.env
     # Always write the env file so COPY in runner stage works
-    echo "export DATABASE_URI='$DATABASE_URI'" > /tmp/database_uri.env
+    echo "export DATABASE_URI='$DATABASE_URI'" > /tmp/build.env
     exit 0
 fi
 

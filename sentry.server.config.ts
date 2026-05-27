@@ -11,7 +11,6 @@ Sentry.init({
 
   tracesSampleRate: 0.1,
 
-  // Enable logs to be sent to Sentry
   enableLogs: true,
 
   // Enable sending user PII (Personally Identifiable Information)

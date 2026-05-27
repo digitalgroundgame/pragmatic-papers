@@ -4,6 +4,9 @@ on:
   push:
     branches: [main]
     paths: [package.json]
+  pull_request:
+    branches: [dev, main]
+    paths: [package.json]
   workflow_dispatch:
     inputs:
       dry_run:
@@ -17,6 +20,8 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+    env:
+      DRY_RUN: ${{ inputs.dry_run == true || github.event_name == 'pull_request' }}
 
     steps:
       - uses: actions/checkout@v6
@@ -38,7 +43,7 @@ jobs:
       - name: Create release
         if: steps.version.outputs.bumped == 'true'
         run: |
-          if [ "${{ inputs.dry_run }}" = "true" ]; then
+          if [ "${{ env.DRY_RUN }}" = "true" ]; then
             echo "[dry-run] gh release create \"${{ steps.version.outputs.tag }}\" --target main --title \"${{ steps.version.outputs.tag }}\" --notes \"\""
           else
             gh release create "${{ steps.version.outputs.tag }}" --target main --title "${{ steps.version.outputs.tag }}" --notes ""

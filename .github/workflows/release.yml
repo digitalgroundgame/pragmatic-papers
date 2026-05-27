@@ -4,6 +4,12 @@ on:
   push:
     branches: [main]
     paths: [package.json]
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Print actions without executing them
+        type: boolean
+        default: true
 
 jobs:
   release:
@@ -31,6 +37,11 @@ jobs:
 
       - name: Create release
         if: steps.version.outputs.bumped == 'true'
-        run: gh release create "${{ steps.version.outputs.tag }}" --target main --title "${{ steps.version.outputs.tag }}" --notes ""
+        run: |
+          if [ "${{ inputs.dry_run }}" = "true" ]; then
+            echo "[dry-run] gh release create \"${{ steps.version.outputs.tag }}\" --target main --title \"${{ steps.version.outputs.tag }}\" --notes \"\""
+          else
+            gh release create "${{ steps.version.outputs.tag }}" --target main --title "${{ steps.version.outputs.tag }}" --notes ""
+          fi
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

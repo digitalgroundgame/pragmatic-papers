@@ -4,6 +4,12 @@ on:
   push:
     branches: [dev]
     paths: [package.json]
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Print actions without executing them
+        type: boolean
+        default: true
 
 jobs:
   open-pr:
@@ -41,12 +47,17 @@ jobs:
       - name: Open PR dev → main
         if: steps.version.outputs.bumped == 'true' && (steps.perms.outputs.level == 'admin' || steps.perms.outputs.level == 'maintain')
         run: |
-          EXISTING=$(gh pr list --base main --head dev --json number --jq length)
-          if [ "$EXISTING" = "0" ]; then
-            PR_URL=$(gh pr create --base main --head dev --title "Release ${{ steps.version.outputs.tag }}" --body "")
-            gh pr merge "$PR_URL" --auto --merge
+          if [ "${{ inputs.dry_run }}" = "true" ]; then
+            echo "[dry-run] gh pr create --base main --head dev --title \"Release ${{ steps.version.outputs.tag }}\" --body \"\""
+            echo "[dry-run] gh pr merge <PR_URL> --auto --merge"
           else
-            echo "PR already exists, skipping"
+            EXISTING=$(gh pr list --base main --head dev --json number --jq length)
+            if [ "$EXISTING" = "0" ]; then
+              PR_URL=$(gh pr create --base main --head dev --title "Release ${{ steps.version.outputs.tag }}" --body "")
+              gh pr merge "$PR_URL" --auto --merge
+            else
+              echo "PR already exists, skipping"
+            fi
           fi
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

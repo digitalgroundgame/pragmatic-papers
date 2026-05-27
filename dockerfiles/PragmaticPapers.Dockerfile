@@ -31,7 +31,7 @@ RUN apk add --no-cache git
 # Coolify auto-injects --mount=type=secret into every RUN instruction: https://coolify.io/docs/knowledge-base/environment-variables#docker-build-secrets
 
 # 1. First, only copy files that determine the dependency tree (lockfile)
-COPY pnpm-lock.yaml .npmrc ./
+COPY pnpm-lock.yaml .npmrc pnpm-workspace.yaml ./
 
 # 2. Fetch dependencies into the pnpm store using a cache mount.
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store \

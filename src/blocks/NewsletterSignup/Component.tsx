@@ -4,8 +4,9 @@ import Script from "next/script"
 import * as React from "react"
 
 import { Button } from "@/components/ui/button"
+import { Field, FieldDescription, FieldError, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
-import type { NewsletterSignupBlock as Props } from "@/payload-types"
+import type { NewsletterSignupBlock as NewsletterSignupTypes } from "@/payload-types"
 
 // Payload `defaultValue` only fills in DB rows when an editor creates the
 // block. When the component is used directly in code (e.g. the Footer),
@@ -41,7 +42,12 @@ declare global {
 
 type Status = "idle" | "submitting" | "success" | "error"
 
-export const NewsletterSignupBlock: React.FC<Props> = ({ heading, description, buttonLabel }) => {
+export const NewsletterSignupBlock: React.FC<NewsletterSignupTypes> = ({
+  heading,
+  description,
+  buttonLabel,
+  id: blockId,
+}) => {
   const [email, setEmail] = React.useState("")
   const [status, setStatus] = React.useState<Status>("idle")
   const [message, setMessage] = React.useState<string | null>(null)
@@ -72,7 +78,8 @@ export const NewsletterSignupBlock: React.FC<Props> = ({ heading, description, b
   const headingText = heading ?? DEFAULT_HEADING
   const descriptionText = description ?? DEFAULT_DESCRIPTION
   const buttonText = buttonLabel ?? DEFAULT_BUTTON_LABEL
-  const disabled = status === "submitting" || status === "success" || !token
+  const disabled =
+    status === "submitting" || status === "success" || (!!TURNSTILE_SITE_KEY && !token)
 
   const resetWidget = (): void => {
     const id = widgetIdRef.current
@@ -82,7 +89,7 @@ export const NewsletterSignupBlock: React.FC<Props> = ({ heading, description, b
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>): Promise<void> => {
     e.preventDefault()
-    if (status === "submitting" || !token) return
+    if (status === "submitting" || (TURNSTILE_SITE_KEY && !token)) return
     setStatus("submitting")
     setMessage(null)
     try {
@@ -108,22 +115,22 @@ export const NewsletterSignupBlock: React.FC<Props> = ({ heading, description, b
     }
   }
 
+  const currentId = blockId || "newsletter-email"
+
   return (
-    <section className="bg-muted text-foreground my-10 rounded-xl border p-8 md:p-12">
+    <section>
       <Script
         src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit"
         strategy="afterInteractive"
         onReady={() => setScriptReady(true)}
       />
-      <div className="mx-auto max-w-xl text-center">
-        <h3 className="m-0 text-2xl font-bold tracking-tight md:text-3xl">{headingText}</h3>
-        <p className="text-muted-foreground mx-auto mt-3 text-base">{descriptionText}</p>
-        <form onSubmit={handleSubmit} className="mt-6 flex flex-col gap-2 sm:flex-row">
-          <label htmlFor="newsletter-email" className="sr-only">
-            Email address
-          </label>
+      <h3>{headingText}</h3>
+      <p className="text-muted-foreground mx-auto mt-3 text-base">{descriptionText}</p>
+      <form onSubmit={handleSubmit} className="mt-6 flex flex-col gap-2 sm:flex-row sm:items-end">
+        <Field className="flex-1">
+          <FieldLabel htmlFor={currentId}>Email address</FieldLabel>
           <Input
-            id="newsletter-email"
+            id={currentId}
             name="email"
             type="email"
             required
@@ -133,23 +140,19 @@ export const NewsletterSignupBlock: React.FC<Props> = ({ heading, description, b
             onChange={(e) => setEmail(e.target.value)}
             placeholder="you@example.com"
             maxLength={254}
-            className="flex-1"
             disabled={status === "submitting" || status === "success"}
           />
-          <Button type="submit" disabled={disabled}>
-            {status === "submitting" ? "Subscribing…" : buttonText}
-          </Button>
-        </form>
-        <div ref={widgetContainerRef} className="mt-3 flex justify-center" />
-        {message ? (
-          <p
-            className={`mt-3 text-sm ${status === "error" ? "text-destructive" : "text-muted-foreground"}`}
-            role={status === "error" ? "alert" : "status"}
-          >
-            {message}
-          </p>
-        ) : null}
-      </div>
+        </Field>
+        <Button type="submit" disabled={disabled}>
+          {status === "submitting" ? "Subscribing…" : buttonText}
+        </Button>
+      </form>
+      <div ref={widgetContainerRef} className="mt-3 flex justify-center" />
+      {status === "error" && message ? (
+        <FieldError className="mt-3">{message}</FieldError>
+      ) : status === "success" && message ? (
+        <FieldDescription className="mt-3">{message}</FieldDescription>
+      ) : null}
     </section>
   )
 }

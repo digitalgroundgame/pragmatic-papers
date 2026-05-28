@@ -80,7 +80,7 @@ export const Media: CollectionConfig = {
       relationTo: "users",
       filterOptions: {
         roles: {
-          in: ["narrator", "admin", "chief-editor"],
+          in: ["narrator"],
         },
       },
       admin: {

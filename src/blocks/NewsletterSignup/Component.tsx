@@ -118,7 +118,7 @@ export const NewsletterSignupBlock: React.FC<NewsletterSignupTypes> = ({
   const currentId = blockId || "newsletter-email"
 
   return (
-    <section className="p-4 font-sans">
+    <section className="font-sans">
       <Script
         src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit"
         strategy="afterInteractive"

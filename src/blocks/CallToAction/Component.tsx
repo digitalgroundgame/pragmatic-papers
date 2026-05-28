@@ -11,7 +11,7 @@ import { cn } from "@/utilities/utils"
 
 export const CallToActionBlock: React.FC<CTABlockProps> = ({ id, links, richText }) => {
   return (
-    <div className="dark from-brand to-brand/50 relative mx-4 flex flex-col items-center gap-6 rounded-sm bg-black bg-[linear-gradient(180deg,var(--tw-gradient-from),var(--tw-gradient-to))] px-8 py-8 font-sans shadow-2xl md:mx-0 md:flex-row md:items-start">
+    <div className="dark from-brand to-brand/50 relative flex flex-col items-center gap-6 rounded-sm bg-black bg-[linear-gradient(180deg,var(--tw-gradient-from),var(--tw-gradient-to))] px-8 py-8 font-sans shadow-2xl md:mx-0 md:flex-row md:items-start">
       <PaperIconPattern
         id={`paper-icon-pattern-${id}`}
         className="absolute inset-0 z-0 h-full w-full text-white opacity-5 blur-[1px]"
@@ -35,7 +35,7 @@ export const CallToActionBlock: React.FC<CTABlockProps> = ({ id, links, richText
                 key={i}
                 className={cn(
                   buttonVariants({ size: "lg" }),
-                  "bg-black text-white no-underline [a]:hover:bg-black/80",
+                  "w-full bg-black text-white no-underline md:w-auto [a]:hover:bg-black/80",
                 )}
                 link={link}
               />

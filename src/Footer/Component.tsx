@@ -10,7 +10,7 @@ export async function Footer(): Promise<React.ReactElement> {
   const { id, navItems, socials, copyright }: Footer = await getCachedGlobal("footer", 1)()
 
   return (
-    <footer className="container mt-6 space-y-1 py-2">
+    <footer className="container space-y-1 py-2">
       <div className="flex flex-col justify-between gap-2 border-t pt-2 md:flex-row md:items-center">
         <a href="/" className="flex-1">
           <Logo size="sm" />

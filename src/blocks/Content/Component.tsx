@@ -19,7 +19,7 @@ const colVariants = cva("col-span-4", {
 export const ContentBlock: React.FC<ContentBlockProps> = ({ columns }) => {
   if (!columns || !columns.length) return null
   return (
-    <section className="container my-4 grid grid-cols-4 gap-x-6 gap-y-2 px-0 lg:grid-cols-12">
+    <section className="container grid grid-cols-4 gap-x-6 gap-y-2 lg:grid-cols-12">
       {columns.map(({ id, richText, size }) => (
         <React.Fragment key={id}>
           {richText && (

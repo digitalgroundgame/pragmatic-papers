@@ -260,5 +260,33 @@ describe("editor and writer access", () => {
         }),
       ).rejects.toThrow()
     })
+
+    it("denies writer from publishing their own draft article", async () => {
+      const writer = await createUser("writer")
+
+      const draft = await payload.create({
+        collection: "articles",
+        overrideAccess: true,
+        context: { disableRevalidate: true },
+        data: {
+          title: "Draft Article to Publish",
+          content: ARTICLE_CONTENT,
+          _status: "draft",
+          createdBy: writer.id,
+        } as unknown as Article,
+        user: writer,
+      })
+
+      await expect(
+        payload.update({
+          collection: "articles",
+          id: draft.id,
+          overrideAccess: false,
+          user: writer,
+          context: { disableRevalidate: true },
+          data: { _status: "published" },
+        }),
+      ).rejects.toThrow()
+    })
   })
 })

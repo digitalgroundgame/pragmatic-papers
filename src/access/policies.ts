@@ -39,7 +39,7 @@ export const isCreatedByOrEditor: Access = ({ req: { user } }) => {
  * Restricts updates to drafts only for writers (and requires ownership), while allowing editors.
  * All other roles (such as narrators and members) are implicitly denied update access.
  */
-export const isDraftOrEditor: Access = ({ req: { user } }) => {
+export const isDraftOrEditor: Access = ({ req: { user }, data }) => {
   if (!user) {
     return false
   }
@@ -49,6 +49,10 @@ export const isDraftOrEditor: Access = ({ req: { user } }) => {
   }
 
   if (!hasRoleOrAdmin(user, "writer")) {
+    return false
+  }
+
+  if (data?._status === "published") {
     return false
   }
 

@@ -1,42 +1,33 @@
 import RichText from "@/components/RichText"
 import { cn } from "@/utilities/utils"
+import { cva } from "class-variance-authority"
 import React from "react"
 
 import type { ContentBlock as ContentBlockProps } from "@/payload-types"
 
-import { CMSLink } from "@/components/Link"
+const colVariants = cva("col-span-4", {
+  variants: {
+    size: {
+      full: "lg:col-span-12",
+      half: "lg:col-span-6 md:col-span-2",
+      oneThird: "lg:col-span-4 md:col-span-2",
+      twoThirds: "lg:col-span-8 md:col-span-2",
+    },
+  },
+})
 
-export const ContentBlock: React.FC<ContentBlockProps> = (props) => {
-  const { columns } = props
-
-  const colsSpanClasses = {
-    full: "lg:col-span-12",
-    half: "lg:col-span-6",
-    oneThird: "lg:col-span-4",
-    twoThirds: "lg:col-span-8",
-  }
-
+export const ContentBlock: React.FC<ContentBlockProps> = ({ columns }) => {
+  if (!columns || !columns.length) return null
   return (
-    <div className="mx-auto my-4 max-w-3xl px-4">
-      <div className="grid grid-cols-4 gap-x-16 gap-y-8 lg:grid-cols-12">
-        {columns &&
-          columns.length > 0 &&
-          columns.map((col, index) => {
-            const { enableLink, link, richText, size } = col
-            return (
-              <div
-                className={cn("col-span-4", colsSpanClasses[size!], {
-                  "md:col-span-2": size !== "full",
-                })}
-                key={index}
-              >
-                {richText && <RichText data={richText} enableGutter={false} />}
-
-                {enableLink && <CMSLink {...link} />}
-              </div>
-            )
-          })}
-      </div>
-    </div>
+    <section className="container my-4 grid grid-cols-4 gap-x-6 gap-y-2 px-0 lg:grid-cols-12">
+      {columns.map(({ id, richText, size }) => (
+        <React.Fragment key={id}>
+          {richText && (
+            <RichText className={cn(colVariants({ size }))} data={richText} enableGutter={false} />
+          )}
+          {/* {enableLink && <CMSLink {...link} />} */}
+        </React.Fragment>
+      ))}
+    </section>
   )
 }

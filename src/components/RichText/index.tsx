@@ -1,5 +1,6 @@
 import { BannerBlock } from "@/blocks/Banner/Component"
 import { CallToActionBlock } from "@/blocks/CallToAction/Component"
+import { NewsletterSignupBlock } from "@/blocks/NewsletterSignup/Component"
 import { CodeBlock } from "@/blocks/Code/Component"
 import { FootnoteBlock } from "@/blocks/Footnote/Component"
 import { MathBlock, type MathBlockProps } from "@/blocks/Math/Component"
@@ -23,6 +24,7 @@ import type {
   FootnoteBlock as FootnoteBlockProps,
   MediaBlock as MediaBlockProps,
   MediaCollageBlock as MediaCollageBlockProps,
+  NewsletterSignupBlock as NewsletterSignupBlockProps,
   SocialEmbedBlock as SocialEmbedBlockProps,
   SquiggleRuleBlock as SquiggleRuleBlockProps,
   TimelineBlock as TimelineBlockProps,
@@ -50,6 +52,7 @@ type NodeTypes =
       | BannerBlockProps
       | CodeBlockProps
       | MathBlockProps
+      | NewsletterSignupBlockProps
       | SquiggleRuleBlockProps
       | SocialEmbedBlockProps
       | TimelineBlockProps
@@ -77,6 +80,7 @@ function createJsxConverters(parentDoc?: ParentDocContext): JSXConvertersFunctio
       mediaCollage: ({ node }) => <MediaCollageBlock {...node.fields} />,
       code: ({ node }) => <CodeBlock className="col-start-2" {...node.fields} />,
       cta: ({ node }) => <CallToActionBlock {...node.fields} />,
+      newsletterSignup: ({ node }) => <NewsletterSignupBlock {...node.fields} />,
       displayMathBlock: ({ node }: { node: SerializedBlockNode<MathBlockProps> }) => (
         <MathBlock {...node.fields} />
       ),

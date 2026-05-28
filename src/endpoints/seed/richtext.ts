@@ -338,6 +338,54 @@ export function createMediaBlockNode(mediaId: number): SerializedLexicalNode {
 }
 
 /**
+ * Creates a newsletterSignup block node for use inside Lexical rich text
+ */
+export function createNewsletterSignupBlockNode(fields?: {
+  heading?: string
+  description?: string
+  buttonLabel?: string
+}): SerializedLexicalNode {
+  const node = {
+    type: "block",
+    fields: {
+      blockType: "newsletterSignup",
+      ...fields,
+    },
+    format: "",
+    version: 2,
+  }
+  return node
+}
+
+/**
+ * Creates a CTA block node for use inside Lexical rich text
+ */
+export function createCTABlockNode(fields: {
+  richText: LexicalContent
+  links?: Array<{
+    id?: string
+    link: {
+      type?: "custom" | "reference"
+      url?: string | null
+      label?: string | null
+      newTab?: boolean | null
+      appearance?: "default" | "outline"
+    }
+  }>
+}): SerializedLexicalNode {
+  const node = {
+    type: "block",
+    fields: {
+      blockType: "cta",
+      ...fields,
+    },
+    format: "",
+    version: 2,
+  }
+  return node
+}
+
+/**
  * Text format bit flags for Lexical text nodes
  */
 export const TextFormat = {

@@ -1,6 +1,8 @@
 import type { Block, Field } from "payload"
 
 import {
+  AlignFeature,
+  BlocksFeature,
   EXPERIMENTAL_TableFeature,
   FixedToolbarFeature,
   HeadingFeature,
@@ -11,6 +13,8 @@ import {
   OrderedListFeature,
 } from "@payloadcms/richtext-lexical"
 
+import { CallToAction } from "@/blocks/CallToAction/config"
+import { NewsletterSignup } from "@/blocks/NewsletterSignup/config"
 import { link } from "@/fields/link"
 
 const columnFields: Field[] = [
@@ -50,7 +54,9 @@ const columnFields: Field[] = [
           IndentFeature(),
           UnorderedListFeature(),
           OrderedListFeature(),
+          AlignFeature(),
           EXPERIMENTAL_TableFeature(),
+          BlocksFeature({ blocks: [CallToAction, NewsletterSignup] }),
         ]
       },
     }),

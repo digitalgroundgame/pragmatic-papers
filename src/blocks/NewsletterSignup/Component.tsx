@@ -118,15 +118,15 @@ export const NewsletterSignupBlock: React.FC<NewsletterSignupTypes> = ({
   const currentId = blockId || "newsletter-email"
 
   return (
-    <section>
+    <section className="p-4 font-sans">
       <Script
         src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit"
         strategy="afterInteractive"
         onReady={() => setScriptReady(true)}
       />
-      <h3>{headingText}</h3>
-      <p className="text-muted-foreground mx-auto mt-3 text-base">{descriptionText}</p>
-      <form onSubmit={handleSubmit} className="mt-6 flex flex-col gap-2 sm:flex-row sm:items-end">
+      <h3 className="mt-0!">{headingText}</h3>
+      <p className="font-serif">{descriptionText}</p>
+      <form onSubmit={handleSubmit} className="flex flex-col gap-2 sm:flex-row sm:items-end">
         <Field className="flex-1">
           <FieldLabel htmlFor={currentId}>Email address</FieldLabel>
           <Input
@@ -153,6 +153,10 @@ export const NewsletterSignupBlock: React.FC<NewsletterSignupTypes> = ({
       ) : status === "success" && message ? (
         <FieldDescription className="mt-3">{message}</FieldDescription>
       ) : null}
+      <p className="text-sm">
+        Your newsletter subscriptions are subject to The Pragmatic Papers{" "}
+        <a href="/privacy-policy">Privacy Policy</a> and <a href="/terms-of-use">Terms of Use</a>.
+      </p>
     </section>
   )
 }

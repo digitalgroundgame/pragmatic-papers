@@ -35,6 +35,14 @@ export default defineConfig({
           testTimeout: 60_000,
         },
       },
+      {
+        resolve: { tsconfigPaths: true },
+        test: {
+          name: "scripts",
+          environment: "node",
+          include: ["tests/scripts/**/*.test.ts"],
+        },
+      },
     ],
   },
 })

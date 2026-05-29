@@ -136,13 +136,12 @@ export const createFootnotesArticle = async (
 ): Promise<number> => {
   validateWriters(writers)
 
-  const writer = writers[0]!
   const title = "Demonstrating Footnotes: A Comprehensive Guide"
 
   const article = await createArticle(payload, {
     title,
     content: createArticleContentWithFootnotes(referencedArticleId),
-    authors: [writer.id],
+    authors: writers.map((writer) => writer.id),
     topics: topics,
     slug: "demonstrating-footnotes-comprehensive-guide",
     heroImage: mediaDocs[Math.floor(Math.random() * mediaDocs.length)]?.id,

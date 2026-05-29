@@ -1,5 +1,6 @@
 import {
   Body,
+  Column,
   Container,
   Head,
   Hr,
@@ -7,14 +8,18 @@ import {
   Img,
   Link,
   Preview,
+  Row,
   Section,
   Text,
 } from "@react-email/components"
 import { Tailwind } from "@react-email/tailwind"
+import { formatDistanceToNow } from "date-fns"
 import * as React from "react"
 
-import type { Article, Volume } from "@/payload-types"
+import type { Article, Topic, Volume } from "@/payload-types"
+import { formatAuthors } from "@/utilities/formatAuthors"
 import { getMediaUrl } from "@/utilities/getMediaUrl"
+import { cn } from "@/utilities/utils"
 
 export interface VolumeArticleEmailProps {
   article: Article
@@ -40,21 +45,56 @@ function articleExcerpt(article: Article): string {
  * 1200, 1920, ...]) or /_next/image returns 400. 1080 is just under 2× the
  * email's 560px max-width — Retina mail clients still render sharp without
  * us serving 4K source files.
+ *
+ * Local-storage paths are relative (e.g. /api/media/file/...) — passing them
+ * directly lets /_next/image handle them with an internal route rather than
+ * an outbound HTTP fetch (which fails in Docker where localhost:8000 is only
+ * the external port mapping, not the container's own address).
  */
 function heroImageUrl(article: Article, siteUrl: string): string | null {
   const hero = article.heroImage
   if (!hero || typeof hero === "number") return null
   const raw = getMediaUrl(hero.url)
   if (!raw) return null
-  const absoluteSrc = raw.startsWith("http") ? raw : `${siteUrl}${raw}`
-  const params = new URLSearchParams({ url: absoluteSrc, w: "1080", q: "80" })
+  const params = new URLSearchParams({ url: raw, w: "1080", q: "80" })
   return `${siteUrl}/_next/image?${params.toString()}`
 }
 
-export function VolumeArticleEmail(props: VolumeArticleEmailProps): React.ReactElement {
-  const { article, volume, dayIndex, totalDays, siteUrl } = props
+function getDimensions(article: Article):
+  | {
+      width?: number
+      height?: number
+    }
+  | undefined {
+  if (!article.heroImage || typeof article.heroImage === "number") return undefined
+  return {
+    width: article.heroImage.sizes?.small?.width ?? undefined,
+    height: article.heroImage.sizes?.small?.height ?? undefined,
+  }
+}
+
+function getAvatars(article: Article): string[] {
+  if (!article.populatedAuthors) return []
+  return article.populatedAuthors
+    .map((a) => {
+      const image = a?.profileImage
+      if (!image || typeof image === "number") return null
+      return image.sizes?.square?.url ?? null
+    })
+    .filter((url): url is string => Boolean(url))
+}
+
+export function VolumeArticleEmail({
+  article,
+  volume,
+  dayIndex,
+  totalDays,
+  siteUrl,
+}: VolumeArticleEmailProps): React.ReactElement {
   const excerpt = articleExcerpt(article)
   const heroUrl = heroImageUrl(article, siteUrl)
+  const image = getDimensions(article)
+  const avatars = getAvatars(article)
   const articleUrl = `${siteUrl}/articles/${article.slug}`
   const volumeUrl = `${siteUrl}/volumes/${volume.slug}`
 
@@ -65,37 +105,82 @@ export function VolumeArticleEmail(props: VolumeArticleEmailProps): React.ReactE
       <Tailwind>
         <Body className="bg-white font-sans">
           <Container className="mx-auto max-w-[560px] px-5 py-8">
-            <Text className="m-0 text-xs tracking-wider text-neutral-500 uppercase">
+            <Img
+              src={`${siteUrl}/the-pragmatic-papers-logo-dark.png`}
+              alt="The Pragmatic Papers Logo"
+              width="256"
+              height="28"
+            />
+            <Text className="my-1 text-base tracking-wider text-neutral-600 uppercase">
               Volume {volume.volumeNumber} · Day {dayIndex} of {totalDays}
             </Text>
-            {heroUrl ? (
-              <Section className="mt-4">
+            {heroUrl && (
+              <Section>
                 <Link href={articleUrl}>
                   <Img
                     src={heroUrl}
                     alt={article.title}
-                    width="520"
-                    className="rounded-md object-cover"
+                    width={image?.width}
+                    height={image?.height}
+                    className="my-3 rounded-md"
                   />
                 </Link>
               </Section>
-            ) : null}
-            <Section className="mt-5">
-              <Link href={articleUrl} className="text-neutral-900 no-underline">
-                <Text className="m-0 text-2xl leading-tight font-semibold">{article.title}</Text>
+            )}
+            <Section>
+              <Link href={articleUrl} className="text-black no-underline">
+                <Text className="my-1 text-3xl font-bold">{article.title}</Text>
               </Link>
-              <Text className="mt-3 text-base leading-relaxed text-neutral-700">{excerpt}</Text>
+              {article.populatedAuthors && article.populatedAuthors.length > 0 && (
+                <Row className="my-1">
+                  {avatars.length > 0 && (
+                    <Column style={{ width: 24 + avatars.length * 8 }}>
+                      {avatars.map((src, i) => (
+                        <Img
+                          key={src}
+                          src={src}
+                          width="24"
+                          height="24"
+                          className={cn(
+                            "ring-background inline-block rounded-full ring-2",
+                            i > 0 ? "-ml-2" : "ml-0",
+                          )}
+                        />
+                      ))}
+                    </Column>
+                  )}
+                  <Column>
+                    <Text className="my-0 pl-2 text-sm text-neutral-600">
+                      By {formatAuthors(article.populatedAuthors)}
+                    </Text>
+                  </Column>
+                </Row>
+              )}
+              {article.publishedAt && (
+                <Text className="my-0 text-neutral-600">
+                  {formatDistanceToNow(new Date(article.publishedAt), { addSuffix: true })}
+                </Text>
+              )}
+              <Text className="my-1 text-base leading-relaxed text-black">{excerpt}</Text>
+              {article.topics && article.topics.length > 0 && (
+                <Text className="my-1 text-xs tracking-wide text-neutral-600 uppercase">
+                  {article.topics
+                    .filter((t): t is Topic => typeof t !== "number")
+                    .map((t) => t.name)
+                    .join(" · ")}
+                </Text>
+              )}
               <Link
                 href={articleUrl}
-                className="mt-5 inline-block rounded-md bg-neutral-900 px-5 py-3 text-sm font-medium text-white no-underline"
+                className="mx-auto my-3 block w-fit rounded-md bg-orange-600 px-5 py-3 text-center font-medium text-white no-underline"
               >
-                Read on Pragmatic Papers
+                Read on The Pragmatic Papers
               </Link>
             </Section>
             <Hr className="my-8 border-neutral-200" />
-            <Text className="m-0 text-xs text-neutral-500">
-              You&apos;re receiving this because you subscribed to Pragmatic Papers. Catch up on the
-              full <Link href={volumeUrl}>Volume {volume.volumeNumber}</Link> any time, or{" "}
+            <Text className="text-xs text-neutral-600">
+              You&apos;re receiving this because you subscribed to The Pragmatic Papers. Catch up on
+              the full <Link href={volumeUrl}>Volume {volume.volumeNumber}</Link> any time, or{" "}
               <Link href="{{ UnsubscribeURL }}">unsubscribe</Link>.
             </Text>
           </Container>

@@ -122,7 +122,7 @@ export function VolumeArticleEmail({
                     alt={article.title}
                     width={image?.width}
                     height={image?.height}
-                    className="my-3 rounded-md"
+                    className="my-3 rounded-md bg-black"
                   />
                 </Link>
               </Section>
@@ -142,7 +142,7 @@ export function VolumeArticleEmail({
                           width="24"
                           height="24"
                           className={cn(
-                            "ring-background inline-block rounded-full ring-2",
+                            "ring-background inline-block rounded-full bg-black ring-2",
                             i > 0 ? "-ml-2" : "ml-0",
                           )}
                         />
@@ -181,8 +181,15 @@ export function VolumeArticleEmail({
             <Hr className="my-8 border-neutral-200" />
             <Text className="text-xs text-neutral-600">
               You&apos;re receiving this because you subscribed to The Pragmatic Papers. Catch up on
-              the full <Link href={volumeUrl}>Volume {volume.volumeNumber}</Link> any time, or{" "}
-              <Link href="{{ UnsubscribeURL }}">unsubscribe</Link>.
+              the full{" "}
+              <Link href={volumeUrl} style={{ color: "#ff401a" }}>
+                Volume {volume.volumeNumber}
+              </Link>{" "}
+              any time, or{" "}
+              <Link href="{{ UnsubscribeURL }}" style={{ color: "#ff401a" }}>
+                unsubscribe
+              </Link>
+              .
             </Text>
           </Container>
         </Body>

@@ -6,6 +6,7 @@ import { isEditor } from "@/access/checkRole"
 import configPromise from "@payload-config"
 import { MidDripWelcomeEmail } from "@/emails/MidDripWelcome"
 import { VolumeArticleEmail } from "@/emails/VolumeArticle"
+import { formatAuthors } from "@/utilities/formatAuthors"
 import { getServerSideURL } from "@/utilities/getURL"
 
 import type { Article, Volume } from "@/payload-types"
@@ -67,7 +68,25 @@ export async function GET(
     const html = await render(
       MidDripWelcomeEmail({
         volume: { title: vol.title, volumeNumber: vol.volumeNumber, slug: vol.slug ?? "" },
-        alreadySent: alreadySent.map((a) => ({ title: a.title, slug: a.slug ?? "" })),
+        alreadySent: alreadySent.map((a) => {
+          const firstAuthorImage = a.populatedAuthors?.[0]?.profileImage
+          return {
+            title: a.title,
+            slug: a.slug ?? "",
+            heroImageUrl:
+              typeof a.heroImage === "object" && a.heroImage
+                ? (a.heroImage.sizes?.square?.url ?? null)
+                : null,
+            authorsText:
+              a.populatedAuthors && a.populatedAuthors.length > 0
+                ? formatAuthors(a.populatedAuthors)
+                : null,
+            avatarUrl:
+              firstAuthorImage && typeof firstAuthorImage !== "number"
+                ? (firstAuthorImage.sizes?.square?.url ?? null)
+                : null,
+          }
+        }),
         remainingCount,
         siteUrl,
       }),

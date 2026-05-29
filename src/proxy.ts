@@ -6,11 +6,11 @@ export function proxy(request: NextRequest): ReturnType<typeof NextResponse.next
 
   const response = NextResponse.next({ request: { headers: requestHeaders } })
 
-  // Only the production deployment is indexable. Every other deployment (PR
-  // previews, staging) stays fully crawlable — so the sitemap and pages can be
+  // Prevent staging (and PR previews) from being search index. Pages
+  // stays fully crawlable — so the sitemap and pages can be
   // verified — but is kept out of search indexes via noindex. Crawling is
   // intentionally left allowed (no robots.txt Disallow) so Google can actually
-  // fetch the page and honor the (new) noindex header.
+  // fetch the page, process, and then and honor the (new) noindex header.
   if (process.env.BUILD_ENV !== "production") {
     response.headers.set("X-Robots-Tag", "noindex, nofollow")
   }

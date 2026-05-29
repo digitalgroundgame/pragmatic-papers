@@ -16,18 +16,35 @@ const colVariants = cva("col-span-4", {
   },
 })
 
-export const ContentBlock: React.FC<ContentBlockProps> = ({ columns }) => {
+const containerVariants = cva("container my-4 grid grid-cols-4 gap-x-6 gap-y-2 lg:grid-cols-12", {
+  variants: {
+    width: {
+      narrow: "max-w-3xl",
+      wide: "max-w-5xl",
+      full: "px-0",
+    },
+  },
+  defaultVariants: {
+    width: "narrow",
+  },
+})
+
+export const ContentBlock: React.FC<ContentBlockProps> = ({ columns, width }) => {
   if (!columns || !columns.length) return null
   return (
-    <section className="container grid grid-cols-4 gap-x-6 gap-y-2 lg:grid-cols-12">
-      {columns.map(({ id, richText, size }) => (
-        <React.Fragment key={id}>
-          {richText && (
-            <RichText className={cn(colVariants({ size }))} data={richText} enableGutter={false} />
-          )}
-          {/* {enableLink && <CMSLink {...link} />} */}
-        </React.Fragment>
-      ))}
+    <section className={containerVariants({ width })}>
+      {columns.map(
+        ({ id, richText, size }) =>
+          richText && (
+            <RichText
+              key={id}
+              className={cn(colVariants({ size }))}
+              data={richText}
+              enableGutter={false}
+            />
+          ),
+      )}
+      {/* {enableLink && <CMSLink {...link} />} */}
     </section>
   )
 }

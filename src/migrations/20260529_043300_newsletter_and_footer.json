@@ -670,6 +670,14 @@
           "primaryKey": true,
           "notNull": true
         },
+        "width": {
+          "name": "width",
+          "type": "enum_pages_blocks_content_width",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "'narrow'"
+        },
         "block_name": {
           "name": "block_name",
           "type": "varchar",
@@ -2794,6 +2802,14 @@
           "type": "serial",
           "primaryKey": true,
           "notNull": true
+        },
+        "width": {
+          "name": "width",
+          "type": "enum__pages_v_blocks_content_width",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "'narrow'"
         },
         "_uuid": {
           "name": "_uuid",
@@ -12217,6 +12233,239 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
+    "public.footer_blocks_content_columns": {
+      "name": "footer_blocks_content_columns",
+      "schema": "",
+      "columns": {
+        "_order": {
+          "name": "_order",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "_parent_id": {
+          "name": "_parent_id",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "id": {
+          "name": "id",
+          "type": "varchar",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "size": {
+          "name": "size",
+          "type": "enum_footer_blocks_content_columns_size",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "'oneThird'"
+        },
+        "rich_text": {
+          "name": "rich_text",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "enable_link": {
+          "name": "enable_link",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "link_type": {
+          "name": "link_type",
+          "type": "enum_footer_blocks_content_columns_link_type",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "'reference'"
+        },
+        "link_new_tab": {
+          "name": "link_new_tab",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "link_url": {
+          "name": "link_url",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "link_label": {
+          "name": "link_label",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "link_appearance": {
+          "name": "link_appearance",
+          "type": "enum_footer_blocks_content_columns_link_appearance",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "'default'"
+        }
+      },
+      "indexes": {
+        "footer_blocks_content_columns_order_idx": {
+          "name": "footer_blocks_content_columns_order_idx",
+          "columns": [
+            {
+              "expression": "_order",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "footer_blocks_content_columns_parent_id_idx": {
+          "name": "footer_blocks_content_columns_parent_id_idx",
+          "columns": [
+            {
+              "expression": "_parent_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "footer_blocks_content_columns_parent_id_fk": {
+          "name": "footer_blocks_content_columns_parent_id_fk",
+          "tableFrom": "footer_blocks_content_columns",
+          "tableTo": "footer_blocks_content",
+          "columnsFrom": ["_parent_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.footer_blocks_content": {
+      "name": "footer_blocks_content",
+      "schema": "",
+      "columns": {
+        "_order": {
+          "name": "_order",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "_parent_id": {
+          "name": "_parent_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "_path": {
+          "name": "_path",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "id": {
+          "name": "id",
+          "type": "varchar",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "width": {
+          "name": "width",
+          "type": "enum_footer_blocks_content_width",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "'narrow'"
+        },
+        "block_name": {
+          "name": "block_name",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "footer_blocks_content_order_idx": {
+          "name": "footer_blocks_content_order_idx",
+          "columns": [
+            {
+              "expression": "_order",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "footer_blocks_content_parent_id_idx": {
+          "name": "footer_blocks_content_parent_id_idx",
+          "columns": [
+            {
+              "expression": "_parent_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "footer_blocks_content_path_idx": {
+          "name": "footer_blocks_content_path_idx",
+          "columns": [
+            {
+              "expression": "_path",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "footer_blocks_content_parent_id_fk": {
+          "name": "footer_blocks_content_parent_id_fk",
+          "tableFrom": "footer_blocks_content",
+          "tableTo": "footer",
+          "columnsFrom": ["_parent_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
     "public.footer_nav_items": {
       "name": "footer_nav_items",
       "schema": "",
@@ -12941,6 +13190,11 @@
       "schema": "public",
       "values": ["default", "outline"]
     },
+    "public.enum_pages_blocks_content_width": {
+      "name": "enum_pages_blocks_content_width",
+      "schema": "public",
+      "values": ["narrow", "wide", "full"]
+    },
     "public.enum_timeline_events_citation_type": {
       "name": "enum_timeline_events_citation_type",
       "schema": "public",
@@ -13020,6 +13274,11 @@
       "name": "enum__pages_v_blocks_content_columns_link_appearance",
       "schema": "public",
       "values": ["default", "outline"]
+    },
+    "public.enum__pages_v_blocks_content_width": {
+      "name": "enum__pages_v_blocks_content_width",
+      "schema": "public",
+      "values": ["narrow", "wide", "full"]
     },
     "public.enum__timeline_v_events_citation_type": {
       "name": "enum__timeline_v_events_citation_type",
@@ -13151,6 +13410,26 @@
       "schema": "public",
       "values": ["link", "default", "outline", "ghost", "branded"]
     },
+    "public.enum_footer_blocks_content_columns_size": {
+      "name": "enum_footer_blocks_content_columns_size",
+      "schema": "public",
+      "values": ["oneThird", "half", "twoThirds", "full"]
+    },
+    "public.enum_footer_blocks_content_columns_link_type": {
+      "name": "enum_footer_blocks_content_columns_link_type",
+      "schema": "public",
+      "values": ["reference", "custom"]
+    },
+    "public.enum_footer_blocks_content_columns_link_appearance": {
+      "name": "enum_footer_blocks_content_columns_link_appearance",
+      "schema": "public",
+      "values": ["default", "outline"]
+    },
+    "public.enum_footer_blocks_content_width": {
+      "name": "enum_footer_blocks_content_width",
+      "schema": "public",
+      "values": ["narrow", "wide", "full"]
+    },
     "public.enum_footer_nav_items_link_type": {
       "name": "enum_footer_nav_items_link_type",
       "schema": "public",
@@ -13192,6 +13471,6 @@
     "tables": {},
     "columns": {}
   },
-  "id": "69be86df-96b4-4ffe-96fa-b23c7cf0476a",
+  "id": "ec1906f4-4e16-4dbd-a59d-c31a6254321b",
   "prevId": "00000000-0000-0000-0000-000000000000"
 }

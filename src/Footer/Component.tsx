@@ -1,3 +1,4 @@
+import { RenderBlocks } from "@/blocks/RenderBlocks"
 import { Logo } from "@/components/Logo"
 import { Menu } from "@/components/Menu"
 import { ModeToggle } from "@/components/ModeToggle"
@@ -7,11 +8,16 @@ import { getCachedGlobal } from "@/utilities/getGlobals"
 import { Copyright } from "./Copyright"
 
 export async function Footer(): Promise<React.ReactElement> {
-  const { id, navItems, socials, copyright }: Footer = await getCachedGlobal("footer", 1)()
+  const { id, navItems, socials, copyright, layout }: Footer = await getCachedGlobal("footer", 2)()
 
   return (
-    <footer className="container space-y-1 py-2">
-      <div className="flex flex-col justify-between gap-2 border-t pt-2 md:flex-row md:items-center">
+    <footer className="container space-y-2 py-2">
+      {layout && (
+        <div className="border-t pt-6">
+          <RenderBlocks blocks={layout} />
+        </div>
+      )}
+      <div className="flex flex-col justify-between gap-2 border-t pt-4 md:flex-row md:items-center">
         <a href="/" className="flex-1">
           <Logo size="sm" />
         </a>

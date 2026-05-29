@@ -761,6 +761,7 @@ export interface CallToActionBlock {
  * via the `definition` "ContentBlock".
  */
 export interface ContentBlock {
+  width?: ('narrow' | 'wide' | 'full') | null;
   columns?:
     | {
         size?: ('oneThird' | 'half' | 'twoThirds' | 'full') | null;
@@ -1551,6 +1552,7 @@ export interface CallToActionBlockSelect<T extends boolean = true> {
  * via the `definition` "ContentBlock_select".
  */
 export interface ContentBlockSelect<T extends boolean = true> {
+  width?: T;
   columns?:
     | T
     | {
@@ -2224,6 +2226,7 @@ export interface Header {
  */
 export interface Footer {
   id: number;
+  layout?: ContentBlock[] | null;
   navItems?: MenuField;
   socials?: MenuField;
   copyright?: LinkField;
@@ -2287,6 +2290,11 @@ export interface HeaderSelect<T extends boolean = true> {
  * via the `definition` "footer_select".
  */
 export interface FooterSelect<T extends boolean = true> {
+  layout?:
+    | T
+    | {
+        content?: T | ContentBlockSelect<T>;
+      };
   navItems?: T | MenuFieldSelect<T>;
   socials?: T | MenuFieldSelect<T>;
   copyright?: T | LinkFieldSelect<T>;

@@ -11,7 +11,6 @@ import { LivePreviewListener } from "@/components/LivePreviewListener"
 import { PayloadRedirects } from "@/components/PayloadRedirects"
 import { RecommendedArticles } from "@/components/RecommendedArticles"
 import RichText from "@/components/RichText"
-import { SignupSection } from "@/components/SignupSection"
 import { TopicsList } from "@/components/Topics/TopicsList"
 import { Separator } from "@/components/ui/separator"
 import { ArticleHero } from "@/heros/ArticleHero"
@@ -95,7 +94,6 @@ export default async function Article({ params: paramsPromise }: Args): Promise<
         <AuthorList aria-label="Article Authors" authors={populatedAuthors} />
       </article>
       <RecommendedArticles currentArticleSlug={slug} />
-      <SignupSection />
     </>
   )
 }

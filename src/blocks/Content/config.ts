@@ -82,6 +82,16 @@ export const Content: Block = {
   interfaceName: "ContentBlock",
   fields: [
     {
+      name: "width",
+      type: "select",
+      defaultValue: "narrow",
+      options: [
+        { label: "Narrow", value: "narrow" },
+        { label: "Wide", value: "wide" },
+        { label: "Full", value: "full" },
+      ],
+    },
+    {
       name: "columns",
       type: "array",
       admin: {

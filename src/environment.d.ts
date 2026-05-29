@@ -6,6 +6,10 @@ declare global {
       NEXT_PUBLIC_GOOGLE_ANALYTICS_ID: string
       NEXT_PUBLIC_SERVER_URL: string
       VERCEL_PROJECT_PRODUCTION_URL: string
+      // Deployment environment, set per Coolify resource. Only "production"
+      // is search-indexable; all other values (preview/staging/unset) are
+      // served with an X-Robots-Tag: noindex header from src/proxy.ts.
+      BUILD_ENV?: string
     }
   }
 }

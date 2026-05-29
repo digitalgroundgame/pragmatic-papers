@@ -52,7 +52,7 @@ export async function POST(req: NextRequest): Promise<Response> {
   // currently-active one (the Volume with the soonest scheduled send).
   const parsed = scheduled
     .map((c) => {
-      const m = c.name.match(/^Volume (\d+) · Day (\d+) ·/)
+      const m = c.name.match(/^Volume (\d+) · Day (\d+) of \d+ ·/)
       if (!m) return null
       return {
         volumeNumber: Number(m[1]),

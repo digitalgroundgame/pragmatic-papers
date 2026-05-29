@@ -3,6 +3,8 @@
 import Script from "next/script"
 import * as React from "react"
 
+import { RichText as ConvertRichText, LinkJSXConverter } from "@payloadcms/richtext-lexical/react"
+
 import { Button } from "@/components/ui/button"
 import { Field, FieldDescription, FieldError, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
@@ -12,10 +14,8 @@ import type { NewsletterSignupBlock as NewsletterSignupTypes } from "@/payload-t
 // block. When the component is used directly in code (e.g. the Footer),
 // props are undefined — so we duplicate the defaults here as runtime
 // fallbacks.
-const DEFAULT_HEADING = "Subscribe to Pragmatic Papers"
-const DEFAULT_DESCRIPTION =
-  "Get one article each weekday during a Volume drop. No spam, unsubscribe any time."
-const DEFAULT_BUTTON_LABEL = "Subscribe"
+const DEFAULT_HEADING = "Get Daily Pragmatic Papers"
+const DEFAULT_BUTTON_LABEL = "Sign Up"
 
 const TURNSTILE_SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY
 
@@ -46,6 +46,7 @@ export const NewsletterSignupBlock: React.FC<NewsletterSignupTypes> = ({
   heading,
   description,
   buttonLabel,
+  notice,
   id: blockId,
 }) => {
   const [email, setEmail] = React.useState("")
@@ -76,7 +77,6 @@ export const NewsletterSignupBlock: React.FC<NewsletterSignupTypes> = ({
   }, [scriptReady])
 
   const headingText = heading ?? DEFAULT_HEADING
-  const descriptionText = description ?? DEFAULT_DESCRIPTION
   const buttonText = buttonLabel ?? DEFAULT_BUTTON_LABEL
   const disabled =
     status === "submitting" || status === "success" || (!!TURNSTILE_SITE_KEY && !token)
@@ -118,14 +118,14 @@ export const NewsletterSignupBlock: React.FC<NewsletterSignupTypes> = ({
   const currentId = blockId || "newsletter-email"
 
   return (
-    <section className="font-sans">
+    <section className="space-y-3 font-sans">
       <Script
         src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit"
         strategy="afterInteractive"
         onReady={() => setScriptReady(true)}
       />
       <h3 className="mt-0!">{headingText}</h3>
-      <p className="font-serif">{descriptionText}</p>
+      {description && <p className="font-serif">{description}</p>}
       <form onSubmit={handleSubmit} className="flex flex-col gap-2 sm:flex-row sm:items-end">
         <Field className="flex-1">
           <FieldLabel htmlFor={currentId}>Email address</FieldLabel>
@@ -153,10 +153,18 @@ export const NewsletterSignupBlock: React.FC<NewsletterSignupTypes> = ({
       ) : status === "success" && message ? (
         <FieldDescription className="mt-3">{message}</FieldDescription>
       ) : null}
-      <p className="text-sm">
-        Your newsletter subscriptions are subject to The Pragmatic Papers{" "}
-        <a href="/privacy-policy">Privacy Policy</a> and <a href="/terms-of-use">Terms of Use</a>.
-      </p>
+      {notice && (
+        <ConvertRichText
+          className="text-muted-foreground [&_a:hover]:text-primary text-sm [&_a]:underline [&_a]:underline-offset-4"
+          converters={({ defaultConverters }) => ({
+            ...defaultConverters,
+            ...LinkJSXConverter({
+              internalDocToHref: ({ linkNode }) => linkNode.fields.url ?? "#",
+            }),
+          })}
+          data={notice}
+        />
+      )}
     </section>
   )
 }

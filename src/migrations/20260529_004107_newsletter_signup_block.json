@@ -1008,14 +1008,13 @@
           "type": "varchar",
           "primaryKey": false,
           "notNull": false,
-          "default": "'Get one article a weekday during each Volume'"
+          "default": "'Newsletter Signup'"
         },
         "description": {
           "name": "description",
           "type": "varchar",
           "primaryKey": false,
-          "notNull": false,
-          "default": "'When a new Volume drops, we send one article per weekday so you can actually read every piece. No spam, unsubscribe any time.'"
+          "notNull": false
         },
         "button_label": {
           "name": "button_label",
@@ -1023,6 +1022,12 @@
           "primaryKey": false,
           "notNull": false,
           "default": "'Subscribe'"
+        },
+        "notice": {
+          "name": "notice",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
         },
         "block_name": {
           "name": "block_name",
@@ -3146,14 +3151,13 @@
           "type": "varchar",
           "primaryKey": false,
           "notNull": false,
-          "default": "'Get one article a weekday during each Volume'"
+          "default": "'Newsletter Signup'"
         },
         "description": {
           "name": "description",
           "type": "varchar",
           "primaryKey": false,
-          "notNull": false,
-          "default": "'When a new Volume drops, we send one article per weekday so you can actually read every piece. No spam, unsubscribe any time.'"
+          "notNull": false
         },
         "button_label": {
           "name": "button_label",
@@ -3161,6 +3165,12 @@
           "primaryKey": false,
           "notNull": false,
           "default": "'Subscribe'"
+        },
+        "notice": {
+          "name": "notice",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
         },
         "_uuid": {
           "name": "_uuid",
@@ -13182,6 +13192,6 @@
     "tables": {},
     "columns": {}
   },
-  "id": "e5e64d44-2b6b-4369-83e0-c0088a2c8efd",
+  "id": "69be86df-96b4-4ffe-96fa-b23c7cf0476a",
   "prevId": "00000000-0000-0000-0000-000000000000"
 }

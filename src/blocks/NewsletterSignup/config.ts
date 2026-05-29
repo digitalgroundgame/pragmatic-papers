@@ -1,5 +1,7 @@
 import type { Block } from "payload"
 
+import { lexicalEditor, LinkFeature } from "@payloadcms/richtext-lexical"
+
 export const NewsletterSignup: Block = {
   slug: "newsletterSignup",
   interfaceName: "NewsletterSignupBlock",
@@ -11,18 +13,23 @@ export const NewsletterSignup: Block = {
     {
       name: "heading",
       type: "text",
-      defaultValue: "Get one article a weekday during each Volume",
+      defaultValue: "Newsletter Signup",
     },
     {
       name: "description",
       type: "textarea",
-      defaultValue:
-        "When a new Volume drops, we send one article per weekday so you can actually read every piece. No spam, unsubscribe any time.",
     },
     {
       name: "buttonLabel",
       type: "text",
       defaultValue: "Subscribe",
+    },
+    {
+      name: "notice",
+      type: "richText",
+      editor: lexicalEditor({
+        features: () => [LinkFeature({ enabledCollections: [] })],
+      }),
     },
   ],
 }

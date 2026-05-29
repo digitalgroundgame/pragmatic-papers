@@ -3,9 +3,11 @@ import type { RequiredDataFromCollectionSlug } from "payload"
 import {
   createCTABlockNode,
   createHeadingNode,
+  createLinkNode,
   createNewsletterSignupBlockNode,
   createParagraph,
   createRichText,
+  createTextNode,
 } from "./richtext"
 
 // Used for pre-seeded content so that the homepage is not empty
@@ -54,10 +56,21 @@ export const homeStatic: RequiredDataFromCollectionSlug<"pages"> = {
           size: "half",
           richText: createRichText([
             createNewsletterSignupBlockNode({
-              heading: "Get one article a weekday during each Volume",
+              heading: "Get Daily Pragmatic Papers",
               description:
                 "When a new Volume drops, we send one article per weekday so you can actually read every piece. No spam, unsubscribe any time.",
               buttonLabel: "Sign Up",
+              notice: createRichText([
+                createParagraph([
+                  createTextNode(
+                    "Your newsletter subscriptions are subject to The Pragmatic Papers ",
+                  ),
+                  createLinkNode("Privacy Policy", "/privacy-policy"),
+                  createTextNode(" and "),
+                  createLinkNode("Terms of Use", "/terms-of-use"),
+                  createTextNode("."),
+                ]),
+              ]),
             }),
           ]),
           enableLink: false,

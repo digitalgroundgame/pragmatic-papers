@@ -839,6 +839,21 @@ export interface NewsletterSignupBlock {
   heading?: string | null;
   description?: string | null;
   buttonLabel?: string | null;
+  notice?: {
+    root: {
+      type: string;
+      children: {
+        type: any;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  } | null;
   id?: string | null;
   blockName?: string | null;
   blockType: 'newsletterSignup';
@@ -1584,6 +1599,7 @@ export interface NewsletterSignupBlockSelect<T extends boolean = true> {
   heading?: T;
   description?: T;
   buttonLabel?: T;
+  notice?: T;
   id?: T;
   blockName?: T;
 }

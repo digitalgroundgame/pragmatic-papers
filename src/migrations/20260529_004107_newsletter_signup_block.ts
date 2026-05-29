@@ -7,9 +7,10 @@ export async function up({ db, payload, req }: MigrateUpArgs): Promise<void> {
   	"_parent_id" integer NOT NULL,
   	"_path" text NOT NULL,
   	"id" varchar PRIMARY KEY NOT NULL,
-  	"heading" varchar DEFAULT 'Get one article a weekday during each Volume',
-  	"description" varchar DEFAULT 'When a new Volume drops, we send one article per weekday so you can actually read every piece. No spam, unsubscribe any time.',
+  	"heading" varchar DEFAULT 'Newsletter Signup',
+  	"description" varchar,
   	"button_label" varchar DEFAULT 'Subscribe',
+  	"notice" jsonb,
   	"block_name" varchar
   );
   
@@ -18,9 +19,10 @@ export async function up({ db, payload, req }: MigrateUpArgs): Promise<void> {
   	"_parent_id" integer NOT NULL,
   	"_path" text NOT NULL,
   	"id" serial PRIMARY KEY NOT NULL,
-  	"heading" varchar DEFAULT 'Get one article a weekday during each Volume',
-  	"description" varchar DEFAULT 'When a new Volume drops, we send one article per weekday so you can actually read every piece. No spam, unsubscribe any time.',
+  	"heading" varchar DEFAULT 'Newsletter Signup',
+  	"description" varchar,
   	"button_label" varchar DEFAULT 'Subscribe',
+  	"notice" jsonb,
   	"_uuid" varchar,
   	"block_name" varchar
   );

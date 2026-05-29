@@ -172,7 +172,8 @@ export function VolumeArticleEmail({
               )}
               <Link
                 href={articleUrl}
-                className="mx-auto my-3 block w-fit rounded-md bg-orange-600 px-5 py-3 text-center font-medium text-white no-underline"
+                className="mx-auto my-3 block w-fit rounded-md px-5 py-3 text-center font-medium text-white no-underline"
+                style={{ backgroundColor: "#ff401a" }}
               >
                 Read on The Pragmatic Papers
               </Link>

@@ -41,6 +41,7 @@ export const homeStatic: RequiredDataFromCollectionSlug<"pages"> = {
   layout: [
     {
       blockType: "content",
+      width: "narrow",
       columns: [
         {
           size: "full",

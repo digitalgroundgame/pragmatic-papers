@@ -69,7 +69,7 @@ async function createVolume(articleIds: number[]) {
       volumeNumber: num,
       description: "Integration test volume.",
       articles: articleIds,
-      slug: "integration-test-volume",
+      slug: `integration-test-volume-${num}`,
     },
     overrideAccess: true,
     context: { disableRevalidate: true },

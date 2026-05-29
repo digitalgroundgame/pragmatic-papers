@@ -1,6 +1,9 @@
-import type { Article } from "@/payload-types"
+import type { Article, Media, User } from "@/payload-types"
+import { getRequestLoader } from "@/utilities/requestLoader"
 import type { CollectionAfterReadHook } from "payload"
 
+// Coalesces per-request user/media lookups so populating N articles hits each
+// table once instead of N times. Shares the user loader with populateAuthors.
 export const populateNarrator: CollectionAfterReadHook<Article> = async ({
   doc,
   req: { payload, context },
@@ -8,47 +11,62 @@ export const populateNarrator: CollectionAfterReadHook<Article> = async ({
   if (context.skipAfterRead) return doc
   if (!doc.narration) return doc
 
-  try {
-    if (typeof doc.narration === "number") {
-      // Fetch with depth:1 so narrator is populated — avoids a second query
-      const narrationDoc = await payload.findByID({
-        id: doc.narration,
-        collection: "media",
-        overrideAccess: true,
-        depth: 1,
-      })
-      const narrator = narrationDoc?.narrator
-      if (narrator && typeof narrator !== "number") {
-        doc.populatedNarrator = { id: narrator.id, name: narrator.name, slug: narrator.slug }
-      }
-    } else {
-      const rawNarrator = doc.narration.narrator
-      if (!rawNarrator) return doc
+  const loadUser = getRequestLoader<number, User>(context, "__articleAuthorLoader", async (ids) => {
+    const { docs } = await payload.find({
+      collection: "users",
+      where: { id: { in: ids } },
+      overrideAccess: true,
+      depth: 1,
+      limit: ids.length,
+      pagination: false,
+    })
+    return new Map(docs.map((u) => [u.id, u]))
+  })
 
-      if (typeof rawNarrator !== "number") {
-        doc.populatedNarrator = {
-          id: rawNarrator.id,
-          name: rawNarrator.name,
-          slug: rawNarrator.slug,
-        }
-      } else {
-        const narratorDoc = await payload.findByID({
-          id: rawNarrator,
-          collection: "users",
-          overrideAccess: true,
-          depth: 0,
-        })
-        if (narratorDoc) {
-          doc.populatedNarrator = {
-            id: narratorDoc.id,
-            name: narratorDoc.name,
-            slug: narratorDoc.slug,
-          }
-        }
+  const loadMedia = getRequestLoader<number, Media>(
+    context,
+    "__articleNarrationMediaLoader",
+    async (ids) => {
+      const { docs } = await payload.find({
+        collection: "media",
+        where: { id: { in: ids } },
+        overrideAccess: true,
+        depth: 0,
+        limit: ids.length,
+        pagination: false,
+      })
+      return new Map(docs.map((m) => [m.id, m]))
+    },
+  )
+
+  try {
+    let narratorId: number | undefined
+    let narratorObj: User | undefined
+
+    if (typeof doc.narration === "number") {
+      const media = await loadMedia(doc.narration)
+      const raw = media?.narrator
+      if (typeof raw === "number") narratorId = raw
+      else if (raw) narratorObj = raw as User
+    } else {
+      const raw = doc.narration.narrator
+      if (typeof raw === "number") narratorId = raw
+      else if (raw) narratorObj = raw
+    }
+
+    if (!narratorObj && narratorId !== undefined) {
+      narratorObj = await loadUser(narratorId)
+    }
+
+    if (narratorObj) {
+      doc.populatedNarrator = {
+        id: narratorObj.id,
+        name: narratorObj.name,
+        slug: narratorObj.slug,
       }
     }
   } catch {
-    // swallow error
+    // swallow error — keep prior behavior of silently no-oping
   }
 
   return doc

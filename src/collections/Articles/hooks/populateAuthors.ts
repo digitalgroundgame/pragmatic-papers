@@ -1,10 +1,14 @@
 import type { Article, User } from "@/payload-types"
+import { getRequestLoader } from "@/utilities/requestLoader"
 import type { CollectionAfterReadHook } from "payload"
 
 // The `user` collection has access control locked so that users are not publicly accessible
 // This means that we need to populate the authors manually here to protect user privacy
 // GraphQL will not return mutated user data that differs from the underlying schema
 // So we use an alternative `populatedAuthors` field to populate the user data, hidden from the admin UI
+//
+// Lookups are coalesced per-request via getRequestLoader, so populating N articles
+// hits the users table once instead of N times.
 export const populateAuthors: CollectionAfterReadHook<Article> = async ({
   doc,
   req: { payload, context },
@@ -16,22 +20,24 @@ export const populateAuthors: CollectionAfterReadHook<Article> = async ({
 
   if (!authorIds.length) return doc
 
-  try {
-    const { docs: authorDocs } = await payload.find({
+  const loadUser = getRequestLoader<number, User>(context, "__articleAuthorLoader", async (ids) => {
+    const { docs } = await payload.find({
       collection: "users",
-      where: { id: { in: authorIds } },
+      where: { id: { in: ids } },
       overrideAccess: true,
       depth: 1,
+      limit: ids.length,
+      pagination: false,
     })
+    return new Map(docs.map((u) => [u.id, u]))
+  })
 
-    // Preserve original author order
-    const authorMap = new Map(authorDocs.map((userDoc) => [userDoc.id, userDoc]))
-    const populatedAuthors = authorIds
-      .map((id) => authorMap.get(id))
-      .filter((userDoc): userDoc is User => Boolean(userDoc))
+  try {
+    const users = await Promise.all(authorIds.map((id) => loadUser(id)))
+    const populatedAuthors = users.filter((u): u is User => Boolean(u))
 
     if (populatedAuthors.length < authorIds.length) {
-      const missingIds = authorIds.filter((id) => !authorMap.has(id))
+      const missingIds = authorIds.filter((_, i) => !users[i])
       payload.logger.warn(
         { articleId: doc.id, missingIds },
         `Some authors were not found for article ${doc.id}`,

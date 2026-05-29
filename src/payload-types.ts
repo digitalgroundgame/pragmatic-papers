@@ -213,7 +213,11 @@ export interface Config {
     'payload-preferences': PayloadPreference;
     'payload-migrations': PayloadMigration;
   };
-  collectionsJoins: {};
+  collectionsJoins: {
+    articles: {
+      volume: 'volumes';
+    };
+  };
   collectionsSelect: {
     pages: PagesSelect<false> | PagesSelect<true>;
     articles: ArticlesSelect<false> | ArticlesSelect<true>;
@@ -456,7 +460,11 @@ export interface Article {
   narration?: (number | null) | Media;
   createdBy?: (number | null) | User;
   populatedAuthors?: PopulatedAuthors;
-  populatedVolume?: PopulatedVolume;
+  volume?: {
+    docs?: (number | Volume)[];
+    hasNextPage?: boolean;
+    totalDocs?: number;
+  };
   populatedNarrator?: PopulatedNarrator;
   updatedAt: string;
   createdAt: string;
@@ -671,17 +679,6 @@ export interface User {
     | null;
   password?: string | null;
   collection: 'users';
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "PopulatedVolume".
- */
-export interface PopulatedVolume {
-  id?: number | null;
-  slug?: string | null;
-  volumeNumber?: number | null;
-  title?: string | null;
-  publishedAt?: string | null;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -1646,7 +1643,7 @@ export interface ArticlesSelect<T extends boolean = true> {
   narration?: T;
   createdBy?: T;
   populatedAuthors?: T | PopulatedAuthorsSelect<T>;
-  populatedVolume?: T | PopulatedVolumeSelect<T>;
+  volume?: T;
   populatedNarrator?: T | PopulatedNarratorSelect<T>;
   updatedAt?: T;
   createdAt?: T;
@@ -1683,17 +1680,6 @@ export interface PopulatedAuthorsSelect<T extends boolean = true> {
 export interface MenuFieldSelect<T extends boolean = true> {
   link?: T | LinkFieldSelect<T>;
   id?: T;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "PopulatedVolume_select".
- */
-export interface PopulatedVolumeSelect<T extends boolean = true> {
-  id?: T;
-  slug?: T;
-  volumeNumber?: T;
-  title?: T;
-  publishedAt?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema

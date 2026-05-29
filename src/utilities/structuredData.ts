@@ -58,6 +58,8 @@ export function buildArticleJsonLd(article: Article, path: string): WithContext<
 
   const image = getImageUrl(article.meta?.image || article.heroImage)
 
+  const volumeDoc = article.volume?.docs?.find((d): d is Volume => typeof d !== "number")
+
   return {
     "@context": "https://schema.org",
     "@type": "Article",
@@ -71,14 +73,12 @@ export function buildArticleJsonLd(article: Article, path: string): WithContext<
     keywords: keywords.length > 0 ? keywords.join(", ") : undefined,
     author: authors.length > 0 ? authors : undefined,
     publisher: { "@type": "Organization", "@id": ORG_ID } satisfies OrganizationLeaf,
-    isPartOf: article.populatedVolume?.id
+    isPartOf: volumeDoc
       ? ({
           "@type": "PublicationVolume",
-          "@id": article.populatedVolume.slug
-            ? `${SERVER_URL}/volumes/${article.populatedVolume.slug}#volume`
-            : undefined,
-          name: article.populatedVolume.title ?? `Volume ${article.populatedVolume.volumeNumber}`,
-          volumeNumber: article.populatedVolume.volumeNumber ?? undefined,
+          "@id": volumeDoc.slug ? `${SERVER_URL}/volumes/${volumeDoc.slug}#volume` : undefined,
+          name: volumeDoc.title ?? `Volume ${volumeDoc.volumeNumber}`,
+          volumeNumber: volumeDoc.volumeNumber ?? undefined,
           isPartOf: { "@type": "Periodical", "@id": PERIODICAL_ID } satisfies PeriodicalLeaf,
         } satisfies PublicationVolumeLeaf)
       : undefined,

@@ -23,7 +23,6 @@ import { populateAuthors } from "@/collections/Articles/hooks/populateAuthors"
 import { populateTopics } from "@/collections/Articles/hooks/populateTopics"
 import { populateMetaImageFromHero } from "@/collections/Articles/hooks/populateMetaImageFromHero"
 import { populateNarrator } from "@/collections/Articles/hooks/populateNarrator"
-import { populateVolume } from "@/collections/Articles/hooks/populateVolume"
 import { revalidateArticle, revalidateDelete } from "@/collections/Articles/hooks/revalidateArticle"
 import { footnotesArrayField } from "@/fields/footnotes"
 import { menu } from "@/fields/menu"
@@ -320,24 +319,11 @@ export const Articles: CollectionConfig = {
       ],
     },
     {
-      name: "populatedVolume",
-      interfaceName: "PopulatedVolume",
-      type: "group",
-      virtual: true,
-      access: {
-        update: () => false,
-      },
-      admin: {
-        disabled: true,
-        readOnly: true,
-      },
-      fields: [
-        { name: "id", type: "number" },
-        { name: "slug", type: "text" },
-        { name: "volumeNumber", type: "number" },
-        { name: "title", type: "text" },
-        { name: "publishedAt", type: "date" },
-      ],
+      name: "volume",
+      type: "join",
+      collection: "volumes",
+      on: "articles",
+      maxDepth: 1,
     },
     {
       name: "populatedNarrator",
@@ -374,7 +360,7 @@ export const Articles: CollectionConfig = {
       populateMetaImageFromHero,
     ],
     afterChange: [revalidateArticle],
-    afterRead: [populateAuthors, populateTopics, populateVolume, populateNarrator],
+    afterRead: [populateAuthors, populateTopics, populateNarrator],
     afterDelete: [revalidateDelete],
   },
   versions: {

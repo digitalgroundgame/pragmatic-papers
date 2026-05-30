@@ -3,6 +3,11 @@ import { type NextRequest } from "next/server"
 import { getPayload } from "payload"
 
 import configPromise from "@payload-config"
+import {
+  NEWSLETTER_TAG,
+  parseDayFromTag,
+  parseVolumeFromTag,
+} from "@/collections/Volumes/endpoints/scheduleNewsletter/helpers"
 import { MidDripWelcomeEmail } from "@/emails/MidDripWelcome"
 import type { Article, Volume } from "@/payload-types"
 import { formatAuthors } from "@/utilities/formatAuthors"
@@ -48,15 +53,25 @@ export async function POST(req: NextRequest): Promise<Response> {
     return Response.json({ ok: true, action: "no-active-drip" })
   }
 
-  // Parse "Volume <N> · Day <K> · <title>" — group by Volume, find the
-  // currently-active one (the Volume with the soonest scheduled send).
+  // Read identity from the campaign's admin tags (vol-<N>, day-<K>) rather than
+  // its display name — the scheduler owns both, but only the tags are a stable
+  // contract. Group by Volume, find the currently-active one (the Volume with
+  // the soonest scheduled send).
   const parsed = scheduled
     .map((c) => {
-      const m = c.name.match(/^Volume (\d+) · Day (\d+) of \d+ ·/)
-      if (!m) return null
+      if (!c.tags.includes(NEWSLETTER_TAG)) return null
+      let volumeNumber: number | null = null
+      let dayNumber: number | null = null
+      for (const tag of c.tags) {
+        const v = parseVolumeFromTag(tag)
+        if (v !== null) volumeNumber = v
+        const d = parseDayFromTag(tag)
+        if (d !== null) dayNumber = d
+      }
+      if (volumeNumber === null || dayNumber === null) return null
       return {
-        volumeNumber: Number(m[1]),
-        dayIndex: Number(m[2]) - 1,
+        volumeNumber,
+        dayIndex: dayNumber - 1,
         sendAt: c.sendAt,
       }
     })

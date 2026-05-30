@@ -15,7 +15,6 @@ import {
 
 import { CallToAction } from "@/blocks/CallToAction/config"
 import { NewsletterSignup } from "@/blocks/NewsletterSignup/config"
-import { link } from "@/fields/link"
 
 const columnFields: Field[] = [
   {
@@ -62,19 +61,6 @@ const columnFields: Field[] = [
     }),
     label: false,
   },
-  {
-    name: "enableLink",
-    type: "checkbox",
-  },
-  link({
-    overrides: {
-      admin: {
-        condition: (_data, siblingData) => {
-          return Boolean(siblingData?.enableLink)
-        },
-      },
-    },
-  }),
 ]
 
 export const Content: Block = {

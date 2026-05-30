@@ -26,13 +26,19 @@ function makeReq(body: unknown, secret?: string) {
   })
 }
 
-/** Constructs a ScheduledCampaignSummary compatible with what listScheduledCampaigns returns. */
-function campaign(name: string, dayOffset = 1) {
+/**
+ * Constructs a ScheduledCampaignSummary like listScheduledCampaigns returns.
+ * Identity comes from the admin tags (vol-<N>, day-<K>), not the display name.
+ */
+function campaign(opts: { volume?: number; day?: number; tags?: string[] }, dayOffset = 1) {
+  const tags =
+    opts.tags ??
+    ["newsletter", `vol-${opts.volume}`, `day-${opts.day}`].filter((t) => !t.endsWith("undefined"))
   return {
     id: Math.floor(Math.random() * 1000),
-    name,
+    name: `Volume ${opts.volume} · Day ${opts.day} · cosmetic`,
     sendAt: new Date(Date.now() + dayOffset * 86400_000),
-    tags: [],
+    tags,
   }
 }
 
@@ -81,9 +87,9 @@ describe("POST /api/listmonk/subscriber-created", () => {
     expect(await res.json()).toMatchObject({ ok: true, action: "no-active-drip" })
   })
 
-  it("returns no-recognizable-campaigns when scheduled campaigns have unrecognizable names", async () => {
+  it("returns no-recognizable-campaigns when scheduled campaigns lack newsletter tags", async () => {
     vi.mocked(listScheduledCampaigns).mockResolvedValue([
-      campaign("Some other campaign without the expected pattern"),
+      campaign({ tags: ["some-unrelated-campaign"] }),
     ])
     const res = await POST(makeReq({ subscriber: { email: "new@example.com" } }, SECRET) as never)
     expect(res.status).toBe(200)
@@ -93,8 +99,8 @@ describe("POST /api/listmonk/subscriber-created", () => {
   it("returns drip-not-started when Day 1 of the active volume is still scheduled", async () => {
     // "Day 1" means dayIndex = 0 → minRemainingDay === 0 → drip not started
     vi.mocked(listScheduledCampaigns).mockResolvedValue([
-      campaign("Volume 3 · Day 1 of 5 · First Article"),
-      campaign("Volume 3 · Day 2 of 5 · Second Article", 2),
+      campaign({ volume: 3, day: 1 }),
+      campaign({ volume: 3, day: 2 }, 2),
     ])
     const res = await POST(makeReq({ subscriber: { email: "new@example.com" } }, SECRET) as never)
     expect(res.status).toBe(200)

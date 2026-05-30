@@ -97,6 +97,8 @@ describe("scheduleVolumeNewsletter", () => {
       expect(input.tags).toContain("newsletter")
       expect(input.tags).toContain(`vol-${volume.volumeNumber}`)
       expect(input.tags).toContain(`art-${articleIds[i]}`)
+      // 1-based day tag, read by the mid-drip welcome flow.
+      expect(input.tags).toContain(`day-${i + 1}`)
     }
   })
 

@@ -119,7 +119,6 @@ export const createMenus = async (
                   ]),
                 }),
               ]),
-              enableLink: false,
             },
             {
               size: "half",
@@ -144,7 +143,6 @@ export const createMenus = async (
                   ],
                 }),
               ]),
-              enableLink: false,
             },
           ],
         },

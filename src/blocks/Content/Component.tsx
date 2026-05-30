@@ -44,7 +44,6 @@ export const ContentBlock: React.FC<ContentBlockProps> = ({ id: blockId, columns
             />
           ),
       )}
-      {/* {enableLink && <CMSLink {...link} />} */}
     </section>
   )
 }

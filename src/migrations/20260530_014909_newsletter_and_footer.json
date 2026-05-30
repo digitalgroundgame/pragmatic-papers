@@ -551,46 +551,6 @@
           "type": "jsonb",
           "primaryKey": false,
           "notNull": false
-        },
-        "enable_link": {
-          "name": "enable_link",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "link_type": {
-          "name": "link_type",
-          "type": "enum_pages_blocks_content_columns_link_type",
-          "typeSchema": "public",
-          "primaryKey": false,
-          "notNull": false,
-          "default": "'reference'"
-        },
-        "link_new_tab": {
-          "name": "link_new_tab",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "link_url": {
-          "name": "link_url",
-          "type": "varchar",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "link_label": {
-          "name": "link_label",
-          "type": "varchar",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "link_appearance": {
-          "name": "link_appearance",
-          "type": "enum_pages_blocks_content_columns_link_appearance",
-          "typeSchema": "public",
-          "primaryKey": false,
-          "notNull": false,
-          "default": "'default'"
         }
       },
       "indexes": {
@@ -2678,46 +2638,6 @@
           "type": "jsonb",
           "primaryKey": false,
           "notNull": false
-        },
-        "enable_link": {
-          "name": "enable_link",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "link_type": {
-          "name": "link_type",
-          "type": "enum__pages_v_blocks_content_columns_link_type",
-          "typeSchema": "public",
-          "primaryKey": false,
-          "notNull": false,
-          "default": "'reference'"
-        },
-        "link_new_tab": {
-          "name": "link_new_tab",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "link_url": {
-          "name": "link_url",
-          "type": "varchar",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "link_label": {
-          "name": "link_label",
-          "type": "varchar",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "link_appearance": {
-          "name": "link_appearance",
-          "type": "enum__pages_v_blocks_content_columns_link_appearance",
-          "typeSchema": "public",
-          "primaryKey": false,
-          "notNull": false,
-          "default": "'default'"
         },
         "_uuid": {
           "name": "_uuid",
@@ -12268,46 +12188,6 @@
           "type": "jsonb",
           "primaryKey": false,
           "notNull": false
-        },
-        "enable_link": {
-          "name": "enable_link",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "link_type": {
-          "name": "link_type",
-          "type": "enum_footer_blocks_content_columns_link_type",
-          "typeSchema": "public",
-          "primaryKey": false,
-          "notNull": false,
-          "default": "'reference'"
-        },
-        "link_new_tab": {
-          "name": "link_new_tab",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "link_url": {
-          "name": "link_url",
-          "type": "varchar",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "link_label": {
-          "name": "link_label",
-          "type": "varchar",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "link_appearance": {
-          "name": "link_appearance",
-          "type": "enum_footer_blocks_content_columns_link_appearance",
-          "typeSchema": "public",
-          "primaryKey": false,
-          "notNull": false,
-          "default": "'default'"
         }
       },
       "indexes": {
@@ -13180,16 +13060,6 @@
       "schema": "public",
       "values": ["oneThird", "half", "twoThirds", "full"]
     },
-    "public.enum_pages_blocks_content_columns_link_type": {
-      "name": "enum_pages_blocks_content_columns_link_type",
-      "schema": "public",
-      "values": ["reference", "custom"]
-    },
-    "public.enum_pages_blocks_content_columns_link_appearance": {
-      "name": "enum_pages_blocks_content_columns_link_appearance",
-      "schema": "public",
-      "values": ["default", "outline"]
-    },
     "public.enum_pages_blocks_content_width": {
       "name": "enum_pages_blocks_content_width",
       "schema": "public",
@@ -13264,16 +13134,6 @@
       "name": "enum__pages_v_blocks_content_columns_size",
       "schema": "public",
       "values": ["oneThird", "half", "twoThirds", "full"]
-    },
-    "public.enum__pages_v_blocks_content_columns_link_type": {
-      "name": "enum__pages_v_blocks_content_columns_link_type",
-      "schema": "public",
-      "values": ["reference", "custom"]
-    },
-    "public.enum__pages_v_blocks_content_columns_link_appearance": {
-      "name": "enum__pages_v_blocks_content_columns_link_appearance",
-      "schema": "public",
-      "values": ["default", "outline"]
     },
     "public.enum__pages_v_blocks_content_width": {
       "name": "enum__pages_v_blocks_content_width",
@@ -13415,16 +13275,6 @@
       "schema": "public",
       "values": ["oneThird", "half", "twoThirds", "full"]
     },
-    "public.enum_footer_blocks_content_columns_link_type": {
-      "name": "enum_footer_blocks_content_columns_link_type",
-      "schema": "public",
-      "values": ["reference", "custom"]
-    },
-    "public.enum_footer_blocks_content_columns_link_appearance": {
-      "name": "enum_footer_blocks_content_columns_link_appearance",
-      "schema": "public",
-      "values": ["default", "outline"]
-    },
     "public.enum_footer_blocks_content_width": {
       "name": "enum_footer_blocks_content_width",
       "schema": "public",
@@ -13471,6 +13321,6 @@
     "tables": {},
     "columns": {}
   },
-  "id": "ec1906f4-4e16-4dbd-a59d-c31a6254321b",
+  "id": "ab5062be-4601-40af-a09c-b91b2439e068",
   "prevId": "00000000-0000-0000-0000-000000000000"
 }

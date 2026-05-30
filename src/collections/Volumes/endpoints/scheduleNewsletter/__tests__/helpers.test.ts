@@ -3,8 +3,11 @@ import { describe, expect, it } from "vitest"
 import {
   articleTag,
   campaignName,
+  dayTag,
   nextWeekday7amET,
   parseArticleIdFromTag,
+  parseDayFromTag,
+  parseVolumeFromTag,
   sevenAmEtAsUtc,
   volumeTag,
 } from "../helpers"
@@ -77,6 +80,40 @@ describe("articleTag", () => {
   it("formats as art-N", () => {
     expect(articleTag(5)).toBe("art-5")
     expect(articleTag(0)).toBe("art-0")
+  })
+})
+
+describe("dayTag", () => {
+  it("formats as day-N with a 1-based number", () => {
+    expect(dayTag(1)).toBe("day-1")
+    expect(dayTag(12)).toBe("day-12")
+  })
+})
+
+describe("parseVolumeFromTag", () => {
+  it("parses a valid vol tag", () => {
+    expect(parseVolumeFromTag("vol-12")).toBe(12)
+  })
+
+  it("returns null for art / day / newsletter tags", () => {
+    expect(parseVolumeFromTag("art-5")).toBeNull()
+    expect(parseVolumeFromTag("day-1")).toBeNull()
+    expect(parseVolumeFromTag("newsletter")).toBeNull()
+  })
+})
+
+describe("parseDayFromTag", () => {
+  it("parses a valid day tag", () => {
+    expect(parseDayFromTag("day-1")).toBe(1)
+    expect(parseDayFromTag("day-30")).toBe(30)
+  })
+
+  it("returns null for art / vol / newsletter tags and non-numeric suffixes", () => {
+    expect(parseDayFromTag("art-5")).toBeNull()
+    expect(parseDayFromTag("vol-5")).toBeNull()
+    expect(parseDayFromTag("newsletter")).toBeNull()
+    expect(parseDayFromTag("day-abc")).toBeNull()
+    expect(parseDayFromTag("day-")).toBeNull()
   })
 })
 

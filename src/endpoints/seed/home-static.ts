@@ -108,7 +108,6 @@ export const homeStatic: RequiredDataFromCollectionSlug<"pages"> = {
               version: 1,
             },
           },
-          enableLink: false,
         },
       ],
     },

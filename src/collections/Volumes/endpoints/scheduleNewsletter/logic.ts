@@ -8,6 +8,7 @@ import { createScheduledCampaign, listScheduledCampaigns } from "@/utilities/lis
 import {
   articleTag,
   campaignName,
+  dayTag,
   NEWSLETTER_TAG,
   nextWeekday7amET,
   parseArticleIdFromTag,
@@ -117,7 +118,7 @@ export async function scheduleVolumeNewsletter(
       subject: article.title,
       bodyHtml,
       sendAt: cursor.toISOString(),
-      tags: [NEWSLETTER_TAG, thisVolumeTag, articleTag(article.id)],
+      tags: [NEWSLETTER_TAG, thisVolumeTag, articleTag(article.id), dayTag(sendDayIndex + 1)],
     })
     log.info(
       `[newsletter]   day ${sendDayIndex + 1}: created campaign #${id} for article #${article.id} send_at=${cursor.toISOString()}`,

@@ -63,6 +63,10 @@ jobs:
 
       - name: Post coverage report
         uses: davelosert/vitest-coverage-report-action@v2
+        with:
+          json-summary-path: coverage/coverage-summary.json
+          json-final-path: coverage/coverage-final.json
+          file-coverage-expanded: true
 
   integration-tests:
     name: Integration tests

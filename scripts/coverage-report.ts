@@ -307,7 +307,7 @@ function renderFileCoverage({
     const fc = summaryJson[file]
     if (!fc) continue
     const cell = (m: keyof FileSummary) =>
-      fc[m].total === 0 ? "n/a" : `${fc[m].pct.toFixed(2)}% (${fc[m].covered}/${fc[m].total})`
+      fc[m].total === 0 ? "n/a" : `${Math.round(fc[m].pct)}% ${fc[m].covered}/${fc[m].total}`
     const fileLink =
       repo && sha
         ? `<a href="https://github.com/${repo}/blob/${sha}/${file}">${file}</a>`
@@ -329,10 +329,10 @@ function renderFileCoverage({
  <thead><tr>
   <th align="left">File</th>
   <th align="right">Lines</th>
-  <th align="right">Stmts</th>
+  <th align="right">Statements</th>
   <th align="right">Functions</th>
   <th align="right">Branches</th>
-  <th align="left">Uncovered Lines</th>
+  <th align="left">Uncovered</th>
  </tr></thead>
  <tbody>
 ${rows.join("\n")}

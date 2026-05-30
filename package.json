@@ -37,6 +37,9 @@
     "test:unit": "vitest --project unit",
     "test:integration": "vitest --project integration",
     "test:scripts": "vitest --project scripts",
+    "test:unit:coverage": "vitest run --project unit --coverage",
+    "test:coverage": "vitest run --coverage",
+    "coverage:report": "tsx scripts/coverage-report.ts",
     "test:e2e": "node scripts/test-e2e.mjs",
     "release": "node scripts/release.mjs"
   },
@@ -101,6 +104,7 @@
     "@types/react-dom": "19.2.3",
     "@types/sanitize-html": "^2.16.1",
     "@vitejs/plugin-react": "^6.0.1",
+    "@vitest/coverage-v8": "4.1.7",
     "copyfiles": "^2.4.1",
     "eslint": "^9.39.4",
     "eslint-config-next": "16.2.4",
@@ -122,7 +126,7 @@
     "tsx": "^4.22.2",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.59.0",
-    "vitest": "^4.1.6"
+    "vitest": "^4.1.7"
   },
   "optionalDependencies": {
     "@digitalgroundgame/fonts": "1.2.0",

@@ -288,9 +288,48 @@ function htmlTable(rows: { label: string; pct: number; covered: number; total: n
   return `${TABLE_HEADER}\n${rowHtml}\n${TABLE_FOOTER}`
 }
 
-function renderTotalSection(total: FileSummary): string {
-  const rows = METRICS.map((k) => ({ label: LABELS[k], ...total[k] }))
-  return `<h3>Project total</h3>\n${htmlTable(rows)}`
+function deltaIcon(delta: number): string {
+  if (delta > 0.001) return "🟢"
+  if (delta < -0.001) return "🔴"
+  return "🟡"
+}
+
+function renderTotalSection(total: FileSummary, baseTotal: FileSummary | null): string {
+  if (!baseTotal) {
+    const rows = METRICS.map((k) => ({ label: LABELS[k], ...total[k] }))
+    return `<h3>Project total</h3>\n${htmlTable(rows)}`
+  }
+
+  const header = `<table>
+ <thead><tr>
+  <th align="center">Status</th>
+  <th align="left">Category</th>
+  <th align="right">Percentage</th>
+  <th align="right">Covered / Total</th>
+  <th align="right">Change</th>
+ </tr></thead>
+ <tbody>`
+
+  const bodyRows = METRICS.map((k) => {
+    const { pct, covered, total: tot } = total[k]
+    const delta = pct - baseTotal[k].pct
+    const icon = tot === 0 ? "🔵" : deltaIcon(delta)
+    const deltaStr =
+      tot === 0
+        ? "n/a"
+        : Math.abs(delta) <= 0.001
+          ? "±0.00%"
+          : `${delta > 0 ? "+" : ""}${delta.toFixed(2)}%`
+    return `  <tr>
+   <td align="center">${icon}</td>
+   <td align="left">${LABELS[k]}</td>
+   <td align="right">${tot === 0 ? "n/a" : `${pct.toFixed(2)}%`}</td>
+   <td align="right">${tot === 0 ? "n/a" : `${covered} / ${tot}`}</td>
+   <td align="right">${deltaStr}</td>
+  </tr>`
+  }).join("\n")
+
+  return `<h3>Project total</h3>\n${header}\n${bodyRows}\n${TABLE_FOOTER}`
 }
 
 function renderFileCoverage({
@@ -353,6 +392,7 @@ ${rows.join("\n")}
 
 function renderReport({
   total,
+  baseTotal,
   summaryJson,
   metrics,
   files,
@@ -361,6 +401,7 @@ function renderReport({
   sha,
 }: {
   total: FileSummary | null
+  baseTotal: FileSummary | null
   summaryJson: Record<string, FileSummary> | null
   metrics: MetricsWithPct
   files: { file: string; uncovered: number[] }[]
@@ -377,7 +418,7 @@ function renderReport({
   const parts = [
     COMMENT_MARKER,
     "<h2>Coverage Report</h2>",
-    ...(total ? ["", renderTotalSection(total)] : []),
+    ...(total ? ["", renderTotalSection(total, baseTotal)] : []),
     ...(fileCoverage ? ["", fileCoverage] : []),
     "",
     "<h3>Patch coverage</h3>",
@@ -480,6 +521,17 @@ async function main(): Promise<void> {
     )
   const total = summaryRaw?.total ?? null
 
+  const baseSummaryPath = process.env.BASE_COVERAGE_SUMMARY_PATH
+  const baseSummaryRaw: CoverageSummaryJson | null =
+    baseSummaryPath && existsSync(baseSummaryPath)
+      ? (JSON.parse(readFileSync(baseSummaryPath, "utf8")) as CoverageSummaryJson)
+      : null
+  if (baseSummaryPath && !baseSummaryRaw)
+    console.warn(
+      `${yellow("⚠")} BASE_COVERAGE_SUMMARY_PATH set but file not found — skipping delta.`,
+    )
+  const baseTotal = baseSummaryRaw?.total ?? null
+
   const repo = process.env.GITHUB_REPOSITORY
   const sha = process.env.GITHUB_SHA
   const token = process.env.GITHUB_TOKEN
@@ -506,6 +558,7 @@ async function main(): Promise<void> {
   const changedFiles = Object.keys(addedLinesByFile)
   const report = renderReport({
     total,
+    baseTotal,
     summaryJson: summaryByFile,
     metrics,
     files,

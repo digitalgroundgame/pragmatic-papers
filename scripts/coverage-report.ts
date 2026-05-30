@@ -16,6 +16,7 @@ import { blue, gray, green, yellow } from "./ansi.mjs"
 
 interface IstanbulLoc {
   start?: { line: number }
+  loc?: { start?: { line: number } }
   line?: number
 }
 
@@ -182,7 +183,7 @@ export function computeFileMetrics(
 
   // Branches: each arm counts individually, on the branch's line.
   for (const [id, br] of Object.entries(branchMap)) {
-    if (!addedLines.has(br.line ?? br.start?.line ?? -1)) continue
+    if (!addedLines.has(br.line ?? br.loc?.start?.line ?? -1)) continue
     for (const armHits of b[id] ?? []) {
       counts.branches.total++
       if (armHits > 0) counts.branches.covered++

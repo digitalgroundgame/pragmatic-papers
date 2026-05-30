@@ -118,7 +118,7 @@ This file provides guidance to tools like Claude Code (claude.ai/code) when work
 
 CI posts a single combined coverage comment on every PR via `scripts/coverage-report.ts` (run as `pnpm coverage:report`). It contains three sections: **Project total** (from `coverage-summary.json`), **File Coverage** (per changed file, collapsed by default), and **Patch coverage** (lines added/modified in the PR's diff). All sections are informational — none fail the build.
 
-`davelosert/vitest-coverage-report-action` still runs in CI but with `comment-on: none`; it writes only to the Actions step summary.
+`davelosert/vitest-coverage-report-action` is no longer used in CI.
 
 **Test types by code kind:**
 

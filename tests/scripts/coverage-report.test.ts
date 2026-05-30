@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest"
 import {
   computeFileMetrics,
   computePatchCoverage,
+  deltaIcon,
   indexCoverageByFile,
   parseAddedLines,
 } from "../../scripts/coverage-report"
@@ -65,6 +66,24 @@ describe("computeFileMetrics", () => {
   it("ignores changed lines outside the file's coverage map", () => {
     const { counts } = computeFileMetrics(fileCoverage, new Set([99]))
     for (const m of Object.values(counts)) expect(m.total).toBe(0)
+  })
+})
+
+describe("deltaIcon", () => {
+  it("returns 🟢 when coverage improved", () => {
+    expect(deltaIcon(0.5)).toBe("🟢")
+    expect(deltaIcon(0.002)).toBe("🟢") // just above threshold
+  })
+
+  it("returns 🔴 when coverage worsened", () => {
+    expect(deltaIcon(-0.5)).toBe("🔴")
+    expect(deltaIcon(-0.002)).toBe("🔴") // just below threshold
+  })
+
+  it("returns 🟡 when coverage is unchanged within floating-point noise", () => {
+    expect(deltaIcon(0)).toBe("🟡")
+    expect(deltaIcon(0.001)).toBe("🟡") // at threshold, not beyond
+    expect(deltaIcon(-0.001)).toBe("🟡") // at threshold, not beyond
   })
 })
 

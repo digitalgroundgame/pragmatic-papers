@@ -288,7 +288,7 @@ function htmlTable(rows: { label: string; pct: number; covered: number; total: n
   return `${TABLE_HEADER}\n${rowHtml}\n${TABLE_FOOTER}`
 }
 
-function deltaIcon(delta: number): string {
+export function deltaIcon(delta: number): string {
   if (delta > 0.001) return "🟢"
   if (delta < -0.001) return "🔴"
   return "🟡"

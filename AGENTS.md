@@ -115,10 +115,7 @@ This file provides guidance to tools like Claude Code (claude.ai/code) when work
 
 ### Test coverage
 
-CI reports coverage in two scopes on every PR. Both are **informational — neither fails the build**:
-
-- **Total** (whole project) — posted via `davelosert/vitest-coverage-report-action`, which also lists the per-changed-file breakdown. `vitest.config.mts` sets `coverage.include: ["src/**/*.{ts,tsx}"]` so untested files count as 0% and the total reflects the real project, not just the files the tests happen to import.
-- **Patch** (lines added/modified in the PR's diff, Codecov-style) — computed by `scripts/patch-coverage.mjs` (`pnpm coverage:patch`), which posts a sticky comment showing total + patch and writes the same to the job summary. It no-ops on non-PR runs (e.g. push to `main`).
+CI posts two coverage comments on every PR: project total (via `davelosert/vitest-coverage-report-action`) and patch coverage for the PR's changed lines (via `scripts/patch-coverage.mjs`). Both are informational — neither fails the build.
 
 **Test types by code kind:**
 

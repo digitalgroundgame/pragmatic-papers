@@ -1,40 +1,27 @@
-// Reports Codecov-style "patch" coverage: the percentage of lines ADDED or
-// MODIFIED in this PR's diff that are covered by tests. The davelosert coverage
-// action reports the project total but has no aggregate patch number, so this
-// script computes and posts the patch figure alongside the total. It is purely
-// informational — it never fails the build.
+// Reports Codecov-style "patch" coverage: how well the lines ADDED or MODIFIED in
+// this PR's diff are covered by tests, broken down by lines/statements/functions/
+// branches (the same metrics the davelosert action reports for the project total).
+// The project total is left to that action; this script focuses only on the patch.
+// It is purely informational — it never fails the build.
 //
-// Line hits come from coverage/lcov.info (produced by `pnpm test:unit:coverage`);
-// changed lines come from the GitHub PR "files" API (its per-file `patch` hunks).
-// On non-PR runs (e.g. push to main) there is no diff to measure, so it no-ops.
+// Coverage comes from coverage/coverage-final.json (istanbul format, produced by
+// `pnpm test:unit:coverage`); changed lines come from the GitHub PR "files" API
+// (its per-file `patch` hunks). On non-PR runs (e.g. push to main) there is no
+// diff to measure, so it no-ops.
 
 /* eslint-disable @typescript-eslint/explicit-module-boundary-types */
 import { existsSync, readFileSync, appendFileSync } from "node:fs"
+import { relative, sep } from "node:path"
 import { fileURLToPath } from "node:url"
 import { blue, gray, green, yellow } from "./ansi.mjs"
 
 const COMMENT_MARKER = "<!-- patch-coverage-report -->"
-
-/**
- * Parse an lcov report into `{ "src/file.ts": Map<lineNumber, hits> }`.
- * @param {string} lcov
- * @returns {Record<string, Map<number, number>>}
- */
-export function parseLcov(lcov) {
-  const files = {}
-  let current = null
-  for (const line of lcov.split("\n")) {
-    if (line.startsWith("SF:")) {
-      current = line.slice(3).trim()
-      files[current] = new Map()
-    } else if (line.startsWith("DA:") && current) {
-      const [lineNo, hits] = line.slice(3).split(",")
-      files[current].set(Number(lineNo), Number(hits))
-    } else if (line === "end_of_record") {
-      current = null
-    }
-  }
-  return files
+const METRICS = ["lines", "statements", "functions", "branches"]
+const LABELS = {
+  lines: "Lines",
+  statements: "Statements",
+  functions: "Functions",
+  branches: "Branches",
 }
 
 /**
@@ -70,34 +57,113 @@ export function parseAddedLines(patch) {
 }
 
 /**
- * Intersect changed lines with covered lines. Only lines that lcov tracked
- * (executable lines) count toward the denominator — blank lines, comments and
- * type-only lines are naturally excluded because lcov never emits a `DA:` for them.
- * @param {Record<string, Map<number, number>>} lineHitsByFile
- * @param {Record<string, Set<number>>} addedLinesByFile
+ * Re-key an istanbul coverage-final.json (keyed by absolute path) by repo-relative
+ * path so it lines up with the filenames GitHub's PR file list returns.
+ * @param {Record<string, any>} finalJson
+ * @param {string} root
+ * @returns {Record<string, any>}
  */
-export function computePatchCoverage(lineHitsByFile, addedLinesByFile) {
-  let covered = 0
-  let total = 0
+export function indexCoverageByFile(finalJson, root) {
+  const out = {}
+  for (const fc of Object.values(finalJson)) {
+    out[relative(root, fc.path).split(sep).join("/")] = fc
+  }
+  return out
+}
+
+const emptyCounts = () => ({
+  lines: { covered: 0, total: 0 },
+  statements: { covered: 0, total: 0 },
+  functions: { covered: 0, total: 0 },
+  branches: { covered: 0, total: 0 },
+})
+
+/**
+ * Compute line/statement/function/branch coverage for a single file, restricted to
+ * `addedLines`. Mirrors istanbul's own metric definitions so the patch numbers are
+ * directly comparable to the project total. Returns per-metric counts plus the
+ * coverable changed lines that ran zero times (for the "uncovered lines" detail).
+ * @param {any} fc istanbul file coverage object
+ * @param {Set<number>} addedLines
+ */
+export function computeFileMetrics(fc, addedLines) {
+  const counts = emptyCounts()
+  const uncoveredLines = []
+  const { statementMap = {}, s = {}, fnMap = {}, f = {}, branchMap = {}, b = {} } = fc
+
+  // Lines: coverable when a statement starts on them; covered when any such
+  // statement ran. Build a line → max-hits map from statements, as istanbul does.
+  const lineHits = new Map()
+  for (const [id, loc] of Object.entries(statementMap)) {
+    const line = loc.start?.line
+    if (line == null) continue
+    lineHits.set(line, Math.max(lineHits.get(line) ?? 0, s[id] ?? 0))
+  }
+  for (const line of addedLines) {
+    if (!lineHits.has(line)) continue
+    counts.lines.total++
+    if (lineHits.get(line) > 0) counts.lines.covered++
+    else uncoveredLines.push(line)
+  }
+
+  // Statements: counted on their start line.
+  for (const [id, loc] of Object.entries(statementMap)) {
+    if (!addedLines.has(loc.start?.line)) continue
+    counts.statements.total++
+    if ((s[id] ?? 0) > 0) counts.statements.covered++
+  }
+
+  // Functions: counted on their declaration line.
+  for (const [id, fn] of Object.entries(fnMap)) {
+    if (!addedLines.has(fn.line ?? fn.decl?.start?.line)) continue
+    counts.functions.total++
+    if ((f[id] ?? 0) > 0) counts.functions.covered++
+  }
+
+  // Branches: each arm counts individually, on the branch's line.
+  for (const [id, br] of Object.entries(branchMap)) {
+    if (!addedLines.has(br.line ?? br.loc?.start?.line)) continue
+    for (const armHits of b[id] ?? []) {
+      counts.branches.total++
+      if (armHits > 0) counts.branches.covered++
+    }
+  }
+
+  uncoveredLines.sort((a, z) => a - z)
+  return { counts, uncoveredLines }
+}
+
+/**
+ * Aggregate patch coverage across every changed file.
+ * @param {Record<string, any>} coverageByFile
+ * @param {Record<string, Set<number>>} addedLinesByFile
+ * @returns {{
+ *   metrics: {
+ *     lines: { covered: number, total: number, pct: number },
+ *     statements: { covered: number, total: number, pct: number },
+ *     functions: { covered: number, total: number, pct: number },
+ *     branches: { covered: number, total: number, pct: number },
+ *   },
+ *   files: { file: string, uncovered: number[] }[],
+ * }}
+ */
+export function computePatchCoverage(coverageByFile, addedLinesByFile) {
+  const metrics = emptyCounts()
   const files = []
   for (const [file, addedLines] of Object.entries(addedLinesByFile)) {
-    const lineHits = lineHitsByFile[file]
-    if (!lineHits) continue // not instrumented (non-source, excluded, or generated)
-    let fileCovered = 0
-    const uncovered = []
-    for (const lineNo of addedLines) {
-      if (!lineHits.has(lineNo)) continue // not an executable line
-      if (lineHits.get(lineNo) > 0) fileCovered++
-      else uncovered.push(lineNo)
+    const fc = coverageByFile[file]
+    if (!fc) continue // not instrumented (non-source, excluded, or generated)
+    const { counts, uncoveredLines } = computeFileMetrics(fc, addedLines)
+    for (const k of METRICS) {
+      metrics[k].covered += counts[k].covered
+      metrics[k].total += counts[k].total
     }
-    const fileTotal = fileCovered + uncovered.length
-    if (fileTotal === 0) continue
-    covered += fileCovered
-    total += fileTotal
-    files.push({ file, covered: fileCovered, total: fileTotal, uncovered })
+    if (uncoveredLines.length > 0) files.push({ file, uncovered: uncoveredLines })
   }
-  const pct = total === 0 ? 100 : (covered / total) * 100
-  return { covered, total, pct, files }
+  for (const k of METRICS) {
+    metrics[k].pct = metrics[k].total === 0 ? 100 : (metrics[k].covered / metrics[k].total) * 100
+  }
+  return { metrics, files }
 }
 
 async function fetchChangedFiles({ repo, prNumber, token }) {
@@ -123,27 +189,22 @@ async function fetchChangedFiles({ repo, prNumber, token }) {
   return byFile
 }
 
-function renderReport({ result, totalPct }) {
-  const pct = (n) => (Number.isNaN(n) ? "n/a" : `${n.toFixed(2)}%`)
-  const patchCell =
-    result.total === 0
-      ? "n/a (no changed lines)"
-      : `${pct(result.pct)} (${result.covered}/${result.total})`
+function renderReport({ metrics, files }) {
+  const cell = (m) => (m.total === 0 ? "n/a" : `${m.pct.toFixed(2)}% (${m.covered}/${m.total})`)
   const lines = [
     COMMENT_MARKER,
-    "## Coverage",
+    "## Coverage Stats",
     "",
-    "| Scope | Coverage |",
+    "Patch coverage — lines added or modified in this PR.",
+    "",
+    "| Metric | Coverage |",
     "| --- | --- |",
-    `| **Total** (whole project) | ${pct(totalPct)} |`,
-    `| **Patch** (lines changed in this PR) | ${patchCell} |`,
+    ...METRICS.map((k) => `| ${LABELS[k]} | ${cell(metrics[k])} |`),
   ]
-  const withGaps = result.files.filter((f) => f.uncovered.length > 0)
+  const withGaps = files.filter((f) => f.uncovered.length > 0)
   if (withGaps.length > 0) {
     lines.push("", "<details><summary>Uncovered changed lines</summary>", "")
-    for (const f of withGaps) {
-      lines.push(`- \`${f.file}\`: ${f.uncovered.join(", ")}`)
-    }
+    for (const f of withGaps) lines.push(`- \`${f.file}\`: ${f.uncovered.join(", ")}`)
     lines.push("", "</details>")
   }
   return lines.join("\n")
@@ -173,8 +234,8 @@ async function upsertComment({ repo, prNumber, token, body }) {
 }
 
 async function main() {
-  const lcovPath = process.env.LCOV_PATH ?? "coverage/lcov.info"
-  const summaryPath = process.env.COVERAGE_SUMMARY_PATH ?? "coverage/coverage-summary.json"
+  const finalPath = process.env.COVERAGE_FINAL_PATH ?? "coverage/coverage-final.json"
+  const root = process.env.GITHUB_WORKSPACE ?? process.cwd()
 
   const eventPath = process.env.GITHUB_EVENT_PATH
   const event =
@@ -184,34 +245,27 @@ async function main() {
     console.warn(`${blue("●")} Not a pull request — skipping patch coverage report.`)
     return
   }
-
-  if (!existsSync(lcovPath)) {
-    console.warn(`${yellow("⚠")} ${lcovPath} not found — run \`pnpm test:unit:coverage\` first.`)
+  if (!existsSync(finalPath)) {
+    console.warn(`${yellow("⚠")} ${finalPath} not found — run \`pnpm test:unit:coverage\` first.`)
     return
   }
 
-  const lineHitsByFile = parseLcov(readFileSync(lcovPath, "utf8"))
-  const totalPct = existsSync(summaryPath)
-    ? JSON.parse(readFileSync(summaryPath, "utf8")).total.lines.pct
-    : NaN
-
+  const coverageByFile = indexCoverageByFile(JSON.parse(readFileSync(finalPath, "utf8")), root)
   const repo = process.env.GITHUB_REPOSITORY
   const token = process.env.GITHUB_TOKEN
   const addedLinesByFile = await fetchChangedFiles({ repo, prNumber, token })
-  const result = computePatchCoverage(lineHitsByFile, addedLinesByFile)
+  const { metrics, files } = computePatchCoverage(coverageByFile, addedLinesByFile)
 
-  console.warn(
-    `${blue("●")} Total coverage: ${Number.isNaN(totalPct) ? "n/a" : totalPct.toFixed(2) + "%"}`,
-  )
-  if (result.total === 0) {
+  if (metrics.lines.total === 0) {
     console.warn(`${gray("○")} Patch coverage: n/a (no executable changed lines)`)
   } else {
     console.warn(
-      `${green("●")} Patch coverage: ${result.pct.toFixed(2)}% (${result.covered}/${result.total} changed lines)`,
+      `${green("●")} Patch coverage — ` +
+        METRICS.map((k) => `${LABELS[k].toLowerCase()} ${metrics[k].pct.toFixed(2)}%`).join(", "),
     )
   }
 
-  const report = renderReport({ result, totalPct })
+  const report = renderReport({ metrics, files })
   if (process.env.GITHUB_STEP_SUMMARY) {
     appendFileSync(process.env.GITHUB_STEP_SUMMARY, report + "\n")
   }

@@ -1,24 +1,25 @@
 import { describe, expect, it } from "vitest"
 
-import { computePatchCoverage, parseAddedLines, parseLcov } from "../../scripts/patch-coverage.mjs"
+import {
+  computeFileMetrics,
+  computePatchCoverage,
+  indexCoverageByFile,
+  parseAddedLines,
+} from "../../scripts/patch-coverage.mjs"
 
-describe("parseLcov", () => {
-  it("maps each file to its line → hits", () => {
-    const lcov = [
-      "SF:src/a.ts",
-      "DA:1,1",
-      "DA:2,0",
-      "end_of_record",
-      "SF:src/b.ts",
-      "DA:5,3",
-      "end_of_record",
-    ].join("\n")
-    const result = parseLcov(lcov)
-    expect(result["src/a.ts"]?.get(1)).toBe(1)
-    expect(result["src/a.ts"]?.get(2)).toBe(0)
-    expect(result["src/b.ts"]?.get(5)).toBe(3)
-  })
-})
+// A synthetic istanbul file-coverage object:
+//  line 1 — statement ran (1)         → covered
+//  line 2 — statement never ran (0) + a function declared here, never called (0)
+//  line 3 — statement ran (5) + an if-branch with one arm taken, one not ([1, 0])
+const fileCoverage = {
+  path: "/repo/src/a.ts",
+  statementMap: { 0: { start: { line: 1 } }, 1: { start: { line: 2 } }, 2: { start: { line: 3 } } },
+  s: { 0: 1, 1: 0, 2: 5 },
+  fnMap: { 0: { line: 2, decl: { start: { line: 2 } } } },
+  f: { 0: 0 },
+  branchMap: { 0: { line: 3, loc: { start: { line: 3 } } } },
+  b: { 0: [1, 0] },
+}
 
 describe("parseAddedLines", () => {
   it("collects added line numbers on the new side of a hunk", () => {
@@ -43,34 +44,48 @@ describe("parseAddedLines", () => {
   })
 })
 
+describe("indexCoverageByFile", () => {
+  it("re-keys absolute coverage paths to repo-relative paths", () => {
+    const indexed = indexCoverageByFile({ x: fileCoverage }, "/repo")
+    expect(Object.keys(indexed)).toEqual(["src/a.ts"])
+  })
+})
+
+describe("computeFileMetrics", () => {
+  it("measures each metric against only the changed lines", () => {
+    // line 4 is not coverable (no statement) → excluded everywhere
+    const { counts, uncoveredLines } = computeFileMetrics(fileCoverage, new Set([1, 2, 3, 4]))
+    expect(counts.lines).toEqual({ covered: 2, total: 3 })
+    expect(counts.statements).toEqual({ covered: 2, total: 3 })
+    expect(counts.functions).toEqual({ covered: 0, total: 1 })
+    expect(counts.branches).toEqual({ covered: 1, total: 2 }) // one arm of two taken
+    expect(uncoveredLines).toEqual([2])
+  })
+
+  it("ignores changed lines outside the file's coverage map", () => {
+    const { counts } = computeFileMetrics(fileCoverage, new Set([99]))
+    for (const m of Object.values(counts)) expect(m.total).toBe(0)
+  })
+})
+
 describe("computePatchCoverage", () => {
-  const lineHits = {
-    "src/a.ts": new Map([
-      [1, 1],
-      [2, 0],
-      [3, 5],
-    ]),
-  }
-
-  it("counts only executable changed lines", () => {
-    // line 4 is not in lineHits (blank/comment) → excluded from the denominator
-    const added = { "src/a.ts": new Set([1, 2, 3, 4]) }
-    const result = computePatchCoverage(lineHits, added)
-    expect(result.covered).toBe(2)
-    expect(result.total).toBe(3)
-    expect(result.pct).toBeCloseTo(66.67, 1)
-    expect(result.files[0]?.uncovered).toEqual([2])
+  it("aggregates metrics and computes percentages", () => {
+    const result = computePatchCoverage(
+      { "src/a.ts": fileCoverage },
+      { "src/a.ts": new Set([1, 2, 3]) },
+    )
+    expect(result.metrics.lines.pct).toBeCloseTo(66.67, 1)
+    expect(result.metrics.branches.pct).toBe(50)
+    expect(result.files).toEqual([{ file: "src/a.ts", uncovered: [2] }])
   })
 
-  it("ignores files that were not instrumented", () => {
-    const added = { "src/untracked.ts": new Set([1, 2]) }
-    const result = computePatchCoverage(lineHits, added)
-    expect(result.total).toBe(0)
-    expect(result.pct).toBe(100)
-  })
-
-  it("reports 100% when no executable lines changed", () => {
-    const added = { "src/a.ts": new Set([99]) }
-    expect(computePatchCoverage(lineHits, added).pct).toBe(100)
+  it("ignores files that were not instrumented and reports 100%", () => {
+    const result = computePatchCoverage(
+      { "src/a.ts": fileCoverage },
+      { "src/untracked.ts": new Set([1, 2]) },
+    )
+    expect(result.metrics.lines.total).toBe(0)
+    expect(result.metrics.lines.pct).toBe(100)
+    expect(result.files).toEqual([])
   })
 })

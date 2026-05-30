@@ -221,12 +221,62 @@ function renderTotalSection(total) {
   return `<h3>Project total</h3>\n${htmlTable(rows)}`
 }
 
-function renderReport({ total, metrics, files }) {
+// Columns mirror the vitest-coverage-report-action file coverage table.
+// summaryJson  — full coverage-summary.json (keyed by repo-relative path)
+// changedFiles — Set keys from addedLinesByFile (all files touched in the PR)
+// uncoveredMap — Map<file, number[]> from computePatchCoverage files array
+// repo / sha   — for GitHub file links (optional; omitted when not in CI)
+function renderFileCoverage({ summaryJson, changedFiles, uncoveredMap, repo, sha }) {
+  const rows = []
+  for (const file of changedFiles) {
+    const fc = summaryJson[file]
+    if (!fc) continue
+    const pct = (m) => (fc[m].total === 0 ? "n/a" : `${fc[m].pct.toFixed(2)}%`)
+    const fileLink =
+      repo && sha
+        ? `<a href="https://github.com/${repo}/blob/${sha}/${file}">${file}</a>`
+        : `<code>${file}</code>`
+    const uncovered = uncoveredMap.get(file) ?? []
+    rows.push(
+      `  <tr>
+   <td align="left">${fileLink}</td>
+   <td align="right">${pct("statements")}</td>
+   <td align="right">${pct("branches")}</td>
+   <td align="right">${pct("functions")}</td>
+   <td align="right">${pct("lines")}</td>
+   <td align="left">${uncovered.join(", ")}</td>
+  </tr>`,
+    )
+  }
+  if (rows.length === 0) return null
+  const table = `<table>
+ <thead><tr>
+  <th align="left">File</th>
+  <th align="right">Stmts</th>
+  <th align="right">Branches</th>
+  <th align="right">Functions</th>
+  <th align="right">Lines</th>
+  <th align="left">Uncovered Lines</th>
+ </tr></thead>
+ <tbody>
+${rows.join("\n")}
+ </tbody>
+</table>`
+  return `<details open><summary>File Coverage</summary>\n${table}\n</details>`
+}
+
+function renderReport({ total, summaryJson, metrics, files, changedFiles, repo, sha }) {
   const rows = METRICS.map((k) => ({ label: LABELS[k], ...metrics[k] }))
+  const uncoveredMap = new Map(files.map((f) => [f.file, f.uncovered]))
+  const fileCoverage =
+    summaryJson && changedFiles
+      ? renderFileCoverage({ summaryJson, changedFiles, uncoveredMap, repo, sha })
+      : null
   const parts = [
     COMMENT_MARKER,
     "<h2>Coverage Report</h2>",
     ...(total ? ["", renderTotalSection(total)] : []),
+    ...(fileCoverage ? ["", fileCoverage] : []),
     "",
     "<h3>Patch coverage</h3>",
     "<p>Lines added or modified in this PR.</p>",
@@ -289,12 +339,15 @@ async function main() {
   }
 
   const coverageByFile = indexCoverageByFile(JSON.parse(readFileSync(finalPath, "utf8")), root)
-  const total = existsSync(summaryPath)
-    ? JSON.parse(readFileSync(summaryPath, "utf8")).total
+  const summaryJson = existsSync(summaryPath)
+    ? JSON.parse(readFileSync(summaryPath, "utf8"))
     : null
-  if (!total) console.warn(`${yellow("⚠")} ${summaryPath} not found — skipping project total section.`)
+  if (!summaryJson)
+    console.warn(`${yellow("⚠")} ${summaryPath} not found — skipping project total and file coverage sections.`)
+  const total = summaryJson?.total ?? null
 
   const repo = process.env.GITHUB_REPOSITORY
+  const sha = process.env.GITHUB_SHA
   const token = process.env.GITHUB_TOKEN
   const addedLinesByFile = await fetchChangedFiles({ repo, prNumber, token })
   const { metrics, files } = computePatchCoverage(coverageByFile, addedLinesByFile)
@@ -308,7 +361,12 @@ async function main() {
     )
   }
 
-  const report = renderReport({ total, metrics, files })
+  // Pass repo-relative summary (strip the "total" key so only file entries remain)
+  const summaryByFile = summaryJson ? Object.fromEntries(
+    Object.entries(summaryJson).filter(([k]) => k !== "total")
+  ) : null
+  const changedFiles = Object.keys(addedLinesByFile)
+  const report = renderReport({ total, summaryJson: summaryByFile, metrics, files, changedFiles, repo, sha })
   if (process.env.GITHUB_STEP_SUMMARY) {
     appendFileSync(process.env.GITHUB_STEP_SUMMARY, report + "\n")
   }

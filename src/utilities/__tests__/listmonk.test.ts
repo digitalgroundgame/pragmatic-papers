@@ -1,11 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
-import {
-  createScheduledCampaign,
-  listScheduledCampaigns,
-  sendTransactional,
-  subscribeMember,
-} from "../listmonk"
+import { createScheduledCampaign, listScheduledCampaigns, subscribeMember } from "../listmonk"
 
 const ENV_DEFAULTS = {
   LISTMONK_BASE_URL: "https://listmonk.example.com",
@@ -154,29 +149,5 @@ describe("listScheduledCampaigns", () => {
     const result = await listScheduledCampaigns()
     expect(result[0]!.sendAt).toBeInstanceOf(Date)
     expect(result[0]!.sendAt.toISOString()).toBe("2026-01-15T12:00:00.000Z")
-  })
-})
-
-describe("sendTransactional", () => {
-  beforeEach(stubEnv)
-  afterEach(() => {
-    vi.unstubAllEnvs()
-    vi.restoreAllMocks()
-  })
-
-  it("throws when LISTMONK_WELCOME_TX_TEMPLATE_ID is not set", async () => {
-    await expect(
-      sendTransactional({ email: "x@x.com", bodyHtml: "<p>hi</p>", subject: "Hi" }),
-    ).rejects.toThrow("LISTMONK_WELCOME_TX_TEMPLATE_ID is not set")
-  })
-
-  it("sends the template id and pre-rendered body", async () => {
-    vi.stubEnv("LISTMONK_WELCOME_TX_TEMPLATE_ID", "99")
-    const spy = mockListmonkFetch(null)
-    await sendTransactional({ email: "x@x.com", bodyHtml: "<p>hi</p>", subject: "Hi" })
-    const body = JSON.parse(spy.mock.calls[0]![1]!.body as string)
-    expect(body.template_id).toBe(99)
-    expect(body.data.body).toBe("<p>hi</p>")
-    expect(body.subscriber_email).toBe("x@x.com")
   })
 })

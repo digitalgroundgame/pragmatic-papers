@@ -107,40 +107,15 @@ export function articleTag(articleId: number): string {
   return `art-${articleId}`
 }
 
-/**
- * Tag carrying the 1-based day number within the Volume drip. The mid-drip
- * welcome flow reads this (not the campaign name) to work out which articles
- * have already been sent, so the human-readable name stays purely cosmetic.
- */
-export function dayTag(dayNumber: number): string {
-  return `day-${dayNumber}`
-}
-
 const ARTICLE_TAG_RE = /^art-(\d+)$/
-const VOLUME_TAG_RE = /^vol-(\d+)$/
-const DAY_TAG_RE = /^day-(\d+)$/
-
-function parseTaggedNumber(tag: string, re: RegExp): number | null {
-  const m = tag.match(re)
-  if (!m?.[1]) return null
-  const n = Number(m[1])
-  return Number.isFinite(n) ? n : null
-}
 
 /**
  * Extract an article ID from a single tag string if it matches `art-<id>`.
  * Returns null for any other tag.
  */
 export function parseArticleIdFromTag(tag: string): number | null {
-  return parseTaggedNumber(tag, ARTICLE_TAG_RE)
-}
-
-/** Extract the Volume number from a `vol-<n>` tag, or null. */
-export function parseVolumeFromTag(tag: string): number | null {
-  return parseTaggedNumber(tag, VOLUME_TAG_RE)
-}
-
-/** Extract the 1-based day number from a `day-<n>` tag, or null. */
-export function parseDayFromTag(tag: string): number | null {
-  return parseTaggedNumber(tag, DAY_TAG_RE)
+  const m = tag.match(ARTICLE_TAG_RE)
+  if (!m?.[1]) return null
+  const id = Number(m[1])
+  return Number.isFinite(id) ? id : null
 }

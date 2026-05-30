@@ -4,9 +4,7 @@ import { getPayload, type PayloadRequest } from "payload"
 
 import { isEditor } from "@/access/checkRole"
 import configPromise from "@payload-config"
-import { MidDripWelcomeEmail } from "@/emails/MidDripWelcome"
 import { VolumeArticleEmail } from "@/emails/VolumeArticle"
-import { formatAuthors } from "@/utilities/formatAuthors"
 import { getServerSideURL } from "@/utilities/getURL"
 
 import type { Article, Volume } from "@/payload-types"
@@ -16,8 +14,7 @@ import type { Article, Volume } from "@/payload-types"
  *
  * URL: /email-preview/<volumeId>/<dayIndex>
  *   - volumeId: numeric Volume id
- *   - dayIndex: 0-based index into the Volume.articles list. Use "welcome" to
- *     preview the mid-drip welcome template instead.
+ *   - dayIndex: 0-based index into the Volume.articles list.
  *
  * Renders the same HTML Listmonk will receive, so editors can spot-check
  * the template before publishing a Volume. Restricted to editor+ roles
@@ -61,38 +58,6 @@ export async function GET(
   )
 
   const siteUrl = getServerSideURL()
-
-  if (dayParam === "welcome") {
-    const alreadySent = articles.slice(0, Math.max(1, Math.floor(articles.length / 2)))
-    const remainingCount = articles.length - alreadySent.length
-    const html = await render(
-      MidDripWelcomeEmail({
-        volume: { title: vol.title, volumeNumber: vol.volumeNumber, slug: vol.slug ?? "" },
-        alreadySent: alreadySent.map((a) => {
-          const firstAuthorImage = a.populatedAuthors?.[0]?.profileImage
-          return {
-            title: a.title,
-            slug: a.slug ?? "",
-            heroImageUrl:
-              typeof a.heroImage === "object" && a.heroImage
-                ? (a.heroImage.sizes?.square?.url ?? null)
-                : null,
-            authorsText:
-              a.populatedAuthors && a.populatedAuthors.length > 0
-                ? formatAuthors(a.populatedAuthors)
-                : null,
-            avatarUrl:
-              firstAuthorImage && typeof firstAuthorImage !== "number"
-                ? (firstAuthorImage.sizes?.square?.url ?? null)
-                : null,
-          }
-        }),
-        remainingCount,
-        siteUrl,
-      }),
-    )
-    return new Response(html, { headers: { "content-type": "text/html; charset=utf-8" } })
-  }
 
   const dayIndex = Number(dayParam)
   const article = articles[dayIndex]

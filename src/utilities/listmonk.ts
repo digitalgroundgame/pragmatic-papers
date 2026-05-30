@@ -15,9 +15,6 @@
  *                                       public /api/public/subscription endpoint,
  *                                       which only accepts list_uuids not list_ids)
  *   NEWSLETTER_FROM_EMAIL               e.g. "Pragmatic Papers <newsletter@newsletter.example.com>"
- *   LISTMONK_WELCOME_TX_TEMPLATE_ID     numeric ID of a Listmonk transactional
- *                                       template (optional; only used by the
- *                                       deferred mid-drip welcome flow)
  */
 
 const REQUIRED_ENV = [
@@ -36,7 +33,6 @@ interface ListmonkConfig {
   newsletterListId: number
   newsletterListUuid: string
   fromEmail: string
-  welcomeTxTemplateId?: number
 }
 
 function readConfig(): ListmonkConfig {
@@ -50,9 +46,6 @@ function readConfig(): ListmonkConfig {
     newsletterListId: Number(process.env.LISTMONK_NEWSLETTER_LIST_ID),
     newsletterListUuid: process.env.LISTMONK_NEWSLETTER_LIST_UUID!,
     fromEmail: process.env.NEWSLETTER_FROM_EMAIL!,
-    welcomeTxTemplateId: process.env.LISTMONK_WELCOME_TX_TEMPLATE_ID
-      ? Number(process.env.LISTMONK_WELCOME_TX_TEMPLATE_ID)
-      : undefined,
   }
 }
 
@@ -199,39 +192,4 @@ export async function subscribeMember(input: SubscribeMemberInput): Promise<void
     const body = await res.text().catch(() => "")
     throw new Error(`Listmonk public subscription → ${res.status}: ${body}`)
   }
-}
-
-export interface SendTransactionalInput {
-  email: string
-  /** Pre-rendered HTML to send as-is. */
-  bodyHtml: string
-  /** Subject line. */
-  subject: string
-}
-
-/**
- * Send a one-off transactional email to a single subscriber via Listmonk's
- * /api/tx endpoint. Requires LISTMONK_WELCOME_TX_TEMPLATE_ID to point at a
- * passthrough template (body: `{{ .Tx.Data.body | safeHTML }}`).
- *
- * Used by the mid-drip welcome flow: when a subscriber confirms during a live
- * Volume drip, we render the backfill email and send it via this path.
- */
-export async function sendTransactional(input: SendTransactionalInput): Promise<void> {
-  const cfg = readConfig()
-  if (!cfg.welcomeTxTemplateId) {
-    throw new Error("LISTMONK_WELCOME_TX_TEMPLATE_ID is not set; cannot send transactional email")
-  }
-  await listmonkFetch("/tx", {
-    method: "POST",
-    body: JSON.stringify({
-      subscriber_email: input.email,
-      template_id: cfg.welcomeTxTemplateId,
-      from_email: cfg.fromEmail,
-      content_type: "html",
-      messenger: "email",
-      headers: [{ Subject: input.subject }],
-      data: { body: input.bodyHtml, subject: input.subject },
-    }),
-  })
 }

@@ -27,6 +27,8 @@ This file provides guidance to tools like Claude Code (claude.ai/code) when work
 - `pnpm test:unit` — run unit tests
 - `pnpm test:integration` — run integration tests (uses Testcontainers)
 - `pnpm test:e2e` — run Playwright E2E tests (uses Testcontainers)
+- `pnpm test:coverage` — run all tests with V8 coverage report (outputs `coverage/lcov.info`)
+- `pnpm test:unit -- --update-snapshots` — regenerate snapshot baselines after intentional UI changes
 
 ### Build & Payload
 
@@ -109,6 +111,36 @@ This file provides guidance to tools like Claude Code (claude.ai/code) when work
 - **Pre-push hooks**: Husky runs full checks on all files (`lint:fix`, `format:fix`, `check-types`) before pushing
 - **Pre-commit hooks**: lint-staged runs ESLint + Prettier on staged files only (fast, ~1-2 seconds)
 - **Colocation**: Prefer colocating logic near where it's used. `src/utilities/` is only for genuinely reusable helpers shared across multiple features (e.g. `generateMeta`, `getURL`, `toRoman`, `cn`). Don't put single-use logic there.
+
+### Test coverage
+
+CI enforces **patch coverage** via Codecov — 80% of lines added in a PR must be covered. Project-wide coverage is not enforced.
+
+**Test types by code kind:**
+
+| Code type                      | Test type                                                                                  |
+| ------------------------------ | ------------------------------------------------------------------------------------------ |
+| Pure utility functions         | Unit test in `src/**/__tests__/`                                                           |
+| UI/presentational components   | Snapshot test (see `src/components/ui/__tests__/button.snapshot.test.tsx` for the pattern) |
+| Client components with state   | RTL interaction test (`userEvent`, `fireEvent`)                                            |
+| Server components (async, CMS) | Integration test with mocked Payload queries                                               |
+| API routes / Payload hooks     | Integration test (Testcontainers, see `tests/integration/`)                                |
+
+**Coverage escape hatches:**
+
+File-level exclusions are configured in `vitest.config.mts` `coverage.exclude` for auto-generated files (`src/migrations/**`, `src/payload-types.ts`, `src/app/(payload)/**`, `src/payload.config.ts`).
+
+For individual untestable lines (e.g. unreachable error branches), use inline comments:
+
+```ts
+/* v8 ignore next */ // ignore one line
+/* v8 ignore next 3 */ // ignore N lines
+/* v8 ignore start */
+// ... block to ignore
+/* v8 ignore stop */
+```
+
+For chore/docs-only PRs with no meaningful code changes, add the `codecov: off` label to skip the coverage check.
 
 ### Testing your changes
 

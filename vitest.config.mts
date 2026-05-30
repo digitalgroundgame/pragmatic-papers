@@ -7,6 +7,19 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 export default defineConfig({
   test: {
+    coverage: {
+      provider: "v8",
+      reporter: ["text", "json", "lcov"],
+      exclude: [
+        "src/migrations/**",
+        "src/payload-types.ts",
+        "src/app/(payload)/**",
+        "src/payload.config.ts",
+        "**/*.config.{ts,mts,js,mjs,cjs}",
+        "tests/**",
+        "scripts/**",
+      ],
+    },
     projects: [
       {
         plugins: [react()],

@@ -54,10 +54,18 @@ jobs:
           payload-secret: ci-unit-test-secret
 
       - name: Run unit tests
-        run: pnpm test:unit -- --run
+        run: pnpm test:unit -- --run --coverage
 
       - name: Run script tests
         run: pnpm test:scripts -- --run
+
+      - name: Upload unit test coverage
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./coverage/lcov.info
+          flags: unit
+          fail_ci_if_error: true
 
   integration-tests:
     name: Integration tests
@@ -78,4 +86,12 @@ jobs:
           payload-secret: ci-integration-secret
 
       - name: Run integration tests
-        run: pnpm test:integration -- --run
+        run: pnpm test:integration -- --run --coverage
+
+      - name: Upload integration test coverage
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./coverage/lcov.info
+          flags: integration
+          fail_ci_if_error: true

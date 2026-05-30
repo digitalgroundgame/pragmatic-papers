@@ -1,0 +1,18 @@
+coverage:
+  status:
+    project: off
+    patch:
+      default:
+        threshold: 80%
+
+comment:
+  layout: "reach, diff, flags"
+  behavior: default
+
+ignore:
+  - "src/migrations/**"
+  - "src/payload-types.ts"
+  - "src/app/(payload)/**"
+  - "src/payload.config.ts"
+  - "tests/**"
+  - "scripts/**"

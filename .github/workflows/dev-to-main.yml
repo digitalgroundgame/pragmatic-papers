@@ -1,0 +1,53 @@
+name: Dev to Main PR
+
+on:
+  push:
+    branches: [dev]
+    paths: [package.json]
+  workflow_dispatch:
+
+jobs:
+  open-pr:
+    name: Open PR dev → main
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 2
+
+      - name: Check actor permissions
+        id: perms
+        run: |
+          LEVEL=$(gh api "repos/${{ github.repository }}/collaborators/${{ github.actor }}/permission" --jq .permission)
+          echo "level=$LEVEL" >> "$GITHUB_OUTPUT"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Check for version bump
+        id: version
+        run: |
+          CURRENT=$(jq -r .version package.json)
+          PREVIOUS=$(git show HEAD~1:package.json 2>/dev/null | jq -r .version || echo "")
+          echo "tag=v$CURRENT" >> "$GITHUB_OUTPUT"
+          if [ "$CURRENT" != "$PREVIOUS" ]; then
+            echo "bumped=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "bumped=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Open PR dev → main
+        if: steps.version.outputs.bumped == 'true' && (steps.perms.outputs.level == 'admin' || steps.perms.outputs.level == 'maintain')
+        run: |
+          EXISTING=$(gh pr list --base main --head dev --json number --jq length)
+          if [ "$EXISTING" = "0" ]; then
+            PR_URL=$(gh pr create --base main --head dev --title "Release ${{ steps.version.outputs.tag }}" --body "")
+            gh pr merge "$PR_URL" --auto --merge
+          else
+            echo "PR already exists, skipping"
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

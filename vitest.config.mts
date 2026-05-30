@@ -10,7 +10,14 @@ export default defineConfig({
     coverage: {
       provider: "v8",
       reporter: ["text", "json", "json-summary", "lcov"],
+      // Instrument the whole source tree so the "total" reflects the real project
+      // coverage. Without `include`, Vitest 4 only reports files imported during the
+      // run (the handful the tests touch), making the total read like patch coverage.
+      include: ["src/**/*.{ts,tsx}"],
       exclude: [
+        "**/__tests__/**",
+        "**/*.{test,spec}.{ts,tsx}",
+        "**/*.d.ts",
         "src/migrations/**",
         "src/payload-types.ts",
         "src/app/(payload)/**",

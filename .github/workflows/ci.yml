@@ -62,11 +62,19 @@ jobs:
         run: pnpm test:scripts -- --run
 
       - name: Post coverage report
+        if: always()
         uses: davelosert/vitest-coverage-report-action@v2
         with:
           json-summary-path: coverage/coverage-summary.json
           json-final-path: coverage/coverage-final.json
+          file-coverage-mode: changes
           file-coverage-expanded: true
+
+      - name: Report patch coverage
+        if: always()
+        run: pnpm coverage:patch
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   integration-tests:
     name: Integration tests

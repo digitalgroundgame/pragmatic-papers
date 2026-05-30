@@ -39,6 +39,7 @@
     "test:scripts": "vitest --project scripts",
     "test:unit:coverage": "vitest run --project unit --coverage",
     "test:coverage": "vitest run --coverage",
+    "coverage:patch": "node scripts/patch-coverage.mjs",
     "test:e2e": "node scripts/test-e2e.mjs"
   },
   "dependencies": {

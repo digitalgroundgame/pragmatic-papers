@@ -189,37 +189,62 @@ async function fetchChangedFiles({ repo, prNumber, token }) {
   return byFile
 }
 
+const TABLE_HEADER = `<table>
+ <thead><tr>
+  <th align="center">Status</th>
+  <th align="left">Category</th>
+  <th align="right">Percentage</th>
+  <th align="right">Covered / Total</th>
+ </tr></thead>
+ <tbody>`
+
+const TABLE_FOOTER = ` </tbody>
+</table>`
+
+function htmlTable(rows) {
+  const rowHtml = rows
+    .map(
+      ({ label, pct, covered, total }) =>
+        `  <tr>
+   <td align="center">🔵</td>
+   <td align="left">${label}</td>
+   <td align="right">${total === 0 ? "n/a" : `${pct.toFixed(2)}%`}</td>
+   <td align="right">${total === 0 ? "n/a" : `${covered} / ${total}`}</td>
+  </tr>`,
+    )
+    .join("\n")
+  return `${TABLE_HEADER}\n${rowHtml}\n${TABLE_FOOTER}`
+}
+
 function renderTotalSection(total) {
-  const cell = (m) => `${m.pct.toFixed(2)}% (${m.covered}/${m.total})`
-  return [
-    "### Project total",
-    "",
-    "| Metric | Coverage |",
-    "| --- | --- |",
-    ...METRICS.map((k) => `| ${LABELS[k]} | ${cell(total[k])} |`),
-  ].join("\n")
+  const rows = METRICS.map((k) => ({ label: LABELS[k], ...total[k] }))
+  return `<h3>Project total</h3>\n${htmlTable(rows)}`
 }
 
 function renderReport({ total, metrics, files }) {
-  const cell = (m) => (m.total === 0 ? "n/a" : `${m.pct.toFixed(2)}% (${m.covered}/${m.total})`)
-  const lines = [
+  const rows = METRICS.map((k) => ({ label: LABELS[k], ...metrics[k] }))
+  const parts = [
     COMMENT_MARKER,
-    "## Coverage Stats",
+    "<h2>Coverage Report</h2>",
+    ...(total ? ["", renderTotalSection(total)] : []),
     "",
-    ...(total ? [renderTotalSection(total), ""] : []),
-    "### Patch coverage — lines added or modified in this PR",
-    "",
-    "| Metric | Coverage |",
-    "| --- | --- |",
-    ...METRICS.map((k) => `| ${LABELS[k]} | ${cell(metrics[k])} |`),
+    "<h3>Patch coverage</h3>",
+    "<p>Lines added or modified in this PR.</p>",
+    htmlTable(rows),
   ]
   const withGaps = files.filter((f) => f.uncovered.length > 0)
   if (withGaps.length > 0) {
-    lines.push("", "<details><summary>Uncovered changed lines</summary>", "")
-    for (const f of withGaps) lines.push(`- \`${f.file}\`: ${f.uncovered.join(", ")}`)
-    lines.push("", "</details>")
+    const items = withGaps.map((f) => `  <li><code>${f.file}</code>: ${f.uncovered.join(", ")}</li>`)
+    parts.push(
+      "",
+      "<details><summary>Uncovered changed lines</summary>",
+      "<ul>",
+      ...items,
+      "</ul>",
+      "</details>",
+    )
   }
-  return lines.join("\n")
+  return parts.join("\n")
 }
 
 async function upsertComment({ repo, prNumber, token, body }) {

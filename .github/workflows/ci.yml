@@ -69,6 +69,7 @@ jobs:
           json-final-path: coverage/coverage-final.json
           file-coverage-mode: changes
           file-coverage-expanded: true
+          comment-on: none
 
       - name: Report patch coverage
         if: always()

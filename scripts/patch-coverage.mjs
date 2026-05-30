@@ -189,13 +189,25 @@ async function fetchChangedFiles({ repo, prNumber, token }) {
   return byFile
 }
 
-function renderReport({ metrics, files }) {
+function renderTotalSection(total) {
+  const cell = (m) => `${m.pct.toFixed(2)}% (${m.covered}/${m.total})`
+  return [
+    "### Project total",
+    "",
+    "| Metric | Coverage |",
+    "| --- | --- |",
+    ...METRICS.map((k) => `| ${LABELS[k]} | ${cell(total[k])} |`),
+  ].join("\n")
+}
+
+function renderReport({ total, metrics, files }) {
   const cell = (m) => (m.total === 0 ? "n/a" : `${m.pct.toFixed(2)}% (${m.covered}/${m.total})`)
   const lines = [
     COMMENT_MARKER,
     "## Coverage Stats",
     "",
-    "Patch coverage — lines added or modified in this PR.",
+    ...(total ? [renderTotalSection(total), ""] : []),
+    "### Patch coverage — lines added or modified in this PR",
     "",
     "| Metric | Coverage |",
     "| --- | --- |",
@@ -235,6 +247,7 @@ async function upsertComment({ repo, prNumber, token, body }) {
 
 async function main() {
   const finalPath = process.env.COVERAGE_FINAL_PATH ?? "coverage/coverage-final.json"
+  const summaryPath = process.env.COVERAGE_SUMMARY_PATH ?? "coverage/coverage-summary.json"
   const root = process.env.GITHUB_WORKSPACE ?? process.cwd()
 
   const eventPath = process.env.GITHUB_EVENT_PATH
@@ -251,6 +264,11 @@ async function main() {
   }
 
   const coverageByFile = indexCoverageByFile(JSON.parse(readFileSync(finalPath, "utf8")), root)
+  const total = existsSync(summaryPath)
+    ? JSON.parse(readFileSync(summaryPath, "utf8")).total
+    : null
+  if (!total) console.warn(`${yellow("⚠")} ${summaryPath} not found — skipping project total section.`)
+
   const repo = process.env.GITHUB_REPOSITORY
   const token = process.env.GITHUB_TOKEN
   const addedLinesByFile = await fetchChangedFiles({ repo, prNumber, token })
@@ -265,7 +283,7 @@ async function main() {
     )
   }
 
-  const report = renderReport({ metrics, files })
+  const report = renderReport({ total, metrics, files })
   if (process.env.GITHUB_STEP_SUMMARY) {
     appendFileSync(process.env.GITHUB_STEP_SUMMARY, report + "\n")
   }

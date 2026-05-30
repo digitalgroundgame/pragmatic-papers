@@ -7,6 +7,26 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 export default defineConfig({
   test: {
+    coverage: {
+      provider: "v8",
+      reporter: ["text", "json", "json-summary", "lcov"],
+      // Instrument the whole source tree so the "total" reflects the real project
+      // coverage. Without `include`, Vitest 4 only reports files imported during the
+      // run (the handful the tests touch), making the total read like patch coverage.
+      include: ["src/**/*.{ts,tsx}"],
+      exclude: [
+        "**/__tests__/**",
+        "**/*.{test,spec}.{ts,tsx}",
+        "**/*.d.ts",
+        "src/migrations/**",
+        "src/payload-types.ts",
+        "src/app/(payload)/**",
+        "src/payload.config.ts",
+        "**/*.config.{ts,mts,js,mjs,cjs}",
+        "tests/**",
+        "scripts/**",
+      ],
+    },
     projects: [
       {
         plugins: [react()],
@@ -34,9 +54,18 @@ export default defineConfig({
           name: "integration",
           environment: "node",
           include: ["tests/integration/**/*.test.ts"],
-          setupFiles: ["./vitest.setup.ts"],
+          setupFiles: ["./vitest.setup.ts", "./tests/setup/integration-db-setup.ts"],
           globalSetup: ["./tests/setup/integration-global-setup.ts"],
+          hookTimeout: 30_000,
           testTimeout: 60_000,
+        },
+      },
+      {
+        resolve: { tsconfigPaths: true },
+        test: {
+          name: "scripts",
+          environment: "node",
+          include: ["tests/scripts/**/*.test.ts"],
         },
       },
     ],

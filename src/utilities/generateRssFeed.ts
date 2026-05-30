@@ -20,10 +20,13 @@ import { getServerSideURL } from "./getURL"
 const SITE_URL = getServerSideURL()
 
 const getMediaUrl = (url: string) => {
-  if (url.startsWith("http://") || url.startsWith("https://")) {
-    return url
+  const absolute =
+    url.startsWith("http://") || url.startsWith("https://") ? url : `${SITE_URL}${url}`
+  try {
+    return new URL(absolute).href
+  } catch {
+    return absolute
   }
-  return `${SITE_URL}${url}`
 }
 
 const resolveMedia = (media: number | Media): Media | null =>

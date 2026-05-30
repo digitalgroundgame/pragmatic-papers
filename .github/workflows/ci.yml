@@ -1,8 +1,9 @@
 name: CI
 
 on:
+  push:
+    branches: [main]
   pull_request:
-    branches: [main, dev]
 
 jobs:
   static:
@@ -41,6 +42,8 @@ jobs:
   unit-tests:
     name: Unit tests
     runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
 
     steps:
       - uses: actions/checkout@v6
@@ -53,7 +56,16 @@ jobs:
           payload-secret: ci-unit-test-secret
 
       - name: Run unit tests
-        run: pnpm test:unit -- --run
+        run: pnpm test:unit:coverage
+
+      - name: Run script tests
+        run: pnpm test:scripts -- --run
+
+      - name: Post coverage report
+        if: always()
+        run: pnpm coverage:report
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   integration-tests:
     name: Integration tests

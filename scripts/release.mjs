@@ -1,10 +1,10 @@
 import { execSync } from "child_process"
 import { readFileSync, writeFileSync } from "fs"
+import { parseArgs } from "node:util"
 import { dirname, join } from "path"
 import process from "process"
 import * as readline from "readline"
 import { fileURLToPath } from "url"
-import { parseArgs } from "node:util"
 import { blue, gray, green, red, yellow } from "./ansi.mjs"
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
@@ -82,7 +82,7 @@ async function waitForMerge(prUrl) {
   }
 }
 
-// ── Phase 1: Branch, version bump, PR → dev ────────────────────────────────────────────
+// ── Phase 1: Branch, version bump, PR → dev ────────────────────────────────
 
 if (phaseArg === 1) {
   console.warn(`\n${blue("●")} Phase 1: Creating release branch and PR to dev\n`)
@@ -107,7 +107,7 @@ if (phaseArg === 1) {
   await waitForMerge(devPrUrl)
 }
 
-// ── Phase 2: PR dev → main ─────────────────────────────────────────────────────────────
+// ── Phase 2: PR dev → main ─────────────────────────────────────────────────
 
 if (phaseArg === 2) {
   console.warn(`\n${blue("●")} Phase 2: Creating PR dev → main\n`)
@@ -121,7 +121,7 @@ if (phaseArg === 2) {
   await waitForMerge(mainPrUrl)
 }
 
-// ── Phase 3: Tag and release ───────────────────────────────────────────────────────────────────────
+// ── Phase 3: Tag and release ───────────────────────────────────────────────
 
 if (phaseArg === 3) {
   console.warn(`\n${blue("●")} Phase 3: Tagging and creating release\n`)

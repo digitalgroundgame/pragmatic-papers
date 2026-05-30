@@ -317,6 +317,12 @@ function renderFileCoverage({
         ? `<a href="https://github.com/${repo}/blob/${sha}/${file}">${file}</a>`
         : `<code>${file}</code>`
     const uncovered = uncoveredMap.get(file) ?? []
+    const uncoveredLinks =
+      repo && sha
+        ? uncovered
+            .map((n) => `<a href="https://github.com/${repo}/blob/${sha}/${file}#L${n}">${n}</a>`)
+            .join(", ")
+        : uncovered.join(", ")
     rows.push(
       `  <tr>
    <td align="left">${fileLink}</td>
@@ -324,7 +330,7 @@ function renderFileCoverage({
    <td align="right">${cell("statements")}</td>
    <td align="right">${cell("functions")}</td>
    <td align="right">${cell("branches")}</td>
-   <td align="left">${uncovered.join(", ")}</td>
+   <td align="left">${uncoveredLinks}</td>
   </tr>`,
     )
   }
@@ -378,20 +384,6 @@ function renderReport({
     "<p>Lines added or modified in this PR.</p>",
     htmlTable(rows),
   ]
-  const withGaps = files.filter((f) => f.uncovered.length > 0)
-  if (withGaps.length > 0) {
-    const items = withGaps.map(
-      (f) => `  <li><code>${f.file}</code>: ${f.uncovered.join(", ")}</li>`,
-    )
-    parts.push(
-      "",
-      "<details><summary>Uncovered changed lines</summary>",
-      "<ul>",
-      ...items,
-      "</ul>",
-      "</details>",
-    )
-  }
   return parts.join("\n")
 }
 

@@ -27,9 +27,10 @@ This file provides guidance to tools like Claude Code (claude.ai/code) when work
 - `pnpm test:unit` — run unit tests
 - `pnpm test:integration` — run integration tests (uses Testcontainers)
 - `pnpm test:e2e` — run Playwright E2E tests (uses Testcontainers)
-- `pnpm test:unit:coverage` — run unit tests with V8 coverage report (what CI uses; outputs `coverage/coverage-summary.json`)
+- `pnpm test:unit:coverage` — run unit tests with V8 coverage report (what CI uses; outputs `coverage/coverage-summary.json` and `coverage/coverage-final.json`)
 - `pnpm test:coverage` — run all tests with V8 coverage report (full picture for local inspection)
 - `pnpm test:unit -- --update-snapshots` — regenerate snapshot baselines after intentional UI changes
+- `pnpm coverage:report` — post the combined coverage PR comment locally (requires `GITHUB_TOKEN`, `GITHUB_REPOSITORY`, `GITHUB_EVENT_PATH`)
 
 ### Build & Payload
 
@@ -115,7 +116,9 @@ This file provides guidance to tools like Claude Code (claude.ai/code) when work
 
 ### Test coverage
 
-CI posts two coverage comments on every PR: project total (via `davelosert/vitest-coverage-report-action`) and patch coverage for the PR's changed lines (via `scripts/patch-coverage.mjs`). Both are informational — neither fails the build.
+CI posts a single combined coverage comment on every PR via `scripts/coverage-report.ts` (run as `pnpm coverage:report`). It contains three sections: **Project total** (from `coverage-summary.json`), **File Coverage** (per changed file, collapsed by default), and **Patch coverage** (lines added/modified in the PR's diff). All sections are informational — none fail the build.
+
+`davelosert/vitest-coverage-report-action` still runs in CI but with `comment-on: none`; it writes only to the Actions step summary.
 
 **Test types by code kind:**
 

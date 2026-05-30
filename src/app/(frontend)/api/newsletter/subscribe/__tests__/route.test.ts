@@ -42,6 +42,7 @@ describe("POST /api/newsletter/subscribe", () => {
   })
 
   it("returns 502 when subscribeMember throws", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => undefined)
     vi.mocked(verifyTurnstileToken).mockResolvedValue(true)
     vi.mocked(subscribeMember).mockRejectedValue(new Error("Listmonk down"))
     const res = await POST(makeReq({ email: "user@example.com", turnstileToken: "t" }) as never)

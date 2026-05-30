@@ -297,6 +297,8 @@ function renderReport({ total, summaryJson, metrics, files, changedFiles, repo, 
   return parts.join("\n")
 }
 
+const VITEST_ACTION_MARKER = "<!-- vitest-coverage-report-marker-root -->"
+
 async function upsertComment({ repo, prNumber, token, body }) {
   const headers = {
     Accept: "application/vnd.github+json",
@@ -308,7 +310,19 @@ async function upsertComment({ repo, prNumber, token, body }) {
     { headers },
   )
   if (!listRes.ok) throw new Error(`GitHub API ${listRes.status}: ${await listRes.text()}`)
-  const existing = (await listRes.json()).find((c) => c.body?.includes(COMMENT_MARKER))
+  const comments = await listRes.json()
+
+  // Delete the stale vitest-coverage-report-action comment if it still exists
+  const stale = comments.find((c) => c.body?.includes(VITEST_ACTION_MARKER))
+  if (stale) {
+    const delRes = await fetch(
+      `https://api.github.com/repos/${repo}/issues/comments/${stale.id}`,
+      { method: "DELETE", headers },
+    )
+    if (!delRes.ok) console.warn(`${yellow("⚠")} Could not delete stale vitest action comment.`)
+  }
+
+  const existing = comments.find((c) => c.body?.includes(COMMENT_MARKER))
   const url = existing
     ? `https://api.github.com/repos/${repo}/issues/comments/${existing.id}`
     : `https://api.github.com/repos/${repo}/issues/${prNumber}/comments`
@@ -361,9 +375,11 @@ async function main() {
     )
   }
 
-  // Pass repo-relative summary (strip the "total" key so only file entries remain)
+  // Re-key by repo-relative path (summary keys are absolute, like coverage-final.json)
   const summaryByFile = summaryJson ? Object.fromEntries(
-    Object.entries(summaryJson).filter(([k]) => k !== "total")
+    Object.entries(summaryJson)
+      .filter(([k]) => k !== "total")
+      .map(([k, v]) => [relative(root, k).split(sep).join("/"), v])
   ) : null
   const changedFiles = Object.keys(addedLinesByFile)
   const report = renderReport({ total, summaryJson: summaryByFile, metrics, files, changedFiles, repo, sha })

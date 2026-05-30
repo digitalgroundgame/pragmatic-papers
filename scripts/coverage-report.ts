@@ -4,34 +4,93 @@
 // format, produced by `pnpm test:unit:coverage`). It is purely informational — it
 // never fails the build.
 //
-// Coverage comes from coverage/coverage-final.json (istanbul format, produced by
-// `pnpm test:unit:coverage`); changed lines come from the GitHub PR "files" API
-// (its per-file `patch` hunks). On non-PR runs (e.g. push to main) there is no
-// diff to measure, so it no-ops.
+// Changed lines come from the GitHub PR "files" API (its per-file `patch` hunks).
+// On non-PR runs (e.g. push to main) there is no diff to measure, so it no-ops.
 
-/* eslint-disable @typescript-eslint/explicit-module-boundary-types */
 import { existsSync, readFileSync, appendFileSync } from "node:fs"
 import { relative, sep } from "node:path"
 import { fileURLToPath } from "node:url"
 import { blue, gray, green, yellow } from "./ansi.mjs"
 
+// ─── Istanbul types ───────────────────────────────────────────────────────────
+
+interface IstanbulLoc {
+  start?: { line: number }
+  line?: number
+}
+
+interface IstanbulFileCoverage {
+  path: string
+  statementMap: Record<string, IstanbulLoc>
+  s: Record<string, number>
+  fnMap: Record<string, { line?: number; decl?: { start?: { line: number } } }>
+  f: Record<string, number>
+  branchMap: Record<string, IstanbulLoc>
+  b: Record<string, number[]>
+}
+
+interface SummaryMetric {
+  total: number
+  covered: number
+  skipped: number
+  pct: number
+}
+
+interface FileSummary {
+  lines: SummaryMetric
+  statements: SummaryMetric
+  functions: SummaryMetric
+  branches: SummaryMetric
+}
+
+interface CoverageSummaryJson {
+  total: FileSummary
+  [file: string]: FileSummary
+}
+
+// ─── Internal types ───────────────────────────────────────────────────────────
+
+interface MetricCounts {
+  covered: number
+  total: number
+}
+
+interface Metrics {
+  lines: MetricCounts
+  statements: MetricCounts
+  functions: MetricCounts
+  branches: MetricCounts
+}
+
+interface MetricsWithPct extends Metrics {
+  lines: MetricCounts & { pct: number }
+  statements: MetricCounts & { pct: number }
+  functions: MetricCounts & { pct: number }
+  branches: MetricCounts & { pct: number }
+}
+
+type MetricKey = keyof Metrics
+
+// ─── Constants ────────────────────────────────────────────────────────────────
+
 const COMMENT_MARKER = "<!-- patch-coverage-report -->"
-const METRICS = ["lines", "statements", "functions", "branches"]
-const LABELS = {
+const VITEST_ACTION_MARKER = "<!-- vitest-coverage-report-marker-root -->"
+const METRICS: MetricKey[] = ["lines", "statements", "functions", "branches"]
+const LABELS: Record<MetricKey, string> = {
   lines: "Lines",
   statements: "Statements",
   functions: "Functions",
   branches: "Branches",
 }
 
+// ─── Pure helpers (exported for unit tests) ───────────────────────────────────
+
 /**
  * Parse a unified-diff `patch` (as returned by the GitHub PR files API) into the
  * set of line numbers added/modified on the NEW side of the file.
- * @param {string} patch
- * @returns {Set<number>}
  */
-export function parseAddedLines(patch) {
-  const added = new Set()
+export function parseAddedLines(patch: string): Set<number> {
+  const added = new Set<number>()
   if (!patch) return added
   let newLine = 0
   let inHunk = false
@@ -59,19 +118,19 @@ export function parseAddedLines(patch) {
 /**
  * Re-key an istanbul coverage-final.json (keyed by absolute path) by repo-relative
  * path so it lines up with the filenames GitHub's PR file list returns.
- * @param {Record<string, any>} finalJson
- * @param {string} root
- * @returns {Record<string, any>}
  */
-export function indexCoverageByFile(finalJson, root) {
-  const out = {}
+export function indexCoverageByFile(
+  finalJson: Record<string, IstanbulFileCoverage>,
+  root: string,
+): Record<string, IstanbulFileCoverage> {
+  const out: Record<string, IstanbulFileCoverage> = {}
   for (const fc of Object.values(finalJson)) {
     out[relative(root, fc.path).split(sep).join("/")] = fc
   }
   return out
 }
 
-const emptyCounts = () => ({
+const emptyCounts = (): Metrics => ({
   lines: { covered: 0, total: 0 },
   statements: { covered: 0, total: 0 },
   functions: { covered: 0, total: 0 },
@@ -83,17 +142,18 @@ const emptyCounts = () => ({
  * `addedLines`. Mirrors istanbul's own metric definitions so the patch numbers are
  * directly comparable to the project total. Returns per-metric counts plus the
  * coverable changed lines that ran zero times (for the "uncovered lines" detail).
- * @param {any} fc istanbul file coverage object
- * @param {Set<number>} addedLines
  */
-export function computeFileMetrics(fc, addedLines) {
+export function computeFileMetrics(
+  fc: IstanbulFileCoverage,
+  addedLines: Set<number>,
+): { counts: Metrics; uncoveredLines: number[] } {
   const counts = emptyCounts()
-  const uncoveredLines = []
+  const uncoveredLines: number[] = []
   const { statementMap = {}, s = {}, fnMap = {}, f = {}, branchMap = {}, b = {} } = fc
 
   // Lines: coverable when a statement starts on them; covered when any such
   // statement ran. Build a line → max-hits map from statements, as istanbul does.
-  const lineHits = new Map()
+  const lineHits = new Map<number, number>()
   for (const [id, loc] of Object.entries(statementMap)) {
     const line = loc.start?.line
     if (line == null) continue
@@ -102,27 +162,27 @@ export function computeFileMetrics(fc, addedLines) {
   for (const line of addedLines) {
     if (!lineHits.has(line)) continue
     counts.lines.total++
-    if (lineHits.get(line) > 0) counts.lines.covered++
+    if ((lineHits.get(line) ?? 0) > 0) counts.lines.covered++
     else uncoveredLines.push(line)
   }
 
   // Statements: counted on their start line.
   for (const [id, loc] of Object.entries(statementMap)) {
-    if (!addedLines.has(loc.start?.line)) continue
+    if (!addedLines.has(loc.start?.line ?? -1)) continue
     counts.statements.total++
     if ((s[id] ?? 0) > 0) counts.statements.covered++
   }
 
   // Functions: counted on their declaration line.
   for (const [id, fn] of Object.entries(fnMap)) {
-    if (!addedLines.has(fn.line ?? fn.decl?.start?.line)) continue
+    if (!addedLines.has(fn.line ?? fn.decl?.start?.line ?? -1)) continue
     counts.functions.total++
     if ((f[id] ?? 0) > 0) counts.functions.covered++
   }
 
   // Branches: each arm counts individually, on the branch's line.
   for (const [id, br] of Object.entries(branchMap)) {
-    if (!addedLines.has(br.line ?? br.loc?.start?.line)) continue
+    if (!addedLines.has(br.line ?? br.start?.line ?? -1)) continue
     for (const armHits of b[id] ?? []) {
       counts.branches.total++
       if (armHits > 0) counts.branches.covered++
@@ -133,23 +193,13 @@ export function computeFileMetrics(fc, addedLines) {
   return { counts, uncoveredLines }
 }
 
-/**
- * Aggregate patch coverage across every changed file.
- * @param {Record<string, any>} coverageByFile
- * @param {Record<string, Set<number>>} addedLinesByFile
- * @returns {{
- *   metrics: {
- *     lines: { covered: number, total: number, pct: number },
- *     statements: { covered: number, total: number, pct: number },
- *     functions: { covered: number, total: number, pct: number },
- *     branches: { covered: number, total: number, pct: number },
- *   },
- *   files: { file: string, uncovered: number[] }[],
- * }}
- */
-export function computePatchCoverage(coverageByFile, addedLinesByFile) {
-  const metrics = emptyCounts()
-  const files = []
+/** Aggregate patch coverage across every changed file. */
+export function computePatchCoverage(
+  coverageByFile: Record<string, IstanbulFileCoverage>,
+  addedLinesByFile: Record<string, Set<number>>,
+): { metrics: MetricsWithPct; files: { file: string; uncovered: number[] }[] } {
+  const metrics = emptyCounts() as MetricsWithPct
+  const files: { file: string; uncovered: number[] }[] = []
   for (const [file, addedLines] of Object.entries(addedLinesByFile)) {
     const fc = coverageByFile[file]
     if (!fc) continue // not instrumented (non-source, excluded, or generated)
@@ -166,20 +216,30 @@ export function computePatchCoverage(coverageByFile, addedLinesByFile) {
   return { metrics, files }
 }
 
-async function fetchChangedFiles({ repo, prNumber, token }) {
-  const headers = {
+// ─── GitHub API ───────────────────────────────────────────────────────────────
+
+async function fetchChangedFiles({
+  repo,
+  prNumber,
+  token,
+}: {
+  repo: string | undefined
+  prNumber: number
+  token: string | undefined
+}): Promise<Record<string, Set<number>>> {
+  const headers: Record<string, string> = {
     Accept: "application/vnd.github+json",
-    "User-Agent": "patch-coverage-script",
+    "User-Agent": "coverage-report-script",
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
   }
-  const byFile = {}
+  const byFile: Record<string, Set<number>> = {}
   for (let page = 1; ; page++) {
     const res = await fetch(
       `https://api.github.com/repos/${repo}/pulls/${prNumber}/files?per_page=100&page=${page}`,
       { headers },
     )
     if (!res.ok) throw new Error(`GitHub API ${res.status}: ${await res.text()}`)
-    const files = await res.json()
+    const files = (await res.json()) as { status: string; patch?: string; filename: string }[]
     for (const f of files) {
       if (f.status === "removed" || !f.patch) continue
       byFile[f.filename] = parseAddedLines(f.patch)
@@ -188,6 +248,8 @@ async function fetchChangedFiles({ repo, prNumber, token }) {
   }
   return byFile
 }
+
+// ─── Rendering ────────────────────────────────────────────────────────────────
 
 const TABLE_HEADER = `<table>
  <thead><tr>
@@ -201,13 +263,13 @@ const TABLE_HEADER = `<table>
 const TABLE_FOOTER = ` </tbody>
 </table>`
 
-function statusIcon(pct) {
+function statusIcon(pct: number): string {
   if (pct >= 80) return "🟢"
   if (pct >= 60) return "🟡"
   return "🔴"
 }
 
-function htmlTable(rows) {
+function htmlTable(rows: { label: string; pct: number; covered: number; total: number }[]): string {
   const rowHtml = rows
     .map(
       ({ label, pct, covered, total }) =>
@@ -222,22 +284,29 @@ function htmlTable(rows) {
   return `${TABLE_HEADER}\n${rowHtml}\n${TABLE_FOOTER}`
 }
 
-function renderTotalSection(total) {
+function renderTotalSection(total: FileSummary): string {
   const rows = METRICS.map((k) => ({ label: LABELS[k], ...total[k] }))
   return `<h3>Project total</h3>\n${htmlTable(rows)}`
 }
 
-// Columns mirror the vitest-coverage-report-action file coverage table.
-// summaryJson  — full coverage-summary.json (keyed by repo-relative path)
-// changedFiles — Set keys from addedLinesByFile (all files touched in the PR)
-// uncoveredMap — Map<file, number[]> from computePatchCoverage files array
-// repo / sha   — for GitHub file links (optional; omitted when not in CI)
-function renderFileCoverage({ summaryJson, changedFiles, uncoveredMap, repo, sha }) {
-  const rows = []
+function renderFileCoverage({
+  summaryJson,
+  changedFiles,
+  uncoveredMap,
+  repo,
+  sha,
+}: {
+  summaryJson: Record<string, FileSummary>
+  changedFiles: string[]
+  uncoveredMap: Map<string, number[]>
+  repo: string | undefined
+  sha: string | undefined
+}): string | null {
+  const rows: string[] = []
   for (const file of changedFiles) {
     const fc = summaryJson[file]
     if (!fc) continue
-    const cell = (m) =>
+    const cell = (m: keyof FileSummary) =>
       fc[m].total === 0 ? "n/a" : `${fc[m].pct.toFixed(2)}% (${fc[m].covered}/${fc[m].total})`
     const fileLink =
       repo && sha
@@ -272,7 +341,23 @@ ${rows.join("\n")}
   return `<details><summary>File Coverage</summary>\n${table}\n</details>`
 }
 
-function renderReport({ total, summaryJson, metrics, files, changedFiles, repo, sha }) {
+function renderReport({
+  total,
+  summaryJson,
+  metrics,
+  files,
+  changedFiles,
+  repo,
+  sha,
+}: {
+  total: FileSummary | null
+  summaryJson: Record<string, FileSummary> | null
+  metrics: MetricsWithPct
+  files: { file: string; uncovered: number[] }[]
+  changedFiles: string[]
+  repo: string | undefined
+  sha: string | undefined
+}): string {
   const rows = METRICS.map((k) => ({ label: LABELS[k], ...metrics[k] }))
   const uncoveredMap = new Map(files.map((f) => [f.file, f.uncovered]))
   const fileCoverage =
@@ -291,7 +376,9 @@ function renderReport({ total, summaryJson, metrics, files, changedFiles, repo, 
   ]
   const withGaps = files.filter((f) => f.uncovered.length > 0)
   if (withGaps.length > 0) {
-    const items = withGaps.map((f) => `  <li><code>${f.file}</code>: ${f.uncovered.join(", ")}</li>`)
+    const items = withGaps.map(
+      (f) => `  <li><code>${f.file}</code>: ${f.uncovered.join(", ")}</li>`,
+    )
     parts.push(
       "",
       "<details><summary>Uncovered changed lines</summary>",
@@ -304,12 +391,20 @@ function renderReport({ total, summaryJson, metrics, files, changedFiles, repo, 
   return parts.join("\n")
 }
 
-const VITEST_ACTION_MARKER = "<!-- vitest-coverage-report-marker-root -->"
-
-async function upsertComment({ repo, prNumber, token, body }) {
-  const headers = {
+async function upsertComment({
+  repo,
+  prNumber,
+  token,
+  body,
+}: {
+  repo: string
+  prNumber: number
+  token: string
+  body: string
+}): Promise<void> {
+  const headers: Record<string, string> = {
     Accept: "application/vnd.github+json",
-    "User-Agent": "patch-coverage-script",
+    "User-Agent": "coverage-report-script",
     Authorization: `Bearer ${token}`,
   }
   const listRes = await fetch(
@@ -317,15 +412,15 @@ async function upsertComment({ repo, prNumber, token, body }) {
     { headers },
   )
   if (!listRes.ok) throw new Error(`GitHub API ${listRes.status}: ${await listRes.text()}`)
-  const comments = await listRes.json()
+  const comments = (await listRes.json()) as { id: number; body?: string }[]
 
   // Delete the stale vitest-coverage-report-action comment if it still exists
   const stale = comments.find((c) => c.body?.includes(VITEST_ACTION_MARKER))
   if (stale) {
-    const delRes = await fetch(
-      `https://api.github.com/repos/${repo}/issues/comments/${stale.id}`,
-      { method: "DELETE", headers },
-    )
+    const delRes = await fetch(`https://api.github.com/repos/${repo}/issues/comments/${stale.id}`, {
+      method: "DELETE",
+      headers,
+    })
     if (!delRes.ok) console.warn(`${yellow("⚠")} Could not delete stale vitest action comment.`)
   }
 
@@ -341,7 +436,9 @@ async function upsertComment({ repo, prNumber, token, body }) {
   if (!res.ok) throw new Error(`GitHub API ${res.status}: ${await res.text()}`)
 }
 
-async function main() {
+// ─── Entry point ──────────────────────────────────────────────────────────────
+
+async function main(): Promise<void> {
   const finalPath = process.env.COVERAGE_FINAL_PATH ?? "coverage/coverage-final.json"
   const summaryPath = process.env.COVERAGE_SUMMARY_PATH ?? "coverage/coverage-summary.json"
   const root = process.env.GITHUB_WORKSPACE ?? process.cwd()
@@ -349,9 +446,9 @@ async function main() {
   const eventPath = process.env.GITHUB_EVENT_PATH
   const event =
     eventPath && existsSync(eventPath) ? JSON.parse(readFileSync(eventPath, "utf8")) : {}
-  const prNumber = event.pull_request?.number
+  const prNumber: number | undefined = event.pull_request?.number
   if (!prNumber) {
-    console.warn(`${blue("●")} Not a pull request — skipping patch coverage report.`)
+    console.warn(`${blue("●")} Not a pull request — skipping coverage report.`)
     return
   }
   if (!existsSync(finalPath)) {
@@ -359,13 +456,18 @@ async function main() {
     return
   }
 
-  const coverageByFile = indexCoverageByFile(JSON.parse(readFileSync(finalPath, "utf8")), root)
-  const summaryJson = existsSync(summaryPath)
-    ? JSON.parse(readFileSync(summaryPath, "utf8"))
+  const coverageByFile = indexCoverageByFile(
+    JSON.parse(readFileSync(finalPath, "utf8")) as Record<string, IstanbulFileCoverage>,
+    root,
+  )
+  const summaryRaw: CoverageSummaryJson | null = existsSync(summaryPath)
+    ? (JSON.parse(readFileSync(summaryPath, "utf8")) as CoverageSummaryJson)
     : null
-  if (!summaryJson)
-    console.warn(`${yellow("⚠")} ${summaryPath} not found — skipping project total and file coverage sections.`)
-  const total = summaryJson?.total ?? null
+  if (!summaryRaw)
+    console.warn(
+      `${yellow("⚠")} ${summaryPath} not found — skipping project total and file coverage sections.`,
+    )
+  const total = summaryRaw?.total ?? null
 
   const repo = process.env.GITHUB_REPOSITORY
   const sha = process.env.GITHUB_SHA
@@ -383,13 +485,23 @@ async function main() {
   }
 
   // Re-key by repo-relative path (summary keys are absolute, like coverage-final.json)
-  const summaryByFile = summaryJson ? Object.fromEntries(
-    Object.entries(summaryJson)
-      .filter(([k]) => k !== "total")
-      .map(([k, v]) => [relative(root, k).split(sep).join("/"), v])
-  ) : null
+  const summaryByFile: Record<string, FileSummary> | null = summaryRaw
+    ? Object.fromEntries(
+        Object.entries(summaryRaw)
+          .filter(([k]) => k !== "total")
+          .map(([k, v]) => [relative(root, k).split(sep).join("/"), v]),
+      )
+    : null
   const changedFiles = Object.keys(addedLinesByFile)
-  const report = renderReport({ total, summaryJson: summaryByFile, metrics, files, changedFiles, repo, sha })
+  const report = renderReport({
+    total,
+    summaryJson: summaryByFile,
+    metrics,
+    files,
+    changedFiles,
+    repo,
+    sha,
+  })
   if (process.env.GITHUB_STEP_SUMMARY) {
     appendFileSync(process.env.GITHUB_STEP_SUMMARY, report + "\n")
   }
@@ -397,7 +509,7 @@ async function main() {
     try {
       await upsertComment({ repo, prNumber, token, body: report })
     } catch (err) {
-      console.warn(`${yellow("⚠")} Could not post PR comment: ${err.message}`)
+      console.warn(`${yellow("⚠")} Could not post PR comment: ${(err as Error).message}`)
     }
   }
 }

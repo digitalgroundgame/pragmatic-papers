@@ -39,7 +39,7 @@
     "test:scripts": "vitest --project scripts",
     "test:unit:coverage": "vitest run --project unit --coverage",
     "test:coverage": "vitest run --coverage",
-    "coverage:report": "node scripts/coverage-report.mjs",
+    "coverage:report": "tsx scripts/coverage-report.ts",
     "test:e2e": "node scripts/test-e2e.mjs"
   },
   "dependencies": {

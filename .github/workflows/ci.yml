@@ -1,63 +1,89 @@
 name: CI
 
 on:
+  push:
+    branches: [main]
   pull_request:
-    branches: [main, dev]
 
 jobs:
-  # build:
-  #   strategy:
-  #     matrix:
-  #       node-version: [20.x, 22.x, 24.x]
-  #       # See supported Node.js release schedule at https://nodejs.org/en/about/releases/
-
-  #   name: Build with ${{ matrix.node-version }}
-  #   runs-on: ubuntu-latest
-  #   # Use Vercel Remote Caching
-  #   env:
-  #     TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
-  #     TURBO_TEAM: ${{ vars.TURBO_TEAM }}
-
-  #   steps:
-  #     - uses: actions/checkout@v4
-
-  #     - name: Set up Node.js environment
-  #       uses: ./.github/actions/setup-project
-  #       with:
-  #         node-version: ${{ matrix.node-version }}
-
-  #     - name: Build Next.js
-  #       run: pnpm run build
-  #       env:
-  #         NEXT_PUBLIC_SENTRY_DISABLED: "true" # Only upload Sentry source maps in deployment
-
   static:
-    strategy:
-      matrix:
-        node-version: [22.x]
-
-    name: Run static checks
+    name: Static checks
     runs-on: ubuntu-latest
+    env:
+      DATABASE_URI: postgres://postgres:postgres@localhost:5432/pragmatic-papers
+      NEXT_PUBLIC_SERVER_URL: http://localhost:8000
+      PAYLOAD_SECRET: ci-payload-secret
+      USE_LOCAL_STORAGE: "true"
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
-          fetch-depth: 0 # Retrieve Git history, needed to verify commits
+          fetch-depth: 0
 
       - name: Set up Node.js environment
         uses: ./.github/actions/setup-project
         with:
-          node-version: ${{ matrix.node-version }}
+          node-version: "24.x"
           gh-font-read-token: ${{ secrets.GH_FONT_READ }}
+          payload-secret: ci-payload-secret
 
-      - name: Linter
+      - name: Lint
         run: pnpm run lint:ci
 
-      - name: Type checking
+      - name: Type check
         run: pnpm run check-types
 
       - name: Check migration order
-        run: pnpm --filter pragmatic-papers exec tsx scripts/check-migration-order.ts
+        run: pnpm exec tsx scripts/check-migration-order.ts
 
       - name: Check for pending migrations
-        run: echo "n" | pnpm --filter pragmatic-papers migrate:create | grep "No schema changes detected"
+        run: node scripts/check-pending-migrations.mjs
+
+  unit-tests:
+    name: Unit tests
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up Node.js environment
+        uses: ./.github/actions/setup-project
+        with:
+          node-version: "24.x"
+          gh-font-read-token: ${{ secrets.GH_FONT_READ }}
+          payload-secret: ci-unit-test-secret
+
+      - name: Run unit tests
+        run: pnpm test:unit:coverage
+
+      - name: Run script tests
+        run: pnpm test:scripts -- --run
+
+      - name: Post coverage report
+        if: always()
+        run: pnpm coverage:report
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  integration-tests:
+    name: Integration tests
+    runs-on: ubuntu-latest
+
+    env:
+      PAYLOAD_SECRET: ci-integration-secret
+      USE_LOCAL_STORAGE: "true"
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up Node.js environment
+        uses: ./.github/actions/setup-project
+        with:
+          node-version: "24.x"
+          gh-font-read-token: ${{ secrets.GH_FONT_READ }}
+          payload-secret: ci-integration-secret
+
+      - name: Run integration tests
+        run: pnpm test:integration -- --run

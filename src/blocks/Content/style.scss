@@ -1,0 +1,41 @@
+.lexical-table {
+  border-radius: 15px;
+  overflow: hidden;
+}
+
+.lexical-table-row {
+  transition: background-color 0.25s;
+}
+
+.lexical-table-cell-header-1 {
+  font-weight: bold;
+}
+
+.lexical-table-cell {
+  border: none !important;
+  padding: 0px 16px !important;
+}
+
+html[data-theme="dark"] {
+  .lexical-table-cell-header-1 {
+    color: white;
+  }
+
+  .lexical-table-cell-header-0 {
+    color: rgb(172, 172, 172);
+  }
+
+  .lexical-table-row:hover {
+    background-color: rgb(20, 20, 20);
+  }
+}
+
+html[data-theme="light"] {
+  .lexical-table-cell-header-0 {
+    color: rgb(54, 54, 54);
+  }
+
+  .lexical-table-row:hover {
+    background-color: rgb(245, 245, 245);
+  }
+}

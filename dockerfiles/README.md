@@ -117,6 +117,7 @@ Use managed PostgreSQL service (AWS RDS, Supabase, Neon, etc.) for all deploymen
 ## 🔒 Production Notes
 
 ### For All Deployments:
+
 1. Use managed PostgreSQL (AWS RDS, Supabase, Neon, etc.)
 2. Generate strong secrets: `openssl rand -base64 32`
 3. Configure CDN for static assets (Pragmatic Papers with S3)
@@ -126,12 +127,14 @@ Use managed PostgreSQL service (AWS RDS, Supabase, Neon, etc.) for all deploymen
 ## 📝 Data Persistence
 
 ### PostgreSQL Database:
+
 - Use managed PostgreSQL service for all environments
 - Configure automated backups through your provider
 - Data persistence handled by database service
 - Migrations run automatically during Docker build
 
 ### Media Storage (Pragmatic Papers):
+
 - **Staging/Preview**: Local storage with persistent volumes
 - **Production**: S3-compatible storage (recommended)
 
@@ -146,6 +149,7 @@ DATABASE_URI=postgresql://postgres:password@postgres:5432/pragmatic_papers
 ```
 
 **Benefits:**
+
 - ✅ Production-ready for all environments
 - ✅ Robust and scalable
 - ✅ Better for high concurrency
@@ -154,12 +158,14 @@ DATABASE_URI=postgresql://postgres:password@postgres:5432/pragmatic_papers
 - ✅ Industry-standard database
 
 **How it works:**
+
 1. Requires external PostgreSQL database service
 2. Database connection via `DATABASE_URI`
 3. Migrations run automatically during build
 4. Data persisted by PostgreSQL service
 
 **Recommended Managed Services:**
+
 - **AWS RDS** - Enterprise-grade, highly available
 - **Supabase** - PostgreSQL with built-in APIs and auth
 - **Neon** - Serverless PostgreSQL with branching
@@ -174,6 +180,7 @@ When deploying with Coolify, preview deployments automatically get unique databa
 **How it works:**
 
 When `BUILD_ENV=preview` and Coolify sets `COOLIFY_FQDN` (e.g., `pr-330.pragmaticpapers.com`), the Dockerfile will:
+
 1. Extract the prefix (`pr-330`)
 2. Sanitize it for database naming (`pr_330`)
 3. Append it to your database name
@@ -193,6 +200,7 @@ COOLIFY_FQDN=pr-330.pragmaticpapers.com
 ```
 
 **Benefits:**
+
 - ✅ Automatic unique database per preview deployment
 - ✅ No manual configuration needed
 - ✅ Works seamlessly with database copy feature
@@ -241,6 +249,7 @@ FORCE_DATABASE_COPY=false
 **Example Use Cases:**
 
 1. **Preview deployments in Coolify (with automatic naming):**
+
    ```env
    BUILD_ENV=preview
    # Coolify automatically sets COOLIFY_FQDN=pr-330.pragmaticpapers.com
@@ -252,6 +261,7 @@ FORCE_DATABASE_COPY=false
    ```
 
 2. **Preview deployments (manual database name):**
+
    ```env
    COPY_SOURCE_DATABASE=true
    SOURCE_DATABASE_URI=postgresql://user:pass@staging-db:5432/staging_db
@@ -267,6 +277,7 @@ FORCE_DATABASE_COPY=false
    ```
 
 **Requirements:**
+
 - Both source and target databases must be PostgreSQL
 - Database user must have permissions to create databases and copy data
 - For cross-server copies: network connectivity between servers required
@@ -287,6 +298,7 @@ DATABASE_URI=postgresql://user:pass@db.example.com:5432/pragmatic_papers
 ```
 
 **What happens:**
+
 1. `BUILD_ENV=preview` enables automatic database naming
 2. Coolify sets `COOLIFY_FQDN=pr-330.pragmaticpapers.com`
 3. Dockerfile modifies `DATABASE_URI` to use database name `pragmatic_papers_pr_330`
@@ -310,11 +322,13 @@ USE_LOCAL_STORAGE=true
 ```
 
 **Benefits:**
+
 - No S3 credentials needed
 - Simpler setup for staging/preview environments
 - Files persist via Docker volumes
 
 **Requirements:**
+
 - Configure persistent volume mount in Coolify for `/app/apps/pragmatic-papers/public/media/`
 - Regular backups of the media volume recommended
 
@@ -330,6 +344,7 @@ S3_ENDPOINT=https://s3.amazonaws.com
 ```
 
 **Benefits:**
+
 - Files stored in S3-compatible storage (AWS S3, Supabase Storage, Cloudflare R2, etc.)
 - Better scalability and CDN integration
 - Automatic redundancy and backups

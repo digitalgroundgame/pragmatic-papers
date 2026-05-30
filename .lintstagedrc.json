@@ -1,0 +1,7 @@
+{
+  "*.{ts,tsx,js,jsx,mjs}": [
+    "cross-env NODE_OPTIONS=--no-deprecation eslint --fix --cache --max-warnings 0 --no-warn-ignored"
+  ],
+  "*.{ts,tsx}": ["cross-env NODE_OPTIONS=--no-deprecation prettier --write"],
+  "*.{json,css,md,yaml,yml}": ["cross-env NODE_OPTIONS=--no-deprecation prettier --write"]
+}

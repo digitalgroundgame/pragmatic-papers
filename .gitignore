@@ -6,6 +6,7 @@ node_modules
 
 # Local env files
 .env
+.envrc
 .env.local
 .env.development.local
 .env.test.local
@@ -25,6 +26,16 @@ coverage
 out/
 build
 dist
+next-env.d.ts
+
+# Fonts (generated at install time)
+public/fonts
+
+# Generated content
+public/media/
+public/mathjax
+public/robots.txt
+public/sitemap*.xml
 
 # Databases
 *.db
@@ -57,3 +68,24 @@ devenv.local.nix
 
 # claude files
 .claude
+
+.eslintcache
+tsconfig.tsbuildinfo
+
+# Playwright
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+/playwright/.auth/
+
+# Devenv
+.devenv*
+devenv.local.nix
+devenv.local.yaml
+
+# direnv
+.direnv
+
+# pre-commit
+.pre-commit-config.yaml

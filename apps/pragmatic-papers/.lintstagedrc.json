@@ -1,7 +1,0 @@
-{
-  "*/**/*.{js,jsx,ts,tsx}": [
-    "pnpm dlx prettier --write",
-    "pnpm dlx eslint --fix --c apps/pragmatic-papers/eslint.config.mjs --max-warnings 0"
-  ],
-  "*/**/*.{json,css,md}": ["pnpm dlx prettier --write"]
-}

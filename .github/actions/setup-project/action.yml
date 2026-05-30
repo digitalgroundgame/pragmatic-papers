@@ -9,21 +9,19 @@ inputs:
     description: "GitHub Token for private font packages"
     required: false
     default: ""
-  restore-nextjs-cache:
-    description: Whether to restore Next.js build cache
+  payload-secret:
+    description: "Payload CMS secret key"
     required: false
-    default: "false"
+    default: ""
 
 runs:
   using: composite
   steps:
     - name: Install pnpm
-      uses: pnpm/action-setup@v4
-      with:
-        version: "10.13.1"
+      uses: pnpm/action-setup@v6
 
     - name: Use Node.js ${{ inputs.node-version }}
-      uses: actions/setup-node@v4
+      uses: actions/setup-node@v6
       with:
         node-version: ${{ inputs.node-version }}
         cache: pnpm
@@ -34,3 +32,14 @@ runs:
     - name: Install dependencies
       shell: bash
       run: pnpm install --frozen-lockfile
+      env:
+        GH_FONT_READ: ${{ inputs.gh-font-read-token }}
+    - name: Create .env file
+      shell: bash
+      run: |
+        cat > .env << EOF
+        DATABASE_URI=postgres://postgres:postgres@localhost:5432/pragmatic-papers
+        PAYLOAD_SECRET=${{ inputs.payload-secret }}
+        NEXT_PUBLIC_SERVER_URL=http://localhost:8000
+        USE_LOCAL_STORAGE=true
+        EOF

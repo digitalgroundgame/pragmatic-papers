@@ -237,7 +237,8 @@ function renderFileCoverage({ summaryJson, changedFiles, uncoveredMap, repo, sha
   for (const file of changedFiles) {
     const fc = summaryJson[file]
     if (!fc) continue
-    const pct = (m) => (fc[m].total === 0 ? "n/a" : `${fc[m].pct.toFixed(2)}%`)
+    const cell = (m) =>
+      fc[m].total === 0 ? "n/a" : `${fc[m].pct.toFixed(2)}% (${fc[m].covered}/${fc[m].total})`
     const fileLink =
       repo && sha
         ? `<a href="https://github.com/${repo}/blob/${sha}/${file}">${file}</a>`
@@ -246,10 +247,10 @@ function renderFileCoverage({ summaryJson, changedFiles, uncoveredMap, repo, sha
     rows.push(
       `  <tr>
    <td align="left">${fileLink}</td>
-   <td align="right">${pct("statements")}</td>
-   <td align="right">${pct("branches")}</td>
-   <td align="right">${pct("functions")}</td>
-   <td align="right">${pct("lines")}</td>
+   <td align="right">${cell("statements")}</td>
+   <td align="right">${cell("branches")}</td>
+   <td align="right">${cell("functions")}</td>
+   <td align="right">${cell("lines")}</td>
    <td align="left">${uncovered.join(", ")}</td>
   </tr>`,
     )

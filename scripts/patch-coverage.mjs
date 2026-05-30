@@ -201,12 +201,18 @@ const TABLE_HEADER = `<table>
 const TABLE_FOOTER = ` </tbody>
 </table>`
 
+function statusIcon(pct) {
+  if (pct >= 80) return "🟢"
+  if (pct >= 60) return "🟡"
+  return "🔴"
+}
+
 function htmlTable(rows) {
   const rowHtml = rows
     .map(
       ({ label, pct, covered, total }) =>
         `  <tr>
-   <td align="center">🔵</td>
+   <td align="center">${total === 0 ? "🔵" : statusIcon(pct)}</td>
    <td align="left">${label}</td>
    <td align="right">${total === 0 ? "n/a" : `${pct.toFixed(2)}%`}</td>
    <td align="right">${total === 0 ? "n/a" : `${covered} / ${total}`}</td>

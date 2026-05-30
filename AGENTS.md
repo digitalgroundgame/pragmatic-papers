@@ -126,8 +126,6 @@ This file provides guidance to tools like Claude Code (claude.ai/code) when work
 | Server components (async, CMS) | Integration test with mocked Payload queries                                               |
 | API routes / Payload hooks     | Integration test (Testcontainers, see `tests/integration/`)                                |
 
-**Coverage escape hatches:**
-
 File-level exclusions are configured in `vitest.config.mts` `coverage.exclude` for auto-generated files (`src/migrations/**`, `src/payload-types.ts`, `src/app/(payload)/**`, `src/payload.config.ts`).
 
 Coverage reporting is informational only — chore/docs PRs don't need special handling.

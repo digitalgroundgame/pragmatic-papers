@@ -27,6 +27,10 @@ This file provides guidance to tools like Claude Code (claude.ai/code) when work
 - `pnpm test:unit` — run unit tests
 - `pnpm test:integration` — run integration tests (uses Testcontainers)
 - `pnpm test:e2e` — run Playwright E2E tests (uses Testcontainers)
+- `pnpm test:unit:coverage` — run unit tests with V8 coverage report (what CI uses; outputs `coverage/coverage-summary.json` and `coverage/coverage-final.json`)
+- `pnpm test:coverage` — run all tests with V8 coverage report (full picture for local inspection)
+- `pnpm test:unit -- --update-snapshots` — regenerate snapshot baselines after intentional UI changes
+- `pnpm coverage:report` — post the combined coverage PR comment locally (requires `GITHUB_TOKEN`, `GITHUB_REPOSITORY`, `GITHUB_EVENT_PATH`)
 
 ### Build & Payload
 
@@ -109,6 +113,22 @@ This file provides guidance to tools like Claude Code (claude.ai/code) when work
 - **Pre-push hooks**: Husky runs full checks on all files (`lint:fix`, `format:fix`, `check-types`) before pushing
 - **Pre-commit hooks**: lint-staged runs ESLint + Prettier on staged files only (fast, ~1-2 seconds)
 - **Colocation**: Prefer colocating logic near where it's used. `src/utilities/` is only for genuinely reusable helpers shared across multiple features (e.g. `generateMeta`, `getURL`, `toRoman`, `cn`). Don't put single-use logic there.
+
+### Test coverage
+
+**Test types by code kind:**
+
+| Code type                      | Test type                                                                                  |
+| ------------------------------ | ------------------------------------------------------------------------------------------ |
+| Pure utility functions         | Unit test in `src/**/__tests__/`                                                           |
+| UI/presentational components   | Snapshot test (see `src/components/ui/__tests__/button.snapshot.test.tsx` for the pattern) |
+| Client components with state   | RTL interaction test (`userEvent`, `fireEvent`)                                            |
+| Server components (async, CMS) | Integration test with mocked Payload queries                                               |
+| API routes / Payload hooks     | Integration test (Testcontainers, see `tests/integration/`)                                |
+
+File-level exclusions are configured in `vitest.config.mts` `coverage.exclude` for auto-generated files (`src/migrations/**`, `src/payload-types.ts`, `src/app/(payload)/**`, `src/payload.config.ts`).
+
+Coverage reporting is informational only — chore/docs PRs don't need special handling.
 
 ### Testing your changes
 

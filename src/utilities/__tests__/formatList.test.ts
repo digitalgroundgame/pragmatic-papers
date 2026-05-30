@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 
-import { formatList, getSeparator } from "../getSeparator"
+import { formatList, formatListWithLimit, getSeparator } from "../getSeparator"
 
 describe("getSeparator", () => {
   it("returns undefined for the first item", () => {
@@ -23,5 +23,13 @@ describe("formatList", () => {
 
   it("joins three items with Oxford comma", () => {
     expect(formatList(["Alice", "Bob", "Carol"])).toBe("Alice, Bob, and Carol")
+  })
+})
+
+describe("formatListWithLimit", () => {
+  it("truncates and shows remaining count", () => {
+    expect(formatListWithLimit(["Alice", "Bob", "Carol", "Dave"], 2)).toBe(
+      "Alice, and Bob, and 2 others",
+    )
   })
 })

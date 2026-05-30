@@ -5,7 +5,7 @@ import {
   computePatchCoverage,
   indexCoverageByFile,
   parseAddedLines,
-} from "../../scripts/patch-coverage.mjs"
+} from "../../scripts/coverage-report.mjs"
 
 // A synthetic istanbul file-coverage object:
 //  line 1 — statement ran (1)         → covered

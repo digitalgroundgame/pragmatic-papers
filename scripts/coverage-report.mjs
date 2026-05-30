@@ -1,8 +1,8 @@
-// Reports Codecov-style "patch" coverage: how well the lines ADDED or MODIFIED in
-// this PR's diff are covered by tests, broken down by lines/statements/functions/
-// branches (the same metrics the davelosert action reports for the project total).
-// The project total is left to that action; this script focuses only on the patch.
-// It is purely informational — it never fails the build.
+// Posts a combined coverage report as a PR comment: project total, per-file coverage
+// for changed files, and patch coverage (lines added or modified in this PR's diff).
+// Coverage data comes from coverage-summary.json and coverage-final.json (istanbul/v8
+// format, produced by `pnpm test:unit:coverage`). It is purely informational — it
+// never fails the build.
 //
 // Coverage comes from coverage/coverage-final.json (istanbul format, produced by
 // `pnpm test:unit:coverage`); changed lines come from the GitHub PR "files" API

@@ -73,7 +73,7 @@ jobs:
 
       - name: Report patch coverage
         if: always()
-        run: pnpm coverage:patch
+        run: pnpm coverage:report
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

@@ -74,8 +74,11 @@ type MetricKey = keyof Metrics
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const COMMENT_MARKER = "<!-- patch-coverage-report -->"
-const VITEST_ACTION_MARKER = "<!-- vitest-coverage-report-marker-root -->"
+const COMMENT_MARKER = "<!-- coverage-report -->"
+const STALE_MARKERS = [
+  "<!-- patch-coverage-report -->", // old name before script rename
+  "<!-- vitest-coverage-report-marker-root -->", // vitest action
+]
 const METRICS: MetricKey[] = ["lines", "statements", "functions", "branches"]
 const LABELS: Record<MetricKey, string> = {
   lines: "Lines",
@@ -392,6 +395,25 @@ function renderReport({
   return parts.join("\n")
 }
 
+async function fetchAllComments(
+  repo: string,
+  prNumber: number,
+  headers: Record<string, string>,
+): Promise<{ id: number; body?: string }[]> {
+  const all: { id: number; body?: string }[] = []
+  for (let page = 1; ; page++) {
+    const res = await fetch(
+      `https://api.github.com/repos/${repo}/issues/${prNumber}/comments?per_page=100&page=${page}`,
+      { headers },
+    )
+    if (!res.ok) throw new Error(`GitHub API ${res.status}: ${await res.text()}`)
+    const page_ = (await res.json()) as { id: number; body?: string }[]
+    all.push(...page_)
+    if (page_.length < 100) break
+  }
+  return all
+}
+
 async function upsertComment({
   repo,
   prNumber,
@@ -408,21 +430,17 @@ async function upsertComment({
     "User-Agent": "coverage-report-script",
     Authorization: `Bearer ${token}`,
   }
-  const listRes = await fetch(
-    `https://api.github.com/repos/${repo}/issues/${prNumber}/comments?per_page=100`,
-    { headers },
-  )
-  if (!listRes.ok) throw new Error(`GitHub API ${listRes.status}: ${await listRes.text()}`)
-  const comments = (await listRes.json()) as { id: number; body?: string }[]
+  const comments = await fetchAllComments(repo, prNumber, headers)
 
-  // Delete the stale vitest-coverage-report-action comment if it still exists
-  const stale = comments.find((c) => c.body?.includes(VITEST_ACTION_MARKER))
-  if (stale) {
-    const delRes = await fetch(`https://api.github.com/repos/${repo}/issues/comments/${stale.id}`, {
-      method: "DELETE",
-      headers,
-    })
-    if (!delRes.ok) console.warn(`${yellow("⚠")} Could not delete stale vitest action comment.`)
+  // Delete any stale coverage comments (old marker names, vitest action)
+  for (const comment of comments) {
+    if (STALE_MARKERS.some((m) => comment.body?.includes(m))) {
+      const delRes = await fetch(
+        `https://api.github.com/repos/${repo}/issues/comments/${comment.id}`,
+        { method: "DELETE", headers },
+      )
+      if (!delRes.ok) console.warn(`${yellow("⚠")} Could not delete stale comment ${comment.id}.`)
+    }
   }
 
   const existing = comments.find((c) => c.body?.includes(COMMENT_MARKER))

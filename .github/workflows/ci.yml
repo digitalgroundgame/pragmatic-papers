@@ -42,6 +42,8 @@ jobs:
   unit-tests:
     name: Unit tests
     runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
 
     steps:
       - uses: actions/checkout@v6
@@ -54,18 +56,13 @@ jobs:
           payload-secret: ci-unit-test-secret
 
       - name: Run unit tests
-        run: pnpm test:unit -- --run --coverage
+        run: pnpm test:unit:coverage
 
       - name: Run script tests
         run: pnpm test:scripts -- --run
 
-      - name: Upload unit test coverage
-        uses: codecov/codecov-action@v5
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          files: ./coverage/lcov.info
-          flags: unit
-          fail_ci_if_error: true
+      - name: Post coverage report
+        uses: davelosert/vitest-coverage-report-action@v2
 
   integration-tests:
     name: Integration tests
@@ -86,12 +83,4 @@ jobs:
           payload-secret: ci-integration-secret
 
       - name: Run integration tests
-        run: pnpm test:integration -- --run --coverage
-
-      - name: Upload integration test coverage
-        uses: codecov/codecov-action@v5
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          files: ./coverage/lcov.info
-          flags: integration
-          fail_ci_if_error: true
+        run: pnpm test:integration -- --run

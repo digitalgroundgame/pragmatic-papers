@@ -9,7 +9,7 @@ export default defineConfig({
   test: {
     coverage: {
       provider: "v8",
-      reporter: ["text", "json", "lcov"],
+      reporter: ["text", "json", "json-summary", "lcov"],
       exclude: [
         "src/migrations/**",
         "src/payload-types.ts",

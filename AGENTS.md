@@ -27,7 +27,8 @@ This file provides guidance to tools like Claude Code (claude.ai/code) when work
 - `pnpm test:unit` — run unit tests
 - `pnpm test:integration` — run integration tests (uses Testcontainers)
 - `pnpm test:e2e` — run Playwright E2E tests (uses Testcontainers)
-- `pnpm test:coverage` — run all tests with V8 coverage report (outputs `coverage/lcov.info`)
+- `pnpm test:unit:coverage` — run unit tests with V8 coverage report (what CI uses; outputs `coverage/coverage-summary.json`)
+- `pnpm test:coverage` — run all tests with V8 coverage report (full picture for local inspection)
 - `pnpm test:unit -- --update-snapshots` — regenerate snapshot baselines after intentional UI changes
 
 ### Build & Payload
@@ -114,7 +115,7 @@ This file provides guidance to tools like Claude Code (claude.ai/code) when work
 
 ### Test coverage
 
-CI enforces **patch coverage** via Codecov — 80% of lines added in a PR must be covered. Project-wide coverage is not enforced.
+CI posts a coverage report comment on every PR via `davelosert/vitest-coverage-report-action`. Coverage is informational — it shows which changed files lack test coverage but does not enforce a hard threshold.
 
 **Test types by code kind:**
 
@@ -140,7 +141,7 @@ For individual untestable lines (e.g. unreachable error branches), use inline co
 /* v8 ignore stop */
 ```
 
-For chore/docs-only PRs with no meaningful code changes, add the `codecov: off` label to skip the coverage check.
+Coverage reporting is informational only — chore/docs PRs don't need special handling.
 
 ### Testing your changes
 

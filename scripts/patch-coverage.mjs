@@ -247,10 +247,10 @@ function renderFileCoverage({ summaryJson, changedFiles, uncoveredMap, repo, sha
     rows.push(
       `  <tr>
    <td align="left">${fileLink}</td>
-   <td align="right">${cell("statements")}</td>
-   <td align="right">${cell("branches")}</td>
-   <td align="right">${cell("functions")}</td>
    <td align="right">${cell("lines")}</td>
+   <td align="right">${cell("statements")}</td>
+   <td align="right">${cell("functions")}</td>
+   <td align="right">${cell("branches")}</td>
    <td align="left">${uncovered.join(", ")}</td>
   </tr>`,
     )
@@ -259,17 +259,17 @@ function renderFileCoverage({ summaryJson, changedFiles, uncoveredMap, repo, sha
   const table = `<table>
  <thead><tr>
   <th align="left">File</th>
-  <th align="right">Stmts</th>
-  <th align="right">Branches</th>
-  <th align="right">Functions</th>
   <th align="right">Lines</th>
+  <th align="right">Stmts</th>
+  <th align="right">Functions</th>
+  <th align="right">Branches</th>
   <th align="left">Uncovered Lines</th>
  </tr></thead>
  <tbody>
 ${rows.join("\n")}
  </tbody>
 </table>`
-  return `<details open><summary>File Coverage</summary>\n${table}\n</details>`
+  return `<details><summary>File Coverage</summary>\n${table}\n</details>`
 }
 
 function renderReport({ total, summaryJson, metrics, files, changedFiles, repo, sha }) {

@@ -1,11 +1,13 @@
 import React from "react"
 
+import { ShareButtons } from "@/components/ShareButtons"
 import { HoverPrefetchLink } from "@/components/Link/HoverPrefetchLink"
 import { Media } from "@/components/Media"
 import { NarrationPlayer } from "@/components/NarrationPlayer"
 import { Separator } from "@/components/ui/separator"
 import type { Article } from "@/payload-types"
 import { formatDateTime } from "@/utilities/formatDateTime"
+import { getServerSideURL } from "@/utilities/getURL"
 import { getSeparator } from "@/utilities/getSeparator"
 
 interface ArticleHeroProps {
@@ -50,6 +52,11 @@ export const ArticleHero: React.FC<ArticleHeroProps> = ({ article }) => {
             <NarrationPlayer narration={narration} populatedNarrator={populatedNarrator} />
           </div>
         )}
+        <ShareButtons
+          url={`${getServerSideURL()}/articles/${article.slug}`}
+          title={article.title}
+          className="shrink-0"
+        />
       </div>
       <Separator />
     </div>

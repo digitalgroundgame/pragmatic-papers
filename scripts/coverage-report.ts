@@ -293,7 +293,7 @@ export function htmlTable(
 export function deltaIcon(delta: number): string {
   if (delta > 0.005) return "🟢"
   if (delta >= -0.005) return "🔵"
-  if (delta >= -1.0) return "🟡"
+  if (delta > -1.0) return "🟡"
   return "🔴"
 }
 

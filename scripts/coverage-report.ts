@@ -294,7 +294,7 @@ export function deltaIcon(delta: number): string {
   return "🟡"
 }
 
-function renderTotalSection(total: FileSummary, baseTotal: FileSummary | null): string {
+export function renderTotalSection(total: FileSummary, baseTotal: FileSummary | null): string {
   if (!baseTotal) {
     const rows = METRICS.map((k) => ({ label: LABELS[k], ...total[k] }))
     return `<h3>Project total</h3>\n${htmlTable(rows)}`

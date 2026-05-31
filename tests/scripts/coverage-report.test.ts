@@ -6,7 +6,14 @@ import {
   deltaIcon,
   indexCoverageByFile,
   parseAddedLines,
+  renderTotalSection,
 } from "../../scripts/coverage-report"
+
+// Minimal FileSummary fixture
+function summary(pct: number, covered = Math.round(pct), total = 100) {
+  const m = { total, covered, skipped: 0, pct }
+  return { lines: m, statements: m, functions: m, branches: m }
+}
 
 // A synthetic istanbul file-coverage object:
 //  line 1 — statement ran (1)         → covered
@@ -84,6 +91,40 @@ describe("deltaIcon", () => {
     expect(deltaIcon(0)).toBe("🟡")
     expect(deltaIcon(0.001)).toBe("🟡") // at threshold, not beyond
     expect(deltaIcon(-0.001)).toBe("🟡") // at threshold, not beyond
+  })
+})
+
+describe("renderTotalSection", () => {
+  it("renders absolute-threshold dots when no base is provided", () => {
+    const html = renderTotalSection(summary(85), null)
+    expect(html).toContain("🟢") // 85% ≥ 80
+    expect(html).not.toContain("Change")
+  })
+
+  it("shows 🟢 and a positive delta when coverage improved", () => {
+    const html = renderTotalSection(summary(85), summary(80))
+    expect(html).toContain("🟢")
+    expect(html).toContain("+5.00%")
+    expect(html).toContain("Change")
+  })
+
+  it("shows 🔴 and a negative delta when coverage worsened", () => {
+    const html = renderTotalSection(summary(75), summary(80))
+    expect(html).toContain("🔴")
+    expect(html).toContain("-5.00%")
+  })
+
+  it("shows 🟡 and ±0.00% when coverage is unchanged", () => {
+    const html = renderTotalSection(summary(80), summary(80))
+    expect(html).toContain("🟡")
+    expect(html).toContain("±0.00%")
+  })
+
+  it("shows 🔵 and n/a for metrics with no coverable lines", () => {
+    const html = renderTotalSection(summary(0, 0, 0), summary(0, 0, 0))
+    expect(html).toContain("🔵")
+    // every data cell should be n/a
+    expect(html.match(/n\/a/g)?.length).toBeGreaterThanOrEqual(4)
   })
 })
 

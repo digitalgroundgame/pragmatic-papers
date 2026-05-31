@@ -292,8 +292,9 @@ export function htmlTable(
 
 export function deltaIcon(delta: number): string {
   if (delta > 0.001) return "🟢"
-  if (delta < -0.001) return "🔴"
-  return "🟡"
+  if (delta >= -0.001) return "🔵"
+  if (delta >= -1.0) return "🟡"
+  return "🔴"
 }
 
 export function renderTotalSection(total: FileSummary, baseTotal: FileSummary | null): string {

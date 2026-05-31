@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest"
 
-import { arrayStringToPlainText, arrayToPlaintText } from "../formatAuthors"
+import { arrayStringToPlainText, arrayToPlaintText, formatAuthors } from "../formatAuthors"
+
+type Author = Parameters<typeof formatAuthors>[0][number]
+const author = (name: string): Author => ({ name }) as Author
 
 describe("arrayToPlaintText", () => {
   it("returns empty string for an empty list", () => {
@@ -37,6 +40,30 @@ describe("arrayToPlaintText", () => {
 
   it("does not add an Oxford comma for two items even when requested", () => {
     expect(arrayToPlaintText(["Alice", "Bob"], "and", true)).toBe("Alice and Bob")
+  })
+})
+
+describe("formatAuthors", () => {
+  it("returns empty string for no authors", () => {
+    expect(formatAuthors([])).toBe("")
+  })
+
+  it("formats a single author", () => {
+    expect(formatAuthors([author("Alice")])).toBe("Alice")
+  })
+
+  it("formats two authors", () => {
+    expect(formatAuthors([author("Alice"), author("Bob")])).toBe("Alice and Bob")
+  })
+
+  it("formats three authors", () => {
+    expect(formatAuthors([author("Alice"), author("Bob"), author("Carol")])).toBe(
+      "Alice, Bob and Carol",
+    )
+  })
+
+  it("filters out authors with no name", () => {
+    expect(formatAuthors([author("Alice"), { name: null } as Author])).toBe("Alice")
   })
 })
 

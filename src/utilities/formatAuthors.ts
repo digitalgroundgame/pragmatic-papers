@@ -1,11 +1,18 @@
 // eslint-disable-next-line @typescript-eslint/consistent-type-imports
 import { Article } from "@/payload-types"
 
-export function arrayToPlaintText(list: string[], conjunction = "and"): string {
+export function arrayToPlaintText(
+  list: string[],
+  conjunction = "and",
+  oxfordComma = false,
+): string {
   if (!list.length) return ""
   if (list.length === 1) return list[0] ?? ""
   if (list.length === 2) return `${list[0]} ${conjunction} ${list[1]}`
-  return `${list.slice(0, -1).join(", ")} ${conjunction} ${list[list.length - 1]}`
+  const tail = oxfordComma
+    ? `, ${conjunction} ${list[list.length - 1]}`
+    : ` ${conjunction} ${list[list.length - 1]}`
+  return `${list.slice(0, -1).join(", ")}${tail}`
 }
 
 export function arrayStringToPlainText(list: string, sep = ",", conjunction = "and"): string {

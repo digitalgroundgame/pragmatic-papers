@@ -37,7 +37,7 @@
     "test:unit": "vitest --project unit",
     "test:integration": "vitest --project integration",
     "test:scripts": "vitest --project scripts",
-    "test:unit:coverage": "vitest run --project unit --coverage",
+    "test:unit:coverage": "vitest run --project unit --project scripts --coverage",
     "test:coverage": "vitest run --coverage",
     "coverage:report": "tsx scripts/coverage-report.ts",
     "test:e2e": "node scripts/test-e2e.mjs",

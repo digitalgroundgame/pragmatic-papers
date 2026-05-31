@@ -1,18 +1,32 @@
-import { describe, expect, it } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import {
   computeFileMetrics,
   computePatchCoverage,
   deltaIcon,
+  fetchAllComments,
+  htmlTable,
   indexCoverageByFile,
   parseAddedLines,
+  renderFileCoverage,
+  renderReport,
   renderTotalSection,
+  statusIcon,
+  upsertComment,
 } from "../../scripts/coverage-report"
 
 // Minimal FileSummary fixture
 function summary(pct: number, covered = Math.round(pct), total = 100) {
   const m = { total, covered, skipped: 0, pct }
   return { lines: m, statements: m, functions: m, branches: m }
+}
+
+// Zero-coverage MetricsWithPct fixture for renderReport
+const emptyMetrics = {
+  lines: { covered: 0, total: 0, pct: 100 },
+  statements: { covered: 0, total: 0, pct: 100 },
+  functions: { covered: 0, total: 0, pct: 100 },
+  branches: { covered: 0, total: 0, pct: 100 },
 }
 
 // A synthetic istanbul file-coverage object:
@@ -128,6 +142,181 @@ describe("renderTotalSection", () => {
   })
 })
 
+describe("statusIcon", () => {
+  it("returns 🟢 at or above 80%", () => {
+    expect(statusIcon(100)).toBe("🟢")
+    expect(statusIcon(80)).toBe("🟢")
+  })
+
+  it("returns 🟡 between 60% and 79%", () => {
+    expect(statusIcon(79)).toBe("🟡")
+    expect(statusIcon(60)).toBe("🟡")
+  })
+
+  it("returns 🔴 below 60%", () => {
+    expect(statusIcon(59)).toBe("🔴")
+    expect(statusIcon(0)).toBe("🔴")
+  })
+})
+
+describe("htmlTable", () => {
+  it("renders a row with percentage and covered/total", () => {
+    const html = htmlTable([{ label: "Lines", pct: 85, covered: 85, total: 100 }])
+    expect(html).toContain("🟢")
+    expect(html).toContain("85.00%")
+    expect(html).toContain("85 / 100")
+    expect(html).toContain("Lines")
+  })
+
+  it("renders n/a and 🔵 for rows with no coverable items", () => {
+    const html = htmlTable([{ label: "Functions", pct: 0, covered: 0, total: 0 }])
+    expect(html).toContain("🔵")
+    expect(html).toContain("n/a")
+    expect(html).not.toContain("0.00%")
+  })
+})
+
+describe("renderFileCoverage", () => {
+  const fileSummary = summary(78, 7, 9)
+  const summaryJson = { "src/foo.ts": fileSummary }
+
+  it("returns null when no changed files have coverage data", () => {
+    expect(
+      renderFileCoverage({
+        summaryJson,
+        changedFiles: ["src/untracked.ts"],
+        uncoveredMap: new Map(),
+        repo: undefined,
+        sha: undefined,
+      }),
+    ).toBeNull()
+  })
+
+  it("renders a file row with plain code tag when repo/sha are absent", () => {
+    const html = renderFileCoverage({
+      summaryJson,
+      changedFiles: ["src/foo.ts"],
+      uncoveredMap: new Map(),
+      repo: undefined,
+      sha: undefined,
+    })
+    expect(html).toContain("<code>src/foo.ts</code>")
+    expect(html).toContain("File Coverage")
+  })
+
+  it("renders a file link when repo and sha are provided", () => {
+    const html = renderFileCoverage({
+      summaryJson,
+      changedFiles: ["src/foo.ts"],
+      uncoveredMap: new Map(),
+      repo: "owner/repo",
+      sha: "abc123",
+    })
+    expect(html).toContain(
+      `<a href="https://github.com/owner/repo/blob/abc123/src/foo.ts">src/foo.ts</a>`,
+    )
+  })
+
+  it("renders uncovered lines as plain numbers without repo/sha", () => {
+    const html = renderFileCoverage({
+      summaryJson,
+      changedFiles: ["src/foo.ts"],
+      uncoveredMap: new Map([["src/foo.ts", [10, 20]]]),
+      repo: undefined,
+      sha: undefined,
+    })
+    expect(html).toContain("10, 20")
+    expect(html).not.toContain("<a href")
+  })
+
+  it("renders uncovered lines as GitHub links when repo and sha are provided", () => {
+    const html = renderFileCoverage({
+      summaryJson,
+      changedFiles: ["src/foo.ts"],
+      uncoveredMap: new Map([["src/foo.ts", [42]]]),
+      repo: "owner/repo",
+      sha: "abc123",
+    })
+    expect(html).toContain(
+      `<a href="https://github.com/owner/repo/blob/abc123/src/foo.ts#L42">42</a>`,
+    )
+  })
+})
+
+describe("renderReport", () => {
+  it("always includes the comment marker and patch coverage section", () => {
+    const html = renderReport({
+      total: null,
+      baseTotal: null,
+      summaryJson: null,
+      metrics: emptyMetrics,
+      files: [],
+      changedFiles: [],
+      repo: undefined,
+      sha: undefined,
+    })
+    expect(html).toContain("<!-- coverage-report -->")
+    expect(html).toContain("Patch coverage")
+  })
+
+  it("omits the project total section when total is null", () => {
+    const html = renderReport({
+      total: null,
+      baseTotal: null,
+      summaryJson: null,
+      metrics: emptyMetrics,
+      files: [],
+      changedFiles: [],
+      repo: undefined,
+      sha: undefined,
+    })
+    expect(html).not.toContain("Project total")
+  })
+
+  it("includes the project total section when total is provided", () => {
+    const html = renderReport({
+      total: summary(75),
+      baseTotal: null,
+      summaryJson: null,
+      metrics: emptyMetrics,
+      files: [],
+      changedFiles: [],
+      repo: undefined,
+      sha: undefined,
+    })
+    expect(html).toContain("Project total")
+  })
+
+  it("includes the file coverage section when changed files have summary data", () => {
+    const html = renderReport({
+      total: summary(75),
+      baseTotal: null,
+      summaryJson: { "src/foo.ts": summary(78) },
+      metrics: emptyMetrics,
+      files: [],
+      changedFiles: ["src/foo.ts"],
+      repo: undefined,
+      sha: undefined,
+    })
+    expect(html).toContain("File Coverage")
+    expect(html).toContain("src/foo.ts")
+  })
+
+  it("omits the file coverage section when no changed files have summary data", () => {
+    const html = renderReport({
+      total: summary(75),
+      baseTotal: null,
+      summaryJson: { "src/foo.ts": summary(78) },
+      metrics: emptyMetrics,
+      files: [],
+      changedFiles: ["src/untracked.ts"],
+      repo: undefined,
+      sha: undefined,
+    })
+    expect(html).not.toContain("File Coverage")
+  })
+})
+
 describe("computePatchCoverage", () => {
   it("aggregates metrics and computes percentages", () => {
     const result = computePatchCoverage(
@@ -147,5 +336,94 @@ describe("computePatchCoverage", () => {
     expect(result.metrics.lines.total).toBe(0)
     expect(result.metrics.lines.pct).toBe(100)
     expect(result.files).toEqual([])
+  })
+})
+
+// ─── GitHub API helpers ────────────────────────────────────────────────────────
+
+function mockRes(body: unknown, ok = true, status = 200) {
+  return { ok, status, json: async () => body, text: async () => JSON.stringify(body) }
+}
+
+describe("fetchAllComments", () => {
+  const headers = { Authorization: "Bearer token" }
+
+  beforeEach(() => {
+    vi.stubGlobal("fetch", vi.fn())
+  })
+  afterEach(() => vi.unstubAllGlobals())
+
+  it("returns comments from a single page", async () => {
+    const comments = [{ id: 1, body: "hello" }]
+    vi.mocked(fetch).mockResolvedValueOnce(mockRes(comments) as Response)
+    const result = await fetchAllComments("owner/repo", 42, headers)
+    expect(result).toEqual(comments)
+    expect(fetch).toHaveBeenCalledTimes(1)
+  })
+
+  it("paginates until a page returns fewer than 100 comments", async () => {
+    const page1 = Array.from({ length: 100 }, (_, i) => ({ id: i }))
+    const page2 = [{ id: 100, body: "last" }]
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(mockRes(page1) as Response)
+      .mockResolvedValueOnce(mockRes(page2) as Response)
+    const result = await fetchAllComments("owner/repo", 1, headers)
+    expect(result).toHaveLength(101)
+    expect(fetch).toHaveBeenCalledTimes(2)
+  })
+
+  it("throws on a non-ok response", async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(mockRes("Not Found", false, 404) as Response)
+    await expect(fetchAllComments("owner/repo", 1, headers)).rejects.toThrow("GitHub API 404")
+  })
+})
+
+describe("upsertComment", () => {
+  const base = { repo: "owner/repo", prNumber: 7, token: "tok", body: "<!-- coverage-report -->" }
+
+  beforeEach(() => {
+    vi.stubGlobal("fetch", vi.fn())
+  })
+  afterEach(() => vi.unstubAllGlobals())
+
+  it("POSTs a new comment when none exists", async () => {
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(mockRes([]) as Response) // fetchAllComments page 1
+      .mockResolvedValueOnce(mockRes({}) as Response) // POST
+    await upsertComment(base)
+    const [, postCall] = vi.mocked(fetch).mock.calls
+    expect((postCall![1] as RequestInit).method).toBe("POST")
+    expect(postCall![0] as string).toContain(`/issues/${base.prNumber}/comments`)
+  })
+
+  it("PATCHes an existing comment when the marker is found", async () => {
+    const existing = [{ id: 99, body: "<!-- coverage-report --> old content" }]
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(mockRes(existing) as Response)
+      .mockResolvedValueOnce(mockRes({}) as Response) // PATCH
+    await upsertComment(base)
+    const [, patchCall] = vi.mocked(fetch).mock.calls
+    expect((patchCall![1] as RequestInit).method).toBe("PATCH")
+    expect(patchCall![0] as string).toContain(`/comments/99`)
+  })
+
+  it("DELETEs stale comments before posting", async () => {
+    const stale = [{ id: 55, body: "<!-- patch-coverage-report --> stale" }]
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(mockRes(stale) as Response) // fetchAllComments
+      .mockResolvedValueOnce(mockRes({}) as Response) // DELETE stale
+      .mockResolvedValueOnce(mockRes({}) as Response) // POST new
+    await upsertComment(base)
+    const [, deleteCall, postCall] = vi.mocked(fetch).mock.calls
+    expect((deleteCall![1] as RequestInit).method).toBe("DELETE")
+    expect(deleteCall![0] as string).toContain(`/comments/55`)
+    expect((postCall![1] as RequestInit).method).toBe("POST")
+  })
+
+  it("throws when the final POST/PATCH fails", async () => {
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(mockRes([]) as Response)
+      .mockResolvedValueOnce(mockRes("Forbidden", false, 403) as Response)
+    await expect(upsertComment(base)).rejects.toThrow("GitHub API 403")
   })
 })

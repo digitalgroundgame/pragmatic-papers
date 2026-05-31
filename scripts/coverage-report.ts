@@ -267,13 +267,15 @@ const TABLE_HEADER = `<table>
 const TABLE_FOOTER = ` </tbody>
 </table>`
 
-function statusIcon(pct: number): string {
+export function statusIcon(pct: number): string {
   if (pct >= 80) return "🟢"
   if (pct >= 60) return "🟡"
   return "🔴"
 }
 
-function htmlTable(rows: { label: string; pct: number; covered: number; total: number }[]): string {
+export function htmlTable(
+  rows: { label: string; pct: number; covered: number; total: number }[],
+): string {
   const rowHtml = rows
     .map(
       ({ label, pct, covered, total }) =>
@@ -332,7 +334,7 @@ export function renderTotalSection(total: FileSummary, baseTotal: FileSummary | 
   return `<h3>Project total</h3>\n${header}\n${bodyRows}\n${TABLE_FOOTER}`
 }
 
-function renderFileCoverage({
+export function renderFileCoverage({
   summaryJson,
   changedFiles,
   uncoveredMap,
@@ -390,7 +392,7 @@ ${rows.join("\n")}
   return `<details><summary>File Coverage</summary>\n${table}\n</details>`
 }
 
-function renderReport({
+export function renderReport({
   total,
   baseTotal,
   summaryJson,
@@ -428,7 +430,7 @@ function renderReport({
   return parts.join("\n")
 }
 
-async function fetchAllComments(
+export async function fetchAllComments(
   repo: string,
   prNumber: number,
   headers: Record<string, string>,
@@ -447,7 +449,7 @@ async function fetchAllComments(
   return all
 }
 
-async function upsertComment({
+export async function upsertComment({
   repo,
   prNumber,
   token,

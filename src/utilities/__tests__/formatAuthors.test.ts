@@ -27,6 +27,17 @@ describe("arrayToPlaintText", () => {
     expect(arrayToPlaintText(["Alice", "Bob"], "or")).toBe("Alice or Bob")
     expect(arrayToPlaintText(["Alice", "Bob", "Carol"], "or")).toBe("Alice, Bob or Carol")
   })
+
+  it("adds an Oxford comma for three or more items when requested", () => {
+    expect(arrayToPlaintText(["Alice", "Bob", "Carol"], "and", true)).toBe("Alice, Bob, and Carol")
+    expect(arrayToPlaintText(["Alice", "Bob", "Carol", "Dave"], "and", true)).toBe(
+      "Alice, Bob, Carol, and Dave",
+    )
+  })
+
+  it("does not add an Oxford comma for two items even when requested", () => {
+    expect(arrayToPlaintText(["Alice", "Bob"], "and", true)).toBe("Alice and Bob")
+  })
 })
 
 describe("arrayStringToPlainText", () => {

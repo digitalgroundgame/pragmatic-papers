@@ -99,6 +99,38 @@ describe("createScheduledCampaign", () => {
   })
 })
 
+describe("readConfig", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs()
+    vi.restoreAllMocks()
+  })
+
+  it("throws when a required env var is missing", async () => {
+    stubEnv()
+    vi.stubEnv("LISTMONK_BASE_URL", "")
+    await expect(listScheduledCampaigns()).rejects.toThrow(
+      "Missing required env var: LISTMONK_BASE_URL",
+    )
+  })
+})
+
+describe("listmonkFetch error path", () => {
+  beforeEach(stubEnv)
+  afterEach(() => {
+    vi.unstubAllEnvs()
+    vi.restoreAllMocks()
+  })
+
+  it("falls back to empty string when res.text() rejects", async () => {
+    vi.spyOn(global, "fetch").mockResolvedValueOnce({
+      ok: false,
+      status: 503,
+      text: () => Promise.reject(new Error("stream closed")),
+    } as Response)
+    await expect(listScheduledCampaigns()).rejects.toThrow("503")
+  })
+})
+
 describe("listScheduledCampaigns", () => {
   beforeEach(stubEnv)
   afterEach(() => {

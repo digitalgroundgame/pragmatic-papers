@@ -1,3 +1,7 @@
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs"
+import { tmpdir } from "node:os"
+import { join } from "node:path"
+
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import {
@@ -5,8 +9,10 @@ import {
   computePatchCoverage,
   deltaIcon,
   fetchAllComments,
+  fetchChangedFiles,
   htmlTable,
   indexCoverageByFile,
+  main,
   parseAddedLines,
   renderFileCoverage,
   renderReport,
@@ -63,6 +69,11 @@ describe("parseAddedLines", () => {
 
   it("returns an empty set for an empty patch", () => {
     expect(parseAddedLines("").size).toBe(0)
+  })
+
+  it("ignores lines before the first hunk header", () => {
+    const patch = ["--- a/src/foo.ts", "+++ b/src/foo.ts", "@@ -1,1 +1,2 @@", "+added"].join("\n")
+    expect([...parseAddedLines(patch)]).toEqual([1])
   })
 })
 
@@ -240,6 +251,25 @@ describe("renderFileCoverage", () => {
     expect(html).toContain(
       `<a href="https://github.com/owner/repo/blob/abc123/src/foo.ts#L42">42</a>`,
     )
+  })
+
+  it("renders n/a for a metric whose total is zero", () => {
+    const zeroFunctions = {
+      "src/foo.ts": {
+        lines: { total: 9, covered: 7, skipped: 0, pct: 78 },
+        statements: { total: 13, covered: 10, skipped: 0, pct: 77 },
+        functions: { total: 0, covered: 0, skipped: 0, pct: 100 },
+        branches: { total: 14, covered: 13, skipped: 0, pct: 93 },
+      },
+    }
+    const html = renderFileCoverage({
+      summaryJson: zeroFunctions,
+      changedFiles: ["src/foo.ts"],
+      uncoveredMap: new Map(),
+      repo: undefined,
+      sha: undefined,
+    })
+    expect(html).toContain("n/a")
   })
 })
 
@@ -425,5 +455,106 @@ describe("upsertComment", () => {
       .mockResolvedValueOnce(mockRes([]) as Response)
       .mockResolvedValueOnce(mockRes("Forbidden", false, 403) as Response)
     await expect(upsertComment(base)).rejects.toThrow("GitHub API 403")
+  })
+
+  it("warns but continues when a stale comment DELETE fails", async () => {
+    const stale = [{ id: 55, body: "<!-- patch-coverage-report --> stale" }]
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(mockRes(stale) as Response) // fetchAllComments
+      .mockResolvedValueOnce(mockRes("Forbidden", false, 403) as Response) // DELETE fails
+      .mockResolvedValueOnce(mockRes({}) as Response) // POST still succeeds
+    await expect(upsertComment(base)).resolves.toBeUndefined()
+  })
+})
+
+describe("fetchChangedFiles", () => {
+  beforeEach(() => {
+    vi.stubGlobal("fetch", vi.fn())
+  })
+  afterEach(() => vi.unstubAllGlobals())
+
+  it("returns added lines keyed by filename", async () => {
+    const files = [
+      { status: "modified", patch: "@@ -1,1 +1,2 @@\n+new line", filename: "src/a.ts" },
+    ]
+    vi.mocked(fetch).mockResolvedValueOnce(mockRes(files) as Response)
+    const result = await fetchChangedFiles({ repo: "owner/repo", prNumber: 1, token: "tok" })
+    expect(result["src/a.ts"]).toBeDefined()
+    expect(result["src/a.ts"]!.has(1)).toBe(true)
+  })
+
+  it("skips removed files", async () => {
+    const files = [{ status: "removed", patch: "@@ -1,1 +0,0 @@\n-gone", filename: "src/gone.ts" }]
+    vi.mocked(fetch).mockResolvedValueOnce(mockRes(files) as Response)
+    const result = await fetchChangedFiles({ repo: "owner/repo", prNumber: 1, token: undefined })
+    expect(Object.keys(result)).toHaveLength(0)
+  })
+
+  it("skips files without a patch (e.g. binary files)", async () => {
+    const files = [{ status: "modified", filename: "image.png" }]
+    vi.mocked(fetch).mockResolvedValueOnce(mockRes(files) as Response)
+    const result = await fetchChangedFiles({ repo: "owner/repo", prNumber: 1, token: undefined })
+    expect(Object.keys(result)).toHaveLength(0)
+  })
+
+  it("omits the Authorization header when no token is provided", async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(mockRes([]) as Response)
+    await fetchChangedFiles({ repo: "owner/repo", prNumber: 1, token: undefined })
+    const headers = vi.mocked(fetch).mock.calls[0]![1]!.headers as Record<string, string>
+    expect(headers["Authorization"]).toBeUndefined()
+  })
+
+  it("paginates through multiple pages", async () => {
+    const page1 = Array.from({ length: 100 }, (_, i) => ({
+      status: "modified",
+      patch: "@@ -1,1 +1,1 @@\n+x",
+      filename: `src/f${i}.ts`,
+    }))
+    const page2 = [{ status: "modified", patch: "@@ -1,1 +1,1 @@\n+x", filename: "src/last.ts" }]
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(mockRes(page1) as Response)
+      .mockResolvedValueOnce(mockRes(page2) as Response)
+    const result = await fetchChangedFiles({ repo: "owner/repo", prNumber: 1, token: "tok" })
+    expect(Object.keys(result)).toHaveLength(101)
+  })
+
+  it("throws on a non-ok response", async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(mockRes("Not Found", false, 404) as Response)
+    await expect(
+      fetchChangedFiles({ repo: "owner/repo", prNumber: 1, token: "tok" }),
+    ).rejects.toThrow("GitHub API 404")
+  })
+})
+
+describe("main", () => {
+  let tmpDir: string
+
+  beforeEach(() => {
+    tmpDir = mkdtempSync(join(tmpdir(), "coverage-main-test-"))
+  })
+  afterEach(() => {
+    rmSync(tmpDir, { recursive: true })
+    delete process.env.GITHUB_EVENT_PATH
+    delete process.env.COVERAGE_FINAL_PATH
+  })
+
+  it("exits early when there is no pull_request in the event", async () => {
+    delete process.env.GITHUB_EVENT_PATH
+    await expect(main()).resolves.toBeUndefined()
+  })
+
+  it("exits early when the event has no pull_request number", async () => {
+    const eventPath = join(tmpDir, "event.json")
+    writeFileSync(eventPath, JSON.stringify({ push: {} }))
+    process.env.GITHUB_EVENT_PATH = eventPath
+    await expect(main()).resolves.toBeUndefined()
+  })
+
+  it("exits early when coverage-final.json does not exist", async () => {
+    const eventPath = join(tmpDir, "event.json")
+    writeFileSync(eventPath, JSON.stringify({ pull_request: { number: 42 } }))
+    process.env.GITHUB_EVENT_PATH = eventPath
+    process.env.COVERAGE_FINAL_PATH = join(tmpDir, "nonexistent.json")
+    await expect(main()).resolves.toBeUndefined()
   })
 })

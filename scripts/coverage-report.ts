@@ -222,7 +222,7 @@ export function computePatchCoverage(
 
 // ─── GitHub API ───────────────────────────────────────────────────────────────
 
-async function fetchChangedFiles({
+export async function fetchChangedFiles({
   repo,
   prNumber,
   token,
@@ -492,7 +492,7 @@ export async function upsertComment({
 
 // ─── Entry point ──────────────────────────────────────────────────────────────
 
-async function main(): Promise<void> {
+export async function main(): Promise<void> {
   const finalPath = process.env.COVERAGE_FINAL_PATH ?? "coverage/coverage-final.json"
   const summaryPath = process.env.COVERAGE_SUMMARY_PATH ?? "coverage/coverage-summary.json"
   const root = process.env.GITHUB_WORKSPACE ?? process.cwd()

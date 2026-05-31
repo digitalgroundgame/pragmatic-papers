@@ -14,6 +14,10 @@ describe("arrayToPlaintText", () => {
     expect(arrayToPlaintText(["Alice"])).toBe("Alice")
   })
 
+  it("returns empty string when the single item is undefined", () => {
+    expect(arrayToPlaintText([undefined as unknown as string])).toBe("")
+  })
+
   it("joins two items with the conjunction", () => {
     expect(arrayToPlaintText(["Alice", "Bob"])).toBe("Alice and Bob")
   })

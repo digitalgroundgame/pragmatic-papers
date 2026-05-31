@@ -55,11 +55,8 @@ jobs:
           gh-font-read-token: ${{ secrets.GH_FONT_READ }}
           payload-secret: ci-unit-test-secret
 
-      - name: Run unit tests
+      - name: Run unit and script tests
         run: pnpm test:unit:coverage
-
-      - name: Run script tests
-        run: pnpm test:scripts -- --run
 
       - name: Upload base coverage artifact
         if: github.ref == 'refs/heads/dev'

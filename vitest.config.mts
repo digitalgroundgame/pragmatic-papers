@@ -29,7 +29,12 @@ export default defineConfig({
     projects: [
       {
         plugins: [react()],
-        resolve: { tsconfigPaths: true },
+        resolve: {
+          tsconfigPaths: true,
+          // tsconfig maps "react" → @types/react for type-checking, but that package has
+          // no runtime exports. Override it here so Vite resolves to the actual runtime package.
+          alias: { react: path.resolve(__dirname, "node_modules/react") },
+        },
         test: {
           name: "unit",
           environment: "jsdom",

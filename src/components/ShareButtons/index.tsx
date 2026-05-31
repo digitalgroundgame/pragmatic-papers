@@ -60,7 +60,12 @@ export function ShareButtons({ url, title, className }: ShareButtonsProps): Reac
               value={url}
               className="border-input bg-background text-muted-foreground h-7 min-w-0 flex-1 truncate rounded-sm border px-2 text-xs outline-none"
             />
-            <Button variant="outline" size="icon-sm" aria-label="Copy link" onClick={handleCopy}>
+            <Button
+              variant="outline"
+              size="icon-sm"
+              aria-label={copied ? "Copied!" : "Copy link"}
+              onClick={handleCopy}
+            >
               {copied ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}
             </Button>
           </div>

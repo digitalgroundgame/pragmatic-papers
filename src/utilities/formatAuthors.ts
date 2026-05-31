@@ -36,3 +36,12 @@ export const formatAuthors = (
   const authorNames = authors.map((author) => author.name).filter(Boolean) as string[]
   return arrayToPlaintText(authorNames)
 }
+
+/** Returns "By Author" or "By Author1 and Author2" etc., prefixed with "By ". */
+export function formatAuthorsByline(
+  authors: NonNullable<NonNullable<Article["populatedAuthors"]>[number]>[],
+): string {
+  const names = formatAuthors(authors)
+  if (!names) return ""
+  return `By ${names}`
+}

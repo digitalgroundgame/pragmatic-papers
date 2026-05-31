@@ -291,8 +291,8 @@ export function htmlTable(
 }
 
 export function deltaIcon(delta: number): string {
-  if (delta > 0.001) return "🟢"
-  if (delta >= -0.001) return "🔵"
+  if (delta > 0.005) return "🟢"
+  if (delta >= -0.005) return "🔵"
   if (delta >= -1.0) return "🟡"
   return "🔴"
 }
@@ -320,7 +320,7 @@ export function renderTotalSection(total: FileSummary, baseTotal: FileSummary | 
     const deltaStr =
       tot === 0
         ? "n/a"
-        : Math.abs(delta) <= 0.001
+        : Math.abs(delta) < 0.005
           ? "±0.00%"
           : `${delta > 0 ? "+" : ""}${delta.toFixed(2)}%`
     return `  <tr>

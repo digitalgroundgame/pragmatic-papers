@@ -104,17 +104,17 @@ describe("computeFileMetrics", () => {
 describe("deltaIcon", () => {
   it("returns 🟢 when coverage improved", () => {
     expect(deltaIcon(0.5)).toBe("🟢")
-    expect(deltaIcon(0.002)).toBe("🟢") // just above threshold
+    expect(deltaIcon(0.006)).toBe("🟢") // just above threshold (rounds to +0.01%)
   })
 
-  it("returns 🔵 when coverage is neutral or zero", () => {
+  it("returns 🔵 when coverage is neutral or zero (rounds to ±0.00% at 2dp)", () => {
     expect(deltaIcon(0)).toBe("🔵")
-    expect(deltaIcon(0.001)).toBe("🔵") // at positive threshold, not beyond
-    expect(deltaIcon(-0.001)).toBe("🔵") // at negative threshold, not beyond
+    expect(deltaIcon(0.004)).toBe("🔵") // rounds to 0.00%
+    expect(deltaIcon(-0.004)).toBe("🔵") // rounds to 0.00%
   })
 
   it("returns 🟡 when coverage dropped a little (< 1%)", () => {
-    expect(deltaIcon(-0.002)).toBe("🟡") // just below neutral threshold
+    expect(deltaIcon(-0.006)).toBe("🟡") // just below neutral threshold (rounds to -0.01%)
     expect(deltaIcon(-0.5)).toBe("🟡")
     expect(deltaIcon(-0.999)).toBe("🟡") // just above big-drop threshold
   })

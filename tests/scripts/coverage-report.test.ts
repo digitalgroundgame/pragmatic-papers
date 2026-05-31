@@ -104,18 +104,24 @@ describe("computeFileMetrics", () => {
 describe("deltaIcon", () => {
   it("returns 🟢 when coverage improved", () => {
     expect(deltaIcon(0.5)).toBe("🟢")
-    expect(deltaIcon(0.002)).toBe("🟢") // just above threshold
+    expect(deltaIcon(0.006)).toBe("🟢") // just above threshold (rounds to +0.01%)
   })
 
-  it("returns 🔴 when coverage worsened", () => {
-    expect(deltaIcon(-0.5)).toBe("🔴")
-    expect(deltaIcon(-0.002)).toBe("🔴") // just below threshold
+  it("returns 🔵 when coverage is neutral or zero (rounds to ±0.00% at 2dp)", () => {
+    expect(deltaIcon(0)).toBe("🔵")
+    expect(deltaIcon(0.004)).toBe("🔵") // rounds to 0.00%
+    expect(deltaIcon(-0.004)).toBe("🔵") // rounds to 0.00%
   })
 
-  it("returns 🟡 when coverage is unchanged within floating-point noise", () => {
-    expect(deltaIcon(0)).toBe("🟡")
-    expect(deltaIcon(0.001)).toBe("🟡") // at threshold, not beyond
-    expect(deltaIcon(-0.001)).toBe("🟡") // at threshold, not beyond
+  it("returns 🟡 when coverage dropped a little (< 1%)", () => {
+    expect(deltaIcon(-0.006)).toBe("🟡") // just below neutral threshold (rounds to -0.01%)
+    expect(deltaIcon(-0.5)).toBe("🟡")
+    expect(deltaIcon(-0.999)).toBe("🟡") // just above big-drop threshold
+  })
+
+  it("returns 🔴 when coverage dropped a lot (≥ 1%)", () => {
+    expect(deltaIcon(-1.0)).toBe("🔴")
+    expect(deltaIcon(-5)).toBe("🔴")
   })
 })
 
@@ -139,10 +145,16 @@ describe("renderTotalSection", () => {
     expect(html).toContain("-5.00%")
   })
 
-  it("shows 🟡 and ±0.00% when coverage is unchanged", () => {
+  it("shows 🔵 and ±0.00% when coverage is unchanged", () => {
     const html = renderTotalSection(summary(80), summary(80))
-    expect(html).toContain("🟡")
+    expect(html).toContain("🔵")
     expect(html).toContain("±0.00%")
+  })
+
+  it("shows 🟡 and a small negative delta when coverage dropped slightly", () => {
+    const html = renderTotalSection(summary(79.5), summary(80))
+    expect(html).toContain("🟡")
+    expect(html).toContain("-0.50%")
   })
 
   it("shows 🔵 and n/a for metrics with no coverable lines", () => {

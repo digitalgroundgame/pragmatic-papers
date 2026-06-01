@@ -76,13 +76,14 @@ test.describe("ShareButtons — article page", () => {
     await expect(page.getByRole("button", { name: "Copy link" })).toBeVisible({ timeout: 4000 })
   })
 
-  test("share links open correct platform URLs", async ({ page, context }) => {
+  test("share links have correct hrefs", async ({ page }) => {
     const href = await gotoFirstArticle(page)
     test.skip(!href, "No articles found in the database")
 
     await page.getByRole("button", { name: "Share" }).click()
     const dialog = page.getByRole("dialog")
 
+    // Share links render as <a target="_blank"> via LinkButton — check href attributes.
     const cases = [
       { label: "Share on X", fragment: "x.com/intent/tweet" },
       { label: "Share on Bluesky", fragment: "bsky.app/intent/compose" },
@@ -90,32 +91,30 @@ test.describe("ShareButtons — article page", () => {
       { label: "Share on Threads", fragment: "threads.net/intent/post" },
       { label: "Share on Reddit", fragment: "reddit.com/submit" },
       { label: "Share on LinkedIn", fragment: "linkedin.com/shareArticle" },
+      { label: "Share via Email", fragment: "mailto:" },
     ]
 
     for (const { label, fragment } of cases) {
-      const [newPage] = await Promise.all([
-        context.waitForEvent("page"),
-        dialog.getByRole("button", { name: label }).click(),
-      ])
-      expect(newPage.url()).toContain(fragment)
-      await newPage.close()
-      // Re-open popover for the next iteration
-      await page.getByRole("button", { name: "Share" }).click()
+      const link = dialog.getByRole("link", { name: label })
+      await expect(link).toBeVisible()
+      const linkHref = await link.getAttribute("href")
+      expect(linkHref).toContain(fragment)
+      expect(await link.getAttribute("target")).toBe("_blank")
     }
   })
 
-  test("email share link uses mailto:", async ({ page }) => {
+  test("share links open in new tab", async ({ page, context }) => {
     const href = await gotoFirstArticle(page)
     test.skip(!href, "No articles found in the database")
 
     await page.getByRole("button", { name: "Share" }).click()
-    // mailto: links don't open a browser page — check via route interception
-    const requests: string[] = []
-    page.on("request", (req) => requests.push(req.url()))
-    await page.getByRole("button", { name: "Share via Email" }).click()
-    // Mailto requests are handled by the OS, not by the browser — the button
-    // should still be clickable without throwing.
-    await expect(page.getByRole("button", { name: "Share via Email" })).toBeVisible()
+    const dialog = page.getByRole("dialog")
+    const [newPage] = await Promise.all([
+      context.waitForEvent("page"),
+      dialog.getByRole("link", { name: "Share on X" }).click(),
+    ])
+    expect(newPage.url()).toContain("x.com/intent/tweet")
+    await newPage.close()
   })
 })
 

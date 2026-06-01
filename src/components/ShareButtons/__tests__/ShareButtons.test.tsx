@@ -1,5 +1,6 @@
 import { cleanup, fireEvent, render, screen, act } from "@testing-library/react"
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
+import { afterEach, beforeEach, describe, expect, it } from "vitest"
+import { vi } from "vitest"
 
 import { ShareButtons } from "../index"
 
@@ -7,6 +8,16 @@ afterEach(cleanup)
 
 const TEST_URL = "https://example.com/articles/test-slug"
 const TEST_TITLE = "Test Article Title"
+
+const PLATFORMS = [
+  { name: "X", buttonLabel: "Share on X", urlFragment: "x.com/intent/tweet" },
+  { name: "Bluesky", buttonLabel: "Share on Bluesky", urlFragment: "bsky.app/intent/compose" },
+  { name: "Facebook", buttonLabel: "Share on Facebook", urlFragment: "facebook.com/sharer" },
+  { name: "Threads", buttonLabel: "Share on Threads", urlFragment: "threads.net/intent/post" },
+  { name: "Reddit", buttonLabel: "Share on Reddit", urlFragment: "reddit.com/submit" },
+  { name: "LinkedIn", buttonLabel: "Share on LinkedIn", urlFragment: "linkedin.com/shareArticle" },
+  { name: "Email", buttonLabel: "Share via Email", urlFragment: "mailto:" },
+]
 
 describe("ShareButtons", () => {
   beforeEach(() => {
@@ -21,12 +32,18 @@ describe("ShareButtons", () => {
     expect(container.firstChild).toMatchSnapshot()
   })
 
+  it("renders share panel when open", () => {
+    render(<ShareButtons url={TEST_URL} title={TEST_TITLE} />)
+    fireEvent.click(screen.getByRole("button", { name: "Share" }))
+    expect(screen.getByRole("dialog")).toMatchSnapshot()
+  })
+
   it("trigger button is accessible", () => {
     render(<ShareButtons url={TEST_URL} title={TEST_TITLE} />)
     expect(screen.getByRole("button", { name: "Share" })).toBeTruthy()
   })
 
-  it("opens popover and shows url input on trigger click", () => {
+  it("shows url input when open", () => {
     render(<ShareButtons url={TEST_URL} title={TEST_TITLE} />)
     fireEvent.click(screen.getByRole("button", { name: "Share" }))
     const input = screen.getByDisplayValue(TEST_URL) as HTMLInputElement
@@ -53,78 +70,12 @@ describe("ShareButtons", () => {
     expect(screen.queryByRole("button", { name: "Copy link" })).toBeNull()
   })
 
-  it("opens X share link in new window", () => {
+  it.each(PLATFORMS)("opens $name share link in new window", ({ buttonLabel, urlFragment }) => {
     render(<ShareButtons url={TEST_URL} title={TEST_TITLE} />)
     fireEvent.click(screen.getByRole("button", { name: "Share" }))
-    fireEvent.click(screen.getByRole("button", { name: "Share on X" }))
+    fireEvent.click(screen.getByRole("button", { name: buttonLabel }))
     expect(window.open).toHaveBeenCalledWith(
-      expect.stringContaining("x.com/intent/tweet"),
-      "_blank",
-      "noopener,noreferrer",
-    )
-  })
-
-  it("opens Bluesky share link in new window", () => {
-    render(<ShareButtons url={TEST_URL} title={TEST_TITLE} />)
-    fireEvent.click(screen.getByRole("button", { name: "Share" }))
-    fireEvent.click(screen.getByRole("button", { name: "Share on Bluesky" }))
-    expect(window.open).toHaveBeenCalledWith(
-      expect.stringContaining("bsky.app/intent/compose"),
-      "_blank",
-      "noopener,noreferrer",
-    )
-  })
-
-  it("opens email share link", () => {
-    render(<ShareButtons url={TEST_URL} title={TEST_TITLE} />)
-    fireEvent.click(screen.getByRole("button", { name: "Share" }))
-    fireEvent.click(screen.getByRole("button", { name: "Share via Email" }))
-    expect(window.open).toHaveBeenCalledWith(
-      expect.stringContaining("mailto:"),
-      "_blank",
-      "noopener,noreferrer",
-    )
-  })
-
-  it("opens Facebook share link in new window", () => {
-    render(<ShareButtons url={TEST_URL} title={TEST_TITLE} />)
-    fireEvent.click(screen.getByRole("button", { name: "Share" }))
-    fireEvent.click(screen.getByRole("button", { name: "Share on Facebook" }))
-    expect(window.open).toHaveBeenCalledWith(
-      expect.stringContaining("facebook.com/sharer"),
-      "_blank",
-      "noopener,noreferrer",
-    )
-  })
-
-  it("opens Threads share link in new window", () => {
-    render(<ShareButtons url={TEST_URL} title={TEST_TITLE} />)
-    fireEvent.click(screen.getByRole("button", { name: "Share" }))
-    fireEvent.click(screen.getByRole("button", { name: "Share on Threads" }))
-    expect(window.open).toHaveBeenCalledWith(
-      expect.stringContaining("threads.net/intent/post"),
-      "_blank",
-      "noopener,noreferrer",
-    )
-  })
-
-  it("opens Reddit share link in new window", () => {
-    render(<ShareButtons url={TEST_URL} title={TEST_TITLE} />)
-    fireEvent.click(screen.getByRole("button", { name: "Share" }))
-    fireEvent.click(screen.getByRole("button", { name: "Share on Reddit" }))
-    expect(window.open).toHaveBeenCalledWith(
-      expect.stringContaining("reddit.com/submit"),
-      "_blank",
-      "noopener,noreferrer",
-    )
-  })
-
-  it("opens LinkedIn share link in new window", () => {
-    render(<ShareButtons url={TEST_URL} title={TEST_TITLE} />)
-    fireEvent.click(screen.getByRole("button", { name: "Share" }))
-    fireEvent.click(screen.getByRole("button", { name: "Share on LinkedIn" }))
-    expect(window.open).toHaveBeenCalledWith(
-      expect.stringContaining("linkedin.com/shareArticle"),
+      expect.stringContaining(urlFragment),
       "_blank",
       "noopener,noreferrer",
     )

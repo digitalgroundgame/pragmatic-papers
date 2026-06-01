@@ -54,4 +54,19 @@ describe("ArticleHero", () => {
     const { container } = render(<ArticleHero article={article} />)
     expect(container.firstChild).toMatchSnapshot()
   })
+
+  it("renders narration as numeric id (no player shown)", () => {
+    const article = { ...baseArticle, narration: 7 } as unknown as Article
+    const { container } = render(<ArticleHero article={article} />)
+    expect(container.firstChild).toMatchSnapshot()
+  })
+
+  it("renders narration as object (shows player)", () => {
+    const article = {
+      ...baseArticle,
+      narration: { id: 7, filename: "narration.mp3" },
+    } as unknown as Article
+    const { container } = render(<ArticleHero article={article} />)
+    expect(container.firstChild).toMatchSnapshot()
+  })
 })

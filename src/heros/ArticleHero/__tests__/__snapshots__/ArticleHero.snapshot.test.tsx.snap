@@ -1,5 +1,88 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
+exports[`ArticleHero > renders narration as numeric id (no player shown) 1`] = `
+<div
+  class="relative flex flex-col gap-2 md:-mx-10 lg:-mx-32 xl:-mx-44"
+>
+  <h1
+    class="mt-6"
+  >
+    Test Article
+  </h1>
+  <div
+    class="flex flex-col gap-2 md:flex-row md:items-center md:gap-8"
+  >
+    <div
+      class="dark:text-brand-high-contrast text-brand flex flex-1 items-center gap-2 font-serif font-bold underline-offset-4"
+    >
+      •
+      <a
+        class="hover:underline"
+        href="/articles/test-article"
+      >
+        <time
+          datetime="2024-06-01T00:00:00.000Z"
+        >
+          June 1, 2024
+        </time>
+      </a>
+    </div>
+  </div>
+  <div
+    aria-orientation="horizontal"
+    class="bg-border shrink-0 data-horizontal:h-px data-horizontal:w-full data-vertical:w-px data-vertical:self-stretch"
+    data-orientation="horizontal"
+    data-slot="separator"
+    role="separator"
+  />
+</div>
+`;
+
+exports[`ArticleHero > renders narration as object (shows player) 1`] = `
+<div
+  class="relative flex flex-col gap-2 md:-mx-10 lg:-mx-32 xl:-mx-44"
+>
+  <h1
+    class="mt-6"
+  >
+    Test Article
+  </h1>
+  <div
+    class="flex flex-col gap-2 md:flex-row md:items-center md:gap-8"
+  >
+    <div
+      class="dark:text-brand-high-contrast text-brand flex flex-1 items-center gap-2 font-serif font-bold underline-offset-4"
+    >
+      •
+      <a
+        class="hover:underline"
+        href="/articles/test-article"
+      >
+        <time
+          datetime="2024-06-01T00:00:00.000Z"
+        >
+          June 1, 2024
+        </time>
+      </a>
+    </div>
+    <div
+      class="md:w-56 md:shrink-0"
+    >
+      <div
+        data-testid="narration-player"
+      />
+    </div>
+  </div>
+  <div
+    aria-orientation="horizontal"
+    class="bg-border shrink-0 data-horizontal:h-px data-horizontal:w-full data-vertical:w-px data-vertical:self-stretch"
+    data-orientation="horizontal"
+    data-slot="separator"
+    role="separator"
+  />
+</div>
+`;
+
 exports[`ArticleHero > renders with hero image 1`] = `
 <div
   class="relative flex flex-col gap-2 md:-mx-10 lg:-mx-32 xl:-mx-44"

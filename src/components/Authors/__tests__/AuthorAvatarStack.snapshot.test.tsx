@@ -1,3 +1,4 @@
+import type { Media } from "@/payload-types"
 import { render } from "@testing-library/react"
 import { describe, expect, it } from "vitest"
 
@@ -8,6 +9,22 @@ const makeAuthor = (id: number, name: string, profileImage?: number | null) => (
   name,
   slug: name.toLowerCase().replace(/\s+/g, "-"),
   profileImage: profileImage ?? null,
+})
+
+const makeAuthorWithImage = (
+  id: number,
+  name: string,
+  squareUrl?: string,
+): { id: number; name: string; slug: string; profileImage: Media } => ({
+  id,
+  name,
+  slug: name.toLowerCase().replace(/\s+/g, "-"),
+  profileImage: {
+    id: 100,
+    updatedAt: "2024-01-01T00:00:00.000Z",
+    createdAt: "2024-01-01T00:00:00.000Z",
+    sizes: squareUrl ? { square: { url: squareUrl } } : undefined,
+  } as Media,
 })
 
 describe("AuthorAvatarStack", () => {
@@ -47,5 +64,33 @@ describe("AuthorAvatarStack", () => {
   it("returns null for empty authors array", () => {
     const { container } = render(<AuthorAvatarStack authors={[]} />)
     expect(container.firstChild).toBeNull()
+  })
+
+  it("renders author with profileImage object with URL", () => {
+    const { container } = render(
+      <AuthorAvatarStack
+        authors={[makeAuthorWithImage(1, "Alice Smith", "https://example.com/alice.jpg")]}
+      />,
+    )
+    expect(container.firstChild).toMatchSnapshot()
+  })
+
+  it("renders author with profileImage object without URL", () => {
+    const { container } = render(
+      <AuthorAvatarStack authors={[makeAuthorWithImage(1, "Alice Smith")]} />,
+    )
+    expect(container.firstChild).toMatchSnapshot()
+  })
+
+  it("renders author with numeric profileImage id", () => {
+    const { container } = render(<AuthorAvatarStack authors={[makeAuthor(1, "Alice Smith", 42)]} />)
+    expect(container.firstChild).toMatchSnapshot()
+  })
+
+  it("renders author with null name using fallback initial", () => {
+    const { container } = render(
+      <AuthorAvatarStack authors={[{ id: 1, name: null, slug: "anon", profileImage: null }]} />,
+    )
+    expect(container.firstChild).toMatchSnapshot()
   })
 })

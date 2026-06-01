@@ -1,6 +1,5 @@
 import { cleanup, fireEvent, render, screen, act } from "@testing-library/react"
-import { afterEach, beforeEach, describe, expect, it } from "vitest"
-import { vi } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { ShareButtons } from "../index"
 
@@ -24,7 +23,6 @@ describe("ShareButtons", () => {
     Object.assign(navigator, {
       clipboard: { writeText: vi.fn().mockResolvedValue(undefined) },
     })
-    vi.stubGlobal("open", vi.fn())
   })
 
   it("renders share trigger button", () => {
@@ -85,15 +83,13 @@ describe("ShareButtons", () => {
     vi.useRealTimers()
   })
 
-  it.each(PLATFORMS)("opens $name share link in new window", ({ buttonLabel, urlFragment }) => {
+  it.each(PLATFORMS)("$name share link has correct href", ({ buttonLabel, urlFragment }) => {
     render(<ShareButtons url={TEST_URL} title={TEST_TITLE} />)
     fireEvent.click(screen.getByRole("button", { name: "Share" }))
-    fireEvent.click(screen.getByRole("button", { name: buttonLabel }))
-    expect(window.open).toHaveBeenCalledWith(
-      expect.stringContaining(urlFragment),
-      "_blank",
-      "noopener,noreferrer",
-    )
+    const link = screen.getByRole("link", { name: buttonLabel }) as HTMLAnchorElement
+    expect(link.getAttribute("href")).toContain(urlFragment)
+    expect(link.target).toBe("_blank")
+    expect(link.rel).toContain("noopener")
   })
 
   it("encodes url and title in share links", () => {
@@ -101,9 +97,9 @@ describe("ShareButtons", () => {
     const specialTitle = "Title with & special chars"
     render(<ShareButtons url={specialUrl} title={specialTitle} />)
     fireEvent.click(screen.getByRole("button", { name: "Share" }))
-    fireEvent.click(screen.getByRole("button", { name: "Share on X" }))
-    const openCall = vi.mocked(window.open).mock.calls[0]?.[0] as string
-    expect(openCall).not.toContain(" ")
-    expect(openCall).toContain(encodeURIComponent(specialUrl))
+    const link = screen.getByRole("link", { name: "Share on X" }) as HTMLAnchorElement
+    const href = link.getAttribute("href") as string
+    expect(href).not.toContain(" ")
+    expect(href).toContain(encodeURIComponent(specialUrl))
   })
 })

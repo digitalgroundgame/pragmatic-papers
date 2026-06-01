@@ -9,8 +9,8 @@ import {
   XIcon,
 } from "@/components/SocialLinks/icons"
 import { Button } from "@/components/ui/button"
+import { LinkButton } from "@/components/ui/link-button"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { cn } from "@/utilities/utils"
 import { Check, Copy, Mail, Share2 } from "lucide-react"
 import { useState } from "react"
 
@@ -74,7 +74,7 @@ export function ShareButtons({ url, title, className }: ShareButtonsProps): Reac
     <Popover>
       <PopoverTrigger
         render={
-          <Button variant="ghost" size="icon-sm" aria-label="Share" className={cn(className)} />
+          <Button variant="outline" size="icon-sm" aria-label="Share" className={className} />
         }
       >
         <Share2 className="size-4" />
@@ -98,15 +98,17 @@ export function ShareButtons({ url, title, className }: ShareButtonsProps): Reac
           </div>
           <div className="flex items-center gap-1">
             {shareLinks.map(({ label, icon: Icon, href }) => (
-              <Button
+              <LinkButton
                 key={label}
                 variant="ghost"
                 size="icon-sm"
                 aria-label={label}
-                onClick={() => window.open(href, "_blank", "noopener,noreferrer")}
+                href={href}
+                target="_blank"
+                rel="noopener noreferrer"
               >
                 <Icon className="size-4" />
-              </Button>
+              </LinkButton>
             ))}
           </div>
         </div>

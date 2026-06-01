@@ -149,7 +149,7 @@ git push
 ```
 
 > [!NOTE]
-> Commit signing does not work in the wiki repo from the remote execution environment — the signing server is scoped to the main repo. If a push fails due to signing, ask the user whether to skip signing (`--no-gpg-sign`) or paste the content into the GitHub wiki editor manually.
+> Commit signing does not work in the wiki repo from the **remote/cloud execution environment** — the signing server is scoped to the main repo. If running in that context and a push fails due to signing, ask the user to re-run the session locally (e.g. in Cursor or another terminal where their git signing is configured), then retry the push.
 
 After adding a new page, update `Home.md` to add it to the Table of Contents under the appropriate section, and match the back-link style used by other pages:
 

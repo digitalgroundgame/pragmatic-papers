@@ -22,7 +22,7 @@ export function AuthorAvatarStack({ authors }: AuthorAvatarStackProps): React.Re
   const overflow = authors.length - MAX_VISIBLE
 
   return (
-    <AvatarGroup>
+    <AvatarGroup className="*:transition-[margin-left] hover:space-x-1">
       {visible.map((author) => {
         const profileImage = author.profileImage
         const profileImageUrl =

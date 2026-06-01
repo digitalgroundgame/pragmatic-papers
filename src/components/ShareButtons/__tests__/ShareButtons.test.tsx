@@ -70,6 +70,21 @@ describe("ShareButtons", () => {
     expect(screen.queryByRole("button", { name: "Copy link" })).toBeNull()
   })
 
+  it("resets copied state after 2 seconds", async () => {
+    vi.useFakeTimers()
+    render(<ShareButtons url={TEST_URL} title={TEST_TITLE} />)
+    fireEvent.click(screen.getByRole("button", { name: "Share" }))
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Copy link" }))
+    })
+    expect(screen.getByRole("button", { name: "Copied!" })).toBeTruthy()
+    await act(async () => {
+      vi.advanceTimersByTime(2000)
+    })
+    expect(screen.getByRole("button", { name: "Copy link" })).toBeTruthy()
+    vi.useRealTimers()
+  })
+
   it.each(PLATFORMS)("opens $name share link in new window", ({ buttonLabel, urlFragment }) => {
     render(<ShareButtons url={TEST_URL} title={TEST_TITLE} />)
     fireEvent.click(screen.getByRole("button", { name: "Share" }))

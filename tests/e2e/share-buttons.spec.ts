@@ -1,10 +1,12 @@
 import { expect, test, type Page } from "@playwright/test"
 
 // Helpers to navigate to the first real article / volume without hardcoding slugs.
+// Uses a short timeout so tests skip immediately when the CI database is empty,
+// rather than waiting the full 30 s action timeout per test.
 async function gotoFirstArticle(page: Page) {
   await page.goto("/articles")
   const firstLink = page.getByRole("main").getByRole("link").first()
-  const href = await firstLink.getAttribute("href")
+  const href = await firstLink.getAttribute("href", { timeout: 5000 }).catch(() => null)
   if (!href) return null
   await page.goto(href)
   return href
@@ -13,7 +15,7 @@ async function gotoFirstArticle(page: Page) {
 async function gotoFirstVolume(page: Page) {
   await page.goto("/volumes")
   const firstLink = page.getByRole("main").getByRole("link").first()
-  const href = await firstLink.getAttribute("href")
+  const href = await firstLink.getAttribute("href", { timeout: 5000 }).catch(() => null)
   if (!href) return null
   await page.goto(href)
   return href

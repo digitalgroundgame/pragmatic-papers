@@ -1,5 +1,6 @@
 import React from "react"
 
+import { AuthorAvatarStack } from "@/components/Authors/AuthorAvatarStack"
 import { HoverPrefetchLink } from "@/components/Link/HoverPrefetchLink"
 import { Media } from "@/components/Media"
 import { NarrationPlayer } from "@/components/NarrationPlayer"
@@ -28,7 +29,8 @@ export const ArticleHero: React.FC<ArticleHeroProps> = ({ article }) => {
       )}
       <h1 className="mt-6">{title}</h1>
       <div className="flex flex-col gap-2 md:flex-row md:items-center md:gap-8">
-        <div className="dark:text-brand-high-contrast text-brand flex flex-1 gap-2 font-serif font-bold underline-offset-4">
+        <div className="dark:text-brand-high-contrast text-brand flex flex-1 items-center gap-2 font-serif font-bold underline-offset-4">
+          {populatedAuthors && <AuthorAvatarStack authors={populatedAuthors} />}
           {populatedAuthors &&
             populatedAuthors.map(({ id, slug, name }, index) => (
               <React.Fragment key={id}>

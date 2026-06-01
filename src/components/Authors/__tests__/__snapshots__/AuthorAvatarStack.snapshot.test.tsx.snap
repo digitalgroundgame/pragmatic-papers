@@ -1,0 +1,116 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`AuthorAvatarStack > renders a single author 1`] = `
+<div
+  class="group/avatar-group *:data-[slot=avatar]:ring-background flex -space-x-2 *:data-[slot=avatar]:ring-2"
+  data-slot="avatar-group"
+>
+  <span
+    class="group/avatar after:border-border relative flex size-8 shrink-0 rounded-sm select-none after:absolute after:inset-0 after:rounded-sm after:border after:mix-blend-darken data-[size=2xl]:size-32 data-[size=lg]:size-10 data-[size=sm]:size-6 data-[size=xl]:size-24 dark:after:mix-blend-lighten"
+    data-size="sm"
+    data-slot="avatar"
+  >
+    <span
+      class="bg-muted text-muted-foreground flex size-full items-center justify-center rounded-sm text-sm group-data-[size=sm]/avatar:text-xs"
+      data-slot="avatar-fallback"
+    >
+      AS
+    </span>
+  </span>
+</div>
+`;
+
+exports[`AuthorAvatarStack > renders multiple authors within the visible cap 1`] = `
+<div
+  class="group/avatar-group *:data-[slot=avatar]:ring-background flex -space-x-2 *:data-[slot=avatar]:ring-2"
+  data-slot="avatar-group"
+>
+  <span
+    class="group/avatar after:border-border relative flex size-8 shrink-0 rounded-sm select-none after:absolute after:inset-0 after:rounded-sm after:border after:mix-blend-darken data-[size=2xl]:size-32 data-[size=lg]:size-10 data-[size=sm]:size-6 data-[size=xl]:size-24 dark:after:mix-blend-lighten"
+    data-size="sm"
+    data-slot="avatar"
+  >
+    <span
+      class="bg-muted text-muted-foreground flex size-full items-center justify-center rounded-sm text-sm group-data-[size=sm]/avatar:text-xs"
+      data-slot="avatar-fallback"
+    >
+      AS
+    </span>
+  </span>
+  <span
+    class="group/avatar after:border-border relative flex size-8 shrink-0 rounded-sm select-none after:absolute after:inset-0 after:rounded-sm after:border after:mix-blend-darken data-[size=2xl]:size-32 data-[size=lg]:size-10 data-[size=sm]:size-6 data-[size=xl]:size-24 dark:after:mix-blend-lighten"
+    data-size="sm"
+    data-slot="avatar"
+  >
+    <span
+      class="bg-muted text-muted-foreground flex size-full items-center justify-center rounded-sm text-sm group-data-[size=sm]/avatar:text-xs"
+      data-slot="avatar-fallback"
+    >
+      BJ
+    </span>
+  </span>
+  <span
+    class="group/avatar after:border-border relative flex size-8 shrink-0 rounded-sm select-none after:absolute after:inset-0 after:rounded-sm after:border after:mix-blend-darken data-[size=2xl]:size-32 data-[size=lg]:size-10 data-[size=sm]:size-6 data-[size=xl]:size-24 dark:after:mix-blend-lighten"
+    data-size="sm"
+    data-slot="avatar"
+  >
+    <span
+      class="bg-muted text-muted-foreground flex size-full items-center justify-center rounded-sm text-sm group-data-[size=sm]/avatar:text-xs"
+      data-slot="avatar-fallback"
+    >
+      CW
+    </span>
+  </span>
+</div>
+`;
+
+exports[`AuthorAvatarStack > renders overflow count when authors exceed cap 1`] = `
+<div
+  class="group/avatar-group *:data-[slot=avatar]:ring-background flex -space-x-2 *:data-[slot=avatar]:ring-2"
+  data-slot="avatar-group"
+>
+  <span
+    class="group/avatar after:border-border relative flex size-8 shrink-0 rounded-sm select-none after:absolute after:inset-0 after:rounded-sm after:border after:mix-blend-darken data-[size=2xl]:size-32 data-[size=lg]:size-10 data-[size=sm]:size-6 data-[size=xl]:size-24 dark:after:mix-blend-lighten"
+    data-size="sm"
+    data-slot="avatar"
+  >
+    <span
+      class="bg-muted text-muted-foreground flex size-full items-center justify-center rounded-sm text-sm group-data-[size=sm]/avatar:text-xs"
+      data-slot="avatar-fallback"
+    >
+      AS
+    </span>
+  </span>
+  <span
+    class="group/avatar after:border-border relative flex size-8 shrink-0 rounded-sm select-none after:absolute after:inset-0 after:rounded-sm after:border after:mix-blend-darken data-[size=2xl]:size-32 data-[size=lg]:size-10 data-[size=sm]:size-6 data-[size=xl]:size-24 dark:after:mix-blend-lighten"
+    data-size="sm"
+    data-slot="avatar"
+  >
+    <span
+      class="bg-muted text-muted-foreground flex size-full items-center justify-center rounded-sm text-sm group-data-[size=sm]/avatar:text-xs"
+      data-slot="avatar-fallback"
+    >
+      BJ
+    </span>
+  </span>
+  <span
+    class="group/avatar after:border-border relative flex size-8 shrink-0 rounded-sm select-none after:absolute after:inset-0 after:rounded-sm after:border after:mix-blend-darken data-[size=2xl]:size-32 data-[size=lg]:size-10 data-[size=sm]:size-6 data-[size=xl]:size-24 dark:after:mix-blend-lighten"
+    data-size="sm"
+    data-slot="avatar"
+  >
+    <span
+      class="bg-muted text-muted-foreground flex size-full items-center justify-center rounded-sm text-sm group-data-[size=sm]/avatar:text-xs"
+      data-slot="avatar-fallback"
+    >
+      CW
+    </span>
+  </span>
+  <div
+    class="bg-muted text-muted-foreground ring-background relative flex size-8 shrink-0 items-center justify-center rounded-full text-sm ring-2 group-has-data-[size=lg]/avatar-group:size-10 group-has-data-[size=sm]/avatar-group:size-6 [&>svg]:size-4 group-has-data-[size=lg]/avatar-group:[&>svg]:size-5 group-has-data-[size=sm]/avatar-group:[&>svg]:size-3"
+    data-slot="avatar-group-count"
+  >
+    +
+    2
+  </div>
+</div>
+`;

@@ -29,53 +29,40 @@ jobs:
           gh-font-read-token: ${{ secrets.GH_FONT_READ }}
           payload-secret: ${{ secrets.PAYLOAD_SECRET }}
 
-      - name: Check linked issue type
-        id: check-labels
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
-          OWNER: ${{ github.repository_owner }}
-          REPO: ${{ github.event.repository.name }}
+      - name: Check for page.screenshot() in changed e2e tests
+        id: check-screenshots
         run: |
-          SHOULD_SCREENSHOT=$(gh api graphql \
-            -f query='query($owner:String!,$repo:String!,$pr:Int!){
-              repository(owner:$owner,name:$repo){
-                pullRequest(number:$pr){
-                  closingIssuesReferences(first:10){
-                    nodes{ labels(first:10){ nodes{ name } } }
-                  }
-                }
-              }
-            }' \
-            -f owner="$OWNER" -f repo="$REPO" -F pr="$PR_NUMBER" \
-            --jq '[.data.repository.pullRequest.closingIssuesReferences.nodes[].labels.nodes[].name]
-                  | map(select(. == "type:feature" or . == "type:task"))
-                  | length > 0')
-          echo "should_screenshot=$SHOULD_SCREENSHOT" >> "$GITHUB_OUTPUT"
-
-      - name: Skip if not a feature/task PR
-        if: steps.check-labels.outputs.should_screenshot != 'true'
-        run: |
-          echo "Linked issue is not type:feature or type:task — skipping screenshots."
-          exit 0
+          git fetch origin ${{ github.base_ref }} --depth=1
+          changed=$(git diff origin/${{ github.base_ref }}...HEAD --name-only -- 'tests/e2e/')
+          if [ -z "$changed" ]; then
+            echo "No e2e test files changed."
+            echo "has_screenshots=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if echo "$changed" | xargs grep -ql "page\.screenshot("; then
+            echo "has_screenshots=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "No page.screenshot() calls found in changed e2e files."
+            echo "has_screenshots=false" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Cache Playwright browsers
-        if: steps.check-labels.outputs.should_screenshot == 'true'
+        if: steps.check-screenshots.outputs.has_screenshots == 'true'
         uses: actions/cache@v5
         with:
           path: ~/.cache/ms-playwright
           key: playwright-chromium-${{ hashFiles('pnpm-lock.yaml') }}
 
       - name: Install Playwright (chromium only)
-        if: steps.check-labels.outputs.should_screenshot == 'true'
+        if: steps.check-screenshots.outputs.has_screenshots == 'true'
         run: pnpm exec playwright install --with-deps chromium
 
-      - name: Capture screenshots
-        if: steps.check-labels.outputs.should_screenshot == 'true'
+      - name: Run e2e tests
+        if: steps.check-screenshots.outputs.has_screenshots == 'true'
         run: pnpm test:e2e --project=chromium
 
       - name: Upload screenshots to PR description
-        if: steps.check-labels.outputs.should_screenshot == 'true'
+        if: steps.check-screenshots.outputs.has_screenshots == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUMBER: ${{ github.event.pull_request.number }}

@@ -103,19 +103,29 @@ test.describe("ShareButtons — article page", () => {
     }
   })
 
-  test("share links open in new tab", async ({ page, context }) => {
-    const href = await gotoFirstArticle(page)
-    test.skip(!href, "No articles found in the database")
+  const SOCIAL_LINKS = [
+    { label: "Share on X", fragment: "x.com/intent/tweet" },
+    { label: "Share on Bluesky", fragment: "bsky.app/intent/compose" },
+    { label: "Share on Facebook", fragment: "facebook.com/sharer" },
+    { label: "Share on Threads", fragment: "threads.net/intent/post" },
+    { label: "Share on Reddit", fragment: "reddit.com/submit" },
+    { label: "Share on LinkedIn", fragment: "linkedin.com/shareArticle" },
+  ]
 
-    await page.getByRole("button", { name: "Share" }).click()
-    const dialog = page.getByRole("dialog")
-    const [newPage] = await Promise.all([
-      context.waitForEvent("page"),
-      dialog.getByRole("link", { name: "Share on X" }).click(),
-    ])
-    expect(newPage.url()).toContain("x.com/intent/tweet")
-    await newPage.close()
-  })
+  for (const { label, fragment } of SOCIAL_LINKS) {
+    test(`${label} opens in new tab`, async ({ page, context }) => {
+      const href = await gotoFirstArticle(page)
+      test.skip(!href, "No articles found in the database")
+
+      await page.getByRole("button", { name: "Share" }).click()
+      const [newPage] = await Promise.all([
+        context.waitForEvent("page"),
+        page.getByRole("dialog").getByRole("link", { name: label }).click(),
+      ])
+      expect(newPage.url()).toContain(fragment)
+      await newPage.close()
+    })
+  }
 })
 
 test.describe("ShareButtons — volume page", () => {

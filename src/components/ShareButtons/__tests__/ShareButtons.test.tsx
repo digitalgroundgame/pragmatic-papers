@@ -86,6 +86,17 @@ describe("ShareButtons", () => {
     )
   })
 
+  it("opens Facebook share link in new window", () => {
+    render(<ShareButtons url={TEST_URL} title={TEST_TITLE} />)
+    fireEvent.click(screen.getByRole("button", { name: "Share" }))
+    fireEvent.click(screen.getByRole("button", { name: "Share on Facebook" }))
+    expect(window.open).toHaveBeenCalledWith(
+      expect.stringContaining("facebook.com/sharer"),
+      "_blank",
+      "noopener,noreferrer",
+    )
+  })
+
   it("opens Threads share link in new window", () => {
     render(<ShareButtons url={TEST_URL} title={TEST_TITLE} />)
     fireEvent.click(screen.getByRole("button", { name: "Share" }))

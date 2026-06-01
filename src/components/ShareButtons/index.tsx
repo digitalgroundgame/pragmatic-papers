@@ -2,6 +2,7 @@
 
 import {
   BlueskyIcon,
+  FacebookIcon,
   LinkedinIcon,
   RedditIcon,
   ThreadsIcon,
@@ -35,6 +36,11 @@ export function ShareButtons({ url, title, className }: ShareButtonsProps): Reac
       label: "Share on Bluesky",
       icon: BlueskyIcon,
       href: `https://bsky.app/intent/compose?text=${encodedTitle}%20${encodedUrl}`,
+    },
+    {
+      label: "Share on Facebook",
+      icon: FacebookIcon,
+      href: `https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}`,
     },
     {
       label: "Share on Threads",

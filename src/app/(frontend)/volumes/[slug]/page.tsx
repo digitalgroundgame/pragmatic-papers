@@ -105,7 +105,7 @@ export default async function VolumePage({
             <time dateTime={publishedAt}>{formatDateTime(publishedAt)}</time>
           </HoverPrefetchLink>
         )}
-        <ShareButtons url={`${getServerSideURL()}${url}`} title={volumeTitle} />
+        <ShareButtons url={`${getServerSideURL()}${url}`} title={volumeTitle} className="ml-auto" />
       </div>
       {editorsNote && <RichText className="drop-cap" enableGutter={false} data={editorsNote} />}
       <Separator className="my-6" />

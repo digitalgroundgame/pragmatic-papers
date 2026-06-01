@@ -18,7 +18,6 @@ jobs:
       PAYLOAD_SECRET: ${{ secrets.PAYLOAD_SECRET }}
       USE_LOCAL_STORAGE: "true"
       SEED_E2E: "true"
-      CAPTURE_SCREENSHOTS: "true"
 
     steps:
       - uses: actions/checkout@v6

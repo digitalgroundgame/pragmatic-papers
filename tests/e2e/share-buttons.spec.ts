@@ -1,4 +1,9 @@
 import { expect, test, type Page } from "@playwright/test"
+import fs from "node:fs"
+
+test.beforeAll(() => {
+  fs.mkdirSync("screenshots", { recursive: true })
+})
 
 // Helpers to navigate to the first real article / volume without hardcoding slugs.
 async function gotoFirstArticle(page: Page) {
@@ -39,6 +44,8 @@ test.describe("ShareButtons — article page", () => {
     const value = await input.inputValue()
     expect(value).toContain("/articles/")
     expect(value).toMatch(/^https?:\/\//)
+
+    await page.screenshot({ path: "screenshots/share-popover-article.png" })
   })
 
   test("URL input is read-only", async ({ page }) => {
@@ -61,6 +68,8 @@ test.describe("ShareButtons — article page", () => {
 
     await page.getByRole("button", { name: "Copy link" }).click()
     await expect(page.getByRole("button", { name: "Copied!" })).toBeVisible()
+
+    await page.screenshot({ path: "screenshots/share-copied-feedback.png" })
 
     const clipped = await page.evaluate(() => navigator.clipboard.readText())
     expect(clipped).toBe(expectedUrl)
@@ -153,5 +162,7 @@ test.describe("ShareButtons — volume page", () => {
     const value = await input.inputValue()
     expect(value).toContain("/volumes/")
     expect(value).toMatch(/^https?:\/\//)
+
+    await page.screenshot({ path: "screenshots/share-popover-volume.png" })
   })
 })

@@ -86,6 +86,39 @@ describe("ShareButtons", () => {
     )
   })
 
+  it("opens Threads share link in new window", () => {
+    render(<ShareButtons url={TEST_URL} title={TEST_TITLE} />)
+    fireEvent.click(screen.getByRole("button", { name: "Share" }))
+    fireEvent.click(screen.getByRole("button", { name: "Share on Threads" }))
+    expect(window.open).toHaveBeenCalledWith(
+      expect.stringContaining("threads.net/intent/post"),
+      "_blank",
+      "noopener,noreferrer",
+    )
+  })
+
+  it("opens Reddit share link in new window", () => {
+    render(<ShareButtons url={TEST_URL} title={TEST_TITLE} />)
+    fireEvent.click(screen.getByRole("button", { name: "Share" }))
+    fireEvent.click(screen.getByRole("button", { name: "Share on Reddit" }))
+    expect(window.open).toHaveBeenCalledWith(
+      expect.stringContaining("reddit.com/submit"),
+      "_blank",
+      "noopener,noreferrer",
+    )
+  })
+
+  it("opens LinkedIn share link in new window", () => {
+    render(<ShareButtons url={TEST_URL} title={TEST_TITLE} />)
+    fireEvent.click(screen.getByRole("button", { name: "Share" }))
+    fireEvent.click(screen.getByRole("button", { name: "Share on LinkedIn" }))
+    expect(window.open).toHaveBeenCalledWith(
+      expect.stringContaining("linkedin.com/shareArticle"),
+      "_blank",
+      "noopener,noreferrer",
+    )
+  })
+
   it("encodes url and title in share links", () => {
     const specialUrl = "https://example.com/articles/test-with-spaces"
     const specialTitle = "Title with & special chars"

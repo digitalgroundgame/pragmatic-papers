@@ -1,6 +1,12 @@
 "use client"
 
-import { BlueskyIcon, XIcon } from "@/components/SocialLinks/icons"
+import {
+  BlueskyIcon,
+  LinkedinIcon,
+  RedditIcon,
+  ThreadsIcon,
+  XIcon,
+} from "@/components/SocialLinks/icons"
 import { Button } from "@/components/ui/button"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { cn } from "@/utilities/utils"
@@ -29,6 +35,21 @@ export function ShareButtons({ url, title, className }: ShareButtonsProps): Reac
       label: "Share on Bluesky",
       icon: BlueskyIcon,
       href: `https://bsky.app/intent/compose?text=${encodedTitle}%20${encodedUrl}`,
+    },
+    {
+      label: "Share on Threads",
+      icon: ThreadsIcon,
+      href: `https://www.threads.net/intent/post?text=${encodedTitle}%20${encodedUrl}`,
+    },
+    {
+      label: "Share on Reddit",
+      icon: RedditIcon,
+      href: `https://www.reddit.com/submit?url=${encodedUrl}&title=${encodedTitle}`,
+    },
+    {
+      label: "Share on LinkedIn",
+      icon: LinkedinIcon,
+      href: `https://www.linkedin.com/shareArticle?mini=true&url=${encodedUrl}&title=${encodedTitle}`,
     },
     {
       label: "Share via Email",

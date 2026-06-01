@@ -2,7 +2,7 @@
 
 exports[`AuthorAvatarStack > renders a single author 1`] = `
 <div
-  class="group/avatar-group *:data-[slot=avatar]:ring-background flex -space-x-2 *:data-[slot=avatar]:ring-2 *:transition-[margin-left] hover:space-x-1"
+  class="group/avatar-group *:data-[slot=avatar]:ring-background flex -space-x-2 *:data-[slot=avatar]:ring-2 *:[transition:margin-left_300ms_ease-out] hover:space-x-1"
   data-slot="avatar-group"
 >
   <span
@@ -22,7 +22,7 @@ exports[`AuthorAvatarStack > renders a single author 1`] = `
 
 exports[`AuthorAvatarStack > renders multiple authors within the visible cap 1`] = `
 <div
-  class="group/avatar-group *:data-[slot=avatar]:ring-background flex -space-x-2 *:data-[slot=avatar]:ring-2 *:transition-[margin-left] hover:space-x-1"
+  class="group/avatar-group *:data-[slot=avatar]:ring-background flex -space-x-2 *:data-[slot=avatar]:ring-2 *:[transition:margin-left_300ms_ease-out] hover:space-x-1"
   data-slot="avatar-group"
 >
   <span
@@ -66,7 +66,7 @@ exports[`AuthorAvatarStack > renders multiple authors within the visible cap 1`]
 
 exports[`AuthorAvatarStack > renders overflow count when authors exceed cap 1`] = `
 <div
-  class="group/avatar-group *:data-[slot=avatar]:ring-background flex -space-x-2 *:data-[slot=avatar]:ring-2 *:transition-[margin-left] hover:space-x-1"
+  class="group/avatar-group *:data-[slot=avatar]:ring-background flex -space-x-2 *:data-[slot=avatar]:ring-2 *:[transition:margin-left_300ms_ease-out] hover:space-x-1"
   data-slot="avatar-group"
 >
   <span

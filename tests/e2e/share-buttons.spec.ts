@@ -58,7 +58,8 @@ test.describe("ShareButtons — article page", () => {
     expect(await input.getAttribute("readonly")).not.toBeNull()
   })
 
-  test("copy button writes URL to clipboard", async ({ page, context }) => {
+  test("copy button writes URL to clipboard", async ({ page, context, browserName }) => {
+    test.skip(browserName !== "chromium", "Clipboard permissions only supported in Chromium")
     await context.grantPermissions(["clipboard-read", "clipboard-write"])
     const href = await gotoFirstArticle(page)
     test.skip(!href, "No articles found in the database")
@@ -122,7 +123,8 @@ test.describe("ShareButtons — article page", () => {
   ]
 
   for (const { label, fragment } of SOCIAL_LINKS) {
-    test(`${label} opens in new tab`, async ({ page, context }) => {
+    test(`${label} opens in new tab`, async ({ page, context, isMobile }) => {
+      test.skip(isMobile, "New-tab behaviour is tested on desktop browsers only")
       const href = await gotoFirstArticle(page)
       test.skip(!href, "No articles found in the database")
 

@@ -25,7 +25,7 @@ export default defineConfig({
     projects: [
       {
         plugins: [react()],
-        resolve: { tsconfigPaths: true, },
+        resolve: { tsconfigPaths: true },
         test: {
           name: "unit",
           environment: "jsdom",

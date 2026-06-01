@@ -23,6 +23,13 @@ try {
     stdio: "inherit",
   })
 
+  if (process.env.SEED_E2E) {
+    console.warn(`${blue("●")} Seeding test database...`)
+    const { seedE2E } = await import("./seed-e2e.ts")
+    await seedE2E()
+    console.warn(`${green("✔")} Database seeded`)
+  }
+
   console.warn(`${blue("●")} Starting Playwright tests...`)
   const child = spawn(
     "pnpm",

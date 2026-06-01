@@ -1,0 +1,121 @@
+name: PR Screenshots
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  screenshots:
+    name: Capture and attach screenshots
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    permissions:
+      contents: read
+      pull-requests: write
+
+    env:
+      PAYLOAD_SECRET: ${{ secrets.PAYLOAD_SECRET }}
+      USE_LOCAL_STORAGE: "true"
+      SEED_E2E: "true"
+      CAPTURE_SCREENSHOTS: "true"
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up Node.js environment
+        uses: ./.github/actions/setup-project
+        with:
+          node-version: "24.x"
+          gh-font-read-token: ${{ secrets.GH_FONT_READ }}
+          payload-secret: ${{ secrets.PAYLOAD_SECRET }}
+
+      - name: Check linked issue type
+        id: check-labels
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          OWNER: ${{ github.repository_owner }}
+          REPO: ${{ github.event.repository.name }}
+        run: |
+          SHOULD_SCREENSHOT=$(gh api graphql \
+            -f query='query($owner:String!,$repo:String!,$pr:Int!){
+              repository(owner:$owner,name:$repo){
+                pullRequest(number:$pr){
+                  closingIssuesReferences(first:10){
+                    nodes{ labels(first:10){ nodes{ name } } }
+                  }
+                }
+              }
+            }' \
+            -f owner="$OWNER" -f repo="$REPO" -F pr="$PR_NUMBER" \
+            --jq '[.data.repository.pullRequest.closingIssuesReferences.nodes[].labels.nodes[].name]
+                  | map(select(. == "type:feature" or . == "type:task"))
+                  | length > 0')
+          echo "should_screenshot=$SHOULD_SCREENSHOT" >> "$GITHUB_OUTPUT"
+
+      - name: Skip if not a feature/task PR
+        if: steps.check-labels.outputs.should_screenshot != 'true'
+        run: |
+          echo "Linked issue is not type:feature or type:task — skipping screenshots."
+          exit 0
+
+      - name: Cache Playwright browsers
+        if: steps.check-labels.outputs.should_screenshot == 'true'
+        uses: actions/cache@v5
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-chromium-${{ hashFiles('pnpm-lock.yaml') }}
+
+      - name: Install Playwright (chromium only)
+        if: steps.check-labels.outputs.should_screenshot == 'true'
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Capture screenshots
+        if: steps.check-labels.outputs.should_screenshot == 'true'
+        run: pnpm test:e2e --project=chromium
+
+      - name: Upload screenshots to PR description
+        if: steps.check-labels.outputs.should_screenshot == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          OWNER: ${{ github.repository_owner }}
+          REPO: ${{ github.event.repository.name }}
+        run: |
+          # Skip if no screenshots were produced
+          if [ ! -d screenshots ] || [ -z "$(ls screenshots/*.png 2>/dev/null)" ]; then
+            echo "No screenshots found — skipping PR update."
+            exit 0
+          fi
+
+          # Skip if the PR description already has the screenshots marker (idempotency)
+          existing=$(gh pr view "$PR_NUMBER" --json body --jq '.body')
+          if echo "$existing" | grep -q "<!-- screenshots -->"; then
+            echo "Screenshots section already present — skipping."
+            exit 0
+          fi
+
+          # Upload each PNG and collect image markdown
+          images=""
+          for f in screenshots/*.png; do
+            name=$(basename "$f" .png)
+            url=$(gh api --method POST \
+              -H "Content-Type: image/png" \
+              -H "Accept: application/vnd.github+json" \
+              "https://uploads.github.com/repos/$OWNER/$REPO/issues/$PR_NUMBER/assets?name=$name.png" \
+              --input "$f" \
+              --jq '.url')
+            images="$images\n**$name**\n![$name]($url)\n"
+          done
+
+          # Prepend the screenshots block to the existing PR body
+          new_body="<!-- screenshots -->
+          ## Screenshots
+          $(printf '%b' "$images")
+          ---
+
+          $existing"
+
+          gh pr edit "$PR_NUMBER" --body "$new_body"
+          echo "Screenshots attached to PR #$PR_NUMBER."

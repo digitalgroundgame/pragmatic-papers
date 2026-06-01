@@ -78,6 +78,7 @@ tsconfig.tsbuildinfo
 /blob-report/
 /playwright/.cache/
 /playwright/.auth/
+/screenshots/
 
 # Devenv
 .devenv*

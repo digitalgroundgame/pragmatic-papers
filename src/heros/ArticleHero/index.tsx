@@ -55,7 +55,7 @@ export const ArticleHero: React.FC<ArticleHeroProps> = ({ article }) => {
         <ShareButtons
           url={`${getServerSideURL()}/articles/${article.slug}`}
           title={article.title}
-          className="shrink-0"
+          className="shrink-0 self-end md:self-auto"
         />
       </div>
       <Separator />

@@ -137,6 +137,35 @@ test.describe("ShareButtons — article page", () => {
 })
 
 test.describe("ShareButtons — screenshots", () => {
+  test("article share button and popover close-up", async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== "chromium", "visual baseline captured on chromium only")
+    const href = await gotoFirstArticle(page)
+    test.skip(!href, "No articles found in the database")
+
+    const share = page.getByRole("button", { name: "Share" })
+    await share.waitFor({ state: "visible" })
+    await share.scrollIntoViewIfNeeded()
+    await share.click()
+
+    const popover = page.locator('[data-slot="popover-content"]')
+    await expect(popover).toBeVisible()
+
+    const buttonBox = await share.boundingBox()
+    const popoverBox = await popover.boundingBox()
+    if (!buttonBox || !popoverBox) throw new Error("Could not get bounding boxes")
+
+    const padding = 16
+    const x = Math.max(0, Math.min(buttonBox.x, popoverBox.x) - padding)
+    const y = Math.max(0, Math.min(buttonBox.y, popoverBox.y) - padding)
+    const right = Math.max(buttonBox.x + buttonBox.width, popoverBox.x + popoverBox.width) + padding
+    const bottom =
+      Math.max(buttonBox.y + buttonBox.height, popoverBox.y + popoverBox.height) + padding
+
+    await expect(page).toHaveScreenshot("article-share-popover-close-up.png", {
+      clip: { x, y, width: right - x, height: bottom - y },
+    })
+  })
+
   test("article share trigger", async ({ page }, testInfo) => {
     test.skip(testInfo.project.name !== "chromium", "visual baseline captured on chromium only")
     const href = await gotoFirstArticle(page)

@@ -1,3 +1,4 @@
+import { toc } from "@/lib/toc"
 import { BannerBlock } from "@/blocks/Banner/Component"
 import { CallToActionBlock } from "@/blocks/CallToAction/Component"
 import { CodeBlock } from "@/blocks/Code/Component"
@@ -65,10 +66,15 @@ export const internalDocToHref = ({ linkNode }: { linkNode: SerializedLinkNode }
   return relationTo === "articles" ? `/articles/${slug}` : `/${slug}`
 }
 
-function createJsxConverters(parentDoc?: ParentDocContext): JSXConvertersFunction<NodeTypes> {
+function createJsxConverters(
+  parentDoc?: ParentDocContext,
+  data?: DefaultTypedEditorState,
+): JSXConvertersFunction<NodeTypes> {
   return ({ defaultConverters }) => ({
     ...defaultConverters,
     ...LinkJSXConverter({ internalDocToHref }),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    ...(data ? (toc.headingConverter(data) as any) : {}),
     blocks: {
       banner: ({ node }) => <BannerBlock className="col-start-2 mb-4" {...node.fields} />,
       mediaBlock: ({ node }) => (
@@ -117,6 +123,7 @@ interface RichTextProps {
   enableGutter?: boolean
   enableProse?: boolean
   parentDoc?: ParentDocContext
+  injectHeadingAnchors?: boolean
 }
 
 export default function RichText({
@@ -125,6 +132,7 @@ export default function RichText({
   enableGutter = true,
   data,
   parentDoc,
+  injectHeadingAnchors = false,
 }: RichTextProps): React.ReactNode {
   return (
     <ConvertRichText
@@ -134,7 +142,7 @@ export default function RichText({
         enableProse && "prose",
         className,
       )}
-      converters={createJsxConverters(parentDoc)}
+      converters={createJsxConverters(parentDoc, injectHeadingAnchors ? data : undefined)}
       data={data}
     />
   )

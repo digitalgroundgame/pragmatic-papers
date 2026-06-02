@@ -17,6 +17,7 @@ import { LegacyTwitterEmbed } from "@/blocks/SocialEmbed/embeds/TwitterEmbed/con
 import { LegacyYouTubeEmbed } from "@/blocks/SocialEmbed/embeds/YouTubeEmbed/config"
 import { SquiggleRule } from "@/blocks/SquiggleRule/config"
 import { Timeline } from "@/blocks/Timeline/config"
+import { toc } from "@/lib/toc"
 import { detectMathBlocks } from "@/collections/Articles/hooks/detectMathBlocks"
 import { generateFootnotes } from "@/collections/Articles/hooks/generateFootnotes"
 import { populateAuthors } from "@/collections/Articles/hooks/populateAuthors"
@@ -155,6 +156,7 @@ export const Articles: CollectionConfig = {
               required: true,
             },
             footnotesArrayField(),
+            toc.field,
           ],
           label: "Content",
         },

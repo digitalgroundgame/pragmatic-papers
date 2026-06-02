@@ -450,6 +450,7 @@ export interface Article {
   generateSlug?: boolean | null;
   slug: string;
   enableMathRendering?: boolean | null;
+  showTableOfContents?: boolean | null;
   publishedAt?: string | null;
   authors?: (number | User)[] | null;
   topics?: (number | Topic)[] | null;

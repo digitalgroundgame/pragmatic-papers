@@ -5,6 +5,7 @@ import { LivePreviewListener } from "@/components/LivePreviewListener"
 import { PayloadRedirects } from "@/components/PayloadRedirects"
 import { RecommendedArticles } from "@/components/RecommendedArticles"
 import RichText from "@/components/RichText"
+import { toc } from "@/lib/toc"
 import { TopicsList } from "@/components/Topics/TopicsList"
 import { Separator } from "@/components/ui/separator"
 import { ArticleHero } from "@/heros/ArticleHero"
@@ -62,7 +63,8 @@ export default async function Article({ params: paramsPromise }: Args): Promise<
 
   if (!article) return <PayloadRedirects url={url} />
 
-  const { footnotes, content, populatedAuthors, enableMathRendering, topics } = article
+  const { footnotes, content, populatedAuthors, enableMathRendering, topics, showTableOfContents } =
+    article
 
   return (
     <>
@@ -79,12 +81,14 @@ export default async function Article({ params: paramsPromise }: Args): Promise<
         {draft && <LivePreviewListener />}
 
         <ArticleHero article={article} />
+        {showTableOfContents && <toc.Component content={content} />}
         <MathJaxProvider enableMathRendering={enableMathRendering}>
           <RichText
             data={content}
             enableGutter={false}
             className="drop-cap"
             parentDoc={{ collection: "articles", id: article.id }}
+            injectHeadingAnchors={!!showTableOfContents}
           />
         </MathJaxProvider>
         <FootnoteList footnotes={footnotes} />

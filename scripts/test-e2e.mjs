@@ -13,12 +13,19 @@ process.env.PAYLOAD_SECRET ??= "test-secret-for-e2e-tests"
 process.env.USE_LOCAL_STORAGE ??= "true"
 process.env.PORT ??= "8001"
 process.env.NEXT_PUBLIC_SERVER_URL ??= `http://localhost:${process.env.PORT}`
+process.env.PAYLOAD_CONFIG_PATH ??= "src/payload.config.ts"
 
 console.warn(`${green("✔")} Test database started at ${uri}`)
 
 try {
   console.warn(`${blue("●")} Running database migrations...`)
   execSync("pnpm payload migrate", {
+    env: process.env,
+    stdio: "inherit",
+  })
+
+  console.warn(`${blue("●")} Seeding E2E test data...`)
+  execSync("pnpm exec tsx scripts/seed-e2e.ts", {
     env: process.env,
     stdio: "inherit",
   })

@@ -123,8 +123,13 @@ jobs:
           mapfile -t changed < <(git diff --name-only --diff-filter=AM \
             "origin/$BASE_REF...HEAD" -- '**/__screenshots__/**/*.png')
 
-          comment_id=$(gh api "repos/$OWNER/$REPO/issues/$PR_NUMBER/comments" \
-            --jq '[.[] | select(.body | startswith("<!-- screenshots -->"))] | first | .id // empty')
+          existing=$(gh api "repos/$OWNER/$REPO/issues/$PR_NUMBER/comments" \
+            --jq '[.[] | select(.body | startswith("<!-- screenshots"))] | first | {id: .id, body: .body} // empty')
+          comment_id=$(printf '%s' "$existing" | jq -r '.id // empty')
+          existing_fingerprint=$(printf '%s' "$existing" \
+            | jq -r '.body // empty' \
+            | sed -n 's/^<!-- screenshots:\([0-9a-f]*\) -->.*/\1/p' \
+            | head -n1)
 
           if [ ${#changed[@]} -eq 0 ]; then
             echo "No snapshot updates in this PR — skipping comment."
@@ -132,6 +137,16 @@ jobs:
               gh api --method DELETE "repos/$OWNER/$REPO/issues/comments/$comment_id"
               echo "Removed stale screenshots comment."
             fi
+            exit 0
+          fi
+
+          fingerprint=$(printf '%s\n' "${changed[@]}" \
+            | sort \
+            | xargs -I{} sha256sum {} \
+            | sha256sum | awk '{print $1}')
+
+          if [ -n "$existing_fingerprint" ] && [ "$existing_fingerprint" = "$fingerprint" ]; then
+            echo "Screenshots unchanged — skipping upload."
             exit 0
           fi
 
@@ -166,7 +181,7 @@ jobs:
             images="$images\n**$name**\n![$name]($url)\n"
           done
 
-          body="<!-- screenshots -->
+          body="<!-- screenshots:$fingerprint -->
           ## Snapshot updates in this PR
           $(printf '%b' "$images")"
 

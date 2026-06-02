@@ -31,6 +31,7 @@ try {
   })
 
   console.warn(`${blue("●")} Starting Playwright tests...`)
+  console.warn(`${blue("●")} argv forwarded: ${JSON.stringify(process.argv.slice(2))}`)
   const child = spawn(
     "./node_modules/.bin/playwright",
     ["test", "--config=playwright.config.ts", ...process.argv.slice(2)],

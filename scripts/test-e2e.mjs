@@ -1,6 +1,20 @@
 import { PostgreSqlContainer } from "@testcontainers/postgresql"
 import { execSync, spawn } from "node:child_process"
-import { blue, green, red } from "./ansi.mjs"
+import net from "node:net"
+import { blue, green, red, yellow } from "./ansi.mjs"
+
+function isPortInUse(port) {
+  return new Promise((resolve) => {
+    const socket = net.createConnection({ port, host: "127.0.0.1" })
+    socket.once("connect", () => {
+      socket.destroy()
+      resolve(true)
+    })
+    socket.once("error", () => {
+      resolve(false)
+    })
+  })
+}
 
 console.warn(`${blue("●")} Starting Postgres container...`)
 const container = await new PostgreSqlContainer("postgres:15-alpine")
@@ -20,8 +34,16 @@ console.warn(`${green("✔")} Test database started at ${uri}`)
 
 let server = null
 try {
-  console.warn(`${blue("●")} Starting Next.js dev server...`)
-  server = spawn("pnpm", ["dev:next"], { env: process.env, stdio: "inherit" })
+  const port = Number(process.env.PORT)
+  if (await isPortInUse(port)) {
+    console.warn(
+      `${yellow("⚠")} Port ${port} is already in use — reusing existing server. ` +
+        `Tests will fail unless it's connected to the test container at ${uri}.`,
+    )
+  } else {
+    console.warn(`${blue("●")} Starting Next.js dev server...`)
+    server = spawn("pnpm", ["dev:next"], { env: process.env, stdio: "inherit" })
+  }
 
   console.warn(`${blue("●")} Running database migrations...`)
   execSync("pnpm payload migrate", {

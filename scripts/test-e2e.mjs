@@ -14,10 +14,15 @@ process.env.USE_LOCAL_STORAGE ??= "true"
 process.env.PORT ??= "8000"
 process.env.NEXT_PUBLIC_SERVER_URL ??= `http://localhost:${process.env.PORT}`
 process.env.PAYLOAD_CONFIG_PATH ??= "src/payload.config.ts"
+process.env.E2E_MANAGED_SERVER = "true"
 
 console.warn(`${green("✔")} Test database started at ${uri}`)
 
+let server = null
 try {
+  console.warn(`${blue("●")} Starting Next.js dev server...`)
+  server = spawn("pnpm", ["dev:next"], { env: process.env, stdio: "inherit" })
+
   console.warn(`${blue("●")} Running database migrations...`)
   execSync("pnpm payload migrate", {
     env: process.env,
@@ -43,6 +48,7 @@ try {
   console.error(`${red("✖")} Error during E2E test setup: ${error.message}`)
   process.exitCode = 1
 } finally {
+  server?.kill()
   console.warn(`${blue("●")} Stopping Postgres container...`)
   await container.stop()
 }

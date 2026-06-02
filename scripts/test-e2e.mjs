@@ -1,5 +1,5 @@
 import { PostgreSqlContainer } from "@testcontainers/postgresql"
-import { spawn, execSync } from "node:child_process"
+import { execSync, spawn } from "node:child_process"
 import { blue, green, red } from "./ansi.mjs"
 
 console.warn(`${blue("●")} Starting Postgres container...`)
@@ -13,6 +13,7 @@ process.env.PAYLOAD_SECRET ??= "test-secret-for-e2e-tests"
 process.env.USE_LOCAL_STORAGE ??= "true"
 process.env.PORT ??= "8001"
 process.env.NEXT_PUBLIC_SERVER_URL ??= `http://localhost:${process.env.PORT}`
+process.env.PAYLOAD_CONFIG_PATH ??= "src/payload.config.ts"
 
 console.warn(`${green("✔")} Test database started at ${uri}`)
 
@@ -23,12 +24,11 @@ try {
     stdio: "inherit",
   })
 
-  if (process.env.SEED_E2E) {
-    console.warn(`${blue("●")} Seeding test database...`)
-    const { seedE2E } = await import("./seed-e2e.ts")
-    await seedE2E()
-    console.warn(`${green("✔")} Database seeded`)
-  }
+  console.warn(`${blue("●")} Seeding E2E test data...`)
+  execSync("pnpm exec tsx scripts/seed-e2e.ts", {
+    env: process.env,
+    stdio: "inherit",
+  })
 
   console.warn(`${blue("●")} Starting Playwright tests...`)
   const child = spawn(

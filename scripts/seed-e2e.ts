@@ -1,50 +1,87 @@
-import { getPayload } from "payload"
+import { createRichTextShowcaseArticle } from "@/endpoints/seed/features/rich-text-showcase"
+import { createUser } from "@/endpoints/seed/users"
 import config from "@payload-config"
+import { getPayload } from "payload"
 
-export async function seedE2E(): Promise<void> {
+const ctx = { disableRevalidate: true }
+
+async function main() {
   const payload = await getPayload({ config })
 
-  const article = await payload.create({
-    collection: "articles",
-    overrideAccess: true,
-    draft: false,
-    data: {
-      title: "E2E Seed Article",
-      slug: "e2e-seed-article",
-      content: {
-        root: {
-          type: "root",
-          children: [
-            {
-              type: "paragraph",
-              children: [{ type: "text", text: "Seed content for E2E screenshots.", version: 1 }],
-              direction: "ltr",
-              format: "",
-              indent: 0,
-              version: 1,
-            },
-          ],
-          direction: "ltr",
-          format: "",
-          indent: 0,
-          version: 1,
-        },
+  try {
+    const writer = await createUser(
+      payload,
+      {
+        email: "writer@e2e.test",
+        password: "e2e-test-password-123",
+        name: "E2E Writer",
+        role: "writer",
+        slug: "e2e-writer",
       },
-      _status: "published",
-    },
-  })
+      "e2e writer",
+      ctx,
+    )
 
-  await payload.create({
-    collection: "volumes",
-    overrideAccess: true,
-    draft: false,
-    data: {
-      title: "E2E Seed Volume",
-      slug: "1",
-      volumeNumber: 1,
-      description: "Seed volume for E2E screenshots.",
-      articles: [article.id],
-      _status: "published",
-    },
-  })
+    // Typography showcase article (slug: "rich-text-showcase").
+    // Pass [] for mediaDocs — all media accesses use ?. so heroImage/meta.image will be null.
+    const articleId = await createRichTextShowcaseArticle(payload, [writer], [], [], ctx)
+
+    const volume = await payload.create({
+      collection: "volumes",
+      context: ctx,
+      data: {
+        title: "E2E Test Volume",
+        volumeNumber: 1,
+        description: "A test volume for E2E testing.",
+        articles: [articleId],
+        slug: "1",
+        _status: "published",
+        publishedAt: new Date().toISOString(),
+      },
+    })
+
+    // Homepage with a CollectionGrid so gotoFirstArticle / gotoFirstVolume can
+    // find a[href*="/articles/"] and a[href*="/volumes/"] links to follow.
+    await payload.create({
+      collection: "pages",
+      context: ctx,
+      data: {
+        title: "Home",
+        slug: "home",
+        _status: "published",
+        publishedAt: new Date().toISOString(),
+        hero: { type: "none" },
+        layout: [
+          {
+            blockType: "collectionGrid",
+            layout: "euler-2",
+            slots: [
+              {
+                collection: { relationTo: "articles", value: articleId },
+                kicker: null,
+                overrideTitle: null,
+              },
+              {
+                collection: { relationTo: "volumes", value: volume.id },
+                kicker: null,
+                overrideTitle: null,
+              },
+            ],
+          },
+        ],
+      },
+    })
+
+    console.warn(`✔ E2E seed complete: article="rich-text-showcase", volume="1"`)
+  } finally {
+    await payload.db.destroy?.()
+  }
+}
+
+try {
+  await main()
+  process.exit(0)
+} catch (err) {
+  console.error(err)
+  process.exit(1)
 }

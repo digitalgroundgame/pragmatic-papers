@@ -94,16 +94,14 @@ export default async function VolumePage({
 
       {draft && <LivePreviewListener />}
       <h1 className="text-6xl lg:text-7xl">Volume {toRoman(Number(volume.slug))}</h1>
-      <div className="flex items-center gap-2">
-        {publishedAt && (
-          <HoverPrefetchLink
-            href={`/volumes/${volume.slug}`}
-            className="dark:text-brand-high-contrast text-brand font-serif font-semibold underline-offset-4 hover:underline"
-          >
-            <time dateTime={publishedAt}>{formatDateTime(publishedAt)}</time>
-          </HoverPrefetchLink>
-        )}
-      </div>
+      {publishedAt && (
+        <HoverPrefetchLink
+          href={`/volumes/${volume.slug}`}
+          className="dark:text-brand-high-contrast text-brand font-serif font-semibold underline-offset-4 hover:underline"
+        >
+          <time dateTime={publishedAt}>{formatDateTime(publishedAt)}</time>
+        </HoverPrefetchLink>
+      )}
       {editorsNote && <RichText className="drop-cap" enableGutter={false} data={editorsNote} />}
       <Separator className="my-6" />
       <section className="space-y-4">

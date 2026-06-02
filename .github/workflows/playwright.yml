@@ -11,6 +11,10 @@ jobs:
     timeout-minutes: 60
     runs-on: ubuntu-latest
 
+    permissions:
+      contents: read
+      pull-requests: write
+
     env:
       PAYLOAD_SECRET: ${{ secrets.PAYLOAD_SECRET }}
       NEXT_PUBLIC_SERVER_URL: http://localhost:8000
@@ -45,3 +49,44 @@ jobs:
           name: playwright-report
           path: playwright-report/
           retention-days: 30
+
+      - name: Upload screenshots to PR description
+        if: github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          OWNER: ${{ github.repository_owner }}
+          REPO: ${{ github.event.repository.name }}
+        run: |
+          if [ ! -d screenshots ] || [ -z "$(ls screenshots/*.png 2>/dev/null)" ]; then
+            echo "No screenshots found — skipping PR update."
+            exit 0
+          fi
+
+          existing=$(gh pr view "$PR_NUMBER" --json body --jq '.body')
+          if echo "$existing" | grep -q "<!-- screenshots -->"; then
+            echo "Screenshots section already present — skipping."
+            exit 0
+          fi
+
+          images=""
+          for f in screenshots/*.png; do
+            name=$(basename "$f" .png)
+            url=$(gh api --method POST \
+              -H "Content-Type: image/png" \
+              -H "Accept: application/vnd.github+json" \
+              "https://uploads.github.com/repos/$OWNER/$REPO/issues/$PR_NUMBER/assets?name=$name.png" \
+              --input "$f" \
+              --jq '.url')
+            images="$images\n**$name**\n![$name]($url)\n"
+          done
+
+          new_body="<!-- screenshots -->
+          ## Screenshots
+          $(printf '%b' "$images")
+          ---
+
+          $existing"
+
+          gh pr edit "$PR_NUMBER" --body "$new_body"
+          echo "Screenshots attached to PR #$PR_NUMBER."

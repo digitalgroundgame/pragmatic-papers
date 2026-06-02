@@ -137,12 +137,8 @@ test.describe("ShareButtons — article page", () => {
 })
 
 test.describe("ShareButtons — screenshots", () => {
-  test.skip(
-    ({ browserName }) => browserName !== "chromium",
-    "visual baseline captured on chromium only",
-  )
-
-  test("article share trigger", async ({ page }) => {
+  test("article share trigger", async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== "chromium", "visual baseline captured on chromium only")
     const href = await gotoFirstArticle(page)
     test.skip(!href, "No articles found in the database")
 
@@ -152,7 +148,8 @@ test.describe("ShareButtons — screenshots", () => {
     await expect(page).toHaveScreenshot("article-share-trigger.png", { fullPage: false })
   })
 
-  test("article share popover open", async ({ page }) => {
+  test("article share popover open", async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== "chromium", "visual baseline captured on chromium only")
     const href = await gotoFirstArticle(page)
     test.skip(!href, "No articles found in the database")
 
@@ -164,7 +161,8 @@ test.describe("ShareButtons — screenshots", () => {
     await expect(page).toHaveScreenshot("article-share-popover-open.png", { fullPage: false })
   })
 
-  test("volume share popover open", async ({ page }) => {
+  test("volume share popover open", async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== "chromium", "visual baseline captured on chromium only")
     const href = await gotoFirstVolume(page)
     test.skip(!href, "No volumes found in the database")
 

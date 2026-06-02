@@ -27,44 +27,50 @@ export default defineConfig({
       name: "chromium",
       use: { ...devices["Desktop Chrome"] },
     },
-    {
-      name: "firefox",
-      use: { ...devices["Desktop Firefox"] },
-    },
-    {
-      name: "webkit",
-      use: { ...devices["Desktop Safari"] },
-    },
-    /* Mobile viewports. */
-    {
-      name: "Mobile Chrome",
-      use: { ...devices["Pixel 5"] },
-    },
-    {
-      name: "Mobile Safari",
-      use: { ...devices["iPhone 12"] },
-    },
+    ...(process.env.E2E_ALL_BROWSERS
+      ? [
+          {
+            name: "firefox",
+            use: { ...devices["Desktop Firefox"] },
+          },
+          {
+            name: "webkit",
+            use: { ...devices["Desktop Safari"] },
+          },
+          /* Mobile viewports. */
+          {
+            name: "Mobile Chrome",
+            use: { ...devices["Pixel 5"] },
+          },
+          {
+            name: "Mobile Safari",
+            use: { ...devices["iPhone 12"] },
+          },
 
-    /* Tablet viewport. */
-    {
-      name: "Tablet",
-      use: { ...devices["iPad (gen 7)"] },
-    },
+          /* Tablet viewport. */
+          {
+            name: "Tablet",
+            use: { ...devices["iPad (gen 7)"] },
+          },
 
-    /* Test against branded browsers. */
-    // {
-    //   name: 'Microsoft Edge',
-    //   use: { ...devices['Desktop Edge'], channel: 'msedge' },
-    // },
-    // {
-    //   name: 'Google Chrome',
-    //   use: { ...devices['Desktop Chrome'], channel: 'chrome' },
-    // },
+          /* Test against branded browsers. */
+          // {
+          //   name: 'Microsoft Edge',
+          //   use: { ...devices['Desktop Edge'], channel: 'msedge' },
+          // },
+          // {
+          //   name: 'Google Chrome',
+          //   use: { ...devices['Desktop Chrome'], channel: 'chrome' },
+          // },
+        ]
+      : []),
   ],
   webServer: {
-    command: "pnpm dev:next",
+    command: process.env.E2E_MANAGED_SERVER
+      ? "echo 'server managed externally'"
+      : "pnpm dev:next",
     url: process.env.NEXT_PUBLIC_SERVER_URL || "http://localhost:8000",
-    reuseExistingServer: !process.env.CI,
+    reuseExistingServer: !!process.env.E2E_MANAGED_SERVER || !process.env.CI,
     timeout: 120_000,
   },
 })

@@ -65,32 +65,29 @@ jobs:
             exit 0
           fi
 
-          # Stage screenshots in a worktree on an orphan assets branch
-          # under <pr-number>/<sha>/, then push.
-          asset_dir="$PR_NUMBER/$PR_SHA"
-          mkdir -p /tmp/screenshots-stage
-          cp screenshots/*.png /tmp/screenshots-stage/
-
           git config --global user.name "github-actions[bot]"
           git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-          if git ls-remote --exit-code origin "$ASSETS_BRANCH" >/dev/null 2>&1; then
-            git fetch origin "$ASSETS_BRANCH":"$ASSETS_BRANCH"
-            git worktree add /tmp/assets "$ASSETS_BRANCH"
+          asset_dir="$PR_NUMBER/$PR_SHA"
+          remote="https://x-access-token:${GH_TOKEN}@github.com/$OWNER/$REPO.git"
+
+          # Clone the assets branch if it exists, otherwise start an orphan
+          if git ls-remote --exit-code "$remote" "refs/heads/$ASSETS_BRANCH" >/dev/null 2>&1; then
+            git clone --depth=1 --branch "$ASSETS_BRANCH" "$remote" /tmp/assets
           else
-            git worktree add --detach /tmp/assets
+            git clone --depth=1 "$remote" /tmp/assets
             git -C /tmp/assets checkout --orphan "$ASSETS_BRANCH"
             git -C /tmp/assets rm -rf . >/dev/null 2>&1 || true
           fi
 
           mkdir -p "/tmp/assets/$asset_dir"
-          cp /tmp/screenshots-stage/*.png "/tmp/assets/$asset_dir/"
+          cp screenshots/*.png "/tmp/assets/$asset_dir/"
           git -C /tmp/assets add "$asset_dir"
           git -C /tmp/assets commit -m "screenshots: PR #$PR_NUMBER @ $PR_SHA"
-          git -C /tmp/assets push origin "$ASSETS_BRANCH"
+          git -C /tmp/assets push "$remote" "$ASSETS_BRANCH"
 
           images=""
-          for f in /tmp/screenshots-stage/*.png; do
+          for f in screenshots/*.png; do
             name=$(basename "$f" .png)
             url="https://raw.githubusercontent.com/$OWNER/$REPO/$ASSETS_BRANCH/$asset_dir/$name.png"
             images="$images\n**$name**\n![$name]($url)\n"

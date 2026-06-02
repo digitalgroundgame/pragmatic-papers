@@ -64,7 +64,7 @@ jobs:
             echo "No new snapshots to commit."
             exit 0
           fi
-          git commit -m "test: add missing e2e snapshot baselines [skip ci]"
+          git commit -m "test: add missing e2e snapshot baselines"
           git push origin "HEAD:${GITHUB_REF_NAME}"
 
       - name: Regenerate visual snapshots

@@ -62,8 +62,8 @@ export default defineConfig({
     // },
   ],
   webServer: {
-    command: `PORT=${process.env.PORT || 8001} pnpm dev:next`,
-    url: process.env.NEXT_PUBLIC_SERVER_URL || "http://localhost:8001",
+    command: "pnpm dev:next",
+    url: process.env.NEXT_PUBLIC_SERVER_URL || "http://localhost:8000",
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
   },

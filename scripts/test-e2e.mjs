@@ -11,7 +11,7 @@ const uri = container.getConnectionUri()
 process.env.DATABASE_URI = uri
 process.env.PAYLOAD_SECRET ??= "test-secret-for-e2e-tests"
 process.env.USE_LOCAL_STORAGE ??= "true"
-process.env.PORT ??= "8001"
+process.env.PORT ??= "8000"
 process.env.NEXT_PUBLIC_SERVER_URL ??= `http://localhost:${process.env.PORT}`
 process.env.PAYLOAD_CONFIG_PATH ??= "src/payload.config.ts"
 

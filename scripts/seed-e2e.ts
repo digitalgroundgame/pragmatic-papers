@@ -3,6 +3,8 @@ import { createRichTextShowcaseArticle } from "@/endpoints/seed/features/rich-te
 import { createUser } from "@/endpoints/seed/users"
 import { getPayload } from "payload"
 
+const ctx = { disableRevalidate: true }
+
 async function main() {
   const payload = await getPayload({ config })
 
@@ -17,14 +19,16 @@ async function main() {
         slug: "e2e-writer",
       },
       "e2e writer",
+      ctx,
     )
 
     // Typography showcase article (slug: "rich-text-showcase").
     // Pass [] for mediaDocs — all media accesses use ?. so heroImage/meta.image will be null.
-    const articleId = await createRichTextShowcaseArticle(payload, [writer], [], [])
+    const articleId = await createRichTextShowcaseArticle(payload, [writer], [], [], ctx)
 
     const volume = await payload.create({
       collection: "volumes",
+      context: ctx,
       data: {
         title: "E2E Test Volume",
         volumeNumber: 1,
@@ -40,6 +44,7 @@ async function main() {
     // find a[href*="/articles/"] and a[href*="/volumes/"] links to follow.
     await payload.create({
       collection: "pages",
+      context: ctx,
       data: {
         title: "Home",
         slug: "home",

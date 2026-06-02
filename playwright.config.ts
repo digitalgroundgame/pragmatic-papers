@@ -10,6 +10,14 @@ export default defineConfig({
   retries: process.env.CI ? 2 : 0,
   workers: process.env.CI ? 1 : undefined,
   reporter: "html",
+  snapshotPathTemplate: "{testDir}/__screenshots__/{testFilePath}/{arg}{ext}",
+  expect: {
+    toHaveScreenshot: {
+      maxDiffPixelRatio: 0.01,
+      animations: "disabled",
+      caret: "hide",
+    },
+  },
   use: {
     baseURL: "http://localhost:8000",
     trace: "on-first-retry",
@@ -54,8 +62,8 @@ export default defineConfig({
     // },
   ],
   webServer: {
-    command: `PORT=${process.env.PORT || 8001} pnpm dev:next`,
-    url: process.env.NEXT_PUBLIC_SERVER_URL || "http://localhost:8001",
+    command: "pnpm dev:next",
+    url: process.env.NEXT_PUBLIC_SERVER_URL || "http://localhost:8000",
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
   },

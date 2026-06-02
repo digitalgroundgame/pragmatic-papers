@@ -435,6 +435,10 @@ export interface Article {
     [k: string]: unknown;
   };
   footnotes?: FootnotesField;
+  /**
+   * Auto-generates a navigable list of headings (and any resolver-matched blocks) at the top of the article.
+   */
+  showTableOfContents?: boolean | null;
   meta?: {
     title?: string | null;
     /**
@@ -450,7 +454,6 @@ export interface Article {
   generateSlug?: boolean | null;
   slug: string;
   enableMathRendering?: boolean | null;
-  showTableOfContents?: boolean | null;
   publishedAt?: string | null;
   authors?: (number | User)[] | null;
   topics?: (number | Topic)[] | null;
@@ -1630,6 +1633,7 @@ export interface ArticlesSelect<T extends boolean = true> {
   title?: T;
   content?: T;
   footnotes?: T | FootnotesFieldSelect<T>;
+  showTableOfContents?: T;
   meta?:
     | T
     | {

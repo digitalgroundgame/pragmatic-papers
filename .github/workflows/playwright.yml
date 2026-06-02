@@ -2,7 +2,7 @@ name: Playwright Tests
 
 on:
   push:
-    branches: [main]
+    branches: [main, dev]
   pull_request:
 
 jobs:
@@ -50,8 +50,8 @@ jobs:
           path: playwright-report/
           retention-days: 30
 
-      - name: Publish screenshot baseline (main)
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+      - name: Publish screenshot baseline (dev)
+        if: github.event_name == 'push' && github.ref == 'refs/heads/dev'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           OWNER: ${{ github.repository_owner }}
@@ -76,10 +76,10 @@ jobs:
             git -C /tmp/assets rm -rf . >/dev/null 2>&1 || true
           fi
 
-          rm -rf /tmp/assets/main
-          mkdir -p /tmp/assets/main
-          cp screenshots/*.png /tmp/assets/main/
-          git -C /tmp/assets add main
+          rm -rf /tmp/assets/dev
+          mkdir -p /tmp/assets/dev
+          cp screenshots/*.png /tmp/assets/dev/
+          git -C /tmp/assets add dev
           if git -C /tmp/assets diff --cached --quiet; then
             echo "Baseline unchanged."
             exit 0
@@ -117,11 +117,11 @@ jobs:
             git -C /tmp/assets rm -rf . >/dev/null 2>&1 || true
           fi
 
-          # Filter to only new or changed screenshots vs the main baseline
+          # Filter to only new or changed screenshots vs the dev baseline
           mkdir -p /tmp/changed
           for f in screenshots/*.png; do
             name=$(basename "$f")
-            baseline="/tmp/assets/main/$name"
+            baseline="/tmp/assets/dev/$name"
             if [ ! -f "$baseline" ] || ! cmp -s "$f" "$baseline"; then
               cp "$f" "/tmp/changed/$name"
             fi

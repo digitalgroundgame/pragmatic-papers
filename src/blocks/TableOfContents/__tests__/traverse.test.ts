@@ -50,6 +50,14 @@ describe("extractText", () => {
   it("returns empty string for undefined", () => {
     expect(extractText(undefined)).toBe("")
   })
+
+  it("ignores nodes with neither text nor children (e.g. linebreak)", () => {
+    expect(extractText([{ type: "linebreak" }, { type: "text", text: "ok" }])).toBe("ok")
+  })
+
+  it("treats a text node missing its text field as empty", () => {
+    expect(extractText([{ type: "text" }, { type: "text", text: "hi" }])).toBe("hi")
+  })
 })
 
 describe("collectEntries – headings only", () => {
@@ -110,5 +118,40 @@ describe("collectEntries – caller resolvers", () => {
       heading: () => ({ label: "Custom Label", anchor: "custom", depth: 1 }),
     })
     expect(entries[0]!.label).toBe("Custom Label")
+  })
+
+  it("skips block nodes with no blockType (empty resolver key)", () => {
+    const state = makeState([heading("h2", "Heading"), { type: "block", fields: {} } as object])
+    const entries = collectEntries(state)
+    expect(entries).toHaveLength(1)
+    expect(entries[0]!.label).toBe("Heading")
+  })
+
+  it("falls back to 'heading' anchor when heading text is empty", () => {
+    const state = makeState([heading("h2", "")])
+    const entries = collectEntries(state, {
+      heading: (node) => {
+        const h = node as { children?: { text?: string }[] }
+        return { label: h.children?.[0]?.text ?? "n/a", anchor: "anchored", depth: 1 }
+      },
+    })
+    expect(entries).toHaveLength(1)
+  })
+
+  it("traverses nested block children (e.g. inlineBlock inside paragraph)", () => {
+    const state = makeState([
+      {
+        type: "paragraph",
+        children: [{ type: "inlineBlock", fields: { blockType: "callout", id: "i1" } }],
+      } as object,
+    ])
+    const entries = collectEntries(state, {
+      callout: (fields) => {
+        const f = fields as { id: string }
+        return { label: "Callout", anchor: f.id }
+      },
+    })
+    expect(entries).toHaveLength(1)
+    expect(entries[0]!.anchor).toBe("i1")
   })
 })

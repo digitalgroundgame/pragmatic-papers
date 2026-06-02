@@ -1,21 +1,23 @@
 import { expect, test, type Page } from "@playwright/test"
 
 // Helpers to navigate to the first real article / volume without hardcoding slugs.
-// Uses a short timeout so tests skip immediately when the CI database is empty,
-// rather than waiting the full 30 s action timeout per test.
+// Routes via the homepage (no dedicated listing page exists for /articles or /volumes).
+// The CSS attribute selector ensures we only follow article/volume links — not generic
+// navigation or 404-page "Go home" links that would lead somewhere without a Share button.
+// The 5 s timeout lets tests skip immediately when the CI database is empty.
 async function gotoFirstArticle(page: Page) {
-  await page.goto("/articles")
-  const firstLink = page.getByRole("main").getByRole("link").first()
-  const href = await firstLink.getAttribute("href", { timeout: 5000 }).catch(() => null)
+  await page.goto("/")
+  const link = page.locator('a[href*="/articles/"]').first()
+  const href = await link.getAttribute("href", { timeout: 5000 }).catch(() => null)
   if (!href) return null
   await page.goto(href)
   return href
 }
 
 async function gotoFirstVolume(page: Page) {
-  await page.goto("/volumes")
-  const firstLink = page.getByRole("main").getByRole("link").first()
-  const href = await firstLink.getAttribute("href", { timeout: 5000 }).catch(() => null)
+  await page.goto("/")
+  const link = page.locator('a[href*="/volumes/"]').first()
+  const href = await link.getAttribute("href", { timeout: 5000 }).catch(() => null)
   if (!href) return null
   await page.goto(href)
   return href

@@ -50,7 +50,7 @@ jobs:
           path: playwright-report/
           retention-days: 30
 
-      - name: Upload screenshots to PR description
+      - name: Upload screenshots to PR comment
         if: github.event_name == 'pull_request'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -59,13 +59,7 @@ jobs:
           REPO: ${{ github.event.repository.name }}
         run: |
           if [ ! -d screenshots ] || [ -z "$(ls screenshots/*.png 2>/dev/null)" ]; then
-            echo "No screenshots found — skipping PR update."
-            exit 0
-          fi
-
-          existing=$(gh pr view "$PR_NUMBER" --json body --jq '.body')
-          if echo "$existing" | grep -q "<!-- screenshots -->"; then
-            echo "Screenshots section already present — skipping."
+            echo "No screenshots found — skipping."
             exit 0
           fi
 
@@ -81,12 +75,18 @@ jobs:
             images="$images\n**$name**\n![$name]($url)\n"
           done
 
-          new_body="<!-- screenshots -->
+          body="<!-- screenshots -->
           ## Screenshots
-          $(printf '%b' "$images")
-          ---
+          $(printf '%b' "$images")"
 
-          $existing"
+          comment_id=$(gh api "repos/$OWNER/$REPO/issues/$PR_NUMBER/comments" \
+            --jq '[.[] | select(.body | startswith("<!-- screenshots -->"))] | first | .id // empty')
 
-          gh pr edit "$PR_NUMBER" --body "$new_body"
-          echo "Screenshots attached to PR #$PR_NUMBER."
+          if [ -n "$comment_id" ]; then
+            gh api --method PATCH "repos/$OWNER/$REPO/issues/comments/$comment_id" \
+              -f body="$body"
+            echo "Screenshots comment updated on PR #$PR_NUMBER."
+          else
+            gh pr comment "$PR_NUMBER" --body "$body"
+            echo "Screenshots comment posted on PR #$PR_NUMBER."
+          fi

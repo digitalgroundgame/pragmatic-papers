@@ -136,6 +136,47 @@ test.describe("ShareButtons — article page", () => {
   }
 })
 
+test.describe("ShareButtons — screenshots", () => {
+  test.skip(
+    ({ browserName }) => browserName !== "chromium",
+    "visual baseline captured on chromium only",
+  )
+
+  test("article share trigger", async ({ page }) => {
+    const href = await gotoFirstArticle(page)
+    test.skip(!href, "No articles found in the database")
+
+    const share = page.getByRole("button", { name: "Share" })
+    await share.waitFor({ state: "visible" })
+    await share.scrollIntoViewIfNeeded()
+    await expect(page).toHaveScreenshot("article-share-trigger.png", { fullPage: false })
+  })
+
+  test("article share popover open", async ({ page }) => {
+    const href = await gotoFirstArticle(page)
+    test.skip(!href, "No articles found in the database")
+
+    const share = page.getByRole("button", { name: "Share" })
+    await share.waitFor({ state: "visible" })
+    await share.scrollIntoViewIfNeeded()
+    await share.click()
+    await expect(page.locator('[data-slot="popover-content"]')).toBeVisible()
+    await expect(page).toHaveScreenshot("article-share-popover-open.png", { fullPage: false })
+  })
+
+  test("volume share popover open", async ({ page }) => {
+    const href = await gotoFirstVolume(page)
+    test.skip(!href, "No volumes found in the database")
+
+    const share = page.getByRole("button", { name: "Share" })
+    await share.waitFor({ state: "visible" })
+    await share.scrollIntoViewIfNeeded()
+    await share.click()
+    await expect(page.locator('[data-slot="popover-content"]')).toBeVisible()
+    await expect(page).toHaveScreenshot("volume-share-popover-open.png", { fullPage: false })
+  })
+})
+
 test.describe("ShareButtons — volume page", () => {
   test("share button is visible and aligned to the right", async ({ page }) => {
     const href = await gotoFirstVolume(page)

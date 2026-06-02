@@ -33,7 +33,7 @@ jobs:
         id: check-screenshots
         run: |
           git fetch origin ${{ github.base_ref }} --depth=1
-          changed=$(git diff origin/${{ github.base_ref }}...HEAD --name-only -- 'tests/e2e/')
+          changed=$(git diff origin/${{ github.base_ref }}..HEAD --name-only -- 'tests/e2e/')
           if [ -z "$changed" ]; then
             echo "No e2e test files changed."
             echo "has_screenshots=false" >> "$GITHUB_OUTPUT"

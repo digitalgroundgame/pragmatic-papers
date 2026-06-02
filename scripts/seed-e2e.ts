@@ -5,7 +5,7 @@ import { getPayload } from "payload"
 
 const ctx = { disableRevalidate: true }
 
-async function main() {
+export async function main(): Promise<void> {
   const payload = await getPayload({ config })
 
   try {
@@ -78,10 +78,12 @@ async function main() {
   }
 }
 
-try {
-  await main()
-  process.exit(0)
-} catch (err) {
-  console.error(err)
-  process.exit(1)
+if (!process.env.VITEST) {
+  try {
+    await main()
+    process.exit(0)
+  } catch (err) {
+    console.error(err)
+    process.exit(1)
+  }
 }

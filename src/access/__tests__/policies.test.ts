@@ -71,6 +71,24 @@ describe("isDraftOrEditor policy", () => {
     })
   })
 
+  it("denies writers from updating status to published", () => {
+    const user = { id: 789, roles: ["writer"] } as unknown as User
+    const args = { req: { user }, data: { _status: "published" } } as unknown as Parameters<
+      typeof isDraftOrEditor
+    >[0]
+    expect(isDraftOrEditor(args)).toBe(false)
+  })
+
+  it("restricts writers to draft documents they created if update status is draft", () => {
+    const user = { id: 789, roles: ["writer"] } as unknown as User
+    const args = { req: { user }, data: { _status: "draft" } } as unknown as Parameters<
+      typeof isDraftOrEditor
+    >[0]
+    expect(isDraftOrEditor(args)).toEqual({
+      and: [{ createdBy: { equals: 789 } }, { _status: { equals: "draft" } }],
+    })
+  })
+
   it("denies other roles (narrators, members)", () => {
     expect(isDraftOrEditor(makeArgs(makeUser("narrator")))).toBe(false)
     expect(isDraftOrEditor(makeArgs(makeUser("member")))).toBe(false)

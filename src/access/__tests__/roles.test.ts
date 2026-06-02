@@ -1,7 +1,23 @@
 import { describe, expect, it } from "vitest"
-import { hasRole, hasRoleOrAdmin, isAdmin, isStaff, admin, editor, writer } from "@/access/roles"
+import {
+  hasRole,
+  hasRoleOrAdmin,
+  isAdmin,
+  isStaff,
+  admin,
+  editor,
+  writer,
+  anyone,
+  authenticated,
+  adminFieldLevel,
+  editorFieldLevel,
+  writerFieldLevel,
+  writerOrEditor,
+  writerOrEditorFieldLevel,
+  staff,
+} from "@/access/roles"
 import type { User } from "@/payload-types"
-import type { AccessArgs } from "payload"
+import type { AccessArgs, FieldAccess } from "payload"
 
 const makeUser = (roleOrRoles?: string | string[] | null): User => {
   if (!roleOrRoles) return { roles: [] } as unknown as User
@@ -145,5 +161,114 @@ describe("writer helper access", () => {
   it("denies narrator and member", () => {
     expect(writer(makeArgs(makeUser("narrator")))).toBe(false)
     expect(writer(makeArgs(makeUser("member")))).toBe(false)
+  })
+})
+
+describe("anyone access helper", () => {
+  it("always returns true", () => {
+    expect(anyone(makeArgs(null))).toBe(true)
+    expect(anyone(makeArgs(makeUser("admin")))).toBe(true)
+  })
+})
+
+describe("authenticated access helper", () => {
+  it("returns true if user is logged in", () => {
+    expect(authenticated(makeArgs(makeUser("member")))).toBe(true)
+  })
+
+  it("returns false if user is not logged in", () => {
+    expect(authenticated(makeArgs(null))).toBe(false)
+  })
+})
+
+describe("adminFieldLevel access helper", () => {
+  const makeFieldArgs = (user: User | null) =>
+    ({ req: { user } }) as unknown as Parameters<FieldAccess>[0]
+
+  it("allows admin and chief-editor", () => {
+    expect(adminFieldLevel(makeFieldArgs(makeUser("admin")))).toBe(true)
+    expect(adminFieldLevel(makeFieldArgs(makeUser("chief-editor")))).toBe(true)
+  })
+
+  it("denies other roles", () => {
+    expect(adminFieldLevel(makeFieldArgs(makeUser("editor")))).toBe(false)
+    expect(adminFieldLevel(makeFieldArgs(null))).toBe(false)
+  })
+})
+
+describe("editorFieldLevel access helper", () => {
+  const makeFieldArgs = (user: User | null) =>
+    ({ req: { user } }) as unknown as Parameters<FieldAccess>[0]
+
+  it("allows admin, chief-editor, and editor", () => {
+    expect(editorFieldLevel(makeFieldArgs(makeUser("admin")))).toBe(true)
+    expect(editorFieldLevel(makeFieldArgs(makeUser("chief-editor")))).toBe(true)
+    expect(editorFieldLevel(makeFieldArgs(makeUser("editor")))).toBe(true)
+  })
+
+  it("denies other roles", () => {
+    expect(editorFieldLevel(makeFieldArgs(makeUser("writer")))).toBe(false)
+    expect(editorFieldLevel(makeFieldArgs(null))).toBe(false)
+  })
+})
+
+describe("writerFieldLevel access helper", () => {
+  const makeFieldArgs = (user: User | null) =>
+    ({ req: { user } }) as unknown as Parameters<FieldAccess>[0]
+
+  it("allows admin, chief-editor, and writer", () => {
+    expect(writerFieldLevel(makeFieldArgs(makeUser("admin")))).toBe(true)
+    expect(writerFieldLevel(makeFieldArgs(makeUser("chief-editor")))).toBe(true)
+    expect(writerFieldLevel(makeFieldArgs(makeUser("writer")))).toBe(true)
+  })
+
+  it("denies other roles", () => {
+    expect(writerFieldLevel(makeFieldArgs(makeUser("editor")))).toBe(false)
+    expect(writerFieldLevel(makeFieldArgs(null))).toBe(false)
+  })
+})
+
+describe("writerOrEditor access helper", () => {
+  it("allows admin, chief-editor, editor, and writer", () => {
+    expect(writerOrEditor(makeArgs(makeUser("admin")))).toBe(true)
+    expect(writerOrEditor(makeArgs(makeUser("chief-editor")))).toBe(true)
+    expect(writerOrEditor(makeArgs(makeUser("editor")))).toBe(true)
+    expect(writerOrEditor(makeArgs(makeUser("writer")))).toBe(true)
+  })
+
+  it("denies other roles", () => {
+    expect(writerOrEditor(makeArgs(makeUser("narrator")))).toBe(false)
+    expect(writerOrEditor(makeArgs(null))).toBe(false)
+  })
+})
+
+describe("writerOrEditorFieldLevel access helper", () => {
+  const makeFieldArgs = (user: User | null) =>
+    ({ req: { user } }) as unknown as Parameters<FieldAccess>[0]
+
+  it("allows admin, chief-editor, editor, and writer", () => {
+    expect(writerOrEditorFieldLevel(makeFieldArgs(makeUser("admin")))).toBe(true)
+    expect(writerOrEditorFieldLevel(makeFieldArgs(makeUser("chief-editor")))).toBe(true)
+    expect(writerOrEditorFieldLevel(makeFieldArgs(makeUser("editor")))).toBe(true)
+    expect(writerOrEditorFieldLevel(makeFieldArgs(makeUser("writer")))).toBe(true)
+  })
+
+  it("denies other roles", () => {
+    expect(writerOrEditorFieldLevel(makeFieldArgs(makeUser("narrator")))).toBe(false)
+    expect(writerOrEditorFieldLevel(makeFieldArgs(null))).toBe(false)
+  })
+})
+
+describe("staff access helper", () => {
+  it("returns true for staff/admin users", () => {
+    expect(staff(makeArgs(makeUser("admin")))).toBe(true)
+    expect(staff(makeArgs(makeUser("editor")))).toBe(true)
+    expect(staff(makeArgs(makeUser("writer")))).toBe(true)
+    expect(staff(makeArgs(makeUser("narrator")))).toBe(true)
+  })
+
+  it("returns false for non-staff users", () => {
+    expect(staff(makeArgs(makeUser("member")))).toBe(false)
+    expect(staff(makeArgs(null))).toBe(false)
   })
 })

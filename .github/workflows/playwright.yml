@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-latest
 
     permissions:
-      contents: read
+      contents: write
       pull-requests: write
 
     env:
@@ -57,21 +57,42 @@ jobs:
           PR_NUMBER: ${{ github.event.pull_request.number }}
           OWNER: ${{ github.repository_owner }}
           REPO: ${{ github.event.repository.name }}
+          PR_SHA: ${{ github.event.pull_request.head.sha }}
+          ASSETS_BRANCH: pr-screenshots
         run: |
           if [ ! -d screenshots ] || [ -z "$(ls screenshots/*.png 2>/dev/null)" ]; then
             echo "No screenshots found — skipping."
             exit 0
           fi
 
+          # Stage screenshots in a worktree on an orphan assets branch
+          # under <pr-number>/<sha>/, then push.
+          asset_dir="$PR_NUMBER/$PR_SHA"
+          mkdir -p /tmp/screenshots-stage
+          cp screenshots/*.png /tmp/screenshots-stage/
+
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          if git ls-remote --exit-code origin "$ASSETS_BRANCH" >/dev/null 2>&1; then
+            git fetch origin "$ASSETS_BRANCH":"$ASSETS_BRANCH"
+            git worktree add /tmp/assets "$ASSETS_BRANCH"
+          else
+            git worktree add --detach /tmp/assets
+            git -C /tmp/assets checkout --orphan "$ASSETS_BRANCH"
+            git -C /tmp/assets rm -rf . >/dev/null 2>&1 || true
+          fi
+
+          mkdir -p "/tmp/assets/$asset_dir"
+          cp /tmp/screenshots-stage/*.png "/tmp/assets/$asset_dir/"
+          git -C /tmp/assets add "$asset_dir"
+          git -C /tmp/assets commit -m "screenshots: PR #$PR_NUMBER @ $PR_SHA"
+          git -C /tmp/assets push origin "$ASSETS_BRANCH"
+
           images=""
-          for f in screenshots/*.png; do
+          for f in /tmp/screenshots-stage/*.png; do
             name=$(basename "$f" .png)
-            url=$(gh api --method POST \
-              -H "Content-Type: image/png" \
-              -H "Accept: application/vnd.github+json" \
-              "https://uploads.github.com/repos/$OWNER/$REPO/issues/$PR_NUMBER/assets?name=$name.png" \
-              --input "$f" \
-              --jq '.url')
+            url="https://raw.githubusercontent.com/$OWNER/$REPO/$ASSETS_BRANCH/$asset_dir/$name.png"
             images="$images\n**$name**\n![$name]($url)\n"
           done
 

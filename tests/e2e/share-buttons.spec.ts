@@ -1,27 +1,6 @@
-import { expect, test, type Page } from "@playwright/test"
+import { expect, test } from "@playwright/test"
 
-// Helpers to navigate to the first real article / volume without hardcoding slugs.
-// Routes via the homepage (no dedicated listing page exists for /articles or /volumes).
-// The CSS attribute selector ensures we only follow article/volume links — not generic
-// navigation or 404-page "Go home" links that would lead somewhere without a Share button.
-// The 5 s timeout lets tests skip immediately when the CI database is empty.
-async function gotoFirstArticle(page: Page) {
-  await page.goto("/")
-  const link = page.locator('a[href*="/articles/"]').first()
-  const href = await link.getAttribute("href", { timeout: 5000 }).catch(() => null)
-  if (!href) return null
-  await page.goto(href)
-  return href
-}
-
-async function gotoFirstVolume(page: Page) {
-  await page.goto("/")
-  const link = page.locator('a[href*="/volumes/"]').first()
-  const href = await link.getAttribute("href", { timeout: 5000 }).catch(() => null)
-  if (!href) return null
-  await page.goto(href)
-  return href
-}
+import { gotoFirstArticle, gotoFirstVolume, viewportRatioClip } from "./helpers"
 
 test.describe("ShareButtons — article page", () => {
   test("share button is visible", async ({ page }) => {
@@ -154,15 +133,9 @@ test.describe("ShareButtons — screenshots", () => {
     const popoverBox = await popover.boundingBox()
     if (!buttonBox || !popoverBox) throw new Error("Could not get bounding boxes")
 
-    const padding = 16
-    const x = Math.max(0, Math.min(buttonBox.x, popoverBox.x) - padding)
-    const y = Math.max(0, Math.min(buttonBox.y, popoverBox.y) - padding)
-    const right = Math.max(buttonBox.x + buttonBox.width, popoverBox.x + popoverBox.width) + padding
-    const bottom =
-      Math.max(buttonBox.y + buttonBox.height, popoverBox.y + popoverBox.height) + padding
-
+    const viewport = page.viewportSize() ?? { width: 1280, height: 720 }
     await expect(page).toHaveScreenshot("article-share-popover-close-up.png", {
-      clip: { x, y, width: right - x, height: bottom - y },
+      clip: viewportRatioClip(buttonBox, popoverBox, viewport),
     })
   })
 

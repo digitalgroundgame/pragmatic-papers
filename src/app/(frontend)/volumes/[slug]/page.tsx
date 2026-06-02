@@ -5,12 +5,10 @@ import { HoverPrefetchLink } from "@/components/Link/HoverPrefetchLink"
 import { LivePreviewListener } from "@/components/LivePreviewListener"
 import { PayloadRedirects } from "@/components/PayloadRedirects"
 import RichText from "@/components/RichText"
-import { ShareButtons } from "@/components/ShareButtons"
 import { Separator } from "@/components/ui/separator"
 import type { Article } from "@/payload-types"
 import { formatDateTime } from "@/utilities/formatDateTime"
 import { generateMeta } from "@/utilities/generateMeta"
-import { getServerSideURL } from "@/utilities/getURL"
 import { queryVolumeBySlug } from "@/utilities/queries"
 import { buildBreadcrumbJsonLd, buildVolumeJsonLd } from "@/utilities/structuredData"
 import { toRoman } from "@/utilities/toRoman"
@@ -105,7 +103,6 @@ export default async function VolumePage({
             <time dateTime={publishedAt}>{formatDateTime(publishedAt)}</time>
           </HoverPrefetchLink>
         )}
-        <ShareButtons url={`${getServerSideURL()}${url}`} title={volumeTitle} className="ml-auto" />
       </div>
       {editorsNote && <RichText className="drop-cap" enableGutter={false} data={editorsNote} />}
       <Separator className="my-6" />

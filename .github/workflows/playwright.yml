@@ -53,7 +53,7 @@ jobs:
         run: pnpm test:e2e -- --update-snapshots=missing
 
       - name: Commit new snapshot baselines
-        if: ${{ !inputs.update_snapshots }}
+        if: ${{ !cancelled() && !inputs.update_snapshots }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -64,8 +64,8 @@ jobs:
             echo "No new snapshots to commit."
             exit 0
           fi
-          git commit -m "test: add missing e2e snapshot baselines [skip ci]"
-          git push origin "HEAD:${GITHUB_REF_NAME}"
+          git commit -m "test: add missing e2e snapshot baselines"
+          git push origin "HEAD:${GITHUB_HEAD_REF:-$GITHUB_REF_NAME}"
 
       - name: Regenerate visual snapshots
         if: ${{ inputs.update_snapshots }}
@@ -84,7 +84,7 @@ jobs:
             exit 0
           fi
           git commit -m "test: update e2e visual snapshots"
-          git push origin "HEAD:${GITHUB_REF_NAME}"
+          git push origin "HEAD:${GITHUB_HEAD_REF:-$GITHUB_REF_NAME}"
 
       - uses: actions/upload-artifact@v7
         if: ${{ !cancelled() }}

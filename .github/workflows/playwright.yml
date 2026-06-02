@@ -174,16 +174,10 @@ jobs:
           git -C /tmp/assets commit -m "screenshots: PR #$PR_NUMBER @ $PR_SHA"
           git -C /tmp/assets push "$remote" "$ASSETS_BRANCH"
 
-          images=""
-          for src in "${changed[@]}"; do
-            name=$(basename "$src" .png)
-            url="https://raw.githubusercontent.com/$OWNER/$REPO/$ASSETS_BRANCH/$asset_dir/$name.png"
-            images="$images\n**$name**\n![$name]($url)\n"
-          done
-
-          body="<!-- screenshots:$fingerprint -->
-          ## Snapshot updates in this PR
-          $(printf '%b' "$images")"
+          body=$(printf '%s\n' "${changed[@]}" \
+            | FINGERPRINT="$fingerprint" \
+              ASSET_BASE_URL="https://raw.githubusercontent.com/$OWNER/$REPO/$ASSETS_BRANCH/$asset_dir" \
+              pnpm exec tsx scripts/render-snapshot-comment.ts)
 
           if [ -n "$comment_id" ]; then
             gh api --method PATCH "repos/$OWNER/$REPO/issues/comments/$comment_id" \

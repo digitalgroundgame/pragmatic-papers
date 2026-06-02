@@ -47,6 +47,10 @@ describe("isAdmin", () => {
   it("returns false when user is undefined", () => {
     expect(isAdmin(undefined)).toBe(false)
   })
+
+  it("returns false when user is null", () => {
+    expect(isAdmin(null)).toBe(false)
+  })
 })
 
 describe("hasRole", () => {
@@ -77,6 +81,11 @@ describe("hasRole", () => {
     expect(hasRole(multiUser, "narrator")).toBe(true)
     expect(hasRole(multiUser, "editor")).toBe(false)
   })
+
+  it("returns false when user is null or undefined", () => {
+    expect(hasRole(null, "writer")).toBe(false)
+    expect(hasRole(undefined, "writer")).toBe(false)
+  })
 })
 
 describe("hasRoleOrAdmin", () => {
@@ -94,6 +103,11 @@ describe("hasRoleOrAdmin", () => {
   it("returns false when non-admin user does not have the specific role", () => {
     expect(hasRoleOrAdmin(makeUser("editor"), "writer")).toBe(false)
     expect(hasRoleOrAdmin(makeUser("writer"), "editor")).toBe(false)
+  })
+
+  it("returns false when user is null or undefined", () => {
+    expect(hasRoleOrAdmin(null, "writer")).toBe(false)
+    expect(hasRoleOrAdmin(undefined, "writer")).toBe(false)
   })
 })
 

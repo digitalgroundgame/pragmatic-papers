@@ -97,7 +97,7 @@ export default async function VolumePage({
       {publishedAt && (
         <HoverPrefetchLink
           href={`/volumes/${volume.slug}`}
-          className="dark:text-brand-high-contrast text-brand font-serif font-semibold underline-offset-4 hover:underline"
+          className="dark:text-brand-high-contrast text-brand block font-serif font-semibold underline-offset-4 hover:underline"
         >
           <time dateTime={publishedAt}>{formatDateTime(publishedAt)}</time>
         </HoverPrefetchLink>

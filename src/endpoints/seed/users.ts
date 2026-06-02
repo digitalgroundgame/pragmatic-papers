@@ -13,9 +13,14 @@ export interface SeededUsers {
 type UserData = RequiredDataFromCollection<User> &
   Omit<Partial<User>, keyof RequiredDataFromCollection<User>>
 
-export async function createUser(payload: Payload, data: UserData, label: string): Promise<User> {
+export async function createUser(
+  payload: Payload,
+  data: UserData,
+  label: string,
+  context?: Record<string, unknown>,
+): Promise<User> {
   try {
-    return await payload.create({ collection: "users", data })
+    return await payload.create({ collection: "users", data, context })
   } catch (err) {
     payload.logger.warn(
       `Failed to create ${label} with full data, retrying with minimal fields. Error: ${err instanceof Error ? err.message : String(err)}`,
@@ -24,6 +29,7 @@ export async function createUser(payload: Payload, data: UserData, label: string
     return await payload.create({
       collection: "users",
       data: { email, password, name, role, slug },
+      context,
     })
   }
 }

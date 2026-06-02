@@ -1,6 +1,8 @@
-import { describe, expect, it } from "vitest"
+import { Readable } from "node:stream"
 
-import { buildCommentBody } from "../../scripts/snapshot-comment"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
+
+import { buildCommentBody, main, readStdin } from "../../scripts/snapshot-comment"
 
 const BASE = "https://raw.githubusercontent.com/org/repo/pr-screenshots/1/abc"
 
@@ -81,5 +83,61 @@ describe("buildCommentBody", () => {
     })
     expect(body).toContain(`src="${BASE}/my-component.png"`)
     expect(body).toContain(`alt="my-component"`)
+  })
+})
+
+describe("readStdin", () => {
+  it("reads all chunks from a stream and returns them as a string", async () => {
+    const stream = Readable.from([Buffer.from("hello\n"), Buffer.from("world")])
+    const result = await readStdin(stream)
+    expect(result).toBe("hello\nworld")
+  })
+})
+
+describe("main", () => {
+  let write: ReturnType<typeof vi.spyOn>
+
+  beforeEach(() => {
+    write = vi.spyOn(process.stdout, "write").mockImplementation(() => true)
+  })
+
+  afterEach(() => {
+    write.mockRestore()
+    delete process.env.FINGERPRINT
+    delete process.env.ASSET_BASE_URL
+  })
+
+  it("writes a comment body using FINGERPRINT and ASSET_BASE_URL env vars", async () => {
+    process.env.FINGERPRINT = "cafe1234"
+    process.env.ASSET_BASE_URL = BASE
+    const readInput = vi.fn().mockResolvedValue("a.png\nb.png\n")
+
+    await main(readInput)
+
+    const output = write.mock.calls[0][0] as string
+    expect(output).toContain("<!-- screenshots:cafe1234 -->")
+    expect(output).toContain(`src="${BASE}/a.png"`)
+    expect(output).toContain(`src="${BASE}/b.png"`)
+  })
+
+  it("falls back to empty fingerprint and baseUrl when env vars are absent", async () => {
+    const readInput = vi.fn().mockResolvedValue("img.png\n")
+
+    await main(readInput)
+
+    const output = write.mock.calls[0][0] as string
+    expect(output).toContain("<!-- screenshots: -->")
+    expect(output).toContain(`src="/img.png"`)
+  })
+
+  it("ignores blank lines in stdin", async () => {
+    process.env.FINGERPRINT = "abc"
+    process.env.ASSET_BASE_URL = BASE
+    const readInput = vi.fn().mockResolvedValue("a.png\n\n  \nb.png\n")
+
+    await main(readInput)
+
+    const output = write.mock.calls[0][0] as string
+    expect(output.match(/<img/g)).toHaveLength(2)
   })
 })

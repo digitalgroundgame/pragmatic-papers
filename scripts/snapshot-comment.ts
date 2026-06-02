@@ -7,9 +7,9 @@ import { basename } from "node:path"
 
 const COLUMNS = 2
 
-export async function readStdin(): Promise<string> {
+export async function readStdin(stream: NodeJS.ReadableStream = process.stdin): Promise<string> {
   const chunks: Buffer[] = []
-  for await (const c of process.stdin) chunks.push(c as Buffer)
+  for await (const c of stream) chunks.push(c as Buffer)
   return Buffer.concat(chunks).toString("utf8")
 }
 
@@ -41,13 +41,18 @@ export function buildCommentBody(opts: {
   )
 }
 
-// CLI entry point — only runs when executed directly, not when imported.
-if (process.argv[1] === import.meta.filename) {
+export async function main(readInput: () => Promise<string> = readStdin): Promise<void> {
   const fingerprint = process.env.FINGERPRINT ?? ""
   const baseUrl = process.env.ASSET_BASE_URL ?? ""
-  const paths = (await readStdin())
+  const paths = (await readInput())
     .split("\n")
     .map((l) => l.trim())
     .filter(Boolean)
   process.stdout.write(buildCommentBody({ fingerprint, baseUrl, paths }))
+}
+
+// CLI entry point — only runs when executed directly, not when imported.
+/* v8 ignore next 3 */
+if (process.argv[1] === import.meta.filename) {
+  await main()
 }

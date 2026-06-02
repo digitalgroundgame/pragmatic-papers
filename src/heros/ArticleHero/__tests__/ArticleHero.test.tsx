@@ -69,8 +69,42 @@ describe("ArticleHero", () => {
     expect(aliceLink.href).toContain("/authors/alice")
   })
 
+  it("renders Media when heroImage is present", () => {
+    const article: Article = {
+      ...baseArticle,
+      heroImage: {
+        id: 10,
+        filename: "hero.jpg",
+        updatedAt: "2024-01-01T00:00:00.000Z",
+        createdAt: "2024-01-01T00:00:00.000Z",
+      },
+    }
+    render(<ArticleHero article={article} />)
+    expect(screen.getByTestId("media")).toBeTruthy()
+  })
+
   it("does not render NarrationPlayer when narration is absent", () => {
     render(<ArticleHero article={baseArticle} />)
+    expect(screen.queryByTestId("narration-player")).toBeNull()
+  })
+
+  it("renders NarrationPlayer when narration is a media object", () => {
+    const article: Article = {
+      ...baseArticle,
+      narration: {
+        id: 20,
+        filename: "narration.mp3",
+        updatedAt: "2024-01-01T00:00:00.000Z",
+        createdAt: "2024-01-01T00:00:00.000Z",
+      },
+    }
+    render(<ArticleHero article={article} />)
+    expect(screen.getByTestId("narration-player")).toBeTruthy()
+  })
+
+  it("does not render NarrationPlayer when narration is a number (unresolved relation)", () => {
+    const article: Article = { ...baseArticle, narration: 20 }
+    render(<ArticleHero article={article} />)
     expect(screen.queryByTestId("narration-player")).toBeNull()
   })
 

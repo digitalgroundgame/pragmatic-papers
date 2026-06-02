@@ -50,6 +50,43 @@ jobs:
           path: playwright-report/
           retention-days: 30
 
+      - name: Publish screenshot baseline (main)
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          OWNER: ${{ github.repository_owner }}
+          REPO: ${{ github.event.repository.name }}
+          ASSETS_BRANCH: pr-screenshots
+        run: |
+          if [ ! -d screenshots ] || [ -z "$(ls screenshots/*.png 2>/dev/null)" ]; then
+            echo "No screenshots found — skipping baseline update."
+            exit 0
+          fi
+
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          remote="https://x-access-token:${GH_TOKEN}@github.com/$OWNER/$REPO.git"
+
+          if git ls-remote --exit-code "$remote" "refs/heads/$ASSETS_BRANCH" >/dev/null 2>&1; then
+            git clone --depth=1 --branch "$ASSETS_BRANCH" "$remote" /tmp/assets
+          else
+            git clone --depth=1 "$remote" /tmp/assets
+            git -C /tmp/assets checkout --orphan "$ASSETS_BRANCH"
+            git -C /tmp/assets rm -rf . >/dev/null 2>&1 || true
+          fi
+
+          rm -rf /tmp/assets/main
+          mkdir -p /tmp/assets/main
+          cp screenshots/*.png /tmp/assets/main/
+          git -C /tmp/assets add main
+          if git -C /tmp/assets diff --cached --quiet; then
+            echo "Baseline unchanged."
+            exit 0
+          fi
+          git -C /tmp/assets commit -m "screenshots: baseline @ ${GITHUB_SHA}"
+          git -C /tmp/assets push "$remote" "$ASSETS_BRANCH"
+
       - name: Upload screenshots to PR comment
         if: github.event_name == 'pull_request'
         env:
@@ -80,14 +117,36 @@ jobs:
             git -C /tmp/assets rm -rf . >/dev/null 2>&1 || true
           fi
 
+          # Filter to only new or changed screenshots vs the main baseline
+          mkdir -p /tmp/changed
+          for f in screenshots/*.png; do
+            name=$(basename "$f")
+            baseline="/tmp/assets/main/$name"
+            if [ ! -f "$baseline" ] || ! cmp -s "$f" "$baseline"; then
+              cp "$f" "/tmp/changed/$name"
+            fi
+          done
+
+          if [ -z "$(ls /tmp/changed/*.png 2>/dev/null)" ]; then
+            echo "No new or changed screenshots — skipping comment."
+            # Remove a stale screenshots comment if one exists
+            comment_id=$(gh api "repos/$OWNER/$REPO/issues/$PR_NUMBER/comments" \
+              --jq '[.[] | select(.body | startswith("<!-- screenshots -->"))] | first | .id // empty')
+            if [ -n "$comment_id" ]; then
+              gh api --method DELETE "repos/$OWNER/$REPO/issues/comments/$comment_id"
+              echo "Removed stale screenshots comment."
+            fi
+            exit 0
+          fi
+
           mkdir -p "/tmp/assets/$asset_dir"
-          cp screenshots/*.png "/tmp/assets/$asset_dir/"
+          cp /tmp/changed/*.png "/tmp/assets/$asset_dir/"
           git -C /tmp/assets add "$asset_dir"
           git -C /tmp/assets commit -m "screenshots: PR #$PR_NUMBER @ $PR_SHA"
           git -C /tmp/assets push "$remote" "$ASSETS_BRANCH"
 
           images=""
-          for f in screenshots/*.png; do
+          for f in /tmp/changed/*.png; do
             name=$(basename "$f" .png)
             url="https://raw.githubusercontent.com/$OWNER/$REPO/$ASSETS_BRANCH/$asset_dir/$name.png"
             images="$images\n**$name**\n![$name]($url)\n"

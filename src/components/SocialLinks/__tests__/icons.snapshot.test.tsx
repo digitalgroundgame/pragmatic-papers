@@ -1,7 +1,15 @@
 import { cleanup, render } from "@testing-library/react"
 import { afterEach, describe, expect, it } from "vitest"
 
-import { GithubIcon, InstagramIcon, SubstackIcon, TiktokIcon, YoutubeIcon } from "../icons"
+import {
+  FacebookIcon,
+  GithubIcon,
+  InstagramIcon,
+  SubstackIcon,
+  ThreadsIcon,
+  TiktokIcon,
+  YoutubeIcon,
+} from "../icons"
 
 afterEach(cleanup)
 
@@ -28,6 +36,16 @@ describe("SocialLinks icons", () => {
 
   it("renders GithubIcon", () => {
     const { container } = render(<GithubIcon />)
+    expect(container.firstChild).toMatchSnapshot()
+  })
+
+  it("renders FacebookIcon", () => {
+    const { container } = render(<FacebookIcon />)
+    expect(container.firstChild).toMatchSnapshot()
+  })
+
+  it("renders ThreadsIcon", () => {
+    const { container } = render(<ThreadsIcon />)
     expect(container.firstChild).toMatchSnapshot()
   })
 })

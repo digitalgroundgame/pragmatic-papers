@@ -78,4 +78,10 @@ async function main() {
   }
 }
 
-await main()
+try {
+  await main()
+  process.exit(0)
+} catch (err) {
+  console.error(err)
+  process.exit(1)
+}

@@ -1,7 +1,7 @@
 import { PostgreSqlContainer } from "@testcontainers/postgresql"
 import { execSync, spawn } from "node:child_process"
 import net from "node:net"
-import { blue, green, red, yellow } from "./ansi.mjs"
+import { blue, green, red } from "./ansi.mjs"
 
 function isPortInUse(port) {
   return new Promise((resolve) => {
@@ -32,18 +32,20 @@ process.env.E2E_MANAGED_SERVER = "true"
 
 console.warn(`${green("✔")} Test database started at ${uri}`)
 
+const port = Number(process.env.PORT)
+if (await isPortInUse(port)) {
+  console.error(
+    `${red("✖")} Port ${port} is already in use. ` +
+      `Stop the process bound to it (e.g. \`lsof -ti:${port} | xargs kill\`) before running E2E tests.`,
+  )
+  await container.stop()
+  process.exit(1)
+}
+
 let server = null
 try {
-  const port = Number(process.env.PORT)
-  if (await isPortInUse(port)) {
-    console.warn(
-      `${yellow("⚠")} Port ${port} is already in use — reusing existing server. ` +
-        `Tests will fail unless it's connected to the test container at ${uri}.`,
-    )
-  } else {
-    console.warn(`${blue("●")} Starting Next.js dev server...`)
-    server = spawn("pnpm", ["dev:next"], { env: process.env, stdio: "inherit" })
-  }
+  console.warn(`${blue("●")} Starting Next.js dev server...`)
+  server = spawn("pnpm", ["dev:next"], { env: process.env, stdio: "inherit" })
 
   console.warn(`${blue("●")} Running database migrations...`)
   execSync("pnpm payload migrate", {

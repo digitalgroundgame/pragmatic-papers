@@ -18,20 +18,33 @@ export async function gotoFirstVolume(page: Page): Promise<string | null> {
   return href
 }
 
-interface Box { x: number; y: number; width: number; height: number }
+interface Box {
+  x: number
+  y: number
+  width: number
+  height: number
+}
 
-// Returns a clip region that tightly frames two bounding boxes (plus padding)
-// then expands to the viewport's aspect ratio, centered on the content.
+export function mergeBoundingBoxes(...boxes: Box[]): Box {
+  const x = Math.min(...boxes.map((b) => b.x))
+  const y = Math.min(...boxes.map((b) => b.y))
+  const right = Math.max(...boxes.map((b) => b.x + b.width))
+  const bottom = Math.max(...boxes.map((b) => b.y + b.height))
+  return { x, y, width: right - x, height: bottom - y }
+}
+
+// Returns a clip region expanded from one or more bounding boxes (plus padding)
+// to the viewport's aspect ratio, centered on the content.
 export function viewportRatioClip(
-  a: Box,
-  b: Box,
+  boxes: Box | Box[],
   viewport: { width: number; height: number },
   padding = 16,
 ): Box {
-  const x0 = Math.round(Math.max(0, Math.min(a.x, b.x) - padding))
-  const y0 = Math.round(Math.max(0, Math.min(a.y, b.y) - padding))
-  const x1 = Math.round(Math.max(a.x + a.width, b.x + b.width) + padding)
-  const y1 = Math.round(Math.max(a.y + a.height, b.y + b.height) + padding)
+  const box = Array.isArray(boxes) ? mergeBoundingBoxes(...boxes) : boxes
+  const x0 = Math.round(Math.max(0, box.x - padding))
+  const y0 = Math.round(Math.max(0, box.y - padding))
+  const x1 = Math.round(box.x + box.width + padding)
+  const y1 = Math.round(box.y + box.height + padding)
   const ratio = viewport.width / viewport.height
   let w = x1 - x0
   let h = y1 - y0

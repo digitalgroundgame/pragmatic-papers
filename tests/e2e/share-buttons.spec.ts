@@ -135,7 +135,7 @@ test.describe("ShareButtons — screenshots", () => {
 
     const viewport = page.viewportSize() ?? { width: 1280, height: 720 }
     await expect(page).toHaveScreenshot("article-share-popover-close-up.png", {
-      clip: viewportRatioClip(buttonBox, popoverBox, viewport),
+      clip: viewportRatioClip([buttonBox, popoverBox], viewport),
     })
   })
 

@@ -177,7 +177,7 @@ jobs:
           body=$(printf '%s\n' "${changed[@]}" \
             | FINGERPRINT="$fingerprint" \
               ASSET_BASE_URL="https://raw.githubusercontent.com/$OWNER/$REPO/$ASSETS_BRANCH/$asset_dir" \
-              pnpm exec tsx scripts/render-snapshot-comment.ts)
+              pnpm exec tsx scripts/snapshot-comment.ts)
 
           if [ -n "$comment_id" ]; then
             gh api --method PATCH "repos/$OWNER/$REPO/issues/comments/$comment_id" \

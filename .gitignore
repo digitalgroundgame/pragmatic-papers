@@ -90,3 +90,6 @@ devenv.local.yaml
 
 # pre-commit
 .pre-commit-config.yaml
+
+# Sentry Config File
+.env.sentry-build-plugin

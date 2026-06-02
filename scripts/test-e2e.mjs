@@ -32,8 +32,8 @@ try {
 
   console.warn(`${blue("●")} Starting Playwright tests...`)
   const child = spawn(
-    "pnpm",
-    ["exec", "playwright", "test", "--config=playwright.config.ts", ...process.argv.slice(2)],
+    "./node_modules/.bin/playwright",
+    ["test", "--config=playwright.config.ts", ...process.argv.slice(2)],
     { env: process.env, stdio: "inherit" },
   )
 

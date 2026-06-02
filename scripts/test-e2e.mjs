@@ -45,7 +45,11 @@ if (await isPortInUse(port)) {
 let server = null
 try {
   console.warn(`${blue("●")} Starting Next.js dev server...`)
-  server = spawn("pnpm", ["dev:next"], { env: process.env, stdio: "inherit" })
+  server = spawn(
+    "./node_modules/.bin/next",
+    ["dev", "-p", String(process.env.PORT), "--turbopack"],
+    { env: { ...process.env, NODE_OPTIONS: "--no-deprecation" }, stdio: "inherit" },
+  )
 
   console.warn(`${blue("●")} Running database migrations...`)
   execSync("pnpm payload migrate", {
@@ -72,7 +76,10 @@ try {
   console.error(`${red("✖")} Error during E2E test setup: ${error.message}`)
   process.exitCode = 1
 } finally {
-  server?.kill()
+  if (server) {
+    server.kill("SIGTERM")
+    await new Promise((resolve) => server.once("exit", resolve))
+  }
   console.warn(`${blue("●")} Stopping Postgres container...`)
   await container.stop()
 }

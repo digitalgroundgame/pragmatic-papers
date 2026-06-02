@@ -7,35 +7,47 @@ import { basename } from "node:path"
 
 const COLUMNS = 2
 
-async function readStdin(): Promise<string> {
+export async function readStdin(): Promise<string> {
   const chunks: Buffer[] = []
   for await (const c of process.stdin) chunks.push(c as Buffer)
   return Buffer.concat(chunks).toString("utf8")
 }
 
-const fingerprint = process.env.FINGERPRINT ?? ""
-const baseUrl = (process.env.ASSET_BASE_URL ?? "").replace(/\/$/, "")
+export function buildCommentBody(opts: {
+  fingerprint: string
+  baseUrl: string
+  paths: string[]
+}): string {
+  const { fingerprint, paths } = opts
+  const baseUrl = opts.baseUrl.replace(/\/$/, "")
 
-const changed = (await readStdin())
-  .split("\n")
-  .map((l) => l.trim())
-  .filter(Boolean)
+  const cells = paths.map((src) => {
+    const name = basename(src, ".png")
+    const url = `${baseUrl}/${name}.png`
+    return `<td width="50%" valign="top"><img src="${url}" alt="${name}" width="100%"/></td>`
+  })
 
-const cells = changed.map((src) => {
-  const name = basename(src, ".png")
-  const url = `${baseUrl}/${name}.png`
-  return `<td width="50%" valign="top"><img src="${url}" alt="${name}" width="100%"/></td>`
-})
+  const rows: string[] = []
+  for (let i = 0; i < cells.length; i += COLUMNS) {
+    const row = cells.slice(i, i + COLUMNS)
+    while (row.length < COLUMNS) row.push("<td></td>")
+    rows.push(`<tr>${row.join("")}</tr>`)
+  }
 
-const rows: string[] = []
-for (let i = 0; i < cells.length; i += COLUMNS) {
-  const row = cells.slice(i, i + COLUMNS)
-  while (row.length < COLUMNS) row.push("<td></td>")
-  rows.push(`<tr>${row.join("")}</tr>`)
+  return (
+    `<!-- screenshots:${fingerprint} -->\n` +
+    `## Snapshot updates in this PR\n` +
+    `<table>${rows.join("")}</table>\n`
+  )
 }
 
-process.stdout.write(
-  `<!-- screenshots:${fingerprint} -->\n` +
-    `## Snapshot updates in this PR\n` +
-    `<table>${rows.join("")}</table>\n`,
-)
+// CLI entry point — only runs when executed directly, not when imported.
+if (process.argv[1] === import.meta.filename) {
+  const fingerprint = process.env.FINGERPRINT ?? ""
+  const baseUrl = process.env.ASSET_BASE_URL ?? ""
+  const paths = (await readStdin())
+    .split("\n")
+    .map((l) => l.trim())
+    .filter(Boolean)
+  process.stdout.write(buildCommentBody({ fingerprint, baseUrl, paths }))
+}

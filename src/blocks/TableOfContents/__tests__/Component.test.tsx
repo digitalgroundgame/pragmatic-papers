@@ -44,7 +44,7 @@ describe("TableOfContents component", () => {
     const { container } = render(
       <TableOfContents content={makeContent([heading("h2", "Only")])} title="" />,
     )
-    expect(container.querySelector("h2")).toBeNull()
+    expect(container.querySelector("h3")).toBeNull()
   })
 
   it("renders a custom title", () => {

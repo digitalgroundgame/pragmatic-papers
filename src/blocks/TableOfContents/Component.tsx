@@ -27,7 +27,7 @@ export function TableOfContents({
 
   return (
     <nav aria-label="Table of contents" className={cn("toc not-prose", className)}>
-      {title ? <h2 className="toc__title text-lg font-semibold">{title}</h2> : null}
+      {title ? <h3 className="toc__title text-lg font-semibold">{title}</h3> : null}
       <ol className="toc__list mt-2 list-none space-y-1 p-0">
         {entries.map((entry, index) => {
           const depth = entry.depth ?? 1

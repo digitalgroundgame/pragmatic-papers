@@ -13,6 +13,7 @@ import { MathJaxProvider } from "@/providers/MathJaxProvider"
 import { generateMeta } from "@/utilities/generateMeta"
 import { queryArticleBySlug } from "@/utilities/queries"
 import { buildArticleJsonLd, buildBreadcrumbJsonLd } from "@/utilities/structuredData"
+import { cn } from "@/utilities/utils"
 import configPromise from "@payload-config"
 import type { Metadata } from "next"
 import { draftMode } from "next/headers"
@@ -68,34 +69,47 @@ export default async function Article({ params: paramsPromise }: Args): Promise<
 
   return (
     <>
-      <article className="mx-auto max-w-2xl space-y-6 px-4 md:px-1">
-        <JsonLd
-          data={[
-            buildArticleJsonLd(article, url),
-            buildBreadcrumbJsonLd([{ name: article.meta?.title || article.title, path: url }]),
-          ]}
-        />
-        {/* Allows redirects for valid pages too */}
-        <PayloadRedirects disableNotFound url={url} />
-
-        {draft && <LivePreviewListener />}
-
-        <ArticleHero article={article} />
-        {showTableOfContents && <toc.Component content={content} />}
-        <MathJaxProvider enableMathRendering={enableMathRendering}>
-          <RichText
-            data={content}
-            enableGutter={false}
-            className="drop-cap"
-            parentDoc={{ collection: "articles", id: article.id }}
-            injectHeadingAnchors={!!showTableOfContents}
+      <div
+        className={cn(
+          "mx-auto px-4",
+          showTableOfContents
+            ? "max-w-2xl lg:grid lg:max-w-5xl lg:grid-cols-[14rem_1fr] lg:items-start lg:gap-8"
+            : "max-w-2xl",
+        )}
+      >
+        {showTableOfContents && (
+          <aside className="sticky top-8 mb-8 lg:mb-0">
+            <toc.Component content={content} />
+          </aside>
+        )}
+        <article className="min-w-0 space-y-6">
+          <JsonLd
+            data={[
+              buildArticleJsonLd(article, url),
+              buildBreadcrumbJsonLd([{ name: article.meta?.title || article.title, path: url }]),
+            ]}
           />
-        </MathJaxProvider>
-        <FootnoteList footnotes={footnotes} />
-        <Separator />
-        <TopicsList topics={topics} />
-        <AuthorList aria-label="Article Authors" authors={populatedAuthors} />
-      </article>
+          {/* Allows redirects for valid pages too */}
+          <PayloadRedirects disableNotFound url={url} />
+
+          {draft && <LivePreviewListener />}
+
+          <ArticleHero article={article} />
+          <MathJaxProvider enableMathRendering={enableMathRendering}>
+            <RichText
+              data={content}
+              enableGutter={false}
+              className="drop-cap"
+              parentDoc={{ collection: "articles", id: article.id }}
+              injectHeadingAnchors={!!showTableOfContents}
+            />
+          </MathJaxProvider>
+          <FootnoteList footnotes={footnotes} />
+          <Separator />
+          <TopicsList topics={topics} />
+          <AuthorList aria-label="Article Authors" authors={populatedAuthors} />
+        </article>
+      </div>
       <RecommendedArticles currentArticleSlug={slug} />
     </>
   )

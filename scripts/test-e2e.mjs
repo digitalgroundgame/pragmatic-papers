@@ -1,5 +1,5 @@
 import { PostgreSqlContainer } from "@testcontainers/postgresql"
-import { spawn, execSync } from "node:child_process"
+import { execSync, spawn } from "node:child_process"
 import { blue, green, red } from "./ansi.mjs"
 
 console.warn(`${blue("●")} Starting Postgres container...`)

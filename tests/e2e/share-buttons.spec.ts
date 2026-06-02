@@ -124,11 +124,13 @@ test.describe("ShareButtons — article page", () => {
       test.skip(!href, "No articles found in the database")
 
       await page.getByRole("button", { name: "Share" }).click()
-      const [newPage] = await Promise.all([
-        context.waitForEvent("page"),
-        page.getByRole("dialog").getByRole("link", { name: label }).click(),
-      ])
-      expect(newPage.url()).toContain(fragment)
+      const link = page.getByRole("dialog").getByRole("link", { name: label })
+
+      // Check the share URL before clicking — third-party platforms may redirect
+      // unauthenticated users so newPage.url() after load would be a login page.
+      expect(await link.getAttribute("href")).toContain(fragment)
+
+      const [newPage] = await Promise.all([context.waitForEvent("page"), link.click()])
       await newPage.close()
     })
   }

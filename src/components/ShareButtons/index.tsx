@@ -65,7 +65,11 @@ export function ShareButtons({ url, title, className }: ShareButtonsProps): Reac
   ]
 
   async function handleCopy() {
-    await navigator.clipboard.writeText(url)
+    try {
+      await navigator.clipboard.writeText(url)
+    } catch {
+      // clipboard unavailable in some environments (headless, sandboxed iframes)
+    }
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
   }

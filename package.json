@@ -59,6 +59,7 @@
     "@payloadcms/richtext-lexical": "^3.84.1",
     "@payloadcms/storage-s3": "^3.84.1",
     "@payloadcms/ui": "^3.84.1",
+    "@sentry/nextjs": "^10.54.0",
     "@wrksz/themes": "^0.9.2",
     "better-react-mathjax": "^3.0.0",
     "class-variance-authority": "^0.7.1",

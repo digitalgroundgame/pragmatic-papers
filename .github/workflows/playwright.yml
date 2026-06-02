@@ -68,7 +68,7 @@ jobs:
             echo "No snapshot changes to commit."
             exit 0
           fi
-          git commit -m "test: update e2e visual snapshots"
+          git commit -m "test: update e2e visual snapshots [skip ci]"
           git push origin "HEAD:${GITHUB_REF_NAME}"
 
       - uses: actions/upload-artifact@v7

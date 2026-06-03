@@ -5,6 +5,7 @@ export interface TableOfContentsEntry {
   anchor: string
   depth?: number
   icon?: ComponentType<SVGProps<SVGSVGElement>>
+  children?: TableOfContentsEntry[]
 }
 
 export type TableOfContentsResolver<T = unknown> = (node: T) => TableOfContentsEntry | null

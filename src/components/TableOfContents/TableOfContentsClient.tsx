@@ -24,15 +24,15 @@ export function TableOfContentsClient({
   const [isOpen, setIsOpen] = useState(true)
 
   return (
-    <nav aria-label="Table of contents" className={cn("toc w-full space-y-2", className)}>
-      <div className="flex gap-1">
+    <nav aria-label="Table of contents" className={cn("toc space-y-2", className)}>
+      <div className={cn("toc__titleContainer flex gap-2", classNames?.titleContainer)}>
         <Button
           variant="outline"
           size="icon-sm"
           aria-label={isOpen ? "Collapse table of contents" : "Expand table of contents"}
           aria-expanded={isOpen}
           onClick={() => setIsOpen((v) => !v)}
-          className={cn("toc__toggle", classNames?.toggleButton)}
+          className={cn("toc__toggleButton", classNames?.toggleButton)}
         >
           <List aria-hidden="true" />
         </Button>

@@ -54,13 +54,14 @@ describe("TableOfContents component", () => {
     expect(getByText("On this page")).toBeTruthy()
   })
 
-  it("applies depth-based indentation", () => {
+  it("nests deeper headings inside shallower ones", () => {
     const { container } = render(
       <TableOfContents content={makeContent([heading("h2", "A"), heading("h4", "Deep")])} />,
     )
-    const items = container.querySelectorAll("li")
-    expect((items[0] as HTMLElement).style.paddingInlineStart).toBe("0rem")
-    expect((items[1] as HTMLElement).style.paddingInlineStart).toBe("2rem")
+    const rootUl = container.querySelector("ul")
+    const nestedUl = container.querySelector("li > ul")
+    expect(nestedUl).toBeTruthy()
+    expect(nestedUl).not.toBe(rootUl)
   })
 
   it("renders an icon when the resolver supplies one", () => {

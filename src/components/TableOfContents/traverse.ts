@@ -65,6 +65,29 @@ export function computeHeadingAnchors(
   return result
 }
 
+export function nestEntries(flat: TableOfContentsEntry[]): TableOfContentsEntry[] {
+  const root: TableOfContentsEntry[] = []
+  const stack: Array<{ entry: TableOfContentsEntry; depth: number }> = []
+
+  for (const orig of flat) {
+    const entry: TableOfContentsEntry = { ...orig }
+    const depth = entry.depth ?? 1
+    while (stack.length > 0 && stack[stack.length - 1]!.depth >= depth) {
+      stack.pop()
+    }
+    if (stack.length === 0) {
+      root.push(entry)
+    } else {
+      const parent = stack[stack.length - 1]!.entry
+      parent.children ??= []
+      parent.children.push(entry)
+    }
+    stack.push({ entry, depth })
+  }
+
+  return root
+}
+
 export function collectEntries(
   data: SerializedEditorState,
   callerResolvers: TableOfContentsResolverMap = {},

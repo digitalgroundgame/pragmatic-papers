@@ -1,8 +1,8 @@
-import { TableIcon } from "lucide-react"
 import type { SerializedLexicalNode } from "@payloadcms/richtext-lexical/lexical"
+import { TableIcon } from "lucide-react"
 
 import { extractText } from "./traverse"
-import type { TocResolverMap } from "./types"
+import type { TableOfContentsResolverMap } from "./types"
 
 type HeadingLike = SerializedLexicalNode & {
   tag?: string
@@ -18,7 +18,7 @@ const HEADING_DEPTH: Record<string, number> = { h1: 1, h2: 1, h3: 2, h4: 3, h5: 
 
 export function buildDefaultResolvers(
   headingAnchors: Map<SerializedLexicalNode, string>,
-): TocResolverMap {
+): TableOfContentsResolverMap {
   return {
     heading: (node) => {
       const heading = node as HeadingLike

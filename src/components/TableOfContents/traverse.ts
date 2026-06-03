@@ -5,7 +5,7 @@ import type {
 
 import { buildDefaultResolvers } from "./defaults"
 import { slugifyHeading } from "./slug"
-import type { SlugifyFn, TocEntry, TocResolverMap } from "./types"
+import type { SlugifyFn, TableOfContentsEntry, TableOfContentsResolverMap } from "./types"
 
 type WithChildren = SerializedLexicalNode & { children?: SerializedLexicalNode[] }
 type WithBlockFields = SerializedLexicalNode & { fields?: { blockType?: string } }
@@ -67,13 +67,13 @@ export function computeHeadingAnchors(
 
 export function collectEntries(
   data: SerializedEditorState,
-  callerResolvers: TocResolverMap = {},
+  callerResolvers: TableOfContentsResolverMap = {},
   slugify: SlugifyFn = slugifyHeading,
-): TocEntry[] {
+): TableOfContentsEntry[] {
   const anchors = computeHeadingAnchors(data, slugify)
   const defaults = buildDefaultResolvers(anchors)
-  const resolvers: TocResolverMap = { ...defaults, ...callerResolvers }
-  const entries: TocEntry[] = []
+  const resolvers: TableOfContentsResolverMap = { ...defaults, ...callerResolvers }
+  const entries: TableOfContentsEntry[] = []
   const walk = (nodes: SerializedLexicalNode[] | undefined): void => {
     if (!nodes) return
     for (const node of nodes) {

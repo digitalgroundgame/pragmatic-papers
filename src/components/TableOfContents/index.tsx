@@ -1,6 +1,6 @@
 import { TvIcon } from "lucide-react"
 
-import { createTableOfContents } from "@/blocks/TableOfContents"
+import { createTableOfContents } from "./create"
 import type { SocialEmbedBlock } from "@/payload-types"
 
 const PLATFORM_LABELS: Record<NonNullable<SocialEmbedBlock["platform"]>, string> = {

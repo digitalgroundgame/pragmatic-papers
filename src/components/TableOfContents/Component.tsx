@@ -5,17 +5,17 @@ import { cn } from "@/utilities/utils"
 
 import { slugifyHeading } from "./slug"
 import { collectEntries } from "./traverse"
-import type { SlugifyFn, TocResolverMap } from "./types"
+import type { SlugifyFn, TableOfContentsResolverMap } from "./types"
 
 interface BaseTableOfContentsProps {
   content: DefaultTypedEditorState
   className?: string
   title?: string
-  resolvers?: TocResolverMap
+  resolvers?: TableOfContentsResolverMap
   slugify?: SlugifyFn
 }
 
-export function BaseTableOfContents({
+export function TableOfContents({
   content,
   className,
   title = "Table of Contents",

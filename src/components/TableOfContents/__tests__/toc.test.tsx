@@ -2,7 +2,7 @@ import { render } from "@testing-library/react"
 import { describe, expect, it } from "vitest"
 
 import type { DefaultTypedEditorState } from "@payloadcms/richtext-lexical"
-import { TableOfContents } from "../toc"
+import { TableOfContents } from ".."
 
 function makeState(children: unknown[]): DefaultTypedEditorState {
   return {

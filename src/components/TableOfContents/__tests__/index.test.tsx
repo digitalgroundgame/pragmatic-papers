@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest"
 
 import type { DefaultTypedEditorState, SerializedHeadingNode } from "@payloadcms/richtext-lexical"
 import { tableOfContentsField } from "../field"
-import { createTableOfContents } from "../index"
+import { createTableOfContents } from "../create"
 
 type HeadingConverterFn = (args: {
   node: SerializedHeadingNode

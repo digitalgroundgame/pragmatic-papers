@@ -16,7 +16,7 @@ import {
 import type { ParentDocContext } from "@/blocks/SocialEmbed/types"
 import { SquiggleRuleBlock } from "@/blocks/SquiggleRule/Component"
 import { TimelineBlock } from "@/blocks/Timeline/Component"
-import { tableOfContentsConverter } from "@/lib/toc"
+import { tableOfContentsConverter } from "@/components/TableOfContents"
 import type {
   BannerBlock as BannerBlockProps,
   CodeBlock as CodeBlockProps,

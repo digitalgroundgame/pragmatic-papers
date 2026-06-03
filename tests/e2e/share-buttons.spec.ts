@@ -129,12 +129,22 @@ test.describe("ShareButtons — screenshots", () => {
     const popover = page.locator('[data-slot="popover-content"]')
     await expect(popover).toBeVisible()
 
-    const popoverBox = await popover.boundingBox()
-    if (!popoverBox) throw new Error("Could not get popover bounding box")
-
     const viewport = page.viewportSize() ?? { width: 1280, height: 720 }
+    const box = await popover.boundingBox()
+    if (!box) throw new Error("Could not get popover bounding box")
+
+    // scrollIntoViewIfNeeded leaves the trigger a few pixels higher or lower
+    // depending on hero-image render height, shifting the popover's viewport Y
+    // and causing the clip to capture different background content each run.
+    // Pin the popover to a fixed viewport Y before computing the clip.
+    const targetY = Math.round(viewport.height * 0.45)
+    await page.evaluate((delta) => window.scrollBy(0, delta), Math.round(box.y - targetY))
+    await expect(popover).toBeVisible()
+
+    const stableBox = await popover.boundingBox()
+    if (!stableBox) throw new Error("Could not get popover bounding box after scroll")
     await expect(page).toHaveScreenshot("article-share-popover-close-up.png", {
-      clip: viewportRatioClip(popoverBox, viewport, { gridSnap: 16 }),
+      clip: viewportRatioClip(stableBox, viewport, { gridSnap: 16 }),
     })
   })
 

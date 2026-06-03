@@ -7,7 +7,7 @@ import { slugifyHeading } from "./slug"
 import { collectEntries } from "./traverse"
 import type { SlugifyFn, TableOfContentsResolverMap } from "./types"
 
-interface BaseTableOfContentsProps {
+export interface TableOfContentsProps {
   content: DefaultTypedEditorState
   className?: string
   title?: string
@@ -21,7 +21,7 @@ export function TableOfContents({
   title = "Table of Contents",
   resolvers,
   slugify = slugifyHeading,
-}: BaseTableOfContentsProps): React.ReactNode {
+}: TableOfContentsProps): React.ReactNode {
   const entries = collectEntries(content, resolvers, slugify)
   if (entries.length === 0) return null
 

@@ -25,9 +25,9 @@ import { populateNarrator } from "@/collections/Articles/hooks/populateNarrator"
 import { populateTopics } from "@/collections/Articles/hooks/populateTopics"
 import { populateVolume } from "@/collections/Articles/hooks/populateVolume"
 import { revalidateArticle, revalidateDelete } from "@/collections/Articles/hooks/revalidateArticle"
+import { tableOfContentsField } from "@/components/TableOfContents"
 import { footnotesArrayField } from "@/fields/footnotes"
 import { menu } from "@/fields/menu"
-import { tableOfContentsField } from "@/components/TableOfContents"
 import { type Article } from "@/payload-types"
 import { generatePreviewPath } from "@/utilities/generatePreviewPath"
 
@@ -156,7 +156,7 @@ export const Articles: CollectionConfig = {
               required: true,
             },
             footnotesArrayField(),
-            tableOfContentsField,
+            tableOfContentsField(),
           ],
           label: "Content",
         },

@@ -43,7 +43,7 @@ function resolverPayloadFor(node: SerializedLexicalNode): unknown {
 }
 
 export function computeHeadingAnchors(
-  data: SerializedEditorState,
+  data?: SerializedEditorState,
   slugify: SlugifyFn = slugifyHeading,
 ): Map<SerializedLexicalNode, string> {
   const counts = new Map<string, number>()
@@ -61,7 +61,7 @@ export function computeHeadingAnchors(
       walk((node as WithChildren).children)
     }
   }
-  walk(data.root.children as SerializedLexicalNode[])
+  walk(data?.root.children as SerializedLexicalNode[])
   return result
 }
 

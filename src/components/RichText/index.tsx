@@ -73,7 +73,7 @@ function createJsxConverters(
   return ({ defaultConverters }) => ({
     ...defaultConverters,
     ...LinkJSXConverter({ internalDocToHref }),
-    ...(data ? tableOfContentsConverter(data) : {}),
+    ...tableOfContentsConverter(data),
     blocks: {
       banner: ({ node }) => <BannerBlock className="col-start-2 mb-4" {...node.fields} />,
       mediaBlock: ({ node }) => (

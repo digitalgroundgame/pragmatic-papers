@@ -7,10 +7,10 @@ export interface TableOfContentsEntry {
   icon?: ComponentType<SVGProps<SVGSVGElement>>
 }
 
-export type TocResolver<T = unknown> = (node: T) => TableOfContentsEntry | null
+export type TableOfContentsResolver<T = unknown> = (node: T) => TableOfContentsEntry | null
 
 export interface TableOfContentsResolverMap {
-  [nodeOrBlockType: string]: TocResolver
+  [nodeOrBlockType: string]: TableOfContentsResolver
 }
 
 export type SlugifyFn = (text: string) => string

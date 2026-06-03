@@ -7,10 +7,14 @@ import type { SlugifyFn } from "./types"
 
 export type HeadingJSXConverter = JSXConverter<SerializedHeadingNode>
 
+export interface CreateHeaderingConverter {
+  heading: HeadingJSXConverter
+}
+
 export function createHeadingConverter(
-  data: DefaultTypedEditorState,
+  data?: DefaultTypedEditorState,
   slugify: SlugifyFn = slugifyHeading,
-): { heading: HeadingJSXConverter } {
+): CreateHeaderingConverter {
   const anchors = computeHeadingAnchors(data, slugify)
   return {
     heading: ({ node, nodesToJSX }: JSXConverterArgs<SerializedHeadingNode>) => {

@@ -2,7 +2,7 @@ import { renderToStaticMarkup } from "react-dom/server"
 import { describe, expect, it } from "vitest"
 
 import type { DefaultTypedEditorState, SerializedHeadingNode } from "@payloadcms/richtext-lexical"
-import { createTableOfContentsConverter } from "../headingConverter"
+import { createHeadingConverter } from "../headingConverter"
 
 type ConverterFn = (args: { node: SerializedHeadingNode; nodesToJSX: unknown }) => React.ReactNode
 
@@ -16,7 +16,7 @@ const nodesToJSX = ({ nodes }: { nodes: unknown }): React.ReactNode[] =>
   ((nodes as { text?: string }[] | undefined) ?? []).map((n) => n.text ?? "")
 
 function invoke(
-  converter: ReturnType<typeof createTableOfContentsConverter>["heading"],
+  converter: ReturnType<typeof createHeadingConverter>["heading"],
   node: SerializedHeadingNode,
 ): React.ReactNode {
   return (converter as unknown as ConverterFn)({ node, nodesToJSX })
@@ -30,7 +30,7 @@ describe("createHeadingConverter", () => {
       children: [{ type: "text", text: "My Section" }],
     } as unknown as SerializedHeadingNode
     const state = makeState([heading])
-    const { heading: converter } = createTableOfContentsConverter(state)
+    const { heading: converter } = createHeadingConverter(state)
     const html = renderToStaticMarkup(<>{invoke(converter, heading)}</>)
     expect(html).toBe('<h2 id="my-section">My Section</h2>')
   })
@@ -42,7 +42,7 @@ describe("createHeadingConverter", () => {
       children: [{ type: "text", text: "Hi" }],
     } as unknown as SerializedHeadingNode
     const state = makeState([heading])
-    const { heading: converter } = createTableOfContentsConverter(state, (t) => `x-${t}`)
+    const { heading: converter } = createHeadingConverter(state, (t) => `x-${t}`)
     const html = renderToStaticMarkup(<>{invoke(converter, heading)}</>)
     expect(html).toContain('id="x-Hi"')
     expect(html).toContain("<h3")
@@ -60,7 +60,7 @@ describe("createHeadingConverter", () => {
       children: [{ type: "text", text: "Same" }],
     } as unknown as SerializedHeadingNode
     const state = makeState([h1, h2])
-    const { heading: converter } = createTableOfContentsConverter(state)
+    const { heading: converter } = createHeadingConverter(state)
     const html1 = renderToStaticMarkup(<>{invoke(converter, h1)}</>)
     const html2 = renderToStaticMarkup(<>{invoke(converter, h2)}</>)
     expect(html1).toContain('id="same"')
@@ -79,7 +79,7 @@ describe("createHeadingConverter", () => {
       children: [{ type: "text", text: "Orphan" }],
     } as unknown as SerializedHeadingNode
     const state = makeState([known])
-    const { heading: converter } = createTableOfContentsConverter(state)
+    const { heading: converter } = createHeadingConverter(state)
     const html = renderToStaticMarkup(<>{invoke(converter, orphan)}</>)
     expect(html).not.toContain("id=")
   })

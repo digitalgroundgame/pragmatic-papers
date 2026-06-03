@@ -113,6 +113,22 @@ jobs:
     env:
       PAYLOAD_SECRET: ci-integration-secret
       USE_LOCAL_STORAGE: "true"
+      DATABASE_URI: postgres://postgres:postgres@localhost:5432/pp_template
+
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: pp_template
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
 
     steps:
       - uses: actions/checkout@v6

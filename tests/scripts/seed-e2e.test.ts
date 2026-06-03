@@ -2,8 +2,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 const mockDestroy = vi.fn()
 const mockCreate = vi.fn()
+const mockUpdateGlobal = vi.fn()
 const mockPayload = {
   create: mockCreate,
+  updateGlobal: mockUpdateGlobal,
   db: { destroy: mockDestroy },
 }
 

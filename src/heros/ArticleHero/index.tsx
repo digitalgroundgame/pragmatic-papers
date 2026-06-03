@@ -1,11 +1,13 @@
 import React from "react"
 
+import { ShareButtons } from "@/components/ShareButtons"
 import { HoverPrefetchLink } from "@/components/Link/HoverPrefetchLink"
 import { Media } from "@/components/Media"
 import { NarrationPlayer } from "@/components/NarrationPlayer"
 import { Separator } from "@/components/ui/separator"
 import type { Article } from "@/payload-types"
 import { formatDateTime } from "@/utilities/formatDateTime"
+import { getServerSideURL } from "@/utilities/getURL"
 import { getSeparator } from "@/utilities/getSeparator"
 
 interface ArticleHeroProps {
@@ -28,7 +30,7 @@ export const ArticleHero: React.FC<ArticleHeroProps> = ({ article }) => {
       )}
       <h1 className="mt-6">{title}</h1>
       <div className="flex flex-col gap-2 md:flex-row md:items-center md:gap-8">
-        <div className="dark:text-brand-high-contrast text-brand flex flex-1 gap-2 font-serif font-bold underline-offset-4">
+        <div className="dark:text-brand-high-contrast text-brand flex flex-1 flex-wrap gap-2 font-serif font-bold underline-offset-4">
           {populatedAuthors &&
             populatedAuthors.map(({ id, slug, name }, index) => (
               <React.Fragment key={id}>
@@ -50,6 +52,11 @@ export const ArticleHero: React.FC<ArticleHeroProps> = ({ article }) => {
             <NarrationPlayer narration={narration} populatedNarrator={populatedNarrator} />
           </div>
         )}
+        <ShareButtons
+          url={`${getServerSideURL()}/articles/${article.slug}`}
+          title={article.title}
+          className="shrink-0 self-end md:self-auto"
+        />
       </div>
       <Separator />
     </div>

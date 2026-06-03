@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test"
 
-import { gotoFirstArticle, gotoFirstVolume, viewportRatioClip } from "./helpers"
+import { gotoFirstArticle, gotoFirstVolume } from "./helpers"
 
 test.describe("ShareButtons — article page", () => {
   test("share button is visible", async ({ page }) => {
@@ -129,14 +129,7 @@ test.describe("ShareButtons — screenshots", () => {
     const popover = page.locator('[data-slot="popover-content"]')
     await expect(popover).toBeVisible()
 
-    const buttonBox = await share.boundingBox()
-    const popoverBox = await popover.boundingBox()
-    if (!buttonBox || !popoverBox) throw new Error("Could not get bounding boxes")
-
-    const viewport = page.viewportSize() ?? { width: 1280, height: 720 }
-    await expect(page).toHaveScreenshot("article-share-popover-close-up.png", {
-      clip: viewportRatioClip([buttonBox, popoverBox], viewport),
-    })
+    await expect(popover).toHaveScreenshot("article-share-popover-close-up.png")
   })
 
   test("article share trigger", async ({ page }, testInfo) => {

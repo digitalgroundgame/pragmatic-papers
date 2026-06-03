@@ -35,10 +35,12 @@ export function mergeBoundingBoxes(...boxes: Box[]): Box {
 
 // Returns a clip region expanded from one or more bounding boxes (plus padding)
 // to the viewport's aspect ratio, centered on the content.
+// gridSnap rounds the clip width up to the nearest multiple of that value so
+// small layout variations (e.g. flex-sized popovers) don't shift the dimensions.
 export function viewportRatioClip(
   boxes: Box | Box[],
   viewport: { width: number; height: number },
-  padding = 16,
+  { padding = 16, gridSnap = 0 }: { padding?: number; gridSnap?: number } = {},
 ): Box {
   const box = Array.isArray(boxes) ? mergeBoundingBoxes(...boxes) : boxes
   const x0 = Math.round(Math.max(0, box.x - padding))
@@ -52,6 +54,10 @@ export function viewportRatioClip(
     h = Math.round(w / ratio)
   } else {
     w = Math.round(h * ratio)
+  }
+  if (gridSnap > 0) {
+    w = Math.ceil(w / gridSnap) * gridSnap
+    h = Math.round(w / ratio)
   }
   const cx = Math.round((x0 + x1) / 2)
   const cy = Math.round((y0 + y1) / 2)

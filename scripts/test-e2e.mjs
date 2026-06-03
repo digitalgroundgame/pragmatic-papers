@@ -16,21 +16,25 @@ function isPortInUse(port) {
   })
 }
 
-console.warn(`${blue("●")} Starting Postgres container...`)
-const container = await new PostgreSqlContainer("postgres:15-alpine")
-  .withDatabase("pragmatic-papers-test")
-  .start()
-
-const uri = container.getConnectionUri()
-process.env.DATABASE_URI = uri
 process.env.PAYLOAD_SECRET ??= "test-secret-for-e2e-tests"
+
+let container = null
+
+if (process.env.DATABASE_URI) {
+  console.warn(`${green("✔")} Using existing DATABASE_URI — skipping container startup.`)
+} else {
+  console.warn(`${blue("●")} Starting Postgres container...`)
+  container = await new PostgreSqlContainer("postgres:15-alpine")
+    .withDatabase("pragmatic-papers-test")
+    .start()
+  process.env.DATABASE_URI = container.getConnectionUri()
+  console.warn(`${green("✔")} Test database started at ${process.env.DATABASE_URI}`)
+}
 process.env.USE_LOCAL_STORAGE ??= "true"
 process.env.PORT ??= "8000"
 process.env.NEXT_PUBLIC_SERVER_URL ??= `http://localhost:${process.env.PORT}`
 process.env.PAYLOAD_CONFIG_PATH ??= "src/payload.config.ts"
 process.env.E2E_MANAGED_SERVER = "true"
-
-console.warn(`${green("✔")} Test database started at ${uri}`)
 
 const port = Number(process.env.PORT)
 if (await isPortInUse(port)) {
@@ -45,7 +49,11 @@ if (await isPortInUse(port)) {
 let server = null
 try {
   console.warn(`${blue("●")} Starting Next.js dev server...`)
-  server = spawn("pnpm", ["dev:next"], { env: process.env, stdio: "inherit" })
+  server = spawn(
+    "./node_modules/.bin/next",
+    ["dev", "-p", String(process.env.PORT), "--turbopack"],
+    { env: { ...process.env, NODE_OPTIONS: "--no-deprecation" }, stdio: "inherit" },
+  )
 
   console.warn(`${blue("●")} Running database migrations...`)
   execSync("pnpm payload migrate", {
@@ -72,7 +80,12 @@ try {
   console.error(`${red("✖")} Error during E2E test setup: ${error.message}`)
   process.exitCode = 1
 } finally {
-  server?.kill()
-  console.warn(`${blue("●")} Stopping Postgres container...`)
-  await container.stop()
+  if (server) {
+    server.kill("SIGTERM")
+    await new Promise((resolve) => server.once("exit", resolve))
+  }
+  if (container) {
+    console.warn(`${blue("●")} Stopping Postgres container...`)
+    await container.stop()
+  }
 }

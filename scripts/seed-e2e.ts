@@ -1,4 +1,13 @@
 import { createRichTextShowcaseArticle } from "@/endpoints/seed/features/rich-text-showcase"
+import {
+  createCTABlockNode,
+  createHeadingNode,
+  createLinkNode,
+  createNewsletterSignupBlockNode,
+  createParagraph,
+  createRichText,
+  createTextNode,
+} from "@/endpoints/seed/richtext"
 import { createUser } from "@/endpoints/seed/users"
 import config from "@payload-config"
 import { getPayload } from "payload"
@@ -67,6 +76,113 @@ export async function main(): Promise<void> {
                 overrideTitle: null,
               },
             ],
+          },
+        ],
+      },
+    })
+
+    await payload.updateGlobal({
+      slug: "footer",
+      data: {
+        layout: [
+          {
+            blockType: "content",
+            columns: [
+              {
+                size: "half",
+                richText: createRichText([
+                  createNewsletterSignupBlockNode({
+                    heading: "Get Daily Pragmatic Papers",
+                    description:
+                      "When a new Volume drops, we send one article per weekday so you can actually read every piece. No spam, unsubscribe any time.",
+                    buttonLabel: "Sign Up",
+                    notice: createRichText([
+                      createParagraph([
+                        createTextNode(
+                          "Your newsletter subscriptions are subject to The Pragmatic Papers ",
+                        ),
+                        createLinkNode("Privacy Policy", "/privacy-policy"),
+                        createTextNode(" and "),
+                        createLinkNode("Terms of Use", "/terms-of-use"),
+                        createTextNode("."),
+                      ]),
+                    ]),
+                  }),
+                ]),
+              },
+              {
+                size: "half",
+                richText: createRichText([
+                  createCTABlockNode({
+                    richText: createRichText([
+                      createHeadingNode("Stay up to date with The Pragmatic Papers", "h3"),
+                      createParagraph(
+                        "Get the latest articles, volumes, and updates delivered straight to you.",
+                      ),
+                    ]),
+                    links: [
+                      {
+                        link: {
+                          type: "custom",
+                          url: "https://discord.gg/digitalgroundgame",
+                          label: "Join the Community",
+                          newTab: true,
+                          appearance: "default",
+                        },
+                      },
+                    ],
+                  }),
+                ]),
+              },
+            ],
+          },
+        ],
+        copyright: {
+          type: "custom",
+          label: "Digital Ground Game",
+          url: "https://digitalgroundgame.org",
+          newTab: true,
+        },
+        navItems: [
+          { link: { type: "custom", label: "Contact", url: "/contact" } },
+          { link: { type: "custom", label: "About", url: "/about" } },
+          { link: { type: "custom", label: "Privacy Policy", url: "/privacy-policy" } },
+          { link: { type: "custom", label: "Terms of Use", url: "/terms-of-use" } },
+          { link: { type: "custom", label: "Log In", url: "/admin/login" } },
+        ],
+        socials: [
+          { link: { type: "custom", label: "X", url: "https://x.com/PragPapers", newTab: true } },
+          {
+            link: {
+              type: "custom",
+              label: "Instagram",
+              url: "https://www.instagram.com/pragmaticpapers/",
+              newTab: true,
+            },
+          },
+          {
+            link: {
+              type: "custom",
+              label: "Reddit",
+              url: "https://www.reddit.com/user/ThePragmaticPapers/",
+              newTab: true,
+            },
+          },
+          {
+            link: {
+              type: "custom",
+              label: "Bluesky",
+              url: "https://bsky.app/profile/thepragmaticpapers.bsky.social",
+              newTab: true,
+            },
+          },
+          {
+            link: {
+              type: "custom",
+              label: "Substack",
+              url: "https://substack.com/@thepragmaticpapers",
+              newTab: true,
+            },
           },
         ],
       },

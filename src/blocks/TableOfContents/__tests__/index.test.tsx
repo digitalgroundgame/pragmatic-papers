@@ -28,7 +28,7 @@ function heading(tag: string, text: string) {
 describe("createTableOfContents", () => {
   it("returns the field, Component, and headingConverter", () => {
     const toc = createTableOfContents()
-    expect(toc.field).toBe(tableOfContentsField)
+    expect(toc.tableOfContentsField).toBe(tableOfContentsField)
     expect(typeof toc.TableOfContents).toBe("function")
     expect(typeof toc.tableOfContentsConverter).toBe("function")
   })

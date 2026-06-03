@@ -16,21 +16,25 @@ function isPortInUse(port) {
   })
 }
 
-console.warn(`${blue("●")} Starting Postgres container...`)
-const container = await new PostgreSqlContainer("postgres:15-alpine")
-  .withDatabase("pragmatic-papers-test")
-  .start()
-
-const uri = container.getConnectionUri()
-process.env.DATABASE_URI = uri
 process.env.PAYLOAD_SECRET ??= "test-secret-for-e2e-tests"
+
+let container = null
+
+if (process.env.DATABASE_URI) {
+  console.warn(`${green("✔")} Using existing DATABASE_URI — skipping container startup.`)
+} else {
+  console.warn(`${blue("●")} Starting Postgres container...`)
+  container = await new PostgreSqlContainer("postgres:15-alpine")
+    .withDatabase("pragmatic-papers-test")
+    .start()
+  process.env.DATABASE_URI = container.getConnectionUri()
+  console.warn(`${green("✔")} Test database started at ${process.env.DATABASE_URI}`)
+}
 process.env.USE_LOCAL_STORAGE ??= "true"
 process.env.PORT ??= "8000"
 process.env.NEXT_PUBLIC_SERVER_URL ??= `http://localhost:${process.env.PORT}`
 process.env.PAYLOAD_CONFIG_PATH ??= "src/payload.config.ts"
 process.env.E2E_MANAGED_SERVER = "true"
-
-console.warn(`${green("✔")} Test database started at ${uri}`)
 
 const port = Number(process.env.PORT)
 if (await isPortInUse(port)) {
@@ -80,6 +84,8 @@ try {
     server.kill("SIGTERM")
     await new Promise((resolve) => server.once("exit", resolve))
   }
-  console.warn(`${blue("●")} Stopping Postgres container...`)
-  await container.stop()
+  if (container) {
+    console.warn(`${blue("●")} Stopping Postgres container...`)
+    await container.stop()
+  }
 }

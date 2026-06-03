@@ -5,10 +5,10 @@ import { LivePreviewListener } from "@/components/LivePreviewListener"
 import { PayloadRedirects } from "@/components/PayloadRedirects"
 import { RecommendedArticles } from "@/components/RecommendedArticles"
 import RichText from "@/components/RichText"
-import { toc } from "@/lib/toc"
 import { TopicsList } from "@/components/Topics/TopicsList"
 import { Separator } from "@/components/ui/separator"
 import { ArticleHero } from "@/heros/ArticleHero"
+import { TableOfContents } from "@/lib/toc"
 import { MathJaxProvider } from "@/providers/MathJaxProvider"
 import { generateMeta } from "@/utilities/generateMeta"
 import { queryArticleBySlug } from "@/utilities/queries"
@@ -69,47 +69,40 @@ export default async function Article({ params: paramsPromise }: Args): Promise<
 
   return (
     <>
-      <div
-        className={cn(
-          "mx-auto px-4",
-          showTableOfContents
-            ? "max-w-2xl lg:grid lg:max-w-5xl lg:grid-cols-[14rem_1fr] lg:items-start lg:gap-8"
-            : "max-w-2xl",
-        )}
-      >
-        {showTableOfContents && (
-          <aside className="sticky top-8 mb-8 lg:mb-0">
-            <toc.Component content={content} />
-          </aside>
-        )}
-        <article className="min-w-0 space-y-6">
-          <JsonLd
-            data={[
-              buildArticleJsonLd(article, url),
-              buildBreadcrumbJsonLd([{ name: article.meta?.title || article.title, path: url }]),
-            ]}
-          />
-          {/* Allows redirects for valid pages too */}
-          <PayloadRedirects disableNotFound url={url} />
+      <article className="mx-auto max-w-5xl min-w-0 space-y-6 px-4">
+        <JsonLd
+          data={[
+            buildArticleJsonLd(article, url),
+            buildBreadcrumbJsonLd([{ name: article.meta?.title || article.title, path: url }]),
+          ]}
+        />
+        {/* Allows redirects for valid pages too */}
+        <PayloadRedirects disableNotFound url={url} />
 
-          {draft && <LivePreviewListener />}
+        {draft && <LivePreviewListener />}
 
-          <ArticleHero article={article} />
+        <ArticleHero article={article} />
+        <div className={cn("relative flex flex-col justify-between gap-3 lg:flex-row lg:gap-6")}>
+          {showTableOfContents && (
+            <aside className="mx-auto w-full max-w-2xl self-start lg:sticky lg:top-[calc(var(--header-height)+1rem)] lg:mb-8">
+              <TableOfContents content={content} />
+            </aside>
+          )}
           <MathJaxProvider enableMathRendering={enableMathRendering}>
             <RichText
               data={content}
               enableGutter={false}
-              className="drop-cap"
+              className="drop-cap mx-auto max-w-2xl"
               parentDoc={{ collection: "articles", id: article.id }}
               injectHeadingAnchors={!!showTableOfContents}
             />
           </MathJaxProvider>
-          <FootnoteList footnotes={footnotes} />
-          <Separator />
-          <TopicsList topics={topics} />
-          <AuthorList aria-label="Article Authors" authors={populatedAuthors} />
-        </article>
-      </div>
+        </div>
+        <FootnoteList footnotes={footnotes} />
+        <Separator />
+        <TopicsList topics={topics} />
+        <AuthorList aria-label="Article Authors" authors={populatedAuthors} />
+      </article>
       <RecommendedArticles currentArticleSlug={slug} />
     </>
   )

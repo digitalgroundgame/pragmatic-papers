@@ -1,4 +1,3 @@
-import { toc } from "@/lib/toc"
 import { BannerBlock } from "@/blocks/Banner/Component"
 import { CallToActionBlock } from "@/blocks/CallToAction/Component"
 import { CodeBlock } from "@/blocks/Code/Component"
@@ -17,6 +16,7 @@ import {
 import type { ParentDocContext } from "@/blocks/SocialEmbed/types"
 import { SquiggleRuleBlock } from "@/blocks/SquiggleRule/Component"
 import { TimelineBlock } from "@/blocks/Timeline/Component"
+import { tableOfContentsConverter } from "@/lib/toc"
 import type {
   BannerBlock as BannerBlockProps,
   CodeBlock as CodeBlockProps,
@@ -73,8 +73,7 @@ function createJsxConverters(
   return ({ defaultConverters }) => ({
     ...defaultConverters,
     ...LinkJSXConverter({ internalDocToHref }),
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    ...(data ? (toc.headingConverter(data) as any) : {}),
+    ...(data ? tableOfContentsConverter(data) : {}),
     blocks: {
       banner: ({ node }) => <BannerBlock className="col-start-2 mb-4" {...node.fields} />,
       mediaBlock: ({ node }) => (

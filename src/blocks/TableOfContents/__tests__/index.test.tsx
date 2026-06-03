@@ -2,9 +2,9 @@ import { render } from "@testing-library/react"
 import { renderToStaticMarkup } from "react-dom/server"
 import { describe, expect, it } from "vitest"
 
-import { createTableOfContents } from "../index"
-import { tableOfContentsField } from "../field"
 import type { DefaultTypedEditorState, SerializedHeadingNode } from "@payloadcms/richtext-lexical"
+import { tableOfContentsField } from "../field"
+import { createTableOfContents } from "../index"
 
 type HeadingConverterFn = (args: {
   node: SerializedHeadingNode
@@ -29,8 +29,8 @@ describe("createTableOfContents", () => {
   it("returns the field, Component, and headingConverter", () => {
     const toc = createTableOfContents()
     expect(toc.field).toBe(tableOfContentsField)
-    expect(typeof toc.Component).toBe("function")
-    expect(typeof toc.headingConverter).toBe("function")
+    expect(typeof toc.TableOfContents).toBe("function")
+    expect(typeof toc.tableOfContentsConverter).toBe("function")
   })
 
   it("Component renders entries from caller resolvers", () => {
@@ -46,7 +46,7 @@ describe("createTableOfContents", () => {
       heading("h2", "First"),
       { type: "block", fields: { blockType: "custom", id: "c1", name: "Custom Entry" } },
     ])
-    const { getByText, container } = render(<toc.Component content={state} />)
+    const { getByText, container } = render(<toc.TableOfContents content={state} />)
     expect(getByText("First")).toBeTruthy()
     expect(getByText("Custom Entry")).toBeTruthy()
     const links = container.querySelectorAll("a")
@@ -58,10 +58,10 @@ describe("createTableOfContents", () => {
     const h = heading("h2", "Hello World")
     const state = makeState([h])
 
-    const { container } = render(<toc.Component content={state} />)
+    const { container } = render(<toc.TableOfContents content={state} />)
     expect(container.querySelector("a")?.getAttribute("href")).toBe("#hello_world")
 
-    const converter = toc.headingConverter(state).heading as unknown as HeadingConverterFn
+    const converter = toc.tableOfContentsConverter(state).heading as unknown as HeadingConverterFn
     const html = renderToStaticMarkup(
       <>
         {converter({
@@ -77,7 +77,7 @@ describe("createTableOfContents", () => {
   it("forwards className and title props to the Component", () => {
     const toc = createTableOfContents()
     const { container, getByText } = render(
-      <toc.Component
+      <toc.TableOfContents
         content={makeState([heading("h2", "X")])}
         className="custom-toc"
         title="Outline"

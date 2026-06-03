@@ -239,6 +239,7 @@ export const createSocialEmbedArticle = async (
       slug: "social-media-embed-test-all-variations",
       heroImage: mediaDocs[Math.floor(Math.random() * mediaDocs.length)]?.id,
       meta: {
+        title,
         description:
           "Test article containing all possible social media block variations from the HOSTNAMES map.",
         image: mediaDocs[0]?.id ?? undefined,
@@ -276,6 +277,7 @@ export const createLegacySocialEmbedArticle = async (
       slug: "legacy-social-media-embed-test-all-variations",
       heroImage: mediaDocs[Math.floor(Math.random() * mediaDocs.length)]?.id,
       meta: {
+        title,
         description:
           "Test article containing all legacy social media block variations using the old blockType structure (twitterEmbed, youtubeEmbed, etc.).",
         image: mediaDocs[0]?.id ?? undefined,

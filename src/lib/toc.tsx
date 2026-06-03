@@ -11,13 +11,14 @@ const PLATFORM_LABELS: Record<NonNullable<SocialEmbedBlock["platform"]>, string>
   youtube: "YouTube",
 }
 
-export const toc = createTableOfContents({
-  resolvers: {
-    socialEmbed: (block) => {
-      const fields = block as SocialEmbedBlock
-      if (!fields.id) return null
-      const label = fields.platform ? `${PLATFORM_LABELS[fields.platform]} embed` : "Social embed"
-      return { label, anchor: fields.id, icon: TvIcon }
+export const { TableOfContents, tableOfContentsField, tableOfContentsConverter } =
+  createTableOfContents({
+    resolvers: {
+      socialEmbed: (block) => {
+        const fields = block as SocialEmbedBlock
+        if (!fields.id) return null
+        const label = fields.platform ? `${PLATFORM_LABELS[fields.platform]} embed` : "Social embed"
+        return { label, anchor: fields.id, icon: TvIcon }
+      },
     },
-  },
-})
+  })

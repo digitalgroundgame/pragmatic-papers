@@ -1,8 +1,8 @@
 import { render } from "@testing-library/react"
 import { describe, expect, it } from "vitest"
 
-import { toc } from "../toc"
 import type { DefaultTypedEditorState } from "@payloadcms/richtext-lexical"
+import { TableOfContents } from "../toc"
 
 function makeState(children: unknown[]): DefaultTypedEditorState {
   return {
@@ -23,31 +23,31 @@ describe("app TOC instance — socialEmbed resolver", () => {
     ["youtube", "YouTube embed"],
   ])("labels %s as %s", (platform, expected) => {
     const state = makeState([socialEmbed({ id: "e1", platform })])
-    const { getByText } = render(<toc.Component content={state} />)
+    const { getByText } = render(<TableOfContents content={state} />)
     expect(getByText(expected)).toBeTruthy()
   })
 
   it("uses 'Social embed' fallback when platform is missing", () => {
     const state = makeState([socialEmbed({ id: "e1" })])
-    const { getByText } = render(<toc.Component content={state} />)
+    const { getByText } = render(<TableOfContents content={state} />)
     expect(getByText("Social embed")).toBeTruthy()
   })
 
   it("skips embeds with no id (no anchor target)", () => {
     const state = makeState([socialEmbed({ platform: "twitter" })])
-    const { container } = render(<toc.Component content={state} />)
+    const { container } = render(<TableOfContents content={state} />)
     expect(container.firstChild).toBeNull()
   })
 
   it("anchors to the embed's id", () => {
     const state = makeState([socialEmbed({ id: "embed-42", platform: "youtube" })])
-    const { container } = render(<toc.Component content={state} />)
+    const { container } = render(<TableOfContents content={state} />)
     expect(container.querySelector("a")?.getAttribute("href")).toBe("#embed-42")
   })
 
   it("renders the TvIcon next to the label", () => {
     const state = makeState([socialEmbed({ id: "e1", platform: "twitter" })])
-    const { container } = render(<toc.Component content={state} />)
+    const { container } = render(<TableOfContents content={state} />)
     expect(container.querySelector("svg")).toBeTruthy()
   })
 })

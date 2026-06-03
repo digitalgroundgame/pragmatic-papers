@@ -1,7 +1,8 @@
-import React from "react"
 import type { DefaultTypedEditorState } from "@payloadcms/richtext-lexical"
+import type { Field } from "payload"
+import React from "react"
 
-import { TableOfContents } from "./Component"
+import { BaseTableOfContents } from "./Component"
 import { tableOfContentsField } from "./field"
 import { createHeadingConverter } from "./headingConverter"
 import { slugifyHeading } from "./slug"
@@ -16,28 +17,28 @@ import type {
 export type { CreateTableOfContentsOptions, SlugifyFn, TocEntry, TocResolver, TocResolverMap }
 
 export function createTableOfContents(options: CreateTableOfContentsOptions = {}): {
-  field: typeof tableOfContentsField
-  Component: (props: {
+  tableOfContentsField: Field
+  TableOfContents: (props: {
     content: DefaultTypedEditorState
     className?: string
     title?: string
   }) => React.ReactNode
-  headingConverter: (data: DefaultTypedEditorState) => ReturnType<typeof createHeadingConverter>
+  tableOfContentsConverter: (
+    data: DefaultTypedEditorState,
+  ) => ReturnType<typeof createHeadingConverter>
 } {
-  const slugify: SlugifyFn = options.slugify ?? slugifyHeading
-  const resolvers: TocResolverMap = options.resolvers ?? {}
-
+  const slugify = options.slugify ?? slugifyHeading
   return {
-    field: tableOfContentsField,
-    Component: ({ content, className, title }) => (
-      <TableOfContents
+    tableOfContentsField,
+    TableOfContents: ({ content, className, title }) => (
+      <BaseTableOfContents
         content={content}
         className={className}
         title={title}
-        resolvers={resolvers}
+        resolvers={options.resolvers}
         slugify={slugify}
       />
     ),
-    headingConverter: (data) => createHeadingConverter(data, slugify),
+    tableOfContentsConverter: (data) => createHeadingConverter(data, slugify),
   }
 }

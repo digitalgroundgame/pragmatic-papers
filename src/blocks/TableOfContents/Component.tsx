@@ -1,5 +1,5 @@
-import React from "react"
 import type { DefaultTypedEditorState } from "@payloadcms/richtext-lexical"
+import React from "react"
 
 import { cn } from "@/utilities/utils"
 
@@ -7,7 +7,7 @@ import { slugifyHeading } from "./slug"
 import { collectEntries } from "./traverse"
 import type { SlugifyFn, TocResolverMap } from "./types"
 
-interface Props {
+interface BaseTableOfContentsProps {
   content: DefaultTypedEditorState
   className?: string
   title?: string
@@ -15,19 +15,19 @@ interface Props {
   slugify?: SlugifyFn
 }
 
-export function TableOfContents({
+export function BaseTableOfContents({
   content,
   className,
-  title = "Contents",
+  title = "Table of Contents",
   resolvers,
   slugify = slugifyHeading,
-}: Props): React.ReactNode {
+}: BaseTableOfContentsProps): React.ReactNode {
   const entries = collectEntries(content, resolvers, slugify)
   if (entries.length === 0) return null
 
   return (
-    <nav aria-label="Table of contents" className={cn("toc not-prose", className)}>
-      {title ? <h3 className="toc__title text-lg font-semibold">{title}</h3> : null}
+    <nav aria-label="Table of contents" className={cn("toc", className)}>
+      {title ? <h3 className="toc__title border-b text-2xl">{title}</h3> : null}
       <ol className="toc__list mt-2 list-none space-y-1 p-0">
         {entries.map((entry, index) => {
           const depth = entry.depth ?? 1
@@ -35,14 +35,14 @@ export function TableOfContents({
           return (
             <li
               key={`${entry.anchor || "entry"}-${index}`}
-              className="toc__item leading-snug"
+              className="toc__item"
               style={{ paddingInlineStart: `${(depth - 1) * 1}rem` }}
             >
               <a
                 href={entry.anchor ? `#${entry.anchor}` : "#"}
                 className="toc__link inline-flex items-center gap-2 no-underline hover:underline"
               >
-                {Icon ? <Icon aria-hidden="true" className="toc__icon size-4 shrink-0" /> : null}
+                {Icon && <Icon aria-hidden="true" className="toc__icon size-4 shrink-0" />}
                 <span className="toc__label">{entry.label}</span>
               </a>
             </li>

@@ -1,4 +1,3 @@
-import React from "react"
 import type { DefaultTypedEditorState, SerializedHeadingNode } from "@payloadcms/richtext-lexical"
 import type { JSXConverter, JSXConverterArgs } from "@payloadcms/richtext-lexical/react"
 

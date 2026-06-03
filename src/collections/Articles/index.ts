@@ -17,17 +17,17 @@ import { LegacyTwitterEmbed } from "@/blocks/SocialEmbed/embeds/TwitterEmbed/con
 import { LegacyYouTubeEmbed } from "@/blocks/SocialEmbed/embeds/YouTubeEmbed/config"
 import { SquiggleRule } from "@/blocks/SquiggleRule/config"
 import { Timeline } from "@/blocks/Timeline/config"
-import { toc } from "@/lib/toc"
 import { detectMathBlocks } from "@/collections/Articles/hooks/detectMathBlocks"
 import { generateFootnotes } from "@/collections/Articles/hooks/generateFootnotes"
 import { populateAuthors } from "@/collections/Articles/hooks/populateAuthors"
-import { populateTopics } from "@/collections/Articles/hooks/populateTopics"
 import { populateMetaImageFromHero } from "@/collections/Articles/hooks/populateMetaImageFromHero"
 import { populateNarrator } from "@/collections/Articles/hooks/populateNarrator"
+import { populateTopics } from "@/collections/Articles/hooks/populateTopics"
 import { populateVolume } from "@/collections/Articles/hooks/populateVolume"
 import { revalidateArticle, revalidateDelete } from "@/collections/Articles/hooks/revalidateArticle"
 import { footnotesArrayField } from "@/fields/footnotes"
 import { menu } from "@/fields/menu"
+import { tableOfContentsField } from "@/lib/toc"
 import { type Article } from "@/payload-types"
 import { generatePreviewPath } from "@/utilities/generatePreviewPath"
 
@@ -156,7 +156,7 @@ export const Articles: CollectionConfig = {
               required: true,
             },
             footnotesArrayField(),
-            toc.field,
+            tableOfContentsField,
           ],
           label: "Content",
         },

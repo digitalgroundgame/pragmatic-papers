@@ -1,21 +1,5 @@
 import type { Article, User } from "@/payload-types"
-import type { Payload } from "payload"
-import type { LexicalContent } from "./richtext"
-
-interface CreateArticleOptions {
-  title: string
-  content: LexicalContent
-  authors: number[]
-  topics?: number[]
-  slug: string
-  heroImage?: number | null
-  narration?: number | null
-  meta?: {
-    title?: string | null
-    description?: string | null
-    image?: number | null
-  }
-}
+import type { Payload, RequiredDataFromCollectionSlug } from "payload"
 
 /**
  * Creates a published article with sensible defaults.
@@ -33,7 +17,7 @@ interface CreateArticleOptions {
  */
 export async function createArticle(
   payload: Payload,
-  options: CreateArticleOptions,
+  data: Omit<RequiredDataFromCollectionSlug<"articles">, "_status" | "publishedAt">,
   context?: Record<string, unknown>,
 ): Promise<Article> {
   const maxAttempts = 3
@@ -44,27 +28,16 @@ export async function createArticle(
         collection: "articles",
         context: { skipPopulateVolume: true, ...context },
         data: {
-          title: options.title,
-          content: options.content,
-          authors: options.authors,
-          topics: options.topics,
-          heroImage: options.heroImage || undefined,
-          narration: options.narration || undefined,
+          ...data,
           _status: "published",
           publishedAt: new Date().toISOString(),
-          slug: options.slug,
-          meta: {
-            title: options.meta?.title || options.title,
-            description: options.meta?.description || null,
-            image: options.meta?.image || undefined,
-          },
         },
       })
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err)
       if (attempt < maxAttempts) {
         payload.logger.warn(
-          `Article create attempt ${attempt}/${maxAttempts} failed for "${options.slug}", retrying. Error: ${message}`,
+          `Article create attempt ${attempt}/${maxAttempts} failed for "${data.slug}", retrying. Error: ${message}`,
         )
         await new Promise((resolve) => setTimeout(resolve, 500 * attempt))
       } else {
@@ -74,7 +47,7 @@ export async function createArticle(
   }
 
   // Unreachable — TypeScript requires explicit return/throw after the loop
-  throw new Error(`Failed to create article "${options.slug}" after ${maxAttempts} attempts`)
+  throw new Error(`Failed to create article "${data.slug}" after ${maxAttempts} attempts`)
 }
 
 /**

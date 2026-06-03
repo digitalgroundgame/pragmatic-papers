@@ -30,7 +30,7 @@ interface CreateTableOfContents {
 export function createTableOfContents({
   resolvers,
   slugify = slugifyHeading,
-}: CreateTableOfContentsOptions): CreateTableOfContents {
+}: CreateTableOfContentsOptions = {}): CreateTableOfContents {
   return {
     tableOfContentsField,
     TableOfContents: (props) => (

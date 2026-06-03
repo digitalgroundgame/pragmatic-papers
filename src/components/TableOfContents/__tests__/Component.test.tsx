@@ -33,7 +33,7 @@ describe("TableOfContents component", () => {
       <TableOfContents content={makeContent([heading("h2", "Intro"), heading("h3", "Details")])} />,
     )
     expect(getByRole("navigation", { name: /table of contents/i })).toBeTruthy()
-    expect(getByText("Contents")).toBeTruthy()
+    expect(getByText("Table of Contents")).toBeTruthy()
     const links = container.querySelectorAll("a")
     expect(links).toHaveLength(2)
     expect(links[0]!.getAttribute("href")).toBe("#intro")

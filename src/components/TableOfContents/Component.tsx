@@ -3,6 +3,7 @@ import React from "react"
 
 import { cn } from "@/utilities/utils"
 
+import { TableOfContentsClient } from "./TableOfContentsClient"
 import { slugifyHeading } from "./slug"
 import { collectEntries } from "./traverse"
 import type { SlugifyFn, TableOfContentsResolverMap } from "./types"
@@ -14,6 +15,7 @@ export interface TableOfContentsClassNames {
   link?: string
   icon?: string
   label?: string
+  toggleButton?: string
 }
 
 export interface TableOfContentsProps {
@@ -37,11 +39,8 @@ export function TableOfContents({
   if (entries.length === 0) return null
 
   return (
-    <nav aria-label="Table of contents" className={cn("toc", className)}>
-      {title ? (
-        <h3 className={cn("toc__title border-b text-2xl", classNames?.title)}>{title}</h3>
-      ) : null}
-      <ol className={cn("toc__list mt-2 list-outside space-y-1 p-0 text-sm", classNames?.list)}>
+    <TableOfContentsClient className={className} classNames={classNames} title={title}>
+      <ol className={cn("toc__list mt-1 list-outside space-y-1 p-0 text-sm", classNames?.list)}>
         {entries.map((entry, index) => {
           const depth = entry.depth ?? 1
           const Icon = entry.icon
@@ -54,7 +53,7 @@ export function TableOfContents({
               <a
                 href={entry.anchor ? `#${entry.anchor}` : "#"}
                 className={cn(
-                  "toc__link inline-flex items-center gap-2 no-underline hover:underline",
+                  "toc__link inline-flex items-center gap-1 no-underline hover:underline",
                   classNames?.link,
                 )}
               >
@@ -70,6 +69,6 @@ export function TableOfContents({
           )
         })}
       </ol>
-    </nav>
+    </TableOfContentsClient>
   )
 }

@@ -83,6 +83,7 @@ export async function main(): Promise<void> {
 
     await payload.updateGlobal({
       slug: "footer",
+      context: ctx,
       data: {
         layout: [
           {

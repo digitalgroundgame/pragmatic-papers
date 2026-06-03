@@ -112,6 +112,17 @@ describe("seed-e2e main()", () => {
     expect(mockDestroy).toHaveBeenCalledOnce()
   })
 
+  it("seeds the footer global with disableRevalidate context", async () => {
+    await main()
+
+    expect(mockUpdateGlobal).toHaveBeenCalledWith(
+      expect.objectContaining({
+        slug: "footer",
+        context: { disableRevalidate: true },
+      }),
+    )
+  })
+
   it("destroys the db connection after a successful run", async () => {
     await main()
 

@@ -119,10 +119,6 @@ export function parseAddedLines(patch: string): Set<number> {
   return added
 }
 
-/**
- * Collapse a list of line numbers into contiguous [start, end] ranges, so a run of
- * adjacent uncovered lines renders as "5-7" rather than "5, 6, 7". De-dupes and sorts.
- */
 export function toLineRanges(lines: number[]): { start: number; end: number }[] {
   const sorted = [...new Set(lines)].sort((a, z) => a - z)
   const ranges: { start: number; end: number }[] = []

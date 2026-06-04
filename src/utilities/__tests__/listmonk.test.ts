@@ -66,7 +66,14 @@ describe("createScheduledCampaign", () => {
         ok: true,
         json: () =>
           Promise.resolve({
-            data: { id: 7, name: "test", status: "draft", send_at: null, tags: [] },
+            data: {
+              id: 7,
+              name: "test",
+              status: "draft",
+              send_at: null,
+              tags: [],
+              lists: [{ id: 42, name: "Newsletter" }],
+            },
           }),
       } as Response)
       .mockResolvedValueOnce({
@@ -79,6 +86,7 @@ describe("createScheduledCampaign", () => {
               status: "scheduled",
               send_at: "2026-01-15T12:00:00Z",
               tags: [],
+              lists: [{ id: 42, name: "Newsletter" }],
             },
           }),
       } as Response)
@@ -94,8 +102,34 @@ describe("createScheduledCampaign", () => {
     expect(id).toBe(7)
     expect(spy).toHaveBeenCalledTimes(2)
 
+    const [, createInit] = spy.mock.calls[0]!
+    expect(JSON.parse(createInit!.body as string).lists).toEqual([42])
+
     const [, secondInit] = spy.mock.calls[1]!
     expect(JSON.parse(secondInit!.body as string)).toEqual({ status: "scheduled" })
+  })
+
+  it("throws when Listmonk drops the list (RBAC) instead of scheduling an empty campaign", async () => {
+    const spy = vi.spyOn(global, "fetch").mockResolvedValueOnce({
+      ok: true,
+      json: () =>
+        Promise.resolve({
+          // List 42 was silently filtered out by FilterListsByPerm.
+          data: { id: 7, name: "test", status: "draft", send_at: null, tags: [], lists: [] },
+        }),
+    } as Response)
+
+    await expect(
+      createScheduledCampaign({
+        name: "Test Campaign",
+        subject: "Hello",
+        bodyHtml: "<p>hi</p>",
+        sendAt: "2026-01-15T12:00:00Z",
+      }),
+    ).rejects.toThrow("without list 42 attached")
+
+    // Must not proceed to the status PUT — the campaign should never be scheduled.
+    expect(spy).toHaveBeenCalledTimes(1)
   })
 })
 
@@ -110,6 +144,14 @@ describe("readConfig", () => {
     vi.stubEnv("LISTMONK_BASE_URL", "")
     await expect(listScheduledCampaigns()).rejects.toThrow(
       "Missing required env var: LISTMONK_BASE_URL",
+    )
+  })
+
+  it("throws when LISTMONK_NEWSLETTER_LIST_ID is not a positive integer", async () => {
+    stubEnv()
+    vi.stubEnv("LISTMONK_NEWSLETTER_LIST_ID", "Newsletter")
+    await expect(listScheduledCampaigns()).rejects.toThrow(
+      'LISTMONK_NEWSLETTER_LIST_ID must be a positive integer, got: "Newsletter"',
     )
   })
 })

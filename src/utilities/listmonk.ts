@@ -39,11 +39,20 @@ function readConfig(): ListmonkConfig {
   for (const key of REQUIRED_ENV) {
     if (!process.env[key]) throw new Error(`Missing required env var: ${key}`)
   }
+  // Must be a real integer — a non-numeric value (e.g. the list name or UUID set
+  // by mistake) parses to NaN, which serializes to `lists: [null]` and silently
+  // creates campaigns with no list attached.
+  const newsletterListId = Number(process.env.LISTMONK_NEWSLETTER_LIST_ID)
+  if (!Number.isInteger(newsletterListId) || newsletterListId <= 0) {
+    throw new Error(
+      `LISTMONK_NEWSLETTER_LIST_ID must be a positive integer, got: "${process.env.LISTMONK_NEWSLETTER_LIST_ID}"`,
+    )
+  }
   return {
     baseUrl: process.env.LISTMONK_BASE_URL!.replace(/\/$/, ""),
     apiUser: process.env.LISTMONK_API_USER!,
     apiToken: process.env.LISTMONK_API_TOKEN!,
-    newsletterListId: Number(process.env.LISTMONK_NEWSLETTER_LIST_ID),
+    newsletterListId,
     newsletterListUuid: process.env.LISTMONK_NEWSLETTER_LIST_UUID!,
     fromEmail: process.env.NEWSLETTER_FROM_EMAIL!,
   }
@@ -104,6 +113,7 @@ interface ListmonkCampaign {
   status: string
   send_at: string | null
   tags: string[] | null
+  lists: { id: number; name: string }[] | null
 }
 
 export interface ScheduledCampaignSummary {
@@ -137,6 +147,16 @@ export async function createScheduledCampaign(input: CreateCampaignInput): Promi
       tags: input.tags ?? [],
     }),
   })
+  // Listmonk silently drops lists the API user's role lacks Get/Manage
+  // permission for (FilterListsByPerm), creating a campaign with no recipients
+  // and no error. Detect that here so it surfaces instead of going out empty.
+  if (!created.lists?.some((l) => l.id === cfg.newsletterListId)) {
+    throw new Error(
+      `Listmonk created campaign #${created.id} without list ${cfg.newsletterListId} attached. ` +
+        `The API user "${cfg.apiUser}" likely lacks Get/Manage permission on that list — ` +
+        `check its role in Listmonk admin (Users → Roles).`,
+    )
+  }
   await listmonkFetch<ListmonkCampaign>(`/campaigns/${created.id}/status`, {
     method: "PUT",
     body: JSON.stringify({ status: "scheduled" }),

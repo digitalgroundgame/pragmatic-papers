@@ -15,9 +15,11 @@ import {
   main,
   parseAddedLines,
   renderFileCoverage,
+  renderPatchByFile,
   renderReport,
   renderTotalSection,
   statusIcon,
+  toLineRanges,
   upsertComment,
 } from "../../scripts/coverage-report"
 
@@ -208,7 +210,6 @@ describe("renderFileCoverage", () => {
       renderFileCoverage({
         summaryJson,
         changedFiles: ["src/untracked.ts"],
-        uncoveredMap: new Map(),
         repo: undefined,
         sha: undefined,
       }),
@@ -219,19 +220,17 @@ describe("renderFileCoverage", () => {
     const html = renderFileCoverage({
       summaryJson,
       changedFiles: ["src/foo.ts"],
-      uncoveredMap: new Map(),
       repo: undefined,
       sha: undefined,
     })
     expect(html).toContain("<code>src/foo.ts</code>")
-    expect(html).toContain("File Coverage")
+    expect(html).toContain("Touched files")
   })
 
   it("renders a file link when repo and sha are provided", () => {
     const html = renderFileCoverage({
       summaryJson,
       changedFiles: ["src/foo.ts"],
-      uncoveredMap: new Map(),
       repo: "owner/repo",
       sha: "abc123",
     })
@@ -240,29 +239,14 @@ describe("renderFileCoverage", () => {
     )
   })
 
-  it("renders uncovered lines as plain numbers without repo/sha", () => {
+  it("does not include an uncovered-lines column", () => {
     const html = renderFileCoverage({
       summaryJson,
       changedFiles: ["src/foo.ts"],
-      uncoveredMap: new Map([["src/foo.ts", [10, 20]]]),
       repo: undefined,
       sha: undefined,
     })
-    expect(html).toContain("10, 20")
-    expect(html).not.toContain("<a href")
-  })
-
-  it("renders uncovered lines as GitHub links when repo and sha are provided", () => {
-    const html = renderFileCoverage({
-      summaryJson,
-      changedFiles: ["src/foo.ts"],
-      uncoveredMap: new Map([["src/foo.ts", [42]]]),
-      repo: "owner/repo",
-      sha: "abc123",
-    })
-    expect(html).toContain(
-      `<a href="https://github.com/owner/repo/blob/abc123/src/foo.ts#L42">42</a>`,
-    )
+    expect(html).not.toContain("Uncovered")
   })
 
   it("renders n/a for a metric whose total is zero", () => {
@@ -277,11 +261,88 @@ describe("renderFileCoverage", () => {
     const html = renderFileCoverage({
       summaryJson: zeroFunctions,
       changedFiles: ["src/foo.ts"],
-      uncoveredMap: new Map(),
       repo: undefined,
       sha: undefined,
     })
     expect(html).toContain("n/a")
+  })
+})
+
+describe("toLineRanges", () => {
+  it("collapses consecutive numbers into a single range", () => {
+    expect(toLineRanges([5, 6, 7])).toEqual([{ start: 5, end: 7 }])
+  })
+
+  it("keeps non-adjacent numbers as separate ranges", () => {
+    expect(toLineRanges([5, 6, 7, 10, 11, 20])).toEqual([
+      { start: 5, end: 7 },
+      { start: 10, end: 11 },
+      { start: 20, end: 20 },
+    ])
+  })
+
+  it("sorts and de-dupes before ranging", () => {
+    expect(toLineRanges([7, 5, 6, 6])).toEqual([{ start: 5, end: 7 }])
+  })
+
+  it("returns an empty array for no lines", () => {
+    expect(toLineRanges([])).toEqual([])
+  })
+})
+
+describe("renderPatchByFile", () => {
+  it("returns null when there are no touched files with coverable patch lines", () => {
+    expect(renderPatchByFile({ files: [], repo: undefined, sha: undefined })).toBeNull()
+  })
+
+  it("renders per-file patch coverage and uncovered ranges as plain text without repo/sha", () => {
+    const html = renderPatchByFile({
+      files: [
+        { file: "src/foo.ts", lines: { covered: 6, total: 10, pct: 60 }, uncovered: [5, 6, 7, 10] },
+      ],
+      repo: undefined,
+      sha: undefined,
+    })
+    expect(html).toContain("<code>src/foo.ts</code>")
+    expect(html).toContain("Patch coverage")
+    expect(html).toContain("60% 6/10") // per-file patch line coverage
+    expect(html).toContain("5-7, 10") // uncovered subset
+    expect(html).not.toContain("<a href")
+  })
+
+  it("lists a fully-covered touched file with an em-dash for uncovered lines", () => {
+    const html = renderPatchByFile({
+      files: [{ file: "src/foo.ts", lines: { covered: 8, total: 8, pct: 100 }, uncovered: [] }],
+      repo: undefined,
+      sha: undefined,
+    })
+    expect(html).toContain("100% 8/8")
+    expect(html).toContain("—")
+    expect(html).toContain("🟢")
+  })
+
+  it("links a multi-line range to a GitHub line range", () => {
+    const html = renderPatchByFile({
+      files: [
+        { file: "src/foo.ts", lines: { covered: 0, total: 3, pct: 0 }, uncovered: [5, 6, 7] },
+      ],
+      repo: "owner/repo",
+      sha: "abc123",
+    })
+    expect(html).toContain(
+      `<a href="https://github.com/owner/repo/blob/abc123/src/foo.ts#L5-L7">5-7</a>`,
+    )
+  })
+
+  it("links a single uncovered line to a single-line anchor", () => {
+    const html = renderPatchByFile({
+      files: [{ file: "src/foo.ts", lines: { covered: 0, total: 1, pct: 0 }, uncovered: [42] }],
+      repo: "owner/repo",
+      sha: "abc123",
+    })
+    expect(html).toContain(
+      `<a href="https://github.com/owner/repo/blob/abc123/src/foo.ts#L42">42</a>`,
+    )
   })
 })
 
@@ -340,8 +401,28 @@ describe("renderReport", () => {
       repo: undefined,
       sha: undefined,
     })
-    expect(html).toContain("File Coverage")
+    expect(html).toContain("Touched files")
     expect(html).toContain("src/foo.ts")
+  })
+
+  it("lists uncovered patch lines as ranges under the patch coverage section", () => {
+    const html = renderReport({
+      total: summary(75),
+      baseTotal: null,
+      summaryJson: { "src/foo.ts": summary(78) },
+      metrics: emptyMetrics,
+      files: [
+        { file: "src/foo.ts", lines: { covered: 0, total: 4, pct: 0 }, uncovered: [5, 6, 7, 12] },
+      ],
+      changedFiles: ["src/foo.ts"],
+      repo: undefined,
+      sha: undefined,
+    })
+    const patchIdx = html.indexOf("Patch coverage")
+    expect(patchIdx).toBeGreaterThanOrEqual(0)
+    expect(html).toContain("Patch coverage by file")
+    // the ranges render after the patch coverage heading
+    expect(html.indexOf("5-7, 12")).toBeGreaterThan(patchIdx)
   })
 
   it("omits the file coverage section when no changed files have summary data", () => {
@@ -355,7 +436,7 @@ describe("renderReport", () => {
       repo: undefined,
       sha: undefined,
     })
-    expect(html).not.toContain("File Coverage")
+    expect(html).not.toContain("Touched files")
   })
 })
 
@@ -367,7 +448,9 @@ describe("computePatchCoverage", () => {
     )
     expect(result.metrics.lines.pct).toBeCloseTo(66.67, 1)
     expect(result.metrics.branches.pct).toBe(50)
-    expect(result.files).toEqual([{ file: "src/a.ts", uncovered: [2] }])
+    expect(result.files).toEqual([
+      { file: "src/a.ts", lines: { covered: 2, total: 3, pct: (2 / 3) * 100 }, uncovered: [2] },
+    ])
   })
 
   it("ignores files that were not instrumented and reports 100%", () => {
@@ -450,7 +533,7 @@ describe("upsertComment", () => {
   })
 
   it("DELETEs stale comments before posting", async () => {
-    const stale = [{ id: 55, body: "<!-- patch-coverage-report --> stale" }]
+    const stale = [{ id: 55, body: "<!-- vitest-coverage-report-marker-root --> stale" }]
     vi.mocked(fetch)
       .mockResolvedValueOnce(mockRes(stale) as Response) // fetchAllComments
       .mockResolvedValueOnce(mockRes({}) as Response) // DELETE stale
@@ -470,7 +553,7 @@ describe("upsertComment", () => {
   })
 
   it("warns but continues when a stale comment DELETE fails", async () => {
-    const stale = [{ id: 55, body: "<!-- patch-coverage-report --> stale" }]
+    const stale = [{ id: 55, body: "<!-- vitest-coverage-report-marker-root --> stale" }]
     vi.mocked(fetch)
       .mockResolvedValueOnce(mockRes(stale) as Response) // fetchAllComments
       .mockResolvedValueOnce(mockRes("Forbidden", false, 403) as Response) // DELETE fails

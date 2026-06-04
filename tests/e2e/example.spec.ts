@@ -1,8 +1,10 @@
 import { expect, test } from "@playwright/test"
 
-test("home page loads", async ({ page }) => {
+test("home page loads", async ({ page }, testInfo) => {
   await page.goto("/")
   await expect(page).toHaveTitle(/The Pragmatic Papers/)
   await expect(page.locator("a[href*='/articles/']").first()).toBeVisible()
-  await page.screenshot({ path: "screenshots/home-page.png" })
+
+  test.skip(testInfo.project.name !== "chromium", "visual baseline captured on chromium only")
+  await expect(page).toHaveScreenshot("home-page.png", { fullPage: true })
 })

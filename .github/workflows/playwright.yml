@@ -2,8 +2,14 @@ name: Playwright Tests
 
 on:
   push:
-    branches: [main]
+    branches: [main, dev]
   pull_request:
+  workflow_dispatch:
+    inputs:
+      update_snapshots:
+        description: "Regenerate visual snapshots and commit them to this branch"
+        type: boolean
+        default: false
 
 jobs:
   test:
@@ -19,9 +25,27 @@ jobs:
       PAYLOAD_SECRET: ${{ secrets.PAYLOAD_SECRET }}
       NEXT_PUBLIC_SERVER_URL: http://localhost:8000
       USE_LOCAL_STORAGE: "true"
+      DATABASE_URI: postgres://postgres:postgres@localhost:5432/pragmatic-papers-e2e
+
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: pragmatic-papers-e2e
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
 
     steps:
       - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
 
       - name: Set up Node.js environment
         uses: ./.github/actions/setup-project
@@ -41,7 +65,42 @@ jobs:
         run: pnpm exec playwright install --with-deps chromium firefox webkit
 
       - name: Run Playwright tests
-        run: pnpm test:e2e
+        if: ${{ !inputs.update_snapshots }}
+        run: pnpm test:e2e -- --update-snapshots=missing
+
+      - name: Commit new snapshot baselines
+        if: ${{ !cancelled() && !inputs.update_snapshots }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add tests/e2e/__screenshots__
+          if git diff --cached --quiet; then
+            echo "No new snapshots to commit."
+          else
+            git commit -m "test: add missing e2e snapshot baselines [skip ci]"
+            git push origin "HEAD:${GITHUB_HEAD_REF:-$GITHUB_REF_NAME}"
+          fi
+
+      - name: Regenerate visual snapshots
+        if: ${{ inputs.update_snapshots }}
+        run: pnpm test:e2e -- --update-snapshots --project=chromium
+
+      - name: Commit regenerated snapshots
+        if: ${{ inputs.update_snapshots }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add tests/e2e/__screenshots__
+          if git diff --cached --quiet; then
+            echo "No snapshot changes to commit."
+            exit 0
+          fi
+          git commit -m "test: update e2e visual snapshots"
+          git push origin "HEAD:${GITHUB_HEAD_REF:-$GITHUB_REF_NAME}"
 
       - uses: actions/upload-artifact@v7
         if: ${{ !cancelled() }}
@@ -50,18 +109,47 @@ jobs:
           path: playwright-report/
           retention-days: 30
 
-      - name: Upload screenshots to PR comment
-        if: github.event_name == 'pull_request'
+      - name: Post snapshot updates to PR comment
+        if: ${{ !cancelled() && github.event_name == 'pull_request' && github.event.pull_request.base.ref != 'main' }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
           OWNER: ${{ github.repository_owner }}
           REPO: ${{ github.event.repository.name }}
           PR_SHA: ${{ github.event.pull_request.head.sha }}
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
           ASSETS_BRANCH: pr-screenshots
         run: |
-          if [ ! -d screenshots ] || [ -z "$(ls screenshots/*.png 2>/dev/null)" ]; then
-            echo "No screenshots found — skipping."
+          git fetch --no-tags --depth=1 origin "$BASE_REF"
+
+          # Snapshot PNGs added or modified in this PR (relative to base branch)
+          mapfile -t changed < <(git diff --name-only --diff-filter=AM \
+            "origin/$BASE_REF...HEAD" -- '**/__screenshots__/**/*.png')
+
+          existing=$(gh api "repos/$OWNER/$REPO/issues/$PR_NUMBER/comments" \
+            --jq '[.[] | select(.body | startswith("<!-- screenshots"))] | first | {id: .id, body: .body} // empty')
+          comment_id=$(printf '%s' "$existing" | jq -r '.id // empty')
+          existing_fingerprint=$(printf '%s' "$existing" \
+            | jq -r '.body // empty' \
+            | sed -n 's/^<!-- screenshots:\([0-9a-f]*\) -->.*/\1/p' \
+            | head -n1)
+
+          if [ ${#changed[@]} -eq 0 ]; then
+            echo "No snapshot updates in this PR — skipping comment."
+            if [ -n "$comment_id" ]; then
+              gh api --method DELETE "repos/$OWNER/$REPO/issues/comments/$comment_id"
+              echo "Removed stale screenshots comment."
+            fi
+            exit 0
+          fi
+
+          fingerprint=$(printf '%s\n' "${changed[@]}" \
+            | sort \
+            | xargs -I{} sha256sum {} \
+            | sha256sum | awk '{print $1}')
+
+          if [ -n "$existing_fingerprint" ] && [ "$existing_fingerprint" = "$fingerprint" ]; then
+            echo "Screenshots unchanged — skipping upload."
             exit 0
           fi
 
@@ -71,7 +159,6 @@ jobs:
           asset_dir="$PR_NUMBER/$PR_SHA"
           remote="https://x-access-token:${GH_TOKEN}@github.com/$OWNER/$REPO.git"
 
-          # Clone the assets branch if it exists, otherwise start an orphan
           if git ls-remote --exit-code "$remote" "refs/heads/$ASSETS_BRANCH" >/dev/null 2>&1; then
             git clone --depth=1 --branch "$ASSETS_BRANCH" "$remote" /tmp/assets
           else
@@ -81,24 +168,19 @@ jobs:
           fi
 
           mkdir -p "/tmp/assets/$asset_dir"
-          cp screenshots/*.png "/tmp/assets/$asset_dir/"
+          for src in "${changed[@]}"; do
+            [ -f "$src" ] || continue
+            cp "$src" "/tmp/assets/$asset_dir/$(basename "$src")"
+          done
+
           git -C /tmp/assets add "$asset_dir"
           git -C /tmp/assets commit -m "screenshots: PR #$PR_NUMBER @ $PR_SHA"
           git -C /tmp/assets push "$remote" "$ASSETS_BRANCH"
 
-          images=""
-          for f in screenshots/*.png; do
-            name=$(basename "$f" .png)
-            url="https://raw.githubusercontent.com/$OWNER/$REPO/$ASSETS_BRANCH/$asset_dir/$name.png"
-            images="$images\n**$name**\n![$name]($url)\n"
-          done
-
-          body="<!-- screenshots -->
-          ## Screenshots
-          $(printf '%b' "$images")"
-
-          comment_id=$(gh api "repos/$OWNER/$REPO/issues/$PR_NUMBER/comments" \
-            --jq '[.[] | select(.body | startswith("<!-- screenshots -->"))] | first | .id // empty')
+          body=$(printf '%s\n' "${changed[@]}" \
+            | FINGERPRINT="$fingerprint" \
+              ASSET_BASE_URL="https://raw.githubusercontent.com/$OWNER/$REPO/$ASSETS_BRANCH/$asset_dir" \
+              pnpm exec tsx scripts/snapshot-comment.ts)
 
           if [ -n "$comment_id" ]; then
             gh api --method PATCH "repos/$OWNER/$REPO/issues/comments/$comment_id" \

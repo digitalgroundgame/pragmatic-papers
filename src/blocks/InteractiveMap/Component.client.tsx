@@ -1,8 +1,17 @@
 "use client"
 
-import React, { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react"
+import React, {
+  useCallback,
+  useEffect,
+  useId,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react"
+import { createPortal } from "react-dom"
 
-import type { ResolvedMap, ResolvedRegion } from "@/blocks/InteractiveMap/types"
+import type { ResolvedMap, ResolvedPath, ResolvedRegion } from "@/blocks/InteractiveMap/types"
 import { cn } from "@/utilities/utils"
 
 interface InteractiveMapClientProps {
@@ -10,8 +19,10 @@ interface InteractiveMapClientProps {
   maps: ResolvedMap[]
 }
 
-interface HoverState {
+interface HoverTarget {
+  mapIndex: number
   region: ResolvedRegion
+  path: ResolvedPath
   pinned: boolean
 }
 
@@ -19,153 +30,161 @@ const TOOLTIP_OFFSET = 14
 
 interface SingleMapProps {
   map: ResolvedMap
+  mapIndex: number
   activeRegionId: string | null
-  onEnter: (region: ResolvedRegion) => void
+  onEnter: (mapIndex: number, region: ResolvedRegion, path: ResolvedPath) => void
   onLeave: () => void
-  onPin: (region: ResolvedRegion) => void
+  onPin: (mapIndex: number, region: ResolvedRegion, path: ResolvedPath) => void
 }
 
-function SingleMap({ map, activeRegionId, onEnter, onLeave, onPin }: SingleMapProps) {
-  const wrapRef = useRef<HTMLDivElement | null>(null)
-  const overlayRef = useRef<SVGPathElement | null>(null)
+function SingleMap({
+  map,
+  mapIndex,
+  activeRegionId,
+  onEnter,
+  onLeave,
+  onPin,
+}: SingleMapProps): React.ReactElement {
   const regionsById = useMemo(() => {
     const m = new Map<string, ResolvedRegion>()
     for (const r of map.regions) m.set(r.regionId, r)
     return m
   }, [map.regions])
 
-  useEffect(() => {
-    const wrap = wrapRef.current
-    if (!wrap) return
-    const svg = wrap.querySelector("svg")
-    if (!svg) return
+  const activePath = useMemo(
+    () =>
+      activeRegionId == null
+        ? null
+        : (map.paths.find((p) => p.regionId === activeRegionId) ?? null),
+    [activeRegionId, map.paths],
+  )
 
-    const vb = svg.viewBox?.baseVal
-    if (vb && vb.width && vb.height) {
-      svg.setAttribute(
-        "preserveAspectRatio",
-        svg.getAttribute("preserveAspectRatio") ?? "xMidYMid meet",
-      )
-      svg.style.aspectRatio = `${vb.width} / ${vb.height}`
-    }
-    svg.removeAttribute("width")
-    svg.removeAttribute("height")
-    svg.style.width = "100%"
-    svg.style.height = "auto"
-    svg.style.display = "block"
+  const renderPath = (path: ResolvedPath, i: number): React.ReactElement => {
+    const region = path.regionId == null ? null : (regionsById.get(path.regionId) ?? null)
+    const fill = region?.color
+    const accessibleLabel = region
+      ? region.formattedValue
+        ? `${region.label}: ${region.formattedValue}`
+        : region.label
+      : (path.regionId ?? "")
+    const interactive = region != null
 
-    const attrName = map.regionAttribute
-    const paths = Array.from(svg.querySelectorAll<SVGPathElement>(`path[${attrName}]`))
+    return (
+      <path
+        key={`${mapIndex}-${i}`}
+        d={path.d}
+        fill={fill}
+        stroke="#ffffff"
+        strokeWidth={1.5}
+        vectorEffect="non-scaling-stroke"
+        tabIndex={interactive ? 0 : undefined}
+        data-interactive-map-path={interactive ? "" : undefined}
+        style={interactive ? { cursor: "pointer", outline: "none" } : undefined}
+        onPointerEnter={interactive && region ? () => onEnter(mapIndex, region, path) : undefined}
+        onPointerLeave={interactive ? onLeave : undefined}
+        onFocus={interactive && region ? () => onEnter(mapIndex, region, path) : undefined}
+        onBlur={interactive ? onLeave : undefined}
+        onClick={interactive && region ? () => onPin(mapIndex, region, path) : undefined}
+        onKeyDown={
+          interactive && region
+            ? (e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault()
+                  onPin(mapIndex, region, path)
+                }
+              }
+            : undefined
+        }
+      >
+        {accessibleLabel ? <title>{accessibleLabel}</title> : null}
+      </path>
+    )
+  }
 
-    for (const path of paths) {
-      const id = path.getAttribute(attrName)
-      if (!id) continue
-      const region = regionsById.get(id)
-      if (region) {
-        path.style.fill = region.color
-      }
-      path.setAttribute("data-interactive-map-path", "")
-      path.setAttribute("tabindex", "0")
-      path.style.cursor = "pointer"
-      path.style.outline = "none"
-      const titleEl = path.querySelector("title")
-      const accessibleLabel = region
-        ? region.formattedValue
-          ? `${region.label}: ${region.formattedValue}`
-          : region.label
-        : id
-      if (titleEl) {
-        titleEl.textContent = accessibleLabel
-      } else {
-        const t = document.createElementNS("http://www.w3.org/2000/svg", "title")
-        t.textContent = accessibleLabel
-        path.appendChild(t)
-      }
-    }
-
-    const g = svg.querySelector("g") ?? svg
-    const overlay = document.createElementNS("http://www.w3.org/2000/svg", "path")
-    overlay.setAttribute("fill", "none")
-    overlay.setAttribute("stroke", "currentColor")
-    overlay.setAttribute("stroke-width", "3")
-    overlay.setAttribute("vector-effect", "non-scaling-stroke")
-    overlay.setAttribute("pointer-events", "none")
-    overlay.style.visibility = "hidden"
-    g.appendChild(overlay)
-    overlayRef.current = overlay
-
-    const handleEnter = (e: Event) => {
-      const target = e.currentTarget as SVGPathElement
-      const id = target.getAttribute(attrName)
-      if (!id) return
-      const region = regionsById.get(id)
-      if (!region) return
-      onEnter(region)
-      overlay.setAttribute("d", target.getAttribute("d") ?? "")
-      overlay.style.visibility = "visible"
-    }
-    const handleLeave = () => {
-      onLeave()
-      overlay.style.visibility = "hidden"
-    }
-    const handleClick = (e: Event) => {
-      const target = e.currentTarget as SVGPathElement
-      const id = target.getAttribute(attrName)
-      if (!id) return
-      const region = regionsById.get(id)
-      if (!region) return
-      onPin(region)
-      overlay.setAttribute("d", target.getAttribute("d") ?? "")
-      overlay.style.visibility = "visible"
-    }
-    const handleKey = (e: Event) => {
-      const ke = e as unknown as KeyboardEvent
-      if (ke.key !== "Enter" && ke.key !== " ") return
-      ke.preventDefault()
-      handleClick(e)
-    }
-    const handleFocus = (e: Event) => handleEnter(e)
-
-    for (const path of paths) {
-      path.addEventListener("pointerenter", handleEnter)
-      path.addEventListener("pointerleave", handleLeave)
-      path.addEventListener("focus", handleFocus)
-      path.addEventListener("blur", handleLeave)
-      path.addEventListener("click", handleClick)
-      path.addEventListener("keydown", handleKey)
-    }
-
-    return () => {
-      for (const path of paths) {
-        path.removeEventListener("pointerenter", handleEnter)
-        path.removeEventListener("pointerleave", handleLeave)
-        path.removeEventListener("focus", handleFocus)
-        path.removeEventListener("blur", handleLeave)
-        path.removeEventListener("click", handleClick)
-        path.removeEventListener("keydown", handleKey)
-      }
-      overlay.remove()
-      overlayRef.current = null
-    }
-  }, [map.regionAttribute, regionsById, onEnter, onLeave, onPin])
-
-  useEffect(() => {
-    const overlay = overlayRef.current
-    if (!overlay) return
-    if (!activeRegionId) {
-      overlay.style.visibility = "hidden"
-    }
-  }, [activeRegionId])
+  const content = (
+    <>
+      {map.paths.map(renderPath)}
+      <path
+        className="pointer-events-none"
+        d={activePath?.d ?? ""}
+        fill="none"
+        stroke="currentColor"
+        strokeWidth={3}
+        vectorEffect="non-scaling-stroke"
+        style={{ visibility: activePath ? "visible" : "hidden" }}
+      />
+    </>
+  )
 
   return (
     <figure className="min-w-0 flex-1">
       {map.title ? (
         <figcaption className="mb-1 text-center text-sm font-medium">{map.title}</figcaption>
       ) : null}
-      {/* eslint-disable-next-line react/no-danger -- SVG is sanitized server-side via sanitize-html with a strict allowlist */}
-      <div ref={wrapRef} dangerouslySetInnerHTML={{ __html: map.svg }} />
+      <svg
+        viewBox={map.viewBox}
+        preserveAspectRatio="xMidYMid meet"
+        style={{ display: "block", height: "auto", width: "100%" }}
+      >
+        {map.transform ? <g transform={map.transform}>{content}</g> : content}
+      </svg>
     </figure>
   )
+}
+
+interface TooltipProps {
+  cursor: { x: number; y: number } | null
+  hover: HoverTarget | null
+}
+
+function Tooltip({ cursor, hover }: TooltipProps): React.ReactElement | null {
+  const ref = useRef<HTMLDivElement | null>(null)
+  const [pos, setPos] = useState<{ x: number; y: number } | null>(null)
+  const [mounted, setMounted] = useState(false)
+
+  // Portals need a DOM target, so we wait one render after hydration to mount.
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- standard isomorphic-portal mount guard
+  useEffect(() => setMounted(true), [])
+
+  useLayoutEffect(() => {
+    if (!hover || !cursor || !ref.current) {
+      setPos(null)
+      return
+    }
+    const el = ref.current
+    const tw = el.offsetWidth
+    const th = el.offsetHeight
+    let x = cursor.x + TOOLTIP_OFFSET
+    let y = cursor.y + TOOLTIP_OFFSET
+    if (x + tw > window.innerWidth - 8) x = cursor.x - tw - TOOLTIP_OFFSET
+    if (y + th > window.innerHeight - 8) y = cursor.y - th - TOOLTIP_OFFSET
+    setPos({ x, y })
+  }, [hover, cursor])
+
+  if (!mounted) return null
+
+  const node = (
+    <div
+      ref={ref}
+      className={cn(
+        "bg-foreground text-background pointer-events-none fixed z-50 rounded-sm px-2.5 py-1.5 text-sm whitespace-nowrap shadow-md transition-opacity",
+        hover && pos ? "opacity-100" : "opacity-0",
+      )}
+      role="tooltip"
+      style={pos ? { left: pos.x, top: pos.y } : { left: -9999, top: -9999 }}
+    >
+      {hover ? (
+        <>
+          <div className="font-medium">{hover.region.label}</div>
+          {hover.region.formattedValue ? (
+            <div className="text-xs opacity-85">{hover.region.formattedValue}</div>
+          ) : null}
+        </>
+      ) : null}
+    </div>
+  )
+
+  return createPortal(node, document.body)
 }
 
 export function InteractiveMapClient({
@@ -173,35 +192,29 @@ export function InteractiveMapClient({
   maps,
 }: InteractiveMapClientProps): React.ReactElement {
   const widgetId = useId()
-  const [hover, setHover] = useState<HoverState | null>(null)
-  const cursorRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 })
-  const tooltipRef = useRef<HTMLDivElement | null>(null)
+  const [hover, setHover] = useState<HoverTarget | null>(null)
+  const [cursor, setCursor] = useState<{ x: number; y: number } | null>(null)
 
-  const positionTooltip = () => {
-    const el = tooltipRef.current
-    if (!el) return
-    const { x: cx, y: cy } = cursorRef.current
-    const tw = el.offsetWidth
-    const th = el.offsetHeight
-    let x = cx + TOOLTIP_OFFSET
-    let y = cy + TOOLTIP_OFFSET
-    if (x + tw > window.innerWidth - 8) x = cx - tw - TOOLTIP_OFFSET
-    if (y + th > window.innerHeight - 8) y = cy - th - TOOLTIP_OFFSET
-    el.style.left = `${x}px`
-    el.style.top = `${y}px`
-  }
+  const handleEnter = useCallback(
+    (mapIndex: number, region: ResolvedRegion, path: ResolvedPath) => {
+      setHover((prev) => (prev?.pinned ? prev : { mapIndex, region, path, pinned: false }))
+    },
+    [],
+  )
+
+  const handleLeave = useCallback(() => {
+    setHover((prev) => (prev?.pinned ? prev : null))
+  }, [])
+
+  const handlePin = useCallback((mapIndex: number, region: ResolvedRegion, path: ResolvedPath) => {
+    setHover({ mapIndex, region, path, pinned: true })
+  }, [])
 
   useEffect(() => {
-    const onMove = (e: PointerEvent) => {
-      cursorRef.current = { x: e.clientX, y: e.clientY }
-      if (hover) positionTooltip()
-    }
+    if (!hover) return
+    const onMove = (e: PointerEvent) => setCursor({ x: e.clientX, y: e.clientY })
     window.addEventListener("pointermove", onMove)
     return () => window.removeEventListener("pointermove", onMove)
-  }, [hover])
-
-  useLayoutEffect(() => {
-    if (hover) positionTooltip()
   }, [hover])
 
   useEffect(() => {
@@ -229,33 +242,18 @@ export function InteractiveMapClient({
 
   return (
     <div aria-label="Interactive map widget" className={layoutClass} role="group">
-      {maps.map((map, i) => (
+      {maps.map((map, mapIndex) => (
         <SingleMap
-          key={`${widgetId}-${i}`}
+          key={`${widgetId}-${mapIndex}`}
           map={map}
-          activeRegionId={hover?.region.regionId ?? null}
-          onEnter={(region) => setHover({ region, pinned: false })}
-          onLeave={() => setHover((h) => (h?.pinned ? h : null))}
-          onPin={(region) => setHover({ region, pinned: true })}
+          mapIndex={mapIndex}
+          activeRegionId={hover?.mapIndex === mapIndex ? hover.region.regionId : null}
+          onEnter={handleEnter}
+          onLeave={handleLeave}
+          onPin={handlePin}
         />
       ))}
-      <div
-        ref={tooltipRef}
-        className={cn(
-          "bg-foreground text-background pointer-events-none fixed z-50 rounded-sm px-2.5 py-1.5 text-sm whitespace-nowrap shadow-md transition-opacity",
-          hover ? "opacity-100" : "opacity-0",
-        )}
-        role="tooltip"
-      >
-        {hover ? (
-          <>
-            <div className="font-medium">{hover.region.label}</div>
-            {hover.region.formattedValue ? (
-              <div className="text-xs opacity-85">{hover.region.formattedValue}</div>
-            ) : null}
-          </>
-        ) : null}
-      </div>
+      <Tooltip cursor={cursor} hover={hover} />
     </div>
   )
 }

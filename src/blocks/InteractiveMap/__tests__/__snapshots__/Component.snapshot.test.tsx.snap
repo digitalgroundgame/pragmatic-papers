@@ -22,38 +22,36 @@ exports[`InteractiveMapBlock > renders a single map with diverging color scale 1
       >
         119th Congress
       </figcaption>
-      <div>
-        <svg
-          preserveAspectRatio="xMidYMid meet"
-          style="aspect-ratio: 10 / 10; width: 100%; height: auto; display: block;"
-          viewBox="0 0 10 10"
+      <svg
+        preserveAspectRatio="xMidYMid meet"
+        style="display: block; height: auto; width: 100%;"
+        viewBox="0 0 10 10"
+      >
+        <path
+          d="M0 0H10V10H0Z"
+          data-interactive-map-path=""
+          fill="#fd5864"
+          stroke="#ffffff"
+          stroke-width="1.5"
+          style="cursor: pointer; outline: none;"
+          tabindex="0"
+          vector-effect="non-scaling-stroke"
         >
-          <path
-            d="M0 0H10V10H0Z"
-            data-interactive-map-path=""
-            data-region="MO-01"
-            style="fill: #fd5864; cursor: pointer; outline: none;"
-            tabindex="0"
-          >
-            <title>
-              District 1: R+12.5
-            </title>
-          </path>
-          <path
-            fill="none"
-            pointer-events="none"
-            stroke="currentColor"
-            stroke-width="3"
-            style="visibility: hidden;"
-            vector-effect="non-scaling-stroke"
-          />
-        </svg>
-      </div>
+          <title>
+            District 1: R+12.5
+          </title>
+        </path>
+        <path
+          class="pointer-events-none"
+          d=""
+          fill="none"
+          stroke="currentColor"
+          stroke-width="3"
+          style="visibility: hidden;"
+          vector-effect="non-scaling-stroke"
+        />
+      </svg>
     </figure>
-    <div
-      class="bg-foreground text-background pointer-events-none fixed z-50 rounded-sm px-2.5 py-1.5 text-sm whitespace-nowrap shadow-md transition-opacity opacity-0"
-      role="tooltip"
-    />
   </div>
   <p
     class="text-muted-foreground mt-2 text-center text-xs"

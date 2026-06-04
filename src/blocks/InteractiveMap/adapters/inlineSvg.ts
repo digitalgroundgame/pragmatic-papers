@@ -1,6 +1,9 @@
 import { type ColorScaleType, formatValue, resolveColor } from "@/blocks/InteractiveMap/colorScale"
+import { parseInlineSvg } from "@/blocks/InteractiveMap/parseInlineSvg"
 import { sanitizeMapSvg } from "@/blocks/InteractiveMap/sanitize"
 import type { RegionDatum, ResolvedMap } from "@/blocks/InteractiveMap/types"
+
+const DEFAULT_VIEWBOX = "0 0 100 100"
 
 interface ResolveInlineSvgArgs {
   title?: string | null
@@ -19,10 +22,11 @@ export function resolveInlineSvgMap({
   scaleType,
   neutralFill,
 }: ResolveInlineSvgArgs): ResolvedMap {
-  const attribute = (regionAttribute?.trim() || "data-region").replace(/^data-/, "data-")
+  const attribute = regionAttribute?.trim() || "data-region"
   const sanitized = sanitizeMapSvg(svg ?? "")
+  const parsed = parseInlineSvg(sanitized, attribute)
 
-  const resolved = regions.map((r) => ({
+  const resolvedRegions = regions.map((r) => ({
     regionId: r.regionId,
     label: r.label?.trim() || r.regionId,
     formattedValue: formatValue(scaleType, r.value),
@@ -36,8 +40,9 @@ export function resolveInlineSvgMap({
 
   return {
     title: title ?? null,
-    svg: sanitized,
-    regionAttribute: attribute,
-    regions: resolved,
+    viewBox: parsed.viewBox ?? DEFAULT_VIEWBOX,
+    transform: parsed.transform,
+    paths: parsed.paths,
+    regions: resolvedRegions,
   }
 }

@@ -2,25 +2,26 @@ import { describe, expect, it } from "vitest"
 
 import { resolveInlineSvgMap } from "@/blocks/InteractiveMap/adapters/inlineSvg"
 
-describe("resolveInlineSvgMap", () => {
-  const baseSvg = `<svg viewBox="0 0 10 10"><path d="M0 0" data-region="MO-01"/></svg>`
+const svg = (path: string) => `<svg viewBox="0 0 10 10"><g><path d="M0 0" ${path}/></g></svg>`
 
-  it("sanitizes the SVG and preserves region attributes", () => {
+describe("resolveInlineSvgMap", () => {
+  it("sanitizes the SVG and surfaces the parsed paths", () => {
     const result = resolveInlineSvgMap({
       title: "Missouri",
-      svg: `${baseSvg}<script>bad()</script>`,
+      svg: `${svg('data-region="MO-01"')}<script>bad()</script>`,
       regionAttribute: "data-region",
       regions: [],
       scaleType: "divergingRedBlue",
     })
-    expect(result.svg).not.toContain("<script")
-    expect(result.svg).toContain('data-region="MO-01"')
+    expect(result.viewBox).toBe("0 0 10 10")
+    expect(result.paths).toHaveLength(1)
+    expect(result.paths[0]?.regionId).toBe("MO-01")
   })
 
   it("computes resolved regions with formatted values and colors from the diverging scale", () => {
     const result = resolveInlineSvgMap({
       title: null,
-      svg: baseSvg,
+      svg: svg('data-region="MO-01"'),
       regionAttribute: "data-region",
       regions: [
         { regionId: "MO-01", label: "District 1", value: 12.5 },
@@ -48,7 +49,7 @@ describe("resolveInlineSvgMap", () => {
   it("falls back to regionId when label is missing and respects override colors", () => {
     const result = resolveInlineSvgMap({
       title: null,
-      svg: baseSvg,
+      svg: svg('data-region="MO-03"'),
       regionAttribute: "data-region",
       regions: [{ regionId: "MO-03", label: null, value: 5, color: "#ff00ff" }],
       scaleType: "divergingRedBlue",
@@ -62,14 +63,25 @@ describe("resolveInlineSvgMap", () => {
     })
   })
 
-  it("defaults regionAttribute to data-region when blank", () => {
+  it("defaults the region attribute to data-region when blank", () => {
     const result = resolveInlineSvgMap({
       title: null,
-      svg: baseSvg,
+      svg: svg('data-region="X"'),
       regionAttribute: "",
       regions: [],
       scaleType: "divergingRedBlue",
     })
-    expect(result.regionAttribute).toBe("data-region")
+    expect(result.paths[0]?.regionId).toBe("X")
+  })
+
+  it("uses a custom region attribute (e.g. data-district)", () => {
+    const result = resolveInlineSvgMap({
+      title: null,
+      svg: svg('data-district="01"'),
+      regionAttribute: "data-district",
+      regions: [],
+      scaleType: "divergingRedBlue",
+    })
+    expect(result.paths[0]?.regionId).toBe("01")
   })
 })

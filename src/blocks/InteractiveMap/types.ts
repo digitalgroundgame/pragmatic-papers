@@ -12,9 +12,16 @@ export interface ResolvedRegion {
   color: string
 }
 
+export interface ResolvedPath {
+  d: string
+  regionId: string | null
+  extraAttrs: Record<string, string>
+}
+
 export interface ResolvedMap {
   title: string | null
-  svg: string
-  regionAttribute: string
+  viewBox: string
+  transform: string | null
+  paths: ResolvedPath[]
   regions: ResolvedRegion[]
 }

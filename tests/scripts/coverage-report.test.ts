@@ -533,7 +533,7 @@ describe("upsertComment", () => {
   })
 
   it("DELETEs stale comments before posting", async () => {
-    const stale = [{ id: 55, body: "<!-- patch-coverage-report --> stale" }]
+    const stale = [{ id: 55, body: "<!-- vitest-coverage-report-marker-root --> stale" }]
     vi.mocked(fetch)
       .mockResolvedValueOnce(mockRes(stale) as Response) // fetchAllComments
       .mockResolvedValueOnce(mockRes({}) as Response) // DELETE stale
@@ -553,7 +553,7 @@ describe("upsertComment", () => {
   })
 
   it("warns but continues when a stale comment DELETE fails", async () => {
-    const stale = [{ id: 55, body: "<!-- patch-coverage-report --> stale" }]
+    const stale = [{ id: 55, body: "<!-- vitest-coverage-report-marker-root --> stale" }]
     vi.mocked(fetch)
       .mockResolvedValueOnce(mockRes(stale) as Response) // fetchAllComments
       .mockResolvedValueOnce(mockRes("Forbidden", false, 403) as Response) // DELETE fails

@@ -8,9 +8,9 @@ import { scheduleVolumeNewsletter } from "./logic"
  * POST /api/volumes/:id/schedule-newsletter
  *
  * Editor-only. Synchronously runs the newsletter scheduling for this Volume,
- * which creates one daily Listmonk campaign per article. Idempotent — the
- * underlying function skips articles already scheduled (by campaign tag),
- * so clicking the button twice is safe.
+ * which creates one daily Listmonk campaign per article. Safe to re-run —
+ * articles already scheduled have their campaign content refreshed in place
+ * (keeping their send time), and new articles are created.
  *
  * Requires the Volume to be published. The auto-on-publish hook was removed
  * in favor of this manual trigger because editors typically edit Volumes
@@ -48,8 +48,8 @@ export const scheduleNewsletterEndpoint: Endpoint = {
     }
 
     try {
-      const { count } = await scheduleVolumeNewsletter(req.payload, volumeId)
-      return Response.json({ count })
+      const { created, updated } = await scheduleVolumeNewsletter(req.payload, volumeId)
+      return Response.json({ created, updated })
     } catch (err) {
       req.payload.logger.error({ err }, "[newsletter] schedule failed")
       const message = err instanceof Error ? err.message : "Unknown error"

@@ -26,15 +26,21 @@ export function ScheduleNewsletterButton(): React.ReactNode {
         credentials: "include",
       })
       const data = (await res.json().catch(() => ({}))) as {
-        count?: number
+        created?: number
+        updated?: number
         error?: string
       }
       if (!res.ok) {
         throw new Error(data.error ?? `HTTP ${res.status}`)
       }
-      toast.success(
-        `Scheduled ${data.count ?? "?"} newsletter campaign${data.count === 1 ? "" : "s"} in Listmonk.`,
-      )
+      const created = data.created ?? 0
+      const updated = data.updated ?? 0
+      const parts: string[] = []
+      if (created > 0) parts.push(`scheduled ${created} new`)
+      if (updated > 0) parts.push(`updated ${updated}`)
+      const summary =
+        parts.length > 0 ? parts.join(" and ") : "no changes — all campaigns are up to date"
+      toast.success(`Newsletter: ${summary}.`)
     } catch (err) {
       toast.error(
         `Could not schedule newsletter: ${err instanceof Error ? err.message : "unknown"}`,

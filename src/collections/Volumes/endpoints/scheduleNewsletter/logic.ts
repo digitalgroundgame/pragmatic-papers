@@ -4,7 +4,12 @@ import type { Payload } from "payload"
 import { VolumeArticleEmail } from "@/emails/VolumeArticle"
 import type { Article, Volume } from "@/payload-types"
 import { getServerSideURL } from "@/utilities/getURL"
-import { createScheduledCampaign, listScheduledCampaigns } from "@/utilities/listmonk"
+import {
+  createScheduledCampaign,
+  listScheduledCampaigns,
+  updateScheduledCampaign,
+  type ScheduledCampaignSummary,
+} from "@/utilities/listmonk"
 import {
   articleTag,
   campaignName,
@@ -18,9 +23,12 @@ import {
  * Schedules one Listmonk campaign per published article in a Volume.
  *
  * Behavior:
- *   - Idempotent: articles already scheduled (matched by Listmonk tag
- *     "art-<id>") are skipped. Safe to retry; safe to call after reordering
- *     Volume.articles in the admin.
+ *   - Re-runnable: an article already scheduled (matched by Listmonk tag
+ *     "art-<id>") has its existing campaign's content (subject + body)
+ *     refreshed in place, keeping its send_at — so editing an article and
+ *     clicking again pushes the new content. New articles are created.
+ *     A campaign that has already started sending (status no longer
+ *     `scheduled`) is left untouched, since Listmonk forbids editing it.
  *   - Append-only: new articles always get send_at values after any existing
  *     scheduled campaigns on the list (queue-overlap policy).
  *   - 7am ET, weekdays only.
@@ -31,13 +39,12 @@ import {
  * isn't found / has no published articles. The endpoint caller surfaces
  * the error to the editor's toast.
  *
- * @returns count of newly-created campaigns (0 if all articles were
- *          already scheduled)
+ * @returns counts of newly-created and content-updated campaigns
  */
 export async function scheduleVolumeNewsletter(
   payload: Payload,
   volumeId: number,
-): Promise<{ count: number }> {
+): Promise<{ created: number; updated: number }> {
   const log = payload.logger
   log.info(`[newsletter] === scheduling campaigns for volume id=${volumeId} ===`)
 
@@ -55,20 +62,20 @@ export async function scheduleVolumeNewsletter(
 
   if (articles.length === 0) {
     log.warn(`[newsletter] volume ${volumeId} has no published articles; nothing to schedule`)
-    return { count: 0 }
+    return { created: 0, updated: 0 }
   }
 
   const existingCampaigns = await listScheduledCampaigns()
-  // Idempotency by Listmonk campaign tags. Tags are admin-only metadata —
-  // never sent to recipients.
+  // Map this Volume's articles to their already-scheduled campaign via the
+  // "art-<id>" tag. Tags are admin-only metadata — never sent to recipients.
   const thisVolumeTag = volumeTag(volume.volumeNumber)
-  const existingArticleIds = new Set<number>()
+  const campaignByArticleId = new Map<number, ScheduledCampaignSummary>()
   for (const c of existingCampaigns) {
     if (!c.tags.includes(NEWSLETTER_TAG)) continue
     if (!c.tags.includes(thisVolumeTag)) continue
     for (const tag of c.tags) {
       const articleId = parseArticleIdFromTag(tag)
-      if (articleId !== null) existingArticleIds.add(articleId)
+      if (articleId !== null) campaignByArticleId.set(articleId, c)
     }
   }
 
@@ -82,23 +89,20 @@ export async function scheduleVolumeNewsletter(
   )
   const baseline = latestAny && latestAny > now ? latestAny : now
   log.info(
-    `[newsletter] baseline = ${baseline.toISOString()} (existing campaigns on list: ${existingCampaigns.length}, this volume: ${existingArticleIds.size})`,
+    `[newsletter] baseline = ${baseline.toISOString()} (existing campaigns on list: ${existingCampaigns.length}, this volume: ${campaignByArticleId.size})`,
   )
 
   const siteUrl = getServerSideURL()
   let cursor = baseline
-  let count = 0
-  // Scheduling is append-only: existing campaigns keep their send_at, new
-  // articles get appended after `baseline`. Cursor only advances on actual
-  // create — skipped iterations don't burn calendar days.
-  for (const article of articles) {
-    if (existingArticleIds.has(article.id)) {
-      log.info(`[newsletter]   article #${article.id} "${article.title}" already scheduled — skip`)
-      continue
-    }
-    cursor = nextWeekday7amET(cursor)
-    const sendDayIndex = existingArticleIds.size + count // 0-based
-    const name = campaignName(volume.volumeNumber, sendDayIndex, articles.length, article.title)
+  let created = 0
+  let updated = 0
+  // Day index is the article's position in the published list, so re-running
+  // produces stable "Day K of N" labels regardless of create order. Send times
+  // stay append-only: existing campaigns keep their send_at and the cursor only
+  // advances on an actual create.
+  for (let i = 0; i < articles.length; i++) {
+    const article = articles[i]!
+    const name = campaignName(volume.volumeNumber, i, articles.length, article.title)
     const bodyHtml = await render(
       VolumeArticleEmail({
         article,
@@ -107,24 +111,58 @@ export async function scheduleVolumeNewsletter(
           volumeNumber: volume.volumeNumber,
           slug: volume.slug ?? "",
         },
-        dayIndex: sendDayIndex + 1,
+        dayIndex: i + 1,
         totalDays: articles.length,
         siteUrl,
       }),
     )
+    const tags = [NEWSLETTER_TAG, thisVolumeTag, articleTag(article.id)]
+    const existing = campaignByArticleId.get(article.id)
+
+    if (existing) {
+      // Already sending or sent — Listmonk won't let us edit it.
+      if (existing.status !== "scheduled") {
+        log.info(
+          `[newsletter]   article #${article.id} "${article.title}" campaign #${existing.id} is "${existing.status}" — leaving as-is`,
+        )
+        continue
+      }
+      await updateScheduledCampaign({
+        campaignId: existing.id,
+        name,
+        subject: article.title,
+        bodyHtml,
+        sendAt: existing.sendAt.toISOString(),
+        // A PUT replaces tags wholesale, so copy the ones we fetched to avoid
+        // dropping any an admin added in Listmonk. Best-effort: a tag edited
+        // between the list fetch and this update would still be overwritten.
+        // The identity tags (newsletter/vol-N/art-id) are always present here
+        // since we matched the campaign on them.
+        tags: existing.tags,
+      })
+      log.info(
+        `[newsletter]   day ${i + 1}: updated campaign #${existing.id} content for article #${article.id}`,
+      )
+      updated++
+      continue
+    }
+
+    cursor = nextWeekday7amET(cursor)
     const id = await createScheduledCampaign({
       name,
       subject: article.title,
       bodyHtml,
       sendAt: cursor.toISOString(),
-      tags: [NEWSLETTER_TAG, thisVolumeTag, articleTag(article.id)],
+      tags,
     })
     log.info(
-      `[newsletter]   day ${sendDayIndex + 1}: created campaign #${id} for article #${article.id} send_at=${cursor.toISOString()}`,
+      `[newsletter]   day ${i + 1}: created campaign #${id} for article #${article.id} send_at=${cursor.toISOString()}`,
     )
-    count++
+    created++
   }
 
-  log.info(`[newsletter] === done — created ${count} campaigns for volume ${volumeId} ===`)
-  return { count }
+  log.info(
+    `[newsletter] === done — created ${created}, updated ${updated} campaigns for volume ${volumeId} ===`,
+  )
+  return { created, updated }
 }

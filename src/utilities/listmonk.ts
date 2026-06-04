@@ -119,8 +119,25 @@ interface ListmonkCampaign {
 export interface ScheduledCampaignSummary {
   id: number
   name: string
+  status: string
   sendAt: Date
   tags: string[]
+}
+
+/**
+ * Listmonk silently drops lists the API user's role lacks Get/Manage permission
+ * for (FilterListsByPerm), persisting a campaign with no recipients and no
+ * error. Verify the newsletter list survived the round-trip so it surfaces
+ * instead of going out empty.
+ */
+function assertListAttached(campaign: ListmonkCampaign, cfg: ListmonkConfig, verb: string): void {
+  if (!campaign.lists?.some((l) => l.id === cfg.newsletterListId)) {
+    throw new Error(
+      `Listmonk ${verb} campaign #${campaign.id} without list ${cfg.newsletterListId} attached. ` +
+        `The API user "${cfg.apiUser}" likely lacks Get/Manage permission on that list — ` +
+        `check its role in Listmonk admin (Users → Roles).`,
+    )
+  }
 }
 
 /**
@@ -147,21 +164,47 @@ export async function createScheduledCampaign(input: CreateCampaignInput): Promi
       tags: input.tags ?? [],
     }),
   })
-  // Listmonk silently drops lists the API user's role lacks Get/Manage
-  // permission for (FilterListsByPerm), creating a campaign with no recipients
-  // and no error. Detect that here so it surfaces instead of going out empty.
-  if (!created.lists?.some((l) => l.id === cfg.newsletterListId)) {
-    throw new Error(
-      `Listmonk created campaign #${created.id} without list ${cfg.newsletterListId} attached. ` +
-        `The API user "${cfg.apiUser}" likely lacks Get/Manage permission on that list — ` +
-        `check its role in Listmonk admin (Users → Roles).`,
-    )
-  }
+  assertListAttached(created, cfg, "created")
   await listmonkFetch<ListmonkCampaign>(`/campaigns/${created.id}/status`, {
     method: "PUT",
     body: JSON.stringify({ status: "scheduled" }),
   })
   return created.id
+}
+
+export interface UpdateCampaignContentInput {
+  campaignId: number
+  name: string
+  subject: string
+  bodyHtml: string
+  /** Re-sent unchanged so updating content never reshuffles existing send times. */
+  sendAt: string
+  tags: string[]
+}
+
+/**
+ * Overwrite an existing campaign's editable content (name, subject, body) while
+ * preserving its schedule. Listmonk only permits edits to draft/paused/scheduled
+ * campaigns, so callers must not pass one that's already running or sent.
+ */
+export async function updateScheduledCampaign(input: UpdateCampaignContentInput): Promise<void> {
+  const cfg = readConfig()
+  const updated = await listmonkFetch<ListmonkCampaign>(`/campaigns/${input.campaignId}`, {
+    method: "PUT",
+    body: JSON.stringify({
+      name: input.name,
+      subject: input.subject,
+      lists: [cfg.newsletterListId],
+      from_email: cfg.fromEmail,
+      content_type: "html",
+      body: input.bodyHtml,
+      send_at: input.sendAt,
+      type: "regular",
+      messenger: "email",
+      tags: input.tags,
+    }),
+  })
+  assertListAttached(updated, cfg, "updated")
 }
 
 /**
@@ -185,6 +228,7 @@ export async function listScheduledCampaigns(): Promise<ScheduledCampaignSummary
     .map((c) => ({
       id: c.id,
       name: c.name,
+      status: c.status,
       sendAt: new Date(c.send_at!),
       tags: c.tags ?? [],
     }))

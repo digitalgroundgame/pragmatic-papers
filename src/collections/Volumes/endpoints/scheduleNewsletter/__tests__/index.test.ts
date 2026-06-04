@@ -84,12 +84,12 @@ describe("scheduleNewsletterEndpoint handler", () => {
     expect(json.error).toMatch(/published/i)
   })
 
-  it("returns 200 with count on success", async () => {
+  it("returns 200 with created/updated counts on success", async () => {
     vi.mocked(isEditor).mockReturnValue(true)
-    vi.mocked(scheduleVolumeNewsletter).mockResolvedValue({ count: 3 })
+    vi.mocked(scheduleVolumeNewsletter).mockResolvedValue({ created: 3, updated: 2 })
     const res = await scheduleNewsletterEndpoint.handler(makeReq() as never)
     expect(res.status).toBe(200)
-    expect(await res.json()).toEqual({ count: 3 })
+    expect(await res.json()).toEqual({ created: 3, updated: 2 })
   })
 
   it("returns 500 when scheduleVolumeNewsletter throws", async () => {

@@ -1,0 +1,74 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`InteractiveMapBlock > renders a single map with diverging color scale 1`] = `
+<figure
+  class="not-prose col-start-2 my-8"
+>
+  <figcaption
+    class="mb-3 text-center font-serif text-lg font-semibold"
+  >
+    Missouri
+  </figcaption>
+  <div
+    aria-label="Interactive map widget"
+    class="flex flex-col gap-3 sm:flex-row sm:items-start"
+    role="group"
+  >
+    <figure
+      class="min-w-0 flex-1"
+    >
+      <figcaption
+        class="mb-1 text-center text-sm font-medium"
+      >
+        119th Congress
+      </figcaption>
+      <div>
+        <svg
+          preserveAspectRatio="xMidYMid meet"
+          style="aspect-ratio: 10 / 10; width: 100%; height: auto; display: block;"
+          viewBox="0 0 10 10"
+        >
+          <path
+            d="M0 0H10V10H0Z"
+            data-interactive-map-path=""
+            data-region="MO-01"
+            style="fill: #fd5864; cursor: pointer; outline: none;"
+            tabindex="0"
+          >
+            <title>
+              District 1: R+12.5
+            </title>
+          </path>
+          <path
+            fill="none"
+            pointer-events="none"
+            stroke="currentColor"
+            stroke-width="3"
+            style="visibility: hidden;"
+            vector-effect="non-scaling-stroke"
+          />
+        </svg>
+      </div>
+    </figure>
+    <div
+      class="bg-foreground text-background pointer-events-none fixed z-50 rounded-sm px-2.5 py-1.5 text-sm whitespace-nowrap shadow-md transition-opacity opacity-0"
+      role="tooltip"
+    />
+  </div>
+  <p
+    class="text-muted-foreground mt-2 text-center text-xs"
+  >
+    Source
+    :
+     
+    <a
+      class="underline"
+      href="https://example.com"
+      rel="noopener noreferrer"
+      target="_blank"
+    >
+      U.S. Census
+    </a>
+  </p>
+</figure>
+`;

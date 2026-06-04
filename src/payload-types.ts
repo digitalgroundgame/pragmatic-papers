@@ -2364,6 +2364,64 @@ export interface CodeBlock {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "InteractiveMapBlock".
+ */
+export interface InteractiveMapBlock {
+  /**
+   * Optional heading displayed above the map(s).
+   */
+  widgetTitle?: string | null;
+  layout: 'row' | 'grid';
+  /**
+   * Diverging Red/Blue colors each region by its value (negative = D+, positive = R+). Per-region uses the color you set on each region row.
+   */
+  colorScale: 'divergingRedBlue' | 'perRegion';
+  maps: {
+    title?: string | null;
+    /**
+     * Paste an SVG whose paths are already projected (e.g. Albers Equal Area). Each region path must carry a data attribute (default: data-region) that matches a Region ID below.
+     */
+    svg: string;
+    /**
+     * The data attribute on each path that identifies the region (e.g. data-region, data-district).
+     */
+    regionAttribute?: string | null;
+    regions?:
+      | {
+          /**
+           * Must match the value of the region attribute on the SVG path.
+           */
+          regionId: string;
+          label?: string | null;
+          /**
+           * For Diverging Red/Blue: signed margin (positive = R+, negative = D+).
+           */
+          value?: number | null;
+          /**
+           * CSS color. Overrides the automatic color scale for this region.
+           */
+          color?: string | null;
+          id?: string | null;
+        }[]
+      | null;
+    id?: string | null;
+  }[];
+  /**
+   * Shown as a small attribution footer beneath the maps.
+   */
+  sources?:
+    | {
+        name: string;
+        url?: string | null;
+        id?: string | null;
+      }[]
+    | null;
+  id?: string | null;
+  blockName?: string | null;
+  blockType: 'interactiveMap';
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "MediaCollageBlock".
  */
 export interface MediaCollageBlock {

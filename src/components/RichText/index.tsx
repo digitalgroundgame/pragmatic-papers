@@ -2,6 +2,7 @@ import { BannerBlock } from "@/blocks/Banner/Component"
 import { CallToActionBlock } from "@/blocks/CallToAction/Component"
 import { CodeBlock } from "@/blocks/Code/Component"
 import { FootnoteBlock } from "@/blocks/Footnote/Component"
+import { InteractiveMapBlock } from "@/blocks/InteractiveMap/Component"
 import { MathBlock, type MathBlockProps } from "@/blocks/Math/Component"
 import { LightboxMediaBlock } from "@/blocks/MediaBlock/LightboxMediaBlock"
 import { MediaCollageBlock } from "@/blocks/MediaCollageBlock/component"
@@ -21,6 +22,7 @@ import type {
   CodeBlock as CodeBlockProps,
   CallToActionBlock as CTABlockProps,
   FootnoteBlock as FootnoteBlockProps,
+  InteractiveMapBlock as InteractiveMapBlockProps,
   MediaBlock as MediaBlockProps,
   MediaCollageBlock as MediaCollageBlockProps,
   SocialEmbedBlock as SocialEmbedBlockProps,
@@ -49,6 +51,7 @@ type NodeTypes =
       | MediaCollageBlockProps
       | BannerBlockProps
       | CodeBlockProps
+      | InteractiveMapBlockProps
       | MathBlockProps
       | SquiggleRuleBlockProps
       | SocialEmbedBlockProps
@@ -77,6 +80,7 @@ function createJsxConverters(parentDoc?: ParentDocContext): JSXConvertersFunctio
       mediaCollage: ({ node }) => <MediaCollageBlock {...node.fields} />,
       code: ({ node }) => <CodeBlock className="col-start-2" {...node.fields} />,
       cta: ({ node }) => <CallToActionBlock {...node.fields} />,
+      interactiveMap: ({ node }) => <InteractiveMapBlock {...node.fields} />,
       displayMathBlock: ({ node }: { node: SerializedBlockNode<MathBlockProps> }) => (
         <MathBlock {...node.fields} />
       ),

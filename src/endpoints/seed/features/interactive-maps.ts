@@ -74,11 +74,13 @@ export const createInteractiveMapArticle = async (
       payload,
       "mo-districts-119.svg",
       "Missouri Congressional Districts — 119th Congress",
+      "https://redistrictingdatahub.org/",
     ),
     createMapAssetFromFixture(
       payload,
       "mo-districts-120.svg",
       "Missouri Congressional Districts — 120th Congress",
+      "https://cdmaps.polisci.ucla.edu/",
     ),
   ])
 

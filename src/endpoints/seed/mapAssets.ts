@@ -17,6 +17,7 @@ export async function createMapAssetFromFixture(
   payload: Payload,
   fixtureFilename: string,
   label: string,
+  sourceUrl?: string,
 ): Promise<MapAsset> {
   const data = await readFile(path.join(fixturesDir, fixtureFilename))
   // Run-unique filename so re-seeding doesn't trip Payload's filename-increment path.
@@ -28,7 +29,10 @@ export async function createMapAssetFromFixture(
   }
   return payload.create({
     collection: "map-assets",
-    data: { label },
+    data: {
+      label,
+      source: sourceUrl ? { type: "custom", url: sourceUrl } : undefined,
+    },
     file,
   })
 }

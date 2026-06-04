@@ -66,7 +66,6 @@ export const InteractiveMap: Block = {
           relationTo: "map-assets",
           required: true,
           label: "Pre-projected SVG",
-          maxLength: 500000,
           admin: {
             description:
               "Upload an SVG whose paths are already projected (e.g. Albers Equal Area). Each region path must carry a data attribute (default: data-region) that matches a Region ID below.",

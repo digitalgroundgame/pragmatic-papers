@@ -8,6 +8,8 @@ type SlotCountMap = Record<string, number>
 type LayoutSelectFieldProps = SelectFieldClientProps & {
   /** Map of layout key → required slot count, passed via clientProps */
   slotCounts: SlotCountMap
+  /** Map of layout key → minimum slot count, passed via clientProps */
+  minSlotCounts?: SlotCountMap
   /** The sibling field name for the slots array (default: "slots") */
   slotsFieldName?: string
 }
@@ -20,7 +22,7 @@ type LayoutSelectFieldProps = SelectFieldClientProps & {
  * the selected layout.
  */
 export const LayoutSelectField: React.FC<LayoutSelectFieldProps> = (props) => {
-  const { slotCounts, slotsFieldName = "slots", path, schemaPath } = props
+  const { slotCounts, minSlotCounts, slotsFieldName = "slots", path, schemaPath } = props
 
   // Derive the sibling slots field paths from the layout field's own paths
   const lastDot = path?.lastIndexOf(".")
@@ -58,7 +60,7 @@ export const LayoutSelectField: React.FC<LayoutSelectFieldProps> = (props) => {
     if (!layoutValue || layoutValue === prevLayoutRef.current) return
     prevLayoutRef.current = layoutValue
 
-    const requiredCount = slotCounts[layoutValue] || 0
+    const requiredCount = (minSlotCounts?.[layoutValue] ?? slotCounts[layoutValue]) || 0
     if (!requiredCount) return
 
     const count = rowCountRef.current
@@ -71,7 +73,15 @@ export const LayoutSelectField: React.FC<LayoutSelectFieldProps> = (props) => {
         removeFieldRow({ path: slotsPath, rowIndex: i })
       }
     }
-  }, [layoutValue, slotCounts, slotsPath, slotsSchemaPath, addFieldRow, removeFieldRow])
+  }, [
+    layoutValue,
+    slotCounts,
+    slotsPath,
+    slotsSchemaPath,
+    addFieldRow,
+    removeFieldRow,
+    minSlotCounts,
+  ])
 
   return <SelectField {...props} />
 }

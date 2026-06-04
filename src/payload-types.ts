@@ -84,6 +84,7 @@ export type CollectionGridLayout =
       | 'fibonacci-6'
       | 'vespucci-7'
       | 'fibonacci-7'
+      | 'gauss-10'
     )
   | null;
 /**

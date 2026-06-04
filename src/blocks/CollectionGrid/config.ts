@@ -8,6 +8,7 @@ import { Fibonacci6 } from "./layouts/Fibonacci6"
 import { Fibonacci7 } from "./layouts/Fibonacci7"
 import { Newton4 } from "./layouts/Newton4"
 import { Vespucci7 } from "./layouts/Vespucci7"
+import { Gauss10 } from "./layouts/Gauss10"
 import type { LayoutDefinition } from "./types"
 
 export type { LayoutDefinition }
@@ -22,6 +23,7 @@ type Layout =
   | "fibonacci-6"
   | "vespucci-7"
   | "fibonacci-7"
+  | "gauss-10"
 
 export const layouts = {
   "bernoulli-left": BernoulliLeft,
@@ -33,6 +35,7 @@ export const layouts = {
   "fibonacci-6": Fibonacci6,
   "vespucci-7": Vespucci7,
   "fibonacci-7": Fibonacci7,
+  "gauss-10": Gauss10,
 } as const satisfies Record<Layout, LayoutDefinition>
 
 const slotCounts: Record<string, number> = Object.fromEntries(
@@ -41,6 +44,13 @@ const slotCounts: Record<string, number> = Object.fromEntries(
 
 const slotDescriptions: Record<string, string[]> = Object.fromEntries(
   Object.entries(layouts).map(([key, def]) => [key, def.slotDescriptions]),
+)
+
+const minSlotCounts: Record<string, number> = Object.fromEntries(
+  Object.entries(layouts).map(([key, def]) => [
+    key,
+    def.minSlotCount ?? def.slotDescriptions.length,
+  ]),
 )
 
 export const CollectionGrid: Block = {
@@ -65,6 +75,7 @@ export const CollectionGrid: Block = {
             path: "@/blocks/CollectionGrid/components/LayoutSelectField#LayoutSelectField",
             clientProps: {
               slotCounts,
+              minSlotCounts,
             },
           },
         },
@@ -84,6 +95,7 @@ export const CollectionGrid: Block = {
             path: "@/blocks/CollectionGrid/components/SlotsField#SlotsField",
             clientProps: {
               slotCounts,
+              minSlotCounts,
             },
           },
           RowLabel: {

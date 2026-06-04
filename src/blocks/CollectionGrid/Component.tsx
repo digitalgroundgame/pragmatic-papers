@@ -14,6 +14,7 @@ import { Fibonacci6Layout } from "./layouts/Fibonacci6"
 import { Fibonacci7Layout } from "./layouts/Fibonacci7"
 import { Newton4Layout } from "./layouts/Newton4"
 import { Vespucci7Layout } from "./layouts/Vespucci7"
+import { Gauss10Layout } from "./layouts/Gauss10"
 import type { LayoutProps } from "./types"
 
 const layouts = {
@@ -25,6 +26,7 @@ const layouts = {
   "euler-5": Euler5Layout,
   "fibonacci-6": Fibonacci6Layout,
   "vespucci-7": Vespucci7Layout,
+  "gauss-10": Gauss10Layout,
   "fibonacci-7": Fibonacci7Layout,
 } as const satisfies Record<NonNullable<CollectionGridLayout>, React.FC<LayoutProps>>
 

@@ -8,6 +8,8 @@ type SlotCountMap = Record<string, number>
 type SlotsFieldProps = ArrayFieldClientProps & {
   /** Map of layout key → required slot count, passed via clientProps */
   slotCounts: SlotCountMap
+  /** Map of layout key → minimum slot count, passed via clientProps */
+  minSlotCounts?: SlotCountMap
   /** The sibling field name for the layout select (default: "layout") */
   layoutFieldName?: string
 }
@@ -20,13 +22,14 @@ type SlotsFieldProps = ArrayFieldClientProps & {
  * Row count synchronisation is handled by LayoutSelectField.
  */
 export const SlotsField: React.FC<SlotsFieldProps> = (props) => {
-  const { slotCounts, layoutFieldName = "layout", path, field } = props
+  const { slotCounts, minSlotCounts, layoutFieldName = "layout", path, field } = props
 
   const basePath = path?.includes(".") ? path.substring(0, path.lastIndexOf(".")) : ""
   const layoutPath = basePath ? `${basePath}.${layoutFieldName}` : layoutFieldName
 
   const layoutValue = useFormFields(([fields]) => fields[layoutPath]?.value as string | undefined)
   const targetCount = (layoutValue && slotCounts[layoutValue]) || 0
+  const minCount = (layoutValue && minSlotCounts?.[layoutValue]) || targetCount
 
-  return <ArrayField {...props} field={{ ...field, minRows: targetCount, maxRows: targetCount }} />
+  return <ArrayField {...props} field={{ ...field, minRows: minCount, maxRows: targetCount }} />
 }

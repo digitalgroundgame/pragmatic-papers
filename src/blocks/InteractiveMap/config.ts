@@ -61,14 +61,14 @@ export const InteractiveMap: Block = {
           label: "Map Title",
         },
         {
-          name: "svg",
-          type: "textarea",
+          name: "svgAsset",
+          type: "upload",
+          relationTo: "map-assets",
           required: true,
           label: "Pre-projected SVG",
           admin: {
             description:
-              "Paste an SVG whose paths are already projected (e.g. Albers Equal Area). Each region path must carry a data attribute (default: data-region) that matches a Region ID below.",
-            rows: 6,
+              "Upload an SVG whose paths are already projected (e.g. Albers Equal Area). Each region path must carry a data attribute (default: data-region) that matches a Region ID below.",
           },
         },
         {

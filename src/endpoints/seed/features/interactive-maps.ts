@@ -2,8 +2,7 @@ import type { Media, User } from "@/payload-types"
 import type { Payload } from "payload"
 
 import { createArticle, validateWriters } from "../articles"
-import { moDistricts119Svg } from "../fixtures/modistricts119"
-import { moDistricts120Svg } from "../fixtures/modistricts120"
+import { createMapAssetFromFixture } from "../mapAssets"
 import { createHeadingNode, createParagraph, createRichText } from "../richtext"
 
 // Margins are R+ when positive, D+ when negative — extracted from Emily's demo HTML.
@@ -19,6 +18,35 @@ const districtRegions119 = [
   { regionId: "MO-08", label: "MO 8th District", value: 54.57 },
 ]
 
+interface MapEntry {
+  title: string
+  svgAssetId: number
+  regionAttribute: string
+  regions: typeof districtRegions119
+}
+
+const createInteractiveMapNode = (maps: MapEntry[]) => ({
+  type: "block",
+  fields: {
+    blockType: "interactiveMap",
+    widgetTitle: "Missouri Congressional Districts — 119th vs. 120th Congress",
+    layout: "row",
+    colorScale: "divergingRedBlue",
+    maps: maps.map((m) => ({
+      title: m.title,
+      svgAsset: m.svgAssetId,
+      regionAttribute: m.regionAttribute,
+      regions: m.regions,
+    })),
+    sources: [
+      { name: "Redistricting Data Hub", url: "https://redistrictingdatahub.org/" },
+      { name: "UCLA cdmaps", url: "https://cdmaps.polisci.ucla.edu/" },
+    ],
+  },
+  format: "",
+  version: 2,
+})
+
 const districtRegions120 = [
   { regionId: "MO-01", label: "MO 1st District", value: -58.61 },
   { regionId: "MO-02", label: "MO 2nd District", value: 11.69 },
@@ -29,36 +57,6 @@ const districtRegions120 = [
   { regionId: "MO-07", label: "MO 7th District", value: 43.14 },
   { regionId: "MO-08", label: "MO 8th District", value: 54.55 },
 ]
-
-const createInteractiveMapBlock = () => ({
-  type: "block",
-  fields: {
-    blockType: "interactiveMap",
-    widgetTitle: "Missouri Congressional Districts — 119th vs. 120th Congress",
-    layout: "row",
-    colorScale: "divergingRedBlue",
-    maps: [
-      {
-        title: "119th Congress",
-        svg: moDistricts119Svg,
-        regionAttribute: "data-district",
-        regions: districtRegions119,
-      },
-      {
-        title: "120th Congress",
-        svg: moDistricts120Svg,
-        regionAttribute: "data-district",
-        regions: districtRegions120,
-      },
-    ],
-    sources: [
-      { name: "Redistricting Data Hub", url: "https://redistrictingdatahub.org/" },
-      { name: "UCLA cdmaps", url: "https://cdmaps.polisci.ucla.edu/" },
-    ],
-  },
-  format: "",
-  version: 2,
-})
 
 export const createInteractiveMapArticle = async (
   payload: Payload,
@@ -71,6 +69,19 @@ export const createInteractiveMapArticle = async (
   const writer = writers[0]!
   const title = "Missouri's Shifting Margins: The 119th and 120th Congressional Maps"
 
+  const [asset119, asset120] = await Promise.all([
+    createMapAssetFromFixture(
+      payload,
+      "mo-districts-119.svg",
+      "Missouri Congressional Districts — 119th Congress",
+    ),
+    createMapAssetFromFixture(
+      payload,
+      "mo-districts-120.svg",
+      "Missouri Congressional Districts — 120th Congress",
+    ),
+  ])
+
   const article = await createArticle(payload, {
     title,
     content: createRichText([
@@ -81,10 +92,23 @@ export const createInteractiveMapArticle = async (
       createParagraph(
         "Hover (or focus with the keyboard) over any district to see the R+/D+ margin. The diverging Red/Blue palette colors each region by its signed margin — deep red for strong Republican wins, deep blue for strong Democratic wins.",
       ),
-      createInteractiveMapBlock(),
+      createInteractiveMapNode([
+        {
+          title: "119th Congress",
+          svgAssetId: asset119.id,
+          regionAttribute: "data-district",
+          regions: districtRegions119,
+        },
+        {
+          title: "120th Congress",
+          svgAssetId: asset120.id,
+          regionAttribute: "data-district",
+          regions: districtRegions120,
+        },
+      ]),
       createHeadingNode("How the block works", "h2"),
       createParagraph(
-        "Writers paste a pre-projected SVG (here in Albers Equal Area, ESRI:102003) into the block. Each path carries a region attribute (in this case data-district) that joins to a regions table the writer fills in with values and labels. The block sanitizes the SVG server-side, parses out the paths, applies the color scale, and renders them as real JSX — so the colored map is SSR-friendly and accessible.",
+        "Writers upload a pre-projected SVG (here in Albers Equal Area, ESRI:102003) into the Map Assets collection. Each path carries a region attribute (in this case data-district) that joins to a regions table the writer fills in with values and labels. The block reads the SVG content the collection captured at upload time, sanitizes it, parses out the paths, applies the color scale, and renders them as real JSX — so the colored map is SSR-friendly and accessible.",
       ),
     ]),
     authors: [writer.id],

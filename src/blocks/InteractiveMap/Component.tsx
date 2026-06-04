@@ -12,6 +12,11 @@ type Props = InteractiveMapBlockProps & {
   className?: string
 }
 
+function readSvgContent(asset: InteractiveMapBlockProps["maps"][number]["svgAsset"]): string {
+  if (!asset || typeof asset === "number") return ""
+  return asset.svgContent ?? ""
+}
+
 export const InteractiveMapBlock: React.FC<Props> = ({
   className,
   widgetTitle,
@@ -22,21 +27,25 @@ export const InteractiveMapBlock: React.FC<Props> = ({
 }) => {
   const scaleType: ColorScaleType = colorScale ?? "divergingRedBlue"
 
-  const resolvedMaps: ResolvedMap[] = (maps ?? []).map((m) => {
-    const regions = (m.regions ?? []).map((r) => ({
-      regionId: r.regionId,
-      label: r.label,
-      value: r.value,
-      color: r.color,
-    }))
-    return resolveInlineSvgMap({
-      title: m.title,
-      svg: m.svg,
-      regionAttribute: m.regionAttribute,
-      regions,
-      scaleType,
+  const resolvedMaps: ResolvedMap[] = (maps ?? [])
+    .map((m): ResolvedMap | null => {
+      const svg = readSvgContent(m.svgAsset)
+      if (!svg) return null
+      const regions = (m.regions ?? []).map((r) => ({
+        regionId: r.regionId,
+        label: r.label,
+        value: r.value,
+        color: r.color,
+      }))
+      return resolveInlineSvgMap({
+        title: m.title,
+        svg,
+        regionAttribute: m.regionAttribute,
+        regions,
+        scaleType,
+      })
     })
-  })
+    .filter((m): m is ResolvedMap => m !== null)
 
   if (resolvedMaps.length === 0) return null
 

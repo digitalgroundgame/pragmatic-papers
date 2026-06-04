@@ -199,6 +199,7 @@ export interface Config {
     articles: Article;
     volumes: Volume;
     media: Media;
+    'map-assets': MapAsset;
     categories: Category;
     users: User;
     webhooks: Webhook;
@@ -219,6 +220,7 @@ export interface Config {
     articles: ArticlesSelect<false> | ArticlesSelect<true>;
     volumes: VolumesSelect<false> | VolumesSelect<true>;
     media: MediaSelect<false> | MediaSelect<true>;
+    'map-assets': MapAssetsSelect<false> | MapAssetsSelect<true>;
     categories: CategoriesSelect<false> | CategoriesSelect<true>;
     users: UsersSelect<false> | UsersSelect<true>;
     webhooks: WebhooksSelect<false> | WebhooksSelect<true>;
@@ -1075,6 +1077,36 @@ export interface Form {
   createdAt: string;
 }
 /**
+ * Raw vector geometry for the Interactive Map block — SVG today, GeoJSON/TopoJSON later. Files are stored without image processing so vector data round-trips intact.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "map-assets".
+ */
+export interface MapAsset {
+  id: number;
+  /**
+   * Human-readable name shown in the admin (e.g. 'Missouri Congressional Districts — 119th Congress').
+   */
+  label?: string | null;
+  /**
+   * Auto-populated with the uploaded SVG's text content so blocks can read it without a runtime file fetch.
+   */
+  svgContent?: string | null;
+  createdBy?: (number | null) | User;
+  prefix?: string | null;
+  updatedAt: string;
+  createdAt: string;
+  url?: string | null;
+  thumbnailURL?: string | null;
+  filename?: string | null;
+  mimeType?: string | null;
+  filesize?: number | null;
+  width?: number | null;
+  height?: number | null;
+  focalX?: number | null;
+  focalY?: number | null;
+}
+/**
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "categories".
  */
@@ -1343,6 +1375,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'media';
         value: number | Media;
+      } | null)
+    | ({
+        relationTo: 'map-assets';
+        value: number | MapAsset;
       } | null)
     | ({
         relationTo: 'categories';
@@ -1824,6 +1860,27 @@ export interface MediaSelect<T extends boolean = true> {
               filename?: T;
             };
       };
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "map-assets_select".
+ */
+export interface MapAssetsSelect<T extends boolean = true> {
+  label?: T;
+  svgContent?: T;
+  createdBy?: T;
+  prefix?: T;
+  updatedAt?: T;
+  createdAt?: T;
+  url?: T;
+  thumbnailURL?: T;
+  filename?: T;
+  mimeType?: T;
+  filesize?: T;
+  width?: T;
+  height?: T;
+  focalX?: T;
+  focalY?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -2379,9 +2436,9 @@ export interface InteractiveMapBlock {
   maps: {
     title?: string | null;
     /**
-     * Paste an SVG whose paths are already projected (e.g. Albers Equal Area). Each region path must carry a data attribute (default: data-region) that matches a Region ID below.
+     * Upload an SVG whose paths are already projected (e.g. Albers Equal Area). Each region path must carry a data attribute (default: data-region) that matches a Region ID below.
      */
-    svg: string;
+    svgAsset: number | MapAsset;
     /**
      * The data attribute on each path that identifies the region (e.g. data-region, data-district).
      */

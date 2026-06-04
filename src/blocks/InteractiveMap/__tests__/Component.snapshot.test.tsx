@@ -2,8 +2,19 @@ import { render } from "@testing-library/react"
 import { describe, expect, it } from "vitest"
 
 import { InteractiveMapBlock } from "@/blocks/InteractiveMap/Component"
+import type { MapAsset } from "@/payload-types"
 
 const minimalSvg = `<svg viewBox="0 0 10 10"><path d="M0 0H10V10H0Z" data-region="MO-01"/></svg>`
+
+const stubAsset = (svgContent: string): MapAsset => ({
+  id: 1,
+  svgContent,
+  updatedAt: "2025-01-01T00:00:00.000Z",
+  createdAt: "2025-01-01T00:00:00.000Z",
+  url: "/map-assets/test.svg",
+  filename: "test.svg",
+  mimeType: "image/svg+xml",
+})
 
 // Snapshot tests for the InteractiveMap server component. To update snapshots after intentional changes:
 // pnpm test:unit -- --update-snapshots
@@ -18,7 +29,7 @@ describe("InteractiveMapBlock", () => {
         maps={[
           {
             title: "119th Congress",
-            svg: minimalSvg,
+            svgAsset: stubAsset(minimalSvg),
             regionAttribute: "data-region",
             regions: [{ regionId: "MO-01", label: "District 1", value: 12.5 }],
           },
@@ -36,6 +47,24 @@ describe("InteractiveMapBlock", () => {
         layout="row"
         colorScale="divergingRedBlue"
         maps={[]}
+      />,
+    )
+    expect(container.firstChild).toBeNull()
+  })
+
+  it("skips maps whose svgAsset has not been populated (id-only ref)", () => {
+    const { container } = render(
+      <InteractiveMapBlock
+        blockType="interactiveMap"
+        layout="row"
+        colorScale="divergingRedBlue"
+        maps={[
+          {
+            title: "Unpopulated",
+            svgAsset: 42,
+            regions: [],
+          },
+        ]}
       />,
     )
     expect(container.firstChild).toBeNull()

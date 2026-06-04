@@ -7,7 +7,7 @@
 // Changed lines come from the GitHub PR "files" API (its per-file `patch` hunks).
 // On non-PR runs (e.g. push to main) there is no diff to measure, so it no-ops.
 
-import { existsSync, readFileSync, appendFileSync } from "node:fs"
+import { appendFileSync, existsSync, readFileSync } from "node:fs"
 import { relative, sep } from "node:path"
 import { fileURLToPath } from "node:url"
 import { blue, gray, green, yellow } from "./ansi.mjs"
@@ -76,7 +76,6 @@ type MetricKey = keyof Metrics
 
 const COMMENT_MARKER = "<!-- coverage-report -->"
 const STALE_MARKERS = [
-  "<!-- patch-coverage-report -->", // old name before script rename
   "<!-- vitest-coverage-report-marker-root -->", // vitest action
 ]
 const METRICS: MetricKey[] = ["lines", "statements", "functions", "branches"]

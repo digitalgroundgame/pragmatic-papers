@@ -230,12 +230,19 @@ export function computePatchCoverage(
       metrics[k].covered += counts[k].covered
       metrics[k].total += counts[k].total
     }
-    if (uncoveredLines.length > 0) {
-      const { covered, total } = counts.lines
-      const pct = total === 0 ? 100 : (covered / total) * 100
-      files.push({ file, lines: { covered, total, pct }, uncovered: uncoveredLines })
+    // Every touched file with coverable patch lines, covered or not — a file whose
+    // patch changed only non-executable lines (comments, blanks) has nothing to report.
+    const { covered, total } = counts.lines
+    if (total > 0) {
+      files.push({
+        file,
+        lines: { covered, total, pct: (covered / total) * 100 },
+        uncovered: uncoveredLines,
+      })
     }
   }
+  // Worst-covered first so gaps surface at the top; stable tie-break by path.
+  files.sort((a, z) => a.lines.pct - z.lines.pct || (a.file < z.file ? -1 : 1))
   for (const k of METRICS) {
     metrics[k].pct = metrics[k].total === 0 ? 100 : (metrics[k].covered / metrics[k].total) * 100
   }
@@ -423,10 +430,11 @@ function renderRanges(
 
 /**
  * Per-file patch line coverage (covered / total of the file's coverable patch lines)
- * alongside the uncovered lines collapsed into ranges. Lives under the Patch coverage
- * section so the patch framing is explicit — never whole-file numbers.
+ * for every touched file, alongside any uncovered lines collapsed into ranges. Lives
+ * under the Patch coverage section so the patch framing is explicit — never whole-file
+ * numbers. A fully-covered file still appears, with an empty uncovered-lines cell.
  */
-export function renderPatchUncovered({
+export function renderPatchByFile({
   files,
   repo,
   sha,
@@ -441,16 +449,18 @@ export function renderPatchUncovered({
       repo && sha
         ? `<a href="https://github.com/${repo}/blob/${sha}/${file}">${file}</a>`
         : `<code>${file}</code>`
-    const coverage =
-      lines.total === 0 ? "n/a" : `${Math.round(lines.pct)}% ${lines.covered}/${lines.total}`
+    const coverage = `${Math.round(lines.pct)}% ${lines.covered}/${lines.total}`
+    const uncoveredCell = uncovered.length === 0 ? "—" : renderRanges(file, uncovered, repo, sha)
     return `  <tr>
+   <td align="center">${statusIcon(lines.pct)}</td>
    <td align="left">${fileLink}</td>
    <td align="right">${coverage}</td>
-   <td align="left">${renderRanges(file, uncovered, repo, sha)}</td>
+   <td align="left">${uncoveredCell}</td>
   </tr>`
   })
   return `<table>
  <thead><tr>
+  <th align="center">Status</th>
   <th align="left">File</th>
   <th align="right">Patch coverage</th>
   <th align="left">Uncovered lines</th>
@@ -485,7 +495,7 @@ export function renderReport({
     summaryJson && changedFiles
       ? renderFileCoverage({ summaryJson, changedFiles, repo, sha })
       : null
-  const patchUncovered = renderPatchUncovered({ files, repo, sha })
+  const patchByFile = renderPatchByFile({ files, repo, sha })
   const parts = [
     COMMENT_MARKER,
     "<h2>Coverage Report</h2>",
@@ -495,7 +505,7 @@ export function renderReport({
     "<h3>Patch coverage</h3>",
     "<p>Lines added or modified in this PR.</p>",
     htmlTable(rows),
-    ...(patchUncovered ? ["", "<p>Uncovered patch lines:</p>", patchUncovered] : []),
+    ...(patchByFile ? ["", "<p>Patch coverage by file:</p>", patchByFile] : []),
   ]
   return parts.join("\n")
 }

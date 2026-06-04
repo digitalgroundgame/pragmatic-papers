@@ -15,7 +15,7 @@ import {
   main,
   parseAddedLines,
   renderFileCoverage,
-  renderPatchUncovered,
+  renderPatchByFile,
   renderReport,
   renderTotalSection,
   statusIcon,
@@ -290,13 +290,13 @@ describe("toLineRanges", () => {
   })
 })
 
-describe("renderPatchUncovered", () => {
-  it("returns null when there are no uncovered lines", () => {
-    expect(renderPatchUncovered({ files: [], repo: undefined, sha: undefined })).toBeNull()
+describe("renderPatchByFile", () => {
+  it("returns null when there are no touched files with coverable patch lines", () => {
+    expect(renderPatchByFile({ files: [], repo: undefined, sha: undefined })).toBeNull()
   })
 
   it("renders per-file patch coverage and uncovered ranges as plain text without repo/sha", () => {
-    const html = renderPatchUncovered({
+    const html = renderPatchByFile({
       files: [
         { file: "src/foo.ts", lines: { covered: 6, total: 10, pct: 60 }, uncovered: [5, 6, 7, 10] },
       ],
@@ -310,17 +310,19 @@ describe("renderPatchUncovered", () => {
     expect(html).not.toContain("<a href")
   })
 
-  it("renders n/a when the file has no coverable patch lines", () => {
-    const html = renderPatchUncovered({
-      files: [{ file: "src/foo.ts", lines: { covered: 0, total: 0, pct: 100 }, uncovered: [] }],
+  it("lists a fully-covered touched file with an em-dash for uncovered lines", () => {
+    const html = renderPatchByFile({
+      files: [{ file: "src/foo.ts", lines: { covered: 8, total: 8, pct: 100 }, uncovered: [] }],
       repo: undefined,
       sha: undefined,
     })
-    expect(html).toContain("n/a")
+    expect(html).toContain("100% 8/8")
+    expect(html).toContain("—")
+    expect(html).toContain("🟢")
   })
 
   it("links a multi-line range to a GitHub line range", () => {
-    const html = renderPatchUncovered({
+    const html = renderPatchByFile({
       files: [
         { file: "src/foo.ts", lines: { covered: 0, total: 3, pct: 0 }, uncovered: [5, 6, 7] },
       ],
@@ -333,7 +335,7 @@ describe("renderPatchUncovered", () => {
   })
 
   it("links a single uncovered line to a single-line anchor", () => {
-    const html = renderPatchUncovered({
+    const html = renderPatchByFile({
       files: [{ file: "src/foo.ts", lines: { covered: 0, total: 1, pct: 0 }, uncovered: [42] }],
       repo: "owner/repo",
       sha: "abc123",
@@ -418,7 +420,7 @@ describe("renderReport", () => {
     })
     const patchIdx = html.indexOf("Patch coverage")
     expect(patchIdx).toBeGreaterThanOrEqual(0)
-    expect(html).toContain("Uncovered patch lines")
+    expect(html).toContain("Patch coverage by file")
     // the ranges render after the patch coverage heading
     expect(html.indexOf("5-7, 12")).toBeGreaterThan(patchIdx)
   })

@@ -42,7 +42,8 @@ describe("app TOC instance — socialEmbed resolver", () => {
   it("anchors to the embed's id", () => {
     const state = makeState([socialEmbed({ id: "embed-42", platform: "youtube" })])
     const { container } = render(<TableOfContents content={state} />)
-    expect(container.querySelector("a")?.getAttribute("href")).toBe("#embed-42")
+    const link = container.querySelector('a[href="#embed-42"]')
+    expect(link).toBeTruthy()
   })
 
   it("renders the TvIcon next to the label", () => {

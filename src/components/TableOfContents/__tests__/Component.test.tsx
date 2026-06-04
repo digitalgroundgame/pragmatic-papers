@@ -82,13 +82,13 @@ describe("TableOfContents component", () => {
 
   it("falls back to '#' when entry anchor is empty", () => {
     const block = { type: "block", fields: { blockType: "weird" } } as object
-    const { container } = render(
+    const { getByText } = render(
       <TableOfContents
         content={makeContent([block])}
         resolvers={{ weird: () => ({ label: "No anchor", anchor: "" }) }}
       />,
     )
-    const link = container.querySelector("a")
+    const link = getByText("No anchor").closest("a")
     expect(link?.getAttribute("href")).toBe("#")
   })
 

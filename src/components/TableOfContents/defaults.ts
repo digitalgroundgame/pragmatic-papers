@@ -24,11 +24,21 @@ export function buildDefaultResolvers(
       const depth = HEADING_DEPTH[heading.tag ?? "h2"] ?? 1
       return { label, anchor, depth }
     },
-    table: (node) => ({
-      label: "Table",
-      anchor: anchors.get(node as SerializedLexicalNode) ?? "",
-      depth: 1,
-      icon: TableIcon,
-    }),
+    table: (node) => {
+      interface TableRow {
+        children?: Array<{
+          children?: Array<{ type?: string; text?: string; children?: unknown[] }>
+        }>
+      }
+      const firstRow = (node as TableRow).children?.[0]
+      const firstCell = firstRow?.children?.[0]
+      const cellText = extractText(firstCell?.children as Parameters<typeof extractText>[0]).trim()
+      return {
+        label: cellText || "Table",
+        anchor: anchors.get(node as SerializedLexicalNode) ?? "",
+        depth: 1,
+        icon: TableIcon,
+      }
+    },
   }
 }

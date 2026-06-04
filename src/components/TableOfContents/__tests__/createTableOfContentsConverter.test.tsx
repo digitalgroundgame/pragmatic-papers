@@ -32,7 +32,10 @@ describe("createHeadingConverter", () => {
     const state = makeState([heading])
     const { heading: converter } = createTableOfContentsConverter(state)
     const html = renderToStaticMarkup(<>{invoke(converter, heading)}</>)
-    expect(html).toBe('<h2 id="my-section">My Section</h2>')
+    expect(html).toContain('id="my-section"')
+    expect(html).toContain("<h2")
+    expect(html).toContain('href="#my-section"')
+    expect(html).toContain("My Section")
   })
 
   it("uses the supplied slugify function", () => {

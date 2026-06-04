@@ -8,7 +8,7 @@ import {
   TableOfContentsAnchor,
   TableOfContentsHeader,
   TableOfContentsList,
-} from "./TableOfContentsLinks"
+} from "./client"
 import { slugifyHeading } from "./slug"
 import { buildEntries } from "./traverse"
 import type { SlugifyFn, TableOfContentsEntry, TableOfContentsResolverMap } from "./types"

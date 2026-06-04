@@ -35,11 +35,7 @@ function articleExcerpt(article: Article): string {
 }
 
 /**
- * Pipes the hero image through /_next/image so email clients fetch a
- * width-capped, quality-80 version instead of the full-res original (which
- * can be megabytes for high-res cover art). Both local-storage and Supabase
- * sources are allowed by remotePatterns in next.config.ts; quality 80 matches
- * the qualities allowlist there.
+ * Pipes the hero image through /_next/image to get an optimized image.
  *
  * Width must be one of Next's default deviceSizes ([640, 750, 828, 1080,
  * 1200, 1920, ...]) or /_next/image returns 400. 1080 is just under 2× the
@@ -73,13 +69,22 @@ function getDimensions(article: Article):
   }
 }
 
-function getAvatars(article: Article): string[] {
+/**
+ * Make sure avatar URLs are always absolute.
+ * Email clients resolve a relative src against the email's host, which
+ * for the hosted view is the mailing-list provider rather than our site, so it
+ * 404s.
+ */
+function getAvatars(article: Article, siteUrl: string): string[] {
   if (!article.populatedAuthors) return []
   return article.populatedAuthors
     .map((a) => {
       const image = a?.profileImage
       if (!image || typeof image === "number") return null
-      return image.sizes?.square?.url ?? null
+      const raw = getMediaUrl(image.sizes?.square?.url)
+      if (!raw) return null
+      if (raw.startsWith("http://") || raw.startsWith("https://")) return raw
+      return `${siteUrl}${raw.startsWith("/") ? "" : "/"}${raw}`
     })
     .filter((url): url is string => Boolean(url))
 }
@@ -94,7 +99,7 @@ export function VolumeArticleEmail({
   const excerpt = articleExcerpt(article)
   const heroUrl = heroImageUrl(article, siteUrl)
   const image = getDimensions(article)
-  const avatars = getAvatars(article)
+  const avatars = getAvatars(article, siteUrl)
   const articleUrl = `${siteUrl}/articles/${article.slug}`
   const volumeUrl = `${siteUrl}/volumes/${volume.slug}`
 

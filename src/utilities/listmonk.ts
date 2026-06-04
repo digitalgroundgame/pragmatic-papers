@@ -67,7 +67,7 @@ async function listmonkFetch<T>(
   if (init.searchParams) {
     for (const [k, v] of Object.entries(init.searchParams)) {
       // Listmonk expects repeated params (?status=scheduled&status=running) for
-      // multi-value filters, not a comma-joined value.
+      // multi-value filters.
       if (Array.isArray(v)) {
         for (const item of v) url.searchParams.append(k, item)
       } else {

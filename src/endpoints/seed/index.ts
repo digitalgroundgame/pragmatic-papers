@@ -6,6 +6,7 @@ import { createBannerBlocksArticle } from "./features/banners"
 import { createCodeBlocksArticle } from "./features/code-blocks"
 import { createCollectionGridHomePage } from "./features/collection-grid"
 import { createFootnotesArticle } from "./features/footnotes"
+import { createInteractiveMapArticle } from "./features/interactive-maps"
 import { createMathBlocksArticle } from "./features/math-blocks"
 import { createMediaCollageArticle } from "./features/media-collage"
 import { createNarrationDemoArticle } from "./features/narration-demo"
@@ -268,6 +269,11 @@ export const seed = async (
           await createCodeBlocksArticle(payload, [ctx.writers[0]!, ctx.writers[1]!], ctx.media, [
             ctx.topics[2]!,
             ctx.topics[7]!,
+          ]),
+        )
+        ctx.featureArticles.push(
+          await createInteractiveMapArticle(payload, [ctx.writers[0]!], ctx.media, [
+            ctx.topics[0]!,
           ]),
         )
       },

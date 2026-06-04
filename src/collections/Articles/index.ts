@@ -156,7 +156,6 @@ export const Articles: CollectionConfig = {
               required: true,
             },
             footnotesArrayField(),
-            tableOfContentsField(),
           ],
           label: "Content",
         },
@@ -190,6 +189,7 @@ export const Articles: CollectionConfig = {
       ],
     },
     // END TABS FIELDS
+    tableOfContentsField(),
     {
       name: "heroImage",
       type: "upload",

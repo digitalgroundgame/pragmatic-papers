@@ -3,6 +3,7 @@ import React from "react"
 import { HoverPrefetchLink } from "@/components/Link/HoverPrefetchLink"
 import { Media } from "@/components/Media"
 import { NarrationPlayer } from "@/components/NarrationPlayer"
+import { TableOfContentsButton } from "@/components/TableOfContents"
 import { Separator } from "@/components/ui/separator"
 import type { Article } from "@/payload-types"
 import { formatDateTime } from "@/utilities/formatDateTime"
@@ -45,11 +46,14 @@ export const ArticleHero: React.FC<ArticleHeroProps> = ({ article }) => {
             </HoverPrefetchLink>
           )}
         </div>
-        {narration && typeof narration !== "number" && (
-          <div className="md:w-56 md:shrink-0">
-            <NarrationPlayer narration={narration} populatedNarrator={populatedNarrator} />
-          </div>
-        )}
+        <div>
+          {narration && typeof narration !== "number" && (
+            <div className="md:w-56 md:shrink-0">
+              <NarrationPlayer narration={narration} populatedNarrator={populatedNarrator} />
+            </div>
+          )}
+          <TableOfContentsButton />
+        </div>
       </div>
       <Separator />
     </div>

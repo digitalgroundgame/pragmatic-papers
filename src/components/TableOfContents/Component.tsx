@@ -64,10 +64,10 @@ export function TableOfContents({
   const serializable = entries.map((e) => toSerializableEntry(e, classNames?.icon))
 
   return (
-    <TableOfContentsHeader className={className} classNames={classNames} title={title}>
-      <TableOfContentsAnchor entries={serializable} classNames={classNames}>
+    <TableOfContentsAnchor entries={serializable} classNames={classNames}>
+      <TableOfContentsHeader className={className} title={title}>
         <TableOfContentsList entries={serializable} isRoot />
-      </TableOfContentsAnchor>
-    </TableOfContentsHeader>
+      </TableOfContentsHeader>
+    </TableOfContentsAnchor>
   )
 }

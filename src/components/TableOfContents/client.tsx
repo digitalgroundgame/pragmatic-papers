@@ -20,6 +20,8 @@ export interface SerializableEntry {
 interface TableOfContentsContextValue {
   activeAnchor: string | null
   classNames?: TableOfContentsClassNames
+  isOpen: boolean
+  toggle: () => void
 }
 
 const TableOfContentsContext = createContext<TableOfContentsContextValue | null>(null)
@@ -93,7 +95,7 @@ export function TableOfContentsList({
   )
 }
 
-interface TableOfContentsLinksProps {
+interface TableOfContentsAnchorProps {
   entries: SerializableEntry[]
   classNames?: TableOfContentsClassNames
   children?: React.ReactNode
@@ -103,43 +105,48 @@ export function TableOfContentsAnchor({
   entries,
   classNames,
   children,
-}: TableOfContentsLinksProps): React.ReactNode {
+}: TableOfContentsAnchorProps): React.ReactNode {
   const activeAnchor = useActiveAnchor(entries)
+  const [isOpen, setIsOpen] = useState(true)
+  const toggle = () => setIsOpen((v) => !v)
   return (
-    <TableOfContentsContext.Provider value={{ activeAnchor, classNames }}>
+    <TableOfContentsContext.Provider value={{ activeAnchor, classNames, isOpen, toggle }}>
       {children}
     </TableOfContentsContext.Provider>
   )
 }
 
-interface TableOfContentsClientProps {
+export function TableOfContentsButton(): React.ReactNode {
+  const { isOpen, toggle, classNames } = useTableOfContents()
+  return (
+    <Button
+      variant="outline"
+      size="icon-sm"
+      aria-label={isOpen ? "Collapse table of contents" : "Expand table of contents"}
+      aria-expanded={isOpen}
+      onClick={toggle}
+      className={cn("toc__toggleButton", classNames?.toggleButton)}
+    >
+      <List aria-hidden="true" />
+    </Button>
+  )
+}
+
+interface TableOfContentsHeaderProps {
   className?: string
-  classNames?: TableOfContentsClassNames
   title?: string
   children: React.ReactNode
 }
 
 export function TableOfContentsHeader({
   className,
-  classNames,
   title,
   children,
-}: TableOfContentsClientProps): React.ReactNode {
-  const [isOpen, setIsOpen] = useState(true)
-
+}: TableOfContentsHeaderProps): React.ReactNode {
+  const { isOpen, classNames } = useTableOfContents()
   return (
     <nav aria-label="Table of contents" className={cn("toc space-y-2", className)}>
       <div className={cn("toc__titleContainer flex gap-2", classNames?.titleContainer)}>
-        <Button
-          variant="outline"
-          size="icon-sm"
-          aria-label={isOpen ? "Collapse table of contents" : "Expand table of contents"}
-          aria-expanded={isOpen}
-          onClick={() => setIsOpen((v) => !v)}
-          className={cn("toc__toggleButton", classNames?.toggleButton)}
-        >
-          <List aria-hidden="true" />
-        </Button>
         {title && isOpen && (
           <h3 className={cn("toc__title flex-1 border-b text-2xl", classNames?.title)}>{title}</h3>
         )}

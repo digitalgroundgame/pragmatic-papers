@@ -2,6 +2,7 @@ import type { DefaultTypedEditorState } from "@payloadcms/richtext-lexical"
 import React from "react"
 
 import { TableOfContents, type TableOfContentsProps } from "./Component"
+import { TableOfContentsButton } from "./client"
 import {
   type CreateTableOfContentsConverter,
   createTableOfContentsConverter,
@@ -27,6 +28,7 @@ export type {
 interface CreateTableOfContents {
   tableOfContentsField: TableOfContentsField
   TableOfContents: (props: TableOfContentsProps) => React.ReactNode
+  TableOfContentsButton: typeof TableOfContentsButton
   tableOfContentsConverter: (data?: DefaultTypedEditorState) => CreateTableOfContentsConverter
 }
 
@@ -40,6 +42,7 @@ export function createTableOfContents({
     TableOfContents: (props) => (
       <TableOfContents {...props} resolvers={resolvers} slugify={slugify} />
     ),
+    TableOfContentsButton,
     tableOfContentsConverter: (data) => createTableOfContentsConverter(data, slugify, icon),
   }
 }

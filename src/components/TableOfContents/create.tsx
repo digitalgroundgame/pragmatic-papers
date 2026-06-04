@@ -30,12 +30,13 @@ interface CreateTableOfContents {
 export function createTableOfContents({
   resolvers,
   slugify = slugifyHeading,
+  icon,
 }: CreateTableOfContentsOptions = {}): CreateTableOfContents {
   return {
     tableOfContentsField,
     TableOfContents: (props) => (
       <TableOfContents {...props} resolvers={resolvers} slugify={slugify} />
     ),
-    tableOfContentsConverter: (data) => createHeadingConverter(data, slugify),
+    tableOfContentsConverter: (data) => createHeadingConverter(data, slugify, icon),
   }
 }

@@ -19,4 +19,5 @@ export type SlugifyFn = (text: string) => string
 export interface CreateTableOfContentsOptions {
   resolvers?: TableOfContentsResolverMap
   slugify?: SlugifyFn
+  icon?: ComponentType<SVGProps<SVGSVGElement>>
 }

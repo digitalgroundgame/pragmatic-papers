@@ -3,8 +3,12 @@ import React from "react"
 
 import { cn } from "@/utilities/utils"
 
-import { Link } from "lucide-react"
-import { TableOfContentsClient } from "./TableOfContentsClient"
+import {
+  type SerializableEntry,
+  TableOfContentsAnchor,
+  TableOfContentsHeader,
+  TableOfContentsList,
+} from "./TableOfContentsLinks"
 import { slugifyHeading } from "./slug"
 import { collectEntries, nestEntries } from "./traverse"
 import type { SlugifyFn, TableOfContentsEntry, TableOfContentsResolverMap } from "./types"
@@ -29,53 +33,21 @@ export interface TableOfContentsProps {
   slugify?: SlugifyFn
 }
 
-function renderEntries(
-  entries?: TableOfContentsEntry[],
-  classNames?: TableOfContentsClassNames,
-  isRoot = true,
-): React.ReactNode {
-  if (!entries) return null
-  return (
-    <ul className={cn("toc__list pl-4", isRoot && cn("text-sm", classNames?.list))}>
-      {entries.map((entry, index) => {
-        const Icon = entry.icon
-        return (
-          <li
-            key={`${entry.anchor || "entry"}-${index}`}
-            className={cn("toc__item space-x-1", classNames?.item)}
-          >
-            <a
-              href={entry.anchor ? `#${entry.anchor}` : "#"}
-              className={cn(
-                "toc__link group inline-flex items-center gap-1 no-underline hover:underline",
-                classNames?.link,
-              )}
-            >
-              {Icon ? (
-                <Icon
-                  aria-hidden="true"
-                  className={cn(
-                    "toc__icon text-muted-foreground size-4 shrink-0",
-                    classNames?.icon,
-                  )}
-                />
-              ) : (
-                <Link
-                  aria-hidden="true"
-                  className={cn(
-                    "toc__icon text-muted-foreground size-4 shrink-0 opacity-0 group-hover:opacity-100",
-                    classNames?.icon,
-                  )}
-                />
-              )}
-              <span className={cn("toc__label", classNames?.label)}>{entry.label}</span>
-            </a>
-            {renderEntries(entry.children, classNames, false)}
-          </li>
-        )
-      })}
-    </ul>
-  )
+function toSerializableEntry(
+  entry: TableOfContentsEntry,
+  iconClassName?: string,
+): SerializableEntry {
+  const { icon: Icon, children, ...rest } = entry
+  return {
+    ...rest,
+    icon: Icon ? (
+      <Icon
+        aria-hidden="true"
+        className={cn("toc__icon text-muted-foreground size-4 shrink-0", iconClassName)}
+      />
+    ) : undefined,
+    children: children?.map((c) => toSerializableEntry(c, iconClassName)),
+  }
 }
 
 export function TableOfContents({
@@ -89,9 +61,13 @@ export function TableOfContents({
   const entries = nestEntries(collectEntries(content, resolvers, slugify))
   if (entries.length === 0) return null
 
+  const serializable = entries.map((e) => toSerializableEntry(e, classNames?.icon))
+
   return (
-    <TableOfContentsClient className={className} classNames={classNames} title={title}>
-      {renderEntries(entries, classNames)}
-    </TableOfContentsClient>
+    <TableOfContentsHeader className={className} classNames={classNames} title={title}>
+      <TableOfContentsAnchor entries={serializable} classNames={classNames}>
+        <TableOfContentsList entries={serializable} isRoot />
+      </TableOfContentsAnchor>
+    </TableOfContentsHeader>
   )
 }

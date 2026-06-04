@@ -400,7 +400,6 @@ ${rows.join("\n")}
   return `<details><summary>Touched files — whole-file coverage</summary>\n${table}\n</details>`
 }
 
-/** Render a list of line numbers as comma-separated ranges, linked to GitHub when possible. */
 function renderRanges(
   file: string,
   lines: number[],

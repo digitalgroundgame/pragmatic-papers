@@ -1,10 +1,10 @@
 import { execSync } from "child_process"
 import { readFileSync, writeFileSync } from "fs"
+import { parseArgs } from "node:util"
 import { dirname, join } from "path"
 import process from "process"
 import * as readline from "readline"
 import { fileURLToPath } from "url"
-import { parseArgs } from "node:util"
 import { blue, gray, green, red, yellow } from "./ansi.mjs"
 
 const __dirname = dirname(fileURLToPath(import.meta.url))

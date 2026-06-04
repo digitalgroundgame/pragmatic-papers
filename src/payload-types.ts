@@ -443,6 +443,10 @@ export interface Article {
     image?: (number | null) | Media;
     description?: string | null;
   };
+  /**
+   * Auto-generates a navigable list of headings (and any resolver-matched blocks) at the top of the article.
+   */
+  showTableOfContents?: boolean | null;
   heroImage?: (number | null) | Media;
   /**
    * When enabled, the slug will auto-generate from the title field on save and autosave.
@@ -1636,6 +1640,7 @@ export interface ArticlesSelect<T extends boolean = true> {
         image?: T;
         description?: T;
       };
+  showTableOfContents?: T;
   heroImage?: T;
   generateSlug?: T;
   slug?: T;

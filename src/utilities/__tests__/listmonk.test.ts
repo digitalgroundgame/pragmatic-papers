@@ -150,6 +150,14 @@ describe("listScheduledCampaigns", () => {
     expect(result[0]!.id).toBe(1)
   })
 
+  it("sends status as repeated query params, not a comma-joined value", async () => {
+    const spy = mockListmonkFetch({ results: [] })
+    await listScheduledCampaigns()
+    const url = new URL(String(spy.mock.calls[0]![0]))
+    expect(url.searchParams.getAll("status")).toEqual(["scheduled", "running"])
+    expect(url.search).not.toContain("scheduled%2Crunning")
+  })
+
   it("maps null tags to an empty array", async () => {
     mockListmonkFetch({
       results: [

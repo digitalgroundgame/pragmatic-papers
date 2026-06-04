@@ -51,12 +51,20 @@ function readConfig(): ListmonkConfig {
 
 async function listmonkFetch<T>(
   path: string,
-  init: RequestInit & { searchParams?: Record<string, string> } = {},
+  init: RequestInit & { searchParams?: Record<string, string | string[]> } = {},
 ): Promise<T> {
   const cfg = readConfig()
   const url = new URL(`${cfg.baseUrl}/api${path}`)
   if (init.searchParams) {
-    for (const [k, v] of Object.entries(init.searchParams)) url.searchParams.set(k, v)
+    for (const [k, v] of Object.entries(init.searchParams)) {
+      // Listmonk expects repeated params (?status=scheduled&status=running) for
+      // multi-value filters, not a comma-joined value.
+      if (Array.isArray(v)) {
+        for (const item of v) url.searchParams.append(k, item)
+      } else {
+        url.searchParams.set(k, v)
+      }
+    }
   }
   const auth = `token ${cfg.apiUser}:${cfg.apiToken}`
   const res = await fetch(url, {
@@ -147,7 +155,7 @@ export async function listScheduledCampaigns(): Promise<ScheduledCampaignSummary
   const cfg = readConfig()
   const data = await listmonkFetch<{ results: ListmonkCampaign[] }>("/campaigns", {
     searchParams: {
-      status: "scheduled,running",
+      status: ["scheduled", "running"],
       list_id: String(cfg.newsletterListId),
       per_page: "200",
     },

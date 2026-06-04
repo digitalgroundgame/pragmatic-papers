@@ -10,7 +10,7 @@ import {
   TableOfContentsList,
 } from "./TableOfContentsLinks"
 import { slugifyHeading } from "./slug"
-import { collectEntries, nestEntries } from "./traverse"
+import { buildEntries } from "./traverse"
 import type { SlugifyFn, TableOfContentsEntry, TableOfContentsResolverMap } from "./types"
 
 export interface TableOfContentsClassNames {
@@ -58,7 +58,7 @@ export function TableOfContents({
   resolvers,
   slugify = slugifyHeading,
 }: TableOfContentsProps): React.ReactNode {
-  const entries = nestEntries(collectEntries(content, resolvers, slugify))
+  const entries = buildEntries(content, resolvers, slugify)
   if (entries.length === 0) return null
 
   const serializable = entries.map((e) => toSerializableEntry(e, classNames?.icon))

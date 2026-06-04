@@ -112,3 +112,11 @@ export function collectEntries(
   walk(data.root.children as SerializedLexicalNode[])
   return entries
 }
+
+export function buildEntries(
+  data: SerializedEditorState,
+  callerResolvers?: TableOfContentsResolverMap,
+  slugify?: SlugifyFn,
+): TableOfContentsEntry[] {
+  return nestEntries(collectEntries(data, callerResolvers, slugify))
+}

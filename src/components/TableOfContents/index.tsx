@@ -1,9 +1,9 @@
 import { TvIcon } from "lucide-react"
 
-import { createTableOfContents } from "./create"
 import type { SocialEmbedBlock } from "@/payload-types"
+import { createTableOfContents } from "./create"
 
-export { createIntroAnchor } from "./headingConverter"
+export { createIntroAnchor } from "./createTableOfContentsConverter"
 
 const PLATFORM_LABELS: Record<NonNullable<SocialEmbedBlock["platform"]>, string> = {
   bluesky: "Bluesky",

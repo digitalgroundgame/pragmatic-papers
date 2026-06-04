@@ -42,27 +42,46 @@ function resolverPayloadFor(node: SerializedLexicalNode): unknown {
   return node
 }
 
-export function computeHeadingAnchors(
-  data?: SerializedEditorState,
-  slugify: SlugifyFn = slugifyHeading,
+export type AnchorGenerator = (
+  node: SerializedLexicalNode,
+  state: Map<string, number>,
+) => string | null
+
+export function computeAnchors(
+  data: SerializedEditorState | undefined,
+  generators: Record<string, AnchorGenerator>,
 ): Map<SerializedLexicalNode, string> {
-  const counts = new Map<string, number>()
+  const state = new Map<string, number>()
   const result = new Map<SerializedLexicalNode, string>()
   const walk = (nodes: SerializedLexicalNode[] | undefined): void => {
     if (!nodes) return
     for (const node of nodes) {
-      if (node.type === "heading") {
-        const text = extractText((node as WithChildren).children)
-        const base = slugify(text) || "heading"
-        const n = (counts.get(base) ?? 0) + 1
-        counts.set(base, n)
-        result.set(node, n === 1 ? base : `${base}-${n}`)
+      const gen = generators[node.type]
+      if (gen) {
+        const id = gen(node, state)
+        if (id) result.set(node, id)
       }
       walk((node as WithChildren).children)
     }
   }
   walk(data?.root.children as SerializedLexicalNode[])
   return result
+}
+
+export function headingAnchorGenerator(slugify: SlugifyFn = slugifyHeading): AnchorGenerator {
+  return (node, state) => {
+    const text = extractText((node as WithChildren).children)
+    const base = slugify(text) || "heading"
+    const n = (state.get(base) ?? 0) + 1
+    state.set(base, n)
+    return n === 1 ? base : `${base}-${n}`
+  }
+}
+
+export const tableAnchorGenerator: AnchorGenerator = (_, state) => {
+  const n = (state.get("table") ?? 0) + 1
+  state.set("table", n)
+  return `table-${n}`
 }
 
 export function nestEntries(flat: TableOfContentsEntry[]): TableOfContentsEntry[] {
@@ -93,7 +112,10 @@ export function collectEntries(
   callerResolvers: TableOfContentsResolverMap = {},
   slugify: SlugifyFn = slugifyHeading,
 ): TableOfContentsEntry[] {
-  const anchors = computeHeadingAnchors(data, slugify)
+  const anchors = computeAnchors(data, {
+    heading: headingAnchorGenerator(slugify),
+    table: tableAnchorGenerator,
+  })
   const defaults = buildDefaultResolvers(anchors)
   const resolvers: TableOfContentsResolverMap = { ...defaults, ...callerResolvers }
   const entries: TableOfContentsEntry[] = []

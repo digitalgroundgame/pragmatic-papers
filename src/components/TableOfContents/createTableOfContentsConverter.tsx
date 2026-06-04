@@ -3,8 +3,10 @@ import type { JSXConverter, JSXConverterArgs } from "@payloadcms/richtext-lexica
 import { Link } from "lucide-react"
 import type { ComponentType, SVGProps } from "react"
 
+import type { SerializedLexicalNode } from "@payloadcms/richtext-lexical/lexical"
+
 import { slugifyHeading } from "./slug"
-import { computeHeadingAnchors } from "./traverse"
+import { computeAnchors, headingAnchorGenerator, tableAnchorGenerator } from "./traverse"
 import type { SlugifyFn } from "./types"
 
 export function createIntroAnchor(data?: DefaultTypedEditorState): React.ReactNode {
@@ -18,6 +20,7 @@ export type HeadingJSXConverter = JSXConverter<SerializedHeadingNode>
 
 export interface CreateTableOfContentsConverter {
   heading: HeadingJSXConverter
+  table: JSXConverter<SerializedLexicalNode>
 }
 
 export function createTableOfContentsConverter(
@@ -25,8 +28,25 @@ export function createTableOfContentsConverter(
   slugify: SlugifyFn = slugifyHeading,
   Icon: ComponentType<SVGProps<SVGSVGElement>> = Link,
 ): CreateTableOfContentsConverter {
-  const anchors = computeHeadingAnchors(data, slugify)
+  const anchors = computeAnchors(data, {
+    heading: headingAnchorGenerator(slugify),
+    table: tableAnchorGenerator,
+  })
   return {
+    table: ({ node, nodesToJSX }) => {
+      const id = anchors.get(node)
+      const children = nodesToJSX({
+        nodes:
+          (node as SerializedLexicalNode & { children?: SerializedLexicalNode[] }).children ?? [],
+      })
+      return (
+        <div id={id} className="lexical-table-container">
+          <table className="lexical-table" style={{ borderCollapse: "collapse" }}>
+            <tbody>{children}</tbody>
+          </table>
+        </div>
+      )
+    },
     heading: ({ node, nodesToJSX }: JSXConverterArgs<SerializedHeadingNode>) => {
       const Tag = node.tag as "h1" | "h2" | "h3" | "h4" | "h5" | "h6"
       const id = anchors.get(node)

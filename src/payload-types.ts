@@ -1092,8 +1092,8 @@ export interface MapAsset {
    * Auto-populated with the uploaded SVG's text content so blocks can read it without a runtime file fetch.
    */
   svgContent?: string | null;
+  source?: LinkField;
   createdBy?: (number | null) | User;
-  prefix?: string | null;
   updatedAt: string;
   createdAt: string;
   url?: string | null;
@@ -1868,8 +1868,8 @@ export interface MediaSelect<T extends boolean = true> {
 export interface MapAssetsSelect<T extends boolean = true> {
   label?: T;
   svgContent?: T;
+  source?: T | LinkFieldSelect<T>;
   createdBy?: T;
-  prefix?: T;
   updatedAt?: T;
   createdAt?: T;
   url?: T;

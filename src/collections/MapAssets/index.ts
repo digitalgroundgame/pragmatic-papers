@@ -10,6 +10,7 @@ import type {
 import { anyone } from "@/access/anyone"
 import { editorOrSelf } from "@/access/editorOrSelf"
 import { writer } from "@/access/writer"
+import { link } from "@/fields/link2"
 import type { MapAsset } from "@/payload-types"
 
 const filename = fileURLToPath(import.meta.url)
@@ -64,6 +65,7 @@ export const MapAssets: CollectionConfig = {
     {
       name: "svgContent",
       type: "textarea",
+      maxLength: 500000,
       admin: {
         description:
           "Auto-populated with the uploaded SVG's text content so blocks can read it without a runtime file fetch.",
@@ -71,6 +73,19 @@ export const MapAssets: CollectionConfig = {
         hidden: true,
       },
     },
+    link({
+      name: "source",
+      label: "Source",
+      admin: {
+        description: "Attribution link for the map data (e.g. Census Bureau, OpenStates).",
+      },
+      component: {
+        type: { defaultValue: "custom" },
+        reference: { required: false },
+        url: { required: false },
+        variant: { admin: { hidden: true } },
+      },
+    }),
     {
       name: "createdBy",
       type: "relationship",

@@ -3,6 +3,8 @@ import { TvIcon } from "lucide-react"
 import { createTableOfContents } from "./create"
 import type { SocialEmbedBlock } from "@/payload-types"
 
+export { createIntroAnchor } from "./headingConverter"
+
 const PLATFORM_LABELS: Record<NonNullable<SocialEmbedBlock["platform"]>, string> = {
   bluesky: "Bluesky",
   reddit: "Reddit",

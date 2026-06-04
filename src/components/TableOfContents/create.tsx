@@ -3,7 +3,10 @@ import React from "react"
 
 import { TableOfContents, type TableOfContentsProps } from "./Component"
 import { type TableOfContentsField, tableOfContentsField } from "./field"
-import { type CreateHeaderingConverter, createHeadingConverter } from "./headingConverter"
+import {
+  type CreateTableOfContentsConverter,
+  createTableOfContentsConverter,
+} from "./headingConverter"
 import { slugifyHeading } from "./slug"
 import type {
   CreateTableOfContentsOptions,
@@ -24,7 +27,7 @@ export type {
 interface CreateTableOfContents {
   tableOfContentsField: TableOfContentsField
   TableOfContents: (props: TableOfContentsProps) => React.ReactNode
-  tableOfContentsConverter: (data?: DefaultTypedEditorState) => CreateHeaderingConverter
+  tableOfContentsConverter: (data?: DefaultTypedEditorState) => CreateTableOfContentsConverter
 }
 
 export function createTableOfContents({
@@ -37,6 +40,6 @@ export function createTableOfContents({
     TableOfContents: (props) => (
       <TableOfContents {...props} resolvers={resolvers} slugify={slugify} />
     ),
-    tableOfContentsConverter: (data) => createHeadingConverter(data, slugify, icon),
+    tableOfContentsConverter: (data) => createTableOfContentsConverter(data, slugify, icon),
   }
 }

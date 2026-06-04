@@ -7,17 +7,24 @@ import { slugifyHeading } from "./slug"
 import { computeHeadingAnchors } from "./traverse"
 import type { SlugifyFn } from "./types"
 
+export function createIntroAnchor(data?: DefaultTypedEditorState): React.ReactNode {
+  if (!data) return null
+  const firstNode = (data.root.children as Array<{ type: string }>)[0]
+  if (!firstNode || firstNode.type === "heading") return null
+  return <div id="intro" aria-hidden="true" />
+}
+
 export type HeadingJSXConverter = JSXConverter<SerializedHeadingNode>
 
-export interface CreateHeaderingConverter {
+export interface CreateTableOfContentsConverter {
   heading: HeadingJSXConverter
 }
 
-export function createHeadingConverter(
+export function createTableOfContentsConverter(
   data?: DefaultTypedEditorState,
   slugify: SlugifyFn = slugifyHeading,
   Icon: ComponentType<SVGProps<SVGSVGElement>> = Link,
-): CreateHeaderingConverter {
+): CreateTableOfContentsConverter {
   const anchors = computeHeadingAnchors(data, slugify)
   return {
     heading: ({ node, nodesToJSX }: JSXConverterArgs<SerializedHeadingNode>) => {

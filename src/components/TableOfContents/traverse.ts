@@ -118,5 +118,10 @@ export function buildEntries(
   callerResolvers?: TableOfContentsResolverMap,
   slugify?: SlugifyFn,
 ): TableOfContentsEntry[] {
-  return nestEntries(collectEntries(data, callerResolvers, slugify))
+  const entries = nestEntries(collectEntries(data, callerResolvers, slugify))
+  const firstNode = (data.root.children as SerializedLexicalNode[])[0]
+  if (firstNode?.type !== "heading" && entries.length > 0) {
+    entries.unshift({ label: "Intro", anchor: "intro", depth: 1 })
+  }
+  return entries
 }

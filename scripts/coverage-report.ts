@@ -418,8 +418,6 @@ function renderRanges(
 
 /**
  * Per-file patch line coverage (covered / total of the file's coverable patch lines)
- * alongside the uncovered lines collapsed into ranges. Lives under the Patch coverage
- * section so the patch framing is explicit — never whole-file numbers.
  */
 export function renderPatchUncovered({
   files,

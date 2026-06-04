@@ -4,6 +4,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vites
 vi.mock("@/utilities/listmonk", () => ({
   listScheduledCampaigns: vi.fn(),
   createScheduledCampaign: vi.fn(),
+  updateScheduledCampaign: vi.fn(),
 }))
 vi.mock("@react-email/render", () => ({
   render: vi.fn().mockResolvedValue("<html/>"),
@@ -12,7 +13,11 @@ vi.mock("@react-email/render", () => ({
 import { scheduleVolumeNewsletter } from "@/collections/Volumes/endpoints/scheduleNewsletter/logic"
 import { getPayloadConfig } from "@/utilities/getPayloadConfig"
 import type { ScheduledCampaignSummary } from "@/utilities/listmonk"
-import { createScheduledCampaign, listScheduledCampaigns } from "@/utilities/listmonk"
+import {
+  createScheduledCampaign,
+  listScheduledCampaigns,
+  updateScheduledCampaign,
+} from "@/utilities/listmonk"
 
 const MINIMAL_CONTENT = {
   root: {
@@ -48,6 +53,7 @@ afterAll(async () => {
 beforeEach(() => {
   vi.resetAllMocks()
   vi.mocked(createScheduledCampaign).mockResolvedValue(1)
+  vi.mocked(updateScheduledCampaign).mockResolvedValue(undefined)
 })
 
 async function createArticle(slug: string) {
@@ -87,7 +93,7 @@ describe("scheduleVolumeNewsletter", () => {
 
     const result = await scheduleVolumeNewsletter(payload, volume.id)
 
-    expect(result.count).toBe(3)
+    expect(result).toEqual({ created: 3, updated: 0 })
     expect(vi.mocked(createScheduledCampaign)).toHaveBeenCalledTimes(3)
 
     const calls = vi.mocked(createScheduledCampaign).mock.calls
@@ -100,23 +106,25 @@ describe("scheduleVolumeNewsletter", () => {
     }
   })
 
-  it("skips articles already tagged in existing campaigns (idempotency)", async () => {
+  it("refreshes already-scheduled articles in place and creates new ones", async () => {
     const a1 = await createArticle("sn-idem-a")
     const a2 = await createArticle("sn-idem-b")
     const a3 = await createArticle("sn-idem-c")
     const volume = await createVolume([a1.id, a2.id, a3.id])
 
-    // Pretend a1 and a2 are already scheduled
+    // Pretend a1 and a2 are already scheduled (still editable in Listmonk).
     const existingCampaigns: ScheduledCampaignSummary[] = [
       {
         id: 10,
         name: `Volume ${volume.volumeNumber} · Day 1 of 3 · ${a1.title}`,
+        status: "scheduled",
         sendAt: new Date("2026-02-03T12:00:00Z"),
         tags: ["newsletter", `vol-${volume.volumeNumber}`, `art-${a1.id}`],
       },
       {
         id: 11,
         name: `Volume ${volume.volumeNumber} · Day 2 of 3 · ${a2.title}`,
+        status: "scheduled",
         sendAt: new Date("2026-02-04T12:00:00Z"),
         tags: ["newsletter", `vol-${volume.volumeNumber}`, `art-${a2.id}`],
       },
@@ -125,10 +133,42 @@ describe("scheduleVolumeNewsletter", () => {
 
     const result = await scheduleVolumeNewsletter(payload, volume.id)
 
-    expect(result.count).toBe(1)
+    expect(result).toEqual({ created: 1, updated: 2 })
+
+    // a3 is the only new one.
     expect(vi.mocked(createScheduledCampaign)).toHaveBeenCalledTimes(1)
-    const input = vi.mocked(createScheduledCampaign).mock.calls[0]![0]
-    expect(input.tags).toContain(`art-${a3.id}`)
+    expect(vi.mocked(createScheduledCampaign).mock.calls[0]![0].tags).toContain(`art-${a3.id}`)
+
+    // a1 and a2 are updated against their existing campaign ids, keeping send_at.
+    expect(vi.mocked(updateScheduledCampaign)).toHaveBeenCalledTimes(2)
+    const updateCalls = vi.mocked(updateScheduledCampaign).mock.calls.map((c) => c[0])
+    expect(updateCalls).toContainEqual(
+      expect.objectContaining({ campaignId: 10, sendAt: "2026-02-03T12:00:00.000Z" }),
+    )
+    expect(updateCalls).toContainEqual(
+      expect.objectContaining({ campaignId: 11, sendAt: "2026-02-04T12:00:00.000Z" }),
+    )
+  })
+
+  it("leaves campaigns that have already started sending untouched", async () => {
+    const a1 = await createArticle("sn-running-a")
+    const volume = await createVolume([a1.id])
+
+    vi.mocked(listScheduledCampaigns).mockResolvedValue([
+      {
+        id: 30,
+        name: "already sending",
+        status: "running",
+        sendAt: new Date("2026-02-03T12:00:00Z"),
+        tags: ["newsletter", `vol-${volume.volumeNumber}`, `art-${a1.id}`],
+      },
+    ])
+
+    const result = await scheduleVolumeNewsletter(payload, volume.id)
+
+    expect(result).toEqual({ created: 0, updated: 0 })
+    expect(vi.mocked(updateScheduledCampaign)).not.toHaveBeenCalled()
+    expect(vi.mocked(createScheduledCampaign)).not.toHaveBeenCalled()
   })
 
   it("schedules the first new campaign after the latest existing campaign (queue-overlap)", async () => {
@@ -141,6 +181,7 @@ describe("scheduleVolumeNewsletter", () => {
       {
         id: 20,
         name: "Some other campaign",
+        status: "scheduled",
         sendAt: futureDate,
         tags: ["newsletter", "vol-999", "art-999"],
       },
@@ -155,14 +196,14 @@ describe("scheduleVolumeNewsletter", () => {
     expect(new Date(input.sendAt) > futureDate).toBe(true)
   })
 
-  it("returns count 0 and creates no campaigns when the volume has no published articles", async () => {
+  it("returns zero counts and creates no campaigns when the volume has no published articles", async () => {
     const volume = await createVolume([])
 
     vi.mocked(listScheduledCampaigns).mockResolvedValue([])
 
     const result = await scheduleVolumeNewsletter(payload, volume.id)
 
-    expect(result.count).toBe(0)
+    expect(result).toEqual({ created: 0, updated: 0 })
     expect(vi.mocked(createScheduledCampaign)).not.toHaveBeenCalled()
   })
 })

@@ -6,7 +6,8 @@ import type { LayoutDefinition, LayoutProps } from "../types"
 
 export const Gauss10: LayoutDefinition = {
   label: "Gauss 10",
-  minSlotCount: 8,
+  minSlots: 8,
+  maxSlots: 10,
   slotDescriptions: [
     "Featured Left (Image Right)",
     "Bottom Left",

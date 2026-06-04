@@ -6,9 +6,9 @@ import { Euler3 } from "./layouts/Euler3"
 import { Euler5 } from "./layouts/Euler5"
 import { Fibonacci6 } from "./layouts/Fibonacci6"
 import { Fibonacci7 } from "./layouts/Fibonacci7"
+import { Gauss10 } from "./layouts/Gauss10"
 import { Newton4 } from "./layouts/Newton4"
 import { Vespucci7 } from "./layouts/Vespucci7"
-import { Gauss10 } from "./layouts/Gauss10"
 import type { LayoutDefinition } from "./types"
 
 export type { LayoutDefinition }
@@ -38,19 +38,15 @@ export const layouts = {
   "gauss-10": Gauss10,
 } as const satisfies Record<Layout, LayoutDefinition>
 
-const slotCounts: Record<string, number> = Object.fromEntries(
-  Object.entries(layouts).map(([key, { slotDescriptions }]) => [key, slotDescriptions.length]),
+const slotCounts: Record<string, [number, number]> = Object.fromEntries(
+  Object.entries(layouts).map(([key, { slotDescriptions, minSlots, maxSlots }]) => [
+    key,
+    [minSlots || slotDescriptions.length, maxSlots || slotDescriptions.length],
+  ]),
 )
 
 const slotDescriptions: Record<string, string[]> = Object.fromEntries(
   Object.entries(layouts).map(([key, def]) => [key, def.slotDescriptions]),
-)
-
-const minSlotCounts: Record<string, number> = Object.fromEntries(
-  Object.entries(layouts).map(([key, def]) => [
-    key,
-    def.minSlotCount ?? def.slotDescriptions.length,
-  ]),
 )
 
 export const CollectionGrid: Block = {
@@ -75,7 +71,6 @@ export const CollectionGrid: Block = {
             path: "@/blocks/CollectionGrid/components/LayoutSelectField#LayoutSelectField",
             clientProps: {
               slotCounts,
-              minSlotCounts,
             },
           },
         },
@@ -95,7 +90,6 @@ export const CollectionGrid: Block = {
             path: "@/blocks/CollectionGrid/components/SlotsField#SlotsField",
             clientProps: {
               slotCounts,
-              minSlotCounts,
             },
           },
           RowLabel: {

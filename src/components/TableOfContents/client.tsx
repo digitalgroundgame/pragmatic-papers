@@ -22,14 +22,16 @@ interface TableOfContentsContextValue {
   classNames?: TableOfContentsClassNames
 }
 
-const TableOfContentsContext = createContext<TableOfContentsContextValue>({ activeAnchor: null })
+const TableOfContentsContext = createContext<TableOfContentsContextValue | null>(null)
 
-function useTableOfContentsContext() {
-  return useContext(TableOfContentsContext)
+function useTableOfContents() {
+  const ctx = useContext(TableOfContentsContext)
+  if (!ctx) throw new Error("useTableOfContents must be used within a TableOfContentsAnchor")
+  return ctx
 }
 
 export function TableOfContentsLink({ entry }: { entry: SerializableEntry }): React.ReactNode {
-  const { activeAnchor, classNames } = useTableOfContentsContext()
+  const { activeAnchor, classNames } = useTableOfContents()
   const isActive = !!entry.anchor && entry.anchor === activeAnchor
   return (
     <a
@@ -62,7 +64,7 @@ export function TableOfContentsItem({
   entry: SerializableEntry
   children?: React.ReactNode
 }): React.ReactNode {
-  const { classNames } = useTableOfContentsContext()
+  const { classNames } = useTableOfContents()
   return (
     <li className={cn("toc__item space-x-1", classNames?.item)}>
       <TableOfContentsLink entry={entry} />
@@ -78,7 +80,7 @@ export function TableOfContentsList({
   entries?: SerializableEntry[]
   isRoot?: boolean
 }): React.ReactNode {
-  const { classNames } = useTableOfContentsContext()
+  const { classNames } = useTableOfContents()
   if (!entries?.length) return null
   return (
     <ul className={cn("toc__list pl-4", isRoot && cn("text-sm", classNames?.list))}>

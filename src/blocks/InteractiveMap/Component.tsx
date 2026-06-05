@@ -1,5 +1,6 @@
 import React from "react"
 
+import "@/blocks/InteractiveMap/InteractiveMap.css"
 import { resolveInlineSvgMap } from "@/blocks/InteractiveMap/adapters/inlineSvg"
 import type { ResolvedMap } from "@/blocks/InteractiveMap/types"
 import { CMSLink } from "@/components/Link/CMSLink2"
@@ -23,6 +24,7 @@ export const InteractiveMapBlock: React.FC<Props> = ({
   widgetTitle,
   layout,
   colorScale,
+  colorBias,
   maps,
   sources,
 }) => {
@@ -36,6 +38,7 @@ export const InteractiveMapBlock: React.FC<Props> = ({
         dataAttribute: m.dataAttribute,
         overrides: m.overrides ?? [],
         scaleType: colorScale,
+        colorBias,
       })
     })
     .filter((m): m is ResolvedMap => m !== null)

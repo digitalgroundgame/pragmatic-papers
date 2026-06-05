@@ -13,12 +13,22 @@ export function inferValueFormat(dataAttribute: string | null | undefined): Valu
   return FORMAT_BY_ATTRIBUTE[key] ?? "number"
 }
 
-const DEFAULT_NEUTRAL = "#d4d4d4"
+const DEFAULT_NEUTRAL = "var(--map-neutral, #f1efe8)"
 
 const DIVERGING_RED_BLUE = {
   breakpoints: [1, 5, 15],
-  positive: ["#dcb4ae", "#de938a", "#da685f", "#cd0526"],
-  negative: ["#bbbed8", "#9fa9db", "#7890df", "#056ee3"],
+  positive: [
+    "var(--map-positive-1, #fde8ec)",
+    "var(--map-positive-2, #f9bcc7)",
+    "var(--map-positive-3, #f08c9d)",
+    "var(--map-positive-4, #da1333)",
+  ],
+  negative: [
+    "var(--map-negative-1, #c5dbfa)",
+    "var(--map-negative-2, #8abaf2)",
+    "var(--map-negative-3, #3e89e7)",
+    "var(--map-negative-4, #1144ff)",
+  ],
 } as const
 
 export function formatDivergingMargin(value: number): string {
@@ -26,8 +36,8 @@ export function formatDivergingMargin(value: number): string {
   return `${sign}${Math.abs(value).toFixed(1)}`
 }
 
-export function pickDivergingColor(value: number): string {
-  const abs = Math.abs(value)
+export function pickDivergingColor(value: number, bias = 1): string {
+  const abs = Math.abs(value) * bias
   const { breakpoints, positive, negative } = DIVERGING_RED_BLUE
   const palette = value >= 0 ? positive : negative
   const fallback = palette[palette.length - 1] ?? "#000000"
@@ -43,6 +53,7 @@ interface ResolveColorArgs {
   scaleType: ColorScaleType
   value: number | null | undefined
   overrideColor: string | null | undefined
+  bias?: number
   neutralFill?: string
 }
 
@@ -50,11 +61,12 @@ export function resolveColor({
   scaleType,
   value,
   overrideColor,
+  bias = 1,
   neutralFill = DEFAULT_NEUTRAL,
 }: ResolveColorArgs): string {
   if (overrideColor) return overrideColor
   if (scaleType === "divergingRedBlue" && typeof value === "number") {
-    return pickDivergingColor(value)
+    return pickDivergingColor(value, bias)
   }
   return neutralFill
 }

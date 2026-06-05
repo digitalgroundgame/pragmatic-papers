@@ -2433,6 +2433,10 @@ export interface InteractiveMapBlock {
    * Diverging Red/Blue colors each region by its value (negative = D+, positive = R+). Per-region uses the color you set on each region row.
    */
   colorScale: 'divergingRedBlue' | 'perRegion';
+  /**
+   * Scales color intensity. Above 1 = stronger colors for small margins (e.g. 2 makes ±5 look like ±10). Below 1 = weaker (requires larger margins for strong colors). Default: 1.
+   */
+  colorBias?: number | null;
   maps: {
     title?: string | null;
     /**

@@ -50,6 +50,17 @@ export const InteractiveMap: Block = {
       },
     },
     {
+      name: "colorBias",
+      type: "number",
+      label: "Color Bias",
+      defaultValue: 1,
+      admin: {
+        description:
+          "Scales color intensity. Above 1 = stronger colors for small margins (e.g. 2 makes ±5 look like ±10). Below 1 = weaker (requires larger margins for strong colors). Default: 1.",
+        step: 0.1,
+      },
+    },
+    {
       name: "maps",
       type: "array",
       label: "Maps",

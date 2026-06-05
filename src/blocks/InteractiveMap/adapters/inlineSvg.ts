@@ -16,6 +16,7 @@ interface ResolveInlineSvgArgs {
   dataAttribute?: string | null
   overrides: RegionDatum[]
   scaleType: ColorScaleType
+  colorBias?: number | null
   neutralFill?: string
 }
 
@@ -25,6 +26,7 @@ export function resolveInlineSvgMap({
   dataAttribute,
   overrides,
   scaleType,
+  colorBias,
   neutralFill,
 }: ResolveInlineSvgArgs): ResolvedMap {
   const sanitized = sanitizeMapSvg(svg ?? "")
@@ -46,7 +48,13 @@ export function resolveInlineSvgMap({
       regionId: p.regionId,
       label: override?.label?.trim() || svgLabel || p.regionId,
       formattedValue: formatValue(format, value),
-      color: resolveColor({ scaleType, value, overrideColor: override?.color, neutralFill }),
+      color: resolveColor({
+        scaleType,
+        value,
+        overrideColor: override?.color,
+        bias: colorBias ?? 1,
+        neutralFill,
+      }),
     })
   }
 

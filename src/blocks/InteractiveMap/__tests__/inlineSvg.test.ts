@@ -34,7 +34,7 @@ describe("resolveInlineSvgMap", () => {
         regionId: "MO-01",
         label: "District 1",
         formattedValue: "R+12.5",
-        color: "#da685f",
+        color: "var(--map-positive-3, #f08c9d)",
       },
     ])
   })

@@ -22,7 +22,7 @@ exports[`InteractiveMapBlock > renders a single map with diverging color scale 1
             aria-label="District 1: R+12.5"
             d="M0 0H10V10H0Z"
             data-interactive-map-path=""
-            fill="#da685f"
+            fill="var(--map-positive-3, #f08c9d)"
             stroke="#ffffff"
             stroke-width="1.5"
             style="cursor: pointer; outline: none;"

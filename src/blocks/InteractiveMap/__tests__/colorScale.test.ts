@@ -11,25 +11,25 @@ import {
 describe("colorScale", () => {
   describe("pickDivergingColor — matches the Missouri demo palette exactly", () => {
     it.each([
-      { value: 0.5, color: "#dcb4ae" },
-      { value: 3, color: "#de938a" },
-      { value: 10, color: "#da685f" },
-      { value: 25, color: "#cd0526" },
-      { value: -0.5, color: "#bbbed8" },
-      { value: -3, color: "#9fa9db" },
-      { value: -10, color: "#7890df" },
-      { value: -25, color: "#056ee3" },
+      { value: 0.5, color: "var(--map-positive-1, #fde8ec)" },
+      { value: 3, color: "var(--map-positive-2, #f9bcc7)" },
+      { value: 10, color: "var(--map-positive-3, #f08c9d)" },
+      { value: 25, color: "var(--map-positive-4, #da1333)" },
+      { value: -0.5, color: "var(--map-negative-1, #c5dbfa)" },
+      { value: -3, color: "var(--map-negative-2, #8abaf2)" },
+      { value: -10, color: "var(--map-negative-3, #3e89e7)" },
+      { value: -25, color: "var(--map-negative-4, #1144ff)" },
     ])("value=$value → $color", ({ value, color }) => {
       expect(pickDivergingColor(value)).toBe(color)
     })
 
     it.each([
-      { value: 0, color: "#dcb4ae" },
-      { value: 1, color: "#de938a" },
-      { value: 5, color: "#da685f" },
-      { value: 15, color: "#cd0526" },
-      { value: -1, color: "#9fa9db" },
-      { value: -15, color: "#056ee3" },
+      { value: 0, color: "var(--map-positive-1, #fde8ec)" },
+      { value: 1, color: "var(--map-positive-2, #f9bcc7)" },
+      { value: 5, color: "var(--map-positive-3, #f08c9d)" },
+      { value: 15, color: "var(--map-positive-4, #da1333)" },
+      { value: -1, color: "var(--map-negative-2, #8abaf2)" },
+      { value: -15, color: "var(--map-negative-4, #1144ff)" },
     ])("breakpoint boundary value=$value → $color (uses strict less-than)", ({ value, color }) => {
       expect(pickDivergingColor(value)).toBe(color)
     })
@@ -118,14 +118,14 @@ describe("colorScale", () => {
       ).toBe("#eeeeee")
     })
 
-    it("uses the default neutral fill (#d4d4d4) when none is provided", () => {
+    it("uses the default neutral fill when none is provided", () => {
       expect(
         resolveColor({
           scaleType: "perRegion",
           value: null,
           overrideColor: null,
         }),
-      ).toBe("#d4d4d4")
+      ).toBe("var(--map-neutral, #f1efe8)")
     })
   })
 })

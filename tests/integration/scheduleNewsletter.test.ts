@@ -41,12 +41,18 @@ const MINIMAL_CONTENT = {
 
 let payload: Payload
 let volNum = 900 // high number to avoid conflicts with other integration tests
+const originalBuildEnv = process.env.BUILD_ENV
 
 beforeAll(async () => {
+  // Exercise the production code path so campaigns carry the bare "newsletter"
+  // tag asserted below; env-namespacing is unit-tested in logic.test.ts.
+  process.env.BUILD_ENV = "production"
   payload = await getPayloadConfig()
 })
 
 afterAll(async () => {
+  if (originalBuildEnv === undefined) delete process.env.BUILD_ENV
+  else process.env.BUILD_ENV = originalBuildEnv
   await payload.db.destroy?.()
 })
 

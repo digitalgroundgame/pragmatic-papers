@@ -1,8 +1,10 @@
-import { describe, expect, it } from "vitest"
+import { afterEach, describe, expect, it } from "vitest"
 
 import {
   articleTag,
+  buildEnv,
   campaignName,
+  newsletterTag,
   nextWeekday7amET,
   parseArticleIdFromTag,
   sevenAmEtAsUtc,
@@ -61,8 +63,56 @@ describe("nextWeekday7amET", () => {
 
 describe("campaignName", () => {
   it("formats as 'Volume N · Day K of Total · title' with 1-based day index", () => {
-    expect(campaignName(3, 0, 5, "My Article")).toBe("Volume 3 · Day 1 of 5 · My Article")
-    expect(campaignName(1, 4, 5, "Last One")).toBe("Volume 1 · Day 5 of 5 · Last One")
+    expect(campaignName(3, 0, 5, "My Article", "production")).toBe(
+      "Volume 3 · Day 1 of 5 · My Article",
+    )
+    expect(campaignName(1, 4, 5, "Last One", "production")).toBe("Volume 1 · Day 5 of 5 · Last One")
+  })
+
+  it("has no environment prefix in production", () => {
+    expect(campaignName(3, 0, 5, "My Article", "production")).not.toContain("[")
+  })
+
+  it("prefixes non-production environments so they stay distinct in the shared admin", () => {
+    expect(campaignName(3, 0, 5, "My Article", "staging")).toBe(
+      "[staging] Volume 3 · Day 1 of 5 · My Article",
+    )
+    expect(campaignName(3, 0, 5, "My Article", "dev")).toBe(
+      "[dev] Volume 3 · Day 1 of 5 · My Article",
+    )
+  })
+})
+
+describe("buildEnv", () => {
+  const original = process.env.BUILD_ENV
+  afterEach(() => {
+    if (original === undefined) delete process.env.BUILD_ENV
+    else process.env.BUILD_ENV = original
+  })
+
+  it("returns 'production' / 'staging' when BUILD_ENV matches", () => {
+    process.env.BUILD_ENV = "production"
+    expect(buildEnv()).toBe("production")
+    process.env.BUILD_ENV = "staging"
+    expect(buildEnv()).toBe("staging")
+  })
+
+  it("falls back to 'dev' when BUILD_ENV is unset or unrecognized", () => {
+    delete process.env.BUILD_ENV
+    expect(buildEnv()).toBe("dev")
+    process.env.BUILD_ENV = "preview"
+    expect(buildEnv()).toBe("dev")
+  })
+})
+
+describe("newsletterTag", () => {
+  it("is the bare 'newsletter' tag in production", () => {
+    expect(newsletterTag("production")).toBe("newsletter")
+  })
+
+  it("is namespaced per environment elsewhere", () => {
+    expect(newsletterTag("staging")).toBe("newsletter-staging")
+    expect(newsletterTag("dev")).toBe("newsletter-dev")
   })
 })
 

@@ -12,8 +12,9 @@ import {
 } from "@/utilities/listmonk"
 import {
   articleTag,
+  buildEnv,
   campaignName,
-  NEWSLETTER_TAG,
+  newsletterTag,
   nextWeekday7amET,
   parseArticleIdFromTag,
   volumeTag,
@@ -32,8 +33,11 @@ import {
  *   - Append-only: new articles always get send_at values after any existing
  *     scheduled campaigns on the list (queue-overlap policy).
  *   - 7am ET, weekdays only.
- *   - Each campaign is tagged ["newsletter", "vol-<N>", "art-<articleId>"]
- *     so admins can filter the dashboard but recipients never see them.
+ *   - Each campaign is tagged [<marker>, "vol-<N>", "art-<articleId>"] — where
+ *     the marker is "newsletter" in production and "newsletter-<env>" elsewhere —
+ *     so admins can filter the dashboard but recipients never see them. The
+ *     env-namespaced marker also keeps staging/dev runs from matching
+ *     production's campaigns on a shared Listmonk server.
  *
  * Throws if Listmonk is unreachable, env config is missing, or the Volume
  * isn't found / has no published articles. The endpoint caller surfaces
@@ -65,13 +69,18 @@ export async function scheduleVolumeNewsletter(
     return { created: 0, updated: 0 }
   }
 
+  // Namespace tags/names by deploy environment so staging and dev runs sharing
+  // production's Listmonk server never match or overwrite production's campaigns.
+  const env = buildEnv()
+  const marker = newsletterTag(env)
+
   const existingCampaigns = await listScheduledCampaigns()
   // Map this Volume's articles to their already-scheduled campaign via the
   // "art-<id>" tag. Tags are admin-only metadata — never sent to recipients.
   const thisVolumeTag = volumeTag(volume.volumeNumber)
   const campaignByArticleId = new Map<number, ScheduledCampaignSummary>()
   for (const c of existingCampaigns) {
-    if (!c.tags.includes(NEWSLETTER_TAG)) continue
+    if (!c.tags.includes(marker)) continue
     if (!c.tags.includes(thisVolumeTag)) continue
     for (const tag of c.tags) {
       const articleId = parseArticleIdFromTag(tag)
@@ -102,7 +111,7 @@ export async function scheduleVolumeNewsletter(
   // advances on an actual create.
   for (let i = 0; i < articles.length; i++) {
     const article = articles[i]!
-    const name = campaignName(volume.volumeNumber, i, articles.length, article.title)
+    const name = campaignName(volume.volumeNumber, i, articles.length, article.title, env)
     const bodyHtml = await render(
       VolumeArticleEmail({
         article,
@@ -116,7 +125,7 @@ export async function scheduleVolumeNewsletter(
         siteUrl,
       }),
     )
-    const tags = [NEWSLETTER_TAG, thisVolumeTag, articleTag(article.id)]
+    const tags = [marker, thisVolumeTag, articleTag(article.id)]
     const existing = campaignByArticleId.get(article.id)
 
     if (existing) {

@@ -76,26 +76,43 @@ export function nextWeekday7amET(after: Date): Date {
   throw new Error("nextWeekday7amET could not find a weekday within 7 iterations")
 }
 
+/** Deploy environments the scheduler distinguishes when namespacing campaigns. */
+export type BuildEnv = "production" | "staging" | "dev"
+
 /**
- * Human-readable campaign name shown in Listmonk's admin UI. Purely cosmetic
- * — idempotency is driven by tags, not by parsing this string.
- * Format: "Volume <N> · Day <K> of <Total> · <title>"
+ * Deploy environment, read from BUILD_ENV. Staging and local dev share
+ * production's Listmonk server — only the target list differs — so campaigns are
+ * namespaced by this value to keep each environment from matching or overwriting
+ * another's work.
+ *
  */
+export function buildEnv(): BuildEnv {
+  const env = process.env.BUILD_ENV
+  return env === "production" || env === "staging" ? env : "dev"
+}
+
 export function campaignName(
   volumeNumber: number,
   dayIndex: number,
   totalDays: number,
   articleTitle: string,
+  env: BuildEnv,
 ): string {
-  return `Volume ${volumeNumber} · Day ${dayIndex + 1} of ${totalDays} · ${articleTitle}`
+  const prefix = env === "production" ? "" : `[${env}] `
+  return `${prefix}Volume ${volumeNumber} · Day ${dayIndex + 1} of ${totalDays} · ${articleTitle}`
 }
 
 /**
- * Tag identifying any campaign created by this scheduler. Lets us
- * distinguish "campaigns we made" from any other scheduled work in
- * Listmonk that happens to be on the same list.
+ * Tag identifying any campaign created by this scheduler, namespaced by deploy
+ * environment. Production keeps the bare "newsletter" tag; staging and dev get
+ * "newsletter-<env>" so they never match production's campaigns on a shared
+ * Listmonk server. Lets us distinguish "campaigns we made in this environment"
+ * from any other scheduled work — combined with vol-/art- tags it's the
+ * idempotency key.
  */
-export const NEWSLETTER_TAG = "newsletter"
+export function newsletterTag(env: BuildEnv): string {
+  return env === "production" ? "newsletter" : `newsletter-${env}`
+}
 
 /** Tag for a specific Volume — combined with NEWSLETTER_TAG, narrows to one Volume. */
 export function volumeTag(volumeNumber: number): string {

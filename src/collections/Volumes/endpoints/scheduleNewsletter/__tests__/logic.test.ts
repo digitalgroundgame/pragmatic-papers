@@ -45,10 +45,18 @@ function existing(overrides: Partial<ScheduledCampaignSummary>): ScheduledCampai
 }
 
 describe("scheduleVolumeNewsletter", () => {
+  const originalBuildEnv = process.env.BUILD_ENV
   beforeEach(() => {
+    // Baseline these cases as production so they exercise the bare "newsletter"
+    // tag; env-namespacing isolation is covered separately below.
+    process.env.BUILD_ENV = "production"
     vi.mocked(listScheduledCampaigns).mockResolvedValue([])
   })
-  afterEach(() => vi.clearAllMocks())
+  afterEach(() => {
+    if (originalBuildEnv === undefined) delete process.env.BUILD_ENV
+    else process.env.BUILD_ENV = originalBuildEnv
+    vi.clearAllMocks()
+  })
 
   it("creates a campaign for every published article when none exist", async () => {
     const result = await scheduleVolumeNewsletter(
@@ -120,5 +128,22 @@ describe("scheduleVolumeNewsletter", () => {
 
     expect(result).toEqual({ created: 1, updated: 0 })
     expect(updateScheduledCampaign).not.toHaveBeenCalled()
+  })
+
+  it("namespaces tags and names by BUILD_ENV, ignoring another environment's campaigns", async () => {
+    process.env.BUILD_ENV = "staging"
+    // A production campaign (bare "newsletter" tag) for the same article must not
+    // be matched — staging looks for "newsletter-staging".
+    vi.mocked(listScheduledCampaigns).mockResolvedValue([
+      existing({ id: 42, status: "scheduled", tags: ["newsletter", "vol-7", "art-1"] }),
+    ])
+
+    const result = await scheduleVolumeNewsletter(makePayload([article(1, "One")]), 5)
+
+    expect(result).toEqual({ created: 1, updated: 0 })
+    expect(updateScheduledCampaign).not.toHaveBeenCalled()
+    const input = vi.mocked(createScheduledCampaign).mock.calls[0]![0]
+    expect(input.tags).toEqual(["newsletter-staging", "vol-7", "art-1"])
+    expect(input.name).toBe("[staging] Volume 7 · Day 1 of 1 · One")
   })
 })

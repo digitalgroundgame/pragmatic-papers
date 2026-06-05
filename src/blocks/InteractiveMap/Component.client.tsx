@@ -12,10 +12,11 @@ interface InteractiveMapClientProps {
   maps: ResolvedMap[]
 }
 
-interface HoverTarget {
+interface PinnedTooltip {
+  id: string
   mapIndex: number
   region: ResolvedRegion
-  pinned: boolean
+  cursor: { x: number; y: number }
 }
 
 type RegionHandler = (mapIndex: number, region: ResolvedRegion) => void
@@ -76,7 +77,8 @@ function MapPath({ path, region, mapIndex, onEnter, onLeave, onClick }: MapPathP
 interface SingleMapProps {
   map: ResolvedMap
   mapIndex: number
-  activeRegionId: string | null
+  pinnedRegionIds: string[]
+  hoverRegionId: string | null
   onEnter: RegionHandler
   onLeave: () => void
   onClick: RegionClickHandler
@@ -123,6 +125,7 @@ function ActiveOverlay({ activePath }: { activePath: ResolvedPath | null }) {
   return (
     <path
       ref={pathRef}
+      data-active-overlay=""
       className="pointer-events-none stroke-black dark:stroke-white"
       d=""
       fill="none"
@@ -136,7 +139,8 @@ function ActiveOverlay({ activePath }: { activePath: ResolvedPath | null }) {
 function SingleMap({
   map,
   mapIndex,
-  activeRegionId,
+  pinnedRegionIds,
+  hoverRegionId,
   onEnter,
   onLeave,
   onClick,
@@ -147,12 +151,15 @@ function SingleMap({
     return m
   }, [map.regions])
 
-  const activePath = useMemo(
+  const hoverActivePath = useMemo(
     () =>
-      activeRegionId == null
-        ? null
-        : (map.paths.find((p) => p.regionId === activeRegionId) ?? null),
-    [activeRegionId, map.paths],
+      hoverRegionId == null ? null : (map.paths.find((p) => p.regionId === hoverRegionId) ?? null),
+    [hoverRegionId, map.paths],
+  )
+
+  const pinnedPaths = useMemo(
+    () => pinnedRegionIds.flatMap((id) => map.paths.filter((p) => p.regionId === id)),
+    [pinnedRegionIds, map.paths],
   )
 
   return (
@@ -175,7 +182,18 @@ function SingleMap({
               onClick={onClick}
             />
           ))}
-          <ActiveOverlay activePath={activePath} />
+          <ActiveOverlay activePath={hoverActivePath} />
+          {pinnedPaths.map((path) => (
+            <path
+              key={path.regionId}
+              data-pinned-overlay=""
+              className="pointer-events-none stroke-black dark:stroke-white"
+              d={path.d}
+              fill="none"
+              strokeWidth={2}
+              vectorEffect="non-scaling-stroke"
+            />
+          ))}
         </g>
       </svg>
       {map.title && (
@@ -185,22 +203,32 @@ function SingleMap({
   )
 }
 
-interface TooltipProps {
-  hover: HoverTarget | null
+function TooltipContent({ region }: { region: ResolvedRegion }) {
+  return (
+    <>
+      <div className="font-medium">{region.label}</div>
+      {region.formattedValue ? (
+        <div className="text-xs opacity-85">{region.formattedValue}</div>
+      ) : null}
+    </>
+  )
+}
+
+interface HoverTooltipProps {
+  hoverRegion: { mapIndex: number; region: ResolvedRegion } | null
   cursor: { x: number; y: number } | null
 }
 
-function Tooltip({ hover, cursor }: TooltipProps): React.ReactElement | null {
+function HoverTooltip({ hoverRegion, cursor }: HoverTooltipProps): React.ReactElement | null {
   const ref = useRef<HTMLDivElement | null>(null)
   const [pos, setPos] = useState<{ x: number; y: number } | null>(null)
   const [mounted, setMounted] = useState(false)
 
-  // Portals need a DOM target, so we wait one render after hydration to mount.
   // eslint-disable-next-line react-hooks/set-state-in-effect -- standard isomorphic-portal mount guard
   useEffect(() => setMounted(true), [])
 
   useLayoutEffect(() => {
-    if (!hover || !cursor || !ref.current) {
+    if (!hoverRegion || !cursor || !ref.current) {
       setPos(null)
       return
     }
@@ -212,7 +240,7 @@ function Tooltip({ hover, cursor }: TooltipProps): React.ReactElement | null {
     if (x + tw > window.innerWidth - 8) x = cursor.x - tw - TOOLTIP_OFFSET
     if (y + th > window.innerHeight - 8) y = cursor.y - th - TOOLTIP_OFFSET
     setPos({ x, y })
-  }, [hover, cursor])
+  }, [hoverRegion, cursor])
 
   if (!mounted) return null
 
@@ -221,19 +249,56 @@ function Tooltip({ hover, cursor }: TooltipProps): React.ReactElement | null {
       ref={ref}
       className={cn(
         "bg-foreground text-background pointer-events-none fixed z-50 rounded-sm px-2.5 py-1.5 text-sm whitespace-nowrap shadow-md transition-opacity",
-        hover && pos ? "opacity-100" : "opacity-0",
+        hoverRegion && pos ? "opacity-100" : "opacity-0",
       )}
       role="tooltip"
       style={pos ? { left: pos.x, top: pos.y } : { left: -9999, top: -9999 }}
     >
-      {hover ? (
-        <>
-          <div className="font-medium">{hover.region.label}</div>
-          {hover.region.formattedValue ? (
-            <div className="text-xs opacity-85">{hover.region.formattedValue}</div>
-          ) : null}
-        </>
-      ) : null}
+      {hoverRegion ? <TooltipContent region={hoverRegion.region} /> : null}
+    </div>
+  )
+
+  return createPortal(node, document.body)
+}
+
+interface PinnedTooltipItemProps {
+  pinned: PinnedTooltip
+}
+
+function PinnedTooltipItem({ pinned }: PinnedTooltipItemProps): React.ReactElement | null {
+  const ref = useRef<HTMLDivElement | null>(null)
+  const [pos, setPos] = useState<{ x: number; y: number } | null>(null)
+  const [mounted, setMounted] = useState(false)
+
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- standard isomorphic-portal mount guard
+  useEffect(() => setMounted(true), [])
+
+  useLayoutEffect(() => {
+    if (!ref.current) return
+    const el = ref.current
+    const tw = el.offsetWidth
+    const th = el.offsetHeight
+    let x = pinned.cursor.x + TOOLTIP_OFFSET
+    let y = pinned.cursor.y + TOOLTIP_OFFSET
+    if (x + tw > window.innerWidth - 8) x = pinned.cursor.x - tw - TOOLTIP_OFFSET
+    if (y + th > window.innerHeight - 8) y = pinned.cursor.y - th - TOOLTIP_OFFSET
+    setPos({ x, y })
+  }, [pinned.cursor, mounted])
+
+  if (!mounted) return null
+
+  const node = (
+    <div
+      ref={ref}
+      data-pinned-tooltip=""
+      className={cn(
+        "bg-foreground text-background pointer-events-none fixed z-50 rounded-sm px-2.5 py-1.5 text-sm whitespace-nowrap shadow-md transition-opacity",
+        pos ? "opacity-100" : "opacity-0",
+      )}
+      role="tooltip"
+      style={pos ? { left: pos.x, top: pos.y } : { left: -9999, top: -9999 }}
+    >
+      <TooltipContent region={pinned.region} />
     </div>
   )
 
@@ -245,42 +310,65 @@ export function InteractiveMapClient({
   maps,
 }: InteractiveMapClientProps): React.ReactElement {
   const widgetId = useId()
-  const [hover, setHover] = useState<HoverTarget | null>(null)
+  const [pinned, setPinned] = useState<PinnedTooltip[]>([])
+  const [hoverRegion, setHoverRegion] = useState<{
+    mapIndex: number
+    region: ResolvedRegion
+  } | null>(null)
   const [cursor, setCursor] = useState<{ x: number; y: number } | null>(null)
 
+  const pinnedKeySet = useMemo(
+    () => new Set(pinned.map((p) => `${p.mapIndex}:${p.region.regionId}`)),
+    [pinned],
+  )
+
   function handleEnter(mapIndex: number, region: ResolvedRegion) {
-    setHover((prev) => (prev?.pinned ? prev : { mapIndex, region, pinned: false }))
+    if (pinnedKeySet.has(`${mapIndex}:${region.regionId}`)) return
+    setHoverRegion({ mapIndex, region })
   }
 
   function handleLeave() {
-    setHover((prev) => (prev?.pinned ? prev : null))
+    setHoverRegion(null)
   }
 
   function handleClick(mapIndex: number, region: ResolvedRegion, x: number, y: number) {
-    setHover((prev) =>
-      prev?.pinned && prev.mapIndex === mapIndex && prev.region.regionId === region.regionId
-        ? null
-        : { mapIndex, region, pinned: true },
-    )
-    setCursor({ x, y })
+    const key = `${mapIndex}:${region.regionId}`
+    if (pinnedKeySet.has(key)) {
+      setPinned((prev) =>
+        prev.filter((p) => !(p.mapIndex === mapIndex && p.region.regionId === region.regionId)),
+      )
+      setHoverRegion(null)
+    } else {
+      setPinned((prev) => [
+        ...prev,
+        { id: `${mapIndex}-${region.regionId}`, mapIndex, region, cursor: { x, y } },
+      ])
+      setHoverRegion(null)
+    }
   }
 
   useEffect(() => {
-    if (!hover || hover.pinned) return
+    if (!hoverRegion) return
     const onMove = (e: PointerEvent) => setCursor({ x: e.clientX, y: e.clientY })
     window.addEventListener("pointermove", onMove)
     return () => window.removeEventListener("pointermove", onMove)
-  }, [hover])
+  }, [hoverRegion])
+
+  const hasPins = pinned.length > 0
 
   useEffect(() => {
-    if (!hover?.pinned) return
+    if (!hasPins) return
     const onDocPointer = (e: PointerEvent) => {
       const target = e.target as Element | null
       if (target?.closest("[data-interactive-map-path]")) return
-      setHover(null)
+      setPinned([])
+      setHoverRegion(null)
     }
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setHover(null)
+      if (e.key === "Escape") {
+        setPinned([])
+        setHoverRegion(null)
+      }
     }
     document.addEventListener("pointerdown", onDocPointer)
     document.addEventListener("keydown", onKey)
@@ -288,7 +376,7 @@ export function InteractiveMapClient({
       document.removeEventListener("pointerdown", onDocPointer)
       document.removeEventListener("keydown", onKey)
     }
-  }, [hover?.pinned])
+  }, [hasPins])
 
   const layoutClass =
     layout === "grid"
@@ -302,13 +390,19 @@ export function InteractiveMapClient({
           key={`${widgetId}-${mapIndex}`}
           map={map}
           mapIndex={mapIndex}
-          activeRegionId={hover?.mapIndex === mapIndex ? hover.region.regionId : null}
+          pinnedRegionIds={pinned
+            .filter((p) => p.mapIndex === mapIndex)
+            .map((p) => p.region.regionId)}
+          hoverRegionId={hoverRegion?.mapIndex === mapIndex ? hoverRegion.region.regionId : null}
           onEnter={handleEnter}
           onLeave={handleLeave}
           onClick={handleClick}
         />
       ))}
-      <Tooltip hover={hover} cursor={cursor} />
+      <HoverTooltip hoverRegion={hoverRegion} cursor={cursor} />
+      {pinned.map((p) => (
+        <PinnedTooltipItem key={p.id} pinned={p} />
+      ))}
     </div>
   )
 }

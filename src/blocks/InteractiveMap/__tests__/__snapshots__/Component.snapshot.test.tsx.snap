@@ -13,46 +13,30 @@ exports[`InteractiveMapBlock > renders a single map with diverging color scale 1
       class="min-w-0 flex-1 space-y-1"
     >
       <svg
+        overflow="visible"
         preserveAspectRatio="xMidYMid meet"
         style="display: block; height: auto; width: 100%;"
         viewBox="0 0 10 10"
       >
-        <defs>
-          <filter
-            height="160%"
-            id="shadow-_r_1_"
-            width="160%"
-            x="-30%"
-            y="-30%"
-          >
-            <fedropshadow
-              dx="0"
-              dy="3"
-              flood-color="black"
-              flood-opacity="0.8"
-              stdDeviation="6"
-            />
-          </filter>
-        </defs>
         <g>
           <path
             aria-label="District 1: R+12.5"
+            class="stroke-white dark:stroke-black"
             d="M0 0H10V10H0Z"
             data-interactive-map-path=""
             fill="var(--map-positive-3, #f08c9d)"
-            stroke="#ffffff"
             stroke-width="1.5"
             style="cursor: pointer; outline: none;"
             tabindex="0"
             vector-effect="non-scaling-stroke"
           />
           <path
-            class="pointer-events-none"
+            class="pointer-events-none stroke-black dark:stroke-white"
             d=""
+            data-active-overlay=""
             fill="none"
-            stroke="currentColor"
             stroke-width="2"
-            style="visibility: hidden;"
+            style="opacity: 0; transition: opacity 80ms ease;"
             vector-effect="non-scaling-stroke"
           />
         </g>

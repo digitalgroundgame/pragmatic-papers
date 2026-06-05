@@ -22,6 +22,7 @@ type RegionHandler = (mapIndex: number, region: ResolvedRegion) => void
 type RegionClickHandler = (mapIndex: number, region: ResolvedRegion, x: number, y: number) => void
 
 const TOOLTIP_OFFSET = 8
+const OVERLAY_FADE_MS = 80
 
 interface MapPathProps {
   path: ResolvedPath
@@ -81,6 +82,57 @@ interface SingleMapProps {
   onClick: RegionClickHandler
 }
 
+function ActiveOverlay({ activePath }: { activePath: ResolvedPath | null }) {
+  const pathRef = useRef<SVGPathElement | null>(null)
+  const visibleRef = useRef(false)
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => {
+    if (timerRef.current) clearTimeout(timerRef.current)
+    const el = pathRef.current
+    if (!el) return
+
+    if (activePath) {
+      if (!visibleRef.current) {
+        el.setAttribute("d", activePath.d)
+        requestAnimationFrame(() => {
+          el.style.opacity = "1"
+          visibleRef.current = true
+        })
+      } else {
+        el.style.opacity = "0"
+        visibleRef.current = false
+        timerRef.current = setTimeout(() => {
+          el.setAttribute("d", activePath.d)
+          requestAnimationFrame(() => {
+            el.style.opacity = "1"
+            visibleRef.current = true
+          })
+        }, OVERLAY_FADE_MS)
+      }
+    } else {
+      el.style.opacity = "0"
+      visibleRef.current = false
+    }
+
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current)
+    }
+  }, [activePath])
+
+  return (
+    <path
+      ref={pathRef}
+      className="pointer-events-none stroke-black dark:stroke-white"
+      d=""
+      fill="none"
+      strokeWidth={2}
+      vectorEffect="non-scaling-stroke"
+      style={{ opacity: 0, transition: `opacity ${OVERLAY_FADE_MS}ms ease` }}
+    />
+  )
+}
+
 function SingleMap({
   map,
   mapIndex,
@@ -123,14 +175,7 @@ function SingleMap({
               onClick={onClick}
             />
           ))}
-          <path
-            className="pointer-events-none stroke-black dark:stroke-white"
-            d={activePath?.d ?? ""}
-            fill="none"
-            strokeWidth={2}
-            vectorEffect="non-scaling-stroke"
-            style={{ visibility: activePath ? "visible" : "hidden" }}
-          />
+          <ActiveOverlay activePath={activePath} />
         </g>
       </svg>
       {map.title && (

@@ -107,10 +107,7 @@ function SingleMap({
   )
 
   return (
-    <figure className="min-w-0 flex-1">
-      {map.title ? (
-        <figcaption className="mb-1 text-center text-sm font-medium">{map.title}</figcaption>
-      ) : null}
+    <figure className="min-w-0 flex-1 space-y-1">
       <svg
         viewBox={map.viewBox}
         preserveAspectRatio="xMidYMid meet"
@@ -139,6 +136,9 @@ function SingleMap({
           />
         </g>
       </svg>
+      {map.title && (
+        <figcaption className="text-center text-sm font-medium">{map.title}</figcaption>
+      )}
     </figure>
   )
 }

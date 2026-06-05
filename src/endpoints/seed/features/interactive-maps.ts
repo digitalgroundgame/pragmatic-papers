@@ -39,8 +39,24 @@ const createInteractiveMapNode = (maps: MapEntry[]) => ({
       regions: m.regions,
     })),
     sources: [
-      { name: "Redistricting Data Hub", url: "https://redistrictingdatahub.org/" },
-      { name: "UCLA cdmaps", url: "https://cdmaps.polisci.ucla.edu/" },
+      {
+        link: {
+          type: "custom",
+          label: "Redistricting Data Hub",
+          url: "https://redistrictingdatahub.org/",
+          newTab: true,
+          variant: "link",
+        },
+      },
+      {
+        link: {
+          type: "custom",
+          label: "UCLA cdmaps",
+          url: "https://cdmaps.polisci.ucla.edu/",
+          newTab: true,
+          variant: "link",
+        },
+      },
     ],
   },
   format: "",

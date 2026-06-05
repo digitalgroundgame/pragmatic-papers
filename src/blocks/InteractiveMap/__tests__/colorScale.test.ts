@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest"
 
 import {
   formatDivergingMargin,
+  formatValue,
   pickDivergingColor,
   resolveColor,
 } from "@/blocks/InteractiveMap/colorScale"
@@ -19,6 +20,34 @@ describe("colorScale", () => {
       { value: -25, color: "#056ee3" },
     ])("value=$value → $color", ({ value, color }) => {
       expect(pickDivergingColor(value)).toBe(color)
+    })
+
+    it.each([
+      { value: 0, color: "#cd897f" },
+      { value: 1, color: "#fd8997" },
+      { value: 5, color: "#fd5864" },
+      { value: 15, color: "#b7212c" },
+      { value: -1, color: "#89aefd" },
+      { value: -15, color: "#22428c" },
+    ])("breakpoint boundary value=$value → $color (uses strict less-than)", ({ value, color }) => {
+      expect(pickDivergingColor(value)).toBe(color)
+    })
+  })
+
+  describe("formatValue", () => {
+    it("delegates to formatDivergingMargin for divergingRedBlue", () => {
+      expect(formatValue("divergingRedBlue", 4.2)).toBe("R+4.2")
+      expect(formatValue("divergingRedBlue", -4.2)).toBe("D+4.2")
+    })
+
+    it("returns the raw number as a string for perRegion", () => {
+      expect(formatValue("perRegion", 42)).toBe("42")
+    })
+
+    it("returns null when the value is missing for either scale", () => {
+      expect(formatValue("divergingRedBlue", null)).toBeNull()
+      expect(formatValue("divergingRedBlue", undefined)).toBeNull()
+      expect(formatValue("perRegion", null)).toBeNull()
     })
   })
 
@@ -65,6 +94,16 @@ describe("colorScale", () => {
           neutralFill: "#eeeeee",
         }),
       ).toBe("#eeeeee")
+    })
+
+    it("uses the default neutral fill (#d4d4d4) when none is provided", () => {
+      expect(
+        resolveColor({
+          scaleType: "perRegion",
+          value: null,
+          overrideColor: null,
+        }),
+      ).toBe("#d4d4d4")
     })
   })
 })

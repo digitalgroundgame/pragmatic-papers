@@ -16,14 +16,18 @@ import type { MapAsset } from "@/payload-types"
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
 
-const populateCreatedBy: CollectionBeforeChangeHook<MapAsset> = ({ data, operation, req }) => {
+export const populateCreatedBy: CollectionBeforeChangeHook<MapAsset> = ({
+  data,
+  operation,
+  req,
+}) => {
   if (operation === "create" && req.user) {
     data.createdBy = req.user.id
   }
   return data
 }
 
-const captureSvgContent: CollectionBeforeValidateHook<MapAsset> = ({ data, req }) => {
+export const captureSvgContent: CollectionBeforeValidateHook<MapAsset> = ({ data, req }) => {
   const file = req.file
   if (file && file.mimetype === "image/svg+xml") {
     const text =

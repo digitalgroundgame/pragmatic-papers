@@ -45,4 +45,18 @@ describe("parseInlineSvg", () => {
     const result = parseInlineSvg(svg, "data-region")
     expect(result.paths[0]?.extraAttrs).toEqual({ class: "hi" })
   })
+
+  it("only records the first <g> transform but still collects paths from later groups", () => {
+    const svg = `<svg viewBox="0 0 10 10"><g transform="scale(1)"><path d="M0 0" data-region="A"/></g><g transform="ignored"><path d="M1 1" data-region="B"/></g></svg>`
+    const result = parseInlineSvg(svg, "data-region")
+    expect(result.transform).toBe("scale(1)")
+    expect(result.paths.map((p) => p.regionId)).toEqual(["A", "B"])
+  })
+
+  it("ignores viewBox on a nested <svg> element", () => {
+    const svg = `<svg viewBox="0 0 100 100"><svg viewBox="9 9 9 9"><path d="M0 0" data-region="A"/></svg></svg>`
+    const result = parseInlineSvg(svg, "data-region")
+    expect(result.viewBox).toBe("0 0 100 100")
+    expect(result.paths).toHaveLength(1)
+  })
 })

@@ -1,43 +1,38 @@
 "use client"
 
-import React, {
-  useCallback,
-  useEffect,
-  useId,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react"
+import React, { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react"
 import { createPortal } from "react-dom"
 
 import type { ResolvedMap, ResolvedPath, ResolvedRegion } from "@/blocks/InteractiveMap/types"
+import type { InteractiveMapBlock } from "@/payload-types"
 import { cn } from "@/utilities/utils"
 
 interface InteractiveMapClientProps {
-  layout: string
+  layout: InteractiveMapBlock["layout"]
   maps: ResolvedMap[]
 }
 
 interface HoverTarget {
   mapIndex: number
   region: ResolvedRegion
-  path: ResolvedPath
   pinned: boolean
 }
 
-const TOOLTIP_OFFSET = 14
+type RegionHandler = (mapIndex: number, region: ResolvedRegion) => void
+type RegionClickHandler = (mapIndex: number, region: ResolvedRegion, x: number, y: number) => void
+
+const TOOLTIP_OFFSET = 8
 
 interface MapPathProps {
   path: ResolvedPath
   region: ResolvedRegion | null
   mapIndex: number
-  onEnter: (mapIndex: number, region: ResolvedRegion, path: ResolvedPath) => void
+  onEnter: RegionHandler
   onLeave: () => void
-  onPin: (mapIndex: number, region: ResolvedRegion, path: ResolvedPath) => void
+  onClick: RegionClickHandler
 }
 
-function MapPath({ path, region, mapIndex, onEnter, onLeave, onPin }: MapPathProps) {
+function MapPath({ path, region, mapIndex, onEnter, onLeave, onClick }: MapPathProps) {
   const fill = region?.color
   const accessibleLabel = region
     ? region.formattedValue
@@ -50,24 +45,25 @@ function MapPath({ path, region, mapIndex, onEnter, onLeave, onPin }: MapPathPro
     <path
       d={path.d}
       fill={fill}
-      stroke="#ffffff"
+      className="stroke-white dark:stroke-black"
       strokeWidth={1.5}
       vectorEffect="non-scaling-stroke"
       aria-label={accessibleLabel || undefined}
       tabIndex={interactive ? 0 : undefined}
       data-interactive-map-path={interactive ? "" : undefined}
       style={interactive ? { cursor: "pointer", outline: "none" } : undefined}
-      onPointerEnter={interactive ? () => onEnter(mapIndex, region, path) : undefined}
+      onPointerEnter={interactive ? () => onEnter(mapIndex, region) : undefined}
       onPointerLeave={interactive ? onLeave : undefined}
-      onFocus={interactive ? () => onEnter(mapIndex, region, path) : undefined}
+      onFocus={interactive ? () => onEnter(mapIndex, region) : undefined}
       onBlur={interactive ? onLeave : undefined}
-      onClick={interactive ? () => onPin(mapIndex, region, path) : undefined}
+      onClick={interactive ? (e) => onClick(mapIndex, region, e.clientX, e.clientY) : undefined}
       onKeyDown={
         interactive
           ? (e) => {
               if (e.key === "Enter" || e.key === " ") {
                 e.preventDefault()
-                onPin(mapIndex, region, path)
+                const rect = e.currentTarget.getBoundingClientRect()
+                onClick(mapIndex, region, rect.left + rect.width / 2, rect.top + rect.height / 2)
               }
             }
           : undefined
@@ -75,13 +71,14 @@ function MapPath({ path, region, mapIndex, onEnter, onLeave, onPin }: MapPathPro
     />
   )
 }
+
 interface SingleMapProps {
   map: ResolvedMap
   mapIndex: number
   activeRegionId: string | null
-  onEnter: (mapIndex: number, region: ResolvedRegion, path: ResolvedPath) => void
+  onEnter: RegionHandler
   onLeave: () => void
-  onPin: (mapIndex: number, region: ResolvedRegion, path: ResolvedPath) => void
+  onClick: RegionClickHandler
 }
 
 function SingleMap({
@@ -90,7 +87,7 @@ function SingleMap({
   activeRegionId,
   onEnter,
   onLeave,
-  onPin,
+  onClick,
 }: SingleMapProps): React.ReactElement {
   const regionsById = useMemo(() => {
     const m = new Map<string, ResolvedRegion>()
@@ -111,6 +108,7 @@ function SingleMap({
       <svg
         viewBox={map.viewBox}
         preserveAspectRatio="xMidYMid meet"
+        overflow="visible"
         style={{ display: "block", height: "auto", width: "100%" }}
       >
         <g transform={map.transform ?? undefined}>
@@ -122,14 +120,13 @@ function SingleMap({
               mapIndex={mapIndex}
               onEnter={onEnter}
               onLeave={onLeave}
-              onPin={onPin}
+              onClick={onClick}
             />
           ))}
           <path
-            className="pointer-events-none"
+            className="pointer-events-none stroke-black dark:stroke-white"
             d={activePath?.d ?? ""}
             fill="none"
-            stroke="currentColor"
             strokeWidth={2}
             vectorEffect="non-scaling-stroke"
             style={{ visibility: activePath ? "visible" : "hidden" }}
@@ -144,11 +141,11 @@ function SingleMap({
 }
 
 interface TooltipProps {
-  cursor: { x: number; y: number } | null
   hover: HoverTarget | null
+  cursor: { x: number; y: number } | null
 }
 
-function Tooltip({ cursor, hover }: TooltipProps): React.ReactElement | null {
+function Tooltip({ hover, cursor }: TooltipProps): React.ReactElement | null {
   const ref = useRef<HTMLDivElement | null>(null)
   const [pos, setPos] = useState<{ x: number; y: number } | null>(null)
   const [mounted, setMounted] = useState(false)
@@ -206,27 +203,25 @@ export function InteractiveMapClient({
   const [hover, setHover] = useState<HoverTarget | null>(null)
   const [cursor, setCursor] = useState<{ x: number; y: number } | null>(null)
 
-  const handleEnter = useCallback(
-    (mapIndex: number, region: ResolvedRegion, path: ResolvedPath) => {
-      setHover((prev) => (prev?.pinned ? prev : { mapIndex, region, path, pinned: false }))
-    },
-    [],
-  )
+  function handleEnter(mapIndex: number, region: ResolvedRegion) {
+    setHover((prev) => (prev?.pinned ? prev : { mapIndex, region, pinned: false }))
+  }
 
-  const handleLeave = useCallback(() => {
+  function handleLeave() {
     setHover((prev) => (prev?.pinned ? prev : null))
-  }, [])
+  }
 
-  const handlePin = useCallback((mapIndex: number, region: ResolvedRegion, path: ResolvedPath) => {
+  function handleClick(mapIndex: number, region: ResolvedRegion, x: number, y: number) {
     setHover((prev) =>
       prev?.pinned && prev.mapIndex === mapIndex && prev.region.regionId === region.regionId
         ? null
-        : { mapIndex, region, path, pinned: true },
+        : { mapIndex, region, pinned: true },
     )
-  }, [])
+    setCursor({ x, y })
+  }
 
   useEffect(() => {
-    if (!hover) return
+    if (!hover || hover.pinned) return
     const onMove = (e: PointerEvent) => setCursor({ x: e.clientX, y: e.clientY })
     window.addEventListener("pointermove", onMove)
     return () => window.removeEventListener("pointermove", onMove)
@@ -265,10 +260,10 @@ export function InteractiveMapClient({
           activeRegionId={hover?.mapIndex === mapIndex ? hover.region.regionId : null}
           onEnter={handleEnter}
           onLeave={handleLeave}
-          onPin={handlePin}
+          onClick={handleClick}
         />
       ))}
-      <Tooltip cursor={cursor} hover={hover} />
+      <Tooltip hover={hover} cursor={cursor} />
     </div>
   )
 }

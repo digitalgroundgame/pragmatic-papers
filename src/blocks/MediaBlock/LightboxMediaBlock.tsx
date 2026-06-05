@@ -22,15 +22,16 @@ export const LightboxMediaBlock: React.FC<LightboxMediaBlockProps> = ({
 
   return (
     <Dialog>
-      <DialogTrigger className={cn("w-full cursor-pointer", containerClassName)}>
-        <MediaBlock
-          media={media}
-          enableGutter={false}
-          className={className}
-          disableInnerContainer
-          {...props}
-        />
-      </DialogTrigger>
+      <MediaBlock
+        media={media}
+        enableGutter={false}
+        className={cn("w-full", containerClassName, className)}
+        disableInnerContainer
+        mediaWrapper={(mediaNode) => (
+          <DialogTrigger className="block w-full cursor-pointer">{mediaNode}</DialogTrigger>
+        )}
+        {...props}
+      />
       <DialogContent
         className="[&>button]:bg-background max-h-[90dvh] overflow-hidden rounded-none bg-transparent p-0 text-base shadow-none ring-0 sm:max-w-max [&>button]:top-2 [&>button]:right-2 [&>button]:rounded-sm [&>button]:p-0.5 [&>button_svg]:size-6"
         style={{

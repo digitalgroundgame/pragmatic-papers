@@ -7,7 +7,7 @@
 // Changed lines come from the GitHub PR "files" API (its per-file `patch` hunks).
 // On non-PR runs (e.g. push to main) there is no diff to measure, so it no-ops.
 
-import { existsSync, readFileSync, appendFileSync } from "node:fs"
+import { appendFileSync, existsSync, readFileSync } from "node:fs"
 import { relative, sep } from "node:path"
 import { fileURLToPath } from "node:url"
 import { blue, gray, green, yellow } from "./ansi.mjs"
@@ -76,7 +76,6 @@ type MetricKey = keyof Metrics
 
 const COMMENT_MARKER = "<!-- coverage-report -->"
 const STALE_MARKERS = [
-  "<!-- patch-coverage-report -->", // old name before script rename
   "<!-- vitest-coverage-report-marker-root -->", // vitest action
 ]
 const METRICS: MetricKey[] = ["lines", "statements", "functions", "branches"]
@@ -117,6 +116,17 @@ export function parseAddedLines(patch: string): Set<number> {
     }
   }
   return added
+}
+
+export function toLineRanges(lines: number[]): { start: number; end: number }[] {
+  const sorted = [...new Set(lines)].sort((a, z) => a - z)
+  const ranges: { start: number; end: number }[] = []
+  for (const n of sorted) {
+    const last = ranges[ranges.length - 1]
+    if (last && n === last.end + 1) last.end = n
+    else ranges.push({ start: n, end: n })
+  }
+  return ranges
 }
 
 /**
@@ -201,9 +211,12 @@ export function computeFileMetrics(
 export function computePatchCoverage(
   coverageByFile: Record<string, IstanbulFileCoverage>,
   addedLinesByFile: Record<string, Set<number>>,
-): { metrics: MetricsWithPct; files: { file: string; uncovered: number[] }[] } {
+): {
+  metrics: MetricsWithPct
+  files: { file: string; lines: MetricCounts & { pct: number }; uncovered: number[] }[]
+} {
   const metrics = emptyCounts() as MetricsWithPct
-  const files: { file: string; uncovered: number[] }[] = []
+  const files: { file: string; lines: MetricCounts & { pct: number }; uncovered: number[] }[] = []
   for (const [file, addedLines] of Object.entries(addedLinesByFile)) {
     const fc = coverageByFile[file]
     if (!fc) continue // not instrumented (non-source, excluded, or generated)
@@ -212,8 +225,19 @@ export function computePatchCoverage(
       metrics[k].covered += counts[k].covered
       metrics[k].total += counts[k].total
     }
-    if (uncoveredLines.length > 0) files.push({ file, uncovered: uncoveredLines })
+    // Every touched file with coverable patch lines, covered or not — a file whose
+    // patch changed only non-executable lines (comments, blanks) has nothing to report.
+    const { covered, total } = counts.lines
+    if (total > 0) {
+      files.push({
+        file,
+        lines: { covered, total, pct: (covered / total) * 100 },
+        uncovered: uncoveredLines,
+      })
+    }
   }
+  // Worst-covered first so gaps surface at the top; stable tie-break by path.
+  files.sort((a, z) => a.lines.pct - z.lines.pct || (a.file < z.file ? -1 : 1))
   for (const k of METRICS) {
     metrics[k].pct = metrics[k].total === 0 ? 100 : (metrics[k].covered / metrics[k].total) * 100
   }
@@ -335,16 +359,19 @@ export function renderTotalSection(total: FileSummary, baseTotal: FileSummary | 
   return `<h3>Project total</h3>\n${header}\n${bodyRows}\n${TABLE_FOOTER}`
 }
 
+function blobUrl(repo: string, sha: string, file: string, fragment = ""): string {
+  const path = file.split("/").map(encodeURIComponent).join("/")
+  return `https://github.com/${repo}/blob/${sha}/${path}${fragment}`
+}
+
 export function renderFileCoverage({
   summaryJson,
   changedFiles,
-  uncoveredMap,
   repo,
   sha,
 }: {
   summaryJson: Record<string, FileSummary>
   changedFiles: string[]
-  uncoveredMap: Map<string, number[]>
   repo: string | undefined
   sha: string | undefined
 }): string | null {
@@ -355,16 +382,7 @@ export function renderFileCoverage({
     const cell = (m: keyof FileSummary) =>
       fc[m].total === 0 ? "n/a" : `${Math.round(fc[m].pct)}% ${fc[m].covered}/${fc[m].total}`
     const fileLink =
-      repo && sha
-        ? `<a href="https://github.com/${repo}/blob/${sha}/${file}">${file}</a>`
-        : `<code>${file}</code>`
-    const uncovered = uncoveredMap.get(file) ?? []
-    const uncoveredLinks =
-      repo && sha
-        ? uncovered
-            .map((n) => `<a href="https://github.com/${repo}/blob/${sha}/${file}#L${n}">${n}</a>`)
-            .join(", ")
-        : uncovered.join(", ")
+      repo && sha ? `<a href="${blobUrl(repo, sha, file)}">${file}</a>` : `<code>${file}</code>`
     rows.push(
       `  <tr>
    <td align="left">${fileLink}</td>
@@ -372,7 +390,6 @@ export function renderFileCoverage({
    <td align="right">${cell("statements")}</td>
    <td align="right">${cell("functions")}</td>
    <td align="right">${cell("branches")}</td>
-   <td align="left">${uncoveredLinks}</td>
   </tr>`,
     )
   }
@@ -384,13 +401,66 @@ export function renderFileCoverage({
   <th align="right">Statements</th>
   <th align="right">Functions</th>
   <th align="right">Branches</th>
-  <th align="left">Uncovered</th>
  </tr></thead>
  <tbody>
 ${rows.join("\n")}
  </tbody>
 </table>`
-  return `<details><summary>File Coverage</summary>\n${table}\n</details>`
+  return `<details><summary>Touched files — whole-file coverage</summary>\n${table}\n</details>`
+}
+
+function renderRanges(
+  file: string,
+  lines: number[],
+  repo: string | undefined,
+  sha: string | undefined,
+): string {
+  return toLineRanges(lines)
+    .map(({ start, end }) => {
+      const label = start === end ? `${start}` : `${start}-${end}`
+      if (!repo || !sha) return label
+      const fragment = start === end ? `#L${start}` : `#L${start}-L${end}`
+      return `<a href="${blobUrl(repo, sha, file, fragment)}">${label}</a>`
+    })
+    .join(", ")
+}
+
+/**
+ * Per-file patch line coverage (covered / total of the file's coverable patch lines)
+ */
+export function renderPatchByFile({
+  files,
+  repo,
+  sha,
+}: {
+  files: { file: string; lines: MetricCounts & { pct: number }; uncovered: number[] }[]
+  repo: string | undefined
+  sha: string | undefined
+}): string | null {
+  if (files.length === 0) return null
+  const rows = files.map(({ file, lines, uncovered }) => {
+    const fileLink =
+      repo && sha ? `<a href="${blobUrl(repo, sha, file)}">${file}</a>` : `<code>${file}</code>`
+    const coverage = `${Math.round(lines.pct)}% ${lines.covered}/${lines.total}`
+    const uncoveredCell = uncovered.length === 0 ? "—" : renderRanges(file, uncovered, repo, sha)
+    return `  <tr>
+   <td align="center">${statusIcon(lines.pct)}</td>
+   <td align="left">${fileLink}</td>
+   <td align="right">${coverage}</td>
+   <td align="left">${uncoveredCell}</td>
+  </tr>`
+  })
+  return `<table>
+ <thead><tr>
+  <th align="center">Status</th>
+  <th align="left">File</th>
+  <th align="right">Patch coverage</th>
+  <th align="left">Uncovered lines</th>
+ </tr></thead>
+ <tbody>
+${rows.join("\n")}
+ </tbody>
+</table>`
 }
 
 export function renderReport({
@@ -407,17 +477,17 @@ export function renderReport({
   baseTotal: FileSummary | null
   summaryJson: Record<string, FileSummary> | null
   metrics: MetricsWithPct
-  files: { file: string; uncovered: number[] }[]
+  files: { file: string; lines: MetricCounts & { pct: number }; uncovered: number[] }[]
   changedFiles: string[]
   repo: string | undefined
   sha: string | undefined
 }): string {
   const rows = METRICS.map((k) => ({ label: LABELS[k], ...metrics[k] }))
-  const uncoveredMap = new Map(files.map((f) => [f.file, f.uncovered]))
   const fileCoverage =
     summaryJson && changedFiles
-      ? renderFileCoverage({ summaryJson, changedFiles, uncoveredMap, repo, sha })
+      ? renderFileCoverage({ summaryJson, changedFiles, repo, sha })
       : null
+  const patchByFile = renderPatchByFile({ files, repo, sha })
   const parts = [
     COMMENT_MARKER,
     "<h2>Coverage Report</h2>",
@@ -427,6 +497,7 @@ export function renderReport({
     "<h3>Patch coverage</h3>",
     "<p>Lines added or modified in this PR.</p>",
     htmlTable(rows),
+    ...(patchByFile ? ["", "<p>Patch coverage by file:</p>", patchByFile] : []),
   ]
   return parts.join("\n")
 }

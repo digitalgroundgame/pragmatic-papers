@@ -17,6 +17,23 @@ exports[`InteractiveMapBlock > renders a single map with diverging color scale 1
         style="display: block; height: auto; width: 100%;"
         viewBox="0 0 10 10"
       >
+        <defs>
+          <filter
+            height="160%"
+            id="shadow-_r_1_"
+            width="160%"
+            x="-30%"
+            y="-30%"
+          >
+            <fedropshadow
+              dx="0"
+              dy="3"
+              flood-color="black"
+              flood-opacity="0.8"
+              stdDeviation="6"
+            />
+          </filter>
+        </defs>
         <g>
           <path
             aria-label="District 1: R+12.5"
@@ -34,7 +51,7 @@ exports[`InteractiveMapBlock > renders a single map with diverging color scale 1
             d=""
             fill="none"
             stroke="currentColor"
-            stroke-width="3"
+            stroke-width="2"
             style="visibility: hidden;"
             vector-effect="non-scaling-stroke"
           />

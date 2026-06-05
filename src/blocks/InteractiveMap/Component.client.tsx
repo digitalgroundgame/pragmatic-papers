@@ -44,7 +44,7 @@ function MapPath({ path, region, mapIndex, onEnter, onLeave, onPin }: MapPathPro
       ? `${region.label}: ${region.formattedValue}`
       : region.label
     : (path.regionId ?? "")
-  const interactive = region != null
+  const interactive = region !== null
 
   return (
     <path
@@ -57,13 +57,13 @@ function MapPath({ path, region, mapIndex, onEnter, onLeave, onPin }: MapPathPro
       tabIndex={interactive ? 0 : undefined}
       data-interactive-map-path={interactive ? "" : undefined}
       style={interactive ? { cursor: "pointer", outline: "none" } : undefined}
-      onPointerEnter={interactive && region ? () => onEnter(mapIndex, region, path) : undefined}
+      onPointerEnter={interactive ? () => onEnter(mapIndex, region, path) : undefined}
       onPointerLeave={interactive ? onLeave : undefined}
-      onFocus={interactive && region ? () => onEnter(mapIndex, region, path) : undefined}
+      onFocus={interactive ? () => onEnter(mapIndex, region, path) : undefined}
       onBlur={interactive ? onLeave : undefined}
-      onClick={interactive && region ? () => onPin(mapIndex, region, path) : undefined}
+      onClick={interactive ? () => onPin(mapIndex, region, path) : undefined}
       onKeyDown={
-        interactive && region
+        interactive
           ? (e) => {
               if (e.key === "Enter" || e.key === " ") {
                 e.preventDefault()
@@ -118,7 +118,7 @@ function SingleMap({
             <MapPath
               key={`${mapIndex}-${i}`}
               path={path}
-              region={path.regionId == null ? null : (regionsById.get(path.regionId) ?? null)}
+              region={path.regionId ? (regionsById.get(path.regionId) ?? null) : null}
               mapIndex={mapIndex}
               onEnter={onEnter}
               onLeave={onLeave}
@@ -130,7 +130,7 @@ function SingleMap({
             d={activePath?.d ?? ""}
             fill="none"
             stroke="currentColor"
-            strokeWidth={3}
+            strokeWidth={2}
             vectorEffect="non-scaling-stroke"
             style={{ visibility: activePath ? "visible" : "hidden" }}
           />
@@ -218,7 +218,11 @@ export function InteractiveMapClient({
   }, [])
 
   const handlePin = useCallback((mapIndex: number, region: ResolvedRegion, path: ResolvedPath) => {
-    setHover({ mapIndex, region, path, pinned: true })
+    setHover((prev) =>
+      prev?.pinned && prev.mapIndex === mapIndex && prev.region.regionId === region.regionId
+        ? null
+        : { mapIndex, region, path, pinned: true },
+    )
   }, [])
 
   useEffect(() => {

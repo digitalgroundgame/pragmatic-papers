@@ -2436,17 +2436,17 @@ export interface InteractiveMapBlock {
   maps: {
     title?: string | null;
     /**
-     * Upload an SVG whose paths are already projected (e.g. Albers Equal Area). Each region path must carry a data attribute (default: data-region) that matches a Region ID below.
+     * Upload an SVG whose paths are already projected (e.g. Albers Equal Area). Each region path must carry an id attribute that matches a Region ID below.
      */
     svgAsset: number | MapAsset;
     /**
-     * The data attribute on each path that identifies the region (e.g. data-region, data-district).
+     * The data attribute on each path that holds the numeric value for the color scale (e.g. data-margin). When set, values are read directly from the SVG — no need to enter them manually in the Regions table.
      */
-    regionAttribute?: string | null;
+    valueAttribute?: string | null;
     regions?:
       | {
           /**
-           * Must match the value of the region attribute on the SVG path.
+           * Must match the id attribute on the SVG path.
            */
           regionId: string;
           label?: string | null;

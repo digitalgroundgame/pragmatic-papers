@@ -33,7 +33,7 @@ export const InteractiveMapBlock: React.FC<Props> = ({
       return resolveInlineSvgMap({
         title: m.title,
         svg,
-        regionAttribute: m.regionAttribute,
+        valueAttribute: m.valueAttribute,
         regions: m.regions ?? [],
         scaleType: colorScale,
       })

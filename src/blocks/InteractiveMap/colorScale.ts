@@ -1,4 +1,17 @@
 export type ColorScaleType = "divergingRedBlue" | "perRegion"
+export type ValueFormat = "r+d-" | "number" | "percent" | "none"
+
+const FORMAT_BY_ATTRIBUTE: Record<string, ValueFormat> = {
+  margin: "r+d-",
+  percent: "percent",
+  number: "number",
+}
+
+export function inferValueFormat(valueAttribute: string | null | undefined): ValueFormat {
+  if (!valueAttribute) return "none"
+  const key = valueAttribute.toLowerCase().replace(/^data-/, "")
+  return FORMAT_BY_ATTRIBUTE[key] ?? "number"
+}
 
 const DEFAULT_NEUTRAL = "#d4d4d4"
 
@@ -46,11 +59,10 @@ export function resolveColor({
   return neutralFill
 }
 
-export function formatValue(
-  scaleType: ColorScaleType,
-  value: number | null | undefined,
-): string | null {
+export function formatValue(format: ValueFormat, value: number | null | undefined): string | null {
   if (typeof value !== "number") return null
-  if (scaleType === "divergingRedBlue") return formatDivergingMargin(value)
-  return String(value)
+  if (format === "none") return null
+  if (format === "r+d-") return formatDivergingMargin(value)
+  if (format === "percent") return `${value.toFixed(1)}%`
+  return value.toLocaleString("en-US", { maximumFractionDigits: 1 })
 }

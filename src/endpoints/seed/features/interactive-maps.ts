@@ -7,22 +7,22 @@ import { createHeadingNode, createParagraph, createRichText } from "../richtext"
 
 // Margins are R+ when positive, D+ when negative — extracted from Emily's demo HTML.
 // Source: Redistricting Data Hub (left map, 119th) + UCLA cdmaps (right map, 120th).
-const districtRegions119 = [
-  { regionId: "MO-01", label: "MO 1st District", value: -58.18 },
-  { regionId: "MO-02", label: "MO 2nd District", value: 8.08 },
-  { regionId: "MO-03", label: "MO 3rd District", value: 27.16 },
-  { regionId: "MO-04", label: "MO 4th District", value: 42.74 },
-  { regionId: "MO-05", label: "MO 5th District", value: -23.6 },
-  { regionId: "MO-06", label: "MO 6th District", value: 39.34 },
-  { regionId: "MO-07", label: "MO 7th District", value: 43.14 },
-  { regionId: "MO-08", label: "MO 8th District", value: 54.57 },
+const districtLabels = [
+  { regionId: "MO-01", label: "MO 1st District" },
+  { regionId: "MO-02", label: "MO 2nd District" },
+  { regionId: "MO-03", label: "MO 3rd District" },
+  { regionId: "MO-04", label: "MO 4th District" },
+  { regionId: "MO-05", label: "MO 5th District" },
+  { regionId: "MO-06", label: "MO 6th District" },
+  { regionId: "MO-07", label: "MO 7th District" },
+  { regionId: "MO-08", label: "MO 8th District" },
 ]
 
 interface MapEntry {
   title: string
   svgAssetId: number
-  regionAttribute: string
-  regions: typeof districtRegions119
+  valueAttribute: string
+  regions: { regionId: string; label: string }[]
 }
 
 const createInteractiveMapNode = (maps: MapEntry[]) => ({
@@ -35,7 +35,7 @@ const createInteractiveMapNode = (maps: MapEntry[]) => ({
     maps: maps.map((m) => ({
       title: m.title,
       svgAsset: m.svgAssetId,
-      regionAttribute: m.regionAttribute,
+      valueAttribute: m.valueAttribute,
       regions: m.regions,
     })),
     sources: [
@@ -62,17 +62,6 @@ const createInteractiveMapNode = (maps: MapEntry[]) => ({
   format: "",
   version: 2,
 })
-
-const districtRegions120 = [
-  { regionId: "MO-01", label: "MO 1st District", value: -58.61 },
-  { regionId: "MO-02", label: "MO 2nd District", value: 11.69 },
-  { regionId: "MO-03", label: "MO 3rd District", value: 20.49 },
-  { regionId: "MO-04", label: "MO 4th District", value: 21.6 },
-  { regionId: "MO-05", label: "MO 5th District", value: 18.19 },
-  { regionId: "MO-06", label: "MO 6th District", value: 26.99 },
-  { regionId: "MO-07", label: "MO 7th District", value: 43.14 },
-  { regionId: "MO-08", label: "MO 8th District", value: 54.55 },
-]
 
 export const createInteractiveMapArticle = async (
   payload: Payload,
@@ -114,14 +103,14 @@ export const createInteractiveMapArticle = async (
         {
           title: "119th Congress",
           svgAssetId: asset119.id,
-          regionAttribute: "data-district",
-          regions: districtRegions119,
+          valueAttribute: "data-margin",
+          regions: districtLabels,
         },
         {
           title: "120th Congress",
           svgAssetId: asset120.id,
-          regionAttribute: "data-district",
-          regions: districtRegions120,
+          valueAttribute: "data-margin",
+          regions: districtLabels,
         },
       ]),
       createHeadingNode("How the block works", "h2"),

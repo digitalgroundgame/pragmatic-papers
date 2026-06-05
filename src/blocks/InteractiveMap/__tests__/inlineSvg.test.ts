@@ -8,8 +8,7 @@ describe("resolveInlineSvgMap", () => {
   it("sanitizes the SVG and surfaces the parsed paths", () => {
     const result = resolveInlineSvgMap({
       title: "Missouri",
-      svg: `${svg('data-region="MO-01"')}<script>bad()</script>`,
-      regionAttribute: "data-region",
+      svg: `${svg('id="MO-01"')}<script>bad()</script>`,
       regions: [],
       scaleType: "divergingRedBlue",
     })
@@ -18,14 +17,14 @@ describe("resolveInlineSvgMap", () => {
     expect(result.paths[0]?.regionId).toBe("MO-01")
   })
 
-  it("computes resolved regions with formatted values and colors from the diverging scale", () => {
+  it("computes resolved regions from paths, using manual region entries as overrides", () => {
     const result = resolveInlineSvgMap({
       title: null,
-      svg: svg('data-region="MO-01"'),
-      regionAttribute: "data-region",
+      svg: svg('id="MO-01"'),
+      valueAttribute: "data-margin",
       regions: [
         { regionId: "MO-01", label: "District 1", value: 12.5 },
-        { regionId: "MO-02", label: "District 2", value: -3.1 },
+        { regionId: "MO-02", label: "District 2", value: -3.1 }, // no path — excluded
       ],
       scaleType: "divergingRedBlue",
     })
@@ -37,20 +36,63 @@ describe("resolveInlineSvgMap", () => {
         formattedValue: "R+12.5",
         color: "#da685f",
       },
-      {
-        regionId: "MO-02",
-        label: "District 2",
-        formattedValue: "D+3.1",
-        color: "#9fa9db",
-      },
     ])
+  })
+
+  it("derives value from valueAttribute on the SVG path when no region override is provided", () => {
+    const result = resolveInlineSvgMap({
+      title: null,
+      svg: svg('id="MO-01" data-margin="-58.18"'),
+      valueAttribute: "data-margin",
+
+      regions: [],
+      scaleType: "divergingRedBlue",
+    })
+    expect(result.regions[0]).toMatchObject({
+      regionId: "MO-01",
+      label: "MO-01",
+      formattedValue: "D+58.2",
+    })
+  })
+
+  it("manual region value overrides the SVG-derived value", () => {
+    const result = resolveInlineSvgMap({
+      title: null,
+      svg: svg('id="MO-01" data-margin="-58.18"'),
+      valueAttribute: "data-margin",
+
+      regions: [{ regionId: "MO-01", label: "District 1", value: 20 }],
+      scaleType: "divergingRedBlue",
+    })
+    expect(result.regions[0]?.formattedValue).toBe("R+20.0")
+  })
+
+  it("infers percent format from data-percent attribute name", () => {
+    const result = resolveInlineSvgMap({
+      title: null,
+      svg: svg('id="MO-01" data-percent="63.4"'),
+      valueAttribute: "data-percent",
+      regions: [],
+      scaleType: "perRegion",
+    })
+    expect(result.regions[0]?.formattedValue).toBe("63.4%")
+  })
+
+  it("produces no formatted value when no valueAttribute is configured", () => {
+    const result = resolveInlineSvgMap({
+      title: null,
+      svg: svg('id="MO-01"'),
+      regions: [],
+      scaleType: "divergingRedBlue",
+    })
+    expect(result.regions[0]?.formattedValue).toBeNull()
   })
 
   it("falls back to regionId when label is missing and respects override colors", () => {
     const result = resolveInlineSvgMap({
       title: null,
-      svg: svg('data-region="MO-03"'),
-      regionAttribute: "data-region",
+      svg: svg('id="MO-03"'),
+      valueAttribute: "data-margin",
       regions: [{ regionId: "MO-03", label: null, value: 5, color: "#ff00ff" }],
       scaleType: "divergingRedBlue",
     })
@@ -63,25 +105,13 @@ describe("resolveInlineSvgMap", () => {
     })
   })
 
-  it("defaults the region attribute to data-region when blank", () => {
+  it("reads regionId from id attribute", () => {
     const result = resolveInlineSvgMap({
       title: null,
-      svg: svg('data-region="X"'),
-      regionAttribute: "",
+      svg: svg('id="X"'),
       regions: [],
       scaleType: "divergingRedBlue",
     })
     expect(result.paths[0]?.regionId).toBe("X")
-  })
-
-  it("uses a custom region attribute (e.g. data-district)", () => {
-    const result = resolveInlineSvgMap({
-      title: null,
-      svg: svg('data-district="01"'),
-      regionAttribute: "data-district",
-      regions: [],
-      scaleType: "divergingRedBlue",
-    })
-    expect(result.paths[0]?.regionId).toBe("01")
   })
 })

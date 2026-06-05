@@ -1,14 +1,19 @@
-import { type ColorScaleType, formatValue, resolveColor } from "@/blocks/InteractiveMap/colorScale"
+import {
+  type ColorScaleType,
+  formatValue,
+  inferValueFormat,
+  resolveColor,
+} from "@/blocks/InteractiveMap/colorScale"
 import { parseInlineSvg } from "@/blocks/InteractiveMap/parseInlineSvg"
 import { sanitizeMapSvg } from "@/blocks/InteractiveMap/sanitize"
-import type { RegionDatum, ResolvedMap } from "@/blocks/InteractiveMap/types"
+import type { RegionDatum, ResolvedMap, ResolvedRegion } from "@/blocks/InteractiveMap/types"
 
 const DEFAULT_VIEWBOX = "0 0 100 100"
 
 interface ResolveInlineSvgArgs {
   title?: string | null
   svg: string
-  regionAttribute?: string | null
+  valueAttribute?: string | null
   regions: RegionDatum[]
   scaleType: ColorScaleType
   neutralFill?: string
@@ -17,30 +22,39 @@ interface ResolveInlineSvgArgs {
 export function resolveInlineSvgMap({
   title,
   svg,
-  regionAttribute,
+  valueAttribute,
   regions,
   scaleType,
   neutralFill,
 }: ResolveInlineSvgArgs): ResolvedMap {
-  const attribute = regionAttribute?.trim() || "data-region"
   const sanitized = sanitizeMapSvg(svg ?? "")
-  const parsed = parseInlineSvg(sanitized, attribute)
+  const parsed = parseInlineSvg(sanitized, "id", valueAttribute ?? undefined)
+
+  const regionOverrides = new Map(regions.map((r) => [r.regionId, r]))
+  const seenIds = new Set<string>()
+  const resolvedRegions: ResolvedRegion[] = []
+
+  const format = inferValueFormat(valueAttribute)
+
+  for (const p of parsed.paths) {
+    if (p.regionId == null || seenIds.has(p.regionId)) continue
+    seenIds.add(p.regionId)
+    const override = regionOverrides.get(p.regionId)
+    const value = override?.value ?? p.value
+    const svgLabel = p.extraAttrs["data-label"]?.trim() || null
+    resolvedRegions.push({
+      regionId: p.regionId,
+      label: override?.label?.trim() || svgLabel || p.regionId,
+      formattedValue: formatValue(format, value),
+      color: resolveColor({ scaleType, value, overrideColor: override?.color, neutralFill }),
+    })
+  }
 
   return {
     title: title ?? null,
     viewBox: parsed.viewBox ?? DEFAULT_VIEWBOX,
     transform: parsed.transform,
     paths: parsed.paths,
-    regions: regions.map((r) => ({
-      regionId: r.regionId,
-      label: r.label?.trim() || r.regionId,
-      formattedValue: formatValue(scaleType, r.value),
-      color: resolveColor({
-        scaleType,
-        value: r.value,
-        overrideColor: r.color,
-        neutralFill,
-      }),
-    })),
+    regions: resolvedRegions,
   }
 }

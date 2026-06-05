@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest"
 import {
   formatDivergingMargin,
   formatValue,
+  inferValueFormat,
   pickDivergingColor,
   resolveColor,
 } from "@/blocks/InteractiveMap/colorScale"
@@ -35,19 +36,40 @@ describe("colorScale", () => {
   })
 
   describe("formatValue", () => {
-    it("delegates to formatDivergingMargin for divergingRedBlue", () => {
-      expect(formatValue("divergingRedBlue", 4.2)).toBe("R+4.2")
-      expect(formatValue("divergingRedBlue", -4.2)).toBe("D+4.2")
+    it("formats r+d- as R+/D-", () => {
+      expect(formatValue("r+d-", 4.2)).toBe("R+4.2")
+      expect(formatValue("r+d-", -4.2)).toBe("D+4.2")
     })
 
-    it("returns the raw number as a string for perRegion", () => {
-      expect(formatValue("perRegion", 42)).toBe("42")
+    it("formats number as a localized string", () => {
+      expect(formatValue("number", 42)).toBe("42")
     })
 
-    it("returns null when the value is missing for either scale", () => {
-      expect(formatValue("divergingRedBlue", null)).toBeNull()
-      expect(formatValue("divergingRedBlue", undefined)).toBeNull()
-      expect(formatValue("perRegion", null)).toBeNull()
+    it("formats percent with a % suffix", () => {
+      expect(formatValue("percent", 63.4)).toBe("63.4%")
+    })
+
+    it("returns null when the value is missing", () => {
+      expect(formatValue("r+d-", null)).toBeNull()
+      expect(formatValue("r+d-", undefined)).toBeNull()
+      expect(formatValue("number", null)).toBeNull()
+    })
+
+    it("returns null for format 'none'", () => {
+      expect(formatValue("none", 42)).toBeNull()
+    })
+  })
+
+  describe("inferValueFormat", () => {
+    it.each([
+      { attr: "data-margin", expected: "r+d-" },
+      { attr: "data-percent", expected: "percent" },
+      { attr: "data-number", expected: "number" },
+      { attr: "data-population", expected: "number" },
+      { attr: null, expected: "none" },
+      { attr: undefined, expected: "none" },
+    ])("$attr → $expected", ({ attr, expected }) => {
+      expect(inferValueFormat(attr)).toBe(expected)
     })
   })
 

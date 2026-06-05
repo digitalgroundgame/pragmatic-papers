@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest"
 import { InteractiveMapBlock } from "@/blocks/InteractiveMap/Component"
 import type { MapAsset } from "@/payload-types"
 
-const minimalSvg = `<svg viewBox="0 0 10 10"><path d="M0 0H10V10H0Z" data-region="MO-01"/></svg>`
+const minimalSvg = `<svg viewBox="0 0 10 10"><path d="M0 0H10V10H0Z" id="MO-01" data-margin="12.5"/></svg>`
 
 const stubAsset = (svgContent: string): MapAsset => ({
   id: 1,
@@ -30,8 +30,8 @@ describe("InteractiveMapBlock", () => {
           {
             title: "119th Congress",
             svgAsset: stubAsset(minimalSvg),
-            regionAttribute: "data-region",
-            regions: [{ regionId: "MO-01", label: "District 1", value: 12.5 }],
+            valueAttribute: "data-margin",
+            regions: [{ regionId: "MO-01", label: "District 1" }],
           },
         ]}
         sources={[

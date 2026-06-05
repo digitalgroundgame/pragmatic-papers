@@ -70,17 +70,16 @@ export const InteractiveMap: Block = {
           label: "Pre-projected SVG",
           admin: {
             description:
-              "Upload an SVG whose paths are already projected (e.g. Albers Equal Area). Each region path must carry a data attribute (default: data-region) that matches a Region ID below.",
+              "Upload an SVG whose paths are already projected (e.g. Albers Equal Area). Each region path must carry an id attribute that matches a Region ID below.",
           },
         },
         {
-          name: "regionAttribute",
+          name: "valueAttribute",
           type: "text",
-          defaultValue: "data-region",
-          label: "Region Attribute",
+          label: "Value Attribute",
           admin: {
             description:
-              "The data attribute on each path that identifies the region (e.g. data-region, data-district).",
+              "The data attribute on each path that holds the numeric value for the color scale (e.g. data-margin). When set, values are read directly from the SVG — no need to enter them manually in the Regions table.",
           },
         },
         {
@@ -95,7 +94,7 @@ export const InteractiveMap: Block = {
               required: true,
               label: "Region ID",
               admin: {
-                description: "Must match the value of the region attribute on the SVG path.",
+                description: "Must match the id attribute on the SVG path.",
               },
             },
             {

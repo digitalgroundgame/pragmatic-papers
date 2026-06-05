@@ -3,6 +3,7 @@ import { Parser } from "htmlparser2"
 export interface ParsedPath {
   d: string
   regionId: string | null
+  value: number | null
   extraAttrs: Record<string, string>
 }
 
@@ -19,8 +20,13 @@ function pickFirst<T>(...values: (T | null | undefined)[]): T | null {
   return null
 }
 
-export function parseInlineSvg(svg: string, regionAttribute: string): ParsedSvg {
+export function parseInlineSvg(
+  svg: string,
+  regionAttribute: string,
+  valueAttribute?: string,
+): ParsedSvg {
   const attrKey = regionAttribute.toLowerCase()
+  const valueAttrKey = valueAttribute?.toLowerCase() ?? null
   let viewBox: string | null = null
   let transform: string | null = null
   const paths: ParsedPath[] = []
@@ -52,13 +58,16 @@ export function parseInlineSvg(svg: string, regionAttribute: string): ParsedSvg 
           const d = attrs.d
           if (!d) return
           const regionId = attrs[attrKey] ?? null
+          const rawValue = valueAttrKey ? parseFloat(attrs[valueAttrKey] ?? "") : NaN
+          const value = isNaN(rawValue) ? null : rawValue
           const extraAttrs: Record<string, string> = {}
           for (const [k, v] of Object.entries(attrs)) {
             if (PATH_RESERVED_ATTRS.has(k)) continue
             if (k === attrKey) continue
+            if (valueAttrKey && k === valueAttrKey) continue
             extraAttrs[k] = v
           }
-          paths.push({ d, regionId, extraAttrs })
+          paths.push({ d, regionId, value, extraAttrs })
         }
       },
       onclosetag(name) {

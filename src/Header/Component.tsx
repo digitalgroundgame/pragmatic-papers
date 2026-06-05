@@ -95,7 +95,7 @@ export async function Header(): Promise<React.JSX.Element> {
                     </div>
                     <SheetTitle className="text-3xl">Settings</SheetTitle>
                   </SheetHeader>
-                  <div className="w-full space-y-2 px-4">
+                  <div className="flex w-full flex-col gap-2 px-4">
                     <HeaderActions
                       actions={actions}
                       className="w-full justify-center [&>a]:w-1/2"
@@ -103,10 +103,7 @@ export async function Header(): Promise<React.JSX.Element> {
                     <LinkButton variant="outline" size="lg" className="w-full" href="/admin/login">
                       Log In
                     </LinkButton>
-                    <div className="flex w-full items-center justify-center gap-2 pt-2">
-                      <span className="text-sm font-medium">Theme</span>
-                      <ModeToggle />
-                    </div>
+                    <ModeToggle showLabel />
                   </div>
                 </SheetContent>
               </Sheet>

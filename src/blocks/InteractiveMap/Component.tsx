@@ -50,37 +50,26 @@ export const InteractiveMapBlock: React.FC<Props> = ({
   if (resolvedMaps.length === 0) return null
 
   return (
-    <figure className={cn("not-prose col-start-2 my-8", className)}>
-      {widgetTitle ? (
-        <figcaption className="mb-3 text-center font-serif text-lg font-semibold">
-          {widgetTitle}
-        </figcaption>
-      ) : null}
-      <InteractiveMapClient layout={layout ?? "row"} maps={resolvedMaps} />
-      {sources && sources.length > 0 ? (
-        <p className="text-muted-foreground mt-2 text-center text-xs">
+    <figure className={cn("not-prose col-start-2 my-8 space-y-2", className)}>
+      <InteractiveMapClient layout={layout} maps={resolvedMaps} />
+      {widgetTitle && <figcaption className="text-lg font-semibold">{widgetTitle}</figcaption>}
+      {sources && sources.length > 0 && (
+        <p className="text-muted-foreground text-xs">
           Source{sources.length > 1 ? "s" : ""}:{" "}
-          {sources.map((s, i) => {
-            const sep = i < sources.length - 1 ? ", " : ""
-            if (s.url) {
-              return (
-                <React.Fragment key={i}>
-                  <a href={s.url} rel="noopener noreferrer" target="_blank" className="underline">
-                    {s.name}
-                  </a>
-                  {sep}
-                </React.Fragment>
-              )
-            }
-            return (
-              <React.Fragment key={i}>
-                {s.name}
-                {sep}
-              </React.Fragment>
-            )
-          })}
+          {sources.map((s, i) => (
+            <React.Fragment key={i}>
+              {s.url ? (
+                <a href={s.url} rel="noopener noreferrer" target="_blank" className="underline">
+                  {s.name}
+                </a>
+              ) : (
+                <>{s.name}</>
+              )}
+              {i < sources.length - 1 ? ", " : ""}
+            </React.Fragment>
+          ))}
         </p>
-      ) : null}
+      )}
     </figure>
   )
 }

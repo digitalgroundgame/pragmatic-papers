@@ -9,14 +9,14 @@ import {
 describe("colorScale", () => {
   describe("pickDivergingColor — matches the Missouri demo palette exactly", () => {
     it.each([
-      { value: 0.5, color: "#cd897f" },
-      { value: 3, color: "#fd8997" },
-      { value: 10, color: "#fd5864" },
-      { value: 25, color: "#b7212c" },
-      { value: -0.5, color: "#9499b2" },
-      { value: -3, color: "#89aefd" },
-      { value: -10, color: "#587ac9" },
-      { value: -25, color: "#22428c" },
+      { value: 0.5, color: "#dcb4ae" },
+      { value: 3, color: "#de938a" },
+      { value: 10, color: "#da685f" },
+      { value: 25, color: "#cd0526" },
+      { value: -0.5, color: "#bbbed8" },
+      { value: -3, color: "#9fa9db" },
+      { value: -10, color: "#7890df" },
+      { value: -25, color: "#056ee3" },
     ])("value=$value → $color", ({ value, color }) => {
       expect(pickDivergingColor(value)).toBe(color)
     })

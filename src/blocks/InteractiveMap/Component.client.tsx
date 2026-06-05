@@ -28,6 +28,53 @@ interface HoverTarget {
 
 const TOOLTIP_OFFSET = 14
 
+interface MapPathProps {
+  path: ResolvedPath
+  region: ResolvedRegion | null
+  mapIndex: number
+  onEnter: (mapIndex: number, region: ResolvedRegion, path: ResolvedPath) => void
+  onLeave: () => void
+  onPin: (mapIndex: number, region: ResolvedRegion, path: ResolvedPath) => void
+}
+
+function MapPath({ path, region, mapIndex, onEnter, onLeave, onPin }: MapPathProps) {
+  const fill = region?.color
+  const accessibleLabel = region
+    ? region.formattedValue
+      ? `${region.label}: ${region.formattedValue}`
+      : region.label
+    : (path.regionId ?? "")
+  const interactive = region != null
+
+  return (
+    <path
+      d={path.d}
+      fill={fill}
+      stroke="#ffffff"
+      strokeWidth={1.5}
+      vectorEffect="non-scaling-stroke"
+      aria-label={accessibleLabel || undefined}
+      tabIndex={interactive ? 0 : undefined}
+      data-interactive-map-path={interactive ? "" : undefined}
+      style={interactive ? { cursor: "pointer", outline: "none" } : undefined}
+      onPointerEnter={interactive && region ? () => onEnter(mapIndex, region, path) : undefined}
+      onPointerLeave={interactive ? onLeave : undefined}
+      onFocus={interactive && region ? () => onEnter(mapIndex, region, path) : undefined}
+      onBlur={interactive ? onLeave : undefined}
+      onClick={interactive && region ? () => onPin(mapIndex, region, path) : undefined}
+      onKeyDown={
+        interactive && region
+          ? (e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault()
+                onPin(mapIndex, region, path)
+              }
+            }
+          : undefined
+      }
+    />
+  )
+}
 interface SingleMapProps {
   map: ResolvedMap
   mapIndex: number
@@ -59,63 +106,6 @@ function SingleMap({
     [activeRegionId, map.paths],
   )
 
-  const renderPath = (path: ResolvedPath, i: number): React.ReactElement => {
-    const region = path.regionId == null ? null : (regionsById.get(path.regionId) ?? null)
-    const fill = region?.color
-    const accessibleLabel = region
-      ? region.formattedValue
-        ? `${region.label}: ${region.formattedValue}`
-        : region.label
-      : (path.regionId ?? "")
-    const interactive = region != null
-
-    return (
-      <path
-        key={`${mapIndex}-${i}`}
-        d={path.d}
-        fill={fill}
-        stroke="#ffffff"
-        strokeWidth={1.5}
-        vectorEffect="non-scaling-stroke"
-        tabIndex={interactive ? 0 : undefined}
-        data-interactive-map-path={interactive ? "" : undefined}
-        style={interactive ? { cursor: "pointer", outline: "none" } : undefined}
-        onPointerEnter={interactive && region ? () => onEnter(mapIndex, region, path) : undefined}
-        onPointerLeave={interactive ? onLeave : undefined}
-        onFocus={interactive && region ? () => onEnter(mapIndex, region, path) : undefined}
-        onBlur={interactive ? onLeave : undefined}
-        onClick={interactive && region ? () => onPin(mapIndex, region, path) : undefined}
-        onKeyDown={
-          interactive && region
-            ? (e) => {
-                if (e.key === "Enter" || e.key === " ") {
-                  e.preventDefault()
-                  onPin(mapIndex, region, path)
-                }
-              }
-            : undefined
-        }
-      >
-        {accessibleLabel ? <title>{accessibleLabel}</title> : null}
-      </path>
-    )
-  }
-
-  const content = (
-    <>
-      {map.paths.map(renderPath)}
-      <path
-        className="pointer-events-none"
-        d={activePath?.d ?? ""}
-        fill="none"
-        stroke="currentColor"
-        strokeWidth={3}
-        vectorEffect="non-scaling-stroke"
-        style={{ visibility: activePath ? "visible" : "hidden" }}
-      />
-    </>
-  )
-
   return (
     <figure className="min-w-0 flex-1">
       {map.title ? (
@@ -126,7 +116,28 @@ function SingleMap({
         preserveAspectRatio="xMidYMid meet"
         style={{ display: "block", height: "auto", width: "100%" }}
       >
-        {map.transform ? <g transform={map.transform}>{content}</g> : content}
+        <g transform={map.transform ?? undefined}>
+          {map.paths.map((path, i) => (
+            <MapPath
+              key={`${mapIndex}-${i}`}
+              path={path}
+              region={path.regionId == null ? null : (regionsById.get(path.regionId) ?? null)}
+              mapIndex={mapIndex}
+              onEnter={onEnter}
+              onLeave={onLeave}
+              onPin={onPin}
+            />
+          ))}
+          <path
+            className="pointer-events-none"
+            d={activePath?.d ?? ""}
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={3}
+            vectorEffect="non-scaling-stroke"
+            style={{ visibility: activePath ? "visible" : "hidden" }}
+          />
+        </g>
       </svg>
     </figure>
   )

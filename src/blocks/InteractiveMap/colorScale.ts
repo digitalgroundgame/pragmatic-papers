@@ -4,8 +4,8 @@ const DEFAULT_NEUTRAL = "#d4d4d4"
 
 const DIVERGING_RED_BLUE = {
   breakpoints: [1, 5, 15],
-  positive: ["#cd897f", "#fd8997", "#fd5864", "#b7212c"],
-  negative: ["#9499b2", "#89aefd", "#587ac9", "#22428c"],
+  positive: ["#dcb4ae", "#de938a", "#da685f", "#cd0526"],
+  negative: ["#bbbed8", "#9fa9db", "#7890df", "#056ee3"],
 } as const
 
 export function formatDivergingMargin(value: number): string {

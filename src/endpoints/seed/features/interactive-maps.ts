@@ -53,6 +53,7 @@ export const createInteractiveMapArticle = async (
   writers: User[],
   mediaDocs: Media[],
   topics: number[] = [],
+  ctx?: Record<string, unknown>,
 ): Promise<number> => {
   validateWriters(writers)
 
@@ -74,44 +75,48 @@ export const createInteractiveMapArticle = async (
     ),
   ])
 
-  const article = await createArticle(payload, {
-    title,
-    content: createRichText([
-      createParagraph(
-        "The Interactive Map block renders pre-projected SVG maps side by side with hover tooltips, a shared color scale, and a source attribution footer. This article uses the same Missouri congressional districts Emily prepared for her election analysis.",
-      ),
-      createHeadingNode("Comparing 119th and 120th Congress Margins", "h2"),
-      createParagraph(
-        "Hover (or focus with the keyboard) over any district to see the R+/D+ margin. The diverging Red/Blue palette colors each region by its signed margin — deep red for strong Republican wins, deep blue for strong Democratic wins.",
-      ),
-      createInteractiveMapNode([
-        {
-          title: "119th Congress",
-          svgAssetId: asset119.id,
-          dataAttribute: "data-margin",
-        },
-        {
-          title: "120th Congress",
-          svgAssetId: asset120.id,
-          dataAttribute: "data-margin",
-        },
-      ]),
-      createHeadingNode("How the block works", "h2"),
-      createParagraph(
-        "Writers upload a pre-projected SVG (here in Albers Equal Area, ESRI:102003) into the Map Assets collection. Each path carries a region attribute (in this case data-district) that joins to a regions table the writer fills in with values and labels. The block reads the SVG content the collection captured at upload time, sanitizes it, parses out the paths, applies the color scale, and renders them as real JSX — so the colored map is SSR-friendly and accessible.",
-      ),
-    ]),
-    authors: [writer.id],
-    topics,
-    slug: "missouri-shifting-margins-119-120-congressional-maps",
-    heroImage: mediaDocs[2]?.id ?? mediaDocs[0]?.id,
-    meta: {
+  const article = await createArticle(
+    payload,
+    {
       title,
-      description:
-        "A seeded article demonstrating the Interactive Map block with side-by-side Missouri congressional district maps for the 119th and 120th Congresses.",
-      image: mediaDocs[2]?.id ?? mediaDocs[0]?.id,
+      content: createRichText([
+        createParagraph(
+          "The Interactive Map block renders pre-projected SVG maps side by side with hover tooltips, a shared color scale, and a source attribution footer. This article uses the same Missouri congressional districts Emily prepared for her election analysis.",
+        ),
+        createHeadingNode("Comparing 119th and 120th Congress Margins", "h2"),
+        createParagraph(
+          "Hover (or focus with the keyboard) over any district to see the R+/D+ margin. The diverging Red/Blue palette colors each region by its signed margin — deep red for strong Republican wins, deep blue for strong Democratic wins.",
+        ),
+        createInteractiveMapNode([
+          {
+            title: "119th Congress",
+            svgAssetId: asset119.id,
+            dataAttribute: "data-margin",
+          },
+          {
+            title: "120th Congress",
+            svgAssetId: asset120.id,
+            dataAttribute: "data-margin",
+          },
+        ]),
+        createHeadingNode("How the block works", "h2"),
+        createParagraph(
+          "Writers upload a pre-projected SVG (here in Albers Equal Area, ESRI:102003) into the Map Assets collection. Each path carries a region attribute (in this case data-district) that joins to a regions table the writer fills in with values and labels. The block reads the SVG content the collection captured at upload time, sanitizes it, parses out the paths, applies the color scale, and renders them as real JSX — so the colored map is SSR-friendly and accessible.",
+        ),
+      ]),
+      authors: [writer.id],
+      topics,
+      slug: "missouri-shifting-margins-119-120-congressional-maps",
+      heroImage: mediaDocs[2]?.id ?? mediaDocs[0]?.id,
+      meta: {
+        title,
+        description:
+          "A seeded article demonstrating the Interactive Map block with side-by-side Missouri congressional district maps for the 119th and 120th Congresses.",
+        image: mediaDocs[2]?.id ?? mediaDocs[0]?.id,
+      },
     },
-  })
+    ctx,
+  )
 
   return article.id
 }

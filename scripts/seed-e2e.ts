@@ -1,3 +1,4 @@
+import { createInteractiveMapArticle } from "@/endpoints/seed/features/interactive-maps"
 import { createRichTextShowcaseArticle } from "@/endpoints/seed/features/rich-text-showcase"
 import { createUser } from "@/endpoints/seed/users"
 import config from "@payload-config"
@@ -25,6 +26,9 @@ export async function main(): Promise<void> {
     // Typography showcase article (slug: "rich-text-showcase").
     // Pass [] for mediaDocs — all media accesses use ?. so heroImage/meta.image will be null.
     const articleId = await createRichTextShowcaseArticle(payload, [writer], [], [], ctx)
+
+    // Interactive map article (slug: "missouri-shifting-margins-119-120-congressional-maps").
+    await createInteractiveMapArticle(payload, [writer], [], [], ctx)
 
     const volume = await payload.create({
       collection: "volumes",

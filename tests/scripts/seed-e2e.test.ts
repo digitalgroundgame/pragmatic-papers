@@ -9,6 +9,7 @@ const mockPayload = {
 
 const mockWriter = { id: 1, email: "writer@e2e.test", name: "E2E Writer" }
 const mockArticleId = 42
+const mockMapArticleId = 43
 const mockVolume = { id: 99, title: "E2E Test Volume" }
 
 vi.mock("payload", () => ({
@@ -25,9 +26,14 @@ vi.mock("@/endpoints/seed/features/rich-text-showcase", () => ({
   createRichTextShowcaseArticle: vi.fn().mockResolvedValue(mockArticleId),
 }))
 
+vi.mock("@/endpoints/seed/features/interactive-maps", () => ({
+  createInteractiveMapArticle: vi.fn().mockResolvedValue(mockMapArticleId),
+}))
+
 const { createUser } = await import("@/endpoints/seed/users")
 const { createRichTextShowcaseArticle } =
   await import("@/endpoints/seed/features/rich-text-showcase")
+const { createInteractiveMapArticle } = await import("@/endpoints/seed/features/interactive-maps")
 const { main } = await import("../../scripts/seed-e2e")
 
 beforeEach(() => {
@@ -57,6 +63,14 @@ describe("seed-e2e main()", () => {
     await main()
 
     expect(createRichTextShowcaseArticle).toHaveBeenCalledWith(mockPayload, [mockWriter], [], [], {
+      disableRevalidate: true,
+    })
+  })
+
+  it("creates the interactive map article with the writer and empty media", async () => {
+    await main()
+
+    expect(createInteractiveMapArticle).toHaveBeenCalledWith(mockPayload, [mockWriter], [], [], {
       disableRevalidate: true,
     })
   })

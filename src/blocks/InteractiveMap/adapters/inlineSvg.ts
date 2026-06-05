@@ -26,23 +26,21 @@ export function resolveInlineSvgMap({
   const sanitized = sanitizeMapSvg(svg ?? "")
   const parsed = parseInlineSvg(sanitized, attribute)
 
-  const resolvedRegions = regions.map((r) => ({
-    regionId: r.regionId,
-    label: r.label?.trim() || r.regionId,
-    formattedValue: formatValue(scaleType, r.value),
-    color: resolveColor({
-      scaleType,
-      value: r.value,
-      overrideColor: r.color,
-      neutralFill,
-    }),
-  }))
-
   return {
     title: title ?? null,
     viewBox: parsed.viewBox ?? DEFAULT_VIEWBOX,
     transform: parsed.transform,
     paths: parsed.paths,
-    regions: resolvedRegions,
+    regions: regions.map((r) => ({
+      regionId: r.regionId,
+      label: r.label?.trim() || r.regionId,
+      formattedValue: formatValue(scaleType, r.value),
+      color: resolveColor({
+        scaleType,
+        value: r.value,
+        overrideColor: r.color,
+        neutralFill,
+      }),
+    })),
   }
 }

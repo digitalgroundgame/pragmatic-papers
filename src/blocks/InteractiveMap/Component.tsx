@@ -1,7 +1,6 @@
 import React from "react"
 
 import { resolveInlineSvgMap } from "@/blocks/InteractiveMap/adapters/inlineSvg"
-import type { ColorScaleType } from "@/blocks/InteractiveMap/colorScale"
 import type { ResolvedMap } from "@/blocks/InteractiveMap/types"
 import type { InteractiveMapBlock as InteractiveMapBlockProps } from "@/payload-types"
 import { cn } from "@/utilities/utils"
@@ -25,24 +24,16 @@ export const InteractiveMapBlock: React.FC<Props> = ({
   maps,
   sources,
 }) => {
-  const scaleType: ColorScaleType = colorScale ?? "divergingRedBlue"
-
-  const resolvedMaps: ResolvedMap[] = (maps ?? [])
+  const resolvedMaps: ResolvedMap[] = maps
     .map((m): ResolvedMap | null => {
       const svg = readSvgContent(m.svgAsset)
       if (!svg) return null
-      const regions = (m.regions ?? []).map((r) => ({
-        regionId: r.regionId,
-        label: r.label,
-        value: r.value,
-        color: r.color,
-      }))
       return resolveInlineSvgMap({
         title: m.title,
         svg,
         regionAttribute: m.regionAttribute,
-        regions,
-        scaleType,
+        regions: m.regions ?? [],
+        scaleType: colorScale,
       })
     })
     .filter((m): m is ResolvedMap => m !== null)

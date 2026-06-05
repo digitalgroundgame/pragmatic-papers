@@ -28,7 +28,7 @@ export const LightboxMediaBlock: React.FC<LightboxMediaBlockProps> = ({
         className={cn("w-full", containerClassName, className)}
         disableInnerContainer
         mediaWrapper={(mediaNode) => (
-          <DialogTrigger className="block w-full cursor-pointer [&>img]:block">
+          <DialogTrigger className="block w-full cursor-pointer [&>*]:m-0">
             {mediaNode}
           </DialogTrigger>
         )}

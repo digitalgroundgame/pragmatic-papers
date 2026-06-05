@@ -496,7 +496,9 @@ export function renderReport({
     "<h3>Patch coverage</h3>",
     "<p>Lines added or modified in this PR.</p>",
     htmlTable(rows),
-    ...(patchByFile ? ["", "<p>Patch coverage by file:</p>", patchByFile] : []),
+    ...(patchByFile
+      ? ["", `<details><summary>Patch coverage by file</summary>\n${patchByFile}\n</details>`]
+      : []),
   ]
   return parts.join("\n")
 }

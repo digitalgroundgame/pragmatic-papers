@@ -2,7 +2,7 @@
 
 exports[`InteractiveMapBlock > renders a single map with diverging color scale 1`] = `
 <figure
-  class="not-prose my-8 space-y-2"
+  class="not-prose col-start-2 my-8 space-y-2"
 >
   <div
     aria-label="Interactive map widget"
@@ -22,31 +22,33 @@ exports[`InteractiveMapBlock > renders a single map with diverging color scale 1
         style="display: block; height: auto; width: 100%;"
         viewBox="0 0 10 10"
       >
-        <path
-          aria-label="District 1: R+12.5"
-          d="M0 0H10V10H0Z"
-          data-interactive-map-path=""
-          fill="#da685f"
-          stroke="#ffffff"
-          stroke-width="1.5"
-          style="cursor: pointer; outline: none;"
-          tabindex="0"
-          vector-effect="non-scaling-stroke"
-        />
-        <path
-          class="pointer-events-none"
-          d=""
-          fill="none"
-          stroke="currentColor"
-          stroke-width="3"
-          style="visibility: hidden;"
-          vector-effect="non-scaling-stroke"
-        />
+        <g>
+          <path
+            aria-label="District 1: R+12.5"
+            d="M0 0H10V10H0Z"
+            data-interactive-map-path=""
+            fill="#da685f"
+            stroke="#ffffff"
+            stroke-width="1.5"
+            style="cursor: pointer; outline: none;"
+            tabindex="0"
+            vector-effect="non-scaling-stroke"
+          />
+          <path
+            class="pointer-events-none"
+            d=""
+            fill="none"
+            stroke="currentColor"
+            stroke-width="3"
+            style="visibility: hidden;"
+            vector-effect="non-scaling-stroke"
+          />
+        </g>
       </svg>
     </figure>
   </div>
   <figcaption
-    class="mb-4 text-lg font-semibold"
+    class="text-lg font-semibold"
   >
     Missouri
   </figcaption>

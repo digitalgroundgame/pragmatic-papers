@@ -13,8 +13,8 @@ const DEFAULT_VIEWBOX = "0 0 100 100"
 interface ResolveInlineSvgArgs {
   title?: string | null
   svg: string
-  valueAttribute?: string | null
-  regions: RegionDatum[]
+  dataAttribute?: string | null
+  overrides: RegionDatum[]
   scaleType: ColorScaleType
   neutralFill?: string
 }
@@ -22,19 +22,19 @@ interface ResolveInlineSvgArgs {
 export function resolveInlineSvgMap({
   title,
   svg,
-  valueAttribute,
-  regions,
+  dataAttribute,
+  overrides,
   scaleType,
   neutralFill,
 }: ResolveInlineSvgArgs): ResolvedMap {
   const sanitized = sanitizeMapSvg(svg ?? "")
-  const parsed = parseInlineSvg(sanitized, "id", valueAttribute ?? undefined)
+  const parsed = parseInlineSvg(sanitized, "id", dataAttribute ?? undefined)
 
-  const regionOverrides = new Map(regions.map((r) => [r.regionId, r]))
+  const regionOverrides = new Map(overrides.map((r) => [r.regionId, r]))
   const seenIds = new Set<string>()
   const resolvedRegions: ResolvedRegion[] = []
 
-  const format = inferValueFormat(valueAttribute)
+  const format = inferValueFormat(dataAttribute)
 
   for (const p of parsed.paths) {
     if (p.regionId == null || seenIds.has(p.regionId)) continue

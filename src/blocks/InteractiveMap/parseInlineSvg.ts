@@ -23,10 +23,10 @@ function pickFirst<T>(...values: (T | null | undefined)[]): T | null {
 export function parseInlineSvg(
   svg: string,
   regionAttribute: string,
-  valueAttribute?: string,
+  dataAttribute?: string,
 ): ParsedSvg {
   const attrKey = regionAttribute.toLowerCase()
-  const valueAttrKey = valueAttribute?.toLowerCase() ?? null
+  const dataAttrKey = dataAttribute?.toLowerCase() ?? null
   let viewBox: string | null = null
   let transform: string | null = null
   const paths: ParsedPath[] = []
@@ -58,13 +58,13 @@ export function parseInlineSvg(
           const d = attrs.d
           if (!d) return
           const regionId = attrs[attrKey] ?? null
-          const rawValue = valueAttrKey ? parseFloat(attrs[valueAttrKey] ?? "") : NaN
+          const rawValue = dataAttrKey ? parseFloat(attrs[dataAttrKey] ?? "") : NaN
           const value = isNaN(rawValue) ? null : rawValue
           const extraAttrs: Record<string, string> = {}
           for (const [k, v] of Object.entries(attrs)) {
             if (PATH_RESERVED_ATTRS.has(k)) continue
             if (k === attrKey) continue
-            if (valueAttrKey && k === valueAttrKey) continue
+            if (dataAttrKey && k === dataAttrKey) continue
             extraAttrs[k] = v
           }
           paths.push({ d, regionId, value, extraAttrs })

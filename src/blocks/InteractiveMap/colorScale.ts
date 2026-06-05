@@ -7,9 +7,9 @@ const FORMAT_BY_ATTRIBUTE: Record<string, ValueFormat> = {
   number: "number",
 }
 
-export function inferValueFormat(valueAttribute: string | null | undefined): ValueFormat {
-  if (!valueAttribute) return "none"
-  const key = valueAttribute.toLowerCase().replace(/^data-/, "")
+export function inferValueFormat(dataAttribute: string | null | undefined): ValueFormat {
+  if (!dataAttribute) return "none"
+  const key = dataAttribute.toLowerCase().replace(/^data-/, "")
   return FORMAT_BY_ATTRIBUTE[key] ?? "number"
 }
 

@@ -60,6 +60,7 @@ describe("parseInlineSvg", () => {
     expect(result.paths).toHaveLength(1)
   })
 
+
   it("extracts numeric value from dataAttribute and excludes it from extraAttrs", () => {
     const svg = `<svg viewBox="0 0 1 1"><path d="M0 0" id="A" data-margin="-58.18"/></svg>`
     const result = parseInlineSvg(svg, "id", "data-margin")

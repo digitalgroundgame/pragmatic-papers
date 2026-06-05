@@ -5,24 +5,10 @@ import { createArticle, validateWriters } from "../articles"
 import { createMapAssetFromFixture } from "../mapAssets"
 import { createHeadingNode, createParagraph, createRichText } from "../richtext"
 
-// Margins are R+ when positive, D+ when negative — extracted from Emily's demo HTML.
-// Source: Redistricting Data Hub (left map, 119th) + UCLA cdmaps (right map, 120th).
-const districtLabels = [
-  { regionId: "MO-01", label: "MO 1st District" },
-  { regionId: "MO-02", label: "MO 2nd District" },
-  { regionId: "MO-03", label: "MO 3rd District" },
-  { regionId: "MO-04", label: "MO 4th District" },
-  { regionId: "MO-05", label: "MO 5th District" },
-  { regionId: "MO-06", label: "MO 6th District" },
-  { regionId: "MO-07", label: "MO 7th District" },
-  { regionId: "MO-08", label: "MO 8th District" },
-]
-
 interface MapEntry {
   title: string
   svgAssetId: number
-  valueAttribute: string
-  regions: { regionId: string; label: string }[]
+  dataAttribute: string
 }
 
 const createInteractiveMapNode = (maps: MapEntry[]) => ({
@@ -35,8 +21,7 @@ const createInteractiveMapNode = (maps: MapEntry[]) => ({
     maps: maps.map((m) => ({
       title: m.title,
       svgAsset: m.svgAssetId,
-      valueAttribute: m.valueAttribute,
-      regions: m.regions,
+      dataAttribute: m.dataAttribute,
     })),
     sources: [
       {
@@ -103,14 +88,12 @@ export const createInteractiveMapArticle = async (
         {
           title: "119th Congress",
           svgAssetId: asset119.id,
-          valueAttribute: "data-margin",
-          regions: districtLabels,
+          dataAttribute: "data-margin",
         },
         {
           title: "120th Congress",
           svgAssetId: asset120.id,
-          valueAttribute: "data-margin",
-          regions: districtLabels,
+          dataAttribute: "data-margin",
         },
       ]),
       createHeadingNode("How the block works", "h2"),

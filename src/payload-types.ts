@@ -2440,10 +2440,10 @@ export interface InteractiveMapBlock {
      */
     svgAsset: number | MapAsset;
     /**
-     * The data attribute on each path that holds the numeric value for the color scale (e.g. data-margin). When set, values are read directly from the SVG — no need to enter them manually in the Regions table.
+     * The data attribute on each path that holds the numeric value for the color scale (e.g. data-margin). When set, values are read directly from the SVG — no need to enter them manually in the Overrides table.
      */
-    valueAttribute?: string | null;
-    regions?:
+    dataAttribute?: string | null;
+    overrides?:
       | {
           /**
            * Must match the id attribute on the SVG path.

@@ -60,7 +60,7 @@ export const InteractiveMap: Block = {
         {
           name: "title",
           type: "text",
-          label: "Map Title",
+          label: "Title",
         },
         {
           name: "svgAsset",
@@ -74,19 +74,19 @@ export const InteractiveMap: Block = {
           },
         },
         {
-          name: "valueAttribute",
+          name: "dataAttribute",
           type: "text",
-          label: "Value Attribute",
+          label: "Data Attribute",
           admin: {
             description:
-              "The data attribute on each path that holds the numeric value for the color scale (e.g. data-margin). When set, values are read directly from the SVG — no need to enter them manually in the Regions table.",
+              "The data attribute on each path that holds the numeric value for the color scale (e.g. data-margin). When set, values are read directly from the SVG — no need to enter them manually in the Overrides table.",
           },
         },
         {
-          name: "regions",
+          name: "overrides",
           type: "array",
-          label: "Regions",
-          labels: { singular: "Region", plural: "Regions" },
+          label: "Overrides",
+          labels: { singular: "Override", plural: "Overrides" },
           fields: [
             {
               name: "regionId",
@@ -100,12 +100,12 @@ export const InteractiveMap: Block = {
             {
               name: "label",
               type: "text",
-              label: "Tooltip Label",
+              label: "Override Label (optional)",
             },
             {
               name: "value",
               type: "number",
-              label: "Value",
+              label: "Override Value (optional)",
               admin: {
                 description:
                   "For Diverging Red/Blue: signed margin (positive = R+, negative = D+).",

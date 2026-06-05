@@ -30,8 +30,8 @@ describe("InteractiveMapBlock", () => {
           {
             title: "119th Congress",
             svgAsset: stubAsset(minimalSvg),
-            valueAttribute: "data-margin",
-            regions: [{ regionId: "MO-01", label: "District 1" }],
+            dataAttribute: "data-margin",
+            overrides: [{ regionId: "MO-01", label: "District 1" }],
           },
         ]}
         sources={[
@@ -72,7 +72,7 @@ describe("InteractiveMapBlock", () => {
           {
             title: "Unpopulated",
             svgAsset: 42,
-            regions: [],
+            overrides: [],
           },
         ]}
       />,

@@ -68,7 +68,7 @@ export const MediaBlock: React.FC<StyledMediaBlockProps> = ({ sizes, ...props })
     media,
     variant = "medium",
     disableInnerContainer,
-    mediaWrapper,
+    mediaWrapper = (node) => node,
   } = props
   if (typeof media === "number" || !media) return null
 
@@ -97,7 +97,7 @@ export const MediaBlock: React.FC<StyledMediaBlockProps> = ({ sizes, ...props })
         className,
       )}
     >
-      {mediaWrapper ? mediaWrapper(mediaNode) : mediaNode}
+      {mediaWrapper(mediaNode)}
       {caption && (
         <figcaption
           className={cn(

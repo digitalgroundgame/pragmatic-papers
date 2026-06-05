@@ -359,6 +359,11 @@ export function renderTotalSection(total: FileSummary, baseTotal: FileSummary | 
   return `<h3>Project total</h3>\n${header}\n${bodyRows}\n${TABLE_FOOTER}`
 }
 
+function blobUrl(repo: string, sha: string, file: string, fragment = ""): string {
+  const path = file.split("/").map(encodeURIComponent).join("/")
+  return `https://github.com/${repo}/blob/${sha}/${path}${fragment}`
+}
+
 export function renderFileCoverage({
   summaryJson,
   changedFiles,
@@ -377,9 +382,7 @@ export function renderFileCoverage({
     const cell = (m: keyof FileSummary) =>
       fc[m].total === 0 ? "n/a" : `${Math.round(fc[m].pct)}% ${fc[m].covered}/${fc[m].total}`
     const fileLink =
-      repo && sha
-        ? `<a href="https://github.com/${repo}/blob/${sha}/${file}">${file}</a>`
-        : `<code>${file}</code>`
+      repo && sha ? `<a href="${blobUrl(repo, sha, file)}">${file}</a>` : `<code>${file}</code>`
     rows.push(
       `  <tr>
    <td align="left">${fileLink}</td>
@@ -417,7 +420,7 @@ function renderRanges(
       const label = start === end ? `${start}` : `${start}-${end}`
       if (!repo || !sha) return label
       const fragment = start === end ? `#L${start}` : `#L${start}-L${end}`
-      return `<a href="https://github.com/${repo}/blob/${sha}/${file}${fragment}">${label}</a>`
+      return `<a href="${blobUrl(repo, sha, file, fragment)}">${label}</a>`
     })
     .join(", ")
 }
@@ -437,9 +440,7 @@ export function renderPatchByFile({
   if (files.length === 0) return null
   const rows = files.map(({ file, lines, uncovered }) => {
     const fileLink =
-      repo && sha
-        ? `<a href="https://github.com/${repo}/blob/${sha}/${file}">${file}</a>`
-        : `<code>${file}</code>`
+      repo && sha ? `<a href="${blobUrl(repo, sha, file)}">${file}</a>` : `<code>${file}</code>`
     const coverage = `${Math.round(lines.pct)}% ${lines.covered}/${lines.total}`
     const uncoveredCell = uncovered.length === 0 ? "—" : renderRanges(file, uncovered, repo, sha)
     return `  <tr>

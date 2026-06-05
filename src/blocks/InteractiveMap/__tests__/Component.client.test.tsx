@@ -160,10 +160,9 @@ describe("InteractiveMapClient", () => {
     expect(overlays[1]!.style.visibility).toBe("hidden")
   })
 
-  it("renders <title> children on interactive paths so screen readers announce label and value", () => {
+  it("sets aria-label on interactive paths so screen readers announce label and value", () => {
     const { container } = render(<InteractiveMapClient layout="row" maps={[baseMap()]} />)
     const [pathA] = interactivePaths(container)
-    const title = pathA!.querySelector("title")
-    expect(title?.textContent).toBe("Alpha: R+5.0")
+    expect(pathA!.getAttribute("aria-label")).toBe("Alpha: R+5.0")
   })
 })

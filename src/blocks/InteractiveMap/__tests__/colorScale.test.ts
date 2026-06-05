@@ -23,12 +23,12 @@ describe("colorScale", () => {
     })
 
     it.each([
-      { value: 0, color: "#cd897f" },
-      { value: 1, color: "#fd8997" },
-      { value: 5, color: "#fd5864" },
-      { value: 15, color: "#b7212c" },
-      { value: -1, color: "#89aefd" },
-      { value: -15, color: "#22428c" },
+      { value: 0, color: "#dcb4ae" },
+      { value: 1, color: "#de938a" },
+      { value: 5, color: "#da685f" },
+      { value: 15, color: "#cd0526" },
+      { value: -1, color: "#9fa9db" },
+      { value: -15, color: "#056ee3" },
     ])("breakpoint boundary value=$value → $color (uses strict less-than)", ({ value, color }) => {
       expect(pickDivergingColor(value)).toBe(color)
     })

@@ -2,6 +2,7 @@ import React from "react"
 
 import { resolveInlineSvgMap } from "@/blocks/InteractiveMap/adapters/inlineSvg"
 import type { ResolvedMap } from "@/blocks/InteractiveMap/types"
+import { CMSLink } from "@/components/Link/CMSLink2"
 import type { InteractiveMapBlock as InteractiveMapBlockProps } from "@/payload-types"
 import { cn } from "@/utilities/utils"
 
@@ -47,15 +48,9 @@ export const InteractiveMapBlock: React.FC<Props> = ({
       {sources && sources.length > 0 && (
         <p className="text-muted-foreground text-xs">
           Source{sources.length > 1 ? "s" : ""}:{" "}
-          {sources.map((s, i) => (
-            <React.Fragment key={i}>
-              {s.url ? (
-                <a href={s.url} rel="noopener noreferrer" target="_blank" className="underline">
-                  {s.name}
-                </a>
-              ) : (
-                <>{s.name}</>
-              )}
+          {sources.map(({ id, link }, i) => (
+            <React.Fragment key={id || i}>
+              <CMSLink link={link} className="underline" />
               {i < sources.length - 1 ? ", " : ""}
             </React.Fragment>
           ))}

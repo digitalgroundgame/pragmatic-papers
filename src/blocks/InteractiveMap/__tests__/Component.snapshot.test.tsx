@@ -34,7 +34,17 @@ describe("InteractiveMapBlock", () => {
             regions: [{ regionId: "MO-01", label: "District 1", value: 12.5 }],
           },
         ]}
-        sources={[{ name: "U.S. Census", url: "https://example.com" }]}
+        sources={[
+          {
+            link: {
+              type: "custom",
+              url: "https://example.com",
+              label: "U.S. Census",
+              newTab: true,
+              variant: "link",
+            },
+          },
+        ]}
       />,
     )
     expect(container.firstChild).toMatchSnapshot()

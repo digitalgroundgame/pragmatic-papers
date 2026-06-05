@@ -1,5 +1,7 @@
 import type { Block } from "payload"
 
+import { link } from "@/fields/link2"
+
 export const InteractiveMap: Block = {
   slug: "interactiveMap",
   interfaceName: "InteractiveMapBlock",
@@ -131,8 +133,14 @@ export const InteractiveMap: Block = {
         description: "Shown as a small attribution footer beneath the maps.",
       },
       fields: [
-        { name: "name", type: "text", required: true },
-        { name: "url", type: "text" },
+        link({
+          label: "Source",
+          component: {
+            type: { defaultValue: "custom" },
+            label: { label: "Name" },
+            variant: { admin: { hidden: true } },
+          },
+        }),
       ],
     },
   ],

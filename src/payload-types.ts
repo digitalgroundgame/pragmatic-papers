@@ -2468,8 +2468,7 @@ export interface InteractiveMapBlock {
    */
   sources?:
     | {
-        name: string;
-        url?: string | null;
+        link?: LinkField;
         id?: string | null;
       }[]
     | null;

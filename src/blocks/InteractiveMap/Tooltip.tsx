@@ -68,7 +68,7 @@ function HoverTooltip({ hoverRegion, cursor }: HoverTooltipProps): React.ReactNo
     <div
       ref={ref}
       className={cn(
-        "bg-foreground text-background pointer-events-none fixed z-50 rounded-sm px-2.5 py-1.5 text-sm whitespace-nowrap shadow-md transition-opacity",
+        "bg-foreground text-background pointer-events-none fixed z-50 rounded-xs px-2.5 py-1.5 text-sm whitespace-nowrap shadow-md transition-opacity",
         hoverRegion && pos ? "opacity-100" : "opacity-0",
       )}
       role="tooltip"
@@ -113,7 +113,7 @@ function PinnedTooltip({ cursor, children }: PinnedTooltipItemProps): React.Reac
       ref={ref}
       data-pinned-tooltip=""
       className={cn(
-        "bg-foreground text-background pointer-events-none absolute z-50 rounded-sm px-2.5 py-1.5 text-sm whitespace-nowrap shadow-md transition-opacity",
+        "bg-foreground text-background pointer-events-none absolute z-50 rounded-xs px-2.5 py-1.5 text-sm whitespace-nowrap shadow-md transition-opacity",
         pos ? "opacity-100" : "opacity-0",
       )}
       role="tooltip"

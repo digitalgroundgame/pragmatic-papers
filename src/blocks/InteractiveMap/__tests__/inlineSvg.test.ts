@@ -37,6 +37,17 @@ describe("resolveInlineSvgMap", () => {
     })
   })
 
+  it("reads label from data-label attribute on the SVG path", () => {
+    const result = resolveInlineSvgMap({
+      title: null,
+      svg: svg('id="MO-01" data-margin="-58.18" data-label="MO District 1"'),
+      dataAttribute: "data-margin",
+      overrides: [],
+      scaleType: "divergingRedBlue",
+    })
+    expect(result.paths[0]?.region?.label).toBe("MO District 1")
+  })
+
   it("derives value from dataAttribute on the SVG path when no region override is provided", () => {
     const result = resolveInlineSvgMap({
       title: null,

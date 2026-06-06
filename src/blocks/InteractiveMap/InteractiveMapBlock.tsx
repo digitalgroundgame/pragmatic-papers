@@ -55,7 +55,9 @@ export const InteractiveMapBlock: React.FC<Props> = ({
       data-interactive-map-block
       className={cn("not-prose col-start-2 my-8 space-y-1", className)}
     >
-      {widgetTitle && <figcaption className="text-lg font-semibold">{widgetTitle}</figcaption>}
+      {widgetTitle && (
+        <figcaption className="text-center text-lg font-semibold">{widgetTitle}</figcaption>
+      )}
       <InteractiveMapClient layout={layout} maps={resolvedMaps} />
       <Legend legend={legend} layout={layout} />
       <Sources sources={sources} />

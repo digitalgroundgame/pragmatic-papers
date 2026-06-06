@@ -6,7 +6,7 @@ exports[`InteractiveMapBlock > renders a single map with diverging color scale 1
   data-interactive-map-block="true"
 >
   <figcaption
-    class="text-lg font-semibold"
+    class="text-center text-lg font-semibold"
   >
     Missouri
   </figcaption>

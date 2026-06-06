@@ -14,7 +14,7 @@ const userData = {
   email: "test@example.com",
   password: "password123",
   name: "Test User",
-  role: "writer" as const,
+  roles: ["writer"] as const,
   slug: "test-user",
   affiliation: "Test Institute",
 }
@@ -64,7 +64,7 @@ describe("createUser", () => {
         email: userData.email,
         password: userData.password,
         name: userData.name,
-        role: userData.role,
+        roles: userData.roles,
         slug: userData.slug,
       },
       context: undefined,

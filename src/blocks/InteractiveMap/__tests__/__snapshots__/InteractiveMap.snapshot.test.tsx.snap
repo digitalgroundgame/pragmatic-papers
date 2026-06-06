@@ -3,6 +3,7 @@
 exports[`InteractiveMapBlock > renders a single map with diverging color scale 1`] = `
 <figure
   class="not-prose col-start-2 my-8 space-y-1"
+  data-interactive-map-block="true"
 >
   <figcaption
     class="text-lg font-semibold"

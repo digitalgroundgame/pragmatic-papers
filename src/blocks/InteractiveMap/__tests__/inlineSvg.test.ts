@@ -17,7 +17,7 @@ describe("resolveInlineSvgMap", () => {
     expect(result.paths[0]?.regionId).toBe("MO-01")
   })
 
-  it("computes resolved regions from paths, using manual region entries as overrides", () => {
+  it("embeds resolved region data on each path", () => {
     const result = resolveInlineSvgMap({
       title: null,
       svg: svg('id="MO-01"'),
@@ -29,14 +29,12 @@ describe("resolveInlineSvgMap", () => {
       scaleType: "divergingRedBlue",
     })
 
-    expect(result.regions).toEqual([
-      {
-        regionId: "MO-01",
-        label: "District 1",
-        formattedValue: "R+12.5",
-        color: "var(--map-positive-3, #f08c9d)",
-      },
-    ])
+    expect(result.paths[0]?.region).toEqual({
+      regionId: "MO-01",
+      label: "District 1",
+      formattedValue: "R+12.5",
+      color: "var(--map-positive-2, #f48088)",
+    })
   })
 
   it("derives value from dataAttribute on the SVG path when no region override is provided", () => {
@@ -44,11 +42,10 @@ describe("resolveInlineSvgMap", () => {
       title: null,
       svg: svg('id="MO-01" data-margin="-58.18"'),
       dataAttribute: "data-margin",
-
       overrides: [],
       scaleType: "divergingRedBlue",
     })
-    expect(result.regions[0]).toMatchObject({
+    expect(result.paths[0]?.region).toMatchObject({
       regionId: "MO-01",
       label: "MO-01",
       formattedValue: "D+58.2",
@@ -60,11 +57,10 @@ describe("resolveInlineSvgMap", () => {
       title: null,
       svg: svg('id="MO-01" data-margin="-58.18"'),
       dataAttribute: "data-margin",
-
       overrides: [{ regionId: "MO-01", label: "District 1", value: 20 }],
       scaleType: "divergingRedBlue",
     })
-    expect(result.regions[0]?.formattedValue).toBe("R+20.0")
+    expect(result.paths[0]?.region?.formattedValue).toBe("R+20.0")
   })
 
   it("infers percent format from data-percent attribute name", () => {
@@ -75,7 +71,7 @@ describe("resolveInlineSvgMap", () => {
       overrides: [],
       scaleType: "perRegion",
     })
-    expect(result.regions[0]?.formattedValue).toBe("63.4%")
+    expect(result.paths[0]?.region?.formattedValue).toBe("63.4%")
   })
 
   it("produces no formatted value when no dataAttribute is configured", () => {
@@ -85,7 +81,7 @@ describe("resolveInlineSvgMap", () => {
       overrides: [],
       scaleType: "divergingRedBlue",
     })
-    expect(result.regions[0]?.formattedValue).toBeNull()
+    expect(result.paths[0]?.region?.formattedValue).toBeNull()
   })
 
   it("falls back to regionId when label is missing and respects override colors", () => {
@@ -96,8 +92,7 @@ describe("resolveInlineSvgMap", () => {
       overrides: [{ regionId: "MO-03", label: null, value: 5, color: "#ff00ff" }],
       scaleType: "divergingRedBlue",
     })
-
-    expect(result.regions[0]).toEqual({
+    expect(result.paths[0]?.region).toEqual({
       regionId: "MO-03",
       label: "MO-03",
       formattedValue: "R+5.0",
@@ -113,5 +108,15 @@ describe("resolveInlineSvgMap", () => {
       scaleType: "divergingRedBlue",
     })
     expect(result.paths[0]?.regionId).toBe("X")
+  })
+
+  it("paths with no regionId get a null region", () => {
+    const result = resolveInlineSvgMap({
+      title: null,
+      svg: `<svg viewBox="0 0 10 10"><path d="M0 0"/></svg>`,
+      overrides: [],
+      scaleType: "divergingRedBlue",
+    })
+    expect(result.paths[0]?.region).toBeNull()
   })
 })

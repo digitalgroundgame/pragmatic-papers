@@ -1,7 +1,7 @@
 import { cleanup, fireEvent, render, within } from "@testing-library/react"
 import { afterEach, describe, expect, it } from "vitest"
 
-import { InteractiveMapClient } from "@/blocks/InteractiveMap/Component.client"
+import { InteractiveMapClient } from "@/blocks/InteractiveMap/InteractiveMapClient"
 import type { ResolvedMap } from "@/blocks/InteractiveMap/types"
 
 const baseMap = (overrides: Partial<ResolvedMap> = {}): ResolvedMap => ({
@@ -9,13 +9,19 @@ const baseMap = (overrides: Partial<ResolvedMap> = {}): ResolvedMap => ({
   viewBox: "0 0 30 10",
   transform: null,
   paths: [
-    { d: "M0 0H10V10H0Z", regionId: "A", extraAttrs: {} },
-    { d: "M10 0H20V10H10Z", regionId: "B", extraAttrs: {} },
-    { d: "M20 0H30V10H20Z", regionId: null, extraAttrs: {} },
-  ],
-  regions: [
-    { regionId: "A", label: "Alpha", formattedValue: "R+5.0", color: "#fd5864" },
-    { regionId: "B", label: "Beta", formattedValue: "D+3.0", color: "#89aefd" },
+    {
+      d: "M0 0H10V10H0Z",
+      regionId: "A",
+      region: { regionId: "A", label: "Alpha", formattedValue: "R+5.0", color: "#fd5864" },
+      extraAttrs: {},
+    },
+    {
+      d: "M10 0H20V10H10Z",
+      regionId: "B",
+      region: { regionId: "B", label: "Beta", formattedValue: "D+3.0", color: "#89aefd" },
+      extraAttrs: {},
+    },
+    { d: "M20 0H30V10H20Z", regionId: null, region: null, extraAttrs: {} },
   ],
   ...overrides,
 })
@@ -25,13 +31,13 @@ function interactivePaths(container: HTMLElement): HTMLElement[] {
 }
 
 function activeOverlay(container: HTMLElement): SVGPathElement {
-  const el = container.querySelector<SVGPathElement>("path[data-active-overlay]")
+  const el = container.querySelector<SVGPathElement>('path[data-overlay="active"]')
   if (!el) throw new Error("active overlay path not found")
   return el
 }
 
 function pinnedOverlays(container: HTMLElement): SVGPathElement[] {
-  return Array.from(container.querySelectorAll<SVGPathElement>("path[data-pinned-overlay]"))
+  return Array.from(container.querySelectorAll<SVGPathElement>('path[data-overlay="pinned"]'))
 }
 
 function pinnedTooltips(): HTMLElement[] {
@@ -51,7 +57,8 @@ describe("InteractiveMapClient", () => {
     }
     // The third path (regionId: null) is inert: no tabindex, no data marker.
     const allPaths = Array.from(container.querySelectorAll("path")).filter(
-      (p) => !p.hasAttribute("data-active-overlay") && !p.hasAttribute("data-pinned-overlay"),
+      (p) =>
+        p.getAttribute("data-overlay") !== "active" && p.getAttribute("data-overlay") !== "pinned",
     )
     const inert = allPaths[2]!
     expect(inert.getAttribute("tabindex")).toBeNull()
@@ -123,9 +130,9 @@ describe("InteractiveMapClient", () => {
     expect(within(hoverTooltip).getByText("R+5.0")).not.toBeNull()
   })
 
-  it("uses the grid wrapper class when layout is 'grid' and the flex row class otherwise", () => {
+  it("uses the grid wrapper class when layout is 'stacked' and the flex row class otherwise", () => {
     const { container: gridContainer } = render(
-      <InteractiveMapClient layout="grid" maps={[baseMap()]} />,
+      <InteractiveMapClient layout="stacked" maps={[baseMap()]} />,
     )
     const gridGroup = gridContainer.querySelector<HTMLDivElement>('[role="group"]')!
     expect(gridGroup.className).toContain("grid")
@@ -146,9 +153,18 @@ describe("InteractiveMapClient", () => {
           baseMap({ title: "First" }),
           baseMap({
             title: "Second",
-            paths: [{ d: "M0 0H5V5H0Z", regionId: "A", extraAttrs: {} }],
-            regions: [
-              { regionId: "A", label: "Alpha-2", formattedValue: "R+1.0", color: "#cd897f" },
+            paths: [
+              {
+                d: "M0 0H5V5H0Z",
+                regionId: "A",
+                region: {
+                  regionId: "A",
+                  label: "Alpha-2",
+                  formattedValue: "R+1.0",
+                  color: "#cd897f",
+                },
+                extraAttrs: {},
+              },
             ],
           }),
         ]}
@@ -156,7 +172,7 @@ describe("InteractiveMapClient", () => {
     )
 
     const overlays = Array.from(
-      container.querySelectorAll<SVGPathElement>("path[data-active-overlay]"),
+      container.querySelectorAll<SVGPathElement>('path[data-overlay="active"]'),
     )
     expect(overlays).toHaveLength(2)
 

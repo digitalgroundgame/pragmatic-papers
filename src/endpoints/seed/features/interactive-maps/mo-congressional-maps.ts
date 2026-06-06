@@ -1,14 +1,15 @@
 import type { Media, User } from "@/payload-types"
 import type { Payload } from "payload"
 
-import { createArticle, validateWriters } from "../articles"
-import { createMapAssetFromFixture } from "../mapAssets"
-import { createHeadingNode, createParagraph, createRichText } from "../richtext"
+import { createArticle, validateWriters } from "../../articles"
+import { createMapAssetFromFixture } from "../../mapAssets"
+import { createHeadingNode, createParagraph, createRichText } from "../../richtext"
 
 interface MapEntry {
   title: string
   svgAssetId: number
   dataAttribute: string
+  invertColors?: boolean
 }
 
 const createInteractiveMapNode = (maps: MapEntry[]) => ({
@@ -18,10 +19,12 @@ const createInteractiveMapNode = (maps: MapEntry[]) => ({
     widgetTitle: "Missouri Congressional Districts — 119th vs. 120th Congress",
     layout: "row",
     colorScale: "divergingRedBlue",
+    colorBias: 0.5,
     maps: maps.map((m) => ({
       title: m.title,
       svgAsset: m.svgAssetId,
       dataAttribute: m.dataAttribute,
+      invertColors: m.invertColors ?? false,
     })),
     sources: [
       {
@@ -48,7 +51,7 @@ const createInteractiveMapNode = (maps: MapEntry[]) => ({
   version: 2,
 })
 
-export const createInteractiveMapArticle = async (
+export const createMoCongressionalMapsArticle = async (
   payload: Payload,
   writers: User[],
   mediaDocs: Media[],
@@ -92,6 +95,7 @@ export const createInteractiveMapArticle = async (
             title: "119th Congress",
             svgAssetId: asset119.id,
             dataAttribute: "data-margin",
+            invertColors: true,
           },
           {
             title: "120th Congress",

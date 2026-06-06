@@ -27,13 +27,14 @@ vi.mock("@/endpoints/seed/features/rich-text-showcase", () => ({
 }))
 
 vi.mock("@/endpoints/seed/features/interactive-maps", () => ({
-  createInteractiveMapArticle: vi.fn().mockResolvedValue(mockMapArticleId),
+  createMoCongressionalMapsArticle: vi.fn().mockResolvedValue(mockMapArticleId),
 }))
 
 const { createUser } = await import("@/endpoints/seed/users")
 const { createRichTextShowcaseArticle } =
   await import("@/endpoints/seed/features/rich-text-showcase")
-const { createInteractiveMapArticle } = await import("@/endpoints/seed/features/interactive-maps")
+const { createMoCongressionalMapsArticle } =
+  await import("@/endpoints/seed/features/interactive-maps")
 const { main } = await import("../../scripts/seed-e2e")
 
 beforeEach(() => {
@@ -70,9 +71,15 @@ describe("seed-e2e main()", () => {
   it("creates the interactive map article with the writer and empty media", async () => {
     await main()
 
-    expect(createInteractiveMapArticle).toHaveBeenCalledWith(mockPayload, [mockWriter], [], [], {
-      disableRevalidate: true,
-    })
+    expect(createMoCongressionalMapsArticle).toHaveBeenCalledWith(
+      mockPayload,
+      [mockWriter],
+      [],
+      [],
+      {
+        disableRevalidate: true,
+      },
+    )
   })
 
   it("creates a volume with the article linked and slug '1'", async () => {

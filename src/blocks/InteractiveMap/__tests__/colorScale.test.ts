@@ -1,36 +1,41 @@
 import { describe, expect, it } from "vitest"
 
 import {
+  DEFAULT_NEUTRAL,
   formatDivergingMargin,
   formatValue,
+  getDivergingRedBlueLegend,
   inferValueFormat,
   pickDivergingColor,
   resolveColor,
 } from "@/blocks/InteractiveMap/colorScale"
 
 describe("colorScale", () => {
-  describe("pickDivergingColor — matches the Missouri demo palette exactly", () => {
+  describe("pickDivergingColor — neutral below first breakpoint, palette tiers above", () => {
     it.each([
-      { value: 0.5, color: "var(--map-positive-1, #fde8ec)" },
-      { value: 3, color: "var(--map-positive-2, #f9bcc7)" },
-      { value: 10, color: "var(--map-positive-3, #f08c9d)" },
-      { value: 25, color: "var(--map-positive-4, #da1333)" },
-      { value: -0.5, color: "var(--map-negative-1, #c5dbfa)" },
-      { value: -3, color: "var(--map-negative-2, #8abaf2)" },
-      { value: -10, color: "var(--map-negative-3, #3e89e7)" },
-      { value: -25, color: "var(--map-negative-4, #1144ff)" },
+      { value: 0.5, color: null },
+      { value: 3, color: "var(--map-positive-1, #ffb8bc)" },
+      { value: 10, color: "var(--map-positive-2, #f48088)" },
+      { value: 25, color: "var(--map-positive-3, #e54858)" },
+      { value: 50, color: "var(--map-positive-4, #d81334)" },
+      { value: -0.5, color: null },
+      { value: -3, color: "var(--map-negative-1, #b4d4f8)" },
+      { value: -10, color: "var(--map-negative-2, #72aef3)" },
+      { value: -25, color: "var(--map-negative-3, #2c86ed)" },
+      { value: -50, color: "var(--map-negative-4, #126ace)" },
     ])("value=$value → $color", ({ value, color }) => {
       expect(pickDivergingColor(value)).toBe(color)
     })
 
     it.each([
-      { value: 0, color: "var(--map-positive-1, #fde8ec)" },
-      { value: 1, color: "var(--map-positive-2, #f9bcc7)" },
-      { value: 5, color: "var(--map-positive-3, #f08c9d)" },
-      { value: 15, color: "var(--map-positive-4, #da1333)" },
-      { value: -1, color: "var(--map-negative-2, #8abaf2)" },
-      { value: -15, color: "var(--map-negative-4, #1144ff)" },
-    ])("breakpoint boundary value=$value → $color (uses strict less-than)", ({ value, color }) => {
+      { value: 0, color: null },
+      { value: 1, color: "var(--map-positive-1, #ffb8bc)" },
+      { value: 5, color: "var(--map-positive-2, #f48088)" },
+      { value: 15, color: "var(--map-positive-3, #e54858)" },
+      { value: 30, color: "var(--map-positive-4, #d81334)" },
+      { value: -1, color: "var(--map-negative-1, #b4d4f8)" },
+      { value: -15, color: "var(--map-negative-3, #2c86ed)" },
+    ])("breakpoint boundary value=$value (≥ threshold gets that tier)", ({ value, color }) => {
       expect(pickDivergingColor(value)).toBe(color)
     })
   })
@@ -85,6 +90,52 @@ describe("colorScale", () => {
     })
   })
 
+  describe("getDivergingRedBlueLegend — threshold labels scale with bias", () => {
+    it("defaults to bias 1 — labels match raw breakpoints", () => {
+      const entries = getDivergingRedBlueLegend()
+      const labels = entries.map((e) => e.label)
+      expect(labels).toEqual([
+        "≥D+30",
+        "≥D+15",
+        "≥D+5",
+        "≥D+1",
+        "±1",
+        "≥R+1",
+        "≥R+5",
+        "≥R+15",
+        "≥R+30",
+      ])
+    })
+
+    it("null bias behaves like bias 1", () => {
+      const entries = getDivergingRedBlueLegend(null)
+      expect(entries.map((e) => e.label)).toEqual(getDivergingRedBlueLegend(1).map((e) => e.label))
+    })
+
+    it("bias 2 — extremes pinned, interior breakpoints shift toward the low end", () => {
+      const entries = getDivergingRedBlueLegend(2)
+      const labels = entries.map((e) => e.label)
+      // bp[0]=1 is pinned; interior and last shift non-linearly toward 100
+      expect(labels).toEqual([
+        "≥D+12.3",
+        "≥D+4.9",
+        "≥D+1.8",
+        "≥D+1",
+        "±1",
+        "≥R+1",
+        "≥R+1.8",
+        "≥R+4.9",
+        "≥R+12.3",
+      ])
+    })
+
+    it("colors are always the same tiers regardless of bias", () => {
+      const def = getDivergingRedBlueLegend(1)
+      const biased = getDivergingRedBlueLegend(2)
+      expect(biased.map((e) => e.color)).toEqual(def.map((e) => e.color))
+    })
+  })
+
   describe("resolveColor", () => {
     it("prefers the per-region override when set", () => {
       expect(
@@ -94,6 +145,17 @@ describe("colorScale", () => {
           overrideColor: "#abcdef",
         }),
       ).toBe("#abcdef")
+    })
+
+    it("returns neutral fill for diverging values below the first breakpoint", () => {
+      expect(
+        resolveColor({
+          scaleType: "divergingRedBlue",
+          value: 0.5,
+          overrideColor: null,
+          neutralFill: "#eeeeee",
+        }),
+      ).toBe("#eeeeee")
     })
 
     it("falls back to neutral fill when value is missing", () => {
@@ -125,7 +187,7 @@ describe("colorScale", () => {
           value: null,
           overrideColor: null,
         }),
-      ).toBe("var(--map-neutral, #f1efe8)")
+      ).toBe(DEFAULT_NEUTRAL)
     })
   })
 })

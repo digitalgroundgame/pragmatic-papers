@@ -23,10 +23,10 @@ function pickFirst<T>(...values: (T | null | undefined)[]): T | null {
 export function parseInlineSvg(
   svg: string,
   regionAttribute: string,
-  dataAttribute?: string,
+  dataAttribute?: string | null,
 ): ParsedSvg {
   const attrKey = regionAttribute.toLowerCase()
-  const dataAttrKey = dataAttribute?.toLowerCase() ?? null
+  const dataAttrKey = dataAttribute?.toLowerCase()
   let viewBox: string | null = null
   let transform: string | null = null
   const paths: ParsedPath[] = []

@@ -1,7 +1,7 @@
 import { render } from "@testing-library/react"
 import { describe, expect, it } from "vitest"
 
-import { InteractiveMapBlock } from "@/blocks/InteractiveMap/Component"
+import { InteractiveMapBlock } from "@/blocks/InteractiveMap/InteractiveMapBlock"
 import type { MapAsset } from "@/payload-types"
 
 const minimalSvg = `<svg viewBox="0 0 10 10"><path d="M0 0H10V10H0Z" id="MO-01" data-margin="12.5"/></svg>`

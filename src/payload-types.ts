@@ -2428,13 +2428,13 @@ export interface InteractiveMapBlock {
    * Optional heading displayed above the map(s).
    */
   widgetTitle?: string | null;
-  layout: 'row' | 'grid';
+  layout: 'row' | 'stacked';
   /**
    * Diverging Red/Blue colors each region by its value (negative = D+, positive = R+). Per-region uses the color you set on each region row.
    */
   colorScale: 'divergingRedBlue' | 'perRegion';
   /**
-   * Scales color intensity. Above 1 = stronger colors for small margins (e.g. 2 makes ±5 look like ±10). Below 1 = weaker (requires larger margins for strong colors). Default: 1.
+   * Warps the color breakpoints along a curve between ±1 (neutral) and ±100 (max). Above 1 = breakpoints shift toward the low end, so small margins get strong colors. Below 1 = breakpoints shift toward the high end, requiring larger margins for strong colors. Default: 1 (linear).
    */
   colorBias?: number | null;
   maps: {
@@ -2465,6 +2465,10 @@ export interface InteractiveMapBlock {
           id?: string | null;
         }[]
       | null;
+    /**
+     * Flip the color scale polarity for this map (positive values get the negative palette and vice versa).
+     */
+    invertColors?: boolean | null;
     id?: string | null;
   }[];
   /**

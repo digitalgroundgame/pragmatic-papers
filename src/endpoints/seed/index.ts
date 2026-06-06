@@ -6,7 +6,7 @@ import { createBannerBlocksArticle } from "./features/banners"
 import { createCodeBlocksArticle } from "./features/code-blocks"
 import { createCollectionGridHomePage } from "./features/collection-grid"
 import { createFootnotesArticle } from "./features/footnotes"
-import { createInteractiveMapArticle } from "./features/interactive-maps"
+import { createMoCongressionalMapsArticle } from "./features/interactive-maps"
 import { createMathBlocksArticle } from "./features/math-blocks"
 import { createMediaCollageArticle } from "./features/media-collage"
 import { createNarrationDemoArticle } from "./features/narration-demo"
@@ -32,6 +32,7 @@ interface SeedContext {
   volume1Articles: number[]
   volume2Articles: number[]
   featureArticles: number[]
+  mapArticles: number[]
 }
 
 export const seed = async (
@@ -272,8 +273,14 @@ export const seed = async (
             ctx.topics[7]!,
           ]),
         )
-        ctx.featureArticles.push(
-          await createInteractiveMapArticle(payload, [ctx.writers[0]!], ctx.media, [
+      },
+    },
+    {
+      name: "Creating map articles...",
+      fn: async () => {
+        ctx.mapArticles = []
+        ctx.mapArticles.push(
+          await createMoCongressionalMapsArticle(payload, [ctx.writers[0]!], ctx.media, [
             ctx.topics[0]!,
           ]),
         )
@@ -311,6 +318,15 @@ export const seed = async (
               editorsNoteContent:
                 "This volume showcases the full range of content features available to authors on Pragmatic Papers.",
               articleIds: ctx.featureArticles,
+            },
+            {
+              volumeNumber: 4,
+              title: "Volume 4: Interactive Maps",
+              description:
+                "A collection of articles featuring interactive election and district maps built with the Interactive Map block.",
+              editorsNoteContent:
+                "This volume demonstrates the Interactive Map block across a range of electoral and geographic datasets.",
+              articleIds: ctx.mapArticles,
             },
           ],
           ctx.media,

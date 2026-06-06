@@ -15,6 +15,7 @@ export interface ResolvedRegion {
 export interface ResolvedPath {
   d: string
   regionId: string | null
+  region: ResolvedRegion | null
   extraAttrs: Record<string, string>
 }
 
@@ -23,5 +24,4 @@ export interface ResolvedMap {
   viewBox: string
   transform: string | null
   paths: ResolvedPath[]
-  regions: ResolvedRegion[]
 }

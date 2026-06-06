@@ -1,4 +1,4 @@
-import { anyone, editor, writerOrEditor } from "@/access/roles"
+import { anyone, editor, writerOrEditor } from "@/access/collections"
 import {
   MetaDescriptionField,
   MetaImageField,

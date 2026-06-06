@@ -15,7 +15,7 @@ import { generatePreviewPath } from "@/utilities/generatePreviewPath"
 import { slugField } from "payload"
 import { revalidateDelete, revalidatePage } from "./hooks/revalidatePage"
 
-import { admin } from "@/access/roles"
+import { admin } from "@/access/collections"
 import {
   MetaDescriptionField,
   MetaImageField,

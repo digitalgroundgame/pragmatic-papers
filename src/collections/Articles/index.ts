@@ -1,5 +1,6 @@
 import { isPublishedOrStaff, isCreatedByOrEditor, isDraftOrEditor } from "@/access/policies"
-import { editorFieldLevel, writerOrEditor } from "@/access/roles"
+import { writerOrEditor } from "@/access/collections"
+import { editorFieldLevel } from "@/access/fields"
 import { Banner } from "@/blocks/Banner/config"
 import { Code } from "@/blocks/Code/config"
 import { FootnoteBlock } from "@/blocks/Footnote/config"

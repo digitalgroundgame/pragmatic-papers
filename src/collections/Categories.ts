@@ -1,6 +1,6 @@
 import type { CollectionConfig } from "payload"
 
-import { anyone, authenticated } from "../access/roles"
+import { anyone, authenticated } from "../access/collections"
 import { slugField } from "payload"
 
 export const Categories: CollectionConfig = {

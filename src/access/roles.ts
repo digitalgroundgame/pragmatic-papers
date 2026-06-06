@@ -1,4 +1,3 @@
-import type { Access, AccessArgs, FieldAccess } from "payload"
 import type { User } from "@/payload-types"
 
 export type Role = "admin" | "chief-editor" | "editor" | "writer" | "narrator" | "member"
@@ -26,48 +25,4 @@ export const hasRoleOrAdmin = (
 
 export const isStaff = (user: User | null | undefined): boolean => {
   return hasRoleOrAdmin(user, ["editor", "writer", "narrator"])
-}
-
-export const anyone: Access = () => true
-
-type isAuthenticated = (args: AccessArgs<User>) => boolean
-
-export const authenticated: isAuthenticated = ({ req: { user } }) => {
-  return Boolean(user)
-}
-
-export const admin: Access = ({ req: { user } }) => {
-  return isAdmin(user)
-}
-
-export const adminFieldLevel: FieldAccess = ({ req: { user } }) => {
-  return isAdmin(user)
-}
-
-export const editor: Access = ({ req: { user } }) => {
-  return hasRoleOrAdmin(user, "editor")
-}
-
-export const editorFieldLevel: FieldAccess = ({ req: { user } }) => {
-  return hasRoleOrAdmin(user, "editor")
-}
-
-export const writer: Access = ({ req: { user } }) => {
-  return hasRoleOrAdmin(user, "writer")
-}
-
-export const writerFieldLevel: FieldAccess = ({ req: { user } }) => {
-  return hasRoleOrAdmin(user, "writer")
-}
-
-export const writerOrEditor: Access = ({ req: { user } }) => {
-  return hasRoleOrAdmin(user, ["writer", "editor"])
-}
-
-export const writerOrEditorFieldLevel: FieldAccess = ({ req: { user } }) => {
-  return hasRoleOrAdmin(user, ["writer", "editor"])
-}
-
-export const staff = ({ req: { user } }: AccessArgs<User>): boolean => {
-  return isStaff(user)
 }

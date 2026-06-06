@@ -8,7 +8,7 @@ import {
 import path from "path"
 import { fileURLToPath } from "url"
 
-import { anyone, staff } from "@/access/roles"
+import { anyone, staff } from "@/access/collections"
 import { isCreatedByOrEditor } from "@/access/policies"
 
 import type { Media as MediaType } from "@/payload-types"

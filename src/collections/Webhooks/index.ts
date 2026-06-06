@@ -1,4 +1,4 @@
-import { admin } from "@/access/roles"
+import { admin } from "@/access/collections"
 import { type Webhook } from "@/payload-types"
 import { type FieldHookArgs, type CollectionConfig } from "payload"
 import { format, isAfter } from "date-fns"

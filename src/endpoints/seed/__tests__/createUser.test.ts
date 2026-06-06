@@ -14,7 +14,7 @@ const userData = {
   email: "test@example.com",
   password: "password123",
   name: "Test User",
-  roles: ["writer"] as const,
+  roles: ["writer" as const],
   slug: "test-user",
   affiliation: "Test Institute",
 }

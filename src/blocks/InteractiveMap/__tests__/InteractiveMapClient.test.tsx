@@ -232,4 +232,41 @@ describe("InteractiveMapClient", () => {
     expect(pinnedOverlays(container)).toHaveLength(1)
     expect(pinnedOverlays(container)[0]!.getAttribute("d")).toBe("M10 0H20V10H10Z")
   })
+
+  it("focusing a path via keyboard shows the active overlay", () => {
+    const { container } = render(<InteractiveMapClient layout="row" maps={[baseMap()]} />)
+    const overlay = activeOverlay(container)
+    const [pathA] = interactivePaths(container)
+
+    fireEvent.focus(pathA!)
+    expect(overlay.getAttribute("d")).toBe("M0 0H10V10H0Z")
+
+    fireEvent.blur(pathA!)
+    expect(overlay.getAttribute("d")).toBe("M0 0H10V10H0Z")
+  })
+
+  it("pointerdown outside the map clears all pinned selections", () => {
+    const { container } = render(<InteractiveMapClient layout="row" maps={[baseMap()]} />)
+    const [pathA] = interactivePaths(container)
+
+    fireEvent.pointerEnter(pathA!)
+    fireEvent.click(pathA!)
+    expect(pinnedOverlays(container)).toHaveLength(1)
+
+    fireEvent.pointerDown(document.body)
+    expect(pinnedOverlays(container)).toHaveLength(0)
+  })
+
+  it("pointerdown on a map path does not clear pinned selections", () => {
+    const { container } = render(<InteractiveMapClient layout="row" maps={[baseMap()]} />)
+    const [pathA, pathB] = interactivePaths(container)
+
+    fireEvent.pointerEnter(pathA!)
+    fireEvent.click(pathA!)
+    expect(pinnedOverlays(container)).toHaveLength(1)
+
+    // Pointerdown on another interactive path — should not clear pins
+    fireEvent.pointerDown(pathB!)
+    expect(pinnedOverlays(container)).toHaveLength(1)
+  })
 })

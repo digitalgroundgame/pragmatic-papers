@@ -44,7 +44,7 @@ function LegendLabel({
 const itemVariants = cva("flex text-muted-foreground hover:text-foreground font-sans", {
   variants: {
     layout: {
-      row: "flex-col items-center gap-0.5 flex-1",
+      row: "flex-col items-center gap-0.5",
       stacked: "items-center gap-2",
     },
   },
@@ -58,11 +58,11 @@ function LegendItem({
   return <div className={itemVariants({ layout })}>{children}</div>
 }
 
-const legendVariants = cva("flex", {
+const legendVariants = cva("", {
   variants: {
     layout: {
-      row: "flex-wrap gap-x-1 gap-y-1",
-      stacked: "flex-col gap-1",
+      row: "grid grid-cols-[repeat(auto-fit,minmax(2.5rem,1fr))] gap-1",
+      stacked: "flex flex-col gap-1",
     },
   },
   defaultVariants: { layout: "row" },
@@ -70,12 +70,13 @@ const legendVariants = cva("flex", {
 
 interface LegendProps extends VariantProps<typeof legendVariants> {
   legend: LegendEntry[] | null
+  className?: string
 }
 
-function Legend({ legend, layout }: LegendProps): React.ReactNode {
+function Legend({ legend, layout, className }: LegendProps): React.ReactNode {
   if (!legend) return null
   return (
-    <div className={legendVariants({ layout })}>
+    <div className={legendVariants({ layout, className })}>
       {legend.map((entry) => (
         <LegendItem key={entry.label} layout={layout}>
           <LegendSwatch layout={layout} color={entry.color} />

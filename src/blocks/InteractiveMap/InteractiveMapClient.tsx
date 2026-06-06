@@ -11,6 +11,7 @@ import { HoverTooltip, PinnedTooltipList, type PinnedTooltip } from "./Tooltip"
 interface InteractiveMapClientProps {
   layout: InteractiveMapBlock["layout"]
   maps: ResolvedMap[]
+  className?: string
 }
 
 const widgetVariants = cva("", {
@@ -26,6 +27,7 @@ const widgetVariants = cva("", {
 export function InteractiveMapClient({
   layout,
   maps,
+  className,
 }: InteractiveMapClientProps): React.ReactElement {
   const widgetId = useId()
   const [pinned, setPinned] = useState<PinnedTooltip[]>([])
@@ -101,7 +103,11 @@ export function InteractiveMapClient({
   }, [hasPins])
 
   return (
-    <div aria-label="Interactive map widget" className={widgetVariants({ layout })} role="group">
+    <div
+      aria-label="Interactive map widget"
+      className={widgetVariants({ layout, className })}
+      role="group"
+    >
       {maps.map((map, mapIndex) => (
         <Region
           key={`${widgetId}-${mapIndex}`}

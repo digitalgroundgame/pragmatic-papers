@@ -130,4 +130,35 @@ describe("resolveInlineSvgMap", () => {
     })
     expect(result.paths[0]?.region).toBeNull()
   })
+
+  it("accepts null overrides — treats as empty array", () => {
+    const result = resolveInlineSvgMap({
+      title: null,
+      svg: svg('id="MO-01"'),
+      overrides: null,
+      scaleType: "divergingRedBlue",
+    })
+    expect(result.paths[0]?.region?.regionId).toBe("MO-01")
+  })
+
+  it("falls back to DEFAULT_VIEWBOX when the SVG has no viewBox attribute", () => {
+    const result = resolveInlineSvgMap({
+      title: null,
+      svg: `<svg><path d="M0 0" id="A"/></svg>`,
+      overrides: [],
+      scaleType: "divergingRedBlue",
+    })
+    expect(result.viewBox).toBe("0 0 100 100")
+  })
+
+  it("stores invertColors as false when null is passed", () => {
+    const result = resolveInlineSvgMap({
+      title: null,
+      svg: svg('id="MO-01"'),
+      overrides: [],
+      scaleType: "divergingRedBlue",
+      invertColors: null,
+    })
+    expect(result.invertColors).toBe(false)
+  })
 })

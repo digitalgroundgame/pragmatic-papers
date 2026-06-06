@@ -62,6 +62,83 @@ describe("InteractiveMapBlock", () => {
     expect(container.firstChild).toBeNull()
   })
 
+  it("treats a map whose svgContent is null as missing and skips it", () => {
+    const { container } = render(
+      <InteractiveMapBlock
+        blockType="interactiveMap"
+        layout="row"
+        colorScale="divergingRedBlue"
+        maps={[{ svgAsset: { ...stubAsset(minimalSvg), svgContent: null } }]}
+      />,
+    )
+    expect(container.firstChild).toBeNull()
+  })
+
+  it("renders with perRegion colorScale — no legend block", () => {
+    const { container } = render(
+      <InteractiveMapBlock
+        blockType="interactiveMap"
+        layout="row"
+        colorScale="perRegion"
+        maps={[{ svgAsset: stubAsset(minimalSvg), dataAttribute: "data-margin" }]}
+      />,
+    )
+    expect(container.firstChild).toMatchSnapshot()
+  })
+
+  it("renders multiple sources with plural label and comma separator", () => {
+    const { container } = render(
+      <InteractiveMapBlock
+        blockType="interactiveMap"
+        layout="row"
+        colorScale="perRegion"
+        maps={[{ svgAsset: stubAsset(minimalSvg) }]}
+        sources={[
+          {
+            id: "s1",
+            link: {
+              type: "custom",
+              url: "https://a.example.com",
+              label: "Source A",
+              newTab: false,
+              variant: "link",
+            },
+          },
+          {
+            id: "s2",
+            link: {
+              type: "custom",
+              url: "https://b.example.com",
+              label: "Source B",
+              newTab: false,
+              variant: "link",
+            },
+          },
+        ]}
+      />,
+    )
+    expect(container.firstChild).toMatchSnapshot()
+  })
+
+  it("renders RegionTitle with invertColors=true — label shows Inverted suffix", () => {
+    const { container } = render(
+      <InteractiveMapBlock
+        blockType="interactiveMap"
+        layout="row"
+        colorScale="divergingRedBlue"
+        maps={[
+          {
+            title: "119th Congress",
+            svgAsset: stubAsset(minimalSvg),
+            dataAttribute: "data-margin",
+            invertColors: true,
+          },
+        ]}
+      />,
+    )
+    expect(container.firstChild).toMatchSnapshot()
+  })
+
   it("skips maps whose svgAsset has not been populated (id-only ref)", () => {
     const { container } = render(
       <InteractiveMapBlock

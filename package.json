@@ -124,7 +124,7 @@
     "testcontainers": "^11.14.0",
     "tsx": "^4.22.2",
     "typescript": "^5.9.3",
-    "typescript-eslint": "^8.59.0",
+    "typescript-eslint": "^8.60.1",
     "vitest": "^4.1.7"
   },
   "optionalDependencies": {

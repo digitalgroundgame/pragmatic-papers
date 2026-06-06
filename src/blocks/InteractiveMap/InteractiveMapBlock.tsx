@@ -51,7 +51,10 @@ export const InteractiveMapBlock: React.FC<Props> = ({
   const legend = colorScale === "divergingRedBlue" ? getDivergingRedBlueLegend(colorBias) : null
 
   return (
-    <figure className={cn("not-prose col-start-2 my-8 space-y-1", className)}>
+    <figure
+      data-interactive-map-block
+      className={cn("not-prose col-start-2 my-8 space-y-1", className)}
+    >
       {widgetTitle && <figcaption className="text-lg font-semibold">{widgetTitle}</figcaption>}
       <InteractiveMapClient layout={layout} maps={resolvedMaps} />
       <Legend legend={legend} layout={layout} />

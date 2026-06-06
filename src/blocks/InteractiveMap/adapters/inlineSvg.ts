@@ -61,6 +61,7 @@ export function resolveInlineSvgMap({
 
   return {
     title: title ?? null,
+    invertColors: invertColors ?? false,
     viewBox: parsed.viewBox ?? DEFAULT_VIEWBOX,
     transform: parsed.transform,
     paths: parsed.paths.map((p) => ({

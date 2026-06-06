@@ -6,6 +6,7 @@ import type { ResolvedMap } from "@/blocks/InteractiveMap/types"
 
 const baseMap = (overrides: Partial<ResolvedMap> = {}): ResolvedMap => ({
   title: "Map",
+  invertColors: false,
   viewBox: "0 0 30 10",
   transform: null,
   paths: [

@@ -21,6 +21,7 @@ export interface ResolvedPath {
 
 export interface ResolvedMap {
   title: string | null
+  invertColors: boolean
   viewBox: string
   transform: string | null
   paths: ResolvedPath[]

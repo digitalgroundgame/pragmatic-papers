@@ -143,11 +143,13 @@ function PathList({ paths }: PathListProps): React.ReactNode {
 
 interface RegionTitleProps {
   title: string | null
+  invertColors: boolean
 }
 
-function RegionTitle({ title }: RegionTitleProps): React.ReactNode {
+function RegionTitle({ title, invertColors }: RegionTitleProps): React.ReactNode {
   if (!title) return null
-  return <figcaption className="mb-3 text-center text-sm font-medium">{title}</figcaption>
+  const label = invertColors ? `${title} (Inverted)` : title
+  return <figcaption className="mb-3 text-center text-sm font-medium">{label}</figcaption>
 }
 
 interface RegionProps {
@@ -182,7 +184,7 @@ function Region({
 
   return (
     <figure className="min-w-0 flex-1 space-y-1">
-      <RegionTitle title={map.title} />
+      <RegionTitle title={map.title} invertColors={map.invertColors} />
       <svg
         viewBox={map.viewBox}
         preserveAspectRatio="xMidYMid meet"

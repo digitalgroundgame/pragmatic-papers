@@ -67,7 +67,7 @@ function TableOfContentsItem({
 }: React.ComponentProps<"li">): React.ReactNode {
   const { classNames } = useTableOfContents()
   return (
-    <li className={cn("toc__item space-x-1", classNames?.item, className)} {...props}>
+    <li className={cn("toc__item", classNames?.item, className)} {...props}>
       {children}
     </li>
   )
@@ -84,11 +84,11 @@ function TableOfContentsList({
 }: TableOfContentsListProps): React.ReactNode {
   if (!entries) return null
   return (
-    <ul className={cn("toc__list pl-4", className)} {...props}>
+    <ul className={cn("toc__list", className)} {...props}>
       {entries.map((entry, index) => (
         <TableOfContentsItem key={`${entry.anchor || "entry"}-${index}`}>
           <TableOfContentsLink entry={entry} />
-          <TableOfContentsList entries={entry.children} />
+          <TableOfContentsList entries={entry.children} className="pl-4" />
         </TableOfContentsItem>
       ))}
     </ul>
@@ -99,7 +99,7 @@ function TableOfContentsButton({
   className,
   ...props
 }: React.ComponentProps<"button">): React.ReactNode {
-  const { isOpen, toggle, classNames, hasEntries } = useTableOfContents()
+  const { classNames, hasEntries, isOpen, toggle } = useTableOfContents()
   if (!hasEntries) return null
   return (
     <Button
@@ -124,10 +124,7 @@ function TableOfContentsTitle({
 }: React.ComponentProps<"h3">): React.ReactNode {
   const { classNames } = useTableOfContents()
   return (
-    <h3
-      className={cn("toc__title flex-1 border-b text-2xl", classNames?.title, className)}
-      {...props}
-    >
+    <h3 className={cn("toc__title flex-1 text-3xl", classNames?.title, className)} {...props}>
       {children}
     </h3>
   )
@@ -157,10 +154,9 @@ function TableOfContentsBody({
   const { isOpen } = useTableOfContents()
   return (
     <nav
-      id="toc__nav"
       hidden={!isOpen}
       aria-label="Table of contents"
-      className={cn("toc space-y-2", className)}
+      className={cn("toc__nav w-full", className)}
       {...props}
     >
       {children}
@@ -186,7 +182,10 @@ function TableOfContents({
           <TableOfContentsTitle>{title}</TableOfContentsTitle>
         </TableOfContentHeader>
       )}
-      <TableOfContentsList entries={entries} className={cn("text-sm", classNames?.list)} />
+      <TableOfContentsList
+        entries={entries}
+        className={cn("md:-translate-x-4", classNames?.list)}
+      />
     </TableOfContentsBody>
   )
 }

@@ -1,6 +1,6 @@
 "use client"
 
-import { createContext, useContext, useState } from "react"
+import { createContext, useCallback, useContext, useMemo, useState } from "react"
 
 import type { TableOfContentsEntry } from "./types"
 import { useActiveAnchor } from "./useActiveAnchor"
@@ -40,33 +40,22 @@ function TableOfContentsProvider({
   children,
 }: TableOfContentsProviderProps): React.ReactNode {
   const hasEntries = entries.length > 0
-  const activeAnchor = useActiveAnchor(entries)
   const [isOpen, setIsOpen] = useState(true)
+  const activeAnchor = useActiveAnchor(entries, 120, isOpen)
 
-  function toggle() {
-    return setIsOpen((v) => !v)
-  }
+  const toggle = useCallback(() => setIsOpen((v) => !v), [])
 
-  return (
-    <TableOfContentsContext.Provider
-      value={{
-        activeAnchor,
-        classNames,
-        entries,
-        hasEntries,
-        isOpen,
-        isActive: false,
-        toggle,
-      }}
-    >
-      {children}
-    </TableOfContentsContext.Provider>
+  const value = useMemo(
+    () => ({ activeAnchor, classNames, entries, hasEntries, isOpen, isActive: false, toggle }),
+    [activeAnchor, classNames, entries, hasEntries, isOpen, toggle],
   )
+
+  return <TableOfContentsContext.Provider value={value}>{children}</TableOfContentsContext.Provider>
 }
 
 function useTableOfContents(anchor?: string): TableOfContentsContextValue {
   const ctx = useContext(TableOfContentsContext)
-  if (!ctx) throw new Error("useTableOfContents must be used within a TableOfContentsAnchor")
+  if (!ctx) throw new Error("useTableOfContents must be used within a TableOfContentsProvider")
   return { ...ctx, isActive: anchor === ctx.activeAnchor }
 }
 

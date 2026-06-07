@@ -1,3 +1,4 @@
+import { ArticleSidebar } from "@/components/ArticleSidebar"
 import { AuthorList } from "@/components/Authors/AuthorList"
 import { FootnoteList } from "@/components/FootnoteList"
 import { JsonLd } from "@/components/JsonLd"
@@ -87,9 +88,9 @@ export default async function Article({ params: paramsPromise }: Args): Promise<
             className="relative flex flex-col justify-between gap-3 lg:flex-row lg:gap-6"
           >
             {showTableOfContents && (
-              <aside className="self-start lg:sticky lg:top-[calc(var(--header-height)+1rem)] lg:mb-8">
+              <ArticleSidebar>
                 <TableOfContents />
-              </aside>
+              </ArticleSidebar>
             )}
             <div className="mx-auto max-w-2xl space-y-3">
               <MathJaxProvider enableMathRendering={enableMathRendering}>

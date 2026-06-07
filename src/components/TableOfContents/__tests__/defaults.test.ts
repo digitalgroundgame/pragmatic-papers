@@ -64,7 +64,7 @@ describe("buildDefaultResolvers", () => {
   })
 
   describe("table", () => {
-    it("labels with the first header cell text", () => {
+    it("always labels as 'Table' regardless of cell content", () => {
       const table = {
         type: "table",
         children: [
@@ -78,28 +78,8 @@ describe("buildDefaultResolvers", () => {
       } as unknown as SerializedLexicalNode
       const resolvers = buildDefaultResolvers(new Map())
       const entry = resolvers.table!(table)
-      expect(entry).toMatchObject({ label: "Region", depth: 1 })
+      expect(entry).toMatchObject({ label: "Table", depth: 1 })
       expect(entry?.icon).toBeDefined()
-    })
-
-    it("falls back to 'Table' when no header cell text is found", () => {
-      const table = {
-        type: "table",
-        children: [],
-      } as unknown as SerializedLexicalNode
-      const resolvers = buildDefaultResolvers(new Map())
-      const entry = resolvers.table!(table)
-      expect(entry?.label).toBe("Table")
-    })
-
-    it("falls back to 'Table' when the first cell is empty", () => {
-      const table = {
-        type: "table",
-        children: [{ children: [{ children: [] }] }],
-      } as unknown as SerializedLexicalNode
-      const resolvers = buildDefaultResolvers(new Map())
-      const entry = resolvers.table!(table)
-      expect(entry?.label).toBe("Table")
     })
   })
 })

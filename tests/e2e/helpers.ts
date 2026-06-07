@@ -40,11 +40,15 @@ export class Screenshot {
     if (current > resolved) {
       const newHeight = width / resolved
       const delta = (newHeight - height) / 2
-      return new Screenshot({ x, y: Math.max(0, y - delta), width, height: newHeight })
+      const newY = Math.max(0, y - delta)
+      const actualDelta = y - newY
+      return new Screenshot({ x, y: newY, width, height: height + actualDelta * 2 })
     } else {
       const newWidth = height * resolved
       const delta = (newWidth - width) / 2
-      return new Screenshot({ x: Math.max(0, x - delta), y, width: newWidth, height })
+      const newX = Math.max(0, x - delta)
+      const actualDelta = x - newX
+      return new Screenshot({ x: newX, y, width: width + actualDelta * 2, height })
     }
   }
 

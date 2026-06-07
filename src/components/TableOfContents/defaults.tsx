@@ -25,16 +25,8 @@ export function buildDefaultResolvers(
       return { label, anchor, depth }
     },
     table: (node) => {
-      interface TableRow {
-        children?: Array<{
-          children?: Array<{ type?: string; text?: string; children?: unknown[] }>
-        }>
-      }
-      const firstRow = (node as TableRow).children?.[0]
-      const firstCell = firstRow?.children?.[0]
-      const cellText = extractText(firstCell?.children as Parameters<typeof extractText>[0]).trim()
       return {
-        label: cellText || "Table",
+        label: "Table",
         anchor: anchors.get(node as SerializedLexicalNode) ?? "",
         depth: 1,
         icon: <TableIcon aria-hidden="true" className="text-muted-foreground size-3 shrink-0" />,

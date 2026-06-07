@@ -9,8 +9,7 @@ export const tableOfContentsField: TableOfContentsField = (options) => ({
   ...options,
   admin: {
     position: "sidebar",
-    description:
-      "Auto-generates a navigable list of headings (and any resolver-matched blocks) at the top of the article.",
+    description: "Auto-generates a navigable list of headings (and any resolver-matched blocks).",
     ...options?.admin,
   },
   name: "showTableOfContents",

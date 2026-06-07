@@ -19,6 +19,7 @@ export const {
   tableOfContentsConverter,
 } = createTableOfContents({
   resolvers: {
+    /* Add block customization here */
     socialEmbed: (block) => {
       const fields = block as SocialEmbedBlock
       if (!fields.id) return null

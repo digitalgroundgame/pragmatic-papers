@@ -1,9 +1,9 @@
-import type { DefaultTypedEditorState, SerializedHeadingNode } from "@payloadcms/richtext-lexical"
-import type { JSXConverter, JSXConverterArgs } from "@payloadcms/richtext-lexical/react"
 import { Link } from "lucide-react"
 import type { ComponentType, SVGProps } from "react"
 
+import type { DefaultTypedEditorState, SerializedHeadingNode } from "@payloadcms/richtext-lexical"
 import type { SerializedLexicalNode } from "@payloadcms/richtext-lexical/lexical"
+import type { JSXConverter, JSXConverterArgs } from "@payloadcms/richtext-lexical/react"
 
 import { slugifyHeading } from "./slug"
 import { computeAnchors, headingAnchorGenerator, tableAnchorGenerator } from "./traverse"

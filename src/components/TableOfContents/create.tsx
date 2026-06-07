@@ -2,10 +2,7 @@ import type { DefaultTypedEditorState } from "@payloadcms/richtext-lexical"
 import React from "react"
 
 import { TableOfContents, TableOfContentsButton } from "./client"
-import {
-  type CreateTableOfContentsConverter,
-  createTableOfContentsConverter,
-} from "./createTableOfContentsConverter"
+import { type CreateTableOfContentsConverter, createTableOfContentsConverter } from "./converter"
 import { type TableOfContentsField, tableOfContentsField } from "./field"
 import { TableOfContentsProvider } from "./provider"
 import { slugifyHeading } from "./slug"

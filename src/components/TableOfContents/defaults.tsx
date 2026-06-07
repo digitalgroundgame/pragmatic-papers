@@ -1,6 +1,5 @@
 import type { SerializedLexicalNode } from "@payloadcms/richtext-lexical/lexical"
 import { TableIcon } from "lucide-react"
-import React from "react"
 
 import { extractText } from "./traverse"
 import type { TableOfContentsResolverMap } from "./types"

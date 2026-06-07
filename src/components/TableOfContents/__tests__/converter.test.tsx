@@ -2,7 +2,7 @@ import { renderToStaticMarkup } from "react-dom/server"
 import { describe, expect, it } from "vitest"
 
 import type { DefaultTypedEditorState, SerializedHeadingNode } from "@payloadcms/richtext-lexical"
-import { createTableOfContentsConverter } from "../createTableOfContentsConverter"
+import { createTableOfContentsConverter } from "../converter"
 
 type ConverterFn = (args: { node: SerializedHeadingNode; nodesToJSX: unknown }) => React.ReactNode
 

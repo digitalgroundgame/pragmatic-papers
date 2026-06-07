@@ -1,5 +1,7 @@
 import { expect, test } from "@playwright/test"
 
+import { Screenshot } from "./helpers"
+
 test("table of contents renders on rich-text showcase article", async ({ page }, testInfo) => {
   await page.goto("/articles/rich-text-showcase")
   await expect(page).toHaveTitle(/The Written Word/)
@@ -13,5 +15,8 @@ test("table of contents renders on rich-text showcase article", async ({ page },
   await expect(toc.getByRole("link", { name: "Conclusion" })).toBeVisible()
 
   test.skip(testInfo.project.name !== "chromium", "visual baseline captured on chromium only")
-  await expect(toc).toHaveScreenshot("toc-list.png")
+  const box = await toc.boundingBox()
+  await expect(page).toHaveScreenshot("table-of-contents-list.png", {
+    clip: new Screenshot(box).padding(16).aspectRatio("classic").clip,
+  })
 })

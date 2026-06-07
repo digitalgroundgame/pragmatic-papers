@@ -444,7 +444,7 @@ export interface Article {
     description?: string | null;
   };
   /**
-   * Auto-generates a navigable list of headings (and any resolver-matched blocks) at the top of the article.
+   * Auto-generates a navigable list of headings (and any resolver-matched blocks).
    */
   showTableOfContents?: boolean | null;
   heroImage?: (number | null) | Media;

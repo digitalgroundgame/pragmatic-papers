@@ -9,13 +9,6 @@ import { slugifyHeading } from "./slug"
 import { computeAnchors, headingAnchorGenerator, tableAnchorGenerator } from "./traverse"
 import type { SlugifyFn } from "./types"
 
-export function createIntroAnchor(data?: DefaultTypedEditorState): React.ReactNode {
-  if (!data) return null
-  const firstNode = (data.root.children as Array<{ type: string }>)[0]
-  if (!firstNode || firstNode.type === "heading") return null
-  return <div id="intro" aria-hidden="true" />
-}
-
 export type HeadingJSXConverter = JSXConverter<SerializedHeadingNode>
 
 export interface CreateTableOfContentsConverter {

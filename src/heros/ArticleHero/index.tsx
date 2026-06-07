@@ -14,7 +14,15 @@ interface ArticleHeroProps {
 }
 
 export const ArticleHero: React.FC<ArticleHeroProps> = ({ article }) => {
-  const { publishedAt, title, heroImage, populatedAuthors, narration, populatedNarrator } = article
+  const {
+    publishedAt,
+    title,
+    heroImage,
+    populatedAuthors,
+    narration,
+    populatedNarrator,
+    showTableOfContents,
+  } = article
 
   return (
     <div className="relative flex flex-col gap-2">
@@ -52,7 +60,7 @@ export const ArticleHero: React.FC<ArticleHeroProps> = ({ article }) => {
               <NarrationPlayer narration={narration} populatedNarrator={populatedNarrator} />
             </div>
           )}
-          <TableOfContentsButton />
+          {showTableOfContents && <TableOfContentsButton />}
         </div>
       </div>
       <Separator />

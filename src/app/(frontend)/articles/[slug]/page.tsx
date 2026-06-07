@@ -5,7 +5,7 @@ import { LivePreviewListener } from "@/components/LivePreviewListener"
 import { PayloadRedirects } from "@/components/PayloadRedirects"
 import { RecommendedArticles } from "@/components/RecommendedArticles"
 import RichText from "@/components/RichText"
-import { TableOfContents } from "@/components/TableOfContents"
+import { TableOfContents, TableOfContentsProvider } from "@/components/TableOfContents"
 import { TopicsList } from "@/components/Topics/TopicsList"
 import { Separator } from "@/components/ui/separator"
 import { ArticleHero } from "@/heros/ArticleHero"
@@ -81,29 +81,30 @@ export default async function Article({ params: paramsPromise }: Args): Promise<
 
         {draft && <LivePreviewListener />}
 
-        <ArticleHero article={article} />
-        <div className={cn("relative flex flex-col justify-between gap-3 lg:flex-row lg:gap-6")}>
-          {showTableOfContents && (
-            <aside className="self-start lg:sticky lg:top-[calc(var(--header-height)+1rem)] lg:mb-8">
-              <TableOfContents content={content} />
-            </aside>
-          )}
-          <div className="mx-auto max-w-2xl space-y-3">
-            <MathJaxProvider enableMathRendering={enableMathRendering}>
-              <RichText
-                data={content}
-                enableGutter={false}
-                className="drop-cap"
-                parentDoc={{ collection: "articles", id: article.id }}
-                injectHeadingAnchors={!!showTableOfContents}
-              />
-            </MathJaxProvider>
-            <FootnoteList footnotes={footnotes} />
-            <Separator />
-            <TopicsList topics={topics} />
-            <AuthorList aria-label="Article Authors" authors={populatedAuthors} />
+        <TableOfContentsProvider content={content}>
+          <ArticleHero article={article} />
+          <div className={cn("relative flex flex-col justify-between gap-3 lg:flex-row lg:gap-6")}>
+            {showTableOfContents && (
+              <aside className="self-start lg:sticky lg:top-[calc(var(--header-height)+1rem)] lg:mb-8">
+                <TableOfContents />
+              </aside>
+            )}
+            <div className="mx-auto max-w-2xl space-y-3">
+              <MathJaxProvider enableMathRendering={enableMathRendering}>
+                <RichText
+                  data={content}
+                  enableGutter={false}
+                  className="drop-cap"
+                  parentDoc={{ collection: "articles", id: article.id }}
+                />
+              </MathJaxProvider>
+              <FootnoteList footnotes={footnotes} />
+              <Separator />
+              <TopicsList topics={topics} />
+              <AuthorList aria-label="Article Authors" authors={populatedAuthors} />
+            </div>
           </div>
-        </div>
+        </TableOfContentsProvider>
       </article>
       <RecommendedArticles currentArticleSlug={slug} />
     </>

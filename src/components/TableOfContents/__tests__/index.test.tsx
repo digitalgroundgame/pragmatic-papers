@@ -3,8 +3,8 @@ import { renderToStaticMarkup } from "react-dom/server"
 import { describe, expect, it } from "vitest"
 
 import type { DefaultTypedEditorState, SerializedHeadingNode } from "@payloadcms/richtext-lexical"
-import { tableOfContentsField } from "../field"
 import { createTableOfContents } from "../create"
+import { tableOfContentsField } from "../field"
 
 type HeadingConverterFn = (args: {
   node: SerializedHeadingNode
@@ -26,14 +26,15 @@ function heading(tag: string, text: string) {
 }
 
 describe("createTableOfContents", () => {
-  it("returns the field, Component, and headingConverter", () => {
+  it("returns the field, Root, Body, and headingConverter", () => {
     const toc = createTableOfContents()
     expect(toc.tableOfContentsField).toBe(tableOfContentsField)
+    expect(typeof toc.TableOfContentsProvider).toBe("function")
     expect(typeof toc.TableOfContents).toBe("function")
     expect(typeof toc.tableOfContentsConverter).toBe("function")
   })
 
-  it("Component renders entries from caller resolvers", () => {
+  it("Root renders entries from caller resolvers", () => {
     const toc = createTableOfContents({
       resolvers: {
         custom: (block) => {
@@ -46,7 +47,11 @@ describe("createTableOfContents", () => {
       heading("h2", "First"),
       { type: "block", fields: { blockType: "custom", id: "c1", name: "Custom Entry" } },
     ])
-    const { getByText, container } = render(<toc.TableOfContents content={state} />)
+    const { getByText, container } = render(
+      <toc.TableOfContentsProvider content={state}>
+        <toc.TableOfContents />
+      </toc.TableOfContentsProvider>,
+    )
     expect(getByText("First")).toBeTruthy()
     expect(getByText("Custom Entry")).toBeTruthy()
     const links = container.querySelectorAll("a")
@@ -58,7 +63,11 @@ describe("createTableOfContents", () => {
     const h = heading("h2", "Hello World")
     const state = makeState([h])
 
-    const { container } = render(<toc.TableOfContents content={state} />)
+    const { container } = render(
+      <toc.TableOfContentsProvider content={state}>
+        <toc.TableOfContents />
+      </toc.TableOfContentsProvider>,
+    )
     expect(container.querySelector("a")?.getAttribute("href")).toBe("#hello_world")
 
     const converter = toc.tableOfContentsConverter(state).heading as unknown as HeadingConverterFn
@@ -74,14 +83,12 @@ describe("createTableOfContents", () => {
     expect(html).toContain('id="hello_world"')
   })
 
-  it("forwards className and title props to the Component", () => {
+  it("forwards className and title props to Body", () => {
     const toc = createTableOfContents()
     const { container, getByText } = render(
-      <toc.TableOfContents
-        content={makeState([heading("h2", "X")])}
-        className="custom-toc"
-        title="Outline"
-      />,
+      <toc.TableOfContentsProvider content={makeState([heading("h2", "X")])}>
+        <toc.TableOfContents className="custom-toc" title="Outline" />
+      </toc.TableOfContentsProvider>,
     )
     expect(container.querySelector("nav.custom-toc")).toBeTruthy()
     expect(getByText("Outline")).toBeTruthy()

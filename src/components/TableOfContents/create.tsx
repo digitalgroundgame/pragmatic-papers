@@ -26,9 +26,10 @@ export type {
 }
 
 interface CreateTableOfContents {
+  introAnchor: string
   tableOfContentsField: TableOfContentsField
   TableOfContentsProvider: (
-    props: Omit<TableOfContentsProviderProps, "resolvers" | "slugify">,
+    props: Omit<TableOfContentsProviderProps, "resolvers" | "slugify" | "introAnchor">,
   ) => React.ReactNode
   TableOfContents: typeof TableOfContents
   TableOfContentsButton: typeof TableOfContentsButton
@@ -39,11 +40,18 @@ export function createTableOfContents({
   resolvers,
   slugify = slugifyHeading,
   icon,
+  introAnchor = "intro",
 }: CreateTableOfContentsOptions = {}): CreateTableOfContents {
   return {
+    introAnchor,
     tableOfContentsField,
     TableOfContentsProvider: (props) => (
-      <TableOfContentsProvider {...props} resolvers={resolvers} slugify={slugify} />
+      <TableOfContentsProvider
+        {...props}
+        resolvers={resolvers}
+        slugify={slugify}
+        introAnchor={introAnchor}
+      />
     ),
     TableOfContents,
     TableOfContentsButton,

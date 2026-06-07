@@ -13,7 +13,6 @@ import { MathJaxProvider } from "@/providers/MathJaxProvider"
 import { generateMeta } from "@/utilities/generateMeta"
 import { queryArticleBySlug } from "@/utilities/queries"
 import { buildArticleJsonLd, buildBreadcrumbJsonLd } from "@/utilities/structuredData"
-import { cn } from "@/utilities/utils"
 import configPromise from "@payload-config"
 import type { Metadata } from "next"
 import { draftMode } from "next/headers"
@@ -83,7 +82,10 @@ export default async function Article({ params: paramsPromise }: Args): Promise<
 
         <TableOfContentsProvider content={content}>
           <ArticleHero article={article} />
-          <div className={cn("relative flex flex-col justify-between gap-3 lg:flex-row lg:gap-6")}>
+          <div
+            id="article-body"
+            className="relative flex flex-col justify-between gap-3 lg:flex-row lg:gap-6"
+          >
             {showTableOfContents && (
               <aside className="self-start lg:sticky lg:top-[calc(var(--header-height)+1rem)] lg:mb-8">
                 <TableOfContents />

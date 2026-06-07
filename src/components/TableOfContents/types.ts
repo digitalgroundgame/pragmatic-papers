@@ -20,4 +20,5 @@ export interface CreateTableOfContentsOptions {
   resolvers?: TableOfContentsResolverMap
   slugify?: SlugifyFn
   icon?: ComponentType<SVGProps<SVGSVGElement>>
+  introAnchor?: string
 }

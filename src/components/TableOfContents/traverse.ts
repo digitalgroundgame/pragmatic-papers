@@ -108,22 +108,22 @@ export function nestEntries(flat: TableOfContentsEntry[]): TableOfContentsEntry[
 }
 
 export function collectEntries(
-  data: SerializedEditorState,
-  callerResolvers: TableOfContentsResolverMap = {},
-  slugify: SlugifyFn = slugifyHeading,
+  content: SerializedEditorState,
+  resolvers: TableOfContentsResolverMap = {},
+  slugify?: SlugifyFn,
 ): TableOfContentsEntry[] {
-  const anchors = computeAnchors(data, {
+  const anchors = computeAnchors(content, {
     heading: headingAnchorGenerator(slugify),
     table: tableAnchorGenerator,
   })
   const defaults = buildDefaultResolvers(anchors)
-  const resolvers: TableOfContentsResolverMap = { ...defaults, ...callerResolvers }
+  const mergedResolvers: TableOfContentsResolverMap = { ...defaults, ...resolvers }
   const entries: TableOfContentsEntry[] = []
   const walk = (nodes: SerializedLexicalNode[] | undefined): void => {
     if (!nodes) return
     for (const node of nodes) {
       const key = resolverKeyFor(node)
-      const resolver = key ? resolvers[key] : undefined
+      const resolver = key ? mergedResolvers[key] : undefined
       if (resolver) {
         const entry = resolver(resolverPayloadFor(node))
         if (entry) entries.push(entry)
@@ -131,19 +131,20 @@ export function collectEntries(
       walk((node as WithChildren).children)
     }
   }
-  walk(data.root.children as SerializedLexicalNode[])
+  walk(content.root.children as SerializedLexicalNode[])
   return entries
 }
 
 export function buildEntries(
-  data: SerializedEditorState,
-  callerResolvers?: TableOfContentsResolverMap,
+  content: SerializedEditorState,
+  resolvers?: TableOfContentsResolverMap,
   slugify?: SlugifyFn,
+  anchor = "#",
 ): TableOfContentsEntry[] {
-  const entries = nestEntries(collectEntries(data, callerResolvers, slugify))
-  const firstNode = (data.root.children as SerializedLexicalNode[])[0]
+  const entries = nestEntries(collectEntries(content, resolvers, slugify))
+  const firstNode = content.root.children[0]
   if (firstNode?.type !== "heading" && entries.length > 0) {
-    entries.unshift({ label: "Intro", anchor: "intro", depth: 1 })
+    entries.unshift({ label: "Intro", anchor, depth: 1 })
   }
   return entries
 }

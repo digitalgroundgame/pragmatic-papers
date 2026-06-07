@@ -35,20 +35,23 @@ interface TableOfContentsProviderProps {
   classNames?: TableOfContentsClassNames
   resolvers?: TableOfContentsResolverMap
   children?: React.ReactNode
+  introAnchor?: string
   slugify?: SlugifyFn
 }
 
 function TableOfContentsProvider({
   content,
   classNames,
-  resolvers,
-  slugify,
+  resolvers: callerResolvers,
+  introAnchor,
   children,
+  slugify,
 }: TableOfContentsProviderProps): React.ReactNode {
-  const entries = buildEntries(content, resolvers, slugify)
+  const entries = buildEntries(content, callerResolvers, slugify, introAnchor)
   const hasEntries = entries.length > 0
   const activeAnchor = useActiveAnchor(entries)
   const [isOpen, setIsOpen] = useState(true)
+
   function toggle() {
     return setIsOpen((v) => !v)
   }

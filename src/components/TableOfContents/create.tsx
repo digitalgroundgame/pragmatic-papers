@@ -7,8 +7,9 @@ import {
   createTableOfContentsConverter,
 } from "./createTableOfContentsConverter"
 import { type TableOfContentsField, tableOfContentsField } from "./field"
-import { TableOfContentsProvider, type TableOfContentsProviderProps } from "./provider"
+import { TableOfContentsProvider } from "./provider"
 import { slugifyHeading } from "./slug"
+import { buildEntries } from "./traverse"
 import type {
   CreateTableOfContentsOptions,
   SlugifyFn,
@@ -25,12 +26,16 @@ export type {
   TableOfContentsResolverMap,
 }
 
+interface TableOfContentsWrapperProps {
+  content: DefaultTypedEditorState
+  classNames?: Record<string, string>
+  children?: React.ReactNode
+}
+
 interface CreateTableOfContents {
   introAnchor: string
   tableOfContentsField: TableOfContentsField
-  TableOfContentsProvider: (
-    props: Omit<TableOfContentsProviderProps, "resolvers" | "slugify" | "introAnchor">,
-  ) => React.ReactNode
+  TableOfContentsProvider: (props: TableOfContentsWrapperProps) => React.ReactNode
   TableOfContents: typeof TableOfContents
   TableOfContentsButton: typeof TableOfContentsButton
   tableOfContentsConverter: (data?: DefaultTypedEditorState) => CreateTableOfContentsConverter
@@ -45,14 +50,14 @@ export function createTableOfContents({
   return {
     introAnchor,
     tableOfContentsField,
-    TableOfContentsProvider: (props) => (
-      <TableOfContentsProvider
-        {...props}
-        resolvers={resolvers}
-        slugify={slugify}
-        introAnchor={introAnchor}
-      />
-    ),
+    TableOfContentsProvider: ({ content, children, classNames }) => {
+      const entries = buildEntries(content, resolvers, slugify, introAnchor)
+      return (
+        <TableOfContentsProvider entries={entries} classNames={classNames}>
+          {children}
+        </TableOfContentsProvider>
+      )
+    },
     TableOfContents,
     TableOfContentsButton,
     tableOfContentsConverter: (data) => createTableOfContentsConverter(data, slugify, icon),

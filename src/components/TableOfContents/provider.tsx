@@ -1,10 +1,8 @@
 "use client"
 
-import { type DefaultTypedEditorState } from "@payloadcms/richtext-lexical"
 import { createContext, useContext, useState } from "react"
 
-import { buildEntries } from "./traverse"
-import type { SlugifyFn, TableOfContentsEntry, TableOfContentsResolverMap } from "./types"
+import type { TableOfContentsEntry } from "./types"
 import { useActiveAnchor } from "./useActiveAnchor"
 
 interface TableOfContentsClassNames {
@@ -31,23 +29,16 @@ interface TableOfContentsContextValue {
 const TableOfContentsContext = createContext<TableOfContentsContextValue | null>(null)
 
 interface TableOfContentsProviderProps {
-  content: DefaultTypedEditorState
+  entries: TableOfContentsEntry[]
   classNames?: TableOfContentsClassNames
-  resolvers?: TableOfContentsResolverMap
   children?: React.ReactNode
-  introAnchor?: string
-  slugify?: SlugifyFn
 }
 
 function TableOfContentsProvider({
-  content,
+  entries,
   classNames,
-  resolvers: callerResolvers,
-  introAnchor,
   children,
-  slugify,
 }: TableOfContentsProviderProps): React.ReactNode {
-  const entries = buildEntries(content, callerResolvers, slugify, introAnchor)
   const hasEntries = entries.length > 0
   const activeAnchor = useActiveAnchor(entries)
   const [isOpen, setIsOpen] = useState(true)

@@ -83,7 +83,7 @@ export default async function Article({ params: paramsPromise }: Args): Promise<
         <TableOfContentsProvider content={content}>
           <ArticleHero article={article} />
           <div
-            id="article-body"
+            id="intro"
             className="relative flex flex-col justify-between gap-3 lg:flex-row lg:gap-6"
           >
             {showTableOfContents && (

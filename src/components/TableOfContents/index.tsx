@@ -23,7 +23,11 @@ export const {
       const fields = block as SocialEmbedBlock
       if (!fields.id) return null
       const label = fields.platform ? `${PLATFORM_LABELS[fields.platform]} embed` : "Social embed"
-      return { label, anchor: fields.id, icon: TvIcon }
+      return {
+        label,
+        anchor: fields.id,
+        icon: <TvIcon aria-hidden="true" className="text-muted-foreground size-3 shrink-0" />,
+      }
     },
   },
 })

@@ -1,10 +1,10 @@
-import type { ComponentType, SVGProps } from "react"
+import type { ComponentType, ReactNode, SVGProps } from "react"
 
 export interface TableOfContentsEntry {
   label: string
   anchor: string
   depth?: number
-  icon?: ComponentType<SVGProps<SVGSVGElement>>
+  icon?: ReactNode
   children?: TableOfContentsEntry[]
 }
 

@@ -1,9 +1,13 @@
+"use client"
+
 import { render } from "@testing-library/react"
 import { describe, expect, it } from "vitest"
 
 import type { DefaultTypedEditorState } from "@payloadcms/richtext-lexical"
 import { TableOfContents, TableOfContentsButton } from "../client"
 import { TableOfContentsProvider } from "../provider"
+import { buildEntries } from "../traverse"
+import type { TableOfContentsResolverMap, SlugifyFn } from "../types"
 
 function makeContent(children: unknown[]): DefaultTypedEditorState {
   return {
@@ -23,15 +27,18 @@ function heading(tag: string, text: string) {
   } as object
 }
 
-function Toc(
-  props: Omit<React.ComponentProps<typeof TableOfContentsProvider>, "children"> & {
-    className?: string
-    title?: string
-  },
-) {
-  const { className, title, ...rootProps } = props
+interface TocProps {
+  content: DefaultTypedEditorState
+  resolvers?: TableOfContentsResolverMap
+  slugify?: SlugifyFn
+  className?: string
+  title?: string
+}
+
+function Toc({ content, resolvers, slugify, className, title }: TocProps) {
+  const entries = buildEntries(content, resolvers, slugify)
   return (
-    <TableOfContentsProvider {...rootProps}>
+    <TableOfContentsProvider entries={entries}>
       <TableOfContents className={className} title={title} />
     </TableOfContentsProvider>
   )
@@ -86,7 +93,7 @@ describe("TableOfContents component", () => {
       <Toc
         content={makeContent([block])}
         resolvers={{
-          widget: () => ({ label: "Widget", anchor: "w1", icon: FakeIcon }),
+          widget: () => ({ label: "Widget", anchor: "w1", icon: <FakeIcon /> }),
         }}
       />,
     )
@@ -107,7 +114,7 @@ describe("TableOfContents component", () => {
 
   it("TableOfContentsButton renders nothing when there are no entries", () => {
     const { container } = render(
-      <TableOfContentsProvider content={makeContent([])}>
+      <TableOfContentsProvider entries={[]}>
         <TableOfContentsButton />
       </TableOfContentsProvider>,
     )

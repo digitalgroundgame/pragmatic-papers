@@ -132,17 +132,15 @@ export default function RichText({
   parentDoc,
 }: RichTextProps): React.ReactNode {
   return (
-    <>
-      <ConvertRichText
-        className={cn(
-          "payload-richtext prose-lg md:prose-xl prose-brand md:prose-blockquote:-mx-4 lg:prose-blockquote:-mx-8 prose-p:leading-relaxed prose-h2:mt-9 prose-h2:mb-6 prose-h2:text-4xl md:prose-h2:text-5xl prose-h3:text-3xl md:prose-h3:text-4xl prose-h4:text-2xl md:prose-h4:text-3xl font-serif",
-          enableGutter ? "container" : "max-w-none",
-          enableProse && "prose",
-          className,
-        )}
-        converters={createJsxConverters(parentDoc)}
-        data={data}
-      />
-    </>
+    <ConvertRichText
+      className={cn(
+        "payload-richtext prose-lg md:prose-xl prose-brand md:prose-blockquote:-mx-4 lg:prose-blockquote:-mx-8 prose-p:leading-relaxed prose-h2:mt-9 prose-h2:mb-6 prose-h2:text-4xl md:prose-h2:text-5xl prose-h3:text-3xl md:prose-h3:text-4xl prose-h4:text-2xl md:prose-h4:text-3xl font-serif",
+        enableGutter ? "container" : "max-w-none",
+        enableProse && "prose",
+        className,
+      )}
+      converters={createJsxConverters(parentDoc, data)}
+      data={data}
+    />
   )
 }

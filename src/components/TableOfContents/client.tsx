@@ -9,9 +9,10 @@ import { cn } from "@/utilities/utils"
 import { useTableOfContents } from "./provider"
 import { type TableOfContentsEntry } from "./types"
 
-interface TableOfContentsIconProps extends React.ComponentProps<"svg"> {
-  icon?: React.ComponentType<React.SVGProps<SVGSVGElement>>
+interface TableOfContentsIconProps {
+  icon?: React.ReactNode
   isActive: boolean
+  className?: string
 }
 
 function TableOfContentsIcon({
@@ -19,14 +20,19 @@ function TableOfContentsIcon({
   isActive,
   className,
 }: TableOfContentsIconProps): React.ReactNode {
-  const Slot = icon || LinkIcon
+  const visibilityClass = cn("toc__icon", className)
+  if (React.isValidElement(icon)) {
+    return React.cloneElement(icon as React.ReactElement<{ className?: string }>, {
+      className: cn((icon.props as { className?: string }).className, visibilityClass),
+    })
+  }
   return (
-    <Slot
+    <LinkIcon
       aria-hidden="true"
       className={cn(
-        "toc__icon text-muted-foreground size-3 shrink-0 opacity-0 group-hover:opacity-100",
+        "text-muted-foreground size-3 shrink-0 opacity-0 group-hover:opacity-100",
         isActive && "opacity-100",
-        className,
+        visibilityClass,
       )}
     />
   )
@@ -97,7 +103,7 @@ function TableOfContentsButton({
   if (!hasEntries) return null
   return (
     <Button
-      variant="outline"
+      variant={isOpen ? "outline" : "ghost"}
       size="icon-sm"
       aria-controls="toc__nav"
       aria-expanded={isOpen}

@@ -9,7 +9,7 @@
  * is mandatory — the client widget alone is purely cosmetic.
  *
  * Required env vars:
- *   TURNSTILE_SECRET_KEY              server-side secret from the Turnstile dashboard
+ *   CLOUDFLARE_TURNSTILE_SECRET_KEY  server-side secret from the Turnstile dashboard
  *   NEXT_PUBLIC_TURNSTILE_SITE_KEY    public site key (read by the client component)
  */
 
@@ -27,8 +27,8 @@ export interface VerifyTurnstileInput {
 }
 
 export async function verifyTurnstileToken(input: VerifyTurnstileInput): Promise<boolean> {
-  const secret = process.env.TURNSTILE_SECRET_KEY
-  if (!secret) throw new Error("Missing required env var: TURNSTILE_SECRET_KEY")
+  const secret = process.env.CLOUDFLARE_TURNSTILE_SECRET_KEY
+  if (!secret) throw new Error("Missing required env var: CLOUDFLARE_TURNSTILE_SECRET_KEY")
   if (!input.token) return false
 
   const form = new URLSearchParams()

@@ -12,7 +12,7 @@ function mockFetchOnce(opts: { ok: boolean; status?: number; json?: unknown }) {
 
 describe("verifyTurnstileToken", () => {
   beforeEach(() => {
-    vi.stubEnv("TURNSTILE_SECRET_KEY", "test-secret")
+    vi.stubEnv("CLOUDFLARE_TURNSTILE_SECRET_KEY", "test-secret")
   })
 
   afterEach(() => {
@@ -20,8 +20,8 @@ describe("verifyTurnstileToken", () => {
     vi.restoreAllMocks()
   })
 
-  it("throws when TURNSTILE_SECRET_KEY is missing", async () => {
-    vi.stubEnv("TURNSTILE_SECRET_KEY", "")
+  it("throws when CLOUDFLARE_TURNSTILE_SECRET_KEY is missing", async () => {
+    vi.stubEnv("CLOUDFLARE_TURNSTILE_SECRET_KEY", "")
     await expect(verifyTurnstileToken({ token: "t" })).rejects.toThrow("Missing required env var")
   })
 

@@ -21,7 +21,7 @@ const containerVariants = cva("container my-4 grid grid-cols-4 gap-x-6 gap-y-2 l
     width: {
       narrow: "max-w-3xl",
       wide: "max-w-5xl",
-      full: "px-0",
+      full: "",
     },
   },
   defaultVariants: {

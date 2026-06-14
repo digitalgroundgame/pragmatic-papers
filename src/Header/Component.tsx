@@ -18,7 +18,7 @@ import { HeaderActions } from "@/Header/HeaderActions/Component"
 import { SearchForm } from "@/Header/SearchForm/Component"
 import type { Footer, Header } from "@/payload-types"
 import { getCachedGlobal } from "@/utilities/getGlobals"
-import { Settings, TextSearch, XIcon } from "lucide-react"
+import { User, TextSearch, XIcon } from "lucide-react"
 import React from "react"
 
 export async function Header(): Promise<React.JSX.Element> {
@@ -80,8 +80,8 @@ export async function Header(): Promise<React.JSX.Element> {
                 <SheetTrigger
                   render={
                     <Button variant="ghost" size="icon" className="lg:hidden">
-                      <Settings className="size-6" />
-                      <span className="sr-only">Settings</span>
+                      <User className="size-6" />
+                      <span className="sr-only">User and Settings</span>
                     </Button>
                   }
                 />

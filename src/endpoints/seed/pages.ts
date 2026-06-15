@@ -154,7 +154,6 @@ export const createPages = async (
         {
           size: "full",
           richText: createRichTextContent(about.content),
-          enableLink: false,
         },
       ],
     },
@@ -247,7 +246,6 @@ export const createPages = async (
           {
             size: "full",
             richText: createRichTextContent(contact.content),
-            enableLink: false,
           },
         ],
       },
@@ -282,7 +280,6 @@ export const createPages = async (
           {
             size: "full",
             richText: createRichTextContent(privacyPolicy.content),
-            enableLink: false,
           },
         ],
       },
@@ -312,7 +309,6 @@ export const createPages = async (
           {
             size: "full",
             richText: createRichTextContent(termsOfUse.content),
-            enableLink: false,
           },
         ],
       },

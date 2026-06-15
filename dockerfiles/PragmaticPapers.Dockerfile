@@ -41,7 +41,7 @@ RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
 
 # 3. Copy package.json and necessary post-install scripts.
 COPY package.json ./
-COPY scripts/install-fonts.mjs scripts/ansi.mjs ./scripts/
+COPY scripts/install-fonts.ts scripts/ansi.mjs scripts/Inter-Bold.woff2 ./scripts/
 
 # 4. Install dependencies from the store (offline)
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store \

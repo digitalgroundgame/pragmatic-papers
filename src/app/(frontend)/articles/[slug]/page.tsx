@@ -1,3 +1,7 @@
+import type { Metadata } from "next"
+import { draftMode } from "next/headers"
+import React from "react"
+
 import { ArticleSidebar } from "@/components/ArticleSidebar"
 import { AuthorList } from "@/components/Authors/AuthorList"
 import { FootnoteList } from "@/components/FootnoteList"
@@ -12,16 +16,12 @@ import { Separator } from "@/components/ui/separator"
 import { ArticleHero } from "@/heros/ArticleHero"
 import { MathJaxProvider } from "@/providers/MathJaxProvider"
 import { generateMeta } from "@/utilities/generateMeta"
+import { getPayloadConfig } from "@/utilities/getPayloadConfig"
 import { queryArticleBySlug } from "@/utilities/queries"
 import { buildArticleJsonLd, buildBreadcrumbJsonLd } from "@/utilities/structuredData"
-import configPromise from "@payload-config"
-import type { Metadata } from "next"
-import { draftMode } from "next/headers"
-import { getPayload } from "payload"
-import React from "react"
 
 export async function generateStaticParams(): Promise<{ slug: string | null | undefined }[]> {
-  const payload = await getPayload({ config: configPromise })
+  const payload = await getPayloadConfig()
   const articles = await payload.find({
     collection: "articles",
     draft: false,

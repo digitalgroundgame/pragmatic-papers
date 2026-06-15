@@ -199,6 +199,7 @@ export interface Config {
     articles: Article;
     volumes: Volume;
     media: Media;
+    'map-assets': MapAsset;
     categories: Category;
     users: User;
     webhooks: Webhook;
@@ -219,6 +220,7 @@ export interface Config {
     articles: ArticlesSelect<false> | ArticlesSelect<true>;
     volumes: VolumesSelect<false> | VolumesSelect<true>;
     media: MediaSelect<false> | MediaSelect<true>;
+    'map-assets': MapAssetsSelect<false> | MapAssetsSelect<true>;
     categories: CategoriesSelect<false> | CategoriesSelect<true>;
     users: UsersSelect<false> | UsersSelect<true>;
     webhooks: WebhooksSelect<false> | WebhooksSelect<true>;
@@ -344,6 +346,7 @@ export interface Page {
     | ContentBlock
     | ContributorsBlock
     | MediaBlock
+    | NewsletterSignupBlock
     | TimelineBlock
     | VolumeView
     | FormBlock
@@ -764,6 +767,7 @@ export interface CallToActionBlock {
  * via the `definition` "ContentBlock".
  */
 export interface ContentBlock {
+  width?: ('narrow' | 'wide' | 'full') | null;
   columns?:
     | {
         size?: ('oneThird' | 'half' | 'twoThirds' | 'full') | null;
@@ -782,30 +786,6 @@ export interface ContentBlock {
           };
           [k: string]: unknown;
         } | null;
-        enableLink?: boolean | null;
-        link?: {
-          type?: ('reference' | 'custom') | null;
-          newTab?: boolean | null;
-          reference?:
-            | ({
-                relationTo: 'pages';
-                value: number | Page;
-              } | null)
-            | ({
-                relationTo: 'volumes';
-                value: number | Volume;
-              } | null)
-            | ({
-                relationTo: 'articles';
-                value: number | Article;
-              } | null);
-          url?: string | null;
-          label: string;
-          /**
-           * Choose how the link should be rendered.
-           */
-          appearance?: ('default' | 'outline') | null;
-        };
         id?: string | null;
       }[]
     | null;
@@ -833,6 +813,33 @@ export interface MediaBlock {
   id?: string | null;
   blockName?: string | null;
   blockType: 'mediaBlock';
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "NewsletterSignupBlock".
+ */
+export interface NewsletterSignupBlock {
+  heading?: string | null;
+  description?: string | null;
+  buttonLabel?: string | null;
+  notice?: {
+    root: {
+      type: string;
+      children: {
+        type: any;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  } | null;
+  id?: string | null;
+  blockName?: string | null;
+  blockType: 'newsletterSignup';
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -1077,6 +1084,36 @@ export interface Form {
     | null;
   updatedAt: string;
   createdAt: string;
+}
+/**
+ * Raw vector geometry for the Interactive Map block — SVG today, GeoJSON/TopoJSON later. Files are stored without image processing so vector data round-trips intact.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "map-assets".
+ */
+export interface MapAsset {
+  id: number;
+  /**
+   * Human-readable name shown in the admin (e.g. 'Missouri Congressional Districts — 119th Congress').
+   */
+  label?: string | null;
+  /**
+   * Auto-populated with the uploaded SVG's text content so blocks can read it without a runtime file fetch.
+   */
+  svgContent?: string | null;
+  source?: LinkField;
+  createdBy?: (number | null) | User;
+  updatedAt: string;
+  createdAt: string;
+  url?: string | null;
+  thumbnailURL?: string | null;
+  filename?: string | null;
+  mimeType?: string | null;
+  filesize?: number | null;
+  width?: number | null;
+  height?: number | null;
+  focalX?: number | null;
+  focalY?: number | null;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -1349,6 +1386,10 @@ export interface PayloadLockedDocument {
         value: number | Media;
       } | null)
     | ({
+        relationTo: 'map-assets';
+        value: number | MapAsset;
+      } | null)
+    | ({
         relationTo: 'categories';
         value: number | Category;
       } | null)
@@ -1458,6 +1499,7 @@ export interface PagesSelect<T extends boolean = true> {
         content?: T | ContentBlockSelect<T>;
         contributors?: T | ContributorsBlockSelect<T>;
         mediaBlock?: T | MediaBlockSelect<T>;
+        newsletterSignup?: T | NewsletterSignupBlockSelect<T>;
         timeline?: T | TimelineBlockSelect<T>;
         volumeView?: T | VolumeViewSelect<T>;
         formBlock?: T | FormBlockSelect<T>;
@@ -1526,22 +1568,12 @@ export interface CallToActionBlockSelect<T extends boolean = true> {
  * via the `definition` "ContentBlock_select".
  */
 export interface ContentBlockSelect<T extends boolean = true> {
+  width?: T;
   columns?:
     | T
     | {
         size?: T;
         richText?: T;
-        enableLink?: T;
-        link?:
-          | T
-          | {
-              type?: T;
-              newTab?: T;
-              reference?: T;
-              url?: T;
-              label?: T;
-              appearance?: T;
-            };
         id?: T;
       };
   id?: T;
@@ -1563,6 +1595,18 @@ export interface ContributorsBlockSelect<T extends boolean = true> {
  */
 export interface MediaBlockSelect<T extends boolean = true> {
   media?: T;
+  id?: T;
+  blockName?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "NewsletterSignupBlock_select".
+ */
+export interface NewsletterSignupBlockSelect<T extends boolean = true> {
+  heading?: T;
+  description?: T;
+  buttonLabel?: T;
+  notice?: T;
   id?: T;
   blockName?: T;
 }
@@ -1829,6 +1873,27 @@ export interface MediaSelect<T extends boolean = true> {
               filename?: T;
             };
       };
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "map-assets_select".
+ */
+export interface MapAssetsSelect<T extends boolean = true> {
+  label?: T;
+  svgContent?: T;
+  source?: T | LinkFieldSelect<T>;
+  createdBy?: T;
+  updatedAt?: T;
+  createdAt?: T;
+  url?: T;
+  thumbnailURL?: T;
+  filename?: T;
+  mimeType?: T;
+  filesize?: T;
+  width?: T;
+  height?: T;
+  focalX?: T;
+  focalY?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -2188,6 +2253,7 @@ export interface Header {
  */
 export interface Footer {
   id: number;
+  layout?: ContentBlock[] | null;
   navItems?: MenuField;
   socials?: MenuField;
   copyright?: LinkField;
@@ -2251,6 +2317,11 @@ export interface HeaderSelect<T extends boolean = true> {
  * via the `definition` "footer_select".
  */
 export interface FooterSelect<T extends boolean = true> {
+  layout?:
+    | T
+    | {
+        content?: T | ContentBlockSelect<T>;
+      };
   navItems?: T | MenuFieldSelect<T>;
   socials?: T | MenuFieldSelect<T>;
   copyright?: T | LinkFieldSelect<T>;
@@ -2366,6 +2437,71 @@ export interface CodeBlock {
   id?: string | null;
   blockName?: string | null;
   blockType: 'code';
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "InteractiveMapBlock".
+ */
+export interface InteractiveMapBlock {
+  /**
+   * Optional heading displayed above the map(s).
+   */
+  widgetTitle?: string | null;
+  layout: 'row' | 'stacked';
+  /**
+   * Diverging Red/Blue colors each region by its value (negative = D+, positive = R+). Per-region uses the color you set on each region row.
+   */
+  colorScale: 'divergingRedBlue' | 'perRegion';
+  /**
+   * Warps the color breakpoints along a curve between ±1 (neutral) and ±100 (max). Above 1 = breakpoints shift toward the low end, so small margins get strong colors. Below 1 = breakpoints shift toward the high end, requiring larger margins for strong colors. Default: 1 (linear).
+   */
+  colorBias?: number | null;
+  maps: {
+    title?: string | null;
+    /**
+     * Upload an SVG whose paths are already projected (e.g. Albers Equal Area). Each region path must carry an id attribute that matches a Region ID below.
+     */
+    svgAsset: number | MapAsset;
+    /**
+     * The data attribute on each path that holds the numeric value for the color scale (e.g. data-margin). When set, values are read directly from the SVG — no need to enter them manually in the Overrides table.
+     */
+    dataAttribute?: string | null;
+    overrides?:
+      | {
+          /**
+           * Must match the id attribute on the SVG path.
+           */
+          regionId: string;
+          label?: string | null;
+          /**
+           * For Diverging Red/Blue: signed margin (positive = R+, negative = D+).
+           */
+          value?: number | null;
+          /**
+           * CSS color. Overrides the automatic color scale for this region.
+           */
+          color?: string | null;
+          id?: string | null;
+        }[]
+      | null;
+    /**
+     * Flip the color scale polarity for this map (positive values get the negative palette and vice versa).
+     */
+    invertColors?: boolean | null;
+    id?: string | null;
+  }[];
+  /**
+   * Shown as a small attribution footer beneath the maps.
+   */
+  sources?:
+    | {
+        link?: LinkField;
+        id?: string | null;
+      }[]
+    | null;
+  id?: string | null;
+  blockName?: string | null;
+  blockType: 'interactiveMap';
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema

@@ -199,6 +199,7 @@ export interface Config {
     articles: Article;
     volumes: Volume;
     media: Media;
+    'map-assets': MapAsset;
     categories: Category;
     users: User;
     webhooks: Webhook;
@@ -219,6 +220,7 @@ export interface Config {
     articles: ArticlesSelect<false> | ArticlesSelect<true>;
     volumes: VolumesSelect<false> | VolumesSelect<true>;
     media: MediaSelect<false> | MediaSelect<true>;
+    'map-assets': MapAssetsSelect<false> | MapAssetsSelect<true>;
     categories: CategoriesSelect<false> | CategoriesSelect<true>;
     users: UsersSelect<false> | UsersSelect<true>;
     webhooks: WebhooksSelect<false> | WebhooksSelect<true>;
@@ -1075,6 +1077,36 @@ export interface Form {
   createdAt: string;
 }
 /**
+ * Raw vector geometry for the Interactive Map block — SVG today, GeoJSON/TopoJSON later. Files are stored without image processing so vector data round-trips intact.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "map-assets".
+ */
+export interface MapAsset {
+  id: number;
+  /**
+   * Human-readable name shown in the admin (e.g. 'Missouri Congressional Districts — 119th Congress').
+   */
+  label?: string | null;
+  /**
+   * Auto-populated with the uploaded SVG's text content so blocks can read it without a runtime file fetch.
+   */
+  svgContent?: string | null;
+  source?: LinkField;
+  createdBy?: (number | null) | User;
+  updatedAt: string;
+  createdAt: string;
+  url?: string | null;
+  thumbnailURL?: string | null;
+  filename?: string | null;
+  mimeType?: string | null;
+  filesize?: number | null;
+  width?: number | null;
+  height?: number | null;
+  focalX?: number | null;
+  focalY?: number | null;
+}
+/**
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "categories".
  */
@@ -1343,6 +1375,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'media';
         value: number | Media;
+      } | null)
+    | ({
+        relationTo: 'map-assets';
+        value: number | MapAsset;
       } | null)
     | ({
         relationTo: 'categories';
@@ -1824,6 +1860,27 @@ export interface MediaSelect<T extends boolean = true> {
               filename?: T;
             };
       };
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "map-assets_select".
+ */
+export interface MapAssetsSelect<T extends boolean = true> {
+  label?: T;
+  svgContent?: T;
+  source?: T | LinkFieldSelect<T>;
+  createdBy?: T;
+  updatedAt?: T;
+  createdAt?: T;
+  url?: T;
+  thumbnailURL?: T;
+  filename?: T;
+  mimeType?: T;
+  filesize?: T;
+  width?: T;
+  height?: T;
+  focalX?: T;
+  focalY?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -2361,6 +2418,71 @@ export interface CodeBlock {
   id?: string | null;
   blockName?: string | null;
   blockType: 'code';
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "InteractiveMapBlock".
+ */
+export interface InteractiveMapBlock {
+  /**
+   * Optional heading displayed above the map(s).
+   */
+  widgetTitle?: string | null;
+  layout: 'row' | 'stacked';
+  /**
+   * Diverging Red/Blue colors each region by its value (negative = D+, positive = R+). Per-region uses the color you set on each region row.
+   */
+  colorScale: 'divergingRedBlue' | 'perRegion';
+  /**
+   * Warps the color breakpoints along a curve between ±1 (neutral) and ±100 (max). Above 1 = breakpoints shift toward the low end, so small margins get strong colors. Below 1 = breakpoints shift toward the high end, requiring larger margins for strong colors. Default: 1 (linear).
+   */
+  colorBias?: number | null;
+  maps: {
+    title?: string | null;
+    /**
+     * Upload an SVG whose paths are already projected (e.g. Albers Equal Area). Each region path must carry an id attribute that matches a Region ID below.
+     */
+    svgAsset: number | MapAsset;
+    /**
+     * The data attribute on each path that holds the numeric value for the color scale (e.g. data-margin). When set, values are read directly from the SVG — no need to enter them manually in the Overrides table.
+     */
+    dataAttribute?: string | null;
+    overrides?:
+      | {
+          /**
+           * Must match the id attribute on the SVG path.
+           */
+          regionId: string;
+          label?: string | null;
+          /**
+           * For Diverging Red/Blue: signed margin (positive = R+, negative = D+).
+           */
+          value?: number | null;
+          /**
+           * CSS color. Overrides the automatic color scale for this region.
+           */
+          color?: string | null;
+          id?: string | null;
+        }[]
+      | null;
+    /**
+     * Flip the color scale polarity for this map (positive values get the negative palette and vice versa).
+     */
+    invertColors?: boolean | null;
+    id?: string | null;
+  }[];
+  /**
+   * Shown as a small attribution footer beneath the maps.
+   */
+  sources?:
+    | {
+        link?: LinkField;
+        id?: string | null;
+      }[]
+    | null;
+  id?: string | null;
+  blockName?: string | null;
+  blockType: 'interactiveMap';
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema

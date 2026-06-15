@@ -5,14 +5,15 @@ import { fileURLToPath } from "url"
 import { blue, gray, green, yellow } from "./ansi.mjs"
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
+const root = process.cwd()
 
 const fallbackFont = resolve(__dirname, "Inter-Bold.woff2")
 
 const src = resolve(
-  __dirname,
-  "../node_modules/@digitalgroundgame/fonts/assets/FKScreamer-2.0.3/woff2-static",
+  root,
+  "node_modules/@digitalgroundgame/fonts/assets/FKScreamer-2.0.3/woff2-static",
 )
-const dest = resolve(__dirname, "../public/fonts")
+const dest = resolve(root, "public/fonts")
 const fontPath = resolve(dest, "FKScreamer-Bold.woff2")
 
 console.warn(`${blue("●")} Installing fonts...`)

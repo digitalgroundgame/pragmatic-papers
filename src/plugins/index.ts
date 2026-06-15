@@ -87,7 +87,7 @@ const beforeSync: BeforeSync = ({ originalDoc, searchDoc }) => {
     null
 
   const content = originalDoc.content as { root?: LexicalTextNode } | undefined
-  const body = lexicalToPlainText(content?.root).replace(/\s+/g, " ").trim()
+  const body = lexicalToPlainText(content?.root).replace(/\s+/g, " ").trim().slice(0, 39000)
 
   return { ...searchDoc, title, excerpt, slug, authors, topics, image, body }
 }
@@ -199,6 +199,20 @@ export const plugins: Plugin[] = [
           }
 
           return `${supabaseUrl}/storage/v1/object/public/${bucket}/${filename}`
+        },
+      },
+      "map-assets": {
+        disablePayloadAccessControl: true,
+        prefix: "map-assets",
+        generateFileURL: ({ filename }) => {
+          const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+          const bucket = process.env.S3_BUCKET
+
+          if (!supabaseUrl || !bucket) {
+            return `/map-assets/${filename}`
+          }
+
+          return `${supabaseUrl}/storage/v1/object/public/${bucket}/map-assets/${filename}`
         },
       },
     },

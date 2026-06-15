@@ -27,12 +27,11 @@ FROM base AS builder
 # Install git for development checks/metadata during build if needed
 RUN apk add --no-cache git
 
-# GitHub Packages auth (set GH_FONT_READ as build arg in Coolify for staging/prod)
-ARG GH_FONT_READ
-ENV GH_FONT_READ=${GH_FONT_READ}
+# GitHub Packages auth — marked as BuildKit secret in Coolify (not baked into layers)
+# Coolify auto-injects --mount=type=secret into every RUN instruction: https://coolify.io/docs/knowledge-base/environment-variables#docker-build-secrets
 
 # 1. First, only copy files that determine the dependency tree (lockfile)
-COPY pnpm-lock.yaml .npmrc ./
+COPY pnpm-lock.yaml .npmrc pnpm-workspace.yaml ./
 
 # 2. Fetch dependencies into the pnpm store using a cache mount.
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
@@ -59,10 +58,10 @@ COPY dockerfiles/scripts/copy-database.sh /usr/local/bin/copy-database.sh
 RUN chmod +x /usr/local/bin/modify-database-uri.sh /usr/local/bin/copy-database.sh
 
 # --- BUILD CONFIGURATION ---
+# Secrets (DATABASE_URI, PAYLOAD_SECRET, S3 creds) are injected via Coolify BuildKit secrets — not baked into layers
+# Coolify auto-injects --mount=type=secret into every RUN instruction: https://coolify.io/docs/knowledge-base/environment-variables#docker-build-secrets
 ARG NODE_ENV=production
 ARG BUILD_ENV=production
-ARG DATABASE_URI
-ARG PAYLOAD_SECRET
 ARG NEXT_PUBLIC_SERVER_URL
 ARG NEXT_TELEMETRY_DISABLED=1
 
@@ -70,37 +69,35 @@ ARG NEXT_TELEMETRY_DISABLED=1
 ARG USE_LOCAL_STORAGE=false
 ARG S3_REGION
 ARG S3_BUCKET
-ARG S3_ACCESS_KEY_ID
-ARG S3_SECRET_ACCESS_KEY
 ARG S3_ENDPOINT
 
 # --- PUBLIC / CLIENT-SIDE ---
 ARG NEXT_PUBLIC_GOOGLE_ANALYTICS_ID
 ARG NEXT_PUBLIC_SUPABASE_URL
+ARG NEXT_PUBLIC_SENTRY_DSN
+ARG NEXT_PUBLIC_SENTRY_ENVIRONMENT
 
 # --- COOLIFY & DEPLOYMENT ---
 ARG COOLIFY_FQDN=
 ARG COPY_SOURCE_DATABASE=false
-ARG SOURCE_DATABASE_URI
 ARG FORCE_DATABASE_COPY=false
 
 # --- ENVIRONMENT MAPPING ---
-# We map ARGs to ENVs so they are available during the 'pnpm build' phase
+# Non-sensitive config only. Secrets (DATABASE_URI, PAYLOAD_SECRET, S3 creds) are
+# injected per-RUN-step via Coolify BuildKit secrets — never baked into layers.
 ENV NODE_ENV=${NODE_ENV} \
     BUILD_ENV=${BUILD_ENV} \
     NEXT_TELEMETRY_DISABLED=${NEXT_TELEMETRY_DISABLED} \
     DATABASE_ADAPTER=postgres \
-    DATABASE_URI=${DATABASE_URI} \
-    PAYLOAD_SECRET=${PAYLOAD_SECRET} \
     USE_LOCAL_STORAGE=${USE_LOCAL_STORAGE} \
     S3_REGION=${S3_REGION} \
     S3_BUCKET=${S3_BUCKET} \
-    S3_ACCESS_KEY_ID=${S3_ACCESS_KEY_ID} \
-    S3_SECRET_ACCESS_KEY=${S3_SECRET_ACCESS_KEY} \
     S3_ENDPOINT=${S3_ENDPOINT} \
     NEXT_PUBLIC_GOOGLE_ANALYTICS_ID=${NEXT_PUBLIC_GOOGLE_ANALYTICS_ID} \
     NEXT_PUBLIC_SERVER_URL=${NEXT_PUBLIC_SERVER_URL} \
-    NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}
+    NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL} \
+    NEXT_PUBLIC_SENTRY_DSN=${NEXT_PUBLIC_SENTRY_DSN} \
+    NEXT_PUBLIC_SENTRY_ENVIRONMENT=${NEXT_PUBLIC_SENTRY_ENVIRONMENT}
 
 # Install PostgreSQL client for database operations during build
 RUN apk add --no-cache postgresql-client
@@ -143,6 +140,9 @@ RUN apk add --no-cache dumb-init libc6-compat \
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
+
+# PERSISTENCE FIX: Carry the isolated DATABASE_URI from builder to runner
+COPY --from=builder --chown=nextjs:nodejs /tmp/database_uri.env /app/database_uri.env
 
 # Prepare media directory and set permissions
 RUN mkdir -p public/media \

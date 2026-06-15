@@ -2,17 +2,21 @@ import { PostgreSqlContainer } from "@testcontainers/postgresql"
 import { execSync } from "node:child_process"
 import { blue, green, red } from "./ansi.mjs"
 
-console.warn(`${blue("●")} Starting Postgres container for migration check...`)
-const container = await new PostgreSqlContainer("postgres:15-alpine")
-  .withDatabase("pragmatic-papers-test")
-  .start()
-
-const uri = container.getConnectionUri()
-process.env.DATABASE_URI = uri
 process.env.PAYLOAD_SECRET ??= "test-secret"
 process.env.USE_LOCAL_STORAGE ??= "true"
 
-console.warn(`${green("✔")} Test database started at ${uri}`)
+let container = null
+
+if (process.env.DATABASE_URI) {
+  console.warn(`${green("✔")} Using existing DATABASE_URI — skipping container startup.`)
+} else {
+  console.warn(`${blue("●")} Starting Postgres container for migration check...`)
+  container = await new PostgreSqlContainer("postgres:15-alpine")
+    .withDatabase("pragmatic-papers-test")
+    .start()
+  process.env.DATABASE_URI = container.getConnectionUri()
+  console.warn(`${green("✔")} Test database started at ${process.env.DATABASE_URI}`)
+}
 
 try {
   console.warn(`${blue("●")} Running existing migrations...`)
@@ -33,7 +37,9 @@ try {
     console.warn(`${green("✔")} No pending migrations detected.`)
     process.exit(0)
   } else {
-    console.error(`${red("✖")} Pending migrations detected! Please run 'pnpm payload migrate:create' locally and commit the result.`)
+    console.error(
+      `${red("✖")} Pending migrations detected! Please run 'pnpm payload migrate:create' locally and commit the result.`,
+    )
     console.warn(output)
     process.exit(1)
   }
@@ -43,6 +49,8 @@ try {
   if (error.stderr) console.error(error.stderr)
   process.exit(1)
 } finally {
-  console.warn(`${blue("●")} Stopping Postgres container...`)
-  await container.stop()
+  if (container) {
+    console.warn(`${blue("●")} Stopping Postgres container...`)
+    await container.stop()
+  }
 }

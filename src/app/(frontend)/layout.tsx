@@ -55,7 +55,7 @@ export default async function RootLayout({
         >
           <AdminBar />
           <Header />
-          <main role="main" className="my-6 flex-1">
+          <main role="main" className="flex-1">
             <Breadcrumbs />
             {children}
           </main>

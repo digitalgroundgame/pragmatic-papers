@@ -27,6 +27,10 @@ This file provides guidance to tools like Claude Code (claude.ai/code) when work
 - `pnpm test:unit` — run unit tests
 - `pnpm test:integration` — run integration tests (uses Testcontainers)
 - `pnpm test:e2e` — run Playwright E2E tests (uses Testcontainers)
+- `pnpm test:unit:coverage` — run unit tests with V8 coverage report (what CI uses; outputs `coverage/coverage-summary.json` and `coverage/coverage-final.json`)
+- `pnpm test:coverage` — run all tests with V8 coverage report (full picture for local inspection)
+- `pnpm test:unit -- --update-snapshots` — regenerate snapshot baselines after intentional UI changes
+- `pnpm coverage:report` — post the combined coverage PR comment locally (requires `GITHUB_TOKEN`, `GITHUB_REPOSITORY`, `GITHUB_EVENT_PATH`)
 
 ### Build & Payload
 
@@ -110,7 +114,45 @@ This file provides guidance to tools like Claude Code (claude.ai/code) when work
 - **Pre-commit hooks**: lint-staged runs ESLint + Prettier on staged files only (fast, ~1-2 seconds)
 - **Colocation**: Prefer colocating logic near where it's used. `src/utilities/` is only for genuinely reusable helpers shared across multiple features (e.g. `generateMeta`, `getURL`, `toRoman`, `cn`). Don't put single-use logic there.
 
+### Test coverage
+
+**Test types by code kind:**
+
+| Code type                      | Test type                                                                                  |
+| ------------------------------ | ------------------------------------------------------------------------------------------ |
+| Pure utility functions         | Unit test in `src/**/__tests__/`                                                           |
+| UI/presentational components   | Snapshot test (see `src/components/ui/__tests__/button.snapshot.test.tsx` for the pattern) |
+| Client components with state   | RTL interaction test (`userEvent`, `fireEvent`)                                            |
+| Server components (async, CMS) | Integration test with mocked Payload queries                                               |
+| API routes / Payload hooks     | Integration test (Testcontainers, see `tests/integration/`)                                |
+
+File-level exclusions are configured in `vitest.config.mts` `coverage.exclude` for auto-generated files (`src/migrations/**`, `src/payload-types.ts`, `src/app/(payload)/**`, `src/payload.config.ts`).
+
+Coverage reporting is informational only — chore/docs PRs don't need special handling.
+
 ### Testing your changes
 
 - run linting and type-checks
 - run unit and integration tests as needed, _skip running e2e_.
+
+## Wiki
+
+The repo wiki lives at `https://github.com/digitalgroundgame/pragmatic-papers/wiki` and is a separate git repository. To create or edit wiki pages:
+
+```bash
+git clone https://github.com/digitalgroundgame/pragmatic-papers.wiki.git /tmp/wiki
+# create or edit .md files in /tmp/wiki
+cd /tmp/wiki
+git add <file>
+git commit -m "docs: ..."
+git push
+```
+
+> [!NOTE]
+> Commit signing does not work in the wiki repo from the **remote/cloud execution environment** — the signing server is scoped to the main repo. If running in that context and a push fails due to signing, ask the user to re-run the session locally (e.g. in Cursor or another terminal where their git signing is configured), then retry the push.
+
+After adding a new page, update `Home.md` to add it to the Table of Contents under the appropriate section, and match the back-link style used by other pages:
+
+```md
+[← Table of Contents](https://github.com/digitalgroundgame/pragmatic-papers/wiki#table-of-contents)
+```

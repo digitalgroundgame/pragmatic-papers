@@ -1,8 +1,9 @@
 name: CI
 
 on:
-  pull_request:
+  push:
     branches: [main, dev]
+  pull_request:
 
 jobs:
   static:
@@ -13,6 +14,21 @@ jobs:
       NEXT_PUBLIC_SERVER_URL: http://localhost:8000
       PAYLOAD_SECRET: ci-payload-secret
       USE_LOCAL_STORAGE: "true"
+
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: pragmatic-papers
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
 
     steps:
       - uses: actions/checkout@v6
@@ -41,6 +57,8 @@ jobs:
   unit-tests:
     name: Unit tests
     runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
 
     steps:
       - uses: actions/checkout@v6
@@ -52,8 +70,41 @@ jobs:
           gh-font-read-token: ${{ secrets.GH_FONT_READ }}
           payload-secret: ci-unit-test-secret
 
-      - name: Run unit tests
-        run: pnpm test:unit -- --run
+      - name: Run unit and script tests
+        run: pnpm test:unit:coverage
+
+      - name: Upload base coverage artifact
+        if: github.ref == 'refs/heads/dev'
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-summary-dev
+          path: coverage/coverage-summary.json
+          retention-days: 90
+
+      - name: Download base coverage from dev
+        if: always() && github.event_name == 'pull_request'
+        continue-on-error: true
+        id: base-coverage
+        run: |
+          RUN_ID=$(gh api \
+            "repos/${{ github.repository }}/actions/workflows/ci.yml/runs?branch=dev&status=success&per_page=1" \
+            --jq '.workflow_runs[0].id // empty')
+          if [ -n "$RUN_ID" ]; then
+            gh run download "$RUN_ID" \
+              --name coverage-summary-dev \
+              --dir /tmp/base-coverage \
+              --repo "${{ github.repository }}"
+            echo "path=/tmp/base-coverage/coverage-summary.json" >> "$GITHUB_OUTPUT"
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Post coverage report
+        if: always()
+        run: pnpm coverage:report
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BASE_COVERAGE_SUMMARY_PATH: ${{ steps.base-coverage.outputs.path }}
 
   integration-tests:
     name: Integration tests
@@ -62,6 +113,22 @@ jobs:
     env:
       PAYLOAD_SECRET: ci-integration-secret
       USE_LOCAL_STORAGE: "true"
+      DATABASE_URI: postgres://postgres:postgres@localhost:5432/pp_template
+
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: pp_template
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
 
     steps:
       - uses: actions/checkout@v6

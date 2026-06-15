@@ -1,5 +1,0 @@
-#!/bin/sh
-# $3 is 1 for branch checkout, 0 for file checkout — only wipe cache on branch switch
-if [ "$3" = "1" ]; then
-  rm -rf .next
-fi

@@ -16,7 +16,7 @@ function runScript(cwd: string, env: Record<string, string> = {}) {
   })
 }
 
-describe("install-fonts.mjs", () => {
+describe("install-fonts.ts", () => {
   let tmpRoot: string
   let FONTS_DIR: string
   let FONT_FILE: string

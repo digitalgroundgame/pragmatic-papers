@@ -24,6 +24,8 @@ import { createOrUpdatePage } from "../pages"
  *  16. CollectionGrid    – bernoulli-left layout
  *  17. Content block  – "Bernoulli Right Style Article Grid"
  *  18. CollectionGrid    – bernoulli-right layout
+ *  19. Content block  – "Gauss 10 Style Article Grid"
+ *  20. CollectionGrid    – gauss-10 layout
  *
  * @param volume1ArticleIds - Volume 1 article IDs (6 articles)
  * @param volume2ArticleIds - Volume 2 article IDs (at least 2 needed)
@@ -400,6 +402,73 @@ export async function createCollectionGridHomePage(
               relationTo: "articles",
               value: volume1ArticleIds[1]!,
             },
+            kicker: null,
+            overrideTitle: null,
+          },
+        ],
+      },
+      {
+        blockType: "collectionGrid",
+        blockName: "Gauss 10",
+        layout: "gauss-10",
+        slots: [
+          // 0: Featured Center
+          {
+            collection: { relationTo: "articles", value: volume1ArticleIds[0]! },
+            kicker: "Featured",
+            overrideTitle: null,
+          },
+          // 1: A — Left Column, Top
+          {
+            collection: { relationTo: "articles", value: volume1ArticleIds[1]! },
+            kicker: null,
+            overrideTitle: null,
+          },
+          // 2: B — Left Column, Middle (Compact)
+          {
+            collection: { relationTo: "articles", value: volume1ArticleIds[2]! },
+            kicker: null,
+            overrideTitle: null,
+          },
+          // 3: C — Left Column, Bottom (Compact)
+          {
+            collection: { relationTo: "articles", value: volume1ArticleIds[3]! },
+            kicker: null,
+            overrideTitle: null,
+          },
+          // 4: D — Right Column, Top
+          {
+            collection: { relationTo: "articles", value: volume1ArticleIds[4]! },
+            kicker: null,
+            overrideTitle: null,
+          },
+          // 5: E — Right Column, Middle (Compact)
+          {
+            collection: { relationTo: "articles", value: volume1ArticleIds[5]! },
+            kicker: null,
+            overrideTitle: null,
+          },
+          // 6: F — Right Column, Bottom (Compact)
+          {
+            collection: { relationTo: "articles", value: volume2ArticleIds[0]! },
+            kicker: null,
+            overrideTitle: null,
+          },
+          // 7: G — Bottom Left (always present)
+          {
+            collection: { relationTo: "articles", value: volume2ArticleIds[1]! },
+            kicker: null,
+            overrideTitle: null,
+          },
+          // 8: H — Bottom Center (optional)
+          {
+            collection: { relationTo: "articles", value: featureArticleIds[0]! },
+            kicker: null,
+            overrideTitle: null,
+          },
+          // 9: I — Bottom Right (optional)
+          {
+            collection: { relationTo: "articles", value: volume1ArticleIds[0]! },
             kicker: null,
             overrideTitle: null,
           },

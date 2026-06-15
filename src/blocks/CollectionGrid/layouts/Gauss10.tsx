@@ -9,38 +9,36 @@ export const Gauss10: LayoutDefinition = {
   minSlots: 8,
   maxSlots: 10,
   slotDescriptions: [
-    "Featured Left (Image Right)",
-    "Bottom Left",
-    "Bottom Center",
-    "Bottom Right",
+    "Featured Center (Image Above)",
+    "Left Column, Top",
+    "Left Column, Middle (Compact)",
+    "Left Column, Bottom (Compact)",
     "Right Column, Top",
     "Right Column, Middle (Compact)",
     "Right Column, Bottom (Compact)",
-    "Left Column, Top (Compact)",
-    "Left Column, Middle (Compact)",
-    "Left Column, Bottom (Compact)",
+    "Bottom Left (Image Left)",
+    "Bottom Center (Image Left, Optional)",
+    "Bottom Right (Image Left, Optional)",
   ],
 }
 
 /**
  * Gauss 10 Layout
  *
- * Extends Fibonacci 7 with an optional left column (slots 8–10).
- * Slots 9 and 10 are optional; slot 8 is always required (minSlotCount: 8).
+ * 7-column grid: left column | featured (5 cols) | right column.
+ * Bottom row (G, H, I) sits under the featured column; H and I are optional.
  *
  * Slots (by index):
- *   0: Featured — top, spans 3 cols (image right)
- *   1: A — bottom row, left
- *   2: B — bottom row, center
- *   3: C — bottom row, right
- *   4: D — right column, top (image above)
+ *   0: Featured — center, spans 3 cols (image above)
+ *   1: A — left column, top
+ *   2: B — left column, middle (compact)
+ *   3: C — left column, bottom (compact)
+ *   4: D — right column, top
  *   5: E — right column, middle (compact)
  *   6: F — right column, bottom (compact)
- *   7: G — left column, top (compact, always present)
- *   8: H — left column, middle (compact, optional)
- *   9: I — left column, bottom (compact, optional)
- *
- * Desktop (lg:grid-cols-5)
+ *   7: G — bottom left (image left/above, required)
+ *   8: H — bottom center (image above, optional)
+ *   9: I — bottom right (image above, optional)
  */
 export const Gauss10Layout: React.FC<LayoutProps> = ({
   className,
@@ -53,21 +51,63 @@ export const Gauss10Layout: React.FC<LayoutProps> = ({
 
   return (
     <section
-      className={cn("grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-5", className)}
+      className={cn("grid grid-cols-1 gap-6 text-ellipsis md:grid-cols-5", className)}
       {...props}
     >
-      {/* Featured — spans 3 cols, image to the right */}
-      <CollectionTile
-        className="md:col-span-2 lg:col-span-3"
-        tile={featured!}
-        imagePosition="right"
-        priority={priority}
-        sizes="(max-width: 768px) 100vw, 460px"
-        variant="medium"
-      />
+      {/* Slots A, B, C — left column */}
+      <div className="flex flex-col gap-6">
+        <CollectionTile
+          tile={a!}
+          loading={loading}
+          sizes="(max-width: 768px) 100vw, 300px"
+          variant="medium"
+        />
+        <CollectionTile tile={b!} imagePosition="none" />
+        <CollectionTile tile={c!} imagePosition="none" />
+      </div>
 
-      {/* Right column: d (image above), e + f compact — spans 2 rows */}
-      <div className="flex flex-col gap-6 lg:row-span-2">
+      <div className="flex flex-col gap-6 md:col-span-3">
+        {/* Featured — spans 5 cols, image above */}
+        <CollectionTile
+          className="flex-3"
+          tile={featured!}
+          imagePosition="above"
+          priority={priority}
+          sizes="(max-width: 768px) 100vw, 460px"
+          variant="medium"
+        />
+        {/* Slots G, H, I — bottom row; G always present, H and I optional */}
+        <div className="flex flex-1 flex-row gap-6">
+          <CollectionTile
+            className="flex-1"
+            tile={g!}
+            sizes="(max-width: 768px) 33vw, 100px"
+            variant="medium"
+            imagePosition={!h && !i ? "left" : "above"}
+          />
+          {h && (
+            <CollectionTile
+              className="flex-1"
+              tile={h}
+              sizes="(max-width: 768px) 33vw, 100px"
+              variant="medium"
+              imagePosition="above"
+            />
+          )}
+          {i && (
+            <CollectionTile
+              className="flex-1"
+              tile={i}
+              sizes="(max-width: 768px) 33vw, 100px"
+              variant="medium"
+              imagePosition="above"
+            />
+          )}
+        </div>
+      </div>
+
+      {/* Slots D, E, F — right column */}
+      <div className="flex flex-col gap-6">
         <CollectionTile
           tile={d!}
           loading={loading}
@@ -76,21 +116,6 @@ export const Gauss10Layout: React.FC<LayoutProps> = ({
         />
         <CollectionTile tile={e!} imagePosition="none" />
         <CollectionTile tile={f!} imagePosition="none" />
-      </div>
-
-      {/* Bottom row: a, b, c */}
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:col-span-3 lg:grid-cols-3">
-        <CollectionTile tile={a!} sizes="(max-width: 768px) 100vw, 300px" variant="medium" />
-        <CollectionTile tile={b!} sizes="(max-width: 768px) 100vw, 300px" variant="medium" />
-        <CollectionTile tile={c!} sizes="(max-width: 768px) 100vw, 300px" variant="medium" />
-      </div>
-
-      {/* Left column — g always present (min 8 slots), h and i optional.
-          Last in DOM for mobile stacking order; lg:order-first repositions it visually. */}
-      <div className="flex flex-col gap-4 md:col-span-2 lg:order-first lg:row-span-2">
-        <CollectionTile tile={g!} imagePosition="none" />
-        {h && <CollectionTile tile={h} imagePosition="none" />}
-        {i && <CollectionTile tile={i} imagePosition="none" />}
       </div>
     </section>
   )

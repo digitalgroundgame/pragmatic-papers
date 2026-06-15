@@ -2,8 +2,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 const mockDestroy = vi.fn()
 const mockCreate = vi.fn()
+const mockUpdateGlobal = vi.fn()
 const mockPayload = {
   create: mockCreate,
+  updateGlobal: mockUpdateGlobal,
   db: { destroy: mockDestroy },
 }
 
@@ -129,6 +131,17 @@ describe("seed-e2e main()", () => {
     await expect(main()).rejects.toThrow("db error")
 
     expect(mockDestroy).toHaveBeenCalledOnce()
+  })
+
+  it("seeds the footer global with disableRevalidate context", async () => {
+    await main()
+
+    expect(mockUpdateGlobal).toHaveBeenCalledWith(
+      expect.objectContaining({
+        slug: "footer",
+        context: { disableRevalidate: true },
+      }),
+    )
   })
 
   it("destroys the db connection after a successful run", async () => {

@@ -37,6 +37,7 @@ import * as migration_20260512_232738_add_recommendation_algorithm from "./20260
 import * as migration_20260515_044418_add_search_plugin from "./20260515_044418_add_search_plugin"
 import * as migration_20260606_003324_add_interactive_map from "./20260606_003324_add_interactive_map"
 import * as migration_20260615_100916_add_newsletter from "./20260615_100916_add_newsletter"
+import * as migration_20260615_220620_add_table_of_contents from "./20260615_220620_add_table_of_contents"
 
 export const migrations = [
   {
@@ -233,5 +234,10 @@ export const migrations = [
     up: migration_20260615_100916_add_newsletter.up,
     down: migration_20260615_100916_add_newsletter.down,
     name: "20260615_100916_add_newsletter",
+  },
+  {
+    up: migration_20260615_220620_add_table_of_contents.up,
+    down: migration_20260615_220620_add_table_of_contents.down,
+    name: "20260615_220620_add_table_of_contents",
   },
 ]

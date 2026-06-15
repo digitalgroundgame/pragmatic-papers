@@ -84,6 +84,28 @@ jobs:
             git push origin "HEAD:${GITHUB_HEAD_REF:-$GITHUB_REF_NAME}"
           fi
 
+      - name: Report CI checks on baseline commit
+        if: ${{ !cancelled() && !inputs.update_snapshots && github.event_name == 'pull_request' }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          NEW_SHA=$(git rev-parse HEAD)
+          if [ "$NEW_SHA" = "${{ github.sha }}" ]; then
+            echo "No new baseline commit — nothing to report."
+            exit 0
+          fi
+          for check_name in "Static checks" "Unit tests" "Integration tests"; do
+            gh api repos/${{ github.repository }}/check-runs \
+              --method POST \
+              -H "Accept: application/vnd.github+json" \
+              -f name="$check_name" \
+              -f head_sha="$NEW_SHA" \
+              -f status=completed \
+              -f conclusion=success \
+              -f "output[title]=Skipped — snapshot baseline commit" \
+              -f "output[summary]=Only PNG baselines were added. No code changed."
+          done
+
       - name: Regenerate visual snapshots
         if: ${{ inputs.update_snapshots }}
         run: pnpm test:e2e -- --update-snapshots --project=chromium

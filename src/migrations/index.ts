@@ -36,6 +36,8 @@ import * as migration_20260510_190018_virtualize_populatedAuthors from "./202605
 import * as migration_20260512_232738_add_recommendation_algorithm from "./20260512_232738_add_recommendation_algorithm"
 import * as migration_20260515_044418_add_search_plugin from "./20260515_044418_add_search_plugin"
 import * as migration_20260530_014909_newsletter_and_footer from "./20260530_014909_newsletter_and_footer"
+import * as migration_20260606_003324_add_interactive_map from "./20260606_003324_add_interactive_map"
+import * as migration_20260615_100916_add_newsletter from "./20260615_100916_add_newsletter"
 
 export const migrations = [
   {
@@ -227,5 +229,15 @@ export const migrations = [
     up: migration_20260530_014909_newsletter_and_footer.up,
     down: migration_20260530_014909_newsletter_and_footer.down,
     name: "20260530_014909_newsletter_and_footer",
+  },
+  {
+    up: migration_20260606_003324_add_interactive_map.up,
+    down: migration_20260606_003324_add_interactive_map.down,
+    name: "20260606_003324_add_interactive_map",
+  },
+  {
+    up: migration_20260615_100916_add_newsletter.up,
+    down: migration_20260615_100916_add_newsletter.down,
+    name: "20260615_100916_add_newsletter",
   },
 ]

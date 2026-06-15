@@ -1,5 +1,6 @@
 import { Articles } from "@/collections/Articles"
 import { Categories } from "@/collections/Categories"
+import { MapAssets } from "@/collections/MapAssets"
 import { Media } from "@/collections/Media"
 import { Pages } from "@/collections/Pages"
 import { Topics } from "@/collections/Topics"
@@ -91,7 +92,7 @@ export default buildConfig({
     push: process.env.NODE_ENV === "development",
     afterSchemaInit: [searchVectorAfterSchemaInit],
   }),
-  collections: [Pages, Articles, Volumes, Media, Categories, Users, Webhooks, Topics],
+  collections: [Pages, Articles, Volumes, Media, MapAssets, Categories, Users, Webhooks, Topics],
   cors: [getServerSideURL()].filter(Boolean),
   globals: [Header, Footer, ArticleRecommendations],
   plugins: [...plugins],

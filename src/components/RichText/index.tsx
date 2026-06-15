@@ -1,11 +1,12 @@
 import { BannerBlock } from "@/blocks/Banner/Component"
 import { CallToActionBlock } from "@/blocks/CallToAction/Component"
-import { NewsletterSignupBlock } from "@/blocks/NewsletterSignup/Component"
 import { CodeBlock } from "@/blocks/Code/Component"
 import { FootnoteBlock } from "@/blocks/Footnote/Component"
+import { InteractiveMapBlock } from "@/blocks/InteractiveMap/InteractiveMapBlock"
 import { MathBlock, type MathBlockProps } from "@/blocks/Math/Component"
 import { LightboxMediaBlock } from "@/blocks/MediaBlock/LightboxMediaBlock"
 import { MediaCollageBlock } from "@/blocks/MediaCollageBlock/component"
+import { NewsletterSignupBlock } from "@/blocks/NewsletterSignup/Component"
 import {
   BlueskyEmbedBlock,
   RedditEmbedBlock,
@@ -22,6 +23,7 @@ import type {
   CodeBlock as CodeBlockProps,
   CallToActionBlock as CTABlockProps,
   FootnoteBlock as FootnoteBlockProps,
+  InteractiveMapBlock as InteractiveMapBlockProps,
   MediaBlock as MediaBlockProps,
   MediaCollageBlock as MediaCollageBlockProps,
   NewsletterSignupBlock as NewsletterSignupBlockProps,
@@ -51,6 +53,7 @@ type NodeTypes =
       | MediaCollageBlockProps
       | BannerBlockProps
       | CodeBlockProps
+      | InteractiveMapBlockProps
       | MathBlockProps
       | NewsletterSignupBlockProps
       | SquiggleRuleBlockProps
@@ -74,18 +77,19 @@ function createJsxConverters(parentDoc?: ParentDocContext): JSXConvertersFunctio
     ...LinkJSXConverter({ internalDocToHref }),
     blocks: {
       banner: ({ node }) => <BannerBlock className="col-start-2 mb-4" {...node.fields} />,
+      code: ({ node }) => <CodeBlock className="col-start-2" {...node.fields} />,
+      cta: ({ node }) => <CallToActionBlock {...node.fields} />,
+      displayMathBlock: ({ node }: { node: SerializedBlockNode<MathBlockProps> }) => (
+        <MathBlock {...node.fields} />
+      ),
+      interactiveMap: ({ node }) => <InteractiveMapBlock {...node.fields} />,
       mediaBlock: ({ node }) => (
         <LightboxMediaBlock containerClassName="-my-8" breakout {...node.fields} />
       ),
       mediaCollage: ({ node }) => <MediaCollageBlock {...node.fields} />,
-      code: ({ node }) => <CodeBlock className="col-start-2" {...node.fields} />,
-      cta: ({ node }) => <CallToActionBlock {...node.fields} />,
       newsletterSignup: ({ node }) => <NewsletterSignupBlock {...node.fields} />,
-      displayMathBlock: ({ node }: { node: SerializedBlockNode<MathBlockProps> }) => (
-        <MathBlock {...node.fields} />
-      ),
-      squiggleRule: ({ node }) => <SquiggleRuleBlock className="col-start-2" {...node.fields} />,
       socialEmbed: ({ node }) => <SocialEmbedBlock {...node.fields} parentDoc={parentDoc} />,
+      squiggleRule: ({ node }) => <SquiggleRuleBlock className="col-start-2" {...node.fields} />,
       timeline: ({ node }: { node: SerializedBlockNode<TimelineBlockProps> }) => (
         <TimelineBlock className="col-start-2 my-8" {...node.fields} />
       ),

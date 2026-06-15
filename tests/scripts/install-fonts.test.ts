@@ -7,6 +7,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest"
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const SCRIPT = resolve(__dirname, "../../scripts/install-fonts.ts")
+const INTER_BOLD = readFileSync(resolve(__dirname, "../../scripts/Inter-Bold.woff2"))
 
 function runScript(cwd: string, env: Record<string, string> = {}) {
   return spawnSync("tsx", [SCRIPT], {
@@ -40,6 +41,19 @@ describe("install-fonts.ts", () => {
     rmSync(tmpRoot, { recursive: true, force: true })
   })
 
+  describe("when public/fonts does not exist", () => {
+    beforeEach(() => {
+      rmSync(FONTS_DIR, { recursive: true, force: true })
+    })
+
+    it("creates the directory and installs the fallback font", () => {
+      const result = runScript(tmpRoot)
+      expect(result.status).toBe(0)
+      expect(existsSync(FONTS_DIR)).toBe(true)
+      expect(existsSync(FONT_FILE)).toBe(true)
+    })
+  })
+
   describe("when the private fonts package is installed", () => {
     beforeEach(() => {
       mkdirSync(PRIVATE_FONTS_SRC, { recursive: true })
@@ -53,6 +67,20 @@ describe("install-fonts.ts", () => {
     })
 
     it("copies the font file contents", () => {
+      runScript(tmpRoot)
+      expect(readFileSync(FONT_FILE, "utf8")).toBe("fake-font-data")
+    })
+
+    it("copies all files from the package directory", () => {
+      writeFileSync(resolve(PRIVATE_FONTS_SRC, "FKScreamer-Light.woff2"), "light-font-data")
+      runScript(tmpRoot)
+      expect(readFileSync(resolve(FONTS_DIR, "FKScreamer-Light.woff2"), "utf8")).toBe(
+        "light-font-data",
+      )
+    })
+
+    it("overwrites an existing font rather than skipping it", () => {
+      writeFileSync(FONT_FILE, Buffer.alloc(2000, 0x41))
       runScript(tmpRoot)
       expect(readFileSync(FONT_FILE, "utf8")).toBe("fake-font-data")
     })
@@ -78,10 +106,9 @@ describe("install-fonts.ts", () => {
       expect(result.stderr).toContain("Copied Inter Bold as fallback font")
     })
 
-    it("writes a non-empty fallback font file", () => {
+    it("writes the exact Inter Bold fallback file", () => {
       runScript(tmpRoot, { GH_FONT_READ: "" })
-      expect(existsSync(FONT_FILE)).toBe(true)
-      expect(readFileSync(FONT_FILE).byteLength).toBeGreaterThan(0)
+      expect(readFileSync(FONT_FILE)).toEqual(INTER_BOLD)
     })
 
     it("logs that the package is not installed", () => {
@@ -115,7 +142,7 @@ describe("install-fonts.ts", () => {
 
     it("overwrites the placeholder with the fallback font", () => {
       runScript(tmpRoot)
-      expect(readFileSync(FONT_FILE).byteLength).toBeGreaterThan(0)
+      expect(readFileSync(FONT_FILE)).toEqual(INTER_BOLD)
     })
 
     it("does not report fonts as already installed", () => {

@@ -11,8 +11,8 @@ test("newsletter signup renders in footer", async ({ page }, testInfo) => {
 
   test.skip(testInfo.project.name !== "chromium", "visual baseline captured on chromium only")
 
-  const footer = page.locator("footer")
-  const shot = new Screenshot(await footer.boundingBox()).padding(0)
+  const footer = await page.locator("footer").boundingBox()
+  const shot = new Screenshot(footer).padding(16)
 
   await expect(page).toHaveScreenshot("newsletter-footer.png", { clip: shot.clip })
 })

@@ -8,6 +8,7 @@ on:
 jobs:
   static:
     name: Static checks
+    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     env:
       DATABASE_URI: postgres://postgres:postgres@localhost:5432/pragmatic-papers
@@ -56,6 +57,7 @@ jobs:
 
   unit-tests:
     name: Unit tests
+    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     permissions:
       pull-requests: write
@@ -108,6 +110,7 @@ jobs:
 
   integration-tests:
     name: Integration tests
+    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
 
     env:

@@ -6,10 +6,10 @@ import { fileURLToPath } from "node:url"
 import { afterEach, beforeEach, describe, expect, it } from "vitest"
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
-const SCRIPT = resolve(__dirname, "../../scripts/install-fonts.mjs")
+const SCRIPT = resolve(__dirname, "../../scripts/install-fonts.ts")
 
 function runScript(cwd: string, env: Record<string, string> = {}) {
-  return spawnSync("node", [SCRIPT], {
+  return spawnSync("tsx", [SCRIPT], {
     cwd,
     encoding: "utf8",
     env: { ...process.env, GH_FONT_READ: "", ...env },

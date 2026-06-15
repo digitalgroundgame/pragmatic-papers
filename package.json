@@ -5,7 +5,7 @@
   "license": "MIT",
   "type": "module",
   "scripts": {
-    "postinstall": "node scripts/install-fonts.mjs",
+    "postinstall": "tsx scripts/install-fonts.ts",
     "build": "cross-env NODE_OPTIONS=--no-deprecation next build",
     "postbuild": "next-sitemap --config next-sitemap.config.cjs",
     "dev": "pnpm dev:db && pnpm dev:next && pnpm dev:db-down",

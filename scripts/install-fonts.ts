@@ -1,7 +1,7 @@
-import { cpSync, existsSync, mkdirSync, readFileSync } from "fs"
-import { dirname, resolve } from "path"
-import process from "process"
-import { fileURLToPath } from "url"
+import { cpSync, existsSync, mkdirSync, readFileSync } from "node:fs"
+import { dirname, resolve } from "node:path"
+import process from "node:process"
+import { fileURLToPath } from "node:url"
 import { blue, gray, green, yellow } from "./ansi.mjs"
 
 const __dirname = dirname(fileURLToPath(import.meta.url))

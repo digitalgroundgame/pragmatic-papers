@@ -3,6 +3,7 @@ import React from "react"
 import { HoverPrefetchLink } from "@/components/Link/HoverPrefetchLink"
 import { Media } from "@/components/Media"
 import { NarrationPlayer } from "@/components/NarrationPlayer"
+import { TableOfContentsButton } from "@/components/TableOfContents"
 import { Separator } from "@/components/ui/separator"
 import type { Article } from "@/payload-types"
 import { formatDateTime } from "@/utilities/formatDateTime"
@@ -13,10 +14,18 @@ interface ArticleHeroProps {
 }
 
 export const ArticleHero: React.FC<ArticleHeroProps> = ({ article }) => {
-  const { publishedAt, title, heroImage, populatedAuthors, narration, populatedNarrator } = article
+  const {
+    publishedAt,
+    title,
+    heroImage,
+    populatedAuthors,
+    narration,
+    populatedNarrator,
+    showTableOfContents,
+  } = article
 
   return (
-    <div className="relative flex flex-col gap-2 md:-mx-10 lg:-mx-32 xl:-mx-44">
+    <div className="relative flex flex-col gap-2">
       {heroImage && (
         <Media
           priority
@@ -45,11 +54,14 @@ export const ArticleHero: React.FC<ArticleHeroProps> = ({ article }) => {
             </HoverPrefetchLink>
           )}
         </div>
-        {narration && typeof narration !== "number" && (
-          <div className="md:w-56 md:shrink-0">
-            <NarrationPlayer narration={narration} populatedNarrator={populatedNarrator} />
-          </div>
-        )}
+        <div>
+          {narration && typeof narration !== "number" && (
+            <div className="md:w-56 md:shrink-0">
+              <NarrationPlayer narration={narration} populatedNarrator={populatedNarrator} />
+            </div>
+          )}
+          {showTableOfContents && <TableOfContentsButton />}
+        </div>
       </div>
       <Separator />
     </div>

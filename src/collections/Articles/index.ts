@@ -21,11 +21,12 @@ import { Timeline } from "@/blocks/Timeline/config"
 import { detectMathBlocks } from "@/collections/Articles/hooks/detectMathBlocks"
 import { generateFootnotes } from "@/collections/Articles/hooks/generateFootnotes"
 import { populateAuthors } from "@/collections/Articles/hooks/populateAuthors"
-import { populateTopics } from "@/collections/Articles/hooks/populateTopics"
 import { populateMetaImageFromHero } from "@/collections/Articles/hooks/populateMetaImageFromHero"
 import { populateNarrator } from "@/collections/Articles/hooks/populateNarrator"
+import { populateTopics } from "@/collections/Articles/hooks/populateTopics"
 import { populateVolume } from "@/collections/Articles/hooks/populateVolume"
 import { revalidateArticle, revalidateDelete } from "@/collections/Articles/hooks/revalidateArticle"
+import { tableOfContentsField } from "@/components/TableOfContents"
 import { footnotesArrayField } from "@/fields/footnotes"
 import { menu } from "@/fields/menu"
 import { type Article } from "@/payload-types"
@@ -190,6 +191,7 @@ export const Articles: CollectionConfig = {
       ],
     },
     // END TABS FIELDS
+    tableOfContentsField(),
     {
       name: "heroImage",
       type: "upload",

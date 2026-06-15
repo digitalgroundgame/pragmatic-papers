@@ -18,6 +18,7 @@ import {
 import type { ParentDocContext } from "@/blocks/SocialEmbed/types"
 import { SquiggleRuleBlock } from "@/blocks/SquiggleRule/Component"
 import { TimelineBlock } from "@/blocks/Timeline/Component"
+import { tableOfContentsConverter } from "@/components/TableOfContents"
 import type {
   BannerBlock as BannerBlockProps,
   CodeBlock as CodeBlockProps,
@@ -71,10 +72,14 @@ export const internalDocToHref = ({ linkNode }: { linkNode: SerializedLinkNode }
   return relationTo === "articles" ? `/articles/${slug}` : `/${slug}`
 }
 
-function createJsxConverters(parentDoc?: ParentDocContext): JSXConvertersFunction<NodeTypes> {
+function createJsxConverters(
+  parentDoc?: ParentDocContext,
+  data?: DefaultTypedEditorState,
+): JSXConvertersFunction<NodeTypes> {
   return ({ defaultConverters }) => ({
     ...defaultConverters,
     ...LinkJSXConverter({ internalDocToHref }),
+    ...tableOfContentsConverter(data),
     blocks: {
       banner: ({ node }) => <BannerBlock className="col-start-2 mb-4" {...node.fields} />,
       code: ({ node }) => <CodeBlock className="col-start-2" {...node.fields} />,
@@ -142,7 +147,7 @@ export default function RichText({
         enableProse && "prose",
         className,
       )}
-      converters={createJsxConverters(parentDoc)}
+      converters={createJsxConverters(parentDoc, data)}
       data={data}
     />
   )

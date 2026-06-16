@@ -2,7 +2,7 @@ import React from "react"
 
 import type { CallToActionBlock as CTABlockProps } from "@/payload-types"
 
-import { CMSLink } from "@/components/Link"
+import { CMSLink } from "@/components/Link/CMSLink2"
 import { PaperIcon } from "@/components/Logo/icons/PaperIcon"
 import { PaperIconPattern } from "@/components/Logo/icons/PaperIconPattern"
 import RichText from "@/components/RichText"
@@ -11,33 +11,33 @@ import { cn } from "@/utilities/utils"
 
 export const CallToActionBlock: React.FC<CTABlockProps> = ({ id, links, richText }) => {
   return (
-    <div className="dark container">
-      <div className="from-brand to-brand/50 relative flex flex-col items-center gap-8 rounded-sm border bg-black bg-[linear-gradient(180deg,var(--tw-gradient-from),var(--tw-gradient-to))] px-8 py-16 shadow-2xl md:flex-row md:items-center md:justify-around lg:gap-16 lg:px-16">
-        <PaperIconPattern
-          id={`paper-icon-pattern-${id}`}
-          className="absolute inset-0 h-full w-full text-white opacity-5 blur-xs"
-        />
-        <div className="relative">
-          <PaperIcon className="absolute top-1 size-30 text-black/30 blur md:size-40" />
-          <PaperIcon className="relative z-1 size-30 text-white md:size-40" />
-        </div>
-        <div className="relative mr-auto flex max-w-3xl items-center gap-6">
-          {richText && (
-            <RichText
-              className="prose-headings:font-sans prose-headings:mb-3 prose-headings:text-white mb-0 text-white"
-              data={richText}
-              enableGutter={false}
-            />
-          )}
-        </div>
-        <div className="relative flex flex-col gap-8">
+    <div className="dark from-brand to-brand/50 relative flex flex-col items-center gap-6 rounded-sm bg-black bg-[linear-gradient(180deg,var(--tw-gradient-from),var(--tw-gradient-to))] px-8 py-8 font-sans shadow-2xl md:mx-0 md:flex-row md:items-start">
+      <PaperIconPattern
+        id={`paper-icon-pattern-${id}`}
+        className="absolute inset-0 z-0 h-full w-full text-white opacity-5 blur-[1px]"
+      />
+      <div className="relative m-7 aspect-square size-32 -translate-y-3">
+        <PaperIcon className="absolute top-1 text-black/30 blur" />
+        <PaperIcon className="relative z-1 text-white" />
+      </div>
+      <div className="relative space-y-3">
+        {richText && (
+          <RichText
+            className="prose-headings:text-white text-white"
+            data={richText}
+            enableGutter={false}
+          />
+        )}
+        <div className="relative flex flex-row gap-3">
           {(links || []).map(({ link }, i) => {
             return (
               <CMSLink
                 key={i}
-                size="lg"
-                className={cn(buttonVariants({ variant: "secondary" }), "[a]:hover:bg-black")}
-                {...link}
+                className={cn(
+                  buttonVariants({ size: "lg" }),
+                  "w-full bg-black text-white no-underline md:w-auto [a]:hover:bg-black/80",
+                )}
+                link={link}
               />
             )
           })}

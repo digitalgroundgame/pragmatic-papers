@@ -45,7 +45,7 @@ export const CollectionGridBlock: React.FC<
         priority={priority}
         loading={priority ? "eager" : undefined}
       />
-      <div className="container mb-9 md:mb-12">
+      <div className="container mb-9 last:hidden md:mb-12">
         <Separator />
       </div>
     </>

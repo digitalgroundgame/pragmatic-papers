@@ -121,7 +121,7 @@ export const NewsletterSignupBlock: React.FC<NewsletterSignupTypes> = ({
     <div className="space-y-3 font-sans">
       <Script
         src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit"
-        strategy="afterInteractive"
+        strategy="lazyOnload"
         onReady={() => setScriptReady(true)}
       />
       <h3 className="mt-0!">{headingText}</h3>

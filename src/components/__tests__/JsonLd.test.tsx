@@ -40,4 +40,11 @@ describe("JsonLd", () => {
     expect(parsed["@type"]).toBe("WebSite")
     expect(parsed["@graph"]).toBeUndefined()
   })
+
+  it("emits an empty array as an empty graph", () => {
+    const parsed = renderJson([])
+
+    expect(parsed["@context"]).toBe("https://schema.org")
+    expect(parsed["@graph"]).toEqual([])
+  })
 })

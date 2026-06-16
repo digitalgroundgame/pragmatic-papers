@@ -1103,6 +1103,7 @@ export interface MapAsset {
   svgContent?: string | null;
   source?: LinkField;
   createdBy?: (number | null) | User;
+  prefix?: string | null;
   updatedAt: string;
   createdAt: string;
   url?: string | null;
@@ -1883,6 +1884,7 @@ export interface MapAssetsSelect<T extends boolean = true> {
   svgContent?: T;
   source?: T | LinkFieldSelect<T>;
   createdBy?: T;
+  prefix?: T;
   updatedAt?: T;
   createdAt?: T;
   url?: T;

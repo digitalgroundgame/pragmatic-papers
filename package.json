@@ -1,11 +1,11 @@
 {
   "name": "pragmatic-papers",
-  "version": "2.3.0",
+  "version": "2.3.1",
   "description": "The Pragmatic Papers",
   "license": "MIT",
   "type": "module",
   "scripts": {
-    "postinstall": "node scripts/install-fonts.mjs",
+    "postinstall": "tsx scripts/install-fonts.ts",
     "build": "cross-env NODE_OPTIONS=--no-deprecation next build",
     "postbuild": "next-sitemap --config next-sitemap.config.cjs",
     "dev": "pnpm dev:db && pnpm dev:next && pnpm dev:db-down",
@@ -128,7 +128,7 @@
     "testcontainers": "^11.14.0",
     "tsx": "^4.22.2",
     "typescript": "^5.9.3",
-    "typescript-eslint": "^8.59.0",
+    "typescript-eslint": "^8.61.0",
     "vitest": "^4.1.7"
   },
   "optionalDependencies": {

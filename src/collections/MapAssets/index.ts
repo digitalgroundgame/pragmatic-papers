@@ -102,6 +102,18 @@ export const MapAssets: CollectionConfig = {
         hidden: true,
       },
     },
+    // The s3Storage plugin only injects this field when storage is enabled, which never
+    // happens locally (USE_LOCAL_STORAGE=true). Declaring it here keeps the column in the
+    // schema in every environment so push and generated migrations stay in sync with prod.
+    {
+      name: "prefix",
+      type: "text",
+      defaultValue: "map-assets",
+      admin: {
+        readOnly: true,
+        hidden: true,
+      },
+    },
   ],
   hooks: {
     beforeValidate: [captureSvgContent],

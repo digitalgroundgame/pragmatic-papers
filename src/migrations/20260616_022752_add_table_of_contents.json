@@ -7105,6 +7105,13 @@
           "primaryKey": false,
           "notNull": false
         },
+        "prefix": {
+          "name": "prefix",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "'map-assets'"
+        },
         "updated_at": {
           "name": "updated_at",
           "type": "timestamp(3) with time zone",
@@ -13798,6 +13805,6 @@
     "tables": {},
     "columns": {}
   },
-  "id": "79576dc5-d986-4dc2-b865-e503e0d42134",
+  "id": "aac56cef-5fc9-4ed0-b74d-40843b20fbc0",
   "prevId": "00000000-0000-0000-0000-000000000000"
 }

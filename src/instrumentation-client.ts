@@ -13,6 +13,10 @@ Sentry.init({
 
   enableLogs: true,
 
+  // Drop errors sourced from browser extension scripts (e.g. crypto wallets
+  // fighting over window.ethereum).
+  denyUrls: [/^chrome-extension:\/\//, /^moz-extension:\/\//],
+
   // https://docs.sentry.io/platforms/javascript/guides/nextjs/configuration/options/#sendDefaultPii
   sendDefaultPii: true,
 })

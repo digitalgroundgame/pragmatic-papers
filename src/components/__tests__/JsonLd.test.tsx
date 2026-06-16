@@ -17,8 +17,6 @@ describe("JsonLd", () => {
 
     const parsed = renderJson(data)
 
-    // Consumers that read parsed["@context"] directly must find it at the top level,
-    // not be handed a bare array (which has no "@context" and crashes them).
     expect(parsed["@context"]).toBe("https://schema.org")
     expect(Array.isArray(parsed)).toBe(false)
 

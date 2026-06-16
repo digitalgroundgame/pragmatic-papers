@@ -26,8 +26,8 @@ const layouts = {
   "euler-5": Euler5Layout,
   "fibonacci-6": Fibonacci6Layout,
   "vespucci-7": Vespucci7Layout,
-  "gauss-10": Gauss10Layout,
   "fibonacci-7": Fibonacci7Layout,
+  "gauss-10": Gauss10Layout,
 } as const satisfies Record<NonNullable<CollectionGridLayout>, React.FC<LayoutProps>>
 
 export const CollectionGridBlock: React.FC<

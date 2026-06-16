@@ -16,16 +16,16 @@ export const Gauss10: LayoutDefinition = {
     "Right Column, Top",
     "Right Column, Middle (Compact)",
     "Right Column, Bottom (Compact)",
-    "Bottom Left (Image Left)",
-    "Bottom Center (Image Left, Optional)",
-    "Bottom Right (Image Left, Optional)",
+    "Bottom Left (Image Left/Above, Required)",
+    "Bottom Center (Image Above, Optional)",
+    "Bottom Right (Image Above, Optional)",
   ],
 }
 
 /**
  * Gauss 10 Layout
  *
- * 7-column grid: left column | featured (5 cols) | right column.
+ * 5-column grid: left column | featured (3 cols) | right column.
  * Bottom row (G, H, I) sits under the featured column; H and I are optional.
  *
  * Slots (by index):
@@ -36,7 +36,7 @@ export const Gauss10: LayoutDefinition = {
  *   4: D — right column, top
  *   5: E — right column, middle (compact)
  *   6: F — right column, bottom (compact)
- *   7: G — bottom left (image left/above, required)
+ *   7: G — bottom left (image left/above if H & I are present, required)
  *   8: H — bottom center (image above, optional)
  *   9: I — bottom right (image above, optional)
  */
@@ -62,12 +62,17 @@ export const Gauss10Layout: React.FC<LayoutProps> = ({
           sizes="(max-width: 768px) 100vw, 300px"
           variant="medium"
         />
-        <CollectionTile tile={b!} imagePosition="none" />
+        <CollectionTile
+          tile={b!}
+          loading={loading}
+          sizes="(max-width: 768px) 100vw, 300px"
+          variant="medium"
+        />
         <CollectionTile tile={c!} imagePosition="none" />
       </div>
 
       <div className="flex flex-col gap-6 md:col-span-3">
-        {/* Featured — spans 5 cols, image above */}
+        {/* Featured — spans 3 cols, image above */}
         <CollectionTile
           className="flex-3"
           tile={featured!}
@@ -114,7 +119,12 @@ export const Gauss10Layout: React.FC<LayoutProps> = ({
           sizes="(max-width: 768px) 100vw, 300px"
           variant="medium"
         />
-        <CollectionTile tile={e!} imagePosition="none" />
+        <CollectionTile
+          tile={e!}
+          loading={loading}
+          sizes="(max-width: 768px) 100vw, 300px"
+          variant="medium"
+        />
         <CollectionTile tile={f!} imagePosition="none" />
       </div>
     </section>

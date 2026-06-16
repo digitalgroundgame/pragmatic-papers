@@ -147,7 +147,6 @@ export const NewsletterSignupBlock: React.FC<NewsletterSignupTypes> = ({
           {status === "submitting" ? "Subscribing…" : buttonText}
         </Button>
       </form>
-      <div ref={widgetContainerRef} className="mt-3 flex justify-center" />
       {status === "error" && message ? (
         <FieldError className="mt-3">{message}</FieldError>
       ) : status === "success" && message ? (
@@ -165,6 +164,7 @@ export const NewsletterSignupBlock: React.FC<NewsletterSignupTypes> = ({
           data={notice}
         />
       )}
+      <div ref={widgetContainerRef} className="mt-3 flex justify-center" />
     </div>
   )
 }

@@ -2,24 +2,15 @@ import type { Graph, Thing, WithContext } from "schema-dts"
 import React from "react"
 
 interface JsonLdProps {
-  data: WithContext<Thing> | WithContext<Thing>[]
+  data: Thing | Thing[]
 }
 
 export function JsonLd({ data }: JsonLdProps): React.ReactElement {
-  // Multiple entities are emitted as a single object with a top-level `@context`
-  // and a `@graph` array — the standard JSON-LD shape for multiple things. A bare
-  // top-level array carries no top-level `@context`, which crashes consumers that
-  // read `parsed["@context"]` directly (e.g. the per-node context lives elsewhere).
-  const json: WithContext<Thing> | Graph = Array.isArray(data)
-    ? {
-        "@context": "https://schema.org",
-        "@graph": data.map((node) => {
-          const copy = { ...(node as Record<string, unknown>) }
-          delete copy["@context"]
-          return copy as Thing
-        }),
-      }
-    : data
+  const nodes = Array.isArray(data) ? data : [data]
+  const json: WithContext<Thing> | Graph =
+    nodes.length === 1
+      ? ({ "@context": "https://schema.org", ...(nodes[0] as object) } as WithContext<Thing>)
+      : { "@context": "https://schema.org", "@graph": nodes }
 
   return (
     // eslint-disable-next-line react/no-danger

@@ -3,6 +3,7 @@ import { Logo } from "@/components/Logo"
 import { Menu } from "@/components/Menu"
 import { ModeToggle } from "@/components/ModeToggle"
 import { SocialLinks } from "@/components/SocialLinks"
+import { TourTrigger } from "@/components/Tour/TourTrigger"
 import type { Footer } from "@/payload-types"
 import { getCachedGlobal } from "@/utilities/getGlobals"
 import { Copyright } from "./Copyright"
@@ -23,6 +24,7 @@ export async function Footer(): Promise<React.ReactElement> {
         </a>
         <div className="flex flex-row items-center gap-2">
           <SocialLinks parentId={id} socials={socials} aria-label="Footer Social Links" />
+          <TourTrigger />
           <ModeToggle />
         </div>
       </div>

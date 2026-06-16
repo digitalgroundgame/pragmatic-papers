@@ -121,7 +121,7 @@ export const NewsletterSignupBlock: React.FC<NewsletterSignupTypes> = ({
     <div className="space-y-3 font-sans">
       <Script
         src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit"
-        strategy="afterInteractive"
+        strategy="lazyOnload"
         onReady={() => setScriptReady(true)}
       />
       <h3 className="mt-0!">{headingText}</h3>
@@ -147,7 +147,6 @@ export const NewsletterSignupBlock: React.FC<NewsletterSignupTypes> = ({
           {status === "submitting" ? "Subscribing…" : buttonText}
         </Button>
       </form>
-      <div ref={widgetContainerRef} className="mt-3 flex justify-center" />
       {status === "error" && message ? (
         <FieldError className="mt-3">{message}</FieldError>
       ) : status === "success" && message ? (
@@ -165,6 +164,7 @@ export const NewsletterSignupBlock: React.FC<NewsletterSignupTypes> = ({
           data={notice}
         />
       )}
+      <div ref={widgetContainerRef} className="mt-3 flex justify-center" />
     </div>
   )
 }

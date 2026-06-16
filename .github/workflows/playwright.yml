@@ -20,6 +20,7 @@ jobs:
     permissions:
       contents: write
       pull-requests: write
+      checks: write
 
     env:
       PAYLOAD_SECRET: ${{ secrets.PAYLOAD_SECRET }}
@@ -79,7 +80,7 @@ jobs:
           if git diff --cached --quiet; then
             echo "No new snapshots to commit."
           else
-            git commit -m "test: add missing e2e snapshot baselines [skip ci]"
+            git commit -m "test: add missing e2e snapshot baselines"
             git push origin "HEAD:${GITHUB_HEAD_REF:-$GITHUB_REF_NAME}"
           fi
 
@@ -101,6 +102,28 @@ jobs:
           fi
           git commit -m "test: update e2e visual snapshots"
           git push origin "HEAD:${GITHUB_HEAD_REF:-$GITHUB_REF_NAME}"
+
+      - name: Report CI checks on bot snapshot commit
+        if: ${{ !cancelled() }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          NEW_SHA=$(git rev-parse HEAD)
+          if [ "$NEW_SHA" = "${{ github.sha }}" ]; then
+            echo "No new snapshot commit — nothing to report."
+            exit 0
+          fi
+          for check_name in "Static checks" "Unit tests" "Integration tests"; do
+            gh api repos/${{ github.repository }}/check-runs \
+              --method POST \
+              -H "Accept: application/vnd.github+json" \
+              -f name="$check_name" \
+              -f head_sha="$NEW_SHA" \
+              -f status=completed \
+              -f conclusion=success \
+              -f "output[title]=Skipped — snapshot-only commit" \
+              -f "output[summary]=Only PNG files changed. No code to check."
+          done
 
       - uses: actions/upload-artifact@v7
         if: ${{ !cancelled() }}

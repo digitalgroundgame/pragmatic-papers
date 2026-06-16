@@ -92,6 +92,7 @@ export async function main(): Promise<void> {
         layout: [
           {
             blockType: "content",
+            width: "full",
             columns: [
               {
                 size: "half",

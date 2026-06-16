@@ -12,7 +12,7 @@ export function NotificationDot({ visible, className }: NotificationDotProps): R
     <span
       aria-hidden="true"
       className={cn(
-        "ring-background pointer-events-none absolute -top-0.5 -right-0.5 size-2 rounded-full bg-red-500 ring-2",
+        "ring-background pointer-events-none absolute -top-0.5 -right-0.5 size-2 rounded-full bg-brand ring-2",
         className,
       )}
     />

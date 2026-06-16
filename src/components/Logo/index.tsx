@@ -8,6 +8,7 @@ const logoVariants = cva("w-auto text-foreground", {
     size: {
       default: "h-6 sm:h-7 md:h-8 lg:h-8.5",
       sm: "h-5 sm:h-6 md:h-7 lg:h-8",
+      xs: "h-4",
     },
   },
   defaultVariants: {
@@ -16,15 +17,13 @@ const logoVariants = cva("w-auto text-foreground", {
 })
 
 export interface LogoProps
-  extends React.SVGProps<SVGSVGElement>, VariantProps<typeof logoVariants> {
-  love?: boolean
-}
+  extends React.SVGProps<SVGSVGElement>, VariantProps<typeof logoVariants> {}
 
 export const Logo: React.FC<LogoProps> = ({ className, size, ...props }) => {
   return (
     <>
       <LogomarkIcon className={cn(logoVariants({ size, className }))} {...props} />
-      <span className="sr-only">Pragmatic Papers Logo</span>
+      <span className="sr-only">The Pragmatic Papers Logo</span>
     </>
   )
 }

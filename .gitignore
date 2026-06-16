@@ -32,6 +32,7 @@ next-env.d.ts
 public/fonts
 
 # Generated content
+public/map-assets/
 public/media/
 public/mathjax
 public/robots.txt

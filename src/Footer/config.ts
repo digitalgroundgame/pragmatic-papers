@@ -1,6 +1,7 @@
 import type { GlobalConfig } from "payload"
 
 import { adminFieldLevel } from "@/access/admins"
+import { Content } from "@/blocks/Content/config"
 import { link } from "@/fields/link2"
 import { menu } from "@/fields/menu"
 import { revalidateFooter } from "./hooks/revalidateFooter"
@@ -12,6 +13,14 @@ export const Footer: GlobalConfig = {
     update: adminFieldLevel,
   },
   fields: [
+    {
+      name: "layout",
+      type: "blocks",
+      blocks: [Content],
+      admin: {
+        initCollapsed: true,
+      },
+    },
     menu({
       name: "navItems",
       label: "Navigation Items",

@@ -1,0 +1,267 @@
+/**
+ * Listmonk REST client.
+ *
+ * Listmonk is the self-hosted mailing list manager that owns subscribers,
+ * unsubscribes, suppression, and the daily campaign queue for the newsletter.
+ * This module is the only place the rest of the codebase talks to Listmonk.
+ *
+ * Required env vars:
+ *   LISTMONK_BASE_URL                   e.g. https://listmonk.example.com
+ *   LISTMONK_API_USER                   admin/API user
+ *   LISTMONK_API_TOKEN                  admin/API token
+ *   LISTMONK_NEWSLETTER_LIST_ID         numeric ID of the "Newsletter" list
+ *                                       (used by the admin /api/campaigns calls)
+ *   LISTMONK_NEWSLETTER_LIST_UUID       UUID of the same list (used by the
+ *                                       public /api/public/subscription endpoint,
+ *                                       which only accepts list_uuids not list_ids)
+ *   NEWSLETTER_FROM_EMAIL               e.g. "Pragmatic Papers <newsletter@newsletter.example.com>"
+ */
+
+const REQUIRED_ENV = [
+  "LISTMONK_BASE_URL",
+  "LISTMONK_API_USER",
+  "LISTMONK_API_TOKEN",
+  "LISTMONK_NEWSLETTER_LIST_ID",
+  "LISTMONK_NEWSLETTER_LIST_UUID",
+  "NEWSLETTER_FROM_EMAIL",
+] as const
+
+interface ListmonkConfig {
+  baseUrl: string
+  apiUser: string
+  apiToken: string
+  newsletterListId: number
+  newsletterListUuid: string
+  fromEmail: string
+}
+
+function readConfig(): ListmonkConfig {
+  for (const key of REQUIRED_ENV) {
+    if (!process.env[key]) throw new Error(`Missing required env var: ${key}`)
+  }
+  // Must be a real integer — a non-numeric value (e.g. the list name or UUID set
+  // by mistake) parses to NaN, which serializes to `lists: [null]` and silently
+  // creates campaigns with no list attached.
+  const newsletterListId = Number(process.env.LISTMONK_NEWSLETTER_LIST_ID)
+  if (!Number.isInteger(newsletterListId) || newsletterListId <= 0) {
+    throw new Error(
+      `LISTMONK_NEWSLETTER_LIST_ID must be a positive integer, got: "${process.env.LISTMONK_NEWSLETTER_LIST_ID}"`,
+    )
+  }
+  return {
+    baseUrl: process.env.LISTMONK_BASE_URL!.replace(/\/$/, ""),
+    apiUser: process.env.LISTMONK_API_USER!,
+    apiToken: process.env.LISTMONK_API_TOKEN!,
+    newsletterListId,
+    newsletterListUuid: process.env.LISTMONK_NEWSLETTER_LIST_UUID!,
+    fromEmail: process.env.NEWSLETTER_FROM_EMAIL!,
+  }
+}
+
+async function listmonkFetch<T>(
+  path: string,
+  init: RequestInit & { searchParams?: Record<string, string | string[]> } = {},
+): Promise<T> {
+  const cfg = readConfig()
+  const url = new URL(`${cfg.baseUrl}/api${path}`)
+  if (init.searchParams) {
+    for (const [k, v] of Object.entries(init.searchParams)) {
+      // Listmonk expects repeated params (?status=scheduled&status=running) for
+      // multi-value filters.
+      if (Array.isArray(v)) {
+        for (const item of v) url.searchParams.append(k, item)
+      } else {
+        url.searchParams.set(k, v)
+      }
+    }
+  }
+  const auth = `token ${cfg.apiUser}:${cfg.apiToken}`
+  const res = await fetch(url, {
+    ...init,
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: auth,
+      ...(init.headers || {}),
+    },
+    cache: "no-store",
+  })
+  if (!res.ok) {
+    const body = await res.text().catch(() => "")
+    throw new Error(`Listmonk ${init.method ?? "GET"} ${path} → ${res.status}: ${body}`)
+  }
+  const json = (await res.json()) as { data: T }
+  return json.data
+}
+
+export interface CreateCampaignInput {
+  name: string
+  subject: string
+  bodyHtml: string
+  /** ISO 8601; Listmonk schedules at this wall-clock instant. */
+  sendAt: string
+  /**
+   * Admin-only string tags attached to the campaign. Used by the newsletter
+   * job for idempotency identifiers (e.g. "vol-12", "art-5") — these show
+   * as chips in Listmonk's admin UI but never go to recipients.
+   */
+  tags?: string[]
+}
+
+interface ListmonkCampaign {
+  id: number
+  name: string
+  status: string
+  send_at: string | null
+  tags: string[] | null
+  lists: { id: number; name: string }[] | null
+}
+
+export interface ScheduledCampaignSummary {
+  id: number
+  name: string
+  status: string
+  sendAt: Date
+  tags: string[]
+}
+
+/**
+ * Listmonk silently drops lists the API user's role lacks Get/Manage permission
+ * for (FilterListsByPerm), persisting a campaign with no recipients and no
+ * error. Verify the newsletter list survived the round-trip so it surfaces
+ * instead of going out empty.
+ */
+function assertListAttached(campaign: ListmonkCampaign, cfg: ListmonkConfig, verb: string): void {
+  if (!campaign.lists?.some((l) => l.id === cfg.newsletterListId)) {
+    throw new Error(
+      `Listmonk ${verb} campaign #${campaign.id} without list ${cfg.newsletterListId} attached. ` +
+        `The API user "${cfg.apiUser}" likely lacks Get/Manage permission on that list — ` +
+        `check its role in Listmonk admin (Users → Roles).`,
+    )
+  }
+}
+
+/**
+ * Create a campaign in `scheduled` status, targeting the configured newsletter
+ * list, with the given pre-rendered HTML body. Returns the new campaign id.
+ *
+ * Listmonk requires two calls — POST creates as `draft`, then PUT status
+ * transitions to `scheduled`. We do both here so callers don't have to.
+ */
+export async function createScheduledCampaign(input: CreateCampaignInput): Promise<number> {
+  const cfg = readConfig()
+  const created = await listmonkFetch<ListmonkCampaign>("/campaigns", {
+    method: "POST",
+    body: JSON.stringify({
+      name: input.name,
+      subject: input.subject,
+      lists: [cfg.newsletterListId],
+      from_email: cfg.fromEmail,
+      content_type: "html",
+      body: input.bodyHtml,
+      send_at: input.sendAt,
+      type: "regular",
+      messenger: "email",
+      tags: input.tags ?? [],
+    }),
+  })
+  assertListAttached(created, cfg, "created")
+  await listmonkFetch<ListmonkCampaign>(`/campaigns/${created.id}/status`, {
+    method: "PUT",
+    body: JSON.stringify({ status: "scheduled" }),
+  })
+  return created.id
+}
+
+export interface UpdateCampaignContentInput {
+  campaignId: number
+  name: string
+  subject: string
+  bodyHtml: string
+  /** Re-sent unchanged so updating content never reshuffles existing send times. */
+  sendAt: string
+  tags: string[]
+}
+
+/**
+ * Overwrite an existing campaign's editable content (name, subject, body) while
+ * preserving its schedule. Listmonk only permits edits to draft/paused/scheduled
+ * campaigns, so callers must not pass one that's already running or sent.
+ */
+export async function updateScheduledCampaign(input: UpdateCampaignContentInput): Promise<void> {
+  const cfg = readConfig()
+  const updated = await listmonkFetch<ListmonkCampaign>(`/campaigns/${input.campaignId}`, {
+    method: "PUT",
+    body: JSON.stringify({
+      name: input.name,
+      subject: input.subject,
+      lists: [cfg.newsletterListId],
+      from_email: cfg.fromEmail,
+      content_type: "html",
+      body: input.bodyHtml,
+      send_at: input.sendAt,
+      type: "regular",
+      messenger: "email",
+      tags: input.tags,
+    }),
+  })
+  assertListAttached(updated, cfg, "updated")
+}
+
+/**
+ * Returns all `scheduled` or `running` campaigns on the newsletter list with a
+ * non-null send_at, including tags. Used by the job for:
+ *   - latest send_at across the result = baseline for the queue-overlap policy
+ *   - tag-based identifiers (vol-<N>, art-<id>) = idempotency check so retries
+ *     and reorders don't create duplicates
+ */
+export async function listScheduledCampaigns(): Promise<ScheduledCampaignSummary[]> {
+  const cfg = readConfig()
+  const data = await listmonkFetch<{ results: ListmonkCampaign[] }>("/campaigns", {
+    searchParams: {
+      status: ["scheduled", "running"],
+      list_id: String(cfg.newsletterListId),
+      per_page: "200",
+    },
+  })
+  return data.results
+    .filter((c) => c.send_at !== null)
+    .map((c) => ({
+      id: c.id,
+      name: c.name,
+      status: c.status,
+      sendAt: new Date(c.send_at!),
+      tags: c.tags ?? [],
+    }))
+}
+
+export interface SubscribeMemberInput {
+  email: string
+  /** Optional display name; Listmonk stores it but it's not required. */
+  name?: string
+}
+
+/**
+ * Subscribe an email to the newsletter list. Listmonk applies the list's
+ * double-opt-in configuration: status becomes `enabled` (confirmed) only after
+ * the recipient clicks the confirmation link.
+ */
+export async function subscribeMember(input: SubscribeMemberInput): Promise<void> {
+  const cfg = readConfig()
+  // The /public endpoint mirrors what Listmonk's hosted form does; it triggers
+  // double-opt-in if the list is configured for it. It only accepts list_uuids
+  // (not list_ids) — that's why we keep the UUID alongside the numeric id.
+  const res = await fetch(`${cfg.baseUrl}/api/public/subscription`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      email: input.email,
+      name: input.name ?? input.email.split("@")[0],
+      list_uuids: [cfg.newsletterListUuid],
+    }),
+    cache: "no-store",
+  })
+  if (!res.ok) {
+    const body = await res.text().catch(() => "")
+    throw new Error(`Listmonk public subscription → ${res.status}: ${body}`)
+  }
+}

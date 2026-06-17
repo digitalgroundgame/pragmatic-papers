@@ -11,7 +11,8 @@ This file provides guidance to tools like Claude Code (claude.ai/code) when work
 ### Development
 
 - `pnpm dev` — starts everything in Docker Compose (Postgres + Next.js dev server on port 8000)
-- `pnpm dev:db-nuke` — stop Postgres and delete volume data
+- `pnpm dev:db-nuke` — stop Postgres and delete its volume (`docker compose down -v`), wiping the entire data directory. Use this after a Postgres major-version bump or whenever the local data is corrupt; the next `pnpm dev` recreates a fresh cluster and Drizzle push re-syncs the schema
+- `pnpm dev:db-fresh` — bring Postgres up and rebuild the schema by re-running all migrations from scratch (`payload migrate:fresh`). Unlike `dev:db-nuke`, this keeps the volume and exercises the committed migration files (the same path prod uses), so it surfaces migration drift that Drizzle push masks in dev
 
 ### Quality Checks
 

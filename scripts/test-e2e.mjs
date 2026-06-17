@@ -24,7 +24,7 @@ if (process.env.DATABASE_URI) {
   console.warn(`${green("✔")} Using existing DATABASE_URI — skipping container startup.`)
 } else {
   console.warn(`${blue("●")} Starting Postgres container...`)
-  container = await new PostgreSqlContainer("postgres:15-alpine")
+  container = await new PostgreSqlContainer("postgres:17-alpine")
     .withDatabase("pragmatic-papers-test")
     .start()
   process.env.DATABASE_URI = container.getConnectionUri()

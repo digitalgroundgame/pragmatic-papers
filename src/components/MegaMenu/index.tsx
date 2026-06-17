@@ -25,7 +25,7 @@ function MegaMenuItem({ item }: { item: NonNullable<MenuField>[number] }): React
         className="py-1"
         render={<CMSLink link={item.link} onClick={markSeen} />}
       />
-      <NotificationDot visible={visible} className="-top-1 -right-1" />
+      <NotificationDot visible={visible} className="top-0 right-0" />
     </NavigationMenuItem>
   )
 }

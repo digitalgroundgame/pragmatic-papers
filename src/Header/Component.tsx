@@ -13,6 +13,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet"
+import { TourTrigger } from "@/components/Tour/TourTrigger"
 import { HeaderActions } from "@/Header/HeaderActions/Component"
 import { SearchForm } from "@/Header/SearchForm/Component"
 import { SearchPanel } from "@/Header/SearchPanel"
@@ -58,6 +59,7 @@ export async function Header(): Promise<React.JSX.Element> {
               <Logo />
             </a>
             <div className="flex items-center justify-end gap-2">
+              <TourTrigger />
               <HeaderActions actions={actions} className="hidden lg:flex" />
               <Sheet>
                 <SheetTrigger

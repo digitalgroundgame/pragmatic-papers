@@ -7,11 +7,13 @@ const KEY_PREFIX = "pp:"
 interface NotificationState {
   seen: Set<string>
   lastVisited: Map<string, string>
+  hydrated: boolean
 }
 
 const EMPTY_STATE: NotificationState = Object.freeze({
   seen: new Set<string>(),
   lastVisited: new Map<string, string>(),
+  hydrated: false,
 })
 
 // Module-level external store — no React state, no effects
@@ -43,7 +45,7 @@ function _readFromLocalStorage(): NotificationState {
     }
   }
 
-  return { seen, lastVisited }
+  return { seen, lastVisited, hydrated: true }
 }
 
 function _getSnapshot(): NotificationState {
@@ -68,7 +70,7 @@ export interface NotificationHookValue {
 export function useNotification(name: string): NotificationHookValue {
   const state = useSyncExternalStore(_subscribe, _getSnapshot, _getServerSnapshot)
 
-  const visible = !state.seen.has(name)
+  const visible = state.hydrated && !state.seen.has(name)
 
   const markSeen = useCallback((): void => {
     localStorage.setItem(`${KEY_PREFIX}seen:${name}`, "1")
@@ -90,14 +92,10 @@ export function useNotification(name: string): NotificationHookValue {
     _notify()
   }, [name])
 
-  return { visible, markSeen, getLastVisited, setLastVisited, loaded: true }
+  return { visible, markSeen, getLastVisited, setLastVisited, loaded: state.hydrated }
 }
 
 // Thin wrapper kept for layout composition
-export function NotificationProvider({
-  children,
-}: {
-  children: React.ReactNode
-}): React.ReactNode {
+export function NotificationProvider({ children }: { children: React.ReactNode }): React.ReactNode {
   return <>{children}</>
 }

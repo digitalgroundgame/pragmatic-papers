@@ -2,7 +2,7 @@ name: Claude Code Review
 
 on:
   pull_request:
-    types: [opened, ready_for_review, synchronize]
+    types: [labeled]
     branches: [dev]
 
 concurrency:
@@ -12,7 +12,7 @@ concurrency:
 jobs:
   review:
     name: Claude review
-    if: github.event.pull_request.draft == false
+    if: github.event.label.name == 'ai-review'
     runs-on: ubuntu-latest
     permissions:
       contents: read

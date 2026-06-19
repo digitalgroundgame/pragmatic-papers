@@ -1,3 +1,9 @@
+import configPromise from "@payload-config"
+import type { Metadata } from "next"
+import { draftMode } from "next/headers"
+import { getPayload } from "payload"
+import React from "react"
+
 import { AuthorList } from "@/components/Authors/AuthorList"
 import { FootnoteList } from "@/components/FootnoteList"
 import { JsonLd } from "@/components/JsonLd"
@@ -12,11 +18,6 @@ import { MathJaxProvider } from "@/providers/MathJaxProvider"
 import { generateMeta } from "@/utilities/generateMeta"
 import { queryArticleBySlug } from "@/utilities/queries"
 import { buildArticleJsonLd, buildBreadcrumbJsonLd } from "@/utilities/structuredData"
-import configPromise from "@payload-config"
-import type { Metadata } from "next"
-import { draftMode } from "next/headers"
-import { getPayload } from "payload"
-import React from "react"
 
 export async function generateStaticParams(): Promise<{ slug: string | null | undefined }[]> {
   const payload = await getPayload({ config: configPromise })

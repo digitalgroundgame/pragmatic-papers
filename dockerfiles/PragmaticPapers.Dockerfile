@@ -41,7 +41,7 @@ RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
 
 # 3. Copy package.json and necessary post-install scripts.
 COPY package.json ./
-COPY scripts/install-fonts.mjs scripts/ansi.mjs ./scripts/
+COPY scripts/install-fonts.ts scripts/ansi.mjs scripts/Inter-Bold.woff2 ./scripts/
 
 # 4. Install dependencies from the store (offline)
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
@@ -74,6 +74,9 @@ ARG S3_ENDPOINT
 # --- PUBLIC / CLIENT-SIDE ---
 ARG NEXT_PUBLIC_GOOGLE_ANALYTICS_ID
 ARG NEXT_PUBLIC_SUPABASE_URL
+ARG NEXT_PUBLIC_SENTRY_DSN
+ARG NEXT_PUBLIC_SENTRY_ENVIRONMENT
+ARG NEXT_PUBLIC_TURNSTILE_SITE_KEY
 
 # --- COOLIFY & DEPLOYMENT ---
 ARG COOLIFY_FQDN=
@@ -93,7 +96,10 @@ ENV NODE_ENV=${NODE_ENV} \
     S3_ENDPOINT=${S3_ENDPOINT} \
     NEXT_PUBLIC_GOOGLE_ANALYTICS_ID=${NEXT_PUBLIC_GOOGLE_ANALYTICS_ID} \
     NEXT_PUBLIC_SERVER_URL=${NEXT_PUBLIC_SERVER_URL} \
-    NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}
+    NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL} \
+    NEXT_PUBLIC_SENTRY_DSN=${NEXT_PUBLIC_SENTRY_DSN} \
+    NEXT_PUBLIC_SENTRY_ENVIRONMENT=${NEXT_PUBLIC_SENTRY_ENVIRONMENT} \
+    NEXT_PUBLIC_TURNSTILE_SITE_KEY=${NEXT_PUBLIC_TURNSTILE_SITE_KEY}
 
 # Install PostgreSQL client for database operations during build
 RUN apk add --no-cache postgresql-client
@@ -142,8 +148,8 @@ COPY --from=builder --chown=nextjs:nodejs /tmp/database_uri.env /app/database_ur
 
 # Prepare media directory and set permissions
 RUN mkdir -p public/media \
-    && chown -R nextjs:nodejs . \
-    && chmod -R 755 public/media
+    && chown nextjs:nodejs public/media \
+    && chmod 755 public/media
 
 # Startup script configuration
 COPY --from=builder --chown=nextjs:nodejs /app/dockerfiles/scripts/start.sh ./start.sh

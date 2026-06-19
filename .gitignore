@@ -32,6 +32,7 @@ next-env.d.ts
 public/fonts
 
 # Generated content
+public/map-assets/
 public/media/
 public/mathjax
 public/robots.txt
@@ -89,3 +90,6 @@ devenv.local.yaml
 
 # pre-commit
 .pre-commit-config.yaml
+
+# Sentry Config File
+.env.sentry-build-plugin

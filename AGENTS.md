@@ -11,7 +11,8 @@ This file provides guidance to tools like Claude Code (claude.ai/code) when work
 ### Development
 
 - `pnpm dev` — starts everything in Docker Compose (Postgres + Next.js dev server on port 8000)
-- `pnpm dev:db-nuke` — stop Postgres and delete volume data
+- `pnpm dev:db-nuke` — stop Postgres and delete its volume (`docker compose down -v`), wiping the entire data directory. Use this after a Postgres major-version bump or whenever the local data is corrupt; the next `pnpm dev` recreates a fresh cluster and Drizzle push re-syncs the schema
+- `pnpm dev:db-fresh` — bring Postgres up and rebuild the schema by re-running all migrations from scratch (`payload migrate:fresh`). Unlike `dev:db-nuke`, this keeps the volume and exercises the committed migration files (the same path prod uses), so it surfaces migration drift that Drizzle push masks in dev
 
 ### Quality Checks
 
@@ -134,3 +135,25 @@ Coverage reporting is informational only — chore/docs PRs don't need special h
 
 - run linting and type-checks
 - run unit and integration tests as needed, _skip running e2e_.
+
+## Wiki
+
+The repo wiki lives at `https://github.com/digitalgroundgame/pragmatic-papers/wiki` and is a separate git repository. To create or edit wiki pages:
+
+```bash
+git clone https://github.com/digitalgroundgame/pragmatic-papers.wiki.git /tmp/wiki
+# create or edit .md files in /tmp/wiki
+cd /tmp/wiki
+git add <file>
+git commit -m "docs: ..."
+git push
+```
+
+> [!NOTE]
+> Commit signing does not work in the wiki repo from the **remote/cloud execution environment** — the signing server is scoped to the main repo. If running in that context and a push fails due to signing, ask the user to re-run the session locally (e.g. in Cursor or another terminal where their git signing is configured), then retry the push.
+
+After adding a new page, update `Home.md` to add it to the Table of Contents under the appropriate section, and match the back-link style used by other pages:
+
+```md
+[← Table of Contents](https://github.com/digitalgroundgame/pragmatic-papers/wiki#table-of-contents)
+```

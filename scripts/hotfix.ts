@@ -89,6 +89,7 @@ export async function main(): Promise<void> {
   }
 }
 
+/* v8 ignore next 3 */
 if (process.argv[1] === import.meta.filename) {
   await main()
 }

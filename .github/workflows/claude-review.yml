@@ -12,7 +12,7 @@ concurrency:
 jobs:
   review:
     name: Claude review
-    if: github.event.label.name == 'ai-review'
+    if: github.event.label.name == 'ready for review'
     runs-on: ubuntu-latest
     permissions:
       contents: read

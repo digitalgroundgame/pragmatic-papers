@@ -63,7 +63,7 @@ export async function main(): Promise<void> {
     console.warn(`${green("✔")} Bumped package.json: ${gray(prev)} → ${green(version)}`)
 
     run(`git add package.json`)
-    run(`git commit -m "Chore: Bump package.json to ${tag}"`)
+    run(`git commit -m "Bump package.json to ${tag}"`)
     run(`git push origin ${branch}`)
 
     const devPrUrl = capture(`gh pr create -f -B dev`)

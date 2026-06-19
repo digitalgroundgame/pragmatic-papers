@@ -3,8 +3,10 @@
 //   2) open PR dev → main and land it as a MERGE COMMIT    (keeps branches in sync)
 //   3) tag main and create the GitHub release
 // Phase 2's merge is auto-enabled as a merge commit so dev and main never diverge.
-// The tag/release in phase 3 is also produced automatically by .github/workflows/
-// release.yml on the version bump — phase 3 stays for manual/local use.
+// --phase is a STARTING point and the run chains forward: the default `--phase 1`
+// carries through phase 2 once you confirm the dev PR merged. Phase 3 is separate —
+// release.yml tags automatically on the version bump, so chaining into it would race
+// the workflow; pass `--phase 3` to tag/release by hand instead.
 
 import { readFileSync, writeFileSync } from "node:fs"
 import { dirname, join } from "node:path"
@@ -47,7 +49,7 @@ export async function main(): Promise<void> {
   requireGh()
 
   // ── Phase 1: Branch, version bump, PR → dev ──────────────────────────────
-  if (phaseArg === 1) {
+  if (phaseArg <= 1) {
     console.warn(`\n${blue("●")} Phase 1: Creating release branch and PR to dev\n`)
 
     run(`git checkout dev`)
@@ -71,7 +73,7 @@ export async function main(): Promise<void> {
   }
 
   // ── Phase 2: PR dev → main (merge commit) ────────────────────────────────
-  if (phaseArg === 2) {
+  if (phaseArg <= 2) {
     console.warn(`\n${blue("●")} Phase 2: Creating PR dev → main\n`)
 
     run(`git checkout dev`)

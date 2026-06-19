@@ -3,6 +3,8 @@
 //   2) back-merge main → dev and land it as a MERGE COMMIT  (keeps branches in sync)
 // The tag + GitHub release are produced automatically by .github/workflows/release.yml
 // when the version bump lands on main, so there is no manual tag/release phase here.
+// --phase is a STARTING point and the run chains forward: the default `--phase 1`
+// carries through phase 2 once you confirm the main PR merged.
 
 import { readFileSync, writeFileSync } from "node:fs"
 import { dirname, join } from "node:path"
@@ -47,7 +49,7 @@ export async function main(): Promise<void> {
   requireGh()
 
   // ── Phase 1: Branch off main, bump, PR → main ────────────────────────────
-  if (phaseArg === 1) {
+  if (phaseArg <= 1) {
     console.warn(`\n${blue("●")} Phase 1: Creating hotfix branch and PR to main\n`)
 
     run(`git checkout main`)
@@ -72,7 +74,7 @@ export async function main(): Promise<void> {
   }
 
   // ── Phase 2: Back-merge main → dev (merge commit) ────────────────────────
-  if (phaseArg === 2) {
+  if (phaseArg <= 2) {
     console.warn(`\n${blue("●")} Phase 2: Back-merging main → dev\n`)
 
     run(`git checkout main`)

@@ -1,4 +1,4 @@
-import { type Page } from "@playwright/test"
+import type { Page } from "@playwright/test"
 
 export async function gotoFirstArticle(page: Page): Promise<string | null> {
   await page.goto("/")
@@ -16,7 +16,7 @@ export async function gotoFirstVolume(page: Page): Promise<string | null> {
   if (!href) return null
   await page.goto(href)
   return href
-import type { Page } from "@playwright/test"
+}
 
 /**
  * Settle sources of pixel nondeterminism before taking a screenshot: wait for

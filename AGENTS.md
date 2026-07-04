@@ -27,7 +27,7 @@ This file provides guidance to tools like Claude Code (claude.ai/code) when work
 - `pnpm test` — run all tests (Vitest)
 - `pnpm test:unit` — run unit tests
 - `pnpm test:integration` — run integration tests (uses Testcontainers)
-- `pnpm test:e2e` — run Playwright E2E tests (uses Testcontainers)
+- `pnpm test:e2e` — run Playwright E2E tests (uses Testcontainers). Screenshot comparisons are skipped locally; visual baselines are CI-generated only — see `tests/e2e/README.md` for the lifecycle (never commit baselines from a local machine)
 - `pnpm test:unit:coverage` — run unit tests with V8 coverage report (what CI uses; outputs `coverage/coverage-summary.json` and `coverage/coverage-final.json`)
 - `pnpm test:coverage` — run all tests with V8 coverage report (full picture for local inspection)
 - `pnpm test:unit -- --update-snapshots` — regenerate snapshot baselines after intentional UI changes

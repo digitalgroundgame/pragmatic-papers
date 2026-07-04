@@ -46,15 +46,13 @@ if (await isPortInUse(port)) {
   process.exit(1)
 }
 
+// A production server (`next build` + `next start`) renders deterministically —
+// no dev overlay, no on-demand compilation, no hot-reload artifacts — so CI
+// uses it for stable screenshots. Local runs default to the faster dev server.
+const useProdServer = !!process.env.E2E_PROD_SERVER
+
 let server = null
 try {
-  console.warn(`${blue("●")} Starting Next.js dev server...`)
-  server = spawn(
-    "./node_modules/.bin/next",
-    ["dev", "-p", String(process.env.PORT), "--turbopack"],
-    { env: { ...process.env, NODE_OPTIONS: "--no-deprecation" }, stdio: "inherit" },
-  )
-
   console.warn(`${blue("●")} Running database migrations...`)
   execSync("pnpm payload migrate", {
     env: process.env,
@@ -66,6 +64,26 @@ try {
     env: process.env,
     stdio: "inherit",
   })
+
+  if (useProdServer) {
+    console.warn(`${blue("●")} Building Next.js production bundle...`)
+    execSync("./node_modules/.bin/next build", {
+      env: { ...process.env, NODE_OPTIONS: "--no-deprecation" },
+      stdio: "inherit",
+    })
+    console.warn(`${blue("●")} Starting Next.js production server...`)
+    server = spawn("./node_modules/.bin/next", ["start", "-p", String(process.env.PORT)], {
+      env: { ...process.env, NODE_OPTIONS: "--no-deprecation" },
+      stdio: "inherit",
+    })
+  } else {
+    console.warn(`${blue("●")} Starting Next.js dev server...`)
+    server = spawn(
+      "./node_modules/.bin/next",
+      ["dev", "-p", String(process.env.PORT), "--turbopack"],
+      { env: { ...process.env, NODE_OPTIONS: "--no-deprecation" }, stdio: "inherit" },
+    )
+  }
 
   console.warn(`${blue("●")} Starting Playwright tests...`)
   const child = spawn(

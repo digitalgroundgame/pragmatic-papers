@@ -1,3 +1,17 @@
+import type { Page } from "@playwright/test"
+
+/**
+ * Settle sources of pixel nondeterminism before taking a screenshot: wait for
+ * web fonts to finish loading (late font swaps shift every glyph) and for two
+ * animation frames so in-flight layout/paint work has flushed.
+ */
+export async function waitForStableRender(page: Page): Promise<void> {
+  await page.evaluate(async () => {
+    await document.fonts.ready
+    await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)))
+  })
+}
+
 interface BoundingBox {
   x: number
   y: number

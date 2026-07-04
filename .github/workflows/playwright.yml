@@ -1,5 +1,15 @@
 name: Playwright Tests
 
+# Screenshot baseline lifecycle:
+#   - Baselines live in tests/e2e/__screenshots__ and are ONLY ever generated
+#     by the "Update snapshot baselines" job below (Linux chromium, production
+#     server) — never locally and never as a side effect of a PR test run.
+#   - PR/push runs compare strictly. A missing baseline or a visual diff fails
+#     the run and posts a "Visual regressions detected" comment with the
+#     actual/diff images.
+#   - To accept changes (or add baselines for new tests), run this workflow
+#     via workflow_dispatch on the PR branch: mode "missing" only adds
+#     baselines for new tests, mode "all" rewrites every baseline.
 on:
   push:
     branches: [main, dev]
@@ -7,26 +17,28 @@ on:
   workflow_dispatch:
     inputs:
       update_snapshots:
-        description: "Regenerate visual snapshots and commit them to this branch"
-        type: boolean
-        default: false
+        description: "Which snapshot baselines to regenerate and commit"
+        type: choice
+        options: [missing, all]
+        default: missing
+
+env:
+  PAYLOAD_SECRET: ${{ secrets.PAYLOAD_SECRET }}
+  NEXT_PUBLIC_SERVER_URL: http://localhost:8000
+  USE_LOCAL_STORAGE: "true"
+  DATABASE_URI: postgres://postgres:postgres@localhost:5432/pragmatic-papers-e2e
+  E2E_PROD_SERVER: "true"
 
 jobs:
   test:
     name: E2E tests
+    if: ${{ github.event_name != 'workflow_dispatch' }}
     timeout-minutes: 60
     runs-on: ubuntu-latest
 
     permissions:
       contents: write
       pull-requests: write
-      checks: write
-
-    env:
-      PAYLOAD_SECRET: ${{ secrets.PAYLOAD_SECRET }}
-      NEXT_PUBLIC_SERVER_URL: http://localhost:8000
-      USE_LOCAL_STORAGE: "true"
-      DATABASE_URI: postgres://postgres:postgres@localhost:5432/pragmatic-papers-e2e
 
     services:
       postgres:
@@ -63,67 +75,46 @@ jobs:
           key: playwright-${{ hashFiles('pnpm-lock.yaml') }}
 
       - name: Install Playwright browsers
-        run: pnpm exec playwright install --with-deps chromium firefox webkit
+        run: pnpm exec playwright install --with-deps chromium
 
       - name: Run Playwright tests
-        if: ${{ !inputs.update_snapshots }}
-        run: pnpm test:e2e -- --update-snapshots=missing
+        run: pnpm test:e2e
 
-      - name: Commit new snapshot baselines
-        if: ${{ !cancelled() && !inputs.update_snapshots }}
+      - name: Post visual regression comment
+        if: ${{ failure() && github.event_name == 'pull_request' }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          OWNER: ${{ github.repository_owner }}
+          REPO: ${{ github.event.repository.name }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          ASSET_DIR: ${{ github.event.pull_request.number }}/${{ github.event.pull_request.head.sha }}/regressions
+          MARKER: visual-regressions
+          TITLE: Visual regressions detected
+          COLUMNS_PER_ROW: "3"
+          FOOTER: >-
+            Columns per snapshot: **actual** / **diff** / **expected** (new
+            tests have no diff/expected yet). If these changes are intentional,
+            run the *Playwright Tests* workflow manually on this branch with
+            mode `all` (or `missing` to only add baselines for new tests) to
+            regenerate and commit the baselines. Otherwise, fix the regression
+            and push.
         run: |
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add tests/e2e/__screenshots__
-          if git diff --cached --quiet; then
-            echo "No new snapshots to commit."
-          else
-            git commit -m "test: add missing e2e snapshot baselines"
-            git push origin "HEAD:${GITHUB_HEAD_REF:-$GITHUB_REF_NAME}"
-          fi
+          find test-results -type f \
+            \( -name '*-expected.png' -o -name '*-actual.png' -o -name '*-diff.png' \) \
+            -not -path '*retry*' | sort \
+            | pnpm exec tsx scripts/pr-screenshot-comment.ts
 
-      - name: Regenerate visual snapshots
-        if: ${{ inputs.update_snapshots }}
-        run: pnpm test:e2e -- --update-snapshots --project=chromium
-
-      - name: Commit regenerated snapshots
-        if: ${{ inputs.update_snapshots }}
+      - name: Clear stale visual regression comment
+        if: ${{ success() && github.event_name == 'pull_request' }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add tests/e2e/__screenshots__
-          if git diff --cached --quiet; then
-            echo "No snapshot changes to commit."
-            exit 0
-          fi
-          git commit -m "test: update e2e visual snapshots"
-          git push origin "HEAD:${GITHUB_HEAD_REF:-$GITHUB_REF_NAME}"
-
-      - name: Report CI checks on bot snapshot commit
-        if: ${{ !cancelled() }}
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          NEW_SHA=$(git rev-parse HEAD)
-          if [ "$NEW_SHA" = "${{ github.sha }}" ]; then
-            echo "No new snapshot commit — nothing to report."
-            exit 0
-          fi
-          for check_name in "Static checks" "Unit tests" "Integration tests"; do
-            gh api repos/${{ github.repository }}/check-runs \
-              --method POST \
-              -H "Accept: application/vnd.github+json" \
-              -f name="$check_name" \
-              -f head_sha="$NEW_SHA" \
-              -f status=completed \
-              -f conclusion=success \
-              -f "output[title]=Skipped — snapshot-only commit" \
-              -f "output[summary]=Only PNG files changed. No code to check."
-          done
+          OWNER: ${{ github.repository_owner }}
+          REPO: ${{ github.event.repository.name }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          ASSET_DIR: unused
+          MARKER: visual-regressions
+          DELETE_WHEN_EMPTY: "true"
+        run: pnpm exec tsx scripts/pr-screenshot-comment.ts </dev/null
 
       - uses: actions/upload-artifact@v7
         if: ${{ !cancelled() }}
@@ -132,84 +123,156 @@ jobs:
           path: playwright-report/
           retention-days: 30
 
-      - name: Post snapshot updates to PR comment
+      - name: Post snapshot updates comment
         if: ${{ !cancelled() && github.event_name == 'pull_request' && github.event.pull_request.base.ref != 'main' }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
           OWNER: ${{ github.repository_owner }}
           REPO: ${{ github.event.repository.name }}
-          PR_SHA: ${{ github.event.pull_request.head.sha }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          ASSET_DIR: ${{ github.event.pull_request.number }}/${{ github.event.pull_request.head.sha }}
           BASE_REF: ${{ github.event.pull_request.base.ref }}
-          ASSETS_BRANCH: pr-screenshots
+          DELETE_WHEN_EMPTY: "true"
         run: |
           git fetch --no-tags --depth=1 origin "$BASE_REF"
+          git diff --name-only --diff-filter=AM \
+            "origin/$BASE_REF...HEAD" -- '**/__screenshots__/**/*.png' \
+            | pnpm exec tsx scripts/pr-screenshot-comment.ts
 
-          # Snapshot PNGs added or modified in this PR (relative to base branch)
-          mapfile -t changed < <(git diff --name-only --diff-filter=AM \
-            "origin/$BASE_REF...HEAD" -- '**/__screenshots__/**/*.png')
+  update-snapshots:
+    name: Update snapshot baselines
+    if: ${{ github.event_name == 'workflow_dispatch' }}
+    timeout-minutes: 60
+    runs-on: ubuntu-latest
 
-          existing=$(gh api "repos/$OWNER/$REPO/issues/$PR_NUMBER/comments" \
-            --jq '[.[] | select(.body | startswith("<!-- screenshots"))] | first | {id: .id, body: .body} // empty')
-          comment_id=$(printf '%s' "$existing" | jq -r '.id // empty')
-          existing_fingerprint=$(printf '%s' "$existing" \
-            | jq -r '.body // empty' \
-            | sed -n 's/^<!-- screenshots:\([0-9a-f]*\) -->.*/\1/p' \
-            | head -n1)
+    permissions:
+      contents: write
+      pull-requests: write
+      checks: write
 
-          if [ ${#changed[@]} -eq 0 ]; then
-            echo "No snapshot updates in this PR — skipping comment."
-            if [ -n "$comment_id" ]; then
-              gh api --method DELETE "repos/$OWNER/$REPO/issues/comments/$comment_id"
-              echo "Removed stale screenshots comment."
-            fi
-            exit 0
-          fi
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: pragmatic-papers-e2e
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
 
-          fingerprint=$(printf '%s\n' "${changed[@]}" \
-            | sort \
-            | xargs -I{} sha256sum {} \
-            | sha256sum | awk '{print $1}')
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
 
-          if [ -n "$existing_fingerprint" ] && [ "$existing_fingerprint" = "$fingerprint" ]; then
-            echo "Screenshots unchanged — skipping upload."
-            exit 0
-          fi
+      - name: Set up Node.js environment
+        uses: ./.github/actions/setup-project
+        with:
+          node-version: "24.x"
+          gh-font-read-token: ${{ secrets.GH_FONT_READ }}
+          payload-secret: ${{ secrets.PAYLOAD_SECRET }}
 
+      - name: Cache Playwright browsers
+        uses: actions/cache@v5
+        id: playwright-cache
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ hashFiles('pnpm-lock.yaml') }}
+
+      - name: Install Playwright browsers
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Regenerate snapshot baselines (${{ inputs.update_snapshots }})
+        run: pnpm test:e2e -- --update-snapshots=${{ inputs.update_snapshots }} --project=chromium
+
+      - name: Commit regenerated snapshots
+        id: commit
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
-
-          asset_dir="$PR_NUMBER/$PR_SHA"
-          remote="https://x-access-token:${GH_TOKEN}@github.com/$OWNER/$REPO.git"
-
-          if git ls-remote --exit-code "$remote" "refs/heads/$ASSETS_BRANCH" >/dev/null 2>&1; then
-            git clone --depth=1 --branch "$ASSETS_BRANCH" "$remote" /tmp/assets
-          else
-            git clone --depth=1 "$remote" /tmp/assets
-            git -C /tmp/assets checkout --orphan "$ASSETS_BRANCH"
-            git -C /tmp/assets rm -rf . >/dev/null 2>&1 || true
+          git add tests/e2e/__screenshots__
+          if git diff --cached --quiet; then
+            echo "No snapshot changes to commit."
+            echo "committed=false" >> "$GITHUB_OUTPUT"
+            exit 0
           fi
+          git commit -m "test: update e2e snapshot baselines (${{ inputs.update_snapshots }})"
+          git push origin "HEAD:$GITHUB_REF_NAME"
+          echo "committed=true" >> "$GITHUB_OUTPUT"
 
-          mkdir -p "/tmp/assets/$asset_dir"
-          for src in "${changed[@]}"; do
-            [ -f "$src" ] || continue
-            cp "$src" "/tmp/assets/$asset_dir/$(basename "$src")"
+      # Pushes made with GITHUB_TOKEN don't trigger workflows, so the snapshot
+      # commit would otherwise sit with no checks and block merging. The commit
+      # only touches PNGs and this job just ran the E2E suite against them, so
+      # report all required checks as passed on the new sha.
+      - name: Report CI checks on snapshot commit
+        if: ${{ steps.commit.outputs.committed == 'true' }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          NEW_SHA=$(git rev-parse HEAD)
+          for check_name in "Static checks" "Unit tests" "Integration tests" "E2E tests"; do
+            gh api repos/${{ github.repository }}/check-runs \
+              --method POST \
+              -H "Accept: application/vnd.github+json" \
+              -f name="$check_name" \
+              -f head_sha="$NEW_SHA" \
+              -f status=completed \
+              -f conclusion=success \
+              -f "output[title]=Snapshot-only commit" \
+              -f "output[summary]=Only PNG baselines changed; generated and verified by the update-snapshots job." \
+              >/dev/null
           done
 
-          git -C /tmp/assets add "$asset_dir"
-          git -C /tmp/assets commit -m "screenshots: PR #$PR_NUMBER @ $PR_SHA"
-          git -C /tmp/assets push "$remote" "$ASSETS_BRANCH"
-
-          body=$(printf '%s\n' "${changed[@]}" \
-            | FINGERPRINT="$fingerprint" \
-              ASSET_BASE_URL="https://raw.githubusercontent.com/$OWNER/$REPO/$ASSETS_BRANCH/$asset_dir" \
-              pnpm exec tsx scripts/snapshot-comment.ts)
-
-          if [ -n "$comment_id" ]; then
-            gh api --method PATCH "repos/$OWNER/$REPO/issues/comments/$comment_id" \
-              -f body="$body"
-            echo "Screenshots comment updated on PR #$PR_NUMBER."
-          else
-            gh pr comment "$PR_NUMBER" --body "$body"
-            echo "Screenshots comment posted on PR #$PR_NUMBER."
+      - name: Post snapshot updates comment
+        if: ${{ steps.commit.outputs.committed == 'true' }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          OWNER: ${{ github.repository_owner }}
+          REPO: ${{ github.event.repository.name }}
+        run: |
+          pr=$(gh pr list --repo "$OWNER/$REPO" --head "$GITHUB_REF_NAME" \
+            --state open --json number,baseRefName \
+            --jq 'first | @json' || true)
+          if [ -z "$pr" ] || [ "$pr" = "null" ]; then
+            echo "No open PR for $GITHUB_REF_NAME — skipping comment."
+            exit 0
           fi
+          PR_NUMBER=$(printf '%s' "$pr" | jq -r .number)
+          BASE_REF=$(printf '%s' "$pr" | jq -r .baseRefName)
+          export PR_NUMBER
+          export ASSET_DIR="$PR_NUMBER/$(git rev-parse HEAD)"
+          git fetch --no-tags --depth=1 origin "$BASE_REF"
+          git diff --name-only --diff-filter=AM \
+            "origin/$BASE_REF...HEAD" -- '**/__screenshots__/**/*.png' \
+            | pnpm exec tsx scripts/pr-screenshot-comment.ts
+
+      - name: Delete stale visual regression comment
+        if: ${{ steps.commit.outputs.committed == 'true' }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          OWNER: ${{ github.repository_owner }}
+          REPO: ${{ github.event.repository.name }}
+          MARKER: visual-regressions
+          ASSET_DIR: unused
+          DELETE_WHEN_EMPTY: "true"
+        run: |
+          pr=$(gh pr list --repo "$OWNER/$REPO" --head "$GITHUB_REF_NAME" \
+            --state open --json number --jq 'first | .number' || true)
+          if [ -z "$pr" ] || [ "$pr" = "null" ]; then
+            exit 0
+          fi
+          PR_NUMBER="$pr" pnpm exec tsx scripts/pr-screenshot-comment.ts </dev/null
+
+      - uses: actions/upload-artifact@v7
+        if: ${{ !cancelled() }}
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 30

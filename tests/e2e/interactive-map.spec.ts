@@ -1,5 +1,7 @@
 import { expect, test } from "@playwright/test"
 
+import { waitForStableRender } from "./helpers"
+
 test("interactive map article renders with pinned tooltip", async ({ page }, testInfo) => {
   await page.goto("/articles/missouri-shifting-margins-119-120-congressional-maps")
 
@@ -16,6 +18,8 @@ test("interactive map article renders with pinned tooltip", async ({ page }, tes
   await expect(tooltip).toBeVisible()
 
   test.skip(testInfo.project.name !== "chromium", "visual baseline captured on chromium only")
+
+  await waitForStableRender(page)
 
   const PADDING = 16
   const box = await mapFigure.boundingBox()

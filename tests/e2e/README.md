@@ -12,33 +12,41 @@ against committed baselines in `__screenshots__/`.
 - **Local runs skip screenshot comparison** (`ignoreSnapshots` in
   `playwright.config.ts`), so `pnpm test:e2e` locally only runs functional
   assertions. Set `E2E_SNAPSHOTS=1` to opt in (expect diffs on non-Linux).
-- **PR runs compare strictly.** They never write or commit baselines. On a
-  mismatch (or a missing baseline for a new test), the run fails and a
-  "Visual regressions detected" comment is posted on the PR with the
-  actual/diff/expected images.
+- **A new test with no baseline yet** gets one automatically: the E2E job runs
+  with `--update-snapshots=missing`, so a genuinely new screenshot has nothing
+  to regress against and CI commits it straight to your branch — no manual
+  step needed.
+- **A mismatch against an existing baseline** fails the run and posts a
+  "Visual regressions detected" PR comment with the actual/diff/expected
+  images. This is never auto-committed — accepting it is a deliberate action
+  (see below).
 
 ## Adding a new screenshot test
 
-1. Write the test. Guard the screenshot on chromium and stabilize the render:
+Write the test, guarding the screenshot on chromium and stabilizing the
+render:
 
-   ```ts
-   test.skip(testInfo.project.name !== "chromium", "visual baseline captured on chromium only")
-   await waitForStableRender(page)
-   await expect(page).toHaveScreenshot("my-feature.png", { clip: shot.clip })
-   ```
+```ts
+test.skip(testInfo.project.name !== "chromium", "visual baseline captured on chromium only")
+await waitForStableRender(page)
+await expect(page).toHaveScreenshot("my-feature.png", { clip: shot.clip })
+```
 
-2. Push. The E2E job will fail with a missing baseline and post the captured
-   image on the PR.
-3. Run the **Playwright Tests** workflow manually (Actions → Playwright Tests →
-   Run workflow) on your branch with mode **`missing`**. CI regenerates only
-   the missing baselines, commits them to your branch in a single commit, and
-   marks the required checks on that commit.
+Push. CI generates and commits the baseline automatically — nothing else to
+do. A "Snapshot updates in this PR" comment shows what was added.
 
 ## Accepting an intentional visual change
 
-Same as above, but run the workflow with mode **`all`** — every baseline is
-regenerated in one commit. Only do this when the PR's regression comment shows
-the diffs are expected.
+When a PR run shows "Visual regressions detected" and the diff is expected
+(e.g. you redesigned a component), run the **Update snapshot baselines**
+workflow on that branch to regenerate every baseline in one commit:
+
+```sh
+gh workflow run playwright.yml --ref <your-branch>
+```
+
+(or Actions → Playwright Tests → Run workflow, if you'd rather use the
+browser). No inputs needed — it always regenerates all baselines.
 
 ## Keeping screenshots stable
 

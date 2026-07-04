@@ -42,10 +42,10 @@ When a PR run shows "Visual regressions detected" and the diff is expected
 workflow on that branch to regenerate every baseline in one commit:
 
 ```sh
-gh workflow run playwright.yml --ref <your-branch>
+gh workflow run update-snapshots.yml --ref <your-branch>
 ```
 
-(or Actions → Playwright Tests → Run workflow, if you'd rather use the
+(or Actions → Update snapshot baselines → Run workflow, if you'd rather use the
 browser). No inputs needed — it always regenerates all baselines.
 
 ## Keeping screenshots stable

@@ -77,11 +77,9 @@ export function ShareButtons({ url, title, className }: ShareButtonsProps): Reac
   return (
     <Popover>
       <PopoverTrigger
-        render={
-          <Button variant="outline" size="icon-sm" aria-label="Share" className={className} />
-        }
+        render={<Button variant="outline" size="icon" aria-label="Share" className={className} />}
       >
-        <Share2 className="size-4" />
+        <Share2 className="size-5" />
       </PopoverTrigger>
       <PopoverContent align="end">
         <div className="space-y-2">
@@ -89,15 +87,15 @@ export function ShareButtons({ url, title, className }: ShareButtonsProps): Reac
             <input
               readOnly
               value={url}
-              className="border-input bg-background text-muted-foreground h-7 min-w-0 flex-1 truncate rounded-sm border px-2 text-xs outline-none"
+              className="border-input bg-background text-muted-foreground h-8 min-w-0 flex-1 truncate rounded-sm border px-2 text-xs outline-none"
             />
             <Button
               variant="outline"
-              size="icon-sm"
+              size="icon"
               aria-label={copied ? "Copied!" : "Copy link"}
               onClick={handleCopy}
             >
-              {copied ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}
+              {copied ? <Check className="size-4" /> : <Copy className="size-4" />}
             </Button>
           </div>
           <div className="flex items-center gap-1">
@@ -105,13 +103,13 @@ export function ShareButtons({ url, title, className }: ShareButtonsProps): Reac
               <LinkButton
                 key={label}
                 variant="ghost"
-                size="icon-sm"
+                size="icon"
                 aria-label={label}
                 href={href}
                 target="_blank"
                 rel="noopener noreferrer"
               >
-                <Icon className="size-4" />
+                <Icon className="size-5" />
               </LinkButton>
             ))}
           </div>

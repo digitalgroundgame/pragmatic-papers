@@ -48,6 +48,10 @@ gh workflow run update-snapshots.yml --ref <your-branch>
 (or Actions → Update snapshot baselines → Run workflow, if you'd rather use the
 browser). No inputs needed — it always regenerates all baselines.
 
+On a PR, you can trigger the same thing by adding the **`needs screenshots`**
+label — no CLI or Actions tab needed. The label is removed automatically once
+the run finishes, so re-adding it later triggers another regeneration.
+
 ## Keeping screenshots stable
 
 - Use `waitForStableRender(page)` (fonts + paint settle) before every

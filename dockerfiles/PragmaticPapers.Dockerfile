@@ -153,7 +153,8 @@ RUN mkdir -p public/media \
 
 # Startup script configuration
 COPY --from=builder --chown=nextjs:nodejs /app/dockerfiles/scripts/start.sh ./start.sh
-RUN chmod +x ./start.sh
+COPY --from=builder --chown=nextjs:nodejs /app/dockerfiles/scripts/notify-github-deployment.sh ./notify-github-deployment.sh
+RUN chmod +x ./start.sh ./notify-github-deployment.sh
 
 USER nextjs
 EXPOSE 3000

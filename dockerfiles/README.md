@@ -100,6 +100,21 @@ Click **Deploy** in Coolify. The application will:
 
 Use managed PostgreSQL service (AWS RDS, Supabase, Neon, etc.) for all deployments.
 
+### GitHub PR Deployment Status
+
+Coolify's own GitHub App check/comment (`digital-ground-game-deployment-bot`) does not
+populate GitHub's "Deployments" widget on a PR — that widget is driven by a separate
+API (the GitHub Deployments API), so PRs can show "This branch has not been deployed"
+even after a successful Coolify deploy.
+
+`dockerfiles/scripts/notify-github-deployment.sh` closes that gap: on container
+startup it creates a GitHub deployment for `SOURCE_COMMIT` (auto-injected by Coolify)
+and immediately marks it `success`, so the PR widget reflects reality.
+
+To enable it, set `GITHUB_DEPLOYMENT_TOKEN` in Coolify (Runtime + Build Secrets) to a
+fine-grained GitHub PAT scoped to this repo with **Deployments: write** permission.
+Leave it unset to skip the notification — the script no-ops safely either way.
+
 ## 🔍 Common Issues
 
 **Build failures:**

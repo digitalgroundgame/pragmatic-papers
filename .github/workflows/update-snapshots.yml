@@ -67,7 +67,7 @@ jobs:
         uses: actions/cache@v5
         with:
           path: .next/cache
-          key: nextjs-${{ hashFiles('pnpm-lock.yaml') }}-${{ github.sha }}
+          key: nextjs-${{ hashFiles('pnpm-lock.yaml') }}-${{ hashFiles('src/**/*.[jt]s', 'src/**/*.[jt]sx', '*.[jt]s', '*.[jt]sx') }}
           restore-keys: |
             nextjs-${{ hashFiles('pnpm-lock.yaml') }}-
 

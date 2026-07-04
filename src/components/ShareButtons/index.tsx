@@ -82,37 +82,35 @@ export function ShareButtons({ url, title, className }: ShareButtonsProps): Reac
         <Share2 className="size-5" />
       </PopoverTrigger>
       <PopoverContent align="end">
-        <div className="space-y-2">
-          <div className="flex items-center gap-1.5">
-            <input
-              readOnly
-              value={url}
-              className="border-input bg-background text-muted-foreground h-8 min-w-0 flex-1 truncate rounded-sm border px-2 text-xs outline-none"
-            />
-            <Button
-              variant="outline"
+        <div className="grid grid-cols-7 gap-1">
+          <input
+            readOnly
+            value={url}
+            className="border-input bg-background text-muted-foreground col-span-6 h-8 min-w-0 truncate rounded-sm border px-2 text-xs outline-none"
+          />
+          <Button
+            variant="outline"
+            size="icon"
+            aria-label={copied ? "Copied!" : "Copy link"}
+            onClick={handleCopy}
+            className="w-full"
+          >
+            {copied ? <Check className="size-4" /> : <Copy className="size-4" />}
+          </Button>
+          {shareLinks.map(({ label, icon: Icon, href }) => (
+            <LinkButton
+              key={label}
+              variant="ghost"
               size="icon"
-              aria-label={copied ? "Copied!" : "Copy link"}
-              onClick={handleCopy}
+              aria-label={label}
+              href={href}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-full"
             >
-              {copied ? <Check className="size-4" /> : <Copy className="size-4" />}
-            </Button>
-          </div>
-          <div className="flex items-center gap-1">
-            {shareLinks.map(({ label, icon: Icon, href }) => (
-              <LinkButton
-                key={label}
-                variant="ghost"
-                size="icon"
-                aria-label={label}
-                href={href}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                <Icon className="size-5" />
-              </LinkButton>
-            ))}
-          </div>
+              <Icon className="size-5" />
+            </LinkButton>
+          ))}
         </div>
       </PopoverContent>
     </Popover>

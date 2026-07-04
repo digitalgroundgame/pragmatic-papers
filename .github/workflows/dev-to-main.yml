@@ -1,14 +1,26 @@
+# DISABLED — kept for reference, intentionally does not run.
+#
+# This workflow tried to auto-open (and auto-merge) the dev → main release PR.
+# It cannot work with the default GITHUB_TOKEN: opening a PR fails with
+# "GitHub Actions is not permitted to create or approve pull requests".
+# PR creation now lives in the local release script, which runs with the
+# operator's gh credentials and forces a merge commit on the sync PR:
+#
+#   pnpm release <version> --phase 2   # opens dev → main and merge-commit auto-merges
+#
+# To re-enable this workflow instead, supply a PAT / GitHub App token for the
+# `gh pr create` step (and enable "Allow GitHub Actions to create and approve
+# pull requests" in repo settings), then remove the `if: false` guard below and
+# restore the `push` trigger.
 name: Dev to Main PR
 
 on:
-  push:
-    branches: [dev]
-    paths: [package.json]
   workflow_dispatch:
 
 jobs:
   open-pr:
     name: Open PR dev → main
+    if: false # disabled — see note at top of file
     runs-on: ubuntu-latest
     permissions:
       contents: read

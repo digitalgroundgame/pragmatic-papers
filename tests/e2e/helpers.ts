@@ -18,14 +18,14 @@ export async function gotoFirstVolume(page: Page): Promise<string | null> {
   return href
 }
 
-interface Box {
+interface BoundingBox {
   x: number
   y: number
   width: number
   height: number
 }
 
-export function mergeBoundingBoxes(...boxes: Box[]): Box {
+export function mergeBoundingBoxes(...boxes: BoundingBox[]): BoundingBox {
   const x = Math.min(...boxes.map((b) => b.x))
   const y = Math.min(...boxes.map((b) => b.y))
   const right = Math.max(...boxes.map((b) => b.x + b.width))
@@ -38,10 +38,10 @@ export function mergeBoundingBoxes(...boxes: Box[]): Box {
 // gridSnap rounds the clip width up to the nearest multiple of that value so
 // small layout variations (e.g. flex-sized popovers) don't shift the dimensions.
 export function viewportRatioClip(
-  boxes: Box | Box[],
+  boxes: BoundingBox | BoundingBox[],
   viewport: { width: number; height: number },
   { padding = 16, gridSnap = 0 }: { padding?: number; gridSnap?: number } = {},
-): Box {
+): BoundingBox {
   const box = Array.isArray(boxes) ? mergeBoundingBoxes(...boxes) : boxes
   const x0 = Math.round(Math.max(0, box.x - padding))
   const y0 = Math.round(Math.max(0, box.y - padding))
@@ -64,4 +64,56 @@ export function viewportRatioClip(
   const x = Math.max(0, Math.min(cx - Math.round(w / 2), viewport.width - w))
   const y = Math.max(0, Math.min(cy - Math.round(h / 2), viewport.height - h))
   return { x, y, width: w, height: h }
+}
+
+const NAMED_RATIOS = {
+  square: 1,
+  photo: 4 / 3,
+  classic: 3 / 2,
+  video: 16 / 9,
+  vertical: 9 / 16,
+} as const
+
+type NamedRatio = keyof typeof NAMED_RATIOS
+
+export class Screenshot {
+  private box: BoundingBox | null
+
+  constructor(box: BoundingBox | null) {
+    this.box = box
+  }
+
+  padding(amount: number): Screenshot {
+    if (!this.box) return this
+    return new Screenshot({
+      x: Math.max(0, this.box.x - amount),
+      y: Math.max(0, this.box.y - amount),
+      width: this.box.width + amount * 2,
+      height: this.box.height + amount * 2,
+    })
+  }
+
+  aspectRatio(ratio: number | NamedRatio): Screenshot {
+    if (!this.box) return this
+    const resolved = typeof ratio === "string" ? NAMED_RATIOS[ratio] : ratio
+    const { x, y, width, height } = this.box
+    const current = width / height
+    if (current > resolved) {
+      const newHeight = width / resolved
+      const delta = (newHeight - height) / 2
+      const newY = Math.max(0, y - delta)
+      const actualDelta = y - newY
+      return new Screenshot({ x, y: newY, width, height: height + actualDelta * 2 })
+    } else {
+      const newWidth = height * resolved
+      const delta = (newWidth - width) / 2
+      const newX = Math.max(0, x - delta)
+      const actualDelta = x - newX
+      return new Screenshot({ x: newX, y, width: width + actualDelta * 2, height })
+    }
+  }
+
+  get clip(): BoundingBox | undefined {
+    return this.box ?? undefined
+  }
 }

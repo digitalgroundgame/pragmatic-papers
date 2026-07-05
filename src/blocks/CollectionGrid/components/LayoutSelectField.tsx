@@ -8,8 +8,6 @@ type SlotCountMap = Record<string, [number, number]>
 type LayoutSelectFieldProps = SelectFieldClientProps & {
   /** Map of layout key → required slot count, passed via clientProps */
   slotCounts: SlotCountMap
-  /** Map of layout key → minimum slot count, passed via clientProps */
-  minSlotCounts?: SlotCountMap
   /** The sibling field name for the slots array (default: "slots") */
   slotsFieldName?: string
 }
@@ -22,7 +20,7 @@ type LayoutSelectFieldProps = SelectFieldClientProps & {
  * the selected layout.
  */
 export const LayoutSelectField: React.FC<LayoutSelectFieldProps> = (props) => {
-  const { slotCounts, minSlotCounts, slotsFieldName = "slots", path, schemaPath } = props
+  const { slotCounts, slotsFieldName = "slots", path, schemaPath } = props
 
   // Derive the sibling slots field paths from the layout field's own paths
   const lastDot = path?.lastIndexOf(".")
@@ -35,7 +33,7 @@ export const LayoutSelectField: React.FC<LayoutSelectFieldProps> = (props) => {
   const slotsSchemaPath =
     lastDotSchema !== undefined && lastDotSchema >= 0
       ? `${schemaPath!.substring(0, lastDotSchema)}.${slotsFieldName}`
-      : slotsPath
+      : slotsFieldName
 
   const { addFieldRow, removeFieldRow } = useForm()
 
@@ -61,7 +59,7 @@ export const LayoutSelectField: React.FC<LayoutSelectFieldProps> = (props) => {
     prevLayoutRef.current = layoutValue
     if (!slotCounts[layoutValue]) return
     const [minRows, maxRows] = slotCounts[layoutValue]!
-    if (!minRows || !maxRows) return
+    if (minRows == null || maxRows == null) return
     const count = rowCountRef.current
     if (count < minRows) {
       for (let i = count; i < minRows; i++) {
@@ -72,15 +70,7 @@ export const LayoutSelectField: React.FC<LayoutSelectFieldProps> = (props) => {
         removeFieldRow({ path: slotsPath, rowIndex: i })
       }
     }
-  }, [
-    layoutValue,
-    slotCounts,
-    slotsPath,
-    slotsSchemaPath,
-    addFieldRow,
-    removeFieldRow,
-    minSlotCounts,
-  ])
+  }, [layoutValue, slotCounts, slotsPath, slotsSchemaPath, addFieldRow, removeFieldRow])
 
   return <SelectField {...props} />
 }

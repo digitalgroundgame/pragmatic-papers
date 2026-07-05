@@ -82,11 +82,11 @@ export const Gauss10Layout: React.FC<LayoutProps> = ({
           variant="medium"
         />
         {/* Slots G, H, I — bottom row; G always present, H and I optional */}
-        <div className="flex flex-1 flex-row gap-6">
+        <div className="flex flex-1 flex-col gap-6 md:flex-row">
           <CollectionTile
             className="min-w-0 flex-1"
             tile={g!}
-            sizes="(max-width: 768px) 33vw, 100px"
+            sizes="(max-width: 768px) 33vw, 250px"
             variant="medium"
             imagePosition={!h && !i ? "left" : "above"}
           />
@@ -94,7 +94,7 @@ export const Gauss10Layout: React.FC<LayoutProps> = ({
             <CollectionTile
               className="min-w-0 flex-1"
               tile={h}
-              sizes="(max-width: 768px) 33vw, 100px"
+              sizes="(max-width: 768px) 33vw, 250px"
               variant="medium"
               imagePosition="above"
             />
@@ -103,7 +103,7 @@ export const Gauss10Layout: React.FC<LayoutProps> = ({
             <CollectionTile
               className="min-w-0 flex-1"
               tile={i}
-              sizes="(max-width: 768px) 33vw, 100px"
+              sizes="(max-width: 768px) 33vw, 250px"
               variant="medium"
               imagePosition="above"
             />

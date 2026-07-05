@@ -36,6 +36,7 @@ export const CollectionGridBlock: React.FC<
   const { layout, id, slots, priority } = props
   if (!layout) return null
   const LayoutComponent = layouts[layout]
+  if (!LayoutComponent) return null
   return (
     <>
       <LayoutComponent

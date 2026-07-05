@@ -41,7 +41,7 @@ export const layouts = {
 const slotCounts: Record<string, [number, number]> = Object.fromEntries(
   Object.entries(layouts).map(([key, { slotDescriptions, minSlots, maxSlots }]) => [
     key,
-    [minSlots || slotDescriptions.length, maxSlots || slotDescriptions.length],
+    [minSlots ?? slotDescriptions.length, maxSlots ?? slotDescriptions.length],
   ]),
 )
 

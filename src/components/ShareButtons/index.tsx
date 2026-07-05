@@ -11,6 +11,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { LinkButton } from "@/components/ui/link-button"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { sendGAEvent } from "@next/third-parties/google"
 import { Check, Copy, Mail, Share2 } from "lucide-react"
 import { useRef, useState } from "react"
 
@@ -20,46 +21,67 @@ interface ShareButtonsProps {
   className?: string
 }
 
+function getContentInfo(url: string): {
+  contentType: "article" | "volume" | "unknown"
+  itemId: string | null
+} {
+  const match = url.match(/\/(articles|volumes)\/([^/?#]+)/)
+  if (!match) return { contentType: "unknown", itemId: null }
+  return { contentType: match[1] === "articles" ? "article" : "volume", itemId: match[2]! }
+}
+
 export function ShareButtons({ url, title, className }: ShareButtonsProps): React.ReactElement {
   const [copied, setCopied] = useState(false)
   const copiedTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const encodedUrl = encodeURIComponent(url)
   const encodedTitle = encodeURIComponent(title)
+  const { contentType, itemId } = getContentInfo(url)
+
+  function trackShare(method: string) {
+    sendGAEvent("event", "share", { method, content_type: contentType, item_id: itemId })
+  }
 
   const shareLinks = [
     {
       label: "Share on X",
+      method: "x",
       icon: XIcon,
       href: `https://x.com/intent/tweet?url=${encodedUrl}&text=${encodedTitle}`,
     },
     {
       label: "Share on Bluesky",
+      method: "bluesky",
       icon: BlueskyIcon,
       href: `https://bsky.app/intent/compose?text=${encodedTitle}%20${encodedUrl}`,
     },
     {
       label: "Share on Facebook",
+      method: "facebook",
       icon: FacebookIcon,
       href: `https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}`,
     },
     {
       label: "Share on Threads",
+      method: "threads",
       icon: ThreadsIcon,
       href: `https://www.threads.net/intent/post?text=${encodedTitle}%20${encodedUrl}`,
     },
     {
       label: "Share on Reddit",
+      method: "reddit",
       icon: RedditIcon,
       href: `https://www.reddit.com/submit?url=${encodedUrl}&title=${encodedTitle}`,
     },
     {
       label: "Share on LinkedIn",
+      method: "linkedin",
       icon: LinkedinIcon,
       href: `https://www.linkedin.com/shareArticle?mini=true&url=${encodedUrl}&title=${encodedTitle}`,
     },
     {
       label: "Share via Email",
+      method: "email",
       icon: Mail,
       href: `mailto:?subject=${encodedTitle}&body=${encodedUrl}`,
     },
@@ -73,6 +95,7 @@ export function ShareButtons({ url, title, className }: ShareButtonsProps): Reac
       return
     }
     setCopied(true)
+    trackShare("copy_link")
     if (copiedTimeoutRef.current) clearTimeout(copiedTimeoutRef.current)
     copiedTimeoutRef.current = setTimeout(() => setCopied(false), 2000)
   }
@@ -102,7 +125,7 @@ export function ShareButtons({ url, title, className }: ShareButtonsProps): Reac
           >
             {copied ? <Check className="size-4" /> : <Copy className="size-4" />}
           </Button>
-          {shareLinks.map(({ label, icon: Icon, href }) => (
+          {shareLinks.map(({ label, method, icon: Icon, href }) => (
             <LinkButton
               key={label}
               variant="ghost"
@@ -112,6 +135,7 @@ export function ShareButtons({ url, title, className }: ShareButtonsProps): Reac
               target="_blank"
               rel="noopener noreferrer"
               className="w-full"
+              onClick={() => trackShare(method)}
             >
               <Icon className="size-5" />
             </LinkButton>

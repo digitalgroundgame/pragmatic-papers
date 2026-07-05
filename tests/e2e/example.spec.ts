@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test"
 
-import { waitForStableRender } from "./helpers"
+import { expectStableScreenshot } from "./helpers"
 
 test("home page loads", async ({ page }, testInfo) => {
   await page.goto("/")
@@ -8,6 +8,5 @@ test("home page loads", async ({ page }, testInfo) => {
   await expect(page.locator("a[href*='/articles/']").first()).toBeVisible()
 
   test.skip(testInfo.project.name !== "chromium", "visual baseline captured on chromium only")
-  await waitForStableRender(page)
-  await expect(page).toHaveScreenshot("home-page.png", { fullPage: true })
+  await expectStableScreenshot(page, "home-page.png", { fullPage: true })
 })

@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test"
 
 import {
+  expectStableScreenshot,
   gotoFirstArticle,
   gotoFirstVolume,
   viewportRatioClip,
@@ -148,10 +149,12 @@ test.describe("ShareButtons — screenshots", () => {
     await page.evaluate((delta) => window.scrollBy(0, delta), Math.round(box.y - targetY))
     await expect(popover).toBeVisible()
 
+    // Settle before measuring the bounding box, not just before the
+    // screenshot — otherwise the clip region can be computed mid-animation.
+    await waitForStableRender(page)
     const stableBox = await popover.boundingBox()
     if (!stableBox) throw new Error("Could not get popover bounding box after scroll")
-    await waitForStableRender(page)
-    await expect(page).toHaveScreenshot("article-share-popover-close-up.png", {
+    await expectStableScreenshot(page, "article-share-popover-close-up.png", {
       clip: viewportRatioClip(stableBox, viewport, { gridSnap: 16 }),
     })
   })
@@ -164,7 +167,7 @@ test.describe("ShareButtons — screenshots", () => {
     const share = page.getByRole("button", { name: "Share" })
     await share.waitFor({ state: "visible" })
     await share.scrollIntoViewIfNeeded()
-    await expect(page).toHaveScreenshot("article-share-trigger.png", { fullPage: false })
+    await expectStableScreenshot(page, "article-share-trigger.png", { fullPage: false })
   })
 
   test("article share popover open", async ({ page }, testInfo) => {
@@ -177,7 +180,7 @@ test.describe("ShareButtons — screenshots", () => {
     await share.scrollIntoViewIfNeeded()
     await share.click()
     await expect(page.locator('[data-slot="popover-content"]')).toBeVisible()
-    await expect(page).toHaveScreenshot("article-share-popover-open.png", { fullPage: false })
+    await expectStableScreenshot(page, "article-share-popover-open.png", { fullPage: false })
   })
 
   test("volume share popover open", async ({ page }, testInfo) => {
@@ -190,7 +193,7 @@ test.describe("ShareButtons — screenshots", () => {
     await share.scrollIntoViewIfNeeded()
     await share.click()
     await expect(page.locator('[data-slot="popover-content"]')).toBeVisible()
-    await expect(page).toHaveScreenshot("volume-share-popover-open.png", { fullPage: false })
+    await expectStableScreenshot(page, "volume-share-popover-open.png", { fullPage: false })
   })
 })
 
@@ -210,7 +213,7 @@ test.describe("ShareButtons — mobile screenshots (iPhone SE)", () => {
     const share = page.getByRole("button", { name: "Share" })
     await share.waitFor({ state: "visible" })
     await share.scrollIntoViewIfNeeded()
-    await expect(page).toHaveScreenshot("mobile-article-share-trigger.png", { fullPage: false })
+    await expectStableScreenshot(page, "mobile-article-share-trigger.png", { fullPage: false })
   })
 
   test("article share popover open", async ({ page }, testInfo) => {
@@ -223,7 +226,7 @@ test.describe("ShareButtons — mobile screenshots (iPhone SE)", () => {
     await share.scrollIntoViewIfNeeded()
     await share.click()
     await expect(page.locator('[data-slot="popover-content"]')).toBeVisible()
-    await expect(page).toHaveScreenshot("mobile-article-share-popover-open.png", {
+    await expectStableScreenshot(page, "mobile-article-share-popover-open.png", {
       fullPage: false,
     })
   })
@@ -238,7 +241,7 @@ test.describe("ShareButtons — mobile screenshots (iPhone SE)", () => {
     await share.scrollIntoViewIfNeeded()
     await share.click()
     await expect(page.locator('[data-slot="popover-content"]')).toBeVisible()
-    await expect(page).toHaveScreenshot("mobile-volume-share-popover-open.png", {
+    await expectStableScreenshot(page, "mobile-volume-share-popover-open.png", {
       fullPage: false,
     })
   })

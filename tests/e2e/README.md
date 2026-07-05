@@ -54,10 +54,13 @@ gh workflow run update-snapshots.yml --ref <your-branch>
 (or Actions → Update snapshot baselines → Run workflow, if you'd rather use the
 browser). No inputs needed. It runs with `--update-snapshots=changed`, so a
 baseline is only rewritten when the current render actually mismatches it —
-unrelated screenshots aren't touched just because the suite ran again (PNG
-re-encoding isn't byte-deterministic, so a full `--update-snapshots=all` regen
-tends to produce a few noise bytes of diff on every screenshot, not just the
-ones that changed).
+browser). No inputs needed. It runs with `--update-snapshots=changed`, so a
+baseline is only rewritten when the current render actually mismatches it —
+unrelated screenshots aren't touched just because the suite ran again. (A full
+`--update-snapshots=all` regen re-renders and rewrites *every* baseline, and the
+freshly-rendered pixels differ slightly from the committed ones due to
+anti-aliasing / font-hinting jitter — within the `maxDiffPixelRatio` tolerance,
+but enough to produce a few noise bytes of diff on each screenshot.)
 
 On a PR, you can trigger the same thing by adding the **`needs screenshots`**
 label — no CLI or Actions tab needed. The label is removed automatically once

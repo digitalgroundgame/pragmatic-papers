@@ -33,7 +33,11 @@ env:
   PAYLOAD_SECRET: ${{ secrets.PAYLOAD_SECRET }}
   NEXT_PUBLIC_SERVER_URL: http://localhost:8000
   USE_LOCAL_STORAGE: "true"
-  DATABASE_URI: postgres://postgres:postgres@localhost:5432/pragmatic-papers-e2e
+  # Hostname is the services key ("postgres"), not localhost — the job runs
+  # inside a container, and service containers are reachable by their
+  # service-id alias on the shared Docker network, not via the runner's
+  # loopback interface.
+  DATABASE_URI: postgres://postgres:postgres@postgres:5432/pragmatic-papers-e2e
   E2E_PROD_SERVER: "true"
 
 jobs:
@@ -41,6 +45,14 @@ jobs:
     name: E2E tests
     timeout-minutes: 60
     runs-on: ubuntu-latest
+    # Pinned to the exact @playwright/test version resolved in
+    # pnpm-lock.yaml so CI's chromium build matches what
+    # `pnpm test:e2e:update-snapshots` runs locally (see
+    # scripts/test-e2e-docker.sh) — both sides render identical baselines
+    # instead of "hopefully close" bare-runner Chromium builds that can
+    # drift as ubuntu-latest itself is updated.
+    container:
+      image: mcr.microsoft.com/playwright:v1.60.0-noble
 
     permissions:
       contents: write
@@ -82,13 +94,6 @@ jobs:
           gh-font-read-token: ${{ secrets.GH_FONT_READ }}
           payload-secret: ${{ secrets.PAYLOAD_SECRET }}
 
-      - name: Cache Playwright browsers
-        uses: actions/cache@v5
-        id: playwright-cache
-        with:
-          path: ~/.cache/ms-playwright
-          key: playwright-${{ hashFiles('pnpm-lock.yaml') }}
-
       # Restores Next.js incremental compilation cache so `next build` inside
       # the E2E run only recompiles what changed since the last run on this
       # branch (or dev).
@@ -99,9 +104,6 @@ jobs:
           key: nextjs-${{ hashFiles('pnpm-lock.yaml') }}-${{ hashFiles('src/**/*.[jt]s', 'src/**/*.[jt]sx', '*.[jt]s', '*.[jt]sx') }}
           restore-keys: |
             nextjs-${{ hashFiles('pnpm-lock.yaml') }}-
-
-      - name: Install Playwright browsers
-        run: pnpm exec playwright install --with-deps chromium
 
       # Only fills in baselines for tests that don't have one yet. Any test
       # with an existing baseline is still compared strictly and fails the

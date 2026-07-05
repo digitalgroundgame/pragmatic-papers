@@ -17,6 +17,23 @@ on:
   pull_request:
     types: [labeled]
 
+# Shared with playwright.yml's group: both workflows can push a baseline
+# commit to the same branch, so a stale run's push would otherwise race a
+# newer one's. Cancelling the older run shrinks that race window from the
+# whole E2E run down to GitHub's cancellation grace period.
+#
+# concurrency is resolved when the run is created — before the job-level
+# `if` below — so this workflow triggers (and would join the shared group)
+# on EVERY `labeled` event, not just "needs screenshots". Since playwright.yml
+# doesn't re-run on `labeled`, joining the shared group unconditionally would
+# let an unrelated label (e.g. "bug") cancel an in-flight E2E run with
+# nothing to replace it. Fall back to a self-only group (this run's own id)
+# whenever the trigger isn't actually one we act on, so those events can only
+# ever conflict with themselves.
+concurrency:
+  group: ${{ (github.event_name == 'workflow_dispatch' || github.event.label.name == 'needs screenshots') && format('snapshot-baselines-{0}', github.event.pull_request.head.ref || github.ref_name) || github.run_id }}
+  cancel-in-progress: true
+
 env:
   PAYLOAD_SECRET: ${{ secrets.PAYLOAD_SECRET }}
   NEXT_PUBLIC_SERVER_URL: http://localhost:8000

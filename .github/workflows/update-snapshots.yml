@@ -119,8 +119,8 @@ jobs:
           restore-keys: |
             nextjs-${{ hashFiles('pnpm-lock.yaml') }}-
 
-      - name: Regenerate every snapshot baseline
-        run: pnpm test:e2e -- --update-snapshots=all --project=chromium
+      - name: Regenerate changed snapshot baselines
+        run: pnpm test:e2e -- --update-snapshots=changed --project=chromium
 
       - name: Commit regenerated snapshots
         id: commit

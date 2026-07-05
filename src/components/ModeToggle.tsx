@@ -1,5 +1,6 @@
 "use client"
 
+import { sendGAEvent } from "@next/third-parties/google"
 import { useTheme } from "@wrksz/themes/client"
 import { Moon, Sun } from "lucide-react"
 import React from "react"
@@ -21,6 +22,11 @@ interface ModeToggleProps {
 export function ModeToggle({ showLabel = false }: ModeToggleProps = {}): React.JSX.Element {
   const { setTheme } = useTheme()
 
+  function handleSetTheme(theme: "light" | "dark" | "system"): void {
+    setTheme(theme)
+    sendGAEvent("event", "theme_change", { theme })
+  }
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
@@ -37,9 +43,9 @@ export function ModeToggle({ showLabel = false }: ModeToggleProps = {}): React.J
         }
       />
       <DropdownMenuContent align={showLabel ? "center" : "start"}>
-        <DropdownMenuItem onClick={() => setTheme("light")}>Light</DropdownMenuItem>
-        <DropdownMenuItem onClick={() => setTheme("dark")}>Dark</DropdownMenuItem>
-        <DropdownMenuItem onClick={() => setTheme("system")}>System</DropdownMenuItem>
+        <DropdownMenuItem onClick={() => handleSetTheme("light")}>Light</DropdownMenuItem>
+        <DropdownMenuItem onClick={() => handleSetTheme("dark")}>Dark</DropdownMenuItem>
+        <DropdownMenuItem onClick={() => handleSetTheme("system")}>System</DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   )

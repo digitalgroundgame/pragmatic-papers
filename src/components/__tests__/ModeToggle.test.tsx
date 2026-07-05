@@ -6,11 +6,17 @@ vi.mock("@wrksz/themes/client", () => ({
   useTheme: () => ({ setTheme }),
 }))
 
+const sendGAEvent = vi.fn()
+vi.mock("@next/third-parties/google", () => ({
+  sendGAEvent: (...args: unknown[]) => sendGAEvent(...args),
+}))
+
 import { ModeToggle } from "../ModeToggle"
 
 afterEach(() => {
   cleanup()
   setTheme.mockClear()
+  sendGAEvent.mockClear()
 })
 
 describe("ModeToggle", () => {
@@ -33,5 +39,6 @@ describe("ModeToggle", () => {
     fireEvent.click(screen.getByRole("button", { name: "Toggle theme" }))
     fireEvent.click(await screen.findByText(label))
     expect(setTheme).toHaveBeenCalledWith(theme)
+    expect(sendGAEvent).toHaveBeenCalledWith("event", "theme_change", { theme })
   })
 })

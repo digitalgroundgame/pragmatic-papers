@@ -20,6 +20,10 @@ against committed baselines in `__screenshots__/`.
   "Visual regressions detected" PR comment with the actual/diff/expected
   images. This is never auto-committed — accepting it is a deliberate action
   (see below).
+- **Concurrent pushes to the same branch don't drop baselines.** If another
+  commit lands on the branch between checkout and the baseline push, CI
+  rebases onto the new tip and retries (up to 5 times) instead of silently
+  failing the push.
 
 ## Adding a new screenshot test
 

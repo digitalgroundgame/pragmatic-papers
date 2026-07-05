@@ -119,7 +119,27 @@ jobs:
             exit 0
           fi
           git commit -m "test: update e2e snapshot baselines"
-          git push origin "HEAD:${{ steps.pr.outputs.branch }}"
+
+          # Another run (or a human) can push to this branch between our
+          # checkout and this push. Rebase onto whatever landed and retry
+          # rather than silently dropping our baselines on a rejected push.
+          BRANCH="${{ steps.pr.outputs.branch }}"
+          attempt=1
+          max_attempts=5
+          until git push origin "HEAD:$BRANCH"; do
+            if [ "$attempt" -ge "$max_attempts" ]; then
+              echo "::error::Failed to push snapshot baseline commit to $BRANCH after $max_attempts attempts."
+              exit 1
+            fi
+            echo "Push rejected (attempt $attempt/$max_attempts) — rebasing onto latest $BRANCH and retrying..."
+            git fetch origin "$BRANCH"
+            if ! git rebase "origin/$BRANCH"; then
+              echo "::error::Rebase conflict while retrying the snapshot baseline push — resolve manually."
+              git rebase --abort
+              exit 1
+            fi
+            attempt=$((attempt + 1))
+          done
           echo "committed=true" >> "$GITHUB_OUTPUT"
 
       # Pushes made with GITHUB_TOKEN don't trigger workflows, so the snapshot

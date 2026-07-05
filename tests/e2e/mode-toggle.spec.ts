@@ -129,6 +129,14 @@ test.describe("ModeToggle — mobile screenshots (iPhone SE)", () => {
     return sheet
   }
 
+  async function openMobileMenuSheet(page: Page) {
+    await page.goto("/")
+    await page.getByRole("button", { name: "Menu" }).click()
+    const sheet = page.locator('[data-slot="sheet-content"]')
+    await expect(sheet).toBeVisible()
+    return sheet
+  }
+
   test("mobile settings sheet trigger", async ({ page }, testInfo) => {
     test.skip(testInfo.project.name !== "chromium", "visual baseline captured on chromium only")
     const sheet = await openMobileSettingsSheet(page)
@@ -165,6 +173,46 @@ test.describe("ModeToggle — mobile screenshots (iPhone SE)", () => {
 
     const shot = new Screenshot(mergeBoundingBoxes(sheetBox, menuBox)).padding(16)
     await expectStableScreenshot(page, "mobile-settings-mode-toggle-dropdown-open.png", {
+      clip: shot.clip,
+    })
+  })
+
+  test("mobile menu sheet trigger", async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== "chromium", "visual baseline captured on chromium only")
+    const sheet = await openMobileMenuSheet(page)
+
+    const toggle = sheet.getByRole("button", { name: "Toggle theme" })
+    await expect(toggle).toBeVisible()
+    await waitForStableRender(page)
+
+    // Clip to the whole sheet panel, not just the button, so the baseline
+    // shows the toggle alongside the social links it sits next to.
+    const box = await sheet.boundingBox()
+    const shot = new Screenshot(box)
+    await expectStableScreenshot(page, "mobile-menu-mode-toggle-trigger.png", {
+      clip: shot.clip,
+    })
+  })
+
+  test("mobile menu sheet dropdown open", async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== "chromium", "visual baseline captured on chromium only")
+    const sheet = await openMobileMenuSheet(page)
+
+    const toggle = sheet.getByRole("button", { name: "Toggle theme" })
+    await expect(toggle).toBeVisible()
+    const sheetBox = await sheet.boundingBox()
+    if (!sheetBox) throw new Error("Could not get sheet bounding box")
+
+    await toggle.click()
+    const menu = page.locator('[data-slot="dropdown-menu-content"]')
+    await expect(menu).toBeVisible()
+    await waitForStableRender(page)
+
+    const menuBox = await menu.boundingBox()
+    if (!menuBox) throw new Error("Could not get dropdown menu bounding box")
+
+    const shot = new Screenshot(mergeBoundingBoxes(sheetBox, menuBox)).padding(16)
+    await expectStableScreenshot(page, "mobile-menu-mode-toggle-dropdown-open.png", {
       clip: shot.clip,
     })
   })

@@ -72,10 +72,10 @@ export async function Header(): Promise<React.JSX.Element> {
               <Logo />
             </a>
             <div className="flex items-center justify-end gap-2">
-              <HeaderActions actions={actions} className="hidden lg:flex" />
               <div className="hidden lg:flex">
                 <ModeToggleAnalytics location="header" />
               </div>
+              <HeaderActions actions={actions} className="hidden lg:flex" />
               <Sheet>
                 <SheetTrigger
                   render={

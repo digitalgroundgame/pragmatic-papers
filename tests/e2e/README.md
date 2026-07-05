@@ -29,13 +29,25 @@ against committed baselines in `__screenshots__/`.
 
 ## Adding a new screenshot test
 
-Write the test, guarding the screenshot on chromium and stabilizing the
-render:
+Write the test, guarding the screenshot on chromium and using
+`expectStableScreenshot` instead of `expect(page).toHaveScreenshot(...)`:
 
 ```ts
 test.skip(testInfo.project.name !== "chromium", "visual baseline captured on chromium only")
+await expectStableScreenshot(page, "my-feature.png", { clip: shot.clip })
+```
+
+`expectStableScreenshot` always runs `waitForStableRender` first — use it for
+every screenshot assertion so this isn't something each new test has to
+remember on its own. If you need a bounding box for `clip` (most tests do),
+call `waitForStableRender(page)` yourself before measuring it too — the box
+has to reflect settled layout, not just the final screenshot:
+
+```ts
 await waitForStableRender(page)
-await expect(page).toHaveScreenshot("my-feature.png", { clip: shot.clip })
+const box = await myElement.boundingBox()
+// ...
+await expectStableScreenshot(page, "my-feature.png", { clip: shot.clip })
 ```
 
 Push. CI generates and commits the baseline automatically — nothing else to
@@ -66,8 +78,15 @@ the run finishes, so re-adding it later triggers another regeneration.
 
 ## Keeping screenshots stable
 
-- Use `waitForStableRender(page)` (fonts + paint settle) before every
-  screenshot.
+- Use `expectStableScreenshot(page, name, options)` instead of
+  `expect(page).toHaveScreenshot(...)` — it waits for fonts, image decoding,
+  and any running (finite) CSS animation/transition to settle before
+  capturing, so a still-loading hero image or an in-flight dropdown
+  enter-animation can't produce a flaky diff.
+- If a test measures a bounding box for `clip`, call
+  `waitForStableRender(page)` before that measurement too, not just before
+  the screenshot — a box measured mid-animation doesn't match the
+  animation-frozen pixels the screenshot actually captures.
 - Prefer clipped component screenshots (`Screenshot` helper) over `fullPage`.
 - Mask or avoid regions with dynamic content (dates, random ordering, media).
 - Timezone (`UTC`), locale (`en-US`), and color scheme (`light`) are pinned in

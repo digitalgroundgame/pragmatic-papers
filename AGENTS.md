@@ -152,7 +152,13 @@ git push
 > [!NOTE]
 > Commit signing does not work in the wiki repo from the **remote/cloud execution environment** — the signing server is scoped to the main repo. If running in that context and a push fails due to signing, ask the user to re-run the session locally (e.g. in Cursor or another terminal where their git signing is configured), then retry the push.
 
-After adding a new page, update `Home.md` to add it to the Table of Contents under the appropriate section, and match the back-link style used by other pages:
+### When to update the wiki
+
+Update the wiki (rather than, or in addition to, this file) when the change is user-facing process/workflow documentation that outlives any single PR — e.g. a new CI workflow, a local dev flow, or a "how do I..." that someone will search for later. Keep this file (`AGENTS.md`) focused on conventions an agent needs while writing code in this repo; the wiki is for humans (and future agents) who need the narrative/how-to version. When in doubt, do both: a short pointer here (if relevant to agent behavior) plus the full writeup on the wiki.
+
+### Local terminal vs. sandboxed/remote environments
+
+Editing the wiki only works when the agent has access to the user's ambient `git`/`gh` credentials (SSH agent, credential helper, or `gh auth login`) — which in practice means running in a real local terminal. The wiki is a separate git repo (`pragmatic-papers.wiki.git`) that isn't covered by this repo's GitHub App installation/OAuth grant, so any sandboxed or remote execution environment (a hosted agent session, a desktop app's background execution environment, CI, etc.) that only has scoped access to the main repo will fail to `git push` to the wiki repo with a permission/auth error — even though it can happily read/write the main repo. If a wiki edit fails this way, ask the user to re-run the request from a local terminal session where their git credentials are already configured (same root cause as the commit-signing caveat above).
 
 ```md
 [← Table of Contents](https://github.com/digitalgroundgame/pragmatic-papers/wiki#table-of-contents)

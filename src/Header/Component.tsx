@@ -74,7 +74,7 @@ export async function Header(): Promise<React.JSX.Element> {
             <div className="flex items-center justify-end gap-2">
               <HeaderActions actions={actions} className="hidden lg:flex" />
               <div className="hidden lg:flex">
-                <ModeToggle />
+                <ModeToggle placement="header" />
               </div>
               <Sheet>
                 <SheetTrigger
@@ -103,7 +103,7 @@ export async function Header(): Promise<React.JSX.Element> {
                     <LinkButton variant="outline" size="lg" className="w-full" href="/admin/login">
                       Log In
                     </LinkButton>
-                    <ModeToggle showLabel />
+                    <ModeToggle showLabel placement="header-mobile-sheet" />
                   </div>
                 </SheetContent>
               </Sheet>

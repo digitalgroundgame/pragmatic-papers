@@ -39,6 +39,19 @@ describe("ModeToggle", () => {
     fireEvent.click(screen.getByRole("button", { name: "Toggle theme" }))
     fireEvent.click(await screen.findByText(label))
     expect(setTheme).toHaveBeenCalledWith(theme)
-    expect(sendGAEvent).toHaveBeenCalledWith("event", "theme_change", { theme })
+    expect(sendGAEvent).toHaveBeenCalledWith("event", "theme_change", {
+      theme,
+      placement: undefined,
+    })
+  })
+
+  it("includes the placement in the analytics event when provided", async () => {
+    render(<ModeToggle placement="footer" />)
+    fireEvent.click(screen.getByRole("button", { name: "Toggle theme" }))
+    fireEvent.click(await screen.findByText("Dark"))
+    expect(sendGAEvent).toHaveBeenCalledWith("event", "theme_change", {
+      theme: "dark",
+      placement: "footer",
+    })
   })
 })

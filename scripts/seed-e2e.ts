@@ -17,7 +17,7 @@ const ctx = { disableRevalidate: true }
 
 // Screenshot baselines bake in this date via the article/volume byline, so it
 // must stay fixed rather than tracking the day the seed happens to run.
-const PUBLISHED_AT = "2026-06-02T00:00:00.000Z"
+const PUBLISHED_AT = "2026-06-04T00:00:00.000Z"
 
 export async function main(): Promise<void> {
   const payload = await getPayload({ config })

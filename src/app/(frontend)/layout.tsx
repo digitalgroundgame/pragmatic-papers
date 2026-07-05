@@ -1,5 +1,6 @@
 import { AdminBar } from "@/components/AdminBar"
 import { Breadcrumbs } from "@/components/Breadcrumbs"
+import { ThemeAnalytics } from "@/components/ThemeAnalytics"
 import { Footer } from "@/Footer/Component"
 import { Header } from "@/Header/Component"
 import { getServerSideURL } from "@/utilities/getURL"
@@ -49,10 +50,11 @@ export default async function RootLayout({
       <body className="flex min-h-screen flex-col">
         <ThemeProvider
           attribute="class"
-          defaultTheme="system"
+          defaultTheme="light"
           enableSystem
           disableTransitionOnChange
         >
+          <ThemeAnalytics />
           <AdminBar />
           <Header />
           <main role="main" className="flex-1">

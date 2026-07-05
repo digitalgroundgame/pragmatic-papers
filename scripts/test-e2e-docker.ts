@@ -45,6 +45,7 @@ export function main(): void {
   if (!isDockerAvailable()) {
     console.error("Docker daemon not reachable — start Docker and try again.")
     process.exit(1)
+    return
   }
 
   const fontWarning = missingFontTokenWarning(process.env)

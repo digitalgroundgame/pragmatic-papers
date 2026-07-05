@@ -1,9 +1,16 @@
-import { describe, expect, it } from "vitest"
+import { afterEach, describe, expect, it, vi } from "vitest"
 
+vi.mock("node:fs", () => ({
+  readFileSync: vi.fn(),
+}))
+
+import { readFileSync } from "node:fs"
 import {
   checkPins,
   getPinnedTags,
   getResolvedPlaywrightVersion,
+  main,
+  PINNED_FILES,
 } from "../../scripts/check-playwright-image-pin"
 
 function lockfile(version: string, specifier = `^${version}`) {
@@ -86,5 +93,43 @@ describe("checkPins", () => {
       "playwright.yml: pinned to v1.59.0-jammy, but pnpm-lock.yaml resolves @playwright/test to 1.60.0",
       "Inconsistent Ubuntu codenames pinned across files: noble, jammy — use the same base image everywhere.",
     ])
+  })
+})
+
+describe("main", () => {
+  afterEach(() => {
+    vi.mocked(readFileSync).mockReset()
+    vi.restoreAllMocks()
+  })
+
+  it("logs success and does not exit when every pin matches", () => {
+    vi.mocked(readFileSync).mockImplementation((path) =>
+      path === "pnpm-lock.yaml" ? lockfile("1.60.0") : pin("1.60.0"),
+    )
+    const exit = vi.spyOn(process, "exit").mockImplementation(() => undefined as never)
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined)
+
+    main()
+
+    expect(exit).not.toHaveBeenCalled()
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining("matches pnpm-lock.yaml"))
+  })
+
+  it("logs mismatches and exits 1 when a pin is out of sync", () => {
+    vi.mocked(readFileSync).mockImplementation((path) => {
+      if (path === "pnpm-lock.yaml") return lockfile("1.60.0")
+      if (path === PINNED_FILES[0]) return pin("1.59.0")
+      return pin("1.60.0")
+    })
+    const exit = vi.spyOn(process, "exit").mockImplementation(() => undefined as never)
+    const error = vi.spyOn(console, "error").mockImplementation(() => undefined)
+
+    main()
+
+    expect(exit).toHaveBeenCalledWith(1)
+    expect(error).toHaveBeenCalledWith(expect.stringContaining("out of sync"))
+    expect(error).toHaveBeenCalledWith(
+      expect.stringContaining(`${PINNED_FILES[0]}: pinned to v1.59.0`),
+    )
   })
 })

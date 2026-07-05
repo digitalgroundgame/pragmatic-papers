@@ -80,7 +80,11 @@ change.
 Keep the image tag in `docker-compose.e2e.yml` and `.github/workflows/*.yml`
 in sync with the `@playwright/test` version in `pnpm-lock.yaml` when
 upgrading — a mismatched image runs a different Chromium build than what's
-actually installed, defeating the parity this exists for.
+actually installed, defeating the parity this exists for. CI enforces this:
+`node scripts/check-playwright-image-pin.mjs` (part of the "Static checks"
+job) fails the build if any pinned tag drifts from the lockfile-resolved
+version, so an upgrade to `@playwright/test` without a matching image bump
+gets caught immediately instead of silently producing mismatched baselines.
 
 ## Accepting an intentional visual change
 

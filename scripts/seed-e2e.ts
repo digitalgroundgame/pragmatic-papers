@@ -97,6 +97,33 @@ export async function main(): Promise<void> {
     })
 
     await payload.updateGlobal({
+      slug: "header",
+      context: ctx,
+      data: {
+        actions: [
+          {
+            link: {
+              type: "custom",
+              label: "Donate",
+              url: "https://example.com/donate",
+              newTab: true,
+              variant: "branded",
+            },
+          },
+          {
+            link: {
+              type: "custom",
+              label: "Join Us",
+              url: "https://discord.gg/digitalgroundgame",
+              newTab: true,
+              variant: "outline",
+            },
+          },
+        ],
+      },
+    })
+
+    await payload.updateGlobal({
       slug: "footer",
       context: ctx,
       data: {

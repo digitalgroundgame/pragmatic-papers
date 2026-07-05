@@ -26,11 +26,11 @@ export function ModeToggle({
   showLabel = false,
   onThemeChange,
 }: ModeToggleProps = {}): React.JSX.Element {
-  const { setTheme } = useTheme()
+  const { setTheme, theme } = useTheme()
 
-  function handleSetTheme(theme: Theme): void {
-    setTheme(theme)
-    onThemeChange?.(theme)
+  function handleSetTheme(next: Theme): void {
+    setTheme(next)
+    onThemeChange?.(next)
   }
 
   return (
@@ -49,9 +49,15 @@ export function ModeToggle({
         }
       />
       <DropdownMenuContent align={showLabel ? "center" : "start"}>
-        <DropdownMenuItem onClick={() => handleSetTheme("light")}>Light</DropdownMenuItem>
-        <DropdownMenuItem onClick={() => handleSetTheme("dark")}>Dark</DropdownMenuItem>
-        <DropdownMenuItem onClick={() => handleSetTheme("system")}>System</DropdownMenuItem>
+        <DropdownMenuItem disabled={theme === "light"} onClick={() => handleSetTheme("light")}>
+          Light
+        </DropdownMenuItem>
+        <DropdownMenuItem disabled={theme === "dark"} onClick={() => handleSetTheme("dark")}>
+          Dark
+        </DropdownMenuItem>
+        <DropdownMenuItem disabled={theme === "system"} onClick={() => handleSetTheme("system")}>
+          System
+        </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   )

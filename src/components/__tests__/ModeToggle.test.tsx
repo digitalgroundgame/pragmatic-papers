@@ -21,7 +21,7 @@ describe("ModeToggle", () => {
 
   it("renders a full-width labeled trigger when showLabel is set", () => {
     render(<ModeToggle showLabel />)
-    expect(screen.getByRole("button", { name: "Theme" })).toBeDefined()
+    expect(screen.getByRole("button", { name: "Toggle theme" })).toBeDefined()
   })
 
   it.each([

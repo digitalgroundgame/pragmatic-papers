@@ -50,7 +50,9 @@ test.describe("ShareButtons — article page", () => {
     expect(clipped).toBe(expectedUrl)
   })
 
-  test("copy button label resets after 2 seconds", async ({ page }) => {
+  test("copy button label resets after 2 seconds", async ({ page, context, browserName }) => {
+    test.skip(browserName !== "chromium", "Clipboard permissions only supported in Chromium")
+    await context.grantPermissions(["clipboard-read", "clipboard-write"])
     const href = await gotoFirstArticle(page)
     test.skip(!href, "No articles found in the database")
 

@@ -17,10 +17,20 @@ test.describe("ModeToggle — desktop screenshots", () => {
     await expect(toggle).toBeVisible()
     await waitForStableRender(page)
 
-    // Clip to the whole header bar, not just the button, so the baseline
-    // shows where the toggle sits relative to the rest of the nav.
-    const box = await header.boundingBox()
-    const shot = new Screenshot(box)
+    // Clip to the header actions + toggle cluster, not the whole header bar
+    // (the full header is already covered by other baselines) or just the
+    // button (too tight to tell where it sits relative to its neighbors).
+    const donate = header.getByRole("link", { name: "Donate" })
+    const joinUs = header.getByRole("link", { name: "Join Us" })
+    const [donateBox, joinUsBox, toggleBox] = await Promise.all([
+      donate.boundingBox(),
+      joinUs.boundingBox(),
+      toggle.boundingBox(),
+    ])
+    if (!donateBox || !joinUsBox || !toggleBox)
+      throw new Error("Could not get cluster bounding boxes")
+
+    const shot = new Screenshot(mergeBoundingBoxes(donateBox, joinUsBox, toggleBox)).padding(16)
     await expectStableScreenshot(page, "header-mode-toggle-trigger.png", { clip: shot.clip })
   })
 
@@ -31,8 +41,16 @@ test.describe("ModeToggle — desktop screenshots", () => {
     const header = page.locator("header")
     const toggle = header.getByRole("button", { name: "Toggle theme" })
     await expect(toggle).toBeVisible()
-    const headerBox = await header.boundingBox()
-    if (!headerBox) throw new Error("Could not get header bounding box")
+
+    const donate = header.getByRole("link", { name: "Donate" })
+    const joinUs = header.getByRole("link", { name: "Join Us" })
+    const [donateBox, joinUsBox, toggleBox] = await Promise.all([
+      donate.boundingBox(),
+      joinUs.boundingBox(),
+      toggle.boundingBox(),
+    ])
+    if (!donateBox || !joinUsBox || !toggleBox)
+      throw new Error("Could not get cluster bounding boxes")
 
     await toggle.click()
     const menu = page.locator('[data-slot="dropdown-menu-content"]')
@@ -42,7 +60,9 @@ test.describe("ModeToggle — desktop screenshots", () => {
     const menuBox = await menu.boundingBox()
     if (!menuBox) throw new Error("Could not get dropdown menu bounding box")
 
-    const shot = new Screenshot(mergeBoundingBoxes(headerBox, menuBox)).padding(16)
+    const shot = new Screenshot(
+      mergeBoundingBoxes(donateBox, joinUsBox, toggleBox, menuBox),
+    ).padding(16)
     await expectStableScreenshot(page, "header-mode-toggle-dropdown-open.png", {
       clip: shot.clip,
     })
@@ -52,16 +72,18 @@ test.describe("ModeToggle — desktop screenshots", () => {
     test.skip(testInfo.project.name !== "chromium", "visual baseline captured on chromium only")
     await page.goto("/")
 
-    const footer = page.locator("footer")
-    const toggle = footer.getByRole("button", { name: "Toggle theme" })
+    const toggle = page.locator("footer").getByRole("button", { name: "Toggle theme" })
     await toggle.scrollIntoViewIfNeeded()
     await expect(toggle).toBeVisible()
     await waitForStableRender(page)
 
-    // Clip to the whole footer, not just the button, for the same reason as
-    // the header trigger screenshot above.
-    const box = await footer.boundingBox()
-    const shot = new Screenshot(box)
+    // Clip to the social links + toggle cluster, not the whole footer (the
+    // full footer is already covered by other baselines) or just the button.
+    const socials = page.getByRole("navigation", { name: "Footer Social Links" })
+    const [socialsBox, toggleBox] = await Promise.all([socials.boundingBox(), toggle.boundingBox()])
+    if (!socialsBox || !toggleBox) throw new Error("Could not get cluster bounding boxes")
+
+    const shot = new Screenshot(mergeBoundingBoxes(socialsBox, toggleBox)).padding(16)
     await expectStableScreenshot(page, "footer-mode-toggle-trigger.png", { clip: shot.clip })
   })
 
@@ -69,12 +91,13 @@ test.describe("ModeToggle — desktop screenshots", () => {
     test.skip(testInfo.project.name !== "chromium", "visual baseline captured on chromium only")
     await page.goto("/")
 
-    const footer = page.locator("footer")
-    const toggle = footer.getByRole("button", { name: "Toggle theme" })
+    const toggle = page.locator("footer").getByRole("button", { name: "Toggle theme" })
     await toggle.scrollIntoViewIfNeeded()
     await expect(toggle).toBeVisible()
-    const footerBox = await footer.boundingBox()
-    if (!footerBox) throw new Error("Could not get footer bounding box")
+
+    const socials = page.getByRole("navigation", { name: "Footer Social Links" })
+    const [socialsBox, toggleBox] = await Promise.all([socials.boundingBox(), toggle.boundingBox()])
+    if (!socialsBox || !toggleBox) throw new Error("Could not get cluster bounding boxes")
 
     await toggle.click()
     const menu = page.locator('[data-slot="dropdown-menu-content"]')
@@ -84,7 +107,7 @@ test.describe("ModeToggle — desktop screenshots", () => {
     const menuBox = await menu.boundingBox()
     if (!menuBox) throw new Error("Could not get dropdown menu bounding box")
 
-    const shot = new Screenshot(mergeBoundingBoxes(footerBox, menuBox)).padding(16)
+    const shot = new Screenshot(mergeBoundingBoxes(socialsBox, toggleBox, menuBox)).padding(16)
     await expectStableScreenshot(page, "footer-mode-toggle-dropdown-open.png", {
       clip: shot.clip,
     })

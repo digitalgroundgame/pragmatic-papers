@@ -1,4 +1,4 @@
-import type { Page } from "@playwright/test"
+import { expect, type Page, type PageAssertionsToHaveScreenshotOptions } from "@playwright/test"
 
 export async function gotoFirstArticle(page: Page): Promise<string | null> {
   await page.goto("/")
@@ -19,11 +19,18 @@ export async function gotoFirstVolume(page: Page): Promise<string | null> {
 }
 
 /**
- * Settle sources of pixel nondeterminism before taking a screenshot: wait for
- * web fonts to finish loading (late font swaps shift every glyph), for all
- * <img>s in the DOM to finish decoding (a still-loading hero image behind a
- * clipped screenshot region is a common source of flaky diffs), and for two
- * animation frames so in-flight layout/paint work has flushed.
+ * Settle sources of pixel nondeterminism before taking a screenshot or
+ * measuring layout: wait for web fonts to finish loading (late font swaps
+ * shift every glyph), for all <img>s in the DOM to finish decoding (a
+ * still-loading hero image behind a clipped screenshot region is a common
+ * source of flaky diffs), for every finite CSS animation/transition
+ * currently running to finish (e.g. a dropdown's enter animation — grabbing
+ * its bounding box mid-animation produces a crop that doesn't match the
+ * animation-frozen pixels `toHaveScreenshot` actually captures), and for two
+ * animation frames so any remaining layout/paint work has flushed.
+ *
+ * Infinite animations (loading skeletons) are intentionally excluded —
+ * waiting on one would hang forever.
  */
 export async function waitForStableRender(page: Page): Promise<void> {
   await page.evaluate(async () => {
@@ -38,8 +45,29 @@ export async function waitForStableRender(page: Page): Promise<void> {
             }),
       ),
     )
+    await Promise.all(
+      document
+        .getAnimations()
+        .filter((animation) => animation.effect?.getTiming().iterations !== Infinity)
+        .map((animation) => animation.finished.catch(() => undefined)),
+    )
     await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)))
   })
+}
+
+/**
+ * `expect(page).toHaveScreenshot(...)`, but always preceded by
+ * `waitForStableRender`. Use this instead of the raw assertion for every
+ * visual regression screenshot — it's the one thing every screenshot test
+ * needs and the easiest thing to forget when writing a new one.
+ */
+export async function expectStableScreenshot(
+  page: Page,
+  name: string | ReadonlyArray<string>,
+  options?: PageAssertionsToHaveScreenshotOptions,
+): Promise<void> {
+  await waitForStableRender(page)
+  await expect(page).toHaveScreenshot(name, options)
 }
 
 interface BoundingBox {

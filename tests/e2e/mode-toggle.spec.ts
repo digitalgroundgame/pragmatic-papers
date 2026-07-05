@@ -1,29 +1,38 @@
 import { expect, test, type Page } from "@playwright/test"
 
-import { mergeBoundingBoxes, Screenshot, waitForStableRender } from "./helpers"
+import {
+  expectStableScreenshot,
+  mergeBoundingBoxes,
+  Screenshot,
+  waitForStableRender,
+} from "./helpers"
 
 test.describe("ModeToggle — desktop screenshots", () => {
   test("header trigger", async ({ page }, testInfo) => {
     test.skip(testInfo.project.name !== "chromium", "visual baseline captured on chromium only")
     await page.goto("/")
 
-    const toggle = page.locator("header").getByRole("button", { name: "Toggle theme" })
+    const header = page.locator("header")
+    const toggle = header.getByRole("button", { name: "Toggle theme" })
     await expect(toggle).toBeVisible()
     await waitForStableRender(page)
 
-    const box = await toggle.boundingBox()
-    const shot = new Screenshot(box).padding(16)
-    await expect(page).toHaveScreenshot("header-mode-toggle-trigger.png", { clip: shot.clip })
+    // Clip to the whole header bar, not just the button, so the baseline
+    // shows where the toggle sits relative to the rest of the nav.
+    const box = await header.boundingBox()
+    const shot = new Screenshot(box)
+    await expectStableScreenshot(page, "header-mode-toggle-trigger.png", { clip: shot.clip })
   })
 
   test("header dropdown open", async ({ page }, testInfo) => {
     test.skip(testInfo.project.name !== "chromium", "visual baseline captured on chromium only")
     await page.goto("/")
 
-    const toggle = page.locator("header").getByRole("button", { name: "Toggle theme" })
+    const header = page.locator("header")
+    const toggle = header.getByRole("button", { name: "Toggle theme" })
     await expect(toggle).toBeVisible()
-    const triggerBox = await toggle.boundingBox()
-    if (!triggerBox) throw new Error("Could not get header toggle bounding box")
+    const headerBox = await header.boundingBox()
+    if (!headerBox) throw new Error("Could not get header bounding box")
 
     await toggle.click()
     const menu = page.locator('[data-slot="dropdown-menu-content"]')
@@ -33,8 +42,8 @@ test.describe("ModeToggle — desktop screenshots", () => {
     const menuBox = await menu.boundingBox()
     if (!menuBox) throw new Error("Could not get dropdown menu bounding box")
 
-    const shot = new Screenshot(mergeBoundingBoxes(triggerBox, menuBox)).padding(16)
-    await expect(page).toHaveScreenshot("header-mode-toggle-dropdown-open.png", {
+    const shot = new Screenshot(mergeBoundingBoxes(headerBox, menuBox)).padding(16)
+    await expectStableScreenshot(page, "header-mode-toggle-dropdown-open.png", {
       clip: shot.clip,
     })
   })
@@ -43,25 +52,29 @@ test.describe("ModeToggle — desktop screenshots", () => {
     test.skip(testInfo.project.name !== "chromium", "visual baseline captured on chromium only")
     await page.goto("/")
 
-    const toggle = page.locator("footer").getByRole("button", { name: "Toggle theme" })
+    const footer = page.locator("footer")
+    const toggle = footer.getByRole("button", { name: "Toggle theme" })
     await toggle.scrollIntoViewIfNeeded()
     await expect(toggle).toBeVisible()
     await waitForStableRender(page)
 
-    const box = await toggle.boundingBox()
-    const shot = new Screenshot(box).padding(16)
-    await expect(page).toHaveScreenshot("footer-mode-toggle-trigger.png", { clip: shot.clip })
+    // Clip to the whole footer, not just the button, for the same reason as
+    // the header trigger screenshot above.
+    const box = await footer.boundingBox()
+    const shot = new Screenshot(box)
+    await expectStableScreenshot(page, "footer-mode-toggle-trigger.png", { clip: shot.clip })
   })
 
   test("footer dropdown open", async ({ page }, testInfo) => {
     test.skip(testInfo.project.name !== "chromium", "visual baseline captured on chromium only")
     await page.goto("/")
 
-    const toggle = page.locator("footer").getByRole("button", { name: "Toggle theme" })
+    const footer = page.locator("footer")
+    const toggle = footer.getByRole("button", { name: "Toggle theme" })
     await toggle.scrollIntoViewIfNeeded()
     await expect(toggle).toBeVisible()
-    const triggerBox = await toggle.boundingBox()
-    if (!triggerBox) throw new Error("Could not get footer toggle bounding box")
+    const footerBox = await footer.boundingBox()
+    if (!footerBox) throw new Error("Could not get footer bounding box")
 
     await toggle.click()
     const menu = page.locator('[data-slot="dropdown-menu-content"]')
@@ -71,8 +84,8 @@ test.describe("ModeToggle — desktop screenshots", () => {
     const menuBox = await menu.boundingBox()
     if (!menuBox) throw new Error("Could not get dropdown menu bounding box")
 
-    const shot = new Screenshot(mergeBoundingBoxes(triggerBox, menuBox)).padding(16)
-    await expect(page).toHaveScreenshot("footer-mode-toggle-dropdown-open.png", {
+    const shot = new Screenshot(mergeBoundingBoxes(footerBox, menuBox)).padding(16)
+    await expectStableScreenshot(page, "footer-mode-toggle-dropdown-open.png", {
       clip: shot.clip,
     })
   })
@@ -101,9 +114,11 @@ test.describe("ModeToggle — mobile screenshots (iPhone SE)", () => {
     await expect(toggle).toBeVisible()
     await waitForStableRender(page)
 
-    const box = await toggle.boundingBox()
-    const shot = new Screenshot(box).padding(16)
-    await expect(page).toHaveScreenshot("mobile-settings-mode-toggle-trigger.png", {
+    // Clip to the whole sheet panel, not just the button, so the baseline
+    // shows the toggle alongside the rest of the settings sheet.
+    const box = await sheet.boundingBox()
+    const shot = new Screenshot(box)
+    await expectStableScreenshot(page, "mobile-settings-mode-toggle-trigger.png", {
       clip: shot.clip,
     })
   })
@@ -114,8 +129,8 @@ test.describe("ModeToggle — mobile screenshots (iPhone SE)", () => {
 
     const toggle = sheet.getByRole("button", { name: "Toggle theme" })
     await expect(toggle).toBeVisible()
-    const triggerBox = await toggle.boundingBox()
-    if (!triggerBox) throw new Error("Could not get mobile toggle bounding box")
+    const sheetBox = await sheet.boundingBox()
+    if (!sheetBox) throw new Error("Could not get sheet bounding box")
 
     await toggle.click()
     const menu = page.locator('[data-slot="dropdown-menu-content"]')
@@ -125,8 +140,8 @@ test.describe("ModeToggle — mobile screenshots (iPhone SE)", () => {
     const menuBox = await menu.boundingBox()
     if (!menuBox) throw new Error("Could not get dropdown menu bounding box")
 
-    const shot = new Screenshot(mergeBoundingBoxes(triggerBox, menuBox)).padding(16)
-    await expect(page).toHaveScreenshot("mobile-settings-mode-toggle-dropdown-open.png", {
+    const shot = new Screenshot(mergeBoundingBoxes(sheetBox, menuBox)).padding(16)
+    await expectStableScreenshot(page, "mobile-settings-mode-toggle-dropdown-open.png", {
       clip: shot.clip,
     })
   })

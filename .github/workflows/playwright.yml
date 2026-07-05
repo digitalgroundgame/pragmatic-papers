@@ -48,9 +48,13 @@ jobs:
     # Pinned to the exact @playwright/test version resolved in
     # pnpm-lock.yaml so CI's chromium build matches what
     # `pnpm test:e2e:update-snapshots` runs locally (see
-    # scripts/test-e2e-docker.sh) — both sides render identical baselines
+    # scripts/test-e2e-docker.ts) — both sides render identical baselines
     # instead of "hopefully close" bare-runner Chromium builds that can
-    # drift as ubuntu-latest itself is updated.
+    # drift as ubuntu-latest itself is updated. This pins the rendering
+    # environment (Chromium + fonts) specifically — Node itself is only
+    # matched at the major-version level (24.x) between this step's
+    # setup-project action and the image's bundled Node, same as it always
+    # was; screenshot pixels don't depend on the Node patch version.
     container:
       image: mcr.microsoft.com/playwright:v1.60.0-noble
 

@@ -50,7 +50,7 @@ jobs:
     if: ${{ github.event_name == 'workflow_dispatch' || github.event.label.name == 'needs screenshots' }}
     timeout-minutes: 60
     runs-on: ubuntu-latest
-    # Same pinned image as playwright.yml and scripts/test-e2e-docker.sh —
+    # Same pinned image as playwright.yml and scripts/test-e2e-docker.ts —
     # keeps this workflow's regenerated baselines at parity with both.
     container:
       image: mcr.microsoft.com/playwright:v1.60.0-noble

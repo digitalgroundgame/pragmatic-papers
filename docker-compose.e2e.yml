@@ -4,6 +4,12 @@
 # Playwright are sibling services on the compose network — no host networking
 # or Docker socket mounts — so this works on Docker Desktop (Mac/Windows) as
 # well as Linux.
+#
+# The pin guarantees identical Chromium + fonts, which is what baseline
+# parity actually depends on — it does not guarantee an identical Node
+# patch version. This service uses whichever Node 24.x the image bundles;
+# CI's setup-node step also only floats to "24.x", not an exact patch.
+# Screenshot pixels don't depend on the Node version, so this is fine.
 services:
   postgres:
     image: postgres:17-alpine
@@ -47,7 +53,7 @@ services:
       E2E_PROD_SERVER: "true"
       # Private fonts affect rendering, and CI installs them — pass the token
       # through so local baselines use the same fonts (see the warning in
-      # scripts/test-e2e-docker.sh when unset).
+      # scripts/test-e2e-docker.ts when unset).
       GH_FONT_READ: ${GH_FONT_READ:-}
     depends_on:
       postgres:

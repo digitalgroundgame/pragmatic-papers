@@ -20,11 +20,12 @@ against committed baselines in `__screenshots__/`.
   "Visual regressions detected" PR comment with the actual/diff/expected
   images. This is never auto-committed — accepting it is a deliberate action
   (see below).
-- **Concurrent runs on the same branch can't race each other's baseline
-  push.** Both this workflow and "Update snapshot baselines" share a
-  `concurrency` group keyed by branch, so pushing a new commit cancels any
-  older run still in flight on that branch before it reaches the commit/push
-  step — only the latest commit's run ever gets there.
+- **Concurrent runs on the same branch are unlikely to race each other's
+  baseline push.** Both this workflow and "Update snapshot baselines" share
+  a `concurrency` group keyed by branch, so pushing a new commit cancels any
+  older run still in flight on that branch. Cancellation isn't instant, so
+  this shrinks the race window rather than eliminating it — but it rules out
+  the practical case of two full runs finishing close together.
 
 ## Adding a new screenshot test
 

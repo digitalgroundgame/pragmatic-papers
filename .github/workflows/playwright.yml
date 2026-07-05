@@ -21,8 +21,10 @@ on:
 
 # Shared with update-snapshots.yml's group: both workflows can push a
 # baseline commit to the same branch, so a stale run's push would otherwise
-# race a newer one's. Cancelling the older run means only the latest commit
-# on a branch ever reaches the commit/push step.
+# race a newer one's. Cancelling the older run shrinks that race window from
+# the whole E2E run down to GitHub's cancellation grace period — not a hard
+# guarantee, but the practical case (two full runs finishing close together)
+# can no longer happen.
 concurrency:
   group: snapshot-baselines-${{ github.event.pull_request.head.ref || github.ref_name }}
   cancel-in-progress: true

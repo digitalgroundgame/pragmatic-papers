@@ -77,9 +77,11 @@ export function ShareButtons({ url, title, className }: ShareButtonsProps): Reac
   return (
     <Popover>
       <PopoverTrigger
-        render={<Button variant="outline" size="icon" aria-label="Share" className={className} />}
+        render={
+          <Button variant="outline" size="icon-sm" aria-label="Share" className={className} />
+        }
       >
-        <Share2 className="size-5" />
+        <Share2 className="size-4" />
       </PopoverTrigger>
       <PopoverContent align="end">
         <div className="grid grid-cols-7 gap-1">

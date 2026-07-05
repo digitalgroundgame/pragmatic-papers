@@ -1,4 +1,4 @@
-# Compose file for `pnpm test:e2e:update-snapshots` (scripts/test-e2e-docker.sh):
+# Compose file for `pnpm test:e2e:update-snapshots` (scripts/test-e2e-docker.ts):
 # runs the E2E suite inside the same pinned Playwright image CI uses so
 # locally-generated screenshot baselines match what CI renders. Postgres and
 # Playwright are sibling services on the compose network — no host networking

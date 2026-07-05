@@ -33,7 +33,11 @@ env:
   PAYLOAD_SECRET: ${{ secrets.PAYLOAD_SECRET }}
   NEXT_PUBLIC_SERVER_URL: http://localhost:8000
   USE_LOCAL_STORAGE: "true"
-  DATABASE_URI: postgres://postgres:postgres@localhost:5432/pragmatic-papers-e2e
+  # Hostname is the services key ("postgres"), not localhost — the job runs
+  # inside a container, and service containers are reachable by their
+  # service-id alias on the shared Docker network, not via the runner's
+  # loopback interface.
+  DATABASE_URI: postgres://postgres:postgres@postgres:5432/pragmatic-papers-e2e
   E2E_PROD_SERVER: "true"
 
 jobs:
@@ -41,6 +45,18 @@ jobs:
     name: E2E tests
     timeout-minutes: 60
     runs-on: ubuntu-latest
+    # Pinned to the exact @playwright/test version resolved in
+    # pnpm-lock.yaml so CI's chromium build matches what
+    # `pnpm test:e2e:update-snapshots` runs locally (see
+    # scripts/test-e2e-docker.ts) — both sides render identical baselines
+    # instead of "hopefully close" bare-runner Chromium builds that can
+    # drift as ubuntu-latest itself is updated. This pins the rendering
+    # environment (Chromium + fonts) specifically — Node itself is only
+    # matched at the major-version level (24.x) between this step's
+    # setup-project action and the image's bundled Node, same as it always
+    # was; screenshot pixels don't depend on the Node patch version.
+    container:
+      image: mcr.microsoft.com/playwright:v1.60.0-noble
 
     permissions:
       contents: write
@@ -67,6 +83,26 @@ jobs:
         with:
           fetch-depth: 0
 
+      # actions/checkout's files are owned by a different UID than this
+      # container's user, so git's dubious-ownership check blocks every git
+      # command below unless the workspace is explicitly trusted.
+      - name: Trust the checked-out workspace
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
+      # The Playwright image doesn't ship the GitHub CLI, but several steps
+      # below (committing baselines, posting PR comments via
+      # scripts/pr-screenshot-comment.ts) shell out to `gh`.
+      - name: Install GitHub CLI
+        run: |
+          (type -p wget >/dev/null || (apt-get update && apt-get install -y wget)) \
+            && mkdir -p -m 755 /etc/apt/keyrings \
+            && wget -nv -O- https://cli.github.com/packages/githubcli-archive-keyring.gpg | tee /etc/apt/keyrings/githubcli-archive-keyring.gpg > /dev/null \
+            && chmod go+r /etc/apt/keyrings/githubcli-archive-keyring.gpg \
+            && mkdir -p -m 755 /etc/apt/sources.list.d \
+            && echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | tee /etc/apt/sources.list.d/github-cli.list > /dev/null \
+            && apt-get update \
+            && apt-get install -y gh
+
       # Captured before the later "Commit new snapshot baselines" step can
       # advance HEAD, so anything describing *this* test run (regression
       # artifacts) has a stable reference regardless of what gets pushed
@@ -82,13 +118,6 @@ jobs:
           gh-font-read-token: ${{ secrets.GH_FONT_READ }}
           payload-secret: ${{ secrets.PAYLOAD_SECRET }}
 
-      - name: Cache Playwright browsers
-        uses: actions/cache@v5
-        id: playwright-cache
-        with:
-          path: ~/.cache/ms-playwright
-          key: playwright-${{ hashFiles('pnpm-lock.yaml') }}
-
       # Restores Next.js incremental compilation cache so `next build` inside
       # the E2E run only recompiles what changed since the last run on this
       # branch (or dev).
@@ -99,9 +128,6 @@ jobs:
           key: nextjs-${{ hashFiles('pnpm-lock.yaml') }}-${{ hashFiles('src/**/*.[jt]s', 'src/**/*.[jt]sx', '*.[jt]s', '*.[jt]sx') }}
           restore-keys: |
             nextjs-${{ hashFiles('pnpm-lock.yaml') }}-
-
-      - name: Install Playwright browsers
-        run: pnpm exec playwright install --with-deps chromium
 
       # Only fills in baselines for tests that don't have one yet. Any test
       # with an existing baseline is still compared strictly and fails the

@@ -61,7 +61,10 @@ export async function Header(): Promise<React.JSX.Element> {
                 </SheetHeader>
                 <SearchForm />
                 <Menu menu={navItems} layout="stacked" slot={SheetClose} />
-                <SocialLinks socials={socials} className="px-4 py-3" />
+                <div className="flex items-center gap-2 px-4 py-3">
+                  <SocialLinks socials={socials} />
+                  <ModeToggleAnalytics location="header-mobile-menu" />
+                </div>
               </SheetContent>
             </Sheet>
             <a
@@ -72,10 +75,10 @@ export async function Header(): Promise<React.JSX.Element> {
               <Logo />
             </a>
             <div className="flex items-center justify-end gap-2">
-              <HeaderActions actions={actions} className="hidden lg:flex" />
               <div className="hidden lg:flex">
                 <ModeToggleAnalytics location="header" />
               </div>
+              <HeaderActions actions={actions} className="hidden lg:flex" />
               <Sheet>
                 <SheetTrigger
                   render={

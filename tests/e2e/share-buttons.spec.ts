@@ -1,6 +1,11 @@
 import { expect, test } from "@playwright/test"
 
-import { gotoFirstArticle, gotoFirstVolume, viewportRatioClip } from "./helpers"
+import {
+  gotoFirstArticle,
+  gotoFirstVolume,
+  viewportRatioClip,
+  waitForStableRender,
+} from "./helpers"
 
 test.describe("ShareButtons — article page", () => {
   test("share button is visible", async ({ page }) => {
@@ -145,6 +150,7 @@ test.describe("ShareButtons — screenshots", () => {
 
     const stableBox = await popover.boundingBox()
     if (!stableBox) throw new Error("Could not get popover bounding box after scroll")
+    await waitForStableRender(page)
     await expect(page).toHaveScreenshot("article-share-popover-close-up.png", {
       clip: viewportRatioClip(stableBox, viewport, { gridSnap: 16 }),
     })

@@ -1,17 +1,13 @@
 #!/usr/bin/env bash
-# Runs the E2E suite inside the same Playwright Docker image CI uses, so
-# locally-generated screenshot baselines have (near-)exact parity with what
-# CI produces — no more push-wait-auto-commit loop for routine baseline
-# updates. See tests/e2e/README.md for the full lifecycle.
+# Runs the E2E suite inside the same Playwright Docker image CI uses (see
+# docker-compose.e2e.yml), so locally-generated screenshot baselines have
+# parity with what CI produces — no more push-wait-auto-commit loop for
+# routine baseline updates. See tests/e2e/README.md for the full lifecycle.
 #
-# Requires Docker with a running daemon. On Linux, --network host lets the
-# container reach the Next.js server at localhost:8000 the same way the host
-# process would; this does not work on Docker Desktop for Mac/Windows.
-#
-# node_modules is kept in a named volume rather than bind-mounted from the
-# host, so `pnpm install` running inside the (Linux) container doesn't
-# clobber host-platform native binaries (sharp, esbuild, etc.) in your
-# working tree.
+# Requires Docker with a running daemon (Docker Desktop is fine — no host
+# networking or socket mounts involved). Postgres runs as a sibling compose
+# service; the Next.js production server and Playwright run inside the
+# pinned Playwright container.
 #
 # Usage:
 #   pnpm test:e2e:update-snapshots                       # --update-snapshots=changed
@@ -20,13 +16,20 @@
 
 set -euo pipefail
 
-# Keep in sync with the `@playwright/test` version resolved in pnpm-lock.yaml
-# and the image used by .github/workflows/playwright.yml.
-IMAGE="mcr.microsoft.com/playwright:v1.60.0-noble"
+cd "$(dirname "$0")/.."
+
+COMPOSE=(docker compose -p pragmatic-papers-e2e -f docker-compose.e2e.yml)
 
 if ! docker info >/dev/null 2>&1; then
   echo "Docker daemon not reachable — start Docker and try again." >&2
   exit 1
+fi
+
+if [ -z "${GH_FONT_READ:-}" ]; then
+  echo "⚠ GH_FONT_READ is not set — the private @digitalgroundgame/fonts package" >&2
+  echo "  won't install, so screenshots will render with the fallback font and" >&2
+  echo "  WILL NOT match CI baselines. Export GH_FONT_READ before generating" >&2
+  echo "  baselines you intend to commit." >&2
 fi
 
 args=("$@")
@@ -34,16 +37,10 @@ if [ "${#args[@]}" -eq 0 ]; then
   args=("--update-snapshots=changed" "--project=chromium")
 fi
 
-docker run --rm \
-  --network host \
-  --ipc host \
-  -v "$(pwd)":/work \
-  -v pragmatic-papers-e2e-node-modules:/work/node_modules \
-  -v /var/run/docker.sock:/var/run/docker.sock \
-  -w /work \
-  -e PAYLOAD_SECRET="${PAYLOAD_SECRET:-test-secret-for-e2e-tests}" \
-  -e NEXT_PUBLIC_SERVER_URL=http://localhost:8000 \
-  -e USE_LOCAL_STORAGE=true \
-  -e E2E_PROD_SERVER=true \
-  "$IMAGE" \
+cleanup() {
+  "${COMPOSE[@]}" down --remove-orphans >/dev/null 2>&1 || true
+}
+trap cleanup EXIT
+
+"${COMPOSE[@]}" run --rm playwright \
   bash -c 'corepack enable && pnpm install --frozen-lockfile && node scripts/test-e2e.mjs "$@"' bash "${args[@]}"

@@ -52,9 +52,11 @@ locally first with `pnpm test:e2e:update-snapshots -- --update-snapshots=missing
 `mcr.microsoft.com/playwright:v1.60.0-noble` image CI uses (pinned to the
 exact `@playwright/test` version resolved in `pnpm-lock.yaml`), so the
 rendered baselines have the same fonts/antialiasing as CI instead of your
-host OS's. Requires Docker with a running daemon; on Linux only (Docker
-Desktop for Mac/Windows doesn't support the `--network host` mode the script
-uses).
+host OS's. Requires Docker with a running daemon (Docker Desktop on
+Mac/Windows works — the setup is a plain compose file, no host networking).
+Export `GH_FONT_READ` first: CI renders with the private
+`@digitalgroundgame/fonts` package installed, so baselines generated with the
+fallback font won't match.
 
 ```sh
 # Update baselines that actually mismatch the current render (mirrors the
@@ -68,13 +70,14 @@ pnpm test:e2e:update-snapshots -- --update-snapshots=missing
 pnpm test:e2e:update-snapshots -- --update-snapshots=changed tests/e2e/foo.spec.ts
 ```
 
-See `scripts/test-e2e-docker.sh` for what it does under the hood (installs
-deps and Chromium inside the container, boots Postgres via Testcontainers by
-mounting the host's Docker socket, builds/runs a production Next.js server,
-then runs Playwright). Review the resulting PNG diffs before committing, same
-as you would review any other change.
+See `docker-compose.e2e.yml` and `scripts/test-e2e-docker.sh` for what it
+does under the hood (Postgres and the Playwright image run as sibling compose
+services; inside the Playwright container it installs deps, migrates/seeds,
+builds and runs a production Next.js server, then runs Playwright). Review
+the resulting PNG diffs before committing, same as you would review any other
+change.
 
-Keep the image tag in `scripts/test-e2e-docker.sh` and `.github/workflows/*.yml`
+Keep the image tag in `docker-compose.e2e.yml` and `.github/workflows/*.yml`
 in sync with the `@playwright/test` version in `pnpm-lock.yaml` when
 upgrading — a mismatched image runs a different Chromium build than what's
 actually installed, defeating the parity this exists for.

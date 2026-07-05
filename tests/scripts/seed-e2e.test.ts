@@ -71,7 +71,7 @@ describe("seed-e2e main()", () => {
       [],
       [],
       { disableRevalidate: true },
-      "2026-06-02T00:00:00.000Z",
+      "2026-06-04T00:00:00.000Z",
     )
   })
 
@@ -86,7 +86,7 @@ describe("seed-e2e main()", () => {
       {
         disableRevalidate: true,
       },
-      "2026-06-02T00:00:00.000Z",
+      "2026-06-04T00:00:00.000Z",
     )
   })
 
@@ -101,6 +101,7 @@ describe("seed-e2e main()", () => {
       slug: "1",
       _status: "published",
       articles: [mockArticleId],
+      publishedAt: "2026-06-04T00:00:00.000Z",
     })
     expect(volumeCall.context).toEqual({ disableRevalidate: true })
   })

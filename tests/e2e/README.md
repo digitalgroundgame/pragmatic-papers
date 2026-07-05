@@ -70,7 +70,7 @@ pnpm test:e2e:update-snapshots -- --update-snapshots=missing
 pnpm test:e2e:update-snapshots -- --update-snapshots=changed tests/e2e/foo.spec.ts
 ```
 
-See `docker-compose.e2e.yml` and `scripts/test-e2e-docker.sh` for what it
+See `docker-compose.e2e.yml` and `scripts/test-e2e-docker.ts` for what it
 does under the hood (Postgres and the Playwright image run as sibling compose
 services; inside the Playwright container it installs deps, migrates/seeds,
 builds and runs a production Next.js server, then runs Playwright). Review

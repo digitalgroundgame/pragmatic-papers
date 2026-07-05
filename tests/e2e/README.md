@@ -77,18 +77,35 @@ builds and runs a production Next.js server, then runs Playwright). Review
 the resulting PNG diffs before committing, same as you would review any other
 change.
 
-Keep the image tag in `docker-compose.e2e.yml` and `.github/workflows/*.yml`
-in sync with the `@playwright/test` version in `pnpm-lock.yaml` when
-upgrading — a mismatched image runs a different Chromium build than what's
-actually installed, defeating the parity this exists for. Bumping
-`@playwright/test` and re-pinning the image tag together is a deliberate
-chore, not something to gate every feature branch on, so
-`pnpm exec tsx scripts/check-playwright-image-pin.ts` runs in its own
-**Playwright pin check** workflow (`.github/workflows/playwright-pin-check.yml`)
-rather than as part of "Static checks" — it fires on pushes to `dev`/`main`
-that touch the lockfile or the pinned files, plus a weekly schedule, and
-just shows up as a failed Actions run if drift lands on trunk. It never
-blocks a PR.
+### Bumping the `@playwright/test` version
+
+The Docker image tag, the `@playwright/test` version, and every committed
+baseline all have to move together — this is the one time baselines
+legitimately need a full regeneration, since it's the one thing that changes
+what CI's Chromium actually renders. Treat it as a single chore:
+
+1. Bump `@playwright/test` in `package.json` and run `pnpm install` to update
+   `pnpm-lock.yaml`.
+2. Update the image tag (`mcr.microsoft.com/playwright:v<version>-<codename>`)
+   everywhere it's pinned: `docker-compose.e2e.yml`,
+   `.github/workflows/playwright.yml`, and
+   `.github/workflows/update-snapshots.yml`. Match the codename
+   (`noble`/`jammy`/etc.) across all three, not just the version.
+3. Regenerate every baseline against the new image:
+   `pnpm test:e2e:update-snapshots -- --update-snapshots=all`.
+4. Run `pnpm exec tsx scripts/check-playwright-image-pin.ts` to confirm the
+   tag is in sync everywhere before committing.
+
+A mismatched image runs a different Chromium build than what's actually
+installed, defeating the parity this exists for. Since this only ever
+happens as a deliberate chore rather than something every feature branch
+should be gated on, the pin check runs in its own **Playwright pin check**
+workflow (`.github/workflows/playwright-pin-check.yml`) instead of as part
+of "Static checks" — it fires on pushes to `dev`/`main` that touch the
+lockfile or the pinned files, and just shows up as a failed Actions run if
+drift lands on trunk (e.g. an automated dependency-bump PR that has no idea
+the image tag needs to move too, or one of the three pinned files getting
+edited without the others). It never blocks a PR.
 
 ## Accepting an intentional visual change
 

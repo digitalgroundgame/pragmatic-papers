@@ -8,8 +8,12 @@ name: Playwright pin check
 # (e.g. an automated dependency bump merged without updating the image
 # tag), failing Static checks on every subsequent feature branch would be
 # a huge blast radius for one chore item. Instead this runs against
-# dev/main after merge and on a schedule, so a drift shows up as a failed
-# run in the Actions tab — visible, but blocking nobody's PR.
+# dev/main pushes that touch the pinned files, so a drift shows up as a
+# failed run in the Actions tab — visible, but blocking nobody's PR.
+#
+# No schedule: the check is a pure function of the committed contents of
+# the paths below, so its result can't change without a commit to one of
+# them — the push trigger already covers every way the pin can drift.
 on:
   push:
     branches: [main, dev]
@@ -20,10 +24,6 @@ on:
       - .github/workflows/update-snapshots.yml
       - .github/workflows/playwright-pin-check.yml
       - scripts/check-playwright-image-pin.ts
-  schedule:
-    # Catches drift from any path this workflow doesn't watch (e.g. a
-    # manual edit that renamed the pin without touching a watched file).
-    - cron: "0 6 * * 1"
   workflow_dispatch:
 
 jobs:

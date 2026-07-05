@@ -23,7 +23,7 @@ export async function Footer(): Promise<React.ReactElement> {
         </a>
         <div className="flex flex-row items-center gap-2">
           <SocialLinks parentId={id} socials={socials} aria-label="Footer Social Links" />
-          <ModeToggle placement="footer" />
+          <ModeToggle location="footer" />
         </div>
       </div>
       <div className="flex flex-col-reverse items-start gap-1 md:flex-row md:items-center md:justify-between md:gap-2">

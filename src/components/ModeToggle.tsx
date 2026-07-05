@@ -18,18 +18,18 @@ interface ModeToggleProps {
   /** Render a full-width labeled button instead of the compact icon-only toggle. */
   showLabel?: boolean
   /** Identifies where this toggle is rendered, reported alongside theme_change analytics. */
-  placement?: string
+  location?: string
 }
 
 export function ModeToggle({
   showLabel = false,
-  placement,
+  location,
 }: ModeToggleProps = {}): React.JSX.Element {
   const { setTheme } = useTheme()
 
   function handleSetTheme(theme: "light" | "dark" | "system"): void {
     setTheme(theme)
-    sendGAEvent("event", "theme_change", { theme, placement })
+    sendGAEvent("event", "theme_change", { theme, location })
   }
 
   return (

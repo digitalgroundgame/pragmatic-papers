@@ -41,17 +41,17 @@ describe("ModeToggle", () => {
     expect(setTheme).toHaveBeenCalledWith(theme)
     expect(sendGAEvent).toHaveBeenCalledWith("event", "theme_change", {
       theme,
-      placement: undefined,
+      location: undefined,
     })
   })
 
-  it("includes the placement in the analytics event when provided", async () => {
-    render(<ModeToggle placement="footer" />)
+  it("includes the location in the analytics event when provided", async () => {
+    render(<ModeToggle location="footer" />)
     fireEvent.click(screen.getByRole("button", { name: "Toggle theme" }))
     fireEvent.click(await screen.findByText("Dark"))
     expect(sendGAEvent).toHaveBeenCalledWith("event", "theme_change", {
       theme: "dark",
-      placement: "footer",
+      location: "footer",
     })
   })
 })

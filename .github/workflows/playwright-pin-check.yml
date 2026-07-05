@@ -1,0 +1,37 @@
+name: Playwright pin check
+
+# Advisory check for scripts/check-playwright-image-pin.mjs — deliberately
+# NOT part of ci.yml's Static checks. A pin drift only ever happens when
+# someone bumps @playwright/test (a chore, done deliberately alongside a
+# Docker tag bump — see tests/e2e/README.md), so it shouldn't gate every
+# feature branch's required checks. If drift ever did land on dev/main
+# (e.g. an automated dependency bump merged without updating the image
+# tag), failing Static checks on every subsequent feature branch would be
+# a huge blast radius for one chore item. Instead this runs against
+# dev/main after merge and on a schedule, so a drift shows up as a failed
+# run in the Actions tab — visible, but blocking nobody's PR.
+on:
+  push:
+    branches: [main, dev]
+    paths:
+      - pnpm-lock.yaml
+      - docker-compose.e2e.yml
+      - .github/workflows/playwright.yml
+      - .github/workflows/update-snapshots.yml
+      - .github/workflows/playwright-pin-check.yml
+      - scripts/check-playwright-image-pin.mjs
+  schedule:
+    # Catches drift from any path this workflow doesn't watch (e.g. a
+    # manual edit that renamed the pin without touching a watched file).
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+
+jobs:
+  check:
+    name: Check Playwright Docker image pin
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Check Playwright Docker image pin
+        run: node scripts/check-playwright-image-pin.mjs

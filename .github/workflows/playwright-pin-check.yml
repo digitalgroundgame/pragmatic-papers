@@ -1,6 +1,6 @@
 name: Playwright pin check
 
-# Advisory check for scripts/check-playwright-image-pin.mjs — deliberately
+# Advisory check for scripts/check-playwright-image-pin.ts — deliberately
 # NOT part of ci.yml's Static checks. A pin drift only ever happens when
 # someone bumps @playwright/test (a chore, done deliberately alongside a
 # Docker tag bump — see tests/e2e/README.md), so it shouldn't gate every
@@ -19,7 +19,7 @@ on:
       - .github/workflows/playwright.yml
       - .github/workflows/update-snapshots.yml
       - .github/workflows/playwright-pin-check.yml
-      - scripts/check-playwright-image-pin.mjs
+      - scripts/check-playwright-image-pin.ts
   schedule:
     # Catches drift from any path this workflow doesn't watch (e.g. a
     # manual edit that renamed the pin without touching a watched file).
@@ -33,5 +33,12 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
+      - name: Set up Node.js environment
+        uses: ./.github/actions/setup-project
+        with:
+          node-version: "24.x"
+          gh-font-read-token: ${{ secrets.GH_FONT_READ }}
+          payload-secret: ${{ secrets.PAYLOAD_SECRET }}
+
       - name: Check Playwright Docker image pin
-        run: node scripts/check-playwright-image-pin.mjs
+        run: pnpm exec tsx scripts/check-playwright-image-pin.ts

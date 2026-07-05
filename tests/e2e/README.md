@@ -83,7 +83,7 @@ upgrading — a mismatched image runs a different Chromium build than what's
 actually installed, defeating the parity this exists for. Bumping
 `@playwright/test` and re-pinning the image tag together is a deliberate
 chore, not something to gate every feature branch on, so
-`node scripts/check-playwright-image-pin.mjs` runs in its own
+`pnpm exec tsx scripts/check-playwright-image-pin.ts` runs in its own
 **Playwright pin check** workflow (`.github/workflows/playwright-pin-check.yml`)
 rather than as part of "Static checks" — it fires on pushes to `dev`/`main`
 that touch the lockfile or the pinned files, plus a weekly schedule, and

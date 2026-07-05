@@ -20,10 +20,11 @@ against committed baselines in `__screenshots__/`.
   "Visual regressions detected" PR comment with the actual/diff/expected
   images. This is never auto-committed — accepting it is a deliberate action
   (see below).
-- **Concurrent pushes to the same branch don't drop baselines.** If another
-  commit lands on the branch between checkout and the baseline push, CI
-  rebases onto the new tip and retries (up to 5 times) instead of silently
-  failing the push.
+- **Concurrent runs on the same branch can't race each other's baseline
+  push.** Both this workflow and "Update snapshot baselines" share a
+  `concurrency` group keyed by branch, so pushing a new commit cancels any
+  older run still in flight on that branch before it reaches the commit/push
+  step — only the latest commit's run ever gets there.
 
 ## Adding a new screenshot test
 

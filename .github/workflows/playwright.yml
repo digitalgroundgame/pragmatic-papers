@@ -19,6 +19,14 @@ on:
     branches: [main, dev]
   pull_request:
 
+# Shared with update-snapshots.yml's group: both workflows can push a
+# baseline commit to the same branch, so a stale run's push would otherwise
+# race a newer one's. Cancelling the older run means only the latest commit
+# on a branch ever reaches the commit/push step.
+concurrency:
+  group: snapshot-baselines-${{ github.event.pull_request.head.ref || github.ref_name }}
+  cancel-in-progress: true
+
 env:
   PAYLOAD_SECRET: ${{ secrets.PAYLOAD_SECRET }}
   NEXT_PUBLIC_SERVER_URL: http://localhost:8000
@@ -116,27 +124,7 @@ jobs:
             exit 0
           fi
           git commit -m "test: add missing e2e snapshot baselines"
-
-          # Another run (or a human) can push to this branch between our
-          # checkout and this push. Rebase onto whatever landed and retry
-          # rather than silently dropping our baselines on a rejected push.
-          BRANCH="${GITHUB_HEAD_REF:-$GITHUB_REF_NAME}"
-          attempt=1
-          max_attempts=5
-          until git push origin "HEAD:$BRANCH"; do
-            if [ "$attempt" -ge "$max_attempts" ]; then
-              echo "::error::Failed to push snapshot baseline commit to $BRANCH after $max_attempts attempts."
-              exit 1
-            fi
-            echo "Push rejected (attempt $attempt/$max_attempts) — rebasing onto latest $BRANCH and retrying..."
-            git fetch origin "$BRANCH"
-            if ! git rebase "origin/$BRANCH"; then
-              echo "::error::Rebase conflict while retrying the snapshot baseline push — resolve manually."
-              git rebase --abort
-              exit 1
-            fi
-            attempt=$((attempt + 1))
-          done
+          git push origin "HEAD:${GITHUB_HEAD_REF:-$GITHUB_REF_NAME}"
           echo "committed=true" >> "$GITHUB_OUTPUT"
 
       # Pushes made with GITHUB_TOKEN don't trigger workflows, so the new

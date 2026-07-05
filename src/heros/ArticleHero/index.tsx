@@ -30,11 +30,6 @@ export const ArticleHero: React.FC<ArticleHeroProps> = ({ article }) => {
       )}
       <h1 className="mt-6">{title}</h1>
       <div className="flex flex-col gap-2 md:flex-row md:items-center md:gap-8">
-        {/* `md:contents` drops this wrapper from layout at md+, so the byline and
-            ShareButtons resume their original desktop order/position (set via
-            md:order-*) as direct items of the row above. Below md, it keeps
-            them on one line together instead of ShareButtons dropping to its
-            own row underneath. */}
         <div className="flex flex-1 items-start justify-between gap-2 md:contents">
           <div className="dark:text-brand-high-contrast text-brand flex flex-1 flex-wrap gap-2 font-serif font-bold underline-offset-4 md:order-1">
             {populatedAuthors &&

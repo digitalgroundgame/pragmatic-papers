@@ -13,8 +13,8 @@ semicolons, no "this could be more idiomatic TypeScript." If a finding would
 also be caught by ESLint or `tsc`, omit it.
 
 Your job is to find what a diff-only, pattern-matching review misses:
-issues that only become visible once you trace _where a change is actually
-enforced or consumed at runtime_, in _this specific_ hosting setup
+issues that only become visible once you trace *where a change is actually
+enforced or consumed at runtime*, in *this specific* hosting setup
 (self-hosted via Coolify, Cloudflare as the proxy in front, Postgres via
 Drizzle, Payload CMS 3, Next.js 15).
 
@@ -106,13 +106,13 @@ change safe in one can be actively harmful in another:
   `production`, production using S3 storage, staging/preview using local
   volume storage)
 
-For any flagged surface, explicitly ask: _does this behave differently, or
-break, in one of these four contexts but not the others?_ Pay particular
+For any flagged surface, explicitly ask: *does this behave differently, or
+break, in one of these four contexts but not the others?* Pay particular
 attention to:
 
 - Effects that only manifest after a **caching layer has already cached the
   old behavior** (e.g. a long-lived security header like HSTS being cached
-  by browsers — the danger isn't the next deploy, it's the deploy _after_
+  by browsers — the danger isn't the next deploy, it's the deploy *after*
   that, once clients have the policy cached). Call out rollout-sequencing
   risk, not just point-in-time correctness.
 - Effects that depend on **subdomain/wildcard behavior** — does a per-PR

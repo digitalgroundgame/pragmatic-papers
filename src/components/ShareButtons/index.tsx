@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button"
 import { LinkButton } from "@/components/ui/link-button"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Check, Copy, Mail, Share2 } from "lucide-react"
-import { useState } from "react"
+import { useRef, useState } from "react"
 
 interface ShareButtonsProps {
   url: string
@@ -22,6 +22,7 @@ interface ShareButtonsProps {
 
 export function ShareButtons({ url, title, className }: ShareButtonsProps): React.ReactElement {
   const [copied, setCopied] = useState(false)
+  const copiedTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const encodedUrl = encodeURIComponent(url)
   const encodedTitle = encodeURIComponent(title)
@@ -69,9 +70,11 @@ export function ShareButtons({ url, title, className }: ShareButtonsProps): Reac
       await navigator.clipboard.writeText(url)
     } catch {
       // clipboard unavailable in some environments (headless, sandboxed iframes)
+      return
     }
     setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
+    if (copiedTimeoutRef.current) clearTimeout(copiedTimeoutRef.current)
+    copiedTimeoutRef.current = setTimeout(() => setCopied(false), 2000)
   }
 
   return (

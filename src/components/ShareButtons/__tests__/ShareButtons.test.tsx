@@ -83,6 +83,43 @@ describe("ShareButtons", () => {
     vi.useRealTimers()
   })
 
+  it("does not show copied feedback when clipboard write fails", async () => {
+    Object.assign(navigator, {
+      clipboard: { writeText: vi.fn().mockRejectedValue(new Error("denied")) },
+    })
+    render(<ShareButtons url={TEST_URL} title={TEST_TITLE} />)
+    fireEvent.click(screen.getByRole("button", { name: "Share" }))
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Copy link" }))
+    })
+    expect(screen.getByRole("button", { name: "Copy link" })).toBeTruthy()
+    expect(screen.queryByRole("button", { name: "Copied!" })).toBeNull()
+  })
+
+  it("does not reset copied state early when clicked again before the first timeout fires", async () => {
+    vi.useFakeTimers()
+    render(<ShareButtons url={TEST_URL} title={TEST_TITLE} />)
+    fireEvent.click(screen.getByRole("button", { name: "Share" }))
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Copy link" }))
+    })
+    await act(async () => {
+      vi.advanceTimersByTime(1000)
+    })
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Copied!" }))
+    })
+    await act(async () => {
+      vi.advanceTimersByTime(1000)
+    })
+    expect(screen.getByRole("button", { name: "Copied!" })).toBeTruthy()
+    await act(async () => {
+      vi.advanceTimersByTime(1000)
+    })
+    expect(screen.getByRole("button", { name: "Copy link" })).toBeTruthy()
+    vi.useRealTimers()
+  })
+
   it.each(PLATFORMS)("$name share link has correct href", ({ buttonLabel, urlFragment }) => {
     render(<ShareButtons url={TEST_URL} title={TEST_TITLE} />)
     fireEvent.click(screen.getByRole("button", { name: "Share" }))

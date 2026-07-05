@@ -54,10 +54,8 @@ gh workflow run update-snapshots.yml --ref <your-branch>
 (or Actions → Update snapshot baselines → Run workflow, if you'd rather use the
 browser). No inputs needed. It runs with `--update-snapshots=changed`, so a
 baseline is only rewritten when the current render actually mismatches it —
-browser). No inputs needed. It runs with `--update-snapshots=changed`, so a
-baseline is only rewritten when the current render actually mismatches it —
 unrelated screenshots aren't touched just because the suite ran again. (A full
-`--update-snapshots=all` regen re-renders and rewrites *every* baseline, and the
+`--update-snapshots=all` regen re-renders and rewrites _every_ baseline, and the
 freshly-rendered pixels differ slightly from the committed ones due to
 anti-aliasing / font-hinting jitter — within the `maxDiffPixelRatio` tolerance,
 but enough to produce a few noise bytes of diff on each screenshot.)

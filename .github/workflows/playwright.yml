@@ -19,6 +19,16 @@ on:
     branches: [main, dev]
   pull_request:
 
+# Shared with update-snapshots.yml's group: both workflows can push a
+# baseline commit to the same branch, so a stale run's push would otherwise
+# race a newer one's. Cancelling the older run shrinks that race window from
+# the whole E2E run down to GitHub's cancellation grace period — not a hard
+# guarantee, but the practical case (two full runs finishing close together)
+# can no longer happen.
+concurrency:
+  group: snapshot-baselines-${{ github.event.pull_request.head.ref || github.ref_name }}
+  cancel-in-progress: true
+
 env:
   PAYLOAD_SECRET: ${{ secrets.PAYLOAD_SECRET }}
   NEXT_PUBLIC_SERVER_URL: http://localhost:8000
@@ -56,6 +66,14 @@ jobs:
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0
+
+      # Captured before the later "Commit new snapshot baselines" step can
+      # advance HEAD, so anything describing *this* test run (regression
+      # artifacts) has a stable reference regardless of what gets pushed
+      # afterward.
+      - name: Record tested commit
+        id: tested
+        run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
       - name: Set up Node.js environment
         uses: ./.github/actions/setup-project
@@ -141,7 +159,7 @@ jobs:
           OWNER: ${{ github.repository_owner }}
           REPO: ${{ github.event.repository.name }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
-          ASSET_DIR: ${{ github.event.pull_request.number }}/${{ github.event.pull_request.head.sha }}/regressions
+          ASSET_DIR: ${{ github.event.pull_request.number }}/${{ steps.tested.outputs.sha }}/regressions
           MARKER: visual-regressions
           TITLE: Visual regressions detected
           COLUMNS_PER_ROW: "3"
@@ -183,10 +201,14 @@ jobs:
           OWNER: ${{ github.repository_owner }}
           REPO: ${{ github.event.repository.name }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
-          ASSET_DIR: ${{ github.event.pull_request.number }}/${{ github.event.pull_request.head.sha }}
           BASE_REF: ${{ github.event.pull_request.base.ref }}
           DELETE_WHEN_EMPTY: "true"
         run: |
+          # Use the actual current HEAD, not github.event.pull_request.head.sha —
+          # if the earlier commit step pushed a new baseline commit, that event
+          # context still points at the pre-commit sha and would upload assets
+          # under the wrong (nonexistent-on-branch) path.
+          export ASSET_DIR="$PR_NUMBER/$(git rev-parse HEAD)"
           git fetch --no-tags --depth=1 origin "$BASE_REF"
           git diff --name-only --diff-filter=AM \
             "origin/$BASE_REF...HEAD" -- '**/__screenshots__/**/*.png' \

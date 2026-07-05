@@ -81,6 +81,25 @@ jobs:
           fetch-depth: 0
           ref: ${{ github.event.pull_request.head.sha || github.ref }}
 
+      # actions/checkout's files are owned by a different UID than this
+      # container's user, so git's dubious-ownership check blocks every git
+      # command below unless the workspace is explicitly trusted.
+      - name: Trust the checked-out workspace
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
+      # The Playwright image doesn't ship the GitHub CLI, but the very next
+      # step (and several after it) shell out to `gh`.
+      - name: Install GitHub CLI
+        run: |
+          (type -p wget >/dev/null || (apt-get update && apt-get install -y wget)) \
+            && mkdir -p -m 755 /etc/apt/keyrings \
+            && wget -nv -O- https://cli.github.com/packages/githubcli-archive-keyring.gpg | tee /etc/apt/keyrings/githubcli-archive-keyring.gpg > /dev/null \
+            && chmod go+r /etc/apt/keyrings/githubcli-archive-keyring.gpg \
+            && mkdir -p -m 755 /etc/apt/sources.list.d \
+            && echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | tee /etc/apt/sources.list.d/github-cli.list > /dev/null \
+            && apt-get update \
+            && apt-get install -y gh
+
       # pull_request's $GITHUB_REF_NAME is "<number>/merge", not the branch —
       # resolve the real branch/PR/base once so every later step can rely on
       # it regardless of which trigger fired.

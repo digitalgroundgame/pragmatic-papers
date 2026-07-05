@@ -79,6 +79,26 @@ jobs:
         with:
           fetch-depth: 0
 
+      # actions/checkout's files are owned by a different UID than this
+      # container's user, so git's dubious-ownership check blocks every git
+      # command below unless the workspace is explicitly trusted.
+      - name: Trust the checked-out workspace
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
+      # The Playwright image doesn't ship the GitHub CLI, but several steps
+      # below (committing baselines, posting PR comments via
+      # scripts/pr-screenshot-comment.ts) shell out to `gh`.
+      - name: Install GitHub CLI
+        run: |
+          (type -p wget >/dev/null || (apt-get update && apt-get install -y wget)) \
+            && mkdir -p -m 755 /etc/apt/keyrings \
+            && wget -nv -O- https://cli.github.com/packages/githubcli-archive-keyring.gpg | tee /etc/apt/keyrings/githubcli-archive-keyring.gpg > /dev/null \
+            && chmod go+r /etc/apt/keyrings/githubcli-archive-keyring.gpg \
+            && mkdir -p -m 755 /etc/apt/sources.list.d \
+            && echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | tee /etc/apt/sources.list.d/github-cli.list > /dev/null \
+            && apt-get update \
+            && apt-get install -y gh
+
       # Captured before the later "Commit new snapshot baselines" step can
       # advance HEAD, so anything describing *this* test run (regression
       # artifacts) has a stable reference regardless of what gets pushed

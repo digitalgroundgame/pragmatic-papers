@@ -2,7 +2,7 @@ import { Logo } from "@/components/Logo"
 import { PaperIcon } from "@/components/Logo/icons/PaperIcon"
 import { MegaMenu } from "@/components/MegaMenu"
 import { Menu } from "@/components/Menu"
-import { ModeToggle } from "@/components/ModeToggle"
+import { ModeToggleAnalytics } from "@/components/ModeToggleAnalytics"
 import { SocialLinks } from "@/components/SocialLinks"
 import { Button } from "@/components/ui/button"
 import { LinkButton } from "@/components/ui/link-button"
@@ -74,7 +74,7 @@ export async function Header(): Promise<React.JSX.Element> {
             <div className="flex items-center justify-end gap-2">
               <HeaderActions actions={actions} className="hidden lg:flex" />
               <div className="hidden lg:flex">
-                <ModeToggle location="header" />
+                <ModeToggleAnalytics location="header" />
               </div>
               <Sheet>
                 <SheetTrigger
@@ -103,7 +103,7 @@ export async function Header(): Promise<React.JSX.Element> {
                     <LinkButton variant="outline" size="lg" className="w-full" href="/admin/login">
                       Log In
                     </LinkButton>
-                    <ModeToggle showLabel location="header-mobile-sheet" />
+                    <ModeToggleAnalytics showLabel location="header-mobile-sheet" />
                   </div>
                 </SheetContent>
               </Sheet>

@@ -6,17 +6,11 @@ vi.mock("@wrksz/themes/client", () => ({
   useTheme: () => ({ setTheme }),
 }))
 
-const sendGAEvent = vi.fn()
-vi.mock("@next/third-parties/google", () => ({
-  sendGAEvent: (...args: unknown[]) => sendGAEvent(...args),
-}))
-
 import { ModeToggle } from "../ModeToggle"
 
 afterEach(() => {
   cleanup()
   setTheme.mockClear()
-  sendGAEvent.mockClear()
 })
 
 describe("ModeToggle", () => {
@@ -35,23 +29,18 @@ describe("ModeToggle", () => {
     ["Dark", "dark"],
     ["System", "system"],
   ])("sets the %s theme when that option is selected", async (label, theme) => {
-    render(<ModeToggle />)
+    const onThemeChange = vi.fn()
+    render(<ModeToggle onThemeChange={onThemeChange} />)
     fireEvent.click(screen.getByRole("button", { name: "Toggle theme" }))
     fireEvent.click(await screen.findByText(label))
     expect(setTheme).toHaveBeenCalledWith(theme)
-    expect(sendGAEvent).toHaveBeenCalledWith("event", "theme_change", {
-      theme,
-      location: undefined,
-    })
+    expect(onThemeChange).toHaveBeenCalledWith(theme)
   })
 
-  it("includes the location in the analytics event when provided", async () => {
-    render(<ModeToggle location="footer" />)
+  it("works without an onThemeChange callback", async () => {
+    render(<ModeToggle />)
     fireEvent.click(screen.getByRole("button", { name: "Toggle theme" }))
     fireEvent.click(await screen.findByText("Dark"))
-    expect(sendGAEvent).toHaveBeenCalledWith("event", "theme_change", {
-      theme: "dark",
-      location: "footer",
-    })
+    expect(setTheme).toHaveBeenCalledWith("dark")
   })
 })

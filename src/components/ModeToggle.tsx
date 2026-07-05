@@ -1,6 +1,5 @@
 "use client"
 
-import { sendGAEvent } from "@next/third-parties/google"
 import { useTheme } from "@wrksz/themes/client"
 import { Moon, Sun } from "lucide-react"
 import React from "react"
@@ -14,22 +13,24 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { cn } from "@/utilities/utils"
 
+export type Theme = "light" | "dark" | "system"
+
 interface ModeToggleProps {
   /** Render a full-width labeled button instead of the compact icon-only toggle. */
   showLabel?: boolean
-  /** Identifies where this toggle is rendered, reported alongside theme_change analytics. */
-  location?: string
+  /** Called after the theme is set, with the theme the user selected. */
+  onThemeChange?: (theme: Theme) => void
 }
 
 export function ModeToggle({
   showLabel = false,
-  location,
+  onThemeChange,
 }: ModeToggleProps = {}): React.JSX.Element {
   const { setTheme } = useTheme()
 
-  function handleSetTheme(theme: "light" | "dark" | "system"): void {
+  function handleSetTheme(theme: Theme): void {
     setTheme(theme)
-    sendGAEvent("event", "theme_change", { theme, location })
+    onThemeChange?.(theme)
   }
 
   return (

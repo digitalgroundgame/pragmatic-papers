@@ -57,6 +57,14 @@ jobs:
         with:
           fetch-depth: 0
 
+      # Captured before the later "Commit new snapshot baselines" step can
+      # advance HEAD, so anything describing *this* test run (regression
+      # artifacts) has a stable reference regardless of what gets pushed
+      # afterward.
+      - name: Record tested commit
+        id: tested
+        run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
       - name: Set up Node.js environment
         uses: ./.github/actions/setup-project
         with:
@@ -161,7 +169,7 @@ jobs:
           OWNER: ${{ github.repository_owner }}
           REPO: ${{ github.event.repository.name }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
-          ASSET_DIR: ${{ github.event.pull_request.number }}/${{ github.event.pull_request.head.sha }}/regressions
+          ASSET_DIR: ${{ github.event.pull_request.number }}/${{ steps.tested.outputs.sha }}/regressions
           MARKER: visual-regressions
           TITLE: Visual regressions detected
           COLUMNS_PER_ROW: "3"

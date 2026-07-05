@@ -186,6 +186,56 @@ test.describe("ShareButtons — screenshots", () => {
   })
 })
 
+test.describe("ShareButtons — mobile screenshots (iPhone SE)", () => {
+  // iPhone SE (2nd/3rd gen) CSS viewport. Baselines are captured on chromium
+  // only (see other screenshot tests in this file) — this overrides the
+  // viewport size rather than switching to a WebKit device profile, so the
+  // rendering engine (and thus font/anti-aliasing) stays consistent with
+  // every other baseline in this suite.
+  test.use({ viewport: { width: 375, height: 667 } })
+
+  test("article share trigger", async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== "chromium", "visual baseline captured on chromium only")
+    const href = await gotoFirstArticle(page)
+    test.skip(!href, "No articles found in the database")
+
+    const share = page.getByRole("button", { name: "Share" })
+    await share.waitFor({ state: "visible" })
+    await share.scrollIntoViewIfNeeded()
+    await expect(page).toHaveScreenshot("mobile-article-share-trigger.png", { fullPage: false })
+  })
+
+  test("article share popover open", async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== "chromium", "visual baseline captured on chromium only")
+    const href = await gotoFirstArticle(page)
+    test.skip(!href, "No articles found in the database")
+
+    const share = page.getByRole("button", { name: "Share" })
+    await share.waitFor({ state: "visible" })
+    await share.scrollIntoViewIfNeeded()
+    await share.click()
+    await expect(page.locator('[data-slot="popover-content"]')).toBeVisible()
+    await expect(page).toHaveScreenshot("mobile-article-share-popover-open.png", {
+      fullPage: false,
+    })
+  })
+
+  test("volume share popover open", async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== "chromium", "visual baseline captured on chromium only")
+    const href = await gotoFirstVolume(page)
+    test.skip(!href, "No volumes found in the database")
+
+    const share = page.getByRole("button", { name: "Share" })
+    await share.waitFor({ state: "visible" })
+    await share.scrollIntoViewIfNeeded()
+    await share.click()
+    await expect(page.locator('[data-slot="popover-content"]')).toBeVisible()
+    await expect(page).toHaveScreenshot("mobile-volume-share-popover-open.png", {
+      fullPage: false,
+    })
+  })
+})
+
 test.describe("ShareButtons — volume page", () => {
   test("share button is visible and aligned to the right", async ({ page }) => {
     const href = await gotoFirstVolume(page)

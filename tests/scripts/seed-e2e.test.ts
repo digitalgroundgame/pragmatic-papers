@@ -65,9 +65,14 @@ describe("seed-e2e main()", () => {
   it("creates the rich-text showcase article with the writer and empty media/topics", async () => {
     await main()
 
-    expect(createRichTextShowcaseArticle).toHaveBeenCalledWith(mockPayload, [mockWriter], [], [], {
-      disableRevalidate: true,
-    })
+    expect(createRichTextShowcaseArticle).toHaveBeenCalledWith(
+      mockPayload,
+      [mockWriter],
+      [],
+      [],
+      { disableRevalidate: true },
+      "2026-06-02T00:00:00.000Z",
+    )
   })
 
   it("creates the interactive map article with the writer and empty media", async () => {
@@ -81,6 +86,7 @@ describe("seed-e2e main()", () => {
       {
         disableRevalidate: true,
       },
+      "2026-06-02T00:00:00.000Z",
     )
   })
 

@@ -15,6 +15,10 @@ import { getPayload } from "payload"
 
 const ctx = { disableRevalidate: true }
 
+// Screenshot baselines bake in this date via the article/volume byline, so it
+// must stay fixed rather than tracking the day the seed happens to run.
+const PUBLISHED_AT = "2026-06-04T00:00:00.000Z"
+
 export async function main(): Promise<void> {
   const payload = await getPayload({ config })
 
@@ -34,10 +38,17 @@ export async function main(): Promise<void> {
 
     // Typography showcase article (slug: "rich-text-showcase").
     // Pass [] for mediaDocs — all media accesses use ?. so heroImage/meta.image will be null.
-    const articleId = await createRichTextShowcaseArticle(payload, [writer], [], [], ctx)
+    const articleId = await createRichTextShowcaseArticle(
+      payload,
+      [writer],
+      [],
+      [],
+      ctx,
+      PUBLISHED_AT,
+    )
 
     // Interactive map article (slug: "missouri-shifting-margins-119-120-congressional-maps").
-    await createMoCongressionalMapsArticle(payload, [writer], [], [], ctx)
+    await createMoCongressionalMapsArticle(payload, [writer], [], [], ctx, PUBLISHED_AT)
 
     const volume = await payload.create({
       collection: "volumes",
@@ -49,7 +60,7 @@ export async function main(): Promise<void> {
         articles: [articleId],
         slug: "1",
         _status: "published",
-        publishedAt: new Date().toISOString(),
+        publishedAt: PUBLISHED_AT,
       },
     })
 

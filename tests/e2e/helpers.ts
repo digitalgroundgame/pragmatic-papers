@@ -20,12 +20,24 @@ export async function gotoFirstVolume(page: Page): Promise<string | null> {
 
 /**
  * Settle sources of pixel nondeterminism before taking a screenshot: wait for
- * web fonts to finish loading (late font swaps shift every glyph) and for two
+ * web fonts to finish loading (late font swaps shift every glyph), for all
+ * <img>s in the DOM to finish decoding (a still-loading hero image behind a
+ * clipped screenshot region is a common source of flaky diffs), and for two
  * animation frames so in-flight layout/paint work has flushed.
  */
 export async function waitForStableRender(page: Page): Promise<void> {
   await page.evaluate(async () => {
     await document.fonts.ready
+    await Promise.all(
+      Array.from(document.images).map((img) =>
+        img.complete
+          ? img.decode().catch(() => undefined)
+          : new Promise((resolve) => {
+              img.addEventListener("load", resolve, { once: true })
+              img.addEventListener("error", resolve, { once: true })
+            }),
+      ),
+    )
     await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)))
   })
 }

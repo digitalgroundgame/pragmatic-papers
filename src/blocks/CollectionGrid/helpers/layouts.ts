@@ -18,8 +18,8 @@ export type Layout =
   | "newton-4"
   | "euler-5"
   | "fibonacci-6"
-  | "vespucci-7"
   | "fibonacci-7"
+  | "vespucci-7"
   | "gauss-10"
 
 export const layouts = {

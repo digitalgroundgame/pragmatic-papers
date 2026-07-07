@@ -38,7 +38,10 @@ env:
   PAYLOAD_SECRET: ${{ secrets.PAYLOAD_SECRET }}
   NEXT_PUBLIC_SERVER_URL: http://localhost:8000
   USE_LOCAL_STORAGE: "true"
-  DATABASE_URI: postgres://postgres:postgres@localhost:5432/pragmatic-papers-e2e
+  # Hostname is the services key ("postgres"), not localhost — this job runs
+  # inside a container, so service containers are reachable by their
+  # service-id alias on the shared Docker network.
+  DATABASE_URI: postgres://postgres:postgres@postgres:5432/pragmatic-papers-e2e
   E2E_PROD_SERVER: "true"
 
 jobs:
@@ -47,6 +50,10 @@ jobs:
     if: ${{ github.event_name == 'workflow_dispatch' || github.event.label.name == 'needs screenshots' }}
     timeout-minutes: 60
     runs-on: ubuntu-latest
+    # Same pinned image as playwright.yml and scripts/test-e2e-docker.ts —
+    # keeps this workflow's regenerated baselines at parity with both.
+    container:
+      image: mcr.microsoft.com/playwright:v1.60.0-noble
 
     permissions:
       contents: write
@@ -74,6 +81,25 @@ jobs:
           fetch-depth: 0
           ref: ${{ github.event.pull_request.head.sha || github.ref }}
 
+      # actions/checkout's files are owned by a different UID than this
+      # container's user, so git's dubious-ownership check blocks every git
+      # command below unless the workspace is explicitly trusted.
+      - name: Trust the checked-out workspace
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
+      # The Playwright image doesn't ship the GitHub CLI, but the very next
+      # step (and several after it) shell out to `gh`.
+      - name: Install GitHub CLI
+        run: |
+          (type -p wget >/dev/null || (apt-get update && apt-get install -y wget)) \
+            && mkdir -p -m 755 /etc/apt/keyrings \
+            && wget -nv -O- https://cli.github.com/packages/githubcli-archive-keyring.gpg | tee /etc/apt/keyrings/githubcli-archive-keyring.gpg > /dev/null \
+            && chmod go+r /etc/apt/keyrings/githubcli-archive-keyring.gpg \
+            && mkdir -p -m 755 /etc/apt/sources.list.d \
+            && echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | tee /etc/apt/sources.list.d/github-cli.list > /dev/null \
+            && apt-get update \
+            && apt-get install -y gh
+
       # pull_request's $GITHUB_REF_NAME is "<number>/merge", not the branch —
       # resolve the real branch/PR/base once so every later step can rely on
       # it regardless of which trigger fired.
@@ -100,16 +126,6 @@ jobs:
           node-version: "24.x"
           gh-font-read-token: ${{ secrets.GH_FONT_READ }}
           payload-secret: ${{ secrets.PAYLOAD_SECRET }}
-
-      - name: Cache Playwright browsers
-        uses: actions/cache@v5
-        id: playwright-cache
-        with:
-          path: ~/.cache/ms-playwright
-          key: playwright-${{ hashFiles('pnpm-lock.yaml') }}
-
-      - name: Install Playwright browsers
-        run: pnpm exec playwright install --with-deps chromium
 
       - name: Cache Next.js build cache
         uses: actions/cache@v5

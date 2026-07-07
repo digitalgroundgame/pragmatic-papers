@@ -1,0 +1,44 @@
+name: Playwright pin check
+
+# Advisory check for scripts/check-playwright-image-pin.ts — deliberately
+# NOT part of ci.yml's Static checks. A pin drift only ever happens when
+# someone bumps @playwright/test (a chore, done deliberately alongside a
+# Docker tag bump — see tests/e2e/README.md), so it shouldn't gate every
+# feature branch's required checks. If drift ever did land on dev/main
+# (e.g. an automated dependency bump merged without updating the image
+# tag), failing Static checks on every subsequent feature branch would be
+# a huge blast radius for one chore item. Instead this runs against
+# dev/main pushes that touch the pinned files, so a drift shows up as a
+# failed run in the Actions tab — visible, but blocking nobody's PR.
+#
+# No schedule: the check is a pure function of the committed contents of
+# the paths below, so its result can't change without a commit to one of
+# them — the push trigger already covers every way the pin can drift.
+on:
+  push:
+    branches: [main, dev]
+    paths:
+      - pnpm-lock.yaml
+      - docker-compose.e2e.yml
+      - .github/workflows/playwright.yml
+      - .github/workflows/update-snapshots.yml
+      - .github/workflows/playwright-pin-check.yml
+      - scripts/check-playwright-image-pin.ts
+  workflow_dispatch:
+
+jobs:
+  check:
+    name: Check Playwright Docker image pin
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up Node.js environment
+        uses: ./.github/actions/setup-project
+        with:
+          node-version: "24.x"
+          gh-font-read-token: ${{ secrets.GH_FONT_READ }}
+          payload-secret: ${{ secrets.PAYLOAD_SECRET }}
+
+      - name: Check Playwright Docker image pin
+        run: pnpm exec tsx scripts/check-playwright-image-pin.ts

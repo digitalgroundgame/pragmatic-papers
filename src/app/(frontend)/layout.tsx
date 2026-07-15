@@ -1,5 +1,6 @@
 import { AdminBar } from "@/components/AdminBar"
 import { Breadcrumbs } from "@/components/Breadcrumbs"
+import { TourProvider } from "@/components/Tour/TourProvider"
 import { Footer } from "@/Footer/Component"
 import { Header } from "@/Header/Component"
 import { NotificationProvider } from "@/providers/NotificationProvider"
@@ -55,13 +56,15 @@ export default async function RootLayout({
           disableTransitionOnChange
         >
           <NotificationProvider>
-            <AdminBar />
-            <Header />
-            <main role="main" className="flex-1">
-              <Breadcrumbs />
-              {children}
-            </main>
-            <Footer />
+            <TourProvider>
+              <AdminBar />
+              <Header />
+              <main role="main" className="flex-1">
+                <Breadcrumbs />
+                {children}
+              </main>
+              <Footer />
+            </TourProvider>
           </NotificationProvider>
         </ThemeProvider>
       </body>

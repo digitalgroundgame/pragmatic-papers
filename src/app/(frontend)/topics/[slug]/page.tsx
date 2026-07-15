@@ -2,6 +2,7 @@ import { AuthorArticleCard } from "@/components/Articles/AuthorArticleCard"
 import { LivePreviewListener } from "@/components/LivePreviewListener"
 import { Pagination } from "@/components/Pagination"
 import { PayloadRedirects } from "@/components/PayloadRedirects"
+import { TopicVisitTracker } from "./TopicVisitTracker"
 import type { Volume } from "@/payload-types"
 import { generateMeta } from "@/utilities/generateMeta"
 import { queryTopicBySlug } from "@/utilities/queries"
@@ -133,6 +134,7 @@ export default async function TopicPage({
   return (
     <article className="mx-auto max-w-3xl space-y-6 px-4">
       <PayloadRedirects disableNotFound url={url} />
+      <TopicVisitTracker slug={slug} />
 
       {draft && <LivePreviewListener />}
 

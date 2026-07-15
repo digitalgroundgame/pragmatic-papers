@@ -96,6 +96,19 @@ what CI's Chromium actually renders. Treat it as a single chore:
 4. Run `pnpm exec tsx scripts/check-playwright-image-pin.ts` to confirm the
    tag is in sync everywhere before committing.
 
+> [!IMPORTANT]
+> The same full regeneration is required any time the **CI rendering
+> environment** changes, not only when the `@playwright/test` version does.
+> Moving the E2E job onto (or between) a pinned container image — e.g. the
+> switch to `mcr.microsoft.com/playwright:v<version>-<codename>` — changes the
+> system fonts, freetype/fontconfig, and antialiasing even at an unchanged
+> Chromium version, so every committed baseline drifts a subpixel on each
+> glyph and icon edge. Detail-dense screenshots then exceed
+> `maxDiffPixelRatio` and fail on _every_ PR until the baselines are
+> regenerated in the new environment. Treat "changed the runner image" the
+> same as "bumped the version": regenerate all baselines as part of that
+> change.
+
 A mismatched image runs a different Chromium build than what's actually
 installed, defeating the parity this exists for. Since this only ever
 happens as a deliberate chore rather than something every feature branch

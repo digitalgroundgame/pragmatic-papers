@@ -1,6 +1,16 @@
 import type { Page } from "@/payload-types"
 import type { Payload } from "payload"
 
+import {
+  createCTABlockNode,
+  createHeadingNode,
+  createLinkNode,
+  createNewsletterSignupBlockNode,
+  createParagraph,
+  createRichText,
+  createTextNode,
+} from "./richtext"
+
 interface CreateMenusParams {
   aboutPage: Page
   articlesPage: Page
@@ -84,6 +94,59 @@ export const createMenus = async (
   await payload.updateGlobal({
     slug: "footer",
     data: {
+      layout: [
+        {
+          blockType: "content",
+          columns: [
+            {
+              size: "half",
+              richText: createRichText([
+                createNewsletterSignupBlockNode({
+                  heading: "Get Daily Pragmatic Papers",
+                  description:
+                    "When a new Volume drops, we send one article per weekday so you can actually read every piece. No spam, unsubscribe any time.",
+                  buttonLabel: "Sign Up",
+                  notice: createRichText([
+                    createParagraph([
+                      createTextNode(
+                        "Your newsletter subscriptions are subject to The Pragmatic Papers ",
+                      ),
+                      createLinkNode("Privacy Policy", "/privacy-policy"),
+                      createTextNode(" and "),
+                      createLinkNode("Terms of Use", "/terms-of-use"),
+                      createTextNode("."),
+                    ]),
+                  ]),
+                }),
+              ]),
+            },
+            {
+              size: "half",
+              richText: createRichText([
+                createCTABlockNode({
+                  richText: createRichText([
+                    createHeadingNode("Stay up to date with The Pragmatic Papers", "h3"),
+                    createParagraph(
+                      "Get the latest articles, volumes, and updates delivered straight to you.",
+                    ),
+                  ]),
+                  links: [
+                    {
+                      link: {
+                        type: "custom",
+                        url: "https://discord.gg/digitalgroundgame",
+                        label: "Join the Community",
+                        newTab: true,
+                        appearance: "default",
+                      },
+                    },
+                  ],
+                }),
+              ]),
+            },
+          ],
+        },
+      ],
       copyright: {
         type: "custom",
         label: "Digital Ground Game",

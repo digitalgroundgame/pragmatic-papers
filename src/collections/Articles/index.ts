@@ -6,6 +6,7 @@ import { Banner } from "@/blocks/Banner/config"
 import { Code } from "@/blocks/Code/config"
 import { FootnoteBlock } from "@/blocks/Footnote/config"
 import { FootnoteShortcutFeature } from "@/blocks/Footnote/shortcutFeature"
+import { InteractiveMap } from "@/blocks/InteractiveMap/config"
 import { DisplayMathBlock, InlineMathBlock } from "@/blocks/Math/config"
 import { MediaBlock } from "@/blocks/MediaBlock/config"
 import { MediaCollageBlock } from "@/blocks/MediaCollageBlock/config"
@@ -120,6 +121,7 @@ export const Articles: CollectionConfig = {
                       blocks: [
                         Banner,
                         Code,
+                        InteractiveMap,
                         MediaBlock,
                         MediaCollageBlock,
                         DisplayMathBlock,

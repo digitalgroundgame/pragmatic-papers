@@ -2,13 +2,16 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 const mockDestroy = vi.fn()
 const mockCreate = vi.fn()
+const mockUpdateGlobal = vi.fn()
 const mockPayload = {
   create: mockCreate,
+  updateGlobal: mockUpdateGlobal,
   db: { destroy: mockDestroy },
 }
 
 const mockWriter = { id: 1, email: "writer@e2e.test", name: "E2E Writer" }
 const mockArticleId = 42
+const mockMapArticleId = 43
 const mockVolume = { id: 99, title: "E2E Test Volume" }
 
 vi.mock("payload", () => ({
@@ -25,9 +28,15 @@ vi.mock("@/endpoints/seed/features/rich-text-showcase", () => ({
   createRichTextShowcaseArticle: vi.fn().mockResolvedValue(mockArticleId),
 }))
 
+vi.mock("@/endpoints/seed/features/interactive-maps", () => ({
+  createMoCongressionalMapsArticle: vi.fn().mockResolvedValue(mockMapArticleId),
+}))
+
 const { createUser } = await import("@/endpoints/seed/users")
 const { createRichTextShowcaseArticle } =
   await import("@/endpoints/seed/features/rich-text-showcase")
+const { createMoCongressionalMapsArticle } =
+  await import("@/endpoints/seed/features/interactive-maps")
 const { main } = await import("../../scripts/seed-e2e")
 
 beforeEach(() => {
@@ -56,9 +65,29 @@ describe("seed-e2e main()", () => {
   it("creates the rich-text showcase article with the writer and empty media/topics", async () => {
     await main()
 
-    expect(createRichTextShowcaseArticle).toHaveBeenCalledWith(mockPayload, [mockWriter], [], [], {
-      disableRevalidate: true,
-    })
+    expect(createRichTextShowcaseArticle).toHaveBeenCalledWith(
+      mockPayload,
+      [mockWriter],
+      [],
+      [],
+      { disableRevalidate: true },
+      "2026-06-04T00:00:00.000Z",
+    )
+  })
+
+  it("creates the interactive map article with the writer and empty media", async () => {
+    await main()
+
+    expect(createMoCongressionalMapsArticle).toHaveBeenCalledWith(
+      mockPayload,
+      [mockWriter],
+      [],
+      [],
+      {
+        disableRevalidate: true,
+      },
+      "2026-06-04T00:00:00.000Z",
+    )
   })
 
   it("creates a volume with the article linked and slug '1'", async () => {
@@ -72,6 +101,7 @@ describe("seed-e2e main()", () => {
       slug: "1",
       _status: "published",
       articles: [mockArticleId],
+      publishedAt: "2026-06-04T00:00:00.000Z",
     })
     expect(volumeCall.context).toEqual({ disableRevalidate: true })
   })
@@ -108,6 +138,17 @@ describe("seed-e2e main()", () => {
     await expect(main()).rejects.toThrow("db error")
 
     expect(mockDestroy).toHaveBeenCalledOnce()
+  })
+
+  it("seeds the footer global with disableRevalidate context", async () => {
+    await main()
+
+    expect(mockUpdateGlobal).toHaveBeenCalledWith(
+      expect.objectContaining({
+        slug: "footer",
+        context: { disableRevalidate: true },
+      }),
+    )
   })
 
   it("destroys the db connection after a successful run", async () => {

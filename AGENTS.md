@@ -11,7 +11,8 @@ This file provides guidance to tools like Claude Code (claude.ai/code) when work
 ### Development
 
 - `pnpm dev` — starts everything in Docker Compose (Postgres + Next.js dev server on port 8000)
-- `pnpm dev:db-nuke` — stop Postgres and delete volume data
+- `pnpm dev:db-nuke` — stop Postgres and delete its volume (`docker compose down -v`), wiping the entire data directory. Use this after a Postgres major-version bump or whenever the local data is corrupt; the next `pnpm dev` recreates a fresh cluster and Drizzle push re-syncs the schema
+- `pnpm dev:db-fresh` — bring Postgres up and rebuild the schema by re-running all migrations from scratch (`payload migrate:fresh`). Unlike `dev:db-nuke`, this keeps the volume and exercises the committed migration files (the same path prod uses), so it surfaces migration drift that Drizzle push masks in dev
 
 ### Quality Checks
 
@@ -26,7 +27,7 @@ This file provides guidance to tools like Claude Code (claude.ai/code) when work
 - `pnpm test` — run all tests (Vitest)
 - `pnpm test:unit` — run unit tests
 - `pnpm test:integration` — run integration tests (uses Testcontainers)
-- `pnpm test:e2e` — run Playwright E2E tests (uses Testcontainers)
+- `pnpm test:e2e` — run Playwright E2E tests (uses Testcontainers). Screenshot comparisons are skipped locally; visual baselines are generated in CI or via `pnpm test:e2e:update-snapshots` (Dockerized, see `tests/e2e/README.md` for the full lifecycle) — never generate/commit baselines from a bare local machine
 - `pnpm test:unit:coverage` — run unit tests with V8 coverage report (what CI uses; outputs `coverage/coverage-summary.json` and `coverage/coverage-final.json`)
 - `pnpm test:coverage` — run all tests with V8 coverage report (full picture for local inspection)
 - `pnpm test:unit -- --update-snapshots` — regenerate snapshot baselines after intentional UI changes

@@ -14,7 +14,7 @@ interface MegaMenuProps {
 export function MegaMenu({ menu }: MegaMenuProps): React.ReactNode {
   if (!menu) return null
   return (
-    <div className="mt-2 hidden w-full justify-center md:flex">
+    <div className="my-2 hidden w-full justify-center md:flex">
       <NavigationMenu
         align="center"
         //   className="hidden w-full max-w-full flex-none justify-center md:flex"

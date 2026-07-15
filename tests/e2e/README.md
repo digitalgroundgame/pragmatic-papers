@@ -97,17 +97,24 @@ what CI's Chromium actually renders. Treat it as a single chore:
    tag is in sync everywhere before committing.
 
 > [!IMPORTANT]
-> The same full regeneration is required any time the **CI rendering
-> environment** changes, not only when the `@playwright/test` version does.
-> Moving the E2E job onto (or between) a pinned container image — e.g. the
-> switch to `mcr.microsoft.com/playwright:v<version>-<codename>` — changes the
-> system fonts, freetype/fontconfig, and antialiasing even at an unchanged
-> Chromium version, so every committed baseline drifts a subpixel on each
-> glyph and icon edge. Detail-dense screenshots then exceed
-> `maxDiffPixelRatio` and fail on _every_ PR until the baselines are
-> regenerated in the new environment. Treat "changed the runner image" the
-> same as "bumped the version": regenerate all baselines as part of that
-> change.
+> **If _every_ PR suddenly fails visual regression** — the text- and
+> icon-dense `article-share-popover-close-up` is the first to go, since it has
+> the least `maxDiffPixelRatio` headroom — suspect the **render environment**
+> before the baselines. Two things change what CI's Chromium actually paints:
+>
+> - **An expired `GH_FONT_READ` token.** CI installs the private
+>   `@digitalgroundgame/fonts` package from GitHub Packages using this token
+>   (see `.github/actions/setup-project`). When it lapses, the E2E job renders
+>   with fallback fonts and every glyph shifts, so the committed (real-font)
+>   baselines no longer match — a whole-suite regression that no code change
+>   explains. Rotate the `GH_FONT_READ` secret, then re-run the failed E2E
+>   jobs (do **not** regenerate baselines against the fallback font).
+> - **A changed CI runner image.** Moving the E2E job onto (or between) a
+>   pinned container image (e.g.
+>   `mcr.microsoft.com/playwright:v<version>-<codename>`) changes system
+>   fonts/freetype/antialiasing even at an unchanged Chromium version. Treat
+>   "changed the runner image" like "bumped the version": regenerate the
+>   baselines against the new image as part of that change.
 
 A mismatched image runs a different Chromium build than what's actually
 installed, defeating the parity this exists for. Since this only ever

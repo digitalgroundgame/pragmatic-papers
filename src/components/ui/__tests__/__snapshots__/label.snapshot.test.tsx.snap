@@ -1,0 +1,29 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`Label > renders with custom className 1`] = `
+<label
+  class="flex items-center gap-2 text-sm leading-none font-medium select-none group-data-[disabled=true]:pointer-events-none group-data-[disabled=true]:opacity-50 peer-disabled:cursor-not-allowed peer-disabled:opacity-50 sr-only"
+  data-slot="label"
+>
+  Hidden label
+</label>
+`;
+
+exports[`Label > renders with htmlFor 1`] = `
+<label
+  class="flex items-center gap-2 text-sm leading-none font-medium select-none group-data-[disabled=true]:pointer-events-none group-data-[disabled=true]:opacity-50 peer-disabled:cursor-not-allowed peer-disabled:opacity-50"
+  data-slot="label"
+  for="email-input"
+>
+  Email address
+</label>
+`;
+
+exports[`Label > renders with text content 1`] = `
+<label
+  class="flex items-center gap-2 text-sm leading-none font-medium select-none group-data-[disabled=true]:pointer-events-none group-data-[disabled=true]:opacity-50 peer-disabled:cursor-not-allowed peer-disabled:opacity-50"
+  data-slot="label"
+>
+  Email address
+</label>
+`;

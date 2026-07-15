@@ -41,6 +41,7 @@ export const homeStatic: RequiredDataFromCollectionSlug<"pages"> = {
   layout: [
     {
       blockType: "content",
+      width: "narrow",
       columns: [
         {
           size: "full",
@@ -107,7 +108,6 @@ export const homeStatic: RequiredDataFromCollectionSlug<"pages"> = {
               version: 1,
             },
           },
-          enableLink: false,
         },
       ],
     },

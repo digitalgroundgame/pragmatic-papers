@@ -7,9 +7,8 @@ import type {
   CollectionConfig,
 } from "payload"
 
-import { anyone } from "@/access/anyone"
-import { editorOrSelf } from "@/access/editorOrSelf"
-import { writer } from "@/access/writer"
+import { anyone, writer } from "@/access/collections"
+import { isCreatedByOrEditor } from "@/access/policies"
 import { link } from "@/fields/link2"
 import type { MapAsset } from "@/payload-types"
 
@@ -47,9 +46,9 @@ export const MapAssets: CollectionConfig = {
   },
   access: {
     create: writer,
-    delete: editorOrSelf,
+    delete: isCreatedByOrEditor,
     read: anyone,
-    update: editorOrSelf,
+    update: isCreatedByOrEditor,
   },
   admin: {
     defaultColumns: ["filename", "label", "mimeType", "updatedAt"],

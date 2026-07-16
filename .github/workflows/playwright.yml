@@ -132,19 +132,16 @@ jobs:
       # Only fills in baselines for tests that don't have one yet. Any test
       # with an existing baseline is still compared strictly and fails the
       # step on a mismatch.
+      # E2E_VERIFY_VISUAL folds the flaky-baseline gate into this single run:
+      # when a screenshot baseline is written/changed here, the wrapper
+      # re-renders the @visual tests against the same server and fails if a
+      # baseline only matches its own first render. It reuses the seeded,
+      # built server (no re-seed, no rebuild) and no-ops when no baseline
+      # changed — so PRs that touch no screenshots pay nothing.
       - name: Run Playwright tests
+        env:
+          E2E_VERIFY_VISUAL: "true"
         run: pnpm test:e2e -- --update-snapshots=missing
-
-      # Flaky-baseline guard: re-render only the @visual tests two more times
-      # (retries off) and compare against the baselines the step above just
-      # generated/validated. A baseline that only matches its own first render
-      # — i.e. a nondeterministic screenshot — fails here, so it can't land
-      # green and then flake on unrelated PRs later (see
-      # article-share-popover-close-up). Runs even after a failure above so a
-      # real regression on one screenshot doesn't mask a separate flaky one.
-      - name: Verify screenshot determinism
-        if: ${{ !cancelled() }}
-        run: pnpm test:e2e -- --grep @visual --repeat-each=2 --retries=0 --project=chromium
 
       # Runs even if the step above failed: a real regression on one test
       # shouldn't block committing a legitimately new baseline from another.

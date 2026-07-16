@@ -169,13 +169,16 @@ the run finishes, so re-adding it later triggers another regeneration.
 
 ### The `@visual` determinism gate
 
-Every `toHaveScreenshot` test is tagged `@visual`. After baselines are
-generated (`playwright.yml`) or regenerated (`update-snapshots.yml`), a
-**"Verify screenshot determinism"** step re-renders just those tests twice more
-with `--repeat-each=2 --retries=0` and compares against the freshly written
-baseline. A screenshot that only matches its own first render fails there —
-so a nondeterministic baseline can't land green and then flake on unrelated
-PRs. **Tag any new screenshot test `@visual`** (append it to the test title)
-so the gate covers it; if it fails the gate, make the capture deterministic
-(stable layout, element-relative clip, masked dynamic regions) rather than
-widening `maxDiffPixelRatio`.
+Every `toHaveScreenshot` test is tagged `@visual`. When CI runs with
+`E2E_VERIFY_VISUAL=true` (set on `playwright.yml` and `update-snapshots.yml`)
+**and the run wrote or changed a baseline**, `scripts/test-e2e.mjs` re-renders
+just the `@visual` tests twice more (`--repeat-each=2 --retries=0`) against the
+**same already-seeded, already-built server** — no re-seed, no rebuild — and
+fails if a baseline only matches its own first render. So a nondeterministic
+baseline can't land green and then flake on unrelated PRs. The check no-ops
+when no baseline changed, so PRs that touch no screenshots pay nothing.
+
+**Tag any new screenshot test `@visual`** (append it to the test title) so the
+gate covers it. If it fails the gate, make the capture deterministic (stable
+layout via `waitForStableBox`, element-relative clip, masked dynamic regions)
+rather than widening `maxDiffPixelRatio`.

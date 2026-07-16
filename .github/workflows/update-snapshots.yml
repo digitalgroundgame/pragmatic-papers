@@ -135,16 +135,14 @@ jobs:
           restore-keys: |
             nextjs-${{ hashFiles('pnpm-lock.yaml') }}-
 
+      # E2E_VERIFY_VISUAL folds the flaky-baseline gate into this run: after
+      # regenerating, the wrapper re-renders the @visual tests against the same
+      # server and fails if a baseline only matches its own first render, so a
+      # nondeterministic screenshot can't be accepted into the branch.
       - name: Regenerate changed snapshot baselines
+        env:
+          E2E_VERIFY_VISUAL: "true"
         run: pnpm test:e2e -- --update-snapshots=changed --project=chromium
-
-      # Flaky-baseline guard: re-render the @visual tests two more times
-      # (retries off) and compare against the baselines just regenerated above.
-      # A baseline that only matches its own first render is nondeterministic,
-      # so fail rather than accept a flaky screenshot into the branch.
-      - name: Verify screenshot determinism
-        if: ${{ !cancelled() }}
-        run: pnpm test:e2e -- --grep @visual --repeat-each=2 --retries=0 --project=chromium
 
       - name: Commit regenerated snapshots
         id: commit

@@ -5,6 +5,15 @@ on:
     branches: [main, dev]
   pull_request:
 
+# Cancel superseded runs on a PR so a new push doesn't leave the previous
+# commit's Static/Unit/Integration jobs (two Postgres services + Testcontainers)
+# running to completion for nothing. Scoped per-ref. Pushes to main/dev use a
+# per-run group (github.run_id) so they never cancel each other — every commit
+# landing on a protected branch is still validated in full.
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   static:
     name: Static checks
@@ -31,9 +40,11 @@ jobs:
           --health-retries 5
 
     steps:
+      # Shallow clone: none of the static checks below read git history
+      # (check-migration-order sorts files by name; check-pending-migrations
+      # runs against the Postgres service), so the default depth-1 fetch is
+      # enough and skips pulling the full history.
       - uses: actions/checkout@v6
-        with:
-          fetch-depth: 0
 
       - name: Set up Node.js environment
         uses: ./.github/actions/setup-project

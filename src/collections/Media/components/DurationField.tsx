@@ -2,15 +2,33 @@
 
 import { FieldLabel, useField, useFormFields } from "@payloadcms/ui"
 import type { NumberFieldClientProps } from "payload"
-import React, { useEffect, useRef } from "react"
+import React, { useEffect, useMemo, useRef } from "react"
+
+import { useIsAudioUpload } from "./useIsAudioUpload"
 
 export const DurationField: React.FC<NumberFieldClientProps> = ({ field, path }) => {
   const { value, setValue } = useField<number>({ path: path ?? field.name })
-  const url = useFormFields(([fields]) => fields.url?.value as string | undefined)
+  const isAudioUpload = useIsAudioUpload()
+  const pendingFile = useFormFields(([fields]) => fields.file?.value as File | undefined)
+  const savedUrl = useFormFields(([fields]) => fields.url?.value as string | undefined)
   const hasMountedRef = useRef(false)
   // Capture the value present at mount — used to skip recalculation when
   // opening an existing record that already has a stored duration.
   const initialValueRef = useRef(value)
+
+  // A pending file is not on the server yet, so it has to be read from memory.
+  const pendingUrl = useMemo(
+    () => (pendingFile ? URL.createObjectURL(pendingFile) : undefined),
+    [pendingFile],
+  )
+
+  useEffect(() => {
+    if (!pendingUrl) return
+
+    return () => URL.revokeObjectURL(pendingUrl)
+  }, [pendingUrl])
+
+  const url = pendingUrl ?? savedUrl
 
   useEffect(() => {
     if (!url) return
@@ -53,6 +71,8 @@ export const DurationField: React.FC<NumberFieldClientProps> = ({ field, path })
       audio.removeEventListener("durationchange", onDurationChange)
     }
   }, [url, setValue])
+
+  if (!isAudioUpload) return null
 
   const formatted = value
     ? `${Math.floor(value / 60)}:${Math.floor(value % 60)

@@ -86,7 +86,11 @@ export const Media: CollectionConfig = {
       },
       admin: {
         description: "User who recorded this narration",
-        condition: (_, siblingData) => siblingData?.mimeType?.startsWith("audio/"),
+        // Hidden for non-audio uploads by the component itself, which can see a
+        // pending file that an `admin.condition` cannot.
+        components: {
+          Field: "@/collections/Media/components/NarratorField#NarratorField",
+        },
       },
     },
     {
@@ -94,7 +98,6 @@ export const Media: CollectionConfig = {
       type: "number",
       admin: {
         description: "Duration in seconds (auto-populated from the audio file)",
-        condition: (_, siblingData) => siblingData?.mimeType?.startsWith("audio/"),
         components: {
           Field: "@/collections/Media/components/DurationField#DurationField",
         },

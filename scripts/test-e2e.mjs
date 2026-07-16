@@ -1,5 +1,6 @@
 import { PostgreSqlContainer } from "@testcontainers/postgresql"
 import { execSync, spawn } from "node:child_process"
+import { appendFileSync } from "node:fs"
 import net from "node:net"
 import { blue, green, red } from "./ansi.mjs"
 
@@ -130,6 +131,12 @@ try {
             `the tolerance.`,
         )
         finalExit = verifyExit
+        // Signal a determinism-gate failure distinctly from the benign
+        // "wrote a missing baseline" failure. CI keys off this so it refuses
+        // to commit and greenlight a flaky baseline (see playwright.yml).
+        if (process.env.GITHUB_OUTPUT) {
+          appendFileSync(process.env.GITHUB_OUTPUT, "determinism_failed=true\n")
+        }
       }
     } else {
       console.warn(`${green("✔")} No baseline changes — skipping screenshot determinism check.`)

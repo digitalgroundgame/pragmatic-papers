@@ -139,15 +139,23 @@ jobs:
       # built server (no re-seed, no rebuild) and no-ops when no baseline
       # changed — so PRs that touch no screenshots pay nothing.
       - name: Run Playwright tests
+        id: e2e
         env:
           E2E_VERIFY_VISUAL: "true"
         run: pnpm test:e2e -- --update-snapshots=missing
 
       # Runs even if the step above failed: a real regression on one test
       # shouldn't block committing a legitimately new baseline from another.
+      # BUT skip when the @visual determinism gate failed — otherwise a flaky
+      # new baseline would be committed and the step below would report
+      # "E2E tests" green on the auto-commit sha, letting a nondeterministic
+      # screenshot merge and defeating the gate. The wrapper sets
+      # determinism_failed only for a gate failure, not the benign
+      # "wrote a missing baseline" failure, so legitimate new baselines still
+      # commit.
       - name: Commit new snapshot baselines
         id: commit
-        if: ${{ !cancelled() }}
+        if: ${{ !cancelled() && steps.e2e.outputs.determinism_failed != 'true' }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |

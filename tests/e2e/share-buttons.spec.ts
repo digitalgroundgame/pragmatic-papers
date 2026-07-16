@@ -1,6 +1,12 @@
 import { expect, test } from "@playwright/test"
 
-import { gotoFirstArticle, gotoFirstVolume, waitForStableRender } from "./helpers"
+import {
+  gotoFirstArticle,
+  gotoFirstVolume,
+  viewportRatioClip,
+  waitForStableBox,
+  waitForStableRender,
+} from "./helpers"
 
 test.describe("ShareButtons — article page", () => {
   test("share button is visible", async ({ page }) => {
@@ -118,7 +124,7 @@ test.describe("ShareButtons — article page", () => {
 })
 
 test.describe("ShareButtons — screenshots", () => {
-  test("article share button and popover close-up", async ({ page }, testInfo) => {
+  test("article share button and popover close-up @visual", async ({ page }, testInfo) => {
     test.skip(testInfo.project.name !== "chromium", "visual baseline captured on chromium only")
     const href = await gotoFirstArticle(page)
     test.skip(!href, "No articles found in the database")
@@ -131,19 +137,30 @@ test.describe("ShareButtons — screenshots", () => {
     const popover = page.locator('[data-slot="popover-content"]')
     await expect(popover).toBeVisible()
 
-    // Screenshot the popover element itself rather than a viewport clip over
-    // the hero image. The old clip was positioned relative to the viewport,
-    // but the popover's scroll position over the hero varied by ~1px between
-    // runs (scrollIntoViewIfNeeded lands the trigger a few pixels higher or
-    // lower depending on hero-image render height). That shifted every glyph
-    // and icon within the clip, producing 7-23% flaky diffs no baseline could
-    // pin down. An element screenshot frames on the popover's own box, so it
-    // is independent of scroll position and background — deterministic.
+    const viewport = page.viewportSize() ?? { width: 1280, height: 720 }
+
+    // The clip captures the popover *with* its surrounding hero context, so its
+    // position must be identical every run. The flake came from taking the
+    // screenshot mid-reflow: the hero image resolves its intrinsic height a
+    // frame or two after waitForStableRender's decode wait, nudging the
+    // popover's Y by ~1px and ghosting every glyph/icon (measured 7-23% diff).
+    // waitForStableBox blocks until the layout stops moving, so box.y — and
+    // thus the computed clip — is deterministic.
+    const box = await waitForStableBox(popover)
+
+    // Pin the popover to a fixed viewport Y so the clip frames the same slice
+    // of hero content each run.
+    const targetY = Math.round(viewport.height * 0.45)
+    await page.evaluate((delta) => window.scrollBy(0, delta), Math.round(box.y - targetY))
+
     await waitForStableRender(page)
-    await expect(popover).toHaveScreenshot("article-share-popover-close-up.png")
+    const stableBox = await waitForStableBox(popover)
+    await expect(page).toHaveScreenshot("article-share-popover-close-up.png", {
+      clip: viewportRatioClip(stableBox, viewport, { gridSnap: 16 }),
+    })
   })
 
-  test("article share trigger", async ({ page }, testInfo) => {
+  test("article share trigger @visual", async ({ page }, testInfo) => {
     test.skip(testInfo.project.name !== "chromium", "visual baseline captured on chromium only")
     const href = await gotoFirstArticle(page)
     test.skip(!href, "No articles found in the database")
@@ -154,7 +171,7 @@ test.describe("ShareButtons — screenshots", () => {
     await expect(page).toHaveScreenshot("article-share-trigger.png", { fullPage: false })
   })
 
-  test("article share popover open", async ({ page }, testInfo) => {
+  test("article share popover open @visual", async ({ page }, testInfo) => {
     test.skip(testInfo.project.name !== "chromium", "visual baseline captured on chromium only")
     const href = await gotoFirstArticle(page)
     test.skip(!href, "No articles found in the database")
@@ -167,7 +184,7 @@ test.describe("ShareButtons — screenshots", () => {
     await expect(page).toHaveScreenshot("article-share-popover-open.png", { fullPage: false })
   })
 
-  test("volume share popover open", async ({ page }, testInfo) => {
+  test("volume share popover open @visual", async ({ page }, testInfo) => {
     test.skip(testInfo.project.name !== "chromium", "visual baseline captured on chromium only")
     const href = await gotoFirstVolume(page)
     test.skip(!href, "No volumes found in the database")
@@ -189,7 +206,7 @@ test.describe("ShareButtons — mobile screenshots (iPhone SE)", () => {
   // every other baseline in this suite.
   test.use({ viewport: { width: 375, height: 667 } })
 
-  test("article share trigger", async ({ page }, testInfo) => {
+  test("article share trigger @visual", async ({ page }, testInfo) => {
     test.skip(testInfo.project.name !== "chromium", "visual baseline captured on chromium only")
     const href = await gotoFirstArticle(page)
     test.skip(!href, "No articles found in the database")
@@ -200,7 +217,7 @@ test.describe("ShareButtons — mobile screenshots (iPhone SE)", () => {
     await expect(page).toHaveScreenshot("mobile-article-share-trigger.png", { fullPage: false })
   })
 
-  test("article share popover open", async ({ page }, testInfo) => {
+  test("article share popover open @visual", async ({ page }, testInfo) => {
     test.skip(testInfo.project.name !== "chromium", "visual baseline captured on chromium only")
     const href = await gotoFirstArticle(page)
     test.skip(!href, "No articles found in the database")
@@ -215,7 +232,7 @@ test.describe("ShareButtons — mobile screenshots (iPhone SE)", () => {
     })
   })
 
-  test("volume share popover open", async ({ page }, testInfo) => {
+  test("volume share popover open @visual", async ({ page }, testInfo) => {
     test.skip(testInfo.project.name !== "chromium", "visual baseline captured on chromium only")
     const href = await gotoFirstVolume(page)
     test.skip(!href, "No volumes found in the database")

@@ -160,3 +160,22 @@ the run finishes, so re-adding it later triggers another regeneration.
 - Mask or avoid regions with dynamic content (dates, random ordering, media).
 - Timezone (`UTC`), locale (`en-US`), and color scheme (`light`) are pinned in
   `playwright.config.ts`.
+- **When a clip is positioned relative to an element whose layout can settle
+  late** (e.g. a popover below a hero image that resolves its intrinsic height
+  a frame or two after decode), call `waitForStableBox(locator)` before
+  computing the clip. It polls the bounding box until it stops moving, so the
+  clip is identical every run. Taking the shot mid-reflow shifts the element
+  ~1px and ghosts every glyph/icon — a 7-23% diff that no baseline can pin.
+
+### The `@visual` determinism gate
+
+Every `toHaveScreenshot` test is tagged `@visual`. After baselines are
+generated (`playwright.yml`) or regenerated (`update-snapshots.yml`), a
+**"Verify screenshot determinism"** step re-renders just those tests twice more
+with `--repeat-each=2 --retries=0` and compares against the freshly written
+baseline. A screenshot that only matches its own first render fails there —
+so a nondeterministic baseline can't land green and then flake on unrelated
+PRs. **Tag any new screenshot test `@visual`** (append it to the test title)
+so the gate covers it; if it fails the gate, make the capture deterministic
+(stable layout, element-relative clip, masked dynamic regions) rather than
+widening `maxDiffPixelRatio`.

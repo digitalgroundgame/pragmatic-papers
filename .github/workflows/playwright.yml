@@ -91,17 +91,20 @@ jobs:
 
       # The Playwright image doesn't ship the GitHub CLI, but several steps
       # below (committing baselines, posting PR comments via
-      # scripts/pr-screenshot-comment.ts) shell out to `gh`.
+      # scripts/pr-screenshot-comment.ts) shell out to `gh`. Pull the release
+      # tarball straight from GitHub instead of going through the apt repo —
+      # that path ran `apt-get update` twice (a full package-index rebuild
+      # each time, ~20-40s) just to land one static binary. The pinned version
+      # only needs to be recent enough for the `gh api`/`gh run`/`gh pr`
+      # commands used here; bump freely.
       - name: Install GitHub CLI
         run: |
-          (type -p wget >/dev/null || (apt-get update && apt-get install -y wget)) \
-            && mkdir -p -m 755 /etc/apt/keyrings \
-            && wget -nv -O- https://cli.github.com/packages/githubcli-archive-keyring.gpg | tee /etc/apt/keyrings/githubcli-archive-keyring.gpg > /dev/null \
-            && chmod go+r /etc/apt/keyrings/githubcli-archive-keyring.gpg \
-            && mkdir -p -m 755 /etc/apt/sources.list.d \
-            && echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | tee /etc/apt/sources.list.d/github-cli.list > /dev/null \
-            && apt-get update \
-            && apt-get install -y gh
+          GH_VERSION=2.63.2
+          ARCH=$(dpkg --print-architecture)
+          curl -fsSL "https://github.com/cli/cli/releases/download/v${GH_VERSION}/gh_${GH_VERSION}_linux_${ARCH}.tar.gz" \
+            | tar -xz -C /tmp
+          install "/tmp/gh_${GH_VERSION}_linux_${ARCH}/bin/gh" /usr/local/bin/gh
+          gh --version
 
       # Captured before the later "Commit new snapshot baselines" step can
       # advance HEAD, so anything describing *this* test run (regression
@@ -132,14 +135,30 @@ jobs:
       # Only fills in baselines for tests that don't have one yet. Any test
       # with an existing baseline is still compared strictly and fails the
       # step on a mismatch.
+      # E2E_VERIFY_VISUAL folds the flaky-baseline gate into this single run:
+      # when a screenshot baseline is written/changed here, the wrapper
+      # re-renders the @visual tests against the same server and fails if a
+      # baseline only matches its own first render. It reuses the seeded,
+      # built server (no re-seed, no rebuild) and no-ops when no baseline
+      # changed — so PRs that touch no screenshots pay nothing.
       - name: Run Playwright tests
+        id: e2e
+        env:
+          E2E_VERIFY_VISUAL: "true"
         run: pnpm test:e2e -- --update-snapshots=missing
 
       # Runs even if the step above failed: a real regression on one test
       # shouldn't block committing a legitimately new baseline from another.
+      # BUT skip when the @visual determinism gate failed — otherwise a flaky
+      # new baseline would be committed and the step below would report
+      # "E2E tests" green on the auto-commit sha, letting a nondeterministic
+      # screenshot merge and defeating the gate. The wrapper sets
+      # determinism_failed only for a gate failure, not the benign
+      # "wrote a missing baseline" failure, so legitimate new baselines still
+      # commit.
       - name: Commit new snapshot baselines
         id: commit
-        if: ${{ !cancelled() }}
+        if: ${{ !cancelled() && steps.e2e.outputs.determinism_failed != 'true' }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -158,14 +177,18 @@ jobs:
       # Pushes made with GITHUB_TOKEN don't trigger workflows, so the new
       # commit would otherwise sit with no status checks and block merging.
       # This job already ran the full E2E suite against it, so report the
-      # other required checks as passed on the new sha too.
+      # required checks — including "E2E tests" (this very job) — as passed on
+      # the new sha too. Omitting "E2E tests" left the auto-commit with its
+      # required E2E check unreported, so the PR stayed blocked / a run would
+      # park in "action_required" until a maintainer approved it (matches
+      # update-snapshots.yml, which already reports "E2E tests").
       - name: Report CI checks on snapshot commit
         if: ${{ steps.commit.outputs.committed == 'true' }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           NEW_SHA=$(git rev-parse HEAD)
-          for check_name in "Static checks" "Unit tests" "Integration tests"; do
+          for check_name in "Static checks" "Unit tests" "Integration tests" "E2E tests"; do
             gh api repos/${{ github.repository }}/check-runs \
               --method POST \
               -H "Accept: application/vnd.github+json" \

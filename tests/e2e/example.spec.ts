@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test"
 
 import { waitForStableRender } from "./helpers"
 
-test("home page loads", async ({ page }, testInfo) => {
+test("home page loads @visual", async ({ page }, testInfo) => {
   await page.goto("/")
   await expect(page).toHaveTitle(/The Pragmatic Papers/)
   await expect(page.locator("a[href*='/articles/']").first()).toBeVisible()

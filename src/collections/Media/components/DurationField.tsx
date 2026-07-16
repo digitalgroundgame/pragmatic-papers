@@ -2,7 +2,7 @@
 
 import { FieldLabel, useField, useFormFields } from "@payloadcms/ui"
 import type { NumberFieldClientProps } from "payload"
-import React, { useEffect, useMemo, useRef } from "react"
+import React, { useEffect, useRef } from "react"
 
 import { useIsAudioUpload } from "./useIsAudioUpload"
 
@@ -16,22 +16,10 @@ export const DurationField: React.FC<NumberFieldClientProps> = ({ field, path })
   // opening an existing record that already has a stored duration.
   const initialValueRef = useRef(value)
 
-  // A pending file is not on the server yet, so it has to be read from memory.
-  const pendingUrl = useMemo(
-    () => (pendingFile ? URL.createObjectURL(pendingFile) : undefined),
-    [pendingFile],
-  )
+  const hasSource = Boolean(pendingFile ?? savedUrl)
 
   useEffect(() => {
-    if (!pendingUrl) return
-
-    return () => URL.revokeObjectURL(pendingUrl)
-  }, [pendingUrl])
-
-  const url = pendingUrl ?? savedUrl
-
-  useEffect(() => {
-    if (!url) return
+    if (!pendingFile && !savedUrl) return
 
     if (!hasMountedRef.current) {
       hasMountedRef.current = true
@@ -39,8 +27,13 @@ export const DurationField: React.FC<NumberFieldClientProps> = ({ field, path })
       if (initialValueRef.current) return
     }
 
+    // A pending file is not on the server yet, so it has to be read from memory.
+    // The object URL is created and revoked within one effect run so a remount
+    // cannot leave the element pointed at a URL an earlier cleanup revoked.
+    const objectUrl = pendingFile ? URL.createObjectURL(pendingFile) : undefined
+
     let seeking = false
-    const audio = new Audio(url)
+    const audio = new Audio(objectUrl ?? savedUrl)
 
     const onLoadedMetadata = () => {
       if (isFinite(audio.duration)) {
@@ -69,8 +62,9 @@ export const DurationField: React.FC<NumberFieldClientProps> = ({ field, path })
     return () => {
       audio.removeEventListener("loadedmetadata", onLoadedMetadata)
       audio.removeEventListener("durationchange", onDurationChange)
+      if (objectUrl) URL.revokeObjectURL(objectUrl)
     }
-  }, [url, setValue])
+  }, [pendingFile, savedUrl, setValue])
 
   if (!isAudioUpload) return null
 
@@ -78,7 +72,7 @@ export const DurationField: React.FC<NumberFieldClientProps> = ({ field, path })
     ? `${Math.floor(value / 60)}:${Math.floor(value % 60)
         .toString()
         .padStart(2, "0")}`
-    : url
+    : hasSource
       ? "Calculating…"
       : "—"
 

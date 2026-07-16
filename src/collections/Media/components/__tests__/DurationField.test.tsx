@@ -1,5 +1,6 @@
 import { act, cleanup, render, screen } from "@testing-library/react"
 import type { NumberFieldClientProps } from "payload"
+import { StrictMode } from "react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { DurationField } from "../DurationField"
@@ -82,13 +83,22 @@ const renderWith = (fields: MockFields) => {
   }
 }
 
+// Object URLs are unique per call, as the real API guarantees. Tests rely on
+// that to tell a live URL apart from one an earlier cleanup already revoked.
+let createdUrls: string[] = []
+
 beforeEach(() => {
   FakeAudio.instances = []
+  createdUrls = []
   mockValue = undefined
   vi.stubGlobal("Audio", FakeAudio)
   vi.stubGlobal("URL", {
     ...URL,
-    createObjectURL: vi.fn((file: File) => `blob:${file.name}`),
+    createObjectURL: vi.fn((file: File) => {
+      const url = `blob:${file.name}#${createdUrls.length}`
+      createdUrls.push(url)
+      return url
+    }),
     revokeObjectURL: vi.fn(),
   })
 })
@@ -126,7 +136,7 @@ describe("DurationField", () => {
     renderWith({ file: { value: file } })
 
     expect(URL.createObjectURL).toHaveBeenCalledWith(file)
-    expect(lastAudio().src).toBe("blob:narration.mp3")
+    expect(lastAudio().src).toMatch(/^blob:narration\.mp3/)
   })
 
   it("stores the duration once metadata for a pending file loads", () => {
@@ -145,7 +155,7 @@ describe("DurationField", () => {
       url: { value: "https://cdn.example.com/old.mp3" },
     })
 
-    expect(lastAudio().src).toBe("blob:narration.mp3")
+    expect(lastAudio().src).toMatch(/^blob:narration\.mp3/)
   })
 
   it("falls back to the saved url for a stored record with no pending file", () => {
@@ -219,7 +229,7 @@ describe("DurationField", () => {
       url: { value: "https://cdn.example.com/a.mp3" },
     })
 
-    expect(lastAudio().src).toBe("blob:replacement.mp3")
+    expect(lastAudio().src).toMatch(/^blob:replacement\.mp3/)
 
     lastAudio().duration = 12
     lastAudio().emit("loadedmetadata")
@@ -240,13 +250,32 @@ describe("DurationField", () => {
     expect(FakeAudio.instances).toHaveLength(0)
   })
 
+  // The admin runs under `reactStrictMode`, which mounts effects, tears them
+  // down, and mounts them again. Creating the object URL outside the effect that
+  // revokes it leaves the live element pointed at a dead URL.
+  it("keeps a usable object url after a StrictMode remount", () => {
+    const revoked: string[] = []
+    vi.mocked(URL.revokeObjectURL).mockImplementation((url: string) => {
+      revoked.push(url)
+    })
+    mockFields = { file: { value: audioFile("narration.wav") } }
+
+    render(
+      <StrictMode>
+        <DurationField {...props} />
+      </StrictMode>,
+    )
+
+    expect(revoked).not.toContain(lastAudio().src)
+  })
+
   it("releases the object url and media listeners on unmount", () => {
     const { unmount } = renderWith({ file: { value: audioFile() } })
     const audio = lastAudio()
 
     unmount()
 
-    expect(URL.revokeObjectURL).toHaveBeenCalledWith("blob:narration.mp3")
+    expect(URL.revokeObjectURL).toHaveBeenCalledWith(audio.src)
     expect(audio.listenerCount).toBe(0)
   })
 })

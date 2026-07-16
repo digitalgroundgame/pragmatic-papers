@@ -50,12 +50,16 @@ describe("buildArticleJsonLd", () => {
           { id: 1, name: "Economics" },
           { id: 2, name: "Politics" },
         ] as Article["topics"],
-        populatedVolume: {
-          id: 7,
-          slug: "vol-7",
-          title: "Volume Seven",
-          volumeNumber: 7,
-        } as Article["populatedVolume"],
+        volume: {
+          docs: [
+            {
+              id: 7,
+              slug: "vol-7",
+              title: "Volume Seven",
+              volumeNumber: 7,
+            },
+          ],
+        } as Article["volume"],
       }),
       "/articles/my-post",
     )
@@ -128,7 +132,7 @@ describe("buildArticleJsonLd", () => {
         title: "T",
         createdAt: "2023-12-01T00:00:00.000Z",
         updatedAt: "2024-02-01T00:00:00.000Z",
-        populatedVolume: { id: 7, volumeNumber: 7 } as Article["populatedVolume"],
+        volume: { docs: [{ id: 7, volumeNumber: 7 }] } as Article["volume"],
       }),
       "/articles/t",
     )

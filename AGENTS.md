@@ -143,6 +143,50 @@ visual diff? Use the **`e2e-visual-tests`** skill
 (`.claude/skills/e2e-visual-tests/SKILL.md`) for the checklist; full lifecycle
 in `tests/e2e/README.md`.
 
+## GitHub Issues
+
+When creating or updating issues, use the **GitHub MCP tools** (`mcp__github__*`) — the `gh` CLI is not available in cloud/remote sessions. All three of labels, issue types, and custom fields are set through a single `issue_write` call (`method: 'create'` or `'update'`), but the valid values are org-defined, so **discover them first, then write**. Never guess option names — a wrong value fails the write or silently sets nothing.
+
+### Labels
+
+Pass a `labels: string[]` array to `issue_write`. Labels are repo-scoped; use existing label names (browse them in the repo's Labels page, or via `get_label`). `issue_write` with `method: 'update'` **replaces** the label set, so include every label you want to keep.
+
+### Issue types
+
+Issue types (Bug / Feature / Task, etc.) are an **org-level** feature, set via the `type` string param on `issue_write`.
+
+1. Call `list_issue_types` (owner `digitalgroundgame`, repo omitted for org-level) to get the valid type names.
+2. Pass the exact name as `type`.
+
+> [!NOTE]
+> As of this writing, `list_issue_types` returns `403 Resource not accessible by integration` for the app token used in cloud sessions — the token lacks org issue-type read scope. Until an org admin grants it (Org Settings → GitHub Apps → grant issue-type read), **omit the `type` param** rather than guessing a value. Labels and custom fields below are unaffected.
+
+### Custom issue fields
+
+These are GitHub's **org-level custom _issue_ fields** (Priority, Effort, dates) — distinct from **Projects (v2) board fields**, which these tools cannot set. Set them via the `issue_fields` array on `issue_write`.
+
+1. Call `list_issue_fields` (owner `digitalgroundgame`, repo `pragmatic-papers`) to get field names, data types, and — for single-selects — the valid option names. Currently defined:
+   - **Priority** (single-select): `Urgent` · `High` · `Medium` · `Low`
+   - **Effort** (single-select): `High` · `Medium` · `Low`
+   - **Start date** (date): `YYYY-MM-DD`
+   - **Target date** (date): `YYYY-MM-DD`
+2. Build each entry with `field_name` plus exactly one of:
+   - `field_option_name` for single-selects (validated against the field's options before the API call — prefer this over `value`),
+   - `value` for text / number / date fields (dates as `YYYY-MM-DD`),
+   - `delete: true` to clear the field.
+
+Example `issue_fields` payload:
+
+```jsonc
+[
+  { "field_name": "Priority", "field_option_name": "High" },
+  { "field_name": "Effort", "field_option_name": "Medium" },
+  { "field_name": "Target date", "value": "2026-08-01" }
+]
+```
+
+Because the field list is org-defined and can change, always re-run `list_issue_fields` rather than trusting the snapshot above if a field isn't found.
+
 ## Wiki
 
 The repo wiki lives at `https://github.com/digitalgroundgame/pragmatic-papers/wiki` and is a separate git repository. To create or edit wiki pages:

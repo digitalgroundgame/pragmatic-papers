@@ -276,4 +276,31 @@ describe("main", () => {
       expect.anything(),
     )
   })
+
+  it("keeps the sha the comment being repointed still links to (deferred to next run)", async () => {
+    mockReadStdin.mockResolvedValue("a.png\n")
+    mockReaddirSync.mockReturnValue(dirents("abc123", "oldsha"))
+    // The comment we're about to repoint still links to oldsha. Deleting it now,
+    // before the PATCH lands, would break the live comment if the run is
+    // cancelled in that window — so it must survive this run.
+    mockExec({
+      "issues/42/comments": JSON.stringify([
+        {
+          id: 9,
+          body:
+            "<!-- screenshots: -->\n" +
+            "![h](https://raw.githubusercontent.com/org/repo/pr-screenshots/42/oldsha/home.png)",
+        },
+      ]),
+      "ls-remote": "abc123\trefs/heads/pr-screenshots\n",
+    })
+
+    await main()
+
+    expect(mockExecFileSync).not.toHaveBeenCalledWith(
+      "git",
+      ["rm", "-r", "--quiet", "42/oldsha"],
+      expect.anything(),
+    )
+  })
 })

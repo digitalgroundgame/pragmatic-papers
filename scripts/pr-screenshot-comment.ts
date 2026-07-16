@@ -148,15 +148,28 @@ export async function main(): Promise<void> {
   }
 
   // Self-prune: this PR only ever needs the sha dir we're uploading now plus any
-  // sha another still-live comment links to. Everything else under the PR folder
-  // is a leftover from an earlier commit's run — drop it so the branch doesn't
-  // grow one full screenshot set per push forever. `existing` is excluded from
-  // the keep set because we're about to repoint it at the current sha.
+  // sha a still-live comment links to. Everything else under the PR folder is a
+  // leftover from an earlier commit's run — drop it so the branch doesn't grow
+  // one full screenshot set per push forever.
+  //
+  // Note we keep the sha `existing` (this run's comment) still links to, even
+  // though we're about to repoint it at the current sha. The push below removes
+  // pruned dirs before the comment is repointed, and this job runs under
+  // `cancel-in-progress`, so deleting the old dir now would leave the live
+  // comment pointing at a removed dir if the run were cancelled in that window.
+  // Deferring its removal to the next run (once no comment references it) keeps
+  // at most one extra generation around and closes that window.
+  //
   // ASSET_DIR is always `<pr>/<sha>[/regressions]`, so the PR folder is PR_NUMBER.
   const currentSha = ASSET_DIR.split("/")[1]
   const keep = referencedShas(
-    comments.filter((c) => c.id !== existing?.id).map((c) => c.body),
-    { owner: OWNER, repo: REPO, branch: assetsBranch, prNumber: PR_NUMBER },
+    comments.map((c) => c.body),
+    {
+      owner: OWNER,
+      repo: REPO,
+      branch: assetsBranch,
+      prNumber: PR_NUMBER,
+    },
   )
   if (currentSha) keep.add(currentSha)
   for (const entry of readdirSync(join(assets, PR_NUMBER), { withFileTypes: true })) {

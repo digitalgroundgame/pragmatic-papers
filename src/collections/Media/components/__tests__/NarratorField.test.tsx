@@ -10,13 +10,14 @@ let mockFields: MockFields = {}
 
 // `useFormFields` is a subscription to the admin form's client state. Drive the
 // selector off a per-test fixture so each upload scenario can be reproduced.
+//
+// Mocked at the package root because that is where the component imports
+// `RelationshipField` from. Mocking a deep path here would let a deep import
+// back into the component, which throws in the real admin — see NarratorField.
 vi.mock("@payloadcms/ui", () => ({
+  RelationshipField: () => <div data-testid="relationship-field" />,
   useFormFields: <T,>(selector: (args: [MockFields, unknown]) => T): T =>
     selector([mockFields, vi.fn()]),
-}))
-
-vi.mock("@payloadcms/ui/fields/Relationship", () => ({
-  RelationshipField: () => <div data-testid="relationship-field" />,
 }))
 
 const props = { field: { name: "narrator" }, path: "narrator" } as RelationshipFieldClientProps

@@ -1,0 +1,64 @@
+# Compose file for `pnpm test:e2e:update-snapshots` (scripts/test-e2e-docker.ts):
+# runs the E2E suite inside the same pinned Playwright image CI uses so
+# locally-generated screenshot baselines match what CI renders. Postgres and
+# Playwright are sibling services on the compose network — no host networking
+# or Docker socket mounts — so this works on Docker Desktop (Mac/Windows) as
+# well as Linux.
+#
+# The pin guarantees identical Chromium + fonts, which is what baseline
+# parity actually depends on — it does not guarantee an identical Node
+# patch version. This service uses whichever Node 24.x the image bundles;
+# CI's setup-node step also only floats to "24.x", not an exact patch.
+# Screenshot pixels don't depend on the Node version, so this is fine.
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: pragmatic-papers-e2e
+    # tmpfs keeps the database ephemeral (a fresh cluster per run, like CI's
+    # service container) and stops the postgres image's VOLUME declaration
+    # from leaking anonymous volumes on every run.
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d pragmatic-papers-e2e"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  playwright:
+    # Keep in sync with the `@playwright/test` version resolved in
+    # pnpm-lock.yaml and the `container:` image in
+    # .github/workflows/playwright.yml / update-snapshots.yml.
+    image: mcr.microsoft.com/playwright:v1.60.0-noble
+    # Chromium can run out of shared memory in Docker's default IPC
+    # namespace; Playwright's Docker docs recommend host IPC.
+    ipc: host
+    working_dir: /work
+    volumes:
+      - .:/work
+      # node_modules lives in a named volume, not the bind mount, so the
+      # Linux-container `pnpm install` doesn't clobber host-platform native
+      # binaries (sharp, esbuild, ...) in your working tree.
+      - e2e_node_modules:/work/node_modules
+    environment:
+      DATABASE_URI: postgres://postgres:postgres@postgres:5432/pragmatic-papers-e2e
+      PAYLOAD_SECRET: ${PAYLOAD_SECRET:-test-secret-for-e2e-tests}
+      # The Next.js server is started inside this same container by
+      # scripts/test-e2e.mjs, so localhost is correct here.
+      NEXT_PUBLIC_SERVER_URL: http://localhost:8000
+      USE_LOCAL_STORAGE: "true"
+      E2E_PROD_SERVER: "true"
+      # Private fonts affect rendering, and CI installs them — pass the token
+      # through so local baselines use the same fonts (see the warning in
+      # scripts/test-e2e-docker.ts when unset).
+      GH_FONT_READ: ${GH_FONT_READ:-}
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  e2e_node_modules:
+    name: pragmatic_papers_e2e_node_modules

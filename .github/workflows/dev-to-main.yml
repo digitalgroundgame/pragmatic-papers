@@ -1,0 +1,65 @@
+# DISABLED — kept for reference, intentionally does not run.
+#
+# This workflow tried to auto-open (and auto-merge) the dev → main release PR.
+# It cannot work with the default GITHUB_TOKEN: opening a PR fails with
+# "GitHub Actions is not permitted to create or approve pull requests".
+# PR creation now lives in the local release script, which runs with the
+# operator's gh credentials and forces a merge commit on the sync PR:
+#
+#   pnpm release <version> --phase 2   # opens dev → main and merge-commit auto-merges
+#
+# To re-enable this workflow instead, supply a PAT / GitHub App token for the
+# `gh pr create` step (and enable "Allow GitHub Actions to create and approve
+# pull requests" in repo settings), then remove the `if: false` guard below and
+# restore the `push` trigger.
+name: Dev to Main PR
+
+on:
+  workflow_dispatch:
+
+jobs:
+  open-pr:
+    name: Open PR dev → main
+    if: false # disabled — see note at top of file
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 2
+
+      - name: Check actor permissions
+        id: perms
+        run: |
+          LEVEL=$(gh api "repos/${{ github.repository }}/collaborators/${{ github.actor }}/permission" --jq .permission)
+          echo "level=$LEVEL" >> "$GITHUB_OUTPUT"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Check for version bump
+        id: version
+        run: |
+          CURRENT=$(jq -r .version package.json)
+          PREVIOUS=$(git show HEAD~1:package.json 2>/dev/null | jq -r .version || echo "")
+          echo "tag=v$CURRENT" >> "$GITHUB_OUTPUT"
+          if [ "$CURRENT" != "$PREVIOUS" ]; then
+            echo "bumped=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "bumped=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Open PR dev → main
+        if: steps.version.outputs.bumped == 'true' && (steps.perms.outputs.level == 'admin' || steps.perms.outputs.level == 'maintain')
+        run: |
+          EXISTING=$(gh pr list --base main --head dev --json number --jq length)
+          if [ "$EXISTING" = "0" ]; then
+            PR_URL=$(gh pr create --base main --head dev --title "Release ${{ steps.version.outputs.tag }}" --body "")
+            gh pr merge "$PR_URL" --auto --merge
+          else
+            echo "PR already exists, skipping"
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

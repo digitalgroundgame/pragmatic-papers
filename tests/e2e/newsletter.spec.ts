@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test"
 
 import { Screenshot, waitForStableRender } from "./helpers"
 
-test("newsletter signup renders in footer", async ({ page }, testInfo) => {
+test("newsletter signup renders in footer @visual", async ({ page }, testInfo) => {
   await page.goto("/")
 
   const heading = page.getByRole("heading", { name: "Get Daily Pragmatic Papers" })

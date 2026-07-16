@@ -131,6 +131,25 @@ describe("DurationField", () => {
     expect(screen.getByText("Duration")).toBeTruthy()
   })
 
+  // The field hides itself by rendering null, which — unlike `admin.condition` —
+  // does not stop its effects running. An <audio> element reads metadata from a
+  // video happily, so an ungated effect would measure one and persist a duration
+  // onto a hidden field.
+  it("does not measure a video upload", () => {
+    renderWith({ file: { value: new File(["x"], "clip.mp4", { type: "video/mp4" }) } })
+
+    expect(URL.createObjectURL).not.toHaveBeenCalled()
+    expect(FakeAudio.instances).toHaveLength(0)
+    expect(mockSetValue).not.toHaveBeenCalled()
+  })
+
+  it("does not measure an image upload", () => {
+    renderWith({ file: { value: new File(["x"], "a.jpg", { type: "image/jpeg" }) } })
+
+    expect(URL.createObjectURL).not.toHaveBeenCalled()
+    expect(FakeAudio.instances).toHaveLength(0)
+  })
+
   it("reads a pending file from memory rather than waiting for a saved url", () => {
     const file = audioFile()
     renderWith({ file: { value: file } })

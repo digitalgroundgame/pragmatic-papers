@@ -19,7 +19,10 @@ export const DurationField: React.FC<NumberFieldClientProps> = ({ field, path })
   const hasSource = Boolean(pendingFile ?? savedUrl)
 
   useEffect(() => {
-    if (!pendingFile && !savedUrl) return
+    // Gated on `isAudioUpload` as well as the source: rendering null hides the
+    // field but does not stop this effect, and an <audio> element will happily
+    // report a duration for a video.
+    if (!isAudioUpload || (!pendingFile && !savedUrl)) return
 
     if (!hasMountedRef.current) {
       hasMountedRef.current = true
@@ -64,7 +67,7 @@ export const DurationField: React.FC<NumberFieldClientProps> = ({ field, path })
       audio.removeEventListener("durationchange", onDurationChange)
       if (objectUrl) URL.revokeObjectURL(objectUrl)
     }
-  }, [pendingFile, savedUrl, setValue])
+  }, [isAudioUpload, pendingFile, savedUrl, setValue])
 
   if (!isAudioUpload) return null
 

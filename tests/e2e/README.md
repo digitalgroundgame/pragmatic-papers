@@ -96,6 +96,26 @@ what CI's Chromium actually renders. Treat it as a single chore:
 4. Run `pnpm exec tsx scripts/check-playwright-image-pin.ts` to confirm the
    tag is in sync everywhere before committing.
 
+> [!IMPORTANT]
+> **If _every_ PR suddenly fails visual regression** — the text- and
+> icon-dense `article-share-popover-close-up` is the first to go, since it has
+> the least `maxDiffPixelRatio` headroom — suspect the **render environment**
+> before the baselines. Two things change what CI's Chromium actually paints:
+>
+> - **An expired `GH_FONT_READ` token.** CI installs the private
+>   `@digitalgroundgame/fonts` package from GitHub Packages using this token
+>   (see `.github/actions/setup-project`). When it lapses, the E2E job renders
+>   with fallback fonts and every glyph shifts, so the committed (real-font)
+>   baselines no longer match — a whole-suite regression that no code change
+>   explains. Rotate the `GH_FONT_READ` secret, then re-run the failed E2E
+>   jobs (do **not** regenerate baselines against the fallback font).
+> - **A changed CI runner image.** Moving the E2E job onto (or between) a
+>   pinned container image (e.g.
+>   `mcr.microsoft.com/playwright:v<version>-<codename>`) changes system
+>   fonts/freetype/antialiasing even at an unchanged Chromium version. Treat
+>   "changed the runner image" like "bumped the version": regenerate the
+>   baselines against the new image as part of that change.
+
 A mismatched image runs a different Chromium build than what's actually
 installed, defeating the parity this exists for. Since this only ever
 happens as a deliberate chore rather than something every feature branch
@@ -140,3 +160,22 @@ the run finishes, so re-adding it later triggers another regeneration.
 - Mask or avoid regions with dynamic content (dates, random ordering, media).
 - Timezone (`UTC`), locale (`en-US`), and color scheme (`light`) are pinned in
   `playwright.config.ts`.
+- **When a clip is positioned relative to an element whose layout can settle
+  late** (e.g. a popover below a hero image that resolves its intrinsic height
+  a frame or two after decode), call `waitForStableBox(locator)` before
+  computing the clip. It polls the bounding box until it stops moving, so the
+  clip is identical every run. Taking the shot mid-reflow shifts the element
+  ~1px and ghosts every glyph/icon — a 7-23% diff that no baseline can pin.
+
+### The `@visual` determinism gate
+
+Every `toHaveScreenshot` test is tagged `@visual`. After baselines are
+generated (`playwright.yml`) or regenerated (`update-snapshots.yml`), a
+**"Verify screenshot determinism"** step re-renders just those tests twice more
+with `--repeat-each=2 --retries=0` and compares against the freshly written
+baseline. A screenshot that only matches its own first render fails there —
+so a nondeterministic baseline can't land green and then flake on unrelated
+PRs. **Tag any new screenshot test `@visual`** (append it to the test title)
+so the gate covers it; if it fails the gate, make the capture deterministic
+(stable layout, element-relative clip, masked dynamic regions) rather than
+widening `maxDiffPixelRatio`.

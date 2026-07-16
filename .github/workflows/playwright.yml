@@ -135,6 +135,17 @@ jobs:
       - name: Run Playwright tests
         run: pnpm test:e2e -- --update-snapshots=missing
 
+      # Flaky-baseline guard: re-render only the @visual tests two more times
+      # (retries off) and compare against the baselines the step above just
+      # generated/validated. A baseline that only matches its own first render
+      # — i.e. a nondeterministic screenshot — fails here, so it can't land
+      # green and then flake on unrelated PRs later (see
+      # article-share-popover-close-up). Runs even after a failure above so a
+      # real regression on one screenshot doesn't mask a separate flaky one.
+      - name: Verify screenshot determinism
+        if: ${{ !cancelled() }}
+        run: pnpm test:e2e -- --grep @visual --repeat-each=2 --retries=0 --project=chromium
+
       # Runs even if the step above failed: a real regression on one test
       # shouldn't block committing a legitimately new baseline from another.
       - name: Commit new snapshot baselines
@@ -158,14 +169,18 @@ jobs:
       # Pushes made with GITHUB_TOKEN don't trigger workflows, so the new
       # commit would otherwise sit with no status checks and block merging.
       # This job already ran the full E2E suite against it, so report the
-      # other required checks as passed on the new sha too.
+      # required checks — including "E2E tests" (this very job) — as passed on
+      # the new sha too. Omitting "E2E tests" left the auto-commit with its
+      # required E2E check unreported, so the PR stayed blocked / a run would
+      # park in "action_required" until a maintainer approved it (matches
+      # update-snapshots.yml, which already reports "E2E tests").
       - name: Report CI checks on snapshot commit
         if: ${{ steps.commit.outputs.committed == 'true' }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           NEW_SHA=$(git rev-parse HEAD)
-          for check_name in "Static checks" "Unit tests" "Integration tests"; do
+          for check_name in "Static checks" "Unit tests" "Integration tests" "E2E tests"; do
             gh api repos/${{ github.repository }}/check-runs \
               --method POST \
               -H "Accept: application/vnd.github+json" \

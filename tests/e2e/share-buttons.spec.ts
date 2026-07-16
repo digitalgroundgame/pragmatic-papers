@@ -1,11 +1,6 @@
 import { expect, test } from "@playwright/test"
 
-import {
-  gotoFirstArticle,
-  gotoFirstVolume,
-  viewportRatioClip,
-  waitForStableRender,
-} from "./helpers"
+import { gotoFirstArticle, gotoFirstVolume, waitForStableRender } from "./helpers"
 
 test.describe("ShareButtons — article page", () => {
   test("share button is visible", async ({ page }) => {
@@ -136,24 +131,16 @@ test.describe("ShareButtons — screenshots", () => {
     const popover = page.locator('[data-slot="popover-content"]')
     await expect(popover).toBeVisible()
 
-    const viewport = page.viewportSize() ?? { width: 1280, height: 720 }
-    const box = await popover.boundingBox()
-    if (!box) throw new Error("Could not get popover bounding box")
-
-    // scrollIntoViewIfNeeded leaves the trigger a few pixels higher or lower
-    // depending on hero-image render height, shifting the popover's viewport Y
-    // and causing the clip to capture different background content each run.
-    // Pin the popover to a fixed viewport Y before computing the clip.
-    const targetY = Math.round(viewport.height * 0.45)
-    await page.evaluate((delta) => window.scrollBy(0, delta), Math.round(box.y - targetY))
-    await expect(popover).toBeVisible()
-
-    const stableBox = await popover.boundingBox()
-    if (!stableBox) throw new Error("Could not get popover bounding box after scroll")
+    // Screenshot the popover element itself rather than a viewport clip over
+    // the hero image. The old clip was positioned relative to the viewport,
+    // but the popover's scroll position over the hero varied by ~1px between
+    // runs (scrollIntoViewIfNeeded lands the trigger a few pixels higher or
+    // lower depending on hero-image render height). That shifted every glyph
+    // and icon within the clip, producing 7-23% flaky diffs no baseline could
+    // pin down. An element screenshot frames on the popover's own box, so it
+    // is independent of scroll position and background — deterministic.
     await waitForStableRender(page)
-    await expect(page).toHaveScreenshot("article-share-popover-close-up.png", {
-      clip: viewportRatioClip(stableBox, viewport, { gridSnap: 16 }),
-    })
+    await expect(popover).toHaveScreenshot("article-share-popover-close-up.png")
   })
 
   test("article share trigger", async ({ page }, testInfo) => {

@@ -136,6 +136,15 @@ Coverage reporting is informational only — chore/docs PRs don't need special h
 - run linting and type-checks
 - run unit and integration tests as needed, _skip running e2e_.
 
+### Visual regression (screenshot) tests
+
+When adding, changing, or debugging a Playwright `toHaveScreenshot` test or a
+flaky visual diff, follow the **`e2e-visual-tests`** skill
+(`.claude/skills/e2e-visual-tests/SKILL.md`) — tag `@visual`, use the
+`waitForStableRender`/`waitForStableBox` helpers, never widen tolerance to hide
+flakiness, and let CI generate baselines. Full lifecycle in
+`tests/e2e/README.md`.
+
 ## Wiki
 
 The repo wiki lives at `https://github.com/digitalgroundgame/pragmatic-papers/wiki` and is a separate git repository. To create or edit wiki pages:

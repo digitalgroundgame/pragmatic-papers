@@ -95,7 +95,7 @@ the uncertainty in the body.
 
 | Group           | Labels                                          | Apply when…                                          |
 | --------------- | ----------------------------------------------- | ---------------------------------------------------- |
-| **Kind**        | `documentation`, `dependencies`, `reference`    | docs-only work / a dep bump / a saved-for-ref PR     |
+| **Kind**        | `documentation`, `dependencies`, `testing`, `ci`, `security`, `performance`, `reference` | the nature of the work — docs / deps / tests / CI / security / perf / saved-ref PR |
 | **Discussion**  | `question`, `discussion`                        | needs an answer or an open design conversation       |
 | **Status**      | `in progress`, `blocked`, `stale`               | tracking workflow state                              |
 | **Review** (PR) | `ready for review`, `review comments`           | on pull requests moving through review               |

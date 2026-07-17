@@ -39,7 +39,7 @@ mcp__github__issue_write(
   method="create", owner="digitalgroundgame", repo="pragmatic-papers",
   title="…", body="…",
   type="Bug",                       # ← by name, no node ID needed
-  labels=["dggp website"],          # ← best-guess area/kind, not needs-triage
+  labels=["dggp website"],          # ← best-guess area/kind at filing time
 )
 ```
 
@@ -50,7 +50,7 @@ To set/change the type on an existing issue, call the same tool with
 **no `--type` flag** — this is the historical reason the agent skipped it.
 Handle it by `gh` version:
 
-- Modern `gh` (≈ 2.63+): `gh issue create --type Bug --label needs-triage …`
+- Modern `gh` (≈ 2.63+): `gh issue create --type Bug --label "dggp website" …`
 - Older `gh`: create first, then set the type with a GraphQL mutation.
   Look the type's node ID up **by name at runtime** (don't paste a stale ID):
 
@@ -88,22 +88,22 @@ Handle it by `gh` version:
 
 **Make a confident best guess — don't punt to triage.** On every new issue,
 apply the type and the labels you'd reasonably infer from the title, body,
-and the surface it touches (area + kind, and status where it's clear). The
-goal is that a filed issue lands already-classified, not sitting in an
-inbox waiting for a human.
+and the surface it touches (area + kind, and status where it's clear). A
+filed issue should land already-classified, not sitting in an inbox waiting
+for a human.
 
-Reserve **`needs-triage`** for the genuine can't-tell cases — you can't
-determine the area, or whether it's even valid/in-scope, without a
-maintainer's input. It's the exception, not the default. If you can guess,
-guess; a maintainer can always correct a label, and a wrong-but-close guess
-is more useful than a bare `needs-triage`.
+There is no `needs-triage` label — we dropped it. If you genuinely can't
+determine the area or whether an issue is in scope, apply your best guess
+anyway (a maintainer can always correct a label) and name the uncertainty
+in the issue body, rather than reaching for a status label to defer the
+decision.
 
 | Group           | Labels                                                                    | Apply when…                                          |
 | --------------- | ------------------------------------------------------------------------- | ---------------------------------------------------- |
 | **Area**        | `pragmatic papers`, `dggp website`, `discord bot`                         | scoping an issue to a product surface                |
 | **Kind**        | `documentation`, `enhancement`, `dependencies`, `javascript`, `reference` | docs-only work / an improvement / a dep bump / etc.  |
 | **Discussion**  | `question`, `discussion`                                                  | needs an answer or an open design conversation       |
-| **Status**      | `needs-triage`, `in progress`, `blocked`, `approved`, `stale`             | tracking triage/workflow state                       |
+| **Status**      | `in progress`, `blocked`, `approved`, `stale`                             | tracking workflow state                              |
 | **Review** (PR) | `ready for review`, `review comments`                                     | on pull requests moving through review               |
 | **Design**      | `waiting on design`, `needs screenshots`                                  | backlogged pending design / needs visual baselines   |
 | **Community**   | `good first issue`, `help wanted`                                         | inviting outside contribution                        |
@@ -123,6 +123,5 @@ For `duplicate`/`invalid`/`wontfix`, add the matching label too.
 
 - [ ] Type set (`Bug` / `Feature` / `Task`).
 - [ ] Best-guess labels applied — Area if the surface is known, a Kind label
-      if it's obviously docs / deps / an enhancement.
-- [ ] `needs-triage` only if you genuinely can't classify it (not as a default).
+      if it's obviously docs / deps / an enhancement. Guess rather than defer.
 - [ ] Every label used exists in `.github/labels.yml`.

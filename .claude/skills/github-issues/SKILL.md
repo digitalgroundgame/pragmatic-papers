@@ -39,7 +39,7 @@ mcp__github__issue_write(
   method="create", owner="digitalgroundgame", repo="pragmatic-papers",
   title="…", body="…",
   type="Bug",                       # ← by name, no node ID needed
-  labels=["dggp website"],          # ← best-guess area/kind at filing time
+  labels=["documentation"],         # ← best-guess kind/status label(s) at filing time
 )
 ```
 
@@ -50,7 +50,7 @@ To set/change the type on an existing issue, call the same tool with
 **no `--type` flag** — this is the historical reason the agent skipped it.
 Handle it by `gh` version:
 
-- Modern `gh` (≈ 2.63+): `gh issue create --type Bug --label "dggp website" …`
+- Modern `gh` (≈ 2.63+): `gh issue create --type Bug --label documentation …`
 - Older `gh`: create first, then set the type with a GraphQL mutation.
   Look the type's node ID up **by name at runtime** (don't paste a stale ID):
 
@@ -87,30 +87,31 @@ Handle it by `gh` version:
 ### When to apply which
 
 **Make a confident best guess — don't punt to triage.** On every new issue,
-apply the type and the labels you'd reasonably infer from the title, body,
-and the surface it touches (area + kind, and status where it's clear). A
-filed issue should land already-classified, not sitting in an inbox waiting
-for a human.
+apply the type and any labels you'd reasonably infer from the title and body
+(kind, and status where it's clear). A filed issue should land
+already-classified, not sitting in an inbox waiting for a human.
 
-There is no `needs-triage` label — we dropped it. If you genuinely can't
-determine the area or whether an issue is in scope, apply your best guess
-anyway (a maintainer can always correct a label) and name the uncertainty
-in the issue body, rather than reaching for a status label to defer the
-decision.
+There is no `needs-triage` label — we dropped it. There are also no **area**
+labels: this repo is solely pragmatic papers, so there's no product surface
+to disambiguate. If you genuinely can't tell whether an issue is valid or in
+scope, apply your best guess anyway (a maintainer can always correct a label)
+and name the uncertainty in the issue body, rather than reaching for a status
+label to defer the decision.
 
-| Group           | Labels                                                                    | Apply when…                                          |
-| --------------- | ------------------------------------------------------------------------- | ---------------------------------------------------- |
-| **Area**        | `pragmatic papers`, `dggp website`, `discord bot`                         | scoping an issue to a product surface                |
-| **Kind**        | `documentation`, `enhancement`, `dependencies`, `javascript`, `reference` | docs-only work / an improvement / a dep bump / etc.  |
-| **Discussion**  | `question`, `discussion`                                                  | needs an answer or an open design conversation       |
-| **Status**      | `in progress`, `blocked`, `approved`, `stale`                             | tracking workflow state                              |
-| **Review** (PR) | `ready for review`, `review comments`                                     | on pull requests moving through review               |
-| **Design**      | `waiting on design`, `needs screenshots`                                  | backlogged pending design / needs visual baselines   |
-| **Community**   | `good first issue`, `help wanted`                                         | inviting outside contribution                        |
-| **Resolution**  | `duplicate`, `invalid`, `wontfix`                                         | when closing (pair with the matching `state_reason`) |
+| Group           | Labels                                          | Apply when…                                          |
+| --------------- | ----------------------------------------------- | ---------------------------------------------------- |
+| **Kind**        | `documentation`, `dependencies`, `reference`    | docs-only work / a dep bump / a saved-for-ref PR     |
+| **Discussion**  | `question`, `discussion`                        | needs an answer or an open design conversation       |
+| **Status**      | `in progress`, `blocked`, `stale`               | tracking workflow state                              |
+| **Review** (PR) | `ready for review`, `review comments`           | on pull requests moving through review               |
+| **Design**      | `waiting on design`, `needs screenshots`        | backlogged pending design / needs visual baselines   |
+| **Community**   | `good first issue`, `help wanted`               | inviting outside contribution                        |
+| **Resolution**  | `duplicate`, `invalid`, `wontfix`               | when closing (pair with the matching `state_reason`) |
 
-Prefer one Area + one Kind over piling on labels. Don't add `enhancement`
-to something already typed `Feature` — the type already says it.
+Keep the label set minimal — a Kind and/or a Status is usually enough; don't
+pile them on. The issue **type** (`Bug` / `Feature` / `Task`) already carries
+the "what kind of work" signal, so there's no `enhancement` label — a feature
+request is just typed `Feature`.
 
 ## Closing issues
 
@@ -122,6 +123,6 @@ For `duplicate`/`invalid`/`wontfix`, add the matching label too.
 ## Quick checklist for a new issue
 
 - [ ] Type set (`Bug` / `Feature` / `Task`).
-- [ ] Best-guess labels applied — Area if the surface is known, a Kind label
-      if it's obviously docs / deps / an enhancement. Guess rather than defer.
+- [ ] Best-guess labels applied — a Kind label if it's obviously docs / deps,
+      plus any status that's clear. Guess rather than defer.
 - [ ] Every label used exists in `.github/labels.yml`.

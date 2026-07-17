@@ -86,17 +86,12 @@ Handle it by `gh` version:
 
 ### When to apply which
 
-**Make a confident best guess — don't punt to triage.** On every new issue,
-apply the type and any labels you'd reasonably infer from the title and body
-(kind, and status where it's clear). A filed issue should land
-already-classified, not sitting in an inbox waiting for a human.
-
-There is no `needs-triage` label — we dropped it. There are also no **area**
-labels: this repo is solely pragmatic papers, so there's no product surface
-to disambiguate. If you genuinely can't tell whether an issue is valid or in
-scope, apply your best guess anyway (a maintainer can always correct a label)
-and name the uncertainty in the issue body, rather than reaching for a status
-label to defer the decision.
+**Apply your best guess at filing time.** On every new issue, set the type
+and any labels you can reasonably infer from the title and body — a Kind
+label if it's clearly docs/deps, plus any status that applies. A filed issue
+should land already-classified. If you can't tell whether it's valid or in
+scope, still make your best guess (a maintainer can correct a label) and note
+the uncertainty in the body.
 
 | Group           | Labels                                          | Apply when…                                          |
 | --------------- | ----------------------------------------------- | ---------------------------------------------------- |
@@ -108,10 +103,9 @@ label to defer the decision.
 | **Community**   | `good first issue`, `help wanted`               | inviting outside contribution                        |
 | **Resolution**  | `duplicate`, `invalid`, `wontfix`               | when closing (pair with the matching `state_reason`) |
 
-Keep the label set minimal — a Kind and/or a Status is usually enough; don't
-pile them on. The issue **type** (`Bug` / `Feature` / `Task`) already carries
-the "what kind of work" signal, so there's no `enhancement` label — a feature
-request is just typed `Feature`.
+Keep the label set minimal — a Kind and/or a Status is usually enough. The
+issue **type** (`Bug` / `Feature` / `Task`) already says what kind of work it
+is, so labels only need to add what the type doesn't.
 
 ## Closing issues
 

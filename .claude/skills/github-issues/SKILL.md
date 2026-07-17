@@ -39,7 +39,7 @@ mcp__github__issue_write(
   method="create", owner="digitalgroundgame", repo="pragmatic-papers",
   title="…", body="…",
   type="Bug",                       # ← by name, no node ID needed
-  labels=["needs-triage"],
+  labels=["dggp website"],          # ← best-guess area/kind, not needs-triage
 )
 ```
 
@@ -86,8 +86,17 @@ Handle it by `gh` version:
 
 ### When to apply which
 
-Default: put **`needs-triage`** on every new agent-filed issue unless the
-type and priority are already obvious.
+**Make a confident best guess — don't punt to triage.** On every new issue,
+apply the type and the labels you'd reasonably infer from the title, body,
+and the surface it touches (area + kind, and status where it's clear). The
+goal is that a filed issue lands already-classified, not sitting in an
+inbox waiting for a human.
+
+Reserve **`needs-triage`** for the genuine can't-tell cases — you can't
+determine the area, or whether it's even valid/in-scope, without a
+maintainer's input. It's the exception, not the default. If you can guess,
+guess; a maintainer can always correct a label, and a wrong-but-close guess
+is more useful than a bare `needs-triage`.
 
 | Group           | Labels                                                                    | Apply when…                                          |
 | --------------- | ------------------------------------------------------------------------- | ---------------------------------------------------- |
@@ -113,7 +122,7 @@ For `duplicate`/`invalid`/`wontfix`, add the matching label too.
 ## Quick checklist for a new issue
 
 - [ ] Type set (`Bug` / `Feature` / `Task`).
-- [ ] `needs-triage` (unless type + priority are already clear).
-- [ ] One Area label if the surface is known.
-- [ ] A Kind label if it's obviously docs / deps / an enhancement.
+- [ ] Best-guess labels applied — Area if the surface is known, a Kind label
+      if it's obviously docs / deps / an enhancement.
+- [ ] `needs-triage` only if you genuinely can't classify it (not as a default).
 - [ ] Every label used exists in `.github/labels.yml`.

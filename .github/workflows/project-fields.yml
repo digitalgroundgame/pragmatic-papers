@@ -1,0 +1,200 @@
+# Set GitHub Projects (v2) field values on issues.
+#
+# WHY THIS IS A WORKFLOW AND NOT A CLOUD-SESSION ACTION
+# -----------------------------------------------------
+# Projects v2 metadata (Status, Priority, custom single-select/text/number/date
+# fields) lives ONLY in the GitHub GraphQL API — there is no REST endpoint for
+# it. Claude Code's cloud container routes all GitHub traffic through a
+# dedicated proxy that serves only a pinned set of PR-review GraphQL operations
+# and scopes requests to attached repos, so project reads/mutations are refused
+# there regardless of the environment's network-access allowlist. GitHub
+# Actions runs outside that proxy, so GraphQL — and therefore `gh project` —
+# works normally here.
+#
+# SETUP (one time)
+# ----------------
+# 1. Create a token with project write access and add it as the repository
+#    secret `PROJECTS_TOKEN`:
+#      - Classic PAT: `project` scope (plus `repo` to read the issue), OR
+#      - Fine-grained PAT / GitHub App: organization "Projects" Read & write,
+#        repository "Issues" Read.
+#    The default GITHUB_TOKEN does NOT carry project permission, which is why a
+#    dedicated secret is required.
+# 2. Add repository variables (Settings → Secrets and variables → Actions →
+#    Variables):
+#      - PROJECT_NUMBER  (required) the project's number, e.g. from its URL
+#                        github.com/orgs/<org>/projects/<NUMBER>
+#      - PROJECT_OWNER   (optional) the project owner login; defaults to this
+#                        repo's owner. Set it if the project lives under a
+#                        different org/user than the repo.
+#      - PROJECT_DEFAULT_STATUS (optional) if set, newly opened issues are added
+#                        to the project and their Status field set to this value
+#                        (e.g. "Todo"). Leave unset to disable auto-add on open.
+#
+# USAGE
+# -----
+# - Manual (Actions tab → this workflow → Run workflow, or `gh workflow run
+#   project-fields.yml -f issue=123 -f field=Status -f value="In Progress"`):
+#   adds issue #123 to the project and sets the named field. Omit field/value to
+#   only add the issue to the board.
+# - Automatic: when PROJECT_DEFAULT_STATUS is set, every opened issue is added
+#   to the project with that Status.
+#
+# The field/value discovery is by NAME (resolved to the underlying IDs at run
+# time), so bumping options or reordering fields in the project UI needs no
+# change here. Supported field types: single-select, text, number, date.
+name: Project fields
+
+on:
+  workflow_dispatch:
+    inputs:
+      issue:
+        description: "Issue number to update"
+        required: true
+        type: string
+      field:
+        description: "Project field name (e.g. Status). Leave blank to only add the issue to the project."
+        required: false
+        type: string
+      value:
+        description: "Value to set (single-select option name, or text/number/date)"
+        required: false
+        type: string
+  issues:
+    types: [opened]
+
+jobs:
+  set-field:
+    name: Set project field
+    runs-on: ubuntu-latest
+    # Skip entirely until a project number is configured, so unconfigured repos
+    # (and every opened issue before setup) don't produce failing runs.
+    if: vars.PROJECT_NUMBER != ''
+    permissions:
+      contents: read
+
+    steps:
+      - name: Verify PROJECTS_TOKEN is configured
+        env:
+          PROJECTS_TOKEN: ${{ secrets.PROJECTS_TOKEN }}
+        run: |
+          if [ -z "$PROJECTS_TOKEN" ]; then
+            echo "::error::Repository secret PROJECTS_TOKEN is not set. See the header of .github/workflows/project-fields.yml for the required token scopes."
+            exit 1
+          fi
+
+      # Resolve the issue/field/value from whichever trigger fired. On
+      # issues.opened we only act when a default status is configured; otherwise
+      # there is nothing to set and the job no-ops (see the guard below).
+      - name: Resolve inputs
+        id: resolve
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          IN_ISSUE: ${{ inputs.issue }}
+          IN_FIELD: ${{ inputs.field }}
+          IN_VALUE: ${{ inputs.value }}
+          EVENT_ISSUE: ${{ github.event.issue.number }}
+          DEFAULT_STATUS: ${{ vars.PROJECT_DEFAULT_STATUS }}
+        run: |
+          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+            issue="$IN_ISSUE"
+            field="$IN_FIELD"
+            value="$IN_VALUE"
+          else
+            # issues.opened
+            issue="$EVENT_ISSUE"
+            field="Status"
+            value="$DEFAULT_STATUS"
+          fi
+          {
+            echo "issue=$issue"
+            echo "field=$field"
+            echo "value=$value"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Add issue to project and set field
+        # On issues.opened with no configured default status there is nothing to
+        # do, so skip. workflow_dispatch always runs (adding to the board is
+        # useful even with no field/value).
+        if: github.event_name == 'workflow_dispatch' || steps.resolve.outputs.value != ''
+        env:
+          GH_TOKEN: ${{ secrets.PROJECTS_TOKEN }}
+          OWNER: ${{ vars.PROJECT_OWNER || github.repository_owner }}
+          NUMBER: ${{ vars.PROJECT_NUMBER }}
+          REPO: ${{ github.repository }}
+          ISSUE: ${{ steps.resolve.outputs.issue }}
+          FIELD: ${{ steps.resolve.outputs.field }}
+          VALUE: ${{ steps.resolve.outputs.value }}
+        run: |
+          set -euo pipefail
+
+          issue_url="https://github.com/${REPO}/issues/${ISSUE}"
+          echo "Project: owner=${OWNER} number=${NUMBER}"
+          echo "Issue:   ${issue_url}"
+
+          # Project node id (needed for item-edit).
+          project_id=$(gh project view "$NUMBER" --owner "$OWNER" --format json --jq '.id')
+
+          # Add the issue to the project. item-add is idempotent: re-adding an
+          # existing item just returns it, so this is safe to run repeatedly.
+          item_id=$(gh project item-add "$NUMBER" --owner "$OWNER" --url "$issue_url" --format json --jq '.id')
+          echo "Added/attached item: ${item_id}"
+
+          if [ -z "${FIELD}" ]; then
+            echo "No field specified — issue added to the project, nothing else to set."
+            echo "- Added [#${ISSUE}](${issue_url}) to project ${OWNER}/${NUMBER}" >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          if [ -z "${VALUE}" ]; then
+            echo "::error::A field ('${FIELD}') was given but no value."
+            exit 1
+          fi
+
+          # Look up the field by name to get its id and type (and, for
+          # single-selects, the option id matching the requested value).
+          fields_json=$(gh project field-list "$NUMBER" --owner "$OWNER" --format json)
+
+          field_id=$(echo "$fields_json" | jq -r --arg n "$FIELD" '.fields[] | select(.name == $n) | .id')
+          field_type=$(echo "$fields_json" | jq -r --arg n "$FIELD" '.fields[] | select(.name == $n) | .type')
+
+          if [ -z "$field_id" ] || [ "$field_id" = "null" ]; then
+            echo "::error::Field '${FIELD}' not found in project ${OWNER}/${NUMBER}. Available fields:"
+            echo "$fields_json" | jq -r '.fields[].name' | sed 's/^/  - /'
+            exit 1
+          fi
+
+          case "$field_type" in
+            ProjectV2SingleSelectField)
+              option_id=$(echo "$fields_json" | jq -r \
+                --arg n "$FIELD" --arg v "$VALUE" \
+                '.fields[] | select(.name == $n) | .options[] | select(.name == $v) | .id')
+              if [ -z "$option_id" ] || [ "$option_id" = "null" ]; then
+                echo "::error::Option '${VALUE}' not found for single-select field '${FIELD}'. Available options:"
+                echo "$fields_json" | jq -r --arg n "$FIELD" '.fields[] | select(.name == $n) | .options[].name' | sed 's/^/  - /'
+                exit 1
+              fi
+              gh project item-edit --id "$item_id" --project-id "$project_id" \
+                --field-id "$field_id" --single-select-option-id "$option_id"
+              ;;
+            ProjectV2Field)
+              # Plain text field.
+              gh project item-edit --id "$item_id" --project-id "$project_id" \
+                --field-id "$field_id" --text "$VALUE"
+              ;;
+            ProjectV2NumberField | *Number*)
+              gh project item-edit --id "$item_id" --project-id "$project_id" \
+                --field-id "$field_id" --number "$VALUE"
+              ;;
+            ProjectV2DateField | *Date*)
+              gh project item-edit --id "$item_id" --project-id "$project_id" \
+                --field-id "$field_id" --date "$VALUE"
+              ;;
+            *)
+              echo "::error::Unsupported field type '${field_type}' for field '${FIELD}'. Supported: single-select, text, number, date."
+              exit 1
+              ;;
+          esac
+
+          echo "Set '${FIELD}' = '${VALUE}' on #${ISSUE}."
+          echo "- Set **${FIELD}** = \`${VALUE}\` on [#${ISSUE}](${issue_url}) in project ${OWNER}/${NUMBER}" >> "$GITHUB_STEP_SUMMARY"

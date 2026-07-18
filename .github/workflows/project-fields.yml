@@ -11,25 +11,38 @@
 # Actions runs outside that proxy, so GraphQL — and therefore `gh project` —
 # works normally here.
 #
+# AUTHENTICATION
+# --------------
+# The default GITHUB_TOKEN has no project permission, so a token that does is
+# required. Two options, checked in this order:
+#
+#   1. GitHub App (recommended — short-lived tokens, no PAT to rotate). Set:
+#        - variable PROJECTS_APP_ID        the App's ID (App ID is not sensitive)
+#        - secret PROJECTS_APP_PRIVATE_KEY the FULL contents of the .pem private
+#                                          key, including the
+#                                          "-----BEGIN/END PRIVATE KEY-----" lines
+#      The App must be INSTALLED on the account that owns the project and granted:
+#        - Organization permissions → Projects: Read and write
+#        - Repository permissions   → Issues: Read (and this repo in its install)
+#      When PROJECTS_APP_ID is set, a scoped installation token is minted per run.
+#
+#   2. Personal access token fallback. If no App is configured, set:
+#        - secret PROJECTS_TOKEN  classic PAT with `project` + `repo` scopes, or a
+#                                 fine-grained PAT with org Projects RW + repo
+#                                 Issues Read.
+#
 # SETUP (one time)
 # ----------------
-# 1. Create a token with project write access and add it as the repository
-#    secret `PROJECTS_TOKEN`:
-#      - Classic PAT: `project` scope (plus `repo` to read the issue), OR
-#      - Fine-grained PAT / GitHub App: organization "Projects" Read & write,
-#        repository "Issues" Read.
-#    The default GITHUB_TOKEN does NOT carry project permission, which is why a
-#    dedicated secret is required.
-# 2. Add repository variables (Settings → Secrets and variables → Actions →
-#    Variables):
-#      - PROJECT_NUMBER  (required) the project's number, e.g. from its URL
-#                        github.com/orgs/<org>/projects/<NUMBER>
-#      - PROJECT_OWNER   (optional) the project owner login; defaults to this
-#                        repo's owner. Set it if the project lives under a
-#                        different org/user than the repo.
-#      - PROJECT_DEFAULT_STATUS (optional) if set, newly opened issues are added
-#                        to the project and their Status field set to this value
-#                        (e.g. "Todo"). Leave unset to disable auto-add on open.
+# In addition to the auth above, add repository variables (Settings → Secrets
+# and variables → Actions → Variables):
+#   - PROJECT_NUMBER  (required) the project's number, e.g. from its URL
+#                     github.com/orgs/<org>/projects/<NUMBER>
+#   - PROJECT_OWNER   (optional) the project owner login; defaults to this repo's
+#                     owner. Set it if the project lives under a different org.
+#   - PROJECT_DEFAULT_STATUS (optional) if set, newly opened issues are added to
+#                     the project and their Status field set to this value (the
+#                     exact option name, case-sensitive, e.g. "Ready"). Leave
+#                     unset to disable auto-add on open.
 #
 # USAGE
 # -----
@@ -37,12 +50,12 @@
 #   project-fields.yml -f issue=123 -f field=Status -f value="In Progress"`):
 #   adds issue #123 to the project and sets the named field. Omit field/value to
 #   only add the issue to the board.
-# - Automatic: when PROJECT_DEFAULT_STATUS is set, every opened issue is added
-#   to the project with that Status.
+# - Automatic: when PROJECT_DEFAULT_STATUS is set, every opened issue is added to
+#   the project with that Status.
 #
-# The field/value discovery is by NAME (resolved to the underlying IDs at run
-# time), so bumping options or reordering fields in the project UI needs no
-# change here. Supported field types: single-select, text, number, date.
+# Field/value discovery is by NAME (resolved to the underlying IDs at run time),
+# so bumping options or reordering fields in the project UI needs no change here.
+# Supported field types: single-select, text, number, date.
 name: Project fields
 
 on:
@@ -74,14 +87,18 @@ jobs:
       contents: read
 
     steps:
-      - name: Verify PROJECTS_TOKEN is configured
-        env:
-          PROJECTS_TOKEN: ${{ secrets.PROJECTS_TOKEN }}
-        run: |
-          if [ -z "$PROJECTS_TOKEN" ]; then
-            echo "::error::Repository secret PROJECTS_TOKEN is not set. See the header of .github/workflows/project-fields.yml for the required token scopes."
-            exit 1
-          fi
+      # Mint a short-lived installation token from the GitHub App. Scoped to the
+      # project owner so the token carries the org-level Projects permission the
+      # App was granted. Skipped when no App is configured, in which case the
+      # PROJECTS_TOKEN PAT fallback is used below.
+      - name: Generate App token
+        id: app-token
+        if: ${{ vars.PROJECTS_APP_ID != '' }}
+        uses: actions/create-github-app-token@v3
+        with:
+          app-id: ${{ vars.PROJECTS_APP_ID }}
+          private-key: ${{ secrets.PROJECTS_APP_PRIVATE_KEY }}
+          owner: ${{ vars.PROJECT_OWNER || github.repository_owner }}
 
       # Resolve the issue/field/value from whichever trigger fired. On
       # issues.opened we only act when a default status is configured; otherwise
@@ -118,7 +135,8 @@ jobs:
         # useful even with no field/value).
         if: github.event_name == 'workflow_dispatch' || steps.resolve.outputs.value != ''
         env:
-          GH_TOKEN: ${{ secrets.PROJECTS_TOKEN }}
+          # Prefer the App installation token; fall back to the PAT secret.
+          GH_TOKEN: ${{ steps.app-token.outputs.token || secrets.PROJECTS_TOKEN }}
           OWNER: ${{ vars.PROJECT_OWNER || github.repository_owner }}
           NUMBER: ${{ vars.PROJECT_NUMBER }}
           REPO: ${{ github.repository }}
@@ -127,6 +145,11 @@ jobs:
           VALUE: ${{ steps.resolve.outputs.value }}
         run: |
           set -euo pipefail
+
+          if [ -z "${GH_TOKEN}" ]; then
+            echo "::error::No project token available. Configure a GitHub App (PROJECTS_APP_ID + PROJECTS_APP_PRIVATE_KEY) or a PROJECTS_TOKEN PAT — see the header of this workflow."
+            exit 1
+          fi
 
           issue_url="https://github.com/${REPO}/issues/${ISSUE}"
           echo "Project: owner=${OWNER} number=${NUMBER}"

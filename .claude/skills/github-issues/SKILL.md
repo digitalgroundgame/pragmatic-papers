@@ -39,7 +39,7 @@ mcp__github__issue_write(
   method="create", owner="digitalgroundgame", repo="pragmatic-papers",
   title="…", body="…",
   type="Bug",                       # ← by name, no node ID needed
-  labels=["needs-triage"],
+  labels=["documentation"],         # ← best-guess kind/status label(s) at filing time
 )
 ```
 
@@ -50,7 +50,7 @@ To set/change the type on an existing issue, call the same tool with
 **no `--type` flag** — this is the historical reason the agent skipped it.
 Handle it by `gh` version:
 
-- Modern `gh` (≈ 2.63+): `gh issue create --type Bug --label needs-triage …`
+- Modern `gh` (≈ 2.63+): `gh issue create --type Bug --label documentation …`
 - Older `gh`: create first, then set the type with a GraphQL mutation.
   Look the type's node ID up **by name at runtime** (don't paste a stale ID):
 
@@ -86,22 +86,26 @@ Handle it by `gh` version:
 
 ### When to apply which
 
-Default: put **`needs-triage`** on every new agent-filed issue unless the
-type and priority are already obvious.
+**Apply your best guess at filing time.** On every new issue, set the type
+and any labels you can reasonably infer from the title and body — a Kind
+label if it's clearly docs/deps, plus any status that applies. A filed issue
+should land already-classified. If you can't tell whether it's valid or in
+scope, still make your best guess (a maintainer can correct a label) and note
+the uncertainty in the body.
 
-| Group           | Labels                                                                    | Apply when…                                          |
-| --------------- | ------------------------------------------------------------------------- | ---------------------------------------------------- |
-| **Area**        | `pragmatic papers`, `dggp website`, `discord bot`                         | scoping an issue to a product surface                |
-| **Kind**        | `documentation`, `enhancement`, `dependencies`, `javascript`, `reference` | docs-only work / an improvement / a dep bump / etc.  |
-| **Discussion**  | `question`, `discussion`                                                  | needs an answer or an open design conversation       |
-| **Status**      | `needs-triage`, `in progress`, `blocked`, `approved`, `stale`             | tracking triage/workflow state                       |
-| **Review** (PR) | `ready for review`, `review comments`                                     | on pull requests moving through review               |
-| **Design**      | `waiting on design`, `needs screenshots`                                  | backlogged pending design / needs visual baselines   |
-| **Community**   | `good first issue`, `help wanted`                                         | inviting outside contribution                        |
-| **Resolution**  | `duplicate`, `invalid`, `wontfix`                                         | when closing (pair with the matching `state_reason`) |
+| Group           | Labels                                          | Apply when…                                          |
+| --------------- | ----------------------------------------------- | ---------------------------------------------------- |
+| **Kind**        | `documentation`, `dependencies`, `testing`, `ci`, `security`, `performance`, `reference` | the nature of the work — docs / deps / tests / CI / security / perf / saved-ref PR |
+| **Discussion**  | `question`, `discussion`                        | needs an answer or an open design conversation       |
+| **Status**      | `in progress`, `blocked`, `stale`               | tracking workflow state                              |
+| **Review** (PR) | `ready for review`, `review comments`           | on pull requests moving through review               |
+| **Design**      | `waiting on design`, `needs screenshots`        | backlogged pending design / needs visual baselines   |
+| **Community**   | `good first issue`, `help wanted`               | inviting outside contribution                        |
+| **Resolution**  | `duplicate`, `invalid`, `wontfix`               | when closing (pair with the matching `state_reason`) |
 
-Prefer one Area + one Kind over piling on labels. Don't add `enhancement`
-to something already typed `Feature` — the type already says it.
+Keep the label set minimal — a Kind and/or a Status is usually enough. The
+issue **type** (`Bug` / `Feature` / `Task`) already says what kind of work it
+is, so labels only need to add what the type doesn't.
 
 ## Closing issues
 
@@ -113,7 +117,6 @@ For `duplicate`/`invalid`/`wontfix`, add the matching label too.
 ## Quick checklist for a new issue
 
 - [ ] Type set (`Bug` / `Feature` / `Task`).
-- [ ] `needs-triage` (unless type + priority are already clear).
-- [ ] One Area label if the surface is known.
-- [ ] A Kind label if it's obviously docs / deps / an enhancement.
+- [ ] Best-guess labels applied — a Kind label if it's obviously docs / deps,
+      plus any status that's clear. Guess rather than defer.
 - [ ] Every label used exists in `.github/labels.yml`.

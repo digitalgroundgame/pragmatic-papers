@@ -125,47 +125,64 @@ jobs:
             exit 1
           fi
 
-          # Look up the field by name to get its id and type (and, for
-          # single-selects, the option id matching the requested value).
-          fields_json=$(gh project field-list "$NUMBER" --owner "$OWNER" --format json)
+          # Resolve the field by name. `gh project field-list` reports every
+          # field's `type` as its GraphQL __typename, and the field-config union
+          # has only three members (ProjectV2Field, ProjectV2SingleSelectField,
+          # ProjectV2IterationField) — text/number/date fields ALL surface as
+          # ProjectV2Field and are told apart only by `dataType`, which
+          # field-list doesn't emit. So query the fields directly for `dataType`
+          # (the attribute that actually distinguishes TEXT/NUMBER/DATE/
+          # SINGLE_SELECT) plus single-select options. Querying by the project's
+          # node id sidesteps whether the owner is an org or a user.
+          nodes=$(gh api graphql -f query='
+            query($id: ID!) {
+              node(id: $id) {
+                ... on ProjectV2 {
+                  fields(first: 100) {
+                    nodes {
+                      ... on ProjectV2FieldCommon { id name dataType }
+                      ... on ProjectV2SingleSelectField { options { id name } }
+                    }
+                  }
+                }
+              }
+            }' -f id="$project_id" --jq '.data.node.fields.nodes')
 
-          field_id=$(echo "$fields_json" | jq -r --arg n "$FIELD" '.fields[] | select(.name == $n) | .id')
-          field_type=$(echo "$fields_json" | jq -r --arg n "$FIELD" '.fields[] | select(.name == $n) | .type')
-
-          if [ -z "$field_id" ] || [ "$field_id" = "null" ]; then
+          field=$(echo "$nodes" | jq -c --arg n "$FIELD" 'map(select(.name == $n)) | .[0] // empty')
+          if [ -z "$field" ]; then
             echo "::error::Field '${FIELD}' not found in project ${OWNER}/${NUMBER}. Available fields:"
-            echo "$fields_json" | jq -r '.fields[].name' | sed 's/^/  - /'
+            echo "$nodes" | jq -r '.[].name' | sed 's/^/  - /'
             exit 1
           fi
 
-          case "$field_type" in
-            ProjectV2SingleSelectField)
-              option_id=$(echo "$fields_json" | jq -r \
-                --arg n "$FIELD" --arg v "$VALUE" \
-                '.fields[] | select(.name == $n) | .options[] | select(.name == $v) | .id')
+          field_id=$(echo "$field" | jq -r '.id')
+          data_type=$(echo "$field" | jq -r '.dataType')
+
+          case "$data_type" in
+            SINGLE_SELECT)
+              option_id=$(echo "$field" | jq -r --arg v "$VALUE" '.options[] | select(.name == $v) | .id')
               if [ -z "$option_id" ] || [ "$option_id" = "null" ]; then
                 echo "::error::Option '${VALUE}' not found for single-select field '${FIELD}'. Available options:"
-                echo "$fields_json" | jq -r --arg n "$FIELD" '.fields[] | select(.name == $n) | .options[].name' | sed 's/^/  - /'
+                echo "$field" | jq -r '.options[].name' | sed 's/^/  - /'
                 exit 1
               fi
               gh project item-edit --id "$item_id" --project-id "$project_id" \
                 --field-id "$field_id" --single-select-option-id "$option_id"
               ;;
-            ProjectV2Field)
-              # Plain text field.
+            TEXT)
               gh project item-edit --id "$item_id" --project-id "$project_id" \
                 --field-id "$field_id" --text "$VALUE"
               ;;
-            ProjectV2NumberField | *Number*)
+            NUMBER)
               gh project item-edit --id "$item_id" --project-id "$project_id" \
                 --field-id "$field_id" --number "$VALUE"
               ;;
-            ProjectV2DateField | *Date*)
+            DATE)
               gh project item-edit --id "$item_id" --project-id "$project_id" \
                 --field-id "$field_id" --date "$VALUE"
               ;;
             *)
-              echo "::error::Unsupported field type '${field_type}' for field '${FIELD}'. Supported: single-select, text, number, date."
+              echo "::error::Unsupported field type '${data_type}' for field '${FIELD}'. Supported: single-select, text, number, date."
               exit 1
               ;;
           esac

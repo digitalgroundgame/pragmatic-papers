@@ -10,34 +10,27 @@ exports[`ArticleHero > matches snapshot 1`] = `
     Test Article
   </h1>
   <div
-    class="flex flex-col gap-2 md:flex-row md:items-center md:gap-8"
+    class="flex flex-wrap items-center gap-x-8 gap-y-2"
   >
     <div
-      class="flex flex-1 items-start justify-between gap-2 md:contents"
+      class="dark:text-brand-high-contrast text-brand flex grow basis-64 flex-wrap gap-2 font-serif font-bold underline-offset-4"
     >
-      <div
-        class="dark:text-brand-high-contrast text-brand flex flex-1 flex-wrap gap-2 font-serif font-bold underline-offset-4 md:order-1"
+      •
+      <a
+        class="hover:underline"
+        href="/articles/test-article"
       >
-        •
-        <a
-          class="hover:underline"
-          href="/articles/test-article"
+        <time
+          datetime="2024-06-15T12:00:00.000Z"
         >
-          <time
-            datetime="2024-06-15T12:00:00.000Z"
-          >
-            June 15, 2024
-          </time>
-        </a>
-      </div>
-      <div
-        data-testid="share-buttons"
-        data-title="Test Article"
-        data-url="https://example.com/articles/test-article"
-      />
+          June 15, 2024
+        </time>
+      </a>
     </div>
     <div
-      class="md:order-2"
+      data-testid="share-buttons"
+      data-title="Test Article"
+      data-url="https://example.com/articles/test-article"
     />
   </div>
   <div

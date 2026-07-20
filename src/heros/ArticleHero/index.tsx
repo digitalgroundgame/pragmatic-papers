@@ -34,43 +34,39 @@ export const ArticleHero: React.FC<ArticleHeroProps> = ({ article }) => {
           sizes="(max-width: 768px) 100vw, 1024px"
           media={heroImage}
           variant="large"
-          className="min-h-56 border object-cover shadow sm:min-h-85 md:min-h-[418px] lg:min-h-[570px]"
+          className="min-h-56 border object-cover shadow sm:min-h-85 md:min-h-104.5 lg:min-h-142.5"
         />
       )}
       <h1 className="mt-6">{title}</h1>
-      <div className="flex flex-col gap-2 md:flex-row md:items-center md:gap-8">
-        <div className="flex flex-1 items-start justify-between gap-2 md:contents">
-          <div className="dark:text-brand-high-contrast text-brand flex flex-1 flex-wrap gap-2 font-serif font-bold underline-offset-4 md:order-1">
-            {populatedAuthors &&
-              populatedAuthors.map(({ id, slug, name }, index) => (
-                <React.Fragment key={id}>
-                  {getSeparator(index, populatedAuthors.length)}
-                  <HoverPrefetchLink href={`/authors/${slug}`} className="hover:underline">
-                    {name}
-                  </HoverPrefetchLink>
-                </React.Fragment>
-              ))}
-            {"•"}
-            {publishedAt && (
-              <HoverPrefetchLink href={`/articles/${article.slug}`} className="hover:underline">
-                <time dateTime={publishedAt}>{formatDateTime(publishedAt)}</time>
-              </HoverPrefetchLink>
-            )}
-          </div>
-          <ShareButtons
-            url={`${getServerSideURL()}/articles/${article.slug}`}
-            title={article.title}
-            className="shrink-0 md:order-3"
-          />
-        </div>
-        <div className="md:order-2">
-          {narration && typeof narration !== "number" && (
-            <div className="md:w-56 md:shrink-0">
-              <NarrationPlayer narration={narration} populatedNarrator={populatedNarrator} />
-            </div>
+      <div className="flex flex-wrap items-center gap-x-8 gap-y-2">
+        <div className="dark:text-brand-high-contrast text-brand flex grow basis-64 flex-wrap gap-2 font-serif font-bold underline-offset-4">
+          {populatedAuthors &&
+            populatedAuthors.map(({ id, slug, name }, index) => (
+              <React.Fragment key={id}>
+                {getSeparator(index, populatedAuthors.length)}
+                <HoverPrefetchLink href={`/authors/${slug}`} className="hover:underline">
+                  {name}
+                </HoverPrefetchLink>
+              </React.Fragment>
+            ))}
+          {"•"}
+          {publishedAt && (
+            <HoverPrefetchLink href={`/articles/${article.slug}`} className="hover:underline">
+              <time dateTime={publishedAt}>{formatDateTime(publishedAt)}</time>
+            </HoverPrefetchLink>
           )}
-          {showTableOfContents && <TableOfContentsButton />}
         </div>
+        {narration && typeof narration !== "number" && (
+          <div className="md:w-56 md:shrink-0">
+            <NarrationPlayer narration={narration} populatedNarrator={populatedNarrator} />
+          </div>
+        )}
+        {showTableOfContents && <TableOfContentsButton />}
+        <ShareButtons
+          url={`${getServerSideURL()}/articles/${article.slug}`}
+          title={article.title}
+          className="shrink-0"
+        />
       </div>
       <Separator />
     </div>

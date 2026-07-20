@@ -191,7 +191,6 @@ export const Articles: CollectionConfig = {
       ],
     },
     // END TABS FIELDS
-    tableOfContentsField(),
     {
       name: "heroImage",
       type: "upload",
@@ -261,6 +260,7 @@ export const Articles: CollectionConfig = {
       },
       relationTo: "media",
     },
+    tableOfContentsField(),
     {
       name: "createdBy",
       type: "relationship",

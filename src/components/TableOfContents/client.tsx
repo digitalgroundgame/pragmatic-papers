@@ -138,7 +138,7 @@ function TableOfContentHeader({
   const { classNames } = useTableOfContents()
   return (
     <div
-      className={cn("toc__titleContainer flex gap-2", classNames?.titleContainer, className)}
+      className={cn("toc__titleContainer mb-1 flex gap-2", classNames?.titleContainer, className)}
       {...props}
     >
       {children}

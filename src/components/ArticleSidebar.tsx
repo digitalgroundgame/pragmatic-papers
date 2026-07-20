@@ -12,8 +12,8 @@ export function ArticleSidebar({
   return (
     <aside
       className={cn(
-        "mx-auto max-w-2xl self-start lg:sticky lg:top-[calc(var(--header-height)+1rem)] lg:mb-8",
-        isOpen && "w-full",
+        "max-w-2xl self-start lg:sticky lg:top-[calc(var(--header-height)+1rem)] lg:mb-8",
+        isOpen && "mx-auto w-full",
         className,
       )}
     >

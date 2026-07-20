@@ -446,10 +446,6 @@ export interface Article {
     image?: (number | null) | Media;
     description?: string | null;
   };
-  /**
-   * Auto-generates a navigable list of headings (and any resolver-matched blocks).
-   */
-  showTableOfContents?: boolean | null;
   heroImage?: (number | null) | Media;
   /**
    * When enabled, the slug will auto-generate from the title field on save and autosave.
@@ -461,6 +457,10 @@ export interface Article {
   authors?: (number | User)[] | null;
   topics?: (number | Topic)[] | null;
   narration?: (number | null) | Media;
+  /**
+   * Auto-generates a navigable list of headings (and any resolver-matched blocks).
+   */
+  showTableOfContents?: boolean | null;
   createdBy?: (number | null) | User;
   populatedAuthors?: PopulatedAuthors;
   populatedVolume?: PopulatedVolume;
@@ -1685,7 +1685,6 @@ export interface ArticlesSelect<T extends boolean = true> {
         image?: T;
         description?: T;
       };
-  showTableOfContents?: T;
   heroImage?: T;
   generateSlug?: T;
   slug?: T;
@@ -1694,6 +1693,7 @@ export interface ArticlesSelect<T extends boolean = true> {
   authors?: T;
   topics?: T;
   narration?: T;
+  showTableOfContents?: T;
   createdBy?: T;
   populatedAuthors?: T | PopulatedAuthorsSelect<T>;
   populatedVolume?: T | PopulatedVolumeSelect<T>;

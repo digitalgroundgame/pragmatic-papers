@@ -223,11 +223,11 @@
 }
 
 .lexical-table-container {
-  @apply my-6 overflow-x-auto [-webkit-overflow-scrolling:touch] sm:overflow-x-visible md:-mx-4 lg:-mx-8;
+  @apply my-6 min-w-0 overflow-x-auto [-webkit-overflow-scrolling:touch] md:-mx-4 lg:-mx-8;
 }
 
 .lexical-table {
-  @apply w-full caption-bottom text-lg;
+  @apply my-0 min-w-full caption-bottom text-lg;
 }
 
 .lexical-table-row {

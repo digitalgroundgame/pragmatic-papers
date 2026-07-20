@@ -17,7 +17,7 @@ import type { Payload, RequiredDataFromCollectionSlug } from "payload"
  */
 export async function createArticle(
   payload: Payload,
-  data: Omit<RequiredDataFromCollectionSlug<"articles">, "_status" | "publishedAt">,
+  data: Omit<RequiredDataFromCollectionSlug<"articles">, "_status">,
   context?: Record<string, unknown>,
 ): Promise<Article> {
   const maxAttempts = 3
@@ -30,7 +30,7 @@ export async function createArticle(
         data: {
           ...data,
           _status: "published",
-          publishedAt: new Date().toISOString(),
+          publishedAt: data.publishedAt || new Date().toISOString(),
         },
       })
     } catch (err) {

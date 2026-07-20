@@ -23,6 +23,7 @@ export const createRichTextShowcaseArticle = async (
   mediaDocs: Media[],
   topics: number[] = [],
   context?: Record<string, unknown>,
+  publishedAt?: string,
 ): Promise<number> => {
   const writer = writers[0]!
 
@@ -257,6 +258,7 @@ export const createRichTextShowcaseArticle = async (
       slug: "rich-text-showcase",
       heroImage: mediaDocs[Math.floor(Math.random() * mediaDocs.length)]?.id,
       showTableOfContents: true,
+      publishedAt,
       meta: {
         title,
         description:

@@ -1,0 +1,191 @@
+# Set a GitHub Projects (v2) field value on a single issue, on demand.
+#
+# PURPOSE
+# -------
+# Lets Claude (or a human) set an arbitrary project field on a specific issue.
+# Automatic lifecycle automation — adding new issues to the board, default
+# Status, closed → Done, etc. — is owned by the project's built-in Workflows
+# (board → ⚙ Workflows), NOT this file, so there is no overlap: this workflow
+# has no automatic trigger and only ever runs when explicitly dispatched.
+#
+# HOW CLAUDE DRIVES IT
+# --------------------
+# Projects v2 metadata is GraphQL-only, and the Claude Code cloud container's
+# GitHub proxy refuses GraphQL (pinned PR-review operations only). But Claude
+# CAN dispatch this workflow over REST via the GitHub MCP tool
+# (actions_run_trigger → run_workflow). The workflow then runs on an Actions
+# runner outside that proxy, where `gh project` works:
+#
+#   Claude → MCP run_workflow (REST) → this workflow → gh project item-edit
+#
+# AUTHENTICATION
+# --------------
+# The default GITHUB_TOKEN has no project permission. Provide one of:
+#   1. GitHub App (recommended). Set:
+#        - variable PROJECTS_APP_ID        the App's ID (not sensitive)
+#        - secret PROJECTS_APP_PRIVATE_KEY the FULL .pem contents, incl. the
+#                                          "-----BEGIN/END PRIVATE KEY-----" lines
+#      The App must be installed on the project owner and granted Organization →
+#      Projects: Read and write, and Repository → Issues: Read.
+#   2. PAT fallback: secret PROJECTS_TOKEN — classic PAT with `project` + `repo`,
+#      or a fine-grained PAT with org Projects RW + repo Issues Read.
+#
+# CONFIG (repo variables)
+# -----------------------
+#   - PROJECT_NUMBER (required) the project number, e.g. from its URL
+#                    github.com/orgs/<org>/projects/<NUMBER>
+#   - PROJECT_OWNER  (optional) the project owner login; defaults to this repo's
+#                    owner. Set if the project lives under a different org.
+#
+# USAGE
+# -----
+#   gh workflow run project-fields.yml -f issue=123 -f field=Status -f value="In Progress"
+# Omit field/value to only add the issue to the board. Field/value are resolved
+# by NAME at run time. Supported field types: single-select, text, number, date.
+name: Project fields
+
+on:
+  workflow_dispatch:
+    inputs:
+      issue:
+        description: "Issue number to update"
+        required: true
+        type: string
+      field:
+        description: "Project field name (e.g. Status). Leave blank to only add the issue to the project."
+        required: false
+        type: string
+      value:
+        description: "Value to set (single-select option name, or text/number/date)"
+        required: false
+        type: string
+
+jobs:
+  set-field:
+    name: Set project field
+    runs-on: ubuntu-latest
+    # Skip until a project number is configured, so an unconfigured repo can't
+    # produce a failing run.
+    if: vars.PROJECT_NUMBER != ''
+    permissions:
+      contents: read
+
+    steps:
+      # Mint a short-lived installation token from the GitHub App. Scoped to the
+      # project owner so the token carries the org-level Projects permission the
+      # App was granted. Skipped when no App is configured, in which case the
+      # PROJECTS_TOKEN PAT fallback is used below.
+      - name: Generate App token
+        id: app-token
+        if: ${{ vars.PROJECTS_APP_ID != '' }}
+        uses: actions/create-github-app-token@v3
+        with:
+          app-id: ${{ vars.PROJECTS_APP_ID }}
+          private-key: ${{ secrets.PROJECTS_APP_PRIVATE_KEY }}
+          owner: ${{ vars.PROJECT_OWNER || github.repository_owner }}
+
+      - name: Add issue to project and set field
+        env:
+          # Prefer the App installation token; fall back to the PAT secret.
+          GH_TOKEN: ${{ steps.app-token.outputs.token || secrets.PROJECTS_TOKEN }}
+          OWNER: ${{ vars.PROJECT_OWNER || github.repository_owner }}
+          NUMBER: ${{ vars.PROJECT_NUMBER }}
+          REPO: ${{ github.repository }}
+          ISSUE: ${{ inputs.issue }}
+          FIELD: ${{ inputs.field }}
+          VALUE: ${{ inputs.value }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "${GH_TOKEN}" ]; then
+            echo "::error::No project token available. Configure a GitHub App (PROJECTS_APP_ID + PROJECTS_APP_PRIVATE_KEY) or a PROJECTS_TOKEN PAT — see the header of this workflow."
+            exit 1
+          fi
+
+          issue_url="https://github.com/${REPO}/issues/${ISSUE}"
+          echo "Project: owner=${OWNER} number=${NUMBER}"
+          echo "Issue:   ${issue_url}"
+
+          # Project node id (needed for item-edit).
+          project_id=$(gh project view "$NUMBER" --owner "$OWNER" --format json --jq '.id')
+
+          # Add the issue to the project. item-add is idempotent: re-adding an
+          # existing item just returns it, so this is safe to run repeatedly.
+          item_id=$(gh project item-add "$NUMBER" --owner "$OWNER" --url "$issue_url" --format json --jq '.id')
+          echo "Added/attached item: ${item_id}"
+
+          if [ -z "${FIELD}" ]; then
+            echo "No field specified — issue added to the project, nothing else to set."
+            echo "- Added [#${ISSUE}](${issue_url}) to project ${OWNER}/${NUMBER}" >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          if [ -z "${VALUE}" ]; then
+            echo "::error::A field ('${FIELD}') was given but no value."
+            exit 1
+          fi
+
+          # Resolve the field by name. `gh project field-list` reports every
+          # field's `type` as its GraphQL __typename, and the field-config union
+          # has only three members (ProjectV2Field, ProjectV2SingleSelectField,
+          # ProjectV2IterationField) — text/number/date fields ALL surface as
+          # ProjectV2Field and are told apart only by `dataType`, which
+          # field-list doesn't emit. So query the fields directly for `dataType`
+          # (the attribute that actually distinguishes TEXT/NUMBER/DATE/
+          # SINGLE_SELECT) plus single-select options. Querying by the project's
+          # node id sidesteps whether the owner is an org or a user.
+          nodes=$(gh api graphql -f query='
+            query($id: ID!) {
+              node(id: $id) {
+                ... on ProjectV2 {
+                  fields(first: 100) {
+                    nodes {
+                      ... on ProjectV2FieldCommon { id name dataType }
+                      ... on ProjectV2SingleSelectField { options { id name } }
+                    }
+                  }
+                }
+              }
+            }' -f id="$project_id" --jq '.data.node.fields.nodes')
+
+          field=$(echo "$nodes" | jq -c --arg n "$FIELD" 'map(select(.name == $n)) | .[0] // empty')
+          if [ -z "$field" ]; then
+            echo "::error::Field '${FIELD}' not found in project ${OWNER}/${NUMBER}. Available fields:"
+            echo "$nodes" | jq -r '.[].name' | sed 's/^/  - /'
+            exit 1
+          fi
+
+          field_id=$(echo "$field" | jq -r '.id')
+          data_type=$(echo "$field" | jq -r '.dataType')
+
+          case "$data_type" in
+            SINGLE_SELECT)
+              option_id=$(echo "$field" | jq -r --arg v "$VALUE" '.options[] | select(.name == $v) | .id')
+              if [ -z "$option_id" ] || [ "$option_id" = "null" ]; then
+                echo "::error::Option '${VALUE}' not found for single-select field '${FIELD}'. Available options:"
+                echo "$field" | jq -r '.options[].name' | sed 's/^/  - /'
+                exit 1
+              fi
+              gh project item-edit --id "$item_id" --project-id "$project_id" \
+                --field-id "$field_id" --single-select-option-id "$option_id"
+              ;;
+            TEXT)
+              gh project item-edit --id "$item_id" --project-id "$project_id" \
+                --field-id "$field_id" --text "$VALUE"
+              ;;
+            NUMBER)
+              gh project item-edit --id "$item_id" --project-id "$project_id" \
+                --field-id "$field_id" --number "$VALUE"
+              ;;
+            DATE)
+              gh project item-edit --id "$item_id" --project-id "$project_id" \
+                --field-id "$field_id" --date "$VALUE"
+              ;;
+            *)
+              echo "::error::Unsupported field type '${data_type}' for field '${FIELD}'. Supported: single-select, text, number, date."
+              exit 1
+              ;;
+          esac
+
+          echo "Set '${FIELD}' = '${VALUE}' on #${ISSUE}."
+          echo "- Set **${FIELD}** = \`${VALUE}\` on [#${ISSUE}](${issue_url}) in project ${OWNER}/${NUMBER}" >> "$GITHUB_STEP_SUMMARY"

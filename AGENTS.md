@@ -27,7 +27,7 @@ This file provides guidance to tools like Claude Code (claude.ai/code) when work
 - `pnpm test` — run all tests (Vitest)
 - `pnpm test:unit` — run unit tests
 - `pnpm test:integration` — run integration tests (uses Testcontainers)
-- `pnpm test:e2e` — run Playwright E2E tests (uses Testcontainers)
+- `pnpm test:e2e` — run Playwright E2E tests (uses Testcontainers). Screenshot comparisons are skipped locally; visual baselines are generated in CI or via `pnpm test:e2e:update-snapshots` (Dockerized, see `tests/e2e/README.md` for the full lifecycle) — never generate/commit baselines from a bare local machine
 - `pnpm test:unit:coverage` — run unit tests with V8 coverage report (what CI uses; outputs `coverage/coverage-summary.json` and `coverage/coverage-final.json`)
 - `pnpm test:coverage` — run all tests with V8 coverage report (full picture for local inspection)
 - `pnpm test:unit -- --update-snapshots` — regenerate snapshot baselines after intentional UI changes
@@ -135,6 +135,23 @@ Coverage reporting is informational only — chore/docs PRs don't need special h
 
 - run linting and type-checks
 - run unit and integration tests as needed, _skip running e2e_.
+
+### Visual regression (screenshot) tests
+
+Adding, changing, or debugging a Playwright `toHaveScreenshot` test or a flaky
+visual diff? Use the **`e2e-visual-tests`** skill
+(`.claude/skills/e2e-visual-tests/SKILL.md`) for the checklist; full lifecycle
+in `tests/e2e/README.md`.
+
+## Filing & triaging GitHub issues
+
+Creating, editing, triaging, or labeling an issue — or adding/removing a
+label? Use the **`github-issues`** skill
+(`.claude/skills/github-issues/SKILL.md`). It covers applying an issue
+**type** (`Bug`/`Feature`/`Task`) as well as **labels** (`Bug` is a type, not
+a label), and the label taxonomy is version-controlled in
+`.github/labels.yml` — edit that file in a PR to change a label; a sync
+workflow applies it on push to `dev`.
 
 ## Wiki
 

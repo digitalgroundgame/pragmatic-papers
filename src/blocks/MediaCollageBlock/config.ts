@@ -1,9 +1,12 @@
 import type { Block } from "payload"
 
+import { blockDescriptionField } from "@/fields/blockDescription"
+
 export const MediaCollageBlock: Block = {
   slug: "mediaCollage",
   interfaceName: "MediaCollageBlock",
   fields: [
+    blockDescriptionField(),
     {
       name: "layout",
       type: "select",

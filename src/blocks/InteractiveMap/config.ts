@@ -1,5 +1,6 @@
 import type { Block } from "payload"
 
+import { blockDescriptionField } from "@/fields/blockDescription"
 import { link } from "@/fields/link2"
 
 export const InteractiveMap: Block = {
@@ -10,6 +11,7 @@ export const InteractiveMap: Block = {
     plural: "Interactive Maps",
   },
   fields: [
+    blockDescriptionField(),
     {
       name: "widgetTitle",
       type: "text",

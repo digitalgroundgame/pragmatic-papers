@@ -1,5 +1,7 @@
 import type { Block } from "payload"
 
+import { blockDescriptionField } from "@/fields/blockDescription"
+
 /**
  * Legacy config for Bluesky embeds.
  * @deprecated Use the SocialEmbed block instead.
@@ -16,6 +18,7 @@ export const LegacyBlueskyEmbed: Block = {
     group: "Legacy",
   },
   fields: [
+    blockDescriptionField(),
     {
       name: "url",
       type: "text",

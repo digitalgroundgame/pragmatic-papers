@@ -1,5 +1,6 @@
 import type { Block } from "payload"
 
+import { blockDescriptionField } from "@/fields/blockDescription"
 import {
   FixedToolbarFeature,
   InlineToolbarFeature,
@@ -9,6 +10,7 @@ import {
 export const Banner: Block = {
   slug: "banner",
   fields: [
+    blockDescriptionField(),
     {
       name: "style",
       type: "select",

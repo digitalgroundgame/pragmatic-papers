@@ -1,9 +1,11 @@
+import { blockDescriptionField } from "@/fields/blockDescription"
 import { type Block } from "payload"
 
 export const InlineMathBlock: Block = {
   slug: "inlineMathBlock",
   interfaceName: "InlineMathBlock",
   fields: [
+    blockDescriptionField(),
     {
       name: "math",
       type: "text",
@@ -32,6 +34,7 @@ export const DisplayMathBlock: Block = {
   slug: "displayMathBlock",
   interfaceName: "DisplayMathBlock",
   fields: [
+    blockDescriptionField(),
     {
       name: "math",
       type: "textarea",

@@ -805,6 +805,10 @@ export interface ContributorsBlock {
  * via the `definition` "MediaBlock".
  */
 export interface MediaBlock {
+  /**
+   * Text spoken by AI voice-over (ElevenLabs) and used for screen reader accessibility (aria-label/alt).
+   */
+  description?: string | null;
   media: number | Media;
   id?: string | null;
   blockName?: string | null;
@@ -842,6 +846,10 @@ export interface NewsletterSignupBlock {
  * via the `definition` "TimelineBlock".
  */
 export interface TimelineBlock {
+  /**
+   * Text spoken by AI voice-over (ElevenLabs) and used for screen reader accessibility (aria-label/alt).
+   */
+  description?: string | null;
   title?: string | null;
   events: TimelineEvents;
   id?: string | null;
@@ -1591,6 +1599,7 @@ export interface ContributorsBlockSelect<T extends boolean = true> {
  * via the `definition` "MediaBlock_select".
  */
 export interface MediaBlockSelect<T extends boolean = true> {
+  description?: T;
   media?: T;
   id?: T;
   blockName?: T;
@@ -1612,6 +1621,7 @@ export interface NewsletterSignupBlockSelect<T extends boolean = true> {
  * via the `definition` "TimelineBlock_select".
  */
 export interface TimelineBlockSelect<T extends boolean = true> {
+  description?: T;
   title?: T;
   events?: T | TimelineEventsSelect<T>;
   id?: T;
@@ -2404,6 +2414,10 @@ export interface TaskSchedulePublish {
  * via the `definition` "BannerBlock".
  */
 export interface BannerBlock {
+  /**
+   * Text spoken by AI voice-over (ElevenLabs) and used for screen reader accessibility (aria-label/alt).
+   */
+  description?: string | null;
   style: 'info' | 'warning' | 'error' | 'success';
   content: {
     root: {
@@ -2429,6 +2443,10 @@ export interface BannerBlock {
  * via the `definition` "CodeBlock".
  */
 export interface CodeBlock {
+  /**
+   * Text spoken by AI voice-over (ElevenLabs) and used for screen reader accessibility (aria-label/alt).
+   */
+  description?: string | null;
   language?: ('typescript' | 'javascript' | 'css') | null;
   code: string;
   id?: string | null;
@@ -2440,6 +2458,10 @@ export interface CodeBlock {
  * via the `definition` "InteractiveMapBlock".
  */
 export interface InteractiveMapBlock {
+  /**
+   * Text spoken by AI voice-over (ElevenLabs) and used for screen reader accessibility (aria-label/alt).
+   */
+  description?: string | null;
   /**
    * Optional heading displayed above the map(s).
    */
@@ -2505,6 +2527,10 @@ export interface InteractiveMapBlock {
  * via the `definition` "MediaCollageBlock".
  */
 export interface MediaCollageBlock {
+  /**
+   * Text spoken by AI voice-over (ElevenLabs) and used for screen reader accessibility (aria-label/alt).
+   */
+  description?: string | null;
   layout: 'grid' | 'carousel';
   images: {
     media: number | Media;
@@ -2519,6 +2545,10 @@ export interface MediaCollageBlock {
  * via the `definition` "DisplayMathBlock".
  */
 export interface DisplayMathBlock {
+  /**
+   * Text spoken by AI voice-over (ElevenLabs) and used for screen reader accessibility (aria-label/alt).
+   */
+  description?: string | null;
   /**
    * Enter a LaTeX math expression.
    */
@@ -2559,6 +2589,10 @@ export interface SocialEmbedSnapshot {
  */
 export interface SocialEmbedBlock {
   /**
+   * Text spoken by AI voice-over (ElevenLabs) and used for screen reader accessibility (aria-label/alt).
+   */
+  description?: string | null;
+  /**
    * Paste a Twitter/X, YouTube, Reddit, BlueSky, or TikTok URL.
    */
   url: string;
@@ -2575,6 +2609,10 @@ export interface SocialEmbedBlock {
  * via the `definition` "InlineMathBlock".
  */
 export interface InlineMathBlock {
+  /**
+   * Text spoken by AI voice-over (ElevenLabs) and used for screen reader accessibility (aria-label/alt).
+   */
+  description?: string | null;
   /**
    * Enter a LaTeX math expression.
    */

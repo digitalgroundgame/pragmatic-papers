@@ -187,6 +187,21 @@ export const Articles: CollectionConfig = {
             }),
           ],
         },
+        {
+          label: "Narration",
+          fields: [
+            {
+              name: "extractNarration",
+              type: "ui",
+              admin: {
+                components: {
+                  Field:
+                    "@/collections/Articles/components/ExtractNarrationButton#ExtractNarrationButton",
+                },
+              },
+            },
+          ],
+        },
       ],
     },
     // END TABS FIELDS

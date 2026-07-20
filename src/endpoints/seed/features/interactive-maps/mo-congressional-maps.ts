@@ -57,6 +57,7 @@ export const createMoCongressionalMapsArticle = async (
   mediaDocs: Media[],
   topics: number[] = [],
   ctx?: Record<string, unknown>,
+  publishedAt?: string,
 ): Promise<number> => {
   validateWriters(writers)
 
@@ -112,6 +113,7 @@ export const createMoCongressionalMapsArticle = async (
       topics,
       slug: "missouri-shifting-margins-119-120-congressional-maps",
       heroImage: mediaDocs[2]?.id ?? mediaDocs[0]?.id,
+      publishedAt,
       meta: {
         title,
         description:

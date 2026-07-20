@@ -1,0 +1,231 @@
+name: Update snapshot baselines
+
+# Manual escape hatch for accepting an intentional visual change (see
+# tests/e2e/README.md). Kept in its own workflow file — a job that's only
+# ever meant to run on workflow_dispatch would otherwise show up as a
+# permanently "skipped" check on every regular PR/push run of Playwright
+# Tests.
+#
+# Two ways to fire it:
+#   - workflow_dispatch (Actions tab, or `gh workflow run update-snapshots.yml
+#     --ref <branch>`)
+#   - adding the "needs screenshots" label to a PR. The label is removed
+#     automatically once this job finishes so it can be re-added later to
+#     retrigger.
+on:
+  workflow_dispatch:
+  pull_request:
+    types: [labeled]
+
+# Shared with playwright.yml's group: both workflows can push a baseline
+# commit to the same branch, so a stale run's push would otherwise race a
+# newer one's. Cancelling the older run shrinks that race window from the
+# whole E2E run down to GitHub's cancellation grace period.
+#
+# concurrency is resolved when the run is created — before the job-level
+# `if` below — so this workflow triggers (and would join the shared group)
+# on EVERY `labeled` event, not just "needs screenshots". Since playwright.yml
+# doesn't re-run on `labeled`, joining the shared group unconditionally would
+# let an unrelated label (e.g. "bug") cancel an in-flight E2E run with
+# nothing to replace it. Fall back to a self-only group (this run's own id)
+# whenever the trigger isn't actually one we act on, so those events can only
+# ever conflict with themselves.
+concurrency:
+  group: ${{ (github.event_name == 'workflow_dispatch' || github.event.label.name == 'needs screenshots') && format('snapshot-baselines-{0}', github.event.pull_request.head.ref || github.ref_name) || github.run_id }}
+  cancel-in-progress: true
+
+env:
+  PAYLOAD_SECRET: ${{ secrets.PAYLOAD_SECRET }}
+  NEXT_PUBLIC_SERVER_URL: http://localhost:8000
+  USE_LOCAL_STORAGE: "true"
+  # Hostname is the services key ("postgres"), not localhost — this job runs
+  # inside a container, so service containers are reachable by their
+  # service-id alias on the shared Docker network.
+  DATABASE_URI: postgres://postgres:postgres@postgres:5432/pragmatic-papers-e2e
+  E2E_PROD_SERVER: "true"
+
+jobs:
+  update-snapshots:
+    name: Update snapshot baselines
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.label.name == 'needs screenshots' }}
+    timeout-minutes: 60
+    runs-on: ubuntu-latest
+    # Same pinned image as playwright.yml and scripts/test-e2e-docker.ts —
+    # keeps this workflow's regenerated baselines at parity with both.
+    container:
+      image: mcr.microsoft.com/playwright:v1.60.0-noble
+
+    permissions:
+      contents: write
+      pull-requests: write
+      checks: write
+
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: pragmatic-papers-e2e
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha || github.ref }}
+
+      # actions/checkout's files are owned by a different UID than this
+      # container's user, so git's dubious-ownership check blocks every git
+      # command below unless the workspace is explicitly trusted.
+      - name: Trust the checked-out workspace
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
+      # The Playwright image doesn't ship the GitHub CLI, but the very next
+      # step (and several after it) shell out to `gh`. Pull the release tarball
+      # straight from GitHub instead of going through the apt repo — that path
+      # ran `apt-get update` twice (a full package-index rebuild each time,
+      # ~20-40s) just to land one static binary. The pinned version only needs
+      # to be recent enough for the `gh api`/`gh run`/`gh pr` commands used
+      # here; bump freely.
+      - name: Install GitHub CLI
+        run: |
+          GH_VERSION=2.63.2
+          ARCH=$(dpkg --print-architecture)
+          curl -fsSL "https://github.com/cli/cli/releases/download/v${GH_VERSION}/gh_${GH_VERSION}_linux_${ARCH}.tar.gz" \
+            | tar -xz -C /tmp
+          install "/tmp/gh_${GH_VERSION}_linux_${ARCH}/bin/gh" /usr/local/bin/gh
+          gh --version
+
+      # pull_request's $GITHUB_REF_NAME is "<number>/merge", not the branch —
+      # resolve the real branch/PR/base once so every later step can rely on
+      # it regardless of which trigger fired.
+      - name: Resolve PR context
+        id: pr
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "branch=${{ github.event.pull_request.head.ref }}" >> "$GITHUB_OUTPUT"
+            echo "number=${{ github.event.pull_request.number }}" >> "$GITHUB_OUTPUT"
+            echo "base=${{ github.event.pull_request.base.ref }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "branch=$GITHUB_REF_NAME" >> "$GITHUB_OUTPUT"
+            pr=$(gh pr list --repo "${{ github.repository }}" --head "$GITHUB_REF_NAME" \
+              --state open --json number,baseRefName --jq 'first | @json' || true)
+            echo "number=$(printf '%s' "$pr" | jq -r '.number // empty')" >> "$GITHUB_OUTPUT"
+            echo "base=$(printf '%s' "$pr" | jq -r '.baseRefName // empty')" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Set up Node.js environment
+        uses: ./.github/actions/setup-project
+        with:
+          node-version: "24.x"
+          gh-font-read-token: ${{ secrets.GH_FONT_READ }}
+          payload-secret: ${{ secrets.PAYLOAD_SECRET }}
+
+      - name: Cache Next.js build cache
+        uses: actions/cache@v5
+        with:
+          path: .next/cache
+          key: nextjs-${{ hashFiles('pnpm-lock.yaml') }}-${{ hashFiles('src/**/*.[jt]s', 'src/**/*.[jt]sx', '*.[jt]s', '*.[jt]sx') }}
+          restore-keys: |
+            nextjs-${{ hashFiles('pnpm-lock.yaml') }}-
+
+      # E2E_VERIFY_VISUAL folds the flaky-baseline gate into this run: after
+      # regenerating, the wrapper re-renders the @visual tests against the same
+      # server and fails if a baseline only matches its own first render, so a
+      # nondeterministic screenshot can't be accepted into the branch.
+      - name: Regenerate changed snapshot baselines
+        env:
+          E2E_VERIFY_VISUAL: "true"
+        run: pnpm test:e2e -- --update-snapshots=changed --project=chromium
+
+      - name: Commit regenerated snapshots
+        id: commit
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add tests/e2e/__screenshots__
+          if git diff --cached --quiet; then
+            echo "No snapshot changes to commit."
+            echo "committed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          git commit -m "test: update e2e snapshot baselines"
+          git push origin "HEAD:${{ steps.pr.outputs.branch }}"
+          echo "committed=true" >> "$GITHUB_OUTPUT"
+
+      # Pushes made with GITHUB_TOKEN don't trigger workflows, so the snapshot
+      # commit would otherwise sit with no checks and block merging. The commit
+      # only touches PNGs and this job just ran the E2E suite against them, so
+      # report all required checks as passed on the new sha.
+      - name: Report CI checks on snapshot commit
+        if: ${{ steps.commit.outputs.committed == 'true' }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          NEW_SHA=$(git rev-parse HEAD)
+          for check_name in "Static checks" "Unit tests" "Integration tests" "E2E tests"; do
+            gh api repos/${{ github.repository }}/check-runs \
+              --method POST \
+              -H "Accept: application/vnd.github+json" \
+              -f name="$check_name" \
+              -f head_sha="$NEW_SHA" \
+              -f status=completed \
+              -f conclusion=success \
+              -f "output[title]=Snapshot-only commit" \
+              -f "output[summary]=Only PNG baselines changed; generated and verified by the update-snapshots job." \
+              >/dev/null
+          done
+
+      - name: Post snapshot updates comment
+        if: ${{ steps.commit.outputs.committed == 'true' && steps.pr.outputs.number != '' }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          OWNER: ${{ github.repository_owner }}
+          REPO: ${{ github.event.repository.name }}
+          PR_NUMBER: ${{ steps.pr.outputs.number }}
+          BASE_REF: ${{ steps.pr.outputs.base }}
+        run: |
+          export ASSET_DIR="$PR_NUMBER/$(git rev-parse HEAD)"
+          git fetch --no-tags --depth=1 origin "$BASE_REF"
+          git diff --name-only --diff-filter=AM \
+            "origin/$BASE_REF...HEAD" -- '**/__screenshots__/**/*.png' \
+            | pnpm exec tsx scripts/pr-screenshot-comment.ts
+
+      - name: Delete stale visual regression comment
+        if: ${{ steps.commit.outputs.committed == 'true' && steps.pr.outputs.number != '' }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          OWNER: ${{ github.repository_owner }}
+          REPO: ${{ github.event.repository.name }}
+          PR_NUMBER: ${{ steps.pr.outputs.number }}
+          MARKER: visual-regressions
+          ASSET_DIR: unused
+          DELETE_WHEN_EMPTY: "true"
+        run: pnpm exec tsx scripts/pr-screenshot-comment.ts </dev/null
+
+      - name: Remove trigger label
+        if: ${{ always() && github.event_name == 'pull_request' }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh api --method DELETE \
+            "repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/labels/needs%20screenshots" \
+            || true
+
+      - uses: actions/upload-artifact@v7
+        if: ${{ !cancelled() }}
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 30

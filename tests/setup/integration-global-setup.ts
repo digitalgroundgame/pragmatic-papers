@@ -15,7 +15,7 @@ export async function setup(): Promise<() => Promise<void>> {
     uri = process.env.DATABASE_URI
     console.warn(`Using existing DATABASE_URI — skipping container startup.`)
   } else {
-    container = await new PostgreSqlContainer("postgres:15-alpine")
+    container = await new PostgreSqlContainer("postgres:17-alpine")
       .withDatabase(TEMPLATE_DB)
       .start()
     uri = container.getConnectionUri()

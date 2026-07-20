@@ -60,6 +60,31 @@ const nextConfig: NextConfig = {
   async headers() {
     return [
       {
+        source: "/:path*",
+        headers: [
+          {
+            key: "Strict-Transport-Security",
+            value: "max-age=63072000; includeSubDomains",
+          },
+          {
+            key: "X-Content-Type-Options",
+            value: "nosniff",
+          },
+          {
+            key: "X-Frame-Options",
+            value: "SAMEORIGIN",
+          },
+          {
+            key: "Referrer-Policy",
+            value: "strict-origin-when-cross-origin",
+          },
+          {
+            key: "Permissions-Policy",
+            value: "camera=(), microphone=(), geolocation=()",
+          },
+        ],
+      },
+      {
         // Payload admin panel: never cache — always requires a fresh authenticated response.
         // CDN-Cache-Control is Vercel-specific and prevents edge caching in addition to the browser.
         source: "/admin/:path*",
@@ -139,6 +164,11 @@ export default withSentryConfig(withPayload(nextConfig, { devBundleServerPackage
   org: "digital-ground-game",
 
   project: "pragmatic-papers",
+
+  // Tags our bundled code with this key so `thirdPartyErrorFilterIntegration`
+  // (in src/instrumentation-client.ts) can tell our frames from third-party ones.
+  // Top-level `applicationKey` injects module metadata for both webpack and Turbopack.
+  applicationKey: "pragmatic-papers",
 
   // Only print logs for uploading source maps in CI
   silent: !process.env.CI,

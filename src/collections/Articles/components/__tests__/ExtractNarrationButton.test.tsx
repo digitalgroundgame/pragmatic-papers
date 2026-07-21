@@ -1,6 +1,6 @@
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
-import { ExtractNarrationButton } from "../ExtractNarrationButton"
+import { ExtractNarrationButton, resetNarrationCache } from "../ExtractNarrationButton"
 
 type MockFields = Record<string, { value?: unknown } | undefined>
 let mockFields: MockFields = {}
@@ -20,16 +20,19 @@ vi.mock("@payloadcms/ui", () => ({
   },
   useFormFields: <T,>(selector: (args: [MockFields, unknown]) => T): T =>
     selector([mockFields, vi.fn()]),
+  useDocumentInfo: () => ({ id: "test-doc-id" }),
 }))
 
 afterEach(() => {
   cleanup()
   mockFields = {}
+  resetNarrationCache()
   vi.clearAllMocks()
 })
 
 describe("ExtractNarrationButton", () => {
   beforeEach(() => {
+    resetNarrationCache()
     Object.assign(navigator, {
       clipboard: {
         writeText: vi.fn().mockResolvedValue(undefined),
@@ -65,6 +68,7 @@ describe("ExtractNarrationButton", () => {
     expect(button).toBeDefined()
 
     fireEvent.click(button)
+    expect(mockToastSuccess).toHaveBeenCalledWith("Narration text generated!")
 
     const textarea = screen.getByRole("textbox", {
       name: /editable narration plain text/i,
@@ -95,5 +99,60 @@ describe("ExtractNarrationButton", () => {
       )
       expect(mockToastSuccess).toHaveBeenCalledWith("Narration text copied to clipboard!")
     })
+  })
+
+  it("persists edited text across unmount and remount (switching tabs)", async () => {
+    mockFields = {
+      title: { value: "Initial Title" },
+    }
+
+    // 1. First render (in Narration tab)
+    const { unmount } = render(<ExtractNarrationButton />)
+    const generateBtn = await screen.findByRole("button", { name: /generate narration text/i })
+    fireEvent.click(generateBtn)
+
+    const textarea = screen.getByRole("textbox", {
+      name: /editable narration plain text/i,
+    }) as HTMLTextAreaElement
+    fireEvent.change(textarea, { target: { value: "Custom edited narration text!" } })
+
+    // 2. Simulate switching tabs away (component unmounts)
+    unmount()
+
+    // 3. Simulate switching back to Narration tab (component remounts)
+    render(<ExtractNarrationButton />)
+
+    const remountedTextarea = (await screen.findByRole("textbox", {
+      name: /editable narration plain text/i,
+    })) as HTMLTextAreaElement
+
+    expect(remountedTextarea.value).toBe("Custom edited narration text!")
+    expect(screen.getByRole("button", { name: /regenerate text/i })).toBeDefined()
+  })
+
+  it("overwrites persisted text and shows regenerated toast when Regenerate Text is clicked", async () => {
+    mockFields = {
+      title: { value: "Initial Title" },
+    }
+
+    const { rerender } = render(<ExtractNarrationButton />)
+    const generateBtn = await screen.findByRole("button", { name: /generate narration text/i })
+    fireEvent.click(generateBtn)
+    expect(mockToastSuccess).toHaveBeenCalledWith("Narration text generated!")
+
+    const textarea = screen.getByRole("textbox", {
+      name: /editable narration plain text/i,
+    }) as HTMLTextAreaElement
+    fireEvent.change(textarea, { target: { value: "Edited before regenerate" } })
+
+    // Update field value, rerender, and click Regenerate
+    mockFields = { title: { value: "Updated Title" } }
+    rerender(<ExtractNarrationButton />)
+    const regenerateBtn = screen.getByRole("button", { name: /regenerate text/i })
+    fireEvent.click(regenerateBtn)
+
+    expect(mockToastSuccess).toHaveBeenCalledWith("Narration text regenerated!")
+    expect(textarea.value).toContain("Updated Title")
+    expect(textarea.value).not.toContain("Edited before regenerate")
   })
 })

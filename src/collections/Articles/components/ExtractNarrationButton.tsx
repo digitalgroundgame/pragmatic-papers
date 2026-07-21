@@ -1,7 +1,7 @@
 "use client"
 
-import { Button, toast, useFormFields } from "@payloadcms/ui"
-import React, { useSyncExternalStore, useState } from "react"
+import { Button, toast, useDocumentInfo, useFormFields } from "@payloadcms/ui"
+import React, { useState, useSyncExternalStore } from "react"
 import { extractNarrationText } from "@/utilities/extractNarrationText"
 
 const noop = (): void => {
@@ -15,10 +15,80 @@ function useIsMounted(): boolean {
   return useSyncExternalStore(emptySubscribe, getClientSnapshot, getServerSnapshot)
 }
 
+interface NarrationCacheEntry {
+  text: string
+  hasGenerated: boolean
+}
+
+const inMemoryNarrationCache = new Map<string, NarrationCacheEntry>()
+
+export function resetNarrationCache(): void {
+  inMemoryNarrationCache.clear()
+  if (typeof window !== "undefined" && window.sessionStorage) {
+    try {
+      window.sessionStorage.clear()
+    } catch {
+      // ignore errors
+    }
+  }
+}
+
+function getNarrationCacheKey(id?: string | number): string {
+  if (id !== undefined && id !== null && id !== "") {
+    return `narration_text_${id}`
+  }
+  if (typeof window !== "undefined" && window.location?.pathname) {
+    return `narration_text_path_${window.location.pathname}`
+  }
+  return "narration_text_default"
+}
+
+function getStoredNarration(key: string): NarrationCacheEntry | null {
+  if (inMemoryNarrationCache.has(key)) {
+    return inMemoryNarrationCache.get(key)!
+  }
+  if (typeof window !== "undefined" && window.sessionStorage) {
+    try {
+      const stored = window.sessionStorage.getItem(key)
+      if (stored) {
+        const parsed = JSON.parse(stored) as NarrationCacheEntry
+        if (typeof parsed.text === "string" && typeof parsed.hasGenerated === "boolean") {
+          inMemoryNarrationCache.set(key, parsed)
+          return parsed
+        }
+      }
+    } catch {
+      // ignore parse or storage errors
+    }
+  }
+  return null
+}
+
+function setStoredNarration(key: string, entry: NarrationCacheEntry): void {
+  inMemoryNarrationCache.set(key, entry)
+  if (typeof window !== "undefined" && window.sessionStorage) {
+    try {
+      window.sessionStorage.setItem(key, JSON.stringify(entry))
+    } catch {
+      // ignore storage errors
+    }
+  }
+}
+
 export function ExtractNarrationButton(): React.ReactNode {
   const isMounted = useIsMounted()
-  const [editableText, setEditableText] = useState("")
-  const [hasGenerated, setHasGenerated] = useState(false)
+  const docInfo = useDocumentInfo()
+  const docId = docInfo?.id
+  const cacheKey = getNarrationCacheKey(docId)
+
+  const [editableText, setEditableText] = useState(() => {
+    const cached = getStoredNarration(cacheKey)
+    return cached ? cached.text : ""
+  })
+  const [hasGenerated, setHasGenerated] = useState(() => {
+    const cached = getStoredNarration(cacheKey)
+    return cached ? cached.hasGenerated : false
+  })
 
   const { title, authors, populatedAuthors, publishedAt, content } = useFormFields(([fields]) => ({
     title: fields.title?.value as string | undefined,
@@ -36,8 +106,17 @@ export function ExtractNarrationButton(): React.ReactNode {
       publishedAt,
       content,
     })
+    const isRegenerating = hasGenerated
     setEditableText(text)
     setHasGenerated(true)
+    setStoredNarration(cacheKey, { text, hasGenerated: true })
+    toast.success(isRegenerating ? "Narration text regenerated!" : "Narration text generated!")
+  }
+
+  const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>): void => {
+    const text = e.target.value
+    setEditableText(text)
+    setStoredNarration(cacheKey, { text, hasGenerated: true })
   }
 
   const handleCopy = async (): Promise<void> => {
@@ -73,8 +152,8 @@ export function ExtractNarrationButton(): React.ReactNode {
         <div>
           <h3 style={{ margin: "0 0 0.25rem 0", fontSize: "1.1rem" }}>Narration Plain Text</h3>
           <p style={{ margin: 0, fontSize: "0.85rem", opacity: 0.8 }}>
-            Extract narration-ready plain text for ElevenLabs AI voice-over. Edits here are
-            ephemeral.
+            Extract narration-ready plain text for ElevenLabs AI voice-over. Edits persist while
+            navigating tabs in this document window.
           </p>
         </div>
         <div style={{ display: "flex", gap: "0.5rem" }}>
@@ -93,7 +172,7 @@ export function ExtractNarrationButton(): React.ReactNode {
         <textarea
           aria-label="Editable narration plain text"
           value={editableText}
-          onChange={(e) => setEditableText(e.target.value)}
+          onChange={handleTextChange}
           rows={20}
           style={{
             width: "100%",

@@ -40,7 +40,7 @@ describe("ExtractNarrationButton", () => {
     })
   })
 
-  it("renders the generate button and shows textarea in tab on click", async () => {
+  it("renders the generate button and shows formatted view and editable textarea on view toggle", async () => {
     mockFields = {
       title: { value: "Sample Article Title" },
       populatedAuthors: { value: [{ name: "Alice Author" }] },
@@ -62,13 +62,24 @@ describe("ExtractNarrationButton", () => {
 
     render(<ExtractNarrationButton />)
 
-    expect(screen.queryByRole("textbox", { name: /editable narration plain text/i })).toBeNull()
+    expect(screen.queryByLabelText(/formatted narration preview/i)).toBeNull()
 
     const button = await screen.findByRole("button", { name: /generate narration text/i })
     expect(button).toBeDefined()
 
     fireEvent.click(button)
-    expect(mockToastSuccess).toHaveBeenCalledWith("Narration text generated!")
+    await waitFor(() => {
+      expect(mockToastSuccess).toHaveBeenCalledWith("Narration text generated!")
+    })
+
+    const formattedPreview = screen.getByLabelText(/formatted narration preview/i)
+    expect(formattedPreview).toBeDefined()
+    expect(formattedPreview.textContent).toContain("Sample Article Title")
+    expect(formattedPreview.textContent).toContain("By Alice Author")
+    expect(formattedPreview.textContent).toContain("Hello world narration text.")
+
+    const editBtn = screen.getByRole("button", { name: /edit text/i })
+    fireEvent.click(editBtn)
 
     const textarea = screen.getByRole("textbox", {
       name: /editable narration plain text/i,
@@ -90,7 +101,7 @@ describe("ExtractNarrationButton", () => {
     const generateBtn = await screen.findByRole("button", { name: /generate narration text/i })
     fireEvent.click(generateBtn)
 
-    const copyBtn = screen.getByRole("button", { name: /copy to clipboard/i })
+    const copyBtn = await screen.findByRole("button", { name: /copy to clipboard/i })
     fireEvent.click(copyBtn)
 
     await waitFor(() => {
@@ -111,6 +122,9 @@ describe("ExtractNarrationButton", () => {
     const generateBtn = await screen.findByRole("button", { name: /generate narration text/i })
     fireEvent.click(generateBtn)
 
+    const editBtn = await screen.findByRole("button", { name: /edit text/i })
+    fireEvent.click(editBtn)
+
     const textarea = screen.getByRole("textbox", {
       name: /editable narration plain text/i,
     }) as HTMLTextAreaElement
@@ -121,6 +135,9 @@ describe("ExtractNarrationButton", () => {
 
     // 3. Simulate switching back to Narration tab (component remounts)
     render(<ExtractNarrationButton />)
+
+    const editBtnRemounted = screen.getByRole("button", { name: /edit text/i })
+    fireEvent.click(editBtnRemounted)
 
     const remountedTextarea = (await screen.findByRole("textbox", {
       name: /editable narration plain text/i,
@@ -138,7 +155,12 @@ describe("ExtractNarrationButton", () => {
     const { rerender } = render(<ExtractNarrationButton />)
     const generateBtn = await screen.findByRole("button", { name: /generate narration text/i })
     fireEvent.click(generateBtn)
-    expect(mockToastSuccess).toHaveBeenCalledWith("Narration text generated!")
+    await waitFor(() => {
+      expect(mockToastSuccess).toHaveBeenCalledWith("Narration text generated!")
+    })
+
+    const editBtn = screen.getByRole("button", { name: /edit text/i })
+    fireEvent.click(editBtn)
 
     const textarea = screen.getByRole("textbox", {
       name: /editable narration plain text/i,
@@ -151,8 +173,14 @@ describe("ExtractNarrationButton", () => {
     const regenerateBtn = screen.getByRole("button", { name: /regenerate text/i })
     fireEvent.click(regenerateBtn)
 
-    expect(mockToastSuccess).toHaveBeenCalledWith("Narration text regenerated!")
-    expect(textarea.value).toContain("Updated Title")
-    expect(textarea.value).not.toContain("Edited before regenerate")
+    await waitFor(() => {
+      expect(mockToastSuccess).toHaveBeenCalledWith("Narration text regenerated!")
+    })
+
+    const regeneratedTextarea = screen.getByRole("textbox", {
+      name: /editable narration plain text/i,
+    }) as HTMLTextAreaElement
+    expect(regeneratedTextarea.value).toContain("Updated Title")
+    expect(regeneratedTextarea.value).not.toContain("Edited before regenerate")
   })
 })

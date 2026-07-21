@@ -28,12 +28,11 @@ const createBannerBlock = (description: string, message: string) => ({
   version: 2,
 })
 
-const createMediaBlock = (mediaId: number, description: string) => ({
+const createMediaBlock = (mediaId: number) => ({
   type: "block",
   fields: {
     blockType: "mediaBlock",
     media: mediaId,
-    description,
   },
   format: "",
   version: 2,
@@ -116,13 +115,7 @@ export const createNarrationDemoArticle = async (
       ),
 
       ...(heroMediaId
-        ? [
-            createHeadingNode("Visual Archives", "h2"),
-            createMediaBlock(
-              heroMediaId,
-              "Archival imagery representing 1960s space flight technology.",
-            ),
-          ]
+        ? [createHeadingNode("Visual Archives", "h2"), createMediaBlock(heroMediaId)]
         : []),
 
       createHeadingNode("Audio Processing Sample", "h2"),

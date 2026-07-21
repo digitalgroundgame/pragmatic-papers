@@ -12,7 +12,7 @@ describe("extractNarrationText", () => {
     expect(text).toContain("Sample Article Title")
     expect(text).toContain("By Jane Doe, John Smith")
     expect(text).toContain("Published on July 20, 2026")
-    expect(text).toContain('<break time="1.5s" />')
+    expect(text).not.toContain("<break")
   })
 
   it("handles author string array fallback when populatedAuthors is absent", () => {
@@ -160,6 +160,38 @@ describe("extractNarrationText", () => {
     expect(text).toContain("To view this Code, please refer to the article.")
   })
 
+  it("extracts banner content text when description is missing", () => {
+    const text = extractNarrationText({
+      title: "Banner Test",
+      content: {
+        root: {
+          type: "root",
+          children: [
+            {
+              type: "block",
+              fields: {
+                blockType: "banner",
+                content: {
+                  root: {
+                    type: "root",
+                    children: [
+                      {
+                        type: "paragraph",
+                        children: [{ type: "text", text: "Important announcement text." }],
+                      },
+                    ],
+                  },
+                },
+              },
+            },
+          ],
+        },
+      },
+    })
+
+    expect(text).toContain("Important announcement text.")
+  })
+
   it("reuses media alt text or caption as description for mediaBlock", () => {
     const textWithAlt = extractNarrationText({
       title: "Media Alt Test",
@@ -216,7 +248,67 @@ describe("extractNarrationText", () => {
     expect(textWithCaption).toContain("Caption plain text description.")
   })
 
-  it("uses snapshot title for socialEmbed when description is missing", () => {
+  it("extracts alt text for mediaCollage blocks", () => {
+    const text = extractNarrationText({
+      title: "Collage Test",
+      content: {
+        root: {
+          type: "root",
+          children: [
+            {
+              type: "block",
+              fields: {
+                blockType: "mediaCollage",
+                images: [
+                  { media: { alt: "First collage image" } },
+                  { media: { alt: "Second collage image" } },
+                ],
+              },
+            },
+          ],
+        },
+      },
+    })
+
+    expect(text).toContain("First collage image\nSecond collage image")
+  })
+
+  it("resolves unpopulated media IDs via mediaMap for mediaBlock and mediaCollage", () => {
+    const text = extractNarrationText({
+      title: "MediaMap Lookup Test",
+      content: {
+        root: {
+          type: "root",
+          children: [
+            {
+              type: "block",
+              fields: {
+                blockType: "mediaBlock",
+                media: 42,
+              },
+            },
+            {
+              type: "block",
+              fields: {
+                blockType: "mediaCollage",
+                images: [{ media: 101 }, { media: "abc" }],
+              },
+            },
+          ],
+        },
+      },
+      mediaMap: {
+        42: { alt: "Single image from mediaMap" },
+        101: { alt: "Collage image 1 from mediaMap" },
+        abc: { alt: "Collage image 2 from mediaMap" },
+      },
+    })
+
+    expect(text).toContain("Single image from mediaMap")
+    expect(text).toContain("Collage image 1 from mediaMap\nCollage image 2 from mediaMap")
+  })
+
+  it("falls back to generic message for socialEmbed when description is missing", () => {
     const text = extractNarrationText({
       title: "Social Embed Test",
       content: {
@@ -237,7 +329,8 @@ describe("extractNarrationText", () => {
       },
     })
 
-    expect(text).toContain("Post about technological breakthroughs")
+    expect(text).toContain("To view this Social Embed, please refer to the article.")
+    expect(text).not.toContain("Post about technological breakthroughs")
   })
 
   it("omits visual rules like horizontalrule and squiggleRule", () => {
@@ -282,8 +375,6 @@ describe("extractNarrationText", () => {
       },
     })
 
-    expect(text).toContain(
-      'Section Heading\n<break time="1.0s" />\n\nParagraph text under section.',
-    )
+    expect(text).toContain("Section Heading\n\nParagraph text under section.")
   })
 })

@@ -75,12 +75,171 @@ function setStoredNarration(key: string, entry: NarrationCacheEntry): void {
   }
 }
 
+function renderFormattedNarration(text: string): React.ReactNode {
+  const paragraphs = text.split("\n\n")
+
+  return (
+    <div
+      aria-label="Formatted narration preview"
+      style={{
+        padding: "1rem",
+        borderRadius: "6px",
+        border: "1px solid var(--theme-elevation-200, #333333)",
+        backgroundColor: "var(--theme-elevation-50, #121212)",
+        lineHeight: "1.6",
+        display: "flex",
+        flexDirection: "column",
+        gap: "1rem",
+        fontSize: "0.95rem",
+      }}
+    >
+      {paragraphs.map((p, idx) => {
+        const lines = p.split("\n")
+        return (
+          <div key={idx} style={{ display: "flex", flexDirection: "column", gap: "0.25rem" }}>
+            {lines.map((line, lineIdx) => {
+              const trimmed = line.trim()
+              if (!trimmed) return null
+
+              if (trimmed.startsWith("<break time=")) {
+                return (
+                  <div key={lineIdx} style={{ margin: "0.25rem 0" }}>
+                    <span
+                      style={{
+                        display: "inline-block",
+                        padding: "2px 8px",
+                        borderRadius: "4px",
+                        backgroundColor: "rgba(236, 201, 75, 0.15)",
+                        border: "1px solid rgba(236, 201, 75, 0.4)",
+                        color: "#ecc94b",
+                        fontSize: "0.75rem",
+                        fontFamily: "monospace",
+                        fontWeight: 600,
+                      }}
+                    >
+                      {trimmed}
+                    </span>
+                  </div>
+                )
+              }
+
+              return (
+                <p key={lineIdx} style={{ margin: 0 }}>
+                  {line}
+                </p>
+              )
+            })}
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+function collectMediaIdsFromContent(content: unknown): Array<string | number> {
+  const ids = new Set<string | number>()
+
+  function traverse(node: unknown): void {
+    if (!node || typeof node !== "object") return
+    const obj = node as Record<string, unknown>
+
+    if (obj.type === "block" && obj.fields && typeof obj.fields === "object") {
+      const fields = obj.fields as Record<string, unknown>
+      const blockType = fields.blockType as string | undefined
+
+      if (blockType === "mediaBlock" && fields.media) {
+        const m = fields.media
+        if (typeof m === "number" || typeof m === "string") {
+          ids.add(m)
+        } else if (typeof m === "object" && m !== null) {
+          const mediaObj = m as Record<string, unknown>
+          if (typeof mediaObj.id === "number" || typeof mediaObj.id === "string") {
+            if (!mediaObj.alt && !mediaObj.caption) {
+              ids.add(mediaObj.id as string | number)
+            }
+          } else if (
+            "value" in mediaObj &&
+            (typeof mediaObj.value === "number" || typeof mediaObj.value === "string")
+          ) {
+            ids.add(mediaObj.value as string | number)
+          }
+        }
+      } else if (blockType === "mediaCollage" && Array.isArray(fields.images)) {
+        for (const img of fields.images as Record<string, unknown>[]) {
+          if (img && typeof img === "object" && img.media) {
+            const m = img.media
+            if (typeof m === "number" || typeof m === "string") {
+              ids.add(m)
+            } else if (typeof m === "object" && m !== null) {
+              const mediaObj = m as Record<string, unknown>
+              if (typeof mediaObj.id === "number" || typeof mediaObj.id === "string") {
+                if (!mediaObj.alt && !mediaObj.caption) {
+                  ids.add(mediaObj.id as string | number)
+                }
+              } else if (
+                "value" in mediaObj &&
+                (typeof mediaObj.value === "number" || typeof mediaObj.value === "string")
+              ) {
+                ids.add(mediaObj.value as string | number)
+              }
+            }
+          }
+        }
+      }
+    }
+
+    if (Array.isArray(obj.children)) {
+      for (const child of obj.children) {
+        traverse(child)
+      }
+    }
+    if (obj.root && typeof obj.root === "object") {
+      traverse(obj.root)
+    }
+  }
+
+  traverse(content)
+  return Array.from(ids)
+}
+
+async function fetchMediaMap(
+  mediaIds: Array<string | number>,
+): Promise<Record<string | number, { alt?: string | null; caption?: unknown }>> {
+  if (mediaIds.length === 0) return {}
+
+  const map: Record<string | number, { alt?: string | null; caption?: unknown }> = {}
+  try {
+    const params = mediaIds
+      .map((id, idx) => `where[id][in][${idx}]=${encodeURIComponent(String(id))}`)
+      .join("&")
+    const res = await fetch(`/api/media?${params}&depth=1&limit=${mediaIds.length}`)
+    if (res.ok) {
+      const data = await res.json()
+      if (Array.isArray(data?.docs)) {
+        for (const doc of data.docs) {
+          if (doc && (typeof doc.id === "number" || typeof doc.id === "string")) {
+            map[doc.id] = {
+              alt: typeof doc.alt === "string" ? doc.alt : null,
+              caption: doc.caption,
+            }
+          }
+        }
+      }
+    }
+  } catch (err) {
+    console.error("Failed to fetch media documents for narration extraction:", err)
+  }
+  return map
+}
+
 export function ExtractNarrationButton(): React.ReactNode {
   const isMounted = useIsMounted()
   const docInfo = useDocumentInfo()
   const docId = docInfo?.id
   const cacheKey = getNarrationCacheKey(docId)
 
+  const [viewMode, setViewMode] = useState<"formatted" | "edit">("formatted")
+  const [isGenerating, setIsGenerating] = useState(false)
   const [editableText, setEditableText] = useState(() => {
     const cached = getStoredNarration(cacheKey)
     return cached ? cached.text : ""
@@ -98,19 +257,31 @@ export function ExtractNarrationButton(): React.ReactNode {
     content: fields.content?.value as Record<string, unknown> | undefined,
   }))
 
-  const handleGenerate = (): void => {
-    const text = extractNarrationText({
-      title,
-      authors,
-      populatedAuthors,
-      publishedAt,
-      content,
-    })
-    const isRegenerating = hasGenerated
-    setEditableText(text)
-    setHasGenerated(true)
-    setStoredNarration(cacheKey, { text, hasGenerated: true })
-    toast.success(isRegenerating ? "Narration text regenerated!" : "Narration text generated!")
+  const handleGenerate = async (): Promise<void> => {
+    setIsGenerating(true)
+    try {
+      const mediaIds = collectMediaIdsFromContent(content)
+      const mediaMap = await fetchMediaMap(mediaIds)
+      const text = extractNarrationText({
+        title,
+        authors,
+        populatedAuthors,
+        publishedAt,
+        content,
+        mediaMap,
+      })
+      const isRegenerating = hasGenerated
+      setEditableText(text)
+      setHasGenerated(true)
+      setStoredNarration(cacheKey, { text, hasGenerated: true })
+      toast.success(isRegenerating ? "Narration text regenerated!" : "Narration text generated!")
+    } catch (err) {
+      toast.error(
+        `Failed to generate narration text: ${err instanceof Error ? err.message : "Unknown error"}`,
+      )
+    } finally {
+      setIsGenerating(false)
+    }
   }
 
   const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>): void => {
@@ -157,8 +328,26 @@ export function ExtractNarrationButton(): React.ReactNode {
           </p>
         </div>
         <div style={{ display: "flex", gap: "0.5rem" }}>
-          <Button buttonStyle="secondary" onClick={handleGenerate} type="button">
-            {hasGenerated ? "Regenerate Text" : "Generate Narration Text"}
+          {hasGenerated && (
+            <Button
+              buttonStyle="subtle"
+              onClick={() => setViewMode(viewMode === "formatted" ? "edit" : "formatted")}
+              type="button"
+            >
+              {viewMode === "formatted" ? "Edit Text" : "Formatted View"}
+            </Button>
+          )}
+          <Button
+            buttonStyle="secondary"
+            disabled={isGenerating}
+            onClick={handleGenerate}
+            type="button"
+          >
+            {isGenerating
+              ? "Generating..."
+              : hasGenerated
+                ? "Regenerate Text"
+                : "Generate Narration Text"}
           </Button>
           {hasGenerated && (
             <Button buttonStyle="primary" onClick={handleCopy} type="button">
@@ -168,26 +357,29 @@ export function ExtractNarrationButton(): React.ReactNode {
         </div>
       </div>
 
-      {hasGenerated && (
-        <textarea
-          aria-label="Editable narration plain text"
-          value={editableText}
-          onChange={handleTextChange}
-          rows={20}
-          style={{
-            width: "100%",
-            fontFamily: "monospace",
-            fontSize: "0.9rem",
-            padding: "1rem",
-            borderRadius: "6px",
-            border: "1px solid var(--theme-elevation-200, #333333)",
-            backgroundColor: "var(--theme-elevation-50, #121212)",
-            color: "inherit",
-            resize: "vertical",
-            boxSizing: "border-box",
-          }}
-        />
-      )}
+      {hasGenerated &&
+        (viewMode === "formatted" ? (
+          renderFormattedNarration(editableText)
+        ) : (
+          <textarea
+            aria-label="Editable narration plain text"
+            value={editableText}
+            onChange={handleTextChange}
+            rows={20}
+            style={{
+              width: "100%",
+              fontFamily: "monospace",
+              fontSize: "0.9rem",
+              padding: "1rem",
+              borderRadius: "6px",
+              border: "1px solid var(--theme-elevation-200, #333333)",
+              backgroundColor: "var(--theme-elevation-50, #121212)",
+              color: "inherit",
+              resize: "vertical",
+              boxSizing: "border-box",
+            }}
+          />
+        ))}
     </div>
   )
 }

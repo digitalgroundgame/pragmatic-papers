@@ -3,12 +3,15 @@ import type {
   SerializedLexicalNode,
 } from "@payloadcms/richtext-lexical/lexical"
 
+export type MediaMap = Record<string | number, { alt?: string | null; caption?: unknown }>
+
 export interface ExtractNarrationTextOptions {
   title?: string | null
   authors?: Array<{ name?: string | null } | string | number> | null
   populatedAuthors?: Array<{ name?: string | null }> | null
   publishedAt?: string | Date | null
   content?: SerializedEditorState | Record<string, unknown> | null
+  mediaMap?: MediaMap | null
 }
 
 const BLOCK_TYPE_NAMES: Record<string, string> = {
@@ -25,7 +28,6 @@ const BLOCK_TYPE_NAMES: Record<string, string> = {
   youtubeEmbed: "YouTube Embed",
   redditEmbed: "Reddit Embed",
   blueSkyEmbed: "Bluesky Embed",
-  blueskyEmbed: "Bluesky Embed",
   tiktokEmbed: "TikTok Embed",
 }
 
@@ -39,16 +41,57 @@ function formatBlockContent(text: string): string {
   return trimmed ? `${trimmed}\n\n` : ""
 }
 
+function resolveMediaInfo(
+  mediaVal: unknown,
+  mediaMap?: MediaMap | null,
+): { alt?: string | null; caption?: unknown } | null {
+  if (!mediaVal) return null
+
+  let mediaId: string | number | null = null
+  let mediaObj: Record<string, unknown> | null = null
+
+  if (typeof mediaVal === "number" || typeof mediaVal === "string") {
+    mediaId = mediaVal
+  } else if (typeof mediaVal === "object" && mediaVal !== null) {
+    const obj = mediaVal as Record<string, unknown>
+    if (typeof obj.alt === "string" || obj.caption) {
+      mediaObj = obj
+    } else if ("value" in obj && typeof obj.value === "object" && obj.value !== null) {
+      mediaObj = obj.value as Record<string, unknown>
+    } else if ("value" in obj && (typeof obj.value === "number" || typeof obj.value === "string")) {
+      mediaId = obj.value as string | number
+    } else if ("id" in obj && (typeof obj.id === "number" || typeof obj.id === "string")) {
+      mediaId = obj.id as string | number
+    }
+  }
+
+  if (mediaObj) {
+    return {
+      alt: typeof mediaObj.alt === "string" ? mediaObj.alt : null,
+      caption: mediaObj.caption,
+    }
+  }
+
+  if (mediaId !== null && mediaMap && mediaMap[mediaId]) {
+    return mediaMap[mediaId] ?? null
+  }
+
+  return null
+}
+
 /**
   Recursively extract plain text from a Lexical node structure or editor state.
  */
-function extractLexicalNodeText(node: SerializedLexicalNode | Record<string, unknown>): string {
+function extractLexicalNodeText(
+  node: SerializedLexicalNode | Record<string, unknown>,
+  mediaMap?: MediaMap | null,
+): string {
   if (!node || typeof node !== "object") return ""
 
   const nodeObj = node as Record<string, unknown>
 
   if (nodeObj.root && typeof nodeObj.root === "object") {
-    return extractLexicalNodeText(nodeObj.root as SerializedLexicalNode)
+    return extractLexicalNodeText(nodeObj.root as SerializedLexicalNode, mediaMap)
   }
 
   const type = nodeObj.type as string | undefined
@@ -68,13 +111,6 @@ function extractLexicalNodeText(node: SerializedLexicalNode | Record<string, unk
       return ""
     }
 
-    if (blockType === "inlineMathBlock") {
-      if (typeof fields.description === "string" && fields.description.trim()) {
-        return fields.description.trim()
-      }
-      return getFallbackTextForBlock("inlineMathBlock")
-    }
-
     if (typeof fields.description === "string" && fields.description.trim()) {
       return fields.description.trim()
     }
@@ -92,26 +128,55 @@ function extractLexicalNodeText(node: SerializedLexicalNode | Record<string, unk
     const blockType = fields.blockType as string | undefined
 
     let blockText = ""
-    if (typeof fields.description === "string" && fields.description.trim()) {
+    if (blockType === "mediaBlock" && fields.media) {
+      const mediaInfo = resolveMediaInfo(fields.media, mediaMap)
+      if (mediaInfo) {
+        if (typeof mediaInfo.alt === "string" && mediaInfo.alt.trim()) {
+          blockText = mediaInfo.alt.trim()
+        } else if (mediaInfo.caption && typeof mediaInfo.caption === "object") {
+          const captionText = extractLexicalNodeText(
+            mediaInfo.caption as SerializedLexicalNode,
+            mediaMap,
+          ).trim()
+          if (captionText) {
+            blockText = captionText
+          }
+        }
+      }
+    } else if (blockType === "mediaCollage" && Array.isArray(fields.images)) {
+      const collageTexts: string[] = []
+      for (const img of fields.images as Record<string, unknown>[]) {
+        if (img && typeof img === "object" && img.media) {
+          const mediaInfo = resolveMediaInfo(img.media, mediaMap)
+          if (mediaInfo) {
+            if (typeof mediaInfo.alt === "string" && mediaInfo.alt.trim()) {
+              collageTexts.push(mediaInfo.alt.trim())
+            } else if (mediaInfo.caption && typeof mediaInfo.caption === "object") {
+              const captionText = extractLexicalNodeText(
+                mediaInfo.caption as SerializedLexicalNode,
+                mediaMap,
+              ).trim()
+              if (captionText) {
+                collageTexts.push(captionText)
+              }
+            }
+          }
+        }
+      }
+      if (collageTexts.length > 0) {
+        blockText = collageTexts.join("\n")
+      }
+    }
+
+    if (!blockText && typeof fields.description === "string" && fields.description.trim()) {
       blockText = fields.description.trim()
-    } else if (blockType === "banner" && fields.content && typeof fields.content === "object") {
-      blockText = extractLexicalNodeText(fields.content as SerializedLexicalNode).trim()
-    } else if (blockType === "mediaBlock" && fields.media && typeof fields.media === "object") {
-      const mediaObj = fields.media as Record<string, unknown>
-      if (typeof mediaObj.alt === "string" && mediaObj.alt.trim()) {
-        blockText = mediaObj.alt.trim()
-      } else if (mediaObj.caption && typeof mediaObj.caption === "object") {
-        blockText = extractLexicalNodeText(mediaObj.caption as SerializedLexicalNode).trim()
-      }
     } else if (
-      blockType === "socialEmbed" &&
-      fields.snapshot &&
-      typeof fields.snapshot === "object"
+      !blockText &&
+      blockType === "banner" &&
+      fields.content &&
+      typeof fields.content === "object"
     ) {
-      const snap = fields.snapshot as Record<string, unknown>
-      if (typeof snap.title === "string" && snap.title.trim()) {
-        blockText = snap.title.trim()
-      }
+      blockText = extractLexicalNodeText(fields.content as SerializedLexicalNode, mediaMap).trim()
     }
 
     if (!blockText && blockType) {
@@ -125,7 +190,7 @@ function extractLexicalNodeText(node: SerializedLexicalNode | Record<string, unk
   let childrenText = ""
   if (Array.isArray(nodeObj.children)) {
     childrenText = (nodeObj.children as Record<string, unknown>[])
-      .map((child) => extractLexicalNodeText(child))
+      .map((child) => extractLexicalNodeText(child, mediaMap))
       .join("")
   } else if (typeof nodeObj.text === "string") {
     childrenText = nodeObj.text
@@ -139,7 +204,7 @@ function extractLexicalNodeText(node: SerializedLexicalNode | Record<string, unk
 
   if (type === "heading") {
     const trimmed = childrenText.trim()
-    return trimmed ? `${trimmed}\n<break time="1.0s" />\n\n` : ""
+    return trimmed ? `${trimmed}\n\n` : ""
   }
 
   if (type === "listitem") {
@@ -152,15 +217,11 @@ function extractLexicalNodeText(node: SerializedLexicalNode | Record<string, unk
     return trimmed ? `${trimmed}\n\n` : ""
   }
 
-  if (type === "root") {
-    return childrenText
-  }
-
   return childrenText
 }
 
 export function extractNarrationText(options: ExtractNarrationTextOptions): string {
-  const { title, authors, populatedAuthors, publishedAt, content } = options
+  const { title, authors, populatedAuthors, publishedAt, content, mediaMap } = options
   const parts: string[] = []
 
   // 1. Title
@@ -213,13 +274,13 @@ export function extractNarrationText(options: ExtractNarrationTextOptions): stri
 
   let byline = parts.join("\n")
   if (byline) {
-    byline += '\n<break time="1.5s" />\n\n'
+    byline += "\n\n"
   }
 
   // 4. Content body
   let bodyText = ""
   if (content && typeof content === "object") {
-    bodyText = extractLexicalNodeText(content as Record<string, unknown>)
+    bodyText = extractLexicalNodeText(content as Record<string, unknown>, mediaMap)
   }
 
   const fullText = `${byline}${bodyText}`.replace(/\n{3,}/g, "\n\n").trim()

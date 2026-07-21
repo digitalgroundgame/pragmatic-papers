@@ -82,7 +82,7 @@ describe("ExtractNarrationButton", () => {
     fireEvent.click(editBtn)
 
     const textarea = screen.getByRole("textbox", {
-      name: /editable narration plain text/i,
+      name: /editable narration script/i,
     }) as HTMLTextAreaElement
     expect(textarea).toBeDefined()
     expect(textarea.value).toContain("Sample Article Title")
@@ -105,9 +105,7 @@ describe("ExtractNarrationButton", () => {
     fireEvent.click(copyBtn)
 
     await waitFor(() => {
-      expect(navigator.clipboard.writeText).toHaveBeenCalledWith(
-        'Sample Article Title\n<break time="1.5s" />',
-      )
+      expect(navigator.clipboard.writeText).toHaveBeenCalledWith("Sample Article Title")
       expect(mockToastSuccess).toHaveBeenCalledWith("Narration text copied to clipboard!")
     })
   })
@@ -126,7 +124,7 @@ describe("ExtractNarrationButton", () => {
     fireEvent.click(editBtn)
 
     const textarea = screen.getByRole("textbox", {
-      name: /editable narration plain text/i,
+      name: /editable narration script/i,
     }) as HTMLTextAreaElement
     fireEvent.change(textarea, { target: { value: "Custom edited narration text!" } })
 
@@ -140,7 +138,7 @@ describe("ExtractNarrationButton", () => {
     fireEvent.click(editBtnRemounted)
 
     const remountedTextarea = (await screen.findByRole("textbox", {
-      name: /editable narration plain text/i,
+      name: /editable narration script/i,
     })) as HTMLTextAreaElement
 
     expect(remountedTextarea.value).toBe("Custom edited narration text!")
@@ -163,7 +161,7 @@ describe("ExtractNarrationButton", () => {
     fireEvent.click(editBtn)
 
     const textarea = screen.getByRole("textbox", {
-      name: /editable narration plain text/i,
+      name: /editable narration script/i,
     }) as HTMLTextAreaElement
     fireEvent.change(textarea, { target: { value: "Edited before regenerate" } })
 
@@ -178,7 +176,7 @@ describe("ExtractNarrationButton", () => {
     })
 
     const regeneratedTextarea = screen.getByRole("textbox", {
-      name: /editable narration plain text/i,
+      name: /editable narration script/i,
     }) as HTMLTextAreaElement
     expect(regeneratedTextarea.value).toContain("Updated Title")
     expect(regeneratedTextarea.value).not.toContain("Edited before regenerate")

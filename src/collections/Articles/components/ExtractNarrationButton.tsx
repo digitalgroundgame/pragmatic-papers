@@ -321,9 +321,9 @@ export function ExtractNarrationButton(): React.ReactNode {
         }}
       >
         <div>
-          <h3 style={{ margin: "0 0 0.25rem 0", fontSize: "1.1rem" }}>Narration Plain Text</h3>
+          <h3 style={{ margin: "0 0 0.25rem 0", fontSize: "1.1rem" }}>Narration Script</h3>
           <p style={{ margin: 0, fontSize: "0.85rem", opacity: 0.8 }}>
-            Extract narration-ready plain text for ElevenLabs AI voice-over. Edits persist while
+            Extract narration-ready script for ElevenLabs AI voice-over. Edits persist while
             navigating tabs in this document window.
           </p>
         </div>
@@ -362,7 +362,7 @@ export function ExtractNarrationButton(): React.ReactNode {
           renderFormattedNarration(editableText)
         ) : (
           <textarea
-            aria-label="Editable narration plain text"
+            aria-label="Editable narration script"
             value={editableText}
             onChange={handleTextChange}
             rows={20}

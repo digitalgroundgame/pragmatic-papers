@@ -26,19 +26,26 @@ export async function SocialEmbedBlock(props: SocialEmbedRenderProps): Promise<R
     })
   }
 
+  let embedContent: React.ReactNode
+
   switch (props.platform) {
     case "bluesky":
-      return <BlueskyEmbedBlock {...props} snapshot={snapshot} />
+      embedContent = <BlueskyEmbedBlock {...props} snapshot={snapshot} />
+      break
     case "reddit":
-      return <RedditEmbedBlock {...props} snapshot={snapshot} />
+      embedContent = <RedditEmbedBlock {...props} snapshot={snapshot} />
+      break
     case "tiktok":
-      return <TikTokEmbedBlock {...props} snapshot={snapshot} />
+      embedContent = <TikTokEmbedBlock {...props} snapshot={snapshot} />
+      break
     case "twitter":
-      return <TwitterEmbedBlock {...props} snapshot={snapshot} />
+      embedContent = <TwitterEmbedBlock {...props} snapshot={snapshot} />
+      break
     case "youtube":
-      return <YouTubeEmbedBlock {...props} snapshot={snapshot} />
+      embedContent = <YouTubeEmbedBlock {...props} snapshot={snapshot} />
+      break
     default:
-      return (
+      embedContent = (
         <EmbedError
           url={props.url}
           message="Social Media platform is not supported."
@@ -46,4 +53,15 @@ export async function SocialEmbedBlock(props: SocialEmbedRenderProps): Promise<R
         />
       )
   }
+
+  if (!embedContent) return null
+
+  return (
+    <div
+      role={props.description ? "region" : undefined}
+      aria-label={props.description ?? undefined}
+    >
+      {embedContent}
+    </div>
+  )
 }

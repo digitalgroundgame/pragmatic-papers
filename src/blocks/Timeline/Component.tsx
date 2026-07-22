@@ -12,6 +12,11 @@ export const TimelineBlock: React.FC<TimelineBlockComponentProps> = ({
   events,
   title,
   className,
+  description,
 }) => {
-  return <Timeline events={events ?? []} title={title} className={className} />
+  return (
+    <div role={description ? "region" : undefined} aria-label={description ?? undefined}>
+      <Timeline events={events ?? []} title={title} className={className} />
+    </div>
+  )
 }

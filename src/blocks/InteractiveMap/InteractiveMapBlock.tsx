@@ -29,6 +29,7 @@ export const InteractiveMapBlock: React.FC<Props> = ({
   colorBias,
   maps,
   sources,
+  description,
 }) => {
   const resolvedMaps: ResolvedMap[] = maps
     .map((m): ResolvedMap | null => {
@@ -53,6 +54,7 @@ export const InteractiveMapBlock: React.FC<Props> = ({
   return (
     <figure
       data-interactive-map-block
+      aria-label={description ?? undefined}
       className={cn("not-prose my-8 flex flex-col gap-2", className)}
     >
       {widgetTitle && (

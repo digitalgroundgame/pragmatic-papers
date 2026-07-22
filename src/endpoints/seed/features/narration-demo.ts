@@ -11,12 +11,11 @@ import {
   createTextNode,
 } from "../richtext"
 
-const createBannerBlock = (description: string, message: string) => ({
+const createBannerBlock = (message: string) => ({
   type: "block",
   fields: {
     blockType: "banner",
     style: "info" as const,
-    description,
     content: {
       root: {
         type: "root",
@@ -109,10 +108,7 @@ export const createNarrationDemoArticle = async (
 
       createQuoteNode(transcript),
 
-      createBannerBlock(
-        "Editorial notice: This historical speech transcript was delivered live to the United States Congress.",
-        "Notice: Historical audio recording included below.",
-      ),
+      createBannerBlock("Notice: Historical audio recording included below."),
 
       ...(heroMediaId
         ? [createHeadingNode("Visual Archives", "h2"), createMediaBlock(heroMediaId)]

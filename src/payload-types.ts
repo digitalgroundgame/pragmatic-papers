@@ -2406,7 +2406,6 @@ export interface TaskSchedulePublish {
  * via the `definition` "BannerBlock".
  */
 export interface BannerBlock {
-  description?: string | null;
   style: 'info' | 'warning' | 'error' | 'success';
   content: {
     root: {

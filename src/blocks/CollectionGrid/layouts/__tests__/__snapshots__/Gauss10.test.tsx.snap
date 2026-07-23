@@ -1,0 +1,88 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`Gauss10Layout > matches snapshot with all 10 slots 1`] = `
+<section
+  class="grid grid-cols-1 gap-6 text-ellipsis md:grid-cols-5"
+>
+  <div
+    class="order-2 flex min-w-0 flex-col gap-6 md:order-none"
+  >
+    <div
+      data-testid="tile-a"
+      data-variant="medium"
+    >
+      a
+    </div>
+    <div
+      data-testid="tile-b"
+      data-variant="medium"
+    >
+      b
+    </div>
+    <div
+      data-image-position="none"
+      data-testid="tile-c"
+    >
+      c
+    </div>
+  </div>
+  <div
+    class="order-1 flex flex-col gap-6 md:order-none md:col-span-3"
+  >
+    <div
+      data-image-position="above"
+      data-testid="tile-featured"
+      data-variant="medium"
+    >
+      featured
+    </div>
+    <div
+      class="flex flex-1 flex-col gap-6 md:flex-row"
+    >
+      <div
+        data-image-position="above"
+        data-testid="tile-g"
+        data-variant="medium"
+      >
+        g
+      </div>
+      <div
+        data-image-position="above"
+        data-testid="tile-h"
+        data-variant="medium"
+      >
+        h
+      </div>
+      <div
+        data-image-position="above"
+        data-testid="tile-i"
+        data-variant="medium"
+      >
+        i
+      </div>
+    </div>
+  </div>
+  <div
+    class="order-3 flex min-w-0 flex-col gap-6 md:order-none"
+  >
+    <div
+      data-testid="tile-d"
+      data-variant="medium"
+    >
+      d
+    </div>
+    <div
+      data-testid="tile-e"
+      data-variant="medium"
+    >
+      e
+    </div>
+    <div
+      data-image-position="none"
+      data-testid="tile-f"
+    >
+      f
+    </div>
+  </div>
+</section>
+`;

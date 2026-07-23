@@ -55,7 +55,7 @@ export const Gauss10Layout: React.FC<LayoutProps> = ({
       {...props}
     >
       {/* Slots A, B, C — left column */}
-      <div className="flex min-w-0 flex-col gap-6">
+      <div className="order-2 flex min-w-0 flex-col gap-6 md:order-none">
         <CollectionTile
           tile={a!}
           loading={loading}
@@ -71,7 +71,7 @@ export const Gauss10Layout: React.FC<LayoutProps> = ({
         <CollectionTile tile={c!} imagePosition="none" />
       </div>
 
-      <div className="flex flex-col gap-6 md:col-span-3">
+      <div className="order-1 flex flex-col gap-6 md:order-none md:col-span-3">
         {/* Featured — spans 3 cols, image above */}
         <CollectionTile
           className="flex-3"
@@ -112,7 +112,7 @@ export const Gauss10Layout: React.FC<LayoutProps> = ({
       </div>
 
       {/* Slots D, E, F — right column */}
-      <div className="flex min-w-0 flex-col gap-6">
+      <div className="order-3 flex min-w-0 flex-col gap-6 md:order-none">
         <CollectionTile
           tile={d!}
           loading={loading}

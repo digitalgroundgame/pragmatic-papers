@@ -17,11 +17,17 @@ export interface ExtractNarrationTextOptions {
 const BLOCK_TYPE_NAMES: Record<string, string> = {
   banner: "Banner",
   code: "Code",
+  cta: "Call to Action",
+  collectionGrid: "Collection Grid",
+  content: "Content",
+  contributors: "Contributors",
+  formBlock: "Form",
   interactiveMap: "Interactive Map",
   mediaBlock: "Media Block",
   mediaCollage: "Media Collage",
   displayMathBlock: "Display Math Block",
   inlineMathBlock: "Inline Math Block",
+  newsletterSignup: "Newsletter Signup",
   socialEmbed: "Social Embed",
   timeline: "Timeline",
   twitterEmbed: "Twitter Embed",
@@ -29,6 +35,7 @@ const BLOCK_TYPE_NAMES: Record<string, string> = {
   redditEmbed: "Reddit Embed",
   blueSkyEmbed: "Bluesky Embed",
   tiktokEmbed: "TikTok Embed",
+  volumeView: "Volume View",
 }
 
 function getFallbackTextForBlock(blockType: string): string {
@@ -52,11 +59,16 @@ function resolveMediaInfo(
 
   if (typeof mediaVal === "number" || typeof mediaVal === "string") {
     mediaId = mediaVal
-  } else if (typeof mediaVal === "object" && mediaVal !== null) {
+  } else if (typeof mediaVal === "object" && mediaVal !== null && !Array.isArray(mediaVal)) {
     const obj = mediaVal as Record<string, unknown>
     if (typeof obj.alt === "string" || obj.caption) {
       mediaObj = obj
-    } else if ("value" in obj && typeof obj.value === "object" && obj.value !== null) {
+    } else if (
+      "value" in obj &&
+      typeof obj.value === "object" &&
+      obj.value !== null &&
+      !Array.isArray(obj.value)
+    ) {
       mediaObj = obj.value as Record<string, unknown>
     } else if ("value" in obj && (typeof obj.value === "number" || typeof obj.value === "string")) {
       mediaId = obj.value as string | number
@@ -101,6 +113,11 @@ function extractLexicalNodeText(
     return ""
   }
 
+  // Handle soft linebreaks
+  if (type === "linebreak") {
+    return "\n"
+  }
+
   // Handle inline blocks (e.g. footnotes, inline math)
   if (type === "inlineBlock") {
     const fields = (nodeObj.fields as Record<string, unknown> | undefined) ?? {}
@@ -115,10 +132,8 @@ function extractLexicalNodeText(
       return fields.description.trim()
     }
 
-    if (blockType) {
-      return getFallbackTextForBlock(blockType)
-    }
-
+    // For inline blocks without custom descriptions, return an empty string to prevent
+    // visual fallback sentences (e.g., "To view this...") from disrupting paragraph flow.
     return ""
   }
 
@@ -131,16 +146,18 @@ function extractLexicalNodeText(
     if (blockType === "mediaBlock" && fields.media) {
       const mediaInfo = resolveMediaInfo(fields.media, mediaMap)
       if (mediaInfo) {
-        if (typeof mediaInfo.alt === "string" && mediaInfo.alt.trim()) {
-          blockText = mediaInfo.alt.trim()
-        } else if (mediaInfo.caption && typeof mediaInfo.caption === "object") {
-          const captionText = extractLexicalNodeText(
+        let extractedCaption = ""
+        if (mediaInfo.caption && typeof mediaInfo.caption === "object") {
+          extractedCaption = extractLexicalNodeText(
             mediaInfo.caption as SerializedLexicalNode,
             mediaMap,
           ).trim()
-          if (captionText) {
-            blockText = captionText
-          }
+        }
+
+        if (extractedCaption) {
+          blockText = extractedCaption
+        } else if (typeof mediaInfo.alt === "string" && mediaInfo.alt.trim()) {
+          blockText = mediaInfo.alt.trim()
         }
       }
     } else if (blockType === "mediaCollage" && Array.isArray(fields.images)) {
@@ -149,16 +166,18 @@ function extractLexicalNodeText(
         if (img && typeof img === "object" && img.media) {
           const mediaInfo = resolveMediaInfo(img.media, mediaMap)
           if (mediaInfo) {
-            if (typeof mediaInfo.alt === "string" && mediaInfo.alt.trim()) {
-              collageTexts.push(mediaInfo.alt.trim())
-            } else if (mediaInfo.caption && typeof mediaInfo.caption === "object") {
-              const captionText = extractLexicalNodeText(
+            let extractedCaption = ""
+            if (mediaInfo.caption && typeof mediaInfo.caption === "object") {
+              extractedCaption = extractLexicalNodeText(
                 mediaInfo.caption as SerializedLexicalNode,
                 mediaMap,
               ).trim()
-              if (captionText) {
-                collageTexts.push(captionText)
-              }
+            }
+
+            if (extractedCaption) {
+              collageTexts.push(extractedCaption)
+            } else if (typeof mediaInfo.alt === "string" && mediaInfo.alt.trim()) {
+              collageTexts.push(mediaInfo.alt.trim())
             }
           }
         }
@@ -168,15 +187,12 @@ function extractLexicalNodeText(
       }
     }
 
-    if (!blockText && typeof fields.description === "string" && fields.description.trim()) {
-      blockText = fields.description.trim()
-    } else if (
-      !blockText &&
-      blockType === "banner" &&
-      fields.content &&
-      typeof fields.content === "object"
-    ) {
-      blockText = extractLexicalNodeText(fields.content as SerializedLexicalNode, mediaMap).trim()
+    if (!blockText) {
+      if (typeof fields.description === "string" && fields.description.trim()) {
+        blockText = fields.description.trim()
+      } else if (blockType === "banner" && fields.content && typeof fields.content === "object") {
+        blockText = extractLexicalNodeText(fields.content as SerializedLexicalNode, mediaMap).trim()
+      }
     }
 
     if (!blockText && blockType) {
@@ -215,6 +231,16 @@ function extractLexicalNodeText(
   if (type === "list") {
     const trimmed = childrenText.trim()
     return trimmed ? `${trimmed}\n\n` : ""
+  }
+
+  if (type === "tablecell") {
+    const trimmed = childrenText.trim()
+    return trimmed ? `${trimmed} ` : ""
+  }
+
+  if (type === "tablerow") {
+    const trimmed = childrenText.trim()
+    return trimmed ? `${trimmed}\n` : ""
   }
 
   return childrenText

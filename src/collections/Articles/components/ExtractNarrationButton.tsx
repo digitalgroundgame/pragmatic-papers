@@ -208,24 +208,35 @@ async function fetchMediaMap(
   if (mediaIds.length === 0) return {}
 
   const map: Record<string | number, { alt?: string | null; caption?: unknown }> = {}
+  const CHUNK_SIZE = 25
+  const chunks: Array<Array<string | number>> = []
+
+  for (let i = 0; i < mediaIds.length; i += CHUNK_SIZE) {
+    chunks.push(mediaIds.slice(i, i + CHUNK_SIZE))
+  }
+
   try {
-    const params = mediaIds
-      .map((id, idx) => `where[id][in][${idx}]=${encodeURIComponent(String(id))}`)
-      .join("&")
-    const res = await fetch(`/api/media?${params}&depth=1&limit=${mediaIds.length}`)
-    if (res.ok) {
-      const data = await res.json()
-      if (Array.isArray(data?.docs)) {
-        for (const doc of data.docs) {
-          if (doc && (typeof doc.id === "number" || typeof doc.id === "string")) {
-            map[doc.id] = {
-              alt: typeof doc.alt === "string" ? doc.alt : null,
-              caption: doc.caption,
+    await Promise.all(
+      chunks.map(async (chunk) => {
+        const params = chunk
+          .map((id, idx) => `where[id][in][${idx}]=${encodeURIComponent(String(id))}`)
+          .join("&")
+        const res = await fetch(`/api/media?${params}&depth=1&limit=${chunk.length}`)
+        if (res.ok) {
+          const data = await res.json()
+          if (Array.isArray(data?.docs)) {
+            for (const doc of data.docs) {
+              if (doc && (typeof doc.id === "number" || typeof doc.id === "string")) {
+                map[doc.id] = {
+                  alt: typeof doc.alt === "string" ? doc.alt : null,
+                  caption: doc.caption,
+                }
+              }
             }
           }
         }
-      }
-    }
+      }),
+    )
   } catch (err) {
     console.error("Failed to fetch media documents for narration extraction:", err)
   }
@@ -249,13 +260,16 @@ export function ExtractNarrationButton(): React.ReactNode {
     return cached ? cached.hasGenerated : false
   })
 
-  const { title, authors, populatedAuthors, publishedAt, content } = useFormFields(([fields]) => ({
-    title: fields.title?.value as string | undefined,
-    authors: fields.authors?.value as Array<Record<string, unknown> | string | number> | undefined,
-    populatedAuthors: fields.populatedAuthors?.value as Array<{ name?: string }> | undefined,
-    publishedAt: fields.publishedAt?.value as string | Date | undefined,
-    content: fields.content?.value as Record<string, unknown> | undefined,
-  }))
+  const { title, authors, populatedAuthors, publishedAt, content } = useFormFields(([fields]) => {
+    const f = fields || {}
+    return {
+      title: f.title?.value as string | undefined,
+      authors: f.authors?.value as Array<Record<string, unknown> | string | number> | undefined,
+      populatedAuthors: f.populatedAuthors?.value as Array<{ name?: string }> | undefined,
+      publishedAt: f.publishedAt?.value as string | Date | undefined,
+      content: f.content?.value as Record<string, unknown> | undefined,
+    }
+  })
 
   const handleGenerate = async (): Promise<void> => {
     setIsGenerating(true)

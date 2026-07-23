@@ -27,16 +27,23 @@ export const MathBlock: React.FC<MathBlockProps> = (props) => {
   )
 
   if (isInline) {
+    if (description) {
+      return (
+        <span aria-label={description}>
+          <span aria-hidden="true">{content}</span>
+        </span>
+      )
+    }
+    return content
+  }
+
+  if (description) {
     return (
-      <span role="text" aria-label={description ?? undefined}>
-        <span aria-hidden={description ? "true" : undefined}>{content}</span>
-      </span>
+      <div role="region" aria-label={description}>
+        <div aria-hidden="true">{content}</div>
+      </div>
     )
   }
 
-  return (
-    <div role="region" aria-label={description ?? undefined}>
-      <div aria-hidden={description ? "true" : undefined}>{content}</div>
-    </div>
-  )
+  return content
 }

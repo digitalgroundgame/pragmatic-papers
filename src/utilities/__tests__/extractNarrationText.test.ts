@@ -377,4 +377,109 @@ describe("extractNarrationText", () => {
 
     expect(text).toContain("Section Heading\n\nParagraph text under section.")
   })
+
+  it("prioritizes caption over alt text when both are present", () => {
+    const text = extractNarrationText({
+      title: "Precedence Test",
+      content: {
+        root: {
+          type: "root",
+          children: [
+            {
+              type: "block",
+              fields: {
+                blockType: "mediaBlock",
+                media: {
+                  alt: "Alternate image description",
+                  caption: {
+                    root: {
+                      type: "root",
+                      children: [
+                        {
+                          type: "paragraph",
+                          children: [{ type: "text", text: "Narrated caption description" }],
+                        },
+                      ],
+                    },
+                  },
+                },
+              },
+            },
+          ],
+        },
+      },
+    })
+
+    expect(text).toContain("Narrated caption description")
+    expect(text).not.toContain("Alternate image description")
+  })
+
+  it("handles soft linebreaks (linebreak nodes) correctly", () => {
+    const text = extractNarrationText({
+      title: "Soft Linebreak Test",
+      content: {
+        root: {
+          type: "root",
+          children: [
+            {
+              type: "paragraph",
+              children: [
+                { type: "text", text: "First line" },
+                { type: "linebreak" },
+                { type: "text", text: "Second line" },
+              ],
+            },
+          ],
+        },
+      },
+    })
+
+    expect(text).toContain("First line\nSecond line")
+  })
+
+  it("extracts text from tables with cell spacing and row newlines", () => {
+    const text = extractNarrationText({
+      title: "Table Test",
+      content: {
+        root: {
+          type: "root",
+          children: [
+            {
+              type: "table",
+              children: [
+                {
+                  type: "tablerow",
+                  children: [
+                    {
+                      type: "tablecell",
+                      children: [{ type: "text", text: "Cell A1" }],
+                    },
+                    {
+                      type: "tablecell",
+                      children: [{ type: "text", text: "Cell A2" }],
+                    },
+                  ],
+                },
+                {
+                  type: "tablerow",
+                  children: [
+                    {
+                      type: "tablecell",
+                      children: [{ type: "text", text: "Cell B1" }],
+                    },
+                    {
+                      type: "tablecell",
+                      children: [{ type: "text", text: "Cell B2" }],
+                    },
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+      },
+    })
+
+    expect(text).toContain("Cell A1 Cell A2\nCell B1 Cell B2")
+  })
 })

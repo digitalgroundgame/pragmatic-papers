@@ -258,3 +258,35 @@
 .list-item-checkbox > label {
   @apply w-full;
 }
+
+/*
+  Marquee for the feed byline (and any future overflowing label). The
+  component sets the `--feed-marquee-shift` (px) and
+  `--feed-marquee-duration` (s) inline based on a runtime overflow
+  measurement; the keyframe alternates so the text slides left, pauses,
+  and slides back.
+*/
+@keyframes feed-marquee {
+  0%,
+  10% {
+    transform: translateX(0);
+  }
+  45%,
+  55% {
+    transform: translateX(calc(var(--feed-marquee-shift, 0px) * -1));
+  }
+  90%,
+  100% {
+    transform: translateX(0);
+  }
+}
+
+.feed-marquee {
+  animation: feed-marquee var(--feed-marquee-duration, 10s) ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .feed-marquee {
+    animation: none;
+  }
+}

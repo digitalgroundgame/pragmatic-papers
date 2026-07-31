@@ -543,4 +543,202 @@ describe("extractNarrationText", () => {
 
     expect(text).toContain("Cell A1 Cell A2\nCell B1 Cell B2")
   })
+
+  it("covers missing branches in getFallbackPlaceholder", () => {
+    const text = extractNarrationText({
+      content: {
+        root: {
+          type: "root",
+          children: [
+            {
+              type: "block",
+              fields: {
+                blockType: "timeline",
+                title: "WWII Timeline",
+              },
+            },
+            {
+              type: "block",
+              fields: {
+                blockType: "displayMathBlock",
+                math: "f(x) = x^2",
+              },
+            },
+            {
+              type: "block",
+              fields: {
+                blockType: "interactiveMap",
+                slug: 12345, // test fallback to numeric key
+              },
+            },
+          ],
+        },
+      },
+    })
+
+    expect(text).toContain("<< TIMELINE: WWII Timeline >>")
+    expect(text).toContain("<< DISPLAY MATH BLOCK: f(x) = x^2 >>")
+    expect(text).toContain("<< INTERACTIVE MAP: 12345 >>")
+  })
+
+  it("covers complex resolveMediaInfo formats", () => {
+    const text = extractNarrationText({
+      content: {
+        root: {
+          type: "root",
+          children: [
+            {
+              type: "block",
+              fields: {
+                blockType: "mediaBlock",
+                media: {
+                  value: {
+                    id: 999,
+                    alt: "quantum spin alt text",
+                  },
+                },
+              },
+            },
+            {
+              type: "block",
+              fields: {
+                blockType: "mediaBlock",
+                media: {
+                  value: 888, // wraps ID
+                },
+              },
+            },
+            {
+              type: "block",
+              fields: {
+                blockType: "mediaBlock",
+                media: {
+                  id: 777, // simple object with id
+                },
+              },
+            },
+            {
+              type: "block",
+              fields: {
+                blockType: "mediaBlock",
+                media: {}, // empty object, should fallback to empty string representation
+              },
+            },
+          ],
+        },
+      },
+      mediaMap: {
+        888: { alt: "Media from value ID lookup" },
+        777: { alt: "Media from direct ID lookup" },
+      },
+    })
+
+    expect(text).toContain("quantum spin alt text")
+    expect(text).toContain("Media from value ID lookup")
+    expect(text).toContain("Media from direct ID lookup")
+    expect(text).toContain("<< MEDIA BLOCK >>")
+  })
+
+  it("covers unknown/unsupported inlineBlock types", () => {
+    const text = extractNarrationText({
+      content: {
+        root: {
+          type: "root",
+          children: [
+            {
+              type: "paragraph",
+              children: [
+                { type: "text", text: "Text before unknown inline block " },
+                {
+                  type: "inlineBlock",
+                  fields: {
+                    blockType: "unsupportedBlockType",
+                  },
+                },
+                { type: "text", text: "and text after." },
+              ],
+            },
+          ],
+        },
+      },
+    })
+
+    expect(text).toContain("Text before unknown inline block and text after.")
+  })
+
+  it("covers non-string author objects in extractNarrationText options", () => {
+    const text = extractNarrationText({
+      title: "Author Object Test",
+      authors: [{ name: "John Object-Author" }, "Jane String-Author"],
+    })
+
+    expect(text).toContain("By John Object-Author, Jane String-Author")
+  })
+
+  it("extracts caption object text from mediaCollage image", () => {
+    const text = extractNarrationText({
+      content: {
+        root: {
+          type: "root",
+          children: [
+            {
+              type: "block",
+              fields: {
+                blockType: "mediaCollage",
+                images: [
+                  {
+                    media: {
+                      caption: {
+                        root: {
+                          type: "root",
+                          children: [
+                            {
+                              type: "paragraph",
+                              children: [{ type: "text", text: "Collage Image Caption" }],
+                            },
+                          ],
+                        },
+                      },
+                    },
+                  },
+                ],
+              },
+            },
+          ],
+        },
+      },
+    })
+
+    expect(text).toContain("Collage Image Caption")
+  })
+
+  it("falls back to media details when resolveMediaInfo returns null in mediaCollage", () => {
+    const text = extractNarrationText({
+      content: {
+        root: {
+          type: "root",
+          children: [
+            {
+              type: "block",
+              fields: {
+                blockType: "mediaCollage",
+                images: [
+                  {
+                    media: [], // resolveMediaInfo returns null
+                  },
+                  {
+                    media: {
+                      value: {}, // resolveMediaInfo returns null
+                    },
+                  },
+                ],
+              },
+            },
+          ],
+        },
+      },
+    })
+
+    expect(text).toContain("<< MEDIA BLOCK >>")
+  })
 })

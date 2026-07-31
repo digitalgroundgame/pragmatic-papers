@@ -1,5 +1,5 @@
-import { MathJax } from "better-react-mathjax/esm"
 import React from "react"
+import { MathJax } from "better-react-mathjax/esm"
 
 export interface MathBlockProps {
   math: string

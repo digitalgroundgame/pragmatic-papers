@@ -24,13 +24,6 @@ const inMemoryNarrationCache = new Map<string, NarrationCacheEntry>()
 
 export function resetNarrationCache(): void {
   inMemoryNarrationCache.clear()
-  if (typeof window !== "undefined" && window.sessionStorage) {
-    try {
-      window.sessionStorage.clear()
-    } catch {
-      // ignore errors
-    }
-  }
 }
 
 function getNarrationCacheKey(id?: string | number): string {
@@ -41,38 +34,6 @@ function getNarrationCacheKey(id?: string | number): string {
     return `narration_text_path_${window.location.pathname}`
   }
   return "narration_text_default"
-}
-
-function getStoredNarration(key: string): NarrationCacheEntry | null {
-  if (inMemoryNarrationCache.has(key)) {
-    return inMemoryNarrationCache.get(key)!
-  }
-  if (typeof window !== "undefined" && window.sessionStorage) {
-    try {
-      const stored = window.sessionStorage.getItem(key)
-      if (stored) {
-        const parsed = JSON.parse(stored) as NarrationCacheEntry
-        if (typeof parsed.text === "string" && typeof parsed.hasGenerated === "boolean") {
-          inMemoryNarrationCache.set(key, parsed)
-          return parsed
-        }
-      }
-    } catch {
-      // ignore parse or storage errors
-    }
-  }
-  return null
-}
-
-function setStoredNarration(key: string, entry: NarrationCacheEntry): void {
-  inMemoryNarrationCache.set(key, entry)
-  if (typeof window !== "undefined" && window.sessionStorage) {
-    try {
-      window.sessionStorage.setItem(key, JSON.stringify(entry))
-    } catch {
-      // ignore storage errors
-    }
-  }
 }
 
 function renderFormattedNarration(text: string): React.ReactNode {
@@ -258,12 +219,10 @@ export function ExtractNarrationButton(): React.ReactNode {
   const [viewMode, setViewMode] = useState<"formatted" | "edit">("formatted")
   const [isGenerating, setIsGenerating] = useState(false)
   const [editableText, setEditableText] = useState(() => {
-    const cached = getStoredNarration(cacheKey)
-    return cached ? cached.text : ""
+    return inMemoryNarrationCache.get(cacheKey)?.text ?? ""
   })
   const [hasGenerated, setHasGenerated] = useState(() => {
-    const cached = getStoredNarration(cacheKey)
-    return cached ? cached.hasGenerated : false
+    return inMemoryNarrationCache.get(cacheKey)?.hasGenerated ?? false
   })
 
   const { title, authors, populatedAuthors, publishedAt, content } = useFormFields(([fields]) => {
@@ -293,7 +252,7 @@ export function ExtractNarrationButton(): React.ReactNode {
       const isRegenerating = hasGenerated
       setEditableText(text)
       setHasGenerated(true)
-      setStoredNarration(cacheKey, { text, hasGenerated: true })
+      inMemoryNarrationCache.set(cacheKey, { text, hasGenerated: true })
       toast.success(isRegenerating ? "Narration text regenerated!" : "Narration text generated!")
     } catch (err) {
       toast.error(
@@ -307,7 +266,7 @@ export function ExtractNarrationButton(): React.ReactNode {
   const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>): void => {
     const text = e.target.value
     setEditableText(text)
-    setStoredNarration(cacheKey, { text, hasGenerated: true })
+    inMemoryNarrationCache.set(cacheKey, { text, hasGenerated: true })
   }
 
   const handleCopy = async (): Promise<void> => {
@@ -344,7 +303,7 @@ export function ExtractNarrationButton(): React.ReactNode {
           <h3 style={{ margin: "0 0 0.25rem 0", fontSize: "1.1rem" }}>Narration Script</h3>
           <p style={{ margin: 0, fontSize: "0.85rem", opacity: 0.8 }}>
             Extract narration-ready script for ElevenLabs AI voice-over. Edits persist while
-            navigating tabs in this document window.
+            navigating tabs, but will be reset if the page is reloaded.
           </p>
         </div>
         <div style={{ display: "flex", gap: "0.5rem" }}>

@@ -1,4 +1,3 @@
-import { blockDescriptionField } from "@/fields/blockDescription"
 import { derivePlatform } from "@/blocks/SocialEmbed/hooks/derivePlatform"
 import { fetchSnapshot } from "@/blocks/SocialEmbed/hooks/fetchSnapshot"
 import { validatePlatform } from "@/blocks/SocialEmbed/hooks/validatePlatform"
@@ -12,7 +11,6 @@ export const SocialEmbed: Block = {
     plural: "Social Embeds",
   },
   fields: [
-    blockDescriptionField(),
     {
       name: "url",
       type: "text",

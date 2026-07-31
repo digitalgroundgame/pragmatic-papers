@@ -842,7 +842,6 @@ export interface NewsletterSignupBlock {
  * via the `definition` "TimelineBlock".
  */
 export interface TimelineBlock {
-  description?: string | null;
   title?: string | null;
   events: TimelineEvents;
   id?: string | null;
@@ -1613,7 +1612,6 @@ export interface NewsletterSignupBlockSelect<T extends boolean = true> {
  * via the `definition` "TimelineBlock_select".
  */
 export interface TimelineBlockSelect<T extends boolean = true> {
-  description?: T;
   title?: T;
   events?: T | TimelineEventsSelect<T>;
   id?: T;
@@ -2431,7 +2429,6 @@ export interface BannerBlock {
  * via the `definition` "CodeBlock".
  */
 export interface CodeBlock {
-  description?: string | null;
   language?: ('typescript' | 'javascript' | 'css') | null;
   code: string;
   id?: string | null;
@@ -2443,7 +2440,6 @@ export interface CodeBlock {
  * via the `definition` "InteractiveMapBlock".
  */
 export interface InteractiveMapBlock {
-  description?: string | null;
   /**
    * Optional heading displayed above the map(s).
    */
@@ -2523,7 +2519,6 @@ export interface MediaCollageBlock {
  * via the `definition` "DisplayMathBlock".
  */
 export interface DisplayMathBlock {
-  description?: string | null;
   /**
    * Enter a LaTeX math expression.
    */
@@ -2563,7 +2558,6 @@ export interface SocialEmbedSnapshot {
  * via the `definition` "SocialEmbedBlock".
  */
 export interface SocialEmbedBlock {
-  description?: string | null;
   /**
    * Paste a Twitter/X, YouTube, Reddit, BlueSky, or TikTok URL.
    */
@@ -2581,7 +2575,6 @@ export interface SocialEmbedBlock {
  * via the `definition` "InlineMathBlock".
  */
 export interface InlineMathBlock {
-  description?: string | null;
   /**
    * Enter a LaTeX math expression.
    */

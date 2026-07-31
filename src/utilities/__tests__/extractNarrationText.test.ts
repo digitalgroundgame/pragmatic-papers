@@ -110,9 +110,9 @@ describe("extractNarrationText", () => {
     expect(text).not.toContain("footnote citation")
   })
 
-  it("uses custom block description field with clean block spacing", () => {
+  it("generates uppercase placeholder with details for block types", () => {
     const text = extractNarrationText({
-      title: "Block Description Test",
+      title: "Block Placeholder Test",
       content: {
         root: {
           type: "root",
@@ -121,7 +121,7 @@ describe("extractNarrationText", () => {
               type: "block",
               fields: {
                 blockType: "interactiveMap",
-                description: "A map showing voting shifts across districts.",
+                widgetTitle: "Voting shifts map",
               },
             },
           ],
@@ -129,10 +129,10 @@ describe("extractNarrationText", () => {
       },
     })
 
-    expect(text).toContain("A map showing voting shifts across districts.")
+    expect(text).toContain("<< INTERACTIVE MAP: Voting shifts map >>")
   })
 
-  it("falls back to legacy message for custom blocks without description", () => {
+  it("falls back to uppercase placeholders for custom blocks without detail", () => {
     const text = extractNarrationText({
       title: "Fallback Test",
       content: {
@@ -156,8 +156,8 @@ describe("extractNarrationText", () => {
       },
     })
 
-    expect(text).toContain("To view this Interactive Map, please refer to the article.")
-    expect(text).toContain("To view this Code, please refer to the article.")
+    expect(text).toContain("<< INTERACTIVE MAP >>")
+    expect(text).toContain("<< CODE >>")
   })
 
   it("extracts banner content text when description is missing", () => {
@@ -308,6 +308,67 @@ describe("extractNarrationText", () => {
     expect(text).toContain("Collage image 1 from mediaMap\nCollage image 2 from mediaMap")
   })
 
+  it("generates clear all-caps placeholders with filename or ID for media blocks missing alt/caption", () => {
+    const text = extractNarrationText({
+      title: "Missing Media Alt Test",
+      content: {
+        root: {
+          type: "root",
+          children: [
+            {
+              type: "block",
+              fields: {
+                blockType: "mediaBlock",
+                media: 99,
+              },
+            },
+            {
+              type: "block",
+              fields: {
+                blockType: "mediaCollage",
+                images: [{ media: 102 }, { media: "xyz" }],
+              },
+            },
+          ],
+        },
+      },
+      mediaMap: {
+        99: { filename: "quantum_superposition.png" },
+        102: { filename: "collage1.jpg" },
+        xyz: {}, // no filename or alt
+      },
+    })
+
+    expect(text).toContain("<< MEDIA BLOCK: quantum_superposition.png >>")
+    expect(text).toContain("<< MEDIA BLOCK: collage1.jpg >>\n<< MEDIA BLOCK: ID: xyz >>")
+  })
+
+  it("formats inline math block placeholders in double angle brackets", () => {
+    const text = extractNarrationText({
+      content: {
+        root: {
+          type: "root",
+          children: [
+            {
+              type: "paragraph",
+              children: [
+                { type: "text", text: "Theory of relativity: " },
+                {
+                  type: "inlineBlock",
+                  fields: {
+                    blockType: "inlineMathBlock",
+                    math: "E=mc^2",
+                  },
+                },
+              ],
+            },
+          ],
+        },
+      },
+    })
+    expect(text).toContain("Theory of relativity: << INLINE MATH BLOCK: E=mc^2 >>")
+  })
+
   it("falls back to generic message for socialEmbed when description is missing", () => {
     const text = extractNarrationText({
       title: "Social Embed Test",
@@ -329,7 +390,7 @@ describe("extractNarrationText", () => {
       },
     })
 
-    expect(text).toContain("To view this Social Embed, please refer to the article.")
+    expect(text).toContain("<< SOCIAL EMBED >>")
     expect(text).not.toContain("Post about technological breakthroughs")
   })
 

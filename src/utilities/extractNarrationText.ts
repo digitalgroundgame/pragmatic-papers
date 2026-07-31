@@ -3,7 +3,10 @@ import type {
   SerializedLexicalNode,
 } from "@payloadcms/richtext-lexical/lexical"
 
-export type MediaMap = Record<string | number, { alt?: string | null; caption?: unknown }>
+export type MediaMap = Record<
+  string | number,
+  { alt?: string | null; caption?: unknown; filename?: string | null }
+>
 
 export interface ExtractNarrationTextOptions {
   title?: string | null
@@ -38,9 +41,40 @@ const BLOCK_TYPE_NAMES: Record<string, string> = {
   volumeView: "Volume View",
 }
 
-function getFallbackTextForBlock(blockType: string): string {
-  const name = BLOCK_TYPE_NAMES[blockType] || blockType
-  return `To view this ${name}, please refer to the article.`
+function getFallbackPlaceholder(blockType: string, fields: Record<string, unknown>): string {
+  const name = (BLOCK_TYPE_NAMES[blockType] || blockType).toUpperCase()
+
+  let detail = ""
+  if (blockType === "code") {
+    detail = typeof fields.language === "string" ? fields.language : ""
+  } else if (blockType === "interactiveMap") {
+    detail = typeof fields.widgetTitle === "string" ? fields.widgetTitle : ""
+  } else if (blockType === "timeline") {
+    detail = typeof fields.title === "string" ? fields.title : ""
+  } else if (blockType === "inlineMathBlock" || blockType === "displayMathBlock") {
+    detail = typeof fields.math === "string" ? fields.math : ""
+  } else if (blockType.endsWith("Embed") || blockType === "socialEmbed") {
+    const parts: string[] = []
+    if (typeof fields.platform === "string") parts.push(fields.platform)
+    if (typeof fields.url === "string") parts.push(fields.url)
+    detail = parts.join(": ")
+  }
+
+  if (!detail) {
+    const potentialKeys = ["title", "name", "slug", "label", "id"]
+    for (const key of potentialKeys) {
+      if (typeof fields[key] === "string" && fields[key]) {
+        detail = fields[key] as string
+        break
+      }
+      if (typeof fields[key] === "number") {
+        detail = String(fields[key])
+        break
+      }
+    }
+  }
+
+  return detail ? `<< ${name}: ${detail} >>` : `<< ${name} >>`
 }
 
 function formatBlockContent(text: string): string {
@@ -51,7 +85,12 @@ function formatBlockContent(text: string): string {
 function resolveMediaInfo(
   mediaVal: unknown,
   mediaMap?: MediaMap | null,
-): { alt?: string | null; caption?: unknown } | null {
+): {
+  alt?: string | null
+  caption?: unknown
+  filename?: string | null
+  id?: string | number | null
+} | null {
   if (!mediaVal) return null
 
   let mediaId: string | number | null = null
@@ -61,7 +100,7 @@ function resolveMediaInfo(
     mediaId = mediaVal
   } else if (typeof mediaVal === "object" && mediaVal !== null && !Array.isArray(mediaVal)) {
     const obj = mediaVal as Record<string, unknown>
-    if (typeof obj.alt === "string" || obj.caption) {
+    if (typeof obj.alt === "string" || obj.caption || typeof obj.filename === "string") {
       mediaObj = obj
     } else if (
       "value" in obj &&
@@ -81,14 +120,24 @@ function resolveMediaInfo(
     return {
       alt: typeof mediaObj.alt === "string" ? mediaObj.alt : null,
       caption: mediaObj.caption,
+      filename: typeof mediaObj.filename === "string" ? mediaObj.filename : null,
+      id: typeof mediaObj.id === "number" || typeof mediaObj.id === "string" ? mediaObj.id : null,
     }
   }
 
-  if (mediaId !== null && mediaMap && mediaMap[mediaId]) {
-    return mediaMap[mediaId] ?? null
+  if (mediaId !== null && mediaMap) {
+    const mapped = mediaMap[mediaId]
+    if (mapped) {
+      return {
+        alt: mapped.alt,
+        caption: mapped.caption,
+        filename: mapped.filename,
+        id: mediaId,
+      }
+    }
   }
 
-  return null
+  return mediaId !== null ? { id: mediaId } : null
 }
 
 /**
@@ -128,12 +177,11 @@ function extractLexicalNodeText(
       return ""
     }
 
-    if (typeof fields.description === "string" && fields.description.trim()) {
-      return fields.description.trim()
+    if (blockType === "inlineMathBlock") {
+      const math = typeof fields.math === "string" ? fields.math : ""
+      return math ? `<< INLINE MATH BLOCK: ${math} >>` : "<< INLINE MATH BLOCK >>"
     }
 
-    // For inline blocks without custom descriptions, return an empty string to prevent
-    // visual fallback sentences (e.g., "To view this...") from disrupting paragraph flow.
     return ""
   }
 
@@ -158,7 +206,19 @@ function extractLexicalNodeText(
           blockText = extractedCaption
         } else if (typeof mediaInfo.alt === "string" && mediaInfo.alt.trim()) {
           blockText = mediaInfo.alt.trim()
+        } else {
+          const detail = mediaInfo.filename || (mediaInfo.id ? `ID: ${mediaInfo.id}` : "")
+          blockText = detail ? `<< MEDIA BLOCK: ${detail} >>` : "<< MEDIA BLOCK >>"
         }
+      } else {
+        let mediaDetail = ""
+        if (typeof fields.media === "string" || typeof fields.media === "number") {
+          mediaDetail = `ID: ${fields.media}`
+        } else if (typeof fields.media === "object" && fields.media !== null) {
+          const mediaObj = fields.media as Record<string, unknown>
+          mediaDetail = (mediaObj.filename as string) || (mediaObj.id ? `ID: ${mediaObj.id}` : "")
+        }
+        blockText = mediaDetail ? `<< MEDIA BLOCK: ${mediaDetail} >>` : "<< MEDIA BLOCK >>"
       }
     } else if (blockType === "mediaCollage" && Array.isArray(fields.images)) {
       const collageTexts: string[] = []
@@ -178,7 +238,19 @@ function extractLexicalNodeText(
               collageTexts.push(extractedCaption)
             } else if (typeof mediaInfo.alt === "string" && mediaInfo.alt.trim()) {
               collageTexts.push(mediaInfo.alt.trim())
+            } else {
+              const detail = mediaInfo.filename || (mediaInfo.id ? `ID: ${mediaInfo.id}` : "")
+              collageTexts.push(detail ? `<< MEDIA BLOCK: ${detail} >>` : "<< MEDIA BLOCK >>")
             }
+          } else {
+            let imgDetail = ""
+            if (typeof img.media === "string" || typeof img.media === "number") {
+              imgDetail = `ID: ${img.media}`
+            } else if (typeof img.media === "object" && img.media !== null) {
+              const mediaObj = img.media as Record<string, unknown>
+              imgDetail = (mediaObj.filename as string) || (mediaObj.id ? `ID: ${mediaObj.id}` : "")
+            }
+            collageTexts.push(imgDetail ? `<< MEDIA BLOCK: ${imgDetail} >>` : "<< MEDIA BLOCK >>")
           }
         }
       }
@@ -188,15 +260,13 @@ function extractLexicalNodeText(
     }
 
     if (!blockText) {
-      if (typeof fields.description === "string" && fields.description.trim()) {
-        blockText = fields.description.trim()
-      } else if (blockType === "banner" && fields.content && typeof fields.content === "object") {
+      if (blockType === "banner" && fields.content && typeof fields.content === "object") {
         blockText = extractLexicalNodeText(fields.content as SerializedLexicalNode, mediaMap).trim()
       }
     }
 
     if (!blockText && blockType) {
-      blockText = getFallbackTextForBlock(blockType)
+      blockText = getFallbackPlaceholder(blockType, fields)
     }
 
     return formatBlockContent(blockText)

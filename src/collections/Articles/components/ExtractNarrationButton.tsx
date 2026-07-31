@@ -204,10 +204,15 @@ function collectMediaIdsFromContent(content: unknown): Array<string | number> {
 
 async function fetchMediaMap(
   mediaIds: Array<string | number>,
-): Promise<Record<string | number, { alt?: string | null; caption?: unknown }>> {
+): Promise<
+  Record<string | number, { alt?: string | null; caption?: unknown; filename?: string | null }>
+> {
   if (mediaIds.length === 0) return {}
 
-  const map: Record<string | number, { alt?: string | null; caption?: unknown }> = {}
+  const map: Record<
+    string | number,
+    { alt?: string | null; caption?: unknown; filename?: string | null }
+  > = {}
   const CHUNK_SIZE = 25
   const chunks: Array<Array<string | number>> = []
 
@@ -230,6 +235,7 @@ async function fetchMediaMap(
                 map[doc.id] = {
                   alt: typeof doc.alt === "string" ? doc.alt : null,
                   caption: doc.caption,
+                  filename: typeof doc.filename === "string" ? doc.filename : null,
                 }
               }
             }

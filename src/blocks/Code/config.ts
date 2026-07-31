@@ -1,12 +1,9 @@
 import type { Block } from "payload"
 
-import { blockDescriptionField } from "@/fields/blockDescription"
-
 export const Code: Block = {
   slug: "code",
   interfaceName: "CodeBlock",
   fields: [
-    blockDescriptionField(),
     {
       name: "language",
       type: "select",

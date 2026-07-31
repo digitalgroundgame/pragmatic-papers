@@ -8,13 +8,9 @@ type Props = CodeBlockType & {
   className?: string
 }
 
-export const CodeBlock: React.FC<Props> = ({ className, code, language, description }) => {
+export const CodeBlock: React.FC<Props> = ({ className, code, language }) => {
   return (
-    <div
-      className={cn("not-prose", className)}
-      role={description ? "region" : undefined}
-      aria-label={description ?? undefined}
-    >
+    <div className={cn("not-prose", className)}>
       <Code code={code} language={language ?? "typescript"} />
     </div>
   )

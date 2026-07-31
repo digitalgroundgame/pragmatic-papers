@@ -1,6 +1,5 @@
 import type { Block } from "payload"
 
-import { blockDescriptionField } from "@/fields/blockDescription"
 import { link } from "@/fields/link2"
 
 export const Timeline: Block = {
@@ -9,7 +8,6 @@ export const Timeline: Block = {
   interfaceName: "TimelineBlock",
   labels: { plural: "Timelines", singular: "Timeline" },
   fields: [
-    blockDescriptionField(),
     { name: "title", type: "text" },
     {
       name: "events",

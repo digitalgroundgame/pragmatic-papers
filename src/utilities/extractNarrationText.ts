@@ -193,6 +193,7 @@ function extractLexicalNodeText(
     let blockText = ""
     if (blockType === "mediaBlock" && fields.media) {
       const mediaInfo = resolveMediaInfo(fields.media, mediaMap)
+      let detail = ""
       if (mediaInfo) {
         let extractedCaption = ""
         if (mediaInfo.caption && typeof mediaInfo.caption === "object") {
@@ -203,28 +204,27 @@ function extractLexicalNodeText(
         }
 
         if (extractedCaption) {
-          blockText = extractedCaption
+          detail = extractedCaption
         } else if (typeof mediaInfo.alt === "string" && mediaInfo.alt.trim()) {
-          blockText = mediaInfo.alt.trim()
+          detail = mediaInfo.alt.trim()
         } else {
-          const detail = mediaInfo.filename || (mediaInfo.id ? `ID: ${mediaInfo.id}` : "")
-          blockText = detail ? `<< MEDIA BLOCK: ${detail} >>` : "<< MEDIA BLOCK >>"
+          detail = mediaInfo.filename || (mediaInfo.id ? `ID: ${mediaInfo.id}` : "")
         }
       } else {
-        let mediaDetail = ""
         if (typeof fields.media === "string" || typeof fields.media === "number") {
-          mediaDetail = `ID: ${fields.media}`
+          detail = `ID: ${fields.media}`
         } else if (typeof fields.media === "object" && fields.media !== null) {
           const mediaObj = fields.media as Record<string, unknown>
-          mediaDetail = (mediaObj.filename as string) || (mediaObj.id ? `ID: ${mediaObj.id}` : "")
+          detail = (mediaObj.filename as string) || (mediaObj.id ? `ID: ${mediaObj.id}` : "")
         }
-        blockText = mediaDetail ? `<< MEDIA BLOCK: ${mediaDetail} >>` : "<< MEDIA BLOCK >>"
       }
+      blockText = detail ? `<< MEDIA BLOCK: ${detail} >>` : "<< MEDIA BLOCK >>"
     } else if (blockType === "mediaCollage" && Array.isArray(fields.images)) {
       const collageTexts: string[] = []
       for (const img of fields.images as Record<string, unknown>[]) {
         if (img && typeof img === "object" && img.media) {
           const mediaInfo = resolveMediaInfo(img.media, mediaMap)
+          let detail = ""
           if (mediaInfo) {
             let extractedCaption = ""
             if (mediaInfo.caption && typeof mediaInfo.caption === "object") {
@@ -235,34 +235,29 @@ function extractLexicalNodeText(
             }
 
             if (extractedCaption) {
-              collageTexts.push(extractedCaption)
+              detail = extractedCaption
             } else if (typeof mediaInfo.alt === "string" && mediaInfo.alt.trim()) {
-              collageTexts.push(mediaInfo.alt.trim())
+              detail = mediaInfo.alt.trim()
             } else {
-              const detail = mediaInfo.filename || (mediaInfo.id ? `ID: ${mediaInfo.id}` : "")
-              collageTexts.push(detail ? `<< MEDIA BLOCK: ${detail} >>` : "<< MEDIA BLOCK >>")
+              detail = mediaInfo.filename || (mediaInfo.id ? `ID: ${mediaInfo.id}` : "")
             }
           } else {
-            let imgDetail = ""
             if (typeof img.media === "string" || typeof img.media === "number") {
-              imgDetail = `ID: ${img.media}`
+              detail = `ID: ${img.media}`
             } else if (typeof img.media === "object" && img.media !== null) {
               const mediaObj = img.media as Record<string, unknown>
-              imgDetail = (mediaObj.filename as string) || (mediaObj.id ? `ID: ${mediaObj.id}` : "")
+              detail = (mediaObj.filename as string) || (mediaObj.id ? `ID: ${mediaObj.id}` : "")
             }
-            collageTexts.push(imgDetail ? `<< MEDIA BLOCK: ${imgDetail} >>` : "<< MEDIA BLOCK >>")
           }
+          collageTexts.push(detail ? `<< MEDIA BLOCK: ${detail} >>` : "<< MEDIA BLOCK >>")
         }
       }
       if (collageTexts.length > 0) {
         blockText = collageTexts.join("\n")
       }
-    }
-
-    if (!blockText) {
-      if (blockType === "banner" && fields.content && typeof fields.content === "object") {
-        blockText = extractLexicalNodeText(fields.content as SerializedLexicalNode, mediaMap).trim()
-      }
+    } else if (blockType === "banner" && fields.content && typeof fields.content === "object") {
+      const text = extractLexicalNodeText(fields.content as SerializedLexicalNode, mediaMap).trim()
+      blockText = text ? `<< BANNER: ${text} >>` : "<< BANNER >>"
     }
 
     if (!blockText && blockType) {

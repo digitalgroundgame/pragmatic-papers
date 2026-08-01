@@ -189,7 +189,7 @@ describe("extractNarrationText", () => {
       },
     })
 
-    expect(text).toContain("Important announcement text.")
+    expect(text).toContain("<< BANNER: Important announcement text. >>")
   })
 
   it("reuses media alt text or caption as description for mediaBlock", () => {
@@ -213,7 +213,9 @@ describe("extractNarrationText", () => {
       },
     })
 
-    expect(textWithAlt).toContain("A diagram illustrating quantum superposition.")
+    expect(textWithAlt).toContain(
+      "<< MEDIA BLOCK: A diagram illustrating quantum superposition. >>",
+    )
 
     const textWithCaption = extractNarrationText({
       title: "Media Caption Test",
@@ -245,7 +247,7 @@ describe("extractNarrationText", () => {
       },
     })
 
-    expect(textWithCaption).toContain("Caption plain text description.")
+    expect(textWithCaption).toContain("<< MEDIA BLOCK: Caption plain text description. >>")
   })
 
   it("extracts alt text for mediaCollage blocks", () => {
@@ -270,7 +272,9 @@ describe("extractNarrationText", () => {
       },
     })
 
-    expect(text).toContain("First collage image\nSecond collage image")
+    expect(text).toContain(
+      "<< MEDIA BLOCK: First collage image >>\n<< MEDIA BLOCK: Second collage image >>",
+    )
   })
 
   it("resolves unpopulated media IDs via mediaMap for mediaBlock and mediaCollage", () => {
@@ -304,8 +308,10 @@ describe("extractNarrationText", () => {
       },
     })
 
-    expect(text).toContain("Single image from mediaMap")
-    expect(text).toContain("Collage image 1 from mediaMap\nCollage image 2 from mediaMap")
+    expect(text).toContain("<< MEDIA BLOCK: Single image from mediaMap >>")
+    expect(text).toContain(
+      "<< MEDIA BLOCK: Collage image 1 from mediaMap >>\n<< MEDIA BLOCK: Collage image 2 from mediaMap >>",
+    )
   })
 
   it("generates clear all-caps placeholders with filename or ID for media blocks missing alt/caption", () => {
@@ -471,7 +477,7 @@ describe("extractNarrationText", () => {
       },
     })
 
-    expect(text).toContain("Narrated caption description")
+    expect(text).toContain("<< MEDIA BLOCK: Narrated caption description >>")
     expect(text).not.toContain("Alternate image description")
   })
 
@@ -709,7 +715,7 @@ describe("extractNarrationText", () => {
       },
     })
 
-    expect(text).toContain("Collage Image Caption")
+    expect(text).toContain("<< MEDIA BLOCK: Collage Image Caption >>")
   })
 
   it("falls back to media details when resolveMediaInfo returns null in mediaCollage", () => {

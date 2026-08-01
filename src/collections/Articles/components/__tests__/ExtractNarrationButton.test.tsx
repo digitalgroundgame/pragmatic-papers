@@ -338,7 +338,7 @@ describe("ExtractNarrationButton", () => {
     })
 
     const formattedPreview = screen.getByLabelText(/formatted narration preview/i)
-    expect(formattedPreview.textContent).toContain("Traversed Image Alt Text")
+    expect(formattedPreview.textContent).toContain("<< MEDIA BLOCK: Traversed Image Alt Text >>")
 
     vi.unstubAllGlobals()
   })
@@ -460,11 +460,11 @@ describe("ExtractNarrationButton", () => {
     })
 
     const formattedPreview = screen.getByLabelText(/formatted narration preview/i)
-    expect(formattedPreview.textContent).toContain("Alt 1")
-    expect(formattedPreview.textContent).toContain("Alt 2")
-    expect(formattedPreview.textContent).toContain("Alt 3")
-    expect(formattedPreview.textContent).toContain("Alt 4")
-    expect(formattedPreview.textContent).toContain("Alt 5")
+    expect(formattedPreview.textContent).toContain("<< MEDIA BLOCK: Alt 1 >>")
+    expect(formattedPreview.textContent).toContain("<< MEDIA BLOCK: Alt 2 >>")
+    expect(formattedPreview.textContent).toContain("<< MEDIA BLOCK: Alt 3 >>")
+    expect(formattedPreview.textContent).toContain("<< MEDIA BLOCK: Alt 4 >>")
+    expect(formattedPreview.textContent).toContain("<< MEDIA BLOCK: Alt 5 >>")
 
     vi.unstubAllGlobals()
   })

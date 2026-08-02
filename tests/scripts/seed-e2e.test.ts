@@ -56,6 +56,49 @@ describe("seed-e2e main()", () => {
         name: "E2E Writer",
         roles: ["writer"],
         slug: "e2e-writer",
+        socials: [
+          { link: { type: "custom", label: "X", url: "https://x.com/e2ewriter", newTab: true } },
+          {
+            link: {
+              type: "custom",
+              label: "YouTube",
+              url: "https://youtube.com/@e2ewriter",
+              newTab: true,
+            },
+          },
+          {
+            link: {
+              type: "custom",
+              label: "Twitch",
+              url: "https://twitch.tv/e2ewriter",
+              newTab: true,
+            },
+          },
+          {
+            link: {
+              type: "custom",
+              label: "Instagram",
+              url: "https://instagram.com/e2ewriter",
+              newTab: true,
+            },
+          },
+          {
+            link: {
+              type: "custom",
+              label: "Discord",
+              url: "https://discord.gg/e2ewriter",
+              newTab: true,
+            },
+          },
+          {
+            link: {
+              type: "custom",
+              label: "GitHub",
+              url: "https://github.com/e2ewriter",
+              newTab: true,
+            },
+          },
+        ],
       },
       "e2e writer",
       { disableRevalidate: true },

@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it } from "vitest"
 
 import {
   BlueskyIcon,
+  DiscordIcon,
   FacebookIcon,
   GithubIcon,
   InstagramIcon,
@@ -11,6 +12,7 @@ import {
   SubstackIcon,
   ThreadsIcon,
   TiktokIcon,
+  TwitchIcon,
   XIcon,
   YoutubeIcon,
 } from "../icons"
@@ -70,6 +72,16 @@ describe("SocialLinks icons", () => {
 
   it("renders LinkedinIcon", () => {
     const { container } = render(<LinkedinIcon />)
+    expect(container.firstChild).toMatchSnapshot()
+  })
+
+  it("renders TwitchIcon", () => {
+    const { container } = render(<TwitchIcon />)
+    expect(container.firstChild).toMatchSnapshot()
+  })
+
+  it("renders DiscordIcon", () => {
+    const { container } = render(<DiscordIcon />)
     expect(container.firstChild).toMatchSnapshot()
   })
 })

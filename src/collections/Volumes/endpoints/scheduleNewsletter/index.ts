@@ -1,6 +1,6 @@
 import type { Endpoint, PayloadRequest } from "payload"
 
-import { hasRoleOrAdmin } from "@/access/roles"
+import { isEditor } from "@/access/roles"
 import type { Volume } from "@/payload-types"
 import { scheduleVolumeNewsletter } from "./logic"
 
@@ -20,7 +20,7 @@ export const scheduleNewsletterEndpoint: Endpoint = {
   path: "/:id/schedule-newsletter",
   method: "post",
   handler: async (req: PayloadRequest) => {
-    if (!req.user || !hasRoleOrAdmin(req.user, "editor")) {
+    if (!req.user || !isEditor(req.user)) {
       return Response.json({ error: "Unauthorized" }, { status: 401 })
     }
 

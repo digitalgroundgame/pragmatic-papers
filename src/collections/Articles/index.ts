@@ -186,6 +186,32 @@ export const Articles: CollectionConfig = {
             }),
           ],
         },
+        {
+          label: "Narration",
+          fields: [
+            {
+              name: "narration",
+              type: "upload",
+              label: "Audio File",
+              filterOptions: {
+                mimeType: {
+                  contains: "audio",
+                },
+              },
+              relationTo: "media",
+            },
+            {
+              name: "extractNarration",
+              type: "ui",
+              admin: {
+                components: {
+                  Field:
+                    "@/collections/Articles/components/ExtractNarrationButton#ExtractNarrationButton",
+                },
+              },
+            },
+          ],
+        },
       ],
     },
     // END TABS FIELDS
@@ -244,19 +270,6 @@ export const Articles: CollectionConfig = {
       },
       hasMany: true,
       relationTo: "topics",
-    },
-    {
-      name: "narration",
-      type: "upload",
-      admin: {
-        position: "sidebar",
-      },
-      filterOptions: {
-        mimeType: {
-          contains: "audio",
-        },
-      },
-      relationTo: "media",
     },
     {
       name: "createdBy",

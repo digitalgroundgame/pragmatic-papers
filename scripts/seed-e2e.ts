@@ -28,7 +28,13 @@ export async function main(): Promise<void> {
       {
         email: "writer@e2e.test",
         password: "e2e-test-password-123",
-        name: "E2E Writer",
+        name: "Teagan Wordsmith",
+        affiliation: "Senior Research Fellow, Pragmatic Papers Institute",
+        biography: createRichText([
+          createParagraph(
+            "Teagan Wordsmith is a Senior Research Fellow at the Pragmatic Papers Institute, studying how empirical methods shape public policy and translating dense academic research into plain language for a general audience.",
+          ),
+        ]),
         roles: ["writer"],
         slug: "e2e-writer",
         // A full spread of platforms so the author card exercises every

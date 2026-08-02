@@ -9,7 +9,7 @@ const mockPayload = {
   db: { destroy: mockDestroy },
 }
 
-const mockWriter = { id: 1, email: "writer@e2e.test", name: "E2E Writer" }
+const mockWriter = { id: 1, email: "writer@e2e.test", name: "Teagan Wordsmith" }
 const mockArticleId = 42
 const mockMapArticleId = 43
 const mockVolume = { id: 99, title: "E2E Test Volume" }
@@ -53,7 +53,9 @@ describe("seed-e2e main()", () => {
       {
         email: "writer@e2e.test",
         password: "e2e-test-password-123",
-        name: "E2E Writer",
+        name: "Teagan Wordsmith",
+        affiliation: "Senior Research Fellow, Pragmatic Papers Institute",
+        biography: expect.any(Object),
         roles: ["writer"],
         slug: "e2e-writer",
         socials: [

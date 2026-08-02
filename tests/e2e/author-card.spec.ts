@@ -2,13 +2,13 @@ import { expect, test } from "@playwright/test"
 
 import { Screenshot, waitForStableBox, waitForStableRender } from "./helpers"
 
-// The e2e seed (scripts/seed-e2e.ts) gives "E2E Writer" a full spread of social
-// links (X, YouTube, Twitch, Instagram, Discord, GitHub), so the author card on
-// the listing page exercises every branded icon variant.
+// The e2e seed (scripts/seed-e2e.ts) gives "Teagan Wordsmith" a full spread of
+// social links (X, YouTube, Twitch, Instagram, Discord, GitHub), so the author
+// card on the listing page exercises every branded icon variant.
 test("author card renders social media links @visual", async ({ page }, testInfo) => {
   await page.goto("/authors")
 
-  const card = page.locator('[data-slot="card"]').filter({ hasText: "E2E Writer" })
+  const card = page.locator('[data-slot="card"]').filter({ hasText: "Teagan Wordsmith" })
   await expect(card).toBeVisible()
 
   // Functional check (runs on every project, even when screenshots are skipped

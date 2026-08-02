@@ -33,7 +33,7 @@ export async function generateStaticParams(): Promise<{ slug: string | null | un
     where: {
       and: [
         {
-          role: {
+          roles: {
             in: ["writer", "editor", "chief-editor", "narrator"],
           },
         },

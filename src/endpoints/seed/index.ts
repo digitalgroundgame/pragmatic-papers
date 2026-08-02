@@ -341,6 +341,7 @@ export const seed = async (
           ctx.volume1Articles,
           ctx.volume2Articles,
           ctx.featureArticles,
+          ctx.media.map((m) => m.id),
         )
         const homePage = await payload
           .find({ collection: "pages", where: { slug: { equals: "home" } }, limit: 1 })

@@ -5,6 +5,9 @@ import { createOrUpdatePage } from "../pages"
 /**
  * Creates the home page with CollectionGrid blocks and saves it to the `pages` collection.
  *
+ * A full-width ShopifyMerch block ("Store Merch") sits third, after the first
+ * two grids, as an on-site store ad placement.
+ *
  * The page mirrors the exported homepage.json layout:
  *   1. Content block  – "Vespucci Style Article Grid"
  *   2. CollectionGrid    – vespucci-7 layout
@@ -28,13 +31,16 @@ import { createOrUpdatePage } from "../pages"
  * @param volume1ArticleIds - Volume 1 article IDs (6 articles)
  * @param volume2ArticleIds - Volume 2 article IDs (at least 2 needed)
  * @param featureArticleIds - Feature article IDs (index 0 = rich text defaults)
+ * @param mediaIds - Media IDs used for the ShopifyMerch product images
  */
 export async function createCollectionGridHomePage(
   payload: Payload,
   volume1ArticleIds: number[],
   volume2ArticleIds: number[],
   featureArticleIds: number[],
+  mediaIds: number[],
 ): Promise<Page> {
+  const merchImage = (index: number): number => mediaIds[index % mediaIds.length] ?? mediaIds[0]!
   return await createOrUpdatePage(payload, {
     title: "Home",
     slug: "home",
@@ -176,6 +182,39 @@ export async function createCollectionGridHomePage(
             },
             kicker: null,
             overrideTitle: null,
+          },
+        ],
+      },
+      {
+        blockType: "shopifyMerch",
+        blockName: "Store Merch",
+        heading: "From the DiGG Store",
+        layout: "fullWidth",
+        storeUrl: "https://store.digitalgroundgame.org/",
+        products: [
+          {
+            image: merchImage(0),
+            title: "DiGG Logo Tee",
+            price: "$28.00",
+            url: "https://store.digitalgroundgame.org/products/logo-tee",
+          },
+          {
+            image: merchImage(1),
+            title: "Pragmatic Papers Mug",
+            price: "$16.00",
+            url: "https://store.digitalgroundgame.org/products/pragmatic-mug",
+          },
+          {
+            image: merchImage(2),
+            title: "Enamel Pin Set",
+            price: "$12.00",
+            url: "https://store.digitalgroundgame.org/products/enamel-pins",
+          },
+          {
+            image: merchImage(3),
+            title: "Canvas Tote Bag",
+            price: "$22.00",
+            url: "https://store.digitalgroundgame.org/products/canvas-tote",
           },
         ],
       },

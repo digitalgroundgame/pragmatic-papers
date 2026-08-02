@@ -985,4 +985,157 @@ describe("extractNarrationText", () => {
 
     expect(text).toContain("(A gallery of images.)")
   })
+
+  it("describes the legacy per-platform embed blocks by provider", () => {
+    const text = extractNarrationText({
+      content: {
+        root: {
+          type: "root",
+          children: [
+            {
+              type: "block",
+              fields: { blockType: "youtubeEmbed", url: "https://youtu.be/abc123" },
+            },
+            { type: "block", fields: { blockType: "tiktokEmbed" } },
+            { type: "block", fields: { blockType: "twitterEmbed" } },
+            { type: "block", fields: { blockType: "redditEmbed" } },
+            { type: "block", fields: { blockType: "blueSkyEmbed" } },
+          ],
+        },
+      },
+    })
+
+    expect(text).toContain("(An embedded YouTube video.)")
+    expect(text).toContain("(An embedded TikTok video.)")
+    expect(text).toContain("(An embedded Twitter post.)")
+    expect(text).toContain("(An embedded Reddit post.)")
+    expect(text).toContain("(An embedded Bluesky post.)")
+    // A spoken URL is unintelligible and is never read aloud.
+    expect(text).not.toContain("youtu.be")
+  })
+
+  it("names unhandled block types from the readable noun map", () => {
+    const text = extractNarrationText({
+      content: {
+        root: {
+          type: "root",
+          children: [
+            { type: "block", fields: { blockType: "cta", title: "Subscribe today" } },
+            { type: "block", fields: { blockType: "formBlock" } },
+            { type: "block", fields: { blockType: "collectionGrid" } },
+          ],
+        },
+      },
+    })
+
+    expect(text).toContain('(A call to action titled "Subscribe today".)')
+    expect(text).toContain("(A form.)")
+    expect(text).toContain("(A collection grid.)")
+  })
+
+  it("falls back to the raw block type, with the right article, for an unmapped block", () => {
+    const text = extractNarrationText({
+      content: {
+        root: {
+          type: "root",
+          children: [
+            { type: "block", fields: { blockType: "authorSpotlight" } },
+            { type: "block", fields: { blockType: "pullQuote" } },
+          ],
+        },
+      },
+    })
+
+    expect(text).toContain("(An authorSpotlight.)")
+    expect(text).toContain("(A pullQuote.)")
+  })
+
+  it("titles a fallback block from name or label when it has no title", () => {
+    const text = extractNarrationText({
+      content: {
+        root: {
+          type: "root",
+          children: [
+            { type: "block", fields: { blockType: "volumeView", name: "Volume III" } },
+            { type: "block", fields: { blockType: "contributors", label: "Our team" } },
+            // A numeric id-like title reads terribly aloud and must be dropped.
+            { type: "block", fields: { blockType: "newsletterSignup", title: 12345 } },
+            // An all-whitespace title is no title at all.
+            { type: "block", fields: { blockType: "content", title: "   " } },
+          ],
+        },
+      },
+    })
+
+    expect(text).toContain('(A volume view titled "Volume III".)')
+    expect(text).toContain('(A contributors block titled "Our team".)')
+    expect(text).toContain("(A newsletter signup.)")
+    expect(text).not.toContain("12345")
+    expect(text).toContain("(A content block.)")
+  })
+
+  it("describes a media block or collage that carries no media at all", () => {
+    const text = extractNarrationText({
+      content: {
+        root: {
+          type: "root",
+          children: [
+            { type: "block", fields: { blockType: "mediaBlock" } },
+            { type: "block", fields: { blockType: "mediaCollage" } },
+            // An images array that exists but is empty falls through the same way.
+            { type: "block", fields: { blockType: "mediaCollage", images: [] } },
+          ],
+        },
+      },
+    })
+
+    expect(text).toContain("(An image.)")
+    expect(text).toContain("(A gallery of images.)")
+  })
+
+  it("emits nothing for empty containers an editor left behind", () => {
+    const text = extractNarrationText({
+      title: "Empty Containers",
+      content: {
+        root: {
+          type: "root",
+          children: [
+            { type: "heading", tag: "h2", children: [] },
+            {
+              type: "list",
+              children: [{ type: "listitem", children: [{ type: "text", text: "" }] }],
+            },
+            {
+              type: "table",
+              children: [{ type: "tablerow", children: [{ type: "tablecell", children: [] }] }],
+            },
+            { type: "quote", children: [{ type: "text", text: "   " }] },
+            { type: "paragraph", children: [{ type: "text", text: "The only line." }] },
+          ],
+        },
+      },
+    })
+
+    // No stray blank lines between the byline and the one real paragraph.
+    expect(text).toBe("Empty Containers\n\nThe only line.")
+  })
+
+  it("survives malformed nodes in the content tree", () => {
+    const text = extractNarrationText({
+      title: "Malformed Test",
+      content: {
+        root: {
+          type: "root",
+          children: [
+            null,
+            "not a node",
+            { type: "paragraph", children: [{ type: "text", text: "Still readable." }] },
+          ],
+        },
+      },
+    })
+
+    expect(text).toContain("Still readable.")
+    expect(text).not.toContain("not a node")
+  })
 })

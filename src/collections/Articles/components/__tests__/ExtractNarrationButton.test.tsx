@@ -28,6 +28,11 @@ import { ExtractNarrationButton, resetNarrationCache } from "../ExtractNarration
 type MockFields = Record<string, { value?: unknown } | undefined>
 let mockFields: MockFields = {}
 
+// An article being created has no id yet, so `useDocumentInfo()` returns one
+// without one — the cache then has to key off something else.
+const savedDocInfo = { id: "test-doc-id" }
+let mockDocInfo: { id?: string | number } = savedDocInfo
+
 const mockToastSuccess = vi.fn()
 const mockToastError = vi.fn()
 
@@ -43,7 +48,7 @@ vi.mock("@payloadcms/ui", () => ({
   },
   useFormFields: <T,>(selector: (args: [MockFields, unknown]) => T): T =>
     selector([mockFields, vi.fn()]),
-  useDocumentInfo: () => ({ id: "test-doc-id" }),
+  useDocumentInfo: () => mockDocInfo,
 }))
 
 let shouldThrowGenerationError = false
@@ -64,6 +69,7 @@ vi.mock("@/utilities/extractNarrationText", async (importOriginal) => {
 afterEach(() => {
   cleanup()
   mockFields = {}
+  mockDocInfo = savedDocInfo
   shouldThrowGenerationError = false
   mockRef.shouldMockNotMounted = false
   resetNarrationCache()
@@ -183,6 +189,74 @@ describe("ExtractNarrationButton", () => {
 
     expect(remountedTextarea.value).toBe("Custom edited narration text!")
     expect(screen.getByRole("button", { name: /regenerate text/i })).toBeDefined()
+  })
+
+  it("caches an unsaved article's script separately from a saved one", async () => {
+    mockFields = { title: { value: "Saved Article" } }
+
+    // A saved article caches under its document id.
+    const saved = render(<ExtractNarrationButton />)
+    fireEvent.click(await screen.findByRole("button", { name: /generate narration text/i }))
+    await screen.findByRole("button", { name: /regenerate text/i })
+    saved.unmount()
+
+    // A brand new article has no id yet, so it must not inherit the saved
+    // article's script — it falls back to a path-keyed cache entry.
+    mockDocInfo = {}
+    mockFields = { title: { value: "Unsaved Draft" } }
+    const unsaved = render(<ExtractNarrationButton />)
+    expect(screen.queryByRole("button", { name: /regenerate text/i })).toBeNull()
+
+    fireEvent.click(await screen.findByRole("button", { name: /generate narration text/i }))
+    fireEvent.click(await screen.findByRole("button", { name: /edit text/i }))
+    fireEvent.change(screen.getByRole("textbox", { name: /editable narration script/i }), {
+      target: { value: "Draft narration" },
+    })
+    unsaved.unmount()
+
+    // Switching tabs away and back keeps the unsaved draft's script.
+    render(<ExtractNarrationButton />)
+    fireEvent.click(await screen.findByRole("button", { name: /edit text/i }))
+    const remounted = (await screen.findByRole("textbox", {
+      name: /editable narration script/i,
+    })) as HTMLTextAreaElement
+
+    expect(remounted.value).toBe("Draft narration")
+  })
+
+  it("skips blank lines when rendering the formatted script", async () => {
+    mockFields = {
+      title: { value: "Spacing Test" },
+      content: {
+        value: {
+          root: {
+            type: "root",
+            children: [
+              {
+                type: "paragraph",
+                children: [
+                  { type: "text", text: "First line" },
+                  { type: "linebreak" },
+                  // Soft breaks around a whitespace-only run leave a blank line
+                  // inside the paragraph, which must not render as an empty row.
+                  { type: "text", text: "   " },
+                  { type: "linebreak" },
+                  { type: "text", text: "Second line" },
+                ],
+              },
+            ],
+          },
+        },
+      },
+    }
+
+    render(<ExtractNarrationButton />)
+    fireEvent.click(await screen.findByRole("button", { name: /generate narration text/i }))
+
+    const firstLine = await screen.findByText("First line")
+    const lines = Array.from(firstLine.parentElement?.children ?? [])
+
+    expect(lines.map((el) => el.textContent)).toEqual(["First line", "Second line"])
   })
 
   it("overwrites persisted text and shows regenerated toast when Regenerate Text is clicked", async () => {

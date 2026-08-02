@@ -33,6 +33,21 @@ const eslintConfig = [
       "@typescript-eslint/no-use-before-define": "error",
       "@typescript-eslint/no-require-imports": "error",
       "@typescript-eslint/prefer-ts-expect-error": "error",
+      // The "@payloadcms/ui" root is pre-bundled with its own copy of the admin's
+      // React contexts. A field imported from the unbundled deep path is a second
+      // module instance reading contexts no provider filled, so it type-checks and
+      // unit-tests clean but throws on first render in the admin.
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: ["@payloadcms/ui/fields/*"],
+              message: 'Import Payload field components from "@payloadcms/ui" instead.',
+            },
+          ],
+        },
+      ],
       "prefer-const": ["error"],
       "react/jsx-boolean-value": ["error", "never"],
       "react/jsx-curly-brace-presence": ["error", { props: "never", children: "ignore" }],

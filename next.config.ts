@@ -165,6 +165,11 @@ export default withSentryConfig(withPayload(nextConfig, { devBundleServerPackage
 
   project: "pragmatic-papers",
 
+  // Tags our bundled code with this key so `thirdPartyErrorFilterIntegration`
+  // (in src/instrumentation-client.ts) can tell our frames from third-party ones.
+  // Top-level `applicationKey` injects module metadata for both webpack and Turbopack.
+  applicationKey: "pragmatic-papers",
+
   // Only print logs for uploading source maps in CI
   silent: !process.env.CI,
 

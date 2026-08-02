@@ -136,6 +136,23 @@ Coverage reporting is informational only — chore/docs PRs don't need special h
 - run linting and type-checks
 - run unit and integration tests as needed, _skip running e2e_.
 
+### Visual regression (screenshot) tests
+
+Adding, changing, or debugging a Playwright `toHaveScreenshot` test or a flaky
+visual diff? Use the **`e2e-visual-tests`** skill
+(`.claude/skills/e2e-visual-tests/SKILL.md`) for the checklist; full lifecycle
+in `tests/e2e/README.md`.
+
+## Filing & triaging GitHub issues
+
+Creating, editing, triaging, or labeling an issue — or adding/removing a
+label? Use the **`github-issues`** skill
+(`.claude/skills/github-issues/SKILL.md`). It covers applying an issue
+**type** (`Bug`/`Feature`/`Task`) as well as **labels** (`Bug` is a type, not
+a label), and the label taxonomy is version-controlled in
+`.github/labels.yml` — edit that file in a PR to change a label; a sync
+workflow applies it on push to `dev`.
+
 ## Wiki
 
 The repo wiki lives at `https://github.com/digitalgroundgame/pragmatic-papers/wiki` and is a separate git repository. To create or edit wiki pages:

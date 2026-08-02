@@ -1,6 +1,6 @@
 import type { Access, AccessArgs } from "payload"
 import type { User } from "@/payload-types"
-import { hasRoleOrAdmin, isAdmin, isStaff } from "./roles"
+import { hasRoleOrAdmin, isAdmin, isEditor, isStaff } from "./roles"
 
 export const anyone: Access = () => true
 
@@ -13,7 +13,7 @@ export const admin: Access = ({ req: { user } }) => {
 }
 
 export const editor: Access = ({ req: { user } }) => {
-  return hasRoleOrAdmin(user, "editor")
+  return isEditor(user)
 }
 
 export const writer: Access = ({ req: { user } }) => {

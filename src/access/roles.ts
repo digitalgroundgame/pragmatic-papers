@@ -2,6 +2,7 @@ import type { User } from "@/payload-types"
 
 export type Role = "admin" | "chief-editor" | "editor" | "writer" | "narrator" | "member"
 
+/** Checks if a user is an admin or chief-editor. */
 export const isAdmin = (user: User | null | undefined): boolean => {
   if (!user?.roles) return false
   const roles = user.roles as Role[]
@@ -23,6 +24,12 @@ export const hasRoleOrAdmin = (
   return isAdmin(user) || hasRole(user, roleOrRoles)
 }
 
+/** Checks if a user is an editor or above (editor, chief-editor, admin). */
+export const isEditor = (user: User | null | undefined): boolean => {
+  return hasRoleOrAdmin(user, "editor")
+}
+
+/** Checks if a user is staff (editor, writer, narrator, chief-editor, admin). */
 export const isStaff = (user: User | null | undefined): boolean => {
   return hasRoleOrAdmin(user, ["editor", "writer", "narrator"])
 }

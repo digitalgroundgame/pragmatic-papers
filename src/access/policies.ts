@@ -1,5 +1,5 @@
 import type { Access } from "payload"
-import { hasRoleOrAdmin, isAdmin, isStaff } from "./roles"
+import { hasRoleOrAdmin, isAdmin, isEditor, isStaff } from "./roles"
 
 /**
  * Access Control Policies
@@ -29,7 +29,7 @@ export const isCreatedByOrEditor: Access = ({ req: { user } }) => {
   }
 
   return (
-    hasRoleOrAdmin(user, "editor") || {
+    isEditor(user) || {
       createdBy: { equals: user.id },
     }
   )
@@ -45,7 +45,7 @@ export const isDraftOrEditor: Access = ({ req: { user }, data }) => {
     return false
   }
 
-  if (hasRoleOrAdmin(user, "editor")) {
+  if (isEditor(user)) {
     return true
   }
 

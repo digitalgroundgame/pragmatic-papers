@@ -2,7 +2,7 @@ import { render } from "@react-email/render"
 import { type NextRequest } from "next/server"
 import { getPayload, type PayloadRequest } from "payload"
 
-import { hasRoleOrAdmin } from "@/access/roles"
+import { isEditor } from "@/access/roles"
 import configPromise from "@payload-config"
 import { VolumeArticleEmail } from "@/emails/VolumeArticle"
 import { getServerSideURL } from "@/utilities/getURL"
@@ -39,7 +39,7 @@ export async function GET(
     payload.logger.error({ err }, "[email-preview] auth failed")
     return new Response("Unauthorized", { status: 401 })
   }
-  if (!user || !hasRoleOrAdmin(user, "editor")) {
+  if (!user || !isEditor(user)) {
     return new Response("Unauthorized", { status: 401 })
   }
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { hasRole, hasRoleOrAdmin, isAdmin, isStaff } from "@/access/roles"
+import { hasRole, hasRoleOrAdmin, isAdmin, isEditor, isStaff } from "@/access/roles"
 import type { User } from "@/payload-types"
 
 const makeUser = (roleOrRoles?: string | string[] | null): User => {
@@ -89,6 +89,26 @@ describe("hasRoleOrAdmin", () => {
   it("returns false when user is null or undefined", () => {
     expect(hasRoleOrAdmin(null, "writer")).toBe(false)
     expect(hasRoleOrAdmin(undefined, "writer")).toBe(false)
+  })
+})
+
+describe("isEditor", () => {
+  it("returns true for editor and above (editor, chief-editor, admin)", () => {
+    expect(isEditor(makeUser("editor"))).toBe(true)
+    expect(isEditor(makeUser("chief-editor"))).toBe(true)
+    expect(isEditor(makeUser("admin"))).toBe(true)
+  })
+
+  it("returns false for writer, narrator, and member", () => {
+    expect(isEditor(makeUser("writer"))).toBe(false)
+    expect(isEditor(makeUser("narrator"))).toBe(false)
+    expect(isEditor(makeUser("member"))).toBe(false)
+  })
+
+  it("returns false when user is null or undefined", () => {
+    expect(isEditor(makeUser(null))).toBe(false)
+    expect(isEditor(undefined)).toBe(false)
+    expect(isEditor(null)).toBe(false)
   })
 })
 

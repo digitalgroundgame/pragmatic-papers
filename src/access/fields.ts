@@ -1,12 +1,12 @@
 import type { FieldAccess } from "payload"
-import { hasRoleOrAdmin, isAdmin } from "./roles"
+import { hasRoleOrAdmin, isAdmin, isEditor } from "./roles"
 
 export const adminFieldLevel: FieldAccess = ({ req: { user } }) => {
   return isAdmin(user)
 }
 
 export const editorFieldLevel: FieldAccess = ({ req: { user } }) => {
-  return hasRoleOrAdmin(user, "editor")
+  return isEditor(user)
 }
 
 export const writerFieldLevel: FieldAccess = ({ req: { user } }) => {

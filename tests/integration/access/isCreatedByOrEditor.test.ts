@@ -148,7 +148,7 @@ describe("editor and writer access", () => {
       expect(updated.title).toBe("Updated Draft by Writer")
     })
 
-    it("denies writer from updating their own published article", async () => {
+    it("allows writer to update their own published article", async () => {
       const writer = await createUser("writer")
 
       const published = await payload.create({
@@ -164,16 +164,16 @@ describe("editor and writer access", () => {
         user: writer,
       })
 
-      await expect(
-        payload.update({
-          collection: "articles",
-          id: published.id,
-          overrideAccess: false,
-          user: writer,
-          context: { disableRevalidate: true },
-          data: { title: "Should Not Update Published" },
-        }),
-      ).rejects.toThrow()
+      const updated = await payload.update({
+        collection: "articles",
+        id: published.id,
+        overrideAccess: false,
+        user: writer,
+        context: { disableRevalidate: true },
+        data: { title: "Updated Published by Writer" },
+      })
+
+      expect(updated.title).toBe("Updated Published by Writer")
     })
 
     it("denies writer from updating another user's draft article", async () => {

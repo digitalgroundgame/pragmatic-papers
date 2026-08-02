@@ -7,7 +7,7 @@ import type {
   CollectionConfig,
 } from "payload"
 
-import { anyone, writer } from "@/access/collections"
+import { anyone, writerOrEditor } from "@/access/collections"
 import { isCreatedByOrEditor } from "@/access/policies"
 import { link } from "@/fields/link2"
 import type { MapAsset } from "@/payload-types"
@@ -45,7 +45,7 @@ export const MapAssets: CollectionConfig = {
     plural: "Map Assets",
   },
   access: {
-    create: writer,
+    create: writerOrEditor,
     delete: isCreatedByOrEditor,
     read: anyone,
     update: isCreatedByOrEditor,

@@ -64,10 +64,10 @@ describe("isDraftOrEditor policy", () => {
     expect(isDraftOrEditor(makeArgs(makeUser("editor")))).toBe(true)
   })
 
-  it("restricts writers to draft documents they created", () => {
+  it("restricts writers to documents they created", () => {
     const user = { id: 789, roles: ["writer"] } as unknown as User
     expect(isDraftOrEditor(makeArgs(user))).toEqual({
-      and: [{ createdBy: { equals: 789 } }, { _status: { equals: "draft" } }],
+      createdBy: { equals: 789 },
     })
   })
 
@@ -79,13 +79,13 @@ describe("isDraftOrEditor policy", () => {
     expect(isDraftOrEditor(args)).toBe(false)
   })
 
-  it("restricts writers to draft documents they created if update status is draft", () => {
+  it("restricts writers to their own documents when update status is draft", () => {
     const user = { id: 789, roles: ["writer"] } as unknown as User
     const args = { req: { user }, data: { _status: "draft" } } as unknown as Parameters<
       typeof isDraftOrEditor
     >[0]
     expect(isDraftOrEditor(args)).toEqual({
-      and: [{ createdBy: { equals: 789 } }, { _status: { equals: "draft" } }],
+      createdBy: { equals: 789 },
     })
   })
 

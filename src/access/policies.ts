@@ -1,4 +1,4 @@
-import type { Access, Where } from "payload"
+import type { Access } from "payload"
 import { hasRoleOrAdmin, isAdmin, isStaff } from "./roles"
 
 /**
@@ -36,8 +36,9 @@ export const isCreatedByOrEditor: Access = ({ req: { user } }) => {
 }
 
 /**
- * Restricts updates to drafts only for writers (and requires ownership), while allowing editors.
- * All other roles (such as narrators and members) are implicitly denied update access.
+ * Editors and above may update any article. Writers may update their own
+ * articles (regardless of status) but may not publish them. All other roles
+ * (such as narrators and members) are implicitly denied update access.
  */
 export const isDraftOrEditor: Access = ({ req: { user }, data }) => {
   if (!user) {
@@ -52,13 +53,12 @@ export const isDraftOrEditor: Access = ({ req: { user }, data }) => {
     return false
   }
 
+  // Writers may edit their own articles but may not publish them.
   if (data?._status === "published") {
     return false
   }
 
-  return {
-    and: [{ createdBy: { equals: user.id } } as Where, { _status: { equals: "draft" } } as Where],
-  }
+  return { createdBy: { equals: user.id } }
 }
 
 /** Allows staff to view all statuses, while restricting others to published items only. */

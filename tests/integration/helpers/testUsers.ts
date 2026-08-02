@@ -14,18 +14,20 @@ export function getPayload(): Promise<Payload> {
 
 export type Role = "admin" | "chief-editor" | "editor" | "writer" | "narrator" | "member"
 
-export async function createUser(role: Role): Promise<User> {
+export async function createUser(roleOrRoles: Role | Role[]): Promise<User> {
   const payload = await getPayload()
+  const roles = Array.isArray(roleOrRoles) ? roleOrRoles : [roleOrRoles]
+  const label = roles.join("-")
   const suffix = randomUUID().slice(0, 8)
   const result = await payload.create({
     collection: "users",
     overrideAccess: true,
     context: { disableRevalidate: true },
     data: {
-      email: `test-${role}-${suffix}@example.com`,
+      email: `test-${label}-${suffix}@example.com`,
       password: "test-password",
-      name: `${role} test user ${suffix}`,
-      roles: [role],
+      name: `${label} test user ${suffix}`,
+      roles,
     } as unknown as User,
   })
   return result

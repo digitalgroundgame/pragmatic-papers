@@ -2523,6 +2523,10 @@ export interface DisplayMathBlock {
    * Enter a LaTeX math expression.
    */
   math: string;
+  /**
+   * Name this formula in plain words, e.g. "the Cauchy–Schwarz inequality". Read aloud by the AI voice-over in place of the LaTeX, and used as the formula's screen reader label.
+   */
+  description?: string | null;
   id?: string | null;
   blockName?: string | null;
   blockType: 'displayMathBlock';
@@ -2579,6 +2583,10 @@ export interface InlineMathBlock {
    * Enter a LaTeX math expression.
    */
   math: string;
+  /**
+   * Name this formula in plain words, e.g. "the Cauchy–Schwarz inequality". Read aloud by the AI voice-over in place of the LaTeX, and used as the formula's screen reader label.
+   */
+  description?: string | null;
   id?: string | null;
   blockName?: string | null;
   blockType: 'inlineMathBlock';

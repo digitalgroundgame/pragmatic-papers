@@ -129,7 +129,7 @@ describe("extractNarrationText", () => {
       },
     })
 
-    expect(text).toContain('An interactive map titled "Voting shifts map" is shown here.')
+    expect(text).toContain('(An interactive map titled "Voting shifts map".)')
   })
 
   it("describes visual blocks without a title using a generic spoken aside", () => {
@@ -156,8 +156,8 @@ describe("extractNarrationText", () => {
       },
     })
 
-    expect(text).toContain("An interactive map is shown here.")
-    expect(text).toContain("A code sample is shown here.")
+    expect(text).toContain("(An interactive map.)")
+    expect(text).toContain("(A code sample.)")
     expect(text).not.toContain("<<")
   })
 
@@ -215,9 +215,7 @@ describe("extractNarrationText", () => {
       },
     })
 
-    expect(textWithAlt).toContain(
-      "An image is shown here: A diagram illustrating quantum superposition.",
-    )
+    expect(textWithAlt).toContain("(An image: A diagram illustrating quantum superposition.)")
 
     const textWithCaption = extractNarrationText({
       title: "Media Caption Test",
@@ -249,7 +247,7 @@ describe("extractNarrationText", () => {
       },
     })
 
-    expect(textWithCaption).toContain("An image is shown here: Caption plain text description.")
+    expect(textWithCaption).toContain("(An image: Caption plain text description.)")
   })
 
   it("extracts alt text for mediaCollage blocks", () => {
@@ -274,9 +272,7 @@ describe("extractNarrationText", () => {
       },
     })
 
-    expect(text).toContain(
-      "A gallery of images is shown here: First collage image; Second collage image.",
-    )
+    expect(text).toContain("(A gallery of images: First collage image; Second collage image.)")
   })
 
   it("resolves unpopulated media IDs via mediaMap for mediaBlock and mediaCollage", () => {
@@ -310,9 +306,9 @@ describe("extractNarrationText", () => {
       },
     })
 
-    expect(text).toContain("An image is shown here: Single image from mediaMap.")
+    expect(text).toContain("(An image: Single image from mediaMap.)")
     expect(text).toContain(
-      "A gallery of images is shown here: Collage image 1 from mediaMap; Collage image 2 from mediaMap.",
+      "(A gallery of images: Collage image 1 from mediaMap; Collage image 2 from mediaMap.)",
     )
   })
 
@@ -350,8 +346,8 @@ describe("extractNarrationText", () => {
     // Filenames read terribly aloud, so they are never spoken.
     expect(text).not.toContain("quantum_superposition.png")
     expect(text).not.toContain("collage1.jpg")
-    expect(text).toContain("An image is shown here.")
-    expect(text).toContain("A gallery of images is shown here.")
+    expect(text).toContain("(An image.)")
+    expect(text).toContain("(A gallery of images.)")
   })
 
   it("collapses inline math to a spoken phrase without reading LaTeX", () => {
@@ -381,6 +377,178 @@ describe("extractNarrationText", () => {
     expect(text).not.toContain("E=mc^2")
   })
 
+  it("speaks an inline math description in place of the generic phrase", () => {
+    const text = extractNarrationText({
+      content: {
+        root: {
+          type: "root",
+          children: [
+            {
+              type: "paragraph",
+              children: [
+                { type: "text", text: "Einstein gave us " },
+                {
+                  type: "inlineBlock",
+                  fields: {
+                    blockType: "inlineMathBlock",
+                    math: "E=mc^2",
+                    description: "mass-energy equivalence",
+                  },
+                },
+                { type: "text", text: "." },
+              ],
+            },
+          ],
+        },
+      },
+    })
+
+    // Inline descriptions read as part of the sentence, not as an aside.
+    expect(text).toContain("Einstein gave us mass-energy equivalence.")
+    expect(text).not.toContain("a mathematical formula")
+    expect(text).not.toContain("E=mc^2")
+  })
+
+  it("names a display math formula from its description", () => {
+    const text = extractNarrationText({
+      content: {
+        root: {
+          type: "root",
+          children: [
+            {
+              type: "block",
+              fields: {
+                blockType: "displayMathBlock",
+                math: "a^2 + b^2 = c^2",
+                description: "the Pythagorean theorem",
+              },
+            },
+          ],
+        },
+      },
+    })
+
+    expect(text).toContain("(A mathematical formula: the Pythagorean theorem.)")
+    expect(text).not.toContain("a^2 + b^2 = c^2")
+  })
+
+  it("falls back to the generic aside when a display math block has no description", () => {
+    const text = extractNarrationText({
+      content: {
+        root: {
+          type: "root",
+          children: [
+            {
+              type: "block",
+              fields: {
+                blockType: "displayMathBlock",
+                math: "a^2 + b^2 = c^2",
+                description: "   ",
+              },
+            },
+          ],
+        },
+      },
+    })
+
+    expect(text).toContain("(A mathematical formula.)")
+  })
+
+  it("reads a timeline's events as a spoken list, one line each", () => {
+    const text = extractNarrationText({
+      content: {
+        root: {
+          type: "root",
+          children: [
+            {
+              type: "block",
+              fields: {
+                blockType: "timeline",
+                title: "Fall of Rome",
+                events: [
+                  {
+                    date: "0410-08-24T00:00:00.000Z",
+                    title: "Visigoths sack Rome",
+                    description: "Alaric enters the city",
+                  },
+                  {
+                    date: "0476-09-04T00:00:00.000Z",
+                    title: "Romulus Augustulus is deposed",
+                  },
+                  // A citation link has nothing to say aloud and must not leak
+                  // into the narration.
+                  {
+                    date: "0480-01-01T00:00:00.000Z",
+                    description: "Julius Nepos is murdered",
+                    enableCitation: true,
+                    citation: { url: "https://example.com/nepos" },
+                  },
+                ],
+              },
+            },
+          ],
+        },
+      },
+    })
+
+    expect(text).toContain(
+      '(A timeline titled "Fall of Rome": August 24, 410: Visigoths sack Rome. Alaric enters the city.\n' +
+        "September 4, 476: Romulus Augustulus is deposed.\n" +
+        "January 1, 480: Julius Nepos is murdered.)",
+    )
+    expect(text).not.toContain("example.com")
+  })
+
+  it("skips unreadable timeline event fragments", () => {
+    const text = extractNarrationText({
+      content: {
+        root: {
+          type: "root",
+          children: [
+            {
+              type: "block",
+              fields: {
+                blockType: "timeline",
+                events: [
+                  // An unparseable date with no text leaves nothing to say.
+                  { date: "not a date" },
+                  // A dateless event still narrates its own words.
+                  { title: "Sometime in late antiquity" },
+                  { date: "not a date", description: "The empire quietly ends" },
+                ],
+              },
+            },
+          ],
+        },
+      },
+    })
+
+    expect(text).toContain("(A timeline: Sometime in late antiquity.\nThe empire quietly ends.)")
+    expect(text).not.toContain("not a date")
+  })
+
+  it("falls back to the bare aside when a timeline has no events", () => {
+    const text = extractNarrationText({
+      content: {
+        root: {
+          type: "root",
+          children: [
+            {
+              type: "block",
+              fields: {
+                blockType: "timeline",
+                title: "Fall of Rome",
+                events: [],
+              },
+            },
+          ],
+        },
+      },
+    })
+
+    expect(text).toContain('(A timeline titled "Fall of Rome".)')
+  })
+
   it("falls back to generic spoken description for socialEmbed when platform is missing", () => {
     const text = extractNarrationText({
       title: "Social Embed Test",
@@ -392,7 +560,31 @@ describe("extractNarrationText", () => {
               type: "block",
               fields: {
                 blockType: "socialEmbed",
+              },
+            },
+          ],
+        },
+      },
+    })
+
+    expect(text).toContain("(An embedded social media post.)")
+  })
+
+  it("describes a socialEmbed with its snapshot title when the fetch succeeded", () => {
+    const text = extractNarrationText({
+      title: "Social Embed Test",
+      content: {
+        root: {
+          type: "root",
+          children: [
+            {
+              type: "block",
+              fields: {
+                blockType: "socialEmbed",
+                platform: "reddit",
+                url: "https://reddit.com/r/history/comments/abc123",
                 snapshot: {
+                  status: "ok",
                   title: "Post about technological breakthroughs",
                 },
               },
@@ -402,8 +594,46 @@ describe("extractNarrationText", () => {
       },
     })
 
-    expect(text).toContain("An embedded social media post is shown here.")
-    expect(text).not.toContain("Post about technological breakthroughs")
+    expect(text).toContain("(An embedded reddit post: Post about technological breakthroughs.)")
+    // A spoken URL is unintelligible — the snapshot title replaces it, never
+    // supplements it.
+    expect(text).not.toContain("reddit.com")
+  })
+
+  it("ignores a snapshot title when the oEmbed fetch did not succeed", () => {
+    const content = (status: unknown, title: string) => ({
+      root: {
+        type: "root",
+        children: [
+          {
+            type: "block",
+            fields: {
+              blockType: "socialEmbed",
+              platform: "twitter",
+              snapshot: { status, title },
+            },
+          },
+        ],
+      },
+    })
+
+    // `buildSnapshot` writes sentinel titles like this one on the failure paths.
+    const notFound = extractNarrationText({ content: content("not_found", "No adapter found") })
+    expect(notFound).toContain("(An embedded twitter post.)")
+    expect(notFound).not.toContain("No adapter found")
+
+    // A network failure carries the previous title forward — it may no longer
+    // describe what is at the URL, so it is not narrated.
+    const timedOut = extractNarrationText({
+      content: content("timeout", "Previously fetched post"),
+    })
+    expect(timedOut).toContain("(An embedded twitter post.)")
+    expect(timedOut).not.toContain("Previously fetched post")
+
+    // A snapshot that predates the status field is treated the same way.
+    const noStatus = extractNarrationText({ content: content(undefined, "Legacy snapshot title") })
+    expect(noStatus).toContain("(An embedded twitter post.)")
+    expect(noStatus).not.toContain("Legacy snapshot title")
   })
 
   it("omits visual rules like horizontalrule and squiggleRule", () => {
@@ -483,7 +713,7 @@ describe("extractNarrationText", () => {
       },
     })
 
-    expect(text).toContain("An image is shown here: Narrated caption description")
+    expect(text).toContain("(An image: Narrated caption description.)")
     expect(text).not.toContain("Alternate image description")
   })
 
@@ -588,10 +818,10 @@ describe("extractNarrationText", () => {
       },
     })
 
-    expect(text).toContain('A timeline titled "WWII Timeline" is shown here.')
-    expect(text).toContain("A mathematical formula is shown here.")
+    expect(text).toContain('(A timeline titled "WWII Timeline".)')
+    expect(text).toContain("(A mathematical formula.)")
     expect(text).not.toContain("f(x) = x^2")
-    expect(text).toContain("An interactive map is shown here.")
+    expect(text).toContain("(An interactive map.)")
     expect(text).not.toContain("12345")
   })
 
@@ -647,10 +877,10 @@ describe("extractNarrationText", () => {
       },
     })
 
-    expect(text).toContain("An image is shown here: quantum spin alt text")
-    expect(text).toContain("An image is shown here: Media from value ID lookup")
-    expect(text).toContain("An image is shown here: Media from direct ID lookup")
-    expect(text).toContain("An image is shown here.")
+    expect(text).toContain("(An image: quantum spin alt text.)")
+    expect(text).toContain("(An image: Media from value ID lookup.)")
+    expect(text).toContain("(An image: Media from direct ID lookup.)")
+    expect(text).toContain("(An image.)")
   })
 
   it("covers unknown/unsupported inlineBlock types", () => {
@@ -723,7 +953,7 @@ describe("extractNarrationText", () => {
       },
     })
 
-    expect(text).toContain("A gallery of images is shown here: Collage Image Caption.")
+    expect(text).toContain("(A gallery of images: Collage Image Caption.)")
   })
 
   it("falls back to media details when resolveMediaInfo returns null in mediaCollage", () => {
@@ -753,6 +983,6 @@ describe("extractNarrationText", () => {
       },
     })
 
-    expect(text).toContain("A gallery of images is shown here.")
+    expect(text).toContain("(A gallery of images.)")
   })
 })

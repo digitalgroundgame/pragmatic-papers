@@ -3,6 +3,9 @@ import type {
   SerializedLexicalNode,
 } from "@payloadcms/richtext-lexical/lexical"
 
+import { describeTimeline } from "@/blocks/Timeline/narration"
+import { describeVisual } from "@/utilities/describeVisual"
+
 export type MediaMap = Record<
   string | number,
   { alt?: string | null; caption?: unknown; filename?: string | null }
@@ -41,37 +44,28 @@ const EMBED_DESCRIPTIONS: Record<string, string> = {
   blueSkyEmbed: "an embedded Bluesky post",
 }
 
-/**
- * Turn a bare noun phrase into a full "described visual" sentence that reads
- * naturally in a text-to-speech engine like ElevenLabs, e.g.
- *   describeVisual('a timeline titled "Fall of Rome"')
- *     -> 'A timeline titled "Fall of Rome" is shown here.'
- *   describeVisual('an image', 'crowds gather outside the courthouse')
- *     -> 'An image is shown here: crowds gather outside the courthouse.'
- *
- * `detail` (a caption or alt description) is appended after the frame so the
- * listener hears what the visual contains without any bracketed markers.
- */
-function describeVisual(nounPhrase: string, detail?: string): string {
-  const trimmedDetail = detail?.trim()
-  let sentence = trimmedDetail
-    ? `${nounPhrase} is shown here: ${trimmedDetail}`
-    : `${nounPhrase} is shown here`
-  sentence = sentence.trim()
-  if (!/[.!?]$/.test(sentence)) sentence += "."
-  return sentence.charAt(0).toUpperCase() + sentence.slice(1)
-}
-
 function indefiniteArticle(noun: string): "a" | "an" {
   return /^[aeiou]/i.test(noun) ? "an" : "a"
 }
 
 /**
+ * The oEmbed title captured when a social embed was last saved, usable as
+ * spoken detail — but only on a successful fetch. `buildSnapshot` leaves
+ * sentinel titles like "No adapter found" behind when it can't resolve a
+ * platform, and carries a stale title forward on network failures, so a title
+ * paired with any status other than `ok` is not safe to read aloud.
+ */
+function snapshotTitle(snapshot: unknown): string {
+  if (!snapshot || typeof snapshot !== "object") return ""
+  const { status, title } = snapshot as Record<string, unknown>
+  if (status !== "ok" || typeof title !== "string") return ""
+  return title.trim()
+}
+
+/**
  * Build a spoken-friendly description for a visual/non-text block. Visual
- * elements can't be narrated directly, so each is described as an aside the
- * ElevenLabs voice can read verbatim — no double-angle-bracket markers, no
- * all-caps block names (which TTS engines spell out letter by letter), and no
- * raw LaTeX or URLs.
+ * elements can't be narrated directly, so each becomes a parenthetical narrator
+ * aside the ElevenLabs voice can read verbatim.
  */
 function describeBlock(blockType: string, fields: Record<string, unknown>): string {
   if (blockType === "mediaBlock") {
@@ -82,9 +76,10 @@ function describeBlock(blockType: string, fields: Record<string, unknown>): stri
     return describeVisual("a gallery of images")
   }
 
+  // A timeline is readable text, not an image — the block renders its own
+  // events as a spoken list rather than collapsing to a stand-in phrase.
   if (blockType === "timeline") {
-    const title = typeof fields.title === "string" ? fields.title.trim() : ""
-    return describeVisual(title ? `a timeline titled "${title}"` : "a timeline")
+    return describeTimeline(fields)
   }
 
   if (blockType === "interactiveMap") {
@@ -97,9 +92,12 @@ function describeBlock(blockType: string, fields: Record<string, unknown>): stri
     return describeVisual(language ? `a code sample in ${language}` : "a code sample")
   }
 
-  // Never read raw LaTeX aloud — collapse any math block to a spoken description.
+  // Never read raw LaTeX aloud — collapse any math block to a spoken
+  // description, naming the formula from the block's `description` when the
+  // author supplied one.
   if (blockType === "displayMathBlock" || blockType === "inlineMathBlock") {
-    return describeVisual("a mathematical formula")
+    const description = typeof fields.description === "string" ? fields.description.trim() : ""
+    return describeVisual("a mathematical formula", description)
   }
 
   const embedDescription = EMBED_DESCRIPTIONS[blockType]
@@ -111,6 +109,7 @@ function describeBlock(blockType: string, fields: Record<string, unknown>): stri
     const platform = typeof fields.platform === "string" ? fields.platform.trim() : ""
     return describeVisual(
       platform ? `an embedded ${platform} post` : "an embedded social media post",
+      snapshotTitle(fields.snapshot),
     )
   }
 
@@ -229,9 +228,11 @@ function extractLexicalNodeText(
     }
 
     if (blockType === "inlineMathBlock") {
-      // Inline within a sentence — a short noun phrase, not a full aside. Raw
-      // LaTeX is never read aloud.
-      return "a mathematical formula"
+      // Inline within a sentence — the author's description reads as part of the
+      // surrounding clause, so it is used bare rather than as a parenthetical
+      // aside. Raw LaTeX is never read aloud.
+      const description = typeof fields.description === "string" ? fields.description.trim() : ""
+      return description || "a mathematical formula"
     }
 
     return ""
@@ -245,7 +246,7 @@ function extractLexicalNodeText(
     // Resolve a spoken description for a media reference: the caption (preferred)
     // or the alt text. Filenames and numeric ids are intentionally omitted —
     // they read terribly aloud and add no narration value, so a media block with
-    // neither caption nor alt simply narrates as "An image is shown here."
+    // neither caption nor alt simply narrates as "(An image.)"
     const resolveMediaDescription = (mediaVal: unknown): string => {
       const mediaInfo = resolveMediaInfo(mediaVal, mediaMap)
       if (!mediaInfo) return ""

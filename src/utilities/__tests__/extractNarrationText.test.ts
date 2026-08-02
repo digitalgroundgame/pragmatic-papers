@@ -657,7 +657,9 @@ describe("extractNarrationText", () => {
     expect(text).not.toContain("squiggleRule")
   })
 
-  it("inserts break tags for headings", () => {
+  // Headings are separated by a blank line, not an SSML <break> tag — the name
+  // this test used to carry described a design that was never implemented.
+  it("separates a heading from the text beneath it", () => {
     const text = extractNarrationText({
       title: "Heading Test",
       content: {

@@ -4,61 +4,16 @@ import { createArticle } from "../articles"
 import { fetchFileByURL } from "../media"
 import {
   createHeadingNode,
+  createMediaBlockNode,
   createParagraph,
   createQuoteNode,
   createRichText,
   createRichTextFromParagraphs,
   createTextNode,
 } from "../richtext"
-
-const createBannerBlock = (message: string) => ({
-  type: "block",
-  fields: {
-    blockType: "banner",
-    style: "info" as const,
-    content: {
-      root: {
-        type: "root",
-        children: [createParagraph(message)],
-      },
-    },
-  },
-  format: "",
-  version: 2,
-})
-
-const createMediaBlock = (mediaId: number) => ({
-  type: "block",
-  fields: {
-    blockType: "mediaBlock",
-    media: mediaId,
-  },
-  format: "",
-  version: 2,
-})
-
-const createCodeBlock = (code: string, description: string) => ({
-  type: "block",
-  fields: {
-    blockType: "code",
-    language: "typescript",
-    code,
-    description,
-  },
-  format: "",
-  version: 2,
-})
-
-const createFootnoteInlineBlock = (note: string) => ({
-  type: "inlineBlock",
-  fields: {
-    blockType: "footnote",
-    id: crypto.randomUUID(),
-    note,
-    attributionEnabled: false,
-  },
-  version: 1,
-})
+import { createBannerBlock } from "./banners"
+import { createCodeBlock } from "./code-blocks"
+import { createFootnoteInlineBlock } from "./footnotes"
 
 export const createNarrationDemoArticle = async (
   payload: Payload,
@@ -94,7 +49,7 @@ export const createNarrationDemoArticle = async (
         ),
         createTextNode("Narration"),
         createTextNode(
-          " tab to generate clean, ElevenLabs-ready narration text formatted with bylines, heading break tags, custom block descriptions, and stripped citations.",
+          " tab to generate clean, ElevenLabs-ready narration text: a byline, spoken narrator asides in place of images, code, and other visuals, and citations stripped out.",
         ),
         createFootnoteInlineBlock(
           "Citations and inline footnote markers are omitted entirely during narration extraction.",
@@ -108,20 +63,20 @@ export const createNarrationDemoArticle = async (
 
       createQuoteNode(transcript),
 
-      createBannerBlock("Notice: Historical audio recording included below."),
+      createBannerBlock("info", "Notice: Historical audio recording included below."),
 
       ...(heroMediaId
-        ? [createHeadingNode("Visual Archives", "h2"), createMediaBlock(heroMediaId)]
+        ? [createHeadingNode("Visual Archives", "h2"), createMediaBlockNode(heroMediaId)]
         : []),
 
       createHeadingNode("Audio Processing Sample", "h2"),
       createCodeBlock(
+        "typescript",
         "const synthesizeAudio = async (text: string) => {\n  return await elevenlabs.generate({ text, voice: 'Rachel' })\n}",
-        "TypeScript function processing audio waveforms for ElevenLabs voice-over synthesis.",
       ),
 
       createParagraph(
-        "When generating narration text in the Narration tab, each custom block uses its narration description, headings receive pause tags, and footnotes are stripped for seamless voice-over output.",
+        "When generating narration text in the Narration tab, every block a listener cannot see becomes a parenthetical aside the voice reads aloud, and footnotes are dropped entirely for seamless voice-over output.",
       ),
     ]),
     authors: [writer.id],

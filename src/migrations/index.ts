@@ -38,6 +38,7 @@ import * as migration_20260515_044418_add_search_plugin from "./20260515_044418_
 import * as migration_20260606_003324_add_interactive_map from "./20260606_003324_add_interactive_map"
 import * as migration_20260615_100916_add_newsletter from "./20260615_100916_add_newsletter"
 import * as migration_20260616_021403_add_map_assets_prefix from "./20260616_021403_add_map_assets_prefix"
+import * as migration_20260715_214854_migrate_role_to_roles from "./20260715_214854_migrate_role_to_roles"
 
 export const migrations = [
   {
@@ -239,5 +240,10 @@ export const migrations = [
     up: migration_20260616_021403_add_map_assets_prefix.up,
     down: migration_20260616_021403_add_map_assets_prefix.down,
     name: "20260616_021403_add_map_assets_prefix",
+  },
+  {
+    up: migration_20260715_214854_migrate_role_to_roles.up,
+    down: migration_20260715_214854_migrate_role_to_roles.down,
+    name: "20260715_214854_migrate_role_to_roles",
   },
 ]

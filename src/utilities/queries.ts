@@ -14,8 +14,8 @@ export const queryUserBySlug = cache(async (slug: string): Promise<User | null> 
     where: {
       and: [
         {
-          role: {
-            in: ["writer", "editor", "chief-editor", "narrator"],
+          roles: {
+            in: ["writer", "editor", "chief-editor", "narrator", "admin"],
           },
         },
         {

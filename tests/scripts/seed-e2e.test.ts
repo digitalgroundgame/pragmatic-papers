@@ -54,7 +54,7 @@ describe("seed-e2e main()", () => {
         email: "writer@e2e.test",
         password: "e2e-test-password-123",
         name: "E2E Writer",
-        role: "writer",
+        roles: ["writer"],
         slug: "e2e-writer",
       },
       "e2e writer",

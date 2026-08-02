@@ -79,7 +79,7 @@ jobs:
           --health-retries 5
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
@@ -125,7 +125,7 @@ jobs:
       # the E2E run only recompiles what changed since the last run on this
       # branch (or dev).
       - name: Cache Next.js build cache
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: .next/cache
           key: nextjs-${{ hashFiles('pnpm-lock.yaml') }}-${{ hashFiles('src/**/*.[jt]s', 'src/**/*.[jt]sx', '*.[jt]s', '*.[jt]sx') }}

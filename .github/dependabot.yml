@@ -9,3 +9,14 @@ updates:
     directory: "/" # Location of package manifests
     schedule:
       interval: "weekly"
+
+  # Keep GitHub Actions used in workflows (.github/workflows) and composite
+  # actions (.github/actions) up to date. Grouped into a single weekly PR.
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    groups:
+      github-actions:
+        patterns:
+          - "*"

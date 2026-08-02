@@ -347,6 +347,7 @@ export interface Page {
     | ContributorsBlock
     | MediaBlock
     | NewsletterSignupBlock
+    | ShopifyMerchBlock
     | TimelineBlock
     | VolumeView
     | FormBlock
@@ -836,6 +837,42 @@ export interface NewsletterSignupBlock {
   id?: string | null;
   blockName?: string | null;
   blockType: 'newsletterSignup';
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "ShopifyMerchBlock".
+ */
+export interface ShopifyMerchBlock {
+  heading?: string | null;
+  /**
+   * Square suits narrow sidebars; full width suits page bodies.
+   */
+  layout?: ('square' | 'fullWidth') | null;
+  /**
+   * Link to the full store, shown as a “Shop all” button.
+   */
+  storeUrl?: string | null;
+  /**
+   * Curate the products to feature. Reorder to control display order.
+   */
+  products?:
+    | {
+        image: number | Media;
+        title: string;
+        /**
+         * Optional, e.g. “$25.00”.
+         */
+        price?: string | null;
+        /**
+         * Link to the product on the Shopify store.
+         */
+        url: string;
+        id?: string | null;
+      }[]
+    | null;
+  id?: string | null;
+  blockName?: string | null;
+  blockType: 'shopifyMerch';
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -1497,6 +1534,7 @@ export interface PagesSelect<T extends boolean = true> {
         contributors?: T | ContributorsBlockSelect<T>;
         mediaBlock?: T | MediaBlockSelect<T>;
         newsletterSignup?: T | NewsletterSignupBlockSelect<T>;
+        shopifyMerch?: T | ShopifyMerchBlockSelect<T>;
         timeline?: T | TimelineBlockSelect<T>;
         volumeView?: T | VolumeViewSelect<T>;
         formBlock?: T | FormBlockSelect<T>;
@@ -1604,6 +1642,26 @@ export interface NewsletterSignupBlockSelect<T extends boolean = true> {
   description?: T;
   buttonLabel?: T;
   notice?: T;
+  id?: T;
+  blockName?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "ShopifyMerchBlock_select".
+ */
+export interface ShopifyMerchBlockSelect<T extends boolean = true> {
+  heading?: T;
+  layout?: T;
+  storeUrl?: T;
+  products?:
+    | T
+    | {
+        image?: T;
+        title?: T;
+        price?: T;
+        url?: T;
+        id?: T;
+      };
   id?: T;
   blockName?: T;
 }

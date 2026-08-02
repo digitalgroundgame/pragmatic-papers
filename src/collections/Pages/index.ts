@@ -8,6 +8,7 @@ import { Contributors } from "@/blocks/Contributors/config"
 import { FormBlock } from "@/blocks/Form/config"
 import { MediaBlock } from "@/blocks/MediaBlock/config"
 import { NewsletterSignup } from "@/blocks/NewsletterSignup/config"
+import { ShopifyMerch } from "@/blocks/ShopifyMerch/config"
 import { Timeline } from "@/blocks/Timeline/config"
 import { VolumeView } from "@/blocks/VolumeViewBlock/config"
 import { hero } from "@/heros/config"
@@ -83,6 +84,7 @@ export const Pages: CollectionConfig<"pages"> = {
                 Contributors,
                 MediaBlock,
                 NewsletterSignup,
+                ShopifyMerch,
                 Timeline,
                 VolumeView,
                 FormBlock,

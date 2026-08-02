@@ -15,6 +15,7 @@ import {
 
 import { CallToAction } from "@/blocks/CallToAction/config"
 import { NewsletterSignup } from "@/blocks/NewsletterSignup/config"
+import { ShopifyMerch } from "@/blocks/ShopifyMerch/config"
 
 const columnFields: Field[] = [
   {
@@ -55,7 +56,7 @@ const columnFields: Field[] = [
           OrderedListFeature(),
           AlignFeature(),
           EXPERIMENTAL_TableFeature(),
-          BlocksFeature({ blocks: [CallToAction, NewsletterSignup] }),
+          BlocksFeature({ blocks: [CallToAction, NewsletterSignup, ShopifyMerch] }),
         ]
       },
     }),

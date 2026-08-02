@@ -17,64 +17,115 @@ export interface ExtractNarrationTextOptions {
   mediaMap?: MediaMap | null
 }
 
+// Human-readable, lower-cased nouns for blocks that fall through to the generic
+// descriptor. Proper-noun blocks (embeds, media, math) are handled explicitly
+// below so their branding/casing survives.
 const BLOCK_TYPE_NAMES: Record<string, string> = {
-  banner: "Banner",
-  code: "Code",
-  cta: "Call to Action",
-  collectionGrid: "Collection Grid",
-  content: "Content",
-  contributors: "Contributors",
-  formBlock: "Form",
-  interactiveMap: "Interactive Map",
-  mediaBlock: "Media Block",
-  mediaCollage: "Media Collage",
-  displayMathBlock: "Display Math Block",
-  inlineMathBlock: "Inline Math Block",
-  newsletterSignup: "Newsletter Signup",
-  socialEmbed: "Social Embed",
-  timeline: "Timeline",
-  twitterEmbed: "Twitter Embed",
-  youtubeEmbed: "YouTube Embed",
-  redditEmbed: "Reddit Embed",
-  blueSkyEmbed: "Bluesky Embed",
-  tiktokEmbed: "TikTok Embed",
-  volumeView: "Volume View",
+  cta: "call to action",
+  collectionGrid: "collection grid",
+  content: "content block",
+  contributors: "contributors block",
+  formBlock: "form",
+  newsletterSignup: "newsletter signup",
+  volumeView: "volume view",
 }
 
-function getFallbackPlaceholder(blockType: string, fields: Record<string, unknown>): string {
-  const name = (BLOCK_TYPE_NAMES[blockType] || blockType).toUpperCase()
+// Provider-aware descriptions for social/media embeds. We never read the raw
+// URL aloud — a spoken URL is unintelligible — so each embed collapses to a
+// short "an embedded X" noun phrase.
+const EMBED_DESCRIPTIONS: Record<string, string> = {
+  youtubeEmbed: "an embedded YouTube video",
+  tiktokEmbed: "an embedded TikTok video",
+  twitterEmbed: "an embedded Twitter post",
+  redditEmbed: "an embedded Reddit post",
+  blueSkyEmbed: "an embedded Bluesky post",
+}
 
-  let detail = ""
-  if (blockType === "code") {
-    detail = typeof fields.language === "string" ? fields.language : ""
-  } else if (blockType === "interactiveMap") {
-    detail = typeof fields.widgetTitle === "string" ? fields.widgetTitle : ""
-  } else if (blockType === "timeline") {
-    detail = typeof fields.title === "string" ? fields.title : ""
-  } else if (blockType === "inlineMathBlock" || blockType === "displayMathBlock") {
-    detail = typeof fields.math === "string" ? fields.math : ""
-  } else if (blockType.endsWith("Embed") || blockType === "socialEmbed") {
-    const parts: string[] = []
-    if (typeof fields.platform === "string") parts.push(fields.platform)
-    if (typeof fields.url === "string") parts.push(fields.url)
-    detail = parts.join(": ")
+/**
+ * Turn a bare noun phrase into a full "described visual" sentence that reads
+ * naturally in a text-to-speech engine like ElevenLabs, e.g.
+ *   describeVisual('a timeline titled "Fall of Rome"')
+ *     -> 'A timeline titled "Fall of Rome" is shown here.'
+ *   describeVisual('an image', 'crowds gather outside the courthouse')
+ *     -> 'An image is shown here: crowds gather outside the courthouse.'
+ *
+ * `detail` (a caption or alt description) is appended after the frame so the
+ * listener hears what the visual contains without any bracketed markers.
+ */
+function describeVisual(nounPhrase: string, detail?: string): string {
+  const trimmedDetail = detail?.trim()
+  let sentence = trimmedDetail
+    ? `${nounPhrase} is shown here: ${trimmedDetail}`
+    : `${nounPhrase} is shown here`
+  sentence = sentence.trim()
+  if (!/[.!?]$/.test(sentence)) sentence += "."
+  return sentence.charAt(0).toUpperCase() + sentence.slice(1)
+}
+
+function indefiniteArticle(noun: string): "a" | "an" {
+  return /^[aeiou]/i.test(noun) ? "an" : "a"
+}
+
+/**
+ * Build a spoken-friendly description for a visual/non-text block. Visual
+ * elements can't be narrated directly, so each is described as an aside the
+ * ElevenLabs voice can read verbatim — no double-angle-bracket markers, no
+ * all-caps block names (which TTS engines spell out letter by letter), and no
+ * raw LaTeX or URLs.
+ */
+function describeBlock(blockType: string, fields: Record<string, unknown>): string {
+  if (blockType === "mediaBlock") {
+    return describeVisual("an image")
   }
 
-  if (!detail) {
-    const potentialKeys = ["title", "name", "slug", "label", "id"]
-    for (const key of potentialKeys) {
-      if (typeof fields[key] === "string" && fields[key]) {
-        detail = fields[key] as string
-        break
-      }
-      if (typeof fields[key] === "number") {
-        detail = String(fields[key])
-        break
-      }
+  if (blockType === "mediaCollage") {
+    return describeVisual("a gallery of images")
+  }
+
+  if (blockType === "timeline") {
+    const title = typeof fields.title === "string" ? fields.title.trim() : ""
+    return describeVisual(title ? `a timeline titled "${title}"` : "a timeline")
+  }
+
+  if (blockType === "interactiveMap") {
+    const title = typeof fields.widgetTitle === "string" ? fields.widgetTitle.trim() : ""
+    return describeVisual(title ? `an interactive map titled "${title}"` : "an interactive map")
+  }
+
+  if (blockType === "code") {
+    const language = typeof fields.language === "string" ? fields.language.trim() : ""
+    return describeVisual(language ? `a code sample in ${language}` : "a code sample")
+  }
+
+  // Never read raw LaTeX aloud — collapse any math block to a spoken description.
+  if (blockType === "displayMathBlock" || blockType === "inlineMathBlock") {
+    return describeVisual("a mathematical formula")
+  }
+
+  const embedDescription = EMBED_DESCRIPTIONS[blockType]
+  if (embedDescription) {
+    return describeVisual(embedDescription)
+  }
+
+  if (blockType === "socialEmbed") {
+    const platform = typeof fields.platform === "string" ? fields.platform.trim() : ""
+    return describeVisual(
+      platform ? `an embedded ${platform} post` : "an embedded social media post",
+    )
+  }
+
+  // Generic fallback for any remaining block type. Only human-readable title/
+  // name/label strings become a "titled" clause — slugs, ids, and numbers read
+  // terribly aloud and are dropped.
+  const noun = BLOCK_TYPE_NAMES[blockType] || blockType
+  let titled = ""
+  for (const key of ["title", "name", "label"]) {
+    if (typeof fields[key] === "string" && (fields[key] as string).trim()) {
+      titled = ` titled "${(fields[key] as string).trim()}"`
+      break
     }
   }
-
-  return detail ? `<< ${name}: ${detail} >>` : `<< ${name} >>`
+  return describeVisual(`${indefiniteArticle(noun)} ${noun}${titled}`)
 }
 
 function formatBlockContent(text: string): string {
@@ -178,8 +229,9 @@ function extractLexicalNodeText(
     }
 
     if (blockType === "inlineMathBlock") {
-      const math = typeof fields.math === "string" ? fields.math : ""
-      return math ? `<< INLINE MATH BLOCK: ${math} >>` : "<< INLINE MATH BLOCK >>"
+      // Inline within a sentence — a short noun phrase, not a full aside. Raw
+      // LaTeX is never read aloud.
+      return "a mathematical formula"
     }
 
     return ""
@@ -190,78 +242,53 @@ function extractLexicalNodeText(
     const fields = (nodeObj.fields as Record<string, unknown> | undefined) ?? {}
     const blockType = fields.blockType as string | undefined
 
+    // Resolve a spoken description for a media reference: the caption (preferred)
+    // or the alt text. Filenames and numeric ids are intentionally omitted —
+    // they read terribly aloud and add no narration value, so a media block with
+    // neither caption nor alt simply narrates as "An image is shown here."
+    const resolveMediaDescription = (mediaVal: unknown): string => {
+      const mediaInfo = resolveMediaInfo(mediaVal, mediaMap)
+      if (!mediaInfo) return ""
+
+      if (mediaInfo.caption && typeof mediaInfo.caption === "object") {
+        const caption = extractLexicalNodeText(
+          mediaInfo.caption as SerializedLexicalNode,
+          mediaMap,
+        ).trim()
+        if (caption) return caption
+      }
+
+      if (typeof mediaInfo.alt === "string" && mediaInfo.alt.trim()) {
+        return mediaInfo.alt.trim()
+      }
+
+      return ""
+    }
+
     let blockText = ""
     if (blockType === "mediaBlock" && fields.media) {
-      const mediaInfo = resolveMediaInfo(fields.media, mediaMap)
-      let detail = ""
-      if (mediaInfo) {
-        let extractedCaption = ""
-        if (mediaInfo.caption && typeof mediaInfo.caption === "object") {
-          extractedCaption = extractLexicalNodeText(
-            mediaInfo.caption as SerializedLexicalNode,
-            mediaMap,
-          ).trim()
-        }
-
-        if (extractedCaption) {
-          detail = extractedCaption
-        } else if (typeof mediaInfo.alt === "string" && mediaInfo.alt.trim()) {
-          detail = mediaInfo.alt.trim()
-        } else {
-          detail = mediaInfo.filename || (mediaInfo.id ? `ID: ${mediaInfo.id}` : "")
-        }
-      } else {
-        if (typeof fields.media === "string" || typeof fields.media === "number") {
-          detail = `ID: ${fields.media}`
-        } else if (typeof fields.media === "object" && fields.media !== null) {
-          const mediaObj = fields.media as Record<string, unknown>
-          detail = (mediaObj.filename as string) || (mediaObj.id ? `ID: ${mediaObj.id}` : "")
-        }
-      }
-      blockText = detail ? `<< MEDIA BLOCK: ${detail} >>` : "<< MEDIA BLOCK >>"
+      const description = resolveMediaDescription(fields.media)
+      blockText = describeVisual("an image", description)
     } else if (blockType === "mediaCollage" && Array.isArray(fields.images)) {
-      const collageTexts: string[] = []
+      const descriptions: string[] = []
       for (const img of fields.images as Record<string, unknown>[]) {
         if (img && typeof img === "object" && img.media) {
-          const mediaInfo = resolveMediaInfo(img.media, mediaMap)
-          let detail = ""
-          if (mediaInfo) {
-            let extractedCaption = ""
-            if (mediaInfo.caption && typeof mediaInfo.caption === "object") {
-              extractedCaption = extractLexicalNodeText(
-                mediaInfo.caption as SerializedLexicalNode,
-                mediaMap,
-              ).trim()
-            }
-
-            if (extractedCaption) {
-              detail = extractedCaption
-            } else if (typeof mediaInfo.alt === "string" && mediaInfo.alt.trim()) {
-              detail = mediaInfo.alt.trim()
-            } else {
-              detail = mediaInfo.filename || (mediaInfo.id ? `ID: ${mediaInfo.id}` : "")
-            }
-          } else {
-            if (typeof img.media === "string" || typeof img.media === "number") {
-              detail = `ID: ${img.media}`
-            } else if (typeof img.media === "object" && img.media !== null) {
-              const mediaObj = img.media as Record<string, unknown>
-              detail = (mediaObj.filename as string) || (mediaObj.id ? `ID: ${mediaObj.id}` : "")
-            }
-          }
-          collageTexts.push(detail ? `<< MEDIA BLOCK: ${detail} >>` : "<< MEDIA BLOCK >>")
+          const description = resolveMediaDescription(img.media)
+          if (description) descriptions.push(description)
         }
       }
-      if (collageTexts.length > 0) {
-        blockText = collageTexts.join("\n")
+      if (Array.isArray(fields.images) && fields.images.length > 0) {
+        blockText = describeVisual("a gallery of images", descriptions.join("; "))
       }
     } else if (blockType === "banner" && fields.content && typeof fields.content === "object") {
+      // A banner carries real, readable prose — narrate it as a set-apart note
+      // rather than describing it as a visual.
       const text = extractLexicalNodeText(fields.content as SerializedLexicalNode, mediaMap).trim()
-      blockText = text ? `<< BANNER: ${text} >>` : "<< BANNER >>"
+      blockText = text ? `Note: ${text}` : ""
     }
 
     if (!blockText && blockType) {
-      blockText = getFallbackPlaceholder(blockType, fields)
+      blockText = describeBlock(blockType, fields)
     }
 
     return formatBlockContent(blockText)

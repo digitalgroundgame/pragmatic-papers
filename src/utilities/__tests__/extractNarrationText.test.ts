@@ -110,7 +110,7 @@ describe("extractNarrationText", () => {
     expect(text).not.toContain("footnote citation")
   })
 
-  it("generates uppercase placeholder with details for block types", () => {
+  it("describes a titled visual block as a spoken aside", () => {
     const text = extractNarrationText({
       title: "Block Placeholder Test",
       content: {
@@ -129,10 +129,10 @@ describe("extractNarrationText", () => {
       },
     })
 
-    expect(text).toContain("<< INTERACTIVE MAP: Voting shifts map >>")
+    expect(text).toContain('An interactive map titled "Voting shifts map" is shown here.')
   })
 
-  it("falls back to uppercase placeholders for custom blocks without detail", () => {
+  it("describes visual blocks without a title using a generic spoken aside", () => {
     const text = extractNarrationText({
       title: "Fallback Test",
       content: {
@@ -156,11 +156,12 @@ describe("extractNarrationText", () => {
       },
     })
 
-    expect(text).toContain("<< INTERACTIVE MAP >>")
-    expect(text).toContain("<< CODE >>")
+    expect(text).toContain("An interactive map is shown here.")
+    expect(text).toContain("A code sample is shown here.")
+    expect(text).not.toContain("<<")
   })
 
-  it("extracts banner content text when description is missing", () => {
+  it("narrates banner content as a set-apart note", () => {
     const text = extractNarrationText({
       title: "Banner Test",
       content: {
@@ -189,7 +190,8 @@ describe("extractNarrationText", () => {
       },
     })
 
-    expect(text).toContain("<< BANNER: Important announcement text. >>")
+    expect(text).toContain("Note: Important announcement text.")
+    expect(text).not.toContain("<<")
   })
 
   it("reuses media alt text or caption as description for mediaBlock", () => {
@@ -214,7 +216,7 @@ describe("extractNarrationText", () => {
     })
 
     expect(textWithAlt).toContain(
-      "<< MEDIA BLOCK: A diagram illustrating quantum superposition. >>",
+      "An image is shown here: A diagram illustrating quantum superposition.",
     )
 
     const textWithCaption = extractNarrationText({
@@ -247,7 +249,7 @@ describe("extractNarrationText", () => {
       },
     })
 
-    expect(textWithCaption).toContain("<< MEDIA BLOCK: Caption plain text description. >>")
+    expect(textWithCaption).toContain("An image is shown here: Caption plain text description.")
   })
 
   it("extracts alt text for mediaCollage blocks", () => {
@@ -273,7 +275,7 @@ describe("extractNarrationText", () => {
     })
 
     expect(text).toContain(
-      "<< MEDIA BLOCK: First collage image >>\n<< MEDIA BLOCK: Second collage image >>",
+      "A gallery of images is shown here: First collage image; Second collage image.",
     )
   })
 
@@ -308,13 +310,13 @@ describe("extractNarrationText", () => {
       },
     })
 
-    expect(text).toContain("<< MEDIA BLOCK: Single image from mediaMap >>")
+    expect(text).toContain("An image is shown here: Single image from mediaMap.")
     expect(text).toContain(
-      "<< MEDIA BLOCK: Collage image 1 from mediaMap >>\n<< MEDIA BLOCK: Collage image 2 from mediaMap >>",
+      "A gallery of images is shown here: Collage image 1 from mediaMap; Collage image 2 from mediaMap.",
     )
   })
 
-  it("generates clear all-caps placeholders with filename or ID for media blocks missing alt/caption", () => {
+  it("omits filenames and IDs from narration when alt/caption are missing", () => {
     const text = extractNarrationText({
       title: "Missing Media Alt Test",
       content: {
@@ -345,11 +347,14 @@ describe("extractNarrationText", () => {
       },
     })
 
-    expect(text).toContain("<< MEDIA BLOCK: quantum_superposition.png >>")
-    expect(text).toContain("<< MEDIA BLOCK: collage1.jpg >>\n<< MEDIA BLOCK: ID: xyz >>")
+    // Filenames read terribly aloud, so they are never spoken.
+    expect(text).not.toContain("quantum_superposition.png")
+    expect(text).not.toContain("collage1.jpg")
+    expect(text).toContain("An image is shown here.")
+    expect(text).toContain("A gallery of images is shown here.")
   })
 
-  it("formats inline math block placeholders in double angle brackets", () => {
+  it("collapses inline math to a spoken phrase without reading LaTeX", () => {
     const text = extractNarrationText({
       content: {
         root: {
@@ -372,10 +377,11 @@ describe("extractNarrationText", () => {
         },
       },
     })
-    expect(text).toContain("Theory of relativity: << INLINE MATH BLOCK: E=mc^2 >>")
+    expect(text).toContain("Theory of relativity: a mathematical formula")
+    expect(text).not.toContain("E=mc^2")
   })
 
-  it("falls back to generic message for socialEmbed when description is missing", () => {
+  it("falls back to generic spoken description for socialEmbed when platform is missing", () => {
     const text = extractNarrationText({
       title: "Social Embed Test",
       content: {
@@ -396,7 +402,7 @@ describe("extractNarrationText", () => {
       },
     })
 
-    expect(text).toContain("<< SOCIAL EMBED >>")
+    expect(text).toContain("An embedded social media post is shown here.")
     expect(text).not.toContain("Post about technological breakthroughs")
   })
 
@@ -477,7 +483,7 @@ describe("extractNarrationText", () => {
       },
     })
 
-    expect(text).toContain("<< MEDIA BLOCK: Narrated caption description >>")
+    expect(text).toContain("An image is shown here: Narrated caption description")
     expect(text).not.toContain("Alternate image description")
   })
 
@@ -550,7 +556,7 @@ describe("extractNarrationText", () => {
     expect(text).toContain("Cell A1 Cell A2\nCell B1 Cell B2")
   })
 
-  it("covers missing branches in getFallbackPlaceholder", () => {
+  it("describes timeline, math, and untitled map blocks as spoken asides", () => {
     const text = extractNarrationText({
       content: {
         root: {
@@ -574,7 +580,7 @@ describe("extractNarrationText", () => {
               type: "block",
               fields: {
                 blockType: "interactiveMap",
-                slug: 12345, // test fallback to numeric key
+                slug: 12345, // numeric slug must never be read aloud
               },
             },
           ],
@@ -582,9 +588,11 @@ describe("extractNarrationText", () => {
       },
     })
 
-    expect(text).toContain("<< TIMELINE: WWII Timeline >>")
-    expect(text).toContain("<< DISPLAY MATH BLOCK: f(x) = x^2 >>")
-    expect(text).toContain("<< INTERACTIVE MAP: 12345 >>")
+    expect(text).toContain('A timeline titled "WWII Timeline" is shown here.')
+    expect(text).toContain("A mathematical formula is shown here.")
+    expect(text).not.toContain("f(x) = x^2")
+    expect(text).toContain("An interactive map is shown here.")
+    expect(text).not.toContain("12345")
   })
 
   it("covers complex resolveMediaInfo formats", () => {
@@ -639,10 +647,10 @@ describe("extractNarrationText", () => {
       },
     })
 
-    expect(text).toContain("quantum spin alt text")
-    expect(text).toContain("Media from value ID lookup")
-    expect(text).toContain("Media from direct ID lookup")
-    expect(text).toContain("<< MEDIA BLOCK >>")
+    expect(text).toContain("An image is shown here: quantum spin alt text")
+    expect(text).toContain("An image is shown here: Media from value ID lookup")
+    expect(text).toContain("An image is shown here: Media from direct ID lookup")
+    expect(text).toContain("An image is shown here.")
   })
 
   it("covers unknown/unsupported inlineBlock types", () => {
@@ -715,7 +723,7 @@ describe("extractNarrationText", () => {
       },
     })
 
-    expect(text).toContain("<< MEDIA BLOCK: Collage Image Caption >>")
+    expect(text).toContain("A gallery of images is shown here: Collage Image Caption.")
   })
 
   it("falls back to media details when resolveMediaInfo returns null in mediaCollage", () => {
@@ -745,6 +753,6 @@ describe("extractNarrationText", () => {
       },
     })
 
-    expect(text).toContain("<< MEDIA BLOCK >>")
+    expect(text).toContain("A gallery of images is shown here.")
   })
 })

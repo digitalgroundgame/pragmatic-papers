@@ -11,9 +11,38 @@ import {
 } from "@/endpoints/seed/richtext"
 import { createUser } from "@/endpoints/seed/users"
 import config from "@payload-config"
+import { readFile } from "node:fs/promises"
+import path from "node:path"
 import { getPayload } from "payload"
+import type { Payload } from "payload"
 
 const ctx = { disableRevalidate: true }
+
+// Create a media doc from a file already committed to the repo. The rest of the
+// e2e seed deliberately ships no media (hero images resolve to null), but the
+// Merch block's `image` field is required and the carousel screenshot needs
+// something to render — so we upload one local PNG and reuse it across the
+// products. Reading from disk keeps the seed deterministic and network-free,
+// unlike `createMediaFromURL`.
+async function createLocalMedia(
+  payload: Payload,
+  repoRelativePath: string,
+  alt: string,
+): Promise<number> {
+  const data = await readFile(path.join(process.cwd(), repoRelativePath))
+  const media = await payload.create({
+    collection: "media",
+    context: ctx,
+    data: { alt },
+    file: {
+      name: `e2e-${path.basename(repoRelativePath)}`,
+      data,
+      mimetype: "image/png",
+      size: data.byteLength,
+    },
+  })
+  return media.id
+}
 
 // Screenshot baselines bake in this date via the article/volume byline, so it
 // must stay fixed rather than tracking the day the seed happens to run.
@@ -116,8 +145,19 @@ export async function main(): Promise<void> {
       },
     })
 
+    // One reused product image for the full-width Merch carousel below. See
+    // createLocalMedia for why the e2e seed uploads a local file here.
+    const merchImage = await createLocalMedia(
+      payload,
+      "public/android-chrome-512x512.png",
+      "Pragmatic Papers merchandise",
+    )
+
     // Homepage with a CollectionGrid so gotoFirstArticle / gotoFirstVolume can
     // find a[href*="/articles/"] and a[href*="/volumes/"] links to follow.
+    // A full-width Merch carousel ("Support The Papers") follows the grid so
+    // merch.spec.ts has a deterministic block to exercise and screenshot;
+    // autoplay stays off so the carousel never moves mid-capture.
     await payload.create({
       collection: "pages",
       context: ctx,
@@ -141,6 +181,53 @@ export async function main(): Promise<void> {
                 collection: { relationTo: "volumes", value: volume.id },
                 kicker: null,
                 overrideTitle: null,
+              },
+            ],
+          },
+          {
+            blockType: "merch",
+            blockName: "Support The Papers",
+            heading: "Support The Papers",
+            layout: "fullWidth",
+            autoplay: false,
+            storeUrl: "https://store.digitalgroundgame.org/",
+            products: [
+              {
+                image: merchImage,
+                title: "Acid Washed Liberalism Charity Tee, Black",
+                price: "$100.00",
+                badge: "Sold Out",
+                url: "https://store.digitalgroundgame.org/products/acid-washed-liberalism-tee-black",
+              },
+              {
+                image: merchImage,
+                title: "Liberalism Heavyweight Tee, Black",
+                price: "$40.00",
+                url: "https://store.digitalgroundgame.org/products/liberalism-heavyweight-tee-black",
+              },
+              {
+                image: merchImage,
+                title: "Liberalism Oversized Sweatshirt, Black",
+                price: "$65.00",
+                url: "https://store.digitalgroundgame.org/products/liberalism-oversized-sweatshirt-black",
+              },
+              {
+                image: merchImage,
+                title: "Liberalism Heavyweight Tee, Navy",
+                price: "$40.00",
+                url: "https://store.digitalgroundgame.org/products/liberalism-heavyweight-tee-black",
+              },
+              {
+                image: merchImage,
+                title: "Liberalism Heavyweight Tee, White",
+                price: "$40.00",
+                url: "https://store.digitalgroundgame.org/products/liberalism-heavyweight-tee-black-copy",
+              },
+              {
+                image: merchImage,
+                title: "Liberalism Oversized Sweatshirt, Navy",
+                price: "$65.00",
+                url: "https://store.digitalgroundgame.org/products/liberalism-oversized-sweatshirt-navy",
               },
             ],
           },

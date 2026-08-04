@@ -57,16 +57,31 @@ describe("MerchBlock", () => {
     render(<MerchBlock {...makeProps()} />)
 
     const mug = screen.getByText("DiGG Mug").closest("a")
-    expect(mug?.getAttribute("href")).toBe("https://store.example.com/mug")
+    const href = new URL(mug?.getAttribute("href") ?? "")
+    expect(href.origin + href.pathname).toBe("https://store.example.com/mug")
     expect(mug?.getAttribute("target")).toBe("_blank")
-    expect(mug?.getAttribute("rel")).toBe("noopener noreferrer")
+    // A commercial off-site placement, declared as one.
+    expect(mug?.getAttribute("rel")).toBe("sponsored nofollow noopener noreferrer")
+  })
+
+  it("tags outbound links so the storefront can attribute the traffic", () => {
+    render(<MerchBlock {...makeProps()} />)
+
+    const product = new URL(screen.getByText("DiGG Mug").closest("a")!.getAttribute("href")!)
+    expect(product.searchParams.get("utm_source")).toBe("pragmaticpapers")
+    expect(product.searchParams.get("utm_medium")).toBe("merch_block")
+    expect(product.searchParams.get("utm_content")).toBe("fullWidth_product")
+
+    const store = new URL(screen.getByText("Shop all").closest("a")!.getAttribute("href")!)
+    expect(store.searchParams.get("utm_content")).toBe("fullWidth_shop_all")
   })
 
   it("links 'Shop all' to the store URL", () => {
     render(<MerchBlock {...makeProps()} />)
 
     const storeLink = screen.getByText("Shop all").closest("a")
-    expect(storeLink?.getAttribute("href")).toBe("https://store.example.com/")
+    const href = new URL(storeLink?.getAttribute("href") ?? "")
+    expect(href.origin + href.pathname).toBe("https://store.example.com/")
     expect(storeLink?.getAttribute("target")).toBe("_blank")
   })
 
@@ -74,8 +89,58 @@ describe("MerchBlock", () => {
     render(<MerchBlock {...makeProps({ heading: null, storeUrl: null })} />)
 
     expect(screen.getByRole("heading", { name: "The Pragmatic Papers Store" })).toBeTruthy()
-    const storeLink = screen.getByText("Shop all").closest("a")
-    expect(storeLink?.getAttribute("href")).toBe("https://pragmaticpapers.org/store")
+    const href = new URL(screen.getByText("Shop all").closest("a")!.getAttribute("href")!)
+    expect(href.origin + href.pathname).toBe("https://pragmaticpapers.org/store")
+  })
+
+  it("overlays a badge only on products that have one", () => {
+    render(
+      <MerchBlock
+        {...makeProps({
+          products: [
+            { id: "1", image, title: "DiGG Mug", badge: "Sold out", url: "https://s.example/mug" },
+            { id: "2", image, title: "DiGG Tee", url: "https://s.example/tee" },
+          ],
+        })}
+      />,
+    )
+
+    expect(screen.getByText("Sold out")).toBeTruthy()
+    expect(screen.queryByText("New")).toBeNull()
+  })
+
+  it("renders the badge in a neutral tone, not the brand colour", () => {
+    render(
+      <MerchBlock
+        {...makeProps({
+          products: [
+            { id: "1", image, title: "DiGG Tee", badge: "Sold out", url: "https://s.example/tee" },
+          ],
+        })}
+      />,
+    )
+
+    const badge = screen.getByText("Sold out").className
+    expect(badge).toContain("bg-secondary")
+    expect(badge).not.toContain("bg-brand")
+  })
+
+  it("owns its gutter and closes with a rule as a page-layout block", () => {
+    const { container } = render(<MerchBlock {...makeProps()} />)
+
+    const section = container.querySelector("section")!
+    expect(section.className).toContain("container")
+    expect(container.querySelector('[data-slot="separator"]')).toBeTruthy()
+  })
+
+  it("drops the gutter, the rule, and prose styling inside a rich-text column", () => {
+    const { container } = render(<MerchBlock {...makeProps()} enableGutter={false} />)
+
+    const section = container.querySelector("section")!
+    expect(section.className).not.toContain("container")
+    expect(section.className).toContain("not-prose")
+    // The surrounding column already separates itself from what follows.
+    expect(container.querySelector('[data-slot="separator"]')).toBeNull()
   })
 
   it("shows one product at a time for the square (sidebar) layout", () => {
@@ -94,15 +159,5 @@ describe("MerchBlock", () => {
     expect(slides).toHaveLength(2)
     expect(slides[0]?.className).toContain("sm:basis-1/2")
     expect(slides[0]?.className).toContain("lg:basis-1/4")
-  })
-
-  it("renders carousel controls for both layouts", () => {
-    for (const layout of ["square", "fullWidth"] as const) {
-      render(<MerchBlock {...makeProps({ layout })} />)
-
-      expect(screen.getByRole("button", { name: "Previous slide" })).toBeTruthy()
-      expect(screen.getByRole("button", { name: "Next slide" })).toBeTruthy()
-      cleanup()
-    }
   })
 })

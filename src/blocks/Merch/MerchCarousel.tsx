@@ -3,7 +3,13 @@
 import Autoplay from "embla-carousel-autoplay"
 import React from "react"
 
-import { Carousel } from "@/components/ui/carousel"
+import {
+  Carousel,
+  CarouselIndicators,
+  CarouselNext,
+  CarouselPrevious,
+  useCarousel,
+} from "@/components/ui/carousel"
 
 const AUTOPLAY_DELAY_MS = 6000
 
@@ -70,4 +76,60 @@ export const MerchCarousel: React.FC<MerchCarouselProps> = ({ autoplay, classNam
       {children}
     </Carousel>
   )
+}
+
+/**
+ * Prev/next arrows that disappear when there's nothing to scroll — with four
+ * products in a four-up layout, permanently disabled arrows imply content that
+ * isn't there.
+ */
+export const MerchCarouselControls: React.FC = () => {
+  const { canScrollPrev, canScrollNext } = useCarousel()
+
+  if (!canScrollPrev && !canScrollNext) return null
+
+  return (
+    <div className="flex gap-2">
+      {/* Pull the arrows out of their default overlay position and into the
+          header. The `active:` override matches the button's own variant chain
+          so tailwind-merge replaces it rather than stacking (otherwise pressing
+          an arrow jerks it upward). */}
+      <CarouselPrevious className="static translate-y-0 active:not-aria-[haspopup]:translate-y-0" />
+      <CarouselNext className="static translate-y-0 active:not-aria-[haspopup]:translate-y-0" />
+    </div>
+  )
+}
+
+/**
+ * Position dots for the one-up layouts, where nothing else tells the reader how
+ * many products there are. Counts embla's snap points rather than the slides,
+ * so it stays right at widths that show several at once.
+ */
+export const MerchCarouselDots: React.FC = () => {
+  const { api } = useCarousel()
+  const [snapCount, setSnapCount] = React.useState(0)
+  const [current, setCurrent] = React.useState(0)
+
+  React.useEffect(() => {
+    if (!api) return
+
+    const sync = () => {
+      setSnapCount(api.scrollSnapList().length)
+      setCurrent(api.selectedScrollSnap())
+    }
+
+    React.startTransition(sync)
+    api.on("select", sync)
+    api.on("reInit", sync)
+
+    return () => {
+      api.off("select", sync)
+      api.off("reInit", sync)
+    }
+  }, [api])
+
+  // A single snap point means everything already fits.
+  if (snapCount < 2) return null
+
+  return <CarouselIndicators count={snapCount} current={current} className="static" />
 }

@@ -353,11 +353,15 @@ export const seed = async (
           privacyPolicyPage,
           termsOfUsePage,
           volumesPage,
-        } = await createPages(payload, {
-          chiefEditorIds: [ctx.chiefEditor.id],
-          editorIds: [ctx.editor.id],
-          writerIds: [ctx.writers[0]!.id, ctx.writers[1]!.id],
-        })
+        } = await createPages(
+          payload,
+          {
+            chiefEditorIds: [ctx.chiefEditor.id],
+            editorIds: [ctx.editor.id],
+            writerIds: [ctx.writers[0]!.id, ctx.writers[1]!.id],
+          },
+          ctx.media.map((m) => m.id),
+        )
         await createMenus(payload, {
           homePage,
           aboutPage,

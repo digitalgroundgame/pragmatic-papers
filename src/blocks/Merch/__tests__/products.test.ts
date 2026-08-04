@@ -14,12 +14,35 @@ describe("getMerchProducts", () => {
 
   it("normalizes a curated product into the MerchProduct shape", () => {
     const products: Products = [
-      { id: "abc", image: 1, title: "DiGG Mug", price: "$15.00", url: "https://store/mug" },
+      {
+        id: "abc",
+        image: 1,
+        title: "DiGG Mug",
+        price: "$15.00",
+        badge: "New",
+        url: "https://store/mug",
+      },
     ]
 
     expect(getMerchProducts(products)).toEqual([
-      { id: "abc", title: "DiGG Mug", price: "$15.00", url: "https://store/mug", image: 1 },
+      {
+        id: "abc",
+        title: "DiGG Mug",
+        price: "$15.00",
+        badge: "New",
+        url: "https://store/mug",
+        image: 1,
+      },
     ])
+  })
+
+  it("coerces blank or whitespace-only badges to null", () => {
+    const products: Products = [
+      { image: 1, title: "A", badge: "   ", url: "https://store/a" },
+      { image: 2, title: "B", url: "https://store/b" },
+    ]
+
+    expect(getMerchProducts(products).map((p) => p.badge)).toEqual([null, null])
   })
 
   it("falls back to an index-based id when the row has none", () => {

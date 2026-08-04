@@ -6,6 +6,7 @@ import { InteractiveMapBlock } from "@/blocks/InteractiveMap/InteractiveMapBlock
 import { MathBlock, type MathBlockProps } from "@/blocks/Math/Component"
 import { LightboxMediaBlock } from "@/blocks/MediaBlock/LightboxMediaBlock"
 import { MediaCollageBlock } from "@/blocks/MediaCollageBlock/component"
+import { MerchBlock } from "@/blocks/Merch/Component"
 import { NewsletterSignupBlock } from "@/blocks/NewsletterSignup/Component"
 import {
   BlueskyEmbedBlock,
@@ -26,6 +27,7 @@ import type {
   InteractiveMapBlock as InteractiveMapBlockProps,
   MediaBlock as MediaBlockProps,
   MediaCollageBlock as MediaCollageBlockProps,
+  MerchBlock as MerchBlockProps,
   NewsletterSignupBlock as NewsletterSignupBlockProps,
   SocialEmbedBlock as SocialEmbedBlockProps,
   SquiggleRuleBlock as SquiggleRuleBlockProps,
@@ -55,6 +57,7 @@ type NodeTypes =
       | CodeBlockProps
       | InteractiveMapBlockProps
       | MathBlockProps
+      | MerchBlockProps
       | NewsletterSignupBlockProps
       | SquiggleRuleBlockProps
       | SocialEmbedBlockProps
@@ -87,6 +90,9 @@ function createJsxConverters(parentDoc?: ParentDocContext): JSXConvertersFunctio
         <LightboxMediaBlock containerClassName="-my-8" breakout {...node.fields} />
       ),
       mediaCollage: ({ node }) => <MediaCollageBlock {...node.fields} />,
+      merch: ({ node }: { node: SerializedBlockNode<MerchBlockProps> }) => (
+        <MerchBlock {...node.fields} enableGutter={false} />
+      ),
       newsletterSignup: ({ node }) => <NewsletterSignupBlock {...node.fields} />,
       socialEmbed: ({ node }) => <SocialEmbedBlock {...node.fields} parentDoc={parentDoc} />,
       squiggleRule: ({ node }) => <SquiggleRuleBlock className="col-start-2" {...node.fields} />,

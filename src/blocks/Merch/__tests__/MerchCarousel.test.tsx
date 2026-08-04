@@ -13,7 +13,19 @@ const Autoplay = vi.fn((_options: unknown) => autoplayPlugin)
 
 vi.mock("embla-carousel-autoplay", () => ({ default: (options: unknown) => Autoplay(options) }))
 
-import { MerchCarousel } from "../MerchCarousel"
+// jsdom has no layout, so a real embla instance always reports "nothing to
+// scroll". Stub the hook to drive the states the controls actually branch on.
+// `CarouselPrevious`/`CarouselIndicators` call the module-internal hook, so
+// those still need a real <Carousel> ancestor.
+const carousel = vi.hoisted(() => ({ state: {} as Record<string, unknown> }))
+
+vi.mock("@/components/ui/carousel", async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>
+  return { ...actual, useCarousel: () => carousel.state }
+})
+
+import { Carousel } from "@/components/ui/carousel"
+import { MerchCarousel, MerchCarouselControls, MerchCarouselDots } from "../MerchCarousel"
 
 /** jsdom has no `matchMedia`; vitest.setup stubs a never-matching one. */
 function stubReducedMotion(matches: boolean): void {
@@ -32,6 +44,7 @@ function stubReducedMotion(matches: boolean): void {
 beforeEach(() => {
   Autoplay.mockClear()
   stubReducedMotion(false)
+  carousel.state = { canScrollPrev: false, canScrollNext: false, api: undefined }
 })
 
 afterEach(cleanup)
@@ -76,5 +89,64 @@ describe("MerchCarousel", () => {
 
     expect(screen.getByText("Slides")).toBeTruthy()
     expect(Autoplay).not.toHaveBeenCalled()
+  })
+})
+
+describe("MerchCarouselControls", () => {
+  it("hides the arrows when every product already fits", () => {
+    render(
+      <Carousel>
+        <MerchCarouselControls />
+      </Carousel>,
+    )
+
+    expect(screen.queryByRole("button", { name: "Previous slide" })).toBeNull()
+    expect(screen.queryByRole("button", { name: "Next slide" })).toBeNull()
+  })
+
+  it("shows the arrows once there is something to scroll to", () => {
+    carousel.state = { canScrollPrev: false, canScrollNext: true }
+
+    render(
+      <Carousel>
+        <MerchCarouselControls />
+      </Carousel>,
+    )
+
+    expect(screen.getByRole("button", { name: "Previous slide" })).toBeTruthy()
+    expect(screen.getByRole("button", { name: "Next slide" })).toBeTruthy()
+  })
+})
+
+describe("MerchCarouselDots", () => {
+  const fakeApi = (snapCount: number) => ({
+    scrollSnapList: () => Array.from({ length: snapCount }, (_, i) => i),
+    selectedScrollSnap: () => 0,
+    on: () => undefined,
+    off: () => undefined,
+  })
+
+  it("renders one dot per snap point", () => {
+    carousel.state = { api: fakeApi(3) }
+
+    render(
+      <Carousel>
+        <MerchCarouselDots />
+      </Carousel>,
+    )
+
+    expect(screen.getAllByRole("button", { name: /Go to slide/ })).toHaveLength(3)
+  })
+
+  it("renders nothing when everything fits in one snap", () => {
+    carousel.state = { api: fakeApi(1) }
+
+    render(
+      <Carousel>
+        <MerchCarouselDots />
+      </Carousel>,
+    )
+
+    expect(screen.queryByRole("button", { name: /Go to slide/ })).toBeNull()
   })
 })

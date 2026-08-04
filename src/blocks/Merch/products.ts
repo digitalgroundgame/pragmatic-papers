@@ -9,6 +9,8 @@ export interface MerchProduct {
   id: string
   title: string
   price: string | null
+  /** Optional pill overlaid on the image, e.g. "New" or "Sold out". */
+  badge: string | null
   url: string
   /** Resolved upload (depth ≥ 1) or an unresolved relation id / null. */
   image: Media | number | null | undefined
@@ -31,6 +33,7 @@ export function getMerchProducts(products: MerchBlock["products"]): MerchProduct
       id: product.id ?? `merch-${index}`,
       title: product.title,
       price: product.price?.trim() ? product.price : null,
+      badge: product.badge?.trim() ? product.badge : null,
       url: product.url,
       image: product.image,
     }))

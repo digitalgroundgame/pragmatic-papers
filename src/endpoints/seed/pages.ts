@@ -2,7 +2,12 @@ import type { Page } from "@/payload-types"
 import type { Payload, RequiredDataFromCollectionSlug } from "payload"
 
 import { createContactForm } from "./forms"
-import { createRichTextContent } from "./richtext"
+import {
+  createMerchBlockNode,
+  createRichText,
+  createRichTextContent,
+  createRichTextFromParagraphs,
+} from "./richtext"
 
 type PageData = RequiredDataFromCollectionSlug<"pages">
 
@@ -96,6 +101,7 @@ const createHeroRichTextHeading = (pageTitle: string, tag: "h1" | "h2" | "h3" | 
 export const createPages = async (
   payload: Payload,
   contributors?: AboutContributors,
+  mediaIds?: number[],
 ): Promise<CreatePagesResult> => {
   const pageConfigs: Record<
     "about" | "articles" | "contact" | "privacyPolicy" | "termsOfUse" | "volumes",
@@ -147,17 +153,65 @@ export const createPages = async (
 
   const { about, articles, contact, privacyPolicy, termsOfUse, volumes } = pageConfigs
 
-  const aboutLayout: PageData["layout"] = [
-    {
+  const aboutBody = [
+    about.content,
+    "Pragmatic Papers is reader-supported. Everything we publish stays free to read — merchandise is one of the ways we cover the bills.",
+  ]
+
+  const aboutLayout: PageData["layout"] = []
+
+  if (mediaIds?.length) {
+    aboutLayout.push({
+      blockType: "content",
+      columns: [
+        {
+          size: "twoThirds",
+          richText: createRichTextFromParagraphs(aboutBody),
+        },
+        {
+          size: "oneThird",
+          richText: createRichText([
+            createMerchBlockNode({
+              heading: "Support Our Work",
+              layout: "square",
+              storeUrl: "https://store.digitalgroundgame.org/",
+              products: [
+                {
+                  image: mediaIds[0]!,
+                  title: "Liberia Logo Tee",
+                  price: "$28.00",
+                  badge: "New",
+                  url: "https://store.digitalgroundgame.org/products/logo-tee",
+                },
+                {
+                  image: mediaIds[1 % mediaIds.length]!,
+                  title: "Pragmatic Papers Mug",
+                  price: "$16.00",
+                  url: "https://store.digitalgroundgame.org/products/pragmatic-mug",
+                },
+                {
+                  image: mediaIds[2 % mediaIds.length]!,
+                  title: "Canvas Tote Bag",
+                  price: "$22.00",
+                  url: "https://store.digitalgroundgame.org/products/canvas-tote",
+                },
+              ],
+            }),
+          ]),
+        },
+      ],
+    })
+  } else {
+    aboutLayout.push({
       blockType: "content",
       columns: [
         {
           size: "full",
-          richText: createRichTextContent(about.content),
+          richText: createRichTextFromParagraphs(aboutBody),
         },
       ],
-    },
-  ]
+    })
+  }
 
   if (contributors?.chiefEditorIds.length) {
     aboutLayout.push({

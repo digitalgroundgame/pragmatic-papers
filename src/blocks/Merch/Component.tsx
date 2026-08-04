@@ -6,16 +6,14 @@ import { cva } from "class-variance-authority"
 import { ShoppingCart } from "lucide-react"
 
 import { isMedia, Media } from "@/components/Media"
-import { MerchCarousel } from "./MerchCarousel"
+import { MerchCarousel, MerchCarouselControls, MerchCarouselDots } from "./MerchCarousel"
 import { getMerchProducts, type MerchProduct } from "./products"
-import {
-  CarouselContent,
-  CarouselItem,
-  CarouselNext,
-  CarouselPrevious,
-} from "@/components/ui/carousel"
+import { withMerchUtm } from "./utm"
+import { Badge } from "@/components/ui/badge"
+import { CarouselContent, CarouselItem } from "@/components/ui/carousel"
 import { Separator } from "@/components/ui/separator"
 import { LinkButton } from "@/components/ui/link-button"
+import { cn } from "@/utilities/utils"
 
 // Payload `defaultValue`s only fill DB rows created through the admin UI. Keep
 // runtime fallbacks so the block still renders sensibly if used directly.
@@ -44,17 +42,37 @@ const imageSizesByLayout = {
   fullWidth: "(max-width: 640px) 90vw, (max-width: 768px) 45vw, (max-width: 1024px) 30vw, 280px",
 } as const
 
+type MerchLayout = keyof typeof imageSizesByLayout
+
+// The block renders in two places. As a page-layout block it owns its own
+// gutter and closes with a rule that separates it from the next block. Inside a
+// rich-text column it sits in a container that already has both, and the
+// surrounding `prose` typography would otherwise restyle the card text.
+const sectionVariants = cva("", {
+  variants: {
+    gutter: {
+      true: "container mb-9 md:mb-12",
+      false: "not-prose mb-6 font-sans",
+    },
+  },
+  defaultVariants: {
+    gutter: true,
+  },
+})
+
 interface MerchCardProps {
   product: MerchProduct
-  sizes: string
+  layout: MerchLayout
 }
 
-const MerchCard: React.FC<MerchCardProps> = ({ product, sizes }) => {
+const MerchCard: React.FC<MerchCardProps> = ({ product, layout }) => {
   return (
     <a
-      href={product.url}
+      href={withMerchUtm(product.url, `${layout}_product`)}
       target="_blank"
-      rel="noopener noreferrer"
+      // This is a paid/commercial placement pointing off-site, so declare it as
+      // one rather than passing link equity to the storefront.
+      rel="sponsored nofollow noopener noreferrer"
       className="group flex flex-col gap-2 no-underline"
     >
       <div className="bg-muted relative aspect-square overflow-hidden rounded-sm border">
@@ -62,9 +80,14 @@ const MerchCard: React.FC<MerchCardProps> = ({ product, sizes }) => {
           <Media
             media={product.image}
             variant="square"
-            sizes={sizes}
+            sizes={imageSizesByLayout[layout]}
             className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
           />
+        ) : null}
+        {product.badge ? (
+          <Badge variant="secondary" className="absolute top-2 left-2 shadow-sm">
+            {product.badge}
+          </Badge>
         ) : null}
       </div>
       <div className="flex items-baseline justify-between gap-2">
@@ -79,8 +102,16 @@ const MerchCard: React.FC<MerchCardProps> = ({ product, sizes }) => {
   )
 }
 
-export const MerchBlock: React.FC<MerchBlockProps> = ({
+interface MerchBlockComponentProps extends MerchBlockProps {
+  className?: string
+  /** Off for rich-text placements, which already sit inside a padded column. */
+  enableGutter?: boolean
+}
+
+export const MerchBlock: React.FC<MerchBlockComponentProps> = ({
   autoplay,
+  className,
+  enableGutter = true,
   heading,
   layout,
   storeUrl,
@@ -95,38 +126,43 @@ export const MerchBlock: React.FC<MerchBlockProps> = ({
 
   return (
     <>
-      <section aria-label={headingText} className="container mb-9 md:mb-12">
+      <section
+        aria-label={headingText}
+        className={cn(sectionVariants({ gutter: enableGutter }), className)}
+      >
         <MerchCarousel autoplay={autoplay} className="space-y-6">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <h3>{headingText}</h3>
             <div className="flex w-full items-center justify-between gap-3 sm:w-fit">
-              <LinkButton href={store} target="_blank" rel="noopener noreferrer" variant="branded">
+              <LinkButton
+                href={withMerchUtm(store, `${merchLayout}_shop_all`)}
+                target="_blank"
+                rel="sponsored nofollow noopener noreferrer"
+                variant="branded"
+              >
                 <ShoppingCart />
                 Shop all
               </LinkButton>
-              <div className="flex gap-2">
-                {/* Pull the arrows out of their default overlay position and into
-                  the header. The `active:` override matches the button's own
-                  variant chain so tailwind-merge replaces it rather than
-                  stacking (otherwise pressing an arrow jerks it upward). */}
-                <CarouselPrevious className="static translate-y-0 active:not-aria-[haspopup]:translate-y-0" />
-                <CarouselNext className="static translate-y-0 active:not-aria-[haspopup]:translate-y-0" />
-              </div>
+              <MerchCarouselControls />
             </div>
           </div>
 
           <CarouselContent>
             {items.map((product) => (
               <CarouselItem key={product.id} className={slideVariants({ layout: merchLayout })}>
-                <MerchCard product={product} sizes={imageSizesByLayout[merchLayout]} />
+                <MerchCard product={product} layout={merchLayout} />
               </CarouselItem>
             ))}
           </CarouselContent>
+
+          {merchLayout === "square" ? <MerchCarouselDots /> : null}
         </MerchCarousel>
       </section>
-      <div className="container mb-9 last:hidden md:mb-12">
-        <Separator />
-      </div>
+      {enableGutter ? (
+        <div className="container mb-9 last:hidden md:mb-12">
+          <Separator />
+        </div>
+      ) : null}
     </>
   )
 }

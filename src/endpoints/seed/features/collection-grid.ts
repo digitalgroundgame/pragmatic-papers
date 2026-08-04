@@ -116,12 +116,14 @@ export async function createCollectionGridHomePage(
         blockName: "Store Merch",
         heading: "DigitalGroundGame Store",
         layout: "fullWidth",
+        autoplay: true,
         storeUrl: "https://store.digitalgroundgame.org/",
         products: [
           {
             image: merchImage(0),
             title: "Liberia Logo Tee",
             price: "$28.00",
+            badge: "New",
             url: "https://store.digitalgroundgame.org/products/logo-tee",
           },
           {
@@ -134,6 +136,7 @@ export async function createCollectionGridHomePage(
             image: merchImage(2),
             title: "Enamel Pin Set",
             price: "$12.00",
+            badge: "Sold out",
             url: "https://store.digitalgroundgame.org/products/enamel-pins",
           },
           {
@@ -141,6 +144,19 @@ export async function createCollectionGridHomePage(
             title: "Canvas Tote Bag",
             price: "$22.00",
             url: "https://store.digitalgroundgame.org/products/canvas-tote",
+          },
+          {
+            image: merchImage(4),
+            title: "Field Notes Set",
+            price: "$14.00",
+            url: "https://store.digitalgroundgame.org/products/field-notes",
+          },
+          {
+            image: merchImage(5),
+            title: "Sticker Pack",
+            price: "$8.00",
+            // Already tagged by hand — `withMerchUtm` must leave this alone.
+            url: "https://store.digitalgroundgame.org/products/stickers?utm_source=partner",
           },
         ],
       },

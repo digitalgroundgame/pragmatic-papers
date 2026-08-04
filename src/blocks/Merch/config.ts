@@ -65,6 +65,9 @@ export const Merch: Block = {
       admin: {
         initCollapsed: true,
         description: "Curate the products to feature. Reorder to control display order.",
+        components: {
+          RowLabel: "@/blocks/Merch/ProductRowLabel#ProductRowLabel",
+        },
       },
       fields: [
         {
@@ -83,6 +86,14 @@ export const Merch: Block = {
           type: "text",
           admin: {
             description: "Optional, e.g. “$25.00”.",
+          },
+        },
+        {
+          name: "badge",
+          type: "text",
+          maxLength: 20,
+          admin: {
+            description: "Optional pill on the product image, e.g. “New” or “Sold out”.",
           },
         },
         {

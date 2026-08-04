@@ -869,6 +869,10 @@ export interface MerchBlock {
          */
         price?: string | null;
         /**
+         * Optional pill on the product image, e.g. “New” or “Sold out”.
+         */
+        badge?: string | null;
+        /**
          * Link to the product on the store.
          */
         url: string;
@@ -1665,6 +1669,7 @@ export interface MerchBlockSelect<T extends boolean = true> {
         image?: T;
         title?: T;
         price?: T;
+        badge?: T;
         url?: T;
         id?: T;
       };

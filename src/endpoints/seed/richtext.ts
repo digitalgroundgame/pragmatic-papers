@@ -86,6 +86,31 @@ export function createNewsletterSignupBlockNode(fields?: {
   return node
 }
 
+export function createMerchBlockNode(fields: {
+  heading?: string
+  layout?: "square" | "fullWidth"
+  autoplay?: boolean
+  storeUrl?: string
+  products: Array<{
+    image: number
+    title: string
+    price?: string
+    badge?: string
+    url: string
+  }>
+}): SerializedLexicalNode {
+  const node = {
+    type: "block",
+    fields: {
+      blockType: "merch",
+      ...fields,
+    },
+    format: "",
+    version: 2,
+  }
+  return node
+}
+
 export function createCTABlockNode(fields: {
   richText: LexicalContent
   links?: Array<{

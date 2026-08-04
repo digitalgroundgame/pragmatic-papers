@@ -51,11 +51,14 @@ export const Gauss10Layout: React.FC<LayoutProps> = ({
 
   return (
     <section
-      className={cn("grid grid-cols-1 gap-6 text-ellipsis md:grid-cols-5", className)}
+      className={cn(
+        "grid grid-cols-1 gap-6 text-ellipsis md:grid-cols-3 lg:grid-cols-5",
+        className,
+      )}
       {...props}
     >
       {/* Slots A, B, C — left column */}
-      <div className="order-2 flex min-w-0 flex-col gap-6 md:order-none">
+      <div className="order-2 grid grid-cols-1 gap-6 md:col-span-3 md:grid-cols-3 lg:order-0 lg:col-span-1 lg:grid-cols-1">
         <CollectionTile
           tile={a!}
           loading={loading}
@@ -71,10 +74,10 @@ export const Gauss10Layout: React.FC<LayoutProps> = ({
         <CollectionTile tile={c!} imagePosition="none" />
       </div>
 
-      <div className="order-1 flex flex-col gap-6 md:order-none md:col-span-3">
+      <div className="order-1 flex flex-col gap-6 md:col-span-3 lg:order-0">
         {/* Featured — spans 3 cols, image above */}
         <CollectionTile
-          className="flex-3"
+          className="flex-1"
           tile={featured!}
           imagePosition="above"
           priority={priority}
@@ -86,7 +89,8 @@ export const Gauss10Layout: React.FC<LayoutProps> = ({
           <CollectionTile
             className="min-w-0 flex-1"
             tile={g!}
-            sizes="(max-width: 768px) 33vw, 250px"
+            loading={loading}
+            sizes="(max-width: 768px) 100vw, 250px"
             variant="medium"
             imagePosition={!h && !i ? "left" : "above"}
           />
@@ -94,7 +98,8 @@ export const Gauss10Layout: React.FC<LayoutProps> = ({
             <CollectionTile
               className="min-w-0 flex-1"
               tile={h}
-              sizes="(max-width: 768px) 33vw, 250px"
+              loading={loading}
+              sizes="(max-width: 768px) 100vw, 250px"
               variant="medium"
               imagePosition="above"
             />
@@ -103,7 +108,8 @@ export const Gauss10Layout: React.FC<LayoutProps> = ({
             <CollectionTile
               className="min-w-0 flex-1"
               tile={i}
-              sizes="(max-width: 768px) 33vw, 250px"
+              loading={loading}
+              sizes="(max-width: 768px) 100vw, 250px"
               variant="medium"
               imagePosition="above"
             />
@@ -112,7 +118,7 @@ export const Gauss10Layout: React.FC<LayoutProps> = ({
       </div>
 
       {/* Slots D, E, F — right column */}
-      <div className="order-3 flex min-w-0 flex-col gap-6 md:order-none">
+      <div className="order-3 grid grid-cols-1 gap-6 md:col-span-3 md:grid-cols-3 lg:order-0 lg:col-span-1 lg:grid-cols-1">
         <CollectionTile
           tile={d!}
           loading={loading}

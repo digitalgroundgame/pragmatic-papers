@@ -5,28 +5,21 @@ import { createOrUpdatePage } from "../pages"
 /**
  * Creates the home page with CollectionGrid blocks and saves it to the `pages` collection.
  *
- * A full-width ShopifyMerch block ("Store Merch") sits third, after the first
- * two grids, as an on-site store ad placement.
+ * A full-width ShopifyMerch block ("Store Merch") sits fourth, after the first
+ * three grids, as an on-site store ad placement.
  *
- * The page mirrors the exported homepage.json layout:
- *   1. Content block  – "Vespucci Style Article Grid"
- *   2. CollectionGrid    – vespucci-7 layout
- *   3. Content block  – "Fibonacci Style Article Grid"
- *   4. CollectionGrid    – fibonacci-7 layout
- *   9. Content block  – "Newton 4 Style Article Grid"
- *  10. CollectionGrid    – newton-4 layout
- *   5. Content block  – "Euler 3 Style Article Grid"
- *   6. CollectionGrid    – euler-3 layout
- *   7. Content block  – "Euler 5 Style Article Grid"
- *   8. CollectionGrid    – euler-5 layout
- *  11. Content block  – "Fibonacci 6 Style Article Grid"
- *  12. CollectionGrid    – fibonacci-6 layout
- *  13. Content block  – "Euler 2 Style Article Grid"
- *  14. CollectionGrid    – euler-2 layout
- *  15. Content block  – "Bernoulli Left Style Article Grid"
- *  16. CollectionGrid    – bernoulli-left layout
- *  17. Content block  – "Bernoulli Right Style Article Grid"
- *  18. CollectionGrid    – bernoulli-right layout
+ * Block order (CollectionGrid layouts unless noted):
+ *   1. gauss-10
+ *   2. vespucci-7
+ *   3. fibonacci-7
+ *   4. ShopifyMerch – full-width "Store Merch"
+ *   5. euler-3
+ *   6. newton-4
+ *   7. euler-5
+ *   8. fibonacci-6
+ *   9. euler-2
+ *  10. bernoulli-left
+ *  11. bernoulli-right
  *
  * @param volume1ArticleIds - Volume 1 article IDs (6 articles)
  * @param volume2ArticleIds - Volume 2 article IDs (at least 2 needed)
@@ -51,6 +44,73 @@ export async function createCollectionGridHomePage(
       type: "none",
     },
     layout: [
+      {
+        blockType: "collectionGrid",
+        blockName: "Gauss 10",
+        layout: "gauss-10",
+        slots: [
+          // 0: Featured Center
+          {
+            collection: { relationTo: "articles", value: volume1ArticleIds[0]! },
+            kicker: "Featured",
+            overrideTitle: null,
+          },
+          // 1: A — Left Column, Top
+          {
+            collection: { relationTo: "articles", value: volume1ArticleIds[1]! },
+            kicker: null,
+            overrideTitle: null,
+          },
+          // 2: B — Left Column, Middle (Compact)
+          {
+            collection: { relationTo: "articles", value: volume1ArticleIds[2]! },
+            kicker: null,
+            overrideTitle: null,
+          },
+          // 3: C — Left Column, Bottom (Compact)
+          {
+            collection: { relationTo: "articles", value: volume1ArticleIds[3]! },
+            kicker: null,
+            overrideTitle: null,
+          },
+          // 4: D — Right Column, Top
+          {
+            collection: { relationTo: "articles", value: volume1ArticleIds[4]! },
+            kicker: null,
+            overrideTitle: null,
+          },
+          // 5: E — Right Column, Middle (Compact)
+          {
+            collection: { relationTo: "articles", value: volume1ArticleIds[5]! },
+            kicker: null,
+            overrideTitle: null,
+          },
+          // 6: F — Right Column, Bottom (Compact)
+          {
+            collection: { relationTo: "articles", value: volume2ArticleIds[0]! },
+            kicker: null,
+            overrideTitle: null,
+          },
+          // 7: G — Bottom Left (always present)
+          {
+            collection: { relationTo: "articles", value: volume2ArticleIds[1]! },
+            kicker: null,
+            overrideTitle: null,
+          },
+          // 8: H — Bottom Center (optional)
+          {
+            collection: { relationTo: "articles", value: featureArticleIds[0]! },
+            kicker: null,
+            overrideTitle: null,
+          },
+          // 9: I — Bottom Right (optional)
+          {
+            collection: { relationTo: "articles", value: volume1ArticleIds[0]! },
+            kicker: null,
+            overrideTitle: null,
+          },
+        ],
+      },
       {
         blockType: "collectionGrid",
         blockName: "Vespucci 7",
@@ -171,14 +231,6 @@ export async function createCollectionGridHomePage(
             collection: {
               relationTo: "articles",
               value: volume1ArticleIds[5]!,
-            },
-            kicker: null,
-            overrideTitle: null,
-          },
-          {
-            collection: {
-              relationTo: "articles",
-              value: volume2ArticleIds[0]!,
             },
             kicker: null,
             overrideTitle: null,

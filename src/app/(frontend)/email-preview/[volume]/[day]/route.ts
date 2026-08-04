@@ -2,7 +2,7 @@ import { render } from "@react-email/render"
 import { type NextRequest } from "next/server"
 import { getPayload, type PayloadRequest } from "payload"
 
-import { isEditor } from "@/access/checkRole"
+import { isEditor } from "@/access/roles"
 import configPromise from "@payload-config"
 import { VolumeArticleEmail } from "@/emails/VolumeArticle"
 import { getServerSideURL } from "@/utilities/getURL"

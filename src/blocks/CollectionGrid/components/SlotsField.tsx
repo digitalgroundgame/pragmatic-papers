@@ -3,7 +3,7 @@ import { ArrayField, useFormFields } from "@payloadcms/ui"
 import type { ArrayFieldClientProps } from "payload"
 import React from "react"
 
-type SlotCountMap = Record<string, number>
+type SlotCountMap = Record<string, [number, number]>
 
 type SlotsFieldProps = ArrayFieldClientProps & {
   /** Map of layout key → required slot count, passed via clientProps */
@@ -26,7 +26,8 @@ export const SlotsField: React.FC<SlotsFieldProps> = (props) => {
   const layoutPath = basePath ? `${basePath}.${layoutFieldName}` : layoutFieldName
 
   const layoutValue = useFormFields(([fields]) => fields[layoutPath]?.value as string | undefined)
-  const targetCount = (layoutValue && slotCounts[layoutValue]) || 0
+  const entry = layoutValue ? slotCounts[layoutValue] : undefined
+  const [minRows, maxRows] = entry ?? [0, 0]
 
-  return <ArrayField {...props} field={{ ...field, minRows: targetCount, maxRows: targetCount }} />
+  return <ArrayField {...props} field={{ ...field, minRows, maxRows }} />
 }

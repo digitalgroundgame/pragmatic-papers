@@ -19,6 +19,7 @@ into tests — link behaviour to the helpers instead.
    tests; an untagged screenshot test escapes the flake gate.
 
 2. **Guard to chromium and stabilize before every shot.**
+
    ```ts
    test.skip(testInfo.project.name !== "chromium", "visual baseline captured on chromium only")
    // …drive the UI…
@@ -49,8 +50,8 @@ into tests — link behaviour to the helpers instead.
   - Let CI generate a **new** baseline: push, and `playwright.yml` runs with
     `--update-snapshots=missing` and auto-commits it.
   - Accept an **intentional change** to an existing baseline: add the
-    **`needs screenshots`** label to the PR, or `gh workflow run
-    update-snapshots.yml --ref <branch>`.
+    **`needs screenshots`** label to the PR, or run
+    `gh workflow run update-snapshots.yml --ref <branch>`.
   - Locally with CI parity: `pnpm test:e2e:update-snapshots` (Dockerized;
     needs Docker + `GH_FONT_READ`).
 - A deleted baseline is treated as missing and regenerated. Use this when a

@@ -8,9 +8,8 @@ import {
 import path from "path"
 import { fileURLToPath } from "url"
 
-import { anyone } from "@/access/anyone"
-import { editorOrSelf } from "@/access/editorOrSelf"
-import { writer } from "@/access/writer"
+import { anyone, staff } from "@/access/collections"
+import { isCreatedByOrEditor } from "@/access/policies"
 
 import type { Media as MediaType } from "@/payload-types"
 import { regenerateBlurHandler } from "./endpoints/regenerateBlur"
@@ -29,10 +28,10 @@ export const Media: CollectionConfig = {
     },
   ],
   access: {
-    create: writer,
-    delete: editorOrSelf,
+    create: staff,
+    delete: isCreatedByOrEditor,
     read: anyone,
-    update: editorOrSelf,
+    update: isCreatedByOrEditor,
   },
   admin: {
     defaultColumns: ["filename", "alt", "caption"],
@@ -80,8 +79,8 @@ export const Media: CollectionConfig = {
       type: "relationship",
       relationTo: "users",
       filterOptions: {
-        role: {
-          equals: "narrator",
+        roles: {
+          in: ["narrator"],
         },
       },
       admin: {

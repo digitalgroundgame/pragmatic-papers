@@ -38,7 +38,8 @@ import * as migration_20260515_044418_add_search_plugin from "./20260515_044418_
 import * as migration_20260606_003324_add_interactive_map from "./20260606_003324_add_interactive_map"
 import * as migration_20260615_100916_add_newsletter from "./20260615_100916_add_newsletter"
 import * as migration_20260616_021403_add_map_assets_prefix from "./20260616_021403_add_map_assets_prefix"
-import * as migration_20260616_035908_add_layouts_8_10 from "./20260616_035908_add_layouts_8_10"
+import * as migration_20260715_214854_migrate_role_to_roles from "./20260715_214854_migrate_role_to_roles"
+import * as migration_20260804_004633_add_layouts_8_10 from "./20260804_004633_add_layouts_8_10"
 
 export const migrations = [
   {
@@ -242,8 +243,13 @@ export const migrations = [
     name: "20260616_021403_add_map_assets_prefix",
   },
   {
-    up: migration_20260616_035908_add_layouts_8_10.up,
-    down: migration_20260616_035908_add_layouts_8_10.down,
-    name: "20260616_035908_add_layouts_8_10",
+    up: migration_20260715_214854_migrate_role_to_roles.up,
+    down: migration_20260715_214854_migrate_role_to_roles.down,
+    name: "20260715_214854_migrate_role_to_roles",
+  },
+  {
+    up: migration_20260804_004633_add_layouts_8_10.up,
+    down: migration_20260804_004633_add_layouts_8_10.down,
+    name: "20260804_004633_add_layouts_8_10",
   },
 ]

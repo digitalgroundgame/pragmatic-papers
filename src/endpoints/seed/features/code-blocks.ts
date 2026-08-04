@@ -2,18 +2,25 @@ import type { Media, User } from "@/payload-types"
 import type { Payload } from "payload"
 
 import { createArticle, validateWriters } from "../articles"
+import type { SerializedLexicalNode } from "../richtext"
 import { createHeadingNode, createParagraph, createRichText } from "../richtext"
 
-const createCodeBlock = (language: "typescript" | "javascript" | "css", code: string) => ({
-  type: "block",
-  fields: {
-    blockType: "code",
-    language,
-    code,
-  },
-  format: "",
-  version: 2,
-})
+export const createCodeBlock = (
+  language: "typescript" | "javascript" | "css",
+  code: string,
+): SerializedLexicalNode => {
+  const node = {
+    type: "block",
+    fields: {
+      blockType: "code",
+      language,
+      code,
+    },
+    format: "",
+    version: 2,
+  }
+  return node
+}
 
 export const createCodeBlocksArticle = async (
   payload: Payload,

@@ -1,16 +1,8 @@
-import { GithubIcon, LinkedinIcon, XIcon } from "@/components/SocialLinks/icons"
+import { detectSocialLinkPlatform } from "@/components/SocialLinks/detectPlatform"
+import { socialIconMap, type SocialIconKey } from "@/components/SocialLinks/iconMap"
 import type { MenuField } from "@/payload-types"
 import { cn } from "@/utilities/utils"
 import { Globe } from "lucide-react"
-
-export type SocialIconKey = "twitter" | "linkedin" | "github" | "generic"
-
-export const SocialIconMap = {
-  twitter: XIcon,
-  linkedin: LinkedinIcon,
-  github: GithubIcon,
-  generic: Globe,
-}
 
 export interface AuthorSocialLink {
   id: string
@@ -47,23 +39,7 @@ export function deriveAuthorSocialLinks(entries: MenuField): AuthorSocialLink[] 
     const href = normalizeExternalUrl(link.url)
     if (!href) continue
 
-    let host = ""
-    try {
-      const urlObj = new URL(href)
-      host = urlObj.hostname.toLowerCase()
-    } catch {
-      // Non-HTTP(S) URL like mailto:, just treat as generic
-    }
-
-    let icon: SocialIconKey = "generic"
-
-    if (host.includes("twitter.com") || host.endsWith("x.com")) {
-      icon = "twitter"
-    } else if (host.includes("linkedin.com")) {
-      icon = "linkedin"
-    } else if (host.includes("github.com")) {
-      icon = "github"
-    }
+    const icon: SocialIconKey = detectSocialLinkPlatform(href) ?? "generic"
 
     links.push({
       id: id || href,
@@ -83,7 +59,7 @@ export const AuthorLinks: React.FC<AuthorLinksProps> = ({ className, socials }) 
   return (
     <nav aria-label="Author Links" className={cn("flex flex-wrap gap-3", className)}>
       {links.map((link) => {
-        const Icon = SocialIconMap[link.icon] || Globe
+        const Icon = socialIconMap[link.icon] || Globe
         return (
           <a
             key={link.id}

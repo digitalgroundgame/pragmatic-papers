@@ -1,29 +1,28 @@
 import type { Block } from "payload"
 
 /**
- * ShopifyMerch — showcases products from the DiGG Shopify store as an
- * on-site ad placement.
+ * Merch — showcases products from an external store as an on-site ad placement.
  *
  * Two layouts:
  *  - `square`    — compact, for sidebars / narrow columns
  *  - `fullWidth` — banner-style, for page bodies
  *
  * Products are curated by editors today. The block is structured so a live
- * Shopify Storefront API source can be layered in later without changing the
- * component contract — see `getMerchProducts` in `./products` for the seam.
+ * storefront API source can be layered in later without changing the component
+ * contract — see `getMerchProducts` in `./products` for the seam.
  */
-export const ShopifyMerch: Block = {
-  slug: "shopifyMerch",
-  interfaceName: "ShopifyMerchBlock",
+export const Merch: Block = {
+  slug: "merch",
+  interfaceName: "MerchBlock",
   labels: {
-    singular: "Shopify Merch",
-    plural: "Shopify Merch",
+    singular: "Merch",
+    plural: "Merch",
   },
   fields: [
     {
       name: "heading",
       type: "text",
-      defaultValue: "From the DiGG Store",
+      defaultValue: "The Pragmatic Papers Store",
     },
     {
       name: "layout",
@@ -38,9 +37,18 @@ export const ShopifyMerch: Block = {
       },
     },
     {
+      name: "autoplay",
+      type: "checkbox",
+      defaultValue: false,
+      admin: {
+        description:
+          "Advance the carousel on its own. Pauses on hover, on focus, and after the reader takes over; ignored for readers who prefer reduced motion.",
+      },
+    },
+    {
       name: "storeUrl",
       type: "text",
-      defaultValue: "https://store.digitalgroundgame.org/",
+      defaultValue: "https://pragmaticpapers.org/store",
       admin: {
         description: "Link to the full store, shown as a “Shop all” button.",
       },
@@ -82,7 +90,7 @@ export const ShopifyMerch: Block = {
           type: "text",
           required: true,
           admin: {
-            description: "Link to the product on the Shopify store.",
+            description: "Link to the product on the store.",
           },
         },
       ],

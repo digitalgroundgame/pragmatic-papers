@@ -1,7 +1,7 @@
-import type { Media, ShopifyMerchBlock } from "@/payload-types"
+import type { Media, MerchBlock } from "@/payload-types"
 
 /**
- * Normalized product shape consumed by the ShopifyMerch component. This is the
+ * Normalized product shape consumed by the Merch component. This is the
  * contract both data sources produce, so the rendering layer never has to know
  * where a product came from.
  */
@@ -15,14 +15,14 @@ export interface MerchProduct {
 }
 
 /**
- * Resolve the products to display for a ShopifyMerch block.
+ * Resolve the products to display for a Merch block.
  *
  * Today this normalizes the editor-curated `products` array. It's the single
- * seam for a future live source: when a Shopify Storefront API integration
- * lands, branch here on a `source` field (e.g. fetch by collection handle) and
- * map the API response into `MerchProduct[]`. Callers stay unchanged.
+ * seam for a future live source: when a storefront API integration lands,
+ * branch here on a `source` field (e.g. fetch by collection handle) and map the
+ * API response into `MerchProduct[]`. Callers stay unchanged.
  */
-export function getMerchProducts(products: ShopifyMerchBlock["products"]): MerchProduct[] {
+export function getMerchProducts(products: MerchBlock["products"]): MerchProduct[] {
   if (!products) return []
 
   return products

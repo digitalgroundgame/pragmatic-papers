@@ -14,8 +14,8 @@ import {
 } from "@payloadcms/richtext-lexical"
 
 import { CallToAction } from "@/blocks/CallToAction/config"
+import { Merch } from "@/blocks/Merch/config"
 import { NewsletterSignup } from "@/blocks/NewsletterSignup/config"
-import { ShopifyMerch } from "@/blocks/ShopifyMerch/config"
 
 const columnFields: Field[] = [
   {
@@ -56,7 +56,7 @@ const columnFields: Field[] = [
           OrderedListFeature(),
           AlignFeature(),
           EXPERIMENTAL_TableFeature(),
-          BlocksFeature({ blocks: [CallToAction, NewsletterSignup, ShopifyMerch] }),
+          BlocksFeature({ blocks: [CallToAction, NewsletterSignup, Merch] }),
         ]
       },
     }),

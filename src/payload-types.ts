@@ -348,7 +348,7 @@ export interface Page {
     | ContributorsBlock
     | MediaBlock
     | NewsletterSignupBlock
-    | ShopifyMerchBlock
+    | MerchBlock
     | TimelineBlock
     | VolumeView
     | FormBlock
@@ -841,14 +841,18 @@ export interface NewsletterSignupBlock {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "ShopifyMerchBlock".
+ * via the `definition` "MerchBlock".
  */
-export interface ShopifyMerchBlock {
+export interface MerchBlock {
   heading?: string | null;
   /**
    * Square suits narrow sidebars; full width suits page bodies.
    */
   layout?: ('square' | 'fullWidth') | null;
+  /**
+   * Advance the carousel on its own. Pauses on hover, on focus, and after the reader takes over; ignored for readers who prefer reduced motion.
+   */
+  autoplay?: boolean | null;
   /**
    * Link to the full store, shown as a “Shop all” button.
    */
@@ -865,7 +869,7 @@ export interface ShopifyMerchBlock {
          */
         price?: string | null;
         /**
-         * Link to the product on the Shopify store.
+         * Link to the product on the store.
          */
         url: string;
         id?: string | null;
@@ -873,7 +877,7 @@ export interface ShopifyMerchBlock {
     | null;
   id?: string | null;
   blockName?: string | null;
-  blockType: 'shopifyMerch';
+  blockType: 'merch';
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -1535,7 +1539,7 @@ export interface PagesSelect<T extends boolean = true> {
         contributors?: T | ContributorsBlockSelect<T>;
         mediaBlock?: T | MediaBlockSelect<T>;
         newsletterSignup?: T | NewsletterSignupBlockSelect<T>;
-        shopifyMerch?: T | ShopifyMerchBlockSelect<T>;
+        merch?: T | MerchBlockSelect<T>;
         timeline?: T | TimelineBlockSelect<T>;
         volumeView?: T | VolumeViewSelect<T>;
         formBlock?: T | FormBlockSelect<T>;
@@ -1648,11 +1652,12 @@ export interface NewsletterSignupBlockSelect<T extends boolean = true> {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "ShopifyMerchBlock_select".
+ * via the `definition` "MerchBlock_select".
  */
-export interface ShopifyMerchBlockSelect<T extends boolean = true> {
+export interface MerchBlockSelect<T extends boolean = true> {
   heading?: T;
   layout?: T;
+  autoplay?: T;
   storeUrl?: T;
   products?:
     | T

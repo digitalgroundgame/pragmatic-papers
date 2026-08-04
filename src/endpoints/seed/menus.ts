@@ -97,6 +97,7 @@ export const createMenus = async (
       layout: [
         {
           blockType: "content",
+          width: "full",
           columns: [
             {
               size: "half",

@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest"
 
-import type { ShopifyMerchBlock } from "@/payload-types"
+import type { MerchBlock } from "@/payload-types"
 
 import { getMerchProducts } from "../products"
 
-type Products = ShopifyMerchBlock["products"]
+type Products = MerchBlock["products"]
 
 describe("getMerchProducts", () => {
   it("returns an empty array for null/undefined products", () => {

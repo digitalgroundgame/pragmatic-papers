@@ -5,14 +5,14 @@ import { createOrUpdatePage } from "../pages"
 /**
  * Creates the home page with CollectionGrid blocks and saves it to the `pages` collection.
  *
- * A full-width ShopifyMerch block ("Store Merch") sits fourth, after the first
+ * A full-width Merch block ("Store Merch") sits fourth, after the first
  * three grids, as an on-site store ad placement.
  *
  * Block order (CollectionGrid layouts unless noted):
  *   1. gauss-10
  *   2. vespucci-7
  *   3. fibonacci-7
- *   4. ShopifyMerch – full-width "Store Merch"
+ *   4. Merch – full-width "Store Merch"
  *   5. euler-3
  *   6. newton-4
  *   7. euler-5
@@ -24,7 +24,7 @@ import { createOrUpdatePage } from "../pages"
  * @param volume1ArticleIds - Volume 1 article IDs (6 articles)
  * @param volume2ArticleIds - Volume 2 article IDs (at least 2 needed)
  * @param featureArticleIds - Feature article IDs (index 0 = rich text defaults)
- * @param mediaIds - Media IDs used for the ShopifyMerch product images
+ * @param mediaIds - Media IDs used for the Merch product images
  */
 export async function createCollectionGridHomePage(
   payload: Payload,
@@ -108,6 +108,39 @@ export async function createCollectionGridHomePage(
             collection: { relationTo: "articles", value: volume1ArticleIds[0]! },
             kicker: null,
             overrideTitle: null,
+          },
+        ],
+      },
+      {
+        blockType: "merch",
+        blockName: "Store Merch",
+        heading: "DigitalGroundGame Store",
+        layout: "fullWidth",
+        storeUrl: "https://store.digitalgroundgame.org/",
+        products: [
+          {
+            image: merchImage(0),
+            title: "Liberia Logo Tee",
+            price: "$28.00",
+            url: "https://store.digitalgroundgame.org/products/logo-tee",
+          },
+          {
+            image: merchImage(1),
+            title: "Pragmatic Papers Mug",
+            price: "$16.00",
+            url: "https://store.digitalgroundgame.org/products/pragmatic-mug",
+          },
+          {
+            image: merchImage(2),
+            title: "Enamel Pin Set",
+            price: "$12.00",
+            url: "https://store.digitalgroundgame.org/products/enamel-pins",
+          },
+          {
+            image: merchImage(3),
+            title: "Canvas Tote Bag",
+            price: "$22.00",
+            url: "https://store.digitalgroundgame.org/products/canvas-tote",
           },
         ],
       },
@@ -234,39 +267,6 @@ export async function createCollectionGridHomePage(
             },
             kicker: null,
             overrideTitle: null,
-          },
-        ],
-      },
-      {
-        blockType: "shopifyMerch",
-        blockName: "Store Merch",
-        heading: "From the DiGG Store",
-        layout: "fullWidth",
-        storeUrl: "https://store.digitalgroundgame.org/",
-        products: [
-          {
-            image: merchImage(0),
-            title: "DiGG Logo Tee",
-            price: "$28.00",
-            url: "https://store.digitalgroundgame.org/products/logo-tee",
-          },
-          {
-            image: merchImage(1),
-            title: "Pragmatic Papers Mug",
-            price: "$16.00",
-            url: "https://store.digitalgroundgame.org/products/pragmatic-mug",
-          },
-          {
-            image: merchImage(2),
-            title: "Enamel Pin Set",
-            price: "$12.00",
-            url: "https://store.digitalgroundgame.org/products/enamel-pins",
-          },
-          {
-            image: merchImage(3),
-            title: "Canvas Tote Bag",
-            price: "$22.00",
-            url: "https://store.digitalgroundgame.org/products/canvas-tote",
           },
         ],
       },

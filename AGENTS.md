@@ -49,7 +49,7 @@ This file provides guidance to tools like Claude Code (claude.ai/code) when work
 - **`collections/`** — Payload collections: Articles, Pages, Users, Volumes, Media, Categories, Webhooks
 - **`blocks/`** — Content blocks used in Lexical rich text: Banner, Code, Content, Footnote, Math, MediaBlock, SocialEmbed, etc.
 - **`fields/`** — Custom Payload fields: colorPicker, menu, numberSlug, link, linkGroup, footnotes, button, defaultLexical. New fields should include `Field` in the name (e.g. `buttonField`, `linkGroupField`).
-- **`access/`** — Access control hooks (authenticatedOrPublished, editorOrSelf, writer)
+- **`access/`** — Access control: `roles.ts` (e.g., `admin`, `editor`, `writer`) and `policies.ts` (e.g., `isSelfOrAdmin`, `isCreatedByOrEditor`, `isPublishedOrStaff`, `isDraftOrEditor`)
 - **`app/(frontend)/`** — Public-facing Next.js pages using App Router
 - **`app/(payload)/`** — Payload admin panel routes
 - **`components/`** — Reusable React components for layouts, pagination, etc; `components/ui/` uses shadcn/ui;
@@ -135,6 +135,23 @@ Coverage reporting is informational only — chore/docs PRs don't need special h
 
 - run linting and type-checks
 - run unit and integration tests as needed, _skip running e2e_.
+
+### Visual regression (screenshot) tests
+
+Adding, changing, or debugging a Playwright `toHaveScreenshot` test or a flaky
+visual diff? Use the **`e2e-visual-tests`** skill
+(`.claude/skills/e2e-visual-tests/SKILL.md`) for the checklist; full lifecycle
+in `tests/e2e/README.md`.
+
+## Filing & triaging GitHub issues
+
+Creating, editing, triaging, or labeling an issue — or adding/removing a
+label? Use the **`github-issues`** skill
+(`.claude/skills/github-issues/SKILL.md`). It covers applying an issue
+**type** (`Bug`/`Feature`/`Task`) as well as **labels** (`Bug` is a type, not
+a label), and the label taxonomy is version-controlled in
+`.github/labels.yml` — edit that file in a PR to change a label; a sync
+workflow applies it on push to `dev`.
 
 ## Wiki
 

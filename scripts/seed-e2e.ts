@@ -28,9 +28,61 @@ export async function main(): Promise<void> {
       {
         email: "writer@e2e.test",
         password: "e2e-test-password-123",
-        name: "E2E Writer",
-        role: "writer",
+        name: "Teagan Wordsmith",
+        affiliation: "Senior Research Fellow, Pragmatic Papers Institute",
+        biography: createRichText([
+          createParagraph(
+            "Teagan Wordsmith is a Senior Research Fellow at the Pragmatic Papers Institute, studying how empirical methods shape public policy and translating dense academic research into plain language for a general audience.",
+          ),
+        ]),
+        roles: ["writer"],
         slug: "e2e-writer",
+        // A full spread of platforms so the author card exercises every
+        // branded icon variant (see AuthorLinks / detectPlatform). Capped at
+        // the socials field's maxRows: 6.
+        socials: [
+          { link: { type: "custom", label: "X", url: "https://x.com/e2ewriter", newTab: true } },
+          {
+            link: {
+              type: "custom",
+              label: "YouTube",
+              url: "https://youtube.com/@e2ewriter",
+              newTab: true,
+            },
+          },
+          {
+            link: {
+              type: "custom",
+              label: "Twitch",
+              url: "https://twitch.tv/e2ewriter",
+              newTab: true,
+            },
+          },
+          {
+            link: {
+              type: "custom",
+              label: "Instagram",
+              url: "https://instagram.com/e2ewriter",
+              newTab: true,
+            },
+          },
+          {
+            link: {
+              type: "custom",
+              label: "Discord",
+              url: "https://discord.gg/e2ewriter",
+              newTab: true,
+            },
+          },
+          {
+            link: {
+              type: "custom",
+              label: "GitHub",
+              url: "https://github.com/e2ewriter",
+              newTab: true,
+            },
+          },
+        ],
       },
       "e2e writer",
       ctx,

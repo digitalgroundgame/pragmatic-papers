@@ -84,6 +84,7 @@ export type CollectionGridLayout =
       | 'fibonacci-6'
       | 'vespucci-7'
       | 'fibonacci-7'
+      | 'gauss-10'
     )
   | null;
 /**
@@ -450,6 +451,7 @@ export interface Article {
     image?: (number | null) | Media;
     description?: string | null;
   };
+  narration?: (number | null) | Media;
   heroImage?: (number | null) | Media;
   /**
    * When enabled, the slug will auto-generate from the title field on save and autosave.
@@ -460,7 +462,6 @@ export interface Article {
   publishedAt?: string | null;
   authors?: (number | User)[] | null;
   topics?: (number | Topic)[] | null;
-  narration?: (number | null) | Media;
   createdBy?: (number | null) | User;
   populatedAuthors?: PopulatedAuthors;
   volume?: {
@@ -663,7 +664,7 @@ export interface User {
   slug: string;
   profileImage?: (number | null) | Media;
   socials?: MenuField;
-  role?: ('admin' | 'chief-editor' | 'editor' | 'writer' | 'narrator' | 'member') | null;
+  roles?: ('admin' | 'chief-editor' | 'editor' | 'writer' | 'narrator' | 'member')[] | null;
   updatedAt: string;
   createdAt: string;
   email: string;
@@ -1678,6 +1679,7 @@ export interface ArticlesSelect<T extends boolean = true> {
         image?: T;
         description?: T;
       };
+  narration?: T;
   heroImage?: T;
   generateSlug?: T;
   slug?: T;
@@ -1685,7 +1687,6 @@ export interface ArticlesSelect<T extends boolean = true> {
   publishedAt?: T;
   authors?: T;
   topics?: T;
-  narration?: T;
   createdBy?: T;
   populatedAuthors?: T | PopulatedAuthorsSelect<T>;
   volume?: T;
@@ -1910,7 +1911,7 @@ export interface UsersSelect<T extends boolean = true> {
   slug?: T;
   profileImage?: T;
   socials?: T | MenuFieldSelect<T>;
-  role?: T;
+  roles?: T;
   updatedAt?: T;
   createdAt?: T;
   email?: T;
@@ -2509,6 +2510,10 @@ export interface DisplayMathBlock {
    * Enter a LaTeX math expression.
    */
   math: string;
+  /**
+   * Name this formula in plain words, e.g. "the Cauchy–Schwarz inequality". Read aloud by the AI voice-over in place of the LaTeX, and used as the formula's screen reader label.
+   */
+  description?: string | null;
   id?: string | null;
   blockName?: string | null;
   blockType: 'displayMathBlock';
@@ -2565,6 +2570,10 @@ export interface InlineMathBlock {
    * Enter a LaTeX math expression.
    */
   math: string;
+  /**
+   * Name this formula in plain words, e.g. "the Cauchy–Schwarz inequality". Read aloud by the AI voice-over in place of the LaTeX, and used as the formula's screen reader label.
+   */
+  description?: string | null;
   id?: string | null;
   blockName?: string | null;
   blockType: 'inlineMathBlock';

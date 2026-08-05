@@ -3,7 +3,7 @@ import { SelectField, useForm, useFormFields } from "@payloadcms/ui"
 import type { SelectFieldClientProps } from "payload"
 import React, { useEffect, useRef } from "react"
 
-type SlotCountMap = Record<string, number>
+type SlotCountMap = Record<string, [number, number]>
 
 type LayoutSelectFieldProps = SelectFieldClientProps & {
   /** Map of layout key → required slot count, passed via clientProps */
@@ -33,7 +33,7 @@ export const LayoutSelectField: React.FC<LayoutSelectFieldProps> = (props) => {
   const slotsSchemaPath =
     lastDotSchema !== undefined && lastDotSchema >= 0
       ? `${schemaPath!.substring(0, lastDotSchema)}.${slotsFieldName}`
-      : slotsPath
+      : slotsFieldName
 
   const { addFieldRow, removeFieldRow } = useForm()
 
@@ -57,17 +57,16 @@ export const LayoutSelectField: React.FC<LayoutSelectFieldProps> = (props) => {
   useEffect(() => {
     if (!layoutValue || layoutValue === prevLayoutRef.current) return
     prevLayoutRef.current = layoutValue
-
-    const requiredCount = slotCounts[layoutValue] || 0
-    if (!requiredCount) return
-
+    if (!slotCounts[layoutValue]) return
+    const [minRows, maxRows] = slotCounts[layoutValue]!
+    if (minRows == null || maxRows == null) return
     const count = rowCountRef.current
-    if (count < requiredCount) {
-      for (let i = count; i < requiredCount; i++) {
+    if (count < minRows) {
+      for (let i = count; i < minRows; i++) {
         addFieldRow({ path: slotsPath, rowIndex: i, schemaPath: slotsSchemaPath })
       }
-    } else if (count > requiredCount) {
-      for (let i = count - 1; i >= requiredCount; i--) {
+    } else if (count > maxRows) {
+      for (let i = count - 1; i >= maxRows; i--) {
         removeFieldRow({ path: slotsPath, rowIndex: i })
       }
     }

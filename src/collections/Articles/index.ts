@@ -1,7 +1,6 @@
-import { authenticatedOrPublished } from "@/access/authenticatedOrPublished"
-import { editorFieldLevel } from "@/access/editor"
-import { editorOrSelf, restrictWritersToDraftOnly } from "@/access/editorOrSelf"
-import { writer } from "@/access/writer"
+import { isPublishedOrStaff, isCreatedByOrEditor, isDraftOrEditor } from "@/access/policies"
+import { writerOrEditor } from "@/access/collections"
+import { editorFieldLevel } from "@/access/fields"
 import { Banner } from "@/blocks/Banner/config"
 import { Code } from "@/blocks/Code/config"
 import { FootnoteBlock } from "@/blocks/Footnote/config"
@@ -73,10 +72,10 @@ const setPublishedAtDefault: FieldHook<Article, Article["publishedAt"]> = ({
 export const Articles: CollectionConfig = {
   slug: "articles",
   access: {
-    create: writer,
-    delete: editorOrSelf,
-    read: authenticatedOrPublished,
-    update: restrictWritersToDraftOnly,
+    create: writerOrEditor,
+    delete: isCreatedByOrEditor,
+    read: isPublishedOrStaff,
+    update: isDraftOrEditor,
   },
   admin: {
     defaultColumns: ["title", "slug", "updatedAt"],
@@ -187,6 +186,32 @@ export const Articles: CollectionConfig = {
             }),
           ],
         },
+        {
+          label: "Narration",
+          fields: [
+            {
+              name: "narration",
+              type: "upload",
+              label: "Audio File",
+              filterOptions: {
+                mimeType: {
+                  contains: "audio",
+                },
+              },
+              relationTo: "media",
+            },
+            {
+              name: "extractNarration",
+              type: "ui",
+              admin: {
+                components: {
+                  Field:
+                    "@/collections/Articles/components/ExtractNarrationButton#ExtractNarrationButton",
+                },
+              },
+            },
+          ],
+        },
       ],
     },
     // END TABS FIELDS
@@ -232,8 +257,8 @@ export const Articles: CollectionConfig = {
       hasMany: true,
       relationTo: "users",
       filterOptions: {
-        role: {
-          in: ["writer", "editor", "chief-editor"],
+        roles: {
+          in: ["writer", "editor", "chief-editor", "narrator"],
         },
       },
     },
@@ -245,19 +270,6 @@ export const Articles: CollectionConfig = {
       },
       hasMany: true,
       relationTo: "topics",
-    },
-    {
-      name: "narration",
-      type: "upload",
-      admin: {
-        position: "sidebar",
-      },
-      filterOptions: {
-        mimeType: {
-          contains: "audio",
-        },
-      },
-      relationTo: "media",
     },
     {
       name: "createdBy",

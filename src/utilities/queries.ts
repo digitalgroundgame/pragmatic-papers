@@ -81,6 +81,7 @@ export const queryArticleBySlug = cache(async (slug: string) => {
     overrideAccess: draft,
     pagination: false,
     where: { slug: { equals: slug } },
+    depth: 2,
   })
   return docs[0] || null
 })
@@ -99,6 +100,7 @@ export const queryPageBySlug = cache(async (slug: string) => {
         equals: slug,
       },
     },
+    depth: 2,
   })
 
   return docs[0] || null

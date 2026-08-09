@@ -39,11 +39,11 @@ import { InsertExistingFootnote as InsertExistingFootnote_db99466ae238816ffbf3d2
 import { FootnoteLabel as FootnoteLabel_2845bbc260cbb0202b7c6ec591d344dc } from '@/blocks/Footnote/FootnoteLabel'
 import { FootnotesPreview as FootnotesPreview_78f98036fa74f92e38dd688ebeae2fd5 } from '@/blocks/Footnote/FootnotesPreview'
 import { ExtractNarrationButton as ExtractNarrationButton_100e898a8737273f0d647b5ef7ea8c8c } from '@/collections/Articles/components/ExtractNarrationButton'
-import { RowLabel as RowLabel_b9b9938cf466765c7ed61773d838e057 } from '@/fields/menu/RowLabel'
 import { ScheduleNewsletterButton as ScheduleNewsletterButton_a66b86b65dab65173a5cdf3751fad59f } from '@/collections/Volumes/components/ScheduleNewsletterButton'
 import { BlurDataURLField as BlurDataURLField_3bf98f0d72a9b7fcf13045923bb48189 } from '@/collections/Media/components/BlurDataURLField'
 import { NarratorField as NarratorField_ac420e631edc2776947f590c2e50edcc } from '@/collections/Media/components/NarratorField'
 import { DurationField as DurationField_eac2b3e17fa524aff4add76374d4c8eb } from '@/collections/Media/components/DurationField'
+import { RowLabel as RowLabel_b9b9938cf466765c7ed61773d838e057 } from '@/fields/menu/RowLabel'
 import { LinkToDoc as LinkToDoc_aead06e4cbf6b2620c5c51c9ab283634 } from '@payloadcms/plugin-search/client'
 import { ReindexButton as ReindexButton_aead06e4cbf6b2620c5c51c9ab283634 } from '@payloadcms/plugin-search/client'
 import { RunNowField as RunNowField_a9d86fb0496ebd76a3dd880c805864b5 } from '@/globals/ArticleRecommendations/components/RunNowField'
@@ -98,11 +98,11 @@ export const importMap = {
   "@/blocks/Footnote/FootnoteLabel#FootnoteLabel": FootnoteLabel_2845bbc260cbb0202b7c6ec591d344dc,
   "@/blocks/Footnote/FootnotesPreview#FootnotesPreview": FootnotesPreview_78f98036fa74f92e38dd688ebeae2fd5,
   "@/collections/Articles/components/ExtractNarrationButton#ExtractNarrationButton": ExtractNarrationButton_100e898a8737273f0d647b5ef7ea8c8c,
-  "@/fields/menu/RowLabel#RowLabel": RowLabel_b9b9938cf466765c7ed61773d838e057,
   "@/collections/Volumes/components/ScheduleNewsletterButton#ScheduleNewsletterButton": ScheduleNewsletterButton_a66b86b65dab65173a5cdf3751fad59f,
   "@/collections/Media/components/BlurDataURLField#BlurDataURLField": BlurDataURLField_3bf98f0d72a9b7fcf13045923bb48189,
   "@/collections/Media/components/NarratorField#NarratorField": NarratorField_ac420e631edc2776947f590c2e50edcc,
   "@/collections/Media/components/DurationField#DurationField": DurationField_eac2b3e17fa524aff4add76374d4c8eb,
+  "@/fields/menu/RowLabel#RowLabel": RowLabel_b9b9938cf466765c7ed61773d838e057,
   "@payloadcms/plugin-search/client#LinkToDoc": LinkToDoc_aead06e4cbf6b2620c5c51c9ab283634,
   "@payloadcms/plugin-search/client#ReindexButton": ReindexButton_aead06e4cbf6b2620c5c51c9ab283634,
   "@/globals/ArticleRecommendations/components/RunNowField#RunNowField": RunNowField_a9d86fb0496ebd76a3dd880c805864b5,

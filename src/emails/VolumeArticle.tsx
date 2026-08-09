@@ -29,9 +29,12 @@ export interface VolumeArticleEmailProps {
   siteUrl: string
 }
 
-function articleExcerpt(article: Article): string {
+function articleExcerpt(
+  article: Article,
+  volume: Pick<Volume, "title" | "volumeNumber" | "slug">,
+): string {
   if (article.meta?.description) return article.meta.description
-  return `A new piece from Volume ${article.populatedVolume?.volumeNumber ?? ""}.`
+  return `A new piece from Volume ${volume.volumeNumber ?? ""}.`
 }
 
 /**
@@ -96,7 +99,7 @@ export function VolumeArticleEmail({
   totalDays,
   siteUrl,
 }: VolumeArticleEmailProps): React.ReactElement {
-  const excerpt = articleExcerpt(article)
+  const excerpt = articleExcerpt(article, volume)
   const heroUrl = heroImageUrl(article, siteUrl)
   const image = getDimensions(article)
   const avatars = getAvatars(article, siteUrl)

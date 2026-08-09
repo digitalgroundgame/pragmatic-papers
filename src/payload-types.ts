@@ -430,7 +430,6 @@ export interface Article {
   authors?: (number | User)[] | null;
   topics?: (number | Topic)[] | null;
   createdBy?: (number | null) | User;
-  populatedVolume?: PopulatedVolume;
   updatedAt: string;
   createdAt: string;
   _status?: ('draft' | 'published') | null;
@@ -644,17 +643,6 @@ export interface User {
     | null;
   password?: string | null;
   collection: 'users';
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "PopulatedVolume".
- */
-export interface PopulatedVolume {
-  id?: number | null;
-  slug?: string | null;
-  volumeNumber?: number | null;
-  title?: string | null;
-  publishedAt?: string | null;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -1651,7 +1639,6 @@ export interface ArticlesSelect<T extends boolean = true> {
   authors?: T;
   topics?: T;
   createdBy?: T;
-  populatedVolume?: T | PopulatedVolumeSelect<T>;
   updatedAt?: T;
   createdAt?: T;
   _status?: T;
@@ -1666,17 +1653,6 @@ export interface FootnotesFieldSelect<T extends boolean = true> {
   attributionEnabled?: T;
   link?: T | LinkFieldSelect<T>;
   id?: T;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "PopulatedVolume_select".
- */
-export interface PopulatedVolumeSelect<T extends boolean = true> {
-  id?: T;
-  slug?: T;
-  volumeNumber?: T;
-  title?: T;
-  publishedAt?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema

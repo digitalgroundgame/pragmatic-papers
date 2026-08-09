@@ -22,7 +22,6 @@ import { generateFootnotes } from "@/collections/Articles/hooks/generateFootnote
 import { populateAuthors } from "@/collections/Articles/hooks/populateAuthors"
 import { populateTopics } from "@/collections/Articles/hooks/populateTopics"
 import { populateMetaImageFromHero } from "@/collections/Articles/hooks/populateMetaImageFromHero"
-import { populateVolume } from "@/collections/Articles/hooks/populateVolume"
 import { revalidateArticle, revalidateDelete } from "@/collections/Articles/hooks/revalidateArticle"
 import { footnotesArrayField } from "@/fields/footnotes"
 import { type Article } from "@/payload-types"
@@ -281,27 +280,6 @@ export const Articles: CollectionConfig = {
         hidden: true,
       },
     },
-
-    {
-      name: "populatedVolume",
-      interfaceName: "PopulatedVolume",
-      type: "group",
-      virtual: true,
-      access: {
-        update: () => false,
-      },
-      admin: {
-        disabled: true,
-        readOnly: true,
-      },
-      fields: [
-        { name: "id", type: "number" },
-        { name: "slug", type: "text" },
-        { name: "volumeNumber", type: "number" },
-        { name: "title", type: "text" },
-        { name: "publishedAt", type: "date" },
-      ],
-    },
   ],
   hooks: {
     beforeChange: [
@@ -319,7 +297,7 @@ export const Articles: CollectionConfig = {
       populateMetaImageFromHero,
     ],
     afterChange: [revalidateArticle],
-    afterRead: [populateAuthors, populateTopics, populateVolume],
+    afterRead: [populateAuthors, populateTopics],
     afterDelete: [revalidateDelete],
   },
   versions: {

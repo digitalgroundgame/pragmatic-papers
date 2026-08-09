@@ -1,4 +1,4 @@
-import type { Topic, User } from "@/payload-types"
+import type { Topic, User, Volume } from "@/payload-types"
 import { draftMode } from "next/headers"
 import { cache } from "react"
 import { getPayloadConfig } from "./getPayloadConfig"
@@ -83,6 +83,28 @@ export const queryArticleBySlug = cache(async (slug: string) => {
     where: { slug: { equals: slug } },
   })
   return docs[0] || null
+})
+
+export const queryVolumesForArticles = cache(async (articleIds: number[]): Promise<Volume[]> => {
+  if (!articleIds.length) return []
+
+  const { isEnabled: draft } = await draftMode()
+  const payload = await getPayloadConfig()
+  const { docs } = await payload.find({
+    collection: "volumes",
+    draft,
+    limit: 1000,
+    overrideAccess: draft,
+    pagination: false,
+    where: {
+      articles: {
+        in: articleIds,
+      },
+    },
+    depth: 0,
+  })
+
+  return docs
 })
 
 export const queryPageBySlug = cache(async (slug: string) => {

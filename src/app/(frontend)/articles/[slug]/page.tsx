@@ -17,7 +17,7 @@ import { Separator } from "@/components/ui/separator"
 import { ArticleHero } from "@/heros/ArticleHero"
 import { MathJaxProvider } from "@/providers/MathJaxProvider"
 import { generateMeta } from "@/utilities/generateMeta"
-import { queryArticleBySlug } from "@/utilities/queries"
+import { queryArticleBySlug, queryVolumesForArticles } from "@/utilities/queries"
 import { buildArticleJsonLd, buildBreadcrumbJsonLd } from "@/utilities/structuredData"
 
 export async function generateStaticParams(): Promise<{ slug: string | null | undefined }[]> {
@@ -70,12 +70,14 @@ export default async function Article({ params: paramsPromise }: Args): Promise<
     (author): author is User => typeof author === "object",
   )
 
+  const [volume] = await queryVolumesForArticles([article.id])
+
   return (
     <>
       <article className="mx-auto max-w-2xl space-y-6 px-4 md:px-1">
         <JsonLd
           data={[
-            buildArticleJsonLd(article, url),
+            buildArticleJsonLd(article, url, volume),
             buildBreadcrumbJsonLd([{ name: article.meta?.title || article.title, path: url }]),
           ]}
         />

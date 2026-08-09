@@ -31,7 +31,11 @@ function getImageUrl(media: Media | number | null | undefined): string | undefin
   return getMediaUrl(media.sizes?.og?.url || media.url) || undefined
 }
 
-export function buildArticleJsonLd(article: Article, path: string): ArticleLeaf {
+export function buildArticleJsonLd(
+  article: Article,
+  path: string,
+  volume?: Pick<Volume, "id" | "slug" | "title" | "volumeNumber" | "publishedAt"> | null,
+): ArticleLeaf {
   const fullUrl = `${SERVER_URL}${path}`
 
   const authors = (article.authors || [])
@@ -63,14 +67,12 @@ export function buildArticleJsonLd(article: Article, path: string): ArticleLeaf 
     keywords: keywords.length > 0 ? keywords.join(", ") : undefined,
     author: authors.length > 0 ? authors : undefined,
     publisher: { "@type": "Organization", "@id": ORG_ID } satisfies OrganizationLeaf,
-    isPartOf: article.populatedVolume?.id
+    isPartOf: volume?.id
       ? ({
           "@type": "PublicationVolume",
-          "@id": article.populatedVolume.slug
-            ? `${SERVER_URL}/volumes/${article.populatedVolume.slug}#volume`
-            : undefined,
-          name: article.populatedVolume.title ?? `Volume ${article.populatedVolume.volumeNumber}`,
-          volumeNumber: article.populatedVolume.volumeNumber ?? undefined,
+          "@id": volume.slug ? `${SERVER_URL}/volumes/${volume.slug}#volume` : undefined,
+          name: volume.title ?? `Volume ${volume.volumeNumber}`,
+          volumeNumber: volume.volumeNumber ?? undefined,
           isPartOf: { "@type": "Periodical", "@id": PERIODICAL_ID } satisfies PeriodicalLeaf,
         } satisfies PublicationVolumeLeaf)
       : undefined,

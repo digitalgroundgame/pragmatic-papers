@@ -20,7 +20,7 @@ export interface CollectionTileProps extends React.ComponentProps<"div"> {
 
 export const CollectionTile: React.FC<CollectionTileProps> = ({
   tile,
-  imagePosition = "left",
+  imagePosition = "above",
   priority,
   loading,
   className,

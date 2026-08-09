@@ -65,7 +65,7 @@ export const queryVolumeBySlug = cache(async (slug: string) => {
         equals: slug,
       },
     },
-    depth: 2,
+    depth: 3,
   })
 
   return docs[0] || null

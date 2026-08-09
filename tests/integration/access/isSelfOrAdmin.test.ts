@@ -53,6 +53,42 @@ describe("isSelfOrAdmin access", () => {
     expect(result.id).toBe(member.id)
   })
 
+  it("anyone can read staff users (writers, editors, etc.)", async () => {
+    const writer = await createUser("writer")
+    const member = await createUser("member")
+
+    // Another member can read the writer
+    const resultByMember = await payload.findByID({
+      collection: "users",
+      id: writer.id,
+      overrideAccess: false,
+      user: member,
+    })
+    expect(resultByMember.id).toBe(writer.id)
+
+    // Unauthenticated user can read the writer
+    const resultByAnon = await payload.findByID({
+      collection: "users",
+      id: writer.id,
+      overrideAccess: false,
+      user: null,
+    })
+    expect(resultByAnon.id).toBe(writer.id)
+  })
+
+  it("unauthenticated user cannot read member users", async () => {
+    const member = await createUser("member")
+
+    await expect(
+      payload.findByID({
+        collection: "users",
+        id: member.id,
+        overrideAccess: false,
+        user: null,
+      }),
+    ).rejects.toThrow()
+  })
+
   it("admin can update any user", async () => {
     const admin = await createUser("admin")
     const otherUser = await createUser("member")

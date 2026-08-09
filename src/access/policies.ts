@@ -1,4 +1,4 @@
-import type { Access } from "payload"
+import type { Access, Where } from "payload"
 import { hasRoleOrAdmin, isAdmin, isEditor, isStaff } from "./roles"
 
 /**
@@ -20,6 +20,31 @@ export const isSelfOrAdmin: Access = ({ req: { user } }) => {
       id: { equals: user.id },
     }
   )
+}
+
+/** Allows staff to view all users, users to view themselves, and anyone to view staff users (authors/narrators/editors). */
+export const readUsers: Access = ({ req: { user } }) => {
+  if (isStaff(user)) {
+    return true
+  }
+
+  const constraints: Where[] = [
+    {
+      roles: {
+        in: ["admin", "chief-editor", "editor", "writer", "narrator"],
+      },
+    },
+  ]
+
+  if (user?.id) {
+    constraints.push({
+      id: { equals: user.id },
+    })
+  }
+
+  return {
+    or: constraints,
+  }
 }
 
 /** Allows editors+, or the user who created the document. */

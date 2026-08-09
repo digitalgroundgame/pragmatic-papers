@@ -1,4 +1,4 @@
-import type { Article, CollectionGridSlots, Media as MediaType } from "@/payload-types"
+import type { CollectionGridSlots, Media as MediaType, User } from "@/payload-types"
 import React from "react"
 
 import { HoverPrefetchLink } from "@/components/Link/HoverPrefetchLink"
@@ -20,7 +20,7 @@ export interface CollectionTileProps extends React.ComponentProps<"div"> {
 
 export const CollectionTile: React.FC<CollectionTileProps> = ({
   tile,
-  imagePosition = "above",
+  imagePosition = "left",
   priority,
   loading,
   className,
@@ -35,7 +35,7 @@ export const CollectionTile: React.FC<CollectionTileProps> = ({
   const { title, slug, publishedAt, meta } = collection.value
   const href = `/${collection.relationTo}/${slug}`
 
-  let populatedAuthors: Article["populatedAuthors"] = []
+  let populatedAuthors: User[] = []
   let heroImage: MediaType | null = null
   if (imagePosition !== "none") {
     if (collection.relationTo === "articles" && isMedia(collection.value.heroImage)) {
@@ -45,8 +45,8 @@ export const CollectionTile: React.FC<CollectionTileProps> = ({
     }
   }
 
-  if ("populatedAuthors" in collection.value) {
-    populatedAuthors = collection.value.populatedAuthors ?? []
+  if ("authors" in collection.value && collection.value.authors) {
+    populatedAuthors = collection.value.authors.filter((a): a is User => typeof a === "object")
   }
 
   const isHorizontal = imagePosition === "left" || imagePosition === "right"

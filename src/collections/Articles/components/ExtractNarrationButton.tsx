@@ -210,6 +210,46 @@ async function fetchMediaMap(
   return map
 }
 
+async function fetchAuthorsMap(
+  authorIds: Array<string | number>,
+): Promise<Record<string | number, { name?: string | null }>> {
+  if (authorIds.length === 0) return {}
+
+  const map: Record<string | number, { name?: string | null }> = {}
+  const CHUNK_SIZE = 25
+  const chunks: Array<Array<string | number>> = []
+
+  for (let i = 0; i < authorIds.length; i += CHUNK_SIZE) {
+    chunks.push(authorIds.slice(i, i + CHUNK_SIZE))
+  }
+
+  try {
+    await Promise.all(
+      chunks.map(async (chunk) => {
+        const params = chunk
+          .map((id, idx) => `where[id][in][${idx}]=${encodeURIComponent(String(id))}`)
+          .join("&")
+        const res = await fetch(`/api/users?${params}&depth=0&limit=${chunk.length}`)
+        if (res.ok) {
+          const data = await res.json()
+          if (Array.isArray(data?.docs)) {
+            for (const doc of data.docs) {
+              if (doc && (typeof doc.id === "number" || typeof doc.id === "string")) {
+                map[doc.id] = {
+                  name: typeof doc.name === "string" ? doc.name : null,
+                }
+              }
+            }
+          }
+        }
+      }),
+    )
+  } catch (err) {
+    console.error("Failed to fetch user documents for narration extraction:", err)
+  }
+  return map
+}
+
 export function ExtractNarrationButton(): React.ReactNode {
   const isMounted = useIsMounted()
   const docInfo = useDocumentInfo()
@@ -225,12 +265,11 @@ export function ExtractNarrationButton(): React.ReactNode {
     return inMemoryNarrationCache.get(cacheKey)?.hasGenerated ?? false
   })
 
-  const { title, authors, populatedAuthors, publishedAt, content } = useFormFields(([fields]) => {
+  const { title, authors, publishedAt, content } = useFormFields(([fields]) => {
     const f = fields || {}
     return {
       title: f.title?.value as string | undefined,
       authors: f.authors?.value as Array<Record<string, unknown> | string | number> | undefined,
-      populatedAuthors: f.populatedAuthors?.value as Array<{ name?: string }> | undefined,
       publishedAt: f.publishedAt?.value as string | Date | undefined,
       content: f.content?.value as Record<string, unknown> | undefined,
     }
@@ -239,12 +278,27 @@ export function ExtractNarrationButton(): React.ReactNode {
   const handleGenerate = async (): Promise<void> => {
     setIsGenerating(true)
     try {
+      const authorIds = (authors || [])
+        .map((a) => (typeof a === "object" && a !== null ? a.id : a))
+        .filter((id): id is string | number => typeof id === "string" || typeof id === "number")
+      const authorsMap = await fetchAuthorsMap(authorIds)
+      const resolvedAuthors = authorIds.map((id) => {
+        const fromMap = authorsMap[id]
+        if (fromMap) return fromMap
+        const original = (authors || []).find(
+          (a) => typeof a === "object" && a !== null && String(a.id) === String(id),
+        )
+        if (original && typeof original === "object" && "name" in original) {
+          return { name: original.name as string }
+        }
+        return { name: String(id) }
+      })
+
       const mediaIds = collectMediaIdsFromContent(content)
       const mediaMap = await fetchMediaMap(mediaIds)
       const text = extractNarrationText({
         title,
-        authors,
-        populatedAuthors,
+        authors: resolvedAuthors,
         publishedAt,
         content,
         mediaMap,

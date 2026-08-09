@@ -1,12 +1,4 @@
-import type {
-  Article,
-  Media,
-  MenuField,
-  PopulatedAuthors,
-  Topic,
-  User,
-  Volume,
-} from "@/payload-types"
+import type { Article, Media, MenuField, Topic, User, Volume } from "@/payload-types"
 import { getMediaUrl } from "@/utilities/getMediaUrl"
 import { getServerSideURL } from "@/utilities/getURL"
 import { convertLexicalToPlaintext } from "@payloadcms/richtext-lexical/plaintext"
@@ -42,14 +34,16 @@ function getImageUrl(media: Media | number | null | undefined): string | undefin
 export function buildArticleJsonLd(article: Article, path: string): ArticleLeaf {
   const fullUrl = `${SERVER_URL}${path}`
 
-  const authors = (article.populatedAuthors || []).map(
-    (author: NonNullable<PopulatedAuthors>[number]): PersonLeaf => ({
-      "@type": "Person",
-      "@id": `${SERVER_URL}/authors/${author.slug}`,
-      name: author.name || undefined,
-      url: `${SERVER_URL}/authors/${author.slug}`,
-    }),
-  )
+  const authors = (article.authors || [])
+    .filter((author): author is User => typeof author === "object")
+    .map(
+      (author): PersonLeaf => ({
+        "@type": "Person",
+        "@id": `${SERVER_URL}/authors/${author.slug}`,
+        name: author.name || undefined,
+        url: `${SERVER_URL}/authors/${author.slug}`,
+      }),
+    )
 
   const keywords = (article.topics || [])
     .filter((t): t is Topic => typeof t !== "number")

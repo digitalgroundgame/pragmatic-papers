@@ -57,13 +57,10 @@ const beforeSync: BeforeSync = ({ originalDoc, searchDoc }) => {
     ""
   const slug = (originalDoc.slug as string | undefined) || ""
 
-  const populatedAuthors = originalDoc.populatedAuthors as
-    | { name?: string | null }[]
-    | undefined
-    | null
-  const authors = populatedAuthors
-    ? populatedAuthors
-        .map((a) => a.name)
+  const authorsRaw = originalDoc.authors as ({ name?: string | null } | number)[] | undefined | null
+  const authors = Array.isArray(authorsRaw)
+    ? authorsRaw
+        .map((a) => (typeof a === "object" && a !== null ? a.name : null))
         .filter(Boolean)
         .join(", ")
     : ""

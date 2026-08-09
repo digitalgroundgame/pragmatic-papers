@@ -1,5 +1,6 @@
 import configPromise from "@payload-config"
 import type { Metadata } from "next"
+import type { User } from "@/payload-types"
 import { draftMode } from "next/headers"
 import { getPayload } from "payload"
 import React from "react"
@@ -63,7 +64,11 @@ export default async function Article({ params: paramsPromise }: Args): Promise<
 
   if (!article) return <PayloadRedirects url={url} />
 
-  const { footnotes, content, populatedAuthors, enableMathRendering, topics } = article
+  const { footnotes, content, authors, enableMathRendering, topics } = article
+
+  const populatedAuthors = (authors || []).filter(
+    (author): author is User => typeof author === "object",
+  )
 
   return (
     <>

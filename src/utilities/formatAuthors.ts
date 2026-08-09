@@ -1,5 +1,4 @@
-// eslint-disable-next-line @typescript-eslint/consistent-type-imports
-import { Article } from "@/payload-types"
+import type { User } from "@/payload-types"
 
 export function arrayToPlaintText(
   list: string[],
@@ -20,8 +19,8 @@ export function arrayStringToPlainText(list: string, sep = ",", conjunction = "a
 }
 
 /**
- * Formats an array of populatedAuthors from Articles into a prettified string.
- * @param authors - The populatedAuthors array from an Article.
+ * Formats an array of authors from Articles into a prettified string.
+ * @param authors - The authors array from an Article.
  * @returns A prettified string of authors.
  * @example
  *
@@ -29,9 +28,7 @@ export function arrayStringToPlainText(list: string, sep = ",", conjunction = "a
  * [Author1, Author2, Author3] becomes 'Author1, Author2, and Author3'
  *
  */
-export const formatAuthors = (
-  authors: NonNullable<NonNullable<Article["populatedAuthors"]>[number]>[],
-): string => {
+export const formatAuthors = (authors: User[]): string => {
   // Ensure we don't have any authors without a name
   const authorNames = authors.map((author) => author.name).filter(Boolean) as string[]
   return arrayToPlaintText(authorNames)

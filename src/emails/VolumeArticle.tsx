@@ -16,7 +16,7 @@ import { Tailwind } from "@react-email/tailwind"
 import { formatDistanceToNow } from "date-fns"
 import * as React from "react"
 
-import type { Article, Topic, Volume } from "@/payload-types"
+import type { Article, Topic, User, Volume } from "@/payload-types"
 import { formatAuthors } from "@/utilities/formatAuthors"
 import { getMediaUrl } from "@/utilities/getMediaUrl"
 import { cn } from "@/utilities/utils"
@@ -76,8 +76,8 @@ function getDimensions(article: Article):
  * 404s.
  */
 function getAvatars(article: Article, siteUrl: string): string[] {
-  if (!article.populatedAuthors) return []
-  return article.populatedAuthors
+  const authors = (article.authors || []).filter((a): a is User => typeof a === "object")
+  return authors
     .map((a) => {
       const image = a?.profileImage
       if (!image || typeof image === "number") return null
@@ -102,6 +102,7 @@ export function VolumeArticleEmail({
   const avatars = getAvatars(article, siteUrl)
   const articleUrl = `${siteUrl}/articles/${article.slug}`
   const volumeUrl = `${siteUrl}/volumes/${volume.slug}`
+  const authors = (article.authors || []).filter((a): a is User => typeof a === "object")
 
   return (
     <Html>
@@ -136,7 +137,7 @@ export function VolumeArticleEmail({
               <Link href={articleUrl} className="text-black no-underline">
                 <Text className="my-1 text-3xl font-bold">{article.title}</Text>
               </Link>
-              {article.populatedAuthors && article.populatedAuthors.length > 0 && (
+              {authors.length > 0 && (
                 <Row className="my-1">
                   {avatars.length > 0 && (
                     <Column style={{ width: 24 + avatars.length * 8 }}>
@@ -156,7 +157,7 @@ export function VolumeArticleEmail({
                   )}
                   <Column>
                     <Text className="my-0 pl-2 text-sm text-neutral-600">
-                      By {formatAuthors(article.populatedAuthors)}
+                      By {formatAuthors(authors)}
                     </Text>
                   </Column>
                 </Row>

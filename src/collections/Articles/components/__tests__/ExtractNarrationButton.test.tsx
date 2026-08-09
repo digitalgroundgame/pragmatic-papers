@@ -89,7 +89,7 @@ describe("ExtractNarrationButton", () => {
   it("renders the generate button and shows formatted view and editable textarea on view toggle", async () => {
     mockFields = {
       title: { value: "Sample Article Title" },
-      populatedAuthors: { value: [{ name: "Alice Author" }] },
+      authors: { value: [{ id: 1, name: "Alice Author" }] },
       publishedAt: { value: "2026-07-20T00:00:00.000Z" },
       content: {
         value: {

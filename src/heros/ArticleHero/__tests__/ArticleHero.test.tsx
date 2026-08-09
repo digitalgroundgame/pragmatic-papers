@@ -2,7 +2,7 @@ import { cleanup, render, screen } from "@testing-library/react"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
 import { ArticleHero } from "../index"
-import type { Article } from "@/payload-types"
+import type { Article, User } from "@/payload-types"
 
 vi.mock("@/components/Media", () => ({
   Media: ({ media }: { media: { filename: string } }) => (
@@ -59,10 +59,10 @@ describe("ArticleHero", () => {
   it("renders populated authors as links", () => {
     const article: Article = {
       ...baseArticle,
-      populatedAuthors: [
+      authors: [
         { id: 1, name: "Alice", slug: "alice", affiliation: null },
         { id: 2, name: "Bob", slug: "bob", affiliation: null },
-      ],
+      ] as User[],
     }
     render(<ArticleHero article={article} />)
     const aliceLink = screen.getByRole("link", { name: "Alice" }) as HTMLAnchorElement

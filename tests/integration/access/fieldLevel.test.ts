@@ -133,4 +133,50 @@ describe("field-level access", () => {
       expect(updated.createdBy).toEqual(article.createdBy)
     })
   })
+
+  describe("field-level read access (Users)", () => {
+    it("hides email and roles from anonymous users", async () => {
+      const writer = await createUser("writer")
+
+      const result = await payload.findByID({
+        collection: "users",
+        id: writer.id,
+        overrideAccess: false,
+        user: null,
+      })
+
+      // In Payload 3, restricted fields are either undefined or null in the returned document.
+      expect(result.email).toBeUndefined()
+      expect(result.roles).toBeUndefined()
+    })
+
+    it("allows a user to read their own email and roles", async () => {
+      const writer = await createUser("writer")
+
+      const result = await payload.findByID({
+        collection: "users",
+        id: writer.id,
+        overrideAccess: false,
+        user: writer,
+      })
+
+      expect(result.email).toBe(writer.email)
+      expect(result.roles).toContain("writer")
+    })
+
+    it("allows staff/admin to read other users' email and roles", async () => {
+      const admin = await createUser("admin")
+      const writer = await createUser("writer")
+
+      const result = await payload.findByID({
+        collection: "users",
+        id: writer.id,
+        overrideAccess: false,
+        user: admin,
+      })
+
+      expect(result.email).toBe(writer.email)
+      expect(result.roles).toContain("writer")
+    })
+  })
 })

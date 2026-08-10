@@ -20,17 +20,24 @@ export const PUBLIC_PROFILE_ROLES: Role[] = [
 ]
 
 /**
+ * Active contributor roles: the ones that grant the ability to produce content.
+ * Everyone holding one of these also carries `author` — see `ensureAuthorRole`.
+ */
+export const CONTRIBUTOR_ROLES: Role[] = ["chief-editor", "editor", "writer", "narrator"]
+
+/**
  * Roles that may be credited on an article, and that the `/authors` index and
  * profile pages list.
  *
  * Authorship is a permanent fact about a published article, while the other
- * roles are permissions that come and go. `author` exists to keep those two
- * apart: when a writer becomes inactive, drop `writer` and leave `author`, and
- * they keep their byline and profile page without retaining any ability to
- * create or edit content. Without it, offboarding someone would silently strip
- * their name from work they had already published.
+ * roles are permissions that come and go. `author` keeps those two apart: it is
+ * granted alongside any contributor role and never removed, so stepping down is
+ * just dropping `writer` — the person keeps their byline and profile page
+ * without retaining any ability to create or edit content. Without it,
+ * offboarding someone would silently strip their name from work they had
+ * already published.
  */
-export const BYLINE_ROLES: Role[] = ["chief-editor", "editor", "writer", "narrator", "author"]
+export const BYLINE_ROLES: Role[] = [...CONTRIBUTOR_ROLES, "author"]
 
 /** Checks if a user is an admin or chief-editor. */
 export const isAdmin = (user: User | null | undefined): boolean => {

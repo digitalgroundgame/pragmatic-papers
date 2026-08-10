@@ -1,6 +1,7 @@
 import { isSelfOrAdmin, readUsers } from "@/access/policies"
 import { admin, staff } from "@/access/collections"
 import { adminFieldLevel, selfOrAdminFieldLevel } from "@/access/fields"
+import { ensureAuthorRole } from "@/collections/Users/hooks/ensureAuthorRole"
 import { revalidateUser } from "@/collections/Users/hooks/revalidateUser"
 import { menu } from "@/fields/menu"
 import {
@@ -112,7 +113,7 @@ export const Users: CollectionConfig = {
       admin: {
         position: "sidebar",
         description:
-          "Use “Author” for inactive writers. It grants no permissions — it only keeps a past contributor’s byline and profile page visible. When someone stops writing, remove “Writer” and leave “Author” rather than dropping them to “Member”, which would strip their name from articles they have already published.",
+          "“Author” is added automatically to every contributor and grants no permissions — it only keeps their byline and profile page visible. To offboard someone, remove their contributor role (e.g. “Writer”) and leave “Author” in place. Dropping them to “Member” instead would strip their name from articles they have already published.",
       },
       options: [
         {
@@ -147,6 +148,7 @@ export const Users: CollectionConfig = {
     },
   ],
   hooks: {
+    beforeChange: [ensureAuthorRole],
     afterChange: [revalidateUser],
   },
   timestamps: true,

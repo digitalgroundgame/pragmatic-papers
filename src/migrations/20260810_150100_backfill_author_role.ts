@@ -1,11 +1,17 @@
 import { MigrateUpArgs, MigrateDownArgs, sql } from "@payloadcms/db-postgres"
 
 /**
- * Grants `author` to anyone already credited on an article who no longer holds
- * a byline role — the case the role exists for. Without this, a past
- * contributor who was dropped to `member` before the role existed stays
- * invisible: `readUsers` filters them out, so their byline and profile page
- * disappear from work they had already published.
+ * Establishes the invariant `ensureAuthorRole` maintains from here on: every
+ * contributor carries `author`, so stepping down is just dropping the
+ * contributor role.
+ *
+ * Grants `author` to two groups:
+ *  1. Everyone currently holding a contributor role, so the invariant holds for
+ *     existing users the hook never ran for.
+ *  2. Anyone already credited on an article who holds no contributor role —
+ *     contributors demoted before this role existed. Without this they stay
+ *     invisible to `readUsers`, and their byline and profile page vanish from
+ *     work they had already published.
  *
  * Deliberately a separate migration from `20260810_150000_add_author_role`:
  * Postgres refuses to use a newly added enum value in the transaction that
@@ -19,14 +25,20 @@ export async function up({ db, payload, req }: MigrateUpArgs): Promise<void> {
     u."id",
     'author'
   FROM "users" u
-  WHERE EXISTS (
-      SELECT 1 FROM "articles_rels" ar
-      WHERE ar."users_id" = u."id" AND ar."path" = 'authors'
-    )
-    AND NOT EXISTS (
+  WHERE NOT EXISTS (
       SELECT 1 FROM "users_roles" ur
-      WHERE ur."parent_id" = u."id"
-        AND ur."value" IN ('chief-editor', 'editor', 'writer', 'narrator', 'author')
+      WHERE ur."parent_id" = u."id" AND ur."value" = 'author'
+    )
+    AND (
+      EXISTS (
+        SELECT 1 FROM "users_roles" ur
+        WHERE ur."parent_id" = u."id"
+          AND ur."value" IN ('chief-editor', 'editor', 'writer', 'narrator')
+      )
+      OR EXISTS (
+        SELECT 1 FROM "articles_rels" ar
+        WHERE ar."users_id" = u."id" AND ar."path" = 'authors'
+      )
     );`)
 }
 

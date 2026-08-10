@@ -86,6 +86,25 @@ describe("field-level access", () => {
       expect(updated.roles).toContain("narrator")
     })
 
+    it("adds the author role alongside a contributor role", async () => {
+      const admin = await createUser("admin")
+      const target = await createUser("member")
+
+      const updated = await payload.update({
+        collection: "users",
+        id: target.id,
+        overrideAccess: false,
+        user: admin,
+        context: { disableRevalidate: true },
+        data: { roles: ["writer"] },
+      })
+
+      // Every contributor carries `author`, so stepping down later is just
+      // dropping `writer`.
+      expect(updated.roles).toContain("writer")
+      expect(updated.roles).toContain("author")
+    })
+
     it("denies non-admin user from updating their own roles", async () => {
       const editor = await createUser("editor")
 

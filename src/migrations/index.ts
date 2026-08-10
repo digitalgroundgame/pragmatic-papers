@@ -41,6 +41,7 @@ import * as migration_20260616_021403_add_map_assets_prefix from "./20260616_021
 import * as migration_20260715_214854_migrate_role_to_roles from "./20260715_214854_migrate_role_to_roles"
 import * as migration_20260804_004633_add_layouts_8_10 from "./20260804_004633_add_layouts_8_10"
 import * as migration_20260810_150000_add_author_role from "./20260810_150000_add_author_role"
+import * as migration_20260810_150100_backfill_author_role from "./20260810_150100_backfill_author_role"
 
 export const migrations = [
   {
@@ -257,5 +258,10 @@ export const migrations = [
     up: migration_20260810_150000_add_author_role.up,
     down: migration_20260810_150000_add_author_role.down,
     name: "20260810_150000_add_author_role",
+  },
+  {
+    up: migration_20260810_150100_backfill_author_role.up,
+    down: migration_20260810_150100_backfill_author_role.down,
+    name: "20260810_150100_backfill_author_role",
   },
 ]

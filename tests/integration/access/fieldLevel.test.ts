@@ -1,6 +1,6 @@
 import { describe, expect, it, beforeAll } from "vitest"
 import type { Payload } from "payload"
-import type { Article } from "@/payload-types"
+import type { Article, User } from "@/payload-types"
 import { getPayload, createUser } from "../helpers/testUsers"
 import { ARTICLE_CONTENT } from "../fixtures/content"
 
@@ -164,7 +164,7 @@ describe("field-level access", () => {
       expect(result.roles).toContain("writer")
     })
 
-    it("allows staff/admin to read other users' email and roles", async () => {
+    it("allows an admin to read other users' email and roles", async () => {
       const admin = await createUser("admin")
       const writer = await createUser("writer")
 
@@ -177,6 +177,127 @@ describe("field-level access", () => {
 
       expect(result.email).toBe(writer.email)
       expect(result.roles).toContain("writer")
+    })
+
+    it("hides email and roles from non-admin staff reading another user", async () => {
+      const editor = await createUser("editor")
+      const writer = await createUser("writer")
+
+      const result = await payload.findByID({
+        collection: "users",
+        id: writer.id,
+        overrideAccess: false,
+        user: editor,
+      })
+
+      // Staff may read the user document (readUsers), but `email`/`roles` stay
+      // private to the user themselves and admins (selfOrAdminFieldLevel).
+      expect(result.email).toBeUndefined()
+      expect(result.roles).toBeUndefined()
+    })
+  })
+
+  describe("article author population (Articles)", () => {
+    it("does not expose author email or roles to anonymous readers", async () => {
+      const writer = await createUser("writer")
+
+      await payload.create({
+        collection: "articles",
+        overrideAccess: true,
+        context: { disableRevalidate: true },
+        data: {
+          title: "Author field exposure - fieldLevel",
+          content: ARTICLE_CONTENT,
+          authors: [writer.id],
+          _status: "published",
+        } as unknown as Article,
+      })
+
+      const { docs } = await payload.find({
+        collection: "articles",
+        depth: 1,
+        overrideAccess: false,
+        user: null,
+        where: { title: { equals: "Author field exposure - fieldLevel" } },
+      })
+
+      const author = docs[0]?.authors?.[0]
+      expect(typeof author).toBe("object")
+      expect((author as User).name).toBe(writer.name)
+      expect((author as User).email).toBeUndefined()
+      expect((author as User).roles).toBeUndefined()
+    })
+
+    it("returns bare IDs at depth 0 rather than unsanitized user docs", async () => {
+      const writer = await createUser("writer")
+
+      await payload.create({
+        collection: "articles",
+        overrideAccess: true,
+        context: { disableRevalidate: true },
+        data: {
+          title: "Depth 0 authors - fieldLevel",
+          content: ARTICLE_CONTENT,
+          authors: [writer.id],
+          _status: "published",
+        } as unknown as Article,
+      })
+
+      // Articles are publicly readable and REST accepts a `depth` param. With
+      // no afterRead hook writing into `doc.authors`, depth 0 returns the
+      // relationship as plain IDs — nothing to leak.
+      const { docs } = await payload.find({
+        collection: "articles",
+        depth: 0,
+        overrideAccess: false,
+        user: null,
+        where: { title: { equals: "Depth 0 authors - fieldLevel" } },
+      })
+
+      expect(docs[0]?.authors).toEqual([writer.id])
+    })
+
+    it("leaves a bare ID for an author who fails the read check", async () => {
+      const writer = await createUser("writer")
+      // `filterOptions` on the authors field rejects a member outright, so the
+      // only way an article ends up with one is a demotion after publication.
+      const demoted = await createUser("writer")
+
+      await payload.create({
+        collection: "articles",
+        overrideAccess: true,
+        context: { disableRevalidate: true },
+        data: {
+          title: "Demoted author - fieldLevel",
+          content: ARTICLE_CONTENT,
+          authors: [writer.id, demoted.id],
+          _status: "published",
+        } as unknown as Article,
+      })
+
+      await payload.update({
+        collection: "users",
+        id: demoted.id,
+        overrideAccess: true,
+        context: { disableRevalidate: true },
+        data: { roles: ["member"] },
+      })
+
+      // Payload leaves the bare ID for a user the caller cannot read, and the
+      // co-author it did populate is unaffected.
+      const { docs } = await payload.find({
+        collection: "articles",
+        depth: 1,
+        overrideAccess: false,
+        user: null,
+        where: { title: { equals: "Demoted author - fieldLevel" } },
+      })
+
+      const authors = docs[0]?.authors ?? []
+      expect((authors[0] as User).id).toBe(writer.id)
+      expect((authors[0] as User).email).toBeUndefined()
+      expect((authors[0] as User).roles).toBeUndefined()
+      expect(authors[1]).toBe(demoted.id)
     })
   })
 })

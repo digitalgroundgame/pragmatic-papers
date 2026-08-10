@@ -282,17 +282,21 @@ export function ExtractNarrationButton(): React.ReactNode {
         .map((a) => (typeof a === "object" && a !== null ? a.id : a))
         .filter((id): id is string | number => typeof id === "string" || typeof id === "number")
       const authorsMap = await fetchAuthorsMap(authorIds)
-      const resolvedAuthors = authorIds.map((id) => {
-        const fromMap = authorsMap[id]
-        if (fromMap) return fromMap
-        const original = (authors || []).find(
-          (a) => typeof a === "object" && a !== null && String(a.id) === String(id),
-        )
-        if (original && typeof original === "object" && "name" in original) {
-          return { name: original.name as string }
-        }
-        return { name: String(id) }
-      })
+      const resolvedAuthors = authorIds
+        .map((id) => {
+          const fromMap = authorsMap[id]
+          if (fromMap) return fromMap
+          const original = (authors || []).find(
+            (a) => typeof a === "object" && a !== null && String(a.id) === String(id),
+          )
+          if (original && typeof original === "object" && "name" in original) {
+            return { name: original.name as string }
+          }
+          // Never fall back to the raw ID — it would be read aloud as the
+          // byline. An unresolvable author is simply left out.
+          return null
+        })
+        .filter((author): author is { name?: string | null } => author !== null)
 
       const mediaIds = collectMediaIdsFromContent(content)
       const mediaMap = await fetchMediaMap(mediaIds)

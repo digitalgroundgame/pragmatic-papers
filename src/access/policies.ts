@@ -1,5 +1,5 @@
 import type { Access, Where } from "payload"
-import { hasRoleOrAdmin, isAdmin, isEditor, isStaff } from "./roles"
+import { hasRoleOrAdmin, isAdmin, isEditor, isStaff, PUBLIC_PROFILE_ROLES } from "./roles"
 
 /**
  * Access Control Policies
@@ -22,7 +22,7 @@ export const isSelfOrAdmin: Access = ({ req: { user } }) => {
   )
 }
 
-/** Allows staff to view all users, users to view themselves, and anyone to view staff users (authors/narrators/editors). */
+/** Allows staff to view all users, users to view themselves, and anyone to view users with a public profile (authors/narrators/editors). */
 export const readUsers: Access = ({ req: { user } }) => {
   if (isStaff(user)) {
     return true
@@ -31,7 +31,7 @@ export const readUsers: Access = ({ req: { user } }) => {
   const constraints: Where[] = [
     {
       roles: {
-        in: ["admin", "chief-editor", "editor", "writer", "narrator"],
+        in: PUBLIC_PROFILE_ROLES,
       },
     },
   ]

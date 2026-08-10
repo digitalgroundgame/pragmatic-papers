@@ -1,3 +1,4 @@
+import { BYLINE_ROLES } from "@/access/roles"
 import { AuthorArticleCard } from "@/components/Articles/AuthorArticleCard"
 import { AuthorLinks } from "@/components/Authors/AuthorLinks"
 import { JsonLd } from "@/components/JsonLd"
@@ -34,7 +35,7 @@ export async function generateStaticParams(): Promise<{ slug: string | null | un
       and: [
         {
           roles: {
-            in: ["writer", "editor", "chief-editor", "narrator"],
+            in: BYLINE_ROLES,
           },
         },
         {

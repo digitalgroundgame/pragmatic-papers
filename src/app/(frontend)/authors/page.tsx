@@ -1,3 +1,4 @@
+import { BYLINE_ROLES } from "@/access/roles"
 import { AuthorCard } from "@/components/Authors/AuthorCard"
 import { LivePreviewListener } from "@/components/LivePreviewListener"
 import { PageRange } from "@/components/PageRange"
@@ -47,7 +48,7 @@ const queryAuthors = cache(async (page: number = 1) => {
     depth: 1,
     where: {
       roles: {
-        in: ["writer", "editor", "chief-editor", "narrator"],
+        in: BYLINE_ROLES,
       },
     },
     select,

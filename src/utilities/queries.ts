@@ -1,3 +1,4 @@
+import { PUBLIC_PROFILE_ROLES } from "@/access/roles"
 import type { Topic, User, Volume } from "@/payload-types"
 import { draftMode } from "next/headers"
 import { cache } from "react"
@@ -15,7 +16,7 @@ export const queryUserBySlug = cache(async (slug: string): Promise<User | null> 
       and: [
         {
           roles: {
-            in: ["writer", "editor", "chief-editor", "narrator", "admin"],
+            in: PUBLIC_PROFILE_ROLES,
           },
         },
         {

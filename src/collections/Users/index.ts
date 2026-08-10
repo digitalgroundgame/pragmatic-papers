@@ -111,6 +111,8 @@ export const Users: CollectionConfig = {
       },
       admin: {
         position: "sidebar",
+        description:
+          "Use “Author” for inactive writers. It grants no permissions — it only keeps a past contributor’s byline and profile page visible. When someone stops writing, remove “Writer” and leave “Author” rather than dropping them to “Member”, which would strip their name from articles they have already published.",
       },
       options: [
         {
@@ -132,6 +134,10 @@ export const Users: CollectionConfig = {
         {
           label: "Narrator",
           value: "narrator",
+        },
+        {
+          label: "Author (inactive writer)",
+          value: "author",
         },
         {
           label: "Member",

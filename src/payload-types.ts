@@ -624,7 +624,10 @@ export interface User {
   slug: string;
   profileImage?: (number | null) | Media;
   socials?: MenuField;
-  roles?: ('admin' | 'chief-editor' | 'editor' | 'writer' | 'narrator' | 'member')[] | null;
+  /**
+   * Use “Author” for inactive writers. It grants no permissions — it only keeps a past contributor’s byline and profile page visible. When someone stops writing, remove “Writer” and leave “Author” rather than dropping them to “Member”, which would strip their name from articles they have already published.
+   */
+  roles?: ('admin' | 'chief-editor' | 'editor' | 'writer' | 'narrator' | 'author' | 'member')[] | null;
   updatedAt: string;
   createdAt: string;
   email: string;

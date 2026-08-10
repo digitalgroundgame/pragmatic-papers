@@ -89,6 +89,35 @@ describe("isSelfOrAdmin access", () => {
     ).rejects.toThrow()
   })
 
+  it("keeps an inactive writer's profile public via the author role", async () => {
+    // Offboarding a writer means swapping `writer` for `author`: no permissions,
+    // but the byline and profile page on already-published articles survive.
+    const inactive = await createUser("author")
+
+    const result = await payload.findByID({
+      collection: "users",
+      id: inactive.id,
+      overrideAccess: false,
+      user: null,
+    })
+
+    expect(result.id).toBe(inactive.id)
+  })
+
+  it("does not let the author role read other users", async () => {
+    const inactive = await createUser("author")
+    const member = await createUser("member")
+
+    await expect(
+      payload.findByID({
+        collection: "users",
+        id: member.id,
+        overrideAccess: false,
+        user: inactive,
+      }),
+    ).rejects.toThrow()
+  })
+
   it("admin can update any user", async () => {
     const admin = await createUser("admin")
     const otherUser = await createUser("member")

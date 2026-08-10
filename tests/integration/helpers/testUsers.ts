@@ -12,7 +12,7 @@ export function getPayload(): Promise<Payload> {
   return payloadPromise
 }
 
-export type Role = "admin" | "chief-editor" | "editor" | "writer" | "narrator" | "member"
+export type Role = "admin" | "chief-editor" | "editor" | "writer" | "narrator" | "author" | "member"
 
 export async function createUser(roleOrRoles: Role | Role[]): Promise<User> {
   const payload = await getPayload()

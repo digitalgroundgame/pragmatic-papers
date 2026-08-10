@@ -6,6 +6,7 @@ import {
   isPublishedOrStaff,
   readUsers,
 } from "../policies"
+import { BYLINE_ROLES, isStaff, PUBLIC_PROFILE_ROLES } from "../roles"
 import type { User } from "@/payload-types"
 import type { AccessArgs } from "payload"
 
@@ -131,13 +132,18 @@ describe("readUsers policy", () => {
     }
   })
 
-  it("restricts member role to staff users and themselves", () => {
+  it("does not grant the author role staff-wide read access", () => {
+    const user = { id: 123, roles: ["author"] } as unknown as User
+    expect(readUsers(makeArgs(user))).not.toBe(true)
+  })
+
+  it("restricts member role to public profiles and themselves", () => {
     const user = { id: 123, roles: ["member"] } as unknown as User
     expect(readUsers(makeArgs(user))).toEqual({
       or: [
         {
           roles: {
-            in: ["admin", "chief-editor", "editor", "writer", "narrator"],
+            in: PUBLIC_PROFILE_ROLES,
           },
         },
         {
@@ -147,15 +153,22 @@ describe("readUsers policy", () => {
     })
   })
 
-  it("restricts anonymous users to staff users only", () => {
+  it("restricts anonymous users to public profiles only", () => {
     expect(readUsers(makeArgs(null))).toEqual({
       or: [
         {
           roles: {
-            in: ["admin", "chief-editor", "editor", "writer", "narrator"],
+            in: PUBLIC_PROFILE_ROLES,
           },
         },
       ],
     })
+  })
+
+  it("exposes inactive authors so their bylines survive losing the writer role", () => {
+    expect(PUBLIC_PROFILE_ROLES).toContain("author")
+    expect(BYLINE_ROLES).toContain("author")
+    // `author` is a credit, not a permission.
+    expect(isStaff({ roles: ["author"] } as unknown as User)).toBe(false)
   })
 })

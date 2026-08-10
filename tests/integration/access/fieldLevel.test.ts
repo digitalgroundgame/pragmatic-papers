@@ -232,9 +232,9 @@ describe("field-level access", () => {
 
     it("does not overwrite natively populated authors when one fails the read check", async () => {
       const writer = await createUser("writer")
-      // A former author demoted to member-only fails `readUsers`, so Payload
-      // leaves their bare ID in place at any depth.
-      const demoted = await createUser("member")
+      // `filterOptions` on the authors field rejects a member outright, so the
+      // only way an article ends up with one is a demotion after publication.
+      const demoted = await createUser("writer")
 
       await payload.create({
         collection: "articles",
@@ -248,6 +248,16 @@ describe("field-level access", () => {
         } as unknown as Article,
       })
 
+      await payload.update({
+        collection: "users",
+        id: demoted.id,
+        overrideAccess: true,
+        context: { disableRevalidate: true },
+        data: { roles: ["member"] },
+      })
+
+      // A member-only user fails `readUsers`, so Payload leaves their bare ID
+      // in place at any depth and populateAuthors backfills it.
       const { docs } = await payload.find({
         collection: "articles",
         depth: 1,
@@ -262,6 +272,45 @@ describe("field-level access", () => {
         expect(author.email).toBeUndefined()
         expect(author.roles).toBeUndefined()
       }
+    })
+
+    it("keeps a byline intact when a writer is moved to the author role", async () => {
+      const retiring = await createUser("writer")
+
+      await payload.create({
+        collection: "articles",
+        overrideAccess: true,
+        context: { disableRevalidate: true },
+        data: {
+          title: "Retired author byline - fieldLevel",
+          content: ARTICLE_CONTENT,
+          authors: [retiring.id],
+          _status: "published",
+        } as unknown as Article,
+      })
+
+      // Offboarding: drop the permission, keep the credit.
+      await payload.update({
+        collection: "users",
+        id: retiring.id,
+        overrideAccess: true,
+        context: { disableRevalidate: true },
+        data: { roles: ["author"] },
+      })
+
+      const { docs } = await payload.find({
+        collection: "articles",
+        depth: 1,
+        overrideAccess: false,
+        user: null,
+        where: { title: { equals: "Retired author byline - fieldLevel" } },
+      })
+
+      const author = docs[0]?.authors?.[0] as User
+      expect(author.id).toBe(retiring.id)
+      expect(author.name).toBe(retiring.name)
+      expect(author.email).toBeUndefined()
+      expect(author.roles).toBeUndefined()
     })
   })
 })

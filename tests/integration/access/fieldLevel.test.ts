@@ -197,8 +197,8 @@ describe("field-level access", () => {
     })
   })
 
-  describe("populateAuthors afterRead hook (Articles)", () => {
-    it("does not leak author email or roles at depth 0", async () => {
+  describe("article author population (Articles)", () => {
+    it("does not expose author email or roles to anonymous readers", async () => {
       const writer = await createUser("writer")
 
       await payload.create({
@@ -206,21 +206,19 @@ describe("field-level access", () => {
         overrideAccess: true,
         context: { disableRevalidate: true },
         data: {
-          title: "Depth 0 author leak - fieldLevel",
+          title: "Author field exposure - fieldLevel",
           content: ARTICLE_CONTENT,
           authors: [writer.id],
           _status: "published",
         } as unknown as Article,
       })
 
-      // Collection afterRead hooks run *after* field sanitization, so anything
-      // the hook writes into `doc.authors` reaches the client verbatim.
       const { docs } = await payload.find({
         collection: "articles",
-        depth: 0,
+        depth: 1,
         overrideAccess: false,
         user: null,
-        where: { title: { equals: "Depth 0 author leak - fieldLevel" } },
+        where: { title: { equals: "Author field exposure - fieldLevel" } },
       })
 
       const author = docs[0]?.authors?.[0]
@@ -230,7 +228,36 @@ describe("field-level access", () => {
       expect((author as User).roles).toBeUndefined()
     })
 
-    it("does not overwrite natively populated authors when one fails the read check", async () => {
+    it("returns bare IDs at depth 0 rather than unsanitized user docs", async () => {
+      const writer = await createUser("writer")
+
+      await payload.create({
+        collection: "articles",
+        overrideAccess: true,
+        context: { disableRevalidate: true },
+        data: {
+          title: "Depth 0 authors - fieldLevel",
+          content: ARTICLE_CONTENT,
+          authors: [writer.id],
+          _status: "published",
+        } as unknown as Article,
+      })
+
+      // Articles are publicly readable and REST accepts a `depth` param. With
+      // no afterRead hook writing into `doc.authors`, depth 0 returns the
+      // relationship as plain IDs — nothing to leak.
+      const { docs } = await payload.find({
+        collection: "articles",
+        depth: 0,
+        overrideAccess: false,
+        user: null,
+        where: { title: { equals: "Depth 0 authors - fieldLevel" } },
+      })
+
+      expect(docs[0]?.authors).toEqual([writer.id])
+    })
+
+    it("leaves a bare ID for an author who fails the read check", async () => {
       const writer = await createUser("writer")
       // `filterOptions` on the authors field rejects a member outright, so the
       // only way an article ends up with one is a demotion after publication.
@@ -248,9 +275,6 @@ describe("field-level access", () => {
         } as unknown as Article,
       })
 
-      // A member-only user fails `readUsers`, so Payload leaves their bare ID
-      // in place at any depth and the hook backfills it — from the public-safe
-      // select, not the raw user doc.
       await payload.update({
         collection: "users",
         id: demoted.id,
@@ -259,6 +283,8 @@ describe("field-level access", () => {
         data: { roles: ["member"] },
       })
 
+      // Payload leaves the bare ID for a user the caller cannot read, and the
+      // co-author it did populate is unaffected.
       const { docs } = await payload.find({
         collection: "articles",
         depth: 1,
@@ -267,12 +293,11 @@ describe("field-level access", () => {
         where: { title: { equals: "Demoted author - fieldLevel" } },
       })
 
-      const authors = (docs[0]?.authors ?? []) as User[]
-      expect(authors.map((author) => author.id)).toEqual([writer.id, demoted.id])
-      for (const author of authors) {
-        expect(author.email).toBeUndefined()
-        expect(author.roles).toBeUndefined()
-      }
+      const authors = docs[0]?.authors ?? []
+      expect((authors[0] as User).id).toBe(writer.id)
+      expect((authors[0] as User).email).toBeUndefined()
+      expect((authors[0] as User).roles).toBeUndefined()
+      expect(authors[1]).toBe(demoted.id)
     })
   })
 })

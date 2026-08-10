@@ -19,7 +19,6 @@ import { SquiggleRule } from "@/blocks/SquiggleRule/config"
 import { Timeline } from "@/blocks/Timeline/config"
 import { detectMathBlocks } from "@/collections/Articles/hooks/detectMathBlocks"
 import { generateFootnotes } from "@/collections/Articles/hooks/generateFootnotes"
-import { populateAuthors } from "@/collections/Articles/hooks/populateAuthors"
 import { populateTopics } from "@/collections/Articles/hooks/populateTopics"
 import { populateMetaImageFromHero } from "@/collections/Articles/hooks/populateMetaImageFromHero"
 import { revalidateArticle, revalidateDelete } from "@/collections/Articles/hooks/revalidateArticle"
@@ -297,7 +296,7 @@ export const Articles: CollectionConfig = {
       populateMetaImageFromHero,
     ],
     afterChange: [revalidateArticle],
-    afterRead: [populateAuthors, populateTopics],
+    afterRead: [populateTopics],
     afterDelete: [revalidateDelete],
   },
   versions: {

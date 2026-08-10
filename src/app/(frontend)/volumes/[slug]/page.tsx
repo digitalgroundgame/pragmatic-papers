@@ -25,7 +25,7 @@ export async function generateStaticParams(): Promise<{ slug: string | null | un
   const volumes = await payload.find({
     collection: "volumes",
     draft: false,
-    limit: 100,
+    limit: 1000,
     overrideAccess: false,
     pagination: false,
     select: {

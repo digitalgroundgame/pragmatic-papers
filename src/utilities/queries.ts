@@ -65,6 +65,8 @@ export const queryVolumeBySlug = cache(async (slug: string) => {
         equals: slug,
       },
     },
+    // volume -> articles -> authors -> profileImage: author images on a volume
+    // page sit one level deeper than on an article page.
     depth: 3,
   })
 
@@ -81,12 +83,18 @@ export const queryArticleBySlug = cache(async (slug: string) => {
     overrideAccess: draft,
     pagination: false,
     where: { slug: { equals: slug } },
+    // Load-bearing since relationships resolve natively: article -> authors ->
+    // profileImage and article -> narration -> narrator both need depth 2.
+    depth: 2,
   })
   return docs[0] || null
 })
 
-export const queryVolumesForArticles = cache(async (articleIds: number[]): Promise<Volume[]> => {
-  if (!articleIds.length) return []
+// Keyed by a normalized string rather than the caller's array, so two
+// components asking for the same article IDs in the same request share one
+// query instead of memoizing on array identity.
+const queryVolumesForArticleKey = cache(async (key: string): Promise<Volume[]> => {
+  const articleIds = key.split(",").map(Number)
 
   const { isEnabled: draft } = await draftMode()
   const payload = await getPayloadConfig()
@@ -107,6 +115,17 @@ export const queryVolumesForArticles = cache(async (articleIds: number[]): Promi
   return docs
 })
 
+/** Resolves the volumes containing any of `articleIds` in a single query. */
+export const queryVolumesForArticles = async (articleIds: number[]): Promise<Volume[]> => {
+  if (!articleIds.length) return []
+
+  const key = Array.from(new Set(articleIds))
+    .sort((a, b) => a - b)
+    .join(",")
+
+  return queryVolumesForArticleKey(key)
+}
+
 export const queryPageBySlug = cache(async (slug: string) => {
   const { isEnabled: draft } = await draftMode()
   const payload = await getPayloadConfig()
@@ -121,6 +140,9 @@ export const queryPageBySlug = cache(async (slug: string) => {
         equals: slug,
       },
     },
+    // Load-bearing since relationships resolve natively: layout blocks ->
+    // articles -> authors needs depth 2.
+    depth: 2,
   })
 
   return docs[0] || null

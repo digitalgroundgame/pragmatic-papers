@@ -1,6 +1,6 @@
 import { isSelfOrAdmin, readUsers } from "@/access/policies"
 import { admin, staff } from "@/access/collections"
-import { adminFieldLevel, selfOrStaffFieldLevel } from "@/access/fields"
+import { adminFieldLevel, selfOrAdminFieldLevel } from "@/access/fields"
 import { revalidateUser } from "@/collections/Users/hooks/revalidateUser"
 import { menu } from "@/fields/menu"
 import {
@@ -34,7 +34,7 @@ export const Users: CollectionConfig = {
       name: "email",
       type: "email",
       access: {
-        read: selfOrStaffFieldLevel,
+        read: selfOrAdminFieldLevel,
       },
     },
     {
@@ -106,7 +106,7 @@ export const Users: CollectionConfig = {
       saveToJWT: true,
       defaultValue: ["member"],
       access: {
-        read: selfOrStaffFieldLevel,
+        read: selfOrAdminFieldLevel,
         update: adminFieldLevel,
       },
       admin: {

@@ -4,7 +4,7 @@ import {
   editorFieldLevel,
   writerFieldLevel,
   writerOrEditorFieldLevel,
-  selfOrStaffFieldLevel,
+  selfOrAdminFieldLevel,
 } from "@/access/fields"
 import type { User } from "@/payload-types"
 import type { FieldAccess } from "payload"
@@ -73,24 +73,28 @@ describe("writerOrEditorFieldLevel access helper", () => {
 const makeFieldArgsWithId = (user: User | null, id: string | number | undefined) =>
   ({ req: { user }, id }) as unknown as Parameters<FieldAccess>[0]
 
-describe("selfOrStaffFieldLevel access helper", () => {
-  it("allows staff members to read any record", () => {
-    for (const role of ["narrator", "writer", "editor", "chief-editor", "admin"]) {
-      expect(selfOrStaffFieldLevel(makeFieldArgsWithId(makeUser(role), 999))).toBe(true)
+describe("selfOrAdminFieldLevel access helper", () => {
+  it("allows admin and chief-editor to read any record", () => {
+    for (const role of ["admin", "chief-editor"]) {
+      expect(selfOrAdminFieldLevel(makeFieldArgsWithId(makeUser(role), 999))).toBe(true)
     }
   })
 
-  it("allows user to read their own record", () => {
-    const user = { id: 123, roles: ["member"] } as unknown as User
-    expect(selfOrStaffFieldLevel(makeFieldArgsWithId(user, 123))).toBe(true)
+  it("denies non-admin staff from reading another user's record", () => {
+    for (const role of ["narrator", "writer", "editor"]) {
+      const user = { id: 123, roles: [role] } as unknown as User
+      expect(selfOrAdminFieldLevel(makeFieldArgsWithId(user, 999))).toBe(false)
+    }
   })
 
-  it("denies user from reading other record if not staff", () => {
-    const user = { id: 123, roles: ["member"] } as unknown as User
-    expect(selfOrStaffFieldLevel(makeFieldArgsWithId(user, 999))).toBe(false)
+  it("allows any user to read their own record", () => {
+    for (const role of ["member", "narrator", "writer", "editor"]) {
+      const user = { id: 123, roles: [role] } as unknown as User
+      expect(selfOrAdminFieldLevel(makeFieldArgsWithId(user, 123))).toBe(true)
+    }
   })
 
   it("denies anonymous users", () => {
-    expect(selfOrStaffFieldLevel(makeFieldArgsWithId(null, 999))).toBe(false)
+    expect(selfOrAdminFieldLevel(makeFieldArgsWithId(null, 999))).toBe(false)
   })
 })

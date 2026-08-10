@@ -19,7 +19,11 @@ const queryVolumes = cache(async () => {
       },
     },
     sort: "-publishedAt",
-    depth: 1,
+    // volume -> articles -> authors. The feed prints author names, which sit
+    // one level deeper than the articles themselves; at depth 1 they arrived as
+    // bare IDs and only rendered because the populateAuthors afterRead hook
+    // backfilled them.
+    depth: 2,
   })
 
   return volumes.docs || []

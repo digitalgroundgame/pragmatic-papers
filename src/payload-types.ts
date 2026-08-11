@@ -917,7 +917,7 @@ export interface MerchProduct {
   compareAtPrice?: string | null;
   currencyCode?: string | null;
   /**
-   * Drives the automatic "Sold out" badge.
+   * Drives the automatic "Sold Out" badge.
    */
   availableForSale?: boolean | null;
   /**
@@ -952,7 +952,7 @@ export interface MerchProduct {
    */
   hidden?: boolean | null;
   /**
-   * Replaces the automatic badge, e.g. "Last few" instead of the derived "Sold out".
+   * Replaces the automatic badge, e.g. "Last few" instead of the derived "Sold Out".
    */
   badgeOverride?: string | null;
   /**

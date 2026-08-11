@@ -10,20 +10,12 @@ export const queryUserBySlug = cache(async (slug: string): Promise<User | null> 
     collection: "users",
     draft,
     limit: 1,
+    overrideAccess: draft,
     pagination: false,
     where: {
-      and: [
-        {
-          roles: {
-            in: ["writer", "editor", "chief-editor", "narrator", "admin"],
-          },
-        },
-        {
-          slug: {
-            equals: slug,
-          },
-        },
-      ],
+      slug: {
+        equals: slug,
+      },
     },
     depth: 1,
   })

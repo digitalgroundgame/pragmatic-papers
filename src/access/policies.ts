@@ -1,5 +1,5 @@
 import type { Access, Where } from "payload"
-import { hasRoleOrAdmin, isAdmin, isEditor, isStaff } from "./roles"
+import { hasRoleOrAdmin, isAdmin, isEditor, isStaff, STAFF_ROLES } from "./roles"
 
 /**
  * Access Control Policies
@@ -31,7 +31,7 @@ export const readUsers: Access = ({ req: { user } }) => {
   const constraints: Where[] = [
     {
       roles: {
-        in: ["admin", "chief-editor", "editor", "writer", "narrator"],
+        in: STAFF_ROLES,
       },
     },
   ]

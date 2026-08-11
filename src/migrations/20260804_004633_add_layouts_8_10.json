@@ -4480,6 +4480,12 @@
           "primaryKey": false,
           "notNull": false
         },
+        "narration_id": {
+          "name": "narration_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
         "hero_image_id": {
           "name": "hero_image_id",
           "type": "integer",
@@ -4509,12 +4515,6 @@
         "published_at": {
           "name": "published_at",
           "type": "timestamp(3) with time zone",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "narration_id": {
-          "name": "narration_id",
-          "type": "integer",
           "primaryKey": false,
           "notNull": false
         },
@@ -4563,6 +4563,21 @@
           "method": "btree",
           "with": {}
         },
+        "articles_narration_idx": {
+          "name": "articles_narration_idx",
+          "columns": [
+            {
+              "expression": "narration_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
         "articles_hero_image_idx": {
           "name": "articles_hero_image_idx",
           "columns": [
@@ -4589,21 +4604,6 @@
             }
           ],
           "isUnique": true,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "articles_narration_idx": {
-          "name": "articles_narration_idx",
-          "columns": [
-            {
-              "expression": "narration_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
           "concurrently": false,
           "method": "btree",
           "with": {}
@@ -4679,20 +4679,20 @@
           "onDelete": "set null",
           "onUpdate": "no action"
         },
-        "articles_hero_image_id_media_id_fk": {
-          "name": "articles_hero_image_id_media_id_fk",
-          "tableFrom": "articles",
-          "tableTo": "media",
-          "columnsFrom": ["hero_image_id"],
-          "columnsTo": ["id"],
-          "onDelete": "set null",
-          "onUpdate": "no action"
-        },
         "articles_narration_id_media_id_fk": {
           "name": "articles_narration_id_media_id_fk",
           "tableFrom": "articles",
           "tableTo": "media",
           "columnsFrom": ["narration_id"],
+          "columnsTo": ["id"],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "articles_hero_image_id_media_id_fk": {
+          "name": "articles_hero_image_id_media_id_fk",
+          "tableFrom": "articles",
+          "tableTo": "media",
+          "columnsFrom": ["hero_image_id"],
           "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
@@ -5134,6 +5134,12 @@
           "primaryKey": false,
           "notNull": false
         },
+        "version_narration_id": {
+          "name": "version_narration_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
         "version_hero_image_id": {
           "name": "version_hero_image_id",
           "type": "integer",
@@ -5163,12 +5169,6 @@
         "version_published_at": {
           "name": "version_published_at",
           "type": "timestamp(3) with time zone",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "version_narration_id": {
-          "name": "version_narration_id",
-          "type": "integer",
           "primaryKey": false,
           "notNull": false
         },
@@ -5256,6 +5256,21 @@
           "method": "btree",
           "with": {}
         },
+        "_articles_v_version_version_narration_idx": {
+          "name": "_articles_v_version_version_narration_idx",
+          "columns": [
+            {
+              "expression": "version_narration_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
         "_articles_v_version_version_hero_image_idx": {
           "name": "_articles_v_version_version_hero_image_idx",
           "columns": [
@@ -5276,21 +5291,6 @@
           "columns": [
             {
               "expression": "version_slug",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "_articles_v_version_version_narration_idx": {
-          "name": "_articles_v_version_version_narration_idx",
-          "columns": [
-            {
-              "expression": "version_narration_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -5441,20 +5441,20 @@
           "onDelete": "set null",
           "onUpdate": "no action"
         },
-        "_articles_v_version_hero_image_id_media_id_fk": {
-          "name": "_articles_v_version_hero_image_id_media_id_fk",
-          "tableFrom": "_articles_v",
-          "tableTo": "media",
-          "columnsFrom": ["version_hero_image_id"],
-          "columnsTo": ["id"],
-          "onDelete": "set null",
-          "onUpdate": "no action"
-        },
         "_articles_v_version_narration_id_media_id_fk": {
           "name": "_articles_v_version_narration_id_media_id_fk",
           "tableFrom": "_articles_v",
           "tableTo": "media",
           "columnsFrom": ["version_narration_id"],
+          "columnsTo": ["id"],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "_articles_v_version_hero_image_id_media_id_fk": {
+          "name": "_articles_v_version_hero_image_id_media_id_fk",
+          "tableFrom": "_articles_v",
+          "tableTo": "media",
+          "columnsFrom": ["version_hero_image_id"],
           "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
@@ -13573,7 +13573,8 @@
         "euler-5",
         "fibonacci-6",
         "vespucci-7",
-        "fibonacci-7"
+        "fibonacci-7",
+        "gauss-10"
       ]
     },
     "public.enum_pages_blocks_cta_links_link_type": {
@@ -13648,7 +13649,8 @@
         "euler-5",
         "fibonacci-6",
         "vespucci-7",
-        "fibonacci-7"
+        "fibonacci-7",
+        "gauss-10"
       ]
     },
     "public.enum__pages_v_blocks_cta_links_link_type": {
@@ -13862,6 +13864,6 @@
     "tables": {},
     "columns": {}
   },
-  "id": "9c104c5d-3fd5-4323-a467-be640273e284",
+  "id": "c4107d27-254d-4c98-a23c-4adbbcdf618b",
   "prevId": "00000000-0000-0000-0000-000000000000"
 }

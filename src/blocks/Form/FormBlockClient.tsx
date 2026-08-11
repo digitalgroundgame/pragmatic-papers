@@ -1,27 +1,23 @@
 "use client"
 
 import { type Form } from "@/payload-types"
-import type { DefaultTypedEditorState } from "@payloadcms/richtext-lexical"
 import { useRouter } from "next/navigation"
 import React, { useCallback, useState } from "react"
 import { type FieldValues, FormProvider, type SubmitHandler, useForm } from "react-hook-form"
 
-import RichText from "@/components/RichText"
 import { Button } from "@/components/ui/button"
 import { getClientSideURL } from "@/utilities/getURL"
 import { fields } from "./fields"
 
 interface FormBlockClientProps {
-  enableIntro?: boolean | null
   form: Form
-  introContent?: DefaultTypedEditorState | null
+  /** Server-rendered intro rich text, or null when the block has none. */
+  intro?: React.ReactNode
+  /** Server-rendered confirmation rich text, shown after a successful submit. */
+  confirmation?: React.ReactNode
 }
 
-export const FormBlockClient: React.FC<FormBlockClientProps> = ({
-  enableIntro,
-  form,
-  introContent,
-}) => {
+export const FormBlockClient: React.FC<FormBlockClientProps> = ({ form, intro, confirmation }) => {
   const [isLoading, setIsLoading] = useState(false)
   const [hasSubmitted, setHasSubmitted] = useState<boolean>()
   const [error, setError] = useState<{ message: string; status?: string } | undefined>()
@@ -35,7 +31,7 @@ export const FormBlockClient: React.FC<FormBlockClientProps> = ({
     register,
   } = formMethods
 
-  const { id, confirmationType, confirmationMessage, redirect, submitButtonLabel } = form
+  const { id, confirmationType, redirect, submitButtonLabel } = form
 
   const onSubmit: SubmitHandler<FieldValues> = useCallback(
     (data) => {
@@ -106,18 +102,10 @@ export const FormBlockClient: React.FC<FormBlockClientProps> = ({
 
   return (
     <div className="container lg:max-w-3xl">
-      {enableIntro && introContent && !hasSubmitted && (
-        <RichText
-          className="mb-8 lg:mb-12"
-          data={introContent as unknown as DefaultTypedEditorState}
-          enableGutter={false}
-        />
-      )}
+      {intro && !hasSubmitted && intro}
       <div className="rounded-sm border p-4 lg:p-6">
         <FormProvider {...formMethods}>
-          {!isLoading && hasSubmitted && confirmationType === "message" && confirmationMessage && (
-            <RichText data={confirmationMessage} />
-          )}
+          {!isLoading && hasSubmitted && confirmation}
           {isLoading && !hasSubmitted && <p>Loading, please wait...</p>}
           {error && <div>{`${error.status || "500"}: ${error.message || ""}`}</div>}
           {!hasSubmitted && (

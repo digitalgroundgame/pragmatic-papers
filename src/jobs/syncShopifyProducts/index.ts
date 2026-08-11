@@ -2,7 +2,7 @@ import type { TaskConfig } from "payload"
 
 import { revalidateTag } from "next/cache"
 
-import { MERCH_PRODUCTS_TAG } from "@/collections/MerchProducts/hooks/revalidateMerchProducts"
+import { MERCH_PRODUCTS_TAG } from "@/collections/MerchProducts/tag"
 import { didChange, fetchShopifyProducts, readShopifyEnv, syncProducts } from "./logic"
 
 /**

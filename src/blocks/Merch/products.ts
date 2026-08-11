@@ -4,7 +4,7 @@ import { unstable_cache } from "next/cache"
 
 import type { Media, MerchBlock, MerchProduct as MerchProductDoc } from "@/payload-types"
 
-import { MERCH_PRODUCTS_TAG } from "@/collections/MerchProducts/hooks/revalidateMerchProducts"
+import { MERCH_PRODUCTS_TAG } from "@/collections/MerchProducts/tag"
 import { getPayloadConfig } from "@/utilities/getPayloadConfig"
 import { getMerchProductUrl } from "./urls"
 

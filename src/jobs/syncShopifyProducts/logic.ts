@@ -62,7 +62,7 @@ export type SyncedProductData = Pick<
   | "imageHeight"
   | "imageAlt"
   | "tags"
-  | "collections"
+  | "categories"
   | "status"
   | "lastSyncedAt"
 >
@@ -258,7 +258,9 @@ export function mapShopifyProduct(node: ShopifyProductNode, syncedAt: string): S
     imageHeight: node.featuredImage?.height ?? null,
     imageAlt: node.featuredImage?.altText ?? null,
     tags: node.tags ?? [],
-    collections: node.collections?.nodes?.map((collection) => collection.handle) ?? [],
+    // Shopify calls these collections; stored as `categories` so the word
+    // isn't overloaded against Payload's own collections.
+    categories: node.collections?.nodes?.map((collection) => collection.handle) ?? [],
     status: "active",
     lastSyncedAt: syncedAt,
   }

@@ -238,7 +238,7 @@ describe("mapShopifyProduct", () => {
       imageHeight: 1000,
       imageAlt: "A tee",
       tags: ["apparel"],
-      collections: ["apparel"],
+      categories: ["apparel"],
       status: "active",
       lastSyncedAt: SYNCED_AT,
     })

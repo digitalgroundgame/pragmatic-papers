@@ -88,7 +88,7 @@ export async function seedMerchProducts(
       imageHeight: height,
       imageAlt: media.alt || product.title,
       tags: [],
-      collections: [],
+      categories: [],
       status: "active" as const,
       featured: product.featured ?? false,
       sortOrder: product.sortOrder ?? index,

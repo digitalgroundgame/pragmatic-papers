@@ -104,8 +104,8 @@ export function buildProductQuery(block: MerchBlock): Where {
   if (block.source !== "filtered") return where
 
   if (block.featuredOnly) and.push({ featured: { equals: true } })
-  if (block.collection?.trim()) {
-    and.push({ collections: { contains: block.collection.trim() } })
+  if (block.category?.trim()) {
+    and.push({ categories: { contains: block.category.trim() } })
   }
   if (block.tag?.trim()) and.push({ tags: { contains: block.tag.trim() } })
 
@@ -153,7 +153,7 @@ async function queryMerchProducts(block: MerchBlock): Promise<MerchProductDoc[]>
  * (all synced products, or a filter over them), never product data, so a price
  * change in Shopify reaches every placement at once.
  *
- * Results are cached under the `merch-products` tag. The sync job drops that
+ * Results are cached under the `merch` tag. The sync job drops that
  * tag when a run actually changed something, and the collection's hooks drop it
  * when an editor curates — nothing else invalidates it, so the hourly no-op run
  * costs nothing.

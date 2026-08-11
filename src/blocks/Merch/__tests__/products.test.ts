@@ -126,23 +126,23 @@ describe("buildProductQuery", () => {
     expect(query.and).toHaveLength(2)
   })
 
-  it("narrows by collection, tag, and featured when filtered", () => {
+  it("narrows by category, tag, and featured when filtered", () => {
     const query = buildProductQuery(
       makeBlock({
         source: "filtered",
-        collection: "apparel",
+        category: "apparel",
         tag: "new-release",
         featuredOnly: true,
       }),
     )
 
     expect(query.and).toContainEqual({ featured: { equals: true } })
-    expect(query.and).toContainEqual({ collections: { contains: "apparel" } })
+    expect(query.and).toContainEqual({ categories: { contains: "apparel" } })
     expect(query.and).toContainEqual({ tags: { contains: "new-release" } })
   })
 
   it("skips blank filter fields rather than matching on empty strings", () => {
-    const query = buildProductQuery(makeBlock({ source: "filtered", collection: "  ", tag: "" }))
+    const query = buildProductQuery(makeBlock({ source: "filtered", category: "  ", tag: "" }))
 
     expect(query.and).toHaveLength(2)
   })

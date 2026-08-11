@@ -59,11 +59,12 @@ export const Merch: Block = {
       },
     },
     {
-      name: "collection",
+      name: "category",
       type: "text",
       admin: {
         condition: (_, siblingData) => siblingData?.source === "filtered",
-        description: 'Store collection handle, e.g. "apparel". Leave blank to ignore.',
+        description:
+          'Store category handle — a Shopify collection, e.g. "apparel". Leave blank to ignore.',
       },
     },
     {

@@ -1126,8 +1126,8 @@
           "notNull": false,
           "default": "'all'"
         },
-        "collection": {
-          "name": "collection",
+        "category": {
+          "name": "category",
           "type": "varchar",
           "primaryKey": false,
           "notNull": false
@@ -3442,8 +3442,8 @@
           "notNull": false,
           "default": "'all'"
         },
-        "collection": {
-          "name": "collection",
+        "category": {
+          "name": "category",
           "type": "varchar",
           "primaryKey": false,
           "notNull": false
@@ -14672,6 +14672,6 @@
     "tables": {},
     "columns": {}
   },
-  "id": "f9094e96-7a09-49de-9b38-14de2fae4b3d",
+  "id": "b57cf3aa-d1ce-44f5-ad71-2ff57814f334",
   "prevId": "00000000-0000-0000-0000-000000000000"
 }

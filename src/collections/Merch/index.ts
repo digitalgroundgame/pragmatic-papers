@@ -170,13 +170,14 @@ export const Merch: CollectionConfig = {
       },
     },
     {
-      name: "collections",
+      name: "categories",
       type: "text",
       hasMany: true,
       index: true,
       admin: {
         readOnly: true,
-        description: "Handles of the store collections this product belongs to.",
+        description:
+          "Handles of the store groupings this product belongs to — Shopify calls these collections, but that word already means something else here.",
       },
     },
     {

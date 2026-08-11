@@ -861,9 +861,9 @@ export interface MerchBlock {
    */
   source?: ('all' | 'filtered') | null;
   /**
-   * Store collection handle, e.g. "apparel". Leave blank to ignore.
+   * Store category handle — a Shopify collection, e.g. "apparel". Leave blank to ignore.
    */
-  collection?: string | null;
+  category?: string | null;
   /**
    * Store product tag, e.g. "new-release". Leave blank to ignore.
    */
@@ -936,9 +936,9 @@ export interface Merch {
    */
   tags?: string[] | null;
   /**
-   * Handles of the store collections this product belongs to.
+   * Handles of the store groupings this product belongs to — Shopify calls these collections, but that word already means something else here.
    */
-  collections?: string[] | null;
+  categories?: string[] | null;
   /**
    * Archived means Shopify stopped listing it. Archived products are never shown.
    */
@@ -1750,7 +1750,7 @@ export interface MerchBlockSelect<T extends boolean = true> {
   layout?: T;
   autoplay?: T;
   source?: T;
-  collection?: T;
+  category?: T;
   tag?: T;
   featuredOnly?: T;
   selectedProducts?: T;
@@ -2151,7 +2151,7 @@ export interface MerchSelect<T extends boolean = true> {
   imageHeight?: T;
   imageAlt?: T;
   tags?: T;
-  collections?: T;
+  categories?: T;
   status?: T;
   lastSyncedAt?: T;
   featured?: T;

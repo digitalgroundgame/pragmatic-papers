@@ -11,4 +11,4 @@
  * Dropped by the sync job when a run actually changed something, and by the
  * collection's hooks when an editor curates a product.
  */
-export const MERCH_PRODUCTS_TAG = "merch-products"
+export const MERCH_TAG = "merch"

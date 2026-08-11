@@ -3,7 +3,7 @@ import { Articles } from "@/collections/Articles"
 import { Categories } from "@/collections/Categories"
 import { MapAssets } from "@/collections/MapAssets"
 import { Media } from "@/collections/Media"
-import { MerchProducts } from "@/collections/MerchProducts"
+import { Merch as MerchCollection } from "@/collections/Merch"
 import { Pages } from "@/collections/Pages"
 import { Topics } from "@/collections/Topics"
 import { Users } from "@/collections/Users"
@@ -105,7 +105,7 @@ export default buildConfig({
     Users,
     Webhooks,
     Topics,
-    MerchProducts,
+    MerchCollection,
   ],
   cors: [getServerSideURL()].filter(Boolean),
   globals: [Header, Footer, ArticleRecommendations],
@@ -144,7 +144,7 @@ export default buildConfig({
     {
       // The scheduled sync runs hourly; this is for the editor who has just
       // pushed a drop to Shopify and wants it on the site now.
-      path: "/merch-products/sync",
+      path: "/merch/sync",
       method: "post",
       handler: async (req) => {
         if (!isAdmin(req.user)) {

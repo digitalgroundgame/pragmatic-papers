@@ -7,22 +7,27 @@ import {
 } from "./hooks/revalidateMerchProducts"
 
 /**
- * MerchProducts — the local mirror of the DiGG Shopify catalog.
+ * Merch — the local mirror of the DGG store catalogue.
  *
- * Rows are written by the `syncShopifyProducts` job, not by hand: Shopify owns
- * every commerce field here, so they render read-only in the admin. The
+ * Rows are written by the `syncShopifyProducts` job, not by hand: the store
+ * owns every commerce field here, so they render read-only in the admin. The
  * editorial fields at the bottom are ours — a sync never overwrites them, so
  * curating a product survives the next run.
+ *
+ * Fields are named for the commerce concept rather than the vendor, and each
+ * one is a leaf value copied as the store reports it. This is a derived cache:
+ * a field we skipped can be added as a column and backfilled by the next run,
+ * which is why there's no raw payload kept alongside.
  *
  * Products are never hard-deleted. One that unpublishes or disappears from
  * Shopify flips to `archived`, so a Merch block pointing at it degrades to
  * "not shown" instead of a dangling reference.
  */
-export const MerchProducts: CollectionConfig = {
-  slug: "merch-products",
+export const Merch: CollectionConfig = {
+  slug: "merch",
   labels: {
     singular: "Merch Product",
-    plural: "Merch Products",
+    plural: "Merch",
   },
   access: {
     create: admin,
@@ -40,7 +45,7 @@ export const MerchProducts: CollectionConfig = {
     useAsTitle: "title",
     defaultColumns: ["title", "price", "availableForSale", "status", "lastSyncedAt"],
     description:
-      "Synced hourly from Shopify. Commerce fields are read-only — edit them in Shopify. The presentation fields at the bottom are ours and survive a sync.",
+      "Synced hourly from Shopify and stored as Shopify reports it — prices are raw amounts, not formatted strings, and the block decides how they read. Commerce fields are read-only; edit them in Shopify. The presentation fields at the bottom are ours and survive a sync.",
     group: "Store",
   },
   hooks: {
@@ -55,14 +60,26 @@ export const MerchProducts: CollectionConfig = {
       admin: { readOnly: true },
     },
     {
-      name: "shopifyId",
+      name: "externalId",
       type: "text",
       required: true,
       unique: true,
       index: true,
       admin: {
         readOnly: true,
-        description: "Shopify's global product ID — the key each sync upserts on.",
+        description: "The store's own product ID — the key each sync upserts on.",
+      },
+    },
+    {
+      name: "source",
+      type: "select",
+      defaultValue: "shopify",
+      index: true,
+      options: [{ label: "Shopify", value: "shopify" }],
+      admin: {
+        readOnly: true,
+        description:
+          "Which storefront this product was synced from. Every field here is a generic commerce concept, so a second source would add an option and its own sync task rather than a second collection.",
       },
     },
     {
@@ -102,7 +119,6 @@ export const MerchProducts: CollectionConfig = {
         {
           name: "currencyCode",
           type: "text",
-          defaultValue: "USD",
           admin: { readOnly: true, width: "33%" },
         },
       ],
@@ -110,10 +126,9 @@ export const MerchProducts: CollectionConfig = {
     {
       name: "availableForSale",
       type: "checkbox",
-      defaultValue: true,
       admin: {
         readOnly: true,
-        description: 'Drives the automatic "Sold Out" badge.',
+        description: 'As Shopify reports it. The block turns this into the "Sold Out" badge.',
       },
     },
     {
@@ -155,13 +170,13 @@ export const MerchProducts: CollectionConfig = {
       },
     },
     {
-      name: "shopifyCollections",
+      name: "collections",
       type: "text",
       hasMany: true,
       index: true,
       admin: {
         readOnly: true,
-        description: "Handles of the Shopify collections this product belongs to.",
+        description: "Handles of the store collections this product belongs to.",
       },
     },
     {

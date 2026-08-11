@@ -2,15 +2,15 @@ import type { TaskConfig } from "payload"
 
 import { revalidateTag } from "next/cache"
 
-import { MERCH_PRODUCTS_TAG } from "@/collections/MerchProducts/tag"
+import { MERCH_TAG } from "@/collections/Merch/tag"
 import { didChange, fetchShopifyProducts, readShopifyEnv, syncProducts } from "./logic"
 
 /**
- * Pull the DiGG Shopify catalog into `merch-products` so Merch blocks render
+ * Pull the DGG Shopify catalogue into `merch` so Merch blocks render
  * live prices and availability instead of hand-typed rows.
  *
  * Hourly is generous for a catalog that changes a few times a season; the
- * "run now" endpoint (`/merch-products/sync`) covers the case where an editor
+ * "run now" endpoint (`/merch/sync`) covers the case where an editor
  * has just pushed a drop and wants it on the site immediately.
  */
 export const syncShopifyProductsTask: TaskConfig<"syncShopifyProducts"> = {
@@ -61,8 +61,8 @@ export const syncShopifyProductsTask: TaskConfig<"syncShopifyProducts"> = {
     log.debug("[merch-sync] step 3/3: revalidating cached product queries")
     if (didChange(counts)) {
       try {
-        revalidateTag(MERCH_PRODUCTS_TAG, "max")
-        log.debug("[merch-sync]   catalog changed — dropped the merch-products cache")
+        revalidateTag(MERCH_TAG, "max")
+        log.debug("[merch-sync]   catalogue changed — dropped the merch cache")
       } catch (err) {
         // `revalidateTag` wants a request scope, and the scheduled run happens
         // on a background timer. A stale cache until the next editorial save is

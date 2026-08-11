@@ -14,7 +14,7 @@ describe("merch URLs", () => {
     delete process.env.MERCH_SITE_URL
   })
 
-  it("points at the DiGG site, not the Shopify store that supplies the data", () => {
+  it("points at the DGG site, not the Shopify store that supplies the data", () => {
     expect(getMerchStoreUrl()).toBe("https://digitalgroundgame.org/merch")
     expect(getMerchProductUrl("logo-tee")).toBe("https://digitalgroundgame.org/merch/logo-tee")
     expect(getMerchProductUrl("logo-tee")).not.toContain("store.digitalgroundgame.org")

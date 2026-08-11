@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 
-import type { MerchBlock, MerchProduct as MerchProductDoc } from "@/payload-types"
+import type { Merch as MerchProductDoc, MerchBlock } from "@/payload-types"
 
 import {
   buildProductQuery,
@@ -14,8 +14,9 @@ import {
 function makeDoc(overrides: Partial<MerchProductDoc> = {}): MerchProductDoc {
   return {
     id: 7,
-    title: "DiGG Mug",
-    shopifyId: "gid://shopify/Product/1",
+    title: "DGG Mug",
+    externalId: "gid://shopify/Product/1",
+    source: "shopify",
     handle: "digg-mug",
     price: "15.00",
     currencyCode: "USD",
@@ -84,7 +85,7 @@ describe("toMediaShape", () => {
   })
 
   it("falls back to the product title when Shopify has no alt text", () => {
-    expect(toMediaShape(makeDoc({ imageAlt: null }))?.alt).toBe("DiGG Mug")
+    expect(toMediaShape(makeDoc({ imageAlt: null }))?.alt).toBe("DGG Mug")
   })
 
   it("returns null when the product has no image", () => {
@@ -93,7 +94,7 @@ describe("toMediaShape", () => {
 })
 
 describe("toMerchProduct", () => {
-  it("links to the DiGG merch page, never the Shopify store", () => {
+  it("links to the DGG merch page, never the Shopify store", () => {
     const product = toMerchProduct(makeDoc({ handle: "logo-tee" }))
 
     expect(product.url).toBe("https://digitalgroundgame.org/merch/logo-tee")
@@ -105,7 +106,7 @@ describe("toMerchProduct", () => {
 
     expect(product).toMatchObject({
       id: "merch-product-7",
-      title: "DiGG Mug",
+      title: "DGG Mug",
       price: "$15.00",
       badge: "Sold Out",
     })
@@ -129,21 +130,19 @@ describe("buildProductQuery", () => {
     const query = buildProductQuery(
       makeBlock({
         source: "filtered",
-        shopifyCollection: "apparel",
+        collection: "apparel",
         tag: "new-release",
         featuredOnly: true,
       }),
     )
 
     expect(query.and).toContainEqual({ featured: { equals: true } })
-    expect(query.and).toContainEqual({ shopifyCollections: { contains: "apparel" } })
+    expect(query.and).toContainEqual({ collections: { contains: "apparel" } })
     expect(query.and).toContainEqual({ tags: { contains: "new-release" } })
   })
 
   it("skips blank filter fields rather than matching on empty strings", () => {
-    const query = buildProductQuery(
-      makeBlock({ source: "filtered", shopifyCollection: "  ", tag: "" }),
-    )
+    const query = buildProductQuery(makeBlock({ source: "filtered", collection: "  ", tag: "" }))
 
     expect(query.and).toHaveLength(2)
   })

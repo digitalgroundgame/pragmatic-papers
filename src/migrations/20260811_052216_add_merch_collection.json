@@ -1126,8 +1126,8 @@
           "notNull": false,
           "default": "'all'"
         },
-        "shopify_collection": {
-          "name": "shopify_collection",
+        "collection": {
+          "name": "collection",
           "type": "varchar",
           "primaryKey": false,
           "notNull": false
@@ -2037,8 +2037,8 @@
           "primaryKey": false,
           "notNull": false
         },
-        "merch_products_id": {
-          "name": "merch_products_id",
+        "merch_id": {
+          "name": "merch_id",
           "type": "integer",
           "primaryKey": false,
           "notNull": false
@@ -2156,11 +2156,11 @@
           "method": "btree",
           "with": {}
         },
-        "pages_rels_merch_products_id_idx": {
-          "name": "pages_rels_merch_products_id_idx",
+        "pages_rels_merch_id_idx": {
+          "name": "pages_rels_merch_id_idx",
           "columns": [
             {
-              "expression": "merch_products_id",
+              "expression": "merch_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -2233,11 +2233,11 @@
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
-        "pages_rels_merch_products_fk": {
-          "name": "pages_rels_merch_products_fk",
+        "pages_rels_merch_fk": {
+          "name": "pages_rels_merch_fk",
           "tableFrom": "pages_rels",
-          "tableTo": "merch_products",
-          "columnsFrom": ["merch_products_id"],
+          "tableTo": "merch",
+          "columnsFrom": ["merch_id"],
           "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
@@ -3442,8 +3442,8 @@
           "notNull": false,
           "default": "'all'"
         },
-        "shopify_collection": {
-          "name": "shopify_collection",
+        "collection": {
+          "name": "collection",
           "type": "varchar",
           "primaryKey": false,
           "notNull": false
@@ -4497,8 +4497,8 @@
           "primaryKey": false,
           "notNull": false
         },
-        "merch_products_id": {
-          "name": "merch_products_id",
+        "merch_id": {
+          "name": "merch_id",
           "type": "integer",
           "primaryKey": false,
           "notNull": false
@@ -4616,11 +4616,11 @@
           "method": "btree",
           "with": {}
         },
-        "_pages_v_rels_merch_products_id_idx": {
-          "name": "_pages_v_rels_merch_products_id_idx",
+        "_pages_v_rels_merch_id_idx": {
+          "name": "_pages_v_rels_merch_id_idx",
           "columns": [
             {
-              "expression": "merch_products_id",
+              "expression": "merch_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -4693,11 +4693,11 @@
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
-        "_pages_v_rels_merch_products_fk": {
-          "name": "_pages_v_rels_merch_products_fk",
+        "_pages_v_rels_merch_fk": {
+          "name": "_pages_v_rels_merch_fk",
           "tableFrom": "_pages_v_rels",
-          "tableTo": "merch_products",
-          "columnsFrom": ["merch_products_id"],
+          "tableTo": "merch",
+          "columnsFrom": ["merch_id"],
           "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
@@ -9115,8 +9115,8 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.merch_products": {
-      "name": "merch_products",
+    "public.merch": {
+      "name": "merch",
       "schema": "",
       "columns": {
         "id": {
@@ -9131,11 +9131,19 @@
           "primaryKey": false,
           "notNull": true
         },
-        "shopify_id": {
-          "name": "shopify_id",
+        "external_id": {
+          "name": "external_id",
           "type": "varchar",
           "primaryKey": false,
           "notNull": true
+        },
+        "source": {
+          "name": "source",
+          "type": "enum_merch_source",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "'shopify'"
         },
         "handle": {
           "name": "handle",
@@ -9165,15 +9173,13 @@
           "name": "currency_code",
           "type": "varchar",
           "primaryKey": false,
-          "notNull": false,
-          "default": "'USD'"
+          "notNull": false
         },
         "available_for_sale": {
           "name": "available_for_sale",
           "type": "boolean",
           "primaryKey": false,
-          "notNull": false,
-          "default": true
+          "notNull": false
         },
         "image_url": {
           "name": "image_url",
@@ -9201,7 +9207,7 @@
         },
         "status": {
           "name": "status",
-          "type": "enum_merch_products_status",
+          "type": "enum_merch_status",
           "typeSchema": "public",
           "primaryKey": false,
           "notNull": false,
@@ -9255,11 +9261,11 @@
         }
       },
       "indexes": {
-        "merch_products_shopify_id_idx": {
-          "name": "merch_products_shopify_id_idx",
+        "merch_external_id_idx": {
+          "name": "merch_external_id_idx",
           "columns": [
             {
-              "expression": "shopify_id",
+              "expression": "external_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -9270,8 +9276,23 @@
           "method": "btree",
           "with": {}
         },
-        "merch_products_handle_idx": {
-          "name": "merch_products_handle_idx",
+        "merch_source_idx": {
+          "name": "merch_source_idx",
+          "columns": [
+            {
+              "expression": "source",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "merch_handle_idx": {
+          "name": "merch_handle_idx",
           "columns": [
             {
               "expression": "handle",
@@ -9285,8 +9306,8 @@
           "method": "btree",
           "with": {}
         },
-        "merch_products_status_idx": {
-          "name": "merch_products_status_idx",
+        "merch_status_idx": {
+          "name": "merch_status_idx",
           "columns": [
             {
               "expression": "status",
@@ -9300,8 +9321,8 @@
           "method": "btree",
           "with": {}
         },
-        "merch_products_updated_at_idx": {
-          "name": "merch_products_updated_at_idx",
+        "merch_updated_at_idx": {
+          "name": "merch_updated_at_idx",
           "columns": [
             {
               "expression": "updated_at",
@@ -9315,8 +9336,8 @@
           "method": "btree",
           "with": {}
         },
-        "merch_products_created_at_idx": {
-          "name": "merch_products_created_at_idx",
+        "merch_created_at_idx": {
+          "name": "merch_created_at_idx",
           "columns": [
             {
               "expression": "created_at",
@@ -9338,8 +9359,8 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.merch_products_texts": {
-      "name": "merch_products_texts",
+    "public.merch_texts": {
+      "name": "merch_texts",
       "schema": "",
       "columns": {
         "id": {
@@ -9374,8 +9395,8 @@
         }
       },
       "indexes": {
-        "merch_products_texts_order_parent": {
-          "name": "merch_products_texts_order_parent",
+        "merch_texts_order_parent": {
+          "name": "merch_texts_order_parent",
           "columns": [
             {
               "expression": "order",
@@ -9395,8 +9416,8 @@
           "method": "btree",
           "with": {}
         },
-        "merch_products_texts_text_idx": {
-          "name": "merch_products_texts_text_idx",
+        "merch_texts_text_idx": {
+          "name": "merch_texts_text_idx",
           "columns": [
             {
               "expression": "text",
@@ -9412,10 +9433,10 @@
         }
       },
       "foreignKeys": {
-        "merch_products_texts_parent_fk": {
-          "name": "merch_products_texts_parent_fk",
-          "tableFrom": "merch_products_texts",
-          "tableTo": "merch_products",
+        "merch_texts_parent_fk": {
+          "name": "merch_texts_parent_fk",
+          "tableFrom": "merch_texts",
+          "tableTo": "merch",
           "columnsFrom": ["parent_id"],
           "columnsTo": ["id"],
           "onDelete": "cascade",
@@ -12254,8 +12275,8 @@
           "primaryKey": false,
           "notNull": false
         },
-        "merch_products_id": {
-          "name": "merch_products_id",
+        "merch_id": {
+          "name": "merch_id",
           "type": "integer",
           "primaryKey": false,
           "notNull": false
@@ -12466,11 +12487,11 @@
           "method": "btree",
           "with": {}
         },
-        "payload_locked_documents_rels_merch_products_id_idx": {
-          "name": "payload_locked_documents_rels_merch_products_id_idx",
+        "payload_locked_documents_rels_merch_id_idx": {
+          "name": "payload_locked_documents_rels_merch_id_idx",
           "columns": [
             {
-              "expression": "merch_products_id",
+              "expression": "merch_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -12633,11 +12654,11 @@
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
-        "payload_locked_documents_rels_merch_products_fk": {
-          "name": "payload_locked_documents_rels_merch_products_fk",
+        "payload_locked_documents_rels_merch_fk": {
+          "name": "payload_locked_documents_rels_merch_fk",
           "tableFrom": "payload_locked_documents_rels",
-          "tableTo": "merch_products",
-          "columnsFrom": ["merch_products_id"],
+          "tableTo": "merch",
+          "columnsFrom": ["merch_id"],
           "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
@@ -14545,8 +14566,13 @@
       "schema": "public",
       "values": ["admin", "chief-editor", "editor", "writer", "narrator", "member"]
     },
-    "public.enum_merch_products_status": {
-      "name": "enum_merch_products_status",
+    "public.enum_merch_source": {
+      "name": "enum_merch_source",
+      "schema": "public",
+      "values": ["shopify"]
+    },
+    "public.enum_merch_status": {
+      "name": "enum_merch_status",
       "schema": "public",
       "values": ["active", "archived"]
     },
@@ -14646,6 +14672,6 @@
     "tables": {},
     "columns": {}
   },
-  "id": "e08f493e-e560-49c4-a071-26a822335da7",
+  "id": "f9094e96-7a09-49de-9b38-14de2fae4b3d",
   "prevId": "00000000-0000-0000-0000-000000000000"
 }

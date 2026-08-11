@@ -205,7 +205,7 @@ export interface Config {
     users: User;
     webhooks: Webhook;
     topics: Topic;
-    'merch-products': MerchProduct;
+    merch: Merch;
     search: Search;
     redirects: Redirect;
     forms: Form;
@@ -227,7 +227,7 @@ export interface Config {
     users: UsersSelect<false> | UsersSelect<true>;
     webhooks: WebhooksSelect<false> | WebhooksSelect<true>;
     topics: TopicsSelect<false> | TopicsSelect<true>;
-    'merch-products': MerchProductsSelect<false> | MerchProductsSelect<true>;
+    merch: MerchSelect<false> | MerchSelect<true>;
     search: SearchSelect<false> | SearchSelect<true>;
     redirects: RedirectsSelect<false> | RedirectsSelect<true>;
     forms: FormsSelect<false> | FormsSelect<true>;
@@ -861,23 +861,23 @@ export interface MerchBlock {
    */
   source?: ('all' | 'filtered') | null;
   /**
-   * Shopify collection handle, e.g. "apparel". Leave blank to ignore.
+   * Store collection handle, e.g. "apparel". Leave blank to ignore.
    */
-  shopifyCollection?: string | null;
+  collection?: string | null;
   /**
-   * Shopify product tag, e.g. "new-release". Leave blank to ignore.
+   * Store product tag, e.g. "new-release". Leave blank to ignore.
    */
   tag?: string | null;
   /**
-   * Only products marked "featured" in Merch Products.
+   * Only products marked "featured" in Merch.
    */
   featuredOnly?: boolean | null;
   /**
    * Pick exact products. They display in the order arranged here, ignoring the sort below.
    */
-  selectedProducts?: (number | MerchProduct)[] | null;
+  selectedProducts?: (number | Merch)[] | null;
   /**
-   * Sort order uses the number set on each product in Merch Products.
+   * Sort order uses the number set on each product in Merch.
    */
   orderBy?: ('sortOrder' | 'title' | 'newest') | null;
   /**
@@ -885,7 +885,7 @@ export interface MerchBlock {
    */
   limit?: number | null;
   /**
-   * Optional override for the “Shop all” button. Defaults to the DiGG merch page.
+   * Optional override for the “Shop all” button. Defaults to the DGG merch page.
    */
   storeUrl?: string | null;
   id?: string | null;
@@ -893,18 +893,22 @@ export interface MerchBlock {
   blockType: 'merch';
 }
 /**
- * Synced hourly from Shopify. Commerce fields are read-only — edit them in Shopify. The presentation fields at the bottom are ours and survive a sync.
+ * Synced hourly from Shopify and stored as Shopify reports it — prices are raw amounts, not formatted strings, and the block decides how they read. Commerce fields are read-only; edit them in Shopify. The presentation fields at the bottom are ours and survive a sync.
  *
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "merch-products".
+ * via the `definition` "merch".
  */
-export interface MerchProduct {
+export interface Merch {
   id: number;
   title: string;
   /**
-   * Shopify's global product ID — the key each sync upserts on.
+   * The store's own product ID — the key each sync upserts on.
    */
-  shopifyId: string;
+  externalId: string;
+  /**
+   * Which storefront this product was synced from. Every field here is a generic commerce concept, so a second source would add an option and its own sync task rather than a second collection.
+   */
+  source?: 'shopify' | null;
   /**
    * Shopify's URL handle. The link we render is derived from this, so a rename in Shopify is picked up by the next sync.
    */
@@ -917,7 +921,7 @@ export interface MerchProduct {
   compareAtPrice?: string | null;
   currencyCode?: string | null;
   /**
-   * Drives the automatic "Sold Out" badge.
+   * As Shopify reports it. The block turns this into the "Sold Out" badge.
    */
   availableForSale?: boolean | null;
   /**
@@ -932,9 +936,9 @@ export interface MerchProduct {
    */
   tags?: string[] | null;
   /**
-   * Handles of the Shopify collections this product belongs to.
+   * Handles of the store collections this product belongs to.
    */
-  shopifyCollections?: string[] | null;
+  collections?: string[] | null;
   /**
    * Archived means Shopify stopped listing it. Archived products are never shown.
    */
@@ -1528,8 +1532,8 @@ export interface PayloadLockedDocument {
         value: number | Topic;
       } | null)
     | ({
-        relationTo: 'merch-products';
-        value: number | MerchProduct;
+        relationTo: 'merch';
+        value: number | Merch;
       } | null)
     | ({
         relationTo: 'search';
@@ -1746,7 +1750,7 @@ export interface MerchBlockSelect<T extends boolean = true> {
   layout?: T;
   autoplay?: T;
   source?: T;
-  shopifyCollection?: T;
+  collection?: T;
   tag?: T;
   featuredOnly?: T;
   selectedProducts?: T;
@@ -2130,11 +2134,12 @@ export interface TopicsSelect<T extends boolean = true> {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "merch-products_select".
+ * via the `definition` "merch_select".
  */
-export interface MerchProductsSelect<T extends boolean = true> {
+export interface MerchSelect<T extends boolean = true> {
   title?: T;
-  shopifyId?: T;
+  externalId?: T;
+  source?: T;
   handle?: T;
   description?: T;
   price?: T;
@@ -2146,7 +2151,7 @@ export interface MerchProductsSelect<T extends boolean = true> {
   imageHeight?: T;
   imageAlt?: T;
   tags?: T;
-  shopifyCollections?: T;
+  collections?: T;
   status?: T;
   lastSyncedAt?: T;
   featured?: T;

@@ -1,7 +1,7 @@
 import type { Block } from "payload"
 
 /**
- * Merch — showcases products from the DiGG store as an on-site placement.
+ * Merch — showcases products from the DGG store as an on-site placement.
  *
  * Two layouts:
  *  - `square`    — compact, for sidebars / narrow columns
@@ -59,11 +59,11 @@ export const Merch: Block = {
       },
     },
     {
-      name: "shopifyCollection",
+      name: "collection",
       type: "text",
       admin: {
         condition: (_, siblingData) => siblingData?.source === "filtered",
-        description: 'Shopify collection handle, e.g. "apparel". Leave blank to ignore.',
+        description: 'Store collection handle, e.g. "apparel". Leave blank to ignore.',
       },
     },
     {
@@ -71,7 +71,7 @@ export const Merch: Block = {
       type: "text",
       admin: {
         condition: (_, siblingData) => siblingData?.source === "filtered",
-        description: 'Shopify product tag, e.g. "new-release". Leave blank to ignore.',
+        description: 'Store product tag, e.g. "new-release". Leave blank to ignore.',
       },
     },
     {
@@ -80,13 +80,13 @@ export const Merch: Block = {
       defaultValue: false,
       admin: {
         condition: (_, siblingData) => siblingData?.source === "filtered",
-        description: 'Only products marked "featured" in Merch Products.',
+        description: 'Only products marked "featured" in Merch.',
       },
     },
     {
       name: "selectedProducts",
       type: "relationship",
-      relationTo: "merch-products",
+      relationTo: "merch",
       hasMany: true,
       admin: {
         condition: (_, siblingData) => siblingData?.source === "filtered",
@@ -104,7 +104,7 @@ export const Merch: Block = {
         { label: "Newest first", value: "newest" },
       ],
       admin: {
-        description: "Sort order uses the number set on each product in Merch Products.",
+        description: "Sort order uses the number set on each product in Merch.",
       },
     },
     {
@@ -121,8 +121,7 @@ export const Merch: Block = {
       name: "storeUrl",
       type: "text",
       admin: {
-        description:
-          "Optional override for the “Shop all” button. Defaults to the DiGG merch page.",
+        description: "Optional override for the “Shop all” button. Defaults to the DGG merch page.",
       },
     },
   ],

@@ -28,7 +28,7 @@ function makeProducts(overrides: Partial<MerchProduct>[] = []): MerchProduct[] {
   const defaults: MerchProduct[] = [
     {
       id: "1",
-      title: "DiGG Mug",
+      title: "DGG Mug",
       price: "$15.00",
       badge: null,
       url: "https://digitalgroundgame.org/merch/digg-mug",
@@ -36,7 +36,7 @@ function makeProducts(overrides: Partial<MerchProduct>[] = []): MerchProduct[] {
     },
     {
       id: "2",
-      title: "DiGG Tee",
+      title: "DGG Tee",
       price: null,
       badge: null,
       url: "https://digitalgroundgame.org/merch/digg-tee",
@@ -90,8 +90,8 @@ describe("MerchBlock", () => {
     await renderBlock(makeProps())
 
     expect(screen.getByRole("heading", { name: "Merch" })).toBeTruthy()
-    expect(screen.getByText("DiGG Mug")).toBeTruthy()
-    expect(screen.getByText("DiGG Tee")).toBeTruthy()
+    expect(screen.getByText("DGG Mug")).toBeTruthy()
+    expect(screen.getByText("DGG Tee")).toBeTruthy()
   })
 
   it("shows a price only when one is provided", async () => {
@@ -104,16 +104,16 @@ describe("MerchBlock", () => {
     expect(screen.queryAllByText(/^\$/)).toHaveLength(1)
   })
 
-  it("links each product card to its DiGG merch page in a new tab", async () => {
+  it("links each product card to its DGG merch page in a new tab", async () => {
     getMerchProducts.mockResolvedValue(makeProducts())
 
     await renderBlock(makeProps())
 
-    const mug = screen.getByText("DiGG Mug").closest("a")
+    const mug = screen.getByText("DGG Mug").closest("a")
     const href = new URL(mug?.getAttribute("href") ?? "")
     expect(href.origin + href.pathname).toBe("https://digitalgroundgame.org/merch/digg-mug")
     expect(mug?.getAttribute("target")).toBe("_blank")
-    // DiGG is our parent org: not a paid placement, not an unendorsed link, and
+    // DGG is our parent org: not a paid placement, not an unendorsed link, and
     // the referrer is left intact for their analytics.
     expect(mug?.getAttribute("rel")).toBe("noopener")
   })
@@ -128,12 +128,12 @@ describe("MerchBlock", () => {
     }
   })
 
-  it("tags outbound links so DiGG can attribute the traffic", async () => {
+  it("tags outbound links so DGG can attribute the traffic", async () => {
     getMerchProducts.mockResolvedValue(makeProducts())
 
     await renderBlock(makeProps())
 
-    const product = new URL(screen.getByText("DiGG Mug").closest("a")!.getAttribute("href")!)
+    const product = new URL(screen.getByText("DGG Mug").closest("a")!.getAttribute("href")!)
     expect(product.searchParams.get("utm_source")).toBe("pragmaticpapers")
     expect(product.searchParams.get("utm_medium")).toBe("merch_block")
     expect(product.searchParams.get("utm_content")).toBe("fullWidth_product")
@@ -142,7 +142,17 @@ describe("MerchBlock", () => {
     expect(store.searchParams.get("utm_content")).toBe("fullWidth_shop_all")
   })
 
-  it("falls back to the default heading and the DiGG merch page when omitted", async () => {
+  it("marks the store link like the product links — not a paid placement", async () => {
+    getMerchProducts.mockResolvedValue(makeProducts())
+
+    await renderBlock(makeProps())
+
+    const shopAll = screen.getByText("Shop all").closest("a")
+    expect(shopAll?.getAttribute("rel")).toBe("noopener")
+    expect(shopAll?.getAttribute("target")).toBe("_blank")
+  })
+
+  it("falls back to the default heading and the DGG merch page when omitted", async () => {
     getMerchProducts.mockResolvedValue(makeProducts())
 
     await renderBlock(makeProps({ heading: null, storeUrl: null }))

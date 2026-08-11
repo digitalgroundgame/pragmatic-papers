@@ -11,7 +11,7 @@
  * a code change.
  *
  * Product URLs are derived from the synced handle rather than stored, which is
- * what keeps them alive — a product renamed in Shopify would 404 on the DiGG
+ * what keeps them alive — a product renamed in Shopify would 404 on the DGG
  * site until the next sync refreshes its handle.
  */
 
@@ -24,7 +24,7 @@ export function getMerchStoreUrl(): string {
   return (configured || DEFAULT_MERCH_STORE_URL).replace(/\/+$/, "")
 }
 
-/** A single product's page on the DiGG site. */
+/** A single product's page on the DGG site. */
 export function getMerchProductUrl(handle: string): string {
   return `${getMerchStoreUrl()}/${encodeURIComponent(handle)}`
 }

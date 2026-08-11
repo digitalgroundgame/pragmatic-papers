@@ -2,9 +2,9 @@ import type { Where } from "payload"
 
 import { unstable_cache } from "next/cache"
 
-import type { Media, MerchBlock, MerchProduct as MerchProductDoc } from "@/payload-types"
+import type { Media, Merch as MerchProductDoc, MerchBlock } from "@/payload-types"
 
-import { MERCH_PRODUCTS_TAG } from "@/collections/MerchProducts/tag"
+import { MERCH_TAG } from "@/collections/Merch/tag"
 import { getPayloadConfig } from "@/utilities/getPayloadConfig"
 import { getMerchProductUrl } from "./urls"
 
@@ -104,8 +104,8 @@ export function buildProductQuery(block: MerchBlock): Where {
   if (block.source !== "filtered") return where
 
   if (block.featuredOnly) and.push({ featured: { equals: true } })
-  if (block.shopifyCollection?.trim()) {
-    and.push({ shopifyCollections: { contains: block.shopifyCollection.trim() } })
+  if (block.collection?.trim()) {
+    and.push({ collections: { contains: block.collection.trim() } })
   }
   if (block.tag?.trim()) and.push({ tags: { contains: block.tag.trim() } })
 
@@ -135,7 +135,7 @@ async function queryMerchProducts(block: MerchBlock): Promise<MerchProductDoc[]>
   const payload = await getPayloadConfig()
 
   const { docs } = await payload.find({
-    collection: "merch-products",
+    collection: "merch",
     where: buildProductQuery(block),
     sort: sortFor(block),
     limit: block.limit ?? DEFAULT_LIMIT,
@@ -164,12 +164,12 @@ export async function getMerchProducts(block: MerchBlock): Promise<MerchProduct[
   const load = unstable_cache(
     async () => queryMerchProducts(block),
     [
-      "merch-products",
+      "merch",
       JSON.stringify(buildProductQuery(block)),
       sortFor(block),
       String(block.limit ?? DEFAULT_LIMIT),
     ],
-    { tags: [MERCH_PRODUCTS_TAG] },
+    { tags: [MERCH_TAG] },
   )
 
   const docs = await load()

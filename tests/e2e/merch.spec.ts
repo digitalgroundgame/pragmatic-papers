@@ -17,7 +17,7 @@ test("merch carousel renders products, controls, and tagged links @visual", asyn
 
   // Functional checks (run on every project, even where screenshots are
   // skipped). Every link opens in a new tab and carries the merch campaign
-  // params. Readers land on the DiGG merch pages, never on the Shopify store
+  // params. Readers land on the DGG merch pages, never on the Shopify store
   // that only supplies the data.
   const shopAll = section.getByRole("link", { name: "Shop all" })
   await expect(shopAll).toBeVisible()
@@ -28,7 +28,7 @@ test("merch carousel renders products, controls, and tagged links @visual", asyn
   expect(shopAllHref).toContain("utm_medium=merch_block")
   expect(shopAllHref).toContain("utm_content=fullWidth_shop_all")
   expect(await shopAll.getAttribute("target")).toBe("_blank")
-  // DiGG is our parent org, so these are neither paid placements nor
+  // DGG is our parent org, so these are neither paid placements nor
   // unendorsed links.
   expect(await shopAll.getAttribute("rel")).toBe("noopener")
 

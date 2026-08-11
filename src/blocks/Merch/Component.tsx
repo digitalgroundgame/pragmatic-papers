@@ -70,9 +70,9 @@ const MerchCard: React.FC<MerchCardProps> = ({ product, layout }) => {
     <a
       href={withMerchUtm(product.url, `${layout}_product`)}
       target="_blank"
-      // DiGG is the parent org of The Pragmatic Papers, so this isn't a paid
+      // DGG is the parent org of The Pragmatic Papers, so this isn't a paid
       // placement (`sponsored`) and isn't an unendorsed link (`nofollow`).
-      // `noreferrer` is left off too, so DiGG's analytics sees where the click
+      // `noreferrer` is left off too, so DGG's analytics sees where the click
       // came from alongside the campaign params.
       rel="noopener"
       className="group flex flex-col gap-2 no-underline"
@@ -136,7 +136,7 @@ export const MerchBlock = async ({
               <LinkButton
                 href={withMerchUtm(store, `${merchLayout}_shop_all`)}
                 target="_blank"
-                rel="sponsored nofollow noopener noreferrer"
+                rel="noopener"
                 variant="branded"
               >
                 <ShoppingCart />

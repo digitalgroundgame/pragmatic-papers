@@ -1,12 +1,13 @@
 import { afterEach, describe, expect, it, vi } from "vitest"
 
-import type { MerchProduct } from "@/payload-types"
+import type { Merch as MerchProductDoc } from "@/payload-types"
 
 import {
   didChange,
   fetchShopifyProducts,
   hasProductChanged,
   mapShopifyProduct,
+  buildProductsQuery,
   readShopifyEnv,
   storefrontEndpoint,
   type ShopifyProductNode,
@@ -141,12 +142,90 @@ describe("fetchShopifyProducts", () => {
       "Invalid access token",
     )
   })
+
+  it("retries without collections when the token isn't scoped for them", async () => {
+    let call = 0
+    const fetchImpl = vi.fn(async () => {
+      call += 1
+      // First query (with collections) is rejected for scope; the retry succeeds.
+      if (call === 1) {
+        return {
+          ok: true,
+          status: 200,
+          statusText: "OK",
+          json: async () => ({
+            errors: [{ message: "Access denied for collections field" }],
+          }),
+        }
+      }
+      return {
+        ok: true,
+        status: 200,
+        statusText: "OK",
+        json: async () => ({
+          data: {
+            products: {
+              nodes: [makeNode({ collections: null })],
+              pageInfo: { hasNextPage: false, endCursor: null },
+            },
+          },
+        }),
+      }
+    }) as unknown as typeof fetch
+
+    const products = await fetchShopifyProducts(config, silentLog, fetchImpl)
+
+    expect(products).toHaveLength(1)
+    const retryBody = JSON.parse(
+      (fetchImpl as unknown as { mock: { calls: [string, RequestInit][] } }).mock.calls[1]![1]
+        .body as string,
+    )
+    expect(retryBody.query).not.toContain("collections(")
+  })
+
+  it("does not retry an outage as if it were a scope problem", async () => {
+    const fetchImpl = vi.fn(async () => ({
+      ok: false,
+      status: 503,
+      statusText: "Service Unavailable",
+      json: async () => ({}),
+    })) as unknown as typeof fetch
+
+    await expect(fetchShopifyProducts(config, silentLog, fetchImpl)).rejects.toThrow(/503/)
+    expect(fetchImpl).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe("buildProductsQuery", () => {
+  it("asks for the fields the sync maps, plus cursor pagination", () => {
+    const query = buildProductsQuery()
+
+    for (const field of [
+      "pageInfo { hasNextPage endCursor }",
+      "tags",
+      "availableForSale",
+      "featuredImage { url altText width height }",
+      "priceRange { minVariantPrice { amount currencyCode } }",
+      "compareAtPriceRange { maxVariantPrice { amount } }",
+      "collections(first: 10) { nodes { handle } }",
+    ]) {
+      expect(query).toContain(field)
+    }
+  })
+
+  it("can drop collections, the one field a storefront token may not be scoped for", () => {
+    const query = buildProductsQuery({ withCollections: false })
+
+    expect(query).not.toContain("collections(")
+    expect(query).toContain("tags")
+  })
 })
 
 describe("mapShopifyProduct", () => {
   it("maps a Storefront product onto the fields a sync owns", () => {
     expect(mapShopifyProduct(makeNode(), SYNCED_AT)).toEqual({
-      shopifyId: "gid://shopify/Product/1",
+      externalId: "gid://shopify/Product/1",
+      source: "shopify",
       title: "Logo Tee",
       handle: "logo-tee",
       description: "A tee.",
@@ -159,39 +238,33 @@ describe("mapShopifyProduct", () => {
       imageHeight: 1000,
       imageAlt: "A tee",
       tags: ["apparel"],
-      shopifyCollections: ["apparel"],
+      collections: ["apparel"],
       status: "active",
       lastSyncedAt: SYNCED_AT,
     })
   })
 
-  it("keeps a real compare-at price", () => {
+  it("stores prices as Shopify reports them, formatting nothing", () => {
     const node = makeNode({ compareAtPriceRange: { maxVariantPrice: { amount: "35.00" } } })
+    const mapped = mapShopifyProduct(node, SYNCED_AT)
 
-    expect(mapShopifyProduct(node, SYNCED_AT).compareAtPrice).toBe("35.00")
+    expect(mapped.price).toBe("28.00")
+    expect(mapped.compareAtPrice).toBe("35.00")
+    expect(mapped.currencyCode).toBe("USD")
   })
 
-  it("drops Shopify's zero compare-at, which means 'never on sale', not a struck price", () => {
+  it("keeps Shopify's zero compare-at rather than deciding what it means", () => {
     const node = makeNode({ compareAtPriceRange: { maxVariantPrice: { amount: "0.0" } } })
 
-    expect(mapShopifyProduct(node, SYNCED_AT).compareAtPrice).toBeNull()
+    // "0.0" means never-on-sale, but that reading belongs to the block: baking
+    // it in here would need a re-sync to change.
+    expect(mapShopifyProduct(node, SYNCED_AT).compareAtPrice).toBe("0.0")
   })
 
-  it("treats missing availability as unavailable rather than assuming stock", () => {
+  it("passes unknown availability through instead of guessing", () => {
     const node = makeNode({ availableForSale: null })
 
-    expect(mapShopifyProduct(node, SYNCED_AT).availableForSale).toBe(false)
-  })
-
-  it("tolerates a product with no image or collections", () => {
-    const mapped = mapShopifyProduct(
-      makeNode({ featuredImage: null, collections: null, tags: null }),
-      SYNCED_AT,
-    )
-
-    expect(mapped.imageUrl).toBeNull()
-    expect(mapped.shopifyCollections).toEqual([])
-    expect(mapped.tags).toEqual([])
+    expect(mapShopifyProduct(node, SYNCED_AT).availableForSale).toBeNull()
   })
 })
 
@@ -199,7 +272,7 @@ describe("hasProductChanged", () => {
   const existing = {
     ...mapShopifyProduct(makeNode(), SYNCED_AT),
     id: 1,
-  } as unknown as MerchProduct
+  } as unknown as MerchProductDoc
 
   it("ignores a run that only moved the sync timestamp", () => {
     const next = mapShopifyProduct(makeNode(), "2026-08-11T01:00:00.000Z")

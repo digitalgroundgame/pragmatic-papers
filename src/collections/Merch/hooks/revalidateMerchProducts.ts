@@ -2,9 +2,9 @@ import type { CollectionAfterChangeHook, CollectionAfterDeleteHook } from "paylo
 
 import { revalidateTag } from "next/cache"
 
-import type { MerchProduct } from "@/payload-types"
+import type { Merch as MerchProductDoc } from "@/payload-types"
 
-import { MERCH_PRODUCTS_TAG } from "../tag"
+import { MERCH_TAG } from "../tag"
 
 /**
  * Merch blocks are rendered into statically generated pages, so an editorial
@@ -15,18 +15,18 @@ import { MERCH_PRODUCTS_TAG } from "../tag"
  * something — see `src/jobs/syncShopifyProducts/index.ts`.
  */
 
-export const revalidateMerchProduct: CollectionAfterChangeHook<MerchProduct> = ({
+export const revalidateMerchProduct: CollectionAfterChangeHook<MerchProductDoc> = ({
   doc,
   req: { context },
 }) => {
-  if (!context.disableRevalidate) revalidateTag(MERCH_PRODUCTS_TAG, "max")
+  if (!context.disableRevalidate) revalidateTag(MERCH_TAG, "max")
   return doc
 }
 
-export const revalidateMerchProductDelete: CollectionAfterDeleteHook<MerchProduct> = ({
+export const revalidateMerchProductDelete: CollectionAfterDeleteHook<MerchProductDoc> = ({
   doc,
   req: { context },
 }) => {
-  if (!context.disableRevalidate) revalidateTag(MERCH_PRODUCTS_TAG, "max")
+  if (!context.disableRevalidate) revalidateTag(MERCH_TAG, "max")
   return doc
 }

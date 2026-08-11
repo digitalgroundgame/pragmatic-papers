@@ -116,18 +116,6 @@ export async function createCollectionGridHomePage(
         ],
       },
       {
-        blockType: "merch",
-        blockName: "Store Merch",
-        heading: "DigitalGroundGame Store",
-        layout: "fullWidth",
-        autoplay: true,
-        // The whole synced catalogue in sort order — no per-placement
-        // curation, which is the point of syncing.
-        source: "all",
-        orderBy: "sortOrder",
-        limit: 6,
-      },
-      {
         blockType: "collectionGrid",
         blockName: "Vespucci 7",
         layout: "vespucci-7",
@@ -252,6 +240,18 @@ export async function createCollectionGridHomePage(
             overrideTitle: null,
           },
         ],
+      },
+      {
+        blockType: "merch",
+        blockName: "Store Merch",
+        heading: "DigitalGroundGame Store",
+        layout: "fullWidth",
+        autoplay: true,
+        // The whole synced catalogue in sort order — no per-placement
+        // curation, which is the point of syncing.
+        source: "all",
+        orderBy: "sortOrder",
+        limit: 6,
       },
       {
         blockType: "collectionGrid",

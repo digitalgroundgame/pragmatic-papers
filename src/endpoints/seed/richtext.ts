@@ -93,7 +93,7 @@ export function createMerchBlockNode(fields: {
   storeUrl?: string
   source?: "all" | "filtered"
   featuredOnly?: boolean
-  shopifyCollection?: string
+  collection?: string
   tag?: string
   selectedProducts?: number[]
   orderBy?: "sortOrder" | "title" | "newest"

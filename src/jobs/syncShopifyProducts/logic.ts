@@ -1,6 +1,6 @@
 import type { Payload } from "payload"
 
-import type { MerchProduct } from "@/payload-types"
+import type { Merch as MerchProductDoc } from "@/payload-types"
 
 /** How many products to pull per Storefront request. */
 export const PAGE_SIZE = 50
@@ -45,10 +45,11 @@ export interface ShopifyProductNode {
   collections?: { nodes?: { handle: string }[] | null } | null
 }
 
-/** The subset of a `merch-products` row that a sync owns. */
+/** The subset of a `merch` row that a sync owns. */
 export type SyncedProductData = Pick<
-  MerchProduct,
-  | "shopifyId"
+  MerchProductDoc,
+  | "externalId"
+  | "source"
   | "title"
   | "handle"
   | "description"
@@ -61,7 +62,7 @@ export type SyncedProductData = Pick<
   | "imageHeight"
   | "imageAlt"
   | "tags"
-  | "shopifyCollections"
+  | "collections"
   | "status"
   | "lastSyncedAt"
 >
@@ -82,8 +83,14 @@ export interface SyncCounts {
  *
  * Product-level `availableForSale` and `priceRange` stand in for walking every
  * variant: we show a card, not a variant picker.
+ *
+ * `collections` needs the `unauthenticated_read_product_listings` scope, which
+ * a storefront token doesn't necessarily carry — and one unauthorized field
+ * fails the whole query. Hence the toggle: see `fetchShopifyProducts`, which
+ * drops it and retries rather than letting a scope gap stop the sync.
  */
-export const PRODUCTS_QUERY = `query MerchProducts($first: Int!, $after: String) {
+export function buildProductsQuery({ withCollections = true } = {}): string {
+  return `query MerchProducts($first: Int!, $after: String) {
   products(first: $first, after: $after, sortKey: TITLE) {
     pageInfo { hasNextPage endCursor }
     nodes {
@@ -95,11 +102,20 @@ export const PRODUCTS_QUERY = `query MerchProducts($first: Int!, $after: String)
       availableForSale
       featuredImage { url altText width height }
       priceRange { minVariantPrice { amount currencyCode } }
-      compareAtPriceRange { maxVariantPrice { amount } }
-      collections(first: 10) { nodes { handle } }
+      compareAtPriceRange { maxVariantPrice { amount } }${
+        withCollections ? "\n      collections(first: 10) { nodes { handle } }" : ""
+      }
     }
   }
 }`
+}
+
+/**
+ * Errors worth retrying without the `collections` field. A scope the token
+ * lacks reads as an access error on that field; anything else (an outage, a bad
+ * token) would fail the same way a second time.
+ */
+const COLLECTIONS_SCOPE_ERROR = /collection|access denied|not authorized|unauthorized/i
 
 /**
  * Read Shopify credentials.
@@ -126,10 +142,11 @@ export function storefrontEndpoint({ domain, apiVersion }: ShopifyConfig): strin
  *
  * `fetchImpl` is injectable so tests exercise pagination without a network.
  */
-export async function fetchShopifyProducts(
+async function fetchPages(
   config: ShopifyConfig,
+  query: string,
   log: Logger,
-  fetchImpl: typeof fetch = fetch,
+  fetchImpl: typeof fetch,
 ): Promise<ShopifyProductNode[]> {
   const endpoint = storefrontEndpoint(config)
   const products: ShopifyProductNode[] = []
@@ -146,7 +163,7 @@ export async function fetchShopifyProducts(
         "X-Shopify-Storefront-Access-Token": config.token,
       },
       body: JSON.stringify({
-        query: PRODUCTS_QUERY,
+        query,
         variables: { first: PAGE_SIZE, after: cursor },
       }),
     })
@@ -182,28 +199,66 @@ export async function fetchShopifyProducts(
   return products
 }
 
-/** Map a Storefront product onto the fields a sync owns. */
+/**
+ * Page through the catalog.
+ *
+ * `fetchImpl` is injectable so tests exercise pagination without a network.
+ */
+export async function fetchShopifyProducts(
+  config: ShopifyConfig,
+  log: Logger,
+  fetchImpl: typeof fetch = fetch,
+): Promise<ShopifyProductNode[]> {
+  try {
+    return await fetchPages(config, buildProductsQuery(), log, fetchImpl)
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    if (!COLLECTIONS_SCOPE_ERROR.test(message)) throw err
+
+    // Losing collection filters is survivable; losing the catalogue isn't.
+    log.warn(
+      `[merch-sync] collections unavailable (${message}) — retrying without them; blocks filtering by Shopify collection will match nothing`,
+    )
+    return await fetchPages(config, buildProductsQuery({ withCollections: false }), log, fetchImpl)
+  }
+}
+
+/**
+ * Map a Storefront product onto the fields a sync owns.
+ *
+ * Deliberately a transcription, not an interpretation: values land as Shopify
+ * reports them — amount and currency apart, image URL and its dimensions, the
+ * raw availability flag — and the block decides how any of it reads. A sync
+ * that formats a price or decides what counts as "on sale" bakes a display
+ * choice into the database, where changing it later means a re-sync.
+ *
+ * Fields are flat leaf values rather than a mirror of the response: the nesting
+ * Shopify returns (`priceRange.minVariantPrice`, `collections { nodes }`) is
+ * GraphQL transport, not its data model, and this table is a derived cache —
+ * anything we skip today can be added as a column and backfilled by the next
+ * hourly run.
+ */
 export function mapShopifyProduct(node: ShopifyProductNode, syncedAt: string): SyncedProductData {
   const price = node.priceRange?.minVariantPrice
-  const compareAt = node.compareAtPriceRange?.maxVariantPrice?.amount ?? null
 
   return {
-    shopifyId: node.id,
+    externalId: node.id,
+    source: "shopify",
     title: node.title,
     handle: node.handle,
-    description: node.description?.trim() ? node.description : null,
+    description: node.description ?? null,
     price: price?.amount ?? null,
-    // Shopify reports a compare-at of "0.0" for products that were never on
-    // sale; that's not a struck-through price, it's an absence.
-    compareAtPrice: compareAt && Number(compareAt) > 0 ? compareAt : null,
-    currencyCode: price?.currencyCode ?? "USD",
-    availableForSale: node.availableForSale ?? false,
+    // Shopify reports "0.0" for products that were never on sale. Stored as
+    // given; the block is what decides that isn't a struck-through price.
+    compareAtPrice: node.compareAtPriceRange?.maxVariantPrice?.amount ?? null,
+    currencyCode: price?.currencyCode ?? null,
+    availableForSale: node.availableForSale ?? null,
     imageUrl: node.featuredImage?.url ?? null,
     imageWidth: node.featuredImage?.width ?? null,
     imageHeight: node.featuredImage?.height ?? null,
     imageAlt: node.featuredImage?.altText ?? null,
     tags: node.tags ?? [],
-    shopifyCollections: node.collections?.nodes?.map((collection) => collection.handle) ?? [],
+    collections: node.collections?.nodes?.map((collection) => collection.handle) ?? [],
     status: "active",
     lastSyncedAt: syncedAt,
   }
@@ -215,13 +270,13 @@ export function mapShopifyProduct(node: ShopifyProductNode, syncedAt: string): S
  * `lastSyncedAt` is deliberately excluded — it changes every run, and treating
  * that as a change would revalidate the whole site hourly for nothing.
  */
-export function hasProductChanged(existing: MerchProduct, next: SyncedProductData): boolean {
+export function hasProductChanged(existing: MerchProductDoc, next: SyncedProductData): boolean {
   const keys = Object.keys(next).filter(
     (key) => key !== "lastSyncedAt",
   ) as (keyof SyncedProductData)[]
 
   return keys.some((key) => {
-    const before = existing[key as keyof MerchProduct]
+    const before = existing[key as keyof MerchProductDoc]
     const after = next[key]
 
     if (Array.isArray(before) || Array.isArray(after)) {
@@ -234,7 +289,7 @@ export function hasProductChanged(existing: MerchProduct, next: SyncedProductDat
 }
 
 /**
- * Upsert the catalog into `merch-products` and archive whatever Shopify no
+ * Upsert the catalogue into `merch` and archive whatever Shopify no
  * longer lists.
  *
  * Editorial fields (`featured`, `hidden`, `badgeOverride`, `sortOrder`) are
@@ -247,15 +302,15 @@ export async function syncProducts(
   log: Logger,
 ): Promise<SyncCounts> {
   const counts: SyncCounts = { created: 0, updated: 0, archived: 0, unchanged: 0 }
-  const seenShopifyIds = new Set<string>()
+  const seenExternalIds = new Set<string>()
 
   for (const node of nodes) {
     const data = mapShopifyProduct(node, syncedAt)
-    seenShopifyIds.add(data.shopifyId)
+    seenExternalIds.add(data.externalId)
 
     const existing = await payload.find({
-      collection: "merch-products",
-      where: { shopifyId: { equals: data.shopifyId } },
+      collection: "merch",
+      where: { externalId: { equals: data.externalId } },
       limit: 1,
       overrideAccess: true,
       // Revalidation is decided once at the end of the run, not per row.
@@ -266,7 +321,7 @@ export async function syncProducts(
 
     if (!current) {
       await payload.create({
-        collection: "merch-products",
+        collection: "merch",
         data,
         overrideAccess: true,
         context: { disableRevalidate: true },
@@ -279,7 +334,7 @@ export async function syncProducts(
       // Still stamp the sync time so a stale `lastSyncedAt` always means the
       // job stopped running, never "nothing changed lately".
       await payload.update({
-        collection: "merch-products",
+        collection: "merch",
         id: current.id,
         data: { lastSyncedAt: syncedAt },
         overrideAccess: true,
@@ -290,7 +345,7 @@ export async function syncProducts(
     }
 
     await payload.update({
-      collection: "merch-products",
+      collection: "merch",
       id: current.id,
       data,
       overrideAccess: true,
@@ -302,7 +357,7 @@ export async function syncProducts(
   // Anything active we didn't see this run is gone from Shopify. Archive it —
   // never delete, so blocks holding a relationship to it don't break.
   const stale = await payload.find({
-    collection: "merch-products",
+    collection: "merch",
     where: { status: { equals: "active" } },
     limit: 0,
     overrideAccess: true,
@@ -310,11 +365,11 @@ export async function syncProducts(
   })
 
   for (const product of stale.docs) {
-    if (seenShopifyIds.has(product.shopifyId)) continue
+    if (seenExternalIds.has(product.externalId)) continue
 
     log.info(`[merch-sync]   archiving "${product.title}" — no longer listed on Shopify`)
     await payload.update({
-      collection: "merch-products",
+      collection: "merch",
       id: product.id,
       data: { status: "archived", lastSyncedAt: syncedAt },
       overrideAccess: true,

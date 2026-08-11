@@ -76,7 +76,8 @@ export async function seedMerchProducts(
 
     const data = {
       // Stable fake Shopify IDs, so a re-seed updates rather than duplicates.
-      shopifyId: `gid://shopify/Product/seed-${product.handle}`,
+      externalId: `gid://shopify/Product/seed-${product.handle}`,
+      source: "shopify" as const,
       title: product.title,
       handle: product.handle,
       price: product.price,
@@ -87,7 +88,7 @@ export async function seedMerchProducts(
       imageHeight: height,
       imageAlt: media.alt || product.title,
       tags: [],
-      shopifyCollections: [],
+      collections: [],
       status: "active" as const,
       featured: product.featured ?? false,
       sortOrder: product.sortOrder ?? index,
@@ -95,15 +96,15 @@ export async function seedMerchProducts(
     }
 
     const existing = await payload.find({
-      collection: "merch-products",
+      collection: "merch",
       where: { handle: { equals: product.handle } },
       limit: 1,
     })
 
     const current = existing.docs[0]
     const doc = current
-      ? await payload.update({ collection: "merch-products", id: current.id, context, data })
-      : await payload.create({ collection: "merch-products", context, data })
+      ? await payload.update({ collection: "merch", id: current.id, context, data })
+      : await payload.create({ collection: "merch", context, data })
 
     ids.push(doc.id)
   }

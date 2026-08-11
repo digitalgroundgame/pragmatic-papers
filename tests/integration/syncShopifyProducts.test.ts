@@ -22,8 +22,8 @@ afterAll(async () => {
 
 afterEach(async () => {
   await payload.delete({
-    collection: "merch-products",
-    where: { shopifyId: { like: "gid://shopify/Product/integration-" } },
+    collection: "merch",
+    where: { externalId: { like: "gid://shopify/Product/integration-" } },
     overrideAccess: true,
     context: { disableRevalidate: true },
   })
@@ -50,10 +50,10 @@ function makeNode(overrides: Partial<ShopifyProductNode> = {}): ShopifyProductNo
   }
 }
 
-async function findByShopifyId(shopifyId: string) {
+async function findByExternalId(externalId: string) {
   const { docs } = await payload.find({
-    collection: "merch-products",
-    where: { shopifyId: { equals: shopifyId } },
+    collection: "merch",
+    where: { externalId: { equals: externalId } },
     limit: 1,
     overrideAccess: true,
   })
@@ -67,7 +67,7 @@ describe("syncProducts", () => {
     const counts = await syncProducts(payload, [node], SYNCED_AT, silentLog)
 
     expect(counts).toMatchObject({ created: 1, updated: 0, archived: 0 })
-    const doc = await findByShopifyId(node.id)
+    const doc = await findByExternalId(node.id)
     expect(doc?.handle).toBe(node.handle)
     expect(doc?.price).toBe("28.00")
     expect(doc?.status).toBe("active")
@@ -82,7 +82,7 @@ describe("syncProducts", () => {
     expect(counts).toMatchObject({ created: 0, updated: 0, archived: 0, unchanged: 1 })
     // The timestamp still moves, so a stale `lastSyncedAt` always means the job
     // stopped running rather than "nothing changed lately".
-    const doc = await findByShopifyId(node.id)
+    const doc = await findByExternalId(node.id)
     expect(doc?.lastSyncedAt).toBe(LATER)
   })
 
@@ -98,7 +98,7 @@ describe("syncProducts", () => {
     )
 
     expect(counts).toMatchObject({ updated: 1 })
-    expect((await findByShopifyId(node.id))?.price).toBe("35.00")
+    expect((await findByExternalId(node.id))?.price).toBe("35.00")
   })
 
   it("follows a renamed handle, which is what keeps outbound links alive", async () => {
@@ -107,7 +107,7 @@ describe("syncProducts", () => {
 
     await syncProducts(payload, [{ ...node, handle: `${node.handle}-2026` }], LATER, silentLog)
 
-    expect((await findByShopifyId(node.id))?.handle).toBe(`${node.handle}-2026`)
+    expect((await findByExternalId(node.id))?.handle).toBe(`${node.handle}-2026`)
   })
 
   it("archives a delisted product instead of deleting it", async () => {
@@ -118,20 +118,20 @@ describe("syncProducts", () => {
     const counts = await syncProducts(payload, [kept], LATER, silentLog)
 
     expect(counts).toMatchObject({ archived: 1 })
-    const doc = await findByShopifyId(delisted.id)
+    const doc = await findByExternalId(delisted.id)
     // Still there — a block holding a relationship to it must not break.
     expect(doc).toBeTruthy()
     expect(doc?.status).toBe("archived")
-    expect((await findByShopifyId(kept.id))?.status).toBe("active")
+    expect((await findByExternalId(kept.id))?.status).toBe("active")
   })
 
   it("leaves editorial fields alone across a sync", async () => {
     const node = makeNode()
     await syncProducts(payload, [node], SYNCED_AT, silentLog)
 
-    const doc = await findByShopifyId(node.id)
+    const doc = await findByExternalId(node.id)
     await payload.update({
-      collection: "merch-products",
+      collection: "merch",
       id: doc!.id,
       data: { featured: true, hidden: true, badgeOverride: "Last few", sortOrder: 3 },
       overrideAccess: true,
@@ -140,7 +140,7 @@ describe("syncProducts", () => {
 
     await syncProducts(payload, [{ ...node, title: `${node.title} (2026)` }], LATER, silentLog)
 
-    const after = await findByShopifyId(node.id)
+    const after = await findByExternalId(node.id)
     expect(after?.title).toBe(`${node.title} (2026)`)
     expect(after?.featured).toBe(true)
     expect(after?.hidden).toBe(true)
@@ -157,18 +157,18 @@ describe("syncProducts", () => {
     const counts = await syncProducts(payload, [], LATER, silentLog)
 
     expect(counts).toMatchObject({ archived: 1 })
-    expect(await findByShopifyId(node.id)).toBeTruthy()
+    expect(await findByExternalId(node.id)).toBeTruthy()
   })
 
   it("restores a product Shopify lists again", async () => {
     const node = makeNode()
     await syncProducts(payload, [node], SYNCED_AT, silentLog)
     await syncProducts(payload, [], LATER, silentLog)
-    expect((await findByShopifyId(node.id))?.status).toBe("archived")
+    expect((await findByExternalId(node.id))?.status).toBe("archived")
 
     const counts = await syncProducts(payload, [node], LATER, silentLog)
 
     expect(counts).toMatchObject({ updated: 1 })
-    expect((await findByShopifyId(node.id))?.status).toBe("active")
+    expect((await findByExternalId(node.id))?.status).toBe("active")
   })
 })

@@ -1,4 +1,3 @@
-import { merchBlockConverters } from "@/blocks/Merch/converter"
 import RichText from "@/components/RichText"
 import { cn } from "@/utilities/utils"
 import { cva } from "class-variance-authority"
@@ -42,9 +41,6 @@ export const ContentBlock: React.FC<ContentBlockProps> = ({ id: blockId, columns
               className={cn(colVariants({ size }))}
               data={richText}
               enableGutter={false}
-              // Merch queries Payload, so it can't live in RichText's own
-              // converter map — see `@/blocks/Merch/converter`.
-              extraBlockConverters={merchBlockConverters}
             />
           ),
       )}

@@ -1,3 +1,5 @@
+import "server-only"
+
 import { BannerBlock } from "@/blocks/Banner/Component"
 import { CallToActionBlock } from "@/blocks/CallToAction/Component"
 import { CodeBlock } from "@/blocks/Code/Component"
@@ -6,6 +8,7 @@ import { InteractiveMapBlock } from "@/blocks/InteractiveMap/InteractiveMapBlock
 import { MathBlock, type MathBlockProps } from "@/blocks/Math/Component"
 import { LightboxMediaBlock } from "@/blocks/MediaBlock/LightboxMediaBlock"
 import { MediaCollageBlock } from "@/blocks/MediaCollageBlock/component"
+import { MerchBlock } from "@/blocks/Merch/Component"
 import { NewsletterSignupBlock } from "@/blocks/NewsletterSignup/Component"
 import {
   BlueskyEmbedBlock,
@@ -26,18 +29,19 @@ import type {
   InteractiveMapBlock as InteractiveMapBlockProps,
   MediaBlock as MediaBlockProps,
   MediaCollageBlock as MediaCollageBlockProps,
+  MerchBlock as MerchBlockProps,
   NewsletterSignupBlock as NewsletterSignupBlockProps,
   SocialEmbedBlock as SocialEmbedBlockProps,
   SquiggleRuleBlock as SquiggleRuleBlockProps,
   TimelineBlock as TimelineBlockProps,
 } from "@/payload-types"
+import { internalDocToHref } from "./internalDocToHref"
 import { cn } from "@/utilities/utils"
 import type {
   DefaultNodeTypes,
   DefaultTypedEditorState,
   SerializedBlockNode,
   SerializedInlineBlockNode,
-  SerializedLinkNode,
 } from "@payloadcms/richtext-lexical"
 import {
   RichText as ConvertRichText,
@@ -51,6 +55,7 @@ type NodeTypes =
       | CTABlockProps
       | MediaBlockProps
       | MediaCollageBlockProps
+      | MerchBlockProps
       | BannerBlockProps
       | CodeBlockProps
       | InteractiveMapBlockProps
@@ -62,24 +67,11 @@ type NodeTypes =
     >
   | SerializedInlineBlockNode<MathBlockProps | FootnoteBlockProps>
 
-export const internalDocToHref = ({ linkNode }: { linkNode: SerializedLinkNode }): string => {
-  const { value, relationTo } = linkNode.fields.doc!
-  if (typeof value !== "object") {
-    throw new Error("Expected value to be an object")
-  }
-  const slug = value.slug
-  return relationTo === "articles" ? `/articles/${slug}` : `/${slug}`
-}
-
-function createJsxConverters(
-  parentDoc?: ParentDocContext,
-  extraBlockConverters: BlockConverters = {},
-): JSXConvertersFunction<NodeTypes> {
+function createJsxConverters(parentDoc?: ParentDocContext): JSXConvertersFunction<NodeTypes> {
   return ({ defaultConverters }) => ({
     ...defaultConverters,
     ...LinkJSXConverter({ internalDocToHref }),
     blocks: {
-      ...extraBlockConverters,
       banner: ({ node }) => <BannerBlock className="col-start-2 mb-4" {...node.fields} />,
       code: ({ node }) => <CodeBlock className="col-start-2" {...node.fields} />,
       cta: ({ node }) => <CallToActionBlock {...node.fields} />,
@@ -91,6 +83,9 @@ function createJsxConverters(
         <LightboxMediaBlock containerClassName="-my-8" breakout {...node.fields} />
       ),
       mediaCollage: ({ node }) => <MediaCollageBlock {...node.fields} />,
+      merch: ({ node }: { node: SerializedBlockNode<MerchBlockProps> }) => (
+        <MerchBlock {...node.fields} enableGutter={false} />
+      ),
       newsletterSignup: ({ node }) => <NewsletterSignupBlock {...node.fields} />,
       socialEmbed: ({ node }) => <SocialEmbedBlock {...node.fields} parentDoc={parentDoc} />,
       squiggleRule: ({ node }) => <SquiggleRuleBlock className="col-start-2" {...node.fields} />,
@@ -124,23 +119,19 @@ function createJsxConverters(
 }
 
 /**
- * Block converters a caller supplies on top of the built-in set.
+ * Server-only: the converter map renders blocks that query Payload (Merch),
+ * and importing the Payload config into a browser bundle fails to resolve its
+ * native dependencies. The `server-only` import above turns a stray client
+ * import into a clear error instead of a puzzling one deep inside `sharp`.
  *
- * This component is reachable from client components (the Form block renders
- * field rich text in the browser), so every converter it imports has to be
- * client-safe. Blocks that query Payload — Merch, and anything like it later —
- * are injected here by server callers instead, keeping the Payload config out
- * of the browser bundle. See `src/blocks/Merch/converter.tsx`.
+ * The Form block therefore renders all of its rich text on the server and
+ * hands the elements to its client component — see `blocks/Form/Component`.
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- matches Payload's own converter map typing
-export type BlockConverters = Record<string, (args: any) => React.ReactNode>
-
 interface RichTextProps {
   className?: string
   data: DefaultTypedEditorState
   enableGutter?: boolean
   enableProse?: boolean
-  extraBlockConverters?: BlockConverters
   parentDoc?: ParentDocContext
 }
 
@@ -149,7 +140,6 @@ export default function RichText({
   enableProse = true,
   enableGutter = true,
   data,
-  extraBlockConverters,
   parentDoc,
 }: RichTextProps): React.ReactNode {
   return (
@@ -160,7 +150,7 @@ export default function RichText({
         enableProse && "prose",
         className,
       )}
-      converters={createJsxConverters(parentDoc, extraBlockConverters)}
+      converters={createJsxConverters(parentDoc)}
       data={data}
     />
   )

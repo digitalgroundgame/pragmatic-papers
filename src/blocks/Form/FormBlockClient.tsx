@@ -15,9 +15,16 @@ interface FormBlockClientProps {
   intro?: React.ReactNode
   /** Server-rendered confirmation rich text, shown after a successful submit. */
   confirmation?: React.ReactNode
+  /** Server-rendered `message` fields, keyed by their position in the form. */
+  messages?: Record<number, React.ReactNode>
 }
 
-export const FormBlockClient: React.FC<FormBlockClientProps> = ({ form, intro, confirmation }) => {
+export const FormBlockClient: React.FC<FormBlockClientProps> = ({
+  form,
+  intro,
+  confirmation,
+  messages,
+}) => {
   const [isLoading, setIsLoading] = useState(false)
   const [hasSubmitted, setHasSubmitted] = useState<boolean>()
   const [error, setError] = useState<{ message: string; status?: string } | undefined>()
@@ -114,6 +121,16 @@ export const FormBlockClient: React.FC<FormBlockClientProps> = ({ form, intro, c
                 {typeof form === "object" &&
                   form.fields &&
                   form.fields?.map((field, index) => {
+                    // Message fields are static copy, rendered on the server.
+                    if (field.blockType === "message") {
+                      const message = messages?.[index]
+                      return message ? (
+                        <div className="mb-6 last:mb-0" key={index}>
+                          {message}
+                        </div>
+                      ) : null
+                    }
+
                     // eslint-disable-next-line @typescript-eslint/no-explicit-any
                     const Field: React.FC<any> = fields?.[field.blockType as keyof typeof fields]
                     if (Field) {

@@ -3,15 +3,16 @@ import React from "react"
 
 import RichText from "@/components/RichText"
 import { FormBlockClient } from "./FormBlockClient"
+import { Message } from "./Message"
 
 /**
- * The form's rich text is rendered here, on the server, and handed to the
- * client component as elements.
+ * Every piece of the form's rich text is rendered here, on the server, and
+ * handed to the client component as elements: the intro, the confirmation
+ * message, and any `message` fields sitting between the inputs.
  *
- * Rendering it inside `FormBlockClient` would pull `RichText` — and with it
- * every block in the Lexical converter — into the browser bundle. Blocks that
- * query Payload (Merch, and anything like it later) would drag the Payload
- * config along with them, which doesn't resolve in a browser build.
+ * `RichText` is server-only — it renders blocks that query Payload — so the
+ * client component must never import it. Message fields have no interactive
+ * behaviour, so pre-rendering them costs nothing.
  */
 export const FormBlock: React.FC<FormBlockType> = ({ form, ...block }) => {
   if (typeof form === "number") return null
@@ -26,5 +27,16 @@ export const FormBlock: React.FC<FormBlockType> = ({ form, ...block }) => {
       <RichText data={form.confirmationMessage} />
     ) : null
 
-  return <FormBlockClient form={form} intro={intro} confirmation={confirmation} />
+  // Keyed by position so the client component can slot each one back into the
+  // same place in the field order.
+  const messages: Record<number, React.ReactNode> = {}
+  form.fields?.forEach((field, index) => {
+    if (field.blockType === "message" && field.message) {
+      messages[index] = <Message message={field.message} />
+    }
+  })
+
+  return (
+    <FormBlockClient form={form} intro={intro} confirmation={confirmation} messages={messages} />
+  )
 }

@@ -91,13 +91,13 @@ export function createMerchBlockNode(fields: {
   layout?: "square" | "fullWidth"
   autoplay?: boolean
   storeUrl?: string
-  products: Array<{
-    image: number
-    title: string
-    price?: string
-    badge?: string
-    url: string
-  }>
+  source?: "all" | "filtered"
+  featuredOnly?: boolean
+  shopifyCollection?: string
+  tag?: string
+  selectedProducts?: number[]
+  orderBy?: "sortOrder" | "title" | "newest"
+  limit?: number
 }): SerializedLexicalNode {
   const node = {
     type: "block",

@@ -1,81 +1,179 @@
 import { describe, expect, it } from "vitest"
 
-import type { MerchBlock } from "@/payload-types"
+import type { MerchBlock, MerchProduct as MerchProductDoc } from "@/payload-types"
 
-import { getMerchProducts } from "../products"
+import {
+  buildProductQuery,
+  deriveBadge,
+  formatPrice,
+  sortFor,
+  toMediaShape,
+  toMerchProduct,
+} from "../products"
 
-type Products = MerchBlock["products"]
+function makeDoc(overrides: Partial<MerchProductDoc> = {}): MerchProductDoc {
+  return {
+    id: 7,
+    title: "DiGG Mug",
+    shopifyId: "gid://shopify/Product/1",
+    handle: "digg-mug",
+    price: "15.00",
+    currencyCode: "USD",
+    availableForSale: true,
+    imageUrl: "https://cdn.shopify.com/mug.jpg",
+    imageWidth: 800,
+    imageHeight: 600,
+    imageAlt: "A mug",
+    status: "active",
+    updatedAt: "2026-08-01T00:00:00.000Z",
+    createdAt: "2026-07-01T00:00:00.000Z",
+    ...overrides,
+  } as MerchProductDoc
+}
 
-describe("getMerchProducts", () => {
-  it("returns an empty array for null/undefined products", () => {
-    expect(getMerchProducts(null)).toEqual([])
-    expect(getMerchProducts(undefined)).toEqual([])
+function makeBlock(overrides: Partial<MerchBlock> = {}): MerchBlock {
+  return { blockType: "merch", source: "all", ...overrides } as MerchBlock
+}
+
+describe("formatPrice", () => {
+  it("formats a Shopify amount in its currency", () => {
+    expect(formatPrice("15.00", "USD")).toBe("$15.00")
   })
 
-  it("normalizes a curated product into the MerchProduct shape", () => {
-    const products: Products = [
-      {
-        id: "abc",
-        image: 1,
-        title: "DiGG Mug",
-        price: "$15.00",
-        badge: "New",
-        url: "https://store/mug",
-      },
-    ]
-
-    expect(getMerchProducts(products)).toEqual([
-      {
-        id: "abc",
-        title: "DiGG Mug",
-        price: "$15.00",
-        badge: "New",
-        url: "https://store/mug",
-        image: 1,
-      },
-    ])
+  it("defaults to USD when Shopify omits the currency", () => {
+    expect(formatPrice("15.00", null)).toBe("$15.00")
   })
 
-  it("coerces blank or whitespace-only badges to null", () => {
-    const products: Products = [
-      { image: 1, title: "A", badge: "   ", url: "https://store/a" },
-      { image: 2, title: "B", url: "https://store/b" },
-    ]
+  it("returns null for a missing or non-numeric amount", () => {
+    expect(formatPrice(null, "USD")).toBeNull()
+    expect(formatPrice("", "USD")).toBeNull()
+    expect(formatPrice("free", "USD")).toBeNull()
+  })
+})
 
-    expect(getMerchProducts(products).map((p) => p.badge)).toEqual([null, null])
+describe("deriveBadge", () => {
+  it("marks a sold-out product", () => {
+    expect(deriveBadge(makeDoc({ availableForSale: false }))).toBe("Sold Out")
   })
 
-  it("falls back to an index-based id when the row has none", () => {
-    const products: Products = [{ image: 2, title: "Tee", url: "https://store/tee" }]
-
-    expect(getMerchProducts(products).map((p) => p.id)).toEqual(["merch-0"])
+  it("leaves an in-stock product unbadged", () => {
+    expect(deriveBadge(makeDoc())).toBeNull()
   })
 
-  it("coerces blank or whitespace-only prices to null", () => {
-    const products: Products = [
-      { image: 1, title: "A", price: "   ", url: "https://store/a" },
-      { image: 2, title: "B", price: "", url: "https://store/b" },
-    ]
-
-    expect(getMerchProducts(products).map((p) => p.price)).toEqual([null, null])
+  it("lets an editor's override win over the derived badge", () => {
+    expect(deriveBadge(makeDoc({ availableForSale: false, badgeOverride: "Last few" }))).toBe(
+      "Last few",
+    )
   })
 
-  it("drops entries missing a title or url", () => {
-    const products = [
-      { image: 1, title: "", url: "https://store/a" },
-      { image: 2, title: "B", url: "" },
-      { image: 3, title: "Keep", url: "https://store/keep" },
-    ] as Products
+  it("ignores a whitespace-only override", () => {
+    expect(deriveBadge(makeDoc({ availableForSale: false, badgeOverride: "   " }))).toBe("Sold Out")
+  })
+})
 
-    expect(getMerchProducts(products).map((p) => p.title)).toEqual(["Keep"])
+describe("toMediaShape", () => {
+  it("presents a remote image as a Media doc ImageMedia can render", () => {
+    const media = toMediaShape(makeDoc())
+
+    expect(media?.url).toBe("https://cdn.shopify.com/mug.jpg")
+    expect(media?.width).toBe(800)
+    expect(media?.height).toBe(600)
+    expect(media?.alt).toBe("A mug")
+    // Without a mimeType the Media dispatcher never routes this to ImageMedia.
+    expect(media?.mimeType).toMatch(/^image\//)
   })
 
-  it("preserves editor ordering", () => {
-    const products: Products = [
-      { image: 1, title: "First", url: "https://store/1" },
-      { image: 2, title: "Second", url: "https://store/2" },
-    ]
+  it("falls back to the product title when Shopify has no alt text", () => {
+    expect(toMediaShape(makeDoc({ imageAlt: null }))?.alt).toBe("DiGG Mug")
+  })
 
-    expect(getMerchProducts(products).map((p) => p.title)).toEqual(["First", "Second"])
+  it("returns null when the product has no image", () => {
+    expect(toMediaShape(makeDoc({ imageUrl: null }))).toBeNull()
+  })
+})
+
+describe("toMerchProduct", () => {
+  it("links to the DiGG merch page, never the Shopify store", () => {
+    const product = toMerchProduct(makeDoc({ handle: "logo-tee" }))
+
+    expect(product.url).toBe("https://digitalgroundgame.org/merch/logo-tee")
+    expect(product.url).not.toContain("store.digitalgroundgame.org")
+  })
+
+  it("maps a synced row onto the rendering contract", () => {
+    const product = toMerchProduct(makeDoc({ availableForSale: false }))
+
+    expect(product).toMatchObject({
+      id: "merch-product-7",
+      title: "DiGG Mug",
+      price: "$15.00",
+      badge: "Sold Out",
+    })
+  })
+})
+
+describe("buildProductQuery", () => {
+  it("shows only active, non-hidden products", () => {
+    expect(buildProductQuery(makeBlock())).toEqual({
+      and: [{ status: { equals: "active" } }, { hidden: { not_equals: true } }],
+    })
+  })
+
+  it("ignores filter fields when the source is all synced products", () => {
+    const query = buildProductQuery(makeBlock({ source: "all", tag: "new", featuredOnly: true }))
+
+    expect(query.and).toHaveLength(2)
+  })
+
+  it("narrows by collection, tag, and featured when filtered", () => {
+    const query = buildProductQuery(
+      makeBlock({
+        source: "filtered",
+        shopifyCollection: "apparel",
+        tag: "new-release",
+        featuredOnly: true,
+      }),
+    )
+
+    expect(query.and).toContainEqual({ featured: { equals: true } })
+    expect(query.and).toContainEqual({ shopifyCollections: { contains: "apparel" } })
+    expect(query.and).toContainEqual({ tags: { contains: "new-release" } })
+  })
+
+  it("skips blank filter fields rather than matching on empty strings", () => {
+    const query = buildProductQuery(
+      makeBlock({ source: "filtered", shopifyCollection: "  ", tag: "" }),
+    )
+
+    expect(query.and).toHaveLength(2)
+  })
+
+  it("restricts to hand-picked products when the editor named some", () => {
+    const query = buildProductQuery(makeBlock({ source: "filtered", selectedProducts: [3, 9] }))
+
+    expect(query.and).toContainEqual({ id: { in: [3, 9] } })
+  })
+
+  it("accepts populated relationships as well as ids", () => {
+    const query = buildProductQuery(
+      makeBlock({
+        source: "filtered",
+        selectedProducts: [makeDoc({ id: 4 }), 9],
+      }),
+    )
+
+    expect(query.and).toContainEqual({ id: { in: [4, 9] } })
+  })
+})
+
+describe("sortFor", () => {
+  it("maps each ordering onto a Payload sort", () => {
+    expect(sortFor({ orderBy: "newest" })).toBe("-createdAt")
+    expect(sortFor({ orderBy: "title" })).toBe("title")
+    expect(sortFor({ orderBy: "sortOrder" })).toBe("sortOrder")
+  })
+
+  it("falls back to sort order when a block predates the field", () => {
+    expect(sortFor({ orderBy: null })).toBe("sortOrder")
   })
 })

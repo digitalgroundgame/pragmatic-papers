@@ -1,8 +1,9 @@
 /**
- * The Merch block is an ad placement pointing at a storefront we don't own, and
- * the site ships no analytics. Tagging the outbound links is the only way to
- * find out whether the block earns its space — the storefront's own analytics
- * does the attribution.
+ * The Merch block points at digitalgroundgame.org — our parent org's site, not
+ * this one — and this site ships no analytics. Tagging the links is the only
+ * way to find out whether the block earns its space: DiGG's own analytics does
+ * the attribution, and the campaign params tell it which placement sent the
+ * reader.
  */
 
 const UTM_SOURCE = "pragmaticpapers"
@@ -12,7 +13,7 @@ const UTM_MEDIUM = "merch_block"
 const TAGGABLE_PROTOCOLS = new Set(["http:", "https:"])
 
 /**
- * Append campaign params to a storefront link.
+ * Append campaign params to a merch link.
  *
  * Editor-supplied params always win — if someone already tagged a URL by hand,
  * that's a deliberate choice. Anything unparseable (a relative path, a typo) is

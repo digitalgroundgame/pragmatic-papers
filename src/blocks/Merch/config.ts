@@ -1,15 +1,15 @@
 import type { Block } from "payload"
 
 /**
- * Merch — showcases products from an external store as an on-site ad placement.
+ * Merch — showcases products from the DiGG store as an on-site placement.
  *
  * Two layouts:
  *  - `square`    — compact, for sidebars / narrow columns
  *  - `fullWidth` — banner-style, for page bodies
  *
- * Products are curated by editors today. The block is structured so a live
- * storefront API source can be layered in later without changing the component
- * contract — see `getMerchProducts` in `./products` for the seam.
+ * The block stores a *query*, never product data: products live in the
+ * `merch-products` collection, synced hourly from Shopify. That's what keeps a
+ * price change or a sold-out item from being a manual edit in every placement.
  */
 export const Merch: Block = {
   slug: "merch",
@@ -46,65 +46,84 @@ export const Merch: Block = {
       },
     },
     {
-      name: "storeUrl",
-      type: "text",
-      defaultValue: "https://pragmaticpapers.org/store",
+      name: "source",
+      type: "select",
+      defaultValue: "all",
+      options: [
+        { label: "All synced products", value: "all" },
+        { label: "Filtered selection", value: "filtered" },
+      ],
       admin: {
-        description: "Link to the full store, shown as a “Shop all” button.",
+        description:
+          "Products are synced from Shopify hourly. Show the whole catalogue, or narrow it down below.",
       },
     },
     {
-      name: "products",
-      type: "array",
-      minRows: 1,
-      maxRows: 6,
-      labels: {
-        singular: "Product",
-        plural: "Products",
-      },
+      name: "shopifyCollection",
+      type: "text",
       admin: {
-        initCollapsed: true,
-        description: "Curate the products to feature. Reorder to control display order.",
-        components: {
-          RowLabel: "@/blocks/Merch/ProductRowLabel#ProductRowLabel",
-        },
+        condition: (_, siblingData) => siblingData?.source === "filtered",
+        description: 'Shopify collection handle, e.g. "apparel". Leave blank to ignore.',
       },
-      fields: [
-        {
-          name: "image",
-          type: "upload",
-          relationTo: "media",
-          required: true,
-        },
-        {
-          name: "title",
-          type: "text",
-          required: true,
-        },
-        {
-          name: "price",
-          type: "text",
-          admin: {
-            description: "Optional, e.g. “$25.00”.",
-          },
-        },
-        {
-          name: "badge",
-          type: "text",
-          maxLength: 20,
-          admin: {
-            description: "Optional pill on the product image, e.g. “New” or “Sold out”.",
-          },
-        },
-        {
-          name: "url",
-          type: "text",
-          required: true,
-          admin: {
-            description: "Link to the product on the store.",
-          },
-        },
+    },
+    {
+      name: "tag",
+      type: "text",
+      admin: {
+        condition: (_, siblingData) => siblingData?.source === "filtered",
+        description: 'Shopify product tag, e.g. "new-release". Leave blank to ignore.',
+      },
+    },
+    {
+      name: "featuredOnly",
+      type: "checkbox",
+      defaultValue: false,
+      admin: {
+        condition: (_, siblingData) => siblingData?.source === "filtered",
+        description: 'Only products marked "featured" in Merch Products.',
+      },
+    },
+    {
+      name: "selectedProducts",
+      type: "relationship",
+      relationTo: "merch-products",
+      hasMany: true,
+      admin: {
+        condition: (_, siblingData) => siblingData?.source === "filtered",
+        description:
+          "Pick exact products. They display in the order arranged here, ignoring the sort below.",
+      },
+    },
+    {
+      name: "orderBy",
+      type: "select",
+      defaultValue: "sortOrder",
+      options: [
+        { label: "Sort order", value: "sortOrder" },
+        { label: "Title (A–Z)", value: "title" },
+        { label: "Newest first", value: "newest" },
       ],
+      admin: {
+        description: "Sort order uses the number set on each product in Merch Products.",
+      },
+    },
+    {
+      name: "limit",
+      type: "number",
+      defaultValue: 12,
+      min: 1,
+      max: 24,
+      admin: {
+        description: "Most products to pull into the carousel.",
+      },
+    },
+    {
+      name: "storeUrl",
+      type: "text",
+      admin: {
+        description:
+          "Optional override for the “Shop all” button. Defaults to the DiGG merch page.",
+      },
     },
   ],
 }

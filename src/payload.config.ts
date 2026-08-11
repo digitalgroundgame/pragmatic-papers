@@ -3,6 +3,7 @@ import { Articles } from "@/collections/Articles"
 import { Categories } from "@/collections/Categories"
 import { MapAssets } from "@/collections/MapAssets"
 import { Media } from "@/collections/Media"
+import { MerchProducts } from "@/collections/MerchProducts"
 import { Pages } from "@/collections/Pages"
 import { Topics } from "@/collections/Topics"
 import { Users } from "@/collections/Users"
@@ -12,6 +13,7 @@ import { defaultLexical } from "@/fields/defaultLexical"
 import { Footer } from "@/Footer/config"
 import { ArticleRecommendations } from "@/globals/ArticleRecommendations/config"
 import { Header } from "@/Header/config"
+import { syncShopifyProductsTask } from "@/jobs/syncShopifyProducts"
 import { updateRecommendationsTask } from "@/jobs/updateRecommendations"
 import { plugins } from "@/plugins"
 import { searchVectorAfterSchemaInit } from "@/plugins/searchVector"
@@ -93,7 +95,18 @@ export default buildConfig({
     push: process.env.NODE_ENV === "development",
     afterSchemaInit: [searchVectorAfterSchemaInit],
   }),
-  collections: [Pages, Articles, Volumes, Media, MapAssets, Categories, Users, Webhooks, Topics],
+  collections: [
+    Pages,
+    Articles,
+    Volumes,
+    Media,
+    MapAssets,
+    Categories,
+    Users,
+    Webhooks,
+    Topics,
+    MerchProducts,
+  ],
   cors: [getServerSideURL()].filter(Boolean),
   globals: [Header, Footer, ArticleRecommendations],
   plugins: [...plugins],
@@ -128,6 +141,23 @@ export default buildConfig({
         return Response.json({ jobId: job.id, result })
       },
     },
+    {
+      // The scheduled sync runs hourly; this is for the editor who has just
+      // pushed a drop to Shopify and wants it on the site now.
+      path: "/merch-products/sync",
+      method: "post",
+      handler: async (req) => {
+        if (!isAdmin(req.user)) {
+          return Response.json({ error: "Unauthorized" }, { status: 401 })
+        }
+        const job = await req.payload.jobs.queue({
+          task: "syncShopifyProducts",
+          input: {},
+        })
+        const result = await req.payload.jobs.run({ queue: "default", limit: 1 })
+        return Response.json({ jobId: job.id, result })
+      },
+    },
   ],
   jobs: {
     access: {
@@ -143,6 +173,6 @@ export default buildConfig({
       },
     },
     autoRun: [{ cron: "*/5 * * * *", queue: "default" }],
-    tasks: [updateRecommendationsTask],
+    tasks: [updateRecommendationsTask, syncShopifyProductsTask],
   },
 })

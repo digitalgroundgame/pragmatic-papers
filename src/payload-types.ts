@@ -205,6 +205,7 @@ export interface Config {
     users: User;
     webhooks: Webhook;
     topics: Topic;
+    'merch-products': MerchProduct;
     search: Search;
     redirects: Redirect;
     forms: Form;
@@ -226,6 +227,7 @@ export interface Config {
     users: UsersSelect<false> | UsersSelect<true>;
     webhooks: WebhooksSelect<false> | WebhooksSelect<true>;
     topics: TopicsSelect<false> | TopicsSelect<true>;
+    'merch-products': MerchProductsSelect<false> | MerchProductsSelect<true>;
     search: SearchSelect<false> | SearchSelect<true>;
     redirects: RedirectsSelect<false> | RedirectsSelect<true>;
     forms: FormsSelect<false> | FormsSelect<true>;
@@ -260,6 +262,7 @@ export interface Config {
   jobs: {
     tasks: {
       updateRecommendations: TaskUpdateRecommendations;
+      syncShopifyProducts: TaskSyncShopifyProducts;
       schedulePublish: TaskSchedulePublish;
       inline: {
         input: unknown;
@@ -854,34 +857,110 @@ export interface MerchBlock {
    */
   autoplay?: boolean | null;
   /**
-   * Link to the full store, shown as a “Shop all” button.
+   * Products are synced from Shopify hourly. Show the whole catalogue, or narrow it down below.
+   */
+  source?: ('all' | 'filtered') | null;
+  /**
+   * Shopify collection handle, e.g. "apparel". Leave blank to ignore.
+   */
+  shopifyCollection?: string | null;
+  /**
+   * Shopify product tag, e.g. "new-release". Leave blank to ignore.
+   */
+  tag?: string | null;
+  /**
+   * Only products marked "featured" in Merch Products.
+   */
+  featuredOnly?: boolean | null;
+  /**
+   * Pick exact products. They display in the order arranged here, ignoring the sort below.
+   */
+  selectedProducts?: (number | MerchProduct)[] | null;
+  /**
+   * Sort order uses the number set on each product in Merch Products.
+   */
+  orderBy?: ('sortOrder' | 'title' | 'newest') | null;
+  /**
+   * Most products to pull into the carousel.
+   */
+  limit?: number | null;
+  /**
+   * Optional override for the “Shop all” button. Defaults to the DiGG merch page.
    */
   storeUrl?: string | null;
-  /**
-   * Curate the products to feature. Reorder to control display order.
-   */
-  products?:
-    | {
-        image: number | Media;
-        title: string;
-        /**
-         * Optional, e.g. “$25.00”.
-         */
-        price?: string | null;
-        /**
-         * Optional pill on the product image, e.g. “New” or “Sold out”.
-         */
-        badge?: string | null;
-        /**
-         * Link to the product on the store.
-         */
-        url: string;
-        id?: string | null;
-      }[]
-    | null;
   id?: string | null;
   blockName?: string | null;
   blockType: 'merch';
+}
+/**
+ * Synced hourly from Shopify. Commerce fields are read-only — edit them in Shopify. The presentation fields at the bottom are ours and survive a sync.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "merch-products".
+ */
+export interface MerchProduct {
+  id: number;
+  title: string;
+  /**
+   * Shopify's global product ID — the key each sync upserts on.
+   */
+  shopifyId: string;
+  /**
+   * Shopify's URL handle. The link we render is derived from this, so a rename in Shopify is picked up by the next sync.
+   */
+  handle: string;
+  description?: string | null;
+  /**
+   * Minimum variant price, as a decimal string.
+   */
+  price?: string | null;
+  compareAtPrice?: string | null;
+  currencyCode?: string | null;
+  /**
+   * Drives the automatic "Sold out" badge.
+   */
+  availableForSale?: boolean | null;
+  /**
+   * Shopify CDN URL. Rendered directly — we don't copy product shots locally.
+   */
+  imageUrl?: string | null;
+  imageWidth?: number | null;
+  imageHeight?: number | null;
+  imageAlt?: string | null;
+  /**
+   * Shopify product tags. Merch blocks can filter on these.
+   */
+  tags?: string[] | null;
+  /**
+   * Handles of the Shopify collections this product belongs to.
+   */
+  shopifyCollections?: string[] | null;
+  /**
+   * Archived means Shopify stopped listing it. Archived products are never shown.
+   */
+  status?: ('active' | 'archived') | null;
+  /**
+   * When the last sync last saw this product. A stale date means the job stopped running.
+   */
+  lastSyncedAt?: string | null;
+  /**
+   * Merch blocks set to "featured only" show these.
+   */
+  featured?: boolean | null;
+  /**
+   * Keep this product out of every Merch block without touching Shopify.
+   */
+  hidden?: boolean | null;
+  /**
+   * Replaces the automatic badge, e.g. "Last few" instead of the derived "Sold out".
+   */
+  badgeOverride?: string | null;
+  /**
+   * Lower sorts first when a block orders by sort order. Blank sorts last.
+   */
+  sortOrder?: number | null;
+  updatedAt: string;
+  createdAt: string;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -1356,7 +1435,7 @@ export interface PayloadJob {
     | {
         executedAt: string;
         completedAt: string;
-        taskSlug: 'inline' | 'updateRecommendations' | 'schedulePublish';
+        taskSlug: 'inline' | 'updateRecommendations' | 'syncShopifyProducts' | 'schedulePublish';
         taskID: string;
         input?:
           | {
@@ -1389,7 +1468,7 @@ export interface PayloadJob {
         id?: string | null;
       }[]
     | null;
-  taskSlug?: ('inline' | 'updateRecommendations' | 'schedulePublish') | null;
+  taskSlug?: ('inline' | 'updateRecommendations' | 'syncShopifyProducts' | 'schedulePublish') | null;
   queue?: string | null;
   waitUntil?: string | null;
   processing?: boolean | null;
@@ -1447,6 +1526,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'topics';
         value: number | Topic;
+      } | null)
+    | ({
+        relationTo: 'merch-products';
+        value: number | MerchProduct;
       } | null)
     | ({
         relationTo: 'search';
@@ -1662,17 +1745,14 @@ export interface MerchBlockSelect<T extends boolean = true> {
   heading?: T;
   layout?: T;
   autoplay?: T;
+  source?: T;
+  shopifyCollection?: T;
+  tag?: T;
+  featuredOnly?: T;
+  selectedProducts?: T;
+  orderBy?: T;
+  limit?: T;
   storeUrl?: T;
-  products?:
-    | T
-    | {
-        image?: T;
-        title?: T;
-        price?: T;
-        badge?: T;
-        url?: T;
-        id?: T;
-      };
   id?: T;
   blockName?: T;
 }
@@ -2045,6 +2125,34 @@ export interface TopicsSelect<T extends boolean = true> {
       };
   generateSlug?: T;
   slug?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "merch-products_select".
+ */
+export interface MerchProductsSelect<T extends boolean = true> {
+  title?: T;
+  shopifyId?: T;
+  handle?: T;
+  description?: T;
+  price?: T;
+  compareAtPrice?: T;
+  currencyCode?: T;
+  availableForSale?: T;
+  imageUrl?: T;
+  imageWidth?: T;
+  imageHeight?: T;
+  imageAlt?: T;
+  tags?: T;
+  shopifyCollections?: T;
+  status?: T;
+  lastSyncedAt?: T;
+  featured?: T;
+  hidden?: T;
+  badgeOverride?: T;
+  sortOrder?: T;
   updatedAt?: T;
   createdAt?: T;
 }
@@ -2440,6 +2548,19 @@ export interface TaskUpdateRecommendations {
   input?: unknown;
   output: {
     count: number;
+  };
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "TaskSyncShopifyProducts".
+ */
+export interface TaskSyncShopifyProducts {
+  input?: unknown;
+  output: {
+    created: number;
+    updated: number;
+    archived: number;
+    unchanged: number;
   };
 }
 /**

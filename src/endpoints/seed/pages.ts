@@ -2,6 +2,7 @@ import type { Page } from "@/payload-types"
 import type { Payload, RequiredDataFromCollectionSlug } from "payload"
 
 import { createContactForm } from "./forms"
+import { devMerchCatalogue, seedMerchProducts } from "./merch"
 import {
   createMerchBlockNode,
   createRichText,
@@ -161,6 +162,14 @@ export const createPages = async (
   const aboutLayout: PageData["layout"] = []
 
   if (mediaIds?.length) {
+    // Products live in their own collection now — the block stores a query, so
+    // the rows have to exist before the page referencing them does. Upserted
+    // from the shared dev catalogue, which the home page seeds in full.
+    const merchProductIds = await seedMerchProducts(
+      payload,
+      devMerchCatalogue(mediaIds).slice(0, 3),
+    )
+
     aboutLayout.push({
       blockType: "content",
       columns: [
@@ -174,28 +183,11 @@ export const createPages = async (
             createMerchBlockNode({
               heading: "Support Our Work",
               layout: "square",
-              storeUrl: "https://store.digitalgroundgame.org/",
-              products: [
-                {
-                  image: mediaIds[0]!,
-                  title: "Liberia Logo Tee",
-                  price: "$28.00",
-                  badge: "New",
-                  url: "https://store.digitalgroundgame.org/products/logo-tee",
-                },
-                {
-                  image: mediaIds[1 % mediaIds.length]!,
-                  title: "Pragmatic Papers Mug",
-                  price: "$16.00",
-                  url: "https://store.digitalgroundgame.org/products/pragmatic-mug",
-                },
-                {
-                  image: mediaIds[2 % mediaIds.length]!,
-                  title: "Canvas Tote Bag",
-                  price: "$22.00",
-                  url: "https://store.digitalgroundgame.org/products/canvas-tote",
-                },
-              ],
+              // Hand-picked, so the sidebar shows these three in this order
+              // however the catalogue grows.
+              source: "filtered",
+              selectedProducts: merchProductIds,
+              limit: merchProductIds.length,
             }),
           ]),
         },

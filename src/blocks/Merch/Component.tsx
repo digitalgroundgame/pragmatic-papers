@@ -8,6 +8,7 @@ import { ShoppingCart } from "lucide-react"
 import { isMedia, Media } from "@/components/Media"
 import { MerchCarousel, MerchCarouselControls, MerchCarouselDots } from "./MerchCarousel"
 import { getMerchProducts, type MerchProduct } from "./products"
+import { getMerchStoreUrl } from "./urls"
 import { withMerchUtm } from "./utm"
 import { Badge } from "@/components/ui/badge"
 import { CarouselContent, CarouselItem } from "@/components/ui/carousel"
@@ -16,9 +17,8 @@ import { LinkButton } from "@/components/ui/link-button"
 import { cn } from "@/utilities/utils"
 
 // Payload `defaultValue`s only fill DB rows created through the admin UI. Keep
-// runtime fallbacks so the block still renders sensibly if used directly.
+// a runtime fallback so the block still renders sensibly if used directly.
 const DEFAULT_HEADING = "The Pragmatic Papers Store"
-const DEFAULT_STORE_URL = "https://pragmaticpapers.org/store"
 
 // How many products a slide has to make room for. Square sits in a narrow
 // sidebar, so it stays one-up at every width; full width fans out with the
@@ -70,9 +70,11 @@ const MerchCard: React.FC<MerchCardProps> = ({ product, layout }) => {
     <a
       href={withMerchUtm(product.url, `${layout}_product`)}
       target="_blank"
-      // This is a paid/commercial placement pointing off-site, so declare it as
-      // one rather than passing link equity to the storefront.
-      rel="sponsored nofollow noopener noreferrer"
+      // DiGG is the parent org of The Pragmatic Papers, so this isn't a paid
+      // placement (`sponsored`) and isn't an unendorsed link (`nofollow`).
+      // `noreferrer` is left off too, so DiGG's analytics sees where the click
+      // came from alongside the campaign params.
+      rel="noopener"
       className="group flex flex-col gap-2 no-underline"
     >
       <div className="bg-muted relative aspect-square overflow-hidden rounded-sm border">
@@ -108,19 +110,16 @@ interface MerchBlockComponentProps extends MerchBlockProps {
   enableGutter?: boolean
 }
 
-export const MerchBlock: React.FC<MerchBlockComponentProps> = ({
-  autoplay,
+export const MerchBlock = async ({
   className,
   enableGutter = true,
-  heading,
-  layout,
-  storeUrl,
-  products,
-}) => {
-  const items = getMerchProducts(products)
+  ...block
+}: MerchBlockComponentProps): Promise<React.ReactNode> => {
+  const { autoplay, heading, layout, storeUrl } = block
+  const items = await getMerchProducts(block)
   const merchLayout = layout === "square" ? "square" : "fullWidth"
   const headingText = heading ?? DEFAULT_HEADING
-  const store = storeUrl?.trim() ? storeUrl : DEFAULT_STORE_URL
+  const store = storeUrl?.trim() ? storeUrl : getMerchStoreUrl()
 
   if (items.length === 0) return null
 

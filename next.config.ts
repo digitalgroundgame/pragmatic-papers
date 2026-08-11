@@ -35,6 +35,12 @@ const nextConfig: NextConfig = {
         hostname: NEXT_PUBLIC_SUPABASE_URL.hostname,
         port: NEXT_PUBLIC_SUPABASE_URL.port,
       },
+      {
+        // Merch products are synced from Shopify and render straight from its
+        // CDN — we don't copy product shots into Media.
+        protocol: "https",
+        hostname: "cdn.shopify.com",
+      },
     ],
   },
   reactStrictMode: true,

@@ -1,5 +1,6 @@
 import type { Page } from "@/payload-types"
 import type { Payload } from "payload"
+import { devMerchCatalogue, seedMerchProducts } from "../merch"
 import { createOrUpdatePage } from "../pages"
 
 /**
@@ -33,7 +34,10 @@ export async function createCollectionGridHomePage(
   featureArticleIds: number[],
   mediaIds: number[],
 ): Promise<Page> {
-  const merchImage = (index: number): number => mediaIds[index % mediaIds.length] ?? mediaIds[0]!
+  // The Merch block below stores a query, not products — seed the catalogue it
+  // resolves against.
+  await seedMerchProducts(payload, devMerchCatalogue(mediaIds))
+
   return await createOrUpdatePage(payload, {
     title: "Home",
     slug: "home",
@@ -117,48 +121,11 @@ export async function createCollectionGridHomePage(
         heading: "DigitalGroundGame Store",
         layout: "fullWidth",
         autoplay: true,
-        storeUrl: "https://store.digitalgroundgame.org/",
-        products: [
-          {
-            image: merchImage(0),
-            title: "Liberia Logo Tee",
-            price: "$28.00",
-            badge: "New",
-            url: "https://store.digitalgroundgame.org/products/logo-tee",
-          },
-          {
-            image: merchImage(1),
-            title: "Pragmatic Papers Mug",
-            price: "$16.00",
-            url: "https://store.digitalgroundgame.org/products/pragmatic-mug",
-          },
-          {
-            image: merchImage(2),
-            title: "Enamel Pin Set",
-            price: "$12.00",
-            badge: "Sold out",
-            url: "https://store.digitalgroundgame.org/products/enamel-pins",
-          },
-          {
-            image: merchImage(3),
-            title: "Canvas Tote Bag",
-            price: "$22.00",
-            url: "https://store.digitalgroundgame.org/products/canvas-tote",
-          },
-          {
-            image: merchImage(4),
-            title: "Field Notes Set",
-            price: "$14.00",
-            url: "https://store.digitalgroundgame.org/products/field-notes",
-          },
-          {
-            image: merchImage(5),
-            title: "Sticker Pack",
-            price: "$8.00",
-            // Already tagged by hand — `withMerchUtm` must leave this alone.
-            url: "https://store.digitalgroundgame.org/products/stickers?utm_source=partner",
-          },
-        ],
+        // The whole synced catalogue in sort order — no per-placement
+        // curation, which is the point of syncing.
+        source: "all",
+        orderBy: "sortOrder",
+        limit: 6,
       },
       {
         blockType: "collectionGrid",

@@ -16,24 +16,29 @@ test("merch carousel renders products, controls, and tagged links @visual", asyn
   await expect(section).toBeVisible()
 
   // Functional checks (run on every project, even where screenshots are
-  // skipped). Every storefront link opens in a new tab, is marked as a paid
-  // placement, and carries the merch campaign params.
+  // skipped). Every link opens in a new tab and carries the merch campaign
+  // params. Readers land on the DiGG merch pages, never on the Shopify store
+  // that only supplies the data.
   const shopAll = section.getByRole("link", { name: "Shop all" })
   await expect(shopAll).toBeVisible()
   const shopAllHref = await shopAll.getAttribute("href")
-  expect(shopAllHref).toContain("store.digitalgroundgame.org")
+  expect(shopAllHref).toContain("digitalgroundgame.org/merch")
+  expect(shopAllHref).not.toContain("store.digitalgroundgame.org")
   expect(shopAllHref).toContain("utm_source=pragmaticpapers")
   expect(shopAllHref).toContain("utm_medium=merch_block")
   expect(shopAllHref).toContain("utm_content=fullWidth_shop_all")
   expect(await shopAll.getAttribute("target")).toBe("_blank")
-  expect(await shopAll.getAttribute("rel")).toContain("sponsored")
+  // DiGG is our parent org, so these are neither paid placements nor
+  // unendorsed links.
+  expect(await shopAll.getAttribute("rel")).toBe("noopener")
 
-  const productLinks = section.locator('a[href*="/products/"]')
+  const productLinks = section.locator('a[href*="/merch/"]')
   await expect(productLinks).toHaveCount(6)
   for (const link of await productLinks.all()) {
     expect(await link.getAttribute("target")).toBe("_blank")
-    expect(await link.getAttribute("rel")).toContain("sponsored")
+    expect(await link.getAttribute("rel")).toBe("noopener")
     expect(await link.getAttribute("href")).toContain("utm_content=fullWidth_product")
+    expect(await link.getAttribute("href")).not.toContain("store.digitalgroundgame.org")
   }
 
   await expect(section.getByText("Sold Out")).toBeVisible()

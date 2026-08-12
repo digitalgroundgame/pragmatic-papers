@@ -19,6 +19,13 @@ import {
  * a field we skipped can be added as a column and backfilled by the next run,
  * which is why there's no raw payload kept alongside.
  *
+ * One name does double duty: the `collections` field holds Shopify collection
+ * handles — the store's own product groupings, what a shopper sees as a
+ * category — and has nothing to do with Payload collections like this one. It
+ * keeps Shopify's name so a row can be read against the Storefront response
+ * without translating, and because Shopify separately uses "category" for its
+ * product taxonomy, which is a different thing we may want that name for.
+ *
  * Products are never hard-deleted. One that unpublishes or disappears from
  * Shopify flips to `archived`, so a Merch block pointing at it degrades to
  * "not shown" instead of a dangling reference.
@@ -170,14 +177,18 @@ export const Merch: CollectionConfig = {
       },
     },
     {
-      name: "categories",
+      // Shopify's own name for these, kept so a row lines up with the
+      // Storefront response field for field. Note this is a plain list of
+      // handles, not a Payload relationship — see the note at the top of this
+      // file on the two meanings of "collection".
+      name: "collections",
       type: "text",
       hasMany: true,
       index: true,
       admin: {
         readOnly: true,
         description:
-          "Handles of the store groupings this product belongs to — Shopify calls these collections, but that word already means something else here.",
+          "Handles of the Shopify collections (the store's product groupings) this product belongs to, e.g. \"apparel\". Shopify's term for a category — nothing to do with Payload collections. A Merch block can filter on one.",
       },
     },
     {

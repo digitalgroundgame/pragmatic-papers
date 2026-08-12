@@ -104,8 +104,10 @@ export function buildProductQuery(block: MerchBlock): Where {
   if (block.source !== "filtered") return where
 
   if (block.featuredOnly) and.push({ featured: { equals: true } })
-  if (block.category?.trim()) {
-    and.push({ categories: { contains: block.category.trim() } })
+  // `collections` here is the product's Shopify collection handles, not a
+  // Payload relationship.
+  if (block.collection?.trim()) {
+    and.push({ collections: { contains: block.collection.trim() } })
   }
   if (block.tag?.trim()) and.push({ tags: { contains: block.tag.trim() } })
 

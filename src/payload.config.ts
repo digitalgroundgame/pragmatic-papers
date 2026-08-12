@@ -14,7 +14,6 @@ import { Footer } from "@/Footer/config"
 import { ArticleRecommendations } from "@/globals/ArticleRecommendations/config"
 import { Header } from "@/Header/config"
 import { syncShopifyProductsTask } from "@/jobs/syncShopifyProducts"
-import { readShopifyEnv } from "@/jobs/syncShopifyProducts/logic"
 import { updateRecommendationsTask } from "@/jobs/updateRecommendations"
 import { plugins } from "@/plugins"
 import { searchVectorAfterSchemaInit } from "@/plugins/searchVector"
@@ -140,25 +139,6 @@ export default buildConfig({
         })
         const result = await req.payload.jobs.run({ queue: "default", limit: 1 })
         return Response.json({ jobId: job.id, result })
-      },
-    },
-    {
-      // The scheduled sync runs hourly; this is for the editor who has just
-      // pushed a drop to Shopify and wants it on the site now.
-      path: "/merch/sync",
-      method: "post",
-      handler: async (req) => {
-        if (!isAdmin(req.user)) {
-          return Response.json({ error: "Unauthorized" }, { status: 401 })
-        }
-        const job = await req.payload.jobs.queue({
-          task: "syncShopifyProducts",
-          input: {},
-        })
-        const result = await req.payload.jobs.run({ queue: "default", limit: 1 })
-        // A run without credentials is a logged no-op, not a failure — say so,
-        // or the admin button reports success over an empty catalogue.
-        return Response.json({ jobId: job.id, configured: readShopifyEnv() !== null, result })
       },
     },
   ],

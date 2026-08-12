@@ -1,6 +1,8 @@
-import type { CollectionConfig } from "payload"
+import type { CollectionConfig, PayloadRequest } from "payload"
 
 import { admin } from "@/access/collections"
+import { isAdmin } from "@/access/roles"
+import { readShopifyEnv } from "@/jobs/syncShopifyProducts/logic"
 import {
   revalidateMerchProduct,
   revalidateMerchProductDelete,
@@ -70,6 +72,29 @@ export const Merch: CollectionConfig = {
     afterChange: [revalidateMerchProduct],
     afterDelete: [revalidateMerchProductDelete],
   },
+  endpoints: [
+    {
+      // Mounted at /api/merch/sync. This has to be a collection endpoint
+      // rather than a root one: root endpoints are matched after collection
+      // routes, so anything under /api/merch is swallowed by this
+      // collection's own REST namespace and 404s.
+      //
+      // The scheduled sync runs hourly; this is for the editor who has just
+      // pushed a drop to Shopify and wants it on the site now.
+      path: "/sync",
+      method: "post",
+      handler: async (req: PayloadRequest): Promise<Response> => {
+        if (!isAdmin(req.user)) {
+          return Response.json({ error: "Unauthorized" }, { status: 401 })
+        }
+        const job = await req.payload.jobs.queue({ task: "syncShopifyProducts", input: {} })
+        const result = await req.payload.jobs.run({ queue: "default", limit: 1 })
+        // A run without credentials is a logged no-op, not a failure — say so,
+        // or the admin button reports success over an empty catalogue.
+        return Response.json({ jobId: job.id, configured: readShopifyEnv() !== null, result })
+      },
+    },
+  ],
   fields: [
     {
       name: "title",

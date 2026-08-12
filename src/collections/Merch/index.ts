@@ -63,7 +63,7 @@ export const Merch: CollectionConfig = {
       beforeListTable: ["@/collections/Merch/components/SyncNowButton#SyncNowButton"],
     },
     useAsTitle: "title",
-    defaultColumns: ["title", "price", "availableForSale", "status", "lastSyncedAt"],
+    defaultColumns: ["imageUrl", "title", "price", "availableForSale", "status", "lastSyncedAt"],
     description:
       "Synced hourly from Shopify and stored as Shopify reports it — prices are raw amounts, not formatted strings, and the block decides how they read. Commerce fields are read-only; edit them in Shopify. The presentation fields at the bottom are ours and survive a sync.",
     group: "Store",
@@ -177,9 +177,15 @@ export const Merch: CollectionConfig = {
     {
       name: "imageUrl",
       type: "text",
+      label: "Image",
       admin: {
         readOnly: true,
         description: "Shopify CDN URL. Rendered directly — we don't copy product shots locally.",
+        components: {
+          // Without this the list column would be a long CDN URL; the product
+          // shot is what makes a row recognisable at a glance.
+          Cell: "@/collections/Merch/components/ProductThumbnailCell#ProductThumbnailCell",
+        },
       },
     },
     {

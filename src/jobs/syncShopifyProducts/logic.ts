@@ -118,6 +118,33 @@ export function buildProductsQuery({ withCollections = true } = {}): string {
 const COLLECTIONS_SCOPE_ERROR = /collection|access denied|not authorized|unauthorized/i
 
 /**
+ * Reduce whatever's in the env var to a bare host.
+ *
+ * "store.example.org" is what the endpoint builder wants, but pasting the
+ * store URL out of a browser is the obvious thing to do, and
+ * `https://https://store…` fails as an opaque "fetch failed" an hour later
+ * rather than at the point of configuration.
+ *
+ * Parsing rather than trimming strings keeps the awkward cases honest — a
+ * port survives, a path or credentials don't — and anything unparseable
+ * returns null so the run reports a bad configuration instead of chasing a
+ * nonsense URL.
+ */
+export function normalizeDomain(domain: string): string | null {
+  const trimmed = domain.trim()
+  if (!trimmed) return null
+
+  const hasScheme = /^[a-z][a-z0-9+.-]*:\/\//i.test(trimmed)
+
+  try {
+    // `host`, not `hostname`, so a non-default port is preserved.
+    return new URL(hasScheme ? trimmed : `https://${trimmed}`).host || null
+  } catch {
+    return null
+  }
+}
+
+/**
  * Read Shopify credentials.
  *
  * Returns null rather than throwing when they're absent: dev and CI have no
@@ -130,11 +157,15 @@ export function readShopifyEnv(): ShopifyConfig | null {
   const apiVersion = process.env.SHOPIFY_API_VERSION
 
   if (!domain || !token || !apiVersion) return null
-  return { domain, token, apiVersion }
+
+  const host = normalizeDomain(domain)
+  if (!host) return null
+
+  return { domain: host, token, apiVersion }
 }
 
 export function storefrontEndpoint({ domain, apiVersion }: ShopifyConfig): string {
-  return `https://${domain}/api/${apiVersion}/graphql.json`
+  return new URL(`/api/${encodeURIComponent(apiVersion)}/graphql.json`, `https://${domain}`).href
 }
 
 /**
@@ -156,17 +187,29 @@ async function fetchPages(
   while (page < MAX_PAGES) {
     page += 1
 
-    const response = await fetchImpl(endpoint, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Shopify-Storefront-Access-Token": config.token,
-      },
-      body: JSON.stringify({
-        query,
-        variables: { first: PAGE_SIZE, after: cursor },
-      }),
-    })
+    let response: Awaited<ReturnType<typeof fetchImpl>>
+    try {
+      response = await fetchImpl(endpoint, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Shopify-Storefront-Access-Token": config.token,
+        },
+        body: JSON.stringify({
+          query,
+          variables: { first: PAGE_SIZE, after: cursor },
+        }),
+      })
+    } catch (err) {
+      // Node reports every network failure as a bare "fetch failed"; without
+      // the endpoint and the cause, a DNS miss, a blocked egress and a
+      // malformed URL are indistinguishable in the logs.
+      const cause = err instanceof Error && err.cause instanceof Error ? err.cause.message : ""
+      throw new Error(
+        `Could not reach the Shopify Storefront API at ${endpoint}${cause ? ` (${cause})` : ""}`,
+        { cause: err },
+      )
+    }
 
     if (!response.ok) {
       throw new Error(`Shopify Storefront API responded ${response.status} ${response.statusText}`)

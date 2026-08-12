@@ -8,6 +8,7 @@ import {
   hasProductChanged,
   mapShopifyProduct,
   buildProductsQuery,
+  normalizeDomain,
   readShopifyEnv,
   storefrontEndpoint,
   type ShopifyProductNode,
@@ -85,6 +86,39 @@ describe("readShopifyEnv", () => {
     process.env.SHOPIFY_API_VERSION = "2025-01"
 
     expect(readShopifyEnv()).toEqual(config)
+  })
+
+  it("accepts a pasted store URL, not just a bare host", () => {
+    // The endpoint builder prefixes https://, so a scheme here used to produce
+    // https://https://store… and fail as an opaque "fetch failed".
+    process.env.SHOPIFY_STORE_DOMAIN = "https://store.example.org/"
+    process.env.SHOPIFY_STOREFRONT_ACCESS_TOKEN = "shpat_test"
+    process.env.SHOPIFY_API_VERSION = "2025-01"
+
+    expect(readShopifyEnv()).toEqual(config)
+  })
+})
+
+describe("normalizeDomain", () => {
+  it("reduces anything paste-shaped to a bare host", () => {
+    for (const input of [
+      "store.example.org",
+      "  store.example.org  ",
+      "https://store.example.org",
+      "http://store.example.org/",
+      "https://store.example.org/collections/all",
+    ]) {
+      expect(normalizeDomain(input)).toBe("store.example.org")
+    }
+  })
+
+  it("keeps a non-default port, which a host is allowed to carry", () => {
+    expect(normalizeDomain("http://localhost:9000")).toBe("localhost:9000")
+  })
+
+  it("returns null for something unparseable, rather than a nonsense host", () => {
+    expect(normalizeDomain("   ")).toBeNull()
+    expect(normalizeDomain("https://")).toBeNull()
   })
 })
 
@@ -181,6 +215,18 @@ describe("fetchShopifyProducts", () => {
         .body as string,
     )
     expect(retryBody.query).not.toContain("collections(")
+  })
+
+  it("names the endpoint and the cause when the network fails", async () => {
+    // Node reports every network failure as a bare "fetch failed", which can't
+    // be told apart from a bad URL or blocked egress in a log.
+    const fetchImpl = vi.fn(async () => {
+      throw new Error("fetch failed", { cause: new Error("getaddrinfo ENOTFOUND store") })
+    }) as unknown as typeof fetch
+
+    await expect(fetchShopifyProducts(config, silentLog, fetchImpl)).rejects.toThrow(
+      /store\.example\.org\/api\/2025-01\/graphql\.json.*ENOTFOUND/,
+    )
   })
 
   it("does not retry an outage as if it were a scope problem", async () => {

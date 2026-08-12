@@ -20,11 +20,21 @@ const DEFAULT_MERCH_STORE_URL = "https://digitalgroundgame.org/merch"
 /** The store page — the "Shop all" destination. */
 export function getMerchStoreUrl(): string {
   const configured = process.env.MERCH_SITE_URL?.trim()
+
+  let url: URL
+  try {
+    url = new URL(configured || DEFAULT_MERCH_STORE_URL)
+  } catch {
+    // A malformed override shouldn't take the page down with it — every merch
+    // link would throw during render.
+    url = new URL(DEFAULT_MERCH_STORE_URL)
+  }
+
   // A trailing slash would double up when a product handle is appended.
-  return (configured || DEFAULT_MERCH_STORE_URL).replace(/\/+$/, "")
+  return url.href.replace(/\/$/, "")
 }
 
 /** A single product's page on the DGG site. */
 export function getMerchProductUrl(handle: string): string {
-  return `${getMerchStoreUrl()}/${encodeURIComponent(handle)}`
+  return new URL(`${getMerchStoreUrl()}/${encodeURIComponent(handle)}`).href
 }

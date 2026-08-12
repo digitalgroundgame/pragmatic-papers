@@ -3,7 +3,13 @@ import type { TaskConfig } from "payload"
 import { revalidateTag } from "next/cache"
 
 import { MERCH_TAG } from "@/collections/Merch/tag"
-import { didChange, fetchShopifyProducts, readShopifyEnv, syncProducts } from "./logic"
+import {
+  didChange,
+  fetchShopifyProducts,
+  readShopifyEnv,
+  storefrontEndpoint,
+  syncProducts,
+} from "./logic"
 
 /**
  * Pull the DGG Shopify catalogue into `merch` so Merch blocks render
@@ -43,14 +49,12 @@ export const syncShopifyProductsTask: TaskConfig<"syncShopifyProducts"> = {
       // Dev and CI have no store credentials. Skipping is the correct outcome
       // there — seeded products stay put and the carousel keeps rendering.
       log.warn(
-        "[merch-sync] SHOPIFY_STORE_DOMAIN / SHOPIFY_STOREFRONT_ACCESS_TOKEN / SHOPIFY_API_VERSION not set — skipping run",
+        "[merch-sync] SHOPIFY_STORE_DOMAIN / SHOPIFY_STOREFRONT_ACCESS_TOKEN / SHOPIFY_API_VERSION missing or unparseable — skipping run",
       )
       return { output: empty }
     }
 
-    log.debug(
-      `[merch-sync] step 1/3: fetching catalog from ${config.domain} (${config.apiVersion})`,
-    )
+    log.debug(`[merch-sync] step 1/3: fetching catalogue from ${storefrontEndpoint(config)}`)
     const nodes = await fetchShopifyProducts(config, log)
     log.debug(`[merch-sync]   fetched ${nodes.length} products`)
 

@@ -540,4 +540,94 @@ describe("ExtractNarrationButton", () => {
 
     vi.unstubAllGlobals()
   })
+
+  it("resolves bare author IDs via the users fetch API in component", async () => {
+    mockFields = {
+      title: { value: "Author Fetch Test" },
+      authors: { value: [123, 789] },
+    }
+
+    const mockFetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        docs: [
+          { id: 123, name: "Fetched Author One" },
+          { id: 789, name: "Fetched Author Two" },
+        ],
+      }),
+    })
+    vi.stubGlobal("fetch", mockFetch)
+
+    render(<ExtractNarrationButton />)
+    const generateBtn = await screen.findByRole("button", { name: /generate narration text/i })
+    fireEvent.click(generateBtn)
+
+    await waitFor(() => {
+      expect(mockToastSuccess).toHaveBeenCalledWith("Narration text generated!")
+    })
+
+    const formattedPreview = screen.getByLabelText(/formatted narration preview/i)
+    expect(formattedPreview.textContent).toContain("By Fetched Author One, Fetched Author Two")
+
+    expect(mockFetch).toHaveBeenCalled()
+    const callUrls = mockFetch.mock.calls.map((call) => call[0])
+    expect(callUrls.some((url) => typeof url === "string" && url.includes("/api/users"))).toBe(true)
+
+    vi.unstubAllGlobals()
+  })
+
+  it("handles fetch failure gracefully and falls back to excluding unresolvable authors", async () => {
+    mockFields = {
+      title: { value: "Author Fetch Failure Test" },
+      authors: { value: [123] },
+    }
+
+    const mockFetch = vi.fn().mockResolvedValue({
+      ok: false,
+    })
+    vi.stubGlobal("fetch", mockFetch)
+
+    render(<ExtractNarrationButton />)
+    const generateBtn = await screen.findByRole("button", { name: /generate narration text/i })
+    fireEvent.click(generateBtn)
+
+    await waitFor(() => {
+      expect(mockToastSuccess).toHaveBeenCalledWith("Narration text generated!")
+    })
+
+    const formattedPreview = screen.getByLabelText(/formatted narration preview/i)
+    expect(formattedPreview.textContent).not.toContain("123")
+    expect(formattedPreview.textContent).not.toContain("By")
+
+    vi.unstubAllGlobals()
+  })
+
+  it("skips unresolvable author IDs (line 297 fallback)", async () => {
+    mockFields = {
+      title: { value: "Author Fetch Partial Success Test" },
+      authors: { value: [123, 999] },
+    }
+
+    const mockFetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        docs: [{ id: 123, name: "Fetched Author One" }],
+      }),
+    })
+    vi.stubGlobal("fetch", mockFetch)
+
+    render(<ExtractNarrationButton />)
+    const generateBtn = await screen.findByRole("button", { name: /generate narration text/i })
+    fireEvent.click(generateBtn)
+
+    await waitFor(() => {
+      expect(mockToastSuccess).toHaveBeenCalledWith("Narration text generated!")
+    })
+
+    const formattedPreview = screen.getByLabelText(/formatted narration preview/i)
+    expect(formattedPreview.textContent).toContain("By Fetched Author One")
+    expect(formattedPreview.textContent).not.toContain("999")
+
+    vi.unstubAllGlobals()
+  })
 })

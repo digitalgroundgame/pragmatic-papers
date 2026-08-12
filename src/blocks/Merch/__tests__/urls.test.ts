@@ -14,37 +14,36 @@ describe("merch URLs", () => {
     delete process.env.MERCH_SITE_URL
   })
 
-  it("points at the DGG site, not the Shopify store that supplies the data", () => {
-    expect(getMerchStoreUrl()).toBe("https://digitalgroundgame.org/merch")
-    expect(getMerchProductUrl("logo-tee")).toBe("https://digitalgroundgame.org/merch/logo-tee")
-    expect(getMerchProductUrl("logo-tee")).not.toContain("store.digitalgroundgame.org")
+  it("comes entirely from MERCH_SITE_URL, with no site baked in", () => {
+    process.env.MERCH_SITE_URL = "https://store-site.test/shop"
+
+    expect(getMerchStoreUrl()).toBe("https://store-site.test/shop")
+    expect(getMerchProductUrl("logo-tee")).toBe("https://store-site.test/shop/logo-tee")
   })
 
-  it("follows MERCH_SITE_URL, path and all, so the storefront can move", () => {
-    process.env.MERCH_SITE_URL = "https://staging.digitalgroundgame.org/shop"
+  it("is null when unconfigured, so the block renders nothing rather than guessing", () => {
+    expect(getMerchStoreUrl()).toBeNull()
+    expect(getMerchProductUrl("logo-tee")).toBeNull()
+  })
 
-    expect(getMerchStoreUrl()).toBe("https://staging.digitalgroundgame.org/shop")
-    expect(getMerchProductUrl("logo-tee")).toBe(
-      "https://staging.digitalgroundgame.org/shop/logo-tee",
-    )
+  it("treats a blank or unparseable value as unconfigured", () => {
+    process.env.MERCH_SITE_URL = "   "
+    expect(getMerchStoreUrl()).toBeNull()
+
+    process.env.MERCH_SITE_URL = "not a url"
+    expect(getMerchStoreUrl()).toBeNull()
   })
 
   it("does not double up on a trailing slash", () => {
-    process.env.MERCH_SITE_URL = "https://digitalgroundgame.org/merch/"
+    process.env.MERCH_SITE_URL = "https://store-site.test/shop/"
 
-    expect(getMerchStoreUrl()).toBe("https://digitalgroundgame.org/merch")
-    expect(getMerchProductUrl("logo-tee")).toBe("https://digitalgroundgame.org/merch/logo-tee")
-  })
-
-  it("falls back to the default when the env var is blank", () => {
-    process.env.MERCH_SITE_URL = "   "
-
-    expect(getMerchStoreUrl()).toBe("https://digitalgroundgame.org/merch")
+    expect(getMerchStoreUrl()).toBe("https://store-site.test/shop")
+    expect(getMerchProductUrl("logo-tee")).toBe("https://store-site.test/shop/logo-tee")
   })
 
   it("escapes a handle so it can't break out of the path", () => {
-    expect(getMerchProductUrl("tee/../admin")).toBe(
-      "https://digitalgroundgame.org/merch/tee%2F..%2Fadmin",
-    )
+    process.env.MERCH_SITE_URL = "https://store-site.test/shop"
+
+    expect(getMerchProductUrl("tee/../admin")).toBe("https://store-site.test/shop/tee%2F..%2Fadmin")
   })
 })

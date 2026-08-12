@@ -1,40 +1,38 @@
 /**
  * Where merch links point.
  *
- * Shopify is only the data source. `store.digitalgroundgame.org` is never a
- * destination for a reader: digitalgroundgame.org has duplicated the products
- * and the cart, and generates its own product pages, so that's where a click
- * has to land.
+ * The storefront API is only the data source — readers are sent to the site
+ * that owns the product pages and the cart, which is a different property and
+ * is named entirely by `MERCH_SITE_URL`. Nothing about that site is baked in
+ * here: no host, no path, no fallback. An unset variable means we don't know
+ * where a product lives, and the block renders nothing rather than guessing.
  *
- * `MERCH_SITE_URL` holds the store page itself, path and all, so moving the
- * storefront (a different path, a staging host) is a config change rather than
- * a code change.
+ * `MERCH_SITE_URL` is the store page itself, path included, so moving the
+ * storefront — a different path, a staging host, a different site entirely —
+ * is a config change rather than a code change.
  *
  * Product URLs are derived from the synced handle rather than stored, which is
- * what keeps them alive — a product renamed in Shopify would 404 on the DGG
- * site until the next sync refreshes its handle.
+ * what keeps them alive: a product renamed upstream would 404 until the next
+ * sync refreshes its handle.
  */
 
-const DEFAULT_MERCH_STORE_URL = "https://digitalgroundgame.org/merch"
-
-/** The store page — the "Shop all" destination. */
-export function getMerchStoreUrl(): string {
+/** The store page — the "Shop all" destination, or null when unconfigured. */
+export function getMerchStoreUrl(): string | null {
   const configured = process.env.MERCH_SITE_URL?.trim()
+  if (!configured) return null
 
-  let url: URL
   try {
-    url = new URL(configured || DEFAULT_MERCH_STORE_URL)
+    // A trailing slash would double up when a product handle is appended.
+    return new URL(configured).href.replace(/\/$/, "")
   } catch {
-    // A malformed override shouldn't take the page down with it — every merch
-    // link would throw during render.
-    url = new URL(DEFAULT_MERCH_STORE_URL)
+    return null
   }
-
-  // A trailing slash would double up when a product handle is appended.
-  return url.href.replace(/\/$/, "")
 }
 
-/** A single product's page on the DGG site. */
-export function getMerchProductUrl(handle: string): string {
-  return new URL(`${getMerchStoreUrl()}/${encodeURIComponent(handle)}`).href
+/** A single product's page on the store site, or null when unconfigured. */
+export function getMerchProductUrl(handle: string): string | null {
+  const store = getMerchStoreUrl()
+  if (!store) return null
+
+  return new URL(`${store}/${encodeURIComponent(handle)}`).href
 }

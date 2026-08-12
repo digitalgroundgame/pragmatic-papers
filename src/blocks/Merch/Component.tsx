@@ -133,15 +133,17 @@ export const MerchBlock = async ({
           <div className="flex flex-wrap items-center justify-between gap-2">
             <h3>{headingText}</h3>
             <div className="flex w-full items-center justify-between gap-3 sm:w-fit">
-              <LinkButton
-                href={withMerchUtm(store, `${merchLayout}_shop_all`)}
-                target="_blank"
-                rel="noopener"
-                variant="branded"
-              >
-                <ShoppingCart />
-                Shop all
-              </LinkButton>
+              {store ? (
+                <LinkButton
+                  href={withMerchUtm(store, `${merchLayout}_shop_all`)}
+                  target="_blank"
+                  rel="noopener"
+                  variant="branded"
+                >
+                  <ShoppingCart />
+                  Shop all
+                </LinkButton>
+              ) : null}
               <MerchCarouselControls />
             </div>
           </div>

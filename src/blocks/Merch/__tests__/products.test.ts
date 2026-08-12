@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest"
+import { afterEach, beforeEach, describe, expect, it } from "vitest"
 
 import type { Merch as MerchProductDoc, MerchBlock } from "@/payload-types"
 
@@ -94,11 +94,22 @@ describe("toMediaShape", () => {
 })
 
 describe("toMerchProduct", () => {
-  it("links to the DGG merch page, never the Shopify store", () => {
+  const STORE = "https://store-site.test/merch"
+  const original = process.env.MERCH_SITE_URL
+
+  beforeEach(() => {
+    process.env.MERCH_SITE_URL = STORE
+  })
+
+  afterEach(() => {
+    if (original === undefined) delete process.env.MERCH_SITE_URL
+    else process.env.MERCH_SITE_URL = original
+  })
+
+  it("links to the configured store site, never the storefront API host", () => {
     const product = toMerchProduct(makeDoc({ handle: "logo-tee" }))
 
-    expect(product.url).toBe("https://digitalgroundgame.org/merch/logo-tee")
-    expect(product.url).not.toContain("store.digitalgroundgame.org")
+    expect(product?.url).toBe(`${STORE}/logo-tee`)
   })
 
   it("maps a synced row onto the rendering contract", () => {
@@ -110,6 +121,12 @@ describe("toMerchProduct", () => {
       price: "$15.00",
       badge: "Sold Out",
     })
+  })
+
+  it("returns null when no store site is configured, since a card can't link", () => {
+    delete process.env.MERCH_SITE_URL
+
+    expect(toMerchProduct(makeDoc())).toBeNull()
   })
 })
 

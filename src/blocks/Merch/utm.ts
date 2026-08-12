@@ -1,9 +1,9 @@
 /**
- * The Merch block points at digitalgroundgame.org — our parent org's site, not
- * this one — and this site ships no analytics. Tagging the links is the only
- * way to find out whether the block earns its space: DGG's own analytics does
- * the attribution, and the campaign params tell it which placement sent the
- * reader.
+ * The Merch block points at the store site (`MERCH_SITE_URL`) rather than at
+ * this one, and this site ships no analytics. Tagging the links is the only
+ * way to find out whether the block earns its space: the store site's own
+ * analytics does the attribution, and the campaign params tell it which
+ * placement sent the reader.
  */
 
 const UTM_SOURCE = "pragmaticpapers"

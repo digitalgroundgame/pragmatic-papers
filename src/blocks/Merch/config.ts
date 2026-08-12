@@ -122,7 +122,7 @@ export const Merch: Block = {
       name: "storeUrl",
       type: "text",
       admin: {
-        description: "Optional override for the “Shop all” button. Defaults to the DGG merch page.",
+        description: "Optional override for the “Shop all” button.",
       },
     },
   ],

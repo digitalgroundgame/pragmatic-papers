@@ -6,7 +6,7 @@ import type { Media, Merch as MerchProductDoc, MerchBlock } from "@/payload-type
 
 import { MERCH_TAG } from "@/collections/Merch/tag"
 import { getPayloadConfig } from "@/utilities/getPayloadConfig"
-import { getMerchProductUrl } from "./urls"
+import { getMerchProductUrl, getMerchStoreUrl } from "./urls"
 
 /**
  * Normalized product shape consumed by the Merch component. This is the
@@ -80,14 +80,22 @@ export function toMediaShape(product: MerchProductDoc): Media | null {
   } as Media
 }
 
-/** Map a synced row onto the rendering contract. */
-export function toMerchProduct(product: MerchProductDoc): MerchProduct {
+/**
+ * Map a synced row onto the rendering contract.
+ *
+ * Returns null when there's no store site configured: the whole point of a
+ * card is the click, so a product with nowhere to link isn't renderable.
+ */
+export function toMerchProduct(product: MerchProductDoc): MerchProduct | null {
+  const url = getMerchProductUrl(product.handle)
+  if (!url) return null
+
   return {
     id: `merch-product-${product.id}`,
     title: product.title,
     price: formatPrice(product.price, product.currencyCode),
     badge: deriveBadge(product),
-    url: getMerchProductUrl(product.handle),
+    url,
     image: toMediaShape(product),
   }
 }
@@ -161,6 +169,10 @@ async function queryMerchProducts(block: MerchBlock): Promise<MerchProductDoc[]>
  * costs nothing.
  */
 export async function getMerchProducts(block: MerchBlock): Promise<MerchProduct[]> {
+  // Without MERCH_SITE_URL there's nowhere to send a reader, so there's
+  // nothing worth querying for.
+  if (!getMerchStoreUrl()) return []
+
   const hasExplicitPicks = block.source === "filtered" && Boolean(block.selectedProducts?.length)
 
   const load = unstable_cache(
@@ -176,7 +188,7 @@ export async function getMerchProducts(block: MerchBlock): Promise<MerchProduct[
 
   const docs = await load()
 
-  if (!hasExplicitPicks) return docs.map(toMerchProduct)
+  if (!hasExplicitPicks) return docs.map(toMerchProduct).filter((p) => p !== null)
 
   // Hand-picked products render in the order the editor arranged them, which
   // no database sort can express.
@@ -189,4 +201,5 @@ export async function getMerchProducts(block: MerchBlock): Promise<MerchProduct[
   return [...docs]
     .sort((a, b) => (order.get(a.id) ?? 0) - (order.get(b.id) ?? 0))
     .map(toMerchProduct)
+    .filter((p) => p !== null)
 }

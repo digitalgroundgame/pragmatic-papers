@@ -50,6 +50,9 @@ services:
       # scripts/test-e2e.mjs, so localhost is correct here.
       NEXT_PUBLIC_SERVER_URL: http://localhost:8000
       USE_LOCAL_STORAGE: "true"
+      # The Merch block has no built-in store site — without this it renders
+      # nothing and merch.spec.ts has no carousel to exercise.
+      MERCH_SITE_URL: https://digitalgroundgame.org/merch
       E2E_PROD_SERVER: "true"
       # Private fonts affect rendering, and CI installs them — pass the token
       # through so local baselines use the same fonts (see the warning in

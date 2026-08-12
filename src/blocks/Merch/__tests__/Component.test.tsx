@@ -31,7 +31,7 @@ function makeProducts(overrides: Partial<MerchProduct>[] = []): MerchProduct[] {
       title: "DGG Mug",
       price: "$15.00",
       badge: null,
-      url: "https://digitalgroundgame.org/merch/digg-mug",
+      url: "https://store-site.test/shop/digg-mug",
       image,
     },
     {
@@ -39,7 +39,7 @@ function makeProducts(overrides: Partial<MerchProduct>[] = []): MerchProduct[] {
       title: "DGG Tee",
       price: null,
       badge: null,
-      url: "https://digitalgroundgame.org/merch/digg-tee",
+      url: "https://store-site.test/shop/digg-tee",
       image,
     },
   ]
@@ -57,7 +57,7 @@ function makeProps(overrides: Partial<MerchBlockProps> = {}): MerchBlockProps {
     heading: "Merch",
     layout: "fullWidth",
     source: "all",
-    storeUrl: "https://digitalgroundgame.org/merch",
+    storeUrl: "https://store-site.test/shop",
     ...overrides,
   } as MerchBlockProps
 }
@@ -111,17 +111,17 @@ describe("MerchBlock", () => {
 
     const mug = screen.getByText("DGG Mug").closest("a")
     const href = new URL(mug?.getAttribute("href") ?? "")
-    expect(href.origin + href.pathname).toBe("https://digitalgroundgame.org/merch/digg-mug")
+    expect(href.origin + href.pathname).toBe("https://store-site.test/shop/digg-mug")
     expect(mug?.getAttribute("target")).toBe("_blank")
     // DGG is our parent org: not a paid placement, not an unendorsed link, and
     // the referrer is left intact for their analytics.
     expect(mug?.getAttribute("rel")).toBe("noopener")
   })
 
-  it("never links a reader to the Shopify store that only supplies the data", async () => {
+  it("never links a reader to the storefront API host", async () => {
     getMerchProducts.mockResolvedValue(makeProducts())
 
-    const { container } = await renderBlock(makeProps({ storeUrl: null }))
+    const { container } = await renderBlock(makeProps())
 
     for (const link of container.querySelectorAll("a")) {
       expect(link.getAttribute("href")).not.toContain("store.digitalgroundgame.org")
@@ -152,25 +152,32 @@ describe("MerchBlock", () => {
     expect(shopAll?.getAttribute("target")).toBe("_blank")
   })
 
-  it("falls back to the default heading and the DGG merch page when omitted", async () => {
+  it("falls back to the default heading when omitted", async () => {
     getMerchProducts.mockResolvedValue(makeProducts())
 
-    await renderBlock(makeProps({ heading: null, storeUrl: null }))
+    await renderBlock(makeProps({ heading: null }))
 
     expect(screen.getByRole("heading", { name: "The Pragmatic Papers Store" })).toBeTruthy()
-    const href = new URL(screen.getByText("Shop all").closest("a")!.getAttribute("href")!)
-    expect(href.origin + href.pathname).toBe("https://digitalgroundgame.org/merch")
+  })
+
+  it("drops the store button when no store site is configured", async () => {
+    // MERCH_SITE_URL is unset in tests, so there's nowhere for "Shop all" to
+    // point — better no button than a dead one.
+    getMerchProducts.mockResolvedValue(makeProducts())
+
+    await renderBlock(makeProps({ storeUrl: null }))
+
+    expect(screen.queryByText("Shop all")).toBeNull()
+    expect(screen.getByText("DGG Mug")).toBeTruthy()
   })
 
   it("honours a store URL override", async () => {
     getMerchProducts.mockResolvedValue(makeProducts())
 
-    await renderBlock(
-      makeProps({ storeUrl: "https://digitalgroundgame.org/merch/collections/new" }),
-    )
+    await renderBlock(makeProps({ storeUrl: "https://store-site.test/shop/collections/new" }))
 
     const href = new URL(screen.getByText("Shop all").closest("a")!.getAttribute("href")!)
-    expect(href.pathname).toBe("/merch/collections/new")
+    expect(href.pathname).toBe("/shop/collections/new")
   })
 
   it("overlays a badge only on products that have one", async () => {

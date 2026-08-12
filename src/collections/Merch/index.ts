@@ -37,8 +37,14 @@ export const Merch: CollectionConfig = {
     plural: "Merch",
   },
   access: {
-    create: admin,
+    // Nobody hand-creates a merch product: rows come from the sync, which
+    // writes through the Local API and bypasses access control. A hand-made
+    // row has no real store ID to match on, so the next run would archive it
+    // immediately. Denying create is what removes Payload's "Create New"
+    // button and the empty-state prompt along with it.
+    create: () => false,
     delete: admin,
+    // Editors need this for the presentation fields at the bottom.
     update: admin,
     // Public read, but only the products Shopify still lists. Staff see
     // everything, including archived rows, so a vanished product is

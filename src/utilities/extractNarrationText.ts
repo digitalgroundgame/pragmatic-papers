@@ -14,7 +14,6 @@ export type MediaMap = Record<
 export interface ExtractNarrationTextOptions {
   title?: string | null
   authors?: Array<{ name?: string | null } | string | number> | null
-  populatedAuthors?: Array<{ name?: string | null }> | null
   publishedAt?: string | Date | null
   content?: SerializedEditorState | Record<string, unknown> | null
   mediaMap?: MediaMap | null
@@ -340,7 +339,7 @@ function extractLexicalNodeText(
 }
 
 export function extractNarrationText(options: ExtractNarrationTextOptions): string {
-  const { title, authors, populatedAuthors, publishedAt, content, mediaMap } = options
+  const { title, authors, publishedAt, content, mediaMap } = options
   const parts: string[] = []
 
   // 1. Title
@@ -350,14 +349,7 @@ export function extractNarrationText(options: ExtractNarrationTextOptions): stri
 
   // 2. Authors
   const authorNames: string[] = []
-  if (Array.isArray(populatedAuthors)) {
-    for (const auth of populatedAuthors) {
-      if (auth && typeof auth === "object" && typeof auth.name === "string" && auth.name.trim()) {
-        authorNames.push(auth.name.trim())
-      }
-    }
-  }
-  if (authorNames.length === 0 && Array.isArray(authors)) {
+  if (Array.isArray(authors)) {
     for (const auth of authors) {
       if (
         typeof auth === "object" &&

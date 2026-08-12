@@ -49,6 +49,11 @@ export const Merch: CollectionConfig = {
     },
   },
   admin: {
+    components: {
+      // The hourly job covers the ordinary case; this is for the editor who
+      // just pushed a drop to Shopify.
+      beforeListTable: ["@/collections/Merch/components/SyncNowButton#SyncNowButton"],
+    },
     useAsTitle: "title",
     defaultColumns: ["title", "price", "availableForSale", "status", "lastSyncedAt"],
     description:

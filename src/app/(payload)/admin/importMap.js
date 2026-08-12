@@ -44,6 +44,7 @@ import { ScheduleNewsletterButton as ScheduleNewsletterButton_a66b86b65dab65173a
 import { BlurDataURLField as BlurDataURLField_3bf98f0d72a9b7fcf13045923bb48189 } from '@/collections/Media/components/BlurDataURLField'
 import { NarratorField as NarratorField_ac420e631edc2776947f590c2e50edcc } from '@/collections/Media/components/NarratorField'
 import { DurationField as DurationField_eac2b3e17fa524aff4add76374d4c8eb } from '@/collections/Media/components/DurationField'
+import { SyncNowButton as SyncNowButton_6b13e2821b4c35428e02347e7578e840 } from '@/collections/Merch/components/SyncNowButton'
 import { LinkToDoc as LinkToDoc_aead06e4cbf6b2620c5c51c9ab283634 } from '@payloadcms/plugin-search/client'
 import { ReindexButton as ReindexButton_aead06e4cbf6b2620c5c51c9ab283634 } from '@payloadcms/plugin-search/client'
 import { RunNowField as RunNowField_a9d86fb0496ebd76a3dd880c805864b5 } from '@/globals/ArticleRecommendations/components/RunNowField'
@@ -103,6 +104,7 @@ export const importMap = {
   "@/collections/Media/components/BlurDataURLField#BlurDataURLField": BlurDataURLField_3bf98f0d72a9b7fcf13045923bb48189,
   "@/collections/Media/components/NarratorField#NarratorField": NarratorField_ac420e631edc2776947f590c2e50edcc,
   "@/collections/Media/components/DurationField#DurationField": DurationField_eac2b3e17fa524aff4add76374d4c8eb,
+  "@/collections/Merch/components/SyncNowButton#SyncNowButton": SyncNowButton_6b13e2821b4c35428e02347e7578e840,
   "@payloadcms/plugin-search/client#LinkToDoc": LinkToDoc_aead06e4cbf6b2620c5c51c9ab283634,
   "@payloadcms/plugin-search/client#ReindexButton": ReindexButton_aead06e4cbf6b2620c5c51c9ab283634,
   "@/globals/ArticleRecommendations/components/RunNowField#RunNowField": RunNowField_a9d86fb0496ebd76a3dd880c805864b5,

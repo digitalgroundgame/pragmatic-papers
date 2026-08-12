@@ -14,6 +14,7 @@ import { Footer } from "@/Footer/config"
 import { ArticleRecommendations } from "@/globals/ArticleRecommendations/config"
 import { Header } from "@/Header/config"
 import { syncShopifyProductsTask } from "@/jobs/syncShopifyProducts"
+import { readShopifyEnv } from "@/jobs/syncShopifyProducts/logic"
 import { updateRecommendationsTask } from "@/jobs/updateRecommendations"
 import { plugins } from "@/plugins"
 import { searchVectorAfterSchemaInit } from "@/plugins/searchVector"
@@ -155,7 +156,9 @@ export default buildConfig({
           input: {},
         })
         const result = await req.payload.jobs.run({ queue: "default", limit: 1 })
-        return Response.json({ jobId: job.id, result })
+        // A run without credentials is a logged no-op, not a failure — say so,
+        // or the admin button reports success over an empty catalogue.
+        return Response.json({ jobId: job.id, configured: readShopifyEnv() !== null, result })
       },
     },
   ],

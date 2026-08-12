@@ -1,5 +1,5 @@
 import { cleanup, render, screen } from "@testing-library/react"
-import { afterEach, describe, expect, it, vi } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import type { Media, MerchBlock as MerchBlockProps } from "@/payload-types"
 
@@ -57,7 +57,6 @@ function makeProps(overrides: Partial<MerchBlockProps> = {}): MerchBlockProps {
     heading: "Merch",
     layout: "fullWidth",
     source: "all",
-    storeUrl: "https://store-site.test/shop",
     ...overrides,
   } as MerchBlockProps
 }
@@ -70,9 +69,19 @@ async function renderBlock(
   return render(await MerchBlock({ ...props, ...options }))
 }
 
+// Where "Shop all" points is config, not content — the block reads it from the
+// environment, so the tests set it the same way production does.
+const originalStoreUrl = process.env.MERCH_SITE_URL
+
+beforeEach(() => {
+  process.env.MERCH_SITE_URL = "https://store-site.test/shop"
+})
+
 afterEach(() => {
   cleanup()
   getMerchProducts.mockReset()
+  if (originalStoreUrl === undefined) delete process.env.MERCH_SITE_URL
+  else process.env.MERCH_SITE_URL = originalStoreUrl
 })
 
 describe("MerchBlock", () => {
@@ -161,23 +170,24 @@ describe("MerchBlock", () => {
   })
 
   it("drops the store button when no store site is configured", async () => {
-    // MERCH_SITE_URL is unset in tests, so there's nowhere for "Shop all" to
-    // point — better no button than a dead one.
+    // Without MERCH_SITE_URL there's nowhere for "Shop all" to point — better
+    // no button than a dead one.
+    delete process.env.MERCH_SITE_URL
     getMerchProducts.mockResolvedValue(makeProducts())
 
-    await renderBlock(makeProps({ storeUrl: null }))
+    await renderBlock(makeProps())
 
     expect(screen.queryByText("Shop all")).toBeNull()
     expect(screen.getByText("DGG Mug")).toBeTruthy()
   })
 
-  it("honours a store URL override", async () => {
+  it("points the store button at the configured site, not a per-block value", async () => {
     getMerchProducts.mockResolvedValue(makeProducts())
 
-    await renderBlock(makeProps({ storeUrl: "https://store-site.test/shop/collections/new" }))
+    await renderBlock(makeProps())
 
     const href = new URL(screen.getByText("Shop all").closest("a")!.getAttribute("href")!)
-    expect(href.pathname).toBe("/shop/collections/new")
+    expect(href.origin + href.pathname).toBe("https://store-site.test/shop")
   })
 
   it("overlays a badge only on products that have one", async () => {

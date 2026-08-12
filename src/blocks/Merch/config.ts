@@ -7,9 +7,12 @@ import type { Block } from "payload"
  *  - `square`    — compact, for sidebars / narrow columns
  *  - `fullWidth` — banner-style, for page bodies
  *
- * The block stores a *query*, never product data: products live in the
- * `merch-products` collection, synced hourly from Shopify. That's what keeps a
- * price change or a sold-out item from being a manual edit in every placement.
+ * The block stores a *query*, never product data: products live in the `merch`
+ * collection, synced hourly from Shopify. That's what keeps a price change or a
+ * sold-out item from being a manual edit in every placement.
+ *
+ * Where a click lands is config, not content — every link is derived from
+ * `MERCH_SITE_URL`, so the store can move without touching a single placement.
  */
 export const Merch: Block = {
   slug: "merch",
@@ -116,13 +119,6 @@ export const Merch: Block = {
       max: 24,
       admin: {
         description: "Most products to pull into the carousel.",
-      },
-    },
-    {
-      name: "storeUrl",
-      type: "text",
-      admin: {
-        description: "Optional override for the “Shop all” button.",
       },
     },
   ],

@@ -90,7 +90,6 @@ export function createMerchBlockNode(fields: {
   heading?: string
   layout?: "square" | "fullWidth"
   autoplay?: boolean
-  storeUrl?: string
   source?: "all" | "filtered"
   featuredOnly?: boolean
   collection?: string

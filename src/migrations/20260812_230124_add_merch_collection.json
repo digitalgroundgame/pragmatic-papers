@@ -1160,12 +1160,6 @@
           "notNull": false,
           "default": 12
         },
-        "store_url": {
-          "name": "store_url",
-          "type": "varchar",
-          "primaryKey": false,
-          "notNull": false
-        },
         "block_name": {
           "name": "block_name",
           "type": "varchar",
@@ -3475,12 +3469,6 @@
           "primaryKey": false,
           "notNull": false,
           "default": 12
-        },
-        "store_url": {
-          "name": "store_url",
-          "type": "varchar",
-          "primaryKey": false,
-          "notNull": false
         },
         "_uuid": {
           "name": "_uuid",
@@ -14672,6 +14660,6 @@
     "tables": {},
     "columns": {}
   },
-  "id": "abce1fb2-ef77-4b70-aaeb-294f46595345",
+  "id": "04207bda-478d-488a-9883-244c83528fe4",
   "prevId": "00000000-0000-0000-0000-000000000000"
 }

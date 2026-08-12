@@ -26,7 +26,6 @@ export async function up({ db, payload, req }: MigrateUpArgs): Promise<void> {
   	"featured_only" boolean DEFAULT false,
   	"order_by" "enum_pages_blocks_merch_order_by" DEFAULT 'sortOrder',
   	"limit" numeric DEFAULT 12,
-  	"store_url" varchar,
   	"block_name" varchar
   );
   
@@ -44,7 +43,6 @@ export async function up({ db, payload, req }: MigrateUpArgs): Promise<void> {
   	"featured_only" boolean DEFAULT false,
   	"order_by" "enum__pages_v_blocks_merch_order_by" DEFAULT 'sortOrder',
   	"limit" numeric DEFAULT 12,
-  	"store_url" varchar,
   	"_uuid" varchar,
   	"block_name" varchar
   );

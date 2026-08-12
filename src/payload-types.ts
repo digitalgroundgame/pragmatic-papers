@@ -884,10 +884,6 @@ export interface MerchBlock {
    * Most products to pull into the carousel.
    */
   limit?: number | null;
-  /**
-   * Optional override for the “Shop all” button. Defaults to the DGG merch page.
-   */
-  storeUrl?: string | null;
   id?: string | null;
   blockName?: string | null;
   blockType: 'merch';
@@ -1756,7 +1752,6 @@ export interface MerchBlockSelect<T extends boolean = true> {
   selectedProducts?: T;
   orderBy?: T;
   limit?: T;
-  storeUrl?: T;
   id?: T;
   blockName?: T;
 }

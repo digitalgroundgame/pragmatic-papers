@@ -115,11 +115,11 @@ export const MerchBlock = async ({
   enableGutter = true,
   ...block
 }: MerchBlockComponentProps): Promise<React.ReactNode> => {
-  const { autoplay, heading, layout, storeUrl } = block
+  const { autoplay, heading, layout } = block
   const items = await getMerchProducts(block)
   const merchLayout = layout === "square" ? "square" : "fullWidth"
   const headingText = heading ?? DEFAULT_HEADING
-  const store = storeUrl?.trim() ? storeUrl : getMerchStoreUrl()
+  const store = getMerchStoreUrl()
 
   if (items.length === 0) return null
 

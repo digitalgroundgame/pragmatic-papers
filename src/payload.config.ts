@@ -3,7 +3,7 @@ import { Articles } from "@/collections/Articles"
 import { Categories } from "@/collections/Categories"
 import { MapAssets } from "@/collections/MapAssets"
 import { Media } from "@/collections/Media"
-import { Merch as MerchCollection } from "@/collections/Merch"
+import { Merch } from "@/collections/Merch"
 import { Pages } from "@/collections/Pages"
 import { Topics } from "@/collections/Topics"
 import { Users } from "@/collections/Users"
@@ -105,7 +105,7 @@ export default buildConfig({
     Users,
     Webhooks,
     Topics,
-    MerchCollection,
+    Merch,
   ],
   cors: [getServerSideURL()].filter(Boolean),
   globals: [Header, Footer, ArticleRecommendations],

@@ -11,7 +11,7 @@ import { seoPlugin } from "@payloadcms/plugin-seo"
 import { type GenerateTitle, type GenerateURL } from "@payloadcms/plugin-seo/types"
 import { FixedToolbarFeature, HeadingFeature, lexicalEditor } from "@payloadcms/richtext-lexical"
 import { s3Storage } from "@payloadcms/storage-s3"
-import { type Plugin } from "payload"
+import { type Payload, type Plugin } from "payload"
 
 function isVolume(obj: Volume | Article | Page | Topic): obj is Volume {
   return (obj as Volume).volumeNumber !== undefined
@@ -47,7 +47,54 @@ const generateURL: GenerateURL<Volume | Article | Page | Topic> = ({ doc }) => {
   return doc?.slug ? `${url}/${doc.slug}` : url
 }
 
-const beforeSync: BeforeSync = ({ originalDoc, searchDoc }) => {
+/**
+ * Resolves author names for the search index.
+ *
+ * The reindex handler fetches documents at `depth: 0`, so `authors` arrives as
+ * bare IDs. This used to be papered over by a `populateAuthors` afterRead hook
+ * on Articles, which ran on *every* article read just so this one caller could
+ * see names. Resolving here keeps it at the call site that needs it.
+ */
+export async function resolveAuthorNames(raw: unknown, payload: Payload): Promise<string> {
+  if (!Array.isArray(raw) || !raw.length) return ""
+
+  const names = new Map<number, string | null | undefined>()
+  const unresolvedIds: number[] = []
+
+  for (const author of raw) {
+    if (typeof author === "number") {
+      unresolvedIds.push(author)
+    } else if (author && typeof author === "object") {
+      names.set(author.id, author.name)
+    }
+  }
+
+  if (unresolvedIds.length) {
+    try {
+      const { docs } = await payload.find({
+        collection: "users",
+        where: { id: { in: unresolvedIds } },
+        depth: 0,
+        limit: unresolvedIds.length,
+        select: { name: true },
+        overrideAccess: true,
+      })
+      for (const doc of docs) names.set(doc.id, doc.name)
+    } catch (error) {
+      payload.logger.error(
+        { err: error, unresolvedIds },
+        "Failed to resolve author names for search",
+      )
+    }
+  }
+
+  return raw
+    .map((author) => (typeof author === "number" ? names.get(author) : author?.name))
+    .filter(Boolean)
+    .join(", ")
+}
+
+const beforeSync: BeforeSync = async ({ originalDoc, payload, searchDoc }) => {
   const title =
     (originalDoc.title as string | undefined) || (originalDoc.name as string | undefined) || ""
   const meta = originalDoc.meta as Record<string, unknown> | undefined
@@ -57,16 +104,7 @@ const beforeSync: BeforeSync = ({ originalDoc, searchDoc }) => {
     ""
   const slug = (originalDoc.slug as string | undefined) || ""
 
-  const populatedAuthors = originalDoc.populatedAuthors as
-    | { name?: string | null }[]
-    | undefined
-    | null
-  const authors = populatedAuthors
-    ? populatedAuthors
-        .map((a) => a.name)
-        .filter(Boolean)
-        .join(", ")
-    : ""
+  const authors = await resolveAuthorNames(originalDoc.authors, payload)
 
   const topicsRaw = originalDoc.topics as ({ name?: string | null } | number)[] | undefined | null
   const topics = Array.isArray(topicsRaw)

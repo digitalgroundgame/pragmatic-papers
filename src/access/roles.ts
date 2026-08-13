@@ -2,6 +2,13 @@ import type { User } from "@/payload-types"
 
 export type Role = "admin" | "chief-editor" | "editor" | "writer" | "narrator" | "member"
 
+/**
+ * Roles that count as staff. Single source of truth for both the requester-side
+ * check (`isStaff`) and document-side query constraints (e.g. `readUsers`), so
+ * adding a staff role only requires editing this list.
+ */
+export const STAFF_ROLES: Role[] = ["admin", "chief-editor", "editor", "writer", "narrator"]
+
 /** Checks if a user is an admin or chief-editor. */
 export const isAdmin = (user: User | null | undefined): boolean => {
   if (!user?.roles) return false
@@ -31,5 +38,5 @@ export const isEditor = (user: User | null | undefined): boolean => {
 
 /** Checks if a user is staff (editor, writer, narrator, chief-editor, admin). */
 export const isStaff = (user: User | null | undefined): boolean => {
-  return hasRoleOrAdmin(user, ["editor", "writer", "narrator"])
+  return hasRole(user, STAFF_ROLES)
 }

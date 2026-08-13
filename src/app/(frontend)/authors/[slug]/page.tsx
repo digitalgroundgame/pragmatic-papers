@@ -14,7 +14,7 @@ import { getInitials } from "@/utilities/getInitials"
 import { getMediaUrl } from "@/utilities/getMediaUrl"
 import { getServerSideURL } from "@/utilities/getURL"
 import { mergeOpenGraph } from "@/utilities/mergeOpenGraph"
-import { queryUserBySlug } from "@/utilities/queries"
+import { queryUserBySlug, queryVolumesForArticles } from "@/utilities/queries"
 import { buildBreadcrumbJsonLd, buildPersonJsonLd } from "@/utilities/structuredData"
 import config from "@payload-config"
 import type { Metadata } from "next"
@@ -76,30 +76,6 @@ const queryArticlesByAuthor = cache(async (userId: number, page: number = 1) => 
     },
     depth: 2,
   })
-})
-
-const queryVolumesForArticles = cache(async (articleIds: number[]): Promise<Volume[]> => {
-  if (!articleIds.length) return []
-
-  const { isEnabled: draft } = await draftMode()
-
-  const payload = await getPayload({ config })
-
-  const { docs } = await payload.find({
-    collection: "volumes",
-    draft,
-    limit: 1000,
-    overrideAccess: draft,
-    pagination: false,
-    where: {
-      articles: {
-        in: articleIds,
-      },
-    },
-    depth: 0,
-  })
-
-  return docs
 })
 
 export async function generateMetadata({ params }: Args): Promise<Metadata> {

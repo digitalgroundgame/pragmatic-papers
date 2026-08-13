@@ -39,35 +39,6 @@ export type MenuField =
     }[]
   | null;
 /**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "PopulatedAuthors".
- */
-export type PopulatedAuthors =
-  | {
-      id: number;
-      name?: string | null;
-      slug: string;
-      affiliation?: string | null;
-      biography?: {
-        root: {
-          type: string;
-          children: {
-            type: any;
-            version: number;
-            [k: string]: unknown;
-          }[];
-          direction: ('ltr' | 'rtl') | null;
-          format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
-          indent: number;
-          version: number;
-        };
-        [k: string]: unknown;
-      } | null;
-      profileImage?: (number | null) | Media;
-      socials?: MenuField;
-    }[]
-  | null;
-/**
  * Choose a layout preset that determines how article slots are arranged.
  *
  * This interface was referenced by `Config`'s JSON-Schema
@@ -463,9 +434,6 @@ export interface Article {
   authors?: (number | User)[] | null;
   topics?: (number | Topic)[] | null;
   createdBy?: (number | null) | User;
-  populatedAuthors?: PopulatedAuthors;
-  populatedVolume?: PopulatedVolume;
-  populatedNarrator?: PopulatedNarrator;
   updatedAt: string;
   createdAt: string;
   _status?: ('draft' | 'published') | null;
@@ -679,26 +647,6 @@ export interface User {
     | null;
   password?: string | null;
   collection: 'users';
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "PopulatedVolume".
- */
-export interface PopulatedVolume {
-  id?: number | null;
-  slug?: string | null;
-  volumeNumber?: number | null;
-  title?: string | null;
-  publishedAt?: string | null;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "PopulatedNarrator".
- */
-export interface PopulatedNarrator {
-  id?: number | null;
-  name?: string | null;
-  slug?: string | null;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -1838,9 +1786,6 @@ export interface ArticlesSelect<T extends boolean = true> {
   authors?: T;
   topics?: T;
   createdBy?: T;
-  populatedAuthors?: T | PopulatedAuthorsSelect<T>;
-  populatedVolume?: T | PopulatedVolumeSelect<T>;
-  populatedNarrator?: T | PopulatedNarratorSelect<T>;
   updatedAt?: T;
   createdAt?: T;
   _status?: T;
@@ -1855,47 +1800,6 @@ export interface FootnotesFieldSelect<T extends boolean = true> {
   attributionEnabled?: T;
   link?: T | LinkFieldSelect<T>;
   id?: T;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "PopulatedAuthors_select".
- */
-export interface PopulatedAuthorsSelect<T extends boolean = true> {
-  id?: T;
-  name?: T;
-  slug?: T;
-  affiliation?: T;
-  biography?: T;
-  profileImage?: T;
-  socials?: T | MenuFieldSelect<T>;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "MenuField_select".
- */
-export interface MenuFieldSelect<T extends boolean = true> {
-  link?: T | LinkFieldSelect<T>;
-  id?: T;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "PopulatedVolume_select".
- */
-export interface PopulatedVolumeSelect<T extends boolean = true> {
-  id?: T;
-  slug?: T;
-  volumeNumber?: T;
-  title?: T;
-  publishedAt?: T;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "PopulatedNarrator_select".
- */
-export interface PopulatedNarratorSelect<T extends boolean = true> {
-  id?: T;
-  name?: T;
-  slug?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -2089,6 +1993,14 @@ export interface UsersSelect<T extends boolean = true> {
         createdAt?: T;
         expiresAt?: T;
       };
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "MenuField_select".
+ */
+export interface MenuFieldSelect<T extends boolean = true> {
+  link?: T | LinkFieldSelect<T>;
+  id?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema

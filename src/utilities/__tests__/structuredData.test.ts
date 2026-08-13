@@ -45,19 +45,14 @@ describe("buildArticleJsonLd", () => {
         publishedAt: "2024-01-01T00:00:00.000Z",
         createdAt: "2023-12-01T00:00:00.000Z",
         updatedAt: "2024-02-01T00:00:00.000Z",
-        populatedAuthors: [{ id: 1, name: "Alice", slug: "alice" }],
+        authors: [{ id: 1, name: "Alice", slug: "alice" } as User],
         topics: [
           { id: 1, name: "Economics" },
           { id: 2, name: "Politics" },
         ] as Article["topics"],
-        populatedVolume: {
-          id: 7,
-          slug: "vol-7",
-          title: "Volume Seven",
-          volumeNumber: 7,
-        } as Article["populatedVolume"],
       }),
       "/articles/my-post",
+      makeVolume({ id: 7, slug: "vol-7", title: "Volume Seven", volumeNumber: 7 }),
     )
 
     expect(result["@type"]).toBe("Article")
@@ -128,9 +123,9 @@ describe("buildArticleJsonLd", () => {
         title: "T",
         createdAt: "2023-12-01T00:00:00.000Z",
         updatedAt: "2024-02-01T00:00:00.000Z",
-        populatedVolume: { id: 7, volumeNumber: 7 } as Article["populatedVolume"],
       }),
       "/articles/t",
+      makeVolume({ id: 7, volumeNumber: 7 }),
     )
 
     expect(result.isPartOf).toMatchObject({

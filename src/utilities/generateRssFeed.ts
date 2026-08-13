@@ -7,6 +7,7 @@ import type {
   MediaBlock,
   MediaCollageBlock,
   TimelineBlock,
+  User,
   Volume,
 } from "@/payload-types"
 import type { SerializedBlockNode, SerializedInlineBlockNode } from "@payloadcms/richtext-lexical"
@@ -236,9 +237,11 @@ export const generateArticleFeed = (articles: Article[]): string => {
           article.meta?.image && typeof article.meta.image !== "string"
             ? getMediaUrl((article.meta.image as Media).url ?? "")
             : undefined,
-        author: article.populatedAuthors?.map((author) => ({
-          name: author.name || "",
-        })),
+        author: (article.authors || [])
+          .filter((author): author is User => typeof author === "object")
+          .map((author) => ({
+            name: author.name || "",
+          })),
         content: (() => {
           try {
             const articleContent = article.content
@@ -291,9 +294,11 @@ export const generateVolumeFeed = (volumes: Volume[]): string => {
           ?.filter((articleRef): articleRef is Article => typeof articleRef !== "string")
           .flatMap(
             (article) =>
-              article.populatedAuthors?.map((author) => ({
-                name: author.name || "",
-              })) || [],
+              (article.authors || [])
+                .filter((author): author is User => typeof author === "object")
+                .map((author) => ({
+                  name: author.name || "",
+                })) || [],
           ),
       })
     }

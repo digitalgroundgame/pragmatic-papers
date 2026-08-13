@@ -14,13 +14,14 @@ import {
   UnorderedListFeature,
 } from "@payloadcms/richtext-lexical"
 
-import { editor } from "@/access/editor"
+import { editor } from "@/access/collections"
 import { Banner } from "@/blocks/Banner/config"
 import { Code } from "@/blocks/Code/config"
 import { MediaBlock } from "@/blocks/MediaBlock/config"
 import { SquiggleRule } from "@/blocks/SquiggleRule/config"
 
-import { authenticatedOrPublished } from "@/access/authenticatedOrPublished"
+import { isPublishedOrStaff } from "@/access/policies"
+
 import { generatePreviewPath } from "@/utilities/generatePreviewPath"
 import {
   MetaDescriptionField,
@@ -41,7 +42,7 @@ export const Volumes: CollectionConfig = {
   access: {
     create: editor,
     delete: editor,
-    read: authenticatedOrPublished,
+    read: isPublishedOrStaff,
     update: editor,
   },
   admin: {

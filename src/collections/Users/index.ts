@@ -1,6 +1,6 @@
-import { adminOrSelf } from "@/access/adminOrSelf"
-import { admin, adminFieldLevel } from "@/access/admins"
-import { staff } from "@/access/staff"
+import { isSelfOrAdmin, readUsers } from "@/access/policies"
+import { admin, staff } from "@/access/collections"
+import { adminFieldLevel, selfOrAdminFieldLevel } from "@/access/fields"
 import { revalidateUser } from "@/collections/Users/hooks/revalidateUser"
 import { menu } from "@/fields/menu"
 import {
@@ -21,15 +21,22 @@ export const Users: CollectionConfig = {
     admin: staff,
     create: admin,
     delete: admin,
-    read: adminOrSelf,
-    update: adminOrSelf,
+    read: readUsers,
+    update: isSelfOrAdmin,
   },
   admin: {
-    defaultColumns: ["name", "role", "email"],
+    defaultColumns: ["name", "roles", "email"],
     useAsTitle: "name",
   },
   auth: true,
   fields: [
+    {
+      name: "email",
+      type: "email",
+      access: {
+        read: selfOrAdminFieldLevel,
+      },
+    },
     {
       name: "name",
       type: "text",
@@ -93,11 +100,13 @@ export const Users: CollectionConfig = {
       },
     }),
     {
-      name: "role",
+      name: "roles",
       type: "select",
+      hasMany: true,
       saveToJWT: true,
-      defaultValue: "member",
+      defaultValue: ["member"],
       access: {
+        read: selfOrAdminFieldLevel,
         update: adminFieldLevel,
       },
       admin: {

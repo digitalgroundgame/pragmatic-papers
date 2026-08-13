@@ -19,14 +19,10 @@ import { SquiggleRule } from "@/blocks/SquiggleRule/config"
 import { Timeline } from "@/blocks/Timeline/config"
 import { detectMathBlocks } from "@/collections/Articles/hooks/detectMathBlocks"
 import { generateFootnotes } from "@/collections/Articles/hooks/generateFootnotes"
-import { populateAuthors } from "@/collections/Articles/hooks/populateAuthors"
 import { populateTopics } from "@/collections/Articles/hooks/populateTopics"
 import { populateMetaImageFromHero } from "@/collections/Articles/hooks/populateMetaImageFromHero"
-import { populateNarrator } from "@/collections/Articles/hooks/populateNarrator"
-import { populateVolume } from "@/collections/Articles/hooks/populateVolume"
 import { revalidateArticle, revalidateDelete } from "@/collections/Articles/hooks/revalidateArticle"
 import { footnotesArrayField } from "@/fields/footnotes"
-import { menu } from "@/fields/menu"
 import { type Article } from "@/payload-types"
 import { generatePreviewPath } from "@/utilities/generatePreviewPath"
 
@@ -283,94 +279,6 @@ export const Articles: CollectionConfig = {
         hidden: true,
       },
     },
-    // This field is only used to populate the user data via the `populateAuthors` hook
-    // This is because the `user` collection has access control locked to protect user privacy
-    // GraphQL will also not return mutated user data that differs from the underlying schema
-    {
-      name: "populatedAuthors",
-      interfaceName: "PopulatedAuthors",
-      type: "array",
-      virtual: true,
-      access: {
-        update: () => false,
-      },
-      admin: {
-        disabled: true,
-        readOnly: true,
-      },
-      fields: [
-        {
-          name: "id",
-          type: "number",
-          required: true,
-        },
-        {
-          name: "name",
-          type: "text",
-        },
-        {
-          name: "slug",
-          type: "text",
-          required: true,
-        },
-        {
-          name: "affiliation",
-          type: "text",
-        },
-        {
-          name: "biography",
-          type: "richText",
-        },
-        {
-          name: "profileImage",
-          type: "upload",
-          relationTo: "media",
-        },
-        menu({
-          name: "socials",
-          label: "Socials",
-          maxRows: 6,
-        }),
-      ],
-    },
-    {
-      name: "populatedVolume",
-      interfaceName: "PopulatedVolume",
-      type: "group",
-      virtual: true,
-      access: {
-        update: () => false,
-      },
-      admin: {
-        disabled: true,
-        readOnly: true,
-      },
-      fields: [
-        { name: "id", type: "number" },
-        { name: "slug", type: "text" },
-        { name: "volumeNumber", type: "number" },
-        { name: "title", type: "text" },
-        { name: "publishedAt", type: "date" },
-      ],
-    },
-    {
-      name: "populatedNarrator",
-      interfaceName: "PopulatedNarrator",
-      type: "group",
-      virtual: true,
-      access: {
-        update: () => false,
-      },
-      admin: {
-        disabled: true,
-        readOnly: true,
-      },
-      fields: [
-        { name: "id", type: "number" },
-        { name: "name", type: "text" },
-        { name: "slug", type: "text" },
-      ],
-    },
   ],
   hooks: {
     beforeChange: [
@@ -388,7 +296,7 @@ export const Articles: CollectionConfig = {
       populateMetaImageFromHero,
     ],
     afterChange: [revalidateArticle],
-    afterRead: [populateAuthors, populateTopics, populateVolume, populateNarrator],
+    afterRead: [populateTopics],
     afterDelete: [revalidateDelete],
   },
   versions: {

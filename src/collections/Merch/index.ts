@@ -1,4 +1,4 @@
-import type { CollectionConfig, PayloadRequest } from "payload"
+import type { CollectionConfig, FieldAccess, PayloadRequest } from "payload"
 
 import { admin } from "@/access/collections"
 import { isAdmin } from "@/access/roles"
@@ -32,6 +32,27 @@ import {
  * Shopify flips to `archived`, so a Merch block pointing at it degrades to
  * "not shown" instead of a dangling reference.
  */
+/**
+ * Denies every write to a store-owned field, for everyone.
+ *
+ * `admin.readOnly` looked like it did this, and doesn't: it greys the input in
+ * the edit view and nothing more. The bulk-edit drawer still listed the field
+ * and happily saved it, and the REST and GraphQL APIs never consulted it at
+ * all — it's presentation, not a permission. Field access is the rule the
+ * server actually enforces, on every operation and every transport.
+ *
+ * The sync is unaffected: it writes through the Local API with
+ * `overrideAccess: true`, which is the point of the flag being there.
+ */
+const storeOwned: FieldAccess = () => false
+
+/**
+ * The admin half of the same rule. `readOnly` greys the field in the edit
+ * view; `disableBulkEdit` keeps it out of the bulk-edit field picker, which
+ * ignores `readOnly` and would otherwise offer an edit that now fails at save.
+ */
+const storeOwnedAdmin = { readOnly: true, disableBulkEdit: true } as const
+
 export const Merch: CollectionConfig = {
   slug: "merch",
   labels: {
@@ -100,7 +121,8 @@ export const Merch: CollectionConfig = {
       name: "title",
       type: "text",
       required: true,
-      admin: { readOnly: true },
+      access: { update: storeOwned },
+      admin: storeOwnedAdmin,
     },
     {
       name: "externalId",
@@ -108,8 +130,9 @@ export const Merch: CollectionConfig = {
       required: true,
       unique: true,
       index: true,
+      access: { update: storeOwned },
       admin: {
-        readOnly: true,
+        ...storeOwnedAdmin,
         description: "The store's own product ID — the key each sync upserts on.",
       },
     },
@@ -119,8 +142,9 @@ export const Merch: CollectionConfig = {
       defaultValue: "shopify",
       index: true,
       options: [{ label: "Shopify", value: "shopify" }],
+      access: { update: storeOwned },
       admin: {
-        readOnly: true,
+        ...storeOwnedAdmin,
         description:
           "Which storefront this product was synced from. Every field here is a generic commerce concept, so a second source would add an option and its own sync task rather than a second collection.",
       },
@@ -131,8 +155,9 @@ export const Merch: CollectionConfig = {
       required: true,
       unique: true,
       index: true,
+      access: { update: storeOwned },
       admin: {
-        readOnly: true,
+        ...storeOwnedAdmin,
         description:
           "Shopify's URL handle. The link we render is derived from this, so a rename in Shopify is picked up by the next sync.",
       },
@@ -140,7 +165,8 @@ export const Merch: CollectionConfig = {
     {
       name: "description",
       type: "textarea",
-      admin: { readOnly: true },
+      access: { update: storeOwned },
+      admin: storeOwnedAdmin,
     },
     {
       type: "row",
@@ -148,8 +174,9 @@ export const Merch: CollectionConfig = {
         {
           name: "price",
           type: "text",
+          access: { update: storeOwned },
           admin: {
-            readOnly: true,
+            ...storeOwnedAdmin,
             width: "33%",
             description: "Minimum variant price, as a decimal string.",
           },
@@ -157,20 +184,23 @@ export const Merch: CollectionConfig = {
         {
           name: "compareAtPrice",
           type: "text",
-          admin: { readOnly: true, width: "33%" },
+          access: { update: storeOwned },
+          admin: { ...storeOwnedAdmin, width: "33%" },
         },
         {
           name: "currencyCode",
           type: "text",
-          admin: { readOnly: true, width: "33%" },
+          access: { update: storeOwned },
+          admin: { ...storeOwnedAdmin, width: "33%" },
         },
       ],
     },
     {
       name: "availableForSale",
       type: "checkbox",
+      access: { update: storeOwned },
       admin: {
-        readOnly: true,
+        ...storeOwnedAdmin,
         description: 'As Shopify reports it. The block turns this into the "Sold Out" badge.',
       },
     },
@@ -178,8 +208,9 @@ export const Merch: CollectionConfig = {
       name: "imageUrl",
       type: "text",
       label: "Image",
+      access: { update: storeOwned },
       admin: {
-        readOnly: true,
+        ...storeOwnedAdmin,
         description: "Shopify CDN URL. Rendered directly — we don't copy product shots locally.",
         components: {
           // Without this the list column would be a long CDN URL; the product
@@ -194,17 +225,20 @@ export const Merch: CollectionConfig = {
         {
           name: "imageWidth",
           type: "number",
-          admin: { readOnly: true, width: "33%" },
+          access: { update: storeOwned },
+          admin: { ...storeOwnedAdmin, width: "33%" },
         },
         {
           name: "imageHeight",
           type: "number",
-          admin: { readOnly: true, width: "33%" },
+          access: { update: storeOwned },
+          admin: { ...storeOwnedAdmin, width: "33%" },
         },
         {
           name: "imageAlt",
           type: "text",
-          admin: { readOnly: true, width: "33%" },
+          access: { update: storeOwned },
+          admin: { ...storeOwnedAdmin, width: "33%" },
         },
       ],
     },
@@ -213,8 +247,9 @@ export const Merch: CollectionConfig = {
       type: "text",
       hasMany: true,
       index: true,
+      access: { update: storeOwned },
       admin: {
-        readOnly: true,
+        ...storeOwnedAdmin,
         description: "Shopify product tags. Merch blocks can filter on these.",
       },
     },
@@ -227,8 +262,9 @@ export const Merch: CollectionConfig = {
       type: "text",
       hasMany: true,
       index: true,
+      access: { update: storeOwned },
       admin: {
-        readOnly: true,
+        ...storeOwnedAdmin,
         description:
           "Handles of the Shopify collections (the store's product groupings) this product belongs to, e.g. \"apparel\". Shopify's term for a category — nothing to do with Payload collections. A Merch block can filter on one.",
       },
@@ -242,8 +278,9 @@ export const Merch: CollectionConfig = {
         { label: "Active", value: "active" },
         { label: "Archived", value: "archived" },
       ],
+      access: { update: storeOwned },
       admin: {
-        readOnly: true,
+        ...storeOwnedAdmin,
         description:
           "Archived means Shopify stopped listing it. Archived products are never shown.",
       },
@@ -251,8 +288,9 @@ export const Merch: CollectionConfig = {
     {
       name: "lastSyncedAt",
       type: "date",
+      access: { update: storeOwned },
       admin: {
-        readOnly: true,
+        ...storeOwnedAdmin,
         date: { pickerAppearance: "dayAndTime" },
         description:
           "When the last sync last saw this product. A stale date means the job stopped running.",

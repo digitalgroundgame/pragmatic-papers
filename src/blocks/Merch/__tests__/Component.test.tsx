@@ -161,12 +161,24 @@ describe("MerchBlock", () => {
     expect(shopAll?.getAttribute("target")).toBe("_blank")
   })
 
-  it("falls back to the default heading when omitted", async () => {
+  it("renders no heading at all when one isn't set", async () => {
     getMerchProducts.mockResolvedValue(makeProducts())
 
-    await renderBlock(makeProps({ heading: null }))
+    const { container } = await renderBlock(makeProps({ heading: null }))
 
-    expect(screen.getByRole("heading", { name: "The Pragmatic Papers Store" })).toBeTruthy()
+    expect(screen.queryByRole("heading")).toBeNull()
+    // The section takes its accessible name from the heading, so without one it
+    // is an unnamed section rather than a section labelled with a stand-in.
+    expect(container.querySelector("section")?.hasAttribute("aria-label")).toBe(false)
+    expect(screen.getByText("DGG Mug")).toBeTruthy()
+  })
+
+  it("treats a heading cleared to whitespace as unset", async () => {
+    getMerchProducts.mockResolvedValue(makeProducts())
+
+    await renderBlock(makeProps({ heading: "   " }))
+
+    expect(screen.queryByRole("heading")).toBeNull()
   })
 
   it("drops the store button when no store site is configured", async () => {

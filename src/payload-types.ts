@@ -795,6 +795,9 @@ export interface NewsletterSignupBlock {
  * via the `definition` "MerchBlock".
  */
 export interface MerchBlock {
+  /**
+   * Optional. Left blank, the carousel renders without a heading.
+   */
   heading?: string | null;
   /**
    * Square suits narrow sidebars; full width suits page bodies.

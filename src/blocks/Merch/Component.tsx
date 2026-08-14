@@ -16,10 +16,6 @@ import { Separator } from "@/components/ui/separator"
 import { LinkButton } from "@/components/ui/link-button"
 import { cn } from "@/utilities/utils"
 
-// Payload `defaultValue`s only fill DB rows created through the admin UI. Keep
-// a runtime fallback so the block still renders sensibly if used directly.
-const DEFAULT_HEADING = "The Pragmatic Papers Store"
-
 // How many products a slide has to make room for. Square sits in a narrow
 // sidebar, so it stays one-up at every width; full width fans out with the
 // viewport. `CarouselItem`'s own `basis-full` is the mobile baseline for both.
@@ -70,10 +66,6 @@ const MerchCard: React.FC<MerchCardProps> = ({ product, layout }) => {
     <a
       href={withMerchUtm(product.url, `${layout}_product`)}
       target="_blank"
-      // DGG is the parent org of The Pragmatic Papers, so this isn't a paid
-      // placement (`sponsored`) and isn't an unendorsed link (`nofollow`).
-      // `noreferrer` is left off too, so DGG's analytics sees where the click
-      // came from alongside the campaign params.
       rel="noopener"
       className="group flex flex-col gap-2 no-underline"
     >
@@ -93,12 +85,6 @@ const MerchCard: React.FC<MerchCardProps> = ({ product, layout }) => {
           />
         ) : null}
         {product.badge ? (
-          // `secondary` sits within a hair of the plate behind it in both
-          // themes, so the badge vanished wherever the product shot is
-          // transparent. `default` is the one solid neutral fill in the set:
-          // near-black on the light theme, near-white on the dark one. That
-          // inversion is the point — it's contrast against the plate either
-          // way, which a fixed dark chip only manages in one theme.
           <Badge className="absolute top-2 left-2 shadow-sm">{product.badge}</Badge>
         ) : null}
       </div>
@@ -128,7 +114,11 @@ export const MerchBlock = async ({
   const { autoplay, heading, layout } = block
   const items = await getMerchProducts(block)
   const merchLayout = layout === "square" ? "square" : "fullWidth"
-  const headingText = heading ?? DEFAULT_HEADING
+  // No heading is a real choice, not a gap to paper over — a placement inside a
+  // rich-text column usually has the surrounding copy introducing it already.
+  // Blank-but-present counts as unset, so a cleared field behaves like an
+  // untouched one.
+  const headingText = heading?.trim() ? heading : null
   const store = getMerchStoreUrl()
 
   if (items.length === 0) return null
@@ -136,13 +126,20 @@ export const MerchBlock = async ({
   return (
     <>
       <section
-        aria-label={headingText}
+        aria-label={headingText ?? undefined}
         className={cn(sectionVariants({ gutter: enableGutter }), className)}
       >
         <MerchCarousel autoplay={autoplay} className="space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <h3>{headingText}</h3>
-            <div className="flex w-full items-center justify-between gap-3 sm:w-fit">
+            {headingText ? <h3>{headingText}</h3> : null}
+            <div
+              className={cn(
+                "flex w-full items-center justify-between gap-3 sm:w-fit",
+                // Without a heading there's nothing for `justify-between` to
+                // push against, so keep the controls on the right themselves.
+                !headingText && "sm:ml-auto",
+              )}
+            >
               {store && (
                 <LinkButton
                   href={withMerchUtm(store, `${merchLayout}_shop_all`)}

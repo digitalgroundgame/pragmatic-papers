@@ -25,7 +25,9 @@ export const Merch: Block = {
     {
       name: "heading",
       type: "text",
-      defaultValue: "The Pragmatic Papers Store",
+      admin: {
+        description: "Optional. Left blank, the carousel renders without a heading.",
+      },
     },
     {
       name: "layout",

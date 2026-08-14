@@ -1100,8 +1100,7 @@
           "name": "heading",
           "type": "varchar",
           "primaryKey": false,
-          "notNull": false,
-          "default": "'The Pragmatic Papers Store'"
+          "notNull": false
         },
         "layout": {
           "name": "layout",
@@ -3410,8 +3409,7 @@
           "name": "heading",
           "type": "varchar",
           "primaryKey": false,
-          "notNull": false,
-          "default": "'The Pragmatic Papers Store'"
+          "notNull": false
         },
         "layout": {
           "name": "layout",
@@ -14660,6 +14658,6 @@
     "tables": {},
     "columns": {}
   },
-  "id": "04207bda-478d-488a-9883-244c83528fe4",
+  "id": "d3085b4c-c538-46dd-ab81-0eacf853a9d5",
   "prevId": "00000000-0000-0000-0000-000000000000"
 }

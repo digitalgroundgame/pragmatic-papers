@@ -5,6 +5,8 @@ import { RefreshCw } from "lucide-react"
 import { useRouter } from "next/navigation"
 import React, { useState } from "react"
 
+import "./SyncNowButton.scss"
+
 interface SyncResponse {
   jobId?: string | number
   /** False when the Shopify credentials aren't set, so the run was a no-op. */
@@ -55,7 +57,9 @@ export function SyncNowButton(): React.ReactNode {
         // Payload's built-in icon set is chevron/edit/plus/x, so the sync glyph
         // comes from lucide. `iconStyle="none"` drops the bordered-circle
         // treatment, which is sized for an icon-only button.
-        icon={<RefreshCw size={15} aria-hidden />}
+        icon={
+          <RefreshCw size={13} className={loading ? "merchSyncSpinner" : undefined} aria-hidden />
+        }
         iconPosition="left"
         iconStyle="none"
       >

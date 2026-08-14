@@ -84,7 +84,12 @@ export const Merch: CollectionConfig = {
       beforeListTable: ["@/collections/Merch/components/SyncNowButton#SyncNowButton"],
     },
     useAsTitle: "title",
-    defaultColumns: ["imageUrl", "title", "price", "availableForSale", "status", "lastSyncedAt"],
+    // Title leads deliberately. Payload links exactly one cell to the document
+    // — the first active column — and a field with a custom `Cell` replaces
+    // that link along with the rest of the default cell. With the thumbnail
+    // first, no cell in the row opened the doc, so the editorial fields were
+    // unreachable. Second place keeps the product shot without taking the link.
+    defaultColumns: ["title", "imageUrl", "price", "availableForSale", "status", "lastSyncedAt"],
     description:
       "Synced hourly from Shopify and stored as Shopify reports it — prices are raw amounts, not formatted strings, and the block decides how they read. Commerce fields are read-only; edit them in Shopify. The presentation fields at the bottom are ours and survive a sync.",
     group: "Store",

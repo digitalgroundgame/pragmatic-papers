@@ -205,8 +205,12 @@ describe("MerchBlock", () => {
     await renderBlock(makeProps())
 
     const badge = screen.getByText("Sold Out").className
-    expect(badge).toContain("bg-secondary")
     expect(badge).not.toContain("bg-brand")
+    // Not `bg-secondary`: it resolves to the same value as the card's own
+    // `bg-muted`, which left the badge invisible behind a transparent product
+    // shot. `bg-primary` is the solid neutral that contrasts in both themes.
+    expect(badge).toContain("bg-primary")
+    expect(badge).not.toContain("bg-secondary")
   })
 
   it("owns its gutter and closes with a rule as a page-layout block", async () => {

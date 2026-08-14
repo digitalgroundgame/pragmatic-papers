@@ -87,9 +87,13 @@ const MerchCard: React.FC<MerchCardProps> = ({ product, layout }) => {
           />
         ) : null}
         {product.badge ? (
-          <Badge variant="secondary" className="absolute top-2 left-2 shadow-sm">
-            {product.badge}
-          </Badge>
+          // `secondary` and `muted` are the same token value, so the badge was
+          // invisible wherever the product shot is transparent and the card's
+          // own background shows through. `default` is the one solid neutral
+          // fill in the set: near-black on the light theme, near-white on the
+          // dark one. That inversion is the point — it's contrast against the
+          // card either way, which a fixed dark chip only manages in one theme.
+          <Badge className="absolute top-2 left-2 shadow-sm">{product.badge}</Badge>
         ) : null}
       </div>
       <div className="flex items-baseline justify-between gap-2">

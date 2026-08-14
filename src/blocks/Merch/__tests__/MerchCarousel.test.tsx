@@ -24,6 +24,17 @@ vi.mock("@/components/ui/carousel", async (importOriginal) => {
   return { ...actual, useCarousel: () => carousel.state }
 })
 
+// Scroll behaviour is embla's to implement, and jsdom gives it no layout to
+// measure — so capture the options it's configured with instead.
+const embla = vi.hoisted(() => ({ options: undefined as Record<string, unknown> | undefined }))
+
+vi.mock("embla-carousel-react", () => ({
+  default: (options: Record<string, unknown>) => {
+    embla.options = options
+    return [() => undefined, undefined]
+  },
+}))
+
 import { Carousel } from "@/components/ui/carousel"
 import { MerchCarousel, MerchCarouselControls, MerchCarouselDots } from "../MerchCarousel"
 
@@ -45,6 +56,7 @@ beforeEach(() => {
   Autoplay.mockClear()
   stubReducedMotion(false)
   carousel.state = { canScrollPrev: false, canScrollNext: false, api: undefined }
+  embla.options = undefined
 })
 
 afterEach(cleanup)
@@ -76,6 +88,18 @@ describe("MerchCarousel", () => {
         stopOnFocusIn: true,
       }),
     )
+  })
+
+  it("pages by however many products the viewport shows, rather than one at a time", () => {
+    render(
+      <MerchCarousel>
+        <div>Slides</div>
+      </MerchCarousel>,
+    )
+
+    // "auto" is embla's read-it-from-the-layout mode, which is what keeps the
+    // step in sync with the responsive slide widths.
+    expect(embla.options).toMatchObject({ slidesToScroll: "auto", align: "start" })
   })
 
   it("skips autoplay for readers who prefer reduced motion", () => {

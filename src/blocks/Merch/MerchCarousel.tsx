@@ -68,8 +68,19 @@ export const MerchCarousel: React.FC<MerchCarouselProps> = ({ autoplay, classNam
 
   return (
     <Carousel
-      // Autoplay that dead-ends at the last slide reads as broken, so cycle.
-      opts={{ align: "start", containScroll: "trimSnaps", loop: isAutoplaying }}
+      opts={{
+        align: "start",
+        containScroll: "trimSnaps",
+        // Autoplay that dead-ends at the last slide reads as broken, so cycle.
+        loop: isAutoplaying,
+        // Page through, don't nudge: an arrow advances by however many
+        // products the viewport is currently showing, so nothing the reader
+        // just looked at is still on screen afterwards. `auto` reads that
+        // count from the rendered layout, which is what keeps it in step with
+        // the responsive slide widths (one up on mobile, four up on desktop)
+        // instead of hard-coding a number per breakpoint.
+        slidesToScroll: "auto",
+      }}
       plugins={plugins}
       className={className}
     >
@@ -103,7 +114,8 @@ export const MerchCarouselControls: React.FC = () => {
 /**
  * Position dots for the one-up layouts, where nothing else tells the reader how
  * many products there are. Counts embla's snap points rather than the slides,
- * so it stays right at widths that show several at once.
+ * so a dot is one press of the arrow — which, with `slidesToScroll: "auto"`,
+ * is a whole page of products at widths that show several at once.
  */
 export const MerchCarouselDots: React.FC = () => {
   const { api } = useCarousel()

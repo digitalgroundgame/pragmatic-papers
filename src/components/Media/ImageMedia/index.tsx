@@ -4,6 +4,7 @@ import React from "react"
 
 import { getMediaUrl } from "@/utilities/getMediaUrl"
 import { cn } from "@/utilities/utils"
+import type { ImageMediaType } from "../types"
 
 // A base64 encoded image to use as a placeholder while the image is loading
 const placeholderBlur =
@@ -12,7 +13,7 @@ const placeholderBlur =
 export type ImageVariant = keyof Required<MediaType>["sizes"]
 
 export interface ImageMediaProps extends Omit<ImageProps, "src" | "alt" | "width" | "height"> {
-  media: MediaType & { mimeType: `image/${string}` }
+  media: ImageMediaType
   variant?: ImageVariant
   containerClassName?: string
 }

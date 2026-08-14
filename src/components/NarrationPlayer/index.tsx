@@ -1,9 +1,9 @@
 "use client"
 
-import type { Media, User } from "@/payload-types"
+import type { User } from "@/payload-types"
 import React from "react"
 
-import { AudioMedia, type AudioMediaProps } from "@/components/Media/AudioMedia"
+import { Media, type AudioMediaType } from "@/components/Media"
 
 // function formatVTTTime(seconds: number): string {
 //   const h = Math.floor(seconds / 3600)
@@ -31,40 +31,27 @@ import { AudioMedia, type AudioMediaProps } from "@/components/Media/AudioMedia"
 // }
 
 interface NarrationPlayerProps {
-  narration: Media
-  narrator?: User | null
+  narration: AudioMediaType
 }
 
-export function NarrationPlayer({ narration, narrator }: NarrationPlayerProps): React.ReactNode {
-  // const [duration, setDuration] = useState(narration.duration ?? 0)
-  // const [captionSrc, setCaptionSrc] = useState("")
+function isNarrator(narrator: number | User | null | undefined): narrator is User {
+  if (!narrator) return false
+  if (typeof narrator === "number") return false
+  return Boolean(narrator.name && narrator.slug)
+}
 
-  // useEffect(() => {
-  //   if (duration <= 0 || !narration.transcript) return
-  //   const vtt = buildWebVTT(narration.transcript, duration)
-  //   const blob = new Blob([vtt], { type: "text/vtt" })
-  //   const url = URL.createObjectURL(blob)
-  //   setCaptionSrc(url)
-  //   return () => URL.revokeObjectURL(url)
-  // }, [duration, narration.transcript])
-
-  if (!narration.url) return null
-
+export function NarrationPlayer({ narration }: NarrationPlayerProps): React.ReactNode {
   return (
     <div className="flex flex-col gap-1.5">
-      {narrator && (
+      {isNarrator(narration.narrator) && (
         <p className="text-muted-foreground font-serif text-sm">
           Narrated by{" "}
-          <a href={`/authors/${narrator.slug}`} className="hover:underline">
-            {narrator.name}
+          <a href={`/authors/${narration.narrator.slug}`} className="hover:underline">
+            {narration.narrator.name}
           </a>
         </p>
       )}
-      <AudioMedia
-        media={narration as AudioMediaProps["media"]}
-        // captionSrc={captionSrc || undefined}
-        // onDurationChange={setDuration}
-      />
+      <Media media={narration} />
     </div>
   )
 }

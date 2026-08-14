@@ -2,7 +2,7 @@ import React from "react"
 
 import { ShareButtons } from "@/components/ShareButtons"
 import { HoverPrefetchLink } from "@/components/Link/HoverPrefetchLink"
-import { Media } from "@/components/Media"
+import { isAudioMedia, Media } from "@/components/Media"
 import { NarrationPlayer } from "@/components/NarrationPlayer"
 import { Separator } from "@/components/ui/separator"
 import type { Article, User } from "@/payload-types"
@@ -56,16 +56,9 @@ export const ArticleHero: React.FC<ArticleHeroProps> = ({ article }) => {
             className="shrink-0 md:order-3"
           />
         </div>
-        {narration && typeof narration !== "number" && (
+        {isAudioMedia(narration) && (
           <div className="md:order-2 md:w-56 md:shrink-0">
-            <NarrationPlayer
-              narration={narration}
-              narrator={
-                typeof narration.narrator === "object" && narration.narrator !== null
-                  ? narration.narrator
-                  : undefined
-              }
-            />
+            <NarrationPlayer narration={narration} />
           </div>
         )}
       </div>

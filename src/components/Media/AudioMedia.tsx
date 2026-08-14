@@ -1,10 +1,10 @@
 "use client"
 
-import type { Media } from "@/payload-types"
 import { Pause, Play } from "lucide-react"
 import React, { useCallback, useEffect, useRef, useState } from "react"
 
 import { Slider } from "@/components/ui/slider"
+import type { AudioMediaType } from "./types"
 
 function formatTime(seconds: number): string {
   if (!isFinite(seconds) || seconds < 0) return "0:00"
@@ -14,7 +14,7 @@ function formatTime(seconds: number): string {
 }
 
 export interface AudioMediaProps {
-  media: Media & { mimeType: `audio/${string}` }
+  media: AudioMediaType
   captionSrc?: string
   onDurationChange?: (duration: number) => void
 }

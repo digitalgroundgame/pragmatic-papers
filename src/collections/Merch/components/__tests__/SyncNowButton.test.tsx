@@ -100,6 +100,8 @@ describe("SyncNowButton", () => {
     })
 
     expect((button as HTMLButtonElement).disabled).toBe(false)
-    expect(button.textContent).toBe("Sync from Shopify now")
+    // `textContent`, not an exact match on the node: the button also renders an
+    // icon, which contributes no text.
+    expect(button.textContent).toContain("Sync Shopify")
   })
 })

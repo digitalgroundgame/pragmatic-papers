@@ -298,7 +298,7 @@ export const Merch: CollectionConfig = {
     },
     {
       type: "collapsible",
-      label: "Presentation (ours — never overwritten by a sync)",
+      label: "Presentation",
       fields: [
         {
           name: "featured",

@@ -1,6 +1,7 @@
 "use client"
 
 import { Button, toast } from "@payloadcms/ui"
+import { RefreshCw } from "lucide-react"
 import { useRouter } from "next/navigation"
 import React, { useState } from "react"
 
@@ -47,8 +48,18 @@ export function SyncNowButton(): React.ReactNode {
 
   return (
     <div style={{ marginBottom: "1rem" }}>
-      <Button buttonStyle="primary" disabled={loading} onClick={onClick}>
-        {loading ? "Syncing..." : "Sync from Shopify now"}
+      <Button
+        buttonStyle="primary"
+        disabled={loading}
+        onClick={onClick}
+        // Payload's built-in icon set is chevron/edit/plus/x, so the sync glyph
+        // comes from lucide. `iconStyle="none"` drops the bordered-circle
+        // treatment, which is sized for an icon-only button.
+        icon={<RefreshCw size={15} aria-hidden />}
+        iconPosition="left"
+        iconStyle="none"
+      >
+        {loading ? "Syncing..." : "Sync Shopify"}
       </Button>
     </div>
   )

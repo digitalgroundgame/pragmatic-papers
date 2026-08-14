@@ -126,7 +126,15 @@ export const Merch: CollectionConfig = {
       type: "text",
       required: true,
       access: { update: storeOwned },
-      admin: storeOwnedAdmin,
+      admin: {
+        ...storeOwnedAdmin,
+        components: {
+          // Payload links one cell per row and picks it by column order. The
+          // title is what an editor reads and reaches for, so it opens the
+          // product from wherever it happens to sit.
+          Cell: "@/collections/Merch/components/ProductTitleCell#ProductTitleCell",
+        },
+      },
     },
     {
       name: "externalId",

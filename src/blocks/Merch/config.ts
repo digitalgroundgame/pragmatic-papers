@@ -21,6 +21,13 @@ export const Merch: Block = {
     singular: "Merch",
     plural: "Merch",
   },
+  admin: {
+    components: {
+      // Several placements can share a page, and collapsed they'd all read
+      // "Merch" — the heading is what tells them apart.
+      Label: "@/blocks/Merch/BlockLabel#MerchBlockLabel",
+    },
+  },
   fields: [
     {
       name: "heading",

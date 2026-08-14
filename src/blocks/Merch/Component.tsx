@@ -71,11 +71,11 @@ const MerchCard: React.FC<MerchCardProps> = ({ product, layout }) => {
     >
       {/* The plate behind the product shot. `bg-muted` is oklch(0.97) — near
           enough to white that a white garment lost its edges against it, and
-          most of the catalogue is white garments. `foreground/8` lands around
-          the card's own border value, dark enough to hold a white product
+          most of the catalogue is white garments. `foreground/10` sits just
+          past the card's own border value, dark enough to hold a white product
           without turning the plate into a colour of its own. Light theme only:
           the dark theme's plate is already darker than anything on it. */}
-      <div className="bg-foreground/8 dark:bg-muted relative aspect-square overflow-hidden rounded-sm border">
+      <div className="bg-foreground/10 dark:bg-muted relative aspect-square overflow-hidden rounded-sm border">
         {isMedia(product.image) ? (
           <Media
             media={product.image}

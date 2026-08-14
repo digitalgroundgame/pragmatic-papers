@@ -1,18 +1,18 @@
 "use client"
 
-import { useConfig } from "@payloadcms/ui"
-import { formatAdminURL } from "@payloadcms/ui/shared"
 import Link from "next/link"
 import React from "react"
 
+import { type DocumentHrefArgs, useDocumentHref } from "./useDocumentHref"
+
 interface ProductThumbnailCellProps {
   cellData?: string | null
-  /** Payload sets this on the one column that opens the document. */
+  /** Payload sets this on the one column it treats as the row's link. */
   link?: boolean
-  /** Pre-computed destination, when Payload has one. */
   linkURL?: string
   collectionSlug?: string
   rowData?: { id?: number | string }
+  viewType?: DocumentHrefArgs["viewType"]
 }
 
 /**
@@ -23,10 +23,8 @@ interface ProductThumbnailCellProps {
  * this is the admin, the URL is remote and already CDN-served, and `next/image`
  * would put the optimizer in front of a 40px thumbnail for nothing.
  *
- * A custom `Cell` replaces Payload's `DefaultCell` outright, including the link
- * that opens the document — so this reproduces it. Payload marks exactly one
- * column as the linked one and passes that down as `link`, which means the row
- * stays clickable no matter which column an editor drags into first place.
+ * Links only when Payload marks this the row's linked column, which is the
+ * behaviour a first-column cell would otherwise have lost by being custom.
  */
 export function ProductThumbnailCell({
   cellData,
@@ -34,12 +32,9 @@ export function ProductThumbnailCell({
   linkURL,
   collectionSlug,
   rowData,
+  viewType,
 }: ProductThumbnailCellProps): React.ReactNode {
-  const {
-    config: {
-      routes: { admin: adminRoute },
-    },
-  } = useConfig()
+  const href = useDocumentHref({ linkURL, collectionSlug, rowData, viewType })
 
   const thumbnail = cellData ? (
     // eslint-disable-next-line @next/next/no-img-element -- remote admin thumbnail, see above
@@ -54,20 +49,7 @@ export function ProductThumbnailCell({
     <span aria-label="No image">—</span>
   )
 
-  if (!link) return thumbnail
-
-  // Same fallback DefaultCell uses: Payload only passes `linkURL` when it has
-  // one to override with, and otherwise builds the path itself.
-  const href =
-    linkURL ??
-    (collectionSlug && rowData?.id != null
-      ? formatAdminURL({
-          adminRoute,
-          path: `/collections/${collectionSlug}/${encodeURIComponent(String(rowData.id))}`,
-        })
-      : undefined)
-
-  if (!href) return thumbnail
+  if (!link || !href) return thumbnail
 
   return (
     <Link href={href} prefetch={false} style={{ display: "block" }}>

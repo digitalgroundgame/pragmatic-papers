@@ -133,11 +133,11 @@ export const MerchBlock = async ({
         aria-label={headingText}
         className={cn(sectionVariants({ gutter: enableGutter }), className)}
       >
-        <MerchCarousel autoplay={autoplay} className="space-y-6">
+        <MerchCarousel autoplay={autoplay} className="space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <h3>{headingText}</h3>
             <div className="flex w-full items-center justify-between gap-3 sm:w-fit">
-              {store ? (
+              {store && (
                 <LinkButton
                   href={withMerchUtm(store, `${merchLayout}_shop_all`)}
                   target="_blank"
@@ -147,7 +147,7 @@ export const MerchBlock = async ({
                   <ShoppingCart />
                   Shop all
                 </LinkButton>
-              ) : null}
+              )}
               <MerchCarouselControls />
             </div>
           </div>
@@ -163,11 +163,11 @@ export const MerchBlock = async ({
           {merchLayout === "square" ? <MerchCarouselDots /> : null}
         </MerchCarousel>
       </section>
-      {enableGutter ? (
+      {enableGutter && (
         <div className="container mb-9 last:hidden md:mb-12">
           <Separator />
         </div>
-      ) : null}
+      )}
     </>
   )
 }

@@ -84,11 +84,10 @@ export const Merch: CollectionConfig = {
       beforeListTable: ["@/collections/Merch/components/SyncNowButton#SyncNowButton"],
     },
     useAsTitle: "title",
-    // Title leads deliberately. Payload links exactly one cell to the document
-    // — the first active column — and a field with a custom `Cell` replaces
-    // that link along with the rest of the default cell. With the thumbnail
-    // first, no cell in the row opened the doc, so the editorial fields were
-    // unreachable. Second place keeps the product shot without taking the link.
+    // Title leads because it's the row's primary identifier, not because the
+    // order is load-bearing: `ProductThumbnailCell` honours the `link` prop
+    // Payload passes to whichever column comes first, so an editor can drag
+    // these into any order and still reach the document.
     defaultColumns: ["title", "imageUrl", "price", "availableForSale", "status", "lastSyncedAt"],
     description:
       "Synced hourly from Shopify and stored as Shopify reports it — prices are raw amounts, not formatted strings, and the block decides how they read. Commerce fields are read-only; edit them in Shopify. The presentation fields at the bottom are ours and survive a sync.",

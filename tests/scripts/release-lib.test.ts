@@ -9,11 +9,19 @@ import {
   ask,
   autoMergeAndWait,
   autoMergeCommand,
+  branchExists,
+  bumpMessage,
   capture,
+  commitIfStaged,
+  commitSubjects,
+  createOrReusePr,
   findVersion,
+  hasStagedChanges,
   parsePrRef,
+  prListCommand,
   prState,
   prStateCommand,
+  prepareBranch,
   requireGh,
   run,
   waitForMerge,
@@ -81,6 +89,17 @@ describe("command builders", () => {
     const cmd = autoMergeCommand("https://github.com/o/r/pull/7")
     expect(cmd).toBe(`gh pr merge "https://github.com/o/r/pull/7" --auto --merge`)
     expect(cmd).not.toContain("--squash")
+  })
+
+  it("bumpMessage matches the commit subject the release makes", () => {
+    expect(bumpMessage("v1.2.3")).toBe("Bump package.json to v1.2.3")
+  })
+
+  it("prListCommand looks up only the open PR for that head → base pair", () => {
+    const cmd = prListCommand("chore/v1.2.3", "dev")
+    expect(cmd).toContain("--head chore/v1.2.3")
+    expect(cmd).toContain("--base dev")
+    expect(cmd).toContain("--state open")
   })
 })
 
@@ -172,6 +191,73 @@ describe("side-effecting helpers", () => {
     exit.mockRestore()
   })
 
+  it("branchExists reports on the local ref, not a remote one", () => {
+    vi.mocked(execSync).mockReturnValue("" as never)
+    expect(branchExists("chore/v1.2.3")).toBe(true)
+    expect(execSync).toHaveBeenCalledWith(
+      "git rev-parse --verify --quiet refs/heads/chore/v1.2.3",
+      expect.objectContaining({ stdio: "ignore" }),
+    )
+
+    vi.mocked(execSync).mockImplementation(() => {
+      throw new Error("not a ref")
+    })
+    expect(branchExists("chore/v1.2.3")).toBe(false)
+  })
+
+  it("commitSubjects lists the branch's commits and drops the trailing blank", () => {
+    vi.mocked(execSync).mockReturnValue("Bump package.json to v1.2.3\n" as never)
+    expect(commitSubjects("dev", "chore/v1.2.3")).toEqual(["Bump package.json to v1.2.3"])
+
+    vi.mocked(execSync).mockReturnValue("" as never)
+    expect(commitSubjects("dev", "chore/v1.2.3")).toEqual([])
+  })
+
+  it("hasStagedChanges inverts the exit code of git diff --cached --quiet", () => {
+    vi.mocked(execSync).mockReturnValue("" as never)
+    expect(hasStagedChanges()).toBe(false)
+
+    vi.mocked(execSync).mockImplementation(() => {
+      throw new Error("exit 1")
+    })
+    expect(hasStagedChanges()).toBe(true)
+  })
+
+  it("commitIfStaged commits staged work", () => {
+    // `git diff --cached --quiet` exits non-zero when something is staged.
+    vi.mocked(execSync).mockImplementation(((cmd: string) => {
+      if (cmd.startsWith("git diff")) throw new Error("exit 1")
+      return ""
+    }) as never)
+
+    commitIfStaged("Bump package.json to v1.2.3")
+    expect(execSync).toHaveBeenCalledWith(
+      'git commit -m "Bump package.json to v1.2.3"',
+      expect.objectContaining({ stdio: "inherit" }),
+    )
+  })
+
+  it("commitIfStaged skips the commit when a retry already made it", () => {
+    vi.mocked(execSync).mockReturnValue("" as never) // nothing staged
+    commitIfStaged("Bump package.json to v1.2.3")
+    expect(execSync).toHaveBeenCalledOnce() // only the staged check, no commit
+  })
+
+  it("createOrReusePr reuses an open PR instead of creating a second one", () => {
+    vi.mocked(execSync).mockReturnValue("https://github.com/o/r/pull/9\n" as never)
+    expect(createOrReusePr("chore/v1.2.3", "dev")).toBe("https://github.com/o/r/pull/9")
+    expect(execSync).toHaveBeenCalledOnce()
+    expect(execSync).toHaveBeenCalledWith(prListCommand("chore/v1.2.3", "dev"), expect.any(Object))
+  })
+
+  it("createOrReusePr creates a PR when none is open", () => {
+    vi.mocked(execSync)
+      .mockReturnValueOnce("" as never) // no existing PR
+      .mockReturnValueOnce("https://github.com/o/r/pull/10\n" as never)
+    expect(createOrReusePr("chore/v1.2.3", "dev")).toBe("https://github.com/o/r/pull/10")
+    expect(execSync).toHaveBeenNthCalledWith(2, "gh pr create -f -B dev", expect.any(Object))
+  })
+
   it("autoMergeAndWait falls back to a manual prompt when auto-merge can't be enabled", async () => {
     stubPrompt("")
     vi.mocked(execSync)
@@ -181,5 +267,67 @@ describe("side-effecting helpers", () => {
       .mockReturnValueOnce("MERGED\n" as never) // waitForMerge → prState
     await autoMergeAndWait(PR, 1)
     expect(readline.createInterface).toHaveBeenCalled()
+  })
+})
+
+// ── prepareBranch: resuming a half-finished run ────────────────────────────
+
+describe("prepareBranch", () => {
+  const BRANCH = "chore/v1.2.3"
+
+  /** Route each git command to a canned result; `exists` toggles the ref lookup. */
+  function stubGit({ exists, subjects = "" }: { exists: boolean; subjects?: string }) {
+    vi.mocked(execSync).mockImplementation(((cmd: string) => {
+      if (cmd.startsWith("git rev-parse")) {
+        if (!exists) throw new Error("not a ref")
+        return ""
+      }
+      if (cmd.startsWith("git log")) return subjects
+      return ""
+    }) as never)
+  }
+
+  const gitCalls = () => vi.mocked(execSync).mock.calls.map((c) => c[0] as string)
+
+  beforeEach(() => {
+    vi.mocked(execSync).mockReset()
+    vi.spyOn(console, "warn").mockImplementation(() => undefined)
+    vi.spyOn(console, "error").mockImplementation(() => undefined)
+  })
+
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  it("creates the branch when it does not exist yet", () => {
+    stubGit({ exists: false })
+    prepareBranch(BRANCH, "dev", "v1.2.3")
+    expect(gitCalls()).toContain(`git checkout -b ${BRANCH}`)
+  })
+
+  it("reuses an empty branch left behind by a failed run", () => {
+    stubGit({ exists: true, subjects: "" })
+    prepareBranch(BRANCH, "dev", "v1.2.3")
+
+    const calls = gitCalls()
+    expect(calls).toContain(`git checkout ${BRANCH}`)
+    expect(calls).not.toContain(`git checkout -b ${BRANCH}`)
+  })
+
+  it("reuses a branch that already carries the bump commit", () => {
+    stubGit({ exists: true, subjects: "Bump package.json to v1.2.3\n" })
+    prepareBranch(BRANCH, "dev", "v1.2.3")
+    expect(gitCalls()).toContain(`git checkout ${BRANCH}`)
+  })
+
+  it("refuses to touch a branch carrying unrelated commits", () => {
+    stubGit({ exists: true, subjects: "feat: something else\n" })
+    const exit = vi.spyOn(process, "exit").mockImplementation(((code?: number) => {
+      throw new Error(`exit:${code}`)
+    }) as never)
+
+    expect(() => prepareBranch(BRANCH, "dev", "v1.2.3")).toThrow("exit:1")
+    expect(gitCalls()).not.toContain(`git checkout ${BRANCH}`)
+    exit.mockRestore()
   })
 })

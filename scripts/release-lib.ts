@@ -35,6 +35,19 @@ export function parsePrRef(prUrl: string): PrRef {
   return { owner, repo, number }
 }
 
+/**
+ * Subject of the version-bump commit. Shared so a retry can recognise the commit
+ * an earlier, half-finished run already made (see `prepareBranch`).
+ */
+export function bumpMessage(tag: string): string {
+  return `Bump package.json to ${tag}`
+}
+
+/** `gh pr list` command that prints the open PR URL for `branch` → `base`, if any. */
+export function prListCommand(branch: string, base: string): string {
+  return `gh pr list --head ${branch} --base ${base} --state open --json url --jq '.[0].url // empty'`
+}
+
 /** jq program that collapses a PR's state into MERGED / OPEN / CLOSED. */
 export const PR_STATE_JQ = 'if .merged then "MERGED" else (.state | ascii_upcase) end'
 
@@ -70,6 +83,78 @@ export function requireGh(): void {
     console.error(`${red("✖")} GitHub CLI (gh) is required. See: https://cli.github.com`)
     process.exit(1)
   }
+}
+
+/** True when a local branch of this name exists. */
+export function branchExists(branch: string): boolean {
+  try {
+    execSync(`git rev-parse --verify --quiet refs/heads/${branch}`, { cwd: root, stdio: "ignore" })
+    return true
+  } catch {
+    return false
+  }
+}
+
+/** Subjects of the commits on `branch` that are not yet on `base`. */
+export function commitSubjects(base: string, branch: string): string[] {
+  return capture(`git log --format=%s ${base}..${branch}`).split("\n").filter(Boolean)
+}
+
+/** True when `git add` has staged something that is not yet committed. */
+export function hasStagedChanges(): boolean {
+  try {
+    execSync("git diff --cached --quiet", { cwd: root, stdio: "ignore" })
+    return false
+  } catch {
+    return true
+  }
+}
+
+/**
+ * Check out the release/hotfix branch, resuming one left behind by a half-finished
+ * run instead of dying on `git checkout -b`. A run can fail after the branch exists
+ * (rejected signing passphrase, pre-commit hook, network) and every retry used to
+ * hit `fatal: a branch named ... already exists`.
+ *
+ * Reuse is only safe when the branch carries nothing but the version bump, so a
+ * branch with unexpected commits stops the run and names the recovery options
+ * rather than resetting work.
+ */
+export function prepareBranch(branch: string, base: string, tag: string): void {
+  if (!branchExists(branch)) {
+    run(`git checkout -b ${branch}`)
+    return
+  }
+
+  const unexpected = commitSubjects(base, branch).filter((s) => s !== bumpMessage(tag))
+  if (unexpected.length > 0) {
+    console.error(`${red("✖")} Branch ${branch} exists and has commits beyond the version bump:`)
+    for (const subject of unexpected) console.error(`${red("✖")}   ${subject}`)
+    console.error(`${red("✖")} Finish or drop it by hand, e.g. git branch -D ${branch}`)
+    process.exit(1)
+  }
+
+  console.warn(`${yellow("!")} Reusing ${branch} left by an earlier run`)
+  run(`git checkout ${branch}`)
+}
+
+/** Commit staged changes, tolerating a retry where an earlier run already committed. */
+export function commitIfStaged(message: string): void {
+  if (!hasStagedChanges()) {
+    console.warn(`${yellow("!")} Nothing staged — version bump is already committed`)
+    return
+  }
+  run(`git commit -m "${message}"`)
+}
+
+/** Open PR URL for `branch` → `base`, reusing one from an earlier run if present. */
+export function createOrReusePr(branch: string, base: string): string {
+  const existing = capture(prListCommand(branch, base))
+  if (existing) {
+    console.warn(`${yellow("!")} Reusing open PR for ${branch} → ${base}`)
+    return existing
+  }
+  return capture(`gh pr create -f -B ${base}`)
 }
 
 export function ask(question: string): Promise<string> {

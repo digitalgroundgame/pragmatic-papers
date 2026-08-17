@@ -54,13 +54,20 @@ exports[`ArticleHero > collapses authors past the cap into a remainder 1`] = `
               BJ
             </span>
           </a>
-          <div
-            class="bg-muted text-muted-foreground ring-background relative flex size-8 shrink-0 items-center justify-center rounded-full text-sm ring-2 group-has-data-[size=lg]/avatar-group:size-10 group-has-data-[size=sm]/avatar-group:size-6 [&>svg]:size-4 group-has-data-[size=lg]/avatar-group:[&>svg]:size-5 group-has-data-[size=sm]/avatar-group:[&>svg]:size-3"
-            data-slot="avatar-group-count"
+          <button
+            aria-expanded="false"
+            aria-label="Show all 6 authors"
+            class="focus-visible:ring-ring flex cursor-pointer rounded-full p-0 focus-visible:ring-2 focus-visible:outline-none"
+            type="button"
           >
-            +
-            4
-          </div>
+            <div
+              class="bg-muted text-muted-foreground ring-background relative flex size-8 shrink-0 items-center justify-center rounded-full text-sm ring-2 group-has-data-[size=lg]/avatar-group:size-10 group-has-data-[size=sm]/avatar-group:size-6 [&>svg]:size-4 group-has-data-[size=lg]/avatar-group:[&>svg]:size-5 group-has-data-[size=sm]/avatar-group:[&>svg]:size-3"
+              data-slot="avatar-group-count"
+            >
+              +
+              4
+            </div>
+          </button>
         </div>
         <span>
           <a
@@ -77,7 +84,14 @@ exports[`ArticleHero > collapses authors past the cap into a remainder 1`] = `
             Bob Jones
           </a>
            & 
-          4 more
+          <button
+            aria-expanded="false"
+            class="focus-visible:ring-ring cursor-pointer rounded-sm underline-offset-4 hover:underline focus-visible:ring-2 focus-visible:outline-none"
+            type="button"
+          >
+            4
+             more
+          </button>
         </span>
         •
         <a

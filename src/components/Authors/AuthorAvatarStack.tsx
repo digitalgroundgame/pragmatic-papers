@@ -14,6 +14,8 @@ interface AuthorAvatarStackProps {
   authors: User[]
   /** Total circles to render, counting the "+N" as one of them. */
   maxVisible?: number
+  /** When given, the "+N" becomes a button instead of a static badge. */
+  onOverflowClick?: () => void
 }
 
 function getThumbnailUrl(author: User): string | undefined {
@@ -25,6 +27,7 @@ function getThumbnailUrl(author: User): string | undefined {
 export function AuthorAvatarStack({
   authors,
   maxVisible = MAX_AUTHOR_SLOTS,
+  onOverflowClick,
 }: AuthorAvatarStackProps): React.ReactNode {
   if (!authors.length) return null
 
@@ -54,7 +57,25 @@ export function AuthorAvatarStack({
           </Avatar>
         )
       })}
-      {overflow > 0 && <AvatarGroupCount>+{overflow}</AvatarGroupCount>}
+      {overflow > 0 &&
+        (onOverflowClick ? (
+          // Wraps the badge rather than making AvatarGroupCount polymorphic:
+          // the badge keeps carrying the size and ring, and the button is a
+          // bare flex item, so the stack looks the same either way. It cannot
+          // wrap the whole group — the avatars are links, and a link inside a
+          // button is not valid HTML.
+          <button
+            type="button"
+            onClick={onOverflowClick}
+            aria-expanded={false}
+            aria-label={`Show all ${authors.length} authors`}
+            className="focus-visible:ring-ring flex cursor-pointer rounded-full p-0 focus-visible:ring-2 focus-visible:outline-none"
+          >
+            <AvatarGroupCount>+{overflow}</AvatarGroupCount>
+          </button>
+        ) : (
+          <AvatarGroupCount>+{overflow}</AvatarGroupCount>
+        ))}
     </AvatarGroup>
   )
 }

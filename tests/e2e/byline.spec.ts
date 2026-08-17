@@ -27,6 +27,22 @@ test("byline collapses a fourth author into a remainder @visual", async ({ page 
     await expect(cards.filter({ hasText: name })).toBeVisible()
   }
 
+  // The remainder expands the byline in place, and the +N badge does the same.
+  await byline.getByRole("button", { name: "2 more" }).click()
+  await expect(byline).toContainText(
+    "Teagan Wordsmith, Sienna Scribe, Marcus Ledger & Alexandra Quill",
+  )
+  await expect(byline.locator('[data-slot="avatar"]')).toHaveCount(4)
+
+  await byline.getByRole("button", { name: "Show less" }).click()
+  await expect(byline.locator('[data-slot="avatar"]')).toHaveCount(2)
+
+  await byline.getByRole("button", { name: "Show all 4 authors" }).click()
+  await expect(byline.locator('[data-slot="avatar"]')).toHaveCount(4)
+
+  await byline.getByRole("button", { name: "Show less" }).click()
+  await expect(byline.locator('[data-slot="avatar"]')).toHaveCount(2)
+
   test.skip(testInfo.project.name !== "chromium", "visual baseline captured on chromium only")
   await waitForStableRender(page)
   await waitForStableBox(byline)

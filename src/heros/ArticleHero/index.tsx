@@ -1,6 +1,6 @@
 import React from "react"
 
-import { AuthorByline } from "@/components/Authors/AuthorByline"
+import { Byline } from "@/components/Authors/Byline"
 import { ShareButtons } from "@/components/ShareButtons"
 import { HoverPrefetchLink } from "@/components/Link/HoverPrefetchLink"
 import { Media } from "@/components/Media"
@@ -34,7 +34,7 @@ export const ArticleHero: React.FC<ArticleHeroProps> = ({ article }) => {
       <div className="flex flex-col gap-2 md:flex-row md:items-center md:gap-8">
         <div className="flex flex-1 items-start justify-between gap-2 md:contents">
           <div className="dark:text-brand-high-contrast text-brand flex flex-1 flex-wrap items-center gap-2 font-serif font-bold underline-offset-4 md:order-1">
-            <AuthorByline authors={populatedAuthors} />
+            <Byline authors={populatedAuthors} />
             {"•"}
             {publishedAt && (
               <HoverPrefetchLink href={`/articles/${article.slug}`} className="hover:underline">

@@ -8,7 +8,7 @@ import { splitAuthors } from "@/components/Authors/splitAuthors"
 import { HoverPrefetchLink } from "@/components/Link/HoverPrefetchLink"
 import { getSeparator } from "@/utilities/getSeparator"
 
-interface AuthorBylineProps {
+interface BylineProps {
   authors: User[]
 }
 
@@ -21,7 +21,7 @@ interface AuthorBylineProps {
  * which is why this is a single client component rather than the stack and the
  * list sitting side by side in the hero.
  */
-export function AuthorByline({ authors }: AuthorBylineProps): React.ReactNode {
+export function Byline({ authors }: BylineProps): React.ReactNode {
   const [expanded, setExpanded] = useState(false)
 
   const { visible, overflow } = splitAuthors(authors)

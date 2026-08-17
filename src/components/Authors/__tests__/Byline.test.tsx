@@ -2,7 +2,7 @@ import type { User } from "@/payload-types"
 import { cleanup, fireEvent, render, screen } from "@testing-library/react"
 import { afterEach, describe, expect, it } from "vitest"
 
-import { AuthorByline } from "../AuthorByline"
+import { Byline } from "../Byline"
 
 // This project doesn't enable vitest `globals`, so RTL never registers its
 // automatic cleanup — without this every render piles up in the same document
@@ -22,20 +22,20 @@ const FOUR = [
 const avatarCount = (container: HTMLElement): number =>
   container.querySelectorAll('[data-slot="avatar"]').length
 
-describe("AuthorByline", () => {
+describe("Byline", () => {
   it("renders nothing without authors", () => {
-    const { container } = render(<AuthorByline authors={[]} />)
+    const { container } = render(<Byline authors={[]} />)
     expect(container.firstChild).toBeNull()
   })
 
   it("names every author when they fit, with no toggle", () => {
-    const { container } = render(<AuthorByline authors={FOUR.slice(0, 3)} />)
+    const { container } = render(<Byline authors={FOUR.slice(0, 3)} />)
     expect(container.textContent).toContain("Alice Smith, Bob Jones & Carol Diaz")
     expect(screen.queryByRole("button")).toBe(null)
   })
 
   it("collapses past the cap into a remainder button", () => {
-    const { container } = render(<AuthorByline authors={FOUR} />)
+    const { container } = render(<Byline authors={FOUR} />)
     expect(container.textContent).toContain("Alice Smith, Bob Jones & 2 more")
     expect(screen.getByRole("button", { name: "2 more" }).getAttribute("aria-expanded")).toBe(
       "false",
@@ -43,7 +43,7 @@ describe("AuthorByline", () => {
   })
 
   it("reveals every name and avatar when the remainder is clicked", () => {
-    const { container } = render(<AuthorByline authors={FOUR} />)
+    const { container } = render(<Byline authors={FOUR} />)
     expect(avatarCount(container)).toBe(2)
 
     fireEvent.click(screen.getByRole("button", { name: "2 more" }))
@@ -54,7 +54,7 @@ describe("AuthorByline", () => {
   })
 
   it("expands from the +N badge too", () => {
-    const { container } = render(<AuthorByline authors={FOUR} />)
+    const { container } = render(<Byline authors={FOUR} />)
 
     fireEvent.click(screen.getByRole("button", { name: "Show all 4 authors" }))
 
@@ -63,7 +63,7 @@ describe("AuthorByline", () => {
   })
 
   it("collapses again from Show less", () => {
-    const { container } = render(<AuthorByline authors={FOUR} />)
+    const { container } = render(<Byline authors={FOUR} />)
     fireEvent.click(screen.getByRole("button", { name: "2 more" }))
 
     const showLess = screen.getByRole("button", { name: "Show less" })
@@ -75,7 +75,7 @@ describe("AuthorByline", () => {
   })
 
   it("links every name it shows, expanded or not", () => {
-    render(<AuthorByline authors={FOUR} />)
+    render(<Byline authors={FOUR} />)
     expect(screen.getByRole("link", { name: "Alice Smith" }).getAttribute("href")).toBe(
       "/authors/alice-smith",
     )

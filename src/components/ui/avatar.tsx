@@ -41,7 +41,7 @@ function AvatarFallback({ className, ...props }: AvatarPrimitive.Fallback.Props)
         // Inverted against the page — dark fill in light mode, light fill in
         // dark — so initials read as a deliberate mark rather than a missing
         // image, and stand out against the surrounding text.
-        "bg-foreground text-background flex size-full items-center justify-center rounded-full text-sm group-data-[size=sm]/avatar:text-xs",
+        "bg-foreground text-background flex size-full items-center justify-center rounded-full font-mono text-sm group-data-[size=sm]/avatar:text-xs",
         className,
       )}
       {...props}

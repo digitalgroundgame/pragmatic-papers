@@ -15,7 +15,7 @@ exports[`AvatarStack > renders a single author 1`] = `
     tabindex="-1"
   >
     <span
-      class="bg-foreground text-background flex size-full items-center justify-center rounded-full text-sm group-data-[size=sm]/avatar:text-xs"
+      class="bg-foreground text-background flex size-full items-center justify-center rounded-full font-mono text-sm group-data-[size=sm]/avatar:text-xs"
       data-slot="avatar-fallback"
     >
       AS
@@ -39,7 +39,7 @@ exports[`AvatarStack > renders author with null name using fallback initial 1`] 
     tabindex="-1"
   >
     <span
-      class="bg-foreground text-background flex size-full items-center justify-center rounded-full text-sm group-data-[size=sm]/avatar:text-xs"
+      class="bg-foreground text-background flex size-full items-center justify-center rounded-full font-mono text-sm group-data-[size=sm]/avatar:text-xs"
       data-slot="avatar-fallback"
     >
       A
@@ -63,7 +63,7 @@ exports[`AvatarStack > renders author with numeric profileImage id 1`] = `
     tabindex="-1"
   >
     <span
-      class="bg-foreground text-background flex size-full items-center justify-center rounded-full text-sm group-data-[size=sm]/avatar:text-xs"
+      class="bg-foreground text-background flex size-full items-center justify-center rounded-full font-mono text-sm group-data-[size=sm]/avatar:text-xs"
       data-slot="avatar-fallback"
     >
       AS
@@ -87,7 +87,7 @@ exports[`AvatarStack > renders author with profileImage object with URL 1`] = `
     tabindex="-1"
   >
     <span
-      class="bg-foreground text-background flex size-full items-center justify-center rounded-full text-sm group-data-[size=sm]/avatar:text-xs"
+      class="bg-foreground text-background flex size-full items-center justify-center rounded-full font-mono text-sm group-data-[size=sm]/avatar:text-xs"
       data-slot="avatar-fallback"
     >
       AS
@@ -111,7 +111,7 @@ exports[`AvatarStack > renders author with profileImage object without URL 1`] =
     tabindex="-1"
   >
     <span
-      class="bg-foreground text-background flex size-full items-center justify-center rounded-full text-sm group-data-[size=sm]/avatar:text-xs"
+      class="bg-foreground text-background flex size-full items-center justify-center rounded-full font-mono text-sm group-data-[size=sm]/avatar:text-xs"
       data-slot="avatar-fallback"
     >
       AS
@@ -135,7 +135,7 @@ exports[`AvatarStack > renders multiple authors within the visible cap 1`] = `
     tabindex="-1"
   >
     <span
-      class="bg-foreground text-background flex size-full items-center justify-center rounded-full text-sm group-data-[size=sm]/avatar:text-xs"
+      class="bg-foreground text-background flex size-full items-center justify-center rounded-full font-mono text-sm group-data-[size=sm]/avatar:text-xs"
       data-slot="avatar-fallback"
     >
       AS
@@ -151,7 +151,7 @@ exports[`AvatarStack > renders multiple authors within the visible cap 1`] = `
     tabindex="-1"
   >
     <span
-      class="bg-foreground text-background flex size-full items-center justify-center rounded-full text-sm group-data-[size=sm]/avatar:text-xs"
+      class="bg-foreground text-background flex size-full items-center justify-center rounded-full font-mono text-sm group-data-[size=sm]/avatar:text-xs"
       data-slot="avatar-fallback"
     >
       BJ
@@ -167,7 +167,7 @@ exports[`AvatarStack > renders multiple authors within the visible cap 1`] = `
     tabindex="-1"
   >
     <span
-      class="bg-foreground text-background flex size-full items-center justify-center rounded-full text-sm group-data-[size=sm]/avatar:text-xs"
+      class="bg-foreground text-background flex size-full items-center justify-center rounded-full font-mono text-sm group-data-[size=sm]/avatar:text-xs"
       data-slot="avatar-fallback"
     >
       CW
@@ -191,7 +191,7 @@ exports[`AvatarStack > renders two avatars and a +3 when five authors exceed the
     tabindex="-1"
   >
     <span
-      class="bg-foreground text-background flex size-full items-center justify-center rounded-full text-sm group-data-[size=sm]/avatar:text-xs"
+      class="bg-foreground text-background flex size-full items-center justify-center rounded-full font-mono text-sm group-data-[size=sm]/avatar:text-xs"
       data-slot="avatar-fallback"
     >
       AS
@@ -207,7 +207,7 @@ exports[`AvatarStack > renders two avatars and a +3 when five authors exceed the
     tabindex="-1"
   >
     <span
-      class="bg-foreground text-background flex size-full items-center justify-center rounded-full text-sm group-data-[size=sm]/avatar:text-xs"
+      class="bg-foreground text-background flex size-full items-center justify-center rounded-full font-mono text-sm group-data-[size=sm]/avatar:text-xs"
       data-slot="avatar-fallback"
     >
       BJ

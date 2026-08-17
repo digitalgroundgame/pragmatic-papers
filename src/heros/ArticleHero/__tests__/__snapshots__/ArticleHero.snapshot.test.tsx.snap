@@ -28,7 +28,7 @@ exports[`ArticleHero > collapses authors past the cap into a remainder 1`] = `
             data-size="sm"
             data-slot="avatar"
             href="/authors/alice-smith"
-            style="z-index: 3;"
+            style="z-index: 2;"
             tabindex="-1"
           >
             <span
@@ -44,7 +44,7 @@ exports[`ArticleHero > collapses authors past the cap into a remainder 1`] = `
             data-size="sm"
             data-slot="avatar"
             href="/authors/bob-jones"
-            style="z-index: 2;"
+            style="z-index: 1;"
             tabindex="-1"
           >
             <span
@@ -54,28 +54,12 @@ exports[`ArticleHero > collapses authors past the cap into a remainder 1`] = `
               BJ
             </span>
           </a>
-          <a
-            aria-hidden="true"
-            class="group/avatar after:border-border relative flex size-8 shrink-0 overflow-hidden rounded-full select-none after:absolute after:inset-0 after:rounded-full after:border after:mix-blend-darken data-[size=2xl]:size-32 data-[size=lg]:size-10 data-[size=sm]:size-6 data-[size=xl]:size-24 dark:after:mix-blend-lighten"
-            data-size="sm"
-            data-slot="avatar"
-            href="/authors/carol-diaz"
-            style="z-index: 1;"
-            tabindex="-1"
-          >
-            <span
-              class="bg-muted text-muted-foreground flex size-full items-center justify-center rounded-full text-sm group-data-[size=sm]/avatar:text-xs"
-              data-slot="avatar-fallback"
-            >
-              CD
-            </span>
-          </a>
           <div
             class="bg-muted text-muted-foreground ring-background relative flex size-8 shrink-0 items-center justify-center rounded-full text-sm ring-2 group-has-data-[size=lg]/avatar-group:size-10 group-has-data-[size=sm]/avatar-group:size-6 [&>svg]:size-4 group-has-data-[size=lg]/avatar-group:[&>svg]:size-5 group-has-data-[size=sm]/avatar-group:[&>svg]:size-3"
             data-slot="avatar-group-count"
           >
             +
-            3
+            4
           </div>
         </div>
         <span>
@@ -92,15 +76,8 @@ exports[`ArticleHero > collapses authors past the cap into a remainder 1`] = `
           >
             Bob Jones
           </a>
-          , 
-          <a
-            class="hover:underline"
-            href="/authors/carol-diaz"
-          >
-            Carol Diaz
-          </a>
            & 
-          3 more
+          4 more
         </span>
         •
         <a
@@ -386,7 +363,7 @@ exports[`ArticleHero > renders narration as numeric id (no player shown) 1`] = `
         class="group/button inline-flex items-center justify-center border bg-clip-padding text-sm font-medium whitespace-nowrap transition-all outline-none select-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 active:not-aria-[haspopup]:translate-y-px disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 border-border bg-background hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:border-input dark:bg-input/30 dark:hover:bg-input/50 size-7 rounded-[min(var(--radius-md),12px)] in-data-[slot=button-group]:rounded-lg shrink-0 md:order-3"
         data-base-ui-click-trigger=""
         data-slot="popover-trigger"
-        id="base-ui-_r_k_"
+        id="base-ui-_r_n_"
         tabindex="0"
         type="button"
       >
@@ -481,7 +458,7 @@ exports[`ArticleHero > renders narration as object (shows player) 1`] = `
         class="group/button inline-flex items-center justify-center border bg-clip-padding text-sm font-medium whitespace-nowrap transition-all outline-none select-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 active:not-aria-[haspopup]:translate-y-px disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 border-border bg-background hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:border-input dark:bg-input/30 dark:hover:bg-input/50 size-7 rounded-[min(var(--radius-md),12px)] in-data-[slot=button-group]:rounded-lg shrink-0 md:order-3"
         data-base-ui-click-trigger=""
         data-slot="popover-trigger"
-        id="base-ui-_r_n_"
+        id="base-ui-_r_q_"
         tabindex="0"
         type="button"
       >
@@ -586,7 +563,7 @@ exports[`ArticleHero > renders with hero image 1`] = `
         class="group/button inline-flex items-center justify-center border bg-clip-padding text-sm font-medium whitespace-nowrap transition-all outline-none select-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 active:not-aria-[haspopup]:translate-y-px disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 border-border bg-background hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:border-input dark:bg-input/30 dark:hover:bg-input/50 size-7 rounded-[min(var(--radius-md),12px)] in-data-[slot=button-group]:rounded-lg shrink-0 md:order-3"
         data-base-ui-click-trigger=""
         data-slot="popover-trigger"
-        id="base-ui-_r_h_"
+        id="base-ui-_r_k_"
         tabindex="0"
         type="button"
       >

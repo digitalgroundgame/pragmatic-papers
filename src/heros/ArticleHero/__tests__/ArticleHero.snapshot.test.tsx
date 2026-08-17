@@ -85,9 +85,24 @@ describe("ArticleHero", () => {
       ],
     } as unknown as Article
     const { container } = render(<ArticleHero article={article} />)
-    expect(container.textContent).toContain("Alice Smith, Bob Jones, Carol Diaz & 3 more")
-    expect(container.textContent).not.toContain("Dan Reed")
+    expect(container.textContent).toContain("Alice Smith, Bob Jones & 4 more")
+    expect(container.textContent).not.toContain("Carol Diaz")
     expect(container.firstChild).toMatchSnapshot()
+  })
+
+  it("gives up the third name rather than show a remainder of one", () => {
+    const article = {
+      ...baseArticle,
+      authors: [
+        makeAuthor(1, "Alice Smith"),
+        makeAuthor(2, "Bob Jones"),
+        makeAuthor(3, "Carol Diaz"),
+        makeAuthor(4, "Dan Reed"),
+      ],
+    } as unknown as Article
+    const { container } = render(<ArticleHero article={article} />)
+    expect(container.textContent).toContain("Alice Smith, Bob Jones & 2 more")
+    expect(container.textContent).not.toContain("1 more")
   })
 
   it("renders with hero image", () => {

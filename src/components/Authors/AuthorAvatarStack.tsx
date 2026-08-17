@@ -8,9 +8,11 @@ import {
   AvatarImage,
 } from "@/components/ui/avatar"
 import { HoverPrefetchLink } from "@/components/Link/HoverPrefetchLink"
+import { MAX_AUTHOR_SLOTS, splitAuthors } from "@/components/Authors/splitAuthors"
 import { getInitials } from "@/utilities/getInitials"
 interface AuthorAvatarStackProps {
   authors: User[]
+  /** Total circles to render, counting the "+N" as one of them. */
   maxVisible?: number
 }
 
@@ -22,12 +24,11 @@ function getThumbnailUrl(author: User): string | undefined {
 
 export function AuthorAvatarStack({
   authors,
-  maxVisible = 3,
+  maxVisible = MAX_AUTHOR_SLOTS,
 }: AuthorAvatarStackProps): React.ReactNode {
   if (!authors.length) return null
 
-  const visible = authors.slice(0, maxVisible)
-  const overflow = authors.length - maxVisible
+  const { visible, overflow } = splitAuthors(authors, maxVisible)
 
   return (
     <AvatarGroup className="*:[transition:margin-inline-end_50ms_ease-out] hover:space-x-1">

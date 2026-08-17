@@ -44,7 +44,7 @@ describe("AuthorAvatarStack", () => {
     expect(container.firstChild).toMatchSnapshot()
   })
 
-  it("renders overflow count when authors exceed cap", () => {
+  it("renders two avatars and a +3 when five authors exceed the cap", () => {
     const { container } = render(
       <AuthorAvatarStack
         authors={[
@@ -57,6 +57,21 @@ describe("AuthorAvatarStack", () => {
       />,
     )
     expect(container.firstChild).toMatchSnapshot()
+  })
+
+  it("renders two avatars and a +2 rather than three avatars and a +1", () => {
+    const { container } = render(
+      <AuthorAvatarStack
+        authors={[
+          makeAuthor(1, "Alice Smith"),
+          makeAuthor(2, "Bob Jones"),
+          makeAuthor(3, "Carol White"),
+          makeAuthor(4, "Dave Brown"),
+        ]}
+      />,
+    )
+    expect(container.querySelectorAll('[data-slot="avatar"]')).toHaveLength(2)
+    expect(container.textContent).toContain("+2")
   })
 
   it("returns null for empty authors array", () => {

@@ -1,6 +1,7 @@
 import React from "react"
 
 import { AuthorAvatarStack } from "@/components/Authors/AuthorAvatarStack"
+import { splitAuthors } from "@/components/Authors/splitAuthors"
 import { ShareButtons } from "@/components/ShareButtons"
 import { HoverPrefetchLink } from "@/components/Link/HoverPrefetchLink"
 import { Media } from "@/components/Media"
@@ -15,19 +16,13 @@ interface ArticleHeroProps {
   article: Article
 }
 
-/**
- * How many authors the byline names before collapsing the rest into "N more".
- * Shared with the avatar stack so the two tell the same story — three faces
- * and a "+3" alongside six spelled-out names would read as a bug.
- */
-const MAX_BYLINE_AUTHORS = 3
-
 export const ArticleHero: React.FC<ArticleHeroProps> = ({ article }) => {
   const { publishedAt, title, heroImage, authors, narration } = article
 
   const populatedAuthors = (authors || []).filter((a): a is User => typeof a === "object")
-  const namedAuthors = populatedAuthors.slice(0, MAX_BYLINE_AUTHORS)
-  const overflowCount = populatedAuthors.length - namedAuthors.length
+  // Same split as the avatar stack beside it, so the names and the faces
+  // always agree on who got collapsed.
+  const { visible: namedAuthors, overflow: overflowCount } = splitAuthors(populatedAuthors)
   // "N more" takes the final slot, so the separators — and the Oxford comma
   // that depends on which item is last — have to count it as one of them.
   const bylineLength = namedAuthors.length + (overflowCount > 0 ? 1 : 0)
@@ -47,7 +42,7 @@ export const ArticleHero: React.FC<ArticleHeroProps> = ({ article }) => {
       <div className="flex flex-col gap-2 md:flex-row md:items-center md:gap-8">
         <div className="flex flex-1 items-start justify-between gap-2 md:contents">
           <div className="dark:text-brand-high-contrast text-brand flex flex-1 flex-wrap items-center gap-2 font-serif font-bold underline-offset-4 md:order-1">
-            <AuthorAvatarStack authors={populatedAuthors} maxVisible={MAX_BYLINE_AUTHORS} />
+            <AuthorAvatarStack authors={populatedAuthors} />
             {namedAuthors.length > 0 && (
               <span>
                 {namedAuthors.map(({ id, slug, name }, index) => (

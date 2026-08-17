@@ -1,7 +1,7 @@
 import type { Block } from "payload"
 
 /**
- * Merch — showcases products from the DGG store as an on-site placement.
+ * Merch — showcases store products as an on-site placement.
  *
  * Two layouts:
  *  - `square`    — compact, for sidebars / narrow columns

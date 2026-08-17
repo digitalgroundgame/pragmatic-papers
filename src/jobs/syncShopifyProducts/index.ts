@@ -12,7 +12,7 @@ import {
 } from "./logic"
 
 /**
- * Pull the DGG Shopify catalogue into `merch` so Merch blocks render
+ * Pull the Shopify catalogue into `merch` so Merch blocks render
  * live prices and availability instead of hand-typed rows.
  *
  * Hourly is generous for a catalog that changes a few times a season; the

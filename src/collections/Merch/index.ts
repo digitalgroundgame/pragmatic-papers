@@ -9,30 +9,6 @@ import {
 } from "./hooks/revalidateMerchProducts"
 
 /**
- * Merch — the local mirror of the DGG store catalogue.
- *
- * Rows are written by the `syncShopifyProducts` job, not by hand: the store
- * owns every commerce field here, so they render read-only in the admin. The
- * editorial fields at the bottom are ours — a sync never overwrites them, so
- * curating a product survives the next run.
- *
- * Fields are named for the commerce concept rather than the vendor, and each
- * one is a leaf value copied as the store reports it. This is a derived cache:
- * a field we skipped can be added as a column and backfilled by the next run,
- * which is why there's no raw payload kept alongside.
- *
- * One name does double duty: the `collections` field holds Shopify collection
- * handles — the store's own product groupings, what a shopper sees as a
- * category — and has nothing to do with Payload collections like this one. It
- * keeps Shopify's name so a row can be read against the Storefront response
- * without translating, and because Shopify separately uses "category" for its
- * product taxonomy, which is a different thing we may want that name for.
- *
- * Products are never hard-deleted. One that unpublishes or disappears from
- * Shopify flips to `archived`, so a Merch block pointing at it degrades to
- * "not shown" instead of a dangling reference.
- */
-/**
  * Denies every write to a store-owned field, for everyone.
  *
  * `admin.readOnly` looked like it did this, and doesn't: it greys the input in
@@ -53,6 +29,22 @@ const storeOwned: FieldAccess = () => false
  */
 const storeOwnedAdmin = { readOnly: true, disableBulkEdit: true } as const
 
+/**
+ * Merch — a local mirror of the storefront catalogue, written by the
+ * `syncShopifyProducts` job rather than by hand.
+ *
+ * Two things here aren't obvious from the fields:
+ *
+ * The `collections` field holds *storefront* collection handles — the store's
+ * own product groupings — and has nothing to do with Payload collections like
+ * this one. It keeps the vendor's word so a row reads against the Storefront
+ * response without translating, and because Shopify uses "category" for a
+ * different concept we may yet want that name for.
+ *
+ * Products are never hard-deleted. One the store stops listing flips to
+ * `archived`, so a Merch block pointing at it degrades to "not shown" rather
+ * than a dangling reference.
+ */
 export const Merch: CollectionConfig = {
   slug: "merch",
   labels: {
@@ -84,11 +76,10 @@ export const Merch: CollectionConfig = {
       beforeListTable: ["@/collections/Merch/components/SyncNowButton#SyncNowButton"],
     },
     useAsTitle: "title",
-    // Title leads because it's the row's primary identifier, not because the
-    // order is load-bearing: `ProductThumbnailCell` honours the `link` prop
-    // Payload passes to whichever column comes first, so an editor can drag
-    // these into any order and still reach the document.
-    defaultColumns: ["title", "imageUrl", "price", "availableForSale", "status", "lastSyncedAt"],
+    // Order is presentation, not a constraint: both cells reach the document,
+    // the thumbnail through the `link` prop Payload gives the leading column
+    // and the title regardless of where it sits.
+    defaultColumns: ["imageUrl", "title", "price", "availableForSale", "status", "lastSyncedAt"],
     description:
       "Synced hourly from Shopify and stored as Shopify reports it — prices are raw amounts, not formatted strings, and the block decides how they read. Commerce fields are read-only; edit them in Shopify. The presentation fields at the bottom are ours and survive a sync.",
     group: "Store",

@@ -20,7 +20,7 @@ exports[`AuthorCard > renders minimal author with no bio, image, or affiliation 
         data-slot="avatar"
       >
         <span
-          class="bg-muted text-muted-foreground flex size-full items-center justify-center rounded-full text-sm group-data-[size=sm]/avatar:text-xs"
+          class="bg-foreground text-background flex size-full items-center justify-center rounded-full text-sm group-data-[size=sm]/avatar:text-xs"
           data-slot="avatar-fallback"
         >
           AS
@@ -76,7 +76,7 @@ exports[`AuthorCard > renders with affiliation and short biography 1`] = `
         data-slot="avatar"
       >
         <span
-          class="bg-muted text-muted-foreground flex size-full items-center justify-center rounded-full text-sm group-data-[size=sm]/avatar:text-xs"
+          class="bg-foreground text-background flex size-full items-center justify-center rounded-full text-sm group-data-[size=sm]/avatar:text-xs"
           data-slot="avatar-fallback"
         >
           BJ
@@ -142,7 +142,7 @@ exports[`AuthorCard > renders with biography longer than 255 characters (truncat
         data-slot="avatar"
       >
         <span
-          class="bg-muted text-muted-foreground flex size-full items-center justify-center rounded-full text-sm group-data-[size=sm]/avatar:text-xs"
+          class="bg-foreground text-background flex size-full items-center justify-center rounded-full text-sm group-data-[size=sm]/avatar:text-xs"
           data-slot="avatar-fallback"
         >
           CW
@@ -203,7 +203,7 @@ exports[`AuthorCard > renders with null name using fallback 1`] = `
         data-slot="avatar"
       >
         <span
-          class="bg-muted text-muted-foreground flex size-full items-center justify-center rounded-full text-sm group-data-[size=sm]/avatar:text-xs"
+          class="bg-foreground text-background flex size-full items-center justify-center rounded-full text-sm group-data-[size=sm]/avatar:text-xs"
           data-slot="avatar-fallback"
         >
           AU
@@ -257,7 +257,7 @@ exports[`AuthorCard > renders with profileImage as a numeric id 1`] = `
         data-slot="avatar"
       >
         <span
-          class="bg-muted text-muted-foreground flex size-full items-center justify-center rounded-full text-sm group-data-[size=sm]/avatar:text-xs"
+          class="bg-foreground text-background flex size-full items-center justify-center rounded-full text-sm group-data-[size=sm]/avatar:text-xs"
           data-slot="avatar-fallback"
         >
           AS
@@ -313,7 +313,7 @@ exports[`AuthorCard > renders with profileImage object containing a square URL 1
         data-slot="avatar"
       >
         <span
-          class="bg-muted text-muted-foreground flex size-full items-center justify-center rounded-full text-sm group-data-[size=sm]/avatar:text-xs"
+          class="bg-foreground text-background flex size-full items-center justify-center rounded-full text-sm group-data-[size=sm]/avatar:text-xs"
           data-slot="avatar-fallback"
         >
           AS
@@ -369,7 +369,7 @@ exports[`AuthorCard > renders with profileImage object without a square URL 1`] 
         data-slot="avatar"
       >
         <span
-          class="bg-muted text-muted-foreground flex size-full items-center justify-center rounded-full text-sm group-data-[size=sm]/avatar:text-xs"
+          class="bg-foreground text-background flex size-full items-center justify-center rounded-full text-sm group-data-[size=sm]/avatar:text-xs"
           data-slot="avatar-fallback"
         >
           AS

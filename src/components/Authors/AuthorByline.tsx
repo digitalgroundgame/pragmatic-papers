@@ -12,9 +12,6 @@ interface AuthorBylineProps {
   authors: User[]
 }
 
-const TOGGLE_CLASS =
-  "focus-visible:ring-ring cursor-pointer rounded-sm underline-offset-4 hover:underline focus-visible:ring-2 focus-visible:outline-none"
-
 /**
  * The article byline: a stack of author avatars followed by their names.
  *
@@ -60,7 +57,7 @@ export function AuthorByline({ authors }: AuthorBylineProps): React.ReactNode {
               type="button"
               onClick={() => setExpanded(true)}
               aria-expanded={false}
-              className={TOGGLE_CLASS}
+              className="focus-visible:ring-ring cursor-pointer rounded-sm underline-offset-4 hover:underline focus-visible:ring-2 focus-visible:outline-none"
             >
               {overflow} more
             </button>
@@ -73,7 +70,7 @@ export function AuthorByline({ authors }: AuthorBylineProps): React.ReactNode {
               type="button"
               onClick={() => setExpanded(false)}
               aria-expanded
-              className={TOGGLE_CLASS}
+              className="focus-visible:ring-ring cursor-pointer rounded-sm underline-offset-4 hover:underline focus-visible:ring-2 focus-visible:outline-none"
             >
               Show less
             </button>

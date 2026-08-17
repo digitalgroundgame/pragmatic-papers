@@ -7,6 +7,7 @@ import {
   AvatarGroupCount,
   AvatarImage,
 } from "@/components/ui/avatar"
+import { HoverPrefetchLink } from "@/components/Link/HoverPrefetchLink"
 import { getInitials } from "@/utilities/getInitials"
 interface AuthorAvatarStackProps {
   authors: User[]
@@ -29,10 +30,24 @@ export function AuthorAvatarStack({
   const overflow = authors.length - maxVisible
 
   return (
-    <AvatarGroup className="*:[transition:margin-inline-end_300ms_ease-out] hover:space-x-1">
-      {visible.map((author) => {
+    <AvatarGroup className="*:[transition:margin-inline-end_50ms_ease-out] hover:space-x-1">
+      {visible.map((author, index) => {
         return (
-          <Avatar key={author.id} size="sm">
+          <Avatar
+            key={author.id}
+            size="sm"
+            style={{ zIndex: visible.length - index }}
+            render={
+              <HoverPrefetchLink
+                href={`/authors/${author.slug}`}
+                // The byline repeats every author as a text link to this same
+                // page, so announcing the avatar too would read each author
+                // twice (WCAG H2). Decorative for AT, clickable for everyone.
+                aria-hidden="true"
+                tabIndex={-1}
+              />
+            }
+          >
             <AvatarImage src={getThumbnailUrl(author)} />
             <AvatarFallback>{getInitials(author.name || "A")}</AvatarFallback>
           </Avatar>

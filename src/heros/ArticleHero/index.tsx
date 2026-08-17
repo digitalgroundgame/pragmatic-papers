@@ -36,14 +36,18 @@ export const ArticleHero: React.FC<ArticleHeroProps> = ({ article }) => {
         <div className="flex flex-1 items-start justify-between gap-2 md:contents">
           <div className="dark:text-brand-high-contrast text-brand flex flex-1 flex-wrap items-center gap-2 font-serif font-bold underline-offset-4 md:order-1">
             <AuthorAvatarStack authors={populatedAuthors} />
-            {populatedAuthors.map(({ id, slug, name }, index) => (
-              <React.Fragment key={id}>
-                {getSeparator(index, populatedAuthors.length)}
-                <HoverPrefetchLink href={`/authors/${slug}`} className="hover:underline">
-                  {name}
-                </HoverPrefetchLink>
-              </React.Fragment>
-            ))}
+            {populatedAuthors.length > 0 && (
+              <span>
+                {populatedAuthors.map(({ id, slug, name }, index) => (
+                  <React.Fragment key={id}>
+                    {getSeparator(index, populatedAuthors.length)}
+                    <HoverPrefetchLink href={`/authors/${slug}`} className="hover:underline">
+                      {name}
+                    </HoverPrefetchLink>
+                  </React.Fragment>
+                ))}
+              </span>
+            )}
             {"•"}
             {publishedAt && (
               <HoverPrefetchLink href={`/articles/${article.slug}`} className="hover:underline">

@@ -2,13 +2,17 @@
 
 exports[`AuthorAvatarStack > renders a single author 1`] = `
 <div
-  class="group/avatar-group *:data-[slot=avatar]:ring-background flex -space-x-2 *:data-[slot=avatar]:ring-2 *:[transition:margin-inline-end_300ms_ease-out] hover:space-x-1"
+  class="group/avatar-group *:data-[slot=avatar]:ring-background flex -space-x-2 *:data-[slot=avatar]:ring-2 *:[transition:margin-inline-end_50ms_ease-out] hover:space-x-1"
   data-slot="avatar-group"
 >
-  <span
+  <a
+    aria-hidden="true"
     class="group/avatar after:border-border relative flex size-8 shrink-0 overflow-hidden rounded-full select-none after:absolute after:inset-0 after:rounded-full after:border after:mix-blend-darken data-[size=2xl]:size-32 data-[size=lg]:size-10 data-[size=sm]:size-6 data-[size=xl]:size-24 dark:after:mix-blend-lighten"
     data-size="sm"
     data-slot="avatar"
+    href="/authors/alice-smith"
+    style="z-index: 1;"
+    tabindex="-1"
   >
     <span
       class="bg-muted text-muted-foreground flex size-full items-center justify-center rounded-full text-sm group-data-[size=sm]/avatar:text-xs"
@@ -16,19 +20,23 @@ exports[`AuthorAvatarStack > renders a single author 1`] = `
     >
       AS
     </span>
-  </span>
+  </a>
 </div>
 `;
 
 exports[`AuthorAvatarStack > renders author with null name using fallback initial 1`] = `
 <div
-  class="group/avatar-group *:data-[slot=avatar]:ring-background flex -space-x-2 *:data-[slot=avatar]:ring-2 *:[transition:margin-inline-end_300ms_ease-out] hover:space-x-1"
+  class="group/avatar-group *:data-[slot=avatar]:ring-background flex -space-x-2 *:data-[slot=avatar]:ring-2 *:[transition:margin-inline-end_50ms_ease-out] hover:space-x-1"
   data-slot="avatar-group"
 >
-  <span
+  <a
+    aria-hidden="true"
     class="group/avatar after:border-border relative flex size-8 shrink-0 overflow-hidden rounded-full select-none after:absolute after:inset-0 after:rounded-full after:border after:mix-blend-darken data-[size=2xl]:size-32 data-[size=lg]:size-10 data-[size=sm]:size-6 data-[size=xl]:size-24 dark:after:mix-blend-lighten"
     data-size="sm"
     data-slot="avatar"
+    href="/authors/anon"
+    style="z-index: 1;"
+    tabindex="-1"
   >
     <span
       class="bg-muted text-muted-foreground flex size-full items-center justify-center rounded-full text-sm group-data-[size=sm]/avatar:text-xs"
@@ -36,19 +44,23 @@ exports[`AuthorAvatarStack > renders author with null name using fallback initia
     >
       A
     </span>
-  </span>
+  </a>
 </div>
 `;
 
 exports[`AuthorAvatarStack > renders author with numeric profileImage id 1`] = `
 <div
-  class="group/avatar-group *:data-[slot=avatar]:ring-background flex -space-x-2 *:data-[slot=avatar]:ring-2 *:[transition:margin-inline-end_300ms_ease-out] hover:space-x-1"
+  class="group/avatar-group *:data-[slot=avatar]:ring-background flex -space-x-2 *:data-[slot=avatar]:ring-2 *:[transition:margin-inline-end_50ms_ease-out] hover:space-x-1"
   data-slot="avatar-group"
 >
-  <span
+  <a
+    aria-hidden="true"
     class="group/avatar after:border-border relative flex size-8 shrink-0 overflow-hidden rounded-full select-none after:absolute after:inset-0 after:rounded-full after:border after:mix-blend-darken data-[size=2xl]:size-32 data-[size=lg]:size-10 data-[size=sm]:size-6 data-[size=xl]:size-24 dark:after:mix-blend-lighten"
     data-size="sm"
     data-slot="avatar"
+    href="/authors/alice-smith"
+    style="z-index: 1;"
+    tabindex="-1"
   >
     <span
       class="bg-muted text-muted-foreground flex size-full items-center justify-center rounded-full text-sm group-data-[size=sm]/avatar:text-xs"
@@ -56,19 +68,23 @@ exports[`AuthorAvatarStack > renders author with numeric profileImage id 1`] = `
     >
       AS
     </span>
-  </span>
+  </a>
 </div>
 `;
 
 exports[`AuthorAvatarStack > renders author with profileImage object with URL 1`] = `
 <div
-  class="group/avatar-group *:data-[slot=avatar]:ring-background flex -space-x-2 *:data-[slot=avatar]:ring-2 *:[transition:margin-inline-end_300ms_ease-out] hover:space-x-1"
+  class="group/avatar-group *:data-[slot=avatar]:ring-background flex -space-x-2 *:data-[slot=avatar]:ring-2 *:[transition:margin-inline-end_50ms_ease-out] hover:space-x-1"
   data-slot="avatar-group"
 >
-  <span
+  <a
+    aria-hidden="true"
     class="group/avatar after:border-border relative flex size-8 shrink-0 overflow-hidden rounded-full select-none after:absolute after:inset-0 after:rounded-full after:border after:mix-blend-darken data-[size=2xl]:size-32 data-[size=lg]:size-10 data-[size=sm]:size-6 data-[size=xl]:size-24 dark:after:mix-blend-lighten"
     data-size="sm"
     data-slot="avatar"
+    href="/authors/alice-smith"
+    style="z-index: 1;"
+    tabindex="-1"
   >
     <span
       class="bg-muted text-muted-foreground flex size-full items-center justify-center rounded-full text-sm group-data-[size=sm]/avatar:text-xs"
@@ -76,19 +92,23 @@ exports[`AuthorAvatarStack > renders author with profileImage object with URL 1`
     >
       AS
     </span>
-  </span>
+  </a>
 </div>
 `;
 
 exports[`AuthorAvatarStack > renders author with profileImage object without URL 1`] = `
 <div
-  class="group/avatar-group *:data-[slot=avatar]:ring-background flex -space-x-2 *:data-[slot=avatar]:ring-2 *:[transition:margin-inline-end_300ms_ease-out] hover:space-x-1"
+  class="group/avatar-group *:data-[slot=avatar]:ring-background flex -space-x-2 *:data-[slot=avatar]:ring-2 *:[transition:margin-inline-end_50ms_ease-out] hover:space-x-1"
   data-slot="avatar-group"
 >
-  <span
+  <a
+    aria-hidden="true"
     class="group/avatar after:border-border relative flex size-8 shrink-0 overflow-hidden rounded-full select-none after:absolute after:inset-0 after:rounded-full after:border after:mix-blend-darken data-[size=2xl]:size-32 data-[size=lg]:size-10 data-[size=sm]:size-6 data-[size=xl]:size-24 dark:after:mix-blend-lighten"
     data-size="sm"
     data-slot="avatar"
+    href="/authors/alice-smith"
+    style="z-index: 1;"
+    tabindex="-1"
   >
     <span
       class="bg-muted text-muted-foreground flex size-full items-center justify-center rounded-full text-sm group-data-[size=sm]/avatar:text-xs"
@@ -96,19 +116,23 @@ exports[`AuthorAvatarStack > renders author with profileImage object without URL
     >
       AS
     </span>
-  </span>
+  </a>
 </div>
 `;
 
 exports[`AuthorAvatarStack > renders multiple authors within the visible cap 1`] = `
 <div
-  class="group/avatar-group *:data-[slot=avatar]:ring-background flex -space-x-2 *:data-[slot=avatar]:ring-2 *:[transition:margin-inline-end_300ms_ease-out] hover:space-x-1"
+  class="group/avatar-group *:data-[slot=avatar]:ring-background flex -space-x-2 *:data-[slot=avatar]:ring-2 *:[transition:margin-inline-end_50ms_ease-out] hover:space-x-1"
   data-slot="avatar-group"
 >
-  <span
+  <a
+    aria-hidden="true"
     class="group/avatar after:border-border relative flex size-8 shrink-0 overflow-hidden rounded-full select-none after:absolute after:inset-0 after:rounded-full after:border after:mix-blend-darken data-[size=2xl]:size-32 data-[size=lg]:size-10 data-[size=sm]:size-6 data-[size=xl]:size-24 dark:after:mix-blend-lighten"
     data-size="sm"
     data-slot="avatar"
+    href="/authors/alice-smith"
+    style="z-index: 3;"
+    tabindex="-1"
   >
     <span
       class="bg-muted text-muted-foreground flex size-full items-center justify-center rounded-full text-sm group-data-[size=sm]/avatar:text-xs"
@@ -116,11 +140,15 @@ exports[`AuthorAvatarStack > renders multiple authors within the visible cap 1`]
     >
       AS
     </span>
-  </span>
-  <span
+  </a>
+  <a
+    aria-hidden="true"
     class="group/avatar after:border-border relative flex size-8 shrink-0 overflow-hidden rounded-full select-none after:absolute after:inset-0 after:rounded-full after:border after:mix-blend-darken data-[size=2xl]:size-32 data-[size=lg]:size-10 data-[size=sm]:size-6 data-[size=xl]:size-24 dark:after:mix-blend-lighten"
     data-size="sm"
     data-slot="avatar"
+    href="/authors/bob-jones"
+    style="z-index: 2;"
+    tabindex="-1"
   >
     <span
       class="bg-muted text-muted-foreground flex size-full items-center justify-center rounded-full text-sm group-data-[size=sm]/avatar:text-xs"
@@ -128,11 +156,15 @@ exports[`AuthorAvatarStack > renders multiple authors within the visible cap 1`]
     >
       BJ
     </span>
-  </span>
-  <span
+  </a>
+  <a
+    aria-hidden="true"
     class="group/avatar after:border-border relative flex size-8 shrink-0 overflow-hidden rounded-full select-none after:absolute after:inset-0 after:rounded-full after:border after:mix-blend-darken data-[size=2xl]:size-32 data-[size=lg]:size-10 data-[size=sm]:size-6 data-[size=xl]:size-24 dark:after:mix-blend-lighten"
     data-size="sm"
     data-slot="avatar"
+    href="/authors/carol-white"
+    style="z-index: 1;"
+    tabindex="-1"
   >
     <span
       class="bg-muted text-muted-foreground flex size-full items-center justify-center rounded-full text-sm group-data-[size=sm]/avatar:text-xs"
@@ -140,19 +172,23 @@ exports[`AuthorAvatarStack > renders multiple authors within the visible cap 1`]
     >
       CW
     </span>
-  </span>
+  </a>
 </div>
 `;
 
 exports[`AuthorAvatarStack > renders overflow count when authors exceed cap 1`] = `
 <div
-  class="group/avatar-group *:data-[slot=avatar]:ring-background flex -space-x-2 *:data-[slot=avatar]:ring-2 *:[transition:margin-inline-end_300ms_ease-out] hover:space-x-1"
+  class="group/avatar-group *:data-[slot=avatar]:ring-background flex -space-x-2 *:data-[slot=avatar]:ring-2 *:[transition:margin-inline-end_50ms_ease-out] hover:space-x-1"
   data-slot="avatar-group"
 >
-  <span
+  <a
+    aria-hidden="true"
     class="group/avatar after:border-border relative flex size-8 shrink-0 overflow-hidden rounded-full select-none after:absolute after:inset-0 after:rounded-full after:border after:mix-blend-darken data-[size=2xl]:size-32 data-[size=lg]:size-10 data-[size=sm]:size-6 data-[size=xl]:size-24 dark:after:mix-blend-lighten"
     data-size="sm"
     data-slot="avatar"
+    href="/authors/alice-smith"
+    style="z-index: 3;"
+    tabindex="-1"
   >
     <span
       class="bg-muted text-muted-foreground flex size-full items-center justify-center rounded-full text-sm group-data-[size=sm]/avatar:text-xs"
@@ -160,11 +196,15 @@ exports[`AuthorAvatarStack > renders overflow count when authors exceed cap 1`] 
     >
       AS
     </span>
-  </span>
-  <span
+  </a>
+  <a
+    aria-hidden="true"
     class="group/avatar after:border-border relative flex size-8 shrink-0 overflow-hidden rounded-full select-none after:absolute after:inset-0 after:rounded-full after:border after:mix-blend-darken data-[size=2xl]:size-32 data-[size=lg]:size-10 data-[size=sm]:size-6 data-[size=xl]:size-24 dark:after:mix-blend-lighten"
     data-size="sm"
     data-slot="avatar"
+    href="/authors/bob-jones"
+    style="z-index: 2;"
+    tabindex="-1"
   >
     <span
       class="bg-muted text-muted-foreground flex size-full items-center justify-center rounded-full text-sm group-data-[size=sm]/avatar:text-xs"
@@ -172,11 +212,15 @@ exports[`AuthorAvatarStack > renders overflow count when authors exceed cap 1`] 
     >
       BJ
     </span>
-  </span>
-  <span
+  </a>
+  <a
+    aria-hidden="true"
     class="group/avatar after:border-border relative flex size-8 shrink-0 overflow-hidden rounded-full select-none after:absolute after:inset-0 after:rounded-full after:border after:mix-blend-darken data-[size=2xl]:size-32 data-[size=lg]:size-10 data-[size=sm]:size-6 data-[size=xl]:size-24 dark:after:mix-blend-lighten"
     data-size="sm"
     data-slot="avatar"
+    href="/authors/carol-white"
+    style="z-index: 1;"
+    tabindex="-1"
   >
     <span
       class="bg-muted text-muted-foreground flex size-full items-center justify-center rounded-full text-sm group-data-[size=sm]/avatar:text-xs"
@@ -184,7 +228,7 @@ exports[`AuthorAvatarStack > renders overflow count when authors exceed cap 1`] 
     >
       CW
     </span>
-  </span>
+  </a>
   <div
     class="bg-muted text-muted-foreground ring-background relative flex size-8 shrink-0 items-center justify-center rounded-full text-sm ring-2 group-has-data-[size=lg]/avatar-group:size-10 group-has-data-[size=sm]/avatar-group:size-6 [&>svg]:size-4 group-has-data-[size=lg]/avatar-group:[&>svg]:size-5 group-has-data-[size=sm]/avatar-group:[&>svg]:size-3"
     data-slot="avatar-group-count"

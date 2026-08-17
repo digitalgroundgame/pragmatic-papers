@@ -45,6 +45,20 @@ describe("ArticleHero", () => {
     expect(container.firstChild).toMatchSnapshot()
   })
 
+  it("joins three authors with an Oxford comma and ampersand", () => {
+    const article = {
+      ...baseArticle,
+      authors: [
+        makeAuthor(1, "Alice Smith"),
+        makeAuthor(2, "Bob Jones"),
+        makeAuthor(3, "Carol Diaz"),
+      ],
+    } as unknown as Article
+    const { container } = render(<ArticleHero article={article} />)
+    expect(container.textContent).toContain("Alice Smith, Bob Jones, & Carol Diaz")
+    expect(container.firstChild).toMatchSnapshot()
+  })
+
   it("renders with hero image", () => {
     const article = {
       ...baseArticle,

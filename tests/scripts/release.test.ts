@@ -66,8 +66,8 @@ describe("release main()", () => {
     expect(lib.commitIfStaged).toHaveBeenCalledWith("Bump package.json to v1.0.0")
     expect(lib.createOrReusePr).toHaveBeenCalledWith("chore/v1.0.0", "dev")
     expect(lib.waitForMerge).toHaveBeenCalledOnce()
-    // phase 2
-    expect(lib.createOrReusePr).toHaveBeenCalledWith("dev", "main")
+    // phase 2 — titled "Release <version>", not the "dev" that --fill would derive
+    expect(lib.createOrReusePr).toHaveBeenCalledWith("dev", "main", "Release 1.0.0")
     expect(lib.autoMergeAndWait).toHaveBeenCalledOnce()
     // phase 3 is not chained (release.yml tags automatically)
     expect(c.some((cmd) => cmd.startsWith("git tag"))).toBe(false)
@@ -79,7 +79,7 @@ describe("release main()", () => {
 
     expect(vi.mocked(fs.writeFileSync)).not.toHaveBeenCalled()
     expect(lib.prepareBranch).not.toHaveBeenCalled()
-    expect(lib.createOrReusePr).toHaveBeenCalledExactlyOnceWith("dev", "main")
+    expect(lib.createOrReusePr).toHaveBeenCalledExactlyOnceWith("dev", "main", "Release 1.0.0")
     expect(lib.autoMergeAndWait).toHaveBeenCalledOnce()
     expect(lib.waitForMerge).not.toHaveBeenCalled()
   })

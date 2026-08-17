@@ -81,7 +81,11 @@ describe("hotfix main()", () => {
     expect(lib.waitForMerge).toHaveBeenCalledOnce()
     // phase 2
     expect(lib.prepareBranch).toHaveBeenCalledWith("chore/back-merge-v1.0.1", "main", "v1.0.1")
-    expect(lib.createOrReusePr).toHaveBeenCalledWith("chore/back-merge-v1.0.1", "dev")
+    expect(lib.createOrReusePr).toHaveBeenCalledWith(
+      "chore/back-merge-v1.0.1",
+      "dev",
+      "Back-merge v1.0.1 into dev",
+    )
     expect(lib.autoMergeAndWait).toHaveBeenCalledOnce()
   })
 
@@ -95,7 +99,11 @@ describe("hotfix main()", () => {
       "main",
       "v1.0.1",
     )
-    expect(lib.createOrReusePr).toHaveBeenCalledExactlyOnceWith("chore/back-merge-v1.0.1", "dev")
+    expect(lib.createOrReusePr).toHaveBeenCalledExactlyOnceWith(
+      "chore/back-merge-v1.0.1",
+      "dev",
+      "Back-merge v1.0.1 into dev",
+    )
     expect(lib.autoMergeAndWait).toHaveBeenCalledOnce()
     expect(lib.waitForMerge).not.toHaveBeenCalled()
   })

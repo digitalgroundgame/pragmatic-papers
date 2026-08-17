@@ -35,21 +35,25 @@ export function parsePrRef(prUrl: string): PrRef {
   return { owner, repo, number }
 }
 
+/**
+ * Subject of the version-bump commit. Shared so a retry can recognise the commit
+ * an earlier, half-finished run already made (see `prepareBranch`).
+ */
+export function bumpMessage(tag: string): string {
+  return `Bump package.json to ${tag}`
+}
+
+/** `gh pr list` command that prints the open PR URL for `branch` → `base`, if any. */
+export function prListCommand(branch: string, base: string): string {
+  return `gh pr list --head ${branch} --base ${base} --state open --json url --jq '.[0].url // empty'`
+}
+
 /** jq program that collapses a PR's state into MERGED / OPEN / CLOSED. */
 export const PR_STATE_JQ = 'if .merged then "MERGED" else (.state | ascii_upcase) end'
 
 /** `gh api` command that prints a PR's collapsed state (see PR_STATE_JQ). */
 export function prStateCommand(ref: PrRef): string {
   return `gh api repos/${ref.owner}/${ref.repo}/pulls/${ref.number} --jq '${PR_STATE_JQ}'`
-}
-
-/**
- * Queue an auto-merge that lands as a real **merge commit** (`--merge`), never a
- * squash, and waits for required checks (`--auto`). This is what keeps the sync
- * branches (dev↔main) from diverging.
- */
-export function autoMergeCommand(prUrl: string): string {
-  return `gh pr merge "${prUrl}" --auto --merge`
 }
 
 // ── Side-effecting helpers ─────────────────────────────────────────────────
@@ -72,6 +76,85 @@ export function requireGh(): void {
   }
 }
 
+/** True when a local branch of this name exists. */
+export function branchExists(branch: string): boolean {
+  try {
+    execSync(`git rev-parse --verify --quiet refs/heads/${branch}`, { cwd: root, stdio: "ignore" })
+    return true
+  } catch {
+    return false
+  }
+}
+
+/** Subjects of the commits on `branch` that are not yet on `base`. */
+export function commitSubjects(base: string, branch: string): string[] {
+  return capture(`git log --format=%s ${base}..${branch}`).split("\n").filter(Boolean)
+}
+
+/** True when `git add` has staged something that is not yet committed. */
+export function hasStagedChanges(): boolean {
+  try {
+    execSync("git diff --cached --quiet", { cwd: root, stdio: "ignore" })
+    return false
+  } catch {
+    return true
+  }
+}
+
+/**
+ * Check out the release/hotfix branch, resuming one left behind by a half-finished
+ * run instead of dying on `git checkout -b`. A run can fail after the branch exists
+ * (rejected signing passphrase, pre-commit hook, network) and every retry used to
+ * hit `fatal: a branch named ... already exists`.
+ *
+ * Reuse is only safe when the branch carries nothing but the version bump, so a
+ * branch with unexpected commits stops the run and names the recovery options
+ * rather than resetting work.
+ */
+export function prepareBranch(branch: string, base: string, tag: string): void {
+  if (!branchExists(branch)) {
+    run(`git checkout -b ${branch}`)
+    return
+  }
+
+  const unexpected = commitSubjects(base, branch).filter((s) => s !== bumpMessage(tag))
+  if (unexpected.length > 0) {
+    console.error(`${red("✖")} Branch ${branch} exists and has commits beyond the version bump:`)
+    for (const subject of unexpected) console.error(`${red("✖")}   ${subject}`)
+    console.error(`${red("✖")} Finish or drop it by hand, e.g. git branch -D ${branch}`)
+    process.exit(1)
+  }
+
+  console.warn(`${yellow("!")} Reusing ${branch} left by an earlier run`)
+  run(`git checkout ${branch}`)
+}
+
+/** Commit staged changes, tolerating a retry where an earlier run already committed. */
+export function commitIfStaged(message: string): void {
+  if (!hasStagedChanges()) {
+    console.warn(`${yellow("!")} Nothing staged — version bump is already committed`)
+    return
+  }
+  run(`git commit -m "${message}"`)
+}
+
+/**
+ * Open PR URL for `branch` → `base`, reusing one from an earlier run if present.
+ *
+ * `--fill` takes the title from the commit subject only when the branch carries a
+ * single commit; with several it falls back to the head branch name, which is how the
+ * dev → main release PR ended up titled "dev". Pass `title` for any branch that can
+ * carry more than one commit — `--title` overrides `--fill` and still autofills the body.
+ */
+export function createOrReusePr(branch: string, base: string, title?: string): string {
+  const existing = capture(prListCommand(branch, base))
+  if (existing) {
+    console.warn(`${yellow("!")} Reusing open PR for ${branch} → ${base}`)
+    return existing
+  }
+  return capture(`gh pr create -f ${title ? `-t "${title}" ` : ""}-B ${base}`)
+}
+
 export function ask(question: string): Promise<string> {
   return new Promise((resolve) => {
     const rl = readline.createInterface({ input: process.stdin, output: process.stdout })
@@ -80,10 +163,6 @@ export function ask(question: string): Promise<string> {
       resolve(answer)
     })
   })
-}
-
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
 export function prState(prUrl: string): string {
@@ -104,33 +183,18 @@ export async function waitForMerge(prUrl: string): Promise<void> {
 }
 
 /**
- * Enable a merge-commit auto-merge and poll until it lands. Removes the manual
- * "remember to pick merge, not squash, and don't click Update branch" footgun on
- * the dev↔main sync PRs. Falls back to a manual merge prompt if auto-merge can't
- * be enabled (e.g. the repo doesn't have it turned on).
+ * Wait on a dev↔main sync PR, which has to be merged by hand: these PRs are merged
+ * with a ruleset bypass, and `gh pr merge --auto` cannot bypass a ruleset — it either
+ * refuses outright or queues a merge that never fires, leaving the release polling
+ * forever. So prompt instead, and lead with the part that actually matters.
+ *
+ * The merge MUST be a merge commit. A squash rewrites the commits onto the target and
+ * leaves dev and main permanently diverged, which is the whole reason these PRs exist.
  */
-export async function autoMergeAndWait(prUrl: string, pollMs = 10_000): Promise<void> {
-  try {
-    run(autoMergeCommand(prUrl))
-    console.warn(`${green("✔")} Auto-merge (merge commit) enabled — waiting for checks…`)
-  } catch {
-    console.warn(
-      `${yellow("!")} Could not enable auto-merge. Merge it manually with a ` +
-        `${yellow("merge commit")} (not squash), and do not click "Update branch".`,
-    )
-    return waitForMerge(prUrl)
-  }
-
-  for (;;) {
-    const state = prState(prUrl)
-    if (state === "MERGED") {
-      console.warn(`${green("✔")} PR merged`)
-      return
-    }
-    if (state === "CLOSED") {
-      console.error(`${red("✖")} PR was closed without merging`)
-      process.exit(1)
-    }
-    await sleep(pollMs)
-  }
+export async function waitForSyncMerge(prUrl: string): Promise<void> {
+  console.warn(
+    `${yellow("!")} Merge this one with a ${yellow("merge commit")} — not a squash, ` +
+      `and do not click "Update branch". A squash diverges dev from main.`,
+  )
+  return waitForMerge(prUrl)
 }

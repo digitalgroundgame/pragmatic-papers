@@ -341,6 +341,7 @@ export const seed = async (
           ctx.volume1Articles,
           ctx.volume2Articles,
           ctx.featureArticles,
+          ctx.media.map((m) => m.id),
         )
         const homePage = await payload
           .find({ collection: "pages", where: { slug: { equals: "home" } }, limit: 1 })
@@ -352,11 +353,15 @@ export const seed = async (
           privacyPolicyPage,
           termsOfUsePage,
           volumesPage,
-        } = await createPages(payload, {
-          chiefEditorIds: [ctx.chiefEditor.id],
-          editorIds: [ctx.editor.id],
-          writerIds: [ctx.writers[0]!.id, ctx.writers[1]!.id],
-        })
+        } = await createPages(
+          payload,
+          {
+            chiefEditorIds: [ctx.chiefEditor.id],
+            editorIds: [ctx.editor.id],
+            writerIds: [ctx.writers[0]!.id, ctx.writers[1]!.id],
+          },
+          ctx.media.map((m) => m.id),
+        )
         await createMenus(payload, {
           homePage,
           aboutPage,

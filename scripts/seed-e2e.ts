@@ -9,11 +9,41 @@ import {
   createRichText,
   createTextNode,
 } from "@/endpoints/seed/richtext"
+import { seedMerchProducts } from "@/endpoints/seed/merch"
 import { createUser } from "@/endpoints/seed/users"
 import config from "@payload-config"
+import { readFile } from "node:fs/promises"
+import path from "node:path"
 import { getPayload } from "payload"
+import type { Payload } from "payload"
 
 const ctx = { disableRevalidate: true }
+
+// Create a media doc from a file already committed to the repo. The rest of the
+// e2e seed deliberately ships no media (hero images resolve to null), but the
+// merch carousel screenshot needs something to render — so we upload one local
+// PNG and point every seeded product at it. Reading from disk keeps the seed
+// deterministic and network-free, unlike `createMediaFromURL`; synced products
+// carry a cdn.shopify.com URL, which no offline test run could fetch.
+async function createLocalMedia(
+  payload: Payload,
+  repoRelativePath: string,
+  alt: string,
+): Promise<number> {
+  const data = await readFile(path.join(process.cwd(), repoRelativePath))
+  const media = await payload.create({
+    collection: "media",
+    context: ctx,
+    data: { alt },
+    file: {
+      name: `e2e-${path.basename(repoRelativePath)}`,
+      data,
+      mimetype: "image/png",
+      size: data.byteLength,
+    },
+  })
+  return media.id
+}
 
 // Screenshot baselines bake in this date via the article/volume byline, so it
 // must stay fixed rather than tracking the day the seed happens to run.
@@ -116,8 +146,72 @@ export async function main(): Promise<void> {
       },
     })
 
+    // One reused product image for the full-width Merch carousel below. See
+    // createLocalMedia for why the e2e seed uploads a local file here.
+    const merchImage = await createLocalMedia(
+      payload,
+      "public/android-chrome-512x512.png",
+      "Pragmatic Papers merchandise",
+    )
+
+    // The catalogue merch.spec.ts exercises. Titles, prices, and the sold-out
+    // badge match what the block used to carry inline, so the visual baseline
+    // is unaffected by the move to synced products.
+    await seedMerchProducts(
+      payload,
+      [
+        {
+          title: "Acid Washed Liberalism Charity Tee, Black",
+          handle: "acid-washed-liberalism-tee-black",
+          price: "100.00",
+          imageId: merchImage,
+          availableForSale: false,
+          sortOrder: 0,
+        },
+        {
+          title: "Liberalism Heavyweight Tee, Black",
+          handle: "liberalism-heavyweight-tee-black",
+          price: "40.00",
+          imageId: merchImage,
+          sortOrder: 1,
+        },
+        {
+          title: "Liberalism Oversized Sweatshirt, Black",
+          handle: "liberalism-oversized-sweatshirt-black",
+          price: "65.00",
+          imageId: merchImage,
+          sortOrder: 2,
+        },
+        {
+          title: "Liberalism Heavyweight Tee, Navy",
+          handle: "liberalism-heavyweight-tee-navy",
+          price: "40.00",
+          imageId: merchImage,
+          sortOrder: 3,
+        },
+        {
+          title: "Liberalism Heavyweight Tee, White",
+          handle: "liberalism-heavyweight-tee-white",
+          price: "40.00",
+          imageId: merchImage,
+          sortOrder: 4,
+        },
+        {
+          title: "Liberalism Oversized Sweatshirt, Navy",
+          handle: "liberalism-oversized-sweatshirt-navy",
+          price: "65.00",
+          imageId: merchImage,
+          sortOrder: 5,
+        },
+      ],
+      ctx,
+    )
+
     // Homepage with a CollectionGrid so gotoFirstArticle / gotoFirstVolume can
     // find a[href*="/articles/"] and a[href*="/volumes/"] links to follow.
+    // A full-width Merch carousel ("Support The Papers") follows the grid so
+    // merch.spec.ts has a deterministic block to exercise and screenshot;
+    // autoplay stays off so the carousel never moves mid-capture.
     await payload.create({
       collection: "pages",
       context: ctx,
@@ -143,6 +237,18 @@ export async function main(): Promise<void> {
                 overrideTitle: null,
               },
             ],
+          },
+          {
+            blockType: "merch",
+            blockName: "Support The Papers",
+            heading: "Support The Papers",
+            layout: "fullWidth",
+            autoplay: false,
+            // Every seeded product, in sort order — deterministic without
+            // naming ids the page doesn't have yet.
+            source: "all",
+            orderBy: "sortOrder",
+            limit: 6,
           },
         ],
       },

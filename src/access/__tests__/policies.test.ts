@@ -4,6 +4,7 @@ import {
   isCreatedByOrEditor,
   isDraftOrEditor,
   isPublishedOrStaff,
+  readUsers,
 } from "../policies"
 import type { User } from "@/payload-types"
 import type { AccessArgs } from "payload"
@@ -119,6 +120,42 @@ describe("isPublishedOrStaff policy", () => {
       _status: {
         equals: "published",
       },
+    })
+  })
+})
+
+describe("readUsers policy", () => {
+  it("allows all staff roles to read all users", () => {
+    for (const role of ["narrator", "writer", "editor", "chief-editor", "admin"]) {
+      expect(readUsers(makeArgs(makeUser(role)))).toBe(true)
+    }
+  })
+
+  it("restricts member role to staff users and themselves", () => {
+    const user = { id: 123, roles: ["member"] } as unknown as User
+    expect(readUsers(makeArgs(user))).toEqual({
+      or: [
+        {
+          roles: {
+            in: ["admin", "chief-editor", "editor", "writer", "narrator"],
+          },
+        },
+        {
+          id: { equals: 123 },
+        },
+      ],
+    })
+  })
+
+  it("restricts anonymous users to staff users only", () => {
+    expect(readUsers(makeArgs(null))).toEqual({
+      or: [
+        {
+          roles: {
+            in: ["admin", "chief-editor", "editor", "writer", "narrator"],
+          },
+        },
+      ],
     })
   })
 })

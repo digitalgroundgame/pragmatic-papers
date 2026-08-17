@@ -1,4 +1,4 @@
-import type { PopulatedAuthors } from "@/payload-types"
+import type { User } from "@/payload-types"
 import { convertLexicalToPlaintext } from "@payloadcms/richtext-lexical/plaintext"
 import React from "react"
 
@@ -9,17 +9,14 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Card, CardContent } from "@/components/ui/card"
 import { getInitials } from "@/utilities/getInitials"
 
-function extractBioSnippet(
-  author: NonNullable<PopulatedAuthors>[number],
-  maxLength = 255,
-): string | undefined {
+function extractBioSnippet(author: User, maxLength = 255): string | undefined {
   if (!author.biography) return
   const text = convertLexicalToPlaintext({ data: author.biography })
   return text.length > maxLength ? `${text.slice(0, maxLength).trimEnd()}…` : text
 }
 
 export interface AuthorCardProps {
-  author: NonNullable<PopulatedAuthors>[number]
+  author: User
 }
 
 export const AuthorCard: React.FC<AuthorCardProps> = ({ author }) => {

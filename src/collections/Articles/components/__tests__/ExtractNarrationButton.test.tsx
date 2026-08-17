@@ -89,7 +89,7 @@ describe("ExtractNarrationButton", () => {
   it("renders the generate button and shows formatted view and editable textarea on view toggle", async () => {
     mockFields = {
       title: { value: "Sample Article Title" },
-      populatedAuthors: { value: [{ name: "Alice Author" }] },
+      authors: { value: [{ id: 1, name: "Alice Author" }] },
       publishedAt: { value: "2026-07-20T00:00:00.000Z" },
       content: {
         value: {
@@ -537,6 +537,96 @@ describe("ExtractNarrationButton", () => {
     expect(formattedPreview.textContent).toContain("(An image: Alt 1.)")
     expect(formattedPreview.textContent).toContain("(An image: Alt 2.)")
     expect(formattedPreview.textContent).toContain("(A gallery of images: Alt 3; Alt 4; Alt 5.)")
+
+    vi.unstubAllGlobals()
+  })
+
+  it("resolves bare author IDs via the users fetch API in component", async () => {
+    mockFields = {
+      title: { value: "Author Fetch Test" },
+      authors: { value: [123, 789] },
+    }
+
+    const mockFetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        docs: [
+          { id: 123, name: "Fetched Author One" },
+          { id: 789, name: "Fetched Author Two" },
+        ],
+      }),
+    })
+    vi.stubGlobal("fetch", mockFetch)
+
+    render(<ExtractNarrationButton />)
+    const generateBtn = await screen.findByRole("button", { name: /generate narration text/i })
+    fireEvent.click(generateBtn)
+
+    await waitFor(() => {
+      expect(mockToastSuccess).toHaveBeenCalledWith("Narration text generated!")
+    })
+
+    const formattedPreview = screen.getByLabelText(/formatted narration preview/i)
+    expect(formattedPreview.textContent).toContain("By Fetched Author One, Fetched Author Two")
+
+    expect(mockFetch).toHaveBeenCalled()
+    const callUrls = mockFetch.mock.calls.map((call) => call[0])
+    expect(callUrls.some((url) => typeof url === "string" && url.includes("/api/users"))).toBe(true)
+
+    vi.unstubAllGlobals()
+  })
+
+  it("handles fetch failure gracefully and falls back to excluding unresolvable authors", async () => {
+    mockFields = {
+      title: { value: "Author Fetch Failure Test" },
+      authors: { value: [123] },
+    }
+
+    const mockFetch = vi.fn().mockResolvedValue({
+      ok: false,
+    })
+    vi.stubGlobal("fetch", mockFetch)
+
+    render(<ExtractNarrationButton />)
+    const generateBtn = await screen.findByRole("button", { name: /generate narration text/i })
+    fireEvent.click(generateBtn)
+
+    await waitFor(() => {
+      expect(mockToastSuccess).toHaveBeenCalledWith("Narration text generated!")
+    })
+
+    const formattedPreview = screen.getByLabelText(/formatted narration preview/i)
+    expect(formattedPreview.textContent).not.toContain("123")
+    expect(formattedPreview.textContent).not.toContain("By")
+
+    vi.unstubAllGlobals()
+  })
+
+  it("skips unresolvable author IDs (line 297 fallback)", async () => {
+    mockFields = {
+      title: { value: "Author Fetch Partial Success Test" },
+      authors: { value: [123, 999] },
+    }
+
+    const mockFetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        docs: [{ id: 123, name: "Fetched Author One" }],
+      }),
+    })
+    vi.stubGlobal("fetch", mockFetch)
+
+    render(<ExtractNarrationButton />)
+    const generateBtn = await screen.findByRole("button", { name: /generate narration text/i })
+    fireEvent.click(generateBtn)
+
+    await waitFor(() => {
+      expect(mockToastSuccess).toHaveBeenCalledWith("Narration text generated!")
+    })
+
+    const formattedPreview = screen.getByLabelText(/formatted narration preview/i)
+    expect(formattedPreview.textContent).toContain("By Fetched Author One")
+    expect(formattedPreview.textContent).not.toContain("999")
 
     vi.unstubAllGlobals()
   })

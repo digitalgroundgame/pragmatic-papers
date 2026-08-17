@@ -1,6 +1,6 @@
 "use client"
 
-import type { Article, Media } from "@/payload-types"
+import type { Media, User } from "@/payload-types"
 import React from "react"
 
 import { AudioMedia, type AudioMediaProps } from "@/components/Media/AudioMedia"
@@ -32,13 +32,10 @@ import { AudioMedia, type AudioMediaProps } from "@/components/Media/AudioMedia"
 
 interface NarrationPlayerProps {
   narration: Media
-  populatedNarrator?: Article["populatedNarrator"]
+  narrator?: User | null
 }
 
-export function NarrationPlayer({
-  narration,
-  populatedNarrator,
-}: NarrationPlayerProps): React.ReactNode {
+export function NarrationPlayer({ narration, narrator }: NarrationPlayerProps): React.ReactNode {
   // const [duration, setDuration] = useState(narration.duration ?? 0)
   // const [captionSrc, setCaptionSrc] = useState("")
 
@@ -55,11 +52,11 @@ export function NarrationPlayer({
 
   return (
     <div className="flex flex-col gap-1.5">
-      {populatedNarrator && (
+      {narrator && (
         <p className="text-muted-foreground font-serif text-sm">
           Narrated by{" "}
-          <a href={`/authors/${populatedNarrator.slug}`} className="hover:underline">
-            {populatedNarrator.name}
+          <a href={`/authors/${narrator.slug}`} className="hover:underline">
+            {narrator.name}
           </a>
         </p>
       )}

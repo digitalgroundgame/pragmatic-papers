@@ -33,6 +33,9 @@ env:
   PAYLOAD_SECRET: ${{ secrets.PAYLOAD_SECRET }}
   NEXT_PUBLIC_SERVER_URL: http://localhost:8000
   USE_LOCAL_STORAGE: "true"
+  # The Merch block has no built-in store site — without this it renders
+  # nothing and merch.spec.ts has no carousel to exercise.
+  MERCH_SITE_URL: https://digitalgroundgame.org/merch
   # Hostname is the services key ("postgres"), not localhost — the job runs
   # inside a container, and service containers are reachable by their
   # service-id alias on the shared Docker network, not via the runner's

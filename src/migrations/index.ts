@@ -40,6 +40,7 @@ import * as migration_20260615_100916_add_newsletter from "./20260615_100916_add
 import * as migration_20260616_021403_add_map_assets_prefix from "./20260616_021403_add_map_assets_prefix"
 import * as migration_20260715_214854_migrate_role_to_roles from "./20260715_214854_migrate_role_to_roles"
 import * as migration_20260804_004633_add_layouts_8_10 from "./20260804_004633_add_layouts_8_10"
+import * as migration_20260814_230024_add_merch_collection from "./20260814_230024_add_merch_collection"
 
 export const migrations = [
   {
@@ -251,5 +252,10 @@ export const migrations = [
     up: migration_20260804_004633_add_layouts_8_10.up,
     down: migration_20260804_004633_add_layouts_8_10.down,
     name: "20260804_004633_add_layouts_8_10",
+  },
+  {
+    up: migration_20260814_230024_add_merch_collection.up,
+    down: migration_20260814_230024_add_merch_collection.down,
+    name: "20260814_230024_add_merch_collection",
   },
 ]

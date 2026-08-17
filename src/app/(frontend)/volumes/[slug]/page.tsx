@@ -7,7 +7,7 @@ import { PayloadRedirects } from "@/components/PayloadRedirects"
 import RichText from "@/components/RichText"
 import { ShareButtons } from "@/components/ShareButtons"
 import { Separator } from "@/components/ui/separator"
-import type { Article } from "@/payload-types"
+import type { Article, User } from "@/payload-types"
 import { formatDateTime } from "@/utilities/formatDateTime"
 import { generateMeta } from "@/utilities/generateMeta"
 import { getServerSideURL } from "@/utilities/getURL"
@@ -33,11 +33,7 @@ export async function generateStaticParams(): Promise<{ slug: string | null | un
     },
   })
 
-  const params = volumes.docs.map(({ slug }) => {
-    return { slug }
-  })
-
-  return params
+  return volumes.docs.map(({ slug }) => ({ slug }))
 }
 
 interface Args {
@@ -73,7 +69,11 @@ export default async function VolumePage({
 
   const seen = new Set<number>()
   const volumeAuthors = articles
-    ?.flatMap((article) => article.populatedAuthors ?? [])
+    ?.flatMap(
+      (article) =>
+        (article.authors || []).filter((author): author is User => typeof author === "object") ??
+        [],
+    )
     .filter((a) => {
       if (seen.has(a.id)) return false
       seen.add(a.id)

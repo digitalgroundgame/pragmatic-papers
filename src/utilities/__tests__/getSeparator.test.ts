@@ -20,28 +20,28 @@ describe("getSeparator", () => {
       expect(getSeparator(1, 2)).toBe(" & ")
     })
 
-    it("joins three or more authors with an Oxford comma before the conjunction", () => {
+    it("joins the last of three or more with a conjunction and no comma", () => {
       expect(getSeparator(1, 3)).toBe(", ")
-      expect(getSeparator(2, 3)).toBe(", & ")
+      expect(getSeparator(2, 3)).toBe(" & ")
     })
 
     it("uses a plain comma for every author but the last", () => {
       expect(getSeparator(1, 4)).toBe(", ")
       expect(getSeparator(2, 4)).toBe(", ")
-      expect(getSeparator(3, 4)).toBe(", & ")
+      expect(getSeparator(3, 4)).toBe(" & ")
     })
 
     it("builds the expected byline", () => {
       expect(join(NAMES.slice(0, 1))).toBe("Ada Lovelace")
       expect(join(NAMES.slice(0, 2))).toBe("Ada Lovelace & Grace Hopper")
-      expect(join(NAMES)).toBe("Ada Lovelace, Grace Hopper, & Radia Perlman")
+      expect(join(NAMES)).toBe("Ada Lovelace, Grace Hopper & Radia Perlman")
     })
   })
 
   describe("conjunction", () => {
     it("swaps the ampersand for a word", () => {
       expect(getSeparator(1, 2, { conjunction: "and" })).toBe(" and ")
-      expect(getSeparator(2, 3, { conjunction: "and" })).toBe(", and ")
+      expect(getSeparator(2, 3, { conjunction: "and" })).toBe(" and ")
     })
 
     it("leaves the non-final separators alone", () => {
@@ -51,7 +51,7 @@ describe("getSeparator", () => {
     it("builds the expected byline", () => {
       expect(join(NAMES.slice(0, 2), { conjunction: "and" })).toBe("Ada Lovelace and Grace Hopper")
       expect(join(NAMES, { conjunction: "and" })).toBe(
-        "Ada Lovelace, Grace Hopper, and Radia Perlman",
+        "Ada Lovelace, Grace Hopper and Radia Perlman",
       )
     })
 
@@ -60,27 +60,33 @@ describe("getSeparator", () => {
     })
   })
 
-  describe("oxfordComma: false", () => {
-    it("drops the comma before the conjunction", () => {
+  describe("oxfordComma", () => {
+    it("is off by default", () => {
+      expect(getSeparator(2, 3)).toBe(" & ")
+      expect(getSeparator(2, 3, {})).toBe(" & ")
       expect(getSeparator(2, 3, { oxfordComma: false })).toBe(" & ")
-      expect(getSeparator(2, 3, { oxfordComma: false, conjunction: "and" })).toBe(" and ")
     })
 
-    it("keeps the commas between the earlier names", () => {
-      expect(getSeparator(1, 3, { oxfordComma: false })).toBe(", ")
-      expect(getSeparator(1, 4, { oxfordComma: false })).toBe(", ")
-      expect(getSeparator(2, 4, { oxfordComma: false })).toBe(", ")
-      expect(getSeparator(3, 4, { oxfordComma: false })).toBe(" & ")
+    it("adds the comma before the conjunction when enabled", () => {
+      expect(getSeparator(2, 3, { oxfordComma: true })).toBe(", & ")
+      expect(getSeparator(2, 3, { oxfordComma: true, conjunction: "and" })).toBe(", and ")
+      expect(getSeparator(3, 4, { oxfordComma: true })).toBe(", & ")
     })
 
-    it("is indistinguishable from the default for two names", () => {
-      expect(getSeparator(1, 2, { oxfordComma: false })).toBe(getSeparator(1, 2))
+    it("leaves the commas between the earlier names alone either way", () => {
+      expect(getSeparator(1, 4, { oxfordComma: true })).toBe(", ")
+      expect(getSeparator(2, 4, { oxfordComma: true })).toBe(", ")
+      expect(getSeparator(1, 4)).toBe(", ")
+    })
+
+    it("makes no difference to two names, which never take a comma", () => {
+      expect(getSeparator(1, 2, { oxfordComma: true })).toBe(getSeparator(1, 2))
     })
 
     it("builds the expected byline", () => {
-      expect(join(NAMES, { oxfordComma: false })).toBe("Ada Lovelace, Grace Hopper & Radia Perlman")
-      expect(join(NAMES, { oxfordComma: false, conjunction: "and" })).toBe(
-        "Ada Lovelace, Grace Hopper and Radia Perlman",
+      expect(join(NAMES, { oxfordComma: true })).toBe("Ada Lovelace, Grace Hopper, & Radia Perlman")
+      expect(join(NAMES, { oxfordComma: true, conjunction: "and" })).toBe(
+        "Ada Lovelace, Grace Hopper, and Radia Perlman",
       )
     })
   })
@@ -94,7 +100,7 @@ describe("getSeparator", () => {
 
     it("has no final conjunction or comma to configure", () => {
       expect(getSeparator(2, 3, { variant: "bullet", conjunction: "and" })).toBe(" • ")
-      expect(getSeparator(2, 3, { variant: "bullet", oxfordComma: false })).toBe(" • ")
+      expect(getSeparator(2, 3, { variant: "bullet", oxfordComma: true })).toBe(" • ")
     })
 
     it("carries its own spacing, since the byline is inline flow", () => {

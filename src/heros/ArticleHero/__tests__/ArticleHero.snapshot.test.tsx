@@ -45,7 +45,7 @@ describe("ArticleHero", () => {
     expect(container.firstChild).toMatchSnapshot()
   })
 
-  it("joins three authors with an Oxford comma and ampersand", () => {
+  it("joins three authors with commas and a closing ampersand", () => {
     const article = {
       ...baseArticle,
       authors: [
@@ -55,7 +55,7 @@ describe("ArticleHero", () => {
       ],
     } as unknown as Article
     const { container } = render(<ArticleHero article={article} />)
-    expect(container.textContent).toContain("Alice Smith, Bob Jones, & Carol Diaz")
+    expect(container.textContent).toContain("Alice Smith, Bob Jones & Carol Diaz")
     expect(container.firstChild).toMatchSnapshot()
   })
 
@@ -85,7 +85,7 @@ describe("ArticleHero", () => {
       ],
     } as unknown as Article
     const { container } = render(<ArticleHero article={article} />)
-    expect(container.textContent).toContain("Alice Smith, Bob Jones, Carol Diaz, & 3 more")
+    expect(container.textContent).toContain("Alice Smith, Bob Jones, Carol Diaz & 3 more")
     expect(container.textContent).not.toContain("Dan Reed")
     expect(container.firstChild).toMatchSnapshot()
   })

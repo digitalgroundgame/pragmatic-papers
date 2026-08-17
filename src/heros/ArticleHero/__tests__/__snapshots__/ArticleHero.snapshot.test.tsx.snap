@@ -99,7 +99,7 @@ exports[`ArticleHero > collapses authors past the cap into a remainder 1`] = `
           >
             Carol Diaz
           </a>
-          , & 
+           & 
           3 more
         </span>
         •
@@ -179,7 +179,7 @@ exports[`ArticleHero > collapses authors past the cap into a remainder 1`] = `
 </div>
 `;
 
-exports[`ArticleHero > joins three authors with an Oxford comma and ampersand 1`] = `
+exports[`ArticleHero > joins three authors with commas and a closing ampersand 1`] = `
 <div
   class="relative flex flex-col gap-2 md:-mx-10 lg:-mx-32 xl:-mx-44"
 >
@@ -264,7 +264,7 @@ exports[`ArticleHero > joins three authors with an Oxford comma and ampersand 1`
           >
             Bob Jones
           </a>
-          , & 
+           & 
           <a
             class="hover:underline"
             href="/authors/carol-diaz"

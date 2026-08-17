@@ -1,7 +1,7 @@
 /**
  * How a byline joins its authors.
  *
- * - `list` — prose list: `Ada & Grace`, `Ada, Grace, & Radia`.
+ * - `list` — prose list: `Ada & Grace`, `Ada, Grace & Radia`.
  * - `bullet` — every author separated by a bullet: `Ada • Grace • Radia`.
  */
 export type SeparatorVariant = "list" | "bullet"
@@ -15,8 +15,8 @@ export interface SeparatorOptions {
   conjunction?: SeparatorConjunction
   /**
    * Whether three or more names take a comma before the conjunction —
-   * `Ada, Grace, & Radia` vs `Ada, Grace & Radia`. Two names never do.
-   * Ignored by the `bullet` variant.
+   * `Ada, Grace, & Radia` vs the default `Ada, Grace & Radia`. Two names
+   * never do. Ignored by the `bullet` variant.
    */
   oxfordComma?: boolean
 }
@@ -31,7 +31,7 @@ export interface SeparatorOptions {
 export function getSeparator(
   index: number,
   length: number,
-  { variant = "list", conjunction = "&", oxfordComma = true }: SeparatorOptions = {},
+  { variant = "list", conjunction = "&", oxfordComma = false }: SeparatorOptions = {},
 ): string | undefined {
   if (index === 0) return undefined
   if (variant === "bullet") return " • "

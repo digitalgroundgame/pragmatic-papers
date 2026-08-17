@@ -39,7 +39,7 @@ export const ArticleHero: React.FC<ArticleHeroProps> = ({ article }) => {
       <h1 className="mt-6">{title}</h1>
       <div className="flex flex-col gap-2 md:flex-row md:items-center md:gap-8">
         <div className="flex flex-1 items-start justify-between gap-2 md:contents">
-          <div className="dark:text-brand-high-contrast text-brand flex flex-1 flex-wrap items-center gap-2 font-serif font-bold underline-offset-4 md:order-1">
+          <div className="dark:text-brand-high-contrast text-brand flex flex-1 flex-wrap items-center gap-2 self-start font-serif font-bold underline-offset-4 md:order-1">
             <Byline authors={bylineAuthors} />
             {"•"}
             {publishedAt && (

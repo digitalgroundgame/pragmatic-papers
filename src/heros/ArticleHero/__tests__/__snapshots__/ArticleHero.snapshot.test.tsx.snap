@@ -16,7 +16,7 @@ exports[`ArticleHero > collapses authors past the cap into a remainder 1`] = `
       class="flex flex-1 items-start justify-between gap-2 md:contents"
     >
       <div
-        class="dark:text-brand-high-contrast text-brand flex flex-1 flex-wrap items-center gap-2 font-serif font-bold underline-offset-4 md:order-1"
+        class="dark:text-brand-high-contrast text-brand flex flex-1 flex-wrap items-center gap-2 self-start font-serif font-bold underline-offset-4 md:order-1"
       >
         <div
           class="group/avatar-group *:data-[slot=avatar]:ring-background flex -space-x-2 *:data-[slot=avatar]:ring-2 *:[transition:margin-inline-end_50ms_ease-out] hover:space-x-1"
@@ -92,7 +92,7 @@ exports[`ArticleHero > collapses authors past the cap into a remainder 1`] = `
           <button
             aria-controls="_r_g_"
             aria-expanded="false"
-            class="focus-visible:ring-ring cursor-pointer rounded-sm underline-offset-4 hover:underline focus-visible:ring-2 focus-visible:outline-none"
+            class="focus-visible:ring-ring cursor-pointer rounded-sm underline-offset-4 focus-visible:ring-2 focus-visible:outline-none hover:underline"
             type="button"
           >
             4 more
@@ -191,7 +191,7 @@ exports[`ArticleHero > joins three authors with commas and a closing ampersand 1
       class="flex flex-1 items-start justify-between gap-2 md:contents"
     >
       <div
-        class="dark:text-brand-high-contrast text-brand flex flex-1 flex-wrap items-center gap-2 font-serif font-bold underline-offset-4 md:order-1"
+        class="dark:text-brand-high-contrast text-brand flex flex-1 flex-wrap items-center gap-2 self-start font-serif font-bold underline-offset-4 md:order-1"
       >
         <div
           class="group/avatar-group *:data-[slot=avatar]:ring-background flex -space-x-2 *:data-[slot=avatar]:ring-2 *:[transition:margin-inline-end_50ms_ease-out] hover:space-x-1"
@@ -365,7 +365,7 @@ exports[`ArticleHero > renders narration as numeric id (no player shown) 1`] = `
       class="flex flex-1 items-start justify-between gap-2 md:contents"
     >
       <div
-        class="dark:text-brand-high-contrast text-brand flex flex-1 flex-wrap items-center gap-2 font-serif font-bold underline-offset-4 md:order-1"
+        class="dark:text-brand-high-contrast text-brand flex flex-1 flex-wrap items-center gap-2 self-start font-serif font-bold underline-offset-4 md:order-1"
       >
         •
         <a
@@ -460,7 +460,7 @@ exports[`ArticleHero > renders narration as object (shows player) 1`] = `
       class="flex flex-1 items-start justify-between gap-2 md:contents"
     >
       <div
-        class="dark:text-brand-high-contrast text-brand flex flex-1 flex-wrap items-center gap-2 font-serif font-bold underline-offset-4 md:order-1"
+        class="dark:text-brand-high-contrast text-brand flex flex-1 flex-wrap items-center gap-2 self-start font-serif font-bold underline-offset-4 md:order-1"
       >
         •
         <a
@@ -565,7 +565,7 @@ exports[`ArticleHero > renders with hero image 1`] = `
       class="flex flex-1 items-start justify-between gap-2 md:contents"
     >
       <div
-        class="dark:text-brand-high-contrast text-brand flex flex-1 flex-wrap items-center gap-2 font-serif font-bold underline-offset-4 md:order-1"
+        class="dark:text-brand-high-contrast text-brand flex flex-1 flex-wrap items-center gap-2 self-start font-serif font-bold underline-offset-4 md:order-1"
       >
         •
         <a
@@ -660,7 +660,7 @@ exports[`ArticleHero > renders with populated authors showing avatar stack 1`] =
       class="flex flex-1 items-start justify-between gap-2 md:contents"
     >
       <div
-        class="dark:text-brand-high-contrast text-brand flex flex-1 flex-wrap items-center gap-2 font-serif font-bold underline-offset-4 md:order-1"
+        class="dark:text-brand-high-contrast text-brand flex flex-1 flex-wrap items-center gap-2 self-start font-serif font-bold underline-offset-4 md:order-1"
       >
         <div
           class="group/avatar-group *:data-[slot=avatar]:ring-background flex -space-x-2 *:data-[slot=avatar]:ring-2 *:[transition:margin-inline-end_50ms_ease-out] hover:space-x-1"
@@ -811,7 +811,7 @@ exports[`ArticleHero > renders without authors or hero image 1`] = `
       class="flex flex-1 items-start justify-between gap-2 md:contents"
     >
       <div
-        class="dark:text-brand-high-contrast text-brand flex flex-1 flex-wrap items-center gap-2 font-serif font-bold underline-offset-4 md:order-1"
+        class="dark:text-brand-high-contrast text-brand flex flex-1 flex-wrap items-center gap-2 self-start font-serif font-bold underline-offset-4 md:order-1"
       >
         •
         <a

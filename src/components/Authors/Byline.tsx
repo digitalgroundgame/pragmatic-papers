@@ -7,6 +7,7 @@ import { AvatarStack } from "@/components/Authors/AvatarStack"
 import { splitAuthors } from "@/components/Authors/splitAuthors"
 import { HoverPrefetchLink } from "@/components/Link/HoverPrefetchLink"
 import { getSeparator } from "@/utilities/getSeparator"
+import { cn } from "@/utilities/utils"
 
 interface BylineProps {
   authors: BylineAuthor[]
@@ -90,7 +91,18 @@ export function Byline({ authors }: BylineProps): React.ReactNode {
               onClick={() => setExpanded((value) => !value)}
               aria-expanded={expanded}
               aria-controls={namesId}
-              className="focus-visible:ring-ring cursor-pointer rounded-sm underline-offset-4 hover:underline focus-visible:ring-2 focus-visible:outline-none"
+              className={cn(
+                "focus-visible:ring-ring cursor-pointer rounded-sm underline-offset-4 focus-visible:ring-2 focus-visible:outline-none",
+                collapsed
+                  ? // "N more" closes the list of names, so it keeps the
+                    // byline's brand colour and behaves like the author links
+                    // beside it.
+                    "hover:underline"
+                  : // "Show less" trails the names instead of belonging to
+                    // them: muted and permanently underlined so it reads as a
+                    // control rather than as one more author.
+                    "text-muted-foreground hover:text-foreground underline",
+              )}
             >
               {collapsed ? `${overflow} more` : "Show less"}
             </button>

@@ -15,7 +15,7 @@ describe("getSeparator", () => {
     expect(getSeparator(0, 3, { variant: "bullet" })).toBeUndefined()
   })
 
-  describe("oxford variant", () => {
+  describe("list variant", () => {
     it("joins two authors with a bare conjunction", () => {
       expect(getSeparator(1, 2)).toBe(" & ")
     })
@@ -60,6 +60,31 @@ describe("getSeparator", () => {
     })
   })
 
+  describe("oxfordComma: false", () => {
+    it("drops the comma before the conjunction", () => {
+      expect(getSeparator(2, 3, { oxfordComma: false })).toBe(" & ")
+      expect(getSeparator(2, 3, { oxfordComma: false, conjunction: "and" })).toBe(" and ")
+    })
+
+    it("keeps the commas between the earlier names", () => {
+      expect(getSeparator(1, 3, { oxfordComma: false })).toBe(", ")
+      expect(getSeparator(1, 4, { oxfordComma: false })).toBe(", ")
+      expect(getSeparator(2, 4, { oxfordComma: false })).toBe(", ")
+      expect(getSeparator(3, 4, { oxfordComma: false })).toBe(" & ")
+    })
+
+    it("is indistinguishable from the default for two names", () => {
+      expect(getSeparator(1, 2, { oxfordComma: false })).toBe(getSeparator(1, 2))
+    })
+
+    it("builds the expected byline", () => {
+      expect(join(NAMES, { oxfordComma: false })).toBe("Ada Lovelace, Grace Hopper & Radia Perlman")
+      expect(join(NAMES, { oxfordComma: false, conjunction: "and" })).toBe(
+        "Ada Lovelace, Grace Hopper and Radia Perlman",
+      )
+    })
+  })
+
   describe("bullet variant", () => {
     it("separates every author with a bullet regardless of count", () => {
       expect(getSeparator(1, 2, { variant: "bullet" })).toBe(" • ")
@@ -67,8 +92,9 @@ describe("getSeparator", () => {
       expect(getSeparator(2, 3, { variant: "bullet" })).toBe(" • ")
     })
 
-    it("has no final conjunction to swap", () => {
+    it("has no final conjunction or comma to configure", () => {
       expect(getSeparator(2, 3, { variant: "bullet", conjunction: "and" })).toBe(" • ")
+      expect(getSeparator(2, 3, { variant: "bullet", oxfordComma: false })).toBe(" • ")
     })
 
     it("carries its own spacing, since the byline is inline flow", () => {

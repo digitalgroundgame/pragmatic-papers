@@ -5,6 +5,8 @@
 // when the version bump lands on main, so there is no manual tag/release phase here.
 // --phase is a STARTING point and the run chains forward: the default `--phase 1`
 // carries through phase 2 once you confirm the main PR merged.
+// Both phases are resumable: if a run dies partway (signing passphrase, hook, network),
+// re-running reuses the branch, bump commit, and PR it already made.
 
 import { readFileSync, writeFileSync } from "node:fs"
 import { dirname, join } from "node:path"
@@ -12,7 +14,17 @@ import { parseArgs } from "node:util"
 import { fileURLToPath } from "node:url"
 
 import { blue, gray, green, red } from "./ansi.mjs"
-import { autoMergeAndWait, capture, findVersion, requireGh, run, waitForMerge } from "./release-lib"
+import {
+  bumpMessage,
+  commitIfStaged,
+  createOrReusePr,
+  findVersion,
+  prepareBranch,
+  requireGh,
+  run,
+  waitForMerge,
+  waitForSyncMerge,
+} from "./release-lib"
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..")
 const pkgPath = join(root, "package.json")
@@ -54,19 +66,23 @@ export async function main(): Promise<void> {
 
     run(`git checkout main`)
     run(`git pull origin main`)
-    run(`git checkout -b ${hotfixBranch(version)}`)
+    prepareBranch(hotfixBranch(version), "main", tag)
 
     const pkg = JSON.parse(readFileSync(pkgPath, "utf8"))
     const prev = pkg.version
-    pkg.version = version
-    writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + "\n")
-    console.warn(`${green("✔")} Bumped package.json: ${gray(prev)} → ${green(version)}`)
+    if (prev === version) {
+      console.warn(`${green("✔")} package.json already at ${green(version)}`)
+    } else {
+      pkg.version = version
+      writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + "\n")
+      console.warn(`${green("✔")} Bumped package.json: ${gray(prev)} → ${green(version)}`)
+    }
 
     run(`git add package.json`)
-    run(`git commit -m "Bump package.json to ${tag}"`)
+    commitIfStaged(bumpMessage(tag))
     run(`git push origin ${hotfixBranch(version)}`)
 
-    const mainPrUrl = capture(`gh pr create -f -B main`)
+    const mainPrUrl = createOrReusePr(hotfixBranch(version), "main")
     console.warn(`\n${green("✔")} PR to main: ${mainPrUrl}`)
     console.warn(`${gray("  On merge, the Release workflow tags and releases ")}${tag}.`)
 
@@ -79,13 +95,13 @@ export async function main(): Promise<void> {
 
     run(`git checkout main`)
     run(`git pull origin main`)
-    run(`git checkout -b ${backmergeBranch(version)}`)
+    prepareBranch(backmergeBranch(version), "main", tag)
     run(`git push origin ${backmergeBranch(version)}`)
 
-    const devPrUrl = capture(`gh pr create -f -B dev`)
+    const devPrUrl = createOrReusePr(backmergeBranch(version), "dev", `Back-merge ${tag} into dev`)
     console.warn(`\n${green("✔")} Back-merge PR to dev: ${devPrUrl}`)
 
-    await autoMergeAndWait(devPrUrl)
+    await waitForSyncMerge(devPrUrl)
   }
 }
 

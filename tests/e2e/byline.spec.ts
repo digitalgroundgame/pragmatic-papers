@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test"
 
-import { Screenshot, waitForStableBox, waitForStableRender } from "./helpers"
+import { waitForStableBox, waitForStableRender } from "./helpers"
 
 // The e2e seed (scripts/seed-e2e.ts) gives this article four authors against a
 // three-slot byline, so it renders the collapsed state: two names and a
@@ -29,8 +29,9 @@ test("byline collapses a fourth author into a remainder @visual", async ({ page 
 
   test.skip(testInfo.project.name !== "chromium", "visual baseline captured on chromium only")
   await waitForStableRender(page)
-  const box = await waitForStableBox(byline)
-  const shot = new Screenshot(box).padding(16)
+  await waitForStableBox(byline)
 
-  await expect(page).toHaveScreenshot("article-byline-collapsed.png", { clip: shot.clip })
+  // Element shot, not a page clip: the byline's position depends on whatever
+  // sits above it, and a clip is intersected with the viewport.
+  await expect(byline).toHaveScreenshot("article-byline-collapsed.png")
 })

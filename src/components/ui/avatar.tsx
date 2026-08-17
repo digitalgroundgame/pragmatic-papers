@@ -1,5 +1,3 @@
-"use client"
-
 import { Avatar as AvatarPrimitive } from "@base-ui/react/avatar"
 import * as React from "react"
 
@@ -17,7 +15,7 @@ function Avatar({
       data-slot="avatar"
       data-size={size}
       className={cn(
-        "group/avatar after:border-border relative flex size-8 shrink-0 rounded-sm select-none after:absolute after:inset-0 after:rounded-sm after:border after:mix-blend-darken data-[size=2xl]:size-32 data-[size=lg]:size-10 data-[size=sm]:size-6 data-[size=xl]:size-24 dark:after:mix-blend-lighten",
+        "group/avatar after:border-border relative flex size-8 shrink-0 overflow-hidden rounded-full select-none after:absolute after:inset-0 after:rounded-full after:border after:mix-blend-darken data-[size=2xl]:size-32 data-[size=lg]:size-10 data-[size=sm]:size-6 data-[size=xl]:size-24 dark:after:mix-blend-lighten",
         className,
       )}
       {...props}
@@ -29,7 +27,7 @@ function AvatarImage({ className, ...props }: AvatarPrimitive.Image.Props): Reac
   return (
     <AvatarPrimitive.Image
       data-slot="avatar-image"
-      className={cn("aspect-square size-full rounded-sm object-cover", className)}
+      className={cn("aspect-square size-full rounded-full object-cover", className)}
       {...props}
     />
   )
@@ -40,7 +38,7 @@ function AvatarFallback({ className, ...props }: AvatarPrimitive.Fallback.Props)
     <AvatarPrimitive.Fallback
       data-slot="avatar-fallback"
       className={cn(
-        "bg-muted text-muted-foreground flex size-full items-center justify-center rounded-sm text-sm group-data-[size=sm]/avatar:text-xs",
+        "bg-muted text-muted-foreground flex size-full items-center justify-center rounded-full text-sm group-data-[size=sm]/avatar:text-xs",
         className,
       )}
       {...props}

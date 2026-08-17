@@ -26,7 +26,7 @@ exports[`ArticleHero > renders narration as numeric id (no player shown) 1`] = `
           <time
             datetime="2024-06-01T00:00:00.000Z"
           >
-            May 31, 2024
+            June 1, 2024
           </time>
         </a>
       </div>
@@ -121,7 +121,7 @@ exports[`ArticleHero > renders narration as object (shows player) 1`] = `
           <time
             datetime="2024-06-01T00:00:00.000Z"
           >
-            May 31, 2024
+            June 1, 2024
           </time>
         </a>
       </div>
@@ -226,7 +226,7 @@ exports[`ArticleHero > renders with hero image 1`] = `
           <time
             datetime="2024-06-01T00:00:00.000Z"
           >
-            May 31, 2024
+            June 1, 2024
           </time>
         </a>
       </div>
@@ -363,7 +363,7 @@ exports[`ArticleHero > renders with populated authors showing avatar stack 1`] =
           <time
             datetime="2024-06-01T00:00:00.000Z"
           >
-            May 31, 2024
+            June 1, 2024
           </time>
         </a>
       </div>
@@ -458,7 +458,7 @@ exports[`ArticleHero > renders without authors or hero image 1`] = `
           <time
             datetime="2024-06-01T00:00:00.000Z"
           >
-            May 31, 2024
+            June 1, 2024
           </time>
         </a>
       </div>

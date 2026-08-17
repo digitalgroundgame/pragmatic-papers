@@ -1,3 +1,5 @@
+import { FOUR_AUTHOR_SLUG } from "./seed-e2e.constants"
+
 import type { User } from "@/payload-types"
 import { createArticle } from "@/endpoints/seed/articles"
 import { createMoCongressionalMapsArticle } from "@/endpoints/seed/features/interactive-maps"
@@ -51,10 +53,7 @@ async function createLocalMedia(
 // must stay fixed rather than tracking the day the seed happens to run.
 const PUBLISHED_AT = "2026-06-04T00:00:00.000Z"
 
-/** Shared with tests/e2e/byline.spec.ts, which navigates here directly. */
-export const FOUR_AUTHOR_SLUG = "committee-work-notes-from-a-crowded-byline"
-
-// Co-authors for the article above. Deliberately plain compared with the e2e
+// Co-authors for the four-author article. Deliberately plain compared with the e2e
 // writer — author-card.spec.ts covers the fully-populated profile, and these
 // only ever appear as a name and a set of initials in a byline.
 const CO_AUTHORS = [

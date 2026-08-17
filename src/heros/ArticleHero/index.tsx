@@ -1,6 +1,7 @@
 import React from "react"
 
 import { Byline } from "@/components/Authors/Byline"
+import { toBylineAuthor } from "@/components/Authors/BylineAuthor"
 import { ShareButtons } from "@/components/ShareButtons"
 import { HoverPrefetchLink } from "@/components/Link/HoverPrefetchLink"
 import { Media } from "@/components/Media"
@@ -17,7 +18,12 @@ interface ArticleHeroProps {
 export const ArticleHero: React.FC<ArticleHeroProps> = ({ article }) => {
   const { publishedAt, title, heroImage, authors, narration } = article
 
-  const populatedAuthors = (authors || []).filter((a): a is User => typeof a === "object")
+  // Narrowed before it crosses into `Byline`, a client component: whatever it
+  // receives is serialised into the RSC payload shipped with the page, and a
+  // populated `User` carries a whole biography and media doc per author.
+  const bylineAuthors = (authors || [])
+    .filter((a): a is User => typeof a === "object")
+    .map(toBylineAuthor)
 
   return (
     <div className="relative flex flex-col gap-2 md:-mx-10 lg:-mx-32 xl:-mx-44">
@@ -34,7 +40,7 @@ export const ArticleHero: React.FC<ArticleHeroProps> = ({ article }) => {
       <div className="flex flex-col gap-2 md:flex-row md:items-center md:gap-8">
         <div className="flex flex-1 items-start justify-between gap-2 md:contents">
           <div className="dark:text-brand-high-contrast text-brand flex flex-1 flex-wrap items-center gap-2 font-serif font-bold underline-offset-4 md:order-1">
-            <Byline authors={populatedAuthors} />
+            <Byline authors={bylineAuthors} />
             {"•"}
             {publishedAt && (
               <HoverPrefetchLink href={`/articles/${article.slug}`} className="hover:underline">

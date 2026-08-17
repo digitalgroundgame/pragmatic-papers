@@ -1,12 +1,12 @@
 import { expect, test } from "@playwright/test"
 
+import { FOUR_AUTHOR_SLUG } from "../../scripts/seed-e2e.constants"
 import { waitForStableBox, waitForStableRender } from "./helpers"
 
 // The e2e seed (scripts/seed-e2e.ts) gives this article four authors against a
 // three-slot byline, so it renders the collapsed state: two names and a
 // remainder, beside two avatars and a "+2". Kept off the homepage grid on
 // purpose — see the seed for why — so navigate to it by slug.
-const FOUR_AUTHOR_SLUG = "committee-work-notes-from-a-crowded-byline"
 
 test("byline collapses a fourth author into a remainder @visual", async ({ page }, testInfo) => {
   await page.goto(`/articles/${FOUR_AUTHOR_SLUG}`)

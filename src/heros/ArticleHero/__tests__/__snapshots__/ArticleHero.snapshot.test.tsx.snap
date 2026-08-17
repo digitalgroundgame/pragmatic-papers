@@ -55,6 +55,7 @@ exports[`ArticleHero > collapses authors past the cap into a remainder 1`] = `
             </span>
           </a>
           <button
+            aria-controls="_r_g_"
             aria-expanded="false"
             aria-label="Show all 6 authors"
             class="focus-visible:ring-ring flex cursor-pointer rounded-full p-0 focus-visible:ring-2 focus-visible:outline-none"
@@ -70,27 +71,31 @@ exports[`ArticleHero > collapses authors past the cap into a remainder 1`] = `
           </button>
         </div>
         <span>
-          <a
-            class="hover:underline"
-            href="/authors/alice-smith"
+          <span
+            id="_r_g_"
           >
-            Alice Smith
-          </a>
-          , 
-          <a
-            class="hover:underline"
-            href="/authors/bob-jones"
-          >
-            Bob Jones
-          </a>
+            <a
+              class="hover:underline"
+              href="/authors/alice-smith"
+            >
+              Alice Smith
+            </a>
+            , 
+            <a
+              class="hover:underline"
+              href="/authors/bob-jones"
+            >
+              Bob Jones
+            </a>
+          </span>
            & 
           <button
+            aria-controls="_r_g_"
             aria-expanded="false"
             class="focus-visible:ring-ring cursor-pointer rounded-sm underline-offset-4 hover:underline focus-visible:ring-2 focus-visible:outline-none"
             type="button"
           >
-            4
-             more
+            4 more
           </button>
         </span>
         •
@@ -112,7 +117,7 @@ exports[`ArticleHero > collapses authors past the cap into a remainder 1`] = `
         class="group/button inline-flex items-center justify-center border bg-clip-padding text-sm font-medium whitespace-nowrap transition-all outline-none select-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 active:not-aria-[haspopup]:translate-y-px disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 border-border bg-background hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:border-input dark:bg-input/30 dark:hover:bg-input/50 size-7 rounded-[min(var(--radius-md),12px)] in-data-[slot=button-group]:rounded-lg shrink-0 md:order-3"
         data-base-ui-click-trigger=""
         data-slot="popover-trigger"
-        id="base-ui-_r_e_"
+        id="base-ui-_r_j_"
         tabindex="0"
         type="button"
       >
@@ -242,26 +247,30 @@ exports[`ArticleHero > joins three authors with commas and a closing ampersand 1
           </a>
         </div>
         <span>
-          <a
-            class="hover:underline"
-            href="/authors/alice-smith"
+          <span
+            id="_r_8_"
           >
-            Alice Smith
-          </a>
-          , 
-          <a
-            class="hover:underline"
-            href="/authors/bob-jones"
-          >
-            Bob Jones
-          </a>
-           & 
-          <a
-            class="hover:underline"
-            href="/authors/carol-diaz"
-          >
-            Carol Diaz
-          </a>
+            <a
+              class="hover:underline"
+              href="/authors/alice-smith"
+            >
+              Alice Smith
+            </a>
+            , 
+            <a
+              class="hover:underline"
+              href="/authors/bob-jones"
+            >
+              Bob Jones
+            </a>
+             & 
+            <a
+              class="hover:underline"
+              href="/authors/carol-diaz"
+            >
+              Carol Diaz
+            </a>
+          </span>
         </span>
         •
         <a
@@ -282,7 +291,7 @@ exports[`ArticleHero > joins three authors with commas and a closing ampersand 1
         class="group/button inline-flex items-center justify-center border bg-clip-padding text-sm font-medium whitespace-nowrap transition-all outline-none select-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 active:not-aria-[haspopup]:translate-y-px disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 border-border bg-background hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:border-input dark:bg-input/30 dark:hover:bg-input/50 size-7 rounded-[min(var(--radius-md),12px)] in-data-[slot=button-group]:rounded-lg shrink-0 md:order-3"
         data-base-ui-click-trigger=""
         data-slot="popover-trigger"
-        id="base-ui-_r_8_"
+        id="base-ui-_r_b_"
         tabindex="0"
         type="button"
       >
@@ -377,7 +386,7 @@ exports[`ArticleHero > renders narration as numeric id (no player shown) 1`] = `
         class="group/button inline-flex items-center justify-center border bg-clip-padding text-sm font-medium whitespace-nowrap transition-all outline-none select-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 active:not-aria-[haspopup]:translate-y-px disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 border-border bg-background hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:border-input dark:bg-input/30 dark:hover:bg-input/50 size-7 rounded-[min(var(--radius-md),12px)] in-data-[slot=button-group]:rounded-lg shrink-0 md:order-3"
         data-base-ui-click-trigger=""
         data-slot="popover-trigger"
-        id="base-ui-_r_n_"
+        id="base-ui-_r_v_"
         tabindex="0"
         type="button"
       >
@@ -472,7 +481,7 @@ exports[`ArticleHero > renders narration as object (shows player) 1`] = `
         class="group/button inline-flex items-center justify-center border bg-clip-padding text-sm font-medium whitespace-nowrap transition-all outline-none select-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 active:not-aria-[haspopup]:translate-y-px disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 border-border bg-background hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:border-input dark:bg-input/30 dark:hover:bg-input/50 size-7 rounded-[min(var(--radius-md),12px)] in-data-[slot=button-group]:rounded-lg shrink-0 md:order-3"
         data-base-ui-click-trigger=""
         data-slot="popover-trigger"
-        id="base-ui-_r_q_"
+        id="base-ui-_r_13_"
         tabindex="0"
         type="button"
       >
@@ -577,7 +586,7 @@ exports[`ArticleHero > renders with hero image 1`] = `
         class="group/button inline-flex items-center justify-center border bg-clip-padding text-sm font-medium whitespace-nowrap transition-all outline-none select-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 active:not-aria-[haspopup]:translate-y-px disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 border-border bg-background hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:border-input dark:bg-input/30 dark:hover:bg-input/50 size-7 rounded-[min(var(--radius-md),12px)] in-data-[slot=button-group]:rounded-lg shrink-0 md:order-3"
         data-base-ui-click-trigger=""
         data-slot="popover-trigger"
-        id="base-ui-_r_k_"
+        id="base-ui-_r_r_"
         tabindex="0"
         type="button"
       >
@@ -691,19 +700,23 @@ exports[`ArticleHero > renders with populated authors showing avatar stack 1`] =
           </a>
         </div>
         <span>
-          <a
-            class="hover:underline"
-            href="/authors/alice-smith"
+          <span
+            id="_r_4_"
           >
-            Alice Smith
-          </a>
-           & 
-          <a
-            class="hover:underline"
-            href="/authors/bob-jones"
-          >
-            Bob Jones
-          </a>
+            <a
+              class="hover:underline"
+              href="/authors/alice-smith"
+            >
+              Alice Smith
+            </a>
+             & 
+            <a
+              class="hover:underline"
+              href="/authors/bob-jones"
+            >
+              Bob Jones
+            </a>
+          </span>
         </span>
         •
         <a
@@ -724,7 +737,7 @@ exports[`ArticleHero > renders with populated authors showing avatar stack 1`] =
         class="group/button inline-flex items-center justify-center border bg-clip-padding text-sm font-medium whitespace-nowrap transition-all outline-none select-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 active:not-aria-[haspopup]:translate-y-px disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 border-border bg-background hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:border-input dark:bg-input/30 dark:hover:bg-input/50 size-7 rounded-[min(var(--radius-md),12px)] in-data-[slot=button-group]:rounded-lg shrink-0 md:order-3"
         data-base-ui-click-trigger=""
         data-slot="popover-trigger"
-        id="base-ui-_r_5_"
+        id="base-ui-_r_7_"
         tabindex="0"
         type="button"
       >
@@ -819,7 +832,7 @@ exports[`ArticleHero > renders without authors or hero image 1`] = `
         class="group/button inline-flex items-center justify-center border bg-clip-padding text-sm font-medium whitespace-nowrap transition-all outline-none select-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 active:not-aria-[haspopup]:translate-y-px disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 border-border bg-background hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:border-input dark:bg-input/30 dark:hover:bg-input/50 size-7 rounded-[min(var(--radius-md),12px)] in-data-[slot=button-group]:rounded-lg shrink-0 md:order-3"
         data-base-ui-click-trigger=""
         data-slot="popover-trigger"
-        id="base-ui-_r_2_"
+        id="base-ui-_r_3_"
         tabindex="0"
         type="button"
       >

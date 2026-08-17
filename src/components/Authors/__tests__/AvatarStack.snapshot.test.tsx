@@ -1,29 +1,15 @@
-import type { Media, User } from "@/payload-types"
+import type { BylineAuthor } from "@/components/Authors/BylineAuthor"
 import { render } from "@testing-library/react"
 import { describe, expect, it } from "vitest"
 
 import { AvatarStack } from "../AvatarStack"
 
-const makeAuthor = (id: number, name: string, profileImage?: number | null): User =>
-  ({
-    id,
-    name,
-    slug: name.toLowerCase().replace(/\s+/g, "-"),
-    profileImage: profileImage ?? null,
-  }) as User
-
-const makeAuthorWithImage = (id: number, name: string, squareUrl?: string): User =>
-  ({
-    id,
-    name,
-    slug: name.toLowerCase().replace(/\s+/g, "-"),
-    profileImage: {
-      id: 100,
-      updatedAt: "2024-01-01T00:00:00.000Z",
-      createdAt: "2024-01-01T00:00:00.000Z",
-      sizes: squareUrl ? { square: { url: squareUrl } } : undefined,
-    } as Media,
-  }) as User
+const makeAuthor = (id: number, name: string, avatarUrl?: string | null): BylineAuthor => ({
+  id,
+  name,
+  slug: name.toLowerCase().replace(/\s+/g, "-"),
+  avatarUrl: avatarUrl ?? null,
+})
 
 describe("AvatarStack", () => {
   it("renders a single author", () => {
@@ -79,28 +65,21 @@ describe("AvatarStack", () => {
     expect(container.firstChild).toBeNull()
   })
 
-  it("renders author with profileImage object with URL", () => {
+  it("renders author with an avatar URL", () => {
     const { container } = render(
-      <AvatarStack
-        authors={[makeAuthorWithImage(1, "Alice Smith", "https://example.com/alice.jpg")]}
-      />,
+      <AvatarStack authors={[makeAuthor(1, "Alice Smith", "https://example.com/alice.jpg")]} />,
     )
     expect(container.firstChild).toMatchSnapshot()
   })
 
-  it("renders author with profileImage object without URL", () => {
-    const { container } = render(<AvatarStack authors={[makeAuthorWithImage(1, "Alice Smith")]} />)
-    expect(container.firstChild).toMatchSnapshot()
-  })
-
-  it("renders author with numeric profileImage id", () => {
-    const { container } = render(<AvatarStack authors={[makeAuthor(1, "Alice Smith", 42)]} />)
+  it("renders author without an avatar URL", () => {
+    const { container } = render(<AvatarStack authors={[makeAuthor(1, "Alice Smith", null)]} />)
     expect(container.firstChild).toMatchSnapshot()
   })
 
   it("renders author with null name using fallback initial", () => {
     const { container } = render(
-      <AvatarStack authors={[{ id: 1, name: null, slug: "anon", profileImage: null } as User]} />,
+      <AvatarStack authors={[{ id: 1, name: null, slug: "anon", avatarUrl: null }]} />,
     )
     expect(container.firstChild).toMatchSnapshot()
   })

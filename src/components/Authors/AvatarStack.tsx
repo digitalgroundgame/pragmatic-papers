@@ -1,4 +1,4 @@
-import type { User } from "@/payload-types"
+import type { BylineAuthor } from "@/components/Authors/BylineAuthor"
 
 import {
   Avatar,
@@ -11,23 +11,20 @@ import { HoverPrefetchLink } from "@/components/Link/HoverPrefetchLink"
 import { MAX_AUTHOR_SLOTS, splitAuthors } from "@/components/Authors/splitAuthors"
 import { getInitials } from "@/utilities/getInitials"
 interface AvatarStackProps {
-  authors: User[]
+  authors: BylineAuthor[]
   /** Total circles to render, counting the "+N" as one of them. */
   maxVisible?: number
   /** When given, the "+N" becomes a button instead of a static badge. */
   onOverflowClick?: () => void
-}
-
-function getThumbnailUrl(author: User): string | undefined {
-  if (!author.profileImage) return undefined
-  if (typeof author.profileImage === "number") return undefined
-  return author.profileImage.sizes?.square?.url ?? undefined
+  /** `id` of the element the "+N" button expands, for `aria-controls`. */
+  overflowControls?: string
 }
 
 export function AvatarStack({
   authors,
   maxVisible = MAX_AUTHOR_SLOTS,
   onOverflowClick,
+  overflowControls,
 }: AvatarStackProps): React.ReactNode {
   if (!authors.length) return null
 
@@ -52,7 +49,7 @@ export function AvatarStack({
               />
             }
           >
-            <AvatarImage src={getThumbnailUrl(author)} />
+            <AvatarImage src={author.avatarUrl ?? undefined} />
             <AvatarFallback>{getInitials(author.name || "A")}</AvatarFallback>
           </Avatar>
         )
@@ -64,10 +61,14 @@ export function AvatarStack({
           // bare flex item, so the stack looks the same either way. It cannot
           // wrap the whole group — the avatars are links, and a link inside a
           // button is not valid HTML.
+          //
+          // This button unmounts when it expands the byline — the caller moves
+          // focus to the toggle that survives.
           <button
             type="button"
             onClick={onOverflowClick}
             aria-expanded={false}
+            aria-controls={overflowControls}
             aria-label={`Show all ${authors.length} authors`}
             className="focus-visible:ring-ring flex cursor-pointer rounded-full p-0 focus-visible:ring-2 focus-visible:outline-none"
           >

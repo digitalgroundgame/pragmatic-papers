@@ -1,15 +1,15 @@
 "use client"
 
-import type { User } from "@/payload-types"
-import React, { useState } from "react"
+import React, { useEffect, useId, useRef, useState } from "react"
 
+import type { BylineAuthor } from "@/components/Authors/BylineAuthor"
 import { AvatarStack } from "@/components/Authors/AvatarStack"
 import { splitAuthors } from "@/components/Authors/splitAuthors"
 import { HoverPrefetchLink } from "@/components/Link/HoverPrefetchLink"
 import { getSeparator } from "@/utilities/getSeparator"
 
 interface BylineProps {
-  authors: User[]
+  authors: BylineAuthor[]
 }
 
 /**
@@ -23,6 +23,21 @@ interface BylineProps {
  */
 export function Byline({ authors }: BylineProps): React.ReactNode {
   const [expanded, setExpanded] = useState(false)
+  const toggleRef = useRef<HTMLButtonElement>(null)
+  // Set when the expansion came from the "+N" badge, which removes itself in
+  // the process — see the effect below.
+  const refocusToggle = useRef(false)
+  const namesId = useId()
+
+  // The "+N" badge unmounts as it expands the byline, dropping focus to
+  // <body> (WCAG 2.4.3). The text toggle is the same control in words, and it
+  // survives the switch, so hand focus to it. The toggle's own clicks need
+  // nothing: it keeps its DOM node across both states.
+  useEffect(() => {
+    if (!refocusToggle.current) return
+    refocusToggle.current = false
+    toggleRef.current?.focus()
+  }, [expanded])
 
   const { visible, overflow } = splitAuthors(authors)
   const collapsed = overflow > 0 && !expanded
@@ -39,40 +54,45 @@ export function Byline({ authors }: BylineProps): React.ReactNode {
       <AvatarStack
         authors={authors}
         maxVisible={collapsed ? undefined : authors.length}
-        onOverflowClick={collapsed ? () => setExpanded(true) : undefined}
+        overflowControls={namesId}
+        onOverflowClick={
+          collapsed
+            ? () => {
+                refocusToggle.current = true
+                setExpanded(true)
+              }
+            : undefined
+        }
       />
       <span>
-        {shown.map(({ id, slug, name }, index) => (
-          <React.Fragment key={id}>
-            {getSeparator(index, listLength)}
-            <HoverPrefetchLink href={`/authors/${slug}`} className="hover:underline">
-              {name}
-            </HoverPrefetchLink>
-          </React.Fragment>
-        ))}
-        {collapsed && (
+        <span id={namesId}>
+          {shown.map(({ id, slug, name }, index) => (
+            <React.Fragment key={id}>
+              {getSeparator(index, listLength)}
+              <HoverPrefetchLink href={`/authors/${slug}`} className="hover:underline">
+                {name}
+              </HoverPrefetchLink>
+            </React.Fragment>
+          ))}
+        </span>
+        {overflow > 0 && (
+          // One button in both states rather than one per state: React then
+          // reuses the DOM node, so activating it by keyboard leaves focus on
+          // it instead of dropping to <body>, and `aria-expanded` describes a
+          // control that is actually still there to be re-pressed.
           <>
-            {getSeparator(shown.length, listLength)}
+            {/* Collapsed, the toggle is the list's last item ("… & 2 more") and
+                takes a real separator; expanded, it just trails the names. */}
+            {collapsed ? getSeparator(shown.length, listLength) : " "}
             <button
+              ref={toggleRef}
               type="button"
-              onClick={() => setExpanded(true)}
-              aria-expanded={false}
+              onClick={() => setExpanded((value) => !value)}
+              aria-expanded={expanded}
+              aria-controls={namesId}
               className="focus-visible:ring-ring cursor-pointer rounded-sm underline-offset-4 hover:underline focus-visible:ring-2 focus-visible:outline-none"
             >
-              {overflow} more
-            </button>
-          </>
-        )}
-        {overflow > 0 && expanded && (
-          <>
-            {" "}
-            <button
-              type="button"
-              onClick={() => setExpanded(false)}
-              aria-expanded
-              className="focus-visible:ring-ring cursor-pointer rounded-sm underline-offset-4 hover:underline focus-visible:ring-2 focus-visible:outline-none"
-            >
-              Show less
+              {collapsed ? `${overflow} more` : "Show less"}
             </button>
           </>
         )}

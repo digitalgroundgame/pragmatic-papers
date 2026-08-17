@@ -1,4 +1,4 @@
-import type { User } from "@/payload-types"
+import type { BylineAuthor } from "@/components/Authors/BylineAuthor"
 import { cleanup, fireEvent, render, screen } from "@testing-library/react"
 import { afterEach, describe, expect, it } from "vitest"
 
@@ -9,8 +9,12 @@ import { Byline } from "../Byline"
 // and `screen` queries start matching earlier tests' markup.
 afterEach(cleanup)
 
-const makeAuthor = (id: number, name: string): User =>
-  ({ id, name, slug: name.toLowerCase().replace(/\s+/g, "-"), profileImage: null }) as User
+const makeAuthor = (id: number, name: string): BylineAuthor => ({
+  id,
+  name,
+  slug: name.toLowerCase().replace(/\s+/g, "-"),
+  avatarUrl: null,
+})
 
 const FOUR = [
   makeAuthor(1, "Alice Smith"),
@@ -21,6 +25,12 @@ const FOUR = [
 
 const avatarCount = (container: HTMLElement): number =>
   container.querySelectorAll('[data-slot="avatar"]').length
+
+/** Activate the way a keyboard user does: the control is focused first. */
+const activate = (button: HTMLElement): void => {
+  button.focus()
+  fireEvent.click(button)
+}
 
 describe("Byline", () => {
   it("renders nothing without authors", () => {
@@ -40,6 +50,14 @@ describe("Byline", () => {
     expect(screen.getByRole("button", { name: "2 more" }).getAttribute("aria-expanded")).toBe(
       "false",
     )
+  })
+
+  it("points the toggle at the list of names it expands", () => {
+    render(<Byline authors={FOUR} />)
+    const controls = screen.getByRole("button", { name: "2 more" }).getAttribute("aria-controls")
+
+    expect(controls).toBeTruthy()
+    expect(document.getElementById(controls!)?.textContent).toContain("Alice Smith")
   })
 
   it("reveals every name and avatar when the remainder is clicked", () => {
@@ -72,6 +90,27 @@ describe("Byline", () => {
 
     expect(container.textContent).toContain("Alice Smith, Bob Jones & 2 more")
     expect(avatarCount(container)).toBe(2)
+  })
+
+  // WCAG 2.4.3: every control here replaces itself when activated, so without
+  // a stable toggle a keyboard user lands on <body> and has to tab back down
+  // the page to reach the byline again.
+  it("keeps focus on the toggle across expanding and collapsing", () => {
+    render(<Byline authors={FOUR} />)
+
+    activate(screen.getByRole("button", { name: "2 more" }))
+    expect(document.activeElement).toBe(screen.getByRole("button", { name: "Show less" }))
+
+    activate(screen.getByRole("button", { name: "Show less" }))
+    expect(document.activeElement).toBe(screen.getByRole("button", { name: "2 more" }))
+  })
+
+  it("moves focus to the toggle when the +N badge expands the byline", () => {
+    render(<Byline authors={FOUR} />)
+
+    activate(screen.getByRole("button", { name: "Show all 4 authors" }))
+
+    expect(document.activeElement).toBe(screen.getByRole("button", { name: "Show less" }))
   })
 
   it("links every name it shows, expanded or not", () => {

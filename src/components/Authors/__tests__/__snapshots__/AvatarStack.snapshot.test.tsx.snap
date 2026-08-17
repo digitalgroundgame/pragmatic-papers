@@ -24,6 +24,30 @@ exports[`AvatarStack > renders a single author 1`] = `
 </div>
 `;
 
+exports[`AvatarStack > renders author with an avatar URL 1`] = `
+<div
+  class="group/avatar-group *:data-[slot=avatar]:ring-background flex -space-x-2 *:data-[slot=avatar]:ring-2 *:[transition:margin-inline-end_50ms_ease-out] hover:space-x-1"
+  data-slot="avatar-group"
+>
+  <a
+    aria-hidden="true"
+    class="group/avatar after:border-border relative flex size-8 shrink-0 overflow-hidden rounded-full select-none after:absolute after:inset-0 after:rounded-full after:border after:mix-blend-darken data-[size=2xl]:size-32 data-[size=lg]:size-10 data-[size=sm]:size-6 data-[size=xl]:size-24 dark:after:mix-blend-lighten"
+    data-size="sm"
+    data-slot="avatar"
+    href="/authors/alice-smith"
+    style="z-index: 1;"
+    tabindex="-1"
+  >
+    <span
+      class="bg-foreground text-background flex size-full items-center justify-center rounded-full font-serif text-sm group-data-[size=sm]/avatar:text-xs"
+      data-slot="avatar-fallback"
+    >
+      AS
+    </span>
+  </a>
+</div>
+`;
+
 exports[`AvatarStack > renders author with null name using fallback initial 1`] = `
 <div
   class="group/avatar-group *:data-[slot=avatar]:ring-background flex -space-x-2 *:data-[slot=avatar]:ring-2 *:[transition:margin-inline-end_50ms_ease-out] hover:space-x-1"
@@ -48,55 +72,7 @@ exports[`AvatarStack > renders author with null name using fallback initial 1`] 
 </div>
 `;
 
-exports[`AvatarStack > renders author with numeric profileImage id 1`] = `
-<div
-  class="group/avatar-group *:data-[slot=avatar]:ring-background flex -space-x-2 *:data-[slot=avatar]:ring-2 *:[transition:margin-inline-end_50ms_ease-out] hover:space-x-1"
-  data-slot="avatar-group"
->
-  <a
-    aria-hidden="true"
-    class="group/avatar after:border-border relative flex size-8 shrink-0 overflow-hidden rounded-full select-none after:absolute after:inset-0 after:rounded-full after:border after:mix-blend-darken data-[size=2xl]:size-32 data-[size=lg]:size-10 data-[size=sm]:size-6 data-[size=xl]:size-24 dark:after:mix-blend-lighten"
-    data-size="sm"
-    data-slot="avatar"
-    href="/authors/alice-smith"
-    style="z-index: 1;"
-    tabindex="-1"
-  >
-    <span
-      class="bg-foreground text-background flex size-full items-center justify-center rounded-full font-serif text-sm group-data-[size=sm]/avatar:text-xs"
-      data-slot="avatar-fallback"
-    >
-      AS
-    </span>
-  </a>
-</div>
-`;
-
-exports[`AvatarStack > renders author with profileImage object with URL 1`] = `
-<div
-  class="group/avatar-group *:data-[slot=avatar]:ring-background flex -space-x-2 *:data-[slot=avatar]:ring-2 *:[transition:margin-inline-end_50ms_ease-out] hover:space-x-1"
-  data-slot="avatar-group"
->
-  <a
-    aria-hidden="true"
-    class="group/avatar after:border-border relative flex size-8 shrink-0 overflow-hidden rounded-full select-none after:absolute after:inset-0 after:rounded-full after:border after:mix-blend-darken data-[size=2xl]:size-32 data-[size=lg]:size-10 data-[size=sm]:size-6 data-[size=xl]:size-24 dark:after:mix-blend-lighten"
-    data-size="sm"
-    data-slot="avatar"
-    href="/authors/alice-smith"
-    style="z-index: 1;"
-    tabindex="-1"
-  >
-    <span
-      class="bg-foreground text-background flex size-full items-center justify-center rounded-full font-serif text-sm group-data-[size=sm]/avatar:text-xs"
-      data-slot="avatar-fallback"
-    >
-      AS
-    </span>
-  </a>
-</div>
-`;
-
-exports[`AvatarStack > renders author with profileImage object without URL 1`] = `
+exports[`AvatarStack > renders author without an avatar URL 1`] = `
 <div
   class="group/avatar-group *:data-[slot=avatar]:ring-background flex -space-x-2 *:data-[slot=avatar]:ring-2 *:[transition:margin-inline-end_50ms_ease-out] hover:space-x-1"
   data-slot="avatar-group"

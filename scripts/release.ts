@@ -2,7 +2,8 @@
 //   1) branch off dev, bump package.json, open PR → dev   (CI runs)
 //   2) open PR dev → main and land it as a MERGE COMMIT    (keeps branches in sync)
 //   3) tag main and create the GitHub release
-// Phase 2's merge is auto-enabled as a merge commit so dev and main never diverge.
+// Phase 2 must be merged by hand as a merge commit so dev and main never diverge:
+// these PRs need a ruleset bypass, which `gh pr merge --auto` cannot perform.
 // --phase is a STARTING point and the run chains forward: the default `--phase 1`
 // carries through phase 2 once you confirm the dev PR merged. Phase 3 is separate —
 // release.yml tags automatically on the version bump, so chaining into it would race
@@ -17,7 +18,6 @@ import { fileURLToPath } from "node:url"
 
 import { blue, gray, green, red } from "./ansi.mjs"
 import {
-  autoMergeAndWait,
   bumpMessage,
   capture,
   commitIfStaged,
@@ -27,6 +27,7 @@ import {
   requireGh,
   run,
   waitForMerge,
+  waitForSyncMerge,
 } from "./release-lib"
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..")
@@ -99,7 +100,7 @@ export async function main(): Promise<void> {
     const mainPrUrl = createOrReusePr("dev", "main", `Release ${version}`)
     console.warn(`\n${green("✔")} PR to main: ${mainPrUrl}`)
 
-    await autoMergeAndWait(mainPrUrl)
+    await waitForSyncMerge(mainPrUrl)
   }
 
   // ── Phase 3: Tag and release ─────────────────────────────────────────────

@@ -96,7 +96,7 @@ export async function main(): Promise<void> {
     run(`git checkout dev`)
     run(`git pull origin dev`)
 
-    const mainPrUrl = createOrReusePr("dev", "main")
+    const mainPrUrl = createOrReusePr("dev", "main", `Release ${version}`)
     console.warn(`\n${green("✔")} PR to main: ${mainPrUrl}`)
 
     await autoMergeAndWait(mainPrUrl)

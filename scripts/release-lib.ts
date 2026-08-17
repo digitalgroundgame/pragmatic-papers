@@ -147,14 +147,21 @@ export function commitIfStaged(message: string): void {
   run(`git commit -m "${message}"`)
 }
 
-/** Open PR URL for `branch` → `base`, reusing one from an earlier run if present. */
-export function createOrReusePr(branch: string, base: string): string {
+/**
+ * Open PR URL for `branch` → `base`, reusing one from an earlier run if present.
+ *
+ * `--fill` takes the title from the commit subject only when the branch carries a
+ * single commit; with several it falls back to the head branch name, which is how the
+ * dev → main release PR ended up titled "dev". Pass `title` for any branch that can
+ * carry more than one commit — `--title` overrides `--fill` and still autofills the body.
+ */
+export function createOrReusePr(branch: string, base: string, title?: string): string {
   const existing = capture(prListCommand(branch, base))
   if (existing) {
     console.warn(`${yellow("!")} Reusing open PR for ${branch} → ${base}`)
     return existing
   }
-  return capture(`gh pr create -f -B ${base}`)
+  return capture(`gh pr create -f ${title ? `-t "${title}" ` : ""}-B ${base}`)
 }
 
 export function ask(question: string): Promise<string> {

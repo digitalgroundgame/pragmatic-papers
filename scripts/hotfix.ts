@@ -98,7 +98,7 @@ export async function main(): Promise<void> {
     prepareBranch(backmergeBranch(version), "main", tag)
     run(`git push origin ${backmergeBranch(version)}`)
 
-    const devPrUrl = createOrReusePr(backmergeBranch(version), "dev")
+    const devPrUrl = createOrReusePr(backmergeBranch(version), "dev", `Back-merge ${tag} into dev`)
     console.warn(`\n${green("✔")} Back-merge PR to dev: ${devPrUrl}`)
 
     await autoMergeAndWait(devPrUrl)

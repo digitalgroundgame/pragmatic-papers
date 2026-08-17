@@ -258,6 +258,18 @@ describe("side-effecting helpers", () => {
     expect(execSync).toHaveBeenNthCalledWith(2, "gh pr create -f -B dev", expect.any(Object))
   })
 
+  it("createOrReusePr sets an explicit title, since --fill would use the branch name", () => {
+    vi.mocked(execSync)
+      .mockReturnValueOnce("" as never) // no existing PR
+      .mockReturnValueOnce("https://github.com/o/r/pull/11\n" as never)
+    createOrReusePr("dev", "main", "Release 1.2.3")
+    expect(execSync).toHaveBeenNthCalledWith(
+      2,
+      'gh pr create -f -t "Release 1.2.3" -B main',
+      expect.any(Object),
+    )
+  })
+
   it("autoMergeAndWait falls back to a manual prompt when auto-merge can't be enabled", async () => {
     stubPrompt("")
     vi.mocked(execSync)

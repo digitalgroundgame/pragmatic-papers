@@ -28,6 +28,13 @@ vi.mock("@/endpoints/seed/features/rich-text-showcase", () => ({
   createRichTextShowcaseArticle: vi.fn().mockResolvedValue(mockArticleId),
 }))
 
+// Stubbed like the other seed collaborators. It also keeps `payload.create`
+// reserved for the calls this script makes directly, which the error-path test
+// below depends on to know which create it is rejecting.
+vi.mock("@/endpoints/seed/articles", () => ({
+  createArticle: vi.fn().mockResolvedValue({ id: 44 }),
+}))
+
 vi.mock("@/endpoints/seed/features/interactive-maps", () => ({
   createMoCongressionalMapsArticle: vi.fn().mockResolvedValue(mockMapArticleId),
 }))
@@ -40,6 +47,7 @@ vi.mock("@/endpoints/seed/merch", () => ({
 }))
 
 const { createUser } = await import("@/endpoints/seed/users")
+const { createArticle } = await import("@/endpoints/seed/articles")
 const { createRichTextShowcaseArticle } =
   await import("@/endpoints/seed/features/rich-text-showcase")
 const { createMoCongressionalMapsArticle } =
@@ -141,6 +149,54 @@ describe("seed-e2e main()", () => {
       },
       "2026-06-04T00:00:00.000Z",
     )
+  })
+
+  it("creates three co-authors for the crowded byline", async () => {
+    await main()
+
+    for (const [name, slug, email] of [
+      ["Sienna Scribe", "e2e-co-author-sienna", "sienna@e2e.test"],
+      ["Marcus Ledger", "e2e-co-author-marcus", "marcus@e2e.test"],
+      ["Alexandra Quill", "e2e-co-author-alexandra", "alexandra@e2e.test"],
+    ]) {
+      expect(createUser).toHaveBeenCalledWith(
+        mockPayload,
+        expect.objectContaining({ name, slug, email, roles: ["writer"] }),
+        `e2e co-author ${name}`,
+        { disableRevalidate: true },
+      )
+    }
+  })
+
+  it("creates a four-author article so the byline has a collapsed state", async () => {
+    await main()
+
+    expect(createArticle).toHaveBeenCalledWith(
+      mockPayload,
+      expect.objectContaining({
+        slug: "committee-work-notes-from-a-crowded-byline",
+        publishedAt: "2026-06-04T00:00:00.000Z",
+      }),
+      { disableRevalidate: true },
+    )
+
+    // createUser is stubbed to one writer, so every author resolves to the same
+    // id — four of them is the point, not which four.
+    const [, options] = vi.mocked(createArticle).mock.calls[0]!
+    expect(options.authors).toHaveLength(4)
+  })
+
+  it("keeps the crowded-byline article off the homepage grid", async () => {
+    await main()
+
+    // gotoFirstArticle follows the first article link on the homepage and
+    // example.spec.ts screenshots the whole page, so a third tile here would
+    // shift unrelated baselines.
+    const pageCall = mockCreate.mock.calls.find(([args]) => args.collection === "pages")?.[0]
+    const grid = pageCall.data.layout.find(
+      (block: { blockType: string }) => block.blockType === "collectionGrid",
+    )
+    expect(grid.slots).toHaveLength(2)
   })
 
   it("creates a volume with the article linked and slug '1'", async () => {

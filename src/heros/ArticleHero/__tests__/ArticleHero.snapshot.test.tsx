@@ -26,9 +26,8 @@ const baseArticle = {
   slug: "test-article",
   publishedAt: "2024-06-01T00:00:00.000Z",
   heroImage: null,
-  populatedAuthors: null,
+  authors: null,
   narration: null,
-  populatedNarrator: null,
 } as unknown as Article
 
 describe("ArticleHero", () => {
@@ -40,7 +39,7 @@ describe("ArticleHero", () => {
   it("renders with populated authors showing avatar stack", () => {
     const article = {
       ...baseArticle,
-      populatedAuthors: [makeAuthor(1, "Alice Smith"), makeAuthor(2, "Bob Jones")],
+      authors: [makeAuthor(1, "Alice Smith"), makeAuthor(2, "Bob Jones")],
     } as unknown as Article
     const { container } = render(<ArticleHero article={article} />)
     expect(container.firstChild).toMatchSnapshot()

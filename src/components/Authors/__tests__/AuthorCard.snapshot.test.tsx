@@ -1,4 +1,4 @@
-import type { Media, PopulatedAuthors } from "@/payload-types"
+import type { Media, User } from "@/payload-types"
 import { render } from "@testing-library/react"
 import { describe, expect, it, vi } from "vitest"
 
@@ -17,7 +17,7 @@ vi.mock("@/components/Authors/AuthorLinks", () => ({
   AuthorLinks: () => <div data-testid="author-links" />,
 }))
 
-type Author = NonNullable<PopulatedAuthors>[number]
+type Author = User
 
 const mockBiography: Author["biography"] = {
   root: {
@@ -34,6 +34,10 @@ const baseAuthor: Author = {
   id: 1,
   name: "Alice Smith",
   slug: "alice-smith",
+  email: "alice@example.com",
+  updatedAt: "2024-01-01T00:00:00.000Z",
+  createdAt: "2024-01-01T00:00:00.000Z",
+  collection: "users",
 }
 
 describe("AuthorCard", () => {

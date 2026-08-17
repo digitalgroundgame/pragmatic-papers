@@ -1,4 +1,4 @@
-import type { PopulatedAuthors } from "@/payload-types"
+import type { User } from "@/payload-types"
 
 import {
   Avatar,
@@ -8,33 +8,33 @@ import {
   AvatarImage,
 } from "@/components/ui/avatar"
 import { getInitials } from "@/utilities/getInitials"
-
-const MAX_VISIBLE = 3
-
 interface AuthorAvatarStackProps {
-  authors: NonNullable<PopulatedAuthors>
+  authors: User[]
+  maxVisible?: number
 }
 
-export function AuthorAvatarStack({ authors }: AuthorAvatarStackProps): React.ReactNode {
+function getThumbnailUrl(author: User): string | undefined {
+  if (!author.profileImage) return undefined
+  if (typeof author.profileImage === "number") return undefined
+  return author.profileImage.sizes?.square?.url ?? undefined
+}
+
+export function AuthorAvatarStack({
+  authors,
+  maxVisible = 3,
+}: AuthorAvatarStackProps): React.ReactNode {
   if (!authors.length) return null
 
-  const visible = authors.slice(0, MAX_VISIBLE)
-  const overflow = authors.length - MAX_VISIBLE
+  const visible = authors.slice(0, maxVisible)
+  const overflow = authors.length - maxVisible
 
   return (
     <AvatarGroup className="*:[transition:margin-left_300ms_ease-out] hover:space-x-1">
       {visible.map((author) => {
-        const profileImage = author.profileImage
-        const profileImageUrl =
-          profileImage && typeof profileImage !== "number"
-            ? (profileImage.sizes?.square?.url ?? undefined)
-            : undefined
-        const initials = getInitials(author.name || "A")
-
         return (
           <Avatar key={author.id} size="sm">
-            <AvatarImage src={profileImageUrl} />
-            <AvatarFallback>{initials}</AvatarFallback>
+            <AvatarImage src={getThumbnailUrl(author)} />
+            <AvatarFallback>{getInitials(author.name || "A")}</AvatarFallback>
           </Avatar>
         )
       })}

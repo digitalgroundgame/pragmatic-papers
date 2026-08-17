@@ -1,31 +1,29 @@
-import type { Media } from "@/payload-types"
+import type { Media, User } from "@/payload-types"
 import { render } from "@testing-library/react"
 import { describe, expect, it } from "vitest"
 
 import { AuthorAvatarStack } from "../AuthorAvatarStack"
 
-const makeAuthor = (id: number, name: string, profileImage?: number | null) => ({
-  id,
-  name,
-  slug: name.toLowerCase().replace(/\s+/g, "-"),
-  profileImage: profileImage ?? null,
-})
+const makeAuthor = (id: number, name: string, profileImage?: number | null): User =>
+  ({
+    id,
+    name,
+    slug: name.toLowerCase().replace(/\s+/g, "-"),
+    profileImage: profileImage ?? null,
+  }) as User
 
-const makeAuthorWithImage = (
-  id: number,
-  name: string,
-  squareUrl?: string,
-): { id: number; name: string; slug: string; profileImage: Media } => ({
-  id,
-  name,
-  slug: name.toLowerCase().replace(/\s+/g, "-"),
-  profileImage: {
-    id: 100,
-    updatedAt: "2024-01-01T00:00:00.000Z",
-    createdAt: "2024-01-01T00:00:00.000Z",
-    sizes: squareUrl ? { square: { url: squareUrl } } : undefined,
-  } as Media,
-})
+const makeAuthorWithImage = (id: number, name: string, squareUrl?: string): User =>
+  ({
+    id,
+    name,
+    slug: name.toLowerCase().replace(/\s+/g, "-"),
+    profileImage: {
+      id: 100,
+      updatedAt: "2024-01-01T00:00:00.000Z",
+      createdAt: "2024-01-01T00:00:00.000Z",
+      sizes: squareUrl ? { square: { url: squareUrl } } : undefined,
+    } as Media,
+  }) as User
 
 describe("AuthorAvatarStack", () => {
   it("renders a single author", () => {
@@ -89,7 +87,9 @@ describe("AuthorAvatarStack", () => {
 
   it("renders author with null name using fallback initial", () => {
     const { container } = render(
-      <AuthorAvatarStack authors={[{ id: 1, name: null, slug: "anon", profileImage: null }]} />,
+      <AuthorAvatarStack
+        authors={[{ id: 1, name: null, slug: "anon", profileImage: null } as User]}
+      />,
     )
     expect(container.firstChild).toMatchSnapshot()
   })

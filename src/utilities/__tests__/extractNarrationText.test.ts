@@ -5,7 +5,7 @@ describe("extractNarrationText", () => {
   it("formats title, author, and publish date byline correctly", () => {
     const text = extractNarrationText({
       title: "Sample Article Title",
-      populatedAuthors: [{ name: "Jane Doe" }, { name: "John Smith" }],
+      authors: [{ name: "Jane Doe" }, { name: "John Smith" }],
       publishedAt: "2026-07-20T00:00:00.000Z",
     })
 
@@ -15,7 +15,7 @@ describe("extractNarrationText", () => {
     expect(text).not.toContain("<break")
   })
 
-  it("handles author string array fallback when populatedAuthors is absent", () => {
+  it("handles author string array fallback", () => {
     const text = extractNarrationText({
       title: "Author Fallback",
       authors: ["Author One", "Author Two"],

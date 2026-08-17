@@ -4,6 +4,7 @@ import {
   editorFieldLevel,
   writerFieldLevel,
   writerOrEditorFieldLevel,
+  selfOrAdminFieldLevel,
 } from "@/access/fields"
 import type { User } from "@/payload-types"
 import type { FieldAccess } from "payload"
@@ -66,5 +67,34 @@ describe("writerOrEditorFieldLevel access helper", () => {
   it("denies other roles", () => {
     expect(writerOrEditorFieldLevel(makeFieldArgs(makeUser("narrator")))).toBe(false)
     expect(writerOrEditorFieldLevel(makeFieldArgs(null))).toBe(false)
+  })
+})
+
+const makeFieldArgsWithId = (user: User | null, id: string | number | undefined) =>
+  ({ req: { user }, id }) as unknown as Parameters<FieldAccess>[0]
+
+describe("selfOrAdminFieldLevel access helper", () => {
+  it("allows admin and chief-editor to read any record", () => {
+    for (const role of ["admin", "chief-editor"]) {
+      expect(selfOrAdminFieldLevel(makeFieldArgsWithId(makeUser(role), 999))).toBe(true)
+    }
+  })
+
+  it("denies non-admin staff from reading another user's record", () => {
+    for (const role of ["narrator", "writer", "editor"]) {
+      const user = { id: 123, roles: [role] } as unknown as User
+      expect(selfOrAdminFieldLevel(makeFieldArgsWithId(user, 999))).toBe(false)
+    }
+  })
+
+  it("allows any user to read their own record", () => {
+    for (const role of ["member", "narrator", "writer", "editor"]) {
+      const user = { id: 123, roles: [role] } as unknown as User
+      expect(selfOrAdminFieldLevel(makeFieldArgsWithId(user, 123))).toBe(true)
+    }
+  })
+
+  it("denies anonymous users", () => {
+    expect(selfOrAdminFieldLevel(makeFieldArgsWithId(null, 999))).toBe(false)
   })
 })

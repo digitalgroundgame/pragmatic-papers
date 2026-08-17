@@ -16,7 +16,7 @@ import { Tailwind } from "@react-email/tailwind"
 import { formatDistanceToNow } from "date-fns"
 import * as React from "react"
 
-import type { Article, Topic, Volume } from "@/payload-types"
+import type { Article, Topic, User, Volume } from "@/payload-types"
 import { formatAuthors } from "@/utilities/formatAuthors"
 import { getMediaUrl } from "@/utilities/getMediaUrl"
 import { cn } from "@/utilities/utils"
@@ -29,9 +29,12 @@ export interface VolumeArticleEmailProps {
   siteUrl: string
 }
 
-function articleExcerpt(article: Article): string {
+function articleExcerpt(
+  article: Article,
+  volume: Pick<Volume, "title" | "volumeNumber" | "slug">,
+): string {
   if (article.meta?.description) return article.meta.description
-  return `A new piece from Volume ${article.populatedVolume?.volumeNumber ?? ""}.`
+  return `A new piece from Volume ${volume.volumeNumber ?? ""}.`
 }
 
 /**
@@ -76,8 +79,8 @@ function getDimensions(article: Article):
  * 404s.
  */
 function getAvatars(article: Article, siteUrl: string): string[] {
-  if (!article.populatedAuthors) return []
-  return article.populatedAuthors
+  const authors = (article.authors || []).filter((a): a is User => typeof a === "object")
+  return authors
     .map((a) => {
       const image = a?.profileImage
       if (!image || typeof image === "number") return null
@@ -96,12 +99,13 @@ export function VolumeArticleEmail({
   totalDays,
   siteUrl,
 }: VolumeArticleEmailProps): React.ReactElement {
-  const excerpt = articleExcerpt(article)
+  const excerpt = articleExcerpt(article, volume)
   const heroUrl = heroImageUrl(article, siteUrl)
   const image = getDimensions(article)
   const avatars = getAvatars(article, siteUrl)
   const articleUrl = `${siteUrl}/articles/${article.slug}`
   const volumeUrl = `${siteUrl}/volumes/${volume.slug}`
+  const authors = (article.authors || []).filter((a): a is User => typeof a === "object")
 
   return (
     <Html>
@@ -136,7 +140,7 @@ export function VolumeArticleEmail({
               <Link href={articleUrl} className="text-black no-underline">
                 <Text className="my-1 text-3xl font-bold">{article.title}</Text>
               </Link>
-              {article.populatedAuthors && article.populatedAuthors.length > 0 && (
+              {authors.length > 0 && (
                 <Row className="my-1">
                   {avatars.length > 0 && (
                     <Column style={{ width: 24 + avatars.length * 8 }}>
@@ -156,7 +160,7 @@ export function VolumeArticleEmail({
                   )}
                   <Column>
                     <Text className="my-0 pl-2 text-sm text-neutral-600">
-                      By {formatAuthors(article.populatedAuthors)}
+                      By {formatAuthors(authors)}
                     </Text>
                   </Column>
                 </Row>

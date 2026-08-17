@@ -9,6 +9,7 @@ import { ContributorsBlock } from "@/blocks/Contributors/Component"
 import { FormBlock } from "@/blocks/Form/Component"
 import { MediaBlock } from "@/blocks/MediaBlock/Component"
 import { NewsletterSignupBlock } from "@/blocks/NewsletterSignup/Component"
+import { MerchBlock } from "@/blocks/Merch/Component"
 import { TimelineBlock } from "@/blocks/Timeline/Component"
 import { VolumeViewBlock } from "@/blocks/VolumeViewBlock/component"
 
@@ -38,6 +39,8 @@ export const RenderBlocks: React.FC<RenderBlocksProps> = ({ blocks, pageNumber }
           return <MediaBlock key={key} {...block} />
         } else if (blockType === "newsletterSignup") {
           return <NewsletterSignupBlock key={key} {...block} />
+        } else if (blockType === "merch") {
+          return <MerchBlock key={key} {...block} />
         } else if (blockType === "timeline") {
           return <TimelineBlock key={key} {...block} />
         } else if (blockType == "volumeView") {

@@ -123,7 +123,7 @@ This file provides guidance to tools like Claude Code (claude.ai/code) when work
 | ------------------------------ | ------------------------------------------------------------------------------------------ |
 | Pure utility functions         | Unit test in `src/**/__tests__/`                                                           |
 | UI/presentational components   | Snapshot test (see `src/components/ui/__tests__/button.snapshot.test.tsx` for the pattern) |
-| Client components with state   | RTL interaction test (`userEvent`, `fireEvent`)                                            |
+| Client components with state   | RTL interaction test (`fireEvent` — see #898 on matchers/`userEvent`)                      |
 | Server components (async, CMS) | Integration test with mocked Payload queries                                               |
 | API routes / Payload hooks     | Integration test (Testcontainers, see `tests/integration/`)                                |
 

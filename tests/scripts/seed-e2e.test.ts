@@ -32,11 +32,19 @@ vi.mock("@/endpoints/seed/features/interactive-maps", () => ({
   createMoCongressionalMapsArticle: vi.fn().mockResolvedValue(mockMapArticleId),
 }))
 
+// Merch products are seeded into their own collection before the home page
+// that queries them. Stubbed like the other seed collaborators above; the
+// helper itself is covered by tests/integration/syncShopifyProducts.test.ts.
+vi.mock("@/endpoints/seed/merch", () => ({
+  seedMerchProducts: vi.fn().mockResolvedValue([1, 2, 3, 4, 5, 6]),
+}))
+
 const { createUser } = await import("@/endpoints/seed/users")
 const { createRichTextShowcaseArticle } =
   await import("@/endpoints/seed/features/rich-text-showcase")
 const { createMoCongressionalMapsArticle } =
   await import("@/endpoints/seed/features/interactive-maps")
+const { seedMerchProducts } = await import("@/endpoints/seed/merch")
 const { main } = await import("../../scripts/seed-e2e")
 
 beforeEach(() => {
@@ -200,5 +208,19 @@ describe("seed-e2e main()", () => {
     await main()
 
     expect(mockDestroy).toHaveBeenCalledOnce()
+  })
+
+  it("seeds the merch catalogue the home carousel queries, sold-out product included", async () => {
+    await main()
+
+    expect(seedMerchProducts).toHaveBeenCalledOnce()
+    const [, products] = vi.mocked(seedMerchProducts).mock.calls[0]!
+    // merch.spec.ts asserts six products and one "Sold Out" badge.
+    expect(products).toHaveLength(6)
+    expect(products.filter((product) => product.availableForSale === false)).toHaveLength(1)
+    expect(products[0]).toMatchObject({
+      title: "Acid Washed Liberalism Charity Tee, Black",
+      price: "100.00",
+    })
   })
 })

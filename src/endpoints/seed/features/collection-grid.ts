@@ -1,32 +1,43 @@
 import type { Page } from "@/payload-types"
 import type { Payload } from "payload"
+import { devMerchCatalogue, seedMerchProducts } from "../merch"
 import { createOrUpdatePage } from "../pages"
 
 /**
  * Creates the home page with CollectionGrid blocks and saves it to the `pages` collection.
  *
- * Block order (CollectionGrid layouts):
+ * A full-width Merch block ("Store Merch") sits fourth, after the first
+ * three grids, as an on-site store ad placement.
+ *
+ * Block order (CollectionGrid layouts unless noted):
  *   1. gauss-10
  *   2. vespucci-7
  *   3. fibonacci-7
- *   4. euler-3
- *   5. newton-4
- *   6. euler-5
- *   7. fibonacci-6
- *   8. euler-2
- *   9. bernoulli-left
- *  10. bernoulli-right
+ *   4. Merch – full-width "Store Merch"
+ *   5. euler-3
+ *   6. newton-4
+ *   7. euler-5
+ *   8. fibonacci-6
+ *   9. euler-2
+ *  10. bernoulli-left
+ *  11. bernoulli-right
  *
  * @param volume1ArticleIds - Volume 1 article IDs (6 articles)
  * @param volume2ArticleIds - Volume 2 article IDs (at least 2 needed)
  * @param featureArticleIds - Feature article IDs (index 0 = rich text defaults)
+ * @param mediaIds - Media IDs used for the Merch product images
  */
 export async function createCollectionGridHomePage(
   payload: Payload,
   volume1ArticleIds: number[],
   volume2ArticleIds: number[],
   featureArticleIds: number[],
+  mediaIds: number[],
 ): Promise<Page> {
+  // The Merch block below stores a query, not products — seed the catalogue it
+  // resolves against.
+  await seedMerchProducts(payload, devMerchCatalogue(mediaIds))
+
   return await createOrUpdatePage(payload, {
     title: "Home",
     slug: "home",
@@ -229,6 +240,18 @@ export async function createCollectionGridHomePage(
             overrideTitle: null,
           },
         ],
+      },
+      {
+        blockType: "merch",
+        blockName: "Store Merch",
+        heading: "DigitalGroundGame Store",
+        layout: "fullWidth",
+        autoplay: true,
+        // The whole synced catalogue in sort order — no per-placement
+        // curation, which is the point of syncing.
+        source: "all",
+        orderBy: "sortOrder",
+        limit: 6,
       },
       {
         blockType: "collectionGrid",

@@ -132,6 +132,67 @@ describe("field-level access", () => {
 
       expect(updated.createdBy).toEqual(article.createdBy)
     })
+
+    it("denies admin from updating store-owned fields on merch", async () => {
+      const admin = await createUser("admin")
+
+      const product = await payload.create({
+        collection: "merch",
+        // The collection denies `create` outright — rows come from the sync,
+        // which writes with overrideAccess just like this.
+        overrideAccess: true,
+        context: { disableRevalidate: true },
+        data: {
+          title: "Store Owned - fieldLevel",
+          externalId: "gid://shopify/Product/fieldlevel",
+          handle: "store-owned-fieldlevel",
+          price: "65.00",
+          status: "active",
+        },
+      })
+
+      const updated = await payload.update({
+        collection: "merch",
+        id: product.id,
+        overrideAccess: false,
+        user: admin,
+        context: { disableRevalidate: true },
+        // What the bulk-edit drawer sends. `admin.readOnly` never stopped this
+        // — only field-level access does.
+        data: { title: "Test", price: "0.01" },
+      })
+
+      expect(updated.title).toBe("Store Owned - fieldLevel")
+      expect(updated.price).toBe("65.00")
+    })
+
+    it("still lets an admin edit the presentation fields on merch", async () => {
+      const admin = await createUser("admin")
+
+      const product = await payload.create({
+        collection: "merch",
+        overrideAccess: true,
+        context: { disableRevalidate: true },
+        data: {
+          title: "Editorial - fieldLevel",
+          externalId: "gid://shopify/Product/editorial",
+          handle: "editorial-fieldlevel",
+          status: "active",
+        },
+      })
+
+      const updated = await payload.update({
+        collection: "merch",
+        id: product.id,
+        overrideAccess: false,
+        user: admin,
+        context: { disableRevalidate: true },
+        data: { featured: true, badgeOverride: "Last few" },
+      })
+
+      expect(updated.featured).toBe(true)
+      expect(updated.badgeOverride).toBe("Last few")
+    })
   })
 
   describe("field-level read access (Users)", () => {

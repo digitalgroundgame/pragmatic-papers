@@ -165,8 +165,8 @@ async function queryMerchProducts(block: MerchBlock): Promise<MerchProductDoc[]>
  *
  * Results are cached under the `merch` tag. The sync job drops that
  * tag when a run actually changed something, and the collection's hooks drop it
- * when an editor curates — nothing else invalidates it, so the hourly no-op run
- * costs nothing.
+ * when an editor curates — nothing else invalidates it, so a scheduled run that
+ * finds nothing new costs nothing.
  */
 export async function getMerchProducts(block: MerchBlock): Promise<MerchProduct[]> {
   // Without MERCH_SITE_URL there's nowhere to send a reader, so there's

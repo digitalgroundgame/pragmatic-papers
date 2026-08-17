@@ -71,8 +71,8 @@ export const Merch: CollectionConfig = {
   },
   admin: {
     components: {
-      // The hourly job covers the ordinary case; this is for the editor who
-      // just pushed a drop to Shopify.
+      // The scheduled job covers the ordinary case; this is for the editor
+      // who just pushed a drop to Shopify.
       beforeListTable: ["@/collections/Merch/components/SyncNowButton#SyncNowButton"],
     },
     useAsTitle: "title",
@@ -81,7 +81,7 @@ export const Merch: CollectionConfig = {
     // and the title regardless of where it sits.
     defaultColumns: ["imageUrl", "title", "price", "availableForSale", "status", "lastSyncedAt"],
     description:
-      "Synced hourly from Shopify and stored as Shopify reports it — prices are raw amounts, not formatted strings, and the block decides how they read. Commerce fields are read-only; edit them in Shopify. The presentation fields at the bottom are ours and survive a sync.",
+      "Synced from Shopify every few hours and stored as Shopify reports it — prices are raw amounts, not formatted strings, and the block decides how they read. Commerce fields are read-only; edit them in Shopify. The presentation fields at the bottom are ours and survive a sync.",
     group: "Store",
   },
   hooks: {
@@ -95,8 +95,8 @@ export const Merch: CollectionConfig = {
       // routes, so anything under /api/merch is swallowed by this
       // collection's own REST namespace and 404s.
       //
-      // The scheduled sync runs hourly; this is for the editor who has just
-      // pushed a drop to Shopify and wants it on the site now.
+      // The scheduled sync runs every few hours; this is for the editor who
+      // has just pushed a drop to Shopify and wants it on the site now.
       path: "/sync",
       method: "post",
       handler: async (req: PayloadRequest): Promise<Response> => {

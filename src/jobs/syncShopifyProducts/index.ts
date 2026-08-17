@@ -15,9 +15,16 @@ import {
  * Pull the Shopify catalogue into `merch` so Merch blocks render
  * live prices and availability instead of hand-typed rows.
  *
- * Hourly is generous for a catalog that changes a few times a season; the
- * "run now" endpoint (`/merch/sync`) covers the case where an editor
- * has just pushed a drop and wants it on the site immediately.
+ * Every six hours, which is a catch-up pass rather than a freshness
+ * guarantee. A catalogue that turns over a few times a season doesn't earn
+ * more: each run re-stamps `lastSyncedAt` on every row it sees, so polling
+ * costs a write per product whether or not the store changed anything.
+ *
+ * What actually needs to be prompt is a drop the editor just pushed, and the
+ * "run now" endpoint (`/merch/sync`) serves that directly — no schedule can
+ * beat a button. The window this leaves is a product selling out between
+ * runs, where the card shows an unsold badge for a few hours and the store
+ * site corrects it on the click through.
  */
 export const syncShopifyProductsTask: TaskConfig<"syncShopifyProducts"> = {
   slug: "syncShopifyProducts",
@@ -25,8 +32,8 @@ export const syncShopifyProductsTask: TaskConfig<"syncShopifyProducts"> = {
   retries: { attempts: 2, backoff: { type: "exponential", delay: 60_000 } },
   schedule: [
     {
-      // Top of every hour.
-      cron: "0 * * * *",
+      // 00:00, 06:00, 12:00 and 18:00 UTC.
+      cron: "0 */6 * * *",
       queue: "default",
     },
   ],
@@ -78,7 +85,7 @@ export const syncShopifyProductsTask: TaskConfig<"syncShopifyProducts"> = {
       }
     } else {
       // Revalidating on every run would drop every page embedding a Merch
-      // block, hourly, to render byte-identical output.
+      // block, on a schedule, to render byte-identical output.
       log.debug("[merch-sync]   nothing changed — left the cache alone")
     }
 

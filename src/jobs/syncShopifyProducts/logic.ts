@@ -279,7 +279,7 @@ export async function fetchShopifyProducts(
  * Shopify returns (`priceRange.minVariantPrice`, `collections { nodes }`) is
  * GraphQL transport, not its data model, and this table is a derived cache —
  * anything we skip today can be added as a column and backfilled by the next
- * hourly run.
+ * next run.
  */
 export function mapShopifyProduct(node: ShopifyProductNode, syncedAt: string): SyncedProductData {
   const price = node.priceRange?.minVariantPrice
@@ -313,7 +313,7 @@ export function mapShopifyProduct(node: ShopifyProductNode, syncedAt: string): S
  * Whether a mapped product differs from the row we already hold.
  *
  * `lastSyncedAt` is deliberately excluded — it changes every run, and treating
- * that as a change would revalidate the whole site hourly for nothing.
+ * that as a change would revalidate the whole site every run for nothing.
  */
 export function hasProductChanged(existing: MerchProductDoc, next: SyncedProductData): boolean {
   const keys = Object.keys(next).filter(

@@ -8,8 +8,8 @@ import type { Block } from "payload"
  *  - `fullWidth` — banner-style, for page bodies
  *
  * The block stores a *query*, never product data: products live in the `merch`
- * collection, synced hourly from Shopify. That's what keeps a price change or a
- * sold-out item from being a manual edit in every placement.
+ * collection, synced from Shopify on a schedule. That's what keeps a price
+ * change or a sold-out item from being a manual edit in every placement.
  *
  * Where a click lands is config, not content — every link is derived from
  * `MERCH_SITE_URL`, so the store can move without touching a single placement.
@@ -67,7 +67,7 @@ export const Merch: Block = {
       ],
       admin: {
         description:
-          "Products are synced from Shopify hourly. Show the whole catalogue, or narrow it down below.",
+          "Products are synced from Shopify automatically. Show the whole catalogue, or narrow it down below.",
       },
     },
     {

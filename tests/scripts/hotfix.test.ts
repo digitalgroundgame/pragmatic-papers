@@ -7,7 +7,7 @@ const lib = vi.hoisted(() => ({
   capture: vi.fn(() => "https://github.com/o/r/pull/1"),
   requireGh: vi.fn(),
   waitForMerge: vi.fn(),
-  autoMergeAndWait: vi.fn(),
+  waitForSyncMerge: vi.fn(),
   prepareBranch: vi.fn(),
   commitIfStaged: vi.fn(),
   createOrReusePr: vi.fn(() => "https://github.com/o/r/pull/1"),
@@ -86,7 +86,7 @@ describe("hotfix main()", () => {
       "dev",
       "Back-merge v1.0.1 into dev",
     )
-    expect(lib.autoMergeAndWait).toHaveBeenCalledOnce()
+    expect(lib.waitForSyncMerge).toHaveBeenCalledOnce()
   })
 
   it("runs only the back-merge for --phase 2", async () => {
@@ -104,7 +104,7 @@ describe("hotfix main()", () => {
       "dev",
       "Back-merge v1.0.1 into dev",
     )
-    expect(lib.autoMergeAndWait).toHaveBeenCalledOnce()
+    expect(lib.waitForSyncMerge).toHaveBeenCalledOnce()
     expect(lib.waitForMerge).not.toHaveBeenCalled()
   })
 

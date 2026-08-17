@@ -7,8 +7,6 @@ import {
   PR_STATE_JQ,
   VERSION_RE,
   ask,
-  autoMergeAndWait,
-  autoMergeCommand,
   branchExists,
   bumpMessage,
   capture,
@@ -25,6 +23,7 @@ import {
   requireGh,
   run,
   waitForMerge,
+  waitForSyncMerge,
 } from "../../scripts/release-lib"
 
 vi.mock("node:child_process", () => ({ execSync: vi.fn() }))
@@ -83,12 +82,6 @@ describe("command builders", () => {
   it("prStateCommand queries the PR and collapses state via jq", () => {
     expect(prStateCommand(ref)).toBe(`gh api repos/o/r/pulls/7 --jq '${PR_STATE_JQ}'`)
     expect(PR_STATE_JQ).toContain("MERGED")
-  })
-
-  it("autoMergeCommand forces a merge commit, never a squash", () => {
-    const cmd = autoMergeCommand("https://github.com/o/r/pull/7")
-    expect(cmd).toBe(`gh pr merge "https://github.com/o/r/pull/7" --auto --merge`)
-    expect(cmd).not.toContain("--squash")
   })
 
   it("bumpMessage matches the commit subject the release makes", () => {
@@ -170,25 +163,34 @@ describe("side-effecting helpers", () => {
     expect(execSync).toHaveBeenCalledTimes(2)
   })
 
-  it("autoMergeAndWait enables auto-merge then polls to MERGED", async () => {
-    vi.mocked(execSync)
-      .mockReturnValueOnce("" as never) // run(autoMergeCommand)
-      .mockReturnValueOnce("OPEN\n" as never) // poll 1
-      .mockReturnValueOnce("MERGED\n" as never) // poll 2
-    await autoMergeAndWait(PR, 1)
-    expect(execSync).toHaveBeenNthCalledWith(1, autoMergeCommand(PR), expect.any(Object))
-    expect(execSync).toHaveBeenCalledTimes(3)
+  it("waitForSyncMerge never issues a merge command — the operator merges by hand", async () => {
+    stubPrompt("")
+    vi.mocked(execSync).mockReturnValue("MERGED\n" as never)
+    await waitForSyncMerge(PR)
+
+    const commands = vi.mocked(execSync).mock.calls.map((c) => c[0] as string)
+    expect(commands.some((cmd) => cmd.includes("gh pr merge"))).toBe(false)
+    expect(readline.createInterface).toHaveBeenCalled()
   })
 
-  it("autoMergeAndWait exits if the PR is closed without merging", async () => {
+  it("waitForSyncMerge warns against squashing, which would diverge dev from main", async () => {
+    stubPrompt("")
+    vi.mocked(execSync).mockReturnValue("MERGED\n" as never)
+    const warn = vi.spyOn(console, "warn")
+    await waitForSyncMerge(PR)
+
+    const output = warn.mock.calls.flat().join(" ")
+    expect(output).toContain("merge commit")
+    expect(output).toContain("not a squash")
+  })
+
+  it("waitForSyncMerge keeps prompting until the PR actually reports MERGED", async () => {
+    stubPrompt("")
     vi.mocked(execSync)
-      .mockReturnValueOnce("" as never) // run(autoMergeCommand)
-      .mockReturnValueOnce("CLOSED\n" as never) // poll
-    const exit = vi.spyOn(process, "exit").mockImplementation(((code?: number) => {
-      throw new Error(`exit:${code}`)
-    }) as never)
-    await expect(autoMergeAndWait(PR, 1)).rejects.toThrow("exit:1")
-    exit.mockRestore()
+      .mockReturnValueOnce("OPEN\n" as never)
+      .mockReturnValueOnce("MERGED\n" as never)
+    await waitForSyncMerge(PR)
+    expect(vi.mocked(readline.createInterface)).toHaveBeenCalledTimes(2)
   })
 
   it("branchExists reports on the local ref, not a remote one", () => {
@@ -268,17 +270,6 @@ describe("side-effecting helpers", () => {
       'gh pr create -f -t "Release 1.2.3" -B main',
       expect.any(Object),
     )
-  })
-
-  it("autoMergeAndWait falls back to a manual prompt when auto-merge can't be enabled", async () => {
-    stubPrompt("")
-    vi.mocked(execSync)
-      .mockImplementationOnce(() => {
-        throw new Error("auto-merge not allowed")
-      }) // run(autoMergeCommand) fails
-      .mockReturnValueOnce("MERGED\n" as never) // waitForMerge → prState
-    await autoMergeAndWait(PR, 1)
-    expect(readline.createInterface).toHaveBeenCalled()
   })
 })
 

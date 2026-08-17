@@ -15,7 +15,6 @@ import { fileURLToPath } from "node:url"
 
 import { blue, gray, green, red } from "./ansi.mjs"
 import {
-  autoMergeAndWait,
   bumpMessage,
   commitIfStaged,
   createOrReusePr,
@@ -24,6 +23,7 @@ import {
   requireGh,
   run,
   waitForMerge,
+  waitForSyncMerge,
 } from "./release-lib"
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..")
@@ -101,7 +101,7 @@ export async function main(): Promise<void> {
     const devPrUrl = createOrReusePr(backmergeBranch(version), "dev", `Back-merge ${tag} into dev`)
     console.warn(`\n${green("✔")} Back-merge PR to dev: ${devPrUrl}`)
 
-    await autoMergeAndWait(devPrUrl)
+    await waitForSyncMerge(devPrUrl)
   }
 }
 

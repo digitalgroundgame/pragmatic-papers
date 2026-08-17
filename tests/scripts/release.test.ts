@@ -9,7 +9,7 @@ const lib = vi.hoisted(() => ({
   capture: vi.fn(() => "https://github.com/o/r/pull/1"),
   requireGh: vi.fn(),
   waitForMerge: vi.fn(),
-  autoMergeAndWait: vi.fn(),
+  waitForSyncMerge: vi.fn(),
   prepareBranch: vi.fn(),
   commitIfStaged: vi.fn(),
   createOrReusePr: vi.fn(() => "https://github.com/o/r/pull/1"),
@@ -68,7 +68,7 @@ describe("release main()", () => {
     expect(lib.waitForMerge).toHaveBeenCalledOnce()
     // phase 2 — titled "Release <version>", not the "dev" that --fill would derive
     expect(lib.createOrReusePr).toHaveBeenCalledWith("dev", "main", "Release 1.0.0")
-    expect(lib.autoMergeAndWait).toHaveBeenCalledOnce()
+    expect(lib.waitForSyncMerge).toHaveBeenCalledOnce()
     // phase 3 is not chained (release.yml tags automatically)
     expect(c.some((cmd) => cmd.startsWith("git tag"))).toBe(false)
   })
@@ -80,7 +80,7 @@ describe("release main()", () => {
     expect(vi.mocked(fs.writeFileSync)).not.toHaveBeenCalled()
     expect(lib.prepareBranch).not.toHaveBeenCalled()
     expect(lib.createOrReusePr).toHaveBeenCalledExactlyOnceWith("dev", "main", "Release 1.0.0")
-    expect(lib.autoMergeAndWait).toHaveBeenCalledOnce()
+    expect(lib.waitForSyncMerge).toHaveBeenCalledOnce()
     expect(lib.waitForMerge).not.toHaveBeenCalled()
   })
 
@@ -92,7 +92,7 @@ describe("release main()", () => {
     expect(c).toContain('git tag v1.0.0 -m "v1.0.0" -s')
     expect(lib.capture).toHaveBeenCalledWith('gh release create v1.0.0 --target main -t "v1.0.0"')
     expect(lib.waitForMerge).not.toHaveBeenCalled()
-    expect(lib.autoMergeAndWait).not.toHaveBeenCalled()
+    expect(lib.waitForSyncMerge).not.toHaveBeenCalled()
     expect(vi.mocked(fs.writeFileSync)).not.toHaveBeenCalled()
   })
 

@@ -15,10 +15,22 @@ interface ArticleHeroProps {
   article: Article
 }
 
+/**
+ * How many authors the byline names before collapsing the rest into "N more".
+ * Shared with the avatar stack so the two tell the same story — three faces
+ * and a "+3" alongside six spelled-out names would read as a bug.
+ */
+const MAX_BYLINE_AUTHORS = 3
+
 export const ArticleHero: React.FC<ArticleHeroProps> = ({ article }) => {
   const { publishedAt, title, heroImage, authors, narration } = article
 
   const populatedAuthors = (authors || []).filter((a): a is User => typeof a === "object")
+  const namedAuthors = populatedAuthors.slice(0, MAX_BYLINE_AUTHORS)
+  const overflowCount = populatedAuthors.length - namedAuthors.length
+  // "N more" takes the final slot, so the separators — and the Oxford comma
+  // that depends on which item is last — have to count it as one of them.
+  const bylineLength = namedAuthors.length + (overflowCount > 0 ? 1 : 0)
 
   return (
     <div className="relative flex flex-col gap-2 md:-mx-10 lg:-mx-32 xl:-mx-44">
@@ -35,17 +47,23 @@ export const ArticleHero: React.FC<ArticleHeroProps> = ({ article }) => {
       <div className="flex flex-col gap-2 md:flex-row md:items-center md:gap-8">
         <div className="flex flex-1 items-start justify-between gap-2 md:contents">
           <div className="dark:text-brand-high-contrast text-brand flex flex-1 flex-wrap items-center gap-2 font-serif font-bold underline-offset-4 md:order-1">
-            <AuthorAvatarStack authors={populatedAuthors} />
-            {populatedAuthors.length > 0 && (
+            <AuthorAvatarStack authors={populatedAuthors} maxVisible={MAX_BYLINE_AUTHORS} />
+            {namedAuthors.length > 0 && (
               <span>
-                {populatedAuthors.map(({ id, slug, name }, index) => (
+                {namedAuthors.map(({ id, slug, name }, index) => (
                   <React.Fragment key={id}>
-                    {getSeparator(index, populatedAuthors.length)}
+                    {getSeparator(index, bylineLength)}
                     <HoverPrefetchLink href={`/authors/${slug}`} className="hover:underline">
                       {name}
                     </HoverPrefetchLink>
                   </React.Fragment>
                 ))}
+                {overflowCount > 0 && (
+                  <>
+                    {getSeparator(namedAuthors.length, bylineLength)}
+                    {`${overflowCount} more`}
+                  </>
+                )}
               </span>
             )}
             {"•"}

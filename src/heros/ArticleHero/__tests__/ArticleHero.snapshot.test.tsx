@@ -59,6 +59,37 @@ describe("ArticleHero", () => {
     expect(container.firstChild).toMatchSnapshot()
   })
 
+  it("names every author when the byline is at its cap", () => {
+    const article = {
+      ...baseArticle,
+      authors: [
+        makeAuthor(1, "Alice Smith"),
+        makeAuthor(2, "Bob Jones"),
+        makeAuthor(3, "Carol Diaz"),
+      ],
+    } as unknown as Article
+    const { container } = render(<ArticleHero article={article} />)
+    expect(container.textContent).not.toContain("more")
+  })
+
+  it("collapses authors past the cap into a remainder", () => {
+    const article = {
+      ...baseArticle,
+      authors: [
+        makeAuthor(1, "Alice Smith"),
+        makeAuthor(2, "Bob Jones"),
+        makeAuthor(3, "Carol Diaz"),
+        makeAuthor(4, "Dan Reed"),
+        makeAuthor(5, "Erin Fox"),
+        makeAuthor(6, "Frank Ng"),
+      ],
+    } as unknown as Article
+    const { container } = render(<ArticleHero article={article} />)
+    expect(container.textContent).toContain("Alice Smith, Bob Jones, Carol Diaz, & 3 more")
+    expect(container.textContent).not.toContain("Dan Reed")
+    expect(container.firstChild).toMatchSnapshot()
+  })
+
   it("renders with hero image", () => {
     const article = {
       ...baseArticle,

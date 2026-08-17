@@ -314,7 +314,7 @@ exports[`ArticleHero > renders with populated authors showing avatar stack 1`] =
         class="dark:text-brand-high-contrast text-brand flex flex-1 flex-wrap items-center gap-2 font-serif font-bold underline-offset-4 md:order-1"
       >
         <div
-          class="group/avatar-group *:data-[slot=avatar]:ring-background flex -space-x-2 *:data-[slot=avatar]:ring-2 *:[transition:margin-left_300ms_ease-out] hover:space-x-1"
+          class="group/avatar-group *:data-[slot=avatar]:ring-background flex -space-x-2 *:data-[slot=avatar]:ring-2 *:[transition:margin-inline-end_300ms_ease-out] hover:space-x-1"
           data-slot="avatar-group"
         >
           <span

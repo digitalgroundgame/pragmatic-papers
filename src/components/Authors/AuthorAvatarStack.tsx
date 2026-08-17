@@ -29,7 +29,7 @@ export function AuthorAvatarStack({
   const overflow = authors.length - maxVisible
 
   return (
-    <AvatarGroup className="*:[transition:margin-left_300ms_ease-out] hover:space-x-1">
+    <AvatarGroup className="*:[transition:margin-inline-end_300ms_ease-out] hover:space-x-1">
       {visible.map((author) => {
         return (
           <Avatar key={author.id} size="sm">

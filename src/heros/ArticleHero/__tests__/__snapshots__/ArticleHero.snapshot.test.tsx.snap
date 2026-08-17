@@ -32,7 +32,7 @@ exports[`ArticleHero > collapses authors past the cap into a remainder 1`] = `
             tabindex="-1"
           >
             <span
-              class="bg-foreground text-background flex size-full items-center justify-center rounded-full font-mono text-sm group-data-[size=sm]/avatar:text-xs"
+              class="bg-foreground text-background flex size-full items-center justify-center rounded-full font-serif text-sm group-data-[size=sm]/avatar:text-xs"
               data-slot="avatar-fallback"
             >
               AS
@@ -48,7 +48,7 @@ exports[`ArticleHero > collapses authors past the cap into a remainder 1`] = `
             tabindex="-1"
           >
             <span
-              class="bg-foreground text-background flex size-full items-center justify-center rounded-full font-mono text-sm group-data-[size=sm]/avatar:text-xs"
+              class="bg-foreground text-background flex size-full items-center justify-center rounded-full font-serif text-sm group-data-[size=sm]/avatar:text-xs"
               data-slot="avatar-fallback"
             >
               BJ
@@ -61,7 +61,7 @@ exports[`ArticleHero > collapses authors past the cap into a remainder 1`] = `
             type="button"
           >
             <div
-              class="bg-foreground text-background ring-background relative flex size-8 shrink-0 items-center justify-center rounded-full font-mono text-sm ring-2 group-has-data-[size=lg]/avatar-group:size-10 group-has-data-[size=sm]/avatar-group:size-6 [&>svg]:size-4 group-has-data-[size=lg]/avatar-group:[&>svg]:size-5 group-has-data-[size=sm]/avatar-group:[&>svg]:size-3"
+              class="bg-foreground text-background ring-background relative flex size-8 shrink-0 items-center justify-center rounded-full font-serif text-sm ring-2 group-has-data-[size=lg]/avatar-group:size-10 group-has-data-[size=sm]/avatar-group:size-6 [&>svg]:size-4 group-has-data-[size=lg]/avatar-group:[&>svg]:size-5 group-has-data-[size=sm]/avatar-group:[&>svg]:size-3"
               data-slot="avatar-group-count"
             >
               +
@@ -202,7 +202,7 @@ exports[`ArticleHero > joins three authors with commas and a closing ampersand 1
             tabindex="-1"
           >
             <span
-              class="bg-foreground text-background flex size-full items-center justify-center rounded-full font-mono text-sm group-data-[size=sm]/avatar:text-xs"
+              class="bg-foreground text-background flex size-full items-center justify-center rounded-full font-serif text-sm group-data-[size=sm]/avatar:text-xs"
               data-slot="avatar-fallback"
             >
               AS
@@ -218,7 +218,7 @@ exports[`ArticleHero > joins three authors with commas and a closing ampersand 1
             tabindex="-1"
           >
             <span
-              class="bg-foreground text-background flex size-full items-center justify-center rounded-full font-mono text-sm group-data-[size=sm]/avatar:text-xs"
+              class="bg-foreground text-background flex size-full items-center justify-center rounded-full font-serif text-sm group-data-[size=sm]/avatar:text-xs"
               data-slot="avatar-fallback"
             >
               BJ
@@ -234,7 +234,7 @@ exports[`ArticleHero > joins three authors with commas and a closing ampersand 1
             tabindex="-1"
           >
             <span
-              class="bg-foreground text-background flex size-full items-center justify-center rounded-full font-mono text-sm group-data-[size=sm]/avatar:text-xs"
+              class="bg-foreground text-background flex size-full items-center justify-center rounded-full font-serif text-sm group-data-[size=sm]/avatar:text-xs"
               data-slot="avatar-fallback"
             >
               CD
@@ -667,7 +667,7 @@ exports[`ArticleHero > renders with populated authors showing avatar stack 1`] =
             tabindex="-1"
           >
             <span
-              class="bg-foreground text-background flex size-full items-center justify-center rounded-full font-mono text-sm group-data-[size=sm]/avatar:text-xs"
+              class="bg-foreground text-background flex size-full items-center justify-center rounded-full font-serif text-sm group-data-[size=sm]/avatar:text-xs"
               data-slot="avatar-fallback"
             >
               AS
@@ -683,7 +683,7 @@ exports[`ArticleHero > renders with populated authors showing avatar stack 1`] =
             tabindex="-1"
           >
             <span
-              class="bg-foreground text-background flex size-full items-center justify-center rounded-full font-mono text-sm group-data-[size=sm]/avatar:text-xs"
+              class="bg-foreground text-background flex size-full items-center justify-center rounded-full font-serif text-sm group-data-[size=sm]/avatar:text-xs"
               data-slot="avatar-fallback"
             >
               BJ

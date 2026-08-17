@@ -41,7 +41,7 @@ function AvatarFallback({ className, ...props }: AvatarPrimitive.Fallback.Props)
         // Inverted against the page — dark fill in light mode, light fill in
         // dark — so initials read as a deliberate mark rather than a missing
         // image, and stand out against the surrounding text.
-        "bg-foreground text-background flex size-full items-center justify-center rounded-full font-mono text-sm group-data-[size=sm]/avatar:text-xs",
+        "bg-foreground text-background flex size-full items-center justify-center rounded-full font-serif text-sm group-data-[size=sm]/avatar:text-xs",
         className,
       )}
       {...props}
@@ -85,7 +85,7 @@ function AvatarGroupCount({ className, ...props }: React.ComponentProps<"div">):
       className={cn(
         // Matches AvatarFallback's inversion so the "+N" reads as one of the
         // circles rather than a gap at the end of the stack.
-        "bg-foreground text-background ring-background relative flex size-8 shrink-0 items-center justify-center rounded-full font-mono text-sm ring-2 group-has-data-[size=lg]/avatar-group:size-10 group-has-data-[size=sm]/avatar-group:size-6 [&>svg]:size-4 group-has-data-[size=lg]/avatar-group:[&>svg]:size-5 group-has-data-[size=sm]/avatar-group:[&>svg]:size-3",
+        "bg-foreground text-background ring-background relative flex size-8 shrink-0 items-center justify-center rounded-full font-serif text-sm ring-2 group-has-data-[size=lg]/avatar-group:size-10 group-has-data-[size=sm]/avatar-group:size-6 [&>svg]:size-4 group-has-data-[size=lg]/avatar-group:[&>svg]:size-5 group-has-data-[size=sm]/avatar-group:[&>svg]:size-3",
         className,
       )}
       {...props}

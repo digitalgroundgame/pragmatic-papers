@@ -7,7 +7,7 @@ exports[`Avatar > renders default size with fallback 1`] = `
   data-slot="avatar"
 >
   <span
-    class="bg-foreground text-background flex size-full items-center justify-center rounded-full font-mono text-sm group-data-[size=sm]/avatar:text-xs"
+    class="bg-foreground text-background flex size-full items-center justify-center rounded-full font-serif text-sm group-data-[size=sm]/avatar:text-xs"
     data-slot="avatar-fallback"
   >
     AB
@@ -22,7 +22,7 @@ exports[`Avatar > renders lg size 1`] = `
   data-slot="avatar"
 >
   <span
-    class="bg-foreground text-background flex size-full items-center justify-center rounded-full font-mono text-sm group-data-[size=sm]/avatar:text-xs"
+    class="bg-foreground text-background flex size-full items-center justify-center rounded-full font-serif text-sm group-data-[size=sm]/avatar:text-xs"
     data-slot="avatar-fallback"
   >
     AB
@@ -37,7 +37,7 @@ exports[`Avatar > renders sm size 1`] = `
   data-slot="avatar"
 >
   <span
-    class="bg-foreground text-background flex size-full items-center justify-center rounded-full font-mono text-sm group-data-[size=sm]/avatar:text-xs"
+    class="bg-foreground text-background flex size-full items-center justify-center rounded-full font-serif text-sm group-data-[size=sm]/avatar:text-xs"
     data-slot="avatar-fallback"
   >
     AB
@@ -52,7 +52,7 @@ exports[`AvatarBadge > renders inside avatar 1`] = `
   data-slot="avatar"
 >
   <span
-    class="bg-foreground text-background flex size-full items-center justify-center rounded-full font-mono text-sm group-data-[size=sm]/avatar:text-xs"
+    class="bg-foreground text-background flex size-full items-center justify-center rounded-full font-serif text-sm group-data-[size=sm]/avatar:text-xs"
     data-slot="avatar-fallback"
   >
     AB
@@ -75,7 +75,7 @@ exports[`AvatarGroup > renders stacked avatars with overflow count 1`] = `
     data-slot="avatar"
   >
     <span
-      class="bg-foreground text-background flex size-full items-center justify-center rounded-full font-mono text-sm group-data-[size=sm]/avatar:text-xs"
+      class="bg-foreground text-background flex size-full items-center justify-center rounded-full font-serif text-sm group-data-[size=sm]/avatar:text-xs"
       data-slot="avatar-fallback"
     >
       AB
@@ -87,14 +87,14 @@ exports[`AvatarGroup > renders stacked avatars with overflow count 1`] = `
     data-slot="avatar"
   >
     <span
-      class="bg-foreground text-background flex size-full items-center justify-center rounded-full font-mono text-sm group-data-[size=sm]/avatar:text-xs"
+      class="bg-foreground text-background flex size-full items-center justify-center rounded-full font-serif text-sm group-data-[size=sm]/avatar:text-xs"
       data-slot="avatar-fallback"
     >
       CD
     </span>
   </span>
   <div
-    class="bg-foreground text-background ring-background relative flex size-8 shrink-0 items-center justify-center rounded-full font-mono text-sm ring-2 group-has-data-[size=lg]/avatar-group:size-10 group-has-data-[size=sm]/avatar-group:size-6 [&>svg]:size-4 group-has-data-[size=lg]/avatar-group:[&>svg]:size-5 group-has-data-[size=sm]/avatar-group:[&>svg]:size-3"
+    class="bg-foreground text-background ring-background relative flex size-8 shrink-0 items-center justify-center rounded-full font-serif text-sm ring-2 group-has-data-[size=lg]/avatar-group:size-10 group-has-data-[size=sm]/avatar-group:size-6 [&>svg]:size-4 group-has-data-[size=lg]/avatar-group:[&>svg]:size-5 group-has-data-[size=sm]/avatar-group:[&>svg]:size-3"
     data-slot="avatar-group-count"
   >
     +3
@@ -109,7 +109,7 @@ exports[`AvatarImage > renders with src 1`] = `
   data-slot="avatar"
 >
   <span
-    class="bg-foreground text-background flex size-full items-center justify-center rounded-full font-mono text-sm group-data-[size=sm]/avatar:text-xs"
+    class="bg-foreground text-background flex size-full items-center justify-center rounded-full font-serif text-sm group-data-[size=sm]/avatar:text-xs"
     data-slot="avatar-fallback"
   >
     AB

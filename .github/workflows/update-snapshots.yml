@@ -55,6 +55,12 @@ jobs:
     container:
       image: mcr.microsoft.com/playwright:v1.60.0-noble
 
+    env:
+      # Baselines captured with the Inter fallback would bake the wrong typeface into every
+      # future visual diff, so fail the run rather than commit bad screenshots. Job-level so
+      # it reaches the install step inside the setup-project composite action.
+      FONTS_REQUIRED: "true"
+
     permissions:
       contents: write
       pull-requests: write

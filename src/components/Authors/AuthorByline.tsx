@@ -3,7 +3,7 @@
 import type { User } from "@/payload-types"
 import React, { useState } from "react"
 
-import { AuthorAvatarStack } from "@/components/Authors/AuthorAvatarStack"
+import { AvatarStack } from "@/components/Authors/AvatarStack"
 import { splitAuthors } from "@/components/Authors/splitAuthors"
 import { HoverPrefetchLink } from "@/components/Link/HoverPrefetchLink"
 import { getSeparator } from "@/utilities/getSeparator"
@@ -36,7 +36,7 @@ export function AuthorByline({ authors }: AuthorBylineProps): React.ReactNode {
 
   return (
     <>
-      <AuthorAvatarStack
+      <AvatarStack
         authors={authors}
         maxVisible={collapsed ? undefined : authors.length}
         onOverflowClick={collapsed ? () => setExpanded(true) : undefined}

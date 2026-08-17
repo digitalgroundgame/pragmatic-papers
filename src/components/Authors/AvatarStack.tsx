@@ -10,7 +10,7 @@ import {
 import { HoverPrefetchLink } from "@/components/Link/HoverPrefetchLink"
 import { MAX_AUTHOR_SLOTS, splitAuthors } from "@/components/Authors/splitAuthors"
 import { getInitials } from "@/utilities/getInitials"
-interface AuthorAvatarStackProps {
+interface AvatarStackProps {
   authors: User[]
   /** Total circles to render, counting the "+N" as one of them. */
   maxVisible?: number
@@ -24,11 +24,11 @@ function getThumbnailUrl(author: User): string | undefined {
   return author.profileImage.sizes?.square?.url ?? undefined
 }
 
-export function AuthorAvatarStack({
+export function AvatarStack({
   authors,
   maxVisible = MAX_AUTHOR_SLOTS,
   onOverflowClick,
-}: AuthorAvatarStackProps): React.ReactNode {
+}: AvatarStackProps): React.ReactNode {
   if (!authors.length) return null
 
   const { visible, overflow } = splitAuthors(authors, maxVisible)

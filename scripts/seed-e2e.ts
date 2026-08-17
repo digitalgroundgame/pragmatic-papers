@@ -1,3 +1,5 @@
+import type { User } from "@/payload-types"
+import { createArticle } from "@/endpoints/seed/articles"
 import { createMoCongressionalMapsArticle } from "@/endpoints/seed/features/interactive-maps"
 import { createRichTextShowcaseArticle } from "@/endpoints/seed/features/rich-text-showcase"
 import {
@@ -48,6 +50,18 @@ async function createLocalMedia(
 // Screenshot baselines bake in this date via the article/volume byline, so it
 // must stay fixed rather than tracking the day the seed happens to run.
 const PUBLISHED_AT = "2026-06-04T00:00:00.000Z"
+
+/** Shared with tests/e2e/byline.spec.ts, which navigates here directly. */
+export const FOUR_AUTHOR_SLUG = "committee-work-notes-from-a-crowded-byline"
+
+// Co-authors for the article above. Deliberately plain compared with the e2e
+// writer — author-card.spec.ts covers the fully-populated profile, and these
+// only ever appear as a name and a set of initials in a byline.
+const CO_AUTHORS = [
+  { name: "Sienna Scribe", slug: "e2e-co-author-sienna", email: "sienna@e2e.test" },
+  { name: "Marcus Ledger", slug: "e2e-co-author-marcus", email: "marcus@e2e.test" },
+  { name: "Alexandra Quill", slug: "e2e-co-author-alexandra", email: "alexandra@e2e.test" },
+]
 
 export async function main(): Promise<void> {
   const payload = await getPayload({ config })
@@ -131,6 +145,47 @@ export async function main(): Promise<void> {
 
     // Interactive map article (slug: "missouri-shifting-margins-119-120-congressional-maps").
     await createMoCongressionalMapsArticle(payload, [writer], [], [], ctx, PUBLISHED_AT)
+
+    // A four-author article, so the byline's collapsed state has something to
+    // render: two names and "& 2 more" beside two avatars and a "+2".
+    //
+    // Deliberately left off the homepage grid below. `gotoFirstArticle` follows
+    // the first article link there and example.spec.ts screenshots the whole
+    // page, so adding a tile would shift baselines that have nothing to do with
+    // this article. byline.spec.ts navigates to it by slug instead.
+    const coAuthors: User[] = []
+    for (const coAuthor of CO_AUTHORS) {
+      coAuthors.push(
+        await createUser(
+          payload,
+          {
+            email: coAuthor.email,
+            password: "e2e-test-password-123",
+            name: coAuthor.name,
+            roles: ["writer"],
+            slug: coAuthor.slug,
+          },
+          `e2e co-author ${coAuthor.name}`,
+          ctx,
+        ),
+      )
+    }
+
+    await createArticle(
+      payload,
+      {
+        title: "Committee Work: Notes From a Crowded Byline",
+        slug: FOUR_AUTHOR_SLUG,
+        authors: [writer, ...coAuthors].map(({ id }) => id),
+        content: createRichText([
+          createParagraph(
+            "Four authors, three slots. This article exists so the byline has somewhere to show its collapsed state — two names, a remainder, and an avatar stack that stops at the same place the names do.",
+          ),
+        ]),
+        publishedAt: PUBLISHED_AT,
+      },
+      ctx,
+    )
 
     const volume = await payload.create({
       collection: "volumes",

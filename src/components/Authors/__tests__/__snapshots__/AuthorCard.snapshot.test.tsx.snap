@@ -1,0 +1,406 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`AuthorCard > renders minimal author with no bio, image, or affiliation 1`] = `
+<div
+  class="group/card bg-card text-card-foreground ring-foreground/10 flex flex-col gap-4 overflow-hidden py-4 text-sm ring-1 has-data-[slot=card-footer]:pb-0 has-[>img:first-child]:pt-0 data-[size=sm]:gap-3 data-[size=sm]:py-3 data-[size=sm]:has-data-[slot=card-footer]:pb-0 *:[img:first-child]:rounded-t-xl *:[img:last-child]:rounded-b-xl rounded-sm"
+  data-size="default"
+  data-slot="card"
+>
+  <div
+    class="px-4 group-data-[size=sm]/card:px-3 flex flex-col gap-4 sm:flex-row"
+    data-slot="card-content"
+  >
+    <a
+      aria-label="Alice Smith"
+      href="/authors/alice-smith"
+    >
+      <span
+        class="group/avatar after:border-border relative flex size-8 shrink-0 overflow-hidden rounded-full select-none after:absolute after:inset-0 after:rounded-full after:border after:mix-blend-darken data-[size=2xl]:size-32 data-[size=lg]:size-10 data-[size=sm]:size-6 data-[size=xl]:size-24 dark:after:mix-blend-lighten aspect-square border hover:opacity-80"
+        data-size="xl"
+        data-slot="avatar"
+      >
+        <span
+          class="bg-foreground text-background flex size-full items-center justify-center rounded-full font-serif text-sm group-data-[size=sm]/avatar:text-xs"
+          data-slot="avatar-fallback"
+        >
+          AS
+        </span>
+      </span>
+    </a>
+    <div
+      class="flex flex-col justify-between space-y-2"
+    >
+      <div
+        class="flex-1 space-y-1"
+      >
+        <div
+          class="flex flex-col md:flex-row md:items-end"
+        >
+          <h3
+            class="text-pretty md:text-2xl"
+          >
+            <a
+              class="text-primary hover:text-primary/80"
+              href="/authors/alice-smith"
+            >
+              Alice Smith
+            </a>
+          </h3>
+        </div>
+      </div>
+      <div
+        data-testid="author-links"
+      />
+    </div>
+  </div>
+</div>
+`;
+
+exports[`AuthorCard > renders with affiliation and short biography 1`] = `
+<div
+  class="group/card bg-card text-card-foreground ring-foreground/10 flex flex-col gap-4 overflow-hidden py-4 text-sm ring-1 has-data-[slot=card-footer]:pb-0 has-[>img:first-child]:pt-0 data-[size=sm]:gap-3 data-[size=sm]:py-3 data-[size=sm]:has-data-[slot=card-footer]:pb-0 *:[img:first-child]:rounded-t-xl *:[img:last-child]:rounded-b-xl rounded-sm"
+  data-size="default"
+  data-slot="card"
+>
+  <div
+    class="px-4 group-data-[size=sm]/card:px-3 flex flex-col gap-4 sm:flex-row"
+    data-slot="card-content"
+  >
+    <a
+      aria-label="Bob Jones"
+      href="/authors/bob-jones"
+    >
+      <span
+        class="group/avatar after:border-border relative flex size-8 shrink-0 overflow-hidden rounded-full select-none after:absolute after:inset-0 after:rounded-full after:border after:mix-blend-darken data-[size=2xl]:size-32 data-[size=lg]:size-10 data-[size=sm]:size-6 data-[size=xl]:size-24 dark:after:mix-blend-lighten aspect-square border hover:opacity-80"
+        data-size="xl"
+        data-slot="avatar"
+      >
+        <span
+          class="bg-foreground text-background flex size-full items-center justify-center rounded-full font-serif text-sm group-data-[size=sm]/avatar:text-xs"
+          data-slot="avatar-fallback"
+        >
+          BJ
+        </span>
+      </span>
+    </a>
+    <div
+      class="flex flex-col justify-between space-y-2"
+    >
+      <div
+        class="flex-1 space-y-1"
+      >
+        <div
+          class="flex flex-col md:flex-row md:items-end"
+        >
+          <h3
+            class="text-pretty md:text-2xl"
+          >
+            <a
+              class="text-primary hover:text-primary/80"
+              href="/authors/bob-jones"
+            >
+              Bob Jones
+            </a>
+          </h3>
+          <span
+            class="text-muted-foreground ml-1 line-clamp-1 text-sm font-normal"
+          >
+            MIT
+          </span>
+        </div>
+        <p
+          class="text-primary line-clamp-2 font-serif text-sm"
+        >
+          A short bio.
+        </p>
+      </div>
+      <div
+        data-testid="author-links"
+      />
+    </div>
+  </div>
+</div>
+`;
+
+exports[`AuthorCard > renders with biography longer than 255 characters (truncates) 1`] = `
+<div
+  class="group/card bg-card text-card-foreground ring-foreground/10 flex flex-col gap-4 overflow-hidden py-4 text-sm ring-1 has-data-[slot=card-footer]:pb-0 has-[>img:first-child]:pt-0 data-[size=sm]:gap-3 data-[size=sm]:py-3 data-[size=sm]:has-data-[slot=card-footer]:pb-0 *:[img:first-child]:rounded-t-xl *:[img:last-child]:rounded-b-xl rounded-sm"
+  data-size="default"
+  data-slot="card"
+>
+  <div
+    class="px-4 group-data-[size=sm]/card:px-3 flex flex-col gap-4 sm:flex-row"
+    data-slot="card-content"
+  >
+    <a
+      aria-label="Carol White"
+      href="/authors/carol-white"
+    >
+      <span
+        class="group/avatar after:border-border relative flex size-8 shrink-0 overflow-hidden rounded-full select-none after:absolute after:inset-0 after:rounded-full after:border after:mix-blend-darken data-[size=2xl]:size-32 data-[size=lg]:size-10 data-[size=sm]:size-6 data-[size=xl]:size-24 dark:after:mix-blend-lighten aspect-square border hover:opacity-80"
+        data-size="xl"
+        data-slot="avatar"
+      >
+        <span
+          class="bg-foreground text-background flex size-full items-center justify-center rounded-full font-serif text-sm group-data-[size=sm]/avatar:text-xs"
+          data-slot="avatar-fallback"
+        >
+          CW
+        </span>
+      </span>
+    </a>
+    <div
+      class="flex flex-col justify-between space-y-2"
+    >
+      <div
+        class="flex-1 space-y-1"
+      >
+        <div
+          class="flex flex-col md:flex-row md:items-end"
+        >
+          <h3
+            class="text-pretty md:text-2xl"
+          >
+            <a
+              class="text-primary hover:text-primary/80"
+              href="/authors/carol-white"
+            >
+              Carol White
+            </a>
+          </h3>
+        </div>
+        <p
+          class="text-primary line-clamp-2 font-serif text-sm"
+        >
+          xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx…
+        </p>
+      </div>
+      <div
+        data-testid="author-links"
+      />
+    </div>
+  </div>
+</div>
+`;
+
+exports[`AuthorCard > renders with null name using fallback 1`] = `
+<div
+  class="group/card bg-card text-card-foreground ring-foreground/10 flex flex-col gap-4 overflow-hidden py-4 text-sm ring-1 has-data-[slot=card-footer]:pb-0 has-[>img:first-child]:pt-0 data-[size=sm]:gap-3 data-[size=sm]:py-3 data-[size=sm]:has-data-[slot=card-footer]:pb-0 *:[img:first-child]:rounded-t-xl *:[img:last-child]:rounded-b-xl rounded-sm"
+  data-size="default"
+  data-slot="card"
+>
+  <div
+    class="px-4 group-data-[size=sm]/card:px-3 flex flex-col gap-4 sm:flex-row"
+    data-slot="card-content"
+  >
+    <a
+      aria-label="Author profile"
+      href="/authors/alice-smith"
+    >
+      <span
+        class="group/avatar after:border-border relative flex size-8 shrink-0 overflow-hidden rounded-full select-none after:absolute after:inset-0 after:rounded-full after:border after:mix-blend-darken data-[size=2xl]:size-32 data-[size=lg]:size-10 data-[size=sm]:size-6 data-[size=xl]:size-24 dark:after:mix-blend-lighten aspect-square border hover:opacity-80"
+        data-size="xl"
+        data-slot="avatar"
+      >
+        <span
+          class="bg-foreground text-background flex size-full items-center justify-center rounded-full font-serif text-sm group-data-[size=sm]/avatar:text-xs"
+          data-slot="avatar-fallback"
+        >
+          AU
+        </span>
+      </span>
+    </a>
+    <div
+      class="flex flex-col justify-between space-y-2"
+    >
+      <div
+        class="flex-1 space-y-1"
+      >
+        <div
+          class="flex flex-col md:flex-row md:items-end"
+        >
+          <h3
+            class="text-pretty md:text-2xl"
+          >
+            <a
+              class="text-primary hover:text-primary/80"
+              href="/authors/alice-smith"
+            />
+          </h3>
+        </div>
+      </div>
+      <div
+        data-testid="author-links"
+      />
+    </div>
+  </div>
+</div>
+`;
+
+exports[`AuthorCard > renders with profileImage as a numeric id 1`] = `
+<div
+  class="group/card bg-card text-card-foreground ring-foreground/10 flex flex-col gap-4 overflow-hidden py-4 text-sm ring-1 has-data-[slot=card-footer]:pb-0 has-[>img:first-child]:pt-0 data-[size=sm]:gap-3 data-[size=sm]:py-3 data-[size=sm]:has-data-[slot=card-footer]:pb-0 *:[img:first-child]:rounded-t-xl *:[img:last-child]:rounded-b-xl rounded-sm"
+  data-size="default"
+  data-slot="card"
+>
+  <div
+    class="px-4 group-data-[size=sm]/card:px-3 flex flex-col gap-4 sm:flex-row"
+    data-slot="card-content"
+  >
+    <a
+      aria-label="Alice Smith"
+      href="/authors/alice-smith"
+    >
+      <span
+        class="group/avatar after:border-border relative flex size-8 shrink-0 overflow-hidden rounded-full select-none after:absolute after:inset-0 after:rounded-full after:border after:mix-blend-darken data-[size=2xl]:size-32 data-[size=lg]:size-10 data-[size=sm]:size-6 data-[size=xl]:size-24 dark:after:mix-blend-lighten aspect-square border hover:opacity-80"
+        data-size="xl"
+        data-slot="avatar"
+      >
+        <span
+          class="bg-foreground text-background flex size-full items-center justify-center rounded-full font-serif text-sm group-data-[size=sm]/avatar:text-xs"
+          data-slot="avatar-fallback"
+        >
+          AS
+        </span>
+      </span>
+    </a>
+    <div
+      class="flex flex-col justify-between space-y-2"
+    >
+      <div
+        class="flex-1 space-y-1"
+      >
+        <div
+          class="flex flex-col md:flex-row md:items-end"
+        >
+          <h3
+            class="text-pretty md:text-2xl"
+          >
+            <a
+              class="text-primary hover:text-primary/80"
+              href="/authors/alice-smith"
+            >
+              Alice Smith
+            </a>
+          </h3>
+        </div>
+      </div>
+      <div
+        data-testid="author-links"
+      />
+    </div>
+  </div>
+</div>
+`;
+
+exports[`AuthorCard > renders with profileImage object containing a square URL 1`] = `
+<div
+  class="group/card bg-card text-card-foreground ring-foreground/10 flex flex-col gap-4 overflow-hidden py-4 text-sm ring-1 has-data-[slot=card-footer]:pb-0 has-[>img:first-child]:pt-0 data-[size=sm]:gap-3 data-[size=sm]:py-3 data-[size=sm]:has-data-[slot=card-footer]:pb-0 *:[img:first-child]:rounded-t-xl *:[img:last-child]:rounded-b-xl rounded-sm"
+  data-size="default"
+  data-slot="card"
+>
+  <div
+    class="px-4 group-data-[size=sm]/card:px-3 flex flex-col gap-4 sm:flex-row"
+    data-slot="card-content"
+  >
+    <a
+      aria-label="Alice Smith"
+      href="/authors/alice-smith"
+    >
+      <span
+        class="group/avatar after:border-border relative flex size-8 shrink-0 overflow-hidden rounded-full select-none after:absolute after:inset-0 after:rounded-full after:border after:mix-blend-darken data-[size=2xl]:size-32 data-[size=lg]:size-10 data-[size=sm]:size-6 data-[size=xl]:size-24 dark:after:mix-blend-lighten aspect-square border hover:opacity-80"
+        data-size="xl"
+        data-slot="avatar"
+      >
+        <span
+          class="bg-foreground text-background flex size-full items-center justify-center rounded-full font-serif text-sm group-data-[size=sm]/avatar:text-xs"
+          data-slot="avatar-fallback"
+        >
+          AS
+        </span>
+      </span>
+    </a>
+    <div
+      class="flex flex-col justify-between space-y-2"
+    >
+      <div
+        class="flex-1 space-y-1"
+      >
+        <div
+          class="flex flex-col md:flex-row md:items-end"
+        >
+          <h3
+            class="text-pretty md:text-2xl"
+          >
+            <a
+              class="text-primary hover:text-primary/80"
+              href="/authors/alice-smith"
+            >
+              Alice Smith
+            </a>
+          </h3>
+        </div>
+      </div>
+      <div
+        data-testid="author-links"
+      />
+    </div>
+  </div>
+</div>
+`;
+
+exports[`AuthorCard > renders with profileImage object without a square URL 1`] = `
+<div
+  class="group/card bg-card text-card-foreground ring-foreground/10 flex flex-col gap-4 overflow-hidden py-4 text-sm ring-1 has-data-[slot=card-footer]:pb-0 has-[>img:first-child]:pt-0 data-[size=sm]:gap-3 data-[size=sm]:py-3 data-[size=sm]:has-data-[slot=card-footer]:pb-0 *:[img:first-child]:rounded-t-xl *:[img:last-child]:rounded-b-xl rounded-sm"
+  data-size="default"
+  data-slot="card"
+>
+  <div
+    class="px-4 group-data-[size=sm]/card:px-3 flex flex-col gap-4 sm:flex-row"
+    data-slot="card-content"
+  >
+    <a
+      aria-label="Alice Smith"
+      href="/authors/alice-smith"
+    >
+      <span
+        class="group/avatar after:border-border relative flex size-8 shrink-0 overflow-hidden rounded-full select-none after:absolute after:inset-0 after:rounded-full after:border after:mix-blend-darken data-[size=2xl]:size-32 data-[size=lg]:size-10 data-[size=sm]:size-6 data-[size=xl]:size-24 dark:after:mix-blend-lighten aspect-square border hover:opacity-80"
+        data-size="xl"
+        data-slot="avatar"
+      >
+        <span
+          class="bg-foreground text-background flex size-full items-center justify-center rounded-full font-serif text-sm group-data-[size=sm]/avatar:text-xs"
+          data-slot="avatar-fallback"
+        >
+          AS
+        </span>
+      </span>
+    </a>
+    <div
+      class="flex flex-col justify-between space-y-2"
+    >
+      <div
+        class="flex-1 space-y-1"
+      >
+        <div
+          class="flex flex-col md:flex-row md:items-end"
+        >
+          <h3
+            class="text-pretty md:text-2xl"
+          >
+            <a
+              class="text-primary hover:text-primary/80"
+              href="/authors/alice-smith"
+            >
+              Alice Smith
+            </a>
+          </h3>
+        </div>
+      </div>
+      <div
+        data-testid="author-links"
+      />
+    </div>
+  </div>
+</div>
+`;

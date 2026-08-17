@@ -1,5 +1,3 @@
-"use client"
-
 import { Avatar as AvatarPrimitive } from "@base-ui/react/avatar"
 import * as React from "react"
 
@@ -17,7 +15,7 @@ function Avatar({
       data-slot="avatar"
       data-size={size}
       className={cn(
-        "group/avatar after:border-border relative flex size-8 shrink-0 rounded-sm select-none after:absolute after:inset-0 after:rounded-sm after:border after:mix-blend-darken data-[size=2xl]:size-32 data-[size=lg]:size-10 data-[size=sm]:size-6 data-[size=xl]:size-24 dark:after:mix-blend-lighten",
+        "group/avatar after:border-border relative flex size-8 shrink-0 overflow-hidden rounded-full select-none after:absolute after:inset-0 after:rounded-full after:border after:mix-blend-darken data-[size=2xl]:size-32 data-[size=lg]:size-10 data-[size=sm]:size-6 data-[size=xl]:size-24 dark:after:mix-blend-lighten",
         className,
       )}
       {...props}
@@ -29,7 +27,7 @@ function AvatarImage({ className, ...props }: AvatarPrimitive.Image.Props): Reac
   return (
     <AvatarPrimitive.Image
       data-slot="avatar-image"
-      className={cn("aspect-square size-full rounded-sm object-cover", className)}
+      className={cn("aspect-square size-full rounded-full object-cover", className)}
       {...props}
     />
   )
@@ -40,7 +38,10 @@ function AvatarFallback({ className, ...props }: AvatarPrimitive.Fallback.Props)
     <AvatarPrimitive.Fallback
       data-slot="avatar-fallback"
       className={cn(
-        "bg-muted text-muted-foreground flex size-full items-center justify-center rounded-sm text-sm group-data-[size=sm]/avatar:text-xs",
+        // Inverted against the page — dark fill in light mode, light fill in
+        // dark — so initials read as a deliberate mark rather than a missing
+        // image, and stand out against the surrounding text.
+        "bg-foreground text-background flex size-full items-center justify-center rounded-full font-serif text-sm group-data-[size=sm]/avatar:text-xs",
         className,
       )}
       {...props}
@@ -82,7 +83,9 @@ function AvatarGroupCount({ className, ...props }: React.ComponentProps<"div">):
     <div
       data-slot="avatar-group-count"
       className={cn(
-        "bg-muted text-muted-foreground ring-background relative flex size-8 shrink-0 items-center justify-center rounded-full text-sm ring-2 group-has-data-[size=lg]/avatar-group:size-10 group-has-data-[size=sm]/avatar-group:size-6 [&>svg]:size-4 group-has-data-[size=lg]/avatar-group:[&>svg]:size-5 group-has-data-[size=sm]/avatar-group:[&>svg]:size-3",
+        // Matches AvatarFallback's inversion so the "+N" reads as one of the
+        // circles rather than a gap at the end of the stack.
+        "bg-foreground text-background ring-background relative flex size-8 shrink-0 items-center justify-center rounded-full font-serif text-sm ring-2 group-has-data-[size=lg]/avatar-group:size-10 group-has-data-[size=sm]/avatar-group:size-6 [&>svg]:size-4 group-has-data-[size=lg]/avatar-group:[&>svg]:size-5 group-has-data-[size=sm]/avatar-group:[&>svg]:size-3",
         className,
       )}
       {...props}

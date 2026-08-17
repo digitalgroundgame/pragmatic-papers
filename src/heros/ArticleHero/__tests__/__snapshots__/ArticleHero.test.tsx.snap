@@ -16,7 +16,7 @@ exports[`ArticleHero > matches snapshot 1`] = `
       class="flex flex-1 items-start justify-between gap-2 md:contents"
     >
       <div
-        class="dark:text-brand-high-contrast text-brand flex flex-1 flex-wrap gap-2 font-serif font-bold underline-offset-4 md:order-1"
+        class="dark:text-brand-high-contrast text-brand flex flex-1 flex-wrap items-center gap-2 font-serif font-bold underline-offset-4 md:order-1"
       >
         •
         <a

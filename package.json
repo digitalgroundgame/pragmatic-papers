@@ -1,6 +1,6 @@
 {
   "name": "pragmatic-papers",
-  "version": "2.3.1",
+  "version": "2.5.1",
   "description": "The Pragmatic Papers",
   "license": "MIT",
   "type": "module",
@@ -74,6 +74,7 @@
     "cross-env": "^10.1.0",
     "date-fns": "^4.4.0",
     "dotenv": "^17.4.2",
+    "embla-carousel-autoplay": "^8.6.0",
     "embla-carousel-react": "^8.6.0",
     "feed": "^5.2.1",
     "graphql": "^16.13.2",
@@ -88,6 +89,7 @@
     "react-hook-form": "^7.73.1",
     "sanitize-html": "^2.17.3",
     "schema-dts": "^2.0.0",
+    "server-only": "^0.0.1",
     "shadcn": "^4.8.0",
     "sharp": "^0.34.5",
     "tailwind-merge": "^3.5.0",

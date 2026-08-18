@@ -93,15 +93,15 @@ should land already-classified. If you can't tell whether it's valid or in
 scope, still make your best guess (a maintainer can correct a label) and note
 the uncertainty in the body.
 
-| Group           | Labels                                          | Apply when…                                          |
-| --------------- | ----------------------------------------------- | ---------------------------------------------------- |
+| Group           | Labels                                                                                   | Apply when…                                                                        |
+| --------------- | ---------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
 | **Kind**        | `documentation`, `dependencies`, `testing`, `ci`, `security`, `performance`, `reference` | the nature of the work — docs / deps / tests / CI / security / perf / saved-ref PR |
-| **Discussion**  | `question`, `discussion`                        | needs an answer or an open design conversation       |
-| **Status**      | `in progress`, `blocked`, `stale`               | tracking workflow state                              |
-| **Review** (PR) | `ready for review`, `review comments`           | on pull requests moving through review               |
-| **Design**      | `waiting on design`, `needs screenshots`        | backlogged pending design / needs visual baselines   |
-| **Community**   | `good first issue`, `help wanted`               | inviting outside contribution                        |
-| **Resolution**  | `duplicate`, `invalid`, `wontfix`               | when closing (pair with the matching `state_reason`) |
+| **Discussion**  | `question`, `discussion`                                                                 | needs an answer or an open design conversation                                     |
+| **Status**      | `in progress`, `blocked`, `stale`                                                        | tracking workflow state                                                            |
+| **Review** (PR) | `ready for review`, `review comments`                                                    | on pull requests moving through review                                             |
+| **Design**      | `waiting on design`, `needs screenshots`                                                 | backlogged pending design / needs visual baselines                                 |
+| **Community**   | `good first issue`, `help wanted`                                                        | inviting outside contribution                                                      |
+| **Resolution**  | `duplicate`, `invalid`, `wontfix`                                                        | when closing (pair with the matching `state_reason`)                               |
 
 Keep the label set minimal — a Kind and/or a Status is usually enough. The
 issue **type** (`Bug` / `Feature` / `Task`) already says what kind of work it

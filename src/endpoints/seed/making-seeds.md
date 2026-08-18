@@ -67,22 +67,29 @@ interface CreateArticleOptions {
 - `validateWriters(writers)` - Throws if no writers provided
 - `getWriterOrThrow(writers, index)` - Gets writer by index with validation (wraps with modulo so index is always valid)
 
-### Block Helpers (defined locally in each feature file)
+### Block Helpers
 
-Block helpers are small factory functions defined at the top of each feature file — they are **not** shared exports. Copy the pattern into your own feature file:
+Block helpers are small factory functions that build one block node. **Check the
+list below before writing one** — a helper that already exists should be
+imported, not copied, so a block's shape only has to be fixed in one place.
 
-**Media block:**
+**Already shared — import these:**
 
-```typescript
-function createMediaBlock(mediaId: number) {
-  return {
-    type: "block",
-    fields: { blockType: "mediaBlock", media: mediaId },
-    format: "",
-    version: 2,
-  }
-}
-```
+| Helper                            | Import from     | Builds                                 |
+| --------------------------------- | --------------- | -------------------------------------- |
+| `createMediaBlockNode`            | `../richtext`   | a `mediaBlock` from a media id         |
+| `createNewsletterSignupBlockNode` | `../richtext`   | a `newsletterSignup` block             |
+| `createCTABlockNode`              | `../richtext`   | a `cta` block                          |
+| `createMathInlineBlock`           | `./math-blocks` | inline LaTeX within a paragraph        |
+| `createMathDisplayBlock`          | `./math-blocks` | a standalone display formula           |
+| `createBannerBlock`               | `./banners`     | a styled `banner` (`info`/`warning`/…) |
+| `createCodeBlock`                 | `./code-blocks` | a `code` block in a supported language |
+| `createFootnoteInlineBlock`       | `./footnotes`   | an inline footnote, with optional link |
+
+For a block that has no helper yet, define one at the top of the feature file
+that owns that block, and export it once a second file needs it. The generic
+lexical node factories (paragraphs, headings, quotes, lists, tables) all live in
+`@/utilities/lexical` and are re-exported from `../richtext`.
 
 **Media collage block:**
 
@@ -97,15 +104,21 @@ function createMediaCollageBlock(mediaIds: number[], layout: "grid" | "carousel"
 }
 ```
 
-**Math block helpers (exported from `features/math-blocks.ts`):**
-
-Unlike the media helpers above, the math helpers are exported and can be imported into other feature files:
+**Usage:**
 
 ```typescript
+import { createMediaBlockNode } from "../richtext"
 import { createMathInlineBlock, createMathDisplayBlock } from "./math-blocks"
+import { createBannerBlock } from "./banners"
+import { createCodeBlock } from "./code-blocks"
+import { createFootnoteInlineBlock } from "./footnotes"
 
+createMediaBlockNode(mediaId)
 createMathInlineBlock("E = mc^2") // inline LaTeX within a paragraph (version: 1, inlineBlock)
 createMathDisplayBlock("\\int_0^1 x") // standalone display block (version: 2, block)
+createBannerBlock("info", "Heads up.")
+createCodeBlock("typescript", "const x = 1")
+createFootnoteInlineBlock("A note.") // add a second argument for an attribution link
 ```
 
 ## How to Generate a Seed from Article JSON

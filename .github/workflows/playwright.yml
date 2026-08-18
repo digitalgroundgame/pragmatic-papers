@@ -30,9 +30,12 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  PAYLOAD_SECRET: ${{ secrets.PAYLOAD_SECRET }}
+  PAYLOAD_SECRET: e2e-payload-secret
   NEXT_PUBLIC_SERVER_URL: http://localhost:8000
   USE_LOCAL_STORAGE: "true"
+  # The Merch block has no built-in store site — without this it renders
+  # nothing and merch.spec.ts has no carousel to exercise.
+  MERCH_SITE_URL: https://digitalgroundgame.org/merch
   # Hostname is the services key ("postgres"), not localhost — the job runs
   # inside a container, and service containers are reachable by their
   # service-id alias on the shared Docker network, not via the runner's
@@ -79,7 +82,7 @@ jobs:
           --health-retries 5
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
@@ -119,13 +122,13 @@ jobs:
         with:
           node-version: "24.x"
           gh-font-read-token: ${{ secrets.GH_FONT_READ }}
-          payload-secret: ${{ secrets.PAYLOAD_SECRET }}
+          payload-secret: ${{ env.PAYLOAD_SECRET }}
 
       # Restores Next.js incremental compilation cache so `next build` inside
       # the E2E run only recompiles what changed since the last run on this
       # branch (or dev).
       - name: Cache Next.js build cache
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: .next/cache
           key: nextjs-${{ hashFiles('pnpm-lock.yaml') }}-${{ hashFiles('src/**/*.[jt]s', 'src/**/*.[jt]sx', '*.[jt]s', '*.[jt]sx') }}

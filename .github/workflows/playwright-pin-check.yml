@@ -31,14 +31,13 @@ jobs:
     name: Check Playwright Docker image pin
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Set up Node.js environment
         uses: ./.github/actions/setup-project
         with:
           node-version: "24.x"
           gh-font-read-token: ${{ secrets.GH_FONT_READ }}
-          payload-secret: ${{ secrets.PAYLOAD_SECRET }}
 
       - name: Check Playwright Docker image pin
         run: pnpm exec tsx scripts/check-playwright-image-pin.ts

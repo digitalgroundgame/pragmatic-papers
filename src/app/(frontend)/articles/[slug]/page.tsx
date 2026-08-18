@@ -1,4 +1,5 @@
 import type { Metadata } from "next"
+import type { User } from "@/payload-types"
 import { draftMode } from "next/headers"
 import React from "react"
 
@@ -17,7 +18,7 @@ import { ArticleHero } from "@/heros/ArticleHero"
 import { MathJaxProvider } from "@/providers/MathJaxProvider"
 import { generateMeta } from "@/utilities/generateMeta"
 import { getPayloadConfig } from "@/utilities/getPayloadConfig"
-import { queryArticleBySlug } from "@/utilities/queries"
+import { queryArticleBySlug, queryVolumesForArticles } from "@/utilities/queries"
 import { buildArticleJsonLd, buildBreadcrumbJsonLd } from "@/utilities/structuredData"
 
 export async function generateStaticParams(): Promise<{ slug: string | null | undefined }[]> {
@@ -64,15 +65,20 @@ export default async function Article({ params: paramsPromise }: Args): Promise<
 
   if (!article) return <PayloadRedirects url={url} />
 
-  const { footnotes, content, populatedAuthors, enableMathRendering, topics, showTableOfContents } =
-    article
+  const { footnotes, content, authors, enableMathRendering, topics, showTableOfContents } = article
+
+  const populatedAuthors = (authors || []).filter(
+    (author): author is User => typeof author === "object",
+  )
+
+  const [volume] = await queryVolumesForArticles([article.id])
 
   return (
     <>
       <article className="mx-auto max-w-5xl min-w-0 space-y-6 px-4">
         <JsonLd
           data={[
-            buildArticleJsonLd(article, url),
+            buildArticleJsonLd(article, url, volume),
             buildBreadcrumbJsonLd([{ name: article.meta?.title || article.title, path: url }]),
           ]}
         />

@@ -1,7 +1,6 @@
-import { authenticatedOrPublished } from "@/access/authenticatedOrPublished"
-import { editorFieldLevel } from "@/access/editor"
-import { editorOrSelf, restrictWritersToDraftOnly } from "@/access/editorOrSelf"
-import { writer } from "@/access/writer"
+import { isPublishedOrStaff, isCreatedByOrEditor, isDraftOrEditor } from "@/access/policies"
+import { writerOrEditor } from "@/access/collections"
+import { editorFieldLevel } from "@/access/fields"
 import { Banner } from "@/blocks/Banner/config"
 import { Code } from "@/blocks/Code/config"
 import { FootnoteBlock } from "@/blocks/Footnote/config"
@@ -20,15 +19,11 @@ import { SquiggleRule } from "@/blocks/SquiggleRule/config"
 import { Timeline } from "@/blocks/Timeline/config"
 import { detectMathBlocks } from "@/collections/Articles/hooks/detectMathBlocks"
 import { generateFootnotes } from "@/collections/Articles/hooks/generateFootnotes"
-import { populateAuthors } from "@/collections/Articles/hooks/populateAuthors"
-import { populateMetaImageFromHero } from "@/collections/Articles/hooks/populateMetaImageFromHero"
-import { populateNarrator } from "@/collections/Articles/hooks/populateNarrator"
 import { populateTopics } from "@/collections/Articles/hooks/populateTopics"
-import { populateVolume } from "@/collections/Articles/hooks/populateVolume"
+import { populateMetaImageFromHero } from "@/collections/Articles/hooks/populateMetaImageFromHero"
 import { revalidateArticle, revalidateDelete } from "@/collections/Articles/hooks/revalidateArticle"
 import { tableOfContentsField } from "@/components/TableOfContents"
 import { footnotesArrayField } from "@/fields/footnotes"
-import { menu } from "@/fields/menu"
 import { type Article } from "@/payload-types"
 import { generatePreviewPath } from "@/utilities/generatePreviewPath"
 
@@ -74,10 +69,10 @@ const setPublishedAtDefault: FieldHook<Article, Article["publishedAt"]> = ({
 export const Articles: CollectionConfig = {
   slug: "articles",
   access: {
-    create: writer,
-    delete: editorOrSelf,
-    read: authenticatedOrPublished,
-    update: restrictWritersToDraftOnly,
+    create: writerOrEditor,
+    delete: isCreatedByOrEditor,
+    read: isPublishedOrStaff,
+    update: isDraftOrEditor,
   },
   admin: {
     defaultColumns: ["title", "slug", "updatedAt"],
@@ -188,6 +183,32 @@ export const Articles: CollectionConfig = {
             }),
           ],
         },
+        {
+          label: "Narration",
+          fields: [
+            {
+              name: "narration",
+              type: "upload",
+              label: "Audio File",
+              filterOptions: {
+                mimeType: {
+                  contains: "audio",
+                },
+              },
+              relationTo: "media",
+            },
+            {
+              name: "extractNarration",
+              type: "ui",
+              admin: {
+                components: {
+                  Field:
+                    "@/collections/Articles/components/ExtractNarrationButton#ExtractNarrationButton",
+                },
+              },
+            },
+          ],
+        },
       ],
     },
     // END TABS FIELDS
@@ -233,8 +254,8 @@ export const Articles: CollectionConfig = {
       hasMany: true,
       relationTo: "users",
       filterOptions: {
-        role: {
-          in: ["writer", "editor", "chief-editor"],
+        roles: {
+          in: ["writer", "editor", "chief-editor", "narrator"],
         },
       },
     },
@@ -246,19 +267,6 @@ export const Articles: CollectionConfig = {
       },
       hasMany: true,
       relationTo: "topics",
-    },
-    {
-      name: "narration",
-      type: "upload",
-      admin: {
-        position: "sidebar",
-      },
-      filterOptions: {
-        mimeType: {
-          contains: "audio",
-        },
-      },
-      relationTo: "media",
     },
     tableOfContentsField(),
     {
@@ -272,94 +280,6 @@ export const Articles: CollectionConfig = {
         readOnly: true,
         hidden: true,
       },
-    },
-    // This field is only used to populate the user data via the `populateAuthors` hook
-    // This is because the `user` collection has access control locked to protect user privacy
-    // GraphQL will also not return mutated user data that differs from the underlying schema
-    {
-      name: "populatedAuthors",
-      interfaceName: "PopulatedAuthors",
-      type: "array",
-      virtual: true,
-      access: {
-        update: () => false,
-      },
-      admin: {
-        disabled: true,
-        readOnly: true,
-      },
-      fields: [
-        {
-          name: "id",
-          type: "number",
-          required: true,
-        },
-        {
-          name: "name",
-          type: "text",
-        },
-        {
-          name: "slug",
-          type: "text",
-          required: true,
-        },
-        {
-          name: "affiliation",
-          type: "text",
-        },
-        {
-          name: "biography",
-          type: "richText",
-        },
-        {
-          name: "profileImage",
-          type: "upload",
-          relationTo: "media",
-        },
-        menu({
-          name: "socials",
-          label: "Socials",
-          maxRows: 6,
-        }),
-      ],
-    },
-    {
-      name: "populatedVolume",
-      interfaceName: "PopulatedVolume",
-      type: "group",
-      virtual: true,
-      access: {
-        update: () => false,
-      },
-      admin: {
-        disabled: true,
-        readOnly: true,
-      },
-      fields: [
-        { name: "id", type: "number" },
-        { name: "slug", type: "text" },
-        { name: "volumeNumber", type: "number" },
-        { name: "title", type: "text" },
-        { name: "publishedAt", type: "date" },
-      ],
-    },
-    {
-      name: "populatedNarrator",
-      interfaceName: "PopulatedNarrator",
-      type: "group",
-      virtual: true,
-      access: {
-        update: () => false,
-      },
-      admin: {
-        disabled: true,
-        readOnly: true,
-      },
-      fields: [
-        { name: "id", type: "number" },
-        { name: "name", type: "text" },
-        { name: "slug", type: "text" },
-      ],
     },
   ],
   hooks: {
@@ -378,7 +298,7 @@ export const Articles: CollectionConfig = {
       populateMetaImageFromHero,
     ],
     afterChange: [revalidateArticle],
-    afterRead: [populateAuthors, populateTopics, populateVolume, populateNarrator],
+    afterRead: [populateTopics],
     afterDelete: [revalidateDelete],
   },
   versions: {

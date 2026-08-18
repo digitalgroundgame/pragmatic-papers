@@ -8,7 +8,7 @@ import React from "react"
 
 import { Media } from "@/components/Media"
 import { type ImageVariant } from "@/components/Media/ImageMedia"
-import { internalDocToHref } from "@/components/RichText"
+import { internalDocToHref } from "@/components/RichText/internalDocToHref"
 import { cn } from "@/utilities/utils"
 import { type DefaultNodeTypes } from "@payloadcms/richtext-lexical"
 

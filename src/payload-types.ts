@@ -39,35 +39,6 @@ export type MenuField =
     }[]
   | null;
 /**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "PopulatedAuthors".
- */
-export type PopulatedAuthors =
-  | {
-      id: number;
-      name?: string | null;
-      slug: string;
-      affiliation?: string | null;
-      biography?: {
-        root: {
-          type: string;
-          children: {
-            type: any;
-            version: number;
-            [k: string]: unknown;
-          }[];
-          direction: ('ltr' | 'rtl') | null;
-          format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
-          indent: number;
-          version: number;
-        };
-        [k: string]: unknown;
-      } | null;
-      profileImage?: (number | null) | Media;
-      socials?: MenuField;
-    }[]
-  | null;
-/**
  * Choose a layout preset that determines how article slots are arranged.
  *
  * This interface was referenced by `Config`'s JSON-Schema
@@ -84,6 +55,7 @@ export type CollectionGridLayout =
       | 'fibonacci-6'
       | 'vespucci-7'
       | 'fibonacci-7'
+      | 'gauss-10'
     )
   | null;
 /**
@@ -204,6 +176,7 @@ export interface Config {
     users: User;
     webhooks: Webhook;
     topics: Topic;
+    merch: Merch;
     search: Search;
     redirects: Redirect;
     forms: Form;
@@ -225,6 +198,7 @@ export interface Config {
     users: UsersSelect<false> | UsersSelect<true>;
     webhooks: WebhooksSelect<false> | WebhooksSelect<true>;
     topics: TopicsSelect<false> | TopicsSelect<true>;
+    merch: MerchSelect<false> | MerchSelect<true>;
     search: SearchSelect<false> | SearchSelect<true>;
     redirects: RedirectsSelect<false> | RedirectsSelect<true>;
     forms: FormsSelect<false> | FormsSelect<true>;
@@ -259,6 +233,7 @@ export interface Config {
   jobs: {
     tasks: {
       updateRecommendations: TaskUpdateRecommendations;
+      syncShopifyProducts: TaskSyncShopifyProducts;
       schedulePublish: TaskSchedulePublish;
       inline: {
         input: unknown;
@@ -347,6 +322,7 @@ export interface Page {
     | ContributorsBlock
     | MediaBlock
     | NewsletterSignupBlock
+    | MerchBlock
     | TimelineBlock
     | VolumeView
     | FormBlock
@@ -446,6 +422,7 @@ export interface Article {
     image?: (number | null) | Media;
     description?: string | null;
   };
+  narration?: (number | null) | Media;
   heroImage?: (number | null) | Media;
   /**
    * When enabled, the slug will auto-generate from the title field on save and autosave.
@@ -456,15 +433,11 @@ export interface Article {
   publishedAt?: string | null;
   authors?: (number | User)[] | null;
   topics?: (number | Topic)[] | null;
-  narration?: (number | null) | Media;
   /**
    * Auto-generates a navigable list of headings (and any resolver-matched blocks).
    */
   showTableOfContents?: boolean | null;
   createdBy?: (number | null) | User;
-  populatedAuthors?: PopulatedAuthors;
-  populatedVolume?: PopulatedVolume;
-  populatedNarrator?: PopulatedNarrator;
   updatedAt: string;
   createdAt: string;
   _status?: ('draft' | 'published') | null;
@@ -659,7 +632,7 @@ export interface User {
   slug: string;
   profileImage?: (number | null) | Media;
   socials?: MenuField;
-  role?: ('admin' | 'chief-editor' | 'editor' | 'writer' | 'narrator' | 'member') | null;
+  roles?: ('admin' | 'chief-editor' | 'editor' | 'writer' | 'narrator' | 'member')[] | null;
   updatedAt: string;
   createdAt: string;
   email: string;
@@ -678,26 +651,6 @@ export interface User {
     | null;
   password?: string | null;
   collection: 'users';
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "PopulatedVolume".
- */
-export interface PopulatedVolume {
-  id?: number | null;
-  slug?: string | null;
-  volumeNumber?: number | null;
-  title?: string | null;
-  publishedAt?: string | null;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "PopulatedNarrator".
- */
-export interface PopulatedNarrator {
-  id?: number | null;
-  name?: string | null;
-  slug?: string | null;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -840,6 +793,129 @@ export interface NewsletterSignupBlock {
   id?: string | null;
   blockName?: string | null;
   blockType: 'newsletterSignup';
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "MerchBlock".
+ */
+export interface MerchBlock {
+  /**
+   * Optional. Left blank, the carousel renders without a heading.
+   */
+  heading?: string | null;
+  /**
+   * Square suits narrow sidebars; full width suits page bodies.
+   */
+  layout?: ('square' | 'fullWidth') | null;
+  /**
+   * Advance the carousel on its own. Pauses on hover, on focus, and after the reader takes over; ignored for readers who prefer reduced motion.
+   */
+  autoplay?: boolean | null;
+  /**
+   * Products are synced from Shopify automatically. Show the whole catalogue, or narrow it down below.
+   */
+  source?: ('all' | 'filtered') | null;
+  /**
+   * Shopify collection handle — the store's own grouping, e.g. "apparel". Leave blank to ignore.
+   */
+  collection?: string | null;
+  /**
+   * Store product tag, e.g. "new-release". Leave blank to ignore.
+   */
+  tag?: string | null;
+  /**
+   * Only products marked "featured" in Merch.
+   */
+  featuredOnly?: boolean | null;
+  /**
+   * Pick exact products. They display in the order arranged here, ignoring the sort below.
+   */
+  selectedProducts?: (number | Merch)[] | null;
+  /**
+   * Sort order uses the number set on each product in Merch.
+   */
+  orderBy?: ('sortOrder' | 'title' | 'newest') | null;
+  /**
+   * Most products to pull into the carousel.
+   */
+  limit?: number | null;
+  id?: string | null;
+  blockName?: string | null;
+  blockType: 'merch';
+}
+/**
+ * Synced from Shopify every few hours and stored as Shopify reports it — prices are raw amounts, not formatted strings, and the block decides how they read. Commerce fields are read-only; edit them in Shopify. The presentation fields at the bottom are ours and survive a sync.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "merch".
+ */
+export interface Merch {
+  id: number;
+  title: string;
+  /**
+   * The store's own product ID — the key each sync upserts on.
+   */
+  externalId: string;
+  /**
+   * Which storefront this product was synced from. Every field here is a generic commerce concept, so a second source would add an option and its own sync task rather than a second collection.
+   */
+  source?: 'shopify' | null;
+  /**
+   * Shopify's URL handle. The link we render is derived from this, so a rename in Shopify is picked up by the next sync.
+   */
+  handle: string;
+  description?: string | null;
+  /**
+   * Minimum variant price, as a decimal string.
+   */
+  price?: string | null;
+  compareAtPrice?: string | null;
+  currencyCode?: string | null;
+  /**
+   * As Shopify reports it. The block turns this into the "Sold Out" badge.
+   */
+  availableForSale?: boolean | null;
+  /**
+   * Shopify CDN URL. Rendered directly — we don't copy product shots locally.
+   */
+  imageUrl?: string | null;
+  imageWidth?: number | null;
+  imageHeight?: number | null;
+  imageAlt?: string | null;
+  /**
+   * Shopify product tags. Merch blocks can filter on these.
+   */
+  tags?: string[] | null;
+  /**
+   * Handles of the Shopify collections (the store's product groupings) this product belongs to, e.g. "apparel". Shopify's term for a category — nothing to do with Payload collections. A Merch block can filter on one.
+   */
+  collections?: string[] | null;
+  /**
+   * Archived means Shopify stopped listing it. Archived products are never shown.
+   */
+  status?: ('active' | 'archived') | null;
+  /**
+   * When the last sync last saw this product. A stale date means the job stopped running.
+   */
+  lastSyncedAt?: string | null;
+  /**
+   * Merch blocks set to "featured only" show these.
+   */
+  featured?: boolean | null;
+  /**
+   * Keep this product out of every Merch block without touching Shopify.
+   */
+  hidden?: boolean | null;
+  /**
+   * Replaces the automatic badge, e.g. "Last few" instead of the derived "Sold Out".
+   */
+  badgeOverride?: string | null;
+  /**
+   * Lower sorts first when a block orders by sort order. Blank sorts last.
+   */
+  sortOrder?: number | null;
+  updatedAt: string;
+  createdAt: string;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -1314,7 +1390,7 @@ export interface PayloadJob {
     | {
         executedAt: string;
         completedAt: string;
-        taskSlug: 'inline' | 'updateRecommendations' | 'schedulePublish';
+        taskSlug: 'inline' | 'updateRecommendations' | 'syncShopifyProducts' | 'schedulePublish';
         taskID: string;
         input?:
           | {
@@ -1347,7 +1423,7 @@ export interface PayloadJob {
         id?: string | null;
       }[]
     | null;
-  taskSlug?: ('inline' | 'updateRecommendations' | 'schedulePublish') | null;
+  taskSlug?: ('inline' | 'updateRecommendations' | 'syncShopifyProducts' | 'schedulePublish') | null;
   queue?: string | null;
   waitUntil?: string | null;
   processing?: boolean | null;
@@ -1405,6 +1481,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'topics';
         value: number | Topic;
+      } | null)
+    | ({
+        relationTo: 'merch';
+        value: number | Merch;
       } | null)
     | ({
         relationTo: 'search';
@@ -1501,6 +1581,7 @@ export interface PagesSelect<T extends boolean = true> {
         contributors?: T | ContributorsBlockSelect<T>;
         mediaBlock?: T | MediaBlockSelect<T>;
         newsletterSignup?: T | NewsletterSignupBlockSelect<T>;
+        merch?: T | MerchBlockSelect<T>;
         timeline?: T | TimelineBlockSelect<T>;
         volumeView?: T | VolumeViewSelect<T>;
         formBlock?: T | FormBlockSelect<T>;
@@ -1613,6 +1694,24 @@ export interface NewsletterSignupBlockSelect<T extends boolean = true> {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "MerchBlock_select".
+ */
+export interface MerchBlockSelect<T extends boolean = true> {
+  heading?: T;
+  layout?: T;
+  autoplay?: T;
+  source?: T;
+  collection?: T;
+  tag?: T;
+  featuredOnly?: T;
+  selectedProducts?: T;
+  orderBy?: T;
+  limit?: T;
+  id?: T;
+  blockName?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "TimelineBlock_select".
  */
 export interface TimelineBlockSelect<T extends boolean = true> {
@@ -1685,6 +1784,7 @@ export interface ArticlesSelect<T extends boolean = true> {
         image?: T;
         description?: T;
       };
+  narration?: T;
   heroImage?: T;
   generateSlug?: T;
   slug?: T;
@@ -1692,12 +1792,8 @@ export interface ArticlesSelect<T extends boolean = true> {
   publishedAt?: T;
   authors?: T;
   topics?: T;
-  narration?: T;
   showTableOfContents?: T;
   createdBy?: T;
-  populatedAuthors?: T | PopulatedAuthorsSelect<T>;
-  populatedVolume?: T | PopulatedVolumeSelect<T>;
-  populatedNarrator?: T | PopulatedNarratorSelect<T>;
   updatedAt?: T;
   createdAt?: T;
   _status?: T;
@@ -1712,47 +1808,6 @@ export interface FootnotesFieldSelect<T extends boolean = true> {
   attributionEnabled?: T;
   link?: T | LinkFieldSelect<T>;
   id?: T;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "PopulatedAuthors_select".
- */
-export interface PopulatedAuthorsSelect<T extends boolean = true> {
-  id?: T;
-  name?: T;
-  slug?: T;
-  affiliation?: T;
-  biography?: T;
-  profileImage?: T;
-  socials?: T | MenuFieldSelect<T>;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "MenuField_select".
- */
-export interface MenuFieldSelect<T extends boolean = true> {
-  link?: T | LinkFieldSelect<T>;
-  id?: T;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "PopulatedVolume_select".
- */
-export interface PopulatedVolumeSelect<T extends boolean = true> {
-  id?: T;
-  slug?: T;
-  volumeNumber?: T;
-  title?: T;
-  publishedAt?: T;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "PopulatedNarrator_select".
- */
-export interface PopulatedNarratorSelect<T extends boolean = true> {
-  id?: T;
-  name?: T;
-  slug?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -1929,7 +1984,7 @@ export interface UsersSelect<T extends boolean = true> {
   slug?: T;
   profileImage?: T;
   socials?: T | MenuFieldSelect<T>;
-  role?: T;
+  roles?: T;
   updatedAt?: T;
   createdAt?: T;
   email?: T;
@@ -1946,6 +2001,14 @@ export interface UsersSelect<T extends boolean = true> {
         createdAt?: T;
         expiresAt?: T;
       };
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "MenuField_select".
+ */
+export interface MenuFieldSelect<T extends boolean = true> {
+  link?: T | LinkFieldSelect<T>;
+  id?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -1981,6 +2044,35 @@ export interface TopicsSelect<T extends boolean = true> {
       };
   generateSlug?: T;
   slug?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "merch_select".
+ */
+export interface MerchSelect<T extends boolean = true> {
+  title?: T;
+  externalId?: T;
+  source?: T;
+  handle?: T;
+  description?: T;
+  price?: T;
+  compareAtPrice?: T;
+  currencyCode?: T;
+  availableForSale?: T;
+  imageUrl?: T;
+  imageWidth?: T;
+  imageHeight?: T;
+  imageAlt?: T;
+  tags?: T;
+  collections?: T;
+  status?: T;
+  lastSyncedAt?: T;
+  featured?: T;
+  hidden?: T;
+  badgeOverride?: T;
+  sortOrder?: T;
   updatedAt?: T;
   createdAt?: T;
 }
@@ -2380,6 +2472,19 @@ export interface TaskUpdateRecommendations {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "TaskSyncShopifyProducts".
+ */
+export interface TaskSyncShopifyProducts {
+  input?: unknown;
+  output: {
+    created: number;
+    updated: number;
+    archived: number;
+    unchanged: number;
+  };
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "TaskSchedulePublish".
  */
 export interface TaskSchedulePublish {
@@ -2528,6 +2633,10 @@ export interface DisplayMathBlock {
    * Enter a LaTeX math expression.
    */
   math: string;
+  /**
+   * Name this formula in plain words, e.g. "the Cauchy–Schwarz inequality". Read aloud by the AI voice-over in place of the LaTeX, and used as the formula's screen reader label.
+   */
+  description?: string | null;
   id?: string | null;
   blockName?: string | null;
   blockType: 'displayMathBlock';
@@ -2584,6 +2693,10 @@ export interface InlineMathBlock {
    * Enter a LaTeX math expression.
    */
   math: string;
+  /**
+   * Name this formula in plain words, e.g. "the Cauchy–Schwarz inequality". Read aloud by the AI voice-over in place of the LaTeX, and used as the formula's screen reader label.
+   */
+  description?: string | null;
   id?: string | null;
   blockName?: string | null;
   blockType: 'inlineMathBlock';

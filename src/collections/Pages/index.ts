@@ -1,12 +1,13 @@
 import type { CollectionConfig } from "payload"
 
-import { authenticatedOrPublished } from "@/access/authenticatedOrPublished"
+import { isPublishedOrStaff } from "@/access/policies"
 import { CollectionGrid } from "@/blocks/CollectionGrid/config"
 import { CallToAction } from "@/blocks/CallToAction/config"
 import { Content } from "@/blocks/Content/config"
 import { Contributors } from "@/blocks/Contributors/config"
 import { FormBlock } from "@/blocks/Form/config"
 import { MediaBlock } from "@/blocks/MediaBlock/config"
+import { Merch } from "@/blocks/Merch/config"
 import { NewsletterSignup } from "@/blocks/NewsletterSignup/config"
 import { Timeline } from "@/blocks/Timeline/config"
 import { VolumeView } from "@/blocks/VolumeViewBlock/config"
@@ -16,7 +17,7 @@ import { generatePreviewPath } from "@/utilities/generatePreviewPath"
 import { slugField } from "payload"
 import { revalidateDelete, revalidatePage } from "./hooks/revalidatePage"
 
-import { admin } from "@/access/admins"
+import { admin } from "@/access/collections"
 import {
   MetaDescriptionField,
   MetaImageField,
@@ -30,7 +31,7 @@ export const Pages: CollectionConfig<"pages"> = {
   access: {
     create: admin,
     delete: admin,
-    read: authenticatedOrPublished,
+    read: isPublishedOrStaff,
     update: admin,
   },
   // This config controls what's populated by default when a page is referenced
@@ -83,6 +84,7 @@ export const Pages: CollectionConfig<"pages"> = {
                 Contributors,
                 MediaBlock,
                 NewsletterSignup,
+                Merch,
                 Timeline,
                 VolumeView,
                 FormBlock,

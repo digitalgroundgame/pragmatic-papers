@@ -17,7 +17,7 @@ function isPortInUse(port) {
   })
 }
 
-process.env.PAYLOAD_SECRET ??= "test-secret-for-e2e-tests"
+process.env.PAYLOAD_SECRET ||= "test-secret-for-e2e-tests"
 
 let container = null
 
@@ -31,10 +31,10 @@ if (process.env.DATABASE_URI) {
   process.env.DATABASE_URI = container.getConnectionUri()
   console.warn(`${green("✔")} Test database started at ${process.env.DATABASE_URI}`)
 }
-process.env.USE_LOCAL_STORAGE ??= "true"
-process.env.PORT ??= "8000"
-process.env.NEXT_PUBLIC_SERVER_URL ??= `http://localhost:${process.env.PORT}`
-process.env.PAYLOAD_CONFIG_PATH ??= "src/payload.config.ts"
+process.env.USE_LOCAL_STORAGE ||= "true"
+process.env.PORT ||= "8000"
+process.env.NEXT_PUBLIC_SERVER_URL ||= `http://localhost:${process.env.PORT}`
+process.env.PAYLOAD_CONFIG_PATH ||= "src/payload.config.ts"
 process.env.E2E_MANAGED_SERVER = "true"
 
 const port = Number(process.env.PORT)

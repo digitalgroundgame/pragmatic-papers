@@ -35,9 +35,14 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  PAYLOAD_SECRET: ${{ secrets.PAYLOAD_SECRET }}
+  PAYLOAD_SECRET: e2e-payload-secret
   NEXT_PUBLIC_SERVER_URL: http://localhost:8000
   USE_LOCAL_STORAGE: "true"
+  # Keep in step with playwright.yml: the Merch block has no built-in store
+  # site, so without this it renders nothing, merch.spec.ts has no carousel to
+  # find, and every baseline that shares a page with it is rewritten without
+  # it — which is worse than failing, since the wrong baseline gets committed.
+  MERCH_SITE_URL: https://digitalgroundgame.org/merch
   # Hostname is the services key ("postgres"), not localhost — this job runs
   # inside a container, so service containers are reachable by their
   # service-id alias on the shared Docker network.
@@ -54,6 +59,12 @@ jobs:
     # keeps this workflow's regenerated baselines at parity with both.
     container:
       image: mcr.microsoft.com/playwright:v1.60.0-noble
+
+    env:
+      # Baselines captured with the Inter fallback would bake the wrong typeface into every
+      # future visual diff, so fail the run rather than commit bad screenshots. Job-level so
+      # it reaches the install step inside the setup-project composite action.
+      FONTS_REQUIRED: "true"
 
     permissions:
       contents: write
@@ -76,7 +87,7 @@ jobs:
           --health-retries 5
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
           ref: ${{ github.event.pull_request.head.sha || github.ref }}
@@ -128,10 +139,10 @@ jobs:
         with:
           node-version: "24.x"
           gh-font-read-token: ${{ secrets.GH_FONT_READ }}
-          payload-secret: ${{ secrets.PAYLOAD_SECRET }}
+          payload-secret: ${{ env.PAYLOAD_SECRET }}
 
       - name: Cache Next.js build cache
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: .next/cache
           key: nextjs-${{ hashFiles('pnpm-lock.yaml') }}-${{ hashFiles('src/**/*.[jt]s', 'src/**/*.[jt]sx', '*.[jt]s', '*.[jt]sx') }}

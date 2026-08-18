@@ -6,7 +6,7 @@ import { Media } from "@/components/Media"
 import { NarrationPlayer } from "@/components/NarrationPlayer"
 import { TableOfContentsButton } from "@/components/TableOfContents"
 import { Separator } from "@/components/ui/separator"
-import type { Article } from "@/payload-types"
+import type { Article, User } from "@/payload-types"
 import { formatDateTime } from "@/utilities/formatDateTime"
 import { getServerSideURL } from "@/utilities/getURL"
 import { getSeparator } from "@/utilities/getSeparator"
@@ -16,15 +16,9 @@ interface ArticleHeroProps {
 }
 
 export const ArticleHero: React.FC<ArticleHeroProps> = ({ article }) => {
-  const {
-    publishedAt,
-    title,
-    heroImage,
-    populatedAuthors,
-    narration,
-    populatedNarrator,
-    showTableOfContents,
-  } = article
+  const { publishedAt, title, heroImage, authors, narration, showTableOfContents } = article
+
+  const populatedAuthors = (authors || []).filter((a): a is User => typeof a === "object")
 
   return (
     <div className="relative flex flex-col gap-2">
@@ -58,7 +52,14 @@ export const ArticleHero: React.FC<ArticleHeroProps> = ({ article }) => {
         </div>
         {narration && typeof narration !== "number" && (
           <div className="md:w-56 md:shrink-0">
-            <NarrationPlayer narration={narration} populatedNarrator={populatedNarrator} />
+            <NarrationPlayer
+              narration={narration}
+              narrator={
+                typeof narration.narrator === "object" && narration.narrator !== null
+                  ? narration.narrator
+                  : undefined
+              }
+            />
           </div>
         )}
         {showTableOfContents && <TableOfContentsButton />}

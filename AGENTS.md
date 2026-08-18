@@ -49,7 +49,7 @@ This file provides guidance to tools like Claude Code (claude.ai/code) when work
 - **`collections/`** — Payload collections: Articles, Pages, Users, Volumes, Media, Categories, Webhooks
 - **`blocks/`** — Content blocks used in Lexical rich text: Banner, Code, Content, Footnote, Math, MediaBlock, SocialEmbed, etc.
 - **`fields/`** — Custom Payload fields: colorPicker, menu, numberSlug, link, linkGroup, footnotes, button, defaultLexical. New fields should include `Field` in the name (e.g. `buttonField`, `linkGroupField`).
-- **`access/`** — Access control hooks (authenticatedOrPublished, editorOrSelf, writer)
+- **`access/`** — Access control: `roles.ts` (e.g., `admin`, `editor`, `writer`) and `policies.ts` (e.g., `isSelfOrAdmin`, `isCreatedByOrEditor`, `isPublishedOrStaff`, `isDraftOrEditor`)
 - **`app/(frontend)/`** — Public-facing Next.js pages using App Router
 - **`app/(payload)/`** — Payload admin panel routes
 - **`components/`** — Reusable React components for layouts, pagination, etc; `components/ui/` uses shadcn/ui;
@@ -123,7 +123,7 @@ This file provides guidance to tools like Claude Code (claude.ai/code) when work
 | ------------------------------ | ------------------------------------------------------------------------------------------ |
 | Pure utility functions         | Unit test in `src/**/__tests__/`                                                           |
 | UI/presentational components   | Snapshot test (see `src/components/ui/__tests__/button.snapshot.test.tsx` for the pattern) |
-| Client components with state   | RTL interaction test (`userEvent`, `fireEvent`)                                            |
+| Client components with state   | RTL interaction test (`fireEvent` — see #898 on matchers/`userEvent`)                      |
 | Server components (async, CMS) | Integration test with mocked Payload queries                                               |
 | API routes / Payload hooks     | Integration test (Testcontainers, see `tests/integration/`)                                |
 

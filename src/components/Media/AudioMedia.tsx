@@ -4,6 +4,7 @@ import { Pause, Play } from "lucide-react"
 import React, { useCallback, useEffect, useRef, useState } from "react"
 
 import { Slider } from "@/components/ui/slider"
+import { cn } from "@/utilities/utils"
 import type { AudioMediaType } from "./types"
 
 function formatTime(seconds: number): string {
@@ -24,6 +25,10 @@ export const AudioMedia: React.FC<AudioMediaProps> = ({ media, onDurationChange 
   const [isPlaying, setIsPlaying] = useState(false)
   const [currentTime, setCurrentTime] = useState(0)
   const [duration, setDuration] = useState(media.duration ?? 0)
+  // The player starts as a bare play button and expands on first play. It stays
+  // expanded through a pause — the scrubber is what you resume and seek with —
+  // and only folds back once the track ends and the position resets.
+  const [expanded, setExpanded] = useState(false)
 
   useEffect(() => {
     const audio = audioRef.current
@@ -47,6 +52,7 @@ export const AudioMedia: React.FC<AudioMediaProps> = ({ media, onDurationChange 
     const onEnded = () => {
       setIsPlaying(false)
       setCurrentTime(durationRef.current)
+      setExpanded(false)
     }
 
     const tryCaptureDuration = () => {
@@ -87,6 +93,7 @@ export const AudioMedia: React.FC<AudioMediaProps> = ({ media, onDurationChange 
       audio.pause()
       setIsPlaying(false)
     } else {
+      setExpanded(true)
       void audio
         .play()
         .then(() => setIsPlaying(true))
@@ -105,7 +112,7 @@ export const AudioMedia: React.FC<AudioMediaProps> = ({ media, onDurationChange 
   if (!media.url) return null
 
   return (
-    <div className="flex items-center gap-3">
+    <div className="flex items-center">
       <button
         onClick={togglePlay}
         aria-label={isPlaying ? "Pause" : "Play"}
@@ -113,16 +120,29 @@ export const AudioMedia: React.FC<AudioMediaProps> = ({ media, onDurationChange 
       >
         {isPlaying ? <Pause className="size-5" /> : <Play className="size-5" />}
       </button>
-      <Slider
-        min={0}
-        max={duration || 100}
-        value={[currentTime]}
-        onValueChange={handleSeek}
-        aria-label="Seek"
-      />
-      <span className="text-muted-foreground shrink-0 text-xs tabular-nums">
-        {`${formatTime(currentTime)} / ${formatTime(duration)}`}
-      </span>
+      <div
+        data-slot="audio-controls"
+        // `inert` keeps the collapsed controls out of the tab order and the
+        // accessibility tree while they are clipped to zero width.
+        inert={!expanded}
+        className={cn(
+          "flex min-w-0 basis-0 items-center gap-3 overflow-hidden",
+          "transition-[flex-grow,opacity] duration-500 ease-out motion-reduce:transition-none",
+          expanded ? "grow opacity-100" : "grow-0 opacity-0",
+        )}
+      >
+        <Slider
+          className="ml-3"
+          min={0}
+          max={duration || 100}
+          value={[currentTime]}
+          onValueChange={handleSeek}
+          aria-label="Seek"
+        />
+        <span className="text-muted-foreground shrink-0 text-xs whitespace-nowrap tabular-nums">
+          {`${formatTime(currentTime)} / ${formatTime(duration)}`}
+        </span>
+      </div>
       <audio ref={audioRef} src={media.url} preload="metadata" />
     </div>
   )

@@ -21,8 +21,6 @@ function NarratorCredit({ narrator }: { narrator: Relationship<User> }): React.R
 }
 
 interface NarrationPlayerProps {
-  // Callers narrow to audio themselves (see ArticleHero) so a non-audio file is
-  // a type error rather than a component that silently renders nothing.
   narration: AudioMediaType
 }
 

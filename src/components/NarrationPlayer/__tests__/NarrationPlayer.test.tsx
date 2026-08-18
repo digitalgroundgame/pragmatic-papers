@@ -29,8 +29,10 @@ const narration = {
 
 const narrator = { id: 5, name: "Ada", slug: "ada" } as User
 
+// Settings live on the play button itself: right-click (and the keyboard's
+// context-menu key) open them, a plain click plays.
 function openSettings(): void {
-  fireEvent.click(screen.getByLabelText("Player settings"))
+  fireEvent.contextMenu(screen.getByLabelText("Play"))
 }
 
 describe("NarrationPlayer", () => {

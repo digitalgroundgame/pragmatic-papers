@@ -808,7 +808,7 @@ export interface MerchBlock {
    */
   autoplay?: boolean | null;
   /**
-   * Products are synced from Shopify hourly. Show the whole catalogue, or narrow it down below.
+   * Products are synced from Shopify automatically. Show the whole catalogue, or narrow it down below.
    */
   source?: ('all' | 'filtered') | null;
   /**
@@ -840,7 +840,7 @@ export interface MerchBlock {
   blockType: 'merch';
 }
 /**
- * Synced hourly from Shopify and stored as Shopify reports it — prices are raw amounts, not formatted strings, and the block decides how they read. Commerce fields are read-only; edit them in Shopify. The presentation fields at the bottom are ours and survive a sync.
+ * Synced from Shopify every few hours and stored as Shopify reports it — prices are raw amounts, not formatted strings, and the block decides how they read. Commerce fields are read-only; edit them in Shopify. The presentation fields at the bottom are ours and survive a sync.
  *
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "merch".

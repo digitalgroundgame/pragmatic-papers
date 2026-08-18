@@ -1,9 +1,19 @@
 "use client"
 
 import { cva, type VariantProps } from "class-variance-authority"
-import { Pause, Play } from "lucide-react"
+import { Pause, Play, Settings, Volume1, Volume2, VolumeX } from "lucide-react"
 import React, { useCallback, useEffect, useRef, useState } from "react"
 
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { Slider } from "@/components/ui/slider"
 import type { AudioMediaType } from "./types"
 
@@ -25,6 +35,17 @@ const audioControlsVariants = cva("flex min-w-0 basis-0 items-center gap-3 overf
   },
 })
 
+const PLAYBACK_RATES = [0.75, 1, 1.25, 1.5, 2] as const
+
+function formatRate(rate: number): string {
+  return `${rate}\u00d7`
+}
+
+function VolumeIcon({ volume }: { volume: number }): React.ReactNode {
+  if (volume === 0) return <VolumeX className="size-4" />
+  return volume < 0.5 ? <Volume1 className="size-4" /> : <Volume2 className="size-4" />
+}
+
 function formatTime(seconds: number): string {
   if (!isFinite(seconds) || seconds < 0) return "0:00"
   const m = Math.floor(seconds / 60)
@@ -38,11 +59,14 @@ export interface AudioMediaProps extends Pick<
 > {
   media: AudioMediaType
   onDurationChange?: (duration: number) => void
+  /** Extra entries appended to the settings menu, below the playback speed group. */
+  menuItems?: React.ReactNode
 }
 
 export const AudioMedia: React.FC<AudioMediaProps> = ({
   media,
   onDurationChange,
+  menuItems,
   variant = "default",
 }) => {
   const audioRef = useRef<HTMLAudioElement>(null)
@@ -51,6 +75,8 @@ export const AudioMedia: React.FC<AudioMediaProps> = ({
   const [currentTime, setCurrentTime] = useState(0)
   const [duration, setDuration] = useState(media.duration ?? 0)
   const [started, setStarted] = useState(false)
+  const [playbackRate, setPlaybackRate] = useState(1)
+  const [volume, setVolume] = useState(1)
   const expanded = variant !== "collapsible" || started
 
   useEffect(() => {
@@ -109,6 +135,14 @@ export const AudioMedia: React.FC<AudioMediaProps> = ({
     if (duration > 0) onDurationChange?.(duration)
   }, [duration, onDurationChange])
 
+  useEffect(() => {
+    if (audioRef.current) audioRef.current.playbackRate = playbackRate
+  }, [playbackRate])
+
+  useEffect(() => {
+    if (audioRef.current) audioRef.current.volume = volume
+  }, [volume])
+
   const togglePlay = useCallback(() => {
     const audio = audioRef.current
     if (!audio) return
@@ -123,6 +157,12 @@ export const AudioMedia: React.FC<AudioMediaProps> = ({
         .catch(() => setIsPlaying(false))
     }
   }, [isPlaying])
+
+  const handleVolumeChange = useCallback((value: number | readonly number[]) => {
+    const next = Array.isArray(value) ? value[0] : value
+    if (next === undefined) return
+    setVolume(next)
+  }, [])
 
   const handleSeek = useCallback((value: number | readonly number[]) => {
     const audio = audioRef.current
@@ -160,6 +200,58 @@ export const AudioMedia: React.FC<AudioMediaProps> = ({
           {`${formatTime(currentTime)} / ${formatTime(duration)}`}
         </span>
       </div>
+      <DropdownMenu>
+        <DropdownMenuTrigger
+          aria-label="Player settings"
+          className="text-muted-foreground hover:text-foreground ml-3 shrink-0 transition-colors"
+        >
+          <Settings className="size-4" />
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-auto min-w-40">
+          {/* Menu.GroupLabel throws outside a Menu.Group, so the label and the
+              radio items are wrapped together rather than left as siblings. */}
+          <DropdownMenuGroup>
+            <DropdownMenuLabel>Playback speed</DropdownMenuLabel>
+            <DropdownMenuRadioGroup
+              value={playbackRate}
+              onValueChange={(value) => setPlaybackRate(Number(value))}
+            >
+              {PLAYBACK_RATES.map((rate) => (
+                <DropdownMenuRadioItem key={rate} value={rate}>
+                  {formatRate(rate)}
+                </DropdownMenuRadioItem>
+              ))}
+            </DropdownMenuRadioGroup>
+          </DropdownMenuGroup>
+          <DropdownMenuSeparator />
+          <DropdownMenuGroup>
+            <DropdownMenuLabel>Volume</DropdownMenuLabel>
+            {/* Not a menu item: the wrapper keeps arrow keys on the slider
+                instead of letting the menu use them to move between items. */}
+            <div
+              className="flex items-center gap-2 px-1.5 py-1"
+              onKeyDown={(event) => event.stopPropagation()}
+            >
+              <VolumeIcon volume={volume} />
+              <Slider
+                min={0}
+                max={1}
+                step={0.01}
+                value={[volume]}
+                onValueChange={handleVolumeChange}
+                aria-label="Volume"
+                className="w-28"
+              />
+            </div>
+          </DropdownMenuGroup>
+          {menuItems ? (
+            <>
+              <DropdownMenuSeparator />
+              {menuItems}
+            </>
+          ) : null}
+        </DropdownMenuContent>
+      </DropdownMenu>
       <audio ref={audioRef} src={media.url} preload="metadata" />
     </div>
   )

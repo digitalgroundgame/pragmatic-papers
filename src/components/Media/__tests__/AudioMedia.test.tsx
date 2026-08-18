@@ -31,6 +31,13 @@ function query<T extends Element>(container: HTMLElement, selector: string): T {
   return el
 }
 
+// The menu renders in a portal, so it is queried off the document rather than
+// the render container. jsdom gives the slider no layout, so these assert that
+// the control is mounted rather than trying to drag it.
+function volumeSlider(): Element | null {
+  return document.querySelector('[data-slot="slider"][aria-label="Volume"]')
+}
+
 function isCollapsed(container: HTMLElement): boolean {
   return query(container, '[data-slot="audio-controls"]').hasAttribute("inert")
 }
@@ -82,6 +89,34 @@ describe("AudioMedia", () => {
 
       fireEvent.ended(query<HTMLAudioElement>(container, "audio"))
       expect(isCollapsed(container)).toBe(true)
+    })
+  })
+
+  describe("settings menu", () => {
+    it("changes the playback rate of the audio element", () => {
+      const { container } = render(<AudioMedia media={media} />)
+      const audio = query<HTMLAudioElement>(container, "audio")
+      expect(audio.playbackRate).toBe(1)
+
+      fireEvent.click(screen.getByLabelText("Player settings"))
+      fireEvent.click(screen.getByRole("menuitemradio", { name: "1.5\u00d7" }))
+      expect(audio.playbackRate).toBe(1.5)
+    })
+
+    it("offers a volume slider", () => {
+      const { container } = render(<AudioMedia media={media} />)
+      expect(query<HTMLAudioElement>(container, "audio").volume).toBe(1)
+
+      fireEvent.click(screen.getByLabelText("Player settings"))
+      expect(volumeSlider()).not.toBeNull()
+    })
+
+    it("is reachable while the collapsible variant is still collapsed", () => {
+      const { container } = render(<AudioMedia media={media} variant="collapsible" />)
+      expect(isCollapsed(container)).toBe(true)
+
+      fireEvent.click(screen.getByLabelText("Player settings"))
+      expect(volumeSlider()).not.toBeNull()
     })
   })
 })

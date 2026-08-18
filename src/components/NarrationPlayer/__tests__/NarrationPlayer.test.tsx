@@ -1,17 +1,16 @@
-import { cleanup, render, screen } from "@testing-library/react"
-import { afterEach, describe, expect, it, vi } from "vitest"
+import { cleanup, fireEvent, render, screen } from "@testing-library/react"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
-import type * as MediaModule from "@/components/Media"
 import type { AudioMediaType } from "@/components/Media"
 import type { User } from "@/payload-types"
 import { NarrationPlayer } from "../index"
 
-vi.mock("@/components/Media", async (importOriginal) => ({
-  ...(await importOriginal<typeof MediaModule>()),
-  Media: ({ media }: { media: { filename: string } }) => (
-    <div data-testid="media">{media?.filename}</div>
-  ),
-}))
+// The credit only exists inside the player's settings menu, so these drive the
+// real menu rather than stubbing Media — menu parts throw outside a Menu.Root.
+beforeEach(() => {
+  vi.spyOn(HTMLMediaElement.prototype, "play").mockResolvedValue(undefined)
+  vi.spyOn(HTMLMediaElement.prototype, "pause").mockImplementation(() => undefined)
+})
 
 afterEach(() => {
   cleanup()
@@ -22,41 +21,55 @@ const narration = {
   id: 20,
   filename: "narration.mp3",
   mimeType: "audio/mpeg",
+  url: "/media/narration.mp3",
+  duration: 120,
   updatedAt: "2024-01-01T00:00:00.000Z",
   createdAt: "2024-01-01T00:00:00.000Z",
 } as AudioMediaType
 
 const narrator = { id: 5, name: "Ada", slug: "ada" } as User
 
+function openSettings(): void {
+  fireEvent.click(screen.getByLabelText("Player settings"))
+}
+
 describe("NarrationPlayer", () => {
   it("renders the audio player", () => {
-    render(<NarrationPlayer narration={narration} />)
-    expect(screen.getByTestId("media").textContent).toBe("narration.mp3")
+    const { container } = render(<NarrationPlayer narration={narration} />)
+    expect(container.querySelector("audio")?.getAttribute("src")).toBe("/media/narration.mp3")
   })
 
-  it("credits a resolved narrator", () => {
+  it("credits a resolved narrator with a link to their profile", () => {
     render(<NarrationPlayer narration={{ ...narration, narrator }} />)
-    const link = screen.getByRole("link", { name: "Ada" }) as HTMLAnchorElement
-    expect(link.href).toContain("/authors/ada")
+    openSettings()
+
+    const link = screen.getByRole("menuitem", { name: "Ada" }) as HTMLAnchorElement
+    expect(link.tagName).toBe("A")
+    expect(link.getAttribute("href")).toBe("/authors/ada")
+    expect(screen.getByText("Narrated by")).toBeTruthy()
   })
 
   it("omits the credit when no narrator is set", () => {
     render(<NarrationPlayer narration={narration} />)
-    expect(screen.queryByRole("link")).toBeNull()
+    openSettings()
+    expect(screen.queryByText("Narrated by")).toBeNull()
   })
 
   it("omits the credit when the narrator relationship was not resolved", () => {
     render(<NarrationPlayer narration={{ ...narration, narrator: 5 }} />)
-    expect(screen.queryByRole("link")).toBeNull()
+    openSettings()
+    expect(screen.queryByText("Narrated by")).toBeNull()
   })
 
   it("omits the credit when a resolved narrator has no slug", () => {
     render(<NarrationPlayer narration={{ ...narration, narrator: { ...narrator, slug: "" } }} />)
-    expect(screen.queryByRole("link")).toBeNull()
+    openSettings()
+    expect(screen.queryByText("Narrated by")).toBeNull()
   })
 
   it("omits the credit when a resolved narrator has no name", () => {
     render(<NarrationPlayer narration={{ ...narration, narrator: { ...narrator, name: null } }} />)
-    expect(screen.queryByRole("link")).toBeNull()
+    openSettings()
+    expect(screen.queryByText("Narrated by")).toBeNull()
   })
 })

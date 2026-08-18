@@ -4,7 +4,7 @@ import React from "react"
 
 import { AuthorLinks } from "@/components/Authors/AuthorLinks"
 import { HoverPrefetchLink } from "@/components/Link/HoverPrefetchLink"
-import { Media } from "@/components/Media"
+import { isMedia, Media } from "@/components/Media"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Card, CardContent } from "@/components/ui/card"
 
@@ -30,8 +30,9 @@ export const AuthorCard: React.FC<AuthorCardProps> = ({ author }) => {
   const initials = getInitials(name || "Author")
   const bioSnippet = extractBioSnippet(author)
   const profileImage = author.profileImage ?? undefined
-  const profileImageUrl =
-    typeof profileImage === "number" ? undefined : (profileImage?.sizes?.square?.url ?? undefined)
+  const profileImageUrl = isMedia(profileImage)
+    ? (profileImage.sizes?.square?.url ?? undefined)
+    : undefined
 
   return (
     <Card className="rounded-sm">

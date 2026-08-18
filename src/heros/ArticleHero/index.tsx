@@ -9,6 +9,7 @@ import type { Article, User } from "@/payload-types"
 import { formatDateTime } from "@/utilities/formatDateTime"
 import { getServerSideURL } from "@/utilities/getURL"
 import { getSeparator } from "@/utilities/getSeparator"
+import { isResolved } from "@/utilities/relationships"
 
 interface ArticleHeroProps {
   article: Article
@@ -17,7 +18,7 @@ interface ArticleHeroProps {
 export const ArticleHero: React.FC<ArticleHeroProps> = ({ article }) => {
   const { publishedAt, title, heroImage, authors, narration } = article
 
-  const populatedAuthors = (authors || []).filter((a): a is User => typeof a === "object")
+  const populatedAuthors = (authors || []).filter(isResolved<User>)
 
   return (
     <div className="relative flex flex-col gap-2 md:-mx-10 lg:-mx-32 xl:-mx-44">

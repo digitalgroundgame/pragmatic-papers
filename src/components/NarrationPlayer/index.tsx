@@ -4,50 +4,55 @@ import type { User } from "@/payload-types"
 import React from "react"
 
 import { Media, type AudioMediaType } from "@/components/Media"
-
-// function formatVTTTime(seconds: number): string {
-//   const h = Math.floor(seconds / 3600)
-//   const m = Math.floor((seconds % 3600) / 60)
-//   const s = seconds % 60
-//   return `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}:${s.toFixed(3).padStart(6, "0")}`
-// }
-
-// function buildWebVTT(transcript: string, duration: number): string {
-//   const segments = transcript
-//     .split(/\n\n+/)
-//     .map((s) => s.replace(/\n/g, " ").trim())
-//     .filter(Boolean)
-
-//   if (segments.length === 0) return "WEBVTT\n"
-
-//   const segmentDuration = duration / segments.length
-//   const cues = segments.map((text, i) => {
-//     const start = formatVTTTime(i * segmentDuration)
-//     const end = formatVTTTime((i + 1) * segmentDuration)
-//     return `${start} --> ${end}\n${text}`
-//   })
-
-//   return `WEBVTT\n\n${cues.join("\n\n")}`
-// }
+import { isResolved, type Relationship } from "@/utilities/relationships"
 
 interface NarrationPlayerProps {
+  // Callers narrow to audio themselves (see ArticleHero) so a non-audio file is
+  // a type error rather than a component that silently renders nothing.
   narration: AudioMediaType
 }
 
-function isNarrator(narrator: number | User | null | undefined): narrator is User {
-  if (!narrator) return false
-  if (typeof narrator === "number") return false
-  return Boolean(narrator.name && narrator.slug)
+interface NarratorCredit {
+  name: string
+  slug: string
+}
+
+/**
+ * An unresolved narrator (query depth too low) and a resolved narrator missing
+ * its name/slug are different failures — the first is a bug, the second is a
+ * content gap — so both get logged rather than dropping the credit silently.
+ */
+function getNarratorCredit(narrator: Relationship<User>): NarratorCredit | null {
+  if (narrator === null || narrator === undefined) return null
+
+  if (!isResolved(narrator)) {
+    console.warn(
+      `NarrationPlayer: narrator ${narrator} was not resolved — query the narration media at a depth that populates it to render the credit.`,
+    )
+    return null
+  }
+
+  const { name, slug } = narrator
+  if (!name || !slug) {
+    console.warn(
+      `NarrationPlayer: narrator ${narrator.id} is missing ${!name ? "a name" : "a slug"} — omitting the narration credit.`,
+    )
+    return null
+  }
+
+  return { name, slug }
 }
 
 export function NarrationPlayer({ narration }: NarrationPlayerProps): React.ReactNode {
+  const narrator = getNarratorCredit(narration.narrator)
+
   return (
     <div className="flex flex-col gap-1.5">
-      {isNarrator(narration.narrator) && (
+      {narrator && (
         <p className="text-muted-foreground font-serif text-sm">
           Narrated by{" "}
-          <a href={`/authors/${narration.narrator.slug}`} className="hover:underline">
-            {narration.narrator.name}
+          <a href={`/authors/${narrator.slug}`} className="hover:underline">
+            {narrator.name}
           </a>
         </p>
       )}

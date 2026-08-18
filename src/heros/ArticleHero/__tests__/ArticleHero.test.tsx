@@ -2,9 +2,12 @@ import { cleanup, render, screen } from "@testing-library/react"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
 import { ArticleHero } from "../index"
+import type * as MediaModule from "@/components/Media"
 import type { Article, User } from "@/payload-types"
 
-vi.mock("@/components/Media", () => ({
+// Only the renderer is stubbed — the real is*Media guards decide what ArticleHero shows.
+vi.mock("@/components/Media", async (importOriginal) => ({
+  ...(await importOriginal<typeof MediaModule>()),
   Media: ({ media }: { media: { filename: string } }) => (
     <div data-testid="media">{media?.filename}</div>
   ),
@@ -75,6 +78,7 @@ describe("ArticleHero", () => {
       heroImage: {
         id: 10,
         filename: "hero.jpg",
+        mimeType: "image/jpeg",
         updatedAt: "2024-01-01T00:00:00.000Z",
         createdAt: "2024-01-01T00:00:00.000Z",
       },
@@ -94,6 +98,7 @@ describe("ArticleHero", () => {
       narration: {
         id: 20,
         filename: "narration.mp3",
+        mimeType: "audio/mpeg",
         updatedAt: "2024-01-01T00:00:00.000Z",
         createdAt: "2024-01-01T00:00:00.000Z",
       },
@@ -104,6 +109,21 @@ describe("ArticleHero", () => {
 
   it("does not render NarrationPlayer when narration is a number (unresolved relation)", () => {
     const article: Article = { ...baseArticle, narration: 20 }
+    render(<ArticleHero article={article} />)
+    expect(screen.queryByTestId("narration-player")).toBeNull()
+  })
+
+  it("does not render NarrationPlayer when narration is not audio", () => {
+    const article: Article = {
+      ...baseArticle,
+      narration: {
+        id: 21,
+        filename: "narration.mp4",
+        mimeType: "video/mp4",
+        updatedAt: "2024-01-01T00:00:00.000Z",
+        createdAt: "2024-01-01T00:00:00.000Z",
+      },
+    }
     render(<ArticleHero article={article} />)
     expect(screen.queryByTestId("narration-player")).toBeNull()
   })

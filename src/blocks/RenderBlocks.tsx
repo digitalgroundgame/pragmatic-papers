@@ -12,6 +12,7 @@ import { NewsletterSignupBlock } from "@/blocks/NewsletterSignup/Component"
 import { MerchBlock } from "@/blocks/Merch/Component"
 import { TimelineBlock } from "@/blocks/Timeline/Component"
 import { VolumeViewBlock } from "@/blocks/VolumeViewBlock/component"
+import { isResolved } from "@/utilities/relationships"
 
 interface RenderBlocksProps {
   blocks: Page["layout"][number][]
@@ -33,7 +34,7 @@ export const RenderBlocks: React.FC<RenderBlocksProps> = ({ blocks, pageNumber }
         } else if (blockType === "cta") {
           return <CallToActionBlock key={key} {...block} />
         } else if (blockType === "formBlock") {
-          if (typeof block.form === "number") return null
+          if (!isResolved(block.form)) return null
           return <FormBlock key={key} {...block} />
         } else if (blockType === "mediaBlock") {
           return <MediaBlock key={key} {...block} />

@@ -1,4 +1,4 @@
-import { act, cleanup, fireEvent, render, screen } from "@testing-library/react"
+import { cleanup, fireEvent, render, screen } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { AudioMedia } from "../AudioMedia"
@@ -63,6 +63,21 @@ describe("AudioMedia", () => {
   })
 
   describe("collapsible variant", () => {
+    it("labels the collapsed player with a call to action and the duration", () => {
+      render(<AudioMedia media={media} variant="collapsible" />)
+      expect(screen.getByText("Listen \u00b7 2:00")).toBeTruthy()
+    })
+
+    it("falls back to a bare call to action when the duration is unknown", () => {
+      render(<AudioMedia media={{ ...media, duration: null }} variant="collapsible" />)
+      expect(screen.getByText("Listen")).toBeTruthy()
+    })
+
+    it("omits the call to action on the default variant", () => {
+      render(<AudioMedia media={media} />)
+      expect(screen.queryByText(/^Listen/)).toBeNull()
+    })
+
     it("starts collapsed with the controls inert", () => {
       const { container } = render(<AudioMedia media={media} variant="collapsible" />)
       expect(isCollapsed(container)).toBe(true)
@@ -93,65 +108,12 @@ describe("AudioMedia", () => {
   })
 
   describe("settings menu", () => {
-    it("does not open on a plain click, which plays instead", () => {
-      const { container } = render(<AudioMedia media={media} />)
-      fireEvent.click(screen.getByLabelText("Play"))
-
-      expect(volumeSlider()).toBeNull()
-      expect(isCollapsed(container)).toBe(false)
-    })
-
-    it("opens from a right-click on the play button without toggling playback", () => {
-      render(<AudioMedia media={media} />)
-      fireEvent.contextMenu(screen.getByLabelText("Play"))
-
-      expect(volumeSlider()).not.toBeNull()
-      expect(screen.getByLabelText("Play")).toBeTruthy()
-    })
-
-    it("opens on a long press and swallows the click that ends it", () => {
-      vi.useFakeTimers()
-      try {
-        const { container } = render(<AudioMedia media={media} variant="collapsible" />)
-        const play = screen.getByLabelText("Play")
-
-        fireEvent.pointerDown(play, { button: 0 })
-        act(() => vi.advanceTimersByTime(600))
-        fireEvent.pointerUp(play)
-        fireEvent.click(play)
-
-        expect(volumeSlider()).not.toBeNull()
-        // The press opened settings, so it must not have started playback.
-        expect(isCollapsed(container)).toBe(true)
-      } finally {
-        vi.useRealTimers()
-      }
-    })
-
-    it("does not open when the press is released early", () => {
-      vi.useFakeTimers()
-      try {
-        const { container } = render(<AudioMedia media={media} variant="collapsible" />)
-        const play = screen.getByLabelText("Play")
-
-        fireEvent.pointerDown(play, { button: 0 })
-        act(() => vi.advanceTimersByTime(200))
-        fireEvent.pointerUp(play)
-        fireEvent.click(play)
-
-        expect(volumeSlider()).toBeNull()
-        expect(isCollapsed(container)).toBe(false)
-      } finally {
-        vi.useRealTimers()
-      }
-    })
-
     it("changes the playback rate of the audio element", () => {
       const { container } = render(<AudioMedia media={media} />)
       const audio = query<HTMLAudioElement>(container, "audio")
       expect(audio.playbackRate).toBe(1)
 
-      fireEvent.contextMenu(screen.getByLabelText("Play"))
+      fireEvent.click(screen.getByLabelText("Player settings"))
       fireEvent.click(screen.getByRole("menuitemradio", { name: "1.5\u00d7" }))
       expect(audio.playbackRate).toBe(1.5)
     })
@@ -160,17 +122,20 @@ describe("AudioMedia", () => {
       const { container } = render(<AudioMedia media={media} />)
       expect(query<HTMLAudioElement>(container, "audio").volume).toBe(1)
 
-      fireEvent.contextMenu(screen.getByLabelText("Play"))
+      fireEvent.click(screen.getByLabelText("Player settings"))
       expect(volumeSlider()).not.toBeNull()
     })
 
-    it("is reachable while the collapsible variant is still collapsed", () => {
+    it("is only revealed once the collapsible variant has been played", () => {
       const { container } = render(<AudioMedia media={media} variant="collapsible" />)
+      const settings = screen.getByLabelText("Player settings")
+      // Present but clipped and inert, so it cannot be reached while collapsed.
       expect(isCollapsed(container)).toBe(true)
+      expect(settings.closest("[inert]")).not.toBeNull()
 
-      fireEvent.contextMenu(screen.getByLabelText("Play"))
-      expect(volumeSlider()).not.toBeNull()
-      expect(isCollapsed(container)).toBe(true)
+      fireEvent.click(screen.getByLabelText("Play"))
+      expect(isCollapsed(container)).toBe(false)
+      expect(settings.closest("[inert]")).toBeNull()
     })
   })
 })

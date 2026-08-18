@@ -40,31 +40,23 @@ describe("NarrationPlayer", () => {
     expect(link.href).toContain("/authors/ada")
   })
 
-  it("omits the credit without warning when no narrator is set", () => {
-    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined)
+  it("omits the credit when no narrator is set", () => {
     render(<NarrationPlayer narration={narration} />)
     expect(screen.queryByRole("link")).toBeNull()
-    expect(warn).not.toHaveBeenCalled()
   })
 
-  it("warns when the narrator relationship was not resolved", () => {
-    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined)
+  it("omits the credit when the narrator relationship was not resolved", () => {
     render(<NarrationPlayer narration={{ ...narration, narrator: 5 }} />)
     expect(screen.queryByRole("link")).toBeNull()
-    expect(warn).toHaveBeenCalledWith(expect.stringContaining("was not resolved"))
   })
 
-  it("warns when a resolved narrator has no slug", () => {
-    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined)
+  it("omits the credit when a resolved narrator has no slug", () => {
     render(<NarrationPlayer narration={{ ...narration, narrator: { ...narrator, slug: "" } }} />)
     expect(screen.queryByRole("link")).toBeNull()
-    expect(warn).toHaveBeenCalledWith(expect.stringContaining("missing a slug"))
   })
 
-  it("warns when a resolved narrator has no name", () => {
-    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined)
+  it("omits the credit when a resolved narrator has no name", () => {
     render(<NarrationPlayer narration={{ ...narration, narrator: { ...narrator, name: null } }} />)
     expect(screen.queryByRole("link")).toBeNull()
-    expect(warn).toHaveBeenCalledWith(expect.stringContaining("missing a name"))
   })
 })

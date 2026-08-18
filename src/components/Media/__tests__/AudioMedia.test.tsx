@@ -41,31 +41,47 @@ describe("AudioMedia", () => {
     expect(container.firstChild).toBeNull()
   })
 
-  it("starts collapsed with the controls inert", () => {
-    const { container } = render(<AudioMedia media={media} />)
-    expect(isCollapsed(container)).toBe(true)
+  describe("default variant", () => {
+    it("shows the controls without any interaction", () => {
+      const { container } = render(<AudioMedia media={media} />)
+      expect(isCollapsed(container)).toBe(false)
+    })
+
+    it("keeps the controls open after playback ends", () => {
+      const { container } = render(<AudioMedia media={media} />)
+      fireEvent.click(screen.getByLabelText("Play"))
+      fireEvent.ended(query<HTMLAudioElement>(container, "audio"))
+      expect(isCollapsed(container)).toBe(false)
+    })
   })
 
-  it("expands when play is pressed", () => {
-    const { container } = render(<AudioMedia media={media} />)
-    fireEvent.click(screen.getByLabelText("Play"))
-    expect(isCollapsed(container)).toBe(false)
-  })
+  describe("collapsible variant", () => {
+    it("starts collapsed with the controls inert", () => {
+      const { container } = render(<AudioMedia media={media} variant="collapsible" />)
+      expect(isCollapsed(container)).toBe(true)
+    })
 
-  it("stays expanded while paused", async () => {
-    const { container } = render(<AudioMedia media={media} />)
-    fireEvent.click(screen.getByLabelText("Play"))
-    fireEvent.click(await screen.findByLabelText("Pause"))
-    expect(screen.getByLabelText("Play")).toBeTruthy()
-    expect(isCollapsed(container)).toBe(false)
-  })
+    it("expands when play is pressed", () => {
+      const { container } = render(<AudioMedia media={media} variant="collapsible" />)
+      fireEvent.click(screen.getByLabelText("Play"))
+      expect(isCollapsed(container)).toBe(false)
+    })
 
-  it("collapses again once playback ends", () => {
-    const { container } = render(<AudioMedia media={media} />)
-    fireEvent.click(screen.getByLabelText("Play"))
-    expect(isCollapsed(container)).toBe(false)
+    it("stays expanded while paused", async () => {
+      const { container } = render(<AudioMedia media={media} variant="collapsible" />)
+      fireEvent.click(screen.getByLabelText("Play"))
+      fireEvent.click(await screen.findByLabelText("Pause"))
+      expect(screen.getByLabelText("Play")).toBeTruthy()
+      expect(isCollapsed(container)).toBe(false)
+    })
 
-    fireEvent.ended(query<HTMLAudioElement>(container, "audio"))
-    expect(isCollapsed(container)).toBe(true)
+    it("collapses again once playback ends", () => {
+      const { container } = render(<AudioMedia media={media} variant="collapsible" />)
+      fireEvent.click(screen.getByLabelText("Play"))
+      expect(isCollapsed(container)).toBe(false)
+
+      fireEvent.ended(query<HTMLAudioElement>(container, "audio"))
+      expect(isCollapsed(container)).toBe(true)
+    })
   })
 })

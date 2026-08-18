@@ -1,11 +1,29 @@
 "use client"
 
+import { cva, type VariantProps } from "class-variance-authority"
 import { Pause, Play } from "lucide-react"
 import React, { useCallback, useEffect, useRef, useState } from "react"
 
 import { Slider } from "@/components/ui/slider"
-import { cn } from "@/utilities/utils"
 import type { AudioMediaType } from "./types"
+
+const audioControlsVariants = cva("flex min-w-0 basis-0 items-center gap-3 overflow-hidden", {
+  variants: {
+    variant: {
+      default: "",
+      collapsible:
+        "transition-[flex-grow,opacity] duration-500 ease-out motion-reduce:transition-none",
+    },
+    expanded: {
+      true: "grow opacity-100",
+      false: "grow-0 opacity-0",
+    },
+  },
+  defaultVariants: {
+    variant: "default",
+    expanded: true,
+  },
+})
 
 function formatTime(seconds: number): string {
   if (!isFinite(seconds) || seconds < 0) return "0:00"
@@ -14,21 +32,26 @@ function formatTime(seconds: number): string {
   return `${m}:${s.toString().padStart(2, "0")}`
 }
 
-export interface AudioMediaProps {
+export interface AudioMediaProps extends Pick<
+  VariantProps<typeof audioControlsVariants>,
+  "variant"
+> {
   media: AudioMediaType
   onDurationChange?: (duration: number) => void
 }
 
-export const AudioMedia: React.FC<AudioMediaProps> = ({ media, onDurationChange }) => {
+export const AudioMedia: React.FC<AudioMediaProps> = ({
+  media,
+  onDurationChange,
+  variant = "default",
+}) => {
   const audioRef = useRef<HTMLAudioElement>(null)
   const durationRef = useRef(media.duration ?? 0)
   const [isPlaying, setIsPlaying] = useState(false)
   const [currentTime, setCurrentTime] = useState(0)
   const [duration, setDuration] = useState(media.duration ?? 0)
-  // The player starts as a bare play button and expands on first play. It stays
-  // expanded through a pause — the scrubber is what you resume and seek with —
-  // and only folds back once the track ends and the position resets.
-  const [expanded, setExpanded] = useState(false)
+  const [started, setStarted] = useState(false)
+  const expanded = variant !== "collapsible" || started
 
   useEffect(() => {
     const audio = audioRef.current
@@ -52,7 +75,7 @@ export const AudioMedia: React.FC<AudioMediaProps> = ({ media, onDurationChange 
     const onEnded = () => {
       setIsPlaying(false)
       setCurrentTime(durationRef.current)
-      setExpanded(false)
+      setStarted(false)
     }
 
     const tryCaptureDuration = () => {
@@ -93,7 +116,7 @@ export const AudioMedia: React.FC<AudioMediaProps> = ({ media, onDurationChange 
       audio.pause()
       setIsPlaying(false)
     } else {
-      setExpanded(true)
+      setStarted(true)
       void audio
         .play()
         .then(() => setIsPlaying(true))
@@ -122,14 +145,8 @@ export const AudioMedia: React.FC<AudioMediaProps> = ({ media, onDurationChange 
       </button>
       <div
         data-slot="audio-controls"
-        // `inert` keeps the collapsed controls out of the tab order and the
-        // accessibility tree while they are clipped to zero width.
         inert={!expanded}
-        className={cn(
-          "flex min-w-0 basis-0 items-center gap-3 overflow-hidden",
-          "transition-[flex-grow,opacity] duration-500 ease-out motion-reduce:transition-none",
-          expanded ? "grow opacity-100" : "grow-0 opacity-0",
-        )}
+        className={audioControlsVariants({ variant, expanded })}
       >
         <Slider
           className="ml-3"

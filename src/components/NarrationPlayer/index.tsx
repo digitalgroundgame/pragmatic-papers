@@ -28,7 +28,7 @@ export function NarrationPlayer({ narration }: NarrationPlayerProps): React.Reac
   return (
     <div className="flex flex-col gap-1.5">
       <NarratorCredit narrator={narration.narrator} />
-      <Media media={narration} />
+      <Media media={narration} variant="collapsible" />
     </div>
   )
 }

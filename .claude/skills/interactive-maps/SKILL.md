@@ -32,13 +32,14 @@ districts dominate the frame while dense urban ones vanish, which is the whole
 the story, say so in the copy, pair the map with a table or chart carrying the
 population weights, or reconsider the map entirely.
 
-Choropleth is also the **only** map type this block supports today. There is no
-cartogram, hex/tile grid, proportional-symbol, dot-density, or flow map — and
-no point/marker layer, since a path with no `id` is inert by design. Those want
-new block types (or new adapters alongside
-`src/blocks/InteractiveMap/adapters/inlineSvg.ts`), not a differently-shaped
-SVG. If a story needs one, file an issue rather than trying to fake it with
-overlapping paths.
+Choropleth is also the **only** map type this block draws today. There is no
+cartogram, hex/tile grid, proportional-symbol, or dot-density mode yet, and no
+point/marker layer — a path with no `id` is inert by design. More map types are
+planned for this same block, each arriving with its own fields, so everything
+below describes the **choropleth path** through the block rather than the block
+in general. Until one lands, don't fake it with overlapping paths or
+hand-placed markers; the sanitizer and parser will fight you, and the result
+won't survive the next upload.
 
 ## The contract
 

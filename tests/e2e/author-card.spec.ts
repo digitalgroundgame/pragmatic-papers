@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test"
 
-import { Screenshot, waitForStableBox, waitForStableRender } from "./helpers"
+import { waitForStableBox, waitForStableRender } from "./helpers"
 
 // The e2e seed (scripts/seed-e2e.ts) gives "Teagan Wordsmith" a full spread of
 // social links (X, YouTube, Twitch, Instagram, Discord, GitHub), so the author
@@ -29,8 +29,13 @@ test("author card renders social media links @visual", async ({ page }, testInfo
   test.skip(testInfo.project.name !== "chromium", "visual baseline captured on chromium only")
 
   await waitForStableRender(page)
-  const box = await waitForStableBox(card)
-  const shot = new Screenshot(box).padding(16)
+  await waitForStableBox(card)
 
-  await expect(page).toHaveScreenshot("author-card-social-links.png", { clip: shot.clip })
+  // Capture the element rather than a clip over the page. The seed now has
+  // several authors, so this card sorts wherever its name falls and can sit
+  // below the fold — a page clip is intersected with the viewport, which
+  // silently truncated this shot to a 37px sliver. An element shot scrolls to
+  // the card and captures exactly it, so neither the list's length nor its
+  // ordering can reach this baseline.
+  await expect(card).toHaveScreenshot("author-card-social-links.png")
 })

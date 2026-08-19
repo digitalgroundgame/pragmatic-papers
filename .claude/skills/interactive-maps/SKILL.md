@@ -1,6 +1,6 @@
 ---
 name: interactive-maps
-description: Build a choropleth map for an article with the Interactive Map block — prepare the pre-projected SVG, upload it to Map Assets, and configure the block. Use whenever a writer wants regions shaded by a value (election margins, turnout, per-capita rates) in a story, or when a map renders blank, all-neutral, or without tooltips. Choropleth is the only map type the block supports today — no cartograms, hex/tile grids, proportional symbols, or dot density.
+description: Build a choropleth map for an article with the Interactive Map block — prepare the pre-projected SVG, upload it to Map Assets, and configure the block. Use whenever a writer wants regions shaded by a value (election margins, turnout, per-capita rates) in a story, or when a map renders blank, all-neutral, or without tooltips. Choropleth is the only map type the block draws today; further modes (starting with the Federal Courts map, #905) are in flight and not covered here.
 ---
 
 # Authoring a choropleth map
@@ -32,14 +32,23 @@ districts dominate the frame while dense urban ones vanish, which is the whole
 the story, say so in the copy, pair the map with a table or chart carrying the
 population weights, or reconsider the map entirely.
 
-Choropleth is also the **only** map type this block draws today. There is no
-cartogram, hex/tile grid, proportional-symbol, or dot-density mode yet, and no
-point/marker layer — a path with no `id` is inert by design. More map types are
-planned for this same block, each arriving with its own fields, so everything
-below describes the **choropleth path** through the block rather than the block
-in general. Until one lands, don't fake it with overlapping paths or
-hand-placed markers; the sanitizer and parser will fight you, and the result
-won't survive the next upload.
+Choropleth is also the **only** map type this block draws today — no
+cartogram, hex/tile grid, proportional-symbol, or dot-density mode, and no
+point/marker layer, since a path with no `id` is inert by design.
+
+More types are coming to **this same block**, selected by a `mode`
+discriminator, each bringing its own fields. The first is the Federal Courts
+map ([#905](https://github.com/digitalgroundgame/pragmatic-papers/issues/905)):
+a national circuit/district map with per-circuit drill-in and a judge-bench
+pane, with its data baked into the SVG asset rather than into collections.
+
+**That work is early and its API is still moving**, so nothing here documents
+it — treat everything below as the **choropleth mode**, which #905 is designed
+to leave working as-is. Two of this skill's specifics are on its list to change
+(the `svgContent` size cap and the sanitizer's tag allowlist), so re-check them
+against the code once it lands. Until then, don't fake an unsupported map type
+with overlapping paths or hand-placed markers; the sanitizer and parser will
+fight you, and the result won't survive the next upload.
 
 ## The contract
 

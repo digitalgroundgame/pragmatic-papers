@@ -152,9 +152,9 @@ without tooltips? Use the **`interactive-maps`** skill
 sanitizer allowlist that silently eats most exports, and the R+/D+ color
 scale, and ships a validator:
 `pnpm tsx .claude/skills/interactive-maps/validate-map-svg.ts <file.svg>`.
-The block draws **choropleths only** for now — further map types are planned
-for the same block, each with its own config fields, so the skill describes
-the choropleth path through it.
+The block draws **choropleths only** for now; further modes land on the same
+block behind a `mode` discriminator, starting with the Federal Courts map
+(#905), so the skill describes the choropleth mode specifically.
 
 ## Filing & triaging GitHub issues
 

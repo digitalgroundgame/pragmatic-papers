@@ -15,6 +15,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Slider } from "@/components/ui/slider"
+import { useAudioGain } from "./useAudioGain"
 import type { AudioMediaType } from "./types"
 
 const audioControlsVariants = cva("flex min-w-0 basis-0 items-center gap-3 overflow-hidden", {
@@ -90,6 +91,7 @@ export const AudioMedia: React.FC<AudioMediaProps> = ({
   variant = "default",
 }) => {
   const audioRef = useRef<HTMLAudioElement>(null)
+  const { connect, setGain } = useAudioGain(audioRef)
   const durationRef = useRef(media.duration ?? 0)
   const [isPlaying, setIsPlaying] = useState(false)
   const [currentTime, setCurrentTime] = useState(0)
@@ -160,8 +162,8 @@ export const AudioMedia: React.FC<AudioMediaProps> = ({
   }, [playbackRate])
 
   useEffect(() => {
-    if (audioRef.current) audioRef.current.volume = volume
-  }, [volume])
+    setGain(volume)
+  }, [volume, setGain])
 
   const togglePlay = useCallback(() => {
     const audio = audioRef.current
@@ -171,12 +173,15 @@ export const AudioMedia: React.FC<AudioMediaProps> = ({
       setIsPlaying(false)
     } else {
       setStarted(true)
+      // Build the gain graph while we still have the click: audio contexts start
+      // suspended and only resume from a user gesture.
+      connect()
       void audio
         .play()
         .then(() => setIsPlaying(true))
         .catch(() => setIsPlaying(false))
     }
-  }, [isPlaying])
+  }, [isPlaying, connect])
 
   const handleVolumeChange = useCallback((value: number | readonly number[]) => {
     const next = Array.isArray(value) ? value[0] : value

@@ -143,6 +143,16 @@ visual diff? Use the **`e2e-visual-tests`** skill
 (`.claude/skills/e2e-visual-tests/SKILL.md`) for the checklist; full lifecycle
 in `tests/e2e/README.md`.
 
+### Interactive maps
+
+Building or debugging an Interactive Map block — preparing the pre-projected
+SVG, uploading a Map Asset, or chasing a map that renders blank, all-grey, or
+without tooltips? Use the **`interactive-maps`** skill
+(`.claude/skills/interactive-maps/SKILL.md`). It covers the SVG contract, the
+sanitizer allowlist that silently eats most exports, and the R+/D+ color
+scale, and ships a validator:
+`pnpm tsx .claude/skills/interactive-maps/validate-map-svg.ts <file.svg>`.
+
 ## Filing & triaging GitHub issues
 
 Creating, editing, triaging, or labeling an issue — or adding/removing a

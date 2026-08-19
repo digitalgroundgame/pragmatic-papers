@@ -1,14 +1,15 @@
 ---
 name: interactive-maps
-description: Build an Interactive Map for an article — prepare the pre-projected SVG, upload it to Map Assets, and configure the Interactive Map block. Use whenever a writer wants a hoverable/clickable map in a story, or when a map renders blank, all-neutral, or without tooltips. Covers the id-per-path join, the sanitizer allowlist that silently eats most exports, data-attribute values, and the diverging R+/D+ color scale.
+description: Build a choropleth map for an article with the Interactive Map block — prepare the pre-projected SVG, upload it to Map Assets, and configure the block. Use whenever a writer wants regions shaded by a value (election margins, turnout, per-capita rates) in a story, or when a map renders blank, all-neutral, or without tooltips. Choropleth is the only map type the block supports today — no cartograms, hex/tile grids, proportional symbols, or dot density.
 ---
 
-# Authoring an Interactive Map
+# Authoring a choropleth map
 
-The Interactive Map block turns a **pre-projected SVG** into a colored,
-hoverable map rendered as real server-side JSX — no map library, no runtime
-fetch, no client-side projection. Everything the block knows comes out of the
-SVG file plus a handful of block fields.
+The Interactive Map block draws **choropleths**: regions from a
+**pre-projected SVG**, shaded by a value, with hover/focus tooltips. It renders
+as real server-side JSX — no map library, no runtime fetch, no client-side
+projection. Everything the block knows comes out of the SVG file plus a handful
+of block fields.
 
 That makes the SVG a **contract**, and the failure modes are quiet: a file that
 breaks the contract renders blank, all-grey, or inert rather than erroring.
@@ -17,6 +18,27 @@ Validate before uploading (below) instead of eyeballing the admin preview.
 Source of truth is the code in **`src/blocks/InteractiveMap/`** — chiefly
 `sanitize.ts` (what survives), `parseInlineSvg.ts` (what is read), and
 `colorScale.ts` (how values become colors). This is the checklist.
+
+## Is a choropleth the right map?
+
+A choropleth encodes value as **fill color over area**, so the reader's eye
+weights each region by how much space it takes up. That is the right call when
+the value is already area-normalized — a rate, a share, a per-capita figure, a
+margin — and every region is a meaningful unit on its own.
+
+It misleads when the story is about **counts of people**. Sparse rural
+districts dominate the frame while dense urban ones vanish, which is the whole
+"land doesn't vote" problem with a red-and-blue election map. If that gap is
+the story, say so in the copy, pair the map with a table or chart carrying the
+population weights, or reconsider the map entirely.
+
+Choropleth is also the **only** map type this block supports today. There is no
+cartogram, hex/tile grid, proportional-symbol, dot-density, or flow map — and
+no point/marker layer, since a path with no `id` is inert by design. Those want
+new block types (or new adapters alongside
+`src/blocks/InteractiveMap/adapters/inlineSvg.ts`), not a differently-shaped
+SVG. If a story needs one, file an issue rather than trying to fake it with
+overlapping paths.
 
 ## The contract
 

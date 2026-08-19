@@ -152,6 +152,9 @@ without tooltips? Use the **`interactive-maps`** skill
 sanitizer allowlist that silently eats most exports, and the R+/D+ color
 scale, and ships a validator:
 `pnpm tsx .claude/skills/interactive-maps/validate-map-svg.ts <file.svg>`.
+The block draws **choropleths only** — cartograms, hex/tile grids,
+proportional symbols, and dot density are not implemented yet and want new
+block types rather than a differently-shaped SVG.
 
 ## Filing & triaging GitHub issues
 

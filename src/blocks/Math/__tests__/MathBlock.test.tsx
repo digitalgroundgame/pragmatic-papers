@@ -30,10 +30,10 @@ describe("MathBlock", () => {
     )
 
     const math = getByRole("math")
-    expect(math.getAttribute("aria-label")).toBe("the Pythagorean theorem")
+    expect(math).toHaveAttribute("aria-label", "the Pythagorean theorem")
     // The rendered LaTeX is hidden so a screen reader announces the description
     // instead of reading the markup character by character.
-    expect(math.firstElementChild?.getAttribute("aria-hidden")).toBe("true")
+    expect(math.firstElementChild).toHaveAttribute("aria-hidden", "true")
     expect(math.textContent).toContain("a^2 + b^2 = c^2")
   })
 
@@ -44,7 +44,7 @@ describe("MathBlock", () => {
 
     const math = getByRole("math")
     expect(math.tagName).toBe("SPAN")
-    expect(math.getAttribute("aria-label")).toBe("mass-energy equivalence")
+    expect(math).toHaveAttribute("aria-label", "mass-energy equivalence")
   })
 
   it("omits the labelled wrapper when no description is provided", () => {
@@ -52,8 +52,8 @@ describe("MathBlock", () => {
       <MathBlock blockType="displayMathBlock" math="x = 1" />,
     )
 
-    expect(queryByRole("math")).toBeNull()
-    expect(container.querySelector("[aria-hidden]")).toBeNull()
+    expect(queryByRole("math")).not.toBeInTheDocument()
+    expect(container.querySelector("[aria-hidden]")).not.toBeInTheDocument()
     expect(container.textContent).toContain("x = 1")
   })
 })

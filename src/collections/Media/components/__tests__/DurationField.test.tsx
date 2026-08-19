@@ -122,13 +122,13 @@ describe("DurationField", () => {
   it("hides for a non-audio upload", () => {
     renderWith({ file: { value: new File([""], "a.jpg", { type: "image/jpeg" }) } })
 
-    expect(screen.queryByText("Duration")).toBeNull()
+    expect(screen.queryByText("Duration")).not.toBeInTheDocument()
   })
 
   it("shows for a pending audio file that has not been saved yet", () => {
     renderWith({ file: { value: audioFile() } })
 
-    expect(screen.getByText("Duration")).toBeTruthy()
+    expect(screen.getByText("Duration")).toBeInTheDocument()
   })
 
   // The field hides itself by rendering null, which — unlike `admin.condition` —
@@ -195,7 +195,7 @@ describe("DurationField", () => {
     })
 
     expect(mockSetValue).not.toHaveBeenCalled()
-    expect(screen.getByText("1:30")).toBeTruthy()
+    expect(screen.getByText("1:30")).toBeInTheDocument()
   })
 
   it("seeks past the end to resolve a file that reports no duration header", () => {
@@ -259,13 +259,13 @@ describe("DurationField", () => {
   it("shows a placeholder while no duration has resolved yet", () => {
     renderWith({ file: { value: audioFile() } })
 
-    expect(screen.getByText("Calculating…")).toBeTruthy()
+    expect(screen.getByText("Calculating…")).toBeInTheDocument()
   })
 
   it("shows a placeholder for an audio record with no file to measure", () => {
     renderWith({ mimeType: { value: "audio/mpeg" } })
 
-    expect(screen.getByText("—")).toBeTruthy()
+    expect(screen.getByText("—")).toBeInTheDocument()
     expect(FakeAudio.instances).toHaveLength(0)
   })
 

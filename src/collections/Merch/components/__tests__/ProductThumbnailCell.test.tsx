@@ -18,17 +18,17 @@ describe("ProductThumbnailCell", () => {
     )
 
     const img = container.querySelector("img")
-    expect(img?.getAttribute("src")).toBe("https://cdn.shopify.com/tee.jpg")
+    expect(img).toHaveAttribute("src", "https://cdn.shopify.com/tee.jpg")
     // Decorative: the title sits in the next column, so announcing the image
     // twice would only add noise.
-    expect(img?.getAttribute("alt")).toBe("")
-    expect(img?.getAttribute("loading")).toBe("lazy")
+    expect(img).toHaveAttribute("alt", "")
+    expect(img).toHaveAttribute("loading", "lazy")
   })
 
   it("falls back to a dash for a product with no image", () => {
     render(<ProductThumbnailCell cellData={null} />)
 
-    expect(screen.getByLabelText("No image")).toBeTruthy()
+    expect(screen.getByLabelText("No image")).toBeInTheDocument()
   })
 
   it("opens the product when it's the row's linked column", () => {
@@ -43,7 +43,7 @@ describe("ProductThumbnailCell", () => {
       />,
     )
 
-    expect(container.querySelector("a")?.getAttribute("href")).toBe("/admin/collections/merch/7")
+    expect(container.querySelector("a")).toHaveAttribute("href", "/admin/collections/merch/7")
   })
 
   it("prefers a destination Payload has already worked out", () => {
@@ -51,7 +51,7 @@ describe("ProductThumbnailCell", () => {
       <ProductThumbnailCell cellData="https://cdn.shopify.com/tee.jpg" link linkURL="/elsewhere" />,
     )
 
-    expect(container.querySelector("a")?.getAttribute("href")).toBe("/elsewhere")
+    expect(container.querySelector("a")).toHaveAttribute("href", "/elsewhere")
   })
 
   it("stays plain in any other column", () => {
@@ -59,7 +59,7 @@ describe("ProductThumbnailCell", () => {
       <ProductThumbnailCell cellData="https://cdn.shopify.com/tee.jpg" collectionSlug="merch" />,
     )
 
-    expect(container.querySelector("a")).toBeNull()
-    expect(container.querySelector("img")).toBeTruthy()
+    expect(container.querySelector("a")).not.toBeInTheDocument()
+    expect(container.querySelector("img")).toBeInTheDocument()
   })
 })

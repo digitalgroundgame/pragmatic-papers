@@ -69,7 +69,7 @@ describe("MerchCarousel", () => {
       </MerchCarousel>,
     )
 
-    expect(screen.getByText("Slides")).toBeTruthy()
+    expect(screen.getByText("Slides")).toBeInTheDocument()
     expect(Autoplay).not.toHaveBeenCalled()
   })
 
@@ -111,7 +111,7 @@ describe("MerchCarousel", () => {
       </MerchCarousel>,
     )
 
-    expect(screen.getByText("Slides")).toBeTruthy()
+    expect(screen.getByText("Slides")).toBeInTheDocument()
     expect(Autoplay).not.toHaveBeenCalled()
   })
 })
@@ -124,8 +124,8 @@ describe("MerchCarouselControls", () => {
       </Carousel>,
     )
 
-    expect(screen.queryByRole("button", { name: "Previous slide" })).toBeNull()
-    expect(screen.queryByRole("button", { name: "Next slide" })).toBeNull()
+    expect(screen.queryByRole("button", { name: "Previous slide" })).not.toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: "Next slide" })).not.toBeInTheDocument()
   })
 
   it("shows the arrows once there is something to scroll to", () => {
@@ -137,8 +137,8 @@ describe("MerchCarouselControls", () => {
       </Carousel>,
     )
 
-    expect(screen.getByRole("button", { name: "Previous slide" })).toBeTruthy()
-    expect(screen.getByRole("button", { name: "Next slide" })).toBeTruthy()
+    expect(screen.getByRole("button", { name: "Previous slide" })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Next slide" })).toBeInTheDocument()
   })
 })
 
@@ -171,6 +171,6 @@ describe("MerchCarouselDots", () => {
       </Carousel>,
     )
 
-    expect(screen.queryByRole("button", { name: /Go to slide/ })).toBeNull()
+    expect(screen.queryByRole("button", { name: /Go to slide/ })).not.toBeInTheDocument()
   })
 })

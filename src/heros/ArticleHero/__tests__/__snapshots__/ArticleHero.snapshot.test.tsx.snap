@@ -77,7 +77,7 @@ exports[`ArticleHero > joins three authors with commas and a closing ampersand 1
           Alice Smith
         </a>
         <span
-          class="text-primary"
+          class="text-foreground"
         >
           , 
         </span>
@@ -88,7 +88,7 @@ exports[`ArticleHero > joins three authors with commas and a closing ampersand 1
           Bob Jones
         </a>
         <span
-          class="text-primary"
+          class="text-foreground"
         >
            & 
         </span>
@@ -307,7 +307,7 @@ exports[`ArticleHero > names every author, however many, with no remainder 1`] =
           Alice Smith
         </a>
         <span
-          class="text-primary"
+          class="text-foreground"
         >
           , 
         </span>
@@ -318,7 +318,7 @@ exports[`ArticleHero > names every author, however many, with no remainder 1`] =
           Bob Jones
         </a>
         <span
-          class="text-primary"
+          class="text-foreground"
         >
           , 
         </span>
@@ -329,7 +329,7 @@ exports[`ArticleHero > names every author, however many, with no remainder 1`] =
           Carol Diaz
         </a>
         <span
-          class="text-primary"
+          class="text-foreground"
         >
           , 
         </span>
@@ -340,7 +340,7 @@ exports[`ArticleHero > names every author, however many, with no remainder 1`] =
           Dan Reed
         </a>
         <span
-          class="text-primary"
+          class="text-foreground"
         >
           , 
         </span>
@@ -351,7 +351,7 @@ exports[`ArticleHero > names every author, however many, with no remainder 1`] =
           Erin Fox
         </a>
         <span
-          class="text-primary"
+          class="text-foreground"
         >
            & 
         </span>
@@ -792,7 +792,7 @@ exports[`ArticleHero > renders with populated authors 1`] = `
           Alice Smith
         </a>
         <span
-          class="text-primary"
+          class="text-foreground"
         >
            & 
         </span>

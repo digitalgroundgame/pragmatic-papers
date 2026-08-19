@@ -128,6 +128,25 @@ describe("ArticleHero", () => {
     expect(screen.queryByTestId("narration-player")).toBeNull()
   })
 
+  it("places the narration player before the share buttons in the DOM", () => {
+    const article: Article = {
+      ...baseArticle,
+      narration: {
+        id: 20,
+        filename: "narration.mp3",
+        mimeType: "audio/mpeg",
+        updatedAt: "2024-01-01T00:00:00.000Z",
+        createdAt: "2024-01-01T00:00:00.000Z",
+      },
+    }
+    render(<ArticleHero article={article} />)
+    const narration = screen.getByTestId("narration-player")
+    const share = screen.getByTestId("share-buttons")
+    // Keyboard focus follows DOM order, and the player is read before the share
+    // buttons on md and up.
+    expect(narration.compareDocumentPosition(share) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
+
   it("matches snapshot", () => {
     const { container } = render(<ArticleHero article={baseArticle} />)
     expect(container.firstChild).toMatchSnapshot()

@@ -6,14 +6,14 @@ import { createOrUpdatePage } from "../pages"
 /**
  * Creates the home page with CollectionGrid blocks and saves it to the `pages` collection.
  *
- * A full-width Merch block ("Store Merch") sits fourth, after the first
- * three grids, as an on-site store ad placement.
+ * A full-width Merch block ("Support Us") sits second, directly after
+ * the first grid, as an on-site store ad placement.
  *
  * Block order (CollectionGrid layouts unless noted):
  *   1. gauss-10
- *   2. vespucci-7
- *   3. fibonacci-7
- *   4. Merch – full-width "Store Merch"
+ *   2. Merch – full-width "Support Us"
+ *   3. vespucci-7
+ *   4. fibonacci-7
  *   5. euler-3
  *   6. newton-4
  *   7. euler-5
@@ -114,6 +114,18 @@ export async function createCollectionGridHomePage(
             overrideTitle: null,
           },
         ],
+      },
+      {
+        blockType: "merch",
+        blockName: "Store Merch",
+        heading: "Support Us",
+        layout: "fullWidth",
+        autoplay: true,
+        // The whole synced catalogue in sort order — no per-placement
+        // curation, which is the point of syncing.
+        source: "all",
+        orderBy: "sortOrder",
+        limit: 6,
       },
       {
         blockType: "collectionGrid",
@@ -240,18 +252,6 @@ export async function createCollectionGridHomePage(
             overrideTitle: null,
           },
         ],
-      },
-      {
-        blockType: "merch",
-        blockName: "Store Merch",
-        heading: "DigitalGroundGame Store",
-        layout: "fullWidth",
-        autoplay: true,
-        // The whole synced catalogue in sort order — no per-placement
-        // curation, which is the point of syncing.
-        source: "all",
-        orderBy: "sortOrder",
-        limit: 6,
       },
       {
         blockType: "collectionGrid",

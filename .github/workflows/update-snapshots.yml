@@ -35,7 +35,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  PAYLOAD_SECRET: ${{ secrets.PAYLOAD_SECRET }}
+  PAYLOAD_SECRET: e2e-payload-secret
   NEXT_PUBLIC_SERVER_URL: http://localhost:8000
   USE_LOCAL_STORAGE: "true"
   # Keep in step with playwright.yml: the Merch block has no built-in store
@@ -139,7 +139,7 @@ jobs:
         with:
           node-version: "24.x"
           gh-font-read-token: ${{ secrets.GH_FONT_READ }}
-          payload-secret: ${{ secrets.PAYLOAD_SECRET }}
+          payload-secret: ${{ env.PAYLOAD_SECRET }}
 
       - name: Cache Next.js build cache
         uses: actions/cache@v6

@@ -93,10 +93,29 @@ describe("Select", () => {
 
     await chooseOption(screen.getByRole("combobox"), "Blue")
 
+    // The trigger shows the option's label, not the value stored behind it.
+    await waitFor(() => expect(screen.getByRole("combobox").textContent).toContain("Blue"))
+
     submit()
 
     await waitFor(() => expect(submitted).toHaveLength(1))
     expect(submitted[0]).toEqual({ colour: "blue" })
+  })
+
+  it("keeps showing the placeholder until the visitor picks something", () => {
+    renderField((methods) => (
+      <Select
+        blockType="select"
+        control={methods.control}
+        errors={methods.formState.errors}
+        label="Favourite colour"
+        name="colour"
+        options={colourOptions}
+        required
+      />
+    ))
+
+    expect(screen.getByRole("combobox").textContent).toContain("Favourite colour")
   })
 
   it("blocks submission while a required select is untouched", async () => {
@@ -132,6 +151,8 @@ describe("Select", () => {
       />
     ))
 
+    expect(screen.getByRole("combobox").textContent).toContain("Red")
+
     submit()
 
     await waitFor(() => expect(submitted).toHaveLength(1))
@@ -154,10 +175,29 @@ describe("State", () => {
 
     await chooseOption(screen.getByRole("combobox"), "California")
 
+    await waitFor(() => expect(screen.getByRole("combobox").textContent).toContain("California"))
+
     submit()
 
     await waitFor(() => expect(submitted).toHaveLength(1))
     expect(submitted[0]).toEqual({ state: "CA" })
+  })
+
+  it("keeps showing the placeholder before a state is picked", () => {
+    renderField((methods) => (
+      <State
+        blockType="state"
+        control={methods.control}
+        errors={methods.formState.errors}
+        label="State"
+        name="state"
+        required
+      />
+    ))
+
+    // The field starts on an empty string; Base UI treats that as "nothing
+    // selected", so the placeholder stands in until the visitor chooses.
+    expect(screen.getByRole("combobox").textContent).toContain("State")
   })
 
   it("blocks submission while a required state is untouched", async () => {
@@ -193,6 +233,8 @@ describe("Country", () => {
     ))
 
     await chooseOption(screen.getByRole("combobox"), "Canada")
+
+    await waitFor(() => expect(screen.getByRole("combobox").textContent).toContain("Canada"))
 
     submit()
 

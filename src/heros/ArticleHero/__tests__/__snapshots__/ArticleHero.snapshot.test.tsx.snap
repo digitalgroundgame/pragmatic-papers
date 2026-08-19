@@ -70,9 +70,6 @@ exports[`ArticleHero > joins three authors with commas and a closing ampersand 1
       <span
         class="align-middle"
       >
-        <span
-          class="text-primary"
-        />
         <a
           class="hover:underline"
           href="/authors/alice-smith"
@@ -303,9 +300,6 @@ exports[`ArticleHero > names every author, however many, with no remainder 1`] =
       <span
         class="align-middle"
       >
-        <span
-          class="text-primary"
-        />
         <a
           class="hover:underline"
           href="/authors/alice-smith"
@@ -791,9 +785,6 @@ exports[`ArticleHero > renders with populated authors 1`] = `
       <span
         class="align-middle"
       >
-        <span
-          class="text-primary"
-        />
         <a
           class="hover:underline"
           href="/authors/alice-smith"

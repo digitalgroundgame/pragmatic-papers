@@ -18,9 +18,6 @@ interface ArticleHeroProps {
 export const ArticleHero: React.FC<ArticleHeroProps> = ({ article }) => {
   const { publishedAt, title, heroImage, authors, narration } = article
 
-  // Narrowed before it crosses into `Byline`, a client component: whatever it
-  // receives is serialised into the RSC payload shipped with the page, and a
-  // populated `User` carries a whole biography and media doc per author.
   const bylineAuthors = (authors || [])
     .filter((a): a is User => typeof a === "object")
     .map(toBylineAuthor)
@@ -37,35 +34,37 @@ export const ArticleHero: React.FC<ArticleHeroProps> = ({ article }) => {
         />
       )}
       <h1 className="mt-6">{title}</h1>
-      <div className="flex flex-col gap-2 md:flex-row md:items-center md:gap-8">
-        <div className="flex flex-1 items-start justify-between gap-2 md:contents">
-          <div className="dark:text-brand-high-contrast text-brand flex flex-1 flex-wrap items-center gap-2 self-start font-serif font-bold underline-offset-4 md:order-1">
-            <Byline authors={bylineAuthors} />
-            {"•"}
-            {publishedAt && (
-              <HoverPrefetchLink href={`/articles/${article.slug}`} className="hover:underline">
-                <time dateTime={publishedAt}>{formatDateTime(publishedAt)}</time>
-              </HoverPrefetchLink>
+      <div>
+        <Byline authors={bylineAuthors} />
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          {publishedAt && (
+            <HoverPrefetchLink
+              href={`/articles/${article.slug}`}
+              className="text-foreground font-serif font-bold underline-offset-4 hover:underline"
+            >
+              <time dateTime={publishedAt}>{formatDateTime(publishedAt)}</time>
+            </HoverPrefetchLink>
+          )}
+          <div className="flex items-end justify-end gap-3">
+            {narration && typeof narration !== "number" && (
+              <div className="md:w-56 md:shrink-0">
+                <NarrationPlayer
+                  narration={narration}
+                  narrator={
+                    typeof narration.narrator === "object" && narration.narrator !== null
+                      ? narration.narrator
+                      : undefined
+                  }
+                />
+              </div>
             )}
-          </div>
-          <ShareButtons
-            url={`${getServerSideURL()}/articles/${article.slug}`}
-            title={article.title}
-            className="shrink-0 md:order-3"
-          />
-        </div>
-        {narration && typeof narration !== "number" && (
-          <div className="md:order-2 md:w-56 md:shrink-0">
-            <NarrationPlayer
-              narration={narration}
-              narrator={
-                typeof narration.narrator === "object" && narration.narrator !== null
-                  ? narration.narrator
-                  : undefined
-              }
+            <ShareButtons
+              url={`${getServerSideURL()}/articles/${article.slug}`}
+              title={article.title}
+              className="shrink-0"
             />
           </div>
-        )}
+        </div>
       </div>
       <Separator />
     </div>

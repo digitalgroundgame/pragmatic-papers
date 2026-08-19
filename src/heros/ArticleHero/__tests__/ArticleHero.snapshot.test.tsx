@@ -20,6 +20,17 @@ const makeAuthor = (id: number, name: string) => ({
   profileImage: null,
 })
 
+/**
+ * The byline's prose, without the avatars — an avatar with no image renders
+ * the author's initials, which would otherwise sit between the separators and
+ * the names ("ASAlice Smith, BJBob Jones").
+ */
+const bylineText = (container: HTMLElement): string => {
+  const clone = container.cloneNode(true) as HTMLElement
+  clone.querySelectorAll('[data-slot="avatar"]').forEach((avatar) => avatar.remove())
+  return clone.textContent ?? ""
+}
+
 const baseArticle = {
   id: 1,
   title: "Test Article",
@@ -36,7 +47,7 @@ describe("ArticleHero", () => {
     expect(container.firstChild).toMatchSnapshot()
   })
 
-  it("renders with populated authors showing avatar stack", () => {
+  it("renders with populated authors", () => {
     const article = {
       ...baseArticle,
       authors: [makeAuthor(1, "Alice Smith"), makeAuthor(2, "Bob Jones")],
@@ -55,24 +66,11 @@ describe("ArticleHero", () => {
       ],
     } as unknown as Article
     const { container } = render(<ArticleHero article={article} />)
-    expect(container.textContent).toContain("Alice Smith, Bob Jones & Carol Diaz")
+    expect(bylineText(container)).toContain("Alice Smith, Bob Jones & Carol Diaz")
     expect(container.firstChild).toMatchSnapshot()
   })
 
-  it("names every author when the byline is at its cap", () => {
-    const article = {
-      ...baseArticle,
-      authors: [
-        makeAuthor(1, "Alice Smith"),
-        makeAuthor(2, "Bob Jones"),
-        makeAuthor(3, "Carol Diaz"),
-      ],
-    } as unknown as Article
-    const { container } = render(<ArticleHero article={article} />)
-    expect(container.textContent).not.toContain("more")
-  })
-
-  it("collapses authors past the cap into a remainder", () => {
+  it("names every author, however many, with no remainder", () => {
     const article = {
       ...baseArticle,
       authors: [
@@ -85,12 +83,14 @@ describe("ArticleHero", () => {
       ],
     } as unknown as Article
     const { container } = render(<ArticleHero article={article} />)
-    expect(container.textContent).toContain("Alice Smith, Bob Jones & 4 more")
-    expect(container.textContent).not.toContain("Carol Diaz")
+    expect(bylineText(container)).toContain(
+      "Alice Smith, Bob Jones, Carol Diaz, Dan Reed, Erin Fox & Frank Ng",
+    )
+    expect(container.textContent).not.toContain("more")
     expect(container.firstChild).toMatchSnapshot()
   })
 
-  it("gives up the third name rather than show a remainder of one", () => {
+  it("gives every author their own avatar", () => {
     const article = {
       ...baseArticle,
       authors: [
@@ -101,8 +101,7 @@ describe("ArticleHero", () => {
       ],
     } as unknown as Article
     const { container } = render(<ArticleHero article={article} />)
-    expect(container.textContent).toContain("Alice Smith, Bob Jones & 2 more")
-    expect(container.textContent).not.toContain("1 more")
+    expect(container.querySelectorAll('[data-slot="avatar"]')).toHaveLength(4)
   })
 
   it("renders with hero image", () => {

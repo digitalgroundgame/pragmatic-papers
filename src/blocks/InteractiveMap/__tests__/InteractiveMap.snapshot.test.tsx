@@ -59,7 +59,7 @@ describe("InteractiveMapBlock", () => {
         maps={[]}
       />,
     )
-    expect(container.firstChild).toBeNull()
+    expect(container).toBeEmptyDOMElement()
   })
 
   it("treats a map whose svgContent is null as missing and skips it", () => {
@@ -71,7 +71,7 @@ describe("InteractiveMapBlock", () => {
         maps={[{ svgAsset: { ...stubAsset(minimalSvg), svgContent: null } }]}
       />,
     )
-    expect(container.firstChild).toBeNull()
+    expect(container).toBeEmptyDOMElement()
   })
 
   it("renders with perRegion colorScale — no legend block", () => {
@@ -154,6 +154,6 @@ describe("InteractiveMapBlock", () => {
         ]}
       />,
     )
-    expect(container.firstChild).toBeNull()
+    expect(container).toBeEmptyDOMElement()
   })
 })

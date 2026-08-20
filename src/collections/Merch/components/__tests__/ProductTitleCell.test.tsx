@@ -19,8 +19,8 @@ describe("ProductTitleCell", () => {
       <ProductTitleCell cellData="DGG Mug" collectionSlug="merch" rowData={{ id: 7 }} />,
     )
 
-    expect(container.querySelector("a")?.getAttribute("href")).toBe("/admin/collections/merch/7")
-    expect(screen.getByText("DGG Mug")).toBeTruthy()
+    expect(container.querySelector("a")).toHaveAttribute("href", "/admin/collections/merch/7")
+    expect(screen.getByText("DGG Mug")).toBeInTheDocument()
   })
 
   it("points at the trash route when the list is showing trash", () => {
@@ -33,21 +33,19 @@ describe("ProductTitleCell", () => {
       />,
     )
 
-    expect(container.querySelector("a")?.getAttribute("href")).toBe(
-      "/admin/collections/merch/trash/7",
-    )
+    expect(container.querySelector("a")).toHaveAttribute("href", "/admin/collections/merch/trash/7")
   })
 
   it("prefers a destination Payload has already worked out", () => {
     const { container } = render(<ProductTitleCell cellData="DGG Mug" linkURL="/elsewhere" />)
 
-    expect(container.querySelector("a")?.getAttribute("href")).toBe("/elsewhere")
+    expect(container.querySelector("a")).toHaveAttribute("href", "/elsewhere")
   })
 
   it("renders plain text rather than a dead link when there's no document", () => {
     const { container } = render(<ProductTitleCell cellData="DGG Mug" collectionSlug="merch" />)
 
-    expect(container.querySelector("a")).toBeNull()
-    expect(screen.getByText("DGG Mug")).toBeTruthy()
+    expect(container.querySelector("a")).not.toBeInTheDocument()
+    expect(screen.getByText("DGG Mug")).toBeInTheDocument()
   })
 })

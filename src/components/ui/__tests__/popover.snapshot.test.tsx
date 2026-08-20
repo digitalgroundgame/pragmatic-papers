@@ -23,6 +23,6 @@ describe("Popover", () => {
         <PopoverContent>Content</PopoverContent>
       </Popover>,
     )
-    expect(screen.getByRole("button", { name: "Share" })).toBeTruthy()
+    expect(screen.getByRole("button", { name: "Share" })).toBeInTheDocument()
   })
 })

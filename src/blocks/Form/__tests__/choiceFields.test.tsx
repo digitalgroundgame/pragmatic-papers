@@ -133,7 +133,7 @@ describe("Select", () => {
 
     submit()
 
-    await waitFor(() => expect(screen.getByText("This field is required")).toBeTruthy())
+    await waitFor(() => expect(screen.getByText("This field is required")).toBeInTheDocument())
     expect(submitted).toHaveLength(0)
   })
 
@@ -214,7 +214,7 @@ describe("State", () => {
 
     submit()
 
-    await waitFor(() => expect(screen.getByText("This field is required")).toBeTruthy())
+    await waitFor(() => expect(screen.getByText("This field is required")).toBeInTheDocument())
     expect(submitted).toHaveLength(0)
   })
 })

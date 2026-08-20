@@ -9,15 +9,12 @@ exports[`ArticleHero > matches snapshot 1`] = `
   >
     Test Article
   </h1>
-  <div
-    class="flex flex-wrap items-center gap-x-8 gap-y-2"
-  >
+  <div>
     <div
-      class="dark:text-brand-high-contrast text-brand flex grow basis-64 flex-wrap gap-2 font-serif font-bold underline-offset-4"
+      class="flex flex-wrap items-center justify-between gap-4"
     >
-      •
       <a
-        class="hover:underline"
+        class="text-foreground font-serif font-bold underline-offset-4 hover:underline"
         href="/articles/test-article"
       >
         <time
@@ -26,12 +23,16 @@ exports[`ArticleHero > matches snapshot 1`] = `
           June 15, 2024
         </time>
       </a>
+      <div
+        class="flex items-end justify-end gap-3"
+      >
+        <div
+          data-testid="share-buttons"
+          data-title="Test Article"
+          data-url="https://example.com/articles/test-article"
+        />
+      </div>
     </div>
-    <div
-      data-testid="share-buttons"
-      data-title="Test Article"
-      data-url="https://example.com/articles/test-article"
-    />
   </div>
   <div
     aria-orientation="horizontal"

@@ -98,15 +98,15 @@ describe("FormBlockClient", () => {
   it("renders the intro, every field, the server-rendered message and the submit label", () => {
     renderBlock()
 
-    expect(screen.getByText("Tell us what you think")).toBeTruthy()
-    expect(screen.getByText("We reply within two days")).toBeTruthy()
-    expect(screen.getByLabelText(/First name/)).toBeTruthy()
-    expect(screen.getByLabelText(/^Email/)).toBeTruthy()
-    expect(screen.getByLabelText("Notes")).toBeTruthy()
-    expect(screen.getByLabelText("Quantity")).toBeTruthy()
-    expect(screen.getByRole("checkbox")).toBeTruthy()
-    expect(screen.getByRole("combobox")).toBeTruthy()
-    expect(screen.getByRole("button", { name: "Send it" })).toBeTruthy()
+    expect(screen.getByText("Tell us what you think")).toBeInTheDocument()
+    expect(screen.getByText("We reply within two days")).toBeInTheDocument()
+    expect(screen.getByLabelText(/First name/)).toBeInTheDocument()
+    expect(screen.getByLabelText(/^Email/)).toBeInTheDocument()
+    expect(screen.getByLabelText("Notes")).toBeInTheDocument()
+    expect(screen.getByLabelText("Quantity")).toBeInTheDocument()
+    expect(screen.getByRole("checkbox")).toBeInTheDocument()
+    expect(screen.getByRole("combobox")).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Send it" })).toBeInTheDocument()
   })
 
   it("ignores a block type it has no field component for", () => {
@@ -121,8 +121,8 @@ describe("FormBlockClient", () => {
       }),
     )
 
-    expect(screen.getByLabelText("First name")).toBeTruthy()
-    expect(screen.queryByLabelText("Payment")).toBeNull()
+    expect(screen.getByLabelText("First name")).toBeInTheDocument()
+    expect(screen.queryByLabelText("Payment")).not.toBeInTheDocument()
   })
 
   it("does not submit while required fields are empty", async () => {
@@ -181,12 +181,12 @@ describe("FormBlockClient", () => {
     submit()
 
     await vi.advanceTimersByTimeAsync(1_000)
-    await waitFor(() => expect(screen.getByText("Loading, please wait...")).toBeTruthy())
+    await waitFor(() => expect(screen.getByText("Loading, please wait...")).toBeInTheDocument())
 
     settle({ status: 200, json: async () => ({}) })
 
-    await waitFor(() => expect(screen.getByText("Thanks for reaching out")).toBeTruthy())
-    expect(screen.queryByText("Loading, please wait...")).toBeNull()
+    await waitFor(() => expect(screen.getByText("Thanks for reaching out")).toBeInTheDocument())
+    expect(screen.queryByText("Loading, please wait...")).not.toBeInTheDocument()
   })
 
   it("replaces the form with the confirmation message after a successful submit", async () => {
@@ -196,10 +196,10 @@ describe("FormBlockClient", () => {
     fillRequiredFields()
     submit()
 
-    await waitFor(() => expect(screen.getByText("Thanks for reaching out")).toBeTruthy())
-    expect(screen.queryByRole("button", { name: "Send it" })).toBeNull()
+    await waitFor(() => expect(screen.getByText("Thanks for reaching out")).toBeInTheDocument())
+    expect(screen.queryByRole("button", { name: "Send it" })).not.toBeInTheDocument()
     // The intro is part of the pre-submission state and goes with the form.
-    expect(screen.queryByText("Tell us what you think")).toBeNull()
+    expect(screen.queryByText("Tell us what you think")).not.toBeInTheDocument()
   })
 
   it("redirects instead of showing a message when the form is configured that way", async () => {
@@ -222,8 +222,8 @@ describe("FormBlockClient", () => {
     fillRequiredFields()
     submit()
 
-    await waitFor(() => expect(screen.getByText("400: That email is blocked")).toBeTruthy())
-    expect(screen.getByRole("button", { name: "Send it" })).toBeTruthy()
+    await waitFor(() => expect(screen.getByText("400: That email is blocked")).toBeInTheDocument())
+    expect(screen.getByRole("button", { name: "Send it" })).toBeInTheDocument()
   })
 
   it("falls back to a generic error when the API returns no message", async () => {
@@ -233,7 +233,7 @@ describe("FormBlockClient", () => {
     fillRequiredFields()
     submit()
 
-    await waitFor(() => expect(screen.getByText("500: Internal Server Error")).toBeTruthy())
+    await waitFor(() => expect(screen.getByText("500: Internal Server Error")).toBeInTheDocument())
   })
 
   it("reports a failed request rather than hanging", async () => {
@@ -245,7 +245,7 @@ describe("FormBlockClient", () => {
     fillRequiredFields()
     submit()
 
-    await waitFor(() => expect(screen.getByText("500: Something went wrong.")).toBeTruthy())
-    expect(screen.getByRole("button", { name: "Send it" })).toBeTruthy()
+    await waitFor(() => expect(screen.getByText("500: Something went wrong.")).toBeInTheDocument())
+    expect(screen.getByRole("button", { name: "Send it" })).toBeInTheDocument()
   })
 })

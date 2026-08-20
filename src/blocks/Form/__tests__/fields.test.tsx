@@ -75,7 +75,7 @@ describe("Text", () => {
     const input = screen.getByLabelText(/First name/) as HTMLInputElement
     expect(input.type).toBe("text")
     expect(input.name).toBe("firstName")
-    expect(screen.getByText("(required)")).toBeTruthy()
+    expect(screen.getByText("(required)")).toBeInTheDocument()
   })
 
   it("renders the default value and submits what the visitor typed", async () => {
@@ -114,7 +114,7 @@ describe("Text", () => {
 
     submit()
 
-    await waitFor(() => expect(screen.getByText("This field is required")).toBeTruthy())
+    await waitFor(() => expect(screen.getByText("This field is required")).toBeInTheDocument())
     expect(submitted).toHaveLength(0)
   })
 })
@@ -214,7 +214,7 @@ describe("Email", () => {
     fireEvent.change(screen.getByLabelText(/Email/), { target: { value: "not-an-address" } })
     submit()
 
-    await waitFor(() => expect(screen.getByText("This field is required")).toBeTruthy())
+    await waitFor(() => expect(screen.getByText("This field is required")).toBeInTheDocument())
     expect(submitted).toHaveLength(0)
   })
 
@@ -273,7 +273,7 @@ describe("Checkbox", () => {
 
     submit()
 
-    await waitFor(() => expect(screen.getByText("This field is required")).toBeTruthy())
+    await waitFor(() => expect(screen.getByText("This field is required")).toBeInTheDocument())
     expect(submitted).toHaveLength(0)
   })
 })
@@ -300,7 +300,9 @@ describe("Error", () => {
 
     render(<Harness />)
 
-    await waitFor(() => expect(screen.getByText("That address is already registered")).toBeTruthy())
+    await waitFor(() =>
+      expect(screen.getByText("That address is already registered")).toBeInTheDocument(),
+    )
   })
 
   it("falls back to the generic copy when the error carries no message", () => {
@@ -315,7 +317,7 @@ describe("Error", () => {
 
     render(<Harness />)
 
-    expect(screen.getByText("This field is required")).toBeTruthy()
+    expect(screen.getByText("This field is required")).toBeInTheDocument()
   })
 })
 

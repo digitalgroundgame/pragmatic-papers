@@ -90,7 +90,7 @@ describe("MerchBlock", () => {
 
     const { container } = await renderBlock(makeProps())
 
-    expect(container.firstChild).toBeNull()
+    expect(container).toBeEmptyDOMElement()
   })
 
   it("renders the heading and each product's title", async () => {
@@ -98,9 +98,9 @@ describe("MerchBlock", () => {
 
     await renderBlock(makeProps())
 
-    expect(screen.getByRole("heading", { name: "Merch" })).toBeTruthy()
-    expect(screen.getByText("DGG Mug")).toBeTruthy()
-    expect(screen.getByText("DGG Tee")).toBeTruthy()
+    expect(screen.getByRole("heading", { name: "Merch" })).toBeInTheDocument()
+    expect(screen.getByText("DGG Mug")).toBeInTheDocument()
+    expect(screen.getByText("DGG Tee")).toBeInTheDocument()
   })
 
   it("shows a price only when one is provided", async () => {
@@ -108,7 +108,7 @@ describe("MerchBlock", () => {
 
     await renderBlock(makeProps())
 
-    expect(screen.getByText("$15.00")).toBeTruthy()
+    expect(screen.getByText("$15.00")).toBeInTheDocument()
     // The tee has no price, so no other price text renders.
     expect(screen.queryAllByText(/^\$/)).toHaveLength(1)
   })
@@ -121,10 +121,10 @@ describe("MerchBlock", () => {
     const mug = screen.getByText("DGG Mug").closest("a")
     const href = new URL(mug?.getAttribute("href") ?? "")
     expect(href.origin + href.pathname).toBe("https://store-site.test/shop/digg-mug")
-    expect(mug?.getAttribute("target")).toBe("_blank")
+    expect(mug).toHaveAttribute("target", "_blank")
     // DGG is our parent org: not a paid placement, not an unendorsed link, and
     // the referrer is left intact for their analytics.
-    expect(mug?.getAttribute("rel")).toBe("noopener")
+    expect(mug).toHaveAttribute("rel", "noopener")
   })
 
   it("never links a reader to the storefront API host", async () => {
@@ -133,7 +133,10 @@ describe("MerchBlock", () => {
     const { container } = await renderBlock(makeProps())
 
     for (const link of container.querySelectorAll("a")) {
-      expect(link.getAttribute("href")).not.toContain("store.digitalgroundgame.org")
+      expect(link).toHaveAttribute(
+        "href",
+        expect.not.stringContaining("store.digitalgroundgame.org"),
+      )
     }
   })
 
@@ -157,8 +160,8 @@ describe("MerchBlock", () => {
     await renderBlock(makeProps())
 
     const shopAll = screen.getByText("Shop all").closest("a")
-    expect(shopAll?.getAttribute("rel")).toBe("noopener")
-    expect(shopAll?.getAttribute("target")).toBe("_blank")
+    expect(shopAll).toHaveAttribute("rel", "noopener")
+    expect(shopAll).toHaveAttribute("target", "_blank")
   })
 
   it("renders no heading at all when one isn't set", async () => {
@@ -166,11 +169,11 @@ describe("MerchBlock", () => {
 
     const { container } = await renderBlock(makeProps({ heading: null }))
 
-    expect(screen.queryByRole("heading")).toBeNull()
+    expect(screen.queryByRole("heading")).not.toBeInTheDocument()
     // The section takes its accessible name from the heading, so without one it
     // is an unnamed section rather than a section labelled with a stand-in.
     expect(container.querySelector("section")?.hasAttribute("aria-label")).toBe(false)
-    expect(screen.getByText("DGG Mug")).toBeTruthy()
+    expect(screen.getByText("DGG Mug")).toBeInTheDocument()
   })
 
   it("treats a heading cleared to whitespace as unset", async () => {
@@ -178,7 +181,7 @@ describe("MerchBlock", () => {
 
     await renderBlock(makeProps({ heading: "   " }))
 
-    expect(screen.queryByRole("heading")).toBeNull()
+    expect(screen.queryByRole("heading")).not.toBeInTheDocument()
   })
 
   it("drops the store button when no store site is configured", async () => {
@@ -189,8 +192,8 @@ describe("MerchBlock", () => {
 
     await renderBlock(makeProps())
 
-    expect(screen.queryByText("Shop all")).toBeNull()
-    expect(screen.getByText("DGG Mug")).toBeTruthy()
+    expect(screen.queryByText("Shop all")).not.toBeInTheDocument()
+    expect(screen.getByText("DGG Mug")).toBeInTheDocument()
   })
 
   it("points the store button at the configured site, not a per-block value", async () => {
@@ -207,8 +210,8 @@ describe("MerchBlock", () => {
 
     await renderBlock(makeProps())
 
-    expect(screen.getByText("Sold Out")).toBeTruthy()
-    expect(screen.queryByText("New")).toBeNull()
+    expect(screen.getByText("Sold Out")).toBeInTheDocument()
+    expect(screen.queryByText("New")).not.toBeInTheDocument()
   })
 
   it("renders the badge in a neutral tone, not the brand colour", async () => {
@@ -216,13 +219,13 @@ describe("MerchBlock", () => {
 
     await renderBlock(makeProps())
 
-    const badge = screen.getByText("Sold Out").className
-    expect(badge).not.toContain("bg-brand")
+    const badge = screen.getByText("Sold Out")
+    expect(badge).not.toHaveClass("bg-brand")
     // Not `bg-secondary`: it resolves to the same value as the card's own
     // `bg-muted`, which left the badge invisible behind a transparent product
     // shot. `bg-primary` is the solid neutral that contrasts in both themes.
-    expect(badge).toContain("bg-primary")
-    expect(badge).not.toContain("bg-secondary")
+    expect(badge).toHaveClass("bg-primary")
+    expect(badge).not.toHaveClass("bg-secondary")
   })
 
   it("owns its gutter and closes with a rule as a page-layout block", async () => {
@@ -231,8 +234,8 @@ describe("MerchBlock", () => {
     const { container } = await renderBlock(makeProps())
 
     const section = container.querySelector("section")!
-    expect(section.className).toContain("container")
-    expect(container.querySelector('[data-slot="separator"]')).toBeTruthy()
+    expect(section).toHaveClass("container")
+    expect(container.querySelector('[data-slot="separator"]')).toBeInTheDocument()
   })
 
   it("drops the gutter, the rule, and prose styling inside a rich-text column", async () => {
@@ -241,9 +244,9 @@ describe("MerchBlock", () => {
     const { container } = await renderBlock(makeProps(), { enableGutter: false })
 
     const section = container.querySelector("section")!
-    expect(section.className).not.toContain("container")
-    expect(section.className).toContain("not-prose")
-    expect(container.querySelector('[data-slot="separator"]')).toBeNull()
+    expect(section).not.toHaveClass("container")
+    expect(section).toHaveClass("not-prose")
+    expect(container.querySelector('[data-slot="separator"]')).not.toBeInTheDocument()
   })
 
   it("shows one product at a time for the square (sidebar) layout", async () => {
@@ -264,7 +267,7 @@ describe("MerchBlock", () => {
 
     const slides = container.querySelectorAll('[aria-roledescription="slide"]')
     expect(slides).toHaveLength(2)
-    expect(slides[0]?.className).toContain("sm:basis-1/2")
-    expect(slides[0]?.className).toContain("lg:basis-1/4")
+    expect(slides[0]).toHaveClass("sm:basis-1/2")
+    expect(slides[0]).toHaveClass("lg:basis-1/4")
   })
 })

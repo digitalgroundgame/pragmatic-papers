@@ -25,7 +25,7 @@ describe("MerchBlockLabel", () => {
   it("names the row by its heading", () => {
     render(<MerchBlockLabel path="layout.1" />)
 
-    expect(screen.getByText("Support Us")).toBeTruthy()
+    expect(screen.getByText("Support Us")).toBeInTheDocument()
   })
 
   it("keeps the row number and block pill the default header would have shown", () => {
@@ -33,8 +33,8 @@ describe("MerchBlockLabel", () => {
     // easy mistake — the row reads as a different kind of thing without them.
     render(<MerchBlockLabel path="layout.1" />)
 
-    expect(screen.getByText("02")).toBeTruthy()
-    expect(screen.getByText("Merch")).toBeTruthy()
+    expect(screen.getByText("02")).toBeInTheDocument()
+    expect(screen.getByText("Merch")).toBeInTheDocument()
   })
 
   it("falls back to the block name alone when there's no heading", () => {
@@ -42,8 +42,8 @@ describe("MerchBlockLabel", () => {
 
     render(<MerchBlockLabel path="layout.1" />)
 
-    expect(screen.getByText("01")).toBeTruthy()
-    expect(screen.getByText("Merch")).toBeTruthy()
+    expect(screen.getByText("01")).toBeInTheDocument()
+    expect(screen.getByText("Merch")).toBeInTheDocument()
   })
 
   it("ignores a heading that's only whitespace", () => {

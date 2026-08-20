@@ -30,6 +30,6 @@ describe("CollectionGridBlock", () => {
       blockType: "collectionGrid",
     })
     render(element)
-    expect(screen.getByTestId("gauss10-layout")).toBeTruthy()
+    expect(screen.getByTestId("gauss10-layout")).toBeInTheDocument()
   })
 })

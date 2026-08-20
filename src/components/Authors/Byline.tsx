@@ -60,7 +60,7 @@ export function Byline({ authors }: BylineProps): React.ReactNode {
         {authors.map(({ id, slug, name }, index) => (
           <React.Fragment key={id}>
             {index > 0 && (
-              <span className="text-primary">{getSeparator(index, authors.length)}</span>
+              <span className="text-foreground">{getSeparator(index, authors.length)}</span>
             )}
             <HoverPrefetchLink href={`/authors/${slug}`} className="hover:underline">
               {name}

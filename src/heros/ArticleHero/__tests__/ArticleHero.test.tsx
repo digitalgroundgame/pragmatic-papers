@@ -41,19 +41,19 @@ const baseArticle: Article = {
 describe("ArticleHero", () => {
   it("renders the article title", () => {
     render(<ArticleHero article={baseArticle} />)
-    expect(screen.getByRole("heading", { name: "Test Article" })).toBeTruthy()
+    expect(screen.getByRole("heading", { name: "Test Article" })).toBeInTheDocument()
   })
 
   it("renders ShareButtons with the correct url and title", () => {
     render(<ArticleHero article={baseArticle} />)
     const shareButtons = screen.getByTestId("share-buttons")
-    expect(shareButtons.getAttribute("data-url")).toBe("https://example.com/articles/test-article")
-    expect(shareButtons.getAttribute("data-title")).toBe("Test Article")
+    expect(shareButtons).toHaveAttribute("data-url", "https://example.com/articles/test-article")
+    expect(shareButtons).toHaveAttribute("data-title", "Test Article")
   })
 
   it("does not render Media when heroImage is absent", () => {
     render(<ArticleHero article={baseArticle} />)
-    expect(screen.queryByTestId("media")).toBeNull()
+    expect(screen.queryByTestId("media")).not.toBeInTheDocument()
   })
 
   it("renders populated authors as links", () => {
@@ -80,12 +80,12 @@ describe("ArticleHero", () => {
       },
     }
     render(<ArticleHero article={article} />)
-    expect(screen.getByTestId("media")).toBeTruthy()
+    expect(screen.getByTestId("media")).toBeInTheDocument()
   })
 
   it("does not render NarrationPlayer when narration is absent", () => {
     render(<ArticleHero article={baseArticle} />)
-    expect(screen.queryByTestId("narration-player")).toBeNull()
+    expect(screen.queryByTestId("narration-player")).not.toBeInTheDocument()
   })
 
   it("renders NarrationPlayer when narration is a media object", () => {
@@ -99,13 +99,13 @@ describe("ArticleHero", () => {
       },
     }
     render(<ArticleHero article={article} />)
-    expect(screen.getByTestId("narration-player")).toBeTruthy()
+    expect(screen.getByTestId("narration-player")).toBeInTheDocument()
   })
 
   it("does not render NarrationPlayer when narration is a number (unresolved relation)", () => {
     const article: Article = { ...baseArticle, narration: 20 }
     render(<ArticleHero article={article} />)
-    expect(screen.queryByTestId("narration-player")).toBeNull()
+    expect(screen.queryByTestId("narration-player")).not.toBeInTheDocument()
   })
 
   it("matches snapshot", () => {

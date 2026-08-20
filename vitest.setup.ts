@@ -1,4 +1,7 @@
-// Add global test setup here (e.g. @testing-library/jest-dom matchers)
+// Register @testing-library/jest-dom's matchers (toBeInTheDocument, toHaveAttribute,
+// toHaveClass, ...) on Vitest's `expect`. Harmless for the node-environment
+// integration project, which loads this file too but never asserts on DOM nodes.
+import "@testing-library/jest-dom/vitest"
 
 // Load .env files
 import "dotenv/config"

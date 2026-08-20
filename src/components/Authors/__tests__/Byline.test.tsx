@@ -40,7 +40,7 @@ const bylineText = (container: HTMLElement): string => {
 describe("Byline", () => {
   it("renders nothing without authors", () => {
     const { container } = render(<Byline authors={[]} />)
-    expect(container.firstChild).toBeNull()
+    expect(container).toBeEmptyDOMElement()
   })
 
   it("names a pair with no comma", () => {
@@ -52,7 +52,7 @@ describe("Byline", () => {
     const { container } = render(<Byline authors={FOUR} />)
 
     expect(bylineText(container)).toBe("Alice Smith, Bob Jones, Carol Diaz & Dan Reed")
-    expect(screen.queryByRole("button")).toBe(null)
+    expect(screen.queryByRole("button")).not.toBeInTheDocument()
   })
 
   it("gives every author their own avatar", () => {
@@ -66,13 +66,14 @@ describe("Byline", () => {
     render(<Byline authors={FOUR} />)
 
     expect(screen.getAllByRole("link")).toHaveLength(FOUR.length)
-    expect(screen.getByRole("link", { name: "Dan Reed" }).getAttribute("href")).toBe(
+    expect(screen.getByRole("link", { name: "Dan Reed" })).toHaveAttribute(
+      "href",
       "/authors/dan-reed",
     )
   })
 
   it("falls back to an initial for an unnamed author", () => {
     render(<Byline authors={[{ id: 1, name: null, slug: "anon", avatarUrl: null }]} />)
-    expect(screen.getByText("A")).toBeTruthy()
+    expect(screen.getByText("A")).toBeInTheDocument()
   })
 })

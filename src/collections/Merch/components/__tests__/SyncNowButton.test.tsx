@@ -99,7 +99,7 @@ describe("SyncNowButton", () => {
       fireEvent.click(button)
     })
 
-    expect((button as HTMLButtonElement).disabled).toBe(false)
+    expect(button).not.toBeDisabled()
     // `textContent`, not an exact match on the node: the button also renders an
     // icon, which contributes no text.
     expect(button.textContent).toContain("Sync Shopify")

@@ -433,6 +433,10 @@ export interface Article {
   publishedAt?: string | null;
   authors?: (number | User)[] | null;
   topics?: (number | Topic)[] | null;
+  /**
+   * Auto-generates a navigable list of headings (and any resolver-matched blocks).
+   */
+  showTableOfContents?: boolean | null;
   createdBy?: (number | null) | User;
   updatedAt: string;
   createdAt: string;
@@ -1788,6 +1792,7 @@ export interface ArticlesSelect<T extends boolean = true> {
   publishedAt?: T;
   authors?: T;
   topics?: T;
+  showTableOfContents?: T;
   createdBy?: T;
   updatedAt?: T;
   createdAt?: T;

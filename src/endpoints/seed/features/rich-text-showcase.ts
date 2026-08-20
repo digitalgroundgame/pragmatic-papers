@@ -257,6 +257,7 @@ export const createRichTextShowcaseArticle = async (
       topics,
       slug: "rich-text-showcase",
       heroImage: mediaDocs[Math.floor(Math.random() * mediaDocs.length)]?.id,
+      showTableOfContents: true,
       publishedAt,
       meta: {
         title,

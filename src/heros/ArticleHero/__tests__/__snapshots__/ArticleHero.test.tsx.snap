@@ -2,7 +2,7 @@
 
 exports[`ArticleHero > matches snapshot 1`] = `
 <div
-  class="relative flex flex-col gap-2 md:-mx-10 lg:-mx-32 xl:-mx-44"
+  class="relative flex flex-col gap-2"
 >
   <h1
     class="mt-6"

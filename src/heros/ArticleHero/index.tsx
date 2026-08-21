@@ -33,7 +33,7 @@ export const ArticleHero: React.FC<ArticleHeroProps> = ({ article }) => {
       <Byline authors={bylineAuthors} />
       <div className="flex flex-wrap items-center justify-between gap-3">
         <PublicationDates publishedAt={publishedAt} updatedAt={updatedAt} />
-        <div className="flex items-center justify-end gap-3">
+        <div className="flex flex-1 items-center justify-between gap-3 md:justify-end">
           <NarrationPlayer narration={narration} className="shrink-0" />
           <ShareButtons
             url={`${getServerSideURL()}/articles/${article.slug}`}

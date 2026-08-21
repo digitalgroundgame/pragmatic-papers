@@ -118,7 +118,7 @@ exports[`ArticleHero > joins three authors with commas and a closing ampersand 1
       </time>
     </span>
     <div
-      class="flex items-center justify-end gap-3"
+      class="flex flex-1 items-center justify-between gap-3 md:justify-end"
     >
       <div
         data-testid="narration-player"
@@ -387,7 +387,7 @@ exports[`ArticleHero > names every author, however many, with no remainder 1`] =
       </time>
     </span>
     <div
-      class="flex items-center justify-end gap-3"
+      class="flex flex-1 items-center justify-between gap-3 md:justify-end"
     >
       <div
         data-testid="narration-player"
@@ -485,7 +485,7 @@ exports[`ArticleHero > renders narration as numeric id (no player shown) 1`] = `
       </time>
     </span>
     <div
-      class="flex items-center justify-end gap-3"
+      class="flex flex-1 items-center justify-between gap-3 md:justify-end"
     >
       <div
         data-testid="narration-player"
@@ -583,7 +583,7 @@ exports[`ArticleHero > renders narration as object (shows player) 1`] = `
       </time>
     </span>
     <div
-      class="flex items-center justify-end gap-3"
+      class="flex flex-1 items-center justify-between gap-3 md:justify-end"
     >
       <div
         data-testid="narration-player"
@@ -681,7 +681,7 @@ exports[`ArticleHero > renders with hero image 1`] = `
       </time>
     </span>
     <div
-      class="flex items-center justify-end gap-3"
+      class="flex flex-1 items-center justify-between gap-3 md:justify-end"
     >
       <div
         data-testid="narration-player"
@@ -842,7 +842,7 @@ exports[`ArticleHero > renders with populated authors 1`] = `
       </time>
     </span>
     <div
-      class="flex items-center justify-end gap-3"
+      class="flex flex-1 items-center justify-between gap-3 md:justify-end"
     >
       <div
         data-testid="narration-player"
@@ -940,7 +940,7 @@ exports[`ArticleHero > renders without authors or hero image 1`] = `
       </time>
     </span>
     <div
-      class="flex items-center justify-end gap-3"
+      class="flex flex-1 items-center justify-between gap-3 md:justify-end"
     >
       <div
         data-testid="narration-player"

@@ -1,7 +1,7 @@
-import type { User } from "@/payload-types"
+import type { User, Media as MediaType } from "@/payload-types"
 import React from "react"
 
-import { Media, type AudioMediaType } from "@/components/Media"
+import { isAudioMedia, Media } from "@/components/Media"
 import {
   DropdownMenuGroup,
   DropdownMenuItem,
@@ -38,13 +38,18 @@ function narratorCredit(narrator: Relationship<User>): React.ReactNode {
 }
 
 interface NarrationPlayerProps {
-  // Callers narrow to audio themselves (see ArticleHero) so a non-audio file is
-  // a type error rather than a component that silently renders nothing.
-  narration: AudioMediaType
+  narration: number | MediaType | null | undefined
+  className?: string
 }
 
-export function NarrationPlayer({ narration }: NarrationPlayerProps): React.ReactNode {
+export function NarrationPlayer({ narration, className }: NarrationPlayerProps): React.ReactNode {
+  if (!isAudioMedia(narration)) return null
   return (
-    <Media media={narration} variant="collapsible" menuItems={narratorCredit(narration.narrator)} />
+    <Media
+      media={narration}
+      variant="collapsible"
+      menuItems={narratorCredit(narration.narrator)}
+      className={className}
+    />
   )
 }

@@ -32,10 +32,18 @@ function query<T extends Element>(container: HTMLElement, selector: string): T {
 }
 
 // The menu renders in a portal, so it is queried off the document rather than
-// the render container. jsdom gives the slider no layout, so these assert that
-// the control is mounted rather than trying to drag it.
+// the render container.
 function volumeSlider(): Element | null {
   return document.querySelector('[data-slot="slider"][aria-label="Volume"]')
+}
+
+/** Base UI backs each slider with a range input, the only handle jsdom can drive. */
+function sliderInput(root: ParentNode, label: string): HTMLInputElement {
+  const input = root
+    .querySelector(`[data-slot="slider"][aria-label="${label}"]`)
+    ?.querySelector("input")
+  if (!input) throw new Error(`${label} slider not found`)
+  return input
 }
 
 function isCollapsed(container: HTMLElement): boolean {
@@ -107,6 +115,110 @@ describe("AudioMedia", () => {
     })
   })
 
+  it("stays paused when the browser refuses to play", async () => {
+    vi.spyOn(HTMLMediaElement.prototype, "play").mockRejectedValue(new Error("blocked"))
+
+    const { container } = render(<AudioMedia media={media} variant="collapsible" />)
+    fireEvent.click(screen.getByLabelText("Play"))
+
+    // The controls still open — the press was a real intent to listen.
+    expect(await screen.findByLabelText("Play")).toBeInTheDocument()
+    expect(isCollapsed(container)).toBe(false)
+  })
+
+  describe("scrubber", () => {
+    it("reads out the position against the duration", () => {
+      const { container } = render(<AudioMedia media={media} />)
+      const audio = query<HTMLAudioElement>(container, "audio")
+      expect(screen.getByText("0:00 / 2:00")).toBeInTheDocument()
+
+      audio.currentTime = 65
+      fireEvent.timeUpdate(audio)
+      expect(screen.getByText("1:05 / 2:00")).toBeInTheDocument()
+    })
+
+    it("seeks the audio element when dragged", () => {
+      const { container } = render(<AudioMedia media={media} />)
+      const audio = query<HTMLAudioElement>(container, "audio")
+
+      fireEvent.change(sliderInput(container, "Seek"), { target: { value: "42" } })
+      expect(audio.currentTime).toBe(42)
+      expect(screen.getByText("0:42 / 2:00")).toBeInTheDocument()
+    })
+
+    it("parks the readout at the end when playback finishes", () => {
+      const { container } = render(<AudioMedia media={media} />)
+      fireEvent.ended(query<HTMLAudioElement>(container, "audio"))
+      expect(screen.getByText("2:00 / 2:00")).toBeInTheDocument()
+    })
+
+    it("falls back to a placeholder range until the duration is known", () => {
+      const { container } = render(<AudioMedia media={{ ...media, duration: null }} />)
+      // A zero-length range would pin the thumb; 100 keeps it draggable.
+      expect(sliderInput(container, "Seek")).toHaveAttribute("max", "100")
+      expect(screen.getByText("0:00 / 0:00")).toBeInTheDocument()
+    })
+  })
+
+  // A file whose header carries no duration reports Infinity, and the player
+  // has to go find the real end. These stub the element's read-only media
+  // properties, which jsdom leaves unimplemented.
+  describe("duration discovery", () => {
+    function stubMediaProperty(name: "duration" | "readyState", value: number): void {
+      vi.spyOn(HTMLMediaElement.prototype, name, "get").mockReturnValue(value)
+    }
+
+    it("takes the duration the element already has at mount", () => {
+      stubMediaProperty("readyState", 1)
+      stubMediaProperty("duration", 200)
+
+      render(<AudioMedia media={{ ...media, duration: null }} />)
+      expect(screen.getByText("0:00 / 3:20")).toBeInTheDocument()
+    })
+
+    it("seeks past the end to force a headerless file to report its length", () => {
+      stubMediaProperty("duration", Infinity)
+
+      const { container } = render(<AudioMedia media={{ ...media, duration: null }} />)
+      const audio = query<HTMLAudioElement>(container, "audio")
+      fireEvent.loadedMetadata(audio)
+      expect(audio.currentTime).toBe(1e9)
+
+      // The browser answers with a real duration; the player rewinds the seek.
+      vi.spyOn(HTMLMediaElement.prototype, "duration", "get").mockReturnValue(300)
+      fireEvent.durationChange(audio)
+      expect(audio.currentTime).toBe(0)
+      expect(screen.getByText("0:00 / 5:00")).toBeInTheDocument()
+    })
+
+    it("leaves a stored duration alone rather than seeking for it", () => {
+      stubMediaProperty("duration", Infinity)
+
+      const { container } = render(<AudioMedia media={media} />)
+      const audio = query<HTMLAudioElement>(container, "audio")
+      fireEvent.loadedMetadata(audio)
+      expect(audio.currentTime).toBe(0)
+      expect(screen.getByText("0:00 / 2:00")).toBeInTheDocument()
+    })
+
+    it("reports the duration it settles on to the caller", () => {
+      const onDurationChange = vi.fn()
+      const { container } = render(<AudioMedia media={media} onDurationChange={onDurationChange} />)
+
+      vi.spyOn(HTMLMediaElement.prototype, "duration", "get").mockReturnValue(90)
+      fireEvent.durationChange(query<HTMLAudioElement>(container, "audio"))
+      expect(onDurationChange).toHaveBeenLastCalledWith(90)
+    })
+
+    it("ignores a durationchange that still has no length to give", () => {
+      vi.spyOn(HTMLMediaElement.prototype, "duration", "get").mockReturnValue(NaN)
+
+      const { container } = render(<AudioMedia media={media} />)
+      fireEvent.durationChange(query<HTMLAudioElement>(container, "audio"))
+      expect(screen.getByText("0:00 / 2:00")).toBeInTheDocument()
+    })
+  })
+
   describe("settings menu", () => {
     it("changes the playback rate of the audio element", () => {
       const { container } = render(<AudioMedia media={media} />)
@@ -124,6 +236,17 @@ describe("AudioMedia", () => {
 
       fireEvent.click(screen.getByLabelText("Player settings"))
       expect(volumeSlider()).not.toBeNull()
+    })
+
+    it("keeps the volume it was given", () => {
+      render(<AudioMedia media={media} />)
+      fireEvent.click(screen.getByLabelText("Player settings"))
+
+      const volume = sliderInput(document, "Volume")
+      expect(volume.value).toBe("1")
+
+      fireEvent.change(volume, { target: { value: "0.25" } })
+      expect(sliderInput(document, "Volume").value).toBe("0.25")
     })
 
     it("is only revealed once the collapsible variant has been played", () => {

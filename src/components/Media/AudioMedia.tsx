@@ -15,29 +15,31 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Slider } from "@/components/ui/slider"
+import { cn } from "@/utilities/utils"
 import { useAudioGain } from "./useAudioGain"
 import type { AudioMediaType } from "./types"
 
-const audioControlsVariants = cva("flex min-w-0 basis-0 items-center gap-3 overflow-hidden", {
+const audioControlsVariants = cva("flex min-w-0 items-center gap-3 overflow-hidden", {
   variants: {
     variant: {
-      default: "",
-      collapsible:
-        "transition-[flex-grow,opacity] duration-500 ease-out motion-reduce:transition-none",
+      default: "grow basis-0",
+      collapsible: "transition-[width,opacity] duration-500 ease-out motion-reduce:transition-none",
     },
     expanded: {
-      true: "grow opacity-100",
-      false: "grow-0 opacity-0",
+      true: "opacity-100",
+      false: "opacity-0",
     },
   },
+  compoundVariants: [
+    { variant: "collapsible", expanded: true, class: "w-56" },
+    { variant: "collapsible", expanded: false, class: "w-0" },
+  ],
   defaultVariants: {
     variant: "default",
     expanded: true,
   },
 })
 
-// Inverse of the controls: the call to action is what the collapsed player
-// shows, and it clears out as the scrubber takes the row.
 const audioLabelVariants = cva("shrink-0 overflow-hidden font-serif text-sm whitespace-nowrap", {
   variants: {
     variant: {
@@ -56,15 +58,12 @@ const audioLabelVariants = cva("shrink-0 overflow-hidden font-serif text-sm whit
   },
 })
 
+type AudioVariant = NonNullable<VariantProps<typeof audioControlsVariants>["variant"]>
+
 const PLAYBACK_RATES = [0.75, 1, 1.25, 1.5, 2] as const
 
 function formatRate(rate: number): string {
   return `${rate}\u00d7`
-}
-
-function VolumeIcon({ volume }: { volume: number }): React.ReactNode {
-  if (volume === 0) return <VolumeX className="size-4" />
-  return volume < 0.5 ? <Volume1 className="size-4" /> : <Volume2 className="size-4" />
 }
 
 function formatTime(seconds: number): string {
@@ -74,14 +73,179 @@ function formatTime(seconds: number): string {
   return `${m}:${s.toString().padStart(2, "0")}`
 }
 
+function singleValue(value: number | readonly number[]): number | undefined {
+  return Array.isArray(value) ? value[0] : (value as number)
+}
+
+interface PlayToggleProps {
+  isPlaying: boolean
+  label: string
+  variant: AudioVariant
+  expanded: boolean
+  onToggle: () => void
+}
+
+function PlayToggle({ isPlaying, label, variant, expanded, onToggle }: PlayToggleProps) {
+  return (
+    <button
+      onClick={onToggle}
+      aria-label={isPlaying ? "Pause" : "Play"}
+      className="text-primary hover:text-primary/70 flex shrink-0 items-center transition-colors"
+    >
+      {isPlaying ? <Pause className="size-5" /> : <Play className="size-5" />}
+      {variant === "collapsible" && (
+        <span aria-hidden className={audioLabelVariants({ variant, expanded })}>
+          {label}
+        </span>
+      )}
+    </button>
+  )
+}
+
+interface ScrubberProps {
+  currentTime: number
+  duration: number
+  onSeek: (seconds: number) => void
+}
+
+function Scrubber({ currentTime, duration, onSeek }: ScrubberProps) {
+  const handleValueChange = useCallback(
+    (value: number | readonly number[]) => {
+      const seconds = singleValue(value)
+      if (seconds !== undefined) onSeek(seconds)
+    },
+    [onSeek],
+  )
+
+  return (
+    <>
+      <Slider
+        className="ml-3"
+        min={0}
+        max={duration || 100}
+        value={[currentTime]}
+        onValueChange={handleValueChange}
+        aria-label="Seek"
+      />
+      <span className="text-muted-foreground shrink-0 text-xs whitespace-nowrap tabular-nums">
+        {`${formatTime(currentTime)} / ${formatTime(duration)}`}
+      </span>
+    </>
+  )
+}
+
+/**
+ * Owns the selected rate: nothing outside the menu renders it, so the player
+ * only hears about the change it has to apply to the element.
+ */
+function SpeedMenuGroup({ onChange }: { onChange: (rate: number) => void }) {
+  const [playbackRate, setPlaybackRate] = useState(1)
+
+  const handleValueChange = useCallback(
+    (value: unknown) => {
+      const rate = Number(value)
+      setPlaybackRate(rate)
+      onChange(rate)
+    },
+    [onChange],
+  )
+
+  return (
+    <DropdownMenuGroup>
+      <DropdownMenuLabel>Speed</DropdownMenuLabel>
+      <DropdownMenuRadioGroup value={playbackRate} onValueChange={handleValueChange}>
+        {PLAYBACK_RATES.map((rate) => (
+          <DropdownMenuRadioItem key={rate} value={rate}>
+            {formatRate(rate)}
+          </DropdownMenuRadioItem>
+        ))}
+      </DropdownMenuRadioGroup>
+    </DropdownMenuGroup>
+  )
+}
+
+function VolumeIcon({ volume }: { volume: number }): React.ReactNode {
+  if (volume === 0) return <VolumeX className="size-4" />
+  return volume < 0.5 ? <Volume1 className="size-4" /> : <Volume2 className="size-4" />
+}
+
+/** Owns the slider position; the level itself is applied by the gain graph upstream. */
+function VolumeMenuGroup({ onChange }: { onChange: (volume: number) => void }) {
+  const [volume, setVolume] = useState(1)
+
+  const handleValueChange = useCallback(
+    (value: number | readonly number[]) => {
+      const next = singleValue(value)
+      if (next === undefined) return
+      setVolume(next)
+      onChange(next)
+    },
+    [onChange],
+  )
+
+  return (
+    <DropdownMenuGroup>
+      <DropdownMenuLabel>Volume</DropdownMenuLabel>
+      {/* Not a menu item: the wrapper keeps arrow keys on the slider
+          instead of letting the menu use them to move between items. */}
+      <div
+        className="flex items-center gap-2 px-1.5 py-1"
+        onKeyDown={(event) => event.stopPropagation()}
+      >
+        <VolumeIcon volume={volume} />
+        <Slider
+          min={0}
+          max={1}
+          step={0.01}
+          value={[volume]}
+          onValueChange={handleValueChange}
+          aria-label="Volume"
+          className="w-28"
+        />
+      </div>
+    </DropdownMenuGroup>
+  )
+}
+
+interface SettingsMenuProps {
+  onPlaybackRateChange: (rate: number) => void
+  onVolumeChange: (volume: number) => void
+  /** Extra entries appended below the built-in groups. */
+  menuItems?: React.ReactNode
+}
+
+function SettingsMenu({ onPlaybackRateChange, onVolumeChange, menuItems }: SettingsMenuProps) {
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        aria-label="Player settings"
+        className="text-muted-foreground hover:text-foreground shrink-0 transition-colors"
+      >
+        <Settings className="size-4" />
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-auto min-w-40">
+        <SpeedMenuGroup onChange={onPlaybackRateChange} />
+        <DropdownMenuSeparator />
+        <VolumeMenuGroup onChange={onVolumeChange} />
+        {menuItems ? (
+          <>
+            <DropdownMenuSeparator />
+            {menuItems}
+          </>
+        ) : null}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  )
+}
+
 export interface AudioMediaProps extends Pick<
   VariantProps<typeof audioControlsVariants>,
   "variant"
 > {
   media: AudioMediaType
   onDurationChange?: (duration: number) => void
-  /** Extra entries appended to the settings menu, below the playback speed group. */
   menuItems?: React.ReactNode
+  className?: string
 }
 
 export const AudioMedia: React.FC<AudioMediaProps> = ({
@@ -89,6 +253,7 @@ export const AudioMedia: React.FC<AudioMediaProps> = ({
   onDurationChange,
   menuItems,
   variant = "default",
+  className,
 }) => {
   const audioRef = useRef<HTMLAudioElement>(null)
   const { connect, setGain } = useAudioGain(audioRef)
@@ -97,8 +262,6 @@ export const AudioMedia: React.FC<AudioMediaProps> = ({
   const [currentTime, setCurrentTime] = useState(0)
   const [duration, setDuration] = useState(media.duration ?? 0)
   const [started, setStarted] = useState(false)
-  const [playbackRate, setPlaybackRate] = useState(1)
-  const [volume, setVolume] = useState(1)
   const expanded = variant !== "collapsible" || started
 
   useEffect(() => {
@@ -157,14 +320,6 @@ export const AudioMedia: React.FC<AudioMediaProps> = ({
     if (duration > 0) onDurationChange?.(duration)
   }, [duration, onDurationChange])
 
-  useEffect(() => {
-    if (audioRef.current) audioRef.current.playbackRate = playbackRate
-  }, [playbackRate])
-
-  useEffect(() => {
-    setGain(volume)
-  }, [volume, setGain])
-
   const togglePlay = useCallback(() => {
     const audio = audioRef.current
     if (!audio) return
@@ -183,18 +338,15 @@ export const AudioMedia: React.FC<AudioMediaProps> = ({
     }
   }, [isPlaying, connect])
 
-  const handleVolumeChange = useCallback((value: number | readonly number[]) => {
-    const next = Array.isArray(value) ? value[0] : value
-    if (next === undefined) return
-    setVolume(next)
+  const handleSeek = useCallback((seconds: number) => {
+    const audio = audioRef.current
+    if (!audio) return
+    audio.currentTime = seconds
+    setCurrentTime(seconds)
   }, [])
 
-  const handleSeek = useCallback((value: number | readonly number[]) => {
-    const audio = audioRef.current
-    const newTime = Array.isArray(value) ? value[0] : value
-    if (!audio || newTime === undefined) return
-    audio.currentTime = newTime
-    setCurrentTime(newTime)
+  const handlePlaybackRateChange = useCallback((rate: number) => {
+    if (audioRef.current) audioRef.current.playbackRate = rate
   }, [])
 
   if (!media.url) return null
@@ -202,85 +354,25 @@ export const AudioMedia: React.FC<AudioMediaProps> = ({
   const listenLabel = duration > 0 ? `Listen \u00b7 ${formatTime(duration)}` : "Listen"
 
   return (
-    <div className="flex items-center">
-      <button
-        onClick={togglePlay}
-        aria-label={isPlaying ? "Pause" : "Play"}
-        className="text-primary hover:text-primary/70 flex shrink-0 items-center transition-colors"
-      >
-        {isPlaying ? <Pause className="size-5" /> : <Play className="size-5" />}
-        {variant === "collapsible" ? (
-          <span aria-hidden className={audioLabelVariants({ variant, expanded })}>
-            {listenLabel}
-          </span>
-        ) : null}
-      </button>
+    <div className={cn("flex items-center", className)}>
+      <PlayToggle
+        isPlaying={isPlaying}
+        label={listenLabel}
+        variant={variant ?? "default"}
+        expanded={expanded}
+        onToggle={togglePlay}
+      />
       <div
         data-slot="audio-controls"
         inert={!expanded}
         className={audioControlsVariants({ variant, expanded })}
       >
-        <Slider
-          className="ml-3"
-          min={0}
-          max={duration || 100}
-          value={[currentTime]}
-          onValueChange={handleSeek}
-          aria-label="Seek"
+        <Scrubber currentTime={currentTime} duration={duration} onSeek={handleSeek} />
+        <SettingsMenu
+          onPlaybackRateChange={handlePlaybackRateChange}
+          onVolumeChange={setGain}
+          menuItems={menuItems}
         />
-        <span className="text-muted-foreground shrink-0 text-xs whitespace-nowrap tabular-nums">
-          {`${formatTime(currentTime)} / ${formatTime(duration)}`}
-        </span>
-        <DropdownMenu>
-          <DropdownMenuTrigger
-            aria-label="Player settings"
-            className="text-muted-foreground hover:text-foreground shrink-0 transition-colors"
-          >
-            <Settings className="size-4" />
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-auto min-w-40">
-            <DropdownMenuGroup>
-              <DropdownMenuLabel>Speed</DropdownMenuLabel>
-              <DropdownMenuRadioGroup
-                value={playbackRate}
-                onValueChange={(value) => setPlaybackRate(Number(value))}
-              >
-                {PLAYBACK_RATES.map((rate) => (
-                  <DropdownMenuRadioItem key={rate} value={rate}>
-                    {formatRate(rate)}
-                  </DropdownMenuRadioItem>
-                ))}
-              </DropdownMenuRadioGroup>
-            </DropdownMenuGroup>
-            <DropdownMenuSeparator />
-            <DropdownMenuGroup>
-              <DropdownMenuLabel>Volume</DropdownMenuLabel>
-              {/* Not a menu item: the wrapper keeps arrow keys on the slider
-                instead of letting the menu use them to move between items. */}
-              <div
-                className="flex items-center gap-2 px-1.5 py-1"
-                onKeyDown={(event) => event.stopPropagation()}
-              >
-                <VolumeIcon volume={volume} />
-                <Slider
-                  min={0}
-                  max={1}
-                  step={0.01}
-                  value={[volume]}
-                  onValueChange={handleVolumeChange}
-                  aria-label="Volume"
-                  className="w-28"
-                />
-              </div>
-            </DropdownMenuGroup>
-            {menuItems ? (
-              <>
-                <DropdownMenuSeparator />
-                {menuItems}
-              </>
-            ) : null}
-          </DropdownMenuContent>
-        </DropdownMenu>
       </div>
       <audio ref={audioRef} src={media.url} preload="metadata" />
     </div>

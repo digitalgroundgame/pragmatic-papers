@@ -37,6 +37,31 @@ function openSettings(): void {
 }
 
 describe("NarrationPlayer", () => {
+  // The hero hands over whatever the CMS returned, so the guard lives here.
+  describe("guards its input", () => {
+    it("renders nothing without narration", () => {
+      const { container } = render(<NarrationPlayer narration={null} />)
+      expect(container).toBeEmptyDOMElement()
+    })
+
+    it("renders nothing for an unresolved relation", () => {
+      const { container } = render(<NarrationPlayer narration={20} />)
+      expect(container).toBeEmptyDOMElement()
+    })
+
+    it("renders nothing for a file that is not audio", () => {
+      const { container } = render(
+        <NarrationPlayer narration={{ ...narration, mimeType: "video/mp4" }} />,
+      )
+      expect(container).toBeEmptyDOMElement()
+    })
+  })
+
+  it("passes its className to the player so callers can place it", () => {
+    const { container } = render(<NarrationPlayer narration={narration} className="shrink-0" />)
+    expect(container.firstElementChild).toHaveClass("shrink-0")
+  })
+
   it("renders the audio player", () => {
     const { container } = render(<NarrationPlayer narration={narration} />)
     expect(container.querySelector("audio")?.getAttribute("src")).toBe("/media/narration.mp3")

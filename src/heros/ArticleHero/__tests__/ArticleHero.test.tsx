@@ -5,16 +5,26 @@ import { ArticleHero } from "../index"
 import type * as MediaModule from "@/components/Media"
 import type { Article, User } from "@/payload-types"
 
-// Only the renderer is stubbed — the real is*Media guards decide what ArticleHero shows.
+// Media and NarrationPlayer each decide for themselves whether their input is
+// renderable, so the stubs record what the hero handed them rather than
+// standing in for that judgement — see their own suites for the guards.
 vi.mock("@/components/Media", async (importOriginal) => ({
   ...(await importOriginal<typeof MediaModule>()),
-  Media: ({ media }: { media: { filename: string } }) => (
-    <div data-testid="media">{media?.filename}</div>
+  Media: ({ media }: { media?: { filename?: string } | number | null }) => (
+    <div
+      data-testid="media"
+      data-media={typeof media === "object" ? media?.filename : String(media)}
+    />
   ),
 }))
 
 vi.mock("@/components/NarrationPlayer", () => ({
-  NarrationPlayer: () => <div data-testid="narration-player" />,
+  NarrationPlayer: ({ narration }: { narration?: { filename?: string } | number | null }) => (
+    <div
+      data-testid="narration-player"
+      data-narration={typeof narration === "object" ? narration?.filename : String(narration)}
+    />
+  ),
 }))
 
 vi.mock("@/components/ShareButtons", () => ({
@@ -54,9 +64,10 @@ describe("ArticleHero", () => {
     expect(shareButtons).toHaveAttribute("data-title", "Test Article")
   })
 
-  it("does not render Media when heroImage is absent", () => {
+  it("hands the hero image to Media, which decides whether to render it", () => {
+    expect(baseArticle.heroImage).toBeUndefined()
     render(<ArticleHero article={baseArticle} />)
-    expect(screen.queryByTestId("media")).not.toBeInTheDocument()
+    expect(screen.getByTestId("media")).toHaveAttribute("data-media", "undefined")
   })
 
   it("renders populated authors as links", () => {
@@ -84,12 +95,15 @@ describe("ArticleHero", () => {
       },
     }
     render(<ArticleHero article={article} />)
-    expect(screen.getByTestId("media")).toBeInTheDocument()
+    expect(screen.getByTestId("media")).toHaveAttribute("data-media", "hero.jpg")
   })
 
-  it("does not render NarrationPlayer when narration is absent", () => {
-    render(<ArticleHero article={baseArticle} />)
-    expect(screen.queryByTestId("narration-player")).not.toBeInTheDocument()
+  it("hands the narration to NarrationPlayer, which decides whether to render it", () => {
+    const article: Article = { ...baseArticle, narration: 20 }
+    render(<ArticleHero article={article} />)
+    // An unresolved relation reaches the player untouched; the player is what
+    // rejects it (see NarrationPlayer.test.tsx).
+    expect(screen.getByTestId("narration-player")).toHaveAttribute("data-narration", "20")
   })
 
   it("renders NarrationPlayer when narration is a media object", () => {
@@ -104,28 +118,10 @@ describe("ArticleHero", () => {
       },
     }
     render(<ArticleHero article={article} />)
-    expect(screen.getByTestId("narration-player")).toBeInTheDocument()
-  })
-
-  it("does not render NarrationPlayer when narration is a number (unresolved relation)", () => {
-    const article: Article = { ...baseArticle, narration: 20 }
-    render(<ArticleHero article={article} />)
-    expect(screen.queryByTestId("narration-player")).not.toBeInTheDocument()
-  })
-
-  it("does not render NarrationPlayer when narration is not audio", () => {
-    const article: Article = {
-      ...baseArticle,
-      narration: {
-        id: 21,
-        filename: "narration.mp4",
-        mimeType: "video/mp4",
-        updatedAt: "2024-01-01T00:00:00.000Z",
-        createdAt: "2024-01-01T00:00:00.000Z",
-      },
-    }
-    render(<ArticleHero article={article} />)
-    expect(screen.queryByTestId("narration-player")).toBeNull()
+    expect(screen.getByTestId("narration-player")).toHaveAttribute(
+      "data-narration",
+      "narration.mp3",
+    )
   })
 
   it("places the narration player before the share buttons in the DOM", () => {
@@ -145,6 +141,11 @@ describe("ArticleHero", () => {
     // Keyboard focus follows DOM order, and the player is read before the share
     // buttons on md and up.
     expect(narration.compareDocumentPosition(share) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
+
+  it("stamps the article with its publication date", () => {
+    render(<ArticleHero article={baseArticle} />)
+    expect(screen.getByText("June 15, 2024")).toBeInTheDocument()
   })
 
   it("matches snapshot", () => {

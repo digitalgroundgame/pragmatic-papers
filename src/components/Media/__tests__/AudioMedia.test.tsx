@@ -46,6 +46,12 @@ function sliderInput(root: ParentNode, label: string): HTMLInputElement {
   return input
 }
 
+/** The icon lucide renders for the current level, e.g. "lucide-volume-x" when muted. */
+function volumeIconClass(): string {
+  const row = volumeSlider()?.parentElement
+  return row?.querySelector("svg")?.getAttribute("class") ?? ""
+}
+
 function isCollapsed(container: HTMLElement): boolean {
   return query(container, '[data-slot="audio-controls"]').hasAttribute("inert")
 }
@@ -152,6 +158,15 @@ describe("AudioMedia", () => {
       expect(screen.getByText("2:00 / 2:00")).toBeInTheDocument()
     })
 
+    it("reads a nonsense position as the start of the track", () => {
+      const { container } = render(<AudioMedia media={media} />)
+      const audio = query<HTMLAudioElement>(container, "audio")
+
+      audio.currentTime = -5
+      fireEvent.timeUpdate(audio)
+      expect(screen.getByText("0:00 / 2:00")).toBeInTheDocument()
+    })
+
     it("falls back to a placeholder range until the duration is known", () => {
       const { container } = render(<AudioMedia media={{ ...media, duration: null }} />)
       // A zero-length range would pin the thumb; 100 keeps it draggable.
@@ -191,6 +206,26 @@ describe("AudioMedia", () => {
       expect(screen.getByText("0:00 / 5:00")).toBeInTheDocument()
     })
 
+    it("hides the position while the forced end-seek is in flight", () => {
+      stubMediaProperty("duration", Infinity)
+
+      const { container } = render(<AudioMedia media={{ ...media, duration: null }} />)
+      const audio = query<HTMLAudioElement>(container, "audio")
+      fireEvent.loadedMetadata(audio)
+      expect(audio.currentTime).toBe(1e9)
+
+      // The seek fires timeupdate at the far end of the file; showing it would
+      // flash a position the listener never asked for.
+      fireEvent.timeUpdate(audio)
+      expect(screen.getByText("0:00 / 0:00")).toBeInTheDocument()
+
+      vi.spyOn(HTMLMediaElement.prototype, "duration", "get").mockReturnValue(300)
+      fireEvent.durationChange(audio)
+      audio.currentTime = 12
+      fireEvent.timeUpdate(audio)
+      expect(screen.getByText("0:12 / 5:00")).toBeInTheDocument()
+    })
+
     it("leaves a stored duration alone rather than seeking for it", () => {
       stubMediaProperty("duration", Infinity)
 
@@ -217,6 +252,12 @@ describe("AudioMedia", () => {
       fireEvent.durationChange(query<HTMLAudioElement>(container, "audio"))
       expect(screen.getByText("0:00 / 2:00")).toBeInTheDocument()
     })
+  })
+
+  it("treats an explicit null variant as the plain player", () => {
+    const { container } = render(<AudioMedia media={media} variant={null} />)
+    expect(isCollapsed(container)).toBe(false)
+    expect(screen.queryByText(/^Listen/)).toBeNull()
   })
 
   describe("settings menu", () => {
@@ -247,6 +288,47 @@ describe("AudioMedia", () => {
 
       fireEvent.change(volume, { target: { value: "0.25" } })
       expect(sliderInput(document, "Volume").value).toBe("0.25")
+    })
+
+    it("mutes the icon once the level reaches zero", () => {
+      render(<AudioMedia media={media} />)
+      fireEvent.click(screen.getByLabelText("Player settings"))
+      expect(volumeIconClass()).not.toContain("volume-x")
+
+      fireEvent.change(sliderInput(document, "Volume"), { target: { value: "0" } })
+      expect(volumeIconClass()).toContain("volume-x")
+    })
+
+    it("appends the entries a caller hands it", () => {
+      render(<AudioMedia media={media} menuItems={<span>Narrated by Ada Lovelace</span>} />)
+      fireEvent.click(screen.getByLabelText("Player settings"))
+
+      expect(screen.getByText("Narrated by Ada Lovelace")).toBeInTheDocument()
+    })
+
+    it("keeps arrow keys on the volume slider instead of the menu", () => {
+      render(<AudioMedia media={media} />)
+      fireEvent.click(screen.getByLabelText("Player settings"))
+
+      const volume = sliderInput(document, "Volume")
+      volume.focus()
+      // The same key moves focus between items when it reaches the menu.
+      fireEvent.keyDown(volume, { key: "ArrowDown" })
+
+      expect(document.activeElement).toBe(volume)
+    })
+
+    it("keeps every other key off the menu too", () => {
+      render(<AudioMedia media={media} />)
+      fireEvent.click(screen.getByLabelText("Player settings"))
+
+      const volume = sliderInput(document, "Volume")
+      volume.focus()
+      // Typeahead and the like: the row swallows what the slider does not use.
+      fireEvent.keyDown(volume, { key: "s" })
+
+      expect(document.activeElement).toBe(volume)
+      expect(screen.getByRole("menu")).toBeInTheDocument()
     })
 
     it("is only revealed once the collapsible variant has been played", () => {

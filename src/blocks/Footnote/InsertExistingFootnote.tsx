@@ -37,12 +37,12 @@ export const InsertExistingFootnote: React.FC = () => {
   return (
     <div className="field-type">
       <div className="label-wrapper">
-        <p className="field-label">Link to Existing Footnote</p>
+        <p className="field-label">Link to Existing Source</p>
       </div>
       <ReactSelect
         onChange={handleChange}
         options={options}
-        placeholder="— Select a footnote to link —"
+        placeholder="— Select a source to link —"
         value={selected}
       />
     </div>

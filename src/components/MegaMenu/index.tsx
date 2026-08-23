@@ -10,18 +10,10 @@ import { type MenuField } from "@/payload-types"
 import { getLinkFieldUrl } from "@/utilities/getLinkFieldUrl"
 import { usePathname } from "next/navigation"
 import { CMSLink } from "../Link/CMSLink2"
+import { isActivePath } from "./isActivePath"
 
 interface MegaMenuProps {
   menu?: MenuField
-}
-
-function isActivePath(pathname: string, url: string | null): boolean {
-  if (!url?.startsWith("/")) return false
-
-  const normalizedUrl = url === "/" ? url : url.replace(/\/+$/, "")
-  if (normalizedUrl === "/") return pathname === "/"
-
-  return pathname === normalizedUrl || pathname.startsWith(`${normalizedUrl}/`)
 }
 
 export function MegaMenu({ menu }: MegaMenuProps): React.ReactNode {

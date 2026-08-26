@@ -22,6 +22,7 @@ export type StyledMediaBlockProps = Omit<MediaBlockProps, "blockType"> & {
   sizes?: string | undefined
   disableInnerContainer?: boolean
   variant?: ImageVariant
+  mediaWrapper?: (media: React.ReactNode) => React.ReactNode
 }
 
 const converters: JSXConvertersFunction<DefaultNodeTypes> = ({ defaultConverters }) => ({
@@ -67,12 +68,23 @@ export const MediaBlock: React.FC<StyledMediaBlockProps> = ({ sizes, ...props })
     media,
     variant = "medium",
     disableInnerContainer,
+    mediaWrapper = (node) => node,
   } = props
   if (typeof media === "number" || !media) return null
 
   sizes = sizes || "(max-width: 768px) 100vw, 800px"
 
   const { caption } = media
+
+  const mediaNode = (
+    <Media
+      className={cn("border", imgClassName)}
+      style={imgStyle}
+      media={media}
+      sizes={sizes}
+      variant={variant}
+    />
+  )
 
   const Slot: React.ElementType = caption ? "figure" : "picture"
   return (
@@ -85,13 +97,7 @@ export const MediaBlock: React.FC<StyledMediaBlockProps> = ({ sizes, ...props })
         className,
       )}
     >
-      <Media
-        className={cn("border", imgClassName)}
-        style={imgStyle}
-        media={media}
-        sizes={sizes}
-        variant={variant}
-      />
+      {mediaWrapper(mediaNode)}
       {caption && (
         <figcaption
           className={cn(

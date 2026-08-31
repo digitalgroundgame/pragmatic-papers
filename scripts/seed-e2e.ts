@@ -1,4 +1,4 @@
-import { FOUR_AUTHOR_SLUG, NARRATION_SECONDS } from "./seed-e2e.constants"
+import { FOUR_AUTHOR_SLUG, NARRATED_UPDATED_AT, NARRATION_SECONDS } from "./seed-e2e.constants"
 
 import type { User } from "@/payload-types"
 import { createArticle } from "@/endpoints/seed/articles"
@@ -15,6 +15,7 @@ import {
 } from "@/endpoints/seed/richtext"
 import { seedMerchProducts } from "@/endpoints/seed/merch"
 import { createUser } from "@/endpoints/seed/users"
+import { sql, type PostgresAdapter } from "@payloadcms/db-postgres"
 import config from "@payload-config"
 import { readFile } from "node:fs/promises"
 import path from "node:path"
@@ -212,7 +213,7 @@ export async function main(): Promise<void> {
     // article rather than the homepage one so no existing baseline moves.
     const narration = await createSilentNarration(payload, NARRATION_SECONDS)
 
-    await createArticle(
+    const crowdedByline = await createArticle(
       payload,
       {
         title: "Committee Work: Notes From a Crowded Byline",
@@ -227,6 +228,16 @@ export async function main(): Promise<void> {
         publishedAt: PUBLISHED_AT,
       },
       ctx,
+    )
+
+    // Straight to the column, because there is no way through the API: Payload
+    // overwrites updatedAt with the current time on every non-draft save
+    // (collections/operations/utilities/update.js), so the dateline of the one
+    // article a screenshot frames would read the day the seed ran and diff
+    // against its baseline the next day. The instant is arbitrary; that it
+    // never moves is the point.
+    await (payload.db as unknown as PostgresAdapter).drizzle.execute(
+      sql`UPDATE articles SET updated_at = ${NARRATED_UPDATED_AT} WHERE id = ${crowdedByline.id}`,
     )
 
     const volume = await payload.create({

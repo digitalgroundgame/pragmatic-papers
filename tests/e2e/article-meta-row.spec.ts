@@ -1,6 +1,10 @@
-import { expect, test } from "@playwright/test"
+import { expect, test, type Locator } from "@playwright/test"
 
-import { FOUR_AUTHOR_SLUG } from "../../scripts/seed-e2e.constants"
+import {
+  FOUR_AUTHOR_SLUG,
+  NARRATED_DATELINE,
+  NARRATED_REVISION,
+} from "../../scripts/seed-e2e.constants"
 import { gotoFirstArticle, waitForStableBox, waitForStableRender } from "./helpers"
 
 // The hero's meta row puts the dateline and the controls (narration player,
@@ -18,6 +22,19 @@ const NARRATED_ARTICLE = `/articles/${FOUR_AUTHOR_SLUG}`
 const row = '[data-slot="article-meta"]'
 const controls = '[data-slot="article-meta-controls"]'
 const audioPlayer = '[data-slot="audio-player"]'
+
+/**
+ * The seed pins both of this article's instants, so the dateline reads the same
+ * words on any day. Asserting them keeps a screenshot of the row honest: if the
+ * stamps ever track the clock again, this fails rather than the baseline
+ * silently drifting a day at a time.
+ */
+async function expectPinnedDateline(dateline: Locator): Promise<void> {
+  const stamps = dateline.locator("time")
+  await expect(stamps).toHaveCount(2)
+  await expect(stamps.nth(0)).toHaveText(NARRATED_DATELINE)
+  await expect(stamps.nth(1)).toHaveText(NARRATED_REVISION)
+}
 
 /** Same line when their vertical centres agree; a wrap moves one a whole row. */
 function sharesLineWith(a: { y: number; height: number }, b: { y: number; height: number }) {
@@ -37,6 +54,7 @@ test.describe("article hero meta row — dateline and controls on one line", () 
     const player = page.locator(audioPlayer)
 
     await expect(dateline).toBeVisible()
+    await expectPinnedDateline(dateline)
     await expect(player).toBeVisible()
     await expect(share).toBeVisible()
 
@@ -65,11 +83,7 @@ test.describe("article hero meta row — dateline and controls on one line", () 
     expect(datelineBox.x).toBeCloseTo(rowBox.x, 0)
 
     test.skip(testInfo.project.name !== "chromium", "visual baseline captured on chromium only")
-    // The dateline carries an "Updated <date>" stamp that moves with the day the
-    // seed runs, and it would be a large share of a crop this tight. Masking
-    // covers the text while keeping its box — which is what drives the wrap —
-    // exactly where it is.
-    await expect(metaRow).toHaveScreenshot("article-meta-row.png", { mask: [dateline] })
+    await expect(metaRow).toHaveScreenshot("article-meta-row.png")
   })
 })
 
@@ -87,6 +101,7 @@ test.describe("article hero meta row — controls wrapped onto their own line", 
     const player = page.locator(audioPlayer)
 
     await expect(dateline).toBeVisible()
+    await expectPinnedDateline(dateline)
     await expect(player).toBeVisible()
     await expect(share).toBeVisible()
 
@@ -110,11 +125,7 @@ test.describe("article hero meta row — controls wrapped onto their own line", 
     expect(shareBox.x - (playerBox.x + playerBox.width)).toBeGreaterThan(24)
 
     test.skip(testInfo.project.name !== "chromium", "visual baseline captured on chromium only")
-    // The dateline carries an "Updated <date>" stamp that moves with the day the
-    // seed runs, and it would be a large share of a crop this tight. Masking
-    // covers the text while keeping its box — which is what drives the wrap —
-    // exactly where it is.
-    await expect(metaRow).toHaveScreenshot("mobile-article-meta-row.png", { mask: [dateline] })
+    await expect(metaRow).toHaveScreenshot("mobile-article-meta-row.png")
   })
 
   test("an article without narration keeps its share button right-aligned", async ({ page }) => {

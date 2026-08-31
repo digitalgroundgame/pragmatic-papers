@@ -3,45 +3,41 @@ import React from "react"
 
 import { AudioMedia, type AudioMediaProps } from "./AudioMedia"
 import { ImageMedia, type ImageMediaProps } from "./ImageMedia"
+import { isAudioMedia, isImageMedia, isVideoMedia } from "./types"
 import { VideoMedia, type VideoMediaProps } from "./VideoMedia"
 
-type MediaTypes =
+export * from "./types"
+
+type MediaPropsTypes =
   | VideoMediaProps
   | ImageMediaProps
   | AudioMediaProps
   | { media?: MediaType | number | null }
 
-export function isVideoMedia(props: MediaTypes): props is VideoMediaProps {
-  if (!props.media || typeof props.media === "number") return false
-  return props.media.mimeType?.startsWith("video") ?? false
+// Narrowing `props.media` doesn't narrow `props` itself — mimeType is a template
+// literal, not a discriminant — so the guards are lifted to the props object.
+function isVideoMediaProps(props: MediaPropsTypes): props is VideoMediaProps {
+  return isVideoMedia(props.media)
 }
 
-export function isAudioMedia(props: MediaTypes): props is AudioMediaProps {
-  if (!props.media || typeof props.media === "number") return false
-  return props.media.mimeType?.startsWith("audio") ?? false
+function isAudioMediaProps(props: MediaPropsTypes): props is AudioMediaProps {
+  return isAudioMedia(props.media)
 }
 
-export function isImageMedia(props: MediaTypes): props is ImageMediaProps {
-  if (!props.media || typeof props.media === "number") return false
-  return props.media.mimeType?.startsWith("image") ?? false
+function isImageMediaProps(props: MediaPropsTypes): props is ImageMediaProps {
+  return isImageMedia(props.media)
 }
 
-export function isMedia(media: number | MediaType | undefined | null): media is MediaType {
-  if (!media) return false
-  if (typeof media === "number") return false
-  return true
-}
-
-export const Media: React.FC<MediaTypes> = (props) => {
-  if (isVideoMedia(props)) {
+export const Media: React.FC<MediaPropsTypes> = (props) => {
+  if (isVideoMediaProps(props)) {
     return <VideoMedia {...props} />
   }
 
-  if (isAudioMedia(props)) {
+  if (isAudioMediaProps(props)) {
     return <AudioMedia {...props} />
   }
 
-  if (isImageMedia(props)) {
+  if (isImageMediaProps(props)) {
     return <ImageMedia {...props} />
   }
 

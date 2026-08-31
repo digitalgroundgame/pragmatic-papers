@@ -4,177 +4,189 @@ exports[`ArticleHero > joins three authors with commas and a closing ampersand 1
 <div
   class="relative flex flex-col gap-2 md:-mx-10 lg:-mx-32 xl:-mx-44"
 >
+  <div
+    data-testid="media"
+  />
   <h1
-    class="mt-6"
+    class="mt-3"
   >
     Test Article
   </h1>
-  <div>
+  <div
+    class="dark:text-brand-high-contrast text-brand font-serif font-bold underline-offset-4"
+    data-slot="byline"
+  >
     <div
-      class="dark:text-brand-high-contrast text-brand font-serif font-bold underline-offset-4"
-      data-slot="byline"
-    >
-      <div
-        class="group/avatar-group *:data-[slot=avatar]:ring-background -space-x-2 *:data-[slot=avatar]:ring-2 mr-2 inline-flex align-middle"
-        data-slot="avatar-group"
-      >
-        <a
-          aria-hidden="true"
-          class="group/avatar after:border-border relative flex size-8 shrink-0 overflow-hidden rounded-full select-none after:absolute after:inset-0 after:rounded-full after:border after:mix-blend-darken data-[size=2xl]:size-32 data-[size=lg]:size-10 data-[size=md]:size-9 data-[size=sm]:size-6 data-[size=xl]:size-24 dark:after:mix-blend-lighten z-(--avatar-z) hover:z-50 [&:has(~*:hover)]:z-(--avatar-z-rev)"
-          data-size="md"
-          data-slot="avatar"
-          href="/authors/alice-smith"
-          style="--avatar-z: 3; --avatar-z-rev: 1;"
-          tabindex="-1"
-        >
-          <span
-            class="bg-foreground text-background flex size-full items-center justify-center rounded-full font-serif text-sm group-data-[size=sm]/avatar:text-xs"
-            data-slot="avatar-fallback"
-          >
-            AS
-          </span>
-        </a>
-        <a
-          aria-hidden="true"
-          class="group/avatar after:border-border relative flex size-8 shrink-0 overflow-hidden rounded-full select-none after:absolute after:inset-0 after:rounded-full after:border after:mix-blend-darken data-[size=2xl]:size-32 data-[size=lg]:size-10 data-[size=md]:size-9 data-[size=sm]:size-6 data-[size=xl]:size-24 dark:after:mix-blend-lighten z-(--avatar-z) hover:z-50 [&:has(~*:hover)]:z-(--avatar-z-rev)"
-          data-size="md"
-          data-slot="avatar"
-          href="/authors/bob-jones"
-          style="--avatar-z: 2; --avatar-z-rev: 2;"
-          tabindex="-1"
-        >
-          <span
-            class="bg-foreground text-background flex size-full items-center justify-center rounded-full font-serif text-sm group-data-[size=sm]/avatar:text-xs"
-            data-slot="avatar-fallback"
-          >
-            BJ
-          </span>
-        </a>
-        <a
-          aria-hidden="true"
-          class="group/avatar after:border-border relative flex size-8 shrink-0 overflow-hidden rounded-full select-none after:absolute after:inset-0 after:rounded-full after:border after:mix-blend-darken data-[size=2xl]:size-32 data-[size=lg]:size-10 data-[size=md]:size-9 data-[size=sm]:size-6 data-[size=xl]:size-24 dark:after:mix-blend-lighten z-(--avatar-z) hover:z-50 [&:has(~*:hover)]:z-(--avatar-z-rev)"
-          data-size="md"
-          data-slot="avatar"
-          href="/authors/carol-diaz"
-          style="--avatar-z: 1; --avatar-z-rev: 3;"
-          tabindex="-1"
-        >
-          <span
-            class="bg-foreground text-background flex size-full items-center justify-center rounded-full font-serif text-sm group-data-[size=sm]/avatar:text-xs"
-            data-slot="avatar-fallback"
-          >
-            CD
-          </span>
-        </a>
-      </div>
-      <span
-        class="align-middle"
-      >
-        <a
-          class="hover:underline"
-          href="/authors/alice-smith"
-        >
-          Alice Smith
-        </a>
-        <span
-          class="text-foreground"
-        >
-          , 
-        </span>
-        <a
-          class="hover:underline"
-          href="/authors/bob-jones"
-        >
-          Bob Jones
-        </a>
-        <span
-          class="text-foreground"
-        >
-           & 
-        </span>
-        <a
-          class="hover:underline"
-          href="/authors/carol-diaz"
-        >
-          Carol Diaz
-        </a>
-      </span>
-    </div>
-    <div
-      class="flex flex-wrap items-center justify-between gap-4"
+      class="group/avatar-group *:data-[slot=avatar]:ring-background -space-x-2 *:data-[slot=avatar]:ring-2 mr-2 inline-flex align-middle"
+      data-slot="avatar-group"
     >
       <a
-        class="text-foreground font-serif font-bold underline-offset-4 hover:underline"
-        href="/articles/test-article"
+        aria-hidden="true"
+        class="group/avatar after:border-border relative flex size-8 shrink-0 overflow-hidden rounded-full select-none after:absolute after:inset-0 after:rounded-full after:border after:mix-blend-darken data-[size=2xl]:size-32 data-[size=lg]:size-10 data-[size=md]:size-9 data-[size=sm]:size-6 data-[size=xl]:size-24 dark:after:mix-blend-lighten z-(--avatar-z) hover:z-50 [&:has(~*:hover)]:z-(--avatar-z-rev)"
+        data-size="md"
+        data-slot="avatar"
+        href="/authors/alice-smith"
+        style="--avatar-z: 3; --avatar-z-rev: 1;"
+        tabindex="-1"
+      >
+        <span
+          class="bg-foreground text-background flex size-full items-center justify-center rounded-full font-serif text-sm group-data-[size=sm]/avatar:text-xs"
+          data-slot="avatar-fallback"
+        >
+          AS
+        </span>
+      </a>
+      <a
+        aria-hidden="true"
+        class="group/avatar after:border-border relative flex size-8 shrink-0 overflow-hidden rounded-full select-none after:absolute after:inset-0 after:rounded-full after:border after:mix-blend-darken data-[size=2xl]:size-32 data-[size=lg]:size-10 data-[size=md]:size-9 data-[size=sm]:size-6 data-[size=xl]:size-24 dark:after:mix-blend-lighten z-(--avatar-z) hover:z-50 [&:has(~*:hover)]:z-(--avatar-z-rev)"
+        data-size="md"
+        data-slot="avatar"
+        href="/authors/bob-jones"
+        style="--avatar-z: 2; --avatar-z-rev: 2;"
+        tabindex="-1"
+      >
+        <span
+          class="bg-foreground text-background flex size-full items-center justify-center rounded-full font-serif text-sm group-data-[size=sm]/avatar:text-xs"
+          data-slot="avatar-fallback"
+        >
+          BJ
+        </span>
+      </a>
+      <a
+        aria-hidden="true"
+        class="group/avatar after:border-border relative flex size-8 shrink-0 overflow-hidden rounded-full select-none after:absolute after:inset-0 after:rounded-full after:border after:mix-blend-darken data-[size=2xl]:size-32 data-[size=lg]:size-10 data-[size=md]:size-9 data-[size=sm]:size-6 data-[size=xl]:size-24 dark:after:mix-blend-lighten z-(--avatar-z) hover:z-50 [&:has(~*:hover)]:z-(--avatar-z-rev)"
+        data-size="md"
+        data-slot="avatar"
+        href="/authors/carol-diaz"
+        style="--avatar-z: 1; --avatar-z-rev: 3;"
+        tabindex="-1"
+      >
+        <span
+          class="bg-foreground text-background flex size-full items-center justify-center rounded-full font-serif text-sm group-data-[size=sm]/avatar:text-xs"
+          data-slot="avatar-fallback"
+        >
+          CD
+        </span>
+      </a>
+    </div>
+    <span
+      class="align-middle"
+    >
+      <a
+        class="hover:underline"
+        href="/authors/alice-smith"
+      >
+        Alice Smith
+      </a>
+      <span
+        class="text-foreground"
+      >
+        , 
+      </span>
+      <a
+        class="hover:underline"
+        href="/authors/bob-jones"
+      >
+        Bob Jones
+      </a>
+      <span
+        class="text-foreground"
+      >
+         & 
+      </span>
+      <a
+        class="hover:underline"
+        href="/authors/carol-diaz"
+      >
+        Carol Diaz
+      </a>
+    </span>
+  </div>
+  <div
+    class="flex flex-wrap items-center gap-3"
+    data-slot="article-meta"
+  >
+    <div
+      class="grow-999"
+    >
+      <span
+        class="text-foreground cursor-default font-serif underline-offset-4 hover:underline hover:decoration-dotted"
+        data-slot="tooltip-trigger"
+        id="article-dateline"
+        tabindex="0"
       >
         <time
           datetime="2024-06-01T00:00:00.000Z"
         >
-          June 1, 2024
+          May 31, 2024
         </time>
-      </a>
+      </span>
+    </div>
+    <div
+      class="flex grow items-center justify-end gap-3"
+      data-slot="article-meta-controls"
+    >
       <div
-        class="flex items-end justify-end gap-3"
+        data-testid="narration-player"
+      />
+      <button
+        aria-expanded="false"
+        aria-haspopup="dialog"
+        aria-label="Share"
+        class="group/button inline-flex items-center justify-center border border-transparent bg-clip-padding text-sm font-medium whitespace-nowrap transition-all outline-none select-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 active:not-aria-[haspopup]:translate-y-px disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:hover:bg-muted/50 size-7 rounded-[min(var(--radius-md),12px)] in-data-[slot=button-group]:rounded-lg shrink-0 cursor-pointer"
+        data-base-ui-click-trigger=""
+        data-slot="popover-trigger"
+        id="base-ui-_r_e_"
+        tabindex="0"
+        type="button"
       >
-        <button
-          aria-expanded="false"
-          aria-haspopup="dialog"
-          aria-label="Share"
-          class="group/button inline-flex items-center justify-center border bg-clip-padding text-sm font-medium whitespace-nowrap transition-all outline-none select-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 active:not-aria-[haspopup]:translate-y-px disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 border-border bg-background hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:border-input dark:bg-input/30 dark:hover:bg-input/50 size-7 rounded-[min(var(--radius-md),12px)] in-data-[slot=button-group]:rounded-lg shrink-0"
-          data-base-ui-click-trigger=""
-          data-slot="popover-trigger"
-          id="base-ui-_r_8_"
-          tabindex="0"
-          type="button"
+        <svg
+          aria-hidden="true"
+          class="lucide lucide-share2 lucide-share-2 size-4"
+          fill="none"
+          height="24"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="24"
+          xmlns="http://www.w3.org/2000/svg"
         >
-          <svg
-            aria-hidden="true"
-            class="lucide lucide-share2 lucide-share-2 size-4"
-            fill="none"
-            height="24"
-            stroke="currentColor"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            viewBox="0 0 24 24"
-            width="24"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <circle
-              cx="18"
-              cy="5"
-              r="3"
-            />
-            <circle
-              cx="6"
-              cy="12"
-              r="3"
-            />
-            <circle
-              cx="18"
-              cy="19"
-              r="3"
-            />
-            <line
-              x1="8.59"
-              x2="15.42"
-              y1="13.51"
-              y2="17.49"
-            />
-            <line
-              x1="15.41"
-              x2="8.59"
-              y1="6.51"
-              y2="10.49"
-            />
-          </svg>
-        </button>
-      </div>
+          <circle
+            cx="18"
+            cy="5"
+            r="3"
+          />
+          <circle
+            cx="6"
+            cy="12"
+            r="3"
+          />
+          <circle
+            cx="18"
+            cy="19"
+            r="3"
+          />
+          <line
+            x1="8.59"
+            x2="15.42"
+            y1="13.51"
+            y2="17.49"
+          />
+          <line
+            x1="15.41"
+            x2="8.59"
+            y1="6.51"
+            y2="10.49"
+          />
+        </svg>
+      </button>
     </div>
   </div>
   <div
     aria-orientation="horizontal"
-    class="bg-border shrink-0 data-horizontal:h-px data-horizontal:w-full data-vertical:w-px data-vertical:self-stretch"
+    class="bg-border shrink-0 data-[orientation=horizontal]:h-px data-[orientation=horizontal]:w-full data-[orientation=vertical]:w-px data-[orientation=vertical]:self-stretch"
     data-orientation="horizontal"
     data-slot="separator"
     role="separator"
@@ -186,258 +198,270 @@ exports[`ArticleHero > names every author, however many, with no remainder 1`] =
 <div
   class="relative flex flex-col gap-2 md:-mx-10 lg:-mx-32 xl:-mx-44"
 >
+  <div
+    data-testid="media"
+  />
   <h1
-    class="mt-6"
+    class="mt-3"
   >
     Test Article
   </h1>
-  <div>
+  <div
+    class="dark:text-brand-high-contrast text-brand font-serif font-bold underline-offset-4"
+    data-slot="byline"
+  >
     <div
-      class="dark:text-brand-high-contrast text-brand font-serif font-bold underline-offset-4"
-      data-slot="byline"
-    >
-      <div
-        class="group/avatar-group *:data-[slot=avatar]:ring-background -space-x-2 *:data-[slot=avatar]:ring-2 mr-2 inline-flex align-middle"
-        data-slot="avatar-group"
-      >
-        <a
-          aria-hidden="true"
-          class="group/avatar after:border-border relative flex size-8 shrink-0 overflow-hidden rounded-full select-none after:absolute after:inset-0 after:rounded-full after:border after:mix-blend-darken data-[size=2xl]:size-32 data-[size=lg]:size-10 data-[size=md]:size-9 data-[size=sm]:size-6 data-[size=xl]:size-24 dark:after:mix-blend-lighten z-(--avatar-z) hover:z-50 [&:has(~*:hover)]:z-(--avatar-z-rev)"
-          data-size="md"
-          data-slot="avatar"
-          href="/authors/alice-smith"
-          style="--avatar-z: 6; --avatar-z-rev: 1;"
-          tabindex="-1"
-        >
-          <span
-            class="bg-foreground text-background flex size-full items-center justify-center rounded-full font-serif text-sm group-data-[size=sm]/avatar:text-xs"
-            data-slot="avatar-fallback"
-          >
-            AS
-          </span>
-        </a>
-        <a
-          aria-hidden="true"
-          class="group/avatar after:border-border relative flex size-8 shrink-0 overflow-hidden rounded-full select-none after:absolute after:inset-0 after:rounded-full after:border after:mix-blend-darken data-[size=2xl]:size-32 data-[size=lg]:size-10 data-[size=md]:size-9 data-[size=sm]:size-6 data-[size=xl]:size-24 dark:after:mix-blend-lighten z-(--avatar-z) hover:z-50 [&:has(~*:hover)]:z-(--avatar-z-rev)"
-          data-size="md"
-          data-slot="avatar"
-          href="/authors/bob-jones"
-          style="--avatar-z: 5; --avatar-z-rev: 2;"
-          tabindex="-1"
-        >
-          <span
-            class="bg-foreground text-background flex size-full items-center justify-center rounded-full font-serif text-sm group-data-[size=sm]/avatar:text-xs"
-            data-slot="avatar-fallback"
-          >
-            BJ
-          </span>
-        </a>
-        <a
-          aria-hidden="true"
-          class="group/avatar after:border-border relative flex size-8 shrink-0 overflow-hidden rounded-full select-none after:absolute after:inset-0 after:rounded-full after:border after:mix-blend-darken data-[size=2xl]:size-32 data-[size=lg]:size-10 data-[size=md]:size-9 data-[size=sm]:size-6 data-[size=xl]:size-24 dark:after:mix-blend-lighten z-(--avatar-z) hover:z-50 [&:has(~*:hover)]:z-(--avatar-z-rev)"
-          data-size="md"
-          data-slot="avatar"
-          href="/authors/carol-diaz"
-          style="--avatar-z: 4; --avatar-z-rev: 3;"
-          tabindex="-1"
-        >
-          <span
-            class="bg-foreground text-background flex size-full items-center justify-center rounded-full font-serif text-sm group-data-[size=sm]/avatar:text-xs"
-            data-slot="avatar-fallback"
-          >
-            CD
-          </span>
-        </a>
-        <a
-          aria-hidden="true"
-          class="group/avatar after:border-border relative flex size-8 shrink-0 overflow-hidden rounded-full select-none after:absolute after:inset-0 after:rounded-full after:border after:mix-blend-darken data-[size=2xl]:size-32 data-[size=lg]:size-10 data-[size=md]:size-9 data-[size=sm]:size-6 data-[size=xl]:size-24 dark:after:mix-blend-lighten z-(--avatar-z) hover:z-50 [&:has(~*:hover)]:z-(--avatar-z-rev)"
-          data-size="md"
-          data-slot="avatar"
-          href="/authors/dan-reed"
-          style="--avatar-z: 3; --avatar-z-rev: 4;"
-          tabindex="-1"
-        >
-          <span
-            class="bg-foreground text-background flex size-full items-center justify-center rounded-full font-serif text-sm group-data-[size=sm]/avatar:text-xs"
-            data-slot="avatar-fallback"
-          >
-            DR
-          </span>
-        </a>
-        <a
-          aria-hidden="true"
-          class="group/avatar after:border-border relative flex size-8 shrink-0 overflow-hidden rounded-full select-none after:absolute after:inset-0 after:rounded-full after:border after:mix-blend-darken data-[size=2xl]:size-32 data-[size=lg]:size-10 data-[size=md]:size-9 data-[size=sm]:size-6 data-[size=xl]:size-24 dark:after:mix-blend-lighten z-(--avatar-z) hover:z-50 [&:has(~*:hover)]:z-(--avatar-z-rev)"
-          data-size="md"
-          data-slot="avatar"
-          href="/authors/erin-fox"
-          style="--avatar-z: 2; --avatar-z-rev: 5;"
-          tabindex="-1"
-        >
-          <span
-            class="bg-foreground text-background flex size-full items-center justify-center rounded-full font-serif text-sm group-data-[size=sm]/avatar:text-xs"
-            data-slot="avatar-fallback"
-          >
-            EF
-          </span>
-        </a>
-        <a
-          aria-hidden="true"
-          class="group/avatar after:border-border relative flex size-8 shrink-0 overflow-hidden rounded-full select-none after:absolute after:inset-0 after:rounded-full after:border after:mix-blend-darken data-[size=2xl]:size-32 data-[size=lg]:size-10 data-[size=md]:size-9 data-[size=sm]:size-6 data-[size=xl]:size-24 dark:after:mix-blend-lighten z-(--avatar-z) hover:z-50 [&:has(~*:hover)]:z-(--avatar-z-rev)"
-          data-size="md"
-          data-slot="avatar"
-          href="/authors/frank-ng"
-          style="--avatar-z: 1; --avatar-z-rev: 6;"
-          tabindex="-1"
-        >
-          <span
-            class="bg-foreground text-background flex size-full items-center justify-center rounded-full font-serif text-sm group-data-[size=sm]/avatar:text-xs"
-            data-slot="avatar-fallback"
-          >
-            FN
-          </span>
-        </a>
-      </div>
-      <span
-        class="align-middle"
-      >
-        <a
-          class="hover:underline"
-          href="/authors/alice-smith"
-        >
-          Alice Smith
-        </a>
-        <span
-          class="text-foreground"
-        >
-          , 
-        </span>
-        <a
-          class="hover:underline"
-          href="/authors/bob-jones"
-        >
-          Bob Jones
-        </a>
-        <span
-          class="text-foreground"
-        >
-          , 
-        </span>
-        <a
-          class="hover:underline"
-          href="/authors/carol-diaz"
-        >
-          Carol Diaz
-        </a>
-        <span
-          class="text-foreground"
-        >
-          , 
-        </span>
-        <a
-          class="hover:underline"
-          href="/authors/dan-reed"
-        >
-          Dan Reed
-        </a>
-        <span
-          class="text-foreground"
-        >
-          , 
-        </span>
-        <a
-          class="hover:underline"
-          href="/authors/erin-fox"
-        >
-          Erin Fox
-        </a>
-        <span
-          class="text-foreground"
-        >
-           & 
-        </span>
-        <a
-          class="hover:underline"
-          href="/authors/frank-ng"
-        >
-          Frank Ng
-        </a>
-      </span>
-    </div>
-    <div
-      class="flex flex-wrap items-center justify-between gap-4"
+      class="group/avatar-group *:data-[slot=avatar]:ring-background -space-x-2 *:data-[slot=avatar]:ring-2 mr-2 inline-flex align-middle"
+      data-slot="avatar-group"
     >
       <a
-        class="text-foreground font-serif font-bold underline-offset-4 hover:underline"
-        href="/articles/test-article"
+        aria-hidden="true"
+        class="group/avatar after:border-border relative flex size-8 shrink-0 overflow-hidden rounded-full select-none after:absolute after:inset-0 after:rounded-full after:border after:mix-blend-darken data-[size=2xl]:size-32 data-[size=lg]:size-10 data-[size=md]:size-9 data-[size=sm]:size-6 data-[size=xl]:size-24 dark:after:mix-blend-lighten z-(--avatar-z) hover:z-50 [&:has(~*:hover)]:z-(--avatar-z-rev)"
+        data-size="md"
+        data-slot="avatar"
+        href="/authors/alice-smith"
+        style="--avatar-z: 6; --avatar-z-rev: 1;"
+        tabindex="-1"
+      >
+        <span
+          class="bg-foreground text-background flex size-full items-center justify-center rounded-full font-serif text-sm group-data-[size=sm]/avatar:text-xs"
+          data-slot="avatar-fallback"
+        >
+          AS
+        </span>
+      </a>
+      <a
+        aria-hidden="true"
+        class="group/avatar after:border-border relative flex size-8 shrink-0 overflow-hidden rounded-full select-none after:absolute after:inset-0 after:rounded-full after:border after:mix-blend-darken data-[size=2xl]:size-32 data-[size=lg]:size-10 data-[size=md]:size-9 data-[size=sm]:size-6 data-[size=xl]:size-24 dark:after:mix-blend-lighten z-(--avatar-z) hover:z-50 [&:has(~*:hover)]:z-(--avatar-z-rev)"
+        data-size="md"
+        data-slot="avatar"
+        href="/authors/bob-jones"
+        style="--avatar-z: 5; --avatar-z-rev: 2;"
+        tabindex="-1"
+      >
+        <span
+          class="bg-foreground text-background flex size-full items-center justify-center rounded-full font-serif text-sm group-data-[size=sm]/avatar:text-xs"
+          data-slot="avatar-fallback"
+        >
+          BJ
+        </span>
+      </a>
+      <a
+        aria-hidden="true"
+        class="group/avatar after:border-border relative flex size-8 shrink-0 overflow-hidden rounded-full select-none after:absolute after:inset-0 after:rounded-full after:border after:mix-blend-darken data-[size=2xl]:size-32 data-[size=lg]:size-10 data-[size=md]:size-9 data-[size=sm]:size-6 data-[size=xl]:size-24 dark:after:mix-blend-lighten z-(--avatar-z) hover:z-50 [&:has(~*:hover)]:z-(--avatar-z-rev)"
+        data-size="md"
+        data-slot="avatar"
+        href="/authors/carol-diaz"
+        style="--avatar-z: 4; --avatar-z-rev: 3;"
+        tabindex="-1"
+      >
+        <span
+          class="bg-foreground text-background flex size-full items-center justify-center rounded-full font-serif text-sm group-data-[size=sm]/avatar:text-xs"
+          data-slot="avatar-fallback"
+        >
+          CD
+        </span>
+      </a>
+      <a
+        aria-hidden="true"
+        class="group/avatar after:border-border relative flex size-8 shrink-0 overflow-hidden rounded-full select-none after:absolute after:inset-0 after:rounded-full after:border after:mix-blend-darken data-[size=2xl]:size-32 data-[size=lg]:size-10 data-[size=md]:size-9 data-[size=sm]:size-6 data-[size=xl]:size-24 dark:after:mix-blend-lighten z-(--avatar-z) hover:z-50 [&:has(~*:hover)]:z-(--avatar-z-rev)"
+        data-size="md"
+        data-slot="avatar"
+        href="/authors/dan-reed"
+        style="--avatar-z: 3; --avatar-z-rev: 4;"
+        tabindex="-1"
+      >
+        <span
+          class="bg-foreground text-background flex size-full items-center justify-center rounded-full font-serif text-sm group-data-[size=sm]/avatar:text-xs"
+          data-slot="avatar-fallback"
+        >
+          DR
+        </span>
+      </a>
+      <a
+        aria-hidden="true"
+        class="group/avatar after:border-border relative flex size-8 shrink-0 overflow-hidden rounded-full select-none after:absolute after:inset-0 after:rounded-full after:border after:mix-blend-darken data-[size=2xl]:size-32 data-[size=lg]:size-10 data-[size=md]:size-9 data-[size=sm]:size-6 data-[size=xl]:size-24 dark:after:mix-blend-lighten z-(--avatar-z) hover:z-50 [&:has(~*:hover)]:z-(--avatar-z-rev)"
+        data-size="md"
+        data-slot="avatar"
+        href="/authors/erin-fox"
+        style="--avatar-z: 2; --avatar-z-rev: 5;"
+        tabindex="-1"
+      >
+        <span
+          class="bg-foreground text-background flex size-full items-center justify-center rounded-full font-serif text-sm group-data-[size=sm]/avatar:text-xs"
+          data-slot="avatar-fallback"
+        >
+          EF
+        </span>
+      </a>
+      <a
+        aria-hidden="true"
+        class="group/avatar after:border-border relative flex size-8 shrink-0 overflow-hidden rounded-full select-none after:absolute after:inset-0 after:rounded-full after:border after:mix-blend-darken data-[size=2xl]:size-32 data-[size=lg]:size-10 data-[size=md]:size-9 data-[size=sm]:size-6 data-[size=xl]:size-24 dark:after:mix-blend-lighten z-(--avatar-z) hover:z-50 [&:has(~*:hover)]:z-(--avatar-z-rev)"
+        data-size="md"
+        data-slot="avatar"
+        href="/authors/frank-ng"
+        style="--avatar-z: 1; --avatar-z-rev: 6;"
+        tabindex="-1"
+      >
+        <span
+          class="bg-foreground text-background flex size-full items-center justify-center rounded-full font-serif text-sm group-data-[size=sm]/avatar:text-xs"
+          data-slot="avatar-fallback"
+        >
+          FN
+        </span>
+      </a>
+    </div>
+    <span
+      class="align-middle"
+    >
+      <a
+        class="hover:underline"
+        href="/authors/alice-smith"
+      >
+        Alice Smith
+      </a>
+      <span
+        class="text-foreground"
+      >
+        , 
+      </span>
+      <a
+        class="hover:underline"
+        href="/authors/bob-jones"
+      >
+        Bob Jones
+      </a>
+      <span
+        class="text-foreground"
+      >
+        , 
+      </span>
+      <a
+        class="hover:underline"
+        href="/authors/carol-diaz"
+      >
+        Carol Diaz
+      </a>
+      <span
+        class="text-foreground"
+      >
+        , 
+      </span>
+      <a
+        class="hover:underline"
+        href="/authors/dan-reed"
+      >
+        Dan Reed
+      </a>
+      <span
+        class="text-foreground"
+      >
+        , 
+      </span>
+      <a
+        class="hover:underline"
+        href="/authors/erin-fox"
+      >
+        Erin Fox
+      </a>
+      <span
+        class="text-foreground"
+      >
+         & 
+      </span>
+      <a
+        class="hover:underline"
+        href="/authors/frank-ng"
+      >
+        Frank Ng
+      </a>
+    </span>
+  </div>
+  <div
+    class="flex flex-wrap items-center gap-3"
+    data-slot="article-meta"
+  >
+    <div
+      class="grow-999"
+    >
+      <span
+        class="text-foreground cursor-default font-serif underline-offset-4 hover:underline hover:decoration-dotted"
+        data-slot="tooltip-trigger"
+        id="article-dateline"
+        tabindex="0"
       >
         <time
           datetime="2024-06-01T00:00:00.000Z"
         >
-          June 1, 2024
+          May 31, 2024
         </time>
-      </a>
+      </span>
+    </div>
+    <div
+      class="flex grow items-center justify-end gap-3"
+      data-slot="article-meta-controls"
+    >
       <div
-        class="flex items-end justify-end gap-3"
+        data-testid="narration-player"
+      />
+      <button
+        aria-expanded="false"
+        aria-haspopup="dialog"
+        aria-label="Share"
+        class="group/button inline-flex items-center justify-center border border-transparent bg-clip-padding text-sm font-medium whitespace-nowrap transition-all outline-none select-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 active:not-aria-[haspopup]:translate-y-px disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:hover:bg-muted/50 size-7 rounded-[min(var(--radius-md),12px)] in-data-[slot=button-group]:rounded-lg shrink-0 cursor-pointer"
+        data-base-ui-click-trigger=""
+        data-slot="popover-trigger"
+        id="base-ui-_r_j_"
+        tabindex="0"
+        type="button"
       >
-        <button
-          aria-expanded="false"
-          aria-haspopup="dialog"
-          aria-label="Share"
-          class="group/button inline-flex items-center justify-center border bg-clip-padding text-sm font-medium whitespace-nowrap transition-all outline-none select-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 active:not-aria-[haspopup]:translate-y-px disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 border-border bg-background hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:border-input dark:bg-input/30 dark:hover:bg-input/50 size-7 rounded-[min(var(--radius-md),12px)] in-data-[slot=button-group]:rounded-lg shrink-0"
-          data-base-ui-click-trigger=""
-          data-slot="popover-trigger"
-          id="base-ui-_r_b_"
-          tabindex="0"
-          type="button"
+        <svg
+          aria-hidden="true"
+          class="lucide lucide-share2 lucide-share-2 size-4"
+          fill="none"
+          height="24"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="24"
+          xmlns="http://www.w3.org/2000/svg"
         >
-          <svg
-            aria-hidden="true"
-            class="lucide lucide-share2 lucide-share-2 size-4"
-            fill="none"
-            height="24"
-            stroke="currentColor"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            viewBox="0 0 24 24"
-            width="24"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <circle
-              cx="18"
-              cy="5"
-              r="3"
-            />
-            <circle
-              cx="6"
-              cy="12"
-              r="3"
-            />
-            <circle
-              cx="18"
-              cy="19"
-              r="3"
-            />
-            <line
-              x1="8.59"
-              x2="15.42"
-              y1="13.51"
-              y2="17.49"
-            />
-            <line
-              x1="15.41"
-              x2="8.59"
-              y1="6.51"
-              y2="10.49"
-            />
-          </svg>
-        </button>
-      </div>
+          <circle
+            cx="18"
+            cy="5"
+            r="3"
+          />
+          <circle
+            cx="6"
+            cy="12"
+            r="3"
+          />
+          <circle
+            cx="18"
+            cy="19"
+            r="3"
+          />
+          <line
+            x1="8.59"
+            x2="15.42"
+            y1="13.51"
+            y2="17.49"
+          />
+          <line
+            x1="15.41"
+            x2="8.59"
+            y1="6.51"
+            y2="10.49"
+          />
+        </svg>
+      </button>
     </div>
   </div>
   <div
     aria-orientation="horizontal"
-    class="bg-border shrink-0 data-horizontal:h-px data-horizontal:w-full data-vertical:w-px data-vertical:self-stretch"
+    class="bg-border shrink-0 data-[orientation=horizontal]:h-px data-[orientation=horizontal]:w-full data-[orientation=vertical]:w-px data-[orientation=vertical]:self-stretch"
     data-orientation="horizontal"
     data-slot="separator"
     role="separator"
@@ -449,87 +473,99 @@ exports[`ArticleHero > renders narration as numeric id (no player shown) 1`] = `
 <div
   class="relative flex flex-col gap-2 md:-mx-10 lg:-mx-32 xl:-mx-44"
 >
+  <div
+    data-testid="media"
+  />
   <h1
-    class="mt-6"
+    class="mt-3"
   >
     Test Article
   </h1>
-  <div>
+  <div
+    class="flex flex-wrap items-center gap-3"
+    data-slot="article-meta"
+  >
     <div
-      class="flex flex-wrap items-center justify-between gap-4"
+      class="grow-999"
     >
-      <a
-        class="text-foreground font-serif font-bold underline-offset-4 hover:underline"
-        href="/articles/test-article"
+      <span
+        class="text-foreground cursor-default font-serif underline-offset-4 hover:underline hover:decoration-dotted"
+        data-slot="tooltip-trigger"
+        id="article-dateline"
+        tabindex="0"
       >
         <time
           datetime="2024-06-01T00:00:00.000Z"
         >
-          June 1, 2024
+          May 31, 2024
         </time>
-      </a>
+      </span>
+    </div>
+    <div
+      class="flex grow items-center justify-end gap-3"
+      data-slot="article-meta-controls"
+    >
       <div
-        class="flex items-end justify-end gap-3"
+        data-testid="narration-player"
+      />
+      <button
+        aria-expanded="false"
+        aria-haspopup="dialog"
+        aria-label="Share"
+        class="group/button inline-flex items-center justify-center border border-transparent bg-clip-padding text-sm font-medium whitespace-nowrap transition-all outline-none select-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 active:not-aria-[haspopup]:translate-y-px disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:hover:bg-muted/50 size-7 rounded-[min(var(--radius-md),12px)] in-data-[slot=button-group]:rounded-lg shrink-0 cursor-pointer"
+        data-base-ui-click-trigger=""
+        data-slot="popover-trigger"
+        id="base-ui-_r_12_"
+        tabindex="0"
+        type="button"
       >
-        <button
-          aria-expanded="false"
-          aria-haspopup="dialog"
-          aria-label="Share"
-          class="group/button inline-flex items-center justify-center border bg-clip-padding text-sm font-medium whitespace-nowrap transition-all outline-none select-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 active:not-aria-[haspopup]:translate-y-px disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 border-border bg-background hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:border-input dark:bg-input/30 dark:hover:bg-input/50 size-7 rounded-[min(var(--radius-md),12px)] in-data-[slot=button-group]:rounded-lg shrink-0"
-          data-base-ui-click-trigger=""
-          data-slot="popover-trigger"
-          id="base-ui-_r_k_"
-          tabindex="0"
-          type="button"
+        <svg
+          aria-hidden="true"
+          class="lucide lucide-share2 lucide-share-2 size-4"
+          fill="none"
+          height="24"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="24"
+          xmlns="http://www.w3.org/2000/svg"
         >
-          <svg
-            aria-hidden="true"
-            class="lucide lucide-share2 lucide-share-2 size-4"
-            fill="none"
-            height="24"
-            stroke="currentColor"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            viewBox="0 0 24 24"
-            width="24"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <circle
-              cx="18"
-              cy="5"
-              r="3"
-            />
-            <circle
-              cx="6"
-              cy="12"
-              r="3"
-            />
-            <circle
-              cx="18"
-              cy="19"
-              r="3"
-            />
-            <line
-              x1="8.59"
-              x2="15.42"
-              y1="13.51"
-              y2="17.49"
-            />
-            <line
-              x1="15.41"
-              x2="8.59"
-              y1="6.51"
-              y2="10.49"
-            />
-          </svg>
-        </button>
-      </div>
+          <circle
+            cx="18"
+            cy="5"
+            r="3"
+          />
+          <circle
+            cx="6"
+            cy="12"
+            r="3"
+          />
+          <circle
+            cx="18"
+            cy="19"
+            r="3"
+          />
+          <line
+            x1="8.59"
+            x2="15.42"
+            y1="13.51"
+            y2="17.49"
+          />
+          <line
+            x1="15.41"
+            x2="8.59"
+            y1="6.51"
+            y2="10.49"
+          />
+        </svg>
+      </button>
     </div>
   </div>
   <div
     aria-orientation="horizontal"
-    class="bg-border shrink-0 data-horizontal:h-px data-horizontal:w-full data-vertical:w-px data-vertical:self-stretch"
+    class="bg-border shrink-0 data-[orientation=horizontal]:h-px data-[orientation=horizontal]:w-full data-[orientation=vertical]:w-px data-[orientation=vertical]:self-stretch"
     data-orientation="horizontal"
     data-slot="separator"
     role="separator"
@@ -541,94 +577,99 @@ exports[`ArticleHero > renders narration as object (shows player) 1`] = `
 <div
   class="relative flex flex-col gap-2 md:-mx-10 lg:-mx-32 xl:-mx-44"
 >
+  <div
+    data-testid="media"
+  />
   <h1
-    class="mt-6"
+    class="mt-3"
   >
     Test Article
   </h1>
-  <div>
+  <div
+    class="flex flex-wrap items-center gap-3"
+    data-slot="article-meta"
+  >
     <div
-      class="flex flex-wrap items-center justify-between gap-4"
+      class="grow-999"
     >
-      <a
-        class="text-foreground font-serif font-bold underline-offset-4 hover:underline"
-        href="/articles/test-article"
+      <span
+        class="text-foreground cursor-default font-serif underline-offset-4 hover:underline hover:decoration-dotted"
+        data-slot="tooltip-trigger"
+        id="article-dateline"
+        tabindex="0"
       >
         <time
           datetime="2024-06-01T00:00:00.000Z"
         >
-          June 1, 2024
+          May 31, 2024
         </time>
-      </a>
+      </span>
+    </div>
+    <div
+      class="flex grow items-center justify-end gap-3"
+      data-slot="article-meta-controls"
+    >
       <div
-        class="flex items-end justify-end gap-3"
+        data-testid="narration-player"
+      />
+      <button
+        aria-expanded="false"
+        aria-haspopup="dialog"
+        aria-label="Share"
+        class="group/button inline-flex items-center justify-center border border-transparent bg-clip-padding text-sm font-medium whitespace-nowrap transition-all outline-none select-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 active:not-aria-[haspopup]:translate-y-px disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:hover:bg-muted/50 size-7 rounded-[min(var(--radius-md),12px)] in-data-[slot=button-group]:rounded-lg shrink-0 cursor-pointer"
+        data-base-ui-click-trigger=""
+        data-slot="popover-trigger"
+        id="base-ui-_r_17_"
+        tabindex="0"
+        type="button"
       >
-        <div
-          class="md:w-56 md:shrink-0"
+        <svg
+          aria-hidden="true"
+          class="lucide lucide-share2 lucide-share-2 size-4"
+          fill="none"
+          height="24"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="24"
+          xmlns="http://www.w3.org/2000/svg"
         >
-          <div
-            data-testid="narration-player"
+          <circle
+            cx="18"
+            cy="5"
+            r="3"
           />
-        </div>
-        <button
-          aria-expanded="false"
-          aria-haspopup="dialog"
-          aria-label="Share"
-          class="group/button inline-flex items-center justify-center border bg-clip-padding text-sm font-medium whitespace-nowrap transition-all outline-none select-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 active:not-aria-[haspopup]:translate-y-px disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 border-border bg-background hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:border-input dark:bg-input/30 dark:hover:bg-input/50 size-7 rounded-[min(var(--radius-md),12px)] in-data-[slot=button-group]:rounded-lg shrink-0"
-          data-base-ui-click-trigger=""
-          data-slot="popover-trigger"
-          id="base-ui-_r_n_"
-          tabindex="0"
-          type="button"
-        >
-          <svg
-            aria-hidden="true"
-            class="lucide lucide-share2 lucide-share-2 size-4"
-            fill="none"
-            height="24"
-            stroke="currentColor"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            viewBox="0 0 24 24"
-            width="24"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <circle
-              cx="18"
-              cy="5"
-              r="3"
-            />
-            <circle
-              cx="6"
-              cy="12"
-              r="3"
-            />
-            <circle
-              cx="18"
-              cy="19"
-              r="3"
-            />
-            <line
-              x1="8.59"
-              x2="15.42"
-              y1="13.51"
-              y2="17.49"
-            />
-            <line
-              x1="15.41"
-              x2="8.59"
-              y1="6.51"
-              y2="10.49"
-            />
-          </svg>
-        </button>
-      </div>
+          <circle
+            cx="6"
+            cy="12"
+            r="3"
+          />
+          <circle
+            cx="18"
+            cy="19"
+            r="3"
+          />
+          <line
+            x1="8.59"
+            x2="15.42"
+            y1="13.51"
+            y2="17.49"
+          />
+          <line
+            x1="15.41"
+            x2="8.59"
+            y1="6.51"
+            y2="10.49"
+          />
+        </svg>
+      </button>
     </div>
   </div>
   <div
     aria-orientation="horizontal"
-    class="bg-border shrink-0 data-horizontal:h-px data-horizontal:w-full data-vertical:w-px data-vertical:self-stretch"
+    class="bg-border shrink-0 data-[orientation=horizontal]:h-px data-[orientation=horizontal]:w-full data-[orientation=vertical]:w-px data-[orientation=vertical]:self-stretch"
     data-orientation="horizontal"
     data-slot="separator"
     role="separator"
@@ -644,86 +685,95 @@ exports[`ArticleHero > renders with hero image 1`] = `
     data-testid="media"
   />
   <h1
-    class="mt-6"
+    class="mt-3"
   >
     Test Article
   </h1>
-  <div>
+  <div
+    class="flex flex-wrap items-center gap-3"
+    data-slot="article-meta"
+  >
     <div
-      class="flex flex-wrap items-center justify-between gap-4"
+      class="grow-999"
     >
-      <a
-        class="text-foreground font-serif font-bold underline-offset-4 hover:underline"
-        href="/articles/test-article"
+      <span
+        class="text-foreground cursor-default font-serif underline-offset-4 hover:underline hover:decoration-dotted"
+        data-slot="tooltip-trigger"
+        id="article-dateline"
+        tabindex="0"
       >
         <time
           datetime="2024-06-01T00:00:00.000Z"
         >
-          June 1, 2024
+          May 31, 2024
         </time>
-      </a>
+      </span>
+    </div>
+    <div
+      class="flex grow items-center justify-end gap-3"
+      data-slot="article-meta-controls"
+    >
       <div
-        class="flex items-end justify-end gap-3"
+        data-testid="narration-player"
+      />
+      <button
+        aria-expanded="false"
+        aria-haspopup="dialog"
+        aria-label="Share"
+        class="group/button inline-flex items-center justify-center border border-transparent bg-clip-padding text-sm font-medium whitespace-nowrap transition-all outline-none select-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 active:not-aria-[haspopup]:translate-y-px disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:hover:bg-muted/50 size-7 rounded-[min(var(--radius-md),12px)] in-data-[slot=button-group]:rounded-lg shrink-0 cursor-pointer"
+        data-base-ui-click-trigger=""
+        data-slot="popover-trigger"
+        id="base-ui-_r_t_"
+        tabindex="0"
+        type="button"
       >
-        <button
-          aria-expanded="false"
-          aria-haspopup="dialog"
-          aria-label="Share"
-          class="group/button inline-flex items-center justify-center border bg-clip-padding text-sm font-medium whitespace-nowrap transition-all outline-none select-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 active:not-aria-[haspopup]:translate-y-px disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 border-border bg-background hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:border-input dark:bg-input/30 dark:hover:bg-input/50 size-7 rounded-[min(var(--radius-md),12px)] in-data-[slot=button-group]:rounded-lg shrink-0"
-          data-base-ui-click-trigger=""
-          data-slot="popover-trigger"
-          id="base-ui-_r_h_"
-          tabindex="0"
-          type="button"
+        <svg
+          aria-hidden="true"
+          class="lucide lucide-share2 lucide-share-2 size-4"
+          fill="none"
+          height="24"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="24"
+          xmlns="http://www.w3.org/2000/svg"
         >
-          <svg
-            aria-hidden="true"
-            class="lucide lucide-share2 lucide-share-2 size-4"
-            fill="none"
-            height="24"
-            stroke="currentColor"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            viewBox="0 0 24 24"
-            width="24"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <circle
-              cx="18"
-              cy="5"
-              r="3"
-            />
-            <circle
-              cx="6"
-              cy="12"
-              r="3"
-            />
-            <circle
-              cx="18"
-              cy="19"
-              r="3"
-            />
-            <line
-              x1="8.59"
-              x2="15.42"
-              y1="13.51"
-              y2="17.49"
-            />
-            <line
-              x1="15.41"
-              x2="8.59"
-              y1="6.51"
-              y2="10.49"
-            />
-          </svg>
-        </button>
-      </div>
+          <circle
+            cx="18"
+            cy="5"
+            r="3"
+          />
+          <circle
+            cx="6"
+            cy="12"
+            r="3"
+          />
+          <circle
+            cx="18"
+            cy="19"
+            r="3"
+          />
+          <line
+            x1="8.59"
+            x2="15.42"
+            y1="13.51"
+            y2="17.49"
+          />
+          <line
+            x1="15.41"
+            x2="8.59"
+            y1="6.51"
+            y2="10.49"
+          />
+        </svg>
+      </button>
     </div>
   </div>
   <div
     aria-orientation="horizontal"
-    class="bg-border shrink-0 data-horizontal:h-px data-horizontal:w-full data-vertical:w-px data-vertical:self-stretch"
+    class="bg-border shrink-0 data-[orientation=horizontal]:h-px data-[orientation=horizontal]:w-full data-[orientation=vertical]:w-px data-[orientation=vertical]:self-stretch"
     data-orientation="horizontal"
     data-slot="separator"
     role="separator"
@@ -735,150 +785,162 @@ exports[`ArticleHero > renders with populated authors 1`] = `
 <div
   class="relative flex flex-col gap-2 md:-mx-10 lg:-mx-32 xl:-mx-44"
 >
+  <div
+    data-testid="media"
+  />
   <h1
-    class="mt-6"
+    class="mt-3"
   >
     Test Article
   </h1>
-  <div>
+  <div
+    class="dark:text-brand-high-contrast text-brand font-serif font-bold underline-offset-4"
+    data-slot="byline"
+  >
     <div
-      class="dark:text-brand-high-contrast text-brand font-serif font-bold underline-offset-4"
-      data-slot="byline"
-    >
-      <div
-        class="group/avatar-group *:data-[slot=avatar]:ring-background -space-x-2 *:data-[slot=avatar]:ring-2 mr-2 inline-flex align-middle"
-        data-slot="avatar-group"
-      >
-        <a
-          aria-hidden="true"
-          class="group/avatar after:border-border relative flex size-8 shrink-0 overflow-hidden rounded-full select-none after:absolute after:inset-0 after:rounded-full after:border after:mix-blend-darken data-[size=2xl]:size-32 data-[size=lg]:size-10 data-[size=md]:size-9 data-[size=sm]:size-6 data-[size=xl]:size-24 dark:after:mix-blend-lighten z-(--avatar-z) hover:z-50 [&:has(~*:hover)]:z-(--avatar-z-rev)"
-          data-size="md"
-          data-slot="avatar"
-          href="/authors/alice-smith"
-          style="--avatar-z: 2; --avatar-z-rev: 1;"
-          tabindex="-1"
-        >
-          <span
-            class="bg-foreground text-background flex size-full items-center justify-center rounded-full font-serif text-sm group-data-[size=sm]/avatar:text-xs"
-            data-slot="avatar-fallback"
-          >
-            AS
-          </span>
-        </a>
-        <a
-          aria-hidden="true"
-          class="group/avatar after:border-border relative flex size-8 shrink-0 overflow-hidden rounded-full select-none after:absolute after:inset-0 after:rounded-full after:border after:mix-blend-darken data-[size=2xl]:size-32 data-[size=lg]:size-10 data-[size=md]:size-9 data-[size=sm]:size-6 data-[size=xl]:size-24 dark:after:mix-blend-lighten z-(--avatar-z) hover:z-50 [&:has(~*:hover)]:z-(--avatar-z-rev)"
-          data-size="md"
-          data-slot="avatar"
-          href="/authors/bob-jones"
-          style="--avatar-z: 1; --avatar-z-rev: 2;"
-          tabindex="-1"
-        >
-          <span
-            class="bg-foreground text-background flex size-full items-center justify-center rounded-full font-serif text-sm group-data-[size=sm]/avatar:text-xs"
-            data-slot="avatar-fallback"
-          >
-            BJ
-          </span>
-        </a>
-      </div>
-      <span
-        class="align-middle"
-      >
-        <a
-          class="hover:underline"
-          href="/authors/alice-smith"
-        >
-          Alice Smith
-        </a>
-        <span
-          class="text-foreground"
-        >
-           & 
-        </span>
-        <a
-          class="hover:underline"
-          href="/authors/bob-jones"
-        >
-          Bob Jones
-        </a>
-      </span>
-    </div>
-    <div
-      class="flex flex-wrap items-center justify-between gap-4"
+      class="group/avatar-group *:data-[slot=avatar]:ring-background -space-x-2 *:data-[slot=avatar]:ring-2 mr-2 inline-flex align-middle"
+      data-slot="avatar-group"
     >
       <a
-        class="text-foreground font-serif font-bold underline-offset-4 hover:underline"
-        href="/articles/test-article"
+        aria-hidden="true"
+        class="group/avatar after:border-border relative flex size-8 shrink-0 overflow-hidden rounded-full select-none after:absolute after:inset-0 after:rounded-full after:border after:mix-blend-darken data-[size=2xl]:size-32 data-[size=lg]:size-10 data-[size=md]:size-9 data-[size=sm]:size-6 data-[size=xl]:size-24 dark:after:mix-blend-lighten z-(--avatar-z) hover:z-50 [&:has(~*:hover)]:z-(--avatar-z-rev)"
+        data-size="md"
+        data-slot="avatar"
+        href="/authors/alice-smith"
+        style="--avatar-z: 2; --avatar-z-rev: 1;"
+        tabindex="-1"
+      >
+        <span
+          class="bg-foreground text-background flex size-full items-center justify-center rounded-full font-serif text-sm group-data-[size=sm]/avatar:text-xs"
+          data-slot="avatar-fallback"
+        >
+          AS
+        </span>
+      </a>
+      <a
+        aria-hidden="true"
+        class="group/avatar after:border-border relative flex size-8 shrink-0 overflow-hidden rounded-full select-none after:absolute after:inset-0 after:rounded-full after:border after:mix-blend-darken data-[size=2xl]:size-32 data-[size=lg]:size-10 data-[size=md]:size-9 data-[size=sm]:size-6 data-[size=xl]:size-24 dark:after:mix-blend-lighten z-(--avatar-z) hover:z-50 [&:has(~*:hover)]:z-(--avatar-z-rev)"
+        data-size="md"
+        data-slot="avatar"
+        href="/authors/bob-jones"
+        style="--avatar-z: 1; --avatar-z-rev: 2;"
+        tabindex="-1"
+      >
+        <span
+          class="bg-foreground text-background flex size-full items-center justify-center rounded-full font-serif text-sm group-data-[size=sm]/avatar:text-xs"
+          data-slot="avatar-fallback"
+        >
+          BJ
+        </span>
+      </a>
+    </div>
+    <span
+      class="align-middle"
+    >
+      <a
+        class="hover:underline"
+        href="/authors/alice-smith"
+      >
+        Alice Smith
+      </a>
+      <span
+        class="text-foreground"
+      >
+         & 
+      </span>
+      <a
+        class="hover:underline"
+        href="/authors/bob-jones"
+      >
+        Bob Jones
+      </a>
+    </span>
+  </div>
+  <div
+    class="flex flex-wrap items-center gap-3"
+    data-slot="article-meta"
+  >
+    <div
+      class="grow-999"
+    >
+      <span
+        class="text-foreground cursor-default font-serif underline-offset-4 hover:underline hover:decoration-dotted"
+        data-slot="tooltip-trigger"
+        id="article-dateline"
+        tabindex="0"
       >
         <time
           datetime="2024-06-01T00:00:00.000Z"
         >
-          June 1, 2024
+          May 31, 2024
         </time>
-      </a>
+      </span>
+    </div>
+    <div
+      class="flex grow items-center justify-end gap-3"
+      data-slot="article-meta-controls"
+    >
       <div
-        class="flex items-end justify-end gap-3"
+        data-testid="narration-player"
+      />
+      <button
+        aria-expanded="false"
+        aria-haspopup="dialog"
+        aria-label="Share"
+        class="group/button inline-flex items-center justify-center border border-transparent bg-clip-padding text-sm font-medium whitespace-nowrap transition-all outline-none select-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 active:not-aria-[haspopup]:translate-y-px disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:hover:bg-muted/50 size-7 rounded-[min(var(--radius-md),12px)] in-data-[slot=button-group]:rounded-lg shrink-0 cursor-pointer"
+        data-base-ui-click-trigger=""
+        data-slot="popover-trigger"
+        id="base-ui-_r_9_"
+        tabindex="0"
+        type="button"
       >
-        <button
-          aria-expanded="false"
-          aria-haspopup="dialog"
-          aria-label="Share"
-          class="group/button inline-flex items-center justify-center border bg-clip-padding text-sm font-medium whitespace-nowrap transition-all outline-none select-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 active:not-aria-[haspopup]:translate-y-px disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 border-border bg-background hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:border-input dark:bg-input/30 dark:hover:bg-input/50 size-7 rounded-[min(var(--radius-md),12px)] in-data-[slot=button-group]:rounded-lg shrink-0"
-          data-base-ui-click-trigger=""
-          data-slot="popover-trigger"
-          id="base-ui-_r_5_"
-          tabindex="0"
-          type="button"
+        <svg
+          aria-hidden="true"
+          class="lucide lucide-share2 lucide-share-2 size-4"
+          fill="none"
+          height="24"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="24"
+          xmlns="http://www.w3.org/2000/svg"
         >
-          <svg
-            aria-hidden="true"
-            class="lucide lucide-share2 lucide-share-2 size-4"
-            fill="none"
-            height="24"
-            stroke="currentColor"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            viewBox="0 0 24 24"
-            width="24"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <circle
-              cx="18"
-              cy="5"
-              r="3"
-            />
-            <circle
-              cx="6"
-              cy="12"
-              r="3"
-            />
-            <circle
-              cx="18"
-              cy="19"
-              r="3"
-            />
-            <line
-              x1="8.59"
-              x2="15.42"
-              y1="13.51"
-              y2="17.49"
-            />
-            <line
-              x1="15.41"
-              x2="8.59"
-              y1="6.51"
-              y2="10.49"
-            />
-          </svg>
-        </button>
-      </div>
+          <circle
+            cx="18"
+            cy="5"
+            r="3"
+          />
+          <circle
+            cx="6"
+            cy="12"
+            r="3"
+          />
+          <circle
+            cx="18"
+            cy="19"
+            r="3"
+          />
+          <line
+            x1="8.59"
+            x2="15.42"
+            y1="13.51"
+            y2="17.49"
+          />
+          <line
+            x1="15.41"
+            x2="8.59"
+            y1="6.51"
+            y2="10.49"
+          />
+        </svg>
+      </button>
     </div>
   </div>
   <div
     aria-orientation="horizontal"
-    class="bg-border shrink-0 data-horizontal:h-px data-horizontal:w-full data-vertical:w-px data-vertical:self-stretch"
+    class="bg-border shrink-0 data-[orientation=horizontal]:h-px data-[orientation=horizontal]:w-full data-[orientation=vertical]:w-px data-[orientation=vertical]:self-stretch"
     data-orientation="horizontal"
     data-slot="separator"
     role="separator"
@@ -890,87 +952,99 @@ exports[`ArticleHero > renders without authors or hero image 1`] = `
 <div
   class="relative flex flex-col gap-2 md:-mx-10 lg:-mx-32 xl:-mx-44"
 >
+  <div
+    data-testid="media"
+  />
   <h1
-    class="mt-6"
+    class="mt-3"
   >
     Test Article
   </h1>
-  <div>
+  <div
+    class="flex flex-wrap items-center gap-3"
+    data-slot="article-meta"
+  >
     <div
-      class="flex flex-wrap items-center justify-between gap-4"
+      class="grow-999"
     >
-      <a
-        class="text-foreground font-serif font-bold underline-offset-4 hover:underline"
-        href="/articles/test-article"
+      <span
+        class="text-foreground cursor-default font-serif underline-offset-4 hover:underline hover:decoration-dotted"
+        data-slot="tooltip-trigger"
+        id="article-dateline"
+        tabindex="0"
       >
         <time
           datetime="2024-06-01T00:00:00.000Z"
         >
-          June 1, 2024
+          May 31, 2024
         </time>
-      </a>
+      </span>
+    </div>
+    <div
+      class="flex grow items-center justify-end gap-3"
+      data-slot="article-meta-controls"
+    >
       <div
-        class="flex items-end justify-end gap-3"
+        data-testid="narration-player"
+      />
+      <button
+        aria-expanded="false"
+        aria-haspopup="dialog"
+        aria-label="Share"
+        class="group/button inline-flex items-center justify-center border border-transparent bg-clip-padding text-sm font-medium whitespace-nowrap transition-all outline-none select-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 active:not-aria-[haspopup]:translate-y-px disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:hover:bg-muted/50 size-7 rounded-[min(var(--radius-md),12px)] in-data-[slot=button-group]:rounded-lg shrink-0 cursor-pointer"
+        data-base-ui-click-trigger=""
+        data-slot="popover-trigger"
+        id="base-ui-_r_4_"
+        tabindex="0"
+        type="button"
       >
-        <button
-          aria-expanded="false"
-          aria-haspopup="dialog"
-          aria-label="Share"
-          class="group/button inline-flex items-center justify-center border bg-clip-padding text-sm font-medium whitespace-nowrap transition-all outline-none select-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 active:not-aria-[haspopup]:translate-y-px disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 border-border bg-background hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:border-input dark:bg-input/30 dark:hover:bg-input/50 size-7 rounded-[min(var(--radius-md),12px)] in-data-[slot=button-group]:rounded-lg shrink-0"
-          data-base-ui-click-trigger=""
-          data-slot="popover-trigger"
-          id="base-ui-_r_2_"
-          tabindex="0"
-          type="button"
+        <svg
+          aria-hidden="true"
+          class="lucide lucide-share2 lucide-share-2 size-4"
+          fill="none"
+          height="24"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="24"
+          xmlns="http://www.w3.org/2000/svg"
         >
-          <svg
-            aria-hidden="true"
-            class="lucide lucide-share2 lucide-share-2 size-4"
-            fill="none"
-            height="24"
-            stroke="currentColor"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            viewBox="0 0 24 24"
-            width="24"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <circle
-              cx="18"
-              cy="5"
-              r="3"
-            />
-            <circle
-              cx="6"
-              cy="12"
-              r="3"
-            />
-            <circle
-              cx="18"
-              cy="19"
-              r="3"
-            />
-            <line
-              x1="8.59"
-              x2="15.42"
-              y1="13.51"
-              y2="17.49"
-            />
-            <line
-              x1="15.41"
-              x2="8.59"
-              y1="6.51"
-              y2="10.49"
-            />
-          </svg>
-        </button>
-      </div>
+          <circle
+            cx="18"
+            cy="5"
+            r="3"
+          />
+          <circle
+            cx="6"
+            cy="12"
+            r="3"
+          />
+          <circle
+            cx="18"
+            cy="19"
+            r="3"
+          />
+          <line
+            x1="8.59"
+            x2="15.42"
+            y1="13.51"
+            y2="17.49"
+          />
+          <line
+            x1="15.41"
+            x2="8.59"
+            y1="6.51"
+            y2="10.49"
+          />
+        </svg>
+      </button>
     </div>
   </div>
   <div
     aria-orientation="horizontal"
-    class="bg-border shrink-0 data-horizontal:h-px data-horizontal:w-full data-vertical:w-px data-vertical:self-stretch"
+    class="bg-border shrink-0 data-[orientation=horizontal]:h-px data-[orientation=horizontal]:w-full data-[orientation=vertical]:w-px data-[orientation=vertical]:self-stretch"
     data-orientation="horizontal"
     data-slot="separator"
     role="separator"

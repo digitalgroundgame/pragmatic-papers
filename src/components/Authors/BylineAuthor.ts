@@ -1,4 +1,5 @@
 import type { User } from "@/payload-types"
+import { isResolved } from "@/utilities/relationships"
 
 /**
  * The only author fields the byline renders.
@@ -21,9 +22,6 @@ export function toBylineAuthor({ id, slug, name, profileImage }: User): BylineAu
     id,
     slug,
     name,
-    avatarUrl:
-      typeof profileImage === "object" && profileImage !== null
-        ? (profileImage.sizes?.square?.url ?? null)
-        : null,
+    avatarUrl: isResolved(profileImage) ? (profileImage.sizes?.square?.url ?? null) : null,
   }
 }

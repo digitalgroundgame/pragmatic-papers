@@ -6,6 +6,7 @@ import { isEditor } from "@/access/roles"
 import configPromise from "@payload-config"
 import { VolumeArticleEmail } from "@/emails/VolumeArticle"
 import { getServerSideURL } from "@/utilities/getURL"
+import { isResolved } from "@/utilities/relationships"
 
 import type { Article, Volume } from "@/payload-types"
 
@@ -53,9 +54,7 @@ export async function GET(
     overrideAccess: true,
   })) as Volume
 
-  const articles = (vol.articles ?? []).filter(
-    (a): a is Article => typeof a === "object" && a !== null,
-  )
+  const articles = (vol.articles ?? []).filter(isResolved<Article>)
 
   const siteUrl = getServerSideURL()
 

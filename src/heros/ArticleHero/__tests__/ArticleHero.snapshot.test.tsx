@@ -1,11 +1,14 @@
 import { render } from "@testing-library/react"
 import { describe, expect, it, vi } from "vitest"
 
+import type * as MediaModule from "@/components/Media"
 import type { Article } from "@/payload-types"
 
 import { ArticleHero } from "../index"
 
-vi.mock("@/components/Media", () => ({
+// Only the renderer is stubbed — the real is*Media guards decide what the hero shows.
+vi.mock("@/components/Media", async (importOriginal) => ({
+  ...(await importOriginal<typeof MediaModule>()),
   Media: () => <div data-testid="media" />,
 }))
 
@@ -122,7 +125,7 @@ describe("ArticleHero", () => {
   it("renders narration as object (shows player)", () => {
     const article = {
       ...baseArticle,
-      narration: { id: 7, filename: "narration.mp3" },
+      narration: { id: 7, filename: "narration.mp3", mimeType: "audio/mpeg" },
     } as unknown as Article
     const { container } = render(<ArticleHero article={article} />)
     expect(container.firstChild).toMatchSnapshot()

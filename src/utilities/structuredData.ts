@@ -1,5 +1,6 @@
 import type { Article, Media, MenuField, Topic, User, Volume } from "@/payload-types"
 import { getMediaUrl } from "@/utilities/getMediaUrl"
+import { isResolved } from "@/utilities/relationships"
 import { getServerSideURL } from "@/utilities/getURL"
 import { convertLexicalToPlaintext } from "@payloadcms/richtext-lexical/plaintext"
 import type {
@@ -27,7 +28,7 @@ const PERIODICAL_ID = `${SERVER_URL}/#periodical`
 export type JsonLdData = Thing
 
 function getImageUrl(media: Media | number | null | undefined): string | undefined {
-  if (!media || typeof media === "number") return undefined
+  if (!isResolved(media)) return undefined
   return getMediaUrl(media.sizes?.og?.url || media.url) || undefined
 }
 
@@ -38,20 +39,16 @@ export function buildArticleJsonLd(
 ): ArticleLeaf {
   const fullUrl = `${SERVER_URL}${path}`
 
-  const authors = (article.authors || [])
-    .filter((author): author is User => typeof author === "object")
-    .map(
-      (author): PersonLeaf => ({
-        "@type": "Person",
-        "@id": `${SERVER_URL}/authors/${author.slug}`,
-        name: author.name || undefined,
-        url: `${SERVER_URL}/authors/${author.slug}`,
-      }),
-    )
+  const authors = (article.authors || []).filter(isResolved<User>).map(
+    (author): PersonLeaf => ({
+      "@type": "Person",
+      "@id": `${SERVER_URL}/authors/${author.slug}`,
+      name: author.name || undefined,
+      url: `${SERVER_URL}/authors/${author.slug}`,
+    }),
+  )
 
-  const keywords = (article.topics || [])
-    .filter((t): t is Topic => typeof t !== "number")
-    .map((t) => t.name)
+  const keywords = (article.topics || []).filter(isResolved<Topic>).map((t) => t.name)
 
   const image = getImageUrl(article.meta?.image || article.heroImage)
 

@@ -4,11 +4,12 @@ import React from "react"
 
 import { getMediaUrl } from "@/utilities/getMediaUrl"
 import { cn } from "@/utilities/utils"
+import type { ImageMediaType } from "../types"
 
 export type ImageVariant = keyof Required<MediaType>["sizes"]
 
 export interface ImageMediaProps extends Omit<ImageProps, "src" | "alt" | "width" | "height"> {
-  media: MediaType & { mimeType: `image/${string}` }
+  media: ImageMediaType
   variant?: ImageVariant
   containerClassName?: string
 }

@@ -1,5 +1,6 @@
 import type { Article, Topic } from "@/payload-types"
 import type { CollectionAfterReadHook } from "payload"
+import { isResolved, relationshipId } from "@/utilities/relationships"
 
 // The search reindex handler fetches docs at depth: 0, leaving `topics` as
 // plain IDs. This hook ensures `topics` is always an array of full Topic
@@ -10,9 +11,9 @@ export const populateTopics: CollectionAfterReadHook<Article> = async ({
 }) => {
   if (context.skipAfterRead) return doc
   if (!doc.topics || !doc.topics.length) return doc
-  if (doc.topics.every((t) => typeof t === "object" && t !== null)) return doc
+  if (doc.topics.every(isResolved)) return doc
 
-  const topicIds = doc.topics.map((t) => (typeof t === "number" ? t : (t as Topic).id))
+  const topicIds = doc.topics.map(relationshipId).filter((id): id is number => id !== null)
 
   try {
     const { docs: topicDocs } = await payload.find({

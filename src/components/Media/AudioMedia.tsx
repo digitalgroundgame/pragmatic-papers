@@ -18,6 +18,7 @@ import { Slider } from "@/components/ui/slider"
 import { cn } from "@/utilities/utils"
 import { useAudioGain } from "./useAudioGain"
 import type { AudioMediaType } from "./types"
+import { Button } from "@/components/ui/button"
 
 const audioControlsVariants = cva("flex min-w-0 items-center gap-3 overflow-hidden", {
   variants: {
@@ -87,18 +88,22 @@ interface PlayToggleProps {
 
 function PlayToggle({ isPlaying, label, variant, expanded, onToggle }: PlayToggleProps) {
   return (
-    <button
-      onClick={onToggle}
-      aria-label={isPlaying ? "Pause" : "Play"}
-      className="text-primary hover:text-primary/70 flex shrink-0 items-center transition-colors"
-    >
-      {isPlaying ? <Pause className="size-5" /> : <Play className="size-5" />}
+    <div className="text-primary hover:text-primary/70 flex shrink-0 items-center transition-colors">
+      <Button
+        variant="ghost"
+        onClick={onToggle}
+        size="icon-sm"
+        aria-label={isPlaying ? "Pause" : "Play"}
+        className="cursor-pointer"
+      >
+        {isPlaying ? <Pause className="size-4.5" /> : <Play className="size-4.5" />}
+      </Button>
       {variant === "collapsible" && (
         <span aria-hidden className={audioLabelVariants({ variant, expanded })}>
           {label}
         </span>
       )}
-    </button>
+    </div>
   )
 }
 
@@ -220,19 +225,20 @@ function SettingsMenu({ onPlaybackRateChange, onVolumeChange, menuItems }: Setti
       <DropdownMenuTrigger
         aria-label="Player settings"
         className="text-muted-foreground hover:text-foreground shrink-0 transition-colors"
+        render={<Button variant="ghost" size="icon-sm" className="cursor-pointer" />}
       >
-        <Settings className="size-4" />
+        <Settings className="size-4.5" />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-auto min-w-40">
+        {menuItems && (
+          <>
+            {menuItems}
+            <DropdownMenuSeparator />
+          </>
+        )}
         <SpeedMenuGroup onChange={onPlaybackRateChange} />
         <DropdownMenuSeparator />
         <VolumeMenuGroup onChange={onVolumeChange} />
-        {menuItems ? (
-          <>
-            <DropdownMenuSeparator />
-            {menuItems}
-          </>
-        ) : null}
       </DropdownMenuContent>
     </DropdownMenu>
   )
@@ -354,7 +360,7 @@ export const AudioMedia: React.FC<AudioMediaProps> = ({
   const listenLabel = duration > 0 ? `Listen \u00b7 ${formatTime(duration)}` : "Listen"
 
   return (
-    <div className={cn("flex items-center", className)}>
+    <div data-slot="audio-player" className={cn("flex items-center", className)}>
       <PlayToggle
         isPlaying={isPlaying}
         label={listenLabel}

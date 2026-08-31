@@ -139,7 +139,8 @@ describe("ArticleHero", () => {
     const narration = screen.getByTestId("narration-player")
     const share = screen.getByTestId("share-buttons")
     // Keyboard focus follows DOM order, and the player is read before the share
-    // buttons on md and up.
+    // buttons in both of the row's layouts — grouped at the right edge, and
+    // spread apart once they wrap onto their own line.
     expect(narration.compareDocumentPosition(share) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
   })
 

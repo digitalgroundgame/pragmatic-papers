@@ -31,14 +31,15 @@ export const ArticleHero: React.FC<ArticleHeroProps> = ({ article }) => {
       />
       <h1 className="mt-3">{title}</h1>
       <Byline authors={bylineAuthors} />
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <PublicationDates publishedAt={publishedAt} updatedAt={updatedAt} />
-        <div className="flex flex-1 items-center justify-between gap-3 md:justify-end">
-          <NarrationPlayer narration={narration} className="shrink-0" />
+      <div data-slot="article-meta" className="flex flex-wrap items-center gap-3">
+        <div className="grow-999">
+          <PublicationDates publishedAt={publishedAt} updatedAt={updatedAt} />
+        </div>
+        <div data-slot="article-meta-controls" className="flex grow items-center justify-end gap-3">
+          <NarrationPlayer narration={narration} className="mr-auto shrink-0" />
           <ShareButtons
             url={`${getServerSideURL()}/articles/${article.slug}`}
             title={article.title}
-            className="shrink-0"
           />
         </div>
       </div>

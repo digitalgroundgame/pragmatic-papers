@@ -19,7 +19,7 @@ export const FootnoteLabelClient: React.FC<FootnoteLabelClientProps> = ({ siblin
   const currentIndex =
     (note ? (footnotes.find((f) => f.note === note)?.index ?? null) : null) ?? index ?? null
 
-  if (!note) return <span>Footnote</span>
+  if (!note) return <span>Source</span>
   if (typeof currentIndex !== "number") return <span>{truncate(note, PREVIEW_LIMIT)}</span>
   if (sourceId) return <span>{`↗ [${currentIndex}]`}</span>
   return <span>{`[${currentIndex}]`}</span>

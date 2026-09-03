@@ -16,7 +16,7 @@ export const FootnoteBlock: React.FC<FootnoteBlockProps> = ({ note, index, class
     <sup
       id={referenceId}
       className={cn(className, "not-prose px-0.5 font-mono -tracking-widest")}
-      title={`Footnote ${index}: ${note}`}
+      title={`Source ${index}: ${note}`}
     >
       <a
         className="text-brand dark:text-brand-high-contrast font-semibold underline-offset-6 hover:underline"

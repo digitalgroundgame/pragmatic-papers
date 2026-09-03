@@ -10,7 +10,7 @@ export const FootnoteBlock: Block = {
       type: "text",
       admin: {
         hidden: true,
-        description: "The Optional ID of an existing footnote to link to. Hidden in the admin UI.",
+        description: "The Optional ID of an existing source to link to. Hidden in the admin UI.",
       },
     },
     {
@@ -59,8 +59,8 @@ export const FootnoteBlock: Block = {
     singularName: "FootnoteBlock",
   },
   labels: {
-    singular: "Footnote",
-    plural: "Footnotes",
+    singular: "Source",
+    plural: "Sources",
   },
   admin: {
     components: {

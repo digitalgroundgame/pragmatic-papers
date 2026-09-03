@@ -7,7 +7,7 @@ const lib = vi.hoisted(() => ({
   capture: vi.fn(() => "https://github.com/o/r/pull/1"),
   requireGh: vi.fn(),
   waitForMerge: vi.fn(),
-  autoMergeAndWait: vi.fn(),
+  waitForSyncMerge: vi.fn(),
   prepareBranch: vi.fn(),
   commitIfStaged: vi.fn(),
   createOrReusePr: vi.fn(() => "https://github.com/o/r/pull/1"),
@@ -81,8 +81,12 @@ describe("hotfix main()", () => {
     expect(lib.waitForMerge).toHaveBeenCalledOnce()
     // phase 2
     expect(lib.prepareBranch).toHaveBeenCalledWith("chore/back-merge-v1.0.1", "main", "v1.0.1")
-    expect(lib.createOrReusePr).toHaveBeenCalledWith("chore/back-merge-v1.0.1", "dev")
-    expect(lib.autoMergeAndWait).toHaveBeenCalledOnce()
+    expect(lib.createOrReusePr).toHaveBeenCalledWith(
+      "chore/back-merge-v1.0.1",
+      "dev",
+      "Back-merge v1.0.1 into dev",
+    )
+    expect(lib.waitForSyncMerge).toHaveBeenCalledOnce()
   })
 
   it("runs only the back-merge for --phase 2", async () => {
@@ -95,8 +99,12 @@ describe("hotfix main()", () => {
       "main",
       "v1.0.1",
     )
-    expect(lib.createOrReusePr).toHaveBeenCalledExactlyOnceWith("chore/back-merge-v1.0.1", "dev")
-    expect(lib.autoMergeAndWait).toHaveBeenCalledOnce()
+    expect(lib.createOrReusePr).toHaveBeenCalledExactlyOnceWith(
+      "chore/back-merge-v1.0.1",
+      "dev",
+      "Back-merge v1.0.1 into dev",
+    )
+    expect(lib.waitForSyncMerge).toHaveBeenCalledOnce()
     expect(lib.waitForMerge).not.toHaveBeenCalled()
   })
 

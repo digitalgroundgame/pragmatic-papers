@@ -108,7 +108,7 @@ describe("ExtractNarrationButton", () => {
 
     render(<ExtractNarrationButton />)
 
-    expect(screen.queryByLabelText(/formatted narration preview/i)).toBeNull()
+    expect(screen.queryByLabelText(/formatted narration preview/i)).not.toBeInTheDocument()
 
     const button = await screen.findByRole("button", { name: /generate narration text/i })
     expect(button).toBeDefined()
@@ -205,7 +205,7 @@ describe("ExtractNarrationButton", () => {
     mockDocInfo = {}
     mockFields = { title: { value: "Unsaved Draft" } }
     const unsaved = render(<ExtractNarrationButton />)
-    expect(screen.queryByRole("button", { name: /regenerate text/i })).toBeNull()
+    expect(screen.queryByRole("button", { name: /regenerate text/i })).not.toBeInTheDocument()
 
     fireEvent.click(await screen.findByRole("button", { name: /generate narration text/i }))
     fireEvent.click(await screen.findByRole("button", { name: /edit text/i }))

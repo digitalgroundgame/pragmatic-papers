@@ -1,4 +1,5 @@
 import { socialEmbedBlockToHTML } from "@/blocks/SocialEmbed/helpers/socialEmbedBlockToHTML"
+import { isResolved } from "@/utilities/relationships"
 import type {
   Article,
   DisplayMathBlock,
@@ -237,11 +238,9 @@ export const generateArticleFeed = (articles: Article[]): string => {
           article.meta?.image && typeof article.meta.image !== "string"
             ? getMediaUrl((article.meta.image as Media).url ?? "")
             : undefined,
-        author: (article.authors || [])
-          .filter((author): author is User => typeof author === "object")
-          .map((author) => ({
-            name: author.name || "",
-          })),
+        author: (article.authors || []).filter(isResolved<User>).map((author) => ({
+          name: author.name || "",
+        })),
         content: (() => {
           try {
             const articleContent = article.content
@@ -290,16 +289,12 @@ export const generateVolumeFeed = (volumes: Volume[]): string => {
           },
         ],
         published: new Date(volume.publishedAt),
-        author: volume.articles
-          ?.filter((articleRef): articleRef is Article => typeof articleRef !== "string")
-          .flatMap(
-            (article) =>
-              (article.authors || [])
-                .filter((author): author is User => typeof author === "object")
-                .map((author) => ({
-                  name: author.name || "",
-                })) || [],
-          ),
+        author: volume.articles?.filter(isResolved<Article>).flatMap(
+          (article) =>
+            (article.authors || []).filter(isResolved<User>).map((author) => ({
+              name: author.name || "",
+            })) || [],
+        ),
       })
     }
   })

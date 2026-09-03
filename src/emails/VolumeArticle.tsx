@@ -19,6 +19,7 @@ import * as React from "react"
 import type { Article, Topic, User, Volume } from "@/payload-types"
 import { formatAuthors } from "@/utilities/formatAuthors"
 import { getMediaUrl } from "@/utilities/getMediaUrl"
+import { isResolved } from "@/utilities/relationships"
 import { cn } from "@/utilities/utils"
 
 export interface VolumeArticleEmailProps {
@@ -52,7 +53,7 @@ function articleExcerpt(
  */
 function heroImageUrl(article: Article, siteUrl: string): string | null {
   const hero = article.heroImage
-  if (!hero || typeof hero === "number") return null
+  if (!isResolved(hero)) return null
   const raw = getMediaUrl(hero.url)
   if (!raw) return null
   const params = new URLSearchParams({ url: raw, w: "1080", q: "80" })
@@ -65,7 +66,7 @@ function getDimensions(article: Article):
       height?: number
     }
   | undefined {
-  if (!article.heroImage || typeof article.heroImage === "number") return undefined
+  if (!isResolved(article.heroImage)) return undefined
   return {
     width: article.heroImage.sizes?.small?.width ?? undefined,
     height: article.heroImage.sizes?.small?.height ?? undefined,
@@ -79,11 +80,11 @@ function getDimensions(article: Article):
  * 404s.
  */
 function getAvatars(article: Article, siteUrl: string): string[] {
-  const authors = (article.authors || []).filter((a): a is User => typeof a === "object")
+  const authors = (article.authors || []).filter(isResolved<User>)
   return authors
     .map((a) => {
       const image = a?.profileImage
-      if (!image || typeof image === "number") return null
+      if (!isResolved(image)) return null
       const raw = getMediaUrl(image.sizes?.square?.url)
       if (!raw) return null
       if (raw.startsWith("http://") || raw.startsWith("https://")) return raw
@@ -105,7 +106,7 @@ export function VolumeArticleEmail({
   const avatars = getAvatars(article, siteUrl)
   const articleUrl = `${siteUrl}/articles/${article.slug}`
   const volumeUrl = `${siteUrl}/volumes/${volume.slug}`
-  const authors = (article.authors || []).filter((a): a is User => typeof a === "object")
+  const authors = (article.authors || []).filter(isResolved<User>)
 
   return (
     <Html>
@@ -174,7 +175,7 @@ export function VolumeArticleEmail({
               {article.topics && article.topics.length > 0 && (
                 <Text className="my-1 text-xs tracking-wide text-neutral-600 uppercase">
                   {article.topics
-                    .filter((t): t is Topic => typeof t !== "number")
+                    .filter(isResolved<Topic>)
                     .map((t) => t.name)
                     .join(" · ")}
                 </Text>

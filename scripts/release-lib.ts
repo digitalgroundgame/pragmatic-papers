@@ -56,15 +56,6 @@ export function prStateCommand(ref: PrRef): string {
   return `gh api repos/${ref.owner}/${ref.repo}/pulls/${ref.number} --jq '${PR_STATE_JQ}'`
 }
 
-/**
- * Queue an auto-merge that lands as a real **merge commit** (`--merge`), never a
- * squash, and waits for required checks (`--auto`). This is what keeps the sync
- * branches (dev↔main) from diverging.
- */
-export function autoMergeCommand(prUrl: string): string {
-  return `gh pr merge "${prUrl}" --auto --merge`
-}
-
 // ── Side-effecting helpers ─────────────────────────────────────────────────
 
 export function run(cmd: string): void {
@@ -147,14 +138,21 @@ export function commitIfStaged(message: string): void {
   run(`git commit -m "${message}"`)
 }
 
-/** Open PR URL for `branch` → `base`, reusing one from an earlier run if present. */
-export function createOrReusePr(branch: string, base: string): string {
+/**
+ * Open PR URL for `branch` → `base`, reusing one from an earlier run if present.
+ *
+ * `--fill` takes the title from the commit subject only when the branch carries a
+ * single commit; with several it falls back to the head branch name, which is how the
+ * dev → main release PR ended up titled "dev". Pass `title` for any branch that can
+ * carry more than one commit — `--title` overrides `--fill` and still autofills the body.
+ */
+export function createOrReusePr(branch: string, base: string, title?: string): string {
   const existing = capture(prListCommand(branch, base))
   if (existing) {
     console.warn(`${yellow("!")} Reusing open PR for ${branch} → ${base}`)
     return existing
   }
-  return capture(`gh pr create -f -B ${base}`)
+  return capture(`gh pr create -f ${title ? `-t "${title}" ` : ""}-B ${base}`)
 }
 
 export function ask(question: string): Promise<string> {
@@ -165,10 +163,6 @@ export function ask(question: string): Promise<string> {
       resolve(answer)
     })
   })
-}
-
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
 export function prState(prUrl: string): string {
@@ -189,33 +183,18 @@ export async function waitForMerge(prUrl: string): Promise<void> {
 }
 
 /**
- * Enable a merge-commit auto-merge and poll until it lands. Removes the manual
- * "remember to pick merge, not squash, and don't click Update branch" footgun on
- * the dev↔main sync PRs. Falls back to a manual merge prompt if auto-merge can't
- * be enabled (e.g. the repo doesn't have it turned on).
+ * Wait on a dev↔main sync PR, which has to be merged by hand: these PRs are merged
+ * with a ruleset bypass, and `gh pr merge --auto` cannot bypass a ruleset — it either
+ * refuses outright or queues a merge that never fires, leaving the release polling
+ * forever. So prompt instead, and lead with the part that actually matters.
+ *
+ * The merge MUST be a merge commit. A squash rewrites the commits onto the target and
+ * leaves dev and main permanently diverged, which is the whole reason these PRs exist.
  */
-export async function autoMergeAndWait(prUrl: string, pollMs = 10_000): Promise<void> {
-  try {
-    run(autoMergeCommand(prUrl))
-    console.warn(`${green("✔")} Auto-merge (merge commit) enabled — waiting for checks…`)
-  } catch {
-    console.warn(
-      `${yellow("!")} Could not enable auto-merge. Merge it manually with a ` +
-        `${yellow("merge commit")} (not squash), and do not click "Update branch".`,
-    )
-    return waitForMerge(prUrl)
-  }
-
-  for (;;) {
-    const state = prState(prUrl)
-    if (state === "MERGED") {
-      console.warn(`${green("✔")} PR merged`)
-      return
-    }
-    if (state === "CLOSED") {
-      console.error(`${red("✖")} PR was closed without merging`)
-      process.exit(1)
-    }
-    await sleep(pollMs)
-  }
+export async function waitForSyncMerge(prUrl: string): Promise<void> {
+  console.warn(
+    `${yellow("!")} Merge this one with a ${yellow("merge commit")} — not a squash, ` +
+      `and do not click "Update branch". A squash diverges dev from main.`,
+  )
+  return waitForMerge(prUrl)
 }

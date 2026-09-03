@@ -53,8 +53,8 @@ describe("InteractiveMapClient", () => {
     const interactive = interactivePaths(container)
     expect(interactive).toHaveLength(2)
     for (const p of interactive) {
-      expect(p.getAttribute("tabindex")).toBe("0")
-      expect(p.getAttribute("fill")).toMatch(/^#/)
+      expect(p).toHaveAttribute("tabindex", "0")
+      expect(p).toHaveAttribute("fill", expect.stringMatching(/^#/))
     }
     // The third path (regionId: null) is inert: no tabindex, no data marker.
     const allPaths = Array.from(container.querySelectorAll("path")).filter(
@@ -62,22 +62,22 @@ describe("InteractiveMapClient", () => {
         p.getAttribute("data-overlay") !== "active" && p.getAttribute("data-overlay") !== "pinned",
     )
     const inert = allPaths[2]!
-    expect(inert.getAttribute("tabindex")).toBeNull()
+    expect(inert).not.toHaveAttribute("tabindex")
     expect(inert.hasAttribute("data-interactive-map-path")).toBe(false)
   })
 
   it("shows the active overlay path for the hovered region and clears it on leave", () => {
     const { container } = render(<InteractiveMapClient layout="row" maps={[baseMap()]} />)
     const overlay = activeOverlay(container)
-    expect(overlay.getAttribute("d")).toBe("")
+    expect(overlay).toHaveAttribute("d", "")
 
     const [pathA] = interactivePaths(container)
     fireEvent.pointerEnter(pathA!)
-    expect(overlay.getAttribute("d")).toBe("M0 0H10V10H0Z")
+    expect(overlay).toHaveAttribute("d", "M0 0H10V10H0Z")
 
     fireEvent.pointerLeave(pathA!)
     // d persists after leave; opacity returns to 0 (set by effect, not checked here)
-    expect(overlay.getAttribute("d")).toBe("M0 0H10V10H0Z")
+    expect(overlay).toHaveAttribute("d", "M0 0H10V10H0Z")
   })
 
   it("pins a region on click — pointer leave does not clear the pinned overlay", () => {
@@ -90,7 +90,7 @@ describe("InteractiveMapClient", () => {
 
     const overlays = pinnedOverlays(container)
     expect(overlays).toHaveLength(1)
-    expect(overlays[0]!.getAttribute("d")).toBe("M0 0H10V10H0Z")
+    expect(overlays[0]).toHaveAttribute("d", "M0 0H10V10H0Z")
   })
 
   it("Escape clears all pinned selections", () => {
@@ -111,7 +111,7 @@ describe("InteractiveMapClient", () => {
 
     fireEvent.keyDown(pathA!, { key: "Enter" })
     expect(pinnedOverlays(container)).toHaveLength(1)
-    expect(pinnedOverlays(container)[0]!.getAttribute("d")).toBe("M0 0H10V10H0Z")
+    expect(pinnedOverlays(container)[0]).toHaveAttribute("d", "M0 0H10V10H0Z")
 
     fireEvent.keyDown(pathB!, { key: " " })
     expect(pinnedOverlays(container)).toHaveLength(2)
@@ -123,12 +123,12 @@ describe("InteractiveMapClient", () => {
     const hoverTooltip = document.body.querySelector<HTMLDivElement>(
       '[role="tooltip"].pointer-events-none',
     )!
-    expect(within(hoverTooltip).queryByText("Alpha")).toBeNull()
+    expect(within(hoverTooltip).queryByText("Alpha")).not.toBeInTheDocument()
 
     const [pathA] = interactivePaths(container)
     fireEvent.pointerEnter(pathA!)
-    expect(within(hoverTooltip).getByText("Alpha")).not.toBeNull()
-    expect(within(hoverTooltip).getByText("R+5.0")).not.toBeNull()
+    expect(within(hoverTooltip).getByText("Alpha")).toBeInTheDocument()
+    expect(within(hoverTooltip).getByText("R+5.0")).toBeInTheDocument()
   })
 
   it("uses the grid wrapper class when layout is 'stacked' and the flex row class otherwise", () => {
@@ -136,14 +136,14 @@ describe("InteractiveMapClient", () => {
       <InteractiveMapClient layout="stacked" maps={[baseMap()]} />,
     )
     const gridGroup = gridContainer.querySelector<HTMLDivElement>('[role="group"]')!
-    expect(gridGroup.className).toContain("grid")
-    expect(gridGroup.className).toContain("sm:grid-cols-2")
+    expect(gridGroup).toHaveClass("grid")
+    expect(gridGroup).toHaveClass("sm:grid-cols-2")
 
     const { container: rowContainer } = render(
       <InteractiveMapClient layout="row" maps={[baseMap()]} />,
     )
     const rowGroup = rowContainer.querySelector<HTMLDivElement>('[role="group"]')!
-    expect(rowGroup.className).toContain("sm:flex-row")
+    expect(rowGroup).toHaveClass("sm:flex-row")
   })
 
   it("hovering a region in one map does not draw an active overlay in the other", () => {
@@ -179,14 +179,14 @@ describe("InteractiveMapClient", () => {
 
     const firstMapPathA = interactivePaths(container)[0]!
     fireEvent.pointerEnter(firstMapPathA)
-    expect(overlays[0]!.getAttribute("d")).toBe("M0 0H10V10H0Z")
-    expect(overlays[1]!.getAttribute("d")).toBe("")
+    expect(overlays[0]).toHaveAttribute("d", "M0 0H10V10H0Z")
+    expect(overlays[1]).toHaveAttribute("d", "")
   })
 
   it("sets aria-label on interactive paths so screen readers announce label and value", () => {
     const { container } = render(<InteractiveMapClient layout="row" maps={[baseMap()]} />)
     const [pathA] = interactivePaths(container)
-    expect(pathA!.getAttribute("aria-label")).toBe("Alpha: R+5.0")
+    expect(pathA).toHaveAttribute("aria-label", "Alpha: R+5.0")
   })
 
   it("allows pinning multiple regions and shows a pinned tooltip for each", () => {
@@ -214,7 +214,7 @@ describe("InteractiveMapClient", () => {
     const hoverTooltip = document.body.querySelector<HTMLDivElement>(
       '[role="tooltip"].pointer-events-none',
     )!
-    expect(within(hoverTooltip).queryByText("Alpha")).toBeNull()
+    expect(within(hoverTooltip).queryByText("Alpha")).not.toBeInTheDocument()
   })
 
   it("clicking a pinned region unpins only that region", () => {
@@ -230,7 +230,7 @@ describe("InteractiveMapClient", () => {
     // Click the already-pinned pathA — should unpin only A, leaving B
     fireEvent.click(pathA!)
     expect(pinnedOverlays(container)).toHaveLength(1)
-    expect(pinnedOverlays(container)[0]!.getAttribute("d")).toBe("M10 0H20V10H10Z")
+    expect(pinnedOverlays(container)[0]).toHaveAttribute("d", "M10 0H20V10H10Z")
   })
 
   it("focusing a path via keyboard shows the active overlay", () => {
@@ -239,10 +239,10 @@ describe("InteractiveMapClient", () => {
     const [pathA] = interactivePaths(container)
 
     fireEvent.focus(pathA!)
-    expect(overlay.getAttribute("d")).toBe("M0 0H10V10H0Z")
+    expect(overlay).toHaveAttribute("d", "M0 0H10V10H0Z")
 
     fireEvent.blur(pathA!)
-    expect(overlay.getAttribute("d")).toBe("M0 0H10V10H0Z")
+    expect(overlay).toHaveAttribute("d", "M0 0H10V10H0Z")
   })
 
   it("pointerdown outside the map clears all pinned selections", () => {

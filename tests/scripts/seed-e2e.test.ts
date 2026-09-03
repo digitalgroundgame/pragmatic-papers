@@ -1,12 +1,31 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { NARRATED_UPDATED_AT } from "../../scripts/seed-e2e.constants"
+
+/**
+ * Read a drizzle `sql` template back as the statement it stands for.
+ * Interpolated values arrive as boxed primitives among the literal chunks, so
+ * the values land inline here rather than as $1, $2 — which is what makes the
+ * assertion below worth reading.
+ */
+function renderStatement(statement: { queryChunks: unknown[] }): string {
+  return statement.queryChunks
+    .map((chunk) =>
+      chunk instanceof Object && "value" in chunk
+        ? (chunk as { value: string[] }).value.join("")
+        : String(chunk),
+    )
+    .join("")
+}
+
 const mockDestroy = vi.fn()
 const mockCreate = vi.fn()
 const mockUpdateGlobal = vi.fn()
+const mockExecute = vi.fn()
 const mockPayload = {
   create: mockCreate,
   updateGlobal: mockUpdateGlobal,
-  db: { destroy: mockDestroy },
+  db: { destroy: mockDestroy, drizzle: { execute: mockExecute } },
 }
 
 const mockWriter = { id: 1, email: "writer@e2e.test", name: "Teagan Wordsmith" }
@@ -28,15 +47,31 @@ vi.mock("@/endpoints/seed/features/rich-text-showcase", () => ({
   createRichTextShowcaseArticle: vi.fn().mockResolvedValue(mockArticleId),
 }))
 
+// Stubbed like the other seed collaborators. It also keeps `payload.create`
+// reserved for the calls this script makes directly, which the error-path test
+// below depends on to know which create it is rejecting.
+vi.mock("@/endpoints/seed/articles", () => ({
+  createArticle: vi.fn().mockResolvedValue({ id: 44 }),
+}))
+
 vi.mock("@/endpoints/seed/features/interactive-maps", () => ({
   createMoCongressionalMapsArticle: vi.fn().mockResolvedValue(mockMapArticleId),
 }))
 
+// Merch products are seeded into their own collection before the home page
+// that queries them. Stubbed like the other seed collaborators above; the
+// helper itself is covered by tests/integration/syncShopifyProducts.test.ts.
+vi.mock("@/endpoints/seed/merch", () => ({
+  seedMerchProducts: vi.fn().mockResolvedValue([1, 2, 3, 4, 5, 6]),
+}))
+
 const { createUser } = await import("@/endpoints/seed/users")
+const { createArticle } = await import("@/endpoints/seed/articles")
 const { createRichTextShowcaseArticle } =
   await import("@/endpoints/seed/features/rich-text-showcase")
 const { createMoCongressionalMapsArticle } =
   await import("@/endpoints/seed/features/interactive-maps")
+const { seedMerchProducts } = await import("@/endpoints/seed/merch")
 const { main } = await import("../../scripts/seed-e2e")
 
 beforeEach(() => {
@@ -135,6 +170,67 @@ describe("seed-e2e main()", () => {
     )
   })
 
+  it("creates three co-authors for the crowded byline", async () => {
+    await main()
+
+    for (const [name, slug, email] of [
+      ["Sienna Scribe", "e2e-co-author-sienna", "sienna@e2e.test"],
+      ["Marcus Ledger", "e2e-co-author-marcus", "marcus@e2e.test"],
+      ["Alexandra Quill", "e2e-co-author-alexandra", "alexandra@e2e.test"],
+    ]) {
+      expect(createUser).toHaveBeenCalledWith(
+        mockPayload,
+        expect.objectContaining({ name, slug, email, roles: ["writer"] }),
+        `e2e co-author ${name}`,
+        { disableRevalidate: true },
+      )
+    }
+  })
+
+  it("creates a four-author article so the byline has a collapsed state", async () => {
+    await main()
+
+    expect(createArticle).toHaveBeenCalledWith(
+      mockPayload,
+      expect.objectContaining({
+        slug: "committee-work-notes-from-a-crowded-byline",
+        publishedAt: "2026-06-04T00:00:00.000Z",
+      }),
+      { disableRevalidate: true },
+    )
+
+    // createUser is stubbed to one writer, so every author resolves to the same
+    // id — four of them is the point, not which four.
+    const [, options] = vi.mocked(createArticle).mock.calls[0]!
+    expect(options.authors).toHaveLength(4)
+  })
+
+  it("pins the crowded-byline article's updatedAt so its dateline can't drift", async () => {
+    await main()
+
+    // Payload overwrites updatedAt on every non-draft save, so the revision
+    // line would otherwise read the day the seed ran and diff the meta-row
+    // baselines that frame it (see article-meta-row.spec.ts).
+    expect(mockExecute).toHaveBeenCalledTimes(1)
+    const [statement] = mockExecute.mock.calls[0]!
+    expect(renderStatement(statement)).toBe(
+      `UPDATE articles SET updated_at = ${NARRATED_UPDATED_AT} WHERE id = 44`,
+    )
+  })
+
+  it("keeps the crowded-byline article off the homepage grid", async () => {
+    await main()
+
+    // gotoFirstArticle follows the first article link on the homepage and
+    // example.spec.ts screenshots the whole page, so a third tile here would
+    // shift unrelated baselines.
+    const pageCall = mockCreate.mock.calls.find(([args]) => args.collection === "pages")?.[0]
+    const grid = pageCall.data.layout.find(
+      (block: { blockType: string }) => block.blockType === "collectionGrid",
+    )
+    expect(grid.slots).toHaveLength(2)
+  })
+
   it("creates a volume with the article linked and slug '1'", async () => {
     await main()
 
@@ -200,5 +296,19 @@ describe("seed-e2e main()", () => {
     await main()
 
     expect(mockDestroy).toHaveBeenCalledOnce()
+  })
+
+  it("seeds the merch catalogue the home carousel queries, sold-out product included", async () => {
+    await main()
+
+    expect(seedMerchProducts).toHaveBeenCalledOnce()
+    const [, products] = vi.mocked(seedMerchProducts).mock.calls[0]!
+    // merch.spec.ts asserts six products and one "Sold Out" badge.
+    expect(products).toHaveLength(6)
+    expect(products.filter((product) => product.availableForSale === false)).toHaveLength(1)
+    expect(products[0]).toMatchObject({
+      title: "Acid Washed Liberalism Charity Tee, Black",
+      price: "100.00",
+    })
   })
 })

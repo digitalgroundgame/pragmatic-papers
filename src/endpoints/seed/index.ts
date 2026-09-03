@@ -214,9 +214,14 @@ export const seed = async (
           ),
         )
         ctx.featureArticles.push(
+          // Four authors against the byline's three slots, so the dev seed has
+          // somewhere to see the collapsed state — two names and a remainder,
+          // two faces and a "+2" — without hand-editing an article first. The
+          // first four writers draw four different profile images (see
+          // generateWriterData: `media[index % 4]`), so the faces stay distinct.
           await createFootnotesArticle(
             payload,
-            [ctx.writers[0]!, ctx.writers[1]!],
+            [ctx.writers[0]!, ctx.writers[1]!, ctx.writers[2]!, ctx.writers[3]!],
             ctx.media,
             ctx.volume1Articles[0]!,
             [ctx.topics[0]!, ctx.topics[3]!, ctx.topics[4]!],
@@ -341,6 +346,7 @@ export const seed = async (
           ctx.volume1Articles,
           ctx.volume2Articles,
           ctx.featureArticles,
+          ctx.media.map((m) => m.id),
         )
         const homePage = await payload
           .find({ collection: "pages", where: { slug: { equals: "home" } }, limit: 1 })
@@ -352,11 +358,15 @@ export const seed = async (
           privacyPolicyPage,
           termsOfUsePage,
           volumesPage,
-        } = await createPages(payload, {
-          chiefEditorIds: [ctx.chiefEditor.id],
-          editorIds: [ctx.editor.id],
-          writerIds: [ctx.writers[0]!.id, ctx.writers[1]!.id],
-        })
+        } = await createPages(
+          payload,
+          {
+            chiefEditorIds: [ctx.chiefEditor.id],
+            editorIds: [ctx.editor.id],
+            writerIds: [ctx.writers[0]!.id, ctx.writers[1]!.id],
+          },
+          ctx.media.map((m) => m.id),
+        )
         await createMenus(payload, {
           homePage,
           aboutPage,

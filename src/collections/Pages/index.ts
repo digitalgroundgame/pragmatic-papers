@@ -7,6 +7,7 @@ import { Content } from "@/blocks/Content/config"
 import { Contributors } from "@/blocks/Contributors/config"
 import { FormBlock } from "@/blocks/Form/config"
 import { MediaBlock } from "@/blocks/MediaBlock/config"
+import { Merch } from "@/blocks/Merch/config"
 import { NewsletterSignup } from "@/blocks/NewsletterSignup/config"
 import { Timeline } from "@/blocks/Timeline/config"
 import { VolumeView } from "@/blocks/VolumeViewBlock/config"
@@ -83,6 +84,7 @@ export const Pages: CollectionConfig<"pages"> = {
                 Contributors,
                 MediaBlock,
                 NewsletterSignup,
+                Merch,
                 Timeline,
                 VolumeView,
                 FormBlock,

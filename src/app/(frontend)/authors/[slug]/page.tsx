@@ -11,6 +11,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Separator } from "@/components/ui/separator"
 import type { Article as ArticleType, Volume } from "@/payload-types"
 import { getInitials } from "@/utilities/getInitials"
+import { isResolved } from "@/utilities/relationships"
 import { getMediaUrl } from "@/utilities/getMediaUrl"
 import { getServerSideURL } from "@/utilities/getURL"
 import { mergeOpenGraph } from "@/utilities/mergeOpenGraph"
@@ -157,8 +158,9 @@ export default async function AuthorPage({ params, searchParams }: Args): Promis
   const hasBiography = !!user.biography
 
   const profile = user.profileImage
-  const profileImageUrl =
-    typeof profile === "number" ? undefined : (profile?.sizes?.square?.url ?? undefined)
+  const profileImageUrl = isResolved(profile)
+    ? (profile.sizes?.square?.url ?? undefined)
+    : undefined
   const initials = getInitials(user.name || "Author")
 
   return (

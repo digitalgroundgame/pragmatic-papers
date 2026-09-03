@@ -3,6 +3,7 @@ import React from "react"
 
 import { HoverPrefetchLink } from "@/components/Link/HoverPrefetchLink"
 import { Badge } from "@/components/ui/badge"
+import { isResolved } from "@/utilities/relationships"
 
 export interface TopicsListProps extends React.HTMLAttributes<HTMLElement> {
   topics: (number | Topic)[] | null | undefined
@@ -17,7 +18,7 @@ export const TopicsList: React.FC<TopicsListProps> = ({
 }) => {
   if (!topics?.length) return null
 
-  const resolvedTopics = topics.filter((topic): topic is Topic => typeof topic === "object")
+  const resolvedTopics = topics.filter(isResolved<Topic>)
 
   if (!resolvedTopics.length) return null
 

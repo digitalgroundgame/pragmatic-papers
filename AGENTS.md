@@ -123,9 +123,25 @@ This file provides guidance to tools like Claude Code (claude.ai/code) when work
 | ------------------------------ | ------------------------------------------------------------------------------------------ |
 | Pure utility functions         | Unit test in `src/**/__tests__/`                                                           |
 | UI/presentational components   | Snapshot test (see `src/components/ui/__tests__/button.snapshot.test.tsx` for the pattern) |
-| Client components with state   | RTL interaction test (`userEvent`, `fireEvent`)                                            |
+| Client components with state   | RTL interaction test (`fireEvent`; `user-event` is not installed — see #898)               |
 | Server components (async, CMS) | Integration test with mocked Payload queries                                               |
 | API routes / Payload hooks     | Integration test (Testcontainers, see `tests/integration/`)                                |
+
+**DOM assertions:** `@testing-library/jest-dom`'s matchers are registered globally in
+`vitest.setup.ts`. Assert with them rather than by hand — they name the element and print
+its markup when they fail, where a raw property read reports only `expected null to be "x"`:
+
+| Instead of                                  | Use                                                                                            |
+| ------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| `expect(getByRole(...)).toBeTruthy()`       | `.toBeInTheDocument()` (`getBy*` already throws when missing, so `toBeTruthy` asserts nothing) |
+| `expect(queryBy...).toBeNull()`             | `.not.toBeInTheDocument()`                                                                     |
+| `expect(el.getAttribute("href")).toBe(url)` | `expect(el).toHaveAttribute("href", url)`                                                      |
+| `expect(el.className).toContain("grid")`    | `expect(el).toHaveClass("grid")` (matches whole class tokens, not substrings)                  |
+| `expect(btn.disabled).toBe(true)`           | `expect(btn).toBeDisabled()`                                                                   |
+| `expect(container.firstChild).toBeNull()`   | `expect(container).toBeEmptyDOMElement()`                                                      |
+
+Partial attribute values go through an asymmetric matcher —
+`toHaveAttribute("rel", expect.stringContaining("noopener"))`.
 
 File-level exclusions are configured in `vitest.config.mts` `coverage.exclude` for auto-generated files (`src/migrations/**`, `src/payload-types.ts`, `src/app/(payload)/**`, `src/payload.config.ts`).
 
@@ -142,6 +158,19 @@ Adding, changing, or debugging a Playwright `toHaveScreenshot` test or a flaky
 visual diff? Use the **`e2e-visual-tests`** skill
 (`.claude/skills/e2e-visual-tests/SKILL.md`) for the checklist; full lifecycle
 in `tests/e2e/README.md`.
+
+### Interactive maps
+
+Building or debugging an Interactive Map block — preparing the pre-projected
+SVG, uploading a Map Asset, or chasing a map that renders blank, all-grey, or
+without tooltips? Use the **`interactive-maps`** skill
+(`.claude/skills/interactive-maps/SKILL.md`). It covers the SVG contract, the
+sanitizer allowlist that silently eats most exports, and the R+/D+ color
+scale, and ships a validator:
+`pnpm tsx .claude/skills/interactive-maps/validate-map-svg.ts <file.svg>`.
+The block draws **choropleths only** for now; further modes land on the same
+block behind a `mode` discriminator, starting with the Federal Courts map
+(#905), so the skill describes the choropleth mode specifically.
 
 ## Filing & triaging GitHub issues
 

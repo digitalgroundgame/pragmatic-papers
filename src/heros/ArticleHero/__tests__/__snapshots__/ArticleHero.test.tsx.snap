@@ -4,32 +4,43 @@ exports[`ArticleHero > matches snapshot 1`] = `
 <div
   class="relative flex flex-col gap-2 md:-mx-10 lg:-mx-32 xl:-mx-44"
 >
+  <div
+    data-media="undefined"
+    data-testid="media"
+  />
   <h1
-    class="mt-6"
+    class="mt-3"
   >
     Test Article
   </h1>
   <div
-    class="flex flex-col gap-2 md:flex-row md:items-center md:gap-8"
+    class="flex flex-wrap items-center gap-3"
+    data-slot="article-meta"
   >
     <div
-      class="flex flex-1 items-start justify-between gap-2 md:contents"
+      class="grow-999"
+    >
+      <span
+        class="text-foreground cursor-default font-serif underline-offset-4 hover:underline hover:decoration-dotted"
+        data-slot="tooltip-trigger"
+        id="article-dateline"
+        tabindex="0"
+      >
+        <time
+          datetime="2024-06-15T12:00:00.000Z"
+        >
+          June 15, 2024
+        </time>
+      </span>
+    </div>
+    <div
+      class="flex grow items-center justify-end gap-3"
+      data-slot="article-meta-controls"
     >
       <div
-        class="dark:text-brand-high-contrast text-brand flex flex-1 flex-wrap gap-2 font-serif font-bold underline-offset-4 md:order-1"
-      >
-        •
-        <a
-          class="hover:underline"
-          href="/articles/test-article"
-        >
-          <time
-            datetime="2024-06-15T12:00:00.000Z"
-          >
-            June 15, 2024
-          </time>
-        </a>
-      </div>
+        data-narration="undefined"
+        data-testid="narration-player"
+      />
       <div
         data-testid="share-buttons"
         data-title="Test Article"
@@ -39,7 +50,7 @@ exports[`ArticleHero > matches snapshot 1`] = `
   </div>
   <div
     aria-orientation="horizontal"
-    class="bg-border shrink-0 data-horizontal:h-px data-horizontal:w-full data-vertical:w-px data-vertical:self-stretch"
+    class="bg-border shrink-0 data-[orientation=horizontal]:h-px data-[orientation=horizontal]:w-full data-[orientation=vertical]:w-px data-[orientation=vertical]:self-stretch"
     data-orientation="horizontal"
     data-slot="separator"
     role="separator"

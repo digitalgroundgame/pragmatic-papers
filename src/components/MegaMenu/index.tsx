@@ -1,3 +1,5 @@
+"use client"
+
 import {
   NavigationMenu,
   NavigationMenuItem,
@@ -5,13 +7,18 @@ import {
   NavigationMenuList,
 } from "@/components/ui/navigation-menu"
 import { type MenuField } from "@/payload-types"
+import { getLinkFieldUrl } from "@/utilities/getLinkFieldUrl"
+import { usePathname } from "next/navigation"
 import { CMSLink } from "../Link/CMSLink2"
+import { isActivePath } from "./isActivePath"
 
 interface MegaMenuProps {
   menu?: MenuField
 }
 
 export function MegaMenu({ menu }: MegaMenuProps): React.ReactNode {
+  const pathname = usePathname()
+
   if (!menu) return null
   return (
     <div className="my-2 hidden w-full justify-center md:flex">
@@ -26,11 +33,18 @@ export function MegaMenu({ menu }: MegaMenuProps): React.ReactNode {
         <NavigationMenuLink>Link</NavigationMenuLink>
       </NavigationMenuContent>
     </NavigationMenuItem> */}
-          {menu.map((item) => (
-            <NavigationMenuItem key={item.id}>
-              <NavigationMenuLink className="py-1" render={<CMSLink link={item.link} />} />
-            </NavigationMenuItem>
-          ))}
+          {menu.map((item) => {
+            const url = getLinkFieldUrl(item.link)
+            return (
+              <NavigationMenuItem key={item.id}>
+                <NavigationMenuLink
+                  active={isActivePath(pathname, url)}
+                  className="py-1"
+                  render={<CMSLink link={item.link} />}
+                />
+              </NavigationMenuItem>
+            )
+          })}
         </NavigationMenuList>
       </NavigationMenu>
     </div>

@@ -8,7 +8,12 @@ import { waitForStableBox, waitForStableRender } from "./helpers"
 test("author card renders social media links @visual", async ({ page }, testInfo) => {
   await page.goto("/authors")
 
-  const card = page.locator('[data-slot="card"]').filter({ hasText: "Teagan Wordsmith" })
+  // The authors view can render the same card in responsive layouts, with only
+  // one copy visible at the active viewport. Scope the visual assertion to the
+  // rendered card so Playwright strict mode does not fail on hidden duplicates.
+  const card = page
+    .locator('[data-slot="card"]:visible')
+    .filter({ hasText: "Teagan Wordsmith" })
   await expect(card).toBeVisible()
 
   // Functional check (runs on every project, even when screenshots are skipped

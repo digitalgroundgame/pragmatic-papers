@@ -109,6 +109,18 @@ what CI's Chromium actually renders. Treat it as a single chore:
 >   baselines no longer match — a whole-suite regression that no code change
 >   explains. Rotate the `GH_FONT_READ` secret, then re-run the failed E2E
 >   jobs (do **not** regenerate baselines against the fallback font).
+>
+>   The job now runs with `FONTS_REQUIRED=true`, so this fails at
+>   `pnpm install` with a named error rather than as a pile of pixel diffs.
+>   Expect the failure to arrive **late and unevenly**: the pnpm store cache is
+>   keyed on the lockfile, so a branch that doesn't touch `pnpm-lock.yaml`
+>   restores the font package from cache (`reused N, downloaded 0`) and never
+>   calls the registry at all. A lapsed token therefore stays invisible on
+>   `dev` and surfaces first on whichever PR bumps a dependency — which is why
+>   it reads as "dependabot broke the screenshots". It didn't; it was just the
+>   first branch to re-fetch. Check `dev` by re-running its E2E job with the
+>   cache cleared, not by assuming green means healthy.
+>
 > - **A changed CI runner image.** Moving the E2E job onto (or between) a
 >   pinned container image (e.g.
 >   `mcr.microsoft.com/playwright:v<version>-<codename>`) changes system

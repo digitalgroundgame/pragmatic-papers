@@ -1,4 +1,4 @@
-import { FOUR_AUTHOR_SLUG, NARRATED_UPDATED_AT, NARRATION_SECONDS } from "./seed-e2e.constants"
+import { FOUR_AUTHOR_SLUG, NARRATION_SECONDS, SEEDED_UPDATED_AT } from "./seed-e2e.constants"
 
 import type { User } from "@/payload-types"
 import { createArticle } from "@/endpoints/seed/articles"
@@ -90,6 +90,25 @@ async function createSilentNarration(payload: Payload, seconds: number): Promise
 // Screenshot baselines bake in this date via the article/volume byline, so it
 // must stay fixed rather than tracking the day the seed happens to run.
 const PUBLISHED_AT = "2026-06-04T00:00:00.000Z"
+
+/**
+ * Freeze the revision stamp on every seeded article and volume.
+ *
+ * Straight to the column, because there is no way through the API: Payload
+ * overwrites `updatedAt` with the current time on every non-draft save
+ * (collections/operations/utilities/update.js), so each hero's dateline would
+ * read the day the seed ran and diff against its baseline the next day. The
+ * instant is arbitrary; that it never moves is the point.
+ *
+ * Applied to whole tables after seeding rather than per document: the previous
+ * per-document version pinned only the narrated article, and the share-button
+ * baselines — framing a different article's hero — quietly rotted instead.
+ */
+async function pinRevisionStamps(payload: Payload): Promise<void> {
+  const { drizzle } = payload.db as unknown as PostgresAdapter
+  await drizzle.execute(sql`UPDATE articles SET updated_at = ${SEEDED_UPDATED_AT}`)
+  await drizzle.execute(sql`UPDATE volumes SET updated_at = ${SEEDED_UPDATED_AT}`)
+}
 
 // Co-authors for the four-author article. Deliberately plain compared with the e2e
 // writer — author-card.spec.ts covers the fully-populated profile, and these
@@ -213,7 +232,7 @@ export async function main(): Promise<void> {
     // article rather than the homepage one so no existing baseline moves.
     const narration = await createSilentNarration(payload, NARRATION_SECONDS)
 
-    const crowdedByline = await createArticle(
+    await createArticle(
       payload,
       {
         title: "Committee Work: Notes From a Crowded Byline",
@@ -228,16 +247,6 @@ export async function main(): Promise<void> {
         publishedAt: PUBLISHED_AT,
       },
       ctx,
-    )
-
-    // Straight to the column, because there is no way through the API: Payload
-    // overwrites updatedAt with the current time on every non-draft save
-    // (collections/operations/utilities/update.js), so the dateline of the one
-    // article a screenshot frames would read the day the seed ran and diff
-    // against its baseline the next day. The instant is arbitrary; that it
-    // never moves is the point.
-    await (payload.db as unknown as PostgresAdapter).drizzle.execute(
-      sql`UPDATE articles SET updated_at = ${NARRATED_UPDATED_AT} WHERE id = ${crowdedByline.id}`,
     )
 
     const volume = await payload.create({
@@ -470,6 +479,8 @@ export async function main(): Promise<void> {
         ],
       },
     })
+
+    await pinRevisionStamps(payload)
 
     console.warn(`✔ E2E seed complete: article="rich-text-showcase", volume="1"`)
   } finally {

@@ -42,6 +42,16 @@ env:
   # loopback interface.
   DATABASE_URI: postgres://postgres:postgres@postgres:5432/pragmatic-papers-e2e
   E2E_PROD_SERVER: "true"
+  # Refuse to render with the Inter fallback. scripts/install-fonts.ts silently
+  # substitutes Inter when @digitalgroundgame/fonts can't be fetched, which
+  # turns a broken GH_FONT_READ into a whole-suite "visual regression" whose PR
+  # comment invites you to commit Inter-rendered baselines. Worse, the pnpm
+  # store cache hides the breakage on dev: an unchanged lockfile means
+  # `reused N, downloaded 0`, so the registry is never called and the token's
+  # validity is never exercised — the suite only goes red on the first PR that
+  # touches the lockfile. Failing at install turns that into one legible error
+  # on the branch that first re-fetches, instead of nine bogus diffs.
+  FONTS_REQUIRED: "true"
 
 jobs:
   test:

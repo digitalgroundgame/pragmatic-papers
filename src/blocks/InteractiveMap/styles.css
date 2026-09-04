@@ -12,3 +12,71 @@
 
   --map-neutral: oklch(0.9528 0.0086 84.57);
 }
+
+/* ---- Drilldown mode ------------------------------------------------------------------- */
+:root {
+  --drilldown-parent-fill: color-mix(in oklch, var(--muted-foreground) 22%, var(--background));
+  --drilldown-parent-outline: color-mix(in oklch, var(--muted-foreground) 70%, var(--background));
+  --drilldown-child-stroke: var(--background);
+  --drilldown-selected-fill: var(--map-negative-1, #b4d4f8);
+  --drilldown-hover-stroke: var(--foreground);
+}
+
+/* Parents are the primary layer: uniform fill, no stroke of their own. */
+[data-drilldown-overview] path[data-role="parent"],
+[data-drilldown-local] path[data-role="parent"] {
+  fill: var(--drilldown-parent-fill);
+  stroke: none;
+}
+
+/* Children: transparent (not none) so the area stays hittable in the child view; thin
+   borders that cut the parent fill up. */
+[data-drilldown-overview] path[data-role="child"],
+[data-drilldown-local] path[data-role="child"] {
+  fill: transparent;
+  stroke: var(--drilldown-child-stroke);
+  stroke-width: 0.9;
+  vector-effect: non-scaling-stroke;
+}
+
+/* An inset is its parent's only presence in that spot, so it takes the parent fill + outline. */
+[data-drilldown-overview] path[data-role="child"][data-inset="true"],
+[data-drilldown-local] path[data-role="child"][data-inset="true"] {
+  fill: var(--drilldown-parent-fill);
+  stroke: var(--drilldown-parent-outline);
+  stroke-width: 2;
+}
+
+/* Stroke-only clones of each parent outline, painted above the child borders. */
+[data-drilldown-overview] path[data-role="outline"],
+[data-drilldown-local] path[data-role="outline"] {
+  fill: none;
+  stroke: var(--drilldown-parent-outline);
+  stroke-width: 2;
+  vector-effect: non-scaling-stroke;
+  pointer-events: none;
+}
+
+[data-drilldown-overview] path[data-role="decorative"],
+[data-drilldown-local] path[data-role="decorative"] {
+  fill: none;
+  stroke: var(--drilldown-parent-outline);
+  vector-effect: non-scaling-stroke;
+  pointer-events: none;
+}
+
+/* Overview: mainland children are visual only — hover and click fall through to the parent
+   fill underneath. Insets stay hittable because they stand in for their parent. */
+[data-drilldown-overview] path[data-role="child"]:not([data-inset="true"]) {
+  pointer-events: none;
+}
+/* Child view: the parent outline is not selectable — pick a child, or use the selector. */
+[data-drilldown-local] path[data-role="parent"] {
+  pointer-events: none;
+}
+
+[data-drilldown-overview] path[role="button"],
+[data-drilldown-local] path[role="button"] {
+  cursor: pointer;
+  outline: none;
+}

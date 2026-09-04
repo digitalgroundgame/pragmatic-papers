@@ -261,7 +261,7 @@ export function DrilldownMapClient({
           data-drilldown-viewport=""
           data-view={view.parentId ? "child" : "overview"}
           aria-busy={busy || undefined}
-          className="bg-muted/30 relative min-h-80 min-w-0 flex-1 overflow-hidden rounded-sm"
+          className="bg-muted/30 @container relative min-h-[26rem] min-w-0 flex-1 overflow-hidden rounded-sm"
           style={{ aspectRatio: `${viewBox[2]} / ${viewBox[3]}` }}
         >
           {children}

@@ -83,7 +83,7 @@ describe("layouts", () => {
 
   it("clamps the seat-chart stage height", () => {
     expect(arcStageHeight(null)).toBe(360)
-    expect(arcStageHeight(100)).toBe(360)
+    expect(arcStageHeight(100)).toBe(280)
     expect(arcStageHeight(900)).toBe(520)
     expect(arcStageHeight(400.7)).toBe(400)
   })

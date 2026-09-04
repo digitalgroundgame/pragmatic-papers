@@ -2,7 +2,10 @@ import { FOUR_AUTHOR_SLUG, NARRATED_UPDATED_AT, NARRATION_SECONDS } from "./seed
 
 import type { User } from "@/payload-types"
 import { createArticle } from "@/endpoints/seed/articles"
-import { createMoCongressionalMapsArticle } from "@/endpoints/seed/features/interactive-maps"
+import {
+  createFederalCourtsArticle,
+  createMoCongressionalMapsArticle,
+} from "@/endpoints/seed/features/interactive-maps"
 import { createRichTextShowcaseArticle } from "@/endpoints/seed/features/rich-text-showcase"
 import {
   createCTABlockNode,
@@ -182,6 +185,7 @@ export async function main(): Promise<void> {
 
     // Interactive map article (slug: "missouri-shifting-margins-119-120-congressional-maps").
     await createMoCongressionalMapsArticle(payload, [writer], [], [], ctx, PUBLISHED_AT)
+    await createFederalCourtsArticle(payload, [writer], [], [], ctx, PUBLISHED_AT)
 
     // A four-author article, so the byline's collapsed state has something to
     // render: two names and "& 2 more" beside two avatars and a "+2".

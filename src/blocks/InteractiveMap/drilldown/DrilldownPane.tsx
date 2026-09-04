@@ -239,7 +239,7 @@ export function DrilldownPane({
               />
             )}
 
-            <div className="flex flex-1 flex-col gap-3 sm:flex-row sm:items-stretch">
+            <div className="flex flex-1 flex-col gap-3 @xl:flex-row @xl:items-stretch">
               <div className="min-w-0 flex-1">
                 {recordsState === "loading" && (
                   <p

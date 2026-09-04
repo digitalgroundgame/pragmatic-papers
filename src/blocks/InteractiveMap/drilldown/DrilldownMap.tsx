@@ -47,7 +47,10 @@ export function DrilldownMap({
     <figure
       data-interactive-map-block
       data-map-mode="drilldown"
-      className={cn("not-prose my-8 flex flex-col gap-2", className)}
+      // Breaks out of the prose column like media blocks do: the map, its selector and the
+      // pane need the width, and the article never reflows because the viewport's height is
+      // fixed by its aspect ratio.
+      className={cn("not-prose my-8 flex flex-col gap-2 lg:-mx-8 xl:-mx-16", className)}
     >
       {widgetTitle && (
         <figcaption className="text-center text-lg font-semibold">{widgetTitle}</figcaption>

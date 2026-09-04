@@ -6,7 +6,10 @@ import { createBannerBlocksArticle } from "./features/banners"
 import { createCodeBlocksArticle } from "./features/code-blocks"
 import { createCollectionGridHomePage } from "./features/collection-grid"
 import { createFootnotesArticle } from "./features/footnotes"
-import { createMoCongressionalMapsArticle } from "./features/interactive-maps"
+import {
+  createFederalCourtsArticle,
+  createMoCongressionalMapsArticle,
+} from "./features/interactive-maps"
 import { createMathBlocksArticle } from "./features/math-blocks"
 import { createMediaCollageArticle } from "./features/media-collage"
 import { createNarrationDemoArticle } from "./features/narration-demo"
@@ -288,6 +291,9 @@ export const seed = async (
           await createMoCongressionalMapsArticle(payload, [ctx.writers[0]!], ctx.media, [
             ctx.topics[0]!,
           ]),
+        )
+        ctx.mapArticles.push(
+          await createFederalCourtsArticle(payload, [ctx.writers[0]!], ctx.media, [ctx.topics[0]!]),
         )
       },
     },

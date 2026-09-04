@@ -31,6 +31,7 @@ const mockPayload = {
 const mockWriter = { id: 1, email: "writer@e2e.test", name: "Teagan Wordsmith" }
 const mockArticleId = 42
 const mockMapArticleId = 43
+const mockFederalCourtsArticleId = 44
 const mockVolume = { id: 99, title: "E2E Test Volume" }
 
 vi.mock("payload", () => ({
@@ -56,6 +57,7 @@ vi.mock("@/endpoints/seed/articles", () => ({
 
 vi.mock("@/endpoints/seed/features/interactive-maps", () => ({
   createMoCongressionalMapsArticle: vi.fn().mockResolvedValue(mockMapArticleId),
+  createFederalCourtsArticle: vi.fn().mockResolvedValue(mockFederalCourtsArticleId),
 }))
 
 // Merch products are seeded into their own collection before the home page
@@ -69,7 +71,7 @@ const { createUser } = await import("@/endpoints/seed/users")
 const { createArticle } = await import("@/endpoints/seed/articles")
 const { createRichTextShowcaseArticle } =
   await import("@/endpoints/seed/features/rich-text-showcase")
-const { createMoCongressionalMapsArticle } =
+const { createFederalCourtsArticle, createMoCongressionalMapsArticle } =
   await import("@/endpoints/seed/features/interactive-maps")
 const { seedMerchProducts } = await import("@/endpoints/seed/merch")
 const { main } = await import("../../scripts/seed-e2e")
@@ -159,6 +161,17 @@ describe("seed-e2e main()", () => {
     await main()
 
     expect(createMoCongressionalMapsArticle).toHaveBeenCalledWith(
+      mockPayload,
+      [mockWriter],
+      [],
+      [],
+      {
+        disableRevalidate: true,
+      },
+      "2026-06-04T00:00:00.000Z",
+    )
+    // The drilldown-mode article (interactive-map-drilldown.spec.ts) is seeded the same way.
+    expect(createFederalCourtsArticle).toHaveBeenCalledWith(
       mockPayload,
       [mockWriter],
       [],

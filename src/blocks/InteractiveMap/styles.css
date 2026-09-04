@@ -24,7 +24,8 @@
 
 /* Parents are the primary layer: uniform fill, no stroke of their own. */
 [data-drilldown-overview] path[data-role="parent"],
-[data-drilldown-local] path[data-role="parent"] {
+[data-drilldown-local] path[data-role="parent"],
+[data-drilldown-morph] path[data-role="parent"] {
   fill: var(--drilldown-parent-fill);
   stroke: none;
 }
@@ -32,7 +33,8 @@
 /* Children: transparent (not none) so the area stays hittable in the child view; thin
    borders that cut the parent fill up. */
 [data-drilldown-overview] path[data-role="child"],
-[data-drilldown-local] path[data-role="child"] {
+[data-drilldown-local] path[data-role="child"],
+[data-drilldown-morph] path[data-role="child"] {
   fill: transparent;
   stroke: var(--drilldown-child-stroke);
   stroke-width: 0.9;
@@ -41,7 +43,8 @@
 
 /* An inset is its parent's only presence in that spot, so it takes the parent fill + outline. */
 [data-drilldown-overview] path[data-role="child"][data-inset="true"],
-[data-drilldown-local] path[data-role="child"][data-inset="true"] {
+[data-drilldown-local] path[data-role="child"][data-inset="true"],
+[data-drilldown-morph] path[data-role="child"][data-inset="true"] {
   fill: var(--drilldown-parent-fill);
   stroke: var(--drilldown-parent-outline);
   stroke-width: 2;
@@ -49,7 +52,8 @@
 
 /* Stroke-only clones of each parent outline, painted above the child borders. */
 [data-drilldown-overview] path[data-role="outline"],
-[data-drilldown-local] path[data-role="outline"] {
+[data-drilldown-local] path[data-role="outline"],
+[data-drilldown-morph] path[data-role="outline"] {
   fill: none;
   stroke: var(--drilldown-parent-outline);
   stroke-width: 2;
@@ -58,7 +62,8 @@
 }
 
 [data-drilldown-overview] path[data-role="decorative"],
-[data-drilldown-local] path[data-role="decorative"] {
+[data-drilldown-local] path[data-role="decorative"],
+[data-drilldown-morph] path[data-role="decorative"] {
   fill: none;
   stroke: var(--drilldown-parent-outline);
   vector-effect: non-scaling-stroke;

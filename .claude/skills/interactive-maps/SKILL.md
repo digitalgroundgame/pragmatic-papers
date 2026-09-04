@@ -1,15 +1,27 @@
 ---
 name: interactive-maps
-description: Build a choropleth map for an article with the Interactive Map block — prepare the pre-projected SVG, upload it to Map Assets, and configure the block. Use whenever a writer wants regions shaded by a value (election margins, turnout, per-capita rates) in a story, or when a map renders blank, all-neutral, or without tooltips. Choropleth is the only map type the block draws today; further modes (starting with the Federal Courts map, #905) are in flight and not covered here.
+description: Build a map for an article with the Interactive Map block — a choropleth (regions shaded by a value) or a drilldown (an overview map whose regions open into their children and records). Covers preparing the pre-projected SVG, baking facts and records into it, uploading to Map Assets, configuring the block and validating before upload. Use whenever a writer wants regions shaded by a value (election margins, turnout, per-capita rates), an overview-to-detail map (circuits → districts → judges, states → counties → returns), or when a map renders blank, all-neutral, without tooltips, or drills into nothing.
 ---
 
-# Authoring a choropleth map
+# Authoring an Interactive Map
 
-The Interactive Map block draws **choropleths**: regions from a
-**pre-projected SVG**, shaded by a value, with hover/focus tooltips. It renders
-as real server-side JSX — no map library, no runtime fetch, no client-side
-projection. Everything the block knows comes out of the SVG file plus a handful
-of block fields.
+The Interactive Map block has two **modes**, selected by the block's `mode`
+field:
+
+- **Choropleth** (default): regions from a **pre-projected SVG**, shaded by a
+  value, with hover/focus tooltips. Fully server-rendered, no runtime fetch.
+  The first half of this document.
+- **Drilldown**: one overview map you drill into. Pick a region and the view
+  morphs into that region's children while a pane fills with the records that
+  belong to it. Child geometry and records load only on drill-in. See
+  [Drilldown mode](#drilldown-mode) below.
+
+Both take SVG out of the **Map Assets** collection, run it through the same
+sanitizer, and render inline SVG — no map library, no client-side projection.
+Everything the block knows comes out of the SVG file plus a handful of block
+fields.
+
+## Choropleth mode
 
 That makes the SVG a **contract**, and the failure modes are quiet: a file that
 breaks the contract renders blank, all-grey, or inert rather than erroring.
@@ -32,23 +44,10 @@ districts dominate the frame while dense urban ones vanish, which is the whole
 the story, say so in the copy, pair the map with a table or chart carrying the
 population weights, or reconsider the map entirely.
 
-Choropleth is also the **only** map type this block draws today — no
-cartogram, hex/tile grid, proportional-symbol, or dot-density mode, and no
-point/marker layer, since a path with no `id` is inert by design.
-
-More types are coming to **this same block**, selected by a `mode`
-discriminator, each bringing its own fields. The first is the Federal Courts
-map ([#905](https://github.com/digitalgroundgame/pragmatic-papers/issues/905)):
-a national circuit/district map with per-circuit drill-in and a judge-bench
-pane, with its data baked into the SVG asset rather than into collections.
-
-**That work is early and its API is still moving**, so nothing here documents
-it — treat everything below as the **choropleth mode**, which #905 is designed
-to leave working as-is. Two of this skill's specifics are on its list to change
-(the `svgContent` size cap and the sanitizer's tag allowlist), so re-check them
-against the code once it lands. Until then, don't fake an unsupported map type
-with overlapping paths or hand-placed markers; the sanitizer and parser will
-fight you, and the result won't survive the next upload.
+Choropleth mode draws **only** choropleths — no cartogram, hex/tile grid,
+proportional-symbol, or dot-density mode, and no point/marker layer, since a
+path with no `id` is inert by design. An overview-to-detail story is the
+[drilldown mode](#drilldown-mode), not a choropleth with overlapping paths.
 
 ## The contract
 
@@ -89,9 +88,9 @@ color and highlight together, and the label/value come from the first one.
 Uploaded SVG is run through `sanitizeMapSvg` before parsing. Only these
 survive:
 
-| Kept tags                                 | Kept attributes                                                                                                                                                                                      |
-| ----------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `<svg>` `<g>` `<path>` `<title>` `<desc>` | `id` `class` `style` `transform` `d` `viewBox` `preserveAspectRatio` `fill` `stroke` `stroke-width` `stroke-linecap` `stroke-linejoin` `vector-effect` `role` `tabindex`, any `data-*`, any `aria-*` |
+| Kept tags                                              | Kept attributes                                                                                                                                                                                      |
+| ------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `<svg>` `<g>` `<path>` `<title>` `<desc>` `<metadata>` | `id` `class` `style` `transform` `d` `viewBox` `preserveAspectRatio` `fill` `stroke` `stroke-width` `stroke-linecap` `stroke-linejoin` `vector-effect` `role` `tabindex`, any `data-*`, any `aria-*` |
 
 Everything else is dropped **silently**, in one of two ways:
 
@@ -157,7 +156,8 @@ paths, which regions got values, and the resolved color per region — then
 flags dropped tags, missing ids, and unvalued regions. Exits non-zero when the
 map would render inert.
 
-`--scale perRegion` and `--bias <n>` mirror the block's fields.
+`--scale perRegion` and `--bias <n>` mirror the block's fields. Add
+`--mode drilldown` for a drilldown asset (see below).
 `.claude/skills/interactive-maps/example-map.svg` is a minimal valid file to
 copy from; `src/endpoints/seed/fixtures/mo-districts-119.svg` is a real one.
 
@@ -170,9 +170,10 @@ intact, and a `beforeValidate` hook copies the file's text into a hidden
 edited outside the CMS must be re-uploaded**, not swapped on disk.
 
 - SVG only (`image/svg+xml` is the sole accepted mime type).
-- `svgContent` caps at 500,000 characters. A dense export blows past that —
-  simplify geometry (QGIS _Simplify_, or `mapshaper -simplify`) rather than
-  trimming coordinate precision by hand.
+- `svgContent` caps at 2,000,000 characters (raised for drilldown overviews,
+  which run ~800 KB with facts baked in). A dense export can still blow past
+  that — simplify geometry (QGIS _Simplify_, or `mapshaper -simplify`) rather
+  than trimming coordinate precision by hand.
 - Set **Label** (shown in the admin picker) and **Source** (attribution link
   for the geometry). Writers see the label when choosing an asset in the
   block, so name it precisely — `MO Congressional Districts, 119th`, not
@@ -188,6 +189,7 @@ block inside the article body.
 | Field                     | What it does                                                                                                                                                                                    |
 | ------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Widget Title**          | Optional heading above the whole widget.                                                                                                                                                        |
+| **Mode**                  | `Choropleth` (fields below) or `Drilldown` (its own **Overview SVG** and **Region Assets** — see [Drilldown mode](#drilldown-mode)). Existing blocks have no value and render as choropleths.   |
 | **Layout**                | `Side by side` / `Stacked` — how multiple maps are arranged. Both currently place maps in one column on phones and two columns from the `sm` breakpoint up, so the visible difference is small. |
 | **Color Scale**           | `Diverging Red/Blue` (color by value) or `Per-region custom colors` (no automatic fill; you set every color yourself).                                                                          |
 | **Color Bias**            | Warps the breakpoints — see below. Leave at `1` unless the map reads flat.                                                                                                                      |
@@ -248,6 +250,236 @@ the sign at export time.
 | Map is upside down                                 | Missing the y-flip: the wrapping `<g>` needs `scale(1,-1) translate(0,-<height>)`.                                          |
 | Fill/stroke set in the SVG is ignored              | Deliberate — region paths are filled by the scale. Only `id`-less decorative paths keep their own attributes.               |
 
+## Drilldown mode
+
+One **overview** map of parent regions; pick one and the view zooms/morphs
+into that region's **children** while a pane fills with the **records** that
+belong to it. Courts → districts → judges is one instance; states → counties →
+precinct returns, a country → provinces → indicators, a metro → neighborhoods →
+records are the same feature. Nothing in the block knows the vocabulary — it
+all comes out of the assets a writer uploads.
+
+The whole mode reads **self-contained SVG assets**: no collections, no runtime
+API, no rows in Postgres. A writer's pipeline bakes the data into the files.
+The reference pipeline is `scripts/bake-court-tracker-fixtures.ts`, which turns
+the court-tracker repository's output into the seeded Federal Courts article's
+assets; copy its shape for a new dataset.
+
+Source of truth is `src/blocks/InteractiveMap/drilldown/types.ts` (the
+contract) and `contract.ts` (validation). What follows is the checklist.
+
+### Two kinds of asset
+
+**Overview asset** (block field **Overview SVG**) — every parent region and,
+if you want them drawn, the child borders that cut them up, in one national
+projection. Its paths carry the region **facts**. Loaded and server-rendered on
+every article view, so the overview is meaningful without JavaScript.
+
+**Region assets** (block field **Region Assets**, one row per drillable parent,
+pinned by **Region ID** to a path `id` in the overview) — that parent's
+children in the parent's **own local projection**, plus the parent's and its
+children's **records** as a `<metadata>` JSON payload. Fetched from a stable
+same-origin URL only when a reader drills in. A parent with no geometry of its
+own (a court with no territory) still gets a region asset — with no paths, just
+`<metadata>` — and the block keeps the overview on screen while listing its
+children in the selector.
+
+### Path attributes (the reserved core)
+
+```svg
+<path id="ca8" data-region-label="8th Cir." data-layer="circuit"
+      data-summary="11 authorized · 11 active · 6 senior · 0 vacant"
+      data-children-label="districts" data-order="8"
+      data-seats="11" data-seats-r="10" data-seats-d="1" data-anchor="484339,528618"
+      data-authorized="11" data-active="11" d="M … L …"/>
+<path id="moed" data-parent-id="ca8" data-region-label="E.D. Mo." data-layer="district" d="…"/>
+<path id="akd"  data-parent-id="ca9" data-inset="true" data-region-label="D. Alaska" d="…"/>
+```
+
+| Attribute             | Meaning                                                                                                                                                                           |
+| --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `id`                  | Region key. Unique within the file; a child asset's path ids must match the overview's for the same region (that is what pairs shapes for the morph).                             |
+| `data-region-label`   | Display name in the selector, tooltip and pane heading. Without it the raw `id` shows.                                                                                            |
+| `data-parent-id`      | Parent region key. **Absent → top-level region** (drillable); present → child. This is how the hierarchy is inferred; `data-layer` is only a name.                                |
+| `data-layer`          | Free-form layer name (`circuit`, `district`, `county`…) kept on the rendered path for styling.                                                                                    |
+| `data-inset="true"`   | An inset drawn in its own box (Alaska, Hawaii, a callout). On the overview it stands in for its parent (click Alaska → the 9th); it crossfades instead of morphing.               |
+| `data-summary`        | One-line meta text under the pane heading and in the tooltip.                                                                                                                     |
+| `data-children-label` | Noun for the drill-in control: "View **districts** →". Default "details".                                                                                                         |
+| `data-order`          | Selector sort key (number). Unordered regions sort by label.                                                                                                                      |
+| `data-note`           | Italic note under the records in the pane. `data-note-seats` shows only in the seat-chart view.                                                                                   |
+| any other `data-*`    | An opaque **fact**: shown in the tooltip and pane as "Label: value". The label is the attribute name humanised (`active-count` → "Active count") unless the payload overrides it. |
+
+Multiple paths may share an id (islands as separate paths) but a single path
+with several `M…L…` subpaths is better — separate paths morph independently and
+only the first one's facts count. The validator warns.
+
+Path data that should **morph** must be **absolute `M`/`L` only**, and each
+morphing shape must be exported twice from **one** simplification so the
+overview and child versions share vertex count and order ("simplify once,
+export twice"). Anything else is not an error: the block detects it and falls
+back to zoom + crossfade for that view, and the validator tells you which
+shapes broke the invariant.
+
+Both files carry a `<g transform="scale(1,-1) translate(0, -(minY+maxY))">`
+Y-flip. The block **recomputes the flip from the viewBox** rather than trusting
+the string, and pads the viewBox 3% so edge strokes are not clipped.
+
+### The `<metadata>` payload
+
+One JSON object in a `<metadata>` element directly under `<svg>`, XML-escaped
+(`&` → `&amp;`, `<` → `&lt;`). Schema `pragmatic-papers/drilldown-map@1`.
+Every key is optional except `schema`; fact keys may be written with or without
+the `data-` prefix.
+
+```json
+{
+  "schema": "pragmatic-papers/drilldown-map@1",
+  "regions": [
+    { "id": "cafc", "label": "Fed. Cir.", "facts": { "seats": "12", "anchor": "2029097,935444" } },
+    { "id": "cit", "label": "CIT", "parentId": "cafc", "facts": { "seats": "9" } }
+  ],
+  "facts": {
+    "labels": { "authorized": "Authorized judgeships" },
+    "order": ["full-name", "tenure"],
+    "hide": ["internal-id"]
+  },
+  "seats": {
+    "totalFact": "seats",
+    "groups": [
+      { "fact": "seats-r", "label": "R-appointed", "color": "var(--map-positive-3, #e54858)" },
+      { "fact": "seats-d", "label": "D-appointed", "color": "var(--map-negative-3, #2c86ed)" }
+    ],
+    "vacant": { "label": "Vacant" },
+    "anchorFact": "anchor",
+    "labelFact": "short-label"
+  },
+  "records": {
+    "items": [
+      {
+        "_region": "ca8",
+        "full_name": "…",
+        "president_party": "Republican",
+        "status": "active",
+        "commission_date": "1990-10-12"
+      }
+    ],
+    "display": { "…": "see below" }
+  }
+}
+```
+
+- **`regions`** declares geometry-less regions (a court with no territory). They
+  appear in the selector and, with an `anchor` fact, as a seat block.
+- **`facts`** controls how path facts display: `labels` per key, `order`, and
+  `hide`. Facts the `seats`/`records` configuration consumes are hidden
+  automatically.
+- **`seats`** draws the **seat block** glyph next to each region visible in the
+  current view: one small square per seat (`totalFact`), coloured by group in
+  the order given, remainder drawn as vacant. `anchorFact` names a fact holding
+  `"x,y"` in **that file's** projected units (so a district's anchor lives in
+  the child asset, a circuit's in the overview); default is the centre of the
+  shape's largest sub-path. `labelFact` puts a short label above the block.
+- **`records`** are the rows shown when a region is selected. Each carries
+  `_region` (the region key) and optionally `_id` (stable React key) and
+  `_role: "associate"` for someone who sits beside the bench rather than in it
+  (a Circuit Justice). Everything else is opaque, referenced by `display`.
+
+Records for a parent **and its children** travel in the parent's region asset.
+Records for top-level regions that have no region asset, and small cross-cutting
+sets (who presides over each parent), go in the overview's payload. The pane
+merges both.
+
+### `records.display` — mapping fields to the pane
+
+| Key                    | Meaning                                                                                                                                              |
+| ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `title` / `shortTitle` | Full name field; compact label under the avatar.                                                                                                     |
+| `image`                | `{ url, source?, license?, credit? }` fields. A plain hotlinked `<img>` with an initials fallback; a non-empty `credit` renders a photo credit line. |
+| `category`             | `{ field, values: [{ value, label, shortLabel?, color }], other? }`. Colours the avatar ring, groups the seat chart, and drives the majority line.   |
+| `order`                | Sort field (ISO date or number), ascending — the timeline order.                                                                                     |
+| `status`               | `{ field, supernumerary: [values], labels }`. Supernumerary members sit outside the seat count: greyed, in the outer band, with Hide/Show/Include.   |
+| `seatsFact`            | Region fact holding the number of seats; vacancies = seats − active members.                                                                         |
+| `flags`                | `[{ field, label, symbol }]` booleans shown as a badge (★ Chief judge).                                                                              |
+| `cohort`               | Field whose shared value lights up on hover (everyone appointed by the same president).                                                              |
+| `marks`                | `[{ field, label }]` boolean fields offered as a "Mark:" toggle (dashed ring).                                                                       |
+| `details`              | Lines in the docked detail panel, in order — see below.                                                                                              |
+
+Detail lines: `{ field, label?, format?, when? }` with `format` one of `text`
+(default), `date`, `years-since` ("12 yr 3 mo" from the date to today), `term`
+(`endField` names the end date: "X served · Y remaining (expires D)" or, past
+the end, "term expired D · holding over pending a successor"), `link` (the
+field is an http(s) URL), or `reported` (shown only when the field is truthy,
+with optional `basisField` and `sourceField` — write the label hedged:
+"Reported to have a … affiliation"). `when` is
+`{ field, in?, notIn?, truthy? }` on the record; bake derived booleans into the
+records when a condition needs more than one field.
+
+### Validate before uploading
+
+```bash
+pnpm tsx .claude/skills/interactive-maps/validate-map-svg.ts national.svg --mode drilldown
+pnpm tsx .claude/skills/interactive-maps/validate-map-svg.ts circuits/ca8.svg --mode drilldown --overview national.svg --region ca8
+```
+
+The overview run reports the hierarchy it infers, the declared regions,
+records, seat-block inputs and the facts each region will show, and flags
+unlabelled regions, dangling `data-parent-id`s, a rejected payload, records
+whose `_region` matches nothing, and display fields no record has. The paired
+run additionally reports which shapes will morph and which fall back, and
+names the shapes whose vertex counts differ between the two files.
+
+### Configuring the block
+
+Set **Mode** to Drilldown. Upload the overview to Map Assets and pick it as
+**Overview SVG**; add one **Region Asset** row per drillable parent with the
+parent's path `id` as **Region ID**. **Sources / Attribution** works as in
+choropleth mode. Both **Widget Title** and the sources footer are shared.
+
+### What the reader gets
+
+- **Overview**: parent fills, child borders, stroke-only parent outlines, seat
+  blocks with labels, hover outline + tooltip (label, summary, facts). Keyboard
+  reachable: regions are focusable and Enter/Space selects.
+- **Select** (map, block or selector): a pane slides down over the map and
+  covers it. Stow (▲) keeps the selection and reveals the map; × or Escape
+  closes. The pane shows label, summary, facts, the bench as a **Timeline**
+  (commission order, vacancies parked at the end) or a **Seat chart**
+  (semicircle over the seat count, first category | vacancies | rest, dotted
+  majority line and count, supernumerary Hide/Show/Include), the **Mark**
+  toggles, the associate chip, notes, and the sticky docked **detail** panel
+  (hover fills it, click pins it).
+- **Drill in** ("View districts →"): a vertex morph from the overview
+  projection into the child projection (620 ms, commit-rate capped), or zoom +
+  crossfade where the invariant fails; the selector repopulates with the
+  children and a back control. Child regions select the same way.
+
+### Archivability
+
+The overview is complete in the initial HTML. Each region asset is referenced
+as `<link rel="prefetch" href="/map-assets/<file>">` — a stable, same-origin
+path (rewritten to the storage bucket in production) that a crawler following
+same-origin references will capture — and fetched from that same path on
+drill-in. Nothing load-bearing is fetched from a third party; hotlinked photos
+are the one exception and degrade to initials. A capture that includes the
+prefetched files drills in; one that does not still shows the full overview,
+selector, facts and any records carried in the overview payload.
+
+### Troubleshooting (drilldown)
+
+| Symptom                                           | Cause                                                                                                                  |
+| ------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| Region missing from the selector                  | Its path has no `id`, or its `data-parent-id` names a parent that does not exist (it is then listed at the top level). |
+| "View … →" never appears                          | No Region Asset row pinned to that id, and it has no children in the overview.                                         |
+| Pane says "No records for this region"            | No record has `_region` equal to that id, or the payload was rejected (run the validator: the error is printed).       |
+| Pane shows "Details could not be loaded"          | The region asset URL failed (deleted upload, wrong storage rewrite). Check `/map-assets/<filename>` in the browser.    |
+| Drill-in zooms and crossfades instead of morphing | By design when shapes are not absolute `M`/`L` or vertex counts differ. The paired validator run names the shapes.     |
+| No seat blocks                                    | No `seats` in the overview payload, or no region carries `totalFact`.                                                  |
+| Seat block in the wrong place                     | `anchor` is in the wrong file's units — a child's anchor must be in the child asset's projection.                      |
+| Tooltip lists machine facts (`seats-r`, `anchor`) | Add them to `facts.hide`, or reference them from `seats`/`display.seatsFact` so they hide automatically.               |
+| Facts show `Active count` instead of your wording | Add `facts.labels`.                                                                                                    |
+| Map upside down in the child view only            | The child file lacks the `scale(1,-1)` flip group (or has it while the overview does not); make both consistent.       |
+| Photos never appear                               | `display.image.url` names a field the records do not have, or the host blocks hotlinking; initials show instead.       |
+
 ## Reference
 
 - Block config and fields — `src/blocks/InteractiveMap/config.ts`
@@ -255,4 +487,7 @@ the sign at export time.
 - Parser (id / value / transform extraction) — `src/blocks/InteractiveMap/parseInlineSvg.ts`
 - Color scale, breakpoints, bias, formatting — `src/blocks/InteractiveMap/colorScale.ts`
 - Map Assets collection — `src/collections/MapAssets/index.ts`
-- Worked example (two maps, shared scale) — `src/endpoints/seed/features/interactive-maps/`
+- Drilldown contract and validation — `src/blocks/InteractiveMap/drilldown/types.ts`, `contract.ts`
+- Drilldown parsing, regions, morph, seat layout — `src/blocks/InteractiveMap/drilldown/`
+- Reference asset pipeline (courts) — `scripts/bake-court-tracker-fixtures.ts`
+- Worked examples — `src/endpoints/seed/features/interactive-maps/` (two choropleths with a shared scale; the Federal Courts drilldown)

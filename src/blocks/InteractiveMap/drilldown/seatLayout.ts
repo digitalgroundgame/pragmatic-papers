@@ -172,8 +172,12 @@ export function timelineStageHeight(count: number, width: number): number {
   return Math.max(220, TIMELINE_TOP + (rows - 1) * (TIMELINE_CELL + TIMELINE_ROW_GAP) + 22 + 18)
 }
 
-/** Seat-chart stage height: enough radial budget for up to four rings, capped. */
+/**
+ * Seat-chart stage height: as much of the pane as is free, clamped. 360 preserves the radial
+ * budget the geometry was tuned at; a pane that cannot give even that shrinks to 280 (still
+ * two rings for a mid-sized bench) rather than forcing the reader to scroll for the arc.
+ */
 export function arcStageHeight(available: number | null): number {
   if (available === null || !Number.isFinite(available) || available <= 0) return 360
-  return Math.max(360, Math.min(520, Math.floor(available)))
+  return Math.max(280, Math.min(520, Math.floor(available)))
 }

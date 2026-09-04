@@ -75,8 +75,139 @@
   pointer-events: none;
 }
 
-[data-drilldown-overview] path[role="button"],
-[data-drilldown-local] path[role="button"] {
+[data-drilldown-overview] path[tabindex],
+[data-drilldown-local] path[tabindex] {
   cursor: pointer;
   outline: none;
+}
+
+/* Layer stack: every layer fills the fixed-ratio viewport and letterboxes its own map. */
+[data-drilldown-viewport] {
+  position: relative;
+}
+[data-drilldown-layer] {
+  position: absolute;
+  inset: 0;
+  padding: 12px;
+  transition:
+    opacity 420ms ease,
+    transform 420ms ease;
+}
+[data-drilldown-layer] > svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+/* An idle layer must be display:none, not merely transparent: an opacity:0 map still
+   rasterises on every frame. */
+[data-drilldown-layer][data-state="hidden"],
+[data-drilldown-layer][data-state="hidden-hard"] {
+  display: none;
+}
+[data-drilldown-layer][data-state="fading"] {
+  opacity: 0;
+}
+[data-drilldown-layer][data-state="fade-in"],
+[data-drilldown-layer][data-state="visible"] {
+  opacity: 1;
+}
+[data-drilldown-layer][data-state="fade-out"] {
+  opacity: 0;
+  transform: scale(1.25);
+  pointer-events: none;
+}
+[data-drilldown-layer][data-no-transition] {
+  transition: none !important;
+}
+/* Morph layer: shown only while interpolating. The fade groups' opacity is written from JS
+   each frame, never transitioned. Seat-block labels must not render inside it — text
+   rasterisation during viewBox interpolation is a second, separate compositor freeze. */
+[data-drilldown-layer="morph"] {
+  transition: none;
+  pointer-events: none;
+}
+[data-drilldown-morph] text {
+  display: none;
+}
+
+/* Hover outline: top of the paint order inside the flip group, follows the target region. */
+path[data-drilldown-overlay] {
+  fill: none;
+  stroke: var(--drilldown-hover-stroke);
+  stroke-width: 2.5;
+  vector-effect: non-scaling-stroke;
+  pointer-events: none;
+  visibility: hidden;
+}
+path[data-drilldown-overlay][data-visible] {
+  visibility: visible;
+}
+[data-drilldown-shapes] path[data-selected] {
+  fill: var(--drilldown-selected-fill) !important;
+}
+
+/* Seat blocks: one square per seat. Position is in map units (glued to the region), size is
+   constant on screen. Hover/selected growth is written per frame from JS — see stage.ts. */
+[data-drilldown-blocks] {
+  pointer-events: none;
+}
+rect[data-block-hit] {
+  fill: transparent;
+  pointer-events: all;
+  cursor: pointer;
+}
+rect[data-block-seat] {
+  stroke: rgba(255, 255, 255, 0.85);
+  stroke-width: 0.6;
+  vector-effect: non-scaling-stroke;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+rect[data-block-seat="vacant"] {
+  fill: var(--background);
+  stroke: var(--foreground);
+  stroke-width: 0.8;
+}
+[data-drilldown-block][data-hover] rect[data-block-seat],
+[data-drilldown-block][data-selected] rect[data-block-seat] {
+  stroke: var(--foreground);
+  stroke-width: 0.9;
+}
+text[data-block-label] {
+  font-family: var(--font-sans, system-ui, sans-serif);
+  font-weight: 600;
+  fill: var(--foreground);
+  paint-order: stroke;
+  stroke: var(--background);
+  stroke-width: 2px;
+  stroke-linejoin: round;
+}
+
+/* Pane slides down over the map; stowed keeps the selection but reveals the map. */
+[data-drilldown-pane] {
+  transform: translateY(-100%);
+  transition: transform 260ms ease;
+  visibility: hidden;
+}
+[data-drilldown-pane][data-open] {
+  transform: translateY(0);
+  visibility: visible;
+}
+[data-drilldown-pane][data-open][data-stowed] {
+  transform: translateY(calc(-100% + 2.75rem));
+}
+
+/* Bench nodes animate between layouts; icons are HTML, so a transform transition is fine here. */
+.drilldown-node {
+  transition:
+    transform 480ms cubic-bezier(0.4, 0.1, 0.2, 1),
+    opacity 300ms ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-drilldown-layer],
+  [data-drilldown-pane],
+  .drilldown-node {
+    transition: none;
+  }
 }

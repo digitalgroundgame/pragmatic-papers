@@ -44,12 +44,7 @@ export function DrilldownOverviewSvg({
       overflow="visible"
       role="group"
       aria-label="Overview map"
-      style={{
-        display: "block",
-        width: "100%",
-        height: "auto",
-        aspectRatio: `${vb[2]} / ${vb[3]}`,
-      }}
+      style={{ display: "block", width: "100%", height: "100%" }}
     >
       <g transform={transform} data-drilldown-shapes="">
         {parents.map((p, i) => (
@@ -60,7 +55,6 @@ export function DrilldownOverviewSvg({
             data-role="parent"
             data-layer={p.layer ?? undefined}
             data-inset={p.inset ? "true" : undefined}
-            role="button"
             tabIndex={0}
             aria-label={labelFor(p)}
           />
@@ -75,7 +69,6 @@ export function DrilldownOverviewSvg({
             data-layer={p.layer ?? undefined}
             data-inset={p.inset ? "true" : undefined}
             // An inset stands in for its parent on the overview (click Alaska → the 9th).
-            role={p.inset ? "button" : undefined}
             tabIndex={p.inset ? 0 : undefined}
             aria-label={p.inset ? labelFor(p) : undefined}
           />

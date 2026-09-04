@@ -1,3 +1,4 @@
+import dynamic from "next/dynamic"
 import React from "react"
 
 import type { ResolvedDrilldown } from "@/blocks/InteractiveMap/adapters/drilldown"
@@ -6,13 +7,25 @@ import type { InteractiveMapBlock as InteractiveMapBlockProps } from "@/payload-
 import { cn } from "@/utilities/utils"
 
 import { DrilldownOverviewSvg } from "./DrilldownOverviewSvg"
-import { displayFacts } from "./regions"
+import type { DrilldownAsset } from "./types"
+
+// The drilldown client (morph engine, seat chart, record pane) is a lot of JavaScript that a
+// choropleth article must not pay for, so it is split into its own chunk — the same
+// precedent as MathJaxProvider. It still server-renders, so the overview is complete HTML.
+const DrilldownMapClient = dynamic(() =>
+  import("./DrilldownMapClient").then((m) => m.DrilldownMapClient),
+)
 
 interface DrilldownMapProps {
   widgetTitle?: string | null
   sources: InteractiveMapBlockProps["sources"]
   resolved: ResolvedDrilldown
   className?: string
+}
+
+/** The overview asset without its path data: the client reads geometry from the rendered SVG. */
+function stripGeometry(asset: DrilldownAsset): DrilldownAsset {
+  return { ...asset, paths: asset.paths.map((p) => ({ ...p, d: "" })) }
 }
 
 /**
@@ -29,7 +42,6 @@ export function DrilldownMap({
   className,
 }: DrilldownMapProps): React.ReactElement {
   const { overview, regions, childAssets } = resolved
-  const drillable = new Set(childAssets.map((a) => a.regionId))
 
   return (
     <figure
@@ -43,40 +55,11 @@ export function DrilldownMap({
       {childAssets.map((a) => (
         <link key={a.regionId} rel="prefetch" as="fetch" href={a.url} />
       ))}
-      <div data-drilldown-map="" className="flex flex-col gap-3 sm:flex-row sm:items-start">
-        <nav
-          aria-label="Regions"
-          className="text-muted-foreground flex shrink-0 flex-row flex-wrap gap-1 text-xs sm:w-40 sm:flex-col"
-        >
-          {regions.topLevel.map((id) => {
-            const region = regions.byId[id]!
-            return (
-              <div
-                key={id}
-                className="bg-muted/40 rounded-xs px-2 py-1"
-                data-region-item={id}
-                data-drillable={drillable.has(id) ? "true" : undefined}
-              >
-                <span className="text-foreground font-medium">{region.label}</span>
-                {region.summary && <span className="block opacity-80">{region.summary}</span>}
-                {displayFacts(region, overview.payload).length > 0 && (
-                  <dl className="mt-0.5 grid grid-cols-[auto_1fr] gap-x-2">
-                    {displayFacts(region, overview.payload).map((f) => (
-                      <React.Fragment key={f.key}>
-                        <dt className="opacity-70">{f.label}</dt>
-                        <dd className="font-medium">{f.value}</dd>
-                      </React.Fragment>
-                    ))}
-                  </dl>
-                )}
-              </div>
-            )
-          })}
-        </nav>
-        <div className="min-w-0 flex-1" data-drilldown-viewport="">
+      <DrilldownMapClient overview={stripGeometry(overview)} childAssets={childAssets}>
+        <div data-drilldown-layer="overview" data-state="visible">
           <DrilldownOverviewSvg asset={overview} regions={regions} />
         </div>
-      </div>
+      </DrilldownMapClient>
       <Sources sources={sources} colorBias={null} />
     </figure>
   )

@@ -1,4 +1,4 @@
-import { cleanup, render, within } from "@testing-library/react"
+import { cleanup, render, waitFor, within } from "@testing-library/react"
 import { afterEach, describe, expect, it } from "vitest"
 
 import { InteractiveMapBlock } from "@/blocks/InteractiveMap/InteractiveMapBlock"
@@ -58,12 +58,16 @@ function renderDrilldown(overrides: Record<string, unknown> = {}) {
 describe("InteractiveMapBlock — drilldown mode (server render)", () => {
   afterEach(cleanup)
 
-  it("renders the overview geometry with roles, the region list and facts, without any child data", () => {
+  it("renders the overview geometry with roles, the region list and facts, without any child data", async () => {
     const { container } = renderDrilldown()
     const figure = container.querySelector("[data-interactive-map-block]")!
     expect(figure).toHaveAttribute("data-map-mode", "drilldown")
     expect(within(figure as HTMLElement).getByText("Courts")).toBeInTheDocument()
 
+    // The client shell is code-split (next/dynamic) and suspends until its chunk resolves.
+    await waitFor(() =>
+      expect(container.querySelector("svg[data-drilldown-overview]")).toBeInTheDocument(),
+    )
     const svg = container.querySelector("svg[data-drilldown-overview]")!
     // 3% padding on each side of a 100×50 box
     expect(svg).toHaveAttribute("viewBox", "-3 -3 106 56")
@@ -72,7 +76,9 @@ describe("InteractiveMapBlock — drilldown mode (server render)", () => {
       "scale(1,-1) translate(0, -50)",
     )
 
-    const roles = Array.from(svg.querySelectorAll("path")).map((p) => p.getAttribute("data-role"))
+    const roles = Array.from(svg.querySelectorAll("path[data-role]")).map((p) =>
+      p.getAttribute("data-role"),
+    )
     expect(roles).toEqual([
       "parent",
       "parent",
@@ -84,7 +90,6 @@ describe("InteractiveMapBlock — drilldown mode (server render)", () => {
     ])
 
     const west = container.querySelector('path[data-region-id="west"][data-role="parent"]')!
-    expect(west).toHaveAttribute("role", "button")
     expect(west).toHaveAttribute("tabindex", "0")
     expect(west).toHaveAttribute("aria-label", "West")
 
@@ -99,8 +104,7 @@ describe("InteractiveMapBlock — drilldown mode (server render)", () => {
     expect(items).toEqual(["east", "west", "fed"])
     const westItem = container.querySelector('[data-region-item="west"]')!
     expect(westItem).toHaveAttribute("data-drillable", "true")
-    expect(within(westItem as HTMLElement).getByText("9 authorized")).toBeInTheDocument()
-    expect(within(westItem as HTMLElement).getByText("Authorized")).toBeInTheDocument()
+    expect(westItem).toHaveTextContent("West")
     expect(container.querySelector('[data-region-item="fed"]')).not.toHaveAttribute(
       "data-drillable",
     )

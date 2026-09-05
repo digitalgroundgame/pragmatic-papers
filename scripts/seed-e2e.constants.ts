@@ -16,17 +16,20 @@ export const FOUR_AUTHOR_SLUG = "committee-work-notes-from-a-crowded-byline"
 export const NARRATION_SECONDS = 3
 
 /**
- * The narrated article's revision stamp, pinned by the seed. Payload stamps
- * `updatedAt` on every save, which would otherwise put the day the seed ran
- * into the dateline — and into every baseline that shows it.
+ * The revision stamp the seed pins onto every article and volume it creates.
+ * Payload stamps `updatedAt` with the current time on every non-draft save,
+ * which would otherwise put the day the seed ran into each hero's dateline —
+ * and into every baseline that frames one. Pinning only the narrated article
+ * left the share-button baselines reading the seed date, so they rotted the
+ * first time a run rebuilt the page instead of serving a cached prerender.
  */
-export const NARRATED_UPDATED_AT = "2026-06-11T16:30:00.000Z"
+export const SEEDED_UPDATED_AT = "2026-06-11T16:30:00.000Z"
 
 /**
- * What the hero prints for that article's two instants, in the publication's
- * timezone (America/New_York). Asserted in article-meta-row.spec.ts: if either
+ * What a hero prints for its two instants, in the publication's timezone
+ * (America/New_York). Asserted wherever a spec frames a dateline: if either
  * date ever goes back to tracking the clock, the spec fails loudly instead of
  * the baseline quietly rotting.
  */
-export const NARRATED_DATELINE = "June 3, 2026"
-export const NARRATED_REVISION = "Updated June 11, 2026"
+export const SEEDED_DATELINE = "June 3, 2026"
+export const SEEDED_REVISION = "Updated June 11, 2026"

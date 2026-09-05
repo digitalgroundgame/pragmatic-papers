@@ -1,0 +1,47 @@
+import { parseDrilldownAssetJson } from "./parseAsset"
+import { parseDrilldownAssetDocument } from "./parseAssetDom"
+import type { DrilldownAsset } from "./types"
+
+/**
+ * Fetches and parses child assets exactly once each, even under concurrent requests.
+ *
+ * Dedupe on the in-flight promise, not the finished value: a double-click on "View …" used to
+ * race through the gap between the cache check and the cache write and inject one layer per
+ * click. Failures are not cached, so a transient network error can be retried.
+ *
+ * Two wire formats: an uploaded SVG (the block) and a JSON asset composed on the server (an
+ * interactive page's region route), told apart by the response's content type.
+ */
+export class AssetLoader {
+  private readonly loaded = new Map<string, DrilldownAsset>()
+  private readonly pending = new Map<string, Promise<DrilldownAsset>>()
+
+  constructor(private readonly fetchImpl: typeof fetch = (...args) => fetch(...args)) {}
+
+  get(url: string): DrilldownAsset | undefined {
+    return this.loaded.get(url)
+  }
+
+  load(url: string): Promise<DrilldownAsset> {
+    const cached = this.loaded.get(url)
+    if (cached) return Promise.resolve(cached)
+    const inFlight = this.pending.get(url)
+    if (inFlight) return inFlight
+    const p = (async () => {
+      const res = await this.fetchImpl(url, { credentials: "same-origin" })
+      if (!res.ok) throw new Error(`${url}: HTTP ${res.status}`)
+      const contentType = res.headers?.get?.("content-type") ?? ""
+      const asset = contentType.includes("json")
+        ? parseDrilldownAssetJson(await res.json())
+        : parseDrilldownAssetDocument(await res.text())
+      this.loaded.set(url, asset)
+      this.pending.delete(url)
+      return asset
+    })().catch((err: unknown) => {
+      this.pending.delete(url)
+      throw err
+    })
+    this.pending.set(url, p)
+    return p
+  }
+}

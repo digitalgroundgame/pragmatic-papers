@@ -68,7 +68,11 @@ export const MapAssets: CollectionConfig = {
     {
       name: "svgContent",
       type: "textarea",
-      maxLength: 500000,
+      // 2,000,000 chars: a national-scale drilldown overview lands around 720 KB before any
+      // data-* facts are baked in, and the largest child asset (geometry plus its <metadata>
+      // records) approaches 500 KB. The column is an unbounded varchar, so this is a
+      // validation limit only — raising it needs no migration.
+      maxLength: 2_000_000,
       admin: {
         description:
           "Auto-populated with the uploaded SVG's text content so blocks can read it without a runtime file fetch.",

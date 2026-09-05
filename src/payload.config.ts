@@ -1,6 +1,8 @@
 import { isAdmin } from "@/access/roles"
 import { Articles } from "@/collections/Articles"
 import { Categories } from "@/collections/Categories"
+import { Interactives } from "@/collections/Interactives"
+import { InteractiveSnapshots } from "@/collections/InteractiveSnapshots"
 import { MapAssets } from "@/collections/MapAssets"
 import { Media } from "@/collections/Media"
 import { Merch } from "@/collections/Merch"
@@ -13,6 +15,7 @@ import { defaultLexical } from "@/fields/defaultLexical"
 import { Footer } from "@/Footer/config"
 import { ArticleRecommendations } from "@/globals/ArticleRecommendations/config"
 import { Header } from "@/Header/config"
+import { syncInteractiveDataTask } from "@/jobs/syncInteractiveData"
 import { syncShopifyProductsTask } from "@/jobs/syncShopifyProducts"
 import { updateRecommendationsTask } from "@/jobs/updateRecommendations"
 import { plugins } from "@/plugins"
@@ -106,6 +109,8 @@ export default buildConfig({
     Webhooks,
     Topics,
     Merch,
+    Interactives,
+    InteractiveSnapshots,
   ],
   cors: [getServerSideURL()].filter(Boolean),
   globals: [Header, Footer, ArticleRecommendations],
@@ -156,6 +161,6 @@ export default buildConfig({
       },
     },
     autoRun: [{ cron: "*/5 * * * *", queue: "default" }],
-    tasks: [updateRecommendationsTask, syncShopifyProductsTask],
+    tasks: [updateRecommendationsTask, syncShopifyProductsTask, syncInteractiveDataTask],
   },
 })

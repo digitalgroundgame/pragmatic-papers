@@ -162,15 +162,26 @@ in `tests/e2e/README.md`.
 ### Interactive maps
 
 Building or debugging an Interactive Map block — preparing the pre-projected
-SVG, uploading a Map Asset, or chasing a map that renders blank, all-grey, or
-without tooltips? Use the **`interactive-maps`** skill
-(`.claude/skills/interactive-maps/SKILL.md`). It covers the SVG contract, the
-sanitizer allowlist that silently eats most exports, and the R+/D+ color
-scale, and ships a validator:
-`pnpm tsx .claude/skills/interactive-maps/validate-map-svg.ts <file.svg>`.
-The block draws **choropleths only** for now; further modes land on the same
-block behind a `mode` discriminator, starting with the Federal Courts map
-(#905), so the skill describes the choropleth mode specifically.
+SVG, baking facts and records into a drilldown asset, uploading a Map Asset,
+or chasing a map that renders blank, all-grey, without tooltips, or drills
+into nothing? Use the **`interactive-maps`** skill
+(`.claude/skills/interactive-maps/SKILL.md`). It covers both modes — the
+**choropleth** (regions shaded by a value, R+/D+ color scale) and the
+**drilldown** (an overview map whose regions open into their children and
+records, lazily loaded from self-contained SVG assets) — the sanitizer
+allowlist that silently eats most exports, the drilldown asset contract, and
+ships a validator:
+`pnpm tsx .claude/skills/interactive-maps/validate-map-svg.ts <file.svg> [--mode drilldown]`.
+The reference drilldown pipeline is `scripts/bake-court-tracker-fixtures.ts`
+(Federal Courts, #905).
+
+The same skill covers **interactive pages** (`/interactives/<slug>`, the
+`interactives` + `interactive-snapshots` collections, `src/interactives/`):
+long-lived drilldowns whose data a researcher's feed keeps updating. Pragmatic
+Papers owns geometry and presentation in code; the feed owns facts and records;
+`syncInteractiveData` pulls it daily into draft snapshots an editor publishes.
+`scripts/snapshot-federal-courts.ts` regenerates the Federal Courts geometry
+and data fixture from a court-tracker checkout.
 
 ## Filing & triaging GitHub issues
 

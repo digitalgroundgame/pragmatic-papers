@@ -177,6 +177,8 @@ export interface Config {
     webhooks: Webhook;
     topics: Topic;
     merch: Merch;
+    interactives: Interactive;
+    'interactive-snapshots': InteractiveSnapshot;
     search: Search;
     redirects: Redirect;
     forms: Form;
@@ -199,6 +201,8 @@ export interface Config {
     webhooks: WebhooksSelect<false> | WebhooksSelect<true>;
     topics: TopicsSelect<false> | TopicsSelect<true>;
     merch: MerchSelect<false> | MerchSelect<true>;
+    interactives: InteractivesSelect<false> | InteractivesSelect<true>;
+    'interactive-snapshots': InteractiveSnapshotsSelect<false> | InteractiveSnapshotsSelect<true>;
     search: SearchSelect<false> | SearchSelect<true>;
     redirects: RedirectsSelect<false> | RedirectsSelect<true>;
     forms: FormsSelect<false> | FormsSelect<true>;
@@ -234,6 +238,7 @@ export interface Config {
     tasks: {
       updateRecommendations: TaskUpdateRecommendations;
       syncShopifyProducts: TaskSyncShopifyProducts;
+      syncInteractiveData: TaskSyncInteractiveData;
       schedulePublish: TaskSchedulePublish;
       inline: {
         input: unknown;
@@ -1235,6 +1240,128 @@ export interface Webhook {
   createdAt: string;
 }
 /**
+ * Interactive pages drawn by a code-owned profile from a researcher's data feed. Editors own the words, the sources and when a data snapshot goes live; the feed owns the numbers.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "interactives".
+ */
+export interface Interactive {
+  id: number;
+  title: string;
+  /**
+   * Which code-owned profile draws this interactive: its geometry, presentation and feed adapter. Adding one is a code change under src/interactives.
+   */
+  profile: 'federal-courts';
+  /**
+   * Standfirst shown above the interactive.
+   */
+  intro?: {
+    root: {
+      type: string;
+      children: {
+        type: any;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  } | null;
+  /**
+   * Shown as a small attribution footer beneath the interactive.
+   */
+  sources?:
+    | {
+        link?: LinkField;
+        id?: string | null;
+      }[]
+    | null;
+  /**
+   * How the sync job reads this interactive's data. It runs daily and can be run now from Interactive Snapshots. Each run that finds new data writes a draft snapshot for review; auto-publish skips the review.
+   */
+  feed: {
+    /**
+     * Uncheck to freeze the data at its current snapshot.
+     */
+    enabled?: boolean | null;
+    /**
+     * Branch, tag or commit of the researcher's repository to read. A tag pins the data; a branch follows their latest.
+     */
+    ref: string;
+    /**
+     * Publish each new snapshot as soon as it validates, without an editor's review.
+     */
+    autoPublish?: boolean | null;
+  };
+  meta?: {
+    title?: string | null;
+    /**
+     * Maximum upload file size: 12MB. Recommended file size for images is <500KB.
+     */
+    image?: (number | null) | Media;
+    description?: string | null;
+  };
+  publishedAt?: string | null;
+  /**
+   * When enabled, the slug will auto-generate from the title field on save and autosave.
+   */
+  generateSlug?: boolean | null;
+  slug: string;
+  updatedAt: string;
+  createdAt: string;
+  _status?: ('draft' | 'published') | null;
+}
+/**
+ * What the researcher's feed said the last time the sync read it. Each sync that changes the data writes a new draft version; publish it to put it in front of readers, or set the interactive's feed to auto-publish. Fields are read-only — the feed is the source of truth.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "interactive-snapshots".
+ */
+export interface InteractiveSnapshot {
+  id: number;
+  label: string;
+  interactive: number | Interactive;
+  /**
+   * What the feed contained — regions, records and extra datasets.
+   */
+  summary?: string | null;
+  /**
+   * Upstream's own build stamp.
+   */
+  sourceVersion: string;
+  /**
+   * Branch, tag or commit read.
+   */
+  sourceRef?: string | null;
+  /**
+   * Hash of what we render; a new version exists only when this moves.
+   */
+  contentHash: string;
+  /**
+   * When upstream generated the data.
+   */
+  generatedAt: string;
+  /**
+   * When the sync last confirmed this version.
+   */
+  syncedAt: string;
+  data:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  updatedAt: string;
+  createdAt: string;
+  _status?: ('draft' | 'published') | null;
+}
+/**
  * This is a collection of automatically created search results. These results are used by the global site search and will be updated automatically as documents in the CMS are created or updated.
  *
  * This interface was referenced by `Config`'s JSON-Schema
@@ -1386,7 +1513,12 @@ export interface PayloadJob {
     | {
         executedAt: string;
         completedAt: string;
-        taskSlug: 'inline' | 'updateRecommendations' | 'syncShopifyProducts' | 'schedulePublish';
+        taskSlug:
+          | 'inline'
+          | 'updateRecommendations'
+          | 'syncShopifyProducts'
+          | 'syncInteractiveData'
+          | 'schedulePublish';
         taskID: string;
         input?:
           | {
@@ -1419,7 +1551,9 @@ export interface PayloadJob {
         id?: string | null;
       }[]
     | null;
-  taskSlug?: ('inline' | 'updateRecommendations' | 'syncShopifyProducts' | 'schedulePublish') | null;
+  taskSlug?:
+    | ('inline' | 'updateRecommendations' | 'syncShopifyProducts' | 'syncInteractiveData' | 'schedulePublish')
+    | null;
   queue?: string | null;
   waitUntil?: string | null;
   processing?: boolean | null;
@@ -1481,6 +1615,14 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'merch';
         value: number | Merch;
+      } | null)
+    | ({
+        relationTo: 'interactives';
+        value: number | Interactive;
+      } | null)
+    | ({
+        relationTo: 'interactive-snapshots';
+        value: number | InteractiveSnapshot;
       } | null)
     | ({
         relationTo: 'search';
@@ -2073,6 +2215,59 @@ export interface MerchSelect<T extends boolean = true> {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "interactives_select".
+ */
+export interface InteractivesSelect<T extends boolean = true> {
+  title?: T;
+  profile?: T;
+  intro?: T;
+  sources?:
+    | T
+    | {
+        link?: T | LinkFieldSelect<T>;
+        id?: T;
+      };
+  feed?:
+    | T
+    | {
+        enabled?: T;
+        ref?: T;
+        autoPublish?: T;
+      };
+  meta?:
+    | T
+    | {
+        title?: T;
+        image?: T;
+        description?: T;
+      };
+  publishedAt?: T;
+  generateSlug?: T;
+  slug?: T;
+  updatedAt?: T;
+  createdAt?: T;
+  _status?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "interactive-snapshots_select".
+ */
+export interface InteractiveSnapshotsSelect<T extends boolean = true> {
+  label?: T;
+  interactive?: T;
+  summary?: T;
+  sourceVersion?: T;
+  sourceRef?: T;
+  contentHash?: T;
+  generatedAt?: T;
+  syncedAt?: T;
+  data?: T;
+  updatedAt?: T;
+  createdAt?: T;
+  _status?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "search_select".
  */
 export interface SearchSelect<T extends boolean = true> {
@@ -2480,6 +2675,22 @@ export interface TaskSyncShopifyProducts {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "TaskSyncInteractiveData".
+ */
+export interface TaskSyncInteractiveData {
+  input: {
+    interactiveId?: number | null;
+    force?: boolean | null;
+  };
+  output: {
+    synced: number;
+    unchanged: number;
+    skipped: number;
+    failed: number;
+  };
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "TaskSchedulePublish".
  */
 export interface TaskSchedulePublish {
@@ -2498,6 +2709,10 @@ export interface TaskSchedulePublish {
       | ({
           relationTo: 'volumes';
           value: number | Volume;
+        } | null)
+      | ({
+          relationTo: 'interactives';
+          value: number | Interactive;
         } | null);
     global?: string | null;
     user?: (number | null) | User;
@@ -2549,49 +2764,77 @@ export interface InteractiveMapBlock {
    * Optional heading displayed above the map(s).
    */
   widgetTitle?: string | null;
-  layout: 'row' | 'stacked';
+  /**
+   * Choropleth colors one or more maps by a numeric value. Drilldown shows one overview map whose regions open into their child regions and records; the child geometry and records load only when a reader drills in.
+   */
+  mode: 'choropleth' | 'drilldown';
+  layout?: ('row' | 'stacked') | null;
   /**
    * Diverging Red/Blue colors each region by its value (negative = D+, positive = R+). Per-region uses the color you set on each region row.
    */
-  colorScale: 'divergingRedBlue' | 'perRegion';
+  colorScale?: ('divergingRedBlue' | 'perRegion') | null;
   /**
    * Warps the color breakpoints along a curve between ±1 (neutral) and ±100 (max). Above 1 = breakpoints shift toward the low end, so small margins get strong colors. Below 1 = breakpoints shift toward the high end, requiring larger margins for strong colors. Default: 1 (linear).
    */
   colorBias?: number | null;
-  maps: {
-    title?: string | null;
+  maps?:
+    | {
+        title?: string | null;
+        /**
+         * Upload an SVG whose paths are already projected (e.g. Albers Equal Area). Each region path must carry an id attribute that matches a Region ID below.
+         */
+        svgAsset: number | MapAsset;
+        /**
+         * The data attribute on each path that holds the numeric value for the color scale (e.g. data-margin). When set, values are read directly from the SVG — no need to enter them manually in the Overrides table.
+         */
+        dataAttribute?: string | null;
+        overrides?:
+          | {
+              /**
+               * Must match the id attribute on the SVG path.
+               */
+              regionId: string;
+              label?: string | null;
+              /**
+               * For Diverging Red/Blue: signed margin (positive = R+, negative = D+).
+               */
+              value?: number | null;
+              /**
+               * CSS color. Overrides the automatic color scale for this region.
+               */
+              color?: string | null;
+              id?: string | null;
+            }[]
+          | null;
+        /**
+         * Flip the color scale polarity for this map (positive values get the negative palette and vice versa).
+         */
+        invertColors?: boolean | null;
+        id?: string | null;
+      }[]
+    | null;
+  /**
+   * The overview SVG's paths carry region facts as data-* attributes; each region asset's <metadata> carries the records shown when a reader drills into that region. See the interactive-maps skill for the asset contract and validator.
+   */
+  drilldown?: {
     /**
-     * Upload an SVG whose paths are already projected (e.g. Albers Equal Area). Each region path must carry an id attribute that matches a Region ID below.
+     * Pre-projected SVG of the parent regions (with child borders if you want them drawn). Each region path needs an id; data-region-label, data-parent-id, data-layer and data-inset are reserved, every other data-* is shown as a fact.
      */
-    svgAsset: number | MapAsset;
+    overviewAsset: number | MapAsset;
     /**
-     * The data attribute on each path that holds the numeric value for the color scale (e.g. data-margin). When set, values are read directly from the SVG — no need to enter them manually in the Overrides table.
+     * One SVG per drillable region: that region's children in their own projection, plus the region's records in a <metadata> JSON payload. Loaded only when a reader drills in.
      */
-    dataAttribute?: string | null;
-    overrides?:
+    regionAssets?:
       | {
           /**
-           * Must match the id attribute on the SVG path.
+           * Must match the id of a region path in the overview SVG (or a region declared in its <metadata>).
            */
           regionId: string;
-          label?: string | null;
-          /**
-           * For Diverging Red/Blue: signed margin (positive = R+, negative = D+).
-           */
-          value?: number | null;
-          /**
-           * CSS color. Overrides the automatic color scale for this region.
-           */
-          color?: string | null;
+          svgAsset: number | MapAsset;
           id?: string | null;
         }[]
       | null;
-    /**
-     * Flip the color scale polarity for this map (positive values get the negative palette and vice versa).
-     */
-    invertColors?: boolean | null;
-    id?: string | null;
-  }[];
+  };
   /**
    * Shown as a small attribution footer beneath the maps.
    */

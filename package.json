@@ -51,7 +51,7 @@
     "@base-ui/react": "^1.4.1",
     "@google-analytics/data": "^5.2.2",
     "@next/third-parties": "16.2.10",
-    "@payloadcms/admin-bar": "^3.84.1",
+    "@payloadcms/admin-bar": "^3.88.0",
     "@payloadcms/db-postgres": "^3.84.1",
     "@payloadcms/live-preview-react": "^3.84.1",
     "@payloadcms/next": "^3.84.1",

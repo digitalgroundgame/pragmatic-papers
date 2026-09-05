@@ -222,6 +222,46 @@ text[data-block-label] {
     opacity 300ms ease;
 }
 
+/* Stacked layout (an interactive page): region strip, map at a capped height, pane beneath —
+   the same arrangement on every viewport. The map letterboxes inside the stage height instead
+   of dictating it, so a wide screen gets a wide map, not a tall one. */
+[data-drilldown-map][data-layout="stacked"] {
+  --drilldown-stage-h: clamp(18rem, 78vw, 26rem);
+}
+@media (min-width: 48rem) {
+  [data-drilldown-map][data-layout="stacked"] {
+    --drilldown-stage-h: clamp(22rem, 56vh, 34rem);
+  }
+}
+[data-drilldown-map][data-layout="stacked"] [data-drilldown-viewport] {
+  height: var(--drilldown-stage-h);
+}
+/* Selector strip: one row that scrolls on a phone, wraps from tablet up. */
+[data-drilldown-selector][data-layout="stacked"] {
+  scrollbar-width: thin;
+}
+
+/* A stacked pane that is not open collapses to its empty-state bar; open, it never has an
+   inner scroll region — the page scrolls. */
+[data-drilldown-pane][data-variant="stacked"] {
+  transform: none;
+  transition: none;
+  visibility: visible;
+}
+
+/* Keyboard focus on a region: the hover outline already follows focus (stage.ts); this adds
+   the ring on the map itself so the reader knows the map has focus at all. */
+[data-drilldown-viewport]:has(path[tabindex]:focus-visible) {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+/* Compact map (a narrow viewport): seat blocks lose their labels and shrink — the R/D balance
+   still reads at a glance and the blocks stop colliding. Set by stage.ts per layer. */
+[data-drilldown-compact] text[data-block-label] {
+  display: none;
+}
+
 @media (prefers-reduced-motion: reduce) {
   [data-drilldown-layer],
   [data-drilldown-pane],

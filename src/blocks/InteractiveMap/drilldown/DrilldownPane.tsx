@@ -1,7 +1,8 @@
 "use client"
 
-import React, { useEffect, useRef, useState } from "react"
+import React, { useEffect, useImperativeHandle, useRef, useState } from "react"
 
+import { Button } from "@/components/ui/button"
 import { cn } from "@/utilities/utils"
 
 import {
@@ -16,6 +17,13 @@ import { buildBench, type RegionRecords } from "./records"
 import type { DisplayFact } from "./regions"
 import type { DrilldownRecord, RecordDisplay, RegionInfo } from "./types"
 
+export interface DrilldownPaneHandle {
+  /** Move keyboard focus to the pane's heading (after a keyboard selection). */
+  focusHeading(): void
+  /** Bring the pane into view (after a selection on a small screen). */
+  scrollIntoView(): void
+}
+
 interface DrilldownPaneProps {
   region: RegionInfo | null
   facts: DisplayFact[]
@@ -24,11 +32,23 @@ interface DrilldownPaneProps {
   open: boolean
   stowed: boolean
   canDrill: boolean
+  /**
+   * `overlay`: slides down over the map inside its viewport and can be stowed (the block).
+   * `stacked`: a section in flow beneath the map, always present, with an empty state (the page).
+   */
+  variant?: "overlay" | "stacked"
+  /** Shown in the empty state of the stacked variant. */
+  emptyHint?: string
   onDrill(): void
   onClose(): void
   onStow(stowed: boolean): void
+  ref?: React.Ref<DrilldownPaneHandle>
 }
 
+/**
+ * A group of toggle buttons with one tab stop: arrow keys move between options and choose
+ * them, as a radio group would, without changing the buttons' role for tests and readers.
+ */
 function Segmented<T extends string>({
   label,
   value,
@@ -40,19 +60,41 @@ function Segmented<T extends string>({
   options: { value: T; label: string }[]
   onChange(v: T): void
 }): React.ReactElement {
+  const onKeyDown = (e: React.KeyboardEvent<HTMLDivElement>): void => {
+    const idx = options.findIndex((o) => o.value === value)
+    let next = idx
+    if (e.key === "ArrowRight" || e.key === "ArrowDown") next = (idx + 1) % options.length
+    else if (e.key === "ArrowLeft" || e.key === "ArrowUp")
+      next = (idx - 1 + options.length) % options.length
+    else if (e.key === "Home") next = 0
+    else if (e.key === "End") next = options.length - 1
+    else return
+    e.preventDefault()
+    const target = options[next]!
+    onChange(target.value)
+    for (const b of e.currentTarget.querySelectorAll<HTMLButtonElement>("button[data-value]"))
+      if (b.dataset.value === target.value) b.focus()
+  }
   return (
-    <div role="group" aria-label={label} className="inline-flex items-center gap-1 text-xs">
-      <span className="text-muted-foreground">{label}</span>
-      <div className="border-border inline-flex overflow-hidden rounded-xs border">
+    <div role="group" aria-label={label} className="inline-flex items-center gap-1.5 text-sm">
+      <span className="text-muted-foreground text-xs">{label}</span>
+      <div
+        className="bg-muted/60 border-border inline-flex overflow-hidden rounded-md border p-0.5"
+        onKeyDown={onKeyDown}
+      >
         {options.map((o) => (
           <button
             key={o.value}
             type="button"
+            data-value={o.value}
             aria-pressed={o.value === value}
+            tabIndex={o.value === value ? 0 : -1}
             onClick={() => onChange(o.value)}
             className={cn(
-              "px-2 py-0.5",
-              o.value === value ? "bg-foreground text-background" : "hover:bg-muted",
+              "focus-visible:ring-ring/60 rounded-[5px] px-2.5 py-1 text-xs font-medium transition-colors outline-none focus-visible:ring-2",
+              o.value === value
+                ? "bg-background text-foreground shadow-sm"
+                : "text-muted-foreground hover:text-foreground",
             )}
           >
             {o.label}
@@ -64,9 +106,9 @@ function Segmented<T extends string>({
 }
 
 /**
- * Slides down over the map when a region is selected and covers it fully; the stow control
- * hides it so the map can be consulted while a region stays selected. The host article never
- * reflows: the pane is absolutely positioned inside the fixed-ratio viewport.
+ * The region's details: its facts, its bench as a timeline or a seat chart, and the docked
+ * record card. In the block it slides down over the map and covers it; the stow control
+ * keeps the selection while revealing the map. On a page it is a section beneath the map.
  */
 export function DrilldownPane({
   region,
@@ -76,17 +118,28 @@ export function DrilldownPane({
   open,
   stowed,
   canDrill,
+  variant = "overlay",
+  emptyHint = "Select a region on the map to see its details.",
   onDrill,
   onClose,
   onStow,
+  ref,
 }: DrilldownPaneProps): React.ReactElement {
   const [mode, setMode] = useState<BenchMode>("timeline")
   const [supernumeraryMode, setSupernumeraryMode] = useState<SupernumeraryMode>("hide")
   const [mark, setMark] = useState<string | null>(null)
   const [detail, setDetail] = useState<DetailSelection | null>(null)
   const [bodyHeight, setBodyHeight] = useState<number | null>(null)
+  const rootRef = useRef<HTMLElement | null>(null)
   const bodyRef = useRef<HTMLDivElement | null>(null)
+  const headingRef = useRef<HTMLHeadingElement | null>(null)
   const [now] = useState(() => new Date())
+  const stacked = variant === "stacked"
+
+  useImperativeHandle(ref, () => ({
+    focusHeading: () => headingRef.current?.focus(),
+    scrollIntoView: () => rootRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }),
+  }))
 
   // A new region starts with no pinned or leftover detail.
   const regionId = region?.id ?? null
@@ -126,109 +179,142 @@ export function DrilldownPane({
   }
 
   const notes = (region?.notes ?? []).filter((n) => n.mode === "always" || mode === "seats")
+  // In the stacked variant the seat chart is not fighting a viewport for room: give it its
+  // tuned height rather than whatever the section happens to measure.
+  const availableHeight = stacked ? null : bodyHeight === null ? null : bodyHeight - 170
+
+  const Heading = stacked ? "h2" : "h3"
 
   return (
     <section
+      ref={rootRef}
       data-drilldown-pane=""
+      data-variant={variant}
       data-open={open ? "" : undefined}
       data-stowed={stowed ? "" : undefined}
       aria-label={region ? `${region.label} details` : "Region details"}
-      aria-hidden={!open}
-      className="bg-card text-card-foreground border-border absolute inset-0 z-10 flex flex-col rounded-sm border shadow-lg"
+      aria-hidden={stacked ? undefined : !open}
+      className={cn(
+        // Its own container: the bench/detail split is a property of the pane's width, not
+        // the map's. Without this the detail card never moves beside the bench on a page,
+        // where the pane is a sibling of the map rather than a child of it.
+        "bg-card text-card-foreground border-border @container flex flex-col border",
+        stacked ? "scroll-mt-20 rounded-lg" : "absolute inset-0 z-10 rounded-sm shadow-lg",
+      )}
       onClick={() => detail?.pinned && setDetail((d) => (d ? { ...d, pinned: false } : d))}
     >
-      <div className="absolute top-2 right-2 z-20 flex gap-1">
-        <button
-          type="button"
-          aria-label={stowed ? "Show details" : "Hide details, keep selection"}
-          data-drilldown-stow=""
-          onClick={() => onStow(!stowed)}
-          className="border-border bg-card hover:bg-muted size-7 rounded-full border text-xs"
+      {stacked && !region && (
+        <p
+          data-drilldown-empty=""
+          className="text-muted-foreground flex min-h-14 items-center justify-center px-4 py-3 text-center text-sm"
         >
-          {stowed ? "▼" : "▲"}
-        </button>
-        <button
-          type="button"
-          aria-label="Close details"
-          data-drilldown-close=""
-          onClick={onClose}
-          className="border-border bg-card hover:bg-muted size-7 rounded-full border text-sm"
+          {emptyHint}
+        </p>
+      )}
+
+      {region && (
+        <div
+          ref={bodyRef}
+          className={cn(
+            "flex min-h-0 flex-1 flex-col gap-3",
+            stacked ? "p-4 sm:p-5" : "overflow-y-auto p-3 pr-20",
+          )}
         >
-          ×
-        </button>
-      </div>
-
-      <div ref={bodyRef} className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto p-3 pr-20">
-        {region && (
-          <>
-            <header className="flex items-start gap-3">
-              <div className="min-w-0 flex-1">
-                <h3 className="text-base leading-tight font-semibold">{region.label}</h3>
-                {region.summary && (
-                  <p className="text-muted-foreground text-xs">{region.summary}</p>
+          <header className="flex flex-wrap items-start gap-x-4 gap-y-2">
+            <div className="min-w-0 flex-1">
+              <Heading
+                ref={headingRef}
+                tabIndex={-1}
+                data-drilldown-pane-title=""
+                className={cn(
+                  "outline-none",
+                  stacked
+                    ? "text-2xl md:text-3xl"
+                    : "font-sans text-base leading-tight font-semibold tracking-normal",
                 )}
-                {facts.length > 0 && (
-                  <dl className="text-muted-foreground mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-xs">
-                    {facts.map((f) => (
-                      <div key={f.key} className="flex gap-1">
-                        <dt>{f.label}</dt>
-                        <dd className="text-foreground font-medium">{f.value}</dd>
-                      </div>
-                    ))}
-                  </dl>
-                )}
-              </div>
-              {associate && mode === "timeline" && (
-                <div className="shrink-0">
-                  <AssociateNode
-                    inline
-                    record={associate.record}
-                    display={associate.display}
-                    onHover={(r) => hoverRecord(r, associate.display)}
-                    onClick={(r) => clickRecord(r, associate.display)}
-                  />
-                </div>
+              >
+                {region.label}
+              </Heading>
+              {region.summary && (
+                <p className={cn("text-muted-foreground", stacked ? "mt-1 text-sm" : "text-xs")}>
+                  {region.summary}
+                </p>
               )}
-            </header>
-
-            <div className="flex flex-wrap items-center gap-2">
-              {display && (
-                <Segmented<BenchMode>
-                  label="View"
-                  value={mode}
-                  options={[
-                    { value: "timeline", label: "Timeline" },
-                    { value: "seats", label: "Seats" },
-                  ]}
-                  onChange={setMode}
-                />
-              )}
-              {display?.marks?.length ? (
-                <Segmented
-                  label="Mark:"
-                  value={mark ?? "__none"}
-                  options={[
-                    { value: "__none", label: "None" },
-                    ...display.marks.map((m) => ({ value: m.field, label: m.label })),
-                  ]}
-                  onChange={(v) => setMark(v === "__none" ? null : v)}
-                />
-              ) : null}
-              {canDrill && (
-                <button
-                  type="button"
-                  data-drilldown-drill=""
-                  onClick={onDrill}
-                  className="text-foreground ml-auto text-xs font-semibold underline-offset-2 hover:underline"
+              {facts.length > 0 && (
+                <dl
+                  className={cn(
+                    "text-muted-foreground flex flex-wrap gap-x-4 gap-y-0.5",
+                    stacked ? "mt-2 text-sm" : "mt-1 text-xs",
+                  )}
                 >
-                  View {region.childrenLabel ?? "details"} →
-                </button>
+                  {facts.map((f) => (
+                    <div key={f.key} className="flex gap-1.5">
+                      <dt>{f.label}</dt>
+                      <dd className="text-foreground font-medium">{f.value}</dd>
+                    </div>
+                  ))}
+                </dl>
               )}
             </div>
+            <div className="flex shrink-0 items-center gap-2">
+              {associate && mode === "timeline" && (
+                <AssociateNode
+                  inline
+                  record={associate.record}
+                  display={associate.display}
+                  onHover={(r) => hoverRecord(r, associate.display)}
+                  onClick={(r) => clickRecord(r, associate.display)}
+                />
+              )}
+              {!stacked && (
+                <button
+                  type="button"
+                  aria-label={stowed ? "Show details" : "Hide details, keep selection"}
+                  data-drilldown-stow=""
+                  onClick={() => onStow(!stowed)}
+                  className="border-border bg-card hover:bg-muted focus-visible:ring-ring/60 size-7 rounded-full border text-xs outline-none focus-visible:ring-2"
+                >
+                  {stowed ? "▼" : "▲"}
+                </button>
+              )}
+              <button
+                type="button"
+                aria-label="Close details"
+                data-drilldown-close=""
+                onClick={onClose}
+                className="border-border bg-card hover:bg-muted focus-visible:ring-ring/60 size-7 rounded-full border text-sm outline-none focus-visible:ring-2"
+              >
+                ×
+              </button>
+            </div>
+          </header>
 
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+            {display && (
+              <Segmented<BenchMode>
+                label="View"
+                value={mode}
+                options={[
+                  { value: "timeline", label: "Timeline" },
+                  { value: "seats", label: "Seats" },
+                ]}
+                onChange={setMode}
+              />
+            )}
+            {display?.marks?.length ? (
+              <Segmented
+                label="Mark"
+                value={mark ?? "__none"}
+                options={[
+                  { value: "__none", label: "None" },
+                  ...display.marks.map((m) => ({ value: m.field, label: m.label })),
+                ]}
+                onChange={(v) => setMark(v === "__none" ? null : v)}
+              />
+            ) : null}
             {showSupernumeraryRow && (
               <Segmented<SupernumeraryMode>
-                label={`${supLabel}:`}
+                label={supLabel}
                 value={supernumeraryMode}
                 options={[
                   { value: "hide", label: "Hide" },
@@ -238,56 +324,68 @@ export function DrilldownPane({
                 onChange={setSupernumeraryMode}
               />
             )}
+            {canDrill && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                data-drilldown-drill=""
+                onClick={onDrill}
+                className="ml-auto"
+              >
+                View {region.childrenLabel ?? "details"} →
+              </Button>
+            )}
+          </div>
 
-            <div className="flex flex-1 flex-col gap-3 @xl:flex-row @xl:items-stretch">
-              <div className="min-w-0 flex-1">
-                {recordsState === "loading" && (
-                  <p
-                    className="text-muted-foreground py-6 text-center text-xs"
-                    data-drilldown-loading=""
-                  >
-                    Loading…
-                  </p>
-                )}
-                {recordsState === "error" && (
-                  <p className="text-destructive py-6 text-center text-xs" data-drilldown-error="">
-                    Details could not be loaded.
-                  </p>
-                )}
-                {recordsState === "idle" && bench && display && (
-                  <DrilldownBench
-                    bench={bench}
-                    display={display}
-                    mode={mode}
-                    supernumeraryMode={supernumeraryMode}
-                    mark={mark}
-                    associate={associate?.record ?? null}
-                    cohortValue={cohortValue}
-                    availableHeight={bodyHeight === null ? null : bodyHeight - 170}
-                    onHover={(r) => hoverRecord(r, display)}
-                    onClick={(r) => clickRecord(r, display)}
-                  />
-                )}
-                {recordsState === "idle" && !display && (
-                  <p className="text-muted-foreground py-6 text-center text-xs">
-                    No records for this region.
-                  </p>
-                )}
-                {notes.map((n, i) => (
-                  <p
-                    key={i}
-                    className="text-muted-foreground mt-2 text-[11px] italic"
-                    data-drilldown-note=""
-                  >
-                    {n.text}
-                  </p>
-                ))}
-              </div>
-              {display && <DrilldownDetail selection={detail} now={now} />}
+          <div className="flex flex-1 flex-col gap-4 @2xl:flex-row @2xl:items-stretch">
+            <div className="min-w-0 flex-1">
+              {recordsState === "loading" && (
+                <p
+                  className="text-muted-foreground py-6 text-center text-sm"
+                  data-drilldown-loading=""
+                >
+                  Loading…
+                </p>
+              )}
+              {recordsState === "error" && (
+                <p className="text-destructive py-6 text-center text-sm" data-drilldown-error="">
+                  Details could not be loaded.
+                </p>
+              )}
+              {recordsState === "idle" && bench && display && (
+                <DrilldownBench
+                  bench={bench}
+                  display={display}
+                  mode={mode}
+                  supernumeraryMode={supernumeraryMode}
+                  mark={mark}
+                  associate={associate?.record ?? null}
+                  cohortValue={cohortValue}
+                  availableHeight={availableHeight}
+                  onHover={(r) => hoverRecord(r, display)}
+                  onClick={(r) => clickRecord(r, display)}
+                />
+              )}
+              {recordsState === "idle" && !display && (
+                <p className="text-muted-foreground py-6 text-center text-sm">
+                  No records for this region.
+                </p>
+              )}
+              {notes.map((n, i) => (
+                <p
+                  key={i}
+                  className="text-muted-foreground mt-2 text-xs italic"
+                  data-drilldown-note=""
+                >
+                  {n.text}
+                </p>
+              ))}
             </div>
-          </>
-        )}
-      </div>
+            {display && <DrilldownDetail selection={detail} now={now} />}
+          </div>
+        </div>
+      )}
     </section>
   )
 }

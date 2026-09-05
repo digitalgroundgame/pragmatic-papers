@@ -9,10 +9,10 @@ import { categoryOf, compareByField, fieldString, fieldTruthy } from "./recordFo
 import type { Bench } from "./records"
 import {
   arcStageHeight,
-  ICON_HALF,
+  COMPACT_METRICS,
   layoutArc,
   layoutTimeline,
-  RING_GAP,
+  seatMetrics,
   timelineStageHeight,
   type Point,
 } from "./seatLayout"
@@ -62,18 +62,23 @@ export function AssociateNode({
   onHover,
   onClick,
   inline = false,
+  compact = false,
 }: {
   record: DrilldownRecord
   display: RecordDisplay
   onHover(record: DrilldownRecord | null): void
   onClick(record: DrilldownRecord): void
   inline?: boolean
+  compact?: boolean
 }): React.ReactElement {
   return (
     <button
       type="button"
       data-drilldown-associate-node=""
-      className={cn(inline ? "flex items-center gap-1.5 text-left" : "block w-full text-center")}
+      className={cn(
+        "focus-visible:ring-ring/60 rounded-md outline-none focus-visible:ring-2",
+        inline ? "flex items-center gap-2 text-left" : "block w-full text-center",
+      )}
       onPointerEnter={() => onHover(record)}
       onPointerLeave={() => !inline && onHover(null)}
       onFocus={() => onHover(record)}
@@ -86,13 +91,13 @@ export function AssociateNode({
       <RecordAvatar
         record={record}
         display={display}
-        size={inline ? "chip" : "bench"}
+        size={inline ? "chip" : compact ? "compact" : "bench"}
         className="mx-auto"
       />
       <span
         className={cn(
-          "text-foreground block text-[10px] leading-tight",
-          inline ? "max-w-28" : "mt-0.5 truncate",
+          "text-foreground block leading-tight",
+          inline ? "max-w-32 text-xs" : "mt-0.5 text-[11px] text-balance",
         )}
       >
         {fieldString(record, display.shortTitle) ?? fieldString(record, display.title)}
@@ -104,7 +109,8 @@ export function AssociateNode({
 /**
  * The bench: one absolutely positioned node per member, laid out as a commission-ordered
  * grid or a seat-chart semicircle. Nodes keep their identity across modes so the CSS
- * transform transition animates the re-sort.
+ * transform transition animates the re-sort. Metrics follow the stage width, so the same
+ * bench fits an article column, a page-wide pane and a phone.
  */
 export function DrilldownBench({
   bench,
@@ -133,6 +139,18 @@ export function DrilldownBench({
     return () => ro.disconnect()
   }, [])
 
+  const metrics = seatMetrics(width)
+  const compact = metrics === COMPACT_METRICS
+  const half = metrics.half
+  const nodeWidth = metrics.icon + 8
+  /**
+   * A big bench (the 9th with its seniors folded in is 51 people) packs the arc tighter than
+   * a name can be written under an icon: every label overlaps its neighbours and the chart
+   * becomes unreadable. Past this many nodes the names come off and the icons speak — the
+   * ring colours are the point of this view, and hovering still names anyone.
+   */
+  const DENSE_ARC = 20
+
   const all = useMemo(() => [...bench.active, ...bench.supernumerary], [bench])
   const keyOf = useMemo(() => new Map(all.map((r, i) => [r, recordKey(r, i)])), [all])
 
@@ -145,8 +163,8 @@ export function DrilldownBench({
 
     if (mode === "timeline") {
       const ordered = [...all].sort(compareByField(display.order))
-      height = timelineStageHeight(ordered.length + bench.vacancies, width)
-      const pts = layoutTimeline(ordered.length + bench.vacancies, width)
+      height = timelineStageHeight(ordered.length + bench.vacancies, width, metrics)
+      const pts = layoutTimeline(ordered.length + bench.vacancies, width, metrics)
       ordered.forEach((r, i) => positions.set(r, pts[i]!))
       vacancies = pts.slice(ordered.length)
     } else {
@@ -159,7 +177,7 @@ export function DrilldownBench({
         ...rest,
       ]
       const band = supernumeraryMode === "show" ? bench.supernumerary : []
-      arc = layoutArc(seatList.length, band.length, width, height)
+      arc = layoutArc(seatList.length, band.length, width, height, metrics)
       seatList.forEach((r, i) => {
         const p = arc!.seats[i]!
         if (r) positions.set(r, p)
@@ -169,7 +187,7 @@ export function DrilldownBench({
       if (supernumeraryMode === "hide") for (const r of bench.supernumerary) hidden.add(r)
     }
     return { positions, hidden, vacancies, height, arc }
-  }, [all, bench, display, mode, supernumeraryMode, width, availableHeight])
+  }, [all, bench, display, mode, supernumeraryMode, width, availableHeight, metrics])
 
   const count = useMemo(() => {
     if (mode !== "seats") return null
@@ -196,12 +214,19 @@ export function DrilldownBench({
 
   const cohortField = display.cohort
   const arc = layout.arc
+  const showLabels =
+    mode !== "seats" || all.length - layout.hidden.size + bench.vacancies <= DENSE_ARC
+  const at = (p: Point): React.CSSProperties => ({
+    transform: `translate(${p.x - half}px, ${p.y - half}px)`,
+    width: nodeWidth,
+  })
 
   return (
     <div
       ref={stageRef}
       data-drilldown-bench=""
       data-mode={mode}
+      data-density={compact ? "compact" : "regular"}
       className="relative w-full"
       style={{ height: layout.height }}
       onPointerLeave={() => onHover(null)}
@@ -224,13 +249,13 @@ export function DrilldownBench({
             const rInner = arc.radii[0]!
             const rOuter = arc.radii[arc.radii.length - 1]!
             const meanR = arc.radii.reduce((a, b) => a + b, 0) / arc.radii.length
-            const half = (rOuter - rInner) / 2 + (ICON_HALF + 4) + RING_GAP / 2
+            const reach = (rOuter - rInner) / 2 + (half + 4) + metrics.ringGap / 2
             return (
               <line
                 x1={arc.dims.cx}
                 x2={arc.dims.cx}
-                y1={arc.dims.cy - meanR + half}
-                y2={arc.dims.cy - meanR - half}
+                y1={arc.dims.cy - meanR + reach}
+                y2={arc.dims.cy - meanR - reach}
                 className="stroke-foreground"
                 strokeWidth={1.5}
                 strokeDasharray="3 4"
@@ -240,9 +265,12 @@ export function DrilldownBench({
           {count && (
             <text
               x={arc.dims.cx}
-              y={arc.dims.cy + 54}
+              y={arc.dims.cy + (compact ? 46 : 54)}
               textAnchor="middle"
-              className="fill-foreground font-sans text-xs font-medium"
+              className={cn(
+                "fill-foreground font-sans font-medium",
+                compact ? "text-[11px]" : "text-xs",
+              )}
               data-drilldown-count=""
             >
               {count}
@@ -266,10 +294,11 @@ export function DrilldownBench({
             data-drilldown-node=""
             data-cohort={cohort ? "" : undefined}
             className={cn(
-              "drilldown-node absolute top-0 left-0 w-[52px] text-center",
+              "drilldown-node focus-visible:ring-ring/60 absolute top-0 left-0 rounded-md text-center outline-none focus-visible:ring-2",
               !show && "pointer-events-none opacity-0",
             )}
-            style={{ transform: `translate(${p.x - ICON_HALF}px, ${p.y - ICON_HALF}px)` }}
+            style={at(p)}
+            tabIndex={show ? 0 : -1}
             onPointerEnter={() => onHover(record)}
             onFocus={() => onHover(record)}
             onClick={(e) => {
@@ -278,7 +307,7 @@ export function DrilldownBench({
             }}
             aria-label={fieldString(record, display.title) ?? undefined}
           >
-            <span className="relative mx-auto block size-11">
+            <span className={cn("relative mx-auto block", compact ? "size-9" : "size-11")}>
               {cohort && (
                 <span
                   aria-hidden="true"
@@ -288,6 +317,7 @@ export function DrilldownBench({
               <RecordAvatar
                 record={record}
                 display={display}
+                size={compact ? "compact" : "bench"}
                 marked={mark !== null && fieldTruthy(record, mark)}
               />
               {flags.map((f) => (
@@ -300,9 +330,16 @@ export function DrilldownBench({
                 </span>
               ))}
             </span>
-            <span className="text-foreground mt-0.5 block truncate text-[10px] leading-tight">
-              {fieldString(record, display.shortTitle) ?? fieldString(record, display.title)}
-            </span>
+            {showLabels && (
+              <span
+                className={cn(
+                  "text-foreground mt-0.5 block truncate leading-tight",
+                  compact ? "text-[10px]" : "text-[11px]",
+                )}
+              >
+                {fieldString(record, display.shortTitle) ?? fieldString(record, display.title)}
+              </span>
+            )}
           </button>
         )
       })}
@@ -311,25 +348,46 @@ export function DrilldownBench({
         <div
           key={`vacant-${i}`}
           data-drilldown-vacancy=""
-          className="drilldown-node absolute top-0 left-0 w-[52px] text-center"
-          style={{ transform: `translate(${p.x - ICON_HALF}px, ${p.y - ICON_HALF}px)` }}
+          className="drilldown-node absolute top-0 left-0 text-center"
+          style={at(p)}
         >
-          <span className="border-muted-foreground/60 mx-auto block size-11 rounded-full border-2 border-dashed" />
-          <span className="text-muted-foreground mt-0.5 block text-[10px] leading-tight">
-            Vacant
-          </span>
+          <span
+            className={cn(
+              "border-muted-foreground/60 mx-auto block rounded-full border-2 border-dashed",
+              compact ? "size-9" : "size-11",
+            )}
+          />
+          {showLabels && (
+            <span
+              className={cn(
+                "text-muted-foreground mt-0.5 block leading-tight",
+                compact ? "text-[10px]" : "text-[11px]",
+              )}
+            >
+              Vacant
+            </span>
+          )}
         </div>
       ))}
 
       {mode === "seats" && associate && arc && (
         <div
           data-drilldown-associate=""
-          className="drilldown-node absolute top-0 left-0 w-[52px] text-center"
+          // Wider than a seat: "Circ. Justice Kavanaugh" is a title plus a surname and
+          // truncating it to "Circ. Jus…" told the reader nothing.
+          className="drilldown-node absolute top-0 left-0 text-center"
           style={{
-            transform: `translate(${arc.dims.cx - ICON_HALF}px, ${arc.dims.cy - arc.dims.r0 * 0.3 - ICON_HALF}px)`,
+            transform: `translate(${arc.dims.cx - 52}px, ${arc.dims.cy - arc.dims.r0 * 0.3 - half}px)`,
+            width: 104,
           }}
         >
-          <AssociateNode record={associate} display={display} onHover={onHover} onClick={onClick} />
+          <AssociateNode
+            record={associate}
+            display={display}
+            compact={compact}
+            onHover={onHover}
+            onClick={onClick}
+          />
         </div>
       )}
     </div>

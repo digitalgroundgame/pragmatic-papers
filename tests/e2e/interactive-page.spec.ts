@@ -10,7 +10,7 @@ test.describe("interactive page — federal courts", () => {
   }, testInfo) => {
     await page.goto(PAGE)
 
-    const figure = page.locator("[data-interactive-map-block][data-map-mode='drilldown']")
+    const figure = page.locator("[data-interactive-drilldown]")
     await expect(figure).toBeVisible()
     await expect(page.locator("h1")).toHaveText("Federal Court Appointment Tracker")
 
@@ -38,9 +38,11 @@ test.describe("interactive page — federal courts", () => {
     await ca8.click()
     const pane = page.locator("[data-drilldown-pane][data-open]")
     await expect(pane).toBeVisible()
-    await expect(pane.locator("h3")).toHaveText("8th Cir.")
+    await expect(pane.locator("[data-drilldown-pane-title]")).toHaveText("8th Cir.")
     await expect(pane.locator("[data-drilldown-node]").first()).toBeVisible()
     await expect(pane.locator("[data-drilldown-associate-node]")).toContainText("Circ. Justice")
+    // The counts live in the summary line; the facts row carries what the summary lacks.
+    await expect(pane).toContainText("11 authorized · 11 active · 6 senior · 0 vacant")
 
     test.skip(testInfo.project.name !== "chromium", "visual baseline captured on chromium only")
 
@@ -72,7 +74,7 @@ test.describe("interactive page — federal courts", () => {
 
   test("drilling into a region morphs to its child map and back", async ({ page }) => {
     await page.goto(PAGE)
-    const figure = page.locator("[data-interactive-map-block][data-map-mode='drilldown']")
+    const figure = page.locator("[data-interactive-drilldown]")
     await figure.scrollIntoViewIfNeeded()
 
     await page.locator("[data-drilldown-selector] [data-region-item='ca8']").click()
@@ -90,7 +92,9 @@ test.describe("interactive page — federal courts", () => {
 
     // A district's records come from the parent's asset, already loaded.
     await page.locator("[data-drilldown-selector] [data-region-item='moed']").click()
-    await expect(page.locator("[data-drilldown-pane][data-open] h3")).toHaveText("E.D. Mo.")
+    await expect(
+      page.locator("[data-drilldown-pane][data-open] [data-drilldown-pane-title]"),
+    ).toHaveText("E.D. Mo.")
 
     await page.getByRole("button", { name: "← Back to overview" }).click()
     await expect(viewport).toHaveAttribute("data-view", "overview")
@@ -120,5 +124,38 @@ test.describe("interactive page — federal courts", () => {
   test("a region that is not drillable is a 404", async ({ page }) => {
     const res = await page.request.get(`${PAGE}/regions/moed`)
     expect(res.status()).toBe(404)
+  })
+
+  test("the region list is one tab stop, and a keyboard selection lands in the pane", async ({
+    page,
+  }) => {
+    await page.goto(PAGE)
+    const items = page.locator("[data-drilldown-selector] button[data-region-item]")
+    await items.first().waitFor()
+
+    // 14 regions, one tab stop: the arrow keys move within the list.
+    await expect(items).toHaveCount(14)
+    await expect(items.filter({ has: page.locator(":scope[tabindex='0']") })).toHaveCount(1)
+
+    await items.first().focus()
+    for (let i = 0; i < 8; i++) await page.keyboard.press("ArrowRight")
+    await expect(page.locator("[data-drilldown-selector] button:focus")).toHaveAttribute(
+      "data-region-item",
+      "ca8",
+    )
+
+    // Enter selects and hands focus to the pane's heading, so the bench is where the reader is.
+    await page.keyboard.press("Enter")
+    const title = page.locator("[data-drilldown-pane][data-open] [data-drilldown-pane-title]")
+    await expect(title).toHaveText("8th Cir.")
+    await expect(title).toBeFocused()
+
+    // Escape closes it and puts focus back on the region it came from.
+    await page.keyboard.press("Escape")
+    await expect(page.locator("[data-drilldown-pane][data-open]")).toHaveCount(0)
+    await expect(page.locator("[data-drilldown-selector] button:focus")).toHaveAttribute(
+      "data-region-item",
+      "ca8",
+    )
   })
 })

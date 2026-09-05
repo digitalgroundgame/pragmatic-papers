@@ -153,7 +153,7 @@ export function DrilldownDetail({
       data-pinned={selection?.pinned ? "" : undefined}
       aria-live="polite"
       className={cn(
-        "bg-card text-card-foreground border-border flex min-h-40 w-full flex-col gap-1.5 rounded-sm border p-3 text-xs @xl:w-60 @xl:shrink-0",
+        "bg-muted/40 text-card-foreground border-border flex min-h-40 w-full flex-col gap-1.5 rounded-md border p-3 text-xs @2xl:w-64 @2xl:shrink-0 @4xl:w-72",
         selection?.pinned && "border-foreground",
         className,
       )}

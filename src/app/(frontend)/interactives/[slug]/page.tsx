@@ -4,14 +4,13 @@ import { draftMode } from "next/headers"
 import { getPayload } from "payload"
 import React from "react"
 
-import "@/blocks/InteractiveMap/styles.css"
-
-import { DrilldownMap } from "@/blocks/InteractiveMap/drilldown/DrilldownMap"
-import { buildRegionIndex } from "@/blocks/InteractiveMap/drilldown/regions"
+import { Sources } from "@/blocks/InteractiveMap/Sources"
 import { interactivePath } from "@/collections/InteractiveSnapshots/tag"
 import { LivePreviewListener } from "@/components/LivePreviewListener"
 import { PayloadRedirects } from "@/components/PayloadRedirects"
 import RichText from "@/components/RichText"
+import { Separator } from "@/components/ui/separator"
+import { InteractiveDrilldown } from "@/interactives/InteractiveDrilldown"
 import { loadInteractiveOverview, queryInteractiveBySlug } from "@/interactives/load"
 import { generateMeta } from "@/utilities/generateMeta"
 
@@ -38,6 +37,13 @@ export async function generateMetadata({ params: paramsPromise }: Args): Promise
   return generateMeta({ doc: interactive, canonicalPath: interactivePath(slug) })
 }
 
+const dataDate = new Intl.DateTimeFormat("en-US", {
+  month: "long",
+  day: "numeric",
+  year: "numeric",
+  timeZone: "UTC",
+})
+
 /**
  * A long-lived interactive page. The editorial frame — title, standfirst, sources — comes
  * from the `interactives` document; the map comes from the code-owned profile it names and
@@ -57,46 +63,48 @@ export default async function InteractivePage({
   const composed = await loadInteractiveOverview(interactive)
 
   return (
-    // The same named size container the article page provides, so the drilldown figure
-    // breaks out of the prose column to the site container's width (see the block's styles).
-    <div className="@container/page">
-      <article className="mx-auto max-w-2xl space-y-6 px-4 md:px-1">
-        <PayloadRedirects disableNotFound url={url} />
-        {draft && <LivePreviewListener />}
+    <div className="container pt-8 pb-16">
+      <PayloadRedirects disableNotFound url={url} />
+      {draft && <LivePreviewListener />}
 
-        <header className="space-y-4 pt-8">
-          <h1 className="font-heading text-3xl font-bold tracking-tight md:text-4xl">
-            {interactive.title}
-          </h1>
-          {interactive.intro && (
-            <div className="text-muted-foreground text-lg">
-              <RichText data={interactive.intro} enableGutter={false} />
-            </div>
-          )}
-        </header>
-
-        {composed ? (
-          <DrilldownMap
-            widgetTitle={null}
-            sources={interactive.sources}
-            resolved={{
-              overview: composed.overview,
-              regions: buildRegionIndex([composed.overview]),
-              childAssets: composed.childAssets,
-              problems: composed.problems,
-            }}
-          />
-        ) : (
-          <p
-            data-interactive-empty
-            className="border-border text-muted-foreground my-8 rounded-sm border border-dashed p-6 text-center text-sm"
-          >
-            {draft
-              ? "No data snapshot has been synced for this interactive yet. Run the sync from Interactive Snapshots in the admin, then reload this preview."
-              : "This interactive has no published data yet."}
+      <header className="max-w-3xl">
+        <p className="text-muted-foreground text-xs font-semibold tracking-widest uppercase">
+          Interactive
+        </p>
+        <h1 className="mt-2">{interactive.title}</h1>
+        {interactive.intro && (
+          <RichText data={interactive.intro} enableGutter={false} className="mt-4" />
+        )}
+        {composed && (
+          <p data-interactive-meta="" className="text-muted-foreground mt-4 text-sm">
+            Data as of{" "}
+            <time dateTime={composed.generatedAt}>
+              {dataDate.format(new Date(composed.generatedAt))}
+            </time>
+            {" · "}synced from {composed.source.name}
           </p>
         )}
-      </article>
+      </header>
+
+      <Separator className="my-6" />
+
+      {composed ? (
+        <InteractiveDrilldown
+          composed={composed}
+          emptyHint="Select a court on the map or from the list to see who sits on its bench."
+        />
+      ) : (
+        <p
+          data-interactive-empty
+          className="border-border text-muted-foreground my-8 rounded-lg border border-dashed p-8 text-center text-sm"
+        >
+          {draft
+            ? "No data snapshot has been synced for this interactive yet. Run the sync from Interactive Snapshots in the admin, then reload this preview."
+            : "This interactive has no published data yet."}
+        </p>
+      )}
+
+      <Sources sources={interactive.sources} colorBias={null} className="mt-4" />
     </div>
   )
 }

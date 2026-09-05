@@ -5,22 +5,22 @@ import { createPortal } from "react-dom"
 
 import { cn } from "@/utilities/utils"
 
-import type { DisplayFact } from "./regions"
-
 interface DrilldownTooltipProps {
   label: string | null
   summary: string | null
-  facts: DisplayFact[]
   cursor: { x: number; y: number } | null
 }
 
 const OFFSET = 12
 
-/** Cursor-following, viewport-clamped tooltip with the hovered region's label and facts. */
+/**
+ * Cursor-following, viewport-clamped tooltip: the hovered region's label and its one-line
+ * summary. The full facts live in the pane, where they can be read at leisure — repeating
+ * them here made the tooltip a wall of text that covered the map.
+ */
 export function DrilldownTooltip({
   label,
   summary,
-  facts,
   cursor,
 }: DrilldownTooltipProps): React.ReactNode {
   const ref = useRef<HTMLDivElement | null>(null)
@@ -41,7 +41,7 @@ export function DrilldownTooltip({
     if (x + el.offsetWidth > window.innerWidth - 8) x = cursor.x - el.offsetWidth - OFFSET
     if (y + el.offsetHeight > window.innerHeight - 8) y = cursor.y - el.offsetHeight - OFFSET
     setPos({ x, y })
-  }, [label, summary, facts, cursor])
+  }, [label, summary, cursor])
 
   if (!mounted) return null
 
@@ -51,25 +51,15 @@ export function DrilldownTooltip({
       data-drilldown-tooltip=""
       role="tooltip"
       className={cn(
-        "bg-foreground text-background pointer-events-none fixed z-50 max-w-64 rounded-xs px-2.5 py-1.5 text-sm shadow-md transition-opacity",
+        "bg-foreground text-background pointer-events-none fixed z-50 max-w-64 rounded-md px-3 py-2 text-sm shadow-md transition-opacity",
         label && pos ? "opacity-100" : "opacity-0",
       )}
       style={pos ? { left: pos.x, top: pos.y } : { left: -9999, top: -9999 }}
     >
       {label && (
         <>
-          <div className="font-medium">{label}</div>
+          <div className="font-semibold">{label}</div>
           {summary && <div className="text-xs opacity-85">{summary}</div>}
-          {facts.length > 0 && (
-            <dl className="mt-1 grid grid-cols-[auto_1fr] gap-x-2 text-xs">
-              {facts.map((f) => (
-                <React.Fragment key={f.key}>
-                  <dt className="opacity-70">{f.label}</dt>
-                  <dd className="font-medium">{f.value}</dd>
-                </React.Fragment>
-              ))}
-            </dl>
-          )}
         </>
       )}
     </div>,

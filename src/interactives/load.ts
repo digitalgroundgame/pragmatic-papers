@@ -63,6 +63,9 @@ const readSnapshotData = cache(
 export interface ComposedOverview {
   overview: DrilldownAsset
   childAssets: ChildAssetRef[]
+  /** When upstream generated the data the page is showing, and who upstream is. */
+  generatedAt: string
+  source: DrilldownData["source"]
   /** Configuration problems worth surfacing to an editor; the page still renders. */
   problems: string[]
 }
@@ -84,7 +87,7 @@ async function composeOverviewFor(
   }))
   const problems: string[] = []
   if (overview.viewBox === null) problems.push("overview geometry has no usable viewBox")
-  return { overview, childAssets, problems }
+  return { overview, childAssets, generatedAt: data.generatedAt, source: data.source, problems }
 }
 
 async function composeChildFor(

@@ -11,7 +11,8 @@ import type { DrilldownRecord, RecordDisplay } from "./types"
 interface RecordAvatarProps {
   record: DrilldownRecord
   display: RecordDisplay
-  size?: "bench" | "chip" | "detail"
+  /** `bench` on a wide stage, `compact` on a narrow one, `chip` inline, `detail` in the card. */
+  size?: "bench" | "compact" | "chip" | "detail"
   marked?: boolean
   className?: string
 }
@@ -40,6 +41,7 @@ export function RecordAvatar({
       className={cn(
         "bg-muted border-[3px] after:hidden",
         size === "bench" && "size-11 text-sm",
+        size === "compact" && "size-9 border-[2.5px] text-xs",
         size === "chip" && "size-8 text-xs",
         size === "detail" && "size-20 text-xl",
         muted && "opacity-70 grayscale",

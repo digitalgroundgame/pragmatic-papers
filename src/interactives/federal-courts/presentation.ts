@@ -24,8 +24,23 @@ export const federalCourtsPresentation: DrilldownPresentation = {
       vacant: "Vacancies",
     },
     order: ["full-name", "tenure", "authorized", "active", "senior", "vacant"],
-    // Machine inputs consumed by the seat blocks and the seat chart, never shown as facts.
-    hide: ["seats", "seats-r", "seats-o", "seats-d", "anchor", "short-label", "photo-thumb"],
+    hide: [
+      // Machine inputs consumed by the seat blocks and the seat chart, never shown as facts.
+      "seats",
+      "seats-r",
+      "seats-o",
+      "seats-d",
+      "anchor",
+      "short-label",
+      "photo-thumb",
+      // The counts are the region's `summary` line ("11 authorized · 11 active · 6 senior ·
+      // 0 vacant"), which the pane and tooltip already show; listing them again as facts
+      // said everything twice. What remains as facts is what the summary lacks.
+      "authorized",
+      "active",
+      "senior",
+      "vacant",
+    ],
   },
   seats: {
     totalFact: "seats",

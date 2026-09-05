@@ -19,7 +19,8 @@ export type LayerState = "visible" | "hidden" | "hidden-hard" | "fade-out" | "fa
 
 export interface StageCallbacks {
   onHover(regionId: string | null, point: { x: number; y: number } | null): void
-  onSelect(regionId: string): void
+  /** `via` lets the client move keyboard focus into the pane a keyboard selection opened. */
+  onSelect(regionId: string, via: "pointer" | "keyboard"): void
 }
 
 export interface StageOptions {
@@ -63,6 +64,13 @@ interface MorphPlan {
 // projections differ ~4× in scale, so a map-unit size would swamp a child view.
 const BLOCK_ROWS = 5
 const BLOCK_PX = 6.5
+/**
+ * Below this rendered map width the blocks shrink and drop their labels: at phone widths the
+ * circuits' blocks overlap each other and their labels collide, and the R/D balance still
+ * reads without either.
+ */
+const COMPACT_MAP_PX = 560
+const BLOCK_PX_COMPACT = 4.5
 const BLOCK_GAP = 0.3
 const LABEL_EM = 10
 const ONE_NUDGE_EM = 1.4
@@ -452,14 +460,15 @@ export class MapStage {
     }
     const onClick = (e: MouseEvent): void => {
       const id = targetFrom(e.target)
-      if (id) this.opts.callbacks.onSelect(id)
+      // A keyboard "click" on a focused path arrives here too, with detail 0.
+      if (id) this.opts.callbacks.onSelect(id, e.detail === 0 ? "keyboard" : "pointer")
     }
     const onKey = (e: KeyboardEvent): void => {
       if (e.key !== "Enter" && e.key !== " ") return
       const id = targetFrom(e.target)
       if (!id) return
       e.preventDefault()
-      this.opts.callbacks.onSelect(id)
+      this.opts.callbacks.onSelect(id, "keyboard")
     }
     const onFocus = (e: FocusEvent): void => {
       const path = pathFrom(e.target)
@@ -522,8 +531,15 @@ export class MapStage {
     const group = svgEl("g", { "data-drilldown-blocks": "" })
     const [, , vw] = layer.viewBox
     const k = flipConstant(layer.viewBox)
-    const unitsPerPx = vw / this.renderedWidth(layer)
-    const e = BLOCK_PX * unitsPerPx
+    const rendered = this.renderedWidth(layer)
+    // Compactness follows the room the page gives the map, not the rendered width: a tall
+    // child map (one circuit) letterboxes narrow on a wide screen and still has plenty of
+    // space for full-size blocks and their labels.
+    const compact = (this.opts.viewport.clientWidth || rendered) < COMPACT_MAP_PX
+    if (compact) layer.svg.setAttribute("data-drilldown-compact", "")
+    else layer.svg.removeAttribute("data-drilldown-compact")
+    const unitsPerPx = vw / rendered
+    const e = (compact ? BLOCK_PX_COMPACT : BLOCK_PX) * unitsPerPx
     const pitch = e * (1 + BLOCK_GAP)
 
     for (const id of regionIds) {
@@ -550,7 +566,8 @@ export class MapStage {
       const y0 = (layer.flipY ? k - anchor[1] : anchor[1]) - tall / 2
 
       const block = svgEl("g", { "data-drilldown-block": "", "data-region-id": id })
-      const labelText = seats.labelFact ? region.facts[seats.labelFact]?.trim() || null : null
+      const labelText =
+        !compact && seats.labelFact ? region.facts[seats.labelFact]?.trim() || null : null
       const m = e * 0.6
       const top = labelText ? y0 - e * 0.45 - e * 1.9 : y0 - m
       block.appendChild(

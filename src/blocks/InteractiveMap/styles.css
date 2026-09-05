@@ -86,6 +86,19 @@
   outline: none;
 }
 
+/* The drilldown figure leaves the prose column and spans the site container (the `container`
+   utility: max 80rem, 1rem inline padding, centred). `50%` here is half the prose column, which
+   is itself centred in the page container, so `calc(50% - 50cqw)` lands the figure's left edge
+   on the container's left edge. Scoped to the named `page` container so it only fires where an
+   article page provides one, and only once the page is wide enough for the extra room to matter. */
+@container page (min-width: 48rem) {
+  [data-interactive-map-block][data-map-mode="drilldown"] {
+    width: min(100cqw, 80rem);
+    margin-inline: calc(50% - min(50cqw, 40rem));
+    padding-inline: 1rem;
+  }
+}
+
 /* Layer stack: every layer fills the fixed-ratio viewport and letterboxes its own map. */
 [data-drilldown-viewport] {
   position: relative;

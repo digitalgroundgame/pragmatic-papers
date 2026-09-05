@@ -143,4 +143,60 @@ export function parseDrilldownAssetString(sanitizedSvg: string): DrilldownAsset 
   return buildDrilldownAsset(events)
 }
 
+const isRecord = (v: unknown): v is Record<string, unknown> =>
+  typeof v === "object" && v !== null && !Array.isArray(v)
+const str = (v: unknown): string | null => (typeof v === "string" && v ? v : null)
+
+/**
+ * Third source: an asset already composed on the server (`src/interactives/compose.ts`) and
+ * served as JSON. The shape is ours, so this is a guard rather than a parser — a wrong field
+ * degrades to an empty path or a null payload with a readable `payloadError`, never a throw
+ * inside the drill-in.
+ */
+export function parseDrilldownAssetJson(value: unknown): DrilldownAsset {
+  if (!isRecord(value)) {
+    return {
+      viewBox: null,
+      flipY: false,
+      paths: [],
+      payload: null,
+      payloadError: "asset is not an object",
+    }
+  }
+  const vb = value.viewBox
+  const viewBox =
+    Array.isArray(vb) &&
+    vb.length === 4 &&
+    vb.every((n) => typeof n === "number" && Number.isFinite(n))
+      ? (vb as ViewBox)
+      : null
+  const paths: DrilldownPath[] = []
+  if (Array.isArray(value.paths)) {
+    for (const p of value.paths) {
+      if (!isRecord(p) || typeof p.d !== "string") continue
+      const facts: FactMap = {}
+      if (isRecord(p.facts))
+        for (const [k, v] of Object.entries(p.facts))
+          if (typeof v === "string") facts[factKey(k)] = v
+      paths.push({
+        id: str(p.id),
+        d: p.d,
+        layer: str(p.layer),
+        parentId: str(p.parentId),
+        inset: p.inset === true,
+        label: str(p.label),
+        facts,
+      })
+    }
+  }
+  let payload: DrilldownAsset["payload"] = null
+  let payloadError: string | null = null
+  if (value.payload !== null && value.payload !== undefined) {
+    const result = validateDrilldownPayload(value.payload)
+    payload = result.payload
+    if (result.errors.length > 0) payloadError = result.errors.join("; ")
+  }
+  return { viewBox, flipY: value.flipY === true, paths, payload, payloadError }
+}
+
 export { isReservedFact }

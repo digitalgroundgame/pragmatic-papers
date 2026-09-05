@@ -63,7 +63,7 @@ function normalizeFactKeys(map: Record<string, string>): FactMap {
   return out
 }
 
-function validateRegions(v: unknown, errors: string[]): DeclaredRegion[] | undefined {
+export function validateRegions(v: unknown, errors: string[]): DeclaredRegion[] | undefined {
   if (v === undefined) return undefined
   if (!Array.isArray(v)) {
     errors.push("regions must be an array")
@@ -113,6 +113,27 @@ function validateDisplay(v: unknown, errors: string[]): RecordDisplay | null {
   return display
 }
 
+/** Checks a list of records; `path` names the list in error messages. */
+export function validateRecordItems(v: unknown, errors: string[], path: string): DrilldownRecord[] {
+  if (!Array.isArray(v)) {
+    errors.push(`${path} must be an array`)
+    return []
+  }
+  const items: DrilldownRecord[] = []
+  v.forEach((item, i) => {
+    if (!isRecord(item) || !isString(item._region) || !item._region) {
+      errors.push(`${path}[${i}] needs a string _region`)
+      return
+    }
+    if (item._role !== undefined && item._role !== "seat" && item._role !== "associate") {
+      errors.push(`${path}[${i}]._role must be "seat" or "associate"`)
+      return
+    }
+    items.push(item as DrilldownRecord)
+  })
+  return items
+}
+
 function validateRecords(
   v: unknown,
   errors: string[],
@@ -126,18 +147,7 @@ function validateRecords(
     errors.push("records.items must be an array")
     return undefined
   }
-  const items: DrilldownRecord[] = []
-  v.items.forEach((item, i) => {
-    if (!isRecord(item) || !isString(item._region) || !item._region) {
-      errors.push(`records.items[${i}] needs a string _region`)
-      return
-    }
-    if (item._role !== undefined && item._role !== "seat" && item._role !== "associate") {
-      errors.push(`records.items[${i}]._role must be "seat" or "associate"`)
-      return
-    }
-    items.push(item as DrilldownRecord)
-  })
+  const items = validateRecordItems(v.items, errors, "records.items")
   const display = validateDisplay(v.display, errors)
   if (!display) return undefined
   return { items, display }

@@ -1,3 +1,4 @@
+import { parseDrilldownAssetJson } from "./parseAsset"
 import { parseDrilldownAssetDocument } from "./parseAssetDom"
 import type { DrilldownAsset } from "./types"
 
@@ -7,6 +8,9 @@ import type { DrilldownAsset } from "./types"
  * Dedupe on the in-flight promise, not the finished value: a double-click on "View …" used to
  * race through the gap between the cache check and the cache write and inject one layer per
  * click. Failures are not cached, so a transient network error can be retried.
+ *
+ * Two wire formats: an uploaded SVG (the block) and a JSON asset composed on the server (an
+ * interactive page's region route), told apart by the response's content type.
  */
 export class AssetLoader {
   private readonly loaded = new Map<string, DrilldownAsset>()
@@ -26,7 +30,10 @@ export class AssetLoader {
     const p = (async () => {
       const res = await this.fetchImpl(url, { credentials: "same-origin" })
       if (!res.ok) throw new Error(`${url}: HTTP ${res.status}`)
-      const asset = parseDrilldownAssetDocument(await res.text())
+      const contentType = res.headers?.get?.("content-type") ?? ""
+      const asset = contentType.includes("json")
+        ? parseDrilldownAssetJson(await res.json())
+        : parseDrilldownAssetDocument(await res.text())
       this.loaded.set(url, asset)
       this.pending.delete(url)
       return asset

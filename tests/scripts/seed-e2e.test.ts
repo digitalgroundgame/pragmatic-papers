@@ -31,7 +31,7 @@ const mockPayload = {
 const mockWriter = { id: 1, email: "writer@e2e.test", name: "Teagan Wordsmith" }
 const mockArticleId = 42
 const mockMapArticleId = 43
-const mockFederalCourtsArticleId = 44
+const mockFederalCourtsInteractiveId = 44
 const mockVolume = { id: 99, title: "E2E Test Volume" }
 
 vi.mock("payload", () => ({
@@ -57,7 +57,10 @@ vi.mock("@/endpoints/seed/articles", () => ({
 
 vi.mock("@/endpoints/seed/features/interactive-maps", () => ({
   createMoCongressionalMapsArticle: vi.fn().mockResolvedValue(mockMapArticleId),
-  createFederalCourtsArticle: vi.fn().mockResolvedValue(mockFederalCourtsArticleId),
+}))
+
+vi.mock("@/endpoints/seed/features/interactives", () => ({
+  createFederalCourtsInteractive: vi.fn().mockResolvedValue(mockFederalCourtsInteractiveId),
 }))
 
 // Merch products are seeded into their own collection before the home page
@@ -71,8 +74,9 @@ const { createUser } = await import("@/endpoints/seed/users")
 const { createArticle } = await import("@/endpoints/seed/articles")
 const { createRichTextShowcaseArticle } =
   await import("@/endpoints/seed/features/rich-text-showcase")
-const { createFederalCourtsArticle, createMoCongressionalMapsArticle } =
+const { createMoCongressionalMapsArticle } =
   await import("@/endpoints/seed/features/interactive-maps")
+const { createFederalCourtsInteractive } = await import("@/endpoints/seed/features/interactives")
 const { seedMerchProducts } = await import("@/endpoints/seed/merch")
 const { main } = await import("../../scripts/seed-e2e")
 
@@ -170,15 +174,15 @@ describe("seed-e2e main()", () => {
       },
       "2026-06-04T00:00:00.000Z",
     )
-    // The drilldown-mode article (interactive-map-drilldown.spec.ts) is seeded the same way.
-    expect(createFederalCourtsArticle).toHaveBeenCalledWith(
+  })
+
+  it("creates the Federal Courts interactive page interactive-page.spec.ts drives", async () => {
+    await main()
+
+    // No writer or media: an interactive is a page with a synced data snapshot, not an article.
+    expect(createFederalCourtsInteractive).toHaveBeenCalledWith(
       mockPayload,
-      [mockWriter],
-      [],
-      [],
-      {
-        disableRevalidate: true,
-      },
+      { disableRevalidate: true },
       "2026-06-04T00:00:00.000Z",
     )
   })

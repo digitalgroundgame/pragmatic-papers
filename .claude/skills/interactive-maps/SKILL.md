@@ -525,6 +525,14 @@ per-path facts from geometry. Source of truth: `src/interactives/types.ts`.
 4. The page composes the overview server-side; regions load lazily as JSON
    from `/interactives/<slug>/regions/<id>`, composed the same way and cached
    by tag until the next publish.
+5. **Record search** is a third composed view. `/interactives/<slug>/search`
+   serves one entry per record — id, name and region, nothing else — named by
+   the profile's `display.title` field, so a feed cannot decide what a result
+   says. The client fetches it on the reader's first keystroke, filters in the
+   browser, and a chosen result selects the record's region (drilling into its
+   parent first when it is a child) and pins the record in the pane. A record
+   needs an `_id` to be searchable: it is what the pane finds it by once the
+   region's asset has loaded.
 
 Private upstream: set `COURT_TRACKER_GITHUB_TOKEN` (fine-grained, contents:
 read); `COURT_TRACKER_REPO` overrides the default repository. Without the
@@ -556,6 +564,8 @@ token the sync logs a warning and skips.
 | Sync fails with `geometry draws "x" but the feed declares…` | Upstream renamed or dropped a region id. Fix the adapter's mapping or re-snapshot the geometry; the last good snapshot still serves. |
 | Colours or labels look wrong after a data update            | They cannot come from the feed; look at `presentation.ts` and the theme tokens.                                                      |
 | Region route returns 404                                    | The region is not drillable (not a key of the profile's `geometry.children`), or there is no published snapshot.                     |
+| A judge is missing from search                              | Their record has no `_id`, or no value in the profile's `display.title` field — `composeSearchIndex` skips both. Check the adapter.  |
+| Searching finds nobody at all                               | `/interactives/<slug>/search` 404s (no published snapshot) or the box was never given a URL; the list says "Search is unavailable".  |
 
 ## Reference
 

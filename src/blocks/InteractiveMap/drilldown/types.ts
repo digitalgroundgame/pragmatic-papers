@@ -149,6 +149,12 @@ export interface RecordDisplay {
 export type DrilldownRecord = Record<string, unknown> & {
   /** Region the record belongs to. */
   _region: string
+  /**
+   * Stable identity for the record, unique across the whole drilldown. Optional — the bench
+   * does not need it — but search does: it is what a result carries so the pane can pin the
+   * record again once its region's asset has loaded.
+   */
+  _id?: string
   /** `associate` records sit beside the bench, not in it. Default `seat`. */
   _role?: "seat" | "associate"
 }

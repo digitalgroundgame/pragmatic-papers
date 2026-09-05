@@ -2,6 +2,7 @@ import { unstable_cache } from "next/cache"
 import { draftMode } from "next/headers"
 import { cache } from "react"
 
+import type { SearchIndex } from "@/blocks/InteractiveMap/drilldown/search"
 import type { ChildAssetRef, DrilldownAsset } from "@/blocks/InteractiveMap/drilldown/types"
 import { interactivePath, interactiveTag } from "@/collections/InteractiveSnapshots/tag"
 import type { Interactive } from "@/payload-types"
@@ -9,6 +10,7 @@ import { getPayloadConfig } from "@/utilities/getPayloadConfig"
 
 import { childKeys, composeChild, composeOverview } from "./compose"
 import { getProfile } from "./profiles"
+import { composeSearchIndex } from "./search"
 import { DRILLDOWN_DATA_SCHEMA, type DrilldownData, type InteractiveProfile } from "./types"
 
 /**
@@ -63,6 +65,8 @@ const readSnapshotData = cache(
 export interface ComposedOverview {
   overview: DrilldownAsset
   childAssets: ChildAssetRef[]
+  /** Same-origin route serving the record search index, fetched on the reader's first query. */
+  searchUrl: string
   /** When upstream generated the data the page is showing, and who upstream is. */
   generatedAt: string
   source: DrilldownData["source"]
@@ -87,7 +91,14 @@ async function composeOverviewFor(
   }))
   const problems: string[] = []
   if (overview.viewBox === null) problems.push("overview geometry has no usable viewBox")
-  return { overview, childAssets, generatedAt: data.generatedAt, source: data.source, problems }
+  return {
+    overview,
+    childAssets,
+    searchUrl: `${interactivePath(interactive.slug)}/search`,
+    generatedAt: data.generatedAt,
+    source: data.source,
+    problems,
+  }
 }
 
 async function composeChildFor(
@@ -131,6 +142,31 @@ export async function loadInteractiveRegion(
   return unstable_cache(
     () => composeChildFor(interactive, profile, regionId, false),
     ["interactive-region", String(interactive.id), regionId],
+    { tags: [interactiveTag(interactive.id)] },
+  )()
+}
+
+async function composeSearchIndexFor(
+  interactive: Interactive,
+  profile: InteractiveProfile,
+  draft: boolean,
+): Promise<SearchIndex | null> {
+  const data = await readSnapshotData(interactive.id, draft)
+  if (!data) return null
+  return composeSearchIndex({ presentation: profile.presentation, data })
+}
+
+/** The record search index, or null when the interactive has no snapshot to search. */
+export async function loadInteractiveSearchIndex(
+  interactive: Interactive,
+): Promise<SearchIndex | null> {
+  const profile = getProfile(interactive.profile)
+  if (!profile) return null
+  const { isEnabled: draft } = await draftMode()
+  if (draft) return composeSearchIndexFor(interactive, profile, true)
+  return unstable_cache(
+    () => composeSearchIndexFor(interactive, profile, false),
+    ["interactive-search", String(interactive.id), interactive.slug],
     { tags: [interactiveTag(interactive.id)] },
   )()
 }

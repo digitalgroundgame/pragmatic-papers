@@ -18,6 +18,8 @@ interface InteractiveDrilldownProps {
   composed: ComposedOverview
   /** Empty-state text for the pane, in the interactive's own vocabulary. */
   emptyHint?: string
+  /** Placeholder for the record search box ("Search judges"). */
+  searchLabel?: string
 }
 
 /**
@@ -28,6 +30,7 @@ interface InteractiveDrilldownProps {
 export function InteractiveDrilldown({
   composed,
   emptyHint,
+  searchLabel,
 }: InteractiveDrilldownProps): React.ReactElement {
   const { overview, childAssets } = composed
   const regions = buildRegionIndex([overview])
@@ -39,6 +42,7 @@ export function InteractiveDrilldown({
       <DrilldownMapClient
         layout="stacked"
         emptyHint={emptyHint}
+        search={{ url: composed.searchUrl, ...(searchLabel ? { label: searchLabel } : {}) }}
         overview={stripGeometry(overview)}
         childAssets={childAssets}
       >

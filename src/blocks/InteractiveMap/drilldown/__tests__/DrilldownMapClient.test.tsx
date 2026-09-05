@@ -5,6 +5,7 @@ import { DrilldownMapClient } from "@/blocks/InteractiveMap/drilldown/DrilldownM
 import { DrilldownOverviewSvg } from "@/blocks/InteractiveMap/drilldown/DrilldownOverviewSvg"
 import { parseDrilldownAssetString } from "@/blocks/InteractiveMap/drilldown/parseAsset"
 import { buildRegionIndex } from "@/blocks/InteractiveMap/drilldown/regions"
+import { DRILLDOWN_SEARCH_SCHEMA } from "@/blocks/InteractiveMap/drilldown/search"
 import { DRILLDOWN_SCHEMA } from "@/blocks/InteractiveMap/drilldown/types"
 
 const display = {
@@ -126,17 +127,28 @@ const westSvg = `<svg viewBox="0 0 50 50">
   </g>
 </svg>`
 
-function setup() {
+const searchIndex = {
+  schema: DRILLDOWN_SEARCH_SCHEMA,
+  entries: [
+    { id: "a", name: "Ada Lovelace", region: "west" },
+    { id: "c", name: "Grace Hopper", region: "west" },
+    { id: "d", name: "Katherine Johnson", region: "w1" },
+  ],
+}
+
+function setup({ search }: { search?: { url: string; label?: string } } = {}) {
   const overview = parseDrilldownAssetString(overviewSvg)
   const regions = buildRegionIndex([overview])
   const fetchMock = vi.fn(async (url: string) => {
     if (url === "/map-assets/west.svg") return new Response(westSvg, { status: 200 })
+    if (url === "/search") return Response.json(searchIndex)
     return new Response("nope", { status: 404 })
   })
   vi.stubGlobal("fetch", fetchMock)
   const utils = render(
     <DrilldownMapClient
       overview={{ ...overview, paths: overview.paths.map((p) => ({ ...p, d: "" })) }}
+      search={search}
       childAssets={[
         { regionId: "west", url: "/map-assets/west.svg" },
         { regionId: "east", url: "/map-assets/east.svg" },
@@ -322,5 +334,99 @@ describe("DrilldownMapClient", () => {
     fireEvent.keyDown(document, { key: "Escape" })
     await waitFor(() => expect(pane(container)).not.toHaveAttribute("data-open"))
     expect(container.querySelector("path[data-selected]")).not.toBeInTheDocument()
+  })
+
+  it("search is off unless the caller supplies an index", () => {
+    const { container } = setup()
+    expect(container.querySelector("[data-drilldown-search]")).not.toBeInTheDocument()
+  })
+
+  it("a search result selects the record's region and pins the record", async () => {
+    const { container, getByRole, fetchMock } = setup({
+      search: { url: "/search", label: "Search judges" },
+    })
+    // The index is not fetched until the reader actually searches.
+    expect(fetchMock).not.toHaveBeenCalled()
+
+    const box = getByRole("combobox", { name: "Search judges" })
+    fireEvent.change(box, { target: { value: "hopper" } })
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith("/search", expect.anything()))
+
+    const option = await within(container).findByRole("option", { name: /Grace Hopper/ })
+    expect(option).toHaveTextContent("West")
+    fireEvent.click(option)
+
+    const p = pane(container)
+    await waitFor(() => expect(p).toHaveAttribute("data-open"))
+    expect(p.querySelector("[data-drilldown-pane-title]")).toHaveTextContent("West")
+    const detail = await waitFor(() => {
+      const el = p.querySelector<HTMLElement>("[data-drilldown-detail]")!
+      expect(el).toHaveAttribute("data-pinned")
+      return el
+    })
+    expect(within(detail).getByText("Grace Hopper")).toBeInTheDocument()
+    // The query is cleared, so the list does not sit over the map the reader was sent to.
+    expect(box).toHaveValue("")
+  })
+
+  it("a result inside a child region drills into its parent first", async () => {
+    const { container, getByRole } = setup({ search: { url: "/search" } })
+    fireEvent.change(getByRole("combobox"), { target: { value: "katherine" } })
+    fireEvent.click(await within(container).findByRole("option", { name: /Katherine Johnson/ }))
+
+    await waitFor(() =>
+      expect(container.querySelector("[data-drilldown-viewport]")).toHaveAttribute(
+        "data-view",
+        "child",
+      ),
+    )
+    const p = pane(container)
+    await waitFor(() =>
+      expect(p.querySelector("[data-drilldown-pane-title]")).toHaveTextContent("West 1"),
+    )
+    await waitFor(() =>
+      expect(p.querySelector("[data-drilldown-detail]")).toHaveAttribute("data-pinned"),
+    )
+  })
+
+  it("the arrow keys walk the results and Enter takes the highlighted one", async () => {
+    const { container, getByRole } = setup({ search: { url: "/search" } })
+    const box = getByRole("combobox")
+    fireEvent.change(box, { target: { value: "a" } })
+    await within(container).findByRole("option", { name: /Ada Lovelace/ })
+
+    const names = () =>
+      within(container)
+        .getAllByRole("option")
+        .map((o) => o.textContent)
+    expect(names()[0]).toContain("Ada Lovelace")
+    fireEvent.keyDown(box, { key: "ArrowDown" })
+    expect(within(container).getAllByRole("option")[1]).toHaveAttribute("aria-selected", "true")
+    fireEvent.keyDown(box, { key: "Enter" })
+
+    await waitFor(() => expect(pane(container)).toHaveAttribute("data-open"))
+  })
+
+  it("Escape in the search box dismisses the list without closing the pane", async () => {
+    const { container, getByRole } = setup({ search: { url: "/search" } })
+    fireEvent.click(selector(container).getByRole("button", { name: "West" }))
+    await waitFor(() => expect(pane(container)).toHaveAttribute("data-open"))
+
+    const box = getByRole("combobox")
+    fireEvent.change(box, { target: { value: "ada" } })
+    await within(container).findByRole("option", { name: /Ada Lovelace/ })
+    fireEvent.keyDown(box, { key: "Escape" })
+
+    expect(within(container).queryByRole("option")).not.toBeInTheDocument()
+    expect(pane(container)).toHaveAttribute("data-open")
+  })
+
+  it("reports an index that cannot be loaded rather than looking like no matches", async () => {
+    const { container, getByRole } = setup({ search: { url: "/missing" } })
+    vi.spyOn(console, "error").mockImplementation(() => undefined)
+    fireEvent.change(getByRole("combobox"), { target: { value: "ada" } })
+    await waitFor(() =>
+      expect(container.querySelector("[data-drilldown-search-error]")).toBeInTheDocument(),
+    )
   })
 })

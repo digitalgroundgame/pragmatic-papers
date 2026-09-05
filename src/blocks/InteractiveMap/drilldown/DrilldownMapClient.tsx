@@ -5,12 +5,14 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { cn } from "@/utilities/utils"
 
 import { AssetLoader } from "./assetLoader"
-import { DrilldownPane, type DrilldownPaneHandle } from "./DrilldownPane"
+import { DrilldownPane, type DrilldownPaneHandle, type PinRequest } from "./DrilldownPane"
+import { DrilldownSearch } from "./DrilldownSearch"
 import { DrilldownSelector, type SelectVia } from "./DrilldownSelector"
 import { DrilldownTooltip } from "./DrilldownTooltip"
 import { DEFAULT_VIEWBOX, padViewBox } from "./geometry"
 import { assetKeyFor, recordsFor } from "./records"
 import { buildRegionIndex, displayFacts } from "./regions"
+import type { SearchResult } from "./search"
 import { MapStage } from "./stage"
 import type { ChildAssetRef, DrilldownAsset, RegionIndex } from "./types"
 
@@ -28,6 +30,11 @@ export interface DrilldownMapClientProps {
   layout?: DrilldownLayout
   /** Empty-state text for the stacked pane. */
   emptyHint?: string
+  /**
+   * Turns on record search. `url` serves the index (`DrilldownSearch`); `label` names it in
+   * the interactive's own vocabulary ("Search judges"). Omitted, no search box is rendered.
+   */
+  search?: { url: string; label?: string }
   /** The server-rendered overview layer. */
   children: React.ReactNode
 }
@@ -56,6 +63,7 @@ export function DrilldownMapClient({
   childAssets,
   layout = "overlay",
   emptyHint,
+  search,
   children,
 }: DrilldownMapClientProps): React.ReactElement {
   const rootRef = useRef<HTMLDivElement | null>(null)
@@ -74,6 +82,7 @@ export function DrilldownMapClient({
   const [paneStowed, setPaneStowed] = useState(false)
   const [hover, setHover] = useState<{ id: string; x: number; y: number } | null>(null)
   const [busy, setBusy] = useState(false)
+  const [pinRequest, setPinRequest] = useState<(PinRequest & { regionId: string }) | null>(null)
   // How the last selection was made, so keyboard users land in the pane they just opened.
   const lastVia = useRef<SelectVia>("pointer")
 
@@ -135,12 +144,16 @@ export function DrilldownMapClient({
   }, [focusSelectorItem])
 
   const select = useCallback(
-    (id: string, via: SelectVia = "pointer") => {
+    (id: string, via: SelectVia = "pointer", { force = false }: { force?: boolean } = {}) => {
       if (!regions.byId[id]) return
       lastVia.current = via
+      // A pin belongs to the region it was made for; selecting elsewhere drops it.
+      setPinRequest((cur) => (cur && cur.regionId !== id ? null : cur))
       setSelected((cur) => {
         if (cur === id) {
-          setPaneOpen((open) => !open)
+          // `force` is for a selection that is showing something specific (a search result):
+          // re-selecting the region it is already on must not toggle the pane shut.
+          setPaneOpen((open) => force || !open)
           return id
         }
         setPaneOpen(true)
@@ -191,6 +204,23 @@ export function DrilldownMapClient({
     if (how === "cancelled") return
     stage.renderBlocks(regions.topLevel)
   }, [regions.topLevel])
+
+  // A search result names a record, not a region: show the map the record sits on, select its
+  // region and ask the pane to pin it. The pane does the pinning once the region's asset has
+  // arrived, so a result in a region that is not loaded yet still lands on the right card.
+  const pinNonce = useRef(0)
+  const revealRecord = useCallback(
+    async (result: SearchResult) => {
+      if (!regions.byId[result.region]) return
+      const key = assetKeyFor(result.region, regions, childAssets)
+      if (key && key !== result.region && view.parentId !== key) await drillIn(key)
+      pinNonce.current += 1
+      // Select first: the selection is what clears a pin left on another region.
+      select(result.region, "keyboard", { force: true })
+      setPinRequest({ regionId: result.region, recordId: result.id, nonce: pinNonce.current })
+    },
+    [regions, childAssets, view.parentId, drillIn, select],
+  )
 
   // ---- stage lifecycle ---------------------------------------------------------------------
 
@@ -309,6 +339,7 @@ export function DrilldownMapClient({
       ref={paneRef}
       variant={stacked ? "stacked" : "overlay"}
       emptyHint={emptyHint}
+      pinRequest={pinRequest && pinRequest.regionId === selected ? pinRequest : null}
       region={selectedRegion}
       facts={selectedRegion ? displayFacts(selectedRegion, payloadFor(selectedRegion.id)) : []}
       records={records}
@@ -324,6 +355,15 @@ export function DrilldownMapClient({
 
   return (
     <>
+      {search && (
+        <DrilldownSearch
+          url={search.url}
+          label={search.label}
+          regions={regions}
+          onSelect={(r) => void revealRecord(r)}
+          className={stacked ? "mb-3 max-w-sm" : "mb-2 max-w-xs"}
+        />
+      )}
       <div
         ref={rootRef}
         data-drilldown-map=""

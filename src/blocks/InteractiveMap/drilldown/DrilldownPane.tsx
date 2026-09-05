@@ -17,6 +17,12 @@ import { buildBench, type RegionRecords } from "./records"
 import type { DisplayFact } from "./regions"
 import type { DrilldownRecord, RecordDisplay, RegionInfo } from "./types"
 
+/** Ask the pane to pin one record; the nonce lets the same record be re-pinned. */
+export interface PinRequest {
+  recordId: string
+  nonce: number
+}
+
 export interface DrilldownPaneHandle {
   /** Move keyboard focus to the pane's heading (after a keyboard selection). */
   focusHeading(): void
@@ -39,6 +45,8 @@ interface DrilldownPaneProps {
   variant?: "overlay" | "stacked"
   /** Shown in the empty state of the stacked variant. */
   emptyHint?: string
+  /** A record to pin as soon as it is among the region's loaded records (search results). */
+  pinRequest?: PinRequest | null
   onDrill(): void
   onClose(): void
   onStow(stowed: boolean): void
@@ -120,6 +128,7 @@ export function DrilldownPane({
   canDrill,
   variant = "overlay",
   emptyHint = "Select a region on the map to see its details.",
+  pinRequest = null,
   onDrill,
   onClose,
   onStow,
@@ -147,6 +156,22 @@ export function DrilldownPane({
     // eslint-disable-next-line react-hooks/set-state-in-effect -- reset per region selection
     setDetail(null)
   }, [regionId])
+
+  // A search result names a record whose region asset may still be loading: pin it as soon as
+  // the records that contain it arrive, and leave the reader's own pin alone otherwise.
+  const pinNonce = pinRequest?.nonce ?? null
+  const pinId = pinRequest?.recordId ?? null
+  useEffect(() => {
+    if (!pinId) return
+    const seat = records.seats.find((r) => r._id === pinId)
+    if (seat && records.display) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- pin requested from outside
+      setDetail({ record: seat, display: records.display, pinned: true })
+      return
+    }
+    const associate = records.associates.find((a) => a.record._id === pinId)
+    if (associate) setDetail({ record: associate.record, display: associate.display, pinned: true })
+  }, [pinId, pinNonce, records])
 
   useEffect(() => {
     const el = bodyRef.current

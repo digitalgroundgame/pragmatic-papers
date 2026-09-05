@@ -92,6 +92,7 @@ export default async function InteractivePage({
         <InteractiveDrilldown
           composed={composed}
           emptyHint="Select a court on the map or from the list to see who sits on its bench."
+          searchLabel="Search judges"
         />
       ) : (
         <p

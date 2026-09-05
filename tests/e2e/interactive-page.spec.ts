@@ -106,6 +106,50 @@ test.describe("interactive page — federal courts", () => {
     await expect(page.locator("[data-drilldown-selector] [data-region-item='ca1']")).toBeVisible()
   })
 
+  test("searching a judge by name opens their court and pins them", async ({ page }) => {
+    await page.goto(PAGE)
+    const box = page.getByRole("combobox", { name: "Search judges" })
+    await expect(box).toBeVisible()
+
+    // The index is a route of its own, fetched only once the reader searches.
+    await box.fill("kayatta")
+    const option = page.getByRole("option", { name: /Kayatta/ })
+    // The region beside the name is what tells two judges of the same name apart.
+    await expect(option).toContainText("1st Cir.")
+    await option.click()
+
+    const pane = page.locator("[data-drilldown-pane][data-open]")
+    await expect(pane.locator("[data-drilldown-pane-title]")).toHaveText("1st Cir.")
+    const detail = pane.locator("[data-drilldown-detail]")
+    await expect(detail).toHaveAttribute("data-pinned", "")
+    await expect(detail).toContainText("Kayatta")
+    await expect(box).toHaveValue("")
+  })
+
+  test("a search for a district judge drills into the circuit first", async ({ page }) => {
+    await page.goto(PAGE)
+    await page.getByRole("combobox", { name: "Search judges" }).fill("woodlock")
+    await page.getByRole("option", { name: /Woodlock/ }).click()
+
+    const viewport = page.locator("[data-drilldown-viewport]")
+    await expect(viewport).toHaveAttribute("data-view", "child")
+    await expect(viewport).not.toHaveAttribute("aria-busy", "true")
+
+    const pane = page.locator("[data-drilldown-pane][data-open]")
+    await expect(pane.locator("[data-drilldown-pane-title]")).toHaveText("D. Mass.")
+    await expect(pane.locator("[data-drilldown-detail]")).toHaveAttribute("data-pinned", "")
+  })
+
+  test("the search index is served as JSON and names every record once", async ({ page }) => {
+    const res = await page.request.get(`${PAGE}/search`)
+    expect(res.ok()).toBe(true)
+    expect(res.headers()["content-type"]).toContain("application/json")
+    const index = (await res.json()) as { entries: { id: string; name: string; region: string }[] }
+    expect(index.entries.length).toBeGreaterThan(1000)
+    expect(new Set(index.entries.map((e) => e.id)).size).toBe(index.entries.length)
+    expect(index.entries.every((e) => typeof e.name === "string" && e.name.length > 0)).toBe(true)
+  })
+
   test("a region's asset is composed server-side and served as JSON", async ({ page }) => {
     const region = await page.request.get(`${PAGE}/regions/ca8`)
     expect(region.ok()).toBe(true)

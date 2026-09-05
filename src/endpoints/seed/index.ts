@@ -10,6 +10,7 @@ import {
   createFederalCourtsArticle,
   createMoCongressionalMapsArticle,
 } from "./features/interactive-maps"
+import { createFederalCourtsInteractive } from "./features/interactives"
 import { createMathBlocksArticle } from "./features/math-blocks"
 import { createMediaCollageArticle } from "./features/media-collage"
 import { createNarrationDemoArticle } from "./features/narration-demo"
@@ -295,6 +296,12 @@ export const seed = async (
         ctx.mapArticles.push(
           await createFederalCourtsArticle(payload, [ctx.writers[0]!], ctx.media, [ctx.topics[0]!]),
         )
+      },
+    },
+    {
+      name: "Creating interactives...",
+      fn: async () => {
+        await createFederalCourtsInteractive(payload)
       },
     },
     {

@@ -1,13 +1,19 @@
 import type { Metadata } from "next"
 
-import type { Article, Page, Topic, Volume } from "../payload-types"
+import type { Article, Interactive, Page, Topic, Volume } from "../payload-types"
 
 import { getMediaUrl } from "./getMediaUrl"
 import { getServerSideURL } from "./getURL"
 import { mergeOpenGraph } from "./mergeOpenGraph"
 
 export const generateMeta = async (args: {
-  doc: Partial<Page> | Partial<Volume> | Partial<Article> | Partial<Topic> | null
+  doc:
+    | Partial<Page>
+    | Partial<Volume>
+    | Partial<Article>
+    | Partial<Topic>
+    | Partial<Interactive>
+    | null
   canonicalPath?: string
 }): Promise<Metadata> => {
   const { doc, canonicalPath } = args

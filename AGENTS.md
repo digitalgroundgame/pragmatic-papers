@@ -175,6 +175,14 @@ ships a validator:
 The reference drilldown pipeline is `scripts/bake-court-tracker-fixtures.ts`
 (Federal Courts, #905).
 
+The same skill covers **interactive pages** (`/interactives/<slug>`, the
+`interactives` + `interactive-snapshots` collections, `src/interactives/`):
+long-lived drilldowns whose data a researcher's feed keeps updating. Pragmatic
+Papers owns geometry and presentation in code; the feed owns facts and records;
+`syncInteractiveData` pulls it daily into draft snapshots an editor publishes.
+`scripts/snapshot-federal-courts.ts` regenerates the Federal Courts geometry
+and data fixture from a court-tracker checkout.
+
 ## Filing & triaging GitHub issues
 
 Creating, editing, triaging, or labeling an issue — or adding/removing a

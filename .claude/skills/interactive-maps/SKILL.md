@@ -259,11 +259,15 @@ precinct returns, a country → provinces → indicators, a metro → neighborho
 records are the same feature. Nothing in the block knows the vocabulary — it
 all comes out of the assets a writer uploads.
 
-The whole mode reads **self-contained SVG assets**: no collections, no runtime
-API, no rows in Postgres. A writer's pipeline bakes the data into the files.
-The reference pipeline is `scripts/bake-court-tracker-fixtures.ts`, which turns
-the court-tracker repository's output into the seeded Federal Courts article's
-assets; copy its shape for a new dataset.
+There are two ways to feed it. As a **block in an article**, the mode reads
+**self-contained SVG assets** a writer uploads: no collections, no runtime API,
+no rows in Postgres — the data is baked into the files by a pipeline such as
+`scripts/bake-court-tracker-fixtures.ts`, and the map is fixed at publish time.
+As an **interactive page** (`/interactives/<slug>`), the same engine draws
+code-owned geometry and presentation from a researcher's data feed that a
+job syncs on a schedule — see [Interactive pages](#interactive-pages--drilldown-from-a-synced-feed)
+below. Use the block for a map that belongs to one article; use a page for a
+tracker that outlives any article and whose data keeps changing.
 
 Source of truth is `src/blocks/InteractiveMap/drilldown/types.ts` (the
 contract) and `contract.ts` (validation). What follows is the checklist.
@@ -479,6 +483,79 @@ selector, facts and any records carried in the overview payload.
 | Facts show `Active count` instead of your wording | Add `facts.labels`.                                                                                                    |
 | Map upside down in the child view only            | The child file lacks the `scale(1,-1)` flip group (or has it while the overview does not); make both consistent.       |
 | Photos never appear                               | `display.image.url` names a field the records do not have, or the host blocks hotlinking; initials show instead.       |
+
+## Interactive pages — drilldown from a synced feed
+
+A long-lived page at `/interactives/<slug>` whose data a researcher keeps
+updating, drawn by the same drilldown engine. The point of the design is an
+**ownership split**:
+
+| Layer            | Contains                                                          | Owner            | Lives in                                         |
+| ---------------- | ----------------------------------------------------------------- | ---------------- | ------------------------------------------------ |
+| **Geometry**     | region shapes, ids, hierarchy                                     | Pragmatic Papers | `src/interactives/<profile>/geometry/*.json`     |
+| **Presentation** | labels, colours, ordering, formats, seat grouping                 | Pragmatic Papers | `src/interactives/<profile>/presentation.ts`     |
+| **Editorial**    | title, standfirst, sources, which profile, feed ref, publish gate | editors          | `interactives` collection                        |
+| **Data**         | region facts and records (plus named extra datasets)              | the researcher   | their repo → `interactive-snapshots` (versioned) |
+
+**The rule:** data carries values and meanings (`party: "D"`,
+`status: "senior"`); code carries appearance (what colour "D" is). A feed cannot
+set a colour, label or order: `src/interactives/compose.ts` reads `facts`,
+`seats` and `display` from the profile and from nothing else, and empties
+per-path facts from geometry. Source of truth: `src/interactives/types.ts`.
+
+### How data flows
+
+1. The researcher publishes what they already publish (court-tracker's
+   `data/manifest.json` + the files it lists). Nothing on their side changes;
+   the **adapter** (`src/interactives/<profile>/adapter.ts`) absorbs their
+   shape and is ours to maintain.
+2. `syncInteractiveData` runs daily (06:15 UTC) and from the **Sync data
+   feeds** button on Interactive Snapshots (`POST
+/api/interactive-snapshots/sync[?interactive=<id>&force=true]`). It reads
+   the manifest, skips if upstream's `version` has not moved, fetches, adapts,
+   **validates against the geometry** (every record's region must exist; a
+   drawn shape the feed no longer declares, or a declaration with no shape
+   under a drawn parent, fails — that is how an upstream rename shows up), and
+   writes a new snapshot **version only when the content hash moved**.
+3. The snapshot is a **draft** unless the interactive's feed is set to
+   auto-publish. An editor opens the page from the admin (draft mode renders
+   the newest draft) — that is the preview — and publishes it. A feed that
+   fails validation never becomes a version, so the last good one keeps
+   serving.
+4. The page composes the overview server-side; regions load lazily as JSON
+   from `/interactives/<slug>/regions/<id>`, composed the same way and cached
+   by tag until the next publish.
+
+Private upstream: set `COURT_TRACKER_GITHUB_TOKEN` (fine-grained, contents:
+read); `COURT_TRACKER_REPO` overrides the default repository. Without the
+token the sync logs a warning and skips.
+
+### Adding an interactive
+
+1. `src/interactives/<profile>/` with `presentation.ts`, `adapter.ts`,
+   `feed.ts` (implements `FeedAdapter`), `geometry.ts` (lazy JSON imports) and
+   `index.ts` exporting an `InteractiveProfile`; register it in
+   `src/interactives/profiles.ts`.
+2. Snapshot the geometry once from the upstream export and commit the JSON —
+   for Federal Courts: `pnpm tsx scripts/snapshot-federal-courts.ts geometry --source ../court-tracker`.
+3. Snapshot the data fixture the seed and tests use — a real adapter output:
+   `pnpm tsx scripts/snapshot-federal-courts.ts data --source ../court-tracker`
+   (or `--ref main` with the token set). This also validates the feed and
+   prints every problem.
+4. Create the **Interactive** in the admin (title, slug, profile, standfirst,
+   sources, feed ref), press **Sync data feeds**, review the draft snapshot on
+   the page, publish it.
+
+### Troubleshooting (pages)
+
+| Symptom                                                     | Cause                                                                                                                                |
+| ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| Page says "no published data yet"                           | No snapshot is published for the interactive. Open Interactive Snapshots: publish the draft, or run the sync and then publish.       |
+| Sync says "skipped — COURT_TRACKER_GITHUB_TOKEN not set"    | The upstream is private; set the token in the environment the job runs in.                                                           |
+| Sync says "unchanged" but the researcher pushed             | Their manifest `version` did not move (they did not rebuild), or the rendered content is identical. Use `?force=true` to re-read.    |
+| Sync fails with `geometry draws "x" but the feed declares…` | Upstream renamed or dropped a region id. Fix the adapter's mapping or re-snapshot the geometry; the last good snapshot still serves. |
+| Colours or labels look wrong after a data update            | They cannot come from the feed; look at `presentation.ts` and the theme tokens.                                                      |
+| Region route returns 404                                    | The region is not drillable (not a key of the profile's `geometry.children`), or there is no published snapshot.                     |
 
 ## Reference
 

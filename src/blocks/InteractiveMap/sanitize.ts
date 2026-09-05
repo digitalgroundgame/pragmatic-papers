@@ -1,11 +1,14 @@
 import sanitizeHtml from "sanitize-html"
 
 // This allowlist is a security boundary: uploaded SVG is rendered inline on the page.
-// Widen it deliberately. <metadata> carries the drilldown mode's JSON record payload as a
-// text node; sanitize-html entity-escapes that text, so read it back through a decoding
-// parser (see `extractSvgMetadata`) rather than a regex. <script>, <style>, <foreignObject>
-// and every on* handler stay out — the sanitizer tests assert this after each widening.
-const ALLOWED_SVG_TAGS = ["svg", "g", "path", "title", "desc", "metadata"]
+// Widen it deliberately. <script>, <style>, <foreignObject> and every on* handler stay out —
+// the sanitizer tests assert this after each change.
+const ALLOWED_SVG_TAGS = ["svg", "g", "path", "title", "desc"]
+
+// Discarding a tag keeps its text by default, which would leave an exporter's <metadata>
+// document dumped into the markup as a bare text node. These carry no drawable content, so
+// drop the text with the tag.
+const NON_TEXT_TAGS = ["script", "style", "textarea", "option", "metadata"]
 
 const ALLOWED_SVG_ATTRS = [
   "class",
@@ -38,6 +41,7 @@ export function sanitizeMapSvg(input: string): string {
       lowerCaseAttributeNames: false,
       lowerCaseTags: false,
     },
+    nonTextTags: NON_TEXT_TAGS,
     disallowedTagsMode: "discard",
   })
 }

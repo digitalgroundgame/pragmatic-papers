@@ -73,8 +73,6 @@ export default async function Article({ params: paramsPromise }: Args): Promise<
 
   return (
     <>
-      {/* A named size container so wide blocks (the drilldown map) can break out of the prose
-          column to the site container's width without measuring the viewport. */}
       <div className="@container/page">
         <article className="mx-auto max-w-2xl space-y-6 px-4 md:px-1">
           <JsonLd

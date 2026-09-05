@@ -161,27 +161,28 @@ in `tests/e2e/README.md`.
 
 ### Interactive maps
 
-Building or debugging an Interactive Map block — preparing the pre-projected
-SVG, baking facts and records into a drilldown asset, uploading a Map Asset,
-or chasing a map that renders blank, all-grey, without tooltips, or drills
-into nothing? Use the **`interactive-maps`** skill
-(`.claude/skills/interactive-maps/SKILL.md`). It covers both modes — the
-**choropleth** (regions shaded by a value, R+/D+ color scale) and the
-**drilldown** (an overview map whose regions open into their children and
-records, lazily loaded from self-contained SVG assets) — the sanitizer
-allowlist that silently eats most exports, the drilldown asset contract, and
-ships a validator:
-`pnpm tsx .claude/skills/interactive-maps/validate-map-svg.ts <file.svg> [--mode drilldown]`.
-The reference drilldown pipeline is `scripts/bake-court-tracker-fixtures.ts`
-(Federal Courts, #905).
+Preparing a pre-projected SVG, uploading a Map Asset, or chasing a map that
+renders blank, all-grey, without tooltips, or drills into nothing? Use the
+**`interactive-maps`** skill (`.claude/skills/interactive-maps/SKILL.md`).
 
-The same skill covers **interactive pages** (`/interactives/<slug>`, the
-`interactives` + `interactive-snapshots` collections, `src/interactives/`):
-long-lived drilldowns whose data a researcher's feed keeps updating. Pragmatic
-Papers owns geometry and presentation in code; the feed owns facts and records;
-`syncInteractiveData` pulls it daily into draft snapshots an editor publishes.
+Two things live there, and they are not two modes of one block:
+
+- The **Interactive Map block** is a **choropleth** only — regions shaded by a
+  value, R+/D+ color scale, from an SVG a writer uploads to Map Assets. The
+  skill covers the sanitizer allowlist that silently eats most exports.
+- A **drilldown** is an **interactive page** (`/interactives/<slug>`, the
+  `interactives` + `interactive-snapshots` collections, `src/interactives/`):
+  an overview map whose regions open into their children and records, whose
+  data a researcher's feed keeps updating. Pragmatic Papers owns geometry and
+  presentation in code; the feed owns facts and records; `syncInteractiveData`
+  pulls it daily into draft snapshots an editor publishes.
+
+An SVG never carries records. A drilldown's SVG is checked in, parsed once at
+snapshot time into `geometry/*.json`, and never parsed again;
 `scripts/snapshot-federal-courts.ts` regenerates the Federal Courts geometry
-and data fixture from a court-tracker checkout.
+and data fixture from a court-tracker checkout. Validate a file before
+committing or uploading it:
+`pnpm tsx .claude/skills/interactive-maps/validate-map-svg.ts <file.svg> [--mode geometry]`.
 
 ## Filing & triaging GitHub issues
 

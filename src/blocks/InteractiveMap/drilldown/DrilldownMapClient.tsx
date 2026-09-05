@@ -2,33 +2,23 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 
-import { cn } from "@/utilities/utils"
-
 import { AssetLoader } from "./assetLoader"
 import { DrilldownPane, type DrilldownPaneHandle, type PinRequest } from "./DrilldownPane"
 import { DrilldownSearch } from "./DrilldownSearch"
 import { DrilldownSelector, type SelectVia } from "./DrilldownSelector"
 import { DrilldownTooltip } from "./DrilldownTooltip"
-import { DEFAULT_VIEWBOX, padViewBox } from "./geometry"
+import { DEFAULT_VIEWBOX } from "./geometry"
 import { assetKeyFor, recordsFor } from "./records"
 import { buildRegionIndex, displayFacts } from "./regions"
 import type { SearchResult } from "./search"
 import { MapStage } from "./stage"
 import type { ChildAssetRef, DrilldownAsset, RegionIndex } from "./types"
 
-export type DrilldownLayout = "overlay" | "stacked"
-
 export interface DrilldownMapClientProps {
   /** The overview asset with path data stripped — geometry lives in the server-rendered SVG. */
   overview: DrilldownAsset
   childAssets: ChildAssetRef[]
-  /**
-   * `overlay` (the block): selector beside a map whose height follows its aspect ratio; the
-   * pane slides over the map. `stacked` (a page): region strip, map at a capped height, pane
-   * beneath — the same on every viewport.
-   */
-  layout?: DrilldownLayout
-  /** Empty-state text for the stacked pane. */
+  /** Empty-state text for the pane. */
   emptyHint?: string
   /**
    * Turns on record search. `url` serves the index (`DrilldownSearch`); `label` names it in
@@ -61,7 +51,6 @@ function blockIdsFor(
 export function DrilldownMapClient({
   overview,
   childAssets,
-  layout = "overlay",
   emptyHint,
   search,
   children,
@@ -72,14 +61,12 @@ export function DrilldownMapClient({
   const stageRef = useRef<MapStage | null>(null)
   const paneRef = useRef<DrilldownPaneHandle | null>(null)
   const [loader] = useState(() => new AssetLoader())
-  const stacked = layout === "stacked"
 
   const [loaded, setLoaded] = useState<Record<string, DrilldownAsset>>({})
   const [loadState, setLoadState] = useState<Record<string, LoadState>>({})
   const [view, setView] = useState<View>({ parentId: null })
   const [selected, setSelected] = useState<string | null>(null)
   const [paneOpen, setPaneOpen] = useState(false)
-  const [paneStowed, setPaneStowed] = useState(false)
   const [hover, setHover] = useState<{ id: string; x: number; y: number } | null>(null)
   const [busy, setBusy] = useState(false)
   const [pinRequest, setPinRequest] = useState<(PinRequest & { regionId: string }) | null>(null)
@@ -95,8 +82,6 @@ export function DrilldownMapClient({
     (regionId: string) => childAssets.find((a) => a.regionId === regionId)?.url ?? null,
     [childAssets],
   )
-
-  const viewBox = padViewBox(overview.viewBox ?? DEFAULT_VIEWBOX)
 
   // ---- asset loading -----------------------------------------------------------------------
 
@@ -159,7 +144,6 @@ export function DrilldownMapClient({
         setPaneOpen(true)
         return id
       })
-      setPaneStowed(false)
       const key = assetKeyFor(id, regions, childAssets)
       if (key) void ensureAsset(key)
     },
@@ -273,8 +257,8 @@ export function DrilldownMapClient({
     stageRef.current?.setSelected(selected)
   }, [selected])
 
-  // After a selection: keyboard users move into the pane; on a page the pane scrolls into
-  // view if it sits below the fold (a phone, or a tall map).
+  // After a selection: keyboard users move into the pane, and it scrolls into view when it
+  // sits below the fold (a phone, or a tall map).
   useEffect(() => {
     if (!selected || !paneOpen) return
     const pane = paneRef.current
@@ -283,12 +267,10 @@ export function DrilldownMapClient({
       pane.focusHeading()
       return
     }
-    if (stacked) {
-      const el = rootRef.current?.querySelector<HTMLElement>("[data-drilldown-pane]")
-      const rect = el?.getBoundingClientRect()
-      if (rect && rect.top > window.innerHeight * 0.6) pane.scrollIntoView()
-    }
-  }, [selected, paneOpen, stacked])
+    const el = rootRef.current?.querySelector<HTMLElement>("[data-drilldown-pane]")
+    const rect = el?.getBoundingClientRect()
+    if (rect && rect.top > window.innerHeight * 0.6) pane.scrollIntoView()
+  }, [selected, paneOpen])
 
   // Escape closes an open pane from anywhere on the page — a reader who has scrolled into the
   // bench should not have to find the map first.
@@ -337,7 +319,6 @@ export function DrilldownMapClient({
   const pane = (
     <DrilldownPane
       ref={paneRef}
-      variant={stacked ? "stacked" : "overlay"}
       emptyHint={emptyHint}
       pinRequest={pinRequest && pinRequest.regionId === selected ? pinRequest : null}
       region={selectedRegion}
@@ -345,11 +326,9 @@ export function DrilldownMapClient({
       records={records}
       recordsState={recordsState}
       open={paneOpen}
-      stowed={paneStowed}
       canDrill={canDrill}
       onDrill={() => selectedRegion && void drillIn(selectedRegion.id)}
       onClose={deselect}
-      onStow={setPaneStowed}
     />
   )
 
@@ -361,20 +340,16 @@ export function DrilldownMapClient({
           label={search.label}
           regions={regions}
           onSelect={(r) => void revealRecord(r)}
-          className={stacked ? "mb-3 max-w-sm" : "mb-2 max-w-xs"}
+          className="mb-3 max-w-sm"
         />
       )}
       <div
         ref={rootRef}
         data-drilldown-map=""
-        data-layout={layout}
         onKeyDown={onKeyDown}
-        className={cn(
-          stacked ? "flex flex-col gap-3" : "flex flex-col gap-3 sm:flex-row sm:items-start",
-        )}
+        className="flex flex-col gap-3"
       >
         <DrilldownSelector
-          layout={layout}
           regions={regions}
           view={view}
           selected={selected}
@@ -387,17 +362,12 @@ export function DrilldownMapClient({
           data-drilldown-viewport=""
           data-view={view.parentId ? "child" : "overview"}
           aria-busy={busy || undefined}
-          className={cn(
-            "bg-muted/30 @container relative min-w-0 overflow-hidden",
-            stacked ? "w-full rounded-lg" : "min-h-[26rem] flex-1 rounded-sm",
-          )}
-          style={stacked ? undefined : { aspectRatio: `${viewBox[2]} / ${viewBox[3]}` }}
+          className="bg-muted/30 @container relative w-full min-w-0 overflow-hidden rounded-lg"
         >
           {children}
           <div ref={layersRef} data-drilldown-layers="" />
-          {!stacked && pane}
         </div>
-        {stacked && pane}
+        {pane}
       </div>
       <DrilldownTooltip
         label={hoverRegion?.label ?? null}

@@ -6,7 +6,7 @@ import { DrilldownOverviewSvg } from "@/blocks/InteractiveMap/drilldown/Drilldow
 import { parseDrilldownAssetString } from "@/blocks/InteractiveMap/drilldown/parseAsset"
 import { buildRegionIndex } from "@/blocks/InteractiveMap/drilldown/regions"
 import { DRILLDOWN_SEARCH_SCHEMA } from "@/blocks/InteractiveMap/drilldown/search"
-import { DRILLDOWN_SCHEMA } from "@/blocks/InteractiveMap/drilldown/types"
+import { DRILLDOWN_SCHEMA, type DrilldownAsset } from "@/blocks/InteractiveMap/drilldown/types"
 
 const display = {
   title: "name",
@@ -31,33 +31,32 @@ const display = {
   ],
 }
 
+const overviewPayload = {
+  schema: DRILLDOWN_SCHEMA,
+  seats: {
+    totalFact: "seats",
+    groups: [
+      { fact: "seats-r", label: "R", color: "red" },
+      { fact: "seats-d", label: "D", color: "blue" },
+    ],
+    labelFact: "short-label",
+  },
+  records: {
+    items: [
+      {
+        _region: "west",
+        _role: "associate",
+        name: "Justice West",
+        short: "Justice",
+        party: "D",
+        since: "2000-01-01",
+      },
+    ],
+    display,
+  },
+}
+
 const overviewSvg = `<svg viewBox="0 0 100 50">
-  <metadata>${JSON.stringify({
-    schema: DRILLDOWN_SCHEMA,
-    seats: {
-      totalFact: "seats",
-      groups: [
-        { fact: "seats-r", label: "R", color: "red" },
-        { fact: "seats-d", label: "D", color: "blue" },
-      ],
-      labelFact: "short-label",
-    },
-    records: {
-      items: [
-        {
-          _region: "west",
-          _role: "associate",
-          name: "Justice West",
-          short: "Justice",
-          party: "D",
-          since: "2000-01-01",
-        },
-      ],
-      display,
-    },
-  })
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")}</metadata>
   <g transform="scale(1,-1) translate(0,-50)">
     <path id="west" data-region-label="West" data-seats="3" data-seats-r="1" data-seats-d="1" data-short-label="W" data-summary="3 authorized" data-children-label="districts" d="M0 0 L50 0 L50 50 L0 50"/>
     <path id="east" data-region-label="East" data-seats="2" d="M50 0 L100 0 L100 50 L50 50"/>
@@ -66,60 +65,59 @@ const overviewSvg = `<svg viewBox="0 0 100 50">
   </g>
 </svg>`
 
+const westPayload = {
+  schema: DRILLDOWN_SCHEMA,
+  records: {
+    items: [
+      {
+        _region: "west",
+        _id: "a",
+        name: "Ada Lovelace",
+        short: "Lovelace",
+        party: "D",
+        status: "active",
+        since: "2010-05-05",
+        appointer: "P1",
+        chief: true,
+        url: "https://example.com/a",
+      },
+      {
+        _region: "west",
+        _id: "b",
+        name: "Alan Turing",
+        short: "Turing",
+        party: "R",
+        status: "active",
+        since: "2012-05-05",
+        appointer: "P2",
+        fedsoc: true,
+      },
+      {
+        _region: "west",
+        _id: "c",
+        name: "Grace Hopper",
+        short: "Hopper",
+        party: "D",
+        status: "senior",
+        since: "1990-05-05",
+        appointer: "P1",
+      },
+      {
+        _region: "w1",
+        _id: "d",
+        name: "Katherine Johnson",
+        short: "Johnson",
+        party: "D",
+        status: "active",
+        since: "2015-01-01",
+        appointer: "P1",
+      },
+    ],
+    display,
+  },
+}
+
 const westSvg = `<svg viewBox="0 0 50 50">
-  <metadata>${JSON.stringify({
-    schema: DRILLDOWN_SCHEMA,
-    records: {
-      items: [
-        {
-          _region: "west",
-          _id: "a",
-          name: "Ada Lovelace",
-          short: "Lovelace",
-          party: "D",
-          status: "active",
-          since: "2010-05-05",
-          appointer: "P1",
-          chief: true,
-          url: "https://example.com/a",
-        },
-        {
-          _region: "west",
-          _id: "b",
-          name: "Alan Turing",
-          short: "Turing",
-          party: "R",
-          status: "active",
-          since: "2012-05-05",
-          appointer: "P2",
-          fedsoc: true,
-        },
-        {
-          _region: "west",
-          _id: "c",
-          name: "Grace Hopper",
-          short: "Hopper",
-          party: "D",
-          status: "senior",
-          since: "1990-05-05",
-          appointer: "P1",
-        },
-        {
-          _region: "w1",
-          _id: "d",
-          name: "Katherine Johnson",
-          short: "Johnson",
-          party: "D",
-          status: "active",
-          since: "2015-01-01",
-          appointer: "P1",
-        },
-      ],
-      display,
-    },
-  })
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")}</metadata>
   <g transform="scale(1,-1) translate(0,-50)">
     <path id="west" data-region-label="West" d="M0 0 L50 0 L50 50 L0 50"/>
     <path id="w1" data-parent-id="west" data-region-label="West 1" data-seats="2" d="M0 0 L25 0 L25 50 L0 50"/>
@@ -136,11 +134,16 @@ const searchIndex = {
   ],
 }
 
+/** An asset as the server composes it: geometry from an SVG, payload from the feed. */
+function compose(svg: string, payload: unknown): DrilldownAsset {
+  return { ...parseDrilldownAssetString(svg), payload: payload as DrilldownAsset["payload"] }
+}
+
 function setup({ search }: { search?: { url: string; label?: string } } = {}) {
-  const overview = parseDrilldownAssetString(overviewSvg)
+  const overview = compose(overviewSvg, overviewPayload)
   const regions = buildRegionIndex([overview])
   const fetchMock = vi.fn(async (url: string) => {
-    if (url === "/map-assets/west.svg") return new Response(westSvg, { status: 200 })
+    if (url === "/regions/west") return Response.json(compose(westSvg, westPayload))
     if (url === "/search") return Response.json(searchIndex)
     return new Response("nope", { status: 404 })
   })
@@ -150,8 +153,8 @@ function setup({ search }: { search?: { url: string; label?: string } } = {}) {
       overview={{ ...overview, paths: overview.paths.map((p) => ({ ...p, d: "" })) }}
       search={search}
       childAssets={[
-        { regionId: "west", url: "/map-assets/west.svg" },
-        { regionId: "east", url: "/map-assets/east.svg" },
+        { regionId: "west", url: "/regions/west" },
+        { regionId: "east", url: "/regions/east" },
       ]}
     >
       <div data-drilldown-layer="overview" data-state="visible">
@@ -209,7 +212,7 @@ describe("DrilldownMapClient", () => {
     fireEvent.click(item) // and open again — still one fetch
     await waitFor(() => expect(pane(container)).toHaveAttribute("data-open"))
     expect(fetchMock).toHaveBeenCalledTimes(1)
-    expect(fetchMock).toHaveBeenCalledWith("/map-assets/west.svg", expect.anything())
+    expect(fetchMock).toHaveBeenCalledWith("/regions/west", expect.anything())
 
     const p = pane(container)
     await waitFor(() =>

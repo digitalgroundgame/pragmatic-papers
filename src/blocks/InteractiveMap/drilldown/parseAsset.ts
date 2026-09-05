@@ -4,15 +4,8 @@ import { validateDrilldownPayload } from "./contract"
 import { factKey, isReservedFact, RESERVED_FACTS } from "./contract"
 import type { DrilldownAsset, DrilldownPath, FactMap, ViewBox } from "./types"
 
-/**
- * Both parsers — htmlparser2 on the server, DOMParser in the browser — reduce an SVG to
- * this one event stream, and `buildDrilldownAsset` does the rest. One set of extraction
- * rules, so the overview (parsed at render time) and the child assets (parsed after a
- * lazy fetch) can never disagree about what a path means.
- */
-export type SvgEvent =
+type SvgEvent =
   | { type: "open"; tag: string; attrs: Record<string, string> }
-  | { type: "text"; text: string }
   | { type: "close"; tag: string }
 
 function lookup(attrs: Record<string, string>, name: string): string | undefined {
@@ -58,14 +51,11 @@ function pathFromAttrs(attrs: Record<string, string>): DrilldownPath | null {
   return { id, d, layer, parentId, inset, label, facts }
 }
 
-export function buildDrilldownAsset(events: Iterable<SvgEvent>): DrilldownAsset {
+function buildGeometryAsset(events: Iterable<SvgEvent>): DrilldownAsset {
   let viewBox: ViewBox | null = null
   let flipY = false
   let sawFirstGroup = false
   let svgDepth = 0
-  let metadataDepth = 0
-  let metadataDone = false
-  const metadataChunks: string[] = []
   const paths: DrilldownPath[] = []
 
   for (const ev of events) {
@@ -80,47 +70,22 @@ export function buildDrilldownAsset(events: Iterable<SvgEvent>): DrilldownAsset 
       if (tag === "g" && !sawFirstGroup) {
         sawFirstGroup = true
         flipY = FLIP_RE.test(lookup(ev.attrs, "transform") ?? "")
-      } else if (tag === "metadata") {
-        if (!metadataDone) metadataDepth += 1
       } else if (tag === "path") {
         const p = pathFromAttrs(ev.attrs)
         if (p) paths.push(p)
       }
-    } else if (ev.type === "text") {
-      if (metadataDepth > 0 && !metadataDone) metadataChunks.push(ev.text)
-    } else {
-      const tag = ev.tag.toLowerCase()
-      if (tag === "svg") svgDepth = Math.max(0, svgDepth - 1)
-      else if (tag === "metadata" && metadataDepth > 0) {
-        metadataDepth -= 1
-        if (metadataDepth === 0) metadataDone = true
-      }
+    } else if (ev.tag.toLowerCase() === "svg") {
+      svgDepth = Math.max(0, svgDepth - 1)
     }
   }
 
-  let payload: DrilldownAsset["payload"] = null
-  let payloadError: string | null = null
-  const metadataText = metadataChunks.join("").trim()
-  if (metadataText) {
-    let json: unknown
-    try {
-      json = JSON.parse(metadataText)
-    } catch (err) {
-      payloadError = `<metadata> is not valid JSON: ${err instanceof Error ? err.message : String(err)}`
-    }
-    if (json !== undefined) {
-      const result = validateDrilldownPayload(json)
-      payload = result.payload
-      if (result.errors.length > 0) payloadError = result.errors.join("; ")
-    }
-  }
-
-  return { viewBox, flipY, paths, payload, payloadError }
+  return { viewBox, flipY, paths, payload: null, payloadError: null }
 }
 
 /**
- * Server-side source: htmlparser2 over the already-sanitized SVG string. Entities in
- * attribute values and in the `<metadata>` text are decoded by the parser.
+ * Geometry out of an exported SVG: shapes, ids, hierarchy and the `data-*` attributes that
+ * describe them. Runs at snapshot time (`src/interactives/geometry.ts`), never at render time
+ * and never in the browser — facts and records reach the engine from a feed, not from a file.
  */
 export function parseDrilldownAssetString(sanitizedSvg: string): DrilldownAsset {
   const events: SvgEvent[] = []
@@ -128,9 +93,6 @@ export function parseDrilldownAssetString(sanitizedSvg: string): DrilldownAsset 
     {
       onopentag(name, attrs) {
         events.push({ type: "open", tag: name, attrs: { ...attrs } })
-      },
-      ontext(text) {
-        events.push({ type: "text", text })
       },
       onclosetag(name) {
         events.push({ type: "close", tag: name })
@@ -140,7 +102,7 @@ export function parseDrilldownAssetString(sanitizedSvg: string): DrilldownAsset 
   )
   parser.write(sanitizedSvg)
   parser.end()
-  return buildDrilldownAsset(events)
+  return buildGeometryAsset(events)
 }
 
 const isRecord = (v: unknown): v is Record<string, unknown> =>
@@ -148,10 +110,10 @@ const isRecord = (v: unknown): v is Record<string, unknown> =>
 const str = (v: unknown): string | null => (typeof v === "string" && v ? v : null)
 
 /**
- * Third source: an asset already composed on the server (`src/interactives/compose.ts`) and
- * served as JSON. The shape is ours, so this is a guard rather than a parser — a wrong field
- * degrades to an empty path or a null payload with a readable `payloadError`, never a throw
- * inside the drill-in.
+ * The wire format the client reads: an asset already composed on the server
+ * (`src/interactives/compose.ts`) and served as JSON. The shape is ours, so this is a guard
+ * rather than a parser — a wrong field degrades to an empty path or a null payload with a
+ * readable `payloadError`, never a throw inside the drill-in.
  */
 export function parseDrilldownAssetJson(value: unknown): DrilldownAsset {
   if (!isRecord(value)) {

@@ -40,7 +40,6 @@ export function InteractiveDrilldown({
         <link key={a.regionId} rel="prefetch" as="fetch" href={a.url} />
       ))}
       <DrilldownMapClient
-        layout="stacked"
         emptyHint={emptyHint}
         search={{ url: composed.searchUrl, ...(searchLabel ? { label: searchLabel } : {}) }}
         overview={stripGeometry(overview)}

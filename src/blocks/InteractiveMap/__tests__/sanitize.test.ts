@@ -37,16 +37,16 @@ describe("sanitizeMapSvg", () => {
   })
 })
 
-describe("sanitizeMapSvg — allow-list boundary after widening for <metadata>", () => {
-  it("keeps <metadata> and its text content", () => {
+describe("sanitizeMapSvg — allow-list boundary", () => {
+  it("strips <metadata>: nothing rendered inline reads a payload out of a file", () => {
     const input = `<svg viewBox="0 0 1 1"><metadata>{"a":1}</metadata><path d="M0 0"/></svg>`
     const out = sanitizeMapSvg(input)
-    expect(out).toContain("<metadata>")
-    expect(out).toContain("</metadata>")
-    expect(out).toContain("a")
+    expect(out).not.toContain("<metadata")
+    expect(out).not.toContain(`{"a":1}`)
+    expect(out).toContain("<path")
   })
 
-  it("still strips <script> even when nested inside <metadata>", () => {
+  it("still strips <script> even when nested inside a stripped element", () => {
     const input = `<svg viewBox="0 0 1 1"><metadata><script>alert(1)</script>{"a":1}</metadata></svg>`
     const out = sanitizeMapSvg(input)
     expect(out).not.toContain("<script")
@@ -62,8 +62,8 @@ describe("sanitizeMapSvg — allow-list boundary after widening for <metadata>",
     expect(out).not.toContain("evil")
   })
 
-  it("still strips every on* event handler attribute, including on <metadata> and <g>", () => {
-    const input = `<svg viewBox="0 0 1 1" onload="a()"><metadata onclick="b()">x</metadata><g onmouseover="c()"><path d="M0 0" onfocus="d()"/></g></svg>`
+  it("still strips every on* event handler attribute", () => {
+    const input = `<svg viewBox="0 0 1 1" onload="a()"><g onmouseover="c()"><path d="M0 0" onfocus="d()"/></g></svg>`
     const out = sanitizeMapSvg(input)
     expect(out).not.toMatch(/\son[a-z]+=/i)
   })

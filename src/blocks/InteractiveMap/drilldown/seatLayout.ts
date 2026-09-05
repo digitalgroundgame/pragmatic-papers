@@ -238,11 +238,7 @@ export function timelineStageHeight(
 }
 
 /**
- * Seat-chart stage height: as much of the pane as is free, clamped. 360 preserves the radial
- * budget the geometry was tuned at; a pane that cannot give even that shrinks to 280 (still
- * two rings for a mid-sized bench) rather than forcing the reader to scroll for the arc.
+ * Seat-chart stage height. 360 is the radial budget the arc geometry was tuned at; the pane
+ * grows to fit it rather than the arc shrinking to fit a viewport.
  */
-export function arcStageHeight(available: number | null): number {
-  if (available === null || !Number.isFinite(available) || available <= 0) return 360
-  return Math.max(280, Math.min(520, Math.floor(available)))
-}
+export const ARC_STAGE_HEIGHT = 360

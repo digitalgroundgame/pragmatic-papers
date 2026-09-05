@@ -15,11 +15,6 @@ interface DrilldownSelectorProps {
   drillable: Set<string>
   onSelect(regionId: string, via: SelectVia): void
   onBack(): void
-  /**
-   * `overlay`: the block's list beside the map (a wrapped row under `sm`).
-   * `stacked`: the page's strip above the map — one scrolling row on phones, wrapping from `md`.
-   */
-  layout?: "overlay" | "stacked"
   className?: string
 }
 
@@ -32,7 +27,6 @@ function Item({
   onSelect,
   regionId,
   drillable,
-  layout,
 }: {
   label: string
   selected: boolean
@@ -40,7 +34,6 @@ function Item({
   onSelect(via: SelectVia): void
   regionId: string
   drillable: boolean
-  layout: "overlay" | "stacked"
 }): React.ReactElement {
   return (
     <button
@@ -51,17 +44,14 @@ function Item({
       tabIndex={tabbable ? 0 : -1}
       onClick={(e) => onSelect(viaOf(e))}
       className={cn(
-        "focus-visible:ring-ring/60 flex shrink-0 items-center gap-2 text-left whitespace-nowrap transition-colors outline-none focus-visible:ring-2",
-        layout === "stacked"
-          ? "rounded-md px-3 py-1.5 text-sm font-medium"
-          : "rounded-xs px-2 py-1 text-xs",
+        "focus-visible:ring-ring/60 flex shrink-0 items-center gap-2 rounded-md px-3 py-1.5 text-left text-sm font-medium whitespace-nowrap transition-colors outline-none focus-visible:ring-2",
         selected
           ? "bg-foreground text-background hover:bg-foreground"
           : "text-foreground hover:bg-muted",
       )}
     >
       <span className="min-w-0 flex-1 truncate">{label}</span>
-      {drillable && layout === "stacked" && (
+      {drillable && (
         <span
           aria-hidden="true"
           className={cn("text-xs", selected ? "text-background/70" : "text-muted-foreground")}
@@ -87,7 +77,6 @@ export function DrilldownSelector({
   drillable,
   onSelect,
   onBack,
-  layout = "overlay",
   className,
 }: DrilldownSelectorProps): React.ReactElement {
   const navRef = useRef<HTMLElement | null>(null)
@@ -124,12 +113,9 @@ export function DrilldownSelector({
       ref={navRef}
       aria-label="Regions"
       data-drilldown-selector=""
-      data-layout={layout}
       onKeyDown={onKeyDown}
       className={cn(
-        layout === "stacked"
-          ? "flex flex-row items-center gap-1.5 overflow-x-auto pb-1 md:flex-wrap md:overflow-visible md:pb-0"
-          : "flex flex-row flex-wrap gap-1 sm:w-44 sm:shrink-0 sm:flex-col",
+        "flex flex-row items-center gap-1.5 overflow-x-auto pb-1 md:flex-wrap md:overflow-visible md:pb-0",
         className,
       )}
     >
@@ -139,12 +125,7 @@ export function DrilldownSelector({
             type="button"
             data-drilldown-back=""
             onClick={onBack}
-            className={cn(
-              "text-muted-foreground hover:text-foreground focus-visible:ring-ring/60 shrink-0 text-left font-medium whitespace-nowrap outline-none focus-visible:ring-2",
-              layout === "stacked"
-                ? "rounded-md px-3 py-1.5 text-sm"
-                : "rounded-xs px-2 py-1 text-xs",
-            )}
+            className="text-muted-foreground hover:text-foreground focus-visible:ring-ring/60 shrink-0 rounded-md px-3 py-1.5 text-left text-sm font-medium whitespace-nowrap outline-none focus-visible:ring-2"
           >
             ← Back to overview
           </button>
@@ -154,17 +135,9 @@ export function DrilldownSelector({
             selected={selected === parent.id}
             tabbable={activeId === parent.id}
             drillable={false}
-            layout={layout}
             onSelect={(via) => onSelect(parent.id, via)}
           />
-          <div
-            className={cn(
-              "text-muted-foreground shrink-0 font-semibold tracking-wide uppercase",
-              layout === "stacked"
-                ? "self-center px-2 text-[11px] after:ml-1 after:content-['·']"
-                : "mt-1 px-2 text-[10px]",
-            )}
-          >
+          <div className="text-muted-foreground shrink-0 self-center px-2 text-[11px] font-semibold tracking-wide uppercase after:ml-1 after:content-['·']">
             {parent.childrenLabel ?? "Details"}
           </div>
         </>
@@ -180,7 +153,6 @@ export function DrilldownSelector({
             selected={selected === id}
             tabbable={activeId === id}
             drillable={drillable.has(id)}
-            layout={layout}
             onSelect={(via) => onSelect(id, via)}
           />
         )

@@ -8,7 +8,7 @@ import { RecordAvatar } from "./RecordAvatar"
 import { categoryOf, compareByField, fieldString, fieldTruthy } from "./recordFormat"
 import type { Bench } from "./records"
 import {
-  arcStageHeight,
+  ARC_STAGE_HEIGHT,
   COMPACT_METRICS,
   layoutArc,
   layoutTimeline,
@@ -30,7 +30,6 @@ interface DrilldownBenchProps {
   mark: string | null
   associate: DrilldownRecord | null
   cohortValue: string | null
-  availableHeight: number | null
   onHover(record: DrilldownRecord | null): void
   onClick(record: DrilldownRecord): void
 }
@@ -120,7 +119,6 @@ export function DrilldownBench({
   mark,
   associate,
   cohortValue,
-  availableHeight,
   onHover,
   onClick,
 }: DrilldownBenchProps): React.ReactElement {
@@ -168,7 +166,7 @@ export function DrilldownBench({
       ordered.forEach((r, i) => positions.set(r, pts[i]!))
       vacancies = pts.slice(ordered.length)
     } else {
-      height = arcStageHeight(availableHeight)
+      height = ARC_STAGE_HEIGHT
       const filled = supernumeraryMode === "include" ? all : bench.active
       const { first, rest } = seatOrder(filled, display)
       const seatList: (DrilldownRecord | null)[] = [
@@ -187,7 +185,7 @@ export function DrilldownBench({
       if (supernumeraryMode === "hide") for (const r of bench.supernumerary) hidden.add(r)
     }
     return { positions, hidden, vacancies, height, arc }
-  }, [all, bench, display, mode, supernumeraryMode, width, availableHeight, metrics])
+  }, [all, bench, display, mode, supernumeraryMode, width, metrics])
 
   const count = useMemo(() => {
     if (mode !== "seats") return null

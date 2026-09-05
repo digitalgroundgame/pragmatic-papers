@@ -2,10 +2,10 @@ import { describe, expect, it } from "vitest"
 
 import { parseDrilldownAssetString } from "@/blocks/InteractiveMap/drilldown/parseAsset"
 import { buildRegionIndex, displayFacts } from "@/blocks/InteractiveMap/drilldown/regions"
-import { DRILLDOWN_SCHEMA } from "@/blocks/InteractiveMap/drilldown/types"
+import { DRILLDOWN_SCHEMA, type DrilldownAsset } from "@/blocks/InteractiveMap/drilldown/types"
 
-const overview = parseDrilldownAssetString(`<svg viewBox="0 0 10 10">
-  <metadata>{"schema":"${DRILLDOWN_SCHEMA}","regions":[{"id":"fed","label":"Federal","facts":{"seats":"12","anchor":"1,2"}},{"id":"cit","label":"Trade","parentId":"fed"}],"facts":{"labels":{"seats":"Authorized"},"order":["vacant","seats"]},"seats":{"totalFact":"seats","groups":[{"fact":"seats-r","label":"R","color":"red"}],"anchorFact":"anchor"}}</metadata>
+// Geometry comes out of an SVG; the payload is attached the way `compose.ts` attaches it.
+const geometry = parseDrilldownAssetString(`<svg viewBox="0 0 10 10">
   <g>
     <path id="ca2" data-region-label="2nd Cir." data-order="2" data-seats="13" data-seats-r="5" data-vacant="1" data-summary="13 authorized" data-children-label="districts" data-note="Note A" data-note-seats="Note S" d="M0 0"/>
     <path id="ca1" data-region-label="1st Cir." data-order="1" data-seats="6" d="M0 0"/>
@@ -15,6 +15,23 @@ const overview = parseDrilldownAssetString(`<svg viewBox="0 0 10 10">
     <path id="orphan" data-region-label="Orphan" data-parent-id="missing" d="M0 0"/>
     <path d="M5 5"/>
   </g></svg>`)
+
+const overview: DrilldownAsset = {
+  ...geometry,
+  payload: {
+    schema: DRILLDOWN_SCHEMA,
+    regions: [
+      { id: "fed", label: "Federal", facts: { seats: "12", anchor: "1,2" } },
+      { id: "cit", label: "Trade", parentId: "fed" },
+    ],
+    facts: { labels: { seats: "Authorized" }, order: ["vacant", "seats"] },
+    seats: {
+      totalFact: "seats",
+      groups: [{ fact: "seats-r", label: "R", color: "red" }],
+      anchorFact: "anchor",
+    },
+  },
+}
 
 describe("buildRegionIndex", () => {
   const index = buildRegionIndex([overview])

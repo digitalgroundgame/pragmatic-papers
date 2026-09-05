@@ -36,20 +36,13 @@ interface DrilldownPaneProps {
   records: RegionRecords
   recordsState: "idle" | "loading" | "error"
   open: boolean
-  stowed: boolean
   canDrill: boolean
-  /**
-   * `overlay`: slides down over the map inside its viewport and can be stowed (the block).
-   * `stacked`: a section in flow beneath the map, always present, with an empty state (the page).
-   */
-  variant?: "overlay" | "stacked"
-  /** Shown in the empty state of the stacked variant. */
+  /** Shown in the empty state, before a region is chosen. */
   emptyHint?: string
   /** A record to pin as soon as it is among the region's loaded records (search results). */
   pinRequest?: PinRequest | null
   onDrill(): void
   onClose(): void
-  onStow(stowed: boolean): void
   ref?: React.Ref<DrilldownPaneHandle>
 }
 
@@ -115,8 +108,8 @@ function Segmented<T extends string>({
 
 /**
  * The region's details: its facts, its bench as a timeline or a seat chart, and the docked
- * record card. In the block it slides down over the map and covers it; the stow control
- * keeps the selection while revealing the map. On a page it is a section beneath the map.
+ * record card. A section in flow beneath the map, always present, with an empty state before
+ * a region is chosen.
  */
 export function DrilldownPane({
   region,
@@ -124,26 +117,20 @@ export function DrilldownPane({
   records,
   recordsState,
   open,
-  stowed,
   canDrill,
-  variant = "overlay",
   emptyHint = "Select a region on the map to see its details.",
   pinRequest = null,
   onDrill,
   onClose,
-  onStow,
   ref,
 }: DrilldownPaneProps): React.ReactElement {
   const [mode, setMode] = useState<BenchMode>("timeline")
   const [supernumeraryMode, setSupernumeraryMode] = useState<SupernumeraryMode>("hide")
   const [mark, setMark] = useState<string | null>(null)
   const [detail, setDetail] = useState<DetailSelection | null>(null)
-  const [bodyHeight, setBodyHeight] = useState<number | null>(null)
   const rootRef = useRef<HTMLElement | null>(null)
-  const bodyRef = useRef<HTMLDivElement | null>(null)
   const headingRef = useRef<HTMLHeadingElement | null>(null)
   const [now] = useState(() => new Date())
-  const stacked = variant === "stacked"
 
   useImperativeHandle(ref, () => ({
     focusHeading: () => headingRef.current?.focus(),
@@ -173,14 +160,6 @@ export function DrilldownPane({
     if (associate) setDetail({ record: associate.record, display: associate.display, pinned: true })
   }, [pinId, pinNonce, records])
 
-  useEffect(() => {
-    const el = bodyRef.current
-    if (!el || typeof ResizeObserver !== "function") return
-    const ro = new ResizeObserver(() => setBodyHeight(el.clientHeight))
-    ro.observe(el)
-    return () => ro.disconnect()
-  }, [])
-
   const display: RecordDisplay | null = records.display
   const bench = display
     ? buildBench(records.seats, display, region?.facts[display.seatsFact ?? ""])
@@ -204,31 +183,22 @@ export function DrilldownPane({
   }
 
   const notes = (region?.notes ?? []).filter((n) => n.mode === "always" || mode === "seats")
-  // In the stacked variant the seat chart is not fighting a viewport for room: give it its
-  // tuned height rather than whatever the section happens to measure.
-  const availableHeight = stacked ? null : bodyHeight === null ? null : bodyHeight - 170
-
-  const Heading = stacked ? "h2" : "h3"
 
   return (
     <section
       ref={rootRef}
       data-drilldown-pane=""
-      data-variant={variant}
       data-open={open ? "" : undefined}
-      data-stowed={stowed ? "" : undefined}
       aria-label={region ? `${region.label} details` : "Region details"}
-      aria-hidden={stacked ? undefined : !open}
       className={cn(
         // Its own container: the bench/detail split is a property of the pane's width, not
-        // the map's. Without this the detail card never moves beside the bench on a page,
-        // where the pane is a sibling of the map rather than a child of it.
-        "bg-card text-card-foreground border-border @container flex flex-col border",
-        stacked ? "scroll-mt-20 rounded-lg" : "absolute inset-0 z-10 rounded-sm shadow-lg",
+        // the map's. Without this the detail card never moves beside the bench, since the
+        // pane is a sibling of the map rather than a child of it.
+        "bg-card text-card-foreground border-border @container flex scroll-mt-20 flex-col rounded-lg border",
       )}
       onClick={() => detail?.pinned && setDetail((d) => (d ? { ...d, pinned: false } : d))}
     >
-      {stacked && !region && (
+      {!region && (
         <p
           data-drilldown-empty=""
           className="text-muted-foreground flex min-h-14 items-center justify-center px-4 py-3 text-center text-sm"
@@ -238,40 +208,22 @@ export function DrilldownPane({
       )}
 
       {region && (
-        <div
-          ref={bodyRef}
-          className={cn(
-            "flex min-h-0 flex-1 flex-col gap-3",
-            stacked ? "p-4 sm:p-5" : "overflow-y-auto p-3 pr-20",
-          )}
-        >
+        <div className="flex min-h-0 flex-1 flex-col gap-3 p-4 sm:p-5">
           <header className="flex flex-wrap items-start gap-x-4 gap-y-2">
             <div className="min-w-0 flex-1">
-              <Heading
+              <h2
                 ref={headingRef}
                 tabIndex={-1}
                 data-drilldown-pane-title=""
-                className={cn(
-                  "outline-none",
-                  stacked
-                    ? "text-2xl md:text-3xl"
-                    : "font-sans text-base leading-tight font-semibold tracking-normal",
-                )}
+                className="text-2xl outline-none md:text-3xl"
               >
                 {region.label}
-              </Heading>
+              </h2>
               {region.summary && (
-                <p className={cn("text-muted-foreground", stacked ? "mt-1 text-sm" : "text-xs")}>
-                  {region.summary}
-                </p>
+                <p className="text-muted-foreground mt-1 text-sm">{region.summary}</p>
               )}
               {facts.length > 0 && (
-                <dl
-                  className={cn(
-                    "text-muted-foreground flex flex-wrap gap-x-4 gap-y-0.5",
-                    stacked ? "mt-2 text-sm" : "mt-1 text-xs",
-                  )}
-                >
+                <dl className="text-muted-foreground mt-2 flex flex-wrap gap-x-4 gap-y-0.5 text-sm">
                   {facts.map((f) => (
                     <div key={f.key} className="flex gap-1.5">
                       <dt>{f.label}</dt>
@@ -290,17 +242,6 @@ export function DrilldownPane({
                   onHover={(r) => hoverRecord(r, associate.display)}
                   onClick={(r) => clickRecord(r, associate.display)}
                 />
-              )}
-              {!stacked && (
-                <button
-                  type="button"
-                  aria-label={stowed ? "Show details" : "Hide details, keep selection"}
-                  data-drilldown-stow=""
-                  onClick={() => onStow(!stowed)}
-                  className="border-border bg-card hover:bg-muted focus-visible:ring-ring/60 size-7 rounded-full border text-xs outline-none focus-visible:ring-2"
-                >
-                  {stowed ? "▼" : "▲"}
-                </button>
               )}
               <button
                 type="button"
@@ -387,7 +328,6 @@ export function DrilldownPane({
                   mark={mark}
                   associate={associate?.record ?? null}
                   cohortValue={cohortValue}
-                  availableHeight={availableHeight}
                   onHover={(r) => hoverRecord(r, display)}
                   onClick={(r) => clickRecord(r, display)}
                 />

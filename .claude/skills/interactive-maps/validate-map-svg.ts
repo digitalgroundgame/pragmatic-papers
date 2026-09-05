@@ -5,10 +5,10 @@
  * Choropleth mode (default):
  *   pnpm tsx .claude/skills/interactive-maps/validate-map-svg.ts <file.svg> [--data-attribute data-margin] [--scale divergingRedBlue|perRegion] [--bias 1]
  *
- * Drilldown mode — an overview asset, or a child asset paired with its overview so the
+ * Geometry mode — an overview SVG, or a child SVG paired with its overview so the
  * vertex-morph invariant can be checked:
- *   pnpm tsx .claude/skills/interactive-maps/validate-map-svg.ts <overview.svg> --mode drilldown
- *   pnpm tsx .claude/skills/interactive-maps/validate-map-svg.ts <child.svg> --mode drilldown --overview <overview.svg> --region <parentId>
+ *   pnpm tsx .claude/skills/interactive-maps/validate-map-svg.ts <overview.svg> --mode geometry
+ *   pnpm tsx .claude/skills/interactive-maps/validate-map-svg.ts <child.svg> --mode geometry --overview <overview.svg> --region <parentId>
  *
  * It imports the same sanitizer, parsers and validation the renderer uses, so its verdict is
  * the renderer's verdict — there is no second copy of the rules here to drift out of date.
@@ -23,11 +23,10 @@ import {
   DEFAULT_NEUTRAL,
   inferValueFormat,
 } from "@/blocks/InteractiveMap/colorScale"
-import { RESERVED_FACTS } from "@/blocks/InteractiveMap/drilldown/contract"
 import { flipConstant } from "@/blocks/InteractiveMap/drilldown/geometry"
 import { buildMorphPairs, parsePathAbs } from "@/blocks/InteractiveMap/drilldown/morph"
 import { parseDrilldownAssetString } from "@/blocks/InteractiveMap/drilldown/parseAsset"
-import { buildRegionIndex, displayFacts } from "@/blocks/InteractiveMap/drilldown/regions"
+import { buildRegionIndex } from "@/blocks/InteractiveMap/drilldown/regions"
 import type { DrilldownAsset } from "@/blocks/InteractiveMap/drilldown/types"
 import { sanitizeMapSvg } from "@/blocks/InteractiveMap/sanitize"
 
@@ -37,7 +36,7 @@ const out = (line = ""): void => void process.stdout.write(`${line}\n`)
 
 interface Options {
   file: string
-  mode: "choropleth" | "drilldown"
+  mode: "choropleth" | "geometry"
   dataAttribute: string | null
   scale: ColorScaleType
   bias: number
@@ -46,7 +45,7 @@ interface Options {
 }
 
 const USAGE =
-  "usage: pnpm tsx .claude/skills/interactive-maps/validate-map-svg.ts <file.svg> [--mode choropleth|drilldown] [--data-attribute data-margin] [--scale divergingRedBlue|perRegion] [--bias 1] [--overview overview.svg --region <parentId>]"
+  "usage: pnpm tsx .claude/skills/interactive-maps/validate-map-svg.ts <file.svg> [--mode choropleth|geometry] [--data-attribute data-margin] [--scale divergingRedBlue|perRegion] [--bias 1] [--overview overview.svg --region <parentId>]"
 
 function parseArgs(argv: string[]): Options {
   const positional: string[] = []
@@ -64,7 +63,7 @@ function parseArgs(argv: string[]): Options {
     if (arg === "--data-attribute") opts.dataAttribute = argv[++i] ?? null
     else if (arg === "--scale") opts.scale = (argv[++i] as ColorScaleType) ?? "divergingRedBlue"
     else if (arg === "--bias") opts.bias = Number(argv[++i] ?? 1)
-    else if (arg === "--mode") opts.mode = argv[++i] === "drilldown" ? "drilldown" : "choropleth"
+    else if (arg === "--mode") opts.mode = argv[++i] === "geometry" ? "geometry" : "choropleth"
     else if (arg === "--overview") opts.overview = argv[++i] ?? null
     else if (arg === "--region") opts.region = argv[++i] ?? null
     else positional.push(arg)
@@ -180,16 +179,21 @@ function validateChoropleth({ file, dataAttribute, scale, bias }: Options): neve
   report(warnings, errors, "OK — this SVG renders as an Interactive Map.")
 }
 
-// ---- drilldown ------------------------------------------------------------------------------
+// ---- drilldown geometry -----------------------------------------------------------------------
 
-function loadDrilldown(file: string): { raw: string; asset: DrilldownAsset } {
+function loadGeometry(file: string): { raw: string; asset: DrilldownAsset } {
   const raw = readFileSync(file, "utf8")
   return { raw, asset: parseDrilldownAssetString(sanitizeMapSvg(raw)) }
 }
 
-function validateDrilldown({ file, overview: overviewFile, region }: Options): never {
-  const { raw, asset } = loadDrilldown(file)
-  const overview = overviewFile ? loadDrilldown(overviewFile).asset : null
+/**
+ * Checks an SVG destined for a profile's `geometry/` directory. Only shapes and hierarchy are
+ * checked: facts and records reach the map from the researcher's feed, never from the file, so
+ * a `data-*` attribute here is a hint for the adapter rather than something a reader will see.
+ */
+function validateGeometry({ file, overview: overviewFile, region }: Options): never {
+  const { raw, asset } = loadGeometry(file)
+  const overview = overviewFile ? loadGeometry(overviewFile).asset : null
   const dropped = findDroppedTags(raw)
   const errors: string[] = []
   const warnings: string[] = []
@@ -197,12 +201,10 @@ function validateDrilldown({ file, overview: overviewFile, region }: Options): n
 
   const index = buildRegionIndex(overview ? [overview, asset] : [asset])
   const idsHere = new Set(asset.paths.map((p) => p.id).filter((id): id is string => id !== null))
-  const declaredHere = new Set((asset.payload?.regions ?? []).map((r) => r.id))
   const knownIds = new Set([...Object.keys(index.byId)])
 
   // geometry --------------------------------------------------------------------------------
-  if (asset.paths.length === 0 && !asset.payload?.records)
-    errors.push("No <path> elements and no records — nothing to show.")
+  if (asset.paths.length === 0) errors.push("No <path> elements — nothing to draw.")
   if (asset.viewBox === null && asset.paths.length > 0)
     errors.push("No usable viewBox on the root <svg> — the map falls back to 0 0 100 100.")
   if (!asset.flipY && asset.paths.length > 0)
@@ -224,7 +226,7 @@ function validateDrilldown({ file, overview: overviewFile, region }: Options): n
         .map(([id, n]) => `${id}×${n}`)
         .join(
           ", ",
-        )}${dupes.length > 5 ? ", …" : ""}). Multipolygons should be one path with several M…L… subpaths; separate paths morph independently and only the first one's facts count.`,
+        )}${dupes.length > 5 ? ", …" : ""}). Multipolygons should be one path with several M…L… subpaths; separate paths morph independently.`,
     )
 
   const decorative = asset.paths.filter((p) => !p.id).length
@@ -234,11 +236,6 @@ function validateDrilldown({ file, overview: overviewFile, region }: Options): n
   if (orphans.length)
     errors.push(
       `${orphans.length} path(s) name a data-parent-id that matches no region: ${[...new Set(orphans.map((p) => p.parentId))].slice(0, 6).join(", ")}.`,
-    )
-  const unlabeled = [...idsHere].filter((id) => index.byId[id]?.label === id)
-  if (unlabeled.length)
-    warnings.push(
-      `${unlabeled.length} region(s) have no data-region-label; the tooltip and selector will show the raw id (${unlabeled.slice(0, 6).join(", ")}${unlabeled.length > 6 ? ", …" : ""}).`,
     )
 
   // morph readiness ---------------------------------------------------------------------------
@@ -253,101 +250,20 @@ function validateDrilldown({ file, overview: overviewFile, region }: Options): n
         )}). Any view containing them falls back to zoom + crossfade instead of the vertex morph.`,
     )
 
-  // metadata ------------------------------------------------------------------------------------
-  const hasMetadata = /<metadata[\s>]/i.test(raw)
-  if (asset.payloadError) errors.push(`<metadata> rejected: ${asset.payloadError}`)
-  else if (hasMetadata && !asset.payload) errors.push("<metadata> is present but empty.")
-  if (isChild && !asset.payload?.records)
+  if (/<metadata[\s>]/i.test(raw))
     warnings.push(
-      "Child asset carries no <metadata> records — the pane for its regions will be empty.",
+      "This file carries a <metadata> element. It is ignored: records come from the feed. Harmless, but the snapshot will not contain it.",
     )
-
-  const records = asset.payload?.records
-  let recordRegionMisses = 0
-  if (records) {
-    const { display, items } = records
-    for (const item of items) if (!knownIds.has(item._region)) recordRegionMisses++
-    if (recordRegionMisses)
-      warnings.push(
-        `${recordRegionMisses}/${items.length} record(s) name a _region that matches no path id or declared region — they will never be shown.`,
-      )
-    const missingField = (field: string | undefined): boolean =>
-      !!field && items.length > 0 && !items.some((r) => r[field] !== undefined)
-    for (const [slot, field] of [
-      ["display.title", display.title],
-      ["display.shortTitle", display.shortTitle],
-      ["display.category.field", display.category.field],
-      ["display.order", display.order],
-      ["display.status.field", display.status?.field],
-      ["display.cohort", display.cohort],
-      ["display.image.url", display.image?.url],
-    ] as const) {
-      if (missingField(field))
-        warnings.push(`${slot} names "${field}" but no record has that field.`)
-    }
-    for (const line of display.details)
-      if (missingField(line.field))
-        warnings.push(
-          `details line "${line.label ?? line.field}" reads "${line.field}" but no record has it.`,
-        )
-    if (display.seatsFact) {
-      const regionsWithRecords = new Set(
-        items.map((r) => r._region).filter((id) => knownIds.has(id)),
-      )
-      const noSeats = [...regionsWithRecords].filter(
-        (id) => !(display.seatsFact! in (index.byId[id]?.facts ?? {})),
-      )
-      if (noSeats.length)
-        warnings.push(
-          `display.seatsFact "${display.seatsFact}" is missing on ${noSeats.length} region(s) with records (${noSeats.slice(0, 5).join(", ")}) — their seat count falls back to the number of active records.`,
-        )
-    }
-  }
-
-  const seats = asset.payload?.seats ?? overview?.payload?.seats
-  if (seats) {
-    const targets = isChild ? children.map((p) => p.id!) : parents.map((p) => p.id!)
-    const withTotal = targets.filter((id) =>
-      Number.isFinite(Number(index.byId[id]?.facts[seats.totalFact])),
-    )
-    if (targets.length && withTotal.length === 0)
-      warnings.push(
-        `seats.totalFact "${seats.totalFact}" is on none of the ${targets.length} region(s) here — no seat blocks will draw.`,
-      )
-    else if (withTotal.length < targets.length)
-      warnings.push(
-        `${targets.length - withTotal.length} region(s) have no ${seats.totalFact} — no seat block for them.`,
-      )
-    if (seats.anchorFact) {
-      const bad = targets.filter((id) => {
-        const v = index.byId[id]?.facts[seats.anchorFact!]
-        return (
-          v !== undefined &&
-          v
-            .split(/[\s,]+/)
-            .map(Number)
-            .some((n) => !Number.isFinite(n))
-        )
-      })
-      if (bad.length)
-        errors.push(
-          `Unparseable ${seats.anchorFact} on ${bad.join(", ")} — expected "x,y" in this file's projected units.`,
-        )
-    }
-  }
 
   // pairing with the overview ----------------------------------------------------------------
   let morphLine = "(no --overview given; pairing not checked)"
   if (overview) {
     if (!region)
       warnings.push(
-        "No --region given: cannot tell which overview region this child asset belongs to.",
+        "No --region given: cannot tell which overview region this child geometry belongs to.",
       )
-    else if (
-      !overview.paths.some((p) => p.id === region) &&
-      !overview.payload?.regions?.some((r) => r.id === region)
-    )
-      errors.push(`--region "${region}" is not a path id or declared region in the overview.`)
+    else if (!overview.paths.some((p) => p.id === region))
+      errors.push(`--region "${region}" is not a path id in the overview.`)
     const key = (p: { id: string | null; parentId: string | null }, i: number): string =>
       p.id ? `shape:${p.id}` : `deco:${i}`
     const ovSrc = overview.paths.map((p, i) => ({ key: key(p, i), d: p.d, inset: p.inset }))
@@ -394,8 +310,11 @@ function validateDrilldown({ file, overview: overviewFile, region }: Options): n
   }
 
   // report ----------------------------------------------------------------------------------------
+  const factKeys = new Set<string>()
+  for (const p of asset.paths) for (const k of Object.keys(p.facts)) factKeys.add(k)
+
   out(`file             ${file}`)
-  out(`mode             drilldown ${isChild ? `child asset of "${region ?? "?"}"` : "overview"}`)
+  out(`mode             geometry ${isChild ? `child of "${region ?? "?"}"` : "overview"}`)
   out(`bytes            ${raw.length} raw → ${sanitizeMapSvg(raw).length} sanitized`)
   out(
     `viewBox          ${asset.viewBox ? asset.viewBox.join(" ") : "(none)"} · Y-flip ${asset.flipY ? "yes (recomputed from viewBox)" : "no"}`,
@@ -403,43 +322,31 @@ function validateDrilldown({ file, overview: overviewFile, region }: Options): n
   out(
     `paths            ${asset.paths.length} total · ${parents.length} top-level · ${children.length} child · ${decorative} decorative`,
   )
-  out(`declared         ${declaredHere.size} geometry-less region(s) in <metadata>`)
-  out(
-    `records          ${records ? `${records.items.length} (${records.items.filter((r) => r._role === "associate").length} associate)` : "(none)"}`,
-  )
-  out(
-    `seat blocks      ${seats ? `total ${seats.totalFact} · ${seats.groups.map((g) => g.fact).join(" + ")}${seats.anchorFact ? ` · anchor ${seats.anchorFact}` : ""}` : "(none)"}`,
-  )
   out(`morph            ${morphLine}`)
+  out(
+    `data-* seen      ${factKeys.size ? [...factKeys].sort().join(", ") : "(none)"} — ignored at render time; only the adapter reads these`,
+  )
   out()
-  out("region            label                 children  facts shown")
+  out("region            label                 children")
   const listed = isChild ? children.map((p) => p.id!) : index.topLevel
   for (const id of [...new Set(listed)].slice(0, 20)) {
     const r = index.byId[id]
     if (!r) continue
-    const facts = displayFacts(r, asset.payload ?? overview?.payload)
     out(
-      `${id.padEnd(17)} ${r.label.slice(0, 21).padEnd(21)} ${String(index.childrenOf[id]?.length ?? 0).padStart(8)}  ${facts
-        .map((f) => `${f.label}=${f.value}`)
-        .join(" · ")
-        .slice(0, 80)}`,
+      `${id.padEnd(17)} ${r.label.slice(0, 21).padEnd(21)} ${String(index.childrenOf[id]?.length ?? 0).padStart(8)}`,
     )
   }
   if (listed.length > 20) out(`… ${listed.length - 20} more`)
-  for (const [key, name] of [
-    [RESERVED_FACTS.summary, "summary"],
-    [RESERVED_FACTS.childrenLabel, "children-label"],
-  ] as const) {
-    const n = listed.filter((id) => asset.paths.some((p) => p.id === id && key in p.facts)).length
-    if (!isChild && n === 0)
-      warnings.push(
-        `No region carries data-${name}; the pane header/drill control will use defaults.`,
-      )
-  }
 
-  report(warnings, errors, "OK — this SVG works as a drilldown asset.")
+  const unlabeled = [...idsHere].filter((id) => index.byId[id]?.label === id)
+  if (unlabeled.length)
+    warnings.push(
+      `${unlabeled.length} region(s) have no data-region-label. Harmless if the feed names them; otherwise the selector shows the raw id (${unlabeled.slice(0, 6).join(", ")}${unlabeled.length > 6 ? ", …" : ""}).`,
+    )
+
+  report(warnings, errors, "OK — this SVG works as drilldown geometry.")
 }
 
 const opts = parseArgs(process.argv.slice(2))
-if (opts.mode === "drilldown") validateDrilldown(opts)
+if (opts.mode === "geometry") validateGeometry(opts)
 else validateChoropleth(opts)

@@ -2764,77 +2764,49 @@ export interface InteractiveMapBlock {
    * Optional heading displayed above the map(s).
    */
   widgetTitle?: string | null;
-  /**
-   * Choropleth colors one or more maps by a numeric value. Drilldown shows one overview map whose regions open into their child regions and records; the child geometry and records load only when a reader drills in.
-   */
-  mode: 'choropleth' | 'drilldown';
-  layout?: ('row' | 'stacked') | null;
+  layout: 'row' | 'stacked';
   /**
    * Diverging Red/Blue colors each region by its value (negative = D+, positive = R+). Per-region uses the color you set on each region row.
    */
-  colorScale?: ('divergingRedBlue' | 'perRegion') | null;
+  colorScale: 'divergingRedBlue' | 'perRegion';
   /**
    * Warps the color breakpoints along a curve between ±1 (neutral) and ±100 (max). Above 1 = breakpoints shift toward the low end, so small margins get strong colors. Below 1 = breakpoints shift toward the high end, requiring larger margins for strong colors. Default: 1 (linear).
    */
   colorBias?: number | null;
-  maps?:
-    | {
-        title?: string | null;
-        /**
-         * Upload an SVG whose paths are already projected (e.g. Albers Equal Area). Each region path must carry an id attribute that matches a Region ID below.
-         */
-        svgAsset: number | MapAsset;
-        /**
-         * The data attribute on each path that holds the numeric value for the color scale (e.g. data-margin). When set, values are read directly from the SVG — no need to enter them manually in the Overrides table.
-         */
-        dataAttribute?: string | null;
-        overrides?:
-          | {
-              /**
-               * Must match the id attribute on the SVG path.
-               */
-              regionId: string;
-              label?: string | null;
-              /**
-               * For Diverging Red/Blue: signed margin (positive = R+, negative = D+).
-               */
-              value?: number | null;
-              /**
-               * CSS color. Overrides the automatic color scale for this region.
-               */
-              color?: string | null;
-              id?: string | null;
-            }[]
-          | null;
-        /**
-         * Flip the color scale polarity for this map (positive values get the negative palette and vice versa).
-         */
-        invertColors?: boolean | null;
-        id?: string | null;
-      }[]
-    | null;
-  /**
-   * The overview SVG's paths carry region facts as data-* attributes; each region asset's <metadata> carries the records shown when a reader drills into that region. See the interactive-maps skill for the asset contract and validator.
-   */
-  drilldown?: {
+  maps: {
+    title?: string | null;
     /**
-     * Pre-projected SVG of the parent regions (with child borders if you want them drawn). Each region path needs an id; data-region-label, data-parent-id, data-layer and data-inset are reserved, every other data-* is shown as a fact.
+     * Upload an SVG whose paths are already projected (e.g. Albers Equal Area). Each region path must carry an id attribute that matches a Region ID below.
      */
-    overviewAsset: number | MapAsset;
+    svgAsset: number | MapAsset;
     /**
-     * One SVG per drillable region: that region's children in their own projection, plus the region's records in a <metadata> JSON payload. Loaded only when a reader drills in.
+     * The data attribute on each path that holds the numeric value for the color scale (e.g. data-margin). When set, values are read directly from the SVG — no need to enter them manually in the Overrides table.
      */
-    regionAssets?:
+    dataAttribute?: string | null;
+    overrides?:
       | {
           /**
-           * Must match the id of a region path in the overview SVG (or a region declared in its <metadata>).
+           * Must match the id attribute on the SVG path.
            */
           regionId: string;
-          svgAsset: number | MapAsset;
+          label?: string | null;
+          /**
+           * For Diverging Red/Blue: signed margin (positive = R+, negative = D+).
+           */
+          value?: number | null;
+          /**
+           * CSS color. Overrides the automatic color scale for this region.
+           */
+          color?: string | null;
           id?: string | null;
         }[]
       | null;
-  };
+    /**
+     * Flip the color scale polarity for this map (positive values get the negative palette and vice versa).
+     */
+    invertColors?: boolean | null;
+    id?: string | null;
+  }[];
   /**
    * Shown as a small attribution footer beneath the maps.
    */

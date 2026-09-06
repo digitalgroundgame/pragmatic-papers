@@ -435,6 +435,26 @@ control: "View **districts** →", default "details"), `order` (selector sort
 key), `note` / `note-seats` (italic note under the records, the latter only in
 the seat-chart view).
 
+### The landing view
+
+Before a reader picks a region the pane shows the profile's **summary** instead of an empty
+hint: an overview of the whole dataset. A profile opts in by declaring `summary` on its
+`InteractiveProfile`, a pair of functions — `compose` runs on the server and its result is
+cached with the overview, so it must be serialisable; `render` turns that into a node and is
+the only place that knows its type, which keeps the shape inside the profile.
+
+The summary reaches the map through `useDrilldownSelection()`, so a reader can go from an
+overview straight to the region it names. Outside a drilldown that hook returns null and the
+component still renders, which is what makes it testable on its own.
+
+Federal Courts shows two views: the Supreme Court's bench on the same dome the seat chart
+uses, and every district judgeship in the numbered circuits as one square, laid out as a
+cartogram of the country. The squares come from the feed's `arrangement` dataset, whose
+per-cell `r`/`d`/`vacant` codes are **meanings**: `summary.ts` maps them onto the profile's own
+party values and `presentation.ts` decides the colour, so the cartogram, the seat blocks and
+the bench can never disagree. Upstream places blocks in drawing units rather than cells, so the
+compose step recovers the grid pitch and normalises offsets to whole cells.
+
 ### What the reader gets
 
 - **Overview**: parent fills, child borders, stroke-only parent outlines, seat
@@ -492,6 +512,8 @@ shows the full overview, strip, facts and any records carried in the overview.
 | Colours or labels look wrong after a data update            | They cannot come from the feed; look at `presentation.ts` and the theme tokens.                                                      |
 | Region route returns 404                                    | The region is not drillable (not a key of the profile's `geometry.children`), or there is no published snapshot.                     |
 | A judge is missing from search                              | Their record has no `_id`, or no value in the profile's `display.title` field — `composeSearchIndex` skips both. Check the adapter.  |
+| Summary shows "No district layout."                         | The feed carries no `arrangement` dataset, or its cells name districts the feed does not declare. Re-run the snapshot script.        |
+| Cartogram blocks overlap or scatter                         | The grid pitch could not be recovered because upstream's offsets are no longer whole multiples of one cell. Check `cellPitch`.       |
 | Searching finds nobody at all                               | `/interactives/<slug>/search` 404s (no published snapshot) or the box was never given a URL; the list says "Search is unavailable".  |
 | Region missing from the strip                               | Its path has no `id`, or its `data-parent-id` names a parent that does not exist (it is then listed at the top level).               |
 | "View … →" never appears                                    | The region is not a key of the profile's `geometry.children`, and it has no children in the overview.                                |

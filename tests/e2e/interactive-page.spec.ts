@@ -106,6 +106,27 @@ test.describe("interactive page — federal courts", () => {
     await expect(page.locator("[data-drilldown-selector] [data-region-item='ca1']")).toBeVisible()
   })
 
+  test("the landing view summarises the whole bench before a region is chosen", async ({
+    page,
+  }) => {
+    await page.goto(PAGE)
+    const pane = page.locator("[data-drilldown-pane]")
+    await expect(pane.locator("[data-summary-scotus]")).toBeVisible()
+    await expect(pane.locator("[data-summary-tally]")).toContainText("9 seats")
+
+    await pane.getByRole("button", { name: "District courts" }).click()
+    const cartogram = pane.locator("[data-summary-cartogram]")
+    await expect(cartogram).toBeVisible()
+    // One square per authorized district judgeship in the circuits upstream lays out.
+    await expect(cartogram.locator("rect[data-summary-seat]")).toHaveCount(681)
+
+    // A seat is a way into its district: the map drills to the circuit and opens the district.
+    await cartogram.locator("rect[data-summary-seat='moed']").first().click()
+    const open = page.locator("[data-drilldown-pane][data-open]")
+    await expect(open.locator("[data-drilldown-pane-title]")).toHaveText("E.D. Mo.")
+    await expect(page.locator("[data-drilldown-viewport]")).toHaveAttribute("data-view", "child")
+  })
+
   test("searching a judge by name opens their court and pins them", async ({ page }) => {
     await page.goto(PAGE)
     const box = page.getByRole("combobox", { name: "Search judges" })

@@ -12,6 +12,7 @@ import RichText from "@/components/RichText"
 import { Separator } from "@/components/ui/separator"
 import { InteractiveDrilldown } from "@/interactives/InteractiveDrilldown"
 import { loadInteractiveOverview, queryInteractiveBySlug } from "@/interactives/load"
+import { getProfile } from "@/interactives/profiles"
 import { generateMeta } from "@/utilities/generateMeta"
 
 export async function generateStaticParams(): Promise<{ slug: string }[]> {
@@ -61,6 +62,8 @@ export default async function InteractivePage({
   if (!interactive) return <PayloadRedirects url={url} />
 
   const composed = await loadInteractiveOverview(interactive)
+  const profile = getProfile(interactive.profile)
+  const summary = composed?.summary != null ? profile?.summary?.render(composed.summary) : undefined
 
   return (
     <div className="container pt-8 pb-16">
@@ -93,6 +96,7 @@ export default async function InteractivePage({
           composed={composed}
           emptyHint="Select a court on the map or from the list to see who sits on its bench."
           searchLabel="Search judges"
+          summary={summary}
         />
       ) : (
         <p

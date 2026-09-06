@@ -11,6 +11,7 @@ import { DEFAULT_VIEWBOX } from "./geometry"
 import { assetKeyFor, recordsFor } from "./records"
 import { buildRegionIndex, displayFacts } from "./regions"
 import type { SearchResult } from "./search"
+import { DrilldownSelectionProvider } from "./selection"
 import { MapStage } from "./stage"
 import type { ChildAssetRef, DrilldownAsset, RegionIndex } from "./types"
 
@@ -25,6 +26,11 @@ export interface DrilldownMapClientProps {
    * the interactive's own vocabulary ("Search judges"). Omitted, no search box is rendered.
    */
   search?: { url: string; label?: string }
+  /**
+   * Shown in the pane before a region is chosen: an overview of the whole dataset. Reaches the
+   * map's selection through `useDrilldownSelection`, so a reader can go from it to a region.
+   */
+  summary?: React.ReactNode
   /** The server-rendered overview layer. */
   children: React.ReactNode
 }
@@ -53,6 +59,7 @@ export function DrilldownMapClient({
   childAssets,
   emptyHint,
   search,
+  summary,
   children,
 }: DrilldownMapClientProps): React.ReactElement {
   const rootRef = useRef<HTMLDivElement | null>(null)
@@ -193,17 +200,27 @@ export function DrilldownMapClient({
   // region and ask the pane to pin it. The pane does the pinning once the region's asset has
   // arrived, so a result in a region that is not loaded yet still lands on the right card.
   const pinNonce = useRef(0)
-  const revealRecord = useCallback(
-    async (result: SearchResult) => {
-      if (!regions.byId[result.region]) return
-      const key = assetKeyFor(result.region, regions, childAssets)
-      if (key && key !== result.region && view.parentId !== key) await drillIn(key)
-      pinNonce.current += 1
-      // Select first: the selection is what clears a pin left on another region.
-      select(result.region, "keyboard", { force: true })
-      setPinRequest({ regionId: result.region, recordId: result.id, nonce: pinNonce.current })
+
+  /** Show the map the region sits on, then select it. Returns false for an unknown region. */
+  const revealRegion = useCallback(
+    async (regionId: string): Promise<boolean> => {
+      if (!regions.byId[regionId]) return false
+      const key = assetKeyFor(regionId, regions, childAssets)
+      if (key && key !== regionId && view.parentId !== key) await drillIn(key)
+      select(regionId, "keyboard", { force: true })
+      return true
     },
     [regions, childAssets, view.parentId, drillIn, select],
+  )
+
+  const revealRecord = useCallback(
+    async (result: SearchResult) => {
+      if (!(await revealRegion(result.region))) return
+      pinNonce.current += 1
+      // The selection above is what clears a pin left on another region, so pin after it.
+      setPinRequest({ regionId: result.region, recordId: result.id, nonce: pinNonce.current })
+    },
+    [revealRegion],
   )
 
   // ---- stage lifecycle ---------------------------------------------------------------------
@@ -320,6 +337,7 @@ export function DrilldownMapClient({
     <DrilldownPane
       ref={paneRef}
       emptyHint={emptyHint}
+      summary={summary}
       pinRequest={pinRequest && pinRequest.regionId === selected ? pinRequest : null}
       region={selectedRegion}
       facts={selectedRegion ? displayFacts(selectedRegion, payloadFor(selectedRegion.id)) : []}
@@ -332,8 +350,13 @@ export function DrilldownMapClient({
     />
   )
 
+  const selection = useMemo(
+    () => ({ selected, select: (id: string) => void revealRegion(id) }),
+    [selected, revealRegion],
+  )
+
   return (
-    <>
+    <DrilldownSelectionProvider value={selection}>
       {search && (
         <DrilldownSearch
           url={search.url}
@@ -374,6 +397,6 @@ export function DrilldownMapClient({
         summary={hoverRegion?.summary ?? null}
         cursor={hover ? { x: hover.x, y: hover.y } : null}
       />
-    </>
+    </DrilldownSelectionProvider>
   )
 }

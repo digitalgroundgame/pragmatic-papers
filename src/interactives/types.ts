@@ -27,6 +27,8 @@ import type {
   ViewBox,
 } from "@/blocks/InteractiveMap/drilldown/types"
 
+import type React from "react"
+
 import type { FileSource } from "./sources/files"
 
 // ---- data: the researcher's half ------------------------------------------------------------
@@ -137,4 +139,15 @@ export interface InteractiveProfile<Raw = unknown> {
   /** Loaded lazily — the geometry JSON is megabytes and only the page and region route need it. */
   loadGeometry(): Promise<DrilldownGeometry>
   feed: FeedAdapter<Raw>
+  /**
+   * The landing view shown before a reader picks a region: an overview of the whole dataset.
+   *
+   * `compose` runs on the server and its result is cached with the overview, so it must be
+   * serialisable. `render` is the only place that knows the shape, which keeps the summary's
+   * type inside the profile instead of forcing every caller to carry it.
+   */
+  summary?: {
+    compose(input: { presentation: DrilldownPresentation; data: DrilldownData }): unknown
+    render(composed: unknown): React.ReactNode
+  }
 }

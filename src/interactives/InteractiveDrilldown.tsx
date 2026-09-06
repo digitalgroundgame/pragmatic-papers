@@ -20,6 +20,8 @@ interface InteractiveDrilldownProps {
   emptyHint?: string
   /** Placeholder for the record search box ("Search judges"). */
   searchLabel?: string
+  /** The profile's landing view, shown in the pane until a region is chosen. */
+  summary?: React.ReactNode
 }
 
 /**
@@ -31,6 +33,7 @@ export function InteractiveDrilldown({
   composed,
   emptyHint,
   searchLabel,
+  summary,
 }: InteractiveDrilldownProps): React.ReactElement {
   const { overview, childAssets } = composed
   const regions = buildRegionIndex([overview])
@@ -41,6 +44,7 @@ export function InteractiveDrilldown({
       ))}
       <DrilldownMapClient
         emptyHint={emptyHint}
+        summary={summary}
         search={{ url: composed.searchUrl, ...(searchLabel ? { label: searchLabel } : {}) }}
         overview={stripGeometry(overview)}
         childAssets={childAssets}

@@ -67,6 +67,8 @@ export interface ComposedOverview {
   childAssets: ChildAssetRef[]
   /** Same-origin route serving the record search index, fetched on the reader's first query. */
   searchUrl: string
+  /** The profile's landing-view payload, or null when it declares no summary. */
+  summary: unknown
   /** When upstream generated the data the page is showing, and who upstream is. */
   generatedAt: string
   source: DrilldownData["source"]
@@ -95,6 +97,7 @@ async function composeOverviewFor(
     overview,
     childAssets,
     searchUrl: `${interactivePath(interactive.slug)}/search`,
+    summary: profile.summary?.compose({ presentation: profile.presentation, data }) ?? null,
     generatedAt: data.generatedAt,
     source: data.source,
     problems,

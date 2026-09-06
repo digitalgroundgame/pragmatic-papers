@@ -4,7 +4,7 @@ import "@/blocks/InteractiveMap/styles.css"
 
 import { resolveInlineSvgMap } from "@/blocks/InteractiveMap/adapters/inlineSvg"
 import type { ResolvedMap } from "@/blocks/InteractiveMap/types"
-import type { InteractiveMapBlock as InteractiveMapBlockProps } from "@/payload-types"
+import type { InteractiveMapBlock as InteractiveMapBlockProps, MapAsset } from "@/payload-types"
 import { cn } from "@/utilities/utils"
 import { isResolved } from "@/utilities/relationships"
 
@@ -17,7 +17,7 @@ type Props = InteractiveMapBlockProps & {
   className?: string
 }
 
-function readSvgContent(asset: InteractiveMapBlockProps["maps"][number]["svgAsset"]): string {
+function readSvgContent(asset: number | MapAsset | null | undefined): string {
   if (!isResolved(asset)) return ""
   return asset.svgContent ?? ""
 }
@@ -31,7 +31,8 @@ export const InteractiveMapBlock: React.FC<Props> = ({
   maps,
   sources,
 }) => {
-  const resolvedMaps: ResolvedMap[] = maps
+  const scaleType = colorScale ?? "divergingRedBlue"
+  const resolvedMaps: ResolvedMap[] = (maps ?? [])
     .map((m): ResolvedMap | null => {
       const svg = readSvgContent(m.svgAsset)
       if (!svg) return null
@@ -40,7 +41,7 @@ export const InteractiveMapBlock: React.FC<Props> = ({
         svg,
         dataAttribute: m.dataAttribute,
         overrides: m.overrides,
-        scaleType: colorScale,
+        scaleType,
         colorBias,
         invertColors: m.invertColors,
       })
@@ -49,7 +50,7 @@ export const InteractiveMapBlock: React.FC<Props> = ({
 
   if (resolvedMaps.length === 0) return null
 
-  const legend = colorScale === "divergingRedBlue" ? getDivergingRedBlueLegend(colorBias) : null
+  const legend = scaleType === "divergingRedBlue" ? getDivergingRedBlueLegend(colorBias) : null
 
   return (
     <figure

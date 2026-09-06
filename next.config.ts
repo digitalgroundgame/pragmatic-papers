@@ -44,6 +44,24 @@ const nextConfig: NextConfig = {
     ],
   },
   reactStrictMode: true,
+  // Interactive Map drilldown assets are fetched lazily from stable, same-origin paths that
+  // are emitted into the article HTML (so a crawler can capture them). With local storage the
+  // files sit in public/map-assets and Next serves them directly; with S3 enabled this proxies
+  // the same path to the bucket, so the URL never changes between environments.
+  async rewrites() {
+    if (process.env.USE_LOCAL_STORAGE === "true") return []
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const bucket = process.env.S3_BUCKET
+    if (!supabaseUrl || !bucket) return []
+    return {
+      afterFiles: [
+        {
+          source: "/map-assets/:path*",
+          destination: `${supabaseUrl.replace(/\/$/, "")}/storage/v1/object/public/${bucket}/map-assets/:path*`,
+        },
+      ],
+    }
+  },
   redirects: async () => [
     {
       destination: "/ie-incompatible.html",

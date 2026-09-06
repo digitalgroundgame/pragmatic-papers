@@ -1,15 +1,32 @@
 ---
 name: interactive-maps
-description: Build a choropleth map for an article with the Interactive Map block — prepare the pre-projected SVG, upload it to Map Assets, and configure the block. Use whenever a writer wants regions shaded by a value (election margins, turnout, per-capita rates) in a story, or when a map renders blank, all-neutral, or without tooltips. Choropleth is the only map type the block draws today; further modes (starting with the Federal Courts map, #905) are in flight and not covered here.
+description: Build a map — a choropleth Interactive Map block in an article (regions shaded by a value), or an interactive page (an overview map whose regions open into their children and records, fed by a researcher's data feed). Covers preparing the pre-projected SVG, uploading to Map Assets, configuring the block, snapshotting drilldown geometry, the ownership split and validating before upload. Use whenever a writer wants regions shaded by a value (election margins, turnout, per-capita rates), an overview-to-detail map (circuits → districts → judges, states → counties → returns), or when a map renders blank, all-neutral, without tooltips, or drills into nothing.
 ---
 
-# Authoring a choropleth map
+# Authoring an Interactive Map
 
-The Interactive Map block draws **choropleths**: regions from a
-**pre-projected SVG**, shaded by a value, with hover/focus tooltips. It renders
-as real server-side JSX — no map library, no runtime fetch, no client-side
-projection. Everything the block knows comes out of the SVG file plus a handful
-of block fields.
+Two things live here, and they are chosen by what the map _is_, not by a field:
+
+- **A choropleth**, as an **Interactive Map block** in an article: regions from
+  a **pre-projected SVG**, shaded by a value, with hover/focus tooltips. Fully
+  server-rendered, no runtime fetch. The first half of this document.
+- **A drilldown**, as an **interactive page** at `/interactives/<slug>`: one
+  overview map you drill into. Pick a region and the view morphs into that
+  region's children while a pane fills with the records that belong to it.
+  Child geometry and records load only on drill-in, and the data comes from a
+  researcher's feed a job syncs on a schedule. See
+  [Drilldown geometry](#drilldown-geometry) and
+  [Interactive pages](#interactive-pages--drilldown-from-a-synced-feed).
+
+Both render inline SVG — no map library, no client-side projection. The
+difference is where the SVG goes. A choropleth's SVG is **uploaded** to Map
+Assets by a writer and read at render time. A drilldown's SVG is **checked in**
+by a developer, parsed once at snapshot time into `geometry/*.json`, and never
+parsed again; its facts and records arrive separately, from the feed.
+
+> A drilldown is not a block mode. An SVG never carries records.
+
+## Choropleth mode
 
 That makes the SVG a **contract**, and the failure modes are quiet: a file that
 breaks the contract renders blank, all-grey, or inert rather than erroring.
@@ -32,23 +49,11 @@ districts dominate the frame while dense urban ones vanish, which is the whole
 the story, say so in the copy, pair the map with a table or chart carrying the
 population weights, or reconsider the map entirely.
 
-Choropleth is also the **only** map type this block draws today — no
-cartogram, hex/tile grid, proportional-symbol, or dot-density mode, and no
-point/marker layer, since a path with no `id` is inert by design.
-
-More types are coming to **this same block**, selected by a `mode`
-discriminator, each bringing its own fields. The first is the Federal Courts
-map ([#905](https://github.com/digitalgroundgame/pragmatic-papers/issues/905)):
-a national circuit/district map with per-circuit drill-in and a judge-bench
-pane, with its data baked into the SVG asset rather than into collections.
-
-**That work is early and its API is still moving**, so nothing here documents
-it — treat everything below as the **choropleth mode**, which #905 is designed
-to leave working as-is. Two of this skill's specifics are on its list to change
-(the `svgContent` size cap and the sanitizer's tag allowlist), so re-check them
-against the code once it lands. Until then, don't fake an unsupported map type
-with overlapping paths or hand-placed markers; the sanitizer and parser will
-fight you, and the result won't survive the next upload.
+Choropleth mode draws **only** choropleths — no cartogram, hex/tile grid,
+proportional-symbol, or dot-density mode, and no point/marker layer, since a
+path with no `id` is inert by design. An overview-to-detail story is the
+an [interactive page](#interactive-pages--drilldown-from-a-synced-feed), not a
+choropleth with overlapping paths.
 
 ## The contract
 
@@ -157,7 +162,8 @@ paths, which regions got values, and the resolved color per region — then
 flags dropped tags, missing ids, and unvalued regions. Exits non-zero when the
 map would render inert.
 
-`--scale perRegion` and `--bias <n>` mirror the block's fields.
+`--scale perRegion` and `--bias <n>` mirror the block's fields. Add
+`--mode geometry` for a drilldown geometry file (see below).
 `.claude/skills/interactive-maps/example-map.svg` is a minimal valid file to
 copy from; `src/endpoints/seed/fixtures/mo-districts-119.svg` is a real one.
 
@@ -170,9 +176,10 @@ intact, and a `beforeValidate` hook copies the file's text into a hidden
 edited outside the CMS must be re-uploaded**, not swapped on disk.
 
 - SVG only (`image/svg+xml` is the sole accepted mime type).
-- `svgContent` caps at 500,000 characters. A dense export blows past that —
-  simplify geometry (QGIS _Simplify_, or `mapshaper -simplify`) rather than
-  trimming coordinate precision by hand.
+- `svgContent` caps at 2,000,000 characters (raised for drilldown overviews,
+  which run ~800 KB with facts baked in). A dense export can still blow past
+  that — simplify geometry (QGIS _Simplify_, or `mapshaper -simplify`) rather
+  than trimming coordinate precision by hand.
 - Set **Label** (shown in the admin picker) and **Source** (attribution link
   for the geometry). Writers see the label when choosing an asset in the
   block, so name it precisely — `MO Congressional Districts, 119th`, not
@@ -248,6 +255,345 @@ the sign at export time.
 | Map is upside down                                 | Missing the y-flip: the wrapping `<g>` needs `scale(1,-1) translate(0,-<height>)`.                                          |
 | Fill/stroke set in the SVG is ignored              | Deliberate — region paths are filled by the scale. Only `id`-less decorative paths keep their own attributes.               |
 
+## Drilldown geometry
+
+One **overview** map of parent regions; pick one and the view zooms/morphs into
+that region's **children** while a pane fills with the **records** that belong
+to it. Courts → districts → judges is one instance; states → counties →
+precinct returns, a country → provinces → indicators, a metro → neighborhoods →
+records are the same feature. Nothing in the engine knows the vocabulary.
+
+This section covers only the **SVG half**: the shapes and the hierarchy. Facts,
+records, labels and colours are not in these files — they come from the feed
+and from the profile's `presentation.ts`. See
+[Interactive pages](#interactive-pages--drilldown-from-a-synced-feed) for those.
+
+Source of truth is `src/blocks/InteractiveMap/drilldown/types.ts` (the engine's
+input) and `src/interactives/geometry.ts` (the SVG → JSON snapshot step).
+
+### Two kinds of file
+
+**Overview** (`geometry/<name>.json`, snapshotted from one SVG) — every parent
+region and, if you want them drawn, the child borders that cut them up, in one
+national projection. Server-rendered on every page view, so the overview is
+meaningful without JavaScript.
+
+**Child geometry** (one per drillable parent) — that parent's children in the
+parent's **own local projection**. Served as JSON from
+`/interactives/<slug>/regions/<id>` only when a reader drills in. A parent with
+no territory of its own still gets an entry, with no paths; the engine then
+keeps the overview on screen and lists its children in the selector.
+
+### Path attributes
+
+```svg
+<path id="ca8" data-region-label="8th Cir." data-layer="circuit" d="M … L …"/>
+<path id="moed" data-parent-id="ca8" data-region-label="E.D. Mo." data-layer="district" d="…"/>
+<path id="akd"  data-parent-id="ca9" data-inset="true" data-region-label="D. Alaska" d="…"/>
+```
+
+| Attribute           | Meaning                                                                                                                                                             |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `id`                | Region key. Unique within the file; a child file's path ids must match the overview's for the same region (that is what pairs shapes for the morph).                |
+| `data-region-label` | Fallback display name. The feed normally supplies the label; without either, the raw `id` shows.                                                                    |
+| `data-parent-id`    | Parent region key. **Absent → top-level region** (drillable); present → child. This is how the hierarchy is inferred; `data-layer` is only a name.                  |
+| `data-layer`        | Free-form layer name (`circuit`, `district`, `county`…) kept on the rendered path for styling.                                                                      |
+| `data-inset="true"` | An inset drawn in its own box (Alaska, Hawaii, a callout). On the overview it stands in for its parent (click Alaska → the 9th); it crossfades instead of morphing. |
+| any other `data-*`  | **Dropped at snapshot time.** `svgToGeometryFile` keeps only the attributes above, so a file exported with facts baked in yields the same geometry as a clean one.  |
+
+Multiple paths may share an id (islands as separate paths) but a single path
+with several `M…L…` subpaths is better — separate paths morph independently.
+The validator warns.
+
+Path data that should **morph** must be **absolute `M`/`L` only**, and each
+morphing shape must be exported twice from **one** simplification so the
+overview and child versions share vertex count and order ("simplify once,
+export twice"). Anything else is not an error: the engine detects it and falls
+back to zoom + crossfade for that view, and the validator tells you which
+shapes broke the invariant.
+
+Both files carry a `<g transform="scale(1,-1) translate(0, -(minY+maxY))">`
+Y-flip. The engine **recomputes the flip from the viewBox** rather than trusting
+the string, and pads the viewBox 3% so edge strokes are not clipped.
+
+### Validate before snapshotting
+
+```bash
+pnpm tsx .claude/skills/interactive-maps/validate-map-svg.ts national.svg --mode geometry
+pnpm tsx .claude/skills/interactive-maps/validate-map-svg.ts circuits/ca8.svg --mode geometry --overview national.svg --region ca8
+```
+
+The overview run reports the hierarchy it infers and flags dangling
+`data-parent-id`s, duplicate ids and paths that cannot morph. The paired run
+additionally reports which shapes will morph and which fall back, and names the
+shapes whose vertex counts differ between the two files.
+
+## Interactive pages — drilldown from a synced feed
+
+A long-lived page at `/interactives/<slug>` whose data a researcher keeps
+updating, drawn by the same drilldown engine. The point of the design is an
+**ownership split**:
+
+| Layer            | Contains                                                          | Owner            | Lives in                                         |
+| ---------------- | ----------------------------------------------------------------- | ---------------- | ------------------------------------------------ |
+| **Geometry**     | region shapes, ids, hierarchy                                     | Pragmatic Papers | `src/interactives/<profile>/geometry/*.json`     |
+| **Presentation** | labels, colours, ordering, formats, seat grouping                 | Pragmatic Papers | `src/interactives/<profile>/presentation.ts`     |
+| **Editorial**    | title, standfirst, sources, which profile, feed ref, publish gate | editors          | `interactives` collection                        |
+| **Data**         | region facts and records (plus named extra datasets)              | the researcher   | their repo → `interactive-snapshots` (versioned) |
+
+**The rule:** data carries values and meanings (`party: "D"`,
+`status: "senior"`); code carries appearance (what colour "D" is). A feed cannot
+set a colour, label or order: `src/interactives/compose.ts` reads `facts`,
+`seats` and `display` from the profile and from nothing else, and empties
+per-path facts from geometry. Source of truth: `src/interactives/types.ts`.
+
+### How data flows
+
+1. The researcher publishes what they already publish (court-tracker's
+   `data/manifest.json` + the files it lists). Nothing on their side changes;
+   the **adapter** (`src/interactives/<profile>/adapter.ts`) absorbs their
+   shape and is ours to maintain.
+2. `syncInteractiveData` runs daily (06:15 UTC) and from the **Sync data
+   feeds** button on Interactive Snapshots (`POST
+/api/interactive-snapshots/sync[?interactive=<id>&force=true]`). It reads
+   upstream at an **immutable ref** (see below), skips if upstream's `version`
+   has not moved, fetches, adapts,
+   **validates against the geometry** (every record's region must exist; a
+   drawn shape the feed no longer declares, or a declaration with no shape
+   under a drawn parent, fails — that is how an upstream rename shows up), and
+   writes a new snapshot **version only when the content hash moved**.
+3. The snapshot is a **draft** unless the interactive's feed is set to
+   auto-publish. An editor opens the page from the admin (draft mode renders
+   the newest draft) — that is the preview — and publishes it. A feed that
+   fails validation never becomes a version, so the last good one keeps
+   serving.
+4. The page composes the overview server-side; regions load lazily as JSON
+   from `/interactives/<slug>/regions/<id>`, composed the same way and cached
+   by tag until the next publish.
+5. **Record search** is a third composed view. `/interactives/<slug>/search`
+   serves one entry per record — id, name and region, nothing else — named by
+   the profile's `display.title` field, so a feed cannot decide what a result
+   says. The client fetches it on the reader's first keystroke, filters in the
+   browser, and a chosen result selects the record's region (drilling into its
+   parent first when it is a child) and pins the record in the pane. A record
+   needs an `_id` to be searchable: it is what the pane finds it by once the
+   region's asset has loaded.
+
+### Which revision the sync reads
+
+court-tracker tags every manifest bump `data-v<manifest.version>` and publishes
+a release for it, and asks consumers not to read `main`: a scheduled pull can
+catch a branch mid-push, or catch `data/` and `assets/geo/` disagreeing across
+two commits. An interactive's **Feed ref** therefore defaults to `release`,
+which means "resolve whatever upstream last published":
+
+- The poll asks the **releases API**, not a file on a branch. One request, and
+  the version is in the tag name. This also avoids a real race in the obvious
+  alternative: the manifest lands on `main` first and the release is cut
+  afterwards, so reading the version and then asking for its tag can ask for a
+  tag that does not exist yet.
+- The fetch reads files at that tag. We do **not** download the release
+  tarball: the atomicity comes from the tag being immutable, and the tarball is
+  about 21 MB because it carries `assets/photos/` and `assets/geo/`, neither of
+  which we use — we hotlink photos and keep our own committed geometry.
+- A repo that has published no matching release yet falls back to `main`, so
+  this works before an upstream release workflow lands.
+- Any other value in **Feed ref** is honoured verbatim, for pinning or
+  debugging. The snapshot records the ref actually read, so its provenance
+  names the immutable tag rather than the word `release`.
+
+Private upstream: set `COURT_TRACKER_GITHUB_TOKEN` (fine-grained, contents:
+read); `COURT_TRACKER_REPO` overrides the default repository. Without the
+token the sync logs a warning and skips. A refused releases request throws
+rather than reporting "no releases", so a token with the wrong scope cannot
+silently downgrade the sync to reading a branch.
+
+### Presentation — what the profile owns
+
+`presentation.ts` exports `facts`, `seats` and `display`. Nothing here can come
+from a feed.
+
+- **`facts`** controls how region facts display: `labels` per key, `order`, and
+  `hide`. Facts the `seats`/`display` configuration consumes are hidden
+  automatically.
+- **`seats`** draws the **seat block** glyph next to each region visible in the
+  current view: one small square per seat (`totalFact`), coloured by group in
+  the order given, remainder drawn as vacant. `anchorFact` names a fact holding
+  `"x,y"` in the projected units of the file that region is drawn in (a
+  district's anchor belongs to its circuit's child geometry, a circuit's to the
+  overview); default is the centre of the shape's largest sub-path. `labelFact`
+  puts a short label above the block.
+- **`display`** maps record fields to the pane.
+
+Records themselves come from the feed. Each carries `_region` (the region key),
+`_id` (stable identity — required for search) and optionally `_role:
+"associate"` for someone who sits beside the bench rather than in it (a Circuit
+Justice). Everything else is opaque, referenced by `display`. Records for a
+parent **and its children** travel in the parent's region route; small
+cross-cutting sets go in the overview. The pane merges both.
+
+| `display` key          | Meaning                                                                                                                                              |
+| ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `title` / `shortTitle` | Full name field; compact label under the avatar. `title` also names the record in search results.                                                    |
+| `image`                | `{ url, source?, license?, credit? }` fields. A plain hotlinked `<img>` with an initials fallback; a non-empty `credit` renders a photo credit line. |
+| `category`             | `{ field, values: [{ value, label, shortLabel?, color }], other? }`. Colours the avatar ring, groups the seat chart, and drives the majority line.   |
+| `order`                | Sort field (ISO date or number), ascending — the timeline order.                                                                                     |
+| `status`               | `{ field, supernumerary: [values], labels }`. Supernumerary members sit outside the seat count: greyed, in the outer band, with Hide/Show/Include.   |
+| `seatsFact`            | Region fact holding the number of seats; vacancies = seats − active members.                                                                         |
+| `flags`                | `[{ field, label, symbol }]` booleans shown as a badge (★ Chief judge).                                                                              |
+| `cohort`               | Field whose shared value lights up on hover (everyone appointed by the same president).                                                              |
+| `marks`                | `[{ field, label }]` boolean fields offered as a "Mark:" toggle (dashed ring).                                                                       |
+| `details`              | Lines in the docked detail panel, in order — see below.                                                                                              |
+
+Detail lines: `{ field, label?, format?, when? }` with `format` one of `text`
+(default), `date`, `years-since` ("12 yr 3 mo" from the date to today), `term`
+(`endField` names the end date: "X served · Y remaining (expires D)" or, past
+the end, "term expired D · holding over pending a successor"), `link` (the
+field is an http(s) URL), or `reported` (shown only when the field is truthy,
+with optional `basisField` and `sourceField` — write the label hedged:
+"Reported to have a … affiliation"). `when` is
+`{ field, in?, notIn?, truthy? }` on the record; have the adapter derive a
+boolean when a condition needs more than one field.
+
+**`portrait`** puts a face beside the value. A judge names their appointing
+president; the president's photo is a fact about the _president_, so the feed
+carries it once in a dataset rather than copied onto every judge. Declare where
+to read it in `presentation.lookups`, then point a detail line at that table:
+
+```ts
+lookups: { presidents: { dataset: "presidents", image: "photo_url", source: "photo_source" } },
+display: {
+  details: [{ field: "appointing_president", label: "Appointed by", format: "portrait", lookup: "presidents" }],
+}
+```
+
+The compose step turns the named dataset into the payload's `lookups`. A
+dataset the feed does not carry yields no table and the line falls back to the
+plain value, so a missing face costs the row nothing.
+
+**The header line.** A profile may also declare `metaLine(input)`, a short
+string shown beside "Data as of …". "Data as of" says when the _sync_ ran; a
+tracker that has not moved in months looks identical to one that syncs nightly.
+Federal Courts uses it to name the most recent commission in the snapshot.
+
+Reserved region facts the feed may set: `summary` (one-line meta text under the
+pane heading and in the tooltip), `children-label` (noun for the drill-in
+control: "View **districts** →", default "details"), `order` (selector sort
+key), `note` / `note-seats` (italic note under the records, the latter only in
+the seat-chart view).
+
+### The landing view
+
+Before a reader picks a region the pane shows the profile's **summary** instead of an empty
+hint: an overview of the whole dataset. A profile opts in by declaring `summary` on its
+`InteractiveProfile`, a pair of functions — `compose` runs on the server and its result is
+cached with the overview, so it must be serialisable; `render` turns that into a node and is
+the only place that knows its type, which keeps the shape inside the profile.
+
+The summary reaches the map through `useDrilldownSelection()`, so a reader can go from an
+overview straight to the region it names. Outside a drilldown that hook returns null and the
+component still renders, which is what makes it testable on its own.
+
+Federal Courts shows two views: the Supreme Court's bench on the same dome the seat chart
+uses, and every district judgeship in the numbered circuits as one square, laid out as a
+cartogram of the country. The squares come from the feed's `arrangement` dataset, whose
+per-cell `r`/`d`/`vacant` codes are **meanings**: `summary.ts` maps them onto the profile's own
+party values and `presentation.ts` decides the colour, so the cartogram, the seat blocks and
+the bench can never disagree. Upstream places blocks in drawing units rather than cells, so the
+compose step recovers the grid pitch and normalises offsets to whole cells.
+
+Federal Courts adds two charts to that landing view, both from the feed's
+`appointments` dataset and both aggregated at compose time — per-year counts
+and per-month buckets, about 6 KB, rather than the megabyte the raw history
+weighs:
+
+- **Change** — judges in active service by appointing party, as a stacked area
+  on a **zero baseline**, not a wiggle-baseline streamgraph: the total is the
+  size of the federal bench, which is itself worth reading. It starts a
+  judicial generation after the history does, because a judge appointed before
+  coverage begins is invisible and the early years would understate the bench;
+  the caption says so.
+- **Appointments** — one dot per appointment, stacked into the month it was
+  commissioned, with the axis banded by president. A term's band comes from the
+  **dominant president in each month**, so a straggler filed under an earlier
+  president cannot smear a band across the whole chart and two non-consecutive
+  terms stay two bands.
+
+Both take their colours from `presentation.ts`, name every series in a legend
+rather than relying on colour alone, and label only the endpoints.
+
+### What the reader gets
+
+- **Overview**: parent fills, child borders, stroke-only parent outlines, seat
+  blocks with labels, hover outline + tooltip (label, summary, facts). Keyboard
+  reachable: regions are focusable and Enter/Space selects, and the region strip
+  is one tab stop with arrow-key movement.
+- **Search**: a box above the region strip finds any record by name and takes
+  the reader to it — the one question the map cannot answer.
+- **Select** (map or region strip): the pane beneath the map fills with label,
+  summary, facts, and the bench as a **Timeline** (commission order, vacancies
+  parked at the end) or a **Seat chart** (semicircle over the seat count, first
+  category | vacancies | rest, dotted majority line and count, supernumerary
+  Hide/Show/Include), plus the **Mark** toggles, the associate chip, notes, and
+  the sticky docked **detail** panel (hover fills it, click pins it). Escape
+  closes and returns focus to the region it came from.
+- **Drill in** ("View districts →"): a vertex morph from the overview
+  projection into the child projection (620 ms, commit-rate capped), or zoom +
+  crossfade where the invariant fails; the strip repopulates with the children
+  and a back control.
+
+### Archivability
+
+The overview is complete in the initial HTML. Each region is referenced as
+`<link rel="prefetch" href="/interactives/<slug>/regions/<id>">` — a stable,
+same-origin path a crawler following same-origin references will capture — and
+fetched from that same path on drill-in. Nothing load-bearing is fetched from a
+third party; hotlinked photos are the one exception and degrade to initials. A
+capture that includes the prefetched routes drills in; one that does not still
+shows the full overview, strip, facts and any records carried in the overview.
+
+### Adding an interactive
+
+1. `src/interactives/<profile>/` with `presentation.ts`, `adapter.ts`,
+   `feed.ts` (implements `FeedAdapter`), `geometry.ts` (lazy JSON imports) and
+   `index.ts` exporting an `InteractiveProfile`; register it in
+   `src/interactives/profiles.ts`.
+2. Snapshot the geometry once from the upstream export and commit the JSON —
+   for Federal Courts: `pnpm tsx scripts/snapshot-federal-courts.ts geometry --source ../court-tracker`.
+3. Snapshot the data fixture the seed and tests use — a real adapter output:
+   `pnpm tsx scripts/snapshot-federal-courts.ts data --source ../court-tracker`
+   (or `--ref main` with the token set). This also validates the feed and
+   prints every problem.
+4. Create the **Interactive** in the admin (title, slug, profile, standfirst,
+   sources, feed ref), press **Sync data feeds**, review the draft snapshot on
+   the page, publish it.
+
+### Troubleshooting (pages)
+
+| Symptom                                                     | Cause                                                                                                                                |
+| ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| Page says "no published data yet"                           | No snapshot is published for the interactive. Open Interactive Snapshots: publish the draft, or run the sync and then publish.       |
+| Sync says "skipped — COURT_TRACKER_GITHUB_TOKEN not set"    | The upstream is private; set the token in the environment the job runs in.                                                           |
+| Sync says "unchanged" but the researcher pushed             | Their manifest `version` did not move (they did not rebuild), or the rendered content is identical. Use `?force=true` to re-read.    |
+| Sync fails with `geometry draws "x" but the feed declares…` | Upstream renamed or dropped a region id. Fix the adapter's mapping or re-snapshot the geometry; the last good snapshot still serves. |
+| Colours or labels look wrong after a data update            | They cannot come from the feed; look at `presentation.ts` and the theme tokens.                                                      |
+| Region route returns 404                                    | The region is not drillable (not a key of the profile's `geometry.children`), or there is no published snapshot.                     |
+| A judge is missing from search                              | Their record has no `_id`, or no value in the profile's `display.title` field — `composeSearchIndex` skips both. Check the adapter.  |
+| Summary shows "No district layout."                         | The feed carries no `arrangement` dataset, or its cells name districts the feed does not declare. Re-run the snapshot script.        |
+| Cartogram blocks overlap or scatter                         | The grid pitch could not be recovered because upstream's offsets are no longer whole multiples of one cell. Check `cellPitch`.       |
+| Searching finds nobody at all                               | `/interactives/<slug>/search` 404s (no published snapshot) or the box was never given a URL; the list says "Search is unavailable".  |
+| Region missing from the strip                               | Its path has no `id`, or its `data-parent-id` names a parent that does not exist (it is then listed at the top level).               |
+| "View … →" never appears                                    | The region is not a key of the profile's `geometry.children`, and it has no children in the overview.                                |
+| Pane says "No records for this region"                      | No record in the feed has `_region` equal to that id. Re-run the snapshot script: it prints every problem.                           |
+| Pane shows "Details could not be loaded"                    | The region route failed. Open `/interactives/<slug>/regions/<id>` in the browser.                                                    |
+| Drill-in zooms and crossfades instead of morphing           | By design when shapes are not absolute `M`/`L` or vertex counts differ. The paired validator run names the shapes.                   |
+| No seat blocks                                              | No `seats` in `presentation.ts`, or no region's facts carry `totalFact`.                                                             |
+| Seat block in the wrong place                               | `anchor` is in the wrong projection — a district's anchor must be in its circuit's child geometry units.                             |
+| Tooltip lists machine facts (`seats-r`, `anchor`)           | Add them to `facts.hide`, or reference them from `seats`/`display.seatsFact` so they hide automatically.                             |
+| Facts show `Active count` instead of your wording           | Add `facts.labels`.                                                                                                                  |
+| Map upside down in the child view only                      | The child SVG lacks the `scale(1,-1)` flip group (or has it while the overview does not); make both consistent, then re-snapshot.    |
+| Photos never appear                                         | `display.image.url` names a field the records do not have, or the host blocks hotlinking; initials show instead.                     |
+
 ## Reference
 
 - Block config and fields — `src/blocks/InteractiveMap/config.ts`
@@ -255,4 +601,8 @@ the sign at export time.
 - Parser (id / value / transform extraction) — `src/blocks/InteractiveMap/parseInlineSvg.ts`
 - Color scale, breakpoints, bias, formatting — `src/blocks/InteractiveMap/colorScale.ts`
 - Map Assets collection — `src/collections/MapAssets/index.ts`
-- Worked example (two maps, shared scale) — `src/endpoints/seed/features/interactive-maps/`
+- Drilldown engine contract — `src/blocks/InteractiveMap/drilldown/types.ts`, `contract.ts`
+- Drilldown rendering, regions, morph, seat layout, search — `src/blocks/InteractiveMap/drilldown/`
+- Ownership split and composition — `src/interactives/types.ts`, `compose.ts`
+- SVG → geometry snapshot — `src/interactives/geometry.ts`, `scripts/snapshot-federal-courts.ts`
+- Worked examples — `src/endpoints/seed/features/interactive-maps/` (two choropleths with a shared scale) and `src/endpoints/seed/features/interactives/` (the Federal Courts page)

@@ -131,6 +131,18 @@ test.describe("interactive page — federal courts", () => {
     // One square per authorized district judgeship in the circuits upstream lays out.
     await expect(cartogram.locator("rect[data-summary-seat]")).toHaveCount(681)
 
+    // Both charts read from the appointment history the feed carries.
+    await pane.getByRole("button", { name: "Change" }).click()
+    await expect(pane.locator("[data-chart-change] path[data-chart-band]")).toHaveCount(2)
+    await expect(pane.locator("[data-chart-change]")).toContainText("R-appointed")
+
+    await pane.getByRole("button", { name: "Appointments" }).click()
+    const swarm = pane.locator("[data-chart-appointments]")
+    await expect(swarm.locator("circle")).toHaveCount(2792)
+    await expect(swarm).toContainText("Nixon")
+    await expect(swarm).toContainText("Biden")
+
+    await pane.getByRole("button", { name: "District courts" }).click()
     // A seat is a way into its district: the map drills to the circuit and opens the district.
     await cartogram.locator("rect[data-summary-seat='moed']").first().click()
     const open = page.locator("[data-drilldown-pane][data-open]")

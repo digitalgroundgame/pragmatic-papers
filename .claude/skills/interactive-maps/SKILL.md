@@ -476,6 +476,26 @@ party values and `presentation.ts` decides the colour, so the cartogram, the sea
 the bench can never disagree. Upstream places blocks in drawing units rather than cells, so the
 compose step recovers the grid pitch and normalises offsets to whole cells.
 
+Federal Courts adds two charts to that landing view, both from the feed's
+`appointments` dataset and both aggregated at compose time — per-year counts
+and per-month buckets, about 6 KB, rather than the megabyte the raw history
+weighs:
+
+- **Change** — judges in active service by appointing party, as a stacked area
+  on a **zero baseline**, not a wiggle-baseline streamgraph: the total is the
+  size of the federal bench, which is itself worth reading. It starts a
+  judicial generation after the history does, because a judge appointed before
+  coverage begins is invisible and the early years would understate the bench;
+  the caption says so.
+- **Appointments** — one dot per appointment, stacked into the month it was
+  commissioned, with the axis banded by president. A term's band comes from the
+  **dominant president in each month**, so a straggler filed under an earlier
+  president cannot smear a band across the whole chart and two non-consecutive
+  terms stay two bands.
+
+Both take their colours from `presentation.ts`, name every series in a legend
+rather than relying on colour alone, and label only the endpoints.
+
 ### What the reader gets
 
 - **Overview**: parent fills, child borders, stroke-only parent outlines, seat

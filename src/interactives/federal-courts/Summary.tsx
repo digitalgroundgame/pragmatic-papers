@@ -10,10 +10,11 @@ import { layoutArc, REGULAR_METRICS } from "@/blocks/InteractiveMap/drilldown/se
 import type { DrilldownRecord } from "@/blocks/InteractiveMap/drilldown/types"
 import { cn } from "@/utilities/utils"
 
+import { AppointmentsChart, ChangeChart } from "./Charts"
 import { federalCourtsPresentation } from "./presentation"
 import type { FederalCourtsSummary, SeatParty } from "./summary"
 
-type View = "scotus" | "districts"
+type View = "scotus" | "districts" | "change" | "appointments"
 
 const display = federalCourtsPresentation.display
 
@@ -53,7 +54,7 @@ function Tally({
           {" · "}
           <span
             aria-hidden="true"
-            className="mr-1 inline-block size-2 translate-y-px rounded-[2px] align-baseline"
+            className="mr-1 inline-block size-2 translate-y-px rounded-xs align-baseline"
             style={{
               backgroundColor: colorFor(t.party),
               boxShadow: "inset 0 0 0 1px var(--border)",
@@ -280,19 +281,34 @@ export function FederalCourtsSummaryView({
           options={[
             { value: "scotus", label: "Supreme Court" },
             { value: "districts", label: "District courts" },
+            { value: "change", label: "Change" },
+            { value: "appointments", label: "Appointments" },
           ]}
           onChange={setView}
         />
       </div>
-      {view === "scotus" ? (
+      {view === "scotus" && (
         <SupremeCourt records={data.supremeCourt} regionId={data.supremeCourtRegion} />
-      ) : (
+      )}
+      {view === "districts" && (
         <DistrictCartogram
           circuits={data.cartogram}
           totals={data.districtTotals}
           labels={data.labels}
         />
       )}
+      {view === "change" &&
+        (data.change ? (
+          <ChangeChart change={data.change} />
+        ) : (
+          <p className="text-muted-foreground py-6 text-center text-sm">No appointment history.</p>
+        ))}
+      {view === "appointments" &&
+        (data.appointments ? (
+          <AppointmentsChart appointments={data.appointments} />
+        ) : (
+          <p className="text-muted-foreground py-6 text-center text-sm">No appointment history.</p>
+        ))}
     </div>
   )
 }

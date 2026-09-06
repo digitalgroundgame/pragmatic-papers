@@ -42,6 +42,25 @@ const summary: FederalCourtsSummary = {
     { party: null, count: 1 },
   ],
   labels: { ca8: "8th Cir.", moed: "E.D. Mo.", arw: "W.D. Ark.", scotus: "SCOTUS" },
+  change: {
+    startYear: 2024,
+    coverageFrom: 1994,
+    series: [
+      { party: "Republican", counts: [2, 2, 3] },
+      { party: "Democratic", counts: [1, 2, 2] },
+    ],
+  },
+  appointments: {
+    baseYear: 1994,
+    presidents: [
+      { name: "A President", party: "Republican" },
+      { name: "B President", party: "Democratic" },
+    ],
+    bursts: [
+      { month: 0, president: 0, count: 2 },
+      { month: 13, president: 1, count: 1 },
+    ],
+  },
 }
 
 function renderView(select = vi.fn()) {
@@ -114,5 +133,44 @@ describe("FederalCourtsSummaryView", () => {
     expect(screen.getByText("No Supreme Court data.")).toBeInTheDocument()
     fireEvent.click(screen.getByRole("button", { name: "District courts" }))
     expect(screen.getByText("No district layout.")).toBeInTheDocument()
+  })
+
+  it("charts the bench's composition on a zero baseline, with both endpoints labelled", () => {
+    const { container } = renderView()
+    fireEvent.click(screen.getByRole("button", { name: "Change" }))
+    const chart = container.querySelector("[data-chart-change]")!
+    // One stacked band per party, each named in the legend rather than by colour alone.
+    expect(chart.querySelectorAll("path[data-chart-band]")).toHaveLength(2)
+    expect(container.querySelector("[data-chart-legend]")).toHaveTextContent("R-appointed")
+    expect(chart).toHaveTextContent("3 R-appointed")
+    expect(chart).toHaveTextContent("2 D-appointed")
+    // The caption says why the series cannot start where coverage does.
+    expect(container).toHaveTextContent("starts in 2024")
+    expect(container).toHaveTextContent("begins in 1994")
+  })
+
+  it("reads out the year under the cursor", () => {
+    const { container } = renderView()
+    fireEvent.click(screen.getByRole("button", { name: "Change" }))
+    const readout = container.querySelector("[data-chart-change-readout]")!
+    expect(readout).toHaveTextContent("Hover the chart")
+    const chart = container.querySelector("[data-chart-change]")!
+    chart.getBoundingClientRect = () => ({ left: 0, width: 720, top: 0, height: 300 }) as DOMRect
+    fireEvent.pointerMove(chart, { clientX: 720 })
+    expect(readout).toHaveTextContent("2026: 3 R-appointed · 2 D-appointed")
+  })
+
+  it("draws one dot per appointment and bands the axis by president", () => {
+    const { container } = renderView()
+    fireEvent.click(screen.getByRole("button", { name: "Appointments" }))
+    const chart = container.querySelector("[data-chart-appointments]")!
+    expect(chart.querySelectorAll("circle")).toHaveLength(3)
+    expect(chart).toHaveTextContent("President")
+  })
+
+  it("says so when the feed carries no appointment history", () => {
+    render(<FederalCourtsSummaryView data={{ ...summary, change: null, appointments: null }} />)
+    fireEvent.click(screen.getByRole("button", { name: "Change" }))
+    expect(screen.getByText("No appointment history.")).toBeInTheDocument()
   })
 })

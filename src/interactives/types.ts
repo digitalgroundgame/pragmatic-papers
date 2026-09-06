@@ -63,11 +63,25 @@ export interface DrilldownData {
 
 // ---- presentation: Pragmatic Papers' half ----------------------------------------------------
 
+/**
+ * Where a `portrait` detail line gets its faces: the named dataset in the feed, and which of
+ * its fields hold the image and its source. The feed supplies the values; this says what to
+ * read and the detail line says whether to show it.
+ */
+export interface LookupSource {
+  dataset: string
+  image?: string
+  label?: string
+  source?: string
+}
+
 /** Everything about how a region's facts and records look. Never read from a feed. */
 export interface DrilldownPresentation {
   facts?: FactsConfig
   seats?: SeatBlockConfig
   display: RecordDisplay
+  /** Side tables built from `datasets`, keyed by the name a detail line's `lookup` names. */
+  lookups?: Record<string, LookupSource>
 }
 
 // ---- geometry: Pragmatic Papers' half --------------------------------------------------------
@@ -139,6 +153,11 @@ export interface InteractiveProfile<Raw = unknown> {
   /** Loaded lazily — the geometry JSON is megabytes and only the page and region route need it. */
   loadGeometry(): Promise<DrilldownGeometry>
   feed: FeedAdapter<Raw>
+  /**
+   * A short line of provenance for the page header, beside "Data as of …". Derived from the
+   * snapshot, so it says something the feed knows and the editorial copy cannot.
+   */
+  metaLine?(input: { data: DrilldownData }): string | null
   /**
    * The landing view shown before a reader picks a region: an overview of the whole dataset.
    *

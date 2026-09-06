@@ -53,6 +53,16 @@ export const federalCourtsPresentation: DrilldownPresentation = {
     anchorFact: "anchor",
     labelFact: "short-label",
   },
+  lookups: {
+    // A judge names their appointing president; the president's face is a fact about the
+    // president, so the feed carries it once in `datasets.presidents` rather than on every
+    // judge they appointed.
+    presidents: {
+      dataset: "presidents",
+      image: "photo_url",
+      source: "photo_source",
+    },
+  },
   display: {
     title: "full_name",
     shortTitle: "display_name",
@@ -90,7 +100,12 @@ export const federalCourtsPresentation: DrilldownPresentation = {
       { field: "acs_reported", label: "ACS" },
     ],
     details: [
-      { field: "appointing_president", label: "Appointed by" },
+      {
+        field: "appointing_president",
+        label: "Appointed by",
+        format: "portrait",
+        lookup: "presidents",
+      },
       {
         field: "senior_date",
         format: "date",

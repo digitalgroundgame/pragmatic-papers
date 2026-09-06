@@ -3,6 +3,7 @@ import React from "react"
 import type { InteractiveProfile } from "../types"
 import { courtTrackerFeed } from "./feed"
 import { loadFederalCourtsGeometry } from "./geometry"
+import { federalCourtsMetaLine } from "./meta"
 import { federalCourtsPresentation } from "./presentation"
 import { composeFederalCourtsSummary, type FederalCourtsSummary } from "./summary"
 import { FederalCourtsSummaryView } from "./Summary"
@@ -16,6 +17,7 @@ export const federalCourtsProfile: InteractiveProfile<CourtTrackerSources> = {
   presentation: federalCourtsPresentation,
   loadGeometry: loadFederalCourtsGeometry,
   feed: courtTrackerFeed,
+  metaLine: federalCourtsMetaLine,
   summary: {
     compose: composeFederalCourtsSummary,
     // The one cast in the profile, so nothing outside it has to know this shape.

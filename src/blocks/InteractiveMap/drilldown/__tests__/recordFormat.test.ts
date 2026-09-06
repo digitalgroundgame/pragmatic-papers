@@ -174,3 +174,40 @@ describe("formatting", () => {
     expect(safeHref("not a url")).toBeNull()
   })
 })
+
+describe("formatDetailLine — portrait", () => {
+  const lookups = {
+    presidents: { "Barack Obama": { image: "https://example.com/obama.jpg", source: "https://c" } },
+  }
+  const line = {
+    field: "by",
+    label: "Appointed by",
+    format: "portrait" as const,
+    lookup: "presidents",
+  }
+
+  it("pairs the value with the face the lookup holds for it", () => {
+    expect(
+      formatDetailLine(line, { _region: "x", by: "Barack Obama" }, new Date(), lookups),
+    ).toEqual({
+      kind: "portrait",
+      label: "Appointed by",
+      value: "Barack Obama",
+      image: "https://example.com/obama.jpg",
+      source: "https://c",
+    })
+  })
+
+  it("still names them when the lookup has no row, so a missing face costs nothing", () => {
+    expect(
+      formatDetailLine(line, { _region: "x", by: "Someone Else" }, new Date(), lookups),
+    ).toMatchObject({ kind: "portrait", value: "Someone Else", image: null })
+    expect(formatDetailLine(line, { _region: "x", by: "Barack Obama" }, new Date())).toMatchObject({
+      image: null,
+    })
+  })
+
+  it("drops the line when the record has no value for the field", () => {
+    expect(formatDetailLine(line, { _region: "x" }, new Date(), lookups)).toBeNull()
+  })
+})

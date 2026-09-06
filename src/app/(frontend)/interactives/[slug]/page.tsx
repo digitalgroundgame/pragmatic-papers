@@ -85,6 +85,7 @@ export default async function InteractivePage({
               {dataDate.format(new Date(composed.generatedAt))}
             </time>
             {" · "}synced from {composed.source.name}
+            {composed.metaLine ? ` · ${composed.metaLine}` : ""}
           </p>
         )}
       </header>

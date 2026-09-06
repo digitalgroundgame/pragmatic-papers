@@ -6,6 +6,7 @@ import {
   type DeclaredRegion,
   type DrilldownAsset,
   type DrilldownPath,
+  type DrilldownPayload,
   type RegionIndex,
 } from "@/blocks/InteractiveMap/drilldown/types"
 
@@ -25,6 +26,45 @@ export interface ComposeInput {
   presentation: DrilldownPresentation
   geometry: DrilldownGeometry
   data: DrilldownData
+}
+
+const isObject = (v: unknown): v is Record<string, unknown> =>
+  typeof v === "object" && v !== null && !Array.isArray(v)
+
+/**
+ * Side tables for the `portrait` detail lines: the profile names a dataset and the fields to
+ * read; the feed supplies the rows. A dataset the feed does not carry yields no table, and a
+ * portrait line then falls back to the plain value it already had.
+ */
+function composeLookups(
+  presentation: DrilldownPresentation,
+  data: DrilldownData,
+): DrilldownPayload["lookups"] {
+  if (!presentation.lookups) return undefined
+  const out: NonNullable<DrilldownPayload["lookups"]> = {}
+  for (const [name, source] of Object.entries(presentation.lookups)) {
+    const raw = data.datasets?.[source.dataset]
+    if (!isObject(raw)) continue
+    const table: Record<string, { image?: string; label?: string; source?: string }> = {}
+    for (const [key, value] of Object.entries(raw)) {
+      if (!isObject(value)) continue
+      const entry: { image?: string; label?: string; source?: string } = {}
+      const read = (field: string | undefined): string | undefined => {
+        if (!field) return undefined
+        const v = value[field]
+        return typeof v === "string" && v !== "" ? v : undefined
+      }
+      const image = read(source.image)
+      const label = read(source.label)
+      const src = read(source.source)
+      if (image) entry.image = image
+      if (label) entry.label = label
+      if (src) entry.source = src
+      if (Object.keys(entry).length > 0) table[key] = entry
+    }
+    if (Object.keys(table).length > 0) out[name] = table
+  }
+  return Object.keys(out).length > 0 ? out : undefined
 }
 
 /** Structural attributes only — every fact a reader sees comes from the data. */
@@ -89,6 +129,10 @@ export function composeOverview({ presentation, geometry, data }: ComposeInput):
       regions: data.regions,
       ...(presentation.facts ? { facts: presentation.facts } : {}),
       ...(presentation.seats ? { seats: presentation.seats } : {}),
+      ...((): Pick<DrilldownPayload, "lookups"> => {
+        const lookups = composeLookups(presentation, data)
+        return lookups ? { lookups } : {}
+      })(),
       records: { items, display: presentation.display },
     },
     payloadError: null,

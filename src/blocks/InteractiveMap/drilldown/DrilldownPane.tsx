@@ -12,7 +12,7 @@ import {
   type SupernumeraryMode,
 } from "./DrilldownBench"
 import { Segmented } from "./Segmented"
-import { DrilldownDetail, type DetailSelection } from "./DrilldownDetail"
+import { DrilldownDetail, type DetailSelection, type Lookups } from "./DrilldownDetail"
 import { fieldString } from "./recordFormat"
 import { buildBench, type RegionRecords } from "./records"
 import type { DisplayFact } from "./regions"
@@ -34,6 +34,8 @@ export interface DrilldownPaneHandle {
 interface DrilldownPaneProps {
   region: RegionInfo | null
   facts: DisplayFact[]
+  /** Side tables a `portrait` detail line reads, from the payload covering this region. */
+  lookups?: Lookups
   records: RegionRecords
   recordsState: "idle" | "loading" | "error"
   open: boolean
@@ -57,6 +59,7 @@ interface DrilldownPaneProps {
 export function DrilldownPane({
   region,
   facts,
+  lookups,
   records,
   recordsState,
   open,
@@ -296,7 +299,7 @@ export function DrilldownPane({
                 </p>
               ))}
             </div>
-            {display && <DrilldownDetail selection={detail} now={now} />}
+            {display && <DrilldownDetail selection={detail} now={now} lookups={lookups} />}
           </div>
         </div>
       )}

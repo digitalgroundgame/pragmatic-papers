@@ -96,7 +96,14 @@ export interface CategoryValue {
   color: string
 }
 
-export type DetailFormat = "text" | "date" | "years-since" | "term" | "link" | "reported"
+export type DetailFormat =
+  | "text"
+  | "date"
+  | "years-since"
+  | "term"
+  | "link"
+  | "reported"
+  | "portrait"
 
 export interface DetailCondition {
   field: string
@@ -114,7 +121,20 @@ export interface DetailLine {
   /** `reported`: optional qualifier and citation fields. */
   basisField?: string
   sourceField?: string
+  /** `portrait`: the `lookups` table whose key is this field's value. */
+  lookup?: string
   when?: DetailCondition
+}
+
+/**
+ * One row of a lookup table: what is known about a value a record refers to by name. A judge
+ * names their appointing president; the president's face is a fact about the president, so it
+ * lives here rather than being copied onto every judge they appointed.
+ */
+export interface LookupEntry {
+  image?: string
+  label?: string
+  source?: string
 }
 
 export interface RecordDisplay {
@@ -170,6 +190,8 @@ export interface DrilldownPayload {
   facts?: FactsConfig
   seats?: SeatBlockConfig
   records?: RecordsConfig
+  /** Side tables a `portrait` detail line reads, keyed by table name then by value. */
+  lookups?: Record<string, Record<string, LookupEntry>>
 }
 
 // ---- resolved model -----------------------------------------------------------------------

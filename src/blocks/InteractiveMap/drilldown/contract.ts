@@ -4,6 +4,7 @@ import {
   type DrilldownPayload,
   type DrilldownRecord,
   type FactMap,
+  type LookupEntry,
   type RecordDisplay,
   type RegionNote,
 } from "./types"
@@ -163,6 +164,36 @@ export interface PayloadValidation {
  * reported rather than thrown so a bad upload degrades to "no records" at render time
  * and to a readable list in the validator script.
  */
+/** Side tables for `portrait` detail lines. Unknown entry fields are dropped, not rejected. */
+function validateLookups(
+  input: unknown,
+  errors: string[],
+): DrilldownPayload["lookups"] | undefined {
+  if (input === undefined) return undefined
+  if (!isRecord(input)) {
+    errors.push("lookups must be an object of tables")
+    return undefined
+  }
+  const out: NonNullable<DrilldownPayload["lookups"]> = {}
+  for (const [name, table] of Object.entries(input)) {
+    if (!isRecord(table)) {
+      errors.push(`lookups.${name} must be an object keyed by value`)
+      continue
+    }
+    const rows: Record<string, LookupEntry> = {}
+    for (const [key, entry] of Object.entries(table)) {
+      if (!isRecord(entry)) continue
+      const row: LookupEntry = {}
+      if (isString(entry.image)) row.image = entry.image
+      if (isString(entry.label)) row.label = entry.label
+      if (isString(entry.source)) row.source = entry.source
+      if (Object.keys(row).length > 0) rows[key] = row
+    }
+    if (Object.keys(rows).length > 0) out[name] = rows
+  }
+  return Object.keys(out).length > 0 ? out : undefined
+}
+
 export function validateDrilldownPayload(input: unknown): PayloadValidation {
   const errors: string[] = []
   if (!isRecord(input)) return { payload: null, errors: ["payload must be a JSON object"] }
@@ -219,6 +250,7 @@ export function validateDrilldownPayload(input: unknown): PayloadValidation {
   }
 
   const records = validateRecords(input.records, errors)
+  const lookups = validateLookups(input.lookups, errors)
 
   if (errors.length > 0) return { payload: null, errors }
   const payload: DrilldownPayload = { schema: DRILLDOWN_SCHEMA }
@@ -226,5 +258,6 @@ export function validateDrilldownPayload(input: unknown): PayloadValidation {
   if (facts) payload.facts = facts
   if (seats) payload.seats = seats
   if (records) payload.records = records
+  if (lookups) payload.lookups = lookups
   return { payload, errors }
 }

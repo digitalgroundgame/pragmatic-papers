@@ -3,6 +3,7 @@ import type {
   DetailCondition,
   DetailLine,
   DrilldownRecord,
+  LookupEntry,
   RecordDisplay,
 } from "./types"
 
@@ -145,16 +146,35 @@ export type FormattedDetail =
   | { kind: "text"; label: string | null; value: string }
   | { kind: "link"; label: string; href: string }
   | { kind: "reported"; label: string; basis: string | null; source: string | null }
+  | {
+      kind: "portrait"
+      label: string | null
+      value: string
+      image: string | null
+      source: string | null
+    }
 
 export function formatDetailLine(
   line: DetailLine,
   record: DrilldownRecord,
   now: Date,
+  lookups?: Record<string, Record<string, LookupEntry>>,
 ): FormattedDetail | null {
   if (!passesCondition(record, line.when)) return null
   const raw = fieldString(record, line.field)
   const label = line.label ?? null
   switch (line.format ?? "text") {
+    case "portrait": {
+      if (raw === null) return null
+      const entry = line.lookup ? lookups?.[line.lookup]?.[raw] : undefined
+      return {
+        kind: "portrait",
+        label,
+        value: entry?.label ?? raw,
+        image: entry?.image ?? null,
+        source: entry?.source ?? null,
+      }
+    }
     case "text":
       return raw === null ? null : { kind: "text", label, value: raw }
     case "date": {

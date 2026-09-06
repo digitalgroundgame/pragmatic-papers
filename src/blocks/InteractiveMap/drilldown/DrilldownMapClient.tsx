@@ -341,6 +341,7 @@ export function DrilldownMapClient({
       pinRequest={pinRequest && pinRequest.regionId === selected ? pinRequest : null}
       region={selectedRegion}
       facts={selectedRegion ? displayFacts(selectedRegion, payloadFor(selectedRegion.id)) : []}
+      lookups={overview.payload?.lookups}
       records={records}
       recordsState={recordsState}
       open={paneOpen}

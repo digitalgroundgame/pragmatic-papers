@@ -69,6 +69,8 @@ export interface ComposedOverview {
   searchUrl: string
   /** The profile's landing-view payload, or null when it declares no summary. */
   summary: unknown
+  /** A line of provenance for the header, beside "Data as of …", or null. */
+  metaLine: string | null
   /** When upstream generated the data the page is showing, and who upstream is. */
   generatedAt: string
   source: DrilldownData["source"]
@@ -98,6 +100,7 @@ async function composeOverviewFor(
     childAssets,
     searchUrl: `${interactivePath(interactive.slug)}/search`,
     summary: profile.summary?.compose({ presentation: profile.presentation, data }) ?? null,
+    metaLine: profile.metaLine?.({ data }) ?? null,
     generatedAt: data.generatedAt,
     source: data.source,
     problems,

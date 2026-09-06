@@ -184,3 +184,45 @@ describe("composeChild", () => {
     expect(served.size).toBe(data.records.length)
   })
 })
+
+describe("composeOverview — lookups", () => {
+  it("builds a lookup table from the dataset the profile names, reading its named fields", () => {
+    const asset = composeOverview({
+      presentation: {
+        ...presentation,
+        lookups: { presidents: { dataset: "presidents", image: "photo_url", source: "src" } },
+      },
+      geometry,
+      data: {
+        ...data,
+        datasets: {
+          presidents: {
+            "Barack Obama": { photo_url: "https://e/o.jpg", src: "https://c", other: "ignored" },
+            "No Photo": { bio: "…" },
+          },
+        },
+      },
+    })
+    expect(asset.payload?.lookups).toEqual({
+      presidents: { "Barack Obama": { image: "https://e/o.jpg", source: "https://c" } },
+    })
+  })
+
+  it("carries no table when the feed does not have the dataset the profile asked for", () => {
+    const asset = composeOverview({
+      presentation: { ...presentation, lookups: { presidents: { dataset: "presidents" } } },
+      geometry,
+      data,
+    })
+    expect(asset.payload?.lookups).toBeUndefined()
+  })
+
+  it("carries no table when the profile declares none, so nothing leaks in from a feed", () => {
+    const asset = composeOverview({
+      presentation,
+      geometry,
+      data: { ...data, datasets: { presidents: { X: { photo_url: "https://e/x.jpg" } } } },
+    })
+    expect(asset.payload?.lookups).toBeUndefined()
+  })
+})

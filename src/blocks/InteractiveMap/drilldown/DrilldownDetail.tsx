@@ -2,6 +2,7 @@
 
 import React from "react"
 
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { cn } from "@/utilities/utils"
 
 import { RecordAvatar } from "./RecordAvatar"
@@ -10,10 +11,11 @@ import {
   fieldString,
   fieldTruthy,
   formatDetailLine,
+  initials,
   safeHref,
   statusLabel,
 } from "./recordFormat"
-import type { DrilldownRecord, RecordDisplay } from "./types"
+import type { DrilldownRecord, LookupEntry, RecordDisplay } from "./types"
 
 export interface DetailSelection {
   record: DrilldownRecord
@@ -21,9 +23,13 @@ export interface DetailSelection {
   pinned: boolean
 }
 
+/** Side tables a `portrait` line reads; absent when the payload declares none. */
+export type Lookups = Record<string, Record<string, LookupEntry>>
+
 interface DrilldownDetailProps {
   selection: DetailSelection | null
   now: Date
+  lookups?: Lookups
   className?: string
 }
 
@@ -51,9 +57,11 @@ function ExternalLink({
 function DetailBody({
   selection,
   now,
+  lookups,
 }: {
   selection: DetailSelection
   now: Date
+  lookups?: Lookups
 }): React.ReactElement {
   const { record, display } = selection
   const name = fieldString(record, display.title) ?? "—"
@@ -61,7 +69,7 @@ function DetailBody({
   const status = statusLabel(record, display)
   const flags = (display.flags ?? []).filter((f) => fieldTruthy(record, f.field))
   const lines = display.details
-    .map((line) => formatDetailLine(line, record, now))
+    .map((line) => formatDetailLine(line, record, now, lookups))
     .filter((l): l is NonNullable<typeof l> => l !== null)
   const credit = fieldString(record, display.image?.credit)
   const license = fieldString(record, display.image?.license)
@@ -113,6 +121,32 @@ function DetailBody({
                 ) : null}
               </div>
             )
+          if (l.kind === "portrait")
+            return (
+              <div key={i} className="flex items-center gap-1.5">
+                {l.label && <dt className="text-muted-foreground shrink-0">{l.label}:</dt>}
+                <dd className="flex min-w-0 items-center gap-1.5">
+                  {l.image && (
+                    // Hotlinked, not run through the image optimiser — the same call
+                    // `RecordAvatar` makes, so an archived page degrades to initials instead
+                    // of a broken proxy request.
+                    <Avatar className="border-border size-6 shrink-0 border">
+                      <AvatarImage
+                        src={l.image}
+                        alt=""
+                        loading="lazy"
+                        referrerPolicy="no-referrer"
+                        data-drilldown-portrait=""
+                      />
+                      <AvatarFallback className="bg-muted text-foreground text-[9px] font-semibold">
+                        {initials(l.value)}
+                      </AvatarFallback>
+                    </Avatar>
+                  )}
+                  <span className="truncate">{l.value}</span>
+                </dd>
+              </div>
+            )
           return (
             <div key={i} className="flex gap-1">
               {l.label && <dt className="text-muted-foreground shrink-0">{l.label}:</dt>}
@@ -145,6 +179,7 @@ function DetailBody({
 export function DrilldownDetail({
   selection,
   now,
+  lookups,
   className,
 }: DrilldownDetailProps): React.ReactElement {
   return (
@@ -165,7 +200,7 @@ export function DrilldownDetail({
           Click to pin.
         </p>
       ) : (
-        <DetailBody selection={selection} now={now} />
+        <DetailBody selection={selection} now={now} lookups={lookups} />
       )}
     </aside>
   )

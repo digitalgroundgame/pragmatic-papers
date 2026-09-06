@@ -429,6 +429,27 @@ with optional `basisField` and `sourceField` — write the label hedged:
 `{ field, in?, notIn?, truthy? }` on the record; have the adapter derive a
 boolean when a condition needs more than one field.
 
+**`portrait`** puts a face beside the value. A judge names their appointing
+president; the president's photo is a fact about the _president_, so the feed
+carries it once in a dataset rather than copied onto every judge. Declare where
+to read it in `presentation.lookups`, then point a detail line at that table:
+
+```ts
+lookups: { presidents: { dataset: "presidents", image: "photo_url", source: "photo_source" } },
+display: {
+  details: [{ field: "appointing_president", label: "Appointed by", format: "portrait", lookup: "presidents" }],
+}
+```
+
+The compose step turns the named dataset into the payload's `lookups`. A
+dataset the feed does not carry yields no table and the line falls back to the
+plain value, so a missing face costs the row nothing.
+
+**The header line.** A profile may also declare `metaLine(input)`, a short
+string shown beside "Data as of …". "Data as of" says when the _sync_ ran; a
+tracker that has not moved in months looks identical to one that syncs nightly.
+Federal Courts uses it to name the most recent commission in the snapshot.
+
 Reserved region facts the feed may set: `summary` (one-line meta text under the
 pane heading and in the tooltip), `children-label` (noun for the drill-in
 control: "View **districts** →", default "details"), `order` (selector sort

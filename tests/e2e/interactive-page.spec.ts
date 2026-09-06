@@ -13,6 +13,8 @@ test.describe("interactive page — federal courts", () => {
     const figure = page.locator("[data-interactive-drilldown]")
     await expect(figure).toBeVisible()
     await expect(page.locator("h1")).toHaveText("Federal Court Appointment Tracker")
+    // The header says when the judiciary last changed, not only when the sync ran.
+    await expect(page.locator("[data-interactive-meta]")).toContainText("last appointment")
 
     // The overview geometry is in the HTML; regions are only referenced, as same-origin JSON.
     await expect(page.locator("svg[data-drilldown-overview] path[data-role='parent']")).toHaveCount(
@@ -41,6 +43,15 @@ test.describe("interactive page — federal courts", () => {
     await expect(pane.locator("[data-drilldown-pane-title]")).toHaveText("8th Cir.")
     await expect(pane.locator("[data-drilldown-node]").first()).toBeVisible()
     await expect(pane.locator("[data-drilldown-associate-node]")).toContainText("Circ. Justice")
+
+    // A judge's card carries the face of the president who appointed them.
+    await pane.locator("[data-drilldown-node]").first().click()
+    const detail = pane.locator("[data-drilldown-detail]")
+    await expect(detail).toHaveAttribute("data-pinned", "")
+    await expect(detail.locator("[data-drilldown-portrait]")).toHaveAttribute(
+      "src",
+      /^https:\/\/upload\.wikimedia\.org\//,
+    )
     // The counts live in the summary line; the facts row carries what the summary lacks.
     await expect(pane).toContainText("11 authorized · 11 active · 6 senior · 0 vacant")
 

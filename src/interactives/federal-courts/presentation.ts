@@ -32,7 +32,6 @@ export const federalCourtsPresentation: DrilldownPresentation = {
       "seats-d",
       "anchor",
       "short-label",
-      "photo-thumb",
       // The counts are the region's `summary` line ("11 authorized · 11 active · 6 senior ·
       // 0 vacant"), which the pane and tooltip already show; listing them again as facts
       // said everything twice. What remains as facts is what the summary lacks.

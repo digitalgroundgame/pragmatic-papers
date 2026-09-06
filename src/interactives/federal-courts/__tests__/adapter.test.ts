@@ -188,7 +188,7 @@ const MANIFEST = {
   },
 }
 
-const files = memoryFileSource({
+const FILE_MAP: Record<string, object> = {
   "data/manifest.json": MANIFEST,
   "data/courts.json": COURTS,
   "data/judges/ca8.json": [
@@ -246,10 +246,11 @@ const files = memoryFileSource({
       photo_license: "",
       source: "fjc",
       notes: "",
-      photo_thumb: null,
     },
   ],
-})
+}
+
+const files = memoryFileSource(FILE_MAP)
 
 const geometry: DrilldownGeometry = {
   overview: {
@@ -350,7 +351,6 @@ describe("courtTrackerFeed end to end", () => {
     const jane = data.records.find((r) => r._id === "MOED01")!
     expect(jane).toMatchObject({
       photo_url: "https://upload.wikimedia.org/x.jpg", // query string stripped
-      photo_thumb: "assets/photos/abc.jpg",
       photo_license: "CC BY-SA 4.0",
       photo_credit: "Someone",
       jd: "Yale Law School (1990)",
@@ -377,7 +377,38 @@ describe("courtTrackerFeed end to end", () => {
       sitting: true,
       fedsoc_reported: false,
       acs_reported: true,
-      photo_thumb: null,
+    })
+  })
+
+  it("drops photo_thumb: we hotlink, and a field we never draw only moves the content hash", async () => {
+    const data = courtTrackerFeed.adapt(await courtTrackerFeed.fetch({ ref: "t", files }), {
+      ref: "t",
+    })
+    for (const record of data.records) expect(record).not.toHaveProperty("photo_thumb")
+    for (const row of (data.datasets?.appointments ?? []) as Record<string, unknown>[])
+      expect(row).not.toHaveProperty("photo_thumb")
+  })
+
+  it("carries what the manifest states about its own build, and nothing when it states none", async () => {
+    const plain = courtTrackerFeed.adapt(await courtTrackerFeed.fetch({ ref: "t", files }), {
+      ref: "t",
+    })
+    expect(plain.datasets?.upstream).toBeUndefined()
+
+    const stated = memoryFileSource({
+      ...FILE_MAP,
+      "data/manifest.json": {
+        ...MANIFEST,
+        last_appointment: "2026-06-18",
+        national_totals: { authorized: 673, active: 654, vacancies: 27, over_authorized: 8 },
+      },
+    })
+    const data = courtTrackerFeed.adapt(await courtTrackerFeed.fetch({ ref: "t", files: stated }), {
+      ref: "t",
+    })
+    expect(data.datasets?.upstream).toEqual({
+      last_appointment: "2026-06-18",
+      national_totals: { authorized: 673, active: 654, vacancies: 27, over_authorized: 8 },
     })
   })
 

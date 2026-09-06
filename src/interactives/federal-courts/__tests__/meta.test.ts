@@ -63,4 +63,30 @@ describe("federalCourtsMetaLine", () => {
       }),
     ).toBeNull()
   })
+
+  it("prefers the date the manifest states over the one we would derive", () => {
+    expect(
+      federalCourtsMetaLine({
+        data: base({
+          datasets: {
+            upstream: { last_appointment: "2024-11-01" },
+            appointments: [
+              { full_name: "Middle Judge", commission_date: "2024-11-01" },
+              { full_name: "Newest Judge", commission_date: "2026-06-18" },
+            ],
+          },
+        }),
+      }),
+      // The rows say June 2026 is later; the manifest says November 2024 is the appointment
+      // it tracks, and upstream's statement about its own build wins.
+    ).toBe("last appointment Middle Judge, November 1, 2024")
+  })
+
+  it("still gives the stated date when no row matches it", () => {
+    expect(
+      federalCourtsMetaLine({
+        data: base({ datasets: { upstream: { last_appointment: "2025-01-09" } } }),
+      }),
+    ).toBe("last appointment January 9, 2025")
+  })
 })

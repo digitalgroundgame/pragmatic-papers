@@ -178,7 +178,6 @@ export function judgeRecord(j: Judge, court: Court): DrilldownRecord {
     aba_rating: j.aba_rating,
     cl_profile_url: j.cl_profile_url,
     photo_url: cleanPhotoUrl(j.photo_url),
-    photo_thumb: j.photo_thumb ?? null,
     photo_source: j.photo_source,
     photo_license: license,
     photo_credit: credit,
@@ -239,7 +238,6 @@ export function justiceRecord(
     is_chief: false,
     photo_url:
       cleanPhotoUrl(jz.photo_url) ?? (base as { photo_url?: string | null }).photo_url ?? null,
-    photo_thumb: jz.photo_thumb ?? (base as { photo_thumb?: string | null }).photo_thumb ?? null,
     photo_source:
       jz.photo_source ?? (base as { photo_source?: string | null }).photo_source ?? null,
     photo_license: license ?? (base as { photo_license?: string | null }).photo_license ?? null,
@@ -263,7 +261,6 @@ export function compactAppointment(a: Appointment): Record<string, unknown> {
     sitting: a.sitting === "true",
     fedsoc_reported: a.fedsoc_reported === "true",
     acs_reported: a.acs_reported === "true",
-    photo_thumb: a.photo_thumb ?? null,
   }
 }
 
@@ -304,6 +301,14 @@ export function adaptCourtTracker(
   if (raw.presidents) datasets.presidents = raw.presidents
   if (raw.arrangement) datasets.arrangement = raw.arrangement
   if (raw.appointments) datasets.appointments = raw.appointments.map(compactAppointment)
+
+  // What the manifest states about its own build, rather than what we can derive from the
+  // rows. Upstream computes the national reconciliation once; redoing it here would be a
+  // second implementation of their arithmetic, free to drift from theirs.
+  const upstream: Record<string, unknown> = {}
+  if (raw.manifest.last_appointment) upstream.last_appointment = raw.manifest.last_appointment
+  if (raw.manifest.national_totals) upstream.national_totals = raw.manifest.national_totals
+  if (Object.keys(upstream).length > 0) datasets.upstream = upstream
 
   return {
     schema: DRILLDOWN_DATA_SCHEMA,

@@ -9,6 +9,17 @@ const APPOINTMENT_DATE = new Intl.DateTimeFormat("en-US", {
   timeZone: "UTC",
 })
 
+const isRecord = (v: unknown): v is Record<string, unknown> =>
+  typeof v === "object" && v !== null && !Array.isArray(v)
+
+/** The date the manifest itself states, when it states one. */
+function statedDate(data: DrilldownData): string | null {
+  const upstream = data.datasets?.upstream
+  if (!isRecord(upstream)) return null
+  const stated = upstream.last_appointment
+  return typeof stated === "string" && stated !== "" ? stated : null
+}
+
 /**
  * The most recent commission in the snapshot, for the page header.
  *
@@ -16,8 +27,10 @@ const APPOINTMENT_DATE = new Intl.DateTimeFormat("en-US", {
  * to one that syncs nightly. This says when the judiciary last actually changed, which is the
  * number a reader came for.
  *
- * Read from `datasets.appointments` (which reaches back through judges who have since left)
- * and falls back to the sitting records when the feed carries no history.
+ * The manifest states this date itself, so that wins when present: deriving it from the rows
+ * is a second implementation of upstream's arithmetic, free to disagree with theirs. The
+ * derivation stays as the fallback, reading `datasets.appointments` and then the sitting
+ * records.
  */
 export function federalCourtsMetaLine({ data }: { data: DrilldownData }): string | null {
   const history = Array.isArray(data.datasets?.appointments) ? data.datasets.appointments : []
@@ -36,9 +49,14 @@ export function federalCourtsMetaLine({ data }: { data: DrilldownData }): string
       if (!when) continue
       candidates.push({ name: fieldString(record, "full_name"), when })
     }
-  if (candidates.length === 0) return null
+  const stated = statedDate(data)
+  const latest = stated
+    ? (candidates.find((c) => c.when === stated) ?? { name: null, when: stated })
+    : candidates.length > 0
+      ? candidates.reduce((a, b) => (b.when > a.when ? b : a))
+      : null
+  if (!latest) return null
 
-  const latest = candidates.reduce((a, b) => (b.when > a.when ? b : a))
   const date = new Date(`${latest.when}T00:00:00Z`)
   if (Number.isNaN(date.getTime())) return null
   const when = APPOINTMENT_DATE.format(date)

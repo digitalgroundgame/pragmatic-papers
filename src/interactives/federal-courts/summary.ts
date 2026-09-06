@@ -55,6 +55,19 @@ export interface AppointmentHistory {
   bursts: AppointmentBurst[]
 }
 
+/**
+ * Upstream's own nation-wide district reconciliation. Worth carrying rather than deriving:
+ * `authorized` is not the number of squares the cartogram draws, and the difference has a
+ * name. A handful of courts seat more active judges than they are authorized, because roving
+ * judgeships are shared across districts in the same state.
+ */
+export interface NationalTotals {
+  authorized: number
+  active: number
+  vacancies: number
+  overAuthorized: number
+}
+
 export interface FederalCourtsSummary {
   /** The Supreme Court's bench, in the display's own order. */
   supremeCourt: DrilldownRecord[]
@@ -63,6 +76,8 @@ export interface FederalCourtsSummary {
   cartogram: CartogramCircuit[]
   /** Judgeships by party value, plus vacancies, across every seat drawn in the cartogram. */
   districtTotals: { party: SeatParty; count: number }[]
+  /** What the manifest says the national district numbers are, when it says. */
+  nationalTotals: NationalTotals | null
   /** Display names for every region the summary names, so it can label without the map index. */
   labels: Record<string, string>
   /** How the sitting bench's composition moved, or null when the feed carries no history. */
@@ -153,6 +168,21 @@ function readCartogram(
     })
   }
   return out
+}
+
+function readNationalTotals(datasets: DrilldownData["datasets"]): NationalTotals | null {
+  const upstream = datasets?.upstream
+  if (!isRecord(upstream)) return null
+  const totals = upstream.national_totals
+  if (!isRecord(totals)) return null
+  const num = (v: unknown): number | null =>
+    typeof v === "number" && Number.isFinite(v) ? v : null
+  const authorized = num(totals.authorized)
+  const active = num(totals.active)
+  const vacancies = num(totals.vacancies)
+  const overAuthorized = num(totals.over_authorized) ?? 0
+  if (authorized === null || active === null || vacancies === null) return null
+  return { authorized, active, vacancies, overAuthorized }
 }
 
 interface AppointmentRow {
@@ -310,6 +340,7 @@ export function composeFederalCourtsSummary({
     supremeCourtRegion: scotusRegion,
     cartogram,
     districtTotals,
+    nationalTotals: readNationalTotals(data.datasets),
     labels,
     change: composeChange(appointmentRows, presentation),
     appointments: composeAppointments(appointmentRows),

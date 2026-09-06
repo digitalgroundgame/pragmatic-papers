@@ -11,6 +11,18 @@ export interface Manifest {
   generated: string
   last_appointment?: string
   counts?: Record<string, number>
+  /**
+   * Nation-wide district reconciliation, precomputed upstream (their CODEBOOK Table H) so a
+   * consumer does not have to redo it. `authorized + over_authorized === active + vacancies`:
+   * a handful of courts seat more active judges than they are authorized, because roving
+   * judgeships are shared across districts in the same state.
+   */
+  national_totals?: {
+    authorized: number
+    active: number
+    vacancies: number
+    over_authorized: number
+  }
   files: {
     courts: string
     judges: Record<string, string>

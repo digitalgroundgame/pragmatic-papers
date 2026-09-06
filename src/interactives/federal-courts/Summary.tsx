@@ -141,10 +141,12 @@ const GAP = 0.12
 function DistrictCartogram({
   circuits,
   totals,
+  nationalTotals,
   labels,
 }: {
   circuits: FederalCourtsSummary["cartogram"]
   totals: FederalCourtsSummary["districtTotals"]
+  nationalTotals: FederalCourtsSummary["nationalTotals"]
   labels: Record<string, string>
 }): React.ReactElement {
   const selection = useDrilldownSelection()
@@ -171,10 +173,18 @@ function DistrictCartogram({
 
   return (
     <div>
-      <Tally totals={totals} noun="district judgeships" />
+      <Tally totals={totals} noun="district seats" />
       <p className="text-muted-foreground mt-0.5 text-xs">
-        One square per authorized district judgeship, grouped into the circuit that hears its
-        appeals. Pick one to open that district.
+        One square per seat on a district bench, filled or vacant, grouped into the circuit that
+        hears its appeals. Pick one to open that district.
+        {nationalTotals !== null && nationalTotals.overAuthorized > 0 && (
+          <>
+            {" "}
+            {nationalTotals.authorized} of them are authorized judgeships; the other{" "}
+            {nationalTotals.overAuthorized} are roving seats shared across districts in the same
+            state.
+          </>
+        )}
       </p>
       <svg
         data-summary-cartogram=""
@@ -294,6 +304,7 @@ export function FederalCourtsSummaryView({
         <DistrictCartogram
           circuits={data.cartogram}
           totals={data.districtTotals}
+          nationalTotals={data.nationalTotals}
           labels={data.labels}
         />
       )}

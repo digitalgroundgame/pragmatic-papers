@@ -41,6 +41,7 @@ const summary: FederalCourtsSummary = {
     { party: "Republican", count: 1 },
     { party: null, count: 1 },
   ],
+  nationalTotals: { authorized: 1, active: 1, vacancies: 1, overAuthorized: 1 },
   labels: { ca8: "8th Cir.", moed: "E.D. Mo.", arw: "W.D. Ark.", scotus: "SCOTUS" },
   change: {
     startYear: 2024,
@@ -90,11 +91,24 @@ describe("FederalCourtsSummaryView", () => {
     fireEvent.click(screen.getByRole("button", { name: "District courts" }))
     const cartogram = container.querySelector("[data-summary-cartogram]")!
     expect(cartogram.querySelectorAll("rect[data-summary-seat]")).toHaveLength(2)
-    expect(container.querySelector("[data-summary-tally]")).toHaveTextContent(
-      "2 district judgeships",
-    )
+    expect(container.querySelector("[data-summary-tally]")).toHaveTextContent("2 district seats")
     // The circuit is captioned on the map itself, in the feed's own wording.
     expect(within(cartogram as unknown as HTMLElement).getByText("8th")).toBeInTheDocument()
+  })
+
+  it("says a square is a seat, and names the roving seats that are not authorized judgeships", () => {
+    const { container } = renderView()
+    fireEvent.click(screen.getByRole("button", { name: "District courts" }))
+    expect(container).toHaveTextContent("One square per seat on a district bench, filled or vacant")
+    // Upstream's own reconciliation, not a count we derived from the squares.
+    expect(container).toHaveTextContent("1 of them are authorized judgeships")
+    expect(container).toHaveTextContent("1 are roving seats")
+  })
+
+  it("says only what it knows when the manifest states no reconciliation", () => {
+    render(<FederalCourtsSummaryView data={{ ...summary, nationalTotals: null }} />)
+    fireEvent.click(screen.getByRole("button", { name: "District courts" }))
+    expect(screen.queryByText(/authorized judgeships/)).not.toBeInTheDocument()
   })
 
   it("names the district under the cursor rather than leaving the reader to guess", () => {

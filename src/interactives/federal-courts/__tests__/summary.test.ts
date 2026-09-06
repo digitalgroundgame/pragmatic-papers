@@ -144,6 +144,47 @@ const history = {
   ],
 }
 
+describe("composeFederalCourtsSummary — what the manifest states", () => {
+  const upstream = {
+    upstream: {
+      last_appointment: "2026-06-18",
+      national_totals: { authorized: 673, active: 654, vacancies: 27, over_authorized: 8 },
+    },
+  }
+
+  it("carries upstream's own reconciliation rather than redoing their arithmetic", () => {
+    const summary = composeFederalCourtsSummary({
+      presentation: federalCourtsPresentation,
+      data: base({ datasets: upstream }),
+    })
+    expect(summary.nationalTotals).toEqual({
+      authorized: 673,
+      active: 654,
+      vacancies: 27,
+      overAuthorized: 8,
+    })
+    // Their own invariant: the squares drawn are active + vacancies, which exceeds authorized.
+    const { authorized, active, vacancies, overAuthorized } = summary.nationalTotals!
+    expect(authorized + overAuthorized).toBe(active + vacancies)
+  })
+
+  it("is null when the manifest states nothing, so the caption simply says less", () => {
+    const summary = composeFederalCourtsSummary({
+      presentation: federalCourtsPresentation,
+      data: base(),
+    })
+    expect(summary.nationalTotals).toBeNull()
+  })
+
+  it("rejects a partial reconciliation rather than showing half of one", () => {
+    const summary = composeFederalCourtsSummary({
+      presentation: federalCourtsPresentation,
+      data: base({ datasets: { upstream: { national_totals: { authorized: 673 } } } }),
+    })
+    expect(summary.nationalTotals).toBeNull()
+  })
+})
+
 describe("composeFederalCourtsSummary — change over time", () => {
   const summary = composeFederalCourtsSummary({
     presentation: federalCourtsPresentation,

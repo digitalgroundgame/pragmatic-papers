@@ -59,7 +59,7 @@ describe("seed — Federal Courts interactive", () => {
       title: "Federal Court Appointment Tracker",
       profile: "federal-courts",
       _status: "published",
-      feed: { enabled: true, ref: "main", autoPublish: false },
+      feed: { enabled: true, ref: "release", autoPublish: false },
     })
     expect(pages[0]?.sources?.length).toBeGreaterThan(0)
 

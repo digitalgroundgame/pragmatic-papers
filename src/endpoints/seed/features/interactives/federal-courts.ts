@@ -2,6 +2,7 @@ import type { Payload } from "payload"
 
 import { validateDrilldownData } from "@/interactives/contract"
 import fixture from "@/interactives/federal-courts/fixtures/data.json"
+import { RELEASE_REF } from "@/interactives/sources/releases"
 import { FEDERAL_COURTS_PROFILE_ID } from "@/interactives/federal-courts"
 import { loadFederalCourtsGeometry } from "@/interactives/federal-courts/geometry"
 import { buildSnapshotFields } from "@/jobs/syncInteractiveData/logic"
@@ -59,7 +60,7 @@ export const createFederalCourtsInteractive = async (
           },
         },
       ],
-      feed: { enabled: true, ref: "main", autoPublish: false },
+      feed: { enabled: true, ref: RELEASE_REF, autoPublish: false },
       publishedAt,
       _status: "published",
       meta: {

@@ -127,10 +127,10 @@ export const Interactives: CollectionConfig<"interactives"> = {
                   name: "ref",
                   type: "text",
                   required: true,
-                  defaultValue: "main",
+                  defaultValue: "release",
                   admin: {
                     description:
-                      "Branch, tag or commit of the researcher's repository to read. A tag pins the data; a branch follows their latest.",
+                      'Which revision of the researcher\'s repository to read. Leave as "release" to follow their newest published data release, which is an immutable snapshot and the way they ask to be read. A branch, tag or commit is honoured verbatim, for pinning or debugging.',
                   },
                 },
                 {

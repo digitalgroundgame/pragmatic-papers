@@ -108,6 +108,11 @@ export interface DrilldownGeometry {
 // ---- feed adapter --------------------------------------------------------------------------
 
 export interface FeedFetchOptions {
+  /**
+   * Which upstream revision to read. `"release"` (the default everywhere) means "whatever the
+   * newest published data release is", which an adapter resolves for itself; anything else is
+   * honoured verbatim, so a branch or a specific tag can still be pinned for debugging.
+   */
   ref: string
   /** Credential for a private upstream; read from `FeedAdapter.tokenEnv` by the sync. */
   token?: string | null
@@ -120,6 +125,11 @@ export interface FeedSnapshot<Raw> {
   /** Upstream's version stamp at the time of the fetch. */
   version: string
   generatedAt: string
+  /**
+   * The revision actually read, when the adapter resolved one itself. Recorded on the
+   * snapshot so its provenance names an immutable tag rather than "release".
+   */
+  ref?: string
   raw: Raw
 }
 

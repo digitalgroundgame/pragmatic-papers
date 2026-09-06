@@ -356,7 +356,8 @@ per-path facts from geometry. Source of truth: `src/interactives/types.ts`.
 2. `syncInteractiveData` runs daily (06:15 UTC) and from the **Sync data
    feeds** button on Interactive Snapshots (`POST
 /api/interactive-snapshots/sync[?interactive=<id>&force=true]`). It reads
-   the manifest, skips if upstream's `version` has not moved, fetches, adapts,
+   upstream at an **immutable ref** (see below), skips if upstream's `version`
+   has not moved, fetches, adapts,
    **validates against the geometry** (every record's region must exist; a
    drawn shape the feed no longer declares, or a declaration with no shape
    under a drawn parent, fails — that is how an upstream rename shows up), and
@@ -378,9 +379,34 @@ per-path facts from geometry. Source of truth: `src/interactives/types.ts`.
    needs an `_id` to be searchable: it is what the pane finds it by once the
    region's asset has loaded.
 
+### Which revision the sync reads
+
+court-tracker tags every manifest bump `data-v<manifest.version>` and publishes
+a release for it, and asks consumers not to read `main`: a scheduled pull can
+catch a branch mid-push, or catch `data/` and `assets/geo/` disagreeing across
+two commits. An interactive's **Feed ref** therefore defaults to `release`,
+which means "resolve whatever upstream last published":
+
+- The poll asks the **releases API**, not a file on a branch. One request, and
+  the version is in the tag name. This also avoids a real race in the obvious
+  alternative: the manifest lands on `main` first and the release is cut
+  afterwards, so reading the version and then asking for its tag can ask for a
+  tag that does not exist yet.
+- The fetch reads files at that tag. We do **not** download the release
+  tarball: the atomicity comes from the tag being immutable, and the tarball is
+  about 21 MB because it carries `assets/photos/` and `assets/geo/`, neither of
+  which we use — we hotlink photos and keep our own committed geometry.
+- A repo that has published no matching release yet falls back to `main`, so
+  this works before an upstream release workflow lands.
+- Any other value in **Feed ref** is honoured verbatim, for pinning or
+  debugging. The snapshot records the ref actually read, so its provenance
+  names the immutable tag rather than the word `release`.
+
 Private upstream: set `COURT_TRACKER_GITHUB_TOKEN` (fine-grained, contents:
 read); `COURT_TRACKER_REPO` overrides the default repository. Without the
-token the sync logs a warning and skips.
+token the sync logs a warning and skips. A refused releases request throws
+rather than reporting "no releases", so a token with the wrong scope cannot
+silently downgrade the sync to reading a branch.
 
 ### Presentation — what the profile owns
 

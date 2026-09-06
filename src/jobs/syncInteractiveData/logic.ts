@@ -2,6 +2,7 @@ import type { Payload } from "payload"
 
 import { validateDrilldownData } from "@/interactives/contract"
 import { hashDrilldownData } from "@/interactives/hash"
+import { RELEASE_REF } from "@/interactives/sources/releases"
 import { getProfile } from "@/interactives/profiles"
 import type { FileSource } from "@/interactives/sources/files"
 import type { DrilldownData, InteractiveProfile } from "@/interactives/types"
@@ -120,8 +121,10 @@ export async function syncInteractive(
     log.warn(`${tag} ${tokenEnv} is not set — skipping ${profile.feed.describe()}`)
     return { outcome: "skipped", reason: `${tokenEnv} not set` }
   }
-  const ref = interactive.feed?.ref?.trim() || "main"
-  const fetchOpts = { ref, token, fetchImpl, files }
+  // Empty means "whatever upstream last released": the adapter resolves an immutable tag, so
+  // a scheduled pull never races a branch mid-push. A pinned value is honoured verbatim.
+  const requestedRef = interactive.feed?.ref?.trim() || RELEASE_REF
+  const fetchOpts = { ref: requestedRef, token, fetchImpl, files }
 
   const latest = await findLatestSnapshot(payload, interactive.id)
 
@@ -134,8 +137,11 @@ export async function syncInteractive(
     log.info(`${tag} upstream moved ${latest.sourceVersion} → ${version}`)
   }
 
-  log.debug(`${tag} reading ${profile.feed.describe()}@${ref}`)
+  log.debug(`${tag} reading ${profile.feed.describe()}@${requestedRef}`)
   const snapshot = await profile.feed.fetch(fetchOpts)
+  // What the adapter actually read. Recording the resolved tag rather than "release" is what
+  // makes a snapshot's provenance reproducible.
+  const ref = snapshot.ref ?? requestedRef
   const adapted = profile.feed.adapt(snapshot, { ref })
   const geometry = await profile.loadGeometry()
   const { data, errors } = validateDrilldownData(adapted, geometry)

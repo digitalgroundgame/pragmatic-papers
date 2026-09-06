@@ -1,7 +1,8 @@
-import { describe, expect, it } from "vitest"
+import { describe, expect, it, vi } from "vitest"
 
 import { validateDrilldownData } from "../../contract"
 import { memoryFileSource } from "../../sources/files"
+import { RELEASE_REF } from "../../sources/releases"
 import type { DrilldownGeometry } from "../../types"
 import { compactAppointment, factsFor, justiceRecord, splitLicense } from "../adapter"
 import { courtTrackerFeed, readCourtTrackerSources } from "../feed"
@@ -472,5 +473,75 @@ describe("helpers", () => {
       confirmation_date: null,
       termination_reason: "Death",
     })
+  })
+})
+
+describe("courtTrackerFeed — which revision it reads", () => {
+  const releases = (body: unknown) =>
+    new Response(JSON.stringify(body), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    })
+  const fileAt = (ref: string) =>
+    new Response(JSON.stringify({ ...MANIFEST, version: `at-${ref}` }), { status: 200 })
+
+  /** Answers the releases API and then the contents API, recording every ref asked for. */
+  function stubGithub(releaseTags: string[]) {
+    const refs: string[] = []
+    const fetchImpl = vi.fn(async (url: string | URL) => {
+      const href = String(url)
+      if (href.includes("/releases")) return releases(releaseTags.map((tag) => ({ tag_name: tag })))
+      const ref = new URL(href).searchParams.get("ref") ?? ""
+      refs.push(ref)
+      if (href.includes("manifest.json")) return fileAt(ref)
+      return new Response("{}", { status: 200 })
+    })
+    return { fetchImpl: fetchImpl as unknown as typeof fetch, refs }
+  }
+
+  it("polls the newest data release, which answers the version without reading a branch", async () => {
+    const { fetchImpl, refs } = stubGithub(["data-v05d95d9fcf1b", "v1.0.0"])
+    await expect(courtTrackerFeed.peekVersion({ ref: RELEASE_REF, fetchImpl })).resolves.toBe(
+      "05d95d9fcf1b",
+    )
+    expect(refs).toEqual([]) // no file was fetched at all
+  })
+
+  it("falls back to the default branch until upstream publishes its first release", async () => {
+    const { fetchImpl, refs } = stubGithub(["v1.0.0"])
+    await expect(courtTrackerFeed.peekVersion({ ref: RELEASE_REF, fetchImpl })).resolves.toBe(
+      "at-main",
+    )
+    expect(refs).toEqual(["main"])
+  })
+
+  it("honours a pinned ref verbatim and never asks about releases", async () => {
+    const { fetchImpl, refs } = stubGithub(["data-v05d95d9fcf1b"])
+    await expect(courtTrackerFeed.peekVersion({ ref: "some-branch", fetchImpl })).resolves.toBe(
+      "at-some-branch",
+    )
+    expect(refs).toEqual(["some-branch"])
+    expect(
+      (fetchImpl as unknown as { mock: { calls: [string][] } }).mock.calls.some(([u]) =>
+        u.includes("/releases"),
+      ),
+    ).toBe(false)
+  })
+
+  it("reports the tag it actually read, so a snapshot's provenance is immutable", async () => {
+    const { fetchImpl } = stubGithub(["data-v05d95d9fcf1b"])
+    const snapshot = await courtTrackerFeed.fetch({ ref: RELEASE_REF, fetchImpl })
+    expect(snapshot.ref).toBe("data-v05d95d9fcf1b")
+  })
+
+  it("resolves nothing when the caller supplies its own files", async () => {
+    const fetchImpl = vi.fn()
+    const snapshot = await courtTrackerFeed.fetch({
+      ref: RELEASE_REF,
+      files,
+      fetchImpl: fetchImpl as unknown as typeof fetch,
+    })
+    expect(fetchImpl).not.toHaveBeenCalled()
+    expect(snapshot.ref).toBeUndefined()
   })
 })

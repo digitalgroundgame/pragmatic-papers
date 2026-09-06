@@ -1,4 +1,5 @@
 import { githubFileSource, type FileSource } from "../sources/files"
+import { latestTaggedRelease, RELEASE_REF, type ReleaseRef } from "../sources/releases"
 import type { FeedAdapter, FeedFetchOptions, FeedSnapshot } from "../types"
 import { adaptCourtTracker } from "./adapter"
 import type {
@@ -12,6 +13,9 @@ import type {
   PresidentPhoto,
   SeatBlock,
 } from "./upstream"
+
+/** Upstream tags every manifest bump `data-v<manifest.version>` and cuts a release for it. */
+export const COURT_TRACKER_TAG_PREFIX = "data-v"
 
 export const COURT_TRACKER_REPO_ENV = "COURT_TRACKER_REPO"
 export const COURT_TRACKER_TOKEN_ENV = "COURT_TRACKER_GITHUB_TOKEN"
@@ -54,16 +58,33 @@ export async function readCourtTrackerSources(
   }
 }
 
-function sourceFor(opts: FeedFetchOptions): FileSource {
-  return (
-    opts.files ??
-    githubFileSource({
-      repo: courtTrackerRepo(),
-      ref: opts.ref,
-      token: opts.token,
-      fetchImpl: opts.fetchImpl,
-    })
-  )
+/**
+ * The revision to read. Upstream asks consumers not to read `main`, because a scheduled pull
+ * can catch it mid-push or catch `data/` and `assets/geo/` disagreeing across two commits;
+ * every manifest bump cuts an immutable `data-v<version>` release instead. A caller that pins
+ * something else is honoured, and a repo that has published no release yet falls back to the
+ * default branch so this keeps working before upstream's release workflow lands.
+ */
+async function resolveRef(
+  opts: FeedFetchOptions,
+): Promise<{ ref: string; release: ReleaseRef | null }> {
+  if (opts.ref !== RELEASE_REF && opts.ref !== "") return { ref: opts.ref, release: null }
+  const release = await latestTaggedRelease({
+    repo: courtTrackerRepo(),
+    tagPrefix: COURT_TRACKER_TAG_PREFIX,
+    token: opts.token,
+    fetchImpl: opts.fetchImpl,
+  })
+  return { ref: release?.tag ?? "main", release }
+}
+
+function sourceAt(ref: string, opts: FeedFetchOptions): FileSource {
+  return githubFileSource({
+    repo: courtTrackerRepo(),
+    ref,
+    token: opts.token,
+    fetchImpl: opts.fetchImpl,
+  })
 }
 
 /**
@@ -74,10 +95,22 @@ function sourceFor(opts: FeedFetchOptions): FileSource {
 export const courtTrackerFeed: FeedAdapter<CourtTrackerSources> = {
   tokenEnv: COURT_TRACKER_TOKEN_ENV,
   describe: () => `github:${courtTrackerRepo()}`,
+
   async peekVersion(opts) {
-    const manifest = await sourceFor(opts).readJson<Manifest>("data/manifest.json")
-    return manifest.version
+    if (opts.files) return (await opts.files.readJson<Manifest>("data/manifest.json")).version
+    // A release tag carries the version, so the cheap poll is one request and never reads a
+    // branch. Only a repo with no release yet has to open the manifest to answer this.
+    const { ref, release } = await resolveRef(opts)
+    if (release) return release.version
+    return (await sourceAt(ref, opts).readJson<Manifest>("data/manifest.json")).version
   },
-  fetch: (opts) => readCourtTrackerSources(sourceFor(opts)),
+
+  async fetch(opts) {
+    if (opts.files) return readCourtTrackerSources(opts.files)
+    const { ref } = await resolveRef(opts)
+    const snapshot = await readCourtTrackerSources(sourceAt(ref, opts))
+    return { ...snapshot, ref }
+  },
+
   adapt: adaptCourtTracker,
 }

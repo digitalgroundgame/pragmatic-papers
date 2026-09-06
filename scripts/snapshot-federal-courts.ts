@@ -5,13 +5,14 @@
  *   data       run the real feed adapter and write the fixture the seed and tests use
  *
  * `geometry` needs a checkout on disk (the SVGs are not part of the feed — geometry is ours).
- * `data` reads a checkout with --source, or GitHub at --ref with COURT_TRACKER_GITHUB_TOKEN
+ * `data` reads a checkout with --source, or GitHub with COURT_TRACKER_GITHUB_TOKEN — by
+ *   default upstream's newest published data release, or --ref to pin a branch, tag or sha
  * set, exactly as the sync job does; the fixture is therefore a real sync output.
  *
  * Usage:
  *   pnpm tsx scripts/snapshot-federal-courts.ts geometry --source ../court-tracker
  *   pnpm tsx scripts/snapshot-federal-courts.ts data --source ../court-tracker
- *   pnpm tsx scripts/snapshot-federal-courts.ts data --ref main
+ *   pnpm tsx scripts/snapshot-federal-courts.ts data --ref data-v05d95d9fcf1b
  */
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs"
 import path from "node:path"
@@ -22,6 +23,7 @@ import { loadFederalCourtsGeometry } from "../src/interactives/federal-courts/ge
 import { svgToGeometryFile } from "../src/interactives/geometry"
 import { hashDrilldownData } from "../src/interactives/hash"
 import { localFileSource } from "../src/interactives/sources/files"
+import { RELEASE_REF } from "../src/interactives/sources/releases"
 
 const PROFILE_DIR = path.resolve("src/interactives/federal-courts")
 const CIRCUITS = [
@@ -67,7 +69,7 @@ function snapshotGeometry(source: string): number {
 
 async function snapshotData(): Promise<number> {
   const source = arg("--source")
-  const ref = arg("--ref") ?? "main"
+  const ref = arg("--ref") ?? RELEASE_REF
   const opts = source
     ? { ref: `dir:${path.resolve(source)}`, files: localFileSource(path.resolve(source)) }
     : { ref, token: process.env.COURT_TRACKER_GITHUB_TOKEN ?? null }
@@ -102,7 +104,7 @@ const run =
       ? snapshotData()
       : Promise.resolve(
           (console.error(
-            "usage: snapshot-federal-courts.ts <geometry|data> [--source dir] [--ref ref]",
+            "usage: snapshot-federal-courts.ts <geometry|data> [--source dir] [--ref ref|release]",
           ),
           2),
         )

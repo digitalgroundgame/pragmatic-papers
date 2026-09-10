@@ -40,10 +40,10 @@ export function InteractiveDrilldown({
   const regions = buildRegionIndex([overview])
   return (
     <section data-interactive-drilldown="" aria-label="Interactive map">
-      {childAssets.map((a) => (
-        <React.Fragment key={a.regionId}>
-          <link rel="prefetch" as="fetch" href={a.url} />
-          <link rel="prefetch" as="fetch" href={a.geometryUrl} />
+      {childAssets.map(({ regionId, url, geometryUrl }) => (
+        <React.Fragment key={regionId}>
+          <link rel="prefetch" as="fetch" href={url} />
+          <link rel="prefetch" as="fetch" href={geometryUrl} />
         </React.Fragment>
       ))}
       <DrilldownMapClient

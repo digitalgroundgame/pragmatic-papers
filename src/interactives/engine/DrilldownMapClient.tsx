@@ -295,7 +295,9 @@ export function DrilldownMapClient({
   /**
    * What choosing a region means, wherever it is chosen from. One with a map of its own opens
    * it in a single click; one on a map the reader is not standing on is reached by moving to
-   * that map first. Anything already on screen simply selects.
+   * that map first. One with no map of its own at all — a court with no territory — lives on
+   * the overview, so choosing it from inside a child map means leaving that map first. Anything
+   * already on screen simply selects.
    */
   const open = useCallback(
     async (id: string, via: SelectVia = "pointer", opts?: { force?: boolean }): Promise<void> => {
@@ -311,13 +313,14 @@ export function DrilldownMapClient({
         }
         const key = assetKeyFor(id, regions, childAssets)
         if (key && key !== id && shownParent() !== key) await drillIn(key)
+        else if (!key && shownParent() !== null) await drillOut()
       } finally {
         moving.current = outer
         if (!outer) setSettled((n) => n + 1)
       }
       select(id, via, opts)
     },
-    [regions, childAssets, drillable, shownParent, drillIn, select],
+    [regions, childAssets, drillable, shownParent, drillIn, drillOut, select],
   )
 
   // A search result names a record, not a region. The pane does the pinning once the region's

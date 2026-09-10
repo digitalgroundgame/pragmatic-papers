@@ -34,6 +34,9 @@ const display = {
 
 const overviewPayload = {
   schema: DRILLDOWN_SCHEMA,
+  // A court with no territory of its own, like the Supreme Court: top-level, but declared
+  // rather than drawn, so it never lives inside a child map's own asset.
+  regions: [{ id: "scotus", label: "Scotus" }],
   seats: {
     totalFact: "seats",
     groups: [
@@ -525,6 +528,29 @@ describe("DrilldownMapClient", () => {
       ),
     )
     expect(container.querySelector("[data-drilldown-trail]")).toBeNull()
+  })
+
+  it("choosing a territory-less region from a child map leaves that map first", async () => {
+    const { container } = setup()
+    fireEvent.click(selector(container).getByRole("button", { name: "West" }))
+    await waitFor(() =>
+      expect(container.querySelector("[data-drilldown-viewport]")).toHaveAttribute(
+        "data-view",
+        "child",
+      ),
+    )
+
+    // Scotus has no map of its own — it lives only on the overview — so choosing it from
+    // West's own map must leave West behind rather than selecting a region absent from screen.
+    fireEvent.click(selector(container).getByRole("button", { name: "Scotus" }))
+    await waitFor(() =>
+      expect(container.querySelector("[data-drilldown-viewport]")).toHaveAttribute(
+        "data-view",
+        "overview",
+      ),
+    )
+    await waitFor(() => expect(pane(container)).toHaveAttribute("data-open"))
+    expect(pane(container).querySelector("[data-drilldown-pane-title]")).toHaveTextContent("Scotus")
   })
 
   it("keeps the pane inside the map's area, opening it on a region and closing it back", async () => {

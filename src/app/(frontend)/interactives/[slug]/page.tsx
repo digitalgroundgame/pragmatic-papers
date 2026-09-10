@@ -112,12 +112,8 @@ export default async function InteractivePage({
         </p>
       )}
 
-      {/* The map's layout tools, said out loud: they are a query string away and nothing
-          they do is saved, so there is more to gain from a curious reader finding them than
-          from hiding them behind an account. */}
       <Sources
         sources={interactive.sources}
-        colorBias={null}
         notes={[...MAP_SHORTCUTS, ...LAYOUT_TOOL_NOTES]}
         className="mt-4"
       />

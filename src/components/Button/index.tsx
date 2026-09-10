@@ -32,8 +32,6 @@ export const CMSButton: React.FC<CMSButtonProps> = ({
 }) => {
   return (
     <CMSLink
-      // Same as `LinkButton`: it wears the button's styles, so it answers to the button's
-      // selector too.
       data-slot="button"
       className={cn(buttonVariants({ variant, size, className }))}
       link={link}

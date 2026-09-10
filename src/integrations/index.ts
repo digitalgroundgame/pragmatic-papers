@@ -5,13 +5,6 @@ import { integrationStatus, type Integration, type IntegrationStatus } from "./t
 /**
  * Every outside connection this site has, declared in one place.
  *
- * A feature imports the connection it needs by name and asks it for what it wants — this list
- * exists so that "which integrations do we have, and are they connected?" has an answer that
- * does not involve grepping for `process.env`. It is a plain array rather than a runtime
- * registry on purpose: a `register()` API designed against two connections would encode the
- * accidents of those two, and an array a config maps over is all an admin panel needs
- * (issue #912).
- *
  * Adding one: declare it here, next to its peers, and export it for its feature to import.
  */
 

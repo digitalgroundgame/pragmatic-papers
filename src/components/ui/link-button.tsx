@@ -14,8 +14,6 @@ const LinkButton: React.FC<LinkButtonProps> = ({
   ...props
 }) => {
   return (
-    // Wearing the button's styles makes it a button as far as anything styling buttons is
-    // concerned, so it says so the same way the real one does.
     <a data-slot="button" className={cn(buttonVariants({ variant, size, className }))} {...props}>
       {children}
     </a>

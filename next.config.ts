@@ -160,7 +160,11 @@ const nextConfig: NextConfig = {
         // stale-while-revalidate=86400 — CDN may serve stale for up to 24h while revalidating in the background.
         // Only applies when both Payload cookies are absent; logged-in editors and draft-preview
         // sessions bypass this rule and always hit the origin with fresh responses.
-        source: "/:path*",
+        // The geometry route names its own content in the URL and sets its own (much longer,
+        // hash-conditional) Cache-Control — a config-level header always wins over one set in a
+        // Route Handler, so without this exclusion this blanket rule silently overwrote it,
+        // capping a year-long immutable cache down to 10 minutes.
+        source: "/:path((?!interactives/[^/]+/regions/[^/]+/geometry/).*)",
         headers: [
           {
             key: "Cache-Control",

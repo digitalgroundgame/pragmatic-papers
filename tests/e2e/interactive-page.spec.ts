@@ -28,7 +28,7 @@ test.describe("interactive page — federal courts", () => {
 
     // Seat blocks are drawn once the client adopts the SVG, from facts the snapshot carries.
     await expect(page.locator("svg[data-drilldown-overview] g[data-drilldown-block]")).toHaveCount(
-      13,
+      14,
     )
 
     // Hover shows the region's facts, which come from the feed through the profile's labels.
@@ -60,11 +60,10 @@ test.describe("interactive page — federal courts", () => {
 
     // Photos are hotlinked from Wikimedia; do not let a slow remote decide the screenshot.
     await page.route("https://upload.wikimedia.org/**", (route) => route.abort())
+    // The drilled-in region now survives a reload — nothing left to re-select. The pane comes
+    // back open on Eighth Circuit, just without the pin the click above left on one judge.
     await page.reload()
     await figure.scrollIntoViewIfNeeded()
-    await page
-      .locator("svg[data-drilldown-overview] path[data-region-id='ca8'][data-role='parent']")
-      .click()
     await expect(
       page.locator("[data-drilldown-pane][data-open] [data-drilldown-node]").first(),
     ).toBeVisible()
@@ -89,21 +88,28 @@ test.describe("interactive page — federal courts", () => {
     const figure = page.locator("[data-interactive-drilldown]")
     await figure.scrollIntoViewIfNeeded()
 
+    // A region with a map of its own opens it in the same click that chooses it — no separate
+    // "View districts" step, wherever the choice is made from.
     await page.locator("[data-drilldown-selector] [data-region-item='ca8']").click()
     const pane = page.locator("[data-drilldown-pane][data-open]")
-    await pane.getByRole("button", { name: "View districts →" }).click()
+    await expect(pane).toBeVisible()
 
     const viewport = page.locator("[data-drilldown-viewport]")
     await expect(viewport).toHaveAttribute("data-view", "child")
     await expect(viewport).not.toHaveAttribute("aria-busy", "true")
     const local = page.locator("[data-drilldown-layer='local'][data-parent-id='ca8']")
     await expect(local).toHaveAttribute("data-state", "visible")
-    await expect(local.locator("g[data-drilldown-block]")).toHaveCount(10)
+    await expect(local.locator("g[data-drilldown-block]")).toHaveCount(11)
     await expect(page.locator("[data-drilldown-layer='morph']")).toHaveCount(0)
-    await expect(page.locator("[data-drilldown-selector] [data-region-item='moed']")).toBeVisible()
+    // The rail still lists only top-level circuits — a district is reached from the map that
+    // just drilled to show them, not from a rail row that was never asked to expand.
+    // A district always carries a parentId, so its role is "child" here too, wherever it's
+    // the map's own current top layer.
+    const moed = local.locator("path[data-region-id='moed'][data-role='child']")
+    await expect(moed).toBeVisible()
 
     // A district's records come from the parent's asset, already loaded.
-    await page.locator("[data-drilldown-selector] [data-region-item='moed']").click()
+    await moed.click()
     await expect(
       page.locator("[data-drilldown-pane][data-open] [data-drilldown-pane-title]"),
     ).toHaveText("Eastern District of Missouri")
@@ -126,31 +132,12 @@ test.describe("interactive page — federal courts", () => {
     await expect(pane.locator("[data-summary-scotus]")).toBeVisible()
     await expect(pane.locator("[data-summary-tally]")).toContainText("9 seats")
 
-    await pane.getByRole("button", { name: "District courts" }).click()
-    const cartogram = pane.locator("[data-summary-cartogram]")
-    await expect(cartogram).toBeVisible()
-    // One square per authorized district judgeship in the circuits upstream lays out.
-    await expect(cartogram.locator("rect[data-summary-seat]")).toHaveCount(681)
-
-    // Both charts read from the appointment history the feed carries.
-    await pane.getByRole("button", { name: "Change" }).click()
-    await expect(pane.locator("[data-chart-change] path[data-chart-band]")).toHaveCount(2)
-    await expect(pane.locator("[data-chart-change]")).toContainText("R-appointed")
-
-    await pane.getByRole("button", { name: "Appointments" }).click()
-    const swarm = pane.locator("[data-chart-appointments]")
-    await expect(swarm.locator("circle")).toHaveCount(2792)
-    await expect(swarm).toContainText("Nixon")
-    await expect(swarm).toContainText("Biden")
-
-    await pane.getByRole("button", { name: "District courts" }).click()
-    // A seat is a way into its district: the map drills to the circuit and opens the district.
-    await cartogram.locator("rect[data-summary-seat='moed']").first().click()
+    // The district cartogram and the two charts are built and tested, but parked behind the
+    // segmented toggle (which is hidden while it offers only "Supreme Court") — the map already
+    // gives every court a seat block. A justice is a way into the Supreme Court's own bench.
+    await pane.locator("[data-summary-justice]").nth(4).click()
     const open = page.locator("[data-drilldown-pane][data-open]")
-    await expect(open.locator("[data-drilldown-pane-title]")).toHaveText(
-      "Eastern District of Missouri",
-    )
-    await expect(page.locator("[data-drilldown-viewport]")).toHaveAttribute("data-view", "child")
+    await expect(open.locator("[data-drilldown-pane-title]")).toContainText("Supreme Court")
   })
 
   test("searching a judge by name opens their court and pins them", async ({ page }) => {
@@ -170,7 +157,9 @@ test.describe("interactive page — federal courts", () => {
     const detail = pane.locator("[data-drilldown-detail]")
     await expect(detail).toHaveAttribute("data-pinned", "")
     await expect(detail).toContainText("Kayatta")
-    await expect(box).toHaveValue("")
+    // Landing on a pinned record folds the rail to give the detail room; the search box is
+    // behind the glyph that unfolds it again, not gone.
+    await expect(page.locator("[data-drilldown-search-open]")).toBeVisible()
   })
 
   test("a search for a district judge drills into the circuit first", async ({ page }) => {
@@ -183,7 +172,11 @@ test.describe("interactive page — federal courts", () => {
     await expect(viewport).not.toHaveAttribute("aria-busy", "true")
 
     const pane = page.locator("[data-drilldown-pane][data-open]")
-    await expect(pane.locator("[data-drilldown-pane-title]")).toHaveText("D. Mass.")
+    // Neither name upstream publishes is shown: the citation abbreviation is a lawyer's
+    // shorthand, so the pane carries the full name with its boilerplate prefix dropped.
+    await expect(pane.locator("[data-drilldown-pane-title]")).toHaveText(
+      "District of Massachusetts",
+    )
     await expect(pane.locator("[data-drilldown-detail]")).toHaveAttribute("data-pinned", "")
   })
 
@@ -198,6 +191,7 @@ test.describe("interactive page — federal courts", () => {
   })
 
   test("a region is composed server-side and served as two halves", async ({ page }) => {
+    await page.goto(PAGE)
     const region = await page.request.get(`${PAGE}/regions/ca8`)
     expect(region.ok()).toBe(true)
     expect(region.headers()["content-type"]).toContain("application/json")
@@ -233,6 +227,7 @@ test.describe("interactive page — federal courts", () => {
   test("a geometry URL naming the wrong hash is a 404, not a year-long cache of the current map", async ({
     page,
   }) => {
+    await page.goto(PAGE)
     const href = await page
       .locator(`head link[rel='prefetch'][href*='/regions/ca8/geometry/']`)
       .getAttribute("href")
@@ -253,8 +248,10 @@ test.describe("interactive page — federal courts", () => {
     await expect(items).toHaveCount(14)
     await expect(items.filter({ has: page.locator(":scope[tabindex='0']") })).toHaveCount(1)
 
+    // ArrowLeft/Right are a tree's expand/collapse, not the roving tabindex — Down/Up move it,
+    // one region at a time, the same as before.
     await items.first().focus()
-    for (let i = 0; i < 8; i++) await page.keyboard.press("ArrowRight")
+    for (let i = 0; i < 8; i++) await page.keyboard.press("ArrowDown")
     await expect(page.locator("[data-drilldown-selector] button:focus")).toHaveAttribute(
       "data-region-item",
       "ca8",

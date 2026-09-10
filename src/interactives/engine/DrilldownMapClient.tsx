@@ -957,10 +957,17 @@ export function DrilldownMapClient({
               it could spare. It folds along its width here and its height on a phone. */}
           <div
             id={paneId}
-            inert={!paneOpen || undefined}
+            // Closed means nothing to act on only when there is no landing summary either —
+            // otherwise this made every seat in it unclickable, since `inert` disables the
+            // whole subtree regardless of what is actually drawn inside it.
+            inert={(!paneOpen && !summary) || undefined}
             className={cn(
               "grid min-w-0 motion-safe:transition-[grid-template-columns,grid-template-rows] motion-safe:duration-200 motion-safe:ease-out",
-              paneOpen
+              // A landing summary needs the same room a selected region's sheet gets — the
+              // 0fr column this collapses to otherwise doesn't stop it rendering, only stops
+              // it being reachable: its fixed sheet width still lays out past the column's
+              // clipped edge, off both the scrollable page and the click a reader makes at it.
+              paneOpen || summary
                 ? "grid-cols-[1fr] grid-rows-[1fr]"
                 : "grid-cols-[1fr] grid-rows-[0fr] md:grid-cols-[0fr] md:grid-rows-[1fr]",
             )}

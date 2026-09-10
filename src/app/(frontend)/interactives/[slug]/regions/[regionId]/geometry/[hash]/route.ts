@@ -22,15 +22,20 @@ interface Args {
  * Serving it apart from the records is the point of the split: the records change every time
  * the sync finds something, and used to drag a map that had not moved along with them.
  */
+/** Never `immutable`: a stale or malformed hash must not be remembered as gone forever. */
+const NOT_FOUND_HEADERS = { "Cache-Control": "public, max-age=0, must-revalidate" }
+
 export async function GET(_req: Request, { params }: Args): Promise<Response> {
   const { slug, regionId, hash } = await params
   const interactive = await queryInteractiveBySlug(slug)
-  if (!interactive) return Response.json({ error: "not found" }, { status: 404 })
+  if (!interactive)
+    return Response.json({ error: "not found" }, { status: 404, headers: NOT_FOUND_HEADERS })
   const current = await loadInteractiveGeometryHash(interactive, regionId)
   if (current === null || current !== hash)
-    return Response.json({ error: "not found" }, { status: 404 })
+    return Response.json({ error: "not found" }, { status: 404, headers: NOT_FOUND_HEADERS })
   const geometry = await loadInteractiveGeometry(interactive, regionId)
-  if (!geometry) return Response.json({ error: "not found" }, { status: 404 })
+  if (!geometry)
+    return Response.json({ error: "not found" }, { status: 404, headers: NOT_FOUND_HEADERS })
   return Response.json(geometry, {
     headers: {
       "Content-Type": "application/json; charset=utf-8",

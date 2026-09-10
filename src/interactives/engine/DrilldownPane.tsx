@@ -145,7 +145,6 @@ export function DrilldownPane({
   const supLabel = display?.status?.supernumerary?.[0]
     ? (display.status.labels?.[display.status.supernumerary[0]] ?? "Others")
     : "Others"
-
   const cohort = computeCohort(display, detail, records.seats)
 
   const hoverRecord = (record: DrilldownRecord | null, recDisplay: RecordDisplay | null): void => {
@@ -194,7 +193,13 @@ export function DrilldownPane({
         ))}
 
       {region && (
+        // Horizontal inset matches the heading's (`px-2`) rather than carrying its own wider
+        // one: the seat arc reads its width from this box, and every pixel of side padding is
+        // a pixel the dome doesn't get. Vertical padding is unrelated and stays generous.
         <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-2 pt-0 pb-4">
+          {/* No heading of its own: the sheet's bar carries the region's name, and saying it
+              twice a line apart is one name too many. What is left here is what the bar does
+              not say — the counts, and the facts the summary line leaves out. */}
           <header className="flex flex-wrap items-start gap-x-4 gap-y-1">
             <div className="min-w-0 flex-1">
               {region.summary && <p className="text-muted-foreground text-sm">{region.summary}</p>}

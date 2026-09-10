@@ -1,25 +1,15 @@
 "use client"
 
-import { MapIcon, Maximize2, Minimize2, PanelLeft, PanelRight, ZoomIn, ZoomOut } from "lucide-react"
-import React, { useCallback, useEffect, useId, useMemo, useRef, useState } from "react"
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb"
-import { Button } from "@/components/ui/button"
 import { useIsMobile } from "@/hooks/use-mobile"
 import { cn } from "@/utilities/utils"
-import { Separator } from "@/components/ui/separator"
 
 import { AssetLoader } from "./assetLoader"
 import { DrilldownPane, type DrilldownPaneHandle, type PinRequest } from "./DrilldownPane"
 import { DrilldownSearch } from "./DrilldownSearch"
 import { DrilldownSelector, type SelectVia } from "./DrilldownSelector"
+import { DrilldownToolbar } from "./DrilldownToolbar"
 import { DrilldownTooltip, type DrilldownTooltipHandle } from "./DrilldownTooltip"
 import { DEFAULT_VIEWBOX } from "./geometry"
 import { assetKeyFor, recordsFor } from "./records"
@@ -28,7 +18,9 @@ import type { SearchResult } from "./search"
 import { DrilldownSelectionProvider } from "./selection"
 import { MapStage, ZOOM_MAX, ZOOM_STEP } from "./stage"
 import { DEBUG_LAYOUT, DEBUG_PARAM } from "./layoutTools"
+import { useFullscreen } from "./useFullscreen"
 import { useLayoutEditor } from "./useLayoutEditor"
+import { useRailPane } from "./useRailPane"
 import type { ChildAssetRef, DrilldownAsset, RegionIndex, RegionInfo } from "./types"
 
 export interface DrilldownMapClientProps {
@@ -98,58 +90,25 @@ export function DrilldownMapClient({
   const [mounted, setMounted] = useState<MapStage | null>(null)
   const paneRef = useRef<DrilldownPaneHandle | null>(null)
   const [loader] = useState(() => new AssetLoader())
-  // Whether the reader has said anything about the rail. Null until they do, and the default
-  // is then a question of screen — beside the map there is room, on a phone it costs a third
-  // of the first screenful. It lives in CSS, so a phone renders folded rather than closing.
-  const [railChoice, setRailChoice] = useState<boolean | null>(null)
   const isMobile = useIsMobile()
-  const [full, setFull] = useState(false)
-  // The browser owns this state — Escape and F11 leave without asking us — so it is read
-  // from the document rather than remembered here.
-  useEffect(() => {
-    const sync = (): void => setFull(document.fullscreenElement === rootRef.current)
-    document.addEventListener("fullscreenchange", sync)
-    return () => document.removeEventListener("fullscreenchange", sync)
-  }, [])
-  const toggleFull = useCallback(() => {
-    const el = rootRef.current
-    if (!el) return
-    // A rejection means the browser said no, which is its right, and the button not moving
-    // says so.
-    if (document.fullscreenElement === el) void document.exitFullscreen?.().catch(() => undefined)
-    else void el.requestFullscreen?.().catch(() => undefined)
-  }, [])
-  const railOpen = railChoice ?? !isMobile
-  const railId = useId()
-
-  const paneId = useId()
+  const { full, toggleFull } = useFullscreen(rootRef)
+  const {
+    railChoice,
+    setRailChoice,
+    railOpen,
+    railId,
+    paneOpen,
+    setPaneOpen,
+    paneId,
+    showRail,
+    showPane,
+    unfoldToSearch,
+  } = useRailPane(isMobile)
 
   const [loaded, setLoaded] = useState<Record<string, DrilldownAsset>>({})
   const [loadState, setLoadState] = useState<Record<string, LoadState>>({})
   const [view, setView] = useState<View>({ parentId: null })
   const [selected, setSelected] = useState<string | null>(null)
-  // Closed on arrival: the map is what a reader came for. Choosing a region opens it.
-  const [paneOpen, setPaneOpen] = useState(false)
-  /** One panel at a time: both open leave a map too narrow to be the thing they are about. */
-  const showRail = useCallback((open: boolean) => {
-    setRailChoice(open)
-    if (open) setPaneOpen(false)
-  }, [])
-  const showPane = useCallback((open: boolean) => {
-    setPaneOpen(open)
-    if (open) setRailChoice(false)
-  }, [])
-  /** The folded rail's search glyph: a box needs the rail's width, so the glyph unfolds it. */
-  const unfoldToSearch = useCallback(() => {
-    showRail(true)
-    // The box is only mounted once the rail is open.
-    requestAnimationFrame(() => {
-      document
-        .getElementById(railId)
-        ?.querySelector<HTMLInputElement>("[data-drilldown-search] input")
-        ?.focus()
-    })
-  }, [showRail, railId])
 
   // The tooltip is driven straight rather than through state: it follows a pointer, and a
   // pointer reports itself far more often than anything above it has anything new to say.
@@ -235,7 +194,7 @@ export function DrilldownMapClient({
     })
     setPinned(null)
     setPaneOpen(false)
-  }, [focusSelectorItem])
+  }, [focusSelectorItem, setPaneOpen])
 
   const select = useCallback(
     (id: string, via: SelectVia = "pointer", { force = false }: { force?: boolean } = {}) => {
@@ -261,7 +220,7 @@ export function DrilldownMapClient({
       const key = assetKeyFor(id, regions, childAssets)
       if (key) void ensureAsset(key)
     },
-    [regions, childAssets, ensureAsset, showPane],
+    [regions, childAssets, ensureAsset, showPane, setPaneOpen, setRailChoice],
   )
 
   /**
@@ -284,7 +243,7 @@ export function DrilldownMapClient({
     if (how === "cancelled") return how
     stage.renderBlocks(blockIdsFor({ parentId: null }, regions, loaded))
     return how
-  }, [regions, loaded])
+  }, [regions, loaded, setPaneOpen])
 
   /**
    * Move into a region's own map. `via` is set when the reader asked for the *region* and not
@@ -330,7 +289,7 @@ export function DrilldownMapClient({
       // the only thing on it that changed.
       if (how === "no-geometry") stage.focusOn(parentId)
     },
-    [view.parentId, shownParent, ensureAsset, overview, loaded, select, showPane],
+    [view.parentId, shownParent, ensureAsset, overview, loaded, select, showPane, setPaneOpen],
   )
 
   /**
@@ -802,154 +761,29 @@ export function DrilldownMapClient({
               "has-[path[tabindex]:focus-visible]:outline-ring has-[path[tabindex]:focus-visible]:outline-2 has-[path[tabindex]:focus-visible]:outline-offset-2",
             )}
           >
-            {/* One bar across the top of the map: where the reader is on the left, what they
-                can do to it on the right. A row rather than two absolutely placed corners, so
-                a long trail truncates against the controls instead of running under them. */}
-            <div className="absolute inset-x-2 top-1 z-10 flex items-center gap-1">
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon-sm"
-                data-drilldown-rail-toggle=""
-                aria-expanded={railOpen}
-                aria-controls={railId}
-                aria-label={railOpen ? "Hide the region list" : "Show the region list"}
-                onClick={() => showRail(!railOpen)}
-                className="shrink-0"
-              >
-                <PanelLeft aria-hidden="true" />
-              </Button>
-              {trail.length > 0 && (
-                <>
-                  <Separator orientation="vertical" className="mr-2" />
-                  <Breadcrumb
-                    data-drilldown-trail=""
-                    aria-label="Where you are on the map"
-                    className="min-w-0"
-                  >
-                    <BreadcrumbList className="flex-nowrap gap-1 sm:gap-1.5">
-                      <BreadcrumbItem>
-                        <BreadcrumbLink
-                          render={
-                            <button
-                              type="button"
-                              data-drilldown-trail-root=""
-                              aria-label="Back to the whole map"
-                              onClick={() => {
-                                void drillOut()
-                                // The rail is left as the reader had it: folded it is still a
-                                // column of regions to choose from.
-                                showPane(false)
-                              }}
-                              className="flex items-center"
-                            />
-                          }
-                        >
-                          <MapIcon aria-hidden="true" className="size-4" />
-                        </BreadcrumbLink>
-                      </BreadcrumbItem>
-                      {trail.map((region, i) => (
-                        <React.Fragment key={region.id}>
-                          <BreadcrumbSeparator />
-                          <BreadcrumbItem className="min-w-0">
-                            {i === trail.length - 1 ? (
-                              <BreadcrumbPage className="truncate" title={region.label}>
-                                {region.label}
-                              </BreadcrumbPage>
-                            ) : (
-                              <BreadcrumbLink
-                                title={region.label}
-                                render={
-                                  <button
-                                    type="button"
-                                    data-drilldown-trail-item={region.id}
-                                    onClick={() => void open(region.id, "keyboard")}
-                                    className="max-w-40 truncate"
-                                  />
-                                }
-                              >
-                                {region.label}
-                              </BreadcrumbLink>
-                            )}
-                          </BreadcrumbItem>
-                        </React.Fragment>
-                      ))}
-                    </BreadcrumbList>
-                  </Breadcrumb>
-                </>
-              )}
-              {/* The camera, then the panels: two different things, so a rule between them —
-                  and both kept out of the trail's way by the row rather than by a guess at how
-                  much room the trail has left. */}
-              <div data-drilldown-zoom="" className="ml-auto flex shrink-0 items-center gap-0.5">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon-sm"
-                  aria-label="Zoom out"
-                  title="Zoom out (−)"
-                  onClick={() => stageRef.current?.zoomBy(1 / ZOOM_STEP)}
-                  disabled={zoom <= 1}
-                >
-                  <ZoomOut aria-hidden="true" />
-                </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon-sm"
-                  aria-label="Zoom in"
-                  title="Zoom in (+)"
-                  onClick={() => stageRef.current?.zoomBy(ZOOM_STEP)}
-                  disabled={zoom >= ZOOM_MAX}
-                >
-                  <ZoomIn aria-hidden="true" />
-                </Button>
-                {/* Written out rather than drawn: every "fit" glyph in the set is a variation
-                    on the corner brackets that mean full screen, and the button beside it is
-                    the one that means full screen. */}
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon-sm"
-                  data-drilldown-zoom-reset=""
-                  aria-label="Fit the whole map"
-                  title="Fit the whole map (0)"
-                  onClick={() => stageRef.current?.resetCamera()}
-                  disabled={zoom <= 1}
-                >
-                  <span aria-hidden="true" className="text-[0.7rem] font-semibold">
-                    1×
-                  </span>
-                </Button>
-              </div>
-              <Separator orientation="vertical" className="mx-1 shrink-0" />
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon-sm"
-                data-drilldown-pane-toggle-map=""
-                aria-expanded={paneOpen}
-                aria-controls={paneId}
-                aria-label={paneOpen ? "Hide the details" : "Show the details"}
-                onClick={() => showPane(!paneOpen)}
-                className="shrink-0"
-              >
-                <PanelRight aria-hidden="true" />
-              </Button>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon-sm"
-                data-drilldown-fullscreen=""
-                aria-pressed={full}
-                aria-label={full ? "Leave full screen" : "Full screen"}
-                title={full ? "Leave full screen (F)" : "Full screen (F)"}
-                onClick={toggleFull}
-                className="shrink-0"
-              >
-                {full ? <Minimize2 aria-hidden="true" /> : <Maximize2 aria-hidden="true" />}
-              </Button>
-            </div>
+            <DrilldownToolbar
+              railOpen={railOpen}
+              railId={railId}
+              onToggleRail={() => showRail(!railOpen)}
+              trail={trail}
+              onTrailRoot={() => {
+                void drillOut()
+                // The rail is left as the reader had it: folded it is still a column of
+                // regions to choose from.
+                showPane(false)
+              }}
+              onTrailItem={(id) => void open(id, "keyboard")}
+              zoom={zoom}
+              zoomMax={ZOOM_MAX}
+              onZoomOut={() => stageRef.current?.zoomBy(1 / ZOOM_STEP)}
+              onZoomIn={() => stageRef.current?.zoomBy(ZOOM_STEP)}
+              onZoomReset={() => stageRef.current?.resetCamera()}
+              paneOpen={paneOpen}
+              paneId={paneId}
+              onTogglePane={() => showPane(!paneOpen)}
+              full={full}
+              onToggleFull={toggleFull}
+            />
             {children}
             <div ref={layersRef} data-drilldown-layers="" />
           </div>

@@ -173,7 +173,7 @@ export function DrilldownPane({
         ref={headingRef}
         tabIndex={-1}
         data-drilldown-pane-title=""
-        className="shrink-0 px-2 py-1.5 text-2xl leading-none outline-none"
+        className="bg-background shrink-0 rounded px-2 py-1.5 text-2xl leading-none outline-none"
       >
         {region?.label ?? overviewLabel}
       </h2>
@@ -196,7 +196,7 @@ export function DrilldownPane({
         // Horizontal inset matches the heading's (`px-2`) rather than carrying its own wider
         // one: the seat arc reads its width from this box, and every pixel of side padding is
         // a pixel the dome doesn't get. Vertical padding is unrelated and stays generous.
-        <div className="-mt-4 flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-2 py-4 sm:py-5">
+        <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-2 pt-0 pb-4">
           {/* No heading of its own: the sheet's bar carries the region's name, and saying it
               twice a line apart is one name too many. What is left here is what the bar does
               not say — the counts, and the facts the summary line leaves out. */}

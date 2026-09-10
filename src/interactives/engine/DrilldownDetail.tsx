@@ -184,7 +184,8 @@ export function DrilldownDetail({
   now,
   lookups,
   className,
-}: DrilldownDetailProps): React.ReactElement {
+}: DrilldownDetailProps): React.ReactNode {
+  if (!selection) return null
   return (
     <aside
       data-drilldown-detail=""

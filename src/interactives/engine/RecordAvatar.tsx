@@ -38,7 +38,7 @@ export function RecordAvatar({
   className,
 }: RecordAvatarProps): React.ReactElement {
   const name = fieldString(record, display.title) ?? "?"
-  const url = fieldString(record, display.image?.url)
+  const url = fieldString(record, display.image?.url) ?? undefined
   const category = categoryOf(record, display)
   const muted = isSupernumerary(record, display)
   return (
@@ -61,7 +61,7 @@ export function RecordAvatar({
       // The class has to win, and an inline colour would beat it.
       style={cohort ? undefined : { borderColor: category.color }}
     >
-      {url && <AvatarImage src={url} alt={name} loading="lazy" referrerPolicy="no-referrer" />}
+      <AvatarImage src={url} alt={name} loading="lazy" referrerPolicy="no-referrer" />
       <AvatarFallback className="bg-muted text-foreground font-sans font-semibold">
         {initials(name)}
       </AvatarFallback>

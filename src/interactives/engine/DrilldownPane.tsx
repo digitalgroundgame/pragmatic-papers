@@ -30,6 +30,38 @@ export interface DrilldownPaneHandle {
   focusHeading(): void
 }
 
+interface Cohort {
+  value: string
+  label: string
+  count: number
+  total: number
+}
+
+/**
+ * What the amber rings mean, said in words: the field, the value it matched and how much of
+ * the bench that is. The label comes from the detail line that already describes the field,
+ * so a profile never spells it twice. A cohort of one is neither ringed nor captioned.
+ */
+function computeCohort(
+  display: RecordDisplay | null,
+  detail: DetailSelection | null,
+  seats: DrilldownRecord[],
+): Cohort | null {
+  const field = display?.cohort
+  if (!field || !detail) return null
+  const value = fieldString(detail.record, field)
+  if (value === null) return null
+  const count = seats.filter((r) => fieldString(r, field) === value).length
+  if (count < 2) return null
+  const detailLabel = display?.details?.find((d) => d.field === field)?.label
+  return {
+    value,
+    label: detailLabel ? `${detailLabel} ${value}` : value,
+    count,
+    total: seats.length,
+  }
+}
+
 interface DrilldownPaneProps {
   region: RegionInfo | null
   facts: DisplayFact[]
@@ -76,8 +108,6 @@ export function DrilldownPane({
   ref,
 }: DrilldownPaneProps): React.ReactElement {
   const [mode, setMode] = useState<BenchMode>("seats")
-  // Hidden by default: an outer band of senior judges doubles the chart's size to answer a
-  // question the reader did not ask first. The control names them, so it is discoverable.
   const [supernumeraryMode, setSupernumeraryMode] = useState<SupernumeraryMode>("hide")
   const [mark, setMark] = useState<string | null>(null)
   const [detail, setDetail] = useState<DetailSelection | null>(null)
@@ -86,15 +116,12 @@ export function DrilldownPane({
 
   useImperativeHandle(ref, () => ({ focusHeading: () => headingRef.current?.focus() }))
 
-  // A new region starts with no pinned or leftover detail.
   const regionId = region?.id ?? null
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- reset per region selection
     setDetail(null)
   }, [regionId])
 
-  // A search result names a record whose region asset may still be loading: pin it as soon as
-  // the records that contain it arrive, and leave the reader's own pin alone otherwise.
   const pinNonce = pinRequest?.nonce ?? null
   const pinId = pinRequest?.recordId ?? null
   useEffect(() => {
@@ -118,27 +145,8 @@ export function DrilldownPane({
   const supLabel = display?.status?.supernumerary?.[0]
     ? (display.status.labels?.[display.status.supernumerary[0]] ?? "Others")
     : "Others"
-  /**
-   * What the amber rings mean, said in words: the field, the value it matched and how much of
-   * the bench that is. The label comes from the detail line that already describes the field,
-   * so a profile never spells it twice. A cohort of one is neither ringed nor captioned.
-   */
-  const cohort = ((): { value: string; label: string; count: number; total: number } | null => {
-    const field = display?.cohort
-    if (!field || !detail) return null
-    const value = fieldString(detail.record, field)
-    if (value === null) return null
-    const pool = records.seats
-    const count = pool.filter((r) => fieldString(r, field) === value).length
-    if (count < 2) return null
-    const detailLabel = display?.details?.find((d) => d.field === field)?.label
-    return {
-      value,
-      label: detailLabel ? `${detailLabel} ${value}` : value,
-      count,
-      total: pool.length,
-    }
-  })()
+
+  const cohort = computeCohort(display, detail, records.seats)
 
   const hoverRecord = (record: DrilldownRecord | null, recDisplay: RecordDisplay | null): void => {
     if (detail?.pinned) return
@@ -151,11 +159,6 @@ export function DrilldownPane({
     setDetail(unpin ? null : { record, display: recDisplay, pinned: true })
   }
 
-  // Notes split by what they are for. An `always` note (a territorial district's holdover
-  // rule) is its own small fact and stays a line under the bench. A `seats` note explains the
-  // supernumerary control itself — what "Senior" and its options mean — wherever that control
-  // is drawn, in either view, which is a tooltip on the control rather than a paragraph below
-  // whatever happens to be on screen when the reader opened it.
   const alwaysNotes = (region?.notes ?? []).filter((n) => n.mode === "always")
   const seatsNote = region?.notes.find((n) => n.mode === "seats")?.text ?? null
 
@@ -164,28 +167,14 @@ export function DrilldownPane({
       data-drilldown-pane=""
       data-open={open ? "" : undefined}
       aria-label={region ? `${region.label} details` : "Region details"}
-      className={cn(
-        // Its own container query: the bench/detail split is a property of the pane's width,
-        // not the map's. No card around it — it sits inside the map's area, which is the box.
-        "@container flex min-h-0 scroll-mt-20 flex-col",
-      )}
+      className={cn("@container flex min-h-0 scroll-mt-20 flex-col")}
       onClick={() => detail?.pinned && setDetail((d) => (d ? { ...d, pinned: false } : d))}
     >
-      {/* The pane's name, and only that: a heading, looking like this site's headings, with
-          nothing folded into it. Opening and closing the pane is the panel button over the
-          map, which is where a reader goes for it and where the rail's own button is. Only the
-          size is set here — the display face, weight and tracking are the ones every other
-          heading on the site has, and a pane 384px wide has no room for `text-3xl`. */}
       <h2
         ref={headingRef}
-        // Focusable only by script: a keyboard selection lands here so the reader arrives at
-        // the top of what they just opened, but it is not a stop on the way through the page.
         tabIndex={-1}
         data-drilldown-pane-title=""
-        // `leading-none` restated: the site's global heading rule already sets it, but
-        // `text-2xl` carries its own line-height and, same specificity, wins over the base
-        // layer — so this heading alone sat in a line box taller than its own glyphs.
-        className="shrink-0 px-2 py-1.5 text-2xl leading-none outline-none"
+        className="bg-background shrink-0 rounded px-2 py-1.5 text-2xl leading-none outline-none"
       >
         {region?.label ?? overviewLabel}
       </h2>
@@ -205,13 +194,7 @@ export function DrilldownPane({
         ))}
 
       {region && (
-        // Horizontal inset matches the heading's (`px-2`) rather than carrying its own wider
-        // one: the seat arc reads its width from this box, and every pixel of side padding is
-        // a pixel the dome doesn't get. Vertical padding is unrelated and stays generous.
-        <div className="-mt-4 flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-2 py-4 sm:py-5">
-          {/* No heading of its own: the sheet's bar carries the region's name, and saying it
-              twice a line apart is one name too many. What is left here is what the bar does
-              not say — the counts, and the facts the summary line leaves out. */}
+        <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-2 pt-0 pb-4">
           <header className="flex flex-wrap items-start gap-x-4 gap-y-1">
             <div className="min-w-0 flex-1">
               {region.summary && <p className="text-muted-foreground text-sm">{region.summary}</p>}
@@ -277,8 +260,6 @@ export function DrilldownPane({
               <Segmented<SupernumeraryMode>
                 label={supLabel}
                 labelHint={seatsNote}
-                // Its three options read as captions ("Alongside", "Counted") that a toggle
-                // button has to fit, not just a name — a dropdown shows only the one chosen.
                 variant="select"
                 // A timeline has no seats and no majority, so only two of the three mean
                 // anything in it.
@@ -337,13 +318,6 @@ export function DrilldownPane({
             )}
           </div>
 
-          {/* No `min-h-0` on this row or the column inside it: their default `min-height:
-              auto` is what a plain nested flex chain has anyway, and it is what lets the
-              bench's own floor (DrilldownBench.tsx) reach all the way up to the ONE place
-              that should act on it — the scrolling wrapper this whole region sits in. Cut
-              anywhere along that chain, the floor stops one level short of where it is read
-              and whatever sits below it — first found with the detail panel — overflows a box
-              smaller than what it had just insisted on being. */}
           <div className="flex flex-1 flex-col gap-4 @2xl:flex-row @2xl:items-stretch">
             <div className="flex min-w-0 flex-1 flex-col">
               {recordsState === "loading" && (
@@ -399,7 +373,7 @@ export function DrilldownPane({
                 </p>
               ))}
             </div>
-            {display && <DrilldownDetail selection={detail} now={now} lookups={lookups} />}
+            <DrilldownDetail selection={detail} now={now} lookups={lookups} />
           </div>
         </div>
       )}

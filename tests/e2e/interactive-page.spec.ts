@@ -124,20 +124,18 @@ test.describe("interactive page — federal courts", () => {
     await expect(page.locator("[data-drilldown-selector] [data-region-item='ca1']")).toBeVisible()
   })
 
-  test("the landing view summarises the whole bench before a region is chosen", async ({
-    page,
-  }) => {
+  test("the overview pane starts empty, not landed on the Supreme Court", async ({ page }) => {
     await page.goto(PAGE)
+    // The landing view (the whole bench, parked behind `summary`) is built and tested at the
+    // component level (Summary.tsx), but the page itself keeps the pane empty until the reader
+    // picks something — every other unselected state works the same way, and opening straight
+    // onto a filled-in Supreme Court bench read as the page choosing for the reader.
     const pane = page.locator("[data-drilldown-pane]")
-    await expect(pane.locator("[data-summary-scotus]")).toBeVisible()
-    await expect(pane.locator("[data-summary-tally]")).toContainText("9 seats")
-
-    // The district cartogram and the two charts are built and tested, but parked behind the
-    // segmented toggle (which is hidden while it offers only "Supreme Court") — the map already
-    // gives every court a seat block. A justice is a way into the Supreme Court's own bench.
-    await pane.locator("[data-summary-justice]").nth(4).click()
-    const open = page.locator("[data-drilldown-pane][data-open]")
-    await expect(open.locator("[data-drilldown-pane-title]")).toContainText("Supreme Court")
+    await expect(pane).not.toHaveAttribute("data-open", "")
+    await expect(pane.locator("[data-drilldown-empty]")).toHaveText(
+      "Select a court on the map or from the list to see who sits on its bench.",
+    )
+    await expect(pane.locator("[data-summary-scotus]")).toHaveCount(0)
   })
 
   test("searching a judge by name opens their court and pins them", async ({ page }) => {

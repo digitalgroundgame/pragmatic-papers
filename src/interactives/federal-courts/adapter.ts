@@ -3,6 +3,7 @@ import type { DeclaredRegion, DrilldownRecord } from "@/interactives/engine/type
 import { DRILLDOWN_DATA_SCHEMA, type DrilldownData, type FeedSnapshot } from "../types"
 import { aggregateAppointments } from "./appointments"
 import ANCHORS from "./geometry/anchors.json"
+import { normalizeAppointingPresident } from "./presidents"
 import type { Court, CourtTrackerSources, Judge, Justice, SeatBlock } from "./upstream"
 
 /**
@@ -253,7 +254,7 @@ export function judgeRecord(j: Judge, court: Court): DrilldownRecord {
     full_name: j.full_name,
     display_name: j.display_name,
     status: j.status,
-    appointing_president: j.appointing_president,
+    appointing_president: normalizeAppointingPresident(j.appointing_president),
     president_party: j.president_party,
     confirmation_date: j.confirmation_date,
     commission_date: j.commission_date,

@@ -792,18 +792,20 @@ describe("DrilldownMapClient", () => {
     }
   })
 
-  it("names the cohort the rings mark, and rings nobody when the cohort is one", async () => {
+  it("keeps the cohort legend visible, and rings nobody when the cohort is one", async () => {
     const { container } = setup()
     fireEvent.click(selector(container).getByRole("button", { name: "West" }))
     const p = pane(container)
     const ada = await within(p).findByRole("button", { name: "Ada Lovelace" })
-    // Ada and Grace were both appointed by P1; the caption says so, in the detail line's words
+    // The legend is a standing explainer of what the ring means, not a per-hover caption
+    expect(p.querySelector("[data-drilldown-cohort]")).toHaveTextContent("Appointed together")
+    // Ada and Grace were both appointed by P1
     fireEvent.pointerEnter(ada)
-    expect(p.querySelector("[data-drilldown-cohort]")).toHaveTextContent("Appointed by P1 · 2 of 3")
+    expect(p.querySelector("[data-drilldown-cohort]")).toHaveTextContent("Appointed together")
     expect(p.querySelectorAll("[data-drilldown-node][data-cohort]")).toHaveLength(2)
-    // Alan is P2's only appointee here: a cohort of one is neither ringed nor captioned
+    // Alan is P2's only appointee here: a cohort of one is not rung, but the legend stays put
     fireEvent.pointerEnter(within(p).getByRole("button", { name: "Alan Turing" }))
-    expect(p.querySelector("[data-drilldown-cohort]")).not.toBeInTheDocument()
+    expect(p.querySelector("[data-drilldown-cohort]")).toHaveTextContent("Appointed together")
     expect(p.querySelectorAll("[data-drilldown-node][data-cohort]")).toHaveLength(0)
   })
 

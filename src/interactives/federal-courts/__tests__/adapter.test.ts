@@ -6,7 +6,7 @@ import { tarGz } from "@/integrations/__tests__/tarFixture"
 import { RELEASE_REF } from "@/integrations/github"
 import type { DrilldownGeometry } from "../../types"
 import ANCHORS from "../geometry/anchors.json"
-import { factsFor, justiceRecord, splitLicense } from "../adapter"
+import { factsFor, judgeRecord, justiceRecord, splitLicense } from "../adapter"
 import { courtTrackerFeed, readCourtTrackerSources } from "../feed"
 import type { Court, Judge, Justice, SeatBlock } from "../upstream"
 
@@ -507,6 +507,12 @@ describe("helpers", () => {
     ])
     expect(facts.summary).toBe("1 authorized · 1 sitting · Fixed term")
     expect(facts).not.toHaveProperty("senior")
+  })
+
+  it("judgeRecord normalizes a two-term president to one cohort value", () => {
+    const moed = COURTS.find((c) => c.court_id === "moed")!
+    const r = judgeRecord(judge({ appointing_president: "Donald Trump" }), moed)
+    expect(r.appointing_president).toBe("Donald J. Trump")
   })
 
   it("justiceRecord falls back to the allotment row when no SCOTUS record matches", () => {

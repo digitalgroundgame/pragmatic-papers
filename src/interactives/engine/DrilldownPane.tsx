@@ -33,15 +33,12 @@ export interface DrilldownPaneHandle {
 
 interface Cohort {
   value: string
-  label: string
-  count: number
-  total: number
 }
 
 /**
- * What the amber rings mean, said in words: the field, the value it matched and how much of
- * the bench that is. The label comes from the detail line that already describes the field,
- * so a profile never spells it twice. A cohort of one is neither ringed nor captioned.
+ * Which value the amber rings pick out, once a hovered or pinned record's own field value has
+ * two or more members sharing it. The legend explaining what the ring means is unconditional —
+ * see the render below — this only decides whether *this* hover activates any ring at all.
  */
 function computeCohort(
   display: RecordDisplay | null,
@@ -54,13 +51,7 @@ function computeCohort(
   if (value === null) return null
   const count = seats.filter((r) => fieldString(r, field) === value).length
   if (count < 2) return null
-  const detailLabel = display?.details?.find((d) => d.field === field)?.label
-  return {
-    value,
-    label: detailLabel ? `${detailLabel} ${value}` : value,
-    count,
-    total: seats.length,
-  }
+  return { value }
 }
 
 interface DrilldownPaneProps {
@@ -358,7 +349,7 @@ export function DrilldownPane({
                   No records for this region.
                 </p>
               )}
-              {recordsState === "idle" && cohort && (
+              {recordsState === "idle" && display?.cohort && (
                 <p
                   data-drilldown-cohort=""
                   className="text-muted-foreground mt-2 flex items-center gap-1.5 text-xs"
@@ -367,7 +358,7 @@ export function DrilldownPane({
                     aria-hidden="true"
                     className="inline-block size-2.5 shrink-0 rounded-full ring-2 ring-amber-400"
                   />
-                  {cohort.label} · {cohort.count} of {cohort.total}
+                  Appointed together
                 </p>
               )}
               {alwaysNotes.map((n, i) => (

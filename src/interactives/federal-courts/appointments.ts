@@ -1,5 +1,6 @@
 import { isRecord } from "@/utilities/isRecord"
 
+import { normalizeAppointingPresident } from "./presidents"
 import type { DrilldownData } from "../types"
 import type { Appointment } from "./upstream"
 
@@ -63,7 +64,7 @@ function readRows(rows: Appointment[], parties: readonly string[]): AppointmentR
     out.push({
       commission,
       termination: row.termination_date,
-      president: row.appointing_president || "",
+      president: normalizeAppointingPresident(row.appointing_president) || "",
       party: parties.includes(row.president_party) ? row.president_party : null,
     })
   }

@@ -208,8 +208,13 @@ export function layoutArc(
   return { seats, band, radii: plan.radii, bandRadius, dims, metrics: m }
 }
 
-/** Side margin the timeline grid keeps clear of the stage edge, left and right alike. */
-export const TIMELINE_MARGIN = 10
+/**
+ * Side margin the timeline grid keeps clear of the stage edge, left and right alike. The stage
+ * itself sits flush against the pane's own padding (the same padding the view/mark toggles sit
+ * in), so this only needs to clear a node's own half-width — the icon is already smaller than
+ * the grid pitch (`cell`), so a node never touches the edge even at zero extra margin.
+ */
+export const TIMELINE_MARGIN = 0
 
 export function timelineColumns(width: number, m: SeatMetrics = REGULAR_METRICS): number {
   return Math.max(1, Math.floor((width - 2 * TIMELINE_MARGIN) / m.cell))

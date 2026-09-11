@@ -457,7 +457,7 @@ exports[`InteractiveMapBlock > renders a single map with diverging color scale 1
     class="flex flex-wrap items-center gap-x-2 gap-y-1"
   >
     <p
-      class="text-muted-foreground text-xs"
+      class="text-muted-foreground mr-auto text-xs"
     >
       Source
       :
@@ -602,7 +602,7 @@ exports[`InteractiveMapBlock > renders multiple sources with plural label and co
     class="flex flex-wrap items-center gap-x-2 gap-y-1"
   >
     <p
-      class="text-muted-foreground text-xs"
+      class="text-muted-foreground mr-auto text-xs"
     >
       Source
       s

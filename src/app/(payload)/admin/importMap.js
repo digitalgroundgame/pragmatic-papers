@@ -48,6 +48,7 @@ import { RowLabel as RowLabel_b9b9938cf466765c7ed61773d838e057 } from '@/fields/
 import { ProductTitleCell as ProductTitleCell_8dff8d8bb04003b09cb89f916f5bb9bc } from '@/collections/Merch/components/ProductTitleCell'
 import { ProductThumbnailCell as ProductThumbnailCell_c79e04f7b9e53b2f3afaedb264d44732 } from '@/collections/Merch/components/ProductThumbnailCell'
 import { SyncNowButton as SyncNowButton_6b13e2821b4c35428e02347e7578e840 } from '@/collections/Merch/components/SyncNowButton'
+import { SyncNowButton as SyncNowButton_5c40eb2c313f4a5f050c97644b650016 } from '@/collections/InteractiveSnapshots/components/SyncNowButton'
 import { LinkToDoc as LinkToDoc_aead06e4cbf6b2620c5c51c9ab283634 } from '@payloadcms/plugin-search/client'
 import { ReindexButton as ReindexButton_aead06e4cbf6b2620c5c51c9ab283634 } from '@payloadcms/plugin-search/client'
 import { RunNowField as RunNowField_a9d86fb0496ebd76a3dd880c805864b5 } from '@/globals/ArticleRecommendations/components/RunNowField'
@@ -111,6 +112,7 @@ export const importMap = {
   "@/collections/Merch/components/ProductTitleCell#ProductTitleCell": ProductTitleCell_8dff8d8bb04003b09cb89f916f5bb9bc,
   "@/collections/Merch/components/ProductThumbnailCell#ProductThumbnailCell": ProductThumbnailCell_c79e04f7b9e53b2f3afaedb264d44732,
   "@/collections/Merch/components/SyncNowButton#SyncNowButton": SyncNowButton_6b13e2821b4c35428e02347e7578e840,
+  "@/collections/InteractiveSnapshots/components/SyncNowButton#SyncNowButton": SyncNowButton_5c40eb2c313f4a5f050c97644b650016,
   "@payloadcms/plugin-search/client#LinkToDoc": LinkToDoc_aead06e4cbf6b2620c5c51c9ab283634,
   "@payloadcms/plugin-search/client#ReindexButton": ReindexButton_aead06e4cbf6b2620c5c51c9ab283634,
   "@/globals/ArticleRecommendations/components/RunNowField#RunNowField": RunNowField_a9d86fb0496ebd76a3dd880c805864b5,

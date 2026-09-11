@@ -54,6 +54,7 @@ This file provides guidance to tools like Claude Code (claude.ai/code) when work
 - **`app/(payload)/`** — Payload admin panel routes
 - **`components/`** — Reusable React components for layouts, pagination, etc; `components/ui/` uses shadcn/ui;
 - **`providers/`** — Context providers (MathJaxProvider)
+- **`integrations/`** — the outside services we read from, one **connection** per entry (see below)
 - **`migrations/`** — Drizzle database migrations
 
 ### Path Aliases
@@ -115,6 +116,31 @@ This file provides guidance to tools like Claude Code (claude.ai/code) when work
 - **Pre-commit hooks**: lint-staged runs ESLint + Prettier on staged files only (fast, ~1-2 seconds)
 - **Colocation**: Prefer colocating logic near where it's used. `src/utilities/` is only for genuinely reusable helpers shared across multiple features (e.g. `generateMeta`, `getURL`, `toRoman`, `cn`). Don't put single-use logic there.
 
+### Integrations
+
+`src/integrations/` is where an outside service lives: a GitHub repository we
+sync data from, the Shopify store behind the merch catalogue, and — as they are
+brought across — Listmonk, Google, the rest.
+
+- An integration is one **connection**, not a vendor. Two GitHub repositories
+  read with two tokens are two connections. Each is declared once in
+  `src/integrations/index.ts`, and a feature imports the one it needs by name.
+- The shared contract (`types.ts`) is only identity, the environment variables
+  it needs, and `integrationStatus()`, which reports which are missing **by
+  name, never by value**. Secrets stay in the environment; nothing here writes a
+  credential to the database (issue #912 has the reasoning).
+- What a connection _does_ is its own API. `githubRepo()` offers `filesAt(ref)`,
+  `latestRelease()` and `filesFromRelease()`, all producing a `FileSource` —
+  the seam that lets a feature read files without knowing whether they came from
+  an archive, a repository or a fixture. Don't invent a common `sync()`.
+- A job that needs credentials asks the connection whether it is configured and
+  skips with `describeStatus()` when it is not, rather than reading
+  `process.env` itself.
+
+Adding one: declare the connection in `src/integrations/index.ts`, put its
+client under `src/integrations/<service>/`, and have the feature import it.
+Progress and the open questions live on issue #912.
+
 ### Test coverage
 
 **Test types by code kind:**
@@ -161,16 +187,28 @@ in `tests/e2e/README.md`.
 
 ### Interactive maps
 
-Building or debugging an Interactive Map block — preparing the pre-projected
-SVG, uploading a Map Asset, or chasing a map that renders blank, all-grey, or
-without tooltips? Use the **`interactive-maps`** skill
-(`.claude/skills/interactive-maps/SKILL.md`). It covers the SVG contract, the
-sanitizer allowlist that silently eats most exports, and the R+/D+ color
-scale, and ships a validator:
-`pnpm tsx .claude/skills/interactive-maps/validate-map-svg.ts <file.svg>`.
-The block draws **choropleths only** for now; further modes land on the same
-block behind a `mode` discriminator, starting with the Federal Courts map
-(#905), so the skill describes the choropleth mode specifically.
+Preparing a pre-projected SVG, uploading a Map Asset, or chasing a map that
+renders blank, all-grey, without tooltips, or drills into nothing? Use the
+**`interactive-maps`** skill (`.claude/skills/interactive-maps/SKILL.md`).
+
+Two things live there, and they are not two modes of one block:
+
+- The **Interactive Map block** is a **choropleth** only — regions shaded by a
+  value, R+/D+ color scale, from an SVG a writer uploads to Map Assets. The
+  skill covers the sanitizer allowlist that silently eats most exports.
+- A **drilldown** is an **interactive page** (`/interactives/<slug>`, the
+  `interactives` + `interactive-snapshots` collections, `src/interactives/`):
+  an overview map whose regions open into their children and records, whose
+  data a researcher's feed keeps updating. Pragmatic Papers owns geometry and
+  presentation in code; the feed owns facts and records; `syncInteractiveData`
+  pulls it daily into draft snapshots an editor publishes.
+
+An SVG never carries records. A drilldown's SVG is checked in, parsed once at
+snapshot time into `geometry/*.json`, and never parsed again;
+`scripts/snapshot-federal-courts.ts` regenerates the Federal Courts geometry
+and data fixture from a court-tracker checkout. Validate a file before
+committing or uploading it:
+`pnpm tsx .claude/skills/interactive-maps/validate-map-svg.ts <file.svg> [--mode geometry]`.
 
 ## Filing & triaging GitHub issues
 

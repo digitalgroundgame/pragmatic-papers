@@ -344,8 +344,7 @@ describe("courtTrackerFeed end to end", () => {
     })
     const byId = Object.fromEntries(data.regions.map((r) => [r.id, r]))
     // The label is the full name with the boilerplate off, not upstream's citation
-    // abbreviation ("E.D. Mo."), which goes unused — it is also what the pane's own heading
-    // shows once the region is open, so there is no separate `heading` fact.
+    // abbreviation ("E.D. Mo."), which stays reachable as the `heading` fact below.
     expect(byId.moed).toMatchObject({ label: "Eastern District of Missouri", parentId: "ca8" })
     expect(byId.ca9).toMatchObject({ label: "Ninth Circuit" })
     // Nothing to strip: the three national courts are already named in words.
@@ -355,6 +354,7 @@ describe("courtTrackerFeed end to end", () => {
     // shared across a state, and "authorized minus active" would report vacancies it does not
     // have. `senior` is the one count they do not publish, so it is still counted here.
     expect(byId.moed?.facts).toMatchObject({
+      heading: "U.S. District Court for the Eastern District of Missouri",
       tenure: "Life tenure",
       seats: "9",
       authorized: "7",

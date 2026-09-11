@@ -1,11 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-const { revalidatePath, revalidateTag, syncInteractive } = vi.hoisted(() => ({
-  revalidatePath: vi.fn(),
+const { revalidateTag, syncInteractive } = vi.hoisted(() => ({
   revalidateTag: vi.fn(),
   syncInteractive: vi.fn(),
 }))
-vi.mock("next/cache", () => ({ revalidatePath, revalidateTag }))
+vi.mock("next/cache", () => ({ revalidateTag }))
 vi.mock("../logic", () => ({ syncInteractive }))
 
 import { syncInteractiveDataTask } from ".."
@@ -77,7 +76,7 @@ describe("syncInteractiveDataTask", () => {
     expect(log.error).toHaveBeenCalledWith("[interactive-sync:a] socket hang up")
   })
 
-  it("drops the page's caches only for a snapshot published straight to readers", async () => {
+  it("drops the page's data cache only for a snapshot published straight to readers", async () => {
     syncInteractive
       .mockResolvedValueOnce(synced("published"))
       .mockResolvedValueOnce(synced("draft"))
@@ -88,14 +87,12 @@ describe("syncInteractiveDataTask", () => {
     ])
 
     expect(revalidateTag.mock.calls).toEqual([["interactive:1", "max"]])
-    expect(revalidatePath.mock.calls).toEqual([["/interactives/courts"]])
   })
 
-  it("skips the path for an interactive with no slug", async () => {
+  it("still tags an interactive with no slug", async () => {
     syncInteractive.mockResolvedValue(synced("published"))
     await run([{ id: 1, slug: null }])
     expect(revalidateTag).toHaveBeenCalledWith("interactive:1", "max")
-    expect(revalidatePath).not.toHaveBeenCalled()
   })
 
   it("still counts a publish whose revalidation throws outside a request scope", async () => {

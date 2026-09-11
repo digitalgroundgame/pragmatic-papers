@@ -1,8 +1,8 @@
 import type { TaskConfig } from "payload"
 
-import { revalidatePath, revalidateTag } from "next/cache"
+import { revalidateTag } from "next/cache"
 
-import { interactivePath, interactiveTag } from "@/collections/InteractiveSnapshots/tag"
+import { interactiveTag } from "@/collections/InteractiveSnapshots/tag"
 
 import { syncInteractive, type SyncOutcome } from "./logic"
 
@@ -73,8 +73,12 @@ export const syncInteractiveDataTask: TaskConfig<"syncInteractiveData"> = {
       counts[outcome.outcome] += 1
       if (outcome.outcome === "synced" && outcome.status === "published") {
         try {
+          // No revalidatePath: /interactives/[slug] calls draftMode() unconditionally, so it
+          // never holds a Full Route Cache entry for revalidatePath to purge — calling it
+          // anyway forces an out-of-request regeneration that throws DynamicServerError and
+          // surfaces as a crash to whichever visitor's request lands during it. revalidateTag
+          // is the only invalidation this page's data needs (see interactives/load.ts).
           revalidateTag(interactiveTag(interactive.id), "max")
-          if (interactive.slug) revalidatePath(interactivePath(interactive.slug))
         } catch (err) {
           // Same caveat as the merch sync: revalidation wants a request scope and the
           // scheduled run has none. The snapshot is written regardless; the cache catches up

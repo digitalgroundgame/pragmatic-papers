@@ -29,6 +29,13 @@ export async function generateStaticParams(): Promise<{ slug: string }[]> {
   return interactives.docs.map(({ slug }) => ({ slug }))
 }
 
+// Explicit, not left to Next's dynamic-API bailout: this page reads draftMode() unconditionally
+// and was never meant to hold a Full Route Cache entry (see revalidateInteractive.ts /
+// revalidateSnapshot.ts). Declaring it here means revalidateTag/revalidatePath can never trigger
+// an out-of-request regeneration attempt for it — the DynamicServerError (DYNAMIC_SERVER_USAGE)
+// that kept surfacing to real visitors even after those hooks stopped calling revalidatePath.
+export const dynamic = "force-dynamic"
+
 interface Args {
   params: Promise<{ slug?: string }>
 }

@@ -261,6 +261,9 @@ export interface RegionInfo {
   childrenLabel: string | null
   /** Reserved `data-order`: selector sort key. */
   order: number | null
+  /** Reserved `data-heading`: the pane's own heading, when it differs from the short `label`
+   * used everywhere else — the rail, the trail, a tooltip. */
+  heading: string | null
 }
 
 export interface RegionIndex {

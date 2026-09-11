@@ -14,6 +14,7 @@ function emptyRegion(id: string): RegionInfo {
     notes: [],
     childrenLabel: null,
     order: null,
+    heading: null,
   }
 }
 
@@ -22,6 +23,7 @@ function applyFacts(region: RegionInfo, facts: FactMap): void {
     if (key === RESERVED_FACTS.summary) region.summary = value.trim() || region.summary
     else if (key === RESERVED_FACTS.childrenLabel)
       region.childrenLabel = value.trim() || region.childrenLabel
+    else if (key === RESERVED_FACTS.heading) region.heading = value.trim() || region.heading
     else if (key === RESERVED_FACTS.order) {
       const n = Number(value)
       if (Number.isFinite(n)) region.order = n

@@ -21,6 +21,7 @@ export const RESERVED_FACTS = {
   order: "order",
   summary: "summary",
   note: "note",
+  heading: "heading",
 } as const
 
 const RESERVED_SET = new Set<string>(Object.values(RESERVED_FACTS))

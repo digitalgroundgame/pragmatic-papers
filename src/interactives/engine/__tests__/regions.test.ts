@@ -7,7 +7,7 @@ import { DRILLDOWN_SCHEMA, type DrilldownAsset } from "@/interactives/engine/typ
 // Geometry comes out of an SVG; the payload is attached the way `compose.ts` attaches it.
 const geometry = parseDrilldownAssetString(`<svg viewBox="0 0 10 10">
   <g>
-    <path id="ca2" data-region-label="2nd Cir." data-order="2" data-seats="13" data-seats-r="5" data-vacant="1" data-summary="13 authorized" data-children-label="districts" data-note="Note A" data-note-seats="Note S" d="M0 0"/>
+    <path id="ca2" data-region-label="2nd Cir." data-heading="U.S. Court of Appeals for the Second Circuit" data-order="2" data-seats="13" data-seats-r="5" data-vacant="1" data-summary="13 authorized" data-children-label="districts" data-note="Note A" data-note-seats="Note S" d="M0 0"/>
     <path id="ca1" data-region-label="1st Cir." data-order="1" data-seats="6" d="M0 0"/>
     <path id="nysd" data-region-label="S.D.N.Y." data-parent-id="ca2" d="M0 0"/>
     <path id="ctd" data-region-label="D. Conn." data-parent-id="ca2" data-inset="true" d="M0 0"/>
@@ -50,6 +50,7 @@ describe("buildRegionIndex", () => {
   it("separates reserved slots from display facts", () => {
     const ca2 = index.byId.ca2!
     expect(ca2.label).toBe("2nd Cir.")
+    expect(ca2.heading).toBe("U.S. Court of Appeals for the Second Circuit")
     expect(ca2.summary).toBe("13 authorized")
     expect(ca2.childrenLabel).toBe("districts")
     expect(ca2.order).toBe(2)

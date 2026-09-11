@@ -16,15 +16,9 @@ export const COLORS = {
 
 export const federalCourtsPresentation: DrilldownPresentation = {
   facts: {
-    labels: {
-      // Not "Court" — the heading already names the court; this is its citation form.
-      "full-name": "Official name",
-      authorized: "Authorized judgeships",
-      active: "Active judges",
-      senior: "Senior judges",
-      vacant: "Vacancies",
-    },
-    order: ["full-name", "authorized", "active", "senior", "vacant"],
+    // Every fact this feed reports is either the pane's own `heading` (a reserved slot, never
+    // a listed fact) or one of the counts below, already said in the region's `summary` line.
+    // Nothing is left to label or order.
     hide: [
       // Machine inputs consumed by the seat blocks and the seat chart, never shown as facts.
       "seats",

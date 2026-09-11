@@ -38,6 +38,7 @@ function region(
     notes: [],
     childrenLabel: null,
     order: null,
+    heading: null,
     ...over,
   }
 }

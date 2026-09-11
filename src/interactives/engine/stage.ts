@@ -1236,6 +1236,7 @@ export class MapStage {
       const path = pathFrom(e.target)
       const id = path ? this.targetOf(layer, path) : null
       if (!id || !path) return
+      if (this.hovered === id) return
       const r = path.getBoundingClientRect()
       this.setHover(layer, id, { x: r.left + r.width / 2, y: r.top + r.height / 2 })
     }

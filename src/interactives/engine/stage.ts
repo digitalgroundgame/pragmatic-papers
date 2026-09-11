@@ -603,9 +603,8 @@ export class MapStage {
     this.resetCamera()
     const local = this.ensureLocalLayer(parentId, asset)
     this.view = { parentId }
+    this.clearHover()
     this.setSelected(null)
-    this.cancelPendingHover()
-    this.opts.callbacks.onHover(null, null)
     const plan = this.morphPlanFor(parentId, local)
     if (!plan) {
       this.cancelMorph()
@@ -653,9 +652,8 @@ export class MapStage {
     if (!outPlan || !inPlan) return this.drillIn(parentId, asset)
 
     this.view = { parentId }
+    this.clearHover()
     this.setSelected(null)
-    this.cancelPendingHover()
-    this.opts.callbacks.onHover(null, null)
     // The reader is looking at `from`, and that is where the crossing starts.
     const outDest = this.zoomedDestOf(outPlan, leaving)
     this.renderMorph(outPlan, 1, this.cameraFor(outPlan, 1, undefined, outDest))
@@ -677,9 +675,8 @@ export class MapStage {
     const leaving = local ? this.cameraBox(local).slice() : null
     this.resetCamera()
     this.view = { parentId: null }
+    this.clearHover()
     this.setSelected(null)
-    this.cancelPendingHover()
-    this.opts.callbacks.onHover(null, null)
     const plan = parentId && local ? this.morphPlanFor(parentId, local) : null
     if (!plan) {
       this.cancelMorph()
@@ -1131,6 +1128,21 @@ export class MapStage {
     if (!this.pendingHover) return
     clearTimeout(this.pendingHover.timer)
     this.pendingHover = null
+  }
+
+  /**
+   * Ends a hover outright — a drill transition's own reset, not a pointer leaving. Clears
+   * `hovered` itself, not only the pending timer and the tooltip callback: a transition that
+   * only told the tooltip `(null, null)` left `hovered` naming the region just left behind, and
+   * `setSelected`'s `highlightBlocks` call right after read that stale id back — lighting the
+   * hover glow on whatever block shares it in the map just arrived at (the parent's own gutter
+   * block is exactly that, on every drill-in). Called before `setSelected`, so that read sees
+   * the reset.
+   */
+  private clearHover(): void {
+    this.cancelPendingHover()
+    this.hovered = null
+    this.opts.callbacks.onHover(null, null)
   }
 
   /**

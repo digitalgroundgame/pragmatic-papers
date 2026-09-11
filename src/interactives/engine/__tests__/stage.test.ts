@@ -619,6 +619,21 @@ describe("drilling in and out", () => {
     expect(overviewLayer).toHaveAttribute("data-state", "visible")
   })
 
+  it("doesn't leave the region just drilled into glowing as hovered in its own gutter block", async () => {
+    // A stale `hovered` id, read back by `setSelected`'s `highlightBlocks` call on the newly
+    // created local layer, used to light up whichever block shared it there — the parent's own
+    // gutter block on every single drill-in, since that block's id is always the one just
+    // hovered and clicked to get here.
+    const { stage, west, layersHost } = ctx
+    west.dispatchEvent(pointer("pointerover", { clientX: 5, clientY: 5 }))
+    await stage.drillIn("west", westAsset)
+    stage.renderBlocks(["west"])
+    const gutterBlock = layersHost.querySelector(
+      '[data-parent-id="west"] g[data-drilldown-block][data-region-id="west"]',
+    )!
+    expect(gutterBlock).not.toHaveAttribute("data-hover")
+  })
+
   it("crossing with nothing drilled into yet is an ordinary drill-in", async () => {
     const { stage } = ctx
     await expect(stage.crossTo("west", westAsset)).resolves.toBe("fallback")

@@ -185,18 +185,15 @@ export function DrilldownDetail({
   lookups,
   className,
 }: DrilldownDetailProps): React.ReactNode {
-  if (!selection) return null
   return (
     <aside
       data-drilldown-detail=""
       data-pinned={selection?.pinned ? "" : undefined}
       aria-live="polite"
       className={cn(
-        // A rule, not a nested card — the pane is already the card. Bounded to the stage's own
-        // height and scrolling internally: a long bio grew this taller than the arc beside it,
-        // and that extra height pushed the pane itself into a scrollbar, which took the width
-        // the arc measures itself against — so the dome resized on every hover.
-        "text-card-foreground flex max-h-(--drilldown-stage-h) min-h-40 w-full flex-col gap-1.5 overflow-y-auto border-t pt-3 text-xs @2xl:min-h-0 @2xl:w-64 @2xl:shrink-0 @2xl:border-t-0 @2xl:border-l @2xl:pt-0 @2xl:pl-3 @4xl:w-72",
+        // A rule, not a nested card — the pane is already the card. Scrolling is the
+        // `ScrollArea` wrapping this from `DrilldownPane`, so nothing here caps its own height.
+        "text-card-foreground flex min-h-40 w-full flex-col gap-1.5 border-t pt-3 text-xs",
         selection?.pinned ? "border-foreground" : "border-border",
         className,
       )}

@@ -4,6 +4,7 @@ import { Armchair, History } from "lucide-react"
 import React, { useEffect, useImperativeHandle, useRef, useState } from "react"
 
 import { Button } from "@/components/ui/button"
+import { ScrollArea } from "@/components/ui/scroll-area"
 import { cn } from "@/utilities/utils"
 
 import {
@@ -323,8 +324,8 @@ export function DrilldownPane({
             )}
           </div>
 
-          <div className="flex flex-1 flex-col gap-4 @2xl:flex-row @2xl:items-stretch">
-            <div className="flex min-w-0 flex-1 flex-col">
+          <div className="flex min-h-0 flex-1 flex-col gap-4">
+            <div className="flex min-w-0 shrink-0 flex-col">
               {recordsState === "loading" && (
                 <p
                   className="text-muted-foreground py-6 text-center text-sm"
@@ -378,7 +379,9 @@ export function DrilldownPane({
                 </p>
               ))}
             </div>
-            <DrilldownDetail selection={detail} now={now} lookups={lookups} />
+            <ScrollArea className="min-h-0 flex-1">
+              <DrilldownDetail selection={detail} now={now} lookups={lookups} />
+            </ScrollArea>
           </div>
         </div>
       )}

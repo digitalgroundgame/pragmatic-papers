@@ -50,6 +50,10 @@ if (typeof window !== "undefined") {
   capture.setPointerCapture ??= noop
   capture.releasePointerCapture ??= noop
   capture.hasPointerCapture ??= () => false
+
+  // jsdom has no Web Animations API either, and Base UI's ScrollArea polls
+  // `Element.getAnimations` to know when its auto-hide scrollbar fade has finished.
+  ;(Element.prototype as unknown as Record<string, unknown>).getAnimations ??= () => []
 }
 
 /**

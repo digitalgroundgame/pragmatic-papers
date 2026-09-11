@@ -220,7 +220,7 @@ export function timelineColumns(width: number, m: SeatMetrics = REGULAR_METRICS)
   return Math.max(1, Math.floor((width - 2 * TIMELINE_MARGIN) / m.cell))
 }
 
-/** Grid positions for `count` icons wrapping into rows. */
+/** Grid positions for `count` icons wrapping into rows, flush to the stage's own padding. */
 export function layoutTimeline(
   count: number,
   width: number,

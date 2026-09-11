@@ -82,6 +82,12 @@ describe("layouts", () => {
     expect(timelineStageHeight(21, 200)).toBe(34 + 6 * 72 + 40)
   })
 
+  it("flushes the timeline grid to the stage's own edge rather than centring it", () => {
+    // width 200, cell 60 → 3 columns, flush left with no inset.
+    const pts = layoutTimeline(5, 200)
+    expect(pts.map((p) => p.x)).toEqual([30, 90, 150, 30, 90])
+  })
+
   it("gives the seat chart the radial budget its geometry was tuned at", () => {
     expect(ARC_STAGE_HEIGHT).toBe(360)
   })

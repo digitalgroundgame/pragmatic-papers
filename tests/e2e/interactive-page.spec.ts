@@ -41,7 +41,9 @@ test.describe("interactive page — federal courts", () => {
     await ca8.click()
     const pane = page.locator("[data-drilldown-pane][data-open]")
     await expect(pane).toBeVisible()
-    await expect(pane.locator("[data-drilldown-pane-title]")).toHaveText("Eighth Circuit")
+    await expect(pane.locator("[data-drilldown-pane-title]")).toHaveText(
+      "U.S. Court of Appeals for the Eighth Circuit",
+    )
     await expect(pane.locator("[data-drilldown-node]").first()).toBeVisible()
     await expect(pane.locator("[data-drilldown-associate-node]")).toContainText("Circ. Justice")
 
@@ -112,7 +114,7 @@ test.describe("interactive page — federal courts", () => {
     await moed.click()
     await expect(
       page.locator("[data-drilldown-pane][data-open] [data-drilldown-pane-title]"),
-    ).toHaveText("Eastern District of Missouri")
+    ).toHaveText("U.S. District Court for the Eastern District of Missouri")
 
     await page.getByRole("button", { name: "Back to overview" }).click()
     await expect(viewport).toHaveAttribute("data-view", "overview")
@@ -124,20 +126,18 @@ test.describe("interactive page — federal courts", () => {
     await expect(page.locator("[data-drilldown-selector] [data-region-item='ca1']")).toBeVisible()
   })
 
-  test("the landing view summarises the whole bench before a region is chosen", async ({
-    page,
-  }) => {
+  test("the overview pane starts empty, not landed on the Supreme Court", async ({ page }) => {
     await page.goto(PAGE)
+    // The landing view (the whole bench, parked behind `summary`) is built and tested at the
+    // component level (Summary.tsx), but the page itself keeps the pane empty until the reader
+    // picks something — every other unselected state works the same way, and opening straight
+    // onto a filled-in Supreme Court bench read as the page choosing for the reader.
     const pane = page.locator("[data-drilldown-pane]")
-    await expect(pane.locator("[data-summary-scotus]")).toBeVisible()
-    await expect(pane.locator("[data-summary-tally]")).toContainText("9 seats")
-
-    // The district cartogram and the two charts are built and tested, but parked behind the
-    // segmented toggle (which is hidden while it offers only "Supreme Court") — the map already
-    // gives every court a seat block. A justice is a way into the Supreme Court's own bench.
-    await pane.locator("[data-summary-justice]").nth(4).click()
-    const open = page.locator("[data-drilldown-pane][data-open]")
-    await expect(open.locator("[data-drilldown-pane-title]")).toContainText("Supreme Court")
+    await expect(pane).not.toHaveAttribute("data-open", "")
+    await expect(pane.locator("[data-drilldown-empty]")).toHaveText(
+      "Select a court on the map or from the list to see who sits on its bench.",
+    )
+    await expect(pane.locator("[data-summary-scotus]")).toHaveCount(0)
   })
 
   test("searching a judge by name opens their court and pins them", async ({ page }) => {
@@ -153,7 +153,9 @@ test.describe("interactive page — federal courts", () => {
     await option.click()
 
     const pane = page.locator("[data-drilldown-pane][data-open]")
-    await expect(pane.locator("[data-drilldown-pane-title]")).toHaveText("First Circuit")
+    await expect(pane.locator("[data-drilldown-pane-title]")).toHaveText(
+      "U.S. Court of Appeals for the First Circuit",
+    )
     const detail = pane.locator("[data-drilldown-detail]")
     await expect(detail).toHaveAttribute("data-pinned", "")
     await expect(detail).toContainText("Kayatta")
@@ -172,10 +174,11 @@ test.describe("interactive page — federal courts", () => {
     await expect(viewport).not.toHaveAttribute("aria-busy", "true")
 
     const pane = page.locator("[data-drilldown-pane][data-open]")
-    // Neither name upstream publishes is shown: the citation abbreviation is a lawyer's
-    // shorthand, so the pane carries the full name with its boilerplate prefix dropped.
+    // The pane's own heading carries the court's full official name (the citation abbreviation
+    // upstream publishes, "D. Mass.", is a lawyer's shorthand nobody else uses) — everywhere
+    // else the region is named, the rail, the trail, a tooltip, drops the boilerplate opening.
     await expect(pane.locator("[data-drilldown-pane-title]")).toHaveText(
-      "District of Massachusetts",
+      "U.S. District Court for the District of Massachusetts",
     )
     await expect(pane.locator("[data-drilldown-detail]")).toHaveAttribute("data-pinned", "")
   })
@@ -260,7 +263,7 @@ test.describe("interactive page — federal courts", () => {
     // Enter selects and hands focus to the pane's heading, so the bench is where the reader is.
     await page.keyboard.press("Enter")
     const title = page.locator("[data-drilldown-pane][data-open] [data-drilldown-pane-title]")
-    await expect(title).toHaveText("Eighth Circuit")
+    await expect(title).toHaveText("U.S. Court of Appeals for the Eighth Circuit")
     await expect(title).toBeFocused()
 
     // Escape closes it and puts focus back on the region it came from.

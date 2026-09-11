@@ -189,7 +189,12 @@ export function DrilldownPane({
         // Horizontal inset matches the heading's (`px-2`) rather than carrying its own wider
         // one: the seat arc reads its width from this box, and every pixel of side padding is
         // a pixel the dome doesn't get. Vertical padding is unrelated and stays generous.
-        <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-2 pt-0 pb-4">
+        // `scrollbar-gutter: stable` reserves the scrollbar's own width whether or not it is
+        // currently showing — hovering a bench member to open the detail card can be the thing
+        // that first grows this column past the viewport, and without a reserved gutter that
+        // popping scrollbar narrowed the box the bench's `ResizeObserver` measures, reflowing
+        // the whole seat arc under the reader's pointer.
+        <div className="flex min-h-0 flex-1 [scrollbar-gutter:stable] flex-col gap-3 overflow-y-auto px-2 pt-0 pb-4">
           {/* No heading of its own: the sheet's bar carries the region's name, and saying it
               twice a line apart is one name too many. What is left here is what the bar does
               not say — the counts, and the facts the summary line leaves out. */}

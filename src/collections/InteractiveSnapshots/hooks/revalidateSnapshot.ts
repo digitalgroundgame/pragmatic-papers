@@ -1,55 +1,44 @@
 import type { CollectionAfterChangeHook, CollectionAfterDeleteHook } from "payload"
 
-import { revalidatePath, revalidateTag } from "next/cache"
+import { revalidateTag } from "next/cache"
 
 import type { InteractiveSnapshot } from "@/payload-types"
 import { relationshipId } from "@/utilities/relationships"
 
-import { interactivePath, interactiveTag } from "../tag"
+import { interactiveTag } from "../tag"
 
 /**
  * A snapshot reaches readers only when published, so that is the only transition worth
  * dropping caches for: a new published version, or a published one being unpublished.
  * Drafts written by the sync change nothing a reader sees.
+ *
+ * No revalidatePath: /interactives/[slug] calls draftMode(), so it's always rendered
+ * per-request and never holds a Full Route Cache entry to purge. Forcing a regeneration of
+ * it outside a real request throws DynamicServerError (no cookies to read draftMode from),
+ * which surfaces as a crash to whichever visitor's request lands during that regeneration.
  */
-async function revalidate(
-  snapshot: InteractiveSnapshot,
-  payload: Parameters<CollectionAfterChangeHook>[0]["req"]["payload"],
-): Promise<void> {
+function revalidate(snapshot: InteractiveSnapshot): void {
   const interactiveId = relationshipId(snapshot.interactive)
   if (interactiveId == null) return
   revalidateTag(interactiveTag(interactiveId), "max")
-  try {
-    const interactive = await payload.findByID({
-      collection: "interactives",
-      id: interactiveId,
-      depth: 0,
-      overrideAccess: true,
-    })
-    if (interactive?.slug) revalidatePath(interactivePath(interactive.slug))
-  } catch (err) {
-    payload.logger.warn(
-      `[interactives] snapshot changed but could not resolve its page path: ${err instanceof Error ? err.message : String(err)}`,
-    )
-  }
 }
 
-export const revalidateSnapshot: CollectionAfterChangeHook<InteractiveSnapshot> = async ({
+export const revalidateSnapshot: CollectionAfterChangeHook<InteractiveSnapshot> = ({
   doc,
   previousDoc,
-  req: { context, payload },
+  req: { context },
 }) => {
   if (context.disableRevalidate) return doc
   const wasPublished = previousDoc?._status === "published"
   const isPublished = doc._status === "published"
-  if (isPublished || wasPublished) await revalidate(doc, payload)
+  if (isPublished || wasPublished) revalidate(doc)
   return doc
 }
 
-export const revalidateSnapshotDelete: CollectionAfterDeleteHook<InteractiveSnapshot> = async ({
+export const revalidateSnapshotDelete: CollectionAfterDeleteHook<InteractiveSnapshot> = ({
   doc,
-  req: { context, payload },
+  req: { context },
 }) => {
-  if (!context.disableRevalidate) await revalidate(doc, payload)
+  if (!context.disableRevalidate) revalidate(doc)
   return doc
 }

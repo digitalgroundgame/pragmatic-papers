@@ -132,6 +132,14 @@ export function DrilldownBench({
 }: DrilldownBenchProps): React.ReactElement {
   const stageRef = useRef<HTMLDivElement | null>(null)
   const [width, setWidth] = useState(600)
+  /**
+   * The seat chart's radial budget, in seats mode: read from the box the flex layout actually
+   * gave the stage rather than fixed at `ARC_STAGE_HEIGHT`, so a bench too big to fit that
+   * budget packs itself tighter instead of the pane growing a scrollbar around it. Timeline
+   * mode ignores this — a list is content-driven height by nature, and this element's own
+   * size is exactly that content's, so reading it back would be circular.
+   */
+  const [available, setAvailable] = useState(ARC_STAGE_HEIGHT)
 
   useEffect(() => {
     const el = stageRef.current
@@ -139,9 +147,12 @@ export function DrilldownBench({
     const ro = new ResizeObserver(() => {
       const w = el.clientWidth
       if (w > 0) setWidth(w)
+      const h = el.clientHeight
+      if (h > 0) setAvailable(h)
     })
     ro.observe(el)
     if (el.clientWidth > 0) setWidth(el.clientWidth)
+    if (el.clientHeight > 0) setAvailable(el.clientHeight)
     return () => ro.disconnect()
   }, [])
 
@@ -173,7 +184,7 @@ export function DrilldownBench({
       vacancies = pts.slice(ordered.length)
       if (supernumeraryMode === "hide") for (const r of bench.supernumerary) hidden.add(r)
     } else {
-      height = ARC_STAGE_HEIGHT
+      height = available
       const filled = supernumeraryMode === "include" ? all : bench.active
       const { first, rest } = seatOrder(filled, display)
       const seatList: (DrilldownRecord | null)[] = [
@@ -192,7 +203,7 @@ export function DrilldownBench({
       if (supernumeraryMode === "hide") for (const r of bench.supernumerary) hidden.add(r)
     }
     return { positions, hidden, vacancies, height, arc }
-  }, [all, bench, display, mode, supernumeraryMode, width, metrics])
+  }, [all, bench, display, mode, supernumeraryMode, width, available, metrics])
 
   const count = useMemo(() => {
     if (mode !== "seats") return null
@@ -230,8 +241,15 @@ export function DrilldownBench({
       data-drilldown-bench=""
       data-mode={mode}
       data-density={compact ? "compact" : "regular"}
-      className="relative w-full shrink-0"
-      style={{ height: layout.height }}
+      className={cn(
+        "relative w-full",
+        // Seats: fills whatever the pane's flex column gives it, down to a floor small enough
+        // to still hold a dome — below that the column is left to grow and the pane scrolls,
+        // rather than a bench nobody could read. Timeline: its own content sets the height, as
+        // it always has, and `flex-1` on an element already sized that way fights the size.
+        mode === "seats" ? "min-h-[220px] flex-1" : "shrink-0",
+      )}
+      style={mode === "seats" ? undefined : { height: layout.height }}
       onPointerLeave={() => onHover(null)}
     >
       {arc && (
@@ -311,9 +329,11 @@ export function DrilldownBench({
             }}
             aria-label={fieldString(record, display.title) ?? undefined}
             title={
-              fieldString(record, display.shortTitle) ??
-              fieldString(record, display.title) ??
-              undefined
+              mode === "seats"
+                ? (fieldString(record, display.shortTitle) ??
+                  fieldString(record, display.title) ??
+                  undefined)
+                : undefined
             }
           >
             <span className={cn("relative mx-auto block", compact ? "size-9" : "size-11")}>
@@ -334,6 +354,16 @@ export function DrilldownBench({
                 </span>
               ))}
             </span>
+            {mode !== "seats" && (
+              <span
+                className={cn(
+                  "text-foreground mt-0.5 block truncate leading-tight",
+                  compact ? "text-[10px]" : "text-[11px]",
+                )}
+              >
+                {fieldString(record, display.shortTitle) ?? fieldString(record, display.title)}
+              </span>
+            )}
           </button>
         )
       })}
@@ -342,7 +372,7 @@ export function DrilldownBench({
         <div
           key={`vacant-${i}`}
           data-drilldown-vacancy=""
-          title="Vacant"
+          title={mode === "seats" ? "Vacant" : undefined}
           className={cn(NODE_MOTION, "absolute top-0 left-0 text-center")}
           style={at(p)}
         >
@@ -352,6 +382,16 @@ export function DrilldownBench({
               compact ? "size-9" : "size-11",
             )}
           />
+          {mode !== "seats" && (
+            <span
+              className={cn(
+                "text-muted-foreground mt-0.5 block leading-tight",
+                compact ? "text-[10px]" : "text-[11px]",
+              )}
+            >
+              Vacant
+            </span>
+          )}
         </div>
       ))}
 

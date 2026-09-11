@@ -326,7 +326,7 @@ export function DrilldownPane({
           </div>
 
           <div className="flex min-h-0 flex-1 flex-col gap-4">
-            <div className="flex min-w-0 shrink-0 flex-col">
+            <div className="flex min-w-0 flex-1 flex-col">
               {recordsState === "loading" && (
                 <p
                   className="text-muted-foreground py-6 text-center text-sm"

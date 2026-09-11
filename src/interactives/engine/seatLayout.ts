@@ -245,9 +245,7 @@ export function timelineStageHeight(
 }
 
 /**
- * Seat-chart stage height, fixed so the dome never reflows as the details card beside it
- * changes size. The dome itself hugs the stage bottom and is capped by width as much as
- * height, so most of this is only headroom above it — 300 trims that headroom without
- * shrinking the dome on the narrow docked pane, where width is already the binding cap.
+ * Seat-chart stage height. 360 is the radial budget the arc geometry was tuned at; the pane
+ * grows to fit it rather than the arc shrinking to fit a viewport.
  */
-export const ARC_STAGE_HEIGHT = 300
+export const ARC_STAGE_HEIGHT = 360

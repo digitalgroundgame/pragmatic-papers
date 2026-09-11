@@ -82,8 +82,8 @@ describe("layouts", () => {
     expect(timelineStageHeight(21, 200)).toBe(34 + 6 * 72 + 40)
   })
 
-  it("gives the seat chart a fixed stage height", () => {
-    expect(ARC_STAGE_HEIGHT).toBe(300)
+  it("gives the seat chart the radial budget its geometry was tuned at", () => {
+    expect(ARC_STAGE_HEIGHT).toBe(360)
   })
 
   it("keeps the dome — and the band a big bench pushes further out — inside the stage width", () => {

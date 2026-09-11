@@ -3,7 +3,7 @@ import { cn } from "@/utilities/utils"
 import { type VariantProps, cva } from "class-variance-authority"
 import React from "react"
 
-const logoVariants = cva("w-auto text-foreground", {
+export const logoVariants = cva("w-auto text-foreground", {
   variants: {
     size: {
       default: "h-6 sm:h-7 md:h-8 lg:h-8.5",

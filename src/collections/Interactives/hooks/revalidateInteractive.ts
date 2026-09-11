@@ -1,10 +1,16 @@
 import type { CollectionAfterChangeHook, CollectionAfterDeleteHook } from "payload"
 
-import { revalidatePath, revalidateTag } from "next/cache"
+import { revalidateTag } from "next/cache"
 
-import { interactivePath, interactiveTag } from "@/collections/InteractiveSnapshots/tag"
+import { interactiveTag } from "@/collections/InteractiveSnapshots/tag"
 import type { Interactive } from "@/payload-types"
 
+// No revalidatePath here: /interactives/[slug] calls draftMode(), so it is always rendered
+// per-request (Next never gives it a Full Route Cache entry to purge). revalidatePath on a
+// route like that forces Next to regenerate it outside of any real request — no cookies, no
+// draftMode() — which throws DynamicServerError (digest DYNAMIC_SERVER_USAGE) and surfaces as
+// a crash to whichever visitor's request lands during that regeneration. revalidateTag is the
+// only invalidation this page's data actually needs (see loadInteractiveOverview's unstable_cache).
 export const revalidateInteractive: CollectionAfterChangeHook<Interactive> = ({
   doc,
   previousDoc,
@@ -12,21 +18,17 @@ export const revalidateInteractive: CollectionAfterChangeHook<Interactive> = ({
 }) => {
   if (context.disableRevalidate) return doc
   if (doc._status === "published") {
-    const path = interactivePath(doc.slug ?? "")
-    payload.logger.info(`Revalidating interactive at path: ${path}`)
-    revalidatePath(path)
+    payload.logger.info(`Revalidating interactive: ${doc.slug}`)
     revalidateTag(interactiveTag(doc.id), "max")
     revalidateTag("interactives-sitemap", "max")
   }
-  // Unpublished, or the slug moved: the old path must stop serving the old page, and the
-  // sitemap must stop naming it (or must name the new slug instead).
+  // Unpublished, or the slug moved: the sitemap must stop naming it (or must name the new
+  // slug instead).
   if (
     previousDoc?._status === "published" &&
     (doc._status !== "published" || previousDoc.slug !== doc.slug)
   ) {
-    const oldPath = interactivePath(previousDoc.slug ?? "")
-    payload.logger.info(`Revalidating old interactive at path: ${oldPath}`)
-    revalidatePath(oldPath)
+    payload.logger.info(`Revalidating old interactive: ${previousDoc.slug}`)
     revalidateTag(interactiveTag(doc.id), "max")
     revalidateTag("interactives-sitemap", "max")
   }
@@ -38,7 +40,6 @@ export const revalidateInteractiveDelete: CollectionAfterDeleteHook<Interactive>
   req: { context },
 }) => {
   if (!context.disableRevalidate) {
-    revalidatePath(interactivePath(doc?.slug ?? ""))
     revalidateTag(interactiveTag(doc.id), "max")
     revalidateTag("interactives-sitemap", "max")
   }

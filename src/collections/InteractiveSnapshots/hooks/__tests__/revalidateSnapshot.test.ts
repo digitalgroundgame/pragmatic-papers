@@ -1,10 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-const { revalidatePath, revalidateTag } = vi.hoisted(() => ({
-  revalidatePath: vi.fn(),
+const { revalidateTag } = vi.hoisted(() => ({
   revalidateTag: vi.fn(),
 }))
-vi.mock("next/cache", () => ({ revalidatePath, revalidateTag }))
+vi.mock("next/cache", () => ({ revalidateTag }))
 
 import { revalidateSnapshot, revalidateSnapshotDelete } from "../revalidateSnapshot"
 
@@ -14,11 +13,7 @@ interface Snapshot {
   _status?: "draft" | "published" | null
 }
 
-const findByID = vi.fn()
-const warn = vi.fn()
-
 const req = (disableRevalidate = false) => ({
-  payload: { findByID, logger: { warn } },
   context: { disableRevalidate },
 })
 
@@ -30,75 +25,48 @@ const drafted: Snapshot = { id: 9, interactive: 3, _status: "draft" }
 
 beforeEach(() => {
   vi.clearAllMocks()
-  findByID.mockResolvedValue({ id: 3, slug: "courts" })
 })
 
 describe("revalidateSnapshot", () => {
-  it("drops the interactive's data and page when a snapshot is published", async () => {
-    await expect(revalidateSnapshot(change(published, drafted))).resolves.toBe(published)
-    expect(revalidateTag).toHaveBeenCalledWith("interactive:3", "max")
-    expect(findByID).toHaveBeenCalledWith({
-      collection: "interactives",
-      id: 3,
-      depth: 0,
-      overrideAccess: true,
-    })
-    expect(revalidatePath).toHaveBeenCalledWith("/interactives/courts")
-  })
-
-  it("reads the interactive's id off a populated relationship too", async () => {
-    await revalidateSnapshot(change({ ...published, interactive: { id: 3 } }))
+  it("drops the interactive's data when a snapshot is published", () => {
+    expect(revalidateSnapshot(change(published, drafted))).toBe(published)
     expect(revalidateTag).toHaveBeenCalledWith("interactive:3", "max")
   })
 
-  it("drops caches when a published snapshot is unpublished", async () => {
-    await revalidateSnapshot(change(drafted, published))
+  it("reads the interactive's id off a populated relationship too", () => {
+    revalidateSnapshot(change({ ...published, interactive: { id: 3 } }))
     expect(revalidateTag).toHaveBeenCalledWith("interactive:3", "max")
-    expect(revalidatePath).toHaveBeenCalledWith("/interactives/courts")
   })
 
-  it("ignores a draft written over a draft — the sync's everyday write", async () => {
-    await revalidateSnapshot(change(drafted, drafted))
-    expect(revalidateTag).not.toHaveBeenCalled()
-    expect(findByID).not.toHaveBeenCalled()
+  it("drops caches when a published snapshot is unpublished", () => {
+    revalidateSnapshot(change(drafted, published))
+    expect(revalidateTag).toHaveBeenCalledWith("interactive:3", "max")
   })
 
-  it("does nothing for a snapshot with no interactive", async () => {
-    await revalidateSnapshot(change({ ...published, interactive: null }))
+  it("ignores a draft written over a draft — the sync's everyday write", () => {
+    revalidateSnapshot(change(drafted, drafted))
     expect(revalidateTag).not.toHaveBeenCalled()
   })
 
-  it("still drops the data tag when the page path can't be resolved", async () => {
-    findByID.mockRejectedValue(new Error("gone"))
-    await revalidateSnapshot(change(published))
-    expect(revalidateTag).toHaveBeenCalledWith("interactive:3", "max")
-    expect(revalidatePath).not.toHaveBeenCalled()
-    expect(warn).toHaveBeenCalledWith(expect.stringContaining("gone"))
+  it("does nothing for a snapshot with no interactive", () => {
+    revalidateSnapshot(change({ ...published, interactive: null }))
+    expect(revalidateTag).not.toHaveBeenCalled()
   })
 
-  it("skips the path for an interactive with no slug", async () => {
-    findByID.mockResolvedValue({ id: 3, slug: null })
-    await revalidateSnapshot(change(published))
-    expect(revalidatePath).not.toHaveBeenCalled()
-  })
-
-  it("does nothing when the caller disabled revalidation", async () => {
-    await revalidateSnapshot(change(published, undefined, true))
+  it("does nothing when the caller disabled revalidation", () => {
+    revalidateSnapshot(change(published, undefined, true))
     expect(revalidateTag).not.toHaveBeenCalled()
   })
 })
 
 describe("revalidateSnapshotDelete", () => {
-  it("drops the interactive's data and page", async () => {
-    await expect(revalidateSnapshotDelete({ doc: published, req: req() } as never)).resolves.toBe(
-      published,
-    )
+  it("drops the interactive's data", () => {
+    expect(revalidateSnapshotDelete({ doc: published, req: req() } as never)).toBe(published)
     expect(revalidateTag).toHaveBeenCalledWith("interactive:3", "max")
-    expect(revalidatePath).toHaveBeenCalledWith("/interactives/courts")
   })
 
-  it("does nothing when the caller disabled revalidation", async () => {
-    await revalidateSnapshotDelete({ doc: published, req: req(true) } as never)
+  it("does nothing when the caller disabled revalidation", () => {
+    revalidateSnapshotDelete({ doc: published, req: req(true) } as never)
     expect(revalidateTag).not.toHaveBeenCalled()
   })
 })

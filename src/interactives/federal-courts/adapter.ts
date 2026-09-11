@@ -93,11 +93,10 @@ function cleanPhotoUrl(url: string | null | undefined): string | null {
 const COURT_PREFIX = /^U\.S\. (?:Court of Appeals|District Court) for the /
 
 /**
- * The short name used everywhere but the pane's own heading — the rail, the trail, a tooltip.
- * Neither name upstream publishes fits those: `short_name` is a citation abbreviation only a
- * lawyer reads at a glance, and `court_name` says "U.S. District Court for the" ninety-four
- * times down one column. Dropping that opening leaves the court named in words; the full title
- * still greets the reader once they open it, as the pane's `heading` fact.
+ * The name shown everywhere a court is named — the rail, the trail, a tooltip, and the pane's
+ * own heading once it is open. Neither name upstream publishes fits: `short_name` is a citation
+ * abbreviation only a lawyer reads at a glance, and `court_name` says "U.S. District Court for
+ * the" ninety-four times down one column. Dropping that opening leaves the court named in words.
  */
 function regionLabel(court: Court): string {
   return court.court_name.replace(COURT_PREFIX, "").trim() || court.short_name
@@ -213,7 +212,6 @@ export function factsFor(
   judges: Judge[],
 ): Record<string, string> {
   const facts: Record<string, string> = {}
-  facts.heading = court.court_name
   facts.tenure = tenureLabel(court.tenure_type)
   const counts = countsFor(court, block, judges)
   facts.seats = String(counts.seats)

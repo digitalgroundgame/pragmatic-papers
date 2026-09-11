@@ -212,19 +212,22 @@ export function timelineColumns(width: number, m: SeatMetrics = REGULAR_METRICS)
   return Math.max(1, Math.floor((width - 20) / m.cell))
 }
 
-/** Grid positions for `count` icons wrapping into rows. */
+/** Grid positions for `count` icons wrapping into rows, centred in the stage width. */
 export function layoutTimeline(
   count: number,
   width: number,
   m: SeatMetrics = REGULAR_METRICS,
 ): Point[] {
   const cols = timelineColumns(width, m)
+  // Centred, not pinned to a fixed inset: a fixed left margin left a gap on the left that
+  // `timelineColumns`' own reserve didn't account for, and never balanced it on the right.
+  const left = Math.max(0, (width - cols * m.cell) / 2)
   const out: Point[] = []
   for (let i = 0; i < count; i++) {
     const r = Math.floor(i / cols)
     const c = i % cols
     out.push({
-      x: 32 + c * m.cell + m.cell / 2,
+      x: left + c * m.cell + m.cell / 2,
       y: TIMELINE_TOP + r * (m.cell + TIMELINE_ROW_GAP),
     })
   }

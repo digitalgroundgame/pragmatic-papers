@@ -857,7 +857,9 @@ describe("DrilldownMapClient", () => {
     fireEvent.click(selector(container).getByRole("button", { name: "West" }))
     const p = pane(container)
     await within(p).findByRole("button", { name: "Ada Lovelace" })
-    // seats is the default view, and the seniors start off the chart entirely
+    // timeline is the default view now; the count text is seats-only.
+    fireEvent.click(within(p).getByRole("button", { name: "Seats" }))
+    // The seniors start off the chart entirely.
     const count = () => p.querySelector("[data-drilldown-count]")!.textContent
     expect(count()).toBe("D-appointed 1 of 2 · majority 2 (no majority)")
     const senior = within(p).getByRole("combobox", { name: "Senior" })

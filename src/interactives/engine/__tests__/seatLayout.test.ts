@@ -82,6 +82,14 @@ describe("layouts", () => {
     expect(timelineStageHeight(21, 200)).toBe(34 + 6 * 72 + 40)
   })
 
+  it("centres the timeline grid in the stage width rather than pinning it to a fixed inset", () => {
+    // width 200, cell 60 → 3 columns, 180px of grid, 20px of slack split evenly either side.
+    const pts = layoutTimeline(5, 200)
+    expect(pts.map((p) => p.x)).toEqual([40, 100, 160, 40, 100])
+    // A narrower stage fits fewer columns and centres over a wider (but still even) margin.
+    expect(layoutTimeline(1, 180).map((p) => p.x)).toEqual([60])
+  })
+
   it("gives the seat chart the radial budget its geometry was tuned at", () => {
     expect(ARC_STAGE_HEIGHT).toBe(360)
   })

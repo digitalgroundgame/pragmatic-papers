@@ -2,6 +2,7 @@ import { Banner } from "@payloadcms/ui/elements/Banner"
 import React from "react"
 
 import { SeedButton } from "./SeedButton"
+import { SeedLiveButton } from "./SeedLiveButton"
 import "./index.scss"
 
 const baseClass = "before-dashboard"
@@ -22,9 +23,9 @@ const BeforeDashboard: React.FC = () => {
       <ul className={`${baseClass}__instructions`}>
         <li>
           <SeedButton />
-          {
-            " with a few volumes, articles, authors, and images to jump-start your local development, then "
-          }
+          {" or "}
+          <SeedLiveButton />
+          {" to populate your local development environment, then "}
           <a href="/" target="_blank">
             visit the website
           </a>

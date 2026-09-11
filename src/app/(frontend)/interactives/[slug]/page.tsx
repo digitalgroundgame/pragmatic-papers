@@ -14,7 +14,6 @@ import RichText from "@/components/RichText"
 import { Separator } from "@/components/ui/separator"
 import { InteractiveDrilldown } from "@/interactives/InteractiveDrilldown"
 import { loadInteractiveOverview, queryInteractiveBySlug } from "@/interactives/load"
-import { getProfile } from "@/interactives/profiles"
 import { generateMeta } from "@/utilities/generateMeta"
 
 export async function generateStaticParams(): Promise<{ slug: string }[]> {
@@ -64,8 +63,11 @@ export default async function InteractivePage({
   if (!interactive) return <PayloadRedirects url={url} />
 
   const composed = await loadInteractiveOverview(interactive)
-  const profile = getProfile(interactive.profile)
-  const summary = composed?.summary != null ? profile?.summary?.render(composed.summary) : undefined
+  // Parked: the overview pane stays empty until the reader picks something, the same as every
+  // other unselected state, rather than landing on a filled-in SCOTUS bench. The profile still
+  // composes and renders one (see `federalCourtsProfile.summary`) — nothing else has to change
+  // to bring it back, just this line.
+  const summary: React.ReactNode = undefined
 
   return (
     <div className="container pt-8 pb-16">

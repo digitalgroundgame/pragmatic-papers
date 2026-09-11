@@ -41,7 +41,9 @@ test.describe("interactive page — federal courts", () => {
     await ca8.click()
     const pane = page.locator("[data-drilldown-pane][data-open]")
     await expect(pane).toBeVisible()
-    await expect(pane.locator("[data-drilldown-pane-title]")).toHaveText("Eighth Circuit")
+    await expect(pane.locator("[data-drilldown-pane-title]")).toHaveText(
+      "U.S. Court of Appeals for the Eighth Circuit",
+    )
     await expect(pane.locator("[data-drilldown-node]").first()).toBeVisible()
     await expect(pane.locator("[data-drilldown-associate-node]")).toContainText("Circ. Justice")
 
@@ -112,7 +114,7 @@ test.describe("interactive page — federal courts", () => {
     await moed.click()
     await expect(
       page.locator("[data-drilldown-pane][data-open] [data-drilldown-pane-title]"),
-    ).toHaveText("Eastern District of Missouri")
+    ).toHaveText("U.S. District Court for the Eastern District of Missouri")
 
     await page.getByRole("button", { name: "Back to overview" }).click()
     await expect(viewport).toHaveAttribute("data-view", "overview")
@@ -151,7 +153,9 @@ test.describe("interactive page — federal courts", () => {
     await option.click()
 
     const pane = page.locator("[data-drilldown-pane][data-open]")
-    await expect(pane.locator("[data-drilldown-pane-title]")).toHaveText("First Circuit")
+    await expect(pane.locator("[data-drilldown-pane-title]")).toHaveText(
+      "U.S. Court of Appeals for the First Circuit",
+    )
     const detail = pane.locator("[data-drilldown-detail]")
     await expect(detail).toHaveAttribute("data-pinned", "")
     await expect(detail).toContainText("Kayatta")
@@ -170,10 +174,11 @@ test.describe("interactive page — federal courts", () => {
     await expect(viewport).not.toHaveAttribute("aria-busy", "true")
 
     const pane = page.locator("[data-drilldown-pane][data-open]")
-    // Neither name upstream publishes is shown: the citation abbreviation is a lawyer's
-    // shorthand, so the pane carries the full name with its boilerplate prefix dropped.
+    // The pane's own heading carries the court's full official name (the citation abbreviation
+    // upstream publishes, "D. Mass.", is a lawyer's shorthand nobody else uses) — everywhere
+    // else the region is named, the rail, the trail, a tooltip, drops the boilerplate opening.
     await expect(pane.locator("[data-drilldown-pane-title]")).toHaveText(
-      "District of Massachusetts",
+      "U.S. District Court for the District of Massachusetts",
     )
     await expect(pane.locator("[data-drilldown-detail]")).toHaveAttribute("data-pinned", "")
   })
@@ -258,7 +263,7 @@ test.describe("interactive page — federal courts", () => {
     // Enter selects and hands focus to the pane's heading, so the bench is where the reader is.
     await page.keyboard.press("Enter")
     const title = page.locator("[data-drilldown-pane][data-open] [data-drilldown-pane-title]")
-    await expect(title).toHaveText("Eighth Circuit")
+    await expect(title).toHaveText("U.S. Court of Appeals for the Eighth Circuit")
     await expect(title).toBeFocused()
 
     // Escape closes it and puts focus back on the region it came from.

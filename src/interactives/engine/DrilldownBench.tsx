@@ -230,6 +230,14 @@ export function DrilldownBench({
 
   const cohortField = display.cohort
   const arc = layout.arc
+  /**
+   * Where a record with no computed position (a hidden supernumerary) parks, and so where it
+   * animates in from once it is shown. A grid reads from its top-left corner, so that is where
+   * a timeline entry comes from; a seat chart has no such corner — a new seat radiates out from
+   * the dome's own centre instead.
+   */
+  const entryPoint: Point =
+    mode === "timeline" ? { x: 0, y: 0 } : { x: width / 2, y: layout.height / 2 }
   const at = (p: Point): React.CSSProperties => ({
     transform: `translate(${p.x - half}px, ${p.y - half}px)`,
     width: nodeWidth,
@@ -301,7 +309,7 @@ export function DrilldownBench({
       )}
 
       {all.map((record, i) => {
-        const p = layout.positions.get(record) ?? { x: width / 2, y: layout.height / 2 }
+        const p = layout.positions.get(record) ?? entryPoint
         const show = !layout.hidden.has(record)
         const cohort =
           cohortValue !== null && cohortField

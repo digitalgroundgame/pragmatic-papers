@@ -20,7 +20,7 @@ export const ReferenceNotice: React.FC = () => {
   return (
     <div className="field-type">
       <div className="label-wrapper">
-        <p className="field-label">Linked Footnote:</p>
+        <p className="field-label">Linked Source:</p>
       </div>
       <p
         style={{
@@ -35,7 +35,7 @@ export const ReferenceNotice: React.FC = () => {
         {attributionUrl && <span>{` | ${attributionUrl}`}</span>}
       </p>
       <p style={{ marginTop: "0.5rem", opacity: 0.5 }}>
-        To make changes, delete this footnote block and re-add it.
+        To make changes, delete this source block and re-add it.
       </p>
     </div>
   )

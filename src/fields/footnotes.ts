@@ -51,8 +51,8 @@ export const footnoteFields = ({ component = {} }: FootnoteFieldOverrides = {}):
       type: "textarea",
       required: true,
       admin: {
-        description: "Footnote text.",
-        placeholder: "Enter footnote text here...",
+        description: "Source text.",
+        placeholder: "Enter source text here...",
         rows: 3,
         ...note.admin,
       },
@@ -73,7 +73,7 @@ export const footnoteFields = ({ component = {} }: FootnoteFieldOverrides = {}):
       defaultValue: false,
       required: true,
       admin: {
-        description: "Optionally add a source link to the footnote.",
+        description: "Optionally add a source link to the source.",
         ...attributionEnabled.admin,
       },
     },

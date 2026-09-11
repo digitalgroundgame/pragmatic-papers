@@ -13,6 +13,7 @@
     "dev:db-nuke": "docker compose -p pragmatic-papers -f docker-compose.yml down -v",
     "dev:db-fresh": "pnpm dev:db && echo y | pnpm payload migrate:fresh && pnpm dev:db-down",
     "dev:db-down": "docker compose -p pragmatic-papers -f docker-compose.yml down",
+    "dev:db-seed": "pnpm dev:db && tsx scripts/seed-dev.ts && pnpm dev:db-down",
     "dev:next": "cross-env NODE_OPTIONS=--no-deprecation next dev -p 8000 --turbopack",
     "dev:prod": "cross-env NODE_OPTIONS=--no-deprecation rm -rf .next && pnpm build && pnpm start",
     "generate:importmap": "cross-env NODE_OPTIONS=--no-deprecation payload generate:importmap",

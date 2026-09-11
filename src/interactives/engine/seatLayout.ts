@@ -208,8 +208,11 @@ export function layoutArc(
   return { seats, band, radii: plan.radii, bandRadius, dims, metrics: m }
 }
 
+/** Side margin the timeline grid keeps clear of the stage edge, left and right alike. */
+export const TIMELINE_MARGIN = 10
+
 export function timelineColumns(width: number, m: SeatMetrics = REGULAR_METRICS): number {
-  return Math.max(1, Math.floor((width - 20) / m.cell))
+  return Math.max(1, Math.floor((width - 2 * TIMELINE_MARGIN) / m.cell))
 }
 
 /** Grid positions for `count` icons wrapping into rows. */
@@ -224,7 +227,7 @@ export function layoutTimeline(
     const r = Math.floor(i / cols)
     const c = i % cols
     out.push({
-      x: 32 + c * m.cell + m.cell / 2,
+      x: TIMELINE_MARGIN + c * m.cell + m.cell / 2,
       y: TIMELINE_TOP + r * (m.cell + TIMELINE_ROW_GAP),
     })
   }
@@ -242,7 +245,9 @@ export function timelineStageHeight(
 }
 
 /**
- * Seat-chart stage height. 360 is the radial budget the arc geometry was tuned at; the pane
- * grows to fit it rather than the arc shrinking to fit a viewport.
+ * Seat-chart stage height, fixed so the dome never reflows as the details card beside it
+ * changes size. The dome itself hugs the stage bottom and is capped by width as much as
+ * height, so most of this is only headroom above it — 300 trims that headroom without
+ * shrinking the dome on the narrow docked pane, where width is already the binding cap.
  */
-export const ARC_STAGE_HEIGHT = 360
+export const ARC_STAGE_HEIGHT = 300

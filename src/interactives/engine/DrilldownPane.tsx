@@ -108,7 +108,8 @@ export function DrilldownPane({
   overviewLabel = "Overview",
   ref,
 }: DrilldownPaneProps): React.ReactElement {
-  const [mode, setMode] = useState<BenchMode>("seats")
+  // Timeline until the seat chart's own layout is worth defaulting to again.
+  const [mode, setMode] = useState<BenchMode>("timeline")
   const [supernumeraryMode, setSupernumeraryMode] = useState<SupernumeraryMode>("hide")
   const [mark, setMark] = useState<string | null>(null)
   const [detail, setDetail] = useState<DetailSelection | null>(null)

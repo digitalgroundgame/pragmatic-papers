@@ -149,13 +149,6 @@ export function DrilldownBench({
   const compact = metrics === COMPACT_METRICS
   const half = metrics.half
   const nodeWidth = metrics.icon + 8
-  /**
-   * A big bench (the 9th with its seniors folded in is 51 people) packs the arc tighter than
-   * a name can be written under an icon: every label overlaps its neighbours and the chart
-   * becomes unreadable. Past this many nodes the names come off and the icons speak — the
-   * ring colours are the point of this view, and hovering still names anyone.
-   */
-  const DENSE_ARC = 20
 
   const all = useMemo(() => [...bench.active, ...bench.supernumerary], [bench])
   const keyOf = useMemo(() => new Map(all.map((r, i) => [r, recordKey(r, i)])), [all])
@@ -226,8 +219,6 @@ export function DrilldownBench({
 
   const cohortField = display.cohort
   const arc = layout.arc
-  const showLabels =
-    mode !== "seats" || all.length - layout.hidden.size + bench.vacancies <= DENSE_ARC
   const at = (p: Point): React.CSSProperties => ({
     transform: `translate(${p.x - half}px, ${p.y - half}px)`,
     width: nodeWidth,
@@ -319,6 +310,11 @@ export function DrilldownBench({
               onClick(record)
             }}
             aria-label={fieldString(record, display.title) ?? undefined}
+            title={
+              fieldString(record, display.shortTitle) ??
+              fieldString(record, display.title) ??
+              undefined
+            }
           >
             <span className={cn("relative mx-auto block", compact ? "size-9" : "size-11")}>
               <RecordAvatar
@@ -338,16 +334,6 @@ export function DrilldownBench({
                 </span>
               ))}
             </span>
-            {showLabels && (
-              <span
-                className={cn(
-                  "text-foreground mt-0.5 block truncate leading-tight",
-                  compact ? "text-[10px]" : "text-[11px]",
-                )}
-              >
-                {fieldString(record, display.shortTitle) ?? fieldString(record, display.title)}
-              </span>
-            )}
           </button>
         )
       })}
@@ -356,6 +342,7 @@ export function DrilldownBench({
         <div
           key={`vacant-${i}`}
           data-drilldown-vacancy=""
+          title="Vacant"
           className={cn(NODE_MOTION, "absolute top-0 left-0 text-center")}
           style={at(p)}
         >
@@ -365,16 +352,6 @@ export function DrilldownBench({
               compact ? "size-9" : "size-11",
             )}
           />
-          {showLabels && (
-            <span
-              className={cn(
-                "text-muted-foreground mt-0.5 block leading-tight",
-                compact ? "text-[10px]" : "text-[11px]",
-              )}
-            >
-              Vacant
-            </span>
-          )}
         </div>
       ))}
 

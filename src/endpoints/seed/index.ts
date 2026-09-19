@@ -1,6 +1,7 @@
-import type { Media, User } from "@/payload-types"
-import type { Payload } from "payload"
 import { seedRandomRankings } from "@/jobs/updateRecommendations/logic"
+import type { Media, User } from "@/payload-types"
+import { revalidatePath } from "next/cache"
+import type { Payload } from "payload"
 import { createArticle, getWriterOrThrow, validateWriters } from "./articles"
 import { createBannerBlocksArticle } from "./features/banners"
 import { createCodeBlocksArticle } from "./features/code-blocks"
@@ -102,6 +103,7 @@ export const seed = async (
         ctx.writers = writers
         ctx.narrator = narrator
         validateWriters([writers[0]!, writers[1]!])
+        revalidatePath("/authors")
       },
     },
     {

@@ -13,11 +13,13 @@ export interface SeededUsers {
 type UserData = RequiredDataFromCollection<User> &
   Omit<Partial<User>, keyof RequiredDataFromCollection<User>>
 
+export type UserContext = Record<string, unknown> & { disableRevalidate: boolean }
+
 export async function createUser(
   payload: Payload,
   data: UserData,
   label: string,
-  context?: Record<string, unknown>,
+  context: UserContext = { disableRevalidate: false },
 ): Promise<User> {
   try {
     return await payload.create({ collection: "users", data, context })
@@ -229,6 +231,7 @@ function generateWriterData(index: number, media: Media[]): UserData {
 }
 
 export const createUsers = async (payload: Payload, media: Media[]): Promise<SeededUsers> => {
+  const context: UserContext = { disableRevalidate: true }
   const admin = await createUser(
     payload,
     {
@@ -240,6 +243,7 @@ export const createUsers = async (payload: Payload, media: Media[]): Promise<See
       profileImage: media[0]?.id,
     },
     "admin",
+    context,
   )
 
   const chiefEditor = await createUser(
@@ -253,6 +257,7 @@ export const createUsers = async (payload: Payload, media: Media[]): Promise<See
       profileImage: media[1]?.id,
     },
     "chiefEditor",
+    context,
   )
 
   const editor = await createUser(
@@ -266,12 +271,15 @@ export const createUsers = async (payload: Payload, media: Media[]): Promise<See
       profileImage: media[2]?.id,
     },
     "editor",
+    context,
   )
 
   const writers: User[] = []
   for (let i = 0; i < WRITER_DATA.length; i++) {
     const writerData = generateWriterData(i, media)
-    const writer = await createUser(payload, writerData, `writer${i + 1}`)
+    const writer = await createUser(payload, writerData, `writer${i + 1}`, {
+      disableRevalidate: true,
+    })
     writers.push(writer)
   }
 
@@ -290,6 +298,7 @@ export const createUsers = async (payload: Payload, media: Media[]): Promise<See
       profileImage: media[2]?.id,
     },
     "narrator",
+    context,
   )
 
   return {

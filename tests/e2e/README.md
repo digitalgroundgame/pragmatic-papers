@@ -49,7 +49,7 @@ locally first with `pnpm test:e2e:update-snapshots -- --update-snapshots=missing
 ## Generating/updating baselines locally (Docker)
 
 `pnpm test:e2e:update-snapshots` runs the suite inside the same
-`mcr.microsoft.com/playwright:v1.60.0-noble` image CI uses (pinned to the
+`mcr.microsoft.com/playwright:v1.63.0-noble` image CI uses (pinned to the
 exact `@playwright/test` version resolved in `pnpm-lock.yaml`), so the
 rendered baselines have the same fonts/antialiasing as CI instead of your
 host OS's. Requires Docker with a running daemon (Docker Desktop on

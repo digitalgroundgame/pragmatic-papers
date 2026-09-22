@@ -1,6 +1,6 @@
 import { PostgreSqlContainer } from "@testcontainers/postgresql"
 import { execSync, spawn } from "node:child_process"
-import { appendFileSync } from "node:fs"
+import { appendFileSync, rmSync } from "node:fs"
 import net from "node:net"
 import { blue, green, red } from "./ansi.mjs"
 
@@ -54,6 +54,16 @@ const useProdServer = !!process.env.E2E_PROD_SERVER
 
 let server = null
 try {
+  // .next/cache/fetch-cache persists across runs (it's on the bind-mounted
+  // repo, not inside the ephemeral test DB or container). unstable_cache
+  // entries from an unrelated earlier build — e.g. a local `pnpm dev` session
+  // seeded with a different merch catalogue — outlive that DB and get served
+  // against this run's freshly-seeded data, since Next's incremental build
+  // doesn't know the database underneath it changed. Wipe it so every E2E
+  // build is hermetic.
+  console.warn(`${blue("●")} Clearing .next build cache...`)
+  rmSync(".next", { recursive: true, force: true })
+
   console.warn(`${blue("●")} Running database migrations...`)
   execSync("pnpm payload migrate", {
     env: process.env,

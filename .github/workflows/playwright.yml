@@ -69,7 +69,7 @@ jobs:
     # setup-project action and the image's bundled Node, same as it always
     # was; screenshot pixels don't depend on the Node patch version.
     container:
-      image: mcr.microsoft.com/playwright:v1.60.0-noble
+      image: mcr.microsoft.com/playwright:v1.63.0-noble
 
     permissions:
       contents: write

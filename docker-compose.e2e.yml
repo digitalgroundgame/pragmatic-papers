@@ -32,7 +32,7 @@ services:
     # Keep in sync with the `@playwright/test` version resolved in
     # pnpm-lock.yaml and the `container:` image in
     # .github/workflows/playwright.yml / update-snapshots.yml.
-    image: mcr.microsoft.com/playwright:v1.60.0-noble
+    image: mcr.microsoft.com/playwright:v1.63.0-noble
     # Chromium can run out of shared memory in Docker's default IPC
     # namespace; Playwright's Docker docs recommend host IPC.
     ipc: host

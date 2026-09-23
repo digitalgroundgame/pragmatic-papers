@@ -134,8 +134,7 @@
     "vitest": "^5.0.1"
   },
   "optionalDependencies": {
-    "@digitalgroundgame/fonts": "1.2.0",
-    "@rolldown/binding-win32-x64-msvc": "^1.0.1"
+    "@digitalgroundgame/fonts": "1.2.0"
   },
   "packageManager": "pnpm@10.33.0",
   "engines": {

@@ -263,9 +263,6 @@ importers:
       '@digitalgroundgame/fonts':
         specifier: 1.2.0
         version: 1.2.0
-      '@rolldown/binding-win32-x64-msvc':
-        specifier: ^1.0.1
-        version: 1.0.1
 
 packages:
 
@@ -2244,12 +2241,6 @@ packages:
     resolution: {integrity: sha512-QXW+ZWaiqs2c7Fi++D/SsW07LTPcUrncxcskJGfGNBoaLik1IU6fJymz4HsqwEO0u5Iq11yTO0B/mc4cPk7jrQ==}
     engines: {node: ^20.19.0 || >=22.12.0}
     cpu: [arm64]
-    os: [win32]
-
-  '@rolldown/binding-win32-x64-msvc@1.0.1':
-    resolution: {integrity: sha512-INAycaWuhlOK3wk4mRHGsdgwYWmd9cChdPdE9bwWmy6rn9VqVNYNFGhOdXrofXUxwHIncSiPNb8tNm8knDVIeQ==}
-    engines: {node: ^20.19.0 || >=22.12.0}
-    cpu: [x64]
     os: [win32]
 
   '@rolldown/binding-win32-x64-msvc@1.2.10':
@@ -9849,9 +9840,6 @@ snapshots:
     optional: true
 
   '@rolldown/binding-win32-arm64-msvc@1.2.10':
-    optional: true
-
-  '@rolldown/binding-win32-x64-msvc@1.0.1':
     optional: true
 
   '@rolldown/binding-win32-x64-msvc@1.2.10':

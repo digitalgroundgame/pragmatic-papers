@@ -107,6 +107,7 @@ const eslintConfig = [
       ".next/**",
       "out/**",
       "coverage/**",
+      ".claude/worktrees/**",
       "**/next-env.d.ts",
       "src/migrations/**",
       "src/payload-types.ts",

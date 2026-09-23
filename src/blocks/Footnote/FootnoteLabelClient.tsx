@@ -4,7 +4,7 @@ import type { FootnoteBlock, FootnotesField } from "@/payload-types"
 import { useDocumentInfo } from "@payloadcms/ui"
 import React from "react"
 
-import { truncate } from "./utils"
+import { getFootnotes, truncate } from "./utils"
 
 const PREVIEW_LIMIT = 20
 
@@ -44,7 +44,7 @@ const resolveIndex = (
 export const FootnoteLabelClient: React.FC<FootnoteLabelClientProps> = ({ siblingData }) => {
   const { note, sourceId, index } = siblingData ?? {}
   const { data } = useDocumentInfo()
-  const footnotes = (data?.footnotes as FootnotesField) ?? []
+  const footnotes = getFootnotes(data)
   const currentIndex = resolveIndex(footnotes, { sourceId, note, index })
 
   if (!note) return <span>Footnote</span>

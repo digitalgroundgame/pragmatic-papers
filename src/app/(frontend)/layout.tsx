@@ -2,6 +2,7 @@ import { AdminBar } from "@/components/AdminBar"
 import { Breadcrumbs } from "@/components/Breadcrumbs"
 import { Footer } from "@/Footer/Component"
 import { Header } from "@/Header/Component"
+import { NotificationProvider } from "@/providers/NotificationProvider"
 import { getServerSideURL } from "@/utilities/getURL"
 import { mergeOpenGraph } from "@/utilities/mergeOpenGraph"
 import { cn } from "@/utilities/utils"
@@ -53,13 +54,15 @@ export default async function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <AdminBar />
-          <Header />
-          <main role="main" className="flex-1">
-            <Breadcrumbs />
-            {children}
-          </main>
-          <Footer />
+          <NotificationProvider>
+            <AdminBar />
+            <Header />
+            <main role="main" className="flex-1">
+              <Breadcrumbs />
+              {children}
+            </main>
+            <Footer />
+          </NotificationProvider>
         </ThemeProvider>
       </body>
       <GoogleAnalytics gaId={process.env.NEXT_PUBLIC_GOOGLE_ANALYTICS_ID} />

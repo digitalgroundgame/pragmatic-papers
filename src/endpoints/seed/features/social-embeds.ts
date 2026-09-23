@@ -164,11 +164,7 @@ const getLegacyBlockType = (platform: string): LegacySocialBlockType => {
 }
 
 type LegacySocialBlockType =
-  | "twitterEmbed"
-  | "youtubeEmbed"
-  | "redditEmbed"
-  | "blueSkyEmbed"
-  | "tiktokEmbed"
+  "twitterEmbed" | "youtubeEmbed" | "redditEmbed" | "blueSkyEmbed" | "tiktokEmbed"
 
 interface LegacyEmbedBlockNode {
   type: "block"

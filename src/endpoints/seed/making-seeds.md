@@ -182,16 +182,12 @@ export const createMyFeatureArticle = async (
   // Build content programmatically
   const content = createRichText([
     createParagraph("Introduction paragraph"),
-    createMyCustomBlock({
-      /* data */
-    }),
+    createMyCustomBlock({/* data */}),
     createParagraph([
       createTextNode("Text with "),
       {
         type: "inlineBlock",
-        fields: {
-          /* inline block data */
-        },
+        fields: {/* inline block data */},
       },
       createTextNode(" more text"),
     ]),

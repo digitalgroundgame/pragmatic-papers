@@ -133,7 +133,7 @@
     "tailwindcss": "^4.3.3",
     "testcontainers": "^12.1.0",
     "tsx": "^4.23.15",
-    "typescript": "^5.9.3",
+    "typescript": "^6.0.3",
     "typescript-eslint": "^8.70.1",
     "vitest": "^4.1.7"
   },

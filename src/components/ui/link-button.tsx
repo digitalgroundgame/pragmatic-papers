@@ -14,7 +14,7 @@ const LinkButton: React.FC<LinkButtonProps> = ({
   ...props
 }) => {
   return (
-    <a className={cn(buttonVariants({ variant, size, className }))} {...props}>
+    <a data-slot="button" className={cn(buttonVariants({ variant, size, className }))} {...props}>
       {children}
     </a>
   )

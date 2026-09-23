@@ -136,14 +136,19 @@ jobs:
 
       # Restores Next.js incremental compilation cache so `next build` inside
       # the E2E run only recompiles what changed since the last run on this
-      # branch (or dev).
+      # exact source tree. No `restore-keys` fallback: a partial (prefix) match
+      # restores whatever `.next/cache` a DIFFERENT source tree last saved under
+      # the same lockfile hash, and Next's incremental build doesn't reliably
+      # notice that a plain data import (e.g. a fixture JSON bundled into the
+      # seed) changed underneath it — it can silently keep serving output baked
+      # from that other tree instead of rebuilding. An exact-key-only cache
+      # still speeds up a re-run of unchanged source; anything that actually
+      # changed gets a real (if slower) clean build instead of a wrong one.
       - name: Cache Next.js build cache
         uses: actions/cache@v6
         with:
           path: .next/cache
-          key: nextjs-${{ hashFiles('pnpm-lock.yaml') }}-${{ hashFiles('src/**/*.[jt]s', 'src/**/*.[jt]sx', '*.[jt]s', '*.[jt]sx') }}
-          restore-keys: |
-            nextjs-${{ hashFiles('pnpm-lock.yaml') }}-
+          key: nextjs-${{ hashFiles('pnpm-lock.yaml') }}-${{ hashFiles('src/**/*.[jt]s', 'src/**/*.[jt]sx', 'src/**/*.json', '*.[jt]s', '*.[jt]sx') }}
 
       # Only fills in baselines for tests that don't have one yet. Any test
       # with an existing baseline is still compared strictly and fails the

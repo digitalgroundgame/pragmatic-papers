@@ -1,0 +1,258 @@
+/* What the drilldown engine paints that no component can.
+ *
+ * The stage builds its layers, its cloned outlines, its hover overlay and its seat blocks with
+ * `createElementNS` — there is no JSX to hang a class on, so their painting lives here. Layout
+ * a component owns (the stage's height, the rail's cap, the focus ring, a bench node's
+ * transition) belongs on that component and has moved there.
+ *
+ * The `--map-*` palette these rules read is a site theme token (globals.css), not the engine's
+ * own: the choropleth block reads the same scale. */
+:root {
+  --drilldown-parent-fill: color-mix(in oklch, var(--muted-foreground) 22%, var(--background));
+  --drilldown-parent-outline: color-mix(in oklch, var(--muted-foreground) 70%, var(--background));
+  --drilldown-child-stroke: var(--background);
+  /* One knob for every region border, so the hover overlay (2, matching the choropleth
+     block) always reads heavier than the borders it sits on top of. */
+  --drilldown-outline-width: 1.25;
+  /* Selection is a state, not a value: the same neutral the choropleth paints a region with
+     no data, so a selected region never reads as a red/blue result. */
+  --drilldown-selected-fill: var(--map-neutral, oklch(0.9528 0.0086 84.57));
+  --drilldown-hover-stroke: var(--foreground);
+}
+
+/* Parents are the primary layer: uniform fill, no stroke of their own. */
+[data-drilldown-overview] path[data-role="parent"],
+[data-drilldown-local] path[data-role="parent"],
+[data-drilldown-morph] path[data-role="parent"] {
+  fill: var(--drilldown-parent-fill);
+  stroke: none;
+}
+
+/* Children: transparent (not none) so the area stays hittable in the child view; thin
+   borders that cut the parent fill up. */
+[data-drilldown-overview] path[data-role="child"],
+[data-drilldown-local] path[data-role="child"],
+[data-drilldown-morph] path[data-role="child"] {
+  fill: transparent;
+  stroke: var(--drilldown-child-stroke);
+  stroke-width: 0.7;
+  vector-effect: non-scaling-stroke;
+}
+
+/* An inset is its parent's only presence in that spot, so it takes the parent fill + outline. */
+[data-drilldown-overview] path[data-role="child"][data-inset="true"],
+[data-drilldown-local] path[data-role="child"][data-inset="true"],
+[data-drilldown-morph] path[data-role="child"][data-inset="true"] {
+  fill: var(--drilldown-parent-fill);
+  stroke: var(--drilldown-parent-outline);
+  stroke-width: var(--drilldown-outline-width);
+}
+
+/* Stroke-only clones of each parent outline, painted above the child borders. */
+[data-drilldown-overview] path[data-role="outline"],
+[data-drilldown-local] path[data-role="outline"],
+[data-drilldown-morph] path[data-role="outline"] {
+  fill: none;
+  stroke: var(--drilldown-parent-outline);
+  stroke-width: var(--drilldown-outline-width);
+  vector-effect: non-scaling-stroke;
+  pointer-events: none;
+}
+
+[data-drilldown-overview] path[data-role="decorative"],
+[data-drilldown-local] path[data-role="decorative"],
+[data-drilldown-morph] path[data-role="decorative"] {
+  fill: none;
+  stroke: var(--drilldown-parent-outline);
+  vector-effect: non-scaling-stroke;
+  pointer-events: none;
+}
+
+/* Overview: mainland children are visual only — hover and click fall through to the parent
+   fill underneath. Insets stay hittable because they stand in for their parent. */
+[data-drilldown-overview] path[data-role="child"]:not([data-inset="true"]) {
+  pointer-events: none;
+}
+/* Child view: the parent outline is not selectable — pick a child, or use the selector. */
+[data-drilldown-local] path[data-role="parent"] {
+  pointer-events: none;
+}
+
+[data-drilldown-overview] path[tabindex],
+[data-drilldown-local] path[tabindex] {
+  cursor: pointer;
+  outline: none;
+}
+
+/* The stage is a control, not a page of text: a drag chooses a region or pans the map, and
+   should never leave a reader with the seat-block labels highlighted instead. Scoped to the
+   viewport, which is also where the control bar sits, rather than to the page as a whole. */
+[data-drilldown-viewport] {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* Once the map is larger than its frame it can be dragged around inside it, and says so. The
+   grab cursor is on the viewport rather than on the paths, so the sea between the regions
+   drags too — it is as much of the map as the land is. */
+[data-drilldown-viewport][data-zoomed] {
+  cursor: grab;
+}
+[data-drilldown-viewport][data-panning],
+[data-drilldown-viewport][data-panning] path[tabindex] {
+  cursor: grabbing;
+}
+
+/* Full screen. The browser promotes this element and paints black behind it, which is nobody's
+   design — so it takes the page's own ground, and the stage height stops being a clamp against
+   a page it is no longer on and becomes what is left of the screen once the trail is drawn. */
+[data-drilldown-map]:fullscreen {
+  background: var(--background);
+  justify-content: center;
+  padding: 0.75rem;
+  --drilldown-stage-h: calc(100vh - 5rem);
+}
+
+/* Layer stack: every layer fills the viewport the component sizes, and letterboxes its own
+   map inside it. Every rule from here down paints something the stage builds by hand — the
+   layers, the paths cloned into them, the seat blocks — which is why they are here and not on
+   a component: there is no component to put them on. */
+[data-drilldown-layer] {
+  position: absolute;
+  inset: 0;
+  transition:
+    opacity 420ms ease,
+    transform 420ms ease;
+}
+[data-drilldown-layer] > svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+/* An idle layer must be display:none, not merely transparent: an opacity:0 map still
+   rasterises on every frame. */
+[data-drilldown-layer][data-state="hidden"],
+[data-drilldown-layer][data-state="hidden-hard"] {
+  display: none;
+}
+[data-drilldown-layer][data-state="fading"] {
+  opacity: 0;
+}
+[data-drilldown-layer][data-state="fade-in"],
+[data-drilldown-layer][data-state="visible"] {
+  opacity: 1;
+}
+[data-drilldown-layer][data-state="fade-out"] {
+  opacity: 0;
+  transform: scale(1.25);
+  pointer-events: none;
+}
+[data-drilldown-layer][data-no-transition] {
+  transition: none !important;
+}
+/* Morph layer: shown only while interpolating. The fade groups' opacity is written from JS
+   each frame, never transitioned. Seat-block labels must not render inside it — text
+   rasterisation during viewBox interpolation is a second, separate compositor freeze. */
+[data-drilldown-layer="morph"] {
+  transition: none;
+  pointer-events: none;
+}
+[data-drilldown-morph] text {
+  display: none;
+}
+
+/* Hover outline: top of the paint order inside the flip group, follows the target region.
+   Weight, colour and the 80ms fade match the choropleth block's overlay (Region.tsx), so the
+   two maps highlight a region the same way. */
+path[data-drilldown-overlay] {
+  fill: none;
+  stroke: var(--drilldown-hover-stroke);
+  stroke-width: 2;
+  vector-effect: non-scaling-stroke;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 80ms ease;
+}
+path[data-drilldown-overlay][data-visible] {
+  opacity: 1;
+}
+/* Islands smaller than the stroke that would outline them. Filled, they read as this region
+   highlighting; outlined, a 2px line closes over five pixels of Virgin Islands and they go
+   solid black, which reads as a blot. */
+path[data-drilldown-overlay="tiny"] {
+  fill: var(--drilldown-hover-stroke);
+  stroke: none;
+}
+/* The selected region keeps the mark a hovered one gets, so it stays findable once the
+   pointer has moved on — the neutral fill alone is too quiet among the greys. */
+path[data-drilldown-overlay="selected"] {
+  stroke-dasharray: none;
+}
+[data-drilldown-shapes] path[data-selected] {
+  fill: var(--drilldown-selected-fill) !important;
+}
+
+/* Seat blocks: one square per seat. Position is in map units (glued to the region), size is
+   constant on screen. Hover/selected growth is written per frame from JS — see stage.ts. */
+[data-drilldown-blocks] {
+  pointer-events: none;
+}
+/* What a court with no territory stands on, so its bench reads as a place on the map rather
+   than a caption floating beside one. The regions' own fill and edge, not the neutral the
+   selection uses: a court standing on the map should be the colour of the map, or it reads as
+   a court that is already selected. */
+rect[data-block-plinth] {
+  fill: var(--drilldown-parent-fill);
+  stroke: var(--drilldown-border, var(--foreground));
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+  opacity: 0.55;
+  pointer-events: none;
+}
+[data-drilldown-block][data-hover] rect[data-block-plinth],
+[data-drilldown-block][data-selected] rect[data-block-plinth] {
+  opacity: 1;
+}
+rect[data-block-hit] {
+  fill: transparent;
+  pointer-events: all;
+  cursor: pointer;
+}
+rect[data-block-seat] {
+  stroke: rgba(255, 255, 255, 0.85);
+  stroke-width: 0.6;
+  vector-effect: non-scaling-stroke;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+rect[data-block-seat="vacant"] {
+  fill: var(--background);
+  stroke: var(--foreground);
+  stroke-width: 0.8;
+}
+[data-drilldown-block][data-hover] rect[data-block-seat],
+[data-drilldown-block][data-selected] rect[data-block-seat] {
+  stroke: var(--foreground);
+  stroke-width: 0.9;
+}
+text[data-block-label] {
+  font-family: var(--font-sans, system-ui, sans-serif);
+  font-weight: 600;
+  fill: var(--foreground);
+  paint-order: stroke;
+  stroke: var(--background);
+  stroke-width: 2px;
+  stroke-linejoin: round;
+}
+
+/* Compact map (a narrow viewport): seat blocks lose their labels and shrink — the R/D balance
+   still reads at a glance and the blocks stop colliding. Set by stage.ts per layer. */
+[data-drilldown-compact] text[data-block-label] {
+  display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-drilldown-layer] {
+    transition: none;
+  }
+}

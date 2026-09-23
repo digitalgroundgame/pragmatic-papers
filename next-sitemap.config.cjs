@@ -8,10 +8,12 @@ module.exports = {
     "/articles-sitemap.xml",
     "/pages-sitemap.xml",
     "/volumes-sitemap.xml",
+    "/interactives-sitemap.xml",
     "/*",
     "/volumes/*",
     "/articles/*",
     "/authors/*",
+    "/interactives/*",
   ],
   robotsTxtOptions: {
     policies: [
@@ -24,6 +26,7 @@ module.exports = {
       `${SITE_URL}/pages-sitemap.xml`,
       `${SITE_URL}/articles-sitemap.xml`,
       `${SITE_URL}/volumes-sitemap.xml`,
+      `${SITE_URL}/interactives-sitemap.xml`,
     ],
   },
 }

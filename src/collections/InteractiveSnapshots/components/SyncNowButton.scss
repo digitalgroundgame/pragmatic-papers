@@ -1,0 +1,16 @@
+// Same approach as `collections/Merch/components/SyncNowButton.scss`: the admin panel loads
+// Payload's stylesheet, not the frontend's, so Tailwind's `animate-spin` isn't available.
+@keyframes interactiveSyncSpinner {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.interactiveSyncSpinner {
+  animation: interactiveSyncSpinner 1s linear infinite;
+  transform-origin: center;
+  flex-shrink: 0;
+}

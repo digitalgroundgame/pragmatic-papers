@@ -7,6 +7,7 @@ import { createCodeBlocksArticle } from "./features/code-blocks"
 import { createCollectionGridHomePage } from "./features/collection-grid"
 import { createFootnotesArticle } from "./features/footnotes"
 import { createMoCongressionalMapsArticle } from "./features/interactive-maps"
+import { createFederalCourtsInteractive } from "./features/interactives"
 import { createMathBlocksArticle } from "./features/math-blocks"
 import { createMediaCollageArticle } from "./features/media-collage"
 import { createNarrationDemoArticle } from "./features/narration-demo"
@@ -289,6 +290,14 @@ export const seed = async (
             ctx.topics[0]!,
           ]),
         )
+      },
+    },
+    {
+      // The Federal Courts drilldown is an interactive page, not an article: its data is
+      // synced from the tracker and versioned, so it outlives any one piece of writing.
+      name: "Creating interactives...",
+      fn: async () => {
+        await createFederalCourtsInteractive(payload)
       },
     },
     {

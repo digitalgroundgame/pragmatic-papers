@@ -7,16 +7,21 @@ import { Logo } from "@/components/Logo"
 import { cn } from "@/utilities/utils"
 import { Info, type Data } from "./Info"
 
-type SourcesProps = Pick<InteractiveMapBlockProps, "colorBias" | "sources"> & { className?: string }
+type SourcesProps = Pick<InteractiveMapBlockProps, "colorBias" | "sources"> & {
+  /** Extra lines for the info popup, from whichever map this footer is under. */
+  notes?: readonly Data[]
+  className?: string
+}
 
-export function Sources({ sources, colorBias, className }: SourcesProps): React.ReactNode {
+export function Sources({ sources, colorBias, notes, className }: SourcesProps): React.ReactNode {
   const data: Data[] = []
   if (colorBias != null) data.push({ label: "Bias", value: colorBias })
+  if (notes) data.push(...notes)
 
   return (
     <div className={cn("flex flex-wrap items-center gap-x-2 gap-y-1", className)}>
       {sources && sources.length > 0 && (
-        <p className="text-muted-foreground text-xs">
+        <p className="text-muted-foreground mr-auto text-xs">
           Source{sources.length > 1 ? "s" : ""}:{" "}
           {sources.map(({ id, link }, i) => (
             <React.Fragment key={id || i}>

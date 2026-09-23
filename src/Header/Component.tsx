@@ -13,6 +13,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet"
+import { HeaderLogo } from "@/Header/chrome"
 import { HeaderActions } from "@/Header/HeaderActions/Component"
 import { SearchForm } from "@/Header/SearchForm/Component"
 import type { Footer, Header } from "@/payload-types"
@@ -68,7 +69,7 @@ export async function Header(): Promise<React.JSX.Element> {
               aria-label="Link to Home"
               className="inline-flex items-center justify-center"
             >
-              <Logo />
+              <HeaderLogo />
             </a>
             <div className="flex items-center justify-end gap-2">
               <HeaderActions actions={actions} className="hidden lg:flex" />

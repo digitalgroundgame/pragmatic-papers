@@ -10,28 +10,15 @@ const mockPayload = {
   logger: { warn: mockWarn },
 } as never
 
-const userData = {
-  email: "test@example.com",
-  password: "password123",
-  name: "Test User",
-  roles: ["writer" as const],
-  slug: "test-user",
-  affiliation: "Test Institute",
-}
-
-const mockUser = { id: 1, ...userData }
-
 describe("createUsers", () => {
-  it("checks if disableRevalidate is true for every createUser call", async () => {
-    mockCreate.mockResolvedValueOnce(mockUser)
-    await createUsers(mockPayload, [])
+  it("disables per-user revalidation on every create", async () => {
+    mockCreate.mockImplementation(async ({ data }) => ({ id: 1, ...data }))
 
-    expect(mockCreate).toHaveBeenCalled()
-    for (const call of mockCreate.mock.calls) {
-      const options = call[0]
-      expect(options).toEqual(
-        expect.objectContaining({ context: expect.objectContaining({ disableRevalidate: true }) }),
-      )
+    const { writers } = await createUsers(mockPayload, [])
+
+    expect(mockCreate).toHaveBeenCalledTimes(writers.length + 4)
+    for (const [options] of mockCreate.mock.calls) {
+      expect(options).toEqual(expect.objectContaining({ context: { disableRevalidate: true } }))
     }
   })
 })

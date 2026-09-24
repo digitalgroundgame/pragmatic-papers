@@ -6,7 +6,6 @@
     "editor.formatOnSave": true,
     "editor.codeActionsOnSave": {
       "source.fixAll.eslint": "explicit"
-      // "source.organizeImports": "always"
     }
   },
   "[typescriptreact]": {
@@ -14,7 +13,6 @@
     "editor.formatOnSave": true,
     "editor.codeActionsOnSave": {
       "source.fixAll.eslint": "explicit"
-      // "source.organizeImports": "always"
     }
   },
   "[javascript]": {
@@ -33,7 +31,7 @@
     "editor.formatOnSave": true
   },
   "editor.formatOnSaveMode": "file",
-  "js/ts.tsdk.path": "node_modules/typescript/lib",
+  "typescript.tsdk": "node_modules/typescript/lib",
   "[javascript][typescript][typescriptreact]": {
     "editor.codeActionsOnSave": {
       "source.fixAll.eslint": "explicit"

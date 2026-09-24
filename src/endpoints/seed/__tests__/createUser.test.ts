@@ -68,7 +68,7 @@ describe("createUser", () => {
         roles: userData.roles,
         slug: userData.slug,
       },
-      context: defaultContext,
+      context: undefined,
     })
     expect(result).toBe(minimalUser)
   })

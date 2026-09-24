@@ -36,7 +36,7 @@ describe("createUser", () => {
     expect(mockCreate).toHaveBeenCalledWith({
       collection: "users",
       data: userData,
-      context: defaultContext,
+      context: undefined,
     })
     expect(result).toBe(mockUser)
   })

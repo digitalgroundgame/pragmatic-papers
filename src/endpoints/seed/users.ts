@@ -13,7 +13,7 @@ export interface SeededUsers {
 type UserData = RequiredDataFromCollection<User> &
   Omit<Partial<User>, keyof RequiredDataFromCollection<User>>
 
-export type UserContext = Record<string, unknown> & { disableRevalidate: boolean }
+export type UserContext = Record<string, unknown> & { disableRevalidate?: boolean }
 
 export async function createUser(
   payload: Payload,

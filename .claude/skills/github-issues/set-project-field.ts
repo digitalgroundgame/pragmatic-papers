@@ -13,7 +13,8 @@
  * One GraphQL query resolves the project, the issue's board item, and every
  * field with its options by name, so a renamed option or recreated field can't
  * leave a stale ID behind. Adds the issue to the board first if it isn't on it.
- * Needs the `project` token scope.
+ * Needs the `project` token scope. `.github/workflows/project-fields.yml`
+ * resolves by name the same way for remote sessions; change both together.
  */
 import { execFileSync } from "node:child_process"
 import { pathToFileURL } from "node:url"

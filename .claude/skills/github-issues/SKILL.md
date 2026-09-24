@@ -184,9 +184,12 @@ prefix doesn't provide it):
 gh auth refresh -h github.com -s project
 ```
 
-In web/remote sessions without `gh`, use the GitHub MCP server's project tools
-if the session has them, with the same field and option names; otherwise note
-the intended values in the issue body for a maintainer to apply.
+In web/remote sessions (where the GitHub proxy blocks GraphQL, so neither `gh
+project` nor this helper works), dispatch `.github/workflows/project-fields.yml`
+via the GitHub MCP `run_workflow` tool with inputs `issue`, `field` and `value`,
+using the same field and option names as above. It runs `gh project item-edit`
+on an Actions runner with the repo's project credentials. It has no `--clear`;
+omit `field` and `value` to only add the issue to the board.
 
 ## Closing issues
 

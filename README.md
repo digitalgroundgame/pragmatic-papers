@@ -83,6 +83,14 @@ In order to see some basic content and website functionality it is key to seed y
 3. When you land on the dashboard click the `Seed your database` link.
 4. Wait a few moments and now your website will have some example content when returning to browsing `http://localhost:8000`
 
+Or seed from the terminal, without the browser, while `pnpm dev` is stopped:
+
+```bash
+pnpm dev:db-seed
+```
+
+It seeds the same content as the button, and works on an empty database too (e.g. right after `pnpm dev:db-nuke`).
+
 > [!TIP]
 > If your docker database ever gets into a unrecoverable state, or you are switch branches that have different database schemas, be sure to run `pnpm dev:db-nuke` to blow away your database and start fresh.
 
@@ -94,6 +102,7 @@ Here are the most important scripts available in the root `package.json`:
 
 - `pnpm dev`: Start the application in development mode.
 - `pnpm dev:db-nuke`: Drop the database schema and re-run migrations (equivalent to a fresh database).
+- `pnpm dev:db-seed`: Seed the development database with mock content from the terminal (stop `pnpm dev` first).
 - `pnpm lint`: Lint files with `eslint`.
 - `pnpm format`: Format files with `prettier`.
 - `pnpm check-types`: Runs typescript compiler in no emit mode to check for type errors.

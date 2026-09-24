@@ -11,9 +11,14 @@ export async function main(): Promise<void> {
   const payload = await getPayload({ config })
 
   try {
-    await seed(payload, (message, step, total) => {
-      console.warn(`[${step}/${total}] ${message}`)
-    })
+    // revalidatePath/revalidateTag throw outside a Next.js request.
+    await seed(
+      payload,
+      (message, step, total) => {
+        console.warn(`[${step}/${total}] ${message}`)
+      },
+      { disableRevalidate: true },
+    )
     console.warn("✔ Dev seed complete")
   } finally {
     await payload.db.destroy?.()

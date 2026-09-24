@@ -24,10 +24,12 @@ beforeEach(() => {
 })
 
 describe("seed-dev main()", () => {
-  it("calls seed() with the payload instance and a progress callback", async () => {
+  it("seeds with revalidation disabled, since there is no Next.js request to revalidate", async () => {
     await main()
 
-    expect(mockSeed).toHaveBeenCalledWith(mockPayload, expect.any(Function))
+    expect(mockSeed).toHaveBeenCalledWith(mockPayload, expect.any(Function), {
+      disableRevalidate: true,
+    })
   })
 
   it("throws and does not seed when NODE_ENV is production", async () => {

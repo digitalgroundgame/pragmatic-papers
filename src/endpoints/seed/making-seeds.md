@@ -348,10 +348,11 @@ async function createUser(
     payload.logger.warn(
       `Failed to create ${label} with full data, retrying with minimal fields. Error: ${err instanceof Error ? err.message : String(err)}`,
     )
-    const { email, password, name, role, slug } = data
+    const { email, password, name, roles, slug } = data
     return await payload.create({
       collection: "users",
-      data: { email, password, name, role, slug },
+      data: { email, password, name, roles, slug },
+      context,
     })
   }
 }

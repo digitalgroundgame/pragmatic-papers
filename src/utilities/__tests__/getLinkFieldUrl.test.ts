@@ -32,6 +32,10 @@ describe("getLinkFieldUrl", () => {
       )
     })
 
+    it("keeps the collection prefix for a non-page slugged home", () => {
+      expect(getLinkFieldUrl(reference("articles", { id: 1, slug: "home" }))).toBe("/articles/home")
+    })
+
     it("falls back to the url when the reference is not populated", () => {
       expect(getLinkFieldUrl(reference("pages", 1, "/fallback"))).toBe("/fallback")
       expect(getLinkFieldUrl(reference("pages", 1))).toBeNull()

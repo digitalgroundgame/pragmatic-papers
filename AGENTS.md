@@ -13,6 +13,7 @@ This file provides guidance to tools like Claude Code (claude.ai/code) when work
 - `pnpm dev` — starts everything in Docker Compose (Postgres + Next.js dev server on port 8000)
 - `pnpm dev:db-nuke` — stop Postgres and delete its volume (`docker compose down -v`), wiping the entire data directory. Use this after a Postgres major-version bump or whenever the local data is corrupt; the next `pnpm dev` recreates a fresh cluster and Drizzle push re-syncs the schema
 - `pnpm dev:db-fresh` — bring Postgres up and rebuild the schema by re-running all migrations from scratch (`payload migrate:fresh`). Unlike `dev:db-nuke`, this keeps the volume and exercises the committed migration files (the same path prod uses), so it surfaces migration drift that Drizzle push masks in dev
+- `pnpm dev:db-seed` — bring Postgres up, seed it from the terminal, and stop it again. Runs the same `seed()` as the admin dashboard's "Seed your database" button, so it first deletes **every** article, volume, page, media file, topic, map asset, form and form submission (not just seeded ones), the seed users, and the recommendation rankings. Drizzle push builds the schema on an empty database, so it works straight after `dev:db-nuke`. It refuses to run unless `DATABASE_URI` points at localhost and `USE_LOCAL_STORAGE=true` (override with `SEED_ALLOW_REMOTE=true`), and exits 1 if you decline Drizzle's data-loss prompt. Stop `pnpm dev` first: this command stops the Postgres container it shares. If the header or footer still show old nav afterwards, delete `.next/dev/cache`
 
 ### Quality Checks
 
@@ -49,7 +50,7 @@ This file provides guidance to tools like Claude Code (claude.ai/code) when work
 - **`collections/`** — Payload collections: Articles, Pages, Users, Volumes, Media, Categories, Webhooks
 - **`blocks/`** — Content blocks used in Lexical rich text: Banner, Code, Content, Footnote, Math, MediaBlock, SocialEmbed, etc.
 - **`fields/`** — Custom Payload fields: colorPicker, menu, numberSlug, link, linkGroup, footnotes, button, defaultLexical. New fields should include `Field` in the name (e.g. `buttonField`, `linkGroupField`).
-- **`access/`** — Access control hooks (authenticatedOrPublished, editorOrSelf, writer)
+- **`access/`** — Access control: `roles.ts` (e.g., `admin`, `editor`, `writer`) and `policies.ts` (e.g., `isSelfOrAdmin`, `isCreatedByOrEditor`, `isPublishedOrStaff`, `isDraftOrEditor`)
 - **`app/(frontend)/`** — Public-facing Next.js pages using App Router
 - **`app/(payload)/`** — Payload admin panel routes
 - **`components/`** — Reusable React components for layouts, pagination, etc; `components/ui/` uses shadcn/ui;
@@ -123,9 +124,25 @@ This file provides guidance to tools like Claude Code (claude.ai/code) when work
 | ------------------------------ | ------------------------------------------------------------------------------------------ |
 | Pure utility functions         | Unit test in `src/**/__tests__/`                                                           |
 | UI/presentational components   | Snapshot test (see `src/components/ui/__tests__/button.snapshot.test.tsx` for the pattern) |
-| Client components with state   | RTL interaction test (`userEvent`, `fireEvent`)                                            |
+| Client components with state   | RTL interaction test (`fireEvent`; `user-event` is not installed — see #898)               |
 | Server components (async, CMS) | Integration test with mocked Payload queries                                               |
 | API routes / Payload hooks     | Integration test (Testcontainers, see `tests/integration/`)                                |
+
+**DOM assertions:** `@testing-library/jest-dom`'s matchers are registered globally in
+`vitest.setup.ts`. Assert with them rather than by hand — they name the element and print
+its markup when they fail, where a raw property read reports only `expected null to be "x"`:
+
+| Instead of                                  | Use                                                                                            |
+| ------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| `expect(getByRole(...)).toBeTruthy()`       | `.toBeInTheDocument()` (`getBy*` already throws when missing, so `toBeTruthy` asserts nothing) |
+| `expect(queryBy...).toBeNull()`             | `.not.toBeInTheDocument()`                                                                     |
+| `expect(el.getAttribute("href")).toBe(url)` | `expect(el).toHaveAttribute("href", url)`                                                      |
+| `expect(el.className).toContain("grid")`    | `expect(el).toHaveClass("grid")` (matches whole class tokens, not substrings)                  |
+| `expect(btn.disabled).toBe(true)`           | `expect(btn).toBeDisabled()`                                                                   |
+| `expect(container.firstChild).toBeNull()`   | `expect(container).toBeEmptyDOMElement()`                                                      |
+
+Partial attribute values go through an asymmetric matcher —
+`toHaveAttribute("rel", expect.stringContaining("noopener"))`.
 
 File-level exclusions are configured in `vitest.config.mts` `coverage.exclude` for auto-generated files (`src/migrations/**`, `src/payload-types.ts`, `src/app/(payload)/**`, `src/payload.config.ts`).
 
@@ -135,6 +152,40 @@ Coverage reporting is informational only — chore/docs PRs don't need special h
 
 - run linting and type-checks
 - run unit and integration tests as needed, _skip running e2e_.
+
+### Visual regression (screenshot) tests
+
+Adding, changing, or debugging a Playwright `toHaveScreenshot` test or a flaky
+visual diff? Use the **`e2e-visual-tests`** skill
+(`.claude/skills/e2e-visual-tests/SKILL.md`) for the checklist; full lifecycle
+in `tests/e2e/README.md`.
+
+### Interactive maps
+
+Building or debugging an Interactive Map block — preparing the pre-projected
+SVG, uploading a Map Asset, or chasing a map that renders blank, all-grey, or
+without tooltips? Use the **`interactive-maps`** skill
+(`.claude/skills/interactive-maps/SKILL.md`). It covers the SVG contract, the
+sanitizer allowlist that silently eats most exports, and the R+/D+ color
+scale, and ships a validator:
+`pnpm tsx .claude/skills/interactive-maps/validate-map-svg.ts <file.svg>`.
+The block draws **choropleths only** for now; further modes land on the same
+block behind a `mode` discriminator, starting with the Federal Courts map
+(#905), so the skill describes the choropleth mode specifically.
+
+## Filing & triaging GitHub issues
+
+Creating, editing, triaging, or labeling an issue — or adding/removing a
+label, or setting its board fields? Use the **`github-issues`** skill
+(`.claude/skills/github-issues/SKILL.md`). It covers applying an issue
+**type** (`Bug`/`Feature`/`Task`) as well as **labels** (`Bug` is a type, not
+a label), and the label taxonomy is version-controlled in
+`.github/labels.yml` — edit that file in a PR to change a label; a sync
+workflow applies it on push to `dev`. It also covers the **Project board
+fields** (`Priority`, `Size`, `Estimate`, `Status`) on the "Pragmatic Papers
+Development" board, set with
+`pnpm tsx .claude/skills/github-issues/set-project-field.ts <issue> <field> <value>`
+(needs the `project` token scope).
 
 ## Wiki
 
@@ -157,3 +208,13 @@ After adding a new page, update `Home.md` to add it to the Table of Contents und
 ```md
 [← Table of Contents](https://github.com/digitalgroundgame/pragmatic-papers/wiki#table-of-contents)
 ```
+
+<!-- BEGIN:nextjs-agent-rules -->
+
+# This is NOT the Next.js you know
+
+This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
+
+This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
+
+<!-- END:nextjs-agent-rules -->

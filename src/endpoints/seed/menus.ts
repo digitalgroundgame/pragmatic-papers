@@ -32,9 +32,11 @@ export const createMenus = async (
     termsOfUsePage,
     volumesPage,
   }: CreateMenusParams,
+  context?: Record<string, unknown>,
 ): Promise<void> => {
   await payload.updateGlobal({
     slug: "header",
+    context,
     data: {
       navItems: [
         {
@@ -93,10 +95,12 @@ export const createMenus = async (
 
   await payload.updateGlobal({
     slug: "footer",
+    context,
     data: {
       layout: [
         {
           blockType: "content",
+          width: "full",
           columns: [
             {
               size: "half",

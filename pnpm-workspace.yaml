@@ -2,8 +2,8 @@
 # Configuration settings for dependencies (overrides, allowBuilds) are managed here for pnpm 10+.
 
 overrides:
-  "@types/react": "19.2.14"
-  "@types/react-dom": "19.2.3"
+  "@types/react": "19.3.0"
+  "@types/react-dom": "19.3.0"
 
 allowBuilds:
   esbuild: true

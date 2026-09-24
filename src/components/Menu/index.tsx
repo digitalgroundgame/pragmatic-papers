@@ -1,8 +1,10 @@
 import { CMSLink } from "@/components/Link/CMSLink2"
 import type { MenuField } from "@/payload-types"
+import { getLinkFieldUrl } from "@/utilities/getLinkFieldUrl"
 import { cn } from "@/utilities/utils"
 import { type VariantProps, cva } from "class-variance-authority"
 import React from "react"
+import { MenuLink } from "./MenuLink"
 
 const menuVariants = cva("flex", {
   defaultVariants: {
@@ -59,6 +61,8 @@ export const Menu: React.FC<MenuProps> = ({ menu, className, layout, slot, ...pr
     <nav>
       <ul className={cn(menuVariants({ className, layout }))} {...props}>
         {menu.map(({ link, id }, index) => {
+          const url = getLinkFieldUrl(link)
+          if (!url) return null
           const isStacked = layout === "stacked"
           return (
             <li
@@ -66,13 +70,17 @@ export const Menu: React.FC<MenuProps> = ({ menu, className, layout, slot, ...pr
               className={cn(menuItemVariants({ layout }), slot && "[&>button]:w-full")}
             >
               <Slot>
-                <CMSLink
-                  link={link}
-                  className={cn(
-                    "block w-full text-left",
-                    isStacked &&
-                      "data-[active=true]:bg-muted px-4 py-3 data-[active=true]:font-semibold",
-                  )}
+                <MenuLink
+                  href={url}
+                  render={
+                    <CMSLink
+                      link={link}
+                      className={cn(
+                        "block w-full text-left",
+                        isStacked && "data-active:bg-muted px-4 py-3 data-active:font-semibold",
+                      )}
+                    />
+                  }
                 />
               </Slot>
             </li>

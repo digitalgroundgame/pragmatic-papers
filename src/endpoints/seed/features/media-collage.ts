@@ -58,6 +58,7 @@ export const createMediaCollageArticle = async (
   writer: User,
   mediaDocs: Media[],
   topics: number[] = [],
+  context?: Record<string, unknown>,
 ): Promise<number> => {
   // Create media with captions
   const [itsBadMedia, blueCoatMedia, wideMedia, portraitMedia, longCaptionMedia] =
@@ -172,20 +173,24 @@ export const createMediaCollageArticle = async (
 
   // Create the article
   const title = "Grids, Carousels, and Captions: Exploring Rich Media Layouts"
-  const article = await createArticle(payload, {
-    title,
-    content,
-    authors: [writer.id],
-    topics: topics,
-    slug: "grids-carousels-captions-exploring-rich-media-layouts",
-    heroImage: mediaDocs[Math.floor(Math.random() * mediaDocs.length)]?.id,
-    meta: {
+  const article = await createArticle(
+    payload,
+    {
       title,
-      description:
-        "Demonstration of the media collage feature with grid and carousel layouts, showing clickable images with captions.",
-      image: mediaDocs[0]?.id,
+      content,
+      authors: [writer.id],
+      topics: topics,
+      slug: "grids-carousels-captions-exploring-rich-media-layouts",
+      heroImage: mediaDocs[Math.floor(Math.random() * mediaDocs.length)]?.id,
+      meta: {
+        title,
+        description:
+          "Demonstration of the media collage feature with grid and carousel layouts, showing clickable images with captions.",
+        image: mediaDocs[0]?.id,
+      },
     },
-  })
+    context,
+  )
 
   return article.id
 }

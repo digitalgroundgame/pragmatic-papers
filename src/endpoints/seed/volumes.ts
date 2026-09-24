@@ -16,7 +16,11 @@ interface CreateVolumesResult {
 
 type VolumeData = RequiredDataFromCollectionSlug<"volumes">
 
-async function createOrUpdateVolume(payload: Payload, data: VolumeData): Promise<Volume> {
+async function createOrUpdateVolume(
+  payload: Payload,
+  data: VolumeData,
+  context?: Record<string, unknown>,
+): Promise<Volume> {
   const maxAttempts = 3
   let lastError: unknown
 
@@ -29,11 +33,12 @@ async function createOrUpdateVolume(payload: Payload, data: VolumeData): Promise
         const { title, volumeNumber, description, slug, _status, publishedAt } = data
         return await payload.create({
           collection: "volumes",
+          context,
           data: { title, volumeNumber, description, slug, _status, publishedAt },
         })
       }
 
-      return await payload.create({ collection: "volumes", data })
+      return await payload.create({ collection: "volumes", context, data })
     } catch (err) {
       lastError = err
       const message = err instanceof Error ? err.message : String(err)
@@ -53,7 +58,7 @@ async function createOrUpdateVolume(payload: Payload, data: VolumeData): Promise
           `Volume slug "${data.slug}" already exists (id: ${existingVolume.id}), updating instead of creating.`,
         )
 
-        return await payload.update({ collection: "volumes", id: existingVolume.id, data })
+        return await payload.update({ collection: "volumes", id: existingVolume.id, context, data })
       }
 
       if (isLastAttempt) {
@@ -78,26 +83,31 @@ export const createVolumes = async (
   payload: Payload,
   volumeConfigs: VolumeConfig[],
   mediaDocs: Media[],
+  context?: Record<string, unknown>,
 ): Promise<CreateVolumesResult> => {
   const volumes: Volume[] = []
 
   for (const config of volumeConfigs) {
     const mediaDoc = mediaDocs[config.volumeNumber % mediaDocs.length]
-    const volume = await createOrUpdateVolume(payload, {
-      title: config.title,
-      volumeNumber: config.volumeNumber,
-      description: config.description,
-      editorsNote: createRichTextFromString(config.editorsNoteContent),
-      articles: config.articleIds,
-      slug: config.volumeNumber.toString(),
-      _status: "published",
-      publishedAt: new Date().toISOString(),
-      meta: {
+    const volume = await createOrUpdateVolume(
+      payload,
+      {
         title: config.title,
+        volumeNumber: config.volumeNumber,
         description: config.description,
-        image: mediaDoc?.id ?? null,
+        editorsNote: createRichTextFromString(config.editorsNoteContent),
+        articles: config.articleIds,
+        slug: config.volumeNumber.toString(),
+        _status: "published",
+        publishedAt: new Date().toISOString(),
+        meta: {
+          title: config.title,
+          description: config.description,
+          image: mediaDoc?.id ?? null,
+        },
       },
-    })
+      context,
+    )
     volumes.push(volume)
   }
 

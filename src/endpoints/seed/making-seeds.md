@@ -67,22 +67,29 @@ interface CreateArticleOptions {
 - `validateWriters(writers)` - Throws if no writers provided
 - `getWriterOrThrow(writers, index)` - Gets writer by index with validation (wraps with modulo so index is always valid)
 
-### Block Helpers (defined locally in each feature file)
+### Block Helpers
 
-Block helpers are small factory functions defined at the top of each feature file — they are **not** shared exports. Copy the pattern into your own feature file:
+Block helpers are small factory functions that build one block node. **Check the
+list below before writing one** — a helper that already exists should be
+imported, not copied, so a block's shape only has to be fixed in one place.
 
-**Media block:**
+**Already shared — import these:**
 
-```typescript
-function createMediaBlock(mediaId: number) {
-  return {
-    type: "block",
-    fields: { blockType: "mediaBlock", media: mediaId },
-    format: "",
-    version: 2,
-  }
-}
-```
+| Helper                            | Import from     | Builds                                 |
+| --------------------------------- | --------------- | -------------------------------------- |
+| `createMediaBlockNode`            | `../richtext`   | a `mediaBlock` from a media id         |
+| `createNewsletterSignupBlockNode` | `../richtext`   | a `newsletterSignup` block             |
+| `createCTABlockNode`              | `../richtext`   | a `cta` block                          |
+| `createMathInlineBlock`           | `./math-blocks` | inline LaTeX within a paragraph        |
+| `createMathDisplayBlock`          | `./math-blocks` | a standalone display formula           |
+| `createBannerBlock`               | `./banners`     | a styled `banner` (`info`/`warning`/…) |
+| `createCodeBlock`                 | `./code-blocks` | a `code` block in a supported language |
+| `createFootnoteInlineBlock`       | `./footnotes`   | an inline footnote, with optional link |
+
+For a block that has no helper yet, define one at the top of the feature file
+that owns that block, and export it once a second file needs it. The generic
+lexical node factories (paragraphs, headings, quotes, lists, tables) all live in
+`@/utilities/lexical` and are re-exported from `../richtext`.
 
 **Media collage block:**
 
@@ -97,15 +104,21 @@ function createMediaCollageBlock(mediaIds: number[], layout: "grid" | "carousel"
 }
 ```
 
-**Math block helpers (exported from `features/math-blocks.ts`):**
-
-Unlike the media helpers above, the math helpers are exported and can be imported into other feature files:
+**Usage:**
 
 ```typescript
+import { createMediaBlockNode } from "../richtext"
 import { createMathInlineBlock, createMathDisplayBlock } from "./math-blocks"
+import { createBannerBlock } from "./banners"
+import { createCodeBlock } from "./code-blocks"
+import { createFootnoteInlineBlock } from "./footnotes"
 
+createMediaBlockNode(mediaId)
 createMathInlineBlock("E = mc^2") // inline LaTeX within a paragraph (version: 1, inlineBlock)
 createMathDisplayBlock("\\int_0^1 x") // standalone display block (version: 2, block)
+createBannerBlock("info", "Heads up.")
+createCodeBlock("typescript", "const x = 1")
+createFootnoteInlineBlock("A note.") // add a second argument for an attribution link
 ```
 
 ## How to Generate a Seed from Article JSON
@@ -157,6 +170,7 @@ export const createMyFeatureArticle = async (
   writers: User | User[],
   mediaDocs: Media[],
   topics: number[],
+  context?: Record<string, unknown>,
 ): Promise<number> => {
   // Create any additional media
   const customMedia = await createMediaFromURL(
@@ -169,16 +183,12 @@ export const createMyFeatureArticle = async (
   // Build content programmatically
   const content = createRichText([
     createParagraph("Introduction paragraph"),
-    createMyCustomBlock({
-      /* data */
-    }),
+    createMyCustomBlock({/* data */}),
     createParagraph([
       createTextNode("Text with "),
       {
         type: "inlineBlock",
-        fields: {
-          /* inline block data */
-        },
+        fields: {/* inline block data */},
       },
       createTextNode(" more text"),
     ]),
@@ -186,21 +196,29 @@ export const createMyFeatureArticle = async (
 
   // Create the article
   const writer = Array.isArray(writers) ? writers.map((writer) => writer.id) : [writer.id]
-  const article = await createArticle(payload, {
-    title: "My Feature Demo",
-    content,
-    authors: writer,
-    topics,
-    slug: "my-feature-demo",
-    meta: {
-      description: "Description of the feature",
-      image: mediaDocs[0]?.id,
+  const article = await createArticle(
+    payload,
+    {
+      title: "My Feature Demo",
+      content,
+      authors: writer,
+      topics,
+      slug: "my-feature-demo",
+      meta: {
+        description: "Description of the feature",
+        image: mediaDocs[0]?.id,
+      },
     },
-  })
+    context,
+  )
 
   return article.id
 }
 ```
+
+### Always pass `context` through
+
+`seed()` takes a `context` and hands it to every helper. `pnpm dev:db-seed` runs the seed outside Next.js with `{ disableRevalidate: true }`, and there `revalidatePath` / `revalidateTag` throw, so any write that reaches a revalidating hook without that context crashes the CLI seed. That covers articles, volumes, pages, users, merch, and the header and footer globals. Accept `context` as the last parameter and pass it to `createArticle`, `createOrUpdatePage`, and any `payload.create` / `update` / `delete` / `updateGlobal` on those collections. `tests/integration/seed.test.ts` runs the real seed without Next.js and fails if one slips through.
 
 ## Example: Converting JSON to Seed
 
@@ -278,7 +296,13 @@ Add your seed to `index.ts`:
 import { createMyFeatureArticle } from "./features/my-feature"
 
 // In the seed() function (inside a step fn, where ctx is available):
-await createMyFeatureArticle(payload, ctx.writers[0]!, ctx.media, [ctx.topics[0]!, ctx.topics[3]!])
+await createMyFeatureArticle(
+  payload,
+  ctx.writers[0]!,
+  ctx.media,
+  [ctx.topics[0]!, ctx.topics[3]!],
+  context,
+)
 ```
 
 ---
@@ -290,7 +314,7 @@ await createMyFeatureArticle(payload, ctx.writers[0]!, ctx.media, [ctx.topics[0]
 > 1. **Next.js hot-reloads** — the dev server recompiles mid-seed (triggered by `Generating import map` cycles), which resets the Drizzle adapter state. The very next `payload.create` / `payload.find` call after a recompile hits the uninitialised adapter.
 > 2. **Partially-cleaned DB state** — when `payload.delete` is called on a versioned collection, Payload's internal version cleanup can fail silently, leaving orphaned records. Subsequent operations (e.g. `enforceMaxVersions` → `findVersions`) then crash in `buildQuery`.
 >
-> The seed runs on a live dev server against a real Postgres instance, so either trigger can surface on any re-seed run. Seeds must handle them gracefully.
+> The dashboard button runs the seed on a live dev server against a real Postgres instance, so either trigger can surface on any re-seed run. `pnpm dev:db-seed` runs outside Next.js and avoids the hot-reload trigger, but not the second one. Seeds must handle both gracefully.
 
 ### The Golden Rule
 
@@ -327,17 +351,23 @@ async function createArticle(payload: Payload, options: CreateArticleOptions): P
 For non-versioned collections without hot-reload risk (e.g. users), a single try/catch with an immediate minimal-fields retry is sufficient:
 
 ```typescript
-async function createUser(payload: Payload, data: UserData, label: string): Promise<User> {
+async function createUser(
+  payload: Payload,
+  data: UserData,
+  label: string,
+  context?: UserContext,
+): Promise<User> {
   try {
-    return await payload.create({ collection: "users", data })
+    return await payload.create({ collection: "users", data, context })
   } catch (err) {
     payload.logger.warn(
       `Failed to create ${label} with full data, retrying with minimal fields. Error: ${err instanceof Error ? err.message : String(err)}`,
     )
-    const { email, password, name, role, slug } = data
+    const { email, password, name, roles, slug } = data
     return await payload.create({
       collection: "users",
-      data: { email, password, name, role, slug },
+      data: { email, password, name, roles, slug },
+      context,
     })
   }
 }

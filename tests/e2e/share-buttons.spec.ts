@@ -1,10 +1,12 @@
 import { expect, test } from "@playwright/test"
 
 import {
+  expectPinnedDateline,
   expectStableScreenshot,
   gotoFirstArticle,
   gotoFirstVolume,
   viewportRatioClip,
+  waitForStableBox,
   waitForStableRender,
 } from "./helpers"
 
@@ -123,11 +125,16 @@ test.describe("ShareButtons — article page", () => {
   }
 })
 
+// Every shot below frames the article hero, dateline included, so each one
+// asserts the seed's pinned stamps first — see expectPinnedDateline for why a
+// clock-tracking date has to fail by name rather than as a pixel diff.
 test.describe("ShareButtons — screenshots", () => {
-  test("article share button and popover close-up", async ({ page }, testInfo) => {
+  test("article share button and popover close-up @visual", async ({ page }, testInfo) => {
     test.skip(testInfo.project.name !== "chromium", "visual baseline captured on chromium only")
     const href = await gotoFirstArticle(page)
     test.skip(!href, "No articles found in the database")
+
+    await expectPinnedDateline(page)
 
     const share = page.getByRole("button", { name: "Share" })
     await share.waitFor({ state: "visible" })
@@ -138,31 +145,34 @@ test.describe("ShareButtons — screenshots", () => {
     await expect(popover).toBeVisible()
 
     const viewport = page.viewportSize() ?? { width: 1280, height: 720 }
-    const box = await popover.boundingBox()
-    if (!box) throw new Error("Could not get popover bounding box")
 
-    // scrollIntoViewIfNeeded leaves the trigger a few pixels higher or lower
-    // depending on hero-image render height, shifting the popover's viewport Y
-    // and causing the clip to capture different background content each run.
-    // Pin the popover to a fixed viewport Y before computing the clip.
+    // The clip captures the popover *with* its surrounding hero context, so its
+    // position must be identical every run. The flake came from taking the
+    // screenshot mid-reflow: the hero image resolves its intrinsic height a
+    // frame or two after waitForStableRender's decode wait, nudging the
+    // popover's Y by ~1px and ghosting every glyph/icon (measured 7-23% diff).
+    // waitForStableBox blocks until the layout stops moving, so box.y — and
+    // thus the computed clip — is deterministic.
+    const box = await waitForStableBox(popover)
+
+    // Pin the popover to a fixed viewport Y so the clip frames the same slice
+    // of hero content each run.
     const targetY = Math.round(viewport.height * 0.45)
     await page.evaluate((delta) => window.scrollBy(0, delta), Math.round(box.y - targetY))
-    await expect(popover).toBeVisible()
 
-    // Settle before measuring the bounding box, not just before the
-    // screenshot — otherwise the clip region can be computed mid-animation.
     await waitForStableRender(page)
-    const stableBox = await popover.boundingBox()
-    if (!stableBox) throw new Error("Could not get popover bounding box after scroll")
+    const stableBox = await waitForStableBox(popover)
     await expectStableScreenshot(page, "article-share-popover-close-up.png", {
       clip: viewportRatioClip(stableBox, viewport, { gridSnap: 16 }),
     })
   })
 
-  test("article share trigger", async ({ page }, testInfo) => {
+  test("article share trigger @visual", async ({ page }, testInfo) => {
     test.skip(testInfo.project.name !== "chromium", "visual baseline captured on chromium only")
     const href = await gotoFirstArticle(page)
     test.skip(!href, "No articles found in the database")
+
+    await expectPinnedDateline(page)
 
     const share = page.getByRole("button", { name: "Share" })
     await share.waitFor({ state: "visible" })
@@ -170,10 +180,12 @@ test.describe("ShareButtons — screenshots", () => {
     await expectStableScreenshot(page, "article-share-trigger.png", { fullPage: false })
   })
 
-  test("article share popover open", async ({ page }, testInfo) => {
+  test("article share popover open @visual", async ({ page }, testInfo) => {
     test.skip(testInfo.project.name !== "chromium", "visual baseline captured on chromium only")
     const href = await gotoFirstArticle(page)
     test.skip(!href, "No articles found in the database")
+
+    await expectPinnedDateline(page)
 
     const share = page.getByRole("button", { name: "Share" })
     await share.waitFor({ state: "visible" })
@@ -183,7 +195,7 @@ test.describe("ShareButtons — screenshots", () => {
     await expectStableScreenshot(page, "article-share-popover-open.png", { fullPage: false })
   })
 
-  test("volume share popover open", async ({ page }, testInfo) => {
+  test("volume share popover open @visual", async ({ page }, testInfo) => {
     test.skip(testInfo.project.name !== "chromium", "visual baseline captured on chromium only")
     const href = await gotoFirstVolume(page)
     test.skip(!href, "No volumes found in the database")
@@ -205,10 +217,12 @@ test.describe("ShareButtons — mobile screenshots (iPhone SE)", () => {
   // every other baseline in this suite.
   test.use({ viewport: { width: 375, height: 667 } })
 
-  test("article share trigger", async ({ page }, testInfo) => {
+  test("article share trigger @visual", async ({ page }, testInfo) => {
     test.skip(testInfo.project.name !== "chromium", "visual baseline captured on chromium only")
     const href = await gotoFirstArticle(page)
     test.skip(!href, "No articles found in the database")
+
+    await expectPinnedDateline(page)
 
     const share = page.getByRole("button", { name: "Share" })
     await share.waitFor({ state: "visible" })
@@ -216,10 +230,12 @@ test.describe("ShareButtons — mobile screenshots (iPhone SE)", () => {
     await expectStableScreenshot(page, "mobile-article-share-trigger.png", { fullPage: false })
   })
 
-  test("article share popover open", async ({ page }, testInfo) => {
+  test("article share popover open @visual", async ({ page }, testInfo) => {
     test.skip(testInfo.project.name !== "chromium", "visual baseline captured on chromium only")
     const href = await gotoFirstArticle(page)
     test.skip(!href, "No articles found in the database")
+
+    await expectPinnedDateline(page)
 
     const share = page.getByRole("button", { name: "Share" })
     await share.waitFor({ state: "visible" })
@@ -231,7 +247,7 @@ test.describe("ShareButtons — mobile screenshots (iPhone SE)", () => {
     })
   })
 
-  test("volume share popover open", async ({ page }, testInfo) => {
+  test("volume share popover open @visual", async ({ page }, testInfo) => {
     test.skip(testInfo.project.name !== "chromium", "visual baseline captured on chromium only")
     const href = await gotoFirstVolume(page)
     test.skip(!href, "No volumes found in the database")

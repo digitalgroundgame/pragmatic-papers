@@ -1,0 +1,17 @@
+// Tailwind's `animate-spin` isn't available here — the admin panel loads
+// Payload's stylesheet, not the frontend's. Same approach as
+// `BeforeDashboard/SeedButton`, which spins a lucide icon the same way.
+@keyframes merchSyncSpinner {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.merchSyncSpinner {
+  animation: merchSyncSpinner 1s linear infinite;
+  transform-origin: center;
+  flex-shrink: 0;
+}

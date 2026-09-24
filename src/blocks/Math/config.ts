@@ -13,6 +13,15 @@ export const InlineMathBlock: Block = {
         description: "Enter a LaTeX math expression.",
       },
     },
+    {
+      name: "description",
+      type: "text",
+      label: "Description",
+      admin: {
+        description:
+          'Name this formula in plain words, e.g. "the Cauchy–Schwarz inequality". Read aloud by the AI voice-over in place of the LaTeX, and used as the formula\'s screen reader label.',
+      },
+    },
   ],
   graphQL: {
     singularName: "InlineMathBlock",
@@ -39,6 +48,15 @@ export const DisplayMathBlock: Block = {
       label: "Math Expression",
       admin: {
         description: "Enter a LaTeX math expression.",
+      },
+    },
+    {
+      name: "description",
+      type: "text",
+      label: "Description",
+      admin: {
+        description:
+          'Name this formula in plain words, e.g. "the Cauchy–Schwarz inequality". Read aloud by the AI voice-over in place of the LaTeX, and used as the formula\'s screen reader label.',
       },
     },
   ],

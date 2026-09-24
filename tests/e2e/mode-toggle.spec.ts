@@ -8,7 +8,7 @@ import {
 } from "./helpers"
 
 test.describe("ModeToggle — desktop screenshots", () => {
-  test("header trigger", async ({ page }, testInfo) => {
+  test("header trigger @visual", async ({ page }, testInfo) => {
     test.skip(testInfo.project.name !== "chromium", "visual baseline captured on chromium only")
     await page.goto("/")
 
@@ -34,7 +34,7 @@ test.describe("ModeToggle — desktop screenshots", () => {
     await expectStableScreenshot(page, "header-mode-toggle-trigger.png", { clip: shot.clip })
   })
 
-  test("header dropdown open", async ({ page }, testInfo) => {
+  test("header dropdown open @visual", async ({ page }, testInfo) => {
     test.skip(testInfo.project.name !== "chromium", "visual baseline captured on chromium only")
     await page.goto("/")
 
@@ -68,7 +68,7 @@ test.describe("ModeToggle — desktop screenshots", () => {
     })
   })
 
-  test("footer trigger", async ({ page }, testInfo) => {
+  test("footer trigger @visual", async ({ page }, testInfo) => {
     test.skip(testInfo.project.name !== "chromium", "visual baseline captured on chromium only")
     await page.goto("/")
 
@@ -87,7 +87,7 @@ test.describe("ModeToggle — desktop screenshots", () => {
     await expectStableScreenshot(page, "footer-mode-toggle-trigger.png", { clip: shot.clip })
   })
 
-  test("footer dropdown open", async ({ page }, testInfo) => {
+  test("footer dropdown open @visual", async ({ page }, testInfo) => {
     test.skip(testInfo.project.name !== "chromium", "visual baseline captured on chromium only")
     await page.goto("/")
 
@@ -137,7 +137,7 @@ test.describe("ModeToggle — mobile screenshots (iPhone SE)", () => {
     return sheet
   }
 
-  test("mobile settings sheet trigger", async ({ page }, testInfo) => {
+  test("mobile settings sheet trigger @visual", async ({ page }, testInfo) => {
     test.skip(testInfo.project.name !== "chromium", "visual baseline captured on chromium only")
     const sheet = await openMobileSettingsSheet(page)
 
@@ -154,7 +154,7 @@ test.describe("ModeToggle — mobile screenshots (iPhone SE)", () => {
     })
   })
 
-  test("mobile settings sheet dropdown open", async ({ page }, testInfo) => {
+  test("mobile settings sheet dropdown open @visual", async ({ page }, testInfo) => {
     test.skip(testInfo.project.name !== "chromium", "visual baseline captured on chromium only")
     const sheet = await openMobileSettingsSheet(page)
 
@@ -177,7 +177,7 @@ test.describe("ModeToggle — mobile screenshots (iPhone SE)", () => {
     })
   })
 
-  test("mobile menu sheet trigger", async ({ page }, testInfo) => {
+  test("mobile menu sheet trigger @visual", async ({ page }, testInfo) => {
     test.skip(testInfo.project.name !== "chromium", "visual baseline captured on chromium only")
     const sheet = await openMobileMenuSheet(page)
 
@@ -194,7 +194,7 @@ test.describe("ModeToggle — mobile screenshots (iPhone SE)", () => {
     })
   })
 
-  test("mobile menu sheet dropdown open", async ({ page }, testInfo) => {
+  test("mobile menu sheet dropdown open @visual", async ({ page }, testInfo) => {
     test.skip(testInfo.project.name !== "chromium", "visual baseline captured on chromium only")
     const sheet = await openMobileMenuSheet(page)
 

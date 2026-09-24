@@ -1,4 +1,28 @@
-import { expect, type Page, type PageAssertionsToHaveScreenshotOptions } from "@playwright/test"
+import {
+  expect,
+  type Locator,
+  type Page,
+  type PageAssertionsToHaveScreenshotOptions,
+} from "@playwright/test"
+
+import { SEEDED_DATELINE, SEEDED_REVISION } from "../../scripts/seed-e2e.constants"
+
+/**
+ * Assert that an article hero's two instants read the words the seed pinned.
+ *
+ * Every baseline that frames a hero bakes these in, and Payload stamps
+ * `updatedAt` with the current time on every non-draft save — so without the
+ * seed's pin the revision line tracks the day the seed ran. Call this before
+ * any such screenshot: a stamp that goes back to following the clock then
+ * fails here, naming the cause, instead of surfacing as an unexplained
+ * whole-suite visual diff months later.
+ */
+export async function expectPinnedDateline(page: Page): Promise<void> {
+  const stamps = page.locator("#article-dateline").locator("time")
+  await expect(stamps).toHaveCount(2)
+  await expect(stamps.nth(0)).toHaveText(SEEDED_DATELINE)
+  await expect(stamps.nth(1)).toHaveText(SEEDED_REVISION)
+}
 
 export async function gotoFirstArticle(page: Page): Promise<string | null> {
   await page.goto("/")
@@ -75,6 +99,42 @@ interface BoundingBox {
   y: number
   width: number
   height: number
+}
+
+/**
+ * Poll an element's bounding box until it stops changing across several
+ * consecutive animation frames, then return the settled box. Use this before
+ * computing a screenshot clip from an element whose position can shift late in
+ * layout — e.g. a popover sitting below a hero image that resolves its
+ * intrinsic height a frame or two after decode. Without it, a clip captured
+ * mid-reflow lands ~1px off and ghosts every glyph/icon in the diff.
+ */
+export async function waitForStableBox(
+  locator: Locator,
+  { frames = 5, maxTicks = 300 }: { frames?: number; maxTicks?: number } = {},
+): Promise<BoundingBox> {
+  const page = locator.page()
+  let last: BoundingBox | null = null
+  let stable = 0
+  for (let tick = 0; tick < maxTicks; tick++) {
+    const box = await locator.boundingBox()
+    if (
+      box &&
+      last &&
+      box.x === last.x &&
+      box.y === last.y &&
+      box.width === last.width &&
+      box.height === last.height
+    ) {
+      if (++stable >= frames) return box
+    } else {
+      stable = 0
+    }
+    last = box
+    await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => resolve(null))))
+  }
+  if (!last) throw new Error("Element never produced a bounding box")
+  return last
 }
 
 export function mergeBoundingBoxes(...boxes: BoundingBox[]): BoundingBox {

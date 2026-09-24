@@ -4,7 +4,7 @@ import type { LinkField } from "@/payload-types"
  * Generates a URL string from a given LinkField object.
  *
  * - If the link is a reference type with a valid `slug`, constructs a path:
- *    - If the reference slug is 'home', returns root ('/').
+ *    - If the reference is in the 'pages' collection and its slug is 'home', returns root ('/').
  *    - If the relationTo is NOT 'pages', prepends `/${relationTo}` to the path.
  *    - Appends `/${slug}` for the final URL.
  * - If the link is not a reference, returns the direct `url` property if available.
@@ -20,13 +20,11 @@ export function getLinkFieldUrl(link?: LinkField): string | null {
     typeof link.reference?.value === "object" &&
     link.reference?.value.slug
   ) {
-    if (link.reference?.value.slug === "home") {
-      return "/"
-    }
-
     let url = ""
     if (link.reference?.relationTo !== "pages") {
       url += `/${link.reference?.relationTo}`
+    } else if (link.reference?.value.slug === "home") {
+      return "/"
     }
 
     url += `/${link.reference?.value.slug}`

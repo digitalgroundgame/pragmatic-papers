@@ -10,7 +10,14 @@
 
 import { execFileSync } from "node:child_process"
 import { createHash } from "node:crypto"
-import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync } from "node:fs"
+import {
+  copyFileSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+} from "node:fs"
 import { tmpdir } from "node:os"
 import { basename, join } from "node:path"
 
@@ -33,6 +40,35 @@ function run(
 export function extractFingerprint(body: string, marker: string): string | null {
   const match = body.match(new RegExp(`^<!-- ${marker}:([0-9a-f]*) -->`))
   return match ? (match[1] ?? "") : null
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+}
+
+/**
+ * Collect the `<pr>/<sha>` asset directories that existing PR comments still
+ * link to, by scanning their bodies for raw.githubusercontent URLs pointing at
+ * this PR's folder on the assets branch. Returns the set of referenced sha
+ * directory names so a self-prune can keep them and drop only orphaned ones.
+ */
+export function referencedShas(
+  bodies: string[],
+  opts: { owner: string; repo: string; branch: string; prNumber: string },
+): Set<string> {
+  const { owner, repo, branch, prNumber } = opts
+  const pattern = new RegExp(
+    `raw\\.githubusercontent\\.com/${escapeRegExp(owner)}/${escapeRegExp(repo)}/` +
+      `${escapeRegExp(branch)}/${escapeRegExp(prNumber)}/([^/"'\\s)]+)`,
+    "g",
+  )
+  const shas = new Set<string>()
+  for (const body of bodies) {
+    for (const match of body.matchAll(pattern)) {
+      if (match[1]) shas.add(match[1])
+    }
+  }
+  return shas
 }
 
 /** Order-independent fingerprint of the given files' contents. */
@@ -109,6 +145,40 @@ export async function main(): Promise<void> {
   mkdirSync(join(assets, ASSET_DIR), { recursive: true })
   for (const src of files) {
     copyFileSync(src, join(assets, ASSET_DIR, basename(src)))
+  }
+
+  // Self-prune: this PR only ever needs the sha dir we're uploading now plus any
+  // sha a still-live comment links to. Everything else under the PR folder is a
+  // leftover from an earlier commit's run — drop it so the branch doesn't grow
+  // one full screenshot set per push forever.
+  //
+  // Note we keep the sha `existing` (this run's comment) still links to, even
+  // though we're about to repoint it at the current sha. The push below removes
+  // pruned dirs before the comment is repointed, and this job runs under
+  // `cancel-in-progress`, so deleting the old dir now would leave the live
+  // comment pointing at a removed dir if the run were cancelled in that window.
+  // Deferring its removal to the next run (once no comment references it) keeps
+  // at most one extra generation around and closes that window.
+  //
+  // ASSET_DIR is always `<pr>/<sha>[/regressions]`, so the PR folder is PR_NUMBER.
+  const currentSha = ASSET_DIR.split("/")[1]
+  const keep = referencedShas(
+    comments.map((c) => c.body),
+    {
+      owner: OWNER,
+      repo: REPO,
+      branch: assetsBranch,
+      prNumber: PR_NUMBER,
+    },
+  )
+  if (currentSha) keep.add(currentSha)
+  for (const entry of readdirSync(join(assets, PR_NUMBER), { withFileTypes: true })) {
+    if (entry.isDirectory() && !keep.has(entry.name)) {
+      run("git", ["rm", "-r", "--quiet", join(PR_NUMBER, entry.name)], {
+        cwd: assets,
+        allowFail: true,
+      })
+    }
   }
 
   run("git", ["add", ASSET_DIR], { cwd: assets })

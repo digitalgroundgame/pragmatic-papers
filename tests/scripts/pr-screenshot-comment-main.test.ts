@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process"
-import { copyFileSync, existsSync, mkdirSync, readFileSync } from "node:fs"
+import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync } from "node:fs"
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
@@ -11,6 +11,7 @@ vi.mock("node:fs", () => ({
   copyFileSync: vi.fn(),
   mkdirSync: vi.fn(),
   mkdtempSync: vi.fn((prefix: string) => `${prefix}abc123`),
+  readdirSync: vi.fn(() => []),
   readFileSync: vi.fn(() => Buffer.from("fake-png-bytes")),
 }))
 vi.mock("../../scripts/snapshot-comment", async (importOriginal) => {
@@ -18,12 +19,21 @@ vi.mock("../../scripts/snapshot-comment", async (importOriginal) => {
   return { ...actual, readStdin: vi.fn() }
 })
 
-const { main, fingerprintFiles } = await import("../../scripts/pr-screenshot-comment")
+const { main, fingerprintFiles, referencedShas } =
+  await import("../../scripts/pr-screenshot-comment")
 const { readStdin } = await import("../../scripts/snapshot-comment")
 
 const mockExecFileSync = vi.mocked(execFileSync)
 const mockExistsSync = vi.mocked(existsSync)
+const mockReaddirSync = vi.mocked(readdirSync)
 const mockReadStdin = vi.mocked(readStdin)
+
+/** Fake a readdirSync({ withFileTypes: true }) result of directory entries. */
+function dirents(...names: string[]) {
+  return names.map((name) => ({ name, isDirectory: () => true })) as unknown as ReturnType<
+    typeof readdirSync
+  >
+}
 
 const BASE_ENV = {
   GH_TOKEN: "ghtoken",
@@ -47,6 +57,27 @@ function mockExec(handlers: Record<string, string | Error>) {
   })
 }
 
+describe("referencedShas", () => {
+  const opts = { owner: "org", repo: "repo", branch: "pr-screenshots", prNumber: "42" }
+
+  it("extracts sha dirs from raw.githubusercontent links for the PR", () => {
+    const bodies = [
+      "![a](https://raw.githubusercontent.com/org/repo/pr-screenshots/42/aaa/home.png)",
+      "before https://raw.githubusercontent.com/org/repo/pr-screenshots/42/bbb/regressions/x.png after",
+    ]
+    expect(referencedShas(bodies, opts)).toEqual(new Set(["aaa", "bbb"]))
+  })
+
+  it("ignores links to other PRs, other branches, and unrelated text", () => {
+    const bodies = [
+      "https://raw.githubusercontent.com/org/repo/pr-screenshots/99/zzz/home.png",
+      "https://raw.githubusercontent.com/org/repo/other-branch/42/yyy/home.png",
+      "no links here",
+    ]
+    expect(referencedShas(bodies, opts)).toEqual(new Set())
+  })
+})
+
 describe("main", () => {
   let warn: ReturnType<typeof vi.spyOn>
 
@@ -60,6 +91,7 @@ describe("main", () => {
     delete process.env.COLUMNS_PER_ROW
     delete process.env.FOOTER
     mockExistsSync.mockReturnValue(true)
+    mockReaddirSync.mockReturnValue(dirents())
   })
 
   afterEach(() => {
@@ -187,5 +219,88 @@ describe("main", () => {
 
     expect(copyFileSync).toHaveBeenCalledTimes(1)
     expect(copyFileSync).toHaveBeenCalledWith("a.png", expect.stringContaining("a.png"))
+  })
+
+  it("prunes the PR's other sha dirs that no live comment references", async () => {
+    mockReadStdin.mockResolvedValue("a.png\n")
+    // The comment being updated points at the current sha; a stale dir and an
+    // unrelated older sha both remain in the PR folder.
+    mockReaddirSync.mockReturnValue(dirents("abc123", "staledir", "oldsha"))
+    mockExec({
+      "issues/42/comments": JSON.stringify([{ id: 9, body: "<!-- screenshots: -->\nold" }]),
+      "ls-remote": "abc123\trefs/heads/pr-screenshots\n",
+    })
+
+    await main()
+
+    expect(mockExecFileSync).toHaveBeenCalledWith(
+      "git",
+      ["rm", "-r", "--quiet", "42/staledir"],
+      expect.anything(),
+    )
+    expect(mockExecFileSync).toHaveBeenCalledWith(
+      "git",
+      ["rm", "-r", "--quiet", "42/oldsha"],
+      expect.anything(),
+    )
+    // The current upload's dir is never removed.
+    expect(mockExecFileSync).not.toHaveBeenCalledWith(
+      "git",
+      ["rm", "-r", "--quiet", "42/abc123"],
+      expect.anything(),
+    )
+  })
+
+  it("keeps sha dirs another live comment still links to", async () => {
+    mockReadStdin.mockResolvedValue("a.png\n")
+    mockReaddirSync.mockReturnValue(dirents("abc123", "regsha"))
+    // A different marker's comment (not the one we're updating) links to regsha.
+    mockExec({
+      "issues/42/comments": JSON.stringify([
+        { id: 9, body: "<!-- screenshots: -->\nold" },
+        {
+          id: 10,
+          body:
+            "<!-- visual-regressions: -->\n" +
+            "![x](https://raw.githubusercontent.com/org/repo/pr-screenshots/42/regsha/regressions/x.png)",
+        },
+      ]),
+      "ls-remote": "abc123\trefs/heads/pr-screenshots\n",
+    })
+
+    await main()
+
+    expect(mockExecFileSync).not.toHaveBeenCalledWith(
+      "git",
+      ["rm", "-r", "--quiet", "42/regsha"],
+      expect.anything(),
+    )
+  })
+
+  it("keeps the sha the comment being repointed still links to (deferred to next run)", async () => {
+    mockReadStdin.mockResolvedValue("a.png\n")
+    mockReaddirSync.mockReturnValue(dirents("abc123", "oldsha"))
+    // The comment we're about to repoint still links to oldsha. Deleting it now,
+    // before the PATCH lands, would break the live comment if the run is
+    // cancelled in that window — so it must survive this run.
+    mockExec({
+      "issues/42/comments": JSON.stringify([
+        {
+          id: 9,
+          body:
+            "<!-- screenshots: -->\n" +
+            "![h](https://raw.githubusercontent.com/org/repo/pr-screenshots/42/oldsha/home.png)",
+        },
+      ]),
+      "ls-remote": "abc123\trefs/heads/pr-screenshots\n",
+    })
+
+    await main()
+
+    expect(mockExecFileSync).not.toHaveBeenCalledWith(
+      "git",
+      ["rm", "-r", "--quiet", "42/oldsha"],
+      expect.anything(),
+    )
   })
 })

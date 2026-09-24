@@ -1,10 +1,10 @@
 // @vitest-environment node
 import { afterEach, describe, expect, it, vi } from "vitest"
 
-vi.mock("@/access/checkRole", () => ({ isEditor: vi.fn() }))
+vi.mock("@/access/roles", () => ({ isEditor: vi.fn() }))
 vi.mock("../logic", () => ({ scheduleVolumeNewsletter: vi.fn() }))
 
-import { isEditor } from "@/access/checkRole"
+import { isEditor } from "@/access/roles"
 import { scheduleVolumeNewsletter } from "../logic"
 import { scheduleNewsletterEndpoint } from "../index"
 

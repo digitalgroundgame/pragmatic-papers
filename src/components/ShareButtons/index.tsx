@@ -15,6 +15,8 @@ import { sendGAEvent } from "@next/third-parties/google"
 import { Check, Copy, Mail, Share2 } from "lucide-react"
 import { useRef, useState } from "react"
 
+import { cn } from "@/utilities/utils"
+
 interface ShareButtonsProps {
   url: string
   title: string
@@ -104,7 +106,12 @@ export function ShareButtons({ url, title, className }: ShareButtonsProps): Reac
     <Popover>
       <PopoverTrigger
         render={
-          <Button variant="outline" size="icon-sm" aria-label="Share" className={className} />
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            aria-label="Share"
+            className={cn("shrink-0 cursor-pointer", className)}
+          />
         }
       >
         <Share2 className="size-4" />
@@ -121,7 +128,7 @@ export function ShareButtons({ url, title, className }: ShareButtonsProps): Reac
             size="icon"
             aria-label={copied ? "Copied!" : "Copy link"}
             onClick={handleCopy}
-            className="w-full"
+            className="w-full cursor-pointer"
           >
             {copied ? <Check className="size-4" /> : <Copy className="size-4" />}
           </Button>

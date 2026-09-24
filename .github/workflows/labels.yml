@@ -1,0 +1,40 @@
+name: Sync labels
+
+# Keeps the repo's labels in lockstep with .github/labels.yml (the source of
+# truth). On a PR that touches the file the job runs in dry-run mode and only
+# prints the diff; once merged to `dev` it applies the changes for real.
+#
+# The default GITHUB_TOKEN can manage labels (issues: write), so no PAT/App
+# token is needed here — unlike PR creation (see dev-to-main.yml).
+
+on:
+  push:
+    branches: [dev]
+    paths: [".github/labels.yml"]
+  pull_request:
+    paths: [".github/labels.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: sync-labels
+  cancel-in-progress: false
+
+jobs:
+  labeler:
+    name: Sync labels from .github/labels.yml
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: crazy-max/ghaction-github-labeler@v6
+        with:
+          yaml_file: .github/labels.yml
+          # skip_delete stays false: a label removed from labels.yml is removed
+          # from the repo, so the file is authoritative.
+          skip_delete: false
+          # Only mutate on push/dispatch; PRs preview the change in the log.
+          dry_run: ${{ github.event_name == 'pull_request' }}

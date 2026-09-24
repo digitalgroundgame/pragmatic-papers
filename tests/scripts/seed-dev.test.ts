@@ -32,6 +32,19 @@ describe("seed-dev main()", () => {
     })
   })
 
+  it("prints each step's progress and a completion line", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(vi.fn())
+    mockSeed.mockImplementationOnce(async (_payload, onProgress) => {
+      onProgress("Creating users...", 3, 11)
+    })
+
+    await main()
+
+    expect(warn).toHaveBeenCalledWith("[3/11] Creating users...")
+    expect(warn).toHaveBeenLastCalledWith("✔ Dev seed complete")
+    warn.mockRestore()
+  })
+
   it("throws and does not seed when NODE_ENV is production", async () => {
     vi.stubEnv("NODE_ENV", "production")
 

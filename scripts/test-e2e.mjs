@@ -76,6 +76,16 @@ try {
     stdio: "inherit",
   })
 
+  // CI restores .next/cache from a prior run to speed up `next build`'s
+  // compilation — but that directory also holds Next.js's unstable_cache
+  // Data Cache (e.g. getCachedGlobal's `global_header`/`global_footer`
+  // entries), which persists independent of build freshness. A stale entry
+  // cached before this run's seed data existed would otherwise survive the
+  // rebuild and serve outdated content. Clear just the data cache, not the
+  // whole directory, to keep the compilation-cache speedup while
+  // guaranteeing fresh reads of what was just seeded.
+  rmSync(".next/cache/fetch-cache", { recursive: true, force: true })
+
   if (useProdServer) {
     console.warn(`${blue("●")} Building Next.js production bundle...`)
     execSync("./node_modules/.bin/next build", {

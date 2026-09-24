@@ -1,20 +1,21 @@
 import { ClientThemeProvider } from "@wrksz/themes/client"
-import { cleanup, fireEvent, render, screen } from "@testing-library/react"
-import { afterEach, describe, expect, it } from "vitest"
+import { cleanup, fireEvent, render, type RenderResult, screen } from "@testing-library/react"
+import React from "react"
+import { afterEach, describe, expect, it, vi } from "vitest"
 
 import { ModeToggle } from "../ModeToggle"
 
 // Same provider props as src/app/(frontend)/layout.tsx. vitest.setup's
 // matchMedia stub reports a light OS preference.
-function renderToggle(): void {
-  render(
+function renderToggle(props: React.ComponentProps<typeof ModeToggle> = {}): RenderResult {
+  return render(
     <ClientThemeProvider
       attribute="class"
-      defaultTheme="system"
+      defaultTheme="light"
       enableSystem
       disableTransitionOnChange
     >
-      <ModeToggle />
+      <ModeToggle {...props} />
     </ClientThemeProvider>,
   )
 }
@@ -46,6 +47,15 @@ describe("ModeToggle", () => {
     expect(items.map((item) => item.textContent)).toEqual(["Light", "Dark", "System"])
   })
 
+  it("hides the trigger label unless showLabel is set", () => {
+    const { unmount } = renderToggle()
+    expect(screen.getByText("Toggle theme")).toHaveClass("sr-only")
+    unmount()
+
+    renderToggle({ showLabel: true })
+    expect(screen.getByText("Toggle theme")).not.toHaveClass("sr-only")
+  })
+
   it("applies and remembers Dark", async () => {
     renderToggle()
     await pick("Dark")
@@ -72,5 +82,25 @@ describe("ModeToggle", () => {
     expect(localStorage.getItem("theme")).toBe("system")
     expect(document.documentElement).toHaveClass("light")
     expect(document.documentElement).not.toHaveClass("dark")
+  })
+
+  it("reports each explicit switch to onThemeChange", async () => {
+    const onThemeChange = vi.fn()
+    renderToggle({ onThemeChange })
+    await pick("Dark")
+    await pick("System")
+
+    expect(onThemeChange.mock.calls).toEqual([["dark"], ["system"]])
+  })
+
+  it("disables the option matching the current theme", async () => {
+    const onThemeChange = vi.fn()
+    renderToggle({ onThemeChange })
+    openMenu()
+
+    const light = await screen.findByRole("menuitem", { name: "Light" })
+    expect(light).toHaveAttribute("data-disabled")
+    fireEvent.click(light)
+    expect(onThemeChange).not.toHaveBeenCalled()
   })
 })

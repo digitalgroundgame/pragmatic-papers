@@ -2,6 +2,7 @@ import { expect, test } from "@playwright/test"
 
 import {
   expectPinnedDateline,
+  expectStableScreenshot,
   gotoFirstArticle,
   gotoFirstVolume,
   viewportRatioClip,
@@ -161,7 +162,7 @@ test.describe("ShareButtons — screenshots", () => {
 
     await waitForStableRender(page)
     const stableBox = await waitForStableBox(popover)
-    await expect(page).toHaveScreenshot("article-share-popover-close-up.png", {
+    await expectStableScreenshot(page, "article-share-popover-close-up.png", {
       clip: viewportRatioClip(stableBox, viewport, { gridSnap: 16 }),
     })
   })
@@ -176,7 +177,7 @@ test.describe("ShareButtons — screenshots", () => {
     const share = page.getByRole("button", { name: "Share" })
     await share.waitFor({ state: "visible" })
     await share.scrollIntoViewIfNeeded()
-    await expect(page).toHaveScreenshot("article-share-trigger.png", { fullPage: false })
+    await expectStableScreenshot(page, "article-share-trigger.png", { fullPage: false })
   })
 
   test("article share popover open @visual", async ({ page }, testInfo) => {
@@ -191,7 +192,7 @@ test.describe("ShareButtons — screenshots", () => {
     await share.scrollIntoViewIfNeeded()
     await share.click()
     await expect(page.locator('[data-slot="popover-content"]')).toBeVisible()
-    await expect(page).toHaveScreenshot("article-share-popover-open.png", { fullPage: false })
+    await expectStableScreenshot(page, "article-share-popover-open.png", { fullPage: false })
   })
 
   test("volume share popover open @visual", async ({ page }, testInfo) => {
@@ -204,7 +205,7 @@ test.describe("ShareButtons — screenshots", () => {
     await share.scrollIntoViewIfNeeded()
     await share.click()
     await expect(page.locator('[data-slot="popover-content"]')).toBeVisible()
-    await expect(page).toHaveScreenshot("volume-share-popover-open.png", { fullPage: false })
+    await expectStableScreenshot(page, "volume-share-popover-open.png", { fullPage: false })
   })
 })
 
@@ -226,7 +227,7 @@ test.describe("ShareButtons — mobile screenshots (iPhone SE)", () => {
     const share = page.getByRole("button", { name: "Share" })
     await share.waitFor({ state: "visible" })
     await share.scrollIntoViewIfNeeded()
-    await expect(page).toHaveScreenshot("mobile-article-share-trigger.png", { fullPage: false })
+    await expectStableScreenshot(page, "mobile-article-share-trigger.png", { fullPage: false })
   })
 
   test("article share popover open @visual", async ({ page }, testInfo) => {
@@ -241,7 +242,7 @@ test.describe("ShareButtons — mobile screenshots (iPhone SE)", () => {
     await share.scrollIntoViewIfNeeded()
     await share.click()
     await expect(page.locator('[data-slot="popover-content"]')).toBeVisible()
-    await expect(page).toHaveScreenshot("mobile-article-share-popover-open.png", {
+    await expectStableScreenshot(page, "mobile-article-share-popover-open.png", {
       fullPage: false,
     })
   })
@@ -256,7 +257,7 @@ test.describe("ShareButtons — mobile screenshots (iPhone SE)", () => {
     await share.scrollIntoViewIfNeeded()
     await share.click()
     await expect(page.locator('[data-slot="popover-content"]')).toBeVisible()
-    await expect(page).toHaveScreenshot("mobile-volume-share-popover-open.png", {
+    await expectStableScreenshot(page, "mobile-volume-share-popover-open.png", {
       fullPage: false,
     })
   })

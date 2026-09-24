@@ -2,6 +2,7 @@ import { Logo } from "@/components/Logo"
 import { PaperIcon } from "@/components/Logo/icons/PaperIcon"
 import { MegaMenu } from "@/components/MegaMenu"
 import { Menu } from "@/components/Menu"
+import { ModeToggleAnalytics } from "@/components/ModeToggleAnalytics"
 import { SocialLinks } from "@/components/SocialLinks"
 import { Button } from "@/components/ui/button"
 import { LinkButton } from "@/components/ui/link-button"
@@ -17,7 +18,7 @@ import { HeaderActions } from "@/Header/HeaderActions/Component"
 import { SearchForm } from "@/Header/SearchForm/Component"
 import type { Footer, Header } from "@/payload-types"
 import { getCachedGlobal } from "@/utilities/getGlobals"
-import { TextSearch, User, XIcon } from "lucide-react"
+import { User, TextSearch, XIcon } from "lucide-react"
 import React from "react"
 
 export async function Header(): Promise<React.JSX.Element> {
@@ -60,7 +61,10 @@ export async function Header(): Promise<React.JSX.Element> {
                 </SheetHeader>
                 <SearchForm />
                 <Menu menu={navItems} layout="stacked" slot={SheetClose} />
-                <SocialLinks socials={socials} className="px-4 py-3" />
+                <div className="flex items-center gap-2 px-4 py-3">
+                  <SocialLinks socials={socials} />
+                  <ModeToggleAnalytics location="header-mobile-menu" />
+                </div>
               </SheetContent>
             </Sheet>
             <a
@@ -71,13 +75,16 @@ export async function Header(): Promise<React.JSX.Element> {
               <Logo />
             </a>
             <div className="flex items-center justify-end gap-2">
+              <div className="hidden lg:flex">
+                <ModeToggleAnalytics location="header" />
+              </div>
               <HeaderActions actions={actions} className="hidden lg:flex" />
               <Sheet>
                 <SheetTrigger
                   render={
                     <Button variant="ghost" size="icon" className="lg:hidden">
                       <User className="size-6" />
-                      <span className="sr-only">Account</span>
+                      <span className="sr-only">User and Settings</span>
                     </Button>
                   }
                 />
@@ -89,9 +96,9 @@ export async function Header(): Promise<React.JSX.Element> {
                     <div className="bg-brand flex aspect-square items-center justify-center rounded-sm p-2">
                       <PaperIcon className="text-white" />
                     </div>
-                    <SheetTitle className="text-3xl">Account</SheetTitle>
+                    <SheetTitle className="text-3xl">Settings</SheetTitle>
                   </SheetHeader>
-                  <div className="w-full space-y-2 px-4">
+                  <div className="flex w-full flex-col gap-2 px-4">
                     <HeaderActions
                       actions={actions}
                       className="w-full justify-center [&>a]:w-1/2"
@@ -99,6 +106,7 @@ export async function Header(): Promise<React.JSX.Element> {
                     <LinkButton variant="outline" size="lg" className="w-full" href="/admin/login">
                       Log In
                     </LinkButton>
+                    <ModeToggleAnalytics showLabel location="header-mobile-sheet" />
                   </div>
                 </SheetContent>
               </Sheet>

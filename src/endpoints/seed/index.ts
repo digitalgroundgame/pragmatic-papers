@@ -104,6 +104,7 @@ export const seed = async (
         ctx.narrator = narrator
         validateWriters([writers[0]!, writers[1]!])
         revalidatePath("/authors")
+        revalidatePath("/authors/[slug]", "page")
       },
     },
     {

@@ -1,6 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
-
-import { createUser } from "../users"
+import { createUser, type UserContext } from "../users"
 
 const mockCreate = vi.fn()
 const mockWarn = vi.fn()
@@ -42,7 +41,7 @@ describe("createUser", () => {
 
   it("passes context through to payload.create", async () => {
     mockCreate.mockResolvedValueOnce(mockUser)
-    const ctx = { disableRevalidate: true }
+    const ctx: UserContext = { disableRevalidate: true }
 
     await createUser(mockPayload, userData, "test user", ctx)
 

@@ -336,17 +336,23 @@ async function createArticle(payload: Payload, options: CreateArticleOptions): P
 For non-versioned collections without hot-reload risk (e.g. users), a single try/catch with an immediate minimal-fields retry is sufficient:
 
 ```typescript
-async function createUser(payload: Payload, data: UserData, label: string): Promise<User> {
+async function createUser(
+  payload: Payload,
+  data: UserData,
+  label: string,
+  context?: UserContext,
+): Promise<User> {
   try {
-    return await payload.create({ collection: "users", data })
+    return await payload.create({ collection: "users", data, context })
   } catch (err) {
     payload.logger.warn(
       `Failed to create ${label} with full data, retrying with minimal fields. Error: ${err instanceof Error ? err.message : String(err)}`,
     )
-    const { email, password, name, role, slug } = data
+    const { email, password, name, roles, slug } = data
     return await payload.create({
       collection: "users",
-      data: { email, password, name, role, slug },
+      data: { email, password, name, roles, slug },
+      context,
     })
   }
 }

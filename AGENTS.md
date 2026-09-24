@@ -175,12 +175,16 @@ block behind a `mode` discriminator, starting with the Federal Courts map
 ## Filing & triaging GitHub issues
 
 Creating, editing, triaging, or labeling an issue — or adding/removing a
-label? Use the **`github-issues`** skill
+label, or setting its board fields? Use the **`github-issues`** skill
 (`.claude/skills/github-issues/SKILL.md`). It covers applying an issue
 **type** (`Bug`/`Feature`/`Task`) as well as **labels** (`Bug` is a type, not
 a label), and the label taxonomy is version-controlled in
 `.github/labels.yml` — edit that file in a PR to change a label; a sync
-workflow applies it on push to `dev`.
+workflow applies it on push to `dev`. It also covers the **Project board
+fields** (`Priority`, `Size`, `Estimate`, `Status`) on the "Pragmatic Papers
+Development" board, set with
+`pnpm tsx .claude/skills/github-issues/set-project-field.ts <issue> <field> <value>`
+(needs the `project` token scope).
 
 ## Wiki
 

@@ -7,11 +7,12 @@ import { PayloadRedirects } from "@/components/PayloadRedirects"
 import RichText from "@/components/RichText"
 import { ShareButtons } from "@/components/ShareButtons"
 import { Separator } from "@/components/ui/separator"
-import type { Article } from "@/payload-types"
+import type { Article, User } from "@/payload-types"
 import { formatDateTime } from "@/utilities/formatDateTime"
 import { generateMeta } from "@/utilities/generateMeta"
 import { getServerSideURL } from "@/utilities/getURL"
 import { queryVolumeBySlug } from "@/utilities/queries"
+import { isResolved } from "@/utilities/relationships"
 import { buildBreadcrumbJsonLd, buildVolumeJsonLd } from "@/utilities/structuredData"
 import { toRoman } from "@/utilities/toRoman"
 import configPromise from "@payload-config"
@@ -33,11 +34,7 @@ export async function generateStaticParams(): Promise<{ slug: string | null | un
     },
   })
 
-  const params = volumes.docs.map(({ slug }) => {
-    return { slug }
-  })
-
-  return params
+  return volumes.docs.map(({ slug }) => ({ slug }))
 }
 
 interface Args {
@@ -67,13 +64,13 @@ export default async function VolumePage({
 
   const { publishedAt, editorsNote } = volume
 
-  const articles = volume.articles?.filter((a): a is Article => typeof a !== "number")
+  const articles = volume.articles?.filter(isResolved<Article>)
 
   if (!articles) return <PayloadRedirects url={url} />
 
   const seen = new Set<number>()
   const volumeAuthors = articles
-    ?.flatMap((article) => article.populatedAuthors ?? [])
+    ?.flatMap((article) => (article.authors || []).filter(isResolved<User>) ?? [])
     .filter((a) => {
       if (seen.has(a.id)) return false
       seen.add(a.id)

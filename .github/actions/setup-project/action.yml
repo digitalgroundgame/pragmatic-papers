@@ -39,7 +39,7 @@ runs:
       run: |
         cat > .env << EOF
         DATABASE_URI=postgres://postgres:postgres@localhost:5432/pragmatic-papers
-        PAYLOAD_SECRET=${{ inputs.payload-secret }}
+        PAYLOAD_SECRET=${{ inputs.payload-secret || 'ci-setup-project-secret' }}
         NEXT_PUBLIC_SERVER_URL=http://localhost:8000
         USE_LOCAL_STORAGE=true
         EOF

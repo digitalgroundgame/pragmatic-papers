@@ -1,6 +1,6 @@
 import type { GlobalConfig } from "payload"
 
-import { adminFieldLevel } from "@/access/admins"
+import { adminFieldLevel } from "@/access/fields"
 import { Content } from "@/blocks/Content/config"
 import { link } from "@/fields/link2"
 import { menu } from "@/fields/menu"

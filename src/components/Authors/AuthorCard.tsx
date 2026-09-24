@@ -1,31 +1,22 @@
-import type { PopulatedAuthors } from "@/payload-types"
+import type { User } from "@/payload-types"
 import { convertLexicalToPlaintext } from "@payloadcms/richtext-lexical/plaintext"
 import React from "react"
 
 import { AuthorLinks } from "@/components/Authors/AuthorLinks"
 import { HoverPrefetchLink } from "@/components/Link/HoverPrefetchLink"
-import { Media } from "@/components/Media"
+import { isMedia, Media } from "@/components/Media"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Card, CardContent } from "@/components/ui/card"
+import { getInitials } from "@/utilities/getInitials"
 
-function getInitials(name: string): string {
-  const parts = name.trim().split(/\s+/).filter(Boolean)
-  if (parts.length === 0) return ""
-  if (parts.length === 1) return parts[0]?.slice(0, 2).toUpperCase() || ""
-  return (parts[0]?.charAt(0) || "") + (parts[1]?.charAt(0) || "").toUpperCase()
-}
-
-function extractBioSnippet(
-  author: NonNullable<PopulatedAuthors>[number],
-  maxLength = 255,
-): string | undefined {
+function extractBioSnippet(author: User, maxLength = 255): string | undefined {
   if (!author.biography) return
   const text = convertLexicalToPlaintext({ data: author.biography })
   return text.length > maxLength ? `${text.slice(0, maxLength).trimEnd()}…` : text
 }
 
 export interface AuthorCardProps {
-  author: NonNullable<PopulatedAuthors>[number]
+  author: User
 }
 
 export const AuthorCard: React.FC<AuthorCardProps> = ({ author }) => {
@@ -33,8 +24,9 @@ export const AuthorCard: React.FC<AuthorCardProps> = ({ author }) => {
   const initials = getInitials(name || "Author")
   const bioSnippet = extractBioSnippet(author)
   const profileImage = author.profileImage ?? undefined
-  const profileImageUrl =
-    typeof profileImage === "number" ? undefined : (profileImage?.sizes?.square?.url ?? undefined)
+  const profileImageUrl = isMedia(profileImage)
+    ? (profileImage.sizes?.square?.url ?? undefined)
+    : undefined
 
   return (
     <Card className="rounded-sm">

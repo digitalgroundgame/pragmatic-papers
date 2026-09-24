@@ -11,10 +11,11 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Separator } from "@/components/ui/separator"
 import type { Article as ArticleType, Volume } from "@/payload-types"
 import { getInitials } from "@/utilities/getInitials"
+import { isResolved } from "@/utilities/relationships"
 import { getMediaUrl } from "@/utilities/getMediaUrl"
 import { getServerSideURL } from "@/utilities/getURL"
 import { mergeOpenGraph } from "@/utilities/mergeOpenGraph"
-import { queryUserBySlug } from "@/utilities/queries"
+import { queryUserBySlug, queryVolumesForArticles } from "@/utilities/queries"
 import { buildBreadcrumbJsonLd, buildPersonJsonLd } from "@/utilities/structuredData"
 import config from "@payload-config"
 import type { Metadata } from "next"
@@ -33,7 +34,7 @@ export async function generateStaticParams(): Promise<{ slug: string | null | un
     where: {
       and: [
         {
-          role: {
+          roles: {
             in: ["writer", "editor", "chief-editor", "narrator"],
           },
         },
@@ -76,30 +77,6 @@ const queryArticlesByAuthor = cache(async (userId: number, page: number = 1) => 
     },
     depth: 2,
   })
-})
-
-const queryVolumesForArticles = cache(async (articleIds: number[]): Promise<Volume[]> => {
-  if (!articleIds.length) return []
-
-  const { isEnabled: draft } = await draftMode()
-
-  const payload = await getPayload({ config })
-
-  const { docs } = await payload.find({
-    collection: "volumes",
-    draft,
-    limit: 1000,
-    overrideAccess: draft,
-    pagination: false,
-    where: {
-      articles: {
-        in: articleIds,
-      },
-    },
-    depth: 0,
-  })
-
-  return docs
 })
 
 export async function generateMetadata({ params }: Args): Promise<Metadata> {
@@ -181,8 +158,9 @@ export default async function AuthorPage({ params, searchParams }: Args): Promis
   const hasBiography = !!user.biography
 
   const profile = user.profileImage
-  const profileImageUrl =
-    typeof profile === "number" ? undefined : (profile?.sizes?.square?.url ?? undefined)
+  const profileImageUrl = isResolved(profile)
+    ? (profile.sizes?.square?.url ?? undefined)
+    : undefined
   const initials = getInitials(user.name || "Author")
 
   return (

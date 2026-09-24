@@ -54,7 +54,16 @@ describe("NewsletterSignupBlock (no Turnstile)", () => {
     render(<NewsletterSignupBlock />)
 
     expect(screen.getByRole("heading").textContent).toBe("Get Daily Pragmatic Papers")
-    expect(screen.getByRole("button", { name: "Sign Up" })).toBeTruthy()
+    expect(screen.getByRole("button", { name: "Sign Up" })).toBeInTheDocument()
+  })
+
+  // `fireEvent.change` writes the value in one shot, so it walks straight past
+  // `maxLength`. Until the suite has user-event to type character by character,
+  // assert the cap is wired to the input at all.
+  it("caps the email field at the RFC 5321 address length", () => {
+    render(<NewsletterSignupBlock />)
+
+    expect(screen.getByLabelText("Email address")).toHaveAttribute("maxLength", "254")
   })
 
   it("renders the provided heading, description, and button label", () => {
@@ -67,8 +76,8 @@ describe("NewsletterSignupBlock (no Turnstile)", () => {
     )
 
     expect(screen.getByRole("heading").textContent).toBe("Custom heading")
-    expect(screen.getByText("A short blurb")).toBeTruthy()
-    expect(screen.getByRole("button", { name: "Join now" })).toBeTruthy()
+    expect(screen.getByText("A short blurb")).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Join now" })).toBeInTheDocument()
   })
 
   it("submits the email and shows the success message on a 2xx response", async () => {
@@ -82,7 +91,9 @@ describe("NewsletterSignupBlock (no Turnstile)", () => {
     typeEmail("reader@example.com")
     fireEvent.submit(getForm())
 
-    expect(await screen.findByText("Check your inbox to confirm your subscription.")).toBeTruthy()
+    expect(
+      await screen.findByText("Check your inbox to confirm your subscription."),
+    ).toBeInTheDocument()
 
     expect(fetchMock).toHaveBeenCalledWith(
       "/api/newsletter/subscribe",
@@ -156,11 +167,13 @@ describe("NewsletterSignupBlock (no Turnstile)", () => {
 
     const button = screen.getByRole("button")
     await waitFor(() => expect(button.textContent).toBe("Subscribing…"))
-    expect((button as HTMLButtonElement).disabled).toBe(true)
-    expect((screen.getByLabelText("Email address") as HTMLInputElement).disabled).toBe(true)
+    expect(button).toBeDisabled()
+    expect(screen.getByLabelText("Email address")).toBeDisabled()
 
     resolveFetch({ ok: true, json: async () => ({}) })
-    expect(await screen.findByText("Check your inbox to confirm your subscription.")).toBeTruthy()
+    expect(
+      await screen.findByText("Check your inbox to confirm your subscription."),
+    ).toBeInTheDocument()
   })
 })
 
@@ -176,7 +189,7 @@ describe("NewsletterSignupBlock (with Turnstile)", () => {
     const NewsletterSignupBlock = await importComponent(SITE_KEY)
     render(<NewsletterSignupBlock />)
 
-    expect((screen.getByRole("button") as HTMLButtonElement).disabled).toBe(true)
+    expect(screen.getByRole("button")).toBeDisabled()
   })
 
   it("enables submission and includes the token once the widget issues one", async () => {
@@ -197,7 +210,7 @@ describe("NewsletterSignupBlock (with Turnstile)", () => {
     render(<NewsletterSignupBlock />)
 
     const button = screen.getByRole("button")
-    await waitFor(() => expect((button as HTMLButtonElement).disabled).toBe(false))
+    await waitFor(() => expect(button).not.toBeDisabled())
 
     typeEmail("reader@example.com")
     fireEvent.submit(getForm())
@@ -232,7 +245,7 @@ describe("NewsletterSignupBlock (with Turnstile)", () => {
     render(<NewsletterSignupBlock />)
 
     const button = screen.getByRole("button")
-    await waitFor(() => expect((button as HTMLButtonElement).disabled).toBe(false))
+    await waitFor(() => expect(button).not.toBeDisabled())
 
     typeEmail("reader@example.com")
     fireEvent.submit(getForm())

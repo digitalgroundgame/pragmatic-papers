@@ -1,0 +1,97 @@
+# Set a GitHub Projects (v2) field value on a single issue, on demand.
+#
+# PURPOSE
+# -------
+# Lets Claude (or a human) set a board field on a specific issue from a session
+# that can't reach GraphQL. Automatic lifecycle automation — adding new issues
+# to the board, default Status, closed → Done, etc. — is owned by the project's
+# built-in Workflows (board → ⚙ Workflows), NOT this file: this workflow has no
+# automatic trigger and only ever runs when explicitly dispatched.
+#
+# HOW CLAUDE DRIVES IT
+# --------------------
+# Projects v2 metadata is GraphQL-only, and the Claude Code cloud container's
+# GitHub proxy refuses GraphQL. But Claude CAN dispatch this workflow over REST
+# via the GitHub MCP tool (actions_run_trigger → run_workflow). The workflow
+# then runs the same helper local sessions use, on a runner outside that proxy:
+#
+#   Claude → MCP run_workflow (REST) → this workflow → set-project-field.ts
+#
+# The helper owns the project number, name resolution and validation; see
+# .claude/skills/github-issues/SKILL.md.
+#
+# AUTHENTICATION
+# --------------
+# The default GITHUB_TOKEN has no project permission. Provide one of:
+#   1. GitHub App (recommended). Set:
+#        - variable PROJECTS_APP_ID        the App's ID (not sensitive)
+#        - secret PROJECTS_APP_PRIVATE_KEY the FULL .pem contents, incl. the
+#                                          "-----BEGIN/END PRIVATE KEY-----" lines
+#      The App must be installed on the project owner and granted Organization →
+#      Projects: Read and write, and Repository → Issues: Read.
+#   2. PAT fallback: secret PROJECTS_TOKEN — classic PAT with `project` + `repo`,
+#      or a fine-grained PAT with org Projects RW + repo Issues Read.
+#
+# USAGE
+# -----
+#   gh workflow run project-fields.yml -f issue=123 -f field=Priority -f value=P2
+#   gh workflow run project-fields.yml -f issue=123 -f field=Priority -f value=--clear
+name: Project fields
+
+on:
+  workflow_dispatch:
+    inputs:
+      issue:
+        description: "Issue number to update"
+        required: true
+        type: string
+      field:
+        description: "Project field name (e.g. Priority)"
+        required: true
+        type: string
+      value:
+        description: "Option name, number, YYYY-MM-DD date or text; --clear to unset"
+        required: true
+        type: string
+
+jobs:
+  set-field:
+    name: Set project field
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      # Skipped when no App is configured, in which case the PROJECTS_TOKEN PAT
+      # fallback is used below.
+      - name: Generate App token
+        id: app-token
+        if: ${{ vars.PROJECTS_APP_ID != '' }}
+        uses: actions/create-github-app-token@v3
+        with:
+          app-id: ${{ vars.PROJECTS_APP_ID }}
+          private-key: ${{ secrets.PROJECTS_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+
+      - uses: actions/checkout@v7
+        with:
+          sparse-checkout: .claude/skills/github-issues
+
+      # Node 24 runs the TypeScript helper directly; no install needed.
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "24.x"
+
+      - name: Set field
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token || secrets.PROJECTS_TOKEN }}
+          ISSUE: ${{ inputs.issue }}
+          FIELD: ${{ inputs.field }}
+          VALUE: ${{ inputs.value }}
+        run: |
+          set -euo pipefail
+          if [ -z "${GH_TOKEN}" ]; then
+            echo "::error::No project token available. Configure a GitHub App (PROJECTS_APP_ID + PROJECTS_APP_PRIVATE_KEY) or a PROJECTS_TOKEN PAT — see the header of this workflow."
+            exit 1
+          fi
+          node .claude/skills/github-issues/set-project-field.ts "$ISSUE" "$FIELD" "$VALUE" | tee -a "$GITHUB_STEP_SUMMARY"

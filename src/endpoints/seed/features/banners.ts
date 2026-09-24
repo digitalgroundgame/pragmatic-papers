@@ -2,6 +2,7 @@ import type { Media, User } from "@/payload-types"
 import type { Payload } from "payload"
 
 import { createArticle, validateWriters } from "../articles"
+import type { SerializedLexicalNode } from "../richtext"
 import {
   createHeadingNode,
   createParagraph,
@@ -9,16 +10,22 @@ import {
   createRichTextContent,
 } from "../richtext"
 
-const createBannerBlock = (style: "info" | "warning" | "error" | "success", message: string) => ({
-  type: "block",
-  fields: {
-    blockType: "banner",
-    style,
-    content: createRichTextContent(message),
-  },
-  format: "",
-  version: 2,
-})
+export const createBannerBlock = (
+  style: "info" | "warning" | "error" | "success",
+  message: string,
+): SerializedLexicalNode => {
+  const node = {
+    type: "block",
+    fields: {
+      blockType: "banner",
+      style,
+      content: createRichTextContent(message),
+    },
+    format: "",
+    version: 2,
+  }
+  return node
+}
 
 export const createBannerBlocksArticle = async (
   payload: Payload,

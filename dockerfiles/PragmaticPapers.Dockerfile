@@ -43,6 +43,12 @@ RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
 COPY package.json ./
 COPY scripts/install-fonts.ts scripts/ansi.mjs scripts/Inter-Bold.woff2 ./scripts/
 
+# A deploy must ship the real FKScreamer. Without this, an expired or unscoped
+# GH_FONT_READ degrades to the bundled Inter fallback and the build still succeeds —
+# shipping the wrong typeface. install-fonts.ts exits non-zero instead. Builder stage
+# only, so local installs and fork CI keep the lenient fallback.
+ENV FONTS_REQUIRED=true
+
 # 4. Install dependencies from the store (offline)
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
     echo "--- PHASE: INSTALLING DEPENDENCIES (OFFLINE) ---" \

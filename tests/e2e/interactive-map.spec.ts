@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test"
 
 import { waitForStableRender } from "./helpers"
 
-test("interactive map article renders with pinned tooltip", async ({ page }, testInfo) => {
+test("interactive map article renders with pinned tooltip @visual", async ({ page }, testInfo) => {
   await page.goto("/articles/missouri-shifting-margins-119-120-congressional-maps")
 
   const mapFigure = page.locator("[data-interactive-map-block]")

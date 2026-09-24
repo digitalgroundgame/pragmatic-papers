@@ -4,9 +4,9 @@ import { execSync } from "node:child_process"
 const TEMPLATE_DB = "pp_template"
 
 export async function setup(): Promise<() => Promise<void>> {
-  process.env.PAYLOAD_SECRET ??= "test-secret-for-integration-tests"
-  process.env.USE_LOCAL_STORAGE ??= "true"
-  process.env.NEXT_PUBLIC_SERVER_URL ??= "http://localhost:8000"
+  process.env.PAYLOAD_SECRET ||= "test-secret-for-integration-tests"
+  process.env.USE_LOCAL_STORAGE ||= "true"
+  process.env.NEXT_PUBLIC_SERVER_URL ||= "http://localhost:8000"
 
   let container = null
   let uri: string

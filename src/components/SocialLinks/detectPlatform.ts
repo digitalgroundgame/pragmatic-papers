@@ -1,9 +1,13 @@
 export type SocialLinkPlatform =
   | "bluesky"
+  | "discord"
+  | "github"
   | "instagram"
+  | "linkedin"
   | "reddit"
   | "substack"
   | "tiktok"
+  | "twitch"
   | "twitter"
   | "youtube"
 
@@ -43,11 +47,31 @@ const RULES: readonly PlatformRule[] = [
   },
   {
     platform: "youtube",
-    domains: [{ root: "youtube.com", subdomains: ["www", "m"] }, { root: "youtu.be" }],
+    domains: [{ root: "youtube.com", subdomains: ["www", "m", "music"] }, { root: "youtu.be" }],
   },
   {
     platform: "tiktok",
     domains: [{ root: "tiktok.com", subdomains: ["www", "m"] }],
+  },
+  {
+    platform: "twitch",
+    domains: [{ root: "twitch.tv", subdomains: ["www", "m"] }],
+  },
+  {
+    platform: "discord",
+    domains: [
+      { root: "discord.gg" },
+      { root: "discord.com", subdomains: ["www"] },
+      { root: "discordapp.com", subdomains: ["www"] },
+    ],
+  },
+  {
+    platform: "github",
+    domains: [{ root: "github.com", subdomains: ["www"] }],
+  },
+  {
+    platform: "linkedin",
+    domains: [{ root: "linkedin.com", subdomains: ["www"] }],
   },
 ] as const
 

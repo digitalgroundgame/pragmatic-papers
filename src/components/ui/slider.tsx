@@ -19,7 +19,10 @@ function Slider({
 
   return (
     <SliderPrimitive.Root
-      className={cn("data-horizontal:w-full data-vertical:h-full", className)}
+      className={cn(
+        "data-[orientation=horizontal]:w-full data-[orientation=vertical]:h-full",
+        className,
+      )}
       data-slot="slider"
       defaultValue={defaultValue}
       value={value}
@@ -28,14 +31,19 @@ function Slider({
       thumbAlignment="edge"
       {...props}
     >
-      <SliderPrimitive.Control className="relative flex w-full touch-none items-center select-none data-disabled:opacity-50 data-vertical:h-full data-vertical:min-h-40 data-vertical:w-auto data-vertical:flex-col">
+      <SliderPrimitive.Control
+        // The track is only 1 unit thick, so the control is padded on the cross axis
+        // to give presses a usable target. Base UI measures the value from the main
+        // axis only, so cross-axis padding does not shift where a press lands.
+        className="relative flex w-full touch-none items-center select-none data-disabled:opacity-50 data-[orientation=horizontal]:py-2 data-[orientation=vertical]:h-full data-[orientation=vertical]:min-h-40 data-[orientation=vertical]:w-auto data-[orientation=vertical]:flex-col data-[orientation=vertical]:px-2"
+      >
         <SliderPrimitive.Track
           data-slot="slider-track"
-          className="bg-muted relative grow overflow-hidden rounded-full select-none data-horizontal:h-1 data-horizontal:w-full data-vertical:h-full data-vertical:w-1"
+          className="bg-muted relative grow overflow-hidden rounded-full select-none data-[orientation=horizontal]:h-1 data-[orientation=horizontal]:w-full data-[orientation=vertical]:h-full data-[orientation=vertical]:w-1"
         >
           <SliderPrimitive.Indicator
             data-slot="slider-range"
-            className="bg-primary select-none data-horizontal:h-full data-vertical:w-full"
+            className="bg-primary select-none data-[orientation=horizontal]:h-full data-[orientation=vertical]:w-full"
           />
         </SliderPrimitive.Track>
         {Array.from({ length: _values.length }, (_, index) => (

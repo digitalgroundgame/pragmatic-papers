@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest"
 import { Button } from "../button"
 
 // Snapshot tests for Button variants. To update snapshots after intentional changes:
-// pnpm test:unit -- --update-snapshots
+// pnpm test:unit -- --update
 describe("Button", () => {
   it("renders default variant", () => {
     const { container } = render(<Button>Click me</Button>)

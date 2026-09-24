@@ -170,6 +170,10 @@
   h3 {
     @apply text-2xl md:text-3xl;
   }
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
 }
 
 @utility container {

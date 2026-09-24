@@ -89,7 +89,7 @@ Or seed from the terminal, without the browser, while `pnpm dev` is stopped:
 pnpm dev:db-seed
 ```
 
-It seeds the same content as the button, and works on an empty database too (e.g. right after `pnpm dev:db-nuke`).
+It seeds the same content as the button, and works on an empty database too (e.g. right after `pnpm dev:db-nuke`). Like the button, it first deletes every article, volume, page and media file in the database, not just seeded ones. It only runs against a local database with local media storage.
 
 > [!TIP]
 > If your docker database ever gets into a unrecoverable state, or you are switch branches that have different database schemas, be sure to run `pnpm dev:db-nuke` to blow away your database and start fresh.

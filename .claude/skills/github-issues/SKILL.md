@@ -184,12 +184,25 @@ prefix doesn't provide it):
 gh auth refresh -h github.com -s project
 ```
 
-In web/remote sessions (where the GitHub proxy blocks GraphQL, so neither `gh
-project` nor this helper works), dispatch `.github/workflows/project-fields.yml`
-via the GitHub MCP `run_workflow` tool with inputs `issue`, `field` and `value`,
-using the same field and option names as above. It runs `gh project item-edit`
-on an Actions runner with the repo's project credentials. It has no `--clear`;
-omit `field` and `value` to only add the issue to the board.
+**Web/remote sessions.** The GitHub proxy blocks GraphQL, so neither `gh
+project` nor the helper works there. Dispatch
+`.github/workflows/project-fields.yml` instead; it runs this same helper on an
+Actions runner with the repo's project credentials, so the arguments are
+identical (`--clear` included):
+
+```
+mcp__github__actions_run_trigger(
+  method="run_workflow", owner="digitalgroundgame", repo="pragmatic-papers",
+  workflow_id="project-fields.yml", ref="dev",
+  inputs={"issue": "953", "field": "Priority", "value": "P2"},
+)
+```
+
+Dispatch returns before the run does, so a misspelled option fails silently
+from your side. Check the latest run with
+`actions_list(method="list_workflow_runs", workflow_id="project-fields.yml")`
+and, if it failed, read the job log (it names the valid fields and options)
+before telling the user the field is set.
 
 ## Closing issues
 

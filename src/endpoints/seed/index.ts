@@ -1,6 +1,7 @@
-import type { Media, User } from "@/payload-types"
-import type { Payload } from "payload"
 import { seedRandomRankings } from "@/jobs/updateRecommendations/logic"
+import type { Media, User } from "@/payload-types"
+import { revalidatePath } from "next/cache"
+import type { Payload } from "payload"
 import { createArticle, getWriterOrThrow, validateWriters } from "./articles"
 import { createBannerBlocksArticle } from "./features/banners"
 import { createCodeBlocksArticle } from "./features/code-blocks"
@@ -38,6 +39,7 @@ interface SeedContext {
 export const seed = async (
   payload: Payload,
   onProgress?: (message: string, step: number, total: number) => void,
+  context: Record<string, unknown> = {},
 ): Promise<void> => {
   const ctx = {} as SeedContext
 
@@ -53,6 +55,7 @@ export const seed = async (
       fn: async () => {
         await payload.delete({
           collection: "users",
+          context,
           where: {
             email: {
               in: [
@@ -65,14 +68,21 @@ export const seed = async (
             },
           },
         })
-        await payload.delete({ collection: "articles", where: {} })
-        await payload.delete({ collection: "volumes", where: {} })
-        await payload.delete({ collection: "topics", where: {} })
-        await payload.delete({ collection: "media", where: {} })
-        await payload.delete({ collection: "map-assets", where: {} })
-        await payload.delete({ collection: "pages", where: {} })
-        await payload.delete({ collection: "forms", where: {} })
-        await payload.delete({ collection: "form-submissions", where: {} })
+        // A ranking's article column is NOT NULL but its foreign key is ON DELETE
+        // SET NULL, so a ranked article can't be deleted until the rankings go.
+        await payload.updateGlobal({
+          slug: "article-recommendations",
+          context,
+          data: { rankings: [] },
+        })
+        await payload.delete({ collection: "articles", context, where: {} })
+        await payload.delete({ collection: "volumes", context, where: {} })
+        await payload.delete({ collection: "topics", context, where: {} })
+        await payload.delete({ collection: "media", context, where: {} })
+        await payload.delete({ collection: "map-assets", context, where: {} })
+        await payload.delete({ collection: "pages", context, where: {} })
+        await payload.delete({ collection: "forms", context, where: {} })
+        await payload.delete({ collection: "form-submissions", context, where: {} })
       },
     },
     {
@@ -102,6 +112,10 @@ export const seed = async (
         ctx.writers = writers
         ctx.narrator = narrator
         validateWriters([writers[0]!, writers[1]!])
+        if (!context.disableRevalidate) {
+          revalidatePath("/authors")
+          revalidatePath("/authors/[slug]", "page")
+        }
       },
     },
     {
@@ -144,19 +158,23 @@ export const seed = async (
         ]
         for (let i = 0; i < volume1Titles.length; i++) {
           const title = volume1Titles[i]!
-          const article = await createArticle(payload, {
-            title,
-            content: createLoremIpsumContent(Math.floor(Math.random() * 8) + 3),
-            authors: [getWriterOrThrow(writers, i).id],
-            topics: volume1TopicSets[i]!,
-            slug: titleToSlug(title),
-            heroImage: ctx.media[i % ctx.media.length]?.id,
-            meta: {
+          const article = await createArticle(
+            payload,
+            {
               title,
-              description: generateLoremIspumSentence(),
-              image: ctx.media[i % ctx.media.length]?.id,
+              content: createLoremIpsumContent(Math.floor(Math.random() * 8) + 3),
+              authors: [getWriterOrThrow(writers, i).id],
+              topics: volume1TopicSets[i]!,
+              slug: titleToSlug(title),
+              heroImage: ctx.media[i % ctx.media.length]?.id,
+              meta: {
+                title,
+                description: generateLoremIspumSentence(),
+                image: ctx.media[i % ctx.media.length]?.id,
+              },
             },
-          })
+            context,
+          )
           ctx.volume1Articles.push(article.id)
         }
       },
@@ -184,19 +202,23 @@ export const seed = async (
         ]
         for (let i = 0; i < volume2Titles.length; i++) {
           const title = volume2Titles[i]!
-          const article = await createArticle(payload, {
-            title,
-            content: createLoremIpsumContent(Math.floor(Math.random() * 8) + 3),
-            authors: [getWriterOrThrow(writers, i).id],
-            topics: volume2TopicSets[i]!,
-            slug: titleToSlug(title),
-            heroImage: ctx.media[i % ctx.media.length]?.id,
-            meta: {
+          const article = await createArticle(
+            payload,
+            {
               title,
-              description: generateLoremIspumSentence(),
-              image: ctx.media[i % ctx.media.length]?.id,
+              content: createLoremIpsumContent(Math.floor(Math.random() * 8) + 3),
+              authors: [getWriterOrThrow(writers, i).id],
+              topics: volume2TopicSets[i]!,
+              slug: titleToSlug(title),
+              heroImage: ctx.media[i % ctx.media.length]?.id,
+              meta: {
+                title,
+                description: generateLoremIspumSentence(),
+                image: ctx.media[i % ctx.media.length]?.id,
+              },
             },
-          })
+            context,
+          )
           ctx.volume2Articles.push(article.id)
         }
       },
@@ -211,6 +233,7 @@ export const seed = async (
             [ctx.writers[0]!, ctx.writers[1]!],
             ctx.media,
             [ctx.topics[3]!, ctx.topics[4]!, ctx.topics[7]!],
+            context,
           ),
         )
         ctx.featureArticles.push(
@@ -225,58 +248,81 @@ export const seed = async (
             ctx.media,
             ctx.volume1Articles[0]!,
             [ctx.topics[0]!, ctx.topics[3]!, ctx.topics[4]!],
+            context,
           ),
         )
         ctx.featureArticles.push(
-          await createSocialEmbedArticle(payload, ctx.writers[0]!, ctx.media, [
-            ctx.topics[0]!,
-            ctx.topics[1]!,
-            ctx.topics[7]!,
-          ]),
+          await createSocialEmbedArticle(
+            payload,
+            ctx.writers[0]!,
+            ctx.media,
+            [ctx.topics[0]!, ctx.topics[1]!, ctx.topics[7]!],
+            context,
+          ),
         )
         ctx.featureArticles.push(
-          await createLegacySocialEmbedArticle(payload, ctx.writers[0]!, ctx.media, [
-            ctx.topics[0]!,
-            ctx.topics[1]!,
-            ctx.topics[10]!,
-          ]),
+          await createLegacySocialEmbedArticle(
+            payload,
+            ctx.writers[0]!,
+            ctx.media,
+            [ctx.topics[0]!, ctx.topics[1]!, ctx.topics[10]!],
+            context,
+          ),
         )
         ctx.featureArticles.push(
-          await createMediaCollageArticle(payload, ctx.writers[0]!, ctx.media, [
-            ctx.topics[3]!,
-            ctx.topics[7]!,
-          ]),
+          await createMediaCollageArticle(
+            payload,
+            ctx.writers[0]!,
+            ctx.media,
+            [ctx.topics[3]!, ctx.topics[7]!],
+            context,
+          ),
         )
         ctx.featureArticles.push(
-          await createMathBlocksArticle(payload, [ctx.writers[0]!, ctx.writers[1]!], ctx.media, [
-            ctx.topics[2]!,
-            ctx.topics[3]!,
-            ctx.topics[5]!,
-          ]),
+          await createMathBlocksArticle(
+            payload,
+            [ctx.writers[0]!, ctx.writers[1]!],
+            ctx.media,
+            [ctx.topics[2]!, ctx.topics[3]!, ctx.topics[5]!],
+            context,
+          ),
         )
         ctx.featureArticles.push(
-          await createTimelineArticle(payload, [ctx.writers[0]!, ctx.writers[1]!], ctx.media, [
-            ctx.topics[3]!,
-            ctx.topics[7]!,
-          ]),
+          await createTimelineArticle(
+            payload,
+            [ctx.writers[0]!, ctx.writers[1]!],
+            ctx.media,
+            [ctx.topics[3]!, ctx.topics[7]!],
+            context,
+          ),
         )
         ctx.featureArticles.push(
-          await createNarrationDemoArticle(payload, ctx.writers[0]!, ctx.narrator, ctx.media, [
-            ctx.topics[3]!,
-            ctx.topics[7]!,
-          ]),
+          await createNarrationDemoArticle(
+            payload,
+            ctx.writers[0]!,
+            ctx.narrator,
+            ctx.media,
+            [ctx.topics[3]!, ctx.topics[7]!],
+            context,
+          ),
         )
         ctx.featureArticles.push(
-          await createBannerBlocksArticle(payload, [ctx.writers[0]!, ctx.writers[1]!], ctx.media, [
-            ctx.topics[3]!,
-            ctx.topics[7]!,
-          ]),
+          await createBannerBlocksArticle(
+            payload,
+            [ctx.writers[0]!, ctx.writers[1]!],
+            ctx.media,
+            [ctx.topics[3]!, ctx.topics[7]!],
+            context,
+          ),
         )
         ctx.featureArticles.push(
-          await createCodeBlocksArticle(payload, [ctx.writers[0]!, ctx.writers[1]!], ctx.media, [
-            ctx.topics[2]!,
-            ctx.topics[7]!,
-          ]),
+          await createCodeBlocksArticle(
+            payload,
+            [ctx.writers[0]!, ctx.writers[1]!],
+            ctx.media,
+            [ctx.topics[2]!, ctx.topics[7]!],
+            context,
+          ),
         )
       },
     },
@@ -285,9 +331,13 @@ export const seed = async (
       fn: async () => {
         ctx.mapArticles = []
         ctx.mapArticles.push(
-          await createMoCongressionalMapsArticle(payload, [ctx.writers[0]!], ctx.media, [
-            ctx.topics[0]!,
-          ]),
+          await createMoCongressionalMapsArticle(
+            payload,
+            [ctx.writers[0]!],
+            ctx.media,
+            [ctx.topics[0]!],
+            context,
+          ),
         )
       },
     },
@@ -335,6 +385,7 @@ export const seed = async (
             },
           ],
           ctx.media,
+          context,
         )
       },
     },
@@ -347,6 +398,7 @@ export const seed = async (
           ctx.volume2Articles,
           ctx.featureArticles,
           ctx.media.map((m) => m.id),
+          context,
         )
         const homePage = await payload
           .find({ collection: "pages", where: { slug: { equals: "home" } }, limit: 1 })
@@ -366,16 +418,21 @@ export const seed = async (
             writerIds: [ctx.writers[0]!.id, ctx.writers[1]!.id],
           },
           ctx.media.map((m) => m.id),
+          context,
         )
-        await createMenus(payload, {
-          homePage,
-          aboutPage,
-          articlesPage,
-          contactPage,
-          privacyPolicyPage,
-          termsOfUsePage,
-          volumesPage,
-        })
+        await createMenus(
+          payload,
+          {
+            homePage,
+            aboutPage,
+            articlesPage,
+            contactPage,
+            privacyPolicyPage,
+            termsOfUsePage,
+            volumesPage,
+          },
+          context,
+        )
       },
     },
     {

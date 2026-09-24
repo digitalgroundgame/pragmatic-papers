@@ -1,12 +1,31 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { SEEDED_UPDATED_AT } from "../../scripts/seed-e2e.constants"
+
+/**
+ * Read a drizzle `sql` template back as the statement it stands for.
+ * Interpolated values arrive as boxed primitives among the literal chunks, so
+ * the values land inline here rather than as $1, $2 — which is what makes the
+ * assertion below worth reading.
+ */
+function renderStatement(statement: { queryChunks: unknown[] }): string {
+  return statement.queryChunks
+    .map((chunk) =>
+      chunk instanceof Object && "value" in chunk
+        ? (chunk as { value: string[] }).value.join("")
+        : String(chunk),
+    )
+    .join("")
+}
+
 const mockDestroy = vi.fn()
 const mockCreate = vi.fn()
 const mockUpdateGlobal = vi.fn()
+const mockExecute = vi.fn()
 const mockPayload = {
   create: mockCreate,
   updateGlobal: mockUpdateGlobal,
-  db: { destroy: mockDestroy },
+  db: { destroy: mockDestroy, drizzle: { execute: mockExecute } },
 }
 
 const mockWriter = { id: 1, email: "writer@e2e.test", name: "Teagan Wordsmith" }
@@ -184,6 +203,22 @@ describe("seed-e2e main()", () => {
     // id — four of them is the point, not which four.
     const [, options] = vi.mocked(createArticle).mock.calls[0]!
     expect(options.authors).toHaveLength(4)
+  })
+
+  it("pins every article's and volume's updatedAt so no dateline can drift", async () => {
+    await main()
+
+    // Payload overwrites updatedAt on every non-draft save, so the revision
+    // line would otherwise read the day the seed ran and diff any baseline
+    // that frames it (article-meta-row.spec.ts, share-buttons.spec.ts).
+    // Whole-table rather than per-id on purpose: the per-document version of
+    // this pinned only the crowded-byline article, and the share-button
+    // baselines — framing a different article's hero — rotted unnoticed.
+    expect(mockExecute).toHaveBeenCalledTimes(2)
+    expect(mockExecute.mock.calls.map(([statement]) => renderStatement(statement))).toEqual([
+      `UPDATE articles SET updated_at = ${SEEDED_UPDATED_AT}`,
+      `UPDATE volumes SET updated_at = ${SEEDED_UPDATED_AT}`,
+    ])
   })
 
   it("keeps the crowded-byline article off the homepage grid", async () => {

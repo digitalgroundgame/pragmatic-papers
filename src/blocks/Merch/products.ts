@@ -6,6 +6,7 @@ import type { Media, Merch as MerchProductDoc, MerchBlock } from "@/payload-type
 
 import { MERCH_TAG } from "@/collections/Merch/tag"
 import { getPayloadConfig } from "@/utilities/getPayloadConfig"
+import { relationshipId } from "@/utilities/relationships"
 import { getMerchProductUrl, getMerchStoreUrl } from "./urls"
 
 /**
@@ -119,9 +120,9 @@ export function buildProductQuery(block: MerchBlock): Where {
   }
   if (block.tag?.trim()) and.push({ tags: { contains: block.tag.trim() } })
 
-  const picked = (block.selectedProducts ?? []).map((product) =>
-    typeof product === "number" ? product : product.id,
-  )
+  const picked = (block.selectedProducts ?? [])
+    .map(relationshipId)
+    .filter((id): id is number => id !== null)
   if (picked.length) and.push({ id: { in: picked } })
 
   return where
@@ -194,7 +195,8 @@ export async function getMerchProducts(block: MerchBlock): Promise<MerchProduct[
   // no database sort can express.
   const order = new Map(
     (block.selectedProducts ?? [])
-      .map((product) => (typeof product === "number" ? product : product.id))
+      .map(relationshipId)
+      .filter((id): id is number => id !== null)
       .map((id, index) => [id, index]),
   )
 

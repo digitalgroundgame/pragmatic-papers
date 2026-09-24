@@ -1,8 +1,9 @@
 "use client"
 
-import type { FootnotesField } from "@/payload-types"
 import { type ReactSelectOption, ReactSelect, useDocumentInfo, useField } from "@payloadcms/ui"
 import React, { useState } from "react"
+
+import { getFootnotes } from "./utils"
 
 export const InsertExistingFootnote: React.FC = () => {
   const { data } = useDocumentInfo()
@@ -11,9 +12,7 @@ export const InsertExistingFootnote: React.FC = () => {
   const { setValue: setSourceId } = useField<string>({ path: "sourceId" })
   const { setValue: setNote } = useField<string>({ path: "note" })
 
-  const footnotes = ((data?.footnotes as NonNullable<FootnotesField>) ?? []).filter(
-    (footnote) => footnote.note,
-  )
+  const footnotes = getFootnotes(data).filter((footnote) => footnote.note)
 
   const handleChange = (value: ReactSelectOption | ReactSelectOption[]) => {
     const option = Array.isArray(value) ? value[0] : value

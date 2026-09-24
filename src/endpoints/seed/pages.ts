@@ -17,9 +17,13 @@ type PageData = RequiredDataFromCollectionSlug<"pages">
  * Needed because Payload's internal version cleanup can fail during bulk deletes,
  * leaving orphaned records that cause unique slug violations on re-seed.
  */
-export async function createOrUpdatePage(payload: Payload, data: PageData): Promise<Page> {
+export async function createOrUpdatePage(
+  payload: Payload,
+  data: PageData,
+  context?: Record<string, unknown>,
+): Promise<Page> {
   try {
-    return await payload.create({ collection: "pages", data })
+    return await payload.create({ collection: "pages", context, data })
   } catch (err) {
     const isSlugConflict = err instanceof Error && err.message.toLowerCase().includes("slug")
     if (!isSlugConflict) throw err
@@ -40,6 +44,7 @@ export async function createOrUpdatePage(payload: Payload, data: PageData): Prom
     return await payload.update({
       collection: "pages",
       id: existingPage.id,
+      context,
       data,
     })
   }
@@ -103,6 +108,7 @@ export const createPages = async (
   payload: Payload,
   contributors?: AboutContributors,
   mediaIds?: number[],
+  context?: Record<string, unknown>,
 ): Promise<CreatePagesResult> => {
   const pageConfigs: Record<
     "about" | "articles" | "contact" | "privacyPolicy" | "termsOfUse" | "volumes",
@@ -168,6 +174,7 @@ export const createPages = async (
     const merchProductIds = await seedMerchProducts(
       payload,
       devMerchCatalogue(mediaIds).slice(0, 3),
+      context,
     )
 
     aboutLayout.push({
@@ -227,174 +234,198 @@ export const createPages = async (
     })
   }
 
-  const aboutPage = await createOrUpdatePage(payload, {
-    title: about.title,
-    slug: about.slug,
-    hero: {
-      type: "lowImpact",
-      richText: null,
-      links: [],
-      media: null,
-    },
-    layout: aboutLayout,
-    meta: {
+  const aboutPage = await createOrUpdatePage(
+    payload,
+    {
       title: about.title,
-      description: about.description,
-      image: null,
-    },
-    _status: "published",
-    publishedAt: new Date().toISOString(),
-  })
-
-  const articlesPage = await createOrUpdatePage(payload, {
-    title: articles.title,
-    slug: articles.slug,
-    hero: {
-      type: "pageHero",
-      richText: createHeroRichTextHeading(articles.title),
-      links: [],
-      media: null,
-    },
-    layout: [
-      {
-        blockType: "volumeView",
-        introContent: null,
-        populateBy: "collection",
-        relationTo: "volumes",
-        limit: 6,
-        selectedDocs: [],
+      slug: about.slug,
+      hero: {
+        type: "lowImpact",
+        richText: null,
+        links: [],
+        media: null,
       },
-    ],
-    meta: {
-      title: articles.title,
-      description: articles.description,
-      image: null,
+      layout: aboutLayout,
+      meta: {
+        title: about.title,
+        description: about.description,
+        image: null,
+      },
+      _status: "published",
+      publishedAt: new Date().toISOString(),
     },
-    _status: "published",
-    publishedAt: new Date().toISOString(),
-  })
+    context,
+  )
+
+  const articlesPage = await createOrUpdatePage(
+    payload,
+    {
+      title: articles.title,
+      slug: articles.slug,
+      hero: {
+        type: "pageHero",
+        richText: createHeroRichTextHeading(articles.title),
+        links: [],
+        media: null,
+      },
+      layout: [
+        {
+          blockType: "volumeView",
+          introContent: null,
+          populateBy: "collection",
+          relationTo: "volumes",
+          limit: 6,
+          selectedDocs: [],
+        },
+      ],
+      meta: {
+        title: articles.title,
+        description: articles.description,
+        image: null,
+      },
+      _status: "published",
+      publishedAt: new Date().toISOString(),
+    },
+    context,
+  )
 
   const contactForm = await createContactForm(payload)
 
-  const contactPage = await createOrUpdatePage(payload, {
-    title: contact.title,
-    slug: contact.slug,
-    hero: {
-      type: "lowImpact",
-      richText: null,
-      links: [],
-      media: null,
-    },
-    layout: [
-      {
-        blockType: "content",
-        columns: [
-          {
-            size: "full",
-            richText: createRichTextContent(contact.content),
-          },
-        ],
-      },
-      {
-        blockType: "formBlock",
-        form: contactForm.id,
-        enableIntro: false,
-      },
-    ],
-    meta: {
+  const contactPage = await createOrUpdatePage(
+    payload,
+    {
       title: contact.title,
-      description: contact.description,
-      image: null,
-    },
-    _status: "published",
-    publishedAt: new Date().toISOString(),
-  })
-
-  const privacyPolicyPage = await createOrUpdatePage(payload, {
-    title: privacyPolicy.title,
-    slug: privacyPolicy.slug,
-    hero: {
-      type: "lowImpact",
-      richText: null,
-      links: [],
-      media: null,
-    },
-    layout: [
-      {
-        blockType: "content",
-        columns: [
-          {
-            size: "full",
-            richText: createRichTextContent(privacyPolicy.content),
-          },
-        ],
+      slug: contact.slug,
+      hero: {
+        type: "lowImpact",
+        richText: null,
+        links: [],
+        media: null,
       },
-    ],
-    meta: {
+      layout: [
+        {
+          blockType: "content",
+          columns: [
+            {
+              size: "full",
+              richText: createRichTextContent(contact.content),
+            },
+          ],
+        },
+        {
+          blockType: "formBlock",
+          form: contactForm.id,
+          enableIntro: false,
+        },
+      ],
+      meta: {
+        title: contact.title,
+        description: contact.description,
+        image: null,
+      },
+      _status: "published",
+      publishedAt: new Date().toISOString(),
+    },
+    context,
+  )
+
+  const privacyPolicyPage = await createOrUpdatePage(
+    payload,
+    {
       title: privacyPolicy.title,
-      description: privacyPolicy.description,
-      image: null,
-    },
-    _status: "published",
-    publishedAt: new Date().toISOString(),
-  })
-
-  const termsOfUsePage = await createOrUpdatePage(payload, {
-    title: termsOfUse.title,
-    slug: termsOfUse.slug,
-    hero: {
-      type: "lowImpact",
-      richText: null,
-      links: [],
-      media: null,
-    },
-    layout: [
-      {
-        blockType: "content",
-        columns: [
-          {
-            size: "full",
-            richText: createRichTextContent(termsOfUse.content),
-          },
-        ],
+      slug: privacyPolicy.slug,
+      hero: {
+        type: "lowImpact",
+        richText: null,
+        links: [],
+        media: null,
       },
-    ],
-    meta: {
+      layout: [
+        {
+          blockType: "content",
+          columns: [
+            {
+              size: "full",
+              richText: createRichTextContent(privacyPolicy.content),
+            },
+          ],
+        },
+      ],
+      meta: {
+        title: privacyPolicy.title,
+        description: privacyPolicy.description,
+        image: null,
+      },
+      _status: "published",
+      publishedAt: new Date().toISOString(),
+    },
+    context,
+  )
+
+  const termsOfUsePage = await createOrUpdatePage(
+    payload,
+    {
       title: termsOfUse.title,
-      description: termsOfUse.description,
-      image: null,
-    },
-    _status: "published",
-    publishedAt: new Date().toISOString(),
-  })
-
-  const volumesPage = await createOrUpdatePage(payload, {
-    title: volumes.title,
-    slug: volumes.slug,
-    hero: {
-      type: "pageHero",
-      richText: createHeroRichTextHeading(volumes.title),
-      links: [],
-      media: null,
-    },
-    layout: [
-      {
-        blockType: "volumeView",
-        introContent: null,
-        populateBy: "collection",
-        relationTo: "volumes",
-        limit: 6,
-        selectedDocs: [],
+      slug: termsOfUse.slug,
+      hero: {
+        type: "lowImpact",
+        richText: null,
+        links: [],
+        media: null,
       },
-    ],
-    meta: {
-      title: volumes.title,
-      description: volumes.description,
-      image: null,
+      layout: [
+        {
+          blockType: "content",
+          columns: [
+            {
+              size: "full",
+              richText: createRichTextContent(termsOfUse.content),
+            },
+          ],
+        },
+      ],
+      meta: {
+        title: termsOfUse.title,
+        description: termsOfUse.description,
+        image: null,
+      },
+      _status: "published",
+      publishedAt: new Date().toISOString(),
     },
-    _status: "published",
-    publishedAt: new Date().toISOString(),
-  })
+    context,
+  )
+
+  const volumesPage = await createOrUpdatePage(
+    payload,
+    {
+      title: volumes.title,
+      slug: volumes.slug,
+      hero: {
+        type: "pageHero",
+        richText: createHeroRichTextHeading(volumes.title),
+        links: [],
+        media: null,
+      },
+      layout: [
+        {
+          blockType: "volumeView",
+          introContent: null,
+          populateBy: "collection",
+          relationTo: "volumes",
+          limit: 6,
+          selectedDocs: [],
+        },
+      ],
+      meta: {
+        title: volumes.title,
+        description: volumes.description,
+        image: null,
+      },
+      _status: "published",
+      publishedAt: new Date().toISOString(),
+    },
+    context,
+  )
 
   return {
     aboutPage,

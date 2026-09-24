@@ -4,9 +4,10 @@ import type { ContributorsBlock as ContributorsBlockProps } from "@/payload-type
 
 import { AuthorCard } from "@/components/Authors/AuthorCard"
 import { getPayloadConfig } from "@/utilities/getPayloadConfig"
+import { relationshipId } from "@/utilities/relationships"
 
 export const ContributorsBlock: React.FC<ContributorsBlockProps> = async ({ title, people }) => {
-  const ids = people.map((p) => (typeof p === "number" ? p : p.id))
+  const ids = people.map(relationshipId).filter((id): id is number => id !== null)
   if (!ids.length) return null
 
   const payload = await getPayloadConfig()

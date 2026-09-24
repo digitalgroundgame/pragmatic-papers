@@ -1,3 +1,4 @@
+import type * as MediaModule from "@/components/Media"
 import type { Media, User } from "@/payload-types"
 import { render } from "@testing-library/react"
 import { describe, expect, it, vi } from "vitest"
@@ -9,7 +10,9 @@ vi.mock("@payloadcms/richtext-lexical/plaintext", () => ({
   convertLexicalToPlaintext: mockConvertLexicalToPlaintext,
 }))
 
-vi.mock("@/components/Media", () => ({
+// Only the renderer is stubbed — AuthorCard uses the real isMedia guard.
+vi.mock("@/components/Media", async (importOriginal) => ({
+  ...(await importOriginal<typeof MediaModule>()),
   Media: () => <div data-testid="media" />,
 }))
 

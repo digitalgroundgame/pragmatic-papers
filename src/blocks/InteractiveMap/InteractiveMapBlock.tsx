@@ -6,6 +6,7 @@ import { resolveInlineSvgMap } from "@/blocks/InteractiveMap/adapters/inlineSvg"
 import type { ResolvedMap } from "@/blocks/InteractiveMap/types"
 import type { InteractiveMapBlock as InteractiveMapBlockProps } from "@/payload-types"
 import { cn } from "@/utilities/utils"
+import { isResolved } from "@/utilities/relationships"
 
 import { getDivergingRedBlueLegend } from "./colorScale"
 import { InteractiveMapClient } from "./InteractiveMapClient"
@@ -17,7 +18,7 @@ type Props = InteractiveMapBlockProps & {
 }
 
 function readSvgContent(asset: InteractiveMapBlockProps["maps"][number]["svgAsset"]): string {
-  if (!asset || typeof asset === "number") return ""
+  if (!isResolved(asset)) return ""
   return asset.svgContent ?? ""
 }
 

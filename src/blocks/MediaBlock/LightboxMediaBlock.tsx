@@ -6,6 +6,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { cn } from "@/utilities/utils"
+import { isMedia } from "@/components/Media"
 import { MediaBlock, type StyledMediaBlockProps } from "./Component"
 
 export type LightboxMediaBlockProps = StyledMediaBlockProps & {
@@ -18,7 +19,7 @@ export const LightboxMediaBlock: React.FC<LightboxMediaBlockProps> = ({
   media,
   ...props
 }) => {
-  if (typeof media === "number" || !media) return null
+  if (!isMedia(media)) return null
 
   return (
     <Dialog>

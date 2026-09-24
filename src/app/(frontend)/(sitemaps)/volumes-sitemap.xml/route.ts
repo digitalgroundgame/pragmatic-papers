@@ -33,7 +33,7 @@ const getVolumesSitemap = unstable_cache(
           .filter((page) => Boolean(page?.slug))
           .map((page) => {
             return {
-              loc: page?.slug === "home" ? SITE_URL : `${SITE_URL}/volumes/${page?.slug}`,
+              loc: `${SITE_URL}/volumes/${page?.slug}`,
               lastmod: page.updatedAt || dateFallback,
             }
           })

@@ -118,9 +118,7 @@ const beforeSync: BeforeSync = async ({ originalDoc, payload, searchDoc }) => {
   const image =
     (originalDoc.heroImage as number | null | undefined) ??
     ((originalDoc.meta as Record<string, unknown> | undefined)?.image as
-      | number
-      | null
-      | undefined) ??
+      number | null | undefined) ??
     (originalDoc.profileImage as number | null | undefined) ??
     null
 

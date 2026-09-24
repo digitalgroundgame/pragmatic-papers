@@ -4870,13 +4870,6 @@
           "primaryKey": false,
           "notNull": false
         },
-        "show_table_of_contents": {
-          "name": "show_table_of_contents",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": false,
-          "default": false
-        },
         "narration_id": {
           "name": "narration_id",
           "type": "integer",
@@ -4942,6 +4935,13 @@
           "primaryKey": false,
           "notNull": false,
           "default": "'draft'"
+        },
+        "show_table_of_contents": {
+          "name": "show_table_of_contents",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": false
         }
       },
       "indexes": {
@@ -5531,13 +5531,6 @@
           "primaryKey": false,
           "notNull": false
         },
-        "version_show_table_of_contents": {
-          "name": "version_show_table_of_contents",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": false,
-          "default": false
-        },
         "version_narration_id": {
           "name": "version_narration_id",
           "type": "integer",
@@ -5627,6 +5620,13 @@
           "type": "boolean",
           "primaryKey": false,
           "notNull": false
+        },
+        "version_show_table_of_contents": {
+          "name": "version_show_table_of_contents",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": false
         }
       },
       "indexes": {
@@ -8463,6 +8463,12 @@
         "hash": {
           "name": "hash",
           "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "reset_password_requested_at": {
+          "name": "reset_password_requested_at",
+          "type": "timestamp(3) with time zone",
           "primaryKey": false,
           "notNull": false
         },
@@ -14672,6 +14678,6 @@
     "tables": {},
     "columns": {}
   },
-  "id": "aac56cef-5fc9-4ed0-b74d-40843b20fbc0",
+  "id": "c4de70af-fd36-40d7-a26a-44bcc877ef44",
   "prevId": "00000000-0000-0000-0000-000000000000"
 }

@@ -13,6 +13,7 @@ This file provides guidance to tools like Claude Code (claude.ai/code) when work
 - `pnpm dev` — starts everything in Docker Compose (Postgres + Next.js dev server on port 8000)
 - `pnpm dev:db-nuke` — stop Postgres and delete its volume (`docker compose down -v`), wiping the entire data directory. Use this after a Postgres major-version bump or whenever the local data is corrupt; the next `pnpm dev` recreates a fresh cluster and Drizzle push re-syncs the schema
 - `pnpm dev:db-fresh` — bring Postgres up and rebuild the schema by re-running all migrations from scratch (`payload migrate:fresh`). Unlike `dev:db-nuke`, this keeps the volume and exercises the committed migration files (the same path prod uses), so it surfaces migration drift that Drizzle push masks in dev
+- `pnpm dev:db-seed` — bring Postgres up, seed it from the terminal, and stop it again. Runs the same `seed()` as the admin dashboard's "Seed your database" button, so it first deletes **every** article, volume, page, media file, topic, map asset, form and form submission (not just seeded ones), the seed users, and the recommendation rankings. Drizzle push builds the schema on an empty database, so it works straight after `dev:db-nuke`. It refuses to run unless `DATABASE_URI` points at localhost and `USE_LOCAL_STORAGE=true` (override with `SEED_ALLOW_REMOTE=true`), and exits 1 if you decline Drizzle's data-loss prompt. Stop `pnpm dev` first: this command stops the Postgres container it shares. If the header or footer still show old nav afterwards, delete `.next/dev/cache`
 
 ### Quality Checks
 
@@ -175,12 +176,16 @@ block behind a `mode` discriminator, starting with the Federal Courts map
 ## Filing & triaging GitHub issues
 
 Creating, editing, triaging, or labeling an issue — or adding/removing a
-label? Use the **`github-issues`** skill
+label, or setting its board fields? Use the **`github-issues`** skill
 (`.claude/skills/github-issues/SKILL.md`). It covers applying an issue
 **type** (`Bug`/`Feature`/`Task`) as well as **labels** (`Bug` is a type, not
 a label), and the label taxonomy is version-controlled in
 `.github/labels.yml` — edit that file in a PR to change a label; a sync
-workflow applies it on push to `dev`.
+workflow applies it on push to `dev`. It also covers the **Project board
+fields** (`Priority`, `Size`, `Estimate`, `Status`) on the "Pragmatic Papers
+Development" board, set with
+`pnpm tsx .claude/skills/github-issues/set-project-field.ts <issue> <field> <value>`
+(needs the `project` token scope).
 
 ## Wiki
 
@@ -203,3 +208,13 @@ After adding a new page, update `Home.md` to add it to the Table of Contents und
 ```md
 [← Table of Contents](https://github.com/digitalgroundgame/pragmatic-papers/wiki#table-of-contents)
 ```
+
+<!-- BEGIN:nextjs-agent-rules -->
+
+# This is NOT the Next.js you know
+
+This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
+
+This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
+
+<!-- END:nextjs-agent-rules -->

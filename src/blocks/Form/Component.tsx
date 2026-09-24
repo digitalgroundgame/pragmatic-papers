@@ -2,6 +2,7 @@ import { type FormBlock as FormBlockType } from "@/payload-types"
 import React from "react"
 
 import RichText from "@/components/RichText"
+import { isResolved } from "@/utilities/relationships"
 import { FormBlockClient } from "./FormBlockClient"
 import { Message } from "./Message"
 
@@ -15,7 +16,7 @@ import { Message } from "./Message"
  * behaviour, so pre-rendering them costs nothing.
  */
 export const FormBlock: React.FC<FormBlockType> = ({ form, ...block }) => {
-  if (typeof form === "number") return null
+  if (!isResolved(form)) return null
 
   const intro =
     block.enableIntro && block.introContent ? (

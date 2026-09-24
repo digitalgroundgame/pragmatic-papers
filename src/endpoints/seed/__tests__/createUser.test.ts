@@ -20,8 +20,6 @@ const userData = {
 
 const mockUser = { id: 1, ...userData }
 
-const defaultContext: UserContext = { disableRevalidate: false }
-
 beforeEach(() => {
   vi.clearAllMocks()
 })

@@ -277,9 +277,7 @@ export const createUsers = async (payload: Payload, media: Media[]): Promise<See
   const writers: User[] = []
   for (let i = 0; i < WRITER_DATA.length; i++) {
     const writerData = generateWriterData(i, media)
-    const writer = await createUser(payload, writerData, `writer${i + 1}`, {
-      disableRevalidate: true,
-    })
+    const writer = await createUser(payload, writerData, `writer${i + 1}`, context)
     writers.push(writer)
   }
 

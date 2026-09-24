@@ -19,7 +19,7 @@ export async function createUser(
   payload: Payload,
   data: UserData,
   label: string,
-  context: UserContext = { disableRevalidate: false },
+  context?: UserContext,
 ): Promise<User> {
   try {
     return await payload.create({ collection: "users", data, context })

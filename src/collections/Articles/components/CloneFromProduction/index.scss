@@ -1,0 +1,40 @@
+.clone-from-production {
+  margin-bottom: var(--base);
+  padding: calc(var(--base) * 0.75);
+  border: 1px solid var(--theme-elevation-150);
+  border-radius: var(--style-radius-m);
+
+  &__title {
+    margin: 0 0 calc(var(--base) * 0.25);
+  }
+
+  &__description {
+    margin: 0 0 calc(var(--base) * 0.5);
+    color: var(--theme-elevation-600);
+  }
+
+  &__controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: calc(var(--base) * 0.5);
+    align-items: center;
+
+    .btn {
+      margin: 0;
+    }
+  }
+
+  &__select {
+    flex: 1 1 20rem;
+    min-width: 0;
+  }
+
+  &__outcomes {
+    margin: calc(var(--base) * 0.5) 0 0;
+    padding-left: var(--base);
+  }
+
+  &__outcome--error {
+    color: var(--theme-error-500);
+  }
+}

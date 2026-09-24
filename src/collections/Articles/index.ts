@@ -18,6 +18,7 @@ import { LegacyYouTubeEmbed } from "@/blocks/SocialEmbed/embeds/YouTubeEmbed/con
 import { SquiggleRule } from "@/blocks/SquiggleRule/config"
 import { Timeline } from "@/blocks/Timeline/config"
 import {
+  canCloneFromProduction,
   cloneFromProductionEndpoint,
   productionSearchEndpoint,
 } from "@/collections/Articles/endpoints/cloneFromProduction"
@@ -80,9 +81,10 @@ export const Articles: CollectionConfig = {
   endpoints: [productionSearchEndpoint, cloneFromProductionEndpoint],
   admin: {
     components: {
-      beforeListTable: [
-        "@/collections/Articles/components/CloneFromProduction#CloneFromProduction",
-      ],
+      // Payload shows the ⋯ menu whenever this is set, so leave it unset where cloning is off.
+      listMenuItems: canCloneFromProduction()
+        ? ["@/collections/Articles/components/CloneFromProduction#CloneFromProduction"]
+        : undefined,
     },
     defaultColumns: ["title", "slug", "updatedAt"],
     livePreview: {

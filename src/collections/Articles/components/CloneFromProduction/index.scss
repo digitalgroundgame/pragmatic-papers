@@ -1,13 +1,4 @@
 .clone-from-production {
-  margin-bottom: var(--base);
-  padding: calc(var(--base) * 0.75);
-  border: 1px solid var(--theme-elevation-150);
-  border-radius: var(--style-radius-m);
-
-  &__title {
-    margin: 0 0 calc(var(--base) * 0.25);
-  }
-
   &__description {
     margin: 0 0 calc(var(--base) * 0.5);
     color: var(--theme-elevation-600);

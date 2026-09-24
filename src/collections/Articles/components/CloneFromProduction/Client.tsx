@@ -1,6 +1,14 @@
 "use client"
 
-import { Button, ReactSelect, useConfig, useDebounce } from "@payloadcms/ui"
+import {
+  Button,
+  Drawer,
+  PopupList,
+  ReactSelect,
+  useConfig,
+  useDebounce,
+  useModal,
+} from "@payloadcms/ui"
 import { useRouter } from "next/navigation"
 import React, { useEffect, useState } from "react"
 
@@ -25,6 +33,7 @@ type Outcome =
   | { slug: string; status: "error"; message: string }
 
 const baseClass = "clone-from-production"
+const drawerSlug = "clone-from-production"
 
 function optionLabel(article: ProductionArticle): string {
   const date = article.publishedAt ? new Date(article.publishedAt).toLocaleDateString() : ""
@@ -32,7 +41,7 @@ function optionLabel(article: ProductionArticle): string {
   return `${article.title}${date ? ` (${date})` : ""}${suffix}`
 }
 
-export const CloneFromProductionClient: React.FC = () => {
+const ClonePanel: React.FC = () => {
   const {
     config: {
       routes: { admin, api },
@@ -116,7 +125,6 @@ export const CloneFromProductionClient: React.FC = () => {
 
   return (
     <div className={baseClass}>
-      <h4 className={`${baseClass}__title`}>Clone from production</h4>
       <p className={`${baseClass}__description`}>
         Copies published articles from pragmaticpapers.com into this environment, with their
         authors, topics, media, volume and linked articles.
@@ -166,5 +174,24 @@ export const CloneFromProductionClient: React.FC = () => {
         </ul>
       )}
     </div>
+  )
+}
+
+export const CloneFromProductionMenuItem: React.FC<{ allowed: boolean }> = ({ allowed }) => {
+  const { openModal } = useModal()
+
+  if (!allowed) {
+    return <PopupList.Button disabled>Clone from production (admins only)</PopupList.Button>
+  }
+
+  return (
+    <>
+      <PopupList.Button onClick={() => openModal(drawerSlug)}>
+        Clone from production…
+      </PopupList.Button>
+      <Drawer slug={drawerSlug} title="Clone from production">
+        <ClonePanel />
+      </Drawer>
+    </>
   )
 }

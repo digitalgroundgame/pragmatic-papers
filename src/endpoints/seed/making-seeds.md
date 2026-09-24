@@ -343,7 +343,7 @@ async function createUser(
   context?: UserContext,
 ): Promise<User> {
   try {
-    return await payload.create({ collection: "users", data })
+    return await payload.create({ collection: "users", data, context })
   } catch (err) {
     payload.logger.warn(
       `Failed to create ${label} with full data, retrying with minimal fields. Error: ${err instanceof Error ? err.message : String(err)}`,

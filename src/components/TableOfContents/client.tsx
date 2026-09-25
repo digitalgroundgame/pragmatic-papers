@@ -20,10 +20,10 @@ function TableOfContentsIcon({
   isActive,
   className,
 }: TableOfContentsIconProps): React.ReactNode {
-  const visibilityClass = cn("toc__icon", className)
+  const iconClass = cn("toc__icon absolute top-1/2 right-full mr-1 -translate-y-1/2", className)
   if (React.isValidElement(icon)) {
     return React.cloneElement(icon as React.ReactElement<{ className?: string }>, {
-      className: cn((icon.props as { className?: string }).className, visibilityClass),
+      className: cn((icon.props as { className?: string }).className, iconClass),
     })
   }
   return (
@@ -32,7 +32,7 @@ function TableOfContentsIcon({
       className={cn(
         "text-muted-foreground size-3 shrink-0 opacity-0 group-hover:opacity-100",
         isActive && "opacity-100",
-        visibilityClass,
+        iconClass,
       )}
     />
   )
@@ -48,7 +48,7 @@ function TableOfContentsLink({ entry, ...props }: TableOfContentsLinkProps): Rea
     <a
       href={entry.anchor ? `#${entry.anchor}` : "#"}
       className={cn(
-        "toc__link group inline-flex items-center gap-1 no-underline hover:underline",
+        "toc__link group relative inline-flex items-center no-underline hover:underline",
         isActive && "underline",
         classNames?.link,
       )}
@@ -182,10 +182,7 @@ function TableOfContents({
           <TableOfContentsTitle>{title}</TableOfContentsTitle>
         </TableOfContentHeader>
       )}
-      <TableOfContentsList
-        entries={entries}
-        className={cn("md:-translate-x-4", classNames?.list)}
-      />
+      <TableOfContentsList entries={entries} className={classNames?.list} />
     </TableOfContentsBody>
   )
 }

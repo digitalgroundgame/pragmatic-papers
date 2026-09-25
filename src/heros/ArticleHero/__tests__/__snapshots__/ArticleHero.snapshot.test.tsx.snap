@@ -2,7 +2,7 @@
 
 exports[`ArticleHero > joins three authors with commas and a closing ampersand 1`] = `
 <div
-  class="relative flex flex-col gap-2 md:-mx-10 lg:-mx-32 xl:-mx-44"
+  class="relative flex flex-col gap-2"
 >
   <div
     data-testid="media"
@@ -197,7 +197,7 @@ exports[`ArticleHero > joins three authors with commas and a closing ampersand 1
 
 exports[`ArticleHero > names every author, however many, with no remainder 1`] = `
 <div
-  class="relative flex flex-col gap-2 md:-mx-10 lg:-mx-32 xl:-mx-44"
+  class="relative flex flex-col gap-2"
 >
   <div
     data-testid="media"
@@ -473,7 +473,7 @@ exports[`ArticleHero > names every author, however many, with no remainder 1`] =
 
 exports[`ArticleHero > renders narration as numeric id (no player shown) 1`] = `
 <div
-  class="relative flex flex-col gap-2 md:-mx-10 lg:-mx-32 xl:-mx-44"
+  class="relative flex flex-col gap-2"
 >
   <div
     data-testid="media"
@@ -578,7 +578,7 @@ exports[`ArticleHero > renders narration as numeric id (no player shown) 1`] = `
 
 exports[`ArticleHero > renders narration as object (shows player) 1`] = `
 <div
-  class="relative flex flex-col gap-2 md:-mx-10 lg:-mx-32 xl:-mx-44"
+  class="relative flex flex-col gap-2"
 >
   <div
     data-testid="media"
@@ -683,7 +683,7 @@ exports[`ArticleHero > renders narration as object (shows player) 1`] = `
 
 exports[`ArticleHero > renders with hero image 1`] = `
 <div
-  class="relative flex flex-col gap-2 md:-mx-10 lg:-mx-32 xl:-mx-44"
+  class="relative flex flex-col gap-2"
 >
   <div
     data-testid="media"
@@ -788,7 +788,7 @@ exports[`ArticleHero > renders with hero image 1`] = `
 
 exports[`ArticleHero > renders with populated authors 1`] = `
 <div
-  class="relative flex flex-col gap-2 md:-mx-10 lg:-mx-32 xl:-mx-44"
+  class="relative flex flex-col gap-2"
 >
   <div
     data-testid="media"
@@ -956,7 +956,7 @@ exports[`ArticleHero > renders with populated authors 1`] = `
 
 exports[`ArticleHero > renders without authors or hero image 1`] = `
 <div
-  class="relative flex flex-col gap-2 md:-mx-10 lg:-mx-32 xl:-mx-44"
+  class="relative flex flex-col gap-2"
 >
   <div
     data-testid="media"

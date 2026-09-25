@@ -46,6 +46,8 @@
   --error: oklch(0.58 0.22 27);
   --success: oklch(0.55 0.18 150);
   --warning: oklch(0.7 0.18 80);
+  /* py-3 (0.75rem × 2) + size-8 button (2rem) + border-b (1px) */
+  --header-height: 3.5625rem;
 }
 
 .dark {
@@ -221,11 +223,11 @@
 }
 
 .lexical-table-container {
-  @apply my-6 overflow-x-auto [-webkit-overflow-scrolling:touch] sm:overflow-x-visible md:-mx-4 lg:-mx-8;
+  @apply my-6 min-w-0 overflow-x-auto [-webkit-overflow-scrolling:touch] md:-mx-4 lg:-mx-8;
 }
 
 .lexical-table {
-  @apply w-full caption-bottom text-lg;
+  @apply my-0 min-w-full caption-bottom text-lg;
 }
 
 .lexical-table-row {

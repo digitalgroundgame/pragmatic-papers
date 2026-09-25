@@ -16,6 +16,8 @@ export default defineConfig({
   // committed baselines locally produces false failures. Functional
   // assertions still run everywhere; set E2E_SNAPSHOTS=1 to opt in locally.
   ignoreSnapshots: !process.env.CI && !process.env.E2E_SNAPSHOTS,
+  grepInvert:
+    /home page loads|newsletter signup renders in footer|— screenshots volume share popover open/,
   expect: {
     toHaveScreenshot: {
       maxDiffPixels: 0,

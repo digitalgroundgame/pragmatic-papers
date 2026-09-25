@@ -20,7 +20,7 @@ function TableOfContentsIcon({
   isActive,
   className,
 }: TableOfContentsIconProps): React.ReactNode {
-  const iconClass = cn("toc__icon absolute top-1/2 right-full mr-1 -translate-y-1/2", className)
+  const iconClass = cn("toc__icon absolute top-1/2 right-full mr-0.5 -translate-y-1/2", className)
   if (React.isValidElement(icon)) {
     return React.cloneElement(icon as React.ReactElement<{ className?: string }>, {
       className: cn((icon.props as { className?: string }).className, iconClass),

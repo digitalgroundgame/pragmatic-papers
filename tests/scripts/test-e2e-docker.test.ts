@@ -7,6 +7,7 @@ vi.mock("node:child_process", () => ({
 
 import { execSync, spawnSync } from "node:child_process"
 import {
+  CONTAINER_SCRIPT,
   isDockerAvailable,
   main,
   missingFontTokenWarning,
@@ -20,6 +21,19 @@ describe("resolveArgs", () => {
 
   it("passes user-supplied args through unchanged", () => {
     expect(resolveArgs(["--update-snapshots=missing"])).toEqual(["--update-snapshots=missing"])
+  })
+})
+
+describe("CONTAINER_SCRIPT", () => {
+  it("wipes node_modules for a new lockfile before installing, and stamps it only after", () => {
+    const steps = CONTAINER_SCRIPT.split(" && ")
+    const wipe = steps.findIndex((s) => s.includes("find node_modules -mindepth 1 -delete"))
+    const install = steps.indexOf("pnpm install --frozen-lockfile")
+    const stamp = steps.findIndex((s) => s.includes("> node_modules/.e2e-lockfile"))
+    expect(wipe).toBeGreaterThan(-1)
+    expect(wipe).toBeLessThan(install)
+    expect(stamp).toBeGreaterThan(install)
+    expect(steps.at(-1)).toBe('node scripts/test-e2e.mjs "$@"')
   })
 })
 
@@ -91,6 +105,7 @@ describe("main", () => {
 
     const [runCall, downCall] = vi.mocked(spawnSync).mock.calls
     expect(runCall?.[1]).toEqual(expect.arrayContaining(["run", "--rm", "playwright"]))
+    expect(runCall?.[1]).toEqual(expect.arrayContaining([CONTAINER_SCRIPT]))
     expect(runCall?.[1]).toEqual(expect.arrayContaining(["--update-snapshots=missing"]))
     expect(downCall?.[1]).toEqual(expect.arrayContaining(["down", "--remove-orphans"]))
   })

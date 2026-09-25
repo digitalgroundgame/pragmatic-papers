@@ -164,6 +164,13 @@ On a PR, you can trigger the same thing by adding the **`needs screenshots`**
 label — no CLI or Actions tab needed. The label is removed automatically once
 the run finishes, so re-adding it later triggers another regeneration.
 
+`changed` compares with the same `maxDiffPixelRatio` the test does, so a
+small but real change — a date or a word in a full-page shot — stays under
+the tolerance and is never rewritten. When you change seeded content that a
+baseline frames (e.g. the `SEEDED_*` values in `scripts/seed-e2e.constants.ts`),
+delete the affected PNGs instead; the next E2E run regenerates them as missing
+baselines and commits them to your branch.
+
 ## Keeping screenshots stable
 
 - Use `waitForStableRender(page)` (fonts + paint settle) before every

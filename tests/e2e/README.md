@@ -190,6 +190,9 @@ specs you changed.
   screenshot.
 - Prefer clipped component screenshots (`Screenshot` helper) over `fullPage`.
 - Mask or avoid regions with dynamic content (dates, random ordering, media).
+- Animate with CSS (ideally behind `motion-safe:`), not SVG SMIL
+  (`<animate>`, `<animateTransform>`): `animations: "disabled"` freezes CSS
+  and Web Animations only, so a SMIL animation keeps moving between captures.
 - Timezone (`UTC`), locale (`en-US`), and color scheme (`light`) are pinned in
   `playwright.config.ts`.
 - **When a clip is positioned relative to an element whose layout can settle

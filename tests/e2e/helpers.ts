@@ -41,9 +41,8 @@ export async function gotoFirstVolume(page: Page): Promise<string | null> {
  * Settle sources of pixel nondeterminism before taking a screenshot: wait for
  * web fonts to finish loading (late font swaps shift every glyph), for all
  * <img>s in the DOM to finish decoding (a still-loading hero image behind a
- * clipped screenshot region is a common source of flaky diffs), rewind and
- * pause SVG animations, and wait two animation frames so in-flight
- * layout/paint work has flushed.
+ * clipped screenshot region is a common source of flaky diffs), and for two
+ * animation frames so in-flight layout/paint work has flushed.
  */
 export async function waitForStableRender(page: Page): Promise<void> {
   await page.evaluate(async () => {
@@ -58,12 +57,6 @@ export async function waitForStableRender(page: Page): Promise<void> {
             }),
       ),
     )
-    // `animations: "disabled"` stops CSS and Web Animations but not SVG SMIL,
-    // e.g. PaperIconPattern's drifting CTA background.
-    for (const svg of document.querySelectorAll("svg")) {
-      svg.pauseAnimations()
-      svg.setCurrentTime(0)
-    }
     await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)))
   })
 }

@@ -27,18 +27,19 @@ export const PaperIconPattern: React.FC<React.ComponentProps<"svg"> & { id: stri
             transform="scale(2)"
             fill={fill}
           />
-          <animateTransform
-            attributeName="patternTransform"
-            type="translate"
-            from="0 0"
-            to="64 -64"
-            dur="6s"
-            repeatCount="indefinite"
-            additive="sum"
-          />
         </pattern>
       </defs>
-      <rect width="100%" height="100%" fill={`url(#${id})`} />
+      {/* A CSS animation, not SMIL, so prefers-reduced-motion and Playwright's
+          `animations: "disabled"` can stop it. Oversized so its edges stay out
+          of view while it drifts. */}
+      <rect
+        x="-100%"
+        y="-100%"
+        width="300%"
+        height="300%"
+        fill={`url(#${id})`}
+        className="motion-safe:animate-paper-drift"
+      />
     </svg>
   )
 }

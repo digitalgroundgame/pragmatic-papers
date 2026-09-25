@@ -1,70 +1,55 @@
-"use client"
-
-import type { Media, User } from "@/payload-types"
+import type { User, Media as MediaType } from "@/payload-types"
 import React from "react"
 
-import { AudioMedia, type AudioMediaProps } from "@/components/Media/AudioMedia"
+import { isAudioMedia, Media } from "@/components/Media"
+import {
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+} from "@/components/ui/dropdown-menu"
+import { isResolved, type Relationship } from "@/utilities/relationships"
 
-// function formatVTTTime(seconds: number): string {
-//   const h = Math.floor(seconds / 3600)
-//   const m = Math.floor((seconds % 3600) / 60)
-//   const s = seconds % 60
-//   return `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}:${s.toFixed(3).padStart(6, "0")}`
-// }
+/**
+ * The narrator credit lives in the player's settings menu rather than on its own
+ * line, so the whole player fits on one row. It stays a link — the menu item
+ * renders as an anchor to the narrator's profile.
+ *
+ * A plain function rather than a component so an absent credit is `null` at the
+ * call site: an element that renders nothing is still truthy, which would leave
+ * the menu with a separator and no entries under it.
+ */
+function narratorCredit(narrator: Relationship<User>): React.ReactNode {
+  if (!isResolved(narrator)) return null
 
-// function buildWebVTT(transcript: string, duration: number): string {
-//   const segments = transcript
-//     .split(/\n\n+/)
-//     .map((s) => s.replace(/\n/g, " ").trim())
-//     .filter(Boolean)
-
-//   if (segments.length === 0) return "WEBVTT\n"
-
-//   const segmentDuration = duration / segments.length
-//   const cues = segments.map((text, i) => {
-//     const start = formatVTTTime(i * segmentDuration)
-//     const end = formatVTTTime((i + 1) * segmentDuration)
-//     return `${start} --> ${end}\n${text}`
-//   })
-
-//   return `WEBVTT\n\n${cues.join("\n\n")}`
-// }
-
-interface NarrationPlayerProps {
-  narration: Media
-  narrator?: User | null
-}
-
-export function NarrationPlayer({ narration, narrator }: NarrationPlayerProps): React.ReactNode {
-  // const [duration, setDuration] = useState(narration.duration ?? 0)
-  // const [captionSrc, setCaptionSrc] = useState("")
-
-  // useEffect(() => {
-  //   if (duration <= 0 || !narration.transcript) return
-  //   const vtt = buildWebVTT(narration.transcript, duration)
-  //   const blob = new Blob([vtt], { type: "text/vtt" })
-  //   const url = URL.createObjectURL(blob)
-  //   setCaptionSrc(url)
-  //   return () => URL.revokeObjectURL(url)
-  // }, [duration, narration.transcript])
-
-  if (!narration.url) return null
+  const { name, slug } = narrator
+  if (!name || !slug) return null
 
   return (
-    <div className="flex flex-col gap-1.5">
-      {narrator && (
-        <p className="text-muted-foreground font-serif text-sm">
-          Narrated by{" "}
-          <a href={`/authors/${narrator.slug}`} className="hover:underline">
-            {narrator.name}
-          </a>
-        </p>
-      )}
-      <AudioMedia
-        media={narration as AudioMediaProps["media"]}
-        // captionSrc={captionSrc || undefined}
-        // onDurationChange={setDuration}
-      />
-    </div>
+    <DropdownMenuGroup>
+      <DropdownMenuLabel>Narrated by</DropdownMenuLabel>
+      <DropdownMenuItem
+        render={<a href={`/authors/${slug}`} />}
+        className="cursor-pointer font-serif"
+      >
+        {name}
+      </DropdownMenuItem>
+    </DropdownMenuGroup>
+  )
+}
+
+interface NarrationPlayerProps {
+  narration: number | MediaType | null | undefined
+  className?: string
+}
+
+export function NarrationPlayer({ narration, className }: NarrationPlayerProps): React.ReactNode {
+  if (!isAudioMedia(narration)) return null
+  return (
+    <Media
+      media={narration}
+      variant="collapsible"
+      menuItems={narratorCredit(narration.narrator)}
+      className={className}
+    />
   )
 }

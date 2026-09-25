@@ -95,12 +95,12 @@ describe("deriveAuthorSocialLinks", () => {
 describe("AuthorLinks", () => {
   it("renders nothing when socials is undefined", () => {
     const { container } = render(<AuthorLinks />)
-    expect(container.firstChild).toBeNull()
+    expect(container).toBeEmptyDOMElement()
   })
 
   it("renders nothing when no entries resolve to a valid link", () => {
     const { container } = render(<AuthorLinks socials={[customEntry(null)]} />)
-    expect(container.firstChild).toBeNull()
+    expect(container).toBeEmptyDOMElement()
   })
 
   it("renders one accessible link per valid social entry", () => {
@@ -113,16 +113,16 @@ describe("AuthorLinks", () => {
       />,
     )
     const nav = screen.getByRole("navigation", { name: "Author Links" })
-    expect(nav).toBeTruthy()
+    expect(nav).toBeInTheDocument()
 
     const links = screen.getAllByRole("link")
     expect(links).toHaveLength(2)
 
     const youtube = links[0]
-    expect(youtube?.getAttribute("href")).toBe("https://youtu.be/abc")
-    expect(youtube?.getAttribute("target")).toBe("_blank")
-    expect(youtube?.getAttribute("rel")).toContain("noopener")
-    expect(screen.getByText("My channel")).toBeTruthy()
+    expect(youtube).toHaveAttribute("href", "https://youtu.be/abc")
+    expect(youtube).toHaveAttribute("target", "_blank")
+    expect(youtube).toHaveAttribute("rel", expect.stringContaining("noopener"))
+    expect(screen.getByText("My channel")).toBeInTheDocument()
   })
 
   it("renders the expected icons for a mix of platforms", () => {

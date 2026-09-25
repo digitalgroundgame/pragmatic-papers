@@ -23,7 +23,7 @@ import React from "react"
 export async function Header(): Promise<React.JSX.Element> {
   const [{ navItems, actions }, { socials }]: [Header, Footer] = await Promise.all([
     getCachedGlobal("header", 1)(),
-    getCachedGlobal("footer", 1)(),
+    getCachedGlobal("footer", 2)(),
   ])
 
   return (

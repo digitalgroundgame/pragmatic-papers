@@ -12,6 +12,7 @@ import { formatDateTime } from "@/utilities/formatDateTime"
 import { generateMeta } from "@/utilities/generateMeta"
 import { getServerSideURL } from "@/utilities/getURL"
 import { queryVolumeBySlug } from "@/utilities/queries"
+import { isResolved } from "@/utilities/relationships"
 import { buildBreadcrumbJsonLd, buildVolumeJsonLd } from "@/utilities/structuredData"
 import { toRoman } from "@/utilities/toRoman"
 import configPromise from "@payload-config"
@@ -63,17 +64,13 @@ export default async function VolumePage({
 
   const { publishedAt, editorsNote } = volume
 
-  const articles = volume.articles?.filter((a): a is Article => typeof a !== "number")
+  const articles = volume.articles?.filter(isResolved<Article>)
 
   if (!articles) return <PayloadRedirects url={url} />
 
   const seen = new Set<number>()
   const volumeAuthors = articles
-    ?.flatMap(
-      (article) =>
-        (article.authors || []).filter((author): author is User => typeof author === "object") ??
-        [],
-    )
+    ?.flatMap((article) => (article.authors || []).filter(isResolved<User>) ?? [])
     .filter((a) => {
       if (seen.has(a.id)) return false
       seen.add(a.id)

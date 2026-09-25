@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test"
 
 import {
+  expectPinnedDateline,
   gotoFirstArticle,
   gotoFirstVolume,
   viewportRatioClip,
@@ -123,11 +124,16 @@ test.describe("ShareButtons — article page", () => {
   }
 })
 
+// Every shot below frames the article hero, dateline included, so each one
+// asserts the seed's pinned stamps first — see expectPinnedDateline for why a
+// clock-tracking date has to fail by name rather than as a pixel diff.
 test.describe("ShareButtons — screenshots", () => {
   test("article share button and popover close-up @visual", async ({ page }, testInfo) => {
     test.skip(testInfo.project.name !== "chromium", "visual baseline captured on chromium only")
     const href = await gotoFirstArticle(page)
     test.skip(!href, "No articles found in the database")
+
+    await expectPinnedDateline(page)
 
     const share = page.getByRole("button", { name: "Share" })
     await share.waitFor({ state: "visible" })
@@ -165,6 +171,8 @@ test.describe("ShareButtons — screenshots", () => {
     const href = await gotoFirstArticle(page)
     test.skip(!href, "No articles found in the database")
 
+    await expectPinnedDateline(page)
+
     const share = page.getByRole("button", { name: "Share" })
     await share.waitFor({ state: "visible" })
     await share.scrollIntoViewIfNeeded()
@@ -175,6 +183,8 @@ test.describe("ShareButtons — screenshots", () => {
     test.skip(testInfo.project.name !== "chromium", "visual baseline captured on chromium only")
     const href = await gotoFirstArticle(page)
     test.skip(!href, "No articles found in the database")
+
+    await expectPinnedDateline(page)
 
     const share = page.getByRole("button", { name: "Share" })
     await share.waitFor({ state: "visible" })
@@ -211,6 +221,8 @@ test.describe("ShareButtons — mobile screenshots (iPhone SE)", () => {
     const href = await gotoFirstArticle(page)
     test.skip(!href, "No articles found in the database")
 
+    await expectPinnedDateline(page)
+
     const share = page.getByRole("button", { name: "Share" })
     await share.waitFor({ state: "visible" })
     await share.scrollIntoViewIfNeeded()
@@ -221,6 +233,8 @@ test.describe("ShareButtons — mobile screenshots (iPhone SE)", () => {
     test.skip(testInfo.project.name !== "chromium", "visual baseline captured on chromium only")
     const href = await gotoFirstArticle(page)
     test.skip(!href, "No articles found in the database")
+
+    await expectPinnedDateline(page)
 
     const share = page.getByRole("button", { name: "Share" })
     await share.waitFor({ state: "visible" })

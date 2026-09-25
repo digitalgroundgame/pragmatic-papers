@@ -128,25 +128,30 @@ export const createFootnotesArticle = async (
   mediaDocs: Media[],
   referencedArticleId: number,
   topics: number[] = [],
+  context?: Record<string, unknown>,
 ): Promise<number> => {
   validateWriters(writers)
 
   const title = "Demonstrating Footnotes: A Comprehensive Guide"
 
-  const article = await createArticle(payload, {
-    title,
-    content: createArticleContentWithFootnotes(referencedArticleId),
-    authors: writers.map((writer) => writer.id),
-    topics: topics,
-    slug: "demonstrating-footnotes-comprehensive-guide",
-    heroImage: mediaDocs[Math.floor(Math.random() * mediaDocs.length)]?.id,
-    meta: {
+  const article = await createArticle(
+    payload,
+    {
       title,
-      description:
-        "This article demonstrates the footnotes feature, showing how to add citations, references, and additional context to your articles.",
-      image: mediaDocs[0]?.id,
+      content: createArticleContentWithFootnotes(referencedArticleId),
+      authors: writers.map((writer) => writer.id),
+      topics: topics,
+      slug: "demonstrating-footnotes-comprehensive-guide",
+      heroImage: mediaDocs[Math.floor(Math.random() * mediaDocs.length)]?.id,
+      meta: {
+        title,
+        description:
+          "This article demonstrates the footnotes feature, showing how to add citations, references, and additional context to your articles.",
+        image: mediaDocs[0]?.id,
+      },
     },
-  })
+    context,
+  )
 
   return article.id
 }

@@ -3,6 +3,7 @@ import { Articles } from "@/collections/Articles"
 import { Categories } from "@/collections/Categories"
 import { MapAssets } from "@/collections/MapAssets"
 import { Media } from "@/collections/Media"
+import { Merch } from "@/collections/Merch"
 import { Pages } from "@/collections/Pages"
 import { Topics } from "@/collections/Topics"
 import { Users } from "@/collections/Users"
@@ -12,6 +13,7 @@ import { defaultLexical } from "@/fields/defaultLexical"
 import { Footer } from "@/Footer/config"
 import { ArticleRecommendations } from "@/globals/ArticleRecommendations/config"
 import { Header } from "@/Header/config"
+import { syncShopifyProductsTask } from "@/jobs/syncShopifyProducts"
 import { updateRecommendationsTask } from "@/jobs/updateRecommendations"
 import { plugins } from "@/plugins"
 import { searchVectorAfterSchemaInit } from "@/plugins/searchVector"
@@ -93,7 +95,18 @@ export default buildConfig({
     push: process.env.NODE_ENV === "development",
     afterSchemaInit: [searchVectorAfterSchemaInit],
   }),
-  collections: [Pages, Articles, Volumes, Media, MapAssets, Categories, Users, Webhooks, Topics],
+  collections: [
+    Pages,
+    Articles,
+    Volumes,
+    Media,
+    MapAssets,
+    Categories,
+    Users,
+    Webhooks,
+    Topics,
+    Merch,
+  ],
   cors: [getServerSideURL()].filter(Boolean),
   globals: [Header, Footer, ArticleRecommendations],
   plugins: [...plugins],
@@ -143,6 +156,6 @@ export default buildConfig({
       },
     },
     autoRun: [{ cron: "*/5 * * * *", queue: "default" }],
-    tasks: [updateRecommendationsTask],
+    tasks: [updateRecommendationsTask, syncShopifyProductsTask],
   },
 })

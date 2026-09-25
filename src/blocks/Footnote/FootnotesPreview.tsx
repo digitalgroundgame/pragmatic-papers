@@ -1,13 +1,14 @@
 "use client"
 
-import type { FootnotesField } from "@/payload-types"
 import { useDocumentInfo } from "@payloadcms/ui"
 import React from "react"
+
+import { getFootnotes } from "./utils"
 
 export const FootnotesPreview: React.FC = () => {
   const { data } = useDocumentInfo()
 
-  const footnotes = (data?.footnotes as NonNullable<FootnotesField>) ?? []
+  const footnotes = getFootnotes(data)
 
   if (!footnotes.length) return null
 

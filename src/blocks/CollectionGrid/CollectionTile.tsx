@@ -6,6 +6,7 @@ import { isMedia, Media } from "@/components/Media"
 import type { ImageVariant } from "@/components/Media/ImageMedia"
 import { TimeAgo } from "@/components/TimeAgo"
 import { cn } from "@/utilities/utils"
+import { isResolved } from "@/utilities/relationships"
 
 export type ImagePosition = "above" | "below" | "left" | "right" | "none"
 
@@ -30,7 +31,7 @@ export const CollectionTile: React.FC<CollectionTileProps> = ({
   if (!tile) return null
   const { id, collection, kicker, overrideTitle, showByline } = tile
 
-  if (!collection || typeof collection.value === "number") return null
+  if (!collection || !isResolved(collection.value)) return null
 
   const { title, slug, publishedAt, meta } = collection.value
   const href = `/${collection.relationTo}/${slug}`
@@ -46,7 +47,7 @@ export const CollectionTile: React.FC<CollectionTileProps> = ({
   }
 
   if ("authors" in collection.value && collection.value.authors) {
-    populatedAuthors = collection.value.authors.filter((a): a is User => typeof a === "object")
+    populatedAuthors = collection.value.authors.filter(isResolved<User>)
   }
 
   const isHorizontal = imagePosition === "left" || imagePosition === "right"

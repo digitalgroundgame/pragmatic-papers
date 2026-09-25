@@ -63,7 +63,7 @@ export default async function Page({ params, searchParams }: Args): Promise<Reac
   const pageNumber = pageString ? Math.max(Number(pageString) || 1, 1) : undefined
   const url = `/${slug}${pageNumber ? `?p=${pageNumber}` : ""}`
   let page: RequiredDataFromCollectionSlug<"pages"> | null = await queryPageBySlug(slug)
-  const { socials } = await getCachedGlobal("footer", 1)()
+  const { socials } = await getCachedGlobal("footer", 2)()
 
   // Remove this code once your website is seeded
   if (!page && slug === "home") {

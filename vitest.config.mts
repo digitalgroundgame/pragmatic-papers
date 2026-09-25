@@ -1,6 +1,14 @@
 import react from "@vitejs/plugin-react"
 import { defineConfig } from "vitest/config"
 
+// Pin the timezone so date rendering is reproducible. Anything that formats a
+// date for display (`formatDateTime`, and the snapshots that capture it) reads
+// the host timezone, so a snapshot generated in America/Los_Angeles records
+// "May 31" for a UTC-midnight timestamp that CI — which runs in UTC — renders
+// as "June 1". Setting it here rather than in the test scripts covers every
+// entry point, including direct `vitest` runs and IDE test runners.
+process.env.TZ = "UTC"
+
 export default defineConfig({
   test: {
     coverage: {

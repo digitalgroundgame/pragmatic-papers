@@ -38,36 +38,36 @@ describe("NarratorField", () => {
   it("shows for a pending audio file that has not been saved yet", () => {
     renderWith({ file: { value: { type: "audio/mpeg" } } })
 
-    expect(narratorField()).toBeTruthy()
+    expect(narratorField()).toBeInTheDocument()
   })
 
   it("shows for a saved audio record", () => {
     renderWith({ mimeType: { value: "audio/mpeg" } })
 
-    expect(narratorField()).toBeTruthy()
+    expect(narratorField()).toBeInTheDocument()
   })
 
   it("hides for a pending image file", () => {
     renderWith({ file: { value: { type: "image/jpeg" } } })
 
-    expect(narratorField()).toBeNull()
+    expect(narratorField()).not.toBeInTheDocument()
   })
 
   it("hides for a saved image record", () => {
     renderWith({ mimeType: { value: "image/jpeg" } })
 
-    expect(narratorField()).toBeNull()
+    expect(narratorField()).not.toBeInTheDocument()
   })
 
   it("hides on a blank form with no file selected", () => {
     renderWith({})
 
-    expect(narratorField()).toBeNull()
+    expect(narratorField()).not.toBeInTheDocument()
   })
 
   it("prefers the pending file over the saved mimeType when a file is replaced", () => {
     renderWith({ file: { value: { type: "image/jpeg" } }, mimeType: { value: "audio/mpeg" } })
 
-    expect(narratorField()).toBeNull()
+    expect(narratorField()).not.toBeInTheDocument()
   })
 })

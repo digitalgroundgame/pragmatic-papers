@@ -18,6 +18,7 @@ import { ArticleHero } from "@/heros/ArticleHero"
 import { MathJaxProvider } from "@/providers/MathJaxProvider"
 import { generateMeta } from "@/utilities/generateMeta"
 import { queryArticleBySlug, queryVolumesForArticles } from "@/utilities/queries"
+import { isResolved } from "@/utilities/relationships"
 import { buildArticleJsonLd, buildBreadcrumbJsonLd } from "@/utilities/structuredData"
 
 export async function generateStaticParams(): Promise<{ slug: string | null | undefined }[]> {
@@ -66,9 +67,7 @@ export default async function Article({ params: paramsPromise }: Args): Promise<
 
   const { footnotes, content, authors, enableMathRendering, topics } = article
 
-  const populatedAuthors = (authors || []).filter(
-    (author): author is User => typeof author === "object",
-  )
+  const populatedAuthors = (authors || []).filter(isResolved<User>)
 
   const [volume] = await queryVolumesForArticles([article.id])
 

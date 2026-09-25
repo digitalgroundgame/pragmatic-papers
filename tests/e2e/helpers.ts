@@ -1,4 +1,23 @@
-import type { Locator, Page } from "@playwright/test"
+import { expect, type Locator, type Page } from "@playwright/test"
+
+import { SEEDED_DATELINE, SEEDED_REVISION } from "../../scripts/seed-e2e.constants"
+
+/**
+ * Assert that an article hero's two instants read the words the seed pinned.
+ *
+ * Every baseline that frames a hero bakes these in, and Payload stamps
+ * `updatedAt` with the current time on every non-draft save — so without the
+ * seed's pin the revision line tracks the day the seed ran. Call this before
+ * any such screenshot: a stamp that goes back to following the clock then
+ * fails here, naming the cause, instead of surfacing as an unexplained
+ * whole-suite visual diff months later.
+ */
+export async function expectPinnedDateline(page: Page): Promise<void> {
+  const stamps = page.locator("#article-dateline").locator("time")
+  await expect(stamps).toHaveCount(2)
+  await expect(stamps.nth(0)).toHaveText(SEEDED_DATELINE)
+  await expect(stamps.nth(1)).toHaveText(SEEDED_REVISION)
+}
 
 export async function gotoFirstArticle(page: Page): Promise<string | null> {
   await page.goto("/")

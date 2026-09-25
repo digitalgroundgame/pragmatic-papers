@@ -19,7 +19,6 @@
     "allowJs": true,
     "jsx": "react-jsx",
     "noEmit": true,
-    "baseUrl": ".",
     "plugins": [
       {
         "name": "next"

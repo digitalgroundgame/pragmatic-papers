@@ -94,3 +94,6 @@ devenv.local.yaml
 
 # Sentry Config File
 .env.sentry-build-plugin
+
+# pnpm store left behind by the Dockerized e2e run (bind-mounted repo root)
+.pnpm-store

@@ -77,32 +77,32 @@ describe("Gauss10Layout", () => {
       render(<Gauss10Layout slots={makeSlots(requiredIds)} />)
 
       for (const id of requiredIds) {
-        expect(screen.getByTestId(`tile-${id}`)).toBeTruthy()
+        expect(screen.getByTestId(`tile-${id}`)).toBeInTheDocument()
       }
-      expect(screen.queryByTestId("tile-h")).toBeNull()
-      expect(screen.queryByTestId("tile-i")).toBeNull()
+      expect(screen.queryByTestId("tile-h")).not.toBeInTheDocument()
+      expect(screen.queryByTestId("tile-i")).not.toBeInTheDocument()
     })
 
     it("renders H but not I when only 9 slots are provided", () => {
       render(<Gauss10Layout slots={makeSlots([...requiredIds, "h"])} />)
 
-      expect(screen.getByTestId("tile-h")).toBeTruthy()
-      expect(screen.queryByTestId("tile-i")).toBeNull()
+      expect(screen.getByTestId("tile-h")).toBeInTheDocument()
+      expect(screen.queryByTestId("tile-i")).not.toBeInTheDocument()
     })
 
     it("renders all 10 slots when provided", () => {
       render(<Gauss10Layout slots={makeSlots(allIds)} />)
 
       for (const id of allIds) {
-        expect(screen.getByTestId(`tile-${id}`)).toBeTruthy()
+        expect(screen.getByTestId(`tile-${id}`)).toBeInTheDocument()
       }
     })
 
     it("ignores slots beyond the 10th", () => {
       render(<Gauss10Layout slots={makeSlots([...allIds, "extra"])} />)
 
-      expect(screen.queryByTestId("tile-extra")).toBeNull()
-      expect(screen.getByTestId("tile-i")).toBeTruthy()
+      expect(screen.queryByTestId("tile-extra")).not.toBeInTheDocument()
+      expect(screen.getByTestId("tile-i")).toBeInTheDocument()
     })
   })
 
@@ -126,16 +126,16 @@ describe("Gauss10Layout", () => {
       const { container } = render(<Gauss10Layout slots={makeSlots(requiredIds)} />)
       const { left, featured, right } = getColumns(container)
 
-      expect(left.className).toContain("order-2")
-      expect(left.className).toContain("lg:order-0")
-      expect(featured.className).toContain("order-1")
-      expect(featured.className).toContain("lg:order-0")
-      expect(right.className).toContain("order-3")
-      expect(right.className).toContain("lg:order-0")
+      expect(left).toHaveClass("order-2")
+      expect(left).toHaveClass("lg:order-0")
+      expect(featured).toHaveClass("order-1")
+      expect(featured).toHaveClass("lg:order-0")
+      expect(right).toHaveClass("order-3")
+      expect(right).toHaveClass("lg:order-0")
 
       // DOM order must stay left -> featured -> right so the lg:order-0
       // reset lands Featured between the two columns, not just anywhere.
-      expect(featured.querySelector('[data-testid="tile-featured"]')).toBeTruthy()
+      expect(featured.querySelector('[data-testid="tile-featured"]')).toBeInTheDocument()
     })
 
     it("stacks the side columns into 3 across at md, then 1 across at lg", () => {
@@ -143,11 +143,11 @@ describe("Gauss10Layout", () => {
       const { left, right } = getColumns(container)
 
       for (const column of [left, right]) {
-        expect(column.className).toContain("grid-cols-1")
-        expect(column.className).toContain("md:col-span-3")
-        expect(column.className).toContain("md:grid-cols-3")
-        expect(column.className).toContain("lg:col-span-1")
-        expect(column.className).toContain("lg:grid-cols-1")
+        expect(column).toHaveClass("grid-cols-1")
+        expect(column).toHaveClass("md:col-span-3")
+        expect(column).toHaveClass("md:grid-cols-3")
+        expect(column).toHaveClass("lg:col-span-1")
+        expect(column).toHaveClass("lg:grid-cols-1")
       }
     })
   })
@@ -245,9 +245,9 @@ describe("Gauss10Layout", () => {
       )
       const section = container.querySelector("section")!
 
-      expect(section.className).toContain("mt-12")
-      expect(section.className).toContain("grid")
-      expect(section.className).toContain("lg:grid-cols-5")
+      expect(section).toHaveClass("mt-12")
+      expect(section).toHaveClass("grid")
+      expect(section).toHaveClass("lg:grid-cols-5")
     })
 
     it("spreads remaining props onto the section element", () => {
@@ -257,7 +257,7 @@ describe("Gauss10Layout", () => {
       const section = container.querySelector("section")!
 
       expect(section.id).toBe("gauss")
-      expect(section.getAttribute("aria-label")).toBe("Featured stories")
+      expect(section).toHaveAttribute("aria-label", "Featured stories")
     })
   })
 

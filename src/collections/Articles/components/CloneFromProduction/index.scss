@@ -21,11 +21,63 @@
   }
 
   &__outcomes {
-    margin: calc(var(--base) * 0.5) 0 0;
-    padding-left: var(--base);
+    display: flex;
+    flex-direction: column;
+    gap: calc(var(--base) * 0.25);
+    margin: calc(var(--base) * 0.75) 0 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  &__outcome {
+    display: flex;
+    gap: calc(var(--base) * 0.5);
+    align-items: center;
+    min-height: calc(var(--base) * 1.25);
+  }
+
+  &__status {
+    display: flex;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    width: calc(var(--base) * 1.25);
+    height: calc(var(--base) * 1.25);
+
+    .icon {
+      width: 100%;
+      height: 100%;
+    }
+  }
+
+  // Titles run full length and only ellipsize when the drawer is too narrow.
+  &__label {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__meta {
+    flex: none;
+    color: var(--theme-elevation-500);
+  }
+
+  &__outcome--queued &__label {
+    color: var(--theme-elevation-500);
+  }
+
+  &__outcome--done &__status {
+    color: var(--theme-success-500);
   }
 
   &__outcome--error {
     color: var(--theme-error-500);
+
+    .clone-from-production__meta {
+      flex: 0 1 auto;
+      min-width: 0;
+      color: inherit;
+    }
   }
 }

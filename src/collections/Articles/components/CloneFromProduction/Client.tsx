@@ -2,12 +2,15 @@
 
 import {
   Button,
+  CheckIcon,
   Drawer,
   PopupList,
   ReactSelect,
+  Spinner,
   useConfig,
   useDebounce,
   useModal,
+  XIcon,
 } from "@payloadcms/ui"
 import { useRouter } from "next/navigation"
 import React, { useEffect, useState } from "react"
@@ -25,12 +28,15 @@ interface Option {
   [key: string]: unknown
   label: string
   value: string
+  title: string
 }
 
-type Outcome =
-  | { slug: string; status: "cloning" }
-  | { slug: string; status: "done"; id: number; clonedAs: string; title: string }
-  | { slug: string; status: "error"; message: string }
+type Outcome = { slug: string; title: string } & (
+  | { status: "queued" }
+  | { status: "cloning" }
+  | { status: "done"; id: number; clonedAs: string }
+  | { status: "error"; message: string }
+)
 
 const baseClass = "clone-from-production"
 const drawerSlug = "clone-from-production"
@@ -39,6 +45,16 @@ function optionLabel(article: ProductionArticle): string {
   const date = article.publishedAt ? new Date(article.publishedAt).toLocaleDateString() : ""
   const suffix = article.existsLocally ? " · already here, will clone as a copy" : ""
   return `${article.title}${date ? ` (${date})` : ""}${suffix}`
+}
+
+/** Seconds since mount, so a long clone visibly keeps working. */
+const Elapsed: React.FC = () => {
+  const [seconds, setSeconds] = useState(0)
+  useEffect(() => {
+    const timer = setInterval(() => setSeconds((s) => s + 1), 1000)
+    return () => clearInterval(timer)
+  }, [])
+  return <>{seconds}s</>
 }
 
 const ClonePanel: React.FC = () => {
@@ -56,7 +72,8 @@ const ClonePanel: React.FC = () => {
   const loading = results?.query !== search
   const [selected, setSelected] = useState<Option[]>([])
   const [outcomes, setOutcomes] = useState<Outcome[]>([])
-  const cloning = outcomes.some((o) => o.status === "cloning")
+  const active = outcomes.findIndex((o) => o.status === "cloning")
+  const cloning = outcomes.some((o) => o.status === "queued" || o.status === "cloning")
 
   useEffect(() => {
     const controller = new AbortController()
@@ -70,7 +87,7 @@ const ClonePanel: React.FC = () => {
         if (!res.ok || !body.docs) throw new Error(body.error ?? `Search failed (${res.status})`)
         setResults({
           query,
-          options: body.docs.map((a) => ({ label: optionLabel(a), value: a.slug })),
+          options: body.docs.map((a) => ({ label: optionLabel(a), value: a.slug, title: a.title })),
         })
       })
       .catch((err: unknown) => {
@@ -83,10 +100,13 @@ const ClonePanel: React.FC = () => {
   const clone = async () => {
     const queue = selected
     setSelected([])
-    setOutcomes(queue.map(({ value }) => ({ slug: value, status: "cloning" })))
+    setOutcomes(queue.map(({ value, title }) => ({ slug: value, title, status: "queued" })))
 
     // One request per article keeps each inside the serverless function time limit.
-    for (const { value: slug } of queue) {
+    for (const { value: slug, title } of queue) {
+      setOutcomes((prev) =>
+        prev.map((o) => (o.slug === slug ? { slug, title, status: "cloning" } : o)),
+      )
       let outcome: Outcome
       try {
         const res = await fetch(`${api}/articles/clone-from-production`, {
@@ -105,15 +125,16 @@ const ClonePanel: React.FC = () => {
           res.ok && body.id !== undefined
             ? {
                 slug,
+                title: body.title ?? title,
                 status: "done",
                 id: body.id,
                 clonedAs: body.slug ?? slug,
-                title: body.title ?? slug,
               }
-            : { slug, status: "error", message: body.error ?? `Failed (${res.status})` }
+            : { slug, title, status: "error", message: body.error ?? `Failed (${res.status})` }
       } catch (err) {
         outcome = {
           slug,
+          title,
           status: "error",
           message: err instanceof Error ? err.message : String(err),
         }
@@ -153,22 +174,43 @@ const ClonePanel: React.FC = () => {
           onClick={clone}
         >
           {cloning
-            ? "Cloning…"
+            ? outcomes.length > 1
+              ? `Cloning ${active + 1} of ${outcomes.length}…`
+              : "Cloning…"
             : `Clone${selected.length > 1 ? ` ${selected.length} articles` : ""}`}
         </Button>
       </div>
       {outcomes.length > 0 && (
         <ul className={`${baseClass}__outcomes`}>
           {outcomes.map((o) => (
-            <li key={o.slug} className={`${baseClass}__outcome--${o.status}`}>
-              {o.status === "cloning" && `Cloning ${o.slug}…`}
-              {o.status === "done" && (
-                <>
-                  Cloned <a href={`${admin}/collections/articles/${o.id}`}>{o.title}</a>
-                  {o.clonedAs !== o.slug && ` as ${o.clonedAs}`}
-                </>
+            <li key={o.slug} className={`${baseClass}__outcome ${baseClass}__outcome--${o.status}`}>
+              <span className={`${baseClass}__status`}>
+                {o.status === "cloning" && <Spinner size="sm" loadingText={null} />}
+                {o.status === "done" && <CheckIcon />}
+                {o.status === "error" && <XIcon />}
+              </span>
+              <span className={`${baseClass}__label`} title={o.title}>
+                {o.status === "done" ? (
+                  <a
+                    href={`${admin}/collections/articles/${o.id}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    {o.title}
+                  </a>
+                ) : (
+                  o.title
+                )}
+              </span>
+              {o.status === "cloning" && (
+                <span className={`${baseClass}__meta`}>
+                  <Elapsed />
+                </span>
               )}
-              {o.status === "error" && `${o.slug}: ${o.message}`}
+              {o.status === "done" && o.clonedAs !== o.slug && (
+                <span className={`${baseClass}__meta`}>as {o.clonedAs}</span>
+              )}
+              {o.status === "error" && <span className={`${baseClass}__meta`}>{o.message}</span>}
             </li>
           ))}
         </ul>

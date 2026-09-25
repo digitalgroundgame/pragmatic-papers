@@ -429,7 +429,7 @@ export async function seedLive(
                   email: `${authorSlug}@example.com`,
                   password: "password123",
                   name: author.name || authorSlug,
-                  role: "writer",
+                  roles: ["writer"],
                   slug: authorSlug,
                   affiliation: author.affiliation || undefined,
                   biography: author.biography as User["biography"],
@@ -451,8 +451,8 @@ export async function seedLive(
       const defaultUsers = await payload.find({
         collection: "users",
         where: {
-          role: {
-            equals: "writer",
+          roles: {
+            in: ["writer"],
           },
         },
         limit: 1,
@@ -464,8 +464,8 @@ export async function seedLive(
         const admins = await payload.find({
           collection: "users",
           where: {
-            role: {
-              equals: "admin",
+            roles: {
+              in: ["admin"],
             },
           },
           limit: 1,

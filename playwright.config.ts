@@ -18,7 +18,8 @@ export default defineConfig({
   ignoreSnapshots: !process.env.CI && !process.env.E2E_SNAPSHOTS,
   expect: {
     toHaveScreenshot: {
-      maxDiffPixelRatio: 0.01,
+      maxDiffPixels: 0,
+      threshold: 0,
       animations: "disabled",
       caret: "hide",
     },

@@ -408,6 +408,127 @@ describe("cloneArticleFromProduction", () => {
     expect(payload.db.articles![0]).toMatchObject({ narration: null })
   })
 
+  it("downloads a map's SVG when production didn't inline it, and drops a map it can't reach", async () => {
+    const mapAsset = (id: number, name: string) => ({
+      id,
+      label: name,
+      filename: `${name}.svg`,
+      mimeType: "image/svg+xml",
+      url: `https://cdn.example.com/${name}.svg`,
+    })
+    const source = article({
+      id: 1,
+      slug: "a",
+      content: richText(
+        block({
+          blockType: "interactiveMap",
+          maps: [{ svgAsset: mapAsset(3, "mo") }, { svgAsset: mapAsset(4, "gone") }],
+        }),
+      ),
+    })
+    const production = fakeProduction({
+      articles: [source],
+      unreachable: ["https://cdn.example.com/gone.svg"],
+    })
+    vi.stubGlobal("fetch", async (input: string | URL, init?: RequestInit) =>
+      String(input) === "https://cdn.example.com/mo.svg" && init?.method !== "HEAD"
+        ? new Response("<svg>mo</svg>")
+        : production(input, init),
+    )
+    const payload = fakePayload()
+
+    await cloneArticleFromProduction(payload as never, "a")
+
+    const [asset] = payload.db["map-assets"]!
+    const [map] = (payload.db.articles![0]!.content as { root: { children: Row[] } }).root.children
+    expect(payload.db["map-assets"]).toHaveLength(1)
+    expect(map!.fields).toMatchObject({ maps: [{ svgAsset: asset!.id }, { svgAsset: null }] })
+    const { file } = payload.create.mock.calls.find(([c]) => c.collection === "map-assets")![0]
+    expect(file.data.toString()).toBe("<svg>mo</svg>")
+    expect(file.name).toMatch(/-mo\.svg$/)
+  })
+
+  it("keeps uploads it could clone, drops the rest, and sends other references to production", async () => {
+    const source = article({
+      id: 1,
+      slug: "a",
+      content: richText(
+        { type: "upload", version: 3, relationTo: "media", value: image(20), fields: null },
+        { type: "upload", version: 3, relationTo: "media", value: image(21), fields: null },
+        paragraph({
+          type: "inlineBlock",
+          fields: {
+            blockType: "footnote",
+            link: {
+              type: "reference",
+              reference: { relationTo: "pages", value: { id: 9, slug: "about" } },
+            },
+          },
+        }),
+      ),
+    })
+    vi.stubGlobal(
+      "fetch",
+      fakeProduction({
+        articles: [source],
+        unreachable: [
+          "https://cdn.example.com/img-21.webp",
+          "https://cdn.example.com/large-img-21.webp",
+        ],
+      }),
+    )
+    const payload = fakePayload()
+
+    await cloneArticleFromProduction(payload as never, "a")
+
+    const children = (payload.db.articles![0]!.content as { root: { children: Row[] } }).root
+      .children as unknown as Array<Row & { children?: Row[] }>
+    expect(children).toHaveLength(2)
+    expect(children[0]).toMatchObject({
+      type: "upload",
+      relationTo: "media",
+      value: payload.db.media![0]!.id,
+    })
+    expect(children[1]!.children![0]).toMatchObject({
+      fields: { link: { type: "custom", url: `${PROD}/about`, reference: null } },
+    })
+  })
+
+  it("clones an article that links to itself only once", async () => {
+    const source = article({ id: 1, slug: "a" })
+    source.content = richText(paragraph(internalLink("articles", { id: 1, slug: "a" })))
+    vi.stubGlobal("fetch", fakeProduction({ articles: [source] }))
+    const payload = fakePayload()
+
+    const result = await cloneArticleFromProduction(payload as never, "a")
+
+    expect(result.created).toEqual({ articles: 1 })
+    expect(payload.db.articles).toHaveLength(1)
+  })
+
+  it("clones the article without a reference that fails, and logs why", async () => {
+    const source = article({
+      id: 1,
+      slug: "a",
+      topics: [{ id: 7, name: "Housing", slug: "housing", description: null, meta: {} }],
+    })
+    vi.stubGlobal("fetch", fakeProduction({ articles: [source] }))
+    const payload = fakePayload()
+    const create = payload.create.getMockImplementation()!
+    payload.create.mockImplementation(async (args) => {
+      if (args.collection === "topics") throw new Error("name must be unique")
+      return create(args)
+    })
+
+    await cloneArticleFromProduction(payload as never, "a")
+
+    expect(payload.db.articles![0]).toMatchObject({ slug: "a", topics: [] })
+    expect(payload.logger.warn).toHaveBeenCalledWith(
+      { err: expect.objectContaining({ message: "name must be unique" }) },
+      "[clone] Could not clone topics:7 from production",
+    )
+  })
+
   it("throws ArticleNotFoundError for a slug production doesn't have", async () => {
     vi.stubGlobal("fetch", fakeProduction({}))
 

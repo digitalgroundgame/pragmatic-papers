@@ -29,6 +29,9 @@ const BLOCK_UPLOAD_FIELDS: Record<string, CollectionSlug> = {
 
 const MEDIA_SIZE_FALLBACKS = ["xlarge", "large", "og", "medium", "small"]
 
+/** Media files downloaded and stored at once; the rest wait their turn. */
+const MEDIA_CONCURRENCY = 4
+
 /** Roles each user relationship accepts (its `filterOptions`), and the one a clone is given. */
 const AUTHOR_ROLES: Role[] = ["writer", "editor", "chief-editor", "narrator"]
 const NARRATOR_ROLES: Role[] = ["narrator"]
@@ -45,11 +48,18 @@ const str = (value: unknown): string | undefined => (typeof value === "string" ?
 
 export class ArticleNotFoundError extends Error {}
 
+export type CreatedCounts = Partial<Record<CollectionSlug, number>>
+
+export interface CloneOptions {
+  /** Called with the running totals each time a document is created. */
+  onProgress?: (created: CreatedCounts) => void
+}
+
 export interface CloneResult {
   id: number
   slug: string
   title: string
-  created: Partial<Record<CollectionSlug, number>>
+  created: CreatedCounts
 }
 
 /** The original file first, then its resized copies in case the original is gone. */
@@ -67,6 +77,22 @@ function mediaUrls(doc: SourceDoc): string[] {
   return [...new Set(urls.filter((url): url is string => Boolean(url)))]
 }
 
+/** Runs at most `max` of the functions passed to it at a time. */
+function limiter(max: number) {
+  let active = 0
+  const waiting: Array<() => void> = []
+  return async <T>(fn: () => Promise<T>): Promise<T> => {
+    if (active >= max) await new Promise<void>((resolve) => waiting.push(resolve))
+    active++
+    try {
+      return await fn()
+    } finally {
+      active--
+      waiting.shift()?.()
+    }
+  }
+}
+
 async function firstReachable(urls: string[]): Promise<string | undefined> {
   for (const url of urls) {
     try {
@@ -79,14 +105,20 @@ async function firstReachable(urls: string[]): Promise<string | undefined> {
 }
 
 class Cloner {
-  readonly created: Partial<Record<CollectionSlug, number>> = {}
-  private readonly resolved = new Map<string, number | null>()
+  readonly created: CreatedCounts = {}
+  /** In flight or settled, so references met concurrently are cloned once. */
+  private readonly resolved = new Map<string, Promise<number | null>>()
   private readonly articlesInProgress = new Set<number>()
   private readonly clonedUsers = new Set<number>()
   /** Production block and row IDs to fresh ones, so a second clone can't collide with the first. */
   private readonly blockIds = new Map<string, string>()
+  /** Only the download and upload are limited, never work that could wait on another slot. */
+  private readonly mediaSlot = limiter(MEDIA_CONCURRENCY)
 
-  constructor(private readonly payload: Payload) {}
+  constructor(
+    private readonly payload: Payload,
+    private readonly onProgress?: CloneOptions["onProgress"],
+  ) {}
 
   async cloneArticle(
     source: SourceDoc,
@@ -98,33 +130,50 @@ class Cloner {
     const title = str(source.title) ?? "Untitled"
     const baseSlug = str(source.slug) ?? "cloned-article"
 
+    const [slug, content, authors, topics, heroImage, narration, createdBy, metaImage] =
+      await Promise.all([
+        incrementSlug ? this.availableSlug("articles", baseSlug) : baseSlug,
+        this.rewrite(source.content, depth),
+        this.resolveUsers(source.authors, depth, AUTHOR_ROLES),
+        this.resolveMany("topics", source.topics, depth),
+        this.resolve("media", source.heroImage, depth),
+        this.resolve("media", source.narration, depth),
+        this.resolve("users", source.createdBy, depth),
+        this.resolve("media", meta.image, depth),
+      ])
+
     const article = await this.payload.create({
       collection: "articles",
       draft: false,
       data: {
         title,
-        slug: incrementSlug ? await this.availableSlug("articles", baseSlug) : baseSlug,
+        slug,
         generateSlug: false,
-        content: (await this.rewrite(source.content, depth)) as Article["content"],
-        authors: await this.resolveUsers(source.authors, depth, AUTHOR_ROLES),
-        topics: await this.resolveMany("topics", source.topics, depth),
-        heroImage: await this.resolve("media", source.heroImage, depth),
-        narration: await this.resolve("media", source.narration, depth),
-        createdBy: await this.resolve("users", source.createdBy, depth),
+        content: content as Article["content"],
+        authors,
+        topics,
+        heroImage,
+        narration,
+        createdBy,
         enableMathRendering: source.enableMathRendering === true,
         publishedAt: str(source.publishedAt) ?? new Date().toISOString(),
         _status: "published",
         meta: {
           title: str(meta.title),
           description: str(meta.description),
-          image: await this.resolve("media", meta.image, depth),
+          image: metaImage,
         },
       },
     })
-    this.resolved.set(`articles:${source.id}`, article.id)
+    this.resolved.set(`articles:${source.id}`, Promise.resolve(article.id))
     this.count("articles")
 
-    await this.addToVolume(source.id, article.id, depth)
+    // The article exists by now, so a volume that won't take it shouldn't fail the clone.
+    try {
+      await this.addToVolume(source.id, article.id, depth)
+    } catch (err) {
+      this.payload.logger.warn({ err }, `[clone] Could not add ${article.slug} to its volume`)
+    }
     return article
   }
 
@@ -145,12 +194,9 @@ class Cloner {
   }
 
   private async resolveMany(collection: CollectionSlug, refs: unknown, depth: number) {
-    const ids: number[] = []
-    for (const ref of Array.isArray(refs) ? refs : []) {
-      const id = await this.resolve(collection, ref, depth)
-      if (id) ids.push(id)
-    }
-    return ids
+    const list = Array.isArray(refs) ? refs : []
+    const ids = await Promise.all(list.map((ref) => this.resolve(collection, ref, depth)))
+    return ids.filter((id): id is number => id !== null)
   }
 
   /**
@@ -188,17 +234,30 @@ class Cloner {
     if (sourceId === undefined) return null
 
     const key = `${collection}:${sourceId}`
-    if (this.resolved.has(key)) return this.resolved.get(key) ?? null
+    let id = this.resolved.get(key)
+    if (!id) {
+      id = this.fetchAndClone(collection, ref, sourceId, depth)
+      this.resolved.set(key, id)
+    }
+    return id
+  }
 
-    let id: number | null = null
+  private async fetchAndClone(
+    collection: CollectionSlug,
+    ref: unknown,
+    sourceId: number,
+    depth: number,
+  ): Promise<number | null> {
     try {
       const doc = isDoc(ref) ? ref : await fetchProductionDoc(collection, sourceId)
-      if (doc) id = await this.reuseOrClone(collection, doc, depth)
+      return doc ? await this.reuseOrClone(collection, doc, depth) : null
     } catch (err) {
-      this.payload.logger.warn({ err }, `[clone] Could not clone ${key} from production`)
+      this.payload.logger.warn(
+        { err },
+        `[clone] Could not clone ${collection}:${sourceId} from production`,
+      )
+      return null
     }
-    this.resolved.set(key, id)
-    return id
   }
 
   private async reuseOrClone(
@@ -238,45 +297,53 @@ class Cloner {
   }
 
   private async cloneMedia(doc: SourceDoc, depth: number): Promise<number | null> {
-    const url = await firstReachable(mediaUrls(doc))
-    if (!url) return null
+    const [caption, narrators] = await Promise.all([
+      this.rewrite(doc.caption, depth),
+      this.resolveUsers(doc.narrator, depth, NARRATOR_ROLES),
+    ])
 
-    const media = await createMediaFromURL(this.payload, url, str(doc.alt) ?? "", {
-      caption: (await this.rewrite(doc.caption, depth)) as Media["caption"],
-      narrator: (await this.resolveUsers(doc.narrator, depth, NARRATOR_ROLES))[0] ?? null,
-      focalX: typeof doc.focalX === "number" ? doc.focalX : undefined,
-      focalY: typeof doc.focalY === "number" ? doc.focalY : undefined,
+    const media = await this.mediaSlot(async () => {
+      const url = await firstReachable(mediaUrls(doc))
+      if (!url) return null
+      return createMediaFromURL(this.payload, url, str(doc.alt) ?? "", {
+        caption: caption as Media["caption"],
+        narrator: narrators[0] ?? null,
+        focalX: typeof doc.focalX === "number" ? doc.focalX : undefined,
+        focalY: typeof doc.focalY === "number" ? doc.focalY : undefined,
+      })
     })
+    if (!media) return null
     this.count("media")
     return media.id
   }
 
   private async cloneMapAsset(doc: SourceDoc, depth: number): Promise<number | null> {
     const filename = str(doc.filename) ?? "map.svg"
-    let data: Buffer
-    if (str(doc.svgContent)) {
-      data = Buffer.from(str(doc.svgContent)!)
-    } else {
-      const url = await firstReachable(mediaUrls(doc))
-      if (!url) return null
-      data = Buffer.from(await (await fetch(url)).arrayBuffer())
-    }
-    // Run-unique filename, as in the seeder, so Payload's filename-increment path never runs.
-    const file: File = {
-      name: `${Date.now()}-${filename}`,
-      data,
-      mimetype: str(doc.mimeType) ?? "image/svg+xml",
-      size: data.byteLength,
-    }
+    const source = await this.rewrite(doc.source, depth)
 
-    const asset = await this.payload.create({
-      collection: "map-assets",
-      data: {
-        label: str(doc.label),
-        source: (await this.rewrite(doc.source, depth)) as MapAsset["source"],
-      },
-      file,
+    const asset = await this.mediaSlot(async () => {
+      let data: Buffer
+      if (str(doc.svgContent)) {
+        data = Buffer.from(str(doc.svgContent)!)
+      } else {
+        const url = await firstReachable(mediaUrls(doc))
+        if (!url) return null
+        data = Buffer.from(await (await fetch(url)).arrayBuffer())
+      }
+      // Run-unique filename, as in the seeder, so Payload's filename-increment path never runs.
+      const file: File = {
+        name: `${Date.now()}-${filename}`,
+        data,
+        mimetype: str(doc.mimeType) ?? "image/svg+xml",
+        size: data.byteLength,
+      }
+      return this.payload.create({
+        collection: "map-assets",
+        data: { label: str(doc.label), source: source as MapAsset["source"] },
+        file,
+      })
     })
+    if (!asset) return null
     this.count("map-assets")
     return asset.id
   }
@@ -372,12 +439,8 @@ class Cloner {
    */
   private async rewrite(value: unknown, depth: number): Promise<unknown> {
     if (Array.isArray(value)) {
-      const items: unknown[] = []
-      for (const item of value) {
-        const next = await this.rewrite(item, depth)
-        if (next !== undefined) items.push(next)
-      }
-      return items
+      const items = await Promise.all(value.map((item) => this.rewrite(item, depth)))
+      return items.filter((item) => item !== undefined)
     }
     if (!isObject(value)) return value
 
@@ -425,20 +488,21 @@ class Cloner {
   }
 
   private async rewriteEntries(node: Json, depth: number, skip: string[] = []): Promise<Json> {
-    const out: Json = {}
-    for (const [key, child] of Object.entries(node)) {
-      if (skip.includes(key)) continue
-      const uploadCollection = BLOCK_UPLOAD_FIELDS[key]
-      // Footnotes point at each other by `sourceId`, so both get the same new ID.
-      if ((key === "id" || key === "sourceId") && typeof child === "string" && child) {
-        out[key] = this.freshBlockId(child)
-      } else if (uploadCollection && (isDoc(child) || typeof child === "number")) {
-        out[key] = await this.resolve(uploadCollection, child, depth)
-      } else {
-        out[key] = await this.rewrite(child, depth)
-      }
-    }
-    return out
+    const entries = Object.entries(node).filter(([key]) => !skip.includes(key))
+    const values = await Promise.all(
+      entries.map(async ([key, child]) => {
+        const uploadCollection = BLOCK_UPLOAD_FIELDS[key]
+        // Footnotes point at each other by `sourceId`, so both get the same new ID.
+        if ((key === "id" || key === "sourceId") && typeof child === "string" && child) {
+          return this.freshBlockId(child)
+        }
+        if (uploadCollection && (isDoc(child) || typeof child === "number")) {
+          return this.resolve(uploadCollection, child, depth)
+        }
+        return this.rewrite(child, depth)
+      }),
+    )
+    return Object.fromEntries(entries.map(([key], i) => [key, values[i]]))
   }
 
   private freshBlockId(sourceId: string): string {
@@ -473,6 +537,7 @@ class Cloner {
 
   private count(collection: CollectionSlug) {
     this.created[collection] = (this.created[collection] ?? 0) + 1
+    this.onProgress?.({ ...this.created })
   }
 }
 
@@ -486,11 +551,12 @@ class Cloner {
 export async function cloneArticleFromProduction(
   payload: Payload,
   slug: string,
+  { onProgress }: CloneOptions = {},
 ): Promise<CloneResult> {
   const source = await fetchProductionArticle(slug)
   if (!source) throw new ArticleNotFoundError(`No published article "${slug}" on production`)
 
-  const cloner = new Cloner(payload)
+  const cloner = new Cloner(payload, onProgress)
   const article = await cloner.cloneArticle(source, 0, { incrementSlug: true })
   return { id: article.id, slug: article.slug, title: article.title, created: cloner.created }
 }

@@ -84,6 +84,8 @@ vi.mock("@payloadcms/ui", () => ({
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh }) }))
 
+import type { CloneEvent } from "@/collections/Articles/endpoints/cloneFromProduction"
+
 import { CloneFromProduction } from ".."
 import { CloneFromProductionMenuItem } from "../Client"
 
@@ -95,26 +97,55 @@ const housing = {
 }
 const transit = { title: "Transit Is Infrastructure", slug: "transit", existsLocally: true }
 
-const json = (body: unknown, status = 200) => ({
+interface FakeResponse {
+  ok: boolean
+  status: number
+  json: () => Promise<unknown>
+  body?: ReadableStream<Uint8Array>
+}
+
+const json = (body: unknown, status = 200): FakeResponse => ({
   ok: status < 400,
   status,
   json: async () => body,
 })
 
-/** A promise the test settles by hand, to hold a clone request in flight. */
-function deferred<T>() {
-  let resolve!: (value: T) => void
-  const promise = new Promise<T>((r) => (resolve = r))
-  return { promise, resolve }
+/** A clone response left open, whose NDJSON lines the test sends by hand. */
+function cloneStream() {
+  let controller!: ReadableStreamDefaultController<Uint8Array>
+  const body = new ReadableStream<Uint8Array>({ start: (c) => void (controller = c) })
+  const encoder = new TextEncoder()
+  return {
+    response: { ok: true, status: 200, json: async () => ({}), body } as FakeResponse,
+    send: (event: CloneEvent) => controller.enqueue(encoder.encode(`${JSON.stringify(event)}\n`)),
+    close: () => controller.close(),
+  }
 }
 
-type CloneResponse = ReturnType<typeof json>
+/** A clone response that streams `events` and ends. */
+function streamed(...events: CloneEvent[]): FakeResponse {
+  const stream = cloneStream()
+  events.forEach(stream.send)
+  stream.close()
+  return stream.response
+}
+
+const done = (id: number, slug: string, title: string): CloneEvent => ({
+  type: "done",
+  id,
+  slug,
+  title,
+  created: { articles: 1 },
+})
+
+/** Lets the drawer read what the stream has sent so far. */
+const flush = () => act(() => new Promise((resolve) => setTimeout(resolve, 0)))
 
 /** Production search answers with `docs`; each clone request answers with the next of `clones`. */
 function mockFetch({
   docs = [housing, transit] as unknown[],
-  search = undefined as CloneResponse | undefined,
-  clones = [] as (() => Promise<CloneResponse>)[],
+  search = undefined as FakeResponse | undefined,
+  clones = [] as (() => Promise<FakeResponse>)[],
 } = {}) {
   const queue = [...clones]
   const fetchMock = vi.fn(async (url: string) =>
@@ -195,9 +226,11 @@ describe("CloneFromProduction", () => {
   })
 
   it("clones one article at a time, showing which is in flight and which are waiting", async () => {
-    const first = deferred<CloneResponse>()
-    const second = deferred<CloneResponse>()
-    const fetchMock = mockFetch({ clones: [() => first.promise, () => second.promise] })
+    const first = cloneStream()
+    const second = cloneStream()
+    const fetchMock = mockFetch({
+      clones: [async () => first.response, async () => second.response],
+    })
     const panel = await openPanel()
 
     fireEvent.click(await panel.findByRole("button", { name: /Housing/ }))
@@ -213,12 +246,21 @@ describe("CloneFromProduction", () => {
     expect(housingRow).toHaveTextContent(housing.title)
     expect(transitRow).toHaveClass("clone-from-production__outcome--queued")
     expect(transitRow).toHaveTextContent(transit.title)
-    // The second request waits for the first, keeping each inside the function time limit.
+    // The second request waits for the first to finish.
     expect(fetchMock).toHaveBeenCalledTimes(2)
 
-    await act(async () => {
-      first.resolve(json({ id: 11, slug: "housing", title: housing.title }))
-    })
+    first.send({ type: "progress", created: { topics: 1, media: 1 } })
+    first.send({ type: "ping" })
+    first.send({ type: "progress", created: { topics: 1, media: 3, users: 1, articles: 1 } })
+    await flush()
+
+    // Running totals, leaving out articles: the one being cloned counts itself at the end.
+    expect(housingRow).toHaveTextContent("3 images · 1 user · 1 topic")
+    expect(housingRow).not.toHaveTextContent(/article/)
+
+    first.send(done(11, "housing", housing.title))
+    first.close()
+    await flush()
 
     expect(panel.getByRole("button", { name: "Cloning 2 of 2…" })).toBeInTheDocument()
     expect(within(housingRow!).getByLabelText("Cloned")).toBeInTheDocument()
@@ -228,9 +270,9 @@ describe("CloneFromProduction", () => {
       expect.objectContaining({ method: "POST", body: JSON.stringify({ slug: "transit" }) }),
     )
 
-    await act(async () => {
-      second.resolve(json({ id: 12, slug: "transit-1", title: transit.title }))
-    })
+    second.send(done(12, "transit-1", transit.title))
+    second.close()
+    await flush()
 
     expect(panel.getByRole("button", { name: "Clone" })).toBeDisabled()
     expect(panel.queryByRole("progressbar")).not.toBeInTheDocument()
@@ -240,8 +282,8 @@ describe("CloneFromProduction", () => {
   it("links each cloned article in a new tab and names a slug that had to change", async () => {
     mockFetch({
       clones: [
-        async () => json({ id: 11, slug: "housing", title: housing.title }),
-        async () => json({ id: 12, slug: "transit-1", title: transit.title }),
+        async () => streamed(done(11, "housing", housing.title)),
+        async () => streamed(done(12, "transit-1", transit.title)),
       ],
     })
     const panel = await openPanel()
@@ -264,7 +306,7 @@ describe("CloneFromProduction", () => {
   it("reports a failed clone with the reason and carries on with the rest", async () => {
     mockFetch({
       clones: [
-        async () => json({ error: "Clone failed: boom" }, 500),
+        async () => json({ error: "Unauthorized" }, 401),
         async () => {
           throw new Error("Network down")
         },
@@ -280,14 +322,40 @@ describe("CloneFromProduction", () => {
 
     const [housingRow, transitRow] = panel.getAllByRole("listitem")
     expect(within(housingRow!).getByLabelText("Failed")).toBeInTheDocument()
-    expect(housingRow).toHaveTextContent("Clone failed: boom")
+    expect(housingRow).toHaveTextContent("Unauthorized")
     expect(transitRow).toHaveTextContent("Network down")
     expect(panel.queryByRole("link")).not.toBeInTheDocument()
   })
 
+  it("reports a failure the server streams, and a stream that ends without a result", async () => {
+    mockFetch({
+      clones: [
+        async () =>
+          streamed(
+            { type: "progress", created: { media: 2 } },
+            { type: "error", message: "Clone failed: boom" },
+          ),
+        async () => streamed({ type: "progress", created: { media: 1 } }),
+      ],
+    })
+    const panel = await openPanel()
+
+    fireEvent.click(await panel.findByRole("button", { name: /Housing/ }))
+    fireEvent.click(panel.getByRole("button", { name: /Transit/ }))
+    await act(async () => {
+      fireEvent.click(panel.getByRole("button", { name: "Clone 2 articles" }))
+    })
+    await flush()
+
+    const [housingRow, transitRow] = panel.getAllByRole("listitem")
+    expect(housingRow).toHaveTextContent("Clone failed: boom")
+    expect(within(transitRow!).getByLabelText("Failed")).toBeInTheDocument()
+    expect(transitRow).toHaveTextContent("The connection closed before the clone finished")
+  })
+
   it("counts the seconds a clone has been running", async () => {
-    const pending = deferred<CloneResponse>()
-    mockFetch({ clones: [() => pending.promise] })
+    const pending = cloneStream()
+    mockFetch({ clones: [async () => pending.response] })
     const panel = await openPanel()
     fireEvent.click(await panel.findByRole("button", { name: /Housing/ }))
 

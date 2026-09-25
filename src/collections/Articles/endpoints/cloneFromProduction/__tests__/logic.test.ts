@@ -9,6 +9,8 @@ vi.mock("@/endpoints/seed/media", () => ({
   ),
 }))
 
+import { createMediaFromURL } from "@/endpoints/seed/media"
+
 import { ArticleNotFoundError, cloneArticleFromProduction } from "../logic"
 import { productionUrl } from "../source"
 
@@ -526,6 +528,80 @@ describe("cloneArticleFromProduction", () => {
     expect(payload.logger.warn).toHaveBeenCalledWith(
       { err: expect.objectContaining({ message: "name must be unique" }) },
       "[clone] Could not clone topics:7 from production",
+    )
+  })
+
+  it("transfers media a few files at a time and reports running totals", async () => {
+    const images = [20, 21, 22, 23, 24, 25, 26].map((id) => image(id))
+    const source = article({
+      id: 1,
+      slug: "a",
+      authors: [author(10, "jane")],
+      content: richText(...images.map((media) => block({ blockType: "mediaBlock", media }))),
+    })
+    vi.stubGlobal("fetch", fakeProduction({ articles: [source] }))
+    const payload = fakePayload()
+    let active = 0
+    let peak = 0
+    const create = vi.mocked(createMediaFromURL).getMockImplementation()!
+    vi.mocked(createMediaFromURL).mockImplementation(async (...args) => {
+      peak = Math.max(peak, ++active)
+      await new Promise((resolve) => setTimeout(resolve, 5))
+      active--
+      return create(...args)
+    })
+    const progress: object[] = []
+
+    const result = await cloneArticleFromProduction(payload as never, "a", {
+      onProgress: (created) => progress.push(created),
+    })
+    vi.mocked(createMediaFromURL).mockImplementation(create)
+
+    // Seven content images and the author's profile photo, no more than four at once.
+    expect(payload.db.media).toHaveLength(8)
+    expect(peak).toBe(4)
+    expect(progress).toHaveLength(10)
+    expect(progress.at(-1)).toEqual(result.created)
+    expect(result.created).toEqual({ media: 8, users: 1, articles: 1 })
+  })
+
+  it("clones media referenced in several places at once only once", async () => {
+    const shared = image(20)
+    const source = article({
+      id: 1,
+      slug: "a",
+      heroImage: shared,
+      meta: { image: shared },
+      content: richText(
+        block({ blockType: "mediaBlock", media: shared }),
+        block({ blockType: "mediaCollage", images: [{ id: "row", media: shared }] }),
+      ),
+    })
+    vi.stubGlobal("fetch", fakeProduction({ articles: [source] }))
+    const payload = fakePayload()
+
+    await cloneArticleFromProduction(payload as never, "a")
+
+    expect(payload.db.media).toHaveLength(1)
+    expect(payload.db.articles![0]).toMatchObject({
+      heroImage: payload.db.media![0]!.id,
+      meta: { image: payload.db.media![0]!.id },
+    })
+  })
+
+  it("keeps the cloned article when its volume refuses it", async () => {
+    const source = article({ id: 1, slug: "a" })
+    const volume = { id: 40, volumeNumber: 4, title: "Vol 4", slug: "4", articles: [1] }
+    vi.stubGlobal("fetch", fakeProduction({ articles: [source], volumes: [volume] }))
+    const payload = fakePayload()
+    payload.update.mockRejectedValueOnce(new Error("The following articles are not published"))
+
+    const result = await cloneArticleFromProduction(payload as never, "a")
+
+    expect(result).toMatchObject({ slug: "a", created: { articles: 1, volumes: 1 } })
+    expect(payload.logger.warn).toHaveBeenCalledWith(
+      { err: expect.objectContaining({ message: "The following articles are not published" }) },
+      "[clone] Could not add a to its volume",
     )
   })
 

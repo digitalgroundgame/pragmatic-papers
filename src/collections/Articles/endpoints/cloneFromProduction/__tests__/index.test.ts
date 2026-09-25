@@ -17,6 +17,14 @@ import { searchProductionArticles } from "../source"
 
 const admin = { id: 1, roles: ["admin"] }
 
+/** Every NDJSON line of a streamed response, parsed. */
+async function events(res: Response) {
+  return (await res.text())
+    .split("\n")
+    .filter(Boolean)
+    .map((line) => JSON.parse(line) as unknown)
+}
+
 function request(overrides: Partial<Record<string, unknown>> = {}) {
   return {
     user: admin,
@@ -37,6 +45,7 @@ describe("clone-from-production endpoints", () => {
     delete process.env.BUILD_ENV
   })
   afterEach(() => {
+    vi.useRealTimers()
     if (originalBuildEnv === undefined) delete process.env.BUILD_ENV
     else process.env.BUILD_ENV = originalBuildEnv
   })
@@ -81,13 +90,23 @@ describe("clone-from-production endpoints", () => {
     expect(res.status).toBe(502)
   })
 
-  it("clone returns the new article", async () => {
+  it("clone streams progress as documents are created, then the new article", async () => {
     const result = { id: 9, slug: "housing-1", title: "Housing", created: { articles: 1 } }
-    vi.mocked(cloneArticleFromProduction).mockResolvedValue(result)
+    vi.mocked(cloneArticleFromProduction).mockImplementation(async (_, slug, options) => {
+      expect(slug).toBe("housing")
+      options?.onProgress?.({ media: 1 })
+      options?.onProgress?.({ media: 2, users: 1 })
+      return result
+    })
 
     const res = await cloneFromProductionEndpoint.handler(request())
 
-    expect(await res.json()).toEqual(result)
+    expect(res.headers.get("Content-Type")).toMatch(/^application\/x-ndjson/)
+    expect(await events(res)).toEqual([
+      { type: "progress", created: { media: 1 } },
+      { type: "progress", created: { media: 2, users: 1 } },
+      { type: "done", ...result },
+    ])
   })
 
   it("clone rejects a request without a slug", async () => {
@@ -95,13 +114,57 @@ describe("clone-from-production endpoints", () => {
     expect(res.status).toBe(400)
   })
 
-  it("clone maps a missing production article to 404 and other failures to 500", async () => {
+  it("clone streams a missing article as an error, and logs only unexpected failures", async () => {
+    const req = request()
     vi.mocked(cloneArticleFromProduction).mockRejectedValueOnce(new ArticleNotFoundError("gone"))
-    expect((await cloneFromProductionEndpoint.handler(request())).status).toBe(404)
+    expect(await events(await cloneFromProductionEndpoint.handler(req))).toEqual([
+      { type: "error", message: "gone" },
+    ])
+    expect(req.payload.logger.error).not.toHaveBeenCalled()
 
     vi.mocked(cloneArticleFromProduction).mockRejectedValueOnce(new Error("boom"))
+    expect(await events(await cloneFromProductionEndpoint.handler(req))).toEqual([
+      { type: "error", message: "Clone failed: boom" },
+    ])
+    expect(req.payload.logger.error).toHaveBeenCalled()
+  })
+
+  it("clone pings while nothing new has been created, so the proxy keeps the response open", async () => {
+    vi.useFakeTimers()
+    let finish!: (value: Awaited<ReturnType<typeof cloneArticleFromProduction>>) => void
+    vi.mocked(cloneArticleFromProduction).mockReturnValue(new Promise((r) => (finish = r)))
+
     const res = await cloneFromProductionEndpoint.handler(request())
-    expect(res.status).toBe(500)
-    expect(await res.json()).toEqual({ error: "Clone failed: boom" })
+    const reader = res.body!.getReader()
+    const next = async () => JSON.parse(new TextDecoder().decode((await reader.read()).value))
+
+    await vi.advanceTimersByTimeAsync(15_000)
+    expect(await next()).toEqual({ type: "ping" })
+
+    finish({ id: 9, slug: "housing", title: "Housing", created: {} })
+    expect(await next()).toMatchObject({ type: "done", id: 9 })
+    expect((await reader.read()).done).toBe(true)
+  })
+
+  it("clone runs to completion when the client disconnects midway", async () => {
+    let progress!: () => void
+    let finish!: () => void
+    vi.mocked(cloneArticleFromProduction).mockImplementation(
+      (_, __, options) =>
+        new Promise((resolve) => {
+          progress = () => options?.onProgress?.({ media: 1 })
+          finish = () => resolve({ id: 9, slug: "housing", title: "Housing", created: {} })
+        }),
+    )
+    const req = request()
+
+    const res = await cloneFromProductionEndpoint.handler(req)
+    await res.body!.cancel()
+    progress()
+    finish()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    // Writing to the closed stream would throw inside the cloner and abandon it halfway.
+    expect(req.payload.logger.error).not.toHaveBeenCalled()
   })
 })

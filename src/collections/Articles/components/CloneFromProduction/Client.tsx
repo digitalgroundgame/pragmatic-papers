@@ -15,6 +15,9 @@ import {
 import { useRouter } from "next/navigation"
 import React, { useEffect, useState } from "react"
 
+import type { CloneEvent } from "@/collections/Articles/endpoints/cloneFromProduction"
+import type { CreatedCounts } from "@/collections/Articles/endpoints/cloneFromProduction/logic"
+
 import "./index.scss"
 
 interface ProductionArticle {
@@ -33,7 +36,7 @@ interface Option {
 
 type Outcome = { slug: string; title: string } & (
   | { status: "queued" }
-  | { status: "cloning" }
+  | { status: "cloning"; created: CreatedCounts }
   | { status: "done"; id: number; clonedAs: string }
   | { status: "error"; message: string }
 )
@@ -45,6 +48,40 @@ function optionLabel(article: ProductionArticle): string {
   const date = article.publishedAt ? new Date(article.publishedAt).toLocaleDateString() : ""
   const suffix = article.existsLocally ? " · already here, will clone as a copy" : ""
   return `${article.title}${date ? ` (${date})` : ""}${suffix}`
+}
+
+const createdLabels: Array<[keyof CreatedCounts, string, string]> = [
+  ["media", "image", "images"],
+  ["users", "user", "users"],
+  ["topics", "topic", "topics"],
+  ["map-assets", "map", "maps"],
+  ["volumes", "volume", "volumes"],
+]
+
+/** What a clone has brought over so far, e.g. "4 images · 1 user". */
+function describeCreated(created: CreatedCounts): string {
+  return createdLabels
+    .filter(([collection]) => created[collection])
+    .map(([collection, one, many]) => {
+      const n = created[collection]!
+      return `${n} ${n === 1 ? one : many}`
+    })
+    .join(" · ")
+}
+
+/** The events of the clone endpoint's NDJSON response, as each line arrives. */
+async function* readEvents(body: ReadableStream<Uint8Array>): AsyncGenerator<CloneEvent> {
+  const reader = body.getReader()
+  const decoder = new TextDecoder()
+  let buffer = ""
+  for (;;) {
+    const { value, done } = await reader.read()
+    buffer += decoder.decode(value, { stream: !done })
+    const lines = buffer.split("\n")
+    buffer = lines.pop() ?? ""
+    for (const line of lines) if (line.trim()) yield JSON.parse(line) as CloneEvent
+    if (done) return
+  }
 }
 
 /** Seconds since mount, so a long clone visibly keeps working. */
@@ -102,12 +139,18 @@ const ClonePanel: React.FC = () => {
     setSelected([])
     setOutcomes(queue.map(({ value, title }) => ({ slug: value, title, status: "queued" })))
 
-    // One request per article keeps each inside the serverless function time limit.
+    // One article at a time, so the server isn't transferring several articles' media at once.
     for (const { value: slug, title } of queue) {
-      setOutcomes((prev) =>
-        prev.map((o) => (o.slug === slug ? { slug, title, status: "cloning" } : o)),
-      )
-      let outcome: Outcome
+      const update = (next: Outcome) =>
+        setOutcomes((prev) => prev.map((o) => (o.slug === slug ? next : o)))
+      update({ slug, title, status: "cloning", created: {} })
+
+      let outcome: Outcome = {
+        slug,
+        title,
+        status: "error",
+        message: "The connection closed before the clone finished",
+      }
       try {
         const res = await fetch(`${api}/articles/clone-from-production`, {
           method: "POST",
@@ -115,22 +158,25 @@ const ClonePanel: React.FC = () => {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ slug }),
         })
-        const body = (await res.json()) as {
-          id?: number
-          slug?: string
-          title?: string
-          error?: string
+        if (!res.ok || !res.body) {
+          const body = (await res.json().catch(() => ({}))) as { error?: string }
+          throw new Error(body.error ?? `Failed (${res.status})`)
         }
-        outcome =
-          res.ok && body.id !== undefined
-            ? {
-                slug,
-                title: body.title ?? title,
-                status: "done",
-                id: body.id,
-                clonedAs: body.slug ?? slug,
-              }
-            : { slug, title, status: "error", message: body.error ?? `Failed (${res.status})` }
+        for await (const event of readEvents(res.body)) {
+          if (event.type === "progress") {
+            update({ slug, title, status: "cloning", created: event.created })
+          } else if (event.type === "done") {
+            outcome = {
+              slug,
+              title: event.title,
+              status: "done",
+              id: event.id,
+              clonedAs: event.slug,
+            }
+          } else if (event.type === "error") {
+            outcome = { slug, title, status: "error", message: event.message }
+          }
+        }
       } catch (err) {
         outcome = {
           slug,
@@ -139,7 +185,7 @@ const ClonePanel: React.FC = () => {
           message: err instanceof Error ? err.message : String(err),
         }
       }
-      setOutcomes((prev) => prev.map((o) => (o.slug === slug ? outcome : o)))
+      update(outcome)
     }
     router.refresh()
   }
@@ -205,6 +251,7 @@ const ClonePanel: React.FC = () => {
               {o.status === "cloning" && (
                 <span className={`${baseClass}__meta`}>
                   <Elapsed />
+                  {describeCreated(o.created) && ` · ${describeCreated(o.created)}`}
                 </span>
               )}
               {o.status === "done" && o.clonedAs !== o.slug && (

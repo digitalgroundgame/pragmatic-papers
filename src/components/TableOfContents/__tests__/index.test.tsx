@@ -48,8 +48,8 @@ describe("createTableOfContents", () => {
       { type: "block", fields: { blockType: "custom", id: "c1", name: "Custom Entry" } },
     ])
     const { getByText, container } = render(
-      <toc.TableOfContentsProvider content={state}>
-        <toc.TableOfContents />
+      <toc.TableOfContentsProvider>
+        <toc.TableOfContents content={state} />
       </toc.TableOfContentsProvider>,
     )
     expect(getByText("First")).toBeTruthy()
@@ -64,8 +64,8 @@ describe("createTableOfContents", () => {
     const state = makeState([h])
 
     const { container } = render(
-      <toc.TableOfContentsProvider content={state}>
-        <toc.TableOfContents />
+      <toc.TableOfContentsProvider>
+        <toc.TableOfContents content={state} />
       </toc.TableOfContentsProvider>,
     )
     expect(container.querySelector("a")?.getAttribute("href")).toBe("#hello_world")
@@ -83,11 +83,35 @@ describe("createTableOfContents", () => {
     expect(html).toContain('id="hello_world"')
   })
 
+  it("TableOfContentsButton renders nothing when the content has no entries", () => {
+    const toc = createTableOfContents()
+    const { container } = render(
+      <toc.TableOfContentsProvider>
+        <toc.TableOfContentsButton content={makeState([])} />
+      </toc.TableOfContentsProvider>,
+    )
+    expect(container).toBeEmptyDOMElement()
+  })
+
+  it("TableOfContentsButton renders when the content has entries", () => {
+    const toc = createTableOfContents()
+    const { getByRole } = render(
+      <toc.TableOfContentsProvider>
+        <toc.TableOfContentsButton content={makeState([heading("h2", "X")])} />
+      </toc.TableOfContentsProvider>,
+    )
+    expect(getByRole("button", { name: /collapse table of contents/i })).toBeInTheDocument()
+  })
+
   it("forwards className and title props to Body", () => {
     const toc = createTableOfContents()
     const { container, getByText } = render(
-      <toc.TableOfContentsProvider content={makeState([heading("h2", "X")])}>
-        <toc.TableOfContents className="custom-toc" title="Outline" />
+      <toc.TableOfContentsProvider>
+        <toc.TableOfContents
+          content={makeState([heading("h2", "X")])}
+          className="custom-toc"
+          title="Outline"
+        />
       </toc.TableOfContentsProvider>,
     )
     expect(container.querySelector("nav.custom-toc")).toBeTruthy()

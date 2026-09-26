@@ -86,7 +86,7 @@ export default async function Article({ params: paramsPromise }: Args): Promise<
 
         {draft && <LivePreviewListener />}
 
-        <TableOfContentsProvider content={content}>
+        <TableOfContentsProvider>
           <ArticleHero article={article} />
           <div
             id="intro"
@@ -94,7 +94,7 @@ export default async function Article({ params: paramsPromise }: Args): Promise<
           >
             {showTableOfContents && (
               <ArticleSidebar>
-                <TableOfContents />
+                <TableOfContents content={content} />
               </ArticleSidebar>
             )}
             <div className="mx-auto max-w-2xl space-y-3">

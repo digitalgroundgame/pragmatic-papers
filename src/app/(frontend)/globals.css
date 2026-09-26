@@ -4,6 +4,8 @@
 @plugin "@tailwindcss/typography";
 
 @custom-variant dark (&:is(.dark *));
+/* An ancestor of an expanded TableOfContents (it renders data-slot="toc", hidden when collapsed). */
+@custom-variant toc-open (&:has([data-slot="toc"]:not([hidden])));
 
 :root {
   --background: oklch(1 0 0);

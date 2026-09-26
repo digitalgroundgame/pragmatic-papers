@@ -17,8 +17,16 @@ interface ArticleHeroProps {
 }
 
 export const ArticleHero: React.FC<ArticleHeroProps> = ({ article }) => {
-  const { publishedAt, updatedAt, title, heroImage, authors, narration, showTableOfContents } =
-    article
+  const {
+    publishedAt,
+    updatedAt,
+    title,
+    heroImage,
+    authors,
+    narration,
+    showTableOfContents,
+    content,
+  } = article
 
   const bylineAuthors = (authors || []).filter(isResolved<User>).map(toBylineAuthor)
 
@@ -39,7 +47,7 @@ export const ArticleHero: React.FC<ArticleHeroProps> = ({ article }) => {
         </div>
         <div data-slot="article-meta-controls" className="flex grow items-center justify-end gap-3">
           <NarrationPlayer narration={narration} className="mr-auto shrink-0" />
-          {showTableOfContents && <TableOfContentsButton />}
+          {showTableOfContents && <TableOfContentsButton content={content} />}
           <ShareButtons
             url={`${getServerSideURL()}/articles/${article.slug}`}
             title={article.title}

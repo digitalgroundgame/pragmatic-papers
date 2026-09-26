@@ -24,8 +24,8 @@ describe("app TOC instance — socialEmbed resolver", () => {
   ])("labels %s as %s", (platform, expected) => {
     const state = makeState([socialEmbed({ id: "e1", platform })])
     const { getByText } = render(
-      <TableOfContentsProvider content={state}>
-        <TableOfContents />
+      <TableOfContentsProvider>
+        <TableOfContents content={state} />
       </TableOfContentsProvider>,
     )
     expect(getByText(expected)).toBeTruthy()
@@ -34,8 +34,8 @@ describe("app TOC instance — socialEmbed resolver", () => {
   it("uses 'Social embed' fallback when platform is missing", () => {
     const state = makeState([socialEmbed({ id: "e1" })])
     const { getByText } = render(
-      <TableOfContentsProvider content={state}>
-        <TableOfContents />
+      <TableOfContentsProvider>
+        <TableOfContents content={state} />
       </TableOfContentsProvider>,
     )
     expect(getByText("Social embed")).toBeTruthy()
@@ -44,8 +44,8 @@ describe("app TOC instance — socialEmbed resolver", () => {
   it("skips embeds with no id (no anchor target)", () => {
     const state = makeState([socialEmbed({ platform: "twitter" })])
     const { container } = render(
-      <TableOfContentsProvider content={state}>
-        <TableOfContents />
+      <TableOfContentsProvider>
+        <TableOfContents content={state} />
       </TableOfContentsProvider>,
     )
     expect(container.firstChild).toBeNull()
@@ -54,8 +54,8 @@ describe("app TOC instance — socialEmbed resolver", () => {
   it("anchors to the embed's id", () => {
     const state = makeState([socialEmbed({ id: "embed-42", platform: "youtube" })])
     const { container } = render(
-      <TableOfContentsProvider content={state}>
-        <TableOfContents />
+      <TableOfContentsProvider>
+        <TableOfContents content={state} />
       </TableOfContentsProvider>,
     )
     const link = container.querySelector('a[href="#embed-42"]')
@@ -65,8 +65,8 @@ describe("app TOC instance — socialEmbed resolver", () => {
   it("renders the TvIcon next to the label", () => {
     const state = makeState([socialEmbed({ id: "e1", platform: "twitter" })])
     const { container } = render(
-      <TableOfContentsProvider content={state}>
-        <TableOfContents />
+      <TableOfContentsProvider>
+        <TableOfContents content={state} />
       </TableOfContentsProvider>,
     )
     expect(container.querySelector("svg")).toBeTruthy()

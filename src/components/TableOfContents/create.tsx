@@ -1,7 +1,10 @@
 import type { DefaultTypedEditorState } from "@payloadcms/richtext-lexical"
 import React from "react"
 
-import { TableOfContents, TableOfContentsButton } from "./client"
+import {
+  TableOfContents as TableOfContentsClient,
+  TableOfContentsButton as TableOfContentsButtonClient,
+} from "./client"
 import { type CreateTableOfContentsConverter, createTableOfContentsConverter } from "./converter"
 import { type TableOfContentsField, tableOfContentsField } from "./field"
 import { TableOfContentsProvider } from "./provider"
@@ -23,18 +26,22 @@ export type {
   TableOfContentsResolverMap,
 }
 
-interface TableOfContentsWrapperProps {
+interface TableOfContentsProps {
   content: DefaultTypedEditorState
-  classNames?: Record<string, string>
-  children?: React.ReactNode
+  className?: string
+  title?: string
+}
+
+interface TableOfContentsButtonProps extends Omit<React.ComponentProps<"button">, "content"> {
+  content: DefaultTypedEditorState
 }
 
 interface CreateTableOfContents {
   introAnchor: string
   tableOfContentsField: TableOfContentsField
-  TableOfContentsProvider: (props: TableOfContentsWrapperProps) => React.ReactNode
-  TableOfContents: typeof TableOfContents
-  TableOfContentsButton: typeof TableOfContentsButton
+  TableOfContentsProvider: typeof TableOfContentsProvider
+  TableOfContents: (props: TableOfContentsProps) => React.ReactNode
+  TableOfContentsButton: (props: TableOfContentsButtonProps) => React.ReactNode
   tableOfContentsConverter: (data?: DefaultTypedEditorState) => CreateTableOfContentsConverter
 }
 
@@ -44,19 +51,18 @@ export function createTableOfContents({
   icon,
   introAnchor = "intro",
 }: CreateTableOfContentsOptions = {}): CreateTableOfContents {
+  const entriesFor = (content: DefaultTypedEditorState) =>
+    buildEntries(content, resolvers, slugify, introAnchor)
+
   return {
     introAnchor,
     tableOfContentsField,
-    TableOfContentsProvider: ({ content, children, classNames }) => {
-      const entries = buildEntries(content, resolvers, slugify, introAnchor)
-      return (
-        <TableOfContentsProvider entries={entries} classNames={classNames}>
-          {children}
-        </TableOfContentsProvider>
-      )
-    },
-    TableOfContents,
-    TableOfContentsButton,
+    TableOfContentsProvider,
+    TableOfContents: ({ content, ...props }) => (
+      <TableOfContentsClient entries={entriesFor(content)} {...props} />
+    ),
+    TableOfContentsButton: ({ content, ...props }) =>
+      entriesFor(content).length > 0 ? <TableOfContentsButtonClient {...props} /> : null,
     tableOfContentsConverter: (data) => createTableOfContentsConverter(data, slugify, icon),
   }
 }

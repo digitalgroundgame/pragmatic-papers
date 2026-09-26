@@ -1,62 +1,32 @@
 "use client"
 
-import { createContext, useCallback, useContext, useMemo, useState } from "react"
-
-import type { TableOfContentsEntry } from "./types"
-import { useActiveAnchor } from "./useActiveAnchor"
-
-interface TableOfContentsClassNames {
-  title?: string
-  titleContainer?: string
-  list?: string
-  item?: string
-  link?: string
-  icon?: string
-  label?: string
-  toggleButton?: string
-}
+import { createContext, useCallback, useContext, useId, useMemo, useState } from "react"
 
 interface TableOfContentsContextValue {
-  activeAnchor: string | null
-  classNames?: TableOfContentsClassNames
-  entries: TableOfContentsEntry[]
-  hasEntries: boolean
   isOpen: boolean
-  isActive: boolean
+  navId: string
   toggle: () => void
 }
 
 const TableOfContentsContext = createContext<TableOfContentsContextValue | null>(null)
 
 interface TableOfContentsProviderProps {
-  entries: TableOfContentsEntry[]
-  classNames?: TableOfContentsClassNames
   children?: React.ReactNode
 }
 
-function TableOfContentsProvider({
-  entries,
-  classNames,
-  children,
-}: TableOfContentsProviderProps): React.ReactNode {
-  const hasEntries = entries.length > 0
+function TableOfContentsProvider({ children }: TableOfContentsProviderProps): React.ReactNode {
   const [isOpen, setIsOpen] = useState(true)
-  const activeAnchor = useActiveAnchor(entries, 120, isOpen)
-
+  const navId = useId()
   const toggle = useCallback(() => setIsOpen((v) => !v), [])
-
-  const value = useMemo(
-    () => ({ activeAnchor, classNames, entries, hasEntries, isOpen, isActive: false, toggle }),
-    [activeAnchor, classNames, entries, hasEntries, isOpen, toggle],
-  )
+  const value = useMemo(() => ({ isOpen, navId, toggle }), [isOpen, navId, toggle])
 
   return <TableOfContentsContext.Provider value={value}>{children}</TableOfContentsContext.Provider>
 }
 
-function useTableOfContents(anchor?: string): TableOfContentsContextValue {
+function useTableOfContents(): TableOfContentsContextValue {
   const ctx = useContext(TableOfContentsContext)
   if (!ctx) throw new Error("useTableOfContents must be used within a TableOfContentsProvider")
-  return { ...ctx, isActive: anchor === ctx.activeAnchor }
+  return ctx
 }
 
 export { TableOfContentsProvider, useTableOfContents, type TableOfContentsProviderProps }

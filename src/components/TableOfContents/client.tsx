@@ -8,27 +8,28 @@ import { cn } from "@/utilities/utils"
 
 import { useTableOfContents } from "./provider"
 import { type TableOfContentsEntry } from "./types"
+import { useActiveAnchor } from "./useActiveAnchor"
 
 interface TableOfContentsIconProps {
   icon?: React.ReactNode
   isActive: boolean
-  className?: string
 }
 
-function TableOfContentsIcon({
-  icon,
-  isActive,
-  className,
-}: TableOfContentsIconProps): React.ReactNode {
-  const iconClass = cn("toc__icon absolute top-1/2 right-full mr-0.5 -translate-y-1/2", className)
+function TableOfContentsIcon({ icon, isActive }: TableOfContentsIconProps): React.ReactNode {
+  const iconClass = "absolute top-1/2 right-full mr-0.5 -translate-y-1/2"
   if (React.isValidElement(icon)) {
-    return React.cloneElement(icon as React.ReactElement<{ className?: string }>, {
-      className: cn((icon.props as { className?: string }).className, iconClass),
-    })
+    return React.cloneElement(
+      icon as React.ReactElement<{ className?: string; "data-slot"?: string }>,
+      {
+        "data-slot": "toc-icon",
+        className: cn((icon.props as { className?: string }).className, iconClass),
+      },
+    )
   }
   return (
     <LinkIcon
       aria-hidden="true"
+      data-slot="toc-icon"
       className={cn(
         "text-muted-foreground size-3 shrink-0 opacity-0 group-hover:opacity-100",
         isActive && "opacity-100",
@@ -40,56 +41,53 @@ function TableOfContentsIcon({
 
 interface TableOfContentsLinkProps extends React.ComponentProps<"a"> {
   entry: TableOfContentsEntry
+  isActive: boolean
 }
 
-function TableOfContentsLink({ entry, ...props }: TableOfContentsLinkProps): React.ReactNode {
-  const { classNames, isActive } = useTableOfContents(entry.anchor)
+function TableOfContentsLink({
+  entry,
+  isActive,
+  ...props
+}: TableOfContentsLinkProps): React.ReactNode {
   return (
     <a
       href={entry.anchor ? `#${entry.anchor}` : "#"}
+      data-slot="toc-link"
       className={cn(
-        "toc__link group relative inline-flex items-center no-underline hover:underline",
+        "group relative inline-flex items-center no-underline hover:underline",
         isActive && "underline",
-        classNames?.link,
       )}
       {...props}
     >
-      <TableOfContentsIcon icon={entry.icon} isActive={isActive} className={classNames?.icon} />
-      <span className={cn("toc__label", classNames?.label)}>{entry.label}</span>
+      <TableOfContentsIcon icon={entry.icon} isActive={isActive} />
+      <span data-slot="toc-label">{entry.label}</span>
     </a>
-  )
-}
-
-function TableOfContentsItem({
-  className,
-  children,
-  ...props
-}: React.ComponentProps<"li">): React.ReactNode {
-  const { classNames } = useTableOfContents()
-  return (
-    <li className={cn("toc__item", classNames?.item, className)} {...props}>
-      {children}
-    </li>
   )
 }
 
 interface TableOfContentsListProps extends React.ComponentProps<"ul"> {
   entries?: TableOfContentsEntry[]
+  activeAnchor: string | null
 }
 
 function TableOfContentsList({
   entries,
+  activeAnchor,
   className,
   ...props
 }: TableOfContentsListProps): React.ReactNode {
   if (!entries) return null
   return (
-    <ul className={cn("toc__list", className)} {...props}>
+    <ul data-slot="toc-list" className={className} {...props}>
       {entries.map((entry, index) => (
-        <TableOfContentsItem key={`${entry.anchor || "entry"}-${index}`}>
-          <TableOfContentsLink entry={entry} />
-          <TableOfContentsList entries={entry.children} className="pl-4" />
-        </TableOfContentsItem>
+        <li key={`${entry.anchor || "entry"}-${index}`} data-slot="toc-item">
+          <TableOfContentsLink entry={entry} isActive={entry.anchor === activeAnchor} />
+          <TableOfContentsList
+            entries={entry.children}
+            activeAnchor={activeAnchor}
+            className="pl-4"
+          />
+        </li>
       ))}
     </ul>
   )
@@ -99,17 +97,16 @@ function TableOfContentsButton({
   className,
   ...props
 }: React.ComponentProps<"button">): React.ReactNode {
-  const { classNames, hasEntries, isOpen, toggle } = useTableOfContents()
-  if (!hasEntries) return null
+  const { isOpen, navId, toggle } = useTableOfContents()
   return (
     <Button
       variant={isOpen ? "outline" : "ghost"}
       size="icon-sm"
-      aria-controls="toc__nav"
+      aria-controls={navId}
       aria-expanded={isOpen}
       aria-label={isOpen ? "Collapse table of contents" : "Expand table of contents"}
       onClick={toggle}
-      className={cn("toc__toggleButton", classNames?.toggleButton, className)}
+      className={className}
       {...props}
     >
       <List aria-hidden="true" />
@@ -117,73 +114,37 @@ function TableOfContentsButton({
   )
 }
 
-function TableOfContentsTitle({
-  className,
-  children,
-  ...props
-}: React.ComponentProps<"h3">): React.ReactNode {
-  const { classNames } = useTableOfContents()
-  return (
-    <h3 className={cn("toc__title flex-1 text-3xl", classNames?.title, className)} {...props}>
-      {children}
-    </h3>
-  )
-}
-
-function TableOfContentHeader({
-  className,
-  children,
-  ...props
-}: React.ComponentProps<"div">): React.ReactNode {
-  const { classNames } = useTableOfContents()
-  return (
-    <div
-      className={cn("toc__titleContainer mb-1 flex gap-2", classNames?.titleContainer, className)}
-      {...props}
-    >
-      {children}
-    </div>
-  )
-}
-
-function TableOfContentsBody({
-  children,
-  className,
-  ...props
-}: React.ComponentProps<"nav">): React.ReactNode {
-  const { isOpen } = useTableOfContents()
-  return (
-    <nav
-      hidden={!isOpen}
-      aria-label="Table of contents"
-      className={cn("toc__nav w-full", className)}
-      {...props}
-    >
-      {children}
-    </nav>
-  )
-}
-
 interface TableOfContentsProps {
+  entries: TableOfContentsEntry[]
   className?: string
   title?: string
 }
 
 function TableOfContents({
+  entries,
   className,
   title = "Table of Contents",
 }: TableOfContentsProps): React.ReactNode {
-  const { hasEntries, entries, classNames } = useTableOfContents()
-  if (!hasEntries) return null
+  const { isOpen, navId } = useTableOfContents()
+  const activeAnchor = useActiveAnchor(entries, 120, isOpen)
+  if (!entries.length) return null
   return (
-    <TableOfContentsBody className={className}>
+    <nav
+      id={navId}
+      data-slot="toc"
+      hidden={!isOpen}
+      aria-label="Table of contents"
+      className={cn("w-full", className)}
+    >
       {title && (
-        <TableOfContentHeader>
-          <TableOfContentsTitle>{title}</TableOfContentsTitle>
-        </TableOfContentHeader>
+        <div data-slot="toc-header" className="mb-1 flex gap-2">
+          <h3 data-slot="toc-title" className="flex-1 text-3xl">
+            {title}
+          </h3>
+        </div>
       )}
-      <TableOfContentsList entries={entries} className={classNames?.list} />
-    </TableOfContentsBody>
+      <TableOfContentsList entries={entries} activeAnchor={activeAnchor} />
+    </nav>
   )
 }
 

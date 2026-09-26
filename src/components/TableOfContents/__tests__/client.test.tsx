@@ -1,6 +1,6 @@
 "use client"
 
-import { render } from "@testing-library/react"
+import { fireEvent, render, within } from "@testing-library/react"
 import { describe, expect, it } from "vitest"
 
 import type { DefaultTypedEditorState } from "@payloadcms/richtext-lexical"
@@ -38,8 +38,8 @@ interface TocProps {
 function Toc({ content, resolvers, slugify, className, title }: TocProps) {
   const entries = buildEntries(content, resolvers, slugify)
   return (
-    <TableOfContentsProvider entries={entries}>
-      <TableOfContents className={className} title={title} />
+    <TableOfContentsProvider>
+      <TableOfContents entries={entries} className={className} title={title} />
     </TableOfContentsProvider>
   )
 }
@@ -112,13 +112,27 @@ describe("TableOfContents component", () => {
     expect(link?.getAttribute("href")).toBe("#")
   })
 
-  it("TableOfContentsButton renders nothing when there are no entries", () => {
+  it("TableOfContentsButton collapses and expands the nav", () => {
+    const entries = buildEntries(makeContent([heading("h2", "Only")]))
     const { container } = render(
-      <TableOfContentsProvider entries={[]}>
+      <TableOfContentsProvider>
         <TableOfContentsButton />
+        <TableOfContents entries={entries} />
       </TableOfContentsProvider>,
     )
-    expect(container.firstChild).toBeNull()
+    const { getByRole } = within(container)
+    const button = getByRole("button", { name: /collapse table of contents/i })
+    const nav = container.querySelector('[data-slot="toc"]')
+    expect(nav).toHaveAttribute("id")
+    expect(button).toHaveAttribute("aria-controls", nav?.id)
+    expect(button).toHaveAttribute("aria-expanded", "true")
+    expect(getByRole("navigation", { name: /table of contents/i })).toBeVisible()
+
+    fireEvent.click(button)
+
+    expect(button).toHaveAttribute("aria-expanded", "false")
+    expect(button).toHaveAccessibleName(/expand table of contents/i)
+    expect(nav).not.toBeVisible()
   })
 
   it("uses the supplied slugify function", () => {

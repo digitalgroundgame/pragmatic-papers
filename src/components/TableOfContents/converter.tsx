@@ -46,11 +46,11 @@ export function createTableOfContentsConverter(
       const children = nodesToJSX({ nodes: node.children })
       return (
         <Tag id={id} className="group">
-          {id && (
+          {id ? (
             <a
               href={`#${id}`}
               aria-label="Link to section"
-              className="group inline-flex items-baseline gap-1 no-underline"
+              className="group inline-flex items-baseline gap-1 text-inherit no-underline"
             >
               {children}
               <Icon
@@ -58,6 +58,8 @@ export function createTableOfContentsConverter(
                 className="text-muted-foreground size-4 opacity-0 group-hover:opacity-100"
               />
             </a>
+          ) : (
+            children
           )}
         </Tag>
       )

@@ -85,5 +85,6 @@ describe("createHeadingConverter", () => {
     const { heading: converter } = createTableOfContentsConverter(state)
     const html = renderToStaticMarkup(<>{invoke(converter, orphan)}</>)
     expect(html).not.toContain("id=")
+    expect(html).toContain("Orphan")
   })
 })

@@ -88,6 +88,10 @@ ARG NEXT_PUBLIC_TURNSTILE_SITE_KEY
 ARG COOLIFY_FQDN=
 ARG COPY_SOURCE_DATABASE=false
 ARG FORCE_DATABASE_COPY=false
+# The commit being built, passed by Coolify when "Include Source Commit in Build"
+# is on. .git is dockerignored, so this is the only way the build can name the
+# Sentry release (see the Next.js build step).
+ARG SOURCE_COMMIT=
 
 # --- ENVIRONMENT MAPPING ---
 # Non-sensitive config only. Secrets (DATABASE_URI, PAYLOAD_SECRET, S3 creds) are
@@ -124,7 +128,7 @@ RUN /usr/local/bin/modify-database-uri.sh && \
 RUN --mount=type=cache,id=nextjs,target=/app/.next/cache \
     echo "--- PHASE: BUILDING NEXT.JS ---" && \
     if [ -f /tmp/database_uri.env ]; then . /tmp/database_uri.env; fi && \
-    pnpm build && \
+    SENTRY_RELEASE="${SOURCE_COMMIT}" pnpm build && \
     echo "--- COMPLETED: BUILDING NEXT.JS ---"
 
 # ============================================

@@ -72,6 +72,11 @@ S3_SECRET_ACCESS_KEY=your-secret
 S3_ENDPOINT=https://s3.amazonaws.com
 ```
 
+**Sentry (production and staging):**
+
+- `SENTRY_AUTH_TOKEN` — mark it available at build time; `next build` uses it to upload source maps. Don't give it to preview builds or GitHub Actions: those bundles are never served to real users, and PR code can read build secrets.
+- Turn on **Include Source Commit in Build** so Coolify passes `SOURCE_COMMIT` into the build. `.git` is excluded from the Docker context, so the Dockerfile uses it as `SENTRY_RELEASE`; without it, releases (and every browser error's release tag) come out empty.
+
 ### 4. Configure Domain
 
 - **Application:** Port `3000` → `your-domain.com`

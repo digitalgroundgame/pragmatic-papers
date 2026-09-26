@@ -11,6 +11,10 @@ export const tableOfContentsField: TableOfContentsField = (options) => ({
     position: "sidebar",
     description: "Auto-generates a navigable list of headings (and any resolver-matched blocks).",
     ...options?.admin,
+    components: {
+      Field: "@/components/TableOfContents/admin#TableOfContentsCheckbox",
+      ...options?.admin?.components,
+    },
   },
   name: "showTableOfContents",
   type: "checkbox",

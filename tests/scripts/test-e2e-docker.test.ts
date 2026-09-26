@@ -8,6 +8,7 @@ vi.mock("node:child_process", () => ({
 import { execSync, spawnSync } from "node:child_process"
 import {
   CONTAINER_SCRIPT,
+  isAnotherRunActive,
   isDockerAvailable,
   main,
   missingFontTokenWarning,
@@ -69,6 +70,25 @@ describe("isDockerAvailable", () => {
   })
 })
 
+describe("isAnotherRunActive", () => {
+  afterEach(() => {
+    vi.mocked(execSync).mockReset()
+  })
+
+  it("is true when a container of the e2e compose project is running", () => {
+    vi.mocked(execSync).mockReturnValue(Buffer.from("3f2c1a9e\n"))
+    expect(isAnotherRunActive()).toBe(true)
+    expect(vi.mocked(execSync).mock.calls[0]?.[0]).toContain(
+      "label=com.docker.compose.project=pragmatic-papers-e2e",
+    )
+  })
+
+  it("is false when none is running", () => {
+    vi.mocked(execSync).mockReturnValue(Buffer.from("\n"))
+    expect(isAnotherRunActive()).toBe(false)
+  })
+})
+
 describe("main", () => {
   const originalArgv = process.argv
 
@@ -77,6 +97,22 @@ describe("main", () => {
     vi.mocked(spawnSync).mockReset()
     process.argv = originalArgv
     vi.restoreAllMocks()
+  })
+
+  it("refuses to start, and leaves the other run's containers alone, while one is active", () => {
+    vi.mocked(execSync).mockImplementation((cmd) =>
+      Buffer.from(String(cmd).startsWith("docker ps") ? "3f2c1a9e\n" : ""),
+    )
+    const exit = vi.spyOn(process, "exit").mockImplementation(() => undefined as never)
+    const error = vi.spyOn(console, "error").mockImplementation(() => undefined)
+
+    main()
+
+    expect(error).toHaveBeenCalledWith(
+      expect.stringContaining("Another E2E Docker run is in progress"),
+    )
+    expect(exit).toHaveBeenCalledWith(1)
+    expect(spawnSync).not.toHaveBeenCalled()
   })
 
   it("logs an error and exits without running compose when Docker is unreachable", () => {

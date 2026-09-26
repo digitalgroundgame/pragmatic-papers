@@ -100,6 +100,30 @@ Click **Deploy** in Coolify. The application will:
 
 Use managed PostgreSQL service (AWS RDS, Supabase, Neon, etc.) for all deployments.
 
+## 🧱 Build Cache and Environment Variables
+
+Coolify passes every build-time variable into the Dockerfile as a BuildKit secret, mounted as an env var into **every** `RUN` (`--mount=type=secret,id=X,env=X`). That includes `SOURCE_COMMIT` when **Include Source Commit in Build** is on. What that means for the layer cache (verified 2026-09-26):
+
+- **Variable _names_ are part of each step's cache key; _values_ are not.** Adding or removing a variable in an application gives its next build a cold cache. Changing a value doesn't invalidate anything: a step can be reused with output built from the old value.
+- **So every step whose output depends on a value must come after `COPY . .`**, which reruns on every deploy. That covers migrations (`DATABASE_URI`) and `next build` (`NEXT_PUBLIC_*`, `SENTRY_RELEASE`). Only value-independent steps belong above it: system packages and the dependency install.
+- **Staging and previews keep separate caches** because their variable names differ (below). Sharing would only save the dependency install on each one's first build of the day, so they aren't kept in sync for that.
+- **Redeploys:** an unchanged commit on staging/production reuses its existing image ("No build configuration changed & image found"). PR previews always rebuild, reusing cached layers up to `COPY . .`.
+- **Server cleanup:** Coolify's Docker cleanup runs `docker builder prune -af`, which removes all build cache, including the pnpm-store and `.next/cache` mounts. Keep its trigger on a **disk-usage threshold** rather than "Run on every schedule", or every day's first build starts cold.
+
+### Variables that differ between staging and previews
+
+Snapshot of the variable names each has, from the 2026-09-26 build logs. Production wasn't checked. Keep this list current when you add or remove one.
+
+| Variable                        | Staging | Previews | Blank / unset means                                                                            |
+| ------------------------------- | ------- | -------- | ---------------------------------------------------------------------------------------------- |
+| `COPY_SOURCE_DATABASE`          | —       | set      | no database copy (`copy-database.sh` checks `!= "true"`)                                       |
+| `FORCE_DATABASE_COPY`           | —       | set      | don't drop an existing copy (checks `= "true"`)                                                |
+| `SOURCE_DATABASE_URI`           | —       | set      | only read when copying; the copy fails loudly if it's blank                                    |
+| `SEED_ENABLED`                  | —       | set      | nothing — no code reads it (from an unmerged branch); delete it                                |
+| `LISTMONK_NEWSLETTER_LIST_UUID` | set     | —        | Listmonk calls throw "Missing required env var", so newsletter signup doesn't work on previews |
+
+Code should treat a blank value the same as an unset one, since a variable can exist with no value. The shell checks above do. In TypeScript, prefer `process.env.X || fallback` over `process.env.X ?? fallback` wherever blank should fall back: `??` keeps `""`.
+
 ## 🔍 Common Issues
 
 **Build failures:**

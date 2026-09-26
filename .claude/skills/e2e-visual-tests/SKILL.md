@@ -47,7 +47,9 @@ into tests — link behaviour to the helpers instead.
 
 - **Generate baselines locally with `pnpm test:e2e:update-snapshots`** and
   commit them with the change. It runs in CI's pinned image as `linux/amd64`
-  and its renders are pixel-identical to CI's. Needs Docker + `GH_FONT_READ`.
+  and its renders are pixel-identical to CI's on x86_64 hosts (expected but
+  unverified under Apple Silicon emulation — CI still rejects a mismatch).
+  Needs Docker + `GH_FONT_READ`. One run at a time.
   - New screenshot: `-- --update-snapshots=missing`.
   - Intentional change: the default (`changed`); for drift inside the 1%
     tolerance, `-- --update-snapshots=all --project=chromium <spec>`.

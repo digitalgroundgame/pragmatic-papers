@@ -1,6 +1,6 @@
 ---
 name: code-review
-description: Review the current diff for operational/infra/security consequences and stale assumptions that automated CI (lint, type-check, tests) cannot catch. Pass --comment <owner>/<repo>/pull/<number> to post a summary plus inline findings to the PR.
+description: Review the current diff for operational/infra/security consequences and stale assumptions that automated CI (lint, type-check, tests) cannot catch. Pass --comment <owner>/<repo>/pull/<number> to post a summary plus inline findings to the PR, or --pending <owner>/<repo>/pull/<number> to leave them as an unsubmitted review for you to edit and submit.
 ---
 
 # Code Review
@@ -149,6 +149,69 @@ that PR:
 - If posting fails (e.g. permissions), print the full review to stdout so
   it's still visible in the Action run logs.
 
-If invoked without `--comment`, just print the findings — don't attempt to
-post anything (this is the local/interactive path, e.g. `/code-review`
-during development).
+## Leaving a pending review (`--pending` mode)
+
+If invoked with `--pending <owner>/<repo>/pull/<number>`, leave the whole
+review as one **pending** review: visible only to the account `gh` is
+logged in as, until they open **Finish your review** on the PR, edit or
+delete comments, and submit it themselves. Local use only; CI uses
+`--comment`.
+
+1. Get the head commit: `gh pr view <number> --repo <owner>/<repo> --json headRefOid -q .headRefOid`.
+2. Write the request to a temp file (`mktemp`) and send it with
+   `gh api -X POST repos/<owner>/<repo>/pulls/<number>/reviews --input <file>`:
+
+   ```json
+   {
+     "commit_id": "<headRefOid>",
+     "body": "<top-level summary>",
+     "comments": [
+       { "path": "src/x.ts", "line": 42, "side": "RIGHT", "body": "..." },
+       {
+         "path": "src/y.ts",
+         "start_line": 10,
+         "line": 12,
+         "side": "RIGHT",
+         "start_side": "RIGHT",
+         "body": "..."
+       }
+     ]
+   }
+   ```
+
+   **Never include `event`.** Leaving it out is what keeps the review
+   pending; any value submits it. `line` is the line number in the new
+   file and must fall inside a diff hunk.
+
+   When a finding's fix is exact and confined to the commented lines, put
+   it in that comment's `body` as a suggestion block, which GitHub renders
+   with a **Commit suggestion** button (`--comment` mode gets this from
+   the inline-comment tool's own description):
+
+   ````md
+   Explanation of the finding.
+
+   ```suggestion
+   the replacement line(s), indentation included
+   ```
+   ````
+
+   The block replaces the whole range (`line`, or `start_line` through
+   `line`), so it must contain every line of it as it should read
+   afterwards. Only for fixes you'd commit as written; if the fix spans
+   files, needs a decision, or you're unsure of it, describe it in prose.
+
+3. If GitHub rejects the request:
+   - **A comment's line isn't part of the diff:** move that finding into
+     `body` with its file and line, and resend.
+   - **"one pending review per pull request":** the user already has one
+     open on this PR. Stop and ask them to submit or discard it; don't
+     delete it yourself.
+4. Tell the user it's waiting under **Files changed → Finish your review**.
+   If `gh api user -q .login` matches the PR author, add that GitHub will
+   only let them submit it as **Comment**: nobody can approve or request
+   changes on their own PR.
+
+If invoked without `--comment` or `--pending`, just print the findings —
+don't attempt to post anything (this is the local/interactive path, e.g.
+`/code-review` during development).

@@ -120,10 +120,13 @@ RUN /usr/local/bin/modify-database-uri.sh && \
     echo "--- COMPLETED: DATABASE MIGRATIONS ---"
 
 # --- NEXT.JS BUILD ---
+# SOURCE_COMMIT arrives like the other Coolify variables, as a secret mounted into
+# each RUN ("Include Source Commit in Build" must be on). .git is dockerignored, so
+# it's what names the Sentry release baked into the browser bundle.
 RUN --mount=type=cache,id=nextjs,target=/app/.next/cache \
     echo "--- PHASE: BUILDING NEXT.JS ---" && \
     if [ -f /tmp/database_uri.env ]; then . /tmp/database_uri.env; fi && \
-    pnpm build && \
+    SENTRY_RELEASE="${SOURCE_COMMIT}" pnpm build && \
     echo "--- COMPLETED: BUILDING NEXT.JS ---"
 
 # ============================================

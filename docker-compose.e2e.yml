@@ -33,6 +33,10 @@ services:
     # pnpm-lock.yaml and the `container:` image in
     # .github/workflows/playwright.yml / update-snapshots.yml.
     image: mcr.microsoft.com/playwright:v1.63.0-noble
+    # CI runs on x86_64. Chromium's arm64 build rasterizes differently, so
+    # Apple Silicon runs this image under emulation (slower, but its baselines
+    # match CI's).
+    platform: linux/amd64
     # Chromium can run out of shared memory in Docker's default IPC
     # namespace; Playwright's Docker docs recommend host IPC.
     ipc: host
@@ -43,7 +47,14 @@ services:
       # Linux-container `pnpm install` doesn't clobber host-platform native
       # binaries (sharp, esbuild, ...) in your working tree.
       - e2e_node_modules:/work/node_modules
+      # A content-addressed store shared across runs, so a wiped node_modules
+      # (see scripts/test-e2e-docker.ts) relinks instead of re-downloading.
+      - e2e_pnpm_store:/pnpm-store
     environment:
+      # This container reproduces CI's E2E job: CI turns on screenshot
+      # comparison and CI's retries/workers/forbidOnly in playwright.config.ts.
+      CI: "true"
+      npm_config_store_dir: /pnpm-store
       DATABASE_URI: postgres://postgres:postgres@postgres:5432/pragmatic-papers-e2e
       PAYLOAD_SECRET: ${PAYLOAD_SECRET:-test-secret-for-e2e-tests}
       # The Next.js server is started inside this same container by
@@ -54,6 +65,7 @@ services:
       # nothing and merch.spec.ts has no carousel to exercise.
       MERCH_SITE_URL: https://digitalgroundgame.org/merch
       E2E_PROD_SERVER: "true"
+      E2E_VERIFY_VISUAL: "true"
       # Private fonts affect rendering, and CI installs them — pass the token
       # through so local baselines use the same fonts (see the warning in
       # scripts/test-e2e-docker.ts when unset).
@@ -65,3 +77,5 @@ services:
 volumes:
   e2e_node_modules:
     name: pragmatic_papers_e2e_node_modules
+  e2e_pnpm_store:
+    name: pragmatic_papers_e2e_pnpm_store

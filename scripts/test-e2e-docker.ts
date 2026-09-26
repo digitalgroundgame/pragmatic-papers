@@ -18,6 +18,19 @@ import { yellow } from "./ansi.mjs"
 
 const COMPOSE = ["docker", "compose", "-p", "pragmatic-papers-e2e", "-f", "docker-compose.e2e.yml"]
 
+// The node_modules volume is shared by every checkout, and an incremental
+// install over another lockfile's tree can leave pnpm's hidden hoist dir
+// incomplete (e.g. no `clsx` for @payloadcms/ui). Stamp the volume with the
+// lockfile it was installed from and start clean when that changes.
+export const CONTAINER_SCRIPT = [
+  "corepack enable",
+  "lock=$(sha256sum pnpm-lock.yaml | cut -d' ' -f1)",
+  'if [ "$(cat node_modules/.e2e-lockfile 2>/dev/null)" != "$lock" ]; then find node_modules -mindepth 1 -delete; fi',
+  "pnpm install --frozen-lockfile",
+  'echo "$lock" > node_modules/.e2e-lockfile',
+  'node scripts/test-e2e.mjs "$@"',
+].join(" && ")
+
 export function resolveArgs(argv: string[]): string[] {
   return argv.length > 0 ? argv : ["--update-snapshots=changed", "--project=chromium"]
 }
@@ -63,7 +76,7 @@ export function main(): void {
         "playwright",
         "bash",
         "-c",
-        'corepack enable && pnpm install --frozen-lockfile && node scripts/test-e2e.mjs "$@"',
+        CONTAINER_SCRIPT,
         "bash",
         ...args,
       ],

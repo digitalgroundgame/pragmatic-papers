@@ -45,15 +45,19 @@ into tests — link behaviour to the helpers instead.
 
 ## Generating / updating baselines
 
+- **Generate baselines locally with `pnpm test:e2e:update-snapshots`** and
+  commit them with the change. It runs in CI's pinned image as `linux/amd64`
+  and its renders are pixel-identical to CI's. Needs Docker + `GH_FONT_READ`.
+  - New screenshot: `-- --update-snapshots=missing`.
+  - Intentional change: the default (`changed`); for drift inside the 1%
+    tolerance, `-- --update-snapshots=all --project=chromium <spec>`.
 - **Never generate baselines on a bare host** — font rendering/antialiasing
-  differ per OS and will not match CI. Options (see README):
-  - Let CI generate a **new** baseline: push, and `playwright.yml` runs with
-    `--update-snapshots=missing` and auto-commits it.
-  - Accept an **intentional change** to an existing baseline: add the
-    **`needs screenshots`** label to the PR, or run
-    `gh workflow run update-snapshots.yml --ref <branch>`.
-  - Locally with CI parity: `pnpm test:e2e:update-snapshots` (Dockerized;
-    needs Docker + `GH_FONT_READ`).
+  differ per OS; plain `pnpm test:e2e` skips screenshots because `CI` isn't
+  set there.
+- Without Docker, CI can do it at the cost of an extra run and a bot commit:
+  push a new test and `playwright.yml` commits its missing baseline, or add
+  the **`needs screenshots`** label / run
+  `gh workflow run update-snapshots.yml --ref <branch>` for a changed one.
 - A deleted baseline is treated as missing and regenerated. Use this when a
   test's capture changes so much that keeping the old PNG would read as a
   regression instead of a fresh baseline.

@@ -1,7 +1,9 @@
 import { PostgreSqlContainer } from "@testcontainers/postgresql"
 import { execSync, spawn } from "node:child_process"
-import { appendFileSync, rmSync } from "node:fs"
+import { createHash } from "node:crypto"
+import { appendFileSync, existsSync, readdirSync, readFileSync, rmSync } from "node:fs"
 import net from "node:net"
+import path from "node:path"
 import { blue, green, red } from "./ansi.mjs"
 
 function isPortInUse(port) {
@@ -15,6 +17,23 @@ function isPortInUse(port) {
       resolve(false)
     })
   })
+}
+
+const SCREENSHOTS_DIR = "tests/e2e/__screenshots__"
+
+// Content hash of every baseline, so "did this run write one?" needs no repo:
+// in the Docker container a worktree's .git points outside the mount, and the
+// container runs as root over files the host owns.
+function screenshotFingerprint() {
+  if (!existsSync(SCREENSHOTS_DIR)) return ""
+  return readdirSync(SCREENSHOTS_DIR, { recursive: true })
+    .filter((file) => file.endsWith(".png"))
+    .sort()
+    .map((file) => {
+      const hash = createHash("sha1").update(readFileSync(path.join(SCREENSHOTS_DIR, file)))
+      return `${file} ${hash.digest("hex")}`
+    })
+    .join("\n")
 }
 
 process.env.PAYLOAD_SECRET ||= "test-secret-for-e2e-tests"
@@ -97,6 +116,7 @@ try {
   }
 
   console.warn(`${blue("●")} Starting Playwright tests...`)
+  const baselinesBefore = screenshotFingerprint()
   const child = spawn(
     "./node_modules/.bin/playwright",
     ["test", "--config=playwright.config.ts", ...process.argv.slice(2).filter((a) => a !== "--")],
@@ -113,12 +133,7 @@ try {
   // it skips itself when no baseline changed, so PRs that touch no screenshots
   // pay nothing — the same scope as gating on "a baseline was committed".
   if (process.env.E2E_VERIFY_VISUAL) {
-    const changedBaselines = execSync("git status --porcelain -- tests/e2e/__screenshots__", {
-      env: process.env,
-    })
-      .toString()
-      .trim()
-    if (changedBaselines) {
+    if (screenshotFingerprint() !== baselinesBefore) {
       console.warn(`${blue("●")} Verifying screenshot determinism (@visual ×2)...`)
       const verify = spawn(
         "./node_modules/.bin/playwright",

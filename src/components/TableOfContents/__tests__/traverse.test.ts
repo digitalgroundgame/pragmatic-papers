@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest"
 
-import { collectEntries, extractText } from "../traverse"
+import { collectEntries, extractText, stampAnchors } from "../traverse"
 import type { SerializedEditorState } from "@payloadcms/richtext-lexical/lexical"
 
 function makeState(children: unknown[]): SerializedEditorState {
-  return {
+  return stampAnchors({
     root: { type: "root", children, direction: null, format: "", indent: 0, version: 1 },
-  } as SerializedEditorState
+  } as SerializedEditorState)
 }
 
 function heading(tag: string, text: string) {
@@ -57,6 +57,65 @@ describe("extractText", () => {
 
   it("treats a text node missing its text field as empty", () => {
     expect(extractText([{ type: "text" }, { type: "text", text: "hi" }])).toBe("hi")
+  })
+})
+
+describe("stampAnchors", () => {
+  const raw = (children: unknown[]) =>
+    ({
+      root: { type: "root", children, direction: null, format: "", indent: 0, version: 1 },
+    }) as unknown as SerializedEditorState
+  const anchorsOf = (state: SerializedEditorState) =>
+    (state.root.children as { anchor?: string }[]).map((n) => n.anchor)
+
+  it("slugifies heading text into an anchor", () => {
+    expect(anchorsOf(stampAnchors(raw([heading("h2", "My Section")])))).toEqual(["my-section"])
+  })
+
+  it("suffixes duplicate heading anchors", () => {
+    const state = stampAnchors(raw([heading("h2", "Same"), heading("h3", "Same")]))
+    expect(anchorsOf(state)).toEqual(["same", "same-2"])
+  })
+
+  it("falls back to 'heading' when the text slugifies to nothing", () => {
+    expect(anchorsOf(stampAnchors(raw([heading("h2", "!!!")])))).toEqual(["heading"])
+  })
+
+  it("numbers tables in document order, including nested ones", () => {
+    const state = stampAnchors(
+      raw([
+        { type: "table", children: [] },
+        { type: "paragraph", children: [] },
+        { type: "listitem", children: [{ type: "table", children: [] }] },
+      ]),
+    )
+    const [first, , item] = state.root.children as {
+      anchor?: string
+      children?: { anchor?: string }[]
+    }[]
+    expect(first!.anchor).toBe("table-1")
+    expect(item!.children![0]!.anchor).toBe("table-2")
+  })
+
+  it("leaves other nodes unanchored", () => {
+    const state = stampAnchors(raw([{ type: "paragraph", children: [] }]))
+    expect(anchorsOf(state)).toEqual([undefined])
+  })
+
+  it("uses the supplied slugify function", () => {
+    const state = stampAnchors(raw([heading("h2", "Hi")]), (t) => `x-${t}`)
+    expect(anchorsOf(state)).toEqual(["x-Hi"])
+  })
+
+  it("overwrites a stale anchor after the heading text changes", () => {
+    const stale = { ...heading("h2", "New title"), anchor: "old-title" }
+    expect(anchorsOf(stampAnchors(raw([stale])))).toEqual(["new-title"])
+  })
+
+  it("does not mutate its input", () => {
+    const input = raw([heading("h2", "Keep")])
+    stampAnchors(input)
+    expect(anchorsOf(input)).toEqual([undefined])
   })
 })
 

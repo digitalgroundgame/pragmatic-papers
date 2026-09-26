@@ -3,9 +3,14 @@ import type {
   SerializedLexicalNode,
 } from "@payloadcms/richtext-lexical/lexical"
 
-import { buildDefaultResolvers } from "./defaults"
+import { defaultResolvers } from "./defaults"
 import { slugifyHeading } from "./slug"
-import type { SlugifyFn, TableOfContentsEntry, TableOfContentsResolverMap } from "./types"
+import type {
+  AnchoredNode,
+  SlugifyFn,
+  TableOfContentsEntry,
+  TableOfContentsResolverMap,
+} from "./types"
 
 type WithChildren = SerializedLexicalNode & { children?: SerializedLexicalNode[] }
 type WithBlockFields = SerializedLexicalNode & { fields?: { blockType?: string } }
@@ -42,46 +47,44 @@ function resolverPayloadFor(node: SerializedLexicalNode): unknown {
   return node
 }
 
-export type AnchorGenerator = (
-  node: SerializedLexicalNode,
-  state: Map<string, number>,
-) => string | null
+type AnchorGenerator = (node: SerializedLexicalNode, counts: Map<string, number>) => string
 
-export function computeAnchors(
-  data: SerializedEditorState | undefined,
-  generators: Record<string, AnchorGenerator>,
-): Map<SerializedLexicalNode, string> {
-  const state = new Map<string, number>()
-  const result = new Map<SerializedLexicalNode, string>()
-  const walk = (nodes: SerializedLexicalNode[] | undefined): void => {
-    if (!nodes) return
-    for (const node of nodes) {
-      const gen = generators[node.type]
-      if (gen) {
-        const id = gen(node, state)
-        if (id) result.set(node, id)
-      }
-      walk((node as WithChildren).children)
-    }
-  }
-  walk(data?.root.children as SerializedLexicalNode[])
-  return result
-}
-
-export function headingAnchorGenerator(slugify: SlugifyFn = slugifyHeading): AnchorGenerator {
-  return (node, state) => {
+function headingAnchorGenerator(slugify: SlugifyFn = slugifyHeading): AnchorGenerator {
+  return (node, counts) => {
     const text = extractText((node as WithChildren).children)
     const base = slugify(text) || "heading"
-    const n = (state.get(base) ?? 0) + 1
-    state.set(base, n)
+    const n = (counts.get(base) ?? 0) + 1
+    counts.set(base, n)
     return n === 1 ? base : `${base}-${n}`
   }
 }
 
-export const tableAnchorGenerator: AnchorGenerator = (_, state) => {
-  const n = (state.get("table") ?? 0) + 1
-  state.set("table", n)
+const tableAnchorGenerator: AnchorGenerator = (_, counts) => {
+  const n = (counts.get("table") ?? 0) + 1
+  counts.set("table", n)
   return `table-${n}`
+}
+
+export function stampAnchors<T extends SerializedEditorState>(
+  state: T,
+  slugify: SlugifyFn = slugifyHeading,
+): T {
+  const stamped = structuredClone(state)
+  const generators: Record<string, AnchorGenerator> = {
+    heading: headingAnchorGenerator(slugify),
+    table: tableAnchorGenerator,
+  }
+  const counts = new Map<string, number>()
+  const walk = (nodes: SerializedLexicalNode[] | undefined): void => {
+    if (!nodes) return
+    for (const node of nodes) {
+      const generate = generators[node.type]
+      if (generate) (node as AnchoredNode).anchor = generate(node, counts)
+      walk((node as WithChildren).children)
+    }
+  }
+  walk(stamped.root.children as SerializedLexicalNode[])
+  return stamped
 }
 
 export function nestEntries(flat: TableOfContentsEntry[]): TableOfContentsEntry[] {
@@ -110,14 +113,8 @@ export function nestEntries(flat: TableOfContentsEntry[]): TableOfContentsEntry[
 export function collectEntries(
   content: SerializedEditorState,
   resolvers: TableOfContentsResolverMap = {},
-  slugify?: SlugifyFn,
 ): TableOfContentsEntry[] {
-  const anchors = computeAnchors(content, {
-    heading: headingAnchorGenerator(slugify),
-    table: tableAnchorGenerator,
-  })
-  const defaults = buildDefaultResolvers(anchors)
-  const mergedResolvers: TableOfContentsResolverMap = { ...defaults, ...resolvers }
+  const mergedResolvers: TableOfContentsResolverMap = { ...defaultResolvers, ...resolvers }
   const entries: TableOfContentsEntry[] = []
   const walk = (nodes: SerializedLexicalNode[] | undefined): void => {
     if (!nodes) return
@@ -138,10 +135,9 @@ export function collectEntries(
 export function buildEntries(
   content: SerializedEditorState,
   resolvers?: TableOfContentsResolverMap,
-  slugify?: SlugifyFn,
   anchor = "#",
 ): TableOfContentsEntry[] {
-  const entries = nestEntries(collectEntries(content, resolvers, slugify))
+  const entries = nestEntries(collectEntries(content, resolvers))
   const firstNode = content.root.children[0]
   if (firstNode?.type !== "heading" && entries.length > 0) {
     entries.unshift({ label: "Intro", anchor, depth: 1 })

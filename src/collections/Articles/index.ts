@@ -22,7 +22,7 @@ import { generateFootnotes } from "@/collections/Articles/hooks/generateFootnote
 import { populateTopics } from "@/collections/Articles/hooks/populateTopics"
 import { populateMetaImageFromHero } from "@/collections/Articles/hooks/populateMetaImageFromHero"
 import { revalidateArticle, revalidateDelete } from "@/collections/Articles/hooks/revalidateArticle"
-import { tableOfContentsField } from "@/components/TableOfContents"
+import { populateTableOfContentsAnchors, tableOfContentsField } from "@/components/TableOfContents"
 import { footnotesArrayField } from "@/fields/footnotes"
 import { type Article } from "@/payload-types"
 import { generatePreviewPath } from "@/utilities/generatePreviewPath"
@@ -149,6 +149,9 @@ export const Articles: CollectionConfig = {
                   ]
                 },
               }),
+              hooks: {
+                beforeChange: [populateTableOfContentsAnchors],
+              },
               label: false,
               required: true,
             },

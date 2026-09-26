@@ -1,90 +1,61 @@
 import { renderToStaticMarkup } from "react-dom/server"
 import { describe, expect, it } from "vitest"
 
-import type { DefaultTypedEditorState, SerializedHeadingNode } from "@payloadcms/richtext-lexical"
+import type { SerializedHeadingNode } from "@payloadcms/richtext-lexical"
+import type { SerializedLexicalNode } from "@payloadcms/richtext-lexical/lexical"
 import { createTableOfContentsConverter } from "../converter"
 
-type ConverterFn = (args: { node: SerializedHeadingNode; nodesToJSX: unknown }) => React.ReactNode
-
-function makeState(children: unknown[]): DefaultTypedEditorState {
-  return {
-    root: { type: "root", children, direction: null, format: "", indent: 0, version: 1 },
-  } as DefaultTypedEditorState
-}
+type ConverterFn = (args: { node: SerializedLexicalNode; nodesToJSX: unknown }) => React.ReactNode
 
 const nodesToJSX = ({ nodes }: { nodes: unknown }): React.ReactNode[] =>
   ((nodes as { text?: string }[] | undefined) ?? []).map((n) => n.text ?? "")
 
-function invoke(
-  converter: ReturnType<typeof createTableOfContentsConverter>["heading"],
-  node: SerializedHeadingNode,
-): React.ReactNode {
-  return (converter as unknown as ConverterFn)({ node, nodesToJSX })
+function heading(tag: string, text: string, anchor?: string): SerializedHeadingNode {
+  return {
+    type: "heading",
+    tag,
+    anchor,
+    children: [{ type: "text", text }],
+  } as unknown as SerializedHeadingNode
 }
 
-describe("createHeadingConverter", () => {
-  it("renders the heading with an id matching the slugified text", () => {
-    const heading = {
-      type: "heading",
-      tag: "h2",
-      children: [{ type: "text", text: "My Section" }],
-    } as unknown as SerializedHeadingNode
-    const state = makeState([heading])
-    const { heading: converter } = createTableOfContentsConverter(state)
-    const html = renderToStaticMarkup(<>{invoke(converter, heading)}</>)
+function render(converter: unknown, node: SerializedLexicalNode): string {
+  return renderToStaticMarkup(<>{(converter as ConverterFn)({ node, nodesToJSX })}</>)
+}
+
+describe("createTableOfContentsConverter", () => {
+  it("renders the heading with its stored anchor as id and self-link", () => {
+    const { heading: converter } = createTableOfContentsConverter()
+    const html = render(converter, heading("h2", "My Section", "my-section"))
     expect(html).toContain('id="my-section"')
     expect(html).toContain("<h2")
     expect(html).toContain('href="#my-section"')
     expect(html).toContain("My Section")
   })
 
-  it("uses the supplied slugify function", () => {
-    const heading = {
-      type: "heading",
-      tag: "h3",
-      children: [{ type: "text", text: "Hi" }],
-    } as unknown as SerializedHeadingNode
-    const state = makeState([heading])
-    const { heading: converter } = createTableOfContentsConverter(state, (t) => `x-${t}`)
-    const html = renderToStaticMarkup(<>{invoke(converter, heading)}</>)
-    expect(html).toContain('id="x-Hi"')
-    expect(html).toContain("<h3")
-  })
-
-  it("disambiguates duplicate heading text with suffixed ids", () => {
-    const h1 = {
-      type: "heading",
-      tag: "h2",
-      children: [{ type: "text", text: "Same" }],
-    } as unknown as SerializedHeadingNode
-    const h2 = {
-      type: "heading",
-      tag: "h2",
-      children: [{ type: "text", text: "Same" }],
-    } as unknown as SerializedHeadingNode
-    const state = makeState([h1, h2])
-    const { heading: converter } = createTableOfContentsConverter(state)
-    const html1 = renderToStaticMarkup(<>{invoke(converter, h1)}</>)
-    const html2 = renderToStaticMarkup(<>{invoke(converter, h2)}</>)
-    expect(html1).toContain('id="same"')
-    expect(html2).toContain('id="same-2"')
-  })
-
-  it("omits id when node has no precomputed anchor", () => {
-    const known = {
-      type: "heading",
-      tag: "h2",
-      children: [{ type: "text", text: "Known" }],
-    } as unknown as SerializedHeadingNode
-    const orphan = {
-      type: "heading",
-      tag: "h2",
-      children: [{ type: "text", text: "Orphan" }],
-    } as unknown as SerializedHeadingNode
-    const state = makeState([known])
-    const { heading: converter } = createTableOfContentsConverter(state)
-    const html = renderToStaticMarkup(<>{invoke(converter, orphan)}</>)
+  it("renders a plain heading when the node has no anchor", () => {
+    const { heading: converter } = createTableOfContentsConverter()
+    const html = render(converter, heading("h3", "Orphan"))
     expect(html).not.toContain("id=")
+    expect(html).not.toContain("href=")
+    expect(html).toContain("<h3")
     expect(html).toContain("Orphan")
+  })
+
+  it("renders the supplied icon beside anchored headings", () => {
+    const Icon = () => <svg data-testid="custom-icon" />
+    const { heading: converter } = createTableOfContentsConverter(Icon)
+    expect(render(converter, heading("h2", "Hi", "hi"))).toContain('data-testid="custom-icon"')
+  })
+
+  it("puts the table's stored anchor on its container", () => {
+    const { table: converter } = createTableOfContentsConverter()
+    const table = {
+      type: "table",
+      anchor: "table-1",
+      children: [],
+      version: 1,
+    } as SerializedLexicalNode
+    expect(render(converter, table)).toContain('<div id="table-1" class="lexical-table-container">')
   })
 })

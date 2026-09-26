@@ -1,65 +1,50 @@
 import { describe, expect, it } from "vitest"
 
-import { buildDefaultResolvers } from "../defaults"
+import { defaultResolvers } from "../defaults"
 import type { SerializedLexicalNode } from "@payloadcms/richtext-lexical/lexical"
 
-describe("buildDefaultResolvers", () => {
+function heading(fields: Record<string, unknown>): SerializedLexicalNode {
+  return { type: "heading", ...fields } as unknown as SerializedLexicalNode
+}
+
+describe("defaultResolvers", () => {
   describe("heading", () => {
-    it("returns an entry with depth from tag", () => {
-      const heading = {
-        type: "heading",
+    it("returns an entry with its stored anchor and depth from tag", () => {
+      const node = heading({
         tag: "h3",
+        anchor: "topic",
         children: [{ type: "text", text: "Topic" }],
-      } as unknown as SerializedLexicalNode
-      const anchors = new Map<SerializedLexicalNode, string>([[heading, "topic"]])
-      const resolvers = buildDefaultResolvers(anchors)
-      const entry = resolvers.heading!(heading)
-      expect(entry).toMatchObject({ label: "Topic", anchor: "topic", depth: 2 })
+      })
+      expect(defaultResolvers.heading!(node)).toMatchObject({
+        label: "Topic",
+        anchor: "topic",
+        depth: 2,
+      })
     })
 
     it("returns null when heading has no text", () => {
-      const heading = {
-        type: "heading",
-        tag: "h2",
-        children: [],
-      } as unknown as SerializedLexicalNode
-      const anchors = new Map<SerializedLexicalNode, string>()
-      const resolvers = buildDefaultResolvers(anchors)
-      expect(resolvers.heading!(heading)).toBeNull()
+      expect(
+        defaultResolvers.heading!(heading({ tag: "h2", anchor: "x", children: [] })),
+      ).toBeNull()
     })
 
-    it("returns null when no anchor is precomputed for the node", () => {
-      const heading = {
-        type: "heading",
-        tag: "h2",
-        children: [{ type: "text", text: "Orphan" }],
-      } as unknown as SerializedLexicalNode
-      const anchors = new Map<SerializedLexicalNode, string>()
-      const resolvers = buildDefaultResolvers(anchors)
-      expect(resolvers.heading!(heading)).toBeNull()
+    it("returns null when the heading has no stored anchor", () => {
+      const node = heading({ tag: "h2", children: [{ type: "text", text: "Orphan" }] })
+      expect(defaultResolvers.heading!(node)).toBeNull()
     })
 
     it("defaults depth to 1 for unknown tags", () => {
-      const heading = {
-        type: "heading",
-        children: [{ type: "text", text: "No tag" }],
-      } as unknown as SerializedLexicalNode
-      const anchors = new Map<SerializedLexicalNode, string>([[heading, "no-tag"]])
-      const resolvers = buildDefaultResolvers(anchors)
-      const entry = resolvers.heading!(heading)
-      expect(entry?.depth).toBe(1)
+      const node = heading({ anchor: "no-tag", children: [{ type: "text", text: "No tag" }] })
+      expect(defaultResolvers.heading!(node)?.depth).toBe(1)
     })
 
     it("defaults depth to 1 for unrecognised tag values", () => {
-      const heading = {
-        type: "heading",
+      const node = heading({
         tag: "h7",
+        anchor: "weird",
         children: [{ type: "text", text: "Weird" }],
-      } as unknown as SerializedLexicalNode
-      const anchors = new Map<SerializedLexicalNode, string>([[heading, "weird"]])
-      const resolvers = buildDefaultResolvers(anchors)
-      const entry = resolvers.heading!(heading)
-      expect(entry?.depth).toBe(1)
+      })
+      expect(defaultResolvers.heading!(node)?.depth).toBe(1)
     })
   })
 
@@ -67,6 +52,7 @@ describe("buildDefaultResolvers", () => {
     it("always labels as 'Table' regardless of cell content", () => {
       const table = {
         type: "table",
+        anchor: "table-1",
         children: [
           {
             children: [
@@ -76,10 +62,14 @@ describe("buildDefaultResolvers", () => {
           },
         ],
       } as unknown as SerializedLexicalNode
-      const resolvers = buildDefaultResolvers(new Map())
-      const entry = resolvers.table!(table)
-      expect(entry).toMatchObject({ label: "Table", depth: 1 })
+      const entry = defaultResolvers.table!(table)
+      expect(entry).toMatchObject({ label: "Table", anchor: "table-1", depth: 1 })
       expect(entry?.icon).toBeDefined()
+    })
+
+    it("returns null when the table has no stored anchor", () => {
+      const table = { type: "table", children: [] } as unknown as SerializedLexicalNode
+      expect(defaultResolvers.table!(table)).toBeNull()
     })
   })
 })

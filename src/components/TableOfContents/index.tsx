@@ -17,6 +17,8 @@ export const {
   TableOfContentsButton,
   tableOfContentsField,
   tableOfContentsConverter,
+  tableOfContentsEntries,
+  populateTableOfContentsAnchors,
 } = createTableOfContents({
   resolvers: {
     /* Add block customization here */

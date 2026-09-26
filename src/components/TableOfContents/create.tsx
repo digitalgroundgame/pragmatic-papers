@@ -1,4 +1,5 @@
 import type { DefaultTypedEditorState } from "@payloadcms/richtext-lexical"
+import type { FieldHook, TypeWithID } from "payload"
 import React from "react"
 
 import {
@@ -9,7 +10,7 @@ import { type CreateTableOfContentsConverter, createTableOfContentsConverter } f
 import { type TableOfContentsField, tableOfContentsField } from "./field"
 import { TableOfContentsProvider } from "./provider"
 import { slugifyHeading } from "./slug"
-import { buildEntries } from "./traverse"
+import { buildEntries, stampAnchors } from "./traverse"
 import type {
   CreateTableOfContentsOptions,
   SlugifyFn,
@@ -42,7 +43,9 @@ interface CreateTableOfContents {
   TableOfContentsProvider: typeof TableOfContentsProvider
   TableOfContents: (props: TableOfContentsProps) => React.ReactNode
   TableOfContentsButton: (props: TableOfContentsButtonProps) => React.ReactNode
-  tableOfContentsConverter: (data?: DefaultTypedEditorState) => CreateTableOfContentsConverter
+  tableOfContentsConverter: CreateTableOfContentsConverter
+  tableOfContentsEntries: (content: DefaultTypedEditorState) => TableOfContentsEntry[]
+  populateTableOfContentsAnchors: FieldHook<TypeWithID, DefaultTypedEditorState | null | undefined>
 }
 
 export function createTableOfContents({
@@ -52,7 +55,7 @@ export function createTableOfContents({
   introAnchor = "intro",
 }: CreateTableOfContentsOptions = {}): CreateTableOfContents {
   const entriesFor = (content: DefaultTypedEditorState) =>
-    buildEntries(content, resolvers, slugify, introAnchor)
+    buildEntries(content, resolvers, introAnchor)
 
   return {
     introAnchor,
@@ -63,6 +66,8 @@ export function createTableOfContents({
     ),
     TableOfContentsButton: ({ content, ...props }) =>
       entriesFor(content).length > 0 ? <TableOfContentsButtonClient {...props} /> : null,
-    tableOfContentsConverter: (data) => createTableOfContentsConverter(data, slugify, icon),
+    tableOfContentsConverter: createTableOfContentsConverter(icon),
+    tableOfContentsEntries: entriesFor,
+    populateTableOfContentsAnchors: ({ value }) => (value ? stampAnchors(value, slugify) : value),
   }
 }

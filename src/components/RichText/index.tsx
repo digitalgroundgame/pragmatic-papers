@@ -68,14 +68,11 @@ type NodeTypes =
     >
   | SerializedInlineBlockNode<MathBlockProps | FootnoteBlockProps>
 
-function createJsxConverters(
-  parentDoc?: ParentDocContext,
-  data?: DefaultTypedEditorState,
-): JSXConvertersFunction<NodeTypes> {
+function createJsxConverters(parentDoc?: ParentDocContext): JSXConvertersFunction<NodeTypes> {
   return ({ defaultConverters }) => ({
     ...defaultConverters,
     ...LinkJSXConverter({ internalDocToHref }),
-    ...tableOfContentsConverter(data),
+    ...tableOfContentsConverter,
     blocks: {
       banner: ({ node }) => <BannerBlock className="col-start-2 mb-4" {...node.fields} />,
       code: ({ node }) => <CodeBlock className="col-start-2" {...node.fields} />,
@@ -155,7 +152,7 @@ export default function RichText({
         enableProse && "prose",
         className,
       )}
-      converters={createJsxConverters(parentDoc, data)}
+      converters={createJsxConverters(parentDoc)}
       data={data}
     />
   )

@@ -1,3 +1,4 @@
+import type { SerializedLexicalNode } from "@payloadcms/richtext-lexical/lexical"
 import type { ComponentType, ReactNode, SVGProps } from "react"
 
 export interface TableOfContentsEntry {
@@ -15,6 +16,10 @@ export interface TableOfContentsResolverMap {
 }
 
 export type SlugifyFn = (text: string) => string
+
+export type AnchoredNode<T extends SerializedLexicalNode = SerializedLexicalNode> = T & {
+  anchor?: string
+}
 
 export interface CreateTableOfContentsOptions {
   resolvers?: TableOfContentsResolverMap

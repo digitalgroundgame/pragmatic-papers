@@ -6,7 +6,7 @@ import { describe, expect, it } from "vitest"
 import type { DefaultTypedEditorState } from "@payloadcms/richtext-lexical"
 import { TableOfContents, TableOfContentsButton } from "../client"
 import { TableOfContentsProvider } from "../provider"
-import { buildEntries } from "../traverse"
+import { buildEntries, stampAnchors } from "../traverse"
 import type { TableOfContentsResolverMap, SlugifyFn } from "../types"
 
 function makeContent(children: unknown[]): DefaultTypedEditorState {
@@ -36,7 +36,7 @@ interface TocProps {
 }
 
 function Toc({ content, resolvers, slugify, className, title }: TocProps) {
-  const entries = buildEntries(content, resolvers, slugify)
+  const entries = buildEntries(stampAnchors(content, slugify), resolvers)
   return (
     <TableOfContentsProvider>
       <TableOfContents entries={entries} className={className} title={title} />
@@ -113,7 +113,7 @@ describe("TableOfContents component", () => {
   })
 
   it("TableOfContentsButton collapses and expands the nav", () => {
-    const entries = buildEntries(makeContent([heading("h2", "Only")]))
+    const entries = buildEntries(stampAnchors(makeContent([heading("h2", "Only")])))
     const { container } = render(
       <TableOfContentsProvider>
         <TableOfContentsButton />

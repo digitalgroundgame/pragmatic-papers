@@ -34,8 +34,8 @@ services:
     # .github/workflows/playwright.yml / update-snapshots.yml.
     image: mcr.microsoft.com/playwright:v1.63.0-noble
     # CI runs on x86_64. Chromium's arm64 build rasterizes differently, so
-    # Apple Silicon runs this image under emulation (slower, but its baselines
-    # match CI's).
+    # Apple Silicon runs this image under emulation (slower; parity with CI is
+    # expected there but only verified on x86_64 hosts so far).
     platform: linux/amd64
     # Chromium can run out of shared memory in Docker's default IPC
     # namespace; Playwright's Docker docs recommend host IPC.

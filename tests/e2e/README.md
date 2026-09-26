@@ -7,9 +7,10 @@ against committed baselines in `__screenshots__/`.
 
 - **Baselines are rendered in the pinned Playwright image (x86_64 Linux
   chromium, production Next.js server)** — locally via
-  `pnpm test:e2e:update-snapshots` (see below), or by CI. The two are
-  pixel-identical, so generate baselines locally and commit them with your
-  PR. **Never generate them on a bare host** — font rendering and
+  `pnpm test:e2e:update-snapshots` (see below), or by CI. On an x86_64 host
+  the two have been verified pixel-identical, so generate baselines locally
+  and commit them with your PR (Apple Silicon: see below). **Never generate
+  them on a bare host** — font rendering and
   antialiasing differ per OS, which is exactly the drift that used to make
   these tests flaky.
 - **Screenshots are only compared when `CI` is set** (`ignoreSnapshots` in
@@ -61,9 +62,15 @@ fallback font won't match.
 
 The container sets `CI` and `E2E_VERIFY_VISUAL`, so it behaves like CI's E2E
 job: screenshots are compared, retries/workers match, and any baseline it
-writes is re-rendered to prove it is deterministic. It runs as `linux/amd64`
-because CI does — Chromium's arm64 build rasterizes differently — so on Apple
-Silicon it runs under emulation and is slower. `node_modules` lives in a
+writes is re-rendered to prove it is deterministic. (With CI's retries, a
+test that writes a missing baseline fails once and passes on retry, so it
+reports as flaky rather than failed.) It runs as `linux/amd64` because CI
+does — Chromium's arm64 build rasterizes differently — so on Apple Silicon it
+runs under emulation and is slower. Emulated renders are expected to match
+CI's but haven't been verified yet; if a baseline you generated there fails
+in CI, fall back to the **Update snapshot baselines** workflow and please note
+it in #980. Only one run at a time: the script refuses to start while another
+checkout's run is in progress. `node_modules` lives in a
 Docker volume stamped with the lockfile it was installed from; a different
 lockfile (another branch or worktree) starts it from scratch, relinking from a
 shared pnpm store rather than re-downloading.

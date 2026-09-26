@@ -187,14 +187,9 @@ const CarouselPrevious = React.forwardRef<HTMLButtonElement, React.ComponentProp
         variant={variant}
         size={size}
         className={cn(
-          // Tailwind v4's preflight dropped v3's `button { cursor: pointer }`,
-          // so a bare button reads as inert text. `disabled:pointer-events-none`
-          // on the Button base means an arrow with nothing to scroll to still
-          // shows the default arrow, which is what we want.
           // `disabled:pointer-events-none` on the Button base means an arrow
-          // with nothing to scroll to isn't hit-tested, so it keeps the default
-          // arrow cursor rather than the pointer from the base-layer
-          // `button:not(:disabled)` rule in globals.css — which is what we want.
+          // with nothing to scroll shows the default arrow cursor instead of
+          // the pointer, which is what we want.
           "absolute h-8 w-8 rounded-sm",
           orientation === "horizontal"
             ? "top-1/2 -left-12 -translate-y-1/2 active:not-aria-[haspopup]:-translate-y-[calc(50%-1px)]"

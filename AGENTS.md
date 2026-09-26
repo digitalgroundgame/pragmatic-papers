@@ -30,7 +30,7 @@ This file provides guidance to tools like Claude Code (claude.ai/code) when work
 - `pnpm test:e2e` — run Playwright E2E tests (uses Testcontainers). Screenshot comparisons are skipped locally; visual baselines are generated in CI or via `pnpm test:e2e:update-snapshots` (Dockerized, see `tests/e2e/README.md` for the full lifecycle) — never generate/commit baselines from a bare local machine
 - `pnpm test:unit:coverage` — run unit tests with V8 coverage report (what CI uses; outputs `coverage/coverage-summary.json` and `coverage/coverage-final.json`)
 - `pnpm test:coverage` — run all tests with V8 coverage report (full picture for local inspection)
-- `pnpm test:unit -- --update-snapshots` — regenerate snapshot baselines after intentional UI changes
+- `pnpm test:unit -- --update` — regenerate snapshot baselines after intentional UI changes
 - `pnpm coverage:report` — post the combined coverage PR comment locally (requires `GITHUB_TOKEN`, `GITHUB_REPOSITORY`, `GITHUB_EVENT_PATH`)
 
 ### Build & Payload

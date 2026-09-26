@@ -169,6 +169,7 @@ jobs:
         id: commit
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BRANCH: ${{ steps.pr.outputs.branch }}
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -179,7 +180,7 @@ jobs:
             exit 0
           fi
           git commit -m "test: update e2e snapshot baselines"
-          git push origin "HEAD:${{ steps.pr.outputs.branch }}"
+          git push origin "HEAD:$BRANCH"
           echo "committed=true" >> "$GITHUB_OUTPUT"
 
       # Pushes made with GITHUB_TOKEN don't trigger workflows, so the snapshot

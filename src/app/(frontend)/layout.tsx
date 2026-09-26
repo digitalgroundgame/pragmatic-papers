@@ -3,7 +3,7 @@ import { Breadcrumbs } from "@/components/Breadcrumbs"
 import { Footer } from "@/Footer/Component"
 import { Header } from "@/Header/Component"
 import { getServerSideURL } from "@/utilities/getURL"
-import { mergeOpenGraph } from "@/utilities/mergeOpenGraph"
+import { DEFAULT_DESCRIPTION, mergeOpenGraph } from "@/utilities/mergeOpenGraph"
 import { cn } from "@/utilities/utils"
 import { GoogleAnalytics } from "@next/third-parties/google"
 import { ThemeProvider } from "@wrksz/themes/next"
@@ -69,6 +69,7 @@ export default async function RootLayout({
 
 export const metadata: Metadata = {
   metadataBase: new URL(getServerSideURL()),
+  description: DEFAULT_DESCRIPTION,
   openGraph: mergeOpenGraph(),
   twitter: {
     card: "summary_large_image",

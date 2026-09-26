@@ -4,7 +4,7 @@ import type { Article, Page, Topic, Volume } from "../payload-types"
 
 import { getMediaUrl } from "./getMediaUrl"
 import { getServerSideURL } from "./getURL"
-import { mergeOpenGraph } from "./mergeOpenGraph"
+import { DEFAULT_DESCRIPTION, mergeOpenGraph } from "./mergeOpenGraph"
 
 export const generateMeta = async (args: {
   doc: Partial<Page> | Partial<Volume> | Partial<Article> | Partial<Topic> | null
@@ -22,7 +22,7 @@ export const generateMeta = async (args: {
     alternates: {
       canonical: canonicalUrl,
     },
-    description: doc?.meta?.description,
+    description: description || DEFAULT_DESCRIPTION,
     openGraph: mergeOpenGraph({
       ...(description ? { description } : {}),
       images: ogImage

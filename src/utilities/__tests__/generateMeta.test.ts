@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import type { Article, Media } from "@/payload-types"
 import { generateMeta } from "@/utilities/generateMeta"
+import { DEFAULT_DESCRIPTION } from "@/utilities/mergeOpenGraph"
 
 const SITE = "https://pragmaticpapers.com"
 const OG_IMAGE = "https://cdn.example.com/media/hero-og.jpg"
@@ -58,7 +59,7 @@ describe("generateMeta", () => {
     const meta = await generateMeta({ doc: null, canonicalPath: "/" })
 
     expect(meta.title).toBe("The Pragmatic Papers")
-    expect(meta.description).toBeUndefined()
+    expect(meta.description).toBe(DEFAULT_DESCRIPTION)
     expect(meta.alternates?.canonical).toBe(`${SITE}/`)
     expect(meta.openGraph?.images).toEqual(DEFAULT_OG_IMAGES)
     expect(meta.twitter).toEqual({
@@ -79,10 +80,11 @@ describe("generateMeta", () => {
   it.each([
     ["no meta description", article({ title: "Untitled" })],
     ["an empty meta description", article({ title: "Untitled", description: "" })],
-  ])("keeps the site's default Open Graph description for a doc with %s", async (_, doc) => {
+  ])("keeps the site's default description for a doc with %s", async (_, doc) => {
     const meta = await generateMeta({ doc, canonicalPath: "/about" })
 
-    expect(meta.openGraph?.description).toEqual(expect.stringContaining("community-driven"))
+    expect(meta.openGraph?.description).toBe(DEFAULT_DESCRIPTION)
+    expect(meta.description).toBe(DEFAULT_DESCRIPTION)
   })
 
   it("uses the site image when the media has no og size", async () => {

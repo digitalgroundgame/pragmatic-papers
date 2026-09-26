@@ -1,6 +1,7 @@
 import { revalidateRedirects } from "@/hooks/revalidateRedirects"
 import type { Article, Page, Topic, Volume } from "@/payload-types"
 import { getServerSideURL } from "@/utilities/getURL"
+import { DEFAULT_DESCRIPTION } from "@/utilities/mergeOpenGraph"
 import { toRoman } from "@/utilities/toRoman"
 import { formBuilderPlugin } from "@payloadcms/plugin-form-builder"
 import { nestedDocsPlugin } from "@payloadcms/plugin-nested-docs"
@@ -8,7 +9,11 @@ import { redirectsPlugin } from "@payloadcms/plugin-redirects"
 import { searchPlugin } from "@payloadcms/plugin-search"
 import type { BeforeSync } from "@payloadcms/plugin-search/types"
 import { seoPlugin } from "@payloadcms/plugin-seo"
-import { type GenerateTitle, type GenerateURL } from "@payloadcms/plugin-seo/types"
+import {
+  type GenerateDescription,
+  type GenerateTitle,
+  type GenerateURL,
+} from "@payloadcms/plugin-seo/types"
 import { FixedToolbarFeature, HeadingFeature, lexicalEditor } from "@payloadcms/richtext-lexical"
 import { s3Storage } from "@payloadcms/storage-s3"
 import { type Payload, type Plugin } from "payload"
@@ -40,6 +45,10 @@ export const generateTitle: GenerateTitle<Volume | Article | Page | Topic> = ({ 
   if ("title" in doc && doc.title) return `${doc.title} | The Pragmatic Papers`
   return "The Pragmatic Papers"
 }
+
+export const generateDescription: GenerateDescription<Volume | Article | Page | Topic> = ({
+  doc,
+}) => ("description" in doc && doc.description) || DEFAULT_DESCRIPTION
 
 const generateURL: GenerateURL<Volume | Article | Page | Topic> = ({ doc }) => {
   const url = getServerSideURL()
@@ -181,6 +190,7 @@ export const plugins: Plugin[] = [
   }),
   seoPlugin({
     generateTitle,
+    generateDescription,
     generateURL,
   }),
   formBuilderPlugin({

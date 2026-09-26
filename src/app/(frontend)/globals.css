@@ -171,8 +171,9 @@
     @apply text-2xl md:text-3xl;
   }
   button:not(:disabled),
-  [role="button"]:not(:disabled) {
+  [role="button"]:not(:disabled):not([aria-disabled="true"]) {
     cursor: pointer;
+  }
   }
 }
 

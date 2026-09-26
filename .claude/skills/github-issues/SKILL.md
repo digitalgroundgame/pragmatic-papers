@@ -1,6 +1,6 @@
 ---
 name: github-issues
-description: File, triage, or label a GitHub issue in this repo the way we do it — apply an issue TYPE (Bug/Feature/Task), the right LABELS, and the Project board fields (Status/Priority/Size/Estimate). Use whenever creating, editing, triaging, prioritizing, sizing, or bulk-labeling issues, moving an issue on the board, or adding/renaming/removing a label. Covers the "Bug is a type not a label" gotcha, the gh-can't-set-type gotcha, the version-controlled label taxonomy in .github/labels.yml, and a helper that sets board fields by name.
+description: File, triage, or label a GitHub issue in this repo the way we do it — apply an issue TYPE (Bug/Feature/Task), the right LABELS, and the Project board fields (Status/Priority/Size/Estimate). Use whenever creating, editing, triaging, prioritizing, sizing, or bulk-labeling issues, starting work on (picking up) an issue, moving an issue on the board, or adding/renaming/removing a label. Covers the "Bug is a type not a label" gotcha, the gh-can't-set-type gotcha, the version-controlled label taxonomy in .github/labels.yml, and a helper that sets board fields by name.
 ---
 
 # Filing & triaging GitHub issues
@@ -149,7 +149,8 @@ board.
   asked for it**, and state the priority you chose and why in your reply so a
   human can change it. If you can't judge it, leave it unset and say so.
 - **`Status`:** leave it at `Backlog`. Set `Ready` only when asked, and
-  `In progress` only when you start working on the issue yourself.
+  `In progress` only when you start working on the issue yourself, and then
+  assign yourself too ([Starting work](#starting-work-on-an-issue)).
 
 ### Setting fields
 
@@ -204,6 +205,26 @@ from your side. Check the latest run with
 and, if it failed, read the job log (it names the valid fields and options)
 before telling the user the field is set.
 
+## Starting work on an issue
+
+Picking up an issue takes two steps. The assignee shows who owns it on the
+issue list; `Status` shows it on the board. Do both, so two people (or an
+agent session) don't start the same work:
+
+```bash
+gh issue edit 953 --add-assignee @me
+pnpm tsx .claude/skills/github-issues/set-project-field.ts 953 Status "In progress"
+```
+
+`@me` is the authenticated `gh` user, so an agent working on your behalf
+assigns you. MCP: `issue_write(method="update", issue_number=953,
+assignees=["<login>"])`, which replaces the list, so include any existing
+assignees.
+
+As a backstop, `.github/workflows/assign-linked-issues.yml` assigns a PR's
+author to any unassigned issue the PR closes (`Fixes #953`) when it's opened.
+It only covers work that already has a PR, so assign yourself when you start.
+
 ## Closing issues
 
 Always set a reason. MCP: `issue_write(method="update", state="closed",
@@ -221,3 +242,6 @@ For `duplicate`/`invalid`/`wontfix`, add the matching label too.
       as `Backlog` automatically).
 - [ ] `Priority` set only if you're confident (never `P0` unasked), and the
       value you chose stated in your reply.
+- [ ] Starting on it now? Assign yourself and set `Status` to `In progress`
+      (see [Starting work](#starting-work-on-an-issue)). Otherwise leave it
+      unassigned.

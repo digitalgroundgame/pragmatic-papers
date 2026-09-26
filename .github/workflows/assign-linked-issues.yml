@@ -1,0 +1,51 @@
+name: Assign linked issues
+
+# When a PR that closes an issue (`Fixes #n`) is opened, assign the PR author to
+# that issue if nobody owns it yet. Catches work that started without the
+# assignee step in .claude/skills/github-issues/SKILL.md.
+#
+# pull_request_target so fork PRs get a token that can write issues. Safe
+# because the job never checks out or runs PR code. GitHub only assigns users
+# with access to the repo; for anyone else the call is a silent no-op.
+
+on:
+  pull_request_target:
+    types: [opened, reopened, edited, ready_for_review]
+
+permissions:
+  issues: write
+  pull-requests: read
+
+jobs:
+  assign:
+    name: Assign PR author to unassigned linked issues
+    if: github.event.pull_request.user.type != 'Bot'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Assign
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          PR: ${{ github.event.pull_request.number }}
+          AUTHOR: ${{ github.event.pull_request.user.login }}
+        run: |
+          set -euo pipefail
+          # shellcheck disable=SC2016 # $owner/$name/$pr are GraphQL variables
+          issues=$(gh api graphql \
+            -f query='query($owner:String!,$name:String!,$pr:Int!){
+              repository(owner:$owner,name:$name){ pullRequest(number:$pr){
+                closingIssuesReferences(first:20){ nodes {
+                  number repository { nameWithOwner } assignees(first:1){ totalCount } } } } } }' \
+            -f owner="${REPO%/*}" -f name="${REPO#*/}" -F pr="$PR" \
+            --jq ".data.repository.pullRequest.closingIssuesReferences.nodes[]
+              | select(.repository.nameWithOwner == \"$REPO\" and .assignees.totalCount == 0)
+              | .number")
+          for n in $issues; do
+            assigned=$(gh api -X POST "repos/$REPO/issues/$n/assignees" -f "assignees[]=$AUTHOR" \
+              --jq "[.assignees[].login] | index(\"$AUTHOR\") != null")
+            if [ "$assigned" = true ]; then
+              echo "Assigned @$AUTHOR to #$n" | tee -a "$GITHUB_STEP_SUMMARY"
+            else
+              echo "Could not assign @$AUTHOR to #$n (no repo access)" | tee -a "$GITHUB_STEP_SUMMARY"
+            fi
+          done

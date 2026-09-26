@@ -102,25 +102,30 @@ export const createMathBlocksArticle = async (
   writers: User[],
   mediaDocs: Media[],
   topics: number[] = [],
+  context?: Record<string, unknown>,
 ): Promise<number> => {
   validateWriters(writers)
 
   const writer = writers[0]!
   const title = "Equations in Context: Demonstrating Inline and Display Math"
 
-  const article = await createArticle(payload, {
-    title,
-    content: createMathBlocksContent(),
-    authors: [writer.id],
-    topics: topics,
-    slug: "equations-in-context-demonstrating-inline-and-display-math",
-    meta: {
+  const article = await createArticle(
+    payload,
+    {
       title,
-      description:
-        "A guide to inline and display math rendering, demonstrating LaTeX equations from Bayes' theorem to the Schrödinger equation.",
-      image: mediaDocs[0]?.id,
+      content: createMathBlocksContent(),
+      authors: [writer.id],
+      topics: topics,
+      slug: "equations-in-context-demonstrating-inline-and-display-math",
+      meta: {
+        title,
+        description:
+          "A guide to inline and display math rendering, demonstrating LaTeX equations from Bayes' theorem to the Schrödinger equation.",
+        image: mediaDocs[0]?.id,
+      },
     },
-  })
+    context,
+  )
 
   return article.id
 }

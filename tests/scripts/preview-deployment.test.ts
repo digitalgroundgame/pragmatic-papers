@@ -232,22 +232,24 @@ describe("main deploy", () => {
       production_environment: false,
     })
 
-    const logUrl =
-      "https://coolify.test/project/p/environment/e/application/app-uuid/deployment/dep-uuid"
     expect(h.statuses()).toEqual([
-      expect.objectContaining({ id: 100, state: "queued", log_url: logUrl }),
-      expect.objectContaining({ id: 100, state: "in_progress", log_url: logUrl }),
+      expect.objectContaining({ id: 100, state: "queued" }),
+      expect.objectContaining({ id: 100, state: "in_progress" }),
       expect.objectContaining({
         id: 100,
         state: "success",
         environment_url: "https://pr-42.pragmaticpapers.com",
-        log_url: logUrl,
         auto_inactive: false,
       }),
       // 80 is already inactive; 100 is the new one.
       expect.objectContaining({ id: 90, state: "inactive" }),
     ])
     expect(h.statuses()[0]).not.toHaveProperty("environment_url")
+    // Statuses are public, so the Coolify dashboard URL must never appear in them.
+    for (const status of h.statuses()) {
+      expect(status).not.toHaveProperty("log_url")
+      expect(JSON.stringify(status)).not.toContain("coolify.test")
+    }
   })
 
   it("sends Coolify's token to Coolify and GitHub's to GitHub", async () => {

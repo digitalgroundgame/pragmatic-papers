@@ -204,7 +204,7 @@ DATABASE_URI=postgresql://postgres:password@postgres:5432/pragmatic_papers
 
 ### Preview Deployments on the PR (GitHub Deployments)
 
-Coolify only comments on the PR; it doesn't create GitHub Deployments ([coollabsio/coolify#9583](https://github.com/coollabsio/coolify/issues/9583)). `.github/workflows/preview-deployment.yml` fills the gap: on each push to a PR it waits for Coolify to queue the preview build for that commit, then creates a Deployment for the PR's branch in the **Preview** environment and copies Coolify's status onto it. The PR then shows the build as queued, in progress, failed or live, with **View deployment** linking to `pr-<n>.pragmaticpapers.com` and the deployment's log linking to the build in Coolify. Older previews of the PR go inactive when a newer one goes live, and all of them when the PR closes.
+Coolify only comments on the PR; it doesn't create GitHub Deployments ([coollabsio/coolify#9583](https://github.com/coollabsio/coolify/issues/9583)). `.github/workflows/preview-deployment.yml` fills the gap: on each push to a PR it waits for Coolify to queue the preview build for that commit, then creates a Deployment for the PR's branch in the **Preview** environment and copies Coolify's status onto it. The PR then shows the build as queued, in progress, failed or live, with **View deployment** linking to `pr-<n>.pragmaticpapers.com`. There's deliberately no log link to the build in Coolify: Deployments are public on this repo, and it would publish the Coolify dashboard's address. Older previews of the PR go inactive when a newer one goes live, and all of them when the PR closes.
 
 Set these under **Settings → Secrets and variables → Actions**:
 

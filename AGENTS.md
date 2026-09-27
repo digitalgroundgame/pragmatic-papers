@@ -167,7 +167,7 @@ function, and fails on any axe violation.
   rather than inlining Payload shapes. Media points at `.storybook/assets`, so no story touches
   the network.
 - **Payload**: `.storybook/main.ts` swaps `@/utilities/getPayloadConfig` for
-  `src/utilities/__mocks__/getPayloadConfig.ts`. Seed a story in `beforeEach` with
+  `src/stories/mocks/getPayloadConfig.ts`. Seed a story in `beforeEach` with
   `mocked(getPayloadConfig).mockResolvedValue(createFakePayload({ collections, globals }))`.
   Server code must reach Payload through `getPayloadConfig`: a direct `getPayload({ config })`
   pulls the Payload config into the browser bundle and breaks `pnpm storybook:build`.

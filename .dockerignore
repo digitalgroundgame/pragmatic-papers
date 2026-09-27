@@ -22,4 +22,3 @@ storybook-static
 .storybook
 **/*.stories.tsx
 src/stories
-src/utilities/__mocks__

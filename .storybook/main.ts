@@ -5,7 +5,7 @@ import type { Plugin } from "vite"
 
 const dirname = path.dirname(fileURLToPath(import.meta.url))
 const payloadConfig = path.resolve(dirname, "../src/utilities/getPayloadConfig.ts")
-const payloadConfigMock = path.resolve(dirname, "../src/utilities/__mocks__/getPayloadConfig.ts")
+const payloadConfigMock = path.resolve(dirname, "../src/stories/mocks/getPayloadConfig.ts")
 
 /**
  * Every Payload query goes through getPayloadConfig; Storybook gets the

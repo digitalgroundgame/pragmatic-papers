@@ -28,7 +28,6 @@ export default defineConfig({
         "**/__tests__/**",
         "**/*.{test,spec}.{ts,tsx}",
         "**/*.stories.{ts,tsx}",
-        "**/__mocks__/**",
         "src/stories/**",
         "**/*.d.ts",
         "src/migrations/**",

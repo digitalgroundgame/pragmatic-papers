@@ -1,6 +1,11 @@
-import { TvIcon } from "lucide-react"
+import { ChartGanttIcon, ImagesIcon, MapIcon, TvIcon, type LucideIcon } from "lucide-react"
 
-import type { SocialEmbedBlock } from "@/payload-types"
+import type {
+  InteractiveMapBlock,
+  MediaCollageBlock,
+  SocialEmbedBlock,
+  TimelineBlock,
+} from "@/payload-types"
 import { createTableOfContents } from "./create"
 
 const PLATFORM_LABELS: Record<NonNullable<SocialEmbedBlock["platform"]>, string> = {
@@ -11,27 +16,40 @@ const PLATFORM_LABELS: Record<NonNullable<SocialEmbedBlock["platform"]>, string>
   youtube: "YouTube",
 }
 
+function entryIcon(Icon: LucideIcon): React.ReactNode {
+  return <Icon aria-hidden="true" className="text-muted-foreground size-3 shrink-0" />
+}
+
 export const {
   TableOfContentsProvider,
   TableOfContents,
   TableOfContentsButton,
   tableOfContentsField,
   tableOfContentsConverter,
+  withTableOfContentsAnchors,
   tableOfContentsEntries,
   stampTableOfContentsAnchors,
   populateTableOfContentsAnchors,
 } = createTableOfContents({
   resolvers: {
     /* Add block customization here */
+    interactiveMap: (block) => {
+      const { widgetTitle, maps } = block as InteractiveMapBlock
+      const label = widgetTitle || (maps?.length === 1 && maps[0]!.title) || "Map"
+      return { label, icon: entryIcon(MapIcon) }
+    },
+    mediaCollage: (block) => {
+      if (!(block as MediaCollageBlock).images?.length) return null
+      return { label: "Gallery", icon: entryIcon(ImagesIcon) }
+    },
     socialEmbed: (block) => {
-      const fields = block as SocialEmbedBlock
-      if (!fields.id) return null
-      const label = fields.platform ? `${PLATFORM_LABELS[fields.platform]} embed` : "Social embed"
-      return {
-        label,
-        anchor: fields.id,
-        icon: <TvIcon aria-hidden="true" className="text-muted-foreground size-3 shrink-0" />,
-      }
+      const { platform } = block as SocialEmbedBlock
+      const label = platform ? `${PLATFORM_LABELS[platform]} embed` : "Social embed"
+      return { label, icon: entryIcon(TvIcon) }
+    },
+    timeline: (block) => {
+      const { title } = block as TimelineBlock
+      return { label: title || "Timeline", icon: entryIcon(ChartGanttIcon) }
     },
   },
 })

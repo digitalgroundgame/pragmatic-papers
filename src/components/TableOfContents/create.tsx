@@ -6,7 +6,11 @@ import {
   TableOfContents as TableOfContentsClient,
   TableOfContentsButton as TableOfContentsButtonClient,
 } from "./client"
-import { type CreateTableOfContentsConverter, createTableOfContentsConverter } from "./converter"
+import {
+  type CreateTableOfContentsConverter,
+  createTableOfContentsConverter,
+  withTableOfContentsAnchors,
+} from "./converter"
 import { type TableOfContentsField, tableOfContentsField } from "./field"
 import { TableOfContentsProvider } from "./provider"
 import { slugifyHeading } from "./slug"
@@ -44,6 +48,7 @@ interface CreateTableOfContents {
   TableOfContents: (props: TableOfContentsProps) => React.ReactNode
   TableOfContentsButton: (props: TableOfContentsButtonProps) => React.ReactNode
   tableOfContentsConverter: CreateTableOfContentsConverter
+  withTableOfContentsAnchors: typeof withTableOfContentsAnchors
   tableOfContentsEntries: (content: DefaultTypedEditorState) => TableOfContentsEntry[]
   stampTableOfContentsAnchors: (content: DefaultTypedEditorState) => DefaultTypedEditorState
   populateTableOfContentsAnchors: FieldHook<TypeWithID, DefaultTypedEditorState | null | undefined>
@@ -57,7 +62,7 @@ export function createTableOfContents({
 }: CreateTableOfContentsOptions = {}): CreateTableOfContents {
   const entriesFor = (content: DefaultTypedEditorState) =>
     buildEntries(content, resolvers, introAnchor)
-  const stamp = (content: DefaultTypedEditorState) => stampAnchors(content, slugify)
+  const stamp = (content: DefaultTypedEditorState) => stampAnchors(content, slugify, resolvers)
 
   return {
     introAnchor,
@@ -69,6 +74,7 @@ export function createTableOfContents({
     TableOfContentsButton: ({ content, ...props }) =>
       entriesFor(content).length > 0 ? <TableOfContentsButtonClient {...props} /> : null,
     tableOfContentsConverter: createTableOfContentsConverter(icon),
+    withTableOfContentsAnchors,
     tableOfContentsEntries: entriesFor,
     stampTableOfContentsAnchors: stamp,
     populateTableOfContentsAnchors: ({ value }) => (value ? stamp(value) : value),

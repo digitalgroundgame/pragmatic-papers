@@ -112,6 +112,26 @@ describe("stampAnchors", () => {
     expect(anchorsOf(stampAnchors(raw([stale])))).toEqual(["new-title"])
   })
 
+  it("stamps resolver-matched blocks from their label, sharing the heading namespace", () => {
+    const resolvers = { map: () => ({ label: "Overview" }) }
+    const state = stampAnchors(
+      raw([heading("h2", "Overview"), block("map"), block("map"), block("other")]),
+      undefined,
+      resolvers,
+    )
+    expect(anchorsOf(state)).toEqual(["overview", "overview-2", "overview-3", undefined])
+  })
+
+  it("leaves blocks whose resolver supplies its own anchor or skips them unstamped", () => {
+    const resolvers = {
+      own: () => ({ label: "Own", anchor: "custom" }),
+      skipped: () => null,
+    }
+    const stale = { ...block("skipped"), anchor: "stale" }
+    const state = stampAnchors(raw([block("own"), stale]), undefined, resolvers)
+    expect(anchorsOf(state)).toEqual([undefined, undefined])
+  })
+
   it("does not mutate its input", () => {
     const input = raw([heading("h2", "Keep")])
     stampAnchors(input)
@@ -195,6 +215,19 @@ describe("collectEntries – caller resolvers", () => {
       },
     })
     expect(entries).toHaveLength(1)
+  })
+
+  it("falls back to the stamped anchor when a resolver omits one", () => {
+    const state = { root: { children: [{ ...block("map"), anchor: "the-map" }] } }
+    const entries = collectEntries(state as unknown as SerializedEditorState, {
+      map: () => ({ label: "Map" }),
+    })
+    expect(entries).toEqual([{ label: "Map", anchor: "the-map" }])
+  })
+
+  it("skips a block that has neither a resolver anchor nor a stamped one", () => {
+    const entries = collectEntries(makeState([block("map")]), { map: () => ({ label: "Map" }) })
+    expect(entries).toEqual([])
   })
 
   it("traverses nested block children (e.g. inlineBlock inside paragraph)", () => {

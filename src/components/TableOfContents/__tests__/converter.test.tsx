@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest"
 
 import type { SerializedHeadingNode } from "@payloadcms/richtext-lexical"
 import type { SerializedLexicalNode } from "@payloadcms/richtext-lexical/lexical"
-import { createTableOfContentsConverter } from "../converter"
+import { createTableOfContentsConverter, withTableOfContentsAnchors } from "../converter"
 
 type ConverterFn = (args: { node: SerializedLexicalNode; nodesToJSX: unknown }) => React.ReactNode
 
@@ -57,5 +57,27 @@ describe("createTableOfContentsConverter", () => {
       version: 1,
     } as SerializedLexicalNode
     expect(render(converter, table)).toContain('<div id="table-1" class="lexical-table-container">')
+  })
+})
+
+describe("withTableOfContentsAnchors", () => {
+  const block = (anchor?: string) =>
+    ({ type: "block", anchor, fields: { blockType: "map" }, version: 2 }) as SerializedLexicalNode
+
+  it("wraps an anchored block in an element carrying the anchor", () => {
+    const { map } = withTableOfContentsAnchors({ map: () => <figure>map</figure> })
+    expect(render(map, block("election-map"))).toBe(
+      '<div id="election-map"><figure>map</figure></div>',
+    )
+  })
+
+  it("renders an unanchored block unchanged", () => {
+    const { map } = withTableOfContentsAnchors({ map: () => <figure>map</figure> })
+    expect(render(map, block())).toBe("<figure>map</figure>")
+  })
+
+  it("wraps a converter given as a plain element", () => {
+    const { map } = withTableOfContentsAnchors({ map: <hr /> })
+    expect(render(map, block("rule"))).toBe('<div id="rule"><hr/></div>')
   })
 })

@@ -9,7 +9,12 @@ export interface TableOfContentsEntry {
   children?: TableOfContentsEntry[]
 }
 
-export type TableOfContentsResolver<T = unknown> = (node: T) => TableOfContentsEntry | null
+/** Omitting `anchor` on a block uses the one stamped on save from its label. */
+export type TableOfContentsResolvedEntry = Omit<TableOfContentsEntry, "anchor"> & {
+  anchor?: string
+}
+
+export type TableOfContentsResolver<T = unknown> = (node: T) => TableOfContentsResolvedEntry | null
 
 export interface TableOfContentsResolverMap {
   [nodeOrBlockType: string]: TableOfContentsResolver

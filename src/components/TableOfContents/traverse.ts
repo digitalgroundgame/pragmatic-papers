@@ -47,15 +47,32 @@ function resolverPayloadFor(node: SerializedLexicalNode): unknown {
   return node
 }
 
-type AnchorGenerator = (node: SerializedLexicalNode, counts: Map<string, number>) => string
+type AnchorGenerator = (
+  node: SerializedLexicalNode,
+  counts: Map<string, number>,
+) => string | undefined
 
-function headingAnchorGenerator(slugify: SlugifyFn = slugifyHeading): AnchorGenerator {
+function dedupe(base: string, counts: Map<string, number>): string {
+  const n = (counts.get(base) ?? 0) + 1
+  counts.set(base, n)
+  return n === 1 ? base : `${base}-${n}`
+}
+
+function headingAnchorGenerator(slugify: SlugifyFn): AnchorGenerator {
   return (node, counts) => {
     const text = extractText((node as WithChildren).children)
-    const base = slugify(text) || "heading"
-    const n = (counts.get(base) ?? 0) + 1
-    counts.set(base, n)
-    return n === 1 ? base : `${base}-${n}`
+    return dedupe(slugify(text) || "heading", counts)
+  }
+}
+
+function blockAnchorGenerator(
+  resolvers: TableOfContentsResolverMap,
+  slugify: SlugifyFn,
+): AnchorGenerator {
+  return (node, counts) => {
+    const entry = resolvers[resolverKeyFor(node)]?.(resolverPayloadFor(node))
+    if (!entry || entry.anchor) return undefined
+    return dedupe(slugify(entry.label) || "block", counts)
   }
 }
 
@@ -68,18 +85,26 @@ const tableAnchorGenerator: AnchorGenerator = (_, counts) => {
 export function stampAnchors<T extends SerializedEditorState>(
   state: T,
   slugify: SlugifyFn = slugifyHeading,
+  resolvers: TableOfContentsResolverMap = {},
 ): T {
   const stamped = structuredClone(state)
+  const block = blockAnchorGenerator(resolvers, slugify)
   const generators: Record<string, AnchorGenerator> = {
     heading: headingAnchorGenerator(slugify),
     table: tableAnchorGenerator,
+    block,
+    inlineBlock: block,
   }
   const counts = new Map<string, number>()
   const walk = (nodes: SerializedLexicalNode[] | undefined): void => {
     if (!nodes) return
     for (const node of nodes) {
       const generate = generators[node.type]
-      if (generate) (node as AnchoredNode).anchor = generate(node, counts)
+      if (generate) {
+        const anchor = generate(node, counts)
+        if (anchor) (node as AnchoredNode).anchor = anchor
+        else delete (node as AnchoredNode).anchor
+      }
       walk((node as WithChildren).children)
     }
   }
@@ -123,7 +148,8 @@ export function collectEntries(
       const resolver = key ? mergedResolvers[key] : undefined
       if (resolver) {
         const entry = resolver(resolverPayloadFor(node))
-        if (entry) entries.push(entry)
+        const anchor = entry?.anchor ?? (node as AnchoredNode).anchor
+        if (entry && anchor !== undefined) entries.push({ ...entry, anchor })
       }
       walk((node as WithChildren).children)
     }

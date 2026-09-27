@@ -57,6 +57,38 @@ describe("table of contents anchors", () => {
     payload = await getPayload()
   })
 
+  it("stamps a resolver-matched block from its label when an article is saved", async () => {
+    const timeline = {
+      type: "block",
+      fields: {
+        blockType: "timeline",
+        blockName: "",
+        title: "How we got here",
+        events: [{ date: "2024-01-01T00:00:00.000Z" }],
+      },
+      format: "",
+      version: 2,
+    }
+    const created = await payload.create({
+      collection: "articles",
+      overrideAccess: true,
+      context,
+      data: {
+        title: "TOC Anchors: Block",
+        content: content([heading("h2", "How we got here"), timeline]),
+        _status: "draft",
+      } as unknown as Article,
+    })
+
+    const stored = await payload.findByID({
+      collection: "articles",
+      id: created.id,
+      draft: true,
+      overrideAccess: true,
+    })
+    expect(anchorsOf(stored)).toEqual(["how-we-got-here", "how-we-got-here-2"])
+  })
+
   it("stamps heading and table anchors when an article is saved", async () => {
     const created = await payload.create({
       collection: "articles",

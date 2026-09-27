@@ -1,17 +1,27 @@
-import { render } from "@testing-library/react"
-import { describe, expect, it } from "vitest"
+import { cleanup, render, within } from "@testing-library/react"
+import { afterEach, describe, expect, it } from "vitest"
 
 import type { DefaultTypedEditorState } from "@payloadcms/richtext-lexical"
-import { TableOfContents, TableOfContentsProvider } from ".."
+import { stampTableOfContentsAnchors, TableOfContents, TableOfContentsProvider } from ".."
 
 function makeState(children: unknown[]): DefaultTypedEditorState {
-  return {
+  return stampTableOfContentsAnchors({
     root: { type: "root", children, direction: null, format: "", indent: 0, version: 1 },
-  } as DefaultTypedEditorState
+  } as DefaultTypedEditorState)
 }
 
-function socialEmbed(fields: Record<string, unknown>) {
-  return { type: "block", fields: { blockType: "socialEmbed", ...fields } } as object
+afterEach(cleanup)
+
+function block(blockType: string, fields: Record<string, unknown> = {}) {
+  return { type: "block", fields: { blockType, ...fields } } as object
+}
+
+function renderToc(children: unknown[]) {
+  return render(
+    <TableOfContentsProvider>
+      <TableOfContents content={makeState(children)} />
+    </TableOfContentsProvider>,
+  )
 }
 
 describe("app TOC instance — socialEmbed resolver", () => {
@@ -22,53 +32,79 @@ describe("app TOC instance — socialEmbed resolver", () => {
     ["twitter", "Twitter embed"],
     ["youtube", "YouTube embed"],
   ])("labels %s as %s", (platform, expected) => {
-    const state = makeState([socialEmbed({ id: "e1", platform })])
-    const { getByText } = render(
-      <TableOfContentsProvider>
-        <TableOfContents content={state} />
-      </TableOfContentsProvider>,
-    )
-    expect(getByText(expected)).toBeTruthy()
+    const { getByText } = renderToc([block("socialEmbed", { id: "e1", platform })])
+    expect(getByText(expected)).toBeInTheDocument()
   })
 
   it("uses 'Social embed' fallback when platform is missing", () => {
-    const state = makeState([socialEmbed({ id: "e1" })])
-    const { getByText } = render(
-      <TableOfContentsProvider>
-        <TableOfContents content={state} />
-      </TableOfContentsProvider>,
-    )
-    expect(getByText("Social embed")).toBeTruthy()
+    const { getByText } = renderToc([block("socialEmbed", { id: "e1" })])
+    expect(getByText("Social embed")).toBeInTheDocument()
   })
 
-  it("skips embeds with no id (no anchor target)", () => {
-    const state = makeState([socialEmbed({ platform: "twitter" })])
-    const { container } = render(
-      <TableOfContentsProvider>
-        <TableOfContents content={state} />
-      </TableOfContentsProvider>,
-    )
-    expect(container.firstChild).toBeNull()
-  })
-
-  it("anchors to the embed's id", () => {
-    const state = makeState([socialEmbed({ id: "embed-42", platform: "youtube" })])
-    const { container } = render(
-      <TableOfContentsProvider>
-        <TableOfContents content={state} />
-      </TableOfContentsProvider>,
-    )
-    const link = container.querySelector('a[href="#embed-42"]')
-    expect(link).toBeTruthy()
+  it("anchors embeds from their label, deduplicated", () => {
+    const { getAllByRole } = renderToc([
+      block("socialEmbed", { id: "e1", platform: "youtube" }),
+      block("socialEmbed", { id: "e2", platform: "youtube" }),
+    ])
+    const hrefs = getAllByRole("link").map((link) => link.getAttribute("href"))
+    expect(hrefs).toContain("#youtube-embed")
+    expect(hrefs).toContain("#youtube-embed-2")
   })
 
   it("renders the TvIcon next to the label", () => {
-    const state = makeState([socialEmbed({ id: "e1", platform: "twitter" })])
-    const { container } = render(
-      <TableOfContentsProvider>
-        <TableOfContents content={state} />
-      </TableOfContentsProvider>,
-    )
-    expect(container.querySelector("svg")).toBeTruthy()
+    const { getByText } = renderToc([block("socialEmbed", { platform: "twitter" })])
+    expect(getByText("Twitter embed").closest("a")?.querySelector("svg")).toBeInTheDocument()
+  })
+})
+
+describe("app TOC instance — exhibit blocks", () => {
+  it("labels an interactive map by its widget title", () => {
+    const { getByRole } = renderToc([
+      block("interactiveMap", { widgetTitle: "2024 margins", maps: [{ title: "House" }] }),
+    ])
+    const link = getByRole("link", { name: /2024 margins/ })
+    expect(link).toHaveAttribute("href", "#2024-margins")
+    expect(link.querySelector("svg")).toBeInTheDocument()
+  })
+
+  it("labels a single untitled-widget map by the map's title", () => {
+    const { getByText } = renderToc([block("interactiveMap", { maps: [{ title: "Senate" }] })])
+    expect(getByText("Senate")).toBeInTheDocument()
+  })
+
+  it("falls back to 'Map' when several maps share an untitled widget", () => {
+    const { getByText } = renderToc([
+      block("interactiveMap", { maps: [{ title: "House" }, { title: "Senate" }] }),
+    ])
+    expect(getByText("Map")).toBeInTheDocument()
+  })
+
+  it("labels a timeline by its title, falling back to 'Timeline'", () => {
+    const { getAllByRole } = renderToc([
+      block("timeline", { title: "How we got here" }),
+      block("timeline"),
+    ])
+    const labels = getAllByRole("link").map((link) => link.textContent)
+    expect(labels).toEqual(expect.arrayContaining(["How we got here", "Timeline"]))
+  })
+
+  it("lists a gallery only when it has images", () => {
+    const { getByRole } = renderToc([
+      block("mediaCollage", { images: [{ media: 1 }] }),
+      block("mediaCollage", { images: [] }),
+    ])
+    const nav = getByRole("navigation")
+    expect(within(nav).getAllByText("Gallery")).toHaveLength(1)
+  })
+
+  it("shares one anchor namespace with headings", () => {
+    const heading = {
+      type: "heading",
+      tag: "h2",
+      children: [{ type: "text", text: "Timeline" }],
+    }
+    const { getAllByRole } = renderToc([heading, block("timeline")])
+    const hrefs = getAllByRole("link").map((link) => link.getAttribute("href"))
+    expect(hrefs).toEqual(expect.arrayContaining(["#timeline", "#timeline-2"]))
   })
 })

@@ -58,3 +58,19 @@ export function createTableOfContentsConverter(
     },
   }
 }
+
+/** Blocks render their own markup, so the stamped anchor goes on a wrapper. */
+export function withTableOfContentsAnchors<T extends Record<string, JSXConverter<never>>>(
+  converters: T,
+): T {
+  return Object.fromEntries(
+    Object.entries(converters).map(([blockType, convert]) => [
+      blockType,
+      (args: JSXConverterArgs<AnchoredNode>) => {
+        const rendered = typeof convert === "function" ? convert(args as never) : convert
+        const id = args.node.anchor
+        return id ? <div id={id}>{rendered}</div> : rendered
+      },
+    ]),
+  ) as unknown as T
+}

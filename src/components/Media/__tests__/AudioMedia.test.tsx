@@ -34,21 +34,21 @@ function query<T extends Element>(container: HTMLElement, selector: string): T {
 // The menu renders in a portal, so it is queried off the document rather than
 // the render container.
 function volumeSlider(): Element | null {
-  return document.querySelector('[data-slot="slider"][aria-label="Volume"]')
+  return document.querySelector('input[type="range"][aria-label="Volume"]')
 }
 
 /** Base UI backs each slider with a range input, the only handle jsdom can drive. */
-function sliderInput(root: ParentNode, label: string): HTMLInputElement {
-  const input = root
-    .querySelector(`[data-slot="slider"][aria-label="${label}"]`)
-    ?.querySelector("input")
+function sliderInput(label: string): HTMLInputElement {
+  const input = document.querySelector<HTMLInputElement>(
+    `input[type="range"][aria-label="${label}"]`,
+  )
   if (!input) throw new Error(`${label} slider not found`)
   return input
 }
 
 /** The icon lucide renders for the current level, e.g. "lucide-volume-x" when muted. */
 function volumeIconClass(): string {
-  const row = volumeSlider()?.parentElement
+  const row = volumeSlider()?.closest('[data-slot="slider"]')?.parentElement
   return row?.querySelector("svg")?.getAttribute("class") ?? ""
 }
 
@@ -147,7 +147,7 @@ describe("AudioMedia", () => {
       const { container } = render(<AudioMedia media={media} />)
       const audio = query<HTMLAudioElement>(container, "audio")
 
-      fireEvent.change(sliderInput(container, "Seek"), { target: { value: "42" } })
+      fireEvent.change(sliderInput("Seek"), { target: { value: "42" } })
       expect(audio.currentTime).toBe(42)
       expect(screen.getByText("0:42 / 2:00")).toBeInTheDocument()
     })
@@ -168,9 +168,9 @@ describe("AudioMedia", () => {
     })
 
     it("falls back to a placeholder range until the duration is known", () => {
-      const { container } = render(<AudioMedia media={{ ...media, duration: null }} />)
+      render(<AudioMedia media={{ ...media, duration: null }} />)
       // A zero-length range would pin the thumb; 100 keeps it draggable.
-      expect(sliderInput(container, "Seek")).toHaveAttribute("max", "100")
+      expect(sliderInput("Seek")).toHaveAttribute("max", "100")
       expect(screen.getByText("0:00 / 0:00")).toBeInTheDocument()
     })
   })
@@ -283,11 +283,11 @@ describe("AudioMedia", () => {
       render(<AudioMedia media={media} />)
       fireEvent.click(screen.getByLabelText("Player settings"))
 
-      const volume = sliderInput(document, "Volume")
+      const volume = sliderInput("Volume")
       expect(volume.value).toBe("1")
 
       fireEvent.change(volume, { target: { value: "0.25" } })
-      expect(sliderInput(document, "Volume").value).toBe("0.25")
+      expect(sliderInput("Volume").value).toBe("0.25")
     })
 
     it("mutes the icon once the level reaches zero", () => {
@@ -295,7 +295,7 @@ describe("AudioMedia", () => {
       fireEvent.click(screen.getByLabelText("Player settings"))
       expect(volumeIconClass()).not.toContain("volume-x")
 
-      fireEvent.change(sliderInput(document, "Volume"), { target: { value: "0" } })
+      fireEvent.change(sliderInput("Volume"), { target: { value: "0" } })
       expect(volumeIconClass()).toContain("volume-x")
     })
 
@@ -310,7 +310,7 @@ describe("AudioMedia", () => {
       render(<AudioMedia media={media} />)
       fireEvent.click(screen.getByLabelText("Player settings"))
 
-      const volume = sliderInput(document, "Volume")
+      const volume = sliderInput("Volume")
       volume.focus()
       // The same key moves focus between items when it reaches the menu.
       fireEvent.keyDown(volume, { key: "ArrowDown" })
@@ -322,7 +322,7 @@ describe("AudioMedia", () => {
       render(<AudioMedia media={media} />)
       fireEvent.click(screen.getByLabelText("Player settings"))
 
-      const volume = sliderInput(document, "Volume")
+      const volume = sliderInput("Volume")
       volume.focus()
       // Typeahead and the like: the row swallows what the slider does not use.
       fireEvent.keyDown(volume, { key: "s" })

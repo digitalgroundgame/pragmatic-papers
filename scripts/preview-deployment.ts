@@ -190,7 +190,6 @@ interface Status {
   state: GithubState
   description: string
   environment_url?: string
-  log_url?: string
 }
 
 export interface GithubApi {
@@ -333,12 +332,10 @@ export async function deploy(deps: Deps, config: Config, timing: Timing = TIMING
       description: `Coolify status: ${current.status}`,
     }
     if (mapped.state !== posted) {
-      const logUrl = current.deployment_url
-        ? `${config.coolifyUrl}${current.deployment_url}`
-        : undefined
+      // No log_url: statuses are public on this repo, and it would publish the
+      // Coolify dashboard's address on every PR.
       await gh.setStatus(deployment.id, {
         ...mapped,
-        ...(logUrl && { log_url: logUrl }),
         ...(mapped.state === "success" && { environment_url: environmentUrl }),
       })
       posted = mapped.state

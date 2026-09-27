@@ -11,9 +11,8 @@
 #   - secret   COOLIFY_API_TOKEN         a Coolify API token with `read` access
 #                                        (Coolify → Keys & Tokens → API tokens;
 #                                        the API must be enabled in Settings)
-#   - variable COOLIFY_DASHBOARD_URL     the Coolify dashboard, e.g. https://coolify.example.com.
-#                                        Not COOLIFY_URL: inside Coolify that name is the
-#                                        app's own URL (e.g. the staging site).
+#   - secret   COOLIFY_API_URL           the Coolify server, e.g. https://coolify.example.com
+#                                        (with or without /api/v1 on the end)
 #   - variable COOLIFY_PREVIEW_APP_UUID  the UUID of the app that builds previews
 #                                        (the last segment of its dashboard URL)
 #   - variable PREVIEW_URL_TEMPLATE      optional; the app's preview URL template in
@@ -77,7 +76,7 @@ jobs:
           HEAD_REF: ${{ github.event.pull_request.head.ref }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
           EVENT_AT: ${{ github.event.pull_request.updated_at }}
-          COOLIFY_DASHBOARD_URL: ${{ vars.COOLIFY_DASHBOARD_URL }}
+          COOLIFY_API_URL: ${{ secrets.COOLIFY_API_URL }}
           COOLIFY_PREVIEW_APP_UUID: ${{ vars.COOLIFY_PREVIEW_APP_UUID }}
           PREVIEW_URL_TEMPLATE: ${{ vars.PREVIEW_URL_TEMPLATE }}
           COOLIFY_API_TOKEN: ${{ secrets.COOLIFY_API_TOKEN }}

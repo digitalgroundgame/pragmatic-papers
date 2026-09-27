@@ -1,15 +1,22 @@
-name: Showcase on preview
+name: Showcase
 
-# Pushes the showcase articles (src/endpoints/seed/showcase.ts) to a PR's
-# Coolify preview with `pnpm showcase <pr>`. The push only adds articles whose
-# slug is missing, so repeat runs are harmless.
+# Pushes feature articles from src/endpoints/seed/showcase.ts to a live site
+# with `pnpm showcase`. The push only adds articles whose slug is missing, so
+# repeat runs are harmless.
 #
-# Three ways to fire it, all for PRs labelled "showcase":
-#   - the deployment bot's comment reporting the preview is ready. The bot
+# A PR opts in with a line in its description naming the articles:
+#
+#   Showcase: finding-your-way-table-of-contents
+#
+# and they're pushed to its Coolify preview:
+#   - when the deployment bot's comment reports the preview is ready. The bot
 #     edits one comment per PR on every deploy, and a deploy may re-copy the
 #     preview database, so this re-pushes after each one.
-#   - adding the "showcase" label, for a preview that is already up.
-#   - workflow_dispatch with the PR number.
+#   - when the description is edited, for a preview that is already up.
+#
+# workflow_dispatch pushes named articles to a PR's preview (from the PR's
+# code) or to staging (as drafts, from the branch it was started on; needs the
+# SHOWCASE_STAGING_URL variable).
 #
 # issue_comment runs this file from the default branch with secrets, while the
 # script comes from the PR, so the job only runs PR code from this repository,
@@ -18,15 +25,18 @@ on:
   issue_comment:
     types: [created, edited]
   pull_request:
-    types: [labeled]
+    types: [edited]
   workflow_dispatch:
     inputs:
-      pr:
-        description: PR number whose preview to push to
+      target:
+        description: A PR number, or "staging"
+        required: true
+      slugs:
+        description: Articles to push, space-separated (see src/endpoints/seed/showcase.ts), or --all
         required: true
 
 concurrency:
-  group: showcase-${{ github.event.issue.number || github.event.pull_request.number || inputs.pr }}
+  group: showcase-${{ github.event.issue.number || github.event.pull_request.number || inputs.target }}
   cancel-in-progress: false
 
 permissions:
@@ -38,37 +48,44 @@ jobs:
     name: Push showcase articles
     if: >-
       github.event_name == 'workflow_dispatch' ||
-      (github.event_name == 'pull_request' && github.event.label.name == 'showcase') ||
+      (github.event_name == 'pull_request' &&
+        github.event.changes.body &&
+        contains(github.event.pull_request.body, 'Showcase:')) ||
       (github.event_name == 'issue_comment' &&
         github.event.issue.pull_request &&
         github.event.comment.user.login == 'digital-ground-game-deployment-bot[bot]' &&
         contains(github.event.comment.body, 'is ready') &&
-        contains(github.event.issue.labels.*.name, 'showcase'))
+        contains(github.event.issue.body, 'Showcase:'))
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
+      # A PR run reads the PR fresh, so the code and description are current
+      # even when the triggering event is a stale comment.
       - name: Resolve the PR
         id: pr
+        if: github.event_name != 'workflow_dispatch' || inputs.target != 'staging'
         env:
           GH_TOKEN: ${{ github.token }}
-          PR: ${{ github.event.issue.number || github.event.pull_request.number || inputs.pr }}
+          PR: ${{ github.event.issue.number || github.event.pull_request.number || inputs.target }}
         run: |
-          read -r head_repo sha labels < <(gh api "repos/$GITHUB_REPOSITORY/pulls/$PR" \
-            --jq '[.head.repo.full_name, .head.sha, ([.labels[].name] | join(","))] | @tsv')
+          if ! [[ "$PR" =~ ^[0-9]+$ ]]; then
+            echo "::error::Target must be a PR number or \"staging\", not \"$PR\"."
+            exit 1
+          fi
+          read -r head_repo sha < <(gh api "repos/$GITHUB_REPOSITORY/pulls/$PR" \
+            --jq '[.head.repo.full_name, .head.sha] | @tsv')
           if [ "$head_repo" != "$GITHUB_REPOSITORY" ]; then
             echo "::error::PR #$PR comes from $head_repo; only same-repository PRs are pushed."
             exit 1
           fi
-          if [[ ",$labels," != *",showcase,"* ]]; then
-            echo "::error::PR #$PR is not labelled showcase."
-            exit 1
-          fi
+          gh api "repos/$GITHUB_REPOSITORY/pulls/$PR" --jq '.body // ""' > "$RUNNER_TEMP/description.md"
           echo "number=$PR" >> "$GITHUB_OUTPUT"
           echo "sha=$sha" >> "$GITHUB_OUTPUT"
 
       - uses: actions/checkout@v7
         with:
-          ref: ${{ steps.pr.outputs.sha }}
+          # A PR's head, or for staging the branch the dispatch was started on.
+          ref: ${{ steps.pr.outputs.sha || github.ref }}
 
       - name: Set up Node.js environment
         uses: ./.github/actions/setup-project
@@ -76,15 +93,28 @@ jobs:
           node-version: "24.x"
           gh-font-read-token: ${{ secrets.GH_FONT_READ }}
 
-      - name: Push to the preview
+      - name: Push
         env:
           SHOWCASE_EMAIL: ${{ secrets.SHOWCASE_EMAIL }}
           SHOWCASE_PASSWORD: ${{ secrets.SHOWCASE_PASSWORD }}
-          PR: ${{ steps.pr.outputs.number }}
+          SHOWCASE_STAGING_URL: ${{ vars.SHOWCASE_STAGING_URL }}
+          TARGET: ${{ steps.pr.outputs.number || 'staging' }}
+          SLUGS: ${{ inputs.slugs }}
         run: |
-          pnpm -s showcase "$PR" 2>&1 | tee showcase.log
+          # Keep going on failure so the summary is written; exit with the push's status.
+          set +e -f
+          if [ "$GITHUB_EVENT_NAME" = workflow_dispatch ]; then
+            # Word-split on purpose (the input is a space-separated list); -f stops globbing.
+            # shellcheck disable=SC2086
+            pnpm -s showcase "$TARGET" $SLUGS 2>&1 | tee showcase.log
+          else
+            SHOWCASE_DESCRIPTION="$(cat "$RUNNER_TEMP/description.md")" \
+              pnpm -s showcase "$TARGET" --from-description 2>&1 | tee showcase.log
+          fi
+          status=${PIPESTATUS[0]}
           {
-            echo "### Showcase on https://pr-$PR.pragmaticpapers.com"
+            echo "### Showcase on $TARGET"
             echo
-            grep '✔' showcase.log | sed 's/^/- /'
+            grep -E '✔|No Showcase' showcase.log | sed 's/^/- /'
           } >> "$GITHUB_STEP_SUMMARY"
+          exit "$status"

@@ -16,11 +16,11 @@ vi.mock("@/endpoints/seed/showcase", () => ({
   ],
 }))
 
-const { createRestPayload, main, resolveTarget, selectEntries } =
+const { createRestPayload, main, resolveTarget, selectEntries, slugsFromDescription } =
   await import("../../scripts/showcase")
 
 const ORIGIN = "https://pr-748.pragmaticpapers.com"
-const PUSHER = { id: 7, roles: ["admin", "editor"] }
+const PUSHER = { id: 7, roles: ["writer"] }
 const ENV = { SHOWCASE_EMAIL: "editor@example.com", SHOWCASE_PASSWORD: "secret" }
 
 function json(body: unknown, status = 200): Response {
@@ -51,11 +51,23 @@ afterEach(() => {
 
 describe("resolveTarget", () => {
   it("maps a PR number to its preview", () => {
-    expect(resolveTarget("748")).toBe(ORIGIN)
+    expect(resolveTarget("748")).toEqual({ origin: ORIGIN, draftByDefault: false })
   })
 
   it("keeps only the origin of a URL", () => {
-    expect(resolveTarget("https://staging.example.com/admin")).toBe("https://staging.example.com")
+    expect(resolveTarget("https://staging.example.com/admin").origin).toBe(
+      "https://staging.example.com",
+    )
+  })
+
+  it("reads staging's URL from SHOWCASE_STAGING_URL, and pushes drafts there", () => {
+    expect(
+      resolveTarget("staging", { SHOWCASE_STAGING_URL: "https://staging.example.com/" }),
+    ).toEqual({ origin: "https://staging.example.com", draftByDefault: true })
+  })
+
+  it("needs SHOWCASE_STAGING_URL for staging", () => {
+    expect(() => resolveTarget("staging", {})).toThrow("Set SHOWCASE_STAGING_URL")
   })
 
   it("rejects anything else", () => {
@@ -63,19 +75,39 @@ describe("resolveTarget", () => {
   })
 })
 
+describe("slugsFromDescription", () => {
+  it.each([
+    ["Showcase: first second", ["first", "second"]],
+    ["Showcase: first, second-part", ["first", "second-part"]],
+    ["**Showcase:** `first`", ["first"]],
+    ["- showcase: first", ["first"]],
+    ["## Context\n\nShowcase: first\n\nMore text", ["first"]],
+  ])("reads %j", (description, slugs) => {
+    expect(slugsFromDescription(description)).toEqual(slugs)
+  })
+
+  it("finds nothing without a Showcase: line", () => {
+    expect(slugsFromDescription("Adds a showcase for the table of contents")).toEqual([])
+  })
+})
+
 describe("selectEntries", () => {
-  it("returns every entry when no slug is named", () => {
-    expect(selectEntries([]).map((entry) => entry.slug)).toEqual(["first", "second"])
+  it("returns every entry with --all", () => {
+    expect(selectEntries([], true).map((entry) => entry.slug)).toEqual(["first", "second"])
   })
 
   it("narrows to the named slugs", () => {
     expect(selectEntries(["second"]).map((entry) => entry.slug)).toEqual(["second"])
   })
 
-  it("names unknown slugs and lists the known ones", () => {
-    expect(() => selectEntries(["missing"])).toThrow(
-      "No showcase entry for missing. Known: first, second",
+  it("lists the known slugs when none is named", () => {
+    expect(() => selectEntries([])).toThrow(
+      "Name the articles to push, or --all:\n  first\n  second",
     )
+  })
+
+  it("names unknown slugs and lists the known ones", () => {
+    expect(() => selectEntries(["missing"])).toThrow("No showcase entry for missing. Known:")
   })
 })
 
@@ -116,6 +148,28 @@ describe("createRestPayload", () => {
     expect((form.get("file") as File).name).toBe("a.webp")
   })
 
+  it("creates articles as drafts in draft mode, and leaves other collections alone", async () => {
+    const fetchImpl = fakeFetch({
+      "POST /api/articles": () => json({ doc: { id: 3 } }, 201),
+      "POST /api/media": () => json({ doc: { id: 4 } }, 201),
+    })
+    const { create } = createRestPayload(ORIGIN, "tok", fetchImpl, {
+      draft: true,
+    }) as unknown as { create: RestCreate }
+    await create({ collection: "articles", data: { title: "Hi", _status: "published" } })
+    await create({ collection: "media", data: { alt: "Alt" } })
+
+    const [articleUrl, articleInit] = fetchImpl.mock.calls[0]!
+    expect(new URL(String(articleUrl)).searchParams.get("draft")).toBe("true")
+    expect(JSON.parse((articleInit as RequestInit).body as string)).toEqual({
+      title: "Hi",
+      _status: "draft",
+    })
+    const [mediaUrl, mediaInit] = fetchImpl.mock.calls[1]!
+    expect(new URL(String(mediaUrl)).searchParams.has("draft")).toBe(false)
+    expect(JSON.parse((mediaInit as RequestInit).body as string)).toEqual({ alt: "Alt" })
+  })
+
   it("surfaces Payload's error messages", async () => {
     const fetchImpl = fakeFetch({
       "POST /api/articles": () => json({ errors: [{ message: "Authors is invalid" }] }, 400),
@@ -133,18 +187,31 @@ describe("main", () => {
       json({ token: "tok", user })
 
   it("requires credentials", async () => {
-    await expect(main(["748"], {}, fakeFetch({}))).rejects.toThrow(
+    await expect(main(["748", "first"], {}, fakeFetch({}))).rejects.toThrow(
       "Set SHOWCASE_EMAIL and SHOWCASE_PASSWORD",
     )
   })
 
-  it.each([
-    ["cannot be credited as author", ["admin"], "(has: admin)"],
-    ["is not an admin (#1003)", ["editor", "writer"], "(has: editor, writer)"],
-  ])("refuses an account that %s", async (_, roles, message) => {
-    const fetchImpl = fakeFetch({ "POST /api/users/login": login({ id: 1, roles }) })
-    await expect(main(["748"], ENV, fetchImpl)).rejects.toThrow(message)
+  it("rejects unknown options", async () => {
+    await expect(main(["748", "--everything"], ENV, fakeFetch({}))).rejects.toThrow(
+      "Unknown option --everything",
+    )
+  })
+
+  it("refuses an account that cannot be credited as author", async () => {
+    const fetchImpl = fakeFetch({ "POST /api/users/login": login({ id: 1, roles: ["admin"] }) })
+    await expect(main(["748", "first"], ENV, fetchImpl)).rejects.toThrow("(has: admin)")
     expect(mockCreateStockMedia).not.toHaveBeenCalled()
+  })
+
+  it("does nothing when the description has no Showcase: line", async () => {
+    const fetchImpl = fakeFetch({})
+    await main(
+      ["748", "--from-description"],
+      { ...ENV, SHOWCASE_DESCRIPTION: "No line" },
+      fetchImpl,
+    )
+    expect(fetchImpl).not.toHaveBeenCalled()
   })
 
   it("creates only the entries whose slug is missing", async () => {
@@ -154,7 +221,7 @@ describe("main", () => {
         json({ totalDocs: url.searchParams.get("where[slug][equals]") === "first" ? 1 : 0 }),
     })
 
-    await main(["748"], ENV, fetchImpl)
+    await main(["748", "--all"], ENV, fetchImpl)
 
     expect(mockCreateStockMedia).toHaveBeenCalledOnce()
     expect(mockCreate).toHaveBeenCalledOnce()
@@ -167,9 +234,31 @@ describe("main", () => {
       "GET /api/articles": () => json({ totalDocs: 1 }),
     })
 
-    await main(["748"], ENV, fetchImpl)
+    await main(["748", "first", "second"], ENV, fetchImpl)
 
     expect(mockCreateStockMedia).not.toHaveBeenCalled()
     expect(mockCreate).not.toHaveBeenCalled()
+  })
+
+  it("pushes the slugs from the description to staging as drafts", async () => {
+    const fetchImpl = fakeFetch({
+      "POST /api/users/login": login(),
+      "GET /api/articles": () => json({ totalDocs: 0 }),
+    })
+
+    await main(
+      ["staging", "--from-description"],
+      {
+        ...ENV,
+        SHOWCASE_STAGING_URL: "https://staging.example.com",
+        SHOWCASE_DESCRIPTION: "## Context\n\nShowcase: second",
+      },
+      fetchImpl,
+    )
+
+    expect(mockCreate).toHaveBeenCalledOnce()
+    expect(console.warn).toHaveBeenCalledWith(
+      "✔ Pushed as a draft: https://staging.example.com/admin/collections/articles/99",
+    )
   })
 })

@@ -1,4 +1,4 @@
-import { withSentryConfig } from "@sentry/nextjs"
+import { withSentryConfig } from "@sentry/nextjs/config"
 import { withPayload } from "@payloadcms/next/withPayload"
 import type { NextConfig } from "next"
 import path from "path"

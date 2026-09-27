@@ -12,9 +12,16 @@ const config: StorybookConfig = {
     name: "@storybook/nextjs-vite",
     options: {},
   },
-  staticDirs: ["../public"],
+  staticDirs: [
+    "../public",
+    { from: "./assets", to: "/storybook-assets" },
+    { from: "../src/endpoints/seed/fixtures", to: "/seed-fixtures" },
+  ],
   core: {
     disableTelemetry: true,
+  },
+  features: {
+    experimentalRSC: true,
   },
 }
 

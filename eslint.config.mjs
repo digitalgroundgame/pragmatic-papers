@@ -97,6 +97,11 @@ const eslintConfig = [
       "@next/next/no-html-link-for-pages": "off",
     },
   },
+  // A story's exports are Storybook's input, not an API other modules call.
+  {
+    files: ["**/*.stories.tsx", ".storybook/**"],
+    rules: { "@typescript-eslint/explicit-module-boundary-types": "off" },
+  },
   // Add Node.js globals for config files (e.g. next-sitemap.config.cjs uses process.env and module.exports)
   {
     files: ["**/*.config.js", "**/*.config.cjs", "**/*.config.mjs"],

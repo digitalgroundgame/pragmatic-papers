@@ -2,6 +2,8 @@ import type { Meta, StoryObj } from "@storybook/nextjs-vite"
 import { ArrowRight, Plus } from "lucide-react"
 import { expect, fn, userEvent, within } from "storybook/test"
 
+import { knownContrastIssue } from "@/stories/a11y"
+
 import { Button } from "./button"
 
 const variants = [
@@ -41,7 +43,7 @@ export const Default: Story = {
 }
 
 export const Variants: Story = {
-  parameters: { a11y: { test: "todo" } },
+  parameters: knownContrastIssue,
   render: (args) => (
     <div className="flex flex-wrap gap-2">
       {variants.map((variant) => (

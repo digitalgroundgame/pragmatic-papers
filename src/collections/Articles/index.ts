@@ -2,22 +2,8 @@ import { isPublishedOrStaff, isCreatedByOrEditor, isDraftOrEditor } from "@/acce
 import { writerOrEditor } from "@/access/collections"
 import { editorFieldLevel } from "@/access/fields"
 import { AUTHOR_ROLES } from "@/access/roles"
-import { Banner } from "@/blocks/Banner/config"
-import { Code } from "@/blocks/Code/config"
-import { FootnoteBlock } from "@/blocks/Footnote/config"
 import { FootnoteShortcutFeature } from "@/blocks/Footnote/shortcutFeature"
-import { InteractiveMap } from "@/blocks/InteractiveMap/config"
-import { DisplayMathBlock, InlineMathBlock } from "@/blocks/Math/config"
-import { MediaBlock } from "@/blocks/MediaBlock/config"
-import { MediaCollageBlock } from "@/blocks/MediaCollageBlock/config"
-import { SocialEmbed } from "@/blocks/SocialEmbed/config"
-import { LegacyBlueskyEmbed } from "@/blocks/SocialEmbed/embeds/BlueskyEmbed/config"
-import { LegacyRedditEmbed } from "@/blocks/SocialEmbed/embeds/RedditEmbed/config"
-import { LegacyTikTokEmbed } from "@/blocks/SocialEmbed/embeds/TikTokEmbed/config"
-import { LegacyTwitterEmbed } from "@/blocks/SocialEmbed/embeds/TwitterEmbed/config"
-import { LegacyYouTubeEmbed } from "@/blocks/SocialEmbed/embeds/YouTubeEmbed/config"
-import { SquiggleRule } from "@/blocks/SquiggleRule/config"
-import { Timeline } from "@/blocks/Timeline/config"
+import { articleContentBlocks, articleInlineBlocks } from "@/collections/Articles/contentBlocks"
 import { detectMathBlocks } from "@/collections/Articles/hooks/detectMathBlocks"
 import { generateFootnotes } from "@/collections/Articles/hooks/generateFootnotes"
 import { populateTopics } from "@/collections/Articles/hooks/populateTopics"
@@ -114,24 +100,8 @@ export const Articles: CollectionConfig = {
                     AlignFeature(),
                     HeadingFeature({ enabledHeadingSizes: ["h2", "h3", "h4"] }),
                     BlocksFeature({
-                      blocks: [
-                        Banner,
-                        Code,
-                        InteractiveMap,
-                        MediaBlock,
-                        MediaCollageBlock,
-                        DisplayMathBlock,
-                        SquiggleRule,
-                        SocialEmbed,
-                        Timeline,
-                        // Legacy blocks for backward compatibility with existing content
-                        LegacyBlueskyEmbed,
-                        LegacyRedditEmbed,
-                        LegacyTikTokEmbed,
-                        LegacyTwitterEmbed,
-                        LegacyYouTubeEmbed,
-                      ],
-                      inlineBlocks: [InlineMathBlock, FootnoteBlock],
+                      blocks: articleContentBlocks,
+                      inlineBlocks: articleInlineBlocks,
                     }),
                     FootnoteShortcutFeature(),
                     FixedToolbarFeature(),

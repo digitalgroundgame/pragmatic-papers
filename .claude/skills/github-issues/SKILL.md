@@ -217,13 +217,18 @@ pnpm tsx .claude/skills/github-issues/set-project-field.ts 953 Status "In progre
 ```
 
 `@me` is the authenticated `gh` user, so an agent working on your behalf
-assigns you. MCP: `issue_write(method="update", issue_number=953,
-assignees=["<login>"])`, which replaces the list, so include any existing
-assignees.
+assigns you. In web/remote sessions neither command works: assign with MCP
+`issue_write(method="update", issue_number=953, assignees=["<login>"])`, which
+replaces the list, so include any existing assignees; set `Status` by
+dispatching `project-fields.yml` with `field: "Status"`, `value: "In progress"`
+([Setting fields](#setting-fields)).
 
 As a backstop, `.github/workflows/assign-linked-issues.yml` assigns a PR's
-author to any unassigned issue the PR closes (`Fixes #953`) when it's opened.
-It only covers work that already has a PR, so assign yourself when you start.
+author to any unassigned issue the PR closes (`Fixes #953`) when the PR is
+opened, reopened or edited, so adding the keyword later works too. It only
+covers work that already has a PR, and not PRs stacked on another branch
+(closing keywords only link on PRs into `dev`), so assign yourself when you
+start.
 
 ## Closing issues
 

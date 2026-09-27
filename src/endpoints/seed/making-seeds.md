@@ -321,8 +321,9 @@ preview's database from staging, so the push has to follow each deploy.
 
 `pnpm showcase` runs the seed on your machine and replays its `payload.create`
 calls against the site's REST API, so a showcase seed can only use `create`
-and `logger` on `payload`. The account must be an editor (to publish) with a
-role that can be credited as author; the articles are credited to it. The push
+and `logger` on `payload`. The account must be an admin with a role that can be
+credited as author (e.g. `admin` + `editor`); the articles are credited to it.
+Until #1003 is fixed, a non-admin can't set authors over REST. The push
 only adds: an entry whose slug is already there is skipped, and nothing is
 deleted. Topics are left empty, since the target's topic ids aren't known.
 

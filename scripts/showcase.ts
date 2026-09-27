@@ -1,6 +1,6 @@
 import "dotenv/config"
 
-import { AUTHOR_ROLES, hasRole, isEditor } from "@/access/roles"
+import { AUTHOR_ROLES, hasRole, isAdmin } from "@/access/roles"
 import type { User } from "@/payload-types"
 import { createStockMedia } from "@/endpoints/seed/media"
 import { type ShowcaseEntry, showcaseEntries } from "@/endpoints/seed/showcase"
@@ -10,7 +10,7 @@ const USAGE = `Usage: pnpm showcase <pr-number | url> [slug...]
 
 Pushes the showcase articles in src/endpoints/seed/showcase.ts to a live site
 through its REST API, skipping any whose slug is already there. Nothing is
-deleted. Logs in as SHOWCASE_EMAIL / SHOWCASE_PASSWORD (an editor account on
+deleted. Logs in as SHOWCASE_EMAIL / SHOWCASE_PASSWORD (an admin with an author role on
 that site; a preview's database is copied from staging).
 
   pnpm showcase 748                          → https://pr-748.pragmaticpapers.com
@@ -130,14 +130,15 @@ export async function main(
   const entries = selectEntries(slugs)
   const { SHOWCASE_EMAIL: email, SHOWCASE_PASSWORD: password } = env
   if (!email || !password) {
-    throw new Error(`Set SHOWCASE_EMAIL and SHOWCASE_PASSWORD to an editor on ${origin}.`)
+    throw new Error(`Set SHOWCASE_EMAIL and SHOWCASE_PASSWORD to an admin on ${origin}.`)
   }
 
   const { token, user } = await login(origin, email, password, fetchImpl)
-  if (!isEditor(user) || !hasRole(user, AUTHOR_ROLES)) {
+  if (!isAdmin(user) || !hasRole(user, AUTHOR_ROLES)) {
     throw new Error(
-      `${email} must be an editor on ${origin} to publish, and hold one of ` +
-        `${AUTHOR_ROLES.join(", ")} to be credited as author (has: ${user.roles?.join(", ")}).`,
+      `${email} must be an admin on ${origin} (until #1003, only admins can set authors over ` +
+        `REST) and hold one of ${AUTHOR_ROLES.join(", ")} to be credited as author ` +
+        `(has: ${user.roles?.join(", ")}).`,
     )
   }
   const pending: ShowcaseEntry[] = []

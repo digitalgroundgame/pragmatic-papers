@@ -20,7 +20,7 @@ const { createRestPayload, main, resolveTarget, selectEntries } =
   await import("../../scripts/showcase")
 
 const ORIGIN = "https://pr-748.pragmaticpapers.com"
-const EDITOR = { id: 7, roles: ["editor"] }
+const PUSHER = { id: 7, roles: ["admin", "editor"] }
 const ENV = { SHOWCASE_EMAIL: "editor@example.com", SHOWCASE_PASSWORD: "secret" }
 
 function json(body: unknown, status = 200): Response {
@@ -128,7 +128,7 @@ describe("createRestPayload", () => {
 
 describe("main", () => {
   const login =
-    (user = EDITOR) =>
+    (user = PUSHER) =>
     () =>
       json({ token: "tok", user })
 
@@ -138,9 +138,12 @@ describe("main", () => {
     )
   })
 
-  it("refuses an account that cannot be credited as author", async () => {
-    const fetchImpl = fakeFetch({ "POST /api/users/login": login({ id: 1, roles: ["admin"] }) })
-    await expect(main(["748"], ENV, fetchImpl)).rejects.toThrow("(has: admin)")
+  it.each([
+    ["cannot be credited as author", ["admin"], "(has: admin)"],
+    ["is not an admin (#1003)", ["editor", "writer"], "(has: editor, writer)"],
+  ])("refuses an account that %s", async (_, roles, message) => {
+    const fetchImpl = fakeFetch({ "POST /api/users/login": login({ id: 1, roles }) })
+    await expect(main(["748"], ENV, fetchImpl)).rejects.toThrow(message)
     expect(mockCreateStockMedia).not.toHaveBeenCalled()
   })
 
@@ -155,7 +158,7 @@ describe("main", () => {
 
     expect(mockCreateStockMedia).toHaveBeenCalledOnce()
     expect(mockCreate).toHaveBeenCalledOnce()
-    expect(mockCreate).toHaveBeenCalledWith(expect.anything(), [EDITOR], [{ id: 1 }])
+    expect(mockCreate).toHaveBeenCalledWith(expect.anything(), [PUSHER], [{ id: 1 }])
   })
 
   it("uploads nothing when every entry is already there", async () => {

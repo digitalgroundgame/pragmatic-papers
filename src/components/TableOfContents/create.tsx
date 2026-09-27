@@ -45,6 +45,7 @@ interface CreateTableOfContents {
   TableOfContentsButton: (props: TableOfContentsButtonProps) => React.ReactNode
   tableOfContentsConverter: CreateTableOfContentsConverter
   tableOfContentsEntries: (content: DefaultTypedEditorState) => TableOfContentsEntry[]
+  stampTableOfContentsAnchors: (content: DefaultTypedEditorState) => DefaultTypedEditorState
   populateTableOfContentsAnchors: FieldHook<TypeWithID, DefaultTypedEditorState | null | undefined>
 }
 
@@ -56,6 +57,7 @@ export function createTableOfContents({
 }: CreateTableOfContentsOptions = {}): CreateTableOfContents {
   const entriesFor = (content: DefaultTypedEditorState) =>
     buildEntries(content, resolvers, introAnchor)
+  const stamp = (content: DefaultTypedEditorState) => stampAnchors(content, slugify)
 
   return {
     introAnchor,
@@ -68,6 +70,7 @@ export function createTableOfContents({
       entriesFor(content).length > 0 ? <TableOfContentsButtonClient {...props} /> : null,
     tableOfContentsConverter: createTableOfContentsConverter(icon),
     tableOfContentsEntries: entriesFor,
-    populateTableOfContentsAnchors: ({ value }) => (value ? stampAnchors(value, slugify) : value),
+    stampTableOfContentsAnchors: stamp,
+    populateTableOfContentsAnchors: ({ value }) => (value ? stamp(value) : value),
   }
 }

@@ -3,11 +3,11 @@
 import "./admin.scss"
 
 import type { DefaultTypedEditorState } from "@payloadcms/richtext-lexical"
-import { CheckboxField, useDocumentInfo, useField } from "@payloadcms/ui"
+import { CheckboxField, useField, useFormFields } from "@payloadcms/ui"
 import type { CheckboxFieldClientComponent } from "payload"
 import React, { useMemo } from "react"
 
-import { tableOfContentsEntries } from "."
+import { stampTableOfContentsAnchors, tableOfContentsEntries } from "."
 import type { TableOfContentsEntry } from "./types"
 
 const baseClass = "toc-preview"
@@ -29,13 +29,16 @@ function PreviewList({ entries }: { entries: TableOfContentsEntry[] }): React.Re
 }
 
 /**
- * Reads the last saved draft rather than live form state: anchors are stamped
- * server-side on save, so the preview follows autosave instead of keystrokes.
+ * Stamps the live editor state here because the saved anchors only exist
+ * after a save, and the preview should follow keystrokes.
  */
 function TableOfContentsPreview(): React.ReactNode {
-  const { savedDocumentData } = useDocumentInfo()
-  const content = savedDocumentData?.content as DefaultTypedEditorState | undefined
-  const entries = useMemo(() => (content?.root ? tableOfContentsEntries(content) : []), [content])
+  const content = useFormFields(([fields]) => fields.content?.value) as
+    DefaultTypedEditorState | undefined
+  const entries = useMemo(
+    () => (content?.root ? tableOfContentsEntries(stampTableOfContentsAnchors(content)) : []),
+    [content],
+  )
 
   return (
     <section className={baseClass} aria-label="Table of contents preview">
@@ -44,7 +47,6 @@ function TableOfContentsPreview(): React.ReactNode {
       ) : (
         <p className={`${baseClass}__note`}>Add a heading to build the table of contents.</p>
       )}
-      <p className={`${baseClass}__note`}>Updates when the draft saves.</p>
     </section>
   )
 }

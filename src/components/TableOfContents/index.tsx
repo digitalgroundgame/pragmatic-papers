@@ -18,6 +18,7 @@ export const {
   tableOfContentsField,
   tableOfContentsConverter,
   tableOfContentsEntries,
+  stampTableOfContentsAnchors,
   populateTableOfContentsAnchors,
 } = createTableOfContents({
   resolvers: {

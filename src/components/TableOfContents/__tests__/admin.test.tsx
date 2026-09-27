@@ -3,22 +3,22 @@ import type { CheckboxFieldClientProps } from "payload"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { TableOfContentsCheckbox } from "../admin"
-import { stampAnchors } from "../traverse"
 import type { DefaultTypedEditorState } from "@payloadcms/richtext-lexical"
 
 let mockChecked = false
-let mockSavedDocumentData: Record<string, unknown> | undefined
+let mockContent: DefaultTypedEditorState | undefined
 
 vi.mock("@payloadcms/ui", () => ({
   CheckboxField: ({ path }: { path: string }) => <input type="checkbox" aria-label={path} />,
-  useDocumentInfo: () => ({ savedDocumentData: mockSavedDocumentData }),
   useField: () => ({ value: mockChecked }),
+  useFormFields: <T,>(selector: (ctx: [Record<string, { value: unknown }>]) => T) =>
+    selector([{ content: { value: mockContent } }]),
 }))
 
 function content(children: unknown[]): DefaultTypedEditorState {
-  return stampAnchors({
+  return {
     root: { type: "root", children, direction: null, format: "", indent: 0, version: 1 },
-  } as DefaultTypedEditorState)
+  } as DefaultTypedEditorState
 }
 
 function heading(tag: string, text: string) {
@@ -30,28 +30,26 @@ const props = { path: "showTableOfContents" } as CheckboxFieldClientProps
 describe("TableOfContentsCheckbox", () => {
   beforeEach(() => {
     mockChecked = false
-    mockSavedDocumentData = undefined
+    mockContent = undefined
   })
 
   afterEach(cleanup)
 
   it("renders only the checkbox while the table of contents is off", () => {
-    mockSavedDocumentData = { content: content([heading("h2", "Hidden")]) }
+    mockContent = content([heading("h2", "Hidden")])
     render(<TableOfContentsCheckbox {...props} />)
 
     expect(screen.getByRole("checkbox", { name: "showTableOfContents" })).toBeInTheDocument()
     expect(screen.queryByRole("region", { name: /preview/i })).not.toBeInTheDocument()
   })
 
-  it("previews the nested entries of the last saved draft", () => {
+  it("previews the nested entries of the unsaved editor state", () => {
     mockChecked = true
-    mockSavedDocumentData = {
-      content: content([
-        heading("h2", "Overview"),
-        heading("h3", "Details"),
-        { type: "table", children: [], version: 1 },
-      ]),
-    }
+    mockContent = content([
+      heading("h2", "Overview"),
+      heading("h3", "Details"),
+      { type: "table", children: [], version: 1 },
+    ])
     render(<TableOfContentsCheckbox {...props} />)
 
     const preview = screen.getByRole("region", { name: "Table of contents preview" })
@@ -62,15 +60,15 @@ describe("TableOfContentsCheckbox", () => {
     expect(within(preview).getByText("Table")).toHaveAttribute("title", "#table-1")
   })
 
-  it("prompts for a heading when the saved draft has no entries", () => {
+  it("prompts for a heading when the editor has no entries", () => {
     mockChecked = true
-    mockSavedDocumentData = { content: content([]) }
+    mockContent = content([])
     render(<TableOfContentsCheckbox {...props} />)
 
     expect(screen.getByText("Add a heading to build the table of contents.")).toBeInTheDocument()
   })
 
-  it("handles a document that has not been saved yet", () => {
+  it("handles an editor that has no value yet", () => {
     mockChecked = true
     render(<TableOfContentsCheckbox {...props} />)
 

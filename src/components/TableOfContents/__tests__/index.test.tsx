@@ -91,6 +91,22 @@ describe("createTableOfContents", () => {
     expect(html).toContain('id="hello_world"')
   })
 
+  it("stampTableOfContentsAnchors stamps with the supplied slugify", () => {
+    const toc = createTableOfContents({ slugify: (text) => text.toLowerCase().replace(/ /g, "_") })
+    const stamped = toc.stampTableOfContentsAnchors({
+      root: {
+        type: "root",
+        children: [heading("h2", "Hello World")],
+        direction: null,
+        format: "",
+        indent: 0,
+        version: 1,
+      },
+    } as DefaultTypedEditorState)
+
+    expect(toc.tableOfContentsEntries(stamped)[0]).toMatchObject({ anchor: "hello_world" })
+  })
+
   it("populateTableOfContentsAnchors passes an empty value through", async () => {
     const toc = createTableOfContents()
     const args = { value: null } as Parameters<typeof toc.populateTableOfContentsAnchors>[0]

@@ -270,6 +270,31 @@ export const Articles: CollectionConfig = {
       relationTo: "topics",
     },
     {
+      name: "syndicateToSubstack",
+      type: "checkbox",
+      label: "Syndicate to Substack",
+      defaultValue: false,
+      access: {
+        update: editorFieldLevel,
+      },
+      admin: {
+        position: "sidebar",
+        description:
+          "Adds the published article to the Substack import feed. Takes effect once the article is published.",
+      },
+    },
+    {
+      name: "substackImportUrl",
+      type: "ui",
+      admin: {
+        position: "sidebar",
+        condition: (data) => Boolean(data?.syndicateToSubstack),
+        components: {
+          Field: "@/collections/Articles/components/SubstackImportUrl#SubstackImportUrl",
+        },
+      },
+    },
+    {
       name: "createdBy",
       type: "relationship",
       relationTo: "users",

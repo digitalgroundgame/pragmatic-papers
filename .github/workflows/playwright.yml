@@ -270,7 +270,8 @@ jobs:
           # if the earlier commit step pushed a new baseline commit, that event
           # context still points at the pre-commit sha and would upload assets
           # under the wrong (nonexistent-on-branch) path.
-          export ASSET_DIR="$PR_NUMBER/$(git rev-parse HEAD)"
+          ASSET_DIR="$PR_NUMBER/$(git rev-parse HEAD)"
+          export ASSET_DIR
           git fetch --no-tags --depth=1 origin "$BASE_REF"
           git diff --name-only --diff-filter=AM \
             "origin/$BASE_REF...HEAD" -- '**/__screenshots__/**/*.png' \

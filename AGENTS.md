@@ -175,8 +175,8 @@ block behind a `mode` discriminator, starting with the Federal Courts map
 
 ## Filing & triaging GitHub issues
 
-Creating, editing, triaging, or labeling an issue — or adding/removing a
-label, or setting its board fields? Use the **`github-issues`** skill
+Creating, editing, triaging, labeling, or picking up an issue — or
+adding/removing a label, or setting its board fields? Use the **`github-issues`** skill
 (`.claude/skills/github-issues/SKILL.md`). It covers applying an issue
 **type** (`Bug`/`Feature`/`Task`) as well as **labels** (`Bug` is a type, not
 a label), and the label taxonomy is version-controlled in

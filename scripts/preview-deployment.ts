@@ -18,9 +18,9 @@
  * `close` marks all of the PR's preview Deployments inactive, since Coolify
  * tears the preview down.
  *
- * A PR that Coolify never builds (previews off for its base branch, a fork) gets
- * no Deployment. Without the Coolify settings (fork PRs don't get secrets) the
- * script does nothing.
+ * The workflow only runs `deploy` on PRs Coolify previews (see its `if`). A PR
+ * Coolify still doesn't build (previews off for its base branch, say) gets no
+ * Deployment. Without the Coolify settings the script does nothing.
  */
 import { pathToFileURL } from "node:url"
 

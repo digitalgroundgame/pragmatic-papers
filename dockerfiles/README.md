@@ -215,7 +215,7 @@ Set these under **Settings → Secrets and variables → Actions**:
 | `COOLIFY_PREVIEW_APP_UUID` | variable | The UUID of the application that builds previews (the last segment of its dashboard URL)                             |
 | `PREVIEW_URL_TEMPLATE`     | variable | Optional. The app's preview URL template in Coolify's syntax; defaults to `https://pr-{{pr_id}}.pragmaticpapers.com` |
 
-Until all three required values are set, and on PRs from forks (which get no secrets), the workflow does nothing. A PR that Coolify doesn't build a preview for gets no Deployment; the job gives up after waiting 10 minutes. If the build runs longer than 45 minutes, the Deployment is marked as errored.
+Until all three required values are set, the workflow does nothing. It also skips the PRs Coolify doesn't preview while **public PR deployments** are off in Coolify: PRs from forks, PRs whose author isn't an owner, member or collaborator of the repo (Dependabot's included), and PRs titled `[skip ci]` or `[skip cd]`. If you turn public PR deployments on, widen the job's `if` to match. Any other PR Coolify doesn't build gets no Deployment; the job gives up after waiting 10 minutes. If the build runs longer than 45 minutes, the Deployment is marked as errored.
 
 ### Automatic Database Naming for Preview Deployments (Coolify)
 

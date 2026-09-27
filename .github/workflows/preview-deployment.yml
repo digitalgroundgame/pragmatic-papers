@@ -18,7 +18,8 @@
 #                                        Coolify's syntax. Default:
 #                                        https://pr-{{pr_id}}.pragmaticpapers.com
 #
-# Until they're set, and on fork PRs (which get no secrets), the job does nothing.
+# Until they're set, the job does nothing. The job's `if` skips PRs Coolify
+# won't preview; widen it if "public PR deployments" is ever turned on in Coolify.
 name: Preview deployment
 
 on:
@@ -38,6 +39,20 @@ permissions:
 jobs:
   report:
     name: Report Coolify preview
+    # Only PRs Coolify previews, so no runner sits out the 10 min wait for a
+    # build that never comes. With public previews off, Coolify skips fork PRs
+    # and same-repo PRs whose author isn't an owner, member or collaborator
+    # (Dependabot's among them), and any PR titled "[skip ci]" / "[skip cd]"
+    # (`contains` ignores case, like Coolify). A "[skip ci]" commit message skips
+    # this workflow anyway. Closing always runs: on a PR that was never
+    # previewed it finds nothing to retire and ends in seconds.
+    if: >-
+      github.event.action == 'closed' || (
+        github.event.pull_request.head.repo.full_name == github.repository &&
+        contains(fromJSON('["OWNER", "MEMBER", "COLLABORATOR"]'), github.event.pull_request.author_association) &&
+        !contains(github.event.pull_request.title, '[skip ci]') &&
+        !contains(github.event.pull_request.title, '[skip cd]')
+      )
     runs-on: ubuntu-latest
     # Covers the script's 10 min wait for Coolify to queue the build plus its
     # 45 min build timeout.

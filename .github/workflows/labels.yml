@@ -5,7 +5,8 @@ name: Sync labels
 # prints the diff; once merged to `dev` it applies the changes for real.
 #
 # The default GITHUB_TOKEN can manage labels (issues: write), so no PAT/App
-# token is needed here — unlike PR creation (see dev-to-main.yml).
+# token is needed here — unlike PR creation, which is why `pnpm release` and
+# `pnpm hotfix` open their PRs locally with the operator's gh credentials.
 
 on:
   push:

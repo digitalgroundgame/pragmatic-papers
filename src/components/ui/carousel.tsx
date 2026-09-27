@@ -254,8 +254,6 @@ export const CarouselIndicators: React.FC<{
           onClick={() => api?.scrollTo(idx)}
           type="button"
           className={cn(
-            // The dots jump the carousel just like the arrows do, so they get
-            // the same affordance — see CarouselPrevious on the cursor.
             "bg-muted-foreground ring-background inline-block h-2 w-2 rounded-sm ring-2 transition-all",
             idx === current ? "bg-primary scale-125" : "opacity-40",
           )}

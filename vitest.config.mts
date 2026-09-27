@@ -72,6 +72,9 @@ export default defineConfig({
       },
       {
         plugins: [storybookTest({ configDir: path.join(dirname, ".storybook") })],
+        // Crawl every story up front: a dependency Vite discovers mid-run reloads the
+        // browser and fails every test file in flight.
+        optimizeDeps: { entries: [".storybook/preview.tsx", "src/**/*.stories.tsx"] },
         test: {
           name: "storybook",
           browser: {

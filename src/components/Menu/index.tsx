@@ -33,9 +33,7 @@ const menuItemVariants = cva("text-primary", {
 })
 
 interface MenuProps
-  extends Omit<React.HTMLAttributes<HTMLUListElement>, "slot">, VariantProps<typeof menuVariants> {
-  /** Wraps each menu link. Falls back to a Fragment when undefined. */
-  slot?: React.ElementType
+  extends React.HTMLAttributes<HTMLUListElement>, VariantProps<typeof menuVariants> {
   menu?: MenuField
 }
 
@@ -45,17 +43,14 @@ interface MenuProps
  * @param menu - The array of menu items to display.
  * @param className - Additional classes for the menu container.
  * @param layout - Specifies the menu layout variant ('inline', 'stacked', or 'responsive').
- * @param slot - Optional wrapper component for each link (e.g. SheetClose). Falls back to a Fragment.
  * @param props - All other HTML div props.
  *
  * @example
  * <Menu menu={menuData} layout="inline" />
- * <Menu menu={menuData} layout="stacked" slot={SheetClose} />
+ * <Menu menu={menuData} layout="stacked" />
  */
-export const Menu: React.FC<MenuProps> = ({ menu, className, layout, slot, ...props }) => {
+export const Menu: React.FC<MenuProps> = ({ menu, className, layout, ...props }) => {
   if (!menu) return null
-
-  const Slot = slot ?? React.Fragment
 
   return (
     <nav>
@@ -65,24 +60,19 @@ export const Menu: React.FC<MenuProps> = ({ menu, className, layout, slot, ...pr
           if (!url) return null
           const isStacked = layout === "stacked"
           return (
-            <li
-              key={id || `menu-item-${index}`}
-              className={cn(menuItemVariants({ layout }), slot && "[&>button]:w-full")}
-            >
-              <Slot>
-                <MenuLink
-                  href={url}
-                  render={
-                    <CMSLink
-                      link={link}
-                      className={cn(
-                        "block w-full text-left",
-                        isStacked && "data-active:bg-muted px-4 py-3 data-active:font-semibold",
-                      )}
-                    />
-                  }
-                />
-              </Slot>
+            <li key={id || `menu-item-${index}`} className={menuItemVariants({ layout })}>
+              <MenuLink
+                href={url}
+                render={
+                  <CMSLink
+                    link={link}
+                    className={cn(
+                      "block w-full text-left",
+                      isStacked && "data-active:bg-muted px-4 py-3 data-active:font-semibold",
+                    )}
+                  />
+                }
+              />
             </li>
           )
         })}

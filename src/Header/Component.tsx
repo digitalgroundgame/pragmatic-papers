@@ -59,7 +59,7 @@ export async function Header(): Promise<React.JSX.Element> {
                   />
                 </SheetHeader>
                 <SearchForm />
-                <Menu menu={navItems} layout="stacked" slot={SheetClose} />
+                <Menu menu={navItems} layout="stacked" />
                 <SocialLinks socials={socials} className="px-4 py-3" />
               </SheetContent>
             </Sheet>

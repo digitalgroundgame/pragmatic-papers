@@ -6,6 +6,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import type { UsersSelect } from "@/payload-types"
 import { getServerSideURL } from "@/utilities/getURL"
 import { mergeOpenGraph } from "@/utilities/mergeOpenGraph"
+import { AUTHOR_ROLES } from "@/access/roles"
 import config from "@payload-config"
 import type { Metadata } from "next"
 import { draftMode } from "next/headers"
@@ -46,7 +47,7 @@ const queryAuthors = cache(async (page: number = 1) => {
     sort: "name",
     depth: 1,
     where: {
-      isAuthor: { equals: true },
+      roles: { in: AUTHOR_ROLES },
     },
     select,
   })

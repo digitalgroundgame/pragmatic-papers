@@ -17,6 +17,7 @@ import { getServerSideURL } from "@/utilities/getURL"
 import { mergeOpenGraph } from "@/utilities/mergeOpenGraph"
 import { queryUserBySlug, queryVolumesForArticles } from "@/utilities/queries"
 import { buildBreadcrumbJsonLd, buildPersonJsonLd } from "@/utilities/structuredData"
+import { AUTHOR_ROLES } from "@/access/roles"
 import config from "@payload-config"
 import type { Metadata } from "next"
 import { draftMode } from "next/headers"
@@ -34,7 +35,7 @@ export async function generateStaticParams(): Promise<{ slug: string | null | un
     where: {
       and: [
         {
-          isAuthor: { equals: true },
+          roles: { in: AUTHOR_ROLES },
         },
         {
           slug: {

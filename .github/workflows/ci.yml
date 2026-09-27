@@ -153,3 +153,29 @@ jobs:
 
       - name: Run integration tests
         run: pnpm test:integration -- --run
+
+  storybook:
+    name: Storybook
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up Node.js environment
+        uses: ./.github/actions/setup-project
+        with:
+          node-version: "24.x"
+          gh-font-read-token: ${{ secrets.GH_FONT_READ }}
+          payload-secret: ci-storybook-secret
+
+      # The story tests only need a browser, not the pinned e2e image.
+      - name: Install Chromium
+        run: pnpm exec playwright install --with-deps chromium
+
+      # The tests never execute a story's lazy imports; the build bundles them,
+      # which is where a server-only module reaching the browser shows up.
+      - name: Build Storybook
+        run: pnpm storybook:build
+
+      - name: Run story tests (interactions and axe)
+        run: pnpm test:storybook --run

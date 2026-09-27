@@ -2,14 +2,13 @@
 
 import React, { useEffect, useRef } from "react"
 
-import type { Media } from "@/payload-types"
-
 import { getMediaUrl } from "@/utilities/getMediaUrl"
+import type { VideoMediaType } from "../types"
 
 export interface VideoMediaProps {
   className?: string
-  onClick?: () => void
-  media: Media & { mimeType: `video/${string}` }
+  onClick?: React.MouseEventHandler<HTMLVideoElement>
+  media: VideoMediaType
 }
 
 export const VideoMedia: React.FC<VideoMediaProps> = (props) => {

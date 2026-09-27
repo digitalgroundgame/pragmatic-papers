@@ -1,4 +1,4 @@
-import { withSentryConfig } from "@sentry/nextjs"
+import { withSentryConfig } from "@sentry/nextjs/config"
 import { withPayload } from "@payloadcms/next/withPayload"
 import type { NextConfig } from "next"
 import path from "path"
@@ -35,6 +35,12 @@ const nextConfig: NextConfig = {
         hostname: NEXT_PUBLIC_SUPABASE_URL.hostname,
         port: NEXT_PUBLIC_SUPABASE_URL.port,
       },
+      {
+        // Merch products are synced from Shopify and render straight from its
+        // CDN — we don't copy product shots into Media.
+        protocol: "https",
+        hostname: "cdn.shopify.com",
+      },
     ],
   },
   reactStrictMode: true,
@@ -59,6 +65,31 @@ const nextConfig: NextConfig = {
   ],
   async headers() {
     return [
+      {
+        source: "/:path*",
+        headers: [
+          {
+            key: "Strict-Transport-Security",
+            value: "max-age=63072000; includeSubDomains",
+          },
+          {
+            key: "X-Content-Type-Options",
+            value: "nosniff",
+          },
+          {
+            key: "X-Frame-Options",
+            value: "SAMEORIGIN",
+          },
+          {
+            key: "Referrer-Policy",
+            value: "strict-origin-when-cross-origin",
+          },
+          {
+            key: "Permissions-Policy",
+            value: "camera=(), microphone=(), geolocation=()",
+          },
+        ],
+      },
       {
         // Payload admin panel: never cache — always requires a fresh authenticated response.
         // CDN-Cache-Control is Vercel-specific and prevents edge caching in addition to the browser.
@@ -140,8 +171,18 @@ export default withSentryConfig(withPayload(nextConfig, { devBundleServerPackage
 
   project: "pragmatic-papers",
 
-  // Only print logs for uploading source maps in CI
-  silent: !process.env.CI,
+  // Tags our bundled code with this key so `thirdPartyErrorFilterIntegration`
+  // (in src/instrumentation-client.ts) can tell our frames from third-party ones.
+  // Top-level `applicationKey` injects module metadata for both webpack and Turbopack.
+  applicationKey: "pragmatic-papers",
+
+  // The build-time dependency instrumentation roughly doubles peak compile memory
+  // (~4.6 → ~8.5 GiB), which the 4 GB Coolify build server can't absorb.
+  buildTimeInstrumentation: false,
+
+  // Log wherever source maps are uploaded: builds with SENTRY_AUTH_TOKEN (Coolify
+  // production/staging). GitHub Actions deliberately has no token.
+  silent: !process.env.SENTRY_AUTH_TOKEN,
 
   // For all available options, see:
   // https://docs.sentry.io/platforms/javascript/guides/nextjs/manual-setup/

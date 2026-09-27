@@ -10,6 +10,7 @@ interface CreateArticleOptions {
   slug: string
   heroImage?: number | null
   narration?: number | null
+  publishedAt?: string
   meta?: {
     title?: string | null
     description?: string | null
@@ -51,7 +52,7 @@ export async function createArticle(
           heroImage: options.heroImage || undefined,
           narration: options.narration || undefined,
           _status: "published",
-          publishedAt: new Date().toISOString(),
+          publishedAt: options.publishedAt || new Date().toISOString(),
           slug: options.slug,
           meta: {
             title: options.meta?.title || options.title,

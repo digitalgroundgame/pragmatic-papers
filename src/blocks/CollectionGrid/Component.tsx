@@ -14,6 +14,7 @@ import { Fibonacci6Layout } from "./layouts/Fibonacci6"
 import { Fibonacci7Layout } from "./layouts/Fibonacci7"
 import { Newton4Layout } from "./layouts/Newton4"
 import { Vespucci7Layout } from "./layouts/Vespucci7"
+import { Gauss10Layout } from "./layouts/Gauss10"
 import type { LayoutProps } from "./types"
 
 const layouts = {
@@ -26,6 +27,7 @@ const layouts = {
   "fibonacci-6": Fibonacci6Layout,
   "vespucci-7": Vespucci7Layout,
   "fibonacci-7": Fibonacci7Layout,
+  "gauss-10": Gauss10Layout,
 } as const satisfies Record<NonNullable<CollectionGridLayout>, React.FC<LayoutProps>>
 
 export const CollectionGridBlock: React.FC<
@@ -34,6 +36,7 @@ export const CollectionGridBlock: React.FC<
   const { layout, id, slots, priority } = props
   if (!layout) return null
   const LayoutComponent = layouts[layout]
+  if (!LayoutComponent) return null
   return (
     <>
       <LayoutComponent
@@ -43,7 +46,7 @@ export const CollectionGridBlock: React.FC<
         priority={priority}
         loading={priority ? "eager" : undefined}
       />
-      <div className="container mb-9 md:mb-12">
+      <div className="container mb-9 last:hidden md:mb-12">
         <Separator />
       </div>
     </>

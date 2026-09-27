@@ -4,9 +4,9 @@ import { execSync } from "node:child_process"
 const TEMPLATE_DB = "pp_template"
 
 export async function setup(): Promise<() => Promise<void>> {
-  process.env.PAYLOAD_SECRET ??= "test-secret-for-integration-tests"
-  process.env.USE_LOCAL_STORAGE ??= "true"
-  process.env.NEXT_PUBLIC_SERVER_URL ??= "http://localhost:8000"
+  process.env.PAYLOAD_SECRET ||= "test-secret-for-integration-tests"
+  process.env.USE_LOCAL_STORAGE ||= "true"
+  process.env.NEXT_PUBLIC_SERVER_URL ||= "http://localhost:8000"
 
   let container = null
   let uri: string
@@ -15,7 +15,7 @@ export async function setup(): Promise<() => Promise<void>> {
     uri = process.env.DATABASE_URI
     console.warn(`Using existing DATABASE_URI — skipping container startup.`)
   } else {
-    container = await new PostgreSqlContainer("postgres:15-alpine")
+    container = await new PostgreSqlContainer("postgres:17-alpine")
       .withDatabase(TEMPLATE_DB)
       .start()
     uri = container.getConnectionUri()

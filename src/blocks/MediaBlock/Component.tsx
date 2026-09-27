@@ -7,8 +7,9 @@ import {
 import React from "react"
 
 import { Media } from "@/components/Media"
+import { isMedia } from "@/components/Media"
 import { type ImageVariant } from "@/components/Media/ImageMedia"
-import { internalDocToHref } from "@/components/RichText"
+import { internalDocToHref } from "@/components/RichText/internalDocToHref"
 import { cn } from "@/utilities/utils"
 import { type DefaultNodeTypes } from "@payloadcms/richtext-lexical"
 
@@ -70,7 +71,7 @@ export const MediaBlock: React.FC<StyledMediaBlockProps> = ({ sizes, ...props })
     disableInnerContainer,
     mediaWrapper = (node) => node,
   } = props
-  if (typeof media === "number" || !media) return null
+  if (!isMedia(media)) return null
 
   sizes = sizes || "(max-width: 768px) 100vw, 800px"
 

@@ -11,6 +11,11 @@ export default defineConfig({
   workers: process.env.CI ? 1 : undefined,
   reporter: "html",
   snapshotPathTemplate: "{testDir}/__screenshots__/{testFilePath}/{arg}{ext}",
+  // Screenshots are compared only in the pinned Playwright image — CI's E2E
+  // job and `pnpm test:e2e:update-snapshots`, which both set CI. A bare host
+  // renders fonts/antialiasing differently, so it runs functional assertions
+  // only.
+  ignoreSnapshots: !process.env.CI,
   expect: {
     toHaveScreenshot: {
       maxDiffPixelRatio: 0.01,
@@ -21,6 +26,10 @@ export default defineConfig({
   use: {
     baseURL: "http://localhost:8000",
     trace: "on-first-retry",
+    // Pin everything that can shift pixels between runs.
+    timezoneId: "UTC",
+    locale: "en-US",
+    colorScheme: "light",
   },
   projects: [
     {
@@ -66,9 +75,7 @@ export default defineConfig({
       : []),
   ],
   webServer: {
-    command: process.env.E2E_MANAGED_SERVER
-      ? "echo 'server managed externally'"
-      : "pnpm dev:next",
+    command: process.env.E2E_MANAGED_SERVER ? "echo 'server managed externally'" : "pnpm dev:next",
     url: process.env.NEXT_PUBLIC_SERVER_URL || "http://localhost:8000",
     reuseExistingServer: !!process.env.E2E_MANAGED_SERVER || !process.env.CI,
     timeout: 120_000,

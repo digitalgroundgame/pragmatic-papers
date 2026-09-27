@@ -13,11 +13,13 @@ export interface SeededUsers {
 type UserData = RequiredDataFromCollection<User> &
   Omit<Partial<User>, keyof RequiredDataFromCollection<User>>
 
+export type UserContext = Record<string, unknown> & { disableRevalidate?: boolean }
+
 export async function createUser(
   payload: Payload,
   data: UserData,
   label: string,
-  context?: Record<string, unknown>,
+  context?: UserContext,
 ): Promise<User> {
   try {
     return await payload.create({ collection: "users", data, context })
@@ -25,10 +27,10 @@ export async function createUser(
     payload.logger.warn(
       `Failed to create ${label} with full data, retrying with minimal fields. Error: ${err instanceof Error ? err.message : String(err)}`,
     )
-    const { email, password, name, role, slug } = data
+    const { email, password, name, roles, slug } = data
     return await payload.create({
       collection: "users",
-      data: { email, password, name, role, slug },
+      data: { email, password, name, roles, slug },
       context,
     })
   }
@@ -219,7 +221,7 @@ function generateWriterData(index: number, media: Media[]): UserData {
     email: `writer${index + 1}@example.com`,
     password: "password123",
     name: `${data.first} ${data.last}`,
-    role: "writer",
+    roles: ["writer"],
     slug,
     affiliation: data.affiliation,
     biography: createRichTextFromString(biography),
@@ -229,17 +231,19 @@ function generateWriterData(index: number, media: Media[]): UserData {
 }
 
 export const createUsers = async (payload: Payload, media: Media[]): Promise<SeededUsers> => {
+  const context: UserContext = { disableRevalidate: true }
   const admin = await createUser(
     payload,
     {
       email: "admin@example.com",
       password: "password123",
       name: "John Admin",
-      role: "admin",
+      roles: ["admin"],
       slug: "superadmin",
       profileImage: media[0]?.id,
     },
     "admin",
+    context,
   )
 
   const chiefEditor = await createUser(
@@ -248,11 +252,12 @@ export const createUsers = async (payload: Payload, media: Media[]): Promise<See
       email: "chiefeditor@example.com",
       password: "password123",
       name: "Jane Chief",
-      role: "chief-editor",
+      roles: ["chief-editor"],
       slug: "chiefjane",
       profileImage: media[1]?.id,
     },
     "chiefEditor",
+    context,
   )
 
   const editor = await createUser(
@@ -261,17 +266,18 @@ export const createUsers = async (payload: Payload, media: Media[]): Promise<See
       email: "editor@example.com",
       password: "password123",
       name: "Stacy The Editor",
-      role: "editor",
+      roles: ["editor"],
       slug: "stacytheeditor",
       profileImage: media[2]?.id,
     },
     "editor",
+    context,
   )
 
   const writers: User[] = []
   for (let i = 0; i < WRITER_DATA.length; i++) {
     const writerData = generateWriterData(i, media)
-    const writer = await createUser(payload, writerData, `writer${i + 1}`)
+    const writer = await createUser(payload, writerData, `writer${i + 1}`, context)
     writers.push(writer)
   }
 
@@ -282,7 +288,7 @@ export const createUsers = async (payload: Payload, media: Media[]): Promise<See
       password: "password123",
       name: "Alex Narrator",
       slug: "alex-narrator",
-      role: "narrator",
+      roles: ["narrator"],
       affiliation: "Voice Artist",
       biography: createRichTextFromString(
         "A professional voice artist specializing in academic and educational content narration.",
@@ -290,6 +296,7 @@ export const createUsers = async (payload: Payload, media: Media[]): Promise<See
       profileImage: media[2]?.id,
     },
     "narrator",
+    context,
   )
 
   return {

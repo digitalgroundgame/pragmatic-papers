@@ -2,8 +2,8 @@ import { PostgreSqlContainer } from "@testcontainers/postgresql"
 import { execSync } from "node:child_process"
 import { blue, green, red } from "./ansi.mjs"
 
-process.env.PAYLOAD_SECRET ??= "test-secret"
-process.env.USE_LOCAL_STORAGE ??= "true"
+process.env.PAYLOAD_SECRET ||= "test-secret"
+process.env.USE_LOCAL_STORAGE ||= "true"
 
 let container = null
 
@@ -11,7 +11,7 @@ if (process.env.DATABASE_URI) {
   console.warn(`${green("✔")} Using existing DATABASE_URI — skipping container startup.`)
 } else {
   console.warn(`${blue("●")} Starting Postgres container for migration check...`)
-  container = await new PostgreSqlContainer("postgres:15-alpine")
+  container = await new PostgreSqlContainer("postgres:17-alpine")
     .withDatabase("pragmatic-papers-test")
     .start()
   process.env.DATABASE_URI = container.getConnectionUri()

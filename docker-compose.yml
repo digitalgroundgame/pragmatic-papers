@@ -1,7 +1,7 @@
 services:
   postgres-pragmatic:
     container_name: postgres-pragmatic
-    image: postgres:15-alpine
+    image: postgres:17-alpine
     restart: always
     environment:
       POSTGRES_USER: postgres

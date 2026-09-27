@@ -4,7 +4,7 @@ import { Pagination } from "@/components/Pagination"
 import { PayloadRedirects } from "@/components/PayloadRedirects"
 import type { Volume } from "@/payload-types"
 import { generateMeta } from "@/utilities/generateMeta"
-import { queryTopicBySlug } from "@/utilities/queries"
+import { queryTopicBySlug, queryVolumesForArticles } from "@/utilities/queries"
 import config from "@payload-config"
 import type { Metadata } from "next"
 import { draftMode } from "next/headers"
@@ -57,30 +57,6 @@ const queryArticlesByTopic = cache(async (topicId: number, page: number = 1) => 
     },
     depth: 2,
   })
-})
-
-const queryVolumesForArticles = cache(async (articleIds: number[]): Promise<Volume[]> => {
-  if (!articleIds.length) return []
-
-  const { isEnabled: draft } = await draftMode()
-
-  const payload = await getPayload({ config })
-
-  const { docs } = await payload.find({
-    collection: "volumes",
-    draft,
-    limit: 1000,
-    overrideAccess: draft,
-    pagination: false,
-    where: {
-      articles: {
-        in: articleIds,
-      },
-    },
-    depth: 0,
-  })
-
-  return docs
 })
 
 export async function generateMetadata({ params }: Args): Promise<Metadata> {

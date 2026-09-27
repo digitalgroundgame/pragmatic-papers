@@ -1,13 +1,13 @@
 import React from "react"
 
-import type { PopulatedAuthors } from "@/payload-types"
+import type { User } from "@/payload-types"
 
 import { AuthorCard } from "@/components/Authors/AuthorCard"
 import { cn } from "@/utilities/utils"
 
 export interface AuthorListProps extends React.HTMLAttributes<HTMLDivElement> {
   classNames?: string
-  authors?: PopulatedAuthors
+  authors?: User[] | null
 }
 
 export const AuthorList: React.FC<AuthorListProps> = ({ authors, classNames, ...props }) => {

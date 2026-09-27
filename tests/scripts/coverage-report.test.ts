@@ -239,6 +239,23 @@ describe("renderFileCoverage", () => {
     )
   })
 
+  it("percent-encodes special characters in the file path while preserving slashes", () => {
+    const specialSummary = {
+      "src/app/(frontend)/email-preview/[volume]/[day]/route.ts": summaryJson["src/foo.ts"],
+    }
+    const html = renderFileCoverage({
+      summaryJson: specialSummary,
+      changedFiles: ["src/app/(frontend)/email-preview/[volume]/[day]/route.ts"],
+      repo: "owner/repo",
+      sha: "abc123",
+    })
+    expect(html).toContain(
+      `href="https://github.com/owner/repo/blob/abc123/src/app/(frontend)/email-preview/%5Bvolume%5D/%5Bday%5D/route.ts"`,
+    )
+    // display text keeps the raw, human-readable path
+    expect(html).toContain(">src/app/(frontend)/email-preview/[volume]/[day]/route.ts</a>")
+  })
+
   it("does not include an uncovered-lines column", () => {
     const html = renderFileCoverage({
       summaryJson,
@@ -343,6 +360,20 @@ describe("renderPatchByFile", () => {
     expect(html).toContain(
       `<a href="https://github.com/owner/repo/blob/abc123/src/foo.ts#L42">42</a>`,
     )
+  })
+
+  it("percent-encodes special characters in linked file paths and ranges", () => {
+    const file = "src/app/(frontend)/[volume]/route.ts"
+    const html = renderPatchByFile({
+      files: [{ file, lines: { covered: 0, total: 1, pct: 0 }, uncovered: [42] }],
+      repo: "owner/repo",
+      sha: "abc123",
+    })
+    const encoded = "src/app/(frontend)/%5Bvolume%5D/route.ts"
+    // file-name link
+    expect(html).toContain(`href="https://github.com/owner/repo/blob/abc123/${encoded}"`)
+    // uncovered-line range link
+    expect(html).toContain(`href="https://github.com/owner/repo/blob/abc123/${encoded}#L42"`)
   })
 })
 

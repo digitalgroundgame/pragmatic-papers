@@ -6,6 +6,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { cn } from "@/utilities/utils"
+import { isMedia } from "@/components/Media"
 import { MediaBlock, type StyledMediaBlockProps } from "./Component"
 
 export type LightboxMediaBlockProps = StyledMediaBlockProps & {
@@ -18,22 +19,23 @@ export const LightboxMediaBlock: React.FC<LightboxMediaBlockProps> = ({
   media,
   ...props
 }) => {
-  if (typeof media === "number" || !media) return null
+  if (!isMedia(media)) return null
 
   return (
     <Dialog>
-      <MediaBlock
-        media={media}
-        enableGutter={false}
-        className={cn("w-full", containerClassName, className)}
-        disableInnerContainer
-        mediaWrapper={(mediaNode) => (
-          <DialogTrigger className="block w-full cursor-pointer [&>*]:m-0">
-            {mediaNode}
-          </DialogTrigger>
-        )}
-        {...props}
-      />
+      {/* Only the image opens the lightbox, so caption links stay plain links. */}
+      <div className={cn("flow-root w-full", containerClassName)}>
+        <MediaBlock
+          media={media}
+          enableGutter={false}
+          className={className}
+          disableInnerContainer
+          mediaWrapper={(mediaNode) => (
+            <DialogTrigger className="block w-full [&>*]:m-0">{mediaNode}</DialogTrigger>
+          )}
+          {...props}
+        />
+      </div>
       <DialogContent
         className="[&>button]:bg-background max-h-[90dvh] overflow-hidden rounded-none bg-transparent p-0 text-base shadow-none ring-0 sm:max-w-max [&>button]:top-2 [&>button]:right-2 [&>button]:rounded-sm [&>button]:p-0.5 [&>button_svg]:size-6"
         style={{

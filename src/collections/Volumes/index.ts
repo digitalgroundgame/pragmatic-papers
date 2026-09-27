@@ -15,7 +15,10 @@ import {
 } from "@payloadcms/richtext-lexical"
 
 import { editor } from "@/access/collections"
-import { editorsNoteBlocks } from "@/collections/Volumes/editorsNoteBlocks"
+import { Banner } from "@/blocks/Banner/config"
+import { Code } from "@/blocks/Code/config"
+import { MediaBlock } from "@/blocks/MediaBlock/config"
+import { SquiggleRule } from "@/blocks/SquiggleRule/config"
 
 import { isPublishedOrStaff } from "@/access/policies"
 
@@ -94,7 +97,7 @@ export const Volumes: CollectionConfig = {
                     ...rootFeatures,
                     AlignFeature(),
                     HeadingFeature({ enabledHeadingSizes: ["h2", "h3", "h4"] }),
-                    BlocksFeature({ blocks: editorsNoteBlocks }),
+                    BlocksFeature({ blocks: [Banner, Code, MediaBlock, SquiggleRule] }),
                     FixedToolbarFeature(),
                     InlineToolbarFeature(),
                     HorizontalRuleFeature(),

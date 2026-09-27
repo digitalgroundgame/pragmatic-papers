@@ -119,9 +119,10 @@ const codeBlockToHTML = ({ node }: { node: SerializedBlockNode<CodeBlock> }): st
   node.fields.code ? `<pre><code>${escapeHTML(node.fields.code)}</code></pre>` : ""
 
 /**
- * Converters for the feeds' rich text. Every block a feed-rendered field allows
- * needs an entry here, or the feed prints "unknown node" in its place;
- * `__tests__/generateRssFeed.converters.test.ts` enforces that.
+ * Converters for the feeds' rich text. Every node type and block a
+ * feed-rendered field allows needs an entry here, or the feed prints "unknown
+ * node" in its place; `__tests__/generateRssFeed.converters.test.ts` enforces
+ * that against the resolved Payload config.
  *
  * `pageUrl` is the page the content lives on, which blocks a feed reader
  * cannot show (interactive maps) link back to.
@@ -130,9 +131,13 @@ export const createHtmlConverters =
   (pageUrl: string): HTMLConvertersFunction =>
   ({ defaultConverters }) => ({
     ...defaultConverters,
-    // A block that slips past the converter test renders nothing rather than
-    // "unknown node". It has to be a function: an empty string is ignored.
-    unknown: () => "",
+    // Last resort for anything that slips past the converter test: keep an
+    // unknown element's text rather than printing "unknown node", and drop a
+    // childless node (a block). It has to be a function: "" is ignored.
+    unknown: ({ node, nodesToHTML }) => {
+      const { children } = node as { children?: Parameters<typeof nodesToHTML>[0]["nodes"] }
+      return children?.length ? nodesToHTML({ nodes: children }).join("") : ""
+    },
     blocks: {
       ...defaultConverters.blocks,
       banner: bannerBlockToHTML,

@@ -78,11 +78,7 @@ export const Media: CollectionConfig = {
       name: "narrator",
       type: "relationship",
       relationTo: "users",
-      filterOptions: {
-        roles: {
-          in: ["narrator"],
-        },
-      },
+      filterOptions: { isNarrator: { equals: true } },
       admin: {
         description: "User who recorded this narration",
         // Hidden for non-audio uploads by the component itself, which can see a

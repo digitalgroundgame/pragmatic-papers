@@ -42,6 +42,7 @@ import * as migration_20260715_214854_migrate_role_to_roles from "./20260715_214
 import * as migration_20260804_004633_add_layouts_8_10 from "./20260804_004633_add_layouts_8_10"
 import * as migration_20260814_230024_add_merch_collection from "./20260814_230024_add_merch_collection"
 import * as migration_20260923_020840_bump_payload_3_90 from "./20260923_020840_bump_payload_3_90"
+import * as migration_20260927_160901_add_user_role_flags from "./20260927_160901_add_user_role_flags"
 
 export const migrations = [
   {
@@ -263,5 +264,10 @@ export const migrations = [
     up: migration_20260923_020840_bump_payload_3_90.up,
     down: migration_20260923_020840_bump_payload_3_90.down,
     name: "20260923_020840_bump_payload_3_90",
+  },
+  {
+    up: migration_20260927_160901_add_user_role_flags.up,
+    down: migration_20260927_160901_add_user_role_flags.down,
+    name: "20260927_160901_add_user_role_flags",
   },
 ]

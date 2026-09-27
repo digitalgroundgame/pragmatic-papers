@@ -9,7 +9,7 @@ export type Role = "admin" | "chief-editor" | "editor" | "writer" | "narrator" |
  */
 export const STAFF_ROLES: Role[] = ["admin", "chief-editor", "editor", "writer", "narrator"]
 
-/** Roles that can be credited as an article's author. */
+/** Roles that can be credited as an article's author, and so appear under /authors. */
 export const AUTHOR_ROLES: Role[] = ["writer", "editor", "chief-editor", "narrator"]
 
 /** Checks if a user is an admin or chief-editor. */

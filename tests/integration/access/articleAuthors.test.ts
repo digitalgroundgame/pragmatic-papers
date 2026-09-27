@@ -2,8 +2,9 @@ import config from "@payload-config"
 import { handleEndpoints, type Payload } from "payload"
 import { beforeAll, describe, expect, it, vi } from "vitest"
 
-import type { User } from "@/payload-types"
+import type { Media, User } from "@/payload-types"
 import { ARTICLE_CONTENT } from "../fixtures/content"
+import { MINIMAL_PNG } from "../fixtures/media"
 import { createUser, getPayload, type Role } from "../helpers/testUsers"
 
 // Publishing revalidates the article's pages, which needs a Next.js request.
@@ -65,4 +66,86 @@ describe("article authors (REST)", () => {
       expect(errors?.join()).toMatch(/Authors/)
     },
   )
+})
+
+describe("media narrator", () => {
+  async function setNarrator(as: User, narrator: User) {
+    const media = await payload.create({
+      collection: "media",
+      context: { disableRevalidate: true },
+      file: {
+        data: MINIMAL_PNG,
+        mimetype: "image/png",
+        name: "test.png",
+        size: MINIMAL_PNG.length,
+      },
+      data: { alt: "Narrated" } as unknown as Media,
+    })
+    return payload.update({
+      collection: "media",
+      id: media.id,
+      data: { narrator: narrator.id },
+      overrideAccess: false,
+      user: as,
+      context: { disableRevalidate: true },
+    })
+  }
+
+  it("lets an editor credit a narrator", async () => {
+    const [editor, narrator] = await Promise.all([createUser("editor"), createUser("narrator")])
+    const updated = await setNarrator(editor, narrator)
+    expect(updated.narrator).toMatchObject({ id: narrator.id })
+  })
+
+  it("rejects crediting a non-narrator", async () => {
+    const [editor, writer] = await Promise.all([createUser("editor"), createUser("writer")])
+    await expect(setNarrator(editor, writer)).rejects.toThrow(/Narrator/)
+  })
+})
+
+describe("derived author flags", () => {
+  it("sets isAuthor and isNarrator from roles", async () => {
+    const [writer, narrator, member] = await Promise.all([
+      createUser("writer"),
+      createUser("narrator"),
+      createUser("member"),
+    ])
+    expect(writer).toMatchObject({ isAuthor: true, isNarrator: false })
+    expect(narrator).toMatchObject({ isAuthor: true, isNarrator: true })
+    expect(member).toMatchObject({ isAuthor: false, isNarrator: false })
+  })
+
+  it("follows a role change and survives a save that leaves roles out", async () => {
+    const user = await createUser("member")
+    const promoted = await payload.update({
+      collection: "users",
+      id: user.id,
+      data: { roles: ["writer"] },
+      context: { disableRevalidate: true },
+    })
+    expect(promoted.isAuthor).toBe(true)
+
+    const renamed = await payload.update({
+      collection: "users",
+      id: user.id,
+      data: { name: "Renamed" },
+      overrideAccess: false,
+      user: promoted,
+      context: { disableRevalidate: true },
+    })
+    expect(renamed.isAuthor).toBe(true)
+  })
+
+  it("ignores a flag set directly", async () => {
+    const member = await createUser("member")
+    const updated = await payload.update({
+      collection: "users",
+      id: member.id,
+      data: { isAuthor: true },
+      overrideAccess: false,
+      user: member,
+      context: { disableRevalidate: true },
+    })
+    expect(updated.isAuthor).toBe(false)
+  })
 })

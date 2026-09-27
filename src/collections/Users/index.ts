@@ -1,6 +1,7 @@
 import { isSelfOrAdmin, readUsers } from "@/access/policies"
 import { admin, staff } from "@/access/collections"
 import { adminFieldLevel, selfOrAdminFieldLevel } from "@/access/fields"
+import { AUTHOR_ROLES } from "@/access/roles"
 import { revalidateUser } from "@/collections/Users/hooks/revalidateUser"
 import { menu } from "@/fields/menu"
 import {
@@ -13,6 +14,7 @@ import {
   UnorderedListFeature,
 } from "@payloadcms/richtext-lexical"
 import { slugField, type CollectionConfig } from "payload"
+import { populateRoleFlag } from "./hooks/populateRoleFlag"
 import { userExists } from "./hooks/userExists"
 
 export const Users: CollectionConfig = {
@@ -152,6 +154,38 @@ export const Users: CollectionConfig = {
           value: "member",
         },
       ],
+    },
+    // `roles` is private, so relationship pickers and public queries filter on
+    // these flags instead. They're derived on save and can't be set directly.
+    {
+      name: "isAuthor",
+      type: "checkbox",
+      index: true,
+      access: {
+        create: () => false,
+        update: () => false,
+      },
+      admin: {
+        hidden: true,
+      },
+      hooks: {
+        beforeChange: [populateRoleFlag(AUTHOR_ROLES)],
+      },
+    },
+    {
+      name: "isNarrator",
+      type: "checkbox",
+      index: true,
+      access: {
+        create: () => false,
+        update: () => false,
+      },
+      admin: {
+        hidden: true,
+      },
+      hooks: {
+        beforeChange: [populateRoleFlag(["narrator"])],
+      },
     },
   ],
   hooks: {

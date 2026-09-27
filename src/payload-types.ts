@@ -629,6 +629,8 @@ export interface User {
   profileImage?: (number | null) | Media;
   socials?: MenuField;
   roles?: ('admin' | 'chief-editor' | 'editor' | 'writer' | 'narrator' | 'member')[] | null;
+  isAuthor?: boolean | null;
+  isNarrator?: boolean | null;
   updatedAt: string;
   createdAt: string;
   email: string;
@@ -1972,6 +1974,8 @@ export interface UsersSelect<T extends boolean = true> {
   profileImage?: T;
   socials?: T | MenuFieldSelect<T>;
   roles?: T;
+  isAuthor?: T;
+  isNarrator?: T;
   updatedAt?: T;
   createdAt?: T;
   email?: T;

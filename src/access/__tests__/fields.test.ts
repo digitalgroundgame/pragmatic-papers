@@ -5,6 +5,7 @@ import {
   writerFieldLevel,
   writerOrEditorFieldLevel,
   selfOrAdminFieldLevel,
+  staffOrSelfFieldLevel,
 } from "@/access/fields"
 import type { User } from "@/payload-types"
 import type { FieldAccess } from "payload"
@@ -96,5 +97,23 @@ describe("selfOrAdminFieldLevel access helper", () => {
 
   it("denies anonymous users", () => {
     expect(selfOrAdminFieldLevel(makeFieldArgsWithId(null, 999))).toBe(false)
+  })
+})
+
+describe("staffOrSelfFieldLevel access helper", () => {
+  it("allows any staff member to read any record", () => {
+    for (const role of ["admin", "chief-editor", "editor", "writer", "narrator"]) {
+      expect(staffOrSelfFieldLevel(makeFieldArgsWithId(makeUser(role), 999))).toBe(true)
+    }
+  })
+
+  it("allows a member to read only their own record", () => {
+    const member = { id: 123, roles: ["member"] } as unknown as User
+    expect(staffOrSelfFieldLevel(makeFieldArgsWithId(member, 123))).toBe(true)
+    expect(staffOrSelfFieldLevel(makeFieldArgsWithId(member, 999))).toBe(false)
+  })
+
+  it("denies anonymous users", () => {
+    expect(staffOrSelfFieldLevel(makeFieldArgsWithId(null, 999))).toBe(false)
   })
 })

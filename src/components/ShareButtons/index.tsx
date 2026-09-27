@@ -110,7 +110,7 @@ export function ShareButtons({ url, title, className }: ShareButtonsProps): Reac
             variant="ghost"
             size="icon-sm"
             aria-label="Share"
-            className={cn("shrink-0 cursor-pointer", className)}
+            className={cn("shrink-0", className)}
           />
         }
       >
@@ -128,7 +128,7 @@ export function ShareButtons({ url, title, className }: ShareButtonsProps): Reac
             size="icon"
             aria-label={copied ? "Copied!" : "Copy link"}
             onClick={handleCopy}
-            className="w-full cursor-pointer"
+            className="w-full"
           >
             {copied ? <Check className="size-4" /> : <Copy className="size-4" />}
           </Button>

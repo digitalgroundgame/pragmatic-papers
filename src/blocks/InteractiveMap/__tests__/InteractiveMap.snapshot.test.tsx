@@ -17,7 +17,7 @@ const stubAsset = (svgContent: string): MapAsset => ({
 })
 
 // Snapshot tests for the InteractiveMap server component. To update snapshots after intentional changes:
-// pnpm test:unit -- --update-snapshots
+// pnpm test:unit -u
 describe("InteractiveMapBlock", () => {
   it("renders a single map with diverging color scale", () => {
     const { container } = render(

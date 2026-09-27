@@ -19,6 +19,7 @@ import { SquiggleRule } from "@/blocks/SquiggleRule/config"
 import { Timeline } from "@/blocks/Timeline/config"
 import { detectMathBlocks } from "@/collections/Articles/hooks/detectMathBlocks"
 import { generateFootnotes } from "@/collections/Articles/hooks/generateFootnotes"
+import { authorFilterOptions } from "@/collections/Articles/authorFilterOptions"
 import { populateTopics } from "@/collections/Articles/hooks/populateTopics"
 import { populateMetaImageFromHero } from "@/collections/Articles/hooks/populateMetaImageFromHero"
 import { revalidateArticle, revalidateDelete } from "@/collections/Articles/hooks/revalidateArticle"
@@ -254,11 +255,7 @@ export const Articles: CollectionConfig = {
       },
       hasMany: true,
       relationTo: "users",
-      filterOptions: {
-        roles: {
-          in: ["writer", "editor", "chief-editor", "narrator"],
-        },
-      },
+      filterOptions: authorFilterOptions,
     },
     {
       name: "topics",

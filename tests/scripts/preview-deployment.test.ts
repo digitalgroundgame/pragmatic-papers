@@ -17,7 +17,7 @@ const ENV = {
   PR_NUMBER: "42",
   HEAD_REF: "feat/thing",
   HEAD_SHA: SHA,
-  COOLIFY_URL: "https://coolify.test/",
+  COOLIFY_DASHBOARD_URL: "https://coolify.test/",
   COOLIFY_API_TOKEN: "coolify-token",
   COOLIFY_PREVIEW_APP_UUID: "app-uuid",
 }
@@ -163,7 +163,7 @@ describe("findDeployment", () => {
 describe("readConfig", () => {
   it("returns null when Coolify isn't configured", () => {
     expect(readConfig({ ...ENV, COOLIFY_API_TOKEN: "" })).toBeNull()
-    expect(readConfig({ ...ENV, COOLIFY_URL: undefined })).toBeNull()
+    expect(readConfig({ ...ENV, COOLIFY_DASHBOARD_URL: undefined })).toBeNull()
   })
 
   it("trims the Coolify URL's trailing slash and defaults the preview template", () => {

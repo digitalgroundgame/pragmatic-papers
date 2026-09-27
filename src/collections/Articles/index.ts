@@ -1,6 +1,7 @@
 import { isPublishedOrStaff, isCreatedByOrEditor, isDraftOrEditor } from "@/access/policies"
 import { writerOrEditor } from "@/access/collections"
 import { editorFieldLevel } from "@/access/fields"
+import { AUTHOR_ROLES } from "@/access/roles"
 import { Banner } from "@/blocks/Banner/config"
 import { Code } from "@/blocks/Code/config"
 import { FootnoteBlock } from "@/blocks/Footnote/config"
@@ -258,11 +259,7 @@ export const Articles: CollectionConfig = {
       },
       hasMany: true,
       relationTo: "users",
-      filterOptions: {
-        roles: {
-          in: ["writer", "editor", "chief-editor", "narrator"],
-        },
-      },
+      filterOptions: { roles: { in: AUTHOR_ROLES } },
     },
     {
       name: "topics",

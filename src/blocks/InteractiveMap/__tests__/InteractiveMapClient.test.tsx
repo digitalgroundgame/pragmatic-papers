@@ -119,14 +119,14 @@ describe("InteractiveMapClient", () => {
 
   it("renders the hover tooltip with the hovered region label and formatted value", () => {
     const { container } = render(<InteractiveMapClient layout="row" maps={[baseMap()]} />)
-    // Hover tooltip is portaled to document.body and has pointer-events-none.
-    const hoverTooltip = document.body.querySelector<HTMLDivElement>(
-      '[role="tooltip"].pointer-events-none',
-    )!
+    // Hover tooltip is portaled to document.body, and only a tooltip while it shows a region.
+    const hoverTooltip = document.body.querySelector<HTMLDivElement>("[data-hover-tooltip]")!
     expect(within(hoverTooltip).queryByText("Alpha")).not.toBeInTheDocument()
+    expect(hoverTooltip).not.toHaveAttribute("role")
 
     const [pathA] = interactivePaths(container)
     fireEvent.pointerEnter(pathA!)
+    expect(hoverTooltip).toHaveAttribute("role", "tooltip")
     expect(within(hoverTooltip).getByText("Alpha")).toBeInTheDocument()
     expect(within(hoverTooltip).getByText("R+5.0")).toBeInTheDocument()
   })
@@ -211,9 +211,7 @@ describe("InteractiveMapClient", () => {
 
     // After pinning, hovering the same path again should not produce a hover tooltip
     fireEvent.pointerEnter(pathA!)
-    const hoverTooltip = document.body.querySelector<HTMLDivElement>(
-      '[role="tooltip"].pointer-events-none',
-    )!
+    const hoverTooltip = document.body.querySelector<HTMLDivElement>("[data-hover-tooltip]")!
     expect(within(hoverTooltip).queryByText("Alpha")).not.toBeInTheDocument()
   })
 

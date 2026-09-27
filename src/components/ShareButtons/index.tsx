@@ -116,10 +116,11 @@ export function ShareButtons({ url, title, className }: ShareButtonsProps): Reac
       >
         <Share2 className="size-4" />
       </PopoverTrigger>
-      <PopoverContent align="end">
+      <PopoverContent align="end" aria-label="Share">
         <div className="grid grid-cols-7 gap-1">
           <input
             readOnly
+            aria-label="Link to share"
             value={url}
             className="border-input bg-background text-muted-foreground col-span-6 h-8 min-w-0 truncate rounded-sm border px-2 text-xs outline-none"
           />

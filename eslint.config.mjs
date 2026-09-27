@@ -2,11 +2,13 @@ import eslintConfigNext from "eslint-config-next/core-web-vitals"
 import eslintConfigNextTypescript from "eslint-config-next/typescript"
 import eslintConfigPrettier from "eslint-config-prettier"
 import pluginReact from "eslint-plugin-react"
+import storybook from "eslint-plugin-storybook"
 import globals from "globals"
 
 const eslintConfig = [
   ...eslintConfigNext,
   ...eslintConfigNextTypescript,
+  ...storybook.configs["flat/recommended"],
   {
     plugins: { react: pluginReact },
     settings: { react: { version: "detect" } },
@@ -107,6 +109,7 @@ const eslintConfig = [
       ".next/**",
       "out/**",
       "coverage/**",
+      "storybook-static/**",
       ".claude/worktrees/**",
       "**/next-env.d.ts",
       "src/migrations/**",

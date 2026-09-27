@@ -67,11 +67,12 @@ function HoverTooltip({ hoverRegion, cursor }: HoverTooltipProps): React.ReactNo
   const node = (
     <div
       ref={ref}
+      data-hover-tooltip=""
       className={cn(
         "bg-foreground text-background pointer-events-none fixed z-50 rounded-xs px-2.5 py-1.5 text-sm whitespace-nowrap shadow-md transition-opacity",
         hoverRegion && pos ? "opacity-100" : "opacity-0",
       )}
-      role="tooltip"
+      role={hoverRegion ? "tooltip" : undefined}
       style={pos ? { left: pos.x, top: pos.y } : { left: -9999, top: -9999 }}
     >
       {hoverRegion && <TooltipContent region={hoverRegion.region} />}

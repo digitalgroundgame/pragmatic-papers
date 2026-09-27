@@ -1,0 +1,68 @@
+# Shows each PR's Coolify preview on the PR as a GitHub Deployment
+# ("View deployment" link, and the build's state), which Coolify doesn't do
+# itself: https://github.com/coollabsio/coolify/issues/9583.
+#
+# Coolify still builds the preview on its own webhook. This workflow only
+# watches that build through Coolify's API and reports it to GitHub; see
+# scripts/preview-deployment.ts.
+#
+# SETUP (Settings → Secrets and variables → Actions)
+# --------------------------------------------------
+#   - secret   COOLIFY_API_TOKEN         a Coolify API token with `read` access
+#                                        (Coolify → Keys & Tokens → API tokens;
+#                                        the API must be enabled in Settings)
+#   - variable COOLIFY_URL               the Coolify dashboard, e.g. https://coolify.example.com
+#   - variable COOLIFY_PREVIEW_APP_UUID  the UUID of the app that builds previews
+#                                        (the last segment of its dashboard URL)
+#   - variable PREVIEW_URL_TEMPLATE      optional; the app's preview URL template in
+#                                        Coolify's syntax. Default:
+#                                        https://pr-{{pr_id}}.pragmaticpapers.com
+#
+# Until they're set, and on fork PRs (which get no secrets), the job does nothing.
+name: Preview deployment
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, closed]
+
+# A new push supersedes the run watching the previous commit's build. Closing
+# the PR also cancels it, so the close run's "inactive" isn't overwritten.
+concurrency:
+  group: preview-deployment-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  deployments: write
+
+jobs:
+  report:
+    name: Report Coolify preview
+    runs-on: ubuntu-latest
+    # Covers the script's 10 min wait for Coolify to queue the build plus its
+    # 45 min build timeout.
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          sparse-checkout: scripts/preview-deployment.ts
+          sparse-checkout-cone-mode: false
+
+      # Node 24 runs the TypeScript script directly; no install needed.
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24.x"
+
+      - name: Mirror Coolify's status
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          EVENT_AT: ${{ github.event.pull_request.updated_at }}
+          COOLIFY_URL: ${{ vars.COOLIFY_URL }}
+          COOLIFY_PREVIEW_APP_UUID: ${{ vars.COOLIFY_PREVIEW_APP_UUID }}
+          PREVIEW_URL_TEMPLATE: ${{ vars.PREVIEW_URL_TEMPLATE }}
+          COOLIFY_API_TOKEN: ${{ secrets.COOLIFY_API_TOKEN }}
+          MODE: ${{ github.event.action == 'closed' && 'close' || 'deploy' }}
+        run: node scripts/preview-deployment.ts "$MODE"

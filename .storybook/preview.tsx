@@ -2,14 +2,11 @@ import { withThemeByClassName } from "@storybook/addon-themes"
 import type { Preview } from "@storybook/nextjs-vite"
 import { ClientThemeProvider } from "@wrksz/themes/client"
 import { unstable_cache } from "next/cache"
-import { mocked, sb } from "storybook/test"
+import { draftMode } from "next/headers"
+import { mocked } from "storybook/test"
 
 import { fontVariables } from "../src/app/(frontend)/fonts"
 import "../src/app/(frontend)/globals.css"
-
-// Every Payload query goes through this helper; the stand-in in
-// src/utilities/__mocks__ serves story fixtures instead of a database.
-sb.mock(import("../src/utilities/getPayloadConfig.ts"))
 
 // The site sets the font variables on <html>, and globals.css reads them from
 // there, so a wrapper element would leave `html { font-sans }` unresolved.
@@ -17,16 +14,25 @@ document.documentElement.classList.add(...fontVariables.split(" "))
 
 const preview: Preview = {
   // The framework mocks next/cache with a pass-through `unstable_cache`, but the
-  // reset Storybook runs between stories drops that implementation.
+  // reset Storybook runs between stories drops that implementation. Its
+  // `draftMode` only spies on Next's, which throws outside a request.
   beforeEach: () => {
     mocked(unstable_cache).mockImplementation((cb) => cb)
+    mocked(draftMode).mockResolvedValue({
+      isEnabled: false,
+      enable: () => undefined,
+      disable: () => undefined,
+    } as Awaited<ReturnType<typeof draftMode>>)
   },
   decorators: [
-    (Story, { globals }) => (
-      <ClientThemeProvider attribute="class" forcedTheme={globals.theme || "light"}>
+    (Story, { globals, parameters }) =>
+      parameters.ownThemeProvider ? (
         <Story />
-      </ClientThemeProvider>
-    ),
+      ) : (
+        <ClientThemeProvider attribute="class" forcedTheme={globals.theme || "light"}>
+          <Story />
+        </ClientThemeProvider>
+      ),
     withThemeByClassName({
       themes: { light: "", dark: "dark" },
       defaultTheme: "light",

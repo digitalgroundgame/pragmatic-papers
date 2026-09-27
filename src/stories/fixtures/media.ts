@@ -36,3 +36,14 @@ export const wideImage = image("wide.svg", 1920, 400, "A city skyline at dusk")
 export function mediaFixture(overrides: Partial<Media> = {}): Media {
   return { ...landscapeImage, id: nextId++, ...overrides }
 }
+
+export const narrationAudio: Media = {
+  id: nextId++,
+  alt: "Article narration",
+  url: "/storybook-assets/narration.wav",
+  filename: "narration.wav",
+  mimeType: "audio/wav",
+  duration: 3,
+  createdAt: TIMESTAMP,
+  updatedAt: TIMESTAMP,
+}

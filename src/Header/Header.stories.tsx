@@ -1,0 +1,66 @@
+import type { Meta, StoryObj } from "@storybook/nextjs-vite"
+import { expect, mocked, screen, userEvent, within } from "storybook/test"
+
+import { createFakePayload } from "@/stories/fixtures/payload"
+import { navItems, socials } from "@/stories/fixtures/navigation"
+import { getPayloadConfig } from "@/utilities/getPayloadConfig"
+
+import { Header } from "./Component"
+
+const meta = {
+  title: "Layout/Header",
+  component: Header,
+  parameters: { layout: "fullscreen", nextjs: { navigation: { pathname: "/articles" } } },
+  beforeEach: () => {
+    mocked(getPayloadConfig).mockResolvedValue(
+      createFakePayload({
+        globals: {
+          header: {
+            navItems,
+            actions: [
+              {
+                id: "a1",
+                link: {
+                  type: "custom",
+                  url: "/newsletter",
+                  label: "Subscribe",
+                  variant: "default",
+                },
+              },
+            ],
+          },
+          footer: { socials },
+        },
+      }),
+    )
+  },
+} satisfies Meta<typeof Header>
+
+export default meta
+type Story = StoryObj<typeof meta>
+
+export const Desktop: Story = {
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(await canvas.findByRole("link", { name: "Link to Home" })).toHaveAttribute(
+      "href",
+      "/",
+    )
+    await expect(canvas.getByRole("link", { name: "Subscribe" })).toBeVisible()
+  },
+}
+
+export const MenuOpen: Story = {
+  play: async ({ canvasElement }) => {
+    await userEvent.click(await within(canvasElement).findByRole("button", { name: "Menu" }))
+    const sheet = await screen.findByRole("dialog")
+    await expect(within(sheet).getByRole("searchbox", { name: "Search box" })).toBeInTheDocument()
+    const current = within(sheet).getByRole("link", { name: "Articles" })
+    await expect(current).toHaveAttribute("aria-current", "page")
+    await expect(current.closest("button")).not.toBeInTheDocument()
+  },
+}
+
+export const Mobile: Story = {
+  globals: { viewport: { value: "mobile1", isRotated: false } },
+}

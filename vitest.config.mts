@@ -83,8 +83,13 @@ export default defineConfig({
           browser: {
             enabled: true,
             headless: true,
-            provider: playwright(),
+            // Stories click through `userEvent`, which isn't a user gesture to
+            // Chromium, so media would otherwise refuse to play.
+            provider: playwright({
+              launchOptions: { args: ["--autoplay-policy=no-user-gesture-required"] },
+            }),
             instances: [{ browser: "chromium" }],
+            viewport: { width: 1280, height: 800 },
           },
         },
       },

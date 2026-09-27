@@ -2,7 +2,6 @@ import type { Payload } from "payload"
 
 interface Doc {
   id: number | string
-  [key: string]: unknown
 }
 type Where = Record<string, { equals?: unknown; in?: unknown[] } | undefined>
 
@@ -15,7 +14,7 @@ function matches(doc: Doc, where: Where | undefined): boolean {
   if (!where) return true
   return Object.entries(where).every(([field, condition]) => {
     if (!condition || typeof condition !== "object") return true
-    const value = doc[field]
+    const value = (doc as unknown as Record<string, unknown>)[field]
     if ("equals" in condition) return value === condition.equals
     if ("in" in condition && Array.isArray(condition.in)) return condition.in.includes(value)
     return true

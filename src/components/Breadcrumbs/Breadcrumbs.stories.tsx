@@ -8,17 +8,13 @@ import { getPayloadConfig } from "@/utilities/getPayloadConfig"
 
 import { Breadcrumbs } from "."
 
+const pages = [{ id: 1, slug: "about", title: "About the Papers" }]
+
 function atPath(pathname: string) {
   return () => {
     headers().set("x-pathname", pathname)
     mocked(getPayloadConfig).mockResolvedValue(
-      createFakePayload({
-        collections: {
-          topics,
-          users: authors,
-          pages: [{ id: 1, slug: "about", title: "About the Papers" }],
-        },
-      }),
+      createFakePayload({ collections: { topics, users: authors, pages } }),
     )
   }
 }

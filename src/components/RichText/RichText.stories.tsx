@@ -1,3 +1,4 @@
+import type { DefaultTypedEditorState } from "@payloadcms/richtext-lexical"
 import type { Meta, StoryObj } from "@storybook/nextjs-vite"
 
 import { MathJaxProviderRoot } from "@/providers/MathJaxProvider"
@@ -26,7 +27,7 @@ const meta = {
   title: "Components/RichText",
   component: RichText,
   parameters: { layout: "fullscreen" },
-  args: { data: articleBody },
+  args: { data: articleBody as DefaultTypedEditorState },
   decorators: [
     (Story) => (
       <div className="py-8">
@@ -85,6 +86,6 @@ export const ArticleWithBlocks: Story = {
         code: "const turnout = ballots / registered // 0.098",
       }),
       createParagraph(SENTENCES[3]),
-    ),
+    ) as DefaultTypedEditorState,
   },
 }

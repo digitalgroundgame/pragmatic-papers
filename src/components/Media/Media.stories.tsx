@@ -2,16 +2,20 @@ import type { Meta, StoryObj } from "@storybook/nextjs-vite"
 import { expect, screen, userEvent, waitFor, within } from "storybook/test"
 
 import { NarrationPlayer } from "@/components/NarrationPlayer"
+import type { Media as MediaDoc } from "@/payload-types"
 import { skipA11yRules } from "@/stories/a11y"
 import { authors } from "@/stories/fixtures/docs"
 import { landscapeImage, narrationAudio, portraitImage } from "@/stories/fixtures/media"
 
 import { Media } from "."
 
+// `Media` takes a union of per-type props, which Storybook's arg types would
+// intersect into something no doc satisfies.
 const meta = {
   title: "Components/Media",
   component: Media,
   args: { media: landscapeImage },
+  render: ({ media }) => <Media media={media} />,
   decorators: [
     (Story) => (
       <div className="max-w-2xl">
@@ -19,7 +23,7 @@ const meta = {
       </div>
     ),
   ],
-} satisfies Meta<typeof Media>
+} satisfies Meta<{ media: MediaDoc }>
 
 export default meta
 type Story = StoryObj<typeof meta>
@@ -34,7 +38,7 @@ export const ImageWithFocalPoint: Story = {
   args: { media: { ...portraitImage, focalX: 50, focalY: 20 } },
   render: (args) => (
     <div className="aspect-video overflow-hidden rounded-sm border">
-      <Media {...args} className="h-full w-full object-cover" />
+      <Media media={args.media} className="h-full w-full object-cover" />
     </div>
   ),
 }

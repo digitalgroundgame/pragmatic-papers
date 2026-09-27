@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite"
-import { expect, mocked, screen, userEvent, within } from "storybook/test"
+import { expect, mocked, screen, userEvent, waitFor, within } from "storybook/test"
 
 import { createFakePayload } from "@/stories/fixtures/payload"
 import { navItems, socials } from "@/stories/fixtures/navigation"
@@ -58,6 +58,22 @@ export const MenuOpen: Story = {
     const current = within(sheet).getByRole("link", { name: "Articles" })
     await expect(current).toHaveAttribute("aria-current", "page")
     await expect(current.closest("button")).not.toBeInTheDocument()
+  },
+}
+
+export const MenuClosesOnLinkClick: Story = {
+  play: async ({ canvasElement }) => {
+    // Keep the story on its page; the menu's own click handler still runs.
+    const stay = (event: MouseEvent): void => event.preventDefault()
+    document.addEventListener("click", stay, { capture: true })
+    try {
+      await userEvent.click(await within(canvasElement).findByRole("button", { name: "Menu" }))
+      const sheet = await screen.findByRole("dialog")
+      await userEvent.click(within(sheet).getByRole("link", { name: "Topics" }))
+      await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument())
+    } finally {
+      document.removeEventListener("click", stay, { capture: true })
+    }
   },
 }
 

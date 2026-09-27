@@ -123,10 +123,22 @@ RUN /usr/local/bin/modify-database-uri.sh && \
 # SOURCE_COMMIT arrives like the other Coolify variables, as a secret mounted into
 # each RUN ("Include Source Commit in Build" must be on). .git is dockerignored, so
 # it's what names the Sentry release baked into the browser bundle.
-RUN --mount=type=cache,id=nextjs,target=/app/.next/cache \
+# The Turbopack cache is shared by every build on the server and is left half-written
+# when a build is killed, which fails every later build with "Failed to restore data
+# for task". `sharing=locked` keeps two builds from writing it at once; if it's
+# corrupt anyway, drop it and build once more.
+RUN --mount=type=cache,id=nextjs,target=/app/.next/cache,sharing=locked \
     echo "--- PHASE: BUILDING NEXT.JS ---" && \
     if [ -f /tmp/database_uri.env ]; then . /tmp/database_uri.env; fi && \
-    SENTRY_RELEASE="${SOURCE_COMMIT}" pnpm build && \
+    export SENTRY_RELEASE="${SOURCE_COMMIT}" && \
+    { pnpm build; echo $? > /tmp/build-status; } 2>&1 | tee /tmp/build.log && \
+    status=$(cat /tmp/build-status) && \
+    if [ "$status" -ne 0 ]; then \
+      grep -q "Failed to restore data for task" /tmp/build.log || exit "$status"; \
+      echo "--- Turbopack cache is corrupt: clearing it and rebuilding ---" && \
+      rm -rf .next/cache/turbopack && \
+      pnpm build; \
+    fi && \
     echo "--- COMPLETED: BUILDING NEXT.JS ---"
 
 # ============================================

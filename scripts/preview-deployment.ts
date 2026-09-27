@@ -128,7 +128,7 @@ export const CLOCK_SKEW_MS = 2 * 60_000
 export function readConfig(env: Env): Config | null {
   // The server's base URL; a value saved with the API path on the end works too.
   const coolifyUrl =
-    env.COOLIFY_API_URL?.trim()
+    env.COOLIFY_DASHBOARD_URL?.trim()
       .replace(/\/+$/, "")
       .replace(/\/api(\/v1)?$/, "") ?? ""
   const coolifyToken = env.COOLIFY_API_TOKEN?.trim() ?? ""
@@ -394,7 +394,7 @@ export async function main(
     const config = readConfig(env)
     if (!config) {
       deps.log(
-        "Coolify isn't configured for this run (COOLIFY_API_URL, COOLIFY_API_TOKEN, COOLIFY_PREVIEW_APP_UUID); skipping.",
+        "Coolify isn't configured for this run (COOLIFY_DASHBOARD_URL, COOLIFY_API_TOKEN, COOLIFY_PREVIEW_APP_UUID); skipping.",
       )
       return 0
     }

@@ -1,0 +1,90 @@
+name: Showcase on preview
+
+# Pushes the showcase articles (src/endpoints/seed/showcase.ts) to a PR's
+# Coolify preview with `pnpm showcase <pr>`. The push only adds articles whose
+# slug is missing, so repeat runs are harmless.
+#
+# Three ways to fire it, all for PRs labelled "showcase":
+#   - the deployment bot's comment reporting the preview is ready. The bot
+#     edits one comment per PR on every deploy, and a deploy may re-copy the
+#     preview database, so this re-pushes after each one.
+#   - adding the "showcase" label, for a preview that is already up.
+#   - workflow_dispatch with the PR number.
+#
+# issue_comment runs this file from the default branch with secrets, while the
+# script comes from the PR, so the job only runs PR code from this repository,
+# never from a fork.
+on:
+  issue_comment:
+    types: [created, edited]
+  pull_request:
+    types: [labeled]
+  workflow_dispatch:
+    inputs:
+      pr:
+        description: PR number whose preview to push to
+        required: true
+
+concurrency:
+  group: showcase-${{ github.event.issue.number || github.event.pull_request.number || inputs.pr }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  push:
+    name: Push showcase articles
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'pull_request' && github.event.label.name == 'showcase') ||
+      (github.event_name == 'issue_comment' &&
+        github.event.issue.pull_request &&
+        github.event.comment.user.login == 'digital-ground-game-deployment-bot[bot]' &&
+        contains(github.event.comment.body, 'is ready') &&
+        contains(github.event.issue.labels.*.name, 'showcase'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Resolve the PR
+        id: pr
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.issue.number || github.event.pull_request.number || inputs.pr }}
+        run: |
+          read -r head_repo sha labels < <(gh api "repos/$GITHUB_REPOSITORY/pulls/$PR" \
+            --jq '[.head.repo.full_name, .head.sha, ([.labels[].name] | join(","))] | @tsv')
+          if [ "$head_repo" != "$GITHUB_REPOSITORY" ]; then
+            echo "::error::PR #$PR comes from $head_repo; only same-repository PRs are pushed."
+            exit 1
+          fi
+          if [[ ",$labels," != *",showcase,"* ]]; then
+            echo "::error::PR #$PR is not labelled showcase."
+            exit 1
+          fi
+          echo "number=$PR" >> "$GITHUB_OUTPUT"
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ steps.pr.outputs.sha }}
+
+      - name: Set up Node.js environment
+        uses: ./.github/actions/setup-project
+        with:
+          node-version: "24.x"
+          gh-font-read-token: ${{ secrets.GH_FONT_READ }}
+
+      - name: Push to the preview
+        env:
+          SHOWCASE_EMAIL: ${{ secrets.SHOWCASE_EMAIL }}
+          SHOWCASE_PASSWORD: ${{ secrets.SHOWCASE_PASSWORD }}
+          PR: ${{ steps.pr.outputs.number }}
+        run: |
+          pnpm -s showcase "$PR" 2>&1 | tee showcase.log
+          {
+            echo "### Showcase on https://pr-$PR.pragmaticpapers.com"
+            echo
+            grep '✔' showcase.log | sed 's/^/- /'
+          } >> "$GITHUB_STEP_SUMMARY"

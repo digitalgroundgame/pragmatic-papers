@@ -296,6 +296,36 @@ await createMyFeatureArticle(
 )
 ```
 
+## Showcasing a Feature on a PR Preview
+
+To put a feature article on a PR's preview for other devs to see, add it to
+`showcaseEntries` in `showcase.ts` with the slug it creates:
+
+```typescript
+{
+  slug: "my-feature-demo",
+  create: (payload, writers, media, context) =>
+    createMyFeatureArticle(payload, writers, media, [], context),
+},
+```
+
+Then either run it yourself:
+
+```bash
+SHOWCASE_EMAIL=you@example.com SHOWCASE_PASSWORD=… pnpm showcase 748
+```
+
+or label the PR `showcase`, and `.github/workflows/showcase.yml` runs it every
+time the preview bot reports a deploy is ready. A redeploy can re-copy the
+preview's database from staging, so the push has to follow each deploy.
+
+`pnpm showcase` runs the seed on your machine and replays its `payload.create`
+calls against the site's REST API, so a showcase seed can only use `create`
+and `logger` on `payload`. The account must be an editor (to publish) with a
+role that can be credited as author; the articles are credited to it. The push
+only adds: an entry whose slug is already there is skipped, and nothing is
+deleted. Topics are left empty, since the target's topic ids aren't known.
+
 ---
 
 ## Error Handling in Seeds

@@ -63,7 +63,7 @@ describe("defaultResolvers", () => {
         ],
       } as unknown as SerializedLexicalNode
       const entry = defaultResolvers.table!(table)
-      expect(entry).toMatchObject({ label: "Table", anchor: "table-1", depth: 1 })
+      expect(entry).toMatchObject({ label: "Table", anchor: "table-1" })
       expect(entry?.icon).toBeDefined()
     })
 

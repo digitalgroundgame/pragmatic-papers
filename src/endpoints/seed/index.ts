@@ -13,6 +13,7 @@ import { createMediaCollageArticle } from "./features/media-collage"
 import { createNarrationDemoArticle } from "./features/narration-demo"
 import { createRichTextShowcaseArticle } from "./features/rich-text-showcase"
 import { createLegacySocialEmbedArticle, createSocialEmbedArticle } from "./features/social-embeds"
+import { createTableOfContentsArticle } from "./features/table-of-contents"
 import { createTimelineArticle } from "./features/timeline"
 import { createMediaFromURL } from "./media"
 import { createMenus } from "./menus"
@@ -321,6 +322,15 @@ export const seed = async (
             [ctx.writers[0]!, ctx.writers[1]!],
             ctx.media,
             [ctx.topics[2]!, ctx.topics[7]!],
+            context,
+          ),
+        )
+        ctx.featureArticles.push(
+          await createTableOfContentsArticle(
+            payload,
+            [ctx.writers[0]!],
+            ctx.media,
+            [ctx.topics[3]!, ctx.topics[7]!],
             context,
           ),
         )

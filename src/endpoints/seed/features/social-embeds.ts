@@ -11,7 +11,7 @@ import {
 /**
  * One example URL per social media platform.
  */
-const SOCIAL_MEDIA_URLS: Pick<SocialEmbedBlock, "platform" | "url" | "snapshot" | "id">[] = [
+export const SOCIAL_MEDIA_URLS: Pick<SocialEmbedBlock, "platform" | "url" | "snapshot" | "id">[] = [
   {
     platform: "bluesky",
     url: "https://bsky.app/profile/destiny.gg/post/3lbjlth3tnc2k",
@@ -108,7 +108,9 @@ interface SocialEmbedBlockNode {
 /**
  * Creates a social embed block node for use within Lexical content
  */
-function createSocialEmbedBlock(item: (typeof SOCIAL_MEDIA_URLS)[number]): SocialEmbedBlockNode {
+export function createSocialEmbedBlock(
+  item: (typeof SOCIAL_MEDIA_URLS)[number],
+): SocialEmbedBlockNode {
   return {
     type: "block",
     fields: {

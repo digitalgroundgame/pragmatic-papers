@@ -55,9 +55,11 @@ describe("TableOfContentsCheckbox", () => {
     const preview = screen.getByRole("region", { name: "Table of contents preview" })
     const [top] = within(preview).getAllByRole("list")
     const topItems = within(top!).getAllByRole("listitem")
-    expect(topItems.filter((li) => li.parentElement === top)).toHaveLength(2)
-    expect(within(topItems[0]!).getByText("Details")).toHaveAttribute("title", "#details")
-    expect(within(preview).getByText("Table")).toHaveAttribute("title", "#table-1")
+    expect(topItems.filter((li) => li.parentElement === top)).toHaveLength(1)
+    const details = within(topItems[0]!).getByText("Details")
+    expect(details).toHaveAttribute("title", "#details")
+    const table = within(details.closest("li")!).getByText("Table")
+    expect(table).toHaveAttribute("title", "#table-1")
   })
 
   it("prompts for a heading when the editor has no entries", () => {

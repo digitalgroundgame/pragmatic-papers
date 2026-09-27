@@ -8,6 +8,7 @@ import {
   createRichText,
   createRichTextFromString,
   createTextNode,
+  type SerializedLexicalNode,
 } from "../richtext"
 
 /**
@@ -28,8 +29,11 @@ function createMediaBlock(mediaId: number) {
 /**
  * Helper to create a media collage block
  */
-function createMediaCollageBlock(mediaIds: number[], layout: "grid" | "carousel" = "grid") {
-  return {
+export function createMediaCollageBlock(
+  mediaIds: number[],
+  layout: "grid" | "carousel" = "grid",
+): SerializedLexicalNode {
+  const node = {
     type: "block",
     fields: {
       blockType: "mediaCollage",
@@ -41,6 +45,7 @@ function createMediaCollageBlock(mediaIds: number[], layout: "grid" | "carousel"
     format: "",
     version: 2,
   }
+  return node
 }
 
 // Deliberately long caption to verify that the caption scrolls independently

@@ -90,7 +90,7 @@ export default async function Article({ params: paramsPromise }: Args): Promise<
           <ArticleHero article={article} />
           <div
             id="intro"
-            className="relative flex flex-col justify-between gap-3 lg:flex-row lg:gap-6"
+            className="lg:toc-open:gap-10 xl:toc-open:gap-20 relative flex flex-col justify-between gap-3 lg:flex-row lg:gap-6"
           >
             {showTableOfContents && (
               <ArticleSidebar>

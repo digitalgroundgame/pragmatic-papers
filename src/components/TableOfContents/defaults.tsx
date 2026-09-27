@@ -25,7 +25,6 @@ export const defaultResolvers: TableOfContentsResolverMap = {
     return {
       label: "Table",
       anchor,
-      depth: 1,
       icon: <TableIcon aria-hidden="true" className="text-muted-foreground size-3 shrink-0" />,
     }
   },

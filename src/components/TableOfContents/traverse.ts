@@ -141,6 +141,7 @@ export function collectEntries(
 ): TableOfContentsEntry[] {
   const mergedResolvers: TableOfContentsResolverMap = { ...defaultResolvers, ...resolvers }
   const entries: TableOfContentsEntry[] = []
+  let sectionDepth = 0
   const walk = (nodes: SerializedLexicalNode[] | undefined): void => {
     if (!nodes) return
     for (const node of nodes) {
@@ -149,7 +150,12 @@ export function collectEntries(
       if (resolver) {
         const entry = resolver(resolverPayloadFor(node))
         const anchor = entry?.anchor ?? (node as AnchoredNode).anchor
-        if (entry && anchor !== undefined) entries.push({ ...entry, anchor })
+        if (entry && anchor !== undefined) {
+          // Headings open a section; anything else without a depth nests inside it.
+          const depth = entry.depth ?? (node.type === "heading" ? 1 : sectionDepth + 1)
+          if (node.type === "heading") sectionDepth = depth
+          entries.push({ ...entry, anchor, depth })
+        }
       }
       walk((node as WithChildren).children)
     }

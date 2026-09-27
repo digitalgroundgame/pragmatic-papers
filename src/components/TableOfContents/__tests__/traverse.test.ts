@@ -153,6 +153,34 @@ describe("collectEntries – headings only", () => {
     expect(entries[2]!).toMatchObject({ label: "Notes", anchor: "notes", depth: 3 })
   })
 
+  it("nests a depthless entry under the heading before it", () => {
+    const state = makeState([
+      { type: "table", children: [] } as object,
+      heading("h2", "Section"),
+      heading("h3", "Subsection"),
+      { type: "table", children: [] } as object,
+      heading("h2", "Next"),
+      { type: "table", children: [] } as object,
+    ])
+    const depths = collectEntries(state).map((entry) => [entry.label, entry.depth])
+    expect(depths).toEqual([
+      ["Table", 1],
+      ["Section", 1],
+      ["Subsection", 2],
+      ["Table", 3],
+      ["Next", 1],
+      ["Table", 2],
+    ])
+  })
+
+  it("keeps a depth the resolver sets explicitly", () => {
+    const state = makeState([heading("h3", "Deep"), block("pinned", { id: "p" })])
+    const entries = collectEntries(state, {
+      pinned: () => ({ label: "Pinned", anchor: "p", depth: 1 }),
+    })
+    expect(entries[1]).toMatchObject({ label: "Pinned", depth: 1 })
+  })
+
   it("disambiguates duplicate heading text", () => {
     const state = makeState([heading("h2", "Overview"), heading("h2", "Overview")])
     const entries = collectEntries(state)
@@ -222,7 +250,7 @@ describe("collectEntries – caller resolvers", () => {
     const entries = collectEntries(state as unknown as SerializedEditorState, {
       map: () => ({ label: "Map" }),
     })
-    expect(entries).toEqual([{ label: "Map", anchor: "the-map" }])
+    expect(entries).toEqual([{ label: "Map", anchor: "the-map", depth: 1 }])
   })
 
   it("skips a block that has neither a resolver anchor nor a stamped one", () => {

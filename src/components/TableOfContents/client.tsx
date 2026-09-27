@@ -16,7 +16,7 @@ interface TableOfContentsIconProps {
 }
 
 function TableOfContentsIcon({ icon, isActive }: TableOfContentsIconProps): React.ReactNode {
-  const iconClass = "absolute top-1/2 right-full mr-0.5 -translate-y-1/2"
+  const iconClass = "absolute top-[0.5lh] right-full mr-0.5 -translate-y-1/2"
   if (React.isValidElement(icon)) {
     return React.cloneElement(
       icon as React.ReactElement<{ className?: string; "data-slot"?: string }>,

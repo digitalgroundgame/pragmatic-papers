@@ -113,7 +113,9 @@ export const Pages: CollectionConfig<"pages"> = {
               relationTo: "media",
             }),
 
-            MetaDescriptionField({}),
+            MetaDescriptionField({
+              hasGenerateFn: true,
+            }),
             PreviewField({
               // if the `generateUrl` function is configured
               hasGenerateFn: true,

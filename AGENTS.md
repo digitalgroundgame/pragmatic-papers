@@ -80,7 +80,7 @@ This file provides guidance to tools like Claude Code (claude.ai/code) when work
 
 - **redirectsPlugin** — redirects on pages, volumes, articles (admin currently hidden)
 - **nestedDocsPlugin** — nested docs on categories (breadcrumb URLs)
-- **seoPlugin** — SEO fields with custom `generateTitle` and `generateURL`
+- **seoPlugin** — `generateTitle`, `generateDescription` and `generateURL` for the SEO tab each collection builds itself. A collection must also be listed in the plugin's `collections`, or its Auto-generate buttons get a 403
 - **formBuilderPlugin** — form builder (admin currently hidden)
 - **s3Storage** — S3/Supabase media storage; falls back to local when `USE_LOCAL_STORAGE=true`
 

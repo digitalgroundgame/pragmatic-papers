@@ -1,11 +1,28 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite"
-import { expect, userEvent, waitFor, within } from "storybook/test"
+import { expect, screen, userEvent, waitFor, within } from "storybook/test"
 
-import { landscapeImage, portraitImage, squareImage, wideImage } from "@/stories/fixtures/media"
+import { mediaFixture, portraitImage, squareImage, wideImage } from "@/stories/fixtures/media"
+import {
+  createLinkNode,
+  createParagraph,
+  createTextNode,
+  richText,
+} from "@/stories/fixtures/richText"
 
 import { MediaCollageBlock } from "./component"
 
-const images = [landscapeImage, squareImage, portraitImage, wideImage].map((media, i) => ({
+// The first image carries a caption with a link: the grid hides captions, the
+// lightbox shows them.
+const captionedLandscape = mediaFixture({
+  caption: richText(
+    createParagraph([
+      createTextNode("The ridge above town. Photo: "),
+      createLinkNode("County Archive", "https://example.com/archive"),
+    ]),
+  ),
+})
+
+const images = [captionedLandscape, squareImage, portraitImage, wideImage].map((media, i) => ({
   id: `img-${i}`,
   media,
 }))
@@ -29,7 +46,28 @@ const meta = {
 export default meta
 type Story = StoryObj<typeof meta>
 
-export const Grid: Story = {}
+export const Grid: Story = {
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    const triggers = canvas.getAllByRole("button")
+    await expect(triggers).toHaveLength(images.length)
+    // Captions stay out of the grid, and never end up inside a trigger.
+    await expect(
+      canvas.getByRole("link", { name: "County Archive", hidden: true }),
+    ).not.toBeVisible()
+    for (const trigger of triggers) {
+      await expect(within(trigger).queryByRole("link")).not.toBeInTheDocument()
+    }
+
+    await userEvent.click(triggers[0]!)
+    const dialog = await screen.findByRole("dialog")
+    await expect(within(dialog).getByRole("img")).toHaveAttribute("alt", captionedLandscape.alt)
+    // The dialog fades in, so wait for its caption to become visible.
+    await waitFor(() =>
+      expect(within(dialog).getByRole("link", { name: "County Archive" })).toBeVisible(),
+    )
+  },
+}
 
 export const OddCount: Story = {
   args: { images: images.slice(0, 3) },

@@ -59,8 +59,30 @@ export const Lightbox: Story = {
   args: { media: captioned },
   render: (args) => <LightboxMediaBlock {...args} />,
   play: async ({ canvasElement }) => {
-    await userEvent.click(within(canvasElement).getByRole("button"))
+    const canvas = within(canvasElement)
+    const trigger = canvas.getByRole("button")
+    // Only the image opens the lightbox: the caption, and its links, sit outside the trigger.
+    await expect(within(trigger).getByRole("img")).toHaveAttribute("alt", captioned.alt)
+    await expect(within(trigger).queryByRole("link")).not.toBeInTheDocument()
+    await expect(canvas.getByRole("link", { name: "County Archive" })).toBeInTheDocument()
+
+    await userEvent.click(trigger)
     const dialog = await screen.findByRole("dialog")
     await expect(within(dialog).getByRole("img")).toHaveAttribute("alt", captioned.alt)
+  },
+}
+
+export const LightboxWithoutCaption: Story = {
+  render: (args) => <LightboxMediaBlock {...args} />,
+  play: async ({ canvasElement }) => {
+    const trigger = within(canvasElement).getByRole("button")
+    await expect(within(trigger).getByRole("img")).toHaveAttribute("alt", landscapeImage.alt)
+    // `picture` may only hold `<source>` and `<img>`, so the trigger needs a `figure` around it.
+    await expect(trigger.closest("picture")).not.toBeInTheDocument()
+    await expect(trigger.closest("figure")).toBeInTheDocument()
+
+    await userEvent.click(trigger)
+    const dialog = await screen.findByRole("dialog")
+    await expect(within(dialog).getByRole("img")).toHaveAttribute("alt", landscapeImage.alt)
   },
 }

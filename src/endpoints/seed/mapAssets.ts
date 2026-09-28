@@ -20,9 +20,10 @@ export async function createMapAssetFromFixture(
   sourceUrl?: string,
 ): Promise<MapAsset> {
   const data = await readFile(path.join(fixturesDir, fixtureFilename))
-  // Run-unique filename so re-seeding doesn't trip Payload's filename-increment path.
+  // Run-unique filename so re-seeding doesn't trip Payload's filename-increment path. Fixtures
+  // may live in a subdirectory; only the basename becomes the upload's filename.
   const file: File = {
-    name: `${Date.now()}-${fixtureFilename}`,
+    name: `${Date.now()}-${path.basename(fixtureFilename)}`,
     data,
     mimetype: "image/svg+xml",
     size: data.byteLength,

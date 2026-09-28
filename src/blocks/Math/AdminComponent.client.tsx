@@ -1,11 +1,12 @@
 "use client"
-import { MathJax } from "better-react-mathjax"
 import React from "react"
+
+import { TypesetMath } from "./TypesetMath"
 
 interface AdminMathBlockLabelProps {
   math: string
 }
 
 export const AdminMathBlockLabel: React.FC<AdminMathBlockLabelProps> = ({ math }) => {
-  return <MathJax inline>\({math}\)</MathJax>
+  return <TypesetMath inline>\({math}\)</TypesetMath>
 }

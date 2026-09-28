@@ -12,8 +12,8 @@ beforeAll(() => {
 })
 
 const { querySyndicatedArticles, querySyndicatedArticleBySlug } = await import("../queries")
-const feedRoute = await import("../route")
-const articleRoute = await import("../[slug]/route")
+const feedRoute = await import("../../substack.xml/route")
+const articleRoute = await import("../../[slug]/substack.xml/route")
 
 const article = (slug: string, title = `Title ${slug}`): Article =>
   ({
@@ -45,7 +45,7 @@ afterEach(() => {
   vi.resetAllMocks()
 })
 
-describe("GET /feed.substack", () => {
+describe("GET /articles/substack.xml", () => {
   it("serves every syndicated article as an RSS feed", async () => {
     vi.mocked(querySyndicatedArticles).mockResolvedValue([article("one"), article("two")])
 
@@ -74,7 +74,7 @@ describe("GET /feed.substack", () => {
   })
 })
 
-describe("GET /feed.substack/[slug]", () => {
+describe("GET /articles/[slug]/substack.xml", () => {
   it("serves a feed holding only the requested article", async () => {
     vi.mocked(querySyndicatedArticleBySlug).mockResolvedValue(article("one"))
 

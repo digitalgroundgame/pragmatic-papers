@@ -6,9 +6,9 @@ import { beforeAll, describe, expect, it } from "vitest"
 import {
   querySyndicatedArticleBySlug,
   querySyndicatedArticles,
-} from "@/app/(frontend)/feed.substack/queries"
-import * as articleRoute from "@/app/(frontend)/feed.substack/[slug]/route"
-import * as feedRoute from "@/app/(frontend)/feed.substack/route"
+} from "@/app/(frontend)/articles/_substack/queries"
+import * as articleRoute from "@/app/(frontend)/articles/[slug]/substack.xml/route"
+import * as feedRoute from "@/app/(frontend)/articles/substack.xml/route"
 import { ARTICLE_CONTENT } from "./fixtures/content"
 import { createUser, getPayload } from "./helpers/testUsers"
 

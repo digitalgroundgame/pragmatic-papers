@@ -10,8 +10,8 @@ const revalidateDoc = async (givenDoc: Article, payload: Payload) => {
   payload.logger.info(`Revalidating article at path: ${path}`)
   revalidatePath(path)
   revalidatePath("/feed.articles")
-  revalidatePath("/feed.substack")
-  revalidatePath(`/feed.substack/${givenDoc.slug}`)
+  revalidatePath("/articles/substack.xml")
+  revalidatePath(`/articles/${givenDoc.slug}/substack.xml`)
   revalidateTag("articles-sitemap", "max")
 
   // Find and revalidate all volumes that reference this article

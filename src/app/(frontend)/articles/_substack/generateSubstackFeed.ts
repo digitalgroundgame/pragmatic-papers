@@ -283,7 +283,7 @@ export const generateSubstackFeed = (articles: Article[]): string => {
     copyright: `All rights reserved ${new Date().getFullYear()}`,
     generator: SITE_NAME,
     updated: new Date(),
-    feedLinks: { rss: `${siteURL}/feed.substack` },
+    feedLinks: { rss: `${siteURL}/articles/substack.xml` },
   })
 
   for (const article of articles) {

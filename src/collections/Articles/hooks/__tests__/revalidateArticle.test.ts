@@ -31,8 +31,8 @@ describe("revalidateArticle", () => {
     expect(paths()).toEqual([
       "/articles/new-piece",
       "/feed.articles",
-      "/feed.substack",
-      "/feed.substack/new-piece",
+      "/articles/substack.xml",
+      "/articles/new-piece/substack.xml",
       "/volumes/volume-1",
     ])
     expect(revalidateTag).toHaveBeenCalledWith("articles-sitemap", "max")
@@ -45,8 +45,8 @@ describe("revalidateArticle", () => {
       req: req(),
     } as never)
 
-    expect(paths()).toContain("/feed.substack")
-    expect(paths()).toContain("/feed.substack/pulled")
+    expect(paths()).toContain("/articles/substack.xml")
+    expect(paths()).toContain("/articles/pulled/substack.xml")
   })
 
   it("also refreshes the old slug's paths when a published article is renamed", async () => {
@@ -59,9 +59,9 @@ describe("revalidateArticle", () => {
     expect(paths()).toEqual(
       expect.arrayContaining([
         "/articles/new-slug",
-        "/feed.substack/new-slug",
+        "/articles/new-slug/substack.xml",
         "/articles/old-slug",
-        "/feed.substack/old-slug",
+        "/articles/old-slug/substack.xml",
       ]),
     )
   })
@@ -73,7 +73,7 @@ describe("revalidateArticle", () => {
       req: req(),
     } as never)
 
-    expect(paths().filter((path) => path === "/feed.substack/same")).toHaveLength(1)
+    expect(paths().filter((path) => path === "/articles/same/substack.xml")).toHaveLength(1)
   })
 
   it("does nothing for a draft that was never published", async () => {
@@ -101,7 +101,7 @@ describe("revalidateDelete", () => {
   it("refreshes the deleted article's feed paths", async () => {
     await revalidateDelete({ doc: doc("gone", "published"), req: req() } as never)
 
-    expect(paths()).toContain("/feed.substack")
-    expect(paths()).toContain("/feed.substack/gone")
+    expect(paths()).toContain("/articles/substack.xml")
+    expect(paths()).toContain("/articles/gone/substack.xml")
   })
 })

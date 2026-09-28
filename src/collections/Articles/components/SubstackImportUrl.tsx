@@ -13,7 +13,7 @@ export const SubstackImportUrl: React.FC = () => {
 
   if (!slug) return null
 
-  const url = `${getClientSideURL()}/feed.substack/${encodeURIComponent(slug)}`
+  const url = `${getClientSideURL()}/articles/${encodeURIComponent(slug)}/substack.xml`
 
   const copy = async (): Promise<void> => {
     try {

@@ -1,5 +1,8 @@
-import { generateSubstackFeed } from "../generateSubstackFeed"
-import { querySyndicatedArticleBySlug, querySyndicatedArticles } from "../queries"
+import { generateSubstackFeed } from "@/app/(frontend)/articles/_substack/generateSubstackFeed"
+import {
+  querySyndicatedArticleBySlug,
+  querySyndicatedArticles,
+} from "@/app/(frontend)/articles/_substack/queries"
 
 interface Args {
   params: Promise<{ slug: string }>
@@ -7,7 +10,7 @@ interface Args {
 
 /**
  * A feed holding one article, so an editor can import exactly that post into
- * Substack without re-importing everything else in `/feed.substack`.
+ * Substack without re-importing everything else in `/articles/substack.xml`.
  */
 export async function GET(_request: Request, { params }: Args): Promise<Response> {
   const { slug } = await params

@@ -1,6 +1,6 @@
 // @vitest-environment node
 import configPromise from "@payload-config"
-import { createSubstackConverters } from "@/app/(frontend)/feed.substack/generateSubstackFeed"
+import { createSubstackConverters } from "@/app/(frontend)/articles/_substack/generateSubstackFeed"
 import { createHtmlConverters } from "@/utilities/generateRssFeed"
 import {
   convertLexicalToHTML,
@@ -34,7 +34,7 @@ const FEED_FIELDS = [
     factory: "createHtmlConverters",
   },
   {
-    feed: "feed.substack",
+    feed: "articles/substack.xml",
     collection: "articles",
     field: "content",
     converters: resolve(createSubstackConverters),

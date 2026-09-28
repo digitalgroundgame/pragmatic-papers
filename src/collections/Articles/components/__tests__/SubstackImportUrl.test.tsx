@@ -22,7 +22,7 @@ vi.mock("@payloadcms/ui", () => ({
 
 import { SubstackImportUrl } from "../SubstackImportUrl"
 
-const expectedUrl = `${window.location.origin}/feed.substack/my-article`
+const expectedUrl = `${window.location.origin}/articles/my-article/substack.xml`
 
 describe("SubstackImportUrl", () => {
   afterEach(() => {

@@ -1,5 +1,5 @@
-import { generateSubstackFeed } from "./generateSubstackFeed"
-import { querySyndicatedArticles } from "./queries"
+import { generateSubstackFeed } from "@/app/(frontend)/articles/_substack/generateSubstackFeed"
+import { querySyndicatedArticles } from "@/app/(frontend)/articles/_substack/queries"
 
 export async function GET(): Promise<Response> {
   const articles = await querySyndicatedArticles()

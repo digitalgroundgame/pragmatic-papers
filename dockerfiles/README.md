@@ -4,6 +4,8 @@ Docker configurations for deploying applications to staging, preview, and produc
 
 > **For local development**, see the docker-compose files in individual application directories.
 
+> **For how Coolify itself works** (settings, build secrets, previews, cleanup), see the vendored Coolify docs in [`docs/vendor/coolify/`](../docs/vendor/coolify/README.md). This file covers how _our_ applications use it.
+
 ## 📦 Files
 
 **Dockerfiles:**

@@ -261,6 +261,22 @@ sitemap is empty, and the daily sync skips. Validate a file before
 committing or uploading it:
 `pnpm tsx .claude/skills/interactive-maps/validate-map-svg.ts <file.svg> [--mode geometry]`.
 
+## Hosting (Coolify)
+
+The site is built and hosted by Coolify, from `dockerfiles/PragmaticPapers.Dockerfile`:
+a **development** application (staging, from `dev`, plus a preview per PR) and a
+**production** application (from `main`).
+`dockerfiles/README.md` records how _our_ applications are set up and what's been
+verified about them; read it first. For how Coolify itself works (environment variables
+and build secrets, preview deployments, Docker cleanup, build servers, scheduled tasks),
+read the vendored docs in `docs/vendor/coolify/` (index: `docs/vendor/coolify/README.md`)
+instead of fetching coolify.io, which cloud sessions can't reach. Refresh them with
+`pnpm docs:coolify`; add a page by listing it in `docs/vendor/coolify/manifest.json`.
+For a page that isn't vendored, read it at the manifest's commit from
+`https://raw.githubusercontent.com/coollabsio/coolify-docs/<commit>/content/docs/<path>`,
+or `git clone --depth 1 --filter=blob:none --sparse https://github.com/coollabsio/coolify-docs`.
+Both work in cloud sessions; the GitHub MCP tools don't, since they only cover this repo.
+
 ## Claude review gate
 
 PRs into `dev` need the **Review acknowledged** check (`review-ack.yml`) on

@@ -438,6 +438,10 @@ export interface Article {
   publishedAt?: string | null;
   authors?: (number | User)[] | null;
   topics?: (number | Topic)[] | null;
+  /**
+   * Adds the published article to the Substack import feed. Takes effect once the article is published.
+   */
+  syndicateToSubstack?: boolean | null;
   createdBy?: (number | null) | User;
   updatedAt: string;
   createdAt: string;
@@ -1506,11 +1510,7 @@ export interface PayloadJob {
         executedAt: string;
         completedAt: string;
         taskSlug:
-          | 'inline'
-          | 'updateRecommendations'
-          | 'syncShopifyProducts'
-          | 'syncInteractiveData'
-          | 'schedulePublish';
+          'inline' | 'updateRecommendations' | 'syncShopifyProducts' | 'syncInteractiveData' | 'schedulePublish';
         taskID: string;
         input?:
           | {
@@ -1544,8 +1544,7 @@ export interface PayloadJob {
       }[]
     | null;
   taskSlug?:
-    | ('inline' | 'updateRecommendations' | 'syncShopifyProducts' | 'syncInteractiveData' | 'schedulePublish')
-    | null;
+    ('inline' | 'updateRecommendations' | 'syncShopifyProducts' | 'syncInteractiveData' | 'schedulePublish') | null;
   queue?: string | null;
   waitUntil?: string | null;
   processing?: boolean | null;
@@ -1922,6 +1921,7 @@ export interface ArticlesSelect<T extends boolean = true> {
   publishedAt?: T;
   authors?: T;
   topics?: T;
+  syndicateToSubstack?: T;
   createdBy?: T;
   updatedAt?: T;
   createdAt?: T;

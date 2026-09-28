@@ -4908,6 +4908,13 @@
           "primaryKey": false,
           "notNull": false
         },
+        "syndicate_to_substack": {
+          "name": "syndicate_to_substack",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": false
+        },
         "created_by_id": {
           "name": "created_by_id",
           "type": "integer",
@@ -5561,6 +5568,13 @@
           "type": "timestamp(3) with time zone",
           "primaryKey": false,
           "notNull": false
+        },
+        "version_syndicate_to_substack": {
+          "name": "version_syndicate_to_substack",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": false
         },
         "version_created_by_id": {
           "name": "version_created_by_id",
@@ -16377,6 +16391,6 @@
     "tables": {},
     "columns": {}
   },
-  "id": "0b7edafb-0269-4c47-b5d9-2f58d9c4debd",
+  "id": "54be8c5b-8974-4a40-9328-d83dc5bd3236",
   "prevId": "00000000-0000-0000-0000-000000000000"
 }

@@ -22,8 +22,9 @@ concurrency:
 jobs:
   # Decides which path-sensitive jobs below a PR needs. Only PRs are filtered:
   # on pushes to main/dev and in the merge queue this job does nothing, and the
-  # jobs gated on it run in full. A job skipped by its `if` reports "skipped", which a required
-  # status check accepts, so gating a required job here never blocks a PR.
+  # jobs gated on it run in full. A job skipped by its `if` reports "skipped",
+  # which a required status check accepts, so gating a required job here never
+  # blocks a PR.
   changes:
     name: Detect changes
     runs-on: ubuntu-latest
@@ -31,6 +32,7 @@ jobs:
       pull-requests: read
     outputs:
       storybook: ${{ steps.filter.outputs.storybook }}
+      integration: ${{ steps.filter.outputs.integration }}
 
     steps:
       # On pull_request the filter lists changed files through the API, so
@@ -40,18 +42,41 @@ jobs:
         id: filter
         with:
           predicate-quantifier: some-with-excludes
-          # A skip-list, not an allow-list: stories import from all over src/,
-          # and the Storybook build exists to catch a server-only module
-          # reaching the browser, which a change anywhere in src/ can cause.
-          # So everything counts except paths no story or the Storybook build
-          # can reach. When in doubt, leave a path out of this list.
+          # Each filter is a skip-list, not an allow-list: a job runs unless
+          # every changed file matches one of its "!" patterns. List only
+          # paths the job provably can't reach; when in doubt, leave a path
+          # out, since a missed skip costs minutes and a wrong one a broken dev.
           filters: |
+            # Stories import from all over src/, and the Storybook build
+            # exists to catch a server-only module reaching the browser, which
+            # a change anywhere in src/ can cause.
             storybook:
               - "**"
               - "!**/*.md"
               - "!.claude/**"
               - "!tests/**"
               - "!src/migrations/**"
+              - "!.github/*"
+              - "!.github/workflows/!(ci).yml"
+              - "!dockerfiles/**"
+              - "!docker-compose*.yml"
+              - "!devenv.*"
+              - "!playwright.config.ts"
+              - "!scripts/*.go"
+              - "!scripts/go.*"
+            # The integration tests load the real Payload config and run every
+            # migration, so all of src/ counts except stories, which nothing
+            # outside Storybook imports.
+            integration:
+              - "**"
+              - "!**/*.md"
+              - "!**/*.mdx"
+              - "!**/*.stories.@(ts|tsx)"
+              - "!src/stories/**"
+              - "!.storybook/**"
+              - "!.claude/**"
+              - "!tests/e2e/**"
+              - "!tests/scripts/**"
               - "!.github/*"
               - "!.github/workflows/!(ci).yml"
               - "!dockerfiles/**"
@@ -165,6 +190,8 @@ jobs:
 
   integration-tests:
     name: Integration tests
+    needs: changes
+    if: github.event_name != 'pull_request' || needs.changes.outputs.integration == 'true'
     runs-on: ubuntu-latest
 
     env:

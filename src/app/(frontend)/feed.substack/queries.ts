@@ -13,8 +13,6 @@ export const querySyndicatedArticles = cache(async (): Promise<Article[]> => {
   const articles = await payload.find({
     collection: "articles",
     draft: false,
-    // No cap: this feed backfills every opted-in article, and a cap would
-    // silently drop the oldest from a one-time import.
     limit: 0,
     overrideAccess: false,
     pagination: false,

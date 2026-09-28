@@ -2,7 +2,7 @@ import type { CollectionAfterChangeHook, CollectionAfterDeleteHook, Payload } fr
 
 import { revalidatePath, revalidateTag } from "next/cache"
 
-import type { Article } from "../../../payload-types"
+import type { Article } from "@/payload-types"
 
 const revalidateDoc = async (givenDoc: Article, payload: Payload) => {
   const path = `/articles/${givenDoc.slug}`

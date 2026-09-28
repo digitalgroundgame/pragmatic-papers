@@ -1,7 +1,6 @@
-import { userFixture } from "@/stories/fixtures/docs"
 import { fireEvent, render, screen } from "@testing-library/react"
 import { afterEach, describe, expect, it, vi } from "vitest"
-import { makeSummary } from "./fixtures"
+import { makeSummary, userFixture } from "./fixtures"
 
 vi.mock("@/components/Media", async () => (await import("./mediaStub")).mediaStub)
 vi.mock("@/utilities/getURL", () => ({ getClientSideURL: () => "https://example.com" }))

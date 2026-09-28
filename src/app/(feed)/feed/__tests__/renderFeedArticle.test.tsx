@@ -1,9 +1,8 @@
-import { landscapeImage } from "@/stories/fixtures/media"
 import { render, screen } from "@testing-library/react"
 import React from "react"
 import { describe, expect, it, vi } from "vitest"
 import type { LexicalNode } from "../types"
-import { block, makeFeedArticle, paragraph } from "./fixtures"
+import { block, landscapeImage, makeFeedArticle, paragraph } from "./fixtures"
 
 vi.mock("server-only", () => ({}))
 vi.mock("@/components/Media", async () => (await import("./mediaStub")).mediaStub)

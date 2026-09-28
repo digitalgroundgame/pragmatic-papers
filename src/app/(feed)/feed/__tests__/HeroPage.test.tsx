@@ -1,8 +1,6 @@
-import { topicFixture, userFixture } from "@/stories/fixtures/docs"
-import { landscapeImage } from "@/stories/fixtures/media"
 import { render, screen } from "@testing-library/react"
 import { describe, expect, it, vi } from "vitest"
-import { makeSummary } from "./fixtures"
+import { landscapeImage, makeSummary, topicFixture, userFixture } from "./fixtures"
 
 vi.mock("@/components/Media", async () => (await import("./mediaStub")).mediaStub)
 

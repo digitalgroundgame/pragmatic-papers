@@ -6,10 +6,10 @@ import type { User } from "@/payload-types"
 import { isResolved } from "@/utilities/relationships"
 import { cn } from "@/utilities/utils"
 import React, { useEffect, useRef, useState } from "react"
-import type { FeedArticle } from "./types"
+import type { FeedArticleSummary } from "./types"
 
 interface FeedBylineProps {
-  article: FeedArticle
+  article: FeedArticleSummary
   className?: string
 }
 

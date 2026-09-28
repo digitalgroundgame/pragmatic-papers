@@ -1,10 +1,8 @@
-"use client"
-
 import RichText from "@/components/RichText"
 import { SquiggleStatic } from "@/components/ui/squiggle"
 import type { DefaultTypedEditorState } from "@payloadcms/richtext-lexical"
 import React from "react"
-import { getFeedBlockBehavior } from "./blocks/registry"
+import { renderFeedBlock } from "./blocks/renderers"
 import type { ArticlePageItem, FeedArticle, LexicalNode } from "./types"
 
 function makeRoot(nodes: LexicalNode[]): DefaultTypedEditorState {
@@ -80,7 +78,7 @@ export function ArticleBlockPage({
   if (page.kind !== "block") return null
 
   const heading = page.headingNode ? headingText(page.headingNode) : null
-  const FeedComponent = getFeedBlockBehavior(page.blockType).FeedComponent
+  const feedBlock = renderFeedBlock(page.blockType, { node: page.node, article })
 
   return (
     <div className="bg-background text-foreground relative flex h-full w-full flex-col overflow-hidden">
@@ -101,9 +99,7 @@ export function ArticleBlockPage({
         }}
       >
         <div className="feed-prose w-full max-w-3xl">
-          {FeedComponent ? (
-            <FeedComponent node={page.node} article={article} />
-          ) : (
+          {feedBlock ?? (
             <RichText
               data={makeRoot([page.node])}
               enableGutter={false}

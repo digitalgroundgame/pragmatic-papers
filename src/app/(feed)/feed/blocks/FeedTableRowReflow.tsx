@@ -1,13 +1,8 @@
-"use client"
-
 import RichText from "@/components/RichText"
 import type { DefaultTypedEditorState } from "@payloadcms/richtext-lexical"
 import React from "react"
 import type { LexicalNode } from "../types"
-
-interface FeedTableRowReflowProps {
-  node: LexicalNode
-}
+import type { FeedBlockRenderer } from "./types"
 
 function isColumnHeaderRow(row: LexicalNode): boolean {
   const cells = (row.children ?? []) as LexicalNode[]
@@ -46,7 +41,7 @@ function cellPlainText(cell: LexicalNode): string {
   return collect(cell).trim()
 }
 
-export function FeedTableRowReflow({ node }: FeedTableRowReflowProps): React.ReactNode {
+export const FeedTableRowReflow: FeedBlockRenderer = ({ node }) => {
   const rows = (Array.isArray(node.children) ? (node.children as LexicalNode[]) : []).filter(
     (r) => r.type === "tablerow",
   )

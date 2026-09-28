@@ -6,10 +6,10 @@ import { formatDateTime } from "@/utilities/formatDateTime"
 import { isResolved } from "@/utilities/relationships"
 import React from "react"
 import { FeedActionColumn } from "./FeedActionColumn"
-import type { FeedArticle } from "./types"
+import type { FeedArticleSummary } from "./types"
 
 interface HeroPageProps {
-  article: FeedArticle
+  article: FeedArticleSummary
   topInset: number
 }
 

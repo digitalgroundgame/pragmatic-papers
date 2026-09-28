@@ -4,6 +4,7 @@ import type { Metadata } from "next"
 import React from "react"
 import { FeedShell } from "./FeedShell"
 import { getFeedBatch } from "./getFeedBatch"
+import { renderFeedArticle } from "./renderFeedArticle"
 
 export const metadata: Metadata = {
   title: "Feed · Pragmatic Papers",
@@ -34,5 +35,10 @@ export default async function FeedPage(): Promise<React.ReactNode> {
     )
   }
 
-  return <FeedShell initialItems={batch.items} initialNextCursor={batch.nextCursor} />
+  return (
+    <FeedShell
+      initialItems={batch.items.map(renderFeedArticle)}
+      initialNextCursor={batch.nextCursor}
+    />
+  )
 }

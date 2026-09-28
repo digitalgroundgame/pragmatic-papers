@@ -17,8 +17,12 @@ export interface FeedBlockBehavior {
 
   /** Auto-play dwell in ms for this block's page. Defaults to 6000ms. */
   durationMs?: number
-
-  /** Optional feed-specific React renderer. When omitted, the block falls
-   *  back to the global RichText JSX converters. */
-  FeedComponent?: React.FC<{ node: LexicalNode; article: FeedArticle }>
 }
+
+/** A feed-specific renderer for one block page. Runs on the server, so it may
+ *  be async and may render RichText. Wired up in `renderers.tsx`; blocks
+ *  without one fall back to the global RichText JSX converters. */
+export type FeedBlockRenderer = (props: {
+  node: LexicalNode
+  article: FeedArticle
+}) => React.ReactNode | Promise<React.ReactNode>

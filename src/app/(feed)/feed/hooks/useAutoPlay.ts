@@ -1,26 +1,7 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
-import { getFeedBlockBehavior } from "../blocks/registry"
-import type { ArticlePageItem } from "../types"
-
-const WPM = 220
-const MIN_MS = 3500
-const HERO_MS = 4500
-const BLOCK_MS = 6000
-
-export function getPageDurationMs(page: ArticlePageItem): number {
-  switch (page.kind) {
-    case "hero":
-      return HERO_MS
-    case "content": {
-      const fromWords = (page.wordCount / WPM) * 60_000
-      return Math.max(MIN_MS, fromWords)
-    }
-    case "block":
-      return getFeedBlockBehavior(page.blockType).durationMs ?? BLOCK_MS
-  }
-}
+import type { FeedPageMeta } from "../types"
 
 function prefersReducedMotion(): boolean {
   if (typeof window === "undefined") return false
@@ -35,7 +16,7 @@ export function useAutoPlay({
 }: {
   active: boolean
   enabled: boolean
-  page: ArticlePageItem | undefined
+  page: FeedPageMeta | undefined
   onAdvance: () => void
 }): { progress: number } {
   const [progress, setProgress] = useState(0)
@@ -44,7 +25,7 @@ export function useAutoPlay({
   // before the RAF-driven update can paint a frame of stale fill.
   // See https://react.dev/learn/you-might-not-need-an-effect#adjusting-some-state-when-a-prop-changes
   const [lastResetKey, setLastResetKey] = useState<{
-    page: ArticlePageItem | undefined
+    page: FeedPageMeta | undefined
     active: boolean
   }>({ page, active })
   if (lastResetKey.page !== page || lastResetKey.active !== active) {
@@ -69,7 +50,7 @@ export function useAutoPlay({
   useEffect(() => {
     if (!page) return
 
-    const duration = getPageDurationMs(page)
+    const duration = page.durationMs
 
     if (!active || !enabled || prefersReducedMotion()) {
       // Paused — sync the displayed progress to the preserved elapsed value and stop.

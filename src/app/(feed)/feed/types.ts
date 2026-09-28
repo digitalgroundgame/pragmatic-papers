@@ -1,4 +1,5 @@
 import type { Article, Volume } from "@/payload-types"
+import type React from "react"
 import type { AdSlot } from "./ads/registry"
 
 export type { AdSlot } from "./ads/registry"
@@ -48,10 +49,37 @@ export interface BlockPageKind {
 
 export type ArticlePageItem = HeroPageKind | ProseChunk | BlockPageKind
 
-export interface FeedBatch {
+/** What the client needs of an article: the body is already rendered. */
+export type FeedArticleSummary = Omit<FeedArticle, "content" | "footnotes">
+
+/** The client's view of a page: enough to lay out the pager and time auto-play. */
+export interface FeedPageMeta {
+  kind: ArticlePageItem["kind"]
+  durationMs: number
+}
+
+/**
+ * An article with every page rendered on the server. `bodies[i]` is page i's
+ * content, or null for the hero, which the client draws from `article`.
+ * Rich text is server-only (its blocks query Payload), so the client never
+ * renders article content itself.
+ */
+export interface RenderedFeedArticle {
+  article: FeedArticleSummary
+  pages: FeedPageMeta[]
+  bodies: React.ReactNode[]
+}
+
+export interface FeedArticleBatch {
   items: FeedArticle[]
   nextCursor: number | null
 }
 
+export interface FeedBatch {
+  items: RenderedFeedArticle[]
+  nextCursor: number | null
+}
+
 export type FeedSlot =
-  { kind: "article"; key: string; article: FeedArticle } | { kind: "ad"; key: string; ad: AdSlot }
+  | { kind: "article"; key: string; article: RenderedFeedArticle }
+  | { kind: "ad"; key: string; ad: AdSlot }

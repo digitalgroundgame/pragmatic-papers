@@ -11,7 +11,7 @@ interface FullscreenMediaProps {
 
 // The "opened lightbox" presentation of a single piece of media —
 // image scaled to viewport, caption in a scrollable footer underneath.
-// Shared between the feed's mediaBlock FeedComponent and the
+// Shared between the feed's mediaBlock renderer (MediaBlockFeed) and the
 // LightboxMediaBlock dialog content so both surfaces look identical.
 export const FullscreenMedia: React.FC<FullscreenMediaProps> = ({ media, className }) => {
   return (

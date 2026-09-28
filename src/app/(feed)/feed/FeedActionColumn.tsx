@@ -10,10 +10,10 @@ import { cn } from "@/utilities/utils"
 import { Share2 } from "lucide-react"
 import Link from "next/link"
 import React, { useCallback } from "react"
-import type { FeedArticle } from "./types"
+import type { FeedArticleSummary } from "./types"
 
 interface FeedActionColumnProps {
-  article: FeedArticle
+  article: FeedArticleSummary
 }
 
 type ResolvedAuthor = User

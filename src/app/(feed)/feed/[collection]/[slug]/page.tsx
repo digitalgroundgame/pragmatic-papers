@@ -3,7 +3,8 @@ import type { Metadata } from "next"
 import { notFound } from "next/navigation"
 import React from "react"
 import { FeedShell } from "../../FeedShell"
-import { getFeedBatch } from "../../getFeedBatch"
+import { getFeedBatch, withVolumes } from "../../getFeedBatch"
+import { renderFeedArticle } from "../../renderFeedArticle"
 import type { FeedArticle } from "../../types"
 
 export const metadata: Metadata = {
@@ -31,7 +32,7 @@ export default async function DeepLinkFeedPage({
   const article = await queryArticleBySlug(slug)
   if (!article) return notFound()
 
-  const target = article as unknown as FeedArticle
+  const [target] = (await withVolumes([article])) as [FeedArticle]
 
   const batch = await getFeedBatch({ cursor: 1 })
   const filtered = batch.items.filter((a) => a.id !== target.id)
@@ -43,7 +44,7 @@ export default async function DeepLinkFeedPage({
 
   return (
     <FeedShell
-      initialItems={items}
+      initialItems={items.map(renderFeedArticle)}
       initialNextCursor={batch.nextCursor}
       initialPinnedArticleId={target.id}
       initialPageIndex={initialPageIndex}

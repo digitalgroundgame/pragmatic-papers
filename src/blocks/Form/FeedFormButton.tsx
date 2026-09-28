@@ -1,7 +1,6 @@
 "use client"
 
 import { useFeedAutoPlay } from "@/app/(feed)/feed/hooks/useFeedAutoPlay"
-import type { LexicalNode } from "@/app/(feed)/feed/types"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -10,24 +9,15 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
-import type { Form } from "@/payload-types"
-import type { DefaultTypedEditorState } from "@payloadcms/richtext-lexical"
 import React, { useEffect, useState } from "react"
-import { FormBlockClient } from "./FormBlockClient"
 
 interface FeedFormButtonProps {
-  node: LexicalNode
+  triggerLabel: string
+  /** The server-rendered form (see `FeedFormBlock`). */
+  children: React.ReactNode
 }
 
-interface FormBlockFields {
-  form?: Form | number | null
-  enableIntro?: boolean | null
-  introContent?: DefaultTypedEditorState | null
-}
-
-export const FeedFormButton: React.FC<FeedFormButtonProps> = ({ node }) => {
-  const fields = (node.fields as FormBlockFields | undefined) ?? {}
-  const { form, enableIntro, introContent } = fields
+export const FeedFormButton: React.FC<FeedFormButtonProps> = ({ triggerLabel, children }) => {
   const [open, setOpen] = useState(false)
   const { pauseAutoPlay, resumeAutoPlay } = useFeedAutoPlay()
 
@@ -38,12 +28,6 @@ export const FeedFormButton: React.FC<FeedFormButtonProps> = ({ node }) => {
     pauseAutoPlay()
     return () => resumeAutoPlay()
   }, [open, pauseAutoPlay, resumeAutoPlay])
-
-  if (!form || typeof form === "number") {
-    return null
-  }
-
-  const triggerLabel = form.title || form.submitButtonLabel || "Open form"
 
   return (
     <div className="flex h-full w-full flex-col items-center justify-center gap-4 px-6 text-center">
@@ -60,11 +44,7 @@ export const FeedFormButton: React.FC<FeedFormButtonProps> = ({ node }) => {
           <DialogHeader>
             <DialogTitle>{triggerLabel}</DialogTitle>
           </DialogHeader>
-          <FormBlockClient
-            form={form}
-            enableIntro={enableIntro}
-            introContent={introContent ?? null}
-          />
+          {children}
         </DialogContent>
       </Dialog>
     </div>

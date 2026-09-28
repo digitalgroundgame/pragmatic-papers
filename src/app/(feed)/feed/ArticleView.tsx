@@ -5,17 +5,16 @@ import { cn } from "@/utilities/utils"
 import useEmblaCarousel from "embla-carousel-react"
 import { Pause, Play } from "lucide-react"
 import React, { useCallback, useEffect, useRef, useState } from "react"
-import { ArticleBlockPage, ArticleContentPage } from "./ArticlePage"
+import { FEED_TOP_INSET } from "./constants"
 import { FeedByline } from "./FeedByline"
 import { FeedSettingsMenu } from "./FeedSettingsMenu"
 import { HeroPage } from "./HeroPage"
 import { PageProgress } from "./PageProgress"
-import { useArticlePages } from "./hooks/useArticlePages"
 import { useAutoPlay } from "./hooks/useAutoPlay"
-import type { ArticlePageItem, FeedArticle } from "./types"
+import type { FeedPageMeta, RenderedFeedArticle } from "./types"
 
 interface ArticleViewProps {
-  article: FeedArticle
+  article: RenderedFeedArticle
   active: boolean
   initialPage: number
   /** The effective enabled flag (user toggle AND no interaction pause). */
@@ -27,7 +26,6 @@ interface ArticleViewProps {
   onEndReached: () => void
 }
 
-const TOP_INSET = 64 // progress bar + article byline row + breathing room
 const SWIPE_PAST_END_PX = 60 // forward-swipe distance that triggers next-article on last page
 const TAP_MAX_MOVE_PX = 8 // pointer movement under this counts as a tap, not a drag
 const TAP_MAX_MS = 350 // and only if the press is shorter than this
@@ -36,7 +34,7 @@ const TAP_INDICATOR_MS = 600 // how long the play/pause flash stays visible
 const INTERACTIVE_SEL = 'button, a, [role="tab"], [role="button"], input, textarea, select, label'
 
 export function ArticleView({
-  article,
+  article: rendered,
   active,
   initialPage,
   autoPlayEnabled,
@@ -45,7 +43,7 @@ export function ArticleView({
   onPageChange,
   onEndReached,
 }: ArticleViewProps): React.ReactNode {
-  const pages = useArticlePages(article)
+  const { article, pages, bodies } = rendered
   const [emblaRef, emblaApi] = useEmblaCarousel({
     axis: "x",
     loop: false,
@@ -96,7 +94,7 @@ export function ArticleView({
     }
   }, [emblaApi])
 
-  const currentPage: ArticlePageItem | undefined = pages[pageIndex]
+  const currentPage: FeedPageMeta | undefined = pages[pageIndex]
   const { progress } = useAutoPlay({
     active,
     enabled: autoPlayEnabled,
@@ -175,7 +173,6 @@ export function ArticleView({
       <div ref={emblaRef} className="h-full overflow-hidden">
         <div className="flex h-full" style={{ touchAction: "pan-y pinch-zoom" }}>
           {pages.map((page, i) => {
-            const isLast = i === pages.length - 1
             return (
               <div
                 key={i}
@@ -184,22 +181,10 @@ export function ArticleView({
                 aria-roledescription="page"
                 aria-label={`Page ${i + 1} of ${pages.length}`}
               >
-                {page.kind === "hero" && <HeroPage article={article} topInset={TOP_INSET} />}
-                {page.kind === "content" && (
-                  <ArticleContentPage
-                    article={article}
-                    page={page}
-                    topInset={TOP_INSET}
-                    isLast={isLast}
-                  />
-                )}
-                {page.kind === "block" && (
-                  <ArticleBlockPage
-                    article={article}
-                    page={page}
-                    topInset={TOP_INSET}
-                    isLast={isLast}
-                  />
+                {page.kind === "hero" ? (
+                  <HeroPage article={article} topInset={FEED_TOP_INSET} />
+                ) : (
+                  bodies[i]
                 )}
               </div>
             )

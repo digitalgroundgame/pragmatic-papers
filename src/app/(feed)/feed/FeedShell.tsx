@@ -6,10 +6,11 @@ import { ArticleView } from "./ArticleView"
 import { FEED_AD_INTERVAL, FEED_ADS } from "./ads/registry"
 import { FeedShellContext, type FeedShellContextValue } from "./FeedShellContext"
 import { usePageMemory } from "./hooks/usePageMemory"
-import type { FeedArticle, FeedBatch, FeedSlot } from "./types"
+import { loadFeedBatch } from "./actions"
+import type { FeedSlot, RenderedFeedArticle } from "./types"
 
 interface FeedShellProps {
-  initialItems: FeedArticle[]
+  initialItems: RenderedFeedArticle[]
   initialNextCursor: number | null
   /** Article to open on mount; seeds page memory and overrides the initial scroll. */
   initialPinnedArticleId?: number
@@ -23,7 +24,7 @@ export function FeedShell({
   initialPinnedArticleId,
   initialPageIndex,
 }: FeedShellProps): React.ReactNode {
-  const [articles, setArticles] = useState<FeedArticle[]>(initialItems)
+  const [articles, setArticles] = useState<RenderedFeedArticle[]>(initialItems)
   const [nextCursor, setNextCursor] = useState<number | null>(initialNextCursor)
   const [activeIndex, setActiveIndex] = useState(0)
   // Auto-play is always on at session start. Tap-to-pause is session-only:
@@ -60,14 +61,14 @@ export function FeedShell({
     if (FEED_ADS.length === 0 || FEED_AD_INTERVAL <= 0) {
       return articles.map((article) => ({
         kind: "article" as const,
-        key: `a:${article.id}`,
+        key: `a:${article.article.id}`,
         article,
       }))
     }
     const out: FeedSlot[] = []
     let adCursor = 0
     articles.forEach((article, i) => {
-      out.push({ kind: "article", key: `a:${article.id}`, article })
+      out.push({ kind: "article", key: `a:${article.article.id}`, article })
       if ((i + 1) % FEED_AD_INTERVAL === 0) {
         const ad = FEED_ADS[adCursor % FEED_ADS.length]!
         out.push({ kind: "ad", key: `ad:${ad.id}:${i}`, ad })
@@ -110,14 +111,12 @@ export function FeedShell({
     if (loadingMoreRef.current || nextCursor === null) return
     loadingMoreRef.current = true
     try {
-      const res = await fetch(`/api/feed?cursor=${nextCursor}`, { cache: "no-store" })
-      if (!res.ok) return
-      const batch = (await res.json()) as FeedBatch
+      const batch = await loadFeedBatch(nextCursor)
       setArticles((prev) => {
-        const seen = new Set(prev.map((a) => a.id))
+        const seen = new Set(prev.map((a) => a.article.id))
         const merged = [...prev]
         for (const item of batch.items) {
-          if (!seen.has(item.id)) merged.push(item)
+          if (!seen.has(item.article.id)) merged.push(item)
         }
         return merged
       })
@@ -147,7 +146,7 @@ export function FeedShell({
   useEffect(() => {
     const slot = slots[activeIndex]
     if (!slot || slot.kind !== "article") return
-    const slug = slot.article.slug
+    const slug = slot.article.article.slug
     if (!slug) return
 
     if (urlSyncTimerRef.current !== null) window.clearTimeout(urlSyncTimerRef.current)
@@ -176,7 +175,7 @@ export function FeedShell({
     setLastActiveSlotKey(currentSlotKey)
     const slot = slots[activeIndex]
     if (slot?.kind === "article") {
-      const remembered = memory.get(slot.article.id)
+      const remembered = memory.get(slot.article.article.id)
       if (remembered !== activePageIndex) setActivePageIndex(remembered)
     }
   }
@@ -255,11 +254,13 @@ export function FeedShell({
                     <ArticleView
                       article={slot.article}
                       active={i === activeIndex}
-                      initialPage={memory.get(slot.article.id)}
+                      initialPage={memory.get(slot.article.article.id)}
                       autoPlayEnabled={effectiveAutoPlay}
                       userAutoPlayEnabled={autoPlayEnabled}
                       onAutoPlayToggle={toggleAutoPlay}
-                      onPageChange={(pageIndex) => handlePageChange(slot.article.id, pageIndex)}
+                      onPageChange={(pageIndex) =>
+                        handlePageChange(slot.article.article.id, pageIndex)
+                      }
                       onEndReached={scrollToNextSlot}
                     />
                   ) : (

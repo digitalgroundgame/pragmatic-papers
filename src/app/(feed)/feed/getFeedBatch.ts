@@ -1,7 +1,8 @@
+import type { Article } from "@/payload-types"
 import { getPayloadConfig } from "@/utilities/getPayloadConfig"
 import { queryVolumesForArticles } from "@/utilities/queries"
 import { relationshipId } from "@/utilities/relationships"
-import type { FeedArticle, FeedBatch } from "./types"
+import type { FeedArticle, FeedArticleBatch } from "./types"
 
 const PAGE_SIZE = 8
 
@@ -53,6 +54,23 @@ export function rankFeed<T extends { publishedAt?: string | null }>(items: T[], 
   return out
 }
 
+/**
+ * Attaches each article's volume, which the hero card shows, with one batched
+ * lookup for all of them instead of a volume query per article.
+ */
+export async function withVolumes(articles: Article[]): Promise<FeedArticle[]> {
+  const volumes = await queryVolumesForArticles(articles.map((article) => article.id))
+  return articles.map((article) => {
+    const volume = volumes.find((v) =>
+      (v.articles ?? []).some((rel) => relationshipId(rel) === article.id),
+    )
+    return {
+      ...article,
+      volume: volume ? { id: volume.id, title: volume.title, slug: volume.slug } : null,
+    }
+  })
+}
+
 export async function getFeedBatch({
   cursor,
   limit = PAGE_SIZE,
@@ -61,7 +79,7 @@ export async function getFeedBatch({
   cursor: number | null
   limit?: number
   seed?: number
-}): Promise<FeedBatch> {
+}): Promise<FeedArticleBatch> {
   const payload = await getPayloadConfig()
   const page = cursor ?? 1
   const res = await payload.find({
@@ -75,18 +93,7 @@ export async function getFeedBatch({
     depth: 2,
   })
 
-  // One batched lookup for the whole page instead of a volume query per article.
-  const volumes = await queryVolumesForArticles(res.docs.map((doc) => doc.id))
-  const items: FeedArticle[] = res.docs.map((doc) => {
-    const volume = volumes.find((v) =>
-      (v.articles ?? []).some((rel) => relationshipId(rel) === doc.id),
-    )
-    return {
-      ...doc,
-      volume: volume ? { id: volume.id, title: volume.title, slug: volume.slug } : null,
-    }
-  })
-
+  const items = await withVolumes(res.docs)
   const ranked = rankFeed(items, seed ?? page * 9973)
 
   return {

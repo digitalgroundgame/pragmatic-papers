@@ -14,6 +14,8 @@ export interface AuthorSocialLink {
 export interface AuthorLinksProps {
   className?: string
   socials?: MenuField
+  /** Names the landmark, so a page listing several authors has distinct ones. */
+  authorName?: string | null
 }
 
 export function normalizeExternalUrl(raw: string): string {
@@ -52,12 +54,15 @@ export function deriveAuthorSocialLinks(entries: MenuField): AuthorSocialLink[] 
   return links
 }
 
-export const AuthorLinks: React.FC<AuthorLinksProps> = ({ className, socials }) => {
+export const AuthorLinks: React.FC<AuthorLinksProps> = ({ className, socials, authorName }) => {
   if (!socials) return null
   const links = deriveAuthorSocialLinks(socials)
   if (!links.length) return null
   return (
-    <nav aria-label="Author Links" className={cn("flex flex-wrap gap-3", className)}>
+    <nav
+      aria-label={authorName ? `Links for ${authorName}` : "Author Links"}
+      className={cn("flex flex-wrap gap-3", className)}
+    >
       {links.map((link) => {
         const Icon = socialIconMap[link.icon] || Globe
         return (

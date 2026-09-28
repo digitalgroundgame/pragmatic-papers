@@ -25,7 +25,7 @@ interface ModeToggleProps {
 export function ModeToggle({
   showLabel = false,
   onThemeChange,
-}: ModeToggleProps = {}): React.JSX.Element {
+}: ModeToggleProps): React.JSX.Element {
   const { setTheme, theme } = useTheme()
 
   function handleSetTheme(next: Theme): void {

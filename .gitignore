@@ -23,6 +23,8 @@ coverage
 
 # Build Outputs
 .next/
+storybook-static
+*storybook.log
 out/
 build
 dist

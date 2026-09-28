@@ -46,6 +46,21 @@
   --error: oklch(0.58 0.22 27);
   --success: oklch(0.55 0.18 150);
   --warning: oklch(0.7 0.18 80);
+
+  /* Diverging Red/Blue map palette — override to retheme election maps. Read through
+     `var()` by the choropleth block's colour scale and by the drilldown engine alike, so it
+     is a site token rather than either feature's own. */
+  --map-positive-1: #ffb8bc;
+  --map-positive-2: #f48088;
+  --map-positive-3: #e54858;
+  --map-positive-4: #d81334;
+
+  --map-negative-1: #b4d4f8;
+  --map-negative-2: #72aef3;
+  --map-negative-3: #2c86ed;
+  --map-negative-4: #126ace;
+
+  --map-neutral: oklch(0.9528 0.0086 84.57);
 }
 
 .dark {
@@ -140,6 +155,14 @@
   /* FK Screamer ligatures render incorrectly at 30px and below, so bumping 3xl to 32px. Overriding this core utilty to prevent us from accidently using it at 30px. */
   --text-3xl: 2rem;
   --text-3xl--line-height: calc(2.25 / 2);
+
+  --animate-paper-drift: paper-drift 6s linear infinite;
+  /* One (64, -64) tile of PaperIconPattern, rotated by its -15° patternTransform, so the loop is seamless. */
+  @keyframes paper-drift {
+    to {
+      transform: translate(45.2548px, -78.3837px);
+    }
+  }
 }
 
 @layer base {
@@ -169,6 +192,10 @@
   }
   h3 {
     @apply text-2xl md:text-3xl;
+  }
+  button:not(:disabled),
+  [role="button"]:not(:disabled):not([aria-disabled="true"]) {
+    cursor: pointer;
   }
 }
 

@@ -8,13 +8,14 @@ import { createCodeBlocksArticle } from "./features/code-blocks"
 import { createCollectionGridHomePage } from "./features/collection-grid"
 import { createFootnotesArticle } from "./features/footnotes"
 import { createMoCongressionalMapsArticle } from "./features/interactive-maps"
+import { createFederalCourtsInteractive } from "./features/interactives"
 import { createMathBlocksArticle } from "./features/math-blocks"
 import { createMediaCollageArticle } from "./features/media-collage"
 import { createNarrationDemoArticle } from "./features/narration-demo"
 import { createRichTextShowcaseArticle } from "./features/rich-text-showcase"
 import { createLegacySocialEmbedArticle, createSocialEmbedArticle } from "./features/social-embeds"
 import { createTimelineArticle } from "./features/timeline"
-import { createMediaFromURL } from "./media"
+import { createStockMedia } from "./media"
 import { createMenus } from "./menus"
 import { createPages } from "./pages"
 import { createLoremIpsumContent, generateLoremIspumSentence } from "./richtext"
@@ -83,20 +84,15 @@ export const seed = async (
         await payload.delete({ collection: "pages", context, where: {} })
         await payload.delete({ collection: "forms", context, where: {} })
         await payload.delete({ collection: "form-submissions", context, where: {} })
+        // Snapshots point at their interactive, so they go first.
+        await payload.delete({ collection: "interactive-snapshots", context, where: {} })
+        await payload.delete({ collection: "interactives", context, where: {} })
       },
     },
     {
       name: "Uploading media...",
       fn: async () => {
-        const IMAGE_BASE =
-          "https://raw.githubusercontent.com/payloadcms/payload/refs/heads/main/templates/website/src/endpoints/seed"
-        const ALT = "Curving abstract shapes with an orange and blue gradient"
-        ctx.media = await Promise.all([
-          createMediaFromURL(payload, `${IMAGE_BASE}/image-post1.webp`, ALT),
-          createMediaFromURL(payload, `${IMAGE_BASE}/image-post2.webp`, ALT),
-          createMediaFromURL(payload, `${IMAGE_BASE}/image-post3.webp`, ALT),
-          createMediaFromURL(payload, `${IMAGE_BASE}/image-hero1.webp`, ALT),
-        ])
+        ctx.media = await createStockMedia(payload)
       },
     },
     {
@@ -342,6 +338,16 @@ export const seed = async (
       },
     },
     {
+      // The Federal Courts drilldown is an interactive page, not an article: its data is
+      // synced from the tracker and versioned, so it outlives any one piece of writing.
+      name: "Creating interactives...",
+      fn: async () => {
+        // With COURT_TRACKER_GITHUB_TOKEN set this reads every judge from upstream's newest
+        // release; without it, the trimmed fixture.
+        await createFederalCourtsInteractive(payload, context, undefined, { live: true })
+      },
+    },
+    {
       name: "Creating volumes...",
       fn: async () => {
         await createVolumes(
@@ -433,6 +439,18 @@ export const seed = async (
           },
           context,
         )
+      },
+    },
+    {
+      name: "Enabling experiments...",
+      fn: async () => {
+        // Local dev shows every beta feature; staging and production switch
+        // theirs on in the admin.
+        await payload.updateGlobal({
+          slug: "site-settings",
+          context,
+          data: { experiments: { feed: true, interactives: true } },
+        })
       },
     },
     {

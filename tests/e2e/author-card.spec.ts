@@ -13,7 +13,9 @@ test("author card renders social media links @visual", async ({ page }, testInfo
 
   // Functional check (runs on every project, even when screenshots are skipped
   // locally): all six seeded social links render as external links.
-  const socialLinks = card.getByRole("navigation", { name: "Author Links" }).getByRole("link")
+  const socialLinks = card
+    .getByRole("navigation", { name: "Links for Teagan Wordsmith" })
+    .getByRole("link")
   await expect(socialLinks).toHaveCount(6)
   for (const url of [
     "https://x.com/e2ewriter",

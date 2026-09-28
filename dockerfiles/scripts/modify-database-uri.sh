@@ -5,6 +5,11 @@ set -e
 # This is useful for preview deployments where each PR gets a unique database
 # Always writes /tmp/database_uri.env so the runner stage can source it
 
+# Never print a URI as-is: it carries the database password into the build log.
+redact_uri() {
+    echo "$1" | sed -E 's#^([a-z]+://[^:@/]*):.*@#\1:****@#'
+}
+
 echo "========================================"
 echo "Database URI Modifier"
 echo "========================================"
@@ -13,7 +18,7 @@ echo "========================================"
 if [ "$BUILD_ENV" != "preview" ]; then
     echo "BUILD_ENV is not 'preview' (current: ${BUILD_ENV:-not set})"
     echo "Skipping DATABASE_URI modification"
-    echo "DATABASE_URI: $DATABASE_URI"
+    echo "DATABASE_URI: $(redact_uri "$DATABASE_URI")"
     # Always write the env file so COPY in runner stage works
     echo "export DATABASE_URI='$DATABASE_URI'" > /tmp/database_uri.env
     exit 0
@@ -24,7 +29,7 @@ echo "BUILD_ENV: preview - proceeding with DATABASE_URI modification"
 # Check if COOLIFY_FQDN is set
 if [ -z "$COOLIFY_FQDN" ]; then
     echo "COOLIFY_FQDN is not set, using DATABASE_URI as-is"
-    echo "DATABASE_URI: $DATABASE_URI"
+    echo "DATABASE_URI: $(redact_uri "$DATABASE_URI")"
     # Always write the env file so COPY in runner stage works
     echo "export DATABASE_URI='$DATABASE_URI'" > /tmp/database_uri.env
     exit 0
@@ -42,7 +47,7 @@ if [ -z "$DATABASE_URI" ]; then
     exit 1
 fi
 
-echo "Original DATABASE_URI: $DATABASE_URI"
+echo "Original DATABASE_URI: $(redact_uri "$DATABASE_URI")"
 
 # Parse DATABASE_URI to extract components
 # Format: postgresql://user:password@host:port/database
@@ -76,7 +81,7 @@ NEW_DB_NAME="${DB_NAME}_${SANITIZED_SUFFIX}"
 NEW_DATABASE_URI="${URI_PREFIX}${URI_BASE}/${NEW_DB_NAME}"
 
 echo "New database name: $NEW_DB_NAME"
-echo "Modified DATABASE_URI: $NEW_DATABASE_URI"
+echo "Modified DATABASE_URI: $(redact_uri "$NEW_DATABASE_URI")"
 
 # Export the modified DATABASE_URI for subsequent commands
 # We'll write it to a file that can be sourced

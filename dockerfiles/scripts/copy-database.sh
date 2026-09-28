@@ -8,6 +8,11 @@ echo "========================================"
 echo "Database Copy Script for Preview Builds"
 echo "========================================"
 
+# Never print a URI as-is: it carries the database password into the build log.
+redact_uri() {
+    echo "$1" | sed -E 's#^([a-z]+://[^:@/]*):.*@#\1:****@#'
+}
+
 # Check if database copy is enabled
 if [ "$COPY_SOURCE_DATABASE" != "true" ]; then
     echo "Database copy is disabled (COPY_SOURCE_DATABASE != true)"
@@ -28,8 +33,8 @@ if [ -z "$DATABASE_URI" ]; then
     exit 1
 fi
 
-echo "Source Database: $SOURCE_DATABASE_URI"
-echo "Target Database: $DATABASE_URI"
+echo "Source Database: $(redact_uri "$SOURCE_DATABASE_URI")"
+echo "Target Database: $(redact_uri "$DATABASE_URI")"
 
 # Parse database URIs to extract connection details
 # Format: postgresql://user:password@host:port/database
@@ -44,7 +49,7 @@ parse_postgres_uri() {
     elif echo "$uri" | grep -q "^postgres://"; then
         prefix="postgres://"
     else
-        echo "ERROR: Invalid PostgreSQL URI format: $uri"
+        echo "ERROR: Invalid PostgreSQL URI format: $(redact_uri "$uri")"
         exit 1
     fi
     

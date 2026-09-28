@@ -24,7 +24,8 @@ jobs:
   # on pushes to main/dev and in the merge queue this job does nothing, and the
   # jobs gated on it run in full. A job skipped by its `if` reports "skipped",
   # which a required status check accepts, so gating a required job here never
-  # blocks a PR.
+  # blocks a PR. The gated jobs fail open: if this job fails, they run in full
+  # rather than being skipped (and so passing) along with it.
   changes:
     name: Detect changes
     runs-on: ubuntu-latest
@@ -191,7 +192,8 @@ jobs:
   integration-tests:
     name: Integration tests
     needs: changes
-    if: github.event_name != 'pull_request' || needs.changes.outputs.integration == 'true'
+    # Fails open: runs in full unless Detect changes succeeded and cleared it.
+    if: ${{ !cancelled() && (github.event_name != 'pull_request' || needs.changes.result != 'success' || needs.changes.outputs.integration == 'true') }}
     runs-on: ubuntu-latest
 
     env:
@@ -230,7 +232,8 @@ jobs:
   storybook:
     name: Storybook
     needs: changes
-    if: github.event_name != 'pull_request' || needs.changes.outputs.storybook == 'true'
+    # Fails open: runs in full unless Detect changes succeeded and cleared it.
+    if: ${{ !cancelled() && (github.event_name != 'pull_request' || needs.changes.result != 'success' || needs.changes.outputs.storybook == 'true') }}
     runs-on: ubuntu-latest
 
     steps:

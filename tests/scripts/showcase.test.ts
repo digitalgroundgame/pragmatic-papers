@@ -237,11 +237,26 @@ describe("main", () => {
         json({ totalDocs: url.searchParams.get("where[slug][equals]") === "first" ? 1 : 0 }),
     })
 
-    await main(["748", "--all"], ENV, fetchImpl)
+    const links = await main(["748", "--all"], ENV, fetchImpl)
 
     expect(mockCreateStockMedia).toHaveBeenCalledOnce()
     expect(mockCreate).toHaveBeenCalledOnce()
     expect(mockCreate).toHaveBeenCalledWith(expect.anything(), [PUSHER], [{ id: 1 }])
+    expect(links).toEqual([
+      `- [first](${ORIGIN}/articles/first)`,
+      `- [second](${ORIGIN}/articles/second)`,
+    ])
+  })
+
+  it("links to drafts in the admin", async () => {
+    const fetchImpl = fakeFetch({
+      "POST /api/users/login": login(),
+      "GET /api/articles": () => json({ totalDocs: 0 }),
+    })
+
+    const links = await main(["748", "first", "--draft"], ENV, fetchImpl)
+
+    expect(links).toEqual([`- [first](${ORIGIN}/admin/collections/articles/99)`])
   })
 
   it("uploads nothing when every entry is already there", async () => {

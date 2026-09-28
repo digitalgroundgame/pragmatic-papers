@@ -9,8 +9,9 @@ name: Showcase
 #
 #   Showcase: rich-text-showcase
 #
-#   - Adding the label inserts `Showcase: all` when there's no line yet, so
-#     edit the line to narrow it. Removing the label removes the line.
+#   - Adding the label inserts a line when there's none yet, naming the
+#     articles the PR adds to the catalog (usually its one demo article), or
+#     `Showcase: all` if it adds none. Removing the label removes the line.
 #   - A description with a line (say, written by a session opening the PR)
 #     gets the label; deleting the line removes it.
 #
@@ -22,6 +23,10 @@ name: Showcase
 # "Up" means the PR's head commit has a successful Preview deployment, as
 # recorded by preview-deployment.yml. That workflow succeeds even when a
 # build fails, so its conclusion alone doesn't say.
+#
+# After each push, the description lists links to the articles on the
+# preview, between <!-- showcase-links --> markers that this workflow
+# rewrites; opting out removes the list with the line.
 #
 # The sync edits the PR with the workflow's own token, and GitHub starts no
 # workflow from such edits, so it can't loop, and it pushes itself rather than
@@ -80,11 +85,22 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           PR: ${{ github.event.pull_request.number }}
           ACTION: ${{ github.event.action }}
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
           HAS_LABEL: ${{ contains(github.event.pull_request.labels.*.name, 'showcase') }}
         run: |
           # The same line scripts/showcase.ts reads (slugsFromDescription).
           line='^[[:space:]>*_-]*showcase[[:space:]]*:'
           body="$RUNNER_TEMP/body.md"
+          # Drops the Showcase line and the link list (see the push job).
+          opt_out() {
+            grep -viE "$line" "$body" \
+              | sed '/<!-- showcase-links -->/,/<!-- \/showcase-links -->/d' > "$body.new" || true
+            if ! cmp -s "$body" "$body.new"; then
+              gh api -X PATCH "repos/$GITHUB_REPOSITORY/pulls/$PR" -F "body=@$body.new" >/dev/null
+              echo "Removed the Showcase line and links from the description."
+            fi
+          }
           gh api "repos/$GITHUB_REPOSITORY/pulls/$PR" --jq '.body // ""' > "$body"
           has_line=false
           grep -qiE "$line" "$body" && has_line=true
@@ -93,18 +109,22 @@ jobs:
           case "$ACTION" in
             labeled)
               if [ "$has_line" = false ]; then
-                printf '\n\nShowcase: all\n' >> "$body"
+                # The articles this PR adds to the catalog, usually its one
+                # demo article; every article if it adds none.
+                catalog() {
+                  gh api -H "Accept: application/vnd.github.raw" \
+                    "repos/$GITHUB_REPOSITORY/contents/src/endpoints/seed/showcase.ts?ref=$1" 2>/dev/null \
+                    | grep -oE '^[[:space:]]*slug: "[a-z0-9-]+"' | grep -oE '[a-z0-9-]+"$' | tr -d '"' | sort -u
+                }
+                added=$(comm -13 <(catalog "$BASE_REF") <(catalog "$HEAD_SHA") | paste -sd ' ' -)
+                printf '\n\nShowcase: %s\n' "${added:-all}" >> "$body"
                 gh api -X PATCH "repos/$GITHUB_REPOSITORY/pulls/$PR" -F "body=@$body" >/dev/null
-                echo "Added \"Showcase: all\" to the description."
+                echo "Added \"Showcase: ${added:-all}\" to the description."
               fi
               push=true
               ;;
             unlabeled)
-              if [ "$has_line" = true ]; then
-                grep -viE "$line" "$body" > "$body.new" || true
-                gh api -X PATCH "repos/$GITHUB_REPOSITORY/pulls/$PR" -F "body=@$body.new" >/dev/null
-                echo "Removed the Showcase line from the description."
-              fi
+              opt_out
               ;;
             opened | edited)
               if [ "$has_line" = true ]; then
@@ -113,9 +133,12 @@ jobs:
                   echo "Added the showcase label."
                 fi
                 push=true
-              elif [ "$HAS_LABEL" = true ]; then
-                gh api -X DELETE "repos/$GITHUB_REPOSITORY/issues/$PR/labels/showcase" >/dev/null
-                echo "Removed the showcase label."
+              else
+                if [ "$HAS_LABEL" = true ]; then
+                  gh api -X DELETE "repos/$GITHUB_REPOSITORY/issues/$PR/labels/showcase" >/dev/null
+                  echo "Removed the showcase label."
+                fi
+                opt_out
               fi
               ;;
           esac
@@ -137,7 +160,7 @@ jobs:
     timeout-minutes: 15
     permissions:
       contents: read
-      pull-requests: read
+      pull-requests: write
       deployments: read
     steps:
       # A PR run reads the PR fresh, so the code and description are current
@@ -204,6 +227,7 @@ jobs:
           SHOWCASE_STAGING_URL: ${{ vars.SHOWCASE_STAGING_URL }}
           TARGET: ${{ steps.pr.outputs.number || 'staging' }}
           SLUGS: ${{ inputs.slugs }}
+          SHOWCASE_LINKS_FILE: ${{ runner.temp }}/links.md
         run: |
           # Keep going on failure so the summary is written; exit with the push's status.
           set +e -f
@@ -222,3 +246,29 @@ jobs:
             grep -E '✔|No Showcase' showcase.log | sed 's/^/- /'
           } >> "$GITHUB_STEP_SUMMARY"
           exit "$status"
+
+      # Rewritten from the fresh description, so an edit made during the push
+      # survives; the workflow's own edit starts no new run.
+      - name: List the links in the description
+        if: steps.pr.outputs.number && steps.pr.outputs.skip != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ steps.pr.outputs.number }}
+          LINKS: ${{ runner.temp }}/links.md
+        run: |
+          body="$RUNNER_TEMP/body.md"
+          gh api "repos/$GITHUB_REPOSITORY/pulls/$PR" --jq '.body // ""' > "$body"
+          python3 - "$body" "$LINKS" <<'PY'
+          import re, sys
+          body_path, links_path = sys.argv[1:]
+          body = open(body_path).read()
+          links = open(links_path).read().strip()
+          block = f"<!-- showcase-links -->\n**On the preview:**\n\n{links}\n<!-- /showcase-links -->"
+          pattern = re.compile(r"<!-- showcase-links -->.*?<!-- /showcase-links -->", re.S)
+          if pattern.search(body):
+              body = pattern.sub(lambda _: block, body)
+          else:
+              body = body.rstrip() + "\n\n" + block + "\n"
+          open(body_path, "w").write(body)
+          PY
+          gh api -X PATCH "repos/$GITHUB_REPOSITORY/pulls/$PR" -F "body=@$body" >/dev/null

@@ -14,7 +14,7 @@ import { createNarrationDemoArticle } from "./features/narration-demo"
 import { createRichTextShowcaseArticle } from "./features/rich-text-showcase"
 import { createLegacySocialEmbedArticle, createSocialEmbedArticle } from "./features/social-embeds"
 import { createTimelineArticle } from "./features/timeline"
-import { createMediaFromURL } from "./media"
+import { createStockMedia } from "./media"
 import { createMenus } from "./menus"
 import { createPages } from "./pages"
 import { createLoremIpsumContent, generateLoremIspumSentence } from "./richtext"
@@ -88,15 +88,7 @@ export const seed = async (
     {
       name: "Uploading media...",
       fn: async () => {
-        const IMAGE_BASE =
-          "https://raw.githubusercontent.com/payloadcms/payload/refs/heads/main/templates/website/src/endpoints/seed"
-        const ALT = "Curving abstract shapes with an orange and blue gradient"
-        ctx.media = await Promise.all([
-          createMediaFromURL(payload, `${IMAGE_BASE}/image-post1.webp`, ALT),
-          createMediaFromURL(payload, `${IMAGE_BASE}/image-post2.webp`, ALT),
-          createMediaFromURL(payload, `${IMAGE_BASE}/image-post3.webp`, ALT),
-          createMediaFromURL(payload, `${IMAGE_BASE}/image-hero1.webp`, ALT),
-        ])
+        ctx.media = await createStockMedia(payload)
       },
     },
     {

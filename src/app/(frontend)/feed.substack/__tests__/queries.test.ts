@@ -20,7 +20,7 @@ afterEach(() => {
 // against a real database; these pin the query itself, so it can't silently widen to
 // drafts or articles nobody opted in.
 describe("querySyndicatedArticles", () => {
-  it("asks for published, syndicated articles only, newest first, as the public", async () => {
+  it("asks for every published, syndicated article, newest first, as the public", async () => {
     find.mockResolvedValue({ docs: [{ slug: "one" }] })
 
     await expect(querySyndicatedArticles()).resolves.toEqual([{ slug: "one" }])
@@ -28,6 +28,7 @@ describe("querySyndicatedArticles", () => {
       expect.objectContaining({
         collection: "articles",
         draft: false,
+        limit: 0,
         overrideAccess: false,
         where: syndicated,
         sort: "-publishedAt",

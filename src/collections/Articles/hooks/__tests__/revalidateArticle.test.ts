@@ -49,6 +49,33 @@ describe("revalidateArticle", () => {
     expect(paths()).toContain("/feed.substack/pulled")
   })
 
+  it("also refreshes the old slug's paths when a published article is renamed", async () => {
+    await revalidateArticle({
+      doc: doc("new-slug", "published"),
+      previousDoc: doc("old-slug", "published"),
+      req: req(),
+    } as never)
+
+    expect(paths()).toEqual(
+      expect.arrayContaining([
+        "/articles/new-slug",
+        "/feed.substack/new-slug",
+        "/articles/old-slug",
+        "/feed.substack/old-slug",
+      ]),
+    )
+  })
+
+  it("refreshes a republished article's paths once when its slug is unchanged", async () => {
+    await revalidateArticle({
+      doc: doc("same", "published"),
+      previousDoc: doc("same", "published"),
+      req: req(),
+    } as never)
+
+    expect(paths().filter((path) => path === "/feed.substack/same")).toHaveLength(1)
+  })
+
   it("does nothing for a draft that was never published", async () => {
     await revalidateArticle({
       doc: doc("draft", "draft"),

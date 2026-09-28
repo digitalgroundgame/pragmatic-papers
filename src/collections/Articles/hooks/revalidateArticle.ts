@@ -45,6 +45,16 @@ export const revalidateArticle: CollectionAfterChangeHook<Article> = async ({
       await revalidateDoc(doc, payload)
     }
 
+    // A renamed published article leaves its old paths cached, including the
+    // Substack import URL an editor may already have copied.
+    if (
+      doc._status === "published" &&
+      previousDoc?._status === "published" &&
+      previousDoc.slug !== doc.slug
+    ) {
+      await revalidateDoc(previousDoc, payload)
+    }
+
     // If the article was previously published, we need to revalidate the old path
     if (previousDoc._status === "published" && doc._status !== "published") {
       await revalidateDoc(previousDoc, payload)

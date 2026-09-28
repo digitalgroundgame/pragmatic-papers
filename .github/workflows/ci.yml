@@ -4,6 +4,11 @@ on:
   push:
     branches: [main, dev]
   pull_request:
+  # The merge queue tests each PR on top of everything queued ahead of it, on
+  # a temporary gh-readonly-queue/* branch. Required checks must report there
+  # too, or the queue waits on them forever. No step below writes to the
+  # branch; the PR-only steps are already gated on `pull_request`.
+  merge_group:
 
 # Cancel superseded runs on a PR so a new push doesn't leave the previous
 # commit's Static/Unit/Integration jobs (two Postgres services + Testcontainers)

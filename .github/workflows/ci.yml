@@ -21,8 +21,8 @@ concurrency:
 
 jobs:
   # Decides which path-sensitive jobs below a PR needs. Only PRs are filtered:
-  # on pushes to main/dev this job does nothing, and the jobs gated on it run
-  # in full. A job skipped by its `if` reports "skipped", which a required
+  # on pushes to main/dev and in the merge queue this job does nothing, and the
+  # jobs gated on it run in full. A job skipped by its `if` reports "skipped", which a required
   # status check accepts, so gating a required job here never blocks a PR.
   changes:
     name: Detect changes

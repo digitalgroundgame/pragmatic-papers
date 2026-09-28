@@ -51,4 +51,20 @@ describe("FeedTableRowReflow", () => {
     const { container } = renderTable(table())
     expect(container).toBeEmptyDOMElement()
   })
+
+  it("copes with rows and cells missing their children or header state", () => {
+    renderTable(
+      table({ type: "tablerow" }, row({ type: "tablecell" }, cell("b")), {
+        type: "paragraph",
+        children: [],
+      }),
+    )
+    expect(screen.getAllByRole("article")).toHaveLength(2)
+    expect(screen.getByText("b")).toBeInTheDocument()
+  })
+
+  it("renders nothing for a table node with no children at all", () => {
+    const { container } = renderTable({ type: "table" })
+    expect(container).toBeEmptyDOMElement()
+  })
 })

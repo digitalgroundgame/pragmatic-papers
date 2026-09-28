@@ -90,4 +90,21 @@ describe("AdSlotView", () => {
     fireEvent.pointerUp(heading, { clientX: 200, clientY: 10 })
     expect(onAutoPlayToggle).toHaveBeenCalledOnce()
   })
+
+  it("starts a new ad's progress from zero", () => {
+    const props = {
+      active: true,
+      autoPlayEnabled: true,
+      userAutoPlayEnabled: true,
+      onAutoPlayToggle: vi.fn(),
+      onEndReached: vi.fn(),
+    }
+    const { rerender, container } = render(<AdSlotView ad={donation} {...props} />)
+    const fill = () => container.querySelector<HTMLElement>(".origin-left")
+    act(() => vi.advanceTimersByTime(3000))
+    expect(fill()?.style.transform).not.toBe("scaleX(0)")
+
+    rerender(<AdSlotView ad={{ ...donation, id: "another" }} {...props} />)
+    expect(fill()?.style.transform).toBe("scaleX(0)")
+  })
 })

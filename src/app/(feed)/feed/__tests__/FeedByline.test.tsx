@@ -24,4 +24,28 @@ describe("FeedByline", () => {
     expect(screen.getByText("turnout")).toBeInTheDocument()
     expect(screen.getByText("T")).toBeInTheDocument()
   })
+
+  it("scrolls the line when it doesn't fit, and not when it does", () => {
+    const width = vi.spyOn(HTMLElement.prototype, "scrollWidth", "get").mockReturnValue(400)
+    const client = vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(200)
+    try {
+      const { unmount } = render(<FeedByline article={makeSummary({ title: "A long title" })} />)
+      const line = screen.getByText("A long title")
+      expect(line).toHaveClass("feed-marquee")
+      expect(line.style.getPropertyValue("--feed-marquee-shift")).toBe("200px")
+      unmount()
+
+      width.mockReturnValue(204)
+      render(<FeedByline article={makeSummary({ title: "Short" })} />)
+      expect(screen.getByText("Short")).toHaveClass("truncate")
+    } finally {
+      width.mockRestore()
+      client.mockRestore()
+    }
+  })
+
+  it("renders nothing with neither a title nor authors", () => {
+    const { container } = render(<FeedByline article={makeSummary({ title: "", authors: [] })} />)
+    expect(container).toBeEmptyDOMElement()
+  })
 })

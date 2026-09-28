@@ -247,4 +247,22 @@ describe("chunkArticle", () => {
       expect(last.blockType).toBe("table")
     }
   })
+
+  it("keeps an empty timeline as one page rather than dropping it", () => {
+    const pages = chunkArticle(makeArticle([heading("Events"), block("timeline", { events: [] })]))
+    expect(pages).toHaveLength(2)
+    const page = pages[1]
+    expect(page?.kind).toBe("block")
+    if (page?.kind !== "block") return
+    expect(page.blockType).toBe("timeline")
+    expect(page.headingNode).toBeDefined()
+  })
+
+  it("keeps a heading that ends the article, on the last prose page", () => {
+    const pages = chunkArticle(makeArticle([paragraph(SHORT), heading("Afterword")]))
+    const last = pages.at(-1)
+    expect(last?.kind).toBe("content")
+    if (last?.kind !== "content") return
+    expect(last.nodes.map((n) => n.type)).toEqual(["heading"])
+  })
 })

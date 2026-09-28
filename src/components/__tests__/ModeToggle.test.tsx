@@ -11,7 +11,7 @@ function renderToggle(props: React.ComponentProps<typeof ModeToggle> = {}): Rend
   return render(
     <ClientThemeProvider
       attribute="class"
-      defaultTheme="light"
+      defaultTheme="system"
       enableSystem
       disableTransitionOnChange
     >
@@ -93,14 +93,14 @@ describe("ModeToggle", () => {
     expect(onThemeChange.mock.calls).toEqual([["dark"], ["system"]])
   })
 
-  it("disables the option matching the current theme", async () => {
+  it("disables the option matching the current theme, System by default", async () => {
     const onThemeChange = vi.fn()
     renderToggle({ onThemeChange })
     openMenu()
 
-    const light = await screen.findByRole("menuitem", { name: "Light" })
-    expect(light).toHaveAttribute("data-disabled")
-    fireEvent.click(light)
+    const system = await screen.findByRole("menuitem", { name: "System" })
+    expect(system).toHaveAttribute("data-disabled")
+    fireEvent.click(system)
     expect(onThemeChange).not.toHaveBeenCalled()
   })
 })

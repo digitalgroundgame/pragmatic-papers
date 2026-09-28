@@ -4,6 +4,8 @@ import type { NextConfig } from "next"
 import path from "path"
 import { fileURLToPath } from "url"
 
+import { resolveSentryDeployment } from "./src/sentry/deployment"
+
 const __filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(__filename)
 
@@ -15,8 +17,17 @@ const NEXT_PUBLIC_SUPABASE_URL = new URL(
   process.env.NEXT_PUBLIC_SUPABASE_URL || "https://example.com",
 )
 
+// Sentry's environment and PR tag, resolved here because this is the only place that sees
+// BUILD_ENV at build time. See src/sentry/deployment.ts.
+const sentryDeployment = resolveSentryDeployment(process.env)
+
 const nextConfig: NextConfig = {
   output: "standalone",
+  // Inlined into every bundle (client, server, edge) for the Sentry configs to share.
+  env: {
+    SENTRY_ENVIRONMENT: sentryDeployment.environment,
+    SENTRY_PR: sentryDeployment.pr,
+  },
   // Temporarily required on Windows until Next.js fixes Turbopack Sass resolution.
   // See: https://github.com/vercel/next.js/issues/86431
   sassOptions: {

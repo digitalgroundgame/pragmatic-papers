@@ -75,6 +75,7 @@ S3_ENDPOINT=https://s3.amazonaws.com
 **Sentry (every Coolify deployment — production, staging and previews):**
 
 - `SENTRY_AUTH_TOKEN` — mark it available at build time; `next build` uses it to upload source maps, so errors from that deployment have readable stack traces. GitHub Actions doesn't get it: CI builds are never served, so there's nothing to symbolicate.
+- `NEXT_PUBLIC_SENTRY_ENVIRONMENT` — `production` or `staging`. Previews ignore it: with `BUILD_ENV=preview` the Sentry environment is always `preview`, and errors carry a `pr` tag (e.g. `986`) taken from `COOLIFY_FQDN`, so filter on `pr:986` to see one PR's. Staging's Sentry data is only `dev`.
 - Turn on **Include Source Commit in Build** so Coolify passes `SOURCE_COMMIT` into the build. `.git` is excluded from the Docker context, so the Dockerfile uses it as `SENTRY_RELEASE`; without it, releases (and every browser error's release tag) come out empty.
 
 ### 4. Configure Domain

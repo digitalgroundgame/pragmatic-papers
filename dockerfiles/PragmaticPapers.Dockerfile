@@ -56,8 +56,8 @@ RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
     && HUSKY=0 CI=true pnpm install --frozen-lockfile --offline --store-dir /pnpm/store \
     && echo "--- COMPLETED: INSTALLING DEPENDENCIES ---"
 
-# Database utility scripts — only rebuilt when these two files change.
-COPY --chmod=755 dockerfiles/scripts/modify-database-uri.sh dockerfiles/scripts/copy-database.sh /usr/local/bin/
+# Database utility scripts — only rebuilt when these files change.
+COPY --chmod=755 dockerfiles/scripts/database-uri.sh dockerfiles/scripts/modify-database-uri.sh dockerfiles/scripts/copy-database.sh /usr/local/bin/
 
 # Copy remaining source code. Everything below reruns on every deploy, so steps whose
 # output depends on source or on variable values (migrations, next build) belong here.
@@ -110,10 +110,12 @@ ENV NODE_ENV=${NODE_ENV} \
     NEXT_PUBLIC_TURNSTILE_SITE_KEY=${NEXT_PUBLIC_TURNSTILE_SITE_KEY}
 
 # --- DATABASE PREPARATION & MIGRATION ---
-# 1. Isolated Preview Logic (clones DB for PRs)
+# 1. Isolated Preview Logic (names and clones a database for each PR)
 # 2. Migration Logic (runs on the final target DB)
+# Each RUN gets DATABASE_URI afresh from its secret mount, so each one applies the
+# preview database name from /tmp/database_name itself.
 RUN /usr/local/bin/modify-database-uri.sh && \
-    if [ -f /tmp/database_uri.env ]; then . /tmp/database_uri.env; fi && \
+    . /usr/local/bin/database-uri.sh && use_preview_database /tmp/database_name && \
     /usr/local/bin/copy-database.sh && \
     echo "--- PHASE: DATABASE MIGRATIONS ---" && \
     pnpm payload migrate && \
@@ -128,7 +130,7 @@ RUN /usr/local/bin/modify-database-uri.sh && \
 # been left corrupt.
 RUN --mount=type=cache,id=nextjs,target=/app/.next/cache,sharing=locked \
     echo "--- PHASE: BUILDING NEXT.JS ---" && \
-    if [ -f /tmp/database_uri.env ]; then . /tmp/database_uri.env; fi && \
+    . /usr/local/bin/database-uri.sh && use_preview_database /tmp/database_name && \
     SENTRY_RELEASE="${SOURCE_COMMIT}" sh dockerfiles/scripts/build-next.sh && \
     echo "--- COMPLETED: BUILDING NEXT.JS ---"
 
@@ -154,8 +156,9 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 
-# PERSISTENCE FIX: Carry the isolated DATABASE_URI from builder to runner
-COPY --from=builder --chown=nextjs:nodejs /tmp/database_uri.env /app/database_uri.env
+# Carry the preview database's name (empty outside previews) to start.sh. Only the
+# name: the credentials come from the runtime DATABASE_URI, never from the image.
+COPY --from=builder --chown=nextjs:nodejs /tmp/database_name /app/database_name
 
 # Prepare media directory and set permissions
 RUN mkdir -p public/media \
@@ -163,7 +166,7 @@ RUN mkdir -p public/media \
     && chmod 755 public/media
 
 # Startup script configuration
-COPY --from=builder --chown=nextjs:nodejs --chmod=755 /app/dockerfiles/scripts/start.sh ./start.sh
+COPY --from=builder --chown=nextjs:nodejs --chmod=755 /app/dockerfiles/scripts/start.sh /app/dockerfiles/scripts/database-uri.sh ./
 
 USER nextjs
 EXPOSE 3000

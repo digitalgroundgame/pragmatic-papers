@@ -136,7 +136,6 @@ Snapshot of the variable names each has, from the 2026-09-26 build logs. Product
 | ------------------------------- | ------- | -------- | ---------------------------------------------------------------------------------------------- |
 | `COPY_SOURCE_DATABASE`          | —       | set      | no database copy (`copy-database.sh` checks `!= "true"`)                                       |
 | `FORCE_DATABASE_COPY`           | —       | set      | don't drop an existing copy (checks `= "true"`)                                                |
-| `SOURCE_DATABASE_URI`           | —       | set      | only read when copying; the copy fails loudly if it's blank                                    |
 | `SEED_ENABLED`                  | —       | set      | nothing — no code reads it (from an unmerged branch); delete it                                |
 | `LISTMONK_NEWSLETTER_LIST_UUID` | set     | —        | Listmonk calls throw "Missing required env var", so newsletter signup doesn't work on previews |
 
@@ -260,7 +259,6 @@ COOLIFY_FQDN=pr-330.pragmaticpapers.com
 
 - ✅ Automatic unique database per preview deployment
 - ✅ No manual configuration needed
-- ✅ Works seamlessly with database copy feature
 - ✅ Clean isolation between preview environments
 - ✅ Easy to identify which database belongs to which PR
 - ✅ Only activates for `BUILD_ENV=preview` (staging/production unaffected)
@@ -269,104 +267,31 @@ COOLIFY_FQDN=pr-330.pragmaticpapers.com
 
 ### Database Copy for Preview Deployments
 
-You can create isolated database copies for preview deployments to prevent schema mismatches between staging and preview environments. This feature is particularly useful when:
-
-- Running migrations in preview environments that might conflict with staging
-- Testing database migrations before applying to staging
-- Creating isolated preview environments for feature branches
-
-**Configuration:**
+With `COPY_SOURCE_DATABASE=true`, a preview's database starts as a copy of the database its `DATABASE_URI` names, so it has that database's content (articles, pages, Site Settings experiments) while its migrations run on the copy.
 
 ```env
-# Enable database copy (set to 'true' to activate)
+BUILD_ENV=preview
 COPY_SOURCE_DATABASE=true
+DATABASE_URI=postgresql://user:pass@db.example.com:5432/pragmatic_papers
 
-# Source database to copy from (typically your staging database)
-SOURCE_DATABASE_URI=postgresql://postgres:password@staging-host:5432/pragmatic_papers_staging
-
-# Target database (your preview database)
-DATABASE_URI=postgresql://postgres:password@preview-host:5432/pragmatic_papers_preview_123
-
-# Force copy even if target exists (optional, default: false)
-# WARNING: This will DROP and recreate the target database
+# Optional, default false. WARNING: drops and recreates an existing preview database
 FORCE_DATABASE_COPY=false
 ```
 
-**How it works:**
+**What happens for PR #330** (`COOLIFY_FQDN=pr-330.pragmaticpapers.com`):
 
-1. During Docker build, before running migrations (`ci` step)
-2. Script checks if `COPY_SOURCE_DATABASE=true`
-3. If source and target are on same PostgreSQL server:
-   - Uses efficient `CREATE DATABASE WITH TEMPLATE` command
-4. If source and target are on different servers:
-   - Uses `pg_dump` and `pg_restore` for cross-server copy
-5. After copy completes, migrations run on the isolated copy
-6. Target database is left untouched if it already exists (unless `FORCE_DATABASE_COPY=true`)
-
-**Example Use Cases:**
-
-1. **Preview deployments in Coolify (with automatic naming):**
-
-   ```env
-   BUILD_ENV=preview
-   # Coolify automatically sets COOLIFY_FQDN=pr-330.pragmaticpapers.com
-   # Database name will become "pragmatic_papers_pr_330" automatically
-   COPY_SOURCE_DATABASE=true
-   SOURCE_DATABASE_URI=postgresql://user:pass@db.example.com:5432/pragmatic_papers_staging
-   DATABASE_URI=postgresql://user:pass@db.example.com:5432/pragmatic_papers
-   # Result: Copies staging_db to pragmatic_papers_pr_330
-   ```
-
-2. **Preview deployments (manual database name):**
-
-   ```env
-   COPY_SOURCE_DATABASE=true
-   SOURCE_DATABASE_URI=postgresql://user:pass@staging-db:5432/staging_db
-   DATABASE_URI=postgresql://user:pass@preview-db:5432/preview_pr_42
-   ```
-
-3. **Rebuilding preview with fresh data:**
-   ```env
-   COPY_SOURCE_DATABASE=true
-   SOURCE_DATABASE_URI=postgresql://user:pass@staging-db:5432/staging_db
-   DATABASE_URI=postgresql://user:pass@preview-db:5432/preview_pr_42
-   FORCE_DATABASE_COPY=true  # Force recreate
-   ```
+1. `modify-database-uri.sh` names the preview database `pragmatic_papers_pr_330` and writes only that name to `/tmp/database_name`.
+2. `copy-database.sh` creates it with `CREATE DATABASE pragmatic_papers_pr_330 WITH TEMPLATE pragmatic_papers`, on the same server and with `DATABASE_URI`'s credentials. It leaves an existing preview database alone unless `FORCE_DATABASE_COPY=true`.
+3. Migrations and `next build` run against the preview database.
+4. The runner image carries `/app/database_name`, and `start.sh` applies it to the runtime `DATABASE_URI`. No credential is written into the image.
 
 **Requirements:**
 
-- Both source and target databases must be PostgreSQL
-- Database user must have permissions to create databases and copy data
-- For cross-server copies: network connectivity between servers required
-- Database must be accessible during Docker build time
-
-**Complete Coolify Preview Workflow:**
-
-When using both automatic database naming and database copying together:
-
-```env
-# Configuration for Coolify preview deployments
-BUILD_ENV=preview
-COPY_SOURCE_DATABASE=true
-SOURCE_DATABASE_URI=postgresql://user:pass@db.example.com:5432/pragmatic_papers_staging
-DATABASE_URI=postgresql://user:pass@db.example.com:5432/pragmatic_papers
-
-# Coolify automatically sets: COOLIFY_FQDN=pr-330.pragmaticpapers.com
-```
-
-**What happens:**
-
-1. `BUILD_ENV=preview` enables automatic database naming
-2. Coolify sets `COOLIFY_FQDN=pr-330.pragmaticpapers.com`
-3. Dockerfile modifies `DATABASE_URI` to use database name `pragmatic_papers_pr_330`
-4. Database copy script creates `pragmatic_papers_pr_330` from `pragmatic_papers_staging`
-5. Migrations run on the new isolated database
-6. Application builds and connects to `pragmatic_papers_pr_330`
-
-**Result:** Each PR gets its own isolated database copy, automatically named and seeded with fresh data from staging!
+- `DATABASE_URI` must be available at build time _and_ runtime (it already is for every deployment).
+- Its user needs `CREATEDB` and permission to terminate other sessions on the source database: `CREATE DATABASE … TEMPLATE` fails while anyone is connected to it, so the script disconnects them first.
 
 **For Staging/Production:**
-Simply set `BUILD_ENV=staging` or `BUILD_ENV=production`, and the automatic naming will be skipped, using your `DATABASE_URI` exactly as configured.
+Set `BUILD_ENV=staging` or `BUILD_ENV=production` and leave `COPY_SOURCE_DATABASE` unset: the naming and the copy are both skipped, using your `DATABASE_URI` exactly as configured.
 
 ## 💾 Storage Configuration (Pragmatic Papers)
 

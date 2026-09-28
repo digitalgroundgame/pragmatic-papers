@@ -1,5 +1,6 @@
 // @vitest-environment node
 import configPromise from "@payload-config"
+import { createSubstackConverters } from "@/app/(frontend)/articles/_substack/generateSubstackFeed"
 import { createHtmlConverters } from "@/utilities/generateRssFeed"
 import {
   convertLexicalToHTML,
@@ -11,14 +12,34 @@ import { beforeAll, describe, expect, it } from "vitest"
 
 const PAGE_URL = "https://example.org/articles/test-article"
 
-const converters = createHtmlConverters(PAGE_URL)({
-  defaultConverters: defaultHTMLConverters,
-}) as HTMLConverters
+const resolve = (factory: typeof createHtmlConverters) =>
+  factory(PAGE_URL)({ defaultConverters: defaultHTMLConverters }) as HTMLConverters
 
-/** The rich-text fields the RSS feeds render, by collection. */
+const rssConverters = resolve(createHtmlConverters)
+
+/** The rich-text fields each feed renders, and the converters it renders them with. */
 const FEED_FIELDS = [
-  { feed: "feed.articles", collection: "articles", field: "content" },
-  { feed: "feed.volumes", collection: "volumes", field: "editorsNote" },
+  {
+    feed: "feed.articles",
+    collection: "articles",
+    field: "content",
+    converters: rssConverters,
+    factory: "createHtmlConverters",
+  },
+  {
+    feed: "feed.volumes",
+    collection: "volumes",
+    field: "editorsNote",
+    converters: rssConverters,
+    factory: "createHtmlConverters",
+  },
+  {
+    feed: "articles/substack.xml",
+    collection: "articles",
+    field: "content",
+    converters: resolve(createSubstackConverters),
+    factory: "createSubstackConverters",
+  },
 ] as const
 
 /** Node types Lexical registers itself, outside any feature. */
@@ -79,7 +100,7 @@ const collect = (fields: ResolvedField[], coverage: Coverage): void => {
  * HTML converter, or the feed prints "unknown node" in its place (#402,
  * #1022). This reads the resolved Payload config, the same one the admin
  * editor uses, so enabling a feature or adding a block anywhere those fields
- * reach fails here until `createHtmlConverters` handles it.
+ * reach fails here until every feed's converter factory handles it.
  */
 describe.each(FEED_FIELDS)("$feed renders every node in $collection.$field", (target) => {
   const coverage: Coverage = { nodeTypes: new Set(), blocks: new Set(), inlineBlocks: new Set() }
@@ -102,19 +123,21 @@ describe.each(FEED_FIELDS)("$feed renders every node in $collection.$field", (ta
 
   it("has a converter for every node type", () => {
     const missing = [...coverage.nodeTypes].filter(
-      (type) => type !== "block" && type !== "inlineBlock" && !(type in converters),
+      (type) => type !== "block" && type !== "inlineBlock" && !(type in target.converters),
     )
-    expect(missing, "add converters for these node types to createHtmlConverters").toEqual([])
+    expect(missing, `add converters for these node types to ${target.factory}`).toEqual([])
   })
 
   it("has a converter for every block", () => {
-    const missing = [...coverage.blocks].filter((slug) => !converters.blocks?.[slug])
-    expect(missing, "add converters for these blocks to createHtmlConverters").toEqual([])
+    const missing = [...coverage.blocks].filter((slug) => !target.converters.blocks?.[slug])
+    expect(missing, `add converters for these blocks to ${target.factory}`).toEqual([])
   })
 
   it("has a converter for every inline block", () => {
-    const missing = [...coverage.inlineBlocks].filter((slug) => !converters.inlineBlocks?.[slug])
-    expect(missing, "add converters for these inline blocks to createHtmlConverters").toEqual([])
+    const missing = [...coverage.inlineBlocks].filter(
+      (slug) => !target.converters.inlineBlocks?.[slug],
+    )
+    expect(missing, `add converters for these inline blocks to ${target.factory}`).toEqual([])
   })
 })
 

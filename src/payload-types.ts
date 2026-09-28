@@ -437,6 +437,10 @@ export interface Article {
    * Auto-generates a navigable list of headings (and any resolver-matched blocks).
    */
   showTableOfContents?: boolean | null;
+  /**
+   * Adds the published article to the Substack import feed. Takes effect once the article is published.
+   */
+  syndicateToSubstack?: boolean | null;
   createdBy?: (number | null) | User;
   updatedAt: string;
   createdAt: string;
@@ -1785,6 +1789,7 @@ export interface ArticlesSelect<T extends boolean = true> {
   authors?: T;
   topics?: T;
   showTableOfContents?: T;
+  syndicateToSubstack?: T;
   createdBy?: T;
   updatedAt?: T;
   createdAt?: T;

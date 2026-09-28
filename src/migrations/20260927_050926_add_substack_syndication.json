@@ -4908,6 +4908,13 @@
           "primaryKey": false,
           "notNull": false
         },
+        "syndicate_to_substack": {
+          "name": "syndicate_to_substack",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": false
+        },
         "created_by_id": {
           "name": "created_by_id",
           "type": "integer",
@@ -4935,13 +4942,6 @@
           "primaryKey": false,
           "notNull": false,
           "default": "'draft'"
-        },
-        "show_table_of_contents": {
-          "name": "show_table_of_contents",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": false,
-          "default": false
         }
       },
       "indexes": {
@@ -5569,6 +5569,13 @@
           "primaryKey": false,
           "notNull": false
         },
+        "version_syndicate_to_substack": {
+          "name": "version_syndicate_to_substack",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": false
+        },
         "version_created_by_id": {
           "name": "version_created_by_id",
           "type": "integer",
@@ -5620,13 +5627,6 @@
           "type": "boolean",
           "primaryKey": false,
           "notNull": false
-        },
-        "version_show_table_of_contents": {
-          "name": "version_show_table_of_contents",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": false,
-          "default": false
         }
       },
       "indexes": {
@@ -14678,6 +14678,6 @@
     "tables": {},
     "columns": {}
   },
-  "id": "c4de70af-fd36-40d7-a26a-44bcc877ef44",
+  "id": "80c6d63a-3ce9-4633-85bf-ea78b321456d",
   "prevId": "00000000-0000-0000-0000-000000000000"
 }

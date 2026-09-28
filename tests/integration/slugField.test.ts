@@ -1,6 +1,6 @@
 import { beforeAll, describe, expect, it } from "vitest"
 import type { Payload } from "payload"
-import type { Article, Page, Volume } from "@/payload-types"
+import type { Article, Interactive, Page, Volume } from "@/payload-types"
 import { getPayload } from "./helpers/testUsers"
 import { ARTICLE_CONTENT } from "./fixtures/content"
 
@@ -104,5 +104,20 @@ describe("slugField generation on create", () => {
     })
 
     expect(volume.slug).toBe("901")
+  })
+
+  it("derives an interactive slug from its title", async () => {
+    const interactive = await payload.create({
+      collection: "interactives",
+      overrideAccess: true,
+      context: ctx,
+      data: {
+        title: "Slug Test Interactive",
+        profile: "federal-courts",
+        _status: "draft",
+      } as unknown as Interactive,
+    })
+
+    expect(interactive.slug).toBe("slug-test-interactive")
   })
 })

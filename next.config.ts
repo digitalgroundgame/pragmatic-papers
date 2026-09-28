@@ -190,6 +190,12 @@ export default withSentryConfig(withPayload(nextConfig, { devBundleServerPackage
   // Upload a larger set of source maps for prettier stack traces (increases build time)
   widenClientFileUpload: true,
 
+  // Preview errors are rarely debugged in Sentry, so skip generating and uploading
+  // source maps there (~1 min off each preview build).
+  sourcemaps: {
+    disable: process.env.BUILD_ENV === "preview",
+  },
+
   // Route browser requests to Sentry through a Next.js rewrite to circumvent ad-blockers.
   // This can increase your server load as well as your hosting bill.
   // Note: This needs to not conflict with our Next.js middleware/proxy.ts, otherwise reporting of client-

@@ -62,6 +62,8 @@ describe("seed outside Next.js", () => {
     expect(header.navItems?.length).toBeGreaterThan(0)
     const recommendations = await payload.findGlobal({ slug: "article-recommendations" })
     expect(recommendations.rankings?.length).toBeGreaterThan(0)
+    const siteSettings = await payload.findGlobal({ slug: "site-settings" })
+    expect(siteSettings.experiments).toMatchObject({ feed: true, interactives: true })
   }, 300_000)
 
   it("re-seeds over its own data, ranked articles included", async () => {

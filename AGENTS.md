@@ -77,7 +77,28 @@ This file provides guidance to tools like Claude Code (claude.ai/code) when work
 
 - **Header** (`slug: 'header'`) — nav items, action button; revalidated via `revalidateHeader` hook
 - **Footer** (`slug: 'footer'`) — nav items; revalidated via `revalidateFooter` hook
+- **Site Settings** (`slug: 'site-settings'`) — admin-only; its `experiments` group switches beta features on per environment; revalidated via `revalidateSiteSettings` hook
 - Fetched via `getCachedGlobal('header' | 'footer', depth)()` using `unstable_cache` with tags
+
+### Experiments
+
+A beta feature that should run on staging before production goes behind a
+checkbox in the Site Settings global's `experiments` group
+(`src/globals/SiteSettings/config.ts`). Each environment has its own database,
+so each has its own switches; PR previews start with staging's. To add one:
+
+1. Add a `checkbox` to the `experiments` group, `defaultValue: false`, then
+   run `pnpm payload generate:types` and `pnpm payload migrate:create`.
+2. Turn it on in the seed's "Enabling experiments..." step
+   (`src/endpoints/seed/index.ts`), so local dev shows it.
+3. Gate **every** entry point with
+   `await isExperimentEnabled("<name>")` from
+   `@/globals/SiteSettings/isExperimentEnabled`: routes call `notFound()`
+   (API routes return 404), links and buttons aren't rendered, sitemaps come
+   back empty, and jobs skip with a log line.
+
+Saving the global clears its cache, so a switch takes effect without a
+redeploy. When the feature graduates, delete the checkbox and the checks.
 
 ### Payload Plugins
 

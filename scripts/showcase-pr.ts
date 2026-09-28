@@ -62,13 +62,32 @@ export function optOut(body: string): string {
     .trimEnd()
 }
 
-/** Replaces the link list, or appends one; no links removes it. */
+/** A line linking an issue the PR closes, such as `Closes #743`. */
+const CLOSING_LINE = /^\s*(close[sd]?|fix(e[sd])?|resolve[sd]?):?\s+([\w.-]+\/[\w.-]+)?#\d+/i
+
+/**
+ * Replaces the link list, or adds one at the top of the description, under
+ * any `Closes #N` lines, where reviewers see it first; no links removes it.
+ */
 export function withLinks(body: string, links: string[]): string {
-  if (links.length === 0) return body.replace(LINKS_BLOCK, "").trimEnd()
+  if (links.length === 0) {
+    if (!LINKS_BLOCK.test(body)) return body.trimEnd()
+    return body
+      .replace(LINKS_BLOCK, "")
+      .replace(/(\r?\n){3,}/g, "\n\n")
+      .trim()
+  }
   const block = `${LINKS_START}\n**On the preview:**\n\n${links.join("\n")}\n${LINKS_END}`
-  return LINKS_BLOCK.test(body)
-    ? body.replace(LINKS_BLOCK, () => block)
-    : `${body.trimEnd()}\n\n${block}\n`
+  if (LINKS_BLOCK.test(body)) return body.replace(LINKS_BLOCK, () => block)
+  const lines = body.split("\n")
+  let top = 0
+  for (let i = 0; i < lines.length; i++) {
+    if (CLOSING_LINE.test(lines[i]!)) top = i + 1
+    else if (lines[i]!.trim()) break
+  }
+  const head = lines.slice(0, top).join("\n").trimEnd()
+  const rest = lines.slice(top).join("\n").trimStart()
+  return [head, block, rest].filter(Boolean).join("\n\n") + (rest ? "" : "\n")
 }
 
 /** The slugs registered in a version of the catalog's source. */

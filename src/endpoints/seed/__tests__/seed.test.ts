@@ -127,14 +127,26 @@ describe("seed", () => {
     expect(clearRankings).toBeLessThan(deleteArticles)
   })
 
+  it("switches every experiment on", async () => {
+    const { payload, writes } = createRecordingPayload()
+
+    await seed(payload, undefined, { disableRevalidate: true })
+
+    const siteSettings = writes.find(
+      (write) => write.op === "updateGlobal" && write.target === "site-settings",
+    )
+    expect(siteSettings?.data).toEqual({ experiments: { feed: true, interactives: true } })
+    expect(siteSettings?.context?.disableRevalidate).toBe(true)
+  })
+
   it("reports each step's progress", async () => {
     const { payload } = createRecordingPayload()
     const onProgress = vi.fn()
 
     await seed(payload, onProgress, { disableRevalidate: true })
 
-    expect(onProgress).toHaveBeenCalledWith("Clearing existing data...", 1, 11)
-    expect(onProgress).toHaveBeenLastCalledWith("Seeding article recommendations...", 11, 11)
+    expect(onProgress).toHaveBeenCalledWith("Clearing existing data...", 1, 12)
+    expect(onProgress).toHaveBeenLastCalledWith("Seeding article recommendations...", 12, 12)
   })
 
   it("names the step that failed", async () => {

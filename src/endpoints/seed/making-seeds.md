@@ -305,6 +305,54 @@ await createMyFeatureArticle(
 )
 ```
 
+## Showcasing a Feature on a Preview or Staging
+
+`showcase.ts` is a catalog of the feature articles that can be pushed to a live
+site. To make yours pushable, add it to `showcaseEntries` with the slug it
+creates (`__tests__/showcase.test.ts` checks the two match):
+
+```typescript
+{
+  slug: "my-feature-demo",
+  create: (payload, writers, media, context) =>
+    createMyFeatureArticle(payload, writers, media, [], context),
+},
+```
+
+Entries stay after their PR merges; each push names the articles it wants.
+
+**On a PR's preview**, add a line naming them to the PR description:
+
+```text
+Showcase: my-feature-demo
+```
+
+`.github/workflows/showcase.yml` pushes them when you save the description, and
+again every time the preview bot reports a deploy is ready (a redeploy can
+re-copy the preview's database from staging, so the push has to follow each
+deploy). The deploy trigger runs from `dev`'s copy of the workflow, so it only
+works once the workflow is there.
+
+**On staging**, run the workflow by hand (Actions → Showcase → Run workflow)
+with target `staging`, or push from your machine. Staging gets drafts, since
+it's shared:
+
+```bash
+SHOWCASE_EMAIL=you@example.com SHOWCASE_PASSWORD=… pnpm showcase 748 my-feature-demo
+SHOWCASE_STAGING_URL=https://… SHOWCASE_EMAIL=… SHOWCASE_PASSWORD=… pnpm showcase staging my-feature-demo
+```
+
+`pnpm showcase <target>` with no slugs lists the catalog; `--all` pushes all of
+it, and `--draft` makes drafts on any target.
+
+`pnpm showcase` runs the seed on your machine and replays its `payload.create`
+calls against the site's REST API, so a showcase seed can only use `create`
+and `logger` on `payload`. The account must hold a role that can be credited as
+author (`writer`, `editor`, `chief-editor` or `narrator`); the articles are
+credited to it. The push only adds: an entry whose slug is already there, as a
+draft or published, is skipped, and nothing is deleted. Topics are left empty,
+since the target's topic ids aren't known.
+
 ---
 
 ## Error Handling in Seeds

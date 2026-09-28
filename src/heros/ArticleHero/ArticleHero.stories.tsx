@@ -38,7 +38,7 @@ export const Default: Story = {
     )
     await userEvent.hover(canvasElement.querySelector("#article-dateline")!)
     await waitFor(() =>
-      expect(document.querySelector("[data-slot=tooltip-popup]")).toHaveTextContent(/2026/),
+      expect(document.querySelector("[data-slot=tooltip-content]")).toHaveTextContent(/2026/),
     )
   },
 }

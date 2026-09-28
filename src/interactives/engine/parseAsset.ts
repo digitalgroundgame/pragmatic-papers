@@ -7,8 +7,7 @@ import { factKey, isReservedFact, RESERVED_FACTS } from "./contract"
 import type { DrilldownAsset, DrilldownPath, FactMap, ViewBox } from "./types"
 
 type SvgEvent =
-  | { type: "open"; tag: string; attrs: Record<string, string> }
-  | { type: "close"; tag: string }
+  { type: "open"; tag: string; attrs: Record<string, string> } | { type: "close"; tag: string }
 
 function lookup(attrs: Record<string, string>, name: string): string | undefined {
   if (name in attrs) return attrs[name]

@@ -126,13 +126,7 @@ export interface CategoryValue {
 }
 
 export type DetailFormat =
-  | "text"
-  | "date"
-  | "years-since"
-  | "term"
-  | "link"
-  | "reported"
-  | "portrait"
+  "text" | "date" | "years-since" | "term" | "link" | "reported" | "portrait"
 
 export interface DetailCondition {
   field: string

@@ -133,8 +133,8 @@ describe("seed", () => {
 
     await seed(payload, onProgress, { disableRevalidate: true })
 
-    expect(onProgress).toHaveBeenCalledWith("Clearing existing data...", 1, 11)
-    expect(onProgress).toHaveBeenLastCalledWith("Seeding article recommendations...", 11, 11)
+    expect(onProgress).toHaveBeenCalledWith("Clearing existing data...", 1, 12)
+    expect(onProgress).toHaveBeenLastCalledWith("Seeding article recommendations...", 12, 12)
   })
 
   it("names the step that failed", async () => {

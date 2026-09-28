@@ -7,11 +7,11 @@ import {
   OverviewField,
   PreviewField,
 } from "@payloadcms/plugin-seo/fields"
-import { slugField } from "payload"
 
 import { editor } from "@/access/collections"
 import { isPublishedOrStaff } from "@/access/policies"
 import { link } from "@/fields/link2"
+import { slugField } from "@/fields/slug"
 import { populatePublishedAt } from "@/hooks/populatePublishedAt"
 import { profileOptions } from "@/interactives/profiles"
 import { generatePreviewPath } from "@/utilities/generatePreviewPath"

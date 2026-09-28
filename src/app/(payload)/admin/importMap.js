@@ -41,6 +41,7 @@ import { FootnoteLabel as FootnoteLabel_2845bbc260cbb0202b7c6ec591d344dc } from 
 import { FootnotesPreview as FootnotesPreview_78f98036fa74f92e38dd688ebeae2fd5 } from '@/blocks/Footnote/FootnotesPreview'
 import { ExtractNarrationButton as ExtractNarrationButton_100e898a8737273f0d647b5ef7ea8c8c } from '@/collections/Articles/components/ExtractNarrationButton'
 import { SubstackImportUrl as SubstackImportUrl_1c3253008a5f10553f86efb4b10e0c79 } from '@/collections/Articles/components/SubstackImportUrl'
+import { CloneFromProduction as CloneFromProduction_0daa172d9e9e4412dde3157655d5106a } from '@/collections/Articles/components/CloneFromProduction'
 import { ScheduleNewsletterButton as ScheduleNewsletterButton_a66b86b65dab65173a5cdf3751fad59f } from '@/collections/Volumes/components/ScheduleNewsletterButton'
 import { DeletionNotice as DeletionNotice_8579feffe3388cd4abea6f9219edec3e } from '@/collections/Media/components/DeletionNotice'
 import { BlurDataURLField as BlurDataURLField_3bf98f0d72a9b7fcf13045923bb48189 } from '@/collections/Media/components/BlurDataURLField'
@@ -108,6 +109,7 @@ export const importMap = {
   "@/blocks/Footnote/FootnotesPreview#FootnotesPreview": FootnotesPreview_78f98036fa74f92e38dd688ebeae2fd5,
   "@/collections/Articles/components/ExtractNarrationButton#ExtractNarrationButton": ExtractNarrationButton_100e898a8737273f0d647b5ef7ea8c8c,
   "@/collections/Articles/components/SubstackImportUrl#SubstackImportUrl": SubstackImportUrl_1c3253008a5f10553f86efb4b10e0c79,
+  "@/collections/Articles/components/CloneFromProduction#CloneFromProduction": CloneFromProduction_0daa172d9e9e4412dde3157655d5106a,
   "@/collections/Volumes/components/ScheduleNewsletterButton#ScheduleNewsletterButton": ScheduleNewsletterButton_a66b86b65dab65173a5cdf3751fad59f,
   "@/collections/Media/components/DeletionNotice#DeletionNotice": DeletionNotice_8579feffe3388cd4abea6f9219edec3e,
   "@/collections/Media/components/BlurDataURLField#BlurDataURLField": BlurDataURLField_3bf98f0d72a9b7fcf13045923bb48189,

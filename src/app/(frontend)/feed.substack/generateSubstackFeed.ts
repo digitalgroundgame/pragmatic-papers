@@ -69,9 +69,13 @@ const figureHTML = (media: number | Media | null | undefined): string => {
   return `<figure><img src="${escapeHTML(absoluteURL(media.url))}" alt="${escapeHTML(media.alt ?? "")}" />${caption ? `<figcaption>${caption}</figcaption>` : ""}</figure>`
 }
 
-const buildConverters = (article: Article): HTMLConvertersFunction => {
-  const url = articleURL(article)
-
+/**
+ * Converters for the Substack feed. `url` is the article's own URL, which
+ * internal links fall back to and interactive maps link back to. Covered by
+ * `src/utilities/__tests__/generateRssFeed.converters.test.ts`, which fails
+ * when a block or node type the article editor allows has no converter here.
+ */
+export const createSubstackConverters = (url: string): HTMLConvertersFunction => {
   return ({ defaultConverters }) => {
     return {
       ...defaultConverters,
@@ -171,7 +175,7 @@ export const substackArticleHTML = (article: Article): string => {
   const hero = figureHTML(article.heroImage)
   const body = convertLexicalToHTML({
     data: article.content,
-    converters: buildConverters(article),
+    converters: createSubstackConverters(url),
     disableContainer: true,
     disableIndent: true,
     disableTextAlign: true,

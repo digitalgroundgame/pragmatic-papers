@@ -98,7 +98,7 @@ This file provides guidance to tools like Claude Code (claude.ai/code) when work
 
 - **File structure**: `blocks/<Name>/config.ts` (Payload config) + `blocks/<Name>/Component.tsx` (React component)
 - **Two rendering systems**: `RenderBlocks` renders page layout blocks (Content, CTA, MediaBlock, Form, VolumeView); `RichText` renders Lexical inline/rich-text blocks (Banner, Code, Math, Footnote, SocialEmbed, SquiggleRule)
-- **Feed converters**: the RSS feeds render article content and volume editor's notes to HTML, so a block or Lexical feature added to those editors (or to the rich text inside their blocks) also needs a converter in `createHtmlConverters` (`src/utilities/generateRssFeed.ts`). `src/utilities/__tests__/generateRssFeed.converters.test.ts` reads the resolved Payload config and fails, naming what's missing, until it has one
+- **Feed converters**: the RSS feeds (and the Substack import feed) render article content and volume editor's notes to HTML, so a block or Lexical feature added to those editors (or to the rich text inside their blocks) also needs a converter in `createHtmlConverters` (`src/utilities/generateRssFeed.ts`) and, for article content, `createSubstackConverters` (`src/app/(frontend)/feed.substack/generateSubstackFeed.ts`). `src/utilities/__tests__/generateRssFeed.converters.test.ts` reads the resolved Payload config and fails, naming what's missing, until it has one
 
 ### Data Fetching Patterns
 

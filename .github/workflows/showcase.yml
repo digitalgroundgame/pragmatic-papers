@@ -16,7 +16,7 @@ name: Showcase
 #     gets the label. Removing either removes the other.
 #
 # The articles are pushed to the PR's Coolify preview once it's up, and the
-# description then lists links to them:
+# description then lists links to them at the top, under any `Closes #N` line:
 #   - after each preview deploy, when "Preview deployment" finishes. A deploy
 #     may re-copy the preview database, so this re-pushes after each one.
 #   - when the label is added or the line edited, for a preview that is

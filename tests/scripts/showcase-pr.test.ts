@@ -58,8 +58,29 @@ describe("optOut", () => {
 })
 
 describe("withLinks", () => {
-  it("appends a list", () => {
-    expect(withLinks("Text\n", ["- [first](u)"])).toBe(`Text\n\n${block("- [first](u)")}\n`)
+  it("adds a list at the top", () => {
+    expect(withLinks("## Context\n\nText\n", ["- [first](u)"])).toBe(
+      `${block("- [first](u)")}\n\n## Context\n\nText\n`,
+    )
+  })
+
+  it("adds a list under the issues the PR closes", () => {
+    const body = "Closes #743\nFixes owner/repo#12\n\n## Context\n\nText"
+    expect(withLinks(body, ["- [first](u)"])).toBe(
+      `Closes #743\nFixes owner/repo#12\n\n${block("- [first](u)")}\n\n## Context\n\nText`,
+    )
+  })
+
+  it.each(["Text\n\nCloses #743", "Fix the carousel, as #743 asks"])(
+    "adds a list above %j, which closes nothing at the top",
+    (body) => {
+      expect(withLinks(body, ["- [first](u)"])).toBe(`${block("- [first](u)")}\n\n${body}`)
+    },
+  )
+
+  it("adds a list to an empty description", () => {
+    expect(withLinks("", ["- [first](u)"])).toBe(`${block("- [first](u)")}\n`)
+    expect(withLinks("Closes #1", ["- [first](u)"])).toBe(`Closes #1\n\n${block("- [first](u)")}\n`)
   })
 
   it("replaces the list in place", () => {
@@ -323,7 +344,7 @@ describe("main", () => {
     it("lists the links in the description", async () => {
       const h = harness({ body: "Text", files: { "/tmp/links.md": "- [first](u)\n\n" } })
       expect(await main(["link"], { ...ENV, LINKS_FILE: "/tmp/links.md" }, h.deps)).toBe(0)
-      expect(h.edits()).toEqual([`Text\n\n${block("- [first](u)")}\n`])
+      expect(h.edits()).toEqual([`${block("- [first](u)")}\n\nText`])
     })
 
     it("doesn't edit a description that already lists them", async () => {

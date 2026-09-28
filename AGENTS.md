@@ -224,6 +224,11 @@ function, and fails on any axe violation.
   `src/stories/a11y.ts` and cite the issue tracking the fix; `knownContrastIssue` covers the
   brand colors (#998). Never turn a story's a11y test off wholesale.
 - **Third-party embeds** that load a platform's script get `tags: ["!test"]`.
+- **Published**: CI's "Deploy Storybook" job uploads the tested build to the
+  `pragmatic-papers-storybook` Cloudflare Worker (`.storybook/wrangler.jsonc`):
+  `dev` at `pragmatic-papers-storybook.digital-ground-game.workers.dev`, and each PR at a
+  `pr-<number>-` preview URL linked from a PR comment. Needs the `CLOUDFLARE_API_TOKEN`
+  (Workers Scripts: Edit) and `CLOUDFLARE_ACCOUNT_ID` repo secrets; without them it skips.
 
 ### Visual regression (screenshot) tests
 

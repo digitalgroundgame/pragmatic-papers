@@ -6,7 +6,7 @@ name: Showcase
 #
 # A PR opts in with a line in its description naming the articles:
 #
-#   Showcase: finding-your-way-table-of-contents
+#   Showcase: rich-text-showcase
 #
 # and they're pushed to its Coolify preview:
 #   - when the deployment bot's comment reports the preview is ready. The bot

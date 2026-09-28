@@ -13,7 +13,7 @@ through its REST API, skipping any whose slug is already there. Nothing is
 deleted. Logs in as SHOWCASE_EMAIL / SHOWCASE_PASSWORD, an account on that site
 that can be credited as author (a preview's users are copied from staging).
 
-  pnpm showcase 748 finding-your-way-table-of-contents  → https://pr-748.pragmaticpapers.com
+  pnpm showcase 748 rich-text-showcase                  → https://pr-748.pragmaticpapers.com
   pnpm showcase staging rich-text-showcase              → SHOWCASE_STAGING_URL, as drafts
   pnpm showcase https://example.com --all --draft
 
@@ -56,7 +56,7 @@ export function resolveTarget(
 
 /**
  * Reads the slugs from a PR description's `Showcase:` line, e.g.
- * `Showcase: finding-your-way-table-of-contents, rich-text-showcase`.
+ * `Showcase: rich-text-showcase, lorem-ipsum-timeline`.
  */
 export function slugsFromDescription(description: string): string[] {
   const line = description.match(/^[\s>*_-]*showcase\s*:[*_\s]*(.*)$/im)?.[1] ?? ""

@@ -40,9 +40,9 @@ import type { SerializedLexicalNode } from "@/utilities/lexical"
  * Unlike `/feed.articles`, whose HTML targets feed readers, this markup is
  * written for Substack's editor, which keeps only plain semantic HTML: every
  * URL is absolute, there are no inline styles, math falls back to its LaTeX
- * source, footnotes use the markup Substack's editor saves for its own, and
- * blocks Substack cannot render (interactive maps) link back to the article.
- * Each post ends by pointing at the original on the site.
+ * source, footnotes become plain endnotes, and blocks Substack cannot render
+ * (interactive maps) link back to the article. Each post ends by pointing at
+ * the original on the site.
  */
 
 const SITE_NAME = "The Pragmatic Papers"
@@ -147,27 +147,12 @@ const tableCellToHTML = ({
 }
 
 /**
- * A footnote reference met while rendering the body, in the order it appears.
- * Substack's footnotes are one-to-one with their references, so a note cited
- * twice becomes two footnotes.
- */
-interface FootnoteReference {
-  index: number
-  note: string
-}
-
-/**
  * Converters for the Substack feed. `url` is the article's own URL, which
- * internal links fall back to and interactive maps link back to. Footnote
- * references are numbered in order of appearance and recorded in
- * `footnoteReferences`, for `footnotesHTML` to render after the body. Covered
- * by `src/utilities/__tests__/generateRssFeed.converters.test.ts`, which fails
+ * internal links fall back to and interactive maps link back to. Covered by
+ * `src/utilities/__tests__/generateRssFeed.converters.test.ts`, which fails
  * when a block or node type the article editor allows has no converter here.
  */
-export const createSubstackConverters = (
-  url: string,
-  footnoteReferences: FootnoteReference[] = [],
-): HTMLConvertersFunction => {
+export const createSubstackConverters = (url: string): HTMLConvertersFunction => {
   return ({ defaultConverters }) => {
     return {
       ...defaultConverters,
@@ -246,53 +231,44 @@ export const createSubstackConverters = (
         ...defaultConverters.inlineBlocks,
         inlineMathBlock: ({ node }: { node: SerializedInlineBlockNode }) =>
           `<code>${escapeHTML((node.fields as InlineMathBlock).math ?? "")}</code>`,
-        // Substack's own footnote markup, as its editor saves it, so the
-        // importer can turn it into a native footnote.
         footnote: ({ node }: { node: SerializedInlineBlockNode }) => {
-          const { index, note } = node.fields as FootnoteBlock
-          if (typeof index !== "number") return ""
-          const n = footnoteReferences.push({ index, note })
-          return `<a data-component-name="FootnoteAnchorToDOM" id="footnote-anchor-${n}" href="#footnote-${n}" target="_self" class="footnote-anchor">${n}</a>`
+          const { index } = node.fields as FootnoteBlock
+          return typeof index === "number" ? `<sup>[${index}]</sup>` : ""
         },
       },
     }
   }
 }
 
-/**
- * One Substack footnote per reference, numbered to match its anchor. The text
- * and source link come from the article's footnotes list, falling back to the
- * note stored on the reference itself.
- */
-const footnotesHTML = (references: FootnoteReference[], footnotes: Article["footnotes"]): string =>
-  references
-    .map(({ index, note: referenceNote }, i) => {
-      const n = i + 1
-      const footnote = footnotes?.find((entry) => entry.index === index)
-      const note = footnote?.note || referenceNote
-      const source = footnote?.attributionEnabled ? getLinkFieldUrl(footnote.link) : null
+const notesHTML = (footnotes: Article["footnotes"]): string => {
+  const items = (footnotes ?? [])
+    .filter((footnote) => footnote?.note && typeof footnote.index === "number")
+    .sort((a, b) => (a.index ?? 0) - (b.index ?? 0))
+    .map(({ index, note, attributionEnabled, link }) => {
+      const source = attributionEnabled ? getLinkFieldUrl(link) : null
       const sourceHTML = source
-        ? ` <a href="${escapeHTML(absoluteURL(source))}">${escapeHTML(footnote?.link?.label || absoluteURL(source))}</a>`
+        ? ` <a href="${escapeHTML(absoluteURL(source))}">${escapeHTML(link?.label || absoluteURL(source))}</a>`
         : ""
-      return `<div data-component-name="FootnoteToDOM" class="footnote"><a id="footnote-${n}" href="#footnote-anchor-${n}" contenteditable="false" target="_self" class="footnote-number">${n}</a><div class="footnote-content"><p>${escapeHTML(note ?? "")}${sourceHTML}</p></div></div>`
+      return `<p>[${index}] ${escapeHTML(note)}${sourceHTML}</p>`
     })
     .join("")
+
+  return items ? `<hr /><h3>Notes</h3>${items}` : ""
+}
 
 export const substackArticleHTML = (article: Article): string => {
   const url = articleURL(article)
   const hero = figureHTML(article.heroImage)
-  const footnoteReferences: FootnoteReference[] = []
   const body = convertLexicalToHTML({
     data: article.content,
-    converters: createSubstackConverters(url, footnoteReferences),
+    converters: createSubstackConverters(url),
     disableContainer: true,
     disableIndent: true,
     disableTextAlign: true,
   })
   const footer = `<hr /><p><em>Originally published at <a href="${escapeHTML(url)}">${SITE_NAME}</a>.</em></p>`
 
-  // Footnotes last, where Substack's editor keeps them.
-  return hero + body + footer + footnotesHTML(footnoteReferences, article.footnotes)
+  return hero + body + notesHTML(article.footnotes) + footer
 }
 
 export const generateSubstackFeed = (articles: Article[]): string => {

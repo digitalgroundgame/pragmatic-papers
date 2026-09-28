@@ -91,9 +91,7 @@ describe("Substack HTML for the showcase articles", () => {
 
   it.each([
     ["inline styles", /\sstyle=/],
-    // Substack's own footnote markup is the one exception: its classes are
-    // what the importer recognises.
-    ["class attributes", /\sclass="(?!footnote(-anchor|-number|-content)?")/],
+    ["class attributes", /\sclass=/],
     ["form elements", /<(input|label)\b/],
     ["React attribute names", /\s(htmlFor|readOnly|tabIndex)=/],
     ['"unknown node"', /unknown node/],

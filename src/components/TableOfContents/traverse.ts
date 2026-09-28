@@ -76,10 +76,19 @@ function blockAnchorGenerator(
   }
 }
 
+/**
+ * Tables are numbered table-1, table-2… in their own sequence, skipping any
+ * number a heading or block already took (a heading reading "Table 1"), and
+ * claiming the id so a later heading can't take it either.
+ */
 const tableAnchorGenerator: AnchorGenerator = (_, counts) => {
-  const n = (counts.get("table") ?? 0) + 1
+  let n = counts.get("table") ?? 0
+  let id: string
+  do id = `table-${++n}`
+  while (counts.has(id))
   counts.set("table", n)
-  return `table-${n}`
+  counts.set(id, 1)
+  return id
 }
 
 /**

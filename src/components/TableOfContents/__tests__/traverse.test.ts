@@ -77,6 +77,18 @@ describe("stampAnchors", () => {
     expect(anchorsOf(state)).toEqual(["same", "same-2"])
   })
 
+  it('gives a table and a heading reading "Table 1" different ids, either order', () => {
+    const table = { type: "table", children: [] }
+    expect(anchorsOf(stampAnchors(raw([heading("h2", "Table 1"), table])))).toEqual([
+      "table-1",
+      "table-2",
+    ])
+    expect(anchorsOf(stampAnchors(raw([table, heading("h2", "Table 1")])))).toEqual([
+      "table-1",
+      "table-1-2",
+    ])
+  })
+
   it("suffixes a heading that would take a reserved id", () => {
     const state = stampAnchors(raw([heading("h2", "Intro")]), undefined, undefined, ["intro"])
     expect(anchorsOf(state)).toEqual(["intro-2"])

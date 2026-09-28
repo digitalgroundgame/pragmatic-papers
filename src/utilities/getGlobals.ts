@@ -1,9 +1,9 @@
 import type { Config } from "@/payload-types"
 
-import configPromise from "@payload-config"
 import { unstable_cache } from "next/cache"
-import { getPayload } from "payload"
 import { cache } from "react"
+
+import { getPayloadConfig } from "./getPayloadConfig"
 
 type Global = keyof Config["globals"]
 
@@ -11,7 +11,7 @@ const getGlobal = cache(async function getGlobalCached<T extends Global>(
   slug: T,
   depth = 0,
 ): Promise<Config["globals"][T]> {
-  const payload = await getPayload({ config: configPromise })
+  const payload = await getPayloadConfig()
 
   const global = await payload.findGlobal({
     slug,

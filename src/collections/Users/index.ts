@@ -1,6 +1,6 @@
 import { isSelfOrAdmin, readUsers } from "@/access/policies"
 import { admin, staff } from "@/access/collections"
-import { adminFieldLevel, selfOrAdminFieldLevel } from "@/access/fields"
+import { adminFieldLevel, selfOrAdminFieldLevel, staffOrSelfFieldLevel } from "@/access/fields"
 import { revalidateUser } from "@/collections/Users/hooks/revalidateUser"
 import { menu } from "@/fields/menu"
 import {
@@ -120,7 +120,7 @@ export const Users: CollectionConfig = {
       saveToJWT: true,
       defaultValue: ["member"],
       access: {
-        read: selfOrAdminFieldLevel,
+        read: staffOrSelfFieldLevel,
         update: adminFieldLevel,
       },
       admin: {

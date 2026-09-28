@@ -103,6 +103,7 @@ Here are the most important scripts available in the root `package.json`:
 - `pnpm dev`: Start the application in development mode.
 - `pnpm dev:db-nuke`: Drop the database schema and re-run migrations (equivalent to a fresh database).
 - `pnpm dev:db-seed`: Seed the development database with mock content from the terminal (stop `pnpm dev` first).
+- `pnpm storybook`: Browse every block and component in Storybook at http://localhost:6006.
 - `pnpm lint`: Lint files with `eslint`.
 - `pnpm format`: Format files with `prettier`.
 - `pnpm check-types`: Runs typescript compiler in no emit mode to check for type errors.

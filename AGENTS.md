@@ -25,8 +25,10 @@ This file provides guidance to tools like Claude Code (claude.ai/code) when work
 
 ### Testing
 
-- `pnpm test` — run all tests (Vitest)
+- `pnpm test` — run all tests (Vitest), stories included (they need Playwright's Chromium: `pnpm exec playwright install chromium`)
 - `pnpm test:unit` — run unit tests
+- `pnpm test:storybook` — run every Storybook story in headless Chromium: its `play` function, then an axe check (see [Storybook](#storybook))
+- `pnpm storybook` — Storybook dev server on port 6006; `pnpm storybook:build` builds it into `storybook-static/`
 - `pnpm test:integration` — run integration tests (uses Testcontainers)
 - `pnpm test:e2e` — run Playwright E2E tests (uses Testcontainers). Screenshot comparisons are skipped unless `CI` is set; generate visual baselines with `pnpm test:e2e:update-snapshots` (Dockerized; matches CI pixel-for-pixel on x86_64 hosts — see `tests/e2e/README.md` for the full lifecycle) and commit them with the PR — never generate/commit baselines from a bare local machine
 - `pnpm test:unit:coverage` — run unit tests with V8 coverage report (what CI uses; outputs `coverage/coverage-summary.json` and `coverage/coverage-final.json`)
@@ -96,6 +98,7 @@ This file provides guidance to tools like Claude Code (claude.ai/code) when work
 
 - **File structure**: `blocks/<Name>/config.ts` (Payload config) + `blocks/<Name>/Component.tsx` (React component)
 - **Two rendering systems**: `RenderBlocks` renders page layout blocks (Content, CTA, MediaBlock, Form, VolumeView); `RichText` renders Lexical inline/rich-text blocks (Banner, Code, Math, Footnote, SocialEmbed, SquiggleRule)
+- **Feed converters**: the RSS feeds render article content and volume editor's notes to HTML, so a block or Lexical feature added to those editors (or to the rich text inside their blocks) also needs a converter in `createHtmlConverters` (`src/utilities/generateRssFeed.ts`). `src/utilities/__tests__/generateRssFeed.converters.test.ts` reads the resolved Payload config and fails, naming what's missing, until it has one
 
 ### Data Fetching Patterns
 
@@ -123,6 +126,7 @@ This file provides guidance to tools like Claude Code (claude.ai/code) when work
 | Code type                      | Test type                                                                                  |
 | ------------------------------ | ------------------------------------------------------------------------------------------ |
 | Pure utility functions         | Unit test in `src/**/__tests__/`                                                           |
+| Blocks and components          | Storybook story next to the component (see [Storybook](#storybook))                        |
 | UI/presentational components   | Snapshot test (see `src/components/ui/__tests__/button.snapshot.test.tsx` for the pattern) |
 | Client components with state   | RTL interaction test (`fireEvent`; `user-event` is not installed — see #898)               |
 | Server components (async, CMS) | Integration test with mocked Payload queries                                               |
@@ -152,6 +156,26 @@ Coverage reporting is informational only — chore/docs PRs don't need special h
 
 - run linting and type-checks
 - run unit and integration tests as needed, _skip running e2e_.
+- touched a block or component? run `pnpm test:storybook`, and add or update its story.
+
+### Storybook
+
+Every block and component has a colocated `*.stories.tsx`. Each story also runs as a test
+(`pnpm test:storybook`, and CI's Storybook job): it renders in Chromium, runs its `play`
+function, and fails on any axe violation.
+
+- **Fixtures** live in `src/stories/fixtures/` (docs, media, rich text, navigation). Reuse them
+  rather than inlining Payload shapes. Media points at `.storybook/assets`, so no story touches
+  the network.
+- **Payload**: `.storybook/main.ts` swaps `@/utilities/getPayloadConfig` for
+  `src/stories/mocks/getPayloadConfig.ts`. Seed a story in `beforeEach` with
+  `mocked(getPayloadConfig).mockResolvedValue(createFakePayload({ collections, globals }))`.
+  Server code must reach Payload through `getPayloadConfig`: a direct `getPayload({ config })`
+  pulls the Payload config into the browser bundle and breaks `pnpm storybook:build`.
+- **Known a11y failures**: skip only the failing rule with `skipA11yRules("rule-id")` from
+  `src/stories/a11y.ts` and cite the issue tracking the fix; `knownContrastIssue` covers the
+  brand colors (#998). Never turn a story's a11y test off wholesale.
+- **Third-party embeds** that load a platform's script get `tags: ["!test"]`.
 
 ### Visual regression (screenshot) tests
 

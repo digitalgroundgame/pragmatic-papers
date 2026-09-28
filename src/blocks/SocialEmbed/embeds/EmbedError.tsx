@@ -12,7 +12,7 @@ export function EmbedError({ url, message, displayName }: EmbedErrorProps): Reac
     <Card
       role="alert"
       aria-live="polite"
-      className="bg-muted/50 text-muted-foreground/80 mx-auto my-4 max-w-[550px] text-center text-sm"
+      className="bg-muted/50 text-muted-foreground mx-auto my-4 max-w-[550px] text-center text-sm"
     >
       <CardContent className="flex flex-col items-center pt-4">
         <TriangleAlert className="h-8 w-8" aria-hidden="true" />

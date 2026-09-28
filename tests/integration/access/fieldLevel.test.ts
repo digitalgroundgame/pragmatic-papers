@@ -240,7 +240,7 @@ describe("field-level access", () => {
       expect(result.roles).toContain("writer")
     })
 
-    it("hides email and roles from non-admin staff reading another user", async () => {
+    it("shows roles but hides email from non-admin staff reading another user", async () => {
       const editor = await createUser("editor")
       const writer = await createUser("writer")
 
@@ -251,8 +251,23 @@ describe("field-level access", () => {
         user: editor,
       })
 
-      // Staff may read the user document (readUsers), but `email`/`roles` stay
-      // private to the user themselves and admins (selfOrAdminFieldLevel).
+      // `email` stays private to the user and admins (selfOrAdminFieldLevel);
+      // `roles` is readable by any staff member (staffOrSelfFieldLevel).
+      expect(result.email).toBeUndefined()
+      expect(result.roles).toContain("writer")
+    })
+
+    it("hides email and roles from a member reading a staff user", async () => {
+      const member = await createUser("member")
+      const writer = await createUser("writer")
+
+      const result = await payload.findByID({
+        collection: "users",
+        id: writer.id,
+        overrideAccess: false,
+        user: member,
+      })
+
       expect(result.email).toBeUndefined()
       expect(result.roles).toBeUndefined()
     })

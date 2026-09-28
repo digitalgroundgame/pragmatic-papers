@@ -43,6 +43,7 @@ import * as migration_20260804_004633_add_layouts_8_10 from "./20260804_004633_a
 import * as migration_20260814_230024_add_merch_collection from "./20260814_230024_add_merch_collection"
 import * as migration_20260923_020840_bump_payload_3_90 from "./20260923_020840_bump_payload_3_90"
 import * as migration_20260927_050926_add_substack_syndication from "./20260927_050926_add_substack_syndication"
+import * as migration_20260928_111332_add_site_settings from "./20260928_111332_add_site_settings"
 
 export const migrations = [
   {
@@ -269,5 +270,10 @@ export const migrations = [
     up: migration_20260927_050926_add_substack_syndication.up,
     down: migration_20260927_050926_add_substack_syndication.down,
     name: "20260927_050926_add_substack_syndication",
+  },
+  {
+    up: migration_20260928_111332_add_site_settings.up,
+    down: migration_20260928_111332_add_site_settings.down,
+    name: "20260928_111332_add_site_settings",
   },
 ]

@@ -107,6 +107,25 @@ describe("createTableOfContents", () => {
     expect(toc.tableOfContentsEntries(stamped)[0]).toMatchObject({ anchor: "hello_world" })
   })
 
+  it("stampTableOfContentsAnchors keeps the intro anchor free for the Intro entry", () => {
+    const toc = createTableOfContents()
+    const stamped = toc.stampTableOfContentsAnchors({
+      root: {
+        type: "root",
+        children: [{ type: "paragraph", children: [], version: 1 }, heading("h2", "Intro")],
+        direction: null,
+        format: "",
+        indent: 0,
+        version: 1,
+      },
+    } as DefaultTypedEditorState)
+
+    expect(toc.tableOfContentsEntries(stamped).map((entry) => entry.anchor)).toEqual([
+      "intro",
+      "intro-2",
+    ])
+  })
+
   it("populateTableOfContentsAnchors passes an empty value through", async () => {
     const toc = createTableOfContents()
     const args = { value: null } as Parameters<typeof toc.populateTableOfContentsAnchors>[0]

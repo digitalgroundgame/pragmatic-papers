@@ -41,7 +41,6 @@ export function createTableOfContentsConverter(
           {id ? (
             <a
               href={`#${id}`}
-              aria-label="Link to section"
               className="group inline-flex items-baseline gap-1 text-inherit no-underline"
             >
               {children}

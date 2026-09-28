@@ -1,3 +1,4 @@
+import { render as renderDom, screen } from "@testing-library/react"
 import { renderToStaticMarkup } from "react-dom/server"
 import { describe, expect, it } from "vitest"
 
@@ -31,6 +32,21 @@ describe("createTableOfContentsConverter", () => {
     expect(html).toContain("<h2")
     expect(html).toContain('href="#my-section"')
     expect(html).toContain("My Section")
+  })
+
+  it("names the heading and its self-link by the heading text", () => {
+    const { heading: converter } = createTableOfContentsConverter()
+    renderDom(
+      <>
+        {(converter as ConverterFn)({
+          node: heading("h2", "My Section", "my-section"),
+          nodesToJSX,
+        })}
+      </>,
+    )
+    // An aria-label on the wrapping link would replace the heading's name too.
+    expect(screen.getByRole("heading", { level: 2, name: "My Section" })).toBeInTheDocument()
+    expect(screen.getByRole("link", { name: "My Section" })).toHaveAttribute("href", "#my-section")
   })
 
   it("renders a plain heading when the node has no anchor", () => {

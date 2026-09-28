@@ -82,10 +82,15 @@ const tableAnchorGenerator: AnchorGenerator = (_, counts) => {
   return `table-${n}`
 }
 
+/**
+ * `reserved` ids are ones the page renders itself (the Intro wrapper), so a
+ * heading that slugifies to one is suffixed instead of duplicating its id.
+ */
 export function stampAnchors<T extends SerializedEditorState>(
   state: T,
   slugify: SlugifyFn = slugifyHeading,
   resolvers: TableOfContentsResolverMap = {},
+  reserved: string[] = [],
 ): T {
   const stamped = structuredClone(state)
   const block = blockAnchorGenerator(resolvers, slugify)
@@ -95,7 +100,7 @@ export function stampAnchors<T extends SerializedEditorState>(
     block,
     inlineBlock: block,
   }
-  const counts = new Map<string, number>()
+  const counts = new Map<string, number>(reserved.map((id) => [id, 1]))
   const walk = (nodes: SerializedLexicalNode[] | undefined): void => {
     if (!nodes) return
     for (const node of nodes) {

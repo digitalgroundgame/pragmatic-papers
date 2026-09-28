@@ -62,7 +62,8 @@ export function createTableOfContents({
 }: CreateTableOfContentsOptions = {}): CreateTableOfContents {
   const entriesFor = (content: DefaultTypedEditorState) =>
     buildEntries(content, resolvers, introAnchor)
-  const stamp = (content: DefaultTypedEditorState) => stampAnchors(content, slugify, resolvers)
+  const stamp = (content: DefaultTypedEditorState) =>
+    stampAnchors(content, slugify, resolvers, [introAnchor])
 
   return {
     introAnchor,

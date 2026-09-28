@@ -150,6 +150,13 @@ jobs:
         with:
           # A PR's head, or for staging the branch the dispatch was started on.
           ref: ${{ steps.pr.outputs.sha || github.ref }}
+          # The script checkout above leaves core.sparseCheckout on, and
+          # checkout's own "sparse-checkout disable" doesn't stick (it writes
+          # the worktree config, then turns worktree config off), so the tree
+          # stays sparse and setup-project is missing. A match-all pattern
+          # checks out everything whatever state the first checkout left.
+          sparse-checkout: /*
+          sparse-checkout-cone-mode: false
 
       - name: Set up Node.js environment
         if: steps.pr.outputs.skip != 'true'

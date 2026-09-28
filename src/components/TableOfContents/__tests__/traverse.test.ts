@@ -77,6 +77,11 @@ describe("stampAnchors", () => {
     expect(anchorsOf(state)).toEqual(["same", "same-2"])
   })
 
+  it("suffixes a heading that would take a reserved id", () => {
+    const state = stampAnchors(raw([heading("h2", "Intro")]), undefined, undefined, ["intro"])
+    expect(anchorsOf(state)).toEqual(["intro-2"])
+  })
+
   it("falls back to 'heading' when the text slugifies to nothing", () => {
     expect(anchorsOf(stampAnchors(raw([heading("h2", "!!!")])))).toEqual(["heading"])
   })

@@ -84,6 +84,9 @@ export const seed = async (
         await payload.delete({ collection: "pages", context, where: {} })
         await payload.delete({ collection: "forms", context, where: {} })
         await payload.delete({ collection: "form-submissions", context, where: {} })
+        // Snapshots point at their interactive, so they go first.
+        await payload.delete({ collection: "interactive-snapshots", context, where: {} })
+        await payload.delete({ collection: "interactives", context, where: {} })
       },
     },
     {
@@ -339,7 +342,7 @@ export const seed = async (
       // synced from the tracker and versioned, so it outlives any one piece of writing.
       name: "Creating interactives...",
       fn: async () => {
-        await createFederalCourtsInteractive(payload)
+        await createFederalCourtsInteractive(payload, context)
       },
     },
     {

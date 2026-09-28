@@ -38,6 +38,8 @@ export const {
   stampTableOfContentsAnchors,
   populateTableOfContentsAnchors,
 } = createTableOfContents({
+  // The footnote list and its references render footnote-N / footnote-ref-N.
+  reservedAnchors: [/^footnote-(ref-)?\d+$/],
   resolvers: {
     /* Add block customization here */
     interactiveMap: (block) => {

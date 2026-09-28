@@ -24,6 +24,19 @@ function renderToc(children: unknown[]) {
   )
 }
 
+describe("app TOC instance — reserved anchors", () => {
+  it("keeps headings off the footnote list's ids", () => {
+    const heading = (text: string) => ({
+      type: "heading",
+      tag: "h2",
+      children: [{ type: "text", text }],
+    })
+    const state = makeState([heading("Footnote 1"), heading("Footnote ref 2"), heading("Intro")])
+    const anchors = (state.root.children as { anchor?: string }[]).map((node) => node.anchor)
+    expect(anchors).toEqual(["footnote-1-2", "footnote-ref-2-2", "intro-2"])
+  })
+})
+
 describe("app TOC instance — socialEmbed resolver", () => {
   it.each([
     ["bluesky", "Bluesky embed"],

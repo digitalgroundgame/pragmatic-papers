@@ -47,21 +47,32 @@ function resolverPayloadFor(node: SerializedLexicalNode): unknown {
   return node
 }
 
-type AnchorGenerator = (
-  node: SerializedLexicalNode,
-  counts: Map<string, number>,
-) => string | undefined
+/**
+ * Ids handed out so far, plus the ones the page renders itself. Every anchor
+ * is claimed here, so no two elements on the page end up sharing an id.
+ */
+interface AnchorIds {
+  counts: Map<string, number>
+  taken: (id: string) => boolean
+}
 
-function dedupe(base: string, counts: Map<string, number>): string {
-  const n = (counts.get(base) ?? 0) + 1
+type AnchorGenerator = (node: SerializedLexicalNode, ids: AnchorIds) => string | undefined
+
+/** `base`, else `base-2`, `base-3`… the first one that isn't taken. */
+function dedupe(base: string, { counts, taken }: AnchorIds): string {
+  let n = counts.get(base) ?? 0
+  let id: string
+  do id = ++n === 1 ? base : `${base}-${n}`
+  while (taken(id))
   counts.set(base, n)
-  return n === 1 ? base : `${base}-${n}`
+  counts.set(id, Math.max(counts.get(id) ?? 0, 1))
+  return id
 }
 
 function headingAnchorGenerator(slugify: SlugifyFn): AnchorGenerator {
-  return (node, counts) => {
+  return (node, ids) => {
     const text = extractText((node as WithChildren).children)
-    return dedupe(slugify(text) || "heading", counts)
+    return dedupe(slugify(text) || "heading", ids)
   }
 }
 
@@ -69,10 +80,10 @@ function blockAnchorGenerator(
   resolvers: TableOfContentsResolverMap,
   slugify: SlugifyFn,
 ): AnchorGenerator {
-  return (node, counts) => {
+  return (node, ids) => {
     const entry = resolvers[resolverKeyFor(node)]?.(resolverPayloadFor(node))
     if (!entry || entry.anchor) return undefined
-    return dedupe(slugify(entry.label) || "block", counts)
+    return dedupe(slugify(entry.label) || "block", ids)
   }
 }
 
@@ -81,25 +92,26 @@ function blockAnchorGenerator(
  * number a heading or block already took (a heading reading "Table 1"), and
  * claiming the id so a later heading can't take it either.
  */
-const tableAnchorGenerator: AnchorGenerator = (_, counts) => {
+const tableAnchorGenerator: AnchorGenerator = (_, { counts, taken }) => {
   let n = counts.get("table") ?? 0
   let id: string
   do id = `table-${++n}`
-  while (counts.has(id))
+  while (taken(id))
   counts.set("table", n)
   counts.set(id, 1)
   return id
 }
 
 /**
- * `reserved` ids are ones the page renders itself (the Intro wrapper), so a
- * heading that slugifies to one is suffixed instead of duplicating its id.
+ * `reserved` ids are ones the page renders itself (the Intro wrapper, say): an
+ * id, or a pattern for a numbered family of them. A heading that slugifies to
+ * one is suffixed instead of duplicating its id.
  */
 export function stampAnchors<T extends SerializedEditorState>(
   state: T,
   slugify: SlugifyFn = slugifyHeading,
   resolvers: TableOfContentsResolverMap = {},
-  reserved: string[] = [],
+  reserved: (string | RegExp)[] = [],
 ): T {
   const stamped = structuredClone(state)
   const block = blockAnchorGenerator(resolvers, slugify)
@@ -109,13 +121,20 @@ export function stampAnchors<T extends SerializedEditorState>(
     block,
     inlineBlock: block,
   }
-  const counts = new Map<string, number>(reserved.map((id) => [id, 1]))
+  const counts = new Map<string, number>(
+    reserved.filter((id) => typeof id === "string").map((id) => [id, 1]),
+  )
+  const patterns = reserved.filter((id) => id instanceof RegExp)
+  const ids: AnchorIds = {
+    counts,
+    taken: (id) => counts.has(id) || patterns.some((pattern) => pattern.test(id)),
+  }
   const walk = (nodes: SerializedLexicalNode[] | undefined): void => {
     if (!nodes) return
     for (const node of nodes) {
       const generate = generators[node.type]
       if (generate) {
-        const anchor = generate(node, counts)
+        const anchor = generate(node, ids)
         if (anchor) (node as AnchoredNode).anchor = anchor
         else delete (node as AnchoredNode).anchor
       }

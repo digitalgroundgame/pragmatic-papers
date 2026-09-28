@@ -126,6 +126,25 @@ describe("createTableOfContents", () => {
     ])
   })
 
+  it("stampTableOfContentsAnchors keeps reservedAnchors free", () => {
+    const toc = createTableOfContents({ reservedAnchors: ["summary", /^note-\d+$/] })
+    const stamped = toc.stampTableOfContentsAnchors({
+      root: {
+        type: "root",
+        children: [heading("h2", "Summary"), heading("h2", "Note 3")],
+        direction: null,
+        format: "",
+        indent: 0,
+        version: 1,
+      },
+    } as DefaultTypedEditorState)
+
+    expect(toc.tableOfContentsEntries(stamped).map((entry) => entry.anchor)).toEqual([
+      "summary-2",
+      "note-3-2",
+    ])
+  })
+
   it("populateTableOfContentsAnchors passes an empty value through", async () => {
     const toc = createTableOfContents()
     const args = { value: null } as Parameters<typeof toc.populateTableOfContentsAnchors>[0]

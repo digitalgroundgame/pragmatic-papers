@@ -31,4 +31,9 @@ export interface CreateTableOfContentsOptions {
   slugify?: SlugifyFn
   icon?: ComponentType<SVGProps<SVGSVGElement>>
   introAnchor?: string
+  /**
+   * Ids the page already renders beside the article body, which headings and
+   * blocks mustn't take: an id, or a pattern for a numbered family of them.
+   */
+  reservedAnchors?: (string | RegExp)[]
 }

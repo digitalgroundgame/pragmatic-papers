@@ -89,6 +89,20 @@ describe("stampAnchors", () => {
     ])
   })
 
+  it("suffixes a heading that matches a reserved pattern", () => {
+    const state = stampAnchors(raw([heading("h2", "Footnote 1")]), undefined, undefined, [
+      /^footnote-\d+$/,
+    ])
+    expect(anchorsOf(state)).toEqual(["footnote-1-2"])
+  })
+
+  it("never reuses an id, even one a later heading's text spells out", () => {
+    const state = stampAnchors(
+      raw([heading("h2", "Same"), heading("h2", "Same"), heading("h2", "Same 2")]),
+    )
+    expect(anchorsOf(state)).toEqual(["same", "same-2", "same-2-2"])
+  })
+
   it("suffixes a heading that would take a reserved id", () => {
     const state = stampAnchors(raw([heading("h2", "Intro")]), undefined, undefined, ["intro"])
     expect(anchorsOf(state)).toEqual(["intro-2"])

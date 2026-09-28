@@ -51,9 +51,10 @@ describe("optOut", () => {
     expect(optOut(body)).toBe("## Context\n\n## Test Plan\n\n- ok")
   })
 
-  it("leaves a description without either alone", () => {
-    expect(optOut("## Context\n\nText")).toBe("## Context\n\nText")
-  })
+  it.each(["## Context\n\nText", "Text\n", "## Context\r\n\r\nText\r\n", "Text\n\n\n\nMore"])(
+    "leaves %j, with neither, untouched",
+    (body) => expect(optOut(body)).toBe(body),
+  )
 })
 
 describe("withLinks", () => {
@@ -145,13 +146,14 @@ describe("planSync", () => {
     })
   })
 
-  it("does nothing for a PR that never opted in", async () => {
-    expect(await planSync("opened", "Text", false, none)).toEqual({
-      body: undefined,
-      label: undefined,
-      push: false,
-    })
-  })
+  it.each(["Text", "Text\n", "## Context\r\n\r\nText\r\n"])(
+    "doesn't edit %j, from a PR that never opted in",
+    async (body) => {
+      for (const action of ["opened", "edited", "unlabeled"] as const) {
+        expect((await planSync(action, body, false, none)).body).toBeUndefined()
+      }
+    },
+  )
 })
 
 interface Call {

@@ -45,8 +45,13 @@ export function withShowcaseLine(body: string, slugs: string[]): string {
   return `${body.trimEnd()}\n\nShowcase: ${slugs.join(" ")}\n`
 }
 
-/** Removes the `Showcase:` lines and the link list. */
+/**
+ * Removes the `Showcase:` lines and the link list. A description with neither
+ * comes back untouched, line endings and all, so a PR that never opted in is
+ * never edited.
+ */
 export function optOut(body: string): string {
+  if (!hasShowcaseLine(body) && !LINKS_BLOCK.test(body)) return body
   const lineOnly = new RegExp(SHOWCASE_LINE.source, "i")
   return body
     .replace(LINKS_BLOCK, "")

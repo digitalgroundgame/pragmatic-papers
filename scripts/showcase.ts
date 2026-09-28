@@ -64,8 +64,8 @@ export function resolveTarget(
 
 /**
  * Reads the slugs from a PR description's `Showcase:` line, e.g.
- * `Showcase: rich-text-showcase, lorem-ipsum-timeline`. `Showcase: all` (what
- * the showcase label inserts) comes back as `["all"]`.
+ * `Showcase: rich-text-showcase, lorem-ipsum-timeline`. `Showcase: all` (meaning
+ * the whole catalog, written by hand) comes back as `["all"]`.
  */
 export function slugsFromDescription(description: string): string[] {
   const line = description.match(SHOWCASE_LINE)?.[1] ?? ""

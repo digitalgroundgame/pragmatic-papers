@@ -1,5 +1,5 @@
 import { APIError, type CollectionBeforeDeleteHook } from "payload"
-import { collectMediaReferences } from "@/utilities/collectMediaReferences"
+import { collectMediaReferences } from "../references/collectMediaReferences"
 
 export const protectPublishedMedia: CollectionBeforeDeleteHook = async ({
   id,

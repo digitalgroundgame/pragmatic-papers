@@ -10,7 +10,6 @@ import path from "path"
 import { fileURLToPath } from "url"
 
 import { anyone, staff } from "@/access/collections"
-import { canDeleteMedia } from "@/access/canDeleteMedia"
 import { isCreatedByOrEditor } from "@/access/policies"
 
 import type { Media as MediaType } from "@/payload-types"
@@ -37,7 +36,7 @@ export const Media: CollectionConfig = {
   ],
   access: {
     create: staff,
-    delete: canDeleteMedia,
+    delete: isCreatedByOrEditor,
     read: anyone,
     update: isCreatedByOrEditor,
   },

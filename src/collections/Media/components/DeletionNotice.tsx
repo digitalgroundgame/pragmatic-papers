@@ -55,10 +55,10 @@ export function DeletionNotice(): React.ReactNode {
         padding: "0.5rem 0.75rem",
       }}
     >
-      <strong>Deletion unavailable</strong>
+      <strong>Can&apos;t be deleted while in use</strong>
       <br />
-      Used in {refCount} published document{refCount === 1 ? "" : "s"}. See the References tab for
-      details.
+      Used in {refCount} published document{refCount === 1 ? "" : "s"}, so deleting it will be
+      refused. See the References tab for details.
     </div>
   )
 }

@@ -3,9 +3,11 @@ name: Claude Code Review
 # Runs once when the "ready for review" label is added (or when a labeled
 # draft is marked ready); to review again, remove and re-add the label. Drafts
 # and unlabeled PRs never run it. Not a required check: what gates merging is
-# "Review acknowledged" (review-ack.yml), a person replying `/reviewed` on the
-# PR's final commit after a review like this one has run. So fixing what a
-# review found doesn't take a second review, only a new reply.
+# "Review acknowledged" (review-ack.yml), which a person gives either by
+# approving the PR or, on their own PR, by replying `/reviewed` on its final
+# commit after a review like this one has run. So only PRs that take the
+# `/reviewed` path need a review, and fixing what it found needs no second
+# review, only a new reply.
 #
 # The job fails when the review reports a blocker, which marks the reviewed
 # commit with a ✗. It never approves.

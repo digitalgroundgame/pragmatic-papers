@@ -145,7 +145,22 @@ that PR:
   `mcp__github_inline_comment__create_inline_comment` so the comment is
   anchored to the code.
 - Never request changes or approve (`gh pr review --request-changes` /
-  `--approve`) — this skill only comments, it does not gate merges.
+  `--approve`) — this skill only comments. Its verdict gates merges only
+  through the marker below.
+- If also given `--head <sha>` (CI passes the commit it checked out), end the
+  summary with a line asking a reader to reply `/reviewed` once they have
+  read the review, then this marker as the very last line:
+
+  ```md
+  <!-- claude-review sha=<sha> verdict=<pass|blocker> -->
+  ```
+
+  `verdict=blocker` if any finding is a `blocker`, otherwise `verdict=pass`.
+  The "Claude review" job fails on a blocker or a missing marker, and
+  `/reviewed` only counts after a summary is on the PR (see
+  `.github/workflows/claude-review.yml` and `review-ack.yml`). Never post
+  `/reviewed` yourself; it stands for a person having read the review.
+
 - If posting fails (e.g. permissions), print the full review to stdout so
   it's still visible in the Action run logs.
 

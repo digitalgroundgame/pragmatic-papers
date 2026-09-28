@@ -4,7 +4,7 @@ import type { Article, Page, Topic, Volume } from "../payload-types"
 
 import { getMediaUrl } from "./getMediaUrl"
 import { getServerSideURL } from "./getURL"
-import { mergeOpenGraph } from "./mergeOpenGraph"
+import { DEFAULT_DESCRIPTION, mergeOpenGraph } from "./mergeOpenGraph"
 
 export const generateMeta = async (args: {
   doc: Partial<Page> | Partial<Volume> | Partial<Article> | Partial<Topic> | null
@@ -16,13 +16,13 @@ export const generateMeta = async (args: {
 
   const title = doc?.meta?.title ? doc?.meta?.title : "The Pragmatic Papers"
   const canonicalUrl = `${getServerSideURL()}${canonicalPath}`
-  const description = doc?.meta?.description || ""
+  const description = doc?.meta?.description || DEFAULT_DESCRIPTION
 
   return {
     alternates: {
       canonical: canonicalUrl,
     },
-    description: doc?.meta?.description,
+    description,
     openGraph: mergeOpenGraph({
       description,
       images: ogImage
@@ -38,7 +38,7 @@ export const generateMeta = async (args: {
     twitter: {
       card: "summary_large_image",
       title,
-      description: description || undefined,
+      description,
       images: ogImage ? [ogImage] : undefined,
     },
     title,

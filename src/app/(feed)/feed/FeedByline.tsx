@@ -2,6 +2,8 @@
 
 import { Media } from "@/components/Media"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import type { User } from "@/payload-types"
+import { isResolved } from "@/utilities/relationships"
 import { cn } from "@/utilities/utils"
 import React, { useEffect, useRef, useState } from "react"
 import type { FeedArticle } from "./types"
@@ -20,8 +22,9 @@ export function FeedByline({ article, className }: FeedBylineProps): React.React
   const textRef = useRef<HTMLSpanElement | null>(null)
   const [marquee, setMarquee] = useState<{ shift: number; duration: number } | null>(null)
 
-  const authorNames = (article.populatedAuthors ?? [])
-    .map((a) => (typeof a === "object" && a.name ? a.name : ""))
+  const authorNames = (article.authors ?? [])
+    .filter(isResolved<User>)
+    .map((a) => a.name ?? "")
     .filter(Boolean)
   const title = article.title
   const heroImage = article.heroImage

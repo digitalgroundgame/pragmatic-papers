@@ -1,6 +1,9 @@
 import { PostgreSqlContainer } from "@testcontainers/postgresql"
 import { execSync, spawn } from "node:child_process"
+import { createHash } from "node:crypto"
+import { appendFileSync, existsSync, readdirSync, readFileSync, rmSync } from "node:fs"
 import net from "node:net"
+import path from "node:path"
 import { blue, green, red } from "./ansi.mjs"
 
 function isPortInUse(port) {
@@ -16,7 +19,24 @@ function isPortInUse(port) {
   })
 }
 
-process.env.PAYLOAD_SECRET ??= "test-secret-for-e2e-tests"
+const SCREENSHOTS_DIR = "tests/e2e/__screenshots__"
+
+// Content hash of every baseline, so "did this run write one?" needs no repo:
+// in the Docker container a worktree's .git points outside the mount, and the
+// container runs as root over files the host owns.
+function screenshotFingerprint() {
+  if (!existsSync(SCREENSHOTS_DIR)) return ""
+  return readdirSync(SCREENSHOTS_DIR, { recursive: true })
+    .filter((file) => file.endsWith(".png"))
+    .sort()
+    .map((file) => {
+      const hash = createHash("sha1").update(readFileSync(path.join(SCREENSHOTS_DIR, file)))
+      return `${file} ${hash.digest("hex")}`
+    })
+    .join("\n")
+}
+
+process.env.PAYLOAD_SECRET ||= "test-secret-for-e2e-tests"
 
 let container = null
 
@@ -30,10 +50,10 @@ if (process.env.DATABASE_URI) {
   process.env.DATABASE_URI = container.getConnectionUri()
   console.warn(`${green("✔")} Test database started at ${process.env.DATABASE_URI}`)
 }
-process.env.USE_LOCAL_STORAGE ??= "true"
-process.env.PORT ??= "8000"
-process.env.NEXT_PUBLIC_SERVER_URL ??= `http://localhost:${process.env.PORT}`
-process.env.PAYLOAD_CONFIG_PATH ??= "src/payload.config.ts"
+process.env.USE_LOCAL_STORAGE ||= "true"
+process.env.PORT ||= "8000"
+process.env.NEXT_PUBLIC_SERVER_URL ||= `http://localhost:${process.env.PORT}`
+process.env.PAYLOAD_CONFIG_PATH ||= "src/payload.config.ts"
 process.env.E2E_MANAGED_SERVER = "true"
 
 const port = Number(process.env.PORT)
@@ -53,6 +73,16 @@ const useProdServer = !!process.env.E2E_PROD_SERVER
 
 let server = null
 try {
+  // .next/cache/fetch-cache persists across runs (it's on the bind-mounted
+  // repo, not inside the ephemeral test DB or container). unstable_cache
+  // entries from an unrelated earlier build — e.g. a local `pnpm dev` session
+  // seeded with a different merch catalogue — outlive that DB and get served
+  // against this run's freshly-seeded data, since Next's incremental build
+  // doesn't know the database underneath it changed. Wipe it so every E2E
+  // build is hermetic.
+  console.warn(`${blue("●")} Clearing .next build cache...`)
+  rmSync(".next", { recursive: true, force: true })
+
   console.warn(`${blue("●")} Running database migrations...`)
   execSync("pnpm payload migrate", {
     env: process.env,
@@ -86,6 +116,7 @@ try {
   }
 
   console.warn(`${blue("●")} Starting Playwright tests...`)
+  const baselinesBefore = screenshotFingerprint()
   const child = spawn(
     "./node_modules/.bin/playwright",
     ["test", "--config=playwright.config.ts", ...process.argv.slice(2).filter((a) => a !== "--")],
@@ -93,7 +124,51 @@ try {
   )
 
   const exitCode = await new Promise((resolve) => child.on("exit", resolve))
-  process.exitCode = exitCode ?? 0
+  let finalExit = exitCode ?? 0
+
+  // Flaky-baseline gate. When the run above wrote or changed a screenshot
+  // baseline, re-render just the @visual tests two more times against the same
+  // already-seeded, already-built server (no re-seed, no rebuild) and fail if a
+  // baseline only matches its own first render. Opt in with E2E_VERIFY_VISUAL;
+  // it skips itself when no baseline changed, so PRs that touch no screenshots
+  // pay nothing — the same scope as gating on "a baseline was committed".
+  if (process.env.E2E_VERIFY_VISUAL) {
+    if (screenshotFingerprint() !== baselinesBefore) {
+      console.warn(`${blue("●")} Verifying screenshot determinism (@visual ×2)...`)
+      const verify = spawn(
+        "./node_modules/.bin/playwright",
+        [
+          "test",
+          "--config=playwright.config.ts",
+          "--grep",
+          "@visual",
+          "--repeat-each=2",
+          "--retries=0",
+          "--project=chromium",
+        ],
+        { env: process.env, stdio: "inherit" },
+      )
+      const verifyExit = await new Promise((resolve) => verify.on("exit", resolve))
+      if (verifyExit) {
+        console.error(
+          `${red("✖")} Screenshot determinism check failed — a baseline only matches its own ` +
+            `first render. Make the capture deterministic (see tests/e2e/README.md), don't widen ` +
+            `the tolerance.`,
+        )
+        finalExit = verifyExit
+        // Signal a determinism-gate failure distinctly from the benign
+        // "wrote a missing baseline" failure. CI keys off this so it refuses
+        // to commit and greenlight a flaky baseline (see playwright.yml).
+        if (process.env.GITHUB_OUTPUT) {
+          appendFileSync(process.env.GITHUB_OUTPUT, "determinism_failed=true\n")
+        }
+      }
+    } else {
+      console.warn(`${green("✔")} No baseline changes — skipping screenshot determinism check.`)
+    }
+  }
+
+  process.exitCode = finalExit
 } catch (error) {
   console.error(`${red("✖")} Error during E2E test setup: ${error.message}`)
   process.exitCode = 1

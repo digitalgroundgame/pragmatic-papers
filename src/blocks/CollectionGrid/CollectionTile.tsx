@@ -1,4 +1,4 @@
-import type { Article, CollectionGridSlots, Media as MediaType } from "@/payload-types"
+import type { CollectionGridSlots, Media as MediaType, User } from "@/payload-types"
 import React from "react"
 
 import { HoverPrefetchLink } from "@/components/Link/HoverPrefetchLink"
@@ -6,6 +6,7 @@ import { isMedia, Media } from "@/components/Media"
 import type { ImageVariant } from "@/components/Media/ImageMedia"
 import { TimeAgo } from "@/components/TimeAgo"
 import { cn } from "@/utilities/utils"
+import { isResolved } from "@/utilities/relationships"
 
 export type ImagePosition = "above" | "below" | "left" | "right" | "none"
 
@@ -30,12 +31,12 @@ export const CollectionTile: React.FC<CollectionTileProps> = ({
   if (!tile) return null
   const { id, collection, kicker, overrideTitle, showByline } = tile
 
-  if (!collection || typeof collection.value === "number") return null
+  if (!collection || !isResolved(collection.value)) return null
 
   const { title, slug, publishedAt, meta } = collection.value
   const href = `/${collection.relationTo}/${slug}`
 
-  let populatedAuthors: Article["populatedAuthors"] = []
+  let populatedAuthors: User[] = []
   let heroImage: MediaType | null = null
   if (imagePosition !== "none") {
     if (collection.relationTo === "articles" && isMedia(collection.value.heroImage)) {
@@ -45,8 +46,8 @@ export const CollectionTile: React.FC<CollectionTileProps> = ({
     }
   }
 
-  if ("populatedAuthors" in collection.value) {
-    populatedAuthors = collection.value.populatedAuthors ?? []
+  if ("authors" in collection.value && collection.value.authors) {
+    populatedAuthors = collection.value.authors.filter(isResolved<User>)
   }
 
   const isHorizontal = imagePosition === "left" || imagePosition === "right"

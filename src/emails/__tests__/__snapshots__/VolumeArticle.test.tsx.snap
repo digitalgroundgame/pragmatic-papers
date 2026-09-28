@@ -1,0 +1,200 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`VolumeArticleEmail > renders the full email 1`] = `
+"<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html dir="ltr" lang="en">
+  <head>
+    <meta content="text/html; charset=UTF-8" http-equiv="Content-Type" />
+    <meta name="x-apple-disable-message-reformatting" />
+    <title>
+      The Written Word — Every platform makes choices about formatting.
+    </title>
+  </head>
+  <body dir="ltr" lang="en" style="background-color:rgb(255,255,255)">
+    <!--$--><!--html--><!--head-->
+    <div
+      style="display:none;overflow:hidden;line-height:1px;opacity:0;max-height:0;max-width:0"
+      data-skip-in-text="true">
+      The Written Word — Every platform makes choices about formatting.
+      <div>
+         ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿
+      </div>
+    </div>
+    <!--body-->
+    <table
+      border="0"
+      width="100%"
+      cellpadding="0"
+      cellspacing="0"
+      role="presentation"
+      align="center">
+      <tbody>
+        <tr>
+          <td
+            dir="ltr"
+            lang="en"
+            style='background-color:rgb(255,255,255);font-family:ui-sans-serif,system-ui,sans-serif,"Apple Color Emoji","Segoe UI Emoji","Segoe UI Symbol","Noto Color Emoji"'>
+            <table
+              align="center"
+              width="100%"
+              border="0"
+              cellpadding="0"
+              cellspacing="0"
+              role="presentation"
+              style="max-width:560px;margin-right:auto;margin-left:auto">
+              <tbody>
+                <tr style="width:100%">
+                  <td
+                    style="padding-right:1.25rem;padding-left:1.25rem;padding-bottom:2rem;padding-top:2rem">
+                    <img
+                      alt="The Pragmatic Papers Logo"
+                      height="28"
+                      src="https://site.example.com/the-pragmatic-papers-logo-dark.png"
+                      style="display:block;outline:none;border:none;text-decoration:none"
+                      width="256" />
+                    <p
+                      style="font-size:1rem;line-height:1.5;margin-bottom:0.25rem;margin-top:0.25rem;letter-spacing:0.05em;color:rgb(82,82,82);text-transform:uppercase">
+                      Volume
+                      <!-- -->3<!-- -->
+                      · Day
+                      <!-- -->2<!-- -->
+                      of
+                      <!-- -->5
+                    </p>
+                    <table
+                      align="center"
+                      width="100%"
+                      border="0"
+                      cellpadding="0"
+                      cellspacing="0"
+                      role="presentation">
+                      <tbody>
+                        <tr>
+                          <td>
+                            <a
+                              href="https://site.example.com/articles/the-written-word"
+                              style="color:#067df7;text-decoration-line:none"
+                              target="_blank"
+                              ><img
+                                alt="The Written Word"
+                                height="300"
+                                src="https://site.example.com/_next/image?url=%2Fapi%2Fmedia%2Ffile%2Fhero.png&amp;w=1080&amp;q=80"
+                                style="display:block;outline:none;border:none;text-decoration:none;margin-bottom:0.75rem;margin-top:0.75rem;border-radius:0.375rem;background-color:rgb(0,0,0)"
+                                width="600"
+                            /></a>
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                    <table
+                      align="center"
+                      width="100%"
+                      border="0"
+                      cellpadding="0"
+                      cellspacing="0"
+                      role="presentation">
+                      <tbody>
+                        <tr>
+                          <td>
+                            <a
+                              href="https://site.example.com/articles/the-written-word"
+                              style="color:rgb(0,0,0);text-decoration-line:none"
+                              target="_blank"
+                              ><p
+                                style="font-size:1.875rem;line-height:1.2;margin-bottom:0.25rem;margin-top:0.25rem;font-weight:700">
+                                The Written Word
+                              </p></a
+                            >
+                            <table
+                              align="center"
+                              width="100%"
+                              border="0"
+                              cellpadding="0"
+                              cellspacing="0"
+                              role="presentation"
+                              style="margin-bottom:0.25rem;margin-top:0.25rem">
+                              <tbody style="width:100%">
+                                <tr style="width:100%">
+                                  <td
+                                    data-id="__react-email-column"
+                                    style="width:40px">
+                                    <img
+                                      class="ring-background"
+                                      alt=""
+                                      height="24"
+                                      src="https://site.example.com/api/media/file/teagan.png"
+                                      style="display:inline-block;outline:none;border:none;text-decoration:none;border-radius:9999px;background-color:rgb(0,0,0);box-shadow:0 0 rgb(0,0,0,0),0 0 rgb(0,0,0,0),0 0 rgb(0,0,0,0),0 0 0 calc(2px + 0px) var(--tw-ring-color, currentcolor),0 0 rgb(0,0,0,0);margin-left:0px"
+                                      width="24" /><img
+                                      class="ring-background"
+                                      alt=""
+                                      height="24"
+                                      src="https://cdn.example.com/sienna.png"
+                                      style="display:inline-block;outline:none;border:none;text-decoration:none;border-radius:9999px;background-color:rgb(0,0,0);box-shadow:0 0 rgb(0,0,0,0),0 0 rgb(0,0,0,0),0 0 rgb(0,0,0,0),0 0 0 calc(2px + 0px) var(--tw-ring-color, currentcolor),0 0 rgb(0,0,0,0);margin-left:-0.5rem"
+                                      width="24" />
+                                  </td>
+                                  <td data-id="__react-email-column">
+                                    <p
+                                      style="font-size:0.875rem;line-height:1.4285714285714286;margin-bottom:0px;margin-top:0px;padding-left:0.5rem;color:rgb(82,82,82)">
+                                      By
+                                      <!-- -->Teagan Wordsmith and Sienna Scribe
+                                    </p>
+                                  </td>
+                                </tr>
+                              </tbody>
+                            </table>
+                            <p
+                              style="font-size:14px;line-height:24px;margin-bottom:0px;margin-top:0px;color:rgb(82,82,82)">
+                              3 months ago
+                            </p>
+                            <p
+                              style="font-size:1rem;line-height:1.625;margin-bottom:0.25rem;margin-top:0.25rem;color:rgb(0,0,0)">
+                              Every platform makes choices about formatting.
+                            </p>
+                            <p
+                              style="font-size:0.75rem;line-height:1.3333333333333333;margin-bottom:0.25rem;margin-top:0.25rem;letter-spacing:0.025em;color:rgb(82,82,82);text-transform:uppercase">
+                              Policy · Economics
+                            </p>
+                            <a
+                              href="https://site.example.com/articles/the-written-word"
+                              style="color:rgb(255,255,255);text-decoration-line:none;margin-right:auto;margin-left:auto;margin-bottom:0.75rem;margin-top:0.75rem;display:block;width:fit-content;border-radius:0.375rem;padding-right:1.25rem;padding-left:1.25rem;padding-bottom:0.75rem;padding-top:0.75rem;text-align:center;font-weight:500;background-color:#ff401a"
+                              target="_blank"
+                              >Read on The Pragmatic Papers</a
+                            >
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                    <hr
+                      style="width:100%;border:none;border-color:rgb(229,229,229);border-top:1px solid #eaeaea;margin-bottom:2rem;margin-top:2rem" />
+                    <p
+                      style="font-size:0.75rem;line-height:1.3333333333333333;color:rgb(82,82,82);margin-top:16px;margin-bottom:16px">
+                      You&#x27;re receiving this because you subscribed to The
+                      Pragmatic Papers. Catch up on the full<!-- -->
+                      <a
+                        href="https://site.example.com/volumes/vol-3"
+                        style="color:#ff401a;text-decoration-line:none"
+                        target="_blank"
+                        >Volume
+                        <!-- -->3</a
+                      >
+                      <!-- -->any time, or<!-- -->
+                      <a
+                        href="{{ UnsubscribeURL }}"
+                        style="color:#ff401a;text-decoration-line:none"
+                        target="_blank"
+                        >unsubscribe</a
+                      >.
+                    </p>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+    <!--/$-->
+  </body>
+</html>
+"
+`;

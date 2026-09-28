@@ -9,7 +9,10 @@ const lib = vi.hoisted(() => ({
   capture: vi.fn(() => "https://github.com/o/r/pull/1"),
   requireGh: vi.fn(),
   waitForMerge: vi.fn(),
-  autoMergeAndWait: vi.fn(),
+  waitForSyncMerge: vi.fn(),
+  prepareBranch: vi.fn(),
+  commitIfStaged: vi.fn(),
+  createOrReusePr: vi.fn(() => "https://github.com/o/r/pull/1"),
 }))
 
 vi.mock("../../scripts/release-lib", async (importOriginal) => ({
@@ -33,6 +36,7 @@ const setArgv = (...args: string[]) => (process.argv = ["node", "release.ts", ..
 beforeEach(() => {
   vi.clearAllMocks()
   lib.capture.mockReturnValue("https://github.com/o/r/pull/1")
+  lib.createOrReusePr.mockReturnValue("https://github.com/o/r/pull/1")
   vi.spyOn(console, "warn").mockImplementation(() => undefined)
   vi.spyOn(console, "error").mockImplementation(() => undefined)
   vi.spyOn(process, "exit").mockImplementation(((code?: number) => {
@@ -54,16 +58,17 @@ describe("release main()", () => {
 
     const c = commands()
     // phase 1
-    expect(c).toContain("git checkout -b chore/v1.0.0")
+    expect(lib.prepareBranch).toHaveBeenCalledWith("chore/v1.0.0", "dev", "v1.0.0")
     expect(vi.mocked(fs.writeFileSync)).toHaveBeenCalledOnce()
     const [, written] = vi.mocked(fs.writeFileSync).mock.calls[0] ?? []
     expect(String(written)).toContain('"version": "1.0.0"')
-    expect(c).toContain('git commit -m "Bump package.json to v1.0.0"')
-    expect(lib.capture).toHaveBeenCalledWith("gh pr create -f -B dev")
+    expect(c).toContain("git add package.json")
+    expect(lib.commitIfStaged).toHaveBeenCalledWith("Bump package.json to v1.0.0")
+    expect(lib.createOrReusePr).toHaveBeenCalledWith("chore/v1.0.0", "dev")
     expect(lib.waitForMerge).toHaveBeenCalledOnce()
-    // phase 2
-    expect(lib.capture).toHaveBeenCalledWith("gh pr create -f -B main")
-    expect(lib.autoMergeAndWait).toHaveBeenCalledOnce()
+    // phase 2 — titled "Release <version>", not the "dev" that --fill would derive
+    expect(lib.createOrReusePr).toHaveBeenCalledWith("dev", "main", "Release 1.0.0")
+    expect(lib.waitForSyncMerge).toHaveBeenCalledOnce()
     // phase 3 is not chained (release.yml tags automatically)
     expect(c.some((cmd) => cmd.startsWith("git tag"))).toBe(false)
   })
@@ -73,9 +78,9 @@ describe("release main()", () => {
     await main()
 
     expect(vi.mocked(fs.writeFileSync)).not.toHaveBeenCalled()
-    expect(commands()).not.toContain("git checkout -b chore/v1.0.0")
-    expect(lib.capture).toHaveBeenCalledWith("gh pr create -f -B main")
-    expect(lib.autoMergeAndWait).toHaveBeenCalledOnce()
+    expect(lib.prepareBranch).not.toHaveBeenCalled()
+    expect(lib.createOrReusePr).toHaveBeenCalledExactlyOnceWith("dev", "main", "Release 1.0.0")
+    expect(lib.waitForSyncMerge).toHaveBeenCalledOnce()
     expect(lib.waitForMerge).not.toHaveBeenCalled()
   })
 
@@ -87,7 +92,7 @@ describe("release main()", () => {
     expect(c).toContain('git tag v1.0.0 -m "v1.0.0" -s')
     expect(lib.capture).toHaveBeenCalledWith('gh release create v1.0.0 --target main -t "v1.0.0"')
     expect(lib.waitForMerge).not.toHaveBeenCalled()
-    expect(lib.autoMergeAndWait).not.toHaveBeenCalled()
+    expect(lib.waitForSyncMerge).not.toHaveBeenCalled()
     expect(vi.mocked(fs.writeFileSync)).not.toHaveBeenCalled()
   })
 

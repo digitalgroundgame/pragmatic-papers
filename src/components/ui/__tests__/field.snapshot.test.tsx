@@ -64,7 +64,7 @@ describe("FieldError", () => {
 
   it("renders nothing when errors is empty", () => {
     const { container } = render(<FieldError errors={[]} />)
-    expect(container.firstChild).toBeNull()
+    expect(container).toBeEmptyDOMElement()
   })
 })
 

@@ -45,7 +45,7 @@ function makeArticle(children: LexicalNode[]): FeedArticle {
         indent: 0,
       },
     } as FeedArticle["content"],
-    populatedAuthors: [],
+    authors: [],
   }
 }
 

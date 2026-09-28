@@ -24,8 +24,9 @@ WORKDIR /app
 # Builder stage - install deps and build
 # ============================================
 FROM base AS builder
-# Install git for development checks/metadata during build if needed
-RUN apk add --no-cache git
+# git for development checks/metadata during build; postgresql-client for the
+# database copy and migrations below. Both are source-independent, so this layer caches.
+RUN apk add --no-cache git postgresql-client
 
 # GitHub Packages auth — marked as BuildKit secret in Coolify (not baked into layers)
 # Coolify auto-injects --mount=type=secret into every RUN instruction: https://coolify.io/docs/knowledge-base/environment-variables#docker-build-secrets
@@ -43,19 +44,24 @@ RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
 COPY package.json ./
 COPY scripts/install-fonts.ts scripts/ansi.mjs scripts/Inter-Bold.woff2 ./scripts/
 
+# A deploy must ship the real FKScreamer. Without this, an expired or unscoped
+# GH_FONT_READ degrades to the bundled Inter fallback and the build still succeeds —
+# shipping the wrong typeface. install-fonts.ts exits non-zero instead. Builder stage
+# only, so local installs and fork CI keep the lenient fallback.
+ENV FONTS_REQUIRED=true
+
 # 4. Install dependencies from the store (offline)
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
     echo "--- PHASE: INSTALLING DEPENDENCIES (OFFLINE) ---" \
     && HUSKY=0 CI=true pnpm install --frozen-lockfile --offline --store-dir /pnpm/store \
     && echo "--- COMPLETED: INSTALLING DEPENDENCIES ---"
 
-# Copy remaining source code
-COPY . .
+# Database utility scripts — only rebuilt when these two files change.
+COPY --chmod=755 dockerfiles/scripts/modify-database-uri.sh dockerfiles/scripts/copy-database.sh /usr/local/bin/
 
-# Copy database utility scripts
-COPY dockerfiles/scripts/modify-database-uri.sh /usr/local/bin/modify-database-uri.sh
-COPY dockerfiles/scripts/copy-database.sh /usr/local/bin/copy-database.sh
-RUN chmod +x /usr/local/bin/modify-database-uri.sh /usr/local/bin/copy-database.sh
+# Copy remaining source code. Everything below reruns on every deploy, so steps whose
+# output depends on source or on variable values (migrations, next build) belong here.
+COPY . .
 
 # --- BUILD CONFIGURATION ---
 # Secrets (DATABASE_URI, PAYLOAD_SECRET, S3 creds) are injected via Coolify BuildKit secrets — not baked into layers
@@ -86,6 +92,8 @@ ARG FORCE_DATABASE_COPY=false
 # --- ENVIRONMENT MAPPING ---
 # Non-sensitive config only. Secrets (DATABASE_URI, PAYLOAD_SECRET, S3 creds) are
 # injected per-RUN-step via Coolify BuildKit secrets — never baked into layers.
+# In that mode Coolify passes no --build-arg, so these hold only the ARG defaults; each
+# RUN sees the real values from its secret mounts, which override them.
 ENV NODE_ENV=${NODE_ENV} \
     BUILD_ENV=${BUILD_ENV} \
     NEXT_TELEMETRY_DISABLED=${NEXT_TELEMETRY_DISABLED} \
@@ -101,9 +109,6 @@ ENV NODE_ENV=${NODE_ENV} \
     NEXT_PUBLIC_SENTRY_ENVIRONMENT=${NEXT_PUBLIC_SENTRY_ENVIRONMENT} \
     NEXT_PUBLIC_TURNSTILE_SITE_KEY=${NEXT_PUBLIC_TURNSTILE_SITE_KEY}
 
-# Install PostgreSQL client for database operations during build
-RUN apk add --no-cache postgresql-client
-
 # --- DATABASE PREPARATION & MIGRATION ---
 # 1. Isolated Preview Logic (clones DB for PRs)
 # 2. Migration Logic (runs on the final target DB)
@@ -115,10 +120,16 @@ RUN /usr/local/bin/modify-database-uri.sh && \
     echo "--- COMPLETED: DATABASE MIGRATIONS ---"
 
 # --- NEXT.JS BUILD ---
-RUN --mount=type=cache,id=nextjs,target=/app/.next/cache \
+# SOURCE_COMMIT arrives like the other Coolify variables, as a secret mounted into
+# each RUN ("Include Source Commit in Build" must be on). .git is dockerignored, so
+# it's what names the Sentry release baked into the browser bundle.
+# The Turbopack cache is shared by every build on the server: `sharing=locked` keeps
+# two builds from writing it at once, and build-next.sh rebuilds without it if it's
+# been left corrupt.
+RUN --mount=type=cache,id=nextjs,target=/app/.next/cache,sharing=locked \
     echo "--- PHASE: BUILDING NEXT.JS ---" && \
     if [ -f /tmp/database_uri.env ]; then . /tmp/database_uri.env; fi && \
-    pnpm build && \
+    SENTRY_RELEASE="${SOURCE_COMMIT}" sh dockerfiles/scripts/build-next.sh && \
     echo "--- COMPLETED: BUILDING NEXT.JS ---"
 
 # ============================================
@@ -152,8 +163,7 @@ RUN mkdir -p public/media \
     && chmod 755 public/media
 
 # Startup script configuration
-COPY --from=builder --chown=nextjs:nodejs /app/dockerfiles/scripts/start.sh ./start.sh
-RUN chmod +x ./start.sh
+COPY --from=builder --chown=nextjs:nodejs --chmod=755 /app/dockerfiles/scripts/start.sh ./start.sh
 
 USER nextjs
 EXPOSE 3000

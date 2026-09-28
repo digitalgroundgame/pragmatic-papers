@@ -1,5 +1,6 @@
 import { BetaAnalyticsDataClient } from "@google-analytics/data"
 import type { Payload } from "payload"
+import { relationshipId } from "@/utilities/relationships"
 
 /** Exponential decay factor per week. 0.15 ≈ half-life of ~4.6 weeks. */
 export const DECAY_LAMBDA = 0.15
@@ -258,7 +259,8 @@ export async function buildCandidatesFromDB(
   const latestVolumeDoc = latestVolume.docs[0]
   const latestVolumeArticleIds = new Set<number>()
   for (const ref of latestVolumeDoc?.articles || []) {
-    latestVolumeArticleIds.add(typeof ref === "number" ? ref : ref.id)
+    const id = relationshipId(ref)
+    if (id !== null) latestVolumeArticleIds.add(id)
   }
   logger?.debug(
     `  latest volume = #${latestVolumeDoc?.volumeNumber ?? "?"} with ${latestVolumeArticleIds.size} articles (these bypass the user-count minimum)`,

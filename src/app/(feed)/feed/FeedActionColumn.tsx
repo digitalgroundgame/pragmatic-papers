@@ -3,8 +3,9 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Media } from "@/components/Media"
-import type { PopulatedAuthors } from "@/payload-types"
+import type { User } from "@/payload-types"
 import { getClientSideURL } from "@/utilities/getURL"
+import { isResolved } from "@/utilities/relationships"
 import { cn } from "@/utilities/utils"
 import { Share2 } from "lucide-react"
 import Link from "next/link"
@@ -15,7 +16,7 @@ interface FeedActionColumnProps {
   article: FeedArticle
 }
 
-type ResolvedAuthor = NonNullable<PopulatedAuthors>[number]
+type ResolvedAuthor = User
 
 const MAX_VISIBLE_AVATARS = 3
 
@@ -52,9 +53,9 @@ export function FeedActionColumn({ article }: FeedActionColumnProps): React.Reac
     }
   }, [article.slug, article.title])
 
-  const authors: ResolvedAuthor[] = (article.populatedAuthors ?? []).filter(
-    (a): a is ResolvedAuthor => typeof a === "object" && Boolean(a?.slug),
-  )
+  const authors: ResolvedAuthor[] = (article.authors ?? [])
+    .filter(isResolved<User>)
+    .filter((a) => Boolean(a.slug))
   const visibleAuthors = authors.slice(0, MAX_VISIBLE_AVATARS)
   const overflow = authors.length - visibleAuthors.length
 

@@ -4,8 +4,89 @@ on:
   push:
     branches: [main, dev]
   pull_request:
+  # The merge queue tests each PR on top of everything queued ahead of it, on
+  # a temporary gh-readonly-queue/* branch. Required checks must report there
+  # too, or the queue waits on them forever. No step below writes to the
+  # branch; the PR-only steps are already gated on `pull_request`.
+  merge_group:
+
+# Cancel superseded runs on a PR so a new push doesn't leave the previous
+# commit's Static/Unit/Integration jobs (two Postgres services + Testcontainers)
+# running to completion for nothing. Scoped per-ref. Pushes to main/dev use a
+# per-run group (github.run_id) so they never cancel each other — every commit
+# landing on a protected branch is still validated in full.
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
+  # Decides which path-sensitive jobs below a PR needs. Only PRs are filtered:
+  # on pushes to main/dev and in the merge queue this job does nothing, and the
+  # jobs gated on it run in full. A job skipped by its `if` reports "skipped",
+  # which a required status check accepts, so gating a required job here never
+  # blocks a PR. The gated jobs fail open: if this job fails, they run in full
+  # rather than being skipped (and so passing) along with it.
+  changes:
+    name: Detect changes
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: read
+    outputs:
+      storybook: ${{ steps.filter.outputs.storybook }}
+      integration: ${{ steps.filter.outputs.integration }}
+
+    steps:
+      # On pull_request the filter lists changed files through the API, so
+      # no checkout is needed.
+      - uses: dorny/paths-filter@v4
+        if: github.event_name == 'pull_request'
+        id: filter
+        with:
+          predicate-quantifier: some-with-excludes
+          # Each filter is a skip-list, not an allow-list: a job runs unless
+          # every changed file matches one of its "!" patterns. List only
+          # paths the job provably can't reach; when in doubt, leave a path
+          # out, since a missed skip costs minutes and a wrong one a broken dev.
+          filters: |
+            # Stories import from all over src/, and the Storybook build
+            # exists to catch a server-only module reaching the browser, which
+            # a change anywhere in src/ can cause.
+            storybook:
+              - "**"
+              - "!**/*.md"
+              - "!.claude/**"
+              - "!tests/**"
+              - "!src/migrations/**"
+              - "!.github/*"
+              - "!.github/workflows/!(ci).yml"
+              - "!dockerfiles/**"
+              - "!docker-compose*.yml"
+              - "!devenv.*"
+              - "!playwright.config.ts"
+              - "!scripts/*.go"
+              - "!scripts/go.*"
+            # The integration tests load the real Payload config and run every
+            # migration, so all of src/ counts except stories, which nothing
+            # outside Storybook imports.
+            integration:
+              - "**"
+              - "!**/*.md"
+              - "!**/*.mdx"
+              - "!**/*.stories.@(ts|tsx)"
+              - "!src/stories/**"
+              - "!.storybook/**"
+              - "!.claude/**"
+              - "!tests/e2e/**"
+              - "!tests/scripts/**"
+              - "!.github/*"
+              - "!.github/workflows/!(ci).yml"
+              - "!dockerfiles/**"
+              - "!docker-compose*.yml"
+              - "!devenv.*"
+              - "!playwright.config.ts"
+              - "!scripts/*.go"
+              - "!scripts/go.*"
+
   static:
     name: Static checks
     runs-on: ubuntu-latest
@@ -31,9 +112,11 @@ jobs:
           --health-retries 5
 
     steps:
-      - uses: actions/checkout@v6
-        with:
-          fetch-depth: 0
+      # Shallow clone: none of the static checks below read git history
+      # (check-migration-order sorts files by name; check-pending-migrations
+      # runs against the Postgres service), so the default depth-1 fetch is
+      # enough and skips pulling the full history.
+      - uses: actions/checkout@v7
 
       - name: Set up Node.js environment
         uses: ./.github/actions/setup-project
@@ -61,7 +144,7 @@ jobs:
       pull-requests: write
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Set up Node.js environment
         uses: ./.github/actions/setup-project
@@ -75,7 +158,7 @@ jobs:
 
       - name: Upload base coverage artifact
         if: github.ref == 'refs/heads/dev'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: coverage-summary-dev
           path: coverage/coverage-summary.json
@@ -108,6 +191,9 @@ jobs:
 
   integration-tests:
     name: Integration tests
+    needs: changes
+    # Fails open: runs in full unless Detect changes succeeded and cleared it.
+    if: ${{ !cancelled() && (github.event_name != 'pull_request' || needs.changes.result != 'success' || needs.changes.outputs.integration == 'true') }}
     runs-on: ubuntu-latest
 
     env:
@@ -131,7 +217,7 @@ jobs:
           --health-retries 5
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Set up Node.js environment
         uses: ./.github/actions/setup-project
@@ -142,3 +228,32 @@ jobs:
 
       - name: Run integration tests
         run: pnpm test:integration -- --run
+
+  storybook:
+    name: Storybook
+    needs: changes
+    # Fails open: runs in full unless Detect changes succeeded and cleared it.
+    if: ${{ !cancelled() && (github.event_name != 'pull_request' || needs.changes.result != 'success' || needs.changes.outputs.storybook == 'true') }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up Node.js environment
+        uses: ./.github/actions/setup-project
+        with:
+          node-version: "24.x"
+          gh-font-read-token: ${{ secrets.GH_FONT_READ }}
+          payload-secret: ci-storybook-secret
+
+      # The story tests only need a browser, not the pinned e2e image.
+      - name: Install Chromium
+        run: pnpm exec playwright install --with-deps chromium
+
+      # The tests never execute a story's lazy imports; the build bundles them,
+      # which is where a server-only module reaching the browser shows up.
+      - name: Build Storybook
+        run: pnpm storybook:build
+
+      - name: Run story tests (interactions and axe)
+        run: pnpm test:storybook --run

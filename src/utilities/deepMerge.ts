@@ -7,7 +7,7 @@
  * @returns {boolean}
  */
 export function isObject(item: unknown): item is object {
-  return typeof item === "object" && !Array.isArray(item)
+  return item !== null && typeof item === "object" && !Array.isArray(item)
 }
 
 /**
@@ -20,7 +20,7 @@ export default function deepMerge<T, R>(target: T, source: R): T {
   if (isObject(target) && isObject(source)) {
     Object.keys(source).forEach((key) => {
       if (isObject(source[key])) {
-        if (!(key in target)) {
+        if (!isObject(target[key])) {
           Object.assign(output, { [key]: source[key] })
         } else {
           output[key] = deepMerge(target[key], source[key])

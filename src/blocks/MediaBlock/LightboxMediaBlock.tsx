@@ -6,6 +6,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { cn } from "@/utilities/utils"
+import { isMedia } from "@/components/Media"
 import { MediaBlock, type StyledMediaBlockProps } from "./Component"
 import { FullscreenMedia } from "./FullscreenMedia"
 
@@ -19,11 +20,11 @@ export const LightboxMediaBlock: React.FC<LightboxMediaBlockProps> = ({
   media,
   ...props
 }) => {
-  if (typeof media === "number" || !media) return null
+  if (!isMedia(media)) return null
 
   return (
     <Dialog>
-      <DialogTrigger className={cn("w-full cursor-pointer", containerClassName)}>
+      <DialogTrigger className={cn("w-full", containerClassName)}>
         <MediaBlock
           media={media}
           enableGutter={false}

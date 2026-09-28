@@ -1,8 +1,10 @@
-import type { Article } from "@/payload-types"
+import type { Article, Volume } from "@/payload-types"
 import type { AdSlot } from "./ads/registry"
 
 export type { AdSlot } from "./ads/registry"
 
+// `volume` isn't an Article field: `getFeedBatch` resolves it in one batched
+// query (see `queryVolumesForArticles`) and attaches the fields the hero shows.
 export type FeedArticle = Pick<
   Article,
   | "id"
@@ -12,12 +14,13 @@ export type FeedArticle = Pick<
   | "publishedAt"
   | "enableMathRendering"
   | "content"
-  | "populatedAuthors"
-  | "populatedVolume"
+  | "authors"
   | "topics"
   | "meta"
   | "footnotes"
->
+> & {
+  volume?: Pick<Volume, "id" | "title" | "slug"> | null
+}
 
 export interface LexicalNode {
   type: string
@@ -51,5 +54,4 @@ export interface FeedBatch {
 }
 
 export type FeedSlot =
-  | { kind: "article"; key: string; article: FeedArticle }
-  | { kind: "ad"; key: string; ad: AdSlot }
+  { kind: "article"; key: string; article: FeedArticle } | { kind: "ad"; key: string; ad: AdSlot }

@@ -3,9 +3,10 @@ import { LivePreviewListener } from "@/components/LivePreviewListener"
 import { PageRange } from "@/components/PageRange"
 import { Pagination } from "@/components/Pagination"
 import { Skeleton } from "@/components/ui/skeleton"
-import type { PopulatedAuthorsSelect } from "@/payload-types"
+import type { UsersSelect } from "@/payload-types"
 import { getServerSideURL } from "@/utilities/getURL"
 import { mergeOpenGraph } from "@/utilities/mergeOpenGraph"
+import { AUTHOR_ROLES } from "@/access/roles"
 import config from "@payload-config"
 import type { Metadata } from "next"
 import { draftMode } from "next/headers"
@@ -28,8 +29,7 @@ const queryAuthors = cache(async (page: number = 1) => {
   const { isEnabled: draft } = await draftMode()
   const payload = await getPayload({ config })
 
-  const select: PopulatedAuthorsSelect<true> = {
-    id: true,
+  const select: UsersSelect<true> = {
     name: true,
     slug: true,
     affiliation: true,
@@ -47,9 +47,7 @@ const queryAuthors = cache(async (page: number = 1) => {
     sort: "name",
     depth: 1,
     where: {
-      role: {
-        in: ["writer", "editor", "chief-editor"],
-      },
+      roles: { in: AUTHOR_ROLES },
     },
     select,
   })

@@ -7,7 +7,10 @@ const lib = vi.hoisted(() => ({
   capture: vi.fn(() => "https://github.com/o/r/pull/1"),
   requireGh: vi.fn(),
   waitForMerge: vi.fn(),
-  autoMergeAndWait: vi.fn(),
+  waitForSyncMerge: vi.fn(),
+  prepareBranch: vi.fn(),
+  commitIfStaged: vi.fn(),
+  createOrReusePr: vi.fn(() => "https://github.com/o/r/pull/1"),
 }))
 
 vi.mock("../../scripts/release-lib", async (importOriginal) => ({
@@ -47,6 +50,7 @@ describe("hotfix main()", () => {
   beforeEach(() => {
     vi.clearAllMocks()
     lib.capture.mockReturnValue("https://github.com/o/r/pull/1")
+    lib.createOrReusePr.mockReturnValue("https://github.com/o/r/pull/1")
     vi.spyOn(console, "warn").mockImplementation(() => undefined)
     vi.spyOn(console, "error").mockImplementation(() => undefined)
     vi.spyOn(process, "exit").mockImplementation(((code?: number) => {
@@ -67,17 +71,22 @@ describe("hotfix main()", () => {
 
     const c = commands()
     // phase 1
-    expect(c).toContain("git checkout -b hotfix/v1.0.1")
+    expect(lib.prepareBranch).toHaveBeenCalledWith("hotfix/v1.0.1", "main", "v1.0.1")
     expect(vi.mocked(fs.writeFileSync)).toHaveBeenCalledOnce()
     const [, written] = vi.mocked(fs.writeFileSync).mock.calls[0] ?? []
     expect(String(written)).toContain('"version": "1.0.1"')
-    expect(c).toContain('git commit -m "Bump package.json to v1.0.1"')
-    expect(lib.capture).toHaveBeenCalledWith("gh pr create -f -B main")
+    expect(c).toContain("git add package.json")
+    expect(lib.commitIfStaged).toHaveBeenCalledWith("Bump package.json to v1.0.1")
+    expect(lib.createOrReusePr).toHaveBeenCalledWith("hotfix/v1.0.1", "main")
     expect(lib.waitForMerge).toHaveBeenCalledOnce()
     // phase 2
-    expect(c).toContain("git checkout -b chore/back-merge-v1.0.1")
-    expect(lib.capture).toHaveBeenCalledWith("gh pr create -f -B dev")
-    expect(lib.autoMergeAndWait).toHaveBeenCalledOnce()
+    expect(lib.prepareBranch).toHaveBeenCalledWith("chore/back-merge-v1.0.1", "main", "v1.0.1")
+    expect(lib.createOrReusePr).toHaveBeenCalledWith(
+      "chore/back-merge-v1.0.1",
+      "dev",
+      "Back-merge v1.0.1 into dev",
+    )
+    expect(lib.waitForSyncMerge).toHaveBeenCalledOnce()
   })
 
   it("runs only the back-merge for --phase 2", async () => {
@@ -85,10 +94,17 @@ describe("hotfix main()", () => {
     await main()
 
     expect(vi.mocked(fs.writeFileSync)).not.toHaveBeenCalled()
-    expect(commands()).not.toContain("git checkout -b hotfix/v1.0.1")
-    expect(commands()).toContain("git checkout -b chore/back-merge-v1.0.1")
-    expect(lib.capture).toHaveBeenCalledWith("gh pr create -f -B dev")
-    expect(lib.autoMergeAndWait).toHaveBeenCalledOnce()
+    expect(lib.prepareBranch).toHaveBeenCalledExactlyOnceWith(
+      "chore/back-merge-v1.0.1",
+      "main",
+      "v1.0.1",
+    )
+    expect(lib.createOrReusePr).toHaveBeenCalledExactlyOnceWith(
+      "chore/back-merge-v1.0.1",
+      "dev",
+      "Back-merge v1.0.1 into dev",
+    )
+    expect(lib.waitForSyncMerge).toHaveBeenCalledOnce()
     expect(lib.waitForMerge).not.toHaveBeenCalled()
   })
 

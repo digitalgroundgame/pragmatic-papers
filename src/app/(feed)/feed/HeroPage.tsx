@@ -1,7 +1,9 @@
 "use client"
 
 import { Media } from "@/components/Media"
+import type { User } from "@/payload-types"
 import { formatDateTime } from "@/utilities/formatDateTime"
+import { isResolved } from "@/utilities/relationships"
 import React from "react"
 import { FeedActionColumn } from "./FeedActionColumn"
 import type { FeedArticle } from "./types"
@@ -12,10 +14,11 @@ interface HeroPageProps {
 }
 
 export function HeroPage({ article, topInset }: HeroPageProps): React.ReactNode {
-  const authors = (article.populatedAuthors ?? [])
-    .map((a) => (typeof a === "object" && a.name ? a.name : ""))
+  const authors = (article.authors ?? [])
+    .filter(isResolved<User>)
+    .map((a) => a.name ?? "")
     .filter(Boolean)
-  const volume = article.populatedVolume
+  const volume = article.volume
   const topicNames = (article.topics ?? [])
     .map((t) => (typeof t === "object" && t.name ? t.name : ""))
     .filter(Boolean)

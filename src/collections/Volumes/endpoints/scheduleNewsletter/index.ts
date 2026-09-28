@@ -1,6 +1,6 @@
 import type { Endpoint, PayloadRequest } from "payload"
 
-import { isEditor } from "@/access/checkRole"
+import { isEditor } from "@/access/roles"
 import type { Volume } from "@/payload-types"
 import { scheduleVolumeNewsletter } from "./logic"
 

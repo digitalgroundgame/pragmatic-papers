@@ -80,14 +80,14 @@ describe("ShareButtons", () => {
 
   it("trigger button is accessible", () => {
     render(<ShareButtons url={TEST_URL} title={TEST_TITLE} />)
-    expect(screen.getByRole("button", { name: "Share" })).toBeTruthy()
+    expect(screen.getByRole("button", { name: "Share" })).toBeInTheDocument()
   })
 
   it("shows url input when open", () => {
     render(<ShareButtons url={TEST_URL} title={TEST_TITLE} />)
     fireEvent.click(screen.getByRole("button", { name: "Share" }))
     const input = screen.getByDisplayValue(TEST_URL) as HTMLInputElement
-    expect(input).toBeTruthy()
+    expect(input).toBeInTheDocument()
     expect(input.readOnly).toBe(true)
   })
 
@@ -111,8 +111,8 @@ describe("ShareButtons", () => {
     await act(async () => {
       fireEvent.click(screen.getByRole("button", { name: "Copy link" }))
     })
-    expect(screen.getByRole("button", { name: "Copied!" })).toBeTruthy()
-    expect(screen.queryByRole("button", { name: "Copy link" })).toBeNull()
+    expect(screen.getByRole("button", { name: "Copied!" })).toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: "Copy link" })).not.toBeInTheDocument()
   })
 
   it("resets copied state after 2 seconds", async () => {
@@ -122,11 +122,11 @@ describe("ShareButtons", () => {
     await act(async () => {
       fireEvent.click(screen.getByRole("button", { name: "Copy link" }))
     })
-    expect(screen.getByRole("button", { name: "Copied!" })).toBeTruthy()
+    expect(screen.getByRole("button", { name: "Copied!" })).toBeInTheDocument()
     await act(async () => {
       vi.advanceTimersByTime(2000)
     })
-    expect(screen.getByRole("button", { name: "Copy link" })).toBeTruthy()
+    expect(screen.getByRole("button", { name: "Copy link" })).toBeInTheDocument()
     vi.useRealTimers()
   })
 
@@ -139,8 +139,8 @@ describe("ShareButtons", () => {
     await act(async () => {
       fireEvent.click(screen.getByRole("button", { name: "Copy link" }))
     })
-    expect(screen.getByRole("button", { name: "Copy link" })).toBeTruthy()
-    expect(screen.queryByRole("button", { name: "Copied!" })).toBeNull()
+    expect(screen.getByRole("button", { name: "Copy link" })).toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: "Copied!" })).not.toBeInTheDocument()
     expect(sendGAEvent).not.toHaveBeenCalled()
   })
 
@@ -160,11 +160,11 @@ describe("ShareButtons", () => {
     await act(async () => {
       vi.advanceTimersByTime(1000)
     })
-    expect(screen.getByRole("button", { name: "Copied!" })).toBeTruthy()
+    expect(screen.getByRole("button", { name: "Copied!" })).toBeInTheDocument()
     await act(async () => {
       vi.advanceTimersByTime(1000)
     })
-    expect(screen.getByRole("button", { name: "Copy link" })).toBeTruthy()
+    expect(screen.getByRole("button", { name: "Copy link" })).toBeInTheDocument()
     vi.useRealTimers()
   })
 
@@ -174,9 +174,9 @@ describe("ShareButtons", () => {
       render(<ShareButtons url={TEST_URL} title={TEST_TITLE} />)
       fireEvent.click(screen.getByRole("button", { name: "Share" }))
       const link = screen.getByRole("link", { name: buttonLabel }) as HTMLAnchorElement
-      expect(link.getAttribute("href")).toContain(urlFragment)
-      expect(link.target).toBe("_blank")
-      expect(link.rel).toContain("noopener")
+      expect(link).toHaveAttribute("href", expect.stringContaining(urlFragment))
+      expect(link).toHaveAttribute("target", "_blank")
+      expect(link).toHaveAttribute("rel", expect.stringContaining("noopener"))
 
       fireEvent.click(link)
       expect(sendGAEvent).toHaveBeenCalledWith("event", "share", {

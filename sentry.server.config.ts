@@ -11,8 +11,11 @@ Sentry.init({
 
   tracesSampleRate: 0.1,
 
-  enableLogs: true,
-
-  // https://docs.sentry.io/platforms/javascript/guides/nextjs/configuration/options/#sendDefaultPii
-  sendDefaultPii: true,
+  // Bodies skip the key-based filtering headers and cookies get, so a login would send its
+  // password; DB query data includes returned rows, e.g. users' hashes and reset tokens.
+  dataCollection: {
+    httpBodies: [],
+    databaseQueryData: false,
+    stackFrameVariables: false,
+  },
 })

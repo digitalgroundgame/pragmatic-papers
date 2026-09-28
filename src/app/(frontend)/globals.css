@@ -17,7 +17,7 @@
   --secondary: oklch(0.97 0 0);
   --secondary-foreground: oklch(0.205 0 0);
   --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
+  --muted-foreground: oklch(45.316% 0.00005 271.152);
   --accent: oklch(0.97 0 0);
   --accent-foreground: oklch(0.205 0 0);
   --destructive: oklch(0.58 0.22 27);
@@ -140,6 +140,14 @@
   /* FK Screamer ligatures render incorrectly at 30px and below, so bumping 3xl to 32px. Overriding this core utilty to prevent us from accidently using it at 30px. */
   --text-3xl: 2rem;
   --text-3xl--line-height: calc(2.25 / 2);
+
+  --animate-paper-drift: paper-drift 6s linear infinite;
+  /* One (64, -64) tile of PaperIconPattern, rotated by its -15° patternTransform, so the loop is seamless. */
+  @keyframes paper-drift {
+    to {
+      transform: translate(45.2548px, -78.3837px);
+    }
+  }
 }
 
 @layer base {
@@ -169,6 +177,10 @@
   }
   h3 {
     @apply text-2xl md:text-3xl;
+  }
+  button:not(:disabled),
+  [role="button"]:not(:disabled):not([aria-disabled="true"]) {
+    cursor: pointer;
   }
 }
 

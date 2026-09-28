@@ -2,8 +2,8 @@ import { PostgreSqlContainer } from "@testcontainers/postgresql"
 import { execSync } from "node:child_process"
 import { blue, green, red } from "./ansi.mjs"
 
-process.env.PAYLOAD_SECRET ??= "test-secret"
-process.env.USE_LOCAL_STORAGE ??= "true"
+process.env.PAYLOAD_SECRET ||= "test-secret"
+process.env.USE_LOCAL_STORAGE ||= "true"
 
 let container = null
 

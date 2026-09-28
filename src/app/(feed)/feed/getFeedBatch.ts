@@ -1,4 +1,6 @@
 import { getPayloadConfig } from "@/utilities/getPayloadConfig"
+import { queryVolumesForArticles } from "@/utilities/queries"
+import { relationshipId } from "@/utilities/relationships"
 import type { FeedArticle, FeedBatch } from "./types"
 
 const PAGE_SIZE = 8
@@ -73,7 +75,19 @@ export async function getFeedBatch({
     depth: 2,
   })
 
-  const ranked = rankFeed(res.docs as FeedArticle[], seed ?? page * 9973)
+  // One batched lookup for the whole page instead of a volume query per article.
+  const volumes = await queryVolumesForArticles(res.docs.map((doc) => doc.id))
+  const items: FeedArticle[] = res.docs.map((doc) => {
+    const volume = volumes.find((v) =>
+      (v.articles ?? []).some((rel) => relationshipId(rel) === doc.id),
+    )
+    return {
+      ...doc,
+      volume: volume ? { id: volume.id, title: volume.title, slug: volume.slug } : null,
+    }
+  })
+
+  const ranked = rankFeed(items, seed ?? page * 9973)
 
   return {
     items: ranked,

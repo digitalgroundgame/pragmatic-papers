@@ -2,7 +2,7 @@ import type { CollectionAfterChangeHook, CollectionAfterDeleteHook, Payload } fr
 
 import { revalidatePath, revalidateTag } from "next/cache"
 
-import type { Article } from "../../../payload-types"
+import type { Article } from "@/payload-types"
 
 const revalidateDoc = async (givenDoc: Article, payload: Payload) => {
   const path = `/articles/${givenDoc.slug}`
@@ -10,6 +10,8 @@ const revalidateDoc = async (givenDoc: Article, payload: Payload) => {
   payload.logger.info(`Revalidating article at path: ${path}`)
   revalidatePath(path)
   revalidatePath("/feed.articles")
+  revalidatePath("/articles/substack.xml")
+  revalidatePath(`/articles/${givenDoc.slug}/substack.xml`)
   revalidateTag("articles-sitemap", "max")
 
   // Find and revalidate all volumes that reference this article
@@ -41,6 +43,16 @@ export const revalidateArticle: CollectionAfterChangeHook<Article> = async ({
   if (!context.disableRevalidate) {
     if (doc._status === "published") {
       await revalidateDoc(doc, payload)
+    }
+
+    // A renamed published article leaves its old paths cached, including the
+    // Substack import URL an editor may already have copied.
+    if (
+      doc._status === "published" &&
+      previousDoc?._status === "published" &&
+      previousDoc.slug !== doc.slug
+    ) {
+      await revalidateDoc(previousDoc, payload)
     }
 
     // If the article was previously published, we need to revalidate the old path

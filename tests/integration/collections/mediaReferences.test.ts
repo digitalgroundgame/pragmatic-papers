@@ -2,6 +2,7 @@ import { beforeAll, describe, expect, it } from "vitest"
 import type { Payload, PayloadRequest } from "payload"
 import type { Article, Media, User } from "@/payload-types"
 import { referencesHandler } from "@/collections/Media/endpoints/references"
+import { DELETE_MEDIA_IN_USE } from "@/collections/Media/hooks/protectPublishedMedia"
 import { ARTICLE_CONTENT } from "../fixtures/content"
 import { testFile } from "../fixtures/media"
 import { createUser, getPayload } from "../helpers/testUsers"
@@ -75,6 +76,39 @@ describe("media references", () => {
 
       expect(result.docs).toHaveLength(0)
       expect(result.errors).toHaveLength(1)
+    })
+
+    it("blocks each referenced media in one bulk delete, keeping the unused one", async () => {
+      const used = await createMedia("Bulk Used A - mref")
+      const alsoUsed = await createMedia("Bulk Used B - mref")
+      const unused = await createMedia("Bulk Unused - mref")
+      await createArticle("Bulk Uses A - mref", used.id, "published")
+      await createArticle("Bulk Uses B - mref", alsoUsed.id, "published")
+
+      const result = await payload.delete({
+        collection: "media",
+        where: { id: { in: [used.id, alsoUsed.id, unused.id] } },
+        overrideAccess: false,
+        user: editor,
+        context: { disableRevalidate: true },
+      })
+
+      expect(result.docs.map((doc) => doc.id)).toEqual([unused.id])
+      expect(result.errors.map((error) => error.id).sort()).toEqual([used.id, alsoUsed.id].sort())
+    })
+
+    it("deletes media in use when the delete says to clear it, as the seed does", async () => {
+      const media = await createMedia("Seed Clears - mref")
+      await createArticle("Seed Clears Article - mref", media.id, "published")
+
+      await expect(
+        payload.delete({
+          collection: "media",
+          id: media.id,
+          overrideAccess: true,
+          context: { disableRevalidate: true, [DELETE_MEDIA_IN_USE]: true },
+        }),
+      ).resolves.toMatchObject({ id: media.id })
     })
 
     it("allows deleting media only a draft uses", async () => {

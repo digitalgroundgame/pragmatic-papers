@@ -1,11 +1,18 @@
 import { APIError, type CollectionBeforeDeleteHook } from "payload"
-import { collectMediaReferences } from "../references/collectMediaReferences"
+import { mediaReferencesInRequest } from "../references/collectMediaReferences"
 
-export const protectPublishedMedia: CollectionBeforeDeleteHook = async ({
-  id,
-  req: { payload },
-}) => {
-  const refs = await collectMediaReferences(payload, id)
+/**
+ * Set on a delete's `context` to delete media even while published content uses it.
+ * Only for clearing everything at once, as the seed does, where the content that uses
+ * the media is about to go too.
+ */
+export const DELETE_MEDIA_IN_USE = "deleteMediaInUse"
+
+export const protectPublishedMedia: CollectionBeforeDeleteHook = async ({ context, id, req }) => {
+  if (context[DELETE_MEDIA_IN_USE]) return
+
+  const { payload } = req
+  const refs = await mediaReferencesInRequest(req, id)
 
   if (refs.length > 0) {
     const docList = refs.map((r) => `"${r.docTitle}" (${r.collection}/${r.field})`).join(", ")
@@ -17,7 +24,7 @@ export const protectPublishedMedia: CollectionBeforeDeleteHook = async ({
 
     payload.logger.warn(
       { refs, mediaId: id },
-      `Media deletion blocked \u2014 in use in published content`,
+      `Media deletion blocked — in use in published content`,
     )
 
     throw new APIError(summary, 400, null, true)

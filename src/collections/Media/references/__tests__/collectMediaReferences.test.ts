@@ -1,6 +1,10 @@
-import type { Payload, Where } from "payload"
+import type { Payload, PayloadRequest, Where } from "payload"
 import { describe, expect, it, vi } from "vitest"
-import { collectMediaReferences } from "../collectMediaReferences"
+import {
+  collectMediaReferences,
+  indexMediaReferences,
+  mediaReferencesInRequest,
+} from "../collectMediaReferences"
 
 type Doc = Record<string, unknown>
 
@@ -139,7 +143,7 @@ describe("collectMediaReferences", () => {
     expect(articlePages).toHaveLength(3)
   })
 
-  it("counts only published documents in collections with drafts", async () => {
+  it("reads only published documents in collections with drafts", async () => {
     const payload = fakePayload({})
     await collectMediaReferences(payload, 42)
 
@@ -147,16 +151,95 @@ describe("collectMediaReferences", () => {
     const whereFor = (collection: string): Where | undefined =>
       calls.find(([args]) => args.collection === collection)?.[0].where
 
-    expect(whereFor("articles")).toEqual({ and: [{ _status: { equals: "published" } }] })
-    expect(whereFor("interactives")).toEqual({
-      and: [{ _status: { equals: "published" } }, { or: [{ "meta.image": { equals: 42 } }] }],
-    })
-    expect(whereFor("users")).toEqual({ and: [{ or: [{ profileImage: { equals: 42 } }] }] })
+    expect(whereFor("articles")).toEqual({ _status: { equals: "published" } })
+    expect(whereFor("interactives")).toEqual({ _status: { equals: "published" } })
+    expect(whereFor("topics")).toBeUndefined()
+    expect(whereFor("users")).toBeUndefined()
   })
 
   it("falls back to 'Untitled' for a document without a title", async () => {
     const payload = fakePayload({ articles: [{ id: 1, heroImage: 42 }] })
     const [ref] = await collectMediaReferences(payload, 42)
     expect(ref?.docTitle).toBe("Untitled")
+  })
+})
+
+describe("indexMediaReferences", () => {
+  it("indexes every media id published content uses", async () => {
+    const payload = fakePayload({
+      articles: [
+        {
+          id: 1,
+          title: "Both",
+          slug: "both",
+          heroImage: 42,
+          content: mediaBlockContent({ id: 7 }),
+        },
+      ],
+      users: [{ id: 4, name: "Ada", profileImage: 42 }],
+    })
+
+    const index = await indexMediaReferences(payload)
+
+    expect([...index.keys()].sort()).toEqual(["42", "7"])
+    expect(index.get("42")?.map((ref) => `${ref.collection}/${ref.field}`)).toEqual([
+      "articles/heroImage",
+      "users/profileImage",
+    ])
+    expect(index.get("7")?.map((ref) => ref.field)).toEqual(["content (mediaBlock)"])
+  })
+
+  it("skips empty upload fields", async () => {
+    const payload = fakePayload({
+      articles: [{ id: 1, title: "Bare", heroImage: null, meta: { image: undefined } }],
+    })
+
+    expect((await indexMediaReferences(payload)).size).toBe(0)
+  })
+})
+
+describe("mediaReferencesInRequest", () => {
+  const requestFor = (payload: Payload) => ({ payload, context: {} }) as unknown as PayloadRequest
+
+  it("reads published content once for every lookup in a request", async () => {
+    const payload = fakePayload({
+      articles: [
+        { id: 1, title: "One", heroImage: 42 },
+        { id: 2, title: "Two", heroImage: 7 },
+      ],
+    })
+    const req = requestFor(payload)
+
+    const first = await mediaReferencesInRequest(req, 42)
+    const callsAfterFirst = payload.find.mock.calls.length
+    const second = await mediaReferencesInRequest(req, "7")
+    const unused = await mediaReferencesInRequest(req, 99)
+
+    expect(first.map((ref) => ref.docId)).toEqual([1])
+    expect(second.map((ref) => ref.docId)).toEqual([2])
+    expect(unused).toEqual([])
+    expect(payload.find).toHaveBeenCalledTimes(callsAfterFirst)
+  })
+
+  it("reads again for a new request, even one given the same context", async () => {
+    const payload = fakePayload({ articles: [{ id: 1, title: "One", heroImage: 42 }] })
+    const context = {}
+
+    await mediaReferencesInRequest({ payload, context } as unknown as PayloadRequest, 42)
+    const callsForOneRequest = payload.find.mock.calls.length
+    await mediaReferencesInRequest({ payload, context } as unknown as PayloadRequest, 42)
+
+    expect(payload.find).toHaveBeenCalledTimes(callsForOneRequest * 2)
+  })
+
+  it("shares the read between lookups that start together", async () => {
+    const payload = fakePayload({ articles: [{ id: 1, title: "One", heroImage: 42 }] })
+    const req = requestFor(payload)
+
+    await Promise.all([mediaReferencesInRequest(req, 42), mediaReferencesInRequest(req, 7)])
+    const callsForBoth = payload.find.mock.calls.length
+    await mediaReferencesInRequest(requestFor(payload), 42)
+
+    expect(payload.find.mock.calls.length).toBe(callsForBoth * 2)
   })
 })

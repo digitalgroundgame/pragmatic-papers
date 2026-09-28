@@ -1,5 +1,5 @@
-import type { CollectionSlug, Payload, Where } from "payload"
-import { findMediaInBlocks, isMediaId } from "./findMediaInBlocks"
+import type { CollectionSlug, Payload, PayloadRequest, Where } from "payload"
+import { mediaIdOf, mediaInBlocks } from "./findMediaInBlocks"
 
 export interface MediaReference {
   collection: string
@@ -79,6 +79,9 @@ const SOURCES: Source[] = [
 
 const PAGE_SIZE = 100
 
+/** Every media id that published content uses, mapped to where it's used. */
+export type MediaReferenceIndex = Map<string, MediaReference[]>
+
 function valueAt(doc: Record<string, unknown>, path: string): unknown {
   return path
     .split(".")
@@ -89,23 +92,18 @@ function valueAt(doc: Record<string, unknown>, path: string): unknown {
     )
 }
 
-function whereFor(source: Source, mediaId: number | string): Where {
-  const and: Where[] = []
-  if (source.drafts) and.push({ _status: { equals: "published" } })
-  // Media inside rich text can't be queried for, so a source with block fields reads
-  // every published document; one without narrows to the documents that use it.
-  if (source.blockFields.length === 0) {
-    and.push({ or: source.fields.map((field) => ({ [field]: { equals: mediaId } })) })
+/**
+ * Reads every published document once and indexes the media each one uses. Media
+ * inside rich text can't be queried for, so there's no narrower query to make; build
+ * the index once and look up as many media as needed in it.
+ */
+export async function indexMediaReferences(payload: Payload): Promise<MediaReferenceIndex> {
+  const index: MediaReferenceIndex = new Map()
+  const add = (mediaId: string, reference: MediaReference): void => {
+    const refs = index.get(mediaId) ?? []
+    refs.push(reference)
+    index.set(mediaId, refs)
   }
-  return { and }
-}
-
-/** Lists the published documents that use `mediaId`. */
-export async function collectMediaReferences(
-  payload: Payload,
-  mediaId: number | string,
-): Promise<MediaReference[]> {
-  const refs: MediaReference[] = []
 
   for (const source of SOURCES) {
     const topLevel = [
@@ -115,6 +113,9 @@ export async function collectMediaReferences(
       ...source.blockFields,
     ].map((path) => path.split(".")[0])
     const select = Object.fromEntries(topLevel.map((key) => [key, true]))
+    const where: Where | undefined = source.drafts
+      ? { _status: { equals: "published" } }
+      : undefined
 
     for (let page = 1; ; page++) {
       const result = await payload.find({
@@ -123,7 +124,7 @@ export async function collectMediaReferences(
         limit: PAGE_SIZE,
         page,
         select,
-        where: whereFor(source, mediaId),
+        where,
         overrideAccess: true,
       })
 
@@ -136,12 +137,12 @@ export async function collectMediaReferences(
         }
 
         for (const field of source.fields) {
-          if (isMediaId(valueAt(doc, field), mediaId)) refs.push({ ...reference, field })
+          const mediaId = mediaIdOf(valueAt(doc, field))
+          if (mediaId !== undefined) add(mediaId, { ...reference, field })
         }
         for (const field of source.blockFields) {
-          const blockTypes = findMediaInBlocks(doc[field], mediaId)
-          if (blockTypes.length > 0) {
-            refs.push({ ...reference, field: `${field} (${blockTypes.join(", ")})` })
+          for (const [mediaId, blockTypes] of mediaInBlocks(doc[field])) {
+            add(mediaId, { ...reference, field: `${field} (${blockTypes.join(", ")})` })
           }
         }
       }
@@ -150,5 +151,34 @@ export async function collectMediaReferences(
     }
   }
 
-  return refs
+  return index
+}
+
+/** Lists the published documents that use `mediaId`. */
+export async function collectMediaReferences(
+  payload: Payload,
+  mediaId: number | string,
+): Promise<MediaReference[]> {
+  const index = await indexMediaReferences(payload)
+  return index.get(String(mediaId)) ?? []
+}
+
+const indexes = new WeakMap<PayloadRequest, Promise<MediaReferenceIndex>>()
+
+/**
+ * Like `collectMediaReferences`, but builds the index once per request. A bulk delete
+ * runs the delete hook once per document on one request, so deleting N media reads
+ * published content once instead of N times. Keyed on the request itself, not its
+ * `context`, since callers may pass one context object to many separate operations.
+ */
+export async function mediaReferencesInRequest(
+  req: PayloadRequest,
+  mediaId: number | string,
+): Promise<MediaReference[]> {
+  let index = indexes.get(req)
+  if (!index) {
+    index = indexMediaReferences(req.payload)
+    indexes.set(req, index)
+  }
+  return (await index).get(String(mediaId)) ?? []
 }

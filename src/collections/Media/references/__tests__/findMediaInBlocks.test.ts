@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { findMediaInBlocks, isMediaId } from "../findMediaInBlocks"
+import { findMediaInBlocks, isMediaId, mediaIdOf, mediaInBlocks } from "../findMediaInBlocks"
 
 const lexical = (...children: unknown[]): unknown => ({ root: { type: "root", children } })
 const blockNode = (fields: Record<string, unknown>): unknown => ({ type: "block", fields })
@@ -82,5 +82,36 @@ describe("findMediaInBlocks", () => {
     expect(findMediaInBlocks(null, 42)).toEqual([])
     expect(findMediaInBlocks(undefined, 42)).toEqual([])
     expect(findMediaInBlocks({}, 42)).toEqual([])
+  })
+})
+
+describe("mediaIdOf", () => {
+  it("reads an id or a populated document's id", () => {
+    expect(mediaIdOf(42)).toBe("42")
+    expect(mediaIdOf({ id: 42 })).toBe("42")
+  })
+
+  it("has nothing for an empty value", () => {
+    expect(mediaIdOf(null)).toBeUndefined()
+    expect(mediaIdOf(undefined)).toBeUndefined()
+    expect(mediaIdOf({})).toBeUndefined()
+  })
+})
+
+describe("mediaInBlocks", () => {
+  it("maps every media id to the block types that hold it", () => {
+    const layout = [
+      { blockType: "mediaBlock", media: 42 },
+      { blockType: "mediaCollage", images: [{ media: 7 }, { media: 42 }, {}] },
+      { blockType: "timeline", events: [{ avatar: { id: 7 } }, { title: "no avatar" }] },
+      { blockType: "mediaBlock", media: null },
+    ]
+
+    expect(mediaInBlocks(layout)).toEqual(
+      new Map([
+        ["42", ["mediaBlock", "mediaCollage"]],
+        ["7", ["mediaCollage", "timeline"]],
+      ]),
+    )
   })
 })

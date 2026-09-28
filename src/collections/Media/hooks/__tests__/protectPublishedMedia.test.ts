@@ -3,20 +3,23 @@ import { APIError } from "payload"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import type { MediaReference } from "../../references/collectMediaReferences"
-import { collectMediaReferences } from "../../references/collectMediaReferences"
-import { protectPublishedMedia } from "../protectPublishedMedia"
+import { mediaReferencesInRequest } from "../../references/collectMediaReferences"
+import { DELETE_MEDIA_IN_USE, protectPublishedMedia } from "../protectPublishedMedia"
 
 vi.mock("../../references/collectMediaReferences", () => ({
-  collectMediaReferences: vi.fn(),
+  mediaReferencesInRequest: vi.fn(),
 }))
 
 const logger = { warn: vi.fn() }
 const payload = { logger }
 
-const runHook = () =>
+const req = { payload }
+
+const runHook = (context: Record<string, unknown> = {}) =>
   protectPublishedMedia({
+    context,
     id: 42,
-    req: { payload },
+    req,
   } as unknown as Parameters<CollectionBeforeDeleteHook>[0])
 
 const reference = (docTitle: string, field = "heroImage"): MediaReference => ({
@@ -27,21 +30,21 @@ const reference = (docTitle: string, field = "heroImage"): MediaReference => ({
 })
 
 beforeEach(() => {
-  vi.mocked(collectMediaReferences).mockReset()
+  vi.mocked(mediaReferencesInRequest).mockReset()
   logger.warn.mockReset()
 })
 
 describe("protectPublishedMedia", () => {
   it("lets unused media be deleted", async () => {
-    vi.mocked(collectMediaReferences).mockResolvedValue([])
+    vi.mocked(mediaReferencesInRequest).mockResolvedValue([])
 
     await expect(runHook()).resolves.toBeUndefined()
-    expect(collectMediaReferences).toHaveBeenCalledWith(payload, 42)
+    expect(mediaReferencesInRequest).toHaveBeenCalledWith(req, 42)
     expect(logger.warn).not.toHaveBeenCalled()
   })
 
   it("names the one document that uses the media", async () => {
-    vi.mocked(collectMediaReferences).mockResolvedValue([reference("Hero Article")])
+    vi.mocked(mediaReferencesInRequest).mockResolvedValue([reference("Hero Article")])
 
     const error = await runHook().catch((caught: unknown) => caught)
 
@@ -53,7 +56,7 @@ describe("protectPublishedMedia", () => {
   })
 
   it("counts the documents when several use the media", async () => {
-    vi.mocked(collectMediaReferences).mockResolvedValue([
+    vi.mocked(mediaReferencesInRequest).mockResolvedValue([
       reference("First"),
       reference("Second", "meta.image"),
       reference("Third"),
@@ -64,7 +67,7 @@ describe("protectPublishedMedia", () => {
 
   it("logs the blocked delete with its references", async () => {
     const refs = [reference("Hero Article")]
-    vi.mocked(collectMediaReferences).mockResolvedValue(refs)
+    vi.mocked(mediaReferencesInRequest).mockResolvedValue(refs)
 
     await runHook().catch(() => undefined)
 
@@ -72,5 +75,12 @@ describe("protectPublishedMedia", () => {
       { refs, mediaId: 42 },
       expect.stringContaining("Media deletion blocked"),
     )
+  })
+
+  it("stands aside when the delete says to clear media in use", async () => {
+    vi.mocked(mediaReferencesInRequest).mockResolvedValue([reference("Hero Article")])
+
+    await expect(runHook({ [DELETE_MEDIA_IN_USE]: true })).resolves.toBeUndefined()
+    expect(mediaReferencesInRequest).not.toHaveBeenCalled()
   })
 })

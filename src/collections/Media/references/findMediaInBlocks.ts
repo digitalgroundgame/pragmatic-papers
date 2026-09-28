@@ -14,16 +14,21 @@ const MEDIA_IN_BLOCK: Record<string, (block: Record<string, unknown>) => unknown
 }
 
 /** A relationship value is an id at depth 0, or the populated document above it. */
-export function isMediaId(value: unknown, mediaId: number | string): boolean {
+export function mediaIdOf(value: unknown): string | undefined {
   if (value && typeof value === "object") {
-    return String((value as { id?: unknown }).id) === String(mediaId)
+    const id = (value as { id?: unknown }).id
+    return id == null ? undefined : String(id)
   }
-  return value != null && String(value) === String(mediaId)
+  return value == null ? undefined : String(value)
 }
 
-/** Returns the block types (once each) under `value` that hold `mediaId`. */
-export function findMediaInBlocks(value: unknown, mediaId: number | string): string[] {
-  const found = new Set<string>()
+export function isMediaId(value: unknown, mediaId: number | string): boolean {
+  return mediaIdOf(value) === String(mediaId)
+}
+
+/** Maps each media id under `value` to the block types (once each) that hold it. */
+export function mediaInBlocks(value: unknown): Map<string, string[]> {
+  const found = new Map<string, Set<string>>()
 
   const walk = (node: unknown): void => {
     if (Array.isArray(node)) {
@@ -35,13 +40,24 @@ export function findMediaInBlocks(value: unknown, mediaId: number | string): str
     const record = node as Record<string, unknown>
     const blockType = typeof record.blockType === "string" ? record.blockType : undefined
     const mediaOf = blockType ? MEDIA_IN_BLOCK[blockType] : undefined
-    if (blockType && mediaOf?.(record).some((media) => isMediaId(media, mediaId))) {
-      found.add(blockType)
+    if (blockType && mediaOf) {
+      for (const media of mediaOf(record)) {
+        const id = mediaIdOf(media)
+        if (id === undefined) continue
+        const blockTypes = found.get(id) ?? new Set<string>()
+        blockTypes.add(blockType)
+        found.set(id, blockTypes)
+      }
     }
 
     Object.values(record).forEach(walk)
   }
 
   walk(value)
-  return [...found]
+  return new Map([...found].map(([id, blockTypes]) => [id, [...blockTypes]]))
+}
+
+/** Returns the block types (once each) under `value` that hold `mediaId`. */
+export function findMediaInBlocks(value: unknown, mediaId: number | string): string[] {
+  return mediaInBlocks(value).get(String(mediaId)) ?? []
 }

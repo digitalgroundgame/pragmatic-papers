@@ -21,6 +21,9 @@ import type {
   SerializedBlockNode,
   SerializedInlineBlockNode,
   SerializedLinkNode,
+  SerializedListNode,
+  SerializedTableCellNode,
+  SerializedTextNode,
   SerializedUploadNode,
 } from "@payloadcms/richtext-lexical"
 import {
@@ -69,6 +72,80 @@ const figureHTML = (media: number | Media | null | undefined): string => {
   return `<figure><img src="${escapeHTML(absoluteURL(media.url))}" alt="${escapeHTML(media.alt ?? "")}" />${caption ? `<figcaption>${caption}</figcaption>` : ""}</figure>`
 }
 
+// Lexical's text format bits (see `NodeFormat` in @payloadcms/richtext-lexical).
+const TEXT_FORMATS: [bit: number, tag: string][] = [
+  [1, "strong"],
+  [2, "em"],
+  [4, "s"],
+  [8, "u"],
+  [16, "code"],
+  [32, "sub"],
+  [64, "sup"],
+]
+
+/**
+ * Plain tags for text formatting. Payload's own converter writes underline and
+ * strikethrough as `<span style="text-decoration: …">`, which Substack strips.
+ */
+const textToHTML = ({ node }: { node: SerializedTextNode }): string =>
+  TEXT_FORMATS.reduce(
+    (html, [bit, tag]) => (node.format & bit ? `<${tag}>${html}</${tag}>` : html),
+    escapeHTML(node.text),
+  )
+
+type NodesToHTML = (args: { nodes: SerializedLexicalNode[] }) => string[]
+
+/**
+ * Plain `<ol>`/`<ul>` lists. Payload's converter adds empty `class`/`style`
+ * attributes to every item and renders checklist items as form inputs with
+ * React attribute names (`htmlFor`, `readOnly`); here a checklist item is
+ * prefixed with ☑ or ☐ instead. Lexical stores a nested list as its own item
+ * holding only that list, so it's attached to the item before it rather than
+ * rendered as an empty bullet.
+ */
+const listToHTML = ({
+  node,
+  nodesToHTML,
+}: {
+  node: SerializedListNode
+  nodesToHTML: NodesToHTML
+}): string => {
+  const tag = node.listType === "number" ? "ol" : "ul"
+  const start = tag === "ol" && node.start > 1 ? ` start="${node.start}"` : ""
+  const items: string[] = []
+
+  for (const item of node.children as {
+    children?: SerializedLexicalNode[]
+    checked?: boolean
+  }[]) {
+    const children = item.children ?? []
+    const html = nodesToHTML({ nodes: children }).join("")
+    const onlyNestedList = children.length > 0 && children.every(({ type }) => type === "list")
+    if (onlyNestedList && items.length > 0) {
+      items[items.length - 1] += html
+      continue
+    }
+    const box = node.listType === "check" ? (item.checked ? "☑ " : "☐ ") : ""
+    items.push(box + html)
+  }
+
+  return `<${tag}${start}>${items.map((item) => `<li>${item}</li>`).join("")}</${tag}>`
+}
+
+/** A plain table: Payload's adds site-only classes and inline borders to every cell. */
+const tableCellToHTML = ({
+  node,
+  nodesToHTML,
+}: {
+  node: SerializedTableCellNode
+  nodesToHTML: NodesToHTML
+}): string => {
+  const tag = node.headerState > 0 ? "th" : "td"
+  const colSpan = node.colSpan && node.colSpan > 1 ? ` colspan="${node.colSpan}"` : ""
+  const rowSpan = node.rowSpan && node.rowSpan > 1 ? ` rowspan="${node.rowSpan}"` : ""
+  return `<${tag}${colSpan}${rowSpan}>${nodesToHTML({ nodes: node.children }).join("")}</${tag}>`
+}
+
 /**
  * Converters for the Substack feed. `url` is the article's own URL, which
  * internal links fall back to and interactive maps link back to. Covered by
@@ -88,6 +165,15 @@ export const createSubstackConverters = (url: string): HTMLConvertersFunction =>
           }
         },
       }),
+      text: textToHTML,
+      list: listToHTML,
+      listitem: ({ node, nodesToHTML }) =>
+        `<li>${nodesToHTML({ nodes: node.children }).join("")}</li>`,
+      table: ({ node, nodesToHTML }) =>
+        `<table>${nodesToHTML({ nodes: node.children }).join("")}</table>`,
+      tablerow: ({ node, nodesToHTML }) =>
+        `<tr>${nodesToHTML({ nodes: node.children }).join("")}</tr>`,
+      tablecell: tableCellToHTML,
       upload: ({ node }: { node: SerializedUploadNode }) => {
         const upload = typeof node.value === "object" ? (node.value as Media) : null
         return upload?.mimeType?.startsWith("image") ? figureHTML(upload) : ""

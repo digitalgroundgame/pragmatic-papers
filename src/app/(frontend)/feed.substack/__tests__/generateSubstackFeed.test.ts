@@ -293,6 +293,111 @@ describe("substackArticleHTML block and node coverage", () => {
   })
 })
 
+describe("substackArticleHTML formatting, lists and tables", () => {
+  const formatted = (value: string, format: number) => ({ ...text(value), format })
+  const item = (children: unknown[], extra: Record<string, unknown> = {}) => ({
+    type: "listitem",
+    version: 1,
+    value: 1,
+    children,
+    ...extra,
+  })
+  const list = (listType: string, children: unknown[], extra: Record<string, unknown> = {}) => ({
+    type: "list",
+    version: 1,
+    listType,
+    start: 1,
+    tag: listType === "number" ? "ol" : "ul",
+    children,
+    ...extra,
+  })
+  const cell = (value: string, headerState = 0, extra: Record<string, unknown> = {}) => ({
+    type: "tablecell",
+    version: 1,
+    headerState,
+    children: [paragraph(text(value))],
+    ...extra,
+  })
+  const row = (...cells: unknown[]) => ({ type: "tablerow", version: 1, children: cells })
+
+  it("uses plain tags for every text format", () => {
+    const html = substackArticleHTML(
+      makeArticle([
+        paragraph(
+          formatted("b", 1),
+          formatted("i", 2),
+          formatted("s", 4),
+          formatted("u", 8),
+          formatted("c", 16),
+          formatted("sub", 32),
+          formatted("sup", 64),
+          formatted("both <&>", 1 | 2),
+        ),
+      ]),
+    )
+    expect(html).toContain(
+      "<p><strong>b</strong><em>i</em><s>s</s><u>u</u><code>c</code><sub>sub</sub><sup>sup</sup><em><strong>both &lt;&amp;&gt;</strong></em></p>",
+    )
+  })
+
+  it("renders lists without attributes, keeping a numbered list's start", () => {
+    const html = substackArticleHTML(
+      makeArticle([
+        list("number", [item([text("Three")]), item([text("Four")])], { start: 3 }),
+        list("bullet", [item([text("Dot")])]),
+      ]),
+    )
+    expect(html).toContain('<ol start="3"><li>Three</li><li>Four</li></ol>')
+    expect(html).toContain("<ul><li>Dot</li></ul>")
+  })
+
+  it("attaches a nested list to the item before it instead of adding an empty bullet", () => {
+    const html = substackArticleHTML(
+      makeArticle([
+        list("bullet", [
+          item([text("Parent")]),
+          item([list("bullet", [item([text("Child")])])]),
+          item([text("Sibling")]),
+        ]),
+      ]),
+    )
+    expect(html).toContain("<ul><li>Parent<ul><li>Child</li></ul></li><li>Sibling</li></ul>")
+  })
+
+  it("renders a checklist as text markers, not form inputs", () => {
+    const html = substackArticleHTML(
+      makeArticle([
+        list("check", [
+          item([text("Done")], { checked: true }),
+          item([text("To do")], { checked: false }),
+        ]),
+      ]),
+    )
+    expect(html).toContain("<ul><li>☑ Done</li><li>☐ To do</li></ul>")
+  })
+
+  it("renders a plain table with header cells and spans", () => {
+    const html = substackArticleHTML(
+      makeArticle([
+        {
+          type: "table",
+          version: 1,
+          children: [
+            row(cell("Format", 1), cell("Use", 1)),
+            row(cell("Bold", 0, { colSpan: 2 })),
+            row(cell("Tall", 0, { rowSpan: 2 }), cell("Short")),
+          ],
+        },
+      ]),
+    )
+    expect(html).toContain(
+      "<table><tr><th><p>Format</p></th><th><p>Use</p></th></tr>" +
+        '<tr><td colspan="2"><p>Bold</p></td></tr>' +
+        '<tr><td rowspan="2"><p>Tall</p></td><td><p>Short</p></td></tr></table>',
+    )
+  })
+})
+
 describe("generateSubstackFeed", () => {
   afterEach(() => {
     vi.restoreAllMocks()

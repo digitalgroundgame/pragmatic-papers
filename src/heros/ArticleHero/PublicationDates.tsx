@@ -1,12 +1,5 @@
 import { formatFullTimestamp, formatPublishedDate, revision } from "./dates"
-import {
-  TooltipPopup,
-  TooltipPortal,
-  TooltipPositioner,
-  TooltipProvider,
-  TooltipRoot,
-  TooltipTrigger,
-} from "@/components/ui/tooltip"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 
 interface PublicationDatesProps {
   publishedAt: string | null | undefined
@@ -27,7 +20,7 @@ export function PublicationDates({
 
   return (
     <TooltipProvider>
-      <TooltipRoot>
+      <Tooltip>
         <TooltipTrigger
           render={<span />}
           // Base UI derives the id from render order otherwise, which makes it
@@ -45,27 +38,23 @@ export function PublicationDates({
             </>
           )}
         </TooltipTrigger>
-        <TooltipPortal>
-          <TooltipPositioner side="top" align="start">
-            <TooltipPopup>
-              {revised ? (
-                <dl className="space-y-0.5">
-                  <div className="flex gap-2">
-                    <dt className="opacity-70">Published</dt>
-                    <dd>{formatFullTimestamp(publishedAt)}</dd>
-                  </div>
-                  <div className="flex gap-2">
-                    <dt className="opacity-70">Updated</dt>
-                    <dd>{formatFullTimestamp(revised.dateTime)}</dd>
-                  </div>
-                </dl>
-              ) : (
-                formatFullTimestamp(publishedAt)
-              )}
-            </TooltipPopup>
-          </TooltipPositioner>
-        </TooltipPortal>
-      </TooltipRoot>
+        <TooltipContent side="top" align="start">
+          {revised ? (
+            <dl className="space-y-0.5">
+              <div className="flex gap-2">
+                <dt className="opacity-70">Published</dt>
+                <dd>{formatFullTimestamp(publishedAt)}</dd>
+              </div>
+              <div className="flex gap-2">
+                <dt className="opacity-70">Updated</dt>
+                <dd>{formatFullTimestamp(revised.dateTime)}</dd>
+              </div>
+            </dl>
+          ) : (
+            formatFullTimestamp(publishedAt)
+          )}
+        </TooltipContent>
+      </Tooltip>
     </TooltipProvider>
   )
 }

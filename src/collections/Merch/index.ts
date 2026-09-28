@@ -2,7 +2,7 @@ import type { CollectionConfig, FieldAccess, PayloadRequest } from "payload"
 
 import { admin } from "@/access/collections"
 import { isAdmin } from "@/access/roles"
-import { readShopifyEnv } from "@/jobs/syncShopifyProducts/logic"
+import { integrationStatus, shopifyStore } from "@/integrations"
 import {
   revalidateMerchProduct,
   revalidateMerchProductDelete,
@@ -106,8 +106,10 @@ export const Merch: CollectionConfig = {
         const job = await req.payload.jobs.queue({ task: "syncShopifyProducts", input: {} })
         const result = await req.payload.jobs.run({ queue: "default", limit: 1 })
         // A run without credentials is a logged no-op, not a failure — say so,
-        // or the admin button reports success over an empty catalogue.
-        return Response.json({ jobId: job.id, configured: readShopifyEnv() !== null, result })
+        // or the admin button reports success over an empty catalogue. The connection
+        // answers that, so this endpoint and a status view can never disagree.
+        const connection = integrationStatus(shopifyStore)
+        return Response.json({ jobId: job.id, configured: connection.configured, result })
       },
     },
   ],

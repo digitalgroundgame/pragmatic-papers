@@ -24,7 +24,9 @@ export default defineConfig({
     },
   },
   use: {
-    baseURL: "http://localhost:8000",
+    // Same source as `webServer.url` below, so a server managed outside the runner
+    // (`E2E_MANAGED_SERVER`) can live on another port and still be the one under test.
+    baseURL: process.env.NEXT_PUBLIC_SERVER_URL || "http://localhost:8000",
     trace: "on-first-retry",
     // Pin everything that can shift pixels between runs.
     timezoneId: "UTC",

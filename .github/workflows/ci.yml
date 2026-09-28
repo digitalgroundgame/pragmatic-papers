@@ -20,6 +20,47 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
+  # Decides which path-sensitive jobs below a PR needs. Only PRs are filtered:
+  # on pushes to main/dev this job does nothing, and the jobs gated on it run
+  # in full. A job skipped by its `if` reports "skipped", which a required
+  # status check accepts, so gating a required job here never blocks a PR.
+  changes:
+    name: Detect changes
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: read
+    outputs:
+      storybook: ${{ steps.filter.outputs.storybook }}
+
+    steps:
+      # On pull_request the filter lists changed files through the API, so
+      # no checkout is needed.
+      - uses: dorny/paths-filter@v4
+        if: github.event_name == 'pull_request'
+        id: filter
+        with:
+          predicate-quantifier: some-with-excludes
+          # A skip-list, not an allow-list: stories import from all over src/,
+          # and the Storybook build exists to catch a server-only module
+          # reaching the browser, which a change anywhere in src/ can cause.
+          # So everything counts except paths no story or the Storybook build
+          # can reach. When in doubt, leave a path out of this list.
+          filters: |
+            storybook:
+              - "**"
+              - "!**/*.md"
+              - "!.claude/**"
+              - "!tests/**"
+              - "!src/migrations/**"
+              - "!.github/*"
+              - "!.github/workflows/!(ci).yml"
+              - "!dockerfiles/**"
+              - "!docker-compose*.yml"
+              - "!devenv.*"
+              - "!playwright.config.ts"
+              - "!scripts/*.go"
+              - "!scripts/go.*"
+
   static:
     name: Static checks
     runs-on: ubuntu-latest
@@ -161,6 +202,8 @@ jobs:
 
   storybook:
     name: Storybook
+    needs: changes
+    if: github.event_name != 'pull_request' || needs.changes.outputs.storybook == 'true'
     runs-on: ubuntu-latest
 
     steps:

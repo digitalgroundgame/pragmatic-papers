@@ -1,5 +1,9 @@
 import "dotenv/config"
 
+import { writeFileSync } from "node:fs"
+
+import { SHOWCASE_LINE } from "./showcase-pr"
+
 import { AUTHOR_ROLES, hasRole } from "@/access/roles"
 import type { User } from "@/payload-types"
 import { createStockMedia } from "@/endpoints/seed/media"
@@ -21,7 +25,11 @@ Options:
   --all               push every article in the catalog
   --draft             create the articles as drafts (the default on staging)
   --from-description  read the slugs from a "Showcase:" line in SHOWCASE_DESCRIPTION
-                      (a PR description); does nothing if there is no such line`
+                      (a PR description), where "all" means --all; does nothing if
+                      there is no such line
+
+With SHOWCASE_LINKS_FILE set, writes a Markdown list linking to each article
+it pushed or found there, for the PR description.`
 
 type Fetch = typeof fetch
 
@@ -56,10 +64,11 @@ export function resolveTarget(
 
 /**
  * Reads the slugs from a PR description's `Showcase:` line, e.g.
- * `Showcase: rich-text-showcase, lorem-ipsum-timeline`.
+ * `Showcase: rich-text-showcase, lorem-ipsum-timeline`. `Showcase: all` (meaning
+ * the whole catalog, written by hand) comes back as `["all"]`.
  */
 export function slugsFromDescription(description: string): string[] {
-  const line = description.match(/^[\s>*_-]*showcase\s*:[*_\s]*(.*)$/im)?.[1] ?? ""
+  const line = description.match(SHOWCASE_LINE)?.[1] ?? ""
   return line.match(/[a-z0-9]+(?:-[a-z0-9]+)*/g) ?? []
 }
 
@@ -161,11 +170,15 @@ export async function articleExists(
   return (body.totalDocs as number) > 0
 }
 
+/**
+ * Pushes the articles and returns a Markdown list item linking to each one,
+ * whether pushed now or already there.
+ */
 export async function main(
   argv = process.argv.slice(2),
   env: Record<string, string | undefined> = process.env,
   fetchImpl: Fetch = fetch,
-): Promise<void> {
+): Promise<string[]> {
   const flags = new Set(argv.filter((arg) => arg.startsWith("-")))
   const [target, ...args] = argv.filter((arg) => !arg.startsWith("-"))
   if (!target || flags.has("--help") || flags.has("-h")) throw new Error(USAGE)
@@ -182,10 +195,10 @@ export async function main(
     slugs = slugsFromDescription(env.SHOWCASE_DESCRIPTION ?? "")
     if (slugs.length === 0) {
       console.warn("No Showcase: line in the description; nothing to push.")
-      return
+      return []
     }
   }
-  const entries = selectEntries(slugs, flags.has("--all"))
+  const entries = selectEntries(slugs, flags.has("--all") || slugs.includes("all"))
 
   const { SHOWCASE_EMAIL: email, SHOWCASE_PASSWORD: password } = env
   if (!email || !password) {
@@ -199,15 +212,22 @@ export async function main(
         `author (has: ${user.roles?.join(", ")}).`,
     )
   }
+  const links = new Map<string, string>()
   const pending: ShowcaseEntry[] = []
   for (const entry of entries) {
     if (await articleExists(origin, token, entry.slug, fetchImpl)) {
+      links.set(entry.slug, `${origin}/articles/${entry.slug}`)
       console.warn(`✔ Already there: ${origin}/articles/${entry.slug}`)
     } else {
       pending.push(entry)
     }
   }
-  if (pending.length === 0) return
+  const list = () =>
+    entries.flatMap((entry) => {
+      const url = links.get(entry.slug)
+      return url ? [`- [${entry.slug}](${url})`] : []
+    })
+  if (pending.length === 0) return list()
 
   const payload = createRestPayload(origin, token, fetchImpl, { draft })
   console.warn(`Uploading stock images to ${origin}…`)
@@ -217,13 +237,18 @@ export async function main(
     const id = await entry.create(payload, [user], media)
     // A draft has no public page yet, so point at it in the admin.
     const where = draft ? `admin/collections/articles/${id}` : `articles/${entry.slug}`
+    links.set(entry.slug, `${origin}/${where}`)
     console.warn(`✔ Pushed${draft ? " as a draft" : ""}: ${origin}/${where}`)
   }
+  return list()
 }
 
 if (!process.env.VITEST) {
   try {
-    await main()
+    const links = await main()
+    if (process.env.SHOWCASE_LINKS_FILE) {
+      writeFileSync(process.env.SHOWCASE_LINKS_FILE, links.map((link) => `${link}\n`).join(""))
+    }
   } catch (err) {
     console.error(err instanceof Error ? err.message : err)
     process.exit(1)

@@ -39,12 +39,7 @@ export const LightboxMediaBlock: React.FC<LightboxMediaBlockProps> = ({
   return (
     <Dialog>
       <div className={cn("flow-root w-full", containerClassName)}>
-        <MediaBlockFrame
-          hasCaption={!!caption}
-          breakout={breakout}
-          className={className}
-          enableGutter={enableGutter}
-        >
+        <MediaBlockFrame breakout={breakout} className={className} enableGutter={enableGutter}>
           <DialogTrigger className="block w-full [&>*]:m-0">
             <MediaBlockImage
               media={media}

@@ -61,19 +61,18 @@ type MediaBlockFrameProps = Pick<
   StyledMediaBlockProps,
   "breakout" | "className" | "enableGutter"
 > & {
-  hasCaption?: boolean
+  /** `picture` may only hold `<source>` and `<img>`; wrap anything else in a `figure`. */
+  as?: "figure" | "picture"
   children: React.ReactNode
 }
 
-/** A `<figure>` when there is a caption to hold, a `<picture>` otherwise. */
 export const MediaBlockFrame: React.FC<MediaBlockFrameProps> = ({
+  as: Slot = "figure",
   breakout,
   children,
   className,
   enableGutter = true,
-  hasCaption,
 }) => {
-  const Slot: React.ElementType = hasCaption ? "figure" : "picture"
   return (
     <Slot
       className={cn(
@@ -155,7 +154,7 @@ export const MediaBlock: React.FC<StyledMediaBlockProps> = ({
 
   return (
     <MediaBlockFrame
-      hasCaption={!!caption}
+      as={caption ? "figure" : "picture"}
       breakout={breakout}
       className={className}
       enableGutter={enableGutter}

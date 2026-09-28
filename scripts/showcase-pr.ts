@@ -70,7 +70,13 @@ const CLOSING_LINE = /^\s*(close[sd]?|fix(e[sd])?|resolve[sd]?):?\s+([\w.-]+\/[\
  * any `Closes #N` lines, where reviewers see it first; no links removes it.
  */
 export function withLinks(body: string, links: string[]): string {
-  if (links.length === 0) return body.replace(LINKS_BLOCK, "").trimEnd()
+  if (links.length === 0) {
+    if (!LINKS_BLOCK.test(body)) return body.trimEnd()
+    return body
+      .replace(LINKS_BLOCK, "")
+      .replace(/(\r?\n){3,}/g, "\n\n")
+      .trim()
+  }
   const block = `${LINKS_START}\n**On the preview:**\n\n${links.join("\n")}\n${LINKS_END}`
   if (LINKS_BLOCK.test(body)) return body.replace(LINKS_BLOCK, () => block)
   const lines = body.split("\n")

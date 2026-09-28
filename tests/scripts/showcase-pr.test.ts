@@ -92,6 +92,14 @@ describe("withLinks", () => {
     expect(withLinks(`Text\n\n${block("- [first](u)")}\n`, [])).toBe("Text")
   })
 
+  it("leaves no blank lines where a list at the top was", () => {
+    const body = "Closes #1\n\nText"
+    expect(withLinks(withLinks(body, ["- [first](u)"]), [])).toBe(body)
+    expect(withLinks(withLinks("## Context\n\nText", ["- [first](u)"]), [])).toBe(
+      "## Context\n\nText",
+    )
+  })
+
   it("keeps $ in links literal", () => {
     expect(withLinks(block("old"), ["- [a]($1)"])).toBe(block("- [a]($1)"))
   })

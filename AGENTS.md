@@ -227,7 +227,8 @@ function, and fails on any axe violation.
 - **Published**: CI's "Deploy Storybook" job uploads the tested build to the
   `pragmatic-papers-storybook` Cloudflare Worker (`.storybook/wrangler.jsonc`):
   `dev` at `pragmatic-papers-storybook.digital-ground-game.workers.dev`, and each PR at a
-  `pr-<number>-` preview URL linked from a PR comment. Needs the `CLOUDFLARE_API_TOKEN`
+  `pr-<number>-` preview URL linked from a PR comment. `/storybook` on staging and on a
+  PR's site preview redirects to its Storybook (404 on production). Needs the `CLOUDFLARE_API_TOKEN`
   (Workers Scripts: Edit) and `CLOUDFLARE_ACCOUNT_ID` repo secrets; without them it skips.
 
 ### Visual regression (screenshot) tests

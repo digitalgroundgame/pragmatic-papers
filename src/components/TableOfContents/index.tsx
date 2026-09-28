@@ -39,8 +39,12 @@ export const {
       return { label, icon: entryIcon(MapIcon) }
     },
     mediaCollage: (block) => {
-      if (!(block as MediaCollageBlock).images?.length) return null
-      return { label: "Gallery", icon: entryIcon(ImagesIcon) }
+      const { images, layout } = block as MediaCollageBlock
+      if (!images?.length) return null
+      return {
+        label: layout === "carousel" ? "Carousel" : "Image grid",
+        icon: entryIcon(ImagesIcon),
+      }
     },
     socialEmbed: (block) => {
       const { platform } = block as SocialEmbedBlock

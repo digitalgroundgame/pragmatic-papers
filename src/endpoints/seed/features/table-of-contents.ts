@@ -93,7 +93,10 @@ export const createTableOfContentsArticle = async (
         createParagraph(
           "Some blocks are worth jumping to on their own. They appear in the list with an icon, labelled by their own title where they have one, and nest under the heading before them.",
         ),
-        createParagraph("Tables are numbered in document order: table-1, table-2 and so on."),
+        createParagraph(
+          "A table directly under a heading is listed as that heading, with the table icon. The heading below is one, so its table has no entry of its own. Any other table is listed as Table.",
+        ),
+        createHeadingNode("How each block is listed", "h3"),
         createTableNode([
           createTableRowNode([
             createTableHeaderNode("Block"),
@@ -102,7 +105,7 @@ export const createTableOfContentsArticle = async (
           ]),
           createTableRowNode([
             createTableCellNode("Table"),
-            createTableCellNode("Table"),
+            createTableCellNode("The heading right above it, else Table"),
             createTableCellNode("Grid"),
           ]),
           createTableRowNode([
@@ -117,7 +120,7 @@ export const createTableOfContentsArticle = async (
           ]),
           createTableRowNode([
             createTableCellNode("Gallery"),
-            createTableCellNode("Gallery"),
+            createTableCellNode("Image grid or Carousel, by its layout"),
             createTableCellNode("Images"),
           ]),
           createTableRowNode([
@@ -154,8 +157,11 @@ export const createTableOfContentsArticle = async (
           ],
           "An article's path to publication",
         ),
-        createParagraph("A gallery has no title of its own, so every one is listed as Gallery."),
+        createParagraph(
+          "A gallery has no title of its own, so it's listed by its layout: this grid as Image grid, and the carousel after it as Carousel.",
+        ),
         createMediaCollageBlock([mediaDocs[0]!.id, mediaDocs[1]!.id, mediaDocs[2]!.id]),
+        createMediaCollageBlock([mediaDocs[1]!.id, mediaDocs[2]!.id, mediaDocs[3]!.id], "carousel"),
         createParagraph("A social embed is listed under its platform."),
         createSocialEmbedBlock({ ...youtube, id: "seed-toc-socialEmbed-youtube" }),
         createHeadingNode("In practice", "h3"),

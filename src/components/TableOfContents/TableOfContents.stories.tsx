@@ -31,7 +31,8 @@ const text = (i: number) => createParagraph(SENTENCES[i % SENTENCES.length]!)
 // Built like an article's content, and stamped the way the save hook stamps it,
 // so the entries come from the same resolvers the site uses. It opens with a
 // paragraph (an Intro entry), nests h2–h4, repeats a heading (deduped anchor),
-// and puts a table and each iconed block under a heading.
+// puts a table right under a heading (folded into it) and another after a
+// paragraph (listed on its own), and nests each iconed block under a heading.
 const content = stampTableOfContentsAnchors(
   richText(
     text(0),
@@ -48,12 +49,17 @@ const content = stampTableOfContentsAnchors(
       createTableRowNode([createTableCellNode("School board"), createTableCellNode("$1.2B")]),
     ]),
     block({ blockType: "interactiveMap", widgetTitle: "Council districts by margin" }),
-    block({ blockType: "mediaCollage", images: [{ image: 1 }] }),
+    block({ blockType: "mediaCollage", layout: "grid", images: [{ image: 1 }] }),
+    block({ blockType: "mediaCollage", layout: "carousel", images: [{ image: 1 }] }),
     block({ blockType: "socialEmbed", platform: "youtube" }),
     createHeadingNode("Turnout", "h3"),
     text(0),
     createHeadingNode("What to watch", "h2"),
     text(1),
+    createTableNode([
+      createTableRowNode([createTableHeaderNode("Race"), createTableHeaderNode("Seats")]),
+      createTableRowNode([createTableCellNode("City council"), createTableCellNode("9")]),
+    ]),
   ) as DefaultTypedEditorState,
 )
 
@@ -92,18 +98,27 @@ export const Default: Story = {
       "#turnout-2",
     ])
 
+    // A table right under a heading folds into the heading's entry, which
+    // takes the table icon; a table after a paragraph gets its own entry.
+    const moneyIcon = toc
+      .getByRole("link", { name: "Where the money goes" })
+      .querySelector('[data-slot="toc-icon"]')
+    await expect(moneyIcon).toHaveClass("mr-0.5")
+    await expect(toc.getAllByRole("link", { name: "Table" })).toHaveLength(1)
+
     // Blocks resolve to labelled entries with their icons, nested under a heading.
     for (const label of [
       "The 2024 primary calendar",
       "Table",
       "Council districts by margin",
-      "Gallery",
+      "Image grid",
+      "Carousel",
       "YouTube embed",
     ]) {
       const link = toc.getByRole("link", { name: label })
       await expect(link.querySelector('[data-slot="toc-icon"]')).toHaveClass("mr-1")
     }
-    const nested = toc.getByRole("link", { name: "Gallery" }).closest('[data-slot="toc-list"]')
+    const nested = toc.getByRole("link", { name: "Image grid" }).closest('[data-slot="toc-list"]')
     await expect(nested).toHaveClass("pl-4")
   },
 }

@@ -159,12 +159,15 @@ describe("collectEntries – headings only", () => {
   })
 
   it("nests a depthless entry under the heading before it", () => {
+    const paragraph = { type: "paragraph", children: [] } as object
     const state = makeState([
       { type: "table", children: [] } as object,
       heading("h2", "Section"),
       heading("h3", "Subsection"),
+      paragraph,
       { type: "table", children: [] } as object,
       heading("h2", "Next"),
+      paragraph,
       { type: "table", children: [] } as object,
     ])
     const depths = collectEntries(state).map((entry) => [entry.label, entry.depth])
@@ -176,6 +179,30 @@ describe("collectEntries – headings only", () => {
       ["Next", 1],
       ["Table", 2],
     ])
+  })
+
+  it("folds a table directly under a heading into the heading's entry", () => {
+    const state = makeState([
+      heading("h2", "Budget"),
+      { type: "table", children: [] } as object,
+      heading("h2", "Races"),
+      { type: "paragraph", children: [] } as object,
+      { type: "table", children: [] } as object,
+    ])
+    const entries = collectEntries(state)
+    expect(entries.map((entry) => entry.label)).toEqual(["Budget", "Races", "Table"])
+    // The heading takes the table's icon, and keeps its own anchor.
+    expect(entries[0]).toMatchObject({ anchor: "budget", icon: expect.anything() })
+    expect(entries[1]!.icon).toBeUndefined()
+  })
+
+  it("keeps a table that follows a heading's table as its own entry", () => {
+    const state = makeState([
+      heading("h2", "Budget"),
+      { type: "table", children: [] } as object,
+      { type: "table", children: [] } as object,
+    ])
+    expect(collectEntries(state).map((entry) => entry.label)).toEqual(["Budget", "Table"])
   })
 
   it("keeps a depth the resolver sets explicitly", () => {

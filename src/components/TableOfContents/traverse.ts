@@ -149,19 +149,31 @@ export function collectEntries(
   let sectionDepth = 0
   const walk = (nodes: SerializedLexicalNode[] | undefined): void => {
     if (!nodes) return
+    // The entry of the heading this node directly follows, if any.
+    let headingJustBefore: TableOfContentsEntry | undefined
     for (const node of nodes) {
       const key = resolverKeyFor(node)
       const resolver = key ? mergedResolvers[key] : undefined
+      let headingEntry: TableOfContentsEntry | undefined
       if (resolver) {
         const entry = resolver(resolverPayloadFor(node))
         const anchor = entry?.anchor ?? (node as AnchoredNode).anchor
         if (entry && anchor !== undefined) {
-          // Headings open a section; anything else without a depth nests inside it.
-          const depth = entry.depth ?? (node.type === "heading" ? 1 : sectionDepth + 1)
-          if (node.type === "heading") sectionDepth = depth
-          entries.push({ ...entry, anchor, depth })
+          if (node.type === "table" && headingJustBefore) {
+            // A table right under a heading is that heading's table: the heading's
+            // entry takes the table's icon instead of listing the table again.
+            headingJustBefore.icon ??= entry.icon
+          } else {
+            // Headings open a section; anything else without a depth nests inside it.
+            const depth = entry.depth ?? (node.type === "heading" ? 1 : sectionDepth + 1)
+            if (node.type === "heading") sectionDepth = depth
+            const pushed = { ...entry, anchor, depth }
+            entries.push(pushed)
+            if (node.type === "heading") headingEntry = pushed
+          }
         }
       }
+      headingJustBefore = headingEntry
       walk((node as WithChildren).children)
     }
   }

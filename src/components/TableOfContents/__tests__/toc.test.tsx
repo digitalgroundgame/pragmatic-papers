@@ -94,7 +94,16 @@ describe("app TOC instance — exhibit blocks", () => {
       block("mediaCollage", { images: [] }),
     ])
     const nav = getByRole("navigation")
-    expect(within(nav).getAllByText("Gallery")).toHaveLength(1)
+    expect(within(nav).getAllByText("Image grid")).toHaveLength(1)
+  })
+
+  it("names a gallery by its layout", () => {
+    const { getAllByRole } = renderToc([
+      block("mediaCollage", { layout: "grid", images: [{ media: 1 }] }),
+      block("mediaCollage", { layout: "carousel", images: [{ media: 1 }] }),
+    ])
+    const labels = getAllByRole("link").map((link) => link.textContent)
+    expect(labels).toEqual(expect.arrayContaining(["Image grid", "Carousel"]))
   })
 
   it("shares one anchor namespace with headings", () => {

@@ -48,6 +48,8 @@ describe("TableOfContentsCheckbox", () => {
     mockContent = content([
       heading("h2", "Overview"),
       heading("h3", "Details"),
+      // A table directly under a heading would fold into it, so text comes first.
+      { type: "paragraph", children: [], version: 1 },
       { type: "table", children: [], version: 1 },
     ])
     render(<TableOfContentsCheckbox {...props} />)

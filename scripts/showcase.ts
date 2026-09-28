@@ -2,6 +2,8 @@ import "dotenv/config"
 
 import { writeFileSync } from "node:fs"
 
+import { SHOWCASE_LINE } from "./showcase-pr"
+
 import { AUTHOR_ROLES, hasRole } from "@/access/roles"
 import type { User } from "@/payload-types"
 import { createStockMedia } from "@/endpoints/seed/media"
@@ -66,7 +68,7 @@ export function resolveTarget(
  * the showcase label inserts) comes back as `["all"]`.
  */
 export function slugsFromDescription(description: string): string[] {
-  const line = description.match(/^[\s>*_-]*showcase\s*:[*_\s]*(.*)$/im)?.[1] ?? ""
+  const line = description.match(SHOWCASE_LINE)?.[1] ?? ""
   return line.match(/[a-z0-9]+(?:-[a-z0-9]+)*/g) ?? []
 }
 

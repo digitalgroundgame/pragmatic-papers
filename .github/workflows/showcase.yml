@@ -2,34 +2,28 @@ name: Showcase
 
 # Pushes feature articles from src/endpoints/seed/showcase.ts to a live site
 # with `pnpm showcase`. The push only adds articles whose slug is missing, so
-# repeat runs are harmless.
+# repeat runs are harmless. The PR logic lives in scripts/showcase-pr.ts.
 #
-# A PR opts in with the "showcase" label or a line in its description naming
-# the articles, and the two are kept in sync:
+# Nothing is pushed by default. A PR that adds a seeded article to the catalog
+# opts in with the "showcase" label or a line in its description naming the
+# articles, and the two are kept in sync:
 #
 #   Showcase: rich-text-showcase
 #
-# Nothing is pushed by default. The usual opt-in is a PR that adds a seeded
-# article to the catalog to demonstrate itself:
-#   - Adding the label inserts a line when there's none yet, naming the
-#     articles the PR adds to the catalog (usually its one demo article). If
-#     it adds none, the label is taken off again, with a note in the run
-#     summary. Removing the label removes the line.
+#   - Adding the label inserts a line naming the articles the PR adds to the
+#     catalog, or takes the label off again (with a note) if it adds none.
 #   - A description with a line (say, written by a session opening the PR)
-#     gets the label; deleting the line removes it.
+#     gets the label. Removing either removes the other.
 #
-# The articles are pushed to the PR's Coolify preview once it's up:
+# The articles are pushed to the PR's Coolify preview once it's up, and the
+# description then lists links to them:
 #   - after each preview deploy, when "Preview deployment" finishes. A deploy
 #     may re-copy the preview database, so this re-pushes after each one.
 #   - when the label is added or the line edited, for a preview that is
 #     already up. Otherwise this skips, and the next deploy pushes.
-# "Up" means the PR's head commit has a successful Preview deployment, as
-# recorded by preview-deployment.yml. That workflow succeeds even when a
-# build fails, so its conclusion alone doesn't say.
-#
-# After each push, the description lists links to the articles on the
-# preview, between <!-- showcase-links --> markers that this workflow
-# rewrites; opting out removes the list with the line.
+# "Up" means the PR's head commit has a successful Preview deployment. That
+# workflow succeeds even when a build fails, so its conclusion alone doesn't
+# say.
 #
 # The sync edits the PR with the workflow's own token, and GitHub starts no
 # workflow from such edits, so it can't loop, and it pushes itself rather than
@@ -40,7 +34,7 @@ name: Showcase
 # SHOWCASE_STAGING_URL variable).
 #
 # workflow_run runs this file from the default branch with secrets, while the
-# script comes from the PR, so the push only runs PR code from this
+# push script comes from the PR, so the push only runs PR code from this
 # repository, never from a fork.
 on:
   workflow_run:
@@ -77,85 +71,33 @@ jobs:
       )
     runs-on: ubuntu-latest
     permissions:
+      contents: read
       pull-requests: write
       issues: write
     outputs:
       push: ${{ steps.sync.outputs.push }}
     steps:
+      # The head, not the test merge, which is missing while the PR conflicts.
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          sparse-checkout: scripts/showcase-pr.ts
+          sparse-checkout-cone-mode: false
+
+      # Node 24 runs the TypeScript script directly; no install needed.
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24.x"
+
       - name: Sync the label and the Showcase line
         id: sync
         env:
-          GH_TOKEN: ${{ github.token }}
-          PR: ${{ github.event.pull_request.number }}
+          GITHUB_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
           ACTION: ${{ github.event.action }}
-          BASE_REF: ${{ github.event.pull_request.base.ref }}
-          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
           HAS_LABEL: ${{ contains(github.event.pull_request.labels.*.name, 'showcase') }}
-        run: |
-          # The same line scripts/showcase.ts reads (slugsFromDescription).
-          line='^[[:space:]>*_-]*showcase[[:space:]]*:'
-          body="$RUNNER_TEMP/body.md"
-          # Drops the Showcase line and the link list (see the push job).
-          opt_out() {
-            grep -viE "$line" "$body" \
-              | sed '/<!-- showcase-links -->/,/<!-- \/showcase-links -->/d' > "$body.new" || true
-            if ! cmp -s "$body" "$body.new"; then
-              gh api -X PATCH "repos/$GITHUB_REPOSITORY/pulls/$PR" -F "body=@$body.new" >/dev/null
-              echo "Removed the Showcase line and links from the description."
-            fi
-          }
-          gh api "repos/$GITHUB_REPOSITORY/pulls/$PR" --jq '.body // ""' > "$body"
-          has_line=false
-          grep -qiE "$line" "$body" && has_line=true
-
-          push=false
-          case "$ACTION" in
-            labeled)
-              if [ "$has_line" = false ]; then
-                # The articles this PR adds to the catalog, usually its one
-                # demo article.
-                catalog() {
-                  gh api -H "Accept: application/vnd.github.raw" \
-                    "repos/$GITHUB_REPOSITORY/contents/src/endpoints/seed/showcase.ts?ref=$1" 2>/dev/null \
-                    | grep -oE '^[[:space:]]*slug: "[a-z0-9-]+"' | grep -oE '[a-z0-9-]+"$' | tr -d '"' | sort -u
-                }
-                added=$(comm -13 <(catalog "$BASE_REF") <(catalog "$HEAD_SHA") | paste -sd ' ' -)
-                if [ -z "$added" ]; then
-                  # A label without a line would be dropped by the next edit
-                  # anyway, so drop it now and say why.
-                  gh api -X DELETE "repos/$GITHUB_REPOSITORY/issues/$PR/labels/showcase" >/dev/null
-                  msg="PR #$PR adds no article to src/endpoints/seed/showcase.ts, so there's nothing to showcase; removed the label. To push existing articles, add a \"Showcase: <slug...>\" line instead."
-                  echo "::notice::$msg"
-                  echo "$msg" >> "$GITHUB_STEP_SUMMARY"
-                  echo "push=false" >> "$GITHUB_OUTPUT"
-                  exit 0
-                fi
-                printf '\n\nShowcase: %s\n' "$added" >> "$body"
-                gh api -X PATCH "repos/$GITHUB_REPOSITORY/pulls/$PR" -F "body=@$body" >/dev/null
-                echo "Added \"Showcase: $added\" to the description."
-              fi
-              push=true
-              ;;
-            unlabeled)
-              opt_out
-              ;;
-            opened | edited)
-              if [ "$has_line" = true ]; then
-                if [ "$HAS_LABEL" = false ]; then
-                  gh api -X POST "repos/$GITHUB_REPOSITORY/issues/$PR/labels" -f "labels[]=showcase" >/dev/null
-                  echo "Added the showcase label."
-                fi
-                push=true
-              else
-                if [ "$HAS_LABEL" = true ]; then
-                  gh api -X DELETE "repos/$GITHUB_REPOSITORY/issues/$PR/labels/showcase" >/dev/null
-                  echo "Removed the showcase label."
-                fi
-                opt_out
-              fi
-              ;;
-          esac
-          echo "push=$push" >> "$GITHUB_OUTPUT"
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
+        run: node scripts/showcase-pr.ts sync
 
   push:
     name: Push showcase articles
@@ -176,48 +118,32 @@ jobs:
       pull-requests: write
       deployments: read
     steps:
+      # The script from the ref this run started on (dev for workflow_run; a
+      # PR's head, not its test merge, for pull_request), before any PR code
+      # is checked out.
+      - uses: actions/checkout@v7
+        if: github.event_name != 'workflow_dispatch' || inputs.target != 'staging'
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          sparse-checkout: scripts/showcase-pr.ts
+          sparse-checkout-cone-mode: false
+
+      - uses: actions/setup-node@v7
+        if: github.event_name != 'workflow_dispatch' || inputs.target != 'staging'
+        with:
+          node-version: "24.x"
+
       # A PR run reads the PR fresh, so the code and description are current
       # even when the triggering event is stale.
       - name: Resolve the PR
         id: pr
         if: github.event_name != 'workflow_dispatch' || inputs.target != 'staging'
         env:
-          GH_TOKEN: ${{ github.token }}
-          PR: ${{ github.event.workflow_run.pull_requests[0].number || github.event.pull_request.number || inputs.target }}
-        run: |
-          if ! [[ "$PR" =~ ^[0-9]+$ ]]; then
-            echo "::error::Target must be a PR number or \"staging\", not \"$PR\"."
-            exit 1
-          fi
-          read -r head_repo head_ref sha < <(gh api "repos/$GITHUB_REPOSITORY/pulls/$PR" \
-            --jq '[.head.repo.full_name, .head.ref, .head.sha] | @tsv')
-          if [ "$head_repo" != "$GITHUB_REPOSITORY" ]; then
-            echo "::error::PR #$PR comes from $head_repo; only same-repository PRs are pushed."
-            exit 1
-          fi
-          gh api "repos/$GITHUB_REPOSITORY/pulls/$PR" --jq '.body // ""' > "$RUNNER_TEMP/description.md"
-          echo "number=$PR" >> "$GITHUB_OUTPUT"
-          echo "sha=$sha" >> "$GITHUB_OUTPUT"
-
-          # A dispatch pushes when asked; an automatic run only when opted in
-          # and the head commit's preview is up.
-          if [ "$GITHUB_EVENT_NAME" != workflow_dispatch ]; then
-            if ! grep -qiE '^[[:space:]>*_-]*showcase[[:space:]]*:' "$RUNNER_TEMP/description.md"; then
-              echo "No Showcase line on PR #$PR; nothing to push."
-              echo "skip=true" >> "$GITHUB_OUTPUT"
-              exit 0
-            fi
-            deployment=$(gh api "repos/$GITHUB_REPOSITORY/deployments?environment=Preview&ref=$head_ref&per_page=100" \
-              --jq "[.[] | select(.sha == \"$sha\")][0].id // empty")
-            state=""
-            if [ -n "$deployment" ]; then
-              state=$(gh api "repos/$GITHUB_REPOSITORY/deployments/$deployment/statuses?per_page=1" --jq '.[0].state // empty')
-            fi
-            if [ "$state" != success ]; then
-              echo "The preview for ${sha:0:7} isn't up (${state:-no deployment}); its deploy will push."
-              echo "skip=true" >> "$GITHUB_OUTPUT"
-            fi
-          fi
+          GITHUB_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.workflow_run.pull_requests[0].number || github.event.pull_request.number || inputs.target }}
+          MANUAL: ${{ github.event_name == 'workflow_dispatch' }}
+          DESCRIPTION_FILE: ${{ runner.temp }}/description.md
+        run: node scripts/showcase-pr.ts resolve
 
       - uses: actions/checkout@v7
         if: steps.pr.outputs.skip != 'true'
@@ -238,9 +164,9 @@ jobs:
           SHOWCASE_EMAIL: ${{ secrets.SHOWCASE_EMAIL }}
           SHOWCASE_PASSWORD: ${{ secrets.SHOWCASE_PASSWORD }}
           SHOWCASE_STAGING_URL: ${{ vars.SHOWCASE_STAGING_URL }}
+          SHOWCASE_LINKS_FILE: ${{ runner.temp }}/links.md
           TARGET: ${{ steps.pr.outputs.number || 'staging' }}
           SLUGS: ${{ inputs.slugs }}
-          SHOWCASE_LINKS_FILE: ${{ runner.temp }}/links.md
         run: |
           # Keep going on failure so the summary is written; exit with the push's status.
           set +e -f
@@ -260,28 +186,10 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
           exit "$status"
 
-      # Rewritten from the fresh description, so an edit made during the push
-      # survives; the workflow's own edit starts no new run.
       - name: List the links in the description
         if: steps.pr.outputs.number && steps.pr.outputs.skip != 'true'
         env:
-          GH_TOKEN: ${{ github.token }}
-          PR: ${{ steps.pr.outputs.number }}
-          LINKS: ${{ runner.temp }}/links.md
-        run: |
-          body="$RUNNER_TEMP/body.md"
-          gh api "repos/$GITHUB_REPOSITORY/pulls/$PR" --jq '.body // ""' > "$body"
-          python3 - "$body" "$LINKS" <<'PY'
-          import re, sys
-          body_path, links_path = sys.argv[1:]
-          body = open(body_path).read()
-          links = open(links_path).read().strip()
-          block = f"<!-- showcase-links -->\n**On the preview:**\n\n{links}\n<!-- /showcase-links -->"
-          pattern = re.compile(r"<!-- showcase-links -->.*?<!-- /showcase-links -->", re.S)
-          if pattern.search(body):
-              body = pattern.sub(lambda _: block, body)
-          else:
-              body = body.rstrip() + "\n\n" + block + "\n"
-          open(body_path, "w").write(body)
-          PY
-          gh api -X PATCH "repos/$GITHUB_REPOSITORY/pulls/$PR" -F "body=@$body" >/dev/null
+          GITHUB_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ steps.pr.outputs.number }}
+          LINKS_FILE: ${{ runner.temp }}/links.md
+        run: node scripts/showcase-pr.ts link

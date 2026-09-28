@@ -1,11 +1,13 @@
 import type { DefaultTypedEditorState } from "@payloadcms/richtext-lexical"
 import type { Meta, StoryObj } from "@storybook/nextjs-vite"
+import { expect, screen, userEvent, within } from "storybook/test"
 
 import { MathJaxProviderRoot } from "@/providers/MathJaxProvider"
 import { knownContrastIssue } from "@/stories/a11y"
-import { landscapeImage } from "@/stories/fixtures/media"
+import { landscapeImage, mediaFixture, portraitImage } from "@/stories/fixtures/media"
 import {
   articleBody,
+  createLinkNode,
   createParagraph,
   createTextNode,
   richText,
@@ -87,5 +89,48 @@ export const ArticleWithBlocks: Story = {
       }),
       createParagraph(SENTENCES[3]),
     ) as DefaultTypedEditorState,
+  },
+}
+
+const captionedImage = mediaFixture({
+  caption: richText(
+    createParagraph([
+      createTextNode("The ridge above town at dusk. Photo: "),
+      createLinkNode("County Archive", "https://example.com/archive"),
+    ]),
+  ),
+})
+
+/**
+ * Images as they sit in an article: a captioned and an uncaptioned media block
+ * between paragraphs, each breaking out of the text column and opening a lightbox.
+ */
+export const ArticleWithImages: Story = {
+  args: {
+    data: richText(
+      createParagraph(SENTENCES[0]),
+      block({ blockType: "mediaBlock", media: captionedImage }),
+      createParagraph(SENTENCES[1]),
+      block({ blockType: "mediaBlock", media: portraitImage }),
+      createParagraph(SENTENCES[2]),
+    ) as DefaultTypedEditorState,
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    const [captionedTrigger, plainTrigger] = canvas.getAllByRole("button")
+
+    // Each lightbox trigger holds only its image; the caption link stays a plain link.
+    await expect(within(captionedTrigger!).getByRole("img")).toHaveAttribute(
+      "alt",
+      captionedImage.alt,
+    )
+    await expect(within(captionedTrigger!).queryByRole("link")).not.toBeInTheDocument()
+    await expect(canvas.getByRole("link", { name: "County Archive" })).toBeInTheDocument()
+    await expect(plainTrigger!.closest("figure")).toBeInTheDocument()
+    await expect(plainTrigger!.closest("picture")).not.toBeInTheDocument()
+
+    await userEvent.click(plainTrigger!)
+    const dialog = await screen.findByRole("dialog")
+    await expect(within(dialog).getByRole("img")).toHaveAttribute("alt", portraitImage.alt)
   },
 }

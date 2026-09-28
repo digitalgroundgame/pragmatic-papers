@@ -280,6 +280,25 @@ describe("substackArticleHTML block and node coverage", () => {
     expect(html).toContain('href="https://example.org/articles/test-article"')
   })
 
+  it("gives a note cited twice the same marker and lists it once", () => {
+    const html = substackArticleHTML(
+      makeArticle(
+        [
+          paragraph(
+            text("First claim."),
+            inlineBlock({ blockType: "footnote", index: 1, note: "Shared" }),
+            text(" Second claim."),
+            inlineBlock({ blockType: "footnote", index: 1, note: "Shared" }),
+          ),
+        ],
+        { footnotes: [{ index: 1, note: "Shared", attributionEnabled: false }] },
+      ),
+    )
+
+    expect(html).toContain("First claim.<sup>[1]</sup> Second claim.<sup>[1]</sup>")
+    expect(html.match(/\[1\] Shared/g)).toHaveLength(1)
+  })
+
   it("lists footnotes in index order whatever order they're stored in", () => {
     const html = substackArticleHTML(
       makeArticle([paragraph(text("Body"))], {

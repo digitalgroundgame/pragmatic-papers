@@ -9,6 +9,21 @@ import { usePageMemory } from "./hooks/usePageMemory"
 import { loadFeedBatch } from "./actions"
 import type { FeedSlot, RenderedFeedArticle } from "./types"
 
+const RELOADED_KEY = "feed:reloaded-after-load-failure"
+
+// One reload per tab session, so a load-more that keeps failing (the server is
+// down, say) can't put the page in a reload loop.
+function reloadOnce(): void {
+  try {
+    if (sessionStorage.getItem(RELOADED_KEY)) return
+    sessionStorage.setItem(RELOADED_KEY, "1")
+  } catch {
+    // Storage blocked: skip the reload rather than risk a loop.
+    return
+  }
+  window.location.reload()
+}
+
 interface FeedShellProps {
   initialItems: RenderedFeedArticle[]
   initialNextCursor: number | null
@@ -111,7 +126,19 @@ export function FeedShell({
     if (loadingMoreRef.current || nextCursor === null) return
     loadingMoreRef.current = true
     try {
-      const batch = await loadFeedBatch(nextCursor)
+      const batch = await loadFeedBatch(nextCursor).catch((error: unknown) => {
+        // Most likely a page from an earlier deploy calling a server action the
+        // new build no longer has. Reload once: the URL already names the
+        // current article, so the reader lands back where they were.
+        console.error("Couldn't load more of the feed", error)
+        reloadOnce()
+        return null
+      })
+      if (!batch) {
+        // Stop paging rather than retrying the same request on every scroll.
+        setNextCursor(null)
+        return
+      }
       setArticles((prev) => {
         const seen = new Set(prev.map((a) => a.article.id))
         const merged = [...prev]

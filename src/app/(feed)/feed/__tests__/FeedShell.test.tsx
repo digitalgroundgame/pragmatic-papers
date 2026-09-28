@@ -1,5 +1,5 @@
 import { fireEvent, render, screen } from "@testing-library/react"
-import { beforeEach, describe, expect, it, vi } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import type { RenderedFeedArticle } from "../types"
 import { makeSummary } from "./fixtures"
 
@@ -80,6 +80,40 @@ describe("FeedShell", () => {
       expect(document.querySelectorAll("section[data-idx]")).toHaveLength(3)
     })
     expect(loadFeedBatch).toHaveBeenCalledOnce()
+  })
+
+  describe("when loading more fails", () => {
+    const reload = vi.fn()
+
+    beforeEach(() => {
+      sessionStorage.clear()
+      reload.mockReset()
+      vi.spyOn(console, "error").mockImplementation(() => undefined)
+      vi.stubGlobal("location", { ...window.location, reload })
+      // A page from an earlier deploy calling an action this build doesn't have.
+      loadFeedBatch.mockRejectedValue(new Error("Failed to find Server Action"))
+    })
+    afterEach(() => {
+      vi.unstubAllGlobals()
+      vi.restoreAllMocks()
+    })
+
+    it("stops paging and reloads once, instead of retrying on every scroll", async () => {
+      render(<FeedShell initialItems={items(1, 2)} initialNextCursor={2} />)
+
+      await vi.waitFor(() => expect(reload).toHaveBeenCalledOnce())
+      // The effect re-runs once the failure clears the cursor, and doesn't ask again.
+      expect(loadFeedBatch).toHaveBeenCalledOnce()
+    })
+
+    it("doesn't reload a second time in the same tab", async () => {
+      sessionStorage.setItem("feed:reloaded-after-load-failure", "1")
+
+      render(<FeedShell initialItems={items(1, 2)} initialNextCursor={2} />)
+
+      await vi.waitFor(() => expect(console.error).toHaveBeenCalled())
+      expect(reload).not.toHaveBeenCalled()
+    })
   })
 
   it("doesn't ask for more once the feed has run out", () => {

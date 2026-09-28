@@ -3,11 +3,11 @@
  * build time (the only place `BUILD_ENV` is visible) and inlines it through `env` as
  * `SENTRY_ENVIRONMENT` / `SENTRY_PR`, so the client, server and edge configs share one value.
  *
- * - `BUILD_ENV=preview` → environment `preview`, whatever `NEXT_PUBLIC_SENTRY_ENVIRONMENT`
- *   a preview inherits from staging's variables. One environment for every PR, so Sentry's
- *   environment list doesn't grow with each one; `pr` tells them apart.
- * - Otherwise `NEXT_PUBLIC_SENTRY_ENVIRONMENT`, falling back to `NODE_ENV`. `||`, not `??`:
- *   a variable that exists but is blank must fall back rather than report `""`.
+ * The environment is `BUILD_ENV` itself (`production`, `staging` or `preview`), so the value
+ * that picks a deploy's database and newsletter namespace also names it in Sentry, and the
+ * two can't disagree. One `preview` environment covers every PR, so Sentry's environment
+ * list doesn't grow with each one; the `pr` tag tells them apart. Without `BUILD_ENV`
+ * (`pnpm dev`, CI) it's `development`. `||`, not `??`: a blank variable falls back too.
  */
 export interface SentryDeployment {
   environment: string
@@ -18,17 +18,11 @@ export interface SentryDeployment {
 export function resolveSentryDeployment(env: {
   BUILD_ENV?: string
   COOLIFY_FQDN?: string
-  NEXT_PUBLIC_SENTRY_ENVIRONMENT?: string
-  NODE_ENV?: string
 }): SentryDeployment {
-  if (env.BUILD_ENV === "preview") {
-    // Coolify sets COOLIFY_FQDN to the preview's host, e.g. `pr-986.pragmaticpapers.com`
-    // (with or without a scheme). No match leaves the tag unset rather than wrong.
-    const pr = env.COOLIFY_FQDN?.match(/(?:^|\/\/)pr-(\d+)\./)?.[1] ?? ""
-    return { environment: "preview", pr }
-  }
-  return {
-    environment: env.NEXT_PUBLIC_SENTRY_ENVIRONMENT || env.NODE_ENV || "development",
-    pr: "",
-  }
+  const environment = env.BUILD_ENV || "development"
+  // Coolify sets COOLIFY_FQDN to the preview's host, e.g. `pr-986.pragmaticpapers.com`
+  // (with or without a scheme). No match leaves the tag unset rather than wrong.
+  const pr =
+    environment === "preview" ? (env.COOLIFY_FQDN?.match(/(?:^|\/\/)pr-(\d+)\./)?.[1] ?? "") : ""
+  return { environment, pr }
 }

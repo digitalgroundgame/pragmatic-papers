@@ -2,31 +2,20 @@ import type { Meta, StoryObj } from "@storybook/nextjs-vite"
 import { expect, screen, userEvent, within } from "storybook/test"
 
 import { Button } from "./button"
-import {
-  TooltipPopup,
-  TooltipPortal,
-  TooltipPositioner,
-  TooltipProvider,
-  TooltipRoot,
-  TooltipTrigger,
-} from "./tooltip"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./tooltip"
 
 const meta = {
   title: "UI/Tooltip",
-  component: TooltipRoot,
+  component: Tooltip,
   render: (args) => (
-    <TooltipProvider delay={0}>
-      <TooltipRoot {...args}>
+    <TooltipProvider>
+      <Tooltip {...args}>
         <TooltipTrigger render={<Button variant="outline" />}>Share</TooltipTrigger>
-        <TooltipPortal>
-          <TooltipPositioner>
-            <TooltipPopup>Copy a link to this article</TooltipPopup>
-          </TooltipPositioner>
-        </TooltipPortal>
-      </TooltipRoot>
+        <TooltipContent>Copy a link to this article</TooltipContent>
+      </Tooltip>
     </TooltipProvider>
   ),
-} satisfies Meta<typeof TooltipRoot>
+} satisfies Meta<typeof Tooltip>
 
 export default meta
 type Story = StoryObj<typeof meta>

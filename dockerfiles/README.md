@@ -296,12 +296,12 @@ FORCE_DATABASE_COPY=false
 
 1. During Docker build, before running migrations (`ci` step)
 2. Script checks if `COPY_SOURCE_DATABASE=true`
-3. If source and target are on same PostgreSQL server:
-   - Uses efficient `CREATE DATABASE WITH TEMPLATE` command
-4. If source and target are on different servers:
-   - Uses `pg_dump` and `pg_restore` for cross-server copy
-5. After copy completes, migrations run on the isolated copy
-6. Target database is left untouched if it already exists (unless `FORCE_DATABASE_COPY=true`)
+3. If source and target are on the same PostgreSQL server, it tries `CREATE DATABASE WITH TEMPLATE`. That only works while nothing is connected to the source, so with staging's app running it falls back to `pg_dump` | `pg_restore`, the same path as a cross-server copy. The script never disconnects the source's clients: doing so failed whatever staging was serving ([#1057](https://github.com/digitalgroundgame/pragmatic-papers/issues/1057)).
+4. After copy completes, migrations run on the isolated copy
+5. Target database is left untouched if it already exists (unless `FORCE_DATABASE_COPY=true`)
+6. With `FORCE_DATABASE_COPY=true` and an existing target, the previous deploy's container is still using it. The script copies into `<target>_incoming`, migrates that, and only then drops the target and renames the copy into place, so the running preview is never left on a missing or unmigrated database ([#1058](https://github.com/digitalgroundgame/pragmatic-papers/issues/1058)). If the migration fails, the build fails and the live target is kept.
+
+A preview build (`BUILD_ENV=preview`) fails if `COOLIFY_FQDN` is empty, rather than falling back to the unsuffixed `DATABASE_URI` every preview would share.
 
 **Example Use Cases:**
 

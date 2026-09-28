@@ -4,6 +4,8 @@
 
 import * as Sentry from "@sentry/nextjs"
 
+import { sentryIgnoredErrors } from "./sentryIgnoredErrors"
+
 Sentry.init({
   dsn: process.env.NEXT_PUBLIC_SENTRY_DSN,
 
@@ -18,6 +20,8 @@ Sentry.init({
     databaseQueryData: false,
     stackFrameVariables: false,
   },
+
+  ignoreErrors: sentryIgnoredErrors,
 
   integrations: [
     // Identify errors that originate entirely from scripts we don't ship — browser

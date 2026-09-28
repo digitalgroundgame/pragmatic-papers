@@ -113,75 +113,81 @@ fi
 # Export PGPASSWORD for psql/createdb commands
 export PGPASSWORD="$TARGET_PASSWORD"
 
-# Check if target database already exists
-echo "Checking if target database '$TARGET_DB' exists..."
-DB_EXISTS=$(psql -h "$TARGET_HOST" -p "$TARGET_PORT" -U "$TARGET_USER" -d postgres -tAc "SELECT 1 FROM pg_database WHERE datname='$TARGET_DB'" 2>/dev/null || echo "")
+# psql against the target server's maintenance database, failing on the first error
+target_psql() {
+    psql -h "$TARGET_HOST" -p "$TARGET_PORT" -U "$TARGET_USER" -d postgres -v ON_ERROR_STOP=1 "$@"
+}
 
-if [ "$DB_EXISTS" = "1" ]; then
-    if [ "$FORCE_DATABASE_COPY" = "true" ]; then
-        echo "Target database exists. FORCE_DATABASE_COPY=true, dropping and recreating..."
-        
-        # Terminate existing connections to the target database
-        psql -h "$TARGET_HOST" -p "$TARGET_PORT" -U "$TARGET_USER" -d postgres -c "
-            SELECT pg_terminate_backend(pid) 
-            FROM pg_stat_activity 
-            WHERE datname = '$TARGET_DB' 
-              AND pid <> pg_backend_pid();
-        " || true
-        
-        # Drop the database
-        psql -h "$TARGET_HOST" -p "$TARGET_PORT" -U "$TARGET_USER" -d postgres -c "DROP DATABASE IF EXISTS \"$TARGET_DB\";"
-    else
+database_exists() {
+    [ "$(target_psql -tAc "SELECT 1 FROM pg_database WHERE datname='$1'" 2>/dev/null)" = "1" ]
+}
+
+# Creates database $1 as a copy of the source.
+#
+# Never terminates the source's connections: the source is staging, and killing them
+# fails whatever staging is serving at that moment with "terminating connection due
+# to administrator command" (#1057). A template copy needs the source to have no
+# connections, so it's only tried as the fast path; while staging's app is connected
+# it fails straight away and the copy falls back to dump/restore.
+copy_database() {
+    db=$1
+    if [ "$SOURCE_HOST" = "$TARGET_HOST" ] && [ "$SOURCE_PORT" = "$TARGET_PORT" ]; then
+        echo "Source and target are on the same PostgreSQL server; trying CREATE DATABASE WITH TEMPLATE..."
+        if target_psql -c "CREATE DATABASE \"$db\" WITH TEMPLATE \"$SOURCE_DB\" OWNER \"$TARGET_USER\";"; then
+            echo "Database copied successfully using template method"
+            return 0
+        fi
+        echo "Template copy unavailable (the source is in use); falling back to dump/restore"
+    fi
+
+    echo "Using pg_dump and pg_restore..."
+    target_psql -c "CREATE DATABASE \"$db\" OWNER \"$TARGET_USER\";"
+    PGPASSWORD="$SOURCE_PASSWORD" pg_dump -h "$SOURCE_HOST" -p "$SOURCE_PORT" -U "$SOURCE_USER" -d "$SOURCE_DB" \
+        --format=custom --no-owner --no-acl | \
+    pg_restore -h "$TARGET_HOST" -p "$TARGET_PORT" -U "$TARGET_USER" -d "$db" --no-owner --no-acl
+    echo "Database copied successfully using dump/restore method"
+}
+
+# Drops database $1, disconnecting its clients first. A pool can reconnect between
+# the two statements, so retry a few times.
+drop_database() {
+    for attempt in 1 2 3 4 5; do
+        target_psql -c "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = '$1' AND pid <> pg_backend_pid();" >/dev/null || true
+        if target_psql -c "DROP DATABASE IF EXISTS \"$1\";"; then
+            return 0
+        fi
+        echo "Could not drop '$1' (attempt $attempt); retrying..."
+        sleep 1
+    done
+    echo "ERROR: could not drop database '$1'"
+    exit 1
+}
+
+echo "Checking if target database '$TARGET_DB' exists..."
+if database_exists "$TARGET_DB"; then
+    if [ "$FORCE_DATABASE_COPY" != "true" ]; then
         echo "Target database already exists and FORCE_DATABASE_COPY is not true"
         echo "Skipping database copy step"
         exit 0
     fi
-fi
 
-# Check if source and target are on the same server
-if [ "$SOURCE_HOST" = "$TARGET_HOST" ] && [ "$SOURCE_PORT" = "$TARGET_PORT" ]; then
-    echo "Source and target are on the same PostgreSQL server"
+    # The previous deploy's container is still serving the target. Dropping it now would
+    # leave that container on a missing database, and then on an unmigrated copy of the
+    # source, until this build finishes or for good if it fails (#1057, #1058). So build
+    # and migrate the new copy beside it, and swap it in only once it's ready.
+    STAGE_DB="${TARGET_DB}_incoming"
+    echo "Target database exists. FORCE_DATABASE_COPY=true, preparing a fresh copy in '$STAGE_DB'..."
+    drop_database "$STAGE_DB"
+    copy_database "$STAGE_DB"
 
-    # --- Fix For ERROR:  source database "pragmatic_papers" is being accessed by other users ---
-    echo "Terminating existing connections to source database '$SOURCE_DB'..."
-    psql -h "$TARGET_HOST" -p "$TARGET_PORT" -U "$TARGET_USER" -d postgres -c "
-        SELECT pg_terminate_backend(pid) 
-        FROM pg_stat_activity 
-        WHERE datname = '$SOURCE_DB' 
-          AND pid <> pg_backend_pid();
-    " || true
-    # ---------------------
+    echo "Running migrations on '$STAGE_DB'..."
+    DATABASE_URI="${DATABASE_URI%/*}/$STAGE_DB" pnpm payload migrate
 
-    echo "Using CREATE DATABASE WITH TEMPLATE for efficient copy..."
-    
-    # Create database from template (most efficient method)
-    psql -h "$TARGET_HOST" -p "$TARGET_PORT" -U "$TARGET_USER" -d postgres -c "
-        CREATE DATABASE \"$TARGET_DB\" 
-        WITH TEMPLATE \"$SOURCE_DB\" 
-        OWNER \"$TARGET_USER\";
-    "
-    
-    echo "Database copied successfully using template method"
+    echo "Swapping '$STAGE_DB' in for '$TARGET_DB'..."
+    drop_database "$TARGET_DB"
+    target_psql -c "ALTER DATABASE \"$STAGE_DB\" RENAME TO \"$TARGET_DB\";"
 else
-    echo "Source and target are on different servers"
-    echo "Using pg_dump and pg_restore for cross-server copy..."
-    
-    # Create empty target database
-    psql -h "$TARGET_HOST" -p "$TARGET_PORT" -U "$TARGET_USER" -d postgres -c "
-        CREATE DATABASE \"$TARGET_DB\" 
-        OWNER \"$TARGET_USER\";
-    "
-    
-    # Use pg_dump to dump and restore
-    # Set PGPASSWORD for source connection
-    export PGPASSWORD="$SOURCE_PASSWORD"
-    
-    pg_dump -h "$SOURCE_HOST" -p "$SOURCE_PORT" -U "$SOURCE_USER" -d "$SOURCE_DB" \
-        --format=custom --no-owner --no-acl | \
-    PGPASSWORD="$TARGET_PASSWORD" pg_restore -h "$TARGET_HOST" -p "$TARGET_PORT" \
-        -U "$TARGET_USER" -d "$TARGET_DB" --no-owner --no-acl
-    
-    echo "Database copied successfully using dump/restore method"
+    copy_database "$TARGET_DB"
 fi
 
 echo "========================================"

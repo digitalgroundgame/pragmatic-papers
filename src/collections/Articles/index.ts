@@ -53,7 +53,7 @@ import {
   UnorderedListFeature,
 } from "@payloadcms/richtext-lexical"
 import type { CollectionBeforeChangeHook, CollectionConfig, FieldHook } from "payload"
-import { slugField } from "payload"
+import { slugField } from "@/fields/slug"
 
 const setPublishedAtDefault: FieldHook<Article, Article["publishedAt"]> = ({
   siblingData,

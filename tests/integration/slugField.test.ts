@@ -6,7 +6,8 @@ import { ARTICLE_CONTENT } from "./fixtures/content"
 
 // Payload 3.90.2 made slugField's generateSlug hook assign the slug after an
 // await, so the required `slug` sibling validated first and every create
-// without a slug failed with "Slug: This field is required." Pin the
+// without a slug failed with "Slug: This field is required." Our wrapper in
+// `@/fields/slug` generates it in a hook on `slug` itself to get around it. Pin the
 // generated slugs directly so a regression names itself here.
 describe("slugField generation on create", () => {
   let payload: Payload
@@ -29,6 +30,21 @@ describe("slugField generation on create", () => {
     })
 
     expect(article.slug).toBe("slug-test-the-written-word")
+  })
+
+  it("derives the slug of an article published on create", async () => {
+    const article = await payload.create({
+      collection: "articles",
+      overrideAccess: true,
+      context: ctx,
+      data: {
+        title: "Slug Test Published On Create",
+        content: ARTICLE_CONTENT,
+        _status: "published",
+      } as unknown as Article,
+    })
+
+    expect(article.slug).toBe("slug-test-published-on-create")
   })
 
   it("keeps a slug the author set explicitly", async () => {

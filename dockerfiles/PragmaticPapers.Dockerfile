@@ -56,9 +56,6 @@ RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
     && HUSKY=0 CI=true pnpm install --frozen-lockfile --offline --store-dir /pnpm/store \
     && echo "--- COMPLETED: INSTALLING DEPENDENCIES ---"
 
-# Database utility scripts — only rebuilt when these two files change.
-COPY --chmod=755 dockerfiles/scripts/modify-database-uri.sh dockerfiles/scripts/copy-database.sh /usr/local/bin/
-
 # Copy remaining source code. Everything below reruns on every deploy, so steps whose
 # output depends on source or on variable values (migrations, next build) belong here.
 COPY . .
@@ -110,11 +107,11 @@ ENV NODE_ENV=${NODE_ENV} \
     NEXT_PUBLIC_TURNSTILE_SITE_KEY=${NEXT_PUBLIC_TURNSTILE_SITE_KEY}
 
 # --- DATABASE PREPARATION & MIGRATION ---
-# 1. Isolated Preview Logic (clones DB for PRs)
-# 2. Migration Logic (runs on the final target DB)
-RUN /usr/local/bin/modify-database-uri.sh && \
-    if [ -f /tmp/database_uri.env ]; then . /tmp/database_uri.env; fi && \
-    /usr/local/bin/copy-database.sh && \
+# 1. preview-database.ts resolves DATABASE_URI (a preview gets its own database) into
+#    /tmp/database_uri.env and, for previews, copies staging into it
+# 2. Migrations run on that database
+RUN node dockerfiles/scripts/preview-database.ts && \
+    . /tmp/database_uri.env && \
     echo "--- PHASE: DATABASE MIGRATIONS ---" && \
     pnpm payload migrate && \
     echo "--- COMPLETED: DATABASE MIGRATIONS ---"

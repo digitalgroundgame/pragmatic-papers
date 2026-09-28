@@ -134,8 +134,8 @@ Snapshot of the variable names each has, from the 2026-09-26 build logs. Product
 
 | Variable                        | Staging | Previews | Blank / unset means                                                                            |
 | ------------------------------- | ------- | -------- | ---------------------------------------------------------------------------------------------- |
-| `COPY_SOURCE_DATABASE`          | —       | set      | no database copy (`copy-database.sh` checks `!= "true"`)                                       |
-| `FORCE_DATABASE_COPY`           | —       | set      | don't drop an existing copy (checks `= "true"`)                                                |
+| `COPY_SOURCE_DATABASE`          | —       | set      | no database copy (`preview-database.ts` checks `!== "true"`)                                   |
+| `FORCE_DATABASE_COPY`           | —       | set      | don't drop an existing copy (checks `=== "true"`)                                              |
 | `SOURCE_DATABASE_URI`           | —       | set      | only read when copying; the copy fails loudly if it's blank                                    |
 | `SEED_ENABLED`                  | —       | set      | nothing — no code reads it (from an unmerged branch); delete it                                |
 | `LISTMONK_NEWSLETTER_LIST_UUID` | set     | —        | Listmonk calls throw "Missing required env var", so newsletter signup doesn't work on previews |
@@ -236,7 +236,7 @@ When deploying with Coolify, preview deployments automatically get unique databa
 
 **How it works:**
 
-When `BUILD_ENV=preview` and Coolify sets `COOLIFY_FQDN` (e.g., `pr-330.pragmaticpapers.com`), the Dockerfile will:
+When `BUILD_ENV=preview` and Coolify sets `COOLIFY_FQDN` (e.g., `pr-330.pragmaticpapers.com`), `dockerfiles/scripts/preview-database.ts` will:
 
 1. Extract the prefix (`pr-330`)
 2. Sanitize it for database naming (`pr_330`)
@@ -295,11 +295,14 @@ FORCE_DATABASE_COPY=false
 **How it works:**
 
 1. During Docker build, before running migrations (`ci` step)
-2. Script checks if `COPY_SOURCE_DATABASE=true`
+2. `dockerfiles/scripts/preview-database.ts` checks if `COPY_SOURCE_DATABASE=true`
 3. If source and target are on the same PostgreSQL server, it tries `CREATE DATABASE WITH TEMPLATE`. That only works while nothing is connected to the source, so with staging's app running it falls back to `pg_dump` | `pg_restore`, the same path as a cross-server copy. The script never disconnects the source's clients: doing so failed whatever staging was serving ([#1057](https://github.com/digitalgroundgame/pragmatic-papers/issues/1057)).
 4. After copy completes, migrations run on the isolated copy
 5. Target database is left untouched if it already exists (unless `FORCE_DATABASE_COPY=true`)
 6. With `FORCE_DATABASE_COPY=true` and an existing target, the previous deploy's container is still using it. The script copies into `<target>_incoming`, migrates that, and only then drops the target and renames the copy into place, so the running preview is never left on a missing or unmigrated database ([#1058](https://github.com/digitalgroundgame/pragmatic-papers/issues/1058)). If the migration fails, the build fails and the live target is kept.
+7. If `pg_dump` or `pg_restore` fails, the build fails and the half-restored database is dropped, so the next build copies again instead of keeping it.
+
+Connection strings are logged with their passwords masked. The script's logic is unit-tested in `tests/scripts/preview-database.test.ts`, and its SQL against Postgres in `tests/integration/previewDatabase.test.ts`.
 
 A preview build (`BUILD_ENV=preview`) fails if `COOLIFY_FQDN` is empty, rather than falling back to the unsuffixed `DATABASE_URI` every preview would share.
 

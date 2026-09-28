@@ -23,7 +23,7 @@ export default defineConfig({
       // Instrument the whole source tree so the "total" reflects the real project
       // coverage. Without `include`, Vitest 4 only reports files imported during the
       // run (the handful the tests touch), making the total read like patch coverage.
-      include: ["src/**/*.{ts,tsx}", "scripts/**/*.ts"],
+      include: ["src/**/*.{ts,tsx}", "scripts/**/*.ts", "dockerfiles/scripts/**/*.ts"],
       exclude: [
         "**/__tests__/**",
         "**/*.{test,spec}.{ts,tsx}",

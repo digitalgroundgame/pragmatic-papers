@@ -23,7 +23,6 @@ export const LightboxMediaBlock: React.FC<LightboxMediaBlockProps> = ({
 
   return (
     <Dialog>
-      {/* Only the image opens the lightbox, so caption links stay plain links. */}
       <div className={cn("flow-root w-full", containerClassName)}>
         <MediaBlock
           media={media}

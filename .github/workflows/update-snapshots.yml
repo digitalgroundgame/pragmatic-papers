@@ -121,17 +121,24 @@ jobs:
         id: pr
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
         run: |
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            echo "branch=${{ github.event.pull_request.head.ref }}" >> "$GITHUB_OUTPUT"
-            echo "number=${{ github.event.pull_request.number }}" >> "$GITHUB_OUTPUT"
-            echo "base=${{ github.event.pull_request.base.ref }}" >> "$GITHUB_OUTPUT"
+          if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
+            {
+              echo "branch=$HEAD_REF"
+              echo "number=$PR_NUMBER"
+              echo "base=$BASE_REF"
+            } >> "$GITHUB_OUTPUT"
           else
-            echo "branch=$GITHUB_REF_NAME" >> "$GITHUB_OUTPUT"
-            pr=$(gh pr list --repo "${{ github.repository }}" --head "$GITHUB_REF_NAME" \
+            pr=$(gh pr list --repo "$GITHUB_REPOSITORY" --head "$GITHUB_REF_NAME" \
               --state open --json number,baseRefName --jq 'first | @json' || true)
-            echo "number=$(printf '%s' "$pr" | jq -r '.number // empty')" >> "$GITHUB_OUTPUT"
-            echo "base=$(printf '%s' "$pr" | jq -r '.baseRefName // empty')" >> "$GITHUB_OUTPUT"
+            {
+              echo "branch=$GITHUB_REF_NAME"
+              echo "number=$(printf '%s' "$pr" | jq -r '.number // empty')"
+              echo "base=$(printf '%s' "$pr" | jq -r '.baseRefName // empty')"
+            } >> "$GITHUB_OUTPUT"
           fi
 
       - name: Set up Node.js environment
@@ -164,6 +171,7 @@ jobs:
         id: commit
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BRANCH: ${{ steps.pr.outputs.branch }}
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -174,7 +182,7 @@ jobs:
             exit 0
           fi
           git commit -m "test: update e2e snapshot baselines"
-          git push origin "HEAD:${{ steps.pr.outputs.branch }}"
+          git push origin "HEAD:$BRANCH"
           echo "committed=true" >> "$GITHUB_OUTPUT"
 
       # Pushes made with GITHUB_TOKEN don't trigger workflows, so the snapshot
@@ -187,7 +195,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           NEW_SHA=$(git rev-parse HEAD)
-          for check_name in "Static checks" "Unit tests" "Integration tests" "E2E tests"; do
+          for check_name in "Static checks" "Unit tests" "Integration tests" "Storybook" "E2E tests"; do
             gh api repos/${{ github.repository }}/check-runs \
               --method POST \
               -H "Accept: application/vnd.github+json" \
@@ -209,7 +217,8 @@ jobs:
           PR_NUMBER: ${{ steps.pr.outputs.number }}
           BASE_REF: ${{ steps.pr.outputs.base }}
         run: |
-          export ASSET_DIR="$PR_NUMBER/$(git rev-parse HEAD)"
+          ASSET_DIR="$PR_NUMBER/$(git rev-parse HEAD)"
+          export ASSET_DIR
           git fetch --no-tags --depth=1 origin "$BASE_REF"
           git diff --name-only --diff-filter=AM \
             "origin/$BASE_REF...HEAD" -- '**/__screenshots__/**/*.png' \

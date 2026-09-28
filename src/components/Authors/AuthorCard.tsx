@@ -61,7 +61,7 @@ export const AuthorCard: React.FC<AuthorCardProps> = ({ author }) => {
               <p className="text-primary line-clamp-2 font-serif text-sm">{bioSnippet}</p>
             )}
           </div>
-          <AuthorLinks socials={author.socials} />
+          <AuthorLinks socials={author.socials} authorName={name} />
         </div>
       </CardContent>
     </Card>

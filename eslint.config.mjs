@@ -2,11 +2,13 @@ import eslintConfigNext from "eslint-config-next/core-web-vitals"
 import eslintConfigNextTypescript from "eslint-config-next/typescript"
 import eslintConfigPrettier from "eslint-config-prettier"
 import pluginReact from "eslint-plugin-react"
+import storybook from "eslint-plugin-storybook"
 import globals from "globals"
 
 const eslintConfig = [
   ...eslintConfigNext,
   ...eslintConfigNextTypescript,
+  ...storybook.configs["flat/recommended"],
   {
     plugins: { react: pluginReact },
     settings: { react: { version: "detect" } },
@@ -95,6 +97,11 @@ const eslintConfig = [
       "@next/next/no-html-link-for-pages": "off",
     },
   },
+  // A story's exports are Storybook's input, not an API other modules call.
+  {
+    files: ["**/*.stories.tsx", ".storybook/**"],
+    rules: { "@typescript-eslint/explicit-module-boundary-types": "off" },
+  },
   // Add Node.js globals for config files (e.g. next-sitemap.config.cjs uses process.env and module.exports)
   {
     files: ["**/*.config.js", "**/*.config.cjs", "**/*.config.mjs"],
@@ -107,6 +114,8 @@ const eslintConfig = [
       ".next/**",
       "out/**",
       "coverage/**",
+      "storybook-static/**",
+      ".claude/worktrees/**",
       "**/next-env.d.ts",
       "src/migrations/**",
       "src/payload-types.ts",

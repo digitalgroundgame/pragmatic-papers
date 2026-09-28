@@ -94,7 +94,6 @@ function PlayToggle({ isPlaying, label, variant, expanded, onToggle }: PlayToggl
         onClick={onToggle}
         size="icon-sm"
         aria-label={isPlaying ? "Pause" : "Play"}
-        className="cursor-pointer"
       >
         {isPlaying ? <Pause className="size-4.5" /> : <Play className="size-4.5" />}
       </Button>
@@ -225,7 +224,7 @@ function SettingsMenu({ onPlaybackRateChange, onVolumeChange, menuItems }: Setti
       <DropdownMenuTrigger
         aria-label="Player settings"
         className="text-muted-foreground hover:text-foreground shrink-0 transition-colors"
-        render={<Button variant="ghost" size="icon-sm" className="cursor-pointer" />}
+        render={<Button variant="ghost" size="icon-sm" />}
       >
         <Settings className="size-4.5" />
       </DropdownMenuTrigger>

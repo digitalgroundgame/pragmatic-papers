@@ -1,4 +1,4 @@
-import type { SquiggleRuleBlock as SquiggleRuleBlockProps } from "src/payload-types"
+import type { SquiggleRuleBlock as SquiggleRuleBlockProps } from "@/payload-types"
 
 import React from "react"
 import { Squiggle, SquiggleStatic } from "@/components/ui/squiggle"

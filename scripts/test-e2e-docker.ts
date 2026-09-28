@@ -16,7 +16,21 @@
 import { execSync, spawnSync } from "node:child_process"
 import { yellow } from "./ansi.mjs"
 
-const COMPOSE = ["docker", "compose", "-p", "pragmatic-papers-e2e", "-f", "docker-compose.e2e.yml"]
+const PROJECT = "pragmatic-papers-e2e"
+const COMPOSE = ["docker", "compose", "-p", PROJECT, "-f", "docker-compose.e2e.yml"]
+
+// The node_modules volume is shared by every checkout, and an incremental
+// install over another lockfile's tree can leave pnpm's hidden hoist dir
+// incomplete (e.g. no `clsx` for @payloadcms/ui). Stamp the volume with the
+// lockfile it was installed from and start clean when that changes.
+export const CONTAINER_SCRIPT = [
+  "corepack enable",
+  "lock=$(sha256sum pnpm-lock.yaml | cut -d' ' -f1)",
+  'if [ "$(cat node_modules/.e2e-lockfile 2>/dev/null)" != "$lock" ]; then find node_modules -mindepth 1 -delete; fi',
+  "pnpm install --frozen-lockfile",
+  'echo "$lock" > node_modules/.e2e-lockfile',
+  'node scripts/test-e2e.mjs "$@"',
+].join(" && ")
 
 export function resolveArgs(argv: string[]): string[] {
   return argv.length > 0 ? argv : ["--update-snapshots=changed", "--project=chromium"]
@@ -41,9 +55,32 @@ export function isDockerAvailable(): boolean {
   }
 }
 
+// Every checkout shares one compose project and one node_modules volume, so a
+// second run would share Postgres, have its containers torn down by the
+// first run's `down`, and wipe node_modules under it on a different lockfile.
+export function isAnotherRunActive(): boolean {
+  try {
+    const ids = execSync(`docker ps -q --filter label=com.docker.compose.project=${PROJECT}`)
+    return ids.toString().trim() !== ""
+  } catch {
+    return false
+  }
+}
+
 export function main(): void {
   if (!isDockerAvailable()) {
     console.error("Docker daemon not reachable — start Docker and try again.")
+    process.exit(1)
+    return
+  }
+
+  if (isAnotherRunActive()) {
+    console.error(
+      [
+        `Another E2E Docker run is in progress (compose project "${PROJECT}") — wait for it to finish.`,
+        `If it is left over from an interrupted run: ${COMPOSE.join(" ")} down`,
+      ].join("\n"),
+    )
     process.exit(1)
     return
   }
@@ -63,7 +100,7 @@ export function main(): void {
         "playwright",
         "bash",
         "-c",
-        'corepack enable && pnpm install --frozen-lockfile && node scripts/test-e2e.mjs "$@"',
+        CONTAINER_SCRIPT,
         "bash",
         ...args,
       ],

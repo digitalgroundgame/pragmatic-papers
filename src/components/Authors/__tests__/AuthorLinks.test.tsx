@@ -125,6 +125,13 @@ describe("AuthorLinks", () => {
     expect(screen.getByText("My channel")).toBeInTheDocument()
   })
 
+  it("names the landmark after the author when given one", () => {
+    render(
+      <AuthorLinks socials={[customEntry("https://example.com")]} authorName="Jordan Rivera" />,
+    )
+    expect(screen.getByRole("navigation", { name: "Links for Jordan Rivera" })).toBeInTheDocument()
+  })
+
   it("renders the expected icons for a mix of platforms", () => {
     const { container } = render(
       <AuthorLinks

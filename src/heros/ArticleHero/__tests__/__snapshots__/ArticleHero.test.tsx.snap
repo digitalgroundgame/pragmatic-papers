@@ -22,6 +22,7 @@ exports[`ArticleHero > matches snapshot 1`] = `
     >
       <span
         class="text-foreground cursor-default font-serif underline-offset-4 hover:underline hover:decoration-dotted"
+        data-base-ui-tooltip-trigger=""
         data-slot="tooltip-trigger"
         id="article-dateline"
         tabindex="0"

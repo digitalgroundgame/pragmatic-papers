@@ -18,6 +18,11 @@ on:
   push:
     branches: [main, dev]
   pull_request:
+  # See ci.yml: required checks must also run in the merge queue. There, a
+  # missing baseline fails instead of being written, and nothing is pushed
+  # back, since the queue's gh-readonly-queue/* branch is read-only and
+  # baselines belong in the PR.
+  merge_group:
 
 # Shared with update-snapshots.yml's group: both workflows can push a
 # baseline commit to the same branch, so a stale run's push would otherwise
@@ -163,7 +168,7 @@ jobs:
         id: e2e
         env:
           E2E_VERIFY_VISUAL: "true"
-        run: pnpm test:e2e -- --update-snapshots=missing
+        run: pnpm test:e2e -- --update-snapshots=${{ github.event_name == 'merge_group' && 'none' || 'missing' }}
 
       # Runs even if the step above failed: a real regression on one test
       # shouldn't block committing a legitimately new baseline from another.
@@ -176,7 +181,7 @@ jobs:
       # commit.
       - name: Commit new snapshot baselines
         id: commit
-        if: ${{ !cancelled() && steps.e2e.outputs.determinism_failed != 'true' }}
+        if: ${{ !cancelled() && github.event_name != 'merge_group' && steps.e2e.outputs.determinism_failed != 'true' }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -206,7 +211,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           NEW_SHA=$(git rev-parse HEAD)
-          for check_name in "Static checks" "Unit tests" "Integration tests" "E2E tests"; do
+          for check_name in "Static checks" "Unit tests" "Integration tests" "Storybook" "E2E tests"; do
             gh api repos/${{ github.repository }}/check-runs \
               --method POST \
               -H "Accept: application/vnd.github+json" \
@@ -275,7 +280,8 @@ jobs:
           # if the earlier commit step pushed a new baseline commit, that event
           # context still points at the pre-commit sha and would upload assets
           # under the wrong (nonexistent-on-branch) path.
-          export ASSET_DIR="$PR_NUMBER/$(git rev-parse HEAD)"
+          ASSET_DIR="$PR_NUMBER/$(git rev-parse HEAD)"
+          export ASSET_DIR
           git fetch --no-tags --depth=1 origin "$BASE_REF"
           git diff --name-only --diff-filter=AM \
             "origin/$BASE_REF...HEAD" -- '**/__screenshots__/**/*.png' \

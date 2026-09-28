@@ -41,8 +41,8 @@ import * as migration_20260616_021403_add_map_assets_prefix from "./20260616_021
 import * as migration_20260715_214854_migrate_role_to_roles from "./20260715_214854_migrate_role_to_roles"
 import * as migration_20260804_004633_add_layouts_8_10 from "./20260804_004633_add_layouts_8_10"
 import * as migration_20260814_230024_add_merch_collection from "./20260814_230024_add_merch_collection"
-import * as migration_20260905_184222_interactives from "./20260905_184222_interactives"
-import * as migration_20260906_050305_interactives_feed_ref_release_default from "./20260906_050305_interactives_feed_ref_release_default"
+import * as migration_20260923_020840_bump_payload_3_90 from "./20260923_020840_bump_payload_3_90"
+import * as migration_20260928_082020_interactives from "./20260928_082020_interactives"
 
 export const migrations = [
   {
@@ -261,13 +261,13 @@ export const migrations = [
     name: "20260814_230024_add_merch_collection",
   },
   {
-    up: migration_20260905_184222_interactives.up,
-    down: migration_20260905_184222_interactives.down,
-    name: "20260905_184222_interactives",
+    up: migration_20260923_020840_bump_payload_3_90.up,
+    down: migration_20260923_020840_bump_payload_3_90.down,
+    name: "20260923_020840_bump_payload_3_90",
   },
   {
-    up: migration_20260906_050305_interactives_feed_ref_release_default.up,
-    down: migration_20260906_050305_interactives_feed_ref_release_default.down,
-    name: "20260906_050305_interactives_feed_ref_release_default",
+    up: migration_20260928_082020_interactives.up,
+    down: migration_20260928_082020_interactives.down,
+    name: "20260928_082020_interactives",
   },
 ]

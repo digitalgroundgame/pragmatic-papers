@@ -9,10 +9,7 @@ import { VideoMedia, type VideoMediaProps } from "./VideoMedia"
 export * from "./types"
 
 type MediaPropsTypes =
-  | VideoMediaProps
-  | ImageMediaProps
-  | AudioMediaProps
-  | { media?: MediaType | number | null }
+  VideoMediaProps | ImageMediaProps | AudioMediaProps | { media?: MediaType | number | null }
 
 // Narrowing `props.media` doesn't narrow `props` itself — mimeType is a template
 // literal, not a discriminant — so the guards are lifted to the props object.

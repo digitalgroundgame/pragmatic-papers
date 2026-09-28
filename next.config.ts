@@ -1,4 +1,4 @@
-import { withSentryConfig } from "@sentry/nextjs"
+import { withSentryConfig } from "@sentry/nextjs/config"
 import { withPayload } from "@payloadcms/next/withPayload"
 import type { NextConfig } from "next"
 import path from "path"
@@ -215,8 +215,13 @@ export default withSentryConfig(withPayload(nextConfig, { devBundleServerPackage
   // Top-level `applicationKey` injects module metadata for both webpack and Turbopack.
   applicationKey: "pragmatic-papers",
 
-  // Only print logs for uploading source maps in CI
-  silent: !process.env.CI,
+  // The build-time dependency instrumentation roughly doubles peak compile memory
+  // (~4.6 → ~8.5 GiB), which the 4 GB Coolify build server can't absorb.
+  buildTimeInstrumentation: false,
+
+  // Log wherever source maps are uploaded: builds with SENTRY_AUTH_TOKEN (Coolify
+  // production/staging). GitHub Actions deliberately has no token.
+  silent: !process.env.SENTRY_AUTH_TOKEN,
 
   // For all available options, see:
   // https://docs.sentry.io/platforms/javascript/guides/nextjs/manual-setup/

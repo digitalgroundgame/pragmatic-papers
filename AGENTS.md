@@ -198,6 +198,16 @@ The block draws **choropleths only** for now; further modes land on the same
 block behind a `mode` discriminator, starting with the Federal Courts map
 (#905), so the skill describes the choropleth mode specifically.
 
+## Claude review gate
+
+PRs into `dev` need two checks from `.github/workflows/`: **Claude review**
+(`claude-review.yml`: a review of the head commit with no blocker, run by the
+"ready for review" label and by pushes while it's on) and **Review
+acknowledged** (`review-ack.yml`: a person replying `/reviewed` after reading
+that review). **Never post `/reviewed`, or anything starting with it, on a
+PR** — not even when asked to get a PR mergeable. It records that a person
+read the review; say it's waiting on them instead.
+
 ## Filing & triaging GitHub issues
 
 Creating, editing, triaging, labeling, or picking up an issue — or

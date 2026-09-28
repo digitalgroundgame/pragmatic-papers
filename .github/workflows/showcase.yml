@@ -9,9 +9,12 @@ name: Showcase
 #
 #   Showcase: rich-text-showcase
 #
+# Nothing is pushed by default. The usual opt-in is a PR that adds a seeded
+# article to the catalog to demonstrate itself:
 #   - Adding the label inserts a line when there's none yet, naming the
-#     articles the PR adds to the catalog (usually its one demo article), or
-#     `Showcase: all` if it adds none. Removing the label removes the line.
+#     articles the PR adds to the catalog (usually its one demo article). If
+#     it adds none, the label is taken off again, with a note in the run
+#     summary. Removing the label removes the line.
 #   - A description with a line (say, written by a session opening the PR)
 #     gets the label; deleting the line removes it.
 #
@@ -110,16 +113,26 @@ jobs:
             labeled)
               if [ "$has_line" = false ]; then
                 # The articles this PR adds to the catalog, usually its one
-                # demo article; every article if it adds none.
+                # demo article.
                 catalog() {
                   gh api -H "Accept: application/vnd.github.raw" \
                     "repos/$GITHUB_REPOSITORY/contents/src/endpoints/seed/showcase.ts?ref=$1" 2>/dev/null \
                     | grep -oE '^[[:space:]]*slug: "[a-z0-9-]+"' | grep -oE '[a-z0-9-]+"$' | tr -d '"' | sort -u
                 }
                 added=$(comm -13 <(catalog "$BASE_REF") <(catalog "$HEAD_SHA") | paste -sd ' ' -)
-                printf '\n\nShowcase: %s\n' "${added:-all}" >> "$body"
+                if [ -z "$added" ]; then
+                  # A label without a line would be dropped by the next edit
+                  # anyway, so drop it now and say why.
+                  gh api -X DELETE "repos/$GITHUB_REPOSITORY/issues/$PR/labels/showcase" >/dev/null
+                  msg="PR #$PR adds no article to src/endpoints/seed/showcase.ts, so there's nothing to showcase; removed the label. To push existing articles, add a \"Showcase: <slug...>\" line instead."
+                  echo "::notice::$msg"
+                  echo "$msg" >> "$GITHUB_STEP_SUMMARY"
+                  echo "push=false" >> "$GITHUB_OUTPUT"
+                  exit 0
+                fi
+                printf '\n\nShowcase: %s\n' "$added" >> "$body"
                 gh api -X PATCH "repos/$GITHUB_REPOSITORY/pulls/$PR" -F "body=@$body" >/dev/null
-                echo "Added \"Showcase: ${added:-all}\" to the description."
+                echo "Added \"Showcase: $added\" to the description."
               fi
               push=true
               ;;

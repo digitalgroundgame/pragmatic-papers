@@ -123,10 +123,13 @@ RUN /usr/local/bin/modify-database-uri.sh && \
 # SOURCE_COMMIT arrives like the other Coolify variables, as a secret mounted into
 # each RUN ("Include Source Commit in Build" must be on). .git is dockerignored, so
 # it's what names the Sentry release baked into the browser bundle.
-RUN --mount=type=cache,id=nextjs,target=/app/.next/cache \
+# The Turbopack cache is shared by every build on the server: `sharing=locked` keeps
+# two builds from writing it at once, and build-next.sh rebuilds without it if it's
+# been left corrupt.
+RUN --mount=type=cache,id=nextjs,target=/app/.next/cache,sharing=locked \
     echo "--- PHASE: BUILDING NEXT.JS ---" && \
     if [ -f /tmp/database_uri.env ]; then . /tmp/database_uri.env; fi && \
-    SENTRY_RELEASE="${SOURCE_COMMIT}" pnpm build && \
+    SENTRY_RELEASE="${SOURCE_COMMIT}" sh dockerfiles/scripts/build-next.sh && \
     echo "--- COMPLETED: BUILDING NEXT.JS ---"
 
 # ============================================

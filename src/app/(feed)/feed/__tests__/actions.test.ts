@@ -1,5 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+const { experiment } = vi.hoisted(() => ({ experiment: { on: true } }))
+vi.mock("@/globals/SiteSettings/isExperimentEnabled", () => ({
+  isExperimentEnabled: async (name: string) => name === "feed" && experiment.on,
+}))
 const getFeedBatch = vi.fn()
 vi.mock("../getFeedBatch", () => ({ getFeedBatch: (args: unknown) => getFeedBatch(args) }))
 vi.mock("../renderFeedArticle", () => ({
@@ -10,6 +14,7 @@ const { loadFeedBatch } = await import("../actions")
 
 describe("loadFeedBatch", () => {
   beforeEach(() => {
+    experiment.on = true
     getFeedBatch.mockReset().mockResolvedValue({ items: [{ id: 1 }, { id: 2 }], nextCursor: 3 })
   })
 
@@ -29,5 +34,11 @@ describe("loadFeedBatch", () => {
   ])("reads a cursor of %s as page %s", async (cursor, page) => {
     await loadFeedBatch(cursor)
     expect(getFeedBatch).toHaveBeenCalledWith({ cursor: page })
+  })
+
+  it("serves nothing while the feed experiment is off", async () => {
+    experiment.on = false
+    expect(await loadFeedBatch(2)).toEqual({ items: [], nextCursor: null })
+    expect(getFeedBatch).not.toHaveBeenCalled()
   })
 })

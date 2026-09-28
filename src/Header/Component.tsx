@@ -13,6 +13,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet"
+import { isExperimentEnabled } from "@/globals/SiteSettings/isExperimentEnabled"
 import { HeaderLogo } from "@/Header/chrome"
 import { HeaderActions } from "@/Header/HeaderActions/Component"
 import { MenuSheet } from "@/Header/MenuSheet/Component"
@@ -23,10 +24,12 @@ import { TextSearch, User, XIcon, Newspaper } from "lucide-react"
 import React from "react"
 
 export async function Header(): Promise<React.JSX.Element> {
-  const [{ navItems, actions }, { socials }]: [Header, Footer] = await Promise.all([
-    getCachedGlobal("header", 1)(),
-    getCachedGlobal("footer", 2)(),
-  ])
+  const [{ navItems, actions }, { socials }, feedEnabled]: [Header, Footer, boolean] =
+    await Promise.all([
+      getCachedGlobal("header", 1)(),
+      getCachedGlobal("footer", 2)(),
+      isExperimentEnabled("feed"),
+    ])
 
   return (
     <>
@@ -66,10 +69,12 @@ export async function Header(): Promise<React.JSX.Element> {
                   <SocialLinks socials={socials} className="px-4 py-3" />
                 </SheetContent>
               </MenuSheet>
-              <LinkButton href="/feed" variant="ghost" size="icon" aria-label="Feed">
-                <Newspaper className="size-6" />
-                <span className="sr-only">Feed</span>
-              </LinkButton>
+              {feedEnabled && (
+                <LinkButton href="/feed" variant="ghost" size="icon" aria-label="Feed">
+                  <Newspaper className="size-6" />
+                  <span className="sr-only">Feed</span>
+                </LinkButton>
+              )}
             </div>
             <a
               href="/"

@@ -1,3 +1,4 @@
+import { isExperimentEnabled } from "@/globals/SiteSettings/isExperimentEnabled"
 import { queryArticleBySlug } from "@/utilities/queries"
 import type { Metadata } from "next"
 import { notFound } from "next/navigation"
@@ -28,6 +29,7 @@ export default async function DeepLinkFeedPage({
   const { p } = await searchParams
 
   if (collection !== "articles") return notFound()
+  if (!(await isExperimentEnabled("feed"))) return notFound()
 
   const article = await queryArticleBySlug(slug)
   if (!article) return notFound()

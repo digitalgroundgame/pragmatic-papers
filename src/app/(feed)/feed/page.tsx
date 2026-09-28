@@ -1,6 +1,8 @@
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/components/ui/empty"
 import { LinkButton } from "@/components/ui/link-button"
+import { isExperimentEnabled } from "@/globals/SiteSettings/isExperimentEnabled"
 import type { Metadata } from "next"
+import { notFound } from "next/navigation"
 import React from "react"
 import { FeedShell } from "./FeedShell"
 import { getFeedBatch } from "./getFeedBatch"
@@ -15,6 +17,9 @@ export const dynamic = "force-dynamic"
 export const revalidate = 0
 
 export default async function FeedPage(): Promise<React.ReactNode> {
+  // The feed is an experiment (Site Settings): off in this environment, it 404s.
+  if (!(await isExperimentEnabled("feed"))) notFound()
+
   const batch = await getFeedBatch({ cursor: 1 })
 
   if (batch.items.length === 0) {

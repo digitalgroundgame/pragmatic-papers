@@ -13,10 +13,21 @@ import { useActiveAnchor } from "./useActiveAnchor"
 interface TableOfContentsIconProps {
   icon?: React.ReactNode
   isActive: boolean
+  nested: boolean
 }
 
-function TableOfContentsIcon({ icon, isActive }: TableOfContentsIconProps): React.ReactNode {
-  const iconClass = "absolute top-[0.5lh] right-full mr-0.5 -translate-y-1/2"
+function TableOfContentsIcon({
+  icon,
+  isActive,
+  nested,
+}: TableOfContentsIconProps): React.ReactNode {
+  // Icons hang left of their label. A top-level one sits just inside the
+  // gutter; a nested one spans the list's pl-4 indent (size-3 + mr-1 = 16px),
+  // so it lines up flush with its parent entry's text.
+  const iconClass = cn(
+    "absolute top-[0.5lh] right-full -translate-y-1/2",
+    nested ? "mr-1" : "mr-0.5",
+  )
   if (React.isValidElement(icon)) {
     return React.cloneElement(
       icon as React.ReactElement<{ className?: string; "data-slot"?: string }>,
@@ -42,11 +53,13 @@ function TableOfContentsIcon({ icon, isActive }: TableOfContentsIconProps): Reac
 interface TableOfContentsLinkProps extends React.ComponentProps<"a"> {
   entry: TableOfContentsEntry
   isActive: boolean
+  nested: boolean
 }
 
 function TableOfContentsLink({
   entry,
   isActive,
+  nested,
   ...props
 }: TableOfContentsLinkProps): React.ReactNode {
   return (
@@ -59,7 +72,7 @@ function TableOfContentsLink({
       )}
       {...props}
     >
-      <TableOfContentsIcon icon={entry.icon} isActive={isActive} />
+      <TableOfContentsIcon icon={entry.icon} isActive={isActive} nested={nested} />
       <span data-slot="toc-label">{entry.label}</span>
     </a>
   )
@@ -68,11 +81,13 @@ function TableOfContentsLink({
 interface TableOfContentsListProps extends React.ComponentProps<"ul"> {
   entries?: TableOfContentsEntry[]
   activeAnchor: string | null
+  nested?: boolean
 }
 
 function TableOfContentsList({
   entries,
   activeAnchor,
+  nested = false,
   className,
   ...props
 }: TableOfContentsListProps): React.ReactNode {
@@ -81,10 +96,15 @@ function TableOfContentsList({
     <ul data-slot="toc-list" className={className} {...props}>
       {entries.map((entry, index) => (
         <li key={`${entry.anchor || "entry"}-${index}`} data-slot="toc-item">
-          <TableOfContentsLink entry={entry} isActive={entry.anchor === activeAnchor} />
+          <TableOfContentsLink
+            entry={entry}
+            isActive={entry.anchor === activeAnchor}
+            nested={nested}
+          />
           <TableOfContentsList
             entries={entry.children}
             activeAnchor={activeAnchor}
+            nested
             className="pl-4"
           />
         </li>

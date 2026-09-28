@@ -221,12 +221,14 @@ export interface Config {
     header: Header;
     footer: Footer;
     'article-recommendations': ArticleRecommendation;
+    'site-settings': SiteSetting;
     'payload-jobs-stats': PayloadJobsStat;
   };
   globalsSelect: {
     header: HeaderSelect<false> | HeaderSelect<true>;
     footer: FooterSelect<false> | FooterSelect<true>;
     'article-recommendations': ArticleRecommendationsSelect<false> | ArticleRecommendationsSelect<true>;
+    'site-settings': SiteSettingsSelect<false> | SiteSettingsSelect<true>;
     'payload-jobs-stats': PayloadJobsStatsSelect<false> | PayloadJobsStatsSelect<true>;
   };
   locale: null;
@@ -2562,6 +2564,28 @@ export interface ArticleRecommendation {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "site-settings".
+ */
+export interface SiteSetting {
+  id: number;
+  /**
+   * Beta features, switched on per environment: staging and production each keep their own settings. Off means readers can't reach the feature here.
+   */
+  experiments?: {
+    /**
+     * The full-screen article feed at /feed and its header button.
+     */
+    feed?: boolean | null;
+    /**
+     * Interactive pages at /interactives/<slug>, their sitemap and the daily data sync.
+     */
+    interactives?: boolean | null;
+  };
+  updatedAt?: string | null;
+  createdAt?: string | null;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload-jobs-stats".
  */
 export interface PayloadJobsStat {
@@ -2618,6 +2642,21 @@ export interface ArticleRecommendationsSelect<T extends boolean = true> {
         article?: T;
         engagementScore?: T;
         id?: T;
+      };
+  updatedAt?: T;
+  createdAt?: T;
+  globalType?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "site-settings_select".
+ */
+export interface SiteSettingsSelect<T extends boolean = true> {
+  experiments?:
+    | T
+    | {
+        feed?: T;
+        interactives?: T;
       };
   updatedAt?: T;
   createdAt?: T;

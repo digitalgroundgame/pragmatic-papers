@@ -440,6 +440,18 @@ export const seed = async (
       },
     },
     {
+      name: "Enabling experiments...",
+      fn: async () => {
+        // Local dev shows every beta feature; staging and production switch
+        // theirs on in the admin.
+        await payload.updateGlobal({
+          slug: "site-settings",
+          context,
+          data: { experiments: { feed: true, interactives: true } },
+        })
+      },
+    },
+    {
       name: "Seeding article recommendations...",
       fn: async () => {
         await seedRandomRankings(payload)

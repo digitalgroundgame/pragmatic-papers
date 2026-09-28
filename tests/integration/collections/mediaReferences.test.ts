@@ -99,15 +99,16 @@ describe("media references", () => {
       const response = await callReferences(editor, media.id)
 
       expect(response.status).toBe(200)
-      expect(await response.json()).toEqual({
-        references: [
-          expect.objectContaining({
-            collection: "articles",
-            field: "heroImage",
-            docId: article.id,
-            docTitle: "Listed Article - mref",
-          }),
-        ],
+      // Saving an article copies its hero image into an empty SEO image
+      // (populateMetaImageFromHero), so it is listed under both fields.
+      const { references } = (await response.json()) as { references: unknown[] }
+      expect(references).toEqual([
+        expect.objectContaining({ docId: article.id, field: "heroImage" }),
+        expect.objectContaining({ docId: article.id, field: "meta.image" }),
+      ])
+      expect(references[0]).toMatchObject({
+        collection: "articles",
+        docTitle: "Listed Article - mref",
       })
     })
 

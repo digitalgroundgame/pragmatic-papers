@@ -21,7 +21,8 @@ Options:
   --all               push every article in the catalog
   --draft             create the articles as drafts (the default on staging)
   --from-description  read the slugs from a "Showcase:" line in SHOWCASE_DESCRIPTION
-                      (a PR description); does nothing if there is no such line`
+                      (a PR description), where "all" means --all; does nothing if
+                      there is no such line`
 
 type Fetch = typeof fetch
 
@@ -56,7 +57,8 @@ export function resolveTarget(
 
 /**
  * Reads the slugs from a PR description's `Showcase:` line, e.g.
- * `Showcase: rich-text-showcase, lorem-ipsum-timeline`.
+ * `Showcase: rich-text-showcase, lorem-ipsum-timeline`. `Showcase: all` (what
+ * the showcase label inserts) comes back as `["all"]`.
  */
 export function slugsFromDescription(description: string): string[] {
   const line = description.match(/^[\s>*_-]*showcase\s*:[*_\s]*(.*)$/im)?.[1] ?? ""
@@ -185,7 +187,7 @@ export async function main(
       return
     }
   }
-  const entries = selectEntries(slugs, flags.has("--all"))
+  const entries = selectEntries(slugs, flags.has("--all") || slugs.includes("all"))
 
   const { SHOWCASE_EMAIL: email, SHOWCASE_PASSWORD: password } = env
   if (!email || !password) {

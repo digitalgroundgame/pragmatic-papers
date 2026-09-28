@@ -82,6 +82,7 @@ describe("slugsFromDescription", () => {
     ["**Showcase:** `first`", ["first"]],
     ["- showcase: first", ["first"]],
     ["## Context\n\nShowcase: first\n\nMore text", ["first"]],
+    ["Showcase: all", ["all"]],
   ])("reads %j", (description, slugs) => {
     expect(slugsFromDescription(description)).toEqual(slugs)
   })
@@ -212,6 +213,21 @@ describe("main", () => {
       fetchImpl,
     )
     expect(fetchImpl).not.toHaveBeenCalled()
+  })
+
+  it("pushes every entry for Showcase: all", async () => {
+    const fetchImpl = fakeFetch({
+      "POST /api/users/login": login(),
+      "GET /api/articles": () => json({ totalDocs: 0 }),
+    })
+
+    await main(
+      ["748", "--from-description"],
+      { ...ENV, SHOWCASE_DESCRIPTION: "Showcase: all" },
+      fetchImpl,
+    )
+
+    expect(mockCreate).toHaveBeenCalledTimes(2)
   })
 
   it("creates only the entries whose slug is missing", async () => {

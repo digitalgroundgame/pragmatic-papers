@@ -4,28 +4,42 @@ name: Showcase
 # with `pnpm showcase`. The push only adds articles whose slug is missing, so
 # repeat runs are harmless.
 #
-# A PR opts in with a line in its description naming the articles:
+# A PR opts in with the "showcase" label or a line in its description naming
+# the articles, and the two are kept in sync:
 #
 #   Showcase: rich-text-showcase
 #
-# and they're pushed to its Coolify preview:
-#   - when the deployment bot's comment reports the preview is ready. The bot
-#     edits one comment per PR on every deploy, and a deploy may re-copy the
-#     preview database, so this re-pushes after each one.
-#   - when the description is edited, for a preview that is already up.
+#   - Adding the label inserts `Showcase: all` when there's no line yet, so
+#     edit the line to narrow it. Removing the label removes the line.
+#   - A description with a line (say, written by a session opening the PR)
+#     gets the label; deleting the line removes it.
+#
+# The articles are pushed to the PR's Coolify preview once it's up:
+#   - after each preview deploy, when "Preview deployment" finishes. A deploy
+#     may re-copy the preview database, so this re-pushes after each one.
+#   - when the label is added or the line edited, for a preview that is
+#     already up. Otherwise this skips, and the next deploy pushes.
+# "Up" means the PR's head commit has a successful Preview deployment, as
+# recorded by preview-deployment.yml. That workflow succeeds even when a
+# build fails, so its conclusion alone doesn't say.
+#
+# The sync edits the PR with the workflow's own token, and GitHub starts no
+# workflow from such edits, so it can't loop, and it pushes itself rather than
+# waiting for an edited event that won't come.
 #
 # workflow_dispatch pushes named articles to a PR's preview (from the PR's
 # code) or to staging (as drafts, from the branch it was started on; needs the
 # SHOWCASE_STAGING_URL variable).
 #
-# issue_comment runs this file from the default branch with secrets, while the
-# script comes from the PR, so the job only runs PR code from this repository,
-# never from a fork.
+# workflow_run runs this file from the default branch with secrets, while the
+# script comes from the PR, so the push only runs PR code from this
+# repository, never from a fork.
 on:
-  issue_comment:
-    types: [created, edited]
+  workflow_run:
+    workflows: [Preview deployment]
+    types: [completed]
   pull_request:
-    types: [edited]
+    types: [opened, edited, labeled, unlabeled]
   workflow_dispatch:
     inputs:
       target:
@@ -36,7 +50,7 @@ on:
         required: true
 
 concurrency:
-  group: showcase-${{ github.event.issue.number || github.event.pull_request.number || inputs.target }}
+  group: showcase-${{ github.event.workflow_run.pull_requests[0].number || github.event.pull_request.number || inputs.target }}
   cancel-in-progress: false
 
 permissions:
@@ -44,36 +58,103 @@ permissions:
   pull-requests: read
 
 jobs:
+  sync:
+    name: Sync showcase label
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.event.pull_request.head.repo.full_name == github.repository && (
+        github.event.action == 'opened' ||
+        github.event.action == 'edited' && github.event.changes.body ||
+        github.event.label.name == 'showcase'
+      )
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+      issues: write
+    outputs:
+      push: ${{ steps.sync.outputs.push }}
+    steps:
+      - name: Sync the label and the Showcase line
+        id: sync
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
+          ACTION: ${{ github.event.action }}
+          HAS_LABEL: ${{ contains(github.event.pull_request.labels.*.name, 'showcase') }}
+        run: |
+          # The same line scripts/showcase.ts reads (slugsFromDescription).
+          line='^[[:space:]>*_-]*showcase[[:space:]]*:'
+          body="$RUNNER_TEMP/body.md"
+          gh api "repos/$GITHUB_REPOSITORY/pulls/$PR" --jq '.body // ""' > "$body"
+          has_line=false
+          grep -qiE "$line" "$body" && has_line=true
+
+          push=false
+          case "$ACTION" in
+            labeled)
+              if [ "$has_line" = false ]; then
+                printf '\n\nShowcase: all\n' >> "$body"
+                gh api -X PATCH "repos/$GITHUB_REPOSITORY/pulls/$PR" -F "body=@$body" >/dev/null
+                echo "Added \"Showcase: all\" to the description."
+              fi
+              push=true
+              ;;
+            unlabeled)
+              if [ "$has_line" = true ]; then
+                grep -viE "$line" "$body" > "$body.new" || true
+                gh api -X PATCH "repos/$GITHUB_REPOSITORY/pulls/$PR" -F "body=@$body.new" >/dev/null
+                echo "Removed the Showcase line from the description."
+              fi
+              ;;
+            opened | edited)
+              if [ "$has_line" = true ]; then
+                if [ "$HAS_LABEL" = false ]; then
+                  gh api -X POST "repos/$GITHUB_REPOSITORY/issues/$PR/labels" -f "labels[]=showcase" >/dev/null
+                  echo "Added the showcase label."
+                fi
+                push=true
+              elif [ "$HAS_LABEL" = true ]; then
+                gh api -X DELETE "repos/$GITHUB_REPOSITORY/issues/$PR/labels/showcase" >/dev/null
+                echo "Removed the showcase label."
+              fi
+              ;;
+          esac
+          echo "push=$push" >> "$GITHUB_OUTPUT"
+
   push:
     name: Push showcase articles
+    needs: sync
     if: >-
-      github.event_name == 'workflow_dispatch' ||
-      (github.event_name == 'pull_request' &&
-        github.event.changes.body &&
-        contains(github.event.pull_request.body, 'Showcase:')) ||
-      (github.event_name == 'issue_comment' &&
-        github.event.issue.pull_request &&
-        github.event.comment.user.login == 'digital-ground-game-deployment-bot[bot]' &&
-        contains(github.event.comment.body, 'is ready') &&
-        contains(github.event.issue.body, 'Showcase:'))
+      !cancelled() && (
+        github.event_name == 'workflow_dispatch' ||
+        github.event_name == 'workflow_run' &&
+          github.event.workflow_run.event == 'pull_request' &&
+          github.event.workflow_run.head_repository.full_name == github.repository &&
+          github.event.workflow_run.pull_requests[0] ||
+        github.event_name == 'pull_request' && needs.sync.outputs.push == 'true'
+      )
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    permissions:
+      contents: read
+      pull-requests: read
+      deployments: read
     steps:
       # A PR run reads the PR fresh, so the code and description are current
-      # even when the triggering event is a stale comment.
+      # even when the triggering event is stale.
       - name: Resolve the PR
         id: pr
         if: github.event_name != 'workflow_dispatch' || inputs.target != 'staging'
         env:
           GH_TOKEN: ${{ github.token }}
-          PR: ${{ github.event.issue.number || github.event.pull_request.number || inputs.target }}
+          PR: ${{ github.event.workflow_run.pull_requests[0].number || github.event.pull_request.number || inputs.target }}
         run: |
           if ! [[ "$PR" =~ ^[0-9]+$ ]]; then
             echo "::error::Target must be a PR number or \"staging\", not \"$PR\"."
             exit 1
           fi
-          read -r head_repo sha < <(gh api "repos/$GITHUB_REPOSITORY/pulls/$PR" \
-            --jq '[.head.repo.full_name, .head.sha] | @tsv')
+          read -r head_repo head_ref sha < <(gh api "repos/$GITHUB_REPOSITORY/pulls/$PR" \
+            --jq '[.head.repo.full_name, .head.ref, .head.sha] | @tsv')
           if [ "$head_repo" != "$GITHUB_REPOSITORY" ]; then
             echo "::error::PR #$PR comes from $head_repo; only same-repository PRs are pushed."
             exit 1
@@ -82,18 +163,41 @@ jobs:
           echo "number=$PR" >> "$GITHUB_OUTPUT"
           echo "sha=$sha" >> "$GITHUB_OUTPUT"
 
+          # A dispatch pushes when asked; an automatic run only when opted in
+          # and the head commit's preview is up.
+          if [ "$GITHUB_EVENT_NAME" != workflow_dispatch ]; then
+            if ! grep -qiE '^[[:space:]>*_-]*showcase[[:space:]]*:' "$RUNNER_TEMP/description.md"; then
+              echo "No Showcase line on PR #$PR; nothing to push."
+              echo "skip=true" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            deployment=$(gh api "repos/$GITHUB_REPOSITORY/deployments?environment=Preview&ref=$head_ref&per_page=100" \
+              --jq "[.[] | select(.sha == \"$sha\")][0].id // empty")
+            state=""
+            if [ -n "$deployment" ]; then
+              state=$(gh api "repos/$GITHUB_REPOSITORY/deployments/$deployment/statuses?per_page=1" --jq '.[0].state // empty')
+            fi
+            if [ "$state" != success ]; then
+              echo "The preview for ${sha:0:7} isn't up (${state:-no deployment}); its deploy will push."
+              echo "skip=true" >> "$GITHUB_OUTPUT"
+            fi
+          fi
+
       - uses: actions/checkout@v7
+        if: steps.pr.outputs.skip != 'true'
         with:
           # A PR's head, or for staging the branch the dispatch was started on.
           ref: ${{ steps.pr.outputs.sha || github.ref }}
 
       - name: Set up Node.js environment
+        if: steps.pr.outputs.skip != 'true'
         uses: ./.github/actions/setup-project
         with:
           node-version: "24.x"
           gh-font-read-token: ${{ secrets.GH_FONT_READ }}
 
       - name: Push
+        if: steps.pr.outputs.skip != 'true'
         env:
           SHOWCASE_EMAIL: ${{ secrets.SHOWCASE_EMAIL }}
           SHOWCASE_PASSWORD: ${{ secrets.SHOWCASE_PASSWORD }}

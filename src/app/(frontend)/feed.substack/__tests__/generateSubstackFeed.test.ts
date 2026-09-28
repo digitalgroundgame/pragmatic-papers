@@ -74,7 +74,7 @@ describe("substackArticleHTML", () => {
     expect(html).toContain('src="https://cdn.test/a.png"')
   })
 
-  it("renders footnotes as plain markers and a Notes section without anchors", () => {
+  it("renders footnotes in Substack's own footnote markup", () => {
     const html = substackArticleHTML(
       makeArticle(
         [paragraph(text("Claim"), inlineBlock({ blockType: "footnote", index: 1, note: "n" }))],
@@ -91,12 +91,25 @@ describe("substackArticleHTML", () => {
       ),
     )
 
-    expect(html).toContain("Claim<sup>[1]</sup>")
-    expect(html).toContain("<h3>Notes</h3>")
     expect(html).toContain(
-      '<p>[1] A &lt;source&gt; note <a href="https://source.test">Source</a></p>',
+      'Claim<a data-component-name="FootnoteAnchorToDOM" id="footnote-anchor-1" href="#footnote-1" target="_self" class="footnote-anchor">1</a>',
     )
-    expect(html).not.toContain("#footnote")
+    expect(html).toContain(
+      '<div data-component-name="FootnoteToDOM" class="footnote"><a id="footnote-1" href="#footnote-anchor-1" contenteditable="false" target="_self" class="footnote-number">1</a><div class="footnote-content"><p>A &lt;source&gt; note <a href="https://source.test">Source</a></p></div></div>',
+    )
+  })
+
+  it("puts the footnotes last, after the link back to the article", () => {
+    const html = substackArticleHTML(
+      makeArticle(
+        [paragraph(text("Claim"), inlineBlock({ blockType: "footnote", index: 1, note: "n" }))],
+        {
+          footnotes: [{ index: 1, note: "n", attributionEnabled: false }],
+        },
+      ),
+    )
+    expect(html.indexOf("Originally published")).toBeLessThan(html.indexOf("FootnoteToDOM"))
+    expect(html.endsWith("</div></div>")).toBe(true)
   })
 
   it("falls back to LaTeX source for math", () => {
@@ -280,16 +293,71 @@ describe("substackArticleHTML block and node coverage", () => {
     expect(html).toContain('href="https://example.org/articles/test-article"')
   })
 
-  it("lists footnotes in index order whatever order they're stored in", () => {
+  it("numbers footnotes by where they're referenced, not by their index", () => {
+    const html = substackArticleHTML(
+      makeArticle(
+        [
+          paragraph(
+            text("A"),
+            inlineBlock({ blockType: "footnote", index: 2, note: "Second note" }),
+            text("B"),
+            inlineBlock({ blockType: "footnote", index: 1, note: "First note" }),
+          ),
+        ],
+        {
+          footnotes: [
+            { index: 1, note: "First note", attributionEnabled: false },
+            { index: 2, note: "Second note", attributionEnabled: false },
+          ],
+        },
+      ),
+    )
+
+    expect(html).toMatch(
+      /A<a [^>]*id="footnote-anchor-1"[^>]*>1<\/a>B<a [^>]*id="footnote-anchor-2"/,
+    )
+    expect(html).toContain(
+      'class="footnote-number">1</a><div class="footnote-content"><p>Second note</p>',
+    )
+    expect(html).toContain(
+      'class="footnote-number">2</a><div class="footnote-content"><p>First note</p>',
+    )
+  })
+
+  it("repeats a note cited twice, since a Substack footnote has one reference", () => {
+    const html = substackArticleHTML(
+      makeArticle(
+        [
+          paragraph(
+            inlineBlock({ blockType: "footnote", index: 1, note: "Shared" }),
+            inlineBlock({ blockType: "footnote", index: 1, note: "Shared" }),
+          ),
+        ],
+        { footnotes: [{ index: 1, note: "Shared", attributionEnabled: false }] },
+      ),
+    )
+
+    expect(html.match(/FootnoteAnchorToDOM/g)).toHaveLength(2)
+    expect(html.match(/<p>Shared<\/p>/g)).toHaveLength(2)
+    expect(html).toContain('id="footnote-2"')
+  })
+
+  it("uses the reference's own note when the footnotes list lacks it", () => {
+    const html = substackArticleHTML(
+      makeArticle([
+        paragraph(inlineBlock({ blockType: "footnote", index: 7, note: "Inline only" })),
+      ]),
+    )
+    expect(html).toContain('<div class="footnote-content"><p>Inline only</p></div>')
+  })
+
+  it("leaves out footnotes nothing in the body refers to", () => {
     const html = substackArticleHTML(
       makeArticle([paragraph(text("Body"))], {
-        footnotes: [
-          { index: 2, note: "Second", attributionEnabled: false },
-          { index: 1, note: "First", attributionEnabled: false },
-        ],
+        footnotes: [{ index: 1, note: "Orphan", attributionEnabled: false }],
       }),
     )
-    expect(html.indexOf("[1] First")).toBeLessThan(html.indexOf("[2] Second"))
+    expect(html).not.toContain("Orphan")
   })
 })
 

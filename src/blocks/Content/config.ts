@@ -1,6 +1,8 @@
 import type { Block, Field } from "payload"
 
 import {
+  AlignFeature,
+  BlocksFeature,
   EXPERIMENTAL_TableFeature,
   FixedToolbarFeature,
   HeadingFeature,
@@ -11,7 +13,9 @@ import {
   OrderedListFeature,
 } from "@payloadcms/richtext-lexical"
 
-import { link } from "@/fields/link"
+import { CallToAction } from "@/blocks/CallToAction/config"
+import { Merch } from "@/blocks/Merch/config"
+import { NewsletterSignup } from "@/blocks/NewsletterSignup/config"
 
 const columnFields: Field[] = [
   {
@@ -50,31 +54,30 @@ const columnFields: Field[] = [
           IndentFeature(),
           UnorderedListFeature(),
           OrderedListFeature(),
+          AlignFeature(),
           EXPERIMENTAL_TableFeature(),
+          BlocksFeature({ blocks: [CallToAction, NewsletterSignup, Merch] }),
         ]
       },
     }),
     label: false,
   },
-  {
-    name: "enableLink",
-    type: "checkbox",
-  },
-  link({
-    overrides: {
-      admin: {
-        condition: (_data, siblingData) => {
-          return Boolean(siblingData?.enableLink)
-        },
-      },
-    },
-  }),
 ]
 
 export const Content: Block = {
   slug: "content",
   interfaceName: "ContentBlock",
   fields: [
+    {
+      name: "width",
+      type: "select",
+      defaultValue: "narrow",
+      options: [
+        { label: "Narrow", value: "narrow" },
+        { label: "Wide", value: "wide" },
+        { label: "Full", value: "full" },
+      ],
+    },
     {
       name: "columns",
       type: "array",

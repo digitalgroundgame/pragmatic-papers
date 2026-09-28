@@ -1,8 +1,9 @@
 "use client"
 
-import type { FootnotesField } from "@/payload-types"
 import { useDocumentInfo, useField } from "@payloadcms/ui"
 import React from "react"
+
+import { getFootnotes } from "./utils"
 
 export const ReferenceNotice: React.FC = () => {
   const { value: sourceId } = useField<string>({ path: "sourceId" })
@@ -10,7 +11,7 @@ export const ReferenceNotice: React.FC = () => {
   const { value: index } = useField<number>({ path: "index" })
   const { data } = useDocumentInfo()
 
-  const footnotes = (data?.footnotes as NonNullable<FootnotesField>) ?? []
+  const footnotes = getFootnotes(data)
   const footnote = footnotes.find((f) => f.id === sourceId)
 
   const note = footnote?.note ?? formNote

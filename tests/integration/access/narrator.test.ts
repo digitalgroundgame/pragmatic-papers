@@ -12,7 +12,7 @@ describe("narrator access", () => {
     payload = await getPayload()
   })
 
-  it("denies narrator from creating an article (narrator < writer)", async () => {
+  it("denies narrator from creating an article", async () => {
     const narrator = await createUser("narrator")
 
     await expect(
@@ -30,7 +30,7 @@ describe("narrator access", () => {
     ).rejects.toThrow()
   })
 
-  it("denies narrator from creating a topic (narrator < writer)", async () => {
+  it("denies narrator from creating a topic", async () => {
     const narrator = await createUser("narrator")
 
     await expect(
@@ -92,7 +92,7 @@ describe("narrator access", () => {
     expect(media.id).toBeDefined()
   })
 
-  it("denies narrator from updating media (narrator < editor, editorOrSelf gate)", async () => {
+  it("denies narrator from updating media (isCreatedByOrEditor gate)", async () => {
     const narrator = await createUser("narrator")
 
     const media = await payload.create({
@@ -120,7 +120,7 @@ describe("narrator access", () => {
     ).rejects.toThrow()
   })
 
-  it("denies narrator from deleting media (narrator < editor, editorOrSelf gate)", async () => {
+  it("denies narrator from deleting media (isCreatedByOrEditor gate)", async () => {
     const narrator = await createUser("narrator")
 
     const media = await payload.create({
@@ -147,7 +147,7 @@ describe("narrator access", () => {
     ).rejects.toThrow()
   })
 
-  it("denies narrator from deleting an article (narrator < editor, editorOrSelf gate)", async () => {
+  it("denies narrator from deleting an article (isCreatedByOrEditor gate)", async () => {
     const narrator = await createUser("narrator")
     const writer = await createUser("writer")
 
@@ -174,7 +174,7 @@ describe("narrator access", () => {
     ).rejects.toThrow()
   })
 
-  it("denies narrator from updating a topic (narrator < editor)", async () => {
+  it("denies narrator from updating a topic", async () => {
     const narrator = await createUser("narrator")
 
     const topic = await payload.create({
@@ -195,7 +195,7 @@ describe("narrator access", () => {
     ).rejects.toThrow()
   })
 
-  it("denies narrator from deleting a topic (narrator < editor)", async () => {
+  it("denies narrator from deleting a topic", async () => {
     const narrator = await createUser("narrator")
 
     const topic = await payload.create({
@@ -215,7 +215,7 @@ describe("narrator access", () => {
     ).rejects.toThrow()
   })
 
-  it("denies narrator from creating a user (narrator < admin)", async () => {
+  it("denies narrator from creating a user", async () => {
     const narrator = await createUser("narrator")
 
     await expect(

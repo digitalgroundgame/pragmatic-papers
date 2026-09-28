@@ -1,3 +1,10 @@
+import configPromise from "@payload-config"
+import type { Metadata } from "next"
+import type { User } from "@/payload-types"
+import { draftMode } from "next/headers"
+import { getPayload } from "payload"
+import React from "react"
+
 import { AuthorList } from "@/components/Authors/AuthorList"
 import { FootnoteList } from "@/components/FootnoteList"
 import { JsonLd } from "@/components/JsonLd"
@@ -10,13 +17,9 @@ import { Separator } from "@/components/ui/separator"
 import { ArticleHero } from "@/heros/ArticleHero"
 import { MathJaxProvider } from "@/providers/MathJaxProvider"
 import { generateMeta } from "@/utilities/generateMeta"
-import { queryArticleBySlug } from "@/utilities/queries"
+import { queryArticleBySlug, queryVolumesForArticles } from "@/utilities/queries"
+import { isResolved } from "@/utilities/relationships"
 import { buildArticleJsonLd, buildBreadcrumbJsonLd } from "@/utilities/structuredData"
-import configPromise from "@payload-config"
-import type { Metadata } from "next"
-import { draftMode } from "next/headers"
-import { getPayload } from "payload"
-import React from "react"
 
 export async function generateStaticParams(): Promise<{ slug: string | null | undefined }[]> {
   const payload = await getPayload({ config: configPromise })
@@ -62,36 +65,42 @@ export default async function Article({ params: paramsPromise }: Args): Promise<
 
   if (!article) return <PayloadRedirects url={url} />
 
-  const { footnotes, content, populatedAuthors, enableMathRendering, topics } = article
+  const { footnotes, content, authors, enableMathRendering, topics } = article
+
+  const populatedAuthors = (authors || []).filter(isResolved<User>)
+
+  const [volume] = await queryVolumesForArticles([article.id])
 
   return (
     <>
-      <article className="mx-auto max-w-2xl space-y-6 px-4 md:px-1">
-        <JsonLd
-          data={[
-            buildArticleJsonLd(article, url),
-            buildBreadcrumbJsonLd([{ name: article.meta?.title || article.title, path: url }]),
-          ]}
-        />
-        {/* Allows redirects for valid pages too */}
-        <PayloadRedirects disableNotFound url={url} />
-
-        {draft && <LivePreviewListener />}
-
-        <ArticleHero article={article} />
-        <MathJaxProvider enableMathRendering={enableMathRendering}>
-          <RichText
-            data={content}
-            enableGutter={false}
-            className="drop-cap"
-            parentDoc={{ collection: "articles", id: article.id }}
+      <div className="@container/page">
+        <article className="mx-auto max-w-2xl space-y-6 px-4 md:px-1">
+          <JsonLd
+            data={[
+              buildArticleJsonLd(article, url, volume),
+              buildBreadcrumbJsonLd([{ name: article.meta?.title || article.title, path: url }]),
+            ]}
           />
-        </MathJaxProvider>
-        <FootnoteList footnotes={footnotes} />
-        <Separator />
-        <TopicsList topics={topics} />
-        <AuthorList aria-label="Article Authors" authors={populatedAuthors} />
-      </article>
+          {/* Allows redirects for valid pages too */}
+          <PayloadRedirects disableNotFound url={url} />
+
+          {draft && <LivePreviewListener />}
+
+          <ArticleHero article={article} />
+          <MathJaxProvider enableMathRendering={enableMathRendering}>
+            <RichText
+              data={content}
+              enableGutter={false}
+              className="drop-cap"
+              parentDoc={{ collection: "articles", id: article.id }}
+            />
+          </MathJaxProvider>
+          <FootnoteList footnotes={footnotes} />
+          <Separator />
+          <TopicsList topics={topics} />
+          <AuthorList aria-label="Article Authors" authors={populatedAuthors} />
+        </article>
+      </div>
       <RecommendedArticles currentArticleSlug={slug} />
     </>
   )

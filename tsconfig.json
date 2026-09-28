@@ -19,7 +19,6 @@
     "allowJs": true,
     "jsx": "react-jsx",
     "noEmit": true,
-    "baseUrl": ".",
     "plugins": [
       {
         "name": "next"
@@ -27,7 +26,6 @@
     ],
     "paths": {
       "@payload-config": ["./src/payload.config.ts"],
-      "react": ["./node_modules/@types/react"],
       "@/*": ["./src/*"]
     }
   },

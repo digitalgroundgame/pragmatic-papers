@@ -3,15 +3,15 @@ import type { Payload } from "payload"
 import type { Volume } from "@/payload-types"
 import { getPayload, createUser } from "../helpers/testUsers"
 
-describe("volumes authenticatedOrPublished access", () => {
+describe("volumes isPublishedOrStaff access", () => {
   let payload: Payload
 
   beforeAll(async () => {
     payload = await getPayload()
   })
 
-  it("allows authenticated user to read a draft volume", async () => {
-    const member = await createUser("member")
+  it("allows staff user to read a draft volume", async () => {
+    const editor = await createUser("editor")
 
     const draft = await payload.create({
       collection: "volumes",
@@ -28,10 +28,34 @@ describe("volumes authenticatedOrPublished access", () => {
       collection: "volumes",
       id: draft.id,
       overrideAccess: false,
-      user: member,
+      user: editor,
     })
 
     expect(result.id).toBe(draft.id)
+  })
+
+  it("denies member user from reading a draft volume", async () => {
+    const member = await createUser("member")
+
+    const draft = await payload.create({
+      collection: "volumes",
+      overrideAccess: true,
+      context: { disableRevalidate: true },
+      data: {
+        title: "Draft Volume AoP - volumes",
+        description: "Draft volume description",
+        _status: "draft",
+      } as unknown as Volume,
+    })
+
+    await expect(
+      payload.findByID({
+        collection: "volumes",
+        id: draft.id,
+        overrideAccess: false,
+        user: member,
+      }),
+    ).rejects.toThrow()
   })
 
   it("allows authenticated user to read a published volume", async () => {
@@ -102,8 +126,8 @@ describe("volumes authenticatedOrPublished access", () => {
     ).rejects.toThrow()
   })
 
-  it("allows authenticated user to find both draft and published volumes", async () => {
-    const member = await createUser("member")
+  it("allows staff user to find both draft and published volumes", async () => {
+    const editor = await createUser("editor")
 
     const draft = await payload.create({
       collection: "volumes",
@@ -130,7 +154,7 @@ describe("volumes authenticatedOrPublished access", () => {
     const result = await payload.find({
       collection: "volumes",
       overrideAccess: false,
-      user: member,
+      user: editor,
       where: {
         id: { in: [draft.id, published.id] },
       },
@@ -138,6 +162,44 @@ describe("volumes authenticatedOrPublished access", () => {
 
     expect(result.docs).toHaveLength(2)
     expect(result.docs.map((d) => d.id)).toEqual(expect.arrayContaining([draft.id, published.id]))
+  })
+
+  it("filters draft volumes for member user find", async () => {
+    const member = await createUser("member")
+
+    const draft = await payload.create({
+      collection: "volumes",
+      overrideAccess: true,
+      context: { disableRevalidate: true },
+      data: {
+        title: "Draft Find Member Volume AoP - volumes",
+        description: "Draft find member volume description",
+        _status: "draft",
+      } as unknown as Volume,
+    })
+
+    const published = await payload.create({
+      collection: "volumes",
+      overrideAccess: true,
+      context: { disableRevalidate: true },
+      data: {
+        title: "Published Find Member Volume AoP - volumes",
+        description: "Published find member volume description",
+        _status: "published",
+      } as unknown as Volume,
+    })
+
+    const result = await payload.find({
+      collection: "volumes",
+      overrideAccess: false,
+      user: member,
+      where: {
+        id: { in: [draft.id, published.id] },
+      },
+    })
+
+    expect(result.docs).toHaveLength(1)
+    expect(result.docs.map((d) => d.id)).toEqual([published.id])
   })
 
   it("filters draft volumes for unauthenticated user find", async () => {

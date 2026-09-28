@@ -23,14 +23,18 @@ coverage
 
 # Build Outputs
 .next/
+storybook-static
+*storybook.log
 out/
 build
 dist
+next-env.d.ts
 
 # Fonts (generated at install time)
 public/fonts
 
 # Generated content
+public/map-assets/
 public/media/
 public/mathjax
 public/robots.txt
@@ -65,8 +69,9 @@ devenv.local.nix
 # act files
 .actrc
 
-# claude files
-.claude
+# claude files (local settings only — .claude/skills/ is versioned and used by CI)
+.claude/*
+!.claude/skills/
 
 .eslintcache
 tsconfig.tsbuildinfo
@@ -88,3 +93,9 @@ devenv.local.yaml
 
 # pre-commit
 .pre-commit-config.yaml
+
+# Sentry Config File
+.env.sentry-build-plugin
+
+# pnpm store left behind by the Dockerized e2e run (bind-mounted repo root)
+.pnpm-store

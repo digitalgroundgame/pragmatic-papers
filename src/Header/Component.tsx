@@ -13,7 +13,9 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet"
+import { HeaderLogo } from "@/Header/chrome"
 import { HeaderActions } from "@/Header/HeaderActions/Component"
+import { MenuSheet } from "@/Header/MenuSheet/Component"
 import { SearchForm } from "@/Header/SearchForm/Component"
 import type { Footer, Header } from "@/payload-types"
 import { getCachedGlobal } from "@/utilities/getGlobals"
@@ -23,7 +25,7 @@ import React from "react"
 export async function Header(): Promise<React.JSX.Element> {
   const [{ navItems, actions }, { socials }]: [Header, Footer] = await Promise.all([
     getCachedGlobal("header", 1)(),
-    getCachedGlobal("footer", 1)(),
+    getCachedGlobal("footer", 2)(),
   ])
 
   return (
@@ -31,7 +33,7 @@ export async function Header(): Promise<React.JSX.Element> {
       <header className="bg-background sticky top-0 z-50">
         <div className="container">
           <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-4 border-b py-3">
-            <Sheet>
+            <MenuSheet>
               <SheetTrigger
                 render={
                   <Button variant="ghost" size="icon">
@@ -59,16 +61,16 @@ export async function Header(): Promise<React.JSX.Element> {
                   />
                 </SheetHeader>
                 <SearchForm />
-                <Menu menu={navItems} layout="stacked" slot={SheetClose} />
+                <Menu menu={navItems} layout="stacked" />
                 <SocialLinks socials={socials} className="px-4 py-3" />
               </SheetContent>
-            </Sheet>
+            </MenuSheet>
             <a
               href="/"
               aria-label="Link to Home"
               className="inline-flex items-center justify-center"
             >
-              <Logo />
+              <HeaderLogo />
             </a>
             <div className="flex items-center justify-end gap-2">
               <HeaderActions actions={actions} className="hidden lg:flex" />

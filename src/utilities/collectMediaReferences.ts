@@ -142,8 +142,7 @@ export async function collectMediaReferences(
 
   for (const page of pagesLayout.docs) {
     const layout = (page as Record<string, unknown>).layout as
-      | Array<Record<string, unknown>>
-      | undefined
+      Array<Record<string, unknown>> | undefined
     if (Array.isArray(layout)) {
       for (const block of layout) {
         if (block.blockType === "mediaBlock" && String(block.media) === String(mediaId)) {

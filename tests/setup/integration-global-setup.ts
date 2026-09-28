@@ -3,22 +3,25 @@ import { execSync } from "node:child_process"
 
 const TEMPLATE_DB = "pp_template"
 
-// DB connection and find-shape validation was previously tested in a dedicated
-// smoke test (payload.test.ts). Every integration test now implicitly proves
-// both the connection and basic payload operations work, so the file was
-// removed as redundant.
 export async function setup(): Promise<() => Promise<void>> {
-  const container = await new PostgreSqlContainer("postgres:15-alpine")
-    .withDatabase(TEMPLATE_DB)
-    .start()
+  process.env.PAYLOAD_SECRET ||= "test-secret-for-integration-tests"
+  process.env.USE_LOCAL_STORAGE ||= "true"
+  process.env.NEXT_PUBLIC_SERVER_URL ||= "http://localhost:8000"
 
-  const uri = container.getConnectionUri()
-  process.env.DATABASE_URI = uri
-  process.env.PAYLOAD_SECRET ??= "test-secret-for-integration-tests"
-  process.env.USE_LOCAL_STORAGE ??= "true"
-  process.env.NEXT_PUBLIC_SERVER_URL ??= "http://localhost:8000"
+  let container = null
+  let uri: string
 
-  console.warn(`Integration test database started at ${uri}`)
+  if (process.env.DATABASE_URI) {
+    uri = process.env.DATABASE_URI
+    console.warn(`Using existing DATABASE_URI — skipping container startup.`)
+  } else {
+    container = await new PostgreSqlContainer("postgres:17-alpine")
+      .withDatabase(TEMPLATE_DB)
+      .start()
+    uri = container.getConnectionUri()
+    process.env.DATABASE_URI = uri
+    console.warn(`Integration test database started at ${uri}`)
+  }
 
   try {
     console.warn("Running database migrations on template database...")
@@ -28,7 +31,7 @@ export async function setup(): Promise<() => Promise<void>> {
     })
   } catch (error) {
     console.error("Error during integration test migration:", error)
-    await container.stop()
+    if (container) await container.stop()
     throw error
   }
 
@@ -42,6 +45,6 @@ export async function setup(): Promise<() => Promise<void>> {
   process.env.PG_TEMPLATE_DB = TEMPLATE_DB
 
   return async (): Promise<void> => {
-    await container.stop()
+    if (container) await container.stop()
   }
 }

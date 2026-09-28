@@ -15,7 +15,10 @@ import { SlotRowLabel as SlotRowLabel_5acbd006b7abec438595e7d3bb0b4bb1 } from '@
 import { OrderedListFeatureClient as OrderedListFeatureClient_e70f5e05f09f93e00b997edb1ef0c864 } from '@payloadcms/richtext-lexical/client'
 import { UnorderedListFeatureClient as UnorderedListFeatureClient_e70f5e05f09f93e00b997edb1ef0c864 } from '@payloadcms/richtext-lexical/client'
 import { IndentFeatureClient as IndentFeatureClient_e70f5e05f09f93e00b997edb1ef0c864 } from '@payloadcms/richtext-lexical/client'
+import { BlocksFeatureClient as BlocksFeatureClient_e70f5e05f09f93e00b997edb1ef0c864 } from '@payloadcms/richtext-lexical/client'
+import { MerchBlockLabel as MerchBlockLabel_6daaa2c7f385f87544e240d2f03ffa20 } from '@/blocks/Merch/BlockLabel'
 import { TableFeatureClient as TableFeatureClient_e70f5e05f09f93e00b997edb1ef0c864 } from '@payloadcms/richtext-lexical/client'
+import { AlignFeatureClient as AlignFeatureClient_e70f5e05f09f93e00b997edb1ef0c864 } from '@payloadcms/richtext-lexical/client'
 import { OverviewComponent as OverviewComponent_a8a977ebc872c5d5ea7ee689724c0860 } from '@payloadcms/plugin-seo/client'
 import { MetaTitleComponent as MetaTitleComponent_a8a977ebc872c5d5ea7ee689724c0860 } from '@payloadcms/plugin-seo/client'
 import { MetaImageComponent as MetaImageComponent_a8a977ebc872c5d5ea7ee689724c0860 } from '@payloadcms/plugin-seo/client'
@@ -29,20 +32,26 @@ import { StrikethroughFeatureClient as StrikethroughFeatureClient_e70f5e05f09f93
 import { BlockquoteFeatureClient as BlockquoteFeatureClient_e70f5e05f09f93e00b997edb1ef0c864 } from '@payloadcms/richtext-lexical/client'
 import { HorizontalRuleFeatureClient as HorizontalRuleFeatureClient_e70f5e05f09f93e00b997edb1ef0c864 } from '@payloadcms/richtext-lexical/client'
 import { FootnoteShortcutFeatureClient as FootnoteShortcutFeatureClient_c9eb0c0c4f4eddc3060756b47cf6d3aa } from '@/blocks/Footnote/shortcutFeature.client'
-import { BlocksFeatureClient as BlocksFeatureClient_e70f5e05f09f93e00b997edb1ef0c864 } from '@payloadcms/richtext-lexical/client'
 import { default as default_80e5fdb60df5ca84bc544282529ce3be } from '../../../blocks/Math/AdminComponent'
 import { URLField as URLField_50bd533e6cc7d027cb7127769a4f2bf9 } from '@/blocks/SocialEmbed/components/URLField'
 import { ReferenceNotice as ReferenceNotice_913f0a870c4353969cac4985fe3c8eef } from '@/blocks/Footnote/ReferenceNotice'
 import { NoteField as NoteField_ef7a8c46b8e9dfd2221f291fae4db1c4 } from '@/blocks/Footnote/NoteField'
 import { InsertExistingFootnote as InsertExistingFootnote_db99466ae238816ffbf3d225ae3be5e8 } from '@/blocks/Footnote/InsertExistingFootnote'
 import { FootnoteLabel as FootnoteLabel_2845bbc260cbb0202b7c6ec591d344dc } from '@/blocks/Footnote/FootnoteLabel'
-import { AlignFeatureClient as AlignFeatureClient_e70f5e05f09f93e00b997edb1ef0c864 } from '@payloadcms/richtext-lexical/client'
 import { FootnotesPreview as FootnotesPreview_78f98036fa74f92e38dd688ebeae2fd5 } from '@/blocks/Footnote/FootnotesPreview'
-import { RowLabel as RowLabel_b9b9938cf466765c7ed61773d838e057 } from '@/fields/menu/RowLabel'
+import { ExtractNarrationButton as ExtractNarrationButton_100e898a8737273f0d647b5ef7ea8c8c } from '@/collections/Articles/components/ExtractNarrationButton'
+import { SubstackImportUrl as SubstackImportUrl_1c3253008a5f10553f86efb4b10e0c79 } from '@/collections/Articles/components/SubstackImportUrl'
+import { ScheduleNewsletterButton as ScheduleNewsletterButton_a66b86b65dab65173a5cdf3751fad59f } from '@/collections/Volumes/components/ScheduleNewsletterButton'
 import { DeletionNotice as DeletionNotice_8579feffe3388cd4abea6f9219edec3e } from '@/collections/Media/components/DeletionNotice'
 import { BlurDataURLField as BlurDataURLField_3bf98f0d72a9b7fcf13045923bb48189 } from '@/collections/Media/components/BlurDataURLField'
+import { NarratorField as NarratorField_ac420e631edc2776947f590c2e50edcc } from '@/collections/Media/components/NarratorField'
 import { DurationField as DurationField_eac2b3e17fa524aff4add76374d4c8eb } from '@/collections/Media/components/DurationField'
 import { ReferencesView as ReferencesView_c329fcebdf040acacbee1d48915ea93f } from '@/collections/Media/components/ReferencesView'
+import { RowLabel as RowLabel_b9b9938cf466765c7ed61773d838e057 } from '@/fields/menu/RowLabel'
+import { ProductTitleCell as ProductTitleCell_8dff8d8bb04003b09cb89f916f5bb9bc } from '@/collections/Merch/components/ProductTitleCell'
+import { ProductThumbnailCell as ProductThumbnailCell_c79e04f7b9e53b2f3afaedb264d44732 } from '@/collections/Merch/components/ProductThumbnailCell'
+import { SyncNowButton as SyncNowButton_6b13e2821b4c35428e02347e7578e840 } from '@/collections/Merch/components/SyncNowButton'
+import { SyncNowButton as SyncNowButton_5c40eb2c313f4a5f050c97644b650016 } from '@/collections/InteractiveSnapshots/components/SyncNowButton'
 import { LinkToDoc as LinkToDoc_aead06e4cbf6b2620c5c51c9ab283634 } from '@payloadcms/plugin-search/client'
 import { ReindexButton as ReindexButton_aead06e4cbf6b2620c5c51c9ab283634 } from '@payloadcms/plugin-search/client'
 import { RunNowField as RunNowField_a9d86fb0496ebd76a3dd880c805864b5 } from '@/globals/ArticleRecommendations/components/RunNowField'
@@ -73,7 +82,10 @@ export const importMap = {
   "@payloadcms/richtext-lexical/client#OrderedListFeatureClient": OrderedListFeatureClient_e70f5e05f09f93e00b997edb1ef0c864,
   "@payloadcms/richtext-lexical/client#UnorderedListFeatureClient": UnorderedListFeatureClient_e70f5e05f09f93e00b997edb1ef0c864,
   "@payloadcms/richtext-lexical/client#IndentFeatureClient": IndentFeatureClient_e70f5e05f09f93e00b997edb1ef0c864,
+  "@payloadcms/richtext-lexical/client#BlocksFeatureClient": BlocksFeatureClient_e70f5e05f09f93e00b997edb1ef0c864,
+  "@/blocks/Merch/BlockLabel#MerchBlockLabel": MerchBlockLabel_6daaa2c7f385f87544e240d2f03ffa20,
   "@payloadcms/richtext-lexical/client#TableFeatureClient": TableFeatureClient_e70f5e05f09f93e00b997edb1ef0c864,
+  "@payloadcms/richtext-lexical/client#AlignFeatureClient": AlignFeatureClient_e70f5e05f09f93e00b997edb1ef0c864,
   "@payloadcms/plugin-seo/client#OverviewComponent": OverviewComponent_a8a977ebc872c5d5ea7ee689724c0860,
   "@payloadcms/plugin-seo/client#MetaTitleComponent": MetaTitleComponent_a8a977ebc872c5d5ea7ee689724c0860,
   "@payloadcms/plugin-seo/client#MetaImageComponent": MetaImageComponent_a8a977ebc872c5d5ea7ee689724c0860,
@@ -87,20 +99,26 @@ export const importMap = {
   "@payloadcms/richtext-lexical/client#BlockquoteFeatureClient": BlockquoteFeatureClient_e70f5e05f09f93e00b997edb1ef0c864,
   "@payloadcms/richtext-lexical/client#HorizontalRuleFeatureClient": HorizontalRuleFeatureClient_e70f5e05f09f93e00b997edb1ef0c864,
   "@/blocks/Footnote/shortcutFeature.client#FootnoteShortcutFeatureClient": FootnoteShortcutFeatureClient_c9eb0c0c4f4eddc3060756b47cf6d3aa,
-  "@payloadcms/richtext-lexical/client#BlocksFeatureClient": BlocksFeatureClient_e70f5e05f09f93e00b997edb1ef0c864,
   "/blocks/Math/AdminComponent#default": default_80e5fdb60df5ca84bc544282529ce3be,
   "@/blocks/SocialEmbed/components/URLField#URLField": URLField_50bd533e6cc7d027cb7127769a4f2bf9,
   "@/blocks/Footnote/ReferenceNotice#ReferenceNotice": ReferenceNotice_913f0a870c4353969cac4985fe3c8eef,
   "@/blocks/Footnote/NoteField#NoteField": NoteField_ef7a8c46b8e9dfd2221f291fae4db1c4,
   "@/blocks/Footnote/InsertExistingFootnote#InsertExistingFootnote": InsertExistingFootnote_db99466ae238816ffbf3d225ae3be5e8,
   "@/blocks/Footnote/FootnoteLabel#FootnoteLabel": FootnoteLabel_2845bbc260cbb0202b7c6ec591d344dc,
-  "@payloadcms/richtext-lexical/client#AlignFeatureClient": AlignFeatureClient_e70f5e05f09f93e00b997edb1ef0c864,
   "@/blocks/Footnote/FootnotesPreview#FootnotesPreview": FootnotesPreview_78f98036fa74f92e38dd688ebeae2fd5,
-  "@/fields/menu/RowLabel#RowLabel": RowLabel_b9b9938cf466765c7ed61773d838e057,
+  "@/collections/Articles/components/ExtractNarrationButton#ExtractNarrationButton": ExtractNarrationButton_100e898a8737273f0d647b5ef7ea8c8c,
+  "@/collections/Articles/components/SubstackImportUrl#SubstackImportUrl": SubstackImportUrl_1c3253008a5f10553f86efb4b10e0c79,
+  "@/collections/Volumes/components/ScheduleNewsletterButton#ScheduleNewsletterButton": ScheduleNewsletterButton_a66b86b65dab65173a5cdf3751fad59f,
   "@/collections/Media/components/DeletionNotice#DeletionNotice": DeletionNotice_8579feffe3388cd4abea6f9219edec3e,
   "@/collections/Media/components/BlurDataURLField#BlurDataURLField": BlurDataURLField_3bf98f0d72a9b7fcf13045923bb48189,
+  "@/collections/Media/components/NarratorField#NarratorField": NarratorField_ac420e631edc2776947f590c2e50edcc,
   "@/collections/Media/components/DurationField#DurationField": DurationField_eac2b3e17fa524aff4add76374d4c8eb,
   "@/collections/Media/components/ReferencesView#ReferencesView": ReferencesView_c329fcebdf040acacbee1d48915ea93f,
+  "@/fields/menu/RowLabel#RowLabel": RowLabel_b9b9938cf466765c7ed61773d838e057,
+  "@/collections/Merch/components/ProductTitleCell#ProductTitleCell": ProductTitleCell_8dff8d8bb04003b09cb89f916f5bb9bc,
+  "@/collections/Merch/components/ProductThumbnailCell#ProductThumbnailCell": ProductThumbnailCell_c79e04f7b9e53b2f3afaedb264d44732,
+  "@/collections/Merch/components/SyncNowButton#SyncNowButton": SyncNowButton_6b13e2821b4c35428e02347e7578e840,
+  "@/collections/InteractiveSnapshots/components/SyncNowButton#SyncNowButton": SyncNowButton_5c40eb2c313f4a5f050c97644b650016,
   "@payloadcms/plugin-search/client#LinkToDoc": LinkToDoc_aead06e4cbf6b2620c5c51c9ab283634,
   "@payloadcms/plugin-search/client#ReindexButton": ReindexButton_aead06e4cbf6b2620c5c51c9ab283634,
   "@/globals/ArticleRecommendations/components/RunNowField#RunNowField": RunNowField_a9d86fb0496ebd76a3dd880c805864b5,

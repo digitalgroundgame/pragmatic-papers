@@ -1,6 +1,9 @@
 #!/bin/sh
 set -e
 
+# Source the isolated DATABASE_URI if it exists (preview deployments)
+if [ -f /app/database_uri.env ]; then . /app/database_uri.env; fi
+
 echo "========================================="
 echo "Starting Pragmatic Papers Application"
 echo "Node version: $(node --version)"

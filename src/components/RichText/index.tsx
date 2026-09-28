@@ -1,10 +1,15 @@
+import "server-only"
+
 import { BannerBlock } from "@/blocks/Banner/Component"
 import { CallToActionBlock } from "@/blocks/CallToAction/Component"
 import { CodeBlock } from "@/blocks/Code/Component"
 import { FootnoteBlock } from "@/blocks/Footnote/Component"
+import { InteractiveMapBlock } from "@/blocks/InteractiveMap/InteractiveMapBlock"
 import { MathBlock, type MathBlockProps } from "@/blocks/Math/Component"
 import { LightboxMediaBlock } from "@/blocks/MediaBlock/LightboxMediaBlock"
 import { MediaCollageBlock } from "@/blocks/MediaCollageBlock/component"
+import { MerchBlock } from "@/blocks/Merch/Component"
+import { NewsletterSignupBlock } from "@/blocks/NewsletterSignup/Component"
 import {
   BlueskyEmbedBlock,
   RedditEmbedBlock,
@@ -21,19 +26,22 @@ import type {
   CodeBlock as CodeBlockProps,
   CallToActionBlock as CTABlockProps,
   FootnoteBlock as FootnoteBlockProps,
+  InteractiveMapBlock as InteractiveMapBlockProps,
   MediaBlock as MediaBlockProps,
   MediaCollageBlock as MediaCollageBlockProps,
+  MerchBlock as MerchBlockProps,
+  NewsletterSignupBlock as NewsletterSignupBlockProps,
   SocialEmbedBlock as SocialEmbedBlockProps,
   SquiggleRuleBlock as SquiggleRuleBlockProps,
   TimelineBlock as TimelineBlockProps,
 } from "@/payload-types"
+import { internalDocToHref } from "./internalDocToHref"
 import { cn } from "@/utilities/utils"
 import type {
   DefaultNodeTypes,
   DefaultTypedEditorState,
   SerializedBlockNode,
   SerializedInlineBlockNode,
-  SerializedLinkNode,
 } from "@payloadcms/richtext-lexical"
 import {
   RichText as ConvertRichText,
@@ -47,23 +55,17 @@ type NodeTypes =
       | CTABlockProps
       | MediaBlockProps
       | MediaCollageBlockProps
+      | MerchBlockProps
       | BannerBlockProps
       | CodeBlockProps
+      | InteractiveMapBlockProps
       | MathBlockProps
+      | NewsletterSignupBlockProps
       | SquiggleRuleBlockProps
       | SocialEmbedBlockProps
       | TimelineBlockProps
     >
   | SerializedInlineBlockNode<MathBlockProps | FootnoteBlockProps>
-
-export const internalDocToHref = ({ linkNode }: { linkNode: SerializedLinkNode }): string => {
-  const { value, relationTo } = linkNode.fields.doc!
-  if (typeof value !== "object") {
-    throw new Error("Expected value to be an object")
-  }
-  const slug = value.slug
-  return relationTo === "articles" ? `/articles/${slug}` : `/${slug}`
-}
 
 function createJsxConverters(parentDoc?: ParentDocContext): JSXConvertersFunction<NodeTypes> {
   return ({ defaultConverters }) => ({
@@ -71,17 +73,22 @@ function createJsxConverters(parentDoc?: ParentDocContext): JSXConvertersFunctio
     ...LinkJSXConverter({ internalDocToHref }),
     blocks: {
       banner: ({ node }) => <BannerBlock className="col-start-2 mb-4" {...node.fields} />,
-      mediaBlock: ({ node }) => (
-        <LightboxMediaBlock containerClassName="-my-8" breakout {...node.fields} />
-      ),
-      mediaCollage: ({ node }) => <MediaCollageBlock {...node.fields} />,
       code: ({ node }) => <CodeBlock className="col-start-2" {...node.fields} />,
       cta: ({ node }) => <CallToActionBlock {...node.fields} />,
       displayMathBlock: ({ node }: { node: SerializedBlockNode<MathBlockProps> }) => (
         <MathBlock {...node.fields} />
       ),
-      squiggleRule: ({ node }) => <SquiggleRuleBlock className="col-start-2" {...node.fields} />,
+      interactiveMap: ({ node }) => <InteractiveMapBlock {...node.fields} />,
+      mediaBlock: ({ node }) => (
+        <LightboxMediaBlock containerClassName="-my-8" breakout {...node.fields} />
+      ),
+      mediaCollage: ({ node }) => <MediaCollageBlock {...node.fields} />,
+      merch: ({ node }: { node: SerializedBlockNode<MerchBlockProps> }) => (
+        <MerchBlock {...node.fields} enableGutter={false} />
+      ),
+      newsletterSignup: ({ node }) => <NewsletterSignupBlock {...node.fields} />,
       socialEmbed: ({ node }) => <SocialEmbedBlock {...node.fields} parentDoc={parentDoc} />,
+      squiggleRule: ({ node }) => <SquiggleRuleBlock className="col-start-2" {...node.fields} />,
       timeline: ({ node }: { node: SerializedBlockNode<TimelineBlockProps> }) => (
         <TimelineBlock className="col-start-2 my-8" {...node.fields} />
       ),
@@ -111,6 +118,15 @@ function createJsxConverters(parentDoc?: ParentDocContext): JSXConvertersFunctio
   })
 }
 
+/**
+ * Server-only: the converter map renders blocks that query Payload (Merch),
+ * and importing the Payload config into a browser bundle fails to resolve its
+ * native dependencies. The `server-only` import above turns a stray client
+ * import into a clear error instead of a puzzling one deep inside `sharp`.
+ *
+ * The Form block therefore renders all of its rich text on the server and
+ * hands the elements to its client component — see `blocks/Form/Component`.
+ */
 interface RichTextProps {
   className?: string
   data: DefaultTypedEditorState

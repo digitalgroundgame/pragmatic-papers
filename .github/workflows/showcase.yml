@@ -1,0 +1,202 @@
+name: Showcase
+
+# Pushes feature articles from src/endpoints/seed/showcase.ts to a live site
+# with `pnpm showcase`. The push only adds articles whose slug is missing, so
+# repeat runs are harmless. The PR logic lives in scripts/showcase-pr.ts.
+#
+# Nothing is pushed by default. A PR that adds a seeded article to the catalog
+# opts in with the "showcase" label or a line in its description naming the
+# articles, and the two are kept in sync:
+#
+#   Showcase: rich-text-showcase
+#
+#   - Adding the label inserts a line naming the articles the PR adds to the
+#     catalog, or takes the label off again (with a note) if it adds none.
+#   - A description with a line (say, written by a session opening the PR)
+#     gets the label. Removing either removes the other.
+#
+# The articles are pushed to the PR's Coolify preview once it's up, and the
+# description then lists links to them at the top, under any `Closes #N` line:
+#   - after each preview deploy, when "Preview deployment" finishes. A deploy
+#     may re-copy the preview database, so this re-pushes after each one.
+#   - when the label is added or the line edited, for a preview that is
+#     already up. Otherwise this skips, and the next deploy pushes.
+# "Up" means the PR's head commit has a successful Preview deployment. That
+# workflow succeeds even when a build fails, so its conclusion alone doesn't
+# say.
+#
+# The sync edits the PR with the workflow's own token, and GitHub starts no
+# workflow from such edits, so it can't loop, and it pushes itself rather than
+# waiting for an edited event that won't come.
+#
+# workflow_dispatch pushes named articles to a PR's preview (from the PR's
+# code) or to staging (as drafts, from the branch it was started on; needs the
+# SHOWCASE_STAGING_URL variable).
+#
+# workflow_run runs this file from the default branch with secrets, while the
+# push script comes from the PR, so the push only runs PR code from this
+# repository, never from a fork.
+on:
+  workflow_run:
+    workflows: [Preview deployment]
+    types: [completed]
+  pull_request:
+    types: [opened, edited, labeled, unlabeled]
+  workflow_dispatch:
+    inputs:
+      target:
+        description: A PR number, or "staging"
+        required: true
+      slugs:
+        description: Articles to push, space-separated (see src/endpoints/seed/showcase.ts), or --all
+        required: true
+
+concurrency:
+  group: showcase-${{ github.event.workflow_run.pull_requests[0].number || github.event.pull_request.number || inputs.target }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  sync:
+    name: Sync showcase label
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.event.pull_request.head.repo.full_name == github.repository && (
+        github.event.action == 'opened' ||
+        github.event.action == 'edited' && github.event.changes.body ||
+        github.event.label.name == 'showcase'
+      )
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
+    outputs:
+      push: ${{ steps.sync.outputs.push }}
+    steps:
+      # The head, not the test merge, which is missing while the PR conflicts.
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          sparse-checkout: scripts/showcase-pr.ts
+          sparse-checkout-cone-mode: false
+
+      # Node 24 runs the TypeScript script directly; no install needed.
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24.x"
+
+      - name: Sync the label and the Showcase line
+        id: sync
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          ACTION: ${{ github.event.action }}
+          HAS_LABEL: ${{ contains(github.event.pull_request.labels.*.name, 'showcase') }}
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
+        run: node scripts/showcase-pr.ts sync
+
+  push:
+    name: Push showcase articles
+    needs: sync
+    if: >-
+      !cancelled() && (
+        github.event_name == 'workflow_dispatch' ||
+        github.event_name == 'workflow_run' &&
+          github.event.workflow_run.event == 'pull_request' &&
+          github.event.workflow_run.head_repository.full_name == github.repository &&
+          github.event.workflow_run.pull_requests[0] ||
+        github.event_name == 'pull_request' && needs.sync.outputs.push == 'true'
+      )
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      pull-requests: write
+      deployments: read
+    steps:
+      # The script from the ref this run started on (dev for workflow_run; a
+      # PR's head, not its test merge, for pull_request), before any PR code
+      # is checked out.
+      - uses: actions/checkout@v7
+        if: github.event_name != 'workflow_dispatch' || inputs.target != 'staging'
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          sparse-checkout: scripts/showcase-pr.ts
+          sparse-checkout-cone-mode: false
+
+      - uses: actions/setup-node@v7
+        if: github.event_name != 'workflow_dispatch' || inputs.target != 'staging'
+        with:
+          node-version: "24.x"
+
+      # A PR run reads the PR fresh, so the code and description are current
+      # even when the triggering event is stale.
+      - name: Resolve the PR
+        id: pr
+        if: github.event_name != 'workflow_dispatch' || inputs.target != 'staging'
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.workflow_run.pull_requests[0].number || github.event.pull_request.number || inputs.target }}
+          MANUAL: ${{ github.event_name == 'workflow_dispatch' }}
+          DESCRIPTION_FILE: ${{ runner.temp }}/description.md
+        run: node scripts/showcase-pr.ts resolve
+
+      - uses: actions/checkout@v7
+        if: steps.pr.outputs.skip != 'true'
+        with:
+          # A PR's head, or for staging the branch the dispatch was started on.
+          ref: ${{ steps.pr.outputs.sha || github.ref }}
+          # The script checkout above leaves core.sparseCheckout on, and
+          # checkout's own "sparse-checkout disable" doesn't stick (it writes
+          # the worktree config, then turns worktree config off), so the tree
+          # stays sparse and setup-project is missing. A match-all pattern
+          # checks out everything whatever state the first checkout left.
+          sparse-checkout: /*
+          sparse-checkout-cone-mode: false
+
+      - name: Set up Node.js environment
+        if: steps.pr.outputs.skip != 'true'
+        uses: ./.github/actions/setup-project
+        with:
+          node-version: "24.x"
+          gh-font-read-token: ${{ secrets.GH_FONT_READ }}
+
+      - name: Push
+        if: steps.pr.outputs.skip != 'true'
+        env:
+          SHOWCASE_EMAIL: ${{ secrets.SHOWCASE_EMAIL }}
+          SHOWCASE_PASSWORD: ${{ secrets.SHOWCASE_PASSWORD }}
+          SHOWCASE_STAGING_URL: ${{ vars.SHOWCASE_STAGING_URL }}
+          SHOWCASE_LINKS_FILE: ${{ runner.temp }}/links.md
+          TARGET: ${{ steps.pr.outputs.number || 'staging' }}
+          SLUGS: ${{ inputs.slugs }}
+        run: |
+          # Keep going on failure so the summary is written; exit with the push's status.
+          set +e -f
+          if [ "$GITHUB_EVENT_NAME" = workflow_dispatch ]; then
+            # Word-split on purpose (the input is a space-separated list); -f stops globbing.
+            # shellcheck disable=SC2086
+            pnpm -s showcase "$TARGET" $SLUGS 2>&1 | tee showcase.log
+          else
+            SHOWCASE_DESCRIPTION="$(cat "$RUNNER_TEMP/description.md")" \
+              pnpm -s showcase "$TARGET" --from-description 2>&1 | tee showcase.log
+          fi
+          status=${PIPESTATUS[0]}
+          {
+            echo "### Showcase on $TARGET"
+            echo
+            grep -E '✔|No Showcase' showcase.log | sed 's/^/- /'
+          } >> "$GITHUB_STEP_SUMMARY"
+          exit "$status"
+
+      - name: List the links in the description
+        if: steps.pr.outputs.number && steps.pr.outputs.skip != 'true'
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ steps.pr.outputs.number }}
+          LINKS_FILE: ${{ runner.temp }}/links.md
+        run: node scripts/showcase-pr.ts link

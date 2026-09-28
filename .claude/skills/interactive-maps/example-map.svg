@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 200">
+  <g>
+    <path id="EX-01" data-label="Riverside District" data-margin="-12.4" d="M 10,10 L 140,10 L 140,90 L 10,90 Z"/>
+    <path id="EX-02" data-label="Midtown District" data-margin="0.6" d="M 150,10 L 290,10 L 290,90 L 150,90 Z"/>
+    <path id="EX-03" data-label="Ridgeline District" data-margin="31.2" d="M 10,100 L 290,100 L 290,190 L 10,190 Z"/>
+    <path d="M 10,95 L 290,95" fill="none" stroke="#999999" stroke-width="1" vector-effect="non-scaling-stroke"/>
+  </g>
+</svg>

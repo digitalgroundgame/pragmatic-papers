@@ -1,62 +1,45 @@
-import type { Access, AccessArgs, FieldAccess } from "payload"
 import type { User } from "@/payload-types"
 
-export type Role = NonNullable<User["role"]>
+export type Role = "admin" | "chief-editor" | "editor" | "writer" | "narrator" | "member"
 
-export const ROLE_HIERARCHY: Record<Role, number> = {
-  member: 0,
-  narrator: 1,
-  writer: 2,
-  editor: 3,
-  "chief-editor": 4,
-  admin: 4,
-} as const
+/**
+ * Roles that count as staff. Single source of truth for both the requester-side
+ * check (`isStaff`) and document-side query constraints (e.g. `readUsers`), so
+ * adding a staff role only requires editing this list.
+ */
+export const STAFF_ROLES: Role[] = ["admin", "chief-editor", "editor", "writer", "narrator"]
 
-export const atLeast = (user: User | null | undefined, role: Role): boolean => {
-  if (!user?.role) return false
-  const userLevel = ROLE_HIERARCHY[user.role]
-  const requiredLevel = ROLE_HIERARCHY[role]
-  if (userLevel === undefined || requiredLevel === undefined) return false
-  return userLevel >= requiredLevel
+/** Roles that can be credited as an article's author, and so appear under /authors. */
+export const AUTHOR_ROLES: Role[] = ["writer", "editor", "chief-editor", "narrator"]
+
+/** Checks if a user is an admin or chief-editor. */
+export const isAdmin = (user: User | null | undefined): boolean => {
+  if (!user?.roles) return false
+  const roles = user.roles as Role[]
+  return roles.includes("admin") || roles.includes("chief-editor")
 }
 
+/** Checks if a user has a specific role or one of a list of roles exactly. */
+export const hasRole = (user: User | null | undefined, roleOrRoles: Role | Role[]): boolean => {
+  if (!user?.roles) return false
+  const targetRoles = Array.isArray(roleOrRoles) ? roleOrRoles : [roleOrRoles]
+  return (user.roles as Role[]).some((r) => targetRoles.includes(r))
+}
+
+/** Checks if a user is an admin/chief-editor, or has the specified role(s). */
+export const hasRoleOrAdmin = (
+  user: User | null | undefined,
+  roleOrRoles: Role | Role[],
+): boolean => {
+  return isAdmin(user) || hasRole(user, roleOrRoles)
+}
+
+/** Checks if a user is an editor or above (editor, chief-editor, admin). */
+export const isEditor = (user: User | null | undefined): boolean => {
+  return hasRoleOrAdmin(user, "editor")
+}
+
+/** Checks if a user is staff (editor, writer, narrator, chief-editor, admin). */
 export const isStaff = (user: User | null | undefined): boolean => {
-  if (!user?.role) return false
-  return user.role !== "member"
-}
-
-export const anyone: Access = () => true
-
-type isAuthenticated = (args: AccessArgs<User>) => boolean
-
-export const authenticated: isAuthenticated = ({ req: { user } }) => {
-  return Boolean(user)
-}
-
-export const admin: Access = ({ req: { user } }) => {
-  return atLeast(user, "admin")
-}
-
-export const adminFieldLevel: FieldAccess = ({ req: { user } }) => {
-  return atLeast(user, "admin")
-}
-
-export const editor: Access = ({ req: { user } }) => {
-  return atLeast(user, "editor")
-}
-
-export const editorFieldLevel: FieldAccess = ({ req: { user } }) => {
-  return atLeast(user, "editor")
-}
-
-export const writer: Access = ({ req: { user } }) => {
-  return atLeast(user, "writer")
-}
-
-export const writerFieldLevel: FieldAccess = ({ req: { user } }) => {
-  return atLeast(user, "writer")
-}
-
-export const staff = ({ req: { user } }: AccessArgs<User>): boolean => {
-  return isStaff(user)
+  return hasRole(user, STAFF_ROLES)
 }

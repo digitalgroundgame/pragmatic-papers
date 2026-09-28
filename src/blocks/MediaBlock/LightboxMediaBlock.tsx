@@ -6,31 +6,58 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { cn } from "@/utilities/utils"
-import { MediaBlock, type StyledMediaBlockProps } from "./Component"
+import { isMedia } from "@/components/Media"
+import {
+  MediaBlock,
+  MediaBlockCaption,
+  MediaBlockFrame,
+  MediaBlockImage,
+  type StyledMediaBlockProps,
+} from "./Component"
 
 export type LightboxMediaBlockProps = StyledMediaBlockProps & {
   containerClassName?: string
 }
 
 export const LightboxMediaBlock: React.FC<LightboxMediaBlockProps> = ({
-  containerClassName,
+  breakout,
+  captionClassName,
   className,
+  containerClassName,
+  disableInnerContainer = true,
+  enableGutter = false,
+  imgClassName,
+  imgStyle,
   media,
-  ...props
+  sizes,
+  variant,
 }) => {
-  if (typeof media === "number" || !media) return null
+  if (!isMedia(media)) return null
+
+  const { caption } = media
 
   return (
     <Dialog>
-      <DialogTrigger className={cn("w-full cursor-pointer", containerClassName)}>
-        <MediaBlock
-          media={media}
-          enableGutter={false}
-          className={className}
-          disableInnerContainer
-          {...props}
-        />
-      </DialogTrigger>
+      <div className={cn("flow-root w-full", containerClassName)}>
+        <MediaBlockFrame breakout={breakout} className={className} enableGutter={enableGutter}>
+          <DialogTrigger className="block w-full [&>*]:m-0">
+            <MediaBlockImage
+              media={media}
+              imgClassName={imgClassName}
+              imgStyle={imgStyle}
+              sizes={sizes}
+              variant={variant}
+            />
+          </DialogTrigger>
+          {caption && (
+            <MediaBlockCaption
+              caption={caption}
+              captionClassName={captionClassName}
+              disableInnerContainer={disableInnerContainer}
+            />
+          )}
+        </MediaBlockFrame>
+      </div>
       <DialogContent
         className="[&>button]:bg-background max-h-[90dvh] overflow-hidden rounded-none bg-transparent p-0 text-base shadow-none ring-0 sm:max-w-max [&>button]:top-2 [&>button]:right-2 [&>button]:rounded-sm [&>button]:p-0.5 [&>button_svg]:size-6"
         style={{

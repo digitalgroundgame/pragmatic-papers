@@ -1,6 +1,7 @@
 import { revalidateRedirects } from "@/hooks/revalidateRedirects"
 import type { Article, Page, Topic, Volume } from "@/payload-types"
 import { getServerSideURL } from "@/utilities/getURL"
+import { DEFAULT_DESCRIPTION } from "@/utilities/mergeOpenGraph"
 import { toRoman } from "@/utilities/toRoman"
 import { formBuilderPlugin } from "@payloadcms/plugin-form-builder"
 import { nestedDocsPlugin } from "@payloadcms/plugin-nested-docs"
@@ -8,10 +9,14 @@ import { redirectsPlugin } from "@payloadcms/plugin-redirects"
 import { searchPlugin } from "@payloadcms/plugin-search"
 import type { BeforeSync } from "@payloadcms/plugin-search/types"
 import { seoPlugin } from "@payloadcms/plugin-seo"
-import { type GenerateTitle, type GenerateURL } from "@payloadcms/plugin-seo/types"
+import {
+  type GenerateDescription,
+  type GenerateTitle,
+  type GenerateURL,
+} from "@payloadcms/plugin-seo/types"
 import { FixedToolbarFeature, HeadingFeature, lexicalEditor } from "@payloadcms/richtext-lexical"
 import { s3Storage } from "@payloadcms/storage-s3"
-import { type Plugin } from "payload"
+import { type Payload, type Plugin } from "payload"
 
 function isVolume(obj: Volume | Article | Page | Topic): obj is Volume {
   return (obj as Volume).volumeNumber !== undefined
@@ -41,13 +46,64 @@ export const generateTitle: GenerateTitle<Volume | Article | Page | Topic> = ({ 
   return "The Pragmatic Papers"
 }
 
+export const generateDescription: GenerateDescription<Volume | Article | Page | Topic> = ({
+  doc,
+}) => ("description" in doc && doc.description) || DEFAULT_DESCRIPTION
+
 const generateURL: GenerateURL<Volume | Article | Page | Topic> = ({ doc }) => {
   const url = getServerSideURL()
 
   return doc?.slug ? `${url}/${doc.slug}` : url
 }
 
-const beforeSync: BeforeSync = ({ originalDoc, searchDoc }) => {
+/**
+ * Resolves author names for the search index.
+ *
+ * The reindex handler fetches documents at `depth: 0`, so `authors` arrives as
+ * bare IDs. This used to be papered over by a `populateAuthors` afterRead hook
+ * on Articles, which ran on *every* article read just so this one caller could
+ * see names. Resolving here keeps it at the call site that needs it.
+ */
+export async function resolveAuthorNames(raw: unknown, payload: Payload): Promise<string> {
+  if (!Array.isArray(raw) || !raw.length) return ""
+
+  const names = new Map<number, string | null | undefined>()
+  const unresolvedIds: number[] = []
+
+  for (const author of raw) {
+    if (typeof author === "number") {
+      unresolvedIds.push(author)
+    } else if (author && typeof author === "object") {
+      names.set(author.id, author.name)
+    }
+  }
+
+  if (unresolvedIds.length) {
+    try {
+      const { docs } = await payload.find({
+        collection: "users",
+        where: { id: { in: unresolvedIds } },
+        depth: 0,
+        limit: unresolvedIds.length,
+        select: { name: true },
+        overrideAccess: true,
+      })
+      for (const doc of docs) names.set(doc.id, doc.name)
+    } catch (error) {
+      payload.logger.error(
+        { err: error, unresolvedIds },
+        "Failed to resolve author names for search",
+      )
+    }
+  }
+
+  return raw
+    .map((author) => (typeof author === "number" ? names.get(author) : author?.name))
+    .filter(Boolean)
+    .join(", ")
+}
+
+const beforeSync: BeforeSync = async ({ originalDoc, payload, searchDoc }) => {
   const title =
     (originalDoc.title as string | undefined) || (originalDoc.name as string | undefined) || ""
   const meta = originalDoc.meta as Record<string, unknown> | undefined
@@ -57,16 +113,7 @@ const beforeSync: BeforeSync = ({ originalDoc, searchDoc }) => {
     ""
   const slug = (originalDoc.slug as string | undefined) || ""
 
-  const populatedAuthors = originalDoc.populatedAuthors as
-    | { name?: string | null }[]
-    | undefined
-    | null
-  const authors = populatedAuthors
-    ? populatedAuthors
-        .map((a) => a.name)
-        .filter(Boolean)
-        .join(", ")
-    : ""
+  const authors = await resolveAuthorNames(originalDoc.authors, payload)
 
   const topicsRaw = originalDoc.topics as ({ name?: string | null } | number)[] | undefined | null
   const topics = Array.isArray(topicsRaw)
@@ -80,17 +127,29 @@ const beforeSync: BeforeSync = ({ originalDoc, searchDoc }) => {
   const image =
     (originalDoc.heroImage as number | null | undefined) ??
     ((originalDoc.meta as Record<string, unknown> | undefined)?.image as
-      | number
-      | null
-      | undefined) ??
+      number | null | undefined) ??
     (originalDoc.profileImage as number | null | undefined) ??
     null
 
   const content = originalDoc.content as { root?: LexicalTextNode } | undefined
-  const body = lexicalToPlainText(content?.root).replace(/\s+/g, " ").trim()
+  const body = lexicalToPlainText(content?.root).replace(/\s+/g, " ").trim().slice(0, 39000)
 
   return { ...searchDoc, title, excerpt, slug, authors, topics, image, body }
 }
+
+// The collections build their own SEO tab, so keep them as they are. The
+// plugin still needs them listed: its generate endpoints refuse any other.
+// Drop this wrapper once plugin-seo can authorize without injecting fields:
+// https://github.com/payloadcms/payload/issues/18311
+const seo: Plugin = async (config) => ({
+  ...(await seoPlugin({
+    collections: ["articles", "pages", "volumes", "topics"],
+    generateTitle,
+    generateDescription,
+    generateURL,
+  })(config)),
+  collections: config.collections,
+})
 
 export const plugins: Plugin[] = [
   searchPlugin({
@@ -143,10 +202,7 @@ export const plugins: Plugin[] = [
     collections: ["categories"],
     generateURL: (docs) => docs.reduce((url, doc) => `${url}/${doc.slug}`, ""),
   }),
-  seoPlugin({
-    generateTitle,
-    generateURL,
-  }),
+  seo,
   formBuilderPlugin({
     fields: {
       payment: false,
@@ -199,6 +255,20 @@ export const plugins: Plugin[] = [
           }
 
           return `${supabaseUrl}/storage/v1/object/public/${bucket}/${filename}`
+        },
+      },
+      "map-assets": {
+        disablePayloadAccessControl: true,
+        prefix: "map-assets",
+        generateFileURL: ({ filename }) => {
+          const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+          const bucket = process.env.S3_BUCKET
+
+          if (!supabaseUrl || !bucket) {
+            return `/map-assets/${filename}`
+          }
+
+          return `${supabaseUrl}/storage/v1/object/public/${bucket}/map-assets/${filename}`
         },
       },
     },

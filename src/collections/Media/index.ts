@@ -9,9 +9,9 @@ import {
 import path from "path"
 import { fileURLToPath } from "url"
 
-import { anyone, staff } from "@/access/roles"
+import { anyone, staff } from "@/access/collections"
 import { canDeleteMedia } from "@/access/canDeleteMedia"
-import { editorOrSelf } from "@/access/editorOrSelf"
+import { isCreatedByOrEditor } from "@/access/policies"
 
 import type { Media as MediaType } from "@/payload-types"
 import { regenerateBlurHandler } from "./endpoints/regenerateBlur"
@@ -39,7 +39,7 @@ export const Media: CollectionConfig = {
     create: staff,
     delete: canDeleteMedia,
     read: anyone,
-    update: editorOrSelf,
+    update: isCreatedByOrEditor,
   },
   admin: {
     defaultColumns: ["filename", "alt", "caption"],
@@ -101,13 +101,17 @@ export const Media: CollectionConfig = {
               type: "relationship",
               relationTo: "users",
               filterOptions: {
-                role: {
-                  equals: "narrator",
+                roles: {
+                  in: ["narrator"],
                 },
               },
               admin: {
                 description: "User who recorded this narration",
-                condition: (_, siblingData) => siblingData?.mimeType?.startsWith("audio/"),
+                // Hidden for non-audio uploads by the component itself, which can see a
+                // pending file that an `admin.condition` cannot.
+                components: {
+                  Field: "@/collections/Media/components/NarratorField#NarratorField",
+                },
               },
             },
             {
@@ -115,7 +119,6 @@ export const Media: CollectionConfig = {
               type: "number",
               admin: {
                 description: "Duration in seconds (auto-populated from the audio file)",
-                condition: (_, siblingData) => siblingData?.mimeType?.startsWith("audio/"),
                 components: {
                   Field: "@/collections/Media/components/DurationField#DurationField",
                 },

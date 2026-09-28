@@ -4,7 +4,7 @@ import type { NextConfig } from "next"
 import path from "path"
 import { fileURLToPath } from "url"
 
-import { resolveSentryDeployment } from "./src/sentry/deployment"
+import { prNumberFromFqdn } from "./src/utilities/prNumberFromFqdn"
 
 const __filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(__filename)
@@ -17,16 +17,15 @@ const NEXT_PUBLIC_SUPABASE_URL = new URL(
   process.env.NEXT_PUBLIC_SUPABASE_URL || "https://example.com",
 )
 
-// Sentry's environment and PR tag, resolved here because this is the only place that sees
-// BUILD_ENV at build time. See src/sentry/deployment.ts.
-const sentryDeployment = resolveSentryDeployment(process.env)
-
 const nextConfig: NextConfig = {
   output: "standalone",
-  // Inlined into every bundle (client, server, edge) for the Sentry configs to share.
+  // Inlined into every bundle (client, server, edge) for the Sentry configs to share; only
+  // the build sees BUILD_ENV and COOLIFY_FQDN. Sentry's environment is the deploy
+  // (production, staging, preview), and a preview is tagged with its PR.
   env: {
-    SENTRY_ENVIRONMENT: sentryDeployment.environment,
-    SENTRY_PR: sentryDeployment.pr,
+    SENTRY_ENVIRONMENT: process.env.BUILD_ENV || "development",
+    SENTRY_PR:
+      process.env.BUILD_ENV === "preview" ? prNumberFromFqdn(process.env.COOLIFY_FQDN) : "",
   },
   // Temporarily required on Windows until Next.js fixes Turbopack Sass resolution.
   // See: https://github.com/vercel/next.js/issues/86431

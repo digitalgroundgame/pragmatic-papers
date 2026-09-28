@@ -31,7 +31,12 @@ export const CMSButton: React.FC<CMSButtonProps> = ({
   ...props
 }) => {
   return (
-    <CMSLink className={cn(buttonVariants({ variant, size, className }))} link={link} {...props}>
+    <CMSLink
+      data-slot="button"
+      className={cn(buttonVariants({ variant, size, className }))}
+      link={link}
+      {...props}
+    >
       {children}
     </CMSLink>
   )

@@ -8,6 +8,7 @@ import { createCodeBlocksArticle } from "./features/code-blocks"
 import { createCollectionGridHomePage } from "./features/collection-grid"
 import { createFootnotesArticle } from "./features/footnotes"
 import { createMoCongressionalMapsArticle } from "./features/interactive-maps"
+import { createFederalCourtsInteractive } from "./features/interactives"
 import { createMathBlocksArticle } from "./features/math-blocks"
 import { createMediaCollageArticle } from "./features/media-collage"
 import { createNarrationDemoArticle } from "./features/narration-demo"
@@ -84,6 +85,9 @@ export const seed = async (
         await payload.delete({ collection: "pages", context, where: {} })
         await payload.delete({ collection: "forms", context, where: {} })
         await payload.delete({ collection: "form-submissions", context, where: {} })
+        // Snapshots point at their interactive, so they go first.
+        await payload.delete({ collection: "interactive-snapshots", context, where: {} })
+        await payload.delete({ collection: "interactives", context, where: {} })
       },
     },
     {
@@ -341,6 +345,16 @@ export const seed = async (
             context,
           ),
         )
+      },
+    },
+    {
+      // The Federal Courts drilldown is an interactive page, not an article: its data is
+      // synced from the tracker and versioned, so it outlives any one piece of writing.
+      name: "Creating interactives...",
+      fn: async () => {
+        // With COURT_TRACKER_GITHUB_TOKEN set this reads every judge from upstream's newest
+        // release; without it, the trimmed fixture.
+        await createFederalCourtsInteractive(payload, context, undefined, { live: true })
       },
     },
     {

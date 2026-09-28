@@ -74,46 +74,48 @@ export default async function Article({ params: paramsPromise }: Args): Promise<
 
   return (
     <>
-      <article className="mx-auto max-w-5xl min-w-0 space-y-6 px-4">
-        <JsonLd
-          data={[
-            buildArticleJsonLd(article, url, volume),
-            buildBreadcrumbJsonLd([{ name: article.meta?.title || article.title, path: url }]),
-          ]}
-        />
-        {/* Allows redirects for valid pages too */}
-        <PayloadRedirects disableNotFound url={url} />
+      <div className="@container/page">
+        <article className="mx-auto max-w-5xl min-w-0 space-y-6 px-4">
+          <JsonLd
+            data={[
+              buildArticleJsonLd(article, url, volume),
+              buildBreadcrumbJsonLd([{ name: article.meta?.title || article.title, path: url }]),
+            ]}
+          />
+          {/* Allows redirects for valid pages too */}
+          <PayloadRedirects disableNotFound url={url} />
 
-        {draft && <LivePreviewListener />}
+          {draft && <LivePreviewListener />}
 
-        <TableOfContentsProvider>
-          <ArticleHero article={article} />
-          <div
-            id="intro"
-            className="lg:toc-open:gap-10 xl:toc-open:gap-20 relative flex flex-col justify-between gap-3 lg:flex-row lg:gap-6"
-          >
-            {showTableOfContents && (
-              <ArticleSidebar>
-                <TableOfContents content={content} />
-              </ArticleSidebar>
-            )}
-            <div className="mx-auto max-w-2xl space-y-3">
-              <MathJaxProvider enableMathRendering={enableMathRendering}>
-                <RichText
-                  data={content}
-                  enableGutter={false}
-                  className="drop-cap"
-                  parentDoc={{ collection: "articles", id: article.id }}
-                />
-              </MathJaxProvider>
-              <FootnoteList footnotes={footnotes} />
-              <Separator />
-              <TopicsList topics={topics} />
-              <AuthorList aria-label="Article Authors" authors={populatedAuthors} />
+          <TableOfContentsProvider>
+            <ArticleHero article={article} />
+            <div
+              id="intro"
+              className="lg:toc-open:gap-10 xl:toc-open:gap-20 relative flex flex-col justify-between gap-3 lg:flex-row lg:gap-6"
+            >
+              {showTableOfContents && (
+                <ArticleSidebar>
+                  <TableOfContents content={content} />
+                </ArticleSidebar>
+              )}
+              <div className="mx-auto max-w-2xl space-y-3">
+                <MathJaxProvider enableMathRendering={enableMathRendering}>
+                  <RichText
+                    data={content}
+                    enableGutter={false}
+                    className="drop-cap"
+                    parentDoc={{ collection: "articles", id: article.id }}
+                  />
+                </MathJaxProvider>
+                <FootnoteList footnotes={footnotes} />
+                <Separator />
+                <TopicsList topics={topics} />
+                <AuthorList aria-label="Article Authors" authors={populatedAuthors} />
+              </div>
             </div>
-          </div>
-        </TableOfContentsProvider>
-      </article>
+          </TableOfContentsProvider>
+        </article>
+      </div>
       <RecommendedArticles currentArticleSlug={slug} />
     </>
   )

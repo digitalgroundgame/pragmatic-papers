@@ -1,4 +1,4 @@
-import type { MediaBlock as MediaBlockProps } from "@/payload-types"
+import type { MediaBlock as MediaBlockProps, Media as MediaType } from "@/payload-types"
 import {
   type JSXConvertersFunction,
   LinkJSXConverter,
@@ -23,7 +23,6 @@ export type StyledMediaBlockProps = Omit<MediaBlockProps, "blockType"> & {
   sizes?: string | undefined
   disableInnerContainer?: boolean
   variant?: ImageVariant
-  mediaWrapper?: (media: React.ReactNode) => React.ReactNode
 }
 
 const converters: JSXConvertersFunction<DefaultNodeTypes> = ({ defaultConverters }) => ({
@@ -58,36 +57,23 @@ const converters: JSXConvertersFunction<DefaultNodeTypes> = ({ defaultConverters
   ),
 })
 
-export const MediaBlock: React.FC<StyledMediaBlockProps> = ({ sizes, ...props }) => {
-  const {
-    breakout,
-    captionClassName,
-    className,
-    enableGutter = true,
-    imgClassName,
-    imgStyle,
-    media,
-    variant = "medium",
-    disableInnerContainer,
-    mediaWrapper = (node) => node,
-  } = props
-  if (!isMedia(media)) return null
+type MediaBlockFrameProps = Pick<
+  StyledMediaBlockProps,
+  "breakout" | "className" | "enableGutter"
+> & {
+  hasCaption?: boolean
+  children: React.ReactNode
+}
 
-  sizes = sizes || "(max-width: 768px) 100vw, 800px"
-
-  const { caption } = media
-
-  const mediaNode = (
-    <Media
-      className={cn("border", imgClassName)}
-      style={imgStyle}
-      media={media}
-      sizes={sizes}
-      variant={variant}
-    />
-  )
-
-  const Slot: React.ElementType = caption ? "figure" : "picture"
+/** A `<figure>` when there is a caption to hold, a `<picture>` otherwise. */
+export const MediaBlockFrame: React.FC<MediaBlockFrameProps> = ({
+  breakout,
+  children,
+  className,
+  enableGutter = true,
+  hasCaption,
+}) => {
+  const Slot: React.ElementType = hasCaption ? "figure" : "picture"
   return (
     <Slot
       className={cn(
@@ -98,20 +84,96 @@ export const MediaBlock: React.FC<StyledMediaBlockProps> = ({ sizes, ...props })
         className,
       )}
     >
-      {mediaWrapper(mediaNode)}
-      {caption && (
-        <figcaption
-          className={cn(
-            "my-1.5 text-start font-serif leading-tight",
-            {
-              container: !disableInnerContainer,
-            },
-            captionClassName,
-          )}
-        >
-          <RichText converters={converters} data={caption} disableContainer />
-        </figcaption>
-      )}
+      {children}
     </Slot>
+  )
+}
+
+type MediaBlockImageProps = Pick<
+  StyledMediaBlockProps,
+  "imgClassName" | "imgStyle" | "sizes" | "variant"
+> & {
+  media: MediaType
+}
+
+export const MediaBlockImage: React.FC<MediaBlockImageProps> = ({
+  imgClassName,
+  imgStyle,
+  media,
+  sizes,
+  variant = "medium",
+}) => (
+  <Media
+    className={cn("border", imgClassName)}
+    style={imgStyle}
+    media={media}
+    sizes={sizes || "(max-width: 768px) 100vw, 800px"}
+    variant={variant}
+  />
+)
+
+type MediaBlockCaptionProps = Pick<
+  StyledMediaBlockProps,
+  "captionClassName" | "disableInnerContainer"
+> & {
+  caption: NonNullable<MediaType["caption"]>
+}
+
+export const MediaBlockCaption: React.FC<MediaBlockCaptionProps> = ({
+  caption,
+  captionClassName,
+  disableInnerContainer,
+}) => (
+  <figcaption
+    className={cn(
+      "my-1.5 text-start font-serif leading-tight",
+      {
+        container: !disableInnerContainer,
+      },
+      captionClassName,
+    )}
+  >
+    <RichText converters={converters} data={caption} disableContainer />
+  </figcaption>
+)
+
+export const MediaBlock: React.FC<StyledMediaBlockProps> = ({
+  breakout,
+  captionClassName,
+  className,
+  disableInnerContainer,
+  enableGutter,
+  imgClassName,
+  imgStyle,
+  media,
+  sizes,
+  variant,
+}) => {
+  if (!isMedia(media)) return null
+
+  const { caption } = media
+
+  return (
+    <MediaBlockFrame
+      hasCaption={!!caption}
+      breakout={breakout}
+      className={className}
+      enableGutter={enableGutter}
+    >
+      <MediaBlockImage
+        media={media}
+        imgClassName={imgClassName}
+        imgStyle={imgStyle}
+        sizes={sizes}
+        variant={variant}
+      />
+      {caption && (
+        <MediaBlockCaption
+          caption={caption}
+          captionClassName={captionClassName}
+          disableInnerContainer={disableInnerContainer}
+        />
+      )}
+    </MediaBlockFrame>
   )
 }

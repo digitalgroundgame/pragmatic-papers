@@ -2,12 +2,16 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import type * as Logic from "../logic"
+import type * as Source from "../source"
 
 vi.mock("../logic", async (importOriginal) => ({
   ...(await importOriginal<typeof Logic>()),
   cloneArticleFromProduction: vi.fn(),
 }))
-vi.mock("../source", () => ({ searchProductionArticles: vi.fn() }))
+vi.mock("../source", async (importOriginal) => ({
+  ...(await importOriginal<typeof Source>()),
+  searchProductionArticles: vi.fn(),
+}))
 
 import type { PayloadRequest } from "payload"
 
@@ -39,25 +43,36 @@ function request(overrides: Partial<Record<string, unknown>> = {}) {
 }
 
 describe("clone-from-production endpoints", () => {
-  const originalBuildEnv = process.env.BUILD_ENV
   beforeEach(() => {
     vi.clearAllMocks()
-    delete process.env.BUILD_ENV
+    vi.stubEnv("BUILD_ENV", undefined)
+    vi.stubEnv("NEXT_PUBLIC_SERVER_URL", "http://localhost:8000")
   })
   afterEach(() => {
     vi.useRealTimers()
-    if (originalBuildEnv === undefined) delete process.env.BUILD_ENV
-    else process.env.BUILD_ENV = originalBuildEnv
+    vi.unstubAllEnvs()
   })
 
   it.each([
     ["search", productionSearchEndpoint],
     ["clone", cloneFromProductionEndpoint],
   ])("%s is refused on production", async (_, endpoint) => {
-    process.env.BUILD_ENV = "production"
+    vi.stubEnv("BUILD_ENV", "production")
     const res = await endpoint.handler(request())
     expect(res.status).toBe(403)
   })
+
+  it.each([
+    ["search", productionSearchEndpoint, "https://pragmaticpapers.com"],
+    ["clone", cloneFromProductionEndpoint, "https://www.pragmaticpapers.com/"],
+  ])(
+    "%s is refused on the production URL even without BUILD_ENV",
+    async (_, endpoint, serverUrl) => {
+      vi.stubEnv("NEXT_PUBLIC_SERVER_URL", serverUrl)
+      const res = await endpoint.handler(request())
+      expect(res.status).toBe(403)
+    },
+  )
 
   it.each([
     ["search", productionSearchEndpoint],

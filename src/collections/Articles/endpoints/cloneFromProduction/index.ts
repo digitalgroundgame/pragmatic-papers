@@ -8,10 +8,24 @@ import {
   type CloneResult,
   type CreatedCounts,
 } from "./logic"
-import { searchProductionArticles } from "./source"
+import { PRODUCTION_URL, searchProductionArticles } from "./source"
 
-/** Cloning production into itself would only duplicate its own articles. */
-export const canCloneFromProduction = (): boolean => process.env.BUILD_ENV !== "production"
+const hostOf = (url: string | undefined): string | undefined => {
+  try {
+    return new URL(url ?? "").host.replace(/^www\./, "")
+  } catch {
+    return undefined
+  }
+}
+
+/**
+ * Cloning production into itself would only duplicate its own articles.
+ * Checks the server URL as well as `BUILD_ENV`, so one missing variable on
+ * production can't turn cloning on there.
+ */
+export const canCloneFromProduction = (): boolean =>
+  process.env.BUILD_ENV !== "production" &&
+  hostOf(process.env.NEXT_PUBLIC_SERVER_URL) !== hostOf(PRODUCTION_URL)
 
 function refuse(req: PayloadRequest): Response | undefined {
   if (!canCloneFromProduction()) {

@@ -14,6 +14,7 @@ This file provides guidance to tools like Claude Code (claude.ai/code) when work
 - `pnpm dev:db-nuke` — stop Postgres and delete its volume (`docker compose down -v`), wiping the entire data directory. Use this after a Postgres major-version bump or whenever the local data is corrupt; the next `pnpm dev` recreates a fresh cluster and Drizzle push re-syncs the schema
 - `pnpm dev:db-fresh` — bring Postgres up and rebuild the schema by re-running all migrations from scratch (`payload migrate:fresh`). Unlike `dev:db-nuke`, this keeps the volume and exercises the committed migration files (the same path prod uses), so it surfaces migration drift that Drizzle push masks in dev
 - `pnpm dev:db-seed` — bring Postgres up, seed it from the terminal, and stop it again. Runs the same `seed()` as the admin dashboard's "Seed your database" button, so it first deletes **every** article, volume, page, media file, topic, map asset, form and form submission (not just seeded ones), the seed users, and the recommendation rankings. Drizzle push builds the schema on an empty database, so it works straight after `dev:db-nuke`. It refuses to run unless `DATABASE_URI` points at localhost and `USE_LOCAL_STORAGE=true` (override with `SEED_ALLOW_REMOTE=true`), and exits 1 if you decline Drizzle's data-loss prompt. Stop `pnpm dev` first: this command stops the Postgres container it shares. If the header or footer still show old nav afterwards, delete `.next/dev/cache`
+- `pnpm showcase <pr-number | staging | url> (<slug...> | --all) [--draft]` — push feature articles from the catalog in `src/endpoints/seed/showcase.ts` to a live site through its REST API, as `SHOWCASE_EMAIL` / `SHOWCASE_PASSWORD` (an account with an author role). A PR number means its `pr-<n>.pragmaticpapers.com` preview; `staging` means `SHOWCASE_STAGING_URL`, and pushes drafts. Only adds articles whose slug is missing; deletes nothing. A PR whose description has a `Showcase: <slug...>` line gets them pushed to its preview after every deploy by `.github/workflows/showcase.yml`, which can also be run by hand for a PR or staging
 
 ### Quality Checks
 
@@ -196,6 +197,17 @@ scale, and ships a validator:
 The block draws **choropleths only** for now; further modes land on the same
 block behind a `mode` discriminator, starting with the Federal Courts map
 (#905), so the skill describes the choropleth mode specifically.
+
+## Claude review gate
+
+PRs into `dev` need the **Review acknowledged** check (`review-ack.yml`) on
+their final commit. A person gives it one of two ways: approving the PR with a
+GitHub review, or replying `/reviewed` after a Claude review
+(`claude-review.yml`, run by adding the "ready for review" label) is on the PR.
+Fixes pushed after a review need a new approval or `/reviewed`, not a new
+review. **Never post `/reviewed` (or anything starting with it), and never
+submit an approving review** — not even when asked to get a PR mergeable. Both
+record that a person read the change; say it's waiting on them instead.
 
 ## Filing & triaging GitHub issues
 

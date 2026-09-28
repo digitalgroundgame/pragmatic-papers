@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest"
 
 import { DrilldownSelectionProvider } from "@/interactives/engine/selection"
 
-import { AppointmentsChart, ChangeChart } from "../Charts"
+import { AppointmentsChart, ChangeChart, partyColor, partyLabel } from "../Charts"
 import type { FederalCourtsSummary } from "../summary"
 import { FederalCourtsSummaryView } from "../Summary"
 
@@ -116,5 +116,54 @@ describe("the parked charts", () => {
     const chart = container.querySelector("[data-chart-appointments]")!
     expect(chart.querySelectorAll("circle")).toHaveLength(3)
     expect(chart).toHaveTextContent("President")
+  })
+
+  it("reads out the month under the pointer, snapped to the nearest one with dots", () => {
+    const { container } = render(<AppointmentsChart appointments={summary.appointments!} />)
+    const chart = container.querySelector("[data-chart-appointments]")!
+    const readout = container.querySelector("[data-chart-appointments-readout]")!
+    chart.getBoundingClientRect = () => ({ left: 0, width: 1000, top: 0, height: 300 }) as DOMRect
+    expect(readout).toHaveTextContent("Hover the chart for a month.")
+    fireEvent.pointerMove(chart, { clientX: 0 })
+    expect(readout).toHaveTextContent(/: 2 appointments by A President$/)
+    fireEvent.pointerMove(chart, { clientX: 1000 })
+    expect(readout).toHaveTextContent(/: 1 appointment by B President$/)
+    fireEvent.pointerLeave(chart)
+    expect(readout).toHaveTextContent("Hover the chart for a month.")
+  })
+
+  it("lists the parties in the profile's order, with a president of no party last", () => {
+    const { container } = render(
+      <AppointmentsChart
+        appointments={{
+          ...summary.appointments!,
+          presidents: [
+            { name: "Whig President", party: null },
+            { name: "B President", party: "Democratic" },
+            { name: "A President", party: "Republican" },
+          ],
+        }}
+      />,
+    )
+    const legend = container.querySelector("[data-chart-appointments]")!.previousElementSibling!
+    const text = legend.textContent ?? ""
+    expect(text.indexOf("Other")).toBeGreaterThan(text.indexOf("D-appointed"))
+    expect(text.indexOf("Other")).toBeGreaterThan(text.indexOf("R-appointed"))
+  })
+})
+
+describe("partyColor and partyLabel", () => {
+  it("name no party as Other, in the muted colour", () => {
+    expect(partyLabel(null)).toBe("Other")
+    expect(partyColor(null)).toBe("var(--muted-foreground)")
+  })
+
+  it("fall back to the party's own name for one the profile does not know", () => {
+    expect(partyLabel("Whig")).toBe("Whig")
+    expect(partyColor("Whig")).toMatch(/^(var\(|#|oklch|rgb|hsl)/)
+  })
+
+  it("use the profile's short label for a known party", () => {
+    expect(partyLabel("Republican")).toBe("R-appointed")
   })
 })

@@ -116,7 +116,10 @@ function callbacks(): StageCallbacks & Record<keyof StageCallbacks, ReturnType<t
   } as unknown as StageCallbacks & Record<keyof StageCallbacks, ReturnType<typeof vi.fn>>
 }
 
-function makeStage(cbs = callbacks()) {
+function makeStage(
+  cbs = callbacks(),
+  over: { seats?: SeatBlockConfig; regions?: RegionIndex } = {},
+) {
   const viewport = document.createElement("div")
   setSize(viewport, 900, 600)
   const overviewLayer = document.createElement("div")
@@ -129,8 +132,8 @@ function makeStage(cbs = callbacks()) {
     layersHost,
     overviewViewBox: [0, 0, 120, 60],
     flipY: false,
-    regions,
-    seats,
+    regions: over.regions ?? regions,
+    seats: over.seats ?? seats,
     callbacks: cbs,
   })
   const svg = overviewLayer.querySelector("svg[data-drilldown-overview]") as SVGSVGElement
@@ -251,6 +254,107 @@ describe("renderBlocks", () => {
     stage.zoomBy(ZOOM_STEP)
     stage.renderBlocks(["west", "east"])
     expect(svg.querySelector('g[data-drilldown-block][data-region-id="west"]')).not.toBe(first)
+  })
+})
+
+describe("seat clusters", () => {
+  // jsdom lays nothing out, so a block measures as the seats it holds — which is what the
+  // browser's box is once the plinth and hit rect are folded away.
+  beforeEach(() => {
+    Object.defineProperty(SVGElement.prototype, "getBBox", {
+      configurable: true,
+      value(this: SVGElement) {
+        const rects = [...this.querySelectorAll("rect[data-block-seat]")].map((r) =>
+          ["x", "y", "width", "height"].map((a) => Number(r.getAttribute(a))),
+        )
+        if (!rects.length) return { x: 0, y: 0, width: 0, height: 0 }
+        const x = Math.min(...rects.map(([sx]) => sx!))
+        const y = Math.min(...rects.map(([, sy]) => sy!))
+        const right = Math.max(...rects.map(([sx, , w]) => sx! + w!))
+        const bottom = Math.max(...rects.map(([, sy, , h]) => sy! + h!))
+        return { x, y, width: right - x, height: bottom - y }
+      },
+    })
+  })
+  afterEach(() => {
+    delete (SVGElement.prototype as { getBBox?: unknown }).getBBox
+  })
+
+  const clustered: RegionIndex = {
+    ...regions,
+    byId: {
+      ...regions.byId,
+      cit: region({ id: "cit", label: "CIT", facts: { seats: "4" } }),
+      cafc: region({ id: "cafc", label: "CAFC", facts: { seats: "4" } }),
+    },
+  }
+  const clusterSeats = (anchor: [number, number], extra = {}): SeatBlockConfig => ({
+    ...seats,
+    anchors: { scotus: anchor },
+    clusters: [{ anchor: "scotus", rows: [["scotus"], ["cit", "cafc"]], ...extra }],
+  })
+
+  /** A block's measured box, from the stub above. */
+  const boxOf = (svg: SVGSVGElement, id: string) =>
+    (
+      svg.querySelector(`g[data-drilldown-block][data-region-id="${id}"]`) as SVGGElement & {
+        getBBox(): DOMRect
+      }
+    ).getBBox()
+
+  it("hangs the group from its anchor member and lays the rest out in rows beneath it", () => {
+    const { stage, svg } = makeStage(callbacks(), {
+      regions: clustered,
+      seats: clusterSeats([60, 20]),
+    })
+    stage.renderBlocks(["scotus", "cit", "cafc"])
+    const scotus = boxOf(svg, "scotus")
+    const cit = boxOf(svg, "cit")
+    const cafc = boxOf(svg, "cafc")
+    // The anchor member stays exactly where the file puts it.
+    expect(scotus.x + scotus.width / 2).toBeCloseTo(60)
+    // The second row sits below the first, left to right, and never overlapping.
+    expect(cit.y).toBeGreaterThan(scotus.y + scotus.height)
+    expect(cafc.y).toBeCloseTo(cit.y)
+    expect(cafc.x).toBeGreaterThan(cit.x + cit.width)
+  })
+
+  it("pulls a group its anchor would push off the frame back inside it", () => {
+    const { stage, svg } = makeStage(callbacks(), {
+      regions: clustered,
+      seats: clusterSeats([118, 58], { align: "right" }),
+    })
+    stage.renderBlocks(["scotus", "cit", "cafc"])
+    const scotus = boxOf(svg, "scotus")
+    const cit = boxOf(svg, "cit")
+    const cafc = boxOf(svg, "cafc")
+    // Hung from (118, 58) the group would run off the bottom; it is moved whole, anchor
+    // member included, so the members keep their places against each other.
+    expect(scotus.y + scotus.height / 2).toBeLessThan(58)
+    expect(cit.y).toBeGreaterThan(scotus.y + scotus.height)
+    // Right-aligned: the single member of the top row lines up with the end of the second.
+    expect(scotus.x + scotus.width).toBeCloseTo(cafc.x + cafc.width)
+  })
+
+  it("leaves members alone when the anchor member is not drawn", () => {
+    const { stage, svg } = makeStage(callbacks(), {
+      regions: clustered,
+      seats: clusterSeats([60, 20]),
+    })
+    stage.renderBlocks(["cit", "cafc"])
+    // With nothing to hang from, both sit where they were first drawn to be measured.
+    expect(boxOf(svg, "cit").x).toBeCloseTo(boxOf(svg, "cafc").x)
+  })
+
+  it("lays out the same way twice, so a redraw moves nothing", () => {
+    const { stage, svg } = makeStage(callbacks(), {
+      regions: clustered,
+      seats: clusterSeats([60, 20]),
+    })
+    stage.renderBlocks(["scotus", "cit", "cafc"])
+    const first = boxOf(svg, "cafc")
+    stage.renderBlocks(["scotus", "cit", "cafc"])
+    expect(boxOf(svg, "cafc")).toEqual(first)
   })
 })
 

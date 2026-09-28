@@ -1107,3 +1107,105 @@ describe("DrilldownMapClient", () => {
     )
   })
 })
+
+describe("DrilldownMapClient shortcuts", () => {
+  beforeEach(() => {
+    vi.spyOn(console, "warn").mockImplementation(() => undefined)
+  })
+  afterEach(() => {
+    cleanup()
+    vi.unstubAllGlobals()
+    vi.restoreAllMocks()
+    window.history.replaceState(null, "", "/interactives/courts")
+  })
+
+  const viewportOf = (container: HTMLElement) =>
+    container.querySelector<HTMLElement>("[data-drilldown-viewport]")!
+  const overviewOf = (container: HTMLElement) =>
+    container.querySelector<SVGSVGElement>("svg[data-drilldown-overview]")!
+  const press = (target: Element, key: string, init: KeyboardEventInit = {}) =>
+    fireEvent.keyDown(target, { key, ...init })
+
+  it("zooms in with + or =, out with - or _, and back to the whole map with 0", () => {
+    const { container } = setup()
+    const viewport = viewportOf(container)
+    press(viewport, "+")
+    expect(viewport).toHaveAttribute("data-zoomed")
+    press(viewport, "-")
+    expect(viewport).not.toHaveAttribute("data-zoomed")
+    press(viewport, "=")
+    press(viewport, "=")
+    press(viewport, "_")
+    expect(viewport).toHaveAttribute("data-zoomed")
+    press(viewport, "0")
+    expect(viewport).not.toHaveAttribute("data-zoomed")
+  })
+
+  it("pans with the arrows only once zoomed in, and only from the map itself", () => {
+    const { container } = setup()
+    const viewport = viewportOf(container)
+    const svg = overviewOf(container)
+    const atRest = svg.getAttribute("viewBox")
+    // At rest the arrows belong to the rail's tree.
+    press(viewport, "ArrowRight")
+    expect(svg.getAttribute("viewBox")).toBe(atRest)
+
+    press(viewport, "+")
+    for (const key of ["ArrowRight", "ArrowDown", "ArrowLeft", "ArrowUp"]) {
+      const before = svg.getAttribute("viewBox")
+      const event = new KeyboardEvent("keydown", { key, bubbles: true, cancelable: true })
+      viewport.dispatchEvent(event)
+      expect(svg.getAttribute("viewBox"), key).not.toBe(before)
+      expect(event.defaultPrevented, key).toBe(true)
+    }
+    // From the rail, the same key walks the tree and leaves the map where it is.
+    const before = svg.getAttribute("viewBox")
+    press(selector(container).getByRole("button", { name: "West" }), "ArrowRight")
+    expect(svg.getAttribute("viewBox")).toBe(before)
+  })
+
+  it("leaves the keys alone with a modifier held, or inside a text field", () => {
+    const { container } = setup({ search: { url: "/search" } })
+    const viewport = viewportOf(container)
+    press(viewport, "+", { ctrlKey: true })
+    press(viewport, "+", { metaKey: true })
+    press(viewport, "+", { altKey: true })
+    press(screen.getByRole("combobox"), "+")
+    expect(viewport).not.toHaveAttribute("data-zoomed")
+  })
+
+  it("asks for the whole screen with F, and gives it back on a second press", () => {
+    const { container } = setup()
+    const root = container.querySelector<HTMLElement>("[data-drilldown-map]")!
+    const request = vi.fn(async () => undefined)
+    const exit = vi.fn(async () => undefined)
+    root.requestFullscreen = request
+    Object.defineProperty(document, "exitFullscreen", { value: exit, configurable: true })
+    press(viewportOf(container), "f")
+    expect(request).toHaveBeenCalledTimes(1)
+
+    Object.defineProperty(document, "fullscreenElement", { value: root, configurable: true })
+    act(() => void document.dispatchEvent(new Event("fullscreenchange")))
+    press(viewportOf(container), "F")
+    expect(exit).toHaveBeenCalledTimes(1)
+    Object.defineProperty(document, "fullscreenElement", { value: null, configurable: true })
+  })
+
+  it("Escape on a child map with the pane closed goes back up to the overview", async () => {
+    const { container } = setup()
+    fireEvent.click(selector(container).getByRole("button", { name: "West" }))
+    const viewport = viewportOf(container)
+    await waitFor(() => expect(viewport).toHaveAttribute("data-view", "child"))
+    fireEvent.keyDown(document, { key: "Escape" }) // closes the pane
+    await waitFor(() => expect(pane(container)).not.toHaveAttribute("data-open"))
+    press(viewport, "Escape")
+    await waitFor(() => expect(viewport).toHaveAttribute("data-view", "overview"))
+  })
+
+  it("Escape on the overview does nothing", () => {
+    const { container } = setup()
+    const event = new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true })
+    viewportOf(container).dispatchEvent(event)
+    expect(event.defaultPrevented).toBe(false)
+  })
+})

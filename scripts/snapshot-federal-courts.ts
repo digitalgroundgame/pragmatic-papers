@@ -27,7 +27,7 @@ import { localFileSource } from "../src/integrations/files"
 import { RELEASE_REF } from "../src/integrations/github"
 
 const PROFILE_DIR = path.resolve("src/interactives/federal-courts")
-const CIRCUITS = [
+export const CIRCUITS = [
   "ca1",
   "ca2",
   "ca3",
@@ -42,9 +42,9 @@ const CIRCUITS = [
   "cadc",
 ]
 
-function arg(name: string): string | undefined {
-  const i = process.argv.indexOf(name)
-  return i >= 0 ? process.argv[i + 1] : undefined
+function arg(argv: readonly string[], name: string): string | undefined {
+  const i = argv.indexOf(name)
+  return i >= 0 ? argv[i + 1] : undefined
 }
 
 function kb(s: string): string {
@@ -76,9 +76,9 @@ function snapshotAnchors(source: string, outDir: string): void {
   )
 }
 
-function snapshotGeometry(source: string): number {
+export function snapshotGeometry(source: string, profileDir = PROFILE_DIR): number {
   const geoDir = path.join(source, "assets", "geo")
-  const outDir = path.join(PROFILE_DIR, "geometry")
+  const outDir = path.join(profileDir, "geometry")
   mkdirSync(path.join(outDir, "circuits"), { recursive: true })
   const write = (rel: string, svg: string): void => {
     const file = svgToGeometryFile(svg)
@@ -94,16 +94,20 @@ function snapshotGeometry(source: string): number {
   return 0
 }
 
-async function snapshotData(): Promise<number> {
-  const source = arg("--source")
-  const ref = arg("--ref") ?? RELEASE_REF
+export async function snapshotData(
+  argv: readonly string[],
+  env: Record<string, string | undefined> = process.env,
+  profileDir = PROFILE_DIR,
+): Promise<number> {
+  const source = arg(argv, "--source")
+  const ref = arg(argv, "--ref") ?? RELEASE_REF
   // What the fixture records as its provenance. Reading a checkout, that is the directory —
   // unless the caller says which release the checkout is of, which is the useful answer and
   // the only one that means anything in another clone.
-  const recordedRef = source ? (arg("--ref") ?? `dir:${path.resolve(source)}`) : ref
+  const recordedRef = source ? (arg(argv, "--ref") ?? `dir:${path.resolve(source)}`) : ref
   const opts = source
     ? { ref: recordedRef, files: localFileSource(path.resolve(source)) }
-    : { ref, token: process.env.COURT_TRACKER_GITHUB_TOKEN ?? null }
+    : { ref, token: env.COURT_TRACKER_GITHUB_TOKEN ?? null }
   if (!source && !opts.token) {
     console.error("set COURT_TRACKER_GITHUB_TOKEN or pass --source <checkout>")
     return 1
@@ -117,7 +121,7 @@ async function snapshotData(): Promise<number> {
     console.error("feed is invalid:\n  " + errors.join("\n  "))
     return 1
   }
-  const outDir = path.join(PROFILE_DIR, "fixtures")
+  const outDir = path.join(profileDir, "fixtures")
   mkdirSync(outDir, { recursive: true })
   const json = JSON.stringify(data)
   writeFileSync(path.join(outDir, "data.json"), json)
@@ -127,16 +131,22 @@ async function snapshotData(): Promise<number> {
   return 0
 }
 
-const command = process.argv[2]
-const run =
-  command === "geometry"
-    ? Promise.resolve(snapshotGeometry(path.resolve(arg("--source") ?? "../court-tracker")))
-    : command === "data"
-      ? snapshotData()
-      : Promise.resolve(
-          (console.error(
-            "usage: snapshot-federal-courts.ts <geometry|data> [--source dir] [--ref ref|release]",
-          ),
-          2),
-        )
-run.then((code) => process.exit(code))
+/** The command line, as an exit code: 0 done, 1 refused or invalid, 2 not a command. */
+export function run(
+  argv: readonly string[],
+  env: Record<string, string | undefined> = process.env,
+  profileDir = PROFILE_DIR,
+): Promise<number> {
+  const command = argv[0]
+  if (command === "geometry")
+    return Promise.resolve(
+      snapshotGeometry(path.resolve(arg(argv, "--source") ?? "../court-tracker"), profileDir),
+    )
+  if (command === "data") return snapshotData(argv, env, profileDir)
+  console.error(
+    "usage: snapshot-federal-courts.ts <geometry|data> [--source dir] [--ref ref|release]",
+  )
+  return Promise.resolve(2)
+}
+
+if (!process.env.VITEST) void run(process.argv.slice(2)).then((code) => process.exit(code))

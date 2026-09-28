@@ -94,6 +94,17 @@ describe("releaseTarballSource", () => {
     ).rejects.toThrow("github:o/r@data-v1 data-json.tar.gz: HTTP 404")
   })
 
+  it("refuses an archive with no files in it, rather than serving an empty source", async () => {
+    const fetchImpl = vi.fn(async () => new Response(tarGz({}), { status: 200 }))
+    await expect(
+      releaseTarballSource({
+        label: "github:o/r@data-v1 data-json.tar.gz",
+        url: "https://api.github.com/repos/o/r/releases/assets/7",
+        fetchImpl: fetchImpl as unknown as typeof fetch,
+      }),
+    ).rejects.toThrow("github:o/r@data-v1 data-json.tar.gz: archive carries no files")
+  })
+
   it("gunzips through the platform decompressor", async () => {
     const round = await gunzip(new Uint8Array(gzipSync(Buffer.from("hello"))))
     expect(new TextDecoder().decode(round)).toBe("hello")

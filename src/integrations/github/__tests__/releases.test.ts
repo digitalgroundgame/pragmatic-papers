@@ -65,6 +65,27 @@ describe("latestTaggedRelease", () => {
     ).resolves.toBeNull()
   })
 
+  it("skips a tag that is only the prefix, since it names no version", async () => {
+    const fetchImpl = vi.fn(async () => ok([{ tag_name: "data-v" }, { tag_name: "data-v7" }]))
+    await expect(
+      latestTaggedRelease({ repo: "o/r", tagPrefix: "data-v", fetchImpl }),
+    ).resolves.toMatchObject({ tag: "data-v7", version: "7" })
+  })
+
+  it("reads a release whose assets are missing or malformed as having none", async () => {
+    const fetchImpl = vi.fn(async () => ok([{ tag_name: "data-v1", assets: "nope" }]))
+    await expect(
+      latestTaggedRelease({ repo: "o/r", tagPrefix: "data-v", fetchImpl }),
+    ).resolves.toEqual({ tag: "data-v1", version: "1", assets: [] })
+  })
+
+  it("throws when GitHub answers with something other than a list", async () => {
+    const fetchImpl = vi.fn(async () => ok({ message: "Bad credentials" }))
+    await expect(
+      latestTaggedRelease({ repo: "o/r", tagPrefix: "data-v", fetchImpl }),
+    ).rejects.toThrow("github:o/r releases: unexpected response")
+  })
+
   it("throws on a refused request rather than reporting no releases", async () => {
     // A token with the wrong scope must not look like "upstream has published nothing",
     // or the caller would silently downgrade to reading a branch.

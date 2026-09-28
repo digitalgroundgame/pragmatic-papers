@@ -2,8 +2,11 @@ import { socialEmbedBlockToHTML } from "@/blocks/SocialEmbed/helpers/socialEmbed
 import { isResolved } from "@/utilities/relationships"
 import type {
   Article,
+  BannerBlock,
+  CodeBlock,
   DisplayMathBlock,
   FootnoteBlock,
+  InteractiveMapBlock,
   Media,
   MediaBlock,
   MediaCollageBlock,
@@ -18,6 +21,7 @@ import {
 } from "@payloadcms/richtext-lexical/html"
 import { Feed } from "feed"
 import { getServerSideURL } from "./getURL"
+import type { SerializedLexicalNode } from "./lexical"
 
 const SITE_URL = getServerSideURL()
 
@@ -94,37 +98,82 @@ const timelineBlockToHTML = ({ node }: { node: SerializedBlockNode<TimelineBlock
   return `<section>${heading}<ul style="list-style: none; padding-left: 0;">${items}</ul></section>`
 }
 
-const htmlConverters: HTMLConvertersFunction = ({ defaultConverters }) => ({
-  ...defaultConverters,
-  blocks: {
-    ...defaultConverters.blocks,
-    mediaBlock: mediaBlockToHTML,
-    mediaCollage: mediaCollageBlockToHTML,
-    socialEmbed: socialEmbedBlockToHTML,
-    blueSkyEmbed: socialEmbedBlockToHTML,
-    redditEmbed: socialEmbedBlockToHTML,
-    tiktokEmbed: socialEmbedBlockToHTML,
-    twitterEmbed: socialEmbedBlockToHTML,
-    youtubeEmbed: socialEmbedBlockToHTML,
-    displayMathBlock: displayMathBlockToHTML,
-    timeline: timelineBlockToHTML,
-  },
-  inlineBlocks: {
-    ...defaultConverters.inlineBlocks,
-    inlineMathBlock: ({ node }: { node: SerializedInlineBlockNode }) => {
-      const math = (node.fields as { math?: string })?.math || ""
-      return `<span class="math">\\(${math}\\)</span>`
+const escapeHTML = (value: string): string =>
+  value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;")
+
+const bannerBlockToHTML = ({
+  node,
+  nodesToHTML,
+}: {
+  node: SerializedBlockNode<BannerBlock>
+  nodesToHTML: (args: { nodes: SerializedLexicalNode[] }) => string[]
+}): string =>
+  `<blockquote>${nodesToHTML({ nodes: node.fields.content.root.children }).join("")}</blockquote>`
+
+const codeBlockToHTML = ({ node }: { node: SerializedBlockNode<CodeBlock> }): string =>
+  node.fields.code ? `<pre><code>${escapeHTML(node.fields.code)}</code></pre>` : ""
+
+/**
+ * Converters for the feeds' rich text. Every node type and block a
+ * feed-rendered field allows needs an entry here, or the feed prints "unknown
+ * node" in its place; `__tests__/generateRssFeed.converters.test.ts` enforces
+ * that against the resolved Payload config.
+ *
+ * `pageUrl` is the page the content lives on, which blocks a feed reader
+ * cannot show (interactive maps) link back to.
+ */
+export const createHtmlConverters =
+  (pageUrl: string): HTMLConvertersFunction =>
+  ({ defaultConverters }) => ({
+    ...defaultConverters,
+    // Last resort for anything that slips past the converter test: keep an
+    // unknown element's text rather than printing "unknown node", and drop a
+    // childless node (a block). It has to be a function: "" is ignored.
+    unknown: ({ node, nodesToHTML }) => {
+      const { children } = node as { children?: Parameters<typeof nodesToHTML>[0]["nodes"] }
+      return children?.length ? nodesToHTML({ nodes: children }).join("") : ""
     },
-    footnote: ({ node }: { node: SerializedInlineBlockNode }) => {
-      const fields = node.fields as FootnoteBlock
-      const index = typeof fields.index === "number" ? fields.index : ""
-      const note = fields.note || ""
-      const referenceId = `footnote-ref-${index}`
-      const describedById = `footnote-${index}`
-      return `<sup id="${referenceId}" title="Footnote ${index}: ${note}"><a href="#${describedById}">[${index}]</a></sup>`
+    blocks: {
+      ...defaultConverters.blocks,
+      banner: bannerBlockToHTML,
+      code: codeBlockToHTML,
+      squiggleRule: "<hr />",
+      interactiveMap: ({ node }: { node: SerializedBlockNode<InteractiveMapBlock> }) => {
+        const title = node.fields.widgetTitle ? ` “${escapeHTML(node.fields.widgetTitle)}”` : ""
+        return `<p><a href="${escapeHTML(pageUrl)}">View the interactive map${title} on The Pragmatic Papers</a></p>`
+      },
+      mediaBlock: mediaBlockToHTML,
+      mediaCollage: mediaCollageBlockToHTML,
+      socialEmbed: socialEmbedBlockToHTML,
+      blueSkyEmbed: socialEmbedBlockToHTML,
+      redditEmbed: socialEmbedBlockToHTML,
+      tiktokEmbed: socialEmbedBlockToHTML,
+      twitterEmbed: socialEmbedBlockToHTML,
+      youtubeEmbed: socialEmbedBlockToHTML,
+      displayMathBlock: displayMathBlockToHTML,
+      timeline: timelineBlockToHTML,
     },
-  },
-})
+    inlineBlocks: {
+      ...defaultConverters.inlineBlocks,
+      inlineMathBlock: ({ node }: { node: SerializedInlineBlockNode }) => {
+        const math = (node.fields as { math?: string })?.math || ""
+        return `<span class="math">\\(${math}\\)</span>`
+      },
+      footnote: ({ node }: { node: SerializedInlineBlockNode }) => {
+        const fields = node.fields as FootnoteBlock
+        const index = typeof fields.index === "number" ? fields.index : ""
+        const note = fields.note || ""
+        const referenceId = `footnote-ref-${index}`
+        const describedById = `footnote-${index}`
+        return `<sup id="${referenceId}" title="Footnote ${index}: ${note}"><a href="#${describedById}">[${index}]</a></sup>`
+      },
+    },
+  })
 
 const formatFootnotes = (footnotes?: Article["footnotes"]): string => {
   if (!footnotes || !footnotes.length) return ""
@@ -182,7 +231,10 @@ const formatVolumeContent = (volume: Volume) => {
   if (volume.editorsNote) {
     sections.push(`
 <div style="margin: 1.5em 0">
-  ${convertLexicalToHTML({ data: volume.editorsNote, converters: htmlConverters })}
+  ${convertLexicalToHTML({
+    data: volume.editorsNote,
+    converters: createHtmlConverters(`${SITE_URL}/volumes/${volume.slug}`),
+  })}
 </div>`)
   }
 
@@ -244,7 +296,10 @@ export const generateArticleFeed = (articles: Article[]): string => {
         content: (() => {
           try {
             const articleContent = article.content
-              ? convertLexicalToHTML({ data: article.content, converters: htmlConverters })
+              ? convertLexicalToHTML({
+                  data: article.content,
+                  converters: createHtmlConverters(`${SITE_URL}/articles/${article.slug}`),
+                })
               : ""
             const footnotesHtml = formatFootnotes(article.footnotes)
             return articleContent + footnotesHtml

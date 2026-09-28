@@ -94,42 +94,6 @@ export const createTableOfContentsArticle = async (
           "Some blocks are worth jumping to on their own. They appear in the list with an icon, labelled by their own title where they have one, and nest under the heading before them.",
         ),
         createParagraph(
-          "A table directly under a heading is listed as that heading, with the table icon. The heading below is one, so its table has no entry of its own. Any other table is listed as Table.",
-        ),
-        createHeadingNode("How each block is listed", "h3"),
-        createTableNode([
-          createTableRowNode([
-            createTableHeaderNode("Block"),
-            createTableHeaderNode("Listed as"),
-            createTableHeaderNode("Icon"),
-          ]),
-          createTableRowNode([
-            createTableCellNode("Table"),
-            createTableCellNode("The heading right above it, else Table"),
-            createTableCellNode("Grid"),
-          ]),
-          createTableRowNode([
-            createTableCellNode("Interactive map"),
-            createTableCellNode("Its widget or map title, else Map"),
-            createTableCellNode("Map"),
-          ]),
-          createTableRowNode([
-            createTableCellNode("Timeline"),
-            createTableCellNode("Its title, else Timeline"),
-            createTableCellNode("Gantt chart"),
-          ]),
-          createTableRowNode([
-            createTableCellNode("Gallery"),
-            createTableCellNode("Image grid or Carousel, by its layout"),
-            createTableCellNode("Images"),
-          ]),
-          createTableRowNode([
-            createTableCellNode("Social embed"),
-            createTableCellNode("Platform embed, e.g. YouTube embed"),
-            createTableCellNode("Screen"),
-          ]),
-        ]),
-        createParagraph(
           "An interactive map is listed under its widget title. A single map with no widget title uses the map's own title instead.",
         ),
         createInteractiveMapNode(
@@ -164,6 +128,42 @@ export const createTableOfContentsArticle = async (
         createMediaCollageBlock([mediaDocs[1]!.id, mediaDocs[2]!.id, mediaDocs[3]!.id], "carousel"),
         createParagraph("A social embed is listed under its platform."),
         createSocialEmbedBlock({ ...youtube, id: "seed-toc-socialEmbed-youtube" }),
+        createParagraph(
+          "A table directly under a heading is listed as that heading, with the table icon. The heading below is one: it carries the table icon, and the table has no entry of its own. Any other table is listed as Table.",
+        ),
+        createHeadingNode("How each block is listed", "h3"),
+        createTableNode([
+          createTableRowNode([
+            createTableHeaderNode("Block"),
+            createTableHeaderNode("Listed as"),
+            createTableHeaderNode("Icon"),
+          ]),
+          createTableRowNode([
+            createTableCellNode("Table"),
+            createTableCellNode("The heading right above it, else Table"),
+            createTableCellNode("Grid"),
+          ]),
+          createTableRowNode([
+            createTableCellNode("Interactive map"),
+            createTableCellNode("Its widget or map title, else Map"),
+            createTableCellNode("Map"),
+          ]),
+          createTableRowNode([
+            createTableCellNode("Timeline"),
+            createTableCellNode("Its title, else Timeline"),
+            createTableCellNode("Gantt chart"),
+          ]),
+          createTableRowNode([
+            createTableCellNode("Gallery"),
+            createTableCellNode("Image grid or Carousel, by its layout"),
+            createTableCellNode("Images, or a sliding gallery for a carousel"),
+          ]),
+          createTableRowNode([
+            createTableCellNode("Social embed"),
+            createTableCellNode("Platform embed, e.g. YouTube embed"),
+            createTableCellNode("Screen"),
+          ]),
+        ]),
         createHeadingNode("In practice", "h3"),
         createParagraph(
           "This is the repeated heading from earlier. It links as #in-practice-2 and highlights on its own as you scroll past it.",

@@ -104,6 +104,12 @@ describe("app TOC instance — exhibit blocks", () => {
     ])
     const labels = getAllByRole("link").map((link) => link.textContent)
     expect(labels).toEqual(expect.arrayContaining(["Image grid", "Carousel"]))
+    const iconOf = (name: string) =>
+      getAllByRole("link")
+        .find((link) => link.textContent === name)!
+        .querySelector('[data-slot="toc-icon"]')
+    expect(iconOf("Image grid")).toHaveClass("lucide-images")
+    expect(iconOf("Carousel")).toHaveClass("lucide-gallery-horizontal-end")
   })
 
   it("shares one anchor namespace with headings", () => {

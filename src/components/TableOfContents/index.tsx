@@ -1,4 +1,11 @@
-import { ChartGanttIcon, ImagesIcon, MapIcon, TvIcon, type LucideIcon } from "lucide-react"
+import {
+  ChartGanttIcon,
+  GalleryHorizontalEndIcon,
+  ImagesIcon,
+  MapIcon,
+  TvIcon,
+  type LucideIcon,
+} from "lucide-react"
 
 import type {
   InteractiveMapBlock,
@@ -41,10 +48,9 @@ export const {
     mediaCollage: (block) => {
       const { images, layout } = block as MediaCollageBlock
       if (!images?.length) return null
-      return {
-        label: layout === "carousel" ? "Carousel" : "Image grid",
-        icon: entryIcon(ImagesIcon),
-      }
+      return layout === "carousel"
+        ? { label: "Carousel", icon: entryIcon(GalleryHorizontalEndIcon) }
+        : { label: "Image grid", icon: entryIcon(ImagesIcon) }
     },
     socialEmbed: (block) => {
       const { platform } = block as SocialEmbedBlock

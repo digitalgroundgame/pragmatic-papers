@@ -1,9 +1,11 @@
 name: Review acknowledgement
 
 # Required on dev as the "Review acknowledged" check: a person with write
-# access replies `/reviewed` on the PR after reading the latest Claude review
-# of its head commit. This records a "Review acknowledged" commit status on
-# that commit; a new push moves the head, so the next review needs a new reply.
+# access replies `/reviewed` on the PR once a Claude review has run on it
+# (claude-review.yml) and they've read it and dealt with what it found. This
+# records a "Review acknowledged" commit status on the PR's head commit. The
+# review can be of an earlier commit, so fixing its findings needs no second
+# review, but a push after the reply moves the head and needs a new reply.
 #
 # A reply, not a 👍: GitHub sends workflows no event for reactions, so a
 # reaction could only be picked up by polling.
@@ -57,13 +59,13 @@ jobs:
           esac
 
           head_sha=$(gh api "repos/$REPO/pulls/$PR_NUMBER" --jq .head.sha)
-          # The latest Claude review summary of the head commit, which must
-          # predate this reply.
+          # The latest Claude review summary on the PR, of any commit, which
+          # must predate this reply.
           reviewed_at=$(gh api --paginate "repos/$REPO/issues/$PR_NUMBER/comments" \
-            --jq ".[] | select(.user.login == \"claude[bot]\")
-                      | select(.body | contains(\"<!-- claude-review sha=$head_sha \"))
-                      | .created_at" | tail -n 1)
-          [ -n "$reviewed_at" ] || fail "No Claude review of $head_sha yet. Add the \"ready for review\" label, or wait for the review to finish."
+            --jq '.[] | select(.user.login == "claude[bot]")
+                      | select(.body | contains("<!-- claude-review sha="))
+                      | .created_at' | tail -n 1)
+          [ -n "$reviewed_at" ] || fail "No Claude review on this PR yet. Add the \"ready for review\" label, or wait for the review to finish."
           [[ "$reviewed_at" < "$COMMENT_AT" ]] || fail "The latest review was posted after this reply. Read it and reply again."
 
           echo "head_sha=$head_sha" >> "$GITHUB_OUTPUT"

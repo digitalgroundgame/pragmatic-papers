@@ -1,21 +1,21 @@
 name: Claude Code Review
 
-# Required on dev as the "Claude review" check, so a PR can't merge until a
-# review has run on its current head commit and found no blocker. It never
-# approves: a person still merges, after acknowledging the review with a
-# `/reviewed` reply (see review-ack.yml).
+# Runs once when the "ready for review" label is added (or when a labeled
+# draft is marked ready); to review again, remove and re-add the label. Drafts
+# and unlabeled PRs never run it. Not a required check: what gates merging is
+# "Review acknowledged" (review-ack.yml), a person replying `/reviewed` on the
+# PR's final commit after a review like this one has run. So fixing what a
+# review found doesn't take a second review, only a new reply.
 #
-# A review runs when the "ready for review" label is added, and again on each
-# push or draft → ready while the label stays on. Draft and unlabeled PRs never
-# run it, so they show the check as "Expected", not as a failure.
+# The job fails when the review reports a blocker, which marks the reviewed
+# commit with a ✗. It never approves.
 on:
   pull_request:
-    types: [labeled, synchronize, ready_for_review]
+    types: [labeled, ready_for_review]
     branches: [dev]
-  merge_group:
 
 concurrency:
-  group: claude-review-${{ github.event.pull_request.number || github.run_id }}
+  group: claude-review-${{ github.event.pull_request.number }}
   cancel-in-progress: true
 
 jobs:
@@ -23,12 +23,10 @@ jobs:
     name: Claude review
     # Same-repo PRs only: a fork PR gets no secrets here.
     if: >-
-      github.event_name == 'merge_group' || (
-        github.event.pull_request.head.repo.full_name == github.repository &&
-        !github.event.pull_request.draft && (
-          github.event.action == 'labeled' && github.event.label.name == 'ready for review' ||
-          github.event.action != 'labeled' && contains(github.event.pull_request.labels.*.name, 'ready for review')
-        )
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      !github.event.pull_request.draft && (
+        github.event.action == 'labeled' && github.event.label.name == 'ready for review' ||
+        github.event.action == 'ready_for_review' && contains(github.event.pull_request.labels.*.name, 'ready for review')
       )
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -38,20 +36,12 @@ jobs:
       id-token: write
 
     steps:
-      # The queue branch holds only commits whose PR already passed this check
-      # on its head, so there's nothing new to review.
-      - name: Pass in the merge queue
-        if: github.event_name == 'merge_group'
-        run: echo "Reviewed on the pull request."
-
       - name: Checkout repository
-        if: github.event_name == 'pull_request'
         uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
       - name: Run Claude code review
-        if: github.event_name == 'pull_request'
         uses: anthropics/claude-code-action@v1
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY_CODE_REVIEW }}
@@ -63,7 +53,6 @@ jobs:
       # The summary comment ends with a marker naming the commit reviewed and
       # the verdict (see `--head` in .claude/skills/code-review/SKILL.md).
       - name: Check the verdict
-        if: github.event_name == 'pull_request'
         env:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
@@ -78,7 +67,7 @@ jobs:
             exit 1
           fi
           if [[ "$marker" == *"verdict=blocker"* ]]; then
-            echo "::error::The review found a blocker. Fix it and push, which reviews again."
+            echo "::error::The review found a blocker. Fix it, then reply /reviewed on the PR."
             exit 1
           fi
           echo "No blockers on $HEAD_SHA."

@@ -200,11 +200,10 @@ block behind a `mode` discriminator, starting with the Federal Courts map
 
 ## Claude review gate
 
-PRs into `dev` need two checks from `.github/workflows/`: **Claude review**
-(`claude-review.yml`: a review of the head commit with no blocker, run by the
-"ready for review" label and by pushes while it's on) and **Review
-acknowledged** (`review-ack.yml`: a person replying `/reviewed` after reading
-that review). **Never post `/reviewed`, or anything starting with it, on a
+PRs into `dev` need the **Review acknowledged** check (`review-ack.yml`): a
+person replying `/reviewed` on the PR's final commit, after a Claude review
+(`claude-review.yml`, run by adding the "ready for review" label) is on the PR.
+Fixes pushed after a review need a new `/reviewed`, not a new review. **Never post `/reviewed`, or anything starting with it, on a
 PR** — not even when asked to get a PR mergeable. It records that a person
 read the review; say it's waiting on them instead.
 

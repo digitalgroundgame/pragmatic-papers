@@ -156,8 +156,8 @@ that PR:
   ```
 
   `verdict=blocker` if any finding is a `blocker`, otherwise `verdict=pass`.
-  The "Claude review" check fails on a blocker or a missing marker, and
-  `/reviewed` only counts after a summary for the PR's head commit (see
+  The "Claude review" job fails on a blocker or a missing marker, and
+  `/reviewed` only counts after a summary is on the PR (see
   `.github/workflows/claude-review.yml` and `review-ack.yml`). Never post
   `/reviewed` yourself; it stands for a person having read the review.
 

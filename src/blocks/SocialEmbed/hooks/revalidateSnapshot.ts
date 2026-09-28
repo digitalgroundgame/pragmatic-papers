@@ -4,9 +4,8 @@ import { buildSnapshot, type BuildSnapshotArgs } from "@/blocks/SocialEmbed/help
 import { SOCIAL_EMBED_SNAPSHOT_TTL_MS } from "@/blocks/SocialEmbed/helpers/snapshotFreshness"
 import type { ParentDocContext } from "@/blocks/SocialEmbed/types"
 import type { Article, SocialEmbedSnapshot } from "@/payload-types"
-import configPromise from "@payload-config"
+import { getPayloadConfig } from "@/utilities/getPayloadConfig"
 import { unstable_cache } from "next/cache"
-import { getPayload } from "payload"
 
 function getCachedSnapshotCheck(args: BuildSnapshotArgs): () => Promise<SocialEmbedSnapshot> {
   const revalidate = Math.ceil(SOCIAL_EMBED_SNAPSHOT_TTL_MS / 1000)
@@ -100,7 +99,7 @@ export async function revalidateSnapshot({
     ...checkSnapshot,
   }
 
-  const payload = await getPayload({ config: configPromise })
+  const payload = await getPayloadConfig()
   const article = await payload.findByID({
     collection: parentDoc.collection,
     id: parentDoc.id,

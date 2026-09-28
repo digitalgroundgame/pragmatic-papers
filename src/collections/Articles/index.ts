@@ -1,6 +1,7 @@
 import { isPublishedOrStaff, isCreatedByOrEditor, isDraftOrEditor } from "@/access/policies"
 import { writerOrEditor } from "@/access/collections"
 import { editorFieldLevel } from "@/access/fields"
+import { AUTHOR_ROLES } from "@/access/roles"
 import { Banner } from "@/blocks/Banner/config"
 import { Code } from "@/blocks/Code/config"
 import { FootnoteBlock } from "@/blocks/Footnote/config"
@@ -183,7 +184,9 @@ export const Articles: CollectionConfig = {
               relationTo: "media",
             }),
 
-            MetaDescriptionField({}),
+            MetaDescriptionField({
+              hasGenerateFn: true,
+            }),
             PreviewField({
               // if the `generateUrl` function is configured
               hasGenerateFn: true,
@@ -264,11 +267,7 @@ export const Articles: CollectionConfig = {
       },
       hasMany: true,
       relationTo: "users",
-      filterOptions: {
-        roles: {
-          in: ["writer", "editor", "chief-editor", "narrator"],
-        },
-      },
+      filterOptions: { roles: { in: AUTHOR_ROLES } },
     },
     {
       name: "topics",
@@ -278,6 +277,32 @@ export const Articles: CollectionConfig = {
       },
       hasMany: true,
       relationTo: "topics",
+    },
+    {
+      name: "syndicateToSubstack",
+      type: "checkbox",
+      label: "Syndicate to Substack",
+      defaultValue: false,
+      access: {
+        create: editorFieldLevel,
+        update: editorFieldLevel,
+      },
+      admin: {
+        position: "sidebar",
+        description:
+          "Adds the published article to the Substack import feed. Takes effect once the article is published.",
+      },
+    },
+    {
+      name: "substackImportUrl",
+      type: "ui",
+      admin: {
+        position: "sidebar",
+        condition: (data) => Boolean(data?.syndicateToSubstack),
+        components: {
+          Field: "@/collections/Articles/components/SubstackImportUrl#SubstackImportUrl",
+        },
+      },
     },
     {
       name: "createdBy",

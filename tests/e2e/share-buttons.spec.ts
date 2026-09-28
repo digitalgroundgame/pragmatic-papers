@@ -204,6 +204,7 @@ test.describe("ShareButtons — screenshots", () => {
     await share.scrollIntoViewIfNeeded()
     await share.click()
     await expect(page.locator('[data-slot="popover-content"]')).toBeVisible()
+    await waitForStableRender(page)
     await expect(page).toHaveScreenshot("volume-share-popover-open.png", { fullPage: false })
   })
 })

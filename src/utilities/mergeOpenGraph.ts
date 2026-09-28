@@ -1,10 +1,12 @@
 import type { Metadata } from "next"
 import { getServerSideURL } from "./getURL"
 
+export const DEFAULT_DESCRIPTION =
+  "Pragmatic, community-driven articles focusing on news, politics, economics, and more."
+
 const defaultOpenGraph: Metadata["openGraph"] = {
   type: "website",
-  description:
-    "Pragmatic, community-driven articles focusing on news, politics, economics, and more.",
+  description: DEFAULT_DESCRIPTION,
   images: [
     {
       url: `${getServerSideURL()}/the-pragmatic-papers-opengraph-image.png`,

@@ -12,6 +12,7 @@ import { Webhooks } from "@/collections/Webhooks"
 import { defaultLexical } from "@/fields/defaultLexical"
 import { Footer } from "@/Footer/config"
 import { ArticleRecommendations } from "@/globals/ArticleRecommendations/config"
+import { SiteSettings } from "@/globals/SiteSettings/config"
 import { Header } from "@/Header/config"
 import { syncShopifyProductsTask } from "@/jobs/syncShopifyProducts"
 import { updateRecommendationsTask } from "@/jobs/updateRecommendations"
@@ -108,7 +109,7 @@ export default buildConfig({
     Merch,
   ],
   cors: [getServerSideURL()].filter(Boolean),
-  globals: [Header, Footer, ArticleRecommendations],
+  globals: [Header, Footer, ArticleRecommendations, SiteSettings],
   plugins: [...plugins],
   secret: process.env.PAYLOAD_SECRET,
   sharp: sharp as unknown as SharpDependency,

@@ -110,16 +110,17 @@ export function ShareButtons({ url, title, className }: ShareButtonsProps): Reac
             variant="ghost"
             size="icon-sm"
             aria-label="Share"
-            className={cn("shrink-0 cursor-pointer", className)}
+            className={cn("shrink-0", className)}
           />
         }
       >
         <Share2 className="size-4" />
       </PopoverTrigger>
-      <PopoverContent align="end">
+      <PopoverContent align="end" aria-label="Share">
         <div className="grid grid-cols-7 gap-1">
           <input
             readOnly
+            aria-label="Link to share"
             value={url}
             className="border-input bg-background text-muted-foreground col-span-6 h-8 min-w-0 truncate rounded-sm border px-2 text-xs outline-none"
           />
@@ -128,7 +129,7 @@ export function ShareButtons({ url, title, className }: ShareButtonsProps): Reac
             size="icon"
             aria-label={copied ? "Copied!" : "Copy link"}
             onClick={handleCopy}
-            className="w-full cursor-pointer"
+            className="w-full"
           >
             {copied ? <Check className="size-4" /> : <Copy className="size-4" />}
           </Button>

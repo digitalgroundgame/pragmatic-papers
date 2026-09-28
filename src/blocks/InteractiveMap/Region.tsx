@@ -50,6 +50,7 @@ function RegionPath({ path, mapIndex, onEnter, onLeave, onClick }: RegionPathPro
       className="stroke-muted hover:stroke-accent-forground"
       strokeWidth={1}
       vectorEffect="non-scaling-stroke"
+      role="button"
       aria-label={accessibleLabel}
       tabIndex={0}
       data-interactive-map-path=""

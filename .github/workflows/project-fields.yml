@@ -78,7 +78,7 @@ jobs:
           sparse-checkout: .claude/skills/github-issues
 
       # Node 24 runs the TypeScript helper directly; no install needed.
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@v7
         with:
           node-version: "24.x"
 

@@ -342,7 +342,9 @@ export const seed = async (
       // synced from the tracker and versioned, so it outlives any one piece of writing.
       name: "Creating interactives...",
       fn: async () => {
-        await createFederalCourtsInteractive(payload, context)
+        // With COURT_TRACKER_GITHUB_TOKEN set this reads every judge from upstream's newest
+        // release; without it, the trimmed fixture.
+        await createFederalCourtsInteractive(payload, context, undefined, { live: true })
       },
     },
     {

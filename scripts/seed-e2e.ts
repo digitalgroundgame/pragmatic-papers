@@ -206,6 +206,12 @@ export async function main(): Promise<void> {
     // The Federal Courts drilldown, as an interactive page (/interactives/federal-courts)
     // with a published data snapshot — what interactive-page.spec.ts drives.
     await createFederalCourtsInteractive(payload, ctx, PUBLISHED_AT)
+    // Interactives are an experiment (Site Settings); off, their pages 404.
+    await payload.updateGlobal({
+      slug: "site-settings",
+      context: ctx,
+      data: { experiments: { interactives: true } },
+    })
 
     // A four-author article, so the byline's collapsed state has something to
     // render: two names and "& 2 more" beside two avatars and a "+2".

@@ -13,12 +13,19 @@
  * Usage:
  *   pnpm tsx scripts/snapshot-federal-courts.ts geometry --source ../court-tracker
  *   pnpm tsx scripts/snapshot-federal-courts.ts data --source ../court-tracker --ref data-v05d95d9fcf1b
- *   pnpm tsx scripts/snapshot-federal-courts.ts data --ref data-v05d95d9fcf1b
+ *   pnpm tsx scripts/snapshot-federal-courts.ts data --ref data-v05d95d9fcf1b --keep ca1,ca8,scotus
+ *
+ * `--keep` trims the fixture to the records of the named top-level regions (and the circuit
+ * justices, who sit beside every bench). Every region and dataset stays, so the map, its seat
+ * counts and the charts are the real thing; only the benches of other courts are empty. The
+ * fixture is what the seed falls back to without a token, and what CI's end-to-end tests drive,
+ * which walk the First and Eighth Circuits and the Supreme Court.
  */
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs"
 import path from "node:path"
 
 import { validateDrilldownData } from "../src/interactives/contract"
+import type { DrilldownData } from "../src/interactives/types"
 import { courtTrackerFeed } from "../src/interactives/federal-courts/feed"
 import { loadFederalCourtsGeometry } from "../src/interactives/federal-courts/geometry"
 import { svgToGeometryFile } from "../src/interactives/geometry"
@@ -45,6 +52,29 @@ export const CIRCUITS = [
 function arg(argv: readonly string[], name: string): string | undefined {
   const i = argv.indexOf(name)
   return i >= 0 ? argv[i + 1] : undefined
+}
+
+/**
+ * The records under `keep` (named top-level regions, whole subtrees), plus every associate —
+ * the circuit justices, one per circuit, whom every bench shows beside it.
+ */
+export function keepRecords(data: DrilldownData, keep: readonly string[]): DrilldownData {
+  const parentOf = new Map(data.regions.map((r) => [r.id, r.parentId ?? null]))
+  // Courts nest at most three deep; the bound only stops a malformed cycle.
+  const topOf = (id: string): string => {
+    let at = id
+    for (let depth = 0; depth < 8; depth++) {
+      const up = parentOf.get(at)
+      if (!up) break
+      at = up
+    }
+    return at
+  }
+  const wanted = new Set(keep)
+  return {
+    ...data,
+    records: data.records.filter((r) => r._role === "associate" || wanted.has(topOf(r._region))),
+  }
 }
 
 function kb(s: string): string {
@@ -114,7 +144,9 @@ export async function snapshotData(
   }
   console.warn(`reading ${source ? `dir:${source}` : `${courtTrackerFeed.describe()}@${ref}`}`)
   const snapshot = await courtTrackerFeed.fetch(opts)
-  const data = courtTrackerFeed.adapt(snapshot, { ref: snapshot.ref ?? recordedRef })
+  const adapted = courtTrackerFeed.adapt(snapshot, { ref: snapshot.ref ?? recordedRef })
+  const keep = arg(argv, "--keep")
+  const data = keep ? keepRecords(adapted, keep.split(",")) : adapted
   const geometry = await loadFederalCourtsGeometry()
   const { errors } = validateDrilldownData(data, geometry)
   if (errors.length > 0) {
@@ -144,7 +176,7 @@ export function run(
     )
   if (command === "data") return snapshotData(argv, env, profileDir)
   console.error(
-    "usage: snapshot-federal-courts.ts <geometry|data> [--source dir] [--ref ref|release]",
+    "usage: snapshot-federal-courts.ts <geometry|data> [--source dir] [--ref ref|release] [--keep region,...]",
   )
   return Promise.resolve(2)
 }

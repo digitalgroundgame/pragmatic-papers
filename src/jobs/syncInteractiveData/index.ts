@@ -46,6 +46,19 @@ export const syncInteractiveDataTask: TaskConfig<"syncInteractiveData"> = {
     const interactiveId = typeof input?.interactiveId === "number" ? input.interactiveId : null
     const force = input?.force === true
 
+    // Interactives are an experiment (Site Settings). The global is read straight from
+    // Payload rather than through `isExperimentEnabled`, whose cache wants the request scope
+    // a scheduled run does not have.
+    const settings = await payload.findGlobal({
+      slug: "site-settings",
+      depth: 0,
+      overrideAccess: true,
+    })
+    if (settings.experiments?.interactives !== true) {
+      log.info("[interactive-sync] skipped: the interactives experiment is off in Site Settings")
+      return { output: counts }
+    }
+
     log.info(
       `[interactive-sync] === starting${interactiveId ? ` for interactive ${interactiveId}` : ""}${force ? " (forced)" : ""} ===`,
     )

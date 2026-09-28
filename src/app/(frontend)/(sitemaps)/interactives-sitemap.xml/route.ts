@@ -3,6 +3,8 @@ import { getPayload } from "payload"
 import config from "@payload-config"
 import { unstable_cache } from "next/cache"
 
+import { isExperimentEnabled } from "@/globals/SiteSettings/isExperimentEnabled"
+
 const getInteractivesSitemap = unstable_cache(
   async () => {
     const payload = await getPayload({ config })
@@ -48,7 +50,8 @@ const getInteractivesSitemap = unstable_cache(
 )
 
 export async function GET(): Promise<Response> {
-  const sitemap = await getInteractivesSitemap()
+  // An experiment that is off lists nothing: its pages 404 in this environment.
+  const sitemap = (await isExperimentEnabled("interactives")) ? await getInteractivesSitemap() : []
 
   return getServerSideSitemap(sitemap)
 }

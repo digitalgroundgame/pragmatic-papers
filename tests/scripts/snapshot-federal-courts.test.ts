@@ -12,7 +12,7 @@ import {
 import type * as filesModule from "@/integrations/files"
 import { localFileSource } from "@/integrations/files"
 
-import { CIRCUITS, run } from "../../scripts/snapshot-federal-courts"
+import { CIRCUITS, keepRecords, run } from "../../scripts/snapshot-federal-courts"
 
 // A checkout on disk is only a place to read files from; the mini tracker stands in for it,
 // so these tests run the real adapter and validator without a court-tracker clone.
@@ -108,6 +108,21 @@ describe("snapshot-federal-courts", () => {
       )
     })
 
+    it("trims the fixture to the benches it is told to keep, and nothing else", async () => {
+      vi.mocked(localFileSource).mockReturnValue(await miniCourtTracker())
+      const source = path.join(work, "court-tracker")
+      const records = async (keep: string) => {
+        await run(["data", "--source", source, "--keep", keep], {}, profile)
+        return readJson("fixtures/data.json") as { records: unknown[]; regions: unknown[] }
+      }
+      // The mini tracker's one judge sits on a district court in the Eighth Circuit.
+      expect((await records("ca8")).records).toHaveLength(1)
+      const trimmed = await records("ca1,scotus")
+      expect(trimmed.records).toHaveLength(0)
+      // Every region stays: the map's seat counts are facts on the regions, not records.
+      expect(trimmed.regions.length).toBeGreaterThan(100)
+    })
+
     it("records the directory as the ref when a checkout's release isn't named", async () => {
       vi.mocked(localFileSource).mockReturnValue(await miniCourtTracker())
       const source = path.join(work, "court-tracker")
@@ -158,5 +173,35 @@ describe("snapshot-federal-courts", () => {
       expect(console.error).toHaveBeenCalledWith(expect.stringContaining("feed is invalid"))
       expect(() => readJson("fixtures/data.json")).toThrow()
     })
+  })
+})
+
+describe("keepRecords", () => {
+  const data = {
+    regions: [
+      { id: "ca1" },
+      { id: "mad", parentId: "ca1" },
+      { id: "ca8" },
+      { id: "moed", parentId: "ca8" },
+      { id: "cafc" },
+      { id: "cit", parentId: "cafc" },
+    ],
+    records: [
+      { _region: "mad", _id: "district" },
+      { _region: "ca1", _id: "circuit" },
+      { _region: "moed", _id: "elsewhere" },
+      { _region: "ca8", _id: "justice", _role: "associate" },
+      { _region: "cit", _id: "specialist" },
+      { _region: "gone", _id: "unknown-region" },
+    ],
+  } as unknown as Parameters<typeof keepRecords>[0]
+
+  it("keeps whole subtrees of the named regions, and every circuit justice", () => {
+    const ids = (keep: string[]) => keepRecords(data, keep).records.map((r) => r._id)
+    expect(ids(["ca1"])).toEqual(["district", "circuit", "justice"])
+    expect(ids(["cafc"])).toEqual(["justice", "specialist"])
+    // A record on a region the data does not declare is its own top level.
+    expect(ids(["gone"])).toEqual(["justice", "unknown-region"])
+    expect(keepRecords(data, ["ca1"]).regions).toBe(data.regions)
   })
 })

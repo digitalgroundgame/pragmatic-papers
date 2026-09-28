@@ -192,7 +192,8 @@ test.describe("interactive page — federal courts", () => {
     expect(res.ok()).toBe(true)
     expect(res.headers()["content-type"]).toContain("application/json")
     const index = (await res.json()) as { entries: { id: string; name: string; region: string }[] }
-    expect(index.entries.length).toBeGreaterThan(1000)
+    // The seeded fixture keeps three courts' benches (see scripts/snapshot-federal-courts.ts).
+    expect(index.entries.length).toBeGreaterThan(100)
     expect(new Set(index.entries.map((e) => e.id)).size).toBe(index.entries.length)
     expect(index.entries.every((e) => typeof e.name === "string" && e.name.length > 0)).toBe(true)
   })

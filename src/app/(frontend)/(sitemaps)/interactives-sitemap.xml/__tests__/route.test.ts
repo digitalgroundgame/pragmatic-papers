@@ -1,12 +1,15 @@
 // @vitest-environment node
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-const { find } = vi.hoisted(() => ({ find: vi.fn() }))
+const { find, experiment } = vi.hoisted(() => ({ find: vi.fn(), experiment: { on: true } }))
 
 vi.mock("@payload-config", () => ({ default: {} }))
 vi.mock("payload", () => ({ getPayload: async () => ({ find }) }))
 // The cache is Next's concern; the route's own job is which interactives it lists.
 vi.mock("next/cache", () => ({ unstable_cache: <T>(fn: T): T => fn }))
+vi.mock("@/globals/SiteSettings/isExperimentEnabled", () => ({
+  isExperimentEnabled: async () => experiment.on,
+}))
 vi.mock("next-sitemap", () => ({
   getServerSideSitemap: (entries: unknown) => Response.json(entries),
 }))
@@ -15,6 +18,7 @@ import { GET } from "../route"
 
 beforeEach(() => {
   vi.clearAllMocks()
+  experiment.on = true
   process.env.NEXT_PUBLIC_SERVER_URL = "https://example.test"
 })
 
@@ -61,5 +65,12 @@ describe("GET /interactives-sitemap.xml", () => {
     await expect(res.json()).resolves.toEqual([
       { loc: "https://example.test/interactives/courts", lastmod: "2026-09-28T12:00:00.000Z" },
     ])
+  })
+
+  it("lists nothing, without reading the collection, while the experiment is off", async () => {
+    experiment.on = false
+    const res = await GET()
+    await expect(res.json()).resolves.toEqual([])
+    expect(find).not.toHaveBeenCalled()
   })
 })

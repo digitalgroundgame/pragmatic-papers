@@ -14,9 +14,10 @@ import {
   type InteractiveProfile,
 } from "../types"
 
-const { find, draft, unstableCache } = vi.hoisted(() => ({
+const { find, draft, experiment, unstableCache } = vi.hoisted(() => ({
   find: vi.fn(),
   draft: { isEnabled: false },
+  experiment: { on: true },
   // `unstable_cache` needs a Next.js request scope to cache anything; only its key and
   // options matter here, so it hands the composer straight back.
   unstableCache: vi.fn(
@@ -33,6 +34,9 @@ vi.mock("next/cache", () => ({
   unstable_cache: (...args: Parameters<typeof unstableCache>) => unstableCache(...args),
 }))
 vi.mock("@/utilities/getPayloadConfig", () => ({ getPayloadConfig: async () => ({ find }) }))
+vi.mock("@/globals/SiteSettings/isExperimentEnabled", () => ({
+  isExperimentEnabled: async (name: string) => name === "interactives" && experiment.on,
+}))
 
 const path = (id: string, parentId: string | null) => ({
   id,
@@ -128,6 +132,7 @@ const cacheOptions = { tags: ["interactive:5"], revalidate: 3600 }
 
 beforeEach(() => {
   draft.isEnabled = false
+  experiment.on = true
   find.mockReset()
   unstableCache.mockClear()
   summaryCompose.mockClear()
@@ -161,6 +166,14 @@ describe("queryInteractiveBySlug", () => {
   it("returns null for a slug nothing has", async () => {
     find.mockResolvedValue({ docs: [] })
     await expect(queryInteractiveBySlug("missing")).resolves.toBeNull()
+  })
+
+  it("finds nothing at any slug while the interactives experiment is off, draft mode included", async () => {
+    experiment.on = false
+    draft.isEnabled = true
+    find.mockResolvedValue({ docs: [interactive] })
+    await expect(queryInteractiveBySlug("courts-off")).resolves.toBeNull()
+    expect(find).not.toHaveBeenCalled()
   })
 })
 

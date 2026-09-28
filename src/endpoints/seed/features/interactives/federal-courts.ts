@@ -1,7 +1,9 @@
 import type { Payload } from "payload"
 
 import { validateDrilldownData } from "@/interactives/contract"
+import { courtTrackerFeed } from "@/interactives/federal-courts/feed"
 import fixture from "@/interactives/federal-courts/fixtures/data.json"
+import { courtTracker, describeStatus, integrationStatus } from "@/integrations"
 import { RELEASE_REF } from "@/integrations/github"
 import { FEDERAL_COURTS_PROFILE_ID } from "@/interactives/federal-courts"
 import { loadFederalCourtsGeometry } from "@/interactives/federal-courts/geometry"
@@ -15,15 +17,45 @@ export const FEDERAL_COURTS_INTERACTIVE_SLUG = "federal-courts"
 const FJC_URL = "https://www.fjc.gov/history/judges"
 
 /**
+ * Upstream's newest release through the real feed adapter, or null — with the reason logged —
+ * when there is no token to read it with or the read fails. The seed then falls back to the
+ * fixture, which is a trimmed copy of the same adapter output.
+ */
+async function readLiveFeed(payload: Payload): Promise<unknown> {
+  const connection = integrationStatus(courtTracker)
+  if (!connection.configured) {
+    payload.logger.info(
+      `[seed] federal courts: ${describeStatus(connection)} — using the trimmed fixture`,
+    )
+    return null
+  }
+  try {
+    const snapshot = await courtTrackerFeed.fetch({ ref: RELEASE_REF })
+    return courtTrackerFeed.adapt(snapshot, { ref: snapshot.ref ?? RELEASE_REF })
+  } catch (err) {
+    payload.logger.warn(
+      `[seed] federal courts: could not read court-tracker (${err instanceof Error ? err.message : String(err)}) — using the trimmed fixture`,
+    )
+    return null
+  }
+}
+
+/**
  * Seeds the Federal Courts interactive page: the editorial document, and a published snapshot
- * built from `fixtures/data.json` — a real output of the feed adapter, regenerated with
- * `scripts/snapshot-federal-courts.ts data`. The seed writes the snapshot the way the sync
- * does, so what the seeded page renders is exactly what a synced page renders.
+ * written the way the sync writes one, so what the seeded page renders is exactly what a synced
+ * page renders.
+ *
+ * The data is `fixtures/data.json` unless `live` is set: then it is upstream's newest release,
+ * read with `COURT_TRACKER_GITHUB_TOKEN`, falling back to the fixture without one. The fixture
+ * is a real adapter output trimmed to three courts' benches (`scripts/snapshot-federal-courts.ts
+ * data --keep`), so tests and CI stay small and deterministic; `pnpm dev:db-seed` with a token
+ * gets every judge.
  */
 export const createFederalCourtsInteractive = async (
   payload: Payload,
   ctx?: Record<string, unknown>,
   publishedAt?: string,
+  { live = false }: { live?: boolean } = {},
 ): Promise<number> => {
   const title = "Federal Court Appointment Tracker"
 
@@ -71,7 +103,16 @@ export const createFederalCourtsInteractive = async (
     },
   })
 
-  const { data, errors } = validateDrilldownData(fixture, await loadFederalCourtsGeometry())
+  const geometry = await loadFederalCourtsGeometry()
+  const liveFeed = live ? await readLiveFeed(payload) : null
+  let checked = liveFeed ? validateDrilldownData(liveFeed, geometry) : null
+  if (checked && !checked.data) {
+    payload.logger.warn(
+      `[seed] federal courts: court-tracker's release is invalid — using the trimmed fixture:\n  ${checked.errors.join("\n  ")}`,
+    )
+    checked = null
+  }
+  const { data, errors } = checked ?? validateDrilldownData(fixture, geometry)
   if (!data) throw new Error(`federal-courts fixture is invalid:\n  ${errors.join("\n  ")}`)
 
   await payload.create({

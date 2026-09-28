@@ -253,7 +253,11 @@ Two things live there, and they are not two modes of one block:
 An SVG never carries records. A drilldown's SVG is checked in, parsed once at
 snapshot time into `geometry/*.json`, and never parsed again;
 `scripts/snapshot-federal-courts.ts` regenerates the Federal Courts geometry
-and data fixture from a court-tracker checkout. Validate a file before
+and data fixture from a court-tracker checkout. The fixture is trimmed to three
+courts' benches (`--keep`); `pnpm dev:db-seed` with `COURT_TRACKER_GITHUB_TOKEN`
+set seeds every judge from upstream's newest release instead. Interactive pages
+are the `interactives` experiment: with it off in Site Settings they 404, their
+sitemap is empty, and the daily sync skips. Validate a file before
 committing or uploading it:
 `pnpm tsx .claude/skills/interactive-maps/validate-map-svg.ts <file.svg> [--mode geometry]`.
 

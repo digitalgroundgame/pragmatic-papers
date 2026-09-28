@@ -12,6 +12,7 @@ import type { SyncOutcome } from "../logic"
 
 const log = { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() }
 const find = vi.fn()
+const findGlobal = vi.fn()
 
 interface Row {
   id: number
@@ -23,7 +24,7 @@ async function run(interactives: Row[], input: Record<string, unknown> = {}) {
   const handler = syncInteractiveDataTask.handler as (args: unknown) => Promise<{
     output: Record<"synced" | "unchanged" | "skipped" | "failed", number>
   }>
-  return handler({ input, req: { payload: { find, logger: log } } })
+  return handler({ input, req: { payload: { find, findGlobal, logger: log } } })
 }
 
 const synced = (status: "draft" | "published"): SyncOutcome => ({
@@ -35,9 +36,25 @@ const synced = (status: "draft" | "published"): SyncOutcome => ({
 
 beforeEach(() => {
   vi.clearAllMocks()
+  findGlobal.mockResolvedValue({ experiments: { interactives: true } })
 })
 
 describe("syncInteractiveDataTask", () => {
+  it.each([
+    ["off", { experiments: { interactives: false } }],
+    ["never saved", {}],
+  ])("does nothing while the interactives experiment is %s", async (_label, settings) => {
+    findGlobal.mockResolvedValue(settings)
+    const { output } = await run([{ id: 1, slug: "courts" }])
+    expect(output).toEqual({ synced: 0, unchanged: 0, skipped: 0, failed: 0 })
+    expect(find).not.toHaveBeenCalled()
+    expect(syncInteractive).not.toHaveBeenCalled()
+    expect(log.info).toHaveBeenCalledWith(
+      "[interactive-sync] skipped: the interactives experiment is off in Site Settings",
+    )
+    expect(findGlobal).toHaveBeenCalledWith(expect.objectContaining({ slug: "site-settings" }))
+  })
+
   it("syncs every interactive, drafts included, and counts each outcome", async () => {
     syncInteractive
       .mockResolvedValueOnce(synced("draft"))

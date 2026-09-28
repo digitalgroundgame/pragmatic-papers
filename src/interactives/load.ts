@@ -3,6 +3,7 @@ import { draftMode } from "next/headers"
 import { cache } from "react"
 
 import { interactivePath, interactiveTag } from "@/collections/InteractiveSnapshots/tag"
+import { isExperimentEnabled } from "@/globals/SiteSettings/isExperimentEnabled"
 import type { SearchIndex } from "@/interactives/engine/search"
 import type { ChildAssetRef, DrilldownAsset } from "@/interactives/engine/types"
 import type { Interactive } from "@/payload-types"
@@ -24,7 +25,13 @@ import { DRILLDOWN_DATA_SCHEMA, type DrilldownData, type InteractiveProfile } fr
  *   previewing from the admin sees the researcher's latest data before publishing it.
  */
 
+/**
+ * The interactive at a slug, or null — which the page and every JSON route under it already
+ * answer with a 404. Interactives are an experiment (Site Settings), so with it off in this
+ * environment there is no interactive at any slug, and one check here closes all of them.
+ */
 export const queryInteractiveBySlug = cache(async (slug: string): Promise<Interactive | null> => {
+  if (!(await isExperimentEnabled("interactives"))) return null
   const { isEnabled: draft } = await draftMode()
   const payload = await getPayloadConfig()
   const { docs } = await payload.find({

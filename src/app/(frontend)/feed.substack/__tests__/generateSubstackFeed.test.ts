@@ -1,6 +1,6 @@
 // @vitest-environment node
 import type { Article, Media } from "@/payload-types"
-import { beforeAll, describe, expect, it } from "vitest"
+import { afterEach, beforeAll, describe, expect, it, vi } from "vitest"
 
 beforeAll(() => {
   process.env.NEXT_PUBLIC_SERVER_URL = "https://example.org"
@@ -173,7 +173,150 @@ describe("substackArticleHTML", () => {
   })
 })
 
+describe("substackArticleHTML block and node coverage", () => {
+  const richText = (...children: unknown[]) => ({
+    root: { type: "root", children, direction: null, format: "", indent: 0, version: 1 },
+  })
+
+  it("renders a timeline with escaped text and absolute citation links", () => {
+    const html = substackArticleHTML(
+      makeArticle([
+        block({
+          blockType: "timeline",
+          title: "Key <dates>",
+          events: [
+            {
+              date: "2024-03-12",
+              title: "Bill introduced",
+              description: "Filed & referred",
+              enableCitation: true,
+              citation: { type: "custom", url: "https://source.test/a" },
+            },
+            {
+              date: "2024-04-01",
+              description: "Passed committee",
+              enableCitation: true,
+              citation: {
+                type: "reference",
+                reference: { relationTo: "articles", value: { slug: "other" } },
+              },
+            },
+            { date: "2024-05-01", description: "No source", enableCitation: false },
+          ],
+        }),
+      ]),
+    )
+
+    expect(html).toContain("<h3>Key &lt;dates&gt;</h3>")
+    expect(html).toContain(
+      '<li><strong>2024-03-12</strong> — <strong>Bill introduced</strong><br />Filed &amp; referred <a href="https://source.test/a">[source]</a></li>',
+    )
+    expect(html).toContain('<a href="https://example.org/articles/other">[source]</a>')
+    expect(html).toContain("<li><strong>2024-05-01</strong><br />No source</li>")
+  })
+
+  it("renders nothing for a timeline without events", () => {
+    const html = substackArticleHTML(makeArticle([block({ blockType: "timeline", events: [] })]))
+    expect(html).not.toContain("<ul>")
+  })
+
+  it("renders an uploaded image as a figure and drops non-image uploads", () => {
+    const upload = (value: Partial<Media>) => ({
+      type: "upload",
+      relationTo: "media",
+      value: media(value),
+      fields: {},
+      version: 3,
+    })
+    const html = substackArticleHTML(
+      makeArticle([
+        upload({ mimeType: "image/png", url: "/api/media/file/chart.png", alt: "Chart" }),
+        upload({ mimeType: "application/pdf", url: "/api/media/file/report.pdf" }),
+      ]),
+    )
+
+    expect(html).toContain(
+      '<figure><img src="https://example.org/api/media/file/chart.png" alt="Chart" /></figure>',
+    )
+    expect(html).not.toContain("report.pdf")
+  })
+
+  it("includes a media caption as a figcaption", () => {
+    const html = substackArticleHTML(
+      makeArticle([
+        block({
+          blockType: "mediaBlock",
+          media: media({ caption: richText(paragraph(text("Photo: AP"))) as Media["caption"] }),
+        }),
+      ]),
+    )
+    expect(html).toContain("<figcaption><p>Photo: AP</p></figcaption>")
+  })
+
+  it("links social embeds instead of embedding them", () => {
+    const html = substackArticleHTML(
+      makeArticle([
+        block({
+          blockType: "socialEmbed",
+          url: "https://bsky.app/profile/x/post/1",
+          platform: "bluesky",
+        }),
+      ]),
+    )
+    expect(html).toContain('href="https://bsky.app/profile/x/post/1"')
+  })
+
+  it("falls back to the article's URL for an internal link whose target isn't loaded", () => {
+    const html = substackArticleHTML(
+      makeArticle([
+        paragraph({
+          type: "link",
+          version: 3,
+          fields: { linkType: "internal", doc: { relationTo: "articles", value: 42 } },
+          children: [text("unresolved")],
+        }),
+      ]),
+    )
+    expect(html).toContain('href="https://example.org/articles/test-article"')
+  })
+
+  it("lists footnotes in index order whatever order they're stored in", () => {
+    const html = substackArticleHTML(
+      makeArticle([paragraph(text("Body"))], {
+        footnotes: [
+          { index: 2, note: "Second", attributionEnabled: false },
+          { index: 1, note: "First", attributionEnabled: false },
+        ],
+      }),
+    )
+    expect(html.indexOf("[1] First")).toBeLessThan(html.indexOf("[2] Second"))
+  })
+})
+
 describe("generateSubstackFeed", () => {
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  it("skips an article whose conversion throws and keeps the rest", () => {
+    const error = vi.spyOn(console, "error").mockImplementation(() => undefined)
+    const broken = makeArticle([paragraph(text("Broken"))], { slug: "broken" })
+    Object.defineProperty(broken, "heroImage", {
+      get: () => {
+        throw new Error("boom")
+      },
+    })
+
+    const xml = generateSubstackFeed([broken, makeArticle([paragraph(text("Fine"))])])
+
+    expect(xml).not.toContain("/articles/broken")
+    expect(xml).toContain("<p>Fine</p>")
+    expect(error).toHaveBeenCalledWith(
+      "Error converting article broken for Substack:",
+      expect.any(Error),
+    )
+  })
+
   it("emits RSS 2.0 with the full post in content:encoded", () => {
     const xml = generateSubstackFeed([
       makeArticle([paragraph(text("Body text"))], {

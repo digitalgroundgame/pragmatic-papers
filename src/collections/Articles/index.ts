@@ -271,7 +271,10 @@ export const Articles: CollectionConfig = {
       type: "checkbox",
       label: "Syndicate to Substack",
       defaultValue: false,
+      // Editors decide what goes to Substack, so writers can't set it when
+      // creating an article either.
       access: {
+        create: editorFieldLevel,
         update: editorFieldLevel,
       },
       admin: {

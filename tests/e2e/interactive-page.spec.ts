@@ -62,8 +62,12 @@ test.describe("interactive page — federal courts", () => {
 
     // Photos are hotlinked from Wikimedia; do not let a slow remote decide the screenshot.
     await page.route("https://upload.wikimedia.org/**", (route) => route.abort())
-    // The drilled-in region now survives a reload — nothing left to re-select. The pane comes
-    // back open on Eighth Circuit, just without the pin the click above left on one judge.
+    // The drilled-in region, the open pane and the pinned judge survive a reload through the
+    // URL. The map only writes the URL once its camera settles, so wait for all three first:
+    // reloading mid-flight comes back on the overview with no pane.
+    await expect(page).toHaveURL(/[?&]region=ca8(&|$)/)
+    await expect(page).toHaveURL(/[?&]pane=1(&|$)/)
+    await expect(page).toHaveURL(/[?&]record=[^&]+/)
     await page.reload()
     await figure.scrollIntoViewIfNeeded()
     await expect(

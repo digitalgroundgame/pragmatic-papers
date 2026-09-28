@@ -37,6 +37,12 @@
 - name: "in progress"
   color: "fbca04"
   description: "The pull request is currently in progress"
+# Renamed from "ready for review". `from_name` makes the sync rename the label in
+# place, so PRs that carry it keep it; drop it once the sync has run on `dev`.
+- name: "in review"
+  from_name: "ready for review"
+  color: "D77757"
+  description: "Adding this label starts a Claude review of the pull request"
 - name: "invalid"
   color: "e4e669"
   description: "This doesn't seem right"
@@ -49,9 +55,6 @@
 - name: "question"
   color: "d876e3"
   description: "Further information is requested"
-- name: "ready for review"
-  color: "0e8a16"
-  description: "The pull request is ready for review"
 - name: "reference"
   color: "D3D3D3"
   description: "A PR saved for future reference and is not gonna be merged"

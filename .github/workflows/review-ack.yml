@@ -75,7 +75,7 @@ jobs:
             --jq '.[] | select(.user.login == "claude[bot]")
                       | select(.body | contains("<!-- claude-review sha="))
                       | .created_at' | tail -n 1)
-          [ -n "$reviewed_at" ] || fail "No Claude review on this PR yet. Add the \"ready for review\" label, or wait for the review to finish."
+          [ -n "$reviewed_at" ] || fail "No Claude review on this PR yet. Add the \"in review\" label, or wait for the review to finish."
           [[ "$reviewed_at" < "$COMMENT_AT" ]] || fail "The latest review was posted after this reply. Read it and reply again."
 
           echo "head_sha=$head_sha" >> "$GITHUB_OUTPUT"

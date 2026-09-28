@@ -99,3 +99,16 @@ export async function createMediaFromURL(
   // Unreachable — TypeScript requires explicit return/throw after the loop
   throw new Error(`Failed to upload media "${alt}" after ${maxAttempts} attempts`)
 }
+
+const STOCK_IMAGE_BASE =
+  "https://raw.githubusercontent.com/payloadcms/payload/refs/heads/main/templates/website/src/endpoints/seed"
+const STOCK_IMAGE_ALT = "Curving abstract shapes with an orange and blue gradient"
+
+/** Uploads the four stock images every seeded article draws its media from. */
+export function createStockMedia(payload: Payload): Promise<Media[]> {
+  return Promise.all(
+    ["image-post1.webp", "image-post2.webp", "image-post3.webp", "image-hero1.webp"].map((name) =>
+      createMediaFromURL(payload, `${STOCK_IMAGE_BASE}/${name}`, STOCK_IMAGE_ALT),
+    ),
+  )
+}

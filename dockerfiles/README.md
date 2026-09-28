@@ -105,6 +105,18 @@ Click **Deploy** in Coolify. The application will:
 
 Use managed PostgreSQL service (AWS RDS, Supabase, Neon, etc.) for all deployments.
 
+### Our Coolify setup
+
+| Coolify application | Environment    | Deploys                | `BUILD_ENV`  |
+| ------------------- | -------------- | ---------------------- | ------------ |
+| **development**     | **preview**    | Each PR, at `pr-<n>.…` | `preview`    |
+| **development**     | **production** | The `dev` branch       | `staging`    |
+| **production**      | **production** | The `main` branch      | `production` |
+
+- The development app's **production** environment is what these docs call **staging**: it deploys `dev`, not the live site.
+- **Every deployment builds on one Coolify build server, one build at a time**, so a queue of preview builds delays a `dev` or `main` deploy behind it. The build caches below (`/pnpm`, `/nextjs`) are shared by all three. The build is memory-hungry; see [#1018](https://github.com/digitalgroundgame/pragmatic-papers/issues/1018) before adding build steps or dependencies that raise build memory.
+- **Public PR deployments are off**, so previews only build for PRs from people with access to the repo (see [Preview Deployments on the PR](#preview-deployments-on-the-pr-github-deployments)). Keep it that way: previews build on the same server as the live site.
+
 ## 🧱 Build Cache and Environment Variables
 
 Coolify passes every build-time variable into the Dockerfile as a BuildKit secret, mounted as an env var into **every** `RUN` (`--mount=type=secret,id=X,env=X`). That includes `SOURCE_COMMIT` when **Include Source Commit in Build** is on. What that means for the layer cache (verified 2026-09-26):
@@ -202,6 +214,21 @@ DATABASE_URI=postgresql://postgres:password@postgres:5432/pragmatic_papers
 - **DigitalOcean Managed Databases** - Simple and affordable
 - **Railway** - Developer-friendly platform
 - Or run your own PostgreSQL instance
+
+### Preview Deployments on the PR (GitHub Deployments)
+
+Coolify only comments on the PR; it doesn't create GitHub Deployments ([coollabsio/coolify#9583](https://github.com/coollabsio/coolify/issues/9583)). `.github/workflows/preview-deployment.yml` fills the gap: on each push to a PR it waits for Coolify to queue the preview build for that commit, then creates a Deployment for the PR's branch in the **Preview** environment and copies Coolify's status onto it. The PR then shows the build as queued, in progress, failed or live, with **View deployment** linking to `pr-<n>.pragmaticpapers.com`. There's deliberately no log link to the build in Coolify: Deployments are public on this repo, and it would publish the Coolify dashboard's address. Older previews of the PR go inactive when a newer one goes live, and all of them when the PR closes.
+
+Set these under **Settings → Secrets and variables → Actions**:
+
+| Name                       | Kind     | Value                                                                                                                |
+| -------------------------- | -------- | -------------------------------------------------------------------------------------------------------------------- |
+| `COOLIFY_API_TOKEN`        | secret   | A Coolify API token with `read` access (**Keys & Tokens → API tokens**; enable the API under **Settings**)           |
+| `COOLIFY_DASHBOARD_URL`    | variable | The Coolify server's URL, e.g. `https://coolify.example.com` (with or without `/api/v1`)                             |
+| `COOLIFY_PREVIEW_APP_UUID` | variable | The UUID of the application that builds previews (the last segment of its dashboard URL)                             |
+| `PREVIEW_URL_TEMPLATE`     | variable | Optional. The app's preview URL template in Coolify's syntax; defaults to `https://pr-{{pr_id}}.pragmaticpapers.com` |
+
+Until all three required values are set, the workflow does nothing. It also skips the PRs Coolify doesn't preview while **public PR deployments** are off in Coolify: PRs from forks, PRs whose author isn't an owner, member or collaborator of the repo (Dependabot's included), and PRs titled `[skip ci]` or `[skip cd]`. If you turn public PR deployments on, widen the job's `if` to match. Any other PR Coolify doesn't build gets no Deployment; the job gives up after waiting 10 minutes. If the build runs longer than 45 minutes, the Deployment is marked as errored.
 
 ### Automatic Database Naming for Preview Deployments (Coolify)
 

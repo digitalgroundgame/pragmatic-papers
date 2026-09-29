@@ -16,14 +16,9 @@ vi.mock("@/endpoints/seed/showcase", () => ({
   ],
 }))
 
-const {
-  createRestPayload,
-  main,
-  resolveTarget,
-  selectEntries,
-  showcaseItem,
-  slugsFromDescription,
-} = await import("../../scripts/showcase")
+const { createRestPayload, main, resolveTarget, selectEntries, showcaseItem } =
+  await import("../../scripts/showcase")
+const { slugsFromDescription } = await import("../../scripts/showcase-pr")
 
 const ORIGIN = "https://pr-748.pragmaticpapers.com"
 const PUSHER = { id: 7, roles: ["writer"] }

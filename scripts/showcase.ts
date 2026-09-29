@@ -2,7 +2,7 @@ import "dotenv/config"
 
 import { writeFileSync } from "node:fs"
 
-import { SHOWCASE_LINE } from "./showcase-pr"
+import { articleSlug, slugsFromDescription } from "./showcase-pr"
 
 import { AUTHOR_ROLES, hasRole } from "@/access/roles"
 import type { User } from "@/payload-types"
@@ -63,34 +63,13 @@ export function resolveTarget(
   return { origin: new URL(target).origin, draftByDefault: false }
 }
 
-/** A Markdown link, whose text may escape brackets: `[Title](url)`. */
-const MARKDOWN_LINK = /\[(?:\\.|[^\]\\])*\]\(([^)\s]*)\)/g
-
-/** The slug in an article's public URL; an admin URL has none. */
-const ARTICLE_PATH = /(?<!collections)\/articles\/([a-z0-9-]+)/
-
-/**
- * Reads the slugs from a PR description's `Showcase:` line, e.g.
- * `Showcase: rich-text-showcase, lorem-ipsum-timeline`. Once pushed, the line
- * links each article by title (see showcaseItem), and a link is read as the
- * slug in its URL. `Showcase: all` (meaning the whole catalog, written by
- * hand) comes back as `["all"]`.
- */
-export function slugsFromDescription(description: string): string[] {
-  const line = (description.match(SHOWCASE_LINE)?.[1] ?? "").replace(
-    MARKDOWN_LINK,
-    (_, url: string) => ` ${url.match(ARTICLE_PATH)?.[1] ?? ""} `,
-  )
-  return line.match(/[a-z0-9]+(?:-[a-z0-9]+)*/g) ?? []
-}
-
 /**
  * An article's entry on the `Showcase:` line: a link titled with its title,
- * which slugsFromDescription reads back as its slug. A draft's link goes to
+ * which slugsFromDescription (scripts/showcase-pr.ts) reads back as its slug. A draft's link goes to
  * the admin, whose URL has no slug, so the slug stays beside it.
  */
 export function showcaseItem(slug: string, title: string, url: string): string {
-  if (url.match(ARTICLE_PATH)?.[1] !== slug) return `${slug} ([draft](${url}))`
+  if (articleSlug(url) !== slug) return `${slug} ([draft](${url}))`
   return `[${title.replace(/[\\[\]]/g, "\\$&")}](${url})`
 }
 

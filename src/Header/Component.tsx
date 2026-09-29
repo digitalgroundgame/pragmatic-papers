@@ -18,6 +18,7 @@ import { HeaderLogo } from "@/Header/chrome"
 import { HeaderActions } from "@/Header/HeaderActions/Component"
 import { SearchForm } from "@/Header/SearchForm/Component"
 import { SearchPanel } from "@/Header/SearchPanel"
+import { ThemeSelectorDot } from "@/Header/ThemeSelectorDot"
 import type { Footer, Header } from "@/payload-types"
 import { getCachedGlobal } from "@/utilities/getGlobals"
 import { User, XIcon } from "lucide-react"
@@ -70,9 +71,10 @@ export async function Header(): Promise<React.JSX.Element> {
               <Sheet>
                 <SheetTrigger
                   render={
-                    <Button variant="ghost" size="icon" className="lg:hidden">
+                    <Button variant="ghost" size="icon" className="relative lg:hidden">
                       <User className="size-6" />
                       <span className="sr-only">User and Settings</span>
+                      <ThemeSelectorDot />
                     </Button>
                   }
                 />

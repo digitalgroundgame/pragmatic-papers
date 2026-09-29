@@ -3,10 +3,13 @@
 import React, { useCallback, useSyncExternalStore } from "react"
 
 const KEY_PREFIX = "pp:"
+const SEEN_PREFIX = `${KEY_PREFIX}seen:`
+const LAST_VISITED_PREFIX = `${KEY_PREFIX}lastVisited:`
 
 interface NotificationState {
   seen: Set<string>
   lastVisited: Map<string, string>
+  /** False on the server, and in browsers where localStorage can't be read. */
   hydrated: boolean
 }
 
@@ -24,28 +27,53 @@ function _notify(): void {
   _listeners.forEach((l) => l())
 }
 
-function _subscribe(listener: () => void): () => void {
-  _listeners.add(listener)
-  return () => _listeners.delete(listener)
+// Another tab wrote (or cleared) our keys: drop the cached state so the next
+// snapshot re-reads localStorage.
+function _onStorage(event: StorageEvent): void {
+  if (event.key !== null && !event.key.startsWith(KEY_PREFIX)) return
+  _state = null
+  _notify()
 }
 
-function _readFromLocalStorage(): NotificationState {
-  const seen = new Set<string>()
-  const lastVisited = new Map<string, string>()
-
-  for (let i = 0; i < localStorage.length; i++) {
-    const key = localStorage.key(i)
-    if (!key?.startsWith(KEY_PREFIX)) continue
-
-    if (key.startsWith(`${KEY_PREFIX}seen:`)) {
-      seen.add(key.slice(`${KEY_PREFIX}seen:`.length))
-    } else if (key.startsWith(`${KEY_PREFIX}lastVisited:`)) {
-      const name = key.slice(`${KEY_PREFIX}lastVisited:`.length)
-      lastVisited.set(name, localStorage.getItem(key) ?? "")
-    }
+function _subscribe(listener: () => void): () => void {
+  if (_listeners.size === 0) window.addEventListener("storage", _onStorage)
+  _listeners.add(listener)
+  return () => {
+    _listeners.delete(listener)
+    if (_listeners.size === 0) window.removeEventListener("storage", _onStorage)
   }
+}
 
-  return { seen, lastVisited, hydrated: true }
+// Private mode and blocked site data can make any localStorage access throw.
+// Treat that as "no storage": nothing is hydrated, so no dot is shown.
+function _readFromLocalStorage(): NotificationState {
+  try {
+    const seen = new Set<string>()
+    const lastVisited = new Map<string, string>()
+
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i)
+      if (!key?.startsWith(KEY_PREFIX)) continue
+
+      if (key.startsWith(SEEN_PREFIX)) {
+        seen.add(key.slice(SEEN_PREFIX.length))
+      } else if (key.startsWith(LAST_VISITED_PREFIX)) {
+        lastVisited.set(key.slice(LAST_VISITED_PREFIX.length), localStorage.getItem(key) ?? "")
+      }
+    }
+
+    return { seen, lastVisited, hydrated: true }
+  } catch {
+    return EMPTY_STATE
+  }
+}
+
+function _write(key: string, value: string): void {
+  try {
+    localStorage.setItem(key, value)
+  } catch {
+    // Storage is full or blocked; the in-memory state still updates for this page.
+  }
 }
 
 function _getSnapshot(): NotificationState {
@@ -57,6 +85,12 @@ function _getSnapshot(): NotificationState {
 
 function _getServerSnapshot(): NotificationState {
   return EMPTY_STATE
+}
+
+/** Forget the cached state so the next read comes from localStorage. For tests. */
+export function resetNotificationStore(): void {
+  _state = null
+  _notify()
 }
 
 export interface NotificationHookValue {
@@ -73,20 +107,23 @@ export function useNotification(name: string): NotificationHookValue {
   const visible = state.hydrated && !state.seen.has(name)
 
   const markSeen = useCallback((): void => {
-    localStorage.setItem(`${KEY_PREFIX}seen:${name}`, "1")
     const current = _getSnapshot()
+    if (current.seen.has(name)) return
+    _write(`${SEEN_PREFIX}${name}`, "1")
     _state = { ...current, seen: new Set(current.seen).add(name) }
     _notify()
   }, [name])
 
   const getLastVisited = useCallback((): Date | null => {
     const val = state.lastVisited.get(name)
-    return val ? new Date(val) : null
+    if (!val) return null
+    const date = new Date(val)
+    return Number.isNaN(date.getTime()) ? null : date
   }, [name, state.lastVisited])
 
   const setLastVisited = useCallback((): void => {
     const now = new Date().toISOString()
-    localStorage.setItem(`${KEY_PREFIX}lastVisited:${name}`, now)
+    _write(`${LAST_VISITED_PREFIX}${name}`, now)
     const current = _getSnapshot()
     _state = { ...current, lastVisited: new Map(current.lastVisited).set(name, now) }
     _notify()

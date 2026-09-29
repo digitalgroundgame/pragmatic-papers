@@ -49,7 +49,7 @@ export const AuthorArticleCard: React.FC<AuthorArticleCardProps> = ({
           {volume && (
             <HoverPrefetchLink
               href={`/volumes/${volume.slug}`}
-              className="text-muted-foreground mt-auto line-clamp-1 text-sm underline-offset-2 hover:underline"
+              className="text-muted-foreground hover:text-primary mt-auto line-clamp-1 text-sm underline underline-offset-2"
             >
               {volume.title ?? volume.slug}
             </HoverPrefetchLink>

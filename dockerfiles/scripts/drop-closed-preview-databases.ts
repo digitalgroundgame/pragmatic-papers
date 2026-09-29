@@ -12,6 +12,11 @@
  * It asks GitHub which PRs are open and drops `<source>_pr_<n>` and `<source>_pr_<n>_incoming`
  * for every other `n`. It never touches any other database, and it's best effort: when it
  * can't tell which PRs are open, it skips, and it never fails the build.
+ *
+ * GitHub's list can still miss an open PR: one too new to be listed yet, or one that moved
+ * between pages while they were read. So a database is also kept while anything is
+ * connected to it (a live preview's app always is; a closed PR's containers are already
+ * gone), and when its PR is newer than every PR GitHub listed. A later build retries it.
  */
 import { pathToFileURL } from "node:url"
 import pg from "pg"
@@ -34,16 +39,20 @@ export function previewPr(database: string, source: string): number | undefined 
   return match ? Number(match[1]) : undefined
 }
 
-/** The preview databases whose PR isn't open, in name order. */
+/**
+ * The preview databases whose PR isn't open, in name order. A PR newer than every open
+ * one GitHub listed may just be too new to be listed, so its database is left alone.
+ */
 export function closedPreviewDatabases(
   databases: string[],
   source: string,
   openPrs: ReadonlySet<number>,
 ): string[] {
+  const newestOpen = Math.max(...openPrs)
   return databases
     .filter((database) => {
       const pr = previewPr(database, source)
-      return pr !== undefined && !openPrs.has(pr)
+      return pr !== undefined && !openPrs.has(pr) && pr < newestOpen
     })
     .sort()
 }
@@ -114,15 +123,23 @@ export async function dropClosedPreviewDatabases(
     return []
   }
 
+  // Anything connected means the database may still be in use: a live preview whose PR
+  // GitHub's list missed. Leave it; a later build retries once it's idle. Without
+  // disconnecting anyone, a client that connects after this check makes the DROP fail,
+  // which is logged below.
+  const { rows: active } = await client.query<{ datname: string }>(
+    "SELECT DISTINCT datname FROM pg_stat_activity WHERE datname = ANY($1)",
+    [closed],
+  )
+  const inUse = new Set(active.map((row) => row.datname))
+
   const dropped: string[] = []
   for (const database of closed) {
+    if (inUse.has(database)) {
+      log(`Keeping ${database}: something is still connected to it`)
+      continue
+    }
     try {
-      // Coolify has already removed a closed PR's containers, so these connections are
-      // only stragglers (an open shell, a stuck pool).
-      await client.query(
-        "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = $1 AND pid <> pg_backend_pid()",
-        [database],
-      )
       await client.query(`DROP DATABASE IF EXISTS ${client.escapeIdentifier(database)}`)
       dropped.push(database)
       log(`Dropped ${database}`)

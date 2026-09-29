@@ -60,6 +60,12 @@ describe("closedPreviewDatabases", () => {
       "pragmatic_papers_pr_9_incoming",
     ])
   })
+  it("leaves a PR newer than every listed one, which may just be too new to be listed", () => {
+    const databases = ["pragmatic_papers_pr_3", "pragmatic_papers_pr_12", "pragmatic_papers_pr_13"]
+    expect(closedPreviewDatabases(databases, "pragmatic_papers", new Set([12]))).toEqual([
+      "pragmatic_papers_pr_3",
+    ])
+  })
 })
 
 /** A fetch that serves `pages` of open PR numbers in turn and records the URLs asked for. */
@@ -104,8 +110,11 @@ describe("openPullRequests", () => {
   })
 })
 
-/** A pg client over a fixed list of databases that records statements and drops. */
-function fakeClient(databases: string[], failDrop: string[] = []) {
+/**
+ * A pg client over a fixed list of databases that records statements. `connected` lists
+ * the databases pg_stat_activity reports clients on; dropping one in `failDrop` fails.
+ */
+function fakeClient(databases: string[], failDrop: string[] = [], connected: string[] = []) {
   const statements: string[] = []
   const events: string[] = []
   const client = {
@@ -120,6 +129,12 @@ function fakeClient(databases: string[], failDrop: string[] = []) {
       statements.push(values ? `${text} ${JSON.stringify(values)}` : text)
       if (text.startsWith("SELECT datname"))
         return { rows: databases.map((datname) => ({ datname })) }
+      if (text.includes("pg_stat_activity")) {
+        const asked = (values?.[0] ?? []) as string[]
+        return {
+          rows: connected.filter((db) => asked.includes(db)).map((datname) => ({ datname })),
+        }
+      }
       const dropped = /^DROP DATABASE IF EXISTS "(.*)"$/.exec(text)?.[1]
       if (dropped && failDrop.includes(dropped)) throw new Error(`must be owner of ${dropped}`)
       return { rows: [] }
@@ -138,7 +153,7 @@ const DATABASES = [
 describe("dropClosedPreviewDatabases", () => {
   const options = { source: "pragmatic_papers", currentPr: 12, repository: "owner/repo" }
 
-  it("drops only the closed PRs' preview databases, disconnecting stragglers first", async () => {
+  it("drops only the closed PRs' preview databases, without disconnecting anyone", async () => {
     const { client, statements } = fakeClient(DATABASES)
     const logs: string[] = []
     const dropped = await dropClosedPreviewDatabases(
@@ -147,16 +162,29 @@ describe("dropClosedPreviewDatabases", () => {
     )
 
     expect(dropped).toEqual(["pragmatic_papers_pr_3", "pragmatic_papers_pr_3_incoming"])
-    expect(statements[0]).toBe(
+    expect(statements).toEqual([
       'SELECT datname FROM pg_database WHERE datname LIKE $1 ["pragmatic\\\\_papers\\\\_pr\\\\_%"]',
-    )
-    expect(statements.slice(1)).toEqual([
-      'SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = $1 AND pid <> pg_backend_pid() ["pragmatic_papers_pr_3"]',
+      'SELECT DISTINCT datname FROM pg_stat_activity WHERE datname = ANY($1) [["pragmatic_papers_pr_3","pragmatic_papers_pr_3_incoming"]]',
       'DROP DATABASE IF EXISTS "pragmatic_papers_pr_3"',
-      'SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = $1 AND pid <> pg_backend_pid() ["pragmatic_papers_pr_3_incoming"]',
       'DROP DATABASE IF EXISTS "pragmatic_papers_pr_3_incoming"',
     ])
+    expect(statements.join("\n")).not.toContain("pg_terminate_backend")
     expect(logs).toContain("Dropped pragmatic_papers_pr_3")
+  })
+
+  it("keeps a closed PR's database while something is connected to it", async () => {
+    // A live preview's app is always connected, so this is what saves an open PR that
+    // GitHub's list missed (one that moved between pages while they were read).
+    const { client, statements } = fakeClient(DATABASES, [], ["pragmatic_papers_pr_3"])
+    const logs: string[] = []
+    const dropped = await dropClosedPreviewDatabases(
+      { client, fetch: fakeGitHub([[12, 40]]).fetch, log: (m) => logs.push(m) },
+      options,
+    )
+
+    expect(dropped).toEqual(["pragmatic_papers_pr_3_incoming"])
+    expect(statements).not.toContain('DROP DATABASE IF EXISTS "pragmatic_papers_pr_3"')
+    expect(logs).toContain("Keeping pragmatic_papers_pr_3: something is still connected to it")
   })
 
   it("drops nothing when GitHub's list doesn't include the PR being built", async () => {

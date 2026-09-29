@@ -15,6 +15,13 @@ import { configure } from "@testing-library/dom"
 
 configure({ asyncUtilTimeout: 3_000 })
 
+import { cleanup } from "@testing-library/react"
+import { afterEach } from "vitest"
+
+afterEach(() => {
+  cleanup()
+})
+
 // jsdom implements none of the layout/viewport observation APIs, but
 // embla-carousel (and anything else that measures the viewport) reaches for
 // them on mount. Stub inert versions — they never fire, which is all a

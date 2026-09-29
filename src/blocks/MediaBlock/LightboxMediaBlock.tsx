@@ -8,12 +8,12 @@ import {
 import { cn } from "@/utilities/utils"
 import { isMedia } from "@/components/Media"
 import {
-  MediaBlock,
   MediaBlockCaption,
   MediaBlockFrame,
   MediaBlockImage,
   type StyledMediaBlockProps,
 } from "./Component"
+import { FullscreenMedia } from "./FullscreenMedia"
 
 export type LightboxMediaBlockProps = StyledMediaBlockProps & {
   containerClassName?: string
@@ -67,16 +67,7 @@ export const LightboxMediaBlock: React.FC<LightboxMediaBlockProps> = ({
         <DialogHeader className="sr-only">
           <DialogTitle>{media.filename}</DialogTitle>
         </DialogHeader>
-        <MediaBlock
-          media={media}
-          sizes="100vw"
-          variant="xlarge"
-          enableGutter={false}
-          className="text-muted-foreground [&_a]:text-foreground"
-          imgClassName="border max-h-[80dvh] w-full h-auto"
-          captionClassName="max-h-24 overflow-y-auto px-4"
-          disableInnerContainer
-        />
+        <FullscreenMedia media={media} />
       </DialogContent>
     </Dialog>
   )

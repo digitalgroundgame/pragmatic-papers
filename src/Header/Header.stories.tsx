@@ -7,33 +7,37 @@ import { getPayloadConfig } from "@/utilities/getPayloadConfig"
 
 import { Header } from "./Component"
 
+/** Seeds the fake Payload; `feed` switches the feed experiment in Site Settings. */
+function seedPayload({ feed = false }: { feed?: boolean } = {}): void {
+  mocked(getPayloadConfig).mockResolvedValue(
+    createFakePayload({
+      globals: {
+        header: {
+          navItems,
+          actions: [
+            {
+              id: "a1",
+              link: {
+                type: "custom",
+                url: "/newsletter",
+                label: "Subscribe",
+                variant: "default",
+              },
+            },
+          ],
+        },
+        footer: { socials },
+        "site-settings": { experiments: { feed } },
+      },
+    }),
+  )
+}
+
 const meta = {
   title: "Layout/Header",
   component: Header,
   parameters: { layout: "fullscreen", nextjs: { navigation: { pathname: "/articles" } } },
-  beforeEach: () => {
-    mocked(getPayloadConfig).mockResolvedValue(
-      createFakePayload({
-        globals: {
-          header: {
-            navItems,
-            actions: [
-              {
-                id: "a1",
-                link: {
-                  type: "custom",
-                  url: "/newsletter",
-                  label: "Subscribe",
-                  variant: "default",
-                },
-              },
-            ],
-          },
-          footer: { socials },
-        },
-      }),
-    )
-  },
+  beforeEach: () => seedPayload(),
 } satisfies Meta<typeof Header>
 
 export default meta
@@ -47,6 +51,16 @@ export const Desktop: Story = {
       "/",
     )
     await expect(canvas.getByRole("link", { name: "Subscribe" })).toBeVisible()
+    // The feed experiment is off by default, so there's no way into it.
+    await expect(canvas.queryByRole("link", { name: "Feed" })).not.toBeInTheDocument()
+  },
+}
+
+export const FeedExperimentOn: Story = {
+  beforeEach: () => seedPayload({ feed: true }),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(await canvas.findByRole("link", { name: "Feed" })).toHaveAttribute("href", "/feed")
   },
 }
 

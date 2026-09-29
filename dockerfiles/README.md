@@ -325,7 +325,7 @@ Coolify deletes a closed PR's preview containers but not its database, so every 
 
 ### Pruning the image registry
 
-Coolify pushes every build's image to a `registry:2` service on dev-worker (`registry-<uuid>`), tagged `pr-<n>-<sha>` for a preview. A registry never deletes anything by itself, so by September 2026 it held 224 tags and 6.5 GB, the largest single use of dev-worker's 38 GB disk after the swap file. `dockerfiles/scripts/prune-registry.sh` trims it. It runs on dev-worker from root's crontab, not in a build:
+Coolify pushes every build's image to the `docker-registry` resource (a `registry:2` service in the Pragmatic Papers project's **development** environment, running on dev-worker as `registry-<uuid>`), tagged `pr-<n>-<sha>` for a preview. A registry never deletes anything by itself, so by September 2026 it held 224 tags and 6.5 GB, the largest single use of dev-worker's 38 GB disk after the swap file. `dockerfiles/scripts/prune-registry.sh` trims it. It runs on dev-worker from root's crontab, not in a build or as a Coolify scheduled task: it has to stop the registry's container, which a task running inside that container can't do.
 
 ```sh
 # once, as root on dev-worker

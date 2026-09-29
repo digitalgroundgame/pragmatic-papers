@@ -441,7 +441,7 @@ export interface Article {
   authors?: (number | User)[] | null;
   topics?: (number | Topic)[] | null;
   /**
-   * Auto-generates a navigable list of headings (and any resolver-matched blocks).
+   * Auto-generates a navigable list of headings (and any resolver-matched blocks). Readers see it only while the table of contents experiment is on in Site Settings.
    */
   showTableOfContents?: boolean | null;
   /**
@@ -2585,6 +2585,10 @@ export interface SiteSetting {
      * Interactive pages at /interactives/<slug>, their sitemap and the daily data sync.
      */
     interactives?: boolean | null;
+    /**
+     * The table of contents in an article's sidebar and its hero button, on articles with “Show table of contents” ticked.
+     */
+    tableOfContents?: boolean | null;
   };
   updatedAt?: string | null;
   createdAt?: string | null;
@@ -2662,6 +2666,7 @@ export interface SiteSettingsSelect<T extends boolean = true> {
     | {
         feed?: T;
         interactives?: T;
+        tableOfContents?: T;
       };
   updatedAt?: T;
   createdAt?: T;

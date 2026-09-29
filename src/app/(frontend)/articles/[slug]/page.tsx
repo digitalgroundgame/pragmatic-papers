@@ -14,6 +14,7 @@ import RichText from "@/components/RichText"
 import { TableOfContents, TableOfContentsProvider } from "@/components/TableOfContents"
 import { TopicsList } from "@/components/Topics/TopicsList"
 import { Separator } from "@/components/ui/separator"
+import { isExperimentEnabled } from "@/globals/SiteSettings/isExperimentEnabled"
 import { ArticleHero } from "@/heros/ArticleHero"
 import { MathJaxProvider } from "@/providers/MathJaxProvider"
 import { generateMeta } from "@/utilities/generateMeta"
@@ -66,11 +67,15 @@ export default async function Article({ params: paramsPromise }: Args): Promise<
 
   if (!article) return <PayloadRedirects url={url} />
 
-  const { footnotes, content, authors, enableMathRendering, topics, showTableOfContents } = article
+  const { footnotes, content, authors, enableMathRendering, topics } = article
 
   const populatedAuthors = (authors || []).filter(isResolved<User>)
 
-  const [volume] = await queryVolumesForArticles([article.id])
+  const [[volume], tableOfContentsEnabled] = await Promise.all([
+    queryVolumesForArticles([article.id]),
+    isExperimentEnabled("tableOfContents"),
+  ])
+  const showTableOfContents = tableOfContentsEnabled && article.showTableOfContents === true
 
   return (
     <>
@@ -88,7 +93,7 @@ export default async function Article({ params: paramsPromise }: Args): Promise<
           {draft && <LivePreviewListener />}
 
           <TableOfContentsProvider>
-            <ArticleHero article={article} />
+            <ArticleHero article={article} showTableOfContents={showTableOfContents} />
             <div
               id="intro"
               className="lg:toc-open:gap-10 xl:toc-open:gap-20 relative flex flex-col justify-between gap-3 lg:flex-row lg:gap-6"

@@ -38,6 +38,16 @@ export const SiteSettings: GlobalConfig = {
               "Interactive pages at /interactives/<slug>, their sitemap and the daily data sync.",
           },
         },
+        {
+          name: "tableOfContents",
+          label: "Article table of contents",
+          type: "checkbox",
+          defaultValue: false,
+          admin: {
+            description:
+              "The table of contents in an article's sidebar and its hero button, on articles with “Show table of contents” ticked.",
+          },
+        },
       ],
     },
   ],

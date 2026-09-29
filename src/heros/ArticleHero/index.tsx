@@ -14,19 +14,18 @@ import { PublicationDates } from "./PublicationDates"
 
 interface ArticleHeroProps {
   article: Article
+  /**
+   * Whether to render the table of contents button. The page decides, since it
+   * depends on the `tableOfContents` experiment as well as the article's own setting.
+   */
+  showTableOfContents?: boolean
 }
 
-export const ArticleHero: React.FC<ArticleHeroProps> = ({ article }) => {
-  const {
-    publishedAt,
-    updatedAt,
-    title,
-    heroImage,
-    authors,
-    narration,
-    showTableOfContents,
-    content,
-  } = article
+export const ArticleHero: React.FC<ArticleHeroProps> = ({
+  article,
+  showTableOfContents = false,
+}) => {
+  const { publishedAt, updatedAt, title, heroImage, authors, narration, content } = article
 
   const bylineAuthors = (authors || []).filter(isResolved<User>).map(toBylineAuthor)
 

@@ -46,6 +46,7 @@ import * as migration_20260927_050926_add_substack_syndication from "./20260927_
 import * as migration_20260928_111332_add_site_settings from "./20260928_111332_add_site_settings"
 import * as migration_20260928_115534_interactives from "./20260928_115534_interactives"
 import * as migration_20260928_123759_add_table_of_contents from "./20260928_123759_add_table_of_contents"
+import * as migration_20260929_163538_add_table_of_contents_experiment from "./20260929_163538_add_table_of_contents_experiment"
 
 export const migrations = [
   {
@@ -287,5 +288,10 @@ export const migrations = [
     up: migration_20260928_123759_add_table_of_contents.up,
     down: migration_20260928_123759_add_table_of_contents.down,
     name: "20260928_123759_add_table_of_contents",
+  },
+  {
+    up: migration_20260929_163538_add_table_of_contents_experiment.up,
+    down: migration_20260929_163538_add_table_of_contents_experiment.down,
+    name: "20260929_163538_add_table_of_contents_experiment",
   },
 ]

@@ -1,8 +1,5 @@
 import type { MediaReference } from "../references/collectMediaReferences"
-
-function collectionLabel(collection: string): string {
-  return collection.charAt(0).toUpperCase() + collection.slice(1)
-}
+import { adminUrl, collectionLabel, fieldLabel } from "../references/labels"
 
 const bodyText = { color: "var(--theme-text)", fontSize: "0.875rem", margin: 0 }
 const mutedText = { color: "var(--theme-elevation-650)" }
@@ -64,7 +61,7 @@ export function MediaReferenceList({
             }}
           >
             <a
-              href={`/admin/collections/${ref.collection}/${ref.docId}`}
+              href={adminUrl(ref)}
               style={{ fontSize: "0.875rem", fontWeight: 600, textDecoration: "underline" }}
               target="_blank"
               rel="noopener noreferrer"
@@ -72,7 +69,7 @@ export function MediaReferenceList({
               {ref.docTitle}
             </a>
             <span style={{ ...mutedText, fontSize: "0.8125rem", marginLeft: "0.5rem" }}>
-              {collectionLabel(ref.collection)} &mdash; {ref.field}
+              {collectionLabel(ref.collection)} &mdash; {fieldLabel(ref.field)}
             </span>
           </li>
         ))}

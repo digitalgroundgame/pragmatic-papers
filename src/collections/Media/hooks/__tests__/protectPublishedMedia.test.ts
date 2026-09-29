@@ -22,10 +22,10 @@ const runHook = (context: Record<string, unknown> = {}) =>
     req,
   } as unknown as Parameters<CollectionBeforeDeleteHook>[0])
 
-const reference = (docTitle: string, field = "heroImage"): MediaReference => ({
+const reference = (docTitle: string, docId = 1, field = "heroImage"): MediaReference => ({
   collection: "articles",
   field,
-  docId: 1,
+  docId,
   docTitle,
 })
 
@@ -43,26 +43,28 @@ describe("protectPublishedMedia", () => {
     expect(logger.warn).not.toHaveBeenCalled()
   })
 
-  it("names the one document that uses the media", async () => {
+  it("refuses with a message naming the document that uses the media", async () => {
     vi.mocked(mediaReferencesInRequest).mockResolvedValue([reference("Hero Article")])
 
     const error = await runHook().catch((caught: unknown) => caught)
 
     expect(error).toBeInstanceOf(APIError)
     expect(error).toMatchObject({
-      message: 'Cannot delete: used in "Hero Article" (articles/heroImage)',
+      message:
+        "Can't delete: it's used in \"Hero Article\" (article hero image). Replace or remove it there first.",
       status: 400,
     })
   })
 
-  it("counts the documents when several use the media", async () => {
+  it("names several documents that use the media", async () => {
     vi.mocked(mediaReferencesInRequest).mockResolvedValue([
-      reference("First"),
-      reference("Second", "meta.image"),
-      reference("Third"),
+      reference("First", 1),
+      reference("Second", 2, "meta.image"),
     ])
 
-    await expect(runHook()).rejects.toThrow("Cannot delete: used in 3 published documents")
+    await expect(runHook()).rejects.toThrow(
+      'it\'s used in 2 published documents: "First" (article hero image) and "Second" (article SEO image)',
+    )
   })
 
   it("logs the blocked delete with its references", async () => {

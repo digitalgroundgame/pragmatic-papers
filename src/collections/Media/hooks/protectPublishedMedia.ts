@@ -1,5 +1,6 @@
 import { APIError, type CollectionBeforeDeleteHook } from "payload"
 import { mediaReferencesInRequest } from "../references/collectMediaReferences"
+import { describeRefusal } from "../references/labels"
 
 /**
  * Set on a delete's `context` to delete media even while published content uses it.
@@ -15,18 +16,11 @@ export const protectPublishedMedia: CollectionBeforeDeleteHook = async ({ contex
   const refs = await mediaReferencesInRequest(req, id)
 
   if (refs.length > 0) {
-    const docList = refs.map((r) => `"${r.docTitle}" (${r.collection}/${r.field})`).join(", ")
-
-    const summary =
-      refs.length === 1
-        ? `Cannot delete: used in ${docList}`
-        : `Cannot delete: used in ${refs.length} published documents`
-
     payload.logger.warn(
       { refs, mediaId: id },
       `Media deletion blocked — in use in published content`,
     )
 
-    throw new APIError(summary, 400, null, true)
+    throw new APIError(describeRefusal(refs), 400, null, true)
   }
 }

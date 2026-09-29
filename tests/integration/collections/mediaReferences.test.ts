@@ -56,7 +56,9 @@ describe("media references", () => {
       const media = await createMedia("Referenced - mref")
       await createArticle("Uses Media - mref", media.id, "published")
 
-      await expect(deleteAsEditor(media.id)).rejects.toThrow(/Cannot delete: used in/)
+      await expect(deleteAsEditor(media.id)).rejects.toThrow(
+        /Can't delete: it's used in "Uses Media - mref" \(article hero image, SEO image\)/,
+      )
 
       const stillThere = await payload.findByID({ collection: "media", id: media.id })
       expect(stillThere.id).toBe(media.id)

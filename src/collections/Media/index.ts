@@ -51,15 +51,6 @@ export const Media: CollectionConfig = {
           label: "Content",
           fields: [
             {
-              name: "deletionNotice",
-              type: "ui",
-              admin: {
-                components: {
-                  Field: "@/collections/Media/components/DeletionNotice#DeletionNotice",
-                },
-              },
-            },
-            {
               name: "alt",
               type: "text",
             },

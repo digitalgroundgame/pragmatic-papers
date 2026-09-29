@@ -2,7 +2,6 @@ import { cleanup, render, screen, within } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import type { MediaReference } from "../../references/collectMediaReferences"
-import { DeletionNotice } from "../DeletionNotice"
 import { ReferencesView } from "../ReferencesView"
 import { useMediaReferences } from "../useMediaReferences"
 
@@ -35,52 +34,6 @@ afterEach(() => {
   vi.mocked(useMediaReferences).mockReset()
 })
 
-describe("DeletionNotice", () => {
-  it("warns that media in use can't be deleted", () => {
-    withReferences([reference(1, "Hero Article")])
-
-    render(<DeletionNotice />)
-
-    const notice = screen.getByRole("status")
-    expect(notice).toHaveTextContent("Can't be deleted while in use")
-    expect(notice).toHaveTextContent("Used in 1 published document,")
-    expect(useMediaReferences).toHaveBeenCalledWith(42)
-  })
-
-  it("counts several documents", () => {
-    withReferences([reference(1, "A"), reference(2, "B")])
-
-    render(<DeletionNotice />)
-
-    expect(screen.getByRole("status")).toHaveTextContent("Used in 2 published documents,")
-  })
-
-  it("stays hidden for unused media", () => {
-    withReferences([])
-
-    const { container } = render(<DeletionNotice />)
-
-    expect(container).toBeEmptyDOMElement()
-  })
-
-  it("stays hidden while the references load", () => {
-    withReferences([], true)
-
-    const { container } = render(<DeletionNotice />)
-
-    expect(container).toBeEmptyDOMElement()
-  })
-
-  it("stays hidden on a media upload that isn't saved yet", () => {
-    mockId = undefined
-    withReferences([reference(1, "A")])
-
-    const { container } = render(<DeletionNotice />)
-
-    expect(container).toBeEmptyDOMElement()
-  })
-})
-
 describe("ReferencesView", () => {
   it("links each document that uses the media", () => {
     withReferences([
@@ -97,7 +50,7 @@ describe("ReferencesView", () => {
     expect(link).toHaveAttribute("href", "/admin/collections/articles/7")
     expect(link).toHaveAttribute("target", "_blank")
     expect(link).toHaveAttribute("rel", expect.stringContaining("noopener"))
-    expect(items[1]).toHaveTextContent("Users — profileImage")
+    expect(items[1]).toHaveTextContent("User — profile image")
   })
 
   it("keeps one row per field when a document uses the media twice", () => {

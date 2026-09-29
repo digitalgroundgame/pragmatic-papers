@@ -47,7 +47,7 @@ export const Referenced: Story = {
     const link = canvas.getByRole("link", { name: "The Case for Permitting Reform" })
     await expect(link).toHaveAttribute("href", "/admin/collections/articles/12")
     await expect(link).toHaveAttribute("rel", expect.stringContaining("noopener"))
-    await expect(canvas.getByText(/Users — profileImage/)).toBeInTheDocument()
+    await expect(canvas.getByText(/User — profile image/)).toBeInTheDocument()
   },
 }
 

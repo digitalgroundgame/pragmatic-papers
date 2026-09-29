@@ -270,7 +270,8 @@ jobs:
   # Publishes the tested build to the pragmatic-papers-storybook Cloudflare
   # Worker (.storybook/wrangler.jsonc): `dev` deploys to the main workers.dev
   # address, and each PR uploads a version under a `pr-<number>` preview alias
-  # and links it from a comment. Kept out of the Storybook job so a Cloudflare
+  # and lists it in the PR description, with a link to each component the PR
+  # changes (scripts/storybook-pr.ts). Kept out of the Storybook job so a Cloudflare
   # outage never turns that required check red. Skips itself without the
   # Cloudflare secrets, which fork and Dependabot PRs never receive.
   storybook-deploy:
@@ -298,7 +299,10 @@ jobs:
       - uses: actions/checkout@v7
         if: env.HAS_CLOUDFLARE == 'true'
         with:
-          sparse-checkout: .storybook
+          sparse-checkout: |
+            .storybook/
+            scripts/storybook-pr.ts
+          sparse-checkout-cone-mode: false
 
       - uses: actions/download-artifact@v7
         if: env.HAS_CLOUDFLARE == 'true'
@@ -326,22 +330,17 @@ jobs:
           fi
           echo "url=$url" >> "$GITHUB_OUTPUT"
 
-      - name: Link the preview from the PR
+      # Node 24 runs the TypeScript script directly; no install needed.
+      - uses: actions/setup-node@v7
         if: steps.preview.outputs.url
-        uses: actions/github-script@v9
-        env:
-          PREVIEW_URL: ${{ steps.preview.outputs.url }}
-          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         with:
-          script: |
-            const marker = "<!-- storybook-preview -->"
-            const body = `${marker}\n📚 **Storybook preview:** ${process.env.PREVIEW_URL}\n\nUpdated for ${process.env.HEAD_SHA.slice(0, 7)}.`
-            const { owner, repo } = context.repo
-            const issue_number = context.issue.number
-            const comments = await github.paginate(github.rest.issues.listComments, { owner, repo, issue_number })
-            const existing = comments.find((c) => c.body?.startsWith(marker))
-            if (existing) {
-              await github.rest.issues.updateComment({ owner, repo, comment_id: existing.id, body })
-            } else {
-              await github.rest.issues.createComment({ owner, repo, issue_number, body })
-            }
+          node-version: "24.x"
+
+      - name: List the preview in the PR description
+        if: steps.preview.outputs.url
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PREVIEW_URL: ${{ steps.preview.outputs.url }}
+          INDEX_FILE: storybook-static/index.json
+        run: node scripts/storybook-pr.ts link

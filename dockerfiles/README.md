@@ -115,8 +115,8 @@ Use managed PostgreSQL service (AWS RDS, Supabase, Neon, etc.) for all deploymen
 | **production**      | **production** | The `main` branch      | `production` |
 
 - The development app's **production** environment is what these docs call **staging**: it deploys `dev`, not the live site.
-- **Two Hetzner CX33 servers (4 vCPU / 8 GB each):** `build-worker` builds every image, and `dev-worker` runs every deployment (previews, staging and production) until previews move to a server of their own.
-- **Every deployment builds on `build-worker`, one build at a time**, so a queue of preview builds delays a `dev` or `main` deploy behind it. The build caches below (`/pnpm`, `/nextjs`) are shared by all three. A build peaks at ~4.6 GB, so two concurrent builds wouldn't fit in 8 GB; see [#1018](https://github.com/digitalgroundgame/pragmatic-papers/issues/1018) before adding build steps or dependencies that raise build memory.
+- **Builds and deployments run on separate servers, 8 GB of RAM each.** One builds every image; the other runs every deployment (previews, staging and production) until previews move to a server of their own.
+- **Every deployment builds on the build server, one build at a time**, so a queue of preview builds delays a `dev` or `main` deploy behind it. The build caches below (`/pnpm`, `/nextjs`) are shared by all three. A build peaks at ~4.6 GB, so two concurrent builds wouldn't fit in 8 GB; see [#1018](https://github.com/digitalgroundgame/pragmatic-papers/issues/1018) before adding build steps or dependencies that raise build memory.
 - **Public PR deployments are off**, so previews only build for PRs from people with access to the repo (see [Preview Deployments on the PR](#preview-deployments-on-the-pr-github-deployments)). Keep it that way: previews build and run on the same servers as the live site.
 
 What Coolify's docs say about behaviour that matters to this setup (read them with the `upstream-docs` skill, `coolify` source; paths are under `content/docs/`):

@@ -225,6 +225,8 @@ specs you changed.
   depends on what this browser has seen before, such as the notification dots
   (`[data-slot="notification-dot"]`) that every fresh test browser shows. Tests
   still see and can assert on that UI; only the captured pixels leave it out.
+  A test whose baseline should include the dots opts in with
+  `await showNotificationDots(page)` from `helpers.ts`.
 - **When a clip is positioned relative to an element whose layout can settle
   late** (e.g. a popover below a hero image that resolves its intrinsic height
   a frame or two after decode), call `waitForStableBox(locator)` before

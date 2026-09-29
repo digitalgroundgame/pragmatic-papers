@@ -4,7 +4,11 @@
  * test, so baselines don't change when it does.
  */
 
-/* Every test starts in a fresh browser, so every notification dot shows. */
-[data-slot="notification-dot"] {
+/*
+ * Every test starts in a fresh browser, so every notification dot shows. They
+ * stay out of baselines unless a test opts in with `showNotificationDots(page)`
+ * (tests/e2e/helpers.ts).
+ */
+:root:not([data-e2e-show-notification-dots]) [data-slot="notification-dot"] {
   visibility: hidden !important;
 }

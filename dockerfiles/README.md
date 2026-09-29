@@ -311,6 +311,18 @@ FORCE_DATABASE_COPY=false
 **For Staging/Production:**
 Set `BUILD_ENV=staging` or `BUILD_ENV=production` and leave `COPY_SOURCE_DATABASE` unset: the naming and the copy are both skipped, using your `DATABASE_URI` exactly as configured.
 
+### Dropping closed PRs' preview databases
+
+Coolify deletes a closed PR's preview containers but not its database, so every preview's copy of staging used to stay on the database server. Each preview build now cleans up after copying: `dockerfiles/scripts/drop-closed-preview-databases.ts` asks GitHub which PRs are open and drops `pragmatic_papers_pr_<n>` and `pragmatic_papers_pr_<n>_incoming` for every PR that isn't open. It logs each database it drops, by name.
+
+- **It touches nothing else.** A name must be exactly the source database plus `_pr_<number>`, optionally followed by `_incoming`.
+- **It skips when unsure.** If GitHub can't be reached, or its open list doesn't include the PR being built (the wrong repository, say), it drops nothing.
+- **It keeps anything that might be live.** GitHub's list can miss an open PR, one too new to be listed yet or one that moved between pages while they were read. So a database is kept while anything is connected to it (a live preview's app always is), and when its PR is newer than every PR listed. It never disconnects anyone; a later build retries.
+- **It never fails the build.** Any error is logged as `Skipping cleanup: …` and the build carries on.
+- **Previews only.** Staging and production builds skip it (`COPY_SOURCE_DATABASE` isn't `true` there).
+- **A reopened PR** gets a fresh copy on its next build, like a new one.
+- **Credentials:** it reads open PRs from GitHub's public API without a token, which works while the repository is public (60 requests an hour per server, one or two per build). For a private repository, add a `GITHUB_TOKEN` build variable to the development application's preview variables: a fine-grained token with read access to pull requests. `GITHUB_REPOSITORY` overrides `digitalgroundgame/pragmatic-papers`.
+
 ## 💾 Storage Configuration (Pragmatic Papers)
 
 Pragmatic Papers supports two storage modes for uploaded media files:

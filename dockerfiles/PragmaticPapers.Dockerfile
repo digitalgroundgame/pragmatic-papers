@@ -108,13 +108,15 @@ ENV NODE_ENV=${NODE_ENV} \
     NEXT_PUBLIC_TURNSTILE_SITE_KEY=${NEXT_PUBLIC_TURNSTILE_SITE_KEY}
 
 # --- DATABASE PREPARATION & MIGRATION ---
-# 1. Isolated Preview Logic (names and clones a database for each PR)
+# 1. Isolated Preview Logic (names and clones a database for each PR, then drops the
+#    databases of closed PRs; best effort, never fails the build)
 # 2. Migration Logic (runs on the final target DB)
 # Each RUN gets DATABASE_URI afresh from its secret mount, so each one applies the
 # preview database name from /tmp/database_name itself.
 RUN /usr/local/bin/modify-database-uri.sh && \
     . /usr/local/bin/database-uri.sh && use_preview_database /tmp/database_name && \
     /usr/local/bin/copy-database.sh && \
+    node dockerfiles/scripts/drop-closed-preview-databases.ts && \
     echo "--- PHASE: DATABASE MIGRATIONS ---" && \
     pnpm payload migrate && \
     echo "--- COMPLETED: DATABASE MIGRATIONS ---"

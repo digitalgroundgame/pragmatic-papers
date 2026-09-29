@@ -222,9 +222,7 @@ export default async function AuthorPage({ params, searchParams }: Args): Promis
                 return <AuthorArticleCard key={article.id} article={article} volume={volume} />
               })}
             </div>
-            {totalPages > 1 && currentPage && (
-              <Pagination page={currentPage} totalPages={totalPages} />
-            )}
+            <Pagination page={currentPage} totalPages={totalPages} />
           </>
         )}
       </section>

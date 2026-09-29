@@ -33,17 +33,14 @@ export const ContentBlock: React.FC<ContentBlockProps> = ({ id: blockId, columns
   if (!columns || !columns.length) return null
   return (
     <section className={containerVariants({ width })}>
-      {columns.map(
-        ({ id: colId, richText, size }, i) =>
-          richText && (
-            <RichText
-              key={colId ?? `${blockId}-col-${i + 1}`}
-              className={cn(colVariants({ size }))}
-              data={richText}
-              enableGutter={false}
-            />
-          ),
-      )}
+      {columns.map(({ id: colId, richText, size }, i) => (
+        <RichText
+          key={colId ?? `${blockId}-col-${i + 1}`}
+          className={cn(colVariants({ size }))}
+          data={richText}
+          enableGutter={false}
+        />
+      ))}
     </section>
   )
 }

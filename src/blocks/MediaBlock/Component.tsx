@@ -115,26 +115,30 @@ type MediaBlockCaptionProps = Pick<
   StyledMediaBlockProps,
   "captionClassName" | "disableInnerContainer"
 > & {
-  caption: NonNullable<MediaType["caption"]>
+  caption: MediaType["caption"]
 }
 
 export const MediaBlockCaption: React.FC<MediaBlockCaptionProps> = ({
   caption,
   captionClassName,
   disableInnerContainer,
-}) => (
-  <figcaption
-    className={cn(
-      "my-1.5 text-start font-serif leading-tight",
-      {
-        container: !disableInnerContainer,
-      },
-      captionClassName,
-    )}
-  >
-    <RichText converters={converters} data={caption} disableContainer />
-  </figcaption>
-)
+}) => {
+  if (!caption) return null
+
+  return (
+    <figcaption
+      className={cn(
+        "my-1.5 text-start font-serif leading-tight",
+        {
+          container: !disableInnerContainer,
+        },
+        captionClassName,
+      )}
+    >
+      <RichText converters={converters} data={caption} disableContainer />
+    </figcaption>
+  )
+}
 
 export const MediaBlock: React.FC<StyledMediaBlockProps> = ({
   breakout,
@@ -166,13 +170,11 @@ export const MediaBlock: React.FC<StyledMediaBlockProps> = ({
         sizes={sizes}
         variant={variant}
       />
-      {caption && (
-        <MediaBlockCaption
-          caption={caption}
-          captionClassName={captionClassName}
-          disableInnerContainer={disableInnerContainer}
-        />
-      )}
+      <MediaBlockCaption
+        caption={caption}
+        captionClassName={captionClassName}
+        disableInnerContainer={disableInnerContainer}
+      />
     </MediaBlockFrame>
   )
 }

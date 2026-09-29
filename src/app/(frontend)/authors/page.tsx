@@ -78,13 +78,7 @@ async function AuthorContent({ page }: { page: number }) {
           ))}
         </div>
       </section>
-      {totalPages > 1 && currentPage && (
-        <Pagination
-          className="mt-6 flex justify-center"
-          page={currentPage}
-          totalPages={totalPages}
-        />
-      )}
+      <Pagination className="mt-6 flex justify-center" page={currentPage} totalPages={totalPages} />
     </>
   )
 }

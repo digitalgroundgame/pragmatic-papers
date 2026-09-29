@@ -21,13 +21,11 @@ export const CallToActionBlock: React.FC<CTABlockProps> = ({ id, links, richText
         <PaperIcon className="relative z-1 text-white" />
       </div>
       <div className="relative space-y-3">
-        {richText && (
-          <RichText
-            className="prose-headings:text-white text-white"
-            data={richText}
-            enableGutter={false}
-          />
-        )}
+        <RichText
+          className="prose-headings:text-white text-white"
+          data={richText}
+          enableGutter={false}
+        />
         <div className="relative flex flex-row gap-3">
           {(links || []).map(({ link }, i) => {
             return (

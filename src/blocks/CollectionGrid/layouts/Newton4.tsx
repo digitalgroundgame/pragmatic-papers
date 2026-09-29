@@ -32,7 +32,7 @@ export const Newton4Layout: React.FC<LayoutProps> = ({
       {/* Featured — left column (75%) */}
       <CollectionTile
         className="h-full"
-        tile={featured!}
+        tile={featured}
         priority={priority}
         sizes="(max-width: 768px) 100vw, 920px"
         variant="large"
@@ -41,13 +41,13 @@ export const Newton4Layout: React.FC<LayoutProps> = ({
       {/* Right column — 3 stacked tiles (25%) */}
       <div className="grid grid-cols-1 gap-6">
         <CollectionTile
-          tile={a!}
+          tile={a}
           loading={loading}
           sizes="(max-width: 768px) 100vw, 310px"
           variant="medium"
         />
-        <CollectionTile tile={b!} imagePosition="none" />
-        <CollectionTile tile={c!} imagePosition="none" />
+        <CollectionTile tile={b} imagePosition="none" />
+        <CollectionTile tile={c} imagePosition="none" />
       </div>
     </section>
   )

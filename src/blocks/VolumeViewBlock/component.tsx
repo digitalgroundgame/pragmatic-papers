@@ -41,16 +41,10 @@ export const VolumeViewBlock: React.FC<
 
     return (
       <div className="container my-4 max-w-3xl space-y-8" id={id ?? undefined}>
-        {introContent && (
-          <RichText className="font-display" data={introContent} enableGutter={false} />
-        )}
+        <RichText className="font-display" data={introContent} enableGutter={false} />
         <VolumesView volumes={docs} />
         <PageRange collection="volumes" currentPage={page} limit={limit} totalDocs={totalDocs} />
-        {totalPages > 1 && page && (
-          <div className="container">
-            <PaginationVolumes page={page} totalPages={totalPages} />
-          </div>
-        )}
+        <PaginationVolumes className="container" page={page} totalPages={totalPages} />
       </div>
     )
   } else {

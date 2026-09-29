@@ -13,10 +13,13 @@ import React from "react"
 export const Pagination: React.FC<{
   buildHref?: (page: number) => string
   className?: string
-  page: number
+  /** Payload's paginated `page`, which it leaves undefined for an empty result */
+  page: number | undefined
   totalPages: number
 }> = (props) => {
   const { buildHref = (p) => `?p=${p}`, className, page, totalPages } = props
+  if (!page || totalPages <= 1) return null
+
   const hasNextPage = page < totalPages
   const hasPrevPage = page > 1
 

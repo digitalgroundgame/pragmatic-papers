@@ -290,6 +290,12 @@ FORCE_DATABASE_COPY=false
 - `DATABASE_URI` must be available at build time _and_ runtime, with the same value, in **every** environment: the image carries no credentials, so the running app reads only the runtime value, and `start.sh` exits if it's missing.
 - Its user needs `CREATEDB` and permission to terminate other sessions on the source database: `CREATE DATABASE … TEMPLATE` fails while anyone is connected to it, so the script disconnects them first. That includes staging's own sessions whenever a new preview database is created.
 
+**Running commands inside a preview container:** only `start.sh` points `DATABASE_URI` at the preview's own database. A shell opened with `docker exec` or Coolify's terminal still has the unsuffixed `DATABASE_URI`, which is **staging's** database. Apply the preview name first:
+
+```sh
+. /app/database-uri.sh && use_preview_database /app/database_name
+```
+
 **For Staging/Production:**
 Set `BUILD_ENV=staging` or `BUILD_ENV=production` and leave `COPY_SOURCE_DATABASE` unset: the naming and the copy are both skipped, using your `DATABASE_URI` exactly as configured.
 
@@ -336,4 +342,4 @@ S3_ENDPOINT=https://s3.amazonaws.com
 
 - Check environment variable examples: `.env.*.example`
 - Review Coolify logs for build/runtime errors
-- Verify health checks in Coolify dashboard
+- Verify health checks in Coolify dashboard. The image's `HEALTHCHECK` requests `/api/users/me` and passes once Payload has started against the database; a container stuck unhealthy usually means `start.sh` exited (check its log for `DATABASE_URI is not set at runtime`) or the database is unreachable

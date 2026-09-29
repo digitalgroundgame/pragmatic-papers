@@ -170,5 +170,12 @@ COPY --from=builder --chown=nextjs:nodejs --chmod=755 /app/dockerfiles/scripts/s
 
 USER nextjs
 EXPOSE 3000
+
+# Healthy once Payload has started against the database: /api/users/me answers 200
+# (user: null) without a login. A container whose start.sh exited, e.g. on a missing
+# runtime DATABASE_URI, never turns healthy, so Coolify keeps the old one serving
+# instead of swapping in a dead one. busybox wget fails on any non-2xx status.
+HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=3 \
+    CMD wget -q -O /dev/null "http://127.0.0.1:${PORT:-3000}/api/users/me" || exit 1
 ENTRYPOINT ["dumb-init", "--"]
 CMD ["./start.sh"]

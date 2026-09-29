@@ -35,25 +35,28 @@ const menuItemVariants = cva("text-primary", {
 interface MenuProps
   extends React.HTMLAttributes<HTMLUListElement>, VariantProps<typeof menuVariants> {
   menu?: MenuField
+  /** Names the `nav` landmark, so a page's navs can be told apart ("Main", "Footer"). */
+  label: string
 }
 
 /**
  * Menu component renders a navigation menu based on menu data.
  *
  * @param menu - The array of menu items to display.
+ * @param label - Accessible name for the `nav` landmark.
  * @param className - Additional classes for the menu container.
  * @param layout - Specifies the menu layout variant ('inline', 'stacked', or 'responsive').
  * @param props - All other HTML div props.
  *
  * @example
- * <Menu menu={menuData} layout="inline" />
- * <Menu menu={menuData} layout="stacked" />
+ * <Menu menu={menuData} label="Footer" layout="inline" />
+ * <Menu menu={menuData} label="Main" layout="stacked" />
  */
-export const Menu: React.FC<MenuProps> = ({ menu, className, layout, ...props }) => {
+export const Menu: React.FC<MenuProps> = ({ menu, label, className, layout, ...props }) => {
   if (!menu) return null
 
   return (
-    <nav>
+    <nav aria-label={label}>
       <ul className={cn(menuVariants({ className, layout }))} {...props}>
         {menu.map(({ link, id }, index) => {
           const url = getLinkFieldUrl(link)

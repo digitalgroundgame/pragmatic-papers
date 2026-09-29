@@ -26,7 +26,7 @@ const menu: MenuField = [
 
 describe("Menu", () => {
   it("marks the current page in the stacked sidebar layout", () => {
-    render(<Menu menu={menu} layout="stacked" />)
+    render(<Menu menu={menu} label="Main" layout="stacked" />)
 
     const authors = screen.getByRole("link", { name: "Authors" })
     expect(authors).toHaveAttribute("aria-current", "page")
@@ -35,7 +35,7 @@ describe("Menu", () => {
   })
 
   it("skips items whose link does not resolve to a URL", () => {
-    render(<Menu menu={menu} />)
+    render(<Menu menu={menu} label="Main" />)
 
     expect(screen.getAllByRole("listitem")).toHaveLength(2)
     expect(screen.queryByText("Deleted page")).not.toBeInTheDocument()

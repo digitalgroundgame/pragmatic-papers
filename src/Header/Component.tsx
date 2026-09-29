@@ -66,7 +66,7 @@ export async function Header(): Promise<React.JSX.Element> {
                     />
                   </SheetHeader>
                   <SearchForm />
-                  <Menu menu={navItems} layout="stacked" />
+                  <Menu menu={navItems} label="Main" layout="stacked" />
                   <div className="flex items-center gap-2 px-4 py-3">
                     <SocialLinks socials={socials} />
                     <ModeToggleAnalytics location="header-mobile-menu" />
@@ -127,7 +127,7 @@ export async function Header(): Promise<React.JSX.Element> {
           </div>
         </div>
       </header>
-      <MegaMenu menu={navItems} />
+      <MegaMenu menu={navItems} label="Main" />
     </>
   )
 }

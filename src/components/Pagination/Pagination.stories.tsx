@@ -2,7 +2,6 @@ import type { Meta, StoryObj } from "@storybook/nextjs-vite"
 import { expect, within } from "storybook/test"
 
 import { PageRange } from "@/components/PageRange"
-import { skipA11yRules } from "@/stories/a11y"
 import { PaginationVolumes } from "@/components/PaginationVolumes"
 
 import { Pagination } from "."
@@ -34,15 +33,26 @@ export const Middle: Story = {
   },
 }
 
-// #1001: the boundary Previous/Next are half-opacity live links.
 export const FirstPage: Story = {
   args: { page: 1 },
-  parameters: skipA11yRules("color-contrast"),
+  play: async ({ canvasElement }) => {
+    const nav = await within(canvasElement).findByRole("navigation", { name: "pagination" })
+    await expect(
+      within(nav).queryByRole("link", { name: "Go to previous page" }),
+    ).not.toBeInTheDocument()
+    await expect(within(nav).getByText("Previous").closest("a")).not.toHaveAttribute("href")
+  },
 }
 
 export const LastPage: Story = {
   args: { page: 8 },
-  parameters: skipA11yRules("color-contrast"),
+  play: async ({ canvasElement }) => {
+    const nav = await within(canvasElement).findByRole("navigation", { name: "pagination" })
+    await expect(
+      within(nav).queryByRole("link", { name: "Go to next page" }),
+    ).not.toBeInTheDocument()
+    await expect(within(nav).getByText("Next").closest("a")).not.toHaveAttribute("href")
+  },
 }
 
 export const CustomHrefs: Story = {

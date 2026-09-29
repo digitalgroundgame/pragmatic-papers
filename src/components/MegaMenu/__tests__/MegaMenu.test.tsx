@@ -26,7 +26,7 @@ const menu: MenuField = [
 
 describe("MegaMenu", () => {
   it("marks the link for the current section as the active page", () => {
-    render(<MegaMenu menu={menu} />)
+    render(<MegaMenu menu={menu} label="Main" />)
 
     const authors = screen.getByRole("link", { name: "Authors" })
     expect(authors).toHaveAttribute("aria-current", "page")
@@ -38,7 +38,7 @@ describe("MegaMenu", () => {
   })
 
   it("skips items whose link does not resolve to a URL", () => {
-    render(<MegaMenu menu={menu} />)
+    render(<MegaMenu menu={menu} label="Main" />)
 
     expect(screen.getAllByRole("listitem")).toHaveLength(2)
     expect(screen.queryByText("Deleted page")).not.toBeInTheDocument()

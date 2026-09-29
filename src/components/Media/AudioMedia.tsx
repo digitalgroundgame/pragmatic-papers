@@ -173,14 +173,23 @@ function VolumeIcon({ volume }: { volume: number }): React.ReactNode {
   return volume < 0.5 ? <Volume1 className="size-4" /> : <Volume2 className="size-4" />
 }
 
-/** Owns the slider position; the level itself is applied by the gain graph upstream. */
+const VOLUME_LEVELS = [0, 0.25, 0.5, 0.75, 1] as const
+
+function formatVolume(volume: number): string {
+  return volume === 0 ? "Mute" : `${volume * 100}%`
+}
+
+/**
+ * Steps rather than a slider: a menu may only hold menu items, and a slider
+ * inside one fights it for the arrow keys. The level itself is applied by the
+ * gain graph upstream.
+ */
 function VolumeMenuGroup({ onChange }: { onChange: (volume: number) => void }) {
   const [volume, setVolume] = useState(1)
 
   const handleValueChange = useCallback(
-    (value: number | readonly number[]) => {
-      const next = singleValue(value)
-      if (next === undefined) return
+    (value: unknown) => {
+      const next = Number(value)
       setVolume(next)
       onChange(next)
     },
@@ -189,24 +198,17 @@ function VolumeMenuGroup({ onChange }: { onChange: (volume: number) => void }) {
 
   return (
     <DropdownMenuGroup>
-      <DropdownMenuLabel>Volume</DropdownMenuLabel>
-      {/* Not a menu item: the wrapper keeps arrow keys on the slider
-          instead of letting the menu use them to move between items. */}
-      <div
-        className="flex items-center gap-2 px-1.5 py-1"
-        onKeyDown={(event) => event.stopPropagation()}
-      >
+      <DropdownMenuLabel className="flex items-center gap-1.5">
         <VolumeIcon volume={volume} />
-        <Slider
-          min={0}
-          max={1}
-          step={0.01}
-          value={[volume]}
-          onValueChange={handleValueChange}
-          aria-label="Volume"
-          className="w-28"
-        />
-      </div>
+        Volume
+      </DropdownMenuLabel>
+      <DropdownMenuRadioGroup value={volume} onValueChange={handleValueChange}>
+        {VOLUME_LEVELS.map((level) => (
+          <DropdownMenuRadioItem key={level} value={level}>
+            {formatVolume(level)}
+          </DropdownMenuRadioItem>
+        ))}
+      </DropdownMenuRadioGroup>
     </DropdownMenuGroup>
   )
 }

@@ -39,7 +39,7 @@ export const SeveralAuthors: Story = {
 export const ShareNative: Story = {
   beforeEach: () => {
     const original = navigator.share
-    const share = fn()
+    const share = fn().mockResolvedValue(undefined)
     Object.defineProperty(navigator, "share", { value: share, configurable: true })
     return () => {
       Object.defineProperty(navigator, "share", { value: original, configurable: true })

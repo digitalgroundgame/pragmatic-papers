@@ -31,12 +31,6 @@ function query<T extends Element>(container: HTMLElement, selector: string): T {
   return el
 }
 
-// The menu renders in a portal, so it is queried off the document rather than
-// the render container.
-function volumeSlider(): Element | null {
-  return document.querySelector('input[type="range"][aria-label="Volume"]')
-}
-
 /** Base UI backs each slider with a range input, the only handle jsdom can drive. */
 function sliderInput(label: string): HTMLInputElement {
   const input = document.querySelector<HTMLInputElement>(
@@ -48,8 +42,10 @@ function sliderInput(label: string): HTMLInputElement {
 
 /** The icon lucide renders for the current level, e.g. "lucide-volume-x" when muted. */
 function volumeIconClass(): string {
-  const row = volumeSlider()?.closest('[data-slot="slider"]')?.parentElement
-  return row?.querySelector("svg")?.getAttribute("class") ?? ""
+  // The menu renders in a portal, so it is queried off the document rather
+  // than the render container.
+  const label = screen.getByText("Volume", { selector: '[data-slot="dropdown-menu-label"]' })
+  return label.querySelector("svg")?.getAttribute("class") ?? ""
 }
 
 function isCollapsed(container: HTMLElement): boolean {
@@ -271,23 +267,21 @@ describe("AudioMedia", () => {
       expect(audio.playbackRate).toBe(1.5)
     })
 
-    it("offers a volume slider", () => {
-      const { container } = render(<AudioMedia media={media} />)
-      expect(query<HTMLAudioElement>(container, "audio").volume).toBe(1)
-
+    it("offers volume levels, starting at full", () => {
+      render(<AudioMedia media={media} />)
       fireEvent.click(screen.getByLabelText("Player settings"))
-      expect(volumeSlider()).not.toBeNull()
+
+      expect(screen.getByRole("menuitemradio", { name: "100%" })).toBeChecked()
+      expect(screen.getByRole("menuitemradio", { name: "Mute" })).not.toBeChecked()
     })
 
     it("keeps the volume it was given", () => {
       render(<AudioMedia media={media} />)
       fireEvent.click(screen.getByLabelText("Player settings"))
 
-      const volume = sliderInput("Volume")
-      expect(volume.value).toBe("1")
-
-      fireEvent.change(volume, { target: { value: "0.25" } })
-      expect(sliderInput("Volume").value).toBe("0.25")
+      fireEvent.click(screen.getByRole("menuitemradio", { name: "25%" }))
+      expect(screen.getByRole("menuitemradio", { name: "25%" })).toBeChecked()
+      expect(screen.getByRole("menuitemradio", { name: "100%" })).not.toBeChecked()
     })
 
     it("mutes the icon once the level reaches zero", () => {
@@ -295,7 +289,7 @@ describe("AudioMedia", () => {
       fireEvent.click(screen.getByLabelText("Player settings"))
       expect(volumeIconClass()).not.toContain("volume-x")
 
-      fireEvent.change(sliderInput("Volume"), { target: { value: "0" } })
+      fireEvent.click(screen.getByRole("menuitemradio", { name: "Mute" }))
       expect(volumeIconClass()).toContain("volume-x")
     })
 
@@ -304,31 +298,6 @@ describe("AudioMedia", () => {
       fireEvent.click(screen.getByLabelText("Player settings"))
 
       expect(screen.getByText("Narrated by Ada Lovelace")).toBeInTheDocument()
-    })
-
-    it("keeps arrow keys on the volume slider instead of the menu", () => {
-      render(<AudioMedia media={media} />)
-      fireEvent.click(screen.getByLabelText("Player settings"))
-
-      const volume = sliderInput("Volume")
-      volume.focus()
-      // The same key moves focus between items when it reaches the menu.
-      fireEvent.keyDown(volume, { key: "ArrowDown" })
-
-      expect(document.activeElement).toBe(volume)
-    })
-
-    it("keeps every other key off the menu too", () => {
-      render(<AudioMedia media={media} />)
-      fireEvent.click(screen.getByLabelText("Player settings"))
-
-      const volume = sliderInput("Volume")
-      volume.focus()
-      // Typeahead and the like: the row swallows what the slider does not use.
-      fireEvent.keyDown(volume, { key: "s" })
-
-      expect(document.activeElement).toBe(volume)
-      expect(screen.getByRole("menu")).toBeInTheDocument()
     })
 
     it("is only revealed once the collapsible variant has been played", () => {

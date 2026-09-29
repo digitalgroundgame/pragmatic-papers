@@ -10,7 +10,7 @@ import { usePageMemory } from "./hooks/usePageMemory"
 import { loadFeedBatch } from "./actions"
 import type { FeedSlot, RenderedFeedArticle } from "./types"
 
-const RELOADED_KEY = "feed:reloaded-after-load-failure"
+const RELOADED_KEY = "pp:feed:reloaded-after-load-failure"
 
 // One reload per tab session, so a load-more that keeps failing (the server is
 // down, say) can't put the page in a reload loop.

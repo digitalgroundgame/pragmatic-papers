@@ -1,10 +1,9 @@
-import configPromise from "@payload-config"
 import type { Metadata } from "next"
 import type { User } from "@/payload-types"
 import { draftMode } from "next/headers"
-import { getPayload } from "payload"
 import React from "react"
 
+import { ArticleSidebar } from "@/components/ArticleSidebar"
 import { AuthorList } from "@/components/Authors/AuthorList"
 import { FootnoteList } from "@/components/FootnoteList"
 import { JsonLd } from "@/components/JsonLd"
@@ -12,17 +11,20 @@ import { LivePreviewListener } from "@/components/LivePreviewListener"
 import { PayloadRedirects } from "@/components/PayloadRedirects"
 import { RecommendedArticles } from "@/components/RecommendedArticles"
 import RichText from "@/components/RichText"
+import { TableOfContents, TableOfContentsProvider } from "@/components/TableOfContents"
 import { TopicsList } from "@/components/Topics/TopicsList"
 import { Separator } from "@/components/ui/separator"
+import { isExperimentEnabled } from "@/globals/SiteSettings/isExperimentEnabled"
 import { ArticleHero } from "@/heros/ArticleHero"
 import { MathJaxProvider } from "@/providers/MathJaxProvider"
 import { generateMeta } from "@/utilities/generateMeta"
+import { getPayloadConfig } from "@/utilities/getPayloadConfig"
 import { queryArticleBySlug, queryVolumesForArticles } from "@/utilities/queries"
 import { isResolved } from "@/utilities/relationships"
 import { buildArticleJsonLd, buildBreadcrumbJsonLd } from "@/utilities/structuredData"
 
 export async function generateStaticParams(): Promise<{ slug: string | null | undefined }[]> {
-  const payload = await getPayload({ config: configPromise })
+  const payload = await getPayloadConfig()
   const articles = await payload.find({
     collection: "articles",
     draft: false,
@@ -69,12 +71,16 @@ export default async function Article({ params: paramsPromise }: Args): Promise<
 
   const populatedAuthors = (authors || []).filter(isResolved<User>)
 
-  const [volume] = await queryVolumesForArticles([article.id])
+  const [[volume], tableOfContentsEnabled] = await Promise.all([
+    queryVolumesForArticles([article.id]),
+    isExperimentEnabled("tableOfContents"),
+  ])
+  const showTableOfContents = tableOfContentsEnabled && article.showTableOfContents === true
 
   return (
     <>
       <div className="@container/page">
-        <article className="mx-auto max-w-2xl space-y-6 px-4 md:px-1">
+        <article className="mx-auto max-w-5xl min-w-0 space-y-6 px-4">
           <JsonLd
             data={[
               buildArticleJsonLd(article, url, volume),
@@ -86,19 +92,33 @@ export default async function Article({ params: paramsPromise }: Args): Promise<
 
           {draft && <LivePreviewListener />}
 
-          <ArticleHero article={article} />
-          <MathJaxProvider enableMathRendering={enableMathRendering}>
-            <RichText
-              data={content}
-              enableGutter={false}
-              className="drop-cap"
-              parentDoc={{ collection: "articles", id: article.id }}
-            />
-          </MathJaxProvider>
-          <FootnoteList footnotes={footnotes} />
-          <Separator />
-          <TopicsList topics={topics} />
-          <AuthorList aria-label="Article Authors" authors={populatedAuthors} />
+          <TableOfContentsProvider>
+            <ArticleHero article={article} showTableOfContents={showTableOfContents} />
+            <div
+              id="intro"
+              className="lg:toc-open:gap-10 xl:toc-open:gap-20 relative flex flex-col justify-between gap-3 lg:flex-row lg:gap-6"
+            >
+              {showTableOfContents && (
+                <ArticleSidebar>
+                  <TableOfContents content={content} />
+                </ArticleSidebar>
+              )}
+              <div className="mx-auto max-w-2xl space-y-3">
+                <MathJaxProvider enableMathRendering={enableMathRendering}>
+                  <RichText
+                    data={content}
+                    enableGutter={false}
+                    className="drop-cap"
+                    parentDoc={{ collection: "articles", id: article.id }}
+                  />
+                </MathJaxProvider>
+                <FootnoteList footnotes={footnotes} />
+                <Separator />
+                <TopicsList topics={topics} />
+                <AuthorList aria-label="Article Authors" authors={populatedAuthors} />
+              </div>
+            </div>
+          </TableOfContentsProvider>
         </article>
       </div>
       <RecommendedArticles currentArticleSlug={slug} />

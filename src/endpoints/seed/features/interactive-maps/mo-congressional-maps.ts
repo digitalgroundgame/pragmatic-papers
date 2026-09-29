@@ -3,53 +3,64 @@ import type { Payload } from "payload"
 
 import { createArticle, validateWriters } from "../../articles"
 import { createMapAssetFromFixture } from "../../mapAssets"
-import { createHeadingNode, createParagraph, createRichText } from "../../richtext"
+import {
+  createHeadingNode,
+  createParagraph,
+  createRichText,
+  type SerializedLexicalNode,
+} from "../../richtext"
 
-interface MapEntry {
+export interface MapEntry {
   title: string
   svgAssetId: number
   dataAttribute: string
   invertColors?: boolean
 }
 
-const createInteractiveMapNode = (maps: MapEntry[]) => ({
-  type: "block",
-  fields: {
-    blockType: "interactiveMap",
-    widgetTitle: "Missouri Congressional Districts — 119th vs. 120th Congress",
-    layout: "row",
-    colorScale: "divergingRedBlue",
-    colorBias: 0.5,
-    maps: maps.map((m) => ({
-      title: m.title,
-      svgAsset: m.svgAssetId,
-      dataAttribute: m.dataAttribute,
-      invertColors: m.invertColors ?? false,
-    })),
-    sources: [
-      {
-        link: {
-          type: "custom",
-          label: "Redistricting Data Hub",
-          url: "https://redistrictingdatahub.org/",
-          newTab: true,
-          variant: "link",
+export const createInteractiveMapNode = (
+  maps: MapEntry[],
+  widgetTitle = "Missouri Congressional Districts — 119th vs. 120th Congress",
+): SerializedLexicalNode => {
+  const node = {
+    type: "block",
+    fields: {
+      blockType: "interactiveMap",
+      widgetTitle,
+      layout: "row",
+      colorScale: "divergingRedBlue",
+      colorBias: 0.5,
+      maps: maps.map((m) => ({
+        title: m.title,
+        svgAsset: m.svgAssetId,
+        dataAttribute: m.dataAttribute,
+        invertColors: m.invertColors ?? false,
+      })),
+      sources: [
+        {
+          link: {
+            type: "custom",
+            label: "Redistricting Data Hub",
+            url: "https://redistrictingdatahub.org/",
+            newTab: true,
+            variant: "link",
+          },
         },
-      },
-      {
-        link: {
-          type: "custom",
-          label: "UCLA cdmaps",
-          url: "https://cdmaps.polisci.ucla.edu/",
-          newTab: true,
-          variant: "link",
+        {
+          link: {
+            type: "custom",
+            label: "UCLA cdmaps",
+            url: "https://cdmaps.polisci.ucla.edu/",
+            newTab: true,
+            variant: "link",
+          },
         },
-      },
-    ],
-  },
-  format: "",
-  version: 2,
-})
+      ],
+    },
+    format: "",
+    version: 2,
+  }
+  return node
+}
 
 export const createMoCongressionalMapsArticle = async (
   payload: Payload,

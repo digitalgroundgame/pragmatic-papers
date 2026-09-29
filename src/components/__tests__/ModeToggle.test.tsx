@@ -1,8 +1,10 @@
 import { ClientThemeProvider } from "@wrksz/themes/client"
 import { cleanup, fireEvent, render, type RenderResult, screen } from "@testing-library/react"
 import React from "react"
-import { afterEach, describe, expect, it, vi } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
+import { NOTIFICATION_DOTS, NotificationDot } from "../NotificationDot"
+import { resetSeenStore, SEEN_KEY_PREFIX } from "../NotificationDot/store"
 import { ModeToggle } from "../ModeToggle"
 
 // Same provider props as src/app/(frontend)/layout.tsx. vitest.setup's
@@ -102,5 +104,59 @@ describe("ModeToggle", () => {
     expect(system).toHaveAttribute("data-disabled")
     fireEvent.click(system)
     expect(onThemeChange).not.toHaveBeenCalled()
+  })
+})
+
+describe("ModeToggle notification dot", () => {
+  function dotIn(element: HTMLElement): Element | null {
+    return element.querySelector("[data-slot='notification-dot']")
+  }
+
+  // The header's account button mirrors the toggle's dot below lg.
+  function renderWithAccountButton(props: React.ComponentProps<typeof ModeToggle> = {}): void {
+    render(
+      <ClientThemeProvider attribute="class" defaultTheme="system" enableSystem>
+        <button type="button" className="relative">
+          Account
+          <NotificationDot name={NOTIFICATION_DOTS.modeToggle} />
+        </button>
+        <ModeToggle {...props} />
+      </ClientThemeProvider>,
+    )
+  }
+
+  beforeEach(resetSeenStore)
+
+  it("shows no dot unless notificationDot is set", () => {
+    renderToggle()
+
+    expect(dotIn(screen.getByRole("button", { name: "Toggle theme" }))).not.toBeInTheDocument()
+  })
+
+  it("marks a first-time reader's toggle, and the places mirroring it", () => {
+    renderWithAccountButton({ notificationDot: true })
+
+    expect(dotIn(screen.getByRole("button", { name: "Toggle theme" }))).toBeInTheDocument()
+    expect(dotIn(screen.getByRole("button", { name: "Account" }))).toBeInTheDocument()
+  })
+
+  it("clears the dot everywhere once a toggle is opened, and remembers it", async () => {
+    renderWithAccountButton({ notificationDot: true })
+
+    openMenu()
+    await screen.findByRole("menuitem", { name: "Dark" })
+
+    expect(dotIn(screen.getByRole("button", { name: "Toggle theme" }))).not.toBeInTheDocument()
+    expect(dotIn(screen.getByRole("button", { name: "Account" }))).not.toBeInTheDocument()
+    expect(localStorage.getItem(`${SEEN_KEY_PREFIX}${NOTIFICATION_DOTS.modeToggle}`)).toBe("1")
+  })
+
+  it("is cleared by opening a toggle that doesn't show it, like the footer's", async () => {
+    renderWithAccountButton()
+
+    openMenu()
+    await screen.findByRole("menuitem", { name: "Dark" })
+
+    expect(dotIn(screen.getByRole("button", { name: "Account" }))).not.toBeInTheDocument()
   })
 })

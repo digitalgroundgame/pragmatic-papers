@@ -3,21 +3,21 @@ import { Bell } from "lucide-react"
 import { expect } from "storybook/test"
 
 import { Button } from "@/components/ui/button"
-import { resetNotificationStore } from "@/providers/NotificationProvider"
 
-import { NotificationDot } from "./NotificationDot"
+import { NOTIFICATION_DOTS, NotificationDot } from "."
+import { resetSeenStore, SEEN_KEY_PREFIX } from "./store"
 
-const NAME = "storybook-demo"
+const KEY = `${SEEN_KEY_PREFIX}${NOTIFICATION_DOTS.modeToggle}`
 
-/** Start each story as a reader who has (or hasn't) seen the notification. */
+/** Start each story as a reader who has (or hasn't) seen the dot. */
 function seen(value: boolean): () => () => void {
   return () => {
-    if (value) localStorage.setItem(`pp:seen:${NAME}`, "1")
-    else localStorage.removeItem(`pp:seen:${NAME}`)
-    resetNotificationStore()
+    if (value) localStorage.setItem(KEY, "1")
+    else localStorage.removeItem(KEY)
+    resetSeenStore()
     return () => {
-      localStorage.removeItem(`pp:seen:${NAME}`)
-      resetNotificationStore()
+      localStorage.removeItem(KEY)
+      resetSeenStore()
     }
   }
 }
@@ -25,7 +25,7 @@ function seen(value: boolean): () => () => void {
 const meta = {
   title: "Components/NotificationDot",
   component: NotificationDot,
-  args: { name: NAME },
+  args: { name: NOTIFICATION_DOTS.modeToggle },
   // The dot positions itself against the nearest `relative` ancestor, usually an icon button.
   render: (args) => (
     <Button variant="ghost" size="icon" className="relative">

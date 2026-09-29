@@ -4,7 +4,7 @@ import { useTheme } from "@wrksz/themes/client"
 import { Moon, Sun } from "lucide-react"
 import React from "react"
 
-import { NotificationDot } from "@/components/NotificationDot"
+import { NOTIFICATION_DOTS, useNotificationDot } from "@/components/NotificationDot"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -12,7 +12,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { useNotification } from "@/providers/NotificationProvider"
 import { cn } from "@/utilities/utils"
 
 export type Theme = "light" | "dark" | "system"
@@ -22,14 +21,17 @@ interface ModeToggleProps {
   showLabel?: boolean
   /** Called after the theme is set, with the theme the user selected. */
   onThemeChange?: (theme: Theme) => void
+  /** Show the notification dot on this toggle. Opening any toggle clears it everywhere. */
+  notificationDot?: boolean
 }
 
 export function ModeToggle({
   showLabel = false,
   onThemeChange,
+  notificationDot = false,
 }: ModeToggleProps): React.JSX.Element {
   const { setTheme, theme } = useTheme()
-  const { markSeen } = useNotification("theme-selector")
+  const { dot, markSeen } = useNotificationDot(NOTIFICATION_DOTS.modeToggle)
 
   function handleSetTheme(next: Theme): void {
     setTheme(next)
@@ -37,7 +39,7 @@ export function ModeToggle({
   }
 
   return (
-    <DropdownMenu onOpenChange={(open) => open && markSeen()}>
+    <DropdownMenu onOpenChange={markSeen}>
       <DropdownMenuTrigger
         render={
           <Button
@@ -49,7 +51,7 @@ export function ModeToggle({
             <Sun className="size-5 scale-100 rotate-0 transition-all dark:scale-0 dark:-rotate-90" />
             <Moon className="absolute size-5 scale-0 rotate-90 transition-all dark:scale-100 dark:rotate-0" />
             <span className={showLabel ? undefined : "sr-only"}>Toggle theme</span>
-            <NotificationDot name="theme-selector" />
+            {notificationDot && dot}
           </Button>
         }
       />

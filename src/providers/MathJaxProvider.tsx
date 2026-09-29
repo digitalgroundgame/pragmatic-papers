@@ -18,11 +18,18 @@ const reportLoadFailure = (error: unknown) => {
   Sentry.captureMessage("MathJax failed to load", { level: "warning", extra: { error } })
 }
 
+// MathJax's default is to typeset the whole document as soon as it loads,
+// which can rewrite a formula's server-rendered TeX before React hydrates it
+// (#997). Every formula is its own `<MathJax>` element that typesets itself,
+// so the page-wide pass only duplicates that work, and turning it off also
+// leaves stray `\(`/`\[` in article text and embeds untouched.
+const config = { startup: { typeset: false } }
+
 export const MathJaxProviderRoot: React.FC<{
   children?: React.ReactNode
 }> = ({ children }) => {
   return (
-    <MathJaxContext version={3} onError={reportLoadFailure}>
+    <MathJaxContext version={3} config={config} onError={reportLoadFailure}>
       {children}
     </MathJaxContext>
   )

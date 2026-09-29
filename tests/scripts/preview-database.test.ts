@@ -25,6 +25,7 @@ const PREVIEW_URI = URI.replace("pragmatic_papers?", "pragmatic_papers_pr_330?")
 // $SERVER_VERSION_NUM and $CLIENT_VERSION set the server's and pg_dump's versions.
 const FAKES: Record<string, string> = {
   psql: `case "$*" in
+  *"shobj_description"*) echo "$DATABASE_COMMENT" ;;
   *"FROM pg_database"*) [ "$TARGET_EXISTS" = "true" ] && echo 1 ;;
   *"server_version_num"*) echo "\${SERVER_VERSION_NUM:-170006}" ;;
   *"WITH TEMPLATE"*) if [ "$SOURCE_BUSY" = "true" ]; then
@@ -74,6 +75,9 @@ function sh(script: string, env: Record<string, string> = {}) {
       FORCE_DATABASE_COPY: "",
       TARGET_EXISTS: "",
       SOURCE_BUSY: "",
+      BUILT_WITHOUT_DATABASE: "",
+      SOURCE_COMMIT: "",
+      DATABASE_COMMENT: "",
       ...env,
     },
   })
@@ -268,6 +272,37 @@ describe("preview database build", () => {
     expect(indexOf('RENAME TO "pragmatic_papers_pr_330"')).toBeGreaterThan(
       indexOf('WITH TEMPLATE "pragmatic_papers"'),
     )
+  })
+
+  it("forces a copy once per image, so a restart keeps the preview's data (#1067)", () => {
+    const image = {
+      TARGET_EXISTS: "true",
+      FORCE_DATABASE_COPY: "true",
+      BUILT_WITHOUT_DATABASE: "true",
+      SOURCE_COMMIT: "abc123",
+    }
+
+    const restart = copyToPreview({ ...image, DATABASE_COMMENT: "copied for commit abc123" })
+    expect(restart.status).toBe(0)
+    expect(restart.output).toContain("a restart keeps its data")
+    expect(indexOf("DROP DATABASE")).toBe(-1)
+
+    rmSync(join(dir, "calls.log"), { force: true })
+    const newImage = copyToPreview({ ...image, DATABASE_COMMENT: "copied for commit old999" })
+    expect(newImage.status).toBe(0)
+    expect(indexOf('RENAME TO "pragmatic_papers_pr_330"')).toBeGreaterThanOrEqual(0)
+    expect(
+      indexOf(`COMMENT ON DATABASE "pragmatic_papers_pr_330" IS 'copied for commit abc123'`),
+    ).toBeGreaterThan(indexOf('RENAME TO "pragmatic_papers_pr_330"'))
+  })
+
+  it("marks a first copy with the image's commit, and leaves Coolify builds unmarked", () => {
+    copyToPreview({ BUILT_WITHOUT_DATABASE: "true", SOURCE_COMMIT: "abc123" })
+    expect(indexOf("COMMENT ON DATABASE")).toBeGreaterThan(indexOf("WITH TEMPLATE"))
+
+    rmSync(join(dir, "calls.log"), { force: true })
+    copyToPreview({ SOURCE_COMMIT: "abc123" })
+    expect(indexOf("COMMENT ON DATABASE")).toBe(-1)
   })
 
   it("keeps the live preview database when the forced copy fails to migrate", () => {

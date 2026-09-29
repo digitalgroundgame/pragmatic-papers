@@ -257,3 +257,90 @@ jobs:
 
       - name: Run story tests (interactions and axe)
         run: pnpm test:storybook --run
+
+      # Handed to Deploy Storybook, so what gets published is the build these
+      # tests just passed.
+      - uses: actions/upload-artifact@v7
+        if: github.event_name != 'merge_group'
+        with:
+          name: storybook-static
+          path: storybook-static
+          retention-days: 1
+
+  # Publishes the tested build to the pragmatic-papers-storybook Cloudflare
+  # Worker (.storybook/wrangler.jsonc): `dev` deploys to the main workers.dev
+  # address, and each PR uploads a version under a `pr-<number>` preview alias
+  # and lists it in the PR description, with a link to each component the PR
+  # changes (scripts/storybook-pr.ts). Kept out of the Storybook job so a Cloudflare
+  # outage never turns that required check red. Skips itself without the
+  # Cloudflare secrets, which fork and Dependabot PRs never receive.
+  storybook-deploy:
+    name: Deploy Storybook
+    needs: storybook
+    if: ${{ !cancelled() && needs.storybook.result == 'success' && (github.event_name == 'pull_request' || github.ref == 'refs/heads/dev') }}
+    runs-on: ubuntu-latest
+    # One deploy per PR (or dev) at a time, so an older build never lands last.
+    concurrency:
+      group: storybook-deploy-${{ github.event.pull_request.number || github.ref }}
+    permissions:
+      contents: read
+      pull-requests: write
+    env:
+      HAS_CLOUDFLARE: ${{ secrets.CLOUDFLARE_API_TOKEN != '' && secrets.CLOUDFLARE_ACCOUNT_ID != '' }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      WRANGLER_SEND_METRICS: "false"
+
+    steps:
+      - name: Skip without Cloudflare secrets
+        if: env.HAS_CLOUDFLARE != 'true'
+        run: echo "::notice::CLOUDFLARE_API_TOKEN / CLOUDFLARE_ACCOUNT_ID not available; skipping the Storybook deploy."
+
+      - uses: actions/checkout@v7
+        if: env.HAS_CLOUDFLARE == 'true'
+        with:
+          sparse-checkout: |
+            .storybook/
+            scripts/storybook-pr.ts
+          sparse-checkout-cone-mode: false
+
+      - uses: actions/download-artifact@v7
+        if: env.HAS_CLOUDFLARE == 'true'
+        with:
+          name: storybook-static
+          path: storybook-static
+
+      - name: Deploy to the main address
+        if: env.HAS_CLOUDFLARE == 'true' && github.event_name != 'pull_request'
+        run: npx --yes wrangler@4 deploy --config .storybook/wrangler.jsonc
+
+      - name: Upload a PR preview
+        id: preview
+        if: env.HAS_CLOUDFLARE == 'true' && github.event_name == 'pull_request'
+        env:
+          ALIAS: pr-${{ github.event.pull_request.number }}
+        run: |
+          npx --yes wrangler@4 versions upload --config .storybook/wrangler.jsonc --preview-alias "$ALIAS" | tee wrangler.log
+          url=$(grep -oE "https://${ALIAS}-[a-z0-9.-]+\.workers\.dev" wrangler.log | head -n 1)
+          if [ -z "$url" ]; then
+            # Wrangler prints preview URLs only while the Worker has them on;
+            # `preview_urls` in wrangler.jsonc applies on the next `dev` deploy.
+            echo "::error::wrangler printed no preview alias URL for $ALIAS. Turn on Preview URLs for the Worker (Cloudflare dashboard: pragmatic-papers-storybook > Settings > Domains & Routes), then re-run this job."
+            exit 1
+          fi
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+
+      # Node 24 runs the TypeScript script directly; no install needed.
+      - uses: actions/setup-node@v7
+        if: steps.preview.outputs.url
+        with:
+          node-version: "24.x"
+
+      - name: List the preview in the PR description
+        if: steps.preview.outputs.url
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PREVIEW_URL: ${{ steps.preview.outputs.url }}
+          INDEX_FILE: storybook-static/index.json
+        run: node scripts/storybook-pr.ts link

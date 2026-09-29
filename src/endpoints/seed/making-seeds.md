@@ -75,34 +75,25 @@ imported, not copied, so a block's shape only has to be fixed in one place.
 
 **Already shared — import these:**
 
-| Helper                            | Import from     | Builds                                 |
-| --------------------------------- | --------------- | -------------------------------------- |
-| `createMediaBlockNode`            | `../richtext`   | a `mediaBlock` from a media id         |
-| `createNewsletterSignupBlockNode` | `../richtext`   | a `newsletterSignup` block             |
-| `createCTABlockNode`              | `../richtext`   | a `cta` block                          |
-| `createMathInlineBlock`           | `./math-blocks` | inline LaTeX within a paragraph        |
-| `createMathDisplayBlock`          | `./math-blocks` | a standalone display formula           |
-| `createBannerBlock`               | `./banners`     | a styled `banner` (`info`/`warning`/…) |
-| `createCodeBlock`                 | `./code-blocks` | a `code` block in a supported language |
-| `createFootnoteInlineBlock`       | `./footnotes`   | an inline footnote, with optional link |
+| Helper                            | Import from          | Builds                                                             |
+| --------------------------------- | -------------------- | ------------------------------------------------------------------ |
+| `createMediaBlockNode`            | `../richtext`        | a `mediaBlock` from a media id                                     |
+| `createNewsletterSignupBlockNode` | `../richtext`        | a `newsletterSignup` block                                         |
+| `createCTABlockNode`              | `../richtext`        | a `cta` block                                                      |
+| `createMathInlineBlock`           | `./math-blocks`      | inline LaTeX within a paragraph                                    |
+| `createMathDisplayBlock`          | `./math-blocks`      | a standalone display formula                                       |
+| `createBannerBlock`               | `./banners`          | a styled `banner` (`info`/`warning`/…)                             |
+| `createCodeBlock`                 | `./code-blocks`      | a `code` block in a supported language                             |
+| `createFootnoteInlineBlock`       | `./footnotes`        | an inline footnote, with optional link                             |
+| `createTimelineBlock`             | `./timeline`         | a `timeline` from events and a title                               |
+| `createMediaCollageBlock`         | `./media-collage`    | a `mediaCollage` from media ids                                    |
+| `createSocialEmbedBlock`          | `./social-embeds`    | a `socialEmbed` (see `SOCIAL_MEDIA_URLS` for snapshotted fixtures) |
+| `createInteractiveMapNode`        | `./interactive-maps` | an `interactiveMap` from uploaded map assets                       |
 
 For a block that has no helper yet, define one at the top of the feature file
 that owns that block, and export it once a second file needs it. The generic
 lexical node factories (paragraphs, headings, quotes, lists, tables) all live in
 `@/utilities/lexical` and are re-exported from `../richtext`.
-
-**Media collage block:**
-
-```typescript
-function createMediaCollageBlock(mediaIds: number[], layout: "grid" | "carousel" = "grid") {
-  return {
-    type: "block",
-    fields: { blockType: "mediaCollage", layout, images: mediaIds.map((id) => ({ media: id })) },
-    format: "",
-    version: 2,
-  }
-}
-```
 
 **Usage:**
 

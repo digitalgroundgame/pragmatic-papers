@@ -33,6 +33,10 @@ vi.mock("@/components/ShareButtons", () => ({
   ),
 }))
 
+vi.mock("@/components/TableOfContents", () => ({
+  TableOfContentsButton: () => <div data-testid="toc-button" />,
+}))
+
 vi.mock("@/utilities/getURL", () => ({
   getServerSideURL: () => "https://example.com",
 }))
@@ -147,6 +151,18 @@ describe("ArticleHero", () => {
   it("stamps the article with its publication date", () => {
     render(<ArticleHero article={baseArticle} />)
     expect(screen.getByText("June 15, 2024")).toBeInTheDocument()
+  })
+
+  it("leaves the table of contents button out unless the page asks for it", () => {
+    // The article's own setting isn't enough: the page also checks the
+    // tableOfContents experiment, and passes the result down.
+    render(<ArticleHero article={{ ...baseArticle, showTableOfContents: true }} />)
+    expect(screen.queryByTestId("toc-button")).not.toBeInTheDocument()
+  })
+
+  it("renders the table of contents button when the page asks for it", () => {
+    render(<ArticleHero article={baseArticle} showTableOfContents />)
+    expect(screen.getByTestId("toc-button")).toBeInTheDocument()
   })
 
   it("matches snapshot", () => {

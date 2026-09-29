@@ -1,1 +1,5 @@
-export { createMoCongressionalMapsArticle } from "./mo-congressional-maps"
+export {
+  createInteractiveMapNode,
+  createMoCongressionalMapsArticle,
+  type MapEntry,
+} from "./mo-congressional-maps"

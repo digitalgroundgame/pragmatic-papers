@@ -8,6 +8,7 @@ import { createMathBlocksArticle } from "./features/math-blocks"
 import { createMediaCollageArticle } from "./features/media-collage"
 import { createRichTextShowcaseArticle } from "./features/rich-text-showcase"
 import { createLegacySocialEmbedArticle, createSocialEmbedArticle } from "./features/social-embeds"
+import { createTableOfContentsArticle } from "./features/table-of-contents"
 import { createTimelineArticle } from "./features/timeline"
 
 /**
@@ -34,6 +35,11 @@ export interface ShowcaseEntry {
 }
 
 export const showcaseEntries: ShowcaseEntry[] = [
+  {
+    slug: "finding-your-way-table-of-contents",
+    create: (payload, writers, media, context) =>
+      createTableOfContentsArticle(payload, writers, media, [], context),
+  },
   {
     slug: "rich-text-showcase",
     create: (payload, writers, media, context) =>

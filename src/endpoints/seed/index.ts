@@ -15,6 +15,7 @@ import { createMediaCollageArticle } from "./features/media-collage"
 import { createNarrationDemoArticle } from "./features/narration-demo"
 import { createRichTextShowcaseArticle } from "./features/rich-text-showcase"
 import { createLegacySocialEmbedArticle, createSocialEmbedArticle } from "./features/social-embeds"
+import { createTableOfContentsArticle } from "./features/table-of-contents"
 import { createTimelineArticle } from "./features/timeline"
 import { createStockMedia } from "./media"
 import { createMenus } from "./menus"
@@ -328,6 +329,15 @@ export const seed = async (
             context,
           ),
         )
+        ctx.featureArticles.push(
+          await createTableOfContentsArticle(
+            payload,
+            [ctx.writers[0]!],
+            ctx.media,
+            [ctx.topics[3]!, ctx.topics[7]!],
+            context,
+          ),
+        )
       },
     },
     {
@@ -457,7 +467,7 @@ export const seed = async (
         await payload.updateGlobal({
           slug: "site-settings",
           context,
-          data: { experiments: { feed: true, interactives: true } },
+          data: { experiments: { feed: true, interactives: true, tableOfContents: true } },
         })
       },
     },

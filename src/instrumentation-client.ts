@@ -9,7 +9,10 @@ import { sentryIgnoredErrors } from "./sentryIgnoredErrors"
 Sentry.init({
   dsn: process.env.NEXT_PUBLIC_SENTRY_DSN,
 
-  environment: process.env.NEXT_PUBLIC_SENTRY_ENVIRONMENT ?? process.env.NODE_ENV,
+  // Resolved once in next.config.ts from BUILD_ENV; PR previews report `preview`, tagged
+  // with their PR number.
+  environment: process.env.SENTRY_ENVIRONMENT,
+  initialScope: process.env.SENTRY_PR ? { tags: { pr: process.env.SENTRY_PR } } : undefined,
 
   tracesSampleRate: 0.1,
 

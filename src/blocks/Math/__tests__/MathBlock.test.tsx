@@ -5,9 +5,13 @@ import { MathBlock } from "@/blocks/Math/Component"
 
 // MathJax typesets against a real DOM/CDN payload, which jsdom has no use for —
 // stub it out so these tests assert the accessibility wrapper, not typesetting.
-vi.mock("better-react-mathjax/esm", () => ({
-  MathJax: ({ children }: { children: React.ReactNode }) => <span>{children}</span>,
-}))
+vi.mock("better-react-mathjax/esm", async () => {
+  const { createContext } = await import("react")
+  return {
+    MathJax: ({ children }: { children: React.ReactNode }) => <span>{children}</span>,
+    MathJaxBaseContext: createContext(undefined),
+  }
+})
 
 afterEach(() => {
   cleanup()

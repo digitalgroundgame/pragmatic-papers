@@ -1,0 +1,13 @@
+// The published Storybook: a static-assets-only Cloudflare Worker, deployed by
+// CI's "Deploy Storybook" job (.github/workflows/ci.yml) from the build the
+// Storybook job has already tested. Paths resolve relative to this file.
+{
+  "name": "pragmatic-papers-storybook",
+  "compatibility_date": "2026-09-01",
+  "assets": {
+    "directory": "../storybook-static",
+  },
+  "workers_dev": true,
+  // PRs upload a version under a `pr-<number>` alias instead of deploying.
+  "preview_urls": true,
+}

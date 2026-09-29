@@ -224,6 +224,14 @@ function, and fails on any axe violation.
   `src/stories/a11y.ts` and cite the issue tracking the fix; `knownContrastIssue` covers the
   brand colors (#998). Never turn a story's a11y test off wholesale.
 - **Third-party embeds** that load a platform's script get `tags: ["!test"]`.
+- **Published**: CI's "Deploy Storybook" job uploads the tested build to the
+  `pragmatic-papers-storybook` Cloudflare Worker (`.storybook/wrangler.jsonc`):
+  `dev` at `pragmatic-papers-storybook.digital-ground-game.workers.dev`, and each PR at a
+  `pr-<number>-` preview URL, which `scripts/storybook-pr.ts` lists in the PR description (under
+  any showcase links) with a link to each component the PR changes, matched through the build's
+  `index.json` by story file, `component` file or folder. `/storybook` on staging and on a
+  PR's site preview redirects to its Storybook (404 on production). Needs the `CLOUDFLARE_API_TOKEN`
+  (Workers Scripts: Edit) and `CLOUDFLARE_ACCOUNT_ID` repo secrets; without them it skips.
 
 ### Visual regression (screenshot) tests
 
@@ -260,6 +268,23 @@ are the `interactives` experiment: with it off in Site Settings they 404, their
 sitemap is empty, and the daily sync skips. Validate a file before
 committing or uploading it:
 `pnpm tsx .claude/skills/interactive-maps/validate-map-svg.ts <file.svg> [--mode geometry]`.
+
+## Hosting (Coolify)
+
+The site is built and hosted by Coolify, from `dockerfiles/PragmaticPapers.Dockerfile`:
+a **development** application (staging, from `dev`, plus a preview per PR) and a
+**production** application (from `main`). `dockerfiles/README.md` records how _our_
+applications are set up and what's been verified about them; read it first.
+
+## Third-party docs
+
+For how a tool we run on behaves (Payload and Lexical, Coolify, GitHub Actions and the
+REST API, Cloudflare, Sentry) or what's in this repo's wiki, use the **`upstream-docs`**
+skill (`.claude/skills/upstream-docs/SKILL.md`) instead of searching the web or answering
+from memory. It clones each project's docs source into the gitignored `.cache/upstream-docs/`
+(Payload's pinned to our installed version) and says where to look. It works in cloud
+sessions, which can't reach most documentation sites. Next.js's docs are already in
+`node_modules/next/dist/docs/`.
 
 ## Claude review gate
 

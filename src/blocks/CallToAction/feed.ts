@@ -1,4 +1,4 @@
-import type { FeedBlockBehavior } from "@/app/(feed)/feed/blocks/types"
+import type { FeedBlockBehavior } from "@/app/feed/blocks/types"
 
 // Block slug is `cta` (registry key matches).
 export const ctaFeed: FeedBlockBehavior = {

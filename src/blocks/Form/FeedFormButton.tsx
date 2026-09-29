@@ -1,6 +1,6 @@
 "use client"
 
-import { useFeedAutoPlay } from "@/app/(feed)/feed/hooks/useFeedAutoPlay"
+import { useFeedAutoPlay } from "@/app/feed/hooks/useFeedAutoPlay"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,

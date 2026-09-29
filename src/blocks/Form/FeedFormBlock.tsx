@@ -1,4 +1,4 @@
-import type { FeedBlockRenderer } from "@/app/(feed)/feed/blocks/types"
+import type { FeedBlockRenderer } from "@/app/feed/blocks/types"
 import type { FormBlock as FormBlockType } from "@/payload-types"
 import { isResolved } from "@/utilities/relationships"
 import React from "react"

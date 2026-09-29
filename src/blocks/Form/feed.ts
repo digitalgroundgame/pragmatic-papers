@@ -1,4 +1,4 @@
-import type { FeedBlockBehavior } from "@/app/(feed)/feed/blocks/types"
+import type { FeedBlockBehavior } from "@/app/feed/blocks/types"
 
 // Block slug is `formBlock`. Forms are interactive and tall, so on the
 // feed they render as a centered CTA that opens a focus-trapped dialog

@@ -1,4 +1,4 @@
-import type { FeedBlockBehavior } from "@/app/(feed)/feed/blocks/types"
+import type { FeedBlockBehavior } from "@/app/feed/blocks/types"
 
 export const contributorsFeed: FeedBlockBehavior = {
   placement: "full-bleed",

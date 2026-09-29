@@ -1,4 +1,4 @@
-import { FeedShellContext } from "@/app/(feed)/feed/FeedShellContext"
+import { FeedShellContext } from "@/app/feed/FeedShellContext"
 import { fireEvent, render, screen } from "@testing-library/react"
 import { describe, expect, it, vi } from "vitest"
 import { FeedFormButton } from "../FeedFormButton"

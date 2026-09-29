@@ -1,7 +1,7 @@
 import type { Decorator } from "@storybook/nextjs-vite"
 import React from "react"
 
-import type { FeedArticle, FeedArticleSummary, LexicalNode } from "@/app/(feed)/feed/types"
+import type { FeedArticle, FeedArticleSummary, LexicalNode } from "@/app/feed/types"
 import type { Form } from "@/payload-types"
 
 import { articleFixture, authors, topics, volumes } from "./docs"

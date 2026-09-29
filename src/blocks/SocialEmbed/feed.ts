@@ -1,4 +1,4 @@
-import type { FeedBlockBehavior } from "@/app/(feed)/feed/blocks/types"
+import type { FeedBlockBehavior } from "@/app/feed/blocks/types"
 
 // Shared by socialEmbed and its 5 deprecated subtype aliases
 // (twitterEmbed, youtubeEmbed, redditEmbed, blueSkyEmbed, tiktokEmbed).

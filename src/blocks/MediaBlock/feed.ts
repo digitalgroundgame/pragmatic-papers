@@ -1,4 +1,4 @@
-import type { FeedBlockBehavior } from "@/app/(feed)/feed/blocks/types"
+import type { FeedBlockBehavior } from "@/app/feed/blocks/types"
 
 // Rendered by `MediaBlockFeed` (see the feed's `blocks/renderers.tsx`).
 export const mediaBlockFeed: FeedBlockBehavior = {

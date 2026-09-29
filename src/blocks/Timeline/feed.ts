@@ -1,5 +1,5 @@
-import type { FeedBlockBehavior } from "@/app/(feed)/feed/blocks/types"
-import type { LexicalNode } from "@/app/(feed)/feed/types"
+import type { FeedBlockBehavior } from "@/app/feed/blocks/types"
+import type { LexicalNode } from "@/app/feed/types"
 
 const EVENTS_PER_PAGE = 3
 

@@ -2,7 +2,7 @@ import "dotenv/config"
 
 import { writeFileSync } from "node:fs"
 
-import { SHOWCASE_LINE } from "./showcase-pr"
+import { articleSlug, slugsFromDescription } from "./showcase-pr"
 
 import { AUTHOR_ROLES, hasRole } from "@/access/roles"
 import type { User } from "@/payload-types"
@@ -28,8 +28,9 @@ Options:
                       (a PR description), where "all" means --all; does nothing if
                       there is no such line
 
-With SHOWCASE_LINKS_FILE set, writes a Markdown list linking to each article
-it pushed or found there, for the PR description.`
+With SHOWCASE_LINKS_FILE set, writes a Markdown link to each article it pushed
+or found there, titled with its title, one per line, for the PR description's
+Showcase: line.`
 
 type Fetch = typeof fetch
 
@@ -63,13 +64,13 @@ export function resolveTarget(
 }
 
 /**
- * Reads the slugs from a PR description's `Showcase:` line, e.g.
- * `Showcase: rich-text-showcase, lorem-ipsum-timeline`. `Showcase: all` (meaning
- * the whole catalog, written by hand) comes back as `["all"]`.
+ * An article's entry on the `Showcase:` line: a link titled with its title,
+ * which slugsFromDescription (scripts/showcase-pr.ts) reads back as its slug. A draft's link goes to
+ * the admin, whose URL has no slug, so the slug stays beside it.
  */
-export function slugsFromDescription(description: string): string[] {
-  const line = description.match(SHOWCASE_LINE)?.[1] ?? ""
-  return line.match(/[a-z0-9]+(?:-[a-z0-9]+)*/g) ?? []
+export function showcaseItem(slug: string, title: string, url: string): string {
+  if (articleSlug(url) !== slug) return `${slug} ([draft](${url}))`
+  return `[${title.replace(/[\\[\]]/g, "\\$&")}](${url})`
 }
 
 export function selectEntries(
@@ -151,12 +152,13 @@ export function createRestPayload(
   return { create, logger } as unknown as Payload
 }
 
-export async function articleExists(
+/** The article with the slug, draft or published, if there is one. */
+export async function findArticle(
   origin: string,
   token: string,
   slug: string,
   fetchImpl: Fetch = fetch,
-): Promise<boolean> {
+): Promise<{ title?: string } | undefined> {
   const query = new URLSearchParams({
     "where[slug][equals]": slug,
     limit: "1",
@@ -167,11 +169,11 @@ export async function articleExists(
     headers: { Authorization: `JWT ${token}` },
   })
   const body = await readJSON(res, `Looking up "${slug}"`)
-  return (body.totalDocs as number) > 0
+  return (body.docs as { title?: string }[] | undefined)?.[0]
 }
 
 /**
- * Pushes the articles and returns a Markdown list item linking to each one,
+ * Pushes the articles and returns a link to each one (see showcaseItem),
  * whether pushed now or already there.
  */
 export async function main(
@@ -215,18 +217,16 @@ export async function main(
   const links = new Map<string, string>()
   const pending: ShowcaseEntry[] = []
   for (const entry of entries) {
-    if (await articleExists(origin, token, entry.slug, fetchImpl)) {
-      links.set(entry.slug, `${origin}/articles/${entry.slug}`)
-      console.warn(`✔ Already there: ${origin}/articles/${entry.slug}`)
+    const article = await findArticle(origin, token, entry.slug, fetchImpl)
+    if (article) {
+      const url = `${origin}/articles/${entry.slug}`
+      links.set(entry.slug, showcaseItem(entry.slug, article.title || entry.slug, url))
+      console.warn(`✔ Already there: ${url}`)
     } else {
       pending.push(entry)
     }
   }
-  const list = () =>
-    entries.flatMap((entry) => {
-      const url = links.get(entry.slug)
-      return url ? [`- [${entry.slug}](${url})`] : []
-    })
+  const list = () => entries.flatMap((entry) => links.get(entry.slug) ?? [])
   if (pending.length === 0) return list()
 
   const payload = createRestPayload(origin, token, fetchImpl, { draft })
@@ -237,7 +237,8 @@ export async function main(
     const id = await entry.create(payload, [user], media)
     // A draft has no public page yet, so point at it in the admin.
     const where = draft ? `admin/collections/articles/${id}` : `articles/${entry.slug}`
-    links.set(entry.slug, `${origin}/${where}`)
+    const title = (await findArticle(origin, token, entry.slug, fetchImpl))?.title
+    links.set(entry.slug, showcaseItem(entry.slug, title || entry.slug, `${origin}/${where}`))
     console.warn(`✔ Pushed${draft ? " as a draft" : ""}: ${origin}/${where}`)
   }
   return list()

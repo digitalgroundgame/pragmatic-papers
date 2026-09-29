@@ -10,14 +10,18 @@
  * step. Adding the label inserts a line naming the articles the PR adds to
  * src/endpoints/seed/showcase.ts (usually its one demo article); if it adds
  * none, the label comes off again. A line adds the label. Removing either
- * removes the other, along with the link list.
+ * removes the other.
  *
  * `resolve` checks a PR is from this repository, and for automatic runs that
  * it has a `Showcase:` line and a live preview: a successful Preview
  * Deployment for its head commit (see scripts/preview-deployment.ts).
  *
- * `link` rewrites the list of links between the LINKS_START and LINKS_END
- * markers from the file `pnpm showcase` writes to SHOWCASE_LINKS_FILE.
+ * `link` rewrites the `Showcase:` line to link each article by title, from
+ * the file `pnpm showcase` writes to SHOWCASE_LINKS_FILE, and moves it to the
+ * top of the description, between the LINKS_START and LINKS_END markers. A
+ * link reads back as its slug, so the line still names what to push. Articles
+ * a manual push adds join the line (or start one, with the label), so later
+ * deploys push them too.
  *
  * Edits made with the workflow's token start no workflow, so none of this
  * can loop.
@@ -36,6 +40,46 @@ export const SHOWCASE_LINE = /^[\s>*_-]*showcase\s*:[*_\s]*(.*)$/im
 
 const LINKS_BLOCK = new RegExp(`${LINKS_START}[\\s\\S]*?${LINKS_END}`)
 
+const SLUG = "[a-z0-9]+(?:-[a-z0-9]+)*"
+/** A Markdown link, whose text may escape brackets: `[Title](url)`. */
+const LINK = String.raw`\[(?:\\.|[^\]\\])*\]\(([^)\s]*)\)`
+/**
+ * One article on the line: a draft's slug beside its admin link, a link to
+ * its page, or a bare slug (as written by hand).
+ */
+const ITEM = new RegExp(String.raw`(${SLUG})\s*\(\[draft\]\([^)\s]*\)\)|${LINK}|(${SLUG})`, "g")
+
+/** The slug in an article's public URL; an admin URL has none. */
+export function articleSlug(url: string): string | undefined {
+  return url.match(/(?<!collections)\/articles\/([a-z0-9-]+)/)?.[1]
+}
+
+export interface ShowcaseItem {
+  text: string
+  slug?: string
+}
+
+/** The articles on a `Showcase:` line, as written. */
+export function showcaseItems(line: string): ShowcaseItem[] {
+  return [...line.matchAll(ITEM)].map(([text, draft, url, bare]) => ({
+    text,
+    slug: draft ?? bare ?? articleSlug(url!),
+  }))
+}
+
+/**
+ * Reads the slugs from a PR description's `Showcase:` line, e.g.
+ * `Showcase: rich-text-showcase, lorem-ipsum-timeline`. Once pushed, the line
+ * links each article by title, and a link reads as the slug in its URL.
+ * `Showcase: all` (meaning the whole catalog, written by hand) comes back as
+ * `["all"]`.
+ */
+export function slugsFromDescription(description: string): string[] {
+  return showcaseItems(description.match(SHOWCASE_LINE)?.[1] ?? "").flatMap(
+    (item) => item.slug ?? [],
+  )
+}
+
 export function hasShowcaseLine(body: string): boolean {
   return SHOWCASE_LINE.test(body)
 }
@@ -45,6 +89,16 @@ export function withShowcaseLine(body: string, slugs: string[]): string {
   return `${body.trimEnd()}\n\nShowcase: ${slugs.join(" ")}\n`
 }
 
+/** The description without its `Showcase:` lines. */
+function withoutShowcaseLines(body: string): string {
+  const lineOnly = new RegExp(SHOWCASE_LINE.source, "i")
+  return body
+    .split(/\r?\n/)
+    .filter((line) => !lineOnly.test(line))
+    .join("\n")
+    .replace(/\n{3,}/g, "\n\n")
+}
+
 /**
  * Removes the `Showcase:` lines and the link list. A description with neither
  * comes back untouched, line endings and all, so a PR that never opted in is
@@ -52,22 +106,51 @@ export function withShowcaseLine(body: string, slugs: string[]): string {
  */
 export function optOut(body: string): string {
   if (!hasShowcaseLine(body) && !LINKS_BLOCK.test(body)) return body
-  const lineOnly = new RegExp(SHOWCASE_LINE.source, "i")
-  return body
-    .replace(LINKS_BLOCK, "")
-    .split(/\r?\n/)
-    .filter((line) => !lineOnly.test(line))
-    .join("\n")
-    .replace(/\n{3,}/g, "\n\n")
-    .trimEnd()
+  return withoutShowcaseLines(body.replace(LINKS_BLOCK, "")).trim()
 }
 
 /** A line linking an issue the PR closes, such as `Closes #743`. */
 const CLOSING_LINE = /^\s*(close[sd]?|fix(e[sd])?|resolve[sd]?):?\s+([\w.-]+\/[\w.-]+)?#\d+/i
 
 /**
- * Replaces the link list, or adds one at the top of the description, under
- * any `Closes #N` lines, where reviewers see it first; no links removes it.
+ * Puts the block where LINKS_START stands, or else at the top, under any
+ * `Closes #N` lines.
+ */
+function placed(body: string, block: string, trailingNewline: boolean): string {
+  if (body.includes(LINKS_START))
+    return body.replace(LINKS_START, () => block).trimEnd() + (trailingNewline ? "\n" : "")
+  const lines = body.split("\n")
+  let top = 0
+  for (let i = 0; i < lines.length; i++) {
+    if (CLOSING_LINE.test(lines[i]!)) top = i + 1
+    else if (lines[i]!.trim()) break
+  }
+  const head = lines.slice(0, top).join("\n").trimEnd()
+  const tail = lines.slice(top).join("\n").trim()
+  return [head, block, tail].filter(Boolean).join("\n\n") + (!tail || trailingNewline ? "\n" : "")
+}
+
+/**
+ * The line's articles with the pushed ones linked: each link from
+ * scripts/showcase.ts replaces its article where the line names it, and one
+ * the line doesn't name (from a manual push) goes on the end.
+ */
+export function mergeLinks(line: string, links: string[]): string[] {
+  const fresh = new Map(links.map((item) => [showcaseItems(item)[0]?.slug ?? item, item]))
+  const merged = showcaseItems(line).map(({ text, slug }) => {
+    const pushed = slug === undefined ? undefined : fresh.get(slug)
+    if (pushed === undefined) return text
+    fresh.delete(slug!)
+    return pushed
+  })
+  return [...merged, ...fresh.values()]
+}
+
+/**
+ * Rewrites the `Showcase:` line to link each pushed article (see mergeLinks),
+ * adding the line if there is none, and moves it to the top of the
+ * description, under any `Closes #N` lines, where reviewers see it first; no
+ * links removes the list.
  */
 export function withLinks(body: string, links: string[]): string {
   if (links.length === 0) {
@@ -77,17 +160,29 @@ export function withLinks(body: string, links: string[]): string {
       .replace(/(\r?\n){3,}/g, "\n\n")
       .trim()
   }
+  const line = body.match(SHOWCASE_LINE)?.[1] ?? ""
+  const block = `${LINKS_START}\nShowcase: ${mergeLinks(line, links).join(", ")}\n${LINKS_END}`
+  // Out of the block, which carries the line from here on.
+  const cleaned = LINKS_BLOCK.test(body) ? body.replace(LINKS_BLOCK, () => LINKS_START) : body
+  const rest = withoutShowcaseLines(cleaned)
+  return placed(rest, block, /\n$/.test(body))
+}
+
+/**
+ * The list of links a PR branch from before titled links writes: `pnpm
+ * showcase` runs from the PR's head, and its older copy writes `- [slug](url)`
+ * items and can't read links on the `Showcase:` line back as slugs. `link`
+ * runs from dev, so for such a branch it keeps the older separate list and
+ * leaves the line alone. Delete once no open PR predates titled links.
+ */
+export function isLegacyLinks(links: string[]): boolean {
+  return links.some((item) => /^\s*[-*]\s/.test(item))
+}
+
+export function withLegacyLinks(body: string, links: string[]): string {
   const block = `${LINKS_START}\n**On the preview:**\n\n${links.join("\n")}\n${LINKS_END}`
-  if (LINKS_BLOCK.test(body)) return body.replace(LINKS_BLOCK, () => block)
-  const lines = body.split("\n")
-  let top = 0
-  for (let i = 0; i < lines.length; i++) {
-    if (CLOSING_LINE.test(lines[i]!)) top = i + 1
-    else if (lines[i]!.trim()) break
-  }
-  const head = lines.slice(0, top).join("\n").trimEnd()
-  const rest = lines.slice(top).join("\n").trimStart()
-  return [head, block, rest].filter(Boolean).join("\n\n") + (rest ? "" : "\n")
+  const marked = LINKS_BLOCK.test(body) ? body.replace(LINKS_BLOCK, () => LINKS_START) : body
+  return placed(marked, block, /\n$/.test(body))
 }
 
 /** The slugs registered in a version of the catalog's source. */
@@ -167,6 +262,7 @@ export interface Deps {
 
 interface Pull {
   body: string | null
+  labels: { name: string }[]
   head: { sha: string; ref: string; repo: { full_name: string } | null }
 }
 
@@ -328,11 +424,18 @@ async function link(env: Env, deps: Deps): Promise<void> {
     .split("\n")
     .filter((line) => line.trim())
   // Read fresh, so an edit made during the push survives.
-  const body = (await gh.pull(pr)).body ?? ""
-  const next = withLinks(body, links)
+  const pull = await gh.pull(pr)
+  const body = pull.body ?? ""
+  const next = (isLegacyLinks(links) ? withLegacyLinks : withLinks)(body, links)
   if (next !== body) {
     await gh.setBody(pr, next)
     deps.log(`Listed ${links.length} article(s) in the description.`)
+  }
+  // A manual push to a PR without the line adds it, so the label follows, as
+  // sync would; this edit starts no workflow to do it.
+  if (hasShowcaseLine(next) && !pull.labels.some((label) => label.name === LABEL)) {
+    await gh.addLabel(pr)
+    deps.log(`Added the ${LABEL} label.`)
   }
 }
 

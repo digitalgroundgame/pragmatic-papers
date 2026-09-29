@@ -19,7 +19,11 @@ const EMPTY_STATE: NotificationState = Object.freeze({
   hydrated: false,
 })
 
-// Module-level external store — no React state, no effects
+// Module-level external store — no React state, no effects. One instance per tab,
+// backed by localStorage. When Layer 2 syncs seen-state to Payload users, turn this
+// into a factory, `createNotificationStore(storage)`, with one default instance, so
+// the backend can be swapped (and tests get fresh instances instead of
+// `resetNotificationStore`). useNotification's API shouldn't need to change.
 let _state: NotificationState | null = null
 const _listeners = new Set<() => void>()
 

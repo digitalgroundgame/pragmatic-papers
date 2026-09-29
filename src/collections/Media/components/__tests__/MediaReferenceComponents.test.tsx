@@ -1,4 +1,4 @@
-import { cleanup, render, screen, within } from "@testing-library/react"
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import type { MediaReference } from "../../references/collectMediaReferences"
@@ -22,17 +22,33 @@ const reference = (docId: number, docTitle: string, field = "heroImage"): MediaR
   docTitle,
 })
 
+const setReferences = vi.fn()
+
 const withReferences = (references: MediaReference[], loading = false) =>
-  vi.mocked(useMediaReferences).mockReturnValue({ references, loading })
+  vi.mocked(useMediaReferences).mockReturnValue({ references, loading, setReferences })
+
+const fetchMock = vi.fn()
 
 beforeEach(() => {
   mockId = 42
+  vi.stubGlobal("fetch", fetchMock)
 })
 
 afterEach(() => {
   cleanup()
   vi.mocked(useMediaReferences).mockReset()
+  setReferences.mockReset()
+  fetchMock.mockReset()
+  vi.unstubAllGlobals()
 })
+
+const respondWith = (status: number, body: unknown) =>
+  fetchMock.mockResolvedValue(new Response(JSON.stringify(body), { status }))
+
+const startDetach = (name: RegExp) => {
+  fireEvent.click(screen.getByRole("button", { name }))
+  fireEvent.click(screen.getByRole("button", { name: "Detach and publish" }))
+}
 
 describe("ReferencesView", () => {
   it("links each document that uses the media", () => {
@@ -85,5 +101,89 @@ describe("ReferencesView", () => {
     const { container } = render(<ReferencesView />)
 
     expect(container).toBeEmptyDOMElement()
+  })
+
+  describe("detach", () => {
+    it("asks before publishing, and can be cancelled", () => {
+      withReferences([reference(7, "Hero Article")])
+      render(<ReferencesView />)
+
+      fireEvent.click(screen.getByRole("button", { name: "Detach from Hero Article (hero image)" }))
+
+      expect(
+        screen.getByRole("group", { name: "Confirm detaching from Hero Article" }),
+      ).toHaveTextContent("Remove it from the article hero image and publish “Hero Article”?")
+      fireEvent.click(screen.getByRole("button", { name: "Cancel" }))
+      expect(screen.queryByRole("group")).not.toBeInTheDocument()
+      expect(fetchMock).not.toHaveBeenCalled()
+    })
+
+    it("detaches the reference and shows the list that's left", async () => {
+      const left = [reference(8, "Other Article")]
+      withReferences([reference(7, "Hero Article", "content (mediaBlock)")])
+      respondWith(200, { references: left })
+      render(<ReferencesView />)
+
+      startDetach(/Detach from Hero Article/)
+
+      await waitFor(() => expect(setReferences).toHaveBeenCalledWith(left))
+      expect(fetchMock).toHaveBeenCalledWith("/api/media/42/detach", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          collection: "articles",
+          docId: 7,
+          field: "content (mediaBlock)",
+        }),
+      })
+    })
+
+    it("shows why a detach was refused, keeping the row", async () => {
+      withReferences([reference(7, "Hero Article")])
+      respondWith(409, { error: "This document has unpublished changes." })
+      render(<ReferencesView />)
+
+      startDetach(/Detach from Hero Article/)
+
+      expect(await screen.findByRole("alert")).toHaveTextContent(
+        "This document has unpublished changes.",
+      )
+      expect(setReferences).not.toHaveBeenCalled()
+      expect(screen.getByRole("button", { name: /Detach from Hero Article/ })).toBeInTheDocument()
+    })
+
+    it("refreshes the list a refused detach still returns", async () => {
+      const current = [reference(7, "Hero Article", "meta.image")]
+      withReferences(current)
+      respondWith(409, { error: "Detach that one first.", references: current })
+      render(<ReferencesView />)
+
+      startDetach(/Detach from Hero Article/)
+
+      expect(await screen.findByRole("alert")).toHaveTextContent("Detach that one first.")
+      expect(setReferences).toHaveBeenCalledWith(current)
+    })
+
+    it("reports a failure with no message by its status", async () => {
+      withReferences([reference(7, "Hero Article")])
+      fetchMock.mockResolvedValue(new Response("oops", { status: 502 }))
+      render(<ReferencesView />)
+
+      startDetach(/Detach from Hero Article/)
+
+      expect(await screen.findByRole("alert")).toHaveTextContent("Detaching failed (HTTP 502).")
+    })
+
+    it("disables the confirmation while it publishes", async () => {
+      withReferences([reference(7, "Hero Article")])
+      fetchMock.mockReturnValue(new Promise(() => undefined))
+      render(<ReferencesView />)
+
+      startDetach(/Detach from Hero Article/)
+
+      expect(await screen.findByRole("button", { name: "Publishing…" })).toBeDisabled()
+      expect(screen.getByRole("button", { name: "Cancel" })).toBeDisabled()
+    })
   })
 })

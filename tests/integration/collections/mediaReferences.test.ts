@@ -1,6 +1,7 @@
 import { beforeAll, describe, expect, it } from "vitest"
 import type { Payload, PayloadRequest } from "payload"
 import type { Article, Media, User } from "@/payload-types"
+import { detachHandler } from "@/collections/Media/endpoints/detach"
 import { referencesHandler } from "@/collections/Media/endpoints/references"
 import { DELETE_MEDIA_IN_USE } from "@/collections/Media/hooks/protectPublishedMedia"
 import { ARTICLE_CONTENT } from "../fixtures/content"
@@ -162,6 +163,148 @@ describe("media references", () => {
     it("rejects a non-numeric id", async () => {
       const response = await callReferences(editor, "abc")
       expect(response.status).toBe(400)
+    })
+  })
+
+  describe("detach endpoint", () => {
+    const callDetach = (user: User, mediaId: number, body: Record<string, unknown>) =>
+      detachHandler({
+        user,
+        payload,
+        routeParams: { id: String(mediaId) },
+        context: { disableRevalidate: true },
+        json: () => Promise.resolve(body),
+      } as unknown as PayloadRequest)
+
+    const referencesTo = async (mediaId: number) =>
+      (await callReferences(editor, mediaId).then((r) => r.json())) as {
+        references: { collection: string; docId: number; field: string }[]
+      }
+
+    it("detaches the hero image, then the SEO image, after which the media deletes", async () => {
+      const media = await createMedia("Detach Hero - mref")
+      const article = await createArticle("Detach Hero Article - mref", media.id, "published")
+      const target = { collection: "articles", docId: article.id }
+
+      const afterHero = await callDetach(editor, media.id, { ...target, field: "heroImage" })
+      expect(afterHero.status).toBe(200)
+      // The SEO image was filled in from the hero image when the article was saved.
+      expect((await afterHero.json()).references).toEqual([
+        expect.objectContaining({ docId: article.id, field: "meta.image" }),
+      ])
+
+      const afterSeo = await callDetach(editor, media.id, { ...target, field: "meta.image" })
+      expect(afterSeo.status).toBe(200)
+      expect((await afterSeo.json()).references).toEqual([])
+
+      const saved = await payload.findByID({ collection: "articles", id: article.id, depth: 0 })
+      expect(saved).toMatchObject({ heroImage: null, _status: "published" })
+      expect(saved.meta?.image ?? null).toBeNull()
+      await expect(deleteAsEditor(media.id)).resolves.toMatchObject({ id: media.id })
+    })
+
+    it("explains that the SEO image refills from the hero image", async () => {
+      const media = await createMedia("Detach Seo First - mref")
+      const article = await createArticle("Detach Seo First Article - mref", media.id, "published")
+
+      const response = await callDetach(editor, media.id, {
+        collection: "articles",
+        docId: article.id,
+        field: "meta.image",
+      })
+
+      expect(response.status).toBe(409)
+      expect((await response.json()).error).toContain("Detach that one first")
+    })
+
+    it("removes a media block from an article's content and publishes it", async () => {
+      const media = await createMedia("Detach Block - mref")
+      const other = await createMedia("Detach Block Other - mref")
+      const article = await payload.create({
+        collection: "articles",
+        overrideAccess: true,
+        context: { disableRevalidate: true },
+        data: {
+          title: "Detach Block Article - mref",
+          heroImage: other.id,
+          _status: "published",
+          content: {
+            root: {
+              ...ARTICLE_CONTENT.root,
+              children: [
+                ...ARTICLE_CONTENT.root.children,
+                {
+                  type: "block",
+                  version: 2,
+                  format: "",
+                  fields: {
+                    id: "mref-block",
+                    blockName: "",
+                    blockType: "mediaBlock",
+                    media: media.id,
+                  },
+                },
+              ],
+            },
+          },
+        } as unknown as Article,
+      })
+      expect((await referencesTo(media.id)).references).toHaveLength(1)
+
+      const response = await callDetach(editor, media.id, {
+        collection: "articles",
+        docId: article.id,
+        field: "content (mediaBlock)",
+      })
+
+      expect(response.status).toBe(200)
+      expect((await response.json()).references).toEqual([])
+      const saved = await payload.findByID({ collection: "articles", id: article.id, depth: 0 })
+      expect(JSON.stringify(saved.content)).not.toContain('"mediaBlock"')
+      expect(JSON.stringify(saved.content)).toContain("Test content")
+    })
+
+    it("refuses to publish over unpublished changes", async () => {
+      const media = await createMedia("Detach Pending Draft - mref")
+      const article = await createArticle(
+        "Detach Pending Draft Article - mref",
+        media.id,
+        "published",
+      )
+      await payload.update({
+        collection: "articles",
+        id: article.id,
+        draft: true,
+        overrideAccess: true,
+        context: { disableRevalidate: true },
+        data: { title: "Detach Pending Draft Article (edited) - mref" },
+      })
+
+      const response = await callDetach(editor, media.id, {
+        collection: "articles",
+        docId: article.id,
+        field: "heroImage",
+      })
+
+      expect(response.status).toBe(409)
+      const live = await payload.findByID({ collection: "articles", id: article.id, depth: 0 })
+      expect(live.heroImage).toBe(media.id)
+    })
+
+    it("refuses a writer, who can't publish", async () => {
+      const writer = await createUser("writer")
+      const media = await createMedia("Detach Writer - mref")
+      const article = await createArticle("Detach Writer Article - mref", media.id, "published")
+
+      const response = await callDetach(writer, media.id, {
+        collection: "articles",
+        docId: article.id,
+        field: "heroImage",
+      })
+
+      expect(response.status).toBe(403)
+      const live = await payload.findByID({ collection: "articles", id: article.id, depth: 0 })
+      expect(live.heroImage).toBe(media.id)
     })
   })
 })

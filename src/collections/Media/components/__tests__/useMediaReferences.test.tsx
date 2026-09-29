@@ -28,7 +28,7 @@ describe("useMediaReferences", () => {
 
     const { result } = renderHook(() => useMediaReferences(101))
 
-    expect(result.current).toEqual({ references: [], loading: true })
+    expect(result.current).toMatchObject({ references: [], loading: true })
     await waitFor(() => expect(result.current.loading).toBe(false))
     expect(result.current.references).toEqual(references)
     expect(fetchMock).toHaveBeenCalledWith("/api/media/101/references", {
@@ -57,7 +57,7 @@ describe("useMediaReferences", () => {
   it("waits without fetching until the document has an id", () => {
     const { result } = renderHook(() => useMediaReferences(undefined))
 
-    expect(result.current).toEqual({ references: [], loading: true })
+    expect(result.current).toMatchObject({ references: [], loading: true })
     expect(fetchMock).not.toHaveBeenCalled()
   })
 
@@ -71,7 +71,7 @@ describe("useMediaReferences", () => {
     resolve(new Response(JSON.stringify({ references }), { status: 200 }))
     await new Promise((r) => setTimeout(r, 0))
 
-    expect(result.current).toEqual({ references: [], loading: true })
+    expect(result.current).toMatchObject({ references: [], loading: true })
     expect(consoleError).not.toHaveBeenCalled()
     consoleError.mockRestore()
   })

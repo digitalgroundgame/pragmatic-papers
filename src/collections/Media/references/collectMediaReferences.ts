@@ -9,7 +9,7 @@ export interface MediaReference {
   docSlug?: string
 }
 
-interface Source {
+export interface Source {
   collection: CollectionSlug
   /** Only published documents count; drafts may still point at media that is deleted. */
   drafts: boolean
@@ -26,7 +26,7 @@ interface Source {
  * that holds media (see `MEDIA_IN_BLOCK`), means adding it here too, or media it
  * uses can be deleted out from under it.
  */
-const SOURCES: Source[] = [
+export const SOURCES: Source[] = [
   {
     collection: "articles",
     drafts: true,

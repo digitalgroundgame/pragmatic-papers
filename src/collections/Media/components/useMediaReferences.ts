@@ -12,6 +12,8 @@ interface ReferencesResponse {
 export function useMediaReferences(id: number | string | undefined): {
   references: MediaReference[]
   loading: boolean
+  /** Replaces the list, e.g. with the one a detach returns. */
+  setReferences: (references: MediaReference[]) => void
 } {
   const [references, setReferences] = useState<MediaReference[]>([])
   const [loading, setLoading] = useState(true)
@@ -40,5 +42,5 @@ export function useMediaReferences(id: number | string | undefined): {
     }
   }, [id])
 
-  return { references, loading }
+  return { references, loading, setReferences }
 }

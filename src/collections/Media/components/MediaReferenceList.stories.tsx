@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite"
-import { expect, within } from "storybook/test"
+import { expect, fn, userEvent, within } from "storybook/test"
 
 import { withPayloadAdminTheme } from "@/stories/payloadAdminTheme"
 
@@ -66,5 +66,48 @@ export const Loading: Story = {
     await expect(within(canvasElement).getByRole("status")).toHaveTextContent(
       "Checking references…",
     )
+  },
+}
+
+export const Detachable: Story = {
+  args: { onDetach: fn(() => new Promise<void>(() => undefined)) },
+  play: async ({ args, canvasElement }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(
+      canvas.getByRole("button", {
+        name: "Detach from The Case for Permitting Reform (hero image)",
+      }),
+    )
+
+    const confirm = canvas.getByRole("group", {
+      name: "Confirm detaching from The Case for Permitting Reform",
+    })
+    await expect(confirm).toHaveTextContent("Remove it from the article hero image and publish")
+
+    await userEvent.click(within(confirm).getByRole("button", { name: "Detach and publish" }))
+    await expect(args.onDetach).toHaveBeenCalledWith(
+      expect.objectContaining({ docId: 12, field: "heroImage" }),
+    )
+    await expect(within(confirm).getByRole("button", { name: "Publishing…" })).toBeDisabled()
+  },
+}
+
+export const DetachRefused: Story = {
+  args: {
+    onDetach: fn(() =>
+      Promise.reject(
+        new Error(
+          "This document has unpublished changes. Publish or discard them first, so detaching doesn't publish them too.",
+        ),
+      ),
+    ),
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(canvas.getByRole("button", { name: /Detach from Jordan Rivera/ }))
+    await userEvent.click(canvas.getByRole("button", { name: "Detach and publish" }))
+
+    await expect(await canvas.findByRole("alert")).toHaveTextContent("unpublished changes")
+    await expect(canvas.getByRole("button", { name: /Detach from Jordan Rivera/ })).toBeEnabled()
   },
 }

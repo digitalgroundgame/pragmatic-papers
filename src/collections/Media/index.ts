@@ -14,6 +14,7 @@ import { isCreatedByOrEditor } from "@/access/policies"
 
 import type { Media as MediaType } from "@/payload-types"
 import { regenerateBlurHandler } from "./endpoints/regenerateBlur"
+import { detachHandler } from "./endpoints/detach"
 import { referencesHandler } from "./endpoints/references"
 import { generateBlurDataUrl } from "./hooks/generateBlurDataUrl"
 
@@ -32,6 +33,11 @@ export const Media: CollectionConfig = {
       path: "/:id/references",
       method: "get",
       handler: referencesHandler,
+    },
+    {
+      path: "/:id/detach",
+      method: "post",
+      handler: detachHandler,
     },
   ],
   access: {

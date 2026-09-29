@@ -2,11 +2,14 @@
 //   1) branch off dev, bump package.json, open PR → dev   (CI runs)
 //   2) open PR dev → main and land it as a MERGE COMMIT    (keeps branches in sync)
 //   3) tag main and create the GitHub release
-// Phase 2's merge is auto-enabled as a merge commit so dev and main never diverge.
+// Phase 2 must be merged by hand as a merge commit so dev and main never diverge:
+// these PRs need a ruleset bypass, which `gh pr merge --auto` cannot perform.
 // --phase is a STARTING point and the run chains forward: the default `--phase 1`
 // carries through phase 2 once you confirm the dev PR merged. Phase 3 is separate —
 // release.yml tags automatically on the version bump, so chaining into it would race
 // the workflow; pass `--phase 3` to tag/release by hand instead.
+// Phase 1 is resumable: if a run dies partway (signing passphrase, hook, network),
+// re-running reuses the branch, bump commit, and PR it already made.
 
 import { readFileSync, writeFileSync } from "node:fs"
 import { dirname, join } from "node:path"
@@ -14,7 +17,18 @@ import { parseArgs } from "node:util"
 import { fileURLToPath } from "node:url"
 
 import { blue, gray, green, red } from "./ansi.mjs"
-import { autoMergeAndWait, capture, findVersion, requireGh, run, waitForMerge } from "./release-lib"
+import {
+  bumpMessage,
+  capture,
+  commitIfStaged,
+  createOrReusePr,
+  findVersion,
+  prepareBranch,
+  requireGh,
+  run,
+  waitForMerge,
+  waitForSyncMerge,
+} from "./release-lib"
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..")
 const pkgPath = join(root, "package.json")
@@ -54,19 +68,23 @@ export async function main(): Promise<void> {
 
     run(`git checkout dev`)
     run(`git pull origin dev`)
-    run(`git checkout -b ${branch}`)
+    prepareBranch(branch, "dev", tag)
 
     const pkg = JSON.parse(readFileSync(pkgPath, "utf8"))
     const prev = pkg.version
-    pkg.version = version
-    writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + "\n")
-    console.warn(`${green("✔")} Bumped package.json: ${gray(prev)} → ${green(version)}`)
+    if (prev === version) {
+      console.warn(`${green("✔")} package.json already at ${green(version)}`)
+    } else {
+      pkg.version = version
+      writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + "\n")
+      console.warn(`${green("✔")} Bumped package.json: ${gray(prev)} → ${green(version)}`)
+    }
 
     run(`git add package.json`)
-    run(`git commit -m "Bump package.json to ${tag}"`)
+    commitIfStaged(bumpMessage(tag))
     run(`git push origin ${branch}`)
 
-    const devPrUrl = capture(`gh pr create -f -B dev`)
+    const devPrUrl = createOrReusePr(branch, "dev")
     console.warn(`\n${green("✔")} PR to dev: ${devPrUrl}`)
 
     await waitForMerge(devPrUrl)
@@ -79,10 +97,10 @@ export async function main(): Promise<void> {
     run(`git checkout dev`)
     run(`git pull origin dev`)
 
-    const mainPrUrl = capture(`gh pr create -f -B main`)
+    const mainPrUrl = createOrReusePr("dev", "main", `Release ${version}`)
     console.warn(`\n${green("✔")} PR to main: ${mainPrUrl}`)
 
-    await autoMergeAndWait(mainPrUrl)
+    await waitForSyncMerge(mainPrUrl)
   }
 
   // ── Phase 3: Tag and release ─────────────────────────────────────────────

@@ -9,3 +9,25 @@ updates:
     directory: "/" # Location of package manifests
     schedule:
       interval: "weekly"
+    # Payload refuses to start unless every payload package is on the same
+    # version, so they must move together in one PR.
+    groups:
+      payload:
+        patterns:
+          - "payload"
+          - "@payloadcms/*"
+    ignore:
+      # Majors follow the Node runtime (Dockerfile NODE_VERSION, CI node-version).
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
+
+  # Keep GitHub Actions used in workflows (.github/workflows) and composite
+  # actions (.github/actions) up to date. Grouped into a single weekly PR.
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    groups:
+      github-actions:
+        patterns:
+          - "*"

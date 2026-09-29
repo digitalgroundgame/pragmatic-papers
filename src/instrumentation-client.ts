@@ -4,17 +4,47 @@
 
 import * as Sentry from "@sentry/nextjs"
 
+import { sentryIgnoredErrors } from "./sentryIgnoredErrors"
+
 Sentry.init({
   dsn: process.env.NEXT_PUBLIC_SENTRY_DSN,
 
-  environment: process.env.NEXT_PUBLIC_SENTRY_ENVIRONMENT ?? process.env.NODE_ENV,
+  // Resolved once in next.config.ts from BUILD_ENV; PR previews report `preview`, tagged
+  // with their PR number.
+  environment: process.env.SENTRY_ENVIRONMENT,
+  initialScope: process.env.SENTRY_PR ? { tags: { pr: process.env.SENTRY_PR } } : undefined,
 
   tracesSampleRate: 0.1,
 
-  enableLogs: true,
+  // Bodies skip the key-based filtering headers and cookies get, so a login would send its
+  // password; DB query data includes returned rows, e.g. users' hashes and reset tokens.
+  dataCollection: {
+    httpBodies: [],
+    databaseQueryData: false,
+    stackFrameVariables: false,
+  },
 
-  // https://docs.sentry.io/platforms/javascript/guides/nextjs/configuration/options/#sendDefaultPii
-  sendDefaultPii: true,
+  ignoreErrors: sentryIgnoredErrors,
+
+  integrations: [
+    // Identify errors that originate entirely from scripts we don't ship — browser
+    // extensions and Cloudflare-injected code (e.g. the /cdn-cgi/rum beacon that
+    // throws `r["@context"].toLowerCase` while parsing our JSON-LD). "Third-party"
+    // frames are those not tagged with the `applicationKey` set in next.config.ts.
+    //
+    // Rollout is deliberately two-step. We start with `apply-tag-*`, which drops
+    // NOTHING and only adds a `third_party_code: true` tag — because if the
+    // applicationKey metadata failed to inject (notably on the Turbopack loader
+    // path), a `drop-*` behaviour would classify every frame as third-party and
+    // silently drop ALL client errors. Once we've confirmed in Sentry that real
+    // errors are untagged and third-party ones are tagged, flip this to
+    // `drop-error-if-exclusively-contains-third-party-frames`. Filter the issue
+    // stream in the meantime with `!third_party_code:True`. See PR/issue #855.
+    Sentry.thirdPartyErrorFilterIntegration({
+      filterKeys: ["pragmatic-papers"],
+      behaviour: "apply-tag-if-exclusively-contains-third-party-frames",
+    }),
+  ],
 })
 
 export const onRouterTransitionStart = Sentry.captureRouterTransitionStart

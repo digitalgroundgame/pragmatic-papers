@@ -1,6 +1,5 @@
-import { isAdmin } from "@/access/checkRole"
+import { isAdmin } from "@/access/roles"
 import { seed } from "@/endpoints/seed"
-import type { User } from "@/payload-types"
 import configPromise from "@payload-config"
 import type { NextRequest } from "next/server"
 import { NextResponse } from "next/server"
@@ -23,7 +22,7 @@ export async function POST(req: NextRequest): Promise<Response> {
     headers: req.headers,
   })
 
-  if (!user || !isAdmin(user as User)) {
+  if (!isAdmin(user)) {
     return NextResponse.json(
       { error: "Unauthorized. Only admins can seed the database." },
       { status: 403 },

@@ -33,6 +33,7 @@ export const createTimelineArticle = async (
   writers: User[],
   mediaDocs: Media[],
   topics: number[] = [],
+  context?: Record<string, unknown>,
 ): Promise<number> => {
   validateWriters(writers)
   const writer = writers[0]!
@@ -132,19 +133,23 @@ export const createTimelineArticle = async (
   const title = "Lorem Ipsum Timeline"
   const heroImage = mediaDocs[0]!.id
 
-  const article = await createArticle(payload, {
-    title,
-    content,
-    authors: [writer.id],
-    topics,
-    slug: "lorem-ipsum-timeline",
-    heroImage,
-    meta: {
+  const article = await createArticle(
+    payload,
+    {
       title,
-      description: "A demonstration of the timeline block with placeholder content.",
-      image: heroImage,
+      content,
+      authors: [writer.id],
+      topics,
+      slug: "lorem-ipsum-timeline",
+      heroImage,
+      meta: {
+        title,
+        description: "A demonstration of the timeline block with placeholder content.",
+        image: heroImage,
+      },
     },
-  })
+    context,
+  )
 
   return article.id
 }

@@ -17,3 +17,8 @@ public/sitemap*.xml
 tsconfig.tsbuildinfo
 npm-debug.log*
 yarn-error.log*
+# Storybook runs locally and in CI only; the site image never imports it.
+storybook-static
+.storybook
+**/*.stories.tsx
+src/stories

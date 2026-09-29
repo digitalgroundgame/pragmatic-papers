@@ -1,7 +1,11 @@
+import { isAdmin } from "@/access/roles"
 import { Articles } from "@/collections/Articles"
 import { Categories } from "@/collections/Categories"
+import { Interactives } from "@/collections/Interactives"
+import { InteractiveSnapshots } from "@/collections/InteractiveSnapshots"
 import { MapAssets } from "@/collections/MapAssets"
 import { Media } from "@/collections/Media"
+import { Merch } from "@/collections/Merch"
 import { Pages } from "@/collections/Pages"
 import { Topics } from "@/collections/Topics"
 import { Users } from "@/collections/Users"
@@ -10,7 +14,10 @@ import { Webhooks } from "@/collections/Webhooks"
 import { defaultLexical } from "@/fields/defaultLexical"
 import { Footer } from "@/Footer/config"
 import { ArticleRecommendations } from "@/globals/ArticleRecommendations/config"
+import { SiteSettings } from "@/globals/SiteSettings/config"
 import { Header } from "@/Header/config"
+import { syncInteractiveDataTask } from "@/jobs/syncInteractiveData"
+import { syncShopifyProductsTask } from "@/jobs/syncShopifyProducts"
 import { updateRecommendationsTask } from "@/jobs/updateRecommendations"
 import { plugins } from "@/plugins"
 import { searchVectorAfterSchemaInit } from "@/plugins/searchVector"
@@ -92,9 +99,30 @@ export default buildConfig({
     push: process.env.NODE_ENV === "development",
     afterSchemaInit: [searchVectorAfterSchemaInit],
   }),
-  collections: [Pages, Articles, Volumes, Media, MapAssets, Categories, Users, Webhooks, Topics],
+  /**
+   * The admin saves a document as multipart, and busboy — which parses it — truncates any
+   * field over 1 MiB rather than refusing it, so Payload was handed half a JSON document and
+   * `JSON.parse` failed on the cut ("Unterminated string at position 1048515"). An interactive
+   * snapshot carries the researcher's whole feed in one field, which is past that on its own.
+   * Raised to 32 MB: the ceiling is only there to stop a runaway request, and ours are known.
+   */
+  bodyParser: { limits: { fieldSize: 32 * 1024 * 1024 } },
+  collections: [
+    Pages,
+    Articles,
+    Volumes,
+    Media,
+    MapAssets,
+    Categories,
+    Users,
+    Webhooks,
+    Topics,
+    Merch,
+    Interactives,
+    InteractiveSnapshots,
+  ],
   cors: [getServerSideURL()].filter(Boolean),
-  globals: [Header, Footer, ArticleRecommendations],
+  globals: [Header, Footer, ArticleRecommendations, SiteSettings],
   plugins: [...plugins],
   secret: process.env.PAYLOAD_SECRET,
   sharp: sharp as unknown as SharpDependency,
@@ -116,7 +144,7 @@ export default buildConfig({
       path: "/article-recommendations/run",
       method: "post",
       handler: async (req) => {
-        if (!req.user) {
+        if (!isAdmin(req.user)) {
           return Response.json({ error: "Unauthorized" }, { status: 401 })
         }
         const job = await req.payload.jobs.queue({
@@ -142,6 +170,6 @@ export default buildConfig({
       },
     },
     autoRun: [{ cron: "*/5 * * * *", queue: "default" }],
-    tasks: [updateRecommendationsTask],
+    tasks: [updateRecommendationsTask, syncShopifyProductsTask, syncInteractiveDataTask],
   },
 })

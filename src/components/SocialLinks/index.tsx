@@ -2,31 +2,9 @@ import { normalizeExternalUrl } from "@/components/Authors/AuthorLinks"
 import type { MenuField } from "@/payload-types"
 import { cn } from "@/utilities/utils"
 import { Globe } from "lucide-react"
-import type { FC, SVGProps } from "react"
 import { buttonVariants } from "../ui/button"
-import { detectSocialLinkPlatform, type SocialLinkPlatform } from "./detectPlatform"
-import {
-  BlueskyIcon,
-  InstagramIcon,
-  RedditIcon,
-  SubstackIcon,
-  TiktokIcon,
-  XIcon,
-  YoutubeIcon,
-} from "./icons"
-
-type SocialIconKey = SocialLinkPlatform | "generic"
-
-const iconMap: Record<SocialIconKey, FC<SVGProps<SVGSVGElement>>> = {
-  twitter: XIcon,
-  instagram: InstagramIcon,
-  reddit: RedditIcon,
-  bluesky: BlueskyIcon,
-  substack: SubstackIcon,
-  youtube: YoutubeIcon,
-  tiktok: TiktokIcon,
-  generic: Globe,
-}
+import { detectSocialLinkPlatform } from "./detectPlatform"
+import { socialIconMap, type SocialIconKey } from "./iconMap"
 
 interface SocialLinksProps extends React.HTMLAttributes<HTMLDivElement> {
   parentId?: number
@@ -58,7 +36,7 @@ export function SocialLinks({
     >
       <ul className="flex flex-row items-center gap-2">
         {links.map(({ id, href, platform, label }) => {
-          const Icon = iconMap[platform] ?? Globe
+          const Icon = socialIconMap[platform] ?? Globe
           return (
             <li key={`${parentId}-${id}`}>
               <a

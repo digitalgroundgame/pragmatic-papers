@@ -1,4 +1,28 @@
-import type { Page } from "@playwright/test"
+import {
+  expect,
+  type Locator,
+  type Page,
+  type PageAssertionsToHaveScreenshotOptions,
+} from "@playwright/test"
+
+import { SEEDED_DATELINE, SEEDED_REVISION } from "../../scripts/seed-e2e.constants"
+
+/**
+ * Assert that an article hero's two instants read the words the seed pinned.
+ *
+ * Every baseline that frames a hero bakes these in, and Payload stamps
+ * `updatedAt` with the current time on every non-draft save — so without the
+ * seed's pin the revision line tracks the day the seed ran. Call this before
+ * any such screenshot: a stamp that goes back to following the clock then
+ * fails here, naming the cause, instead of surfacing as an unexplained
+ * whole-suite visual diff months later.
+ */
+export async function expectPinnedDateline(page: Page): Promise<void> {
+  const stamps = page.locator("#article-dateline").locator("time")
+  await expect(stamps).toHaveCount(2)
+  await expect(stamps.nth(0)).toHaveText(SEEDED_DATELINE)
+  await expect(stamps.nth(1)).toHaveText(SEEDED_REVISION)
+}
 
 export async function gotoFirstArticle(page: Page): Promise<string | null> {
   await page.goto("/")
@@ -19,11 +43,18 @@ export async function gotoFirstVolume(page: Page): Promise<string | null> {
 }
 
 /**
- * Settle sources of pixel nondeterminism before taking a screenshot: wait for
- * web fonts to finish loading (late font swaps shift every glyph), for all
- * <img>s in the DOM to finish decoding (a still-loading hero image behind a
- * clipped screenshot region is a common source of flaky diffs), and for two
- * animation frames so in-flight layout/paint work has flushed.
+ * Settle sources of pixel nondeterminism before taking a screenshot or
+ * measuring layout: wait for web fonts to finish loading (late font swaps
+ * shift every glyph), for all <img>s in the DOM to finish decoding (a
+ * still-loading hero image behind a clipped screenshot region is a common
+ * source of flaky diffs), for every finite CSS animation/transition
+ * currently running to finish (e.g. a dropdown's enter animation — grabbing
+ * its bounding box mid-animation produces a crop that doesn't match the
+ * animation-frozen pixels `toHaveScreenshot` actually captures), and for two
+ * animation frames so any remaining layout/paint work has flushed.
+ *
+ * Infinite animations (loading skeletons) are intentionally excluded —
+ * waiting on one would hang forever.
  */
 export async function waitForStableRender(page: Page): Promise<void> {
   await page.evaluate(async () => {
@@ -38,8 +69,29 @@ export async function waitForStableRender(page: Page): Promise<void> {
             }),
       ),
     )
+    await Promise.all(
+      document
+        .getAnimations()
+        .filter((animation) => animation.effect?.getTiming().iterations !== Infinity)
+        .map((animation) => animation.finished.catch(() => undefined)),
+    )
     await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)))
   })
+}
+
+/**
+ * `expect(page).toHaveScreenshot(...)`, but always preceded by
+ * `waitForStableRender`. Use this instead of the raw assertion for every
+ * visual regression screenshot — it's the one thing every screenshot test
+ * needs and the easiest thing to forget when writing a new one.
+ */
+export async function expectStableScreenshot(
+  page: Page,
+  name: string | ReadonlyArray<string>,
+  options?: PageAssertionsToHaveScreenshotOptions,
+): Promise<void> {
+  await waitForStableRender(page)
+  await expect(page).toHaveScreenshot(name, options)
 }
 
 interface BoundingBox {
@@ -47,6 +99,42 @@ interface BoundingBox {
   y: number
   width: number
   height: number
+}
+
+/**
+ * Poll an element's bounding box until it stops changing across several
+ * consecutive animation frames, then return the settled box. Use this before
+ * computing a screenshot clip from an element whose position can shift late in
+ * layout — e.g. a popover sitting below a hero image that resolves its
+ * intrinsic height a frame or two after decode. Without it, a clip captured
+ * mid-reflow lands ~1px off and ghosts every glyph/icon in the diff.
+ */
+export async function waitForStableBox(
+  locator: Locator,
+  { frames = 5, maxTicks = 300 }: { frames?: number; maxTicks?: number } = {},
+): Promise<BoundingBox> {
+  const page = locator.page()
+  let last: BoundingBox | null = null
+  let stable = 0
+  for (let tick = 0; tick < maxTicks; tick++) {
+    const box = await locator.boundingBox()
+    if (
+      box &&
+      last &&
+      box.x === last.x &&
+      box.y === last.y &&
+      box.width === last.width &&
+      box.height === last.height
+    ) {
+      if (++stable >= frames) return box
+    } else {
+      stable = 0
+    }
+    last = box
+    await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => resolve(null))))
+  }
+  if (!last) throw new Error("Element never produced a bounding box")
+  return last
 }
 
 export function mergeBoundingBoxes(...boxes: BoundingBox[]): BoundingBox {

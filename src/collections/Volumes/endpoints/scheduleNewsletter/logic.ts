@@ -4,6 +4,7 @@ import type { Payload } from "payload"
 import { VolumeArticleEmail } from "@/emails/VolumeArticle"
 import type { Article, Volume } from "@/payload-types"
 import { getServerSideURL } from "@/utilities/getURL"
+import { isResolved } from "@/utilities/relationships"
 import {
   createScheduledCampaign,
   listScheduledCampaigns,
@@ -60,8 +61,7 @@ export async function scheduleVolumeNewsletter(
   })) as Volume
 
   const articles = (volume.articles ?? []).filter(
-    (a): a is Article =>
-      typeof a === "object" && a !== null && (a as Article)._status === "published",
+    (a): a is Article => isResolved(a) && a._status === "published",
   )
 
   if (articles.length === 0) {

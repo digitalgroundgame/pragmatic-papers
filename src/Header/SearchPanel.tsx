@@ -5,14 +5,16 @@ import { TextSearch } from "lucide-react"
 
 import { NotificationDot } from "@/components/NotificationDot"
 import { Button } from "@/components/ui/button"
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
+import { SheetContent, SheetTrigger } from "@/components/ui/sheet"
+import { MenuSheet } from "@/Header/MenuSheet/Component"
 import { useNotification } from "@/providers/NotificationProvider"
 
+/** The mobile menu and search sheet, whose trigger carries the `search` dot until first opened. */
 export function SearchPanel({ children }: { children: React.ReactNode }): React.ReactNode {
   const { visible, markSeen } = useNotification("search")
 
   return (
-    <Sheet>
+    <MenuSheet>
       <SheetTrigger
         render={
           <Button
@@ -35,6 +37,6 @@ export function SearchPanel({ children }: { children: React.ReactNode }): React.
       >
         {children}
       </SheetContent>
-    </Sheet>
+    </MenuSheet>
   )
 }

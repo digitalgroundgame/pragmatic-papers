@@ -1,19 +1,22 @@
-import type { Media, User } from "@/payload-types"
-import type { Payload } from "payload"
+import { DELETE_MEDIA_IN_USE } from "@/collections/Media/hooks/protectPublishedMedia"
 import { seedRandomRankings } from "@/jobs/updateRecommendations/logic"
+import type { Media, User } from "@/payload-types"
+import { revalidatePath } from "next/cache"
+import type { Payload } from "payload"
 import { createArticle, getWriterOrThrow, validateWriters } from "./articles"
 import { createBannerBlocksArticle } from "./features/banners"
 import { createCodeBlocksArticle } from "./features/code-blocks"
 import { createCollectionGridHomePage } from "./features/collection-grid"
 import { createFootnotesArticle } from "./features/footnotes"
 import { createMoCongressionalMapsArticle } from "./features/interactive-maps"
+import { createFederalCourtsInteractive } from "./features/interactives"
 import { createMathBlocksArticle } from "./features/math-blocks"
 import { createMediaCollageArticle } from "./features/media-collage"
 import { createNarrationDemoArticle } from "./features/narration-demo"
 import { createRichTextShowcaseArticle } from "./features/rich-text-showcase"
 import { createLegacySocialEmbedArticle, createSocialEmbedArticle } from "./features/social-embeds"
 import { createTimelineArticle } from "./features/timeline"
-import { createMediaFromURL } from "./media"
+import { createStockMedia } from "./media"
 import { createMenus } from "./menus"
 import { createPages } from "./pages"
 import { createLoremIpsumContent, generateLoremIspumSentence } from "./richtext"
@@ -38,6 +41,7 @@ interface SeedContext {
 export const seed = async (
   payload: Payload,
   onProgress?: (message: string, step: number, total: number) => void,
+  context: Record<string, unknown> = {},
 ): Promise<void> => {
   const ctx = {} as SeedContext
 
@@ -53,6 +57,7 @@ export const seed = async (
       fn: async () => {
         await payload.delete({
           collection: "users",
+          context,
           where: {
             email: {
               in: [
@@ -65,28 +70,37 @@ export const seed = async (
             },
           },
         })
-        await payload.delete({ collection: "articles", where: {} })
-        await payload.delete({ collection: "volumes", where: {} })
-        await payload.delete({ collection: "topics", where: {} })
-        await payload.delete({ collection: "media", where: {} })
-        await payload.delete({ collection: "map-assets", where: {} })
-        await payload.delete({ collection: "pages", where: {} })
-        await payload.delete({ collection: "forms", where: {} })
-        await payload.delete({ collection: "form-submissions", where: {} })
+        // A ranking's article column is NOT NULL but its foreign key is ON DELETE
+        // SET NULL, so a ranked article can't be deleted until the rankings go.
+        await payload.updateGlobal({
+          slug: "article-recommendations",
+          context,
+          data: { rankings: [] },
+        })
+        await payload.delete({ collection: "articles", context, where: {} })
+        await payload.delete({ collection: "volumes", context, where: {} })
+        await payload.delete({ collection: "topics", context, where: {} })
+        await payload.delete({ collection: "map-assets", context, where: {} })
+        await payload.delete({ collection: "pages", context, where: {} })
+        await payload.delete({ collection: "forms", context, where: {} })
+        await payload.delete({ collection: "form-submissions", context, where: {} })
+        // Snapshots point at their interactive, so they go first.
+        await payload.delete({ collection: "interactive-snapshots", context, where: {} })
+        await payload.delete({ collection: "interactives", context, where: {} })
+        // Last, once the content that uses it is gone. The flag also clears media
+        // that content the seed doesn't own (a real user's profile image) still uses,
+        // which the delete would otherwise skip without saying so.
+        await payload.delete({
+          collection: "media",
+          context: { ...context, [DELETE_MEDIA_IN_USE]: true },
+          where: {},
+        })
       },
     },
     {
       name: "Uploading media...",
       fn: async () => {
-        const IMAGE_BASE =
-          "https://raw.githubusercontent.com/payloadcms/payload/refs/heads/main/templates/website/src/endpoints/seed"
-        const ALT = "Curving abstract shapes with an orange and blue gradient"
-        ctx.media = await Promise.all([
-          createMediaFromURL(payload, `${IMAGE_BASE}/image-post1.webp`, ALT),
-          createMediaFromURL(payload, `${IMAGE_BASE}/image-post2.webp`, ALT),
-          createMediaFromURL(payload, `${IMAGE_BASE}/image-post3.webp`, ALT),
-          createMediaFromURL(payload, `${IMAGE_BASE}/image-hero1.webp`, ALT),
-        ])
+        ctx.media = await createStockMedia(payload)
       },
     },
     {
@@ -102,6 +116,10 @@ export const seed = async (
         ctx.writers = writers
         ctx.narrator = narrator
         validateWriters([writers[0]!, writers[1]!])
+        if (!context.disableRevalidate) {
+          revalidatePath("/authors")
+          revalidatePath("/authors/[slug]", "page")
+        }
       },
     },
     {
@@ -144,19 +162,23 @@ export const seed = async (
         ]
         for (let i = 0; i < volume1Titles.length; i++) {
           const title = volume1Titles[i]!
-          const article = await createArticle(payload, {
-            title,
-            content: createLoremIpsumContent(Math.floor(Math.random() * 8) + 3),
-            authors: [getWriterOrThrow(writers, i).id],
-            topics: volume1TopicSets[i]!,
-            slug: titleToSlug(title),
-            heroImage: ctx.media[i % ctx.media.length]?.id,
-            meta: {
+          const article = await createArticle(
+            payload,
+            {
               title,
-              description: generateLoremIspumSentence(),
-              image: ctx.media[i % ctx.media.length]?.id,
+              content: createLoremIpsumContent(Math.floor(Math.random() * 8) + 3),
+              authors: [getWriterOrThrow(writers, i).id],
+              topics: volume1TopicSets[i]!,
+              slug: titleToSlug(title),
+              heroImage: ctx.media[i % ctx.media.length]?.id,
+              meta: {
+                title,
+                description: generateLoremIspumSentence(),
+                image: ctx.media[i % ctx.media.length]?.id,
+              },
             },
-          })
+            context,
+          )
           ctx.volume1Articles.push(article.id)
         }
       },
@@ -184,19 +206,23 @@ export const seed = async (
         ]
         for (let i = 0; i < volume2Titles.length; i++) {
           const title = volume2Titles[i]!
-          const article = await createArticle(payload, {
-            title,
-            content: createLoremIpsumContent(Math.floor(Math.random() * 8) + 3),
-            authors: [getWriterOrThrow(writers, i).id],
-            topics: volume2TopicSets[i]!,
-            slug: titleToSlug(title),
-            heroImage: ctx.media[i % ctx.media.length]?.id,
-            meta: {
+          const article = await createArticle(
+            payload,
+            {
               title,
-              description: generateLoremIspumSentence(),
-              image: ctx.media[i % ctx.media.length]?.id,
+              content: createLoremIpsumContent(Math.floor(Math.random() * 8) + 3),
+              authors: [getWriterOrThrow(writers, i).id],
+              topics: volume2TopicSets[i]!,
+              slug: titleToSlug(title),
+              heroImage: ctx.media[i % ctx.media.length]?.id,
+              meta: {
+                title,
+                description: generateLoremIspumSentence(),
+                image: ctx.media[i % ctx.media.length]?.id,
+              },
             },
-          })
+            context,
+          )
           ctx.volume2Articles.push(article.id)
         }
       },
@@ -211,67 +237,96 @@ export const seed = async (
             [ctx.writers[0]!, ctx.writers[1]!],
             ctx.media,
             [ctx.topics[3]!, ctx.topics[4]!, ctx.topics[7]!],
+            context,
           ),
         )
         ctx.featureArticles.push(
+          // Four authors against the byline's three slots, so the dev seed has
+          // somewhere to see the collapsed state — two names and a remainder,
+          // two faces and a "+2" — without hand-editing an article first. The
+          // first four writers draw four different profile images (see
+          // generateWriterData: `media[index % 4]`), so the faces stay distinct.
           await createFootnotesArticle(
             payload,
-            [ctx.writers[0]!, ctx.writers[1]!],
+            [ctx.writers[0]!, ctx.writers[1]!, ctx.writers[2]!, ctx.writers[3]!],
             ctx.media,
             ctx.volume1Articles[0]!,
             [ctx.topics[0]!, ctx.topics[3]!, ctx.topics[4]!],
+            context,
           ),
         )
         ctx.featureArticles.push(
-          await createSocialEmbedArticle(payload, ctx.writers[0]!, ctx.media, [
-            ctx.topics[0]!,
-            ctx.topics[1]!,
-            ctx.topics[7]!,
-          ]),
+          await createSocialEmbedArticle(
+            payload,
+            ctx.writers[0]!,
+            ctx.media,
+            [ctx.topics[0]!, ctx.topics[1]!, ctx.topics[7]!],
+            context,
+          ),
         )
         ctx.featureArticles.push(
-          await createLegacySocialEmbedArticle(payload, ctx.writers[0]!, ctx.media, [
-            ctx.topics[0]!,
-            ctx.topics[1]!,
-            ctx.topics[10]!,
-          ]),
+          await createLegacySocialEmbedArticle(
+            payload,
+            ctx.writers[0]!,
+            ctx.media,
+            [ctx.topics[0]!, ctx.topics[1]!, ctx.topics[10]!],
+            context,
+          ),
         )
         ctx.featureArticles.push(
-          await createMediaCollageArticle(payload, ctx.writers[0]!, ctx.media, [
-            ctx.topics[3]!,
-            ctx.topics[7]!,
-          ]),
+          await createMediaCollageArticle(
+            payload,
+            ctx.writers[0]!,
+            ctx.media,
+            [ctx.topics[3]!, ctx.topics[7]!],
+            context,
+          ),
         )
         ctx.featureArticles.push(
-          await createMathBlocksArticle(payload, [ctx.writers[0]!, ctx.writers[1]!], ctx.media, [
-            ctx.topics[2]!,
-            ctx.topics[3]!,
-            ctx.topics[5]!,
-          ]),
+          await createMathBlocksArticle(
+            payload,
+            [ctx.writers[0]!, ctx.writers[1]!],
+            ctx.media,
+            [ctx.topics[2]!, ctx.topics[3]!, ctx.topics[5]!],
+            context,
+          ),
         )
         ctx.featureArticles.push(
-          await createTimelineArticle(payload, [ctx.writers[0]!, ctx.writers[1]!], ctx.media, [
-            ctx.topics[3]!,
-            ctx.topics[7]!,
-          ]),
+          await createTimelineArticle(
+            payload,
+            [ctx.writers[0]!, ctx.writers[1]!],
+            ctx.media,
+            [ctx.topics[3]!, ctx.topics[7]!],
+            context,
+          ),
         )
         ctx.featureArticles.push(
-          await createNarrationDemoArticle(payload, ctx.writers[0]!, ctx.narrator, ctx.media, [
-            ctx.topics[3]!,
-            ctx.topics[7]!,
-          ]),
+          await createNarrationDemoArticle(
+            payload,
+            ctx.writers[0]!,
+            ctx.narrator,
+            ctx.media,
+            [ctx.topics[3]!, ctx.topics[7]!],
+            context,
+          ),
         )
         ctx.featureArticles.push(
-          await createBannerBlocksArticle(payload, [ctx.writers[0]!, ctx.writers[1]!], ctx.media, [
-            ctx.topics[3]!,
-            ctx.topics[7]!,
-          ]),
+          await createBannerBlocksArticle(
+            payload,
+            [ctx.writers[0]!, ctx.writers[1]!],
+            ctx.media,
+            [ctx.topics[3]!, ctx.topics[7]!],
+            context,
+          ),
         )
         ctx.featureArticles.push(
-          await createCodeBlocksArticle(payload, [ctx.writers[0]!, ctx.writers[1]!], ctx.media, [
-            ctx.topics[2]!,
-            ctx.topics[7]!,
-          ]),
+          await createCodeBlocksArticle(
+            payload,
+            [ctx.writers[0]!, ctx.writers[1]!],
+            ctx.media,
+            [ctx.topics[2]!, ctx.topics[7]!],
+            context,
+          ),
         )
       },
     },
@@ -280,10 +335,24 @@ export const seed = async (
       fn: async () => {
         ctx.mapArticles = []
         ctx.mapArticles.push(
-          await createMoCongressionalMapsArticle(payload, [ctx.writers[0]!], ctx.media, [
-            ctx.topics[0]!,
-          ]),
+          await createMoCongressionalMapsArticle(
+            payload,
+            [ctx.writers[0]!],
+            ctx.media,
+            [ctx.topics[0]!],
+            context,
+          ),
         )
+      },
+    },
+    {
+      // The Federal Courts drilldown is an interactive page, not an article: its data is
+      // synced from the tracker and versioned, so it outlives any one piece of writing.
+      name: "Creating interactives...",
+      fn: async () => {
+        // With COURT_TRACKER_GITHUB_TOKEN set this reads every judge from upstream's newest
+        // release; without it, the trimmed fixture.
+        await createFederalCourtsInteractive(payload, context, undefined, { live: true })
       },
     },
     {
@@ -330,6 +399,7 @@ export const seed = async (
             },
           ],
           ctx.media,
+          context,
         )
       },
     },
@@ -341,6 +411,8 @@ export const seed = async (
           ctx.volume1Articles,
           ctx.volume2Articles,
           ctx.featureArticles,
+          ctx.media.map((m) => m.id),
+          context,
         )
         const homePage = await payload
           .find({ collection: "pages", where: { slug: { equals: "home" } }, limit: 1 })
@@ -352,19 +424,40 @@ export const seed = async (
           privacyPolicyPage,
           termsOfUsePage,
           volumesPage,
-        } = await createPages(payload, {
-          chiefEditorIds: [ctx.chiefEditor.id],
-          editorIds: [ctx.editor.id],
-          writerIds: [ctx.writers[0]!.id, ctx.writers[1]!.id],
-        })
-        await createMenus(payload, {
-          homePage,
-          aboutPage,
-          articlesPage,
-          contactPage,
-          privacyPolicyPage,
-          termsOfUsePage,
-          volumesPage,
+        } = await createPages(
+          payload,
+          {
+            chiefEditorIds: [ctx.chiefEditor.id],
+            editorIds: [ctx.editor.id],
+            writerIds: [ctx.writers[0]!.id, ctx.writers[1]!.id],
+          },
+          ctx.media.map((m) => m.id),
+          context,
+        )
+        await createMenus(
+          payload,
+          {
+            homePage,
+            aboutPage,
+            articlesPage,
+            contactPage,
+            privacyPolicyPage,
+            termsOfUsePage,
+            volumesPage,
+          },
+          context,
+        )
+      },
+    },
+    {
+      name: "Enabling experiments...",
+      fn: async () => {
+        // Local dev shows every beta feature; staging and production switch
+        // theirs on in the admin.
+        await payload.updateGlobal({
+          slug: "site-settings",
+          context,
+          data: { experiments: { feed: true, interactives: true } },
         })
       },
     },

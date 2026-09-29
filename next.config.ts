@@ -1,8 +1,10 @@
-import { withSentryConfig } from "@sentry/nextjs"
+import { withSentryConfig } from "@sentry/nextjs/config"
 import { withPayload } from "@payloadcms/next/withPayload"
 import type { NextConfig } from "next"
 import path from "path"
 import { fileURLToPath } from "url"
+
+import { prNumberFromFqdn } from "./src/utilities/prNumberFromFqdn"
 
 const __filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(__filename)
@@ -17,6 +19,14 @@ const NEXT_PUBLIC_SUPABASE_URL = new URL(
 
 const nextConfig: NextConfig = {
   output: "standalone",
+  // Inlined into every bundle (client, server, edge) for the Sentry configs to share; only
+  // the build sees BUILD_ENV and COOLIFY_FQDN. Sentry's environment is the deploy
+  // (production, staging, preview), and a preview is tagged with its PR.
+  env: {
+    SENTRY_ENVIRONMENT: process.env.BUILD_ENV || "development",
+    SENTRY_PR:
+      process.env.BUILD_ENV === "preview" ? prNumberFromFqdn(process.env.COOLIFY_FQDN) : "",
+  },
   // Temporarily required on Windows until Next.js fixes Turbopack Sass resolution.
   // See: https://github.com/vercel/next.js/issues/86431
   sassOptions: {
@@ -35,9 +45,50 @@ const nextConfig: NextConfig = {
         hostname: NEXT_PUBLIC_SUPABASE_URL.hostname,
         port: NEXT_PUBLIC_SUPABASE_URL.port,
       },
+      {
+        // Merch products are synced from Shopify and render straight from its
+        // CDN — we don't copy product shots into Media.
+        protocol: "https",
+        hostname: "cdn.shopify.com",
+      },
     ],
   },
   reactStrictMode: true,
+  experimental: {
+    serverActions: {
+      // Payload's admin panel drives its document forms through a Server Action (this
+      // repo's own `serverFunction` in `src/app/(payload)/layout.tsx`), and an interactive
+      // snapshot carries the researcher's feed as one JSON field on that form — 1.3 MB for
+      // the federal judiciary today, and it only grows. Next's default limit is 1 MB, so
+      // unpublishing a snapshot failed with "Body exceeded 1 MB limit". The field never
+      // needs to be in that form at all (issue #905), but the limit is what stands between
+      // an editor and a broken publish button today.
+      //
+      // There is no per-action override for this in Next — `bodySizeLimit` is one number
+      // for every Server Action in the app, so this also covers `getAuth.ts` and
+      // `SocialEmbed/hooks/revalidateSnapshot.ts`. Neither is publicly reachable, so the
+      // practical exposure is low; it is still wider than the one flow this was raised for.
+      bodySizeLimit: "8mb",
+    },
+  },
+  // Interactive Map drilldown assets are fetched lazily from stable, same-origin paths that
+  // are emitted into the article HTML (so a crawler can capture them). With local storage the
+  // files sit in public/map-assets and Next serves them directly; with S3 enabled this proxies
+  // the same path to the bucket, so the URL never changes between environments.
+  async rewrites() {
+    if (process.env.USE_LOCAL_STORAGE === "true") return []
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const bucket = process.env.S3_BUCKET
+    if (!supabaseUrl || !bucket) return []
+    return {
+      afterFiles: [
+        {
+          source: "/map-assets/:path*",
+          destination: `${supabaseUrl.replace(/\/$/, "")}/storage/v1/object/public/${bucket}/map-assets/:path*`,
+        },
+      ],
+    }
+  },
   redirects: async () => [
     {
       destination: "/ie-incompatible.html",
@@ -119,7 +170,11 @@ const nextConfig: NextConfig = {
         // stale-while-revalidate=86400 — CDN may serve stale for up to 24h while revalidating in the background.
         // Only applies when both Payload cookies are absent; logged-in editors and draft-preview
         // sessions bypass this rule and always hit the origin with fresh responses.
-        source: "/:path*",
+        // The geometry route names its own content in the URL and sets its own (much longer,
+        // hash-conditional) Cache-Control — a config-level header always wins over one set in a
+        // Route Handler, so without this exclusion this blanket rule silently overwrote it,
+        // capping a year-long immutable cache down to 10 minutes.
+        source: "/:path((?!interactives/[^/]+/regions/[^/]+/geometry/).*)",
         headers: [
           {
             key: "Cache-Control",
@@ -165,14 +220,30 @@ export default withSentryConfig(withPayload(nextConfig, { devBundleServerPackage
 
   project: "pragmatic-papers",
 
-  // Only print logs for uploading source maps in CI
-  silent: !process.env.CI,
+  // Tags our bundled code with this key so `thirdPartyErrorFilterIntegration`
+  // (in src/instrumentation-client.ts) can tell our frames from third-party ones.
+  // Top-level `applicationKey` injects module metadata for both webpack and Turbopack.
+  applicationKey: "pragmatic-papers",
+
+  // The build-time dependency instrumentation roughly doubles peak compile memory
+  // (~4.6 → ~8.5 GiB), which the 4 GB Coolify build server can't absorb.
+  buildTimeInstrumentation: false,
+
+  // Log wherever source maps are uploaded: builds with SENTRY_AUTH_TOKEN (Coolify
+  // production/staging). GitHub Actions deliberately has no token.
+  silent: !process.env.SENTRY_AUTH_TOKEN,
 
   // For all available options, see:
   // https://docs.sentry.io/platforms/javascript/guides/nextjs/manual-setup/
 
   // Upload a larger set of source maps for prettier stack traces (increases build time)
   widenClientFileUpload: true,
+
+  // Preview errors are rarely debugged in Sentry, so skip generating and uploading
+  // source maps there (~1 min off each preview build).
+  sourcemaps: {
+    disable: process.env.BUILD_ENV === "preview",
+  },
 
   // Route browser requests to Sentry through a Next.js rewrite to circumvent ad-blockers.
   // This can increase your server load as well as your hosting bill.

@@ -35,7 +35,7 @@ const getArticlesSitemap = unstable_cache(
           .filter((page) => Boolean(page?.slug))
           .map((page) => {
             return {
-              loc: page?.slug === "home" ? SITE_URL : `${SITE_URL}/articles/${page?.slug}`,
+              loc: `${SITE_URL}/articles/${page?.slug}`,
               lastmod: page.updatedAt || dateFallback,
               news: {
                 title: page.title,

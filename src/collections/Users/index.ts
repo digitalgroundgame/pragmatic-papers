@@ -1,6 +1,6 @@
-import { adminOrSelf } from "@/access/adminOrSelf"
-import { admin, adminFieldLevel } from "@/access/admins"
-import { staff } from "@/access/staff"
+import { isSelfOrAdmin, readUsers } from "@/access/policies"
+import { admin, staff } from "@/access/collections"
+import { adminFieldLevel, selfOrAdminFieldLevel, staffOrSelfFieldLevel } from "@/access/fields"
 import { revalidateUser } from "@/collections/Users/hooks/revalidateUser"
 import { menu } from "@/fields/menu"
 import {
@@ -12,7 +12,8 @@ import {
   OrderedListFeature,
   UnorderedListFeature,
 } from "@payloadcms/richtext-lexical"
-import { slugField, type CollectionConfig } from "payload"
+import type { CollectionConfig } from "payload"
+import { slugField } from "@/fields/slug"
 import { userExists } from "./hooks/userExists"
 
 export const Users: CollectionConfig = {
@@ -21,15 +22,36 @@ export const Users: CollectionConfig = {
     admin: staff,
     create: admin,
     delete: admin,
-    read: adminOrSelf,
-    update: adminOrSelf,
+    read: readUsers,
+    update: isSelfOrAdmin,
   },
   admin: {
-    defaultColumns: ["name", "role", "email"],
+    defaultColumns: ["name", "roles", "email"],
     useAsTitle: "name",
   },
   auth: true,
   fields: [
+    {
+      // Payload's auth already supplies an `email` field and merges this
+      // declaration into it; we redeclare it only to attach field-level read
+      // access. The auth form (login, first-user registration, the Auth panel
+      // on a user doc) renders its own email input, and Payload normally keeps
+      // the merged field from rendering a second one via a `Field: false`
+      // component. That suppression is delivered through form state, which
+      // skips any field whose `access.read` denies — so on the first-user
+      // registration form (no user yet, so `selfOrAdminFieldLevel` is false)
+      // the client fell back to the default email input and drew a second
+      // "Email" box. `admin.hidden` suppresses it on the client instead, which
+      // holds whether or not read access passes. List columns are unaffected.
+      name: "email",
+      type: "email",
+      access: {
+        read: selfOrAdminFieldLevel,
+      },
+      admin: {
+        hidden: true,
+      },
+    },
     {
       name: "name",
       type: "text",
@@ -93,11 +115,13 @@ export const Users: CollectionConfig = {
       },
     }),
     {
-      name: "role",
+      name: "roles",
       type: "select",
+      hasMany: true,
       saveToJWT: true,
-      defaultValue: "member",
+      defaultValue: ["member"],
       access: {
+        read: staffOrSelfFieldLevel,
         update: adminFieldLevel,
       },
       admin: {

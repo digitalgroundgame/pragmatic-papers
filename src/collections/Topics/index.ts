@@ -1,6 +1,4 @@
-import { anyone } from "@/access/anyone"
-import { editor } from "@/access/editor"
-import { writer } from "@/access/writer"
+import { anyone, editor, writerOrEditor } from "@/access/collections"
 import {
   MetaDescriptionField,
   MetaImageField,
@@ -9,12 +7,12 @@ import {
   PreviewField,
 } from "@payloadcms/plugin-seo/fields"
 import type { CollectionConfig } from "payload"
-import { slugField } from "payload"
+import { slugField } from "@/fields/slug"
 
 export const Topics: CollectionConfig = {
   slug: "topics",
   access: {
-    create: writer,
+    create: writerOrEditor,
     delete: editor,
     read: anyone,
     update: editor,
@@ -60,7 +58,9 @@ export const Topics: CollectionConfig = {
             MetaImageField({
               relationTo: "media",
             }),
-            MetaDescriptionField({}),
+            MetaDescriptionField({
+              hasGenerateFn: true,
+            }),
             PreviewField({
               hasGenerateFn: true,
               titlePath: "meta.title",

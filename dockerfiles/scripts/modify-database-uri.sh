@@ -1,86 +1,64 @@
 #!/bin/sh
 set -e
 
-# Script to modify DATABASE_URI by appending a suffix based on COOLIFY_FQDN
-# This is useful for preview deployments where each PR gets a unique database
-# Always writes /tmp/database_uri.env so the runner stage can source it
+# Names the database a preview deployment uses: DATABASE_URI's database with the
+# PR prefix of COOLIFY_FQDN appended (pragmatic_papers -> pragmatic_papers_pr_330).
+#
+# Only the name is written, to $DATABASE_NAME_FILE (default /tmp/database_name), and
+# never the URI: the runner image carries this file, and start.sh applies it to the
+# DATABASE_URI Coolify passes at runtime, so no credential is baked into the image.
+# The file is empty outside previews, which then use DATABASE_URI as-is.
+
+. "$(dirname "$0")/database-uri.sh"
+
+NAME_FILE=${DATABASE_NAME_FILE:-/tmp/database_name}
+: > "$NAME_FILE"
 
 echo "========================================"
 echo "Database URI Modifier"
 echo "========================================"
 
-# Check if BUILD_ENV is set to preview
 if [ "$BUILD_ENV" != "preview" ]; then
     echo "BUILD_ENV is not 'preview' (current: ${BUILD_ENV:-not set})"
     echo "Skipping DATABASE_URI modification"
-    echo "DATABASE_URI: $DATABASE_URI"
-    # Always write the env file so COPY in runner stage works
-    echo "export DATABASE_URI='$DATABASE_URI'" > /tmp/database_uri.env
+    echo "DATABASE_URI: $(redact_uri "$DATABASE_URI")"
     exit 0
 fi
 
 echo "BUILD_ENV: preview - proceeding with DATABASE_URI modification"
 
-# Check if COOLIFY_FQDN is set
+# Without it the preview can't name its own database. Falling back to DATABASE_URI
+# as-is would migrate and serve the database every preview shares, with this branch's
+# migrations, and leave other previews querying columns they don't have (#1058).
 if [ -z "$COOLIFY_FQDN" ]; then
-    echo "COOLIFY_FQDN is not set, using DATABASE_URI as-is"
-    echo "DATABASE_URI: $DATABASE_URI"
-    # Always write the env file so COPY in runner stage works
-    echo "export DATABASE_URI='$DATABASE_URI'" > /tmp/database_uri.env
-    exit 0
+    echo "ERROR: COOLIFY_FQDN is not set, so this preview can't get its own database"
+    echo "Refusing to build against the shared DATABASE_URI"
+    exit 1
 fi
 
 echo "COOLIFY_FQDN: $COOLIFY_FQDN"
 
-# Extract the prefix (e.g., "pr-330" from "pr-330.pragmaticpapers.com")
-PREFIX=$(echo "$COOLIFY_FQDN" | cut -d'.' -f1)
-echo "Extracted prefix: $PREFIX"
-
-# Check if DATABASE_URI is set
 if [ -z "$DATABASE_URI" ]; then
     echo "ERROR: DATABASE_URI is not set"
     exit 1
 fi
 
-echo "Original DATABASE_URI: $DATABASE_URI"
+case "$DATABASE_URI" in
+    postgres://* | postgresql://*) ;;
+    *)
+        echo "ERROR: DATABASE_URI must start with postgresql:// or postgres://"
+        exit 1
+        ;;
+esac
 
-# Parse DATABASE_URI to extract components
-# Format: postgresql://user:password@host:port/database
+# "pr-330.pragmaticpapers.com" -> "pr_330" (hyphens aren't safe in database names)
+SUFFIX=$(echo "$COOLIFY_FQDN" | cut -d'.' -f1 | tr '-' '_')
+NEW_DB_NAME="$(uri_database "$DATABASE_URI")_${SUFFIX}"
 
-# Check for both postgres:// and postgresql:// prefixes
-if echo "$DATABASE_URI" | grep -q "^postgresql://"; then
-    URI_PREFIX="postgresql://"
-elif echo "$DATABASE_URI" | grep -q "^postgres://"; then
-    URI_PREFIX="postgres://"
-else
-    echo "ERROR: DATABASE_URI must start with postgresql:// or postgres://"
-    exit 1
-fi
+echo "$NEW_DB_NAME" > "$NAME_FILE"
 
-# Remove prefix
-URI_WITHOUT_PREFIX=${DATABASE_URI#$URI_PREFIX}
-
-# Extract database name (after last /)
-DB_NAME=$(echo "$URI_WITHOUT_PREFIX" | sed 's/.*\///')
-
-# Extract everything before database name
-URI_BASE=$(echo "$URI_WITHOUT_PREFIX" | sed 's/\(.*\)\/.*/\1/')
-
-# Create sanitized suffix (replace hyphens with underscores for database name compatibility)
-SANITIZED_SUFFIX=$(echo "$PREFIX" | tr '-' '_')
-
-# Construct new database name with suffix
-NEW_DB_NAME="${DB_NAME}_${SANITIZED_SUFFIX}"
-
-# Construct new DATABASE_URI
-NEW_DATABASE_URI="${URI_PREFIX}${URI_BASE}/${NEW_DB_NAME}"
-
-echo "New database name: $NEW_DB_NAME"
-echo "Modified DATABASE_URI: $NEW_DATABASE_URI"
-
-# Export the modified DATABASE_URI for subsequent commands
-# We'll write it to a file that can be sourced
-echo "export DATABASE_URI='$NEW_DATABASE_URI'" > /tmp/database_uri.env
+echo "Original DATABASE_URI: $(redact_uri "$DATABASE_URI")"
+echo "Modified DATABASE_URI: $(redact_uri "$(uri_with_database "$DATABASE_URI" "$NEW_DB_NAME")")"
 
 echo "========================================"
 echo "Database URI modification complete"

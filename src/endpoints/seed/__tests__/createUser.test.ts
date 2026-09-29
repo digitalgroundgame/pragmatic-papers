@@ -1,6 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
-
-import { createUser } from "../users"
+import { createUser, type UserContext } from "../users"
 
 const mockCreate = vi.fn()
 const mockWarn = vi.fn()
@@ -14,7 +13,7 @@ const userData = {
   email: "test@example.com",
   password: "password123",
   name: "Test User",
-  role: "writer" as const,
+  roles: ["writer" as const],
   slug: "test-user",
   affiliation: "Test Institute",
 }
@@ -42,7 +41,7 @@ describe("createUser", () => {
 
   it("passes context through to payload.create", async () => {
     mockCreate.mockResolvedValueOnce(mockUser)
-    const ctx = { disableRevalidate: true }
+    const ctx: UserContext = { disableRevalidate: true }
 
     await createUser(mockPayload, userData, "test user", ctx)
 
@@ -64,7 +63,7 @@ describe("createUser", () => {
         email: userData.email,
         password: userData.password,
         name: userData.name,
-        role: userData.role,
+        roles: userData.roles,
         slug: userData.slug,
       },
       context: undefined,

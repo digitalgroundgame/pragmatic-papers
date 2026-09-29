@@ -8,12 +8,18 @@ import * as Sentry from "@sentry/nextjs"
 Sentry.init({
   dsn: process.env.SENTRY_DSN,
 
-  environment: process.env.NEXT_PUBLIC_SENTRY_ENVIRONMENT ?? process.env.NODE_ENV,
+  // Resolved once in next.config.ts from BUILD_ENV; PR previews report `preview`, tagged
+  // with their PR number.
+  environment: process.env.SENTRY_ENVIRONMENT,
+  initialScope: process.env.SENTRY_PR ? { tags: { pr: process.env.SENTRY_PR } } : undefined,
 
   tracesSampleRate: 0.1,
 
-  enableLogs: true,
-
-  // https://docs.sentry.io/platforms/javascript/guides/nextjs/configuration/options/#sendDefaultPii
-  sendDefaultPii: true,
+  // Bodies skip the key-based filtering headers and cookies get, so a login would send its
+  // password; DB query data includes returned rows, e.g. users' hashes and reset tokens.
+  dataCollection: {
+    httpBodies: [],
+    databaseQueryData: false,
+    stackFrameVariables: false,
+  },
 })

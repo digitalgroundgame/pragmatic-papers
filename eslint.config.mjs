@@ -2,11 +2,13 @@ import eslintConfigNext from "eslint-config-next/core-web-vitals"
 import eslintConfigNextTypescript from "eslint-config-next/typescript"
 import eslintConfigPrettier from "eslint-config-prettier"
 import pluginReact from "eslint-plugin-react"
+import storybook from "eslint-plugin-storybook"
 import globals from "globals"
 
 const eslintConfig = [
   ...eslintConfigNext,
   ...eslintConfigNextTypescript,
+  ...storybook.configs["flat/recommended"],
   {
     plugins: { react: pluginReact },
     settings: { react: { version: "detect" } },
@@ -33,6 +35,21 @@ const eslintConfig = [
       "@typescript-eslint/no-use-before-define": "error",
       "@typescript-eslint/no-require-imports": "error",
       "@typescript-eslint/prefer-ts-expect-error": "error",
+      // The "@payloadcms/ui" root is pre-bundled with its own copy of the admin's
+      // React contexts. A field imported from the unbundled deep path is a second
+      // module instance reading contexts no provider filled, so it type-checks and
+      // unit-tests clean but throws on first render in the admin.
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: ["@payloadcms/ui/fields/*"],
+              message: 'Import Payload field components from "@payloadcms/ui" instead.',
+            },
+          ],
+        },
+      ],
       "prefer-const": ["error"],
       "react/jsx-boolean-value": ["error", "never"],
       "react/jsx-curly-brace-presence": ["error", { props: "never", children: "ignore" }],
@@ -80,6 +97,11 @@ const eslintConfig = [
       "@next/next/no-html-link-for-pages": "off",
     },
   },
+  // A story's exports are Storybook's input, not an API other modules call.
+  {
+    files: ["**/*.stories.tsx", ".storybook/**"],
+    rules: { "@typescript-eslint/explicit-module-boundary-types": "off" },
+  },
   // Add Node.js globals for config files (e.g. next-sitemap.config.cjs uses process.env and module.exports)
   {
     files: ["**/*.config.js", "**/*.config.cjs", "**/*.config.mjs"],
@@ -92,6 +114,8 @@ const eslintConfig = [
       ".next/**",
       "out/**",
       "coverage/**",
+      "storybook-static/**",
+      ".claude/worktrees/**",
       "**/next-env.d.ts",
       "src/migrations/**",
       "src/payload-types.ts",

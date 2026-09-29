@@ -1,4 +1,5 @@
 import type { CollectionBeforeChangeHook, CollectionConfig } from "payload"
+import { protectPublishedMedia } from "./hooks/protectPublishedMedia"
 
 import {
   FixedToolbarFeature,
@@ -13,6 +14,8 @@ import { isCreatedByOrEditor } from "@/access/policies"
 
 import type { Media as MediaType } from "@/payload-types"
 import { regenerateBlurHandler } from "./endpoints/regenerateBlur"
+import { detachHandler } from "./endpoints/detach"
+import { referencesHandler } from "./endpoints/references"
 import { generateBlurDataUrl } from "./hooks/generateBlurDataUrl"
 
 const filename = fileURLToPath(import.meta.url)
@@ -26,6 +29,16 @@ export const Media: CollectionConfig = {
       method: "post",
       handler: regenerateBlurHandler,
     },
+    {
+      path: "/:id/references",
+      method: "get",
+      handler: referencesHandler,
+    },
+    {
+      path: "/:id/detach",
+      method: "post",
+      handler: detachHandler,
+    },
   ],
   access: {
     create: staff,
@@ -38,72 +51,96 @@ export const Media: CollectionConfig = {
   },
   fields: [
     {
-      name: "alt",
-      type: "text",
-      //required: true,
-    },
-    {
-      name: "caption",
-      type: "richText",
-      editor: lexicalEditor({
-        features: ({ rootFeatures }) => {
-          return [...rootFeatures, FixedToolbarFeature(), InlineToolbarFeature()]
+      type: "tabs",
+      tabs: [
+        {
+          label: "Content",
+          fields: [
+            {
+              name: "alt",
+              type: "text",
+            },
+            {
+              name: "caption",
+              type: "richText",
+              editor: lexicalEditor({
+                features: ({ rootFeatures }) => {
+                  return [...rootFeatures, FixedToolbarFeature(), InlineToolbarFeature()]
+                },
+              }),
+            },
+            {
+              name: "blurDataURL",
+              type: "text",
+              label: "Blur Placeholder",
+              admin: {
+                components: {
+                  Field: "@/collections/Media/components/BlurDataURLField#BlurDataURLField",
+                },
+                description: "Base64 encoded blur placeholder (auto-generated)",
+              },
+            },
+            {
+              name: "createdBy",
+              type: "relationship",
+              relationTo: "users",
+              access: {
+                update: () => false,
+              },
+              admin: {
+                readOnly: true,
+                hidden: true,
+              },
+            },
+            {
+              name: "narrator",
+              type: "relationship",
+              relationTo: "users",
+              filterOptions: {
+                roles: {
+                  in: ["narrator"],
+                },
+              },
+              admin: {
+                description: "User who recorded this narration",
+                // Hidden for non-audio uploads by the component itself, which can see a
+                // pending file that an `admin.condition` cannot.
+                components: {
+                  Field: "@/collections/Media/components/NarratorField#NarratorField",
+                },
+              },
+            },
+            {
+              name: "duration",
+              type: "number",
+              admin: {
+                description: "Duration in seconds (auto-populated from the audio file)",
+                components: {
+                  Field: "@/collections/Media/components/DurationField#DurationField",
+                },
+              },
+            },
+          ],
         },
-      }),
-    },
-    {
-      name: "blurDataURL",
-      type: "text",
-      label: "Blur Placeholder",
-      admin: {
-        components: {
-          Field: "@/collections/Media/components/BlurDataURLField#BlurDataURLField",
+        {
+          label: "References",
+          fields: [
+            {
+              name: "references",
+              type: "ui",
+              admin: {
+                components: {
+                  Field: "@/collections/Media/components/ReferencesView#ReferencesView",
+                },
+              },
+            },
+          ],
         },
-        description: "Base64 encoded blur placeholder (auto-generated)",
-      },
-    },
-    {
-      name: "createdBy",
-      type: "relationship",
-      relationTo: "users",
-      access: {
-        update: () => false,
-      },
-      admin: {
-        readOnly: true,
-        hidden: true,
-      },
-    },
-    {
-      name: "narrator",
-      type: "relationship",
-      relationTo: "users",
-      filterOptions: {
-        roles: {
-          in: ["narrator"],
-        },
-      },
-      admin: {
-        description: "User who recorded this narration",
-        // Hidden for non-audio uploads by the component itself, which can see a
-        // pending file that an `admin.condition` cannot.
-        components: {
-          Field: "@/collections/Media/components/NarratorField#NarratorField",
-        },
-      },
-    },
-    {
-      name: "duration",
-      type: "number",
-      admin: {
-        description: "Duration in seconds (auto-populated from the audio file)",
-        components: {
-          Field: "@/collections/Media/components/DurationField#DurationField",
-        },
-      },
+      ],
     },
   ],
   hooks: {
+    beforeDelete: [protectPublishedMedia],
     beforeChange: [
       (args: Parameters<CollectionBeforeChangeHook<MediaType>>[0]): Partial<MediaType> | void => {
         const { req, operation, data } = args
@@ -120,8 +157,7 @@ export const Media: CollectionConfig = {
   upload: {
     // Upload to the public/media directory in Next.js making them publicly accessible even outside of Payload
     staticDir: path.resolve(dirname, "../../../public/media"),
-    adminThumbnail: ({ doc }: { doc: Partial<MediaType> }) =>
-      doc.sizes?.thumbnail?.url || "thumbnail",
+    adminThumbnail: ({ doc }: { doc: Partial<MediaType> }) => doc.sizes?.thumbnail?.url || "",
     formatOptions: {
       format: "webp",
     },

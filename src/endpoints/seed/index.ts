@@ -1,3 +1,4 @@
+import { DELETE_MEDIA_IN_USE } from "@/collections/Media/hooks/protectPublishedMedia"
 import { seedRandomRankings } from "@/jobs/updateRecommendations/logic"
 import type { Media, User } from "@/payload-types"
 import { revalidatePath } from "next/cache"
@@ -79,7 +80,6 @@ export const seed = async (
         await payload.delete({ collection: "articles", context, where: {} })
         await payload.delete({ collection: "volumes", context, where: {} })
         await payload.delete({ collection: "topics", context, where: {} })
-        await payload.delete({ collection: "media", context, where: {} })
         await payload.delete({ collection: "map-assets", context, where: {} })
         await payload.delete({ collection: "pages", context, where: {} })
         await payload.delete({ collection: "forms", context, where: {} })
@@ -87,6 +87,14 @@ export const seed = async (
         // Snapshots point at their interactive, so they go first.
         await payload.delete({ collection: "interactive-snapshots", context, where: {} })
         await payload.delete({ collection: "interactives", context, where: {} })
+        // Last, once the content that uses it is gone. The flag also clears media
+        // that content the seed doesn't own (a real user's profile image) still uses,
+        // which the delete would otherwise skip without saying so.
+        await payload.delete({
+          collection: "media",
+          context: { ...context, [DELETE_MEDIA_IN_USE]: true },
+          where: {},
+        })
       },
     },
     {

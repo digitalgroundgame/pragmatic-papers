@@ -46,6 +46,7 @@ import { ScheduleNewsletterButton as ScheduleNewsletterButton_a66b86b65dab65173a
 import { BlurDataURLField as BlurDataURLField_3bf98f0d72a9b7fcf13045923bb48189 } from '@/collections/Media/components/BlurDataURLField'
 import { NarratorField as NarratorField_ac420e631edc2776947f590c2e50edcc } from '@/collections/Media/components/NarratorField'
 import { DurationField as DurationField_eac2b3e17fa524aff4add76374d4c8eb } from '@/collections/Media/components/DurationField'
+import { ReferencesView as ReferencesView_c329fcebdf040acacbee1d48915ea93f } from '@/collections/Media/components/ReferencesView'
 import { RowLabel as RowLabel_b9b9938cf466765c7ed61773d838e057 } from '@/fields/menu/RowLabel'
 import { ProductTitleCell as ProductTitleCell_8dff8d8bb04003b09cb89f916f5bb9bc } from '@/collections/Merch/components/ProductTitleCell'
 import { ProductThumbnailCell as ProductThumbnailCell_c79e04f7b9e53b2f3afaedb264d44732 } from '@/collections/Merch/components/ProductThumbnailCell'
@@ -112,6 +113,7 @@ export const importMap = {
   "@/collections/Media/components/BlurDataURLField#BlurDataURLField": BlurDataURLField_3bf98f0d72a9b7fcf13045923bb48189,
   "@/collections/Media/components/NarratorField#NarratorField": NarratorField_ac420e631edc2776947f590c2e50edcc,
   "@/collections/Media/components/DurationField#DurationField": DurationField_eac2b3e17fa524aff4add76374d4c8eb,
+  "@/collections/Media/components/ReferencesView#ReferencesView": ReferencesView_c329fcebdf040acacbee1d48915ea93f,
   "@/fields/menu/RowLabel#RowLabel": RowLabel_b9b9938cf466765c7ed61773d838e057,
   "@/collections/Merch/components/ProductTitleCell#ProductTitleCell": ProductTitleCell_8dff8d8bb04003b09cb89f916f5bb9bc,
   "@/collections/Merch/components/ProductThumbnailCell#ProductThumbnailCell": ProductThumbnailCell_c79e04f7b9e53b2f3afaedb264d44732,

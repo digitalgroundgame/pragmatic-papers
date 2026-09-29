@@ -43,16 +43,22 @@ interface Call {
 /**
  * A fake of both APIs. Each Coolify poll returns the next entry of `polls`
  * (the last one repeats); an entry that is a number is returned as that HTTP
- * status instead.
+ * status instead. Fetching one deployment by UUID polls too, and gets the
+ * entry's first row. `deployed` is Coolify's answer to a deploy request, and
+ * `deleteStatus` its status for deleting a preview.
  */
 function harness({
   polls = [[row("finished")]],
   deploymentSha = SHA,
   existing = [] as { id: number; state: string }[],
+  deployed = { deployments: [{ message: "queued", deployment_uuid: "img-dep" }] } as unknown,
+  deleteStatus = 200,
 }: {
   polls?: (CoolifyDeployment[] | number)[]
   deploymentSha?: string
   existing?: { id: number; state: string }[]
+  deployed?: unknown
+  deleteStatus?: number
 } = {}) {
   const calls: Call[] = []
   const logs: string[] = []
@@ -72,11 +78,16 @@ function harness({
         body,
       })
 
+      if (input.startsWith("https://coolify.test/api/v1/deploy?")) return json(deployed)
+      if (method === "DELETE") return json({ message: "queued" }, deleteStatus)
       if (input.startsWith("https://coolify.test/")) {
         const next = polls[Math.min(poll++, polls.length - 1)] ?? []
-        return typeof next === "number"
-          ? json({ message: "nope" }, next)
-          : json({ count: next.length, deployments: next })
+        if (typeof next === "number") return json({ message: "nope" }, next)
+        return input.includes("/deployments/applications/")
+          ? json({ count: next.length, deployments: next })
+          : next[0]
+            ? json(next[0])
+            : json({ message: "Deployment not found." }, 404)
       }
       if (method === "POST" && input.endsWith("/deployments"))
         return json({ id: 100, sha: deploymentSha }, 201)
@@ -329,5 +340,72 @@ describe("main close", () => {
     expect(h.statuses().every((s) => s.state === "inactive")).toBe(true)
     const list = h.calls.find((c) => c.url.includes("/deployments?"))!
     expect(list.url).toContain("environment=Preview&ref=feat%2Fthing")
+  })
+})
+
+describe("main deploy <image-tag>", () => {
+  const imageRow = (status: string) => row(status, { deployment_uuid: "img-dep", commit: "HEAD" })
+
+  it("asks Coolify to deploy the tag as the PR's preview, then follows that deployment", async () => {
+    const h = harness({
+      polls: [[imageRow("queued")], [imageRow("in_progress")], [imageRow("finished")]],
+    })
+    expect(await main(["deploy", "pr-42-abc1234"], ENV, h.deps)).toBe(0)
+
+    const coolifyCalls = h.calls.filter((c) => c.url.startsWith("https://coolify.test/"))
+    expect(coolifyCalls[0]).toMatchObject({
+      method: "POST",
+      url: "https://coolify.test/api/v1/deploy?uuid=app-uuid&pr=42&docker_tag=pr-42-abc1234",
+      auth: "Bearer coolify-token",
+    })
+    // It follows the deployment it queued, whatever commit Coolify records for an image.
+    expect(coolifyCalls.slice(1).map((c) => c.url)).toEqual(
+      Array(3).fill("https://coolify.test/api/v1/deployments/img-dep"),
+    )
+    expect(h.statuses().map((s) => s.state)).toEqual(["queued", "in_progress", "success"])
+    expect(h.logs.join("\n")).toContain("deployment img-dep")
+  })
+
+  it("fails the run, creating nothing, when Coolify doesn't queue the image", async () => {
+    const h = harness({
+      deployed: {
+        deployments: [{ message: "docker_tag can only be used with Docker Image applications." }],
+      },
+    })
+    expect(await main(["deploy", "pr-42-abc1234"], ENV, h.deps)).toBe(1)
+    expect(h.logs.join("\n")).toContain("Docker Image applications")
+    expect(h.statuses()).toEqual([])
+  })
+
+  it("rejects a flag where the tag goes", async () => {
+    expect(await main(["deploy", "--delete-preview"], ENV, harness().deps)).toBe(2)
+  })
+})
+
+describe("main close --delete-preview", () => {
+  it("removes the preview from Coolify, then retires the PR's deployments", async () => {
+    const h = harness({ existing: [{ id: 90, state: "success" }] })
+    expect(await main(["close", "--delete-preview"], ENV, h.deps)).toBe(0)
+    expect(h.calls[0]).toMatchObject({
+      method: "DELETE",
+      url: "https://coolify.test/api/v1/applications/app-uuid/previews/42",
+    })
+    expect(h.statuses().map((s) => s.id)).toEqual([100, 90])
+  })
+
+  it("carries on when Coolify has no preview for the PR", async () => {
+    const h = harness({ deleteStatus: 404 })
+    expect(await main(["close", "--delete-preview"], ENV, h.deps)).toBe(0)
+    expect(h.logs.join("\n")).toContain("no preview for PR #42")
+  })
+
+  it("leaves Coolify alone without the flag", async () => {
+    const h = harness()
+    expect(await main(["close"], ENV, h.deps)).toBe(0)
+    expect(h.calls.some((c) => c.url.startsWith("https://coolify.test/"))).toBe(false)
+  })
+
+  it("rejects an unknown flag", async () => {
+    expect(await main(["close", "--drop"], ENV, harness().deps)).toBe(2)
   })
 })

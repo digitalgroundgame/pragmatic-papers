@@ -132,8 +132,15 @@ if database_exists "$TARGET_DB"; then
     drop_database "$STAGE_DB"
     copy_database "$STAGE_DB"
 
-    echo "Running migrations on '$STAGE_DB'..."
-    DATABASE_URI=$(uri_with_database "$DATABASE_URI" "$STAGE_DB") pnpm payload migrate
+    # An image built in GitHub Actions runs this at start and has no Payload CLI: the
+    # app migrates the database once it's swapped in, before its health check passes, so
+    # the old container serves the unmigrated copy for that long (#1067).
+    if [ "$BUILT_WITHOUT_DATABASE" = "true" ]; then
+        echo "Leaving '$STAGE_DB' for the app to migrate when it starts"
+    else
+        echo "Running migrations on '$STAGE_DB'..."
+        DATABASE_URI=$(uri_with_database "$DATABASE_URI" "$STAGE_DB") pnpm payload migrate
+    fi
 
     echo "Swapping '$STAGE_DB' in for '$TARGET_DB'..."
     drop_database "$TARGET_DB"

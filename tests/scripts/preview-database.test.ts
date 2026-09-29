@@ -17,7 +17,7 @@ const PASSWORD = "hunter2-s3cret"
 const URI = `postgres://app:${PASSWORD}@db.internal:5432/pragmatic_papers?sslmode=require`
 const PREVIEW_URI = URI.replace("pragmatic_papers?", "pragmatic_papers_pr_330?")
 
-// Fake psql, pg_dump, pg_restore, pnpm and node. Each logs its name and arguments to
+// Fake psql, pg_dump, pg_restore, pnpm, node and wget. Each logs its name and arguments to
 // $CALLS_LOG, one line per call. psql answers the "does the target exist?" query from
 // $TARGET_EXISTS and, while $SOURCE_BUSY is set, refuses a template copy the way Postgres
 // does while anything is connected to the template. pnpm also logs the DATABASE_URI it
@@ -39,6 +39,7 @@ exit "\${DUMP_STATUS:-0}"`,
 exit "\${MIGRATE_STATUS:-0}"`,
   node: `[ "$1" = "--version" ] && echo v24 && exit 0
 echo "node started with DATABASE_URI=$DATABASE_URI"`,
+  wget: `case "$*" in *revalidate-all*) exit "\${REFRESH_STATUS:-0}" ;; esac`,
 }
 const LOG_CALL = `echo "$(basename "$0") $*" | tr '\\n' ' ' >> "$CALLS_LOG"; echo >> "$CALLS_LOG"`
 
@@ -254,6 +255,21 @@ describe("preview database build", () => {
     expect(disconnectsSource()).toBe(false)
   })
 
+  it("leaves a forced copy for the app to migrate in an image built without a database (#1067)", () => {
+    const { status, output } = copyToPreview({
+      TARGET_EXISTS: "true",
+      FORCE_DATABASE_COPY: "true",
+      BUILT_WITHOUT_DATABASE: "true",
+    })
+
+    expect(status).toBe(0)
+    expect(output).toContain("for the app to migrate")
+    expect(calls().some((call) => call.startsWith("pnpm"))).toBe(false)
+    expect(indexOf('RENAME TO "pragmatic_papers_pr_330"')).toBeGreaterThan(
+      indexOf('WITH TEMPLATE "pragmatic_papers"'),
+    )
+  })
+
   it("keeps the live preview database when the forced copy fails to migrate", () => {
     const { status } = copyToPreview({
       TARGET_EXISTS: "true",
@@ -281,8 +297,15 @@ describe("start.sh", () => {
   function start(name: string, env: Record<string, string>) {
     const app = join(dir, "app")
     mkdirSync(app)
-    copyFileSync(join(SCRIPTS, "start.sh"), join(app, "start.sh"))
-    copyFileSync(join(SCRIPTS, "database-uri.sh"), join(app, "database-uri.sh"))
+    for (const script of [
+      "start.sh",
+      "database-uri.sh",
+      "modify-database-uri.sh",
+      "copy-database.sh",
+    ]) {
+      copyFileSync(join(SCRIPTS, script), join(app, script))
+      chmodSync(join(app, script), 0o755)
+    }
     writeFileSync(join(app, "database_name"), name)
     return sh(`cd "${app}" && sh ./start.sh`, env)
   }
@@ -307,5 +330,63 @@ describe("start.sh", () => {
     expect(status).toBe(1)
     expect(output).toContain("DATABASE_URI is not set at runtime")
     expect(output).not.toContain("node started")
+  })
+
+  describe("in an image built without a database (#1067)", () => {
+    const built = {
+      BUILT_WITHOUT_DATABASE: "true",
+      BUILD_ENV: "preview",
+      COOLIFY_FQDN: "pr-330.pragmaticpapers.com",
+      COPY_SOURCE_DATABASE: "true",
+      PAYLOAD_SECRET: "payload-s3cret",
+      PORT: "3000",
+      DATABASE_URI: URI,
+    }
+
+    it("names and copies the preview's database, cleans up, then starts on it", () => {
+      // The build wrote no name: this image names the database from the runtime COOLIFY_FQDN.
+      const { status, output } = start("", built)
+
+      expect(status).toBe(0)
+      // The fake node prints the URI it was given; nothing else may.
+      expect(output.replace(/^node started with .*$/gm, "")).not.toContain(PASSWORD)
+      const steps = [
+        'CREATE DATABASE "pragmatic_papers_pr_330" WITH TEMPLATE "pragmatic_papers"',
+        "drop-closed-preview-databases.ts",
+        "node server.js",
+      ].map((text) => calls().findIndex((call) => call.includes(text)))
+      expect(steps.every((step) => step >= 0)).toBe(true)
+      expect(steps).toEqual([...steps].sort((a, b) => a - b))
+      expect(output).toContain(`node started with DATABASE_URI=${PREVIEW_URI}`)
+    })
+
+    it("refreshes the prerendered routes once the server answers", () => {
+      const { output } = start("", built)
+
+      // The refresh runs beside the server, so their log lines can interleave: check the
+      // order across the whole log rather than line by line.
+      const log = calls().join("\n")
+      const ready = log.indexOf("http://127.0.0.1:3000/api/users/me")
+      const refresh = log.indexOf(
+        "--header=Authorization: Bearer payload-s3cret http://127.0.0.1:3000/next/revalidate-all",
+      )
+      expect(ready).toBeGreaterThanOrEqual(0)
+      expect(refresh).toBeGreaterThan(ready)
+      expect(output).toContain("Prerendered routes refreshed from pragmatic_papers_pr_330")
+    })
+
+    it("still serves when the refresh fails", () => {
+      const { status, output } = start("", { ...built, REFRESH_STATUS: "1" })
+
+      expect(status).toBe(0)
+      expect(output).toContain("node started")
+    })
+
+    it("fails a preview that can't name its database instead of sharing one (#1058)", () => {
+      const { status, output } = start("", { ...built, COOLIFY_FQDN: "" })
+
+      expect(status).toBe(1)
+      expect(output).not.toContain("node started")
+    })
   })
 })

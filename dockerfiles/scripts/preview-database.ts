@@ -193,9 +193,24 @@ function isObjectInUse(error: unknown): boolean {
   return (error as { code?: string }).code === OBJECT_IN_USE
 }
 
+/** The part of a `pg.Client` that pgServer uses. */
+export type PgClient = Pick<pg.Client, "connect" | "query" | "escapeIdentifier" | "end">
+
+export interface PgServerOptions {
+  /** Defaults to a client for the target server's `postgres` database. */
+  client?: PgClient
+  /** Wait between attempts to drop a database a client reconnected to. */
+  retryDelayMs?: number
+}
+
 /** A Server over one connection to the target server's `postgres` database. */
-export async function pgServer(targetUri: string): Promise<Server & { close(): Promise<void> }> {
-  const client = new pg.Client({ connectionString: withDatabase(targetUri, "postgres") })
+export async function pgServer(
+  targetUri: string,
+  {
+    client = new pg.Client({ connectionString: withDatabase(targetUri, "postgres") }),
+    retryDelayMs = 1000,
+  }: PgServerOptions = {},
+): Promise<Server & { close(): Promise<void> }> {
   await client.connect()
   const id = (name: string): string => client.escapeIdentifier(name)
 
@@ -228,7 +243,7 @@ export async function pgServer(targetUri: string): Promise<Server & { close(): P
           return
         } catch (error) {
           if (!isObjectInUse(error) || attempt === 5) throw error
-          await sleep(1000)
+          await sleep(retryDelayMs)
         }
       }
     },
@@ -251,6 +266,10 @@ export function dumpRestore(sourceUri: string, targetUri: string): Promise<void>
     stdio: ["pipe", "inherit", "inherit"],
   })
   dump.stdout.pipe(restore.stdin)
+  // When pg_restore quits early, pg_dump's next write fails with EPIPE. Unhandled, that
+  // crashes the process before copyDatabase can drop the half-restored database; the exit
+  // codes below already report the failure.
+  restore.stdin.on("error", () => undefined)
 
   const exit = (name: string, child: ReturnType<typeof spawn>) =>
     new Promise<void>((resolve, reject) => {
@@ -262,7 +281,8 @@ export function dumpRestore(sourceUri: string, targetUri: string): Promise<void>
   return Promise.all([exit("pg_dump", dump), exit("pg_restore", restore)]).then(() => undefined)
 }
 
-function migrate(uri: string): Promise<void> {
+/** `payload migrate` against `uri`, failing if it does. */
+export function migrate(uri: string): Promise<void> {
   const result = spawnSync("pnpm", ["payload", "migrate"], {
     env: { ...process.env, DATABASE_URI: uri },
     stdio: "inherit",
@@ -273,7 +293,21 @@ function migrate(uri: string): Promise<void> {
   return Promise.resolve()
 }
 
-export async function main(env: Env = process.env, envFile = ENV_FILE): Promise<number> {
+/** What main reaches outside the process through, replaceable in tests. */
+export interface MainDeps {
+  connect(targetUri: string): Promise<Server & { close(): Promise<void> }>
+  dumpRestore: CopyDeps["dumpRestore"]
+  migrate: CopyDeps["migrate"]
+}
+
+const defaultDeps: MainDeps = { connect: (uri) => pgServer(uri), dumpRestore, migrate }
+
+export async function main(
+  env: Env = process.env,
+  envFile = ENV_FILE,
+  overrides: Partial<MainDeps> = {},
+): Promise<number> {
+  const deps = { ...defaultDeps, ...overrides }
   const log = (message: string) => process.stdout.write(`${message}\n`)
   try {
     const uri = resolveDatabaseUri(env)
@@ -287,10 +321,10 @@ export async function main(env: Env = process.env, envFile = ENV_FILE): Promise<
     if (!env.SOURCE_DATABASE_URI) throw new Error("SOURCE_DATABASE_URI is not set")
     log(`Copying from ${maskUri(env.SOURCE_DATABASE_URI)}`)
 
-    const server = await pgServer(uri)
+    const server = await deps.connect(uri)
     try {
       await copyDatabase(
-        { server, dumpRestore, migrate, log },
+        { server, dumpRestore: deps.dumpRestore, migrate: deps.migrate, log },
         {
           sourceUri: env.SOURCE_DATABASE_URI,
           targetUri: uri,

@@ -1,8 +1,11 @@
 import { randomUUID } from "node:crypto"
+import { mkdtempSync, readFileSync, rmSync } from "node:fs"
+import { tmpdir } from "node:os"
+import { join } from "node:path"
 import pg from "pg"
 import { afterAll, beforeAll, describe, expect, it } from "vitest"
 
-import { pgServer } from "../../dockerfiles/scripts/preview-database"
+import { main, pgServer } from "../../dockerfiles/scripts/preview-database"
 
 // The real SQL behind copyDatabase's Server, on the integration Postgres. The copy's
 // ordering is unit-tested in tests/scripts/preview-database.test.ts.
@@ -42,7 +45,13 @@ beforeAll(async () => {
 })
 
 afterAll(async () => {
-  for (const db of [source, target, `${target}_incoming`]) {
+  for (const db of [
+    source,
+    target,
+    `${target}_incoming`,
+    `${prefix}_pr_2`,
+    `${prefix}_pr_2_incoming`,
+  ]) {
     await admin.query(`DROP DATABASE IF EXISTS "${db}" WITH (FORCE)`)
   }
   await admin.end()
@@ -86,5 +95,68 @@ describe("pgServer", () => {
       await preview.client.end().catch(() => undefined)
       await server.close()
     }
+  })
+})
+
+describe("main", () => {
+  // A preview build end to end on a real server: main resolves the preview's database from
+  // COOLIFY_FQDN, connects with the real pgServer and copies. The source is idle here, so the
+  // copy takes the template path and pg_dump isn't needed; migrations are a stand-in that
+  // adds a column, the way a branch's migration would.
+  const preview = `${prefix}_pr_2`
+  const env = {
+    BUILD_ENV: "preview",
+    COOLIFY_FQDN: "pr-2.example.com",
+    DATABASE_URI: serverUri(prefix),
+    COPY_SOURCE_DATABASE: "true",
+    SOURCE_DATABASE_URI: serverUri(source),
+  }
+  const noDump = () => Promise.reject(new Error("the template path shouldn't need pg_dump"))
+  const addColumn = async (uri: string) => {
+    const client = new pg.Client({ connectionString: uri })
+    await client.connect()
+    await client.query("ALTER TABLE articles ADD COLUMN show_table_of_contents boolean")
+    await client.end()
+  }
+  const columns = async (db: string) => {
+    const client = new pg.Client({ connectionString: serverUri(db) })
+    await client.connect()
+    const { rows } = await client.query<{ column_name: string }>(
+      "SELECT column_name FROM information_schema.columns WHERE table_name = 'articles' ORDER BY 1",
+    )
+    await client.end()
+    return rows.map((row) => row.column_name)
+  }
+  let dir: string
+
+  beforeAll(() => {
+    dir = mkdtempSync(join(tmpdir(), "preview-database-"))
+  })
+
+  afterAll(() => {
+    rmSync(dir, { recursive: true, force: true })
+  })
+
+  it("creates the preview's own database as a copy of the source", async () => {
+    const envFile = join(dir, "database_uri.env")
+    expect(await main(env, envFile, { dumpRestore: noDump })).toBe(0)
+    expect(readFileSync(envFile, "utf-8")).toContain(`/${preview}'`)
+    expect(await columns(preview)).toEqual(["id"])
+  })
+
+  it("swaps in a migrated recopy, disconnecting the old container only then (#1058)", async () => {
+    const old = await connectTo(preview)
+    const status = await main(
+      { ...env, FORCE_DATABASE_COPY: "true" },
+      join(dir, "database_uri.env"),
+      { dumpRestore: noDump, migrate: addColumn },
+    )
+    expect(status).toBe(0)
+    expect(await old.lost).toBe(true)
+    await old.client.end().catch(() => undefined)
+    expect(await columns(preview)).toEqual(["id", "show_table_of_contents"])
+    const server = await pgServer(serverUri(preview))
+    expect(await server.exists(`${preview}_incoming`)).toBe(false)
+    await server.close()
   })
 })

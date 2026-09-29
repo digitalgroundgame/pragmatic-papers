@@ -26,7 +26,8 @@ describe("feed root layout", () => {
   it("renders the page inside the theme provider, after the admin bar", () => {
     const provider = body?.props.children as El
     const [adminBar, page] = provider.props.children as El[]
-    expect(provider.props.defaultTheme).toBe("system")
+    // The overlays are white text over the page, so the feed is always dark.
+    expect(provider.props.forcedTheme).toBe("dark")
     expect(adminBar?.type).toBe(AdminBar)
     expect(page?.props.id).toBe("feed")
   })

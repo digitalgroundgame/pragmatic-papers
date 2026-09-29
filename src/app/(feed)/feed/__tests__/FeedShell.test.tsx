@@ -159,6 +159,18 @@ describe("FeedShell", () => {
     expect(article()).toHaveAttribute("data-autoplay", "true")
   })
 
+  it("lets the space bar press a focused button instead of pausing", () => {
+    render(
+      <>
+        <button type="button">Share</button>
+        <FeedShell initialItems={items(1)} initialNextCursor={null} />
+      </>,
+    )
+    const event = fireEvent.keyDown(screen.getByRole("button", { name: "Share" }), { key: " " })
+    expect(event).toBe(true) // not prevented, so the button still activates
+    expect(screen.getByTestId("article")).toHaveAttribute("data-autoplay", "true")
+  })
+
   describe("tracking the slot on screen", () => {
     // Captures the shell's observer so a test can report what's in view.
     let report: (visible: Array<[idx: number | undefined, ratio: number]>) => void

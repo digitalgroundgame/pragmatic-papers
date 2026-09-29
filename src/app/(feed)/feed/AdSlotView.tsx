@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button"
 import { cn } from "@/utilities/utils"
 import { ArrowUpRight, Pause, Play } from "lucide-react"
 import React, { useCallback, useEffect, useRef, useState } from "react"
+import { INTERACTIVE_SEL } from "./constants"
 import { FeedSettingsMenu } from "./FeedSettingsMenu"
 import type { AdSlot } from "./types"
 
@@ -20,7 +21,6 @@ const AD_DURATION_MS = 6000
 const TAP_MAX_MOVE_PX = 8
 const TAP_MAX_MS = 350
 const TAP_INDICATOR_MS = 600
-const INTERACTIVE_SEL = 'button, a, [role="tab"], [role="button"], input, textarea, select, label'
 
 function prefersReducedMotion(): boolean {
   if (typeof window === "undefined") return false

@@ -12,6 +12,7 @@ const { embla } = vi.hoisted(() => {
       handlers,
       canScrollNext: vi.fn(() => true),
       scrollNext: vi.fn(),
+      scrollPrev: vi.fn(),
       scrollTo: vi.fn(),
       selectedScrollSnap: vi.fn(() => 0),
       on: vi.fn((event: string, cb: () => void) => {
@@ -76,6 +77,7 @@ describe("ArticleView paging", () => {
     for (const fn of [
       embla.canScrollNext,
       embla.scrollNext,
+      embla.scrollPrev,
       embla.scrollTo,
       embla.selectedScrollSnap,
       embla.reInit,
@@ -108,6 +110,39 @@ describe("ArticleView paging", () => {
     renderView()
     fireEvent.click(screen.getByRole("tab", { name: "Go to page 2 of 3" }))
     expect(embla.scrollTo).toHaveBeenCalledWith(1)
+  })
+
+  it("pages with ← and → while the article is active", () => {
+    const { rerender } = renderView()
+    fireEvent.keyDown(window, { key: "ArrowRight" })
+    expect(embla.scrollNext).toHaveBeenCalledOnce()
+    fireEvent.keyDown(window, { key: "ArrowLeft" })
+    expect(embla.scrollPrev).toHaveBeenCalledOnce()
+
+    rerender(
+      <ArticleView
+        article={rendered(3)}
+        active={false}
+        initialPage={0}
+        autoPlayEnabled={false}
+        userAutoPlayEnabled
+        onAutoPlayToggle={vi.fn()}
+        onPageChange={vi.fn()}
+        onEndReached={vi.fn()}
+      />,
+    )
+    fireEvent.keyDown(window, { key: "ArrowRight" })
+    expect(embla.scrollNext).toHaveBeenCalledOnce()
+  })
+
+  it("leaves arrow keys on a progress segment to the progress bar", () => {
+    renderView()
+    fireEvent.keyDown(screen.getByRole("tab", { name: "Go to page 1 of 3" }), {
+      key: "ArrowRight",
+    })
+    // The segment moved the page once; the window shortcut didn't move it again.
+    expect(embla.scrollTo).toHaveBeenCalledWith(1)
+    expect(embla.scrollNext).not.toHaveBeenCalled()
   })
 
   it("lets only the active article be dragged", () => {

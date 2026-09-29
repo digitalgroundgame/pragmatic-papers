@@ -1,7 +1,7 @@
 "use client"
 
 import { cn } from "@/utilities/utils"
-import React from "react"
+import React, { useRef } from "react"
 
 interface PageProgressProps {
   total: number
@@ -16,16 +16,47 @@ export function PageProgress({
   progress,
   onJump,
 }: PageProgressProps): React.ReactNode {
+  const tabsRef = useRef<Array<HTMLButtonElement | null>>([])
+
   if (total <= 1) return null
 
+  // Roving focus: only the active segment is in the tab order, so the arrow
+  // keys (and Home/End) move between pages, taking focus along.
+  const onKeyDown = (e: React.KeyboardEvent): void => {
+    const target =
+      e.key === "ArrowRight"
+        ? activeIndex + 1
+        : e.key === "ArrowLeft"
+          ? activeIndex - 1
+          : e.key === "Home"
+            ? 0
+            : e.key === "End"
+              ? total - 1
+              : null
+    if (target === null) return
+    e.preventDefault()
+    const next = Math.max(0, Math.min(total - 1, target))
+    if (next === activeIndex) return
+    onJump(next)
+    tabsRef.current[next]?.focus()
+  }
+
   return (
-    <div className="flex w-full items-center gap-1" role="tablist" aria-label="Article pages">
+    <div
+      className="flex w-full items-center gap-1"
+      role="tablist"
+      aria-label="Article pages"
+      onKeyDown={onKeyDown}
+    >
       {Array.from({ length: total }, (_, i) => {
         const fill = i < activeIndex ? 1 : i === activeIndex ? progress : 0
         const isActive = i === activeIndex
         return (
           <button
             key={i}
+            ref={(el) => {
+              tabsRef.current[i] = el
+            }}
             type="button"
             role="tab"
             aria-label={`Go to page ${i + 1} of ${total}`}

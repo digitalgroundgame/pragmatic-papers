@@ -52,6 +52,18 @@ export const TapToJump: Story = {
   },
 }
 
+/** Arrow keys, Home and End move between pages from the focused segment. */
+export const KeyboardJump: Story = {
+  play: async ({ args, canvasElement }) => {
+    const canvas = within(canvasElement)
+    canvas.getByRole("tab", { selected: true }).focus()
+    await userEvent.keyboard("{ArrowRight}")
+    await expect(args.onJump).toHaveBeenLastCalledWith(3)
+    await userEvent.keyboard("{Home}")
+    await expect(args.onJump).toHaveBeenLastCalledWith(0)
+  },
+}
+
 /** A one-page article has nothing to page through, so no bar at all. */
 export const SinglePage: Story = {
   args: { total: 1, activeIndex: 0 },

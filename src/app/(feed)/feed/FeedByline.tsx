@@ -61,8 +61,9 @@ export function FeedByline({ article, className }: FeedBylineProps): React.React
   const line = [title, authorNames.join(", ")].filter(Boolean).join(" · ")
 
   return (
-    <div className={cn("flex items-center gap-2 px-1", className)} aria-hidden="true">
+    <div className={cn("flex items-center gap-2 px-1", className)}>
       <Avatar
+        aria-hidden="true"
         size="sm"
         className="shrink-0 overflow-hidden rounded-full ring-1 ring-white/30 after:rounded-full"
       >

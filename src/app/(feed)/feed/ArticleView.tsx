@@ -5,7 +5,7 @@ import { cn } from "@/utilities/utils"
 import useEmblaCarousel from "embla-carousel-react"
 import { Pause, Play } from "lucide-react"
 import React, { useCallback, useEffect, useRef, useState } from "react"
-import { FEED_TOP_INSET } from "./constants"
+import { FEED_TOP_INSET, INTERACTIVE_SEL } from "./constants"
 import { FeedByline } from "./FeedByline"
 import { FeedSettingsMenu } from "./FeedSettingsMenu"
 import { HeroPage } from "./HeroPage"
@@ -30,8 +30,6 @@ const SWIPE_PAST_END_PX = 60 // forward-swipe distance that triggers next-articl
 const TAP_MAX_MOVE_PX = 8 // pointer movement under this counts as a tap, not a drag
 const TAP_MAX_MS = 350 // and only if the press is shorter than this
 const TAP_INDICATOR_MS = 600 // how long the play/pause flash stays visible
-
-const INTERACTIVE_SEL = 'button, a, [role="tab"], [role="button"], input, textarea, select, label'
 
 export function ArticleView({
   article: rendered,
@@ -117,6 +115,25 @@ export function ArticleView({
       emblaApi.scrollTo(desired, true)
     }
   }, [active, emblaApi, initialPage, pages.length])
+
+  // ←/→ page through the active article. A key the progress bar already
+  // handled (focus on a segment) arrives with defaultPrevented set.
+  useEffect(() => {
+    if (!emblaApi || !active) return
+    const onKey = (e: KeyboardEvent): void => {
+      if (e.defaultPrevented) return
+      if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return
+      if (e.target instanceof HTMLElement) {
+        const tag = e.target.tagName
+        if (tag === "INPUT" || tag === "TEXTAREA" || e.target.isContentEditable) return
+      }
+      e.preventDefault()
+      if (e.key === "ArrowLeft") emblaApi.scrollPrev()
+      else emblaApi.scrollNext()
+    }
+    window.addEventListener("keydown", onKey)
+    return () => window.removeEventListener("keydown", onKey)
+  }, [active, emblaApi])
 
   // Briefly flash the pause/play icon when the user taps to toggle.
   useEffect(() => {
@@ -210,6 +227,8 @@ export function ArticleView({
               "min-w-0 flex-1 transition-opacity duration-300 ease-out",
               currentPage?.kind === "hero" ? "pointer-events-none opacity-0" : "opacity-100",
             )}
+            // The hero already shows the title and authors; hide the invisible copy.
+            aria-hidden={currentPage?.kind === "hero" ? true : undefined}
           >
             <FeedByline article={article} />
           </div>

@@ -40,8 +40,8 @@ export default function FeedRootLayout({
       <body className="bg-background text-foreground">
         <ThemeProvider
           attribute="class"
-          defaultTheme="system"
-          enableSystem
+          // The feed is designed dark only: its overlays are white over the page.
+          forcedTheme="dark"
           disableTransitionOnChange
         >
           <AdminBar />

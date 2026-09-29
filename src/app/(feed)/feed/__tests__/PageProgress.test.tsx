@@ -37,6 +37,30 @@ describe("PageProgress", () => {
     expect(onJump).toHaveBeenCalledWith(2)
   })
 
+  it("moves between pages with the arrow keys, Home and End", () => {
+    const onJump = vi.fn()
+    const { rerender } = render(
+      <PageProgress total={4} activeIndex={1} progress={0} onJump={onJump} />,
+    )
+    const tablist = screen.getByRole("tablist")
+
+    fireEvent.keyDown(tablist, { key: "ArrowRight" })
+    expect(onJump).toHaveBeenLastCalledWith(2)
+    expect(nth(screen.getAllByRole("tab"), 2)).toHaveFocus()
+
+    fireEvent.keyDown(tablist, { key: "ArrowLeft" })
+    expect(onJump).toHaveBeenLastCalledWith(0)
+    fireEvent.keyDown(tablist, { key: "End" })
+    expect(onJump).toHaveBeenLastCalledWith(3)
+
+    rerender(<PageProgress total={4} activeIndex={3} progress={0} onJump={onJump} />)
+    onJump.mockClear()
+    fireEvent.keyDown(tablist, { key: "ArrowRight" })
+    expect(onJump).not.toHaveBeenCalled()
+    fireEvent.keyDown(tablist, { key: "Home" })
+    expect(onJump).toHaveBeenLastCalledWith(0)
+  })
+
   it("marks the active segment with aria-selected", () => {
     render(<PageProgress total={3} activeIndex={2} progress={0.1} onJump={vi.fn()} />)
     const tabs = screen.getAllByRole("tab")

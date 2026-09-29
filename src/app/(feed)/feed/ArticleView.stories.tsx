@@ -80,6 +80,34 @@ export const TapSegmentToJump: Story = {
   },
 }
 
+/** ← and → page through the article on screen. */
+export const KeyboardPaging: Story = {
+  play: async ({ args, canvasElement }) => {
+    await userEvent.keyboard("{ArrowRight}")
+    await waitFor(() => expect(args.onPageChange).toHaveBeenLastCalledWith(1))
+    // Off the hero, the byline names the article for screen readers too.
+    const byline = within(canvasElement).getByText(`${rendered.article.title} · Jordan Rivera`)
+    await expect(byline.closest("[aria-hidden='true']")).not.toBeInTheDocument()
+    await userEvent.keyboard("{ArrowLeft}")
+    await waitFor(() => expect(args.onPageChange).toHaveBeenLastCalledWith(0))
+  },
+}
+
+/** Focused on a segment, the arrow keys move one page, and focus follows. */
+export const KeyboardSegments: Story = {
+  play: async ({ args, canvasElement }) => {
+    const canvas = within(canvasElement)
+    canvas.getByRole("tab", { selected: true }).focus()
+    await userEvent.keyboard("{ArrowRight}")
+    await waitFor(() => expect(args.onPageChange).toHaveBeenLastCalledWith(1))
+    await expect(canvas.getByRole("tab", { name: `Go to page 2 of ${total}` })).toHaveFocus()
+    await expect(canvas.getByRole("tab", { name: `Go to page 2 of ${total}` })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    )
+  },
+}
+
 /** Tapping the page itself pauses or resumes auto-play. */
 export const TapToToggleAutoPlay: Story = {
   play: async ({ args, canvasElement }) => {

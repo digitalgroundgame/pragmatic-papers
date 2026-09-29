@@ -3,6 +3,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { AdSlotView } from "./AdSlotView"
 import { ArticleView } from "./ArticleView"
+import { INTERACTIVE_SEL } from "./constants"
 import { FEED_AD_INTERVAL, FEED_ADS } from "./ads/registry"
 import { FeedShellContext, type FeedShellContextValue } from "./FeedShellContext"
 import { usePageMemory } from "./hooks/usePageMemory"
@@ -233,6 +234,8 @@ export function FeedShell({
         e.preventDefault()
         scroller.scrollBy({ top: -scroller.clientHeight, behavior: "smooth" })
       } else if (e.key === " ") {
+        // Space presses a focused button or link; only toggle when it wouldn't.
+        if (e.target instanceof Element && e.target.closest(INTERACTIVE_SEL)) return
         e.preventDefault()
         toggleAutoPlay()
       }

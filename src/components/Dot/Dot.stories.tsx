@@ -4,10 +4,10 @@ import { expect } from "storybook/test"
 
 import { Button } from "@/components/ui/button"
 
-import { NOTIFICATION_DOTS, NotificationDot } from "."
+import { DOTS, Dot } from "."
 import { resetSeenStore, SEEN_KEY_PREFIX } from "./store"
 
-const KEY = `${SEEN_KEY_PREFIX}${NOTIFICATION_DOTS.modeToggle}`
+const KEY = `${SEEN_KEY_PREFIX}${DOTS.modeToggle}`
 
 /** Start each story as a reader who has (or hasn't) seen the dot. */
 function seen(value: boolean): () => () => void {
@@ -23,18 +23,18 @@ function seen(value: boolean): () => () => void {
 }
 
 const meta = {
-  title: "Components/NotificationDot",
-  component: NotificationDot,
-  args: { name: NOTIFICATION_DOTS.modeToggle },
+  title: "Components/Dot",
+  component: Dot,
+  args: { name: DOTS.modeToggle },
   // The dot positions itself against the nearest `relative` ancestor, usually an icon button.
   render: (args) => (
     <Button variant="ghost" size="icon" className="relative">
       <Bell className="size-6" />
       <span className="sr-only">Notifications</span>
-      <NotificationDot {...args} />
+      <Dot {...args} />
     </Button>
   ),
-} satisfies Meta<typeof NotificationDot>
+} satisfies Meta<typeof Dot>
 
 export default meta
 type Story = StoryObj<typeof meta>
@@ -43,7 +43,7 @@ type Story = StoryObj<typeof meta>
 export const Unseen: Story = {
   beforeEach: seen(false),
   play: async ({ canvasElement }) => {
-    await expect(canvasElement.querySelector("[data-slot='notification-dot']")).toBeVisible()
+    await expect(canvasElement.querySelector("[data-slot='dot']")).toBeVisible()
   },
 }
 
@@ -51,8 +51,6 @@ export const Unseen: Story = {
 export const Seen: Story = {
   beforeEach: seen(true),
   play: async ({ canvasElement }) => {
-    await expect(
-      canvasElement.querySelector("[data-slot='notification-dot']"),
-    ).not.toBeInTheDocument()
+    await expect(canvasElement.querySelector("[data-slot='dot']")).not.toBeInTheDocument()
   },
 }

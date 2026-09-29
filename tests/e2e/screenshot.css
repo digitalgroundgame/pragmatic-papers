@@ -5,10 +5,11 @@
  */
 
 /*
- * Every test starts in a fresh browser, so every notification dot shows. They
- * stay out of baselines unless a test opts in with `showNotificationDots(page)`
- * (tests/e2e/helpers.ts).
+ * Every test starts in a fresh browser, so every dot (src/components/Dot) shows.
+ * They stay out of baselines unless a test opts in with `showDots(page)`
+ * (tests/e2e/helpers.ts). Only that component carries `data-slot="dot"`; give it
+ * to nothing else, or it disappears from screenshots too.
  */
-:root:not([data-e2e-show-notification-dots]) [data-slot="notification-dot"] {
+:root:not([data-e2e-show-dots]) [data-slot="dot"] {
   visibility: hidden !important;
 }

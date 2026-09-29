@@ -36,7 +36,7 @@ describe("the seen store", () => {
     expect(result.current).toBe(true)
   })
 
-  it("remembers a dot once seen, under the notification-dot: prefix", () => {
+  it("remembers a dot once seen, under the pp:dot: prefix", () => {
     const { result } = renderHook(() => useIsUnseen("new-feature"))
 
     act(() => markSeen("new-feature"))

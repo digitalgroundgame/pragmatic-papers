@@ -3,8 +3,8 @@ import { PaperIcon } from "@/components/Logo/icons/PaperIcon"
 import { MegaMenu } from "@/components/MegaMenu"
 import { Menu } from "@/components/Menu"
 import { ModeToggleAnalytics } from "@/components/ModeToggleAnalytics"
-import { NotificationDot } from "@/components/NotificationDot"
-import { NOTIFICATION_DOTS } from "@/components/NotificationDot/names"
+import { Dot } from "@/components/Dot"
+import { DOTS } from "@/components/Dot/names"
 import { SocialLinks } from "@/components/SocialLinks"
 import { Button } from "@/components/ui/button"
 import { LinkButton } from "@/components/ui/link-button"
@@ -71,7 +71,7 @@ export async function Header(): Promise<React.JSX.Element> {
                   <Menu menu={navItems} layout="stacked" />
                   <div className="flex items-center gap-2 px-4 py-3">
                     <SocialLinks socials={socials} />
-                    <ModeToggleAnalytics location="header-mobile-menu" notificationDot />
+                    <ModeToggleAnalytics location="header-mobile-menu" showDot />
                   </div>
                 </SheetContent>
               </MenuSheet>
@@ -91,7 +91,7 @@ export async function Header(): Promise<React.JSX.Element> {
             </a>
             <div className="flex items-center justify-end gap-2">
               <div className="hidden lg:flex">
-                <ModeToggleAnalytics location="header" notificationDot />
+                <ModeToggleAnalytics location="header" showDot />
               </div>
               <HeaderActions actions={actions} className="hidden lg:flex" />
               <Sheet>
@@ -101,7 +101,7 @@ export async function Header(): Promise<React.JSX.Element> {
                       <User className="size-6" />
                       <span className="sr-only">User and Settings</span>
                       {/* Below lg the mode toggle lives in this sheet; opening it clears the dot. */}
-                      <NotificationDot name={NOTIFICATION_DOTS.modeToggle} />
+                      <Dot name={DOTS.modeToggle} />
                     </Button>
                   }
                 />
@@ -123,7 +123,7 @@ export async function Header(): Promise<React.JSX.Element> {
                     <LinkButton variant="outline" size="lg" className="w-full" href="/admin/login">
                       Log In
                     </LinkButton>
-                    <ModeToggleAnalytics showLabel location="header-mobile-sheet" notificationDot />
+                    <ModeToggleAnalytics showLabel location="header-mobile-sheet" showDot />
                   </div>
                 </SheetContent>
               </Sheet>

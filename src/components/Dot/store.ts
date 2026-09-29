@@ -2,8 +2,12 @@
 
 import { useSyncExternalStore } from "react"
 
-/** A dot's name is stored under this prefix once the reader has seen it, e.g. `notification-dot:mode-toggle`. */
-export const SEEN_KEY_PREFIX = "notification-dot:"
+/**
+ * A dot's name is stored under this prefix once the reader has seen it, e.g.
+ * `pp:dot:mode-toggle`. `pp:` keeps the site's own keys apart from the ones
+ * libraries write, like the theme's `theme`.
+ */
+export const SEEN_KEY_PREFIX = "pp:dot:"
 
 /** The names of the dots this reader has seen, or null when localStorage can't be read. */
 type Seen = ReadonlySet<string> | null
@@ -11,7 +15,7 @@ type Seen = ReadonlySet<string> | null
 // One store per tab, backed by localStorage. When Layer 2 syncs seen dots to Payload
 // users, turn this module into a factory, `createSeenStore(storage)`, with one default
 // instance, so the backend can be swapped (and tests get fresh instances instead of
-// `resetSeenStore`). useNotificationDot's API shouldn't need to change.
+// `resetSeenStore`). useDot's API shouldn't need to change.
 let seen: Seen | undefined
 const listeners = new Set<() => void>()
 

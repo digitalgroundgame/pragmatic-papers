@@ -281,15 +281,14 @@ FORCE_DATABASE_COPY=false
 **What happens for PR #330** (`COOLIFY_FQDN=pr-330.pragmaticpapers.com`):
 
 1. `modify-database-uri.sh` names the preview database `pragmatic_papers_pr_330` and writes only that name to `/tmp/database_name`.
-2. `copy-database.sh` creates it empty and streams the source in with `pg_dump | pg_restore`, on the same server and with `DATABASE_URI`'s credentials. `pg_dump` reads a snapshot over an ordinary connection, so staging's sessions on the source stay connected (a `CREATE DATABASE … TEMPLATE` copy would have to disconnect them). If the copy fails, the half-made database is dropped so the next build retries. An existing preview database is left alone unless `FORCE_DATABASE_COPY=true`.
+2. `copy-database.sh` creates it with `CREATE DATABASE pragmatic_papers_pr_330 WITH TEMPLATE pragmatic_papers`, on the same server and with `DATABASE_URI`'s credentials. It leaves an existing preview database alone unless `FORCE_DATABASE_COPY=true`.
 3. Migrations and `next build` run against the preview database.
 4. The runner image carries `/app/database_name`, and `start.sh` applies it to the runtime `DATABASE_URI`. No credential is written into the image.
 
 **Requirements:**
 
 - `DATABASE_URI` must be available at build time _and_ runtime, with the same value, in **every** environment: the image carries no credentials, so the running app reads only the runtime value, and `start.sh` exits if it's missing.
-- Its user needs `CREATEDB`.
-- The builder's `postgresql-client` must be at least the server's major version, or `pg_dump` refuses to run (the build then fails and drops the partial copy).
+- Its user needs `CREATEDB` and permission to terminate other sessions on the source database: `CREATE DATABASE … TEMPLATE` fails while anyone is connected to it, so the script disconnects them first. That includes staging's own sessions whenever a new preview database is created.
 
 **For Staging/Production:**
 Set `BUILD_ENV=staging` or `BUILD_ENV=production` and leave `COPY_SOURCE_DATABASE` unset: the naming and the copy are both skipped, using your `DATABASE_URI` exactly as configured.

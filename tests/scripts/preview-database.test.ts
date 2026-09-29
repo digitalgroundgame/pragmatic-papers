@@ -17,17 +17,11 @@ const PASSWORD = "hunter2-s3cret"
 const URI = `postgres://app:${PASSWORD}@db.internal:5432/pragmatic_papers?sslmode=require`
 const PREVIEW_URI = URI.replace("pragmatic_papers?", "pragmatic_papers_pr_330?")
 
-// Fake Postgres clients and node. Each logs its name and arguments to $CALLS_LOG,
-// one line per call. psql answers the "does the target exist?" query from
-// $TARGET_EXISTS; pg_dump writes a dump, or fails with $DUMP_FAILS; pg_restore logs
-// what it read and exits with $RESTORE_EXIT.
+// Fake psql and node. Each logs its name and arguments to $CALLS_LOG, one line per
+// call. psql answers the "does the target exist?" query from $TARGET_EXISTS.
 const FAKES: Record<string, string> = {
   psql: `case "$*" in *"FROM pg_database"*) [ "$TARGET_EXISTS" = "true" ] && echo 1 ;; esac
 exit 0`,
-  pg_dump: `[ "$DUMP_FAILS" = "true" ] && exit 1
-echo "the-dump"`,
-  pg_restore: `echo "pg_restore read $(cat)" >> "$CALLS_LOG"
-exit "\${RESTORE_EXIT:-0}"`,
   node: `[ "$1" = "--version" ] && echo v24 && exit 0
 echo "node started with DATABASE_URI=$DATABASE_URI"`,
 }
@@ -124,7 +118,7 @@ describe("preview database build", () => {
     expect(output).not.toContain(PASSWORD)
   })
 
-  it("copies the original database into the preview database without disconnecting it", () => {
+  it("copies the original database into the preview database", () => {
     const { status, output } = sh(
       `sh "${SCRIPTS}/modify-database-uri.sh" && use_preview_database "${nameFile}" && ` +
         `echo "URI=$DATABASE_URI" && sh "${SCRIPTS}/copy-database.sh"`,
@@ -134,37 +128,14 @@ describe("preview database build", () => {
     expect(status).toBe(0)
     expect(output).toContain(`URI=${PREVIEW_URI}`)
     expect(output.replace(/^URI=.*$/m, "")).not.toContain(PASSWORD)
-
-    const log = calls()
-    // Created empty through the server's maintenance database...
-    expect(log).toContainEqual(
-      expect.stringMatching(
-        /^psql postgres:\/\/app:.*@db\.internal:5432\/postgres\?sslmode=require -c CREATE DATABASE "pragmatic_papers_pr_330";/,
-      ),
+    const create = calls().at(-1)
+    expect(create).toContain(
+      'CREATE DATABASE "pragmatic_papers_pr_330" WITH TEMPLATE "pragmatic_papers"',
     )
-    // ...then restored from a dump of the original.
-    expect(log).toContainEqual(expect.stringContaining(`pg_dump --format=custom`))
-    expect(log.find((call) => call.startsWith("pg_dump"))).toContain(URI)
-    expect(log.find((call) => call.startsWith("pg_restore -"))).toContain(`-d ${PREVIEW_URI}`)
-    expect(log).toContainEqual(expect.stringContaining("pg_restore read the-dump"))
-    // Staging keeps its sessions: nothing terminates backends or copies a template.
-    expect(log.join("\n")).not.toMatch(/pg_terminate_backend|TEMPLATE/)
-  })
-
-  it.each([
-    ["pg_dump", { DUMP_FAILS: "true" }],
-    ["pg_restore", { RESTORE_EXIT: "1" }],
-  ])("drops the partial copy and fails when %s fails", (_, failure) => {
-    const { status, output } = sh(`sh "${SCRIPTS}/copy-database.sh"`, {
-      DATABASE_URI: PREVIEW_URI,
-      SOURCE_DATABASE_NAME: "pragmatic_papers",
-      COPY_SOURCE_DATABASE: "true",
-      ...failure,
-    })
-
-    expect(status).toBe(1)
-    expect(output).toContain("dropping 'pragmatic_papers_pr_330'")
-    expect(calls().at(-1)).toContain('DROP DATABASE IF EXISTS "pragmatic_papers_pr_330"')
+    // Connects to the server's maintenance database, not either copy.
+    expect(create).toMatch(
+      /^psql postgres:\/\/app:.*@db\.internal:5432\/postgres\?sslmode=require /,
+    )
   })
 
   it("leaves an existing preview database alone", () => {

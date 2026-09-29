@@ -1,0 +1,10 @@
+/*
+ * Applied to every toHaveScreenshot capture (playwright.config.ts `stylePath`).
+ * Hides UI that depends on this browser's history rather than the page under
+ * test, so baselines don't change when it does.
+ */
+
+/* Every test starts in a fresh browser, so every notification dot shows. */
+[data-slot="notification-dot"] {
+  visibility: hidden !important;
+}

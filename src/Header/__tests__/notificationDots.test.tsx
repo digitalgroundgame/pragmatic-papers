@@ -18,7 +18,7 @@ function press(element: HTMLElement): void {
 }
 
 function dotIn(element: HTMLElement): Element | null {
-  return element.querySelector("span[aria-hidden='true'].rounded-full")
+  return element.querySelector("[data-slot='notification-dot']")
 }
 
 beforeEach(() => {

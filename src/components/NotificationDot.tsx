@@ -11,6 +11,7 @@ export function NotificationDot({ visible, className }: NotificationDotProps): R
   return (
     <span
       aria-hidden="true"
+      data-slot="notification-dot"
       className={cn(
         "ring-background bg-brand pointer-events-none absolute top-0.5 right-0.5 size-2 rounded-full ring-2",
         className,

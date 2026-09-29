@@ -25,13 +25,15 @@ type Story = StoryObj<typeof meta>
 
 export const Visible: Story = {
   play: async ({ canvasElement }) => {
-    await expect(canvasElement.querySelector("[aria-hidden='true'].rounded-full")).toBeVisible()
+    await expect(canvasElement.querySelector("[data-slot='notification-dot']")).toBeVisible()
   },
 }
 
 export const Hidden: Story = {
   args: { visible: false },
   play: async ({ canvasElement }) => {
-    await expect(canvasElement.querySelector(".rounded-full")).not.toBeInTheDocument()
+    await expect(
+      canvasElement.querySelector("[data-slot='notification-dot']"),
+    ).not.toBeInTheDocument()
   },
 }

@@ -18,6 +18,8 @@ describe("NotificationDot", () => {
 
     const dot = container.firstElementChild
     expect(dot).toHaveAttribute("aria-hidden", "true")
+    // tests/e2e/screenshot.css hides the dot from visual baselines by this attribute.
+    expect(dot).toHaveAttribute("data-slot", "notification-dot")
     expect(dot).toHaveClass("absolute", "top-0.5", "right-0.5", "rounded-full")
   })
 

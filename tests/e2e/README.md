@@ -221,6 +221,10 @@ specs you changed.
   and Web Animations only, so a SMIL animation keeps moving between captures.
 - Timezone (`UTC`), locale (`en-US`), and color scheme (`light`) are pinned in
   `playwright.config.ts`.
+- `tests/e2e/screenshot.css` is applied to every screenshot. It hides UI that
+  depends on what this browser has seen before, such as the notification dots
+  (`[data-slot="notification-dot"]`) that every fresh test browser shows. Tests
+  still see and can assert on that UI; only the captured pixels leave it out.
 - **When a clip is positioned relative to an element whose layout can settle
   late** (e.g. a popover below a hero image that resolves its intrinsic height
   a frame or two after decode), call `waitForStableBox(locator)` before

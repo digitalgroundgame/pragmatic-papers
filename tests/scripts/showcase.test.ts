@@ -16,8 +16,14 @@ vi.mock("@/endpoints/seed/showcase", () => ({
   ],
 }))
 
-const { createRestPayload, main, resolveTarget, selectEntries, slugsFromDescription } =
-  await import("../../scripts/showcase")
+const {
+  createRestPayload,
+  main,
+  resolveTarget,
+  selectEntries,
+  showcaseItem,
+  slugsFromDescription,
+} = await import("../../scripts/showcase")
 
 const ORIGIN = "https://pr-748.pragmaticpapers.com"
 const PUSHER = { id: 7, roles: ["writer"] }
@@ -83,12 +89,47 @@ describe("slugsFromDescription", () => {
     ["- showcase: first", ["first"]],
     ["## Context\n\nShowcase: first\n\nMore text", ["first"]],
     ["Showcase: all", ["all"]],
+    [
+      `Showcase: [First: a title](${ORIGIN}/articles/first), [Second](${ORIGIN}/articles/second)`,
+      ["first", "second"],
+    ],
+    [String.raw`Showcase: [A \[bracketed\] title](${ORIGIN}/articles/first)`, ["first"]],
+    [`Showcase: first ([draft](${ORIGIN}/admin/collections/articles/99))`, ["first"]],
   ])("reads %j", (description, slugs) => {
     expect(slugsFromDescription(description)).toEqual(slugs)
   })
 
   it("finds nothing without a Showcase: line", () => {
     expect(slugsFromDescription("Adds a showcase for the table of contents")).toEqual([])
+  })
+})
+
+describe("showcaseItem", () => {
+  it("links a published article by title", () => {
+    expect(showcaseItem("first", "First", `${ORIGIN}/articles/first`)).toBe(
+      `[First](${ORIGIN}/articles/first)`,
+    )
+  })
+
+  it("escapes brackets in the title", () => {
+    expect(showcaseItem("first", "A [b] c", `${ORIGIN}/articles/first`)).toBe(
+      String.raw`[A \[b\] c](${ORIGIN}/articles/first)`,
+    )
+  })
+
+  it("keeps a draft's slug beside its admin link", () => {
+    const url = `${ORIGIN}/admin/collections/articles/99`
+    expect(showcaseItem("first", "First", url)).toBe(`first ([draft](${url}))`)
+  })
+
+  it.each([
+    ["First", `${ORIGIN}/articles/first`],
+    ["A [b] c", `${ORIGIN}/articles/first`],
+    ["Draft", `${ORIGIN}/admin/collections/articles/99`],
+  ])("reads %j back as its slug", (title, url) => {
+    expect(slugsFromDescription(`Showcase: ${showcaseItem("first", title, url)}`)).toEqual([
+      "first",
+    ])
   })
 })
 
@@ -218,7 +259,7 @@ describe("main", () => {
   it("pushes every entry for Showcase: all", async () => {
     const fetchImpl = fakeFetch({
       "POST /api/users/login": login(),
-      "GET /api/articles": () => json({ totalDocs: 0 }),
+      "GET /api/articles": () => json({ docs: [] }),
     })
 
     await main(
@@ -233,8 +274,12 @@ describe("main", () => {
   it("creates only the entries whose slug is missing", async () => {
     const fetchImpl = fakeFetch({
       "POST /api/users/login": login(),
-      "GET /api/articles": (url) =>
-        json({ totalDocs: url.searchParams.get("where[slug][equals]") === "first" ? 1 : 0 }),
+      "GET /api/articles": (url) => {
+        const slug = url.searchParams.get("where[slug][equals]")
+        // "second" appears once it's created.
+        const found = slug === "first" || mockCreate.mock.calls.length > 0
+        return json({ docs: found ? [{ title: `Title of ${slug}` }] : [] })
+      },
     })
 
     const links = await main(["748", "--all"], ENV, fetchImpl)
@@ -243,26 +288,26 @@ describe("main", () => {
     expect(mockCreate).toHaveBeenCalledOnce()
     expect(mockCreate).toHaveBeenCalledWith(expect.anything(), [PUSHER], [{ id: 1 }])
     expect(links).toEqual([
-      `- [first](${ORIGIN}/articles/first)`,
-      `- [second](${ORIGIN}/articles/second)`,
+      `[Title of first](${ORIGIN}/articles/first)`,
+      `[Title of second](${ORIGIN}/articles/second)`,
     ])
   })
 
   it("links to drafts in the admin", async () => {
     const fetchImpl = fakeFetch({
       "POST /api/users/login": login(),
-      "GET /api/articles": () => json({ totalDocs: 0 }),
+      "GET /api/articles": () => json({ docs: [] }),
     })
 
     const links = await main(["748", "first", "--draft"], ENV, fetchImpl)
 
-    expect(links).toEqual([`- [first](${ORIGIN}/admin/collections/articles/99)`])
+    expect(links).toEqual([`first ([draft](${ORIGIN}/admin/collections/articles/99))`])
   })
 
   it("uploads nothing when every entry is already there", async () => {
     const fetchImpl = fakeFetch({
       "POST /api/users/login": login(),
-      "GET /api/articles": () => json({ totalDocs: 1 }),
+      "GET /api/articles": () => json({ docs: [{ title: "T" }] }),
     })
 
     await main(["748", "first", "second"], ENV, fetchImpl)
@@ -274,7 +319,7 @@ describe("main", () => {
   it("pushes the slugs from the description to staging as drafts", async () => {
     const fetchImpl = fakeFetch({
       "POST /api/users/login": login(),
-      "GET /api/articles": () => json({ totalDocs: 0 }),
+      "GET /api/articles": () => json({ docs: [] }),
     })
 
     await main(

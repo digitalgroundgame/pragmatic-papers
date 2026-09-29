@@ -7,7 +7,7 @@ import {
   PreviewField,
 } from "@payloadcms/plugin-seo/fields"
 import type { CollectionConfig } from "payload"
-import { slugField } from "payload"
+import { slugField } from "@/fields/slug"
 
 export const Topics: CollectionConfig = {
   slug: "topics",

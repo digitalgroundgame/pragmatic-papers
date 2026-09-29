@@ -1,12 +1,13 @@
 import { beforeAll, describe, expect, it } from "vitest"
 import type { Payload } from "payload"
-import type { Article, Page, Volume } from "@/payload-types"
+import type { Article, Interactive, Page, Volume } from "@/payload-types"
 import { getPayload } from "./helpers/testUsers"
 import { ARTICLE_CONTENT } from "./fixtures/content"
 
 // Payload 3.90.2 made slugField's generateSlug hook assign the slug after an
 // await, so the required `slug` sibling validated first and every create
-// without a slug failed with "Slug: This field is required." Pin the
+// without a slug failed with "Slug: This field is required." Our wrapper in
+// `@/fields/slug` generates it in a hook on `slug` itself to get around it. Pin the
 // generated slugs directly so a regression names itself here.
 describe("slugField generation on create", () => {
   let payload: Payload
@@ -29,6 +30,21 @@ describe("slugField generation on create", () => {
     })
 
     expect(article.slug).toBe("slug-test-the-written-word")
+  })
+
+  it("derives the slug of an article published on create", async () => {
+    const article = await payload.create({
+      collection: "articles",
+      overrideAccess: true,
+      context: ctx,
+      data: {
+        title: "Slug Test Published On Create",
+        content: ARTICLE_CONTENT,
+        _status: "published",
+      } as unknown as Article,
+    })
+
+    expect(article.slug).toBe("slug-test-published-on-create")
   })
 
   it("keeps a slug the author set explicitly", async () => {
@@ -88,5 +104,20 @@ describe("slugField generation on create", () => {
     })
 
     expect(volume.slug).toBe("901")
+  })
+
+  it("derives an interactive slug from its title", async () => {
+    const interactive = await payload.create({
+      collection: "interactives",
+      overrideAccess: true,
+      context: ctx,
+      data: {
+        title: "Slug Test Interactive",
+        profile: "federal-courts",
+        _status: "draft",
+      } as unknown as Interactive,
+    })
+
+    expect(interactive.slug).toBe("slug-test-interactive")
   })
 })

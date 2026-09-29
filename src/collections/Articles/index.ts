@@ -18,6 +18,11 @@ import { LegacyTwitterEmbed } from "@/blocks/SocialEmbed/embeds/TwitterEmbed/con
 import { LegacyYouTubeEmbed } from "@/blocks/SocialEmbed/embeds/YouTubeEmbed/config"
 import { SquiggleRule } from "@/blocks/SquiggleRule/config"
 import { Timeline } from "@/blocks/Timeline/config"
+import {
+  canCloneFromProduction,
+  cloneFromProductionEndpoint,
+  productionSearchEndpoint,
+} from "@/collections/Articles/endpoints/cloneFromProduction"
 import { detectMathBlocks } from "@/collections/Articles/hooks/detectMathBlocks"
 import { generateFootnotes } from "@/collections/Articles/hooks/generateFootnotes"
 import { populateTopics } from "@/collections/Articles/hooks/populateTopics"
@@ -53,7 +58,7 @@ import {
   UnorderedListFeature,
 } from "@payloadcms/richtext-lexical"
 import type { CollectionBeforeChangeHook, CollectionConfig, FieldHook } from "payload"
-import { slugField } from "payload"
+import { slugField } from "@/fields/slug"
 
 const setPublishedAtDefault: FieldHook<Article, Article["publishedAt"]> = ({
   siblingData,
@@ -74,7 +79,14 @@ export const Articles: CollectionConfig = {
     read: isPublishedOrStaff,
     update: isDraftOrEditor,
   },
+  endpoints: [productionSearchEndpoint, cloneFromProductionEndpoint],
   admin: {
+    components: {
+      // Payload shows the ⋯ menu whenever this is set, so leave it unset where cloning is off.
+      listMenuItems: canCloneFromProduction()
+        ? ["@/collections/Articles/components/CloneFromProduction#CloneFromProduction"]
+        : undefined,
+    },
     defaultColumns: ["title", "slug", "updatedAt"],
     livePreview: {
       url: ({ data, req }) =>

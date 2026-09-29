@@ -75,6 +75,7 @@ S3_ENDPOINT=https://s3.amazonaws.com
 **Sentry (every Coolify deployment — production, staging and previews):**
 
 - `SENTRY_AUTH_TOKEN` — mark it available at build time; `next build` uses it to upload source maps, so errors from that deployment have readable stack traces. GitHub Actions doesn't get it: CI builds are never served, so there's nothing to symbolicate.
+- The Sentry environment is `BUILD_ENV` (`production`, `staging` or `preview`); there's no separate variable for it. Preview errors also carry a `pr` tag (e.g. `986`) taken from `COOLIFY_FQDN`, so filter on `pr:986` to see one PR's.
 - Turn on **Include Source Commit in Build** so Coolify passes `SOURCE_COMMIT` into the build. `.git` is excluded from the Docker context, so the Dockerfile uses it as `SENTRY_RELEASE`; without it, releases (and every browser error's release tag) come out empty.
 
 ### 4. Configure Domain
@@ -116,6 +117,14 @@ Use managed PostgreSQL service (AWS RDS, Supabase, Neon, etc.) for all deploymen
 - The development app's **production** environment is what these docs call **staging**: it deploys `dev`, not the live site.
 - **Every deployment builds on one Coolify build server, one build at a time**, so a queue of preview builds delays a `dev` or `main` deploy behind it. The build caches below (`/pnpm`, `/nextjs`) are shared by all three. The build is memory-hungry; see [#1018](https://github.com/digitalgroundgame/pragmatic-papers/issues/1018) before adding build steps or dependencies that raise build memory.
 - **Public PR deployments are off**, so previews only build for PRs from people with access to the repo (see [Preview Deployments on the PR](#preview-deployments-on-the-pr-github-deployments)). Keep it that way: previews build on the same server as the live site.
+
+What Coolify's docs say about behaviour that matters to this setup (read them with the `upstream-docs` skill, `coolify` source; paths are under `content/docs/`):
+
+- **Preview variables are a separate group.** The development app's **Production Environment Variables** are staging's; **Preview Deployment Environment Variables** are the previews'. Changing a value for both means changing it twice (`applications/deployments/preview-deployments.mdx`).
+- **Closing a PR deletes its preview's containers, not its database.** Data a preview wrote to an external service stays, so each preview's `pragmatic_papers_pr_<n>` copy of staging outlives the PR. Nothing in this repo drops them yet.
+- **Build secrets need BuildKit.** With **Use Docker Build Secrets** on, Coolify mounts build-time variables as secrets; without BuildKit it silently falls back to build arguments, which can show in the image's metadata (`applications/configuration/environment-variables.mdx`). Each variable also has independent **Build Variable** / **Runtime Variable** toggles; turn **Build Variable** off for secrets the build doesn't read.
+- **Old images are kept for rollback**, a configured number per app, and Docker cleanup skips them unless **Disable Application Image Retention** is on. A rollback runs an old image with the _current_ variables (`applications/deployments/rollbacks.mdx`, `core/infrastructure/servers/automated-docker-cleanup.mdx`).
+- **Deployment logs can't be cleared.** The docs describe no way to delete a deployment's log, so anything a build prints stays readable to whoever can open the app in Coolify (#1066).
 
 ## 🧱 Build Cache and Environment Variables
 

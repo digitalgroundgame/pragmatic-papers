@@ -1,6 +1,6 @@
 import React from "react"
 
-import { MathJax } from "better-react-mathjax/esm"
+import { TypesetMath } from "./TypesetMath"
 
 export interface MathBlockProps {
   math: string
@@ -16,12 +16,12 @@ export const MathBlock: React.FC<MathBlockProps> = (props) => {
   const isInline = blockType === "inlineMathBlock"
 
   const content = isInline ? (
-    <MathJax key={math} inline>
+    <TypesetMath key={math} inline>
       \({math}\)
-    </MathJax>
+    </TypesetMath>
   ) : (
     <div className="my-4 flex justify-center">
-      <MathJax key={math}>\[{math}\]</MathJax>
+      <TypesetMath key={math}>\[{math}\]</TypesetMath>
     </div>
   )
 

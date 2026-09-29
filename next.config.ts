@@ -4,6 +4,8 @@ import type { NextConfig } from "next"
 import path from "path"
 import { fileURLToPath } from "url"
 
+import { prNumberFromFqdn } from "./src/utilities/prNumberFromFqdn"
+
 const __filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(__filename)
 
@@ -17,6 +19,14 @@ const NEXT_PUBLIC_SUPABASE_URL = new URL(
 
 const nextConfig: NextConfig = {
   output: "standalone",
+  // Inlined into every bundle (client, server, edge) for the Sentry configs to share; only
+  // the build sees BUILD_ENV and COOLIFY_FQDN. Sentry's environment is the deploy
+  // (production, staging, preview), and a preview is tagged with its PR.
+  env: {
+    SENTRY_ENVIRONMENT: process.env.BUILD_ENV || "development",
+    SENTRY_PR:
+      process.env.BUILD_ENV === "preview" ? prNumberFromFqdn(process.env.COOLIFY_FQDN) : "",
+  },
   // Temporarily required on Windows until Next.js fixes Turbopack Sass resolution.
   // See: https://github.com/vercel/next.js/issues/86431
   sassOptions: {
@@ -164,7 +174,11 @@ const nextConfig: NextConfig = {
         // hash-conditional) Cache-Control — a config-level header always wins over one set in a
         // Route Handler, so without this exclusion this blanket rule silently overwrote it,
         // capping a year-long immutable cache down to 10 minutes.
-        source: "/:path((?!interactives/[^/]+/regions/[^/]+/geometry/).*)",
+        // The feed (`/feed`, `/feed/...`; not the `/feed.articles` RSS) is left out too: it's
+        // rendered per request, its 404 follows a Site Settings switch that should apply on
+        // save, and a stale copy would call load-more's server action with an ID the current
+        // build no longer has.
+        source: "/:path((?!interactives/[^/]+/regions/[^/]+/geometry/|feed(?:/|$)).*)",
         headers: [
           {
             key: "Cache-Control",

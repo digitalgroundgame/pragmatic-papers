@@ -11,7 +11,7 @@ import { useNotification } from "@/providers/NotificationProvider"
 
 /** The mobile menu and search sheet, whose trigger carries the `search` dot until first opened. */
 export function SearchPanel({ children }: { children: React.ReactNode }): React.ReactNode {
-  const { visible, markSeen } = useNotification("search")
+  const { markSeen } = useNotification("search")
 
   return (
     <MenuSheet>
@@ -26,7 +26,7 @@ export function SearchPanel({ children }: { children: React.ReactNode }): React.
           >
             <TextSearch className="size-6" />
             <span className="sr-only">Menu</span>
-            <NotificationDot visible={visible} />
+            <NotificationDot name="search" />
           </Button>
         }
       />

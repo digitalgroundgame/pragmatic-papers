@@ -3,6 +3,7 @@ import { PaperIcon } from "@/components/Logo/icons/PaperIcon"
 import { MegaMenu } from "@/components/MegaMenu"
 import { Menu } from "@/components/Menu"
 import { ModeToggleAnalytics } from "@/components/ModeToggleAnalytics"
+import { NotificationDot } from "@/components/NotificationDot"
 import { SocialLinks } from "@/components/SocialLinks"
 import { Button } from "@/components/ui/button"
 import { LinkButton } from "@/components/ui/link-button"
@@ -19,7 +20,6 @@ import { HeaderLogo } from "@/Header/chrome"
 import { HeaderActions } from "@/Header/HeaderActions/Component"
 import { SearchForm } from "@/Header/SearchForm/Component"
 import { SearchPanel } from "@/Header/SearchPanel"
-import { ThemeSelectorDot } from "@/Header/ThemeSelectorDot"
 import type { Footer, Header } from "@/payload-types"
 import { getCachedGlobal } from "@/utilities/getGlobals"
 import { Newspaper, User, XIcon } from "lucide-react"
@@ -85,7 +85,7 @@ export async function Header(): Promise<React.JSX.Element> {
                     <Button variant="ghost" size="icon" className="relative lg:hidden">
                       <User className="size-6" />
                       <span className="sr-only">User and Settings</span>
-                      <ThemeSelectorDot />
+                      <NotificationDot name="theme-selector" />
                     </Button>
                   }
                 />

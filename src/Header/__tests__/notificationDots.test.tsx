@@ -4,11 +4,11 @@ import React from "react"
 import { afterEach, beforeEach, describe, expect, it } from "vitest"
 
 import { ModeToggle } from "@/components/ModeToggle"
+import { NotificationDot } from "@/components/NotificationDot"
 import { SheetTitle } from "@/components/ui/sheet"
 import { resetNotificationStore } from "@/providers/NotificationProvider"
 
 import { SearchPanel } from "../SearchPanel"
-import { ThemeSelectorDot } from "../ThemeSelectorDot"
 
 // Base UI opens menus and sheets on the pointer sequence, not a bare click.
 function press(element: HTMLElement): void {
@@ -68,7 +68,7 @@ describe("theme selector dot", () => {
       <ClientThemeProvider attribute="class" defaultTheme="system" enableSystem>
         <button type="button" className="relative">
           Account
-          <ThemeSelectorDot />
+          <NotificationDot name="theme-selector" />
         </button>
         <ModeToggle />
       </ClientThemeProvider>,

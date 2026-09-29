@@ -4,7 +4,7 @@ import { useTheme } from "@wrksz/themes/client"
 import { Moon, Sun } from "lucide-react"
 import React from "react"
 
-import { DOTS, useDot } from "@/components/Dot"
+import { FRESH, useFresh } from "@/components/Fresh"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -21,17 +21,17 @@ interface ModeToggleProps {
   showLabel?: boolean
   /** Called after the theme is set, with the theme the user selected. */
   onThemeChange?: (theme: Theme) => void
-  /** Show the dot on this toggle. Opening any toggle clears it everywhere. */
-  showDot?: boolean
+  /** Show the fresh dot on this toggle. Opening any mode toggle clears it everywhere. */
+  showFresh?: boolean
 }
 
 export function ModeToggle({
   showLabel = false,
   onThemeChange,
-  showDot = false,
+  showFresh = false,
 }: ModeToggleProps): React.JSX.Element {
   const { setTheme, theme } = useTheme()
-  const { dot, markSeen } = useDot(DOTS.modeToggle)
+  const { freshDot, markSeen } = useFresh(FRESH.modeToggle)
 
   function handleSetTheme(next: Theme): void {
     setTheme(next)
@@ -51,7 +51,7 @@ export function ModeToggle({
             <Sun className="size-5 scale-100 rotate-0 transition-all dark:scale-0 dark:-rotate-90" />
             <Moon className="absolute size-5 scale-0 rotate-90 transition-all dark:scale-100 dark:rotate-0" />
             <span className={showLabel ? undefined : "sr-only"}>Toggle theme</span>
-            {showDot && dot}
+            {showFresh && freshDot}
           </Button>
         }
       />

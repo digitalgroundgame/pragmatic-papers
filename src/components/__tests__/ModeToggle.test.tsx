@@ -3,8 +3,8 @@ import { cleanup, fireEvent, render, type RenderResult, screen } from "@testing-
 import React from "react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
-import { DOTS, Dot } from "../Dot"
-import { resetSeenStore, SEEN_KEY_PREFIX } from "../Dot/store"
+import { FRESH, Fresh } from "../Fresh"
+import { resetSeenStore, SEEN_KEY_PREFIX } from "../Fresh/store"
 import { ModeToggle } from "../ModeToggle"
 
 // Same provider props as src/app/(frontend)/layout.tsx. vitest.setup's
@@ -107,18 +107,18 @@ describe("ModeToggle", () => {
   })
 })
 
-describe("ModeToggle dot", () => {
+describe("ModeToggle fresh dot", () => {
   function dotIn(element: HTMLElement): Element | null {
-    return element.querySelector("[data-slot='dot']")
+    return element.querySelector("[data-slot='fresh']")
   }
 
-  // The header's account button mirrors the toggle's dot below lg.
+  // The header's account button mirrors the toggle's fresh dot below lg.
   function renderWithAccountButton(props: React.ComponentProps<typeof ModeToggle> = {}): void {
     render(
       <ClientThemeProvider attribute="class" defaultTheme="system" enableSystem>
         <button type="button" className="relative">
           Account
-          <Dot name={DOTS.modeToggle} />
+          <Fresh name={FRESH.modeToggle} />
         </button>
         <ModeToggle {...props} />
       </ClientThemeProvider>,
@@ -127,28 +127,28 @@ describe("ModeToggle dot", () => {
 
   beforeEach(resetSeenStore)
 
-  it("shows no dot unless showDot is set", () => {
+  it("shows no dot unless showFresh is set", () => {
     renderToggle()
 
     expect(dotIn(screen.getByRole("button", { name: "Toggle theme" }))).not.toBeInTheDocument()
   })
 
   it("marks a first-time reader's toggle, and the places mirroring it", () => {
-    renderWithAccountButton({ showDot: true })
+    renderWithAccountButton({ showFresh: true })
 
     expect(dotIn(screen.getByRole("button", { name: "Toggle theme" }))).toBeInTheDocument()
     expect(dotIn(screen.getByRole("button", { name: "Account" }))).toBeInTheDocument()
   })
 
   it("clears the dot everywhere once a toggle is opened, and remembers it", async () => {
-    renderWithAccountButton({ showDot: true })
+    renderWithAccountButton({ showFresh: true })
 
     openMenu()
     await screen.findByRole("menuitem", { name: "Dark" })
 
     expect(dotIn(screen.getByRole("button", { name: "Toggle theme" }))).not.toBeInTheDocument()
     expect(dotIn(screen.getByRole("button", { name: "Account" }))).not.toBeInTheDocument()
-    expect(localStorage.getItem(`${SEEN_KEY_PREFIX}${DOTS.modeToggle}`)).toBe("1")
+    expect(localStorage.getItem(`${SEEN_KEY_PREFIX}${FRESH.modeToggle}`)).toBe("1")
   })
 
   it("is cleared by opening a toggle that doesn't show it, like the footer's", async () => {

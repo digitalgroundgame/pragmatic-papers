@@ -99,3 +99,6 @@ devenv.local.yaml
 
 # pnpm store left behind by the Dockerized e2e run (bind-mounted repo root)
 .pnpm-store
+
+# Upstream docs fetched on demand by .claude/skills/upstream-docs
+/.cache/

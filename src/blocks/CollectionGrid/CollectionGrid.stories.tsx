@@ -56,6 +56,16 @@ export const Vespucci7 = layoutStory("vespucci-7")
 export const Fibonacci7 = layoutStory("fibonacci-7")
 export const Gauss10 = layoutStory("gauss-10")
 
+/** Gauss 10's bottom-center and bottom-right slots are optional; the bottom-left tile takes the row. */
+export const Gauss10WithoutOptionalSlots: Story = {
+  args: { layout: "gauss-10", slots: slotsFor("gauss-10").slice(0, 8) },
+  play: async ({ canvasElement }) => {
+    const links = within(canvasElement).getAllByRole("link")
+    await expect(links).toHaveLength(8)
+    await expect(links.map((link) => link.getAttribute("href"))).toContain("/articles/article-8")
+  },
+}
+
 export const KickersAndOverrides: Story = {
   parameters: knownContrastIssue,
   args: {

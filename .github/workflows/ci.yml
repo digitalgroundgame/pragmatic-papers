@@ -319,7 +319,9 @@ jobs:
           npx --yes wrangler@4 versions upload --config .storybook/wrangler.jsonc --preview-alias "$ALIAS" | tee wrangler.log
           url=$(grep -oE "https://${ALIAS}-[a-z0-9.-]+\.workers\.dev" wrangler.log | head -n 1)
           if [ -z "$url" ]; then
-            echo "::error::wrangler printed no preview alias URL for $ALIAS"
+            # Wrangler prints preview URLs only while the Worker has them on;
+            # `preview_urls` in wrangler.jsonc applies on the next `dev` deploy.
+            echo "::error::wrangler printed no preview alias URL for $ALIAS. Turn on Preview URLs for the Worker (Cloudflare dashboard: pragmatic-papers-storybook > Settings > Domains & Routes), then re-run this job."
             exit 1
           fi
           echo "url=$url" >> "$GITHUB_OUTPUT"

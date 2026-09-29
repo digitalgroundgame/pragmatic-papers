@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite"
-import { expect, screen, userEvent, within } from "storybook/test"
+import { expect, screen, userEvent, waitFor, within } from "storybook/test"
 
 import {
   feedArticle,
@@ -100,7 +100,10 @@ export const Form: Story = {
     await expect(canvas.getByText("Pitch the editors")).toBeVisible()
     await userEvent.click(canvas.getByRole("button", { name: "Open form" }))
     const dialog = await screen.findByRole("dialog", { name: "Pitch the editors" })
-    await expect(within(dialog).getByRole("textbox", { name: /Your pitch/ })).toBeVisible()
+    // The dialog fades in from opacity 0, so wait for it to finish rather than read it mid-fade.
+    await waitFor(() =>
+      expect(within(dialog).getByRole("textbox", { name: /Your pitch/ })).toBeVisible(),
+    )
   },
 }
 

@@ -5,11 +5,13 @@ import {
   catalogSlugs,
   type Deps,
   hasShowcaseLine,
+  isLegacyLinks,
   LINKS_END,
   LINKS_START,
   main,
   optOut,
   planSync,
+  withLegacyLinks,
   withLinks,
   withShowcaseLine,
 } from "../../scripts/showcase-pr"
@@ -134,6 +136,20 @@ describe("withLinks", () => {
     expect(withLinks(block("[Old](/articles/first)"), ["[a](/articles/first?$1)"])).toBe(
       block("[a](/articles/first?$1)"),
     )
+  })
+})
+
+describe("withLegacyLinks", () => {
+  it("replaces the older list in place and leaves the line", () => {
+    const body = `Closes #1\n\n${legacyBlock("- [first](u)")}\n\nShowcase: first`
+    expect(withLegacyLinks(body, ["- [first](v)"])).toBe(
+      `Closes #1\n\n${legacyBlock("- [first](v)")}\n\nShowcase: first`,
+    )
+  })
+
+  it("tells the older list from titled links", () => {
+    expect(isLegacyLinks(["- [first](u)"])).toBe(true)
+    expect(isLegacyLinks(["[First](u)", "first ([draft](u))"])).toBe(false)
   })
 })
 
@@ -399,6 +415,19 @@ describe("main", () => {
       const h = harness({ body, files: { "/tmp/links.md": "[First](/articles/first)\n" } })
       await main(["link"], { ...ENV, LINKS_FILE: "/tmp/links.md" }, h.deps)
       expect(h.edits()).toEqual([])
+    })
+
+    it("keeps the older list, and the line, for a branch whose push writes one", async () => {
+      const body = "Text\n\nShowcase: first\n"
+      const h = harness({
+        body,
+        labels: ["showcase"],
+        files: { "/tmp/links.md": "- [first](https://pr-42.pragmaticpapers.com/articles/first)\n" },
+      })
+      expect(await main(["link"], { ...ENV, LINKS_FILE: "/tmp/links.md" }, h.deps)).toBe(0)
+      expect(h.edits()).toEqual([
+        `${legacyBlock("- [first](https://pr-42.pragmaticpapers.com/articles/first)")}\n\n${body}`,
+      ])
     })
 
     it("adds the line and the label for a manual push to a PR without one", async () => {

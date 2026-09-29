@@ -113,6 +113,24 @@ export function optOut(body: string): string {
 const CLOSING_LINE = /^\s*(close[sd]?|fix(e[sd])?|resolve[sd]?):?\s+([\w.-]+\/[\w.-]+)?#\d+/i
 
 /**
+ * Puts the block where LINKS_START stands, or else at the top, under any
+ * `Closes #N` lines.
+ */
+function placed(body: string, block: string, trailingNewline: boolean): string {
+  if (body.includes(LINKS_START))
+    return body.replace(LINKS_START, () => block).trimEnd() + (trailingNewline ? "\n" : "")
+  const lines = body.split("\n")
+  let top = 0
+  for (let i = 0; i < lines.length; i++) {
+    if (CLOSING_LINE.test(lines[i]!)) top = i + 1
+    else if (lines[i]!.trim()) break
+  }
+  const head = lines.slice(0, top).join("\n").trimEnd()
+  const tail = lines.slice(top).join("\n").trim()
+  return [head, block, tail].filter(Boolean).join("\n\n") + (!tail || trailingNewline ? "\n" : "")
+}
+
+/**
  * The line's articles with the pushed ones linked: each link from
  * scripts/showcase.ts replaces its article where the line names it, and one
  * the line doesn't name (from a manual push) goes on the end.
@@ -147,17 +165,24 @@ export function withLinks(body: string, links: string[]): string {
   // Out of the block, which carries the line from here on.
   const cleaned = LINKS_BLOCK.test(body) ? body.replace(LINKS_BLOCK, () => LINKS_START) : body
   const rest = withoutShowcaseLines(cleaned)
-  if (rest.includes(LINKS_START))
-    return rest.replace(LINKS_START, () => block).trimEnd() + (/\n$/.test(body) ? "\n" : "")
-  const lines = rest.split("\n")
-  let top = 0
-  for (let i = 0; i < lines.length; i++) {
-    if (CLOSING_LINE.test(lines[i]!)) top = i + 1
-    else if (lines[i]!.trim()) break
-  }
-  const head = lines.slice(0, top).join("\n").trimEnd()
-  const tail = lines.slice(top).join("\n").trim()
-  return [head, block, tail].filter(Boolean).join("\n\n") + (!tail || /\n$/.test(body) ? "\n" : "")
+  return placed(rest, block, /\n$/.test(body))
+}
+
+/**
+ * The list of links a PR branch from before titled links writes: `pnpm
+ * showcase` runs from the PR's head, and its older copy writes `- [slug](url)`
+ * items and can't read links on the `Showcase:` line back as slugs. `link`
+ * runs from dev, so for such a branch it keeps the older separate list and
+ * leaves the line alone. Delete once no open PR predates titled links.
+ */
+export function isLegacyLinks(links: string[]): boolean {
+  return links.some((item) => /^\s*[-*]\s/.test(item))
+}
+
+export function withLegacyLinks(body: string, links: string[]): string {
+  const block = `${LINKS_START}\n**On the preview:**\n\n${links.join("\n")}\n${LINKS_END}`
+  const marked = LINKS_BLOCK.test(body) ? body.replace(LINKS_BLOCK, () => LINKS_START) : body
+  return placed(marked, block, /\n$/.test(body))
 }
 
 /** The slugs registered in a version of the catalog's source. */
@@ -401,7 +426,7 @@ async function link(env: Env, deps: Deps): Promise<void> {
   // Read fresh, so an edit made during the push survives.
   const pull = await gh.pull(pr)
   const body = pull.body ?? ""
-  const next = withLinks(body, links)
+  const next = (isLegacyLinks(links) ? withLegacyLinks : withLinks)(body, links)
   if (next !== body) {
     await gh.setBody(pr, next)
     deps.log(`Listed ${links.length} article(s) in the description.`)

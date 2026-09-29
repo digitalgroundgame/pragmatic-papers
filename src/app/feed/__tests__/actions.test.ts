@@ -5,7 +5,10 @@ vi.mock("@/globals/SiteSettings/isExperimentEnabled", () => ({
   isExperimentEnabled: async (name: string) => name === "feed" && experiment.on,
 }))
 const getFeedBatch = vi.fn()
-vi.mock("../getFeedBatch", () => ({ getFeedBatch: (args: unknown) => getFeedBatch(args) }))
+vi.mock("../getFeedBatch", () => ({
+  getFeedBatch: (args: unknown) => getFeedBatch(args),
+  MAX_FEED_PAGE: 50,
+}))
 vi.mock("../renderFeedArticle", () => ({
   renderFeedArticle: (article: { id: number }) => ({ rendered: article.id }),
 }))
@@ -34,6 +37,19 @@ describe("loadFeedBatch", () => {
   ])("reads a cursor of %s as page %s", async (cursor, page) => {
     await loadFeedBatch(cursor)
     expect(getFeedBatch).toHaveBeenCalledWith({ cursor: page })
+  })
+
+  it.each([51, 1e9, Number.POSITIVE_INFINITY])(
+    "serves nothing past the last page, without querying (cursor %s)",
+    async (cursor) => {
+      expect(await loadFeedBatch(cursor)).toEqual({ items: [], nextCursor: null })
+      expect(getFeedBatch).not.toHaveBeenCalled()
+    },
+  )
+
+  it("still serves the last page", async () => {
+    await loadFeedBatch(50)
+    expect(getFeedBatch).toHaveBeenCalledWith({ cursor: 50 })
   })
 
   it("serves nothing while the feed experiment is off", async () => {

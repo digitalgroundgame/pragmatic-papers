@@ -9,7 +9,7 @@ vi.mock("@/utilities/queries", () => ({
   queryVolumesForArticles: (ids: number[]) => queryVolumesForArticles(ids),
 }))
 
-const { getFeedBatch, rankFeed, withVolumes } = await import("../getFeedBatch")
+const { getFeedBatch, MAX_FEED_PAGE, rankFeed, withVolumes } = await import("../getFeedBatch")
 
 const DAY = 24 * 60 * 60 * 1000
 const daysAgo = (n: number): string => new Date(Date.now() - n * DAY).toISOString()
@@ -112,5 +112,12 @@ describe("getFeedBatch", () => {
 
     expect(find).toHaveBeenCalledWith(expect.objectContaining({ page: 1, limit: 8 }))
     expect(batch).toEqual({ items: [], nextCursor: null })
+  })
+
+  it("stops offering more at the deepest page it serves", async () => {
+    find.mockResolvedValue({ docs: [{ id: 1, publishedAt: daysAgo(1) }], hasNextPage: true })
+
+    expect((await getFeedBatch({ cursor: MAX_FEED_PAGE - 1 })).nextCursor).toBe(MAX_FEED_PAGE)
+    expect((await getFeedBatch({ cursor: MAX_FEED_PAGE })).nextCursor).toBeNull()
   })
 })

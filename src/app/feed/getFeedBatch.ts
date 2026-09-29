@@ -6,6 +6,13 @@ import type { FeedArticle, FeedArticleBatch } from "./types"
 
 const PAGE_SIZE = 8
 
+/**
+ * The deepest page the feed serves: 400 articles, far past any reading
+ * session. Load-more is a public server action, so this bounds the database
+ * offset anyone can ask for, whatever cursor they send.
+ */
+export const MAX_FEED_PAGE = 50
+
 // Mulberry32 PRNG so server-side shuffles are deterministic per seed.
 function mulberry32(seed: number): () => number {
   let a = seed >>> 0
@@ -98,6 +105,6 @@ export async function getFeedBatch({
 
   return {
     items: ranked,
-    nextCursor: res.hasNextPage ? page + 1 : null,
+    nextCursor: res.hasNextPage && page < MAX_FEED_PAGE ? page + 1 : null,
   }
 }

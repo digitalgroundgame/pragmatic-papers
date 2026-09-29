@@ -182,11 +182,13 @@ export function readConfig(env: Env): Config | null {
 
 /** HTTP 4xx other than rate limits: retrying won't help. */
 export class FatalHttpError extends Error {
-  constructor(
-    message: string,
-    readonly status: number,
-  ) {
+  // A plain field, not a constructor parameter property: the workflows run this file
+  // under Node's type stripping, which rejects parameter properties.
+  readonly status: number
+
+  constructor(message: string, status: number) {
     super(message)
+    this.status = status
   }
 }
 

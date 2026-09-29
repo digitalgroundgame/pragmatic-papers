@@ -1,3 +1,5 @@
+import { spawnSync } from "node:child_process"
+import { resolve } from "node:path"
 import { describe, expect, it } from "vitest"
 
 import {
@@ -407,5 +409,20 @@ describe("main close --delete-preview", () => {
 
   it("rejects an unknown flag", async () => {
     expect(await main(["close", "--drop"], ENV, harness().deps)).toBe(2)
+  })
+})
+
+describe("the entry point", () => {
+  // The workflows run the file with plain `node`, which only strips types: syntax that needs
+  // compiling (a constructor parameter property, say) passes the tests above but not this.
+  it("runs under plain node, skipping without Coolify settings", () => {
+    const result = spawnSync(
+      process.execPath,
+      [resolve(__dirname, "../../scripts/preview-deployment.ts"), "deploy"],
+      { encoding: "utf-8", env: { ...process.env, COOLIFY_DASHBOARD_URL: "" } },
+    )
+    expect(result.stderr).not.toContain("ERR_UNSUPPORTED_TYPESCRIPT_SYNTAX")
+    expect(result.stdout).toContain("skipping")
+    expect(result.status).toBe(0)
   })
 })

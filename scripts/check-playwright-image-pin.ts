@@ -7,6 +7,7 @@ import { blue, green, red } from "./ansi.mjs"
 // different Chromium build than the one `pnpm test` uses.
 export const PINNED_FILES = [
   "docker-compose.e2e.yml",
+  ".github/workflows/ci.yml",
   ".github/workflows/playwright.yml",
   ".github/workflows/update-snapshots.yml",
 ]

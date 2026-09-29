@@ -152,6 +152,9 @@ jobs:
           node-version: "24.x"
           gh-font-read-token: ${{ secrets.GH_FONT_READ }}
           payload-secret: ci-unit-test-secret
+          # The one bare-runner job that saves the pnpm store; the others only
+          # restore it. It runs on every event, unlike the path-filtered jobs.
+          save-pnpm-cache: "true"
 
       - name: Run unit and script tests
         run: pnpm test:unit:coverage
@@ -235,9 +238,21 @@ jobs:
     # Fails open: runs in full unless Detect changes succeeded and cleared it.
     if: ${{ !cancelled() && (github.event_name != 'pull_request' || needs.changes.result != 'success' || needs.changes.outputs.storybook == 'true') }}
     runs-on: ubuntu-latest
+    # The E2E job's pinned image, so the story tests run the same Chromium
+    # build as the E2E suite and skip installing one. Keep the tag in step
+    # with playwright.yml (scripts/check-playwright-image-pin.ts checks it).
+    container:
+      image: mcr.microsoft.com/playwright:v1.63.0-noble
 
     steps:
       - uses: actions/checkout@v7
+
+      # actions/checkout's files are owned by a different UID than this
+      # container's user, so git's dubious-ownership check blocks git commands
+      # (Storybook asks git for the project root) unless the workspace is
+      # explicitly trusted.
+      - name: Trust the checked-out workspace
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
 
       - name: Set up Node.js environment
         uses: ./.github/actions/setup-project
@@ -245,10 +260,6 @@ jobs:
           node-version: "24.x"
           gh-font-read-token: ${{ secrets.GH_FONT_READ }}
           payload-secret: ci-storybook-secret
-
-      # The story tests only need a browser, not the pinned e2e image.
-      - name: Install Chromium
-        run: pnpm exec playwright install --with-deps chromium
 
       # The tests never execute a story's lazy imports; the build bundles them,
       # which is where a server-only module reaching the browser shows up.

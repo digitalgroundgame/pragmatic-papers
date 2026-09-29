@@ -120,9 +120,10 @@ what CI's Chromium actually renders. Treat it as a single chore:
    `pnpm-lock.yaml`.
 2. Update the image tag (`mcr.microsoft.com/playwright:v<version>-<codename>`)
    everywhere it's pinned: `docker-compose.e2e.yml`,
+   `.github/workflows/ci.yml` (the Storybook job),
    `.github/workflows/playwright.yml`, and
    `.github/workflows/update-snapshots.yml`. Match the codename
-   (`noble`/`jammy`/etc.) across all three, not just the version.
+   (`noble`/`jammy`/etc.) across all four, not just the version.
 3. Regenerate every baseline against the new image:
    `pnpm test:e2e:update-snapshots -- --update-snapshots=all`.
 4. Run `pnpm exec tsx scripts/check-playwright-image-pin.ts` to confirm the
@@ -168,7 +169,7 @@ workflow (`.github/workflows/playwright-pin-check.yml`) instead of as part
 of "Static checks" — it fires on pushes to `dev`/`main` that touch the
 lockfile or the pinned files, and just shows up as a failed Actions run if
 drift lands on trunk (e.g. an automated dependency-bump PR that has no idea
-the image tag needs to move too, or one of the three pinned files getting
+the image tag needs to move too, or one of the pinned files getting
 edited without the others). It never blocks a PR.
 
 ## Accepting an intentional visual change

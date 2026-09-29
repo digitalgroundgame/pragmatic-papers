@@ -13,6 +13,14 @@ inputs:
     description: "Payload CMS secret key"
     required: false
     default: ""
+  save-pnpm-cache:
+    description: >-
+      "true" to save the pnpm store when the lockfile's cache entry is missing.
+      Every job restores it, but only one job per runner environment should
+      save it: on a lockfile change each saver compresses and uploads the whole
+      store (~300 MB), and all but the first upload are thrown away.
+    required: false
+    default: "false"
 
 runs:
   using: composite
@@ -24,16 +32,40 @@ runs:
       uses: actions/setup-node@v6
       with:
         node-version: ${{ inputs.node-version }}
-        cache: pnpm
         registry-url: "https://npm.pkg.github.com"
       env:
         NODE_AUTH_TOKEN: ${{ inputs.gh-font-read-token }}
+
+    # Cached here rather than with setup-node's `cache: pnpm`, which saves from
+    # every job that misses. The store path is part of a cache entry's
+    # identity, so jobs in the Playwright container (store under /github/home)
+    # and on the bare runner (under /home/runner) keep separate entries under
+    # the same key, and each needs its own saver.
+    - name: Locate the pnpm store
+      id: pnpm-store
+      shell: bash
+      run: echo "path=$(pnpm store path --silent)" >> "$GITHUB_OUTPUT"
+
+    - name: Restore the pnpm store
+      id: pnpm-cache
+      uses: actions/cache/restore@v6
+      with:
+        path: ${{ steps.pnpm-store.outputs.path }}
+        key: pnpm-store-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('pnpm-lock.yaml') }}
 
     - name: Install dependencies
       shell: bash
       run: pnpm install --frozen-lockfile
       env:
         GH_FONT_READ: ${{ inputs.gh-font-read-token }}
+
+    - name: Save the pnpm store
+      if: inputs.save-pnpm-cache == 'true' && steps.pnpm-cache.outputs.cache-hit != 'true'
+      uses: actions/cache/save@v6
+      with:
+        path: ${{ steps.pnpm-store.outputs.path }}
+        key: ${{ steps.pnpm-cache.outputs.cache-primary-key }}
+
     - name: Create .env file
       shell: bash
       run: |

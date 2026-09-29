@@ -34,29 +34,9 @@ concurrency:
   group: snapshot-baselines-${{ github.event.pull_request.head.ref || github.ref_name }}
   cancel-in-progress: true
 
-env:
-  PAYLOAD_SECRET: e2e-payload-secret
-  NEXT_PUBLIC_SERVER_URL: http://localhost:8000
-  USE_LOCAL_STORAGE: "true"
-  # The Merch block has no built-in store site — without this it renders
-  # nothing and merch.spec.ts has no carousel to exercise.
-  MERCH_SITE_URL: https://digitalgroundgame.org/merch
-  # Hostname is the services key ("postgres"), not localhost — the job runs
-  # inside a container, and service containers are reachable by their
-  # service-id alias on the shared Docker network, not via the runner's
-  # loopback interface.
-  DATABASE_URI: postgres://postgres:postgres@postgres:5432/pragmatic-papers-e2e
-  E2E_PROD_SERVER: "true"
-  # Refuse to render with the Inter fallback. scripts/install-fonts.ts silently
-  # substitutes Inter when @digitalgroundgame/fonts can't be fetched, which
-  # turns a broken GH_FONT_READ into a whole-suite "visual regression" whose PR
-  # comment invites you to commit Inter-rendered baselines. Worse, the pnpm
-  # store cache hides the breakage on dev: an unchanged lockfile means
-  # `reused N, downloaded 0`, so the registry is never called and the token's
-  # validity is never exercised — the suite only goes red on the first PR that
-  # touches the lockfile. Failing at install turns that into one legible error
-  # on the branch that first re-fetches, instead of nine bogus diffs.
-  FONTS_REQUIRED: "true"
+# The E2E environment (database, server URL, FONTS_REQUIRED, ...) is set by
+# .github/actions/setup-e2e, shared with update-snapshots.yml so the two
+# workflows always render the same page.
 
 jobs:
   test:
@@ -87,6 +67,7 @@ jobs:
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
+          # Must match DATABASE_URI in .github/actions/setup-e2e.
           POSTGRES_DB: pragmatic-papers-e2e
         ports:
           - 5432:5432
@@ -101,28 +82,13 @@ jobs:
         with:
           fetch-depth: 0
 
-      # actions/checkout's files are owned by a different UID than this
-      # container's user, so git's dubious-ownership check blocks every git
-      # command below unless the workspace is explicitly trusted.
-      - name: Trust the checked-out workspace
-        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
-
-      # The Playwright image doesn't ship the GitHub CLI, but several steps
-      # below (committing baselines, posting PR comments via
-      # scripts/pr-screenshot-comment.ts) shell out to `gh`. Pull the release
-      # tarball straight from GitHub instead of going through the apt repo —
-      # that path ran `apt-get update` twice (a full package-index rebuild
-      # each time, ~20-40s) just to land one static binary. The pinned version
-      # only needs to be recent enough for the `gh api`/`gh run`/`gh pr`
-      # commands used here; bump freely.
-      - name: Install GitHub CLI
-        run: |
-          GH_VERSION=2.63.2
-          ARCH=$(dpkg --print-architecture)
-          curl -fsSL "https://github.com/cli/cli/releases/download/v${GH_VERSION}/gh_${GH_VERSION}_linux_${ARCH}.tar.gz" \
-            | tar -xz -C /tmp
-          install "/tmp/gh_${GH_VERSION}_linux_${ARCH}/bin/gh" /usr/local/bin/gh
-          gh --version
+      - name: Set up E2E
+        uses: ./.github/actions/setup-e2e
+        with:
+          gh-font-read-token: ${{ secrets.GH_FONT_READ }}
+          # The job that saves the pnpm store for the Playwright image, which
+          # the Storybook job in ci.yml also restores from.
+          save-pnpm-cache: "true"
 
       # Captured before the later "Commit new snapshot baselines" step can
       # advance HEAD, so anything describing *this* test run (regression
@@ -131,29 +97,6 @@ jobs:
       - name: Record tested commit
         id: tested
         run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
-
-      - name: Set up Node.js environment
-        uses: ./.github/actions/setup-project
-        with:
-          node-version: "24.x"
-          gh-font-read-token: ${{ secrets.GH_FONT_READ }}
-          payload-secret: ${{ env.PAYLOAD_SECRET }}
-
-      # Restores Next.js incremental compilation cache so `next build` inside
-      # the E2E run only recompiles what changed since the last run on this
-      # exact source tree. No `restore-keys` fallback: a partial (prefix) match
-      # restores whatever `.next/cache` a DIFFERENT source tree last saved under
-      # the same lockfile hash, and Next's incremental build doesn't reliably
-      # notice that a plain data import (e.g. a fixture JSON bundled into the
-      # seed) changed underneath it — it can silently keep serving output baked
-      # from that other tree instead of rebuilding. An exact-key-only cache
-      # still speeds up a re-run of unchanged source; anything that actually
-      # changed gets a real (if slower) clean build instead of a wrong one.
-      - name: Cache Next.js build cache
-        uses: actions/cache@v6
-        with:
-          path: .next/cache
-          key: nextjs-${{ hashFiles('pnpm-lock.yaml') }}-${{ hashFiles('src/**/*.[jt]s', 'src/**/*.[jt]sx', 'src/**/*.json', '*.[jt]s', '*.[jt]sx') }}
 
       # Only fills in baselines for tests that don't have one yet. Any test
       # with an existing baseline is still compared strictly and fails the

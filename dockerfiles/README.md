@@ -121,7 +121,7 @@ Use managed PostgreSQL service (AWS RDS, Supabase, Neon, etc.) for all deploymen
 What Coolify's docs say about behaviour that matters to this setup (read them with the `upstream-docs` skill, `coolify` source; paths are under `content/docs/`):
 
 - **Preview variables are a separate group.** The development app's **Production Environment Variables** are staging's; **Preview Deployment Environment Variables** are the previews'. Changing a value for both means changing it twice (`applications/deployments/preview-deployments.mdx`).
-- **Closing a PR deletes its preview's containers, not its database.** Data a preview wrote to an external service stays, so each preview's `pragmatic_papers_pr_<n>` copy of staging outlives the PR. Nothing in this repo drops them yet.
+- **Closing a PR deletes its preview's containers, not its database.** Data a preview wrote to an external service stays, so each preview's `pragmatic_papers_pr_<n>` copy of staging outlives the PR; later preview builds drop it (see [Dropping closed PRs' preview databases](#dropping-closed-prs-preview-databases)).
 - **Build secrets need BuildKit.** With **Use Docker Build Secrets** on, Coolify mounts build-time variables as secrets; without BuildKit it silently falls back to build arguments, which can show in the image's metadata (`applications/configuration/environment-variables.mdx`). Each variable also has independent **Build Variable** / **Runtime Variable** toggles; turn **Build Variable** off for secrets the build doesn't read.
 - **Old images are kept for rollback**, a configured number per app, and Docker cleanup skips them unless **Disable Application Image Retention** is on. A rollback runs an old image with the _current_ variables (`applications/deployments/rollbacks.mdx`, `core/infrastructure/servers/automated-docker-cleanup.mdx`).
 - **Deployment logs can't be cleared.** The docs describe no way to delete a deployment's log, so anything a build prints stays readable to whoever can open the app in Coolify (#1066).
@@ -322,6 +322,23 @@ Coolify deletes a closed PR's preview containers but not its database, so every 
 - **Previews only.** Staging and production builds skip it (`COPY_SOURCE_DATABASE` isn't `true` there).
 - **A reopened PR** gets a fresh copy on its next build, like a new one.
 - **Credentials:** it reads open PRs from GitHub's public API without a token, which works while the repository is public (60 requests an hour per server, one or two per build). For a private repository, add a `GITHUB_TOKEN` build variable to the development application's preview variables: a fine-grained token with read access to pull requests. `GITHUB_REPOSITORY` overrides `digitalgroundgame/pragmatic-papers`.
+
+### Pruning the image registry
+
+Coolify pushes every build's image to a `registry:2` service on dev-worker (`registry-<uuid>`), tagged `pr-<n>-<sha>` for a preview. A registry never deletes anything by itself, so by September 2026 it held 224 tags and 6.5 GB, the largest single use of dev-worker's 38 GB disk after the swap file. `dockerfiles/scripts/prune-registry.sh` trims it. It runs on dev-worker from root's crontab, not in a build:
+
+```sh
+# once, as root on dev-worker
+curl -fsSL https://raw.githubusercontent.com/digitalgroundgame/pragmatic-papers/dev/dockerfiles/scripts/prune-registry.sh -o /root/prune-registry.sh
+chmod +x /root/prune-registry.sh
+/root/prune-registry.sh            # dry run: lists what it keeps and how many it would delete
+(crontab -l 2>/dev/null; echo '30 4 * * * /root/prune-registry.sh --apply >> /var/log/prune-registry.log 2>&1') | crontab -
+```
+
+- **What it keeps:** every tag a container on the server runs, the newest 2 tags of each open PR (`KEEP_PER_PR`), every tag of a PR newer than all the open ones GitHub listed (it may be too new to be listed), and the newest 10 tags that aren't a PR's (`KEEP_OTHER`), for rollbacks and for production if it runs them. Everything else goes, including every tag of a closed PR.
+- **How:** it deletes the tags' directories in the registry's storage, then runs `registry garbage-collect --delete-untagged` in a throwaway container sharing the registry's volumes. The registry is **stopped** meanwhile, so a push can't land half-collected; a deploy that pushes in that minute fails and needs redeploying, hence 04:30.
+- **It deletes nothing when unsure:** if GitHub can't be reached, lists no open PRs, or fails partway through its pages, it exits 1 before touching the registry. It finds the registry as the only `registry-*` container and its storage as the mount at `/var/lib/registry`; set `REGISTRY_CONTAINER` if there are several.
+- **Private repository:** set `GITHUB_TOKEN` in the crontab line, a fine-grained token with read access to pull requests.
 
 ## 💾 Storage Configuration (Pragmatic Papers)
 

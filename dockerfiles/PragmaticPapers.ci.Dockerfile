@@ -115,8 +115,10 @@ ENV NODE_ENV=production \
     BUILD_ENV=${BUILD_ENV} \
     BUILT_WITHOUT_DATABASE=true
 
-# postgresql-client for copy-database.sh, now run here rather than while building.
-RUN apk add --no-cache dumb-init libc6-compat postgresql-client \
+# The PostgreSQL client for copy-database.sh, now run here rather than while building.
+# Pinned to the server's major version, as in PragmaticPapers.Dockerfile's builder:
+# its pg_dump fallback refuses any other.
+RUN apk add --no-cache dumb-init libc6-compat postgresql17-client \
     && addgroup --system --gid 1001 nodejs \
     && adduser --system --uid 1001 nextjs
 

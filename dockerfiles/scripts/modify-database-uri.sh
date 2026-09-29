@@ -27,10 +27,13 @@ fi
 
 echo "BUILD_ENV: preview - proceeding with DATABASE_URI modification"
 
+# Without it the preview can't name its own database. Falling back to DATABASE_URI
+# as-is would migrate and serve the database every preview shares, with this branch's
+# migrations, and leave other previews querying columns they don't have (#1058).
 if [ -z "$COOLIFY_FQDN" ]; then
-    echo "COOLIFY_FQDN is not set, using DATABASE_URI as-is"
-    echo "DATABASE_URI: $(redact_uri "$DATABASE_URI")"
-    exit 0
+    echo "ERROR: COOLIFY_FQDN is not set, so this preview can't get its own database"
+    echo "Refusing to build against the shared DATABASE_URI"
+    exit 1
 fi
 
 echo "COOLIFY_FQDN: $COOLIFY_FQDN"

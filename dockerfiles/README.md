@@ -289,15 +289,18 @@ FORCE_DATABASE_COPY=false
 
 **What happens for PR #330** (`COOLIFY_FQDN=pr-330.pragmaticpapers.com`):
 
-1. `modify-database-uri.sh` names the preview database `pragmatic_papers_pr_330` and writes only that name to `/tmp/database_name`.
-2. `copy-database.sh` creates it with `CREATE DATABASE pragmatic_papers_pr_330 WITH TEMPLATE pragmatic_papers`, on the same server and with `DATABASE_URI`'s credentials. It leaves an existing preview database alone unless `FORCE_DATABASE_COPY=true`.
-3. Migrations and `next build` run against the preview database.
-4. The runner image carries `/app/database_name`, and `start.sh` applies it to the runtime `DATABASE_URI`. No credential is written into the image.
+1. `modify-database-uri.sh` names the preview database `pragmatic_papers_pr_330` and writes only that name to `/tmp/database_name`. A preview build without `COOLIFY_FQDN` fails instead of falling back to the database every preview shares ([#1058](https://github.com/digitalgroundgame/pragmatic-papers/issues/1058)).
+2. `copy-database.sh` creates it as a copy of `pragmatic_papers`, on the same server and with `DATABASE_URI`'s credentials. It tries `CREATE DATABASE … WITH TEMPLATE` first, which only works while nothing is connected to the source; with staging's app running it falls back to `pg_dump`/`pg_restore`. It never disconnects the source's clients: doing so failed whatever staging was serving ([#1057](https://github.com/digitalgroundgame/pragmatic-papers/issues/1057)). If the dump or restore fails, the half-restored database is dropped, so the next build copies again.
+3. It leaves an existing preview database alone unless `FORCE_DATABASE_COPY=true`. Then the previous deploy's container is still using it, so the script copies into `pragmatic_papers_pr_330_incoming`, migrates that, and only then drops the old database and renames the copy into place. The running preview is never left on a missing or unmigrated database ([#1058](https://github.com/digitalgroundgame/pragmatic-papers/issues/1058)); if the migration fails, the build fails and the old database is kept.
+4. Migrations and `next build` run against the preview database.
+5. The runner image carries `/app/database_name`, and `start.sh` applies it to the runtime `DATABASE_URI`. No credential is written into the image.
 
 **Requirements:**
 
 - `DATABASE_URI` must be available at build time _and_ runtime, with the same value, in **every** environment: the image carries no credentials, so the running app reads only the runtime value, and `start.sh` exits if it's missing.
-- Its user needs `CREATEDB` and permission to terminate other sessions on the source database: `CREATE DATABASE … TEMPLATE` fails while anyone is connected to it, so the script disconnects them first. That includes staging's own sessions whenever a new preview database is created.
+- Its user needs `CREATEDB`, read access to the source database (for `pg_dump`), and permission to terminate sessions on **preview** databases (for a forced recopy). It never terminates sessions on the source.
+- **The builder's `pg_dump` must match the server's major version.** With staging's app connected, dump/restore is the usual path for a new preview, not the exception. An older `pg_dump` refuses a newer server, and a newer one writes settings an older server's restore rejects. The builder gets its client from Alpine's unpinned `postgresql-client` (the builder stage's `apk add`), whose version follows the Alpine release under the Node image. `copy-database.sh` compares the two before creating anything, prints `pg_dump major version: N; server: M` in the build log, and fails the build with the package to install when they differ. The fix is to pin the matching `postgresqlNN-client`.
+- **A dump holds `ACCESS SHARE` locks on staging's tables while it runs.** If a staging deploy runs `payload migrate` at the same time, an `ALTER TABLE` waits for them, and staging's queries queue behind that `ALTER`. While the database is small this lasts seconds; if staging ever hangs during a deploy, check whether a preview build was copying at the time.
 
 **Running commands inside a preview container:** only `start.sh` points `DATABASE_URI` at the preview's own database. A shell opened with `docker exec` or Coolify's terminal still has the unsuffixed `DATABASE_URI`, which is **staging's** database. Apply the preview name first:
 

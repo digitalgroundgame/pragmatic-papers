@@ -66,6 +66,21 @@ drop_database() {
     exit 1
 }
 
+# pg_dump refuses to dump a server of a newer major version, and a newer pg_dump writes
+# settings (PostgreSQL 17's transaction_timeout, say) that an older server's restore
+# rejects. The builder's client comes from Alpine's postgresql-client, so check it
+# matches the server before creating anything, and print both for the build log.
+check_client_version() {
+    server_major=$(( $(psql "$ADMIN_URI" -tAc "SHOW server_version_num") / 10000 ))
+    client_major=$(pg_dump --version | sed -E 's/^[^0-9]*([0-9]+).*/\1/')
+    echo "pg_dump major version: $client_major; server: $server_major"
+    if [ "$client_major" != "$server_major" ]; then
+        echo "ERROR: pg_dump $client_major can't reliably copy a PostgreSQL $server_major database."
+        echo "Install postgresql${server_major}-client in the Dockerfile's builder stage."
+        exit 1
+    fi
+}
+
 # Creates database $1 as a copy of the source.
 #
 # Never disconnects the source's clients: the source is staging, and killing them
@@ -80,6 +95,7 @@ copy_database() {
         return 0
     fi
     echo "Template copy unavailable (the source is in use); falling back to dump/restore"
+    check_client_version
 
     psql "$ADMIN_URI" -v ON_ERROR_STOP=1 -c "CREATE DATABASE \"$1\";"
     # Through a file rather than a pipe: sh has no pipefail, so a failing pg_dump

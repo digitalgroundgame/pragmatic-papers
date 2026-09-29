@@ -21,15 +21,18 @@ const PREVIEW_URI = URI.replace("pragmatic_papers?", "pragmatic_papers_pr_330?")
 // $CALLS_LOG, one line per call. psql answers the "does the target exist?" query from
 // $TARGET_EXISTS and, while $SOURCE_BUSY is set, refuses a template copy the way Postgres
 // does while anything is connected to the template. pnpm also logs the DATABASE_URI it
-// migrated. $DUMP_STATUS, $RESTORE_STATUS and $MIGRATE_STATUS make those steps fail.
+// migrated. $DUMP_STATUS, $RESTORE_STATUS and $MIGRATE_STATUS make those steps fail;
+// $SERVER_VERSION_NUM and $CLIENT_VERSION set the server's and pg_dump's versions.
 const FAKES: Record<string, string> = {
   psql: `case "$*" in
   *"FROM pg_database"*) [ "$TARGET_EXISTS" = "true" ] && echo 1 ;;
+  *"server_version_num"*) echo "\${SERVER_VERSION_NUM:-170006}" ;;
   *"WITH TEMPLATE"*) if [ "$SOURCE_BUSY" = "true" ]; then
     echo 'ERROR:  source database "pragmatic_papers" is being accessed by other users' >&2; exit 1; fi ;;
 esac
 exit 0`,
-  pg_dump: `for arg; do case "$arg" in --file=*) : > "\${arg#--file=}" ;; esac; done
+  pg_dump: `[ "$1" = "--version" ] && echo "pg_dump (PostgreSQL) \${CLIENT_VERSION:-17.6}" && exit 0
+for arg; do case "$arg" in --file=*) : > "\${arg#--file=}" ;; esac; done
 exit "\${DUMP_STATUS:-0}"`,
   pg_restore: `exit "\${RESTORE_STATUS:-0}"`,
   pnpm: `echo "migrated DATABASE_URI=$DATABASE_URI" >> "$CALLS_LOG"
@@ -219,6 +222,19 @@ describe("preview database build", () => {
     expect(status).toBe(1)
     expect(output).toContain("pg_dump/pg_restore failed")
     expect(calls().at(-1)).toContain('DROP DATABASE IF EXISTS "pragmatic_papers_pr_330"')
+  })
+
+  it.each([
+    ["older", "16.4"],
+    ["newer", "18.0"],
+  ])("refuses to dump with a %s pg_dump than the server, before creating anything", (_, client) => {
+    const { status, output } = copyToPreview({ SOURCE_BUSY: "true", CLIENT_VERSION: client })
+
+    expect(status).toBe(1)
+    expect(output).toContain(`pg_dump major version: ${client.split(".")[0]}; server: 17`)
+    expect(output).toContain("Install postgresql17-client")
+    expect(indexOf('CREATE DATABASE "pragmatic_papers_pr_330";')).toBe(-1)
+    expect(calls().some((call) => call.startsWith("pg_dump --format"))).toBe(false)
   })
 
   it("migrates a forced copy beside the live one before swapping it in (#1058)", () => {

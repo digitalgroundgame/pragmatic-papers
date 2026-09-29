@@ -20,19 +20,23 @@ const CONTAINER = "registry-aow0w84kckskokscwgkg8k0o"
 const REPO = "digitalgroundgame/pragmatic-papers"
 
 // Fake docker and curl, each logging its arguments to $CALLS_LOG. docker answers the
-// script's ps and inspect queries from $CONTAINERS, $RUNNING_IMAGES, $STORAGE and
-// $REGISTRY_RUNNING, and `docker run` (the garbage collection) exits $GC_STATUS. curl
+// script's ps and inspect queries from $CONTAINERS, $RUNNING_IMAGES, $REGISTRY_ENV (the
+// container's environment), $REGISTRY_RUNNING and $STORAGE (the source of the mount at
+// $STORAGE_ROOT). `docker run` (the garbage collection) logs the env file it was given and
+// exits $GC_STATUS. curl
 // prints $PAGES/page-<n>.json for the page asked for, or exits $CURL_STATUS.
 const FAKES: Record<string, string> = {
   docker: `case "$1 $2" in
   "ps -a") printf '%s\\n' "$CONTAINERS" ;;
   "ps --format") printf '%s\\n' "$RUNNING_IMAGES" ;;
   "inspect -f") case "$3" in
-    *var/lib/registry*) echo "$STORAGE" ;;
+    *Config.Env*) printf '%s\\n' "$REGISTRY_ENV" ;;
+    *'"'"$STORAGE_ROOT"'"'*) echo "$STORAGE" ;;
     *Config.Image*) echo registry:2 ;;
     *State.Running*) echo "\${REGISTRY_RUNNING:-true}" ;;
   esac ;;
-  run*) echo "blobs eligible for deletion: 42"; exit "\${GC_STATUS:-0}" ;;
+  run*) for arg; do [ "$prev" = --env-file ] && sed 's/^/env: /' "$arg" >> "$CALLS_LOG"; prev=$arg; done
+    echo "blobs eligible for deletion: 42"; exit "\${GC_STATUS:-0}" ;;
 esac
 exit 0`,
   curl: `[ -n "$CURL_STATUS" ] && exit "$CURL_STATUS"
@@ -114,6 +118,9 @@ function run(args: string[] = [], env: Record<string, string> = {}) {
       RUNNING_IMAGES: "",
       STORAGE: storage,
       REGISTRY_RUNNING: "true",
+      // Coolify's template: the storage is at /data, not the image's /var/lib/registry.
+      REGISTRY_ENV: "REGISTRY_STORAGE_FILESYSTEM_ROOTDIRECTORY=/data\nREGISTRY_HTTP_SECRET=s3cret",
+      STORAGE_ROOT: "/data",
       CURL_STATUS: "",
       GC_STATUS: "",
       GITHUB_TOKEN: "",
@@ -237,10 +244,50 @@ describe("prune-registry.sh", () => {
       .filter((line) => /^docker (stop|run|start)/.test(line))
     expect(docker).toEqual([
       `docker stop ${CONTAINER}`,
-      `docker run --rm --volumes-from ${CONTAINER} --entrypoint registry registry:2 garbage-collect --delete-untagged /etc/docker/registry/config.yml`,
+      expect.stringMatching(
+        new RegExp(
+          `^docker run --rm --volumes-from ${CONTAINER} --env-file \\S+ --entrypoint registry registry:2 garbage-collect --delete-untagged /etc/docker/registry/config.yml$`,
+        ),
+      ),
       `docker start ${CONTAINER}`,
     ])
     expect(output).toContain("blobs eligible for deletion: 42")
+  })
+
+  it("collects garbage with the registry's environment, where its storage is", () => {
+    pushTags("pr-6-a", "pr-7-a")
+    openPrs(7)
+
+    const { output } = run(["--apply"])
+
+    expect(output).toContain(`Storage: /data in the container, ${storage} on this server`)
+    expect(calls()).toContain("env: REGISTRY_STORAGE_FILESYSTEM_ROOTDIRECTORY=/data\n")
+    expect(calls()).toContain("env: REGISTRY_HTTP_SECRET=s3cret\n")
+  })
+
+  it("looks for the storage at /var/lib/registry when the environment doesn't move it", () => {
+    pushTags("pr-6-a", "pr-7-a")
+    openPrs(7)
+
+    const { status } = run(["--apply"], { REGISTRY_ENV: "", STORAGE_ROOT: "/var/lib/registry" })
+
+    expect(status).toBe(0)
+    expect(remaining()).toEqual(["pr-7-a"])
+  })
+
+  it("deletes nothing when the storage isn't where the environment says", () => {
+    pushTags("pr-6-a", "pr-7-a")
+    openPrs(7)
+
+    // The storage is mounted at /data, but nothing tells the script so.
+    const { status, output } = run(["--apply"], { REGISTRY_ENV: "" })
+
+    expect(status).toBe(1)
+    expect(output).toContain(
+      "can't find registry-aow0w84kckskokscwgkg8k0o's storage, /var/lib/registry",
+    )
+    expect(remaining()).toEqual(["pr-6-a", "pr-7-a"])
+    expect(calls()).not.toMatch(/docker (stop|run)/)
   })
 
   it("leaves a stopped registry stopped", () => {

@@ -43,6 +43,13 @@ CONFIG=${REGISTRY_CONFIG:-/etc/docker/registry/config.yml}
 KEEP_PER_PR=${KEEP_PER_PR:-2}
 KEEP_OTHER=${KEEP_OTHER:-10}
 
+restart=false
+cleanup() {
+    rm -f "${env_file:-}" "${running:-}" "${plan:-}" "${gc_log:-}"
+    if [ "$restart" = true ]; then docker start "$container" >/dev/null && echo "Started $container"; fi
+}
+trap cleanup EXIT
+
 echo "=== Pruning the registry ($(date -u '+%Y-%m-%d %H:%M:%S UTC')) ==="
 
 container=${REGISTRY_CONTAINER:-}
@@ -54,12 +61,21 @@ if [ -z "$container" ]; then
     fi
 fi
 
-storage=$(docker inspect -f '{{range .Mounts}}{{if eq .Destination "/var/lib/registry"}}{{.Source}}{{end}}{{end}}' "$container")
+# The registry's environment. Its variables override its config file, and Coolify's
+# template moves the storage with REGISTRY_STORAGE_FILESYSTEM_ROOTDIRECTORY, leaving
+# /var/lib/registry an empty volume. Garbage collection runs with the same environment.
+env_file=$(mktemp)
+docker inspect -f '{{range .Config.Env}}{{println .}}{{end}}' "$container" | grep . > "$env_file" || true
+root=$(sed -n 's/^REGISTRY_STORAGE_FILESYSTEM_ROOTDIRECTORY=//p' "$env_file" | tail -1)
+root=${root:-/var/lib/registry}
+
+storage=$(docker inspect -f "{{range .Mounts}}{{if eq .Destination \"$root\"}}{{.Source}}{{end}}{{end}}" "$container")
 repositories="$storage/docker/registry/v2/repositories"
 if [ -z "$storage" ] || [ ! -d "$repositories" ]; then
-    echo "ERROR: can't find $container's storage (looked for $repositories)"
+    echo "ERROR: can't find $container's storage, $root in the container (looked for $repositories)"
     exit 1
 fi
+echo "Storage: $root in the container, $storage on this server"
 
 # The open PRs' numbers, one per line. Each PR in the list has exactly one top-level
 # "url" ending in /pulls/<n>, so counting those also tells when the last page is read.
@@ -90,12 +106,6 @@ echo "Open PRs: $(echo "$open" | sort -n | tr '\n' ' ')"
 
 running=$(mktemp)
 plan=$(mktemp)
-restart=false
-cleanup() {
-    rm -f "$running" "$plan" "${gc_log:-}"
-    if [ "$restart" = true ]; then docker start "$container" >/dev/null && echo "Started $container"; fi
-}
-trap cleanup EXIT
 
 # The tags this server's containers run, whichever repository they're from.
 docker ps --format '{{.Image}}' | sed 's/.*://' > "$running"
@@ -177,7 +187,7 @@ awk '$2 == "delete"' "$plan" | while read -r tags _ tag; do rm -rf "${tags:?}/${
 echo "Deleted $doomed tags; collecting garbage..."
 # Through a file rather than a pipe: sh has no pipefail, so a failure would go unnoticed.
 gc_log=$(mktemp)
-if ! docker run --rm --volumes-from "$container" --entrypoint registry "$image" \
+if ! docker run --rm --volumes-from "$container" --env-file "$env_file" --entrypoint registry "$image" \
     garbage-collect --delete-untagged "$CONFIG" > "$gc_log" 2>&1; then
     tail -20 "$gc_log"
     echo "ERROR: garbage collection failed; the tags are deleted, and the next run collects their files"

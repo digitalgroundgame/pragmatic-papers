@@ -331,10 +331,11 @@ jobs:
         uses: actions/github-script@v9
         env:
           PREVIEW_URL: ${{ steps.preview.outputs.url }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         with:
           script: |
             const marker = "<!-- storybook-preview -->"
-            const body = `${marker}\n📚 **Storybook preview:** ${process.env.PREVIEW_URL}\n\nUpdated for ${context.sha.slice(0, 7)}.`
+            const body = `${marker}\n📚 **Storybook preview:** ${process.env.PREVIEW_URL}\n\nUpdated for ${process.env.HEAD_SHA.slice(0, 7)}.`
             const { owner, repo } = context.repo
             const issue_number = context.issue.number
             const comments = await github.paginate(github.rest.issues.listComments, { owner, repo, issue_number })

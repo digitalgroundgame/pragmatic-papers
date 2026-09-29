@@ -1,4 +1,5 @@
 import { spawnSync } from "node:child_process"
+import { createHash } from "node:crypto"
 import {
   chmodSync,
   existsSync,
@@ -61,13 +62,31 @@ afterEach(() => {
   rmSync(dir, { recursive: true, force: true })
 })
 
-/** Creates the tags, oldest first, each a minute newer than the one before. */
-function pushTags(...tags: string[]) {
+/**
+ * Pushes the tags, oldest first, each a minute after the one before: its current/link names
+ * a manifest blob, an image's or, for a tag listed in `indexes`, an image index's.
+ */
+function pushTagsAs(indexes: string[], ...tags: string[]) {
   const start = Date.now() / 1000 - 86_400
   tags.forEach((tag, i) => {
-    mkdirSync(join(tagsDir, tag, "current"), { recursive: true })
-    utimesSync(join(tagsDir, tag), start + i * 60, start + i * 60)
+    const hex = createHash("sha256").update(tag).digest("hex")
+    const blob = join(storage, "docker/registry/v2/blobs/sha256", hex.slice(0, 2), hex)
+    mkdirSync(blob, { recursive: true })
+    const manifest = indexes.includes(tag)
+      ? { schemaVersion: 2, manifests: [{ digest: "sha256:0" }] }
+      : { schemaVersion: 2, config: {}, layers: [] }
+    writeFileSync(join(blob, "data"), JSON.stringify(manifest))
+
+    const current = join(tagsDir, tag, "current")
+    mkdirSync(current, { recursive: true })
+    writeFileSync(join(current, "link"), `sha256:${hex}`)
+    utimesSync(join(current, "link"), start + i * 60, start + i * 60)
   })
+}
+
+/** Pushes plain images. */
+function pushTags(...tags: string[]) {
+  pushTagsAs([], ...tags)
 }
 
 /** Makes GitHub list these PRs as open, 100 to a page. */
@@ -140,6 +159,40 @@ describe("prune-registry.sh", () => {
     run(["--apply"], { KEEP_OTHER: "2" })
 
     expect(remaining()).toEqual(["ccc", "ddd", "pr-1-a"])
+  })
+
+  it("ranks a tag by its latest push, not its first", () => {
+    pushTags("aaa", "bbb", "ccc")
+    // Pushing aaa again rewrites its link, not its directory.
+    utimesSync(join(tagsDir, "aaa", "current", "link"), new Date(), new Date())
+    openPrs(1)
+
+    run(["--apply"], { KEEP_OTHER: "2" })
+
+    expect(remaining()).toEqual(["aaa", "ccc"])
+  })
+
+  it("refuses to run while a tag it keeps is an image index", () => {
+    pushTagsAs(["pr-7-b"], "pr-6-a", "pr-7-a", "pr-7-b")
+    openPrs(7)
+
+    const { status, output } = run(["--apply"])
+
+    expect(status).toBe(1)
+    expect(output).toContain("these tags are image indexes")
+    expect(output).toContain("  pr-7-b")
+    expect(remaining()).toEqual(["pr-6-a", "pr-7-a", "pr-7-b"])
+    expect(calls()).not.toMatch(/docker (stop|run)/)
+  })
+
+  it("deletes an image index it doesn't keep", () => {
+    pushTagsAs(["pr-6-a"], "pr-6-a", "pr-7-a")
+    openPrs(7)
+
+    const { status } = run(["--apply"])
+
+    expect(status).toBe(0)
+    expect(remaining()).toEqual(["pr-7-a"])
   })
 
   it("keeps a tag a container is running, however old", () => {

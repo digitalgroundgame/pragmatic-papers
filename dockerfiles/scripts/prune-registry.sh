@@ -19,7 +19,8 @@
 # The registry is stopped while it does, so a push can't land half-collected; a deploy
 # that pushes in that minute fails and needs redeploying.
 #
-# If it can't tell which PRs are open, it deletes nothing.
+# If it can't tell which PRs are open, or a tag it keeps is an image index (see below),
+# it deletes nothing.
 #
 # Settings (environment variables):
 #   REGISTRY_CONTAINER  the registry's container; defaults to the only one named registry-*
@@ -99,9 +100,15 @@ trap cleanup EXIT
 # The tags this server's containers run, whichever repository they're from.
 docker ps --format '{{.Image}}' | sed 's/.*://' > "$running"
 
+# The tags in directory $1, most recently pushed first. A tag's directory is created on
+# its first push, but every push rewrites its current/link, so that's what's sorted.
+tags_by_push() {
+    ls -t "$1"/*/current/link 2>/dev/null | sed -e "s|^$1/||" -e 's|/current/link$||'
+}
+
 # Prints "keep <tag>" or "delete <tag>" for the tags in directory $1, newest first.
 plan_tags() {
-    ls -t "$1" | awk -v open="$(echo "$open" | tr '\n' ',')" -v newest="$newest_open" \
+    tags_by_push "$1" | awk -v open="$(echo "$open" | tr '\n' ',')" -v newest="$newest_open" \
         -v per_pr="$KEEP_PER_PR" -v other="$KEEP_OTHER" '
         BEGIN { n = split(open, prs, ","); for (i = 1; i <= n; i++) if (prs[i] != "") is_open[prs[i]] = 1 }
         match($0, /^pr-[0-9]+-/) {
@@ -131,6 +138,23 @@ for manifests in $(find "$repositories" -type d -name _manifests); do
     echo "$name: $count tags, deleting $deleting, keeping:"
     grep "^$tags keep " "$plan" | awk '{ print "  " $3 }'
 done
+
+# registry:2's `garbage-collect --delete-untagged` deletes the platform manifests an image
+# index (a multi-platform or attested image) points to, because no tag names them directly,
+# which leaves the index's tag unpullable (distribution/distribution#3178). So refuse to
+# run while any tag we keep is an index. An index lists "manifests"; an image, "layers".
+indexes=$(awk '$2 == "keep" { print $1 "/" $3 }' "$plan" | while read -r tag_dir; do
+    digest=$(cat "$tag_dir/current/link" 2>/dev/null) || continue
+    hex=${digest#sha256:}
+    manifest="$storage/docker/registry/v2/blobs/sha256/$(echo "$hex" | cut -c1-2)/$hex/data"
+    if grep -q '"manifests"' "$manifest" 2>/dev/null; then echo "  ${tag_dir##*/}"; fi
+done)
+if [ -n "$indexes" ]; then
+    echo "ERROR: these tags are image indexes, which registry:2's garbage collection would"
+    echo "break (distribution/distribution#3178); deleting nothing:"
+    echo "$indexes"
+    exit 1
+fi
 
 if [ "$doomed" -eq 0 ]; then
     echo "Nothing to delete"

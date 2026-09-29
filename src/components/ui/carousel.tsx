@@ -5,6 +5,7 @@ import { ArrowLeft, ArrowRight } from "lucide-react"
 import * as React from "react"
 
 import { Button } from "@/components/ui/button"
+import { Dot } from "@/components/ui/dot"
 import { cn } from "@/utilities/utils"
 
 type CarouselApi = UseEmblaCarouselType[1]
@@ -249,16 +250,20 @@ export const CarouselIndicators: React.FC<{
       className={cn("absolute right-0 bottom-10 left-0 z-10 flex justify-center gap-2", className)}
     >
       {Array.from({ length: count }).map((_, idx) => (
-        <button
+        <Dot
           key={idx}
-          onClick={() => api?.scrollTo(idx)}
-          type="button"
-          className={cn(
-            "bg-muted-foreground ring-background inline-block h-2 w-2 rounded-sm ring-2 transition-all",
-            idx === current ? "bg-primary scale-125" : "opacity-40",
-          )}
-          aria-label={`Go to slide ${idx + 1}`}
-          tabIndex={-1}
+          shape="square"
+          tone={idx === current ? "primary" : "muted"}
+          ring
+          className={cn("transition-all", idx === current ? "scale-125" : "opacity-40")}
+          render={
+            <button
+              type="button"
+              onClick={() => api?.scrollTo(idx)}
+              aria-label={`Go to slide ${idx + 1}`}
+              tabIndex={-1}
+            />
+          }
         />
       ))}
     </div>

@@ -2,6 +2,7 @@
 
 import React, { useCallback } from "react"
 
+import { Dot } from "@/components/ui/dot"
 import { cn } from "@/utilities/utils"
 
 import type { FreshName } from "./names"
@@ -25,13 +26,10 @@ interface FreshProps {
 export function Fresh({ name, className }: FreshProps): React.ReactNode {
   if (!useIsUnseen(name)) return null
   return (
-    <span
-      aria-hidden="true"
+    <Dot
+      ring
       data-slot="fresh"
-      className={cn(
-        "ring-background bg-brand pointer-events-none absolute top-0.5 right-0.5 size-2 rounded-full ring-2",
-        className,
-      )}
+      className={cn("pointer-events-none absolute top-0.5 right-0.5", className)}
     />
   )
 }

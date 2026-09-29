@@ -21,6 +21,7 @@ import {
 import type { ParentDocContext } from "@/blocks/SocialEmbed/types"
 import { SquiggleRuleBlock } from "@/blocks/SquiggleRule/Component"
 import { TimelineBlock } from "@/blocks/Timeline/Component"
+import { tableOfContentsConverter, withTableOfContentsAnchors } from "@/components/TableOfContents"
 import type {
   BannerBlock as BannerBlockProps,
   CodeBlock as CodeBlockProps,
@@ -71,7 +72,8 @@ function createJsxConverters(parentDoc?: ParentDocContext): JSXConvertersFunctio
   return ({ defaultConverters }) => ({
     ...defaultConverters,
     ...LinkJSXConverter({ internalDocToHref }),
-    blocks: {
+    ...tableOfContentsConverter,
+    blocks: withTableOfContentsAnchors({
       banner: ({ node }) => <BannerBlock className="col-start-2 mb-4" {...node.fields} />,
       code: ({ node }) => <CodeBlock className="col-start-2" {...node.fields} />,
       cta: ({ node }) => <CallToActionBlock {...node.fields} />,
@@ -108,7 +110,7 @@ function createJsxConverters(parentDoc?: ParentDocContext): JSXConvertersFunctio
       tiktokEmbed: ({ node }: { node: SerializedBlockNode<SocialEmbedBlockProps> }) => (
         <TikTokEmbedBlock {...node.fields} />
       ),
-    },
+    }),
     inlineBlocks: {
       inlineMathBlock: ({ node }: { node: SerializedInlineBlockNode<MathBlockProps> }) => (
         <MathBlock {...node.fields} />

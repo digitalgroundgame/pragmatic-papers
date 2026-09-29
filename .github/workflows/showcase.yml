@@ -16,7 +16,8 @@ name: Showcase
 #     gets the label. Removing either removes the other.
 #
 # The articles are pushed to the PR's Coolify preview once it's up, and the
-# description then lists links to them at the top, under any `Closes #N` line:
+# Showcase line then links each by title and moves to the top of the
+# description, under any `Closes #N` line (a link still reads as its slug):
 #   - after each preview deploy, when "Preview deployment" finishes. A deploy
 #     may re-copy the preview database, so this re-pushes after each one.
 #   - when the label is added or the line edited, for a preview that is
@@ -31,7 +32,8 @@ name: Showcase
 #
 # workflow_dispatch pushes named articles to a PR's preview (from the PR's
 # code) or to staging (as drafts, from the branch it was started on; needs the
-# SHOWCASE_STAGING_URL variable).
+# SHOWCASE_STAGING_URL variable). On a PR they join the Showcase line, which
+# it gains, with the label, if it had none, so later deploys push them too.
 #
 # workflow_run runs this file from the default branch with secrets, while the
 # push script comes from the PR, so the push only runs PR code from this
@@ -116,6 +118,8 @@ jobs:
     permissions:
       contents: read
       pull-requests: write
+      # The label, when a manual push adds the Showcase line.
+      issues: write
       deployments: read
     steps:
       # The script from the ref this run started on (dev for workflow_run; a

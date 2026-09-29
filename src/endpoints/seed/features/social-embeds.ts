@@ -11,7 +11,7 @@ import {
 /**
  * One example URL per social media platform.
  */
-const SOCIAL_MEDIA_URLS: Pick<SocialEmbedBlock, "platform" | "url" | "snapshot" | "id">[] = [
+export const SOCIAL_MEDIA_URLS: Pick<SocialEmbedBlock, "platform" | "url" | "snapshot" | "id">[] = [
   {
     platform: "bluesky",
     url: "https://bsky.app/profile/destiny.gg/post/3lbjlth3tnc2k",
@@ -108,7 +108,9 @@ interface SocialEmbedBlockNode {
 /**
  * Creates a social embed block node for use within Lexical content
  */
-function createSocialEmbedBlock(item: (typeof SOCIAL_MEDIA_URLS)[number]): SocialEmbedBlockNode {
+export function createSocialEmbedBlock(
+  item: (typeof SOCIAL_MEDIA_URLS)[number],
+): SocialEmbedBlockNode {
   return {
     type: "block",
     fields: {
@@ -236,6 +238,7 @@ export const createSocialEmbedArticle = async (
       slug: "social-media-embed-test-all-variations",
       heroImage: mediaDocs[Math.floor(Math.random() * mediaDocs.length)]?.id,
       meta: {
+        title,
         description:
           "Test article containing all possible social media block variations from the HOSTNAMES map.",
         image: mediaDocs[0]?.id ?? undefined,
@@ -275,6 +278,7 @@ export const createLegacySocialEmbedArticle = async (
       slug: "legacy-social-media-embed-test-all-variations",
       heroImage: mediaDocs[Math.floor(Math.random() * mediaDocs.length)]?.id,
       meta: {
+        title,
         description:
           "Test article containing all legacy social media block variations using the old blockType structure (twitterEmbed, youtubeEmbed, etc.).",
         image: mediaDocs[0]?.id ?? undefined,

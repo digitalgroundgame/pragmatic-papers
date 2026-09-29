@@ -5,11 +5,13 @@ import {
   catalogSlugs,
   type Deps,
   hasShowcaseLine,
+  isLegacyLinks,
   LINKS_END,
   LINKS_START,
   main,
   optOut,
   planSync,
+  withLegacyLinks,
   withLinks,
   withShowcaseLine,
 } from "../../scripts/showcase-pr"
@@ -21,7 +23,9 @@ const ENV = { GITHUB_REPOSITORY: REPO, GITHUB_TOKEN: "gh-token", PR_NUMBER: "42"
 const catalog = (...slugs: string[]) =>
   `export const showcaseEntries = [\n${slugs.map((slug) => `  {\n    slug: "${slug}",\n  },`).join("\n")}\n]\n`
 
-const block = (...links: string[]) =>
+const block = (...links: string[]) => `${LINKS_START}\nShowcase: ${links.join(", ")}\n${LINKS_END}`
+/** The list descriptions carried before the Showcase line held the links. */
+const legacyBlock = (...links: string[]) =>
   `${LINKS_START}\n**On the preview:**\n\n${links.join("\n")}\n${LINKS_END}`
 
 describe("hasShowcaseLine", () => {
@@ -47,8 +51,12 @@ describe("withShowcaseLine", () => {
 
 describe("optOut", () => {
   it("removes the line and the link list, and leaves the rest", () => {
-    const body = `## Context\r\n\r\nShowcase: first\r\n\r\n## Test Plan\r\n\r\n- ok\r\n\r\n${block("- [first](u)")}\n`
+    const body = `## Context\r\n\r\nShowcase: first\r\n\r\n## Test Plan\r\n\r\n- ok\r\n\r\n${legacyBlock("- [first](/articles/first)")}\n`
     expect(optOut(body)).toBe("## Context\n\n## Test Plan\n\n- ok")
+  })
+
+  it("removes a linked line", () => {
+    expect(optOut(`${block("[First](/articles/first)")}\n\nText\n`)).toBe("Text")
   })
 
   it.each(["## Context\n\nText", "Text\n", "## Context\r\n\r\nText\r\n", "Text\n\n\n\nMore"])(
@@ -58,50 +66,90 @@ describe("optOut", () => {
 })
 
 describe("withLinks", () => {
-  it("adds a list at the top", () => {
-    expect(withLinks("## Context\n\nText\n", ["- [first](u)"])).toBe(
-      `${block("- [first](u)")}\n\n## Context\n\nText\n`,
+  const LINK = "[First article](/articles/first)"
+
+  it("moves the Showcase line to the top, linked", () => {
+    expect(withLinks("## Context\n\nText\n\nShowcase: first\n", [LINK])).toBe(
+      `${block(LINK)}\n\n## Context\n\nText\n`,
     )
   })
 
-  it("adds a list under the issues the PR closes", () => {
-    const body = "Closes #743\nFixes owner/repo#12\n\n## Context\n\nText"
-    expect(withLinks(body, ["- [first](u)"])).toBe(
-      `Closes #743\nFixes owner/repo#12\n\n${block("- [first](u)")}\n\n## Context\n\nText`,
+  it("joins several links on the one line", () => {
+    expect(withLinks("Showcase: first second", [LINK, "[Second](/articles/second)"])).toBe(
+      `${block(LINK, "[Second](/articles/second)")}\n`,
+    )
+  })
+
+  it("puts the line under the issues the PR closes", () => {
+    const body = "Closes #743\nFixes owner/repo#12\n\n## Context\n\nText\n\nShowcase: first"
+    expect(withLinks(body, [LINK])).toBe(
+      `Closes #743\nFixes owner/repo#12\n\n${block(LINK)}\n\n## Context\n\nText`,
     )
   })
 
   it.each(["Text\n\nCloses #743", "Fix the carousel, as #743 asks"])(
-    "adds a list above %j, which closes nothing at the top",
+    "puts the line above %j, which closes nothing at the top",
     (body) => {
-      expect(withLinks(body, ["- [first](u)"])).toBe(`${block("- [first](u)")}\n\n${body}`)
+      expect(withLinks(`${body}\n\nShowcase: first`, [LINK])).toBe(`${block(LINK)}\n\n${body}`)
     },
   )
 
-  it("adds a list to an empty description", () => {
-    expect(withLinks("", ["- [first](u)"])).toBe(`${block("- [first](u)")}\n`)
-    expect(withLinks("Closes #1", ["- [first](u)"])).toBe(`Closes #1\n\n${block("- [first](u)")}\n`)
+  it("adds the line to a description that is only the line", () => {
+    expect(withLinks("Showcase: first", [LINK])).toBe(`${block(LINK)}\n`)
+    expect(withLinks("Closes #1\n\nShowcase: first", [LINK])).toBe(`Closes #1\n\n${block(LINK)}\n`)
   })
 
-  it("replaces the list in place", () => {
-    const body = `Text\n\n${block("- [first](u)")}\n\nAfter`
-    expect(withLinks(body, ["- [second](v)"])).toBe(`Text\n\n${block("- [second](v)")}\n\nAfter`)
-  })
-
-  it("removes the list when there are no links", () => {
-    expect(withLinks(`Text\n\n${block("- [first](u)")}\n`, [])).toBe("Text")
-  })
-
-  it("leaves no blank lines where a list at the top was", () => {
-    const body = "Closes #1\n\nText"
-    expect(withLinks(withLinks(body, ["- [first](u)"]), [])).toBe(body)
-    expect(withLinks(withLinks("## Context\n\nText", ["- [first](u)"]), [])).toBe(
-      "## Context\n\nText",
+  it("replaces the line in place", () => {
+    const body = `Text\n\n${block("[Old](/articles/first)")}\n\nAfter`
+    expect(withLinks(body, ["[New](/articles/first)"])).toBe(
+      `Text\n\n${block("[New](/articles/first)")}\n\nAfter`,
     )
   })
 
+  it("replaces an older link list, and the line it listed", () => {
+    const body = `${legacyBlock("- [first](/articles/first)")}\n\nText\n\nShowcase: first\n`
+    expect(withLinks(body, [LINK])).toBe(`${block(LINK)}\n\nText\n`)
+  })
+
+  it("removes the list when there are no links", () => {
+    expect(withLinks(`Text\n\n${legacyBlock("- [first](/articles/first)")}\n`, [])).toBe("Text")
+  })
+
+  it("leaves no blank lines where a list at the top was", () => {
+    expect(withLinks(`Closes #1\n\n${legacyBlock("- [first](/articles/first)")}\n\nText`, [])).toBe(
+      "Closes #1\n\nText",
+    )
+  })
+
+  it("keeps the articles a manual push didn't name, and adds the ones the line didn't", () => {
+    const body = `${block("[First](/articles/first)", "second")}\n`
+    expect(withLinks(body, ["[Third](/articles/third)", "[Second](/articles/second)"])).toBe(
+      `${block("[First](/articles/first)", "[Second](/articles/second)", "[Third](/articles/third)")}\n`,
+    )
+  })
+
+  it("keeps all, which still means the whole catalog", () => {
+    expect(withLinks("Showcase: all", [LINK])).toBe(`${block("all", LINK)}\n`)
+  })
+
   it("keeps $ in links literal", () => {
-    expect(withLinks(block("old"), ["- [a]($1)"])).toBe(block("- [a]($1)"))
+    expect(withLinks(block("[Old](/articles/first)"), ["[a](/articles/first?$1)"])).toBe(
+      block("[a](/articles/first?$1)"),
+    )
+  })
+})
+
+describe("withLegacyLinks", () => {
+  it("replaces the older list in place and leaves the line", () => {
+    const body = `Closes #1\n\n${legacyBlock("- [first](u)")}\n\nShowcase: first`
+    expect(withLegacyLinks(body, ["- [first](v)"])).toBe(
+      `Closes #1\n\n${legacyBlock("- [first](v)")}\n\nShowcase: first`,
+    )
+  })
+
+  it("tells the older list from titled links", () => {
+    expect(isLegacyLinks(["- [first](u)"])).toBe(true)
+    expect(isLegacyLinks(["[First](u)", "first ([draft](u))"])).toBe(false)
   })
 })
 
@@ -168,7 +216,9 @@ describe("planSync", () => {
   })
 
   it("removes the label and links when the line is deleted", async () => {
-    expect(await planSync("edited", `Text\n\n${block("- [first](u)")}`, true, none)).toEqual({
+    expect(
+      await planSync("edited", `Text\n\n${legacyBlock("- [first](/articles/first)")}`, true, none),
+    ).toEqual({
       body: "Text",
       label: "remove",
       push: false,
@@ -199,6 +249,7 @@ function harness({
   catalogs = {} as Record<string, string>,
   deployments = [] as { id: number; sha: string; state: string }[],
   files = {} as Record<string, string>,
+  labels = [] as string[],
 } = {}) {
   const calls: Call[] = []
   const logs: string[] = []
@@ -219,6 +270,7 @@ function harness({
       if (path === "/pulls/42" && method === "GET")
         return json({
           body,
+          labels: labels.map((name) => ({ name })),
           head: { sha: SHA, ref: "feat/demo", repo: headRepo && { full_name: headRepo } },
         })
       if (path === "/pulls/42" && method === "PATCH") return json({})
@@ -349,17 +401,52 @@ describe("main", () => {
   })
 
   describe("link", () => {
-    it("lists the links in the description", async () => {
-      const h = harness({ body: "Text", files: { "/tmp/links.md": "- [first](u)\n\n" } })
+    it("links the Showcase line", async () => {
+      const h = harness({
+        body: "Text\n\nShowcase: first",
+        files: { "/tmp/links.md": "[First](/articles/first)\n\n" },
+      })
       expect(await main(["link"], { ...ENV, LINKS_FILE: "/tmp/links.md" }, h.deps)).toBe(0)
-      expect(h.edits()).toEqual([`${block("- [first](u)")}\n\nText`])
+      expect(h.edits()).toEqual([`${block("[First](/articles/first)")}\n\nText`])
     })
 
-    it("doesn't edit a description that already lists them", async () => {
-      const body = `Text\n\n${block("- [first](u)")}\n`
-      const h = harness({ body, files: { "/tmp/links.md": "- [first](u)\n" } })
+    it("doesn't edit a description that already links them", async () => {
+      const body = `${block("[First](/articles/first)")}\n\nText\n`
+      const h = harness({ body, files: { "/tmp/links.md": "[First](/articles/first)\n" } })
       await main(["link"], { ...ENV, LINKS_FILE: "/tmp/links.md" }, h.deps)
       expect(h.edits()).toEqual([])
+    })
+
+    it("keeps the older list, and the line, for a branch whose push writes one", async () => {
+      const body = "Text\n\nShowcase: first\n"
+      const h = harness({
+        body,
+        labels: ["showcase"],
+        files: { "/tmp/links.md": "- [first](https://pr-42.pragmaticpapers.com/articles/first)\n" },
+      })
+      expect(await main(["link"], { ...ENV, LINKS_FILE: "/tmp/links.md" }, h.deps)).toBe(0)
+      expect(h.edits()).toEqual([
+        `${legacyBlock("- [first](https://pr-42.pragmaticpapers.com/articles/first)")}\n\n${body}`,
+      ])
+    })
+
+    it("adds the line and the label for a manual push to a PR without one", async () => {
+      const h = harness({ body: "Text", files: { "/tmp/links.md": "[First](/articles/first)\n" } })
+      expect(await main(["link"], { ...ENV, LINKS_FILE: "/tmp/links.md" }, h.deps)).toBe(0)
+      expect(h.edits()).toEqual([`${block("[First](/articles/first)")}\n\nText`])
+      expect(h.calls.filter((c) => c.method === "POST").map((c) => c.body)).toEqual([
+        { labels: ["showcase"] },
+      ])
+    })
+
+    it("doesn't add the label again", async () => {
+      const h = harness({
+        body: "Showcase: first",
+        labels: ["showcase"],
+        files: { "/tmp/links.md": "[First](/articles/first)\n" },
+      })
+      await main(["link"], { ...ENV, LINKS_FILE: "/tmp/links.md" }, h.deps)
+      expect(h.calls.filter((c) => c.method === "POST")).toEqual([])
     })
   })
 })

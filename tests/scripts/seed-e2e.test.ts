@@ -185,11 +185,12 @@ describe("seed-e2e main()", () => {
       { disableRevalidate: true },
       "2026-06-04T00:00:00.000Z",
     )
-    // The page is behind the interactives experiment, which the e2e database switches on.
+    // The page is behind the interactives experiment, and the table of contents behind
+    // its own; the e2e database switches both on.
     expect(mockUpdateGlobal).toHaveBeenCalledWith({
       slug: "site-settings",
       context: { disableRevalidate: true },
-      data: { experiments: { interactives: true } },
+      data: { experiments: { interactives: true, tableOfContents: true } },
     })
   })
 

@@ -135,7 +135,9 @@ describe("seed", () => {
     const siteSettings = writes.find(
       (write) => write.op === "updateGlobal" && write.target === "site-settings",
     )
-    expect(siteSettings?.data).toEqual({ experiments: { feed: true, interactives: true } })
+    expect(siteSettings?.data).toEqual({
+      experiments: { feed: true, interactives: true, tableOfContents: true },
+    })
     expect(siteSettings?.context?.disableRevalidate).toBe(true)
   })
 

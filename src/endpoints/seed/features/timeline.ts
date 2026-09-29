@@ -3,30 +3,36 @@ import type { Payload } from "payload"
 
 import { type TimelineEvent } from "@/components/Timeline/types"
 import { createArticle, validateWriters } from "../articles"
-import { createParagraph, createRichText } from "../richtext"
+import { createParagraph, createRichText, type SerializedLexicalNode } from "../richtext"
 
 const buildCitation = (citation?: LinkField) =>
   citation
     ? { type: "custom" as const, url: citation.url, label: citation.label, newTab: true }
     : undefined
 
-const createTimelineBlock = (events: TimelineEvent[], title?: string) => ({
-  type: "block",
-  fields: {
-    blockType: "timeline",
-    title: title ?? null,
-    events: events.map((e) => ({
-      date: e.date,
-      title: e.title ?? null,
-      description: e.description,
-      avatar: e.avatar ?? null,
-      enableCitation: Boolean(e.citation),
-      ...(e.citation && { citation: buildCitation(e.citation) }),
-    })),
-  },
-  format: "",
-  version: 2,
-})
+export const createTimelineBlock = (
+  events: TimelineEvent[],
+  title?: string,
+): SerializedLexicalNode => {
+  const node = {
+    type: "block",
+    fields: {
+      blockType: "timeline",
+      title: title ?? null,
+      events: events.map((e) => ({
+        date: e.date,
+        title: e.title ?? null,
+        description: e.description,
+        avatar: e.avatar ?? null,
+        enableCitation: Boolean(e.citation),
+        ...(e.citation && { citation: buildCitation(e.citation) }),
+      })),
+    },
+    format: "",
+    version: 2,
+  }
+  return node
+}
 
 export const createTimelineArticle = async (
   payload: Payload,

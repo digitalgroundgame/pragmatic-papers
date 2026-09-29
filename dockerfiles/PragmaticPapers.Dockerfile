@@ -24,9 +24,12 @@ WORKDIR /app
 # Builder stage - install deps and build
 # ============================================
 FROM base AS builder
-# git for development checks/metadata during build; postgresql-client for the
+# git for development checks/metadata during build; the PostgreSQL client for the
 # database copy and migrations below. Both are source-independent, so this layer caches.
-RUN apk add --no-cache git postgresql-client
+# The client is pinned to the database server's major version (17): copy-database.sh's
+# pg_dump fallback refuses any other, and Alpine's unpinned postgresql-client has moved
+# on to 18. Bump it together with the server.
+RUN apk add --no-cache git postgresql17-client
 
 # GitHub Packages auth — marked as BuildKit secret in Coolify (not baked into layers)
 # Coolify auto-injects --mount=type=secret into every RUN instruction: https://coolify.io/docs/knowledge-base/environment-variables#docker-build-secrets

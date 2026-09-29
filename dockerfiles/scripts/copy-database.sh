@@ -68,7 +68,7 @@ drop_database() {
 
 # pg_dump refuses to dump a server of a newer major version, and a newer pg_dump writes
 # settings (PostgreSQL 17's transaction_timeout, say) that an older server's restore
-# rejects. The builder's client comes from Alpine's postgresql-client, so check it
+# rejects. The builder's client is the Dockerfile's pinned postgresqlNN-client, so check it
 # matches the server before creating anything, and print both for the build log.
 check_client_version() {
     server_major=$(( $(psql "$ADMIN_URI" -tAc "SHOW server_version_num") / 10000 ))

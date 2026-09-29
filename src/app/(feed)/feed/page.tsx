@@ -8,9 +8,12 @@ import { FeedShell } from "./FeedShell"
 import { getFeedBatch } from "./getFeedBatch"
 import { renderFeedArticle } from "./renderFeedArticle"
 
+// The feed renders whole article bodies, so a crawler would index it as a copy
+// of the articles. Links out of it are still followed.
 export const metadata: Metadata = {
   title: "Feed · Pragmatic Papers",
   description: "Swipe through the latest from Pragmatic Papers.",
+  robots: { index: false, follow: true },
 }
 
 export const dynamic = "force-dynamic"

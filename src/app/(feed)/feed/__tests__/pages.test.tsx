@@ -28,8 +28,8 @@ vi.mock("../renderFeedArticle", () => ({
 }))
 vi.mock("../FeedShell", () => ({ FeedShell: () => null }))
 
-const { default: FeedPage } = await import("../page")
-const { default: DeepLinkFeedPage } = await import("../[collection]/[slug]/page")
+const { default: FeedPage, metadata: feedMetadata } = await import("../page")
+const { default: DeepLinkFeedPage, generateMetadata } = await import("../[collection]/[slug]/page")
 
 interface ShellProps {
   initialItems: Array<{ id: number }>
@@ -65,6 +65,10 @@ describe("/feed", () => {
     })
   })
 
+  it("keeps itself out of search results, since it repeats whole articles", () => {
+    expect(feedMetadata.robots).toEqual({ index: false, follow: true })
+  })
+
   it("says so when there's nothing published yet", async () => {
     getFeedBatch.mockResolvedValue({ items: [], nextCursor: null })
     expect(JSON.stringify(props(await FeedPage()))).toContain("Nothing to read yet")
@@ -96,5 +100,42 @@ describe("/feed/[collection]/[slug]", () => {
     const shell = props(await deepLink("articles", "nine", "nonsense"))
     expect(shell.initialItems.map((a) => a.id)).toEqual([9, 1, 2])
     expect(shell.initialPageIndex).toBe(0)
+  })
+
+  describe("metadata", () => {
+    const metadataFor = (collection: string, slug: string) =>
+      generateMetadata({
+        params: Promise.resolve({ collection, slug }),
+        searchParams: Promise.resolve({}),
+      })
+
+    it("is the article's own, pointing search engines at the article page", async () => {
+      queryArticleBySlug.mockResolvedValue({
+        id: 2,
+        slug: "two",
+        meta: { title: "Turnout, explained", description: "Why it's low." },
+      })
+      const metadata = await metadataFor("articles", "two")
+      expect(metadata.title).toBe("Turnout, explained")
+      expect(metadata.description).toBe("Why it's low.")
+      expect(String(metadata.alternates?.canonical)).toMatch(/\/articles\/two$/)
+      expect(metadata.robots).toBeUndefined()
+    })
+
+    it("falls back to the feed's, unindexed, wherever the page 404s", async () => {
+      await expect(metadataFor("volumes", "two")).resolves.toMatchObject({
+        robots: { index: false },
+      })
+      queryArticleBySlug.mockResolvedValue(null)
+      await expect(metadataFor("articles", "missing")).resolves.toMatchObject({
+        robots: { index: false },
+      })
+      experiment.on = false
+      queryArticleBySlug.mockClear()
+      await expect(metadataFor("articles", "two")).resolves.toMatchObject({
+        robots: { index: false },
+      })
+      expect(queryArticleBySlug).not.toHaveBeenCalled()
+    })
   })
 })

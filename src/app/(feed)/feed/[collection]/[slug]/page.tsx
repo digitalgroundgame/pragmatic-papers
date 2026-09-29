@@ -1,4 +1,5 @@
 import { isExperimentEnabled } from "@/globals/SiteSettings/isExperimentEnabled"
+import { generateMeta } from "@/utilities/generateMeta"
 import { queryArticleBySlug } from "@/utilities/queries"
 import type { Metadata } from "next"
 import { notFound } from "next/navigation"
@@ -8,9 +9,10 @@ import { getFeedBatch, withVolumes } from "../../getFeedBatch"
 import { renderFeedArticle } from "../../renderFeedArticle"
 import type { FeedArticle } from "../../types"
 
-export const metadata: Metadata = {
+const feedMetadata: Metadata = {
   title: "Feed · Pragmatic Papers",
   description: "Swipe through the latest from Pragmatic Papers.",
+  robots: { index: false, follow: true },
 }
 
 export const dynamic = "force-dynamic"
@@ -19,6 +21,21 @@ export const revalidate = 0
 interface DeepLinkFeedPageProps {
   params: Promise<{ collection: string; slug: string }>
   searchParams: Promise<{ p?: string }>
+}
+
+/**
+ * A deep link is the article in another view, so it takes the article's title,
+ * description and share image, with the article page as its canonical URL.
+ * Anything the page would 404 on keeps the feed's own, unindexed metadata.
+ */
+export async function generateMetadata({ params }: DeepLinkFeedPageProps): Promise<Metadata> {
+  const { collection, slug } = await params
+  if (collection !== "articles" || !(await isExperimentEnabled("feed"))) return feedMetadata
+
+  const article = await queryArticleBySlug(slug)
+  if (!article) return feedMetadata
+
+  return generateMeta({ doc: article, canonicalPath: `/articles/${slug}` })
 }
 
 export default async function DeepLinkFeedPage({

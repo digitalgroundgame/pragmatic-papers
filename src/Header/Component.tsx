@@ -18,11 +18,11 @@ import {
 import { isExperimentEnabled } from "@/globals/SiteSettings/isExperimentEnabled"
 import { HeaderLogo } from "@/Header/chrome"
 import { HeaderActions } from "@/Header/HeaderActions/Component"
+import { MenuSheet } from "@/Header/MenuSheet/Component"
 import { SearchForm } from "@/Header/SearchForm/Component"
-import { SearchPanel } from "@/Header/SearchPanel"
 import type { Footer, Header } from "@/payload-types"
 import { getCachedGlobal } from "@/utilities/getGlobals"
-import { Newspaper, User, XIcon } from "lucide-react"
+import { Newspaper, TextSearch, User, XIcon } from "lucide-react"
 import React from "react"
 
 export async function Header(): Promise<React.JSX.Element> {
@@ -39,27 +39,41 @@ export async function Header(): Promise<React.JSX.Element> {
         <div className="container">
           <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-4 border-b py-3">
             <div className="flex items-center gap-1">
-              <SearchPanel>
-                <SheetHeader className="flex flex-row items-center justify-between">
-                  <SheetTitle className="my-2 md:my-0">
-                    <Logo size="sm" />
-                  </SheetTitle>
-                  <SheetClose
-                    render={
-                      <Button variant="ghost" size="icon-lg">
-                        <XIcon className="size-7" />
-                        <span className="sr-only">Close</span>
-                      </Button>
-                    }
-                  />
-                </SheetHeader>
-                <SearchForm />
-                <Menu menu={navItems} layout="stacked" />
-                <div className="flex items-center gap-2 px-4 py-3">
-                  <SocialLinks socials={socials} />
-                  <ModeToggleAnalytics location="header-mobile-menu" />
-                </div>
-              </SearchPanel>
+              <MenuSheet>
+                <SheetTrigger
+                  render={
+                    <Button variant="ghost" size="icon" data-tour="search">
+                      <TextSearch className="size-6" />
+                      <span className="sr-only">Menu</span>
+                    </Button>
+                  }
+                />
+                <SheetContent
+                  className="space-y-4 data-[side=left]:w-full data-[side=left]:sm:max-w-sm"
+                  side="left"
+                  showCloseButton={false}
+                >
+                  <SheetHeader className="flex flex-row items-center justify-between">
+                    <SheetTitle className="my-2 md:my-0">
+                      <Logo size="sm" />
+                    </SheetTitle>
+                    <SheetClose
+                      render={
+                        <Button variant="ghost" size="icon-lg">
+                          <XIcon className="size-7" />
+                          <span className="sr-only">Close</span>
+                        </Button>
+                      }
+                    />
+                  </SheetHeader>
+                  <SearchForm />
+                  <Menu menu={navItems} layout="stacked" />
+                  <div className="flex items-center gap-2 px-4 py-3">
+                    <SocialLinks socials={socials} />
+                    <ModeToggleAnalytics location="header-mobile-menu" />
+                  </div>
+                </SheetContent>
+              </MenuSheet>
               {feedEnabled && (
                 <LinkButton href="/feed" variant="ghost" size="icon" aria-label="Feed">
                   <Newspaper className="size-6" />
@@ -85,6 +99,7 @@ export async function Header(): Promise<React.JSX.Element> {
                     <Button variant="ghost" size="icon" className="relative lg:hidden">
                       <User className="size-6" />
                       <span className="sr-only">User and Settings</span>
+                      {/* The theme toggle lives in this sheet below lg; opening it clears the dot. */}
                       <NotificationDot name="theme-selector" />
                     </Button>
                   }

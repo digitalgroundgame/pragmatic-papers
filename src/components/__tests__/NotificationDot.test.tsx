@@ -15,7 +15,7 @@ afterEach(cleanup)
 
 describe("NotificationDot", () => {
   it("renders a decorative dot in the top-right corner until its notification is seen", () => {
-    const { container } = render(<NotificationDot name="search" />)
+    const { container } = render(<NotificationDot name="new-feature" />)
 
     const dot = container.firstElementChild
     expect(dot).toHaveAttribute("aria-hidden", "true")
@@ -25,16 +25,16 @@ describe("NotificationDot", () => {
   })
 
   it("renders nothing once its notification has been seen", () => {
-    localStorage.setItem("pp:seen:search", "1")
+    localStorage.setItem("pp:seen:new-feature", "1")
 
-    const { container } = render(<NotificationDot name="search" />)
+    const { container } = render(<NotificationDot name="new-feature" />)
 
     expect(container).toBeEmptyDOMElement()
   })
 
   it("disappears when its notification is marked seen elsewhere", () => {
-    const { container } = render(<NotificationDot name="search" />)
-    const { result } = renderHook(() => useNotification("search"))
+    const { container } = render(<NotificationDot name="new-feature" />)
+    const { result } = renderHook(() => useNotification("new-feature"))
 
     act(() => result.current.markSeen())
 
@@ -42,7 +42,7 @@ describe("NotificationDot", () => {
   })
 
   it("ignores other notifications being seen", () => {
-    const { container } = render(<NotificationDot name="search" />)
+    const { container } = render(<NotificationDot name="new-feature" />)
     const { result } = renderHook(() => useNotification("theme-selector"))
 
     act(() => result.current.markSeen())
@@ -51,7 +51,7 @@ describe("NotificationDot", () => {
   })
 
   it("lets the caller reposition it", () => {
-    const { container } = render(<NotificationDot name="search" className="top-0 right-0" />)
+    const { container } = render(<NotificationDot name="new-feature" className="top-0 right-0" />)
 
     expect(container.firstElementChild).toHaveClass("top-0", "right-0")
     expect(container.firstElementChild).not.toHaveClass("top-0.5")

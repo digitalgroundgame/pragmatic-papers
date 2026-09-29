@@ -36,38 +36,38 @@ function Probe({ name }: { name: string }): React.ReactNode {
 
 describe("useNotification", () => {
   it("shows the dot on a first visit", () => {
-    const { result } = renderHook(() => useNotification("search"))
+    const { result } = renderHook(() => useNotification("new-feature"))
 
     expect(result.current.loaded).toBe(true)
     expect(result.current.visible).toBe(true)
   })
 
   it("hides the dot once seen, and remembers it in localStorage", () => {
-    const { result } = renderHook(() => useNotification("search"))
+    const { result } = renderHook(() => useNotification("new-feature"))
 
     act(() => result.current.markSeen())
 
     expect(result.current.visible).toBe(false)
-    expect(localStorage.getItem("pp:seen:search")).toBe("1")
+    expect(localStorage.getItem("pp:seen:new-feature")).toBe("1")
   })
 
   it("keeps the dot hidden on the next page load", () => {
-    localStorage.setItem("pp:seen:search", "1")
+    localStorage.setItem("pp:seen:new-feature", "1")
 
-    const { result } = renderHook(() => useNotification("search"))
+    const { result } = renderHook(() => useNotification("new-feature"))
 
     expect(result.current.visible).toBe(false)
   })
 
   it("only clears the dot it was asked to", () => {
     const { result } = renderHook(() => ({
-      search: useNotification("search"),
+      newFeature: useNotification("new-feature"),
       theme: useNotification("theme-selector"),
     }))
 
-    act(() => result.current.search.markSeen())
+    act(() => result.current.newFeature.markSeen())
 
-    expect(result.current.search.visible).toBe(false)
+    expect(result.current.newFeature.visible).toBe(false)
     expect(result.current.theme.visible).toBe(true)
   })
 
@@ -86,7 +86,7 @@ describe("useNotification", () => {
   })
 
   it("does not write again for a dot already seen", () => {
-    const { result } = renderHook(() => useNotification("search"))
+    const { result } = renderHook(() => useNotification("new-feature"))
     act(() => result.current.markSeen())
     const setItem = vi.spyOn(Storage.prototype, "setItem")
 
@@ -96,17 +96,17 @@ describe("useNotification", () => {
   })
 
   it("picks up a dot seen in another tab", () => {
-    const { result } = renderHook(() => useNotification("search"))
+    const { result } = renderHook(() => useNotification("new-feature"))
     expect(result.current.visible).toBe(true)
 
-    writeFromAnotherTab("pp:seen:search", "1")
+    writeFromAnotherTab("pp:seen:new-feature", "1")
 
     expect(result.current.visible).toBe(false)
   })
 
   it("shows the dot again when another tab clears storage", () => {
-    localStorage.setItem("pp:seen:search", "1")
-    const { result } = renderHook(() => useNotification("search"))
+    localStorage.setItem("pp:seen:new-feature", "1")
+    const { result } = renderHook(() => useNotification("new-feature"))
     expect(result.current.visible).toBe(false)
 
     localStorage.clear()
@@ -118,7 +118,7 @@ describe("useNotification", () => {
   })
 
   it("ignores another tab's writes to keys it doesn't own", () => {
-    const { result } = renderHook(() => useNotification("search"))
+    const { result } = renderHook(() => useNotification("new-feature"))
     const before = result.current
 
     writeFromAnotherTab("theme", "dark")
@@ -129,7 +129,7 @@ describe("useNotification", () => {
   it("renders no dot on the server", () => {
     localStorage.clear()
 
-    expect(renderToString(<Probe name="search" />)).toContain("no dot")
+    expect(renderToString(<Probe name="new-feature" />)).toContain("no dot")
   })
 
   describe("last visited", () => {
@@ -182,7 +182,7 @@ describe("useNotification", () => {
       })
       localStorage.setItem("pp:unrelated", "1")
 
-      const { result } = renderHook(() => useNotification("search"))
+      const { result } = renderHook(() => useNotification("new-feature"))
 
       expect(result.current.loaded).toBe(false)
       expect(result.current.visible).toBe(false)
@@ -192,7 +192,7 @@ describe("useNotification", () => {
       vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
         throw new DOMException("Quota exceeded", "QuotaExceededError")
       })
-      const { result } = renderHook(() => useNotification("search"))
+      const { result } = renderHook(() => useNotification("new-feature"))
 
       expect(() => act(() => result.current.markSeen())).not.toThrow()
       expect(result.current.visible).toBe(false)

@@ -35,7 +35,9 @@ export const Display: Story = {}
 export const DisplayWithDescription: Story = {
   args: { description: "the Pythagorean theorem" },
   play: async ({ canvasElement }) => {
-    const math = within(canvasElement).getByRole("math", { name: "the Pythagorean theorem" })
+    const math = await within(canvasElement).findByRole("math", {
+      name: "the Pythagorean theorem",
+    })
     await expect(math.tagName).toBe("DIV")
     await expect(math.firstElementChild).toHaveAttribute("aria-hidden", "true")
   },
@@ -54,7 +56,9 @@ export const InlineWithDescription: Story = {
   ...Inline,
   args: { ...Inline.args, description: "mass-energy equivalence" },
   play: async ({ canvasElement }) => {
-    const math = within(canvasElement).getByRole("math", { name: "mass-energy equivalence" })
+    const math = await within(canvasElement).findByRole("math", {
+      name: "mass-energy equivalence",
+    })
     await expect(math.tagName).toBe("SPAN")
   },
 }

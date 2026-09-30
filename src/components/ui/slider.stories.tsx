@@ -22,7 +22,7 @@ type Story = StoryObj<typeof meta>
 export const Single: Story = {
   args: { defaultValue: [40] },
   play: async ({ args, canvasElement }) => {
-    const thumb = within(canvasElement).getByRole("slider", { name: "Playback speed" })
+    const thumb = await within(canvasElement).findByRole("slider", { name: "Playback speed" })
     await expect(thumb).toHaveAttribute("aria-valuenow", "40")
     thumb.focus()
     await userEvent.keyboard("{ArrowRight}")

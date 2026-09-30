@@ -97,7 +97,7 @@ export const Form: Story = {
   render: (args) => <ArticleBlockPage {...args} page={blockPage(formBlockNode, "formBlock")} />,
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    await expect(canvas.getByText("Pitch the editors")).toBeVisible()
+    await waitFor(() => expect(canvas.getByText("Pitch the editors")).toBeVisible())
     await userEvent.click(canvas.getByRole("button", { name: "Open form" }))
     const dialog = await screen.findByRole("dialog", { name: "Pitch the editors" })
     // The dialog fades in from opacity 0, so wait for it to finish rather than read it mid-fade.

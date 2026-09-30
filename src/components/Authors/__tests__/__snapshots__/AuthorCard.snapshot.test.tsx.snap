@@ -11,8 +11,9 @@ exports[`AuthorCard > renders minimal author with no bio, image, or affiliation 
     data-slot="card-content"
   >
     <a
-      aria-label="Alice Smith"
+      aria-hidden="true"
       href="/authors/alice-smith"
+      tabindex="-1"
     >
       <span
         class="group/avatar after:border-border relative flex size-8 shrink-0 overflow-hidden rounded-full select-none after:absolute after:inset-0 after:rounded-full after:border after:mix-blend-darken data-[size=2xl]:size-32 data-[size=lg]:size-10 data-[size=md]:size-9 data-[size=sm]:size-6 data-[size=xl]:size-24 dark:after:mix-blend-lighten aspect-square border hover:opacity-80"
@@ -67,8 +68,9 @@ exports[`AuthorCard > renders with affiliation and short biography 1`] = `
     data-slot="card-content"
   >
     <a
-      aria-label="Bob Jones"
+      aria-hidden="true"
       href="/authors/bob-jones"
+      tabindex="-1"
     >
       <span
         class="group/avatar after:border-border relative flex size-8 shrink-0 overflow-hidden rounded-full select-none after:absolute after:inset-0 after:rounded-full after:border after:mix-blend-darken data-[size=2xl]:size-32 data-[size=lg]:size-10 data-[size=md]:size-9 data-[size=sm]:size-6 data-[size=xl]:size-24 dark:after:mix-blend-lighten aspect-square border hover:opacity-80"
@@ -133,8 +135,9 @@ exports[`AuthorCard > renders with biography longer than 255 characters (truncat
     data-slot="card-content"
   >
     <a
-      aria-label="Carol White"
+      aria-hidden="true"
       href="/authors/carol-white"
+      tabindex="-1"
     >
       <span
         class="group/avatar after:border-border relative flex size-8 shrink-0 overflow-hidden rounded-full select-none after:absolute after:inset-0 after:rounded-full after:border after:mix-blend-darken data-[size=2xl]:size-32 data-[size=lg]:size-10 data-[size=md]:size-9 data-[size=sm]:size-6 data-[size=xl]:size-24 dark:after:mix-blend-lighten aspect-square border hover:opacity-80"
@@ -194,8 +197,9 @@ exports[`AuthorCard > renders with null name using fallback 1`] = `
     data-slot="card-content"
   >
     <a
-      aria-label="Author profile"
+      aria-hidden="true"
       href="/authors/alice-smith"
+      tabindex="-1"
     >
       <span
         class="group/avatar after:border-border relative flex size-8 shrink-0 overflow-hidden rounded-full select-none after:absolute after:inset-0 after:rounded-full after:border after:mix-blend-darken data-[size=2xl]:size-32 data-[size=lg]:size-10 data-[size=md]:size-9 data-[size=sm]:size-6 data-[size=xl]:size-24 dark:after:mix-blend-lighten aspect-square border hover:opacity-80"
@@ -248,8 +252,9 @@ exports[`AuthorCard > renders with profileImage as a numeric id 1`] = `
     data-slot="card-content"
   >
     <a
-      aria-label="Alice Smith"
+      aria-hidden="true"
       href="/authors/alice-smith"
+      tabindex="-1"
     >
       <span
         class="group/avatar after:border-border relative flex size-8 shrink-0 overflow-hidden rounded-full select-none after:absolute after:inset-0 after:rounded-full after:border after:mix-blend-darken data-[size=2xl]:size-32 data-[size=lg]:size-10 data-[size=md]:size-9 data-[size=sm]:size-6 data-[size=xl]:size-24 dark:after:mix-blend-lighten aspect-square border hover:opacity-80"
@@ -304,8 +309,9 @@ exports[`AuthorCard > renders with profileImage object containing a square URL 1
     data-slot="card-content"
   >
     <a
-      aria-label="Alice Smith"
+      aria-hidden="true"
       href="/authors/alice-smith"
+      tabindex="-1"
     >
       <span
         class="group/avatar after:border-border relative flex size-8 shrink-0 overflow-hidden rounded-full select-none after:absolute after:inset-0 after:rounded-full after:border after:mix-blend-darken data-[size=2xl]:size-32 data-[size=lg]:size-10 data-[size=md]:size-9 data-[size=sm]:size-6 data-[size=xl]:size-24 dark:after:mix-blend-lighten aspect-square border hover:opacity-80"
@@ -360,8 +366,9 @@ exports[`AuthorCard > renders with profileImage object without a square URL 1`] 
     data-slot="card-content"
   >
     <a
-      aria-label="Alice Smith"
+      aria-hidden="true"
       href="/authors/alice-smith"
+      tabindex="-1"
     >
       <span
         class="group/avatar after:border-border relative flex size-8 shrink-0 overflow-hidden rounded-full select-none after:absolute after:inset-0 after:rounded-full after:border after:mix-blend-darken data-[size=2xl]:size-32 data-[size=lg]:size-10 data-[size=md]:size-9 data-[size=sm]:size-6 data-[size=xl]:size-24 dark:after:mix-blend-lighten aspect-square border hover:opacity-80"

@@ -2,21 +2,16 @@ import type { User, Media as MediaType } from "@/payload-types"
 import React from "react"
 
 import { isAudioMedia, Media } from "@/components/Media"
-import {
-  DropdownMenuGroup,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-} from "@/components/ui/dropdown-menu"
 import { isResolved, type Relationship } from "@/utilities/relationships"
 
 /**
- * The narrator credit lives in the player's settings menu rather than on its own
- * line, so the whole player fits on one row. It stays a link — the menu item
- * renders as an anchor to the narrator's profile.
+ * The narrator credit lives in the player's settings panel rather than on its own
+ * line, so the whole player fits on one row. It stays a link to the narrator's
+ * profile.
  *
  * A plain function rather than a component so an absent credit is `null` at the
  * call site: an element that renders nothing is still truthy, which would leave
- * the menu with a separator and no entries under it.
+ * the panel with a separator and nothing above it.
  */
 function narratorCredit(narrator: Relationship<User>): React.ReactNode {
   if (!isResolved(narrator)) return null
@@ -25,15 +20,15 @@ function narratorCredit(narrator: Relationship<User>): React.ReactNode {
   if (!name || !slug) return null
 
   return (
-    <DropdownMenuGroup>
-      <DropdownMenuLabel>Narrated by</DropdownMenuLabel>
-      <DropdownMenuItem
-        render={<a href={`/authors/${slug}`} />}
-        className="cursor-pointer font-serif"
+    <div>
+      <p className="text-muted-foreground mb-1 text-xs font-medium">Narrated by</p>
+      <a
+        href={`/authors/${slug}`}
+        className="focus-visible:ring-ring/50 rounded-sm font-serif text-sm outline-none hover:underline focus-visible:ring-3"
       >
         {name}
-      </DropdownMenuItem>
-    </DropdownMenuGroup>
+      </a>
+    </div>
   )
 }
 
@@ -48,7 +43,7 @@ export function NarrationPlayer({ narration, className }: NarrationPlayerProps):
     <Media
       media={narration}
       variant="collapsible"
-      menuItems={narratorCredit(narration.narrator)}
+      extraSettings={narratorCredit(narration.narrator)}
       className={className}
     />
   )

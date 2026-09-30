@@ -2,19 +2,12 @@
 
 import { cva, type VariantProps } from "class-variance-authority"
 import { Pause, Play, Settings, Volume1, Volume2, VolumeX } from "lucide-react"
-import React, { useCallback, useEffect, useRef, useState } from "react"
+import React, { useCallback, useEffect, useId, useRef, useState } from "react"
 
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuGroup,
-  DropdownMenuLabel,
-  DropdownMenuRadioGroup,
-  DropdownMenuRadioItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Separator } from "@/components/ui/separator"
 import { Slider } from "@/components/ui/slider"
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { cn } from "@/utilities/utils"
 import { useAudioGain } from "./useAudioGain"
 import type { AudioMediaType } from "./types"
@@ -138,108 +131,132 @@ function Scrubber({ currentTime, duration, onSeek }: ScrubberProps) {
   )
 }
 
-/**
- * Owns the selected rate: nothing outside the menu renders it, so the player
- * only hears about the change it has to apply to the element.
- */
-function SpeedMenuGroup({ onChange }: { onChange: (rate: number) => void }) {
-  const [playbackRate, setPlaybackRate] = useState(1)
-
-  const handleValueChange = useCallback(
-    (value: unknown) => {
-      const rate = Number(value)
-      setPlaybackRate(rate)
-      onChange(rate)
-    },
-    [onChange],
-  )
-
-  return (
-    <DropdownMenuGroup>
-      <DropdownMenuLabel>Speed</DropdownMenuLabel>
-      <DropdownMenuRadioGroup value={playbackRate} onValueChange={handleValueChange}>
-        {PLAYBACK_RATES.map((rate) => (
-          <DropdownMenuRadioItem key={rate} value={rate}>
-            {formatRate(rate)}
-          </DropdownMenuRadioItem>
-        ))}
-      </DropdownMenuRadioGroup>
-    </DropdownMenuGroup>
-  )
-}
-
 function VolumeIcon({ volume }: { volume: number }): React.ReactNode {
   if (volume === 0) return <VolumeX className="size-4" />
   return volume < 0.5 ? <Volume1 className="size-4" /> : <Volume2 className="size-4" />
 }
 
-/** Owns the slider position; the level itself is applied by the gain graph upstream. */
-function VolumeMenuGroup({ onChange }: { onChange: (volume: number) => void }) {
-  const [volume, setVolume] = useState(1)
+function SettingsHeading({ id, children }: { id?: string; children: React.ReactNode }) {
+  return (
+    <p
+      id={id}
+      className="text-muted-foreground mb-1.5 flex items-center gap-1.5 text-xs font-medium"
+    >
+      {children}
+    </p>
+  )
+}
+
+function SpeedSetting({ value, onChange }: { value: number; onChange: (rate: number) => void }) {
+  const labelId = useId()
 
   const handleValueChange = useCallback(
-    (value: number | readonly number[]) => {
-      const next = singleValue(value)
-      if (next === undefined) return
-      setVolume(next)
-      onChange(next)
+    (next: readonly string[]) => {
+      // A toggle group lets its pressed button be pressed again to clear it;
+      // there is always a speed, so that press changes nothing.
+      if (next[0] !== undefined) onChange(Number(next[0]))
     },
     [onChange],
   )
 
   return (
-    <DropdownMenuGroup>
-      <DropdownMenuLabel>Volume</DropdownMenuLabel>
-      {/* Not a menu item: the wrapper keeps arrow keys on the slider
-          instead of letting the menu use them to move between items. */}
-      <div
-        className="flex items-center gap-2 px-1.5 py-1"
-        onKeyDown={(event) => event.stopPropagation()}
+    <div>
+      <SettingsHeading id={labelId}>Speed</SettingsHeading>
+      <ToggleGroup
+        aria-labelledby={labelId}
+        size="sm"
+        spacing={1}
+        value={[String(value)]}
+        onValueChange={handleValueChange}
       >
-        <VolumeIcon volume={volume} />
-        <Slider
-          min={0}
-          max={1}
-          step={0.01}
-          value={[volume]}
-          onValueChange={handleValueChange}
-          aria-label="Volume"
-          className="w-28"
-        />
-      </div>
-    </DropdownMenuGroup>
+        {PLAYBACK_RATES.map((rate) => (
+          <ToggleGroupItem key={rate} value={String(rate)}>
+            {formatRate(rate)}
+          </ToggleGroupItem>
+        ))}
+      </ToggleGroup>
+    </div>
   )
 }
 
-interface SettingsMenuProps {
-  onPlaybackRateChange: (rate: number) => void
-  onVolumeChange: (volume: number) => void
-  /** Extra entries appended below the built-in groups. */
-  menuItems?: React.ReactNode
+function VolumeSetting({ value, onChange }: { value: number; onChange: (volume: number) => void }) {
+  const handleValueChange = useCallback(
+    (next: number | readonly number[]) => {
+      const volume = singleValue(next)
+      if (volume !== undefined) onChange(volume)
+    },
+    [onChange],
+  )
+
+  return (
+    <div>
+      <SettingsHeading>
+        <VolumeIcon volume={value} />
+        Volume
+      </SettingsHeading>
+      <Slider
+        min={0}
+        max={1}
+        step={0.01}
+        value={[value]}
+        onValueChange={handleValueChange}
+        aria-label="Volume"
+        className="py-1"
+      />
+    </div>
+  )
 }
 
-function SettingsMenu({ onPlaybackRateChange, onVolumeChange, menuItems }: SettingsMenuProps) {
+interface SettingsPanelProps {
+  playbackRate: number
+  onPlaybackRateChange: (rate: number) => void
+  volume: number
+  onVolumeChange: (volume: number) => void
+  /** Extra content shown above the built-in settings, e.g. a narrator credit. */
+  extraSettings?: React.ReactNode
+  open: boolean
+  onOpenChange: (open: boolean) => void
+}
+
+/**
+ * A popover rather than a menu: a menu may only hold menu items, and the volume
+ * slider inside one broke it for screen readers and fought it for the arrow
+ * keys (#1001). A popover can hold any control, so it moves between them with
+ * Tab, as a media player's settings panel usually does.
+ */
+function SettingsPanel({
+  playbackRate,
+  onPlaybackRateChange,
+  volume,
+  onVolumeChange,
+  extraSettings,
+  open,
+  onOpenChange,
+}: SettingsPanelProps) {
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger
+    <Popover open={open} onOpenChange={onOpenChange}>
+      <PopoverTrigger
         aria-label="Player settings"
         className="text-muted-foreground hover:text-foreground shrink-0 transition-colors"
         render={<Button variant="ghost" size="icon-sm" />}
       >
         <Settings className="size-4.5" />
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-auto min-w-40">
-        {menuItems && (
+      </PopoverTrigger>
+      <PopoverContent
+        align="end"
+        aria-label="Player settings"
+        className="flex w-auto min-w-56 flex-col gap-3"
+      >
+        {extraSettings && (
           <>
-            {menuItems}
-            <DropdownMenuSeparator />
+            {extraSettings}
+            <Separator />
           </>
         )}
-        <SpeedMenuGroup onChange={onPlaybackRateChange} />
-        <DropdownMenuSeparator />
-        <VolumeMenuGroup onChange={onVolumeChange} />
-      </DropdownMenuContent>
-    </DropdownMenu>
+        <SpeedSetting value={playbackRate} onChange={onPlaybackRateChange} />
+        <VolumeSetting value={volume} onChange={onVolumeChange} />
+      </PopoverContent>
+    </Popover>
   )
 }
 
@@ -249,14 +266,15 @@ export interface AudioMediaProps extends Pick<
 > {
   media: AudioMediaType
   onDurationChange?: (duration: number) => void
-  menuItems?: React.ReactNode
+  /** Extra content shown above the built-in settings, e.g. a narrator credit. */
+  extraSettings?: React.ReactNode
   className?: string
 }
 
 export const AudioMedia: React.FC<AudioMediaProps> = ({
   media,
   onDurationChange,
-  menuItems,
+  extraSettings,
   variant = "default",
   className,
 }) => {
@@ -267,6 +285,11 @@ export const AudioMedia: React.FC<AudioMediaProps> = ({
   const [currentTime, setCurrentTime] = useState(0)
   const [duration, setDuration] = useState(media.duration ?? 0)
   const [started, setStarted] = useState(false)
+  // Held here, not in the settings popover: it unmounts while closed, and
+  // would reopen showing the defaults instead of what the player is using.
+  const [playbackRate, setPlaybackRate] = useState(1)
+  const [volume, setVolume] = useState(1)
+  const [settingsOpen, setSettingsOpen] = useState(false)
   const expanded = variant !== "collapsible" || started
 
   useEffect(() => {
@@ -292,6 +315,9 @@ export const AudioMedia: React.FC<AudioMediaProps> = ({
       setIsPlaying(false)
       setCurrentTime(durationRef.current)
       setStarted(false)
+      // Playback is over, and the collapsible player folds away: an open
+      // settings panel would be left floating beside nothing.
+      setSettingsOpen(false)
     }
 
     const tryCaptureDuration = () => {
@@ -351,8 +377,17 @@ export const AudioMedia: React.FC<AudioMediaProps> = ({
   }, [])
 
   const handlePlaybackRateChange = useCallback((rate: number) => {
+    setPlaybackRate(rate)
     if (audioRef.current) audioRef.current.playbackRate = rate
   }, [])
+
+  const handleVolumeChange = useCallback(
+    (next: number) => {
+      setVolume(next)
+      setGain(next)
+    },
+    [setGain],
+  )
 
   if (!media.url) return null
 
@@ -373,10 +408,14 @@ export const AudioMedia: React.FC<AudioMediaProps> = ({
         className={audioControlsVariants({ variant, expanded })}
       >
         <Scrubber currentTime={currentTime} duration={duration} onSeek={handleSeek} />
-        <SettingsMenu
+        <SettingsPanel
+          playbackRate={playbackRate}
           onPlaybackRateChange={handlePlaybackRateChange}
-          onVolumeChange={setGain}
-          menuItems={menuItems}
+          volume={volume}
+          onVolumeChange={handleVolumeChange}
+          extraSettings={extraSettings}
+          open={settingsOpen}
+          onOpenChange={setSettingsOpen}
         />
       </div>
       <audio ref={audioRef} src={media.url} preload="metadata" />

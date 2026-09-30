@@ -8,7 +8,8 @@ import { getPayloadConfig } from "@/utilities/getPayloadConfig"
 
 import { MerchBlock } from "./Component"
 
-const STORE = "https://shop.example.com/collections/pragmatic-papers"
+// Set for every story in .storybook/main.ts.
+const STORE = process.env.MERCH_SITE_URL
 
 const products: Merch[] = [
   ["Pragmatic Papers Tee", "28.00", true, null],
@@ -42,14 +43,9 @@ const meta = {
     layout: { control: "inline-radio", options: ["fullWidth", "square"] },
   },
   beforeEach: () => {
-    const previous = process.env.MERCH_SITE_URL
-    process.env.MERCH_SITE_URL = STORE
     mocked(getPayloadConfig).mockResolvedValue(
       createFakePayload({ collections: { merch: products } }),
     )
-    return () => {
-      process.env.MERCH_SITE_URL = previous
-    }
   },
 } satisfies Meta<typeof MerchBlock>
 

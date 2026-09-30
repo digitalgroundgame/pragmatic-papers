@@ -47,7 +47,7 @@ function RegionPath({ path, mapIndex, onEnter, onLeave, onClick }: RegionPathPro
     <path
       d={d}
       fill={region.color}
-      className="stroke-muted hover:stroke-accent-forground"
+      className="stroke-muted hover:stroke-accent-foreground"
       strokeWidth={1}
       vectorEffect="non-scaling-stroke"
       role="button"

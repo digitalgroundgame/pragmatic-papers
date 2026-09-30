@@ -6,7 +6,7 @@ import { loadFederalCourtsGeometry } from "./geometry"
 import { federalCourtsMetaLine } from "./meta"
 import { federalCourtsPresentation } from "./presentation"
 import { composeFederalCourtsSummary, type FederalCourtsSummary } from "./summary"
-import { FederalCourtsSummaryView } from "./Summary"
+import { FederalCourtsSummaryView } from "./SummaryView"
 import type { CourtTrackerSources } from "./upstream"
 
 export const FEDERAL_COURTS_PROFILE_ID = "federal-courts"

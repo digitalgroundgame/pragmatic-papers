@@ -6,7 +6,7 @@ import { DrilldownSelectionProvider } from "@/interactives/engine/selection"
 
 import { AppointmentsChart, ChangeChart, partyColor, partyLabel } from "../Charts"
 import type { FederalCourtsSummary } from "../summary"
-import { FederalCourtsSummaryView } from "../Summary"
+import { FederalCourtsSummaryView } from "../SummaryView"
 
 const summary: FederalCourtsSummary = {
   supremeCourtRegion: "scotus",

@@ -133,7 +133,7 @@ test.describe("interactive page — federal courts", () => {
   test("the overview pane starts empty, not landed on the Supreme Court", async ({ page }) => {
     await page.goto(PAGE)
     // The landing view (the whole bench, parked behind `summary`) is built and tested at the
-    // component level (Summary.tsx), but the page itself keeps the pane empty until the reader
+    // component level (SummaryView.tsx), but the page itself keeps the pane empty until the reader
     // picks something — every other unselected state works the same way, and opening straight
     // onto a filled-in Supreme Court bench read as the page choosing for the reader.
     const pane = page.locator("[data-drilldown-pane]")

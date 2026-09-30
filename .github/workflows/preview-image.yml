@@ -132,7 +132,6 @@ jobs:
             NEXT_PUBLIC_SERVER_URL=${{ steps.meta.outputs.url }}
             SOURCE_COMMIT=${{ github.event.pull_request.head.sha }}
             USE_LOCAL_STORAGE=${{ vars.PREVIEW_USE_LOCAL_STORAGE || 'true' }}
-            NEXT_PUBLIC_GOOGLE_ANALYTICS_ID=${{ vars.PREVIEW_NEXT_PUBLIC_GOOGLE_ANALYTICS_ID }}
             NEXT_PUBLIC_SUPABASE_URL=${{ vars.PREVIEW_NEXT_PUBLIC_SUPABASE_URL }}
             NEXT_PUBLIC_SENTRY_DSN=${{ vars.PREVIEW_NEXT_PUBLIC_SENTRY_DSN }}
             NEXT_PUBLIC_TURNSTILE_SITE_KEY=${{ vars.PREVIEW_NEXT_PUBLIC_TURNSTILE_SITE_KEY }}

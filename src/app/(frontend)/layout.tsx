@@ -45,9 +45,9 @@ export default async function RootLayout({
           <Footer />
         </ThemeProvider>
       </body>
-      <GoogleAnalytics
-        gaId={process.env.GOOGLE_ANALYTICS_ID || process.env.NEXT_PUBLIC_GOOGLE_ANALYTICS_ID}
-      />
+      {process.env.GOOGLE_ANALYTICS_ID ? (
+        <GoogleAnalytics gaId={process.env.GOOGLE_ANALYTICS_ID} />
+      ) : null}
     </html>
   )
 }

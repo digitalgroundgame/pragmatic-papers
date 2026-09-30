@@ -150,7 +150,9 @@ Snapshot of the variable names each has, from the 2026-09-26 build logs. Product
 | `SEED_ENABLED`                  | —       | set      | nothing — no code reads it (from an unmerged branch); delete it                                |
 | `LISTMONK_NEWSLETTER_LIST_UUID` | set     | —        | Listmonk calls throw "Missing required env var", so newsletter signup doesn't work on previews |
 
-`NEXT_PUBLIC_*` variables are compiled into the image when it builds, in server code as well as browser code, so changing one in Coolify needs a rebuild. Three have a plain twin read when the container starts, which wins when set: `SERVER_URL`, `GOOGLE_ANALYTICS_ID` and `TURNSTILE_SITE_KEY` ([#1090](https://github.com/digitalgroundgame/pragmatic-papers/issues/1090)). None of the applications set them today, and nothing needs them yet: without them, the `NEXT_PUBLIC_` values apply as before. Pages rendered during the build keep the build's values until they re-render.
+`NEXT_PUBLIC_*` variables are compiled into the image when it builds, in server code as well as browser code, so changing one in Coolify needs a rebuild ([#1090](https://github.com/digitalgroundgame/pragmatic-papers/issues/1090)). Two have a plain twin read when the container starts, which wins when set: `SERVER_URL` and `TURNSTILE_SITE_KEY`. Nothing sets them yet, and without them the `NEXT_PUBLIC_` values apply as before.
+
+`GOOGLE_ANALYTICS_ID` (formerly `NEXT_PUBLIC_GOOGLE_ANALYTICS_ID`, which nothing reads any more) is read when a page renders. Give it both **Build Variable** and **Runtime Variable** in Coolify: pages rendered during the build read the build's value, and pages rendered later read the container's. Unset, pages render without the analytics tag. Images built in GitHub Actions only need the runtime variable, since `start.sh` re-renders every page on start.
 
 Code should treat a blank value the same as an unset one, since a variable can exist with no value. The shell checks above do. In TypeScript, prefer `process.env.X || fallback` over `process.env.X ?? fallback` wherever blank should fall back: `??` keeps `""`.
 
@@ -351,11 +353,11 @@ The image sets `BUILT_WITHOUT_DATABASE=true`, which switches on the start-time s
 
 In GitHub (**Settings → Secrets and variables → Actions**):
 
-| Name                                                                                                                                                      | Kind      | Value                                                                                                   |
-| --------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- | ------------------------------------------------------------------------------------------------------- |
-| `COOLIFY_PREVIEW_IMAGE_APP_UUID`                                                                                                                          | variable  | The Docker Image application's UUID. Setting it switches previews over.                                 |
-| `PREVIEW_NEXT_PUBLIC_SENTRY_DSN`, `PREVIEW_NEXT_PUBLIC_GOOGLE_ANALYTICS_ID`, `PREVIEW_NEXT_PUBLIC_SUPABASE_URL`, `PREVIEW_NEXT_PUBLIC_TURNSTILE_SITE_KEY` | variables | Optional. The browser-side values previews build with: copy them from the preview variables in Coolify. |
-| `PREVIEW_USE_LOCAL_STORAGE`                                                                                                                               | variable  | Optional; defaults to `true`, as previews use.                                                          |
+| Name                                                                                                           | Kind      | Value                                                                                                   |
+| -------------------------------------------------------------------------------------------------------------- | --------- | ------------------------------------------------------------------------------------------------------- |
+| `COOLIFY_PREVIEW_IMAGE_APP_UUID`                                                                               | variable  | The Docker Image application's UUID. Setting it switches previews over.                                 |
+| `PREVIEW_NEXT_PUBLIC_SENTRY_DSN`, `PREVIEW_NEXT_PUBLIC_SUPABASE_URL`, `PREVIEW_NEXT_PUBLIC_TURNSTILE_SITE_KEY` | variables | Optional. The browser-side values previews build with: copy them from the preview variables in Coolify. |
+| `PREVIEW_USE_LOCAL_STORAGE`                                                                                    | variable  | Optional; defaults to `true`, as previews use.                                                          |
 
 `GH_FONT_READ`, `COOLIFY_API_TOKEN`, `COOLIFY_DASHBOARD_URL` and `PREVIEW_URL_TEMPLATE` are shared with the workflows above.
 

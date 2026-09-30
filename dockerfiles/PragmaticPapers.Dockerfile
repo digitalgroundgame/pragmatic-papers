@@ -71,7 +71,7 @@ COPY . .
 # Coolify auto-injects --mount=type=secret into every RUN instruction: https://coolify.io/docs/knowledge-base/environment-variables#docker-build-secrets
 ARG NODE_ENV=production
 ARG BUILD_ENV=production
-ARG NEXT_PUBLIC_SERVER_URL
+ARG SERVER_URL
 ARG NEXT_TELEMETRY_DISABLED=1
 
 # --- STORAGE & S3 ---
@@ -81,10 +81,11 @@ ARG S3_BUCKET
 ARG S3_ENDPOINT
 
 # --- PUBLIC / CLIENT-SIDE ---
-ARG NEXT_PUBLIC_GOOGLE_ANALYTICS_ID
+# TURNSTILE_SITE_KEY and GOOGLE_ANALYTICS_ID get no ARG: Coolify mounts every build
+# variable into each RUN anyway, and a name ending in _KEY trips Docker's
+# SecretsUsedInArgOrEnv check.
 ARG NEXT_PUBLIC_SUPABASE_URL
-ARG NEXT_PUBLIC_SENTRY_DSN
-ARG NEXT_PUBLIC_TURNSTILE_SITE_KEY
+ARG SENTRY_DSN
 
 # --- COOLIFY & DEPLOYMENT ---
 ARG COOLIFY_FQDN=
@@ -104,11 +105,9 @@ ENV NODE_ENV=${NODE_ENV} \
     S3_REGION=${S3_REGION} \
     S3_BUCKET=${S3_BUCKET} \
     S3_ENDPOINT=${S3_ENDPOINT} \
-    NEXT_PUBLIC_GOOGLE_ANALYTICS_ID=${NEXT_PUBLIC_GOOGLE_ANALYTICS_ID} \
-    NEXT_PUBLIC_SERVER_URL=${NEXT_PUBLIC_SERVER_URL} \
+    SERVER_URL=${SERVER_URL} \
     NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL} \
-    NEXT_PUBLIC_SENTRY_DSN=${NEXT_PUBLIC_SENTRY_DSN} \
-    NEXT_PUBLIC_TURNSTILE_SITE_KEY=${NEXT_PUBLIC_TURNSTILE_SITE_KEY}
+    SENTRY_DSN=${SENTRY_DSN}
 
 # --- DATABASE PREPARATION & MIGRATION ---
 # 1. Isolated Preview Logic (names and clones a database for each PR, then drops the

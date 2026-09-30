@@ -17,8 +17,6 @@ import type { NewsletterSignupBlock as NewsletterSignupTypes } from "@/payload-t
 const DEFAULT_HEADING = "Get Daily Pragmatic Papers"
 const DEFAULT_BUTTON_LABEL = "Sign Up"
 
-const TURNSTILE_SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY
-
 interface TurnstileRenderOptions {
   sitekey: string
   callback: (token: string) => void
@@ -42,12 +40,21 @@ declare global {
 
 type Status = "idle" | "submitting" | "success" | "error"
 
-export const NewsletterSignupBlock: React.FC<NewsletterSignupTypes> = ({
+export type NewsletterSignupBlockProps = NewsletterSignupTypes & {
+  /**
+   * Cloudflare Turnstile site key, from `getTurnstileSiteKey()` on the server. Without
+   * one the form submits with no challenge.
+   */
+  turnstileSiteKey?: string
+}
+
+export const NewsletterSignupBlock: React.FC<NewsletterSignupBlockProps> = ({
   heading,
   description,
   buttonLabel,
   notice,
   id: blockId,
+  turnstileSiteKey,
 }) => {
   const [email, setEmail] = React.useState("")
   const [status, setStatus] = React.useState<Status>("idle")
@@ -58,12 +65,12 @@ export const NewsletterSignupBlock: React.FC<NewsletterSignupTypes> = ({
   const widgetIdRef = React.useRef<string | null>(null)
 
   React.useEffect(() => {
-    if (!scriptReady || !TURNSTILE_SITE_KEY) return
+    if (!scriptReady || !turnstileSiteKey) return
     const container = widgetContainerRef.current
     const turnstile = window.turnstile
     if (!container || !turnstile || widgetIdRef.current) return
     widgetIdRef.current = turnstile.render(container, {
-      sitekey: TURNSTILE_SITE_KEY,
+      sitekey: turnstileSiteKey,
       theme: "auto",
       callback: (t) => setToken(t),
       "expired-callback": () => setToken(null),
@@ -74,12 +81,11 @@ export const NewsletterSignupBlock: React.FC<NewsletterSignupTypes> = ({
       if (id && window.turnstile) window.turnstile.remove(id)
       widgetIdRef.current = null
     }
-  }, [scriptReady])
+  }, [scriptReady, turnstileSiteKey])
 
   const headingText = heading ?? DEFAULT_HEADING
   const buttonText = buttonLabel ?? DEFAULT_BUTTON_LABEL
-  const disabled =
-    status === "submitting" || status === "success" || (!!TURNSTILE_SITE_KEY && !token)
+  const disabled = status === "submitting" || status === "success" || (!!turnstileSiteKey && !token)
 
   const resetWidget = (): void => {
     const id = widgetIdRef.current
@@ -89,7 +95,7 @@ export const NewsletterSignupBlock: React.FC<NewsletterSignupTypes> = ({
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>): Promise<void> => {
     e.preventDefault()
-    if (status === "submitting" || (TURNSTILE_SITE_KEY && !token)) return
+    if (status === "submitting" || (turnstileSiteKey && !token)) return
     setStatus("submitting")
     setMessage(null)
     try {

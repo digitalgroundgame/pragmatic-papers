@@ -25,7 +25,7 @@ runs:
       run: |
         cat >> "$GITHUB_ENV" << 'EOF'
         PAYLOAD_SECRET=e2e-payload-secret
-        NEXT_PUBLIC_SERVER_URL=http://localhost:8000
+        SERVER_URL=http://localhost:8000
         USE_LOCAL_STORAGE=true
         MERCH_SITE_URL=https://digitalgroundgame.org/merch
         DATABASE_URI=postgres://postgres:postgres@postgres:5432/pragmatic-papers-e2e

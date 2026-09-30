@@ -1,6 +1,7 @@
 import type { Endpoint, PayloadRequest } from "payload"
 
 import { isAdmin } from "@/access/roles"
+import { getServerSideURL } from "@/utilities/getURL"
 
 import {
   ArticleNotFoundError,
@@ -24,8 +25,7 @@ const hostOf = (url: string | undefined): string | undefined => {
  * production can't turn cloning on there.
  */
 export const canCloneFromProduction = (): boolean =>
-  process.env.BUILD_ENV !== "production" &&
-  hostOf(process.env.NEXT_PUBLIC_SERVER_URL) !== hostOf(PRODUCTION_URL)
+  process.env.BUILD_ENV !== "production" && hostOf(getServerSideURL()) !== hostOf(PRODUCTION_URL)
 
 function refuse(req: PayloadRequest): Response | undefined {
   if (!canCloneFromProduction()) {

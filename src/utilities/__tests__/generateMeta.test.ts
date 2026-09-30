@@ -20,7 +20,7 @@ const media = (ogUrl?: string): Media =>
   ({ id: 1, sizes: { og: ogUrl ? { url: ogUrl } : {} } }) as unknown as Media
 
 beforeEach(() => {
-  vi.stubEnv("NEXT_PUBLIC_SERVER_URL", SITE)
+  vi.stubEnv("SERVER_URL", SITE)
 })
 
 afterEach(() => {

@@ -5,7 +5,7 @@ import { NarrationPlayer } from "@/components/NarrationPlayer"
 import type { Media as MediaDoc } from "@/payload-types"
 import { skipA11yRules } from "@/stories/a11y"
 import { authors } from "@/stories/fixtures/docs"
-import { landscapeImage, narrationAudio, portraitImage } from "@/stories/fixtures/media"
+import { landscapeImage, loopVideo, narrationAudio, portraitImage } from "@/stories/fixtures/media"
 
 import { Media } from "."
 
@@ -41,6 +41,17 @@ export const ImageWithFocalPoint: Story = {
       <Media media={args.media} className="h-full w-full object-cover" />
     </div>
   ),
+}
+
+// Plays from the file's own url, as the storage plugin resolves it.
+export const Video: Story = {
+  args: { media: loopVideo },
+  play: async ({ canvasElement }) => {
+    const video = canvasElement.querySelector("video")
+    await expect(video?.querySelector("source")).toHaveAttribute("src", loopVideo.url)
+    // HAVE_CURRENT_DATA or better: the url resolved to a file Chromium can decode.
+    await waitFor(() => expect(video?.readyState).toBeGreaterThanOrEqual(2))
+  },
 }
 
 export const Audio: Story = {

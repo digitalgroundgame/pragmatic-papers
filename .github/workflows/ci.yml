@@ -299,9 +299,10 @@ jobs:
 
   # Publishes the tested build to the pragmatic-papers-storybook Cloudflare
   # Worker (.storybook/wrangler.jsonc): `dev` deploys to the main workers.dev
-  # address, and each PR uploads a version under a `pr-<number>` preview alias
-  # and lists it in the PR description, with a link to each component the PR
-  # changes (scripts/storybook-pr.ts). Kept out of the Storybook job so a Cloudflare
+  # address, and each PR uploads a version under a `pr-<number>` preview alias,
+  # records it as a "Storybook Preview" Deployment (listed on the PR beside the
+  # site's Preview), and links each component the PR changes at the top of its
+  # description (scripts/storybook-pr.ts). Kept out of the Storybook job so a Cloudflare
   # outage never turns that required check red. Skips itself without the
   # Cloudflare secrets, which fork and Dependabot PRs never receive.
   storybook-deploy:
@@ -314,6 +315,7 @@ jobs:
       group: storybook-deploy-${{ github.event.pull_request.number || github.ref }}
     permissions:
       contents: read
+      deployments: write
       pull-requests: write
     env:
       HAS_CLOUDFLARE: ${{ secrets.CLOUDFLARE_API_TOKEN != '' && secrets.CLOUDFLARE_ACCOUNT_ID != '' }}
@@ -366,7 +368,15 @@ jobs:
         with:
           node-version: "24.x"
 
-      - name: List the preview in the PR description
+      - name: Record the preview as a Deployment
+        if: steps.preview.outputs.url
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PREVIEW_URL: ${{ steps.preview.outputs.url }}
+        run: node scripts/storybook-pr.ts deploy
+
+      - name: Link the changed components in the PR description
         if: steps.preview.outputs.url
         env:
           GITHUB_TOKEN: ${{ github.token }}

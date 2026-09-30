@@ -367,10 +367,31 @@ describe("start.sh", () => {
     expect(output).not.toContain("node started")
   })
 
+  // A deployed image without SERVER_URL would publish localhost links (#1090).
+  it("refuses to start a deployed image without a runtime SERVER_URL", () => {
+    const { status, output } = start("", { DATABASE_URI: URI, BUILD_ENV: "production" })
+
+    expect(status).toBe(1)
+    expect(output).toContain("SERVER_URL is not set at runtime")
+    expect(output).not.toContain("node started")
+  })
+
+  it("starts a deployed image that has SERVER_URL", () => {
+    const { status, output } = start("", {
+      DATABASE_URI: URI,
+      BUILD_ENV: "production",
+      SERVER_URL: "https://pragmaticpapers.com",
+    })
+
+    expect(status).toBe(0)
+    expect(output).toContain("node started")
+  })
+
   describe("in an image built without a database (#1067)", () => {
     const built = {
       BUILT_WITHOUT_DATABASE: "true",
       BUILD_ENV: "preview",
+      SERVER_URL: "https://pr-330.pragmaticpapers.com",
       COOLIFY_FQDN: "pr-330.pragmaticpapers.com",
       COPY_SOURCE_DATABASE: "true",
       PAYLOAD_SECRET: "payload-s3cret",

@@ -16,10 +16,14 @@ if [ -n "$BUILD_ENV" ] && [ -z "$SERVER_URL" ]; then
     exit 1
 fi
 
-# With S3 storage, media URLs point at SUPABASE_URL's public bucket, and next/image only
-# optimizes them from a *.supabase.co host (next.config.ts). Anything else would break
-# every image on the site, so refuse to start, as above.
+# With S3 storage, media URLs point at SUPABASE_URL's public bucket S3_BUCKET, and
+# next/image only optimizes them from a *.supabase.co host (next.config.ts). Anything else
+# would break every image on the site (#791), so refuse to start, as above.
 if [ -n "$BUILD_ENV" ] && [ "$USE_LOCAL_STORAGE" != "true" ]; then
+    if [ -z "$S3_BUCKET" ]; then
+        echo "ERROR: S3_BUCKET is not set at runtime, and USE_LOCAL_STORAGE isn't true (Coolify: enable Runtime for it)"
+        exit 1
+    fi
     case "$SUPABASE_URL" in
     https://*.supabase.co) ;;
     "")

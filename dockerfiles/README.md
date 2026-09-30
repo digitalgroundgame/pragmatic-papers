@@ -456,7 +456,7 @@ S3_ENDPOINT=https://s3.amazonaws.com
 SUPABASE_URL=https://<project>.supabase.co
 ```
 
-`SUPABASE_URL` is where media is served from: `generateFileURL` (`src/plugins/index.ts`) points each file at `<SUPABASE_URL>/storage/v1/object/public/<S3_BUCKET>/…`. It's read at runtime only, so it needs **Runtime Variable** and not **Build Variable**. `next/image` only loads remote images from hosts `next.config.ts` lists, and that list is fixed when the image builds, so it allows any `https://*.supabase.co` public bucket rather than one project's host. For the same reason `start.sh` refuses to start a deployed image using S3 (`USE_LOCAL_STORAGE` not `true`) whose `SUPABASE_URL` is unset, not a `*.supabase.co` origin, or ends in a slash: every image on the site would break. A custom storage domain needs a pattern for it in `next.config.ts`, and in `start.sh`.
+`SUPABASE_URL` is where media is served from: `generateFileURL` (`src/plugins/index.ts`) points each file at `<SUPABASE_URL>/storage/v1/object/public/<S3_BUCKET>/…`. It's read at runtime only, so it needs **Runtime Variable** and not **Build Variable**. `next/image` only loads remote images from hosts `next.config.ts` lists, and that list is fixed when the image builds, so it allows any `https://*.supabase.co` public bucket rather than one project's host. For the same reason `start.sh` refuses to start a deployed image using S3 (`USE_LOCAL_STORAGE` not `true`) whose `S3_BUCKET` or `SUPABASE_URL` is unset, or whose `SUPABASE_URL` isn't a `*.supabase.co` origin or ends in a slash: every image on the site would break ([#791](https://github.com/digitalgroundgame/pragmatic-papers/issues/791)). A custom storage domain needs a pattern for it in `next.config.ts`, and in `start.sh`.
 
 **Benefits:**
 

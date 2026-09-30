@@ -79,6 +79,7 @@ function sh(script: string, env: Record<string, string> = {}) {
       SERVER_URL: "",
       USE_LOCAL_STORAGE: "true",
       SUPABASE_URL: "",
+      S3_BUCKET: "",
       TARGET_EXISTS: "",
       SOURCE_BUSY: "",
       BUILT_WITHOUT_DATABASE: "",
@@ -400,6 +401,7 @@ describe("start.sh", () => {
       BUILD_ENV: "production",
       SERVER_URL: "https://pragmaticpapers.com",
       USE_LOCAL_STORAGE: "false",
+      S3_BUCKET: "media",
     }
 
     it("starts with a Supabase project URL", () => {
@@ -417,6 +419,19 @@ describe("start.sh", () => {
 
       expect(status).toBe(1)
       expect(output).toContain("SUPABASE_URL is not set at runtime")
+      expect(output).not.toContain("node started")
+    })
+
+    // #791: media URLs fell back to /media/<file>, which doesn't exist with S3 storage.
+    it("refuses to start without S3_BUCKET", () => {
+      const { status, output } = start("", {
+        ...production,
+        SUPABASE_URL: "https://abcdefgh.supabase.co",
+        S3_BUCKET: "",
+      })
+
+      expect(status).toBe(1)
+      expect(output).toContain("S3_BUCKET is not set at runtime")
       expect(output).not.toContain("node started")
     })
 

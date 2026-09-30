@@ -26,9 +26,12 @@ on:
 permissions:
   contents: read
 
-# One run at a time, and never cancel an apply halfway through its phases.
+# Applies run one at a time and never cancel one halfway through its phases.
+# Only one run can wait in a group, and a newer one cancels it, so plans and
+# checks, which only read, get a group each: a PR's plan must never cancel a
+# release's waiting apply. (Two waiting applies can: the newer applies newer files.)
 concurrency:
-  group: cloudflare-rules
+  group: cloudflare-rules-${{ github.event_name == 'push' && 'apply' || github.run_id }}
   cancel-in-progress: false
 
 jobs:
@@ -65,4 +68,11 @@ jobs:
 
       - name: Cloudflare rules (${{ env.COMMAND }})
         if: env.HAS_CLOUDFLARE == 'true'
-        run: node scripts/cloudflare-rules.ts "$COMMAND"
+        run: |
+          # The schedule runs from `dev` but checks `main`, which has no rules
+          # until the release that first carries them.
+          if [ ! -f scripts/cloudflare-rules.ts ]; then
+            echo "::notice::main has no Cloudflare rules yet; nothing to check until they're released."
+            exit 0
+          fi
+          node scripts/cloudflare-rules.ts "$COMMAND"

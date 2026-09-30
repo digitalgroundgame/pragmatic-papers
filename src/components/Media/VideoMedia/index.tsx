@@ -41,7 +41,9 @@ export const VideoMedia: React.FC<VideoMediaProps> = (props) => {
         playsInline
         ref={videoRef}
       >
-        <source src={getMediaUrl(media.url, media.updatedAt)} type={media.mimeType} />
+        {/* No `type`: uploads take any video type, and a browser skips a source whose
+            declared type it doesn't recognise (video/quicktime) rather than sniffing it. */}
+        <source src={getMediaUrl(media.url, media.updatedAt)} />
       </video>
     )
   }

@@ -25,9 +25,7 @@ describe("VideoMedia", () => {
   it.each(["development", "production"])("plays the file's own url in %s", (env) => {
     vi.stubEnv("NODE_ENV", env)
     const { container } = render(<VideoMedia media={video("/media/clip.mp4")} />)
-    const source = container.querySelector("video source")
-    expect(source).toHaveAttribute("src", "/media/clip.mp4")
-    expect(source).toHaveAttribute("type", "video/mp4")
+    expect(container.querySelector("video source")).toHaveAttribute("src", "/media/clip.mp4")
   })
 
   it("keeps a bucket url as the storage plugin resolved it", () => {
@@ -37,6 +35,14 @@ describe("VideoMedia", () => {
       "src",
       `${url}?2024-01-01T00:00:00.000Z`,
     )
+  })
+
+  // A declared type the browser can't vouch for makes it skip the source unfetched.
+  it("leaves the type for the browser to sniff", () => {
+    const { container } = render(
+      <VideoMedia media={{ ...video("/media/clip.mov"), mimeType: "video/quicktime" }} />,
+    )
+    expect(container.querySelector("video source")).not.toHaveAttribute("type")
   })
 
   it("renders nothing without a url", () => {

@@ -115,6 +115,7 @@ Use managed PostgreSQL service (AWS RDS, Supabase, Neon, etc.) for all deploymen
 | **production**      | **production** | The `main` branch      | `production` |
 
 - The development app's **production** environment is what these docs call **staging**: it deploys `dev`, not the live site.
+- **Two servers run them:** `dev-worker` runs staging and the previews, and hosts the `docker-registry` service they're pulled from; `prod-worker` runs production. Nothing of production's is on `dev-worker`.
 - **Every deployment builds on one Coolify build server, one build at a time**, so a queue of preview builds delays a `dev` or `main` deploy behind it. The build caches below (`/pnpm`, `/nextjs`) are shared by all three. The build is memory-hungry; see [#1018](https://github.com/digitalgroundgame/pragmatic-papers/issues/1018) before adding build steps or dependencies that raise build memory.
 - **Public PR deployments are off**, so previews only build for PRs from people with access to the repo (see [Preview Deployments on the PR](#preview-deployments-on-the-pr-github-deployments)). Keep it that way: previews build on the same server as the live site.
 

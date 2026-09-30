@@ -5,7 +5,8 @@ name: Review acknowledgement
 #
 # - Approval: a person with write access approves the PR's head commit with a
 #   GitHub review. For someone else's PR; no Claude review needed.
-# - Acknowledgement: a person with write access replies `/reviewed` on the PR
+# - Acknowledgement: a person with write access replies `/reviewed` or `LGTM`
+#   (any case; startsWith() ignores it) on the PR
 #   once a Claude review is on it and they've read it and dealt with what it
 #   found. For your own PR, which GitHub won't let you approve. The review can
 #   be of an earlier commit, so fixing its findings needs no second review.
@@ -20,11 +21,11 @@ name: Review acknowledgement
 # A reply, not a 👍: GitHub sends workflows no event for reactions, so a
 # reaction could only be picked up by polling.
 #
-# Agents must never post `/reviewed` or approve: both stand for a person
+# Agents must never post `/reviewed` or `LGTM`, or approve: all stand for a person
 # having read the change. Comments and reviews carrying the Claude Code footer
 # are ignored for that reason.
 #
-# The paths live in separate workflows (this one for `/reviewed`,
+# The paths live in separate workflows (this one for `/reviewed` and `LGTM`,
 # review-approval.yml for approvals, review-queue.yml for the merge queue).
 # A job whose `if` is false still reports "skipped" on the commit its event
 # belongs to, and a required check counts "skipped" as passing: in one
@@ -42,7 +43,8 @@ jobs:
     if: >-
       github.event_name == 'issue_comment' &&
       github.event.issue.pull_request &&
-      startsWith(github.event.comment.body, '/reviewed')
+      (startsWith(github.event.comment.body, '/reviewed') ||
+      startsWith(github.event.comment.body, 'LGTM'))
     runs-on: ubuntu-latest
     permissions:
       pull-requests: write

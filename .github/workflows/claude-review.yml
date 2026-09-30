@@ -69,7 +69,7 @@ jobs:
             exit 1
           fi
           if [[ "$marker" == *"verdict=blocker"* ]]; then
-            echo "::error::The review found a blocker. Fix it, then reply /reviewed on the PR."
+            echo "::error::The review found a blocker. Fix it, then reply /reviewed or LGTM on the PR."
             exit 1
           fi
           echo "No blockers on $HEAD_SHA."

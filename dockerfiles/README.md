@@ -329,13 +329,17 @@ Set `BUILD_ENV=staging` or `BUILD_ENV=production` and leave `COPY_SOURCE_DATABAS
 
 The image sets `BUILT_WITHOUT_DATABASE=true`, which switches on the start-time steps in `start.sh` and `prodMigrations` in `src/payload.config.ts`. Images Coolify builds don't set it, so staging and production behave as before. Two differences from a Coolify-built preview:
 
-- **First boot takes longer**: it copies staging before the server starts, so the image's health check allows 5 minutes.
+- **First boot takes longer**: it copies staging before the server starts, so the health check below allows 5 minutes before counting failures.
 - **`FORCE_DATABASE_COPY=true` swaps the fresh copy in unmigrated.** There's no Payload CLI in the image, so the new container migrates it as it starts, and the old container serves the unmigrated copy until then.
 - **`FORCE_DATABASE_COPY=true` copies once per image, not once per start.** The copy runs whenever the container starts, restarts included, so the script marks the database with the image's commit (a Postgres comment) and skips the forced copy when the mark matches. Restarting a preview keeps what testers entered; deploying a new commit copies afresh. Still turn it back off once the preview you meant to refresh has been redeployed.
 
 **Setup.** In Coolify:
 
-1. Create an application of type **Docker Image** in the development project, image `ghcr.io/digitalgroundgame/pragmatic-papers-preview`. Give it the preview URL template `https://pr-{{pr_id}}.pragmaticpapers.com` and port `3000`.
+1. Create an application of type **Docker Image** in the development project, on the server and destination the development app deploys to, with image `ghcr.io/digitalgroundgame/pragmatic-papers-preview`. Any tag will do (e.g. `unused`): each preview deploy sends its own, and the app's own deployment is never run. Then:
+   - **Exposed port** `3000` (the default is 80).
+   - **Keep a domain on the app** (`https://…`). Coolify only generates a preview's URL when the app has one, and takes the preview's scheme from it (`ApplicationPreview::generate_preview_fqdn`).
+   - **Preview URL template** `pr-{{pr_id}}.pragmaticpapers.com`, host only: Coolify puts the scheme in front.
+   - **Healthcheck on**: GET `/api/users/me` on port `3000`, expecting `200`, with a start period of `300` seconds. Coolify doesn't read the image's own `HEALTHCHECK` for a Docker Image app, and with its check off it swaps a preview in before the copy and migrations have finished.
 2. Copy the development app's **Preview Deployment Environment Variables** into it as **runtime** variables: `DATABASE_URI`, `COPY_SOURCE_DATABASE`, `FORCE_DATABASE_COPY`, `PAYLOAD_SECRET`, `USE_LOCAL_STORAGE` and the rest the app reads at runtime. `BUILD_ENV` is baked into the image. Build variables aren't used: nothing builds in Coolify.
 3. Let the server pull from GHCR: the package is private, so log its Docker in to `ghcr.io` (`docker login ghcr.io`, as the user Coolify connects with) with a GitHub token that has `read:packages`.
 4. Give `COOLIFY_API_TOKEN` the `deploy` and `write` abilities as well as `read` (the token's owner must be a team admin). The workflow uses them to deploy the image (`POST /api/v1/deploy?uuid=…&pr=…&docker_tag=…`, Coolify `v4.0.0-beta.471` or later) and to remove the preview when the PR closes.

@@ -1,8 +1,8 @@
 #!/bin/sh
 # Deletes old images from the Docker registry Coolify pushes our builds to, and frees
-# their space. Run on the server that hosts the registry, from root's crontab:
-#
-#   30 4 * * * /root/prune-registry.sh --apply >> /var/log/prune-registry.log 2>&1
+# their space. Runs nightly as a Coolify Scheduled Task, in a docker:cli container beside
+# the registry with the Docker socket and the registry's storage mounted; see "Pruning the
+# image registry" in dockerfiles/README.md. It also runs as root on that server as it is.
 #
 # Without --apply it only prints what it would delete.
 #
@@ -27,6 +27,8 @@
 # Settings (environment variables):
 #   REGISTRY_CONTAINER  the registry's container; defaults to the only one named registry-*
 #   REGISTRY_CONFIG     its config file inside the container (/etc/docker/registry/config.yml)
+#   REGISTRY_STORAGE    where this script sees the registry's storage; defaults to the host
+#                       path mounted at its root directory, so set it in a container
 #   GITHUB_REPOSITORY   the repository whose PRs these are (digitalgroundgame/pragmatic-papers)
 #   GITHUB_TOKEN        optional; only needed if the repository is private
 #   KEEP_PER_PR         default 2
@@ -75,21 +77,28 @@ docker inspect -f '{{range .Config.Env}}{{println .}}{{end}}' "$container" | gre
 root=$(sed -n 's/^REGISTRY_STORAGE_FILESYSTEM_ROOTDIRECTORY=//p' "$env_file" | tail -1)
 root=${root:-/var/lib/registry}
 
-storage=$(docker inspect -f "{{range .Mounts}}{{if eq .Destination \"$root\"}}{{.Source}}{{end}}{{end}}" "$container")
+storage=${REGISTRY_STORAGE:-$(docker inspect -f "{{range .Mounts}}{{if eq .Destination \"$root\"}}{{.Source}}{{end}}{{end}}" "$container")}
 repositories="$storage/docker/registry/v2/repositories"
 if [ -z "$storage" ] || [ ! -d "$repositories" ]; then
     echo "ERROR: can't find $container's storage, $root in the container (looked for $repositories)"
     exit 1
 fi
-echo "Storage: $root in the container, $storage on this server"
+echo "Storage: $root in the registry, $storage here"
 
-# GETs $1 from the repository's GitHub API.
+# GETs $1 from the repository's GitHub API, with curl or, in an image without it (the
+# docker:cli one the Coolify task runs in), BusyBox wget. Both fail on an HTTP error.
 github() {
-    if [ -n "${GITHUB_TOKEN:-}" ]; then
-        curl -fsS -H "Authorization: Bearer $GITHUB_TOKEN" -H 'Accept: application/vnd.github+json' \
-            "https://api.github.com/repos/$REPOSITORY/$1"
+    url="https://api.github.com/repos/$REPOSITORY/$1"
+    if command -v curl >/dev/null; then
+        if [ -n "${GITHUB_TOKEN:-}" ]; then
+            curl -fsS -H "Authorization: Bearer $GITHUB_TOKEN" -H 'Accept: application/vnd.github+json' "$url"
+        else
+            curl -fsS -H 'Accept: application/vnd.github+json' "$url"
+        fi
+    elif [ -n "${GITHUB_TOKEN:-}" ]; then
+        wget -qO- --header "Authorization: Bearer $GITHUB_TOKEN" --header 'Accept: application/vnd.github+json' "$url"
     else
-        curl -fsS -H 'Accept: application/vnd.github+json' "https://api.github.com/repos/$REPOSITORY/$1"
+        wget -qO- --header 'Accept: application/vnd.github+json' "$url"
     fi
 }
 

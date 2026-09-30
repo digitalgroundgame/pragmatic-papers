@@ -173,6 +173,7 @@ function run(args: string[] = [], env: Record<string, string> = {}) {
       GC_STATUS: "",
       GITHUB_TOKEN: "",
       REGISTRY_CONTAINER: "",
+      REGISTRY_STORAGE: "",
       ...env,
     },
   })
@@ -380,9 +381,20 @@ describe("prune-registry.sh", () => {
 
     const { output } = run(["--apply"])
 
-    expect(output).toContain(`Storage: /data in the container, ${storage} on this server`)
+    expect(output).toContain(`Storage: /data in the registry, ${storage} here`)
     expect(calls()).toContain("env: REGISTRY_STORAGE_FILESYSTEM_ROOTDIRECTORY=/data\n")
     expect(calls()).toContain("env: REGISTRY_HTTP_SECRET=s3cret\n")
+  })
+
+  it("reads the storage from REGISTRY_STORAGE, as a container that mounts it elsewhere sets", () => {
+    pushTags("pr-6-a", "pr-7-a")
+    openPrs(7)
+
+    const { status, output } = run(["--apply"], { REGISTRY_STORAGE: storage, STORAGE: "/nowhere" })
+
+    expect(status).toBe(0)
+    expect(output).toContain(`Storage: /data in the registry, ${storage} here`)
+    expect(remaining()).toEqual(["pr-7-a"])
   })
 
   it("looks for the storage at /var/lib/registry when the environment doesn't move it", () => {

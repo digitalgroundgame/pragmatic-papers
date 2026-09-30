@@ -8,10 +8,11 @@ afterEach(() => {
   vi.unstubAllEnvs()
 })
 
-// Both used to be static files next-sitemap wrote at build time, naming the build's host.
-// Read per request, one image can serve any host (#1090).
+// Both used to be files next-sitemap wrote at build time, naming the build's host for
+// good. As routes, they render with whatever SERVER_URL the server has when they're
+// (re)rendered, so revalidate-all can point an image at the host it serves (#1090).
 describe("GET /robots.txt", () => {
-  it("names the host it's served from, read when requested", async () => {
+  it("names the host from SERVER_URL as it is when rendered", async () => {
     vi.stubEnv("SERVER_URL", "https://pr-1.pragmaticpapers.com")
     await robots()
     vi.stubEnv("SERVER_URL", "https://pragmaticpapers.com")
@@ -40,7 +41,7 @@ describe("GET /robots.txt", () => {
 })
 
 describe("GET /sitemap.xml", () => {
-  it("indexes each sitemap route on the host it's served from", async () => {
+  it("indexes each sitemap route on SERVER_URL's host", async () => {
     vi.stubEnv("SERVER_URL", "http://localhost:8000")
     const res = await sitemapIndex()
 

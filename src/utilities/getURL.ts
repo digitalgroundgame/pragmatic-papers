@@ -1,14 +1,12 @@
 import canUseDOM from "./canUseDOM"
 
-// SERVER_URL is read when the server runs. NEXT_PUBLIC_SERVER_URL is compiled into
-// the build (server code included), so one image can only ever serve the host it was
-// built for; SERVER_URL lets the same image run somewhere else, such as E2E (#1090).
-const configuredServerURL = (): string | undefined =>
-  process.env.SERVER_URL || process.env.NEXT_PUBLIC_SERVER_URL || undefined
+// SERVER_URL is read when the server runs, not compiled in like a NEXT_PUBLIC_ variable
+// (which Next inlines into server code too), so one image can serve any host (#1090).
+// Browser code never needs it: getClientSideURL reads the page's own origin there.
 
 // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
 export const getServerSideURL = () => {
-  return configuredServerURL() || "http://localhost:8000"
+  return process.env.SERVER_URL || "http://localhost:8000"
 }
 
 // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
@@ -21,5 +19,5 @@ export const getClientSideURL = () => {
     return `${protocol}//${domain}${port ? `:${port}` : ""}`
   }
 
-  return configuredServerURL() || ""
+  return process.env.SERVER_URL || ""
 }

@@ -66,21 +66,19 @@ describe("getTurnstileSiteKey", () => {
     vi.unstubAllEnvs()
   })
 
-  it("prefers TURNSTILE_SITE_KEY, read at runtime, over the compiled-in name", () => {
-    vi.stubEnv("NEXT_PUBLIC_TURNSTILE_SITE_KEY", "build-key")
+  it("reads TURNSTILE_SITE_KEY", () => {
     vi.stubEnv("TURNSTILE_SITE_KEY", "runtime-key")
     expect(getTurnstileSiteKey()).toBe("runtime-key")
   })
 
-  it("falls back to NEXT_PUBLIC_TURNSTILE_SITE_KEY", () => {
-    vi.stubEnv("TURNSTILE_SITE_KEY", "")
+  it("ignores NEXT_PUBLIC_TURNSTILE_SITE_KEY", () => {
+    vi.stubEnv("TURNSTILE_SITE_KEY", undefined)
     vi.stubEnv("NEXT_PUBLIC_TURNSTILE_SITE_KEY", "build-key")
-    expect(getTurnstileSiteKey()).toBe("build-key")
+    expect(getTurnstileSiteKey()).toBeUndefined()
   })
 
-  it("is undefined when neither is set, so the form renders without the widget", () => {
-    vi.stubEnv("TURNSTILE_SITE_KEY", undefined)
-    vi.stubEnv("NEXT_PUBLIC_TURNSTILE_SITE_KEY", "")
+  it("is undefined when blank, so the form renders without the widget", () => {
+    vi.stubEnv("TURNSTILE_SITE_KEY", "")
     expect(getTurnstileSiteKey()).toBeUndefined()
   })
 })

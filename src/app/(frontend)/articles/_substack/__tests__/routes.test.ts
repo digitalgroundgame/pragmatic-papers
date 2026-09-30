@@ -8,7 +8,7 @@ vi.mock("../queries", () => ({
 }))
 
 beforeAll(() => {
-  process.env.NEXT_PUBLIC_SERVER_URL = "https://example.org"
+  process.env.SERVER_URL = "https://example.org"
 })
 
 const { querySyndicatedArticles, querySyndicatedArticleBySlug } = await import("../queries")

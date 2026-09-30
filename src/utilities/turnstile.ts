@@ -11,7 +11,7 @@
  * Required env vars:
  *   CLOUDFLARE_TURNSTILE_SECRET_KEY  server-side secret from the Turnstile dashboard
  *   TURNSTILE_SITE_KEY               public site key, read on the server and passed to
- *                                    the widget (NEXT_PUBLIC_TURNSTILE_SITE_KEY also works)
+ *                                    the widget
  */
 
 /**
@@ -20,7 +20,7 @@
  * so one build can run with a different key (#1090).
  */
 export const getTurnstileSiteKey = (): string | undefined =>
-  process.env.TURNSTILE_SITE_KEY || process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || undefined
+  process.env.TURNSTILE_SITE_KEY || undefined
 
 const SITEVERIFY_URL = "https://challenges.cloudflare.com/turnstile/v0/siteverify"
 

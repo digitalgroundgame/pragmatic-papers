@@ -9,9 +9,8 @@ import { prNumberFromFqdn } from "./src/utilities/prNumberFromFqdn"
 const __filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(__filename)
 
-const NEXT_PUBLIC_SERVER_URL = new URL(
-  process.env.NEXT_PUBLIC_SERVER_URL || "http://localhost:8000",
-)
+// Read while building, so a Coolify build needs SERVER_URL as a build variable too.
+const SERVER_URL = new URL(process.env.SERVER_URL || "http://localhost:8000")
 
 const NEXT_PUBLIC_SUPABASE_URL = new URL(
   process.env.NEXT_PUBLIC_SUPABASE_URL || "https://example.com",
@@ -36,9 +35,9 @@ const nextConfig: NextConfig = {
     qualities: [80],
     remotePatterns: [
       {
-        protocol: NEXT_PUBLIC_SERVER_URL.protocol.slice(0, -1) as "http" | "https",
-        hostname: NEXT_PUBLIC_SERVER_URL.hostname,
-        port: NEXT_PUBLIC_SERVER_URL.port,
+        protocol: SERVER_URL.protocol.slice(0, -1) as "http" | "https",
+        hostname: SERVER_URL.hostname,
+        port: SERVER_URL.port,
       },
       {
         protocol: NEXT_PUBLIC_SUPABASE_URL.protocol.slice(0, -1) as "http" | "https",

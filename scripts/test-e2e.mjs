@@ -52,7 +52,7 @@ if (process.env.DATABASE_URI) {
 }
 process.env.USE_LOCAL_STORAGE ||= "true"
 process.env.PORT ||= "8000"
-process.env.NEXT_PUBLIC_SERVER_URL ||= `http://localhost:${process.env.PORT}`
+process.env.SERVER_URL ||= `http://localhost:${process.env.PORT}`
 process.env.PAYLOAD_CONFIG_PATH ||= "src/payload.config.ts"
 process.env.E2E_MANAGED_SERVER = "true"
 

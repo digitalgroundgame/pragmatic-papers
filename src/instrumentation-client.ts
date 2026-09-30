@@ -4,15 +4,17 @@
 
 import * as Sentry from "@sentry/nextjs"
 
+import { sentryConfigFromDocument } from "./sentryConfig"
 import { sentryIgnoredErrors } from "./sentryIgnoredErrors"
 
-Sentry.init({
-  dsn: process.env.NEXT_PUBLIC_SENTRY_DSN,
+// Both root layouts write the server's config onto <html> (sentryHtmlAttributes), which the
+// parser has read before this runs. No DSN there, no reporting, as with SENTRY_DSN unset.
+const { dsn, environment, pr } = sentryConfigFromDocument(document.documentElement)
 
-  // Resolved once in next.config.ts from BUILD_ENV; PR previews report `preview`, tagged
-  // with their PR number.
-  environment: process.env.SENTRY_ENVIRONMENT,
-  initialScope: process.env.SENTRY_PR ? { tags: { pr: process.env.SENTRY_PR } } : undefined,
+Sentry.init({
+  dsn,
+  environment,
+  initialScope: pr ? { tags: { pr } } : undefined,
 
   tracesSampleRate: 0.1,
 

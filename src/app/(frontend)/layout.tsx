@@ -2,6 +2,7 @@ import { AdminBar } from "@/components/AdminBar"
 import { Breadcrumbs } from "@/components/Breadcrumbs"
 import { Footer } from "@/Footer/Component"
 import { Header } from "@/Header/Component"
+import { sentryHtmlAttributes } from "@/sentryConfig"
 import { getServerSideURL } from "@/utilities/getURL"
 import { DEFAULT_DESCRIPTION, mergeOpenGraph } from "@/utilities/mergeOpenGraph"
 import { GoogleAnalytics } from "@next/third-parties/google"
@@ -22,6 +23,7 @@ export default async function RootLayout({
       lang="en"
       suppressHydrationWarning
       data-scroll-behavior="smooth"
+      {...sentryHtmlAttributes()}
     >
       <head>
         <link href="/manifest.json" rel="manifest" />

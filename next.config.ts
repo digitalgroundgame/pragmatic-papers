@@ -149,7 +149,12 @@ const nextConfig: NextConfig = {
         // rendered per request, its 404 follows a Site Settings switch that should apply on
         // save, and a stale copy would call load-more's server action with an ID the current
         // build no longer has.
-        source: "/:path((?!interactives/[^/]+/regions/[^/]+/geometry/|feed(?:/|$)).*)",
+        // The image optimizer (`/_next/image`) is left out as well. It sets its own Cache-Control
+        // on each image it serves (images.minimumCacheTTL, or the upstream image's max-age), and
+        // Next's docs say to shape that through the upstream image, not /_next/image. It sets
+        // none on an error, so under this rule Cloudflare kept the 400 for a missing media file
+        // for up to a day (stale-while-revalidate=86400), long after the file came back.
+        source: "/:path((?!interactives/[^/]+/regions/[^/]+/geometry/|feed(?:/|$)|_next/image$).*)",
         headers: [
           {
             key: "Cache-Control",

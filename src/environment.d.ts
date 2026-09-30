@@ -5,6 +5,12 @@ declare global {
       DATABASE_URI: string
       NEXT_PUBLIC_GOOGLE_ANALYTICS_ID: string
       NEXT_PUBLIC_SERVER_URL: string
+      /** Read at runtime; wins over NEXT_PUBLIC_SERVER_URL, which is compiled in. */
+      SERVER_URL?: string
+      /** Read at runtime; wins over NEXT_PUBLIC_GOOGLE_ANALYTICS_ID. */
+      GOOGLE_ANALYTICS_ID?: string
+      /** Read at runtime; wins over NEXT_PUBLIC_TURNSTILE_SITE_KEY. */
+      TURNSTILE_SITE_KEY?: string
       VERCEL_PROJECT_PRODUCTION_URL: string
       BUILD_ENV?: string
     }

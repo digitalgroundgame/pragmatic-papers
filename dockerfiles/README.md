@@ -150,6 +150,8 @@ Snapshot of the variable names each has, from the 2026-09-26 build logs. Product
 | `SEED_ENABLED`                  | —       | set      | nothing — no code reads it (from an unmerged branch); delete it                                |
 | `LISTMONK_NEWSLETTER_LIST_UUID` | set     | —        | Listmonk calls throw "Missing required env var", so newsletter signup doesn't work on previews |
 
+`NEXT_PUBLIC_*` variables are compiled into the image when it builds, in server code as well as browser code, so changing one in Coolify needs a rebuild. Three have a plain twin read when the container starts, which wins when set: `SERVER_URL`, `GOOGLE_ANALYTICS_ID` and `TURNSTILE_SITE_KEY` ([#1090](https://github.com/digitalgroundgame/pragmatic-papers/issues/1090)). None of the applications set them today, and nothing needs them yet: without them, the `NEXT_PUBLIC_` values apply as before. Pages rendered during the build keep the build's values until they re-render.
+
 Code should treat a blank value the same as an unset one, since a variable can exist with no value. The shell checks above do. In TypeScript, prefer `process.env.X || fallback` over `process.env.X ?? fallback` wherever blank should fall back: `??` keeps `""`.
 
 ## 🔍 Common Issues

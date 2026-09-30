@@ -3,6 +3,8 @@ import { PaperIcon } from "@/components/Logo/icons/PaperIcon"
 import { MegaMenu } from "@/components/MegaMenu"
 import { Menu } from "@/components/Menu"
 import { ModeToggleAnalytics } from "@/components/ModeToggleAnalytics"
+import { Fresh } from "@/components/Fresh"
+import { FRESH } from "@/components/Fresh/names"
 import { SocialLinks } from "@/components/SocialLinks"
 import { Button } from "@/components/ui/button"
 import { LinkButton } from "@/components/ui/link-button"
@@ -41,7 +43,7 @@ export async function Header(): Promise<React.JSX.Element> {
               <MenuSheet>
                 <SheetTrigger
                   render={
-                    <Button variant="ghost" size="icon">
+                    <Button variant="ghost" size="icon" data-tour="search">
                       <TextSearch className="size-6" />
                       <span className="sr-only">Menu</span>
                     </Button>
@@ -69,7 +71,7 @@ export async function Header(): Promise<React.JSX.Element> {
                   <Menu menu={navItems} layout="stacked" />
                   <div className="flex items-center gap-2 px-4 py-3">
                     <SocialLinks socials={socials} />
-                    <ModeToggleAnalytics location="header-mobile-menu" />
+                    <ModeToggleAnalytics location="header-mobile-menu" showFresh />
                   </div>
                 </SheetContent>
               </MenuSheet>
@@ -89,15 +91,17 @@ export async function Header(): Promise<React.JSX.Element> {
             </a>
             <div className="flex items-center justify-end gap-2">
               <div className="hidden lg:flex">
-                <ModeToggleAnalytics location="header" />
+                <ModeToggleAnalytics location="header" showFresh />
               </div>
               <HeaderActions actions={actions} className="hidden lg:flex" />
               <Sheet>
                 <SheetTrigger
                   render={
-                    <Button variant="ghost" size="icon" className="lg:hidden">
+                    <Button variant="ghost" size="icon" className="relative lg:hidden">
                       <User className="size-6" />
                       <span className="sr-only">User and Settings</span>
+                      {/* Below lg the mode toggle lives in this sheet; opening it clears the fresh dot. */}
+                      <Fresh name={FRESH.modeToggle} />
                     </Button>
                   }
                 />
@@ -119,7 +123,7 @@ export async function Header(): Promise<React.JSX.Element> {
                     <LinkButton variant="outline" size="lg" className="w-full" href="/admin/login">
                       Log In
                     </LinkButton>
-                    <ModeToggleAnalytics showLabel location="header-mobile-sheet" />
+                    <ModeToggleAnalytics showLabel location="header-mobile-sheet" showFresh />
                   </div>
                 </SheetContent>
               </Sheet>

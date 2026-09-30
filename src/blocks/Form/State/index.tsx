@@ -1,5 +1,5 @@
 import type { StateField } from "@payloadcms/plugin-form-builder/types"
-import type { Control, FieldErrorsImpl } from "react-hook-form"
+import type { Control } from "react-hook-form"
 
 import { Label } from "@/components/ui/label"
 import {
@@ -19,9 +19,8 @@ import { stateOptions } from "./options"
 export const State: React.FC<
   StateField & {
     control: Control
-    errors: Partial<FieldErrorsImpl>
   }
-> = ({ name, control, errors, label, required, width }) => {
+> = ({ name, control, label, required, width }) => {
   return (
     <Width width={width}>
       <Label htmlFor={name}>
@@ -57,7 +56,7 @@ export const State: React.FC<
         }}
         rules={{ required }}
       />
-      {errors[name] && <Error name={name} />}
+      <Error name={name} />
     </Width>
   )
 }

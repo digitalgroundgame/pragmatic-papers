@@ -4,6 +4,7 @@ import { Armchair, History } from "lucide-react"
 import React, { useEffect, useImperativeHandle, useRef, useState } from "react"
 
 import { Button } from "@/components/ui/button"
+import { Dot } from "@/components/ui/dot"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { cn } from "@/utilities/utils"
 
@@ -359,10 +360,7 @@ export function DrilldownPane({
                   data-drilldown-cohort=""
                   className="text-muted-foreground mt-2 flex items-center gap-1.5 text-xs"
                 >
-                  <span
-                    aria-hidden="true"
-                    className="inline-block size-2.5 shrink-0 rounded-full ring-2 ring-amber-400"
-                  />
+                  <Dot size="md" tone="none" className="ring-2 ring-amber-400" />
                   Appointed together
                 </p>
               )}

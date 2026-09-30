@@ -21,6 +21,8 @@ export default defineConfig({
       maxDiffPixelRatio: 0.01,
       animations: "disabled",
       caret: "hide",
+      // Hides per-reader UI, such as the fresh dots a new browser shows.
+      stylePath: "./tests/e2e/screenshot.css",
     },
   },
   use: {

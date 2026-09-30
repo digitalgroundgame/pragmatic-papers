@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite"
+import { expect, within } from "storybook/test"
 
 import { createHeadingNode, createParagraph, richText } from "@/stories/fixtures/richText"
 import { landscapeImage, wideImage } from "@/stories/fixtures/media"
@@ -71,4 +72,46 @@ export const LowImpact: Story = {}
 
 export const PageHero: Story = {
   args: { type: "pageHero" },
+}
+
+/**
+ * A hero saved without text renders the rest of itself and no empty
+ * rich-text wrapper: RichText returns nothing when it has no data.
+ */
+const expectNoText: Story["play"] = async ({ canvasElement }) => {
+  await expect(canvasElement.querySelector(".payload-richtext")).not.toBeInTheDocument()
+}
+
+export const HighImpactWithoutText: Story = {
+  ...HighImpact,
+  args: { ...HighImpact.args, richText: null },
+  play: async (context) => {
+    await expectNoText(context)
+    await expect(
+      within(context.canvasElement).getByRole("link", { name: "Read the volume" }),
+    ).toBeInTheDocument()
+  },
+}
+
+export const MediumImpactWithoutText: Story = {
+  args: { ...MediumImpact.args, richText: null },
+  play: async (context) => {
+    await expectNoText(context)
+    await expect(
+      within(context.canvasElement).getByRole("link", { name: "About us" }),
+    ).toBeInTheDocument()
+  },
+}
+
+export const LowImpactWithoutText: Story = {
+  args: { richText: null },
+  play: expectNoText,
+}
+
+export const PageHeroWithoutText: Story = {
+  args: { type: "pageHero", richText: null },
+  play: async (context) => {
+    await expectNoText(context)
+    await expect(within(context.canvasElement).getByRole("separator")).toBeInTheDocument()
+  },
 }

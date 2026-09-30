@@ -23,7 +23,7 @@ export const BernoulliLeftLayout: React.FC<LayoutProps> = ({
   return (
     <section {...props}>
       <CollectionTile
-        tile={featured!}
+        tile={featured}
         imagePosition="left"
         priority={priority}
         sizes="(max-width: 768px) 100vw, 620px"

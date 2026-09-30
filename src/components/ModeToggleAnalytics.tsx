@@ -10,15 +10,20 @@ interface ModeToggleAnalyticsProps {
   showLabel?: boolean
   /** Identifies where this toggle is rendered, reported alongside theme_change analytics. */
   location?: string
+  /** Show the mode toggle's fresh dot on this toggle. */
+  showFresh?: boolean
 }
 
 export function ModeToggleAnalytics({
   showLabel,
   location,
+  showFresh,
 }: ModeToggleAnalyticsProps): React.JSX.Element {
   function handleThemeChange(theme: Theme): void {
     sendGAEvent("event", "theme_change", { theme, location })
   }
 
-  return <ModeToggle showLabel={showLabel} onThemeChange={handleThemeChange} />
+  return (
+    <ModeToggle showLabel={showLabel} onThemeChange={handleThemeChange} showFresh={showFresh} />
+  )
 }

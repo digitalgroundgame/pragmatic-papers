@@ -48,7 +48,8 @@ jobs:
     # this workflow anyway. Closing always runs: on a PR that was never
     # previewed it finds nothing to retire and ends in seconds.
     # Once previews build in GitHub Actions (COOLIFY_PREVIEW_IMAGE_APP_UUID is set),
-    # preview-image.yml reports them instead.
+    # playwright.yml deploys and reports them instead, and preview-image.yml
+    # removes them.
     if: >-
       vars.COOLIFY_PREVIEW_IMAGE_APP_UUID == '' && (
       github.event.action == 'closed' || (

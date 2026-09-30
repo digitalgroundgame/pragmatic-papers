@@ -37,6 +37,10 @@ concurrency:
 # The E2E environment (database, server URL, FONTS_REQUIRED, ...) is set by
 # .github/actions/setup-e2e, shared with update-snapshots.yml so the two
 # workflows always render the same page.
+#
+# One image per run (#1090): "Build image" builds it, "E2E tests" runs the
+# suite against it, and "Deploy preview" hands the same image to Coolify as
+# the PR's preview. Removing a closed PR's preview stays in preview-image.yml.
 
 jobs:
   # Skips the suite on a PR that changes only Markdown, the same way ci.yml's
@@ -61,9 +65,132 @@ jobs:
               - "**"
               - "!**/*.md"
 
+  # Whether this run deploys a preview: the PRs Coolify previewed before #1067
+  # (see preview-deployment.yml), same-repo PRs from owners, members and
+  # collaborators, not titled [skip ci] / [skip cd]. Fork PRs get no secrets,
+  # and fork and Dependabot runs can't push to GHCR.
+  preview:
+    name: Plan preview
+    runs-on: ubuntu-latest
+    outputs:
+      deploy: ${{ steps.plan.outputs.deploy }}
+      tag: ${{ steps.plan.outputs.tag }}
+      image: ${{ steps.plan.outputs.image }}
+    steps:
+      - id: plan
+        env:
+          DEPLOY: >-
+            ${{
+              github.event_name == 'pull_request' &&
+              vars.COOLIFY_PREVIEW_IMAGE_APP_UUID != '' &&
+              github.event.pull_request.head.repo.full_name == github.repository &&
+              contains(fromJSON('["OWNER", "MEMBER", "COLLABORATOR"]'), github.event.pull_request.author_association) &&
+              !contains(github.event.pull_request.title, '[skip ci]') &&
+              !contains(github.event.pull_request.title, '[skip cd]')
+            }}
+          PR: ${{ github.event.pull_request.number }}
+          SHA: ${{ github.event.pull_request.head.sha }}
+          OWNER: ${{ github.repository_owner }}
+        run: |
+          echo "deploy=$DEPLOY" >> "$GITHUB_OUTPUT"
+          if [ "$DEPLOY" = "true" ]; then
+            echo "image=ghcr.io/${OWNER,,}/pragmatic-papers-preview" >> "$GITHUB_OUTPUT"
+            echo "tag=pr-${PR}-${SHA::12}" >> "$GITHUB_OUTPUT"
+          fi
+
+  image:
+    name: Build image
+    needs: [changes, preview]
+    if: ${{ !cancelled() && needs.preview.result == 'success' && (needs.preview.outputs.deploy == 'true' || github.event_name != 'pull_request' || needs.changes.result != 'success' || needs.changes.outputs.e2e == 'true') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      packages: write
+
+    # What `next build` prerenders from. Nothing it reads ends up served: the
+    # server throws the prerendered routes away once it runs on its own
+    # database (dockerfiles/scripts/start.sh, and scripts/test-e2e.mjs here).
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: build
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: ./.github/actions/build-app-image
+        with:
+          gh-font-read-token: ${{ secrets.GH_FONT_READ }}
+          source-commit: ${{ github.event.pull_request.head.sha || github.sha }}
+          push-tag: ${{ needs.preview.outputs.deploy == 'true' && format('{0}:{1}', needs.preview.outputs.image, needs.preview.outputs.tag) || '' }}
+          registry-token: ${{ github.token }}
+
+  # Hands the image E2E is testing to Coolify as the PR's preview, alongside
+  # the tests rather than after them, as previews always have been. A new push
+  # cancels this run (the workflow's concurrency group) before it can deploy
+  # a stale image.
+  deploy:
+    name: Deploy preview
+    needs: [preview, image]
+    if: ${{ !cancelled() && needs.image.result == 'success' && needs.preview.outputs.deploy == 'true' }}
+    runs-on: ubuntu-latest
+    # scripts/preview-deployment.ts waits on Coolify, first boot included
+    # (copying staging).
+    timeout-minutes: 45
+    permissions:
+      contents: read
+      deployments: write
+      pull-requests: read
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          sparse-checkout: scripts/preview-deployment.ts
+          sparse-checkout-cone-mode: false
+
+      # Node 24 runs the TypeScript script directly; no install needed.
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24.x"
+
+      # A PR closed while this run was building has had its preview removed
+      # (preview-image.yml); deploying now would bring it back.
+      - name: Check the PR is still open
+        id: open
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
+        run: echo "state=$(gh api "repos/$GITHUB_REPOSITORY/pulls/$PR" --jq .state)" >> "$GITHUB_OUTPUT"
+
+      - name: Deploy to Coolify and mirror its status
+        if: steps.open.outputs.state == 'open'
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          COOLIFY_DASHBOARD_URL: ${{ vars.COOLIFY_DASHBOARD_URL }}
+          COOLIFY_PREVIEW_APP_UUID: ${{ vars.COOLIFY_PREVIEW_IMAGE_APP_UUID }}
+          PREVIEW_URL_TEMPLATE: ${{ vars.PREVIEW_URL_TEMPLATE }}
+          COOLIFY_API_TOKEN: ${{ secrets.COOLIFY_API_TOKEN }}
+          TAG: ${{ needs.preview.outputs.tag }}
+        run: node scripts/preview-deployment.ts deploy "$TAG"
+
   test:
     name: E2E tests
-    needs: changes
+    needs: [changes, image]
+    # Runs even when the image failed, so the failure lands on this required
+    # check: a skipped required check counts as passing.
     if: ${{ !cancelled() && (github.event_name != 'pull_request' || needs.changes.result != 'success' || needs.changes.outputs.e2e == 'true') }}
     timeout-minutes: 60
     runs-on: ubuntu-latest
@@ -102,6 +229,14 @@ jobs:
           --health-retries 5
 
     steps:
+      - name: Stop if the image didn't build
+        if: needs.image.result != 'success'
+        env:
+          RESULT: ${{ needs.image.result }}
+        run: |
+          echo "::error::The Build image job ended with '$RESULT'; there's no image to test."
+          exit 1
+
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
@@ -135,6 +270,8 @@ jobs:
         id: e2e
         env:
           E2E_VERIFY_VISUAL: "true"
+          # The image's server shares this container's network (scripts/test-e2e.mjs).
+          E2E_NETWORK_CONTAINER: ${{ job.container.id }}
         run: pnpm test:e2e -- --update-snapshots=${{ github.event_name == 'merge_group' && 'none' || 'missing' }}
 
       # Runs even if the step above failed: a real regression on one test

@@ -62,11 +62,9 @@ RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
 
 COPY . .
 
-# None of these is a secret: DATABASE_URI points at the workflow's throwaway database
-# and PAYLOAD_SECRET only has to exist for the build. The deployment's real values
-# come from Coolify at runtime.
+# None of these is a secret: DATABASE_URI points at the workflow's throwaway database.
+# The deployment's real values come from Coolify at runtime.
 ARG DATABASE_URI
-ARG PAYLOAD_SECRET=build-only
 ARG BUILD_ENV=preview
 ARG COOLIFY_FQDN=
 ARG SOURCE_COMMIT=
@@ -86,7 +84,11 @@ ENV NODE_ENV=production \
 # Migrate the throwaway database first: the build reads the schema, and Payload's
 # prodMigrations stays off here, so parallel prerender workers never race to apply them.
 # A fresh runner has no Turbopack cache to go corrupt, so this skips build-next.sh.
-RUN echo "--- PHASE: MIGRATING THE BUILD DATABASE ---" && \
+# PAYLOAD_SECRET only has to exist for the build; the deployment's real one comes from
+# Coolify at runtime. It's set here rather than as an ARG, which Docker's
+# SecretsUsedInArgOrEnv check flags whatever the value.
+RUN export PAYLOAD_SECRET=build-only && \
+    echo "--- PHASE: MIGRATING THE BUILD DATABASE ---" && \
     pnpm payload migrate && \
     echo "--- PHASE: BUILDING NEXT.JS ---" && \
     SENTRY_RELEASE="${SOURCE_COMMIT}" pnpm build && \

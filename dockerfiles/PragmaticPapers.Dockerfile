@@ -81,9 +81,11 @@ ARG S3_BUCKET
 ARG S3_ENDPOINT
 
 # --- PUBLIC / CLIENT-SIDE ---
+# TURNSTILE_SITE_KEY and GOOGLE_ANALYTICS_ID get no ARG: Coolify mounts every build
+# variable into each RUN anyway, and a name ending in _KEY trips Docker's
+# SecretsUsedInArgOrEnv check.
 ARG NEXT_PUBLIC_SUPABASE_URL
 ARG SENTRY_DSN
-ARG TURNSTILE_SITE_KEY
 
 # --- COOLIFY & DEPLOYMENT ---
 ARG COOLIFY_FQDN=
@@ -105,8 +107,7 @@ ENV NODE_ENV=${NODE_ENV} \
     S3_ENDPOINT=${S3_ENDPOINT} \
     SERVER_URL=${SERVER_URL} \
     NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL} \
-    SENTRY_DSN=${SENTRY_DSN} \
-    TURNSTILE_SITE_KEY=${TURNSTILE_SITE_KEY}
+    SENTRY_DSN=${SENTRY_DSN}
 
 # --- DATABASE PREPARATION & MIGRATION ---
 # 1. Isolated Preview Logic (names and clones a database for each PR, then drops the

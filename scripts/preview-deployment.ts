@@ -22,7 +22,8 @@
  * Coolify still doesn't build (previews off for its base branch, say) gets no
  * Deployment. Without the Coolify settings the script does nothing.
  *
- * Previews built in GitHub Actions instead (#1067, .github/workflows/preview-image.yml)
+ * Previews built in GitHub Actions instead (#1067; deployed by .github/workflows/playwright.yml,
+ * removed by .github/workflows/preview-image.yml)
  * run on a Coolify "Docker Image" application, which never builds anything itself:
  *
  *   node scripts/preview-deployment.ts deploy <image-tag>   # deploy that image as the PR's preview

@@ -1,8 +1,10 @@
 name: "Set up E2E"
 description: >-
   Shared setup for the E2E jobs in playwright.yml and update-snapshots.yml:
-  the E2E environment, the GitHub CLI, dependencies and the Next.js build
-  cache. Runs inside the pinned Playwright image, after actions/checkout.
+  the E2E environment, the GitHub and Docker CLIs, dependencies, and the app
+  image the workflow's "Build image" job saved (the `app-image` artifact),
+  loaded into Docker. Runs inside the pinned Playwright image, after
+  actions/checkout.
 
 inputs:
   gh-font-read-token:
@@ -30,6 +32,7 @@ runs:
         MERCH_SITE_URL=https://digitalgroundgame.org/merch
         DATABASE_URI=postgres://postgres:postgres@postgres:5432/pragmatic-papers-e2e
         E2E_PROD_SERVER=true
+        E2E_IMAGE=pragmatic-papers-app:ci
         FONTS_REQUIRED=true
         EOF
       # MERCH_SITE_URL: the Merch block has no built-in store site. Without it
@@ -40,6 +43,10 @@ runs:
       # localhost. The job runs inside a container, and service containers are
       # reachable by their service-id alias on the shared Docker network. The
       # database name must match the service's POSTGRES_DB.
+      #
+      # E2E_IMAGE: scripts/test-e2e.mjs serves the image the workflow built,
+      # the one a PR's preview deploys, instead of building Next.js itself
+      # (#1090). Must match the build-app-image action's `image` output.
       #
       # FONTS_REQUIRED: refuse to render with the Inter fallback.
       # scripts/install-fonts.ts silently substitutes Inter when
@@ -81,18 +88,24 @@ runs:
         payload-secret: e2e-payload-secret
         save-pnpm-cache: ${{ inputs.save-pnpm-cache }}
 
-    # Restores Next.js incremental compilation cache so `next build` inside
-    # the E2E run only recompiles what changed since the last run on this
-    # exact source tree. No `restore-keys` fallback: a partial (prefix) match
-    # restores whatever `.next/cache` a DIFFERENT source tree last saved under
-    # the same lockfile hash, and Next's incremental build doesn't reliably
-    # notice that a plain data import (e.g. a fixture JSON bundled into the
-    # seed) changed underneath it. It can silently keep serving output baked
-    # from that other tree instead of rebuilding. An exact-key-only cache
-    # still speeds up a re-run of unchanged source; anything that actually
-    # changed gets a real (if slower) clean build instead of a wrong one.
-    - name: Cache Next.js build cache
-      uses: actions/cache@v6
+    # The job container talks to the runner's Docker daemon through the socket
+    # the runner mounts into it: test-e2e.mjs starts the app image beside it.
+    # The Playwright image has no Docker CLI, so fetch the static client.
+    - name: Install Docker CLI
+      shell: bash
+      run: |
+        DOCKER_VERSION=27.3.1
+        curl -fsSL "https://download.docker.com/linux/static/stable/$(uname -m)/docker-${DOCKER_VERSION}.tgz" \
+          | tar -xz -C /tmp docker/docker
+        install /tmp/docker/docker /usr/local/bin/docker
+        docker version
+
+    - name: Download the app image
+      uses: actions/download-artifact@v7
       with:
-        path: .next/cache
-        key: nextjs-${{ hashFiles('pnpm-lock.yaml') }}-${{ hashFiles('src/**/*.[jt]s', 'src/**/*.[jt]sx', 'src/**/*.json', '*.[jt]s', '*.[jt]sx') }}
+        name: app-image
+        path: ${{ runner.temp }}
+
+    - name: Load the app image
+      shell: bash
+      run: docker load -i "$RUNNER_TEMP/app-image.tar"

@@ -17,7 +17,7 @@
 # other one: Coolify injects its variables into every RUN that has no secret mount of
 # its own, so the explicit mounts below would strip the rest of its variables there.
 #
-# Build (see .github/workflows/preview-image.yml):
+# Build (see .github/actions/build-app-image, which playwright.yml's image job runs):
 #   docker buildx build -f dockerfiles/PragmaticPapers.ci.Dockerfile --network host \
 #     --secret id=GH_FONT_READ,env=GH_FONT_READ --build-arg DATABASE_URI=... .
 ARG NODE_VERSION=24.15.0

@@ -35,12 +35,50 @@ concurrency:
   cancel-in-progress: true
 
 # The E2E environment is set by .github/actions/setup-e2e, shared with
-# playwright.yml so regenerated baselines render the same page it checks.
+# playwright.yml so regenerated baselines render the same page it checks:
+# both serve the app from the image .github/actions/build-app-image builds.
 
 jobs:
+  image:
+    name: Build image
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.label.name == 'needs screenshots' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+
+    # What `next build` prerenders from; see playwright.yml's image job.
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: build
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.ref }}
+
+      - uses: ./.github/actions/build-app-image
+        with:
+          gh-font-read-token: ${{ secrets.GH_FONT_READ }}
+          source-commit: ${{ github.event.pull_request.head.sha || github.sha }}
+
   update-snapshots:
     name: Update snapshot baselines
-    if: ${{ github.event_name == 'workflow_dispatch' || github.event.label.name == 'needs screenshots' }}
+    needs: image
+    # Runs even when the image failed, so the failure shows here and the
+    # trigger label is still removed below.
+    if: ${{ !cancelled() && (github.event_name == 'workflow_dispatch' || github.event.label.name == 'needs screenshots') }}
     timeout-minutes: 60
     runs-on: ubuntu-latest
     # Same pinned image as playwright.yml and scripts/test-e2e-docker.ts —
@@ -70,6 +108,14 @@ jobs:
           --health-retries 5
 
     steps:
+      - name: Stop if the image didn't build
+        if: needs.image.result != 'success'
+        env:
+          RESULT: ${{ needs.image.result }}
+        run: |
+          echo "::error::The Build image job ended with '$RESULT'; there's no image to render baselines from."
+          exit 1
+
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
@@ -114,6 +160,8 @@ jobs:
       - name: Regenerate changed snapshot baselines
         env:
           E2E_VERIFY_VISUAL: "true"
+          # The image's server shares this container's network (scripts/test-e2e.mjs).
+          E2E_NETWORK_CONTAINER: ${{ job.container.id }}
         run: pnpm test:e2e -- --update-snapshots=changed --project=chromium
 
       - name: Commit regenerated snapshots

@@ -100,7 +100,7 @@ export const Form: Story = {
     await waitFor(() => expect(canvas.getByText("Pitch the editors")).toBeVisible())
     await userEvent.click(canvas.getByRole("button", { name: "Open form" }))
     const dialog = await screen.findByRole("dialog", { name: "Pitch the editors" })
-    // The dialog fades in, so its fields aren't visible straight away.
+    // The dialog fades in from opacity 0, so wait for it to finish rather than read it mid-fade.
     await waitFor(() =>
       expect(within(dialog).getByRole("textbox", { name: /Your pitch/ })).toBeVisible(),
     )

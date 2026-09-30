@@ -1,8 +1,10 @@
 import { ClientThemeProvider } from "@wrksz/themes/client"
 import { cleanup, fireEvent, render, type RenderResult, screen } from "@testing-library/react"
 import React from "react"
-import { afterEach, describe, expect, it, vi } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
+import { FRESH, Fresh } from "../Fresh"
+import { resetSeenStore, SEEN_KEY_PREFIX } from "../Fresh/store"
 import { ModeToggle } from "../ModeToggle"
 
 // Same provider props as src/app/(frontend)/layout.tsx. vitest.setup's
@@ -102,5 +104,59 @@ describe("ModeToggle", () => {
     expect(system).toHaveAttribute("data-disabled")
     fireEvent.click(system)
     expect(onThemeChange).not.toHaveBeenCalled()
+  })
+})
+
+describe("ModeToggle fresh dot", () => {
+  function dotIn(element: HTMLElement): Element | null {
+    return element.querySelector("[data-slot='fresh']")
+  }
+
+  // The header's account button mirrors the toggle's fresh dot below lg.
+  function renderWithAccountButton(props: React.ComponentProps<typeof ModeToggle> = {}): void {
+    render(
+      <ClientThemeProvider attribute="class" defaultTheme="system" enableSystem>
+        <button type="button" className="relative">
+          Account
+          <Fresh name={FRESH.modeToggle} />
+        </button>
+        <ModeToggle {...props} />
+      </ClientThemeProvider>,
+    )
+  }
+
+  beforeEach(resetSeenStore)
+
+  it("shows no dot unless showFresh is set", () => {
+    renderToggle()
+
+    expect(dotIn(screen.getByRole("button", { name: "Toggle theme" }))).not.toBeInTheDocument()
+  })
+
+  it("marks a first-time reader's toggle, and the places mirroring it", () => {
+    renderWithAccountButton({ showFresh: true })
+
+    expect(dotIn(screen.getByRole("button", { name: "Toggle theme" }))).toBeInTheDocument()
+    expect(dotIn(screen.getByRole("button", { name: "Account" }))).toBeInTheDocument()
+  })
+
+  it("clears the dot everywhere once a toggle is opened, and remembers it", async () => {
+    renderWithAccountButton({ showFresh: true })
+
+    openMenu()
+    await screen.findByRole("menuitem", { name: "Dark" })
+
+    expect(dotIn(screen.getByRole("button", { name: "Toggle theme" }))).not.toBeInTheDocument()
+    expect(dotIn(screen.getByRole("button", { name: "Account" }))).not.toBeInTheDocument()
+    expect(localStorage.getItem(`${SEEN_KEY_PREFIX}${FRESH.modeToggle}`)).toBe("1")
+  })
+
+  it("is cleared by opening a toggle that doesn't show it, like the footer's", async () => {
+    renderWithAccountButton()
+
+    openMenu()
+    await screen.findByRole("menuitem", { name: "Dark" })
+
+    expect(dotIn(screen.getByRole("button", { name: "Account" }))).not.toBeInTheDocument()
   })
 })

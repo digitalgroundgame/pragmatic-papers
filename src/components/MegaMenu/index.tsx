@@ -17,7 +17,7 @@ interface MegaMenuProps {
 export function MegaMenu({ menu, label }: MegaMenuProps): React.ReactNode {
   if (!menu) return null
   return (
-    <div className="my-2 hidden w-full justify-center md:flex">
+    <div className="my-2 hidden w-full justify-center md:flex" data-tour="mega-menu">
       <NavigationMenu
         aria-label={label}
         align="center"

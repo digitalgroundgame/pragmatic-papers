@@ -4,6 +4,7 @@ import React from "react"
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
+import { Dot } from "@/components/ui/dot"
 import { cn } from "@/utilities/utils"
 
 import { RecordAvatar } from "./RecordAvatar"
@@ -94,11 +95,7 @@ function DetailBody({
         )}
       </div>
       <div className="flex items-center gap-1.5">
-        <span
-          aria-hidden="true"
-          className="inline-block size-2.5 shrink-0 rounded-full"
-          style={{ background: category.color }}
-        />
+        <Dot size="md" tone="none" style={{ background: category.color }} />
         <span>{category.label}</span>
       </div>
       <dl className="space-y-0.5">

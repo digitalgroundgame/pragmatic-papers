@@ -79,6 +79,26 @@ export async function waitForStableRender(page: Page): Promise<void> {
   })
 }
 
+const SHOW_FRESH = "data-e2e-show-fresh"
+
+/**
+ * Keep fresh dots in this test's screenshots. `tests/e2e/screenshot.css`
+ * hides them from every capture by default, since each test starts in a fresh
+ * browser where every fresh dot shows; call this in a test whose baseline is
+ * about one. It applies to the current page and to any page the test navigates to
+ * afterwards.
+ */
+export async function showFresh(page: Page): Promise<void> {
+  await page.addInitScript((attribute) => {
+    document.addEventListener("DOMContentLoaded", () => {
+      document.documentElement.setAttribute(attribute, "")
+    })
+  }, SHOW_FRESH)
+  await page.evaluate((attribute) => {
+    document.documentElement.setAttribute(attribute, "")
+  }, SHOW_FRESH)
+}
+
 /**
  * `expect(page).toHaveScreenshot(...)`, but always preceded by
  * `waitForStableRender`. Use this instead of the raw assertion for every

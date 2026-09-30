@@ -23,6 +23,12 @@ import { queryArticleBySlug, queryVolumesForArticles } from "@/utilities/queries
 import { isResolved } from "@/utilities/relationships"
 import { buildArticleJsonLd, buildBreadcrumbJsonLd } from "@/utilities/structuredData"
 
+// Explicit, not left to Next's dynamic-API bailout: this page reads draftMode(), which makes
+// Next render it per request, but it only finds that out by prerendering one. When
+// generateStaticParams returns nothing (a build against an empty database, #1067) the route
+// is classed static instead, and every request then fails with DYNAMIC_SERVER_USAGE.
+export const dynamic = "force-dynamic"
+
 export async function generateStaticParams(): Promise<{ slug: string | null | undefined }[]> {
   const payload = await getPayloadConfig()
   const articles = await payload.find({

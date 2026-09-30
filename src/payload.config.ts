@@ -16,15 +16,17 @@ import { Footer } from "@/Footer/config"
 import { ArticleRecommendations } from "@/globals/ArticleRecommendations/config"
 import { SiteSettings } from "@/globals/SiteSettings/config"
 import { Header } from "@/Header/config"
+import { canRunJobs } from "@/jobs/access"
 import { syncInteractiveDataTask } from "@/jobs/syncInteractiveData"
 import { syncShopifyProductsTask } from "@/jobs/syncShopifyProducts"
 import { updateRecommendationsTask } from "@/jobs/updateRecommendations"
 import { plugins } from "@/plugins"
 import { searchVectorAfterSchemaInit } from "@/plugins/searchVector"
 import { getServerSideURL } from "@/utilities/getURL"
+import { migrations } from "@/migrations"
 import { postgresAdapter } from "@payloadcms/db-postgres"
 import path from "path"
-import { buildConfig, type PayloadRequest, type SharpDependency } from "payload"
+import { buildConfig, type SharpDependency } from "payload"
 import sharp from "sharp"
 import { fileURLToPath } from "url"
 
@@ -97,6 +99,10 @@ export default buildConfig({
     },
     // prevent schema push in prod/test for static schema determinism and noise reduction
     push: process.env.NODE_ENV === "development",
+    // Images built in GitHub Actions (dockerfiles/PragmaticPapers.ci.Dockerfile, #1067) never
+    // touch the real database while building, so they migrate when Payload starts (Payload
+    // only does under NODE_ENV=production). Coolify's builds run `payload migrate` instead.
+    prodMigrations: process.env.BUILT_WITHOUT_DATABASE === "true" ? migrations : undefined,
     afterSchemaInit: [searchVectorAfterSchemaInit],
   }),
   /**
@@ -158,16 +164,7 @@ export default buildConfig({
   ],
   jobs: {
     access: {
-      run: ({ req }: { req: PayloadRequest }): boolean => {
-        // Allow logged in users to execute this endpoint (default)
-        if (req.user) return true
-
-        // If there is no logged in user, then check
-        // for the Vercel Cron secret to be present as an
-        // Authorization header:
-        const authHeader = req.headers.get("authorization")
-        return authHeader === `Bearer ${process.env.CRON_SECRET}`
-      },
+      run: canRunJobs,
     },
     autoRun: [{ cron: "*/5 * * * *", queue: "default" }],
     tasks: [updateRecommendationsTask, syncShopifyProductsTask, syncInteractiveDataTask],

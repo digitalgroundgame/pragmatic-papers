@@ -116,7 +116,7 @@ Issues live on the org Project **"Pragmatic Papers Development"**
 (`https://github.com/orgs/digitalgroundgame/projects/3`). The board's
 built-in workflows handle two transitions for you:
 
-- **New issues are added automatically** with `Status: Backlog`. Don't add them
+- **New issues are added automatically** with `Status: Ready`. Don't add them
   by hand.
 - **Closing an issue moves it to `Done`.** Don't set `Done` yourself.
 - **PRs are not tracked on the board.** Only issues. Don't add PRs.
@@ -128,13 +128,13 @@ through the API. Don't assume they moved an issue; check its `Status`
 
 ### Fields and how we use them
 
-| Field                     | Values                                                                    | Convention                                                                                                                                  |
-| ------------------------- | ------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| `Status`                  | `Backlog` · `Ready` · `In progress` · `In review` · `Needs Work` · `Done` | Set `Ready` when an issue is scoped and can be picked up, `In progress` when work starts. `In review` / `Needs Work` exist but aren't used. |
-| `Priority`                | `P0` · `P1` · `P2` · `P3`                                                 | Set on every open issue.                                                                                                                    |
-| `Size`                    | `XS` · `S` · `M` · `L` · `XL`                                             | Set on every open issue, together with `Estimate`.                                                                                          |
-| `Estimate`                | story points (number)                                                     | Follows `Size`: **XS = 0.5 or 1, S = 2, M = 3, L = 5, XL = 8**. Never set without `Size`.                                                   |
-| `Start date` / `End date` | date                                                                      | Not used. Leave empty.                                                                                                                      |
+| Field                     | Values                                                                    | Convention                                                                                                                                                        |
+| ------------------------- | ------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Status`                  | `Backlog` · `Ready` · `In progress` · `In review` · `Needs Work` · `Done` | New issues start `Ready`. Move one to `Backlog` when it can't be picked up yet, `In progress` when work starts. `In review` / `Needs Work` exist but aren't used. |
+| `Priority`                | `P0` · `P1` · `P2` · `P3`                                                 | Set on every open issue.                                                                                                                                          |
+| `Size`                    | `XS` · `S` · `M` · `L` · `XL`                                             | Set on every open issue, together with `Estimate`.                                                                                                                |
+| `Estimate`                | story points (number)                                                     | Follows `Size`: **XS = 0.5 or 1, S = 2, M = 3, L = 5, XL = 8**. Never set without `Size`.                                                                         |
+| `Start date` / `End date` | date                                                                      | Not used. Leave empty.                                                                                                                                            |
 
 Assignees, labels, milestone, parent issue and linked PRs are issue attributes
 the board only displays. Set those on the issue (`gh issue edit`), not on the
@@ -148,9 +148,11 @@ board.
   proposal. Set `P1`–`P3` when you're confident, **never `P0` unless someone
   asked for it**, and state the priority you chose and why in your reply so a
   human can change it. If you can't judge it, leave it unset and say so.
-- **`Status`:** leave it at `Backlog`. Set `Ready` only when asked, and
-  `In progress` only when you start working on the issue yourself, and then
-  assign yourself too ([Starting work](#starting-work-on-an-issue)).
+- **`Status`:** leave it at `Ready`. Set `Backlog` when the issue can't be
+  picked up yet (blocked on another issue, `waiting on design`, not scoped
+  enough to start), and say why in your reply. Set `In progress` only when you
+  start working on the issue yourself, and then assign yourself too
+  ([Starting work](#starting-work-on-an-issue)).
 
 ### Setting fields
 
@@ -244,7 +246,8 @@ For `duplicate`/`invalid`/`wontfix`, add the matching label too.
       plus any status that's clear. Guess rather than defer.
 - [ ] Every label used exists in `.github/labels.yml`.
 - [ ] `Size` and the matching `Estimate` set on the board (the issue is added
-      as `Backlog` automatically).
+      as `Ready` automatically; move it to `Backlog` if it can't be picked up
+      yet).
 - [ ] `Priority` set only if you're confident (never `P0` unasked), and the
       value you chose stated in your reply.
 - [ ] Starting on it now? Assign yourself and set `Status` to `In progress`

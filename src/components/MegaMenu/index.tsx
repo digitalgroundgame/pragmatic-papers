@@ -10,13 +10,16 @@ import { MegaMenuLink } from "./MegaMenuLink"
 
 interface MegaMenuProps {
   menu?: MenuField
+  /** Names the `nav` landmark, so a page's navs can be told apart. */
+  label: string
 }
 
-export function MegaMenu({ menu }: MegaMenuProps): React.ReactNode {
+export function MegaMenu({ menu, label }: MegaMenuProps): React.ReactNode {
   if (!menu) return null
   return (
     <div className="my-2 hidden w-full justify-center md:flex" data-tour="mega-menu">
       <NavigationMenu
+        aria-label={label}
         align="center"
         //   className="hidden w-full max-w-full flex-none justify-center md:flex"
       >

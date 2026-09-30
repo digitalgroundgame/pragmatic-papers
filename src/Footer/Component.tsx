@@ -28,7 +28,7 @@ export async function Footer(): Promise<React.ReactElement> {
       </div>
       <div className="flex flex-col-reverse items-start gap-1 md:flex-row md:items-center md:justify-between md:gap-2">
         <Copyright copyright={copyright} />
-        <Menu menu={navItems} />
+        <Menu menu={navItems} label="Footer" />
       </div>
     </footer>
   )

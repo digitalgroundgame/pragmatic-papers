@@ -51,7 +51,7 @@ export const Unavailable: Story = {
     snapshot: snapshot({ status: "not_found" }),
   },
   play: async ({ canvasElement }) => {
-    const alert = within(canvasElement).getByRole("alert")
+    const alert = await within(canvasElement).findByRole("alert")
     await expect(alert).toHaveTextContent("This video is unavailable.")
     await expect(within(alert).getByRole("link")).toHaveAttribute(
       "href",

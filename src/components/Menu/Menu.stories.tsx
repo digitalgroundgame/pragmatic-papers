@@ -9,7 +9,7 @@ import { Menu } from "."
 const meta = {
   title: "Components/Menu",
   component: Menu,
-  args: { menu: navItems, layout: "responsive" },
+  args: { menu: navItems, label: "Main", layout: "responsive" },
   argTypes: {
     layout: { control: "inline-radio", options: ["inline", "stacked", "responsive"] },
   },
@@ -45,7 +45,7 @@ export const Stacked: Story = {
 }
 
 export const Mega: Story = {
-  render: (args) => <MegaMenu menu={args.menu} />,
+  render: (args) => <MegaMenu menu={args.menu} label={args.label} />,
   play: async ({ canvasElement }) => {
     await expect(within(canvasElement).getByRole("link", { name: "Volumes" })).toHaveAttribute(
       "aria-current",

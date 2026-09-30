@@ -25,6 +25,15 @@ function mockPayload(): Plugin {
   }
 }
 
+/**
+ * Server env the stories need. The built preview swaps `process.env` for an
+ * empty object wherever it's read, so a story can't set one in `beforeEach`;
+ * `define` bakes it in for the dev server, the build and the test runner alike.
+ */
+const storyEnv = {
+  MERCH_SITE_URL: "https://shop.example.com/collections/pragmatic-papers",
+}
+
 const config: StorybookConfig = {
   stories: ["../src/**/*.stories.@(ts|tsx)", "../src/**/*.mdx"],
   addons: [
@@ -50,6 +59,15 @@ const config: StorybookConfig = {
   },
   viteFinal: (viteConfig) => {
     viteConfig.plugins = [mockPayload(), ...(viteConfig.plugins ?? [])]
+    viteConfig.define = {
+      ...viteConfig.define,
+      ...Object.fromEntries(
+        Object.entries(storyEnv).map(([key, value]) => [
+          `process.env.${key}`,
+          JSON.stringify(value),
+        ]),
+      ),
+    }
     return viteConfig
   },
 }

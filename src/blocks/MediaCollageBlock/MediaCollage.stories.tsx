@@ -77,8 +77,11 @@ export const Carousel: Story = {
   args: { layout: "carousel" },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    const second = canvas.getByRole("button", { name: "Go to slide 2" })
-    await userEvent.click(canvas.getByRole("button", { name: "Next slide" }))
+    const second = await canvas.findByRole("button", { name: "Go to slide 2" })
+    // Next stays disabled until the carousel has measured its slides.
+    const next = canvas.getByRole("button", { name: "Next slide" })
+    await waitFor(() => expect(next).toBeEnabled())
+    await userEvent.click(next)
     await waitFor(() => expect(second).toHaveClass("bg-primary"))
   },
 }

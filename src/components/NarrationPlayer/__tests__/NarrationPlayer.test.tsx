@@ -33,7 +33,7 @@ const narrator = { id: 5, name: "Ada", slug: "ada" } as User
 // been expanded, so each case plays first and then opens the menu.
 function openSettings(): void {
   fireEvent.click(screen.getByLabelText("Play"))
-  fireEvent.click(screen.getByLabelText("Player settings"))
+  fireEvent.click(screen.getByRole("button", { name: "Player settings" }))
 }
 
 describe("NarrationPlayer", () => {
@@ -71,10 +71,8 @@ describe("NarrationPlayer", () => {
     render(<NarrationPlayer narration={{ ...narration, narrator }} />)
     openSettings()
 
-    const link = screen.getByRole("menuitem", { name: "Ada" }) as HTMLAnchorElement
-    expect(link.tagName).toBe("A")
-    expect(link.getAttribute("href")).toBe("/authors/ada")
-    expect(screen.getByText("Narrated by")).toBeTruthy()
+    expect(screen.getByRole("link", { name: "Ada" })).toHaveAttribute("href", "/authors/ada")
+    expect(screen.getByText("Narrated by")).toBeInTheDocument()
   })
 
   it("omits the credit when no narrator is set", () => {

@@ -59,22 +59,17 @@ export const AudioSettings: Story = {
     await userEvent.click(
       await within(canvasElement).findByRole("button", { name: "Player settings" }),
     )
-    await userEvent.click(await screen.findByRole("menuitemradio", { name: /1\.5/ }))
+    const panel = await screen.findByRole("dialog", { name: "Player settings" })
+
+    await userEvent.click(await within(panel).findByRole("button", { name: "1.5\u00d7" }))
     await waitFor(() =>
       expect(canvasElement.querySelector("audio")).toHaveProperty("playbackRate", 1.5),
     )
-  },
-}
 
-export const AudioVolume: Story = {
-  args: { media: narrationAudio },
-  play: async ({ canvasElement }) => {
-    await userEvent.click(await within(canvasElement).findByRole("button", { name: "Volume" }))
-    const popover = await screen.findByRole("dialog", { name: "Volume" })
-    const slider = await within(popover).findByRole("slider", { name: "Volume" })
-    slider.focus()
+    const volume = await within(panel).findByRole("slider", { name: "Volume" })
+    volume.focus()
     await userEvent.keyboard("{ArrowLeft}")
-    await expect(slider).toHaveAttribute("aria-valuenow", "0.99")
+    await expect(volume).toHaveAttribute("aria-valuenow", "0.99")
   },
 }
 
@@ -87,7 +82,7 @@ export const Narration: Story = {
     await userEvent.click(canvas.getByRole("button", { name: "Play" }))
     await waitFor(() => expect(controls).not.toHaveAttribute("inert"))
     await userEvent.click(canvas.getByRole("button", { name: "Player settings" }))
-    await expect(await screen.findByRole("menuitem", { name: "Jordan Rivera" })).toHaveAttribute(
+    await expect(await screen.findByRole("link", { name: "Jordan Rivera" })).toHaveAttribute(
       "href",
       "/authors/jordan-rivera",
     )

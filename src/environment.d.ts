@@ -9,6 +9,8 @@ declare global {
       GOOGLE_ANALYTICS_ID?: string
       /** Read at runtime; unset, the newsletter form renders without the widget. */
       TURNSTILE_SITE_KEY?: string
+      /** Media's public bucket origin (https://<project>.supabase.co) with S3 storage. Read at runtime. */
+      SUPABASE_URL?: string
       VERCEL_PROJECT_PRODUCTION_URL: string
       BUILD_ENV?: string
     }

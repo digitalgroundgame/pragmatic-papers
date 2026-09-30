@@ -19,8 +19,6 @@
 #                                              keeps following Coolify's own builds.
 #   - secret   COOLIFY_API_TOKEN               needs `deploy` and `write` as well as `read`
 #   - variable COOLIFY_DASHBOARD_URL, PREVIEW_URL_TEMPLATE   as for preview-deployment.yml
-#   - variables PREVIEW_NEXT_PUBLIC_*          optional; the browser-side values previews
-#                                              build with (see the build step)
 # The Coolify side is in dockerfiles/README.md ("Previews built in GitHub Actions").
 name: Preview image
 
@@ -132,7 +130,6 @@ jobs:
             SERVER_URL=${{ steps.meta.outputs.url }}
             SOURCE_COMMIT=${{ github.event.pull_request.head.sha }}
             USE_LOCAL_STORAGE=${{ vars.PREVIEW_USE_LOCAL_STORAGE || 'true' }}
-            NEXT_PUBLIC_SUPABASE_URL=${{ vars.PREVIEW_NEXT_PUBLIC_SUPABASE_URL }}
           labels: |
             org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
             org.opencontainers.image.revision=${{ github.event.pull_request.head.sha }}

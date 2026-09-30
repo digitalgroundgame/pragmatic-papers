@@ -324,7 +324,9 @@ Set `BUILD_ENV=staging` or `BUILD_ENV=production` and leave `COPY_SOURCE_DATABAS
 
 ### Previews built in GitHub Actions
 
-[#1067](https://github.com/digitalgroundgame/pragmatic-papers/issues/1067) moves preview builds off the Coolify build server (see [#1018](https://github.com/digitalgroundgame/pragmatic-papers/issues/1018)): `.github/workflows/preview-image.yml` builds each PR's image on a GitHub runner, pushes it to GHCR, and has Coolify run it as the PR's preview. It stays off until `COOLIFY_PREVIEW_IMAGE_APP_UUID` is set; until then previews build in Coolify as described above.
+[#1067](https://github.com/digitalgroundgame/pragmatic-papers/issues/1067) moves preview builds off the Coolify build server (see [#1018](https://github.com/digitalgroundgame/pragmatic-papers/issues/1018)): `.github/workflows/playwright.yml` builds each PR's image on a GitHub runner (`.github/actions/build-app-image`), pushes it to GHCR, and has Coolify run it as the PR's preview; `preview-image.yml` removes it when the PR closes. It stays off until `COOLIFY_PREVIEW_IMAGE_APP_UUID` is set; until then previews build in Coolify as described above.
+
+**The preview is the image E2E tested** ([#1090](https://github.com/digitalgroundgame/pragmatic-papers/issues/1090)). Nothing environment-specific is built in: `SERVER_URL` and the rest are read at runtime. What the build prerenders from its localhost default (the feeds, `robots.txt` and the sitemap index) is re-rendered once the server starts, when `/next/revalidate-all` is called. So the same image serves E2E on `http://localhost:8000` and the preview on `pr-<n>.pragmaticpapers.com`. The "E2E tests" job starts it with `node server.js` rather than `start.sh`: there's no preview database to name or copy, and `scripts/test-e2e.mjs` seeds, copies the uploads in and calls `/next/revalidate-all` itself.
 
 **Where each step runs.** The runner never gets a route to our database or its password, so the database work moves to the container:
 
@@ -364,7 +366,7 @@ The image sets `BUILT_WITHOUT_DATABASE=true`, which switches on the start-time s
      2. Add the mount as a **Directory mount**. Double-check the type before saving.
      3. Straight away, click **Configure Backup** on it and set a schedule. That locks out Convert To File and Delete, and backs up staging's media from then on.
 
-     Never edit the mount afterwards; delete it only after removing its backup schedule and copying staging's media again. `start.sh` only reads `/staging-media`, but Coolify has no read-only option for a Docker Image app's mounts, so it is mounted read-write. What keeps previews off staging's files is that only `start.sh` touches that path, and previews only deploy PRs from trusted authors (`preview-image.yml`).
+     Never edit the mount afterwards; delete it only after removing its backup schedule and copying staging's media again. `start.sh` only reads `/staging-media`, but Coolify has no read-only option for a Docker Image app's mounts, so it is mounted read-write. What keeps previews off staging's files is that only `start.sh` touches that path, and previews only deploy PRs from trusted authors (the "Plan preview" job in `playwright.yml`).
 2. Copy the development app's **Preview Deployment Environment Variables** into it as **runtime** variables: `DATABASE_URI`, `COPY_SOURCE_DATABASE`, `FORCE_DATABASE_COPY`, `PAYLOAD_SECRET`, `USE_LOCAL_STORAGE`, `SERVER_URL=$COOLIFY_URL`, `TURNSTILE_SITE_KEY`, `GOOGLE_ANALYTICS_ID`, `SENTRY_DSN` and the rest the app reads at runtime. `BUILD_ENV` is baked into the image. Build variables aren't used: nothing builds in Coolify.
 3. Let the server pull from GHCR: the package is private, so log its Docker in to `ghcr.io` (`docker login ghcr.io`, as the user Coolify connects with) with a GitHub token that has `read:packages`.
 4. Give `COOLIFY_API_TOKEN` the `deploy` and `write` abilities as well as `read` (the token's owner must be a team admin). The workflow uses them to deploy the image (`POST /api/v1/deploy?uuid=…&pr=…&docker_tag=…`, Coolify `v4.0.0-beta.471` or later) and to remove the preview when the PR closes.
@@ -378,7 +380,7 @@ In GitHub (**Settings → Secrets and variables → Actions**):
 
 `GH_FONT_READ`, `COOLIFY_API_TOKEN`, `COOLIFY_DASHBOARD_URL` and `PREVIEW_URL_TEMPLATE` are shared with the workflows above.
 
-**Cutover.** Setting `COOLIFY_PREVIEW_IMAGE_APP_UUID` hands PRs to `preview-image.yml`, and `preview-deployment.yml` stops following Coolify's builds. Then turn off preview deployments on the development app and delete its running previews: they'd claim the same `pr-<n>` hostnames as the new app's. Each PR's next push redeploys it on the new app, which names databases the same way, so a preview keeps its data.
+**Cutover.** Setting `COOLIFY_PREVIEW_IMAGE_APP_UUID` hands PRs to `playwright.yml` and `preview-image.yml`, and `preview-deployment.yml` stops following Coolify's builds. Then turn off preview deployments on the development app and delete its running previews: they'd claim the same `pr-<n>` hostnames as the new app's. Each PR's next push redeploys it on the new app, which names databases the same way, so a preview keeps its data.
 
 **Rolling back.** Clear the variable and turn the development app's preview deployments back on.
 

@@ -1,0 +1,124 @@
+name: Cloudflare rules
+
+# Keeps the zone's Cloudflare rules in lockstep with cloudflare/rulesets/ (the
+# source of truth; scripts/cloudflare-rules.ts, cloudflare/README.md). A PR that
+# touches them gets the plan in its job summary. A push to `main` applies it: the
+# zone serves production, staging and every PR preview, so a rule goes live with
+# a release, not when it merges to `dev`. A weekly run checks `main`'s files
+# against Cloudflare and fails when a rule was changed in the dashboard.
+#
+# Two tokens keep a PR from writing the zone. `plan` and `check` read with the
+# repo secret CLOUDFLARE_RULES_READ_TOKEN (Cache Rules: Read). Only `apply` gets
+# the Edit token, an environment secret of `cloudflare`, whose deployment
+# branches are just `main`: a PR's run (`refs/pull/<n>/merge`) can't reach it,
+# even from a workflow file the PR edits. Setup: cloudflare/README.md.
+#
+# Path-filtered, so keep it out of required checks. `plan` and `check` skip
+# themselves without their secrets, which fork and Dependabot PRs never receive.
+
+on:
+  push:
+    branches: [main]
+    paths: ["cloudflare/rulesets/**", "scripts/cloudflare-rules.ts"]
+  pull_request:
+    paths:
+      - "cloudflare/rulesets/**"
+      - "scripts/cloudflare-rules.ts"
+      - ".github/workflows/cloudflare-rules.yml"
+  schedule:
+    - cron: "23 7 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Applies run one at a time and never cancel one halfway through its phases.
+# Only one run can wait in a group, and a newer one cancels it, so plans and
+# checks, which only read, get a group each: a PR's plan must never cancel a
+# release's waiting apply. (Two waiting applies can: the newer applies newer files.)
+concurrency:
+  group: cloudflare-rules-${{ github.event_name == 'push' && 'apply' || github.run_id }}
+  cancel-in-progress: false
+
+jobs:
+  # What `apply` would change (PRs), or whether Cloudflare has drifted from
+  # `main` (weekly, and by hand). Read-only.
+  plan:
+    name: Cloudflare rules
+    if: github.event_name != 'push'
+    runs-on: ubuntu-latest
+    env:
+      HAS_CLOUDFLARE: ${{ secrets.CLOUDFLARE_RULES_READ_TOKEN != '' && secrets.CLOUDFLARE_ZONE_ID != '' }}
+      CLOUDFLARE_RULES_TOKEN: ${{ secrets.CLOUDFLARE_RULES_READ_TOKEN }}
+      CLOUDFLARE_ZONE_ID: ${{ secrets.CLOUDFLARE_ZONE_ID }}
+      COMMAND: ${{ github.event_name == 'pull_request' && 'plan' || 'check' }}
+
+    steps:
+      - name: Skip without Cloudflare secrets
+        if: env.HAS_CLOUDFLARE != 'true'
+        run: echo "::notice::CLOUDFLARE_RULES_READ_TOKEN / CLOUDFLARE_ZONE_ID not available; skipping."
+
+      - uses: actions/checkout@v7
+        if: env.HAS_CLOUDFLARE == 'true'
+        with:
+          # The weekly check compares what's live with what `main` last applied,
+          # not with rules still waiting on `dev` for a release.
+          ref: ${{ github.event_name == 'schedule' && 'main' || '' }}
+          sparse-checkout: |
+            cloudflare/
+            scripts/cloudflare-rules.ts
+          sparse-checkout-cone-mode: false
+
+      # Node 24 runs the TypeScript script directly; no install needed.
+      - uses: actions/setup-node@v7
+        if: env.HAS_CLOUDFLARE == 'true'
+        with:
+          node-version: "24.x"
+
+      - name: Cloudflare rules (${{ env.COMMAND }})
+        if: env.HAS_CLOUDFLARE == 'true'
+        run: |
+          # The schedule runs from `dev` but checks `main`, which has no rules
+          # until the release that first carries them.
+          if [ ! -f scripts/cloudflare-rules.ts ]; then
+            echo "::notice::main has no Cloudflare rules yet; nothing to check until they're released."
+            exit 0
+          fi
+          node scripts/cloudflare-rules.ts "$COMMAND"
+
+  # Makes Cloudflare match the files a release brings to `main`.
+  apply:
+    name: Apply Cloudflare rules
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    # Its `main`-only branch rule is what keeps PRs from the Edit token. GitHub creates
+    # a missing environment without one, so add the rule before the token
+    # (cloudflare/README.md → Secrets).
+    environment: cloudflare
+    env:
+      CLOUDFLARE_RULES_TOKEN: ${{ secrets.CLOUDFLARE_RULES_TOKEN }}
+      CLOUDFLARE_ZONE_ID: ${{ secrets.CLOUDFLARE_ZONE_ID }}
+
+    steps:
+      # A push to `main` always has the secrets, so a missing one is a setup
+      # mistake: fail rather than skip, or the release's rules never go live.
+      - name: Check the Cloudflare secrets
+        run: |
+          if [ -z "$CLOUDFLARE_RULES_TOKEN" ] || [ -z "$CLOUDFLARE_ZONE_ID" ]; then
+            echo "::error::The cloudflare environment needs the CLOUDFLARE_RULES_TOKEN secret, and the repo CLOUDFLARE_ZONE_ID (cloudflare/README.md)."
+            exit 1
+          fi
+
+      - uses: actions/checkout@v7
+        with:
+          sparse-checkout: |
+            cloudflare/
+            scripts/cloudflare-rules.ts
+          sparse-checkout-cone-mode: false
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24.x"
+
+      - name: Cloudflare rules (apply)
+        run: node scripts/cloudflare-rules.ts apply

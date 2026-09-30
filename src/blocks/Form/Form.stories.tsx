@@ -80,6 +80,8 @@ export const Submitted: Story = {
     await userEvent.type(canvas.getByLabelText(/^Email/), "ada@example.com")
     await userEvent.click(canvas.getByRole("combobox", { name: /Topic/ }))
     await userEvent.click(await screen.findByRole("option", { name: "Correction" }))
+    // The listbox stays mounted while it animates out; let it go before the axe check runs.
+    await waitFor(() => expect(screen.queryByRole("listbox")).not.toBeInTheDocument())
     await userEvent.type(canvas.getByLabelText(/^Message/), "The 2022 turnout figure is off.")
     await userEvent.click(canvas.getByRole("button", { name: "Send it" }))
     await expect(await canvas.findByText(/an editor will reply/)).toBeInTheDocument()

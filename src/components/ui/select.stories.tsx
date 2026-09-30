@@ -54,6 +54,8 @@ export const Default: Story = {
     await userEvent.click(await screen.findByRole("option", { name: "Most read" }))
     await waitFor(() => expect(trigger).toHaveTextContent("Most read"))
     await expect(args.onValueChange).toHaveBeenCalledWith("popular", expect.anything())
+    // The listbox stays mounted while it animates out; let it go before the axe check runs.
+    await waitFor(() => expect(screen.queryByRole("listbox")).not.toBeInTheDocument())
   },
 }
 

@@ -1,6 +1,7 @@
 import { PostgreSqlContainer } from "@testcontainers/postgresql"
-import { execSync, spawn } from "node:child_process"
+import { execFileSync, execSync, spawn } from "node:child_process"
 import { createHash } from "node:crypto"
+import { lookup } from "node:dns/promises"
 import { appendFileSync, existsSync, readdirSync, readFileSync, rmSync } from "node:fs"
 import net from "node:net"
 import path from "node:path"
@@ -71,6 +72,80 @@ if (await isPortInUse(port)) {
 // uses it for stable screenshots. Local runs default to the faster dev server.
 const useProdServer = !!process.env.E2E_PROD_SERVER
 
+// CI tests the image it deploys (#1090): E2E_IMAGE names it, already loaded into Docker,
+// and E2E_NETWORK_CONTAINER the container this script runs in. The server joins that
+// container's network namespace, so it answers on localhost:$PORT (the SERVER_URL the
+// baselines were rendered with) and reaches Postgres by the same hostname this script
+// does.
+const image = process.env.E2E_IMAGE
+const APP_CONTAINER = "pragmatic-papers-e2e-app"
+// What the server reads at runtime, passed through from this environment. DATABASE_URI
+// is passed separately, below.
+const APP_ENV = ["PAYLOAD_SECRET", "SERVER_URL", "USE_LOCAL_STORAGE", "MERCH_SITE_URL", "PORT"]
+// Where the seed wrote uploads, which the server has to serve from its own filesystem.
+const UPLOAD_DIRS = ["public/media", "public/map-assets"]
+
+const docker = (...args) => execFileSync("docker", args, { stdio: "inherit" })
+
+async function waitForServer(url, timeoutMs) {
+  const deadline = Date.now() + timeoutMs
+  while (Date.now() < deadline) {
+    try {
+      if ((await fetch(url)).ok) return
+    } catch {
+      // Not listening yet.
+    }
+    await new Promise((resolve) => setTimeout(resolve, 2000))
+  }
+  throw new Error(`the server didn't answer ${url} within ${timeoutMs / 1000}s`)
+}
+
+// Starts the image's server on the seeded database, then has it throw away what its build
+// prerendered from an empty one — what dockerfiles/scripts/start.sh does in a preview,
+// without the preview's database copy.
+async function startImageServer() {
+  if (!process.env.E2E_NETWORK_CONTAINER) {
+    throw new Error("E2E_IMAGE needs E2E_NETWORK_CONTAINER, the container to share a network with")
+  }
+  // The database host as an address: a container sharing another's network namespace
+  // may not share its resolver, which is what knows the job's service names.
+  const database = new URL(process.env.DATABASE_URI)
+  database.hostname = (await lookup(database.hostname, { family: 4 })).address
+
+  execFileSync("docker", ["rm", "-f", APP_CONTAINER], { stdio: "ignore" })
+  docker(
+    "create",
+    "--name",
+    APP_CONTAINER,
+    "--network",
+    `container:${process.env.E2E_NETWORK_CONTAINER}`,
+    ...APP_ENV.flatMap((name) => ["-e", name]),
+    "-e",
+    `DATABASE_URI=${database}`,
+    // Rendered as a local build, as E2E always has been, not as a preview.
+    "-e",
+    "BUILD_ENV=",
+    image,
+    "node",
+    "server.js",
+  )
+  for (const dir of UPLOAD_DIRS) {
+    if (existsSync(dir)) docker("cp", `${dir}/.`, `${APP_CONTAINER}:/app/${dir}`)
+  }
+  docker("start", APP_CONTAINER)
+  const server = spawn("docker", ["logs", "--follow", APP_CONTAINER], { stdio: "inherit" })
+
+  const url = process.env.SERVER_URL
+  await waitForServer(`${url}/api/users/me`, 180_000)
+  const refresh = await fetch(`${url}/next/revalidate-all`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${process.env.PAYLOAD_SECRET}` },
+  })
+  if (!refresh.ok) throw new Error(`revalidate-all answered ${refresh.status}`)
+  console.warn(`${green("✔")} Prerendered routes refreshed from the seeded database.`)
+  return server
+}
+
 let server = null
 try {
   // .next/cache/fetch-cache persists across runs (it's on the bind-mounted
@@ -80,8 +155,10 @@ try {
   // against this run's freshly-seeded data, since Next's incremental build
   // doesn't know the database underneath it changed. Wipe it so every E2E
   // build is hermetic.
-  console.warn(`${blue("●")} Clearing .next build cache...`)
-  rmSync(".next", { recursive: true, force: true })
+  if (!image) {
+    console.warn(`${blue("●")} Clearing .next build cache...`)
+    rmSync(".next", { recursive: true, force: true })
+  }
 
   console.warn(`${blue("●")} Running database migrations...`)
   execSync("pnpm payload migrate", {
@@ -105,7 +182,10 @@ try {
   // guaranteeing fresh reads of what was just seeded.
   rmSync(".next/cache/fetch-cache", { recursive: true, force: true })
 
-  if (useProdServer) {
+  if (image) {
+    console.warn(`${blue("●")} Starting ${image}...`)
+    server = await startImageServer()
+  } else if (useProdServer) {
     console.warn(`${blue("●")} Building Next.js production bundle...`)
     execSync("./node_modules/.bin/next build", {
       env: { ...process.env, NODE_OPTIONS: "--no-deprecation" },
@@ -183,9 +263,14 @@ try {
   console.error(`${red("✖")} Error during E2E test setup: ${error.message}`)
   process.exitCode = 1
 } finally {
-  if (server) {
+  // A server that already exited (a crashed container ends `docker logs`) has no exit
+  // event left to wait for.
+  if (server && server.exitCode === null && server.signalCode === null) {
     server.kill("SIGTERM")
     await new Promise((resolve) => server.once("exit", resolve))
+  }
+  if (image) {
+    execFileSync("docker", ["rm", "-f", APP_CONTAINER], { stdio: "ignore" })
   }
   if (container) {
     console.warn(`${blue("●")} Stopping Postgres container...`)

@@ -5,8 +5,8 @@ import type { AudioMediaType } from "@/components/Media"
 import type { User } from "@/payload-types"
 import { NarrationPlayer } from "../index"
 
-// The credit only exists inside the player's settings menu, so these drive the
-// real menu rather than stubbing Media — menu parts throw outside a Menu.Root.
+// The credit only exists inside the player's settings panel, so these open the
+// real panel rather than stubbing Media.
 beforeEach(() => {
   vi.spyOn(HTMLMediaElement.prototype, "play").mockResolvedValue(undefined)
   vi.spyOn(HTMLMediaElement.prototype, "pause").mockImplementation(() => undefined)

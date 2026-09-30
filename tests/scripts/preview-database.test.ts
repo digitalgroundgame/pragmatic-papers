@@ -411,7 +411,8 @@ describe("start.sh", () => {
     })
 
     it("leaves the media folder alone with S3 storage", () => {
-      const { output } = start("", { DATABASE_URI: URI }, [])
+      // Explicit: CI runs the tests with USE_LOCAL_STORAGE=true, which the scripts inherit.
+      const { output } = start("", { DATABASE_URI: URI, USE_LOCAL_STORAGE: "false" }, [])
 
       expect(output).not.toContain("public/media")
     })

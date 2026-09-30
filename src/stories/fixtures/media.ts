@@ -37,6 +37,18 @@ export function mediaFixture(overrides: Partial<Media> = {}): Media {
   return { ...landscapeImage, id: nextId++, ...overrides }
 }
 
+export const loopVideo: Media = {
+  id: nextId++,
+  alt: "A square sliding across a navy background",
+  url: "/storybook-assets/loop.webm",
+  filename: "loop.webm",
+  mimeType: "video/webm",
+  width: 160,
+  height: 90,
+  createdAt: TIMESTAMP,
+  updatedAt: TIMESTAMP,
+}
+
 export const narrationAudio: Media = {
   id: nextId++,
   alt: "Article narration",

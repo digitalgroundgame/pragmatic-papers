@@ -8,7 +8,7 @@ name: Cloudflare rules
 # against Cloudflare and fails when a rule was changed in the dashboard.
 #
 # Two tokens keep a PR from writing the zone. `plan` and `check` read with the
-# repo secret CLOUDFLARE_RULES_READ_TOKEN (Cache Rules: Read). Only `apply` gets
+# repo secret CLOUDFLARE_RULES_TOKEN_READ (Cache Rules: Read). Only `apply` gets
 # the Edit token, an environment secret of `cloudflare`, whose deployment
 # branches are just `main`: a PR's run (`refs/pull/<n>/merge`) can't reach it,
 # even from a workflow file the PR edits. Setup: cloudflare/README.md.
@@ -48,15 +48,15 @@ jobs:
     if: github.event_name != 'push'
     runs-on: ubuntu-latest
     env:
-      HAS_CLOUDFLARE: ${{ secrets.CLOUDFLARE_RULES_READ_TOKEN != '' && secrets.CLOUDFLARE_ZONE_ID != '' }}
-      CLOUDFLARE_RULES_TOKEN: ${{ secrets.CLOUDFLARE_RULES_READ_TOKEN }}
+      HAS_CLOUDFLARE: ${{ secrets.CLOUDFLARE_RULES_TOKEN_READ != '' && secrets.CLOUDFLARE_ZONE_ID != '' }}
+      CLOUDFLARE_RULES_TOKEN: ${{ secrets.CLOUDFLARE_RULES_TOKEN_READ }}
       CLOUDFLARE_ZONE_ID: ${{ secrets.CLOUDFLARE_ZONE_ID }}
       COMMAND: ${{ github.event_name == 'pull_request' && 'plan' || 'check' }}
 
     steps:
       - name: Skip without Cloudflare secrets
         if: env.HAS_CLOUDFLARE != 'true'
-        run: echo "::notice::CLOUDFLARE_RULES_READ_TOKEN / CLOUDFLARE_ZONE_ID not available; skipping."
+        run: echo "::notice::CLOUDFLARE_RULES_TOKEN_READ / CLOUDFLARE_ZONE_ID not available; skipping."
 
       - uses: actions/checkout@v7
         if: env.HAS_CLOUDFLARE == 'true'

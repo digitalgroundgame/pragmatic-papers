@@ -552,14 +552,21 @@ describe("start.sh", () => {
     })
 
     it("copies staging's media without overwriting the preview's own", () => {
-      // The image's cp is BusyBox's: with -n it skips any destination that exists,
-      // a folder included, so `cp -Rn staging/. media/` copied nothing. Stand in for it.
+      // The image's cp is BusyBox's: with -n it skips a source whose own destination
+      // exists. For `cp -Rn staging/. media/` that's media/. itself, so it copied
+      // nothing. Stand in for it: GNU cp recurses into the folder instead.
       writeFileSync(
         join(dir, "bin", "cp"),
         `#!/bin/sh
+case "$1" in -*n*) shift ;; *) exec /bin/cp "$@" ;; esac
 for last; do :; done
-case "$1" in -*n*) [ -e "$last" ] && exit 0 ;; esac
-exec /bin/cp "$@"
+status=0
+while [ $# -gt 1 ]; do
+  src=$1; shift
+  if [ -d "$last" ]; then dest="$last/$(basename "$src")"; else dest=$last; fi
+  [ -e "$dest" ] || /bin/cp -R "$src" "$dest" || status=1
+done
+exit $status
 `,
       )
       chmodSync(join(dir, "bin", "cp"), 0o755)

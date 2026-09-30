@@ -47,7 +47,7 @@ the rules but only a release can change them:
 | Secret                        | Where                                 | Permission                     | Used by         |
 | ----------------------------- | ------------------------------------- | ------------------------------ | --------------- |
 | `CLOUDFLARE_ZONE_ID`          | repository                            | (the zone's ID, Overview page) | every run       |
-| `CLOUDFLARE_RULES_TOKEN_READ` | repository                            | **Zone → Cache Rules → Read**  | `plan`, `check` |
+| `CLOUDFLARE_RULES_READ_TOKEN` | repository                            | **Zone → Cache Rules → Read**  | `plan`, `check` |
 | `CLOUDFLARE_RULES_TOKEN`      | the **`cloudflare` environment** only | **Zone → Cache Rules → Edit**  | `apply`         |
 
 Set up the `cloudflare` environment in **Settings → Environments** with

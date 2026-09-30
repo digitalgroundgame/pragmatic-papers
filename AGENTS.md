@@ -277,6 +277,10 @@ a **development** application (staging, from `dev`, plus a preview per PR) and a
 **production** application (from `main`). `dockerfiles/README.md` records how _our_
 applications are set up and what's been verified about them; read it first.
 
+The zone's Cloudflare rules (Cache Rules today) are version-controlled in
+`cloudflare/rulesets/` and applied on release by `.github/workflows/cloudflare-rules.yml`;
+change them there, not in the dashboard (`cloudflare/README.md`).
+
 ## Third-party docs
 
 For how a tool we run on behaves (Payload and Lexical, Coolify, GitHub Actions and the

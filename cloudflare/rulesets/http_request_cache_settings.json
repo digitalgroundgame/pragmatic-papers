@@ -1,7 +1,7 @@
 {
   "rules": [
     {
-      "description": "cache static page",
+      "description": "cache static pages",
       "expression": [
         "(not starts_with(http.request.uri.path, \"/admin\")",
         "and not starts_with(http.request.uri.path, \"/api\")",

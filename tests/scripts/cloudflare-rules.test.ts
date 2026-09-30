@@ -83,7 +83,7 @@ describe("parseRuleset", () => {
 
   it("parses the committed cache rules", () => {
     const rules = parseRuleset(PHASE, readFileSync(PATH, "utf8"))
-    expect(rules.map((rule) => rule.description)).toEqual(["cache static page"])
+    expect(rules.map((rule) => rule.description)).toEqual(["cache static pages"])
     expect(rules[0]!.expression).toContain('http.host ne "list.pragmaticpapers.com"')
   })
 })

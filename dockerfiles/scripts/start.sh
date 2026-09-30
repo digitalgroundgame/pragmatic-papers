@@ -54,13 +54,18 @@ if [ "$BUILT_WITHOUT_DATABASE" = "true" ]; then
     # The database copy brings staging's media rows but not their files, which live
     # in staging's storage. When the app mounts that at /staging-media, copy what this
     # preview's own media volume lacks. -n never overwrites, so the preview's own
-    # uploads survive, and later starts only pick up what staging added since.
+    # uploads survive, and later starts only pick up what staging added since. Name
+    # the files (`dir/*`), not the folder: BusyBox's cp (this image's) checks -n
+    # against each source's own destination, and for `dir/.` that's the preview's
+    # folder, which always exists, so it copied nothing at all.
     # An empty mount means its source path is wrong, so Docker created a new folder.
     staging_media=${STAGING_MEDIA_DIR:-/staging-media}
     if [ -d "$staging_media" ] && [ -n "$(ls -A "$staging_media")" ]; then
         echo "--- Copying staging's media from $staging_media ---"
-        if cp -Rn "$staging_media/." "$APP_DIR/public/media/"; then
-            echo "Media: $(ls "$APP_DIR/public/media" | wc -l) files"
+        before=$(ls "$APP_DIR/public/media" | wc -l)
+        if cp -n "$staging_media"/* "$APP_DIR/public/media/"; then
+            after=$(ls "$APP_DIR/public/media" | wc -l)
+            echo "Media: copied $((after - before)), now $after files"
         else
             echo "WARNING: couldn't copy all of staging's media; some images may be missing"
         fi

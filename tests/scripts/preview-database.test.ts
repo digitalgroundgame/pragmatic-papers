@@ -552,9 +552,28 @@ describe("start.sh", () => {
     })
 
     it("copies staging's media without overwriting the preview's own", () => {
+      // The image's cp is BusyBox's: with -n it skips a source whose own destination
+      // exists. For `cp -Rn staging/. media/` that's media/. itself, so it copied
+      // nothing. Stand in for it: GNU cp recurses into the folder instead.
+      writeFileSync(
+        join(dir, "bin", "cp"),
+        `#!/bin/sh
+case "$1" in -*n*) shift ;; *) exec /bin/cp "$@" ;; esac
+for last; do :; done
+status=0
+while [ $# -gt 1 ]; do
+  src=$1; shift
+  if [ -d "$last" ]; then dest="$last/$(basename "$src")"; else dest=$last; fi
+  [ -e "$dest" ] || /bin/cp -R "$src" "$dest" || status=1
+done
+exit $status
+`,
+      )
+      chmodSync(join(dir, "bin", "cp"), 0o755)
       const staging = join(dir, "staging-media")
       mkdirSync(staging)
       writeFileSync(join(staging, "new.webp"), "staging")
+      writeFileSync(join(staging, "Screenshot at 5.49 PM.webp"), "staging")
       writeFileSync(join(staging, "same.webp"), "staging")
       const { output } = start(
         "",
@@ -564,8 +583,10 @@ describe("start.sh", () => {
 
       const media = join(dir, "app", "public", "media")
       expect(readFileSync(join(media, "new.webp"), "utf8")).toBe("staging")
+      expect(readFileSync(join(media, "Screenshot at 5.49 PM.webp"), "utf8")).toBe("staging")
       expect(readFileSync(join(media, "same.webp"), "utf8")).toBe("same.webp")
-      expect(output).toContain("Media: 2 files")
+      expect(output).toContain("Media: copied 2, now 3 files")
+      expect(output).not.toContain("public/media is empty")
     })
 
     it("says so when staging's media folder is empty", () => {

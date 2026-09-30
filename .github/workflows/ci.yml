@@ -32,6 +32,8 @@ jobs:
     permissions:
       pull-requests: read
     outputs:
+      static: ${{ steps.filter.outputs.static }}
+      unit: ${{ steps.filter.outputs.unit }}
       storybook: ${{ steps.filter.outputs.storybook }}
       integration: ${{ steps.filter.outputs.integration }}
 
@@ -48,6 +50,18 @@ jobs:
           # paths the job provably can't reach; when in doubt, leave a path
           # out, since a missed skip costs minutes and a wrong one a broken dev.
           filters: |
+            # Lint and the type check read no Markdown.
+            static:
+              - "**"
+              - "!**/*.md"
+            # tests/scripts/upstream-docs.test.ts reads the upstream-docs
+            # skill's Markdown, so only that skill's docs still count.
+            unit:
+              - "**"
+              - "!*.md"
+              - "!!(.claude)/**/*.md"
+              - "!.claude/!(skills)/**/*.md"
+              - "!.claude/skills/!(upstream-docs)/**/*.md"
             # Stories import from all over src/, and the Storybook build
             # exists to catch a server-only module reaching the browser, which
             # a change anywhere in src/ can cause.
@@ -89,6 +103,8 @@ jobs:
 
   static:
     name: Static checks
+    needs: changes
+    if: ${{ !cancelled() && (github.event_name != 'pull_request' || needs.changes.result != 'success' || needs.changes.outputs.static == 'true') }}
     runs-on: ubuntu-latest
     env:
       DATABASE_URI: postgres://postgres:postgres@localhost:5432/pragmatic-papers
@@ -139,6 +155,8 @@ jobs:
 
   unit-tests:
     name: Unit tests
+    needs: changes
+    if: ${{ !cancelled() && (github.event_name != 'pull_request' || needs.changes.result != 'success' || needs.changes.outputs.unit == 'true') }}
     runs-on: ubuntu-latest
     permissions:
       pull-requests: write

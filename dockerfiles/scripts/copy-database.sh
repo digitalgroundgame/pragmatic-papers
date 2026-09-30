@@ -115,10 +115,31 @@ copy_database() {
     exit 1
 }
 
+# An image built in GitHub Actions runs this at every container start, not once per
+# build, so a restart of the same image must not take FORCE_DATABASE_COPY as a request
+# for another fresh copy: that would throw away what testers entered. The commit a copy
+# was made for is kept as the database's comment, and a forced copy is made once per
+# commit (#1067).
+FORCED_MARK="copied for commit ${SOURCE_COMMIT}"
+copied_for_this_commit() {
+    [ "$BUILT_WITHOUT_DATABASE" = "true" ] && [ -n "$SOURCE_COMMIT" ] &&
+        [ "$(psql "$ADMIN_URI" -tAc "SELECT shobj_description(oid, 'pg_database') FROM pg_database WHERE datname='$1'")" = "$FORCED_MARK" ]
+}
+mark_copied() {
+    if [ "$BUILT_WITHOUT_DATABASE" = "true" ] && [ -n "$SOURCE_COMMIT" ]; then
+        psql "$ADMIN_URI" -v ON_ERROR_STOP=1 -c "COMMENT ON DATABASE \"$1\" IS '$FORCED_MARK';"
+    fi
+}
+
 echo "Checking if target database '$TARGET_DB' exists..."
 if database_exists "$TARGET_DB"; then
     if [ "$FORCE_DATABASE_COPY" != "true" ]; then
         echo "Target database already exists and FORCE_DATABASE_COPY is not true"
+        echo "Skipping database copy step"
+        exit 0
+    fi
+    if copied_for_this_commit "$TARGET_DB"; then
+        echo "Target database was already copied for this image (${SOURCE_COMMIT}); a restart keeps its data"
         echo "Skipping database copy step"
         exit 0
     fi
@@ -132,8 +153,15 @@ if database_exists "$TARGET_DB"; then
     drop_database "$STAGE_DB"
     copy_database "$STAGE_DB"
 
-    echo "Running migrations on '$STAGE_DB'..."
-    DATABASE_URI=$(uri_with_database "$DATABASE_URI" "$STAGE_DB") pnpm payload migrate
+    # An image built in GitHub Actions runs this at start and has no Payload CLI: the
+    # app migrates the database once it's swapped in, before its health check passes, so
+    # the old container serves the unmigrated copy for that long (#1067).
+    if [ "$BUILT_WITHOUT_DATABASE" = "true" ]; then
+        echo "Leaving '$STAGE_DB' for the app to migrate when it starts"
+    else
+        echo "Running migrations on '$STAGE_DB'..."
+        DATABASE_URI=$(uri_with_database "$DATABASE_URI" "$STAGE_DB") pnpm payload migrate
+    fi
 
     echo "Swapping '$STAGE_DB' in for '$TARGET_DB'..."
     drop_database "$TARGET_DB"
@@ -141,6 +169,7 @@ if database_exists "$TARGET_DB"; then
 else
     copy_database "$TARGET_DB"
 fi
+mark_copied "$TARGET_DB"
 
 echo "========================================"
 echo "Database copy completed successfully"

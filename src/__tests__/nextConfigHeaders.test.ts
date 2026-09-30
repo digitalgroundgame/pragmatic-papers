@@ -25,8 +25,29 @@ describe("next.config.ts Cache-Control", () => {
     expect(await cacheControlFor("/_next/image")).toBeUndefined()
   })
 
+  // Both have their own no-store rule, which the public-page rule used to override for
+  // requests without Payload's cookies, since it comes after them and the last match wins.
+  it("never lets a shared cache keep the admin panel or the API", async () => {
+    for (const path of [
+      "/admin",
+      "/admin/login",
+      "/admin/collections/articles/1",
+      "/api/users/me",
+      "/api/newsletter/subscribe",
+    ]) {
+      expect(await cacheControlFor(path)).toBe("private, no-cache, no-store, must-revalidate")
+    }
+  })
+
   it("still caches public pages at the edge", async () => {
-    for (const path of ["/", "/articles/some-article", "/robots.txt", "/_next/image-like-page"]) {
+    for (const path of [
+      "/",
+      "/articles/some-article",
+      "/robots.txt",
+      "/_next/image-like-page",
+      "/apiary",
+      "/administration",
+    ]) {
       expect(await cacheControlFor(path)).toBe("public, s-maxage=600, stale-while-revalidate=86400")
     }
   })

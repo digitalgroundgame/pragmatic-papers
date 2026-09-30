@@ -13,7 +13,8 @@ function isBearer(header: string | null, secret: string): boolean {
  * renders again from this deployment's database on its next request.
  *
  * An image built in CI is built against an empty database (#1067), so the
- * routes it bakes in (the RSS and Substack feeds) hold no content.
+ * routes it bakes in (the RSS and Substack feeds) hold no content, and robots.txt and
+ * the sitemap index name the build's host rather than this deployment's.
  * `dockerfiles/scripts/start.sh` calls this once the server is up.
  *
  * Authenticated with `Authorization: Bearer <PAYLOAD_SECRET>`, which the

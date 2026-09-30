@@ -4,13 +4,15 @@ import { getServerSideURL } from "@/utilities/getURL"
 
 import { SITEMAP_PATHS } from "../sitemaps"
 
-// Built per request rather than written at build time, so the same image lists the
-// host it serves (#1090).
+// A route rather than a file next-sitemap writes at build time, so revalidate-all can
+// re-render it for the host the image serves (#1090).
 export async function GET(): Promise<Response> {
   const siteUrl = getServerSideURL()
 
   return getServerSideSitemapIndex(SITEMAP_PATHS.map((path) => `${siteUrl}${path}`))
 }
 
-// Never prerendered: a build would bake its own host in.
-export const dynamic = "force-dynamic"
+// Rendered once and served as a static file, like the feeds. A build prerenders it with the
+// build's SERVER_URL; an image deployed somewhere else (built in Actions, or tested by E2E)
+// calls /next/revalidate-all at start, which re-renders it once with the runtime one.
+export const dynamic = "force-static"

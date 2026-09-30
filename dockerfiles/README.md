@@ -9,6 +9,7 @@ Docker configurations for deploying applications to staging, preview, and produc
 **Dockerfiles:**
 
 - `PragmaticPapers.Dockerfile` - Pragmatic Papers (Next.js + Payload CMS)
+- `PragmaticPapers.ci.Dockerfile` - the same app, built in GitHub Actions for PR previews (see [Previews built in GitHub Actions](#previews-built-in-github-actions))
 
 **Environment Template:**
 
@@ -300,7 +301,7 @@ FORCE_DATABASE_COPY=false
 
 - `DATABASE_URI` must be available at build time _and_ runtime, with the same value, in **every** environment: the image carries no credentials, so the running app reads only the runtime value, and `start.sh` exits if it's missing.
 - Its user needs `CREATEDB`, read access to the source database (for `pg_dump`), and permission to terminate sessions on **preview** databases (for a forced recopy). It never terminates sessions on the source.
-- **The builder's `pg_dump` must match the server's major version.** With staging's app connected, dump/restore is the usual path for a new preview, not the exception. An older `pg_dump` refuses a newer server, and a newer one writes settings an older server's restore rejects. The builder stage's `apk add` pins `postgresql17-client` to match the server; Alpine's unpinned `postgresql-client` follows the Alpine release under the Node image and had moved on to 18, which failed preview builds whose template copy was refused. `copy-database.sh` compares the two before creating anything, prints `pg_dump major version: N; server: M` in the build log, and fails the build with the package to install when they differ. **Upgrading the database server means bumping that pin in the same change.**
+- **The builder's `pg_dump` must match the server's major version.** With staging's app connected, dump/restore is the usual path for a new preview, not the exception. An older `pg_dump` refuses a newer server, and a newer one writes settings an older server's restore rejects. The builder stage's `apk add` pins `postgresql17-client` to match the server; Alpine's unpinned `postgresql-client` follows the Alpine release under the Node image and had moved on to 18, which failed preview builds whose template copy was refused. `copy-database.sh` compares the two before creating anything, prints `pg_dump major version: N; server: M` in the build log, and fails the build with the package to install when they differ. `PragmaticPapers.ci.Dockerfile` pins the same package in its runtime stage, where the copy runs for images built in GitHub Actions. **Upgrading the database server means bumping both pins in the same change.**
 - **A dump holds `ACCESS SHARE` locks on staging's tables while it runs.** If a staging deploy runs `payload migrate` at the same time, an `ALTER TABLE` waits for them, and staging's queries queue behind that `ALTER`. While the database is small this lasts seconds; if staging ever hangs during a deploy, check whether a preview build was copying at the time.
 
 **Running commands inside a preview container:** only `start.sh` points `DATABASE_URI` at the preview's own database. A shell opened with `docker exec` or Coolify's terminal still has the unsuffixed `DATABASE_URI`, which is **staging's** database. Apply the preview name first:
@@ -311,6 +312,52 @@ FORCE_DATABASE_COPY=false
 
 **For Staging/Production:**
 Set `BUILD_ENV=staging` or `BUILD_ENV=production` and leave `COPY_SOURCE_DATABASE` unset: the naming and the copy are both skipped, using your `DATABASE_URI` exactly as configured.
+
+### Previews built in GitHub Actions
+
+[#1067](https://github.com/digitalgroundgame/pragmatic-papers/issues/1067) moves preview builds off the Coolify build server (see [#1018](https://github.com/digitalgroundgame/pragmatic-papers/issues/1018)): `.github/workflows/preview-image.yml` builds each PR's image on a GitHub runner, pushes it to GHCR, and has Coolify run it as the PR's preview. It stays off until `COOLIFY_PREVIEW_IMAGE_APP_UUID` is set; until then previews build in Coolify as described above.
+
+**Where each step runs.** The runner never gets a route to our database or its password, so the database work moves to the container:
+
+| Step                                 | Coolify build (`PragmaticPapers.Dockerfile`) | GitHub Actions (`PragmaticPapers.ci.Dockerfile`)                                              |
+| ------------------------------------ | -------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| Name the preview's database          | while building                               | at container start, from the runtime `COOLIFY_FQDN`                                           |
+| Copy staging into it                 | while building                               | at container start (first boot only)                                                          |
+| Drop closed PRs' databases           | while building                               | at container start                                                                            |
+| Migrate                              | `payload migrate` while building             | when Payload starts (`prodMigrations`), before the health check passes                        |
+| `next build`                         | against the preview's database               | against a throwaway Postgres beside the job                                                   |
+| Routes prerendered from the database | served as built                              | thrown away once the server is up (`POST /next/revalidate-all`), then rendered from real data |
+
+The image sets `BUILT_WITHOUT_DATABASE=true`, which switches on the start-time steps in `start.sh` and `prodMigrations` in `src/payload.config.ts`. Images Coolify builds don't set it, so staging and production behave as before. Two differences from a Coolify-built preview:
+
+- **First boot takes longer**: it copies staging before the server starts, so the health check below allows 5 minutes before counting failures.
+- **`FORCE_DATABASE_COPY=true` swaps the fresh copy in unmigrated.** There's no Payload CLI in the image, so the new container migrates it as it starts, and the old container serves the unmigrated copy until then.
+- **`FORCE_DATABASE_COPY=true` copies once per image, not once per start.** The copy runs whenever the container starts, restarts included, so the script marks the database with the image's commit (a Postgres comment) and skips the forced copy when the mark matches. Restarting a preview keeps what testers entered; deploying a new commit copies afresh. Still turn it back off once the preview you meant to refresh has been redeployed.
+
+**Setup.** In Coolify:
+
+1. Create an application of type **Docker Image** in the development project, on the server and destination the development app deploys to, with image `ghcr.io/digitalgroundgame/pragmatic-papers-preview`. Any tag will do (e.g. `unused`): each preview deploy sends its own, and the app's own deployment is never run. Then:
+   - **Exposed port** `3000` (the default is 80).
+   - **Keep a domain on the app** (`https://…`). Coolify only generates a preview's URL when the app has one, and takes the preview's scheme from it (`ApplicationPreview::generate_preview_fqdn`).
+   - **Preview URL template** `pr-{{pr_id}}.pragmaticpapers.com`, host only: Coolify puts the scheme in front.
+   - **Healthcheck on**: GET `/api/users/me` on port `3000`, expecting `200`, with a start period of `300` seconds. Coolify doesn't read the image's own `HEALTHCHECK` for a Docker Image app, and with its check off it swaps a preview in before the copy and migrations have finished.
+2. Copy the development app's **Preview Deployment Environment Variables** into it as **runtime** variables: `DATABASE_URI`, `COPY_SOURCE_DATABASE`, `FORCE_DATABASE_COPY`, `PAYLOAD_SECRET`, `USE_LOCAL_STORAGE` and the rest the app reads at runtime. `BUILD_ENV` is baked into the image. Build variables aren't used: nothing builds in Coolify.
+3. Let the server pull from GHCR: the package is private, so log its Docker in to `ghcr.io` (`docker login ghcr.io`, as the user Coolify connects with) with a GitHub token that has `read:packages`.
+4. Give `COOLIFY_API_TOKEN` the `deploy` and `write` abilities as well as `read` (the token's owner must be a team admin). The workflow uses them to deploy the image (`POST /api/v1/deploy?uuid=…&pr=…&docker_tag=…`, Coolify `v4.0.0-beta.471` or later) and to remove the preview when the PR closes.
+
+In GitHub (**Settings → Secrets and variables → Actions**):
+
+| Name                                                                                                                                                      | Kind      | Value                                                                                                   |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- | ------------------------------------------------------------------------------------------------------- |
+| `COOLIFY_PREVIEW_IMAGE_APP_UUID`                                                                                                                          | variable  | The Docker Image application's UUID. Setting it switches previews over.                                 |
+| `PREVIEW_NEXT_PUBLIC_SENTRY_DSN`, `PREVIEW_NEXT_PUBLIC_GOOGLE_ANALYTICS_ID`, `PREVIEW_NEXT_PUBLIC_SUPABASE_URL`, `PREVIEW_NEXT_PUBLIC_TURNSTILE_SITE_KEY` | variables | Optional. The browser-side values previews build with: copy them from the preview variables in Coolify. |
+| `PREVIEW_USE_LOCAL_STORAGE`                                                                                                                               | variable  | Optional; defaults to `true`, as previews use.                                                          |
+
+`GH_FONT_READ`, `COOLIFY_API_TOKEN`, `COOLIFY_DASHBOARD_URL` and `PREVIEW_URL_TEMPLATE` are shared with the workflows above.
+
+**Cutover.** Setting `COOLIFY_PREVIEW_IMAGE_APP_UUID` hands PRs to `preview-image.yml`, and `preview-deployment.yml` stops following Coolify's builds. Then turn off preview deployments on the development app and delete its running previews: they'd claim the same `pr-<n>` hostnames as the new app's. Each PR's next push redeploys it on the new app, which names databases the same way, so a preview keeps its data.
+
+**Rolling back.** Clear the variable and turn the development app's preview deployments back on.
 
 ### Dropping closed PRs' preview databases
 

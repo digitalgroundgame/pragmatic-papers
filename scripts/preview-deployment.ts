@@ -21,6 +21,18 @@
  * The workflow only runs `deploy` on PRs Coolify previews (see its `if`). A PR
  * Coolify still doesn't build (previews off for its base branch, say) gets no
  * Deployment. Without the Coolify settings the script does nothing.
+ *
+ * Previews built in GitHub Actions instead (#1067, .github/workflows/preview-image.yml)
+ * run on a Coolify "Docker Image" application, which never builds anything itself:
+ *
+ *   node scripts/preview-deployment.ts deploy <image-tag>   # deploy that image as the PR's preview
+ *   node scripts/preview-deployment.ts close --delete-preview
+ *
+ * `deploy <image-tag>` asks Coolify to deploy the tag as PR n's preview (creating the
+ * preview on its first deploy), then follows that deployment, not the newest one it
+ * can find for the commit. `close --delete-preview` also removes the preview from
+ * Coolify, which nothing else does for an image application (there's no GitHub App
+ * watching the PR). Both need a token with the `deploy` and `write` abilities.
  */
 import { pathToFileURL } from "node:url"
 
@@ -39,6 +51,14 @@ export interface Config {
   coolifyToken: string
   coolifyAppUuid: string
   previewUrlTemplate: string
+}
+
+/** What `deploy` and `close` do on top of mirroring, for an image-built preview. */
+export interface ImageOptions {
+  /** The image tag to deploy as the PR's preview. */
+  dockerTag?: string
+  /** Remove the PR's preview from Coolify. */
+  deletePreview?: boolean
 }
 
 /** One row of Coolify's `GET /api/v1/deployments/applications/{uuid}`. */
@@ -161,7 +181,16 @@ export function readConfig(env: Env): Config | null {
 }
 
 /** HTTP 4xx other than rate limits: retrying won't help. */
-export class FatalHttpError extends Error {}
+export class FatalHttpError extends Error {
+  // A plain field, not a constructor parameter property: the workflows run this file
+  // under Node's type stripping, which rejects parameter properties.
+  readonly status: number
+
+  constructor(message: string, status: number) {
+    super(message)
+    this.status = status
+  }
+}
 
 async function request<T>(
   deps: Deps,
@@ -180,7 +209,7 @@ async function request<T>(
     const text = (await res.text()).slice(0, 500)
     const message = `${init.method ?? "GET"} ${url} → ${res.status}: ${text}`
     if (res.status >= 400 && res.status < 500 && res.status !== 429)
-      throw new FatalHttpError(message)
+      throw new FatalHttpError(message, res.status)
     throw new Error(message)
   }
   return (await res.json()) as T
@@ -243,18 +272,55 @@ export function github(deps: Deps, config: Config): GithubApi {
   }
 }
 
-export function coolify(
-  deps: Deps,
-  config: Config,
-): { listDeployments: () => Promise<CoolifyDeployment[]> } {
+export interface CoolifyApi {
+  listDeployments: () => Promise<CoolifyDeployment[]>
+  getDeployment: (uuid: string) => Promise<CoolifyDeployment>
+  /** Queues `tag` as the PR's preview and returns the deployment's UUID. */
+  deployImage: (tag: string) => Promise<string>
+  /** Removes the PR's preview; false when it was already gone. */
+  deletePreview: () => Promise<boolean>
+}
+
+export function coolify(deps: Deps, config: Config): CoolifyApi {
+  const api = `${config.coolifyUrl}/api/v1`
+  const app = encodeURIComponent(config.coolifyAppUuid)
+  const call = <T>(path: string, method = "GET") =>
+    request<T>(deps, `${api}${path}`, { method, token: config.coolifyToken })
+
   return {
     listDeployments: async () => {
-      const body = await request<{ deployments: CoolifyDeployment[] }>(
-        deps,
-        `${config.coolifyUrl}/api/v1/deployments/applications/${encodeURIComponent(config.coolifyAppUuid)}?take=50`,
-        { token: config.coolifyToken },
+      const body = await call<{ deployments: CoolifyDeployment[] }>(
+        `/deployments/applications/${app}?take=50`,
       )
       return body.deployments ?? []
+    },
+    getDeployment: (uuid) => call<CoolifyDeployment>(`/deployments/${encodeURIComponent(uuid)}`),
+    deployImage: async (tag) => {
+      // POST: current Coolify answers GET /deploy with "use POST". It reads the
+      // parameters from the query string either way.
+      const query = new URLSearchParams({
+        uuid: config.coolifyAppUuid,
+        pr: String(config.pr),
+        docker_tag: tag,
+      })
+      const body = await call<{ deployments?: { message?: string; deployment_uuid?: string }[] }>(
+        `/deploy?${query}`,
+        "POST",
+      )
+      const [queued] = body.deployments ?? []
+      if (!queued?.deployment_uuid) {
+        throw new Error(`Coolify didn't queue ${tag}: ${queued?.message ?? JSON.stringify(body)}`)
+      }
+      return queued.deployment_uuid
+    },
+    deletePreview: async () => {
+      try {
+        await call<unknown>(`/applications/${app}/previews/${config.pr}`, "DELETE")
+        return true
+      } catch (err) {
+        if (err instanceof FatalHttpError && err.status === 404) return false
+        throw err
+      }
     },
   }
 }
@@ -273,24 +339,18 @@ export async function deactivate(deps: Deps, config: Config, keep?: number): Pro
 }
 
 /**
- * Polls Coolify for the commit's preview deploy. A failed poll is retried until
- * the deadline; a 4xx (bad token, wrong app UUID) is thrown at once.
+ * Polls Coolify with `find` until it returns the deploy. A failed poll is retried
+ * until the deadline; a 4xx (bad token, wrong app UUID) is thrown at once.
  */
 async function poll(
   deps: Deps,
-  config: Config,
   timing: Timing,
   deadline: number,
+  find: () => Promise<CoolifyDeployment | undefined>,
 ): Promise<CoolifyDeployment | undefined> {
-  const api = coolify(deps, config)
   for (;;) {
     try {
-      const found = findDeployment(
-        await api.listDeployments(),
-        config.pr,
-        config.headSha,
-        config.since,
-      )
+      const found = await find()
       if (found) return found
     } catch (err) {
       if (err instanceof FatalHttpError) throw err
@@ -301,9 +361,23 @@ async function poll(
   }
 }
 
-export async function deploy(deps: Deps, config: Config, timing: Timing = TIMING): Promise<void> {
+export async function deploy(
+  deps: Deps,
+  config: Config,
+  timing: Timing = TIMING,
+  { dockerTag }: ImageOptions = {},
+): Promise<void> {
   const short = config.headSha.slice(0, 7)
-  let current = await poll(deps, config, timing, deps.now() + timing.queueTimeoutMs)
+  const api = coolify(deps, config)
+  let find = async () =>
+    findDeployment(await api.listDeployments(), config.pr, config.headSha, config.since)
+  if (dockerTag) {
+    const uuid = await api.deployImage(dockerTag)
+    deps.log(`Coolify queued ${dockerTag} as PR #${config.pr}'s preview (deployment ${uuid}).`)
+    find = () => api.getDeployment(uuid)
+  }
+
+  let current = await poll(deps, timing, deps.now() + timing.queueTimeoutMs, find)
   if (!current) {
     deps.log(
       `Coolify didn't queue a preview for PR #${config.pr} at ${short} within ${timing.queueTimeoutMs / 60_000} min. ` +
@@ -361,11 +435,23 @@ export async function deploy(deps: Deps, config: Config, timing: Timing = TIMING
     await deps.sleep(timing.pollMs)
     // The deploy was seen already, so a missing row now means Coolify pruned
     // it; keep the last known state and let the build deadline end the wait.
-    current = (await poll(deps, config, timing, deps.now())) ?? current
+    current = (await poll(deps, timing, deps.now(), find)) ?? current
   }
 }
 
-export async function close(deps: Deps, config: Config): Promise<void> {
+export async function close(
+  deps: Deps,
+  config: Config,
+  { deletePreview }: ImageOptions = {},
+): Promise<void> {
+  if (deletePreview) {
+    const deleted = await coolify(deps, config).deletePreview()
+    deps.log(
+      deleted
+        ? `Asked Coolify to remove PR #${config.pr}'s preview.`
+        : `Coolify has no preview for PR #${config.pr}.`,
+    )
+  }
   const n = await deactivate(deps, config)
   deps.log(`Marked ${n} preview deployment(s) for PR #${config.pr} inactive.`)
 }
@@ -382,9 +468,17 @@ export async function main(
   env: Env = process.env,
   deps: Deps = defaultDeps,
 ): Promise<number> {
-  const mode = argv[0]
-  if (mode !== "deploy" && mode !== "close") {
-    deps.log("Usage: node scripts/preview-deployment.ts <deploy|close>")
+  const [mode, arg] = argv
+  const options: ImageOptions | null =
+    mode === "deploy" && !arg?.startsWith("-")
+      ? { dockerTag: arg }
+      : mode === "close" && (arg === undefined || arg === "--delete-preview")
+        ? { deletePreview: arg === "--delete-preview" }
+        : null
+  if (!options) {
+    deps.log(
+      "Usage: node scripts/preview-deployment.ts deploy [image-tag] | close [--delete-preview]",
+    )
     return 2
   }
   try {
@@ -395,7 +489,7 @@ export async function main(
       )
       return 0
     }
-    await (mode === "deploy" ? deploy(deps, config) : close(deps, config))
+    await (mode === "deploy" ? deploy(deps, config, TIMING, options) : close(deps, config, options))
     return 0
   } catch (err) {
     deps.log(`::error::${(err as Error).message}`)

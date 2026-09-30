@@ -1,0 +1,19 @@
+{
+  "rules": [
+    {
+      "description": "cache static page",
+      "expression": [
+        "(not starts_with(http.request.uri.path, \"/admin\")",
+        "and not starts_with(http.request.uri.path, \"/api\")",
+        "and not http.cookie contains \"__prerender_bypass\"",
+        "and not http.cookie contains \"payload-token\"",
+        "and http.host ne \"list.pragmaticpapers.com\")"
+      ],
+      "action": "set_cache_settings",
+      "action_parameters": {
+        "cache": true,
+        "edge_ttl": { "mode": "bypass_by_default" }
+      }
+    }
+  ]
+}

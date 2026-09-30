@@ -85,7 +85,7 @@ ARG S3_ENDPOINT
 # variable into each RUN anyway, and a name ending in _KEY trips Docker's
 # SecretsUsedInArgOrEnv check.
 ARG NEXT_PUBLIC_SUPABASE_URL
-ARG NEXT_PUBLIC_SENTRY_DSN
+ARG SENTRY_DSN
 
 # --- COOLIFY & DEPLOYMENT ---
 ARG COOLIFY_FQDN=
@@ -107,7 +107,7 @@ ENV NODE_ENV=${NODE_ENV} \
     S3_ENDPOINT=${S3_ENDPOINT} \
     SERVER_URL=${SERVER_URL} \
     NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL} \
-    NEXT_PUBLIC_SENTRY_DSN=${NEXT_PUBLIC_SENTRY_DSN}
+    SENTRY_DSN=${SENTRY_DSN}
 
 # --- DATABASE PREPARATION & MIGRATION ---
 # 1. Isolated Preview Logic (names and clones a database for each PR, then drops the

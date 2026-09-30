@@ -277,6 +277,17 @@ a **development** application (staging, from `dev`, plus a preview per PR) and a
 **production** application (from `main`). `dockerfiles/README.md` records how _our_
 applications are set up and what's been verified about them; read it first.
 
+## Releases
+
+A release train (`.github/workflows/release-train.yml`, `scripts/release-train.ts`)
+runs every Saturday. It opens a "Bump package.json to vX.Y.Z" PR into `dev` (the
+next **candidate**, versioned from commit prefixes: `!` major, `feat` minor, anything
+else patch), and once a merged candidate has spent `SOAK_DAYS` (4) on staging, a
+"Release X.Y.Z" PR into `main` from a branch at that bump commit. People merge both;
+the release PR as a **merge commit**, after which `release.yml` tags it. Only one
+candidate settles at a time, and the bump lands on `dev` first, so nothing is
+back-merged. `pnpm release` and `pnpm hotfix` remain for doing it by hand.
+
 ## Third-party docs
 
 For how a tool we run on behaves (Payload and Lexical, Coolify, GitHub Actions and the

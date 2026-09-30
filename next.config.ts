@@ -158,9 +158,12 @@ const nextConfig: NextConfig = {
         // for up to a day (stale-while-revalidate=86400), long after the file came back.
         // `/admin` and `/api` have their own no-store rules above. When rules match the same
         // path the last one wins, so without this exclusion a request without Payload's
-        // cookies got this rule's public caching instead.
+        // cookies got this rule's public caching instead. Upload files stay under this rule:
+        // with local storage (staging, previews) media and map assets are served from
+        // `/api/<collection>/file/...`, anyone can read them, and narration audio and video
+        // shouldn't re-download on every load. (Cloudflare's cache rule skips `/api` anyway.)
         source:
-          "/:path((?!admin(?:/|$)|api(?:/|$)|interactives/[^/]+/regions/[^/]+/geometry/|feed(?:/|$)|_next/image$).*)",
+          "/:path((?!admin(?:/|$)|api(?:/(?!(?:media|map-assets)/file/)|$)|interactives/[^/]+/regions/[^/]+/geometry/|feed(?:/|$)|_next/image$).*)",
         headers: [
           {
             key: "Cache-Control",

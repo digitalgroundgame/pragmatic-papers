@@ -34,6 +34,8 @@ describe("next.config.ts Cache-Control", () => {
       "/admin/collections/articles/1",
       "/api/users/me",
       "/api/newsletter/subscribe",
+      "/api/media",
+      "/api/media/1",
     ]) {
       expect(await cacheControlFor(path)).toBe("private, no-cache, no-store, must-revalidate")
     }
@@ -47,6 +49,9 @@ describe("next.config.ts Cache-Control", () => {
       "/_next/image-like-page",
       "/apiary",
       "/administration",
+      // Upload files, which local storage serves from /api and anyone can read.
+      "/api/media/file/hero.jpg",
+      "/api/map-assets/file/counties.svg",
     ]) {
       expect(await cacheControlFor(path)).toBe("public, s-maxage=600, stale-while-revalidate=86400")
     }

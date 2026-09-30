@@ -4,11 +4,13 @@
  *
  *   node scripts/storybook-pr.ts deploy   # after a preview upload: record it as a Deployment
  *   node scripts/storybook-pr.ts link     # then link the components it changes
+ *   node scripts/storybook-pr.ts close    # PR closed or merged (.github/workflows/storybook-close.yml)
  *
  * `deploy` records the preview as a GitHub Deployment of the PR's branch in the
  * "Storybook Preview" environment, so the PR's deployments list it next to the
  * site's Preview (scripts/preview-deployment.ts), and marks the PR's older ones
- * inactive.
+ * inactive. `close` marks all of them inactive, as the site's Preview does; the
+ * Cloudflare alias itself keeps serving.
  *
  * `link` rewrites the block between LINKS_START and LINKS_END in the PR's
  * description: a link to each component the PR changes in the preview. It goes
@@ -241,6 +243,14 @@ async function deploy(env: Env, deps: Deps): Promise<void> {
   deps.log(`Recorded ${url} as a ${ENVIRONMENT} deployment of ${ref}.`)
 }
 
+async function close(env: Env, deps: Deps): Promise<void> {
+  const gh = github(deps, required(env, "GITHUB_REPOSITORY"), required(env, "GITHUB_TOKEN"))
+  const ref = (await gh.pull(Number(required(env, "PR_NUMBER")))).head.ref
+  const deployments = await gh.deployments(ref)
+  for (const { id } of deployments) await gh.setStatus(id, "inactive")
+  deps.log(`Marked ${deployments.length} ${ENVIRONMENT} deployment(s) of ${ref} inactive.`)
+}
+
 async function link(env: Env, deps: Deps): Promise<void> {
   const gh = github(deps, required(env, "GITHUB_REPOSITORY"), required(env, "GITHUB_TOKEN"))
   const pr = Number(required(env, "PR_NUMBER"))
@@ -257,12 +267,12 @@ async function link(env: Env, deps: Deps): Promise<void> {
   if (block) deps.summary(block.split("\n").slice(1, -1).join("\n"))
 }
 
-const COMMANDS = { deploy, link }
+const COMMANDS = { deploy, link, close }
 
 export async function main(argv: string[], env: Env, deps: Deps): Promise<number> {
   const command = COMMANDS[argv[0] as keyof typeof COMMANDS]
   if (!command) {
-    deps.log("Usage: node scripts/storybook-pr.ts deploy|link")
+    deps.log("Usage: node scripts/storybook-pr.ts deploy|link|close")
     return 2
   }
   try {

@@ -232,6 +232,22 @@ describe("main", () => {
     ])
   })
 
+  it("retires all of the PR's Deployments when it closes", async () => {
+    const { deps, calls } = fakeDeps([], "")
+    expect(await main(["close"], { ...ENV, PREVIEW_URL: "" }, deps)).toBe(0)
+    const api = "https://api.github.com/repos/digitalgroundgame/pragmatic-papers"
+    expect(calls.filter((call) => call.method === "POST")).toEqual(
+      [7, 8].map((id) => ({
+        method: "POST",
+        url: `${api}/deployments/${id}/statuses`,
+        body: { state: "inactive", environment: ENVIRONMENT, auto_inactive: false },
+      })),
+    )
+    expect(calls[1]?.url).toBe(
+      `${api}/deployments?environment=Storybook%20Preview&ref=feat%2Fthing&per_page=100`,
+    )
+  })
+
   it("links the changed components at the top of the description", async () => {
     const { deps, calls } = fakeDeps(
       [

@@ -9,7 +9,8 @@
  *   node scripts/cloudflare-rules.ts apply [--prune]   # make Cloudflare match the files
  *   node scripts/cloudflare-rules.ts export [phase...] # write Cloudflare's rules into the files
  *
- * Needs CLOUDFLARE_ZONE_ID and CLOUDFLARE_RULES_TOKEN (see cloudflare/README.md).
+ * Needs CLOUDFLARE_ZONE_ID and CLOUDFLARE_RULES_TOKEN: a Cache Rules Read token does for
+ * everything but `apply`, which needs Edit (see cloudflare/README.md).
  *
  * A phase's rules are one ruleset (its "entrypoint"), and `apply` replaces it
  * whole. So a rule is known by its description (the dashboard's "Rule name"),

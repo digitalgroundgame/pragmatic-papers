@@ -41,10 +41,29 @@ CLOUDFLARE_ZONE_ID=… CLOUDFLARE_RULES_TOKEN=… node scripts/cloudflare-rules.
 
 ## Secrets
 
-The workflow needs two repository secrets, and skips itself without them:
+Two Cloudflare API tokens, each scoped to this zone alone, so that a PR can read
+the rules but only a release can change them:
 
-- `CLOUDFLARE_ZONE_ID`: the zone's ID, from the zone's Overview page.
-- `CLOUDFLARE_RULES_TOKEN`: an API token scoped to this zone alone, with
-  **Zone → Cache Rules → Edit**. A phase added later needs its own permission
-  (Single Redirects need **Zone → Dynamic URL Redirects → Edit**, for example).
-  Keep it apart from `CLOUDFLARE_API_TOKEN`, which only deploys Storybook.
+| Secret                        | Where                                 | Permission                     | Used by         |
+| ----------------------------- | ------------------------------------- | ------------------------------ | --------------- |
+| `CLOUDFLARE_ZONE_ID`          | repository                            | (the zone's ID, Overview page) | every run       |
+| `CLOUDFLARE_RULES_READ_TOKEN` | repository                            | **Zone → Cache Rules → Read**  | `plan`, `check` |
+| `CLOUDFLARE_RULES_TOKEN`      | the **`cloudflare` environment** only | **Zone → Cache Rules → Edit**  | `apply`         |
+
+Set up the `cloudflare` environment in **Settings → Environments** with
+**Deployment branches and tags → Selected branches and tags → `main`**. GitHub
+then gives its secrets only to runs on `main`: a PR's run is on
+`refs/pull/<n>/merge`, so it can't reach the Edit token even from a workflow
+file the PR changes. The Edit token must **not** also be a repository secret,
+which every PR's run could read.
+
+`plan` and `check` skip themselves without their secrets (fork and Dependabot
+PRs never get them); `apply` fails instead, so a release's rules never quietly
+stay unapplied.
+
+A phase added later needs its permission on both tokens (Single Redirects need
+**Zone → Dynamic URL Redirects**, for example). Keep both apart from
+`CLOUDFLARE_API_TOKEN`, which only deploys Storybook.
+
+To run the script locally, set `CLOUDFLARE_RULES_TOKEN` to either token: the
+read one is enough for `plan`, `check` and `export`.

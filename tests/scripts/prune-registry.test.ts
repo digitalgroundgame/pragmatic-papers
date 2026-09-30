@@ -48,6 +48,8 @@ const LOG_CALL = `echo "$(basename "$0") $*" >> "$CALLS_LOG"`
 let dir: string
 let storage: string
 let tagsDir: string
+/** Each manifest putManifest stored, by digest. */
+const names = new Map<string, string>()
 
 beforeEach(() => {
   dir = mkdtempSync(join(tmpdir(), "prune-registry-"))
@@ -63,26 +65,48 @@ beforeEach(() => {
 })
 
 afterEach(() => {
+  names.clear()
   rmSync(dir, { recursive: true, force: true })
 })
 
+const digestOf = (name: string) => createHash("sha256").update(name).digest("hex")
+
+/** Stores a manifest blob and registers it in the repository, the way a push does. */
+function putManifest(name: string, manifest: object) {
+  const hex = digestOf(name)
+  names.set(hex, name)
+  const blob = join(storage, "docker/registry/v2/blobs/sha256", hex.slice(0, 2), hex)
+  mkdirSync(blob, { recursive: true })
+  writeFileSync(join(blob, "data"), JSON.stringify(manifest, null, 2))
+  const revision = join(tagsDir, "../revisions/sha256", hex)
+  mkdirSync(revision, { recursive: true })
+  writeFileSync(join(revision, "link"), `sha256:${hex}`)
+  return hex
+}
+
 /**
- * Pushes the tags, oldest first, each a minute after the one before: its current/link names
- * a manifest blob, an image's or, for a tag listed in `indexes`, an image index's.
+ * Pushes the tags, oldest first, each a minute after the one before. A tag in `indexes` is
+ * an image index, as Coolify pushes them, listing `<tag>-amd64`, `<tag>-attestation` and
+ * any `shared` platform images; any other is a plain image.
  */
-function pushTagsAs(indexes: string[], ...tags: string[]) {
+function pushTagsAs(indexes: string[], tags: string[], shared: string[] = []) {
   const start = Date.now() / 1000 - 86_400
   tags.forEach((tag, i) => {
-    const hex = createHash("sha256").update(tag).digest("hex")
-    const blob = join(storage, "docker/registry/v2/blobs/sha256", hex.slice(0, 2), hex)
-    mkdirSync(blob, { recursive: true })
-    const manifest = indexes.includes(tag)
-      ? { schemaVersion: 2, manifests: [{ digest: "sha256:0" }] }
-      : { schemaVersion: 2, config: {}, layers: [] }
-    writeFileSync(join(blob, "data"), JSON.stringify(manifest))
+    const image = { schemaVersion: 2, config: { digest: "sha256:c0" }, layers: [] }
+    let hex: string
+    if (indexes.includes(tag)) {
+      const children = [`${tag}-amd64`, `${tag}-attestation`, ...shared].map((child) => ({
+        mediaType: "application/vnd.oci.image.manifest.v1+json",
+        digest: `sha256:${putManifest(child, image)}`,
+      }))
+      hex = putManifest(tag, { schemaVersion: 2, manifests: children })
+    } else {
+      hex = putManifest(tag, image)
+    }
 
     const current = join(tagsDir, tag, "current")
     mkdirSync(current, { recursive: true })
+    mkdirSync(join(tagsDir, tag, "index/sha256", hex), { recursive: true })
     writeFileSync(join(current, "link"), `sha256:${hex}`)
     utimesSync(join(current, "link"), start + i * 60, start + i * 60)
   })
@@ -90,8 +114,14 @@ function pushTagsAs(indexes: string[], ...tags: string[]) {
 
 /** Pushes plain images. */
 function pushTags(...tags: string[]) {
-  pushTagsAs([], ...tags)
+  pushTagsAs([], tags)
 }
+
+/** The manifests still registered in the repository, by name. */
+const registered = () =>
+  readdirSync(join(tagsDir, "../revisions/sha256"))
+    .map((hex) => names.get(hex))
+    .sort()
 
 /** Makes GitHub list these PRs as open, 100 to a page. */
 function openPrs(...numbers: number[]) {
@@ -179,27 +209,62 @@ describe("prune-registry.sh", () => {
     expect(remaining()).toEqual(["aaa", "ccc"])
   })
 
-  it("refuses to run while a tag it keeps is an image index", () => {
-    pushTagsAs(["pr-7-b"], "pr-6-a", "pr-7-a", "pr-7-b")
+  it("unregisters a deleted index with the manifests it lists, and keeps a kept one's", () => {
+    pushTagsAs(["pr-6-a", "pr-7-a"], ["pr-6-a", "pr-7-a"])
     openPrs(7)
 
     const { status, output } = run(["--apply"])
 
-    expect(status).toBe(1)
-    expect(output).toContain("these tags are image indexes")
-    expect(output).toContain("  pr-7-b")
-    expect(remaining()).toEqual(["pr-6-a", "pr-7-a", "pr-7-b"])
-    expect(calls()).not.toMatch(/docker (stop|run)/)
-  })
-
-  it("deletes an image index it doesn't keep", () => {
-    pushTagsAs(["pr-6-a"], "pr-6-a", "pr-7-a")
-    openPrs(7)
-
-    const { status } = run(["--apply"])
-
     expect(status).toBe(0)
     expect(remaining()).toEqual(["pr-7-a"])
+    expect(registered()).toEqual(["pr-7-a", "pr-7-a-amd64", "pr-7-a-attestation"])
+    expect(output).toContain("Deleted 1 tags and unregistered 3 manifests")
+  })
+
+  it("keeps a platform image a kept index shares with a deleted one", () => {
+    pushTagsAs(["pr-6-a", "pr-7-a"], ["pr-6-a", "pr-7-a"], ["unchanged-layer-image"])
+    openPrs(7)
+
+    run(["--apply"])
+
+    expect(registered()).toEqual([
+      "pr-7-a",
+      "pr-7-a-amd64",
+      "pr-7-a-attestation",
+      "unchanged-layer-image",
+    ])
+  })
+
+  it("unregisters every image a deleted tag has named, not only its latest", () => {
+    pushTags("pr-6-a", "pr-7-a")
+    // pr-6-a was pushed before, as another image.
+    const earlier = putManifest("pr-6-a-earlier", { schemaVersion: 2, layers: [] })
+    mkdirSync(join(tagsDir, "pr-6-a/index/sha256", earlier), { recursive: true })
+    openPrs(7)
+
+    run(["--apply"])
+
+    expect(registered()).toEqual(["pr-7-a"])
+  })
+
+  it("leaves images no tag it deletes has named", () => {
+    pushTags("pr-6-a", "pr-7-a")
+    putManifest("pushed-by-digest", { schemaVersion: 2, layers: [] })
+    openPrs(7)
+
+    run(["--apply"])
+
+    expect(registered()).toEqual(["pr-7-a", "pushed-by-digest"])
+  })
+
+  it("counts the manifests it would unregister in a dry run, and unregisters none", () => {
+    pushTagsAs(["pr-6-a", "pr-7-a"], ["pr-6-a", "pr-7-a"])
+    openPrs(7)
+
+    const { output } = run()
+
+    expect(output).toContain("would delete 1 of 2 tags and unregister their 3 manifests")
+    expect(registered()).toHaveLength(6)
   })
 
   it("keeps a tag a container is running, however old", () => {
@@ -246,7 +311,7 @@ describe("prune-registry.sh", () => {
       `docker stop ${CONTAINER}`,
       expect.stringMatching(
         new RegExp(
-          `^docker run --rm --volumes-from ${CONTAINER} --env-file \\S+ --entrypoint registry registry:2 garbage-collect --delete-untagged /etc/docker/registry/config.yml$`,
+          `^docker run --rm --volumes-from ${CONTAINER} --env-file \\S+ --entrypoint registry registry:2 garbage-collect /etc/docker/registry/config.yml$`,
         ),
       ),
       `docker start ${CONTAINER}`,

@@ -15,12 +15,12 @@
 #   - the newest KEEP_OTHER tags that aren't a PR's (staging's and production's), for
 #     rollbacks and for servers other than this one that run them
 #
-# and deletes every other tag, then garbage-collects the files no tag uses any more.
+# and deletes every other tag with the images it named (see "Deleting a tag" below), then
+# garbage-collects the files no remaining image uses.
 # The registry is stopped while it does, so a push can't land half-collected; a deploy
 # that pushes in that minute fails and needs redeploying.
 #
-# If it can't tell which PRs are open, or a tag it keeps is an image index (see below),
-# it deletes nothing.
+# If it can't tell which PRs are open, it deletes nothing.
 #
 # Settings (environment variables):
 #   REGISTRY_CONTAINER  the registry's container; defaults to the only one named registry-*
@@ -45,7 +45,7 @@ KEEP_OTHER=${KEEP_OTHER:-10}
 
 restart=false
 cleanup() {
-    rm -f "${env_file:-}" "${running:-}" "${plan:-}" "${gc_log:-}"
+    rm -f "${env_file:-}" "${running:-}" "${plan:-}" "${unregister:-}" "${gc_log:-}"
     if [ "$restart" = true ]; then docker start "$container" >/dev/null && echo "Started $container"; fi
 }
 trap cleanup EXIT
@@ -149,29 +149,59 @@ for manifests in $(find "$repositories" -type d -name _manifests); do
     grep "^$tags keep " "$plan" | awk '{ print "  " $3 }'
 done
 
-# registry:2's `garbage-collect --delete-untagged` deletes the platform manifests an image
-# index (a multi-platform or attested image) points to, because no tag names them directly,
-# which leaves the index's tag unpullable (distribution/distribution#3178). So refuse to
-# run while any tag we keep is an index. An index lists "manifests"; an image, "layers".
-indexes=$(awk '$2 == "keep" { print $1 "/" $3 }' "$plan" | while read -r tag_dir; do
-    digest=$(cat "$tag_dir/current/link" 2>/dev/null) || continue
-    hex=${digest#sha256:}
-    manifest="$storage/docker/registry/v2/blobs/sha256/$(echo "$hex" | cut -c1-2)/$hex/data"
-    if grep -q '"manifests"' "$manifest" 2>/dev/null; then echo "  ${tag_dir##*/}"; fi
-done)
-if [ -n "$indexes" ]; then
-    echo "ERROR: these tags are image indexes, which registry:2's garbage collection would"
-    echo "break (distribution/distribution#3178); deleting nothing:"
-    echo "$indexes"
-    exit 1
-fi
+# Deleting a tag doesn't free its image: the image's manifest stays registered under the
+# repository's _manifests/revisions, and garbage collection keeps everything a registered
+# manifest refers to. `garbage-collect --delete-untagged` would unregister untagged ones
+# itself, but it counts the platform manifests inside an image index as untagged, since
+# no tag names them, and so breaks every index it keeps (distribution/distribution#3178).
+# Coolify pushes indexes. So unregister the deleted tags' manifests here, with the
+# manifests inside them, and garbage-collect without that flag.
+#
+# A manifest stays registered if a kept tag names it, or if an index that stays registered
+# lists it (an unchanged platform image shared by an old build and a new one).
+
+blob() { hex=${1#sha256:}; echo "$storage/docker/registry/v2/blobs/sha256/$(echo "$hex" | cut -c1-2)/$hex/data"; }
+
+# The digests of the manifests an index lists; nothing for an image's manifest.
+children() {
+    grep -q '"manifests"' "$(blob "$1")" 2>/dev/null || return 0
+    grep -o '"digest": *"sha256:[0-9a-f]*"' "$(blob "$1")" | grep -o 'sha256:[0-9a-f]*'
+}
+
+unregister=$(mktemp)
+for manifests in $(awk '{ print $1 }' "$plan" | sed 's|/tags$||' | sort -u); do
+    revisions="$manifests/revisions/sha256"
+    doomed_list=$(mktemp)
+    kept_list=$(mktemp)
+    # Every manifest a deleted tag has named, current or earlier, and what they list.
+    awk -v tags="$manifests/tags" '$1 == tags && $2 == "delete" { print $3 }' "$plan" | while read -r tag; do
+        cat "$manifests/tags/$tag/current/link" 2>/dev/null && echo
+        ls "$manifests/tags/$tag/index/sha256" 2>/dev/null | sed 's/^/sha256:/'
+    done | grep . | sort -u > "$doomed_list.top" || true
+    while read -r digest; do echo "$digest"; children "$digest"; done < "$doomed_list.top" | sort -u > "$doomed_list"
+    # What stays: the kept tags' manifests, every registered manifest that isn't doomed,
+    # and whatever the indexes among them list.
+    {
+        awk -v tags="$manifests/tags" '$1 == tags && $2 == "keep" { print $3 }' "$plan" | while read -r tag; do
+            cat "$manifests/tags/$tag/current/link" 2>/dev/null && echo
+        done
+        ls "$revisions" 2>/dev/null | sed 's/^/sha256:/' | grep -vxF -f "$doomed_list"
+    } | grep . | sort -u > "$kept_list.top" || true
+    while read -r digest; do echo "$digest"; children "$digest"; done < "$kept_list.top" | sort -u > "$kept_list"
+    grep -vxF -f "$kept_list" "$doomed_list" | while read -r digest; do
+        [ -d "$revisions/${digest#sha256:}" ] && echo "$revisions/${digest#sha256:}"
+    done >> "$unregister" || true
+    rm -f "$doomed_list" "$doomed_list.top" "$kept_list" "$kept_list.top"
+done
+manifest_count=$(grep -c . "$unregister" || true)
 
 if [ "$doomed" -eq 0 ]; then
     echo "Nothing to delete"
     exit 0
 fi
 if [ "$APPLY" != true ]; then
-    echo "Dry run: would delete $doomed of $total tags. Re-run with --apply to delete them."
+    echo "Dry run: would delete $doomed of $total tags and unregister their $manifest_count manifests."
+    echo "Re-run with --apply to delete them."
     exit 0
 fi
 
@@ -184,11 +214,12 @@ if [ "$(docker inspect -f '{{.State.Running}}' "$container")" = true ]; then
 fi
 
 awk '$2 == "delete"' "$plan" | while read -r tags _ tag; do rm -rf "${tags:?}/${tag:?}"; done
-echo "Deleted $doomed tags; collecting garbage..."
+while read -r revision; do rm -rf "${revision:?}"; done < "$unregister"
+echo "Deleted $doomed tags and unregistered $manifest_count manifests; collecting garbage..."
 # Through a file rather than a pipe: sh has no pipefail, so a failure would go unnoticed.
 gc_log=$(mktemp)
 if ! docker run --rm --volumes-from "$container" --env-file "$env_file" --entrypoint registry "$image" \
-    garbage-collect --delete-untagged "$CONFIG" > "$gc_log" 2>&1; then
+    garbage-collect "$CONFIG" > "$gc_log" 2>&1; then
     tail -20 "$gc_log"
     echo "ERROR: garbage collection failed; the tags are deleted, and the next run collects their files"
     exit 1

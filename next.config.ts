@@ -10,10 +10,6 @@ const dirname = path.dirname(__filename)
 // Read while building, so a Coolify build needs SERVER_URL as a build variable too.
 const SERVER_URL = new URL(process.env.SERVER_URL || "http://localhost:8000")
 
-const NEXT_PUBLIC_SUPABASE_URL = new URL(
-  process.env.NEXT_PUBLIC_SUPABASE_URL || "https://example.com",
-)
-
 const nextConfig: NextConfig = {
   output: "standalone",
   // Temporarily required on Windows until Next.js fixes Turbopack Sass resolution.
@@ -30,9 +26,13 @@ const nextConfig: NextConfig = {
         port: SERVER_URL.port,
       },
       {
-        protocol: NEXT_PUBLIC_SUPABASE_URL.protocol.slice(0, -1) as "http" | "https",
-        hostname: NEXT_PUBLIC_SUPABASE_URL.hostname,
-        port: NEXT_PUBLIC_SUPABASE_URL.port,
+        // Production's media, which generateFileURL (src/plugins/index.ts) points at
+        // SUPABASE_URL's public bucket. Any Supabase project rather than SUPABASE_URL's own
+        // host, so the storage host isn't fixed when the image is built (#1090).
+        // start.sh refuses to start a deployed image whose SUPABASE_URL this doesn't match.
+        protocol: "https",
+        hostname: "*.supabase.co",
+        pathname: "/storage/v1/object/public/**",
       },
       {
         // Merch products are synced from Shopify and render straight from its
@@ -59,24 +59,6 @@ const nextConfig: NextConfig = {
       // practical exposure is low; it is still wider than the one flow this was raised for.
       bodySizeLimit: "8mb",
     },
-  },
-  // Interactive Map drilldown assets are fetched lazily from stable, same-origin paths that
-  // are emitted into the article HTML (so a crawler can capture them). With local storage the
-  // files sit in public/map-assets and Next serves them directly; with S3 enabled this proxies
-  // the same path to the bucket, so the URL never changes between environments.
-  async rewrites() {
-    if (process.env.USE_LOCAL_STORAGE === "true") return []
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-    const bucket = process.env.S3_BUCKET
-    if (!supabaseUrl || !bucket) return []
-    return {
-      afterFiles: [
-        {
-          source: "/map-assets/:path*",
-          destination: `${supabaseUrl.replace(/\/$/, "")}/storage/v1/object/public/${bucket}/map-assets/:path*`,
-        },
-      ],
-    }
   },
   redirects: async () => [
     {

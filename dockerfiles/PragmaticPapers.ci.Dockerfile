@@ -70,7 +70,6 @@ ARG COOLIFY_FQDN=
 ARG SOURCE_COMMIT=
 ARG USE_LOCAL_STORAGE=true
 ARG SERVER_URL
-ARG NEXT_PUBLIC_SUPABASE_URL
 
 ENV NODE_ENV=production \
     NEXT_TELEMETRY_DISABLED=1 \
@@ -78,8 +77,7 @@ ENV NODE_ENV=production \
     BUILD_ENV=${BUILD_ENV} \
     COOLIFY_FQDN=${COOLIFY_FQDN} \
     USE_LOCAL_STORAGE=${USE_LOCAL_STORAGE} \
-    SERVER_URL=${SERVER_URL} \
-    NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}
+    SERVER_URL=${SERVER_URL}
 
 # Migrate the throwaway database first: the build reads the schema, and Payload's
 # prodMigrations stays off here, so parallel prerender workers never race to apply them.

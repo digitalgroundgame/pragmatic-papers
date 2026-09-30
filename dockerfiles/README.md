@@ -71,6 +71,7 @@ S3_BUCKET=your-bucket
 S3_ACCESS_KEY_ID=your-key
 S3_SECRET_ACCESS_KEY=your-secret
 S3_ENDPOINT=https://s3.amazonaws.com
+SUPABASE_URL=https://<project>.supabase.co
 ```
 
 **Sentry (every Coolify deployment — production, staging and previews):**
@@ -134,7 +135,7 @@ What Coolify's docs say about behaviour that matters to this setup (read them wi
 Coolify passes every build-time variable into the Dockerfile as a BuildKit secret, mounted as an env var into **every** `RUN` (`--mount=type=secret,id=X,env=X`). That includes `SOURCE_COMMIT` when **Include Source Commit in Build** is on. What that means for the layer cache (verified 2026-09-26):
 
 - **Variable _names_ are part of each step's cache key; _values_ are not.** Adding or removing a variable in an application gives its next build a cold cache. Changing a value doesn't invalidate anything: a step can be reused with output built from the old value.
-- **So every step whose output depends on a value must come after `COPY . .`**, which reruns on every deploy. That covers migrations (`DATABASE_URI`) and `next build` (`NEXT_PUBLIC_*`, `SENTRY_RELEASE`). Only value-independent steps belong above it: system packages and the dependency install.
+- **So every step whose output depends on a value must come after `COPY . .`**, which reruns on every deploy. That covers migrations (`DATABASE_URI`) and `next build` (`SERVER_URL`, `SENTRY_RELEASE`). Only value-independent steps belong above it: system packages and the dependency install.
 - **Staging and previews keep separate caches** because their variable names differ (below). Sharing would only save the dependency install on each one's first build of the day, so they aren't kept in sync for that.
 - **Redeploys:** an unchanged commit on staging/production reuses its existing image ("No build configuration changed & image found"). PR previews always rebuild, reusing cached layers up to `COPY . .`.
 - **Server cleanup:** Coolify's Docker cleanup runs `docker builder prune -af`, which removes all build cache, including the pnpm-store and `.next/cache` mounts. Keep its trigger on a **disk-usage threshold** rather than "Run on every schedule", or every day's first build starts cold.
@@ -151,7 +152,7 @@ Snapshot of the variable names each has, from the 2026-09-26 build logs. Product
 | `SEED_ENABLED`                  | —       | set      | nothing — no code reads it (from an unmerged branch); delete it                                |
 | `LISTMONK_NEWSLETTER_LIST_UUID` | set     | —        | Listmonk calls throw "Missing required env var", so newsletter signup doesn't work on previews |
 
-`NEXT_PUBLIC_*` variables are compiled into the image when it builds, in server code as well as browser code, so changing one in Coolify needs a rebuild. `SERVER_URL`, `TURNSTILE_SITE_KEY`, `GOOGLE_ANALYTICS_ID` and `SENTRY_DSN` are read by the server instead ([#1090](https://github.com/digitalgroundgame/pragmatic-papers/issues/1090)). They replace `NEXT_PUBLIC_SERVER_URL`, `NEXT_PUBLIC_TURNSTILE_SITE_KEY`, `NEXT_PUBLIC_GOOGLE_ANALYTICS_ID` and `NEXT_PUBLIC_SENTRY_DSN`, which nothing reads any more.
+`NEXT_PUBLIC_*` variables are compiled into the image when it builds, in server code as well as browser code, so changing one in Coolify would need a rebuild. None is read any more: `SERVER_URL`, `TURNSTILE_SITE_KEY`, `GOOGLE_ANALYTICS_ID`, `SENTRY_DSN` and `SUPABASE_URL` are read by the server instead ([#1090](https://github.com/digitalgroundgame/pragmatic-papers/issues/1090)). They replace `NEXT_PUBLIC_SERVER_URL`, `NEXT_PUBLIC_TURNSTILE_SITE_KEY`, `NEXT_PUBLIC_GOOGLE_ANALYTICS_ID`, `NEXT_PUBLIC_SENTRY_DSN` and `NEXT_PUBLIC_SUPABASE_URL`.
 
 - **In an app Coolify builds** (staging, production, Coolify-built previews), give each one both **Build Variable** and **Runtime Variable**. Pages rendered during the build read the build's value, and `next.config.ts` reads `SERVER_URL` while building. Pages rendered later read the container's value.
 - **In the Docker Image app for previews built in GitHub Actions**, set them as runtime variables. `start.sh` re-renders every page once the server starts.
@@ -372,11 +373,10 @@ The image sets `BUILT_WITHOUT_DATABASE=true`, which switches on the start-time s
 
 In GitHub (**Settings → Secrets and variables → Actions**):
 
-| Name                               | Kind     | Value                                                                                                |
-| ---------------------------------- | -------- | ---------------------------------------------------------------------------------------------------- |
-| `COOLIFY_PREVIEW_IMAGE_APP_UUID`   | variable | The Docker Image application's UUID. Setting it switches previews over.                              |
-| `PREVIEW_NEXT_PUBLIC_SUPABASE_URL` | variable | Optional. The browser-side value previews build with: copy it from the preview variables in Coolify. |
-| `PREVIEW_USE_LOCAL_STORAGE`        | variable | Optional; defaults to `true`, as previews use.                                                       |
+| Name                             | Kind     | Value                                                                   |
+| -------------------------------- | -------- | ----------------------------------------------------------------------- |
+| `COOLIFY_PREVIEW_IMAGE_APP_UUID` | variable | The Docker Image application's UUID. Setting it switches previews over. |
+| `PREVIEW_USE_LOCAL_STORAGE`      | variable | Optional; defaults to `true`, as previews use.                          |
 
 `GH_FONT_READ`, `COOLIFY_API_TOKEN`, `COOLIFY_DASHBOARD_URL` and `PREVIEW_URL_TEMPLATE` are shared with the workflows above.
 
@@ -469,7 +469,10 @@ S3_BUCKET=your-bucket
 S3_ACCESS_KEY_ID=your-key
 S3_SECRET_ACCESS_KEY=your-secret
 S3_ENDPOINT=https://s3.amazonaws.com
+SUPABASE_URL=https://<project>.supabase.co
 ```
+
+`SUPABASE_URL` is where media is served from: `generateFileURL` (`src/plugins/index.ts`) points each file at `<SUPABASE_URL>/storage/v1/object/public/<S3_BUCKET>/…`. It's read when pages render, not compiled in. Give it and `S3_BUCKET` both **Build Variable** and **Runtime Variable**, like `SERVER_URL`: a Coolify build renders the `force-static` feeds (`/feed.articles`, `/feed.volumes`, each article's `substack.xml`) from the database, and without them their images point at `/media/<file>`, which production doesn't have. The feeds keep those URLs until each one next re-renders. `next/image` only loads remote images from hosts `next.config.ts` lists, and that list is fixed when the image builds, so it allows any `https://*.supabase.co` public bucket rather than one project's host. For the same reason `start.sh` refuses to start a deployed image using S3 (`USE_LOCAL_STORAGE` not `true`) whose `S3_BUCKET` or `SUPABASE_URL` is unset, or whose `SUPABASE_URL` isn't a `*.supabase.co` origin or ends in a slash: every image on the site would break ([#791](https://github.com/digitalgroundgame/pragmatic-papers/issues/791)). A custom storage domain needs a pattern for it in `next.config.ts`, and in `start.sh`.
 
 **Benefits:**
 

@@ -73,10 +73,13 @@ function sh(script: string, env: Record<string, string> = {}) {
       SOURCE_DATABASE_NAME: "",
       COPY_SOURCE_DATABASE: "",
       FORCE_DATABASE_COPY: "",
-      // start.sh refuses a deployed image without SERVER_URL; a .env loaded into
-      // process.env mustn't decide that for a test.
+      // start.sh refuses a deployed image without SERVER_URL, or with S3 storage and no
+      // usable SUPABASE_URL; a .env loaded into process.env mustn't decide that for a test.
       BUILD_ENV: "",
       SERVER_URL: "",
+      USE_LOCAL_STORAGE: "true",
+      SUPABASE_URL: "",
+      S3_BUCKET: "",
       TARGET_EXISTS: "",
       SOURCE_BUSY: "",
       BUILT_WITHOUT_DATABASE: "",
@@ -436,6 +439,65 @@ describe("start.sh", () => {
 
     expect(status).toBe(0)
     expect(output).toContain("node started")
+  })
+
+  // Media URLs point at SUPABASE_URL, and next/image only loads *.supabase.co (#1090).
+  describe("a deployed image on S3 storage", () => {
+    const production = {
+      DATABASE_URI: URI,
+      BUILD_ENV: "production",
+      SERVER_URL: "https://pragmaticpapers.com",
+      USE_LOCAL_STORAGE: "false",
+      S3_BUCKET: "media",
+    }
+
+    it("starts with a Supabase project URL", () => {
+      const { status, output } = start("", {
+        ...production,
+        SUPABASE_URL: "https://abcdefgh.supabase.co",
+      })
+
+      expect(status).toBe(0)
+      expect(output).toContain("node started")
+    })
+
+    it("refuses to start without SUPABASE_URL", () => {
+      const { status, output } = start("", production)
+
+      expect(status).toBe(1)
+      expect(output).toContain("SUPABASE_URL is not set at runtime")
+      expect(output).not.toContain("node started")
+    })
+
+    // #791: media URLs fell back to /media/<file>, which doesn't exist with S3 storage.
+    it("refuses to start without S3_BUCKET", () => {
+      const { status, output } = start("", {
+        ...production,
+        SUPABASE_URL: "https://abcdefgh.supabase.co",
+        S3_BUCKET: "",
+      })
+
+      expect(status).toBe(1)
+      expect(output).toContain("S3_BUCKET is not set at runtime")
+      expect(output).not.toContain("node started")
+    })
+
+    it.each(["https://media.pragmaticpapers.com", "https://abcdefgh.supabase.co/"])(
+      "refuses to start with %s, which next/image won't load",
+      (url) => {
+        const { status, output } = start("", { ...production, SUPABASE_URL: url })
+
+        expect(status).toBe(1)
+        expect(output).toContain(`SUPABASE_URL must be https://<project>.supabase.co`)
+        expect(output).not.toContain("node started")
+      },
+    )
+
+    it("doesn't need SUPABASE_URL on local storage", () => {
+      const { status } = start("", { ...production, USE_LOCAL_STORAGE: "true" })
+
+      expect(status).toBe(0)
+    })
   })
 
   describe("in an image built without a database (#1067)", () => {

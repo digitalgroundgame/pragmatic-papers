@@ -246,7 +246,7 @@ export const plugins: Plugin[] = [
       media: {
         disablePayloadAccessControl: true,
         generateFileURL: ({ filename }) => {
-          const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+          const supabaseUrl = process.env.SUPABASE_URL
           const bucket = process.env.S3_BUCKET
 
           if (!supabaseUrl || !bucket) {
@@ -261,7 +261,7 @@ export const plugins: Plugin[] = [
         disablePayloadAccessControl: true,
         prefix: "map-assets",
         generateFileURL: ({ filename }) => {
-          const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+          const supabaseUrl = process.env.SUPABASE_URL
           const bucket = process.env.S3_BUCKET
 
           if (!supabaseUrl || !bucket) {

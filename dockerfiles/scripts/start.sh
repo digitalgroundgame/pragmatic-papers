@@ -16,6 +16,27 @@ if [ -n "$BUILD_ENV" ] && [ -z "$SERVER_URL" ]; then
     exit 1
 fi
 
+# With S3 storage, media URLs point at SUPABASE_URL's public bucket S3_BUCKET, and
+# next/image only optimizes them from a *.supabase.co host (next.config.ts). Anything else
+# would break every image on the site (#791), so refuse to start, as above.
+if [ -n "$BUILD_ENV" ] && [ "$USE_LOCAL_STORAGE" != "true" ]; then
+    if [ -z "$S3_BUCKET" ]; then
+        echo "ERROR: S3_BUCKET is not set at runtime, and USE_LOCAL_STORAGE isn't true (Coolify: enable Runtime for it)"
+        exit 1
+    fi
+    case "$SUPABASE_URL" in
+    https://*.supabase.co) ;;
+    "")
+        echo "ERROR: SUPABASE_URL is not set at runtime, and USE_LOCAL_STORAGE isn't true (Coolify: enable Runtime for it)"
+        exit 1
+        ;;
+    *)
+        echo "ERROR: SUPABASE_URL must be https://<project>.supabase.co with no trailing slash, the host next.config.ts lets next/image load; got $SUPABASE_URL"
+        exit 1
+        ;;
+    esac
+fi
+
 # The helpers, and the database name a Coolify build chose, sit next to this script in /app.
 APP_DIR=$(dirname "$0")
 . "$APP_DIR/database-uri.sh"

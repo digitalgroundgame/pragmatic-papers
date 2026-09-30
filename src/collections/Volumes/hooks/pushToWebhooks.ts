@@ -1,8 +1,9 @@
 import { type Volume } from "@/payload-types"
 import config from "@payload-config"
 import { getPayload, type CollectionAfterChangeHook } from "payload"
-import { env } from "process"
 import { Volumes } from ".."
+
+import { getServerSideURL } from "@/utilities/getURL"
 
 export const pushToWebhooks: CollectionAfterChangeHook<Volume> = async (args) => {
   // NOTE: current check is supposed to filter for first publish
@@ -13,7 +14,7 @@ export const pushToWebhooks: CollectionAfterChangeHook<Volume> = async (args) =>
   )
     return
 
-  const url = `${env.NEXT_PUBLIC_SERVER_URL}/${Volumes.slug}/${args.data.slug}`
+  const url = `${getServerSideURL()}/${Volumes.slug}/${args.data.slug}`
   const payload = await getPayload({ config })
   const webhooks = await payload.find({ collection: "webhooks" })
 
@@ -29,7 +30,7 @@ export const pushToWebhooks: CollectionAfterChangeHook<Volume> = async (args) =>
       body: JSON.stringify({
         content: url,
         username: "The Pragmatic Papers",
-        avatar_url: `${env.NEXT_PUBLIC_SERVER_URL}/android-chrome-192x192.png`,
+        avatar_url: `${getServerSideURL()}/android-chrome-192x192.png`,
       }),
     }).catch((e) => {
       console.error(e)

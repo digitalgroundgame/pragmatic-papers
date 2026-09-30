@@ -3,7 +3,7 @@ import type { Article, Media } from "@/payload-types"
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest"
 
 beforeAll(() => {
-  process.env.NEXT_PUBLIC_SERVER_URL = "https://example.org"
+  process.env.SERVER_URL = "https://example.org"
 })
 
 const { generateSubstackFeed, substackArticleHTML } = await import("../generateSubstackFeed")

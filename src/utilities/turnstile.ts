@@ -10,8 +10,17 @@
  *
  * Required env vars:
  *   CLOUDFLARE_TURNSTILE_SECRET_KEY  server-side secret from the Turnstile dashboard
- *   NEXT_PUBLIC_TURNSTILE_SITE_KEY    public site key (read by the client component)
+ *   TURNSTILE_SITE_KEY               public site key, read on the server and passed to
+ *                                    the widget
  */
+
+/**
+ * The public site key for the signup widget, or undefined to render the form without it.
+ * Read when the server renders the block rather than compiled into the browser bundle,
+ * so one build can run with a different key (#1090).
+ */
+export const getTurnstileSiteKey = (): string | undefined =>
+  process.env.TURNSTILE_SITE_KEY || undefined
 
 const SITEVERIFY_URL = "https://challenges.cloudflare.com/turnstile/v0/siteverify"
 

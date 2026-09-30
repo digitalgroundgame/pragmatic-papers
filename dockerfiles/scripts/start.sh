@@ -8,6 +8,14 @@ if [ -z "$DATABASE_URI" ]; then
     exit 1
 fi
 
+# Every deployed image sets BUILD_ENV. Without SERVER_URL the app would put
+# http://localhost:8000 in canonical tags, sitemaps and share links (#1090), so refuse
+# to start: the healthcheck fails and Coolify keeps the previous container.
+if [ -n "$BUILD_ENV" ] && [ -z "$SERVER_URL" ]; then
+    echo "ERROR: SERVER_URL is not set at runtime (Coolify: enable Runtime for it)"
+    exit 1
+fi
+
 # The helpers, and the database name a Coolify build chose, sit next to this script in /app.
 APP_DIR=$(dirname "$0")
 . "$APP_DIR/database-uri.sh"

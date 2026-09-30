@@ -28,7 +28,7 @@ export default defineConfig({
   use: {
     // Same source as `webServer.url` below, so a server managed outside the runner
     // (`E2E_MANAGED_SERVER`) can live on another port and still be the one under test.
-    baseURL: process.env.NEXT_PUBLIC_SERVER_URL || "http://localhost:8000",
+    baseURL: process.env.SERVER_URL || "http://localhost:8000",
     trace: "on-first-retry",
     // Pin everything that can shift pixels between runs.
     timezoneId: "UTC",
@@ -80,7 +80,7 @@ export default defineConfig({
   ],
   webServer: {
     command: process.env.E2E_MANAGED_SERVER ? "echo 'server managed externally'" : "pnpm dev:next",
-    url: process.env.NEXT_PUBLIC_SERVER_URL || "http://localhost:8000",
+    url: process.env.SERVER_URL || "http://localhost:8000",
     reuseExistingServer: !!process.env.E2E_MANAGED_SERVER || !process.env.CI,
     timeout: 120_000,
   },

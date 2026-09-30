@@ -37,6 +37,7 @@ import type {
   TimelineBlock as TimelineBlockProps,
 } from "@/payload-types"
 import { internalDocToHref } from "./internalDocToHref"
+import { getTurnstileSiteKey } from "@/utilities/turnstile"
 import { cn } from "@/utilities/utils"
 import type {
   DefaultNodeTypes,
@@ -88,7 +89,9 @@ function createJsxConverters(parentDoc?: ParentDocContext): JSXConvertersFunctio
       merch: ({ node }: { node: SerializedBlockNode<MerchBlockProps> }) => (
         <MerchBlock {...node.fields} enableGutter={false} />
       ),
-      newsletterSignup: ({ node }) => <NewsletterSignupBlock {...node.fields} />,
+      newsletterSignup: ({ node }) => (
+        <NewsletterSignupBlock {...node.fields} turnstileSiteKey={getTurnstileSiteKey()} />
+      ),
       socialEmbed: ({ node }) => <SocialEmbedBlock {...node.fields} parentDoc={parentDoc} />,
       squiggleRule: ({ node }) => <SquiggleRuleBlock className="col-start-2" {...node.fields} />,
       timeline: ({ node }: { node: SerializedBlockNode<TimelineBlockProps> }) => (

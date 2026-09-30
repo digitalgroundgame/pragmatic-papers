@@ -19,7 +19,7 @@ import { GET } from "../route"
 beforeEach(() => {
   vi.clearAllMocks()
   experiment.on = true
-  process.env.NEXT_PUBLIC_SERVER_URL = "https://example.test"
+  process.env.SERVER_URL = "https://example.test"
 })
 
 describe("GET /interactives-sitemap.xml", () => {

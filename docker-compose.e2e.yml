@@ -59,7 +59,7 @@ services:
       PAYLOAD_SECRET: ${PAYLOAD_SECRET:-test-secret-for-e2e-tests}
       # The Next.js server is started inside this same container by
       # scripts/test-e2e.mjs, so localhost is correct here.
-      NEXT_PUBLIC_SERVER_URL: http://localhost:8000
+      SERVER_URL: http://localhost:8000
       USE_LOCAL_STORAGE: "true"
       # The Merch block has no built-in store site — without this it renders
       # nothing and merch.spec.ts has no carousel to exercise.

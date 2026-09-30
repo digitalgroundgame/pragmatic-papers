@@ -27,7 +27,7 @@ vi.mock("@/endpoints/seed/media", async (importOriginal) => ({
 }))
 
 beforeAll(() => {
-  process.env.NEXT_PUBLIC_SERVER_URL = "https://example.org"
+  process.env.SERVER_URL = "https://example.org"
 })
 
 const { showcaseEntries } = await import("@/endpoints/seed/showcase")

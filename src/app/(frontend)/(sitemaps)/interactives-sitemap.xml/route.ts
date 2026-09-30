@@ -4,11 +4,12 @@ import config from "@payload-config"
 import { unstable_cache } from "next/cache"
 
 import { isExperimentEnabled } from "@/globals/SiteSettings/isExperimentEnabled"
+import { getServerSideURL } from "@/utilities/getURL"
 
 const getInteractivesSitemap = unstable_cache(
   async () => {
     const payload = await getPayload({ config })
-    const SITE_URL = process.env.NEXT_PUBLIC_SERVER_URL
+    const SITE_URL = getServerSideURL()
 
     const results = await payload.find({
       collection: "interactives",

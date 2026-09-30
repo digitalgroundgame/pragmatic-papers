@@ -46,7 +46,7 @@ describe("clone-from-production endpoints", () => {
   beforeEach(() => {
     vi.clearAllMocks()
     vi.stubEnv("BUILD_ENV", undefined)
-    vi.stubEnv("NEXT_PUBLIC_SERVER_URL", "http://localhost:8000")
+    vi.stubEnv("SERVER_URL", "http://localhost:8000")
   })
   afterEach(() => {
     vi.useRealTimers()
@@ -68,7 +68,7 @@ describe("clone-from-production endpoints", () => {
   ])(
     "%s is refused on the production URL even without BUILD_ENV",
     async (_, endpoint, serverUrl) => {
-      vi.stubEnv("NEXT_PUBLIC_SERVER_URL", serverUrl)
+      vi.stubEnv("SERVER_URL", serverUrl)
       const res = await endpoint.handler(request())
       expect(res.status).toBe(403)
     },

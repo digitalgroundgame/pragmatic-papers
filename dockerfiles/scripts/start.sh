@@ -26,8 +26,8 @@ if [ "$BUILT_WITHOUT_DATABASE" = "true" ]; then
     # in staging's storage. When the app mounts that at /staging-media, copy what this
     # preview's own media volume lacks. -n never overwrites, so the preview's own
     # uploads survive, and later starts only pick up what staging added since.
-    # An empty mount usually means Coolify added -pr-<n> to the bind's host path (its
-    # "PR deployment suffix" must be "Share volume"), so Docker mounted a new folder.
+    # An empty mount usually means Coolify added -pr-<n> to the bind's host path, so
+    # Docker mounted a new folder: turn is_preview_suffix_enabled off for it (README).
     staging_media=${STAGING_MEDIA_DIR:-/staging-media}
     if [ -d "$staging_media" ] && [ -n "$(ls -A "$staging_media")" ]; then
         echo "--- Copying staging's media from $staging_media ---"
@@ -37,7 +37,7 @@ if [ "$BUILT_WITHOUT_DATABASE" = "true" ]; then
             echo "WARNING: couldn't copy all of staging's media; some images may be missing"
         fi
     elif [ -d "$staging_media" ]; then
-        echo "WARNING: $staging_media is empty; set its PR deployment suffix to \"Share volume\" in Coolify"
+        echo "WARNING: $staging_media is empty; turn Coolify's preview suffix off for its mount (dockerfiles/README.md)"
     fi
 else
     # Preview deployments run on their own database: apply the name the build chose

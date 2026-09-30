@@ -24,8 +24,6 @@ export const MediaCollageBlock: Block = {
           name: "media",
           type: "upload",
           relationTo: "media",
-          // Images and video only: these render in a lightbox, whose trigger button
-          // can't hold an audio player's controls (#1035).
           filterOptions: {
             or: [{ mimeType: { contains: "image" } }, { mimeType: { contains: "video" } }],
           },

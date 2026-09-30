@@ -1,0 +1,187 @@
+# Builds each PR's preview in GitHub Actions and has Coolify run the image (#1067),
+# instead of Coolify building it on its 4 GB build server (#1018).
+#
+# The image builds against a throwaway Postgres beside the job, never the real database:
+# the preview's database is copied, migrated and swapped in when Coolify starts the
+# container (dockerfiles/PragmaticPapers.ci.Dockerfile and dockerfiles/scripts/start.sh).
+# So this job holds no database credentials; its only secret is GH_FONT_READ.
+#
+# Coolify then deploys the pushed tag as the PR's preview on a "Docker Image"
+# application, and scripts/preview-deployment.ts mirrors that deploy onto the PR as a
+# GitHub Deployment (it replaces preview-deployment.yml for these PRs). Closing the PR
+# removes the preview from Coolify.
+#
+# SETUP (Settings → Secrets and variables → Actions)
+# --------------------------------------------------
+#   - variable COOLIFY_PREVIEW_IMAGE_APP_UUID  the Docker Image application that runs
+#                                              previews. Until it's set, this workflow
+#                                              does nothing and preview-deployment.yml
+#                                              keeps following Coolify's own builds.
+#   - secret   COOLIFY_API_TOKEN               needs `deploy` and `write` as well as `read`
+#   - variable COOLIFY_DASHBOARD_URL, PREVIEW_URL_TEMPLATE   as for preview-deployment.yml
+#   - variables PREVIEW_NEXT_PUBLIC_*          optional; the browser-side values previews
+#                                              build with (see the build step)
+# The Coolify side is in dockerfiles/README.md ("Previews built in GitHub Actions").
+name: Preview image
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, closed]
+
+# A new push supersedes the build of the previous one. Closing cancels it too, so a
+# build can't deploy after the close has removed the preview.
+concurrency:
+  group: preview-image-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  deployments: write
+  packages: write
+
+jobs:
+  deploy:
+    name: Build and deploy preview
+    # The PRs Coolify previews today (see preview-deployment.yml): same-repo PRs from
+    # owners, members and collaborators, not titled [skip ci] / [skip cd]. Fork PRs get
+    # no secrets, so they couldn't build here anyway.
+    if: >-
+      vars.COOLIFY_PREVIEW_IMAGE_APP_UUID != '' &&
+      github.event.action != 'closed' &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      contains(fromJSON('["OWNER", "MEMBER", "COLLABORATOR"]'), github.event.pull_request.author_association) &&
+      !contains(github.event.pull_request.title, '[skip ci]') &&
+      !contains(github.event.pull_request.title, '[skip cd]')
+    runs-on: ubuntu-latest
+    # The build takes a few minutes; the rest covers scripts/preview-deployment.ts
+    # waiting on Coolify, first boot included (copying staging).
+    timeout-minutes: 60
+
+    # What the build prerenders from. Nothing it reads ends up served: start.sh throws
+    # the prerendered routes away once the preview runs on its own database.
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: build
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Name the image and the preview
+        id: meta
+        env:
+          PR: ${{ github.event.pull_request.number }}
+          SHA: ${{ github.event.pull_request.head.sha }}
+          TEMPLATE: ${{ vars.PREVIEW_URL_TEMPLATE || 'https://pr-{{pr_id}}.pragmaticpapers.com' }}
+          OWNER: ${{ github.repository_owner }}
+        run: |
+          url=${TEMPLATE//\{\{pr_id\}\}/$PR}
+          host=${url#*://}
+          host=${host%%/*}
+          tag="pr-${PR}-${SHA::12}"
+          {
+            echo "image=ghcr.io/${OWNER,,}/pragmatic-papers-preview"
+            echo "tag=$tag"
+            echo "url=$url"
+            echo "host=$host"
+          } >> "$GITHUB_OUTPUT"
+
+      - uses: docker/setup-buildx-action@v4
+        with:
+          # The build reaches the postgres service on the runner's network.
+          buildkitd-flags: --allow-insecure-entitlement network.host
+
+      - uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v7
+        env:
+          GH_FONT_READ: ${{ secrets.GH_FONT_READ }}
+        with:
+          context: .
+          file: dockerfiles/PragmaticPapers.ci.Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.image }}:${{ steps.meta.outputs.tag }}
+          network: host
+          allow: network.host
+          secret-envs: GH_FONT_READ=GH_FONT_READ
+          # COOLIFY_FQDN is only read at build time for Sentry's PR tag; at runtime
+          # Coolify sets the real one, which also names the preview's database.
+          build-args: |
+            DATABASE_URI=postgres://postgres:postgres@127.0.0.1:5432/build
+            BUILD_ENV=preview
+            COOLIFY_FQDN=${{ steps.meta.outputs.host }}
+            NEXT_PUBLIC_SERVER_URL=${{ steps.meta.outputs.url }}
+            SOURCE_COMMIT=${{ github.event.pull_request.head.sha }}
+            USE_LOCAL_STORAGE=${{ vars.PREVIEW_USE_LOCAL_STORAGE || 'true' }}
+            NEXT_PUBLIC_GOOGLE_ANALYTICS_ID=${{ vars.PREVIEW_NEXT_PUBLIC_GOOGLE_ANALYTICS_ID }}
+            NEXT_PUBLIC_SUPABASE_URL=${{ vars.PREVIEW_NEXT_PUBLIC_SUPABASE_URL }}
+            NEXT_PUBLIC_SENTRY_DSN=${{ vars.PREVIEW_NEXT_PUBLIC_SENTRY_DSN }}
+            NEXT_PUBLIC_TURNSTILE_SITE_KEY=${{ vars.PREVIEW_NEXT_PUBLIC_TURNSTILE_SITE_KEY }}
+          labels: |
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.event.pull_request.head.sha }}
+          # The dependency layers only change with the lockfile; everything from
+          # `COPY . .` on rebuilds each time anyway.
+          cache-from: type=gha,scope=preview-image
+          cache-to: type=gha,scope=preview-image,mode=max
+
+      # Node 24 runs the TypeScript script directly; no install needed.
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24.x"
+
+      - name: Deploy to Coolify and mirror its status
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          COOLIFY_DASHBOARD_URL: ${{ vars.COOLIFY_DASHBOARD_URL }}
+          COOLIFY_PREVIEW_APP_UUID: ${{ vars.COOLIFY_PREVIEW_IMAGE_APP_UUID }}
+          PREVIEW_URL_TEMPLATE: ${{ vars.PREVIEW_URL_TEMPLATE }}
+          COOLIFY_API_TOKEN: ${{ secrets.COOLIFY_API_TOKEN }}
+          TAG: ${{ steps.meta.outputs.tag }}
+        run: node scripts/preview-deployment.ts deploy "$TAG"
+
+  close:
+    name: Remove preview
+    if: vars.COOLIFY_PREVIEW_IMAGE_APP_UUID != '' && github.event.action == 'closed'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          sparse-checkout: scripts/preview-deployment.ts
+          sparse-checkout-cone-mode: false
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24.x"
+
+      # The preview's database is dropped by the next preview that starts
+      # (drop-closed-preview-databases.ts), which can reach the database server.
+      - name: Remove the preview from Coolify
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          COOLIFY_DASHBOARD_URL: ${{ vars.COOLIFY_DASHBOARD_URL }}
+          COOLIFY_PREVIEW_APP_UUID: ${{ vars.COOLIFY_PREVIEW_IMAGE_APP_UUID }}
+          COOLIFY_API_TOKEN: ${{ secrets.COOLIFY_API_TOKEN }}
+        run: node scripts/preview-deployment.ts close --delete-preview

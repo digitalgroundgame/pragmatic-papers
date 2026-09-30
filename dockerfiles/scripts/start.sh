@@ -21,6 +21,20 @@ if [ "$BUILT_WITHOUT_DATABASE" = "true" ]; then
     use_preview_database /tmp/database_name
     "$APP_DIR/copy-database.sh"
     node "$APP_DIR/drop-closed-preview-databases.ts"
+
+    # The database copy brings staging's media rows but not their files, which live
+    # in staging's storage. When the app mounts that at /staging-media, copy what this
+    # preview's own media volume lacks. -n never overwrites, so the preview's own
+    # uploads survive, and later starts only pick up what staging added since.
+    staging_media=${STAGING_MEDIA_DIR:-/staging-media}
+    if [ -d "$staging_media" ]; then
+        echo "--- Copying staging's media from $staging_media ---"
+        if cp -Rn "$staging_media/." "$APP_DIR/public/media/"; then
+            echo "Media: $(ls "$APP_DIR/public/media" | wc -l) files"
+        else
+            echo "WARNING: couldn't copy all of staging's media; some images may be missing"
+        fi
+    fi
 else
     # Preview deployments run on their own database: apply the name the build chose
     # (modify-database-uri.sh) to that DATABASE_URI.

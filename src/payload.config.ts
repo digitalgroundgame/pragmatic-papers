@@ -26,6 +26,7 @@ import { getServerSideURL } from "@/utilities/getURL"
 import { migrations } from "@/migrations"
 import { postgresAdapter } from "@payloadcms/db-postgres"
 import path from "path"
+import pretty from "pino-pretty"
 import { buildConfig, type SharpDependency } from "payload"
 import sharp from "sharp"
 import { fileURLToPath } from "url"
@@ -37,8 +38,12 @@ export default buildConfig({
   logger: {
     options: {
       level: process.env.PAYLOAD_LOG_LEVEL || "info",
-      transport: process.env.NODE_ENV !== "production" ? { target: "pino-pretty" } : undefined,
     },
+    destination: pretty({
+      colorize: process.stdout.isTTY,
+      translateTime: "SYS:HH:MM:ss",
+      ignore: "pid,hostname",
+    }),
   },
   admin: {
     components: {

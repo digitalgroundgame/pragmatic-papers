@@ -12,8 +12,8 @@
 #   - every tag a container on this server is running
 #   - the newest KEEP_PER_PR tags of each open PR, and every tag of a PR newer than all
 #     the open PRs GitHub listed (it may be too new to be listed yet)
-#   - the newest KEEP_OTHER tags that aren't a PR's (staging's and production's), for
-#     rollbacks and for servers other than this one that run them
+#   - the newest KEEP_OTHER tags that aren't a PR's (staging's), for rollbacks.
+#     Production builds and runs on its own server and doesn't push here.
 #
 # and deletes every other tag with the images it named (see "Deleting a tag" below), then
 # garbage-collects the files no remaining image uses.

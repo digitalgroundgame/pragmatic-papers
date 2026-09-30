@@ -45,7 +45,6 @@ export default async function RootLayout({
           <Footer />
         </ThemeProvider>
       </body>
-      {/* GOOGLE_ANALYTICS_ID is read at render time; the NEXT_PUBLIC_ name is compiled in (#1090). */}
       <GoogleAnalytics
         gaId={process.env.GOOGLE_ANALYTICS_ID || process.env.NEXT_PUBLIC_GOOGLE_ANALYTICS_ID}
       />

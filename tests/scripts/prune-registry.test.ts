@@ -18,6 +18,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest"
 const SCRIPT = resolve(__dirname, "../../dockerfiles/scripts/prune-registry.sh")
 const CONTAINER = "registry-aow0w84kckskokscwgkg8k0o"
 const REPO = "digitalgroundgame/pragmatic-papers"
+const MAIN_HEAD = "a1f79b203e16a25c805b4580bdabe56a21164c31"
 
 // Fake docker and curl, each logging its arguments to $CALLS_LOG. docker answers the
 // script's ps and inspect queries from $CONTAINERS, $RUNNING_IMAGES, $REGISTRY_ENV (the
@@ -40,7 +41,12 @@ const FAKES: Record<string, string> = {
 esac
 exit 0`,
   curl: `[ -n "$CURL_STATUS" ] && exit "$CURL_STATUS"
-for arg; do case "$arg" in *page=*) page=\${arg##*page=} ;; esac; done
+for arg; do case "$arg" in
+  *commits\?sha=*) branch=\${arg##*sha=}; branch=\${branch%%&*}
+    [ -n "$COMMITS_STATUS" ] && exit "$COMMITS_STATUS"
+    cat "$PAGES/commits-$branch.json" 2>/dev/null || echo "[]"; exit 0 ;;
+  *page=*) page=\${arg##*page=} ;;
+esac; done
 cat "$PAGES/page-$page.json" 2>/dev/null || echo "[]"`,
 }
 const LOG_CALL = `echo "$(basename "$0") $*" >> "$CALLS_LOG"`
@@ -51,6 +57,16 @@ let tagsDir: string
 /** Each manifest putManifest stored, by digest. */
 const names = new Map<string, string>()
 
+/** Makes GitHub list these as the branch's newest commits, newest first. */
+function branchCommits(branch: string, ...shas: string[]) {
+  const commits = shas.map((sha, i) => ({
+    sha,
+    commit: { tree: { sha: "f".repeat(40) } },
+    parents: [{ sha: shas[i + 1] ?? "e".repeat(40) }],
+  }))
+  writeFileSync(join(dir, "pages", `commits-${branch}.json`), JSON.stringify(commits, null, 2))
+}
+
 beforeEach(() => {
   dir = mkdtempSync(join(tmpdir(), "prune-registry-"))
   storage = join(dir, "registry")
@@ -58,6 +74,7 @@ beforeEach(() => {
   mkdirSync(tagsDir, { recursive: true })
   mkdirSync(join(dir, "bin"))
   mkdirSync(join(dir, "pages"))
+  branchCommits("main", MAIN_HEAD)
   for (const [name, body] of Object.entries(FAKES)) {
     writeFileSync(join(dir, "bin", name), `#!/bin/sh\n${LOG_CALL}\n${body}\n`)
     chmodSync(join(dir, "bin", name), 0o755)
@@ -152,6 +169,7 @@ function run(args: string[] = [], env: Record<string, string> = {}) {
       REGISTRY_ENV: "REGISTRY_STORAGE_FILESYSTEM_ROOTDIRECTORY=/data\nREGISTRY_HTTP_SECRET=s3cret",
       STORAGE_ROOT: "/data",
       CURL_STATUS: "",
+      COMMITS_STATUS: "",
       GC_STATUS: "",
       GITHUB_TOKEN: "",
       REGISTRY_CONTAINER: "",
@@ -187,6 +205,43 @@ describe("prune-registry.sh", () => {
 
     expect(status).toBe(0)
     expect(remaining()).toEqual(["pr-5-b", "pr-5-c", "pr-7-a"])
+  })
+
+  it("keeps a tag named after one of main's newest commits, however old", () => {
+    pushTags(MAIN_HEAD, "bbb", "ccc", "pr-1-a")
+    openPrs(1)
+
+    const { output } = run(["--apply"], { KEEP_OTHER: "1" })
+
+    expect(output).toContain("Keeping main's newest 5 commits' tags")
+    expect(remaining()).toEqual([MAIN_HEAD, "ccc", "pr-1-a"])
+  })
+
+  it("asks GitHub for KEEP_PER_BRANCH commits of each branch in KEEP_BRANCHES", () => {
+    pushTags("1".repeat(40), "2".repeat(40), "pr-1-a")
+    branchCommits("release", "1".repeat(40))
+    openPrs(1)
+
+    run(["--apply"], { KEEP_OTHER: "0", KEEP_BRANCHES: "main release", KEEP_PER_BRANCH: "3" })
+
+    expect(remaining()).toEqual(["1".repeat(40), "pr-1-a"])
+    expect(calls()).toContain("commits?sha=main&per_page=3")
+    expect(calls()).toContain("commits?sha=release&per_page=3")
+  })
+
+  it.each([
+    ["GitHub can't list them", { COMMITS_STATUS: "22" }],
+    ["the branch has none", { KEEP_BRANCHES: "gone" }],
+  ])("deletes nothing when a kept branch's commits are unknown because %s", (_, env) => {
+    pushTags("pr-6-a", "pr-7-a")
+    openPrs(7)
+
+    const { status, output } = run(["--apply"], env)
+
+    expect(status).toBe(1)
+    expect(output).toMatch(/couldn't list \w+'s commits; deleting nothing/)
+    expect(remaining()).toEqual(["pr-6-a", "pr-7-a"])
+    expect(calls()).not.toMatch(/docker (stop|run)/)
   })
 
   it("keeps the newest KEEP_OTHER tags that aren't a PR's", () => {

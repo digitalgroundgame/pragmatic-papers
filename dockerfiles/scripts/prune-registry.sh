@@ -12,8 +12,10 @@
 #   - every tag a container on this server is running
 #   - the newest KEEP_PER_PR tags of each open PR, and every tag of a PR newer than all
 #     the open PRs GitHub listed (it may be too new to be listed yet)
-#   - the newest KEEP_OTHER tags that aren't a PR's (staging's), for rollbacks.
-#     Production builds and runs on its own server and doesn't push here.
+#   - every tag named after one of the newest KEEP_PER_BRANCH commits of each branch in
+#     KEEP_BRANCHES (main). Production runs on another server, so `docker ps` here can't
+#     see which tag it runs, and dev's deploys would otherwise crowd its tags out.
+#   - the newest KEEP_OTHER tags that aren't a PR's (staging's), for rollbacks
 #
 # and deletes every other tag with the images it named (see "Deleting a tag" below), then
 # garbage-collects the files no remaining image uses.
@@ -29,6 +31,8 @@
 #   GITHUB_TOKEN        optional; only needed if the repository is private
 #   KEEP_PER_PR         default 2
 #   KEEP_OTHER          default 10
+#   KEEP_BRANCHES       default main (space-separated)
+#   KEEP_PER_BRANCH     default 5
 set -eu
 
 APPLY=false
@@ -42,6 +46,8 @@ REPOSITORY=${GITHUB_REPOSITORY:-digitalgroundgame/pragmatic-papers}
 CONFIG=${REGISTRY_CONFIG:-/etc/docker/registry/config.yml}
 KEEP_PER_PR=${KEEP_PER_PR:-2}
 KEEP_OTHER=${KEEP_OTHER:-10}
+KEEP_BRANCHES=${KEEP_BRANCHES-main}
+KEEP_PER_BRANCH=${KEEP_PER_BRANCH:-5}
 
 restart=false
 cleanup() {
@@ -77,18 +83,22 @@ if [ -z "$storage" ] || [ ! -d "$repositories" ]; then
 fi
 echo "Storage: $root in the container, $storage on this server"
 
+# GETs $1 from the repository's GitHub API.
+github() {
+    if [ -n "${GITHUB_TOKEN:-}" ]; then
+        curl -fsS -H "Authorization: Bearer $GITHUB_TOKEN" -H 'Accept: application/vnd.github+json' \
+            "https://api.github.com/repos/$REPOSITORY/$1"
+    else
+        curl -fsS -H 'Accept: application/vnd.github+json' "https://api.github.com/repos/$REPOSITORY/$1"
+    fi
+}
+
 # The open PRs' numbers, one per line. Each PR in the list has exactly one top-level
 # "url" ending in /pulls/<n>, so counting those also tells when the last page is read.
 open_prs() {
     page=1
     while :; do
-        if [ -n "${GITHUB_TOKEN:-}" ]; then
-            body=$(curl -fsS -H "Authorization: Bearer $GITHUB_TOKEN" -H 'Accept: application/vnd.github+json' \
-                "https://api.github.com/repos/$REPOSITORY/pulls?state=open&per_page=100&page=$page") || return 1
-        else
-            body=$(curl -fsS -H 'Accept: application/vnd.github+json' \
-                "https://api.github.com/repos/$REPOSITORY/pulls?state=open&per_page=100&page=$page") || return 1
-        fi
+        body=$(github "pulls?state=open&per_page=100&page=$page") || return 1
         numbers=$(echo "$body" | grep -o "\"url\": *\"https://api.github.com/repos/$REPOSITORY/pulls/[0-9]*\"" |
             grep -o '[0-9]*"$' | tr -d '"')
         [ -n "$numbers" ] && echo "$numbers"
@@ -107,8 +117,19 @@ echo "Open PRs: $(echo "$open" | sort -n | tr '\n' ' ')"
 running=$(mktemp)
 plan=$(mktemp)
 
-# The tags this server's containers run, whichever repository they're from.
+# Tags kept whatever else the plan says: those this server's containers run, whichever
+# repository they're from, and the kept branches' newest commits. A commit list names
+# each commit's parents and tree too; keeping those as well costs nothing.
 docker ps --format '{{.Image}}' | sed 's/.*://' > "$running"
+for branch in $KEEP_BRANCHES; do
+    if ! commits=$(github "commits?sha=$branch&per_page=$KEEP_PER_BRANCH" |
+        grep -o '"sha": *"[0-9a-f]\{40\}"' | grep -o '[0-9a-f]\{40\}') || [ -z "$commits" ]; then
+        echo "ERROR: couldn't list $branch's commits; deleting nothing"
+        exit 1
+    fi
+    echo "$commits" >> "$running"
+    echo "Keeping $branch's newest $KEEP_PER_BRANCH commits' tags"
+done
 
 # The tags in directory $1, most recently pushed first. A tag's directory is created on
 # its first push, but every push rewrites its current/link, so that's what's sorted.

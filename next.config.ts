@@ -13,9 +13,23 @@ const NEXT_PUBLIC_SERVER_URL = new URL(
   process.env.NEXT_PUBLIC_SERVER_URL || "http://localhost:8000",
 )
 
-const NEXT_PUBLIC_SUPABASE_URL = new URL(
-  process.env.NEXT_PUBLIC_SUPABASE_URL || "https://example.com",
-)
+const NEXT_PUBLIC_SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL
+  ? new URL(process.env.NEXT_PUBLIC_SUPABASE_URL)
+  : null
+
+// With S3 storage on, media URLs point at Supabase; without these variables the storage
+// plugin falls back to /media/<file> paths that don't exist, and images just fail.
+if (
+  process.env.NODE_ENV !== "test" &&
+  process.env.USE_LOCAL_STORAGE !== "true" &&
+  (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.S3_BUCKET)
+) {
+  console.warn(
+    '⚠ S3 storage is enabled (USE_LOCAL_STORAGE is not "true") but NEXT_PUBLIC_SUPABASE_URL ' +
+      "or S3_BUCKET is not set, so uploaded media will not load. Set both, or set " +
+      "USE_LOCAL_STORAGE=true.",
+  )
+}
 
 const nextConfig: NextConfig = {
   output: "standalone",
@@ -40,11 +54,15 @@ const nextConfig: NextConfig = {
         hostname: NEXT_PUBLIC_SERVER_URL.hostname,
         port: NEXT_PUBLIC_SERVER_URL.port,
       },
-      {
-        protocol: NEXT_PUBLIC_SUPABASE_URL.protocol.slice(0, -1) as "http" | "https",
-        hostname: NEXT_PUBLIC_SUPABASE_URL.hostname,
-        port: NEXT_PUBLIC_SUPABASE_URL.port,
-      },
+      ...(NEXT_PUBLIC_SUPABASE_URL
+        ? [
+            {
+              protocol: NEXT_PUBLIC_SUPABASE_URL.protocol.slice(0, -1) as "http" | "https",
+              hostname: NEXT_PUBLIC_SUPABASE_URL.hostname,
+              port: NEXT_PUBLIC_SUPABASE_URL.port,
+            },
+          ]
+        : []),
       {
         // Merch products are synced from Shopify and render straight from its
         // CDN — we don't copy product shots into Media.

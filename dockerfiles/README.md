@@ -350,7 +350,20 @@ The image sets `BUILT_WITHOUT_DATABASE=true`, which switches on the start-time s
    - **Preview URL template** `pr-{{pr_id}}.pragmaticpapers.com`, host only: Coolify puts the scheme in front.
    - **Healthcheck on**: GET `/api/users/me` on port `3000`, expecting `200`, with a start period of `300` seconds. Coolify doesn't read the image's own `HEALTHCHECK` for a Docker Image app, and with its check off it swaps a preview in before the copy and migrations have finished.
    - **Healthcheck host** `127.0.0.1`, not `localhost`: the server listens on IPv4 only, and in the Alpine image `localhost` resolves to `::1` first, so the check is refused and Traefik answers 503 "No available server".
-   - **Persistent storage**, two mounts. A **volume** at `/app/public/media` (any name): the preview's own uploads. Coolify gives each preview its own copy of the app's volumes, and a fresh volume takes the image's ownership, so the app can write to it. The development app's media folder (`/data/coolify/applications/<its uuid>/public/media`) at `/staging-media`, added as a **Directory mount** (Coolify v4.3.23's Volume mount takes no source path). Coolify mounts a Directory mount's source path as-is for every preview, with no `-pr-<n>` suffix. **Then click Configure Backup on it and set a schedule.** Its **Convert To File** and permanent **Delete** run `rm -rf` on the source path, which here is staging's media, and both refuse to run while a backup schedule exists. Staging's media gets a backup out of it too. `start.sh` copies what the preview's volume lacks from it at every start (`cp -n`, so a preview's own uploads are never overwritten), and warns when it's empty. The database copy brings staging's media rows but not their files, so without it every image is broken. `start.sh` only reads `/staging-media`, but Coolify has no read-only option for a Docker Image app's mounts, so it is mounted read-write. What keeps previews off staging's files is that only `start.sh` touches that path, and previews only deploy PRs from trusted authors (`preview-image.yml`).
+   - **Persistent storage**, two mounts. A **volume** at `/app/public/media` (any name): the preview's own uploads. Coolify gives each preview its own copy of the app's volumes, and a fresh volume takes the image's ownership, so the app can write to it. The development app's media folder (`/data/coolify/applications/<its uuid>/public/media`) at `/staging-media`, added as a **Directory mount** (Coolify v4.3.23's Volume mount takes no source path). Coolify mounts a Directory mount's source path as-is for every preview, with no `-pr-<n>` suffix. `start.sh` copies what the preview's volume lacks from it at every start (`cp -n`, so a preview's own uploads are never overwritten), and logs an error when it's empty. The database copy brings staging's media rows but not their files, so without it every image is broken.
+
+     **This mount points at staging's only copy of its media, and Coolify deletes it without asking in three ways** (v4.3.23, `LocalFileVolume`). On 2026-09-30 one of them emptied staging's media folder, and there was no copy to restore from:
+
+     - Saving it as a **File mount** instead of a Directory mount runs `rm -fr` on the source path at once and leaves an empty file there (`saveStorageOnServer`). No confirmation, no backup check.
+     - **Convert To File** and permanent **Delete** run `rm -rf` on the source path (`deleteStorageOnServer`). Both refuse while the mount has a backup schedule, but there's none until you add one.
+
+     So, in this order:
+
+     1. On the server, copy staging's media somewhere Coolify doesn't manage: `cp -a /data/coolify/applications/<uuid>/public/media /root/staging-media-$(date +%F)`.
+     2. Add the mount as a **Directory mount**. Double-check the type before saving.
+     3. Straight away, click **Configure Backup** on it and set a schedule. That locks out Convert To File and Delete, and backs up staging's media from then on.
+
+     Never edit the mount afterwards; delete it only after removing its backup schedule and copying staging's media again. `start.sh` only reads `/staging-media`, but Coolify has no read-only option for a Docker Image app's mounts, so it is mounted read-write. What keeps previews off staging's files is that only `start.sh` touches that path, and previews only deploy PRs from trusted authors (`preview-image.yml`).
 2. Copy the development app's **Preview Deployment Environment Variables** into it as **runtime** variables: `DATABASE_URI`, `COPY_SOURCE_DATABASE`, `FORCE_DATABASE_COPY`, `PAYLOAD_SECRET`, `USE_LOCAL_STORAGE`, `SERVER_URL=$COOLIFY_URL`, `TURNSTILE_SITE_KEY`, `GOOGLE_ANALYTICS_ID`, `SENTRY_DSN` and the rest the app reads at runtime. `BUILD_ENV` is baked into the image. Build variables aren't used: nothing builds in Coolify.
 3. Let the server pull from GHCR: the package is private, so log its Docker in to `ghcr.io` (`docker login ghcr.io`, as the user Coolify connects with) with a GitHub token that has `read:packages`.
 4. Give `COOLIFY_API_TOKEN` the `deploy` and `write` abilities as well as `read` (the token's owner must be a team admin). The workflow uses them to deploy the image (`POST /api/v1/deploy?uuid=…&pr=…&docker_tag=…`, Coolify `v4.0.0-beta.471` or later) and to remove the preview when the PR closes.
@@ -442,7 +455,8 @@ USE_LOCAL_STORAGE=true
 **Requirements:**
 
 - Configure a persistent mount in Coolify at `/app/public/media` (the development app bind-mounts `/data/coolify/applications/<its uuid>/public/media`; previews: see the preview image setup above)
-- Regular backups of the media volume recommended
+- The app runs as uid `1001` (`nextjs`), so it must be able to write the mount's source folder. When Docker creates a missing bind source it makes it `root`-owned, and every upload fails; fix it with `chown 1001:1001 /data/coolify/applications/<uuid>/public/media`. `start.sh` warns at startup when the folder is missing, empty, or not writable.
+- Back up the media folder. It's the only copy of staging's uploads (see the preview mount's warning above).
 
 ### S3 Storage (Production)
 

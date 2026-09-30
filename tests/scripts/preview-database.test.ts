@@ -333,9 +333,15 @@ describe("preview database build", () => {
 
 describe("start.sh", () => {
   // Lays out /app as the runner image does: start.sh, the helpers and the name file.
-  function start(name: string, env: Record<string, string>) {
+  // `media` lays out public/media with those files; `mediaMode` then sets its permissions.
+  function start(name: string, env: Record<string, string>, media?: string[], mediaMode?: number) {
     const app = join(dir, "app")
     mkdirSync(app)
+    if (media) {
+      mkdirSync(join(app, "public", "media"), { recursive: true })
+      for (const file of media) writeFileSync(join(app, "public", "media", file), file)
+      if (mediaMode !== undefined) chmodSync(join(app, "public", "media"), mediaMode)
+    }
     for (const script of [
       "start.sh",
       "database-uri.sh",
@@ -369,6 +375,47 @@ describe("start.sh", () => {
     expect(status).toBe(1)
     expect(output).toContain("DATABASE_URI is not set at runtime")
     expect(output).not.toContain("node started")
+  })
+
+  describe("with local storage", () => {
+    const local = { DATABASE_URI: URI, USE_LOCAL_STORAGE: "true" }
+
+    it("warns when the media folder is empty, as when its host folder was deleted", () => {
+      const { status, output } = start("", local, [])
+
+      expect(status).toBe(0)
+      expect(output).toContain("public/media is empty")
+      expect(output).toContain("node started")
+    })
+
+    it("warns when there's no media folder at all", () => {
+      const { output } = start("", local)
+
+      expect(output).toContain("public/media doesn't exist")
+    })
+
+    // Root can write anywhere, so this only means something as another user.
+    it.skipIf(process.getuid?.() === 0)("warns when the app can't write its uploads", () => {
+      const { status, output } = start("", local, ["photo.webp"], 0o555)
+      chmodSync(join(dir, "app", "public", "media"), 0o755)
+
+      expect(status).toBe(0)
+      expect(output).toContain("isn't writable")
+      expect(output).toContain("node started")
+    })
+
+    it("says nothing about a folder that holds files", () => {
+      const { output } = start("", local, ["photo.webp"])
+
+      expect(output).not.toMatch(/public\/media (is empty|doesn't exist|isn't writable)/)
+    })
+
+    it("leaves the media folder alone with S3 storage", () => {
+      // Explicit: CI runs the tests with USE_LOCAL_STORAGE=true, which the scripts inherit.
+      const { output } = start("", { DATABASE_URI: URI, USE_LOCAL_STORAGE: "false" }, [])
+
+      expect(output).not.toContain("public/media")
+    })
   })
 
   // A deployed image without SERVER_URL would publish localhost links (#1090).
@@ -439,6 +486,33 @@ describe("start.sh", () => {
       const { status, output } = start("", { ...built, REFRESH_STATUS: "1" })
 
       expect(status).toBe(0)
+      expect(output).toContain("node started")
+    })
+
+    it("copies staging's media without overwriting the preview's own", () => {
+      const staging = join(dir, "staging-media")
+      mkdirSync(staging)
+      writeFileSync(join(staging, "new.webp"), "staging")
+      writeFileSync(join(staging, "same.webp"), "staging")
+      const { output } = start(
+        "",
+        { ...built, USE_LOCAL_STORAGE: "true", STAGING_MEDIA_DIR: staging },
+        ["same.webp"],
+      )
+
+      const media = join(dir, "app", "public", "media")
+      expect(readFileSync(join(media, "new.webp"), "utf8")).toBe("staging")
+      expect(readFileSync(join(media, "same.webp"), "utf8")).toBe("same.webp")
+      expect(output).toContain("Media: 2 files")
+    })
+
+    it("says so when staging's media folder is empty", () => {
+      const staging = join(dir, "staging-media")
+      mkdirSync(staging)
+      const { status, output } = start("", { ...built, STAGING_MEDIA_DIR: staging }, [])
+
+      expect(status).toBe(0)
+      expect(output).toContain(`ERROR: ${staging} is empty`)
       expect(output).toContain("node started")
     })
 

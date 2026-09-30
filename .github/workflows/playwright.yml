@@ -39,8 +39,32 @@ concurrency:
 # workflows always render the same page.
 
 jobs:
+  # Skips the suite on a PR that changes only Markdown, the same way ci.yml's
+  # "Detect changes" job does: a skipped required check passes, only PRs are
+  # filtered, and if this job fails the suite runs in full.
+  changes:
+    name: Detect E2E changes
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: read
+    outputs:
+      e2e: ${{ steps.filter.outputs.e2e }}
+
+    steps:
+      - uses: dorny/paths-filter@v4
+        if: github.event_name == 'pull_request'
+        id: filter
+        with:
+          predicate-quantifier: some-with-excludes
+          filters: |
+            e2e:
+              - "**"
+              - "!**/*.md"
+
   test:
     name: E2E tests
+    needs: changes
+    if: ${{ !cancelled() && (github.event_name != 'pull_request' || needs.changes.result != 'success' || needs.changes.outputs.e2e == 'true') }}
     timeout-minutes: 60
     runs-on: ubuntu-latest
     # Pinned to the exact @playwright/test version resolved in

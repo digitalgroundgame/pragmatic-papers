@@ -230,7 +230,7 @@ export default withSentryConfig(withPayload(nextConfig, { devBundleServerPackage
   applicationKey: "pragmatic-papers",
 
   // The build-time dependency instrumentation roughly doubles peak compile memory
-  // (~4.6 → ~8.5 GiB), which the 4 GB Coolify build server can't absorb.
+  // (~4.6 → ~8.5 GiB), more than the Coolify build server's 8 GB of RAM (#1018).
   buildTimeInstrumentation: false,
 
   // Log wherever source maps are uploaded: builds with SENTRY_AUTH_TOKEN (Coolify

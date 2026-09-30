@@ -66,6 +66,18 @@ export const AudioSettings: Story = {
   },
 }
 
+export const AudioVolume: Story = {
+  args: { media: narrationAudio },
+  play: async ({ canvasElement }) => {
+    await userEvent.click(await within(canvasElement).findByRole("button", { name: "Volume" }))
+    const popover = await screen.findByRole("dialog", { name: "Volume" })
+    const slider = await within(popover).findByRole("slider", { name: "Volume" })
+    slider.focus()
+    await userEvent.keyboard("{ArrowLeft}")
+    await expect(slider).toHaveAttribute("aria-valuenow", "0.99")
+  },
+}
+
 export const Narration: Story = {
   render: () => <NarrationPlayer narration={{ ...narrationAudio, narrator: authors[0] }} />,
   play: async ({ canvasElement }) => {

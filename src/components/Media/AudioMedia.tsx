@@ -14,6 +14,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Slider } from "@/components/ui/slider"
 import { cn } from "@/utilities/utils"
 import { useAudioGain } from "./useAudioGain"
@@ -32,7 +33,7 @@ const audioControlsVariants = cva("flex min-w-0 items-center gap-3 overflow-hidd
     },
   },
   compoundVariants: [
-    { variant: "collapsible", expanded: true, class: "w-56" },
+    { variant: "collapsible", expanded: true, class: "w-64" },
     { variant: "collapsible", expanded: false, class: "w-0" },
   ],
   defaultVariants: {
@@ -138,26 +139,13 @@ function Scrubber({ currentTime, duration, onSeek }: ScrubberProps) {
   )
 }
 
-/**
- * Owns the selected rate: nothing outside the menu renders it, so the player
- * only hears about the change it has to apply to the element.
- */
-function SpeedMenuGroup({ onChange }: { onChange: (rate: number) => void }) {
-  const [playbackRate, setPlaybackRate] = useState(1)
-
-  const handleValueChange = useCallback(
-    (value: unknown) => {
-      const rate = Number(value)
-      setPlaybackRate(rate)
-      onChange(rate)
-    },
-    [onChange],
-  )
+function SpeedMenuGroup({ value, onChange }: { value: number; onChange: (rate: number) => void }) {
+  const handleValueChange = useCallback((next: unknown) => onChange(Number(next)), [onChange])
 
   return (
     <DropdownMenuGroup>
       <DropdownMenuLabel>Speed</DropdownMenuLabel>
-      <DropdownMenuRadioGroup value={playbackRate} onValueChange={handleValueChange}>
+      <DropdownMenuRadioGroup value={value} onValueChange={handleValueChange}>
         {PLAYBACK_RATES.map((rate) => (
           <DropdownMenuRadioItem key={rate} value={rate}>
             {formatRate(rate)}
@@ -173,54 +161,56 @@ function VolumeIcon({ volume }: { volume: number }): React.ReactNode {
   return volume < 0.5 ? <Volume1 className="size-4" /> : <Volume2 className="size-4" />
 }
 
-const VOLUME_LEVELS = [0, 0.25, 0.5, 0.75, 1] as const
-
-function formatVolume(volume: number): string {
-  return volume === 0 ? "Mute" : `${volume * 100}%`
-}
-
 /**
- * Steps rather than a slider: a menu may only hold menu items, and a slider
- * inside one fights it for the arrow keys. The level itself is applied by the
- * gain graph upstream.
+ * Its own popover rather than a row in the settings menu: a menu may only hold
+ * menu items, and a slider inside one fights it for the arrow keys (#1001).
  */
-function VolumeMenuGroup({ onChange }: { onChange: (volume: number) => void }) {
-  const [volume, setVolume] = useState(1)
-
+function VolumeControl({
+  volume,
+  onChange,
+}: {
+  volume: number
+  onChange: (volume: number) => void
+}) {
   const handleValueChange = useCallback(
-    (value: unknown) => {
-      const next = Number(value)
-      setVolume(next)
-      onChange(next)
+    (value: number | readonly number[]) => {
+      const next = singleValue(value)
+      if (next !== undefined) onChange(next)
     },
     [onChange],
   )
 
   return (
-    <DropdownMenuGroup>
-      <DropdownMenuLabel className="flex items-center gap-1.5">
+    <Popover>
+      <PopoverTrigger
+        aria-label="Volume"
+        className="text-muted-foreground hover:text-foreground shrink-0 transition-colors"
+        render={<Button variant="ghost" size="icon-sm" />}
+      >
         <VolumeIcon volume={volume} />
-        Volume
-      </DropdownMenuLabel>
-      <DropdownMenuRadioGroup value={volume} onValueChange={handleValueChange}>
-        {VOLUME_LEVELS.map((level) => (
-          <DropdownMenuRadioItem key={level} value={level}>
-            {formatVolume(level)}
-          </DropdownMenuRadioItem>
-        ))}
-      </DropdownMenuRadioGroup>
-    </DropdownMenuGroup>
+      </PopoverTrigger>
+      <PopoverContent align="end" aria-label="Volume" className="w-40 px-4 py-3">
+        <Slider
+          min={0}
+          max={1}
+          step={0.01}
+          value={[volume]}
+          onValueChange={handleValueChange}
+          aria-label="Volume"
+        />
+      </PopoverContent>
+    </Popover>
   )
 }
 
 interface SettingsMenuProps {
+  playbackRate: number
   onPlaybackRateChange: (rate: number) => void
-  onVolumeChange: (volume: number) => void
   /** Extra entries appended below the built-in groups. */
   menuItems?: React.ReactNode
 }
 
-function SettingsMenu({ onPlaybackRateChange, onVolumeChange, menuItems }: SettingsMenuProps) {
+function SettingsMenu({ playbackRate, onPlaybackRateChange, menuItems }: SettingsMenuProps) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
@@ -237,9 +227,7 @@ function SettingsMenu({ onPlaybackRateChange, onVolumeChange, menuItems }: Setti
             <DropdownMenuSeparator />
           </>
         )}
-        <SpeedMenuGroup onChange={onPlaybackRateChange} />
-        <DropdownMenuSeparator />
-        <VolumeMenuGroup onChange={onVolumeChange} />
+        <SpeedMenuGroup value={playbackRate} onChange={onPlaybackRateChange} />
       </DropdownMenuContent>
     </DropdownMenu>
   )
@@ -269,6 +257,10 @@ export const AudioMedia: React.FC<AudioMediaProps> = ({
   const [currentTime, setCurrentTime] = useState(0)
   const [duration, setDuration] = useState(media.duration ?? 0)
   const [started, setStarted] = useState(false)
+  // Held here, not in the menu or popover: both unmount while closed, and
+  // would reopen showing the defaults instead of what the player is using.
+  const [playbackRate, setPlaybackRate] = useState(1)
+  const [volume, setVolume] = useState(1)
   const expanded = variant !== "collapsible" || started
 
   useEffect(() => {
@@ -353,8 +345,17 @@ export const AudioMedia: React.FC<AudioMediaProps> = ({
   }, [])
 
   const handlePlaybackRateChange = useCallback((rate: number) => {
+    setPlaybackRate(rate)
     if (audioRef.current) audioRef.current.playbackRate = rate
   }, [])
+
+  const handleVolumeChange = useCallback(
+    (next: number) => {
+      setVolume(next)
+      setGain(next)
+    },
+    [setGain],
+  )
 
   if (!media.url) return null
 
@@ -375,9 +376,10 @@ export const AudioMedia: React.FC<AudioMediaProps> = ({
         className={audioControlsVariants({ variant, expanded })}
       >
         <Scrubber currentTime={currentTime} duration={duration} onSeek={handleSeek} />
+        <VolumeControl volume={volume} onChange={handleVolumeChange} />
         <SettingsMenu
+          playbackRate={playbackRate}
           onPlaybackRateChange={handlePlaybackRateChange}
-          onVolumeChange={setGain}
           menuItems={menuItems}
         />
       </div>

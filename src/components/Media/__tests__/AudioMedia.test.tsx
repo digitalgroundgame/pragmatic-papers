@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen } from "@testing-library/react"
+import { act, cleanup, fireEvent, render, screen } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { AudioMedia } from "../AudioMedia"
@@ -40,12 +40,19 @@ function sliderInput(label: string): HTMLInputElement {
   return input
 }
 
+function volumeButton(): HTMLElement {
+  return screen.getByRole("button", { name: "Volume" })
+}
+
 /** The icon lucide renders for the current level, e.g. "lucide-volume-x" when muted. */
 function volumeIconClass(): string {
-  // The menu renders in a portal, so it is queried off the document rather
-  // than the render container.
-  const label = screen.getByText("Volume", { selector: '[data-slot="dropdown-menu-label"]' })
-  return label.querySelector("svg")?.getAttribute("class") ?? ""
+  return volumeButton().querySelector("svg")?.getAttribute("class") ?? ""
+}
+
+/** Close a menu or popover by clicking its trigger again, and let it unmount. */
+async function toggleClosed(trigger: HTMLElement): Promise<void> {
+  fireEvent.click(trigger)
+  await act(() => new Promise((resolve) => setTimeout(resolve, 0)))
 }
 
 function isCollapsed(container: HTMLElement): boolean {
@@ -267,30 +274,16 @@ describe("AudioMedia", () => {
       expect(audio.playbackRate).toBe(1.5)
     })
 
-    it("offers volume levels, starting at full", () => {
+    it("shows the rate it was given when reopened", async () => {
       render(<AudioMedia media={media} />)
-      fireEvent.click(screen.getByLabelText("Player settings"))
+      const settings = screen.getByLabelText("Player settings")
+      fireEvent.click(settings)
+      fireEvent.click(screen.getByRole("menuitemradio", { name: "1.5\u00d7" }))
 
-      expect(screen.getByRole("menuitemradio", { name: "100%" })).toBeChecked()
-      expect(screen.getByRole("menuitemradio", { name: "Mute" })).not.toBeChecked()
-    })
-
-    it("keeps the volume it was given", () => {
-      render(<AudioMedia media={media} />)
-      fireEvent.click(screen.getByLabelText("Player settings"))
-
-      fireEvent.click(screen.getByRole("menuitemradio", { name: "25%" }))
-      expect(screen.getByRole("menuitemradio", { name: "25%" })).toBeChecked()
-      expect(screen.getByRole("menuitemradio", { name: "100%" })).not.toBeChecked()
-    })
-
-    it("mutes the icon once the level reaches zero", () => {
-      render(<AudioMedia media={media} />)
-      fireEvent.click(screen.getByLabelText("Player settings"))
-      expect(volumeIconClass()).not.toContain("volume-x")
-
-      fireEvent.click(screen.getByRole("menuitemradio", { name: "Mute" }))
-      expect(volumeIconClass()).toContain("volume-x")
+      await toggleClosed(settings)
+      expect(screen.queryByRole("menu")).not.toBeInTheDocument()
+      fireEvent.click(settings)
+      expect(screen.getByRole("menuitemradio", { name: "1.5\u00d7" })).toBeChecked()
     })
 
     it("appends the entries a caller hands it", () => {
@@ -310,6 +303,46 @@ describe("AudioMedia", () => {
       fireEvent.click(screen.getByLabelText("Play"))
       expect(isCollapsed(container)).toBe(false)
       expect(settings.closest("[inert]")).toBeNull()
+    })
+  })
+
+  describe("volume", () => {
+    it("keeps the slider out of the settings menu", () => {
+      render(<AudioMedia media={media} />)
+      fireEvent.click(screen.getByLabelText("Player settings"))
+      expect(screen.getByRole("menu")).not.toContainElement(
+        document.querySelector('input[type="range"][aria-label="Volume"]'),
+      )
+    })
+
+    it("opens a continuous slider starting at full", () => {
+      const { container } = render(<AudioMedia media={media} />)
+      expect(query<HTMLAudioElement>(container, "audio").volume).toBe(1)
+
+      fireEvent.click(volumeButton())
+      expect(sliderInput("Volume")).toHaveValue("1")
+      expect(sliderInput("Volume")).toHaveAttribute("step", "0.01")
+    })
+
+    it("keeps the volume it was given, even after closing", async () => {
+      render(<AudioMedia media={media} />)
+      fireEvent.click(volumeButton())
+
+      fireEvent.change(sliderInput("Volume"), { target: { value: "0.25" } })
+      expect(sliderInput("Volume")).toHaveValue("0.25")
+
+      await toggleClosed(volumeButton())
+      fireEvent.click(volumeButton())
+      expect(sliderInput("Volume")).toHaveValue("0.25")
+    })
+
+    it("mutes the icon once the level reaches zero", () => {
+      render(<AudioMedia media={media} />)
+      expect(volumeIconClass()).not.toContain("volume-x")
+
+      fireEvent.click(volumeButton())
+      fireEvent.change(sliderInput("Volume"), { target: { value: "0" } })
+      expect(volumeIconClass()).toContain("volume-x")
     })
   })
 })

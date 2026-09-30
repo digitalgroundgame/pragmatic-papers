@@ -552,9 +552,21 @@ describe("start.sh", () => {
     })
 
     it("copies staging's media without overwriting the preview's own", () => {
+      // The image's cp is BusyBox's: with -n it skips any destination that exists,
+      // a folder included, so `cp -Rn staging/. media/` copied nothing. Stand in for it.
+      writeFileSync(
+        join(dir, "bin", "cp"),
+        `#!/bin/sh
+for last; do :; done
+case "$1" in -*n*) [ -e "$last" ] && exit 0 ;; esac
+exec /bin/cp "$@"
+`,
+      )
+      chmodSync(join(dir, "bin", "cp"), 0o755)
       const staging = join(dir, "staging-media")
       mkdirSync(staging)
       writeFileSync(join(staging, "new.webp"), "staging")
+      writeFileSync(join(staging, "Screenshot at 5.49 PM.webp"), "staging")
       writeFileSync(join(staging, "same.webp"), "staging")
       const { output } = start(
         "",
@@ -564,8 +576,10 @@ describe("start.sh", () => {
 
       const media = join(dir, "app", "public", "media")
       expect(readFileSync(join(media, "new.webp"), "utf8")).toBe("staging")
+      expect(readFileSync(join(media, "Screenshot at 5.49 PM.webp"), "utf8")).toBe("staging")
       expect(readFileSync(join(media, "same.webp"), "utf8")).toBe("same.webp")
-      expect(output).toContain("Media: 2 files")
+      expect(output).toContain("Media: copied 2, now 3 files")
+      expect(output).not.toContain("public/media is empty")
     })
 
     it("says so when staging's media folder is empty", () => {

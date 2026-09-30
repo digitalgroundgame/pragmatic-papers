@@ -43,6 +43,7 @@ export default buildConfig({
       colorize: process.stdout.isTTY,
       translateTime: "SYS:HH:MM:ss",
       ignore: "pid,hostname",
+      sync: true,
     }),
   },
   admin: {

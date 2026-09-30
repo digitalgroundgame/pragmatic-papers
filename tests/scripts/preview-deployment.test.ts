@@ -368,6 +368,22 @@ describe("main deploy <image-tag>", () => {
     expect(h.logs.join("\n")).toContain("deployment img-dep")
   })
 
+  it("waits out the 404 Coolify answers right after queueing the image", async () => {
+    // An empty poll is Coolify's 404 "Deployment not found." for the queued UUID.
+    const h = harness({ polls: [[], [], [imageRow("in_progress")], [imageRow("finished")]] })
+    expect(await main(["deploy", "pr-42-abc1234"], ENV, h.deps)).toBe(0)
+
+    expect(h.statuses().map((s) => s.state)).toEqual(["in_progress", "success"])
+  })
+
+  it("gives up without creating a Deployment when the queued image never appears", async () => {
+    const h = harness({ polls: [[]] })
+    expect(await main(["deploy", "pr-42-abc1234"], ENV, h.deps)).toBe(0)
+
+    expect(h.statuses()).toEqual([])
+    expect(h.logs.join("\n")).toContain("didn't queue a preview")
+  })
+
   it("fails the run, creating nothing, when Coolify doesn't queue the image", async () => {
     const h = harness({
       deployed: {

@@ -274,7 +274,7 @@ export function github(deps: Deps, config: Config): GithubApi {
 
 export interface CoolifyApi {
   listDeployments: () => Promise<CoolifyDeployment[]>
-  getDeployment: (uuid: string) => Promise<CoolifyDeployment>
+  getDeployment: (uuid: string) => Promise<CoolifyDeployment | undefined>
   /** Queues `tag` as the PR's preview and returns the deployment's UUID. */
   deployImage: (tag: string) => Promise<string>
   /** Removes the PR's preview; false when it was already gone. */
@@ -294,7 +294,17 @@ export function coolify(deps: Deps, config: Config): CoolifyApi {
       )
       return body.deployments ?? []
     },
-    getDeployment: (uuid) => call<CoolifyDeployment>(`/deployments/${encodeURIComponent(uuid)}`),
+    getDeployment: async (uuid) => {
+      try {
+        return await call<CoolifyDeployment>(`/deployments/${encodeURIComponent(uuid)}`)
+      } catch (err) {
+        // Coolify hands back the UUID before the deployment can be read by it, so the
+        // first polls can 404. Not found yet, not fatal: poll() retries until its
+        // deadline. A bad token or app UUID has already failed the deploy request.
+        if (err instanceof FatalHttpError && err.status === 404) return undefined
+        throw err
+      }
+    },
     deployImage: async (tag) => {
       // POST: current Coolify answers GET /deploy with "use POST". It reads the
       // parameters from the query string either way.

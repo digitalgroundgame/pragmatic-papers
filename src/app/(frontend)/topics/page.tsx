@@ -66,7 +66,7 @@ export default async function TopicsPage({ searchParams }: Args): Promise<React.
               <TopicsList topics={topics} />
             </div>
             <Pagination
-              className="mt-6 flex justify-center"
+              className="mt-18 flex justify-center"
               page={currentPage}
               totalPages={totalPages}
             />

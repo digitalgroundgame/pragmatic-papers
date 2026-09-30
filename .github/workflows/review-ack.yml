@@ -80,7 +80,9 @@ jobs:
           head_sha=$(gh api "repos/$REPO/pulls/$PR_NUMBER" --jq .head.sha)
           # The latest Claude review summary on the PR, of any commit, which
           # must predate this reply: CI's (claude[bot]), or a local
-          # `/code-review --comment` run by someone with write access.
+          # `/code-review --comment` run by someone with write access. A
+          # summary ends with its full marker, so a comment quoting one
+          # doesn't count.
           reviewed_at=
           while read -r author at; do
             if [ "$author" = "claude[bot]" ]; then
@@ -94,7 +96,7 @@ jobs:
                 ;;
             esac
           done < <(gh api --paginate "repos/$REPO/issues/$PR_NUMBER/comments" \
-            --jq '.[] | select(.body | contains("<!-- claude-review sha="))
+            --jq '.[] | select(.body | test("<!-- claude-review sha=[0-9a-f]{40} verdict=[a-z]+ -->\\s*$"))
                       | "\(.user.login) \(.created_at)"' | tac)
           [ -n "$reviewed_at" ] || fail "No Claude review on this PR yet. Add the \"ready for review\" label, or run \`/code-review --comment <pr>\` locally."
           [[ "$reviewed_at" < "$COMMENT_AT" ]] || fail "The latest review was posted after this reply. Read it and reply again."

@@ -6,10 +6,13 @@ name: Review acknowledgement
 # - Approval: a person with write access approves the PR's head commit with a
 #   GitHub review. For someone else's PR; no Claude review needed.
 # - Acknowledgement: a person with write access replies `/reviewed` on the PR
-#   once a Claude review has run on it (claude-review.yml) and they've read it
-#   and dealt with what it found. For your own PR, which GitHub won't let you
-#   approve. The review can be of an earlier commit, so fixing its findings
-#   needs no second review.
+#   once a Claude review is on it and they've read it and dealt with what it
+#   found. For your own PR, which GitHub won't let you approve. The review can
+#   be of an earlier commit, so fixing its findings needs no second review.
+#   It counts from either place a review comes from: CI (claude-review.yml,
+#   posted by claude[bot]) or a local `/code-review --comment <pr>`, posted as
+#   whoever ran it, which counts when they have write access. Either way it's
+#   the summary comment ending in the `<!-- claude-review sha=… -->` marker.
 #
 # Either way the status belongs to one commit, so a push afterwards needs a
 # new approval or reply.
@@ -76,12 +79,24 @@ jobs:
 
           head_sha=$(gh api "repos/$REPO/pulls/$PR_NUMBER" --jq .head.sha)
           # The latest Claude review summary on the PR, of any commit, which
-          # must predate this reply.
-          reviewed_at=$(gh api --paginate "repos/$REPO/issues/$PR_NUMBER/comments" \
-            --jq '.[] | select(.user.login == "claude[bot]")
-                      | select(.body | contains("<!-- claude-review sha="))
-                      | .created_at' | tail -n 1)
-          [ -n "$reviewed_at" ] || fail "No Claude review on this PR yet. Add the \"ready for review\" label, or wait for the review to finish."
+          # must predate this reply: CI's (claude[bot]), or a local
+          # `/code-review --comment` run by someone with write access.
+          reviewed_at=
+          while read -r author at; do
+            if [ "$author" = "claude[bot]" ]; then
+              reviewed_at=$at
+              break
+            fi
+            case "$(gh api "repos/$REPO/collaborators/$author/permission" --jq .permission 2>/dev/null)" in
+              admin | maintain | write)
+                reviewed_at=$at
+                break
+                ;;
+            esac
+          done < <(gh api --paginate "repos/$REPO/issues/$PR_NUMBER/comments" \
+            --jq '.[] | select(.body | contains("<!-- claude-review sha="))
+                      | "\(.user.login) \(.created_at)"' | tac)
+          [ -n "$reviewed_at" ] || fail "No Claude review on this PR yet. Add the \"ready for review\" label, or run \`/code-review --comment <pr>\` locally."
           [[ "$reviewed_at" < "$COMMENT_AT" ]] || fail "The latest review was posted after this reply. Read it and reply again."
 
           echo "head_sha=$head_sha" >> "$GITHUB_OUTPUT"

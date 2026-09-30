@@ -1,0 +1,41 @@
+# Retires a closed or merged PR's "Storybook Preview" Deployments, which CI's
+# "Deploy Storybook" job records (scripts/storybook-pr.ts), as
+# preview-deployment.yml does for the site's Preview. The Cloudflare preview
+# alias itself stays up.
+name: Storybook preview closed
+
+on:
+  pull_request:
+    types: [closed]
+
+# CI's Deploy Storybook job's group: a deploy still running for this PR
+# finishes first, so its "success" can't land after this run's "inactive".
+concurrency:
+  group: storybook-deploy-${{ github.event.pull_request.number }}
+
+permissions:
+  contents: read
+  deployments: write
+
+jobs:
+  close:
+    name: Retire Storybook preview
+    # Fork PRs never get a Storybook Deployment, and their token can't write one.
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          sparse-checkout: scripts/storybook-pr.ts
+          sparse-checkout-cone-mode: false
+
+      # Node 24 runs the TypeScript script directly; no install needed.
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24.x"
+
+      - name: Mark the PR's Storybook Deployments inactive
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: node scripts/storybook-pr.ts close

@@ -108,7 +108,9 @@ const nextConfig: NextConfig = {
       },
       {
         // Payload admin panel: never cache — always requires a fresh authenticated response.
-        // CDN-Cache-Control is Vercel-specific and prevents edge caching in addition to the browser.
+        // CDN-Cache-Control (RFC 9213) is for CDNs only. Cloudflare decides caching from it
+        // whenever it's present, over Cache-Control, so it keeps the edge from caching too
+        // (https://developers.cloudflare.com/cache/concepts/cdn-cache-control/).
         source: "/admin/:path*",
         headers: [
           {
@@ -154,7 +156,14 @@ const nextConfig: NextConfig = {
         // Next's docs say to shape that through the upstream image, not /_next/image. It sets
         // none on an error, so under this rule Cloudflare kept the 400 for a missing media file
         // for up to a day (stale-while-revalidate=86400), long after the file came back.
-        source: "/:path((?!interactives/[^/]+/regions/[^/]+/geometry/|feed(?:/|$)|_next/image$).*)",
+        // `/admin` and `/api` have their own no-store rules above. When rules match the same
+        // path the last one wins, so without this exclusion a request without Payload's
+        // cookies got this rule's public caching instead. Upload files stay under this rule:
+        // with local storage (staging, previews) media and map assets are served from
+        // `/api/<collection>/file/...`, anyone can read them, and narration audio and video
+        // shouldn't re-download on every load. (Cloudflare's cache rule skips `/api` anyway.)
+        source:
+          "/:path((?!admin(?:/|$)|api(?:/(?!(?:media|map-assets)/file/)|$)|interactives/[^/]+/regions/[^/]+/geometry/|feed(?:/|$)|_next/image$).*)",
         headers: [
           {
             key: "Cache-Control",

@@ -22,6 +22,14 @@
  * there is only ever one at a time. The bump lands on dev before it reaches
  * main, so main never holds a commit dev lacks and nothing is back-merged.
  *
+ * The exception is a hotfix (`pnpm hotfix`), which reaches main straight from
+ * its own branch. A candidate cut before it changed the same "version" line,
+ * so its release PR would conflict. Every promotion and cut is first checked
+ * with a trial merge into main (`git merge-tree`): a conflicting candidate is
+ * skipped as stale, its release PR closed, and nothing is cut until the
+ * hotfix is back-merged into dev. The next candidate is then cut above the
+ * stale one, so versions never repeat.
+ *
  * Only a `!` in the subject marks a commit breaking, never `BREAKING CHANGE`
  * in its body: squash commits carry the PR description, and Dependabot's
  * quote upstream changelogs that say it about their own releases.
@@ -150,6 +158,10 @@ export interface Plan {
   }
   /** A candidate still settling; no new one is cut until it has. */
   waiting?: Candidate
+  /** The newest candidate that conflicts with main (a hotfix landed after it); never promoted. */
+  stale?: Candidate
+  /** Dev itself conflicts with main, so nothing is cut until main is back-merged. */
+  blocked?: true
   /** The next candidate to open (or refresh) the bump PR for. */
   cut?: {
     version: string
@@ -162,24 +174,35 @@ export interface Plan {
 
 /**
  * Decide what this run does from main's version and dev's first-parent
- * commits that main doesn't have, newest first.
+ * commits that main doesn't have, newest first. `mergesCleanly` says whether
+ * a commit merges into main without conflicts.
  */
 export function planTrain({
   mainVersion,
   commits,
   now,
   soakDays,
+  mergesCleanly,
 }: {
   mainVersion: string
   commits: Commit[]
   now: number
   soakDays: number
+  mergesCleanly: (sha: string) => boolean
 }): Plan {
   // A bump at or below main's version was released, or overtaken by a hotfix.
   const candidates = commits.flatMap((commit, index) => {
     const version = candidateVersion(commit.subject)
     if (!version || compareVersions(version, mainVersion) <= 0) return []
-    return [{ version, commit, index, age: (now - Date.parse(commit.date)) / DAY_MS }]
+    return [
+      {
+        version,
+        commit,
+        index,
+        age: (now - Date.parse(commit.date)) / DAY_MS,
+        clean: mergesCleanly(commit.sha),
+      },
+    ]
   })
   const strip = ({ version, commit, age }: (typeof candidates)[number]): Candidate => ({
     version,
@@ -188,7 +211,7 @@ export function planTrain({
   })
   const plan: Plan = {}
 
-  const settled = candidates.find((c) => c.age >= soakDays)
+  const settled = candidates.find((c) => c.clean && c.age >= soakDays)
   if (settled) {
     plan.promote = {
       ...strip(settled),
@@ -197,8 +220,12 @@ export function planTrain({
     }
   }
 
+  const stale = candidates.find((c) => !c.clean)
+  if (stale) plan.stale = strip(stale)
+
+  // A stale candidate will never settle, so it holds nothing up.
   const newest = candidates[0]
-  if (newest && newest !== settled) {
+  if (newest && newest !== settled && newest.clean) {
     plan.waiting = strip(newest)
     return plan
   }
@@ -206,9 +233,15 @@ export function planTrain({
   const pending = commits
     .slice(0, newest?.index ?? commits.length)
     .filter((c) => !candidateVersion(c.subject))
-  if (pending.length > 0) {
+  if (pending.length > 0 && !mergesCleanly(pending[0]!.sha)) {
+    plan.blocked = true
+  } else if (pending.length > 0) {
     const from = newest?.version ?? mainVersion
-    const level = releaseLevel(pending)
+    // Above a stale candidate, level by everything unreleased: its features
+    // never shipped, so the next version still has to say so.
+    const level = releaseLevel(
+      newest && !newest.clean ? commits.filter((c) => !candidateVersion(c.subject)) : pending,
+    )
     plan.cut = { version: bumpVersion(from, level), from, level, commits: pending }
   }
   return plan
@@ -226,6 +259,8 @@ export function releaseBody(promote: NonNullable<Plan["promote"]>): string {
     `Promotes the release candidate v${version} (${commit.sha}), which has been on dev and staging for ${days(age)}.`,
     "",
     `Merge with a **merge commit**. Don't squash it, and don't click "Update branch": either one leaves dev and main diverged. Merging deploys production, and release.yml tags v${version}.`,
+    "",
+    "If GitHub reports conflicts, a hotfix has reached main since this was opened. Don't resolve them here: back-merge the hotfix into dev, and the next run closes this PR and cuts a fresh candidate.",
   ]
   if (reverts.length > 0) {
     lines.push(
@@ -271,7 +306,16 @@ export function describePlan(plan: Plan, mainVersion: string): string {
       `- v${plan.waiting.version} (${short(plan.waiting.commit.sha)}) has been on dev for ${days(plan.waiting.age)}; it's promoted once it has settled, and nothing new is cut until then.`,
     )
   }
-  if (plan.cut) {
+  if (plan.stale) {
+    lines.push(
+      `- v${plan.stale.version} (${short(plan.stale.commit.sha)}) conflicts with main, where a hotfix landed after it was cut; it won't be promoted.`,
+    )
+  }
+  if (plan.blocked) {
+    lines.push(
+      "- dev conflicts with main: back-merge the hotfix into dev (`pnpm hotfix <version> --phase 2`). Nothing is cut until then.",
+    )
+  } else if (plan.cut) {
     lines.push(
       `- Cut v${plan.cut.version} (${plan.cut.level}) from ${plan.cut.commits.length} commit(s) since v${plan.cut.from}.`,
     )
@@ -441,7 +485,17 @@ export async function main(env: Env, deps: Deps): Promise<number> {
     const commits = parseLog(
       deps.git(["log", "--first-parent", "--format=%H%x1f%cI%x1f%s", "origin/dev", "^origin/main"]),
     )
-    const plan = planTrain({ mainVersion, commits, now: deps.now(), soakDays })
+    // A trial merge in memory: merge-tree exits 1 when the merge conflicts.
+    const mergesCleanly = (sha: string) => {
+      try {
+        deps.git(["merge-tree", "--write-tree", "origin/main", sha])
+        return true
+      } catch (err) {
+        if ((err as { status?: number }).status === 1) return false
+        throw err
+      }
+    }
+    const plan = planTrain({ mainVersion, commits, now: deps.now(), soakDays, mergesCleanly })
     const description = describePlan(plan, mainVersion)
     deps.log(description)
     deps.summary(description)
@@ -452,7 +506,18 @@ export async function main(env: Env, deps: Deps): Promise<number> {
 
     const gh = github(deps, required(env, "GITHUB_REPOSITORY"), required(env, "GITHUB_TOKEN"))
 
-    const { promote, cut } = plan
+    const { promote, stale, cut } = plan
+    if (stale && !promote) {
+      for (const pull of await gh.openPulls("main")) {
+        if (pull.head.ref !== releaseBranch(stale.version)) continue
+        await gh.closePull(
+          pull.number,
+          `Closed: a hotfix reached main after v${stale.version} was cut, so this conflicts. Back-merge the hotfix into dev; the next run cuts a fresh candidate.`,
+        )
+        await gh.deleteBranch(pull.head.ref)
+        deps.log(`Closed #${pull.number}: v${stale.version} conflicts with main.`)
+      }
+    }
     if (promote) {
       await syncPull(
         gh,

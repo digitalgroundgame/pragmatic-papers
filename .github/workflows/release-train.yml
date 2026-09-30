@@ -10,6 +10,10 @@ name: Release train
 #     version worked out from the commit subjects since the last one. It goes
 #     through review and the merge queue like any PR.
 #
+# After a hotfix (`pnpm hotfix`), a candidate cut before it conflicts with
+# main: the run closes its release PR and cuts nothing until the hotfix is
+# back-merged into dev (a trial merge with `git merge-tree` decides).
+#
 # Nothing merges itself: both PRs wait on a person. Saturday leaves Sunday as
 # a grace period before Monday's publishing, with volunteers around to triage.
 # Holding a release is closing its PR; next week's run offers a newer one.

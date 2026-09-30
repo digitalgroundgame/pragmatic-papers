@@ -27,8 +27,14 @@ const commit = (subject: string, daysAgo = 0): Commit => ({
   date: new Date(NOW - daysAgo * DAY).toISOString(),
   subject,
 })
-const plan = (commits: Commit[], mainVersion = "2.6.0", soakDays = 4) =>
-  planTrain({ mainVersion, commits, now: NOW, soakDays })
+const plan = (commits: Commit[], mainVersion = "2.6.0", soakDays = 4, conflicting: Commit[] = []) =>
+  planTrain({
+    mainVersion,
+    commits,
+    now: NOW,
+    soakDays,
+    mergesCleanly: (sha) => !conflicting.some((c) => c.sha === sha),
+  })
 
 describe("versions", () => {
   it("compares numerically, not as strings", () => {
@@ -184,6 +190,44 @@ describe("planTrain", () => {
       "2.7.0",
     )
   })
+
+  describe("a hotfix below the candidate's version", () => {
+    // pnpm hotfix 2.6.1 reached main after v2.7.0 was cut, so the candidate
+    // and dev both change the "version" line main changed too.
+    const fix = commit("fix: c", 1)
+    const candidate = commit("Bump package.json to v2.7.0", 6)
+    const feature = commit("feat: b", 7)
+
+    it("doesn't promote the conflicting candidate, and cuts nothing until the back-merge", () => {
+      const result = plan([fix, candidate, feature], "2.6.1", 4, [fix, candidate])
+      expect(result.promote).toBeUndefined()
+      expect(result.stale).toMatchObject({ version: "2.7.0" })
+      expect(result.waiting).toBeUndefined()
+      expect(result.blocked).toBe(true)
+      expect(result.cut).toBeUndefined()
+      expect(describePlan(result, "2.6.1")).toContain("back-merge the hotfix into dev")
+    })
+
+    it("cuts above the stale candidate once dev is back-merged, levelled by all that's unreleased", () => {
+      const backMerge = commit("Back-merge v2.6.1 (#980)", 0)
+      const result = plan([backMerge, fix, candidate, feature], "2.6.1", 4, [fix, candidate])
+      expect(result.blocked).toBeUndefined()
+      expect(result.cut).toMatchObject({ version: "2.8.0", from: "2.7.0", level: "minor" })
+      expect(result.cut?.commits).toEqual([backMerge, fix])
+    })
+
+    it("still waits on a clean candidate that's settling, with a stale one behind it", () => {
+      const result = plan(
+        [commit("Bump package.json to v2.8.0", 1), commit("Back-merge v2.6.1", 2), candidate],
+        "2.6.1",
+        4,
+        [candidate],
+      )
+      expect(result.waiting).toMatchObject({ version: "2.8.0" })
+      expect(result.stale).toMatchObject({ version: "2.7.0" })
+      expect(result.cut).toBeUndefined()
+    })
+  })
 })
 
 // ── main, against a fake GitHub ────────────────────────────────────────────
@@ -252,6 +296,7 @@ function run(
   log: Commit[],
   github: ReturnType<typeof fakeGithub>,
   env: Record<string, string> = {},
+  conflicting: Commit[] = [],
 ) {
   const logs: string[] = []
   const deps: Deps = {
@@ -259,6 +304,11 @@ function run(
     git: (args) => {
       if (args[0] === "show") return PKG
       if (args[0] === "rev-parse") return `${DEV_SHA}\n`
+      if (args[0] === "merge-tree") {
+        if (conflicting.some((c) => c.sha === args[3]))
+          throw Object.assign(new Error("conflict"), { status: 1 })
+        return "tree\n"
+      }
       return log.map((c) => [c.sha, c.date, c.subject].join("\x1f")).join("\n")
     },
     now: () => NOW,
@@ -382,6 +432,49 @@ describe("main", () => {
     const { code } = run([commit("feat: a", 1)], github)
     expect(await code).toBe(0)
     expect(writes(github.calls).map((c) => `${c.method} ${c.path}`)).toEqual(["PATCH /pulls/8"])
+  })
+
+  it("closes the release PR of a candidate a hotfix made conflict", async () => {
+    const fix = commit("fix: c", 1)
+    const candidate = commit("Bump package.json to v2.7.0", 6)
+    const github = fakeGithub({
+      pulls: {
+        main: [{ number: 5, head: { ref: "release-train/v2.7.0", sha: candidate.sha } }],
+      },
+    })
+    const { code } = run([fix, candidate], github, {}, [fix, candidate])
+    expect(await code).toBe(0)
+    expect(writes(github.calls)).toEqual([
+      {
+        method: "POST",
+        path: "/issues/5/comments",
+        body: { body: expect.stringContaining("a hotfix reached main") },
+      },
+      { method: "PATCH", path: "/pulls/5", body: { state: "closed" } },
+      { method: "DELETE", path: "/git/refs/heads/release-train/v2.7.0" },
+    ])
+  })
+
+  it("fails on git errors other than a conflict", async () => {
+    const logs: string[] = []
+    const candidate = commit("Bump package.json to v2.7.0", 6)
+    const code = await main(
+      { GITHUB_REPOSITORY: "o/r", GITHUB_TOKEN: "t" },
+      {
+        fetch: fakeGithub({}).fetch,
+        git: (args) => {
+          if (args[0] === "show") return PKG
+          if (args[0] === "merge-tree")
+            throw Object.assign(new Error("bad object"), { status: 128 })
+          return [candidate.sha, candidate.date, candidate.subject].join("\x1f")
+        },
+        now: () => NOW,
+        log: (message) => logs.push(message),
+        summary: (markdown) => logs.push(markdown),
+      },
+    )
+    expect(code).toBe(1)
+    expect(logs.join("\n")).toContain("bad object")
   })
 
   it("fails on a bad SOAK_DAYS", async () => {

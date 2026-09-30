@@ -130,8 +130,11 @@ RUN /usr/local/bin/modify-database-uri.sh && \
 # The Turbopack cache is shared by every build on the server: `sharing=locked` keeps
 # two builds from writing it at once, and build-next.sh rebuilds without it if it's
 # been left corrupt.
+# Pages prerendered here put SERVER_URL in their canonical and share links, so the
+# build refuses to run without it rather than bake in http://localhost:8000.
 RUN --mount=type=cache,id=nextjs,target=/app/.next/cache,sharing=locked \
     echo "--- PHASE: BUILDING NEXT.JS ---" && \
+    { [ -n "$SERVER_URL" ] || { echo "ERROR: SERVER_URL is not set at build time (Coolify: enable Build Variable for it)"; exit 1; }; } && \
     . /usr/local/bin/database-uri.sh && use_preview_database /tmp/database_name && \
     SENTRY_RELEASE="${SOURCE_COMMIT}" sh dockerfiles/scripts/build-next.sh && \
     echo "--- COMPLETED: BUILDING NEXT.JS ---"

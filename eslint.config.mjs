@@ -102,7 +102,7 @@ const eslintConfig = [
     files: ["**/*.stories.tsx", ".storybook/**"],
     rules: { "@typescript-eslint/explicit-module-boundary-types": "off" },
   },
-  // Add Node.js globals for config files (e.g. next-sitemap.config.cjs uses process.env and module.exports)
+  // Add Node.js globals for plain-JS config files, which may read process.env
   {
     files: ["**/*.config.js", "**/*.config.cjs", "**/*.config.mjs"],
     languageOptions: { globals: { ...globals.node } },

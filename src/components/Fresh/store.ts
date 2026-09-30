@@ -68,7 +68,9 @@ export function useIsUnseen(name: string): boolean {
 /** Record that the reader has seen `name`, in this tab and every other. */
 export function markSeen(name: string): void {
   const current = getSeen()
-  if (current?.has(name)) return
+  // Unreadable storage shows no dots, so there's nothing to clear. Recording `name`
+  // here would turn "unknown" into "seen only this", and every other dot would appear.
+  if (current === null || current.has(name)) return
   try {
     localStorage.setItem(`${SEEN_KEY_PREFIX}${name}`, "1")
   } catch {

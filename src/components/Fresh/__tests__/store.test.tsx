@@ -116,6 +116,21 @@ describe("the seen store", () => {
       expect(result.current).toBe(false)
     })
 
+    it("keeps every other dot hidden after something is marked seen", () => {
+      vi.spyOn(Storage.prototype, "key").mockImplementation(() => {
+        throw new DOMException("The operation is insecure.", "SecurityError")
+      })
+      localStorage.setItem("unrelated", "1")
+      const { result } = renderHook(() => ({
+        newFeature: useIsUnseen("new-feature"),
+        other: useIsUnseen("other-feature"),
+      }))
+
+      act(() => markSeen("new-feature"))
+
+      expect(result.current).toEqual({ newFeature: false, other: false })
+    })
+
     it("still clears the dot for this page if storage can't be written", () => {
       vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
         throw new DOMException("Quota exceeded", "QuotaExceededError")

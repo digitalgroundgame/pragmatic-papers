@@ -204,13 +204,11 @@ export default async function SearchPage({ searchParams }: Args): Promise<React.
             })}
           </ul>
 
-          {totalPages > 1 && currentPage && (
-            <Pagination
-              page={currentPage}
-              totalPages={totalPages}
-              buildHref={(pageNum) => `/search?q=${encodeURIComponent(q)}&p=${pageNum}`}
-            />
-          )}
+          <Pagination
+            page={currentPage}
+            totalPages={totalPages}
+            buildHref={(pageNum) => `/search?q=${encodeURIComponent(q)}&p=${pageNum}`}
+          />
         </>
       ) : q ? (
         <PageRange

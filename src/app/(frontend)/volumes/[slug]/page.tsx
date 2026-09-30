@@ -110,7 +110,7 @@ export default async function VolumePage({
         )}
         <ShareButtons url={`${getServerSideURL()}${url}`} title={volumeTitle} className="ml-auto" />
       </div>
-      {editorsNote && <RichText className="drop-cap" enableGutter={false} data={editorsNote} />}
+      <RichText className="drop-cap" enableGutter={false} data={editorsNote} />
       <Separator className="my-6" />
       <section className="space-y-4">
         <h2>Articles in this Volume</h2>

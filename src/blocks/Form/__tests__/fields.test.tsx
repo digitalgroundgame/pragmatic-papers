@@ -19,7 +19,7 @@ import { Width } from "../Width"
 
 /**
  * The field components are only ever rendered by `FormBlockClient`, which
- * hands each one `register`/`errors` off a `useForm()` it owns and wraps the
+ * hands each one `register`/`control` off a `useForm()` it owns and wraps the
  * lot in a `FormProvider`. This harness reproduces that wiring so the tests
  * exercise the real react-hook-form plumbing — registration, the validation
  * rules each field attaches, and the values that reach `handleSubmit` — rather
@@ -64,7 +64,6 @@ describe("Text", () => {
     renderField((methods) => (
       <Text
         blockType="text"
-        errors={methods.formState.errors}
         label="First name"
         name="firstName"
         register={methods.register}
@@ -83,7 +82,6 @@ describe("Text", () => {
       <Text
         blockType="text"
         defaultValue="Ada"
-        errors={methods.formState.errors}
         label="First name"
         name="firstName"
         register={methods.register}
@@ -104,7 +102,6 @@ describe("Text", () => {
     const { submitted, submit } = renderField((methods) => (
       <Text
         blockType="text"
-        errors={methods.formState.errors}
         label="First name"
         name="firstName"
         register={methods.register}
@@ -125,13 +122,7 @@ describe("Text", () => {
 describe("Textarea", () => {
   it("defaults to three rows and honours an override", () => {
     renderField((methods) => (
-      <Textarea
-        blockType="text"
-        errors={methods.formState.errors}
-        label="Message"
-        name="message"
-        register={methods.register}
-      />
+      <Textarea blockType="text" label="Message" name="message" register={methods.register} />
     ))
 
     expect((screen.getByLabelText("Message") as HTMLTextAreaElement).rows).toBe(3)
@@ -141,7 +132,6 @@ describe("Textarea", () => {
     renderField((methods) => (
       <Textarea
         blockType="text"
-        errors={methods.formState.errors}
         label="Message"
         name="message"
         register={methods.register}
@@ -156,7 +146,6 @@ describe("Textarea", () => {
     const { submitted, submit } = renderField((methods) => (
       <Textarea
         blockType="text"
-        errors={methods.formState.errors}
         label="Message"
         name="message"
         register={methods.register}
@@ -177,7 +166,6 @@ describe("Number", () => {
     const { submitted, submit } = renderField((methods) => (
       <NumberField
         blockType="text"
-        errors={methods.formState.errors}
         label="Quantity"
         name="quantity"
         register={methods.register}
@@ -201,14 +189,7 @@ describe("Number", () => {
 describe("Email", () => {
   it("rejects a value that does not look like an address", async () => {
     const { submitted, submit } = renderField((methods) => (
-      <Email
-        blockType="email"
-        errors={methods.formState.errors}
-        label="Email"
-        name="email"
-        register={methods.register}
-        required
-      />
+      <Email blockType="email" label="Email" name="email" register={methods.register} required />
     ))
 
     fireEvent.change(screen.getByLabelText(/Email/), { target: { value: "not-an-address" } })
@@ -220,14 +201,7 @@ describe("Email", () => {
 
   it("accepts a well-formed address", async () => {
     const { submitted, submit } = renderField((methods) => (
-      <Email
-        blockType="email"
-        errors={methods.formState.errors}
-        label="Email"
-        name="email"
-        register={methods.register}
-        required
-      />
+      <Email blockType="email" label="Email" name="email" register={methods.register} required />
     ))
 
     fireEvent.change(screen.getByLabelText(/Email/), { target: { value: "ada@example.com" } })
@@ -243,7 +217,6 @@ describe("Checkbox", () => {
     const { submitted, submit } = renderField((methods) => (
       <Checkbox
         blockType="checkbox"
-        errors={methods.formState.errors}
         label="Subscribe"
         name="subscribe"
         register={methods.register}
@@ -263,7 +236,6 @@ describe("Checkbox", () => {
     const { submitted, submit } = renderField((methods) => (
       <Checkbox
         blockType="checkbox"
-        errors={methods.formState.errors}
         label="Accept the terms"
         name="terms"
         register={methods.register}
@@ -305,7 +277,30 @@ describe("Error", () => {
     )
   })
 
-  it("falls back to the generic copy when the error carries no message", () => {
+  it("falls back to the generic copy when the error carries no message", async () => {
+    const SetError = (): null => {
+      const { setError } = useFormContext()
+      React.useEffect(() => {
+        setError("email", { type: "required" })
+      }, [setError])
+      return null
+    }
+    const Harness = (): React.ReactNode => {
+      const methods = useForm()
+      return (
+        <FormProvider {...methods}>
+          <SetError />
+          <FieldError name="email" />
+        </FormProvider>
+      )
+    }
+
+    render(<Harness />)
+
+    await waitFor(() => expect(screen.getByText("This field is required")).toBeInTheDocument())
+  })
+
+  it("renders nothing while the field has no error", () => {
     const Harness = (): React.ReactNode => {
       const methods = useForm()
       return (
@@ -315,9 +310,9 @@ describe("Error", () => {
       )
     }
 
-    render(<Harness />)
+    const { container } = render(<Harness />)
 
-    expect(screen.getByText("This field is required")).toBeInTheDocument()
+    expect(container).toBeEmptyDOMElement()
   })
 })
 

@@ -31,12 +31,7 @@ export const FormBlockClient: React.FC<FormBlockClientProps> = ({
   const router = useRouter()
   const formMethods = useForm()
 
-  const {
-    control,
-    formState: { errors },
-    handleSubmit,
-    register,
-  } = formMethods
+  const { control, handleSubmit, register } = formMethods
 
   const { id, confirmationType, redirect, submitButtonLabel } = form
 
@@ -141,7 +136,6 @@ export const FormBlockClient: React.FC<FormBlockClientProps> = ({
                             {...field}
                             {...formMethods}
                             control={control}
-                            errors={errors}
                             register={register}
                           />
                         </div>

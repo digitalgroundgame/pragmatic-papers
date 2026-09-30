@@ -131,7 +131,7 @@ function createJsxConverters(parentDoc?: ParentDocContext): JSXConvertersFunctio
  */
 interface RichTextProps {
   className?: string
-  data: DefaultTypedEditorState
+  data: DefaultTypedEditorState | null | undefined
   enableGutter?: boolean
   enableProse?: boolean
   parentDoc?: ParentDocContext
@@ -144,6 +144,8 @@ export default function RichText({
   data,
   parentDoc,
 }: RichTextProps): React.ReactNode {
+  if (!data) return null
+
   return (
     <ConvertRichText
       className={cn(

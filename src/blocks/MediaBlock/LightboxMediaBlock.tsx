@@ -49,13 +49,11 @@ export const LightboxMediaBlock: React.FC<LightboxMediaBlockProps> = ({
               variant={variant}
             />
           </DialogTrigger>
-          {caption && (
-            <MediaBlockCaption
-              caption={caption}
-              captionClassName={captionClassName}
-              disableInnerContainer={disableInnerContainer}
-            />
-          )}
+          <MediaBlockCaption
+            caption={caption}
+            captionClassName={captionClassName}
+            disableInnerContainer={disableInnerContainer}
+          />
         </MediaBlockFrame>
       </div>
       <DialogContent

@@ -53,6 +53,30 @@ export const Volumes: Story = {
   render: (args) => <PaginationVolumes page={args.page} totalPages={args.totalPages} />,
 }
 
+/** One page of results has nowhere to go, so the component renders nothing. */
+export const SinglePage: Story = {
+  args: { page: 1, totalPages: 1 },
+  play: async ({ canvasElement }) => {
+    await expect(within(canvasElement).queryByRole("navigation")).not.toBeInTheDocument()
+  },
+}
+
+/** Payload leaves `page` undefined for an empty result. */
+export const NoResults: Story = {
+  args: { page: undefined, totalPages: 0 },
+  play: async ({ canvasElement }) => {
+    await expect(within(canvasElement).queryByRole("navigation")).not.toBeInTheDocument()
+  },
+}
+
+export const VolumesSinglePage: Story = {
+  args: { page: 1, totalPages: 1 },
+  render: (args) => <PaginationVolumes page={args.page} totalPages={args.totalPages} />,
+  play: async ({ canvasElement }) => {
+    await expect(within(canvasElement).queryByRole("navigation")).not.toBeInTheDocument()
+  },
+}
+
 export const Range: Story = {
   render: () => (
     <div className="space-y-2">

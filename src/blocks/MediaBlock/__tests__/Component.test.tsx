@@ -128,6 +128,11 @@ describe("MediaBlockImage", () => {
 })
 
 describe("MediaBlockCaption", () => {
+  it("renders nothing without a caption", () => {
+    const { container } = render(<MediaBlockCaption caption={null} />)
+    expect(container).toBeEmptyDOMElement()
+  })
+
   it("renders the caption's rich text inside a figcaption", () => {
     const { container } = render(<MediaBlockCaption caption={caption} />)
     expect(container.firstElementChild?.tagName).toBe("FIGCAPTION")

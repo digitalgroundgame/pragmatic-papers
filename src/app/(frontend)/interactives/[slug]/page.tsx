@@ -86,9 +86,7 @@ export default async function InteractivePage({
           Interactive
         </p>
         <h1 className="mt-2">{interactive.title}</h1>
-        {interactive.intro && (
-          <RichText data={interactive.intro} enableGutter={false} className="mt-4" />
-        )}
+        <RichText data={interactive.intro} enableGutter={false} className="mt-4" />
         {composed && (
           <p data-interactive-meta="" className="text-muted-foreground mt-4 text-sm">
             Data as of{" "}

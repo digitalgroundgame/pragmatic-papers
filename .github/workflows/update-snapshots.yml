@@ -34,20 +34,8 @@ concurrency:
   group: ${{ (github.event_name == 'workflow_dispatch' || github.event.label.name == 'needs screenshots') && format('snapshot-baselines-{0}', github.event.pull_request.head.ref || github.ref_name) || github.run_id }}
   cancel-in-progress: true
 
-env:
-  PAYLOAD_SECRET: e2e-payload-secret
-  NEXT_PUBLIC_SERVER_URL: http://localhost:8000
-  USE_LOCAL_STORAGE: "true"
-  # Keep in step with playwright.yml: the Merch block has no built-in store
-  # site, so without this it renders nothing, merch.spec.ts has no carousel to
-  # find, and every baseline that shares a page with it is rewritten without
-  # it — which is worse than failing, since the wrong baseline gets committed.
-  MERCH_SITE_URL: https://digitalgroundgame.org/merch
-  # Hostname is the services key ("postgres"), not localhost — this job runs
-  # inside a container, so service containers are reachable by their
-  # service-id alias on the shared Docker network.
-  DATABASE_URI: postgres://postgres:postgres@postgres:5432/pragmatic-papers-e2e
-  E2E_PROD_SERVER: "true"
+# The E2E environment is set by .github/actions/setup-e2e, shared with
+# playwright.yml so regenerated baselines render the same page it checks.
 
 jobs:
   update-snapshots:
@@ -60,12 +48,6 @@ jobs:
     container:
       image: mcr.microsoft.com/playwright:v1.63.0-noble
 
-    env:
-      # Baselines captured with the Inter fallback would bake the wrong typeface into every
-      # future visual diff, so fail the run rather than commit bad screenshots. Job-level so
-      # it reaches the install step inside the setup-project composite action.
-      FONTS_REQUIRED: "true"
-
     permissions:
       contents: write
       pull-requests: write
@@ -77,6 +59,7 @@ jobs:
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
+          # Must match DATABASE_URI in .github/actions/setup-e2e.
           POSTGRES_DB: pragmatic-papers-e2e
         ports:
           - 5432:5432
@@ -92,27 +75,10 @@ jobs:
           fetch-depth: 0
           ref: ${{ github.event.pull_request.head.sha || github.ref }}
 
-      # actions/checkout's files are owned by a different UID than this
-      # container's user, so git's dubious-ownership check blocks every git
-      # command below unless the workspace is explicitly trusted.
-      - name: Trust the checked-out workspace
-        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
-
-      # The Playwright image doesn't ship the GitHub CLI, but the very next
-      # step (and several after it) shell out to `gh`. Pull the release tarball
-      # straight from GitHub instead of going through the apt repo — that path
-      # ran `apt-get update` twice (a full package-index rebuild each time,
-      # ~20-40s) just to land one static binary. The pinned version only needs
-      # to be recent enough for the `gh api`/`gh run`/`gh pr` commands used
-      # here; bump freely.
-      - name: Install GitHub CLI
-        run: |
-          GH_VERSION=2.63.2
-          ARCH=$(dpkg --print-architecture)
-          curl -fsSL "https://github.com/cli/cli/releases/download/v${GH_VERSION}/gh_${GH_VERSION}_linux_${ARCH}.tar.gz" \
-            | tar -xz -C /tmp
-          install "/tmp/gh_${GH_VERSION}_linux_${ARCH}/bin/gh" /usr/local/bin/gh
-          gh --version
+      - name: Set up E2E
+        uses: ./.github/actions/setup-e2e
+        with:
+          gh-font-read-token: ${{ secrets.GH_FONT_READ }}
 
       # pull_request's $GITHUB_REF_NAME is "<number>/merge", not the branch —
       # resolve the real branch/PR/base once so every later step can rely on
@@ -140,23 +106,6 @@ jobs:
               echo "base=$(printf '%s' "$pr" | jq -r '.baseRefName // empty')"
             } >> "$GITHUB_OUTPUT"
           fi
-
-      - name: Set up Node.js environment
-        uses: ./.github/actions/setup-project
-        with:
-          node-version: "24.x"
-          gh-font-read-token: ${{ secrets.GH_FONT_READ }}
-          payload-secret: ${{ env.PAYLOAD_SECRET }}
-
-      # No `restore-keys` fallback: see the same step in playwright.yml — a
-      # partial (prefix) match can restore a `.next/cache` a different source
-      # tree saved, and Next's incremental build doesn't reliably notice a
-      # plain data import (fixture JSON) changed underneath it.
-      - name: Cache Next.js build cache
-        uses: actions/cache@v6
-        with:
-          path: .next/cache
-          key: nextjs-${{ hashFiles('pnpm-lock.yaml') }}-${{ hashFiles('src/**/*.[jt]s', 'src/**/*.[jt]sx', 'src/**/*.json', '*.[jt]s', '*.[jt]sx') }}
 
       # E2E_VERIFY_VISUAL folds the flaky-baseline gate into this run: after
       # regenerating, the wrapper re-renders the @visual tests against the same

@@ -120,10 +120,12 @@ fi
 refresh_prerendered_routes() {
     url="http://127.0.0.1:${PORT:-3000}"
     tries=0
-    until wget -q -O /dev/null "$url/api/users/me" 2>/dev/null; do
+    # Refused connections are expected while the server boots, so keep only the last
+    # error and show it if the server never comes up.
+    until error=$(wget -q -O /dev/null "$url/api/users/me" 2>&1); do
         tries=$((tries + 1))
         if [ "$tries" -ge 150 ]; then
-            echo "WARNING: server not up after 5 min; prerendered routes keep the build's content"
+            echo "WARNING: server not up after 5 min ($error); prerendered routes keep the build's content"
             return 0
         fi
         sleep 2

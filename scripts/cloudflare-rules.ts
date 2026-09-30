@@ -298,9 +298,10 @@ async function check(env: Env, deps: Deps): Promise<number> {
 async function apply(env: Env, deps: Deps, args: string[]): Promise<number> {
   const prune = args.includes("--prune")
   const { cf, plans: results } = await plans(env, deps)
-  report(deps, "Cloudflare rules: applied", results)
   const blocked = results.filter(({ plan: p }) => p.unmanaged.length && !prune)
   if (blocked.length) {
+    // Say so in the summary too: it's what people read, and nothing was sent.
+    report(deps, "Cloudflare rules: not applied (a rule exists only in Cloudflare)", results)
     for (const { phase, plan: p } of blocked)
       deps.log(
         `::error::${phase}: ${p.unmanaged.map((name) => `"${name}"`).join(", ")} exist only in Cloudflare, and applying would delete them. Run \`node scripts/cloudflare-rules.ts export\` and commit them, or pass --prune to delete them.`,
@@ -312,6 +313,7 @@ async function apply(env: Env, deps: Deps, args: string[]): Promise<number> {
     await cf.put(phase, p.body)
     deps.log(`${phase}: applied ${p.body.rules.length} rule(s)`)
   }
+  report(deps, "Cloudflare rules: applied", results)
   return 0
 }
 

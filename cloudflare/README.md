@@ -57,6 +57,11 @@ then gives its secrets only to runs on `main`: a PR's run is on
 file the PR changes. The Edit token must **not** also be a repository secret,
 which every PR's run could read.
 
+Add the branch rule **before** the Edit token. A job that names a missing
+environment makes GitHub create it with no branch rule, so a PR could reach a
+secret added to it. After adding the token, check that **Settings → Environments →
+cloudflare** still shows `main` as its only deployment branch.
+
 `plan` and `check` skip themselves without their secrets (fork and Dependabot
 PRs never get them); `apply` fails instead, so a release's rules never quietly
 stay unapplied.

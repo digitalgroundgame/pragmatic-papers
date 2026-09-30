@@ -40,6 +40,7 @@ const fileRule = {
 /** Fakes the Rulesets API: GET returns `rules` (404 when null), PUT records its body. */
 function fakeDeps(rules: LiveRule[] | null, files: Record<string, string>) {
   const logs: string[] = []
+  const summaries: string[] = []
   const puts: unknown[] = []
   const written: Record<string, string> = {}
   const deps: Deps = {
@@ -52,14 +53,14 @@ function fakeDeps(rules: LiveRule[] | null, files: Record<string, string>) {
       return Response.json({ success: true, result: { rules } })
     }) as typeof fetch,
     log: (message) => logs.push(message),
-    summary: () => undefined,
+    summary: (markdown) => summaries.push(markdown),
     readDir: () => Object.keys(files).map((path) => path.slice(RULESETS_DIR.length + 1)),
     readFile: (path) => files[path]!,
     writeFile: (path, contents) => {
       written[path] = contents
     },
   }
-  return { deps, logs, puts, written }
+  return { deps, logs, summaries, puts, written }
 }
 
 describe("parseRuleset", () => {
@@ -165,10 +166,14 @@ describe("main", () => {
     expect(await main(["apply"], ENV, blocked.deps)).toBe(1)
     expect(blocked.puts).toEqual([])
     expect(blocked.logs.join("\n")).toMatch(/"dashboard only" exist only in Cloudflare/)
+    // The job summary is what people read, so it mustn't say the rules went live.
+    expect(blocked.summaries.join("\n")).toMatch(/^### Cloudflare rules: not applied/m)
+    expect(blocked.summaries.join("\n")).not.toMatch(/: applied$/m)
 
     const pruned = fakeDeps(rules, { [PATH]: file([fileRule]) })
     expect(await main(["apply", "--prune"], ENV, pruned.deps)).toBe(0)
     expect(pruned.puts).toHaveLength(1)
+    expect(pruned.summaries.join("\n")).toMatch(/^### Cloudflare rules: applied$/m)
   })
 
   it("check fails on drift and passes in sync; plan never fails", async () => {

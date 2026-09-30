@@ -101,9 +101,12 @@ Read more about [Seeding The Database](https://github.com/digitalgroundgame/prag
 Here are the most important scripts available in the root `package.json`:
 
 - `pnpm dev`: Start the application in development mode.
-- `pnpm dev:db-nuke`: Drop the database schema and re-run migrations (equivalent to a fresh database).
+- `pnpm dev:db-nuke`: Stop Postgres and delete its volume, wiping the database. The next `pnpm dev` starts from an empty one.
+- `pnpm dev:db-fresh`: Rebuild the schema by re-running every migration from scratch, the same path production uses.
 - `pnpm dev:db-seed`: Seed the development database with mock content from the terminal (stop `pnpm dev` first).
 - `pnpm storybook`: Browse every block and component in Storybook at http://localhost:6006.
+- `pnpm test:storybook`: Run every story as a test, with an accessibility check (needs `pnpm exec playwright install chromium`).
+- `pnpm showcase <pr-number | staging> <slug...>`: Push feature articles from the showcase catalog to a PR preview or staging.
 - `pnpm lint`: Lint files with `eslint`.
 - `pnpm format`: Format files with `prettier`.
 - `pnpm check-types`: Runs typescript compiler in no emit mode to check for type errors.

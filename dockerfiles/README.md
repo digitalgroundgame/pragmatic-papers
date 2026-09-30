@@ -115,13 +115,14 @@ Use managed PostgreSQL service (AWS RDS, Supabase, Neon, etc.) for all deploymen
 | **production**      | **production** | The `main` branch      | `production` |
 
 - The development app's **production** environment is what these docs call **staging**: it deploys `dev`, not the live site.
-- **Every deployment builds on one Coolify build server, one build at a time**, so a queue of preview builds delays a `dev` or `main` deploy behind it. The build caches below (`/pnpm`, `/nextjs`) are shared by all three. The build is memory-hungry; see [#1018](https://github.com/digitalgroundgame/pragmatic-papers/issues/1018) before adding build steps or dependencies that raise build memory.
+- **Two servers run them:** `dev-worker` runs staging and the previews, and hosts the `docker-registry` service they're pulled from; `prod-worker` runs production, apparently pulling from the same registry.
+- **Every deployment builds on one Coolify build server, one build at a time**, so a queue of preview builds delays a `dev` or `main` deploy behind it. The build caches below (`/pnpm`, `/nextjs`) are shared by all three. The build server has 8 GB of RAM and a build peaks at ~4.6 GB, so two concurrent builds wouldn't fit; see [#1018](https://github.com/digitalgroundgame/pragmatic-papers/issues/1018) before adding build steps or dependencies that raise build memory.
 - **Public PR deployments are off**, so previews only build for PRs from people with access to the repo (see [Preview Deployments on the PR](#preview-deployments-on-the-pr-github-deployments)). Keep it that way: previews build on the same server as the live site.
 
 What Coolify's docs say about behaviour that matters to this setup (read them with the `upstream-docs` skill, `coolify` source; paths are under `content/docs/`):
 
 - **Preview variables are a separate group.** The development app's **Production Environment Variables** are staging's; **Preview Deployment Environment Variables** are the previews'. Changing a value for both means changing it twice (`applications/deployments/preview-deployments.mdx`).
-- **Closing a PR deletes its preview's containers, not its database.** Data a preview wrote to an external service stays, so each preview's `pragmatic_papers_pr_<n>` copy of staging outlives the PR. Nothing in this repo drops them yet.
+- **Closing a PR deletes its preview's containers, not its database.** Data a preview wrote to an external service stays, so each preview's `pragmatic_papers_pr_<n>` copy of staging outlives the PR; later preview builds drop it (see [Dropping closed PRs' preview databases](#dropping-closed-prs-preview-databases)).
 - **Build secrets need BuildKit.** With **Use Docker Build Secrets** on, Coolify mounts build-time variables as secrets; without BuildKit it silently falls back to build arguments, which can show in the image's metadata (`applications/configuration/environment-variables.mdx`). Each variable also has independent **Build Variable** / **Runtime Variable** toggles; turn **Build Variable** off for secrets the build doesn't read.
 - **Old images are kept for rollback**, a configured number per app, and Docker cleanup skips them unless **Disable Application Image Retention** is on. A rollback runs an old image with the _current_ variables (`applications/deployments/rollbacks.mdx`, `core/infrastructure/servers/automated-docker-cleanup.mdx`).
 - **Deployment logs can't be cleared.** The docs describe no way to delete a deployment's log, so anything a build prints stays readable to whoever can open the app in Coolify (#1066).
@@ -322,6 +323,48 @@ Coolify deletes a closed PR's preview containers but not its database, so every 
 - **Previews only.** Staging and production builds skip it (`COPY_SOURCE_DATABASE` isn't `true` there).
 - **A reopened PR** gets a fresh copy on its next build, like a new one.
 - **Credentials:** it reads open PRs from GitHub's public API without a token, which works while the repository is public (60 requests an hour per server, one or two per build). For a private repository, add a `GITHUB_TOKEN` build variable to the development application's preview variables: a fine-grained token with read access to pull requests. `GITHUB_REPOSITORY` overrides `digitalgroundgame/pragmatic-papers`.
+
+### Pruning the image registry
+
+Coolify pushes every build's image to the `docker-registry` resource (a `registry:2` service in the Pragmatic Papers project's **development** environment, running on dev-worker as `registry-<uuid>`), tagged `pr-<n>-<sha>` for a preview. A registry never deletes anything by itself, so by September 2026 it held 224 tags and 6.5 GB, the largest single use of dev-worker's 38 GB disk after the swap file. `dockerfiles/scripts/prune-registry.sh` trims it. The production app, which runs on `prod-worker`, appears to use the same registry (its settings name the same domain), though in September 2026 the registry held none of `main`'s commits.
+
+It runs as a **Coolify Scheduled Task** on the `docker-registry` service, so its schedule and every run's output are in Coolify, not in a crontab. The task can't run in the registry's own container, which the script stops, so the service has a second container for it:
+
+1. On the `docker-registry` service, **Edit Compose File** and add under `services:`:
+
+   ```yaml
+   pruner:
+     image: docker:29-cli
+     command: ["sleep", "infinity"]
+     restart: unless-stopped
+     exclude_from_hc: true
+     environment:
+       - REGISTRY_STORAGE=/registry-data
+     volumes:
+       - /var/run/docker.sock:/var/run/docker.sock
+       - ./data:/registry-data
+   ```
+
+   `./data` is the registry's own storage directory (`/data/coolify/services/<uuid>/data`). The Docker socket lets the task stop and start the registry and run garbage collection beside it, which is root on the server: nothing else in the stack gets it. Save and **Restart** the service.
+
+2. Under **Configuration → Scheduled Tasks**, **+ Add**:
+
+   | Field          | Value                                                                                                                                                                    |
+   | -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+   | Name           | Prune registry                                                                                                                                                           |
+   | Command        | `wget -qO /tmp/prune.sh https://raw.githubusercontent.com/digitalgroundgame/pragmatic-papers/<commit>/dockerfiles/scripts/prune-registry.sh && sh /tmp/prune.sh --apply` |
+   | Frequency      | `30 4 * * *` (the server's timezone)                                                                                                                                     |
+   | Container name | `pruner`                                                                                                                                                                 |
+   | Timeout        | `1800`                                                                                                                                                                   |
+
+   `<commit>` is a full commit SHA on `dev`, so the code the task runs with root on the server only changes when someone edits the task. Drop `--apply` and **Execute Now** for a dry run; its output is under **Recent executions**.
+
+While a run collects garbage the registry container is stopped for about a minute, so Coolify may briefly show the service as degraded.
+
+- **What it keeps:** every tag a container on the server runs, the newest 2 tags of each open PR (`KEEP_PER_PR`), every tag of a PR newer than all the open ones GitHub listed (it may be too new to be listed), and the newest 10 tags that aren't a PR's (`KEEP_OTHER`), staging's, for rollbacks. It also keeps every tag named after one of `main`'s 5 newest commits (`KEEP_BRANCHES`, `KEEP_PER_BRANCH`), which it asks GitHub for: production runs on another server, where the script's `docker ps` can't see which tag it runs, and `dev`'s far more frequent deploys would otherwise crowd production's tags out of the ten. In September 2026 the registry held none of `main`'s commits (the last production deploy may predate the registry); which registry production pushes to is its app's **Configuration → General → Docker Registry → Docker Image**. Everything else goes, including every tag of a closed PR.
+- **How:** it deletes the tags' directories in the registry's storage, ranking tags by their latest push. Deleting a tag doesn't free its image, which stays registered under `_manifests/revisions`, so it also unregisters every image the deleted tags named and the platform images inside each one. It never unregisters one a kept tag names, or one that an image staying registered lists, such as an unchanged platform image shared by an old build and a new one. Then it runs `registry garbage-collect`, without `--delete-untagged`, in a throwaway container with the registry's volumes and environment. That flag would do the unregistering itself, but Coolify pushes image indexes (BuildKit's attestations), and `registry:2`'s `--delete-untagged` deletes an index's platform images and leaves its tag unpullable ([distribution/distribution#3178](https://github.com/distribution/distribution/issues/3178)). The registry is **stopped** meanwhile, so a push can't land half-collected; a deploy that pushes in that minute fails and needs redeploying, hence 04:30.
+- **It deletes nothing when unsure:** if GitHub can't be reached, lists no open PRs or no commits for a kept branch, or fails partway through its pages, it exits 1 before touching the registry. It finds the registry as the only `registry-*` container and its storage as the mount at the path its `REGISTRY_STORAGE_FILESYSTEM_ROOTDIRECTORY` names (Coolify sets `/data`), or `/var/lib/registry`; set `REGISTRY_CONTAINER` if there are several.
+- **Private repository:** add `GITHUB_TOKEN` to the `pruner` container's `environment`, a fine-grained token with read access to pull requests.
 
 ## 💾 Storage Configuration (Pragmatic Papers)
 

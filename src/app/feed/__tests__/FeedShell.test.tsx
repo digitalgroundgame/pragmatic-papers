@@ -122,7 +122,7 @@ describe("FeedShell", () => {
     })
 
     it("doesn't reload a second time in the same tab", async () => {
-      sessionStorage.setItem("feed:reloaded-after-load-failure", "1")
+      sessionStorage.setItem("pp:feed:reloaded-after-load-failure", "1")
 
       render(<FeedShell initialItems={items(1, 2)} initialNextCursor={2} />)
 

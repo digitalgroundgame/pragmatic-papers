@@ -73,6 +73,10 @@ function sh(script: string, env: Record<string, string> = {}) {
       SOURCE_DATABASE_NAME: "",
       COPY_SOURCE_DATABASE: "",
       FORCE_DATABASE_COPY: "",
+      // start.sh refuses a deployed image without SERVER_URL; a .env loaded into
+      // process.env mustn't decide that for a test.
+      BUILD_ENV: "",
+      SERVER_URL: "",
       TARGET_EXISTS: "",
       SOURCE_BUSY: "",
       BUILT_WITHOUT_DATABASE: "",

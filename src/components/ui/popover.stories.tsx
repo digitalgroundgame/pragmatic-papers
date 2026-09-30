@@ -31,6 +31,8 @@ export const Default: Story = {
     await waitFor(() => expect(body).toBeVisible())
     await userEvent.keyboard("{Escape}")
     await waitFor(() => expect(trigger).toHaveAttribute("aria-expanded", "false"))
+    // The popup stays mounted while it animates out; let it go before the axe check runs.
+    await waitFor(() => expect(body).not.toBeInTheDocument())
   },
 }
 

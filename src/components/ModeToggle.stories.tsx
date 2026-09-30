@@ -30,5 +30,7 @@ export const Default: Story = {
     await userEvent.click(within(canvasElement).getByRole("button", { name: "Toggle theme" }))
     await userEvent.click(await screen.findByRole("menuitem", { name: "Light" }))
     await waitFor(() => expect(document.documentElement).not.toHaveClass("dark"))
+    // The menu stays mounted while it animates out; let it go before the axe check runs.
+    await waitFor(() => expect(screen.queryByRole("menu")).not.toBeInTheDocument())
   },
 }

@@ -1,27 +1,31 @@
 name: Release train
 
-# Every Saturday, promotes the release candidate that has settled on staging
-# and cuts the next one (scripts/release-train.ts has the details):
+# Cuts a release candidate every Tuesday and promotes it on Saturday
+# (scripts/release-train.ts has the details):
 #
-#   - "Release X.Y.Z" into main, from a branch at the candidate's bump commit,
-#     once it has been on dev for SOAK_DAYS. Merge it with a merge commit, as
-#     release PRs always have been; release.yml then tags and releases it.
-#   - "Bump package.json to vX.Y.Z" into dev, the next candidate, with the
-#     version worked out from the commit subjects since the last one. It goes
-#     through review and the merge queue like any PR.
+#   - Tuesday: "Bump package.json to vX.Y.Z" into dev, the next candidate, with
+#     the version worked out from the commit subjects since the last one. It
+#     goes through review and the merge queue like any PR. Merge it by
+#     Wednesday 16:00 UTC for it to go out that Saturday.
+#   - Saturday: "Release X.Y.Z" into main, from a branch at the candidate's
+#     bump commit, once it has been on dev for SOAK_DAYS (3). Merge it with a
+#     merge commit, as release PRs always have been; release.yml then tags and
+#     releases it.
 #
 # After a hotfix (`pnpm hotfix`), a candidate cut before it conflicts with
 # main: the run closes its release PR and cuts nothing until the hotfix is
 # back-merged into dev (a trial merge with `git merge-tree` decides).
 #
-# Nothing merges itself: both PRs wait on a person. Saturday leaves Sunday as
-# a grace period before Monday's publishing, with volunteers around to triage.
-# Holding a release is closing its PR; next week's run offers a newer one.
+# Nothing merges itself: both PRs wait on a person. Articles publish on
+# Mondays, so a Saturday release leaves Sunday as a grace period, with
+# volunteers around to triage. Holding a release is closing its PR; next
+# week's run offers a newer one.
 #
-# Run it by hand with dry_run to see what it would do. To ship a fix that
-# landed after the candidate without waiting a week, run it with soak_days: 0
-# to cut a candidate that includes the fix, merge that bump PR, and run it
-# again with soak_days: 0 to open its release PR (closing the older one).
+# Run it by hand with dry_run to see what it would do; by hand, step "all"
+# cuts and promotes in one run. To ship a fix that landed after the candidate
+# without waiting a week, run it with soak_days: 0 to cut a candidate that
+# includes the fix, merge that bump PR, and run it again with soak_days: 0 to
+# open its release PR (closing the older one).
 #
 # AUTHENTICATION
 # --------------
@@ -35,13 +39,19 @@ name: Release train
 #      permissions on this repository.
 on:
   schedule:
-    # Saturday 16:00 UTC: 9am Pacific (8am in winter).
-    - cron: "0 16 * * 6"
+    # 16:00 UTC: 9am Pacific (8am in winter). The step job maps each to its step.
+    - cron: "0 16 * * 2" # Tuesday: cut
+    - cron: "0 16 * * 6" # Saturday: promote
   workflow_dispatch:
     inputs:
+      step:
+        description: Which step to take
+        type: choice
+        options: [all, cut, promote]
+        default: all
       soak_days:
         description: Days a candidate must spend on dev before it's promoted
-        default: "4"
+        default: "3"
       dry_run:
         description: Report the plan without opening or changing any PR
         type: boolean
@@ -56,7 +66,7 @@ permissions:
 
 jobs:
   train:
-    name: Promote and cut
+    name: Cut or promote
     runs-on: ubuntu-latest
 
     steps:
@@ -84,6 +94,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ steps.app-token.outputs.token || secrets.RELEASE_TOKEN }}
           SOAK_DAYS: ${{ inputs.soak_days }}
+          TRAIN_STEP: ${{ github.event.schedule == '0 16 * * 2' && 'cut' || github.event.schedule == '0 16 * * 6' && 'promote' || inputs.step }}
           DRY_RUN: ${{ inputs.dry_run }}
         run: |
           if [ -z "$GITHUB_TOKEN" ] && [ "$DRY_RUN" != "true" ]; then

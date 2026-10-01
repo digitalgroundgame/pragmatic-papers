@@ -325,10 +325,12 @@ change them there, not in the dashboard (`cloudflare/README.md`).
 ## Releases
 
 A release train (`.github/workflows/release-train.yml`, `scripts/release-train.ts`)
-runs every Saturday. It opens a "Bump package.json to vX.Y.Z" PR into `dev` (the
-next **candidate**, versioned from commit prefixes: `!` major, `feat` minor, anything
-else patch), and once a merged candidate has spent `SOAK_DAYS` (4) on staging, a
-"Release X.Y.Z" PR into `main` from a branch at that bump commit. People merge both;
+puts a release live on Saturday, ahead of Monday's articles. Every Tuesday it opens a
+"Bump package.json to vX.Y.Z" PR into `dev` (the next **candidate**, versioned from
+commit prefixes: `!` major, `feat` minor, anything else patch). On Saturday, once a
+merged candidate has spent `SOAK_DAYS` (3) on staging, it opens a "Release X.Y.Z" PR
+into `main` from a branch at that bump commit, so a bump merged by Wednesday 16:00 UTC
+ships that week. People merge both;
 the release PR as a **merge commit**, after which `release.yml` tags it. Only one
 candidate settles at a time, and the bump lands on `dev` first, so nothing is
 back-merged. The exception is `pnpm hotfix`: a candidate cut before a hotfix would

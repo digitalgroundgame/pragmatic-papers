@@ -8,8 +8,10 @@ import {
   compareVersions,
   type Deps,
   describePlan,
+  forStep,
   main,
   parseLog,
+  parseStep,
   planTrain,
   releaseBody,
   releaseLevel,
@@ -481,5 +483,60 @@ describe("main", () => {
     const { code, logs } = run([], fakeGithub({}), { SOAK_DAYS: "soon" })
     expect(await code).toBe(1)
     expect(logs.join("\n")).toContain("SOAK_DAYS")
+  })
+
+  it("only cuts on Tuesday's run", async () => {
+    const candidate = commit("Bump package.json to v2.7.0 (#950)", 6)
+    const github = fakeGithub({})
+    const { code, logs } = run([commit("fix: after (#951)", 2), candidate], github, {
+      TRAIN_STEP: "cut",
+    })
+    expect(await code).toBe(0)
+    const posts = writes(github.calls).filter((c) => c.path === "/pulls")
+    expect(posts.map((c) => c.body?.base)).toEqual(["dev"])
+    expect(logs[0]).toContain("Promoting is left to Saturday's run.")
+  })
+
+  it("only promotes on Saturday's run", async () => {
+    const candidate = commit("Bump package.json to v2.7.0 (#950)", 6)
+    const github = fakeGithub({})
+    const { code, logs } = run([commit("fix: after (#951)", 2), candidate], github, {
+      TRAIN_STEP: "promote",
+    })
+    expect(await code).toBe(0)
+    const posts = writes(github.calls).filter((c) => c.path === "/pulls")
+    expect(posts.map((c) => c.body?.base)).toEqual(["main"])
+    expect(logs[0]).toContain("Cutting is left to Tuesday's run.")
+  })
+
+  it("rejects an unknown step", async () => {
+    const github = fakeGithub({})
+    const { code, logs } = run([commit("feat: a", 1)], github, { TRAIN_STEP: "ship" })
+    expect(await code).toBe(1)
+    expect(logs.join("\n")).toContain('TRAIN_STEP must be one of cut, promote, all, not "ship"')
+    expect(github.calls).toEqual([])
+  })
+})
+
+describe("steps", () => {
+  it("defaults to all", () => {
+    expect(parseStep(undefined)).toBe("all")
+    expect(parseStep(" ")).toBe("all")
+  })
+
+  it("promotes a candidate cut on Tuesday and merged by Wednesday 16:00 on Saturday", () => {
+    // NOW is Saturday 16:00; three days back is Wednesday 16:00.
+    const ok = plan([commit("Bump package.json to v2.7.0", 3), commit("feat: a", 4)], "2.6.0", 3)
+    expect(forStep(ok, "promote").promote?.version).toBe("2.7.0")
+    const late = plan([commit("Bump package.json to v2.7.0", 2.9)], "2.6.0", 3)
+    expect(forStep(late, "promote").promote).toBeUndefined()
+  })
+
+  it("leaves out the step a run doesn't take", () => {
+    const both = plan([commit("fix: after", 2), commit("Bump package.json to v2.7.0", 6)])
+    expect(both.promote && both.cut).toBeTruthy()
+    expect(forStep(both, "cut")).toEqual({ cut: both.cut })
+    expect(forStep(both, "promote")).toEqual({ promote: both.promote })
+    expect(forStep(both, "all")).toEqual(both)
   })
 })

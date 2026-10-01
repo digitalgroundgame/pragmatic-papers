@@ -1,11 +1,13 @@
 /**
- * The weekly release train, run every Saturday by
- * .github/workflows/release-train.yml under plain Node 24 (no install needed):
+ * The weekly release train, run by .github/workflows/release-train.yml under
+ * plain Node 24 (no install needed):
  *
- *   node scripts/release-train.ts
+ *   TRAIN_STEP=cut node scripts/release-train.ts       # Tuesdays
+ *   TRAIN_STEP=promote node scripts/release-train.ts   # Saturdays
  *
- * A release is cut in two steps a week apart, so what reaches production has
- * spent that week on staging first:
+ * A release is cut in two steps, so what reaches production has spent a few
+ * days on staging first. Articles publish on Mondays, so a release goes live on
+ * Saturday, and its candidate is cut on the Tuesday before:
  *
  *   1. Cut a candidate: open a PR into dev that bumps package.json to the next
  *      version, worked out from the commit subjects since the last candidate
@@ -17,8 +19,9 @@
  *      has kept moving). A person merges it with a merge commit, as release
  *      PRs always have been; release.yml then tags it.
  *
- * Each run promotes the candidate that has settled and cuts the next one from
- * what landed since. While a candidate is still settling no new one is cut, so
+ * TRAIN_STEP picks which step a run takes: `cut`, `promote`, or `all` (the
+ * default, for running it by hand), which promotes the candidate that has
+ * settled and cuts the next one from what landed since. While a candidate is still settling no new one is cut, so
  * there is only ever one at a time. The bump lands on dev before it reaches
  * main, so main never holds a commit dev lacks and nothing is back-merged.
  *
@@ -57,7 +60,32 @@ const RELEASE_PREFIX = "release-train/v"
 const BUMP_PREFIX = "release-train/bump-v"
 
 const DAY_MS = 24 * 60 * 60 * 1000
-export const DEFAULT_SOAK_DAYS = 4
+/**
+ * Tuesday 16:00 to Saturday 16:00 is four days, less the time the bump PR waits
+ * for someone to merge it: a candidate merged by Wednesday 16:00 UTC goes out
+ * that Saturday.
+ */
+export const DEFAULT_SOAK_DAYS = 3
+
+export type Step = "cut" | "promote" | "all"
+const STEPS: Step[] = ["cut", "promote", "all"]
+
+export function parseStep(value: string | undefined): Step {
+  const step = value?.trim() || "all"
+  if (!STEPS.includes(step as Step))
+    throw new Error(`TRAIN_STEP must be one of ${STEPS.join(", ")}, not "${value}"`)
+  return step as Step
+}
+
+/** The plan with the step this run doesn't take left out. */
+export function forStep(plan: Plan, step: Step): Plan {
+  const { promote, cut, ...rest } = plan
+  return {
+    ...rest,
+    ...(step !== "cut" && promote && { promote }),
+    ...(step !== "promote" && cut && { cut }),
+  }
+}
 
 // ── Versions ───────────────────────────────────────────────────────────────
 
@@ -284,7 +312,7 @@ export function bumpBody(cut: NonNullable<Plan["cut"]>, soakDays: number): strin
   return [
     `Cuts v${cut.version} as the next release candidate: a ${cut.level} release after v${cut.from}, because ${why}.`,
     "",
-    `Once this merges, the candidate settles on staging, and the first Saturday run at least ${days(soakDays)} later opens its release PR into main. It holds everything on dev up to this commit. The release train refreshes this PR each Saturday until it merges, taking in what landed since.`,
+    `Once this merges, the candidate settles on staging, and the first Saturday run at least ${days(soakDays)} later opens its release PR into main. It holds everything on dev up to this commit. The release train refreshes this PR each Tuesday until it merges, taking in what landed since.`,
     "",
     `## Changes since v${cut.from}`,
     "",
@@ -294,7 +322,7 @@ export function bumpBody(cut: NonNullable<Plan["cut"]>, soakDays: number): strin
   ].join("\n")
 }
 
-export function describePlan(plan: Plan, mainVersion: string): string {
+export function describePlan(plan: Plan, mainVersion: string, step: Step = "all"): string {
   const lines = [`Production (main) is on v${mainVersion}.`]
   if (plan.promote) {
     lines.push(
@@ -319,9 +347,12 @@ export function describePlan(plan: Plan, mainVersion: string): string {
     lines.push(
       `- Cut v${plan.cut.version} (${plan.cut.level}) from ${plan.cut.commits.length} commit(s) since v${plan.cut.from}.`,
     )
+  } else if (step === "promote") {
+    lines.push("- Cutting is left to Tuesday's run.")
   } else if (!plan.waiting) {
     lines.push("- Nothing has landed on dev since the last candidate; nothing to cut.")
   }
+  if (step === "cut") lines.push("- Promoting is left to Saturday's run.")
   return lines.join("\n")
 }
 
@@ -476,6 +507,7 @@ export async function main(env: Env, deps: Deps): Promise<number> {
     const soakDays = Number(env.SOAK_DAYS?.trim() || DEFAULT_SOAK_DAYS)
     if (!Number.isFinite(soakDays) || soakDays < 0)
       throw new Error(`SOAK_DAYS must be a number of days, not "${env.SOAK_DAYS}"`)
+    const step = parseStep(env.TRAIN_STEP)
 
     const mainVersion = (
       JSON.parse(deps.git(["show", "origin/main:package.json"])) as {
@@ -495,8 +527,11 @@ export async function main(env: Env, deps: Deps): Promise<number> {
         throw err
       }
     }
-    const plan = planTrain({ mainVersion, commits, now: deps.now(), soakDays, mergesCleanly })
-    const description = describePlan(plan, mainVersion)
+    const plan = forStep(
+      planTrain({ mainVersion, commits, now: deps.now(), soakDays, mergesCleanly }),
+      step,
+    )
+    const description = describePlan(plan, mainVersion, step)
     deps.log(description)
     deps.summary(description)
     if (env.DRY_RUN === "true") {

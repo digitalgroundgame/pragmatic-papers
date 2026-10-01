@@ -26,7 +26,7 @@ This release brings three new ways to read, new tools for editors, and a new saf
 
 - **Storybook** for every block and component, with an axe accessibility check per story, run in CI and published for every PR (#1002, #1065, #1081). A PR's Storybook shows up as a "Storybook Preview" deployment, and the PR description links each component it changes (#1105).
 - **Merge gate**: PRs into `dev` need a human approval, or a `/reviewed` or `LGTM` reply after a Claude review, either CI's or a local `/code-review --comment` (#1037, #1086, #1111, #1118). PRs now merge through GitHub's merge queue, so there's no more **Update branch** churn (#1042, #1036).
-- **Weekly release train**: every Saturday a workflow opens the next "Bump package.json" candidate into `dev`, and after it has spent four days on staging, the "Release X.Y.Z" PR into `main`. People still merge both (#1104).
+- **Weekly release train**: every Tuesday a workflow opens the next "Bump package.json" candidate into `dev`, and on Saturday, once it has settled on staging, the "Release X.Y.Z" PR into `main`, so releases go live ahead of Monday's articles. People still merge both (#1104).
 - **PR previews are built in GitHub Actions** and the image is deployed to Coolify, with staging's database and media copied in (#1073, #1083, #1085, #1087, #1098). They show up on the PR as GitHub Deployments (#1021). E2E now tests that same image (#1097).
 - **`pnpm dev:db-seed`** seeds your local database from the terminal (#835). **`pnpm showcase`**, or the `showcase` label on a PR, pushes feature articles to a preview or staging, and the PR description links them by title (#1033, #1039, #1053, #1072).
 - **Test suites**: integration and E2E tests run against a throwaway Postgres from a pre-migrated snapshot, and never touch your dev database (#1119). New coverage includes route smoke tests, navigation journeys, article interactions, hook integration tests and unit tests for hooks, SocialEmbed, block utilities and field factories (#1113, #1115, #1116).
@@ -58,6 +58,7 @@ This release brings three new ways to read, new tools for editors, and a new saf
   - `NEXT_PUBLIC_SENTRY_DSN` → `SENTRY_DSN`. `SENTRY_DSN` now covers the browser too.
 
   The container **refuses to start** without `SERVER_URL`, or with S3 storage and no valid `SUPABASE_URL` or `S3_BUCKET`. Coolify then keeps the previous container running.
+
 - **New variables:**
   - `COURT_TRACKER_GITHUB_TOKEN`, needed for the Federal Courts daily sync.
   - `CLOUDFLARE_ZONE_ID` and `CLOUDFLARE_PURGE_TOKEN` (Zone → Cache Purge → Purge on the site's zone only), for the edge-cache purge. Without them, saves skip the purge and readers can see the old page for up to 10 minutes, or a day served stale.

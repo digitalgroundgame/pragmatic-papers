@@ -1,41 +1,31 @@
-import { socialEmbedBlockToHTML } from "@/blocks/SocialEmbed/helpers/socialEmbedBlockToHTML"
+import { bannerToHTML } from "@/blocks/Banner/converters"
+import { codeToHTML } from "@/blocks/Code/converters"
+import { footnotesToHTML, footnoteToHTML } from "@/blocks/Footnote/converters"
+import { interactiveMapToHTML } from "@/blocks/InteractiveMap/converters"
+import { displayMathToHTML, inlineMathToHTML } from "@/blocks/Math/converters"
+import { mediaBlockToHTML } from "@/blocks/MediaBlock/converters"
+import { mediaCollageToHTML } from "@/blocks/MediaCollageBlock/converters"
+import { socialEmbedToHTML } from "@/blocks/SocialEmbed/converters"
+import { squiggleRuleToHTML } from "@/blocks/SquiggleRule/converters"
+import { timelineToHTML } from "@/blocks/Timeline/converters"
 import { internalDocToHref } from "@/components/RichText/internalDocToHref"
+import type { Article, Media, User, Volume } from "@/payload-types"
 import { isResolved } from "@/utilities/relationships"
-import type {
-  Article,
-  BannerBlock,
-  CodeBlock,
-  DisplayMathBlock,
-  FootnoteBlock,
-  InteractiveMapBlock,
-  Media,
-  MediaBlock,
-  MediaCollageBlock,
-  TimelineBlock,
-  User,
-  Volume,
-} from "@/payload-types"
-import type {
-  SerializedBlockNode,
-  SerializedInlineBlockNode,
-  SerializedLinkNode,
-} from "@payloadcms/richtext-lexical"
+import type { SerializedLinkNode } from "@payloadcms/richtext-lexical"
 import {
   convertLexicalToHTML,
   LinkHTMLConverter,
   type HTMLConvertersFunction,
 } from "@payloadcms/richtext-lexical/html"
 import { Feed } from "feed"
-import { absoluteURL, escapeHTML } from "./feedHTML"
+import { absoluteURL, escapeHTML, fromBlock } from "./feedHTML"
 import { getServerSideURL } from "./getURL"
-import type { SerializedLexicalNode } from "./lexical"
 
 // Read on each call, not at import: SERVER_URL is a runtime variable (#1090).
 const siteUrl = (): string => getServerSideURL()
 
 const getMediaUrl = (url: string) => {
-  const absolute =
-    url.startsWith("http://") || url.startsWith("https://") ? url : `${siteUrl()}${url}`
+  const absolute = absoluteURL(url, siteUrl())
   try {
     return new URL(absolute).href
   } catch {
@@ -43,86 +33,13 @@ const getMediaUrl = (url: string) => {
   }
 }
 
-const resolveMedia = (media: number | Media): Media | null =>
-  typeof media === "object" ? media : null
-
-const mediaBlockToHTML = ({ node }: { node: SerializedBlockNode<MediaBlock> }): string => {
-  const media = resolveMedia(node.fields.media)
-  if (!media?.url) return ""
-  const src = escapeHTML(getMediaUrl(media.url))
-  const alt = escapeHTML(media.alt)
-  const widthAttr = media.width ? ` width="${media.width}"` : ""
-  const heightAttr = media.height ? ` height="${media.height}"` : ""
-  return `<figure><img src="${src}" alt="${alt}"${widthAttr}${heightAttr} style="max-width:100%;height:auto;" /></figure>`
-}
-
-const mediaCollageBlockToHTML = ({
-  node,
-}: {
-  node: SerializedBlockNode<MediaCollageBlock>
-}): string => {
-  const imgs = node.fields.images
-    .map(({ media }) => {
-      const resolved = resolveMedia(media)
-      if (!resolved?.url) return ""
-      const src = escapeHTML(getMediaUrl(resolved.url))
-      const alt = escapeHTML(resolved.alt)
-      return `<img src="${src}" alt="${alt}" style="max-width:100%;height:auto;" />`
-    })
-    .filter(Boolean)
-    .join("\n")
-  return imgs ? `<figure style="display:flex;flex-wrap:wrap;gap:0.5em;">${imgs}</figure>` : ""
-}
-
-function displayMathBlockToHTML({ node }: { node: SerializedBlockNode<DisplayMathBlock> }): string {
-  const { math } = node.fields
-  if (!math) return ""
-  return `<p class="math display-math">\\[${escapeHTML(math)}\\]</p>`
-}
-
-const timelineBlockToHTML = ({ node }: { node: SerializedBlockNode<TimelineBlock> }): string => {
-  const { title, events } = node.fields
-  if (!events?.length) return ""
-
-  const items = events
-    .map((event) => {
-      const link = event.enableCitation ? event.citation : undefined
-      let citationHtml = ""
-      if (link?.url) {
-        const href =
-          link.type === "reference" &&
-          typeof link.reference?.value === "object" &&
-          link.reference.value?.slug
-            ? `${siteUrl()}/${link.reference.relationTo}/${link.reference.value.slug}`
-            : link.url
-        citationHtml = ` <a href="${escapeHTML(href)}">[1]</a>`
-      }
-      const titleHtml = event.title ? ` — <strong>${escapeHTML(event.title)}</strong>` : ""
-      return `<li><strong>${escapeHTML(event.date)}</strong>${titleHtml}<br/>${escapeHTML(event.description)}${citationHtml}</li>`
-    })
-    .join("\n")
-
-  const heading = title ? `<h3>${escapeHTML(title)}</h3>` : ""
-  return `<section>${heading}<ul style="list-style: none; padding-left: 0;">${items}</ul></section>`
-}
-
-const bannerBlockToHTML = ({
-  node,
-  nodesToHTML,
-}: {
-  node: SerializedBlockNode<BannerBlock>
-  nodesToHTML: (args: { nodes: SerializedLexicalNode[] }) => string[]
-}): string =>
-  `<blockquote>${nodesToHTML({ nodes: node.fields.content.root.children }).join("")}</blockquote>`
-
-const codeBlockToHTML = ({ node }: { node: SerializedBlockNode<CodeBlock> }): string =>
-  node.fields.code ? `<pre><code>${escapeHTML(node.fields.code)}</code></pre>` : ""
-
 /**
- * Converters for the feeds' rich text. Every node type and block a
- * feed-rendered field allows needs an entry here, or the feed prints "unknown
- * node" in its place; `__tests__/generateRssFeed.converters.test.ts` enforces
- * that against the resolved Payload config.
+ * Converters for the RSS feeds' rich text. Each block renders through the
+ * converter in its own `src/blocks/<Name>/converters.ts`; this is the map from
+ * block slug to the output format the RSS feeds want. Every node type and
+ * block a feed-rendered field allows needs an entry here, or the feed prints
+ * "unknown node" in its place; `__tests__/generateRssFeed.converters.test.ts`
+ * enforces that against the resolved Payload config.
  *
  * `pageUrl` is the page the content lives on, which blocks a feed reader
  * cannot show (interactive maps) link back to, and which an internal link
@@ -130,147 +47,94 @@ const codeBlockToHTML = ({ node }: { node: SerializedBlockNode<CodeBlock> }): st
  */
 export const createHtmlConverters =
   (pageUrl: string): HTMLConvertersFunction =>
-  ({ defaultConverters }) => ({
-    ...defaultConverters,
-    // Payload's default link converter has no `internalDocToHref`, so every
-    // internal link would render as `href="#"` (#1023). Feed readers need
-    // absolute URLs; the site's helper returns a path.
-    ...LinkHTMLConverter({
-      internalDocToHref: ({ linkNode }: { linkNode: SerializedLinkNode }) => {
-        try {
-          return absoluteURL(internalDocToHref({ linkNode }), siteUrl())
-        } catch {
-          return pageUrl
-        }
+  ({ defaultConverters }) => {
+    const context = { siteUrl: siteUrl(), pageUrl }
+    return {
+      ...defaultConverters,
+      // Payload's default link converter has no `internalDocToHref`, so every
+      // internal link would render as `href="#"` (#1023). Feed readers need
+      // absolute URLs; the site's helper returns a path.
+      ...LinkHTMLConverter({
+        internalDocToHref: ({ linkNode }: { linkNode: SerializedLinkNode }) => {
+          try {
+            return absoluteURL(internalDocToHref({ linkNode }), context.siteUrl)
+          } catch {
+            return pageUrl
+          }
+        },
+      }),
+      // Last resort for anything that slips past the converter test: keep an
+      // unknown element's text rather than printing "unknown node", and drop a
+      // childless node (a block). It has to be a function: "" is ignored.
+      unknown: ({ node, nodesToHTML }) => {
+        const { children } = node as { children?: Parameters<typeof nodesToHTML>[0]["nodes"] }
+        return children?.length ? nodesToHTML({ nodes: children }).join("") : ""
       },
-    }),
-    // Last resort for anything that slips past the converter test: keep an
-    // unknown element's text rather than printing "unknown node", and drop a
-    // childless node (a block). It has to be a function: "" is ignored.
-    unknown: ({ node, nodesToHTML }) => {
-      const { children } = node as { children?: Parameters<typeof nodesToHTML>[0]["nodes"] }
-      return children?.length ? nodesToHTML({ nodes: children }).join("") : ""
-    },
-    blocks: {
-      ...defaultConverters.blocks,
-      banner: bannerBlockToHTML,
-      code: codeBlockToHTML,
-      squiggleRule: "<hr />",
-      interactiveMap: ({ node }: { node: SerializedBlockNode<InteractiveMapBlock> }) => {
-        const title = node.fields.widgetTitle ? ` “${escapeHTML(node.fields.widgetTitle)}”` : ""
-        return `<p><a href="${escapeHTML(pageUrl)}">View the interactive map${title} on The Pragmatic Papers</a></p>`
+      blocks: {
+        ...defaultConverters.blocks,
+        banner: fromBlock(bannerToHTML, context),
+        code: fromBlock(codeToHTML, context),
+        displayMathBlock: fromBlock(displayMathToHTML, context),
+        interactiveMap: fromBlock(interactiveMapToHTML, context),
+        mediaBlock: fromBlock(mediaBlockToHTML, context),
+        mediaCollage: fromBlock(mediaCollageToHTML, context),
+        socialEmbed: fromBlock(socialEmbedToHTML, context),
+        blueSkyEmbed: fromBlock(socialEmbedToHTML, context),
+        redditEmbed: fromBlock(socialEmbedToHTML, context),
+        tiktokEmbed: fromBlock(socialEmbedToHTML, context),
+        twitterEmbed: fromBlock(socialEmbedToHTML, context),
+        youtubeEmbed: fromBlock(socialEmbedToHTML, context),
+        squiggleRule: fromBlock(squiggleRuleToHTML, context),
+        timeline: fromBlock(timelineToHTML, context),
       },
-      mediaBlock: mediaBlockToHTML,
-      mediaCollage: mediaCollageBlockToHTML,
-      socialEmbed: socialEmbedBlockToHTML,
-      blueSkyEmbed: socialEmbedBlockToHTML,
-      redditEmbed: socialEmbedBlockToHTML,
-      tiktokEmbed: socialEmbedBlockToHTML,
-      twitterEmbed: socialEmbedBlockToHTML,
-      youtubeEmbed: socialEmbedBlockToHTML,
-      displayMathBlock: displayMathBlockToHTML,
-      timeline: timelineBlockToHTML,
-    },
-    inlineBlocks: {
-      ...defaultConverters.inlineBlocks,
-      inlineMathBlock: ({ node }: { node: SerializedInlineBlockNode }) => {
-        const math = (node.fields as { math?: string })?.math || ""
-        return `<span class="math">\\(${escapeHTML(math)}\\)</span>`
+      inlineBlocks: {
+        ...defaultConverters.inlineBlocks,
+        footnote: fromBlock(footnoteToHTML, context),
+        inlineMathBlock: fromBlock(inlineMathToHTML, context),
       },
-      footnote: ({ node }: { node: SerializedInlineBlockNode }) => {
-        const fields = node.fields as FootnoteBlock
-        const index = typeof fields.index === "number" ? fields.index : ""
-        const note = escapeHTML(fields.note)
-        const referenceId = `footnote-ref-${index}`
-        const describedById = `footnote-${index}`
-        return `<sup id="${referenceId}" title="Footnote ${index}: ${note}"><a href="#${describedById}">[${index}]</a></sup>`
-      },
-    },
-  })
+    }
+  }
 
-const formatFootnotes = (footnotes?: Article["footnotes"]): string => {
-  if (!footnotes || !footnotes.length) return ""
-
-  const footnoteItems = footnotes
-    .map((footnote) => {
-      if (!footnote) return ""
-      const { index, note, attributionEnabled, link } = footnote
-      if (!note || typeof index !== "number") return ""
-
-      const describedById = `footnote-${index}`
-      let linkHtml = ""
-
-      if (attributionEnabled && link?.url) {
-        if (link.type === "custom") {
-          linkHtml = ` <a href="${escapeHTML(link.url)}" style="border: none; color: #0066cc; text-decoration: underline;" title="Link to source ${escapeHTML(link.label)}">${escapeHTML(link.url)}</a>`
-        } else if (link.type === "reference" && link.reference) {
-          const referenceUrl =
-            typeof link.reference.value === "object" && link.reference.value?.slug
-              ? `${siteUrl()}/${link.reference.relationTo}/${link.reference.value.slug}`
-              : link.url
-          linkHtml = ` <a href="${escapeHTML(referenceUrl)}" style="border: none; color: #0066cc; text-decoration: underline;" title="Link to source ${escapeHTML(link.label)}">${escapeHTML(link.url)}</a>`
-        }
-      }
-
-      return `<li><span id="${describedById}">${escapeHTML(note)}</span>${linkHtml}</li>`
-    })
-    .filter(Boolean)
-    .join("\n    ")
-
-  if (!footnoteItems) return ""
-
-  return `<section style="margin-top: 2em; padding-top: 1em; border-top: 1px solid #ddd;"><h3 style="font-size: 1.2em; font-weight: bold; margin-bottom: 0.5em;">Footnotes</h3><ol style="list-style: decimal; padding-left: 1.5em;">${footnoteItems}</ol></section>`
-}
-
-const formatArticleLink = (article: Article) => {
+const articleLinkHTML = (article: Article): string => {
   const href = escapeHTML(`${siteUrl()}/articles/${article.slug}`)
-  const title = escapeHTML(article.title)
-  if (!article.meta?.description) {
-    return `<li style="margin: 1em 0"><a href="${href}">${title}</a></li>`
-  }
-
-  return `
-<li style="margin: 1em 0">
-  <a href="${href}">${title}</a>
-  <p style="margin: 0.5em 0 0 0; color: #666">${escapeHTML(article.meta.description)}</p>
-</li>`
+  const description = article.meta?.description
+    ? `<p>${escapeHTML(article.meta.description)}</p>`
+    : ""
+  return `<li><a href="${href}">${escapeHTML(article.title)}</a>${description}</li>`
 }
 
-const formatVolumeContent = (volume: Volume) => {
-  const sections = []
-
-  if (volume.description) {
-    sections.push(`<div style="margin-bottom: 1.5em">${escapeHTML(volume.description)}</div>`)
-  }
-
-  if (volume.editorsNote) {
-    sections.push(`
-<div style="margin: 1.5em 0">
-  ${convertLexicalToHTML({
-    data: volume.editorsNote,
-    converters: createHtmlConverters(`${siteUrl()}/volumes/${volume.slug}`),
-  })}
-</div>`)
-  }
-
+const volumeContentHTML = (volume: Volume): string => {
+  const description = volume.description ? `<p>${escapeHTML(volume.description)}</p>` : ""
+  const editorsNote = volume.editorsNote
+    ? convertLexicalToHTML({
+        data: volume.editorsNote,
+        converters: createHtmlConverters(`${siteUrl()}/volumes/${volume.slug}`),
+      })
+    : ""
   // An article not loaded at this depth is a bare numeric ID: leave it out
   // rather than link to `/articles/undefined`.
   const articles = volume.articles
     ?.filter(isResolved<Article>)
-    .map(formatArticleLink)
-    .join("\n")
+    .map(articleLinkHTML)
+    .join("")
+  const articleList = articles ? `<h3>Articles in this Volume</h3><ul>${articles}</ul>` : ""
 
-  if (articles) {
-    sections.push(`
-<div style="margin-top: 1.5em">
-  <h3>Articles in this Volume</h3>
-  <ul style="padding-left: 1.5em">
-    ${articles}
-  </ul>
-</div>`)
+  return description + editorsNote + articleList
+}
+
+const articleContentHTML = (article: Article): string => {
+  try {
+    const content = article.content
+      ? convertLexicalToHTML({
+          data: article.content,
+          converters: createHtmlConverters(`${siteUrl()}/articles/${article.slug}`),
+        })
+      : ""
+    return content + footnotesToHTML(article.footnotes, { siteUrl: siteUrl() })
+  } catch (error) {
+    console.error("Error converting article content to HTML:", error)
+    return ""
   }
-
-  return sections.join("\n")
 }
 
 const createBaseFeedConfig = (type: "Articles" | "Volumes") => ({
@@ -288,6 +152,12 @@ const createBaseFeedConfig = (type: "Articles" | "Volumes") => ({
   },
 })
 
+const imageUrl = (image: number | Media | null | undefined): string | undefined =>
+  isResolved<Media>(image) && image.url ? getMediaUrl(image.url) : undefined
+
+const authorsOf = (article: Article) =>
+  (article.authors || []).filter(isResolved<User>).map((author) => ({ name: author.name || "" }))
+
 export const generateArticleFeed = (articles: Article[]): string => {
   const feed = new Feed(createBaseFeedConfig("Articles"))
 
@@ -300,28 +170,9 @@ export const generateArticleFeed = (articles: Article[]): string => {
         published: new Date(article.publishedAt),
         description: article.meta?.description ? article.meta.description : "",
         date: new Date(article.publishedAt),
-        image:
-          article.meta?.image && typeof article.meta.image !== "string"
-            ? getMediaUrl((article.meta.image as Media).url ?? "")
-            : undefined,
-        author: (article.authors || []).filter(isResolved<User>).map((author) => ({
-          name: author.name || "",
-        })),
-        content: (() => {
-          try {
-            const articleContent = article.content
-              ? convertLexicalToHTML({
-                  data: article.content,
-                  converters: createHtmlConverters(`${siteUrl()}/articles/${article.slug}`),
-                })
-              : ""
-            const footnotesHtml = formatFootnotes(article.footnotes)
-            return articleContent + footnotesHtml
-          } catch (error) {
-            console.error("Error converting article content to HTML:", error)
-            return ""
-          }
-        })(),
+        image: imageUrl(article.meta?.image),
+        author: authorsOf(article),
+        content: articleContentHTML(article),
         extensions: [
           {
             name: "updated",
@@ -346,11 +197,8 @@ export const generateVolumeFeed = (volumes: Volume[]): string => {
         link: `${siteUrl()}/volumes/${volume.slug}`,
         description: volume.meta?.description || "",
         date: new Date(volume.publishedAt),
-        image:
-          volume.meta?.image && typeof volume.meta.image !== "string"
-            ? getMediaUrl((volume.meta.image as Media).url ?? "")
-            : undefined,
-        content: formatVolumeContent(volume),
+        image: imageUrl(volume.meta?.image),
+        content: volumeContentHTML(volume),
         extensions: [
           {
             name: "updated",
@@ -358,12 +206,7 @@ export const generateVolumeFeed = (volumes: Volume[]): string => {
           },
         ],
         published: new Date(volume.publishedAt),
-        author: volume.articles?.filter(isResolved<Article>).flatMap(
-          (article) =>
-            (article.authors || []).filter(isResolved<User>).map((author) => ({
-              name: author.name || "",
-            })) || [],
-        ),
+        author: volume.articles?.filter(isResolved<Article>).flatMap(authorsOf),
       })
     }
   })

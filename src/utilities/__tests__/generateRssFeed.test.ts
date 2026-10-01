@@ -105,15 +105,13 @@ describe("RSS feed escapes CMS text (#1024)", () => {
     expect(html).not.toContain("<timeline>")
   })
 
-  it("escapes a footnote note inside its title attribute", () => {
+  it("keeps a footnote's note out of its marker, so nothing there to escape", () => {
     const html = renderContent(
       paragraph(
         inlineBlock({ blockType: "footnote", index: 1, note: 'He said "<b>no</b>" & left' }),
       ),
     )
-    expect(html).toContain(
-      'title="Footnote 1: He said &quot;&lt;b&gt;no&lt;/b&gt;&quot; &amp; left"',
-    )
+    expect(html).toBe("<p><sup>[1]</sup></p>")
   })
 
   it("escapes math", () => {
@@ -249,7 +247,7 @@ describe("generateArticleFeed", () => {
 
     expect(entry).toBeDefined()
     expect(entry).not.toContain("<author>")
-    expect(entry).not.toContain("Footnotes")
+    expect(entry).not.toContain("<h3>Notes</h3>")
   })
 
   it("leaves out authors that weren't loaded", () => {
@@ -264,9 +262,9 @@ describe("generateArticleFeed", () => {
     expect(feed).toContain("https://example.org/api/media/file/hero.jpg")
   })
 
-  it("appends the article's footnotes after its content", () => {
+  it("lists the article's notes after its content, without in-page anchors", () => {
     const feed = generateArticleFeed([
-      makeArticle([paragraph(text("Body"))], {
+      makeArticle([paragraph(text("Body"), inlineBlock({ blockType: "footnote", index: 1 }))], {
         footnotes: [
           {
             id: "1",
@@ -280,9 +278,12 @@ describe("generateArticleFeed", () => {
     ])
     const entry = entries(feed)[0] ?? ""
 
-    expect(entry.indexOf("<p>Body</p>")).toBeLessThan(entry.indexOf("Footnotes"))
-    expect(entry).toContain('<span id="footnote-1">A source</span>')
-    expect(entry).toContain('href="https://source.test/a"')
+    expect(entry).toContain("<p>Body<sup>[1]</sup></p>")
+    expect(entry.indexOf("<p>Body")).toBeLessThan(entry.indexOf("<h3>Notes</h3>"))
+    expect(entry).toContain(
+      '<p>[1] A source <a href="https://source.test/a">https://source.test/a</a></p>',
+    )
+    expect(entry).not.toContain("#footnote")
   })
 })
 

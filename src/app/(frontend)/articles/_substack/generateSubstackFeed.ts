@@ -1,26 +1,19 @@
-import { socialEmbedBlockToHTML } from "@/blocks/SocialEmbed/helpers/socialEmbedBlockToHTML"
+import { bannerToHTML } from "@/blocks/Banner/converters"
+import { codeToHTML } from "@/blocks/Code/converters"
+import { footnotesToHTML, footnoteToHTML } from "@/blocks/Footnote/converters"
+import { interactiveMapToHTML } from "@/blocks/InteractiveMap/converters"
+import { displayMathToCode, inlineMathToCode } from "@/blocks/Math/converters"
+import { mediaBlockToHTML, mediaToFigure } from "@/blocks/MediaBlock/converters"
+import { mediaCollageToHTML } from "@/blocks/MediaCollageBlock/converters"
+import { socialEmbedToHTML } from "@/blocks/SocialEmbed/converters"
+import { squiggleRuleToHTML } from "@/blocks/SquiggleRule/converters"
+import { timelineToHTML } from "@/blocks/Timeline/converters"
 import { internalDocToHref } from "@/components/RichText/internalDocToHref"
-import type {
-  Article,
-  BannerBlock,
-  CodeBlock,
-  DisplayMathBlock,
-  FootnoteBlock,
-  InlineMathBlock,
-  InteractiveMapBlock,
-  Media,
-  MediaBlock,
-  MediaCollageBlock,
-  TimelineBlock,
-  User,
-} from "@/payload-types"
-import { getLinkFieldUrl } from "@/utilities/getLinkFieldUrl"
-import { escapeHTML, absoluteURL as toAbsoluteURL } from "@/utilities/feedHTML"
+import type { Article, Media, User } from "@/payload-types"
+import { escapeHTML, fromBlock, absoluteURL as toAbsoluteURL } from "@/utilities/feedHTML"
 import { getServerSideURL } from "@/utilities/getURL"
 import { isResolved } from "@/utilities/relationships"
 import type {
-  SerializedBlockNode,
-  SerializedInlineBlockNode,
   SerializedLinkNode,
   SerializedListNode,
   SerializedTableCellNode,
@@ -52,14 +45,6 @@ const absoluteURL = (url: string): string => toAbsoluteURL(url, getServerSideURL
 
 export const articleURL = (article: Pick<Article, "slug">): string =>
   absoluteURL(`/articles/${article.slug}`)
-
-const figureHTML = (media: number | Media | null | undefined): string => {
-  if (!media || typeof media !== "object" || !media.url) return ""
-  const caption = media.caption
-    ? convertLexicalToHTML({ data: media.caption, disableContainer: true })
-    : ""
-  return `<figure><img src="${escapeHTML(absoluteURL(media.url))}" alt="${escapeHTML(media.alt ?? "")}" />${caption ? `<figcaption>${caption}</figcaption>` : ""}</figure>`
-}
 
 // Lexical's text format bits (see `NodeFormat` in @payloadcms/richtext-lexical).
 const TEXT_FORMATS: [bit: number, tag: string][] = [
@@ -143,6 +128,7 @@ const tableCellToHTML = ({
  */
 export const createSubstackConverters = (url: string): HTMLConvertersFunction => {
   return ({ defaultConverters }) => {
+    const context = { siteUrl: getServerSideURL(), pageUrl: url }
     return {
       ...defaultConverters,
       ...LinkHTMLConverter({
@@ -163,101 +149,65 @@ export const createSubstackConverters = (url: string): HTMLConvertersFunction =>
       tablerow: ({ node, nodesToHTML }) =>
         `<tr>${nodesToHTML({ nodes: node.children }).join("")}</tr>`,
       tablecell: tableCellToHTML,
-      upload: ({ node }: { node: SerializedUploadNode }) => {
+      upload: ({ node, nodesToHTML }: { node: SerializedUploadNode; nodesToHTML: NodesToHTML }) => {
         const upload = typeof node.value === "object" ? (node.value as Media) : null
-        return upload?.mimeType?.startsWith("image") ? figureHTML(upload) : ""
+        if (!upload?.mimeType?.startsWith("image")) return ""
+        return mediaToFigure(upload, {
+          ...context,
+          richTextToHTML: (data) => nodesToHTML({ nodes: data.root.children }).join(""),
+        })
       },
       // Drop anything without a converter instead of printing "unknown node".
       unknown: () => "",
+      // Each block renders through its own `src/blocks/<Name>/converters.ts`;
+      // this picks the format Substack's editor keeps.
       blocks: {
         ...defaultConverters.blocks,
-        banner: ({
-          node,
-          nodesToHTML,
-        }: {
-          node: SerializedBlockNode<BannerBlock>
-          nodesToHTML: (args: { nodes: SerializedLexicalNode[] }) => string[]
-        }) =>
-          `<blockquote>${nodesToHTML({ nodes: node.fields.content.root.children }).join("")}</blockquote>`,
-        code: ({ node }: { node: SerializedBlockNode<CodeBlock> }) =>
-          `<pre><code>${escapeHTML(node.fields.code ?? "")}</code></pre>`,
-        displayMathBlock: ({ node }: { node: SerializedBlockNode<DisplayMathBlock> }) =>
-          node.fields.math ? `<pre><code>${escapeHTML(node.fields.math)}</code></pre>` : "",
-        interactiveMap: ({ node }: { node: SerializedBlockNode<InteractiveMapBlock> }) => {
-          const title = node.fields.widgetTitle ? `“${escapeHTML(node.fields.widgetTitle)}” ` : ""
-          return `<p><a href="${escapeHTML(url)}">View the interactive map ${title}on ${SITE_NAME} →</a></p>`
-        },
-        mediaBlock: ({ node }: { node: SerializedBlockNode<MediaBlock> }) =>
-          figureHTML(node.fields.media),
-        mediaCollage: ({ node }: { node: SerializedBlockNode<MediaCollageBlock> }) =>
-          node.fields.images.map(({ media }) => figureHTML(media)).join(""),
-        squiggleRule: "<hr />",
-        socialEmbed: socialEmbedBlockToHTML,
-        blueSkyEmbed: socialEmbedBlockToHTML,
-        redditEmbed: socialEmbedBlockToHTML,
-        tiktokEmbed: socialEmbedBlockToHTML,
-        twitterEmbed: socialEmbedBlockToHTML,
-        youtubeEmbed: socialEmbedBlockToHTML,
-        timeline: ({ node }: { node: SerializedBlockNode<TimelineBlock> }) => {
-          const { title, events } = node.fields
-          if (!events?.length) return ""
-          const items = events
-            .map((event) => {
-              const citation = event.enableCitation ? getLinkFieldUrl(event.citation) : null
-              return [
-                `<li><strong>${escapeHTML(event.date)}</strong>`,
-                event.title ? ` — <strong>${escapeHTML(event.title)}</strong>` : "",
-                `<br />${escapeHTML(event.description ?? "")}`,
-                citation ? ` <a href="${escapeHTML(absoluteURL(citation))}">[source]</a>` : "",
-                "</li>",
-              ].join("")
-            })
-            .join("")
-          return `${title ? `<h3>${escapeHTML(title)}</h3>` : ""}<ul>${items}</ul>`
-        },
+        banner: fromBlock(bannerToHTML, context),
+        code: fromBlock(codeToHTML, context),
+        displayMathBlock: fromBlock(displayMathToCode, context),
+        interactiveMap: fromBlock(interactiveMapToHTML, context),
+        mediaBlock: fromBlock(mediaBlockToHTML, context),
+        mediaCollage: fromBlock(mediaCollageToHTML, context),
+        squiggleRule: fromBlock(squiggleRuleToHTML, context),
+        socialEmbed: fromBlock(socialEmbedToHTML, context),
+        blueSkyEmbed: fromBlock(socialEmbedToHTML, context),
+        redditEmbed: fromBlock(socialEmbedToHTML, context),
+        tiktokEmbed: fromBlock(socialEmbedToHTML, context),
+        twitterEmbed: fromBlock(socialEmbedToHTML, context),
+        youtubeEmbed: fromBlock(socialEmbedToHTML, context),
+        timeline: fromBlock(timelineToHTML, context),
       },
       inlineBlocks: {
         ...defaultConverters.inlineBlocks,
-        inlineMathBlock: ({ node }: { node: SerializedInlineBlockNode }) =>
-          `<code>${escapeHTML((node.fields as InlineMathBlock).math ?? "")}</code>`,
-        footnote: ({ node }: { node: SerializedInlineBlockNode }) => {
-          const { index } = node.fields as FootnoteBlock
-          return typeof index === "number" ? `<sup>[${index}]</sup>` : ""
-        },
+        inlineMathBlock: fromBlock(inlineMathToCode, context),
+        footnote: fromBlock(footnoteToHTML, context),
       },
     }
   }
 }
 
-const notesHTML = (footnotes: Article["footnotes"]): string => {
-  const items = (footnotes ?? [])
-    .filter((footnote) => footnote?.note && typeof footnote.index === "number")
-    .sort((a, b) => (a.index ?? 0) - (b.index ?? 0))
-    .map(({ index, note, attributionEnabled, link }) => {
-      const source = attributionEnabled ? getLinkFieldUrl(link) : null
-      const sourceHTML = source
-        ? ` <a href="${escapeHTML(absoluteURL(source))}">${escapeHTML(link?.label || absoluteURL(source))}</a>`
-        : ""
-      return `<p>[${index}] ${escapeHTML(note)}${sourceHTML}</p>`
-    })
-    .join("")
-
-  return items ? `<hr /><h3>Notes</h3>${items}` : ""
-}
-
 export const substackArticleHTML = (article: Article): string => {
   const url = articleURL(article)
-  const hero = figureHTML(article.heroImage)
+  const options = { disableContainer: true, disableIndent: true, disableTextAlign: true }
+  const hero = mediaToFigure(article.heroImage, {
+    siteUrl: getServerSideURL(),
+    richTextToHTML: (data) =>
+      convertLexicalToHTML({
+        data: data as Article["content"],
+        converters: createSubstackConverters(url),
+        ...options,
+      }),
+  })
   const body = convertLexicalToHTML({
     data: article.content,
     converters: createSubstackConverters(url),
-    disableContainer: true,
-    disableIndent: true,
-    disableTextAlign: true,
+    ...options,
   })
+  const notes = footnotesToHTML(article.footnotes, { siteUrl: getServerSideURL() })
   const footer = `<hr /><p><em>Originally published at <a href="${escapeHTML(url)}">${SITE_NAME}</a>.</em></p>`
 
-  return hero + body + notesHTML(article.footnotes) + footer
+  return hero + body + notes + footer
 }
 
 export const generateSubstackFeed = (articles: Article[]): string => {

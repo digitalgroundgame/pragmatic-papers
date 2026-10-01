@@ -168,7 +168,7 @@ describe("RSS feed block converters", () => {
 
   it("renders code escaped inside pre/code", () => {
     expect(render(block({ blockType: "code", code: "<div>&</div>" }))).toBe(
-      "<pre><code>&lt;div&gt;&amp;&lt;/div&gt;</code></pre>",
+      '<pre tabindex="0"><code>&lt;div&gt;&amp;&lt;/div&gt;</code></pre>',
     )
   })
 
@@ -178,7 +178,7 @@ describe("RSS feed block converters", () => {
 
   it("links an interactive map back to the page it sits on", () => {
     expect(render(block({ blockType: "interactiveMap", widgetTitle: "Turnout" }))).toBe(
-      `<p><a href="${PAGE_URL}">View the interactive map “Turnout” on The Pragmatic Papers</a></p>`,
+      `<p><a href="${PAGE_URL}">View the interactive map “Turnout” on The Pragmatic Papers →</a></p>`,
     )
   })
 })

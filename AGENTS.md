@@ -329,9 +329,9 @@ puts a release live on Saturday, ahead of Monday's articles. Every Tuesday it op
 "Bump package.json to vX.Y.Z" PR into `dev` (the next **candidate**, versioned from
 commit prefixes: `!` major, `feat` minor, anything else patch). On Saturday, once a
 merged candidate has spent `SOAK_DAYS` (3) on staging, it opens a "Release X.Y.Z" PR
-into `main` from a branch at that bump commit, so a bump merged by Wednesday 16:00 UTC
-ships that week. People merge both;
-the release PR as a **merge commit**, after which `release.yml` tags it. Only one
+into `main` from a branch at that bump commit, so a bump merged by Wednesday 9am
+Pacific / noon Eastern ships that week (the runs are at 16:00 UTC, an hour earlier
+locally in winter). People merge both; the release PR as a **merge commit**, after which `release.yml` tags it. Only one
 candidate settles at a time, and the bump lands on `dev` first, so nothing is
 back-merged. The exception is `pnpm hotfix`: a candidate cut before a hotfix would
 conflict with `main`, so the train skips it and cuts nothing until the hotfix is

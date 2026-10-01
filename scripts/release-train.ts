@@ -61,9 +61,10 @@ const BUMP_PREFIX = "release-train/bump-v"
 
 const DAY_MS = 24 * 60 * 60 * 1000
 /**
- * Tuesday 16:00 to Saturday 16:00 is four days, less the time the bump PR waits
- * for someone to merge it: a candidate merged by Wednesday 16:00 UTC goes out
- * that Saturday.
+ * The runs are at 16:00 UTC (9am Pacific / noon Eastern). Tuesday to Saturday is
+ * four days, less the time the bump PR waits for someone to merge it: a
+ * candidate merged by Wednesday 9am Pacific / noon Eastern goes out that
+ * Saturday.
  */
 export const DEFAULT_SOAK_DAYS = 3
 

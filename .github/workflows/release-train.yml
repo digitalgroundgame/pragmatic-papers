@@ -6,7 +6,7 @@ name: Release train
 #   - Tuesday: "Bump package.json to vX.Y.Z" into dev, the next candidate, with
 #     the version worked out from the commit subjects since the last one. It
 #     goes through review and the merge queue like any PR. Merge it by
-#     Wednesday 16:00 UTC for it to go out that Saturday.
+#     Wednesday 9am Pacific / noon Eastern for it to go out that Saturday.
 #   - Saturday: "Release X.Y.Z" into main, from a branch at the candidate's
 #     bump commit, once it has been on dev for SOAK_DAYS (3). Merge it with a
 #     merge commit, as release PRs always have been; release.yml then tags and
@@ -39,7 +39,8 @@ name: Release train
 #      permissions on this repository.
 on:
   schedule:
-    # 16:00 UTC: 9am Pacific (8am in winter). The step job maps each to its step.
+    # 16:00 UTC: 9am Pacific / noon Eastern, an hour earlier in winter (cron is
+    # always UTC). TRAIN_STEP below maps each schedule to its step.
     - cron: "0 16 * * 2" # Tuesday: cut
     - cron: "0 16 * * 6" # Saturday: promote
   workflow_dispatch:

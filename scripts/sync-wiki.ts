@@ -75,12 +75,21 @@ export function mirror(source: string, target: string): void {
 /** The workflow's env (GITHUB_REPOSITORY, GITHUB_SHA, FORCE, DRY_RUN); not NodeJS.ProcessEnv, which the app's typings narrow. */
 export type Env = Record<string, string | undefined>
 
-export function main(
-  wikiDir: string,
-  env: Env,
-  log: (message: string) => void,
-  git = (args: string[]) => execFileSync("git", ["-C", wikiDir, ...args], { encoding: "utf8" }),
-): number {
+export function main({
+  wikiDir,
+  sourceDir = "wiki",
+  env,
+  log,
+}: {
+  /** A clone of the wiki, with `origin` to push to. */
+  wikiDir: string
+  /** The pages to publish. */
+  sourceDir?: string
+  env: Env
+  log: (message: string) => void
+}): number {
+  const git = (args: string[]) =>
+    execFileSync("git", ["-C", wikiDir, ...args], { encoding: "utf8" })
   const repo = env.GITHUB_REPOSITORY ?? "digitalgroundgame/pragmatic-papers"
   const sha = env.GITHUB_SHA ?? "local"
   const state: WikiState = {
@@ -94,7 +103,7 @@ export function main(
     return 1
   }
 
-  mirror("wiki", wikiDir)
+  mirror(sourceDir, wikiDir)
   git(["add", "--all"])
   const changed = git(["status", "--porcelain"]).trim()
   if (!changed) {
@@ -115,5 +124,9 @@ export function main(
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const wikiDir = process.argv[2]
   if (!wikiDir) throw new Error("Usage: node scripts/sync-wiki.ts <wiki-clone-dir>")
-  process.exitCode = main(wikiDir, process.env, (message) => process.stdout.write(`${message}\n`))
+  process.exitCode = main({
+    wikiDir,
+    env: process.env,
+    log: (message) => process.stdout.write(`${message}\n`),
+  })
 }

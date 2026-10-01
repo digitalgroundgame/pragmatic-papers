@@ -33,3 +33,47 @@ export const SEEDED_UPDATED_AT = "2026-06-11T16:30:00.000Z"
  */
 export const SEEDED_DATELINE = "June 3, 2026"
 export const SEEDED_REVISION = "Updated June 11, 2026"
+
+/** The rich-text showcase article: the homepage's article tile and volume 1's only article. */
+export const SHOWCASE_SLUG = "rich-text-showcase"
+export const SHOWCASE_TITLE = "The Written Word: A Survey of Text Formatting"
+
+/** The seeded volume holding the showcase article. */
+export const VOLUME_SLUG = "1"
+
+/** The author of every seeded article, and the one whose author card is fully populated. */
+export const WRITER_NAME = "Teagan Wordsmith"
+export const WRITER_SLUG = "e2e-writer"
+
+/**
+ * The topic the seeded feature articles (footnotes, code blocks, media, social
+ * embeds) are filed under, so /topics and /topics/[slug] have something to
+ * list. Only those articles carry it: the ones other specs photograph stay
+ * untouched.
+ */
+export const TOPIC_NAME = "Research Methods"
+export const TOPIC_SLUG = "research-methods"
+
+/** An article with five footnotes, the last a reference to the showcase article. */
+export const FOOTNOTES_SLUG = "demonstrating-footnotes-comprehensive-guide"
+export const FOOTNOTES_TITLE = "Demonstrating Footnotes: A Comprehensive Guide"
+
+/** An article with three code blocks (TypeScript, JavaScript, CSS). */
+export const CODE_BLOCKS_SLUG = "code-blocks-syntax-samples-for-authors"
+
+/** An article with a single media block, which opens in a lightbox. */
+export const LIGHTBOX_SLUG = "seeing-the-evidence-a-media-block"
+export const LIGHTBOX_IMAGE_ALT = "The Pragmatic Papers mark, shown full screen"
+
+/** An article with one social embed per platform, each with a saved snapshot. */
+export const SOCIAL_EMBEDS_SLUG = "social-media-embed-test-all-variations"
+
+/**
+ * Authors with no articles, seeded so /authors runs past its five-per-page
+ * limit. Their names sort after every other seeded author's, so the authors
+ * other specs look for stay on page 1.
+ */
+export const EXTRA_AUTHORS = [
+  { name: "Victor Vellum", slug: "e2e-author-victor", email: "victor@e2e.test" },
+  { name: "Winona Whitfield", slug: "e2e-author-winona", email: "winona@e2e.test" },
+]

@@ -1,7 +1,20 @@
-import { FOUR_AUTHOR_SLUG, NARRATION_SECONDS, SEEDED_UPDATED_AT } from "./seed-e2e.constants"
+import {
+  EXTRA_AUTHORS,
+  FOUR_AUTHOR_SLUG,
+  LIGHTBOX_IMAGE_ALT,
+  LIGHTBOX_SLUG,
+  NARRATION_SECONDS,
+  SEEDED_UPDATED_AT,
+  TOPIC_NAME,
+  TOPIC_SLUG,
+  VOLUME_SLUG,
+} from "./seed-e2e.constants"
 
 import type { User } from "@/payload-types"
 import { createArticle } from "@/endpoints/seed/articles"
+import { createCodeBlocksArticle } from "@/endpoints/seed/features/code-blocks"
+import { createFootnotesArticle } from "@/endpoints/seed/features/footnotes"
+import { createSocialEmbedArticle } from "@/endpoints/seed/features/social-embeds"
 import { createMoCongressionalMapsArticle } from "@/endpoints/seed/features/interactive-maps"
 import { createFederalCourtsInteractive } from "@/endpoints/seed/features/interactives"
 import { createRichTextShowcaseArticle } from "@/endpoints/seed/features/rich-text-showcase"
@@ -9,6 +22,7 @@ import {
   createCTABlockNode,
   createHeadingNode,
   createLinkNode,
+  createMediaBlockNode,
   createNewsletterSignupBlockNode,
   createParagraph,
   createRichText,
@@ -218,7 +232,7 @@ export async function main(): Promise<void> {
     // render: two names and "& 2 more" beside two avatars and a "+2".
     //
     // Deliberately left off the homepage grid below. `gotoFirstArticle` follows
-    // the first article link there and example.spec.ts screenshots the whole
+    // the first article link there and smoke.spec.ts screenshots the whole
     // page, so adding a tile would shift baselines that have nothing to do with
     // this article. byline.spec.ts navigates to it by slug instead.
     const coAuthors: User[] = []
@@ -261,6 +275,63 @@ export async function main(): Promise<void> {
       ctx,
     )
 
+    // Feature articles for the article-interaction specs, all filed under one
+    // topic so /topics and /topics/[slug] have something to list. None is on
+    // the homepage grid or in the volume, and none is an article another spec
+    // photographs, so no baseline moves.
+    const topic = await payload.create({
+      collection: "topics",
+      context: ctx,
+      draft: false,
+      data: {
+        name: TOPIC_NAME,
+        slug: TOPIC_SLUG,
+        description: "How the evidence gets gathered, cited, and shown.",
+      },
+    })
+
+    // Five footnotes, the last a reference back to the showcase article.
+    await createFootnotesArticle(payload, [writer], [], articleId, [topic.id], ctx)
+
+    // TypeScript, JavaScript and CSS samples, each with a Copy button.
+    await createCodeBlocksArticle(payload, [writer], [], [topic.id], ctx)
+
+    // One media block, which an article renders as a lightbox trigger.
+    const lightboxImage = await createLocalMedia(
+      payload,
+      "public/android-chrome-512x512.png",
+      LIGHTBOX_IMAGE_ALT,
+    )
+    await createArticle(
+      payload,
+      {
+        title: "Seeing the Evidence: A Media Block",
+        slug: LIGHTBOX_SLUG,
+        authors: [writer.id],
+        topics: [topic.id],
+        content: createRichText([
+          createParagraph("Click the image below to see it full screen."),
+          createMediaBlockNode(lightboxImage),
+          createParagraph("Press Escape, or the close button, to come back."),
+        ]),
+        publishedAt: PUBLISHED_AT,
+      },
+      ctx,
+    )
+
+    // One embed per platform, each with a saved snapshot so nothing is fetched.
+    await createSocialEmbedArticle(payload, writer, [], [topic.id], ctx)
+
+    // Two more authors, so /authors (five per page) has a second page.
+    for (const author of EXTRA_AUTHORS) {
+      await createUser(
+        payload,
+        { ...author, password: "e2e-test-password-123", roles: ["writer"] },
+        `e2e author ${author.name}`,
+        ctx,
+      )
+    }
+
     const volume = await payload.create({
       collection: "volumes",
       context: ctx,
@@ -269,7 +340,7 @@ export async function main(): Promise<void> {
         volumeNumber: 1,
         description: "A test volume for E2E testing.",
         articles: [articleId],
-        slug: "1",
+        slug: VOLUME_SLUG,
         _status: "published",
         publishedAt: PUBLISHED_AT,
       },

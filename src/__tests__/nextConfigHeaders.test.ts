@@ -41,10 +41,32 @@ describe("next.config.ts Cache-Control", () => {
     }
   })
 
+  // Route Handlers that set their own Cache-Control: a config header for the same key would
+  // replace it, so none of these may match a Cache-Control rule at all (#947).
+  it("leaves routes that set their own Cache-Control alone", async () => {
+    for (const path of [
+      "/interactives/federal-courts/regions/ca1",
+      "/interactives/federal-courts/regions/ca1/geometry/abc123",
+      "/interactives/federal-courts/search",
+      "/feed.articles",
+      "/feed.volumes",
+      "/articles/substack.xml",
+      "/articles/some-article/substack.xml",
+      "/recommended-articles.json",
+    ]) {
+      expect(await cacheControlFor(path)).toBeUndefined()
+    }
+  })
+
   it("still caches public pages at the edge", async () => {
     for (const path of [
       "/",
       "/articles/some-article",
+      "/interactives/federal-courts",
+      "/interactives/federal-courts/searching",
+      "/feed.articles.bak",
+      "/feedback",
+      "/recommended-articles",
       "/robots.txt",
       "/_next/image-like-page",
       "/apiary",

@@ -16,7 +16,7 @@ export const revalidateArticle: CollectionAfterChangeHook<Article> = ({
       payload.logger.info(`Revalidating article at path: ${path}`)
 
       revalidatePath(path)
-      revalidatePath("/feed.volumes")
+      revalidatePath("/volumes/feed.xml")
       revalidateTag("volumes-sitemap", "max")
     }
 
@@ -27,7 +27,7 @@ export const revalidateArticle: CollectionAfterChangeHook<Article> = ({
       payload.logger.info(`Revalidating old article at path: ${oldPath}`)
 
       revalidatePath(oldPath)
-      revalidatePath("/feed.volumes")
+      revalidatePath("/volumes/feed.xml")
       revalidateTag("volumes-sitemap", "max")
     }
   }
@@ -39,7 +39,7 @@ export const revalidateDelete: CollectionAfterDeleteHook<Article> = ({ doc, req:
     const path = `/volumes/${doc?.slug}`
 
     revalidatePath(path)
-    revalidatePath("/feed.volumes")
+    revalidatePath("/volumes/feed.xml")
     revalidateTag("volumes-sitemap", "max")
   }
 

@@ -30,7 +30,7 @@ describe("revalidateArticle", () => {
 
     expect(paths()).toEqual([
       "/articles/new-piece",
-      "/feed.articles",
+      "/articles/feed.xml",
       "/articles/substack.xml",
       "/articles/new-piece/substack.xml",
       "/volumes/volume-1",

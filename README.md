@@ -48,7 +48,19 @@ The `@digitalgroundgame/fonts` package contains the proprietary display font. It
 
 If you do have access, create a **Classic GitHub Personal Access Token (PAT)** at [GitHub Settings → Tokens](https://github.com/settings/tokens) with the `read:packages` scope.
 
-The project `.npmrc` references `GH_FONT_READ` — you just need that variable set before running `pnpm install`. Choose whichever method suits you:
+pnpm reads the token from `GH_FONT_READ`, through a line in your **user-level** `~/.npmrc` (not the project's: pnpm won't expand environment variables in a committed `.npmrc`'s credentials, #955). Add it once — it holds the placeholder, not your token:
+
+```bash
+# Mac/Linux
+echo '//npm.pkg.github.com/:_authToken=${GH_FONT_READ:-""}' >> ~/.npmrc
+```
+
+```powershell
+# Windows (PowerShell)
+Add-Content "$HOME\.npmrc" '//npm.pkg.github.com/:_authToken=${GH_FONT_READ:-""}'
+```
+
+Then set `GH_FONT_READ` before running `pnpm install`. Choose whichever method suits you:
 
 - **Mac/Linux — shell profile** (applies to every terminal automatically):
 

@@ -156,6 +156,10 @@ that PR:
   <!-- claude-review sha=<sha> verdict=<pass|blocker> -->
   ```
 
+  Posting through GitHub's MCP server (`mcp__github__add_issue_comment`)
+  moves the Claude Code footer below the marker. `review-ack.yml` accepts
+  that footer after the marker, but nothing else.
+
   `verdict=blocker` if any finding is a `blocker`, otherwise `verdict=pass`.
   The "Claude review" job fails on a blocker or a missing marker, and
   `/reviewed` only counts after a summary is on the PR (see

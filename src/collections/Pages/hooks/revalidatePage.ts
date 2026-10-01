@@ -2,6 +2,7 @@ import type { CollectionAfterChangeHook, CollectionAfterDeleteHook } from "paylo
 
 import { revalidatePath, revalidateTag } from "next/cache"
 
+import { purgeEdgeCache } from "@/hooks/purgeEdgeCache"
 import type { Page } from "../../../payload-types"
 
 export const revalidatePage: CollectionAfterChangeHook<Page> = ({
@@ -19,6 +20,7 @@ export const revalidatePage: CollectionAfterChangeHook<Page> = ({
     }
     revalidatePath(path)
     revalidateTag("pages-sitemap", "max")
+    purgeEdgeCache(payload.logger, `page ${doc.slug}`)
   }
 
   // If the page was previously published, we need to revalidate the old path
@@ -29,16 +31,21 @@ export const revalidatePage: CollectionAfterChangeHook<Page> = ({
 
     revalidatePath(oldPath)
     revalidateTag("pages-sitemap", "max")
+    purgeEdgeCache(payload.logger, `page ${previousDoc.slug} unpublished`)
   }
 
   return doc
 }
 
-export const revalidateDelete: CollectionAfterDeleteHook<Page> = ({ doc, req: { context } }) => {
+export const revalidateDelete: CollectionAfterDeleteHook<Page> = ({
+  doc,
+  req: { payload, context },
+}) => {
   if (!context.disableRevalidate) {
     const path = doc?.slug === "home" ? "/" : `/${doc?.slug}`
     revalidatePath(path)
     revalidateTag("pages-sitemap", "max")
+    purgeEdgeCache(payload.logger, `page ${doc?.slug} deleted`)
   }
 
   return doc

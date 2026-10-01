@@ -3,6 +3,7 @@ import type { CollectionAfterChangeHook, CollectionAfterDeleteHook } from "paylo
 import { revalidateTag } from "next/cache"
 
 import { interactiveTag } from "@/collections/InteractiveSnapshots/tag"
+import { purgeEdgeCache } from "@/hooks/purgeEdgeCache"
 import type { Interactive } from "@/payload-types"
 
 // No revalidatePath here: /interactives/[slug] calls draftMode(), so it is always rendered
@@ -21,6 +22,7 @@ export const revalidateInteractive: CollectionAfterChangeHook<Interactive> = ({
     payload.logger.info(`Revalidating interactive: ${doc.slug}`)
     revalidateTag(interactiveTag(doc.id), "max")
     revalidateTag("interactives-sitemap", "max")
+    purgeEdgeCache(payload.logger, `interactive ${doc.slug}`)
   }
   // Unpublished, or the slug moved: the sitemap must stop naming it (or must name the new
   // slug instead).
@@ -31,17 +33,19 @@ export const revalidateInteractive: CollectionAfterChangeHook<Interactive> = ({
     payload.logger.info(`Revalidating old interactive: ${previousDoc.slug}`)
     revalidateTag(interactiveTag(doc.id), "max")
     revalidateTag("interactives-sitemap", "max")
+    purgeEdgeCache(payload.logger, `interactive ${previousDoc.slug}`)
   }
   return doc
 }
 
 export const revalidateInteractiveDelete: CollectionAfterDeleteHook<Interactive> = ({
   doc,
-  req: { context },
+  req: { payload, context },
 }) => {
   if (!context.disableRevalidate) {
     revalidateTag(interactiveTag(doc.id), "max")
     revalidateTag("interactives-sitemap", "max")
+    purgeEdgeCache(payload.logger, `interactive ${doc.slug} deleted`)
   }
   return doc
 }

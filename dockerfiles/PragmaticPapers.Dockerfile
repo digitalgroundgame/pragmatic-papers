@@ -37,11 +37,6 @@ RUN apk add --no-cache git postgresql17-client
 # 1. First, only copy files that determine the dependency tree (lockfile)
 COPY pnpm-lock.yaml .npmrc pnpm-workspace.yaml ./
 
-# GH_FONT_READ authenticates the @digitalgroundgame registry from a user-level .npmrc:
-# pnpm won't expand it from the project .npmrc (#955). The file holds the placeholder,
-# not the token, so it's safe in a layer; the token arrives as a build secret.
-RUN printf '%s\n' '//npm.pkg.github.com/:_authToken=${GH_FONT_READ:-""}' > "$HOME/.npmrc"
-
 # 2. Fetch dependencies into the pnpm store using a cache mount.
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
     echo "--- PHASE: FETCHING DEPENDENCIES ---" \

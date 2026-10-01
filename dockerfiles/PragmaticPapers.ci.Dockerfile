@@ -45,11 +45,7 @@ RUN apk add --no-cache git
 
 COPY pnpm-lock.yaml .npmrc pnpm-workspace.yaml ./
 
-# GH_FONT_READ authenticates the @digitalgroundgame registry from a user-level .npmrc:
-# pnpm won't expand it from the project .npmrc (#955). The file holds the placeholder,
-# not the token, so it's safe in a layer; the token arrives as a build secret.
-RUN printf '%s\n' '//npm.pkg.github.com/:_authToken=${GH_FONT_READ:-""}' > "$HOME/.npmrc"
-
+# GH_FONT_READ authenticates the @digitalgroundgame registry in .npmrc.
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
     --mount=type=secret,id=GH_FONT_READ,env=GH_FONT_READ \
     pnpm fetch --store-dir /pnpm/store

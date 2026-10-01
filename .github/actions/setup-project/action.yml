@@ -58,10 +58,6 @@ runs:
       run: pnpm install --frozen-lockfile
       env:
         GH_FONT_READ: ${{ inputs.gh-font-read-token }}
-        # setup-node's registry-url wrote a user-level .npmrc (NPM_CONFIG_USERCONFIG)
-        # authenticating npm.pkg.github.com with ${NODE_AUTH_TOKEN}, which pnpm expands
-        # at install time. The project .npmrc holds no credentials (#955).
-        NODE_AUTH_TOKEN: ${{ inputs.gh-font-read-token }}
 
     - name: Save the pnpm store
       if: inputs.save-pnpm-cache == 'true' && steps.pnpm-cache.outputs.cache-hit != 'true'

@@ -42,7 +42,7 @@ export const Country: React.FC<
               <SelectTrigger className="w-full" id={name}>
                 <SelectValue placeholder={label} />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent aria-label={label || name}>
                 {/* eslint-disable-next-line @typescript-eslint/no-shadow */}
                 {countryOptions.map(({ label, value }) => {
                   return (

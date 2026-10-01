@@ -1,4 +1,5 @@
 import { socialEmbedBlockToHTML } from "@/blocks/SocialEmbed/helpers/socialEmbedBlockToHTML"
+import { internalDocToHref } from "@/components/RichText/internalDocToHref"
 import { isResolved } from "@/utilities/relationships"
 import type {
   Article,
@@ -14,20 +15,27 @@ import type {
   User,
   Volume,
 } from "@/payload-types"
-import type { SerializedBlockNode, SerializedInlineBlockNode } from "@payloadcms/richtext-lexical"
+import type {
+  SerializedBlockNode,
+  SerializedInlineBlockNode,
+  SerializedLinkNode,
+} from "@payloadcms/richtext-lexical"
 import {
   convertLexicalToHTML,
+  LinkHTMLConverter,
   type HTMLConvertersFunction,
 } from "@payloadcms/richtext-lexical/html"
 import { Feed } from "feed"
+import { absoluteURL } from "./feedHTML"
 import { getServerSideURL } from "./getURL"
 import type { SerializedLexicalNode } from "./lexical"
 
-const SITE_URL = getServerSideURL()
+// Read on each call, not at import: SERVER_URL is a runtime variable (#1090).
+const siteUrl = (): string => getServerSideURL()
 
 const getMediaUrl = (url: string) => {
   const absolute =
-    url.startsWith("http://") || url.startsWith("https://") ? url : `${SITE_URL}${url}`
+    url.startsWith("http://") || url.startsWith("https://") ? url : `${siteUrl()}${url}`
   try {
     return new URL(absolute).href
   } catch {
@@ -85,7 +93,7 @@ const timelineBlockToHTML = ({ node }: { node: SerializedBlockNode<TimelineBlock
           link.type === "reference" &&
           typeof link.reference?.value === "object" &&
           link.reference.value?.slug
-            ? `${SITE_URL}/${link.reference.relationTo}/${link.reference.value.slug}`
+            ? `${siteUrl()}/${link.reference.relationTo}/${link.reference.value.slug}`
             : link.url
         citationHtml = ` <a href="${href}">[1]</a>`
       }
@@ -125,12 +133,25 @@ const codeBlockToHTML = ({ node }: { node: SerializedBlockNode<CodeBlock> }): st
  * that against the resolved Payload config.
  *
  * `pageUrl` is the page the content lives on, which blocks a feed reader
- * cannot show (interactive maps) link back to.
+ * cannot show (interactive maps) link back to, and which an internal link
+ * whose document can't be resolved falls back to.
  */
 export const createHtmlConverters =
   (pageUrl: string): HTMLConvertersFunction =>
   ({ defaultConverters }) => ({
     ...defaultConverters,
+    // Payload's default link converter has no `internalDocToHref`, so every
+    // internal link would render as `href="#"` (#1023). Feed readers need
+    // absolute URLs; the site's helper returns a path.
+    ...LinkHTMLConverter({
+      internalDocToHref: ({ linkNode }: { linkNode: SerializedLinkNode }) => {
+        try {
+          return absoluteURL(internalDocToHref({ linkNode }), siteUrl())
+        } catch {
+          return pageUrl
+        }
+      },
+    }),
     // Last resort for anything that slips past the converter test: keep an
     // unknown element's text rather than printing "unknown node", and drop a
     // childless node (a block). It has to be a function: "" is ignored.
@@ -193,7 +214,7 @@ const formatFootnotes = (footnotes?: Article["footnotes"]): string => {
         } else if (link.type === "reference" && link.reference) {
           const referenceUrl =
             typeof link.reference.value === "object" && link.reference.value?.slug
-              ? `${SITE_URL}/${link.reference.relationTo}/${link.reference.value.slug}`
+              ? `${siteUrl()}/${link.reference.relationTo}/${link.reference.value.slug}`
               : link.url
           linkHtml = ` <a href="${referenceUrl}" style="border: none; color: #0066cc; text-decoration: underline;" title="Link to source ${link.label || ""}">${link.url}</a>`
         }
@@ -211,12 +232,12 @@ const formatFootnotes = (footnotes?: Article["footnotes"]): string => {
 
 const formatArticleLink = (article: Article) => {
   if (!article.meta?.description) {
-    return `<li style="margin: 1em 0"><a href="${SITE_URL}/articles/${article.slug}">${article.title}</a></li>`
+    return `<li style="margin: 1em 0"><a href="${siteUrl()}/articles/${article.slug}">${article.title}</a></li>`
   }
 
   return `
 <li style="margin: 1em 0">
-  <a href="${SITE_URL}/articles/${article.slug}">${article.title}</a>
+  <a href="${siteUrl()}/articles/${article.slug}">${article.title}</a>
   <p style="margin: 0.5em 0 0 0; color: #666">${article.meta.description}</p>
 </li>`
 }
@@ -233,7 +254,7 @@ const formatVolumeContent = (volume: Volume) => {
 <div style="margin: 1.5em 0">
   ${convertLexicalToHTML({
     data: volume.editorsNote,
-    converters: createHtmlConverters(`${SITE_URL}/volumes/${volume.slug}`),
+    converters: createHtmlConverters(`${siteUrl()}/volumes/${volume.slug}`),
   })}
 </div>`)
   }
@@ -262,15 +283,15 @@ const formatVolumeContent = (volume: Volume) => {
 const createBaseFeedConfig = (type: "Articles" | "Volumes") => ({
   title: `The Pragmatic Papers - ${type}`,
   description: `Latest ${type.toLowerCase()} from The Pragmatic Papers`,
-  id: SITE_URL,
-  link: SITE_URL,
+  id: siteUrl(),
+  link: siteUrl(),
   language: "en",
-  favicon: `${SITE_URL}/favicon.ico`,
+  favicon: `${siteUrl()}/favicon.ico`,
   copyright: `All rights reserved ${new Date().getFullYear()}`,
   generator: "The Pragmatic Papers",
   updated: new Date(),
   feedLinks: {
-    atom: `${SITE_URL}/feed.${type.toLowerCase()}`,
+    atom: `${siteUrl()}/feed.${type.toLowerCase()}`,
   },
 })
 
@@ -281,8 +302,8 @@ export const generateArticleFeed = (articles: Article[]): string => {
     if (article._status === "published" && article.publishedAt) {
       feed.addItem({
         title: article.title,
-        id: `${SITE_URL}/articles/${article.slug}`,
-        link: `${SITE_URL}/articles/${article.slug}`,
+        id: `${siteUrl()}/articles/${article.slug}`,
+        link: `${siteUrl()}/articles/${article.slug}`,
         published: new Date(article.publishedAt),
         description: article.meta?.description ? article.meta.description : "",
         date: new Date(article.publishedAt),
@@ -298,7 +319,7 @@ export const generateArticleFeed = (articles: Article[]): string => {
             const articleContent = article.content
               ? convertLexicalToHTML({
                   data: article.content,
-                  converters: createHtmlConverters(`${SITE_URL}/articles/${article.slug}`),
+                  converters: createHtmlConverters(`${siteUrl()}/articles/${article.slug}`),
                 })
               : ""
             const footnotesHtml = formatFootnotes(article.footnotes)
@@ -328,8 +349,8 @@ export const generateVolumeFeed = (volumes: Volume[]): string => {
     if (volume._status === "published" && volume.publishedAt) {
       feed.addItem({
         title: volume.title,
-        id: `${SITE_URL}/volumes/${volume.slug}`,
-        link: `${SITE_URL}/volumes/${volume.slug}`,
+        id: `${siteUrl()}/volumes/${volume.slug}`,
+        link: `${siteUrl()}/volumes/${volume.slug}`,
         description: volume.meta?.description || "",
         date: new Date(volume.publishedAt),
         image:

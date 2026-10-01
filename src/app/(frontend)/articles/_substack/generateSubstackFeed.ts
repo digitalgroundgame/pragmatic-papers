@@ -15,6 +15,7 @@ import type {
   User,
 } from "@/payload-types"
 import { getLinkFieldUrl } from "@/utilities/getLinkFieldUrl"
+import { absoluteURL as toAbsoluteURL } from "@/utilities/feedHTML"
 import { getServerSideURL } from "@/utilities/getURL"
 import { isResolved } from "@/utilities/relationships"
 import type {
@@ -55,11 +56,7 @@ const escapeHTML = (value: string): string =>
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#39;")
 
-const absoluteURL = (url: string): string => {
-  if (/^https?:\/\//.test(url)) return url
-  const siteURL = getServerSideURL()
-  return `${siteURL}${url.startsWith("/") ? "" : "/"}${url}`
-}
+const absoluteURL = (url: string): string => toAbsoluteURL(url, getServerSideURL())
 
 export const articleURL = (article: Pick<Article, "slug">): string =>
   absoluteURL(`/articles/${article.slug}`)

@@ -80,7 +80,7 @@ export function Segmented<T extends string>({
                   rather than what the reader chose ("Hidden"). We already have the mapping. */}
               <SelectValue>{options.find((o) => o.value === value)?.label ?? value}</SelectValue>
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent aria-label={label}>
               {options.map((o) => {
                 const item = (
                   <SelectItem value={o.value} label={o.label}>

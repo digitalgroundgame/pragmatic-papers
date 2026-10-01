@@ -27,7 +27,7 @@ const meta = {
       <SelectTrigger className="w-48" aria-label="Sort articles">
         <SelectValue />
       </SelectTrigger>
-      <SelectContent>
+      <SelectContent aria-label="Sort articles">
         <SelectGroup>
           <SelectLabel>Sort by</SelectLabel>
           {items.slice(0, 2).map((item) => (
@@ -56,6 +56,18 @@ export const Default: Story = {
     await expect(args.onValueChange).toHaveBeenCalledWith("popular", expect.anything())
     // The listbox stays mounted while it animates out; let it go before the axe check runs.
     await waitFor(() => expect(screen.queryByRole("listbox")).not.toBeInTheDocument())
+  },
+}
+
+/**
+ * Left open, so the axe check that follows `play` sees the listbox every time: an unnamed listbox
+ * fails here on every run, not only when axe happens to beat the close animation (#1028).
+ */
+export const Open: Story = {
+  play: async ({ canvasElement }) => {
+    await userEvent.click(within(canvasElement).getByRole("combobox", { name: "Sort articles" }))
+    const listbox = await screen.findByRole("listbox", { name: "Sort articles" })
+    await expect(within(listbox).getByRole("option", { name: "Most read" })).toBeVisible()
   },
 }
 

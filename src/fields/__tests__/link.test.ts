@@ -1,47 +1,84 @@
-import type { Field, GroupField, RowField } from "payload"
+// @vitest-environment node
+import type { GroupField, SelectField } from "payload"
 import { describe, expect, it } from "vitest"
 
-import { link } from "@/fields/link"
+import { appearanceOptions, link } from "../link"
+import { namedFields, showsFor } from "./helpers"
 
-const named = (fields: Field[], name: string) => {
-  const field = fields.find((candidate) => "name" in candidate && candidate.name === name)
-  if (!field) throw new Error(`No field named "${name}"`)
-  return field
-}
+const group = (...args: Parameters<typeof link>) => link(...args) as GroupField
 
-describe("link", () => {
-  it("lays the reference and url fields out at half width beside the label", () => {
-    const group = link() as GroupField
-    const row = group.fields[1] as RowField
+describe("link (deprecated)", () => {
+  it("returns a link group with type, new tab, target, label and appearance", () => {
+    const field = group()
 
-    expect(row.type).toBe("row")
-    expect(row.fields.map((field) => "name" in field && field.name)).toEqual([
+    expect(field).toMatchObject({ name: "link", type: "group", admin: { hideGutter: true } })
+    expect(Object.keys(namedFields(field.fields))).toEqual([
+      "type",
+      "newTab",
       "reference",
       "url",
       "label",
+      "appearance",
     ])
-    for (const name of ["reference", "url", "label"]) {
-      expect(named(row.fields, name).admin).toMatchObject({ width: "50%" })
+    expect(namedFields(field.fields).reference).toMatchObject({
+      relationTo: ["pages", "volumes", "articles"],
+      required: true,
+    })
+  })
+
+  it("shows the reference or the URL depending on the link type", () => {
+    const { reference, url } = namedFields(group().fields)
+
+    expect(showsFor(reference!, { type: "reference" })).toBe(true)
+    expect(showsFor(reference!, { type: "custom" })).toBe(false)
+    expect(showsFor(url!, { type: "custom" })).toBe(true)
+    expect(showsFor(url!, { type: "reference" })).toBe(false)
+  })
+
+  it("lays the reference and URL out at half width beside the label", () => {
+    const { reference, url, label } = namedFields(group().fields)
+
+    for (const field of [reference, url, label]) {
+      expect(field!.admin).toMatchObject({ width: "50%" })
     }
   })
 
-  it("keeps each link type's condition when it adds the width", () => {
-    const row = (link() as GroupField).fields[1] as RowField
-    const reference = named(row.fields, "reference")
-    const url = named(row.fields, "url")
+  it("leaves the reference and URL full width when disableLabel is set", () => {
+    const { reference, url } = namedFields(group({ disableLabel: true }).fields)
 
-    expect(reference.admin?.condition?.({}, { type: "reference" }, {} as never)).toBe(true)
-    expect(reference.admin?.condition?.({}, { type: "custom" }, {} as never)).toBe(false)
-    expect(url.admin?.condition?.({}, { type: "custom" }, {} as never)).toBe(true)
-    expect(url.admin?.condition?.({}, { type: "reference" }, {} as never)).toBe(false)
+    for (const field of [reference, url]) {
+      expect(field!.admin).not.toHaveProperty("width")
+    }
   })
 
-  it("leaves the reference and url fields full width when the label is disabled", () => {
-    const group = link({ disableLabel: true }) as GroupField
+  it("drops the label field when disableLabel is set", () => {
+    const field = group({ disableLabel: true })
 
-    expect(group.fields.some((field) => "name" in field && field.name === "label")).toBe(false)
-    for (const name of ["reference", "url"]) {
-      expect(named(group.fields, name).admin).not.toHaveProperty("width")
-    }
+    expect(namedFields(field.fields)).not.toHaveProperty("label")
+    expect(field.fields.map((f) => ("name" in f ? f.name : f.type))).toEqual([
+      "row",
+      "reference",
+      "url",
+      "appearance",
+    ])
+  })
+
+  it("offers both appearances by default, a chosen subset, or none", () => {
+    const appearance = (field: GroupField) => namedFields(field.fields).appearance as SelectField
+
+    expect(appearance(group()).options).toEqual([
+      appearanceOptions.default,
+      appearanceOptions.outline,
+    ])
+    expect(appearance(group({ appearances: ["outline"] })).options).toEqual([
+      appearanceOptions.outline,
+    ])
+    expect(appearance(group({ appearances: false }))).toBeUndefined()
+  })
+
+  it("deep-merges overrides into the group", () => {
+    const field = group({ overrides: { name: "cta", admin: { description: "d" } } })
+
+    expect(field).toMatchObject({ name: "cta", admin: { hideGutter: true, description: "d" } })
   })
 })

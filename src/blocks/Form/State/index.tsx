@@ -41,7 +41,7 @@ export const State: React.FC<
               <SelectTrigger className="w-full" id={name}>
                 <SelectValue placeholder={label} />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent aria-label={label || name}>
                 {/* eslint-disable-next-line @typescript-eslint/no-shadow */}
                 {stateOptions.map(({ label, value }) => {
                   return (

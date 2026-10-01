@@ -1,3 +1,4 @@
+import { formatTimelineDate } from "@/blocks/Timeline/converters"
 import { CMSLink } from "@/components/Link/CMSLink2"
 import { getLinkFieldUrl } from "@/utilities/getLinkFieldUrl"
 import { cn } from "@/utilities/utils"
@@ -47,11 +48,7 @@ const EventContent: React.FC<{
     )}
     <div className={cn("w-full max-w-[240px]", isLeft ? "text-right" : "order-first")}>
       <div className="text-brand dark:text-brand-high-contrast text-sm font-bold tracking-wide">
-        {new Date(event.date).toLocaleDateString(undefined, {
-          month: "long",
-          day: "numeric",
-          year: "numeric",
-        })}
+        {formatTimelineDate(event.date)}
       </div>
       {event.title && <div>{event.title}</div>}
       <p className={cn("text-muted-foreground text-sm text-pretty")}>

@@ -140,7 +140,11 @@ too.
 
 - **File structure**: `blocks/<Name>/config.ts` (Payload config) + `blocks/<Name>/Component.tsx` (React component)
 - **Two rendering systems**: `RenderBlocks` renders page layout blocks (Content, CTA, MediaBlock, Form, VolumeView); `RichText` renders Lexical inline/rich-text blocks (Banner, Code, Math, Footnote, SocialEmbed, SquiggleRule)
-- **Feed converters**: the RSS feeds (and the Substack import feed) render article content and volume editor's notes to HTML, so a block or Lexical feature added to those editors (or to the rich text inside their blocks) also needs a converter in `createHtmlConverters` (`src/utilities/generateRssFeed.ts`) and, for article content, `createSubstackConverters` (`src/app/(frontend)/articles/_substack/generateSubstackFeed.ts`). `src/utilities/__tests__/generateRssFeed.converters.test.ts` reads the resolved Payload config and fails, naming what's missing, until it has one
+- **Feed converters**: the RSS feeds (`/feed.articles`, `/feed.volumes`) and the Substack import feed render article content and volume editor's notes to HTML. A block's non-React renderings live in **`blocks/<Name>/converters.ts`**, one function per output **format**, named for the format rather than the feed (`timelineToHTML`, `displayMathToCode`). Each takes the block's fields plus a `FeedContext` (`src/utilities/feedHTML.ts`: `siteUrl`, `pageUrl`, `richTextToHTML` for nested rich text) and returns plain semantic HTML: absolute URLs, no inline styles, and every CMS value through `escapeHTML`. Shared logic used by several formats, or by `Component.tsx`, goes in the same file (`formatTimelineDate`). `converters.ts` must run in the browser, because Storybook imports it, so no server-only imports. The feed files only map block slugs to the format they want, through `fromBlock`: `createHtmlConverters` (`src/utilities/generateRssFeed.ts`) and, for article content, `createSubstackConverters` (`src/app/(frontend)/articles/_substack/generateSubstackFeed.ts`). A block added to those editors (or to the rich text inside their blocks) needs a converter, plus:
+  - a `__tests__/converters.test.ts` using `toMatchInlineSnapshot()`, fed from `src/stories/fixtures/blocks.ts`
+  - a `Feed` story that renders the output through `src/stories/FeedHTML.tsx`, so it gets the axe check
+
+  `src/utilities/__tests__/generateRssFeed.converters.test.ts` reads the resolved Payload config and fails, naming what's missing, until every feed has a converter
 
 ### Data Fetching Patterns
 

@@ -2,8 +2,16 @@ import type { Meta, StoryObj } from "@storybook/nextjs-vite"
 import { expect, within } from "storybook/test"
 
 import { MathJaxProviderRoot } from "@/providers/MathJaxProvider"
+import { FeedHTML } from "@/stories/FeedHTML"
+import { displayMathBlock, inlineMathBlock } from "@/stories/fixtures/blocks"
 
 import { MathBlock } from "./Component"
+import {
+  displayMathToCode,
+  displayMathToHTML,
+  inlineMathToCode,
+  inlineMathToHTML,
+} from "./converters"
 
 const meta = {
   title: "Blocks/Math",
@@ -15,10 +23,7 @@ const meta = {
       </MathJaxProviderRoot>
     ),
   ],
-  args: {
-    blockType: "displayMathBlock",
-    math: "a^2 + b^2 = c^2",
-  },
+  args: displayMathBlock,
   argTypes: {
     blockType: {
       control: "inline-radio",
@@ -44,7 +49,7 @@ export const DisplayWithDescription: Story = {
 }
 
 export const Inline: Story = {
-  args: { blockType: "inlineMathBlock", math: "E = mc^2" },
+  args: inlineMathBlock,
   render: (args) => (
     <p>
       Einstein showed that <MathBlock {...args} /> in 1905.
@@ -60,5 +65,26 @@ export const InlineWithDescription: Story = {
       name: "mass-energy equivalence",
     })
     await expect(math.tagName).toBe("SPAN")
+  },
+}
+
+/**
+ * Math in the feeds: MathJax delimiters for RSS readers that typeset them,
+ * and the LaTeX source as code for Substack, which can't.
+ */
+export const Feed: Story = {
+  render: () => (
+    <FeedHTML
+      html={[
+        displayMathToHTML(displayMathBlock),
+        `<p>Einstein showed that ${inlineMathToHTML(inlineMathBlock)} in 1905.</p>`,
+        displayMathToCode(displayMathBlock),
+        `<p>Einstein showed that ${inlineMathToCode(inlineMathBlock)} in 1905.</p>`,
+      ].join("")}
+    />
+  ),
+  play: async ({ canvasElement }) => {
+    await expect(canvasElement.querySelector("pre code")).toHaveTextContent(displayMathBlock.math)
+    await expect(canvasElement.querySelector("p code")).toHaveTextContent(inlineMathBlock.math)
   },
 }

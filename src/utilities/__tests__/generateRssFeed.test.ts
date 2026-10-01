@@ -184,3 +184,166 @@ describe("RSS feed links", () => {
     expect(html).toContain('href="https://source.test/a"')
   })
 })
+
+const entries = (xml: string) => xml.match(/<entry>[\s\S]*?<\/entry>/g) ?? []
+
+describe("generateArticleFeed", () => {
+  it("is a valid Atom feed with the site's metadata and its own URL", () => {
+    const feed = generateArticleFeed([])
+
+    expect(feed).toMatch(/^<\?xml version="1.0" encoding="utf-8"\?>/)
+    expect(feed).toContain('<feed xmlns="http://www.w3.org/2005/Atom">')
+    expect(feed).toContain("<title>The Pragmatic Papers - Articles</title>")
+    expect(feed).toContain("<id>https://example.org</id>")
+    expect(feed).toContain('<link rel="self" href="https://example.org/articles/feed.xml"/>')
+  })
+
+  it("has no entries for no articles", () => {
+    expect(entries(generateArticleFeed([]))).toEqual([])
+  })
+
+  it("adds an entry per published article with its title, link, dates and authors", () => {
+    const feed = generateArticleFeed([
+      makeArticle([paragraph(text("Body text"))], {
+        authors: [
+          { id: 1, name: "Ada Lovelace" } as never,
+          { id: 2, name: "Alan Turing" } as never,
+        ],
+        meta: { description: "A summary" },
+      }),
+    ])
+    const [entry] = entries(feed)
+
+    expect(entries(feed)).toHaveLength(1)
+    expect(entry).toContain('<title type="html"><![CDATA[Test Article]]></title>')
+    expect(entry).toContain("<id>https://example.org/articles/test-article</id>")
+    expect(entry).toContain('<link href="https://example.org/articles/test-article"/>')
+    expect(entry).toContain("<published>2026-09-01T12:00:00.000Z</published>")
+    expect(entry).toContain('<summary type="html"><![CDATA[A summary]]></summary>')
+    expect(entry).toContain("<name>Ada Lovelace</name>")
+    expect(entry).toContain("<name>Alan Turing</name>")
+    expect(entry).toContain("<p>Body text</p>")
+  })
+
+  it("skips drafts and articles without a publish date", () => {
+    const feed = generateArticleFeed([
+      makeArticle([], { slug: "draft", _status: "draft" }),
+      makeArticle([], { slug: "undated", publishedAt: null }),
+      makeArticle([], { slug: "live" }),
+    ])
+
+    expect(entries(feed)).toHaveLength(1)
+    expect(feed).toContain("https://example.org/articles/live")
+  })
+
+  it("handles an article with no authors, description, image, content or footnotes", () => {
+    const feed = generateArticleFeed([
+      makeArticle([], {
+        authors: undefined,
+        meta: undefined,
+        content: undefined as never,
+        footnotes: undefined,
+      }),
+    ])
+    const [entry] = entries(feed)
+
+    expect(entry).toBeDefined()
+    expect(entry).not.toContain("<author>")
+    expect(entry).not.toContain("Footnotes")
+  })
+
+  it("leaves out authors that weren't loaded", () => {
+    const feed = generateArticleFeed([makeArticle([], { authors: [7] })])
+    expect(entries(feed)[0]).not.toContain("<author>")
+  })
+
+  it("uses the SEO image, made absolute", () => {
+    const feed = generateArticleFeed([
+      makeArticle([], { meta: { image: { id: 1, url: "/api/media/file/hero.jpg" } as never } }),
+    ])
+    expect(feed).toContain("https://example.org/api/media/file/hero.jpg")
+  })
+
+  it("appends the article's footnotes after its content", () => {
+    const feed = generateArticleFeed([
+      makeArticle([paragraph(text("Body"))], {
+        footnotes: [
+          {
+            id: "1",
+            index: 1,
+            note: "A source",
+            attributionEnabled: true,
+            link: { type: "custom", url: "https://source.test/a" },
+          },
+        ],
+      }),
+    ])
+    const entry = entries(feed)[0] ?? ""
+
+    expect(entry.indexOf("<p>Body</p>")).toBeLessThan(entry.indexOf("Footnotes"))
+    expect(entry).toContain('<span id="footnote-1">A source</span>')
+    expect(entry).toContain('href="https://source.test/a"')
+  })
+})
+
+describe("generateVolumeFeed", () => {
+  it("is an Atom feed for volumes with its own URL", () => {
+    const feed = generateVolumeFeed([])
+
+    expect(feed).toContain("<title>The Pragmatic Papers - Volumes</title>")
+    expect(feed).toContain('<link rel="self" href="https://example.org/volumes/feed.xml"/>')
+    expect(entries(feed)).toEqual([])
+  })
+
+  it("adds an entry per published volume with its description and article list", () => {
+    const feed = generateVolumeFeed([
+      makeVolume({
+        articles: [
+          makeArticle([], {
+            slug: "first",
+            title: "First Piece",
+            authors: [{ id: 1, name: "Ada Lovelace" } as never],
+          }),
+          makeArticle([], { slug: "second", title: "Second Piece" }),
+        ],
+      }),
+    ])
+    const [entry] = entries(feed)
+
+    expect(entries(feed)).toHaveLength(1)
+    expect(entry).toContain("<id>https://example.org/volumes/1</id>")
+    expect(entry).toContain("The first volume")
+    expect(entry).toContain("Articles in this Volume")
+    expect(entry).toContain('<a href="https://example.org/articles/first">First Piece</a>')
+    expect(entry).toContain('<a href="https://example.org/articles/second">Second Piece</a>')
+    expect(entry).toContain("<name>Ada Lovelace</name>")
+  })
+
+  it("renders the editor's note", () => {
+    const feed = generateVolumeFeed([
+      makeVolume({ editorsNote: richText([paragraph(text("From the editor"))]) as never }),
+    ])
+    expect(feed).toContain("<p>From the editor</p>")
+  })
+
+  it("skips drafts", () => {
+    expect(entries(generateVolumeFeed([makeVolume({ _status: "draft" })]))).toEqual([])
+  })
+
+  it("leaves out articles that weren't loaded instead of linking to /articles/undefined", () => {
+    const feed = generateVolumeFeed([makeVolume({ articles: [3] })])
+
+    expect(feed).not.toContain("undefined")
+    expect(feed).not.toContain("Articles in this Volume")
+  })
+
+  it("handles a volume with no articles, editor's note or SEO fields", () => {
+    const feed = generateVolumeFeed([
+      makeVolume({ articles: undefined, editorsNote: undefined, meta: undefined }),
+    ])
+    const [entry] = entries(feed)
+
+    expect(entry).toBeDefined()
+    expect(entry).not.toContain("<author>")
+  })
+})

@@ -253,12 +253,11 @@ const formatVolumeContent = (volume: Volume) => {
 </div>`)
   }
 
+  // An article not loaded at this depth is a bare numeric ID: leave it out
+  // rather than link to `/articles/undefined`.
   const articles = volume.articles
-    ?.map((articleRef) => {
-      if (typeof articleRef === "string") return ""
-      return formatArticleLink(articleRef as Article)
-    })
-    .filter(Boolean)
+    ?.filter(isResolved<Article>)
+    .map(formatArticleLink)
     .join("\n")
 
   if (articles) {

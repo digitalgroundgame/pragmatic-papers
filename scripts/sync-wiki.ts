@@ -16,6 +16,11 @@
  * The very first sync (no sync commit in the wiki's history yet) imports
  * nothing and overwrites whatever is there, since `wiki/` was copied from it.
  *
+ * A run also skips when the commit it's on adds no `wiki/` change that the last
+ * synced commit lacks. A release merges a candidate cut days earlier, so a doc
+ * fix published from dev in between would otherwise be rolled back until the
+ * next release.
+ *
  * DRY_RUN=true reports what would change and writes nothing.
  */
 import { execFileSync } from "node:child_process"
@@ -36,6 +41,13 @@ export interface WikiState {
   headSummary: string
   /** Whether any commit in the wiki's history is a sync. */
   everSynced: boolean
+}
+
+/** The repo commit a sync commit's message says it came from. */
+export function syncedSha(message: string, repo: string): string | undefined {
+  const at = message.indexOf(`${MARKER}${repo}@`)
+  if (at === -1) return undefined
+  return /^[0-9a-f]{7,40}/.exec(message.slice(at + MARKER.length + repo.length + 1))?.[0]
 }
 
 /** Why this run must not overwrite the wiki, or undefined when it may. */
@@ -77,19 +89,21 @@ export type Env = Record<string, string | undefined>
 
 export function main({
   wikiDir,
-  sourceDir = "wiki",
+  repoDir = ".",
   env,
   log,
 }: {
   /** A clone of the wiki, with `origin` to push to. */
   wikiDir: string
-  /** The pages to publish. */
-  sourceDir?: string
+  /** The checkout whose `wiki/` is published, with its history. */
+  repoDir?: string
   env: Env
   log: (message: string) => void
 }): number {
   const git = (args: string[]) =>
     execFileSync("git", ["-C", wikiDir, ...args], { encoding: "utf8" })
+  const repoGit = (args: string[]) =>
+    execFileSync("git", ["-C", repoDir, ...args], { encoding: "utf8", stdio: "pipe" })
   const repo = env.GITHUB_REPOSITORY ?? "digitalgroundgame/pragmatic-papers"
   const sha = env.GITHUB_SHA ?? "local"
   const state: WikiState = {
@@ -97,13 +111,33 @@ export function main({
     headSummary: git(["log", "-1", "--format=%h by %an: %s"]).trim(),
     everSynced: git(["log", "--format=%h", "--fixed-strings", `--grep=${MARKER}`]).trim() !== "",
   }
-  const refused = refusal(state, env.FORCE === "true")
+  const force = env.FORCE === "true"
+  const refused = refusal(state, force)
   if (refused) {
     log(`::error::${refused}`)
     return 1
   }
 
-  mirror(sourceDir, wikiDir)
+  const last = syncedSha(
+    git(["log", "-1", "--format=%B", "--fixed-strings", `--grep=${MARKER}`]),
+    repo,
+  )
+  if (last && !force) {
+    let newer: string | undefined
+    try {
+      newer = repoGit(["log", "--format=%h", "HEAD", "--not", last, "--", "wiki"]).trim()
+    } catch {
+      // The last synced commit isn't in this checkout's history; sync as usual.
+    }
+    if (newer === "") {
+      log(
+        `This commit adds no change to wiki/ that the wiki (synced from ${last.slice(0, 7)}) lacks; nothing to sync.`,
+      )
+      return 0
+    }
+  }
+
+  mirror(join(repoDir, "wiki"), wikiDir)
   git(["add", "--all"])
   const changed = git(["status", "--porcelain"]).trim()
   if (!changed) {

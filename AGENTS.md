@@ -386,8 +386,9 @@ any other file, so a cloud session (which can't push to the wiki's own repositor
 the GitHub web editor can change it. When a release reaches `main`,
 `.github/workflows/wiki-sync.yml` mirrors `wiki/` onto the wiki in one commit, so the
 wiki describes what's in production. A doc fix that can't wait for the release is
-published by running **Wiki sync** by hand on `dev`. A PR touching `wiki/` gets a dry
-run listing the pages it changes.
+published by running **Wiki sync** by hand on `dev`; a later release whose candidate
+predates it won't roll it back. A PR touching `wiki/` gets a dry run listing the pages
+it changes.
 
 Don't edit the wiki on github.com: the next sync would overwrite it, so the workflow
 refuses to sync while the wiki's newest commit isn't one of its own. Copy such an edit

@@ -1,11 +1,19 @@
 import { execFileSync } from "node:child_process"
-import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs"
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 
 import { describe, expect, it } from "vitest"
 
-import { listFiles, main, MARKER, mirror, refusal, syncMessage } from "../../scripts/sync-wiki"
+import {
+  listFiles,
+  main,
+  MARKER,
+  mirror,
+  refusal,
+  syncedSha,
+  syncMessage,
+} from "../../scripts/sync-wiki"
 
 describe("refusal", () => {
   const synced = {
@@ -66,22 +74,42 @@ describe("mirror", () => {
   })
 })
 
+describe("syncedSha", () => {
+  it("reads the repo commit back out of a sync message", () => {
+    const sha = "0123456789abcdef0123456789abcdef01234567"
+    expect(syncedSha(syncMessage("o/r", sha), "o/r")).toBe(sha)
+    expect(syncedSha(syncMessage("o/r", sha), "other/repo")).toBeUndefined()
+    expect(syncedSha("Updated Home (markdown)", "o/r")).toBeUndefined()
+  })
+})
+
 describe("main, against real git repositories", () => {
-  const SHA = "0123456789abcdef0123456789abcdef01234567"
   const run = (dir: string, ...args: string[]) =>
     execFileSync("git", ["-C", dir, ...args], { encoding: "utf8" })
   const commitAll = (dir: string, message: string) => {
     run(dir, "add", "--all")
     run(dir, "-c", "user.name=ana", "-c", "user.email=a@example.com", "commit", "-qm", message)
+    return run(dir, "rev-parse", "HEAD").trim()
   }
 
-  /** A bare "GitHub" wiki holding Home.md, a clone of it, and a wiki/ folder to publish. */
+  /** Replace the repo's wiki/ with `pages` and commit it, returning the commit. */
+  const writePages = ({ repo }: { repo: string }, pages: Record<string, string>) => {
+    rmSync(join(repo, "wiki"), { recursive: true, force: true })
+    mkdirSync(join(repo, "wiki"))
+    for (const [name, content] of Object.entries(pages))
+      writeFileSync(join(repo, "wiki", name), content)
+    return commitAll(repo, "wiki change")
+  }
+  /**
+   * A bare "GitHub" wiki holding Home.md, a clone of it to sync into, and a
+   * repo whose wiki/ holds `pages`, committed.
+   */
   function setup(pages: Record<string, string>) {
     const root = mkdtempSync(join(tmpdir(), "sync-"))
     const origin = join(root, "origin.git")
     const seed = join(root, "seed")
     const clone = join(root, "clone")
-    const source = join(root, "source")
+    const repo = join(root, "repo")
     execFileSync("git", ["init", "-q", "--bare", "-b", "master", origin])
     execFileSync("git", ["clone", "-q", origin, seed])
     writeFileSync(join(seed, "Home.md"), "old home\n")
@@ -90,30 +118,33 @@ describe("main, against real git repositories", () => {
     execFileSync("git", ["clone", "-q", origin, clone])
     run(clone, "config", "user.name", "github-actions[bot]")
     run(clone, "config", "user.email", "bot@example.com")
-    mkdirSync(source)
-    for (const [name, content] of Object.entries(pages)) writeFileSync(join(source, name), content)
-    return { origin, seed, clone, source }
+    execFileSync("git", ["init", "-q", "-b", "dev", repo])
+    const repos = { origin, seed, clone, repo }
+    writePages(repos, pages)
+    return repos
   }
   const sync = (
-    { clone, source }: { clone: string; source: string },
+    { clone, repo }: { clone: string; repo: string },
     env: Record<string, string> = {},
   ) => {
     const logs: string[] = []
     const code = main({
       wikiDir: clone,
-      sourceDir: source,
-      env: { GITHUB_REPOSITORY: "o/r", GITHUB_SHA: SHA, ...env },
+      repoDir: repo,
+      env: { GITHUB_REPOSITORY: "o/r", GITHUB_SHA: run(repo, "rev-parse", "HEAD").trim(), ...env },
       log: (message) => logs.push(message),
     })
     return { code, logs: logs.join("\n") }
   }
   const originLog = (origin: string) => run(origin, "log", "--format=%s", "master").trim()
+  const published = (origin: string, page = "Home.md") => run(origin, "show", `master:${page}`)
 
   it("pushes the first sync as one marked commit", () => {
     const repos = setup({ "Home.md": "new home\n", "Page.md": "page\n" })
+    const head = run(repos.repo, "rev-parse", "HEAD").trim()
     expect(sync(repos).code).toBe(0)
-    expect(originLog(repos.origin).split("\n")[0]).toBe("docs: sync from o/r@0123456")
-    expect(run(repos.origin, "show", "master:Page.md")).toBe("page\n")
+    expect(originLog(repos.origin).split("\n")[0]).toBe(`docs: sync from o/r@${head.slice(0, 7)}`)
+    expect(published(repos.origin, "Page.md")).toBe("page\n")
   })
 
   it("does nothing when the wiki already matches", () => {
@@ -132,6 +163,24 @@ describe("main, against real git repositories", () => {
     expect(originLog(repos.origin)).toBe("Initial Home")
   })
 
+  it("doesn't roll back a newer sync when an older commit, such as a release, comes later", () => {
+    const repos = setup({ "Home.md": "candidate home\n" })
+    const candidate = run(repos.repo, "rev-parse", "HEAD").trim()
+    writePages(repos, { "Home.md": "doc fix from dev\n" })
+    expect(sync(repos).code).toBe(0)
+
+    run(repos.repo, "checkout", "-q", candidate)
+    const { code, logs } = sync(repos)
+    expect(code).toBe(0)
+    expect(logs).toContain("adds no change to wiki/")
+    expect(published(repos.origin)).toBe("doc fix from dev\n")
+
+    run(repos.repo, "checkout", "-q", "dev")
+    writePages(repos, { "Home.md": "next release\n" })
+    expect(sync(repos).code).toBe(0)
+    expect(published(repos.origin)).toBe("next release\n")
+  })
+
   it("refuses after a direct edit since the last sync, and overwrites it when forced", () => {
     const repos = setup({ "Home.md": "new home\n" })
     sync(repos)
@@ -140,14 +189,14 @@ describe("main, against real git repositories", () => {
     commitAll(repos.seed, "Updated Home (markdown)")
     run(repos.seed, "push", "-q", "origin", "HEAD:master")
     run(repos.clone, "pull", "-q", "origin", "master")
-    writeFileSync(join(repos.source, "Home.md"), "newer home\n")
+    writePages(repos, { "Home.md": "newer home\n" })
 
     const refused = sync(repos)
     expect(refused.code).toBe(1)
     expect(refused.logs).toContain("by ana: Updated Home (markdown)")
-    expect(run(repos.origin, "show", "master:Home.md")).toBe("edited on the wiki\n")
+    expect(published(repos.origin)).toBe("edited on the wiki\n")
 
     expect(sync(repos, { FORCE: "true" }).code).toBe(0)
-    expect(run(repos.origin, "show", "master:Home.md")).toBe("newer home\n")
+    expect(published(repos.origin)).toBe("newer home\n")
   })
 })

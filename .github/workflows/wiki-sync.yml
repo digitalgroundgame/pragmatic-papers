@@ -8,16 +8,19 @@ name: Wiki sync
 #   - Push to main touching wiki/, which is a release: mirrors wiki/ onto the
 #     wiki in one commit, so the wiki describes what's in production. With the
 #     release train that's midnight going into Sunday.
-#   - PR touching wiki/: reports what the sync would change (a dry run). It
+#   - PR touching wiki/: reports what the sync would change (a dry run), with
+#     no write access and no WIKI_TOKEN, since it runs the PR's own script. It
 #     fails if the wiki was edited directly since the last sync, before that
 #     edit is overwritten.
 #   - By hand: publishes the chosen branch's wiki/. Run it on dev to publish a
-#     doc fix before the next release. dry_run previews; force overwrites a
-#     direct edit.
+#     doc fix before the next release; the release that follows won't roll it
+#     back. dry_run previews; force overwrites a direct edit (and the
+#     rollback guard).
 #
 # The default token pushes to the wiki with contents: write. If it's refused,
 # add a WIKI_TOKEN secret: a classic personal access token with the
-# public_repo scope from someone who can edit the wiki.
+# public_repo scope, ideally from a bot account, since that scope reaches every
+# public repository its owner can push to.
 on:
   push:
     branches: [main]
@@ -40,15 +43,50 @@ concurrency:
   cancel-in-progress: false
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  sync:
-    name: Wiki sync
+  # What a PR would change on the wiki. Read-only, with no credentials: the PR's
+  # own copy of the script runs here, and the wiki is public.
+  preview:
+    name: Wiki sync (preview)
+    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
         with:
+          fetch-depth: 0
+          sparse-checkout: |
+            wiki/
+            scripts/sync-wiki.ts
+          sparse-checkout-cone-mode: false
+
+      - name: Clone the wiki
+        run: git clone --quiet "https://github.com/${GITHUB_REPOSITORY}.wiki.git" "$RUNNER_TEMP/wiki"
+
+      # Node 24 runs the TypeScript directly; no install needed.
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24.x"
+
+      - name: Sync (dry run)
+        env:
+          DRY_RUN: "true"
+        run: node scripts/sync-wiki.ts "$RUNNER_TEMP/wiki"
+
+  # Publishes wiki/ from main (a release) or from the branch run by hand.
+  sync:
+    name: Wiki sync
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      # Full history: a run skips when this commit adds nothing to wiki/ that the
+      # last synced commit lacks, so a release can't roll back an early doc fix.
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
           sparse-checkout: |
             wiki/
             scripts/sync-wiki.ts
@@ -62,13 +100,12 @@ jobs:
           git -C "$RUNNER_TEMP/wiki" config user.name "github-actions[bot]"
           git -C "$RUNNER_TEMP/wiki" config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-      # Node 24 runs the TypeScript directly; no install needed.
       - uses: actions/setup-node@v7
         with:
           node-version: "24.x"
 
       - name: Sync
         env:
-          DRY_RUN: ${{ github.event_name == 'pull_request' || inputs.dry_run }}
+          DRY_RUN: ${{ inputs.dry_run }}
           FORCE: ${{ inputs.force }}
         run: node scripts/sync-wiki.ts "$RUNNER_TEMP/wiki"

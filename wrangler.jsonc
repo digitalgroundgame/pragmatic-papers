@@ -1,0 +1,28 @@
+// #916 spike: the public frontend as a Cloudflare Worker, built by OpenNext.
+// Starts from node_modules/@opennextjs/cloudflare/templates/wrangler.jsonc.
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "main": ".open-next/worker.js",
+  "name": "pragmatic-papers-spike",
+  "compatibility_date": "2026-09-30",
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS",
+  },
+  "services": [
+    {
+      "binding": "WORKER_SELF_REFERENCE",
+      "service": "pragmatic-papers-spike",
+    },
+  ],
+  "r2_buckets": [
+    {
+      "binding": "NEXT_INC_CACHE_R2_BUCKET",
+      "bucket_name": "pragmatic-papers-spike-opennext-cache",
+    },
+  ],
+  "images": {
+    "binding": "IMAGES",
+  },
+}

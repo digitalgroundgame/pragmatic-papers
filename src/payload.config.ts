@@ -27,7 +27,7 @@ import { migrations } from "@/migrations"
 import { postgresAdapter } from "@payloadcms/db-postgres"
 import path from "path"
 import { buildConfig, type SharpDependency } from "payload"
-import sharp from "sharp"
+import sharp from "@/cloudflare/sharp"
 import { fileURLToPath } from "url"
 
 const filename = fileURLToPath(import.meta.url)
@@ -96,6 +96,9 @@ export default buildConfig({
   db: postgresAdapter({
     pool: {
       connectionString: process.env.DATABASE_URI,
+      // #916 spike: a Worker can't reuse a socket opened during another request, so in
+      // one, give each query a fresh connection (Hyperdrive pools them for us).
+      ...(globalThis.navigator?.userAgent === "Cloudflare-Workers" && { maxUses: 1 }),
     },
     // prevent schema push in prod/test for static schema determinism and noise reduction
     push: process.env.NODE_ENV === "development",

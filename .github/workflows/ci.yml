@@ -11,7 +11,7 @@ on:
   merge_group:
 
 # Cancel superseded runs on a PR so a new push doesn't leave the previous
-# commit's Static/Unit/Integration jobs (two Postgres services + Testcontainers)
+# commit's Static/Unit/Integration jobs (each starting its own test Postgres)
 # running to completion for nothing. Scoped per-ref. Pushes to main/dev use a
 # per-run group (github.run_id) so they never cancel each other — every commit
 # landing on a protected branch is still validated in full.
@@ -106,32 +106,18 @@ jobs:
     needs: changes
     if: ${{ !cancelled() && (github.event_name != 'pull_request' || needs.changes.result != 'success' || needs.changes.outputs.static == 'true') }}
     runs-on: ubuntu-latest
+    # No Postgres service: check-pending-migrations starts its own with
+    # scripts/test-db.mjs, the same way it does locally.
     env:
-      DATABASE_URI: postgres://postgres:postgres@localhost:5432/pragmatic-papers
       SERVER_URL: http://localhost:8000
       PAYLOAD_SECRET: ci-payload-secret
       USE_LOCAL_STORAGE: "true"
 
-    services:
-      postgres:
-        image: postgres:17-alpine
-        env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: pragmatic-papers
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-
     steps:
       # Shallow clone: none of the static checks below read git history
       # (check-migration-order sorts files by name; check-pending-migrations
-      # runs against the Postgres service), so the default depth-1 fetch is
-      # enough and skips pulling the full history.
+      # replays migrations into a fresh database), so the default depth-1 fetch
+      # is enough and skips pulling the full history.
       - uses: actions/checkout@v7
 
       - name: Set up Node.js environment
@@ -218,25 +204,12 @@ jobs:
     if: ${{ !cancelled() && (github.event_name != 'pull_request' || needs.changes.result != 'success' || needs.changes.outputs.integration == 'true') }}
     runs-on: ubuntu-latest
 
+    # No Postgres service: the integration global setup starts its own with
+    # scripts/test-db.mjs, as it does locally. CI sets `CI`, so it always
+    # migrates a fresh database rather than reusing a snapshot.
     env:
       PAYLOAD_SECRET: ci-integration-secret
       USE_LOCAL_STORAGE: "true"
-      DATABASE_URI: postgres://postgres:postgres@localhost:5432/pp_template
-
-    services:
-      postgres:
-        image: postgres:17-alpine
-        env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: pp_template
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
 
     steps:
       - uses: actions/checkout@v7

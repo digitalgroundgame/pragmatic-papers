@@ -55,7 +55,9 @@ services:
       # comparison and CI's retries/workers/forbidOnly in playwright.config.ts.
       CI: "true"
       npm_config_store_dir: /pnpm-store
-      DATABASE_URI: postgres://postgres:postgres@postgres:5432/pragmatic-papers-e2e
+      # scripts/test-e2e.mjs runs against this instead of starting a Postgres
+      # container of its own (scripts/test-db.mjs); this image has no Docker.
+      TEST_DATABASE_URI: postgres://postgres:postgres@postgres:5432/pragmatic-papers-e2e
       PAYLOAD_SECRET: ${PAYLOAD_SECRET:-test-secret-for-e2e-tests}
       # The Next.js server is started inside this same container by
       # scripts/test-e2e.mjs, so localhost is correct here.

@@ -4,8 +4,9 @@ The whole wiki is checked out (it's small). Site:
 `https://github.com/digitalgroundgame/pragmatic-papers/wiki/<Page-Name>`. `Home.md` has the
 table of contents; `_Sidebar.md` and `_Footer.md` are shared chrome.
 
-To **edit** the wiki, don't use this cache (it's a shallow read-only copy): follow the "Wiki"
-section of `AGENTS.md`, which clones it for writing and covers commit signing in cloud sessions.
+The pages' source is `wiki/` in this repo, published to the wiki by the **Wiki sync** workflow
+on merge to `dev`. Read and **edit** them there (see the "Wiki" section of `AGENTS.md`); this
+cache is the published copy, which lags `wiki/` until a change merges.
 
 The wiki explains process for people; `AGENTS.md`, the skills and the code are the source of
 truth for agents. When the two disagree, say so rather than picking one.

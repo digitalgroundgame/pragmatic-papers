@@ -379,27 +379,24 @@ Development" board, set with
 
 ## Wiki
 
-The repo wiki lives at `https://github.com/digitalgroundgame/pragmatic-papers/wiki` and is a separate git repository. To create or edit wiki pages:
+The wiki at `https://github.com/digitalgroundgame/pragmatic-papers/wiki` is published
+from **`wiki/`** in this repo: one Markdown file per page (`Home.md` holds the table of
+contents; `_Sidebar.md` and `_Footer.md` are shared chrome). Edit a page in a PR like
+any other file. When it merges into `dev`, `.github/workflows/wiki-sync.yml` mirrors
+`wiki/` onto the wiki in one commit, so a cloud session (which can't push to the wiki's
+own repository) or the GitHub web editor can change it. A PR touching `wiki/` gets a dry
+run listing the pages it changes.
 
-```bash
-git clone https://github.com/digitalgroundgame/pragmatic-papers.wiki.git /tmp/wiki
-# create or edit .md files in /tmp/wiki
-cd /tmp/wiki
-git add <file>
-git commit -m "docs: ..."
-git push
-```
+Don't edit the wiki on github.com: the next sync would overwrite it, so the workflow
+refuses to sync while the wiki's newest commit isn't one of its own. Copy such an edit
+into `wiki/` in a PR, or run **Wiki sync** by hand with `force` to discard it.
 
-> [!NOTE]
-> Commit signing does not work in the wiki repo from the **remote/cloud execution environment** — the signing server is scoped to the main repo. If running in that context and a push fails due to signing, ask the user to re-run the session locally (e.g. in Cursor or another terminal where their git signing is configured), then retry the push.
-
-After adding a new page, update `Home.md` to add it to the Table of Contents under the appropriate section, and match the back-link style used by other pages:
+A new page needs a link in `Home.md`'s Table of Contents, under the right section, and
+the back-link other pages use:
 
 ```md
 [← Table of Contents](https://github.com/digitalgroundgame/pragmatic-papers/wiki#table-of-contents)
 ```
-
-<!-- BEGIN:nextjs-agent-rules -->
 
 # This is NOT the Next.js you know
 

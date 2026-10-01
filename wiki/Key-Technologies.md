@@ -1,0 +1,6 @@
+- Language: [Typescript](https://www.typescriptlang.org/docs/handbook/intro.html) — type-safe superset of javascript
+- Library: [React](https://react.dev/reference/react) — powerful ui library
+- Component Library: [shadcn/base-ui](https://ui.shadcn.com/docs/components) — lightweight and composable ui components
+- Content Management System: [payloadcms](https://payloadcms.com/docs/getting-started/what-is-payload) — customizable content publishing engine
+- Server-Side Rendering Framework: [Next.js](https://nextjs.org/docs/15/app/getting-started) — full-stack type-safe web server
+- Hosting: [coolify](https://coolify.dggpoliticalaction.org/) — self-hosted deployment infrastructure

@@ -1,0 +1,70 @@
+name: Wiki sync
+
+# The wiki's pages live in wiki/ and are published to the GitHub wiki
+# (https://github.com/digitalgroundgame/pragmatic-papers/wiki) by
+# scripts/sync-wiki.ts, so they can be edited in a PR from anywhere, cloud
+# sessions included, which can't push to the wiki's own repository.
+#
+#   - Push to dev touching wiki/: mirrors wiki/ onto the wiki in one commit.
+#   - PR touching wiki/: reports what the sync would change (a dry run). It
+#     fails if the wiki was edited directly since the last sync, before that
+#     edit is overwritten.
+#   - By hand: dry_run to preview, force to overwrite a direct edit.
+#
+# The default token pushes to the wiki with contents: write. If it's refused,
+# add a WIKI_TOKEN secret: a classic personal access token with the
+# public_repo scope from someone who can edit the wiki.
+on:
+  push:
+    branches: [dev]
+    paths: ["wiki/**", "scripts/sync-wiki.ts"]
+  pull_request:
+    paths: ["wiki/**", "scripts/sync-wiki.ts", ".github/workflows/wiki-sync.yml"]
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Report what would change without pushing
+        type: boolean
+        default: false
+      force:
+        description: Overwrite pages edited on the wiki directly since the last sync
+        type: boolean
+        default: false
+
+concurrency:
+  group: wiki-sync-${{ github.event_name == 'pull_request' && github.run_id || 'push' }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    name: Wiki sync
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          sparse-checkout: |
+            wiki/
+            scripts/sync-wiki.ts
+          sparse-checkout-cone-mode: false
+
+      - name: Clone the wiki
+        env:
+          TOKEN: ${{ secrets.WIKI_TOKEN || github.token }}
+        run: |
+          git clone --quiet "https://x-access-token:${TOKEN}@github.com/${GITHUB_REPOSITORY}.wiki.git" "$RUNNER_TEMP/wiki"
+          git -C "$RUNNER_TEMP/wiki" config user.name "github-actions[bot]"
+          git -C "$RUNNER_TEMP/wiki" config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      # Node 24 runs the TypeScript directly; no install needed.
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24.x"
+
+      - name: Sync
+        env:
+          DRY_RUN: ${{ github.event_name == 'pull_request' || inputs.dry_run }}
+          FORCE: ${{ inputs.force }}
+        run: node scripts/sync-wiki.ts "$RUNNER_TEMP/wiki"

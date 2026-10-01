@@ -19,10 +19,13 @@ export async function getRedirects(depth = 1) {
 /**
  * Returns a unstable_cache function mapped with the cache tag for 'redirects'.
  *
- * Cache all redirects together to avoid multiple fetches.
+ * Cache all redirects together to avoid multiple fetches. Uncached in development, for the
+ * reason `getCachedGlobal` gives (#971).
  */
 // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
 export const getCachedRedirects = () =>
-  unstable_cache(async () => getRedirects(), ["redirects"], {
-    tags: ["redirects"],
-  })
+  process.env.NODE_ENV === "development"
+    ? async () => getRedirects()
+    : unstable_cache(async () => getRedirects(), ["redirects"], {
+        tags: ["redirects"],
+      })

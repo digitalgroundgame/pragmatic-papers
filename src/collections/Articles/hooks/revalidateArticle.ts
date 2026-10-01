@@ -9,7 +9,7 @@ const revalidateDoc = async (givenDoc: Article, payload: Payload) => {
 
   payload.logger.info(`Revalidating article at path: ${path}`)
   revalidatePath(path)
-  revalidatePath("/feed.articles")
+  revalidatePath("/articles/feed.xml")
   revalidatePath("/articles/substack.xml")
   revalidatePath(`/articles/${givenDoc.slug}/substack.xml`)
   revalidateTag("articles-sitemap", "max")

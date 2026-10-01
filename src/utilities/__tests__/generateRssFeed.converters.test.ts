@@ -20,14 +20,14 @@ const rssConverters = resolve(createHtmlConverters)
 /** The rich-text fields each feed renders, and the converters it renders them with. */
 const FEED_FIELDS = [
   {
-    feed: "feed.articles",
+    feed: "articles/feed.xml",
     collection: "articles",
     field: "content",
     converters: rssConverters,
     factory: "createHtmlConverters",
   },
   {
-    feed: "feed.volumes",
+    feed: "volumes/feed.xml",
     collection: "volumes",
     field: "editorsNote",
     converters: rssConverters,

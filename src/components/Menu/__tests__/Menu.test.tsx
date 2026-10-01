@@ -22,6 +22,17 @@ const menu: MenuField = [
       reference: { relationTo: "pages", value: 42 },
     },
   },
+  {
+    id: "unpublished",
+    link: {
+      type: "reference",
+      label: "Unpublished page",
+      reference: {
+        relationTo: "pages",
+        value: { id: 43, title: "Pulled", slug: "pulled", _status: "draft" } as never,
+      },
+    },
+  },
 ]
 
 describe("Menu", () => {
@@ -39,5 +50,11 @@ describe("Menu", () => {
 
     expect(screen.getAllByRole("listitem")).toHaveLength(2)
     expect(screen.queryByText("Deleted page")).not.toBeInTheDocument()
+  })
+
+  it("skips items linking to a document that is no longer published", () => {
+    render(<Menu menu={menu} label="Main" />)
+
+    expect(screen.queryByText("Unpublished page")).not.toBeInTheDocument()
   })
 })

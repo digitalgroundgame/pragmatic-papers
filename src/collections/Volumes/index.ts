@@ -35,6 +35,7 @@ import { scheduleNewsletterEndpoint } from "./endpoints/scheduleNewsletter"
 import { checkArticles } from "./hooks/checkArticles"
 import { getNextVolumeNumber } from "./hooks/getNextVolumeNumber"
 import { pushToWebhooks } from "./hooks/pushToWebhooks"
+import { revalidateNavLinks, revalidateNavLinksDelete } from "@/hooks/revalidateNavLinks"
 import { revalidateArticle, revalidateDelete } from "./hooks/revalidateVolumes"
 import { setDefaultSeoTitle } from "./hooks/seoTitle"
 
@@ -197,8 +198,8 @@ export const Volumes: CollectionConfig = {
   ],
   endpoints: [scheduleNewsletterEndpoint],
   hooks: {
-    afterChange: [revalidateArticle, pushToWebhooks],
-    afterDelete: [revalidateDelete],
+    afterChange: [revalidateArticle, revalidateNavLinks, pushToWebhooks],
+    afterDelete: [revalidateDelete, revalidateNavLinksDelete],
     beforeChange: [setDefaultSeoTitle],
   },
   versions: {

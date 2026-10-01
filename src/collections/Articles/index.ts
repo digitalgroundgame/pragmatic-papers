@@ -28,6 +28,7 @@ import { generateFootnotes } from "@/collections/Articles/hooks/generateFootnote
 import { populateTopics } from "@/collections/Articles/hooks/populateTopics"
 import { populateMetaImageFromHero } from "@/collections/Articles/hooks/populateMetaImageFromHero"
 import { revalidateArticle, revalidateDelete } from "@/collections/Articles/hooks/revalidateArticle"
+import { revalidateNavLinks, revalidateNavLinksDelete } from "@/hooks/revalidateNavLinks"
 import { populateTableOfContentsAnchors, tableOfContentsField } from "@/components/TableOfContents"
 import { footnotesArrayField } from "@/fields/footnotes"
 import { type Article } from "@/payload-types"
@@ -337,9 +338,9 @@ export const Articles: CollectionConfig = {
       detectMathBlocks,
       populateMetaImageFromHero,
     ],
-    afterChange: [revalidateArticle],
+    afterChange: [revalidateArticle, revalidateNavLinks],
     afterRead: [populateTopics],
-    afterDelete: [revalidateDelete],
+    afterDelete: [revalidateDelete, revalidateNavLinksDelete],
   },
   versions: {
     drafts: {

@@ -34,6 +34,16 @@ type Story = StoryObj<typeof meta>
 /** The stored snapshot as readers see it before the platform's script upgrades it. */
 export const TweetFallback: Story = {
   args: { snapshot: snapshot({ html: tweetHtml }) },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(
+      await canvas.findByText(/Turnout in yesterday's school board runoff/),
+    ).toBeInTheDocument()
+    await expect(canvas.getByRole("link", { name: "January 12, 2026" })).toHaveAttribute(
+      "href",
+      "https://twitter.com/countyclerk/status/1",
+    )
+  },
 }
 
 export const BlueskyFallback: Story = {
@@ -41,6 +51,14 @@ export const BlueskyFallback: Story = {
     platform: "bluesky",
     url: "https://bsky.app/profile/example/post/1",
     snapshot: snapshot({ html: blueskyHtml }),
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(await canvas.findByText(/New volume is up/)).toBeInTheDocument()
+    await expect(canvas.getByRole("link", { name: "January 11, 2026" })).toHaveAttribute(
+      "href",
+      "https://bsky.app/profile/example/post/1",
+    )
   },
 }
 
@@ -64,6 +82,14 @@ export const UnsupportedPlatform: Story = {
   args: {
     platform: "myspace" as never,
     url: "https://myspace.com/example",
+  },
+  play: async ({ canvasElement }) => {
+    const alert = await within(canvasElement).findByRole("alert")
+    await expect(alert).toHaveTextContent("Social Media platform is not supported.")
+    await expect(within(alert).getByRole("link")).toHaveAttribute(
+      "href",
+      "https://myspace.com/example",
+    )
   },
 }
 

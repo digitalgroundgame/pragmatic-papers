@@ -2,6 +2,7 @@ import type { CollectionAfterChangeHook, CollectionAfterDeleteHook, Payload } fr
 
 import { revalidatePath, revalidateTag } from "next/cache"
 
+import { purgeEdgeCache } from "@/hooks/purgeEdgeCache"
 import type { Article } from "@/payload-types"
 
 const revalidateDoc = async (givenDoc: Article, payload: Payload) => {
@@ -33,6 +34,8 @@ const revalidateDoc = async (givenDoc: Article, payload: Payload) => {
     payload.logger.info(`Revalidating volume at path: ${volumePath}`)
     revalidatePath(volumePath)
   })
+
+  purgeEdgeCache(payload.logger, `article ${givenDoc.slug}`)
 }
 
 export const revalidateArticle: CollectionAfterChangeHook<Article> = async ({

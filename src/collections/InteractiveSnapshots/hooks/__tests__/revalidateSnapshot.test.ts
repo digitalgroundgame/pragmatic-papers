@@ -1,9 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-const { revalidateTag } = vi.hoisted(() => ({
+const { revalidateTag, purgeEdgeCache } = vi.hoisted(() => ({
   revalidateTag: vi.fn(),
+  purgeEdgeCache: vi.fn(),
 }))
 vi.mock("next/cache", () => ({ revalidateTag }))
+vi.mock("@/hooks/purgeEdgeCache", () => ({ purgeEdgeCache }))
 
 import { revalidateSnapshot, revalidateSnapshotDelete } from "../revalidateSnapshot"
 
@@ -13,7 +15,9 @@ interface Snapshot {
   _status?: "draft" | "published" | null
 }
 
+const logger = { info: vi.fn() }
 const req = (disableRevalidate = false) => ({
+  payload: { logger },
   context: { disableRevalidate },
 })
 
@@ -31,6 +35,7 @@ describe("revalidateSnapshot", () => {
   it("drops the interactive's data when a snapshot is published", () => {
     expect(revalidateSnapshot(change(published, drafted))).toBe(published)
     expect(revalidateTag).toHaveBeenCalledWith("interactive:3", "max")
+    expect(purgeEdgeCache).toHaveBeenCalledWith(logger, "interactive 3 snapshot")
   })
 
   it("reads the interactive's id off a populated relationship too", () => {
@@ -46,6 +51,7 @@ describe("revalidateSnapshot", () => {
   it("ignores a draft written over a draft — the sync's everyday write", () => {
     revalidateSnapshot(change(drafted, drafted))
     expect(revalidateTag).not.toHaveBeenCalled()
+    expect(purgeEdgeCache).not.toHaveBeenCalled()
   })
 
   it("does nothing for a snapshot with no interactive", () => {
@@ -56,6 +62,7 @@ describe("revalidateSnapshot", () => {
   it("does nothing when the caller disabled revalidation", () => {
     revalidateSnapshot(change(published, undefined, true))
     expect(revalidateTag).not.toHaveBeenCalled()
+    expect(purgeEdgeCache).not.toHaveBeenCalled()
   })
 })
 
@@ -63,6 +70,7 @@ describe("revalidateSnapshotDelete", () => {
   it("drops the interactive's data", () => {
     expect(revalidateSnapshotDelete({ doc: published, req: req() } as never)).toBe(published)
     expect(revalidateTag).toHaveBeenCalledWith("interactive:3", "max")
+    expect(purgeEdgeCache).toHaveBeenCalledOnce()
   })
 
   it("does nothing when the caller disabled revalidation", () => {

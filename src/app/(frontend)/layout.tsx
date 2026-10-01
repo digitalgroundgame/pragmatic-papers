@@ -64,8 +64,8 @@ export const metadata: Metadata = {
   alternates: {
     types: {
       "application/rss+xml": [
-        { url: "/articles/feed.xml", title: "Pragmatic Papers - Articles RSS Feed" },
-        { url: "/volumes/feed.xml", title: "Pragmatic Papers - Volumes RSS Feed" },
+        { url: "/feed.articles", title: "Pragmatic Papers - Articles RSS Feed" },
+        { url: "/feed.volumes", title: "Pragmatic Papers - Volumes RSS Feed" },
       ],
     },
   },

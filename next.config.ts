@@ -73,11 +73,6 @@ const nextConfig: NextConfig = {
       permanent: false,
       source: "/:path((?!ie-incompatible.html$).*)", // all pages except the incompatibility page
     },
-    // The RSS feeds moved under the section they list, ending in `.xml` like
-    // every other feed and sitemap (#1046). Permanent, so feed readers that
-    // honour 301/308 update the URL they have stored.
-    { source: "/feed.articles", destination: "/articles/feed.xml", permanent: true },
-    { source: "/feed.volumes", destination: "/volumes/feed.xml", permanent: true },
     {
       source: "/iceout/:state*",
       destination: "https://iceout.org/en/location/report",
@@ -152,7 +147,7 @@ const nextConfig: NextConfig = {
         // hash-conditional) Cache-Control — a config-level header always wins over one set in a
         // Route Handler, so without this exclusion this blanket rule silently overwrote it,
         // capping a year-long immutable cache down to 10 minutes.
-        // The feed (`/feed`, `/feed/...`; not the `/articles/feed.xml` RSS) is left out too: it's
+        // The feed (`/feed`, `/feed/...`; not the `/feed.articles` RSS) is left out too: it's
         // rendered per request, its 404 follows a Site Settings switch that should apply on
         // save, and a stale copy would call load-more's server action with an ID the current
         // build no longer has.

@@ -31,7 +31,7 @@ import type { SerializedLexicalNode } from "@/utilities/lexical"
 /**
  * RSS feed built for Substack's importer (Settings → Import → from URL).
  *
- * Unlike `/articles/feed.xml`, whose HTML targets feed readers, this markup is
+ * Unlike `/feed.articles`, whose HTML targets feed readers, this markup is
  * written for Substack's editor, which keeps only plain semantic HTML: every
  * URL is absolute, there are no inline styles, math falls back to its LaTeX
  * source, footnotes become plain endnotes, and blocks Substack cannot render

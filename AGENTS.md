@@ -282,6 +282,19 @@ The zone's Cloudflare rules (Cache Rules today) are version-controlled in
 `cloudflare/rulesets/` and applied on release by `.github/workflows/cloudflare-rules.yml`;
 change them there, not in the dashboard (`cloudflare/README.md`).
 
+## Releases
+
+A release train (`.github/workflows/release-train.yml`, `scripts/release-train.ts`)
+runs every Saturday. It opens a "Bump package.json to vX.Y.Z" PR into `dev` (the
+next **candidate**, versioned from commit prefixes: `!` major, `feat` minor, anything
+else patch), and once a merged candidate has spent `SOAK_DAYS` (4) on staging, a
+"Release X.Y.Z" PR into `main` from a branch at that bump commit. People merge both;
+the release PR as a **merge commit**, after which `release.yml` tags it. Only one
+candidate settles at a time, and the bump lands on `dev` first, so nothing is
+back-merged. The exception is `pnpm hotfix`: a candidate cut before a hotfix would
+conflict with `main`, so the train skips it and cuts nothing until the hotfix is
+back-merged into `dev`. `pnpm release` remains for doing it by hand.
+
 ## Third-party docs
 
 For how a tool we run on behaves (Payload and Lexical, Coolify, GitHub Actions and the

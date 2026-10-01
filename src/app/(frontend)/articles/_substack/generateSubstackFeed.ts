@@ -15,7 +15,7 @@ import type {
   User,
 } from "@/payload-types"
 import { getLinkFieldUrl } from "@/utilities/getLinkFieldUrl"
-import { absoluteURL as toAbsoluteURL } from "@/utilities/feedHTML"
+import { escapeHTML, absoluteURL as toAbsoluteURL } from "@/utilities/feedHTML"
 import { getServerSideURL } from "@/utilities/getURL"
 import { isResolved } from "@/utilities/relationships"
 import type {
@@ -47,14 +47,6 @@ import type { SerializedLexicalNode } from "@/utilities/lexical"
  */
 
 const SITE_NAME = "The Pragmatic Papers"
-
-const escapeHTML = (value: string): string =>
-  value
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;")
 
 const absoluteURL = (url: string): string => toAbsoluteURL(url, getServerSideURL())
 

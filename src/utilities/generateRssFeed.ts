@@ -26,7 +26,7 @@ import {
   type HTMLConvertersFunction,
 } from "@payloadcms/richtext-lexical/html"
 import { Feed } from "feed"
-import { absoluteURL } from "./feedHTML"
+import { absoluteURL, escapeHTML } from "./feedHTML"
 import { getServerSideURL } from "./getURL"
 import type { SerializedLexicalNode } from "./lexical"
 
@@ -49,8 +49,8 @@ const resolveMedia = (media: number | Media): Media | null =>
 const mediaBlockToHTML = ({ node }: { node: SerializedBlockNode<MediaBlock> }): string => {
   const media = resolveMedia(node.fields.media)
   if (!media?.url) return ""
-  const src = getMediaUrl(media.url)
-  const alt = media.alt ?? ""
+  const src = escapeHTML(getMediaUrl(media.url))
+  const alt = escapeHTML(media.alt)
   const widthAttr = media.width ? ` width="${media.width}"` : ""
   const heightAttr = media.height ? ` height="${media.height}"` : ""
   return `<figure><img src="${src}" alt="${alt}"${widthAttr}${heightAttr} style="max-width:100%;height:auto;" /></figure>`
@@ -65,8 +65,8 @@ const mediaCollageBlockToHTML = ({
     .map(({ media }) => {
       const resolved = resolveMedia(media)
       if (!resolved?.url) return ""
-      const src = getMediaUrl(resolved.url)
-      const alt = resolved.alt ?? ""
+      const src = escapeHTML(getMediaUrl(resolved.url))
+      const alt = escapeHTML(resolved.alt)
       return `<img src="${src}" alt="${alt}" style="max-width:100%;height:auto;" />`
     })
     .filter(Boolean)
@@ -77,7 +77,7 @@ const mediaCollageBlockToHTML = ({
 function displayMathBlockToHTML({ node }: { node: SerializedBlockNode<DisplayMathBlock> }): string {
   const { math } = node.fields
   if (!math) return ""
-  return `<p class="math display-math">\\[${math}\\]</p>`
+  return `<p class="math display-math">\\[${escapeHTML(math)}\\]</p>`
 }
 
 const timelineBlockToHTML = ({ node }: { node: SerializedBlockNode<TimelineBlock> }): string => {
@@ -95,24 +95,16 @@ const timelineBlockToHTML = ({ node }: { node: SerializedBlockNode<TimelineBlock
           link.reference.value?.slug
             ? `${siteUrl()}/${link.reference.relationTo}/${link.reference.value.slug}`
             : link.url
-        citationHtml = ` <a href="${href}">[1]</a>`
+        citationHtml = ` <a href="${escapeHTML(href)}">[1]</a>`
       }
-      const titleHtml = event.title ? ` — <strong>${event.title}</strong>` : ""
-      return `<li><strong>${event.date}</strong>${titleHtml}<br/>${event.description}${citationHtml}</li>`
+      const titleHtml = event.title ? ` — <strong>${escapeHTML(event.title)}</strong>` : ""
+      return `<li><strong>${escapeHTML(event.date)}</strong>${titleHtml}<br/>${escapeHTML(event.description)}${citationHtml}</li>`
     })
     .join("\n")
 
-  const heading = title ? `<h3>${title}</h3>` : ""
+  const heading = title ? `<h3>${escapeHTML(title)}</h3>` : ""
   return `<section>${heading}<ul style="list-style: none; padding-left: 0;">${items}</ul></section>`
 }
-
-const escapeHTML = (value: string): string =>
-  value
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;")
 
 const bannerBlockToHTML = ({
   node,
@@ -183,12 +175,12 @@ export const createHtmlConverters =
       ...defaultConverters.inlineBlocks,
       inlineMathBlock: ({ node }: { node: SerializedInlineBlockNode }) => {
         const math = (node.fields as { math?: string })?.math || ""
-        return `<span class="math">\\(${math}\\)</span>`
+        return `<span class="math">\\(${escapeHTML(math)}\\)</span>`
       },
       footnote: ({ node }: { node: SerializedInlineBlockNode }) => {
         const fields = node.fields as FootnoteBlock
         const index = typeof fields.index === "number" ? fields.index : ""
-        const note = fields.note || ""
+        const note = escapeHTML(fields.note)
         const referenceId = `footnote-ref-${index}`
         const describedById = `footnote-${index}`
         return `<sup id="${referenceId}" title="Footnote ${index}: ${note}"><a href="#${describedById}">[${index}]</a></sup>`
@@ -210,17 +202,17 @@ const formatFootnotes = (footnotes?: Article["footnotes"]): string => {
 
       if (attributionEnabled && link?.url) {
         if (link.type === "custom") {
-          linkHtml = ` <a href="${link.url}" style="border: none; color: #0066cc; text-decoration: underline;" title="Link to source ${link.label || ""}">${link.url}</a>`
+          linkHtml = ` <a href="${escapeHTML(link.url)}" style="border: none; color: #0066cc; text-decoration: underline;" title="Link to source ${escapeHTML(link.label)}">${escapeHTML(link.url)}</a>`
         } else if (link.type === "reference" && link.reference) {
           const referenceUrl =
             typeof link.reference.value === "object" && link.reference.value?.slug
               ? `${siteUrl()}/${link.reference.relationTo}/${link.reference.value.slug}`
               : link.url
-          linkHtml = ` <a href="${referenceUrl}" style="border: none; color: #0066cc; text-decoration: underline;" title="Link to source ${link.label || ""}">${link.url}</a>`
+          linkHtml = ` <a href="${escapeHTML(referenceUrl)}" style="border: none; color: #0066cc; text-decoration: underline;" title="Link to source ${escapeHTML(link.label)}">${escapeHTML(link.url)}</a>`
         }
       }
 
-      return `<li><span id="${describedById}">${note}</span>${linkHtml}</li>`
+      return `<li><span id="${describedById}">${escapeHTML(note)}</span>${linkHtml}</li>`
     })
     .filter(Boolean)
     .join("\n    ")
@@ -231,14 +223,16 @@ const formatFootnotes = (footnotes?: Article["footnotes"]): string => {
 }
 
 const formatArticleLink = (article: Article) => {
+  const href = escapeHTML(`${siteUrl()}/articles/${article.slug}`)
+  const title = escapeHTML(article.title)
   if (!article.meta?.description) {
-    return `<li style="margin: 1em 0"><a href="${siteUrl()}/articles/${article.slug}">${article.title}</a></li>`
+    return `<li style="margin: 1em 0"><a href="${href}">${title}</a></li>`
   }
 
   return `
 <li style="margin: 1em 0">
-  <a href="${siteUrl()}/articles/${article.slug}">${article.title}</a>
-  <p style="margin: 0.5em 0 0 0; color: #666">${article.meta.description}</p>
+  <a href="${href}">${title}</a>
+  <p style="margin: 0.5em 0 0 0; color: #666">${escapeHTML(article.meta.description)}</p>
 </li>`
 }
 
@@ -246,7 +240,7 @@ const formatVolumeContent = (volume: Volume) => {
   const sections = []
 
   if (volume.description) {
-    sections.push(`<div style="margin-bottom: 1.5em">${volume.description}</div>`)
+    sections.push(`<div style="margin-bottom: 1.5em">${escapeHTML(volume.description)}</div>`)
   }
 
   if (volume.editorsNote) {

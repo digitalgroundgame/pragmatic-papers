@@ -148,10 +148,15 @@ const nextConfig: NextConfig = {
         // stale-while-revalidate=86400 — CDN may serve stale for up to 24h while revalidating in the background.
         // Only applies when both Payload cookies are absent; logged-in editors and draft-preview
         // sessions bypass this rule and always hit the origin with fresh responses.
-        // The geometry route names its own content in the URL and sets its own (much longer,
-        // hash-conditional) Cache-Control — a config-level header always wins over one set in a
-        // Route Handler, so without this exclusion this blanket rule silently overwrote it,
-        // capping a year-long immutable cache down to 10 minutes.
+        // Route Handlers that set their own Cache-Control are left out, because a config-level
+        // header always wins over one a Route Handler sets for the same key (#947):
+        // - interactives' region, geometry and search JSON (`/interactives/<slug>/regions/...`,
+        //   `/interactives/<slug>/search`): an hour at the edge, and geometry, which names its
+        //   own content in the URL, is immutable for a year — this rule capped both at 10 min.
+        // - the RSS and Substack feeds (`/articles/feed.xml`, `/volumes/feed.xml`,
+        //   `/articles/substack.xml`, `/articles/<slug>/substack.xml`): 20 minutes. The old
+        //   `/feed.articles` and `/feed.volumes` only redirect now, and stay excluded.
+        // - `/recommended-articles.json`: no-store.
         // The feed (`/feed`, `/feed/...`; not the `/articles/feed.xml` RSS) is left out too: it's
         // rendered per request, its 404 follows a Site Settings switch that should apply on
         // save, and a stale copy would call load-more's server action with an ID the current
@@ -168,7 +173,7 @@ const nextConfig: NextConfig = {
         // `/api/<collection>/file/...`, anyone can read them, and narration audio and video
         // shouldn't re-download on every load. (Cloudflare's cache rule skips `/api` anyway.)
         source:
-          "/:path((?!admin(?:/|$)|api(?:/(?!(?:media|map-assets)/file/)|$)|interactives/[^/]+/regions/[^/]+/geometry/|feed(?:/|$)|_next/image$).*)",
+          "/:path((?!admin(?:/|$)|api(?:/(?!(?:media|map-assets)/file/)|$)|interactives/[^/]+/(?:regions/|search$)|feed(?:/|$|\\.articles$|\\.volumes$)|articles/feed\\.xml$|volumes/feed\\.xml$|articles/(?:[^/]+/)?substack\\.xml$|recommended-articles\\.json$|_next/image$).*)",
         headers: [
           {
             key: "Cache-Control",

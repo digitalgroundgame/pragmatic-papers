@@ -296,12 +296,13 @@ sessions, which can't reach most documentation sites. Next.js's docs are already
 
 PRs into `dev` need the **Review acknowledged** check (`review-ack.yml`) on
 their final commit. A person gives it one of two ways: approving the PR with a
-GitHub review, or replying `/reviewed` after a Claude review is on the PR:
+GitHub review, or replying `/reviewed` or `LGTM` (any case) after a Claude
+review is on the PR:
 CI's (`claude-review.yml`, run by adding the "ready for review" label) or one
 they posted with a local `/code-review --comment <pr>` (they need write access).
-Fixes pushed after a review need a new approval or `/reviewed`, not a new
-review. **Never post `/reviewed` (or anything starting with it), and never
-submit an approving review** — not even when asked to get a PR mergeable. Both
+Fixes pushed after a review need a new approval or reply, not a new
+review. **Never post `/reviewed` or `LGTM` (or anything starting with either),
+and never submit an approving review** — not even when asked to get a PR mergeable. Both
 record that a person read the change; say it's waiting on them instead.
 
 ## Filing & triaging GitHub issues

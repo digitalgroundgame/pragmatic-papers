@@ -147,7 +147,7 @@ that PR:
 - Never request changes or approve (`gh pr review --request-changes` /
   `--approve`) — this skill only comments. Its verdict gates merges only
   through the marker below.
-- End the summary with a line asking a reader to reply `/reviewed` once
+- End the summary with a line asking a reader to reply `/reviewed` or `LGTM` once
   they have read the review, then this marker as the very last line. `<sha>`
   is `--head <sha>` when given (CI passes the commit it checked out), else
   the PR's head: `gh pr view <number> --repo <owner>/<repo> --json headRefOid -q .headRefOid`.
@@ -161,8 +161,9 @@ that PR:
   `/reviewed` only counts after a summary is on the PR (see
   `.github/workflows/claude-review.yml` and `review-ack.yml`). A summary
   posted from a local run counts too, when whoever ran it has write access,
-  so a simple PR needs no CI review. Never post `/reviewed` yourself; it
-  stands for a person having read the review.
+  so a simple PR needs no CI review. Never post `/reviewed` or `LGTM`
+  yourself (nor anything starting with either); it stands for a person having
+  read the review.
 
 - If posting fails (e.g. permissions), print the full review to stdout so
   it's still visible in the Action run logs.

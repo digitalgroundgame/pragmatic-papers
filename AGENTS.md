@@ -329,10 +329,11 @@ cuts a candidate after Wednesday's dev meeting and puts it live at midnight goin
 Sunday, leaving a day to check production before Monday's articles. At midnight
 Pacific going into Thursday it opens a "Bump package.json to vX.Y.Z" PR into `dev`
 (the next **candidate**, versioned from commit prefixes: `!` major, `feat` minor,
-anything else patch). Saturday morning, once a merged candidate has spent `SOAK_DAYS`
-(1) on staging, it opens a "Release X.Y.Z" PR into `main` from a branch at that bump
-commit. At midnight Pacific going into Sunday it merges that PR with a **merge
-commit** if a person has approved it and its checks are green; `release.yml` then
+anything else patch). Saturday at 16:00 UTC (8am PST, 9am PDT), once a merged
+candidate has spent `SOAK_DAYS` (1) on staging, it opens a "Release X.Y.Z" PR into
+`main` from a branch at that bump commit. At midnight Pacific going into Sunday it
+merges that PR with a **merge commit** if a maintainer has approved it and its checks
+are green; `release.yml` then
 tags it. Unapproved, it waits for a person. Cron is UTC, so the midnight runs are at
 08:00 UTC: midnight PST, 1am PDT. Only one candidate settles at a time, and the bump
 lands on `dev` first, so nothing is back-merged. The exception is `pnpm hotfix`: a

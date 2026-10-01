@@ -17,6 +17,7 @@ import {
   releaseBody,
   releaseLevel,
   releaseNotes,
+  type Review,
   withVersion,
 } from "../../scripts/release-train"
 
@@ -249,14 +250,14 @@ function fakeGithub({
   branches = [] as string[],
   commitParents = {} as Record<string, string>,
   states = {} as Record<number, string[]>,
-  reviews = {} as Record<number, { user: { login: string }; state: string; commit_id: string }[]>,
+  reviews = {} as Record<number, Review[]>,
 }: {
   pulls?: Record<string, { number: number; head: { ref: string; sha: string } }[]>
   branches?: string[]
   commitParents?: Record<string, string>
   /** mergeable_state per read of a PR, the last one repeating. */
   states?: Record<number, string[]>
-  reviews?: Record<number, { user: { login: string }; state: string; commit_id: string }[]>
+  reviews?: Record<number, Review[]>
 }) {
   const calls: Call[] = []
   const respond = (body: unknown, status = 200) =>
@@ -569,7 +570,12 @@ describe("steps", () => {
 describe("merge step", () => {
   const HEAD = "a".repeat(40)
   const release = { number: 12, head: { ref: "release-train/v2.7.0", sha: HEAD } }
-  const approval = { user: { login: "ana" }, state: "APPROVED", commit_id: HEAD }
+  const approval = {
+    user: { login: "ana" },
+    state: "APPROVED",
+    commit_id: HEAD,
+    author_association: "MEMBER",
+  }
   const merges = (calls: Call[]) => calls.filter((c) => c.method === "PUT")
 
   it("merges an approved, green release PR with a merge commit", async () => {
@@ -632,10 +638,16 @@ describe("merge step", () => {
 
 describe("approvedAt", () => {
   const HEAD = "a".repeat(40)
-  const review = (login: string, state: string, commit_id = HEAD) => ({
+  const review = (
+    login: string,
+    state: string,
+    commit_id = HEAD,
+    author_association = "MEMBER",
+  ) => ({
     user: { login },
     state,
     commit_id,
+    author_association,
   })
 
   it("needs an approval on the PR's current commit", () => {
@@ -644,7 +656,13 @@ describe("approvedAt", () => {
     expect(approvedAt([], HEAD)).toBe(false)
   })
 
-  it("is blocked by anyone's outstanding change request", () => {
+  it("ignores reviews from people without access to the repository", () => {
+    expect(approvedAt([review("stranger", "APPROVED", HEAD, "NONE")], HEAD)).toBe(false)
+    expect(approvedAt([review("ana", "APPROVED", HEAD, "COLLABORATOR")], HEAD)).toBe(true)
+    expect(approvedAt([review("ana", "APPROVED", HEAD, "OWNER")], HEAD)).toBe(true)
+  })
+
+  it("is blocked by any maintainer's outstanding change request", () => {
     expect(approvedAt([review("ana", "APPROVED"), review("bo", "CHANGES_REQUESTED")], HEAD)).toBe(
       false,
     )

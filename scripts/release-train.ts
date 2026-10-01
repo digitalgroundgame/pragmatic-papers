@@ -397,11 +397,16 @@ interface PullDetail extends Pull {
   mergeable_state: string
 }
 
-interface Review {
+export interface Review {
   user: { login: string } | null
   state: string
   commit_id: string
+  /** The reviewer's relationship to the repository. */
+  author_association: string
 }
+
+/** Who can sign off a release: anyone else can review a public repo's PRs. */
+const MAINTAINERS = ["OWNER", "MEMBER", "COLLABORATOR"]
 
 function github(deps: Deps, repo: string, token: string) {
   const call = async (
@@ -527,13 +532,19 @@ async function syncPull(
 }
 
 /**
- * Whether people have approved `headSha`: each reviewer's latest verdict
+ * Whether maintainers have approved `headSha`: each one's latest verdict
  * counts, at least one approved this commit, and nobody requests changes.
+ * Reviews from people without access are ignored, since anyone can review a
+ * public repository's PRs.
  */
 export function approvedAt(reviews: Review[], headSha: string): boolean {
   const latest = new Map<string, Review>()
   for (const review of reviews) {
-    if (!review.user || !["APPROVED", "CHANGES_REQUESTED", "DISMISSED"].includes(review.state))
+    if (
+      !review.user ||
+      !MAINTAINERS.includes(review.author_association) ||
+      !["APPROVED", "CHANGES_REQUESTED", "DISMISSED"].includes(review.state)
+    )
       continue
     latest.set(review.user.login, review)
   }

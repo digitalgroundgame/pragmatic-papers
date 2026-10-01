@@ -45,9 +45,10 @@ on:
   schedule:
     # Cron is always UTC. 08:00 UTC is midnight Pacific in winter (PST) and 1am
     # in summer (PDT), so the cut never comes before midnight. TRAIN_STEP below
-    # maps each schedule to its step.
+    # maps each schedule to its step: change both together, or the run falls
+    # back to "all".
     - cron: "0 8 * * 4" # Thursday 12am PST / 3am EST: cut
-    - cron: "0 16 * * 6" # Saturday 8am PST / 11am EST: promote
+    - cron: "0 16 * * 6" # Saturday 8am PST / 9am PDT: promote
     - cron: "0 8 * * 0" # Sunday 12am PST / 3am EST: merge
   workflow_dispatch:
     inputs:
@@ -101,6 +102,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ steps.app-token.outputs.token || secrets.RELEASE_TOKEN }}
           SOAK_DAYS: ${{ inputs.soak_days }}
+          # Keep these strings in sync with on.schedule above.
           TRAIN_STEP: >-
             ${{ github.event.schedule == '0 8 * * 4' && 'cut'
             || github.event.schedule == '0 16 * * 6' && 'promote'

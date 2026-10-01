@@ -5,8 +5,8 @@ The whole wiki is checked out (it's small). Site:
 table of contents; `_Sidebar.md` and `_Footer.md` are shared chrome.
 
 The pages' source is `wiki/` in this repo, published to the wiki by the **Wiki sync** workflow
-on merge to `dev`. Read and **edit** them there (see the "Wiki" section of `AGENTS.md`); this
-cache is the published copy, which lags `wiki/` until a change merges.
+with each release. Read and **edit** them there (see the "Wiki" section of `AGENTS.md`); this
+cache is the published copy, which describes production and lags `wiki/` on `dev`.
 
 The wiki explains process for people; `AGENTS.md`, the skills and the code are the source of
 truth for agents. When the two disagree, say so rather than picking one.

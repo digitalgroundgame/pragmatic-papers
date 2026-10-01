@@ -382,9 +382,11 @@ Development" board, set with
 The wiki at `https://github.com/digitalgroundgame/pragmatic-papers/wiki` is published
 from **`wiki/`** in this repo: one Markdown file per page (`Home.md` holds the table of
 contents; `_Sidebar.md` and `_Footer.md` are shared chrome). Edit a page in a PR like
-any other file. When it merges into `dev`, `.github/workflows/wiki-sync.yml` mirrors
-`wiki/` onto the wiki in one commit, so a cloud session (which can't push to the wiki's
-own repository) or the GitHub web editor can change it. A PR touching `wiki/` gets a dry
+any other file, so a cloud session (which can't push to the wiki's own repository) or
+the GitHub web editor can change it. When a release reaches `main`,
+`.github/workflows/wiki-sync.yml` mirrors `wiki/` onto the wiki in one commit, so the
+wiki describes what's in production. A doc fix that can't wait for the release is
+published by running **Wiki sync** by hand on `dev`. A PR touching `wiki/` gets a dry
 run listing the pages it changes.
 
 Don't edit the wiki on github.com: the next sync would overwrite it, so the workflow

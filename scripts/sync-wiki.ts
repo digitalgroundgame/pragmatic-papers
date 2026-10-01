@@ -5,9 +5,10 @@
  *   node scripts/sync-wiki.ts <wiki-clone-dir>
  *
  * The wiki is a separate git repository that cloud sessions can't push to, so
- * its pages live in `wiki/` here and go through PRs like any other file. On a
- * push to dev that changes them, this mirrors `wiki/` into a clone of the wiki
- * and pushes one commit, whose message names the repo commit it came from.
+ * its pages live in `wiki/` here and go through PRs like any other file. When a
+ * release that changes them reaches main, this mirrors `wiki/` into a clone of
+ * the wiki and pushes one commit, whose message names the repo commit it came
+ * from. So the wiki describes what's in production, like the code it documents.
  *
  * A page edited on the wiki directly would be overwritten, so a run refuses
  * when the wiki's newest commit isn't one of these syncs. Copy that edit into

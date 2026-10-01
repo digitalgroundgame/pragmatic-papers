@@ -5,18 +5,22 @@ name: Wiki sync
 # scripts/sync-wiki.ts, so they can be edited in a PR from anywhere, cloud
 # sessions included, which can't push to the wiki's own repository.
 #
-#   - Push to dev touching wiki/: mirrors wiki/ onto the wiki in one commit.
+#   - Push to main touching wiki/, which is a release: mirrors wiki/ onto the
+#     wiki in one commit, so the wiki describes what's in production. With the
+#     release train that's midnight going into Sunday.
 #   - PR touching wiki/: reports what the sync would change (a dry run). It
 #     fails if the wiki was edited directly since the last sync, before that
 #     edit is overwritten.
-#   - By hand: dry_run to preview, force to overwrite a direct edit.
+#   - By hand: publishes the chosen branch's wiki/. Run it on dev to publish a
+#     doc fix before the next release. dry_run previews; force overwrites a
+#     direct edit.
 #
 # The default token pushes to the wiki with contents: write. If it's refused,
 # add a WIKI_TOKEN secret: a classic personal access token with the
 # public_repo scope from someone who can edit the wiki.
 on:
   push:
-    branches: [dev]
+    branches: [main]
     paths: ["wiki/**", "scripts/sync-wiki.ts"]
   pull_request:
     paths: ["wiki/**", "scripts/sync-wiki.ts", ".github/workflows/wiki-sync.yml"]

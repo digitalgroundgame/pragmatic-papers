@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest"
 
 import { bumpMessage as releaseBumpMessage } from "../../scripts/release-lib"
 import {
+  approvedAt,
   bumpMessage,
   bumpVersion,
   type Commit,
@@ -247,10 +248,15 @@ function fakeGithub({
   pulls = {},
   branches = [] as string[],
   commitParents = {} as Record<string, string>,
+  states = {} as Record<number, string[]>,
+  reviews = {} as Record<number, { user: { login: string }; state: string; commit_id: string }[]>,
 }: {
   pulls?: Record<string, { number: number; head: { ref: string; sha: string } }[]>
   branches?: string[]
   commitParents?: Record<string, string>
+  /** mergeable_state per read of a PR, the last one repeating. */
+  states?: Record<number, string[]>
+  reviews?: Record<number, { user: { login: string }; state: string; commit_id: string }[]>
 }) {
   const calls: Call[] = []
   const respond = (body: unknown, status = 200) =>
@@ -271,6 +277,22 @@ function fakeGithub({
         })),
       )
     }
+    const pullRead = /^\/pulls\/(\d+)$/.exec(path)
+    if (method === "GET" && pullRead) {
+      const number = Number(pullRead[1])
+      const pull = Object.values(pulls)
+        .flat()
+        .find((p) => p.number === number)
+      const queue = states[number] ?? ["clean"]
+      const state = queue.length > 1 ? queue.shift()! : queue[0]!
+      return respond({
+        ...pull,
+        html_url: `https://github.com/o/r/pull/${number}`,
+        mergeable_state: state,
+      })
+    }
+    const reviewRead = /^\/pulls\/(\d+)\/reviews/.exec(path)
+    if (method === "GET" && reviewRead) return respond(reviews[Number(reviewRead[1])] ?? [])
     if (method === "POST" && path === "/pulls")
       return respond({
         number: 99,
@@ -316,6 +338,7 @@ function run(
     now: () => NOW,
     log: (message) => logs.push(message),
     summary: (markdown) => logs.push(markdown),
+    wait: () => Promise.resolve(),
   }
   return {
     logs,
@@ -485,7 +508,7 @@ describe("main", () => {
     expect(logs.join("\n")).toContain("SOAK_DAYS")
   })
 
-  it("only cuts on Tuesday's run", async () => {
+  it("only cuts on Thursday's run", async () => {
     const candidate = commit("Bump package.json to v2.7.0 (#950)", 6)
     const github = fakeGithub({})
     const { code, logs } = run([commit("fix: after (#951)", 2), candidate], github, {
@@ -506,14 +529,16 @@ describe("main", () => {
     expect(await code).toBe(0)
     const posts = writes(github.calls).filter((c) => c.path === "/pulls")
     expect(posts.map((c) => c.body?.base)).toEqual(["main"])
-    expect(logs[0]).toContain("Cutting is left to Tuesday's run.")
+    expect(logs[0]).toContain("Cutting is left to Thursday's run.")
   })
 
   it("rejects an unknown step", async () => {
     const github = fakeGithub({})
     const { code, logs } = run([commit("feat: a", 1)], github, { TRAIN_STEP: "ship" })
     expect(await code).toBe(1)
-    expect(logs.join("\n")).toContain('TRAIN_STEP must be one of cut, promote, all, not "ship"')
+    expect(logs.join("\n")).toContain(
+      'TRAIN_STEP must be one of cut, promote, merge, all, not "ship"',
+    )
     expect(github.calls).toEqual([])
   })
 })
@@ -524,11 +549,11 @@ describe("steps", () => {
     expect(parseStep(" ")).toBe("all")
   })
 
-  it("promotes a candidate cut on Tuesday and merged by Wednesday 16:00 on Saturday", () => {
-    // NOW is Saturday 16:00; three days back is Wednesday 16:00.
-    const ok = plan([commit("Bump package.json to v2.7.0", 3), commit("feat: a", 4)], "2.6.0", 3)
+  it("promotes on Saturday a candidate cut Thursday and merged by Friday 16:00 UTC", () => {
+    // NOW is Saturday 16:00 UTC; a day back is Friday 16:00.
+    const ok = plan([commit("Bump package.json to v2.7.0", 1), commit("feat: a", 2)], "2.6.0", 1)
     expect(forStep(ok, "promote").promote?.version).toBe("2.7.0")
-    const late = plan([commit("Bump package.json to v2.7.0", 2.9)], "2.6.0", 3)
+    const late = plan([commit("Bump package.json to v2.7.0", 0.9)], "2.6.0", 1)
     expect(forStep(late, "promote").promote).toBeUndefined()
   })
 
@@ -538,5 +563,100 @@ describe("steps", () => {
     expect(forStep(both, "cut")).toEqual({ cut: both.cut })
     expect(forStep(both, "promote")).toEqual({ promote: both.promote })
     expect(forStep(both, "all")).toEqual(both)
+  })
+})
+
+describe("merge step", () => {
+  const HEAD = "a".repeat(40)
+  const release = { number: 12, head: { ref: "release-train/v2.7.0", sha: HEAD } }
+  const approval = { user: { login: "ana" }, state: "APPROVED", commit_id: HEAD }
+  const merges = (calls: Call[]) => calls.filter((c) => c.method === "PUT")
+
+  it("merges an approved, green release PR with a merge commit", async () => {
+    const github = fakeGithub({ pulls: { main: [release] }, reviews: { 12: [approval] } })
+    const { code, logs } = run([], github, { TRAIN_STEP: "merge" })
+    expect(await code).toBe(0)
+    expect(merges(github.calls)).toEqual([
+      { method: "PUT", path: "/pulls/12/merge", body: { merge_method: "merge", sha: HEAD } },
+    ])
+    expect(logs).toContain("Merged https://github.com/o/r/pull/12.")
+  })
+
+  it("waits out GitHub's `unknown` while it works out mergeability", async () => {
+    const github = fakeGithub({
+      pulls: { main: [release] },
+      reviews: { 12: [approval] },
+      states: { 12: ["unknown", "unknown", "clean"] },
+    })
+    expect(await run([], github, { TRAIN_STEP: "merge" }).code).toBe(0)
+    expect(merges(github.calls)).toHaveLength(1)
+  })
+
+  it("leaves an unapproved release PR for a person", async () => {
+    const github = fakeGithub({ pulls: { main: [release] } })
+    const { code, logs } = run([], github, { TRAIN_STEP: "merge" })
+    expect(await code).toBe(0)
+    expect(merges(github.calls)).toEqual([])
+    expect(logs.join("\n")).toContain("it isn't approved on its latest commit")
+  })
+
+  it("leaves an approved release PR whose checks aren't green", async () => {
+    const github = fakeGithub({
+      pulls: { main: [release] },
+      reviews: { 12: [approval] },
+      states: { 12: ["blocked"] },
+    })
+    const { code, logs } = run([], github, { TRAIN_STEP: "merge" })
+    expect(await code).toBe(0)
+    expect(merges(github.calls)).toEqual([])
+    expect(logs.join("\n")).toContain("GitHub reports it as `blocked`")
+  })
+
+  it("only reports on a dry run", async () => {
+    const github = fakeGithub({ pulls: { main: [release] }, reviews: { 12: [approval] } })
+    const { code, logs } = run([], github, { TRAIN_STEP: "merge", DRY_RUN: "true" })
+    expect(await code).toBe(0)
+    expect(merges(github.calls)).toEqual([])
+    expect(logs).toContain("Would merge https://github.com/o/r/pull/12.")
+  })
+
+  it("ignores PRs into main that the train didn't open", async () => {
+    const other = { number: 13, head: { ref: "hotfix/v2.6.1", sha: HEAD } }
+    const github = fakeGithub({ pulls: { main: [other] }, reviews: { 13: [approval] } })
+    const { code, logs } = run([], github, { TRAIN_STEP: "merge" })
+    expect(await code).toBe(0)
+    expect(merges(github.calls)).toEqual([])
+    expect(logs).toContain("No release PR is open; nothing to merge.")
+  })
+})
+
+describe("approvedAt", () => {
+  const HEAD = "a".repeat(40)
+  const review = (login: string, state: string, commit_id = HEAD) => ({
+    user: { login },
+    state,
+    commit_id,
+  })
+
+  it("needs an approval on the PR's current commit", () => {
+    expect(approvedAt([review("ana", "APPROVED")], HEAD)).toBe(true)
+    expect(approvedAt([review("ana", "APPROVED", "b".repeat(40))], HEAD)).toBe(false)
+    expect(approvedAt([], HEAD)).toBe(false)
+  })
+
+  it("is blocked by anyone's outstanding change request", () => {
+    expect(approvedAt([review("ana", "APPROVED"), review("bo", "CHANGES_REQUESTED")], HEAD)).toBe(
+      false,
+    )
+  })
+
+  it("takes each reviewer's latest verdict, ignoring comments", () => {
+    expect(
+      approvedAt(
+        [review("bo", "CHANGES_REQUESTED"), review("bo", "APPROVED"), review("bo", "COMMENTED")],
+        HEAD,
+      ),
+    ).toBe(true)
+    expect(approvedAt([review("ana", "APPROVED"), review("ana", "DISMISSED")], HEAD)).toBe(false)
   })
 })

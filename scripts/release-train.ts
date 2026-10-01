@@ -2,12 +2,15 @@
  * The weekly release train, run by .github/workflows/release-train.yml under
  * plain Node 24 (no install needed):
  *
- *   TRAIN_STEP=cut node scripts/release-train.ts       # Tuesdays
- *   TRAIN_STEP=promote node scripts/release-train.ts   # Saturdays
+ *   TRAIN_STEP=cut node scripts/release-train.ts       # Thursday, midnight Pacific
+ *   TRAIN_STEP=promote node scripts/release-train.ts   # Saturday morning
+ *   TRAIN_STEP=merge node scripts/release-train.ts     # Sunday, midnight Pacific
  *
  * A release is cut in two steps, so what reaches production has spent a few
- * days on staging first. Articles publish on Mondays, so a release goes live on
- * Saturday, and its candidate is cut on the Tuesday before:
+ * days on staging first. The candidate is cut at midnight after Wednesday's
+ * dev meeting, so the evening's PRs make it, and the release goes live at
+ * midnight going into Sunday, leaving a day to check production before
+ * Monday's articles:
  *
  *   1. Cut a candidate: open a PR into dev that bumps package.json to the next
  *      version, worked out from the commit subjects since the last candidate
@@ -16,14 +19,18 @@
  *      to it is what the release will hold.
  *   2. Promote it: once the candidate has been on dev for SOAK_DAYS, open a
  *      PR into main from a branch at that bump commit (not dev's tip, which
- *      has kept moving). A person merges it with a merge commit, as release
- *      PRs always have been; release.yml then tags it.
+ *      has kept moving), for people to check and approve during Saturday.
+ *   3. Merge it: at midnight, if a person has approved the release PR and its
+ *      checks are green, merge it with a merge commit, as release PRs always
+ *      have been. Merging deploys production, and release.yml tags it. If it
+ *      isn't approved and green, it waits for a person to merge it.
  *
- * TRAIN_STEP picks which step a run takes: `cut`, `promote`, or `all` (the
- * default, for running it by hand), which promotes the candidate that has
- * settled and cuts the next one from what landed since. While a candidate is still settling no new one is cut, so
- * there is only ever one at a time. The bump lands on dev before it reaches
- * main, so main never holds a commit dev lacks and nothing is back-merged.
+ * TRAIN_STEP picks which step a run takes: `cut`, `promote`, `merge`, or
+ * `all` (the default, for running it by hand), which promotes the candidate
+ * that has settled and cuts the next one from what landed since. While a
+ * candidate is still settling no new one is cut, so there is only ever one at
+ * a time. The bump lands on dev before it reaches main, so main never holds a
+ * commit dev lacks and nothing is back-merged.
  *
  * The exception is a hotfix (`pnpm hotfix`), which reaches main straight from
  * its own branch. A candidate cut before it changed the same "version" line,
@@ -38,8 +45,9 @@
  * quote upstream changelogs that say it about their own releases.
  *
  * The workflow runs this with a GitHub App token (or a PAT), not its own: CI
- * doesn't run on PRs the workflow's token opens, and both PRs need CI. Every
- * write goes through the API, so the bump commit is signed by GitHub.
+ * doesn't run on PRs the workflow's token opens, and both PRs need CI; nor
+ * would a merge with the workflow's token start the deploy and tag workflows.
+ * Every write goes through the API, so the bump commit is signed by GitHub.
  * DRY_RUN=true reports the plan and writes nothing.
  */
 import { execFileSync } from "node:child_process"
@@ -61,15 +69,13 @@ const BUMP_PREFIX = "release-train/bump-v"
 
 const DAY_MS = 24 * 60 * 60 * 1000
 /**
- * The runs are at 16:00 UTC (9am Pacific / noon Eastern). Tuesday to Saturday is
- * four days, less the time the bump PR waits for someone to merge it: a
- * candidate merged by Wednesday 9am Pacific / noon Eastern goes out that
- * Saturday.
+ * The candidate is cut early Thursday and promoted Saturday morning, so a bump
+ * merged by Friday morning still goes out that weekend, after a day on staging.
  */
-export const DEFAULT_SOAK_DAYS = 3
+export const DEFAULT_SOAK_DAYS = 1
 
-export type Step = "cut" | "promote" | "all"
-const STEPS: Step[] = ["cut", "promote", "all"]
+export type Step = "cut" | "promote" | "merge" | "all"
+const STEPS: Step[] = ["cut", "promote", "merge", "all"]
 
 export function parseStep(value: string | undefined): Step {
   const step = value?.trim() || "all"
@@ -79,7 +85,7 @@ export function parseStep(value: string | undefined): Step {
 }
 
 /** The plan with the step this run doesn't take left out. */
-export function forStep(plan: Plan, step: Step): Plan {
+export function forStep(plan: Plan, step: Exclude<Step, "merge">): Plan {
   const { promote, cut, ...rest } = plan
   return {
     ...rest,
@@ -287,7 +293,9 @@ export function releaseBody(promote: NonNullable<Plan["promote"]>): string {
   const lines = [
     `Promotes the release candidate v${version} (${commit.sha}), which has been on dev and staging for ${days(age)}.`,
     "",
-    `Merge with a **merge commit**. Don't squash it, and don't click "Update branch": either one leaves dev and main diverged. Merging deploys production, and release.yml tags v${version}.`,
+    `**Approve this PR to release it.** At midnight Pacific going into Sunday, the release train merges it if it's approved and its checks are green. Merging deploys production, and release.yml tags v${version}. Unapproved, it waits for a person.`,
+    "",
+    `To merge it yourself, use a **merge commit**. Don't squash it, and don't click "Update branch": either one leaves dev and main diverged.`,
     "",
     "If GitHub reports conflicts, a hotfix has reached main since this was opened. Don't resolve them here: back-merge the hotfix into dev, and the next run closes this PR and cuts a fresh candidate.",
   ]
@@ -313,7 +321,7 @@ export function bumpBody(cut: NonNullable<Plan["cut"]>, soakDays: number): strin
   return [
     `Cuts v${cut.version} as the next release candidate: a ${cut.level} release after v${cut.from}, because ${why}.`,
     "",
-    `Once this merges, the candidate settles on staging, and the first Saturday run at least ${days(soakDays)} later opens its release PR into main. It holds everything on dev up to this commit. The release train refreshes this PR each Tuesday until it merges, taking in what landed since.`,
+    `Once this merges, the candidate settles on staging, and the first Saturday run at least ${days(soakDays)} later opens its release PR into main, which goes live at midnight going into Sunday once approved. It holds everything on dev up to this commit. The release train refreshes this PR each Thursday until it merges, taking in what landed since.`,
     "",
     `## Changes since v${cut.from}`,
     "",
@@ -323,7 +331,11 @@ export function bumpBody(cut: NonNullable<Plan["cut"]>, soakDays: number): strin
   ].join("\n")
 }
 
-export function describePlan(plan: Plan, mainVersion: string, step: Step = "all"): string {
+export function describePlan(
+  plan: Plan,
+  mainVersion: string,
+  step: Exclude<Step, "merge"> = "all",
+): string {
   const lines = [`Production (main) is on v${mainVersion}.`]
   if (plan.promote) {
     lines.push(
@@ -349,7 +361,7 @@ export function describePlan(plan: Plan, mainVersion: string, step: Step = "all"
       `- Cut v${plan.cut.version} (${plan.cut.level}) from ${plan.cut.commits.length} commit(s) since v${plan.cut.from}.`,
     )
   } else if (step === "promote") {
-    lines.push("- Cutting is left to Tuesday's run.")
+    lines.push("- Cutting is left to Thursday's run.")
   } else if (!plan.waiting) {
     lines.push("- Nothing has landed on dev since the last candidate; nothing to cut.")
   }
@@ -370,12 +382,25 @@ export interface Deps {
   log: (message: string) => void
   /** Adds to the job summary (GITHUB_STEP_SUMMARY). */
   summary: (markdown: string) => void
+  /** Waits between polls while GitHub works out whether a PR can merge. */
+  wait?: (ms: number) => Promise<void>
 }
 
 interface Pull {
   number: number
   html_url: string
   head: { ref: string; sha: string }
+}
+
+interface PullDetail extends Pull {
+  /** GitHub's verdict: `clean` means mergeable with every required check green. */
+  mergeable_state: string
+}
+
+interface Review {
+  user: { login: string } | null
+  state: string
+  commit_id: string
 }
 
 function github(deps: Deps, repo: string, token: string) {
@@ -412,6 +437,10 @@ function github(deps: Deps, repo: string, token: string) {
       json<Pull>("/pulls", { method: "POST", body }),
     updatePull: (pr: number, body: { title: string; body: string }) =>
       json(`/pulls/${pr}`, { method: "PATCH", body }),
+    pull: (pr: number) => json<PullDetail>(`/pulls/${pr}`),
+    reviews: (pr: number) => json<Review[]>(`/pulls/${pr}/reviews?per_page=100`),
+    mergePull: (pr: number, sha: string) =>
+      json(`/pulls/${pr}/merge`, { method: "PUT", body: { merge_method: "merge", sha } }),
     closePull: async (pr: number, comment: string) => {
       await json(`/issues/${pr}/comments`, { method: "POST", body: { body: comment } })
       await json(`/pulls/${pr}`, { method: "PATCH", body: { state: "closed" } })
@@ -497,6 +526,62 @@ async function syncPull(
   return pull
 }
 
+/**
+ * Whether people have approved `headSha`: each reviewer's latest verdict
+ * counts, at least one approved this commit, and nobody requests changes.
+ */
+export function approvedAt(reviews: Review[], headSha: string): boolean {
+  const latest = new Map<string, Review>()
+  for (const review of reviews) {
+    if (!review.user || !["APPROVED", "CHANGES_REQUESTED", "DISMISSED"].includes(review.state))
+      continue
+    latest.set(review.user.login, review)
+  }
+  const verdicts = [...latest.values()]
+  return (
+    verdicts.some((r) => r.state === "APPROVED" && r.commit_id === headSha) &&
+    !verdicts.some((r) => r.state === "CHANGES_REQUESTED")
+  )
+}
+
+/** Merge the open release PR if it's approved and green; otherwise say why it waits. */
+async function mergeRelease(gh: Github, deps: Deps, dryRun: boolean): Promise<void> {
+  const open = (await gh.openPulls("main")).filter((p) => p.head.ref.startsWith(RELEASE_PREFIX))
+  if (open.length === 0) {
+    deps.log("No release PR is open; nothing to merge.")
+    deps.summary("No release PR is open; nothing to merge.")
+    return
+  }
+  for (const { number } of open) {
+    // GitHub works out mergeability in the background, so a fresh read can say `unknown`.
+    let pull = await gh.pull(number)
+    for (let tries = 0; pull.mergeable_state === "unknown" && tries < 5; tries++) {
+      await (deps.wait ?? ((ms) => new Promise((resolve) => setTimeout(resolve, ms))))(3000)
+      pull = await gh.pull(number)
+    }
+    const approved = approvedAt(await gh.reviews(number), pull.head.sha)
+    const waits = !approved
+      ? "it isn't approved on its latest commit"
+      : pull.mergeable_state !== "clean"
+        ? `GitHub reports it as \`${pull.mergeable_state}\`, not ready to merge (checks failing or pending, or a conflict)`
+        : undefined
+    if (waits) {
+      const message = `Not merging ${pull.html_url}: ${waits}. It waits for a person to merge it.`
+      deps.log(message)
+      deps.summary(`- ${message}`)
+      continue
+    }
+    if (dryRun) {
+      deps.log(`Would merge ${pull.html_url}.`)
+      deps.summary(`- Would merge ${pull.html_url}.`)
+      continue
+    }
+    await gh.mergePull(number, pull.head.sha)
+    deps.log(`Merged ${pull.html_url}.`)
+    deps.summary(`- Merged ${pull.html_url}.`)
+  }
+}
+
 function required(env: Env, name: string): string {
   const value = env[name]?.trim()
   if (!value) throw new Error(`Missing required env var ${name}`)
@@ -509,6 +594,12 @@ export async function main(env: Env, deps: Deps): Promise<number> {
     if (!Number.isFinite(soakDays) || soakDays < 0)
       throw new Error(`SOAK_DAYS must be a number of days, not "${env.SOAK_DAYS}"`)
     const step = parseStep(env.TRAIN_STEP)
+    if (step === "merge") {
+      // A dry run reads the PR too, so it needs the token; it just doesn't merge.
+      const gh = github(deps, required(env, "GITHUB_REPOSITORY"), required(env, "GITHUB_TOKEN"))
+      await mergeRelease(gh, deps, env.DRY_RUN === "true")
+      return 0
+    }
 
     const mainVersion = (
       JSON.parse(deps.git(["show", "origin/main:package.json"])) as {

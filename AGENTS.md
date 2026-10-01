@@ -325,17 +325,19 @@ change them there, not in the dashboard (`cloudflare/README.md`).
 ## Releases
 
 A release train (`.github/workflows/release-train.yml`, `scripts/release-train.ts`)
-puts a release live on Saturday, ahead of Monday's articles. Every Tuesday it opens a
-"Bump package.json to vX.Y.Z" PR into `dev` (the next **candidate**, versioned from
-commit prefixes: `!` major, `feat` minor, anything else patch). On Saturday, once a
-merged candidate has spent `SOAK_DAYS` (3) on staging, it opens a "Release X.Y.Z" PR
-into `main` from a branch at that bump commit, so a bump merged by Wednesday 9am
-Pacific / noon Eastern ships that week (the runs are at 16:00 UTC, an hour earlier
-locally in winter). People merge both; the release PR as a **merge commit**, after which `release.yml` tags it. Only one
-candidate settles at a time, and the bump lands on `dev` first, so nothing is
-back-merged. The exception is `pnpm hotfix`: a candidate cut before a hotfix would
-conflict with `main`, so the train skips it and cuts nothing until the hotfix is
-back-merged into `dev`. `pnpm release` remains for doing it by hand.
+cuts a candidate after Wednesday's dev meeting and puts it live at midnight going into
+Sunday, leaving a day to check production before Monday's articles. At midnight
+Pacific going into Thursday it opens a "Bump package.json to vX.Y.Z" PR into `dev`
+(the next **candidate**, versioned from commit prefixes: `!` major, `feat` minor,
+anything else patch). Saturday morning, once a merged candidate has spent `SOAK_DAYS`
+(1) on staging, it opens a "Release X.Y.Z" PR into `main` from a branch at that bump
+commit. At midnight Pacific going into Sunday it merges that PR with a **merge
+commit** if a person has approved it and its checks are green; `release.yml` then
+tags it. Unapproved, it waits for a person. Cron is UTC, so the midnight runs are at
+08:00 UTC: midnight PST, 1am PDT. Only one candidate settles at a time, and the bump
+lands on `dev` first, so nothing is back-merged. The exception is `pnpm hotfix`: a
+candidate cut before a hotfix would conflict with `main`, so the train skips it and
+cuts nothing until the hotfix is back-merged into `dev`. `pnpm release` remains for doing it by hand.
 
 ## Third-party docs
 

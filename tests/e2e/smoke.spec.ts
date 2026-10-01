@@ -70,7 +70,12 @@ test.describe("public routes", () => {
       await visit(page, `/authors/${WRITER_SLUG}`)
       await expect(page.getByRole("heading", { level: 1, name: WRITER_NAME })).toBeVisible()
       const articles = page.getByRole("region", { name: "Articles by this author" })
-      await expect(articles.getByRole("link", { name: SHOWCASE_TITLE }).first()).toBeVisible()
+      // The seed's writer has more articles than fit on one page, so assert
+      // the list rather than which ones sort first.
+      await expect(articles.getByRole("heading", { level: 2, name: "Articles" })).toBeVisible()
+      await expect(
+        articles.getByRole("heading", { level: 3 }).getByRole("link").first(),
+      ).toHaveAttribute("href", /^\/articles\//)
     })
   })
 

@@ -1,23 +1,17 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite"
 import { expect, within } from "storybook/test"
 
-import { createParagraph, createTextNode, richText, TextFormat } from "@/stories/fixtures/richText"
+import { FeedHTML } from "@/stories/FeedHTML"
+import { bannerBlock } from "@/stories/fixtures/blocks"
+import { storyFeedContext } from "@/stories/fixtures/feedContext"
 
 import { BannerBlock } from "./Component"
+import { bannerToHTML } from "./converters"
 
 const meta = {
   title: "Blocks/Banner",
   component: BannerBlock,
-  args: {
-    blockType: "banner",
-    style: "info",
-    content: richText(
-      createParagraph([
-        createTextNode("Correction: ", TextFormat.Bold),
-        createTextNode("an earlier version of this article misstated the turnout in 2022."),
-      ]),
-    ),
-  },
+  args: bannerBlock,
   argTypes: {
     style: { control: "inline-radio", options: ["info", "warning", "error", "success"] },
   },
@@ -54,4 +48,14 @@ export const Error: Story = {
 export const Success: Story = {
   args: { style: "success" },
   play: expectBanner("border-success"),
+}
+
+/** The banner in the RSS and Substack feeds: a plain blockquote. */
+export const Feed: Story = {
+  render: (args) => <FeedHTML html={bannerToHTML(args, storyFeedContext())} />,
+  play: async ({ canvasElement }) => {
+    const quote = canvasElement.querySelector("blockquote")
+    await expect(quote).toBeInTheDocument()
+    await expect(within(quote!).getByText(/misstated the turnout/)).toBeInTheDocument()
+  },
 }

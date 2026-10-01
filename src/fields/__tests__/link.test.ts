@@ -35,6 +35,22 @@ describe("link (deprecated)", () => {
     expect(showsFor(url!, { type: "reference" })).toBe(false)
   })
 
+  it("lays the reference and URL out at half width beside the label", () => {
+    const { reference, url, label } = namedFields(group().fields)
+
+    for (const field of [reference, url, label]) {
+      expect(field!.admin).toMatchObject({ width: "50%" })
+    }
+  })
+
+  it("leaves the reference and URL full width when disableLabel is set", () => {
+    const { reference, url } = namedFields(group({ disableLabel: true }).fields)
+
+    for (const field of [reference, url]) {
+      expect(field!.admin).not.toHaveProperty("width")
+    }
+  })
+
   it("drops the label field when disableLabel is set", () => {
     const field = group({ disableLabel: true })
 

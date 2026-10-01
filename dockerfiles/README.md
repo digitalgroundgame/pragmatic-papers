@@ -81,6 +81,16 @@ SUPABASE_URL=https://<project>.supabase.co
 - The Sentry environment is `BUILD_ENV` (`production`, `staging` or `preview`); there's no separate variable for it. Preview errors also carry a `pr` tag (e.g. `986`) taken from `COOLIFY_FQDN`, so filter on `pr:986` to see one PR's. Both are read when the server starts, not compiled in.
 - Turn on **Include Source Commit in Build** so Coolify passes `SOURCE_COMMIT` into the build. `.git` is excluded from the Docker context, so the Dockerfile uses it as `SENTRY_RELEASE`; without it, releases (and every browser error's release tag) come out empty.
 
+**Cloudflare cache purge (every Coolify deployment — production, staging and previews):**
+
+Public pages are cached at Cloudflare's edge for 10 minutes, then served stale for up to a day while they revalidate (`next.config.ts`, and the zone's Cache Rules in `cloudflare/`). When an editor saves a global (Site Settings, Header, Footer) or publishes, changes or deletes a document readers see, the save's `revalidate*` hook asks Cloudflare to purge **this deployment's hostname** (from `SERVER_URL`), so anonymous readers get the change at once (`src/hooks/purgeEdgeCache.ts`). Only the hostname: the three environments share one zone, so a "purge everything" from a preview would empty production's cache too.
+
+- `CLOUDFLARE_ZONE_ID` — the zone's ID, from its Overview page in the Cloudflare dashboard.
+- `CLOUDFLARE_PURGE_TOKEN` — a custom API token with **Zone → Cache Purge → Purge**, on this zone only. Keep it apart from `CLOUDFLARE_API_TOKEN` (a GitHub secret that deploys Storybook) and the Cache Rules tokens (`cloudflare/README.md`).
+- Both are **Runtime Variables** only; the build never reads them. Set them in the production app, and in the development app's staging **and** preview variable groups.
+- Unset (or with `SERVER_URL` on localhost), each save logs `Skipping Cloudflare purge (…) — … set CLOUDFLARE_ZONE_ID, CLOUDFLARE_PURGE_TOKEN` and carries on. A purge Cloudflare refuses is logged as a warning, never thrown at the save.
+- Purges within a second of each other go out as one request. Hostname purges are rate-limited per account (5 a minute on the Free plan, more on paid plans); a refused one just leaves the edge to expire on its own.
+
 ### 4. Configure Domain
 
 - **Application:** Port `3000` → `your-domain.com`

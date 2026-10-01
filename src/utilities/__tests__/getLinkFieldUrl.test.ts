@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest"
 
 import type { LinkField } from "@/payload-types"
-import { getLinkFieldUrl } from "@/utilities/getLinkFieldUrl"
+import { getLinkFieldUrl, linksToUnpublished } from "@/utilities/getLinkFieldUrl"
 
 type RelationTo = NonNullable<LinkField["reference"]>["relationTo"]
 
@@ -60,5 +60,23 @@ describe("getLinkFieldUrl", () => {
       expect(getLinkFieldUrl({ type: "custom", url: null })).toBeNull()
       expect(getLinkFieldUrl({ type: "custom", url: "" })).toBeNull()
     })
+  })
+})
+
+describe("linksToUnpublished", () => {
+  it("is true only for a populated reference whose document is a draft", () => {
+    expect(linksToUnpublished(reference("pages", { id: 1, slug: "a", _status: "draft" }))).toBe(
+      true,
+    )
+    expect(
+      linksToUnpublished(reference("articles", { id: 1, slug: "a", _status: "published" })),
+    ).toBe(false)
+  })
+
+  it("is false for a collection without drafts, an unpopulated reference, or a custom URL", () => {
+    expect(linksToUnpublished(reference("topics", { id: 1, slug: "economics" }))).toBe(false)
+    expect(linksToUnpublished(reference("pages", 42))).toBe(false)
+    expect(linksToUnpublished({ type: "custom", url: "/x" })).toBe(false)
+    expect(linksToUnpublished()).toBe(false)
   })
 })

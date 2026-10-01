@@ -1,4 +1,4 @@
-import type { Field, GroupField } from "payload"
+import type { Field, GroupField, RelationshipField, TextField } from "payload"
 
 import deepMerge from "@/utilities/deepMerge"
 
@@ -70,7 +70,7 @@ export const link: LinkType = ({ appearances, disableLabel = false, overrides = 
     ],
   }
 
-  const linkTypes: Field[] = [
+  const linkTypes: (RelationshipField | TextField)[] = [
     {
       name: "reference",
       type: "relationship",
@@ -93,18 +93,20 @@ export const link: LinkType = ({ appearances, disableLabel = false, overrides = 
   ]
 
   if (!disableLabel) {
-    linkTypes.map((linkType) => ({
-      ...linkType,
-      admin: {
-        ...linkType.admin,
-        width: "50%",
-      },
-    }))
+    const halfWidthLinkTypes = linkTypes.map(
+      <T extends RelationshipField | TextField>(linkType: T): T => ({
+        ...linkType,
+        admin: {
+          ...linkType.admin,
+          width: "50%",
+        },
+      }),
+    )
 
     linkResult.fields.push({
       type: "row",
       fields: [
-        ...linkTypes,
+        ...halfWidthLinkTypes,
         {
           name: "label",
           type: "text",

@@ -1,25 +1,16 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite"
 import { expect, screen, userEvent, within } from "storybook/test"
 
-import { landscapeImage, mediaFixture, portraitImage } from "@/stories/fixtures/media"
-import {
-  createLinkNode,
-  createParagraph,
-  createTextNode,
-  richText,
-} from "@/stories/fixtures/richText"
+import { FeedHTML } from "@/stories/FeedHTML"
+import { captionedImage } from "@/stories/fixtures/blocks"
+import { storyFeedContext } from "@/stories/fixtures/feedContext"
+import { landscapeImage, portraitImage } from "@/stories/fixtures/media"
 
 import { MediaBlock } from "./Component"
+import { mediaBlockToHTML } from "./converters"
 import { LightboxMediaBlock } from "./LightboxMediaBlock"
 
-const captioned = mediaFixture({
-  caption: richText(
-    createParagraph([
-      createTextNode("The ridge above town at dusk. Photo: "),
-      createLinkNode("County Archive", "https://example.com/archive"),
-    ]),
-  ),
-})
+const captioned = captionedImage
 
 const meta = {
   title: "Blocks/MediaBlock",
@@ -69,6 +60,20 @@ export const Lightbox: Story = {
     await userEvent.click(trigger)
     const dialog = await screen.findByRole("dialog")
     await expect(within(dialog).getByRole("img")).toHaveAttribute("alt", captioned.alt)
+  },
+}
+
+/** The image in the feeds: a plain figure with an absolute URL and its caption. */
+export const Feed: Story = {
+  args: { media: captioned },
+  render: ({ media }) => <FeedHTML html={mediaBlockToHTML({ media }, storyFeedContext())} />,
+  play: async ({ canvasElement }) => {
+    const figure = within(canvasElement).getByRole("figure")
+    await expect(within(figure).getByRole("img")).toHaveAttribute(
+      "src",
+      `${window.location.origin}${captioned.url}`,
+    )
+    await expect(within(figure).getByRole("link", { name: "County Archive" })).toBeInTheDocument()
   },
 }
 

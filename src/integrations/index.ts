@@ -1,3 +1,4 @@
+import { cloudflareZone } from "./cloudflare"
 import { githubRepo } from "./github"
 import { shopifyStore } from "./shopify"
 import { integrationStatus, type Integration, type IntegrationStatus } from "./types"
@@ -24,8 +25,23 @@ export const courtTracker = githubRepo({
 
 export { shopifyStore }
 
+/**
+ * The Cloudflare zone in front of every environment — production, staging and each PR
+ * preview share it (`cloudflare/README.md`). Used to purge the edge cache when an editor's
+ * save changes what anonymous readers should see (`src/hooks/purgeEdgeCache.ts`).
+ *
+ * Its token is not `CLOUDFLARE_API_TOKEN` (CI's, which deploys Storybook) nor the rules
+ * tokens: a token scoped to **Zone → Cache Purge** on this zone only, set at runtime.
+ */
+export const cloudflareCache = cloudflareZone({
+  id: "cloudflare-cache",
+  label: "Cloudflare edge cache",
+  zoneEnv: "CLOUDFLARE_ZONE_ID",
+  tokenEnv: "CLOUDFLARE_PURGE_TOKEN",
+})
+
 /** Declaration order is display order. */
-export const INTEGRATIONS: readonly Integration[] = [courtTracker, shopifyStore]
+export const INTEGRATIONS: readonly Integration[] = [courtTracker, shopifyStore, cloudflareCache]
 
 export function getIntegration(id: string): Integration | null {
   return INTEGRATIONS.find((i) => i.id === id) ?? null

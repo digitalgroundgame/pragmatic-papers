@@ -22,3 +22,8 @@ storybook-static
 .storybook
 **/*.stories.tsx
 src/stories
+# Unit tests and their fixtures run from the checkout in CI; the site image never
+# imports them, and `next build` would type-check them against files left out above.
+**/__tests__
+**/*.test.ts
+**/*.test.tsx

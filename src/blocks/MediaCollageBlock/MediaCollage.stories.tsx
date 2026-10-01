@@ -1,36 +1,22 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite"
 import { expect, screen, userEvent, waitFor, within } from "storybook/test"
 
-import { mediaFixture, portraitImage, squareImage, wideImage } from "@/stories/fixtures/media"
-import {
-  createLinkNode,
-  createParagraph,
-  createTextNode,
-  richText,
-} from "@/stories/fixtures/richText"
+import { FeedHTML } from "@/stories/FeedHTML"
+import { captionedImage, mediaCollageBlock } from "@/stories/fixtures/blocks"
+import { storyFeedContext } from "@/stories/fixtures/feedContext"
 
 import { MediaCollageBlock } from "./component"
+import { mediaCollageToHTML } from "./converters"
 
 // The first image carries a caption with a link: the grid hides captions, the
 // lightbox shows them.
-const captionedLandscape = mediaFixture({
-  caption: richText(
-    createParagraph([
-      createTextNode("The ridge above town. Photo: "),
-      createLinkNode("County Archive", "https://example.com/archive"),
-    ]),
-  ),
-})
-
-const images = [captionedLandscape, squareImage, portraitImage, wideImage].map((media, i) => ({
-  id: `img-${i}`,
-  media,
-}))
+const captionedLandscape = captionedImage
+const { images } = mediaCollageBlock
 
 const meta = {
   title: "Blocks/MediaCollage",
   component: MediaCollageBlock,
-  args: { blockType: "mediaCollage", layout: "grid", images },
+  args: mediaCollageBlock,
   argTypes: {
     layout: { control: "inline-radio", options: ["grid", "carousel"] },
   },
@@ -66,6 +52,16 @@ export const Grid: Story = {
     await waitFor(() =>
       expect(within(dialog).getByRole("link", { name: "County Archive" })).toBeVisible(),
     )
+  },
+}
+
+/** The collage in the feeds: one figure per image, in order, which readers lay out themselves. */
+export const Feed: Story = {
+  render: (args) => <FeedHTML html={mediaCollageToHTML(args, storyFeedContext())} />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getAllByRole("figure")).toHaveLength(images.length)
+    await expect(canvas.getByRole("link", { name: "County Archive" })).toBeVisible()
   },
 }
 

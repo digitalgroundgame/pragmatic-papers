@@ -13,7 +13,7 @@ This file provides guidance to tools like Claude Code (claude.ai/code) when work
 - `pnpm dev` — starts everything in Docker Compose (Postgres + Next.js dev server on port 8000)
 - `pnpm dev:db-nuke` — stop Postgres and delete its volume (`docker compose down -v`), wiping the entire data directory. Use this after a Postgres major-version bump or whenever the local data is corrupt; the next `pnpm dev` recreates a fresh cluster and Drizzle push re-syncs the schema
 - `pnpm dev:db-fresh` — bring Postgres up and rebuild the schema by re-running all migrations from scratch (`payload migrate:fresh`). Unlike `dev:db-nuke`, this keeps the volume and exercises the committed migration files (the same path prod uses), so it surfaces migration drift that Drizzle push masks in dev
-- `pnpm dev:db-seed` — bring Postgres up, seed it from the terminal, and stop it again. Runs the same `seed()` as the admin dashboard's "Seed your database" button, so it first deletes **every** article, volume, page, media file, topic, map asset, interactive, form and form submission (not just seeded ones), the seed users, and the recommendation rankings. Drizzle push builds the schema on an empty database, so it works straight after `dev:db-nuke`. It refuses to run unless `DATABASE_URI` points at localhost and `USE_LOCAL_STORAGE=true` (override with `SEED_ALLOW_REMOTE=true`), and exits 1 if you decline Drizzle's data-loss prompt. Stop `pnpm dev` first: this command stops the Postgres container it shares. If the header or footer still show old nav afterwards, delete `.next/dev/cache`
+- `pnpm dev:db-seed` — bring Postgres up, seed it from the terminal, and stop it again. Runs the same `seed()` as the admin dashboard's "Seed your database" button, so it first deletes **every** article, volume, page, media file, topic, map asset, interactive, form and form submission (not just seeded ones), the seed users, and the recommendation rankings. Drizzle push builds the schema on an empty database, so it works straight after `dev:db-nuke`. It refuses to run unless `DATABASE_URI` points at localhost and `USE_LOCAL_STORAGE=true` (override with `SEED_ALLOW_REMOTE=true`), and exits 1 if you decline Drizzle's data-loss prompt. Stop `pnpm dev` first: this command stops the Postgres container it shares.
 - `pnpm showcase <pr-number | staging | url> (<slug...> | --all) [--draft]` — push feature articles from the catalog in `src/endpoints/seed/showcase.ts` to a live site through its REST API, as `SHOWCASE_EMAIL` / `SHOWCASE_PASSWORD` (an account with an author role). A PR number means its `pr-<n>.pragmaticpapers.com` preview; `staging` means `SHOWCASE_STAGING_URL`, and pushes drafts. Only adds articles whose slug is missing; deletes nothing. A PR with the `showcase` label or a `Showcase: <slug...>` line in its description (the workflow keeps the two in sync; the label alone inserts a line naming the articles the PR adds to the catalog) gets them pushed to its preview after every deploy by `.github/workflows/showcase.yml`, which then turns that line into links to them, titled, at the top of the description, and can also be run by hand for a PR (the articles join that line, which opts the PR in) or staging. Nothing is pushed by default: when a PR adds a seeded article to that catalog, opt it in by adding the `showcase` label or putting `Showcase: <slug>` in its description
 
 ### Quality Checks
@@ -30,12 +30,30 @@ This file provides guidance to tools like Claude Code (claude.ai/code) when work
 - `pnpm test:unit` — run unit tests
 - `pnpm test:storybook` — run every Storybook story in headless Chromium: its `play` function, then an axe check (see [Storybook](#storybook))
 - `pnpm storybook` — Storybook dev server on port 6006; `pnpm storybook:build` builds it into `storybook-static/`
-- `pnpm test:integration` — run integration tests (uses Testcontainers)
-- `pnpm test:e2e` — run Playwright E2E tests (uses Testcontainers). Screenshot comparisons are skipped unless `CI` is set; generate visual baselines with `pnpm test:e2e:update-snapshots` (Dockerized; matches CI pixel-for-pixel on x86_64 hosts — see `tests/e2e/README.md` for the full lifecycle) and commit them with the PR — never generate/commit baselines from a bare local machine
+- `pnpm test:integration` — run integration tests against a throwaway Postgres in Docker (see [Test databases](#test-databases))
+- `pnpm test:e2e` — run Playwright E2E tests against a throwaway Postgres in Docker (see [Test databases](#test-databases)). Screenshot comparisons are skipped unless `CI` is set; generate visual baselines with `pnpm test:e2e:update-snapshots` (Dockerized; matches CI pixel-for-pixel on x86_64 hosts — see `tests/e2e/README.md` for the full lifecycle) and commit them with the PR — never generate/commit baselines from a bare local machine
 - `pnpm test:unit:coverage` — run unit tests with V8 coverage report (what CI uses; outputs `coverage/coverage-summary.json` and `coverage/coverage-final.json`)
 - `pnpm test:coverage` — run all tests with V8 coverage report (full picture for local inspection)
 - `pnpm test:unit -u` — regenerate snapshot baselines after intentional UI changes
 - `pnpm coverage:report` — post the combined coverage PR comment locally (requires `GITHUB_TOKEN`, `GITHUB_REPOSITORY`, `GITHUB_EVENT_PATH`)
+
+### Test databases
+
+`pnpm test:integration`, `pnpm test:e2e` and `node scripts/check-pending-migrations.mjs`
+get their database from `startTestDatabase()` in `scripts/test-db.mjs`. They never read
+`DATABASE_URI` (that's your dev database in `.env`); they only set it for the Payload
+processes they start.
+
+- By default it `docker run`s `postgres:17-alpine` on a random localhost port and removes
+  it on exit, Ctrl-C or SIGTERM. A container left by a `kill -9` is swept by the next run.
+- Integration and E2E start from a **pre-migrated snapshot image**
+  (`pragmatic-papers-test-db:<hash>`, keyed on `src/migrations/**` and the Postgres image),
+  so they skip `payload migrate` until a migration changes; a miss migrates once and commits
+  a new one. The pending-migrations check always replays from scratch, and CI (`CI` set)
+  never uses a snapshot. `docker image rm` the tags to force a fresh migrate.
+- `TEST_DATABASE_URI` points them at an existing database instead (CI's E2E jobs, and
+  `pnpm test:e2e:update-snapshots`, whose containers can't start their own). It is refused if
+  it names the same database as `DATABASE_URI` in `.env`.
 
 ### Build & Payload
 
@@ -98,8 +116,26 @@ so each has its own switches; PR previews start with staging's. To add one:
    (API routes return 404), links and buttons aren't rendered, sitemaps come
    back empty, and jobs skip with a log line.
 
-Saving the global clears its cache, so a switch takes effect without a
-redeploy. When the feature graduates, delete the checkbox and the checks.
+Saving the global clears Next's cache, so the origin answers with the new
+switch on the next request, without a redeploy. Cloudflare's edge copy of
+every public page is purged too, when the deployment has
+`CLOUDFLARE_ZONE_ID` and `CLOUDFLARE_PURGE_TOKEN` (see
+[Edge cache](#edge-cache-cloudflare)); without them anonymous readers can
+see the old answer until the edge's copy expires (10 minutes, or up to a day
+served stale). When the feature graduates, delete the checkbox and the checks.
+
+### Edge cache (Cloudflare)
+
+Public pages are cached at Cloudflare's edge (`s-maxage=600`,
+`stale-while-revalidate=86400`, from `next.config.ts`). A `revalidate*` hook
+that changes what anonymous readers see calls
+`purgeEdgeCache(payload.logger, "<reason>")` (`src/hooks/purgeEdgeCache.ts`)
+after its own `revalidatePath` / `revalidateTag`, and only when
+`context.disableRevalidate` is unset. It purges this deployment's hostname
+(production, staging and previews share a zone), batches a burst of saves into
+one request, returns at once, and logs and skips when the `cloudflareCache`
+connection isn't configured. A new hook for content readers see should call it
+too.
 
 ### Payload Plugins
 
@@ -122,7 +158,11 @@ redeploy. When the feature graduates, delete the checkbox and the checks.
 
 - **File structure**: `blocks/<Name>/config.ts` (Payload config) + `blocks/<Name>/Component.tsx` (React component)
 - **Two rendering systems**: `RenderBlocks` renders page layout blocks (Content, CTA, MediaBlock, Form, VolumeView); `RichText` renders Lexical inline/rich-text blocks (Banner, Code, Math, Footnote, SocialEmbed, SquiggleRule)
-- **Feed converters**: the RSS feeds (and the Substack import feed) render article content and volume editor's notes to HTML, so a block or Lexical feature added to those editors (or to the rich text inside their blocks) also needs a converter in `createHtmlConverters` (`src/utilities/generateRssFeed.ts`) and, for article content, `createSubstackConverters` (`src/app/(frontend)/articles/_substack/generateSubstackFeed.ts`). `src/utilities/__tests__/generateRssFeed.converters.test.ts` reads the resolved Payload config and fails, naming what's missing, until it has one
+- **Feed converters**: the RSS feeds (`/articles/feed.xml`, `/volumes/feed.xml`) and the Substack import feed render article content and volume editor's notes to HTML. A block's non-React renderings live in **`blocks/<Name>/converters.ts`**, one function per output **format**, named for the format rather than the feed (`timelineToHTML`, `displayMathToCode`). Each takes the block's fields plus a `FeedContext` (`src/utilities/feedHTML.ts`: `siteUrl`, `pageUrl`, `richTextToHTML` for nested rich text) and returns plain semantic HTML: absolute URLs, no inline styles, and every CMS value through `escapeHTML`. Shared logic used by several formats, or by `Component.tsx`, goes in the same file (`formatTimelineDate`). `converters.ts` must run in the browser, because Storybook imports it, so no server-only imports. The feed files only map block slugs to the format they want, through `fromBlock`: `createHtmlConverters` (`src/utilities/generateRssFeed.ts`) and, for article content, `createSubstackConverters` (`src/app/(frontend)/articles/_substack/generateSubstackFeed.ts`). A block added to those editors (or to the rich text inside their blocks) needs a converter, plus:
+  - a `__tests__/converters.test.ts` using `toMatchInlineSnapshot()`, fed from `src/stories/fixtures/blocks.ts`
+  - a `Feed` story that renders the output through `src/stories/FeedHTML.tsx`, so it gets the axe check
+
+  `src/utilities/__tests__/generateRssFeed.converters.test.ts` reads the resolved Payload config and fails, naming what's missing, until every feed has a converter
 
 ### Data Fetching Patterns
 
@@ -179,7 +219,7 @@ Progress and the open questions live on issue #912.
 | UI/presentational components   | Snapshot test (see `src/components/ui/__tests__/button.snapshot.test.tsx` for the pattern) |
 | Client components with state   | RTL interaction test (`fireEvent`; `user-event` is not installed — see #898)               |
 | Server components (async, CMS) | Integration test with mocked Payload queries                                               |
-| API routes / Payload hooks     | Integration test (Testcontainers, see `tests/integration/`)                                |
+| API routes / Payload hooks     | Integration test (a Docker Postgres, see `tests/integration/`)                             |
 
 **DOM assertions:** `@testing-library/jest-dom`'s matchers are registered globally in
 `vitest.setup.ts`. Assert with them rather than by hand — they name the element and print

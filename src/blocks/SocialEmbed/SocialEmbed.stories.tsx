@@ -2,8 +2,11 @@ import type { Meta, StoryObj } from "@storybook/nextjs-vite"
 import { expect, within } from "storybook/test"
 
 import type { SocialEmbedSnapshot } from "@/payload-types"
+import { FeedHTML } from "@/stories/FeedHTML"
+import { socialEmbedBlock } from "@/stories/fixtures/blocks"
 
 import { SocialEmbedBlock } from "./Component"
+import { socialEmbedToHTML } from "./converters"
 
 const fetchedAt = new Date().toISOString()
 
@@ -20,12 +23,7 @@ function snapshot(overrides: SocialEmbedSnapshot): SocialEmbedSnapshot {
 const meta = {
   title: "Blocks/SocialEmbed",
   component: SocialEmbedBlock,
-  args: {
-    blockType: "socialEmbed",
-    id: "embed-story",
-    platform: "twitter",
-    url: "https://twitter.com/countyclerk/status/1",
-  },
+  args: socialEmbedBlock,
 } satisfies Meta<typeof SocialEmbedBlock>
 
 export default meta
@@ -90,6 +88,16 @@ export const UnsupportedPlatform: Story = {
       "href",
       "https://myspace.com/example",
     )
+  },
+}
+
+/** The embed in the feeds: a link to the post, since feeds can't run the platform's script. */
+export const Feed: Story = {
+  render: (args) => <FeedHTML html={socialEmbedToHTML(args)} />,
+  play: async ({ args, canvasElement }) => {
+    await expect(
+      within(canvasElement).getByRole("link", { name: "View post on Twitter" }),
+    ).toHaveAttribute("href", args.url)
   },
 }
 

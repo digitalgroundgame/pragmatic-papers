@@ -2,6 +2,7 @@ import type { CollectionAfterChangeHook, CollectionAfterDeleteHook } from "paylo
 
 import { revalidatePath, revalidateTag } from "next/cache"
 
+import { purgeEdgeCache } from "@/hooks/purgeEdgeCache"
 import type { Article } from "@/payload-types"
 
 export const revalidateArticle: CollectionAfterChangeHook<Article> = ({
@@ -18,6 +19,7 @@ export const revalidateArticle: CollectionAfterChangeHook<Article> = ({
       revalidatePath(path)
       revalidatePath("/volumes/feed.xml")
       revalidateTag("volumes-sitemap", "max")
+      purgeEdgeCache(payload.logger, `volume ${doc.slug}`)
     }
 
     // If the article was previously published, we need to revalidate the old path
@@ -29,18 +31,23 @@ export const revalidateArticle: CollectionAfterChangeHook<Article> = ({
       revalidatePath(oldPath)
       revalidatePath("/volumes/feed.xml")
       revalidateTag("volumes-sitemap", "max")
+      purgeEdgeCache(payload.logger, `volume ${previousDoc.slug} unpublished`)
     }
   }
   return doc
 }
 
-export const revalidateDelete: CollectionAfterDeleteHook<Article> = ({ doc, req: { context } }) => {
+export const revalidateDelete: CollectionAfterDeleteHook<Article> = ({
+  doc,
+  req: { payload, context },
+}) => {
   if (!context.disableRevalidate) {
     const path = `/volumes/${doc?.slug}`
 
     revalidatePath(path)
     revalidatePath("/volumes/feed.xml")
     revalidateTag("volumes-sitemap", "max")
+    purgeEdgeCache(payload.logger, `volume ${doc?.slug} deleted`)
   }
 
   return doc

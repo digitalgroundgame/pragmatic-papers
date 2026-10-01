@@ -134,7 +134,7 @@ describe("substackArticleHTML", () => {
     )
 
     expect(html).toContain("<blockquote><p>Heads up</p></blockquote>")
-    expect(html).toContain("<pre><code>&lt;div&gt;</code></pre>")
+    expect(html).toContain('<pre tabindex="0"><code>&lt;div&gt;</code></pre>')
     expect(html).toContain("<hr />")
   })
 
@@ -209,10 +209,10 @@ describe("substackArticleHTML block and node coverage", () => {
 
     expect(html).toContain("<h3>Key &lt;dates&gt;</h3>")
     expect(html).toContain(
-      '<li><strong>2024-03-12</strong> — <strong>Bill introduced</strong><br />Filed &amp; referred <a href="https://source.test/a">[source]</a></li>',
+      '<li><strong>March 12, 2024</strong> — <strong>Bill introduced</strong><br />Filed &amp; referred <a href="https://source.test/a">[source]</a></li>',
     )
     expect(html).toContain('<a href="https://example.org/articles/other">[source]</a>')
-    expect(html).toContain("<li><strong>2024-05-01</strong><br />No source</li>")
+    expect(html).toContain("<li><strong>May 1, 2024</strong><br />No source</li>")
   })
 
   it("renders nothing for a timeline without events", () => {

@@ -98,8 +98,26 @@ so each has its own switches; PR previews start with staging's. To add one:
    (API routes return 404), links and buttons aren't rendered, sitemaps come
    back empty, and jobs skip with a log line.
 
-Saving the global clears its cache, so a switch takes effect without a
-redeploy. When the feature graduates, delete the checkbox and the checks.
+Saving the global clears Next's cache, so the origin answers with the new
+switch on the next request, without a redeploy. Cloudflare's edge copy of
+every public page is purged too, when the deployment has
+`CLOUDFLARE_ZONE_ID` and `CLOUDFLARE_PURGE_TOKEN` (see
+[Edge cache](#edge-cache-cloudflare)); without them anonymous readers can
+see the old answer until the edge's copy expires (10 minutes, or up to a day
+served stale). When the feature graduates, delete the checkbox and the checks.
+
+### Edge cache (Cloudflare)
+
+Public pages are cached at Cloudflare's edge (`s-maxage=600`,
+`stale-while-revalidate=86400`, from `next.config.ts`). A `revalidate*` hook
+that changes what anonymous readers see calls
+`purgeEdgeCache(payload.logger, "<reason>")` (`src/hooks/purgeEdgeCache.ts`)
+after its own `revalidatePath` / `revalidateTag`, and only when
+`context.disableRevalidate` is unset. It purges this deployment's hostname
+(production, staging and previews share a zone), batches a burst of saves into
+one request, returns at once, and logs and skips when the `cloudflareCache`
+connection isn't configured. A new hook for content readers see should call it
+too.
 
 ### Payload Plugins
 

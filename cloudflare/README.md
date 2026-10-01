@@ -68,7 +68,10 @@ stay unapplied.
 
 A phase added later needs its permission on both tokens (Single Redirects need
 **Zone → Dynamic URL Redirects**, for example). Keep both apart from
-`CLOUDFLARE_API_TOKEN`, which only deploys Storybook.
+`CLOUDFLARE_API_TOKEN`, which only deploys Storybook, and from
+`CLOUDFLARE_PURGE_TOKEN` (**Zone → Cache Purge**), which the running site uses
+to purge its hostname when an editor saves; it's a Coolify runtime variable,
+not a GitHub secret (`dockerfiles/README.md`).
 
 To run the script locally, set `CLOUDFLARE_RULES_TOKEN` to either token: the
 read one is enough for `plan`, `check` and `export`.

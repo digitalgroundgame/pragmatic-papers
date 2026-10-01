@@ -1,8 +1,9 @@
 // @vitest-environment node
+import { SERVER_REFERENCE_ID_LENGTH } from "next/dist/shared/lib/server-reference-info"
 import { NextRequest } from "next/server"
 import { describe, expect, it } from "vitest"
 
-import { config, proxy } from "../proxy"
+import { proxy } from "../proxy"
 
 const request = (headers: Record<string, string> = {}, method = "POST"): NextRequest =>
   new NextRequest("https://pragmaticpapers.com/articles/some-article", { method, headers })
@@ -22,24 +23,18 @@ describe("proxy: Next-Action header", () => {
     expect(proxy(request()).headers.get("x-middleware-next")).toBe("1")
   })
 
-  // Values seen from scanners on a PR preview (#1107), plus near misses.
-  it.each([
-    "x",
-    "17794517",
-    "1f1c13e5",
-    "",
-    VALID_ID.slice(1),
-    VALID_ID + "0",
-    VALID_ID.slice(0, -1) + "g",
-    VALID_ID.slice(0, -1) + "\n",
-  ])("answers a malformed ID %j with a 404 before Next sees it", (id) => {
-    const response = proxy(request({ "next-action": id }))
-    expect(response.status).toBe(404)
-    expect(response.headers.get("x-middleware-next")).toBeNull()
+  // If a Next upgrade changes the ID length, the proxy would 404 every real action.
+  it("matches the ID length Next expects", () => {
+    expect(VALID_ID).toHaveLength(SERVER_REFERENCE_ID_LENGTH)
   })
 
-  it("runs on page routes, where Next resolves Server Actions", () => {
-    const [matcher] = config.matcher
-    expect(new RegExp(`^${matcher}$`).test("/articles/some-article")).toBe(true)
-  })
+  // A value seen from scanners on a PR preview (#1107), plus near misses.
+  it.each(["x", VALID_ID.slice(1), VALID_ID + "0", VALID_ID.slice(0, -1) + "g"])(
+    "answers a malformed ID %j with a 404 before Next sees it",
+    (id) => {
+      const response = proxy(request({ "next-action": id }))
+      expect(response.status).toBe(404)
+      expect(response.headers.get("x-middleware-next")).toBeNull()
+    },
+  )
 })

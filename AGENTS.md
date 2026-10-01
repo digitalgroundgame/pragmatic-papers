@@ -30,12 +30,30 @@ This file provides guidance to tools like Claude Code (claude.ai/code) when work
 - `pnpm test:unit` — run unit tests
 - `pnpm test:storybook` — run every Storybook story in headless Chromium: its `play` function, then an axe check (see [Storybook](#storybook))
 - `pnpm storybook` — Storybook dev server on port 6006; `pnpm storybook:build` builds it into `storybook-static/`
-- `pnpm test:integration` — run integration tests (uses Testcontainers)
-- `pnpm test:e2e` — run Playwright E2E tests (uses Testcontainers). Screenshot comparisons are skipped unless `CI` is set; generate visual baselines with `pnpm test:e2e:update-snapshots` (Dockerized; matches CI pixel-for-pixel on x86_64 hosts — see `tests/e2e/README.md` for the full lifecycle) and commit them with the PR — never generate/commit baselines from a bare local machine
+- `pnpm test:integration` — run integration tests against a throwaway Postgres in Docker (see [Test databases](#test-databases))
+- `pnpm test:e2e` — run Playwright E2E tests against a throwaway Postgres in Docker (see [Test databases](#test-databases)). Screenshot comparisons are skipped unless `CI` is set; generate visual baselines with `pnpm test:e2e:update-snapshots` (Dockerized; matches CI pixel-for-pixel on x86_64 hosts — see `tests/e2e/README.md` for the full lifecycle) and commit them with the PR — never generate/commit baselines from a bare local machine
 - `pnpm test:unit:coverage` — run unit tests with V8 coverage report (what CI uses; outputs `coverage/coverage-summary.json` and `coverage/coverage-final.json`)
 - `pnpm test:coverage` — run all tests with V8 coverage report (full picture for local inspection)
 - `pnpm test:unit -u` — regenerate snapshot baselines after intentional UI changes
 - `pnpm coverage:report` — post the combined coverage PR comment locally (requires `GITHUB_TOKEN`, `GITHUB_REPOSITORY`, `GITHUB_EVENT_PATH`)
+
+### Test databases
+
+`pnpm test:integration`, `pnpm test:e2e` and `node scripts/check-pending-migrations.mjs`
+get their database from `startTestDatabase()` in `scripts/test-db.mjs`. They never read
+`DATABASE_URI` (that's your dev database in `.env`); they only set it for the Payload
+processes they start.
+
+- By default it `docker run`s `postgres:17-alpine` on a random localhost port and removes
+  it on exit, Ctrl-C or SIGTERM. A container left by a `kill -9` is swept by the next run.
+- Integration and E2E start from a **pre-migrated snapshot image**
+  (`pragmatic-papers-test-db:<hash>`, keyed on `src/migrations/**` and the Postgres image),
+  so they skip `payload migrate` until a migration changes; a miss migrates once and commits
+  a new one. The pending-migrations check always replays from scratch, and CI (`CI` set)
+  never uses a snapshot. `docker image rm` the tags to force a fresh migrate.
+- `TEST_DATABASE_URI` points them at an existing database instead (CI's E2E jobs, and
+  `pnpm test:e2e:update-snapshots`, whose containers can't start their own). It is refused if
+  it names the same database as `DATABASE_URI` in `.env`.
 
 ### Build & Payload
 
@@ -201,7 +219,7 @@ Progress and the open questions live on issue #912.
 | UI/presentational components   | Snapshot test (see `src/components/ui/__tests__/button.snapshot.test.tsx` for the pattern) |
 | Client components with state   | RTL interaction test (`fireEvent`; `user-event` is not installed — see #898)               |
 | Server components (async, CMS) | Integration test with mocked Payload queries                                               |
-| API routes / Payload hooks     | Integration test (Testcontainers, see `tests/integration/`)                                |
+| API routes / Payload hooks     | Integration test (a Docker Postgres, see `tests/integration/`)                             |
 
 **DOM assertions:** `@testing-library/jest-dom`'s matchers are registered globally in
 `vitest.setup.ts`. Assert with them rather than by hand — they name the element and print

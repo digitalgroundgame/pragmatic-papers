@@ -30,7 +30,7 @@ runs:
         SERVER_URL=http://localhost:8000
         USE_LOCAL_STORAGE=true
         MERCH_SITE_URL=https://digitalgroundgame.org/merch
-        DATABASE_URI=postgres://postgres:postgres@postgres:5432/pragmatic-papers-e2e
+        TEST_DATABASE_URI=postgres://postgres:postgres@postgres:5432/pragmatic-papers-e2e
         E2E_PROD_SERVER=true
         E2E_IMAGE=pragmatic-papers-app:ci
         FONTS_REQUIRED=true
@@ -39,10 +39,14 @@ runs:
       # the block renders nothing, merch.spec.ts has no carousel to exercise,
       # and every baseline that shares a page with it is rendered without it.
       #
-      # DATABASE_URI: the host is the job's `postgres` service key, not
-      # localhost. The job runs inside a container, and service containers are
-      # reachable by their service-id alias on the shared Docker network. The
-      # database name must match the service's POSTGRES_DB.
+      # TEST_DATABASE_URI: scripts/test-e2e.mjs runs against it instead of
+      # starting a Postgres container (scripts/test-db.mjs), whose random
+      # localhost port this job container couldn't reach. The host is the job's
+      # `postgres` service key, not localhost: the job runs inside a container,
+      # and service containers are reachable by their service-id alias on the
+      # shared Docker network. The database name must match the service's
+      # POSTGRES_DB, and must differ from DATABASE_URI in setup-project's .env,
+      # which the helper refuses to test against.
       #
       # E2E_IMAGE: scripts/test-e2e.mjs serves the image the workflow built,
       # the one a PR's preview deploys, instead of building Next.js itself

@@ -1,56 +1,51 @@
-import { PostgreSqlContainer } from "@testcontainers/postgresql"
 import { execSync } from "node:child_process"
 import { blue, green, red } from "./ansi.mjs"
+import { startTestDatabase } from "./test-db.mjs"
 
 process.env.PAYLOAD_SECRET ||= "test-secret"
 process.env.USE_LOCAL_STORAGE ||= "true"
 
-let container = null
-
-if (process.env.DATABASE_URI) {
-  console.warn(`${green("✔")} Using existing DATABASE_URI — skipping container startup.`)
-} else {
-  console.warn(`${blue("●")} Starting Postgres container for migration check...`)
-  container = await new PostgreSqlContainer("postgres:17-alpine")
-    .withDatabase("pragmatic-papers-test")
-    .start()
-  process.env.DATABASE_URI = container.getConnectionUri()
-  console.warn(`${green("✔")} Test database started at ${process.env.DATABASE_URI}`)
-}
+let database = null
 
 try {
-  console.warn(`${blue("●")} Running existing migrations...`)
-  execSync("pnpm payload migrate", {
-    env: process.env,
-    stdio: "inherit",
+  console.warn(`${blue("●")} Starting a test database for the migration check...`)
+  // No snapshot: replaying every migration from scratch is what this checks.
+  database = await startTestDatabase({
+    migrate: (uri) => {
+      console.warn(`${blue("●")} Running existing migrations...`)
+      execSync("pnpm payload migrate", {
+        env: { ...process.env, DATABASE_URI: uri },
+        stdio: "inherit",
+      })
+    },
   })
 
   console.warn(`${blue("●")} Checking for pending schema changes...`)
   // This will attempt to create a migration. If it says "No schema changes detected", we are good.
   // We use "echo n" to answer "no" to the "Do you want to create a migration?" prompt if it appears.
   const output = execSync('echo "n" | pnpm payload migrate:create', {
-    env: process.env,
+    env: { ...process.env, DATABASE_URI: database.uri },
     encoding: "utf-8",
   })
 
   if (output.includes("No schema changes detected")) {
     console.warn(`${green("✔")} No pending migrations detected.`)
-    process.exit(0)
+    process.exitCode = 0
   } else {
     console.error(
       `${red("✖")} Pending migrations detected! Please run 'pnpm payload migrate:create' locally and commit the result.`,
     )
     console.warn(output)
-    process.exit(1)
+    process.exitCode = 1
   }
 } catch (error) {
   console.error(`${red("✖")} Error during migration check: ${error.message}`)
   if (error.stdout) console.warn(error.stdout)
   if (error.stderr) console.error(error.stderr)
-  process.exit(1)
+  process.exitCode = 1
 } finally {
-  if (container) {
-    console.warn(`${blue("●")} Stopping Postgres container...`)
-    await container.stop()
+  if (database) {
+    console.warn(`${blue("●")} Stopping the test database...`)
+    database.stop()
   }
 }

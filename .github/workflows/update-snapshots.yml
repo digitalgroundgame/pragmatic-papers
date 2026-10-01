@@ -97,7 +97,7 @@ jobs:
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
-          # Must match DATABASE_URI in .github/actions/setup-e2e.
+          # Must match TEST_DATABASE_URI in .github/actions/setup-e2e.
           POSTGRES_DB: pragmatic-papers-e2e
         ports:
           - 5432:5432

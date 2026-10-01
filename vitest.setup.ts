@@ -1,6 +1,6 @@
 // Register @testing-library/jest-dom's matchers (toBeInTheDocument, toHaveAttribute,
-// toHaveClass, ...) on Vitest's `expect`. Harmless for the node-environment
-// integration project, which loads this file too but never asserts on DOM nodes.
+// toHaveClass, ...) on Vitest's `expect`. The integration project doesn't load this
+// file: it uses tests/setup/integration-env.ts, which skips all of this (#1016).
 import "@testing-library/jest-dom/vitest"
 
 // Load .env files

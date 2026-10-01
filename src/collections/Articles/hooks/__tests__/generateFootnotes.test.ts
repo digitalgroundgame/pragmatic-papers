@@ -124,6 +124,61 @@ describe("collectFootnotes", () => {
     expect(inlineFields(state).map((f) => f.index)).toEqual([1, 2, 1])
   })
 
+  describe("unpopulated reference links", () => {
+    type Reference = NonNullable<NonNullable<FootnoteBlock["link"]>["reference"]>
+
+    const ref = (reference: Reference) =>
+      footnote({ note: "Ref", attributionEnabled: true, link: { type: "reference", reference } })
+
+    it("collapses references to the same numeric id", () => {
+      const state = editor(
+        paragraph(
+          ref({ relationTo: "articles", value: 7 }),
+          ref({ relationTo: "articles", value: 7 }),
+        ),
+      )
+
+      expect(collectFootnotes(state)).toHaveLength(1)
+      expect(inlineFields(state).map((f) => f.index)).toEqual([1, 1])
+    })
+
+    it("keeps references to different numeric ids separate", () => {
+      const state = editor(
+        paragraph(
+          ref({ relationTo: "articles", value: 7 }),
+          ref({ relationTo: "articles", value: 8 }),
+          ref({ relationTo: "articles", value: 7 }),
+        ),
+      )
+
+      expect(collectFootnotes(state)).toHaveLength(2)
+      expect(inlineFields(state).map((f) => f.index)).toEqual([1, 2, 1])
+    })
+
+    it("treats a bare id and the populated document as the same reference", () => {
+      const state = editor(
+        paragraph(
+          ref({ relationTo: "articles", value: 7 }),
+          ref({ relationTo: "articles", value: { id: 7 } as Article }),
+        ),
+      )
+
+      expect(collectFootnotes(state)).toHaveLength(1)
+    })
+
+    it("keeps the same id in different collections separate", () => {
+      const state = editor(
+        paragraph(
+          ref({ relationTo: "articles", value: 7 }),
+          ref({ relationTo: "pages", value: 7 }),
+        ),
+      )
+
+      expect(collectFootnotes(state)).toHaveLength(2)
+      expect(inlineFields(state).map((f) => f.index)).toEqual([1, 2])
+    })
+  })
+
   it("ignores the link when attribution is off", () => {
     const state = editor(
       paragraph(

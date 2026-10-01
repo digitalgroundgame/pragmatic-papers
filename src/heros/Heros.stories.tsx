@@ -53,8 +53,40 @@ const meta = {
 export default meta
 type Story = StoryObj<typeof meta>
 
+const expectHeading = async (canvasElement: HTMLElement): Promise<void> => {
+  await expect(
+    within(canvasElement).getByRole("heading", {
+      level: 1,
+      name: "The offices that shape daily life",
+    }),
+  ).toBeInTheDocument()
+}
+
+const expectLinks = async (canvasElement: HTMLElement): Promise<void> => {
+  const canvas = within(canvasElement)
+  await expect(canvas.getByRole("link", { name: "Read the volume" })).toHaveAttribute(
+    "href",
+    "/volumes/12",
+  )
+  await expect(canvas.getByRole("link", { name: "About us" })).toHaveAttribute("href", "/about")
+}
+
+/** The text-only heroes draw no media and no buttons, whatever the document holds. */
+const expectTextOnly = async (canvasElement: HTMLElement): Promise<void> => {
+  const canvas = within(canvasElement)
+  await expect(canvas.queryByRole("img")).not.toBeInTheDocument()
+  await expect(canvas.queryByRole("link")).not.toBeInTheDocument()
+}
+
 export const HighImpact: Story = {
   args: { type: "highImpact", media: landscapeImage, links },
+  play: async ({ canvasElement }) => {
+    await expectHeading(canvasElement)
+    await expectLinks(canvasElement)
+    await expect(
+      within(canvasElement).getByRole("img", { name: "Mountains at sunset" }),
+    ).toBeInTheDocument()
+  },
   decorators: [
     (Story) => (
       <div className="pt-[10.4rem]">
@@ -66,12 +98,47 @@ export const HighImpact: Story = {
 
 export const MediumImpact: Story = {
   args: { type: "mediumImpact", media: wideImage, links },
+  play: async ({ canvasElement }) => {
+    await expectHeading(canvasElement)
+    await expectLinks(canvasElement)
+    await expect(
+      within(canvasElement).getByRole("img", { name: "A city skyline at dusk" }),
+    ).toBeInTheDocument()
+  },
 }
 
-export const LowImpact: Story = {}
+export const LowImpact: Story = {
+  args: { media: landscapeImage, links },
+  play: async ({ canvasElement }) => {
+    await expectHeading(canvasElement)
+    await expectTextOnly(canvasElement)
+  },
+}
 
 export const PageHero: Story = {
-  args: { type: "pageHero" },
+  args: { type: "pageHero", media: landscapeImage, links },
+  play: async ({ canvasElement }) => {
+    await expectHeading(canvasElement)
+    await expectTextOnly(canvasElement)
+    await expect(within(canvasElement).getByRole("separator")).toBeInTheDocument()
+  },
+}
+
+/** A page whose hero is set to "None" gets no hero at all, not an empty wrapper. */
+export const None: Story = {
+  args: { type: "none", media: landscapeImage, links },
+  play: async ({ canvasElement }) => {
+    await expect(canvasElement.querySelector(".py-8")).toBeEmptyDOMElement()
+  },
+}
+
+/** A hero with media but no media object (an unpopulated ID) skips the image, not the text. */
+export const MediumImpactWithUnpopulatedMedia: Story = {
+  args: { type: "mediumImpact", media: 42, links },
+  play: async ({ canvasElement }) => {
+    await expectHeading(canvasElement)
+    await expect(within(canvasElement).queryByRole("img")).not.toBeInTheDocument()
+  },
 }
 
 /**

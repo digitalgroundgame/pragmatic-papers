@@ -32,6 +32,6 @@ jobs:
 
       - name: Create release
         if: steps.version.outputs.bumped == 'true'
-        run: gh release create "${{ steps.version.outputs.tag }}" --target main --title "${{ steps.version.outputs.tag }}" --notes ""
+        run: gh release create "${{ steps.version.outputs.tag }}" --target main --title "${{ steps.version.outputs.tag }}" --generate-notes
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

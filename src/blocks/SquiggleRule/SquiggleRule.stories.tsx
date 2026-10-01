@@ -20,10 +20,34 @@ const meta = {
 export default meta
 type Story = StoryObj<typeof meta>
 
-export const Animated: Story = {}
+/** Which squiggle the rule draws, read off the image it paints, and how wide it runs. */
+const expectRule =
+  (image: string, width: string): Story["play"] =>
+  async ({ canvasElement }) => {
+    const rule = canvasElement.querySelector(`.${width}`)
+    await expect(rule).toBeInTheDocument()
+    const line = rule!.firstElementChild!
+    await expect(getComputedStyle(line).backgroundImage).toContain(`/${image}`)
+  }
+
+export const Animated: Story = {
+  play: expectRule("squiggle.svg", "max-w-md"),
+}
 
 export const Static: Story = {
   args: { variant: "static" },
+  play: expectRule("squiggle-static.svg", "max-w-md"),
+}
+
+/** A rule saved before sizes existed has none, and falls back to medium. */
+export const WithoutSize: Story = {
+  args: { size: null },
+  play: expectRule("squiggle.svg", "max-w-md"),
+}
+
+export const Full: Story = {
+  args: { size: "full" },
+  play: expectRule("squiggle.svg", "w-full"),
 }
 
 /** The rule in the feeds: a plain thematic break between paragraphs. */

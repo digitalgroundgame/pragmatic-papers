@@ -13,7 +13,7 @@ import {
   Tailwind,
   Text,
 } from "react-email"
-import { formatDistanceToNow } from "date-fns"
+import { formatDistanceToNow } from "date-fns/formatDistanceToNow"
 import * as React from "react"
 
 import type { Article, Topic, User, Volume } from "@/payload-types"

@@ -63,7 +63,7 @@ export default defineConfig({
           name: "integration",
           environment: "node",
           include: ["tests/integration/**/*.test.ts"],
-          setupFiles: ["./vitest.setup.ts", "./tests/setup/integration-db-setup.ts"],
+          setupFiles: ["./tests/setup/integration-env.ts", "./tests/setup/integration-db-setup.ts"],
           globalSetup: ["./tests/setup/integration-global-setup.ts"],
           hookTimeout: 30_000,
           testTimeout: 60_000,

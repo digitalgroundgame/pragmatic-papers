@@ -1,4 +1,7 @@
-import { format, formatDistanceToNow } from "date-fns"
+// Per-function entry points: the package index loads all ~250 functions, ~1.4s in an
+// integration test file, which doesn't tree-shake (#1016).
+import { format } from "date-fns/format"
+import { formatDistanceToNow } from "date-fns/formatDistanceToNow"
 
 export const formatDateTime = (timestamp: string): string => {
   const now = new Date()

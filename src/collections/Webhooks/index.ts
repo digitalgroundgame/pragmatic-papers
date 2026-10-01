@@ -1,7 +1,8 @@
 import { admin } from "@/access/collections"
 import { type Webhook } from "@/payload-types"
 import { type FieldHookArgs, type CollectionConfig } from "payload"
-import { format, isAfter } from "date-fns"
+import { format } from "date-fns/format"
+import { isAfter } from "date-fns/isAfter"
 
 export const Webhooks: CollectionConfig = {
   slug: "webhooks",

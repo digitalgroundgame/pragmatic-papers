@@ -73,6 +73,11 @@ const nextConfig: NextConfig = {
       permanent: false,
       source: "/:path((?!ie-incompatible.html$).*)", // all pages except the incompatibility page
     },
+    // The RSS feeds moved under the section they list, ending in `.xml` like
+    // every other feed and sitemap (#1046). Permanent, so feed readers that
+    // honour 301/308 update the URL they have stored.
+    { source: "/feed.articles", destination: "/articles/feed.xml", permanent: true },
+    { source: "/feed.volumes", destination: "/volumes/feed.xml", permanent: true },
     {
       source: "/iceout/:state*",
       destination: "https://iceout.org/en/location/report",
@@ -148,10 +153,11 @@ const nextConfig: NextConfig = {
         // - interactives' region, geometry and search JSON (`/interactives/<slug>/regions/...`,
         //   `/interactives/<slug>/search`): an hour at the edge, and geometry, which names its
         //   own content in the URL, is immutable for a year — this rule capped both at 10 min.
-        // - the RSS and Substack feeds (`/feed.articles`, `/feed.volumes`,
-        //   `/articles/substack.xml`, `/articles/<slug>/substack.xml`): 20 minutes.
+        // - the RSS and Substack feeds (`/articles/feed.xml`, `/volumes/feed.xml`,
+        //   `/articles/substack.xml`, `/articles/<slug>/substack.xml`): 20 minutes. The old
+        //   `/feed.articles` and `/feed.volumes` only redirect now, and stay excluded.
         // - `/recommended-articles.json`: no-store.
-        // The feed (`/feed`, `/feed/...`; not the `/feed.articles` RSS) is left out too: it's
+        // The feed (`/feed`, `/feed/...`; not the `/articles/feed.xml` RSS) is left out too: it's
         // rendered per request, its 404 follows a Site Settings switch that should apply on
         // save, and a stale copy would call load-more's server action with an ID the current
         // build no longer has.
@@ -167,7 +173,7 @@ const nextConfig: NextConfig = {
         // `/api/<collection>/file/...`, anyone can read them, and narration audio and video
         // shouldn't re-download on every load. (Cloudflare's cache rule skips `/api` anyway.)
         source:
-          "/:path((?!admin(?:/|$)|api(?:/(?!(?:media|map-assets)/file/)|$)|interactives/[^/]+/(?:regions/|search$)|feed(?:/|$|\\.articles$|\\.volumes$)|articles/(?:[^/]+/)?substack\\.xml$|recommended-articles\\.json$|_next/image$).*)",
+          "/:path((?!admin(?:/|$)|api(?:/(?!(?:media|map-assets)/file/)|$)|interactives/[^/]+/(?:regions/|search$)|feed(?:/|$|\\.articles$|\\.volumes$)|articles/feed\\.xml$|volumes/feed\\.xml$|articles/(?:[^/]+/)?substack\\.xml$|recommended-articles\\.json$|_next/image$).*)",
         headers: [
           {
             key: "Cache-Control",

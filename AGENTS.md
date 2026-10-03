@@ -314,9 +314,10 @@ committing or uploading it:
 
 ## Hosting (Coolify)
 
-The site is built and hosted by Coolify, from `dockerfiles/PragmaticPapers.Dockerfile`:
-a **development** application (staging, from `dev`, plus a preview per PR) and a
-**production** application (from `main`). `dockerfiles/README.md` records how _our_
+The site is hosted by Coolify in three applications: **staging** (from `dev`) and
+**production** (from `main`), which Coolify builds from
+`dockerfiles/PragmaticPapers.Dockerfile`, and **preview** (one per PR), which runs the
+image GitHub Actions builds from `dockerfiles/PragmaticPapers.ci.Dockerfile`. `dockerfiles/README.md` records how _our_
 applications are set up and what's been verified about them; read it first.
 
 The zone's Cloudflare rules (Cache Rules today) are version-controlled in

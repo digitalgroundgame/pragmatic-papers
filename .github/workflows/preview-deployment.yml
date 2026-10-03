@@ -2,8 +2,10 @@
 # ("View deployment" link, and the build's state), which Coolify doesn't do
 # itself: https://github.com/coollabsio/coolify/issues/9583.
 #
-# Coolify still builds the preview on its own webhook. This workflow only
-# watches that build through Coolify's API and reports it to GitHub; see
+# This covers the fallback, previews the staging app builds on its own webhook,
+# and only runs while COOLIFY_PREVIEW_IMAGE_APP_UUID is unset; otherwise the
+# preview app runs the image playwright.yml builds and reports. It only watches
+# staging's build through Coolify's API and reports it to GitHub; see
 # scripts/preview-deployment.ts.
 #
 # SETUP (Settings → Secrets and variables → Actions)
@@ -13,7 +15,7 @@
 #                                        the API must be enabled in Settings)
 #   - variable COOLIFY_DASHBOARD_URL     the Coolify server, e.g. https://coolify.example.com
 #                                        (with or without /api/v1 on the end)
-#   - variable COOLIFY_PREVIEW_APP_UUID  the UUID of the app that builds previews
+#   - variable COOLIFY_PREVIEW_APP_UUID  the UUID of the staging app
 #                                        (the last segment of its dashboard URL)
 #   - variable PREVIEW_URL_TEMPLATE      optional; the app's preview URL template in
 #                                        Coolify's syntax. Default:

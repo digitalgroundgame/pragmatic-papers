@@ -6,63 +6,36 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb"
-import { Skeleton } from "@/components/ui/skeleton"
 import { cn } from "@/utilities/utils"
-import { queryPageBySlug, queryTopicBySlug, queryUserBySlug } from "@/utilities/queries"
-import { toRoman } from "@/utilities/toRoman"
 import { Home } from "lucide-react"
-import { Fragment, Suspense, type ReactElement } from "react"
+import { Fragment, type ReactElement } from "react"
 
-const STATIC_ROOTS = new Set(["authors", "topics", "volumes"])
+import type { Crumb } from "./trail"
+
+export type { Crumb } from "./trail"
+export { nestedDocsTrail } from "./trail"
+
+interface BreadcrumbsProps {
+  /** The steps after Home, the current page last. Empty renders nothing. */
+  items: Crumb[]
+  /**
+   * For pages that fill the container rather than a column of prose. The trail lines up with
+   * what it sits under, so it is as wide as the page there and stops where the reading column
+   * does everywhere else.
+   */
+  fullWidth?: boolean
+}
 
 /**
- * Sections whose pages fill the container rather than a column of prose. The trail lines up
- * with what it sits above, so on those it is as wide as the page and everywhere else it stops
- * where the reading column does.
+ * The trail above a page. Each page passes the trail it already knows from the documents it
+ * loaded (the same list it gives `buildBreadcrumbJsonLd`), so labels are real titles and nothing
+ * is read from the request, which would stop the page being prerendered.
  */
-const FULL_WIDTH_ROOTS = new Set(["interactives"])
-
-const widthFor = (segments: string[]): string =>
-  segments[0] && FULL_WIDTH_ROOTS.has(segments[0]) ? "container" : "container max-w-3xl"
-
-const formatBreadcrumbLabel = (segment: string): string => {
-  return decodeURIComponent(segment)
-    .split("-")
-    .filter(Boolean)
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(" ")
-}
-
-const getSegmentHref = (segments: string[], index: number): string =>
-  `/${segments.slice(0, index + 1).join("/")}`
-
-async function getSegmentLabel(
-  segment: string,
-  parent: string | undefined,
-  index: number,
-): Promise<string> {
-  const label = formatBreadcrumbLabel(segment)
-  if (parent === "authors") return (await queryUserBySlug(segment))?.name || label
-  if (parent === "topics") return (await queryTopicBySlug(segment))?.name || label
-  if (parent === "volumes") return `Volume ${toRoman(Number(segment))}`
-  if (index === 0 && !STATIC_ROOTS.has(segment))
-    return (await queryPageBySlug(segment))?.title || label
-  return label
-}
-
-async function BreadcrumbsRoot({ pathname }: { pathname: string }): Promise<ReactElement | null> {
-  const segments = pathname.split("/").filter(Boolean)
-
-  const segmentItems = await Promise.all(
-    segments.map(async (segment, index) => {
-      const parent = index > 0 ? segments[index - 1] : undefined
-      const label = await getSegmentLabel(segment, parent, index)
-      return { href: getSegmentHref(segments, index), label }
-    }),
-  )
+export function Breadcrumbs({ items, fullWidth = false }: BreadcrumbsProps): ReactElement | null {
+  if (items.length === 0) return null
 
   return (
-    <Breadcrumb className={cn("mb-4", widthFor(segments))}>
+    <Breadcrumb className={cn("mb-4", fullWidth ? "container" : "container max-w-3xl")}>
       <BreadcrumbList className="flex-nowrap">
         <BreadcrumbItem>
           <BreadcrumbLink href="/">
@@ -70,18 +43,18 @@ async function BreadcrumbsRoot({ pathname }: { pathname: string }): Promise<Reac
             <span className="sr-only">Home</span>
           </BreadcrumbLink>
         </BreadcrumbItem>
-        {segmentItems.map(({ href, label }, index) => {
-          const isCurrentPage = index === segmentItems.length - 1
+        {items.map(({ name, path }, index) => {
+          const isCurrentPage = index === items.length - 1
           return (
-            <Fragment key={href}>
+            <Fragment key={path}>
               <BreadcrumbSeparator />
               <BreadcrumbItem className={isCurrentPage ? "min-w-0 flex-1" : undefined}>
                 {isCurrentPage ? (
                   <BreadcrumbPage className="block max-w-full min-w-0 truncate">
-                    {label}
+                    {name}
                   </BreadcrumbPage>
                 ) : (
-                  <BreadcrumbLink href={href}>{label}</BreadcrumbLink>
+                  <BreadcrumbLink href={path}>{name}</BreadcrumbLink>
                 )}
               </BreadcrumbItem>
             </Fragment>
@@ -89,36 +62,5 @@ async function BreadcrumbsRoot({ pathname }: { pathname: string }): Promise<Reac
         })}
       </BreadcrumbList>
     </Breadcrumb>
-  )
-}
-
-function BreadcrumbsSkeleton({ segments }: { segments: string[] }): ReactElement {
-  return (
-    <div className={cn("mb-4", widthFor(segments))}>
-      <div className="flex flex-nowrap items-center gap-1.5">
-        <Skeleton className="size-4 rounded-sm" />
-        <Skeleton className="size-3.5 rounded-sm" />
-        <Skeleton className="h-5 w-16 rounded" />
-        <Skeleton className="size-3.5 rounded-sm" />
-        <Skeleton className="h-5 w-28 rounded" />
-      </div>
-    </div>
-  )
-}
-
-/**
- * The trail for `pathname`. Each page renders its own, passing the path it knows from its
- * params: read from the request instead (a header or the like), it would make every page
- * under the layout dynamic, so none could be prerendered.
- */
-export function Breadcrumbs({ pathname }: { pathname: string }): ReactElement | null {
-  const segments = pathname.split("/").filter(Boolean)
-
-  if (segments.length === 0 || segments[0] === "articles") return null
-
-  return (
-    <Suspense fallback={<BreadcrumbsSkeleton segments={segments} />}>
-      <BreadcrumbsRoot pathname={pathname} />
-    </Suspense>
   )
 }

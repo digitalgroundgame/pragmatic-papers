@@ -115,7 +115,12 @@ export default async function TopicPage({
 
   return (
     <>
-      <Breadcrumbs pathname={url} />
+      <Breadcrumbs
+        items={[
+          { name: "Topics", path: "/topics" },
+          { name: topic.name, path: url },
+        ]}
+      />
       <article className="mx-auto max-w-3xl space-y-6 px-4">
         <PayloadRedirects disableNotFound url={url} />
 

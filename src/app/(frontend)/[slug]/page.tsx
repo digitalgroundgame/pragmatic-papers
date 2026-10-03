@@ -14,7 +14,7 @@ import { RenderHero } from "@/heros/RenderHero"
 import { generateMeta } from "@/utilities/generateMeta"
 import { getCachedGlobal } from "@/utilities/getGlobals"
 import { buildBreadcrumbJsonLd, buildHomeJsonLd } from "@/utilities/structuredData"
-import { Breadcrumbs } from "@/components/Breadcrumbs"
+import { Breadcrumbs, type Crumb } from "@/components/Breadcrumbs"
 
 // Rendered per request until #1129 moves it to prerendering. Not because of draftMode(): a
 // prerender reads it as off. The layout used to call headers(), which Next only found out by
@@ -83,13 +83,12 @@ export default async function Page({ params, searchParams }: Args): Promise<Reac
 
   const { hero, layout } = page
 
-  const jsonLdData =
-    slug === "home"
-      ? buildHomeJsonLd(socials)
-      : [buildBreadcrumbJsonLd([{ name: page.meta?.title || slug, path: `/${slug}` }])]
+  // Flat today. Once pages nest, this is nestedDocsTrail(page.breadcrumbs).
+  const trail: Crumb[] = slug === "home" ? [] : [{ name: page.title, path: `/${slug}` }]
+  const jsonLdData = slug === "home" ? buildHomeJsonLd(socials) : [buildBreadcrumbJsonLd(trail)]
   return (
     <>
-      <Breadcrumbs pathname={slug === "home" ? "/" : `/${slug}`} />
+      <Breadcrumbs items={trail} />
       <article>
         <JsonLd data={jsonLdData} />
         {/* Allows redirects for valid pages too */}

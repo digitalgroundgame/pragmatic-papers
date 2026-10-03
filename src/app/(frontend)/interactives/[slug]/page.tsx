@@ -79,7 +79,13 @@ export default async function InteractivePage({
 
   return (
     <>
-      <Breadcrumbs pathname={url} />
+      <Breadcrumbs
+        fullWidth
+        items={[
+          { name: "Interactives", path: "/interactives" },
+          { name: interactive.title, path: url },
+        ]}
+      />
       <div className="container pt-8 pb-16">
         <PayloadRedirects disableNotFound url={url} />
         {draft && <LivePreviewListener />}

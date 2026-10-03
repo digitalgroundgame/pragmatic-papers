@@ -68,6 +68,10 @@ export default async function VolumePage({
   if (!volume) return <PayloadRedirects url={url} />
 
   const volumeTitle = `Volume ${toRoman(Number(volume.slug))}`
+  const trail = [
+    { name: "Volumes", path: "/volumes" },
+    { name: volumeTitle, path: url },
+  ]
 
   const { publishedAt, editorsNote } = volume
 
@@ -86,17 +90,9 @@ export default async function VolumePage({
 
   return (
     <>
-      <Breadcrumbs pathname={url} />
+      <Breadcrumbs items={trail} />
       <article className="mx-auto max-w-3xl space-y-3 px-4">
-        <JsonLd
-          data={[
-            buildVolumeJsonLd(volume, url),
-            buildBreadcrumbJsonLd([
-              { name: "Volumes", path: "/volumes" },
-              { name: volumeTitle, path: url },
-            ]),
-          ]}
-        />
+        <JsonLd data={[buildVolumeJsonLd(volume, url), buildBreadcrumbJsonLd(trail)]} />
         {/* Allows redirects for valid pages too */}
         <PayloadRedirects disableNotFound url={url} />
 

@@ -168,20 +168,16 @@ export default async function AuthorPage({ params, searchParams }: Args): Promis
     ? (profile.sizes?.square?.url ?? undefined)
     : undefined
   const initials = getInitials(user.name || "Author")
+  const trail = [
+    { name: "Authors", path: "/authors" },
+    { name: user.name || "Author", path: url },
+  ]
 
   return (
     <>
-      <Breadcrumbs pathname={url} />
+      <Breadcrumbs items={trail} />
       <article className="mx-auto max-w-3xl space-y-6 px-4">
-        <JsonLd
-          data={[
-            buildPersonJsonLd(user, url),
-            buildBreadcrumbJsonLd([
-              { name: "Authors", path: "/authors" },
-              { name: user.name || "Author", path: url },
-            ]),
-          ]}
-        />
+        <JsonLd data={[buildPersonJsonLd(user, url), buildBreadcrumbJsonLd(trail)]} />
         {/* Allows redirects for valid pages too */}
         <PayloadRedirects disableNotFound url={url} />
 

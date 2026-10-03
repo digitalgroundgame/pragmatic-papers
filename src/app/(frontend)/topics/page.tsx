@@ -51,7 +51,7 @@ export default async function TopicsPage({ searchParams }: Args): Promise<React.
 
   return (
     <>
-      <Breadcrumbs pathname="/topics" />
+      <Breadcrumbs items={[{ name: "Topics", path: "/topics" }]} />
       <article className="mx-auto max-w-3xl space-y-6 px-4">
         {draft && <LivePreviewListener />}
 

@@ -122,7 +122,7 @@ export default async function SearchPage({ searchParams }: Args): Promise<React.
 
   return (
     <>
-      <Breadcrumbs pathname="/search" />
+      <Breadcrumbs items={[{ name: "Search", path: "/search" }]} />
       <main className="mx-auto max-w-3xl space-y-6 px-4">
         <h1>Search</h1>
 

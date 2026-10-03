@@ -127,7 +127,7 @@ export default async function AuthorsIndexPage({ searchParams }: Args): Promise<
 
   return (
     <>
-      <Breadcrumbs pathname="/authors" />
+      <Breadcrumbs items={[{ name: "Authors", path: "/authors" }]} />
       <article className="mx-auto max-w-3xl space-y-6 px-4">
         {draft && <LivePreviewListener />}
 

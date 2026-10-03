@@ -14,6 +14,7 @@ import { RenderHero } from "@/heros/RenderHero"
 import { generateMeta } from "@/utilities/generateMeta"
 import { getCachedGlobal } from "@/utilities/getGlobals"
 import { buildBreadcrumbJsonLd, buildHomeJsonLd } from "@/utilities/structuredData"
+import { Breadcrumbs } from "@/components/Breadcrumbs"
 
 // Explicit, not left to Next's dynamic-API bailout: this page reads draftMode(), which makes
 // Next render it per request, but it only finds that out by prerendering one. When
@@ -87,16 +88,19 @@ export default async function Page({ params, searchParams }: Args): Promise<Reac
       ? buildHomeJsonLd(socials)
       : [buildBreadcrumbJsonLd([{ name: page.meta?.title || slug, path: `/${slug}` }])]
   return (
-    <article>
-      <JsonLd data={jsonLdData} />
-      {/* Allows redirects for valid pages too */}
-      <PayloadRedirects disableNotFound url={url} />
+    <>
+      <Breadcrumbs pathname={slug === "home" ? "/" : `/${slug}`} />
+      <article>
+        <JsonLd data={jsonLdData} />
+        {/* Allows redirects for valid pages too */}
+        <PayloadRedirects disableNotFound url={url} />
 
-      {draft && <LivePreviewListener />}
+        {draft && <LivePreviewListener />}
 
-      <RenderHero {...hero} />
+        <RenderHero {...hero} />
 
-      <RenderBlocks blocks={layout} pageNumber={pageNumber} />
-    </article>
+        <RenderBlocks blocks={layout} pageNumber={pageNumber} />
+      </article>
+    </>
   )
 }

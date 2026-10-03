@@ -2,8 +2,7 @@ import { cleanup, render, screen } from "@testing-library/react"
 import type React from "react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
-const { path, queries } = vi.hoisted(() => ({
-  path: { value: "/" },
+const { queries } = vi.hoisted(() => ({
   queries: {
     queryPageBySlug: vi.fn(),
     queryTopicBySlug: vi.fn(),
@@ -11,9 +10,6 @@ const { path, queries } = vi.hoisted(() => ({
   },
 }))
 
-vi.mock("next/headers", () => ({
-  headers: async () => new Headers({ "x-pathname": path.value }),
-}))
 vi.mock("@/utilities/queries", () => queries)
 
 import { Breadcrumbs } from "../index"
@@ -28,8 +24,7 @@ type Suspended = React.ReactElement<{
  * can't await. Resolve the trail the way the server would, then render what it returns.
  */
 async function renderTrail(pathname: string): Promise<HTMLElement> {
-  path.value = pathname
-  const suspended = (await Breadcrumbs()) as Suspended
+  const suspended = Breadcrumbs({ pathname }) as Suspended
   const trail = suspended.props.children
   const resolve = trail.type as unknown as (props: {
     pathname: string
@@ -39,8 +34,7 @@ async function renderTrail(pathname: string): Promise<HTMLElement> {
 }
 
 async function renderSkeleton(pathname: string): Promise<HTMLElement> {
-  path.value = pathname
-  const suspended = (await Breadcrumbs()) as Suspended
+  const suspended = Breadcrumbs({ pathname }) as Suspended
   const { container } = render(suspended.props.fallback)
   return container.firstElementChild as HTMLElement
 }
@@ -54,9 +48,8 @@ beforeEach(() => {
 afterEach(cleanup)
 
 describe("Breadcrumbs", () => {
-  it.each(["/", "/articles/some-story"])("renders nothing on %s", async (pathname) => {
-    path.value = pathname
-    await expect(Breadcrumbs()).resolves.toBeNull()
+  it.each(["/", "/articles/some-story"])("renders nothing on %s", (pathname) => {
+    expect(Breadcrumbs({ pathname })).toBeNull()
   })
 
   it("spans the page on an interactive, which fills the container", async () => {

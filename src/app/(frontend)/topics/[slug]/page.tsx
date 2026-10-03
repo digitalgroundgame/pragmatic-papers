@@ -10,6 +10,7 @@ import type { Metadata } from "next"
 import { draftMode } from "next/headers"
 import { getPayload } from "payload"
 import React, { cache } from "react"
+import { Breadcrumbs } from "@/components/Breadcrumbs"
 
 interface Args {
   params: Promise<{
@@ -113,32 +114,37 @@ export default async function TopicPage({
   }
 
   return (
-    <article className="mx-auto max-w-3xl space-y-6 px-4">
-      <PayloadRedirects disableNotFound url={url} />
+    <>
+      <Breadcrumbs pathname={url} />
+      <article className="mx-auto max-w-3xl space-y-6 px-4">
+        <PayloadRedirects disableNotFound url={url} />
 
-      {draft && <LivePreviewListener />}
+        {draft && <LivePreviewListener />}
 
-      <header className="space-y-3">
-        <h1>{topic.name}</h1>
-        {topic.description && <p className="text-muted-foreground text-sm">{topic.description}</p>}
-      </header>
+        <header className="space-y-3">
+          <h1>{topic.name}</h1>
+          {topic.description && (
+            <p className="text-muted-foreground text-sm">{topic.description}</p>
+          )}
+        </header>
 
-      <section aria-label="Articles for this topic">
-        <h2 className="mb-3">Articles</h2>
-        {totalDocs === 0 ? (
-          <p className="text-muted-foreground text-sm">No articles found for this topic yet.</p>
-        ) : (
-          <>
-            <div className="flex flex-col gap-4">
-              {articles.map((article) => {
-                const volume = volumeByArticleId.get(article.id)
-                return <AuthorArticleCard key={article.id} article={article} volume={volume} />
-              })}
-            </div>
-            <Pagination page={currentPage} totalPages={totalPages} />
-          </>
-        )}
-      </section>
-    </article>
+        <section aria-label="Articles for this topic">
+          <h2 className="mb-3">Articles</h2>
+          {totalDocs === 0 ? (
+            <p className="text-muted-foreground text-sm">No articles found for this topic yet.</p>
+          ) : (
+            <>
+              <div className="flex flex-col gap-4">
+                {articles.map((article) => {
+                  const volume = volumeByArticleId.get(article.id)
+                  return <AuthorArticleCard key={article.id} article={article} volume={volume} />
+                })}
+              </div>
+              <Pagination page={currentPage} totalPages={totalPages} />
+            </>
+          )}
+        </section>
+      </article>
+    </>
   )
 }

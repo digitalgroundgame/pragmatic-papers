@@ -23,6 +23,7 @@ import type { Metadata } from "next"
 import { draftMode } from "next/headers"
 import { getPayload } from "payload"
 import React, { cache } from "react"
+import { Breadcrumbs } from "@/components/Breadcrumbs"
 
 // Explicit, not left to Next's dynamic-API bailout: this page reads draftMode(), which makes
 // Next render it per request, but it only finds that out by prerendering one. When
@@ -169,69 +170,72 @@ export default async function AuthorPage({ params, searchParams }: Args): Promis
   const initials = getInitials(user.name || "Author")
 
   return (
-    <article className="mx-auto max-w-3xl space-y-6 px-4">
-      <JsonLd
-        data={[
-          buildPersonJsonLd(user, url),
-          buildBreadcrumbJsonLd([
-            { name: "Authors", path: "/authors" },
-            { name: user.name || "Author", path: url },
-          ]),
-        ]}
-      />
-      {/* Allows redirects for valid pages too */}
-      <PayloadRedirects disableNotFound url={url} />
+    <>
+      <Breadcrumbs pathname={url} />
+      <article className="mx-auto max-w-3xl space-y-6 px-4">
+        <JsonLd
+          data={[
+            buildPersonJsonLd(user, url),
+            buildBreadcrumbJsonLd([
+              { name: "Authors", path: "/authors" },
+              { name: user.name || "Author", path: url },
+            ]),
+          ]}
+        />
+        {/* Allows redirects for valid pages too */}
+        <PayloadRedirects disableNotFound url={url} />
 
-      {draft && <LivePreviewListener />}
+        {draft && <LivePreviewListener />}
 
-      <header className="flex flex-col items-center space-y-3 text-center">
-        {profile && (
-          <Avatar size="2xl" className="aspect-square border">
-            <AvatarImage
-              src={profileImageUrl}
-              render={<Media media={profile} variant="square" sizes="128px" priority />}
+        <header className="flex flex-col items-center space-y-3 text-center">
+          {profile && (
+            <Avatar size="2xl" className="aspect-square border">
+              <AvatarImage
+                src={profileImageUrl}
+                render={<Media media={profile} variant="square" sizes="128px" priority />}
+              />
+              <AvatarFallback>{initials}</AvatarFallback>
+            </Avatar>
+          )}
+          <h1>{user.name || "Author"}</h1>
+          {user.affiliation && <p className="text-muted-foreground text-sm">{user.affiliation}</p>}
+          <AuthorLinks socials={user.socials} />
+        </header>
+
+        {hasBiography && (
+          <section className="mb-10" aria-label="Author biography">
+            <h2 className="mb-3">Bio</h2>
+            <RichText enableGutter={false} data={user.biography as ArticleType["content"]} />
+          </section>
+        )}
+
+        <Separator className="my-16" />
+
+        <section aria-label="Articles by this author">
+          <div className="mb-4 flex items-center justify-between">
+            <h2>Articles</h2>
+            <PageRange
+              collection="articles"
+              currentPage={currentPage}
+              limit={ARTICLES_PER_PAGE}
+              totalDocs={totalDocs}
             />
-            <AvatarFallback>{initials}</AvatarFallback>
-          </Avatar>
-        )}
-        <h1>{user.name || "Author"}</h1>
-        {user.affiliation && <p className="text-muted-foreground text-sm">{user.affiliation}</p>}
-        <AuthorLinks socials={user.socials} />
-      </header>
-
-      {hasBiography && (
-        <section className="mb-10" aria-label="Author biography">
-          <h2 className="mb-3">Bio</h2>
-          <RichText enableGutter={false} data={user.biography as ArticleType["content"]} />
+          </div>
+          {totalDocs === 0 ? (
+            <p className="text-muted-foreground text-sm">{`Look out for this author's debut!`}</p>
+          ) : (
+            <>
+              <div className="mt-4 flex flex-col gap-4">
+                {articles.map((article) => {
+                  const volume = volumeByArticleId.get(article.id)
+                  return <AuthorArticleCard key={article.id} article={article} volume={volume} />
+                })}
+              </div>
+              <Pagination page={currentPage} totalPages={totalPages} />
+            </>
+          )}
         </section>
-      )}
-
-      <Separator className="my-16" />
-
-      <section aria-label="Articles by this author">
-        <div className="mb-4 flex items-center justify-between">
-          <h2>Articles</h2>
-          <PageRange
-            collection="articles"
-            currentPage={currentPage}
-            limit={ARTICLES_PER_PAGE}
-            totalDocs={totalDocs}
-          />
-        </div>
-        {totalDocs === 0 ? (
-          <p className="text-muted-foreground text-sm">{`Look out for this author's debut!`}</p>
-        ) : (
-          <>
-            <div className="mt-4 flex flex-col gap-4">
-              {articles.map((article) => {
-                const volume = volumeByArticleId.get(article.id)
-                return <AuthorArticleCard key={article.id} article={article} volume={volume} />
-              })}
-            </div>
-            <Pagination page={currentPage} totalPages={totalPages} />
-          </>
-        )}
-      </section>
-    </article>
+      </article>
+    </>
   )
 }

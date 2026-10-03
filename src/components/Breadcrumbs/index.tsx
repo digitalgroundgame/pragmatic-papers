@@ -11,7 +11,6 @@ import { cn } from "@/utilities/utils"
 import { queryPageBySlug, queryTopicBySlug, queryUserBySlug } from "@/utilities/queries"
 import { toRoman } from "@/utilities/toRoman"
 import { Home } from "lucide-react"
-import { headers } from "next/headers"
 import { Fragment, Suspense, type ReactElement } from "react"
 
 const STATIC_ROOTS = new Set(["authors", "topics", "volumes"])
@@ -107,9 +106,12 @@ function BreadcrumbsSkeleton({ segments }: { segments: string[] }): ReactElement
   )
 }
 
-export async function Breadcrumbs(): Promise<ReactElement | null> {
-  const headersList = await headers()
-  const pathname = headersList.get("x-pathname") ?? "/"
+/**
+ * The trail for `pathname`. Each page renders its own, passing the path it knows from its
+ * params: read from the request instead (a header or the like), it would make every page
+ * under the layout dynamic, so none could be prerendered.
+ */
+export function Breadcrumbs({ pathname }: { pathname: string }): ReactElement | null {
   const segments = pathname.split("/").filter(Boolean)
 
   if (segments.length === 0 || segments[0] === "articles") return null

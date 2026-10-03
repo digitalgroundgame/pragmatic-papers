@@ -54,8 +54,8 @@ const nextConfig: NextConfig = {
       // an editor and a broken publish button today.
       //
       // There is no per-action override for this in Next — `bodySizeLimit` is one number
-      // for every Server Action in the app, so this also covers `getAuth.ts` and
-      // `SocialEmbed/hooks/revalidateSnapshot.ts`. Neither is publicly reachable, so the
+      // for every Server Action in the app, so this also covers
+      // `SocialEmbed/hooks/revalidateSnapshot.ts`. It isn't publicly reachable, so the
       // practical exposure is low; it is still wider than the one flow this was raised for.
       bodySizeLimit: "8mb",
     },

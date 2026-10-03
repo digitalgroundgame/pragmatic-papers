@@ -263,6 +263,8 @@ Until all three required values are set, or while `COOLIFY_PREVIEW_IMAGE_APP_UUI
 
 When deploying with Coolify, preview deployments automatically get unique database names based on the `COOLIFY_FQDN` environment variable.
 
+This section and the next describe these steps as a Coolify build runs them (the fallback, previews staging builds). The **preview** app runs the same scripts when its container starts instead; [Where each step runs](#previews-built-in-github-actions) maps one onto the other.
+
 **How it works:**
 
 When `BUILD_ENV=preview` and Coolify sets `COOLIFY_FQDN` (e.g., `pr-330.pragmaticpapers.com`), the Dockerfile will:

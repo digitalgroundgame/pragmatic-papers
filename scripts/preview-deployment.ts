@@ -1,30 +1,12 @@
 /**
- * Mirrors a PR's Coolify preview deploy into a GitHub Deployment, so the PR
- * shows the preview's state and a "View deployment" link to it.
+ * Deploys a PR's preview on Coolify and mirrors it into a GitHub Deployment, so the PR
+ * shows the preview's state and a "View deployment" link to it. Coolify never tells
+ * GitHub about previews itself: it only posts a PR comment
+ * (https://github.com/coollabsio/coolify/issues/9583). Runs under plain Node 24.
  *
- * Coolify builds previews itself (on its GitHub App's webhook) but never tells
- * GitHub about them: it only posts a PR comment
- * (https://github.com/coollabsio/coolify/issues/9583). Run by
- * .github/workflows/preview-deployment.yml under plain Node 24, with:
- *
- *   node scripts/preview-deployment.ts deploy   # PR opened, reopened or pushed
- *   node scripts/preview-deployment.ts close    # PR closed or merged
- *
- * `deploy` waits for Coolify to queue a preview for the PR's head commit, then
- * creates a Deployment for the PR's branch in the "Preview" environment and
- * copies Coolify's status onto it until the build finishes. The branch (not the
- * commit SHA) is the Deployment's ref, which is what ties it to the PR. When the
- * build succeeds, the PR's older preview Deployments are marked inactive.
- * `close` marks all of the PR's preview Deployments inactive, since Coolify
- * tears the preview down.
- *
- * The workflow only runs `deploy` on PRs Coolify previews (see its `if`). A PR
- * Coolify still doesn't build (previews off for its base branch, say) gets no
- * Deployment. Without the Coolify settings the script does nothing.
- *
- * Previews built in GitHub Actions instead (deployed by .github/workflows/playwright.yml,
- * removed by .github/workflows/preview-image.yml)
- * run on a Coolify "Docker Image" application, which never builds anything itself:
+ * Previews run on Coolify's **preview** app, a "Docker Image" application that never
+ * builds anything itself. .github/workflows/playwright.yml builds the image and deploys
+ * it, and .github/workflows/preview-image.yml removes it when the PR closes:
  *
  *   node scripts/preview-deployment.ts deploy <image-tag>   # deploy that image as the PR's preview
  *   node scripts/preview-deployment.ts close --delete-preview
@@ -34,6 +16,24 @@
  * can find for the commit. `close --delete-preview` also removes the preview from
  * Coolify, which nothing else does for an image application (there's no GitHub App
  * watching the PR). Both need a token with the `deploy` and `write` abilities.
+ *
+ * The fallback, previews the staging app builds itself on its GitHub App's webhook
+ * (dockerfiles/README.md, "Falling back to Coolify-built previews"), is followed by
+ * .github/workflows/preview-deployment.yml instead:
+ *
+ *   node scripts/preview-deployment.ts deploy   # PR opened, reopened or pushed
+ *   node scripts/preview-deployment.ts close    # PR closed or merged
+ *
+ * There `deploy` waits for Coolify to queue a preview for the PR's head commit, then
+ * creates a Deployment for the PR's branch in the "Preview" environment and copies
+ * Coolify's status onto it until the build finishes. The workflow only runs it on PRs
+ * Coolify previews (see its `if`); a PR Coolify doesn't build gets no Deployment.
+ * `close` marks all of the PR's preview Deployments inactive, since Coolify tears the
+ * preview down.
+ *
+ * Either way the branch (not the commit SHA) is the Deployment's ref, which is what ties
+ * it to the PR, and once a preview is live the PR's older preview Deployments are marked
+ * inactive. Without the Coolify settings the script does nothing.
  */
 import { pathToFileURL } from "node:url"
 

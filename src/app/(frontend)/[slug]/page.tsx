@@ -16,10 +16,10 @@ import { getCachedGlobal } from "@/utilities/getGlobals"
 import { buildBreadcrumbJsonLd, buildHomeJsonLd } from "@/utilities/structuredData"
 import { Breadcrumbs } from "@/components/Breadcrumbs"
 
-// Explicit, not left to Next's dynamic-API bailout: this page reads draftMode(), which makes
-// Next render it per request, but it only finds that out by prerendering one. When
-// generateStaticParams returns nothing (a build against an empty database, #1067) the route
-// is classed static instead, and every request then fails with DYNAMIC_SERVER_USAGE.
+// Rendered per request until #1129 moves it to prerendering. Not because of draftMode(): a
+// prerender reads it as off. The layout used to call headers(), which Next only found out by
+// prerendering a slug, so a build with none (#1067) classed the route static and every request
+// failed with DYNAMIC_SERVER_USAGE.
 export const dynamic = "force-dynamic"
 
 export async function generateStaticParams(): Promise<{ slug: string }[]> {

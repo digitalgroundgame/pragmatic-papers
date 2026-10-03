@@ -21,7 +21,7 @@ import { Feed } from "feed"
 import { absoluteURL, escapeHTML, fromBlock } from "./feedHTML"
 import { getServerSideURL } from "./getURL"
 
-// Read on each call, not at import: SERVER_URL is a runtime variable (#1090).
+// Read on each call, not at import: SERVER_URL is a runtime variable.
 const siteUrl = (): string => getServerSideURL()
 
 const getMediaUrl = (url: string) => {
@@ -52,7 +52,7 @@ export const createHtmlConverters =
     return {
       ...defaultConverters,
       // Payload's default link converter has no `internalDocToHref`, so every
-      // internal link would render as `href="#"` (#1023). Feed readers need
+      // internal link would render as `href="#"`. Feed readers need
       // absolute URLs; the site's helper returns a path.
       ...LinkHTMLConverter({
         internalDocToHref: ({ linkNode }: { linkNode: SerializedLinkNode }) => {

@@ -42,7 +42,7 @@ describe("next.config.ts Cache-Control", () => {
   })
 
   // Route Handlers that set their own Cache-Control: a config header for the same key would
-  // replace it, so none of these may match a Cache-Control rule at all (#947).
+  // replace it, so none of these may match a Cache-Control rule at all.
   it("leaves routes that set their own Cache-Control alone", async () => {
     for (const path of [
       "/interactives/federal-courts/regions/ca1",

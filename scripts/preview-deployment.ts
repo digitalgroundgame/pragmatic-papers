@@ -22,7 +22,7 @@
  * Coolify still doesn't build (previews off for its base branch, say) gets no
  * Deployment. Without the Coolify settings the script does nothing.
  *
- * Previews built in GitHub Actions instead (#1067; deployed by .github/workflows/playwright.yml,
+ * Previews built in GitHub Actions instead (deployed by .github/workflows/playwright.yml,
  * removed by .github/workflows/preview-image.yml)
  * run on a Coolify "Docker Image" application, which never builds anything itself:
  *

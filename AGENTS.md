@@ -218,7 +218,7 @@ Progress and the open questions live on issue #912.
 | Pure utility functions         | Unit test in `src/**/__tests__/`                                                           |
 | Blocks and components          | Storybook story next to the component (see [Storybook](#storybook))                        |
 | UI/presentational components   | Snapshot test (see `src/components/ui/__tests__/button.snapshot.test.tsx` for the pattern) |
-| Client components with state   | RTL interaction test (`fireEvent`; `user-event` is not installed — see #898)               |
+| Client components with state   | RTL interaction test (`fireEvent`; `user-event` is not installed)                          |
 | Server components (async, CMS) | Integration test with mocked Payload queries                                               |
 | API routes / Payload hooks     | Integration test (a Docker Postgres, see `tests/integration/`)                             |
 

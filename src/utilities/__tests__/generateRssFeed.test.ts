@@ -69,7 +69,7 @@ const inlineBlock = (fields: Record<string, unknown>) => ({
   version: 1,
 })
 
-describe("RSS feed escapes CMS text (#1024)", () => {
+describe("RSS feed escapes CMS text", () => {
   it("escapes a quoted alt text in a media block", () => {
     const html = renderContent(
       block({

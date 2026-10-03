@@ -28,7 +28,7 @@ const nextConfig: NextConfig = {
       {
         // Production's media, which generateFileURL (src/plugins/index.ts) points at
         // SUPABASE_URL's public bucket. Any Supabase project rather than SUPABASE_URL's own
-        // host, so the storage host isn't fixed when the image is built (#1090).
+        // host, so the storage host isn't fixed when the image is built.
         // start.sh refuses to start a deployed image whose SUPABASE_URL this doesn't match.
         protocol: "https",
         hostname: "*.supabase.co",
@@ -144,7 +144,7 @@ const nextConfig: NextConfig = {
         // Only applies when both Payload cookies are absent; logged-in editors and draft-preview
         // sessions bypass this rule and always hit the origin with fresh responses.
         // Route Handlers that set their own Cache-Control are left out, because a config-level
-        // header always wins over one a Route Handler sets for the same key (#947):
+        // header always wins over one a Route Handler sets for the same key:
         // - interactives' region, geometry and search JSON (`/interactives/<slug>/regions/...`,
         //   `/interactives/<slug>/search`): an hour at the edge, and geometry, which names its
         //   own content in the URL, is immutable for a year — this rule capped both at 10 min.
@@ -219,7 +219,7 @@ export default withSentryConfig(withPayload(nextConfig, { devBundleServerPackage
   applicationKey: "pragmatic-papers",
 
   // The build-time dependency instrumentation roughly doubles peak compile memory
-  // (~4.6 → ~8.5 GiB), more than the Coolify build server's 8 GB of RAM (#1018).
+  // (~4.6 → ~8.5 GiB), more than the Coolify build server's 8 GB of RAM.
   buildTimeInstrumentation: false,
 
   // Log wherever source maps are uploaded: builds with SENTRY_AUTH_TOKEN (Coolify

@@ -27,8 +27,8 @@ const getGlobal = cache(async function getGlobalCached<T extends Global>(
  * In development it skips `unstable_cache` and reads the database on every request
  * (`React.cache` still dedupes within one). `next dev` keeps that cache on disk in
  * `.next/dev/cache`, untimed, and only the globals' own hooks inside the Next process clear
- * it — so a seed, `dev:db-nuke`, `dev:db-fresh` or a script writing the globals left the
- * header and footer showing an earlier database's nav across restarts (#971).
+ * it — so a seed, `dev:db-nuke`, `dev:db-fresh` or a script writing the globals would leave
+ * the header and footer showing an earlier database's nav across restarts.
  */
 // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
 export const getCachedGlobal = <T extends Global>(slug: T, depth = 0) =>

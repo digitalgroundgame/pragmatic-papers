@@ -50,7 +50,7 @@ runs:
       #
       # E2E_IMAGE: scripts/test-e2e.mjs serves the image the workflow built,
       # the one a PR's preview deploys, instead of building Next.js itself
-      # (#1090). Must match the build-app-image action's `image` output.
+      # Must match the build-app-image action's `image` output.
       #
       # FONTS_REQUIRED: refuse to render with the Inter fallback.
       # scripts/install-fonts.ts silently substitutes Inter when

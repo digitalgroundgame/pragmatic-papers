@@ -85,7 +85,7 @@ check_client_version() {
 #
 # Never disconnects the source's clients: the source is staging, and killing them
 # fails whatever staging is serving at that moment with "terminating connection due
-# to administrator command" (#1057). A template copy needs the source to have no
+# to administrator command". A template copy needs the source to have no
 # connections, so it's only tried as the fast path; while staging's app is connected
 # Postgres refuses it straight away and the copy falls back to pg_dump/pg_restore.
 copy_database() {
@@ -119,7 +119,7 @@ copy_database() {
 # build, so a restart of the same image must not take FORCE_DATABASE_COPY as a request
 # for another fresh copy: that would throw away what testers entered. The commit a copy
 # was made for is kept as the database's comment, and a forced copy is made once per
-# commit (#1067).
+# commit.
 FORCED_MARK="copied for commit ${SOURCE_COMMIT}"
 copied_for_this_commit() {
     [ "$BUILT_WITHOUT_DATABASE" = "true" ] && [ -n "$SOURCE_COMMIT" ] &&
@@ -146,7 +146,7 @@ if database_exists "$TARGET_DB"; then
 
     # The previous deploy's container is still serving the target. Dropping it now would
     # leave that container on a missing database, and then on an unmigrated copy of the
-    # source, until this build finishes or for good if it fails (#1057, #1058). So build
+    # source, until this build finishes or for good if it fails. So build
     # and migrate the new copy beside it, and swap it in only once it's ready.
     STAGE_DB="${TARGET_DB}_incoming"
     echo "Target database exists. FORCE_DATABASE_COPY=true, preparing a fresh copy in '$STAGE_DB'..."
@@ -155,7 +155,7 @@ if database_exists "$TARGET_DB"; then
 
     # An image built in GitHub Actions runs this at start and has no Payload CLI: the
     # app migrates the database once it's swapped in, before its health check passes, so
-    # the old container serves the unmigrated copy for that long (#1067).
+    # the old container serves the unmigrated copy for that long.
     if [ "$BUILT_WITHOUT_DATABASE" = "true" ]; then
         echo "Leaving '$STAGE_DB' for the app to migrate when it starts"
     else

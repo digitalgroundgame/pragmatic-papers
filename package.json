@@ -54,7 +54,7 @@
   "dependencies": {
     "@base-ui/react": "^1.8.0",
     "@google-analytics/data": "^7.2.0",
-    "@next/third-parties": "16.3.6",
+    "@next/third-parties": "16.3.8",
     "@payloadcms/admin-bar": "^3.90.2",
     "@payloadcms/db-postgres": "^3.90.2",
     "@payloadcms/live-preview-react": "^3.90.2",

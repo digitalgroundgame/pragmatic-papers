@@ -309,7 +309,7 @@ jobs:
             scripts/storybook-pr.ts
           sparse-checkout-cone-mode: false
 
-      - uses: actions/download-artifact@v7
+      - uses: actions/download-artifact@v8
         if: env.HAS_CLOUDFLARE == 'true'
         with:
           name: storybook-static

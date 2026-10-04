@@ -9,7 +9,7 @@ if [ -z "$DATABASE_URI" ]; then
 fi
 
 # Every deployed image sets BUILD_ENV. Without SERVER_URL the app would put
-# http://localhost:8000 in canonical tags, sitemaps and share links (#1090), so refuse
+# http://localhost:8000 in canonical tags, sitemaps and share links, so refuse
 # to start: the healthcheck fails and Coolify keeps the previous container.
 if [ -n "$BUILD_ENV" ] && [ -z "$SERVER_URL" ]; then
     echo "ERROR: SERVER_URL is not set at runtime (Coolify: enable Runtime for it)"
@@ -18,7 +18,7 @@ fi
 
 # With S3 storage, media URLs point at SUPABASE_URL's public bucket S3_BUCKET, and
 # next/image only optimizes them from a *.supabase.co host (next.config.ts). Anything else
-# would break every image on the site (#791), so refuse to start, as above.
+# would break every image on the site, so refuse to start, as above.
 if [ -n "$BUILD_ENV" ] && [ "$USE_LOCAL_STORAGE" != "true" ]; then
     if [ -z "$S3_BUCKET" ]; then
         echo "ERROR: S3_BUCKET is not set at runtime, and USE_LOCAL_STORAGE isn't true (Coolify: enable Runtime for it)"
@@ -42,7 +42,7 @@ APP_DIR=$(dirname "$0")
 . "$APP_DIR/database-uri.sh"
 
 if [ "$BUILT_WITHOUT_DATABASE" = "true" ]; then
-    # Built in GitHub Actions (PragmaticPapers.ci.Dockerfile, #1067): the database work a
+    # Built in GitHub Actions (PragmaticPapers.ci.Dockerfile): the database work a
     # Coolify build does happens here instead, next to the database. Name the preview's
     # database from the runtime COOLIFY_FQDN, copy staging into it on its first boot, and
     # drop closed PRs' copies. Payload migrates it when it starts (prodMigrations).

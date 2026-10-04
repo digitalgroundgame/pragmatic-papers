@@ -20,7 +20,7 @@ export async function getRedirects(depth = 1) {
  * Returns a unstable_cache function mapped with the cache tag for 'redirects'.
  *
  * Cache all redirects together to avoid multiple fetches. Uncached in development, for the
- * reason `getCachedGlobal` gives (#971).
+ * reason `getCachedGlobal` gives.
  */
 // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
 export const getCachedRedirects = () =>

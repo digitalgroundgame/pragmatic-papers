@@ -6,7 +6,7 @@ import type { Page, Topic } from "@/payload-types"
 import { ARTICLE_CONTENT } from "./fixtures/content"
 import { getPayload } from "./helpers/testUsers"
 
-// #970: the Header and Footer globals cache their nav with linked documents populated, so a
+// The Header and Footer globals cache their nav with linked documents populated, so a
 // rename, unpublish or delete of a linked page or topic must drop both globals' caches. This
 // drives the real collections, so a hook that's written but never registered fails here.
 const { revalidateTag } = vi.hoisted(() => ({ revalidateTag: vi.fn() }))

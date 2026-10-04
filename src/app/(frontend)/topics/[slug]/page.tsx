@@ -22,7 +22,7 @@ interface Args {
 
 // Explicit, not left to Next's dynamic-API bailout: this page reads draftMode(), which makes
 // Next render it per request, but it only finds that out by prerendering one. When
-// generateStaticParams returns nothing (a build against an empty database, #1067) the route
+// generateStaticParams returns nothing (an image GitHub Actions builds against an empty database) the route
 // is classed static instead, and every request then fails with DYNAMIC_SERVER_USAGE.
 export const dynamic = "force-dynamic"
 

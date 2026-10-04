@@ -97,8 +97,8 @@ const collect = (fields: ResolvedField[], coverage: Coverage): void => {
 
 /**
  * Every node type and block a feed-rendered rich-text field allows needs an
- * HTML converter, or the feed prints "unknown node" in its place (#402,
- * #1022). This reads the resolved Payload config, the same one the admin
+ * HTML converter, or the feed prints "unknown node" in its place. This
+ * reads the resolved Payload config, the same one the admin
  * editor uses, so enabling a feature or adding a block anywhere those fields
  * reach fails here until every feed's converter factory handles it.
  */

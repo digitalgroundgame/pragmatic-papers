@@ -221,7 +221,7 @@ interface SettingsPanelProps {
 /**
  * A popover rather than a menu: a menu may only hold menu items, and the volume
  * slider inside one broke it for screen readers and fought it for the arrow
- * keys (#1001). A popover can hold any control, so it moves between them with
+ * keys. A popover can hold any control, so it moves between them with
  * Tab, as a media player's settings panel usually does.
  */
 function SettingsPanel({

@@ -1,5 +1,5 @@
 // The throwaway Postgres that integration tests, E2E tests and the pending-migrations
-// check run against (#1015, #953). One helper decides where tests run, so none of them
+// check run against. One helper decides where tests run, so none of them
 // reads DATABASE_URI: that variable names the dev database in `.env`, and a test that
 // trusted it would migrate, seed and litter the dev cluster. Callers only *set*
 // DATABASE_URI, for the Payload processes they start.

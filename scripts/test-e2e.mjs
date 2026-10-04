@@ -77,7 +77,7 @@ console.warn(`${green("✔")} Test database ready.`)
 // uses it for stable screenshots. Local runs default to the faster dev server.
 const useProdServer = !!process.env.E2E_PROD_SERVER
 
-// CI tests the image it deploys (#1090): E2E_IMAGE names it, already loaded into Docker,
+// CI tests the image it deploys: E2E_IMAGE names it, already loaded into Docker,
 // and E2E_NETWORK_CONTAINER the container this script runs in. The server joins that
 // container's network namespace, so it answers on localhost:$PORT (the SERVER_URL the
 // baselines were rendered with) and reaches Postgres by the same hostname this script

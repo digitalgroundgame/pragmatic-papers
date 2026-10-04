@@ -22,7 +22,7 @@ How **our** two applications (development: staging + PR previews; production) ar
 | Deploy webhooks and the API                                                                             | `core/automation/deploy-webhooks.mdx`, `core/security/credentials/api-tokens.mdx`                    |
 | 502/504 from a deployed app                                                                             | `troubleshoot/applications/bad-gateway.mdx`, `gateway-timeout.mdx`                                   |
 
-Things these pages say that matter to us (checked for #1066): old images are kept for rollback
+Things these pages say that matter to us: old images are kept for rollback
 and Docker cleanup skips them unless **Disable Application Image Retention** is on; the docs
 describe no way to clear a deployment's log; a preview's containers are deleted when its PR
 closes, but data it wrote to an external database is not.

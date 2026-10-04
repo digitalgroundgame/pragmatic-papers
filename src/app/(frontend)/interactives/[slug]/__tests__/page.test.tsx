@@ -97,6 +97,17 @@ describe("InteractivePage", () => {
     expect(screen.getByTestId("redirects")).toHaveAttribute("data-disable-not-found", "true")
   })
 
+  it("trails Interactives to this one by its title, as wide as the page it sits on", async () => {
+    await renderPage()
+    const nav = screen.getByRole("navigation", { name: "breadcrumb" })
+    expect(nav).not.toHaveClass("max-w-3xl")
+    expect(screen.getByRole("link", { name: "Interactives" })).toHaveAttribute(
+      "href",
+      "/interactives",
+    )
+    expect(nav).toHaveTextContent(interactive.title)
+  })
+
   it("leaves out the data line's extra when the snapshot has none", async () => {
     load.loadInteractiveOverview.mockResolvedValue({ ...composed, metaLine: undefined })
     await renderPage()

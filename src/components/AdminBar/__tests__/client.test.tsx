@@ -1,11 +1,14 @@
-import { cleanup, render, screen } from "@testing-library/react"
+import { cleanup, fireEvent, render, screen } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
-const { path } = vi.hoisted(() => ({ path: { value: "/" } }))
+const { path, router } = vi.hoisted(() => ({
+  path: { value: "/" },
+  router: { push: vi.fn(), refresh: vi.fn() },
+}))
 
 vi.mock("next/navigation", () => ({
   usePathname: () => path.value,
-  useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }),
+  useRouter: () => router,
 }))
 
 import { AdminBarClient } from "../client"
@@ -13,16 +16,29 @@ import { AdminBarClient } from "../client"
 const json = (body: unknown, ok = true): Response =>
   ({ ok, json: async () => body }) as unknown as Response
 
-function stubPayload({ user, docs = [] }: { user: unknown; docs?: unknown[] }) {
-  const fetchMock = vi.fn(async (url: string) =>
-    url.includes("/api/users/me") ? json({ user }) : json({ docs }),
-  )
+const editor = { id: "7", email: "ed@example.com" }
+
+function stubPayload({
+  user,
+  docs = [],
+  lookupOk = true,
+}: {
+  user: unknown
+  docs?: unknown[] | ((url: string) => unknown[])
+  lookupOk?: boolean
+}) {
+  const fetchMock = vi.fn(async (url: string) => {
+    if (url.includes("/api/users/me")) return json({ user })
+    if (url.includes("/next/exit-preview")) return json({})
+    return json({ docs: typeof docs === "function" ? docs(url) : docs }, lookupOk)
+  })
   vi.stubGlobal("fetch", fetchMock)
   return fetchMock
 }
 
 beforeEach(() => {
   path.value = "/"
+  vi.clearAllMocks()
 })
 afterEach(() => {
   cleanup()
@@ -73,5 +89,48 @@ describe("AdminBarClient", () => {
     const lookup = new URL(fetchMock.mock.calls[1]![0])
     expect(lookup.pathname).toBe("/api/pages")
     expect(lookup.searchParams.get("where[slug][equals]")).toBe("home")
+  })
+
+  it("leaves out the Edit link when the page's document can't be found", async () => {
+    const fetchMock = stubPayload({ user: editor, lookupOk: false })
+    path.value = "/topics/gone"
+    render(<AdminBarClient />)
+
+    await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2))
+    expect(screen.getByText("ed@example.com")).toBeInTheDocument()
+    expect(screen.queryByRole("link", { name: /^Edit/ })).not.toBeInTheDocument()
+  })
+
+  it("never points the Edit link at the previous page after a navigation", async () => {
+    stubPayload({
+      user: editor,
+      docs: (url) => (url.includes("first") ? [{ id: 1 }] : [{ id: 2 }]),
+    })
+    path.value = "/articles/first"
+    const { rerender } = render(<AdminBarClient />)
+    expect(await screen.findByRole("link", { name: "Edit Article" })).toHaveAttribute(
+      "href",
+      expect.stringContaining("/collections/articles/1"),
+    )
+
+    path.value = "/articles/second"
+    rerender(<AdminBarClient />)
+    // The first article's ID is never shown for the second article, even before its lookup lands.
+    expect(screen.queryByRole("link", { name: "Edit Article" })).not.toBeInTheDocument()
+    expect(await screen.findByRole("link", { name: "Edit Article" })).toHaveAttribute(
+      "href",
+      expect.stringContaining("/collections/articles/2"),
+    )
+  })
+
+  it("exits preview through the exit route, then reloads from the home page", async () => {
+    const fetchMock = stubPayload({ user: editor })
+    render(<AdminBarClient preview />)
+
+    fireEvent.click(await screen.findByText("Exit preview mode"))
+
+    expect(fetchMock).toHaveBeenCalledWith("/next/exit-preview")
+    await vi.waitFor(() => expect(router.refresh).toHaveBeenCalled())
+    expect(router.push).toHaveBeenCalledWith("/")
   })
 })

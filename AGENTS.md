@@ -183,6 +183,7 @@ too.
 - **Pre-push hooks**: Husky runs full checks on all files (`lint:fix`, `format:fix`, `check-types`) before pushing
 - **Pre-commit hooks**: lint-staged runs ESLint + Prettier on staged files only (fast, ~1-2 seconds)
 - **Colocation**: Prefer colocating logic near where it's used. `src/utilities/` is only for genuinely reusable helpers shared across multiple features (e.g. `generateMeta`, `getURL`, `toRoman`, `cn`). Don't put single-use logic there.
+- **Issue and PR numbers in comments**: comments and docs describe the code as it is now; why and when it changed is what `git log` and `git blame` are for. Don't write "added in #970", "before #672" or "see #883" — the sentence should stand on its own. Two exceptions, each a pointer with an exit: an upstream bug a workaround depends on (full URL; remove the workaround when it's fixed), and an **open** issue tracking a known gap or a skipped check (say what to remove when it closes, as `knownContrastIssue` does for #998). When that issue closes, delete the comment and what it guards; never append to it.
 
 ### Integrations
 
@@ -218,7 +219,7 @@ Progress and the open questions live on issue #912.
 | Pure utility functions         | Unit test in `src/**/__tests__/`                                                           |
 | Blocks and components          | Storybook story next to the component (see [Storybook](#storybook))                        |
 | UI/presentational components   | Snapshot test (see `src/components/ui/__tests__/button.snapshot.test.tsx` for the pattern) |
-| Client components with state   | RTL interaction test (`fireEvent`; `user-event` is not installed — see #898)               |
+| Client components with state   | RTL interaction test (`fireEvent`; `user-event` is not installed)                          |
 | Server components (async, CMS) | Integration test with mocked Payload queries                                               |
 | API routes / Payload hooks     | Integration test (a Docker Postgres, see `tests/integration/`)                             |
 
@@ -314,9 +315,10 @@ committing or uploading it:
 
 ## Hosting (Coolify)
 
-The site is built and hosted by Coolify, from `dockerfiles/PragmaticPapers.Dockerfile`:
-a **development** application (staging, from `dev`, plus a preview per PR) and a
-**production** application (from `main`). `dockerfiles/README.md` records how _our_
+The site is hosted by Coolify in three applications: **staging** (from `dev`) and
+**production** (from `main`), which Coolify builds from
+`dockerfiles/PragmaticPapers.Dockerfile`, and **preview** (one per PR), which runs the
+image GitHub Actions builds from `dockerfiles/PragmaticPapers.ci.Dockerfile`. `dockerfiles/README.md` records how _our_
 applications are set up and what's been verified about them; read it first.
 
 The zone's Cloudflare rules (Cache Rules today) are version-controlled in

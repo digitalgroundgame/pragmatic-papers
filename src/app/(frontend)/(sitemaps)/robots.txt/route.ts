@@ -3,7 +3,7 @@ import { getServerSideURL } from "@/utilities/getURL"
 import { SITEMAP_PATHS } from "../sitemaps"
 
 // A route rather than a file next-sitemap writes at build time, so revalidate-all can
-// re-render it for the host the image serves (#1090). Previews and staging are kept out
+// re-render it for the host the image serves. Previews and staging are kept out
 // of search indexes by the X-Robots-Tag header in src/proxy.ts, not here: crawlers must
 // be able to fetch a page to see it.
 export async function GET(): Promise<Response> {

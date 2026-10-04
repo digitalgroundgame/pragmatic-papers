@@ -5,7 +5,7 @@ import { getServerSideURL } from "@/utilities/getURL"
 import { SITEMAP_PATHS } from "../sitemaps"
 
 // A route rather than a file next-sitemap writes at build time, so revalidate-all can
-// re-render it for the host the image serves (#1090).
+// re-render it for the host the image serves.
 export async function GET(): Promise<Response> {
   const siteUrl = getServerSideURL()
 

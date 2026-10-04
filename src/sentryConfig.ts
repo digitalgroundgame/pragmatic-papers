@@ -3,7 +3,7 @@ import { prNumberFromFqdn } from "./utilities/prNumberFromFqdn"
 /**
  * What every Sentry SDK here (server, edge, browser) reports with. Read when the server
  * runs rather than compiled into the build, so one image reports as whichever
- * deployment runs it (#1090).
+ * deployment runs it.
  */
 export interface SentryRuntimeConfig {
   dsn?: string

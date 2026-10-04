@@ -9,7 +9,7 @@ against committed baselines in `__screenshots__/`.
   chromium, production Next.js server)** — locally via
   `pnpm test:e2e:update-snapshots` (see below), or by CI. CI serves the app
   from the image a PR's preview deploys (`E2E_IMAGE`: its standalone
-  `node server.js`, #1090); the local script builds and runs `next start`
+  `node server.js`); the local script builds and runs `next start`
   from the checkout. Both serve the same production build of the same code. On an x86_64 host
   the two have been verified pixel-identical, so generate baselines locally
   and commit them with your PR (Apple Silicon: see below). **Never generate

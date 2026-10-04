@@ -105,7 +105,7 @@ export default buildConfig({
     },
     // prevent schema push in prod/test for static schema determinism and noise reduction
     push: process.env.NODE_ENV === "development",
-    // Images built in GitHub Actions (dockerfiles/PragmaticPapers.ci.Dockerfile, #1067) never
+    // Images built in GitHub Actions (dockerfiles/PragmaticPapers.ci.Dockerfile) never
     // touch the real database while building, so they migrate when Payload starts (Payload
     // only does under NODE_ENV=production). Coolify's builds run `payload migrate` instead.
     prodMigrations: process.env.BUILT_WITHOUT_DATABASE === "true" ? migrations : undefined,

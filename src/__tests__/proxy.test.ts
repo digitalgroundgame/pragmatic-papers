@@ -28,7 +28,7 @@ describe("proxy: Next-Action header", () => {
     expect(VALID_ID).toHaveLength(SERVER_REFERENCE_ID_LENGTH)
   })
 
-  // A value seen from scanners on a PR preview (#1107), plus near misses.
+  // A value seen from scanners on a PR preview, plus near misses.
   it.each(["x", VALID_ID.slice(1), VALID_ID + "0", VALID_ID.slice(0, -1) + "g"])(
     "answers a malformed ID %j with a 404 before Next sees it",
     (id) => {

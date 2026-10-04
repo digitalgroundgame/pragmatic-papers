@@ -23,10 +23,10 @@ import { queryArticleBySlug, queryVolumesForArticles } from "@/utilities/queries
 import { isResolved } from "@/utilities/relationships"
 import { buildArticleJsonLd, buildBreadcrumbJsonLd } from "@/utilities/structuredData"
 
-// Rendered per request until #1129 moves it to prerendering. Not because of draftMode(): a
-// prerender reads it as off. The layout used to call headers(), which Next only found out by
-// prerendering a slug, so a build with none (#1067) classed the route static and every request
-// failed with DYNAMIC_SERVER_USAGE.
+// Rendered per request until #1129 moves this page to prerendering; delete this then. Not because
+// of draftMode(): a prerender reads it as off. The layout used to call headers(), which Next only
+// found out by prerendering a slug, so a build with none (an image GitHub Actions builds against
+// an empty database) classed the route static and every request failed with DYNAMIC_SERVER_USAGE.
 export const dynamic = "force-dynamic"
 
 export async function generateStaticParams(): Promise<{ slug: string | null | undefined }[]> {

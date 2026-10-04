@@ -17,7 +17,6 @@ import { getServerSideURL } from "@/utilities/getURL"
 import { mergeOpenGraph } from "@/utilities/mergeOpenGraph"
 import { queryUserBySlug, queryVolumesForArticles } from "@/utilities/queries"
 import { buildBreadcrumbJsonLd, buildPersonJsonLd } from "@/utilities/structuredData"
-import { AUTHOR_ROLES } from "@/access/roles"
 import config from "@payload-config"
 import type { Metadata } from "next"
 import { draftMode } from "next/headers"
@@ -25,36 +24,9 @@ import { getPayload } from "payload"
 import React, { cache } from "react"
 import { Breadcrumbs } from "@/components/Breadcrumbs"
 
-// Rendered per request until #1129 moves this page to prerendering; delete this then. Not because
-// of draftMode(): a prerender reads it as off. The layout used to call headers(), which Next only
-// found out by prerendering a slug, so a build with none (an image GitHub Actions builds against
-// an empty database) classed the route static and every request failed with DYNAMIC_SERVER_USAGE.
+// Paginated with `?p=`, which only a request carries, so this is rendered per request. That's
+// also why there's no generateStaticParams: a prerendered slug would never be served.
 export const dynamic = "force-dynamic"
-
-export async function generateStaticParams(): Promise<{ slug: string | null | undefined }[]> {
-  const payload = await getPayload({ config })
-  const { docs } = await payload.find({
-    collection: "users",
-    draft: false,
-    limit: 1000,
-    overrideAccess: true,
-    pagination: false,
-    where: {
-      and: [
-        {
-          roles: { in: AUTHOR_ROLES },
-        },
-        {
-          slug: {
-            not_equals: null,
-          },
-        },
-      ],
-    },
-  })
-
-  return docs.map(({ slug }) => ({ slug }))
-}
 
 interface Args {
   params: Promise<{

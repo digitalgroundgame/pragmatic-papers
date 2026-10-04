@@ -23,11 +23,10 @@ import { queryArticleBySlug, queryVolumesForArticles } from "@/utilities/queries
 import { isResolved } from "@/utilities/relationships"
 import { buildArticleJsonLd, buildBreadcrumbJsonLd } from "@/utilities/structuredData"
 
-// Rendered per request until #1129 moves this page to prerendering; delete this then. Not because
-// of draftMode(): a prerender reads it as off. The layout used to call headers(), which Next only
-// found out by prerendering a slug, so a build with none (an image GitHub Actions builds against
-// an empty database) classed the route static and every request failed with DYNAMIC_SERVER_USAGE.
-export const dynamic = "force-dynamic"
+// Prerendered from generateStaticParams; a slug published since the build is rendered on its
+// first request and cached the same way. Saving the article or one of its authors revalidates it.
+// The hour is a backstop for what changes without either (a topic renamed, a volume it joined).
+export const revalidate = 3600
 
 export async function generateStaticParams(): Promise<{ slug: string | null | undefined }[]> {
   const payload = await getPayloadConfig()

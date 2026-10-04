@@ -1,7 +1,5 @@
-import configPromise from "@payload-config"
 import type { Metadata } from "next"
 import { draftMode } from "next/headers"
-import { getPayload } from "payload"
 import React from "react"
 
 import { Sources } from "@/blocks/InteractiveMap/Sources"
@@ -16,19 +14,6 @@ import { InteractiveDrilldown } from "@/interactives/InteractiveDrilldown"
 import { loadInteractiveOverview, queryInteractiveBySlug } from "@/interactives/load"
 import { generateMeta } from "@/utilities/generateMeta"
 import { Breadcrumbs } from "@/components/Breadcrumbs"
-
-export async function generateStaticParams(): Promise<{ slug: string }[]> {
-  const payload = await getPayload({ config: configPromise })
-  const interactives = await payload.find({
-    collection: "interactives",
-    draft: false,
-    limit: 1000,
-    overrideAccess: false,
-    pagination: false,
-    select: { slug: true },
-  })
-  return interactives.docs.map(({ slug }) => ({ slug }))
-}
 
 // Explicit, not left to Next's dynamic-API bailout: this page was never meant to hold a Full
 // Route Cache entry (see revalidateInteractive.ts / revalidateSnapshot.ts). Declaring it here

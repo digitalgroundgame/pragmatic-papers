@@ -21,29 +21,9 @@ interface Args {
   }>
 }
 
-// Rendered per request until #1129 moves this page to prerendering; delete this then. Not because
-// of draftMode(): a prerender reads it as off. The layout used to call headers(), which Next only
-// found out by prerendering a slug, so a build with none (an image GitHub Actions builds against
-// an empty database) classed the route static and every request failed with DYNAMIC_SERVER_USAGE.
+// Paginated with `?p=`, which only a request carries, so this is rendered per request. That's
+// also why there's no generateStaticParams: a prerendered slug would never be served.
 export const dynamic = "force-dynamic"
-
-export async function generateStaticParams(): Promise<{ slug: string | null | undefined }[]> {
-  const payload = await getPayload({ config })
-  const { docs } = await payload.find({
-    collection: "topics",
-    draft: false,
-    limit: 1000,
-    overrideAccess: true,
-    pagination: false,
-    where: {
-      slug: {
-        not_equals: null,
-      },
-    },
-  })
-
-  return docs.map(({ slug }) => ({ slug }))
-}
 
 const ARTICLES_PER_PAGE = 5
 const queryArticlesByTopic = cache(async (topicId: number, page: number = 1) => {

@@ -3,9 +3,8 @@ import type { Metadata } from "next"
 import { PayloadRedirects } from "@/components/PayloadRedirects"
 import { homeStatic } from "@/endpoints/seed/home-static"
 import { queryPageBySlug } from "@/utilities/queries"
-import configPromise from "@payload-config"
 import { draftMode } from "next/headers"
-import { getPayload, type RequiredDataFromCollectionSlug } from "payload"
+import type { RequiredDataFromCollectionSlug } from "payload"
 
 import { RenderBlocks } from "@/blocks/RenderBlocks"
 import { JsonLd } from "@/components/JsonLd"
@@ -16,35 +15,9 @@ import { getCachedGlobal } from "@/utilities/getGlobals"
 import { buildBreadcrumbJsonLd, buildHomeJsonLd } from "@/utilities/structuredData"
 import { Breadcrumbs, type Crumb } from "@/components/Breadcrumbs"
 
-// Rendered per request until #1129 moves this page to prerendering; delete this then. Not because
-// of draftMode(): a prerender reads it as off. The layout used to call headers(), which Next only
-// found out by prerendering a slug, so a build with none (an image GitHub Actions builds against
-// an empty database) classed the route static and every request failed with DYNAMIC_SERVER_USAGE.
+// Paginated with `?p=`, which only a request carries, so this is rendered per request. That's
+// also why there's no generateStaticParams: a prerendered slug would never be served.
 export const dynamic = "force-dynamic"
-
-export async function generateStaticParams(): Promise<{ slug: string }[]> {
-  const payload = await getPayload({ config: configPromise })
-  const pages = await payload.find({
-    collection: "pages",
-    draft: false,
-    limit: 1000,
-    overrideAccess: false,
-    pagination: false,
-    select: {
-      slug: true,
-    },
-  })
-
-  const params = pages.docs
-    ?.filter((doc) => {
-      return doc.slug !== "home"
-    })
-    .map(({ slug }) => {
-      return { slug }
-    })
-
-  return params
-}
 
 export async function generateMetadata({ params: paramsPromise }: Args): Promise<Metadata> {
   const { slug = "home" } = await paramsPromise

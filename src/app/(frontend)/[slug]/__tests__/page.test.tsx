@@ -36,7 +36,9 @@ const renderPage = async (slug?: string) =>
     })) as React.ReactElement,
   )
 
-interface Crumbs { itemListElement: { name: string; item: string }[] }
+interface Crumbs {
+  itemListElement: { name: string; item: string }[]
+}
 
 beforeEach(() => {
   vi.clearAllMocks()

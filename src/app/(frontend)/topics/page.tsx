@@ -8,6 +8,7 @@ import type { Metadata } from "next"
 import { draftMode } from "next/headers"
 import { getPayload } from "payload"
 import React, { cache } from "react"
+import { Breadcrumbs } from "@/components/Breadcrumbs"
 
 export const metadata: Metadata = {
   title: "Topics | The Pragmatic Papers",
@@ -49,30 +50,33 @@ export default async function TopicsPage({ searchParams }: Args): Promise<React.
   const { docs: topics, totalPages, page: currentPage } = await queryTopics(page)
 
   return (
-    <article className="mx-auto max-w-3xl space-y-6 px-4">
-      {draft && <LivePreviewListener />}
+    <>
+      <Breadcrumbs items={[{ name: "Topics", path: "/topics" }]} />
+      <article className="mx-auto max-w-3xl space-y-6 px-4">
+        {draft && <LivePreviewListener />}
 
-      <header className="space-y-3">
-        <h1>Topics</h1>
-        <p className="text-muted-foreground text-sm">Browse all topics</p>
-      </header>
+        <header className="space-y-3">
+          <h1>Topics</h1>
+          <p className="text-muted-foreground text-sm">Browse all topics</p>
+        </header>
 
-      <section aria-label="All topics" className="mt-6">
-        {topics.length === 0 ? (
-          <p className="text-muted-foreground text-sm">No topics found.</p>
-        ) : (
-          <>
-            <div className="mt-6 flex justify-center">
-              <TopicsList topics={topics} />
-            </div>
-            <Pagination
-              className="mt-18 flex justify-center"
-              page={currentPage}
-              totalPages={totalPages}
-            />
-          </>
-        )}
-      </section>
-    </article>
+        <section aria-label="All topics" className="mt-6">
+          {topics.length === 0 ? (
+            <p className="text-muted-foreground text-sm">No topics found.</p>
+          ) : (
+            <>
+              <div className="mt-6 flex justify-center">
+                <TopicsList topics={topics} />
+              </div>
+              <Pagination
+                className="mt-18 flex justify-center"
+                page={currentPage}
+                totalPages={totalPages}
+              />
+            </>
+          )}
+        </section>
+      </article>
+    </>
   )
 }

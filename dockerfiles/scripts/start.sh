@@ -110,13 +110,12 @@ echo "Hostname: $HOSTNAME"
 echo "Storage: $([ "$USE_LOCAL_STORAGE" = "true" ] && echo "Local" || echo "S3")"
 echo "========================================="
 
-if [ "$BUILT_WITHOUT_DATABASE" != "true" ]; then
-    echo "Starting Next.js server..."
-    exec node server.js
-fi
-
-# The build prerendered its feeds from an empty database. Once the server answers (and
-# so has started Payload and migrated), throw those away so they render from this one.
+# Pages the build prerendered from the database are out of date once this starts. An image
+# built in GitHub Actions saw an empty database. One Coolify built saw the database as it was
+# then: edits saved since only revalidated the container they reached, and a container
+# recreated from the image has lost every page regenerated after the build. Once the server
+# answers (and so has started Payload and migrated), throw them away so each page renders
+# from this database on its next request.
 refresh_prerendered_routes() {
     url="http://127.0.0.1:${PORT:-3000}"
     tries=0

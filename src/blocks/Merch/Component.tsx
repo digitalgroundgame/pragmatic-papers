@@ -6,7 +6,7 @@ import { cva } from "class-variance-authority"
 import { ShoppingCart } from "lucide-react"
 
 import { isMedia, Media } from "@/components/Media"
-import { MerchCarousel, MerchCarouselControls, MerchCarouselDots } from "./MerchCarousel"
+import { MerchCarousel, MerchCarouselControls, MerchCarouselDots } from "./MerchCarousel.lazy"
 import { getMerchProducts, type MerchProduct } from "./products"
 import { getMerchStoreUrl } from "./urls"
 import { withMerchUtm } from "./utm"

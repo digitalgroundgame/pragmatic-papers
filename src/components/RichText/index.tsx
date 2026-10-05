@@ -7,7 +7,7 @@ import { FootnoteBlock } from "@/blocks/Footnote/Component"
 import { InteractiveMapBlock } from "@/blocks/InteractiveMap/InteractiveMapBlock"
 import { MathBlock, type MathBlockProps } from "@/blocks/Math/Component"
 import { LightboxMediaBlock } from "@/blocks/MediaBlock/LightboxMediaBlock"
-import { MediaCollageBlock } from "@/blocks/MediaCollageBlock/component"
+import { MediaCollageBlock } from "@/blocks/MediaCollageBlock/component.lazy"
 import { MerchBlock } from "@/blocks/Merch/Component"
 import { NewsletterSignupBlock } from "@/blocks/NewsletterSignup/Component"
 import {

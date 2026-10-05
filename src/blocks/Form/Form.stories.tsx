@@ -67,7 +67,8 @@ export const RequiredFields: Story = {
   parameters: { a11y: { test: "todo" } },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    await userEvent.click(canvas.getByRole("button", { name: "Send it" }))
+    // The form loads lazily, so it arrives a moment after the story mounts.
+    await userEvent.click(await canvas.findByRole("button", { name: "Send it" }))
     await waitFor(() => expect(canvas.getAllByText("This field is required")).toHaveLength(3))
     await expect(window.fetch).not.toHaveBeenCalled()
   },
@@ -76,7 +77,8 @@ export const RequiredFields: Story = {
 export const Submitted: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    await userEvent.type(canvas.getByLabelText(/^Name/), "Ada Lovelace")
+    // The form loads lazily, so it arrives a moment after the story mounts.
+    await userEvent.type(await canvas.findByLabelText(/^Name/), "Ada Lovelace")
     await userEvent.type(canvas.getByLabelText(/^Email/), "ada@example.com")
     await userEvent.click(canvas.getByRole("combobox", { name: /Topic/ }))
     await userEvent.click(await screen.findByRole("option", { name: "Correction" }))

@@ -1,0 +1,14 @@
+{
+  "/": 510,
+  "/[slug]": 510,
+  "/articles/[slug]": 524,
+  "/authors": 510,
+  "/authors/[slug]": 510,
+  "/feed": 458,
+  "/feed/[collection]/[slug]": 458,
+  "/interactives/[slug]": 550,
+  "/search": 509,
+  "/topics": 510,
+  "/topics/[slug]": 510,
+  "/volumes/[slug]": 514
+}

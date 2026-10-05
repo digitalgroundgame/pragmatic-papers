@@ -204,13 +204,22 @@ try {
     )
   }
 
-  console.warn(`${blue("●")} Starting Playwright tests...`)
+  // E2E_COMMAND runs something else against the seeded server in place of the
+  // suite: `pnpm lighthouse` audits it with scripts/lighthouse.ts.
+  const command = process.env.E2E_COMMAND
   const baselinesBefore = screenshotFingerprint()
-  const child = spawn(
-    "./node_modules/.bin/playwright",
-    ["test", "--config=playwright.config.ts", ...process.argv.slice(2).filter((a) => a !== "--")],
-    { env: process.env, stdio: "inherit" },
-  )
+  let child
+  if (command) {
+    console.warn(`${blue("●")} Running ${command}...`)
+    child = spawn(command, { env: process.env, stdio: "inherit", shell: true })
+  } else {
+    console.warn(`${blue("●")} Starting Playwright tests...`)
+    child = spawn(
+      "./node_modules/.bin/playwright",
+      ["test", "--config=playwright.config.ts", ...process.argv.slice(2).filter((a) => a !== "--")],
+      { env: process.env, stdio: "inherit" },
+    )
+  }
 
   const exitCode = await new Promise((resolve) => child.on("exit", resolve))
   let finalExit = exitCode ?? 0
@@ -221,7 +230,7 @@ try {
   // baseline only matches its own first render. Opt in with E2E_VERIFY_VISUAL;
   // it skips itself when no baseline changed, so PRs that touch no screenshots
   // pay nothing — the same scope as gating on "a baseline was committed".
-  if (process.env.E2E_VERIFY_VISUAL) {
+  if (process.env.E2E_VERIFY_VISUAL && !command) {
     if (screenshotFingerprint() !== baselinesBefore) {
       console.warn(`${blue("●")} Verifying screenshot determinism (@visual ×2)...`)
       const verify = spawn(

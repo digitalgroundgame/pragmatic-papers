@@ -1,9 +1,10 @@
-import { execFileSync, execSync, spawn } from "node:child_process"
+import { execFileSync, execSync, spawn, spawnSync } from "node:child_process"
 import { createHash } from "node:crypto"
 import { lookup } from "node:dns/promises"
 import { appendFileSync, existsSync, readdirSync, readFileSync, rmSync } from "node:fs"
 import net from "node:net"
 import path from "node:path"
+import pg from "pg"
 import { blue, green, red } from "./ansi.mjs"
 import { startTestDatabase } from "./test-db.mjs"
 
@@ -84,9 +85,17 @@ const useProdServer = !!process.env.E2E_PROD_SERVER
 // does.
 const image = process.env.E2E_IMAGE
 const APP_CONTAINER = "pragmatic-papers-e2e-app"
-// What the server reads at runtime, passed through from this environment. DATABASE_URI
-// is passed separately, below.
-const APP_ENV = ["PAYLOAD_SECRET", "SERVER_URL", "USE_LOCAL_STORAGE", "MERCH_SITE_URL", "PORT"]
+// E2E_BASE_IMAGE starts a second image beside the first, on E2E_BASE_PORT (PORT + 1),
+// for E2E_COMMAND to compare with: `pnpm lighthouse` in CI audits dev's image there.
+// It gets its own copy of the seeded database, so whatever migrations it runs as it
+// starts can't change the one the image under test reads. If it won't start, the
+// command runs without it, and BASE_SERVER_URL stays unset.
+const baseImage = process.env.E2E_BASE_IMAGE
+const BASE_CONTAINER = "pragmatic-papers-e2e-base"
+const basePort = Number(process.env.E2E_BASE_PORT) || Number(process.env.PORT) + 1
+// What the server reads at runtime, passed through from this environment. DATABASE_URI,
+// PORT and SERVER_URL are set per server, below.
+const APP_ENV = ["PAYLOAD_SECRET", "USE_LOCAL_STORAGE", "MERCH_SITE_URL"]
 // Where the seed wrote uploads, which the server has to serve from its own filesystem.
 const UPLOAD_DIRS = ["public/media", "public/map-assets"]
 
@@ -105,42 +114,53 @@ async function waitForServer(url, timeoutMs) {
   throw new Error(`the server didn't answer ${url} within ${timeoutMs / 1000}s`)
 }
 
-// Starts the image's server on the seeded database, then has it throw away what its build
+// Starts an image's server on the seeded database, then has it throw away what its build
 // prerendered from an empty one — what dockerfiles/scripts/start.sh does in a preview,
-// without the preview's database copy.
-async function startImageServer() {
+// without the preview's database copy. `listenPort` and `url` default to this script's PORT
+// and SERVER_URL; logs follow this script's output unless `quiet`.
+async function startImageServer({
+  name = APP_CONTAINER,
+  from = image,
+  databaseUri: uri = database.uri,
+  listenPort = process.env.PORT,
+  url = process.env.SERVER_URL,
+  quiet = false,
+} = {}) {
   if (!process.env.E2E_NETWORK_CONTAINER) {
     throw new Error("E2E_IMAGE needs E2E_NETWORK_CONTAINER, the container to share a network with")
   }
   // The database host as an address: a container sharing another's network namespace
   // may not share its resolver, which is what knows the job's service names.
-  const databaseUri = new URL(database.uri)
+  const databaseUri = new URL(uri)
   databaseUri.hostname = (await lookup(databaseUri.hostname, { family: 4 })).address
 
-  execFileSync("docker", ["rm", "-f", APP_CONTAINER], { stdio: "ignore" })
+  execFileSync("docker", ["rm", "-f", name], { stdio: "ignore" })
   docker(
     "create",
     "--name",
-    APP_CONTAINER,
+    name,
     "--network",
     `container:${process.env.E2E_NETWORK_CONTAINER}`,
-    ...APP_ENV.flatMap((name) => ["-e", name]),
+    ...APP_ENV.flatMap((variable) => ["-e", variable]),
+    "-e",
+    `PORT=${listenPort}`,
+    "-e",
+    `SERVER_URL=${url}`,
     "-e",
     `DATABASE_URI=${databaseUri}`,
     // Rendered as a local build, as E2E always has been, not as a preview.
     "-e",
     "BUILD_ENV=",
-    image,
+    from,
     "node",
     "server.js",
   )
   for (const dir of UPLOAD_DIRS) {
-    if (existsSync(dir)) docker("cp", `${dir}/.`, `${APP_CONTAINER}:/app/${dir}`)
+    if (existsSync(dir)) docker("cp", `${dir}/.`, `${name}:/app/${dir}`)
   }
-  docker("start", APP_CONTAINER)
-  const server = spawn("docker", ["logs", "--follow", APP_CONTAINER], { stdio: "inherit" })
+  docker("start", name)
+  const server = quiet ? null : spawn("docker", ["logs", "--follow", name], { stdio: "inherit" })
 
-  const url = process.env.SERVER_URL
   await waitForServer(`${url}/api/users/me`, 180_000)
   const refresh = await fetch(`${url}/next/revalidate-all`, {
     method: "POST",
@@ -151,7 +171,41 @@ async function startImageServer() {
   return server
 }
 
+// A copy of the seeded database, made while nothing is connected to it (Postgres won't
+// copy a database in use).
+async function copyDatabase(uri, copyName) {
+  const source = new URL(uri)
+  const admin = new URL(uri)
+  admin.pathname = "/postgres"
+  const client = new pg.Client({ connectionString: admin.toString() })
+  await client.connect()
+  try {
+    const sourceName = decodeURIComponent(source.pathname.slice(1))
+    await client.query(`DROP DATABASE IF EXISTS "${copyName}"`)
+    await client.query(`CREATE DATABASE "${copyName}" TEMPLATE "${sourceName}"`)
+  } finally {
+    await client.end()
+  }
+  const copy = new URL(uri)
+  copy.pathname = `/${copyName}`
+  return copy.toString()
+}
+
+async function dropDatabase(uri) {
+  const admin = new URL(uri)
+  const name = decodeURIComponent(admin.pathname.slice(1))
+  admin.pathname = "/postgres"
+  const client = new pg.Client({ connectionString: admin.toString() })
+  await client.connect()
+  try {
+    await client.query(`DROP DATABASE IF EXISTS "${name}"`)
+  } finally {
+    await client.end()
+  }
+}
+
 let server = null
+let baseDatabaseUri = null
 try {
   // .next/cache/fetch-cache persists across runs (it's on the bind-mounted
   // repo, not inside the ephemeral test DB or container). unstable_cache
@@ -181,9 +235,31 @@ try {
   // guaranteeing fresh reads of what was just seeded.
   rmSync(".next/cache/fetch-cache", { recursive: true, force: true })
 
+  if (image && baseImage) {
+    baseDatabaseUri = await copyDatabase(database.uri, "pragmatic_papers_e2e_base")
+  }
+
   if (image) {
     console.warn(`${blue("●")} Starting ${image}...`)
     server = await startImageServer()
+    if (baseImage) {
+      const url = `http://localhost:${basePort}`
+      console.warn(`${blue("●")} Starting ${baseImage} on ${url} to compare with...`)
+      try {
+        await startImageServer({
+          name: BASE_CONTAINER,
+          from: baseImage,
+          databaseUri: baseDatabaseUri,
+          listenPort: String(basePort),
+          url,
+          quiet: true,
+        })
+        process.env.BASE_SERVER_URL = url
+      } catch (error) {
+        console.warn(`${red("✖")} ${baseImage} didn't start (${error.message}); its last logs:`)
+        spawnSync("docker", ["logs", "--tail", "50", BASE_CONTAINER], { stdio: "inherit" })
+      }
+    }
   } else if (useProdServer) {
     console.warn(`${blue("●")} Building Next.js production bundle...`)
     execSync("./node_modules/.bin/next build", {
@@ -278,7 +354,15 @@ try {
     await new Promise((resolve) => server.once("exit", resolve))
   }
   if (image) {
-    execFileSync("docker", ["rm", "-f", APP_CONTAINER], { stdio: "ignore" })
+    for (const name of [APP_CONTAINER, BASE_CONTAINER]) {
+      // Fails, harmlessly, for a container that was never started.
+      spawnSync("docker", ["rm", "-f", name], { stdio: "ignore" })
+    }
+  }
+  if (baseDatabaseUri) {
+    await dropDatabase(baseDatabaseUri).catch((error) => {
+      console.warn(`Couldn't drop the base image's database copy: ${error.message}`)
+    })
   }
   console.warn(`${blue("●")} Stopping the test database...`)
   database.stop()

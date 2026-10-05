@@ -1,29 +1,46 @@
 import { describe, expect, it } from "vitest"
 
 import {
+  cpuMultiplier,
+  formatRange,
   formatValue,
+  median,
+  metricsOf,
   regressed,
   regressions,
   renderReport,
-  summarize,
   type PageResult,
+  type Samples,
+  type Summary,
 } from "../../scripts/lighthouse"
 
-const page = (overrides: Partial<PageResult> = {}): PageResult => ({
-  name: "Home",
-  path: "/",
-  score: 90,
-  fcp: 1200,
-  lcp: 2000,
-  tbt: 150,
-  cls: 0.01,
-  speedIndex: 1800,
-  totalBytes: 800 * 1024,
-  scriptBytes: 500 * 1024,
+const samples = (overrides: Partial<Samples> = {}): Samples => ({
+  score: [90, 91, 89],
+  fcp: [1200, 1180, 1220],
+  lcp: [2000, 1950, 2100],
+  tbt: [150, 140, 170],
+  cls: [0.01, 0.01, 0.01],
+  speedIndex: [1800, 1790, 1850],
+  totalBytes: [800 * 1024, 800 * 1024, 800 * 1024],
+  scriptBytes: [500 * 1024, 500 * 1024, 500 * 1024],
   ...overrides,
 })
 
-describe("summarize", () => {
+const page = (pr: Partial<Samples> = {}, dev: Partial<Samples> | null = {}): PageResult => ({
+  name: "Home",
+  path: "/",
+  pr: samples(pr),
+  dev: dev === null ? null : samples(dev),
+})
+
+const summary = (pages: PageResult[]): Summary => ({
+  runs: 3,
+  benchmarkIndex: 2100,
+  cpuSlowdownMultiplier: 4.2,
+  pages,
+})
+
+describe("metricsOf", () => {
   it("reads the metrics from a Lighthouse result", () => {
     const audit = (numericValue: number) => ({ numericValue })
     const lhr = {
@@ -45,9 +62,7 @@ describe("summarize", () => {
         },
       },
     }
-    expect(summarize("Home", "/", lhr as never)).toEqual({
-      name: "Home",
-      path: "/",
+    expect(metricsOf(lhr as never)).toEqual({
       score: 88,
       fcp: 1100,
       lcp: 2500,
@@ -60,35 +75,71 @@ describe("summarize", () => {
   })
 })
 
+describe("median", () => {
+  it("takes the middle value, or the mean of the middle two, ignoring NaN", () => {
+    expect(median([3, 1, 2])).toBe(2)
+    expect(median([4, 1, 3, 2])).toBe(2.5)
+    expect(median([Number.NaN, 5])).toBe(5)
+    expect(median([])).toBeNaN()
+  })
+})
+
+describe("cpuMultiplier", () => {
+  it("scales Lighthouse's 4× with the benchmark index", () => {
+    expect(cpuMultiplier(2000)).toBe(4)
+    expect(cpuMultiplier(3000)).toBe(6)
+    expect(cpuMultiplier(1234)).toBe(2.5)
+  })
+
+  it("stays within 1× and 20×, and falls back to 4× without a benchmark", () => {
+    expect(cpuMultiplier(100)).toBe(1)
+    expect(cpuMultiplier(50_000)).toBe(20)
+    expect(cpuMultiplier(Number.NaN)).toBe(4)
+    expect(cpuMultiplier(0)).toBe(4)
+  })
+})
+
 describe("regressed", () => {
-  it("needs a change past both the relative and the absolute floor", () => {
-    // +25% but only 50 ms.
-    expect(regressed("lcp", 200, 250)).toBe(false)
-    // +600 ms but only 10%.
-    expect(regressed("lcp", 6000, 6600)).toBe(false)
-    expect(regressed("lcp", 2000, 2600)).toBe(true)
+  it("needs every run worse than every dev run", () => {
+    // Medians 300 ms apart, but one PR run is as fast as a dev run.
+    expect(regressed("lcp", [2000, 2100, 2200], [2150, 2400, 2500])).toBe(false)
+    expect(regressed("lcp", [2000, 2100, 2200], [2300, 2400, 2500])).toBe(true)
+  })
+
+  it("needs the medians further apart than the threshold", () => {
+    // Separated, but only by 20 ms.
+    expect(regressed("tbt", [100, 101, 102], [120, 121, 122])).toBe(false)
+    expect(regressed("tbt", [100, 101, 102], [200, 201, 202])).toBe(true)
   })
 
   it("treats a lower score as worse", () => {
-    expect(regressed("score", 90, 81)).toBe(false)
-    expect(regressed("score", 90, 79)).toBe(true)
-    expect(regressed("score", 70, 95)).toBe(false)
+    expect(regressed("score", [90, 91, 92], [80, 81, 82])).toBe(true)
+    expect(regressed("score", [80, 81, 82], [90, 91, 92])).toBe(false)
+    expect(regressed("score", [90, 91, 92], [85, 86, 91])).toBe(false)
   })
 
-  it("never flags an improvement", () => {
-    expect(regressed("tbt", 900, 100)).toBe(false)
+  it("never flags an improvement, or a side with no runs", () => {
+    expect(regressed("tbt", [900, 950], [100, 120])).toBe(false)
+    expect(regressed("tbt", [], [100])).toBe(false)
+  })
+
+  it("flags a byte count past its threshold, since those don't vary", () => {
+    expect(regressed("scriptBytes", [500_000], [520_000])).toBe(true)
+    expect(regressed("scriptBytes", [500_000], [501_000])).toBe(false)
   })
 })
 
 describe("regressions", () => {
-  it("lists the metrics that got worse, and none without a baseline", () => {
-    const after = page({ lcp: 3000, cls: 0.2 })
-    expect(regressions(after, page())).toEqual(["lcp", "cls"])
-    expect(regressions(after, undefined)).toEqual([])
+  it("lists the metrics that got worse, and none without dev", () => {
+    expect(regressions(page({ lcp: [3000, 3100, 3200], cls: [0.2, 0.2, 0.2] }))).toEqual([
+      "lcp",
+      "cls",
+    ])
+    expect(regressions(page({ lcp: [3000, 3100, 3200] }, null))).toEqual([])
   })
 })
 
-describe("formatValue", () => {
+describe("formatValue and formatRange", () => {
   it("formats each kind of metric", () => {
     expect(formatValue("score", 87.4)).toBe("87")
     expect(formatValue("lcp", 950)).toBe("950 ms")
@@ -97,29 +148,45 @@ describe("formatValue", () => {
     expect(formatValue("scriptBytes", 512 * 1024)).toBe("512 kB")
     expect(formatValue("fcp", Number.NaN)).toBe("n/a")
   })
+
+  it("collapses a range whose ends look the same", () => {
+    expect(formatRange("tbt", [140, 170, 150])).toBe("140 ms–170 ms")
+    expect(formatRange("scriptBytes", [512 * 1024, 512 * 1024])).toBe("512 kB")
+    expect(formatRange("tbt", [])).toBe("n/a")
+  })
 })
 
 describe("renderReport", () => {
-  it("says when there's nothing to compare with", () => {
-    const report = renderReport({ results: [page()], base: null, runs: 3 })
-    expect(report).toContain("No results from `dev` to compare with yet.")
+  it("says when there was no dev image to compare with", () => {
+    const report = renderReport(summary([page({}, null)]))
+    expect(report).toContain("Dev's image wasn't available")
     expect(report).toContain("| Home | 90 | 2.0 s | 150 ms | 0.010 | 1.2 s | 500 kB | 800 kB |")
+    expect(report).not.toContain("| | dev |")
   })
 
-  it("shows changes and flags regressions", () => {
-    const report = renderReport({
-      results: [page({ lcp: 3000, tbt: 160 })],
-      base: [page()],
-      runs: 3,
-    })
-    expect(report).toContain("⚠️ 1 page looks slower than on `dev`.")
-    expect(report).toContain("⚠️ **3.0 s** (+1.0 s)")
+  it("shows changes against dev's medians and flags regressions", () => {
+    const report = renderReport(summary([page({ lcp: [3000, 3100, 3200], tbt: [155, 160, 165] })]))
+    expect(report).toContain("⚠️ 1 page is slower than on `dev` in every one of 3 runs.")
+    expect(report).toContain("⚠️ **3.1 s** (+1.1 s)")
     expect(report).toContain("| 160 ms (+10 ms) |")
+    expect(report).toContain("| Home | this PR | 89–91 | 3.0 s–3.2 s |")
+    expect(report).toContain("| | dev | 89–91 | 1.9 s–2.1 s |")
   })
 
-  it("stays quiet when nothing moved past the thresholds", () => {
-    const report = renderReport({ results: [page()], base: [page()], runs: 3 })
-    expect(report).toContain("No page moved past the noise thresholds")
+  it("stays quiet when the runs overlap", () => {
+    const report = renderReport(summary([page({ tbt: [140, 200, 260] })]))
+    expect(report).toContain("No page is slower than on `dev`")
     expect(report).not.toContain("⚠️")
+  })
+
+  it("says how many pages dev's image couldn't serve", () => {
+    const report = renderReport(summary([page(), { ...page(), path: "/new", dev: null }]))
+    expect(report).toContain("Dev's image couldn't serve 1 of the pages")
+  })
+
+  it("states the CPU calibration", () => {
+    expect(renderReport(summary([page()]))).toContain(
+      "CPU 4.2× slower, from a benchmark index of 2100",
+    )
   })
 })

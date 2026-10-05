@@ -37,7 +37,7 @@ This file provides guidance to tools like Claude Code (claude.ai/code) when work
 - `pnpm test:unit -u` — regenerate snapshot baselines after intentional UI changes
 - `pnpm coverage:report` — post the combined coverage PR comment locally (requires `GITHUB_TOKEN`, `GITHUB_REPOSITORY`, `GITHUB_EVENT_PATH`)
 - `pnpm bundle-size` — measure the gzipped client JS and CSS each public page loads, from the build in `.next` (run `pnpm build` first), and check JS against `bundle-budgets.json`; `--update` rewrites the budgets as each route's size plus 10 kB (see [Page speed](#page-speed))
-- `pnpm lighthouse` — seed a throwaway database, build and serve as `pnpm test:e2e` does, then run Lighthouse's performance audit on a few seeded pages; reports land in `lighthouse-results/`
+- `pnpm lighthouse` — seed a throwaway database, build and serve as `pnpm test:e2e` does, then run Lighthouse's performance audit on a few seeded pages; reports land in `lighthouse-results/`. Set `BASE_SERVER_URL` to compare with a second server (see [Page speed](#page-speed))
 
 ### Test databases
 
@@ -289,12 +289,14 @@ PR comment comparing it with the last run on `dev`:
   route's JavaScript is over its budget in `bundle-budgets.json`. If the growth is
   intended, raise that route's budget in the same PR. The comment prints the new
   values, and the change shows up in the diff for review.
-- **Lighthouse** (`scripts/lighthouse.ts`) seeds the E2E database, starts the image
-  and audits a few seeded pages: 3 runs each, mobile settings, and the median run
-  is reported. It **only warns**. Timings on a CI runner vary between identical
-  runs, so a flagged page needs a look at the HTML reports in the
-  `lighthouse-results` artifact, not an automatic fix. A page added to the seed
-  can be audited by adding it to `PAGES`.
+- **Lighthouse** (`scripts/lighthouse.ts`) seeds the E2E database and starts the
+  PR's image beside dev's (the `dev` tag in GHCR, pushed by every push to `dev`).
+  Dev's image gets its own copy of the database. Each page is audited 5 times on
+  each image, alternating, on the same runner. The CPU slowdown is calibrated to
+  the runner's benchmark score, and Chrome can't reach any host but localhost. A
+  metric is flagged only when every PR run is worse than every dev run. It **only
+  warns**: the HTML reports are in the `lighthouse-results` artifact. A page added
+  to the seed can be audited by adding it to `PAGES`.
 
 ### Visual regression (screenshot) tests
 

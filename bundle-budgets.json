@@ -1,14 +1,14 @@
 {
-  "/": 510,
-  "/[slug]": 510,
-  "/articles/[slug]": 524,
-  "/authors": 510,
-  "/authors/[slug]": 510,
-  "/feed": 458,
-  "/feed/[collection]/[slug]": 458,
-  "/interactives/[slug]": 550,
-  "/search": 509,
-  "/topics": 510,
-  "/topics/[slug]": 510,
-  "/volumes/[slug]": 514
+  "/": 331,
+  "/[slug]": 331,
+  "/articles/[slug]": 349,
+  "/authors": 329,
+  "/authors/[slug]": 329,
+  "/feed": 332,
+  "/feed/[collection]/[slug]": 332,
+  "/interactives/[slug]": 369,
+  "/search": 328,
+  "/topics": 329,
+  "/topics/[slug]": 329,
+  "/volumes/[slug]": 339
 }

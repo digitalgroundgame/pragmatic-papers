@@ -23,11 +23,10 @@ import { queryArticleBySlug, queryVolumesForArticles } from "@/utilities/queries
 import { isResolved } from "@/utilities/relationships"
 import { buildArticleJsonLd, buildBreadcrumbJsonLd } from "@/utilities/structuredData"
 
-// Explicit, not left to Next's dynamic-API bailout: this page reads draftMode(), which makes
-// Next render it per request, but it only finds that out by prerendering one. When
-// generateStaticParams returns nothing (an image GitHub Actions builds against an empty database) the route
-// is classed static instead, and every request then fails with DYNAMIC_SERVER_USAGE.
-export const dynamic = "force-dynamic"
+// Prerendered from generateStaticParams; a slug published since the build is rendered on its
+// first request and cached the same way. Saving the article or one of its authors revalidates it.
+// The hour is a backstop for what changes without either (a topic renamed, a volume it joined).
+export const revalidate = 3600
 
 export async function generateStaticParams(): Promise<{ slug: string | null | undefined }[]> {
   const payload = await getPayloadConfig()

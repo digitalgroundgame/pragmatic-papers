@@ -3,9 +3,8 @@ import type { Metadata } from "next"
 import { PayloadRedirects } from "@/components/PayloadRedirects"
 import { homeStatic } from "@/endpoints/seed/home-static"
 import { queryPageBySlug } from "@/utilities/queries"
-import configPromise from "@payload-config"
 import { draftMode } from "next/headers"
-import { getPayload, type RequiredDataFromCollectionSlug } from "payload"
+import type { RequiredDataFromCollectionSlug } from "payload"
 
 import { RenderBlocks } from "@/blocks/RenderBlocks"
 import { JsonLd } from "@/components/JsonLd"
@@ -14,36 +13,11 @@ import { RenderHero } from "@/heros/RenderHero"
 import { generateMeta } from "@/utilities/generateMeta"
 import { getCachedGlobal } from "@/utilities/getGlobals"
 import { buildBreadcrumbJsonLd, buildHomeJsonLd } from "@/utilities/structuredData"
+import { Breadcrumbs, type Crumb } from "@/components/Breadcrumbs"
 
-// Explicit, not left to Next's dynamic-API bailout: this page reads draftMode(), which makes
-// Next render it per request, but it only finds that out by prerendering one. When
-// generateStaticParams returns nothing (an image GitHub Actions builds against an empty database) the route
-// is classed static instead, and every request then fails with DYNAMIC_SERVER_USAGE.
+// Paginated with `?p=`, which only a request carries, so this is rendered per request. That's
+// also why there's no generateStaticParams: a prerendered slug would never be served.
 export const dynamic = "force-dynamic"
-
-export async function generateStaticParams(): Promise<{ slug: string }[]> {
-  const payload = await getPayload({ config: configPromise })
-  const pages = await payload.find({
-    collection: "pages",
-    draft: false,
-    limit: 1000,
-    overrideAccess: false,
-    pagination: false,
-    select: {
-      slug: true,
-    },
-  })
-
-  const params = pages.docs
-    ?.filter((doc) => {
-      return doc.slug !== "home"
-    })
-    .map(({ slug }) => {
-      return { slug }
-    })
-
-  return params
-}
 
 export async function generateMetadata({ params: paramsPromise }: Args): Promise<Metadata> {
   const { slug = "home" } = await paramsPromise
@@ -82,21 +56,23 @@ export default async function Page({ params, searchParams }: Args): Promise<Reac
 
   const { hero, layout } = page
 
-  const jsonLdData =
-    slug === "home"
-      ? buildHomeJsonLd(socials)
-      : [buildBreadcrumbJsonLd([{ name: page.meta?.title || slug, path: `/${slug}` }])]
+  // Flat today. Once pages nest, this is nestedDocsTrail(page.breadcrumbs).
+  const trail: Crumb[] = slug === "home" ? [] : [{ name: page.title, path: `/${slug}` }]
+  const jsonLdData = slug === "home" ? buildHomeJsonLd(socials) : [buildBreadcrumbJsonLd(trail)]
   return (
-    <article>
-      <JsonLd data={jsonLdData} />
-      {/* Allows redirects for valid pages too */}
-      <PayloadRedirects disableNotFound url={url} />
+    <>
+      <Breadcrumbs items={trail} />
+      <article>
+        <JsonLd data={jsonLdData} />
+        {/* Allows redirects for valid pages too */}
+        <PayloadRedirects disableNotFound url={url} />
 
-      {draft && <LivePreviewListener />}
+        {draft && <LivePreviewListener />}
 
-      <RenderHero {...hero} />
+        <RenderHero {...hero} />
 
-      <RenderBlocks blocks={layout} pageNumber={pageNumber} />
-    </article>
+        <RenderBlocks blocks={layout} pageNumber={pageNumber} />
+      </article>
+    </>
   )
 }

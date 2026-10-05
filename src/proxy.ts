@@ -15,10 +15,7 @@ export function proxy(request: NextRequest): ReturnType<typeof NextResponse.next
     return new NextResponse(null, { status: 404 })
   }
 
-  const requestHeaders = new Headers(request.headers)
-  requestHeaders.set("x-pathname", request.nextUrl.pathname)
-
-  const response = NextResponse.next({ request: { headers: requestHeaders } })
+  const response = NextResponse.next()
 
   // Prevent staging (and PR previews) from being search index. Pages
   // stays fully crawlable — so the sitemap and pages can be

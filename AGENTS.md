@@ -154,6 +154,7 @@ too.
 - **Tabs pattern**: Content + SEO tabs; SEO tab uses standard fields (`OverviewField`, `MetaTitleField`, `MetaImageField`, `MetaDescriptionField`, `PreviewField`)
 - **Versions config**: `drafts.autosave: true`, `schedulePublish: true`, `maxPerDoc: 50`
 - **Live preview**: `generatePreviewPath()` for `admin.livePreview.url` and `admin.preview`
+- **Breadcrumbs**: a page builds its trail (`Crumb[]`, the steps after Home) from the documents it loaded and passes the same list to `<Breadcrumbs items={...} />` and `buildBreadcrumbJsonLd`. Labels are titles, never derived from slugs, and nothing reads the request. A nested collection (the nested-docs plugin) builds it with `nestedDocsTrail(doc.breadcrumbs, basePath)` from `@/components/Breadcrumbs`
 - **Media references**: media used by published content can't be deleted until it's detached (the Media **References** tab). An upload field or a block that holds media must be listed in `SOURCES` (`src/collections/Media/references/collectMediaReferences.ts`), or media it uses can be deleted without warning
 
 ### Block Conventions

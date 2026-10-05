@@ -172,23 +172,33 @@ jobs:
           path: coverage/coverage-summary.json
           retention-days: 90
 
+      # The baseline is the coverage of the commit this PR is compared against:
+      # the `dev` push run on the PR's base SHA. Asking for "the latest
+      # successful run on dev" instead can return a run from weeks ago, since
+      # GitHub doesn't keep that list newest-first. With no finished run on the
+      # base SHA (it failed, or is still running), the report leaves out the
+      # change column rather than compare against some other commit.
       - name: Download base coverage from dev
         if: always() && github.event_name == 'pull_request'
         continue-on-error: true
         id: base-coverage
         run: |
           RUN_ID=$(gh api \
-            "repos/${{ github.repository }}/actions/workflows/ci.yml/runs?branch=dev&status=success&per_page=1" \
-            --jq '.workflow_runs[0].id // empty')
-          if [ -n "$RUN_ID" ]; then
-            gh run download "$RUN_ID" \
-              --name coverage-summary-dev \
-              --dir /tmp/base-coverage \
-              --repo "${{ github.repository }}"
-            echo "path=/tmp/base-coverage/coverage-summary.json" >> "$GITHUB_OUTPUT"
+            "repos/${{ github.repository }}/actions/workflows/ci.yml/runs?head_sha=$BASE_SHA&event=push&per_page=20" \
+            --jq '[.workflow_runs[] | select(.head_branch == "dev" and .conclusion == "success")] | max_by(.run_attempt) | .id // empty')
+          if [ -z "$RUN_ID" ]; then
+            echo "::notice::No successful dev run on base commit $BASE_SHA yet; the coverage report will show no change column."
+            exit 0
           fi
+          echo "Base coverage: run $RUN_ID on $BASE_SHA"
+          gh run download "$RUN_ID" \
+            --name coverage-summary-dev \
+            --dir /tmp/base-coverage \
+            --repo "${{ github.repository }}"
+          echo "path=/tmp/base-coverage/coverage-summary.json" >> "$GITHUB_OUTPUT"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
 
       - name: Post coverage report
         if: always()

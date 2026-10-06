@@ -109,6 +109,7 @@ jobs:
             exit 0
           fi
           BRANCH="chore/back-merge-$TAG"
+          echo "branch=$BRANCH" >> "$GITHUB_OUTPUT"
           EXISTING=$(gh pr list --head "$BRANCH" --base dev --state open --json url --jq '.[0].url')
           if [ -n "$EXISTING" ]; then
             echo "Back-merge PR already open: $EXISTING"
@@ -139,12 +140,15 @@ jobs:
 
       # GitHub reports these PRs as blocked, because "Review acknowledged" never
       # passes on them, so this checks the rest itself: mergeable, every other
-      # required check passed, and nothing else failed or still running.
+      # required check passed, and nothing else failed or still running. That
+      # review is only skipped because main already reviewed this code, so it
+      # merges only while the PR's head is main's commit.
       - name: Merge it once its checks pass
         if: steps.pr.outputs.url != ''
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token || secrets.RELEASE_TOKEN }}
           URL: ${{ steps.pr.outputs.url }}
+          BRANCH: ${{ steps.pr.outputs.branch }}
           SKIP_CHECK: Review acknowledged
         run: |
           leave() {
@@ -153,6 +157,7 @@ jobs:
             exit 0
           }
           REPO="repos/$GITHUB_REPOSITORY"
+          MAIN_SHA=$(git rev-parse origin/main)
           NUMBER="${URL##*/}"
           REQUIRED=$(gh api "$REPO/rules/branches/dev" --jq '[.[] | select(.type == "required_status_checks") | .parameters.required_status_checks[].context] | unique')
           echo "Required checks on dev: $REQUIRED"
@@ -161,15 +166,20 @@ jobs:
             PR=$(gh api "$REPO/pulls/$NUMBER")
             [ "$(jq -r .state <<< "$PR")" = "open" ] && [ "$(jq -r .merged <<< "$PR")" = "false" ] || { echo "Already merged or closed."; exit 0; }
             SHA=$(jq -r .head.sha <<< "$PR")
+            [ "$SHA" = "$MAIN_SHA" ] || leave "the branch has commits beyond main's, which need a review"
             MERGEABLE=$(jq -r .mergeable <<< "$PR")
             [ "$MERGEABLE" = "false" ] && leave "it conflicts with dev"
 
             # Check runs and commit statuses as {name, state}: state is "pass", "fail" or "pending".
+            # The head is main's commit, which also carries the checks of main's own
+            # push (this job among them), so only check suites run for this branch count.
+            SUITES=$(gh api --paginate "$REPO/commits/$SHA/check-suites?per_page=100" --jq "[.check_suites[] | select(.head_branch == \"$BRANCH\") | .id]" | jq -s 'add // []')
             CHECKS=$(jq -s 'add' \
-              <(gh api --paginate "$REPO/commits/$SHA/check-runs?per_page=100" --jq '[.check_runs[] | {id, name, state: (if .status != "completed" then "pending" elif (.conclusion | IN("success", "skipped", "neutral")) then "pass" else "fail" end)}]') \
+              <(gh api --paginate "$REPO/commits/$SHA/check-runs?per_page=100" --jq '[.check_runs[] | {id, name, suite: .check_suite.id, state: (if .status != "completed" then "pending" elif (.conclusion | IN("success", "skipped", "neutral")) then "pass" else "fail" end)}]') \
               <(gh api "$REPO/commits/$SHA/status" --jq '[.statuses[] | {name: .context, state: (if .state == "success" then "pass" elif .state == "pending" then "pending" else "fail" end)}]'))
             # A re-run adds a check run under the same name: keep the newest.
-            CHECKS=$(jq --arg skip "$SKIP_CHECK" '[group_by(.name)[] | max_by(.id // 0) | select(.name != $skip)]' <<< "$CHECKS")
+            CHECKS=$(jq --arg skip "$SKIP_CHECK" --argjson suites "$SUITES" \
+              '[.[] | select(.suite == null or (.suite | IN($suites[])))] | [group_by(.name)[] | max_by(.id // 0) | select(.name != $skip)]' <<< "$CHECKS")
             FAILED=$(jq -r '[.[] | select(.state == "fail") | .name] | join(", ")' <<< "$CHECKS")
             [ -n "$FAILED" ] && leave "checks failed: $FAILED"
             MISSING=$(jq -r --argjson required "$REQUIRED" --arg skip "$SKIP_CHECK" \

@@ -21,19 +21,30 @@ export function loadSentry(): Promise<Sentry> {
   // A module of our own rather than `@sentry/nextjs` itself: a dynamic import keeps the
   // whole namespace it names, so importing the package directly would ship every
   // integration (161 kB gzipped against 62 kB), where sentrySdk.ts imports what we use.
-  loading ??= import("./sentrySdk").then((Sentry) => {
-    Sentry.initSentry()
-    return Sentry
-  })
+  loading ??= import("./sentrySdk")
+    .then((Sentry) => {
+      Sentry.initSentry()
+      return Sentry
+    })
+    .catch((error: unknown) => {
+      // The chunk didn't arrive (a dropped connection, or a deploy that replaced it under
+      // an open page), or init threw. Forget the failure so the next report tries again.
+      loading = undefined
+      throw error
+    })
   return loading
 }
 
+// A failed load is swallowed here: it would otherwise surface as an unhandled rejection,
+// which has nowhere to be reported either.
+const ignore = (): void => undefined
+
 export function captureException(...args: Parameters<Sentry["captureException"]>): void {
-  void loadSentry().then((Sentry) => Sentry.captureException(...args))
+  loadSentry().then((Sentry) => Sentry.captureException(...args), ignore)
 }
 
 export function captureMessage(...args: Parameters<Sentry["captureMessage"]>): void {
-  void loadSentry().then((Sentry) => Sentry.captureMessage(...args))
+  loadSentry().then((Sentry) => Sentry.captureMessage(...args), ignore)
 }
 
 /**
@@ -63,15 +74,21 @@ export function startSentryWhenIdle(
   const start = () => {
     if (started) return
     started = true
-    void loadSentry().then((loaded) => {
-      listening.abort()
-      for (const { error, handler } of early.splice(0)) {
-        loaded.captureException(error, {
-          mechanism: { handled: false, type: `auto.browser.global_handlers.${handler}` },
-        })
-      }
-      sentry = loaded
-    })
+    loadSentry().then(
+      (loaded) => {
+        listening.abort()
+        for (const { error, handler } of early.splice(0)) {
+          loaded.captureException(error, {
+            mechanism: { handled: false, type: `auto.browser.global_handlers.${handler}` },
+          })
+        }
+        sentry = loaded
+      },
+      // Keep listening, and keep what was caught: the next error tries the load again.
+      () => {
+        started = false
+      },
+    )
   }
   const keep = (error: unknown, handler: (typeof early)[number]["handler"]) => {
     early.push({ error, handler })

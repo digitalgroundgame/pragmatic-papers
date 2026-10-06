@@ -5,11 +5,16 @@ import React from "react"
 
 import {
   Carousel,
+  CarouselContent,
   CarouselIndicators,
+  CarouselItem,
   CarouselNext,
   CarouselPrevious,
   useCarousel,
 } from "@/components/ui/carousel"
+
+// Component.tsx renders these too, and has to reach them through MerchCarousel.lazy.tsx.
+export { CarouselContent, CarouselItem }
 
 const AUTOPLAY_DELAY_MS = 6000
 

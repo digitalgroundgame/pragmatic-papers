@@ -37,6 +37,7 @@ This file provides guidance to tools like Claude Code (claude.ai/code) when work
 - `pnpm test:unit -u` — regenerate snapshot baselines after intentional UI changes
 - `pnpm coverage:report` — post the combined coverage PR comment locally (requires `GITHUB_TOKEN`, `GITHUB_REPOSITORY`, `GITHUB_EVENT_PATH`)
 - `pnpm bundle-size` — measure the gzipped client JS and CSS each public page loads, from the build in `.next` (run `pnpm build` first), and check JS against `bundle-budgets.json`; `--update` rewrites the budgets as each route's size plus 10 kB (see [Page speed](#page-speed))
+- `pnpm analyze` — Turbopack's bundle analyzer, in the browser (it compiles but doesn't leave a build behind): each route's client and server modules, and the import chain that brings each one in. `pnpm analyze --output` writes it to `.next/diagnostics/analyze/` instead, which the next `pnpm build` deletes
 - `pnpm lighthouse` — seed a throwaway database, build and serve as `pnpm test:e2e` does, then run Lighthouse's performance audit on a few seeded pages; reports land in `lighthouse-results/`. Set `BASE_SERVER_URL` to compare with a second server (see [Page speed](#page-speed))
 
 ### Test databases

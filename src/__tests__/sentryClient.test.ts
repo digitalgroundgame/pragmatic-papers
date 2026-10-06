@@ -86,6 +86,59 @@ describe("loadSentry", () => {
   })
 })
 
+describe("a failed load", () => {
+  // Stands in for the chunk failing to arrive: either way the load rejects.
+  const failOnce = () =>
+    sdk.init.mockImplementationOnce(() => {
+      throw new Error("chunk failed to load")
+    })
+
+  it("is tried again on the next report, and reports nothing meanwhile", async () => {
+    failOnce()
+    const { captureException } = await importClient()
+    const rejections: unknown[] = []
+    const onRejection = (reason: unknown) => rejections.push(reason)
+    process.on("unhandledRejection", onRejection)
+
+    captureException(new Error("first"))
+    await settle()
+    expect(sdk.captureException).not.toHaveBeenCalled()
+
+    const second = new Error("second")
+    captureException(second)
+    await settle()
+    process.off("unhandledRejection", onRejection)
+
+    expect(sdk.init).toHaveBeenCalledTimes(2)
+    expect(sdk.captureException).toHaveBeenCalledExactlyOnceWith(second)
+    expect(rejections).toEqual([])
+  })
+
+  it("keeps early errors and listening, so the next error tries again", async () => {
+    failOnce()
+    const { startSentryWhenIdle } = await importClient()
+    const { win } = fakeWindow()
+    startSentryWhenIdle(win)
+
+    const first = new Error("first")
+    win.dispatchEvent(errorEvent(first))
+    await settle()
+    expect(sdk.captureException).not.toHaveBeenCalled()
+
+    const second = new Error("second")
+    win.dispatchEvent(errorEvent(second))
+    await settle()
+
+    const unhandled = {
+      mechanism: { handled: false, type: "auto.browser.global_handlers.onerror" },
+    }
+    expect(sdk.captureException.mock.calls).toEqual([
+      [first, unhandled],
+      [second, unhandled],
+    ])
+  })
+})
+
 describe("captureException and captureMessage", () => {
   it("load Sentry on demand, initialised before the report", async () => {
     const { captureException, captureMessage } = await importClient()

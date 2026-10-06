@@ -38,6 +38,8 @@ vi.mock("@/blocks/Merch/MerchCarousel", () => ({
   MerchCarousel: stub("MerchCarousel"),
   MerchCarouselControls: stub("MerchCarouselControls"),
   MerchCarouselDots: stub("MerchCarouselDots"),
+  CarouselContent: stub("CarouselContent"),
+  CarouselItem: stub("CarouselItem"),
 }))
 vi.mock("@/components/Media/AudioMedia", () => ({ AudioMedia: stub("AudioMedia") }))
 vi.mock("@/components/Media/VideoMedia", () => ({ VideoMedia: stub("VideoMedia") }))
@@ -47,6 +49,8 @@ import { FormBlockClient } from "@/blocks/Form/FormBlockClient.lazy"
 import { InteractiveMapClient } from "@/blocks/InteractiveMap/InteractiveMapClient.lazy"
 import { MediaCollageBlock } from "@/blocks/MediaCollageBlock/component.lazy"
 import {
+  CarouselContent,
+  CarouselItem,
   MerchCarousel,
   MerchCarouselControls,
   MerchCarouselDots,
@@ -64,6 +68,8 @@ describe("lazy wrappers", () => {
     ["MediaCollageBlock", MediaCollageBlock, { id: "collage" }],
     ["MerchCarouselControls", MerchCarouselControls, {}],
     ["MerchCarouselDots", MerchCarouselDots, {}],
+    ["CarouselContent", CarouselContent, { className: "track" }],
+    ["CarouselItem", CarouselItem, { className: "slide" }],
     ["AudioMedia", AudioMedia, { className: "audio" }],
     ["VideoMedia", VideoMedia, { className: "video" }],
   ] as const)("%s renders the component it wraps, with its props", async (name, Lazy, given) => {

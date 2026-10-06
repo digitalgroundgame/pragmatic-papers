@@ -70,3 +70,28 @@ export const Default: Story = {
     await waitFor(() => expect(screen.queryByRole("menu")).not.toBeInTheDocument())
   },
 }
+
+/** The labeled button in the mobile settings sheet, in dark mode, where the moon shows. */
+export const LabeledDark: Story = {
+  args: { showLabel: true },
+  // The docs page renders every story in one document, so this story's dark
+  // theme would switch every other story there to dark too.
+  tags: ["!autodocs"],
+  globals: { theme: "dark" },
+  decorators: [
+    (Story) => (
+      <div className="w-80">
+        <Story />
+      </div>
+    ),
+  ],
+  play: async ({ canvasElement }) => {
+    const button = within(canvasElement).getByRole("button", { name: "Toggle theme" })
+    await waitFor(() => expect(document.documentElement).toHaveClass("dark"))
+
+    // The moon sits beside the label, not on top of it.
+    const label = within(button).getByText("Toggle theme").getBoundingClientRect()
+    const moon = button.querySelector(".lucide-moon")!.getBoundingClientRect()
+    await expect(moon.right).toBeLessThanOrEqual(label.left)
+  },
+}

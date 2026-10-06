@@ -48,8 +48,11 @@ export function ModeToggle({
             className={cn("relative", showLabel && "w-full")}
             data-tour="mode-toggle"
           >
-            <Sun className="size-5 scale-100 rotate-0 transition-all dark:scale-0 dark:-rotate-90" />
-            <Moon className="absolute size-5 scale-0 rotate-90 transition-all dark:scale-100 dark:rotate-0" />
+            {/* The moon stacks on the sun inside this box, not over the label. */}
+            <span className="relative inline-flex size-5 shrink-0">
+              <Sun className="size-5 scale-100 rotate-0 transition-all dark:scale-0 dark:-rotate-90" />
+              <Moon className="absolute inset-0 size-5 scale-0 rotate-90 transition-all dark:scale-100 dark:rotate-0" />
+            </span>
             <span className={showLabel ? undefined : "sr-only"}>Toggle theme</span>
             {showFresh && freshDot}
           </Button>

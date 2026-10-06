@@ -42,6 +42,9 @@ export const Default: Story = {
 /** The labeled button in the mobile settings sheet, in dark mode, where the moon shows. */
 export const LabeledDark: Story = {
   args: { showLabel: true },
+  // The docs page renders every story in one document, so this story's dark
+  // class on <html> would turn every toggle there light-on-white.
+  tags: ["!autodocs"],
   parameters: { defaultTheme: "dark" },
   decorators: [
     (Story) => (

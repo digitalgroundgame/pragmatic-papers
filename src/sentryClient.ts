@@ -48,10 +48,27 @@ export function captureMessage(...args: Parameters<Sentry["captureMessage"]>): v
 }
 
 /**
+ * Whether an error event's script is one we serve. Cloudflare injects scripts under
+ * `/cdn-cgi/` (its RUM beacon throws on our JSON-LD), extensions run from their own schemes,
+ * and a cross-origin script's error arrives muted, with no filename.
+ */
+function isOurScript(filename: string, location: Location): boolean {
+  if (!filename) return false
+  try {
+    const url = new URL(filename)
+    return url.origin === location.origin && !url.pathname.startsWith("/cdn-cgi/")
+  } catch {
+    return false
+  }
+}
+
+/**
  * Loads Sentry once the page has loaded and the browser is idle (or after `timeout` ms
- * idle-waiting, whichever comes first), or at once on the first error or unhandled
- * rejection before then, as Sentry's own Loader Script does: a reader who hits an error
- * and leaves straight away is still reported. Those early errors are kept and reported
+ * idle-waiting, whichever comes first), or at once on the first error from our own
+ * scripts, or unhandled rejection, before then, as Sentry's own Loader Script does: a reader
+ * who hits an error and leaves straight away is still reported. An error from a script we
+ * don't serve is kept but doesn't hurry the load: Cloudflare's beacon would otherwise bring
+ * Sentry in before the first paint on every page. Those early errors are kept and reported
  * once it's up, marked unhandled as Sentry's global handlers mark them; from then on those
  * handlers catch everything. Returns a `onRouterTransitionStart` for
  * instrumentation-client.ts, which does nothing until Sentry has loaded: a navigation that
@@ -90,13 +107,16 @@ export function startSentryWhenIdle(
       },
     )
   }
-  const keep = (error: unknown, handler: (typeof early)[number]["handler"]) => {
+  const keep = (error: unknown, handler: (typeof early)[number]["handler"], loadNow = true) => {
     early.push({ error, handler })
-    start()
+    if (loadNow) start()
   }
-  win.addEventListener("error", (event) => keep(event.error ?? event.message, "onerror"), {
-    signal: listening.signal,
-  })
+  win.addEventListener(
+    "error",
+    (event) =>
+      keep(event.error ?? event.message, "onerror", isOurScript(event.filename, win.location)),
+    { signal: listening.signal },
+  )
   win.addEventListener(
     "unhandledrejection",
     (event) => keep(event.reason, "onunhandledrejection"),

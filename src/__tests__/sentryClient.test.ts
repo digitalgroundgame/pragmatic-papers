@@ -18,12 +18,16 @@ const importClient = async () => {
 // Lets the dynamic import and the `.then`s after it settle.
 const settle = () => new Promise((resolve) => setTimeout(resolve, 0))
 
+const ORIGIN = "https://pragmaticpapers.test"
+const OUR_SCRIPT = `${ORIGIN}/_next/static/chunks/app.js`
+
 /** A window whose load and idle callbacks the test fires by hand. */
 function fakeWindow({ readyState = "loading", idle = true } = {}) {
   const target = new EventTarget()
   const idleCallbacks: (() => void)[] = []
   const win = Object.assign(target, {
     document: { readyState },
+    location: { origin: ORIGIN },
     requestIdleCallback: idle
       ? vi.fn((callback: () => void) => {
           idleCallbacks.push(callback)
@@ -39,7 +43,8 @@ function fakeWindow({ readyState = "loading", idle = true } = {}) {
   return { win: win as unknown as Window, runIdle }
 }
 
-const errorEvent = (error: Error) => new ErrorEvent("error", { error, message: error.message })
+const errorEvent = (error: Error, filename = OUR_SCRIPT) =>
+  new ErrorEvent("error", { error, message: error.message, filename })
 
 beforeEach(() => {
   document.documentElement.dataset.sentryDsn = "https://key@o1.ingest.sentry.io/2"
@@ -239,12 +244,30 @@ describe("startSentryWhenIdle", () => {
     const { win } = fakeWindow()
     startSentryWhenIdle(win)
 
-    win.dispatchEvent(new ErrorEvent("error", { message: "Script error." }))
+    win.dispatchEvent(new ErrorEvent("error", { message: "Muted.", filename: OUR_SCRIPT }))
     await settle()
-    expect(sdk.captureException).toHaveBeenCalledExactlyOnceWith(
-      "Script error.",
-      unhandled("onerror"),
-    )
+    expect(sdk.captureException).toHaveBeenCalledExactlyOnceWith("Muted.", unhandled("onerror"))
+  })
+
+  it.each([
+    ["Cloudflare's beacon", `${ORIGIN}/cdn-cgi/rum?v=1`],
+    ["another origin", "https://ads.example/tag.js"],
+    ["an extension", "chrome-extension://abc/content.js"],
+    ["a muted cross-origin script", ""],
+  ])("keeps an early error from %s without hurrying the load", async (_, filename) => {
+    const { startSentryWhenIdle } = await importClient()
+    const { win, runIdle } = fakeWindow()
+    startSentryWhenIdle(win)
+
+    const error = new Error("not ours")
+    win.dispatchEvent(errorEvent(error, filename))
+    await settle()
+    expect(sdk.init).not.toHaveBeenCalled()
+
+    win.dispatchEvent(new Event("load"))
+    runIdle()
+    await settle()
+    expect(sdk.captureException).toHaveBeenCalledExactlyOnceWith(error, unhandled("onerror"))
   })
 
   it("forwards router transitions only once Sentry has loaded", async () => {

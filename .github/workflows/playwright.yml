@@ -402,11 +402,13 @@ jobs:
   # The client JavaScript and CSS each public page loads, read from the image's
   # build manifests (scripts/bundle-size.ts). Fails when a page's JavaScript
   # outgrows its budget in bundle-budgets.json; raising one is a reviewed line in
-  # the PR. Pushes to dev upload the measurement PRs compare with.
+  # the PR. Pushes to dev upload the measurement PRs compare with. It runs in the
+  # merge queue too, where the PRs ahead are included, so two that each fit their
+  # budget can't land together over it.
   bundle-size:
     name: Bundle size
     needs: [changes, image]
-    if: ${{ !cancelled() && needs.image.result == 'success' && ((github.event_name == 'pull_request' && (needs.changes.result != 'success' || needs.changes.outputs.e2e == 'true')) || (github.event_name == 'push' && github.ref == 'refs/heads/dev')) }}
+    if: ${{ !cancelled() && needs.image.result == 'success' && ((github.event_name == 'pull_request' && (needs.changes.result != 'success' || needs.changes.outputs.e2e == 'true')) || github.event_name == 'merge_group' || (github.event_name == 'push' && github.ref == 'refs/heads/dev')) }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:

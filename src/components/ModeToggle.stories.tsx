@@ -10,8 +10,12 @@ const meta = {
   // The preview's provider forces the toolbar's theme, which would ignore the toggle.
   parameters: { ownThemeProvider: true },
   decorators: [
-    (Story) => (
-      <ClientThemeProvider attribute="class" defaultTheme="light" storage="none">
+    (Story, { parameters }) => (
+      <ClientThemeProvider
+        attribute="class"
+        defaultTheme={parameters.defaultTheme ?? "light"}
+        storage="none"
+      >
         <Story />
       </ClientThemeProvider>
     ),
@@ -32,5 +36,27 @@ export const Default: Story = {
     await waitFor(() => expect(document.documentElement).not.toHaveClass("dark"))
     // The menu stays mounted while it animates out; let it go before the axe check runs.
     await waitFor(() => expect(screen.queryByRole("menu")).not.toBeInTheDocument())
+  },
+}
+
+/** The labeled button in the mobile settings sheet, in dark mode, where the moon shows. */
+export const LabeledDark: Story = {
+  args: { showLabel: true },
+  parameters: { defaultTheme: "dark" },
+  decorators: [
+    (Story) => (
+      <div className="w-80">
+        <Story />
+      </div>
+    ),
+  ],
+  play: async ({ canvasElement }) => {
+    const button = within(canvasElement).getByRole("button", { name: "Toggle theme" })
+    await waitFor(() => expect(document.documentElement).toHaveClass("dark"))
+
+    // The moon sits beside the label, not on top of it.
+    const label = within(button).getByText("Toggle theme").getBoundingClientRect()
+    const moon = button.querySelector(".lucide-moon")!.getBoundingClientRect()
+    await expect(moon.right).toBeLessThanOrEqual(label.left)
   },
 }

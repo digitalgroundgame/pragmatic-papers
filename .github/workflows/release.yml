@@ -161,7 +161,8 @@ jobs:
           NUMBER="${URL##*/}"
           REQUIRED=$(gh api "$REPO/rules/branches/dev" --jq '[.[] | select(.type == "required_status_checks") | .parameters.required_status_checks[].context] | unique')
           echo "Required checks on dev: $REQUIRED"
-          DEADLINE=$(( $(date +%s) + 60 * 60 ))
+          # The App token expires an hour after the job's first step; stop well before.
+          DEADLINE=$(( $(date +%s) + 45 * 60 ))
           while :; do
             PR=$(gh api "$REPO/pulls/$NUMBER")
             [ "$(jq -r .state <<< "$PR")" = "open" ] && [ "$(jq -r .merged <<< "$PR")" = "false" ] || { echo "Already merged or closed."; exit 0; }
@@ -194,7 +195,7 @@ jobs:
               fi
               leave "GitHub refused the merge (is the release App still on dev's ruleset bypass list?)"
             fi
-            [ "$(date +%s)" -ge "$DEADLINE" ] && leave "checks still not done after an hour (waiting on: ${MISSING:-}${MISSING:+, }${PENDING:-mergeability})"
+            [ "$(date +%s)" -ge "$DEADLINE" ] && leave "checks still not done after 45 minutes (waiting on: ${MISSING:-}${MISSING:+, }${PENDING:-mergeability})"
             echo "Waiting on: ${MISSING:-}${MISSING:+; running: }${PENDING:-mergeability}"
             sleep 60
           done

@@ -1,5 +1,11 @@
+import { storybookTest } from "@storybook/addon-vitest/vitest-plugin"
 import react from "@vitejs/plugin-react"
+import { playwright } from "@vitest/browser-playwright"
+import path from "node:path"
+import { fileURLToPath } from "node:url"
 import { defineConfig } from "vitest/config"
+
+const dirname = path.dirname(fileURLToPath(import.meta.url))
 
 // Pin the timezone so date rendering is reproducible. Anything that formats a
 // date for display (`formatDateTime`, and the snapshots that capture it) reads
@@ -21,6 +27,8 @@ export default defineConfig({
       exclude: [
         "**/__tests__/**",
         "**/*.{test,spec}.{ts,tsx}",
+        "**/*.stories.{ts,tsx}",
+        "src/stories/**",
         "**/*.d.ts",
         "src/migrations/**",
         "src/payload-types.ts",
@@ -36,7 +44,12 @@ export default defineConfig({
     projects: [
       {
         plugins: [react()],
-        resolve: { tsconfigPaths: true },
+        resolve: {
+          tsconfigPaths: true,
+          // tsconfig maps "react" → @types/react for type-checking, but that package has
+          // no runtime exports. Override it here so Vite resolves to the actual runtime package.
+          alias: { react: path.resolve(__dirname, "node_modules/react") },
+        },
         test: {
           name: "unit",
           environment: "jsdom",
@@ -50,7 +63,7 @@ export default defineConfig({
           name: "integration",
           environment: "node",
           include: ["tests/integration/**/*.test.ts"],
-          setupFiles: ["./vitest.setup.ts", "./tests/setup/integration-db-setup.ts"],
+          setupFiles: ["./tests/setup/integration-env.ts", "./tests/setup/integration-db-setup.ts"],
           globalSetup: ["./tests/setup/integration-global-setup.ts"],
           hookTimeout: 30_000,
           testTimeout: 60_000,
@@ -62,6 +75,26 @@ export default defineConfig({
           name: "scripts",
           environment: "node",
           include: ["tests/scripts/**/*.test.ts"],
+        },
+      },
+      {
+        plugins: [storybookTest({ configDir: path.join(dirname, ".storybook") })],
+        // Crawl every story up front: a dependency Vite discovers mid-run reloads the
+        // browser and fails every test file in flight.
+        optimizeDeps: { entries: [".storybook/preview.tsx", "src/**/*.stories.tsx"] },
+        test: {
+          name: "storybook",
+          browser: {
+            enabled: true,
+            headless: true,
+            // Stories click through `userEvent`, which isn't a user gesture to
+            // Chromium, so media would otherwise refuse to play.
+            provider: playwright({
+              launchOptions: { args: ["--autoplay-policy=no-user-gesture-required"] },
+            }),
+            instances: [{ browser: "chromium" }],
+            viewport: { width: 1280, height: 800 },
+          },
         },
       },
     ],

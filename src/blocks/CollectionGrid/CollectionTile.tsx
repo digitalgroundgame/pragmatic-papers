@@ -11,7 +11,7 @@ import { isResolved } from "@/utilities/relationships"
 export type ImagePosition = "above" | "below" | "left" | "right" | "none"
 
 export interface CollectionTileProps extends React.ComponentProps<"div"> {
-  tile: CollectionGridSlots[number]
+  tile: CollectionGridSlots[number] | undefined
   imagePosition?: ImagePosition
   priority?: boolean
   loading?: "eager" | "lazy"

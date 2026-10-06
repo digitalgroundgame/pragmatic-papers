@@ -24,8 +24,12 @@ WORKDIR /app
 # Builder stage - install deps and build
 # ============================================
 FROM base AS builder
-# Install git for development checks/metadata during build if needed
-RUN apk add --no-cache git
+# git for development checks/metadata during build; the PostgreSQL client for the
+# database copy and migrations below. Both are source-independent, so this layer caches.
+# The client is pinned to the database server's major version (17): copy-database.sh's
+# pg_dump fallback refuses any other, and Alpine's unpinned postgresql-client has moved
+# on to 18. Bump it together with the server.
+RUN apk add --no-cache git postgresql17-client
 
 # GitHub Packages auth — marked as BuildKit secret in Coolify (not baked into layers)
 # Coolify auto-injects --mount=type=secret into every RUN instruction: https://coolify.io/docs/knowledge-base/environment-variables#docker-build-secrets
@@ -55,20 +59,19 @@ RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
     && HUSKY=0 CI=true pnpm install --frozen-lockfile --offline --store-dir /pnpm/store \
     && echo "--- COMPLETED: INSTALLING DEPENDENCIES ---"
 
-# Copy remaining source code
-COPY . .
+# Database utility scripts — only rebuilt when these files change.
+COPY --chmod=755 dockerfiles/scripts/database-uri.sh dockerfiles/scripts/modify-database-uri.sh dockerfiles/scripts/copy-database.sh /usr/local/bin/
 
-# Copy database utility scripts
-COPY dockerfiles/scripts/modify-database-uri.sh /usr/local/bin/modify-database-uri.sh
-COPY dockerfiles/scripts/copy-database.sh /usr/local/bin/copy-database.sh
-RUN chmod +x /usr/local/bin/modify-database-uri.sh /usr/local/bin/copy-database.sh
+# Copy remaining source code. Everything below reruns on every deploy, so steps whose
+# output depends on source or on variable values (migrations, next build) belong here.
+COPY . .
 
 # --- BUILD CONFIGURATION ---
 # Secrets (DATABASE_URI, PAYLOAD_SECRET, S3 creds) are injected via Coolify BuildKit secrets — not baked into layers
 # Coolify auto-injects --mount=type=secret into every RUN instruction: https://coolify.io/docs/knowledge-base/environment-variables#docker-build-secrets
 ARG NODE_ENV=production
 ARG BUILD_ENV=production
-ARG NEXT_PUBLIC_SERVER_URL
+ARG SERVER_URL
 ARG NEXT_TELEMETRY_DISABLED=1
 
 # --- STORAGE & S3 ---
@@ -78,11 +81,10 @@ ARG S3_BUCKET
 ARG S3_ENDPOINT
 
 # --- PUBLIC / CLIENT-SIDE ---
-ARG NEXT_PUBLIC_GOOGLE_ANALYTICS_ID
-ARG NEXT_PUBLIC_SUPABASE_URL
-ARG NEXT_PUBLIC_SENTRY_DSN
-ARG NEXT_PUBLIC_SENTRY_ENVIRONMENT
-ARG NEXT_PUBLIC_TURNSTILE_SITE_KEY
+# TURNSTILE_SITE_KEY and GOOGLE_ANALYTICS_ID get no ARG: Coolify mounts every build
+# variable into each RUN anyway, and a name ending in _KEY trips Docker's
+# SecretsUsedInArgOrEnv check. SUPABASE_URL is only read at runtime.
+ARG SENTRY_DSN
 
 # --- COOLIFY & DEPLOYMENT ---
 ARG COOLIFY_FQDN=
@@ -92,6 +94,8 @@ ARG FORCE_DATABASE_COPY=false
 # --- ENVIRONMENT MAPPING ---
 # Non-sensitive config only. Secrets (DATABASE_URI, PAYLOAD_SECRET, S3 creds) are
 # injected per-RUN-step via Coolify BuildKit secrets — never baked into layers.
+# In that mode Coolify passes no --build-arg, so these hold only the ARG defaults; each
+# RUN sees the real values from its secret mounts, which override them.
 ENV NODE_ENV=${NODE_ENV} \
     BUILD_ENV=${BUILD_ENV} \
     NEXT_TELEMETRY_DISABLED=${NEXT_TELEMETRY_DISABLED} \
@@ -100,31 +104,37 @@ ENV NODE_ENV=${NODE_ENV} \
     S3_REGION=${S3_REGION} \
     S3_BUCKET=${S3_BUCKET} \
     S3_ENDPOINT=${S3_ENDPOINT} \
-    NEXT_PUBLIC_GOOGLE_ANALYTICS_ID=${NEXT_PUBLIC_GOOGLE_ANALYTICS_ID} \
-    NEXT_PUBLIC_SERVER_URL=${NEXT_PUBLIC_SERVER_URL} \
-    NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL} \
-    NEXT_PUBLIC_SENTRY_DSN=${NEXT_PUBLIC_SENTRY_DSN} \
-    NEXT_PUBLIC_SENTRY_ENVIRONMENT=${NEXT_PUBLIC_SENTRY_ENVIRONMENT} \
-    NEXT_PUBLIC_TURNSTILE_SITE_KEY=${NEXT_PUBLIC_TURNSTILE_SITE_KEY}
-
-# Install PostgreSQL client for database operations during build
-RUN apk add --no-cache postgresql-client
+    SERVER_URL=${SERVER_URL} \
+    SENTRY_DSN=${SENTRY_DSN}
 
 # --- DATABASE PREPARATION & MIGRATION ---
-# 1. Isolated Preview Logic (clones DB for PRs)
+# 1. Isolated Preview Logic (names and clones a database for each PR, then drops the
+#    databases of closed PRs; best effort, never fails the build)
 # 2. Migration Logic (runs on the final target DB)
+# Each RUN gets DATABASE_URI afresh from its secret mount, so each one applies the
+# preview database name from /tmp/database_name itself.
 RUN /usr/local/bin/modify-database-uri.sh && \
-    if [ -f /tmp/database_uri.env ]; then . /tmp/database_uri.env; fi && \
+    . /usr/local/bin/database-uri.sh && use_preview_database /tmp/database_name && \
     /usr/local/bin/copy-database.sh && \
+    node dockerfiles/scripts/drop-closed-preview-databases.ts && \
     echo "--- PHASE: DATABASE MIGRATIONS ---" && \
     pnpm payload migrate && \
     echo "--- COMPLETED: DATABASE MIGRATIONS ---"
 
 # --- NEXT.JS BUILD ---
-RUN --mount=type=cache,id=nextjs,target=/app/.next/cache \
+# SOURCE_COMMIT arrives like the other Coolify variables, as a secret mounted into
+# each RUN ("Include Source Commit in Build" must be on). .git is dockerignored, so
+# it's what names the Sentry release baked into the browser bundle.
+# The Turbopack cache is shared by every build on the server: `sharing=locked` keeps
+# two builds from writing it at once, and build-next.sh rebuilds without it if it's
+# been left corrupt.
+# Pages prerendered here put SERVER_URL in their canonical and share links, so the
+# build refuses to run without it rather than bake in http://localhost:8000.
+RUN --mount=type=cache,id=nextjs,target=/app/.next/cache,sharing=locked \
     echo "--- PHASE: BUILDING NEXT.JS ---" && \
-    if [ -f /tmp/database_uri.env ]; then . /tmp/database_uri.env; fi && \
-    pnpm build && \
+    { [ -n "$SERVER_URL" ] || { echo "ERROR: SERVER_URL is not set at build time (Coolify: enable Build Variable for it)"; exit 1; }; } && \
+    . /usr/local/bin/database-uri.sh && use_preview_database /tmp/database_name && \
+    SENTRY_RELEASE="${SOURCE_COMMIT}" sh dockerfiles/scripts/build-next.sh && \
     echo "--- COMPLETED: BUILDING NEXT.JS ---"
 
 # ============================================
@@ -149,8 +159,9 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 
-# PERSISTENCE FIX: Carry the isolated DATABASE_URI from builder to runner
-COPY --from=builder --chown=nextjs:nodejs /tmp/database_uri.env /app/database_uri.env
+# Carry the preview database's name (empty outside previews) to start.sh. Only the
+# name: the credentials come from the runtime DATABASE_URI, never from the image.
+COPY --from=builder --chown=nextjs:nodejs /tmp/database_name /app/database_name
 
 # Prepare media directory and set permissions
 RUN mkdir -p public/media \
@@ -158,10 +169,16 @@ RUN mkdir -p public/media \
     && chmod 755 public/media
 
 # Startup script configuration
-COPY --from=builder --chown=nextjs:nodejs /app/dockerfiles/scripts/start.sh ./start.sh
-RUN chmod +x ./start.sh
+COPY --from=builder --chown=nextjs:nodejs --chmod=755 /app/dockerfiles/scripts/start.sh /app/dockerfiles/scripts/database-uri.sh ./
 
 USER nextjs
 EXPOSE 3000
+
+# Healthy once Payload has started against the database: /api/users/me answers 200
+# (user: null) without a login. A container whose start.sh exited, e.g. on a missing
+# runtime DATABASE_URI, never turns healthy, so Coolify keeps the old one serving
+# instead of swapping in a dead one. busybox wget fails on any non-2xx status.
+HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=3 \
+    CMD wget -q -O /dev/null "http://127.0.0.1:${PORT:-3000}/api/users/me" || exit 1
 ENTRYPOINT ["dumb-init", "--"]
 CMD ["./start.sh"]

@@ -1,10 +1,12 @@
 import type { Metadata } from "next"
 import { getServerSideURL } from "./getURL"
 
+export const DEFAULT_DESCRIPTION =
+  "Pragmatic, community-driven articles focusing on news, politics, economics, and more."
+
 const defaultOpenGraph: Metadata["openGraph"] = {
   type: "website",
-  description:
-    "Pragmatic, community-driven articles focusing on news, politics, economics, and more.",
+  description: DEFAULT_DESCRIPTION,
   images: [
     {
       url: `${getServerSideURL()}/the-pragmatic-papers-opengraph-image.png`,
@@ -16,9 +18,12 @@ const defaultOpenGraph: Metadata["openGraph"] = {
 }
 
 export const mergeOpenGraph = (og?: Metadata["openGraph"]): Metadata["openGraph"] => {
+  const images = og?.images
+  const hasImages = Array.isArray(images) ? images.length > 0 : Boolean(images)
+
   return {
     ...defaultOpenGraph,
     ...og,
-    images: og?.images ? og.images : defaultOpenGraph.images,
+    images: hasImages ? images : defaultOpenGraph.images,
   }
 }

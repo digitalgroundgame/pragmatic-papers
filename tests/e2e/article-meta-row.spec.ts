@@ -1,11 +1,12 @@
-import { expect, test, type Locator } from "@playwright/test"
+import { expect, test } from "@playwright/test"
 
+import { FOUR_AUTHOR_SLUG } from "../../scripts/seed-e2e.constants"
 import {
-  FOUR_AUTHOR_SLUG,
-  NARRATED_DATELINE,
-  NARRATED_REVISION,
-} from "../../scripts/seed-e2e.constants"
-import { gotoFirstArticle, waitForStableBox, waitForStableRender } from "./helpers"
+  expectPinnedDateline,
+  gotoFirstArticle,
+  waitForStableBox,
+  waitForStableRender,
+} from "./helpers"
 
 // The hero's meta row puts the dateline and the controls (narration player,
 // share button) on one line while they fit, and drops the controls onto their
@@ -22,19 +23,6 @@ const NARRATED_ARTICLE = `/articles/${FOUR_AUTHOR_SLUG}`
 const row = '[data-slot="article-meta"]'
 const controls = '[data-slot="article-meta-controls"]'
 const audioPlayer = '[data-slot="audio-player"]'
-
-/**
- * The seed pins both of this article's instants, so the dateline reads the same
- * words on any day. Asserting them keeps a screenshot of the row honest: if the
- * stamps ever track the clock again, this fails rather than the baseline
- * silently drifting a day at a time.
- */
-async function expectPinnedDateline(dateline: Locator): Promise<void> {
-  const stamps = dateline.locator("time")
-  await expect(stamps).toHaveCount(2)
-  await expect(stamps.nth(0)).toHaveText(NARRATED_DATELINE)
-  await expect(stamps.nth(1)).toHaveText(NARRATED_REVISION)
-}
 
 /** Same line when their vertical centres agree; a wrap moves one a whole row. */
 function sharesLineWith(a: { y: number; height: number }, b: { y: number; height: number }) {
@@ -54,7 +42,7 @@ test.describe("article hero meta row — dateline and controls on one line", () 
     const player = page.locator(audioPlayer)
 
     await expect(dateline).toBeVisible()
-    await expectPinnedDateline(dateline)
+    await expectPinnedDateline(page)
     await expect(player).toBeVisible()
     await expect(share).toBeVisible()
 
@@ -101,7 +89,7 @@ test.describe("article hero meta row — controls wrapped onto their own line", 
     const player = page.locator(audioPlayer)
 
     await expect(dateline).toBeVisible()
-    await expectPinnedDateline(dateline)
+    await expectPinnedDateline(page)
     await expect(player).toBeVisible()
     await expect(share).toBeVisible()
 

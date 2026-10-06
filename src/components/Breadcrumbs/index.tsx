@@ -7,6 +7,7 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb"
 import { Skeleton } from "@/components/ui/skeleton"
+import { cn } from "@/utilities/utils"
 import { queryPageBySlug, queryTopicBySlug, queryUserBySlug } from "@/utilities/queries"
 import { toRoman } from "@/utilities/toRoman"
 import { Home } from "lucide-react"
@@ -14,6 +15,16 @@ import { headers } from "next/headers"
 import { Fragment, Suspense, type ReactElement } from "react"
 
 const STATIC_ROOTS = new Set(["authors", "topics", "volumes"])
+
+/**
+ * Sections whose pages fill the container rather than a column of prose. The trail lines up
+ * with what it sits above, so on those it is as wide as the page and everywhere else it stops
+ * where the reading column does.
+ */
+const FULL_WIDTH_ROOTS = new Set(["interactives"])
+
+const widthFor = (segments: string[]): string =>
+  segments[0] && FULL_WIDTH_ROOTS.has(segments[0]) ? "container" : "container max-w-3xl"
 
 const formatBreadcrumbLabel = (segment: string): string => {
   return decodeURIComponent(segment)
@@ -52,7 +63,7 @@ async function BreadcrumbsRoot({ pathname }: { pathname: string }): Promise<Reac
   )
 
   return (
-    <Breadcrumb className="container mb-4 max-w-3xl">
+    <Breadcrumb className={cn("mb-4", widthFor(segments))}>
       <BreadcrumbList className="flex-nowrap">
         <BreadcrumbItem>
           <BreadcrumbLink href="/">
@@ -82,9 +93,9 @@ async function BreadcrumbsRoot({ pathname }: { pathname: string }): Promise<Reac
   )
 }
 
-function BreadcrumbsSkeleton(): ReactElement {
+function BreadcrumbsSkeleton({ segments }: { segments: string[] }): ReactElement {
   return (
-    <div className="container mb-4 max-w-3xl">
+    <div className={cn("mb-4", widthFor(segments))}>
       <div className="flex flex-nowrap items-center gap-1.5">
         <Skeleton className="size-4 rounded-sm" />
         <Skeleton className="size-3.5 rounded-sm" />
@@ -104,7 +115,7 @@ export async function Breadcrumbs(): Promise<ReactElement | null> {
   if (segments.length === 0 || segments[0] === "articles") return null
 
   return (
-    <Suspense fallback={<BreadcrumbsSkeleton />}>
+    <Suspense fallback={<BreadcrumbsSkeleton segments={segments} />}>
       <BreadcrumbsRoot pathname={pathname} />
     </Suspense>
   )

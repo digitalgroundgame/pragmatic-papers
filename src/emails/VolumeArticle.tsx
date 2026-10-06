@@ -10,10 +10,10 @@ import {
   Preview,
   Row,
   Section,
+  Tailwind,
   Text,
-} from "@react-email/components"
-import { Tailwind } from "@react-email/tailwind"
-import { formatDistanceToNow } from "date-fns"
+} from "react-email"
+import { formatDistanceToNow } from "date-fns/formatDistanceToNow"
 import * as React from "react"
 
 import type { Article, Topic, User, Volume } from "@/payload-types"

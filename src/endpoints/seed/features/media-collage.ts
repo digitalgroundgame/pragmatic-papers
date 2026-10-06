@@ -8,6 +8,7 @@ import {
   createRichText,
   createRichTextFromString,
   createTextNode,
+  type SerializedLexicalNode,
 } from "../richtext"
 
 /**
@@ -28,8 +29,11 @@ function createMediaBlock(mediaId: number) {
 /**
  * Helper to create a media collage block
  */
-function createMediaCollageBlock(mediaIds: number[], layout: "grid" | "carousel" = "grid") {
-  return {
+export function createMediaCollageBlock(
+  mediaIds: number[],
+  layout: "grid" | "carousel" = "grid",
+): SerializedLexicalNode {
+  const node = {
     type: "block",
     fields: {
       blockType: "mediaCollage",
@@ -41,6 +45,7 @@ function createMediaCollageBlock(mediaIds: number[], layout: "grid" | "carousel"
     format: "",
     version: 2,
   }
+  return node
 }
 
 // Deliberately long caption to verify that the caption scrolls independently
@@ -58,6 +63,7 @@ export const createMediaCollageArticle = async (
   writer: User,
   mediaDocs: Media[],
   topics: number[] = [],
+  context?: Record<string, unknown>,
 ): Promise<number> => {
   // Create media with captions
   const [itsBadMedia, blueCoatMedia, wideMedia, portraitMedia, longCaptionMedia] =
@@ -172,20 +178,24 @@ export const createMediaCollageArticle = async (
 
   // Create the article
   const title = "Grids, Carousels, and Captions: Exploring Rich Media Layouts"
-  const article = await createArticle(payload, {
-    title,
-    content,
-    authors: [writer.id],
-    topics: topics,
-    slug: "grids-carousels-captions-exploring-rich-media-layouts",
-    heroImage: mediaDocs[Math.floor(Math.random() * mediaDocs.length)]?.id,
-    meta: {
+  const article = await createArticle(
+    payload,
+    {
       title,
-      description:
-        "Demonstration of the media collage feature with grid and carousel layouts, showing clickable images with captions.",
-      image: mediaDocs[0]?.id,
+      content,
+      authors: [writer.id],
+      topics: topics,
+      slug: "grids-carousels-captions-exploring-rich-media-layouts",
+      heroImage: mediaDocs[Math.floor(Math.random() * mediaDocs.length)]?.id,
+      meta: {
+        title,
+        description:
+          "Demonstration of the media collage feature with grid and carousel layouts, showing clickable images with captions.",
+        image: mediaDocs[0]?.id,
+      },
     },
-  })
+    context,
+  )
 
   return article.id
 }

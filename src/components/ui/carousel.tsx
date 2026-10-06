@@ -5,6 +5,7 @@ import { ArrowLeft, ArrowRight } from "lucide-react"
 import * as React from "react"
 
 import { Button } from "@/components/ui/button"
+import { Dot } from "@/components/ui/dot"
 import { cn } from "@/utilities/utils"
 
 type CarouselApi = UseEmblaCarouselType[1]
@@ -187,11 +188,10 @@ const CarouselPrevious = React.forwardRef<HTMLButtonElement, React.ComponentProp
         variant={variant}
         size={size}
         className={cn(
-          // Tailwind v4's preflight dropped v3's `button { cursor: pointer }`,
-          // so a bare button reads as inert text. `disabled:pointer-events-none`
-          // on the Button base means an arrow with nothing to scroll to still
-          // shows the default arrow, which is what we want.
-          "absolute h-8 w-8 cursor-pointer rounded-sm",
+          // `disabled:pointer-events-none` on the Button base means an arrow
+          // with nothing to scroll shows the default arrow cursor instead of
+          // the pointer, which is what we want.
+          "absolute h-8 w-8 rounded-sm",
           orientation === "horizontal"
             ? "top-1/2 -left-12 -translate-y-1/2 active:not-aria-[haspopup]:-translate-y-[calc(50%-1px)]"
             : "-top-12 left-1/2 -translate-x-1/2 rotate-90",
@@ -220,7 +220,7 @@ const CarouselNext = React.forwardRef<HTMLButtonElement, React.ComponentProps<ty
         size={size}
         className={cn(
           // See CarouselPrevious on the cursor.
-          "absolute h-8 w-8 cursor-pointer rounded-sm",
+          "absolute h-8 w-8 rounded-sm",
           orientation === "horizontal"
             ? "top-1/2 -right-12 -translate-y-1/2 active:not-aria-[haspopup]:-translate-y-[calc(50%-1px)]"
             : "-bottom-12 left-1/2 -translate-x-1/2 rotate-90",
@@ -250,18 +250,20 @@ export const CarouselIndicators: React.FC<{
       className={cn("absolute right-0 bottom-10 left-0 z-10 flex justify-center gap-2", className)}
     >
       {Array.from({ length: count }).map((_, idx) => (
-        <button
+        <Dot
           key={idx}
-          onClick={() => api?.scrollTo(idx)}
-          type="button"
-          className={cn(
-            // The dots jump the carousel just like the arrows do, so they get
-            // the same affordance — see CarouselPrevious on the cursor.
-            "bg-muted-foreground ring-background inline-block h-2 w-2 cursor-pointer rounded-sm ring-2 transition-all",
-            idx === current ? "bg-primary scale-125" : "opacity-40",
-          )}
-          aria-label={`Go to slide ${idx + 1}`}
-          tabIndex={-1}
+          shape="square"
+          tone={idx === current ? "primary" : "muted"}
+          ring
+          className={cn("transition-all", idx === current ? "scale-125" : "opacity-40")}
+          render={
+            <button
+              type="button"
+              onClick={() => api?.scrollTo(idx)}
+              aria-label={`Go to slide ${idx + 1}`}
+              tabIndex={-1}
+            />
+          }
         />
       ))}
     </div>

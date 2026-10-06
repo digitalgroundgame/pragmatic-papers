@@ -17,13 +17,17 @@ vi.mock("next/script", async () => {
   return { default: ScriptMock }
 })
 
-// The component reads NEXT_PUBLIC_TURNSTILE_SITE_KEY at module-eval time, so
-// each suite stubs the env and imports a fresh copy of the component.
+// The site key comes in as a prop (the server reads it with getTurnstileSiteKey), so
+// each suite binds one: "" leaves the widget out.
 async function importComponent(siteKey: string): Promise<React.FC<Partial<NewsletterSignupTypes>>> {
-  vi.resetModules()
-  vi.stubEnv("NEXT_PUBLIC_TURNSTILE_SITE_KEY", siteKey)
-  const mod = await import("../Component")
-  return mod.NewsletterSignupBlock as React.FC<Partial<NewsletterSignupTypes>>
+  const { NewsletterSignupBlock } = await import("../Component")
+  const WithSiteKey: React.FC<Partial<NewsletterSignupTypes>> = (props) => (
+    <NewsletterSignupBlock
+      {...(props as NewsletterSignupTypes)}
+      turnstileSiteKey={siteKey || undefined}
+    />
+  )
+  return WithSiteKey
 }
 
 function getForm(): HTMLFormElement {

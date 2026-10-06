@@ -2,31 +2,15 @@ import { AdminBar } from "@/components/AdminBar"
 import { Breadcrumbs } from "@/components/Breadcrumbs"
 import { Footer } from "@/Footer/Component"
 import { Header } from "@/Header/Component"
+import { sentryHtmlAttributes } from "@/sentryConfig"
 import { getServerSideURL } from "@/utilities/getURL"
-import { mergeOpenGraph } from "@/utilities/mergeOpenGraph"
-import { cn } from "@/utilities/utils"
+import { DEFAULT_DESCRIPTION, mergeOpenGraph } from "@/utilities/mergeOpenGraph"
 import { GoogleAnalytics } from "@next/third-parties/google"
 import { ThemeProvider } from "@wrksz/themes/next"
 import type { Metadata } from "next"
-import { Geist } from "next/font/google"
-import localFont from "next/font/local"
 import React from "react"
+import { fontVariables } from "./fonts"
 import "./globals.css"
-
-const FKScreamer = localFont({
-  src: "../../../public/fonts/FKScreamer-Bold.woff2",
-  weight: "700",
-  display: "swap",
-  fallback: ["fantasy", "sans-serif"],
-  variable: "--font-display",
-})
-
-const geist = Geist({
-  weight: ["400", "600"],
-  subsets: ["latin"],
-  fallback: ["Helvetica", "Arial", "sans-serif"],
-  variable: "--font-sans",
-})
 
 export default async function RootLayout({
   children,
@@ -35,10 +19,11 @@ export default async function RootLayout({
 }): Promise<React.ReactElement> {
   return (
     <html
-      className={cn(FKScreamer.variable, geist.variable)}
+      className={fontVariables}
       lang="en"
       suppressHydrationWarning
       data-scroll-behavior="smooth"
+      {...sentryHtmlAttributes()}
     >
       <head>
         <link href="/manifest.json" rel="manifest" />
@@ -62,13 +47,16 @@ export default async function RootLayout({
           <Footer />
         </ThemeProvider>
       </body>
-      <GoogleAnalytics gaId={process.env.NEXT_PUBLIC_GOOGLE_ANALYTICS_ID} />
+      {process.env.GOOGLE_ANALYTICS_ID ? (
+        <GoogleAnalytics gaId={process.env.GOOGLE_ANALYTICS_ID} />
+      ) : null}
     </html>
   )
 }
 
 export const metadata: Metadata = {
   metadataBase: new URL(getServerSideURL()),
+  description: DEFAULT_DESCRIPTION,
   openGraph: mergeOpenGraph(),
   twitter: {
     card: "summary_large_image",

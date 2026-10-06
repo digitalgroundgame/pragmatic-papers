@@ -13,6 +13,7 @@ import { MerchBlock } from "@/blocks/Merch/Component"
 import { TimelineBlock } from "@/blocks/Timeline/Component"
 import { VolumeViewBlock } from "@/blocks/VolumeViewBlock/component"
 import { isResolved } from "@/utilities/relationships"
+import { getTurnstileSiteKey } from "@/utilities/turnstile"
 
 interface RenderBlocksProps {
   blocks: Page["layout"][number][]
@@ -39,7 +40,9 @@ export const RenderBlocks: React.FC<RenderBlocksProps> = ({ blocks, pageNumber }
         } else if (blockType === "mediaBlock") {
           return <MediaBlock key={key} {...block} />
         } else if (blockType === "newsletterSignup") {
-          return <NewsletterSignupBlock key={key} {...block} />
+          return (
+            <NewsletterSignupBlock key={key} {...block} turnstileSiteKey={getTurnstileSiteKey()} />
+          )
         } else if (blockType === "merch") {
           return <MerchBlock key={key} {...block} />
         } else if (blockType === "timeline") {

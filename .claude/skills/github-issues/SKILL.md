@@ -1,16 +1,19 @@
 ---
 name: github-issues
-description: File, triage, or label a GitHub issue in this repo the way we do it — apply an issue TYPE (Bug/Feature/Task) and the right LABELS. Use whenever creating, editing, triaging, or bulk-labeling issues, or when adding/renaming/removing a label. Covers the "Bug is a type not a label" gotcha, the gh-can't-set-type gotcha, and the version-controlled label taxonomy in .github/labels.yml.
+description: File, triage, or label a GitHub issue in this repo the way we do it — apply an issue TYPE (Bug/Feature/Task), the right LABELS, and the Project board fields (Status/Priority/Size/Estimate). Use whenever creating, editing, triaging, prioritizing, sizing, or bulk-labeling issues, starting work on (picking up) an issue, moving an issue on the board, or adding/renaming/removing a label. Covers the "Bug is a type not a label" gotcha, the gh-can't-set-type gotcha, the version-controlled label taxonomy in .github/labels.yml, and a helper that sets board fields by name.
 ---
 
 # Filing & triaging GitHub issues
 
-This repo classifies issues on **two independent axes**. Set both.
+This repo classifies issues on **three independent axes**. Set all three.
 
 1. **Issue type** — `Bug` · `Feature` · `Task`. Org-level metadata, exactly
    one per issue. This is _not_ a label.
 2. **Labels** — the taxonomy in `.github/labels.yml` (area, status, kind…).
    Zero or more per issue.
+3. **Project board fields** — `Priority`, `Size`, `Estimate` and `Status` on
+   the org board **"Pragmatic Papers Development"** (project #3). See
+   [Project board fields](#project-board-fields).
 
 The single most common mistake: treating `Bug` as a label. **There is no
 `bug` label** — `Bug` is an issue _type_. Applying a nonexistent label
@@ -107,6 +110,150 @@ Keep the label set minimal — a Kind and/or a Status is usually enough. The
 issue **type** (`Bug` / `Feature` / `Task`) already says what kind of work it
 is, so labels only need to add what the type doesn't.
 
+## Project board fields
+
+Issues live on the org Project **"Pragmatic Papers Development"**
+(`https://github.com/orgs/digitalgroundgame/projects/3`). Its built-in
+workflows (Project → ⋯ → **Workflows**) move issues for you. Their settings
+aren't visible or editable through the API, so this table is the record of
+them. Update it when you change one in the UI:
+
+| Workflow                       | Trigger                                               | Action                               |
+| ------------------------------ | ----------------------------------------------------- | ------------------------------------ |
+| Auto-add to project            | open issue in `pragmatic-papers` (`is:issue is:open`) | Adds it to the board                 |
+| Auto-add sub-issues to project | an item on the board has sub-issues                   | Adds the sub-issues                  |
+| Item added to project          | issue or PR added                                     | `Status: Ready`                      |
+| Pull request linked to issue   | a PR links the issue (`Fixes #n`)                     | `Status: In progress`                |
+| Code changes requested         | a PR review requests changes                          | `Status: Needs Work` (PR items only) |
+| Pull request merged            | PR merged                                             | `Status: Done` (PR items only)       |
+| Item closed                    | issue or PR closed                                    | `Status: Done`                       |
+| Item reopened                  | issue or PR reopened                                  | `Status: Ready`                      |
+| Auto-close issue               | `Status` set to `Done`                                | **Closes the issue**                 |
+| Auto-archive items             | —                                                     | Off                                  |
+| Code review approved           | —                                                     | Off                                  |
+
+What that means in practice:
+
+- **New issues are added automatically** with `Status: Ready`. Don't add them
+  by hand.
+- **Linking a PR moves the issue to `In progress`**, and merging a PR that
+  closes it moves it to `Done` (via Item closed).
+- **Don't set `Done` yourself.** Setting it closes the issue (Auto-close
+  issue) without a close reason; close the issue instead
+  ([Closing issues](#closing-issues)).
+- **PRs are not tracked on the board.** Only issues are auto-added, so the
+  PR-only workflows above rarely fire. Don't add PRs.
+
+Workflows can fail or be changed without this file following, so check an
+issue's `Status` (`gh issue view <n> --json projectItems`) before relying on
+it.
+
+### Fields and how we use them
+
+| Field                     | Values                                                                    | Convention                                                                                                                                                        |
+| ------------------------- | ------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Status`                  | `Backlog` · `Ready` · `In progress` · `In review` · `Needs Work` · `Done` | New issues start `Ready`. Move one to `Backlog` when it can't be picked up yet, `In progress` when work starts. `In review` / `Needs Work` exist but aren't used. |
+| `Priority`                | `P0` · `P1` · `P2` · `P3`                                                 | Set on every open issue.                                                                                                                                          |
+| `Size`                    | `XS` · `S` · `M` · `L` · `XL`                                             | Set on every open issue, together with `Estimate`.                                                                                                                |
+| `Estimate`                | story points (number)                                                     | Follows `Size`: **XS = 0.5 or 1, S = 2, M = 3, L = 5, XL = 8**. Never set without `Size`.                                                                         |
+| `Start date` / `End date` | date                                                                      | Not used. Leave empty.                                                                                                                                            |
+
+Assignees, labels, milestone, parent issue and linked PRs are issue attributes
+the board only displays. Set those on the issue (`gh issue edit`), not on the
+board.
+
+**At filing time**, after type and labels:
+
+- **`Size` and `Estimate`:** set your best guess, using the mapping above. Say
+  in the body if the size is uncertain.
+- **`Priority`:** this orders the team's work, so treat your value as a
+  proposal. Set `P1`–`P3` when you're confident, **never `P0` unless someone
+  asked for it**, and state the priority you chose and why in your reply so a
+  human can change it. If you can't judge it, leave it unset and say so.
+- **`Status`:** leave it at `Ready`. Set `Backlog` when the issue can't be
+  picked up yet (blocked on another issue, `waiting on design`, not scoped
+  enough to start), and say why in your reply. Set `In progress` only when you
+  start working on the issue yourself, and then assign yourself too
+  ([Starting work](#starting-work-on-an-issue)).
+
+### Setting fields
+
+Use the helper next to this file, from the repo root. One GraphQL query looks
+up the project, the issue's board item, and every field and option by name, so
+nothing goes stale, and it adds the issue to the board if it's missing:
+
+```bash
+pnpm tsx .claude/skills/github-issues/set-project-field.ts 953 Priority P2
+pnpm tsx .claude/skills/github-issues/set-project-field.ts 953 Size M
+pnpm tsx .claude/skills/github-issues/set-project-field.ts 953 Estimate 3
+pnpm tsx .claude/skills/github-issues/set-project-field.ts 953 Status Ready
+pnpm tsx .claude/skills/github-issues/set-project-field.ts 953 Priority --clear
+```
+
+It checks the edit before touching the board: a misspelled field or option
+fails with the list of valid names, `Estimate` must be a number and dates
+`YYYY-MM-DD`, and fields the board only mirrors (Labels, Assignees…) are
+refused with a pointer to `gh issue edit`. Tests live in
+`tests/scripts/set-project-field.test.ts`.
+
+To read an issue's current board values:
+`gh issue view <n> --json projectItems` (shows `Status`); the `QUERY` in the
+helper is the pattern for reading the other fields.
+
+**Requirements:** a current `gh` (tested with 2.101) and the **`project`** token scope. Without the
+scope, `gh project` fails with `missing required scopes [read:project]`. Add
+it in a real terminal (the browser device flow needs one; Claude Code's `!`
+prefix doesn't provide it):
+
+```bash
+gh auth refresh -h github.com -s project
+```
+
+**Web/remote sessions.** The GitHub proxy blocks GraphQL, so neither `gh
+project` nor the helper works there. Dispatch
+`.github/workflows/project-fields.yml` instead; it runs this same helper on an
+Actions runner with the repo's project credentials, so the arguments are
+identical (`--clear` included):
+
+```
+mcp__github__actions_run_trigger(
+  method="run_workflow", owner="digitalgroundgame", repo="pragmatic-papers",
+  workflow_id="project-fields.yml", ref="dev",
+  inputs={"issue": "953", "field": "Priority", "value": "P2"},
+)
+```
+
+Dispatch returns before the run does, so a misspelled option fails silently
+from your side. Check the latest run with
+`actions_list(method="list_workflow_runs", workflow_id="project-fields.yml")`
+and, if it failed, read the job log (it names the valid fields and options)
+before telling the user the field is set.
+
+## Starting work on an issue
+
+Picking up an issue takes two steps. The assignee shows who owns it on the
+issue list; `Status` shows it on the board. Do both, so two people (or an
+agent session) don't start the same work:
+
+```bash
+gh issue edit 953 --add-assignee @me
+pnpm tsx .claude/skills/github-issues/set-project-field.ts 953 Status "In progress"
+```
+
+`@me` is the authenticated `gh` user, so an agent working on your behalf
+assigns you. In web/remote sessions neither command works: assign with MCP
+`issue_write(method="update", issue_number=953, assignees=["<login>"])`, which
+replaces the list, so include any existing assignees; set `Status` by
+dispatching `project-fields.yml` with `field: "Status"`, `value: "In progress"`
+([Setting fields](#setting-fields)).
+
+As a backstop, `.github/workflows/assign-linked-issues.yml` assigns a PR's
+author to any unassigned issue the PR closes (`Fixes #953`) when the PR is
+opened, reopened or edited, so adding the keyword later works too. It only
+covers work that already has a PR, and not PRs stacked on another branch
+(closing keywords only link on PRs into `dev`), so assign yourself when you
+start.
+
 ## Closing issues
 
 Always set a reason. MCP: `issue_write(method="update", state="closed",
@@ -120,3 +267,11 @@ For `duplicate`/`invalid`/`wontfix`, add the matching label too.
 - [ ] Best-guess labels applied — a Kind label if it's obviously docs / deps,
       plus any status that's clear. Guess rather than defer.
 - [ ] Every label used exists in `.github/labels.yml`.
+- [ ] `Size` and the matching `Estimate` set on the board (the issue is added
+      as `Ready` automatically; move it to `Backlog` if it can't be picked up
+      yet).
+- [ ] `Priority` set only if you're confident (never `P0` unasked), and the
+      value you chose stated in your reply.
+- [ ] Starting on it now? Assign yourself and set `Status` to `In progress`
+      (see [Starting work](#starting-work-on-an-issue)). Otherwise leave it
+      unassigned.

@@ -4,6 +4,8 @@
 @plugin "@tailwindcss/typography";
 
 @custom-variant dark (&:is(.dark *));
+/* An ancestor of an expanded TableOfContents (it renders data-slot="toc", hidden when collapsed). */
+@custom-variant toc-open (&:has([data-slot="toc"]:not([hidden])));
 
 :root {
   --background: oklch(1 0 0);
@@ -46,6 +48,23 @@
   --error: oklch(0.58 0.22 27);
   --success: oklch(0.55 0.18 150);
   --warning: oklch(0.7 0.18 80);
+  /* py-3 (0.75rem × 2) + size-8 button (2rem) + border-b (1px) */
+  --header-height: 3.5625rem;
+
+  /* Diverging Red/Blue map palette — override to retheme election maps. Read through
+     `var()` by the choropleth block's colour scale and by the drilldown engine alike, so it
+     is a site token rather than either feature's own. */
+  --map-positive-1: #ffb8bc;
+  --map-positive-2: #f48088;
+  --map-positive-3: #e54858;
+  --map-positive-4: #d81334;
+
+  --map-negative-1: #b4d4f8;
+  --map-negative-2: #72aef3;
+  --map-negative-3: #2c86ed;
+  --map-negative-4: #126ace;
+
+  --map-neutral: oklch(0.9528 0.0086 84.57);
 }
 
 .dark {
@@ -140,6 +159,14 @@
   /* FK Screamer ligatures render incorrectly at 30px and below, so bumping 3xl to 32px. Overriding this core utilty to prevent us from accidently using it at 30px. */
   --text-3xl: 2rem;
   --text-3xl--line-height: calc(2.25 / 2);
+
+  --animate-paper-drift: paper-drift 6s linear infinite;
+  /* One (64, -64) tile of PaperIconPattern, rotated by its -15° patternTransform, so the loop is seamless. */
+  @keyframes paper-drift {
+    to {
+      transform: translate(45.2548px, -78.3837px);
+    }
+  }
 }
 
 @layer base {
@@ -169,6 +196,10 @@
   }
   h3 {
     @apply text-2xl md:text-3xl;
+  }
+  button:not(:disabled),
+  [role="button"]:not(:disabled):not([aria-disabled="true"]) {
+    cursor: pointer;
   }
 }
 
@@ -221,11 +252,11 @@
 }
 
 .lexical-table-container {
-  @apply my-6 overflow-x-auto [-webkit-overflow-scrolling:touch] sm:overflow-x-visible md:-mx-4 lg:-mx-8;
+  @apply my-6 min-w-0 overflow-x-auto [-webkit-overflow-scrolling:touch] md:-mx-4 lg:-mx-8;
 }
 
 .lexical-table {
-  @apply w-full caption-bottom text-lg;
+  @apply my-0 min-w-full caption-bottom text-lg;
 }
 
 .lexical-table-row {
@@ -257,4 +288,36 @@
 
 .list-item-checkbox > label {
   @apply w-full;
+}
+
+/*
+  Marquee for the feed byline (and any future overflowing label). The
+  component sets the `--feed-marquee-shift` (px) and
+  `--feed-marquee-duration` (s) inline based on a runtime overflow
+  measurement; the keyframe alternates so the text slides left, pauses,
+  and slides back.
+*/
+@keyframes feed-marquee {
+  0%,
+  10% {
+    transform: translateX(0);
+  }
+  45%,
+  55% {
+    transform: translateX(calc(var(--feed-marquee-shift, 0px) * -1));
+  }
+  90%,
+  100% {
+    transform: translateX(0);
+  }
+}
+
+.feed-marquee {
+  animation: feed-marquee var(--feed-marquee-duration, 10s) ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .feed-marquee {
+    animation: none;
+  }
 }

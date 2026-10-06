@@ -1,6 +1,7 @@
 import { revalidateRedirects } from "@/hooks/revalidateRedirects"
 import type { Article, Page, Topic, Volume } from "@/payload-types"
 import { getServerSideURL } from "@/utilities/getURL"
+import { DEFAULT_DESCRIPTION } from "@/utilities/mergeOpenGraph"
 import { toRoman } from "@/utilities/toRoman"
 import { formBuilderPlugin } from "@payloadcms/plugin-form-builder"
 import { nestedDocsPlugin } from "@payloadcms/plugin-nested-docs"
@@ -8,7 +9,11 @@ import { redirectsPlugin } from "@payloadcms/plugin-redirects"
 import { searchPlugin } from "@payloadcms/plugin-search"
 import type { BeforeSync } from "@payloadcms/plugin-search/types"
 import { seoPlugin } from "@payloadcms/plugin-seo"
-import { type GenerateTitle, type GenerateURL } from "@payloadcms/plugin-seo/types"
+import {
+  type GenerateDescription,
+  type GenerateTitle,
+  type GenerateURL,
+} from "@payloadcms/plugin-seo/types"
 import { FixedToolbarFeature, HeadingFeature, lexicalEditor } from "@payloadcms/richtext-lexical"
 import { s3Storage } from "@payloadcms/storage-s3"
 import { type Payload, type Plugin } from "payload"
@@ -40,6 +45,10 @@ export const generateTitle: GenerateTitle<Volume | Article | Page | Topic> = ({ 
   if ("title" in doc && doc.title) return `${doc.title} | The Pragmatic Papers`
   return "The Pragmatic Papers"
 }
+
+export const generateDescription: GenerateDescription<Volume | Article | Page | Topic> = ({
+  doc,
+}) => ("description" in doc && doc.description) || DEFAULT_DESCRIPTION
 
 const generateURL: GenerateURL<Volume | Article | Page | Topic> = ({ doc }) => {
   const url = getServerSideURL()
@@ -118,9 +127,7 @@ const beforeSync: BeforeSync = async ({ originalDoc, payload, searchDoc }) => {
   const image =
     (originalDoc.heroImage as number | null | undefined) ??
     ((originalDoc.meta as Record<string, unknown> | undefined)?.image as
-      | number
-      | null
-      | undefined) ??
+      number | null | undefined) ??
     (originalDoc.profileImage as number | null | undefined) ??
     null
 
@@ -129,6 +136,20 @@ const beforeSync: BeforeSync = async ({ originalDoc, payload, searchDoc }) => {
 
   return { ...searchDoc, title, excerpt, slug, authors, topics, image, body }
 }
+
+// The collections build their own SEO tab, so keep them as they are. The
+// plugin still needs them listed: its generate endpoints refuse any other.
+// Drop this wrapper once plugin-seo can authorize without injecting fields:
+// https://github.com/payloadcms/payload/issues/18311
+const seo: Plugin = async (config) => ({
+  ...(await seoPlugin({
+    collections: ["articles", "pages", "volumes", "topics"],
+    generateTitle,
+    generateDescription,
+    generateURL,
+  })(config)),
+  collections: config.collections,
+})
 
 export const plugins: Plugin[] = [
   searchPlugin({
@@ -181,10 +202,7 @@ export const plugins: Plugin[] = [
     collections: ["categories"],
     generateURL: (docs) => docs.reduce((url, doc) => `${url}/${doc.slug}`, ""),
   }),
-  seoPlugin({
-    generateTitle,
-    generateURL,
-  }),
+  seo,
   formBuilderPlugin({
     fields: {
       payment: false,
@@ -228,7 +246,7 @@ export const plugins: Plugin[] = [
       media: {
         disablePayloadAccessControl: true,
         generateFileURL: ({ filename }) => {
-          const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+          const supabaseUrl = process.env.SUPABASE_URL
           const bucket = process.env.S3_BUCKET
 
           if (!supabaseUrl || !bucket) {
@@ -243,7 +261,7 @@ export const plugins: Plugin[] = [
         disablePayloadAccessControl: true,
         prefix: "map-assets",
         generateFileURL: ({ filename }) => {
-          const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+          const supabaseUrl = process.env.SUPABASE_URL
           const bucket = process.env.S3_BUCKET
 
           if (!supabaseUrl || !bucket) {

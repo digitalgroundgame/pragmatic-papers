@@ -31,7 +31,8 @@ export const AuthorCard: React.FC<AuthorCardProps> = ({ author }) => {
   return (
     <Card className="rounded-sm">
       <CardContent className="flex flex-col gap-4 sm:flex-row">
-        <HoverPrefetchLink href={`/authors/${slug}`} aria-label={name || "Author profile"}>
+        {/* The name below is the card's link; this one is for pointers only. */}
+        <HoverPrefetchLink href={`/authors/${slug}`} aria-hidden="true" tabIndex={-1}>
           <Avatar size="xl" className="aspect-square border hover:opacity-80">
             <AvatarImage
               src={profileImageUrl}
@@ -61,7 +62,7 @@ export const AuthorCard: React.FC<AuthorCardProps> = ({ author }) => {
               <p className="text-primary line-clamp-2 font-serif text-sm">{bioSnippet}</p>
             )}
           </div>
-          <AuthorLinks socials={author.socials} />
+          <AuthorLinks socials={author.socials} authorName={name} />
         </div>
       </CardContent>
     </Card>

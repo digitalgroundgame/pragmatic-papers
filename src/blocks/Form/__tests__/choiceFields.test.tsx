@@ -59,7 +59,6 @@ describe("Select", () => {
       <Select
         blockType="select"
         control={methods.control}
-        errors={methods.formState.errors}
         label="Favourite colour"
         name="colour"
         options={colourOptions}
@@ -76,6 +75,8 @@ describe("Select", () => {
 
     const options = await screen.findAllByRole("option")
     expect(options.map((option) => option.textContent)).toEqual(["Red", "Blue"])
+    // The open list carries the field's label, not only the trigger (#1028).
+    expect(screen.getByRole("listbox", { name: "Favourite colour" })).toBeInTheDocument()
   })
 
   it("submits the option the visitor picked", async () => {
@@ -83,7 +84,6 @@ describe("Select", () => {
       <Select
         blockType="select"
         control={methods.control}
-        errors={methods.formState.errors}
         label="Favourite colour"
         name="colour"
         options={colourOptions}
@@ -107,7 +107,6 @@ describe("Select", () => {
       <Select
         blockType="select"
         control={methods.control}
-        errors={methods.formState.errors}
         label="Favourite colour"
         name="colour"
         options={colourOptions}
@@ -123,7 +122,6 @@ describe("Select", () => {
       <Select
         blockType="select"
         control={methods.control}
-        errors={methods.formState.errors}
         label="Favourite colour"
         name="colour"
         options={colourOptions}
@@ -143,7 +141,6 @@ describe("Select", () => {
         blockType="select"
         control={methods.control}
         defaultValue="red"
-        errors={methods.formState.errors}
         label="Favourite colour"
         name="colour"
         options={colourOptions}
@@ -163,14 +160,7 @@ describe("Select", () => {
 describe("State", () => {
   it("submits the two-letter code for the state the visitor picked", async () => {
     const { submitted, submit } = renderField((methods) => (
-      <State
-        blockType="state"
-        control={methods.control}
-        errors={methods.formState.errors}
-        label="State"
-        name="state"
-        required
-      />
+      <State blockType="state" control={methods.control} label="State" name="state" required />
     ))
 
     await chooseOption(screen.getByRole("combobox"), "California")
@@ -185,14 +175,7 @@ describe("State", () => {
 
   it("keeps showing the placeholder before a state is picked", () => {
     renderField((methods) => (
-      <State
-        blockType="state"
-        control={methods.control}
-        errors={methods.formState.errors}
-        label="State"
-        name="state"
-        required
-      />
+      <State blockType="state" control={methods.control} label="State" name="state" required />
     ))
 
     // The field starts on an empty string; Base UI treats that as "nothing
@@ -202,14 +185,7 @@ describe("State", () => {
 
   it("blocks submission while a required state is untouched", async () => {
     const { submitted, submit } = renderField((methods) => (
-      <State
-        blockType="state"
-        control={methods.control}
-        errors={methods.formState.errors}
-        label="State"
-        name="state"
-        required
-      />
+      <State blockType="state" control={methods.control} label="State" name="state" required />
     ))
 
     submit()
@@ -225,7 +201,6 @@ describe("Country", () => {
       <Country
         blockType="country"
         control={methods.control}
-        errors={methods.formState.errors}
         label="Country"
         name="country"
         required

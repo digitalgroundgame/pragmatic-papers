@@ -177,6 +177,8 @@ export interface Config {
     webhooks: Webhook;
     topics: Topic;
     merch: Merch;
+    interactives: Interactive;
+    'interactive-snapshots': InteractiveSnapshot;
     search: Search;
     redirects: Redirect;
     forms: Form;
@@ -199,6 +201,8 @@ export interface Config {
     webhooks: WebhooksSelect<false> | WebhooksSelect<true>;
     topics: TopicsSelect<false> | TopicsSelect<true>;
     merch: MerchSelect<false> | MerchSelect<true>;
+    interactives: InteractivesSelect<false> | InteractivesSelect<true>;
+    'interactive-snapshots': InteractiveSnapshotsSelect<false> | InteractiveSnapshotsSelect<true>;
     search: SearchSelect<false> | SearchSelect<true>;
     redirects: RedirectsSelect<false> | RedirectsSelect<true>;
     forms: FormsSelect<false> | FormsSelect<true>;
@@ -217,12 +221,14 @@ export interface Config {
     header: Header;
     footer: Footer;
     'article-recommendations': ArticleRecommendation;
+    'site-settings': SiteSetting;
     'payload-jobs-stats': PayloadJobsStat;
   };
   globalsSelect: {
     header: HeaderSelect<false> | HeaderSelect<true>;
     footer: FooterSelect<false> | FooterSelect<true>;
     'article-recommendations': ArticleRecommendationsSelect<false> | ArticleRecommendationsSelect<true>;
+    'site-settings': SiteSettingsSelect<false> | SiteSettingsSelect<true>;
     'payload-jobs-stats': PayloadJobsStatsSelect<false> | PayloadJobsStatsSelect<true>;
   };
   locale: null;
@@ -234,6 +240,7 @@ export interface Config {
     tasks: {
       updateRecommendations: TaskUpdateRecommendations;
       syncShopifyProducts: TaskSyncShopifyProducts;
+      syncInteractiveData: TaskSyncInteractiveData;
       schedulePublish: TaskSchedulePublish;
       inline: {
         input: unknown;
@@ -433,6 +440,14 @@ export interface Article {
   publishedAt?: string | null;
   authors?: (number | User)[] | null;
   topics?: (number | Topic)[] | null;
+  /**
+   * Auto-generates a navigable list of headings (and any resolver-matched blocks). Readers see it only while the table of contents experiment is on in Site Settings.
+   */
+  showTableOfContents?: boolean | null;
+  /**
+   * Adds the published article to the Substack import feed. Takes effect once the article is published.
+   */
+  syndicateToSubstack?: boolean | null;
   createdBy?: (number | null) | User;
   updatedAt: string;
   createdAt: string;
@@ -636,6 +651,7 @@ export interface User {
   resetPasswordExpiration?: string | null;
   salt?: string | null;
   hash?: string | null;
+  resetPasswordRequestedAt?: string | null;
   loginAttempts?: number | null;
   lockUntil?: string | null;
   sessions?:
@@ -1100,9 +1116,6 @@ export interface Form {
       )[]
     | null;
   submitButtonLabel?: string | null;
-  /**
-   * Choose whether to display an on-page message or redirect to a different page after they submit the form.
-   */
   confirmationType?: ('message' | 'redirect') | null;
   confirmationMessage?: {
     root: {
@@ -1122,9 +1135,6 @@ export interface Form {
   redirect?: {
     url: string;
   };
-  /**
-   * Send custom emails when the form submits. Use comma separated lists to send the same email to multiple recipients. To reference a value from this form, wrap that field's name with double curly brackets, i.e. {{firstName}}. You can use a wildcard {{*}} to output all data and {{*:table}} to format it as an HTML table in the email.
-   */
   emails?:
     | {
         emailTo?: string | null;
@@ -1133,9 +1143,6 @@ export interface Form {
         replyTo?: string | null;
         emailFrom?: string | null;
         subject: string;
-        /**
-         * Enter the message that should be sent in this email.
-         */
         message?: {
           root: {
             type: string;
@@ -1233,6 +1240,128 @@ export interface Webhook {
     | null;
   updatedAt: string;
   createdAt: string;
+}
+/**
+ * Interactive pages drawn by a code-owned profile from a researcher's data feed. Editors own the words, the sources and when a data snapshot goes live; the feed owns the numbers.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "interactives".
+ */
+export interface Interactive {
+  id: number;
+  title: string;
+  /**
+   * Which code-owned profile draws this interactive: its geometry, presentation and feed adapter. Adding one is a code change under src/interactives.
+   */
+  profile: 'federal-courts';
+  /**
+   * Standfirst shown above the interactive.
+   */
+  intro?: {
+    root: {
+      type: string;
+      children: {
+        type: any;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  } | null;
+  /**
+   * Shown as a small attribution footer beneath the interactive.
+   */
+  sources?:
+    | {
+        link?: LinkField;
+        id?: string | null;
+      }[]
+    | null;
+  /**
+   * How the sync job reads this interactive's data. It runs daily and can be run now from Interactive Snapshots. Each run that finds new data writes a draft snapshot for review; auto-publish skips the review.
+   */
+  feed: {
+    /**
+     * Uncheck to freeze the data at its current snapshot.
+     */
+    enabled?: boolean | null;
+    /**
+     * Which revision of the researcher's repository to read. Leave as "release" to follow their newest published data release, which is an immutable snapshot and the way they ask to be read. A branch, tag or commit is honoured verbatim, for pinning or debugging.
+     */
+    ref: string;
+    /**
+     * Publish each new snapshot as soon as it validates, without an editor's review.
+     */
+    autoPublish?: boolean | null;
+  };
+  meta?: {
+    title?: string | null;
+    /**
+     * Maximum upload file size: 12MB. Recommended file size for images is <500KB.
+     */
+    image?: (number | null) | Media;
+    description?: string | null;
+  };
+  publishedAt?: string | null;
+  /**
+   * When enabled, the slug will auto-generate from the title field on save and autosave.
+   */
+  generateSlug?: boolean | null;
+  slug: string;
+  updatedAt: string;
+  createdAt: string;
+  _status?: ('draft' | 'published') | null;
+}
+/**
+ * What the researcher's feed said the last time the sync read it. Each sync that changes the data writes a new draft version; publish it to put it in front of readers, or set the interactive's feed to auto-publish. Fields are read-only — the feed is the source of truth.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "interactive-snapshots".
+ */
+export interface InteractiveSnapshot {
+  id: number;
+  label: string;
+  interactive: number | Interactive;
+  /**
+   * What the feed contained — regions, records and extra datasets.
+   */
+  summary?: string | null;
+  /**
+   * Upstream's own build stamp.
+   */
+  sourceVersion: string;
+  /**
+   * Branch, tag or commit read.
+   */
+  sourceRef?: string | null;
+  /**
+   * Hash of what we render; a new version exists only when this moves.
+   */
+  contentHash: string;
+  /**
+   * When upstream generated the data.
+   */
+  generatedAt: string;
+  /**
+   * When the sync last confirmed this version.
+   */
+  syncedAt: string;
+  data:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  updatedAt: string;
+  createdAt: string;
+  _status?: ('draft' | 'published') | null;
 }
 /**
  * This is a collection of automatically created search results. These results are used by the global site search and will be updated automatically as documents in the CMS are created or updated.
@@ -1386,7 +1515,8 @@ export interface PayloadJob {
     | {
         executedAt: string;
         completedAt: string;
-        taskSlug: 'inline' | 'updateRecommendations' | 'syncShopifyProducts' | 'schedulePublish';
+        taskSlug:
+          'inline' | 'updateRecommendations' | 'syncShopifyProducts' | 'syncInteractiveData' | 'schedulePublish';
         taskID: string;
         input?:
           | {
@@ -1419,7 +1549,8 @@ export interface PayloadJob {
         id?: string | null;
       }[]
     | null;
-  taskSlug?: ('inline' | 'updateRecommendations' | 'syncShopifyProducts' | 'schedulePublish') | null;
+  taskSlug?:
+    ('inline' | 'updateRecommendations' | 'syncShopifyProducts' | 'syncInteractiveData' | 'schedulePublish') | null;
   queue?: string | null;
   waitUntil?: string | null;
   processing?: boolean | null;
@@ -1481,6 +1612,14 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'merch';
         value: number | Merch;
+      } | null)
+    | ({
+        relationTo: 'interactives';
+        value: number | Interactive;
+      } | null)
+    | ({
+        relationTo: 'interactive-snapshots';
+        value: number | InteractiveSnapshot;
       } | null)
     | ({
         relationTo: 'search';
@@ -1788,6 +1927,8 @@ export interface ArticlesSelect<T extends boolean = true> {
   publishedAt?: T;
   authors?: T;
   topics?: T;
+  showTableOfContents?: T;
+  syndicateToSubstack?: T;
   createdBy?: T;
   updatedAt?: T;
   createdAt?: T;
@@ -1987,6 +2128,7 @@ export interface UsersSelect<T extends boolean = true> {
   resetPasswordExpiration?: T;
   salt?: T;
   hash?: T;
+  resetPasswordRequestedAt?: T;
   loginAttempts?: T;
   lockUntil?: T;
   sessions?:
@@ -2070,6 +2212,59 @@ export interface MerchSelect<T extends boolean = true> {
   sortOrder?: T;
   updatedAt?: T;
   createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "interactives_select".
+ */
+export interface InteractivesSelect<T extends boolean = true> {
+  title?: T;
+  profile?: T;
+  intro?: T;
+  sources?:
+    | T
+    | {
+        link?: T | LinkFieldSelect<T>;
+        id?: T;
+      };
+  feed?:
+    | T
+    | {
+        enabled?: T;
+        ref?: T;
+        autoPublish?: T;
+      };
+  meta?:
+    | T
+    | {
+        title?: T;
+        image?: T;
+        description?: T;
+      };
+  publishedAt?: T;
+  generateSlug?: T;
+  slug?: T;
+  updatedAt?: T;
+  createdAt?: T;
+  _status?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "interactive-snapshots_select".
+ */
+export interface InteractiveSnapshotsSelect<T extends boolean = true> {
+  label?: T;
+  interactive?: T;
+  summary?: T;
+  sourceVersion?: T;
+  sourceRef?: T;
+  contentHash?: T;
+  generatedAt?: T;
+  syncedAt?: T;
+  data?: T;
+  updatedAt?: T;
+  createdAt?: T;
+  _status?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -2374,6 +2569,32 @@ export interface ArticleRecommendation {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "site-settings".
+ */
+export interface SiteSetting {
+  id: number;
+  /**
+   * Beta features, switched on per environment: staging and production each keep their own settings. Off means readers can't reach the feature here.
+   */
+  experiments?: {
+    /**
+     * The full-screen article feed at /feed and its header button.
+     */
+    feed?: boolean | null;
+    /**
+     * Interactive pages at /interactives/<slug>, their sitemap and the daily data sync.
+     */
+    interactives?: boolean | null;
+    /**
+     * The table of contents in an article's sidebar and its hero button, on articles with “Show table of contents” ticked.
+     */
+    tableOfContents?: boolean | null;
+  };
+  updatedAt?: string | null;
+  createdAt?: string | null;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload-jobs-stats".
  */
 export interface PayloadJobsStat {
@@ -2437,6 +2658,22 @@ export interface ArticleRecommendationsSelect<T extends boolean = true> {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "site-settings_select".
+ */
+export interface SiteSettingsSelect<T extends boolean = true> {
+  experiments?:
+    | T
+    | {
+        feed?: T;
+        interactives?: T;
+        tableOfContents?: T;
+      };
+  updatedAt?: T;
+  createdAt?: T;
+  globalType?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload-jobs-stats_select".
  */
 export interface PayloadJobsStatsSelect<T extends boolean = true> {
@@ -2480,6 +2717,22 @@ export interface TaskSyncShopifyProducts {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "TaskSyncInteractiveData".
+ */
+export interface TaskSyncInteractiveData {
+  input: {
+    interactiveId?: number | null;
+    force?: boolean | null;
+  };
+  output: {
+    synced: number;
+    unchanged: number;
+    skipped: number;
+    failed: number;
+  };
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "TaskSchedulePublish".
  */
 export interface TaskSchedulePublish {
@@ -2498,9 +2751,16 @@ export interface TaskSchedulePublish {
       | ({
           relationTo: 'volumes';
           value: number | Volume;
+        } | null)
+      | ({
+          relationTo: 'interactives';
+          value: number | Interactive;
         } | null);
     global?: string | null;
-    user?: (number | null) | User;
+    user?: {
+      relationTo: 'users';
+      value: number | User;
+    } | null;
   };
   output?: unknown;
 }

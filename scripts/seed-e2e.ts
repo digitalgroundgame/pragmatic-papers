@@ -1,13 +1,28 @@
-import { FOUR_AUTHOR_SLUG, NARRATED_UPDATED_AT, NARRATION_SECONDS } from "./seed-e2e.constants"
+import {
+  EXTRA_AUTHORS,
+  FOUR_AUTHOR_SLUG,
+  LIGHTBOX_IMAGE_ALT,
+  LIGHTBOX_SLUG,
+  NARRATION_SECONDS,
+  SEEDED_UPDATED_AT,
+  TOPIC_NAME,
+  TOPIC_SLUG,
+  VOLUME_SLUG,
+} from "./seed-e2e.constants"
 
 import type { User } from "@/payload-types"
 import { createArticle } from "@/endpoints/seed/articles"
+import { createCodeBlocksArticle } from "@/endpoints/seed/features/code-blocks"
+import { createFootnotesArticle } from "@/endpoints/seed/features/footnotes"
+import { createSocialEmbedArticle } from "@/endpoints/seed/features/social-embeds"
 import { createMoCongressionalMapsArticle } from "@/endpoints/seed/features/interactive-maps"
+import { createFederalCourtsInteractive } from "@/endpoints/seed/features/interactives"
 import { createRichTextShowcaseArticle } from "@/endpoints/seed/features/rich-text-showcase"
 import {
   createCTABlockNode,
   createHeadingNode,
   createLinkNode,
+  createMediaBlockNode,
   createNewsletterSignupBlockNode,
   createParagraph,
   createRichText,
@@ -90,6 +105,25 @@ async function createSilentNarration(payload: Payload, seconds: number): Promise
 // Screenshot baselines bake in this date via the article/volume byline, so it
 // must stay fixed rather than tracking the day the seed happens to run.
 const PUBLISHED_AT = "2026-06-04T00:00:00.000Z"
+
+/**
+ * Freeze the revision stamp on every seeded article and volume.
+ *
+ * Straight to the column, because there is no way through the API: Payload
+ * overwrites `updatedAt` with the current time on every non-draft save
+ * (collections/operations/utilities/update.js), so each hero's dateline would
+ * read the day the seed ran and diff against its baseline the next day. The
+ * instant is arbitrary; that it never moves is the point.
+ *
+ * Applied to whole tables after seeding rather than per document: the previous
+ * per-document version pinned only the narrated article, and the share-button
+ * baselines — framing a different article's hero — quietly rotted instead.
+ */
+async function pinRevisionStamps(payload: Payload): Promise<void> {
+  const { drizzle } = payload.db as unknown as PostgresAdapter
+  await drizzle.execute(sql`UPDATE articles SET updated_at = ${SEEDED_UPDATED_AT}`)
+  await drizzle.execute(sql`UPDATE volumes SET updated_at = ${SEEDED_UPDATED_AT}`)
+}
 
 // Co-authors for the four-author article. Deliberately plain compared with the e2e
 // writer — author-card.spec.ts covers the fully-populated profile, and these
@@ -183,11 +217,22 @@ export async function main(): Promise<void> {
     // Interactive map article (slug: "missouri-shifting-margins-119-120-congressional-maps").
     await createMoCongressionalMapsArticle(payload, [writer], [], [], ctx, PUBLISHED_AT)
 
+    // The Federal Courts drilldown, as an interactive page (/interactives/federal-courts)
+    // with a published data snapshot — what interactive-page.spec.ts drives.
+    await createFederalCourtsInteractive(payload, ctx, PUBLISHED_AT)
+    // Interactives and the table of contents are experiments (Site Settings);
+    // off, interactive pages 404 and articles render without a table of contents.
+    await payload.updateGlobal({
+      slug: "site-settings",
+      context: ctx,
+      data: { experiments: { interactives: true, tableOfContents: true } },
+    })
+
     // A four-author article, so the byline's collapsed state has something to
     // render: two names and "& 2 more" beside two avatars and a "+2".
     //
     // Deliberately left off the homepage grid below. `gotoFirstArticle` follows
-    // the first article link there and example.spec.ts screenshots the whole
+    // the first article link there and smoke.spec.ts screenshots the whole
     // page, so adding a tile would shift baselines that have nothing to do with
     // this article. byline.spec.ts navigates to it by slug instead.
     const coAuthors: User[] = []
@@ -213,7 +258,7 @@ export async function main(): Promise<void> {
     // article rather than the homepage one so no existing baseline moves.
     const narration = await createSilentNarration(payload, NARRATION_SECONDS)
 
-    const crowdedByline = await createArticle(
+    await createArticle(
       payload,
       {
         title: "Committee Work: Notes From a Crowded Byline",
@@ -230,15 +275,62 @@ export async function main(): Promise<void> {
       ctx,
     )
 
-    // Straight to the column, because there is no way through the API: Payload
-    // overwrites updatedAt with the current time on every non-draft save
-    // (collections/operations/utilities/update.js), so the dateline of the one
-    // article a screenshot frames would read the day the seed ran and diff
-    // against its baseline the next day. The instant is arbitrary; that it
-    // never moves is the point.
-    await (payload.db as unknown as PostgresAdapter).drizzle.execute(
-      sql`UPDATE articles SET updated_at = ${NARRATED_UPDATED_AT} WHERE id = ${crowdedByline.id}`,
+    // Feature articles for the article-interaction specs, all filed under one
+    // topic so /topics and /topics/[slug] have something to list. None is on
+    // the homepage grid or in the volume, and none is an article another spec
+    // photographs, so no baseline moves.
+    const topic = await payload.create({
+      collection: "topics",
+      context: ctx,
+      draft: false,
+      data: {
+        name: TOPIC_NAME,
+        slug: TOPIC_SLUG,
+        description: "How the evidence gets gathered, cited, and shown.",
+      },
+    })
+
+    // Five footnotes, the last a reference back to the showcase article.
+    await createFootnotesArticle(payload, [writer], [], articleId, [topic.id], ctx)
+
+    // TypeScript, JavaScript and CSS samples, each with a Copy button.
+    await createCodeBlocksArticle(payload, [writer], [], [topic.id], ctx)
+
+    // One media block, which an article renders as a lightbox trigger.
+    const lightboxImage = await createLocalMedia(
+      payload,
+      "public/android-chrome-512x512.png",
+      LIGHTBOX_IMAGE_ALT,
     )
+    await createArticle(
+      payload,
+      {
+        title: "Seeing the Evidence: A Media Block",
+        slug: LIGHTBOX_SLUG,
+        authors: [writer.id],
+        topics: [topic.id],
+        content: createRichText([
+          createParagraph("Click the image below to see it full screen."),
+          createMediaBlockNode(lightboxImage),
+          createParagraph("Press Escape, or the close button, to come back."),
+        ]),
+        publishedAt: PUBLISHED_AT,
+      },
+      ctx,
+    )
+
+    // One embed per platform, each with a saved snapshot so nothing is fetched.
+    await createSocialEmbedArticle(payload, writer, [], [topic.id], ctx)
+
+    // Two more authors, so /authors (five per page) has a second page.
+    for (const author of EXTRA_AUTHORS) {
+      await createUser(
+        payload,
+        { ...author, password: "e2e-test-password-123", roles: ["writer"] },
+        `e2e author ${author.name}`,
+        ctx,
+      )
+    }
 
     const volume = await payload.create({
       collection: "volumes",
@@ -248,7 +340,7 @@ export async function main(): Promise<void> {
         volumeNumber: 1,
         description: "A test volume for E2E testing.",
         articles: [articleId],
-        slug: "1",
+        slug: VOLUME_SLUG,
         _status: "published",
         publishedAt: PUBLISHED_AT,
       },
@@ -363,6 +455,33 @@ export async function main(): Promise<void> {
     })
 
     await payload.updateGlobal({
+      slug: "header",
+      context: ctx,
+      data: {
+        actions: [
+          {
+            link: {
+              type: "custom",
+              label: "Donate",
+              url: "https://example.com/donate",
+              newTab: true,
+              variant: "branded",
+            },
+          },
+          {
+            link: {
+              type: "custom",
+              label: "Join Us",
+              url: "https://discord.gg/digitalgroundgame",
+              newTab: true,
+              variant: "outline",
+            },
+          },
+        ],
+      },
+    })
+
+    await payload.updateGlobal({
       slug: "footer",
       context: ctx,
       data: {
@@ -470,6 +589,8 @@ export async function main(): Promise<void> {
         ],
       },
     })
+
+    await pinRevisionStamps(payload)
 
     console.warn(`✔ E2E seed complete: article="rich-text-showcase", volume="1"`)
   } finally {

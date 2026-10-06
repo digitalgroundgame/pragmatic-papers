@@ -1,6 +1,8 @@
 import { isAdmin } from "@/access/roles"
 import { Articles } from "@/collections/Articles"
 import { Categories } from "@/collections/Categories"
+import { Interactives } from "@/collections/Interactives"
+import { InteractiveSnapshots } from "@/collections/InteractiveSnapshots"
 import { MapAssets } from "@/collections/MapAssets"
 import { Media } from "@/collections/Media"
 import { Merch } from "@/collections/Merch"
@@ -12,15 +14,20 @@ import { Webhooks } from "@/collections/Webhooks"
 import { defaultLexical } from "@/fields/defaultLexical"
 import { Footer } from "@/Footer/config"
 import { ArticleRecommendations } from "@/globals/ArticleRecommendations/config"
+import { SiteSettings } from "@/globals/SiteSettings/config"
 import { Header } from "@/Header/config"
+import { canRunJobs } from "@/jobs/access"
+import { syncInteractiveDataTask } from "@/jobs/syncInteractiveData"
 import { syncShopifyProductsTask } from "@/jobs/syncShopifyProducts"
 import { updateRecommendationsTask } from "@/jobs/updateRecommendations"
 import { plugins } from "@/plugins"
 import { searchVectorAfterSchemaInit } from "@/plugins/searchVector"
 import { getServerSideURL } from "@/utilities/getURL"
+import { migrations } from "@/migrations"
 import { postgresAdapter } from "@payloadcms/db-postgres"
 import path from "path"
-import { buildConfig, type PayloadRequest, type SharpDependency } from "payload"
+import pretty from "pino-pretty"
+import { buildConfig, type SharpDependency } from "payload"
 import sharp from "sharp"
 import { fileURLToPath } from "url"
 
@@ -31,8 +38,13 @@ export default buildConfig({
   logger: {
     options: {
       level: process.env.PAYLOAD_LOG_LEVEL || "info",
-      transport: process.env.NODE_ENV !== "production" ? { target: "pino-pretty" } : undefined,
     },
+    destination: pretty({
+      colorize: process.stdout.isTTY,
+      translateTime: "SYS:HH:MM:ss",
+      ignore: "pid,hostname",
+      sync: true,
+    }),
   },
   admin: {
     components: {
@@ -93,8 +105,20 @@ export default buildConfig({
     },
     // prevent schema push in prod/test for static schema determinism and noise reduction
     push: process.env.NODE_ENV === "development",
+    // Images built in GitHub Actions (dockerfiles/PragmaticPapers.ci.Dockerfile, #1067) never
+    // touch the real database while building, so they migrate when Payload starts (Payload
+    // only does under NODE_ENV=production). Coolify's builds run `payload migrate` instead.
+    prodMigrations: process.env.BUILT_WITHOUT_DATABASE === "true" ? migrations : undefined,
     afterSchemaInit: [searchVectorAfterSchemaInit],
   }),
+  /**
+   * The admin saves a document as multipart, and busboy — which parses it — truncates any
+   * field over 1 MiB rather than refusing it, so Payload was handed half a JSON document and
+   * `JSON.parse` failed on the cut ("Unterminated string at position 1048515"). An interactive
+   * snapshot carries the researcher's whole feed in one field, which is past that on its own.
+   * Raised to 32 MB: the ceiling is only there to stop a runaway request, and ours are known.
+   */
+  bodyParser: { limits: { fieldSize: 32 * 1024 * 1024 } },
   collections: [
     Pages,
     Articles,
@@ -106,9 +130,11 @@ export default buildConfig({
     Webhooks,
     Topics,
     Merch,
+    Interactives,
+    InteractiveSnapshots,
   ],
   cors: [getServerSideURL()].filter(Boolean),
-  globals: [Header, Footer, ArticleRecommendations],
+  globals: [Header, Footer, ArticleRecommendations, SiteSettings],
   plugins: [...plugins],
   secret: process.env.PAYLOAD_SECRET,
   sharp: sharp as unknown as SharpDependency,
@@ -144,18 +170,9 @@ export default buildConfig({
   ],
   jobs: {
     access: {
-      run: ({ req }: { req: PayloadRequest }): boolean => {
-        // Allow logged in users to execute this endpoint (default)
-        if (req.user) return true
-
-        // If there is no logged in user, then check
-        // for the Vercel Cron secret to be present as an
-        // Authorization header:
-        const authHeader = req.headers.get("authorization")
-        return authHeader === `Bearer ${process.env.CRON_SECRET}`
-      },
+      run: canRunJobs,
     },
     autoRun: [{ cron: "*/5 * * * *", queue: "default" }],
-    tasks: [updateRecommendationsTask, syncShopifyProductsTask],
+    tasks: [updateRecommendationsTask, syncShopifyProductsTask, syncInteractiveDataTask],
   },
 })

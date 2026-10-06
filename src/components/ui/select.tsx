@@ -90,6 +90,15 @@ function SelectScrollDownButton({
   )
 }
 
+/**
+ * What names the open listbox. Base UI names the trigger (from `aria-label` or a `<label>`) but
+ * leaves the listbox it opens unnamed, so a screen reader announces an unlabelled list (#1028).
+ * One of the two is required, so no `Select` can ship without it.
+ */
+type ListboxName =
+  | { "aria-label": string; "aria-labelledby"?: never }
+  | { "aria-labelledby": string; "aria-label"?: never }
+
 function SelectContent({
   className,
   children,
@@ -98,8 +107,11 @@ function SelectContent({
   align = "center",
   alignOffset = 0,
   alignItemWithTrigger = true,
+  "aria-label": ariaLabel,
+  "aria-labelledby": ariaLabelledBy,
   ...props
-}: SelectPrimitive.Popup.Props &
+}: Omit<SelectPrimitive.Popup.Props, "aria-label" | "aria-labelledby"> &
+  ListboxName &
   Pick<
     SelectPrimitive.Positioner.Props,
     "align" | "alignOffset" | "side" | "sideOffset" | "alignItemWithTrigger"
@@ -124,7 +136,9 @@ function SelectContent({
           {...props}
         >
           <SelectScrollUpButton />
-          <SelectPrimitive.List>{children}</SelectPrimitive.List>
+          <SelectPrimitive.List aria-label={ariaLabel} aria-labelledby={ariaLabelledBy}>
+            {children}
+          </SelectPrimitive.List>
           <SelectScrollDownButton />
         </SelectPrimitive.Popup>
       </SelectPrimitive.Positioner>

@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
-import { verifyTurnstileToken } from "../turnstile"
+import { getTurnstileSiteKey, verifyTurnstileToken } from "../turnstile"
 
 function mockFetchOnce(opts: { ok: boolean; status?: number; json?: unknown }) {
   return vi.spyOn(global, "fetch").mockResolvedValueOnce({
@@ -58,5 +58,27 @@ describe("verifyTurnstileToken", () => {
     await verifyTurnstileToken({ token: "t" })
     const body = spy.mock.calls[0]?.[1]?.body as URLSearchParams
     expect(body.has("remoteip")).toBe(false)
+  })
+})
+
+describe("getTurnstileSiteKey", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs()
+  })
+
+  it("reads TURNSTILE_SITE_KEY", () => {
+    vi.stubEnv("TURNSTILE_SITE_KEY", "runtime-key")
+    expect(getTurnstileSiteKey()).toBe("runtime-key")
+  })
+
+  it("ignores NEXT_PUBLIC_TURNSTILE_SITE_KEY", () => {
+    vi.stubEnv("TURNSTILE_SITE_KEY", undefined)
+    vi.stubEnv("NEXT_PUBLIC_TURNSTILE_SITE_KEY", "build-key")
+    expect(getTurnstileSiteKey()).toBeUndefined()
+  })
+
+  it("is undefined when blank, so the form renders without the widget", () => {
+    vi.stubEnv("TURNSTILE_SITE_KEY", "")
+    expect(getTurnstileSiteKey()).toBeUndefined()
   })
 })

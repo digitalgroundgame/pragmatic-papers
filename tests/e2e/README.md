@@ -5,16 +5,21 @@ against committed baselines in `__screenshots__/`.
 
 ## How visual baselines work
 
-- **Baselines are generated on Linux chromium, production Next.js server** —
-  either by CI, or locally via `pnpm test:e2e:update-snapshots` (see below).
-  **Never generate or commit them from a bare local machine** (plain
-  `pnpm test:e2e` with `E2E_SNAPSHOTS=1`) — font rendering and antialiasing
-  differ per OS/host, which is exactly the drift that used to make these tests
-  flaky. The Dockerized script exists precisely so you don't need to do that.
-- **Local runs skip screenshot comparison** (`ignoreSnapshots` in
-  `playwright.config.ts`), so `pnpm test:e2e` locally only runs functional
-  assertions. Set `E2E_SNAPSHOTS=1` to opt in on the host OS (expect diffs on
-  non-Linux) — useful for a quick sanity check, not for generating baselines.
+- **Baselines are rendered in the pinned Playwright image (x86_64 Linux
+  chromium, production Next.js server)** — locally via
+  `pnpm test:e2e:update-snapshots` (see below), or by CI. CI serves the app
+  from the image a PR's preview deploys (`E2E_IMAGE`: its standalone
+  `node server.js`, #1090); the local script builds and runs `next start`
+  from the checkout. Both serve the same production build of the same code. On an x86_64 host
+  the two have been verified pixel-identical, so generate baselines locally
+  and commit them with your PR (Apple Silicon: see below). **Never generate
+  them on a bare host** — font rendering and
+  antialiasing differ per OS, which is exactly the drift that used to make
+  these tests flaky.
+- **Screenshots are only compared when `CI` is set** (`ignoreSnapshots` in
+  `playwright.config.ts`): in GitHub Actions and inside the Docker script,
+  which sets it. Plain `pnpm test:e2e` on your machine runs functional
+  assertions only.
 - **A new test with no baseline yet** gets one automatically: the E2E job runs
   with `--update-snapshots=missing`, so a genuinely new screenshot has nothing
   to regress against and CI commits it straight to your branch — no manual
@@ -32,24 +37,36 @@ against committed baselines in `__screenshots__/`.
 
 ## Adding a new screenshot test
 
-Write the test, guarding the screenshot on chromium and stabilizing the
-render:
+Write the test, guarding the screenshot on chromium and using
+`expectStableScreenshot` instead of `expect(page).toHaveScreenshot(...)`:
 
 ```ts
 test.skip(testInfo.project.name !== "chromium", "visual baseline captured on chromium only")
-await waitForStableRender(page)
-await expect(page).toHaveScreenshot("my-feature.png", { clip: shot.clip })
+await expectStableScreenshot(page, "my-feature.png", { clip: shot.clip })
 ```
 
-Push, and either let CI auto-generate the baseline (nothing else to do — a
-"Snapshot updates in this PR" comment shows what was added), or generate it
-locally first with `pnpm test:e2e:update-snapshots -- --update-snapshots=missing`
-(see below) and commit it yourself to skip that round-trip.
+`expectStableScreenshot` always runs `waitForStableRender` first — use it for
+every screenshot assertion so this isn't something each new test has to
+remember on its own. If you need a bounding box for `clip` (most tests do),
+call `waitForStableRender(page)` yourself before measuring it too — the box
+has to reflect settled layout, not just the final screenshot:
+
+```ts
+await waitForStableRender(page)
+const box = await myElement.boundingBox()
+// ...
+await expectStableScreenshot(page, "my-feature.png", { clip: shot.clip })
+```
+
+Generate its baseline with
+`pnpm test:e2e:update-snapshots -- --update-snapshots=missing` (see below)
+and commit it with the test. If you push without one, CI generates it and
+commits it to your branch, at the cost of an extra run and a bot commit.
 
 ## Generating/updating baselines locally (Docker)
 
 `pnpm test:e2e:update-snapshots` runs the suite inside the same
-`mcr.microsoft.com/playwright:v1.60.0-noble` image CI uses (pinned to the
+`mcr.microsoft.com/playwright:v1.63.0-noble` image CI uses (pinned to the
 exact `@playwright/test` version resolved in `pnpm-lock.yaml`), so the
 rendered baselines have the same fonts/antialiasing as CI instead of your
 host OS's. Requires Docker with a running daemon (Docker Desktop on
@@ -57,6 +74,21 @@ Mac/Windows works — the setup is a plain compose file, no host networking).
 Export `GH_FONT_READ` first: CI renders with the private
 `@digitalgroundgame/fonts` package installed, so baselines generated with the
 fallback font won't match.
+
+The container sets `CI` and `E2E_VERIFY_VISUAL`, so it behaves like CI's E2E
+job: screenshots are compared, retries/workers match, and any baseline it
+writes is re-rendered to prove it is deterministic. (With CI's retries, a
+test that writes a missing baseline fails once and passes on retry, so it
+reports as flaky rather than failed.) It runs as `linux/amd64` because CI
+does — Chromium's arm64 build rasterizes differently — so on Apple Silicon it
+runs under emulation and is slower. Emulated renders are expected to match
+CI's but haven't been verified yet; if a baseline you generated there fails
+in CI, fall back to the **Update snapshot baselines** workflow and please note
+it in #980. Only one run at a time: the script refuses to start while another
+checkout's run is in progress. `node_modules` lives in a
+Docker volume stamped with the lockfile it was installed from; a different
+lockfile (another branch or worktree) starts it from scratch, relinking from a
+shared pnpm store rather than re-downloading.
 
 ```sh
 # Update baselines that actually mismatch the current render (mirrors the
@@ -68,6 +100,9 @@ pnpm test:e2e:update-snapshots -- --update-snapshots=missing
 
 # Narrow to specific files/projects like any Playwright invocation:
 pnpm test:e2e:update-snapshots -- --update-snapshots=changed tests/e2e/foo.spec.ts
+
+# Rewrite baselines even when the drift is inside the tolerance (see below):
+pnpm test:e2e:update-snapshots -- --update-snapshots=all --project=chromium tests/e2e/foo.spec.ts
 ```
 
 See `docker-compose.e2e.yml` and `scripts/test-e2e-docker.ts` for what it
@@ -88,9 +123,10 @@ what CI's Chromium actually renders. Treat it as a single chore:
    `pnpm-lock.yaml`.
 2. Update the image tag (`mcr.microsoft.com/playwright:v<version>-<codename>`)
    everywhere it's pinned: `docker-compose.e2e.yml`,
+   `.github/workflows/ci.yml` (the Storybook job),
    `.github/workflows/playwright.yml`, and
    `.github/workflows/update-snapshots.yml`. Match the codename
-   (`noble`/`jammy`/etc.) across all three, not just the version.
+   (`noble`/`jammy`/etc.) across all four, not just the version.
 3. Regenerate every baseline against the new image:
    `pnpm test:e2e:update-snapshots -- --update-snapshots=all`.
 4. Run `pnpm exec tsx scripts/check-playwright-image-pin.ts` to confirm the
@@ -109,6 +145,18 @@ what CI's Chromium actually renders. Treat it as a single chore:
 >   baselines no longer match — a whole-suite regression that no code change
 >   explains. Rotate the `GH_FONT_READ` secret, then re-run the failed E2E
 >   jobs (do **not** regenerate baselines against the fallback font).
+>
+>   The job now runs with `FONTS_REQUIRED=true`, so this fails at
+>   `pnpm install` with a named error rather than as a pile of pixel diffs.
+>   Expect the failure to arrive **late and unevenly**: the pnpm store cache is
+>   keyed on the lockfile, so a branch that doesn't touch `pnpm-lock.yaml`
+>   restores the font package from cache (`reused N, downloaded 0`) and never
+>   calls the registry at all. A lapsed token therefore stays invisible on
+>   `dev` and surfaces first on whichever PR bumps a dependency — which is why
+>   it reads as "dependabot broke the screenshots". It didn't; it was just the
+>   first branch to re-fetch. Check `dev` by re-running its E2E job with the
+>   cache cleared, not by assuming green means healthy.
+>
 > - **A changed CI runner image.** Moving the E2E job onto (or between) a
 >   pinned container image (e.g.
 >   `mcr.microsoft.com/playwright:v<version>-<codename>`) changes system
@@ -124,16 +172,18 @@ workflow (`.github/workflows/playwright-pin-check.yml`) instead of as part
 of "Static checks" — it fires on pushes to `dev`/`main` that touch the
 lockfile or the pinned files, and just shows up as a failed Actions run if
 drift lands on trunk (e.g. an automated dependency-bump PR that has no idea
-the image tag needs to move too, or one of the three pinned files getting
+the image tag needs to move too, or one of the pinned files getting
 edited without the others). It never blocks a PR.
 
 ## Accepting an intentional visual change
 
-When a PR run shows "Visual regressions detected" and the diff is expected
-(e.g. you redesigned a component), either run
-`pnpm test:e2e:update-snapshots` locally and push the result, or run the
-**Update snapshot baselines** workflow on that branch to update just the
-baselines that actually differ:
+When a change is meant to alter a screenshot (e.g. you redesigned a
+component), run `pnpm test:e2e:update-snapshots` before pushing, review the
+PNG diffs, and commit them with the change. CI then only has to confirm them.
+
+If you can't run Docker or don't have `GH_FONT_READ`, run the
+**Update snapshot baselines** workflow on your branch instead. It updates just
+the baselines that differ and commits them to the branch:
 
 ```sh
 gh workflow run update-snapshots.yml --ref <your-branch>
@@ -142,24 +192,45 @@ gh workflow run update-snapshots.yml --ref <your-branch>
 (or Actions → Update snapshot baselines → Run workflow, if you'd rather use the
 browser). No inputs needed. It runs with `--update-snapshots=changed`, so a
 baseline is only rewritten when the current render actually mismatches it —
-unrelated screenshots aren't touched just because the suite ran again. (A full
-`--update-snapshots=all` regen re-renders and rewrites _every_ baseline, and the
-freshly-rendered pixels differ slightly from the committed ones due to
-anti-aliasing / font-hinting jitter — within the `maxDiffPixelRatio` tolerance,
-but enough to produce a few noise bytes of diff on each screenshot.)
+unrelated screenshots aren't touched just because the suite ran again.
 
 On a PR, you can trigger the same thing by adding the **`needs screenshots`**
 label — no CLI or Actions tab needed. The label is removed automatically once
 the run finishes, so re-adding it later triggers another regeneration.
 
+`changed` compares with the same `maxDiffPixelRatio` the test does, so a
+small but real change — a date or a word in a full-page shot, a 1px layout
+shift — stays under the tolerance and is never rewritten. When a change could
+do that (e.g. the `SEEDED_*` values in `scripts/seed-e2e.constants.ts`), rerun
+the affected specs locally with `--update-snapshots=all`. Most shots render
+byte-identically run to run, so unaffected baselines come out unchanged; the
+shots that include the newsletter footer do not, so keep `all` scoped to the
+specs you changed.
+
 ## Keeping screenshots stable
 
-- Use `waitForStableRender(page)` (fonts + paint settle) before every
-  screenshot.
+- Use `expectStableScreenshot(page, name, options)` instead of
+  `expect(page).toHaveScreenshot(...)` — it waits for fonts, image decoding,
+  and any running (finite) CSS animation/transition to settle before
+  capturing, so a still-loading hero image or an in-flight dropdown
+  enter-animation can't produce a flaky diff.
+- If a test measures a bounding box for `clip`, call
+  `waitForStableRender(page)` before that measurement too, not just before
+  the screenshot — a box measured mid-animation doesn't match the
+  animation-frozen pixels the screenshot actually captures.
 - Prefer clipped component screenshots (`Screenshot` helper) over `fullPage`.
 - Mask or avoid regions with dynamic content (dates, random ordering, media).
+- Animate with CSS (ideally behind `motion-safe:`), not SVG SMIL
+  (`<animate>`, `<animateTransform>`): `animations: "disabled"` freezes CSS
+  and Web Animations only, so a SMIL animation keeps moving between captures.
 - Timezone (`UTC`), locale (`en-US`), and color scheme (`light`) are pinned in
   `playwright.config.ts`.
+- `tests/e2e/screenshot.css` is applied to every screenshot. It hides UI that
+  depends on what this browser has seen before, such as the fresh dots from
+  `src/components/Fresh` (`[data-slot="fresh"]`) that every fresh test browser shows. Tests
+  still see and can assert on that UI; only the captured pixels leave it out.
+  A test whose baseline should include them opts in with
+  `await showFresh(page)` from `helpers.ts`.
 - **When a clip is positioned relative to an element whose layout can settle
   late** (e.g. a popover below a hero image that resolves its intrinsic height
   a frame or two after decode), call `waitForStableBox(locator)` before

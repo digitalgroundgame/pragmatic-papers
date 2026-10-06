@@ -4,17 +4,29 @@
 
 import * as Sentry from "@sentry/nextjs"
 
-Sentry.init({
-  dsn: process.env.NEXT_PUBLIC_SENTRY_DSN,
+import { sentryConfigFromDocument } from "./sentryConfig"
+import { sentryIgnoredErrors } from "./sentryIgnoredErrors"
 
-  environment: process.env.NEXT_PUBLIC_SENTRY_ENVIRONMENT ?? process.env.NODE_ENV,
+// Both root layouts write the server's config onto <html> (sentryHtmlAttributes), which the
+// parser has read before this runs. No DSN there, no reporting, as with SENTRY_DSN unset.
+const { dsn, environment, pr } = sentryConfigFromDocument(document.documentElement)
+
+Sentry.init({
+  dsn,
+  environment,
+  initialScope: pr ? { tags: { pr } } : undefined,
 
   tracesSampleRate: 0.1,
 
-  enableLogs: true,
+  // Bodies skip the key-based filtering headers and cookies get, so a login would send its
+  // password; DB query data includes returned rows, e.g. users' hashes and reset tokens.
+  dataCollection: {
+    httpBodies: [],
+    databaseQueryData: false,
+    stackFrameVariables: false,
+  },
 
-  // https://docs.sentry.io/platforms/javascript/guides/nextjs/configuration/options/#sendDefaultPii
-  sendDefaultPii: true,
+  ignoreErrors: sentryIgnoredErrors,
 
   integrations: [
     // Identify errors that originate entirely from scripts we don't ship — browser

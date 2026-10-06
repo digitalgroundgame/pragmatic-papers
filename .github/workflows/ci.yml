@@ -4,9 +4,14 @@ on:
   push:
     branches: [main, dev]
   pull_request:
+  # The merge queue tests each PR on top of everything queued ahead of it, on
+  # a temporary gh-readonly-queue/* branch. Required checks must report there
+  # too, or the queue waits on them forever. No step below writes to the
+  # branch; the PR-only steps are already gated on `pull_request`.
+  merge_group:
 
 # Cancel superseded runs on a PR so a new push doesn't leave the previous
-# commit's Static/Unit/Integration jobs (two Postgres services + Testcontainers)
+# commit's Static/Unit/Integration jobs (each starting its own test Postgres)
 # running to completion for nothing. Scoped per-ref. Pushes to main/dev use a
 # per-run group (github.run_id) so they never cancel each other — every commit
 # landing on a protected branch is still validated in full.
@@ -15,35 +20,104 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
+  # Decides which path-sensitive jobs below a PR needs. Only PRs are filtered:
+  # on pushes to main/dev and in the merge queue this job does nothing, and the
+  # jobs gated on it run in full. A job skipped by its `if` reports "skipped",
+  # which a required status check accepts, so gating a required job here never
+  # blocks a PR. The gated jobs fail open: if this job fails, they run in full
+  # rather than being skipped (and so passing) along with it.
+  changes:
+    name: Detect changes
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: read
+    outputs:
+      static: ${{ steps.filter.outputs.static }}
+      unit: ${{ steps.filter.outputs.unit }}
+      storybook: ${{ steps.filter.outputs.storybook }}
+      integration: ${{ steps.filter.outputs.integration }}
+
+    steps:
+      # On pull_request the filter lists changed files through the API, so
+      # no checkout is needed.
+      - uses: dorny/paths-filter@v4
+        if: github.event_name == 'pull_request'
+        id: filter
+        with:
+          predicate-quantifier: some-with-excludes
+          # Each filter is a skip-list, not an allow-list: a job runs unless
+          # every changed file matches one of its "!" patterns. List only
+          # paths the job provably can't reach; when in doubt, leave a path
+          # out, since a missed skip costs minutes and a wrong one a broken dev.
+          filters: |
+            # Lint and the type check read no Markdown.
+            static:
+              - "**"
+              - "!**/*.md"
+            # tests/scripts/upstream-docs.test.ts reads the upstream-docs
+            # skill's Markdown, so only that skill's docs still count.
+            unit:
+              - "**"
+              - "!*.md"
+              - "!!(.claude)/**/*.md"
+              - "!.claude/!(skills)/**/*.md"
+              - "!.claude/skills/!(upstream-docs)/**/*.md"
+            # Stories import from all over src/, and the Storybook build
+            # exists to catch a server-only module reaching the browser, which
+            # a change anywhere in src/ can cause.
+            storybook:
+              - "**"
+              - "!**/*.md"
+              - "!.claude/**"
+              - "!tests/**"
+              - "!src/migrations/**"
+              - "!.github/*"
+              - "!.github/workflows/!(ci).yml"
+              - "!dockerfiles/**"
+              - "!docker-compose*.yml"
+              - "!devenv.*"
+              - "!playwright.config.ts"
+              - "!scripts/*.go"
+              - "!scripts/go.*"
+            # The integration tests load the real Payload config and run every
+            # migration, so all of src/ counts except stories, which nothing
+            # outside Storybook imports.
+            integration:
+              - "**"
+              - "!**/*.md"
+              - "!**/*.mdx"
+              - "!**/*.stories.@(ts|tsx)"
+              - "!src/stories/**"
+              - "!.storybook/**"
+              - "!.claude/**"
+              - "!tests/e2e/**"
+              - "!tests/scripts/**"
+              - "!.github/*"
+              - "!.github/workflows/!(ci).yml"
+              - "!dockerfiles/**"
+              - "!docker-compose*.yml"
+              - "!devenv.*"
+              - "!playwright.config.ts"
+              - "!scripts/*.go"
+              - "!scripts/go.*"
+
   static:
     name: Static checks
+    needs: changes
+    if: ${{ !cancelled() && (github.event_name != 'pull_request' || needs.changes.result != 'success' || needs.changes.outputs.static == 'true') }}
     runs-on: ubuntu-latest
+    # No Postgres service: check-pending-migrations starts its own with
+    # scripts/test-db.mjs, the same way it does locally.
     env:
-      DATABASE_URI: postgres://postgres:postgres@localhost:5432/pragmatic-papers
-      NEXT_PUBLIC_SERVER_URL: http://localhost:8000
+      SERVER_URL: http://localhost:8000
       PAYLOAD_SECRET: ci-payload-secret
       USE_LOCAL_STORAGE: "true"
-
-    services:
-      postgres:
-        image: postgres:17-alpine
-        env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: pragmatic-papers
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
 
     steps:
       # Shallow clone: none of the static checks below read git history
       # (check-migration-order sorts files by name; check-pending-migrations
-      # runs against the Postgres service), so the default depth-1 fetch is
-      # enough and skips pulling the full history.
+      # replays migrations into a fresh database), so the default depth-1 fetch
+      # is enough and skips pulling the full history.
       - uses: actions/checkout@v7
 
       - name: Set up Node.js environment
@@ -67,6 +141,8 @@ jobs:
 
   unit-tests:
     name: Unit tests
+    needs: changes
+    if: ${{ !cancelled() && (github.event_name != 'pull_request' || needs.changes.result != 'success' || needs.changes.outputs.unit == 'true') }}
     runs-on: ubuntu-latest
     permissions:
       pull-requests: write
@@ -80,6 +156,10 @@ jobs:
           node-version: "24.x"
           gh-font-read-token: ${{ secrets.GH_FONT_READ }}
           payload-secret: ci-unit-test-secret
+          # The one bare-runner job that saves the pnpm store; the others only
+          # restore it. It is skipped only on Markdown-only PRs, which never
+          # change the lockfile, so every new lockfile still gets saved.
+          save-pnpm-cache: "true"
 
       - name: Run unit and script tests
         run: pnpm test:unit:coverage
@@ -119,27 +199,17 @@ jobs:
 
   integration-tests:
     name: Integration tests
+    needs: changes
+    # Fails open: runs in full unless Detect changes succeeded and cleared it.
+    if: ${{ !cancelled() && (github.event_name != 'pull_request' || needs.changes.result != 'success' || needs.changes.outputs.integration == 'true') }}
     runs-on: ubuntu-latest
 
+    # No Postgres service: the integration global setup starts its own with
+    # scripts/test-db.mjs, as it does locally. CI sets `CI`, so it always
+    # migrates a fresh database rather than reusing a snapshot.
     env:
       PAYLOAD_SECRET: ci-integration-secret
       USE_LOCAL_STORAGE: "true"
-      DATABASE_URI: postgres://postgres:postgres@localhost:5432/pp_template
-
-    services:
-      postgres:
-        image: postgres:17-alpine
-        env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: pp_template
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
 
     steps:
       - uses: actions/checkout@v7
@@ -153,3 +223,137 @@ jobs:
 
       - name: Run integration tests
         run: pnpm test:integration -- --run
+
+  storybook:
+    name: Storybook
+    needs: changes
+    # Fails open: runs in full unless Detect changes succeeded and cleared it.
+    if: ${{ !cancelled() && (github.event_name != 'pull_request' || needs.changes.result != 'success' || needs.changes.outputs.storybook == 'true') }}
+    runs-on: ubuntu-latest
+    # The E2E job's pinned image, so the story tests run the same Chromium
+    # build as the E2E suite and skip installing one. Keep the tag in step
+    # with playwright.yml (scripts/check-playwright-image-pin.ts checks it).
+    container:
+      image: mcr.microsoft.com/playwright:v1.63.0-noble
+
+    steps:
+      - uses: actions/checkout@v7
+
+      # actions/checkout's files are owned by a different UID than this
+      # container's user, so git's dubious-ownership check blocks git commands
+      # (Storybook asks git for the project root) unless the workspace is
+      # explicitly trusted.
+      - name: Trust the checked-out workspace
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
+      - name: Set up Node.js environment
+        uses: ./.github/actions/setup-project
+        with:
+          node-version: "24.x"
+          gh-font-read-token: ${{ secrets.GH_FONT_READ }}
+          payload-secret: ci-storybook-secret
+
+      # The tests never execute a story's lazy imports; the build bundles them,
+      # which is where a server-only module reaching the browser shows up.
+      - name: Build Storybook
+        run: pnpm storybook:build
+
+      - name: Run story tests (interactions and axe)
+        run: pnpm test:storybook --run
+
+      # Handed to Deploy Storybook, so what gets published is the build these
+      # tests just passed.
+      - uses: actions/upload-artifact@v7
+        if: github.event_name != 'merge_group'
+        with:
+          name: storybook-static
+          path: storybook-static
+          retention-days: 1
+
+  # Publishes the tested build to the pragmatic-papers-storybook Cloudflare
+  # Worker (.storybook/wrangler.jsonc): `dev` deploys to the main workers.dev
+  # address, and each PR uploads a version under a `pr-<number>` preview alias,
+  # records it as a "Storybook Preview" Deployment (listed on the PR beside the
+  # site's Preview), and links each component the PR changes at the top of its
+  # description (scripts/storybook-pr.ts). Kept out of the Storybook job so a Cloudflare
+  # outage never turns that required check red. Skips itself without the
+  # Cloudflare secrets, which fork and Dependabot PRs never receive.
+  storybook-deploy:
+    name: Deploy Storybook
+    needs: storybook
+    if: ${{ !cancelled() && needs.storybook.result == 'success' && (github.event_name == 'pull_request' || github.ref == 'refs/heads/dev') }}
+    runs-on: ubuntu-latest
+    # One deploy per PR (or dev) at a time, so an older build never lands last.
+    concurrency:
+      group: storybook-deploy-${{ github.event.pull_request.number || github.ref }}
+    permissions:
+      contents: read
+      deployments: write
+      pull-requests: write
+    env:
+      HAS_CLOUDFLARE: ${{ secrets.CLOUDFLARE_API_TOKEN != '' && secrets.CLOUDFLARE_ACCOUNT_ID != '' }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      WRANGLER_SEND_METRICS: "false"
+
+    steps:
+      - name: Skip without Cloudflare secrets
+        if: env.HAS_CLOUDFLARE != 'true'
+        run: echo "::notice::CLOUDFLARE_API_TOKEN / CLOUDFLARE_ACCOUNT_ID not available; skipping the Storybook deploy."
+
+      - uses: actions/checkout@v7
+        if: env.HAS_CLOUDFLARE == 'true'
+        with:
+          sparse-checkout: |
+            .storybook/
+            scripts/storybook-pr.ts
+          sparse-checkout-cone-mode: false
+
+      - uses: actions/download-artifact@v7
+        if: env.HAS_CLOUDFLARE == 'true'
+        with:
+          name: storybook-static
+          path: storybook-static
+
+      - name: Deploy to the main address
+        if: env.HAS_CLOUDFLARE == 'true' && github.event_name != 'pull_request'
+        run: npx --yes wrangler@4 deploy --config .storybook/wrangler.jsonc
+
+      - name: Upload a PR preview
+        id: preview
+        if: env.HAS_CLOUDFLARE == 'true' && github.event_name == 'pull_request'
+        env:
+          ALIAS: pr-${{ github.event.pull_request.number }}
+        run: |
+          npx --yes wrangler@4 versions upload --config .storybook/wrangler.jsonc --preview-alias "$ALIAS" | tee wrangler.log
+          url=$(grep -oE "https://${ALIAS}-[a-z0-9.-]+\.workers\.dev" wrangler.log | head -n 1)
+          if [ -z "$url" ]; then
+            # Wrangler prints preview URLs only while the Worker has them on;
+            # `preview_urls` in wrangler.jsonc applies on the next `dev` deploy.
+            echo "::error::wrangler printed no preview alias URL for $ALIAS. Turn on Preview URLs for the Worker (Cloudflare dashboard: pragmatic-papers-storybook > Settings > Domains & Routes), then re-run this job."
+            exit 1
+          fi
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+
+      # Node 24 runs the TypeScript script directly; no install needed.
+      - uses: actions/setup-node@v7
+        if: steps.preview.outputs.url
+        with:
+          node-version: "24.x"
+
+      - name: Record the preview as a Deployment
+        if: steps.preview.outputs.url
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PREVIEW_URL: ${{ steps.preview.outputs.url }}
+        run: node scripts/storybook-pr.ts deploy
+
+      - name: Link the changed components in the PR description
+        if: steps.preview.outputs.url
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PREVIEW_URL: ${{ steps.preview.outputs.url }}
+          INDEX_FILE: storybook-static/index.json
+        run: node scripts/storybook-pr.ts link

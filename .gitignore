@@ -23,6 +23,8 @@ coverage
 
 # Build Outputs
 .next/
+storybook-static
+*storybook.log
 out/
 build
 dist
@@ -35,8 +37,6 @@ public/fonts
 public/map-assets/
 public/media/
 public/mathjax
-public/robots.txt
-public/sitemap*.xml
 
 # Databases
 *.db
@@ -97,3 +97,6 @@ devenv.local.yaml
 
 # pnpm store left behind by the Dockerized e2e run (bind-mounted repo root)
 .pnpm-store
+
+# Upstream docs fetched on demand by .claude/skills/upstream-docs
+/.cache/

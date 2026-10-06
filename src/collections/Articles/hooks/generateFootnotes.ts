@@ -16,9 +16,15 @@ const getDedupeKey = (fields: FootnoteBlock): string => {
     return `${fields.note}|${fields.link.url ?? ""}`
   }
   const ref = fields.link.reference
+  if (!ref) return `${fields.note}|`
+  // Unpopulated in a beforeChange hook (a bare id), populated when read back at depth > 0
+  const value: unknown = ref.value
   const refId =
-    typeof ref?.value === "string" ? ref.value : ((ref?.value as { id?: string } | null)?.id ?? "")
-  return `${fields.note}|${refId}`
+    typeof value === "number" || typeof value === "string"
+      ? value
+      : ((value as { id?: number | string } | null)?.id ?? "")
+  // Ids are per-collection, so pages:7 and articles:7 are different documents
+  return `${fields.note}|${ref.relationTo}:${refId}`
 }
 
 export const collectFootnotes = (editorState?: SerializedEditorState): FootnotesField => {

@@ -24,6 +24,9 @@ export const MediaCollageBlock: Block = {
           name: "media",
           type: "upload",
           relationTo: "media",
+          filterOptions: {
+            or: [{ mimeType: { contains: "image" } }, { mimeType: { contains: "video" } }],
+          },
           required: true,
         },
       ],

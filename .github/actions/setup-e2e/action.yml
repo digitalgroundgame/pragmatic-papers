@@ -1,0 +1,115 @@
+name: "Set up E2E"
+description: >-
+  Shared setup for the E2E jobs in playwright.yml and update-snapshots.yml:
+  the E2E environment, the GitHub and Docker CLIs, dependencies, and the app
+  image the workflow's "Build image" job saved (the `app-image` artifact),
+  loaded into Docker. Runs inside the pinned Playwright image, after
+  actions/checkout.
+
+inputs:
+  gh-font-read-token:
+    description: "GitHub Token for private font packages"
+    required: true
+  save-pnpm-cache:
+    description: "Passed to setup-project"
+    required: false
+    default: "false"
+
+runs:
+  using: composite
+  steps:
+    # Both workflows render and commit baselines, so they must render the same
+    # page: a variable set in one and not the other rewrites every baseline it
+    # touches. Written to $GITHUB_ENV, so it reaches every later step of the
+    # calling job, including pnpm install below.
+    - name: Set the E2E environment
+      shell: bash
+      run: |
+        cat >> "$GITHUB_ENV" << 'EOF'
+        PAYLOAD_SECRET=e2e-payload-secret
+        SERVER_URL=http://localhost:8000
+        USE_LOCAL_STORAGE=true
+        MERCH_SITE_URL=https://digitalgroundgame.org/merch
+        TEST_DATABASE_URI=postgres://postgres:postgres@postgres:5432/pragmatic-papers-e2e
+        E2E_PROD_SERVER=true
+        E2E_IMAGE=pragmatic-papers-app:ci
+        FONTS_REQUIRED=true
+        EOF
+      # MERCH_SITE_URL: the Merch block has no built-in store site. Without it
+      # the block renders nothing, merch.spec.ts has no carousel to exercise,
+      # and every baseline that shares a page with it is rendered without it.
+      #
+      # TEST_DATABASE_URI: scripts/test-e2e.mjs runs against it instead of
+      # starting a Postgres container (scripts/test-db.mjs), whose random
+      # localhost port this job container couldn't reach. The host is the job's
+      # `postgres` service key, not localhost: the job runs inside a container,
+      # and service containers are reachable by their service-id alias on the
+      # shared Docker network. The database name must match the service's
+      # POSTGRES_DB, and must differ from DATABASE_URI in setup-project's .env,
+      # which the helper refuses to test against.
+      #
+      # E2E_IMAGE: scripts/test-e2e.mjs serves the image the workflow built,
+      # the one a PR's preview deploys, instead of building Next.js itself
+      # (#1090). Must match the build-app-image action's `image` output.
+      #
+      # FONTS_REQUIRED: refuse to render with the Inter fallback.
+      # scripts/install-fonts.ts silently substitutes Inter when
+      # @digitalgroundgame/fonts can't be fetched, which turns a broken
+      # GH_FONT_READ into a whole-suite "visual regression" whose PR comment
+      # invites you to commit Inter-rendered baselines. The pnpm store cache
+      # hides the breakage on dev: an unchanged lockfile means `reused N,
+      # downloaded 0`, so the token is never exercised until a PR touches the
+      # lockfile. Failing at install turns that into one legible error.
+
+    # actions/checkout's files are owned by a different UID than this
+    # container's user, so git's dubious-ownership check blocks every git
+    # command unless the workspace is explicitly trusted.
+    - name: Trust the checked-out workspace
+      shell: bash
+      run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
+    # The Playwright image doesn't ship the GitHub CLI, but both workflows
+    # commit baselines and post PR comments with `gh`. Pull the release tarball
+    # straight from GitHub instead of going through the apt repo, which ran
+    # `apt-get update` twice (~20-40s) just to land one static binary. The
+    # pinned version only needs to be recent enough for the `gh api`/`gh run`/
+    # `gh pr` commands used; bump freely.
+    - name: Install GitHub CLI
+      shell: bash
+      run: |
+        GH_VERSION=2.63.2
+        ARCH=$(dpkg --print-architecture)
+        curl -fsSL "https://github.com/cli/cli/releases/download/v${GH_VERSION}/gh_${GH_VERSION}_linux_${ARCH}.tar.gz" \
+          | tar -xz -C /tmp
+        install "/tmp/gh_${GH_VERSION}_linux_${ARCH}/bin/gh" /usr/local/bin/gh
+        gh --version
+
+    - name: Set up Node.js environment
+      uses: ./.github/actions/setup-project
+      with:
+        node-version: "24.x"
+        gh-font-read-token: ${{ inputs.gh-font-read-token }}
+        payload-secret: e2e-payload-secret
+        save-pnpm-cache: ${{ inputs.save-pnpm-cache }}
+
+    # The job container talks to the runner's Docker daemon through the socket
+    # the runner mounts into it: test-e2e.mjs starts the app image beside it.
+    # The Playwright image has no Docker CLI, so fetch the static client.
+    - name: Install Docker CLI
+      shell: bash
+      run: |
+        DOCKER_VERSION=27.3.1
+        curl -fsSL "https://download.docker.com/linux/static/stable/$(uname -m)/docker-${DOCKER_VERSION}.tgz" \
+          | tar -xz -C /tmp docker/docker
+        install /tmp/docker/docker /usr/local/bin/docker
+        docker version
+
+    - name: Download the app image
+      uses: actions/download-artifact@v7
+      with:
+        name: app-image
+        path: ${{ runner.temp }}
+
+    - name: Load the app image
+      shell: bash
+      run: docker load -i "$RUNNER_TEMP/app-image.tar"

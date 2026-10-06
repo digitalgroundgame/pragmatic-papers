@@ -1,12 +1,14 @@
 import config from "@payload-config"
 import { getServerSideSitemap } from "next-sitemap"
 import { unstable_cache } from "next/cache"
+
+import { getServerSideURL } from "@/utilities/getURL"
 import { getPayload } from "payload"
 
 const getArticlesSitemap = unstable_cache(
   async () => {
     const payload = await getPayload({ config })
-    const SITE_URL = process.env.NEXT_PUBLIC_SERVER_URL
+    const SITE_URL = getServerSideURL()
 
     const results = await payload.find({
       collection: "articles",
@@ -35,7 +37,7 @@ const getArticlesSitemap = unstable_cache(
           .filter((page) => Boolean(page?.slug))
           .map((page) => {
             return {
-              loc: page?.slug === "home" ? SITE_URL : `${SITE_URL}/articles/${page?.slug}`,
+              loc: `${SITE_URL}/articles/${page?.slug}`,
               lastmod: page.updatedAt || dateFallback,
               news: {
                 title: page.title,

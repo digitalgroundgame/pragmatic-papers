@@ -22,11 +22,16 @@ export function CopyButton({ code }: { code: string }) {
       variant="secondary"
       size="sm"
       onClick={async () => {
-        await navigator.clipboard.writeText(code)
+        try {
+          await navigator.clipboard.writeText(code)
+        } catch {
+          // clipboard unavailable in some environments (headless, sandboxed iframes)
+          return
+        }
         updateCopyStatus()
       }}
     >
-      <p>{text}</p>
+      <span>{text}</span>
       <Copy className="size-4" />
     </Button>
   )

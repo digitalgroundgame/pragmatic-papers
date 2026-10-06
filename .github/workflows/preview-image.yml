@@ -1,0 +1,57 @@
+# Previews built in GitHub Actions (#1067): Coolify runs an image instead of building
+# it on its 4 GB build server (#1018).
+#
+# The image is built and deployed by playwright.yml (#1090): its "Build image" job
+# builds dockerfiles/PragmaticPapers.ci.Dockerfile once, "E2E tests" tests it, and
+# "Deploy preview" pushes the same image to Coolify as the PR's preview, which
+# scripts/preview-deployment.ts mirrors onto the PR as a GitHub Deployment. This
+# workflow only removes the preview from Coolify when the PR closes.
+#
+# SETUP (Settings → Secrets and variables → Actions)
+# --------------------------------------------------
+#   - variable COOLIFY_PREVIEW_IMAGE_APP_UUID  the Docker Image application that runs
+#                                              previews. Until it's set, nothing is
+#                                              deployed or removed here, and
+#                                              preview-deployment.yml keeps following
+#                                              Coolify's own builds.
+#   - secret   COOLIFY_API_TOKEN               needs `deploy` and `write` as well as `read`
+#   - variable COOLIFY_DASHBOARD_URL, PREVIEW_URL_TEMPLATE   as for preview-deployment.yml
+# The Coolify side is in dockerfiles/README.md ("Previews built in GitHub Actions").
+name: Preview image
+
+on:
+  pull_request:
+    types: [closed]
+
+permissions:
+  contents: read
+  deployments: write
+
+jobs:
+  close:
+    name: Remove preview
+    if: vars.COOLIFY_PREVIEW_IMAGE_APP_UUID != '' && github.event.action == 'closed'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          sparse-checkout: scripts/preview-deployment.ts
+          sparse-checkout-cone-mode: false
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24.x"
+
+      # The preview's database is dropped by the next preview that starts
+      # (drop-closed-preview-databases.ts), which can reach the database server.
+      - name: Remove the preview from Coolify
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          COOLIFY_DASHBOARD_URL: ${{ vars.COOLIFY_DASHBOARD_URL }}
+          COOLIFY_PREVIEW_APP_UUID: ${{ vars.COOLIFY_PREVIEW_IMAGE_APP_UUID }}
+          COOLIFY_API_TOKEN: ${{ secrets.COOLIFY_API_TOKEN }}
+        run: node scripts/preview-deployment.ts close --delete-preview

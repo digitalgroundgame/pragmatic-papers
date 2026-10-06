@@ -28,10 +28,11 @@ exports[`InteractiveMapBlock > renders RegionTitle with invertColors=true — la
           <g>
             <path
               aria-label="MO-01: R+12.5"
-              class="stroke-muted hover:stroke-accent-forground"
+              class="stroke-muted hover:stroke-accent-foreground"
               d="M0 0H10V10H0Z"
               data-interactive-map-path=""
               fill="var(--map-negative-2, #72aef3)"
+              role="button"
               stroke-width="1"
               style="cursor: pointer; outline: none;"
               tabindex="0"
@@ -298,10 +299,11 @@ exports[`InteractiveMapBlock > renders a single map with diverging color scale 1
           <g>
             <path
               aria-label="District 1: R+12.5"
-              class="stroke-muted hover:stroke-accent-forground"
+              class="stroke-muted hover:stroke-accent-foreground"
               d="M0 0H10V10H0Z"
               data-interactive-map-path=""
               fill="var(--map-positive-2, #f48088)"
+              role="button"
               stroke-width="1"
               style="cursor: pointer; outline: none;"
               tabindex="0"
@@ -457,7 +459,7 @@ exports[`InteractiveMapBlock > renders a single map with diverging color scale 1
     class="flex flex-wrap items-center gap-x-2 gap-y-1"
   >
     <p
-      class="text-muted-foreground text-xs"
+      class="text-muted-foreground mr-auto text-xs"
     >
       Source
       :
@@ -573,10 +575,11 @@ exports[`InteractiveMapBlock > renders multiple sources with plural label and co
           <g>
             <path
               aria-label="MO-01"
-              class="stroke-muted hover:stroke-accent-forground"
+              class="stroke-muted hover:stroke-accent-foreground"
               d="M0 0H10V10H0Z"
               data-interactive-map-path=""
               fill="var(--map-neutral, oklch(0.9528 0.0086 84.57))"
+              role="button"
               stroke-width="1"
               style="cursor: pointer; outline: none;"
               tabindex="0"
@@ -602,7 +605,7 @@ exports[`InteractiveMapBlock > renders multiple sources with plural label and co
     class="flex flex-wrap items-center gap-x-2 gap-y-1"
   >
     <p
-      class="text-muted-foreground text-xs"
+      class="text-muted-foreground mr-auto text-xs"
     >
       Source
       s
@@ -724,10 +727,11 @@ exports[`InteractiveMapBlock > renders with perRegion colorScale — no legend b
           <g>
             <path
               aria-label="MO-01: R+12.5"
-              class="stroke-muted hover:stroke-accent-forground"
+              class="stroke-muted hover:stroke-accent-foreground"
               d="M0 0H10V10H0Z"
               data-interactive-map-path=""
               fill="var(--map-neutral, oklch(0.9528 0.0086 84.57))"
+              role="button"
               stroke-width="1"
               style="cursor: pointer; outline: none;"
               tabindex="0"

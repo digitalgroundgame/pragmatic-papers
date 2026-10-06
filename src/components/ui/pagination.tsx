@@ -38,16 +38,23 @@ function PaginationLink({
   className,
   isActive,
   size = "icon",
+  variant = isActive ? "outline" : "ghost",
+  href,
   ...props
 }: PaginationLinkProps): React.ReactNode {
+  // A disabled link (Previous on the first page, Next on the last) keeps its
+  // place but loses its href, so it isn't focusable or followable.
+  const disabled = variant === "disabled"
   return (
     <LinkButton
-      variant={isActive ? "outline" : "ghost"}
+      variant={variant}
       size={size}
       className={cn(className)}
       aria-current={isActive ? "page" : undefined}
+      aria-disabled={disabled || undefined}
       data-slot="pagination-link"
       data-active={isActive}
+      href={disabled ? undefined : href}
       {...props}
     />
   )

@@ -1,188 +1,175 @@
 #!/bin/sh
 set -e
 
-# Database copy script for preview deployments
-# This script creates a copy of an existing database to isolate preview deployment migrations
+# Gives a preview deployment its own copy of the database it would otherwise share,
+# so its migrations can't touch that database.
+#
+# Run after use_preview_database (database-uri.sh): DATABASE_URI then points at the
+# preview's database and SOURCE_DATABASE_NAME names the one to copy, on the same
+# server, reached with the same credentials.
 
 echo "========================================"
 echo "Database Copy Script for Preview Builds"
 echo "========================================"
 
-# Check if database copy is enabled
 if [ "$COPY_SOURCE_DATABASE" != "true" ]; then
     echo "Database copy is disabled (COPY_SOURCE_DATABASE != true)"
     echo "Skipping database copy step"
     exit 0
 fi
 
-# Validate required environment variables
-if [ -z "$SOURCE_DATABASE_URI" ]; then
-    echo "ERROR: SOURCE_DATABASE_URI is not set"
-    echo "This variable must point to the database to copy from"
-    exit 1
-fi
-
 if [ -z "$DATABASE_URI" ]; then
     echo "ERROR: DATABASE_URI is not set"
-    echo "This variable must point to the target database"
     exit 1
 fi
 
-echo "Source Database: $SOURCE_DATABASE_URI"
-echo "Target Database: $DATABASE_URI"
+. "$(dirname "$0")/database-uri.sh"
 
-# Parse database URIs to extract connection details
-# Format: postgresql://user:password@host:port/database
+SOURCE_DB=$SOURCE_DATABASE_NAME
+TARGET_DB=$(uri_database "$DATABASE_URI")
 
-parse_postgres_uri() {
-    local uri=$1
-    local prefix=""
-    
-    # Check for both postgres:// and postgresql:// prefixes
-    if echo "$uri" | grep -q "^postgresql://"; then
-        prefix="postgresql://"
-    elif echo "$uri" | grep -q "^postgres://"; then
-        prefix="postgres://"
-    else
-        echo "ERROR: Invalid PostgreSQL URI format: $uri"
-        exit 1
-    fi
-    
-    # Remove prefix
-    uri=${uri#$prefix}
-    
-    # Extract user:password@host:port/database
-    local userpass_hostport_db=$uri
-    
-    # Extract database name (after last /)
-    local db_name=$(echo "$userpass_hostport_db" | sed 's/.*\///')
-    
-    # Extract userpass_hostport (before last /)
-    local userpass_hostport=$(echo "$userpass_hostport_db" | sed 's/\(.*\)\/.*/\1/')
-    
-    # Extract host:port (after @)
-    local host_port=$(echo "$userpass_hostport" | sed 's/.*@//')
-    
-    # Extract user:password (before last @)
-    local user_pass=$(echo "$userpass_hostport" | sed 's/\(.*\)@.*/\1/')
-    
-    # Extract user (before :)
-    local user=$(echo "$user_pass" | sed 's/:.*//')
-    
-    # Extract password (after :)
-    local password=$(echo "$user_pass" | sed 's/[^:]*://')
-    
-    # Extract host (before :)
-    local host=$(echo "$host_port" | sed 's/:.*//')
-    
-    # Extract port (after :), default to 5432 if not present
-    local port=$(echo "$host_port" | grep -o ':[0-9]*$' | sed 's/://')
-    if [ -z "$port" ]; then
-        port=5432
-    fi
-    
-    echo "$user|$password|$host|$port|$db_name"
-}
-
-# Parse source and target URIs
-SOURCE_PARSED=$(parse_postgres_uri "$SOURCE_DATABASE_URI")
-TARGET_PARSED=$(parse_postgres_uri "$DATABASE_URI")
-
-SOURCE_USER=$(echo "$SOURCE_PARSED" | cut -d'|' -f1)
-SOURCE_PASSWORD=$(echo "$SOURCE_PARSED" | cut -d'|' -f2)
-SOURCE_HOST=$(echo "$SOURCE_PARSED" | cut -d'|' -f3)
-SOURCE_PORT=$(echo "$SOURCE_PARSED" | cut -d'|' -f4)
-SOURCE_DB=$(echo "$SOURCE_PARSED" | cut -d'|' -f5)
-
-TARGET_USER=$(echo "$TARGET_PARSED" | cut -d'|' -f1)
-TARGET_PASSWORD=$(echo "$TARGET_PARSED" | cut -d'|' -f2)
-TARGET_HOST=$(echo "$TARGET_PARSED" | cut -d'|' -f3)
-TARGET_PORT=$(echo "$TARGET_PARSED" | cut -d'|' -f4)
-TARGET_DB=$(echo "$TARGET_PARSED" | cut -d'|' -f5)
-
-echo "Source: $SOURCE_USER@$SOURCE_HOST:$SOURCE_PORT/$SOURCE_DB"
-echo "Target: $TARGET_USER@$TARGET_HOST:$TARGET_PORT/$TARGET_DB"
-
-# Guard against source and target being the exact same database
-if [ "$SOURCE_HOST" = "$TARGET_HOST" ] && [ "$SOURCE_PORT" = "$TARGET_PORT" ] && [ "$SOURCE_DB" = "$TARGET_DB" ]; then
-    echo "Source and target are the same database ($SOURCE_DB@$SOURCE_HOST:$SOURCE_PORT)"
-    echo "Skipping database copy to avoid dropping production data"
+if [ -z "$SOURCE_DB" ] || [ "$SOURCE_DB" = "$TARGET_DB" ]; then
+    echo "DATABASE_URI isn't a preview database ($TARGET_DB)"
+    echo "Skipping database copy to avoid dropping its data"
     exit 0
 fi
 
-# Export PGPASSWORD for psql/createdb commands
-export PGPASSWORD="$TARGET_PASSWORD"
+echo "Source database: $SOURCE_DB"
+echo "Target database: $TARGET_DB"
 
-# Check if target database already exists
-echo "Checking if target database '$TARGET_DB' exists..."
-DB_EXISTS=$(psql -h "$TARGET_HOST" -p "$TARGET_PORT" -U "$TARGET_USER" -d postgres -tAc "SELECT 1 FROM pg_database WHERE datname='$TARGET_DB'" 2>/dev/null || echo "")
+# psql, pg_dump and pg_restore take URIs whole, so the password never lands in a
+# variable or the log.
+ADMIN_URI=$(uri_with_database "$DATABASE_URI" postgres)
+SOURCE_URI=$(uri_with_database "$DATABASE_URI" "$SOURCE_DB")
 
-if [ "$DB_EXISTS" = "1" ]; then
-    if [ "$FORCE_DATABASE_COPY" = "true" ]; then
-        echo "Target database exists. FORCE_DATABASE_COPY=true, dropping and recreating..."
-        
-        # Terminate existing connections to the target database
-        psql -h "$TARGET_HOST" -p "$TARGET_PORT" -U "$TARGET_USER" -d postgres -c "
-            SELECT pg_terminate_backend(pid) 
-            FROM pg_stat_activity 
-            WHERE datname = '$TARGET_DB' 
+database_exists() {
+    [ "$(psql "$ADMIN_URI" -tAc "SELECT 1 FROM pg_database WHERE datname='$1'" 2>/dev/null)" = "1" ]
+}
+
+# Drops database $1, disconnecting its clients first. A pool can reconnect between
+# the two statements, so retry a few times.
+drop_database() {
+    for attempt in 1 2 3 4 5; do
+        psql "$ADMIN_URI" -c "
+            SELECT pg_terminate_backend(pid)
+            FROM pg_stat_activity
+            WHERE datname = '$1'
               AND pid <> pg_backend_pid();
-        " || true
-        
-        # Drop the database
-        psql -h "$TARGET_HOST" -p "$TARGET_PORT" -U "$TARGET_USER" -d postgres -c "DROP DATABASE IF EXISTS \"$TARGET_DB\";"
-    else
+        " >/dev/null || true
+        if psql "$ADMIN_URI" -v ON_ERROR_STOP=1 -c "DROP DATABASE IF EXISTS \"$1\";"; then
+            return 0
+        fi
+        echo "Could not drop '$1' (attempt $attempt); retrying..."
+        sleep 1
+    done
+    echo "ERROR: could not drop database '$1'"
+    exit 1
+}
+
+# pg_dump refuses to dump a server of a newer major version, and a newer pg_dump writes
+# settings (PostgreSQL 17's transaction_timeout, say) that an older server's restore
+# rejects. The builder's client is the Dockerfile's pinned postgresqlNN-client, so check it
+# matches the server before creating anything, and print both for the build log.
+check_client_version() {
+    server_major=$(( $(psql "$ADMIN_URI" -tAc "SHOW server_version_num") / 10000 ))
+    client_major=$(pg_dump --version | sed -E 's/^[^0-9]*([0-9]+).*/\1/')
+    echo "pg_dump major version: $client_major; server: $server_major"
+    if [ "$client_major" != "$server_major" ]; then
+        echo "ERROR: pg_dump $client_major can't reliably copy a PostgreSQL $server_major database."
+        echo "Install postgresql${server_major}-client in the Dockerfile's builder stage."
+        exit 1
+    fi
+}
+
+# Creates database $1 as a copy of the source.
+#
+# Never disconnects the source's clients: the source is staging, and killing them
+# fails whatever staging is serving at that moment with "terminating connection due
+# to administrator command" (#1057). A template copy needs the source to have no
+# connections, so it's only tried as the fast path; while staging's app is connected
+# Postgres refuses it straight away and the copy falls back to pg_dump/pg_restore.
+copy_database() {
+    echo "Trying CREATE DATABASE WITH TEMPLATE..."
+    if psql "$ADMIN_URI" -v ON_ERROR_STOP=1 -c "CREATE DATABASE \"$1\" WITH TEMPLATE \"$SOURCE_DB\";"; then
+        echo "Copied with CREATE DATABASE WITH TEMPLATE"
+        return 0
+    fi
+    echo "Template copy unavailable (the source is in use); falling back to dump/restore"
+    check_client_version
+
+    psql "$ADMIN_URI" -v ON_ERROR_STOP=1 -c "CREATE DATABASE \"$1\";"
+    # Through a file rather than a pipe: sh has no pipefail, so a failing pg_dump
+    # would otherwise go unnoticed.
+    dump=$(mktemp)
+    if pg_dump --format=custom --no-owner --no-acl --file="$dump" --dbname="$SOURCE_URI" &&
+        pg_restore --no-owner --no-acl --dbname="$(uri_with_database "$DATABASE_URI" "$1")" "$dump"; then
+        rm -f "$dump"
+        echo "Copied with pg_dump/pg_restore"
+        return 0
+    fi
+    rm -f "$dump"
+    # Left behind, the half-restored database would "exist" to the next build, which
+    # would then keep it instead of copying.
+    drop_database "$1"
+    echo "ERROR: pg_dump/pg_restore failed"
+    exit 1
+}
+
+# An image built in GitHub Actions runs this at every container start, not once per
+# build, so a restart of the same image must not take FORCE_DATABASE_COPY as a request
+# for another fresh copy: that would throw away what testers entered. The commit a copy
+# was made for is kept as the database's comment, and a forced copy is made once per
+# commit (#1067).
+FORCED_MARK="copied for commit ${SOURCE_COMMIT}"
+copied_for_this_commit() {
+    [ "$BUILT_WITHOUT_DATABASE" = "true" ] && [ -n "$SOURCE_COMMIT" ] &&
+        [ "$(psql "$ADMIN_URI" -tAc "SELECT shobj_description(oid, 'pg_database') FROM pg_database WHERE datname='$1'")" = "$FORCED_MARK" ]
+}
+mark_copied() {
+    if [ "$BUILT_WITHOUT_DATABASE" = "true" ] && [ -n "$SOURCE_COMMIT" ]; then
+        psql "$ADMIN_URI" -v ON_ERROR_STOP=1 -c "COMMENT ON DATABASE \"$1\" IS '$FORCED_MARK';"
+    fi
+}
+
+echo "Checking if target database '$TARGET_DB' exists..."
+if database_exists "$TARGET_DB"; then
+    if [ "$FORCE_DATABASE_COPY" != "true" ]; then
         echo "Target database already exists and FORCE_DATABASE_COPY is not true"
         echo "Skipping database copy step"
         exit 0
     fi
-fi
+    if copied_for_this_commit "$TARGET_DB"; then
+        echo "Target database was already copied for this image (${SOURCE_COMMIT}); a restart keeps its data"
+        echo "Skipping database copy step"
+        exit 0
+    fi
 
-# Check if source and target are on the same server
-if [ "$SOURCE_HOST" = "$TARGET_HOST" ] && [ "$SOURCE_PORT" = "$TARGET_PORT" ]; then
-    echo "Source and target are on the same PostgreSQL server"
+    # The previous deploy's container is still serving the target. Dropping it now would
+    # leave that container on a missing database, and then on an unmigrated copy of the
+    # source, until this build finishes or for good if it fails (#1057, #1058). So build
+    # and migrate the new copy beside it, and swap it in only once it's ready.
+    STAGE_DB="${TARGET_DB}_incoming"
+    echo "Target database exists. FORCE_DATABASE_COPY=true, preparing a fresh copy in '$STAGE_DB'..."
+    drop_database "$STAGE_DB"
+    copy_database "$STAGE_DB"
 
-    # --- Fix For ERROR:  source database "pragmatic_papers" is being accessed by other users ---
-    echo "Terminating existing connections to source database '$SOURCE_DB'..."
-    psql -h "$TARGET_HOST" -p "$TARGET_PORT" -U "$TARGET_USER" -d postgres -c "
-        SELECT pg_terminate_backend(pid) 
-        FROM pg_stat_activity 
-        WHERE datname = '$SOURCE_DB' 
-          AND pid <> pg_backend_pid();
-    " || true
-    # ---------------------
+    # An image built in GitHub Actions runs this at start and has no Payload CLI: the
+    # app migrates the database once it's swapped in, before its health check passes, so
+    # the old container serves the unmigrated copy for that long (#1067).
+    if [ "$BUILT_WITHOUT_DATABASE" = "true" ]; then
+        echo "Leaving '$STAGE_DB' for the app to migrate when it starts"
+    else
+        echo "Running migrations on '$STAGE_DB'..."
+        DATABASE_URI=$(uri_with_database "$DATABASE_URI" "$STAGE_DB") pnpm payload migrate
+    fi
 
-    echo "Using CREATE DATABASE WITH TEMPLATE for efficient copy..."
-    
-    # Create database from template (most efficient method)
-    psql -h "$TARGET_HOST" -p "$TARGET_PORT" -U "$TARGET_USER" -d postgres -c "
-        CREATE DATABASE \"$TARGET_DB\" 
-        WITH TEMPLATE \"$SOURCE_DB\" 
-        OWNER \"$TARGET_USER\";
-    "
-    
-    echo "Database copied successfully using template method"
+    echo "Swapping '$STAGE_DB' in for '$TARGET_DB'..."
+    drop_database "$TARGET_DB"
+    psql "$ADMIN_URI" -v ON_ERROR_STOP=1 -c "ALTER DATABASE \"$STAGE_DB\" RENAME TO \"$TARGET_DB\";"
 else
-    echo "Source and target are on different servers"
-    echo "Using pg_dump and pg_restore for cross-server copy..."
-    
-    # Create empty target database
-    psql -h "$TARGET_HOST" -p "$TARGET_PORT" -U "$TARGET_USER" -d postgres -c "
-        CREATE DATABASE \"$TARGET_DB\" 
-        OWNER \"$TARGET_USER\";
-    "
-    
-    # Use pg_dump to dump and restore
-    # Set PGPASSWORD for source connection
-    export PGPASSWORD="$SOURCE_PASSWORD"
-    
-    pg_dump -h "$SOURCE_HOST" -p "$SOURCE_PORT" -U "$SOURCE_USER" -d "$SOURCE_DB" \
-        --format=custom --no-owner --no-acl | \
-    PGPASSWORD="$TARGET_PASSWORD" pg_restore -h "$TARGET_HOST" -p "$TARGET_PORT" \
-        -U "$TARGET_USER" -d "$TARGET_DB" --no-owner --no-acl
-    
-    echo "Database copied successfully using dump/restore method"
+    copy_database "$TARGET_DB"
 fi
+mark_copied "$TARGET_DB"
 
 echo "========================================"
 echo "Database copy completed successfully"

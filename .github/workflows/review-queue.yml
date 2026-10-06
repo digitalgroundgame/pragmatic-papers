@@ -1,0 +1,16 @@
+name: Review queue
+
+# Reports the required "Review acknowledged" check in the merge queue, whose
+# branch holds only commits whose PR head was acknowledged (see
+# review-ack.yml). Its own workflow, listening only to merge_group, so this
+# job never runs, and so never reports "skipped", on a pull request: a
+# skipped check of the required name would pass the gate.
+on:
+  merge_group:
+
+jobs:
+  queue:
+    name: Review acknowledged
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Acknowledged on the pull request."

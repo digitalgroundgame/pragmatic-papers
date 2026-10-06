@@ -21,6 +21,7 @@ export const createNarrationDemoArticle = async (
   narrator: User,
   mediaDocs: Media[],
   topics: number[] = [],
+  context?: Record<string, unknown>,
 ): Promise<number> => {
   const title = "Narration Demo: The Pragmatic Papers Audio Player & Narration Extraction"
   const transcript =
@@ -40,56 +41,60 @@ export const createNarrationDemoArticle = async (
 
   const heroMediaId = mediaDocs[0]?.id
 
-  const article = await createArticle(payload, {
-    title,
-    content: createRichText([
-      createParagraph([
-        createTextNode(
-          "This article demonstrates audio narration playback and the Narration Plain Text Extractor. In the admin panel, switch to the ",
+  const article = await createArticle(
+    payload,
+    {
+      title,
+      content: createRichText([
+        createParagraph([
+          createTextNode(
+            "This article demonstrates audio narration playback and the Narration Plain Text Extractor. In the admin panel, switch to the ",
+          ),
+          createTextNode("Narration"),
+          createTextNode(
+            " tab to generate clean, ElevenLabs-ready narration text: a byline, spoken narrator asides in place of images, code, and other visuals, and citations stripped out.",
+          ),
+          createFootnoteInlineBlock(
+            "Citations and inline footnote markers are omitted entirely during narration extraction.",
+          ),
+        ]),
+
+        createHeadingNode("Historical Context", "h2"),
+        createParagraph(
+          "On May 25, 1961, President John F. Kennedy addressed a joint session of Congress to outline the ambitious vision for American space exploration.",
         ),
-        createTextNode("Narration"),
-        createTextNode(
-          " tab to generate clean, ElevenLabs-ready narration text: a byline, spoken narrator asides in place of images, code, and other visuals, and citations stripped out.",
+
+        createQuoteNode(transcript),
+
+        createBannerBlock("info", "Notice: Historical audio recording included below."),
+
+        ...(heroMediaId
+          ? [createHeadingNode("Visual Archives", "h2"), createMediaBlockNode(heroMediaId)]
+          : []),
+
+        createHeadingNode("Audio Processing Sample", "h2"),
+        createCodeBlock(
+          "typescript",
+          "const synthesizeAudio = async (text: string) => {\n  return await elevenlabs.generate({ text, voice: 'Rachel' })\n}",
         ),
-        createFootnoteInlineBlock(
-          "Citations and inline footnote markers are omitted entirely during narration extraction.",
+
+        createParagraph(
+          "When generating narration text in the Narration tab, every block a listener cannot see becomes a parenthetical aside the voice reads aloud, and footnotes are dropped entirely for seamless voice-over output.",
         ),
       ]),
-
-      createHeadingNode("Historical Context", "h2"),
-      createParagraph(
-        "On May 25, 1961, President John F. Kennedy addressed a joint session of Congress to outline the ambitious vision for American space exploration.",
-      ),
-
-      createQuoteNode(transcript),
-
-      createBannerBlock("info", "Notice: Historical audio recording included below."),
-
-      ...(heroMediaId
-        ? [createHeadingNode("Visual Archives", "h2"), createMediaBlockNode(heroMediaId)]
-        : []),
-
-      createHeadingNode("Audio Processing Sample", "h2"),
-      createCodeBlock(
-        "typescript",
-        "const synthesizeAudio = async (text: string) => {\n  return await elevenlabs.generate({ text, voice: 'Rachel' })\n}",
-      ),
-
-      createParagraph(
-        "When generating narration text in the Narration tab, every block a listener cannot see becomes a parenthetical aside the voice reads aloud, and footnotes are dropped entirely for seamless voice-over output.",
-      ),
-    ]),
-    authors: [writer.id],
-    topics,
-    slug: "narration-demo",
-    narration: narration.id,
-    heroImage: heroMediaId,
-    meta: {
-      title,
-      description: transcript,
-      image: heroMediaId,
+      authors: [writer.id],
+      topics,
+      slug: "narration-demo",
+      narration: narration.id,
+      heroImage: heroMediaId,
+      meta: {
+        title,
+        description: transcript,
+        image: heroMediaId,
+      },
     },
-  })
+    context,
+  )
 
   return article.id
 }

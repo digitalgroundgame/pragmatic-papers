@@ -11,7 +11,7 @@ import {
 /**
  * One example URL per social media platform.
  */
-const SOCIAL_MEDIA_URLS: Pick<SocialEmbedBlock, "platform" | "url" | "snapshot" | "id">[] = [
+export const SOCIAL_MEDIA_URLS: Pick<SocialEmbedBlock, "platform" | "url" | "snapshot" | "id">[] = [
   {
     platform: "bluesky",
     url: "https://bsky.app/profile/destiny.gg/post/3lbjlth3tnc2k",
@@ -108,7 +108,9 @@ interface SocialEmbedBlockNode {
 /**
  * Creates a social embed block node for use within Lexical content
  */
-function createSocialEmbedBlock(item: (typeof SOCIAL_MEDIA_URLS)[number]): SocialEmbedBlockNode {
+export function createSocialEmbedBlock(
+  item: (typeof SOCIAL_MEDIA_URLS)[number],
+): SocialEmbedBlockNode {
   return {
     type: "block",
     fields: {
@@ -164,11 +166,7 @@ const getLegacyBlockType = (platform: string): LegacySocialBlockType => {
 }
 
 type LegacySocialBlockType =
-  | "twitterEmbed"
-  | "youtubeEmbed"
-  | "redditEmbed"
-  | "blueSkyEmbed"
-  | "tiktokEmbed"
+  "twitterEmbed" | "youtubeEmbed" | "redditEmbed" | "blueSkyEmbed" | "tiktokEmbed"
 
 interface LegacyEmbedBlockNode {
   type: "block"
@@ -222,6 +220,7 @@ export const createSocialEmbedArticle = async (
   writer: User,
   mediaDocs: Media[],
   topics: number[] = [],
+  context?: Record<string, unknown>,
 ): Promise<number> => {
   if (!writer?.id) {
     throw new Error("Writer must have an ID")
@@ -239,12 +238,14 @@ export const createSocialEmbedArticle = async (
       slug: "social-media-embed-test-all-variations",
       heroImage: mediaDocs[Math.floor(Math.random() * mediaDocs.length)]?.id,
       meta: {
+        title,
         description:
           "Test article containing all possible social media block variations from the HOSTNAMES map.",
         image: mediaDocs[0]?.id ?? undefined,
       },
     },
     {
+      ...context,
       // Seed provides snapshots explicitly (including intentionally stale ones).
       // Skip the SocialEmbed url hook that would otherwise rebuild snapshots on create.
       skipSocialEmbedSnapshot: true,
@@ -259,6 +260,7 @@ export const createLegacySocialEmbedArticle = async (
   writer: User,
   mediaDocs: Media[],
   topics: number[] = [],
+  context?: Record<string, unknown>,
 ): Promise<number> => {
   if (!writer?.id) {
     throw new Error("Writer must have an ID")
@@ -276,12 +278,14 @@ export const createLegacySocialEmbedArticle = async (
       slug: "legacy-social-media-embed-test-all-variations",
       heroImage: mediaDocs[Math.floor(Math.random() * mediaDocs.length)]?.id,
       meta: {
+        title,
         description:
           "Test article containing all legacy social media block variations using the old blockType structure (twitterEmbed, youtubeEmbed, etc.).",
         image: mediaDocs[0]?.id ?? undefined,
       },
     },
     {
+      ...context,
       skipSocialEmbedSnapshot: true,
     },
   )

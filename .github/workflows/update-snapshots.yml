@@ -34,37 +34,57 @@ concurrency:
   group: ${{ (github.event_name == 'workflow_dispatch' || github.event.label.name == 'needs screenshots') && format('snapshot-baselines-{0}', github.event.pull_request.head.ref || github.ref_name) || github.run_id }}
   cancel-in-progress: true
 
-env:
-  PAYLOAD_SECRET: e2e-payload-secret
-  NEXT_PUBLIC_SERVER_URL: http://localhost:8000
-  USE_LOCAL_STORAGE: "true"
-  # Keep in step with playwright.yml: the Merch block has no built-in store
-  # site, so without this it renders nothing, merch.spec.ts has no carousel to
-  # find, and every baseline that shares a page with it is rewritten without
-  # it — which is worse than failing, since the wrong baseline gets committed.
-  MERCH_SITE_URL: https://digitalgroundgame.org/merch
-  # Hostname is the services key ("postgres"), not localhost — this job runs
-  # inside a container, so service containers are reachable by their
-  # service-id alias on the shared Docker network.
-  DATABASE_URI: postgres://postgres:postgres@postgres:5432/pragmatic-papers-e2e
-  E2E_PROD_SERVER: "true"
+# The E2E environment is set by .github/actions/setup-e2e, shared with
+# playwright.yml so regenerated baselines render the same page it checks:
+# both serve the app from the image .github/actions/build-app-image builds.
 
 jobs:
+  image:
+    name: Build image
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.label.name == 'needs screenshots' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+
+    # What `next build` prerenders from; see playwright.yml's image job.
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: build
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.ref }}
+
+      - uses: ./.github/actions/build-app-image
+        with:
+          gh-font-read-token: ${{ secrets.GH_FONT_READ }}
+          source-commit: ${{ github.event.pull_request.head.sha || github.sha }}
+
   update-snapshots:
     name: Update snapshot baselines
-    if: ${{ github.event_name == 'workflow_dispatch' || github.event.label.name == 'needs screenshots' }}
+    needs: image
+    # Runs even when the image failed, so the failure shows here and the
+    # trigger label is still removed below.
+    if: ${{ !cancelled() && (github.event_name == 'workflow_dispatch' || github.event.label.name == 'needs screenshots') }}
     timeout-minutes: 60
     runs-on: ubuntu-latest
     # Same pinned image as playwright.yml and scripts/test-e2e-docker.ts —
     # keeps this workflow's regenerated baselines at parity with both.
     container:
-      image: mcr.microsoft.com/playwright:v1.60.0-noble
-
-    env:
-      # Baselines captured with the Inter fallback would bake the wrong typeface into every
-      # future visual diff, so fail the run rather than commit bad screenshots. Job-level so
-      # it reaches the install step inside the setup-project composite action.
-      FONTS_REQUIRED: "true"
+      image: mcr.microsoft.com/playwright:v1.63.0-noble
 
     permissions:
       contents: write
@@ -77,6 +97,7 @@ jobs:
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
+          # Must match TEST_DATABASE_URI in .github/actions/setup-e2e.
           POSTGRES_DB: pragmatic-papers-e2e
         ports:
           - 5432:5432
@@ -87,32 +108,23 @@ jobs:
           --health-retries 5
 
     steps:
+      - name: Stop if the image didn't build
+        if: needs.image.result != 'success'
+        env:
+          RESULT: ${{ needs.image.result }}
+        run: |
+          echo "::error::The Build image job ended with '$RESULT'; there's no image to render baselines from."
+          exit 1
+
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
           ref: ${{ github.event.pull_request.head.sha || github.ref }}
 
-      # actions/checkout's files are owned by a different UID than this
-      # container's user, so git's dubious-ownership check blocks every git
-      # command below unless the workspace is explicitly trusted.
-      - name: Trust the checked-out workspace
-        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
-
-      # The Playwright image doesn't ship the GitHub CLI, but the very next
-      # step (and several after it) shell out to `gh`. Pull the release tarball
-      # straight from GitHub instead of going through the apt repo — that path
-      # ran `apt-get update` twice (a full package-index rebuild each time,
-      # ~20-40s) just to land one static binary. The pinned version only needs
-      # to be recent enough for the `gh api`/`gh run`/`gh pr` commands used
-      # here; bump freely.
-      - name: Install GitHub CLI
-        run: |
-          GH_VERSION=2.63.2
-          ARCH=$(dpkg --print-architecture)
-          curl -fsSL "https://github.com/cli/cli/releases/download/v${GH_VERSION}/gh_${GH_VERSION}_linux_${ARCH}.tar.gz" \
-            | tar -xz -C /tmp
-          install "/tmp/gh_${GH_VERSION}_linux_${ARCH}/bin/gh" /usr/local/bin/gh
-          gh --version
+      - name: Set up E2E
+        uses: ./.github/actions/setup-e2e
+        with:
+          gh-font-read-token: ${{ secrets.GH_FONT_READ }}
 
       # pull_request's $GITHUB_REF_NAME is "<number>/merge", not the branch —
       # resolve the real branch/PR/base once so every later step can rely on
@@ -121,33 +133,25 @@ jobs:
         id: pr
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
         run: |
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            echo "branch=${{ github.event.pull_request.head.ref }}" >> "$GITHUB_OUTPUT"
-            echo "number=${{ github.event.pull_request.number }}" >> "$GITHUB_OUTPUT"
-            echo "base=${{ github.event.pull_request.base.ref }}" >> "$GITHUB_OUTPUT"
+          if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
+            {
+              echo "branch=$HEAD_REF"
+              echo "number=$PR_NUMBER"
+              echo "base=$BASE_REF"
+            } >> "$GITHUB_OUTPUT"
           else
-            echo "branch=$GITHUB_REF_NAME" >> "$GITHUB_OUTPUT"
-            pr=$(gh pr list --repo "${{ github.repository }}" --head "$GITHUB_REF_NAME" \
+            pr=$(gh pr list --repo "$GITHUB_REPOSITORY" --head "$GITHUB_REF_NAME" \
               --state open --json number,baseRefName --jq 'first | @json' || true)
-            echo "number=$(printf '%s' "$pr" | jq -r '.number // empty')" >> "$GITHUB_OUTPUT"
-            echo "base=$(printf '%s' "$pr" | jq -r '.baseRefName // empty')" >> "$GITHUB_OUTPUT"
+            {
+              echo "branch=$GITHUB_REF_NAME"
+              echo "number=$(printf '%s' "$pr" | jq -r '.number // empty')"
+              echo "base=$(printf '%s' "$pr" | jq -r '.baseRefName // empty')"
+            } >> "$GITHUB_OUTPUT"
           fi
-
-      - name: Set up Node.js environment
-        uses: ./.github/actions/setup-project
-        with:
-          node-version: "24.x"
-          gh-font-read-token: ${{ secrets.GH_FONT_READ }}
-          payload-secret: ${{ env.PAYLOAD_SECRET }}
-
-      - name: Cache Next.js build cache
-        uses: actions/cache@v6
-        with:
-          path: .next/cache
-          key: nextjs-${{ hashFiles('pnpm-lock.yaml') }}-${{ hashFiles('src/**/*.[jt]s', 'src/**/*.[jt]sx', '*.[jt]s', '*.[jt]sx') }}
-          restore-keys: |
-            nextjs-${{ hashFiles('pnpm-lock.yaml') }}-
 
       # E2E_VERIFY_VISUAL folds the flaky-baseline gate into this run: after
       # regenerating, the wrapper re-renders the @visual tests against the same
@@ -156,12 +160,15 @@ jobs:
       - name: Regenerate changed snapshot baselines
         env:
           E2E_VERIFY_VISUAL: "true"
+          # The image's server shares this container's network (scripts/test-e2e.mjs).
+          E2E_NETWORK_CONTAINER: ${{ job.container.id }}
         run: pnpm test:e2e -- --update-snapshots=changed --project=chromium
 
       - name: Commit regenerated snapshots
         id: commit
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BRANCH: ${{ steps.pr.outputs.branch }}
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -172,7 +179,7 @@ jobs:
             exit 0
           fi
           git commit -m "test: update e2e snapshot baselines"
-          git push origin "HEAD:${{ steps.pr.outputs.branch }}"
+          git push origin "HEAD:$BRANCH"
           echo "committed=true" >> "$GITHUB_OUTPUT"
 
       # Pushes made with GITHUB_TOKEN don't trigger workflows, so the snapshot
@@ -185,7 +192,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           NEW_SHA=$(git rev-parse HEAD)
-          for check_name in "Static checks" "Unit tests" "Integration tests" "E2E tests"; do
+          for check_name in "Static checks" "Unit tests" "Integration tests" "Storybook" "E2E tests"; do
             gh api repos/${{ github.repository }}/check-runs \
               --method POST \
               -H "Accept: application/vnd.github+json" \
@@ -207,7 +214,8 @@ jobs:
           PR_NUMBER: ${{ steps.pr.outputs.number }}
           BASE_REF: ${{ steps.pr.outputs.base }}
         run: |
-          export ASSET_DIR="$PR_NUMBER/$(git rev-parse HEAD)"
+          ASSET_DIR="$PR_NUMBER/$(git rev-parse HEAD)"
+          export ASSET_DIR
           git fetch --no-tags --depth=1 origin "$BASE_REF"
           git diff --name-only --diff-filter=AM \
             "origin/$BASE_REF...HEAD" -- '**/__screenshots__/**/*.png' \

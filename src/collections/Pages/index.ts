@@ -13,8 +13,9 @@ import { Timeline } from "@/blocks/Timeline/config"
 import { VolumeView } from "@/blocks/VolumeViewBlock/config"
 import { hero } from "@/heros/config"
 import { populatePublishedAt } from "@/hooks/populatePublishedAt"
+import { revalidateNavLinks, revalidateNavLinksDelete } from "@/hooks/revalidateNavLinks"
 import { generatePreviewPath } from "@/utilities/generatePreviewPath"
-import { slugField } from "payload"
+import { slugField } from "@/fields/slug"
 import { revalidateDelete, revalidatePage } from "./hooks/revalidatePage"
 
 import { admin } from "@/access/collections"
@@ -40,6 +41,8 @@ export const Pages: CollectionConfig<"pages"> = {
   defaultPopulate: {
     title: true,
     slug: true,
+    // So a nav link to an unpublished page can be left out (`linksToUnpublished`).
+    _status: true,
   },
   admin: {
     defaultColumns: ["title", "slug", "updatedAt"],
@@ -113,7 +116,9 @@ export const Pages: CollectionConfig<"pages"> = {
               relationTo: "media",
             }),
 
-            MetaDescriptionField({}),
+            MetaDescriptionField({
+              hasGenerateFn: true,
+            }),
             PreviewField({
               // if the `generateUrl` function is configured
               hasGenerateFn: true,
@@ -136,9 +141,9 @@ export const Pages: CollectionConfig<"pages"> = {
     slugField(),
   ],
   hooks: {
-    afterChange: [revalidatePage],
+    afterChange: [revalidatePage, revalidateNavLinks],
     beforeChange: [populatePublishedAt],
-    afterDelete: [revalidateDelete],
+    afterDelete: [revalidateDelete, revalidateNavLinksDelete],
   },
   versions: {
     drafts: {

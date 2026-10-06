@@ -3,36 +3,43 @@ import type { Payload } from "payload"
 
 import { type TimelineEvent } from "@/components/Timeline/types"
 import { createArticle, validateWriters } from "../articles"
-import { createParagraph, createRichText } from "../richtext"
+import { createParagraph, createRichText, type SerializedLexicalNode } from "../richtext"
 
 const buildCitation = (citation?: LinkField) =>
   citation
     ? { type: "custom" as const, url: citation.url, label: citation.label, newTab: true }
     : undefined
 
-const createTimelineBlock = (events: TimelineEvent[], title?: string) => ({
-  type: "block",
-  fields: {
-    blockType: "timeline",
-    title: title ?? null,
-    events: events.map((e) => ({
-      date: e.date,
-      title: e.title ?? null,
-      description: e.description,
-      avatar: e.avatar ?? null,
-      enableCitation: Boolean(e.citation),
-      ...(e.citation && { citation: buildCitation(e.citation) }),
-    })),
-  },
-  format: "",
-  version: 2,
-})
+export const createTimelineBlock = (
+  events: TimelineEvent[],
+  title?: string,
+): SerializedLexicalNode => {
+  const node = {
+    type: "block",
+    fields: {
+      blockType: "timeline",
+      title: title ?? null,
+      events: events.map((e) => ({
+        date: e.date,
+        title: e.title ?? null,
+        description: e.description,
+        avatar: e.avatar ?? null,
+        enableCitation: Boolean(e.citation),
+        ...(e.citation && { citation: buildCitation(e.citation) }),
+      })),
+    },
+    format: "",
+    version: 2,
+  }
+  return node
+}
 
 export const createTimelineArticle = async (
   payload: Payload,
   writers: User[],
   mediaDocs: Media[],
   topics: number[] = [],
+  context?: Record<string, unknown>,
 ): Promise<number> => {
   validateWriters(writers)
   const writer = writers[0]!
@@ -132,19 +139,23 @@ export const createTimelineArticle = async (
   const title = "Lorem Ipsum Timeline"
   const heroImage = mediaDocs[0]!.id
 
-  const article = await createArticle(payload, {
-    title,
-    content,
-    authors: [writer.id],
-    topics,
-    slug: "lorem-ipsum-timeline",
-    heroImage,
-    meta: {
+  const article = await createArticle(
+    payload,
+    {
       title,
-      description: "A demonstration of the timeline block with placeholder content.",
-      image: heroImage,
+      content,
+      authors: [writer.id],
+      topics,
+      slug: "lorem-ipsum-timeline",
+      heroImage,
+      meta: {
+        title,
+        description: "A demonstration of the timeline block with placeholder content.",
+        image: heroImage,
+      },
     },
-  })
+    context,
+  )
 
   return article.id
 }

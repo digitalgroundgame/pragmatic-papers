@@ -39,14 +39,12 @@ export function buildArticleJsonLd(
 ): ArticleLeaf {
   const fullUrl = `${SERVER_URL}${path}`
 
-  const authors = (article.authors || []).filter(isResolved<User>).map(
-    (author): PersonLeaf => ({
-      "@type": "Person",
-      "@id": `${SERVER_URL}/authors/${author.slug}`,
-      name: author.name || undefined,
-      url: `${SERVER_URL}/authors/${author.slug}`,
-    }),
-  )
+  const authors = (article.authors || []).filter(isResolved<User>).map((author): PersonLeaf => ({
+    "@type": "Person",
+    "@id": `${SERVER_URL}/authors/${author.slug}`,
+    name: author.name || undefined,
+    url: `${SERVER_URL}/authors/${author.slug}`,
+  }))
 
   const keywords = (article.topics || []).filter(isResolved<Topic>).map((t) => t.name)
 

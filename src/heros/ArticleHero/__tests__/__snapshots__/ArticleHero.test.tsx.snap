@@ -2,7 +2,7 @@
 
 exports[`ArticleHero > matches snapshot 1`] = `
 <div
-  class="relative flex flex-col gap-2 md:-mx-10 lg:-mx-32 xl:-mx-44"
+  class="relative flex flex-col gap-2"
 >
   <div
     data-media="undefined"
@@ -22,6 +22,7 @@ exports[`ArticleHero > matches snapshot 1`] = `
     >
       <span
         class="text-foreground cursor-default font-serif underline-offset-4 hover:underline hover:decoration-dotted"
+        data-base-ui-tooltip-trigger=""
         data-slot="tooltip-trigger"
         id="article-dateline"
         tabindex="0"

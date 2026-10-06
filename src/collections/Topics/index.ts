@@ -7,7 +7,8 @@ import {
   PreviewField,
 } from "@payloadcms/plugin-seo/fields"
 import type { CollectionConfig } from "payload"
-import { slugField } from "payload"
+import { slugField } from "@/fields/slug"
+import { revalidateNavLinks, revalidateNavLinksDelete } from "@/hooks/revalidateNavLinks"
 
 export const Topics: CollectionConfig = {
   slug: "topics",
@@ -58,7 +59,9 @@ export const Topics: CollectionConfig = {
             MetaImageField({
               relationTo: "media",
             }),
-            MetaDescriptionField({}),
+            MetaDescriptionField({
+              hasGenerateFn: true,
+            }),
             PreviewField({
               hasGenerateFn: true,
               titlePath: "meta.title",
@@ -70,4 +73,9 @@ export const Topics: CollectionConfig = {
     },
     slugField({ useAsSlug: "name" }),
   ],
+  hooks: {
+    // A nav link can point at a topic (#970).
+    afterChange: [revalidateNavLinks],
+    afterDelete: [revalidateNavLinksDelete],
+  },
 }

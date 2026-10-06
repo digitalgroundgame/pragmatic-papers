@@ -1,6 +1,7 @@
 import { isPublishedOrStaff, isCreatedByOrEditor, isDraftOrEditor } from "@/access/policies"
 import { writerOrEditor } from "@/access/collections"
 import { editorFieldLevel } from "@/access/fields"
+import { AUTHOR_ROLES } from "@/access/roles"
 import { Banner } from "@/blocks/Banner/config"
 import { Code } from "@/blocks/Code/config"
 import { FootnoteBlock } from "@/blocks/Footnote/config"
@@ -17,11 +18,18 @@ import { LegacyTwitterEmbed } from "@/blocks/SocialEmbed/embeds/TwitterEmbed/con
 import { LegacyYouTubeEmbed } from "@/blocks/SocialEmbed/embeds/YouTubeEmbed/config"
 import { SquiggleRule } from "@/blocks/SquiggleRule/config"
 import { Timeline } from "@/blocks/Timeline/config"
+import {
+  canCloneFromProduction,
+  cloneFromProductionEndpoint,
+  productionSearchEndpoint,
+} from "@/collections/Articles/endpoints/cloneFromProduction"
 import { detectMathBlocks } from "@/collections/Articles/hooks/detectMathBlocks"
 import { generateFootnotes } from "@/collections/Articles/hooks/generateFootnotes"
 import { populateTopics } from "@/collections/Articles/hooks/populateTopics"
 import { populateMetaImageFromHero } from "@/collections/Articles/hooks/populateMetaImageFromHero"
 import { revalidateArticle, revalidateDelete } from "@/collections/Articles/hooks/revalidateArticle"
+import { revalidateNavLinks, revalidateNavLinksDelete } from "@/hooks/revalidateNavLinks"
+import { populateTableOfContentsAnchors, tableOfContentsField } from "@/components/TableOfContents"
 import { footnotesArrayField } from "@/fields/footnotes"
 import { type Article } from "@/payload-types"
 import { generatePreviewPath } from "@/utilities/generatePreviewPath"
@@ -52,7 +60,7 @@ import {
   UnorderedListFeature,
 } from "@payloadcms/richtext-lexical"
 import type { CollectionBeforeChangeHook, CollectionConfig, FieldHook } from "payload"
-import { slugField } from "payload"
+import { slugField } from "@/fields/slug"
 
 const setPublishedAtDefault: FieldHook<Article, Article["publishedAt"]> = ({
   siblingData,
@@ -73,7 +81,14 @@ export const Articles: CollectionConfig = {
     read: isPublishedOrStaff,
     update: isDraftOrEditor,
   },
+  endpoints: [productionSearchEndpoint, cloneFromProductionEndpoint],
   admin: {
+    components: {
+      // Payload shows the ⋯ menu whenever this is set, so leave it unset where cloning is off.
+      listMenuItems: canCloneFromProduction()
+        ? ["@/collections/Articles/components/CloneFromProduction#CloneFromProduction"]
+        : undefined,
+    },
     defaultColumns: ["title", "slug", "updatedAt"],
     livePreview: {
       url: ({ data, req }) =>
@@ -148,6 +163,9 @@ export const Articles: CollectionConfig = {
                   ]
                 },
               }),
+              hooks: {
+                beforeChange: [populateTableOfContentsAnchors],
+              },
               label: false,
               required: true,
             },
@@ -171,7 +189,9 @@ export const Articles: CollectionConfig = {
               relationTo: "media",
             }),
 
-            MetaDescriptionField({}),
+            MetaDescriptionField({
+              hasGenerateFn: true,
+            }),
             PreviewField({
               // if the `generateUrl` function is configured
               hasGenerateFn: true,
@@ -252,11 +272,7 @@ export const Articles: CollectionConfig = {
       },
       hasMany: true,
       relationTo: "users",
-      filterOptions: {
-        roles: {
-          in: ["writer", "editor", "chief-editor", "narrator"],
-        },
-      },
+      filterOptions: { roles: { in: AUTHOR_ROLES } },
     },
     {
       name: "topics",
@@ -266,6 +282,33 @@ export const Articles: CollectionConfig = {
       },
       hasMany: true,
       relationTo: "topics",
+    },
+    tableOfContentsField(),
+    {
+      name: "syndicateToSubstack",
+      type: "checkbox",
+      label: "Syndicate to Substack",
+      defaultValue: false,
+      access: {
+        create: editorFieldLevel,
+        update: editorFieldLevel,
+      },
+      admin: {
+        position: "sidebar",
+        description:
+          "Adds the published article to the Substack import feed. Takes effect once the article is published.",
+      },
+    },
+    {
+      name: "substackImportUrl",
+      type: "ui",
+      admin: {
+        position: "sidebar",
+        condition: (data) => Boolean(data?.syndicateToSubstack),
+        components: {
+          Field: "@/collections/Articles/components/SubstackImportUrl#SubstackImportUrl",
+        },
+      },
     },
     {
       name: "createdBy",
@@ -295,9 +338,9 @@ export const Articles: CollectionConfig = {
       detectMathBlocks,
       populateMetaImageFromHero,
     ],
-    afterChange: [revalidateArticle],
+    afterChange: [revalidateArticle, revalidateNavLinks],
     afterRead: [populateTopics],
-    afterDelete: [revalidateDelete],
+    afterDelete: [revalidateDelete, revalidateNavLinksDelete],
   },
   versions: {
     drafts: {

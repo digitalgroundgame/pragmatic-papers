@@ -1,10 +1,9 @@
-import configPromise from "@payload-config"
 import type { Metadata } from "next"
 import type { User } from "@/payload-types"
 import { draftMode } from "next/headers"
-import { getPayload } from "payload"
 import React from "react"
 
+import { ArticleSidebar } from "@/components/ArticleSidebar"
 import { AuthorList } from "@/components/Authors/AuthorList"
 import { FootnoteList } from "@/components/FootnoteList"
 import { JsonLd } from "@/components/JsonLd"
@@ -12,17 +11,26 @@ import { LivePreviewListener } from "@/components/LivePreviewListener"
 import { PayloadRedirects } from "@/components/PayloadRedirects"
 import { RecommendedArticles } from "@/components/RecommendedArticles"
 import RichText from "@/components/RichText"
+import { TableOfContents, TableOfContentsProvider } from "@/components/TableOfContents"
 import { TopicsList } from "@/components/Topics/TopicsList"
 import { Separator } from "@/components/ui/separator"
+import { isExperimentEnabled } from "@/globals/SiteSettings/isExperimentEnabled"
 import { ArticleHero } from "@/heros/ArticleHero"
 import { MathJaxProvider } from "@/providers/MathJaxProvider"
 import { generateMeta } from "@/utilities/generateMeta"
+import { getPayloadConfig } from "@/utilities/getPayloadConfig"
 import { queryArticleBySlug, queryVolumesForArticles } from "@/utilities/queries"
 import { isResolved } from "@/utilities/relationships"
 import { buildArticleJsonLd, buildBreadcrumbJsonLd } from "@/utilities/structuredData"
 
+// Explicit, not left to Next's dynamic-API bailout: this page reads draftMode(), which makes
+// Next render it per request, but it only finds that out by prerendering one. When
+// generateStaticParams returns nothing (a build against an empty database, #1067) the route
+// is classed static instead, and every request then fails with DYNAMIC_SERVER_USAGE.
+export const dynamic = "force-dynamic"
+
 export async function generateStaticParams(): Promise<{ slug: string | null | undefined }[]> {
-  const payload = await getPayload({ config: configPromise })
+  const payload = await getPayloadConfig()
   const articles = await payload.find({
     collection: "articles",
     draft: false,
@@ -69,36 +77,56 @@ export default async function Article({ params: paramsPromise }: Args): Promise<
 
   const populatedAuthors = (authors || []).filter(isResolved<User>)
 
-  const [volume] = await queryVolumesForArticles([article.id])
+  const [[volume], tableOfContentsEnabled] = await Promise.all([
+    queryVolumesForArticles([article.id]),
+    isExperimentEnabled("tableOfContents"),
+  ])
+  const showTableOfContents = tableOfContentsEnabled && article.showTableOfContents === true
 
   return (
     <>
-      <article className="mx-auto max-w-2xl space-y-6 px-4 md:px-1">
-        <JsonLd
-          data={[
-            buildArticleJsonLd(article, url, volume),
-            buildBreadcrumbJsonLd([{ name: article.meta?.title || article.title, path: url }]),
-          ]}
-        />
-        {/* Allows redirects for valid pages too */}
-        <PayloadRedirects disableNotFound url={url} />
-
-        {draft && <LivePreviewListener />}
-
-        <ArticleHero article={article} />
-        <MathJaxProvider enableMathRendering={enableMathRendering}>
-          <RichText
-            data={content}
-            enableGutter={false}
-            className="drop-cap"
-            parentDoc={{ collection: "articles", id: article.id }}
+      <div className="@container/page">
+        <article className="mx-auto max-w-5xl min-w-0 space-y-6 px-4">
+          <JsonLd
+            data={[
+              buildArticleJsonLd(article, url, volume),
+              buildBreadcrumbJsonLd([{ name: article.meta?.title || article.title, path: url }]),
+            ]}
           />
-        </MathJaxProvider>
-        <FootnoteList footnotes={footnotes} />
-        <Separator />
-        <TopicsList topics={topics} />
-        <AuthorList aria-label="Article Authors" authors={populatedAuthors} />
-      </article>
+          {/* Allows redirects for valid pages too */}
+          <PayloadRedirects disableNotFound url={url} />
+
+          {draft && <LivePreviewListener />}
+
+          <TableOfContentsProvider>
+            <ArticleHero article={article} showTableOfContents={showTableOfContents} />
+            <div
+              id="intro"
+              className="lg:toc-open:gap-10 xl:toc-open:gap-20 relative flex flex-col justify-between gap-3 lg:flex-row lg:gap-6"
+            >
+              {showTableOfContents && (
+                <ArticleSidebar>
+                  <TableOfContents content={content} />
+                </ArticleSidebar>
+              )}
+              <div className="mx-auto max-w-2xl space-y-3">
+                <MathJaxProvider enableMathRendering={enableMathRendering}>
+                  <RichText
+                    data={content}
+                    enableGutter={false}
+                    className="drop-cap"
+                    parentDoc={{ collection: "articles", id: article.id }}
+                  />
+                </MathJaxProvider>
+                <FootnoteList footnotes={footnotes} />
+                <Separator />
+                <TopicsList topics={topics} />
+                <AuthorList aria-label="Article Authors" authors={populatedAuthors} />
+              </div>
+            </div>
+          </TableOfContentsProvider>
+        </article>
+      </div>
       <RecommendedArticles currentArticleSlug={slug} />
     </>
   )

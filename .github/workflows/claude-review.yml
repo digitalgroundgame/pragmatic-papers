@@ -1,8 +1,19 @@
 name: Claude Code Review
 
+# Runs once when the "ready for review" label is added (or when a labeled
+# draft is marked ready); to review again, remove and re-add the label. Drafts
+# and unlabeled PRs never run it. Not a required check: what gates merging is
+# "Review acknowledged" (review-ack.yml), which a person gives either by
+# approving the PR or, on their own PR, by replying `/reviewed` on its final
+# commit after a review like this one has run. So only PRs that take the
+# `/reviewed` path need a review, and fixing what it found needs no second
+# review, only a new reply.
+#
+# The job fails when the review reports a blocker, which marks the reviewed
+# commit with a ✗. It never approves.
 on:
   pull_request:
-    types: [labeled]
+    types: [labeled, ready_for_review]
     branches: [dev]
 
 concurrency:
@@ -12,7 +23,13 @@ concurrency:
 jobs:
   review:
     name: Claude review
-    if: github.event.label.name == 'ready for review'
+    # Same-repo PRs only: a fork PR gets no secrets here.
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      !github.event.pull_request.draft && (
+        github.event.action == 'labeled' && github.event.label.name == 'ready for review' ||
+        github.event.action == 'ready_for_review' && contains(github.event.pull_request.labels.*.name, 'ready for review')
+      )
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
@@ -30,6 +47,29 @@ jobs:
         uses: anthropics/claude-code-action@v1
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY_CODE_REVIEW }}
-          prompt: "/code-review --comment ${{ github.repository }}/pull/${{ github.event.pull_request.number }}"
+          prompt: "/code-review --comment ${{ github.repository }}/pull/${{ github.event.pull_request.number }} --head ${{ github.event.pull_request.head.sha }}"
           claude_args: |
+            --model opus
             --allowedTools "mcp__github_inline_comment__create_inline_comment,Bash(gh pr comment:*),Bash(gh pr diff:*),Bash(gh pr view:*)"
+
+      # The summary comment ends with a marker naming the commit reviewed and
+      # the verdict (see `--head` in .claude/skills/code-review/SKILL.md).
+      - name: Check the verdict
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          marker=$(gh api --paginate "repos/$REPO/issues/$PR_NUMBER/comments" \
+            --jq '.[] | select(.user.login == "claude[bot]") | .body' \
+            | grep -o "<!-- claude-review sha=$HEAD_SHA verdict=[a-z]* -->" | tail -n 1 || true)
+          if [ -z "$marker" ]; then
+            echo "::error::No review summary for $HEAD_SHA was posted. See the step above."
+            exit 1
+          fi
+          if [[ "$marker" == *"verdict=blocker"* ]]; then
+            echo "::error::The review found a blocker. Fix it, then reply /reviewed on the PR."
+            exit 1
+          fi
+          echo "No blockers on $HEAD_SHA."

@@ -21,6 +21,7 @@ import {
 import type { ParentDocContext } from "@/blocks/SocialEmbed/types"
 import { SquiggleRuleBlock } from "@/blocks/SquiggleRule/Component"
 import { TimelineBlock } from "@/blocks/Timeline/Component"
+import { tableOfContentsConverter, withTableOfContentsAnchors } from "@/components/TableOfContents"
 import type {
   BannerBlock as BannerBlockProps,
   CodeBlock as CodeBlockProps,
@@ -36,6 +37,7 @@ import type {
   TimelineBlock as TimelineBlockProps,
 } from "@/payload-types"
 import { internalDocToHref } from "./internalDocToHref"
+import { getTurnstileSiteKey } from "@/utilities/turnstile"
 import { cn } from "@/utilities/utils"
 import type {
   DefaultNodeTypes,
@@ -71,7 +73,8 @@ function createJsxConverters(parentDoc?: ParentDocContext): JSXConvertersFunctio
   return ({ defaultConverters }) => ({
     ...defaultConverters,
     ...LinkJSXConverter({ internalDocToHref }),
-    blocks: {
+    ...tableOfContentsConverter,
+    blocks: withTableOfContentsAnchors({
       banner: ({ node }) => <BannerBlock className="col-start-2 mb-4" {...node.fields} />,
       code: ({ node }) => <CodeBlock className="col-start-2" {...node.fields} />,
       cta: ({ node }) => <CallToActionBlock {...node.fields} />,
@@ -86,7 +89,9 @@ function createJsxConverters(parentDoc?: ParentDocContext): JSXConvertersFunctio
       merch: ({ node }: { node: SerializedBlockNode<MerchBlockProps> }) => (
         <MerchBlock {...node.fields} enableGutter={false} />
       ),
-      newsletterSignup: ({ node }) => <NewsletterSignupBlock {...node.fields} />,
+      newsletterSignup: ({ node }) => (
+        <NewsletterSignupBlock {...node.fields} turnstileSiteKey={getTurnstileSiteKey()} />
+      ),
       socialEmbed: ({ node }) => <SocialEmbedBlock {...node.fields} parentDoc={parentDoc} />,
       squiggleRule: ({ node }) => <SquiggleRuleBlock className="col-start-2" {...node.fields} />,
       timeline: ({ node }: { node: SerializedBlockNode<TimelineBlockProps> }) => (
@@ -108,7 +113,7 @@ function createJsxConverters(parentDoc?: ParentDocContext): JSXConvertersFunctio
       tiktokEmbed: ({ node }: { node: SerializedBlockNode<SocialEmbedBlockProps> }) => (
         <TikTokEmbedBlock {...node.fields} />
       ),
-    },
+    }),
     inlineBlocks: {
       inlineMathBlock: ({ node }: { node: SerializedInlineBlockNode<MathBlockProps> }) => (
         <MathBlock {...node.fields} />
@@ -129,7 +134,7 @@ function createJsxConverters(parentDoc?: ParentDocContext): JSXConvertersFunctio
  */
 interface RichTextProps {
   className?: string
-  data: DefaultTypedEditorState
+  data: DefaultTypedEditorState | null | undefined
   enableGutter?: boolean
   enableProse?: boolean
   parentDoc?: ParentDocContext
@@ -142,6 +147,8 @@ export default function RichText({
   data,
   parentDoc,
 }: RichTextProps): React.ReactNode {
+  if (!data) return null
+
   return (
     <ConvertRichText
       className={cn(

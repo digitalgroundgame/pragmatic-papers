@@ -2,6 +2,8 @@ import type { User } from "@/payload-types"
 import { revalidatePath } from "next/cache"
 import type { CollectionAfterChangeHook } from "payload"
 
+import { purgeEdgeCache } from "@/hooks/purgeEdgeCache"
+
 export const revalidateUser: CollectionAfterChangeHook<User> = async ({
   doc,
   previousDoc,
@@ -76,6 +78,8 @@ export const revalidateUser: CollectionAfterChangeHook<User> = async ({
       revalidatePath(volumePath)
     }
   }
+
+  purgeEdgeCache(payload.logger, `author ${doc.slug ?? doc.id}`)
 
   return doc
 }

@@ -1,4 +1,55 @@
-import type { Locator, Page } from "@playwright/test"
+import {
+  expect,
+  type Locator,
+  type Page,
+  type PageAssertionsToHaveScreenshotOptions,
+} from "@playwright/test"
+
+import { SEEDED_DATELINE, SEEDED_REVISION } from "../../scripts/seed-e2e.constants"
+
+/**
+ * Assert that an article hero's two instants read the words the seed pinned.
+ *
+ * Every baseline that frames a hero bakes these in, and Payload stamps
+ * `updatedAt` with the current time on every non-draft save — so without the
+ * seed's pin the revision line tracks the day the seed ran. Call this before
+ * any such screenshot: a stamp that goes back to following the clock then
+ * fails here, naming the cause, instead of surfacing as an unexplained
+ * whole-suite visual diff months later.
+ */
+export async function expectPinnedDateline(page: Page): Promise<void> {
+  const stamps = page.locator("#article-dateline").locator("time")
+  await expect(stamps).toHaveCount(2)
+  await expect(stamps.nth(0)).toHaveText(SEEDED_DATELINE)
+  await expect(stamps.nth(1)).toHaveText(SEEDED_REVISION)
+}
+
+/**
+ * Messages a page may log as errors without failing a smoke test. A failed
+ * network fetch (a third-party script the test sandbox can't reach, an image
+ * the seed never uploaded) is logged by the browser as
+ * "Failed to load resource" — it is not a JavaScript error in our code.
+ */
+const ALLOWED_CONSOLE_ERRORS: RegExp[] = [/^Failed to load resource\b/]
+
+/**
+ * Collect every console error and uncaught exception a page produces from now
+ * on. Call the returned function to read them; assert it is empty once the
+ * page has done its work.
+ */
+export function trackPageErrors(page: Page): () => string[] {
+  const errors: string[] = []
+  page.on("console", (message) => {
+    if (message.type() !== "error") return
+    const text = message.text()
+    if (ALLOWED_CONSOLE_ERRORS.some((pattern) => pattern.test(text))) return
+    errors.push(`console.error: ${text}`)
+  })
+  page.on("pageerror", (error) => {
+    errors.push(`uncaught: ${error.message}`)
+  })
+  return () => [...errors]
+}
 
 export async function gotoFirstArticle(page: Page): Promise<string | null> {
   await page.goto("/")
@@ -19,11 +70,18 @@ export async function gotoFirstVolume(page: Page): Promise<string | null> {
 }
 
 /**
- * Settle sources of pixel nondeterminism before taking a screenshot: wait for
- * web fonts to finish loading (late font swaps shift every glyph), for all
- * <img>s in the DOM to finish decoding (a still-loading hero image behind a
- * clipped screenshot region is a common source of flaky diffs), and for two
- * animation frames so in-flight layout/paint work has flushed.
+ * Settle sources of pixel nondeterminism before taking a screenshot or
+ * measuring layout: wait for web fonts to finish loading (late font swaps
+ * shift every glyph), for all <img>s in the DOM to finish decoding (a
+ * still-loading hero image behind a clipped screenshot region is a common
+ * source of flaky diffs), for every finite CSS animation/transition
+ * currently running to finish (e.g. a dropdown's enter animation — grabbing
+ * its bounding box mid-animation produces a crop that doesn't match the
+ * animation-frozen pixels `toHaveScreenshot` actually captures), and for two
+ * animation frames so any remaining layout/paint work has flushed.
+ *
+ * Infinite animations (loading skeletons) are intentionally excluded —
+ * waiting on one would hang forever.
  */
 export async function waitForStableRender(page: Page): Promise<void> {
   await page.evaluate(async () => {
@@ -38,8 +96,49 @@ export async function waitForStableRender(page: Page): Promise<void> {
             }),
       ),
     )
+    await Promise.all(
+      document
+        .getAnimations()
+        .filter((animation) => animation.effect?.getTiming().iterations !== Infinity)
+        .map((animation) => animation.finished.catch(() => undefined)),
+    )
     await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)))
   })
+}
+
+const SHOW_FRESH = "data-e2e-show-fresh"
+
+/**
+ * Keep fresh dots in this test's screenshots. `tests/e2e/screenshot.css`
+ * hides them from every capture by default, since each test starts in a fresh
+ * browser where every fresh dot shows; call this in a test whose baseline is
+ * about one. It applies to the current page and to any page the test navigates to
+ * afterwards.
+ */
+export async function showFresh(page: Page): Promise<void> {
+  await page.addInitScript((attribute) => {
+    document.addEventListener("DOMContentLoaded", () => {
+      document.documentElement.setAttribute(attribute, "")
+    })
+  }, SHOW_FRESH)
+  await page.evaluate((attribute) => {
+    document.documentElement.setAttribute(attribute, "")
+  }, SHOW_FRESH)
+}
+
+/**
+ * `expect(page).toHaveScreenshot(...)`, but always preceded by
+ * `waitForStableRender`. Use this instead of the raw assertion for every
+ * visual regression screenshot — it's the one thing every screenshot test
+ * needs and the easiest thing to forget when writing a new one.
+ */
+export async function expectStableScreenshot(
+  page: Page,
+  name: string | ReadonlyArray<string>,
+  options?: PageAssertionsToHaveScreenshotOptions,
+): Promise<void> {
+  await waitForStableRender(page)
+  await expect(page).toHaveScreenshot(name, options)
 }
 
 interface BoundingBox {

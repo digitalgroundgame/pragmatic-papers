@@ -71,6 +71,13 @@ describe("loadSentry", () => {
     )
   })
 
+  it("tags nothing outside a PR preview", async () => {
+    delete document.documentElement.dataset.sentryPr
+    const { loadSentry } = await importClient()
+    await loadSentry()
+    expect(sdk.init).toHaveBeenCalledWith(expect.objectContaining({ initialScope: undefined }))
+  })
+
   it("reports nothing without a DSN on <html>", async () => {
     delete document.documentElement.dataset.sentryDsn
     const { loadSentry } = await importClient()
@@ -150,6 +157,17 @@ describe("startSentryWhenIdle", () => {
 
     win.dispatchEvent(errorEvent(new Error("late")))
     expect(sdk.captureException).toHaveBeenCalledTimes(2)
+  })
+
+  it("reports an early error's message when it carries no Error", async () => {
+    const { startSentryWhenIdle } = await importClient()
+    const { win, runIdle } = fakeWindow({ readyState: "complete" })
+    startSentryWhenIdle(win)
+
+    win.dispatchEvent(new ErrorEvent("error", { message: "Script error." }))
+    runIdle()
+    await settle()
+    expect(sdk.captureException).toHaveBeenCalledExactlyOnceWith("Script error.")
   })
 
   it("forwards router transitions only once Sentry has loaded", async () => {

@@ -75,8 +75,7 @@ jobs:
     outputs:
       deploy: ${{ steps.plan.outputs.deploy }}
       tag: ${{ steps.plan.outputs.tag }}
-      push-tag: ${{ steps.plan.outputs.push-tag }}
-      dev-image: ${{ steps.plan.outputs.dev-image }}
+      image: ${{ steps.plan.outputs.image }}
     steps:
       - id: plan
         env:
@@ -92,18 +91,11 @@ jobs:
           PR: ${{ github.event.pull_request.number }}
           SHA: ${{ github.event.pull_request.head.sha }}
           OWNER: ${{ github.repository_owner }}
-          # dev's image is pushed as the `dev` tag, which the Lighthouse job audits a
-          # PR against.
-          PUSH_DEV: ${{ github.event_name == 'push' && github.ref == 'refs/heads/dev' }}
         run: |
           echo "deploy=$DEPLOY" >> "$GITHUB_OUTPUT"
-          image="ghcr.io/${OWNER,,}/pragmatic-papers-preview"
-          echo "dev-image=$image:dev" >> "$GITHUB_OUTPUT"
           if [ "$DEPLOY" = "true" ]; then
+            echo "image=ghcr.io/${OWNER,,}/pragmatic-papers-preview" >> "$GITHUB_OUTPUT"
             echo "tag=pr-${PR}-${SHA::12}" >> "$GITHUB_OUTPUT"
-            echo "push-tag=$image:pr-${PR}-${SHA::12}" >> "$GITHUB_OUTPUT"
-          elif [ "$PUSH_DEV" = "true" ]; then
-            echo "push-tag=$image:dev" >> "$GITHUB_OUTPUT"
           fi
 
   image:
@@ -141,7 +133,7 @@ jobs:
         with:
           gh-font-read-token: ${{ secrets.GH_FONT_READ }}
           source-commit: ${{ github.event.pull_request.head.sha || github.sha }}
-          push-tag: ${{ needs.preview.outputs.push-tag }}
+          push-tag: ${{ needs.preview.outputs.deploy == 'true' && format('{0}:{1}', needs.preview.outputs.image, needs.preview.outputs.tag) || '' }}
           registry-token: ${{ github.token }}
 
   # Hands the image E2E is testing to Coolify as the PR's preview, alongside
@@ -458,23 +450,23 @@ jobs:
           path: bundle-size.json
           retention-days: 90
 
-  # Lighthouse's performance audit of a few seeded pages (scripts/lighthouse.ts):
-  # the image E2E tests and dev's (the `dev` tag on GHCR), side by side on this
-  # runner in alternating runs, so the runner's speed affects both alike. In its own
-  # job so the suite doesn't share the runner's CPU with it. Report-only: it posts
-  # how each page compares with dev and annotates regressions, but never fails.
+  # Lighthouse's performance audit of a few seeded pages (scripts/lighthouse.ts),
+  # compared with dev's last results. In its own job so the suite doesn't share the
+  # runner's CPU with it. Report-only: it posts how each page compares with dev and
+  # annotates big regressions, but never fails. Pushes to dev upload the results PRs
+  # compare with.
   lighthouse:
     name: Lighthouse
-    needs: [changes, preview, image]
-    if: ${{ !cancelled() && needs.image.result == 'success' && github.event_name == 'pull_request' && (needs.changes.result != 'success' || needs.changes.outputs.e2e == 'true') }}
+    needs: [changes, image]
+    if: ${{ !cancelled() && needs.image.result == 'success' && ((github.event_name == 'pull_request' && (needs.changes.result != 'success' || needs.changes.outputs.e2e == 'true')) || (github.event_name == 'push' && github.ref == 'refs/heads/dev')) }}
     runs-on: ubuntu-latest
     timeout-minutes: 60
     # The E2E job's container, for its Chromium and the shared setup-e2e action.
     container:
       image: mcr.microsoft.com/playwright:v1.63.0-noble
     permissions:
+      actions: read
       contents: read
-      packages: read
       pull-requests: write
 
     services:
@@ -499,27 +491,19 @@ jobs:
         with:
           gh-font-read-token: ${{ secrets.GH_FONT_READ }}
 
-      # Without it (a fork's token, or before dev's first push) the report has
-      # this PR's numbers alone.
-      - name: Pull dev's image
-        id: dev
-        env:
-          IMAGE: ${{ needs.preview.outputs.dev-image }}
-          TOKEN: ${{ github.token }}
-        run: |
-          if echo "$TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin \
-            && docker pull "$IMAGE"; then
-            echo "image=$IMAGE" >> "$GITHUB_OUTPUT"
-          else
-            echo "::notice::Couldn't pull $IMAGE; reporting without a comparison."
-          fi
+      - name: Download dev's results
+        id: base
+        if: github.event_name == 'pull_request'
+        uses: ./.github/actions/download-dev-artifact
+        with:
+          name: lighthouse-results
 
-      # Seeds the database and starts both images as the E2E suite does, then runs
-      # Lighthouse against them in place of Playwright.
+      # Seeds the database and starts the image as the E2E suite does, then runs
+      # Lighthouse against it in place of Playwright.
       - name: Run Lighthouse
         env:
           E2E_COMMAND: pnpm exec tsx scripts/lighthouse.ts
-          E2E_BASE_IMAGE: ${{ steps.dev.outputs.image }}
+          BASE_LIGHTHOUSE_PATH: ${{ steps.base.outputs.dir && format('{0}/summary.json', steps.base.outputs.dir) || '' }}
           E2E_NETWORK_CONTAINER: ${{ job.container.id }}
           GITHUB_TOKEN: ${{ github.token }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
@@ -530,4 +514,4 @@ jobs:
         with:
           name: lighthouse-results
           path: lighthouse-results/
-          retention-days: 30
+          retention-days: 90

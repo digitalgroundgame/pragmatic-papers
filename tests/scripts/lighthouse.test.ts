@@ -101,15 +101,15 @@ describe("cpuMultiplier", () => {
 
 describe("regressed", () => {
   it("needs every run worse than every dev run", () => {
-    // Medians 300 ms apart, but one PR run is as fast as a dev run.
-    expect(regressed("lcp", [2000, 2100, 2200], [2150, 2400, 2500])).toBe(false)
-    expect(regressed("lcp", [2000, 2100, 2200], [2300, 2400, 2500])).toBe(true)
+    // Medians 600 ms apart, but one PR run is as fast as a dev run.
+    expect(regressed("lcp", [2000, 2100, 2200], [2150, 2700, 2800])).toBe(false)
+    expect(regressed("lcp", [2000, 2100, 2200], [2600, 2700, 2800])).toBe(true)
   })
 
   it("needs the medians further apart than the threshold", () => {
     // Separated, but only by 20 ms.
     expect(regressed("tbt", [100, 101, 102], [120, 121, 122])).toBe(false)
-    expect(regressed("tbt", [100, 101, 102], [200, 201, 202])).toBe(true)
+    expect(regressed("tbt", [100, 101, 102], [300, 301, 302])).toBe(true)
   })
 
   it("treats a lower score as worse", () => {
@@ -157,16 +157,16 @@ describe("formatValue and formatRange", () => {
 })
 
 describe("renderReport", () => {
-  it("says when there was no dev image to compare with", () => {
+  it("says when there were no dev results to compare with", () => {
     const report = renderReport(summary([page({}, null)]))
-    expect(report).toContain("Dev's image wasn't available")
+    expect(report).toContain("No results from `dev` to compare with yet")
     expect(report).toContain("| Home | 90 | 2.0 s | 150 ms | 0.010 | 1.2 s | 500 kB | 800 kB |")
     expect(report).not.toContain("| | dev |")
   })
 
   it("shows changes against dev's medians and flags regressions", () => {
     const report = renderReport(summary([page({ lcp: [3000, 3100, 3200], tbt: [155, 160, 165] })]))
-    expect(report).toContain("⚠️ 1 page is slower than on `dev` in every one of 3 runs.")
+    expect(report).toContain("⚠️ 1 page is much slower than on `dev` in every one of 3 runs.")
     expect(report).toContain("⚠️ **3.1 s** (+1.1 s)")
     expect(report).toContain("| 160 ms (+10 ms) |")
     expect(report).toContain("| Home | this PR | 89–91 | 3.0 s–3.2 s |")
@@ -175,13 +175,13 @@ describe("renderReport", () => {
 
   it("stays quiet when the runs overlap", () => {
     const report = renderReport(summary([page({ tbt: [140, 200, 260] })]))
-    expect(report).toContain("No page is slower than on `dev`")
+    expect(report).toContain("No page is much slower than on `dev`")
     expect(report).not.toContain("⚠️")
   })
 
-  it("says how many pages dev's image couldn't serve", () => {
+  it("says how many pages dev's results don't have", () => {
     const report = renderReport(summary([page(), { ...page(), path: "/new", dev: null }]))
-    expect(report).toContain("Dev's image couldn't serve 1 of the pages")
+    expect(report).toContain("Dev's results don't have 1 of the pages")
   })
 
   it("states the CPU calibration", () => {

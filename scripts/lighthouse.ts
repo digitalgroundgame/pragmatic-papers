@@ -1,22 +1,19 @@
-// Runs Lighthouse's performance audit on a set of seeded pages, for this build and,
-// when one is running beside it, for dev's, and reports how each page moved. It only
-// ever warns; scripts/bundle-size.ts is the gate, on byte counts that don't vary.
+// Runs Lighthouse's performance audit on a set of seeded pages and reports how each
+// page moved against dev's last results. It only ever warns.
 //
 //   pnpm lighthouse                          seed, build and serve, then audit
 //   SERVER_URL=http://localhost:8000 \
 //     pnpm exec tsx scripts/lighthouse.ts    audit a server already running the
 //                                            E2E seed (scripts/seed-e2e.ts)
 //
-// Lighthouse's timings come from the work Chrome did on this machine's CPU, slowed
-// down to imitate a phone, so they move with the machine. Four things keep that out
-// of the comparison:
+// BASE_LIGHTHOUSE_PATH names the summary.json to compare with: in CI, the one the last
+// push to dev uploaded. Lighthouse's timings come from the work Chrome did on this
+// machine's CPU, slowed down to imitate a phone, so they move with the machine, and
+// dev's were measured on another runner. Three things keep that out of the comparison:
 //
-//   - Dev on the same machine. With BASE_SERVER_URL (dev's image, which CI starts
-//     beside this one) every page is audited on both, alternating which goes first,
-//     so whatever the runner does to one side it does to the other.
-//   - Spreads, not single numbers. Each side gets LIGHTHOUSE_RUNS runs (default 5),
-//     and a metric is flagged only when every run of this build is worse than every
-//     run of dev's, and the medians differ by more than THRESHOLDS.
+//   - Spreads, not single numbers. Each page gets LIGHTHOUSE_RUNS runs (default 5),
+//     and a metric is flagged only when every run is worse than every one of dev's,
+//     and the medians differ by more than THRESHOLDS, which only catch big swings.
 //   - A calibrated CPU slowdown. Lighthouse scores the CPU with a benchmark
 //     (benchmarkIndex); the slowdown is scaled by it so a faster runner is slowed
 //     more, putting runs on different machines on the same footing.
@@ -26,7 +23,7 @@
 //     however long the internet takes.
 //
 // Results go to lighthouse-results/: summary.json and each page's median report as
-// HTML (`.dev.html` for dev's). CHROME_PATH picks the browser; by default it's
+// HTML. CHROME_PATH picks the browser; by default it's
 // Playwright's Chromium. In CI (playwright.yml's "Lighthouse" job) the report goes to
 // the job summary and, with PR_NUMBER and GITHUB_TOKEN, to a PR comment; regressions
 // also become warning annotations.
@@ -37,7 +34,7 @@ import lighthouse from "lighthouse"
 import type { Flags, Result as LighthouseResult } from "lighthouse"
 import { throttling } from "lighthouse/core/config/constants.js"
 import { computeMedianRun, filterToValidRuns } from "lighthouse/core/lib/median-run.js"
-import { appendFileSync, mkdirSync, writeFileSync } from "node:fs"
+import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs"
 import { join } from "node:path"
 import { fileURLToPath } from "node:url"
 import { blue, green, red, yellow } from "./ansi.mjs"
@@ -84,7 +81,7 @@ export type Samples = Record<Metric, number[]>
 export interface PageResult {
   name: string
   path: string
-  /** Every run of this build, and of dev's (null without a dev server, or if it failed). */
+  /** Every run of this build, and of dev's last results (null when dev has no such page). */
   pr: Samples
   dev: Samples | null
 }
@@ -98,16 +95,17 @@ export interface Summary {
 
 /**
  * How far apart the medians must also be before a metric is flagged, relative and
- * absolute, so a 30 ms page doesn't warn for going to 40 ms. Byte counts don't vary
- * between runs, so for them this alone decides.
+ * absolute. Dev's numbers come from another runner, so the timings only flag a big
+ * swing, not the few points runners differ by. Byte counts don't vary between runs,
+ * so for them this alone decides.
  */
 export const THRESHOLDS: Record<Metric, { relative: number; absolute: number }> = {
-  score: { relative: 0, absolute: 3 },
-  fcp: { relative: 0.05, absolute: 100 },
-  lcp: { relative: 0.05, absolute: 100 },
-  tbt: { relative: 0.1, absolute: 50 },
-  cls: { relative: 0, absolute: 0.02 },
-  speedIndex: { relative: 0.05, absolute: 100 },
+  score: { relative: 0, absolute: 8 },
+  fcp: { relative: 0.15, absolute: 300 },
+  lcp: { relative: 0.15, absolute: 400 },
+  tbt: { relative: 0.3, absolute: 150 },
+  cls: { relative: 0, absolute: 0.05 },
+  speedIndex: { relative: 0.15, absolute: 400 },
   totalBytes: { relative: 0.02, absolute: 10 * 1024 },
   scriptBytes: { relative: 0.02, absolute: 5 * 1024 },
 }
@@ -243,10 +241,10 @@ export function renderReport(summary: Summary): string {
 
   const headline =
     compared.length === 0
-      ? "Dev's image wasn't available to compare with, so these are this PR's numbers alone."
+      ? "No results from `dev` to compare with yet, so these are this PR's numbers alone."
       : flagged === 0
-        ? "No page is slower than on `dev`: wherever the medians differ, the runs overlap."
-        : `⚠️ ${flagged} ${flagged === 1 ? "page is" : "pages are"} slower than on \`dev\` ` +
+        ? "No page is much slower than on `dev`."
+        : `⚠️ ${flagged} ${flagged === 1 ? "page is" : "pages are"} much slower than on \`dev\` ` +
           `in every one of ${runs} runs. The full reports are in the \`lighthouse-results\` ` +
           "artifact."
   const missing = pages.length - compared.length
@@ -255,7 +253,7 @@ export function renderReport(summary: Summary): string {
     "",
     headline,
     ...(compared.length > 0 && missing > 0
-      ? ["", `Dev's image couldn't serve ${missing} of the pages, so those aren't compared.`]
+      ? ["", `Dev's results don't have ${missing} of the pages, so those aren't compared.`]
       : []),
     "",
     table,
@@ -268,40 +266,46 @@ export function renderReport(summary: Summary): string {
     "",
     `<sub>Medians of ${runs} runs per page, Lighthouse's mobile settings with simulated ` +
       `throttling (CPU ${summary.cpuSlowdownMultiplier}× slower, from a benchmark index of ` +
-      `${Math.round(summary.benchmarkIndex)}). Changes are against dev's image, audited ` +
-      "on the same runner in alternating runs. A metric is flagged only when every run is " +
-      "worse than every dev run. This never fails the build.</sub>",
+      `${Math.round(summary.benchmarkIndex)}). Changes are against dev's last results, ` +
+      "from another runner, so only big swings are flagged: every run worse than every " +
+      "dev run, by more than runners differ. This never fails the build.</sub>",
   ].join("\n")
 }
 
-interface Side {
-  label: "pr" | "dev"
-  server: string
-  runs: { lhr: LighthouseResult; html: string }[]
-  failed: boolean
+interface Run {
+  lhr: LighthouseResult
+  html: string
 }
 
-async function audit(
-  url: string,
-  flags: Flags,
-  html: boolean,
-): Promise<{ lhr: LighthouseResult; html: string }> {
+async function audit(url: string, flags: Flags, html: boolean): Promise<Run> {
   const result = await lighthouse(url, html ? { ...flags, output: "html" } : flags)
   if (!result) throw new Error(`Lighthouse returned nothing for ${url}`)
   if (result.lhr.runtimeError) throw new Error(`${url}: ${result.lhr.runtimeError.message}`)
   return { lhr: result.lhr, html: html ? (result.report as string) : "" }
 }
 
-function medianOf(runs: Side["runs"]): Side["runs"][number] | undefined {
+function medianOf(runs: Run[]): Run | undefined {
   const valid = filterToValidRuns(runs.map((r) => r.lhr))
   if (valid.length === 0) return undefined
   const best = computeMedianRun(valid)
   return runs.find((r) => r.lhr === best)
 }
 
+/** Dev's samples for each page path, from the summary.json at `path`; empty without one. */
+export function readBaseline(path: string | undefined): Map<string, Samples> {
+  if (!path || !existsSync(path)) return new Map()
+  try {
+    const base = JSON.parse(readFileSync(path, "utf8")) as Summary
+    return new Map(base.pages.map((page) => [page.path, page.pr]))
+  } catch (err) {
+    console.warn(`${yellow("⚠")} Couldn't read dev's results: ${(err as Error).message}`)
+    return new Map()
+  }
+}
+
 export async function main(): Promise<number> {
   const server = process.env.SERVER_URL || "http://localhost:8000"
-  const baseServer = process.env.BASE_SERVER_URL
+  const baseline = readBaseline(process.env.BASE_LIGHTHOUSE_PATH)
   const runs = Number(process.env.LIGHTHOUSE_RUNS) || 5
   const chromePath = process.env.CHROME_PATH || chromium.executablePath()
   mkdirSync(OUT_DIR, { recursive: true })
@@ -345,47 +349,24 @@ export async function main(): Promise<number> {
 
     const pages: PageResult[] = []
     for (const page of PAGES) {
-      const sides: Side[] = [
-        { label: "pr", server, runs: [], failed: false },
-        ...(baseServer
-          ? [{ label: "dev" as const, server: baseServer, runs: [], failed: false }]
-          : []),
-      ]
+      const url = new URL(page.path, server).toString()
       console.warn(`${blue("●")} Auditing ${page.name} (${page.path})...`)
-      const run = async (side: Side, keep: boolean) => {
-        if (side.failed) return
-        try {
-          const result = await audit(new URL(page.path, side.server).toString(), flags, keep)
-          if (keep) side.runs.push(result)
-        } catch (err) {
-          // This build failing is an error; dev's image failing (say, on a page this PR
-          // adds) leaves the page uncompared.
-          if (side.label === "pr") throw err
-          console.warn(`${yellow("⚠")} Dev's image: ${(err as Error).message}`)
-          side.failed = true
-        }
-      }
       // Warm-up: the first request renders the page and optimizes its images.
-      for (const side of sides) await run(side, false)
-      for (let i = 0; i < runs; i++) {
-        for (const side of i % 2 ? [...sides].reverse() : sides) await run(side, true)
-      }
+      await audit(url, flags, false)
+      const pageRuns: Run[] = []
+      for (let i = 0; i < runs; i++) pageRuns.push(await audit(url, flags, true))
 
-      const [pr, dev] = sides
       const result: PageResult = {
         name: page.name,
         path: page.path,
-        pr: samplesOf(pr!.runs.map((r) => r.lhr)),
-        dev: dev && !dev.failed ? samplesOf(dev.runs.map((r) => r.lhr)) : null,
+        pr: samplesOf(pageRuns.map((r) => r.lhr)),
+        dev: baseline.get(page.path) ?? null,
       }
       pages.push(result)
-      const file = page.path === "/" ? "home" : page.path.slice(1).replaceAll("/", "-")
-      for (const side of sides) {
-        const best = medianOf(side.runs)
-        if (best) {
-          const suffix = side.label === "dev" ? ".dev" : ""
-          writeFileSync(join(OUT_DIR, `${file}${suffix}.html`), best.html)
-        }
+      const best = medianOf(pageRuns)
+      if (best) {
+        const file = page.path === "/" ? "home" : page.path.slice(1).replaceAll("/", "-")
+        writeFileSync(join(OUT_DIR, `${file}.html`), best.html)
       }
       const worse = regressions(result)
       console.warn(

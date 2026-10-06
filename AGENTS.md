@@ -38,7 +38,7 @@ This file provides guidance to tools like Claude Code (claude.ai/code) when work
 - `pnpm coverage:report` — post the combined coverage PR comment locally (requires `GITHUB_TOKEN`, `GITHUB_REPOSITORY`, `GITHUB_EVENT_PATH`)
 - `pnpm bundle-size` — measure the gzipped client JS and CSS each public page loads, from the build in `.next` (run `pnpm build` first), and compare it with dev's last measurement when `BASE_BUNDLE_SIZE_PATH` names one (see [Page speed](#page-speed))
 - `pnpm analyze` — Turbopack's bundle analyzer, in the browser (it compiles but doesn't leave a build behind): each route's client and server modules, and the import chain that brings each one in. `pnpm analyze --output` writes it to `.next/diagnostics/analyze/` instead, which the next `pnpm build` deletes
-- `pnpm lighthouse` — seed a throwaway database, build and serve as `pnpm test:e2e` does, then run Lighthouse's performance audit on a few seeded pages; reports land in `lighthouse-results/`. Set `BASE_SERVER_URL` to compare with a second server (see [Page speed](#page-speed))
+- `pnpm lighthouse` — seed a throwaway database, build and serve as `pnpm test:e2e` does, then run Lighthouse's performance audit on a few seeded pages; reports land in `lighthouse-results/`. Set `BASE_LIGHTHOUSE_PATH` to a `summary.json` from an earlier run to compare with it (see [Page speed](#page-speed))
 
 ### Test databases
 
@@ -293,14 +293,14 @@ PR comment comparing it with the last run on `dev`:
   more than 10 kB against dev is flagged in the comment and with a warning on the
   PR's checks. It **only warns**; `pnpm analyze` shows which import brought the
   growth in.
-- **Lighthouse** (`scripts/lighthouse.ts`) seeds the E2E database and starts the
-  PR's image beside dev's (the `dev` tag in GHCR, pushed by every push to `dev`).
-  Dev's image gets its own copy of the database. Each page is audited 5 times on
-  each image, alternating, on the same runner. The CPU slowdown is calibrated to
-  the runner's benchmark score, and Chrome can't reach any host but localhost. A
-  metric is flagged only when every PR run is worse than every dev run. It **only
-  warns**: the HTML reports are in the `lighthouse-results` artifact. A page added
-  to the seed can be audited by adding it to `PAGES`.
+- **Lighthouse** (`scripts/lighthouse.ts`) seeds the E2E database, starts the
+  PR's image and audits each page 5 times, comparing with the results the last
+  push to `dev` uploaded. The CPU slowdown is calibrated to the runner's benchmark
+  score, and Chrome can't reach any host but localhost. Dev's results come from
+  another runner, so a metric is flagged only when every PR run is worse than
+  every dev run by a wide margin (`THRESHOLDS`). It **only warns**: the HTML
+  reports are in the `lighthouse-results` artifact. A page added to the seed can
+  be audited by adding it to `PAGES`.
 
 ### Visual regression (screenshot) tests
 

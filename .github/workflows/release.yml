@@ -1,5 +1,14 @@
 name: Release
 
+# Tags and releases each version that lands on main. When that version is a
+# hotfix (`pnpm hotfix`), it also opens the PR that back-merges main into dev,
+# which the release train waits on before it cuts another candidate. A person
+# still merges it, with a merge commit.
+#
+# The back-merge PR needs the same token as the release train (a GitHub App or
+# RELEASE_TOKEN; see release-train.yml), because CI doesn't run on PRs opened
+# with the workflow's own token. Without one it warns and skips.
+
 on:
   push:
     branches: [main]
@@ -12,6 +21,9 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+    outputs:
+      bumped: ${{ steps.version.outputs.bumped }}
+      tag: ${{ steps.version.outputs.tag }}
 
     steps:
       - uses: actions/checkout@v7
@@ -35,3 +47,74 @@ jobs:
         run: gh release create "${{ steps.version.outputs.tag }}" --target main --title "${{ steps.version.outputs.tag }}" --generate-notes
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  back-merge:
+    name: Open the back-merge PR
+    needs: release
+    if: needs.release.outputs.bumped == 'true' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Get the release App's token
+        id: app-token
+        if: ${{ vars.RELEASE_APP_ID != '' }}
+        uses: actions/create-github-app-token@v3
+        with:
+          app-id: ${{ vars.RELEASE_APP_ID }}
+          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
+
+      - uses: actions/checkout@v7
+        with:
+          ref: main
+          fetch-depth: 0
+          token: ${{ steps.app-token.outputs.token || secrets.RELEASE_TOKEN || github.token }}
+
+      # A release train merge brings main nothing dev lacks, so a trial merge of
+      # main into dev leaves dev's tree as it is. A hotfix changes it, or
+      # conflicts (merge-tree exits 1), and either way dev needs main.
+      - name: Check whether dev already has main
+        id: check
+        run: |
+          DEV_TREE=$(git rev-parse 'origin/dev^{tree}')
+          if MERGED_TREE=$(git merge-tree --write-tree origin/dev origin/main) && [ "$MERGED_TREE" = "$DEV_TREE" ]; then
+            echo "dev already has everything on main; nothing to back-merge."
+            echo "needed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "needed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      # Same branch and title as `pnpm hotfix <version> --phase 2`, so either
+      # one reuses what the other opened.
+      - name: Open the PR
+        if: steps.check.outputs.needed == 'true'
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token || secrets.RELEASE_TOKEN }}
+          TAG: ${{ needs.release.outputs.tag }}
+        run: |
+          if [ -z "$GH_TOKEN" ]; then
+            echo "::warning::main has changes dev lacks, but there is no release token to open the back-merge PR with. Run \`pnpm hotfix ${TAG#v} --phase 2\`."
+            exit 0
+          fi
+          BRANCH="chore/back-merge-$TAG"
+          EXISTING=$(gh pr list --head "$BRANCH" --base dev --state open --json url --jq '.[0].url')
+          if [ -n "$EXISTING" ]; then
+            echo "Back-merge PR already open: $EXISTING"
+            exit 0
+          fi
+          if git ls-remote --exit-code --heads origin "$BRANCH" > /dev/null; then
+            echo "Reusing $BRANCH"
+          else
+            git push origin "origin/main:refs/heads/$BRANCH"
+          fi
+          cat > "$RUNNER_TEMP/body.md" <<EOF
+          $TAG reached main as a hotfix, so dev doesn't have it yet. The release train cuts no new candidate until it does.
+
+          **Merge this with a merge commit.** Don't squash it or use "Update branch": either one gives dev the change under a different commit, and main and dev keep diverging.
+
+          If GitHub reports conflicts, resolve them on this branch with a merge commit (\`git merge origin/dev\`), never a rebase.
+          EOF
+          URL=$(gh pr create --base dev --head "$BRANCH" --title "Back-merge $TAG into dev" --body-file "$RUNNER_TEMP/body.md")
+          echo "Opened $URL"
+          echo "Back-merge PR: $URL" >> "$GITHUB_STEP_SUMMARY"

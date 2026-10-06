@@ -14,4 +14,9 @@ export const sentryIgnoredErrors: RegExp[] = [
   /window\.ethereum\b/,
   // Firefox for iOS injects its reader-mode script into every page.
   /window\.__firefox__\b/,
+  // A promise rejected with the bare `error` Event of a <script>, <img> or <link> that
+  // failed to load. Our own loaders reject with Errors (next/script catches its own, and
+  // MathJax's goes to MathJaxProvider's onError), so these come from third-party and
+  // injected scripts, and an Event carries no URL or stack to act on.
+  /^(?:Event: )?Event `Event` \(type=error\) captured as (?:promise rejection|exception)$/,
 ]

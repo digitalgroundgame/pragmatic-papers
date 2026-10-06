@@ -38,3 +38,58 @@ describe("proxy: Next-Action header", () => {
     },
   )
 })
+
+const get = (path: string): NextRequest => new NextRequest(`https://pragmaticpapers.com${path}`)
+
+describe("proxy: dotfile probes", () => {
+  it.each(["/.env", "/.env.local", "/.git/config", "/.git/HEAD", "/articles/.aws/credentials"])(
+    "answers %s with a 404 before Next sees it",
+    (path) => {
+      const response = proxy(get(path))
+      expect(response.status).toBe(404)
+      expect(response.headers.get("x-middleware-next")).toBeNull()
+    },
+  )
+
+  it.each([
+    "/.well-known/security.txt",
+    "/.well-known",
+    "/articles/some-article",
+    "/articles/v1.2-release",
+  ])("passes %s through to Next", (path) => {
+    expect(proxy(get(path)).headers.get("x-middleware-next")).toBe("1")
+  })
+
+  it("still turns away look-alikes of /.well-known", () => {
+    expect(proxy(get("/.well-known-secrets")).status).toBe(404)
+  })
+})
+
+describe("proxy: multipart bodies without a boundary", () => {
+  it.each(["multipart/form-data", "multipart/form-data; charset=utf-8", "Multipart/Form-Data"])(
+    "answers a POST with Content-Type %j with a 400",
+    (contentType) => {
+      const response = proxy(request({ "content-type": contentType }))
+      expect(response.status).toBe(400)
+      expect(response.headers.get("x-middleware-next")).toBeNull()
+    },
+  )
+
+  it("passes a multipart POST with a boundary through", () => {
+    const response = proxy(
+      request({ "content-type": "multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxk" }),
+    )
+    expect(response.headers.get("x-middleware-next")).toBe("1")
+  })
+
+  it("passes other content types and methods through", () => {
+    expect(
+      proxy(request({ "content-type": "application/json" })).headers.get("x-middleware-next"),
+    ).toBe("1")
+    expect(
+      proxy(request({ "content-type": "multipart/form-data" }, "GET")).headers.get(
+        "x-middleware-next",
+      ),
+    ).toBe("1")
+  })
+})

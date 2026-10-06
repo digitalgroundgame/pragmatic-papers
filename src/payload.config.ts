@@ -24,7 +24,7 @@ import { plugins } from "@/plugins"
 import { searchVectorAfterSchemaInit } from "@/plugins/searchVector"
 import { getServerSideURL } from "@/utilities/getURL"
 import { migrations } from "@/migrations"
-import { postgresAdapter } from "@payloadcms/db-postgres"
+import { type PostgresAdapter, postgresAdapter } from "@payloadcms/db-postgres"
 import path from "path"
 import pretty from "pino-pretty"
 import { buildConfig, type SharpDependency } from "payload"
@@ -102,6 +102,10 @@ export default buildConfig({
   db: postgresAdapter({
     pool: {
       connectionString: process.env.DATABASE_URI,
+      // Notice a connection the server dropped while idle instead of finding out on the
+      // next query, and give up on an unreachable server rather than hanging a request.
+      keepAlive: true,
+      connectionTimeoutMillis: 10_000,
     },
     // prevent schema push in prod/test for static schema determinism and noise reduction
     push: process.env.NODE_ENV === "development",
@@ -119,6 +123,18 @@ export default buildConfig({
    * Raised to 32 MB: the ceiling is only there to stop a runaway request, and ours are known.
    */
   bodyParser: { limits: { fieldSize: 32 * 1024 * 1024 } },
+  onInit: async (payload) => {
+    // When the database server closes a connection sitting idle in the pool (a restart,
+    // an admin_shutdown), node-postgres drops the client and emits "error" on the pool.
+    // Payload only listens on the one client it holds, so with no listener here the event
+    // is thrown as an uncaught exception. The pool opens a new connection on the next
+    // query, so a warning is all it needs. Commands that skip connecting
+    // (`disableDBConnect`) have no pool yet.
+    const { pool } = payload.db as unknown as Partial<PostgresAdapter>
+    pool?.on("error", (err) => {
+      payload.logger.warn({ err }, "Postgres closed an idle connection")
+    })
+  },
   collections: [
     Pages,
     Articles,

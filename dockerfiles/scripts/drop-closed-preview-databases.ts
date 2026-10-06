@@ -15,8 +15,12 @@
  *
  * GitHub's list can still miss an open PR: one too new to be listed yet, or one that moved
  * between pages while they were read. So a database is also kept while anything is
- * connected to it (a live preview's app always is; a closed PR's containers are already
- * gone), and when its PR is newer than every PR GitHub listed. A later build retries it.
+ * connected to it (a live preview's app usually is), and when its PR is newer than every PR
+ * GitHub listed. A later build retries it.
+ *
+ * A closed PR's preview can also outlive Coolify's delete, and an idle one may hold no
+ * connection at the moment of the check. So a database is also kept while its preview's
+ * URL still answers as our app, and the log says so: that container needs deleting by hand.
  */
 import { pathToFileURL } from "node:url"
 import pg from "pg"
@@ -27,7 +31,12 @@ export const DEFAULT_REPOSITORY = "digitalgroundgame/pragmatic-papers"
 
 /** Only what's needed from a `pg.Client`. */
 export type PgClient = Pick<pg.Client, "connect" | "query" | "escapeIdentifier" | "end">
-export type Fetch = (url: string, init?: { headers?: Record<string, string> }) => Promise<Response>
+export type Fetch = (
+  url: string,
+  init?: { method?: string; headers?: Record<string, string>; redirect?: "manual" },
+) => Promise<Response>
+
+export const DEFAULT_PREVIEW_URL_TEMPLATE = "https://pr-{{pr_id}}.pragmaticpapers.com"
 
 function escapeRegExp(text: string): string {
   return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
@@ -82,6 +91,26 @@ export async function openPullRequests(
   }
 }
 
+/**
+ * Whether PR `pr`'s preview still answers as our app. Asks for a path no page has, so
+ * neither Cloudflare's cache nor a page answers: our app replies with its own 404, which
+ * carries Next's `X-Powered-By`, and a removed preview gets Coolify's proxy or nothing.
+ * Kept in step with `previewAnswers` in scripts/preview-deployment.ts, which this image
+ * can't import.
+ */
+export async function previewAnswers(fetch: Fetch, template: string, pr: number): Promise<boolean> {
+  const url = template.replaceAll("{{pr_id}}", String(pr))
+  try {
+    const response = await fetch(`${url}/__preview-removed-check-${Date.now()}`, {
+      method: "HEAD",
+      redirect: "manual",
+    })
+    return response.headers.get("x-powered-by")?.includes("Next.js") ?? false
+  } catch {
+    return false
+  }
+}
+
 export interface CleanupDeps {
   client: PgClient
   fetch: Fetch
@@ -95,7 +124,13 @@ export interface CleanupDeps {
  */
 export async function dropClosedPreviewDatabases(
   deps: CleanupDeps,
-  options: { source: string; currentPr: number; repository: string; token?: string },
+  options: {
+    source: string
+    currentPr: number
+    repository: string
+    token?: string
+    previewUrlTemplate?: string
+  },
 ): Promise<string[]> {
   const { client, log } = deps
   const openPrs = await openPullRequests(deps.fetch, options.repository, options.token)
@@ -137,6 +172,15 @@ export async function dropClosedPreviewDatabases(
   for (const database of closed) {
     if (inUse.has(database)) {
       log(`Keeping ${database}: something is still connected to it`)
+      continue
+    }
+    const pr = previewPr(database, options.source)!
+    const template = options.previewUrlTemplate ?? DEFAULT_PREVIEW_URL_TEMPLATE
+    if (await previewAnswers(deps.fetch, template, pr)) {
+      log(
+        `Keeping ${database}: PR ${pr} is closed but its preview still answers. ` +
+          "Delete that preview in Coolify.",
+      )
       continue
     }
     try {
@@ -185,6 +229,7 @@ export async function main(
         currentPr: pr,
         repository: env.GITHUB_REPOSITORY || DEFAULT_REPOSITORY,
         token: env.GITHUB_TOKEN || undefined,
+        previewUrlTemplate: env.PREVIEW_URL_TEMPLATE || undefined,
       },
     )
   } catch (error) {

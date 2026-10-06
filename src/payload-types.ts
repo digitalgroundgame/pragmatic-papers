@@ -543,6 +543,7 @@ export interface Media {
    * Duration in seconds (auto-populated from the audio file)
    */
   duration?: number | null;
+  _objectKey?: string | null;
   updatedAt: string;
   createdAt: string;
   url?: string | null;
@@ -1183,6 +1184,7 @@ export interface MapAsset {
   source?: LinkField;
   createdBy?: (number | null) | User;
   prefix?: string | null;
+  _objectKey?: string | null;
   updatedAt: string;
   createdAt: string;
   url?: string | null;
@@ -1980,6 +1982,7 @@ export interface MediaSelect<T extends boolean = true> {
   createdBy?: T;
   narrator?: T;
   duration?: T;
+  _objectKey?: T;
   updatedAt?: T;
   createdAt?: T;
   url?: T;
@@ -2076,6 +2079,7 @@ export interface MapAssetsSelect<T extends boolean = true> {
   source?: T | LinkFieldSelect<T>;
   createdBy?: T;
   prefix?: T;
+  _objectKey?: T;
   updatedAt?: T;
   createdAt?: T;
   url?: T;

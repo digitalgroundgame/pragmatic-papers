@@ -113,6 +113,16 @@ export const MapAssets: CollectionConfig = {
         hidden: true,
       },
     },
+    // Injected by the s3Storage plugin under the same condition as `prefix`; declared for
+    // the same reason.
+    {
+      name: "_objectKey",
+      type: "text",
+      admin: {
+        readOnly: true,
+        hidden: true,
+      },
+    },
   ],
   hooks: {
     beforeValidate: [captureSvgContent],

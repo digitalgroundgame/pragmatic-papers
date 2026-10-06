@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs"
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { dirname, join } from "node:path"
 import { gzipSync } from "node:zlib"
@@ -16,13 +16,12 @@ import { upsertPrComment } from "../../scripts/pr-comment"
 
 import {
   formatDelta,
+  jumps,
   main,
   measureRoutes,
-  overBudget,
   readClientManifest,
   renderReport,
   routeFromManifestPath,
-  suggestBudgets,
   type RouteSize,
 } from "../../scripts/bundle-size"
 
@@ -162,16 +161,16 @@ const route = (name: string, jsKb: number, cssKb = 10): RouteSize => ({
   cssGzip: cssKb * 1024,
 })
 
-describe("budgets", () => {
-  it("fails only routes over their budget, never routes without one", () => {
-    const routes = [route("/", 100), route("/search", 120.5), route("/new", 900)]
-    expect(overBudget(routes, { "/": 100, "/search": 120 }).map((r) => r.route)).toEqual([
-      "/search",
-    ])
+describe("jumps", () => {
+  it("flags only routes whose JavaScript grew by more than 10 kB vs dev", () => {
+    const routes = [route("/", 110), route("/search", 110.5), route("/smaller", 50)]
+    const base = [route("/", 100), route("/search", 100), route("/smaller", 100)]
+    expect(jumps(routes, base).map((r) => r.route)).toEqual(["/search"])
   })
 
-  it("suggests each route's size plus the headroom, rounded up", () => {
-    expect(suggestBudgets([route("/", 100.2)])).toEqual({ "/": 111 })
+  it("never flags a route dev doesn't have, or anything without a measurement from dev", () => {
+    expect(jumps([route("/new", 900)], [route("/", 100)])).toEqual([])
+    expect(jumps([route("/", 900)], null)).toEqual([])
   })
 })
 
@@ -184,42 +183,42 @@ describe("formatDelta", () => {
 })
 
 describe("renderReport", () => {
-  it("collapses the table when everything is within budget", () => {
-    const report = renderReport({
-      routes: [route("/", 100)],
-      base: [route("/", 100)],
-      budgets: { "/": 110 },
-    })
+  it("collapses the table when nothing changed", () => {
+    const report = renderReport({ routes: [route("/", 100)], base: [route("/", 100)] })
     expect(report).toContain("No page's client JavaScript or CSS changed size.")
     expect(report).toContain("<details>")
-    expect(report).toContain("| `/` | 100.0 kB | ±0 | ✅ 110 kB | 10.0 kB | ±0 |")
+    expect(report).toContain("| `/` | 100.0 kB | ±0 | 10.0 kB | ±0 |")
   })
 
   it("counts the routes that changed", () => {
     const report = renderReport({
       routes: [route("/", 104), route("/search", 100)],
       base: [route("/", 100), route("/search", 100)],
-      budgets: {},
     })
-    expect(report).toContain("1 route changed size")
-    expect(report).toContain("| `/` | 104.0 kB | +4.0 kB | none |")
+    expect(report).toContain("1 route changed size; none grew by more than 10 kB.")
+    expect(report).toContain("| `/` | 104.0 kB | +4.0 kB |")
   })
 
-  it("names the budgets to raise when a route is over", () => {
+  it("leads with the routes that jumped, and shows the whole table", () => {
     const report = renderReport({
       routes: [route("/", 130), route("/search", 100)],
       base: [route("/", 100), route("/search", 100)],
-      budgets: { "/": 110, "/search": 110 },
     })
-    expect(report).toContain("❌ **1 route is over budget.**")
-    expect(report).toContain('"/": 140,')
-    expect(report).not.toContain('"/search"')
+    expect(report).toContain("⚠ **1 route grew by more than 10 kB vs dev.**")
+    expect(report).toContain("| `/` | 130.0 kB | ⚠ +30.0 kB |")
+    expect(report).toContain("| `/search` | 100.0 kB | ±0 |")
     expect(report).not.toContain("<details>")
   })
 
   it("marks routes dev didn't have", () => {
-    const report = renderReport({ routes: [route("/", 100)], base: [], budgets: {} })
+    const report = renderReport({ routes: [route("/", 100)], base: [] })
     expect(report).toContain("| `/` | 100.0 kB | new |")
+  })
+
+  it("says when there's no measurement from dev", () => {
+    expect(renderReport({ routes: [route("/", 100)], base: null })).toContain(
+      "No measurement from `dev` to compare with yet.",
+    )
   })
 })
 
@@ -228,12 +227,20 @@ describe("main", () => {
   let dir: string
   let warn: MockInstance<typeof console.warn>
   let error: MockInstance<typeof console.error>
-  const budgets = (value: Record<string, number>) =>
-    writeFileSync(join(dir, "bundle-budgets.json"), JSON.stringify(value))
+  /** Dev's measurement: this build's, with each route's JavaScript `kbLess` kB smaller. */
+  const devMeasured = async (kbLess: Record<string, number>) => {
+    vi.stubEnv("BUNDLE_SIZE_OUT", join(dir, "now.json"))
+    await main([])
+    const now = JSON.parse(readFileSync(join(dir, "now.json"), "utf8")) as RouteSize[]
+    const base = now.map((r) => ({ ...r, jsGzip: r.jsGzip - (kbLess[r.route] ?? 0) * 1024 }))
+    writeFileSync(join(dir, "base.json"), JSON.stringify(base))
+    vi.stubEnv("BASE_BUNDLE_SIZE_PATH", join(dir, "base.json"))
+    vi.stubEnv("BUNDLE_SIZE_OUT", "")
+  }
 
   beforeEach(() => {
-    // bundle-budgets.json is read from and written to the working directory. Each test
-    // file runs in its own process, so moving it is safe.
+    // The build is read from the working directory's .next. Each test file runs in its
+    // own process, so moving it is safe.
     dir = mkdtempSync(join(tmpdir(), "bundle-size-main-"))
     writeBuild(join(dir, ".next"))
     process.chdir(dir)
@@ -243,6 +250,7 @@ describe("main", () => {
     vi.stubEnv("BUNDLE_SIZE_OUT", "")
     vi.stubEnv("GITHUB_STEP_SUMMARY", "")
     vi.stubEnv("PR_NUMBER", "")
+    vi.stubEnv("GITHUB_ACTIONS", "")
   })
 
   afterEach(() => {
@@ -264,35 +272,31 @@ describe("main", () => {
     expect(error.mock.calls[0]![0]).toContain("Found no page manifests")
   })
 
-  it("passes when every route is within its budget", async () => {
-    budgets({ "/": 100, "/articles/[slug]": 100 })
+  const annotations = () =>
+    warn.mock.calls.map(([line]) => String(line)).filter((line) => line.startsWith("::"))
+
+  it("passes, and annotates nothing, when no route jumped", async () => {
+    vi.stubEnv("GITHUB_ACTIONS", "true")
+    await devMeasured({ "/": 5 })
+    warn.mockClear()
     expect(await main([])).toBe(0)
     expect(error).not.toHaveBeenCalled()
+    expect(annotations()).toEqual([])
   })
 
-  it("never fails a route that has no budget", async () => {
-    budgets({})
+  it("only warns, with an annotation naming the route, when one jumped", async () => {
+    vi.stubEnv("GITHUB_ACTIONS", "true")
+    await devMeasured({ "/articles/[slug]": 12 })
+    warn.mockClear()
+
     expect(await main([])).toBe(0)
-    expect(warn.mock.calls.some(([line]) => String(line).includes("(no budget)"))).toBe(true)
-  })
-
-  it("fails, naming the route, when one is over its budget", async () => {
-    budgets({ "/": 100, "/articles/[slug]": 0 })
-    expect(await main([])).toBe(1)
-    expect(error.mock.calls[0]![0]).toContain("Over budget: /articles/[slug].")
-  })
-
-  it("--update writes every route's budget, and measures nothing against them", async () => {
-    budgets({ "/": 0 })
-    expect(await main(["--update"])).toBe(0)
-    expect(JSON.parse(readFileSync(join(dir, "bundle-budgets.json"), "utf8"))).toEqual({
-      "/": 11,
-      "/articles/[slug]": 11,
-    })
+    expect(annotations()).toEqual([
+      "::warning title=Bundle size::/articles/[slug] grew by 12.0 kB of gzipped JavaScript vs dev",
+    ])
+    expect(warn.mock.calls.some(([line]) => String(line).includes("+12.0 kB vs dev"))).toBe(true)
   })
 
   it("saves the measurement and the report for CI, comparing with dev's", async () => {
-    budgets({})
     const base: RouteSize[] = [{ route: "/", js: 0, jsGzip: 0, cssGzip: 0 }]
     writeFileSync(join(dir, "base.json"), JSON.stringify(base))
     vi.stubEnv("BASE_BUNDLE_SIZE_PATH", join(dir, "base.json"))
@@ -307,11 +311,9 @@ describe("main", () => {
     expect(summary).toContain("## Bundle size")
     // The article route is new to dev; the home page has a change against it.
     expect(summary).toMatch(/\| `\/articles\/\[slug\]` \| [\d.]+ kB \| new \|/)
-    expect(existsSync(join(dir, "bundle-budgets.json"))).toBe(true)
   })
 
   it("posts the report on the PR, and keeps going if GitHub refuses it", async () => {
-    budgets({})
     vi.stubEnv("GITHUB_REPOSITORY", "owner/repo")
     vi.stubEnv("GITHUB_TOKEN", "t0ken")
     vi.stubEnv("PR_NUMBER", "7")

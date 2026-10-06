@@ -36,7 +36,7 @@ This file provides guidance to tools like Claude Code (claude.ai/code) when work
 - `pnpm test:coverage` — run all tests with V8 coverage report (full picture for local inspection)
 - `pnpm test:unit -u` — regenerate snapshot baselines after intentional UI changes
 - `pnpm coverage:report` — post the combined coverage PR comment locally (requires `GITHUB_TOKEN`, `GITHUB_REPOSITORY`, `GITHUB_EVENT_PATH`)
-- `pnpm bundle-size` — measure the gzipped client JS and CSS each public page loads, from the build in `.next` (run `pnpm build` first), and check JS against `bundle-budgets.json`; `--update` rewrites the budgets as each route's size plus 10 kB (see [Page speed](#page-speed))
+- `pnpm bundle-size` — measure the gzipped client JS and CSS each public page loads, from the build in `.next` (run `pnpm build` first), and compare it with dev's last measurement when `BASE_BUNDLE_SIZE_PATH` names one (see [Page speed](#page-speed))
 - `pnpm analyze` — Turbopack's bundle analyzer, in the browser (it compiles but doesn't leave a build behind): each route's client and server modules, and the import chain that brings each one in. `pnpm analyze --output` writes it to `.next/diagnostics/analyze/` instead, which the next `pnpm build` deletes
 - `pnpm lighthouse` — seed a throwaway database, build and serve as `pnpm test:e2e` does, then run Lighthouse's performance audit on a few seeded pages; reports land in `lighthouse-results/`. Set `BASE_SERVER_URL` to compare with a second server (see [Page speed](#page-speed))
 
@@ -288,10 +288,11 @@ PR comment comparing it with the last run on `dev`:
 
 - **Bundle size** (`scripts/bundle-size.ts`) reads the image's build manifests and
   adds up the gzipped JavaScript and CSS each public page loads before it's
-  interactive (Next 16 no longer prints "First Load JS"). It **fails** when a
-  route's JavaScript is over its budget in `bundle-budgets.json`. If the growth is
-  intended, raise that route's budget in the same PR. The comment prints the new
-  values, and the change shows up in the diff for review.
+  interactive (Next 16 no longer prints "First Load JS"). Pages are expected to
+  grow over time, so there are no fixed budgets: a route whose JavaScript grew by
+  more than 10 kB against dev is flagged in the comment and with a warning on the
+  PR's checks. It **only warns**; `pnpm analyze` shows which import brought the
+  growth in.
 - **Lighthouse** (`scripts/lighthouse.ts`) seeds the E2E database and starts the
   PR's image beside dev's (the `dev` tag in GHCR, pushed by every push to `dev`).
   Dev's image gets its own copy of the database. Each page is audited 5 times on

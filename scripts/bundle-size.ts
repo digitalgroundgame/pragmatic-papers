@@ -1,8 +1,8 @@
 // Measures the client JavaScript and CSS each public page loads, from a production
-// build's manifests, and fails when a page's JavaScript outgrows its budget in
-// bundle-budgets.json.
+// build's manifests, and flags a page whose JavaScript grew by more than JUMP_KB
+// against dev's last measurement.
 //
-//   pnpm bundle-size [--next-dir .next] [--update]
+//   pnpm bundle-size [--next-dir .next]
 //
 // Next 16 dropped "First Load JS" from `next build`'s output, so this reads what
 // the HTML references directly: the build manifest's `rootMainFiles` (the React and
@@ -12,9 +12,8 @@
 // gzipped, so the number tracks what readers download. Chunks a page imports lazily
 // aren't counted; Lighthouse (scripts/lighthouse.ts) sees those.
 //
-// Budgets are kB of gzipped JavaScript per route. A page that grows past its budget
-// fails the check; raise the budget in the same PR, so the growth is a reviewed line
-// in the diff. `--update` rewrites the file as each route's size plus HEADROOM_KB.
+// Pages are expected to grow over time, so there are no fixed budgets: a jump of more
+// than JUMP_KB in one PR is what gets flagged, and it only warns.
 //
 // In CI (playwright.yml's "Bundle size" job) it reads the `.next` copied out of the
 // image the PR deploys, compares with dev's last measurement (BASE_BUNDLE_SIZE_PATH),
@@ -26,12 +25,11 @@ import { join, relative, sep } from "node:path"
 import { fileURLToPath } from "node:url"
 import vm from "node:vm"
 import { gzipSync } from "node:zlib"
-import { blue, green, red, yellow } from "./ansi.mjs"
+import { blue, red, yellow } from "./ansi.mjs"
 import { prCommentTarget, upsertPrComment } from "./pr-comment"
 
-export const BUDGETS_FILE = "bundle-budgets.json"
-/** Room a budget written by `--update` leaves above the route's current size. */
-export const HEADROOM_KB = 10
+/** Growth in a route's gzipped JavaScript against dev, in kB, that gets flagged. */
+export const JUMP_KB = 10
 const COMMENT_MARKER = "bundle-size"
 
 export interface RouteSize {
@@ -42,8 +40,6 @@ export interface RouteSize {
   /** Bytes of CSS loaded as stylesheets (not inlined), gzipped. */
   cssGzip: number
 }
-
-export type Budgets = Record<string, number>
 
 interface ClientReferenceManifest {
   entryJSFiles?: Record<string, string[]>
@@ -135,26 +131,27 @@ export function formatDelta(bytes: number): string {
   return `${bytes > 0 ? "+" : "−"}${formatKb(Math.abs(bytes))}`
 }
 
-/** Routes whose gzipped JavaScript is over their budget. Routes without one never fail. */
-export function overBudget(routes: RouteSize[], budgets: Budgets): RouteSize[] {
-  return routes.filter((r) => budgets[r.route] !== undefined && kb(r.jsGzip) > budgets[r.route]!)
-}
-
-export function suggestBudgets(routes: RouteSize[]): Budgets {
-  return Object.fromEntries(routes.map((r) => [r.route, Math.ceil(kb(r.jsGzip) + HEADROOM_KB)]))
+/**
+ * Routes whose gzipped JavaScript grew by more than JUMP_KB against dev. A route dev
+ * doesn't have isn't flagged: there's nothing to compare it with.
+ */
+export function jumps(routes: RouteSize[], base: RouteSize[] | null): RouteSize[] {
+  const baseByRoute = new Map(base?.map((r) => [r.route, r]))
+  return routes.filter((r) => {
+    const before = baseByRoute.get(r.route)
+    return before !== undefined && kb(r.jsGzip - before.jsGzip) > JUMP_KB
+  })
 }
 
 export function renderReport({
   routes,
   base,
-  budgets,
 }: {
   routes: RouteSize[]
   base: RouteSize[] | null
-  budgets: Budgets
 }): string {
   const baseByRoute = new Map(base?.map((r) => [r.route, r]))
-  const over = new Set(overBudget(routes, budgets).map((r) => r.route))
+  const jumped = new Set(jumps(routes, base).map((r) => r.route))
   const changed = routes.filter((r) => {
     const before = baseByRoute.get(r.route)
     return (
@@ -166,45 +163,38 @@ export function renderReport({
 
   const rows = routes.map((r) => {
     const before = baseByRoute.get(r.route)
-    const budget = budgets[r.route]
-    const status = over.has(r.route) ? "❌" : budget === undefined ? "➖" : "✅"
+    const vsDev = before ? formatDelta(r.jsGzip - before.jsGzip) : base === null ? "–" : "new"
     return [
       `\`${r.route}\``,
       formatKb(r.jsGzip),
-      before ? formatDelta(r.jsGzip - before.jsGzip) : base === null ? "–" : "new",
-      budget === undefined ? "none" : `${status} ${budget} kB`,
+      jumped.has(r.route) ? `⚠ ${vsDev}` : vsDev,
       formatKb(r.cssGzip),
       before ? formatDelta(r.cssGzip - before.cssGzip) : base === null ? "–" : "new",
     ]
   })
   const table = [
-    "| Route | JS (gzip) | vs dev | Budget | CSS (gzip) | vs dev |",
-    "| --- | ---: | ---: | ---: | ---: | ---: |",
+    "| Route | JS (gzip) | vs dev | CSS (gzip) | vs dev |",
+    "| --- | ---: | ---: | ---: | ---: |",
     ...rows.map((cells) => `| ${cells.join(" | ")} |`),
   ].join("\n")
 
   const lines = ["## Bundle size", ""]
-  if (over.size > 0) {
-    const suggested = suggestBudgets(routes.filter((r) => over.has(r.route)))
+  if (jumped.size > 0) {
     lines.push(
-      `❌ **${over.size} ${over.size === 1 ? "route is" : "routes are"} over budget.** ` +
-        `Make the page lighter, or raise its budget in \`${BUDGETS_FILE}\` in this PR ` +
-        `so the growth gets reviewed:`,
-      "",
-      "```json",
-      ...Object.entries(suggested).map(([route, value]) => `"${route}": ${value},`),
-      "```",
+      `⚠ **${jumped.size} ${jumped.size === 1 ? "route" : "routes"} grew by more than ` +
+        `${JUMP_KB} kB vs dev.** Check that the growth is meant: \`pnpm analyze\` shows ` +
+        "which import brings a module in.",
       "",
       table,
     )
   } else {
     lines.push(
       base === null
-        ? "No measurement from `dev` to compare with yet. Every route is within its budget."
+        ? "No measurement from `dev` to compare with yet."
         : changed.length === 0
-          ? "No page's client JavaScript or CSS changed size. Every route is within its budget."
+          ? "No page's client JavaScript or CSS changed size."
           : `${changed.length} ${changed.length === 1 ? "route changed" : "routes changed"} size; ` +
-            "every route is within its budget.",
+            `none grew by more than ${JUMP_KB} kB.`,
       "",
       "<details><summary>Every route</summary>",
       "",
@@ -239,15 +229,6 @@ export async function main(args = process.argv.slice(2)): Promise<number> {
     return 1
   }
 
-  if (args.includes("--update")) {
-    writeFileSync(BUDGETS_FILE, JSON.stringify(suggestBudgets(routes), null, 2) + "\n")
-    console.warn(`${green("✔")} Wrote ${BUDGETS_FILE}: each route's size + ${HEADROOM_KB} kB.`)
-    return 0
-  }
-
-  const budgets = existsSync(BUDGETS_FILE)
-    ? (JSON.parse(readFileSync(BUDGETS_FILE, "utf8")) as Budgets)
-    : {}
   const basePath = process.env.BASE_BUNDLE_SIZE_PATH
   const base =
     basePath && existsSync(basePath)
@@ -257,17 +238,18 @@ export async function main(args = process.argv.slice(2)): Promise<number> {
   const out = process.env.BUNDLE_SIZE_OUT
   if (out) writeFileSync(out, JSON.stringify(routes, null, 2) + "\n")
 
+  const jumped = new Set(jumps(routes, base).map((r) => r.route))
+  const baseByRoute = new Map(base?.map((r) => [r.route, r]))
   for (const r of routes) {
-    const budget = budgets[r.route]
-    const mark = budget !== undefined && kb(r.jsGzip) > budget ? red("✖") : blue("●")
+    const before = baseByRoute.get(r.route)
+    const vsDev = before ? `  ${formatDelta(r.jsGzip - before.jsGzip)} vs dev` : ""
     console.warn(
-      `${mark} ${r.route.padEnd(28)} JS ${formatKb(r.jsGzip).padStart(9)} gzip` +
-        `${budget === undefined ? yellow("  (no budget)") : `  / ${budget} kB`}` +
-        `   CSS ${formatKb(r.cssGzip)}`,
+      `${jumped.has(r.route) ? yellow("⚠") : blue("●")} ${r.route.padEnd(28)} ` +
+        `JS ${formatKb(r.jsGzip).padStart(9)} gzip${vsDev}   CSS ${formatKb(r.cssGzip)}`,
     )
   }
 
-  const report = renderReport({ routes, base, budgets })
+  const report = renderReport({ routes, base })
   if (process.env.GITHUB_STEP_SUMMARY)
     appendFileSync(process.env.GITHUB_STEP_SUMMARY, report + "\n")
   const target = prCommentTarget()
@@ -279,13 +261,15 @@ export async function main(args = process.argv.slice(2)): Promise<number> {
     }
   }
 
-  const over = overBudget(routes, budgets)
-  if (over.length > 0) {
-    console.error(
-      `${red("✖")} Over budget: ${over.map((r) => r.route).join(", ")}. ` +
-        `Make the page lighter, or raise its budget in ${BUDGETS_FILE}.`,
-    )
-    return 1
+  // A GitHub annotation per route, so a jump shows on the PR's checks; it never fails.
+  if (process.env.GITHUB_ACTIONS) {
+    for (const r of routes.filter((route) => jumped.has(route.route))) {
+      const before = baseByRoute.get(r.route)!
+      console.warn(
+        `::warning title=Bundle size::${r.route} grew by ` +
+          `${formatKb(r.jsGzip - before.jsGzip)} of gzipped JavaScript vs dev`,
+      )
+    }
   }
   return 0
 }

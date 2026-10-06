@@ -270,6 +270,28 @@ describe("startSentryWhenIdle", () => {
     expect(sdk.captureException).toHaveBeenCalledExactlyOnceWith(error, unhandled("onerror"))
   })
 
+  it("keeps an early rejection with a DOM Event as its reason without hurrying the load", async () => {
+    const { startSentryWhenIdle } = await importClient()
+    const { win, runIdle } = fakeWindow()
+    startSentryWhenIdle(win)
+
+    // What a promise wrapping a failed <script> load rejects with.
+    const failedLoad = new Event("error")
+    const rejection = new Event("unhandledrejection")
+    Object.assign(rejection, { reason: failedLoad })
+    win.dispatchEvent(rejection)
+    await settle()
+    expect(sdk.init).not.toHaveBeenCalled()
+
+    win.dispatchEvent(new Event("load"))
+    runIdle()
+    await settle()
+    expect(sdk.captureException).toHaveBeenCalledExactlyOnceWith(
+      failedLoad,
+      unhandled("onunhandledrejection"),
+    )
+  })
+
   it("forwards router transitions only once Sentry has loaded", async () => {
     const { startSentryWhenIdle } = await importClient()
     const { win, runIdle } = fakeWindow({ readyState: "complete" })

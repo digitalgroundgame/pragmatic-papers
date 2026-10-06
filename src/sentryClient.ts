@@ -65,12 +65,12 @@ function isOurScript(filename: string, location: Location): boolean {
 /**
  * Loads Sentry once the page has loaded and the browser is idle (or after `timeout` ms
  * idle-waiting, whichever comes first), or at once on the first error from our own
- * scripts, or unhandled rejection, before then, as Sentry's own Loader Script does: a reader
- * who hits an error and leaves straight away is still reported. An error from a script we
- * don't serve is kept but doesn't hurry the load: Cloudflare's beacon would otherwise bring
- * Sentry in before the first paint on every page. Those early errors are kept and reported
- * once it's up, marked unhandled as Sentry's global handlers mark them; from then on those
- * handlers catch everything. Returns a `onRouterTransitionStart` for
+ * scripts, or unhandled rejection that isn't a failed load, before then, as Sentry's own
+ * Loader Script does: a reader who hits an error and leaves straight away is still
+ * reported. An error from a script we don't serve is kept but doesn't hurry the load:
+ * Cloudflare's beacon would otherwise bring Sentry in before the first paint on every
+ * page. Those early errors are kept and reported once it's up, marked unhandled as
+ * Sentry's global handlers mark them; from then on those handlers catch everything. Returns a `onRouterTransitionStart` for
  * instrumentation-client.ts, which does nothing until Sentry has loaded: a navigation that
  * early is the page's own, which Sentry's pageload span already covers.
  *
@@ -119,10 +119,11 @@ export function startSentryWhenIdle(
   )
   win.addEventListener(
     "unhandledrejection",
-    (event) => keep(event.reason, "onunhandledrejection"),
-    {
-      signal: listening.signal,
-    },
+    // A rejection with a DOM Event as its reason is almost always a script or image that
+    // failed to load, usually someone else's, and carries no stack to act on: kept, but
+    // not worth loading Sentry before the first paint for.
+    (event) => keep(event.reason, "onunhandledrejection", !(event.reason instanceof Event)),
+    { signal: listening.signal },
   )
 
   const whenIdle = () => {

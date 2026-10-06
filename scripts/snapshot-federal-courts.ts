@@ -4,6 +4,8 @@
  *   geometry   parse upstream's QGIS export (assets/geo/**) into the JSON the profile imports,
  *              and take the seat-block anchors measured against it
  *   data       run the real feed adapter and write the fixture the seed and tests use
+ *   quantize   re-grid the checked-in geometry to `geometryStep` without a checkout, and the
+ *              offsets, anchors and fixture anchors measured in its units with it
  *
  * `geometry` needs a checkout on disk (the SVGs are not part of the feed — geometry is ours).
  * `data` reads a checkout with --source, or GitHub with COURT_TRACKER_GITHUB_TOKEN — by
@@ -12,6 +14,7 @@
  *
  * Usage:
  *   pnpm tsx scripts/snapshot-federal-courts.ts geometry --source ../court-tracker
+ *   pnpm tsx scripts/snapshot-federal-courts.ts quantize
  *   pnpm tsx scripts/snapshot-federal-courts.ts data --source ../court-tracker --ref data-v05d95d9fcf1b
  *   pnpm tsx scripts/snapshot-federal-courts.ts data --ref data-v05d95d9fcf1b --keep ca1,ca8,scotus
  *
@@ -25,10 +28,10 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs"
 import path from "node:path"
 
 import { validateDrilldownData } from "../src/interactives/contract"
-import type { DrilldownData } from "../src/interactives/types"
+import type { DrilldownData, GeometryFile } from "../src/interactives/types"
 import { courtTrackerFeed } from "../src/interactives/federal-courts/feed"
 import { loadFederalCourtsGeometry } from "../src/interactives/federal-courts/geometry"
-import { svgToGeometryFile } from "../src/interactives/geometry"
+import { geometryStep, quantizeGeometry, svgToGeometryFile } from "../src/interactives/geometry"
 import { hashDrilldownData } from "../src/interactives/hash"
 import { localFileSource } from "../src/integrations/files"
 import { RELEASE_REF } from "../src/integrations/github"
@@ -81,6 +84,30 @@ function kb(s: string): string {
   return `${(Buffer.byteLength(s) / 1024).toFixed(0)} KB`
 }
 
+/** A geometry file by map: `national`, or a circuit id. */
+type Maps = Record<string, GeometryFile>
+
+/**
+ * The map a region's seat block is drawn on, which is also the units its anchor is in: the
+ * national map for a circuit and for anything with no shape of its own (the Supreme Court, the
+ * specialist courts), the circuit's own map for a district.
+ */
+export function anchorMap(maps: Maps): (regionId: string) => string {
+  const topLevel = new Set(maps.national?.paths.filter((p) => !p.parentId).map((p) => p.id))
+  const home = new Map<string, string>()
+  for (const [map, file] of Object.entries(maps)) {
+    if (map === "national") continue
+    for (const p of file.paths) if (p.id && p.parentId) home.set(p.id, map)
+  }
+  return (id) => (topLevel.has(id) ? "national" : (home.get(id) ?? "national"))
+}
+
+/** A point divided by `by`, rounded to the file's grid. */
+const scalePoint = (at: readonly number[], by: number): [number, number] => [
+  Math.round(at[0]! / by) || 0,
+  Math.round(at[1]! / by) || 0,
+]
+
 /**
  * Where each court's seat block is drawn, taken once from upstream's `seat_blocks.json` and
  * checked in beside the geometry it is measured against.
@@ -88,16 +115,18 @@ function kb(s: string): string {
  * Upstream tiers `anchor` as renderer-specific — hand-placed for their own map, free to move
  * without notice — and placement is ours to own anyway. Reading it from the feed daily meant
  * a nudge to their layout silently moved ours; taken here, it moves when the geometry it
- * belongs to moves, in a diff someone reviews.
+ * belongs to moves, in a diff someone reviews. Upstream's are in the export's units, so each is
+ * divided by the step of the map it is drawn on.
  */
-function snapshotAnchors(source: string, outDir: string): void {
+function snapshotAnchors(source: string, outDir: string, maps: Maps): void {
   const blocks = JSON.parse(
     readFileSync(path.join(source, "data", "seat_blocks.json"), "utf8"),
   ) as Record<string, { anchor: [number, number] | null }>
+  const mapOf = anchorMap(maps)
   const anchors: Record<string, [number, number]> = {}
   for (const id of Object.keys(blocks).sort()) {
     const anchor = blocks[id]?.anchor
-    if (anchor) anchors[id] = anchor
+    if (anchor) anchors[id] = scalePoint(anchor, maps[mapOf(id)]?.step ?? 1)
   }
   const json = JSON.stringify(anchors)
   writeFileSync(path.join(outDir, "anchors.json"), json)
@@ -106,21 +135,98 @@ function snapshotAnchors(source: string, outDir: string): void {
   )
 }
 
+const geometryFiles = (): [string, string][] => [
+  ["national", "national.json"],
+  ...CIRCUITS.map((id): [string, string] => [id, `circuits/${id}.json`]),
+]
+
+function readGeometry(outDir: string, rel: string): GeometryFile | null {
+  try {
+    return JSON.parse(readFileSync(path.join(outDir, rel), "utf8")) as GeometryFile
+  } catch {
+    return null
+  }
+}
+
 export function snapshotGeometry(source: string, profileDir = PROFILE_DIR): number {
   const geoDir = path.join(source, "assets", "geo")
   const outDir = path.join(profileDir, "geometry")
   mkdirSync(path.join(outDir, "circuits"), { recursive: true })
-  const write = (rel: string, svg: string): void => {
-    const file = svgToGeometryFile(svg)
+  const maps: Maps = {}
+  for (const [map, rel] of geometryFiles()) {
+    const svg = readFileSync(path.join(geoDir, rel.replace(/\.json$/, ".svg")), "utf8")
+    // The step the checked-in file already has, if any: `offsets.json` is written in its units.
+    const file = svgToGeometryFile(svg, readGeometry(outDir, rel)?.step)
     const json = JSON.stringify(file)
     writeFileSync(path.join(outDir, rel), json)
+    maps[map] = file
     const ids = file.paths.filter((p) => p.id).length
-    console.warn(`${rel.padEnd(22)} ${kb(json).padStart(8)} · ${ids} regions`)
+    console.warn(`${rel.padEnd(22)} ${kb(json).padStart(8)} · ${ids} regions · step ${file.step}`)
   }
-  write("national.json", readFileSync(path.join(geoDir, "national.svg"), "utf8"))
-  for (const id of CIRCUITS)
-    write(`circuits/${id}.json`, readFileSync(path.join(geoDir, "circuits", `${id}.svg`), "utf8"))
-  snapshotAnchors(source, outDir)
+  snapshotAnchors(source, outDir, maps)
+  return 0
+}
+
+/**
+ * Re-grids the checked-in geometry to `geometryStep` without the export: every map, and with
+ * each the numbers measured in its units — `offsets.json`, `anchors.json` and the anchors in the
+ * data fixture — divided by the same factor. A map already on its step is left alone, so this
+ * is safe to run again. Rounding an already rounded file can land half a unit away from
+ * rounding the export; the next `geometry` snapshot from the SVGs is exact.
+ */
+export function quantizeCheckedIn(profileDir = PROFILE_DIR): number {
+  const outDir = path.join(profileDir, "geometry")
+  const maps: Maps = {}
+  const factor: Record<string, number> = {}
+  for (const [map, rel] of geometryFiles()) {
+    const file = readGeometry(outDir, rel)
+    if (!file) {
+      console.error(`${rel} is missing`)
+      return 1
+    }
+    const from = file.step ?? 1
+    const exportBox = file.viewBox && (file.viewBox.map((v) => v * from) as typeof file.viewBox)
+    const step = geometryStep(exportBox)
+    const next = quantizeGeometry(file, step)
+    factor[map] = step / from
+    maps[map] = next
+    const json = JSON.stringify(next)
+    writeFileSync(path.join(outDir, rel), json)
+    console.warn(`${rel.padEnd(22)} ${kb(json).padStart(8)} · step ${from} → ${step}`)
+  }
+  const mapOf = anchorMap(maps)
+
+  const anchorsPath = path.join(outDir, "anchors.json")
+  const anchors = JSON.parse(readFileSync(anchorsPath, "utf8")) as Record<string, number[]>
+  for (const [id, at] of Object.entries(anchors))
+    anchors[id] = scalePoint(at, factor[mapOf(id)] ?? 1)
+  writeFileSync(anchorsPath, JSON.stringify(anchors))
+
+  // Keyed by map already, the national one as `overview`.
+  const offsetsPath = path.join(outDir, "offsets.json")
+  const offsets = JSON.parse(readFileSync(offsetsPath, "utf8")) as Record<
+    string,
+    Record<string, number[]>
+  >
+  for (const [map, group] of Object.entries(offsets)) {
+    const by = factor[map === "overview" ? "national" : map] ?? 1
+    for (const [id, at] of Object.entries(group)) group[id] = scalePoint(at, by)
+  }
+  writeFileSync(offsetsPath, JSON.stringify(offsets, null, 2) + "\n")
+
+  // The fixture is a sync's output, and a sync writes each region's anchor as a fact.
+  const fixturePath = path.join(profileDir, "fixtures", "data.json")
+  const data = JSON.parse(readFileSync(fixturePath, "utf8")) as DrilldownData
+  for (const region of data.regions) {
+    const at = region.facts?.anchor
+    if (typeof at !== "string") continue
+    region.facts!.anchor = scalePoint(
+      at.split(",").map(Number),
+      factor[mapOf(region.id)] ?? 1,
+    ).join(",")
+  }
+  writeFileSync(fixturePath, JSON.stringify(data))
+  console.warn("anchors.json, offsets.json and fixtures/data.json rescaled with their maps")
   return 0
 }
 
@@ -175,8 +281,9 @@ export function run(
       snapshotGeometry(path.resolve(arg(argv, "--source") ?? "../court-tracker"), profileDir),
     )
   if (command === "data") return snapshotData(argv, env, profileDir)
+  if (command === "quantize") return Promise.resolve(quantizeCheckedIn(profileDir))
   console.error(
-    "usage: snapshot-federal-courts.ts <geometry|data> [--source dir] [--ref ref|release] [--keep region,...]",
+    "usage: snapshot-federal-courts.ts <geometry|data|quantize> [--source dir] [--ref ref|release] [--keep region,...]",
   )
   return Promise.resolve(2)
 }

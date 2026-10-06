@@ -323,6 +323,14 @@ Both files carry a `<g transform="scale(1,-1) translate(0, -(minY+maxY))">`
 Y-flip. The engine **recomputes the flip from the viewBox** rather than trusting
 the string, and pads the viewBox 3% so edge strokes are not clipped.
 
+The snapshot rounds each file's coordinates to a coarser grid: it divides them
+by the file's `step` (`geometryStep` in `src/interactives/geometry.ts`, the
+largest 1-2-5 step that moves no vertex a device pixel at the stage's deepest
+zoom) and records it in the JSON. No vertex is dropped, so morph pairs survive.
+`offsets.json` and `anchors.json` are in each map's **file** units, not the
+export's. `snapshot-federal-courts.ts quantize` re-grids the checked-in files
+(and those two, and the fixture's anchors) without a checkout.
+
 ### Validate before snapshotting
 
 ```bash

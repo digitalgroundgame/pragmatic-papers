@@ -5,6 +5,7 @@ import {
   holdCamera,
   padViewBox,
   viewBoxAttr,
+  ZOOM_MAX,
 } from "./geometry"
 import {
   buildMorphPairs,
@@ -173,8 +174,8 @@ const BLOCK_SCALE_HOVER = 1.17
 const BLOCK_SCALE_SELECTED = 1.24
 const BLOCK_SCALE_MS = 90
 const NOMINAL_MAP_PX = 900
-/** How far in the camera can be pushed, and how far one press takes it. */
-export const ZOOM_MAX = 6
+/** How far in the camera can be pushed (defined with `holdCamera`), and how far one press takes it. */
+export { ZOOM_MAX }
 export const ZOOM_STEP = 1.5
 /** Where the camera lands on a court that has no territory to be found by. */
 const FOCUS_ZOOM = 1.8
@@ -1635,7 +1636,7 @@ export class MapStage {
       block.appendChild(rect)
     })
     if (labelText) {
-      // Browsers clamp font-size at 10000px and these viewBoxes are millions of units across,
+      // Browsers clamp font-size at 10000px and a viewBox can be millions of units across,
       // so the label rides in a scaled group with a small font.
       const scale = (e * 1.9) / LABEL_EM
       const tg = svgEl("g", { transform: `translate(${x0} ${y0 - e * 0.45}) scale(${scale})` })

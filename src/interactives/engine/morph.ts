@@ -117,7 +117,7 @@ export function lerpViewBox(a: readonly number[], b: readonly number[], u: numbe
  * the way its numbers are stored.
  *
  * A straight line through `x`, `y`, `w`, `h` measures in map units what the reader judges in
- * screen widths: halfway between 5.2M and 1.0M is 3.1M, still almost the whole country, so the
+ * screen widths: halfway between 5200 and 1000 is 3100, still almost the whole country, so the
  * view stays wide and then collapses while the centre tears across at the end. The scale is
  * therefore interpolated geometrically — equal ratios in equal time — and the centre carried
  * along in proportion to its progress, which holds the pan to a steady speed on screen.

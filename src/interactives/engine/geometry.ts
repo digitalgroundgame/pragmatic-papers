@@ -32,6 +32,12 @@ export function flipTransform(vb: ViewBox): string {
 export const DEFAULT_VIEWBOX: ViewBox = [0, 0, 100, 100]
 
 /**
+ * How far in the camera can be pushed, where 1 is the whole map. The geometry snapshot reads it
+ * too: it sets how coarse a map's coordinates may be (`geometryStep`).
+ */
+export const ZOOM_MAX = 6
+
+/**
  * Where the camera may point, given how far in it is and what it is looking at.
  *
  * `k` is how far in, where 1 is the whole box; `cx`/`cy` are what sits under the middle of the

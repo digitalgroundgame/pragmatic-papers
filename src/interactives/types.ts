@@ -86,6 +86,12 @@ export type GeometryPath = Omit<DrilldownPath, "facts">
 export interface GeometryFile {
   viewBox: ViewBox | null
   flipY: boolean
+  /**
+   * How many of the export's units make one of this file's: the snapshot rounds coordinates to
+   * it (`geometryStep`). Offsets and anchors for this map are in the file's units, not the
+   * export's. Absent means 1.
+   */
+  step?: number
   paths: GeometryPath[]
 }
 

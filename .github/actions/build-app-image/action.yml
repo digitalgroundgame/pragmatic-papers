@@ -1,7 +1,7 @@
 name: "Build the app image"
 description: >-
   Builds dockerfiles/PragmaticPapers.ci.Dockerfile once, for E2E to test and the
-  PR preview to deploy (#1090). Nothing environment-specific is built in: the
+  PR preview to deploy. Nothing environment-specific is built in: the
   server reads SERVER_URL and the rest at runtime. Saves the image as the
   `app-image` artifact, and pushes it to GHCR when `push-tag` is set.
   The calling job must run on the bare runner (not in a container), with a

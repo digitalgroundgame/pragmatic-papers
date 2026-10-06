@@ -38,7 +38,7 @@ concurrency:
 # .github/actions/setup-e2e, shared with update-snapshots.yml so the two
 # workflows always render the same page.
 #
-# One image per run (#1090): "Build image" builds it, "E2E tests" runs the
+# One image per run: "Build image" builds it, "E2E tests" runs the
 # suite against it, and "Deploy preview" hands the same image to Coolify as
 # the PR's preview. Removing a closed PR's preview stays in preview-image.yml.
 
@@ -65,8 +65,8 @@ jobs:
               - "**"
               - "!**/*.md"
 
-  # Whether this run deploys a preview: the PRs Coolify previewed before #1067
-  # (see preview-deployment.yml), same-repo PRs from owners, members and
+  # Whether this run deploys a preview: the PRs Coolify builds previews for
+  # itself (preview-deployment.yml's `if`): same-repo PRs from owners, members and
   # collaborators, not titled [skip ci] / [skip cd]. Fork PRs get no secrets,
   # and fork and Dependabot runs can't push to GHCR.
   preview:

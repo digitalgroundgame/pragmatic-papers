@@ -2,18 +2,15 @@ import { cleanup, render, screen } from "@testing-library/react"
 import type React from "react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
-const { load, draft, find, generateMeta, drilldown } = vi.hoisted(() => ({
+const { load, draft, generateMeta, drilldown } = vi.hoisted(() => ({
   load: { queryInteractiveBySlug: vi.fn(), loadInteractiveOverview: vi.fn() },
   draft: { isEnabled: false },
-  find: vi.fn(),
   generateMeta: vi.fn(async () => ({ title: "meta" })),
   drilldown: vi.fn(),
 }))
 
 vi.mock("@/interactives/load", () => load)
 vi.mock("next/headers", () => ({ draftMode: async () => draft }))
-vi.mock("@payload-config", () => ({ default: {} }))
-vi.mock("payload", () => ({ getPayload: async () => ({ find }) }))
 vi.mock("@/utilities/generateMeta", () => ({ generateMeta }))
 // Children with their own tests (or server-only dependencies) render as markers, so these
 // tests are about what the page decides, not how the map draws.
@@ -42,7 +39,7 @@ vi.mock("@/interactives/InteractiveDrilldown", () => ({
   },
 }))
 
-import InteractivePage, { generateMetadata, generateStaticParams } from "../page"
+import InteractivePage, { generateMetadata } from "../page"
 
 const interactive = {
   id: 5,
@@ -97,6 +94,17 @@ describe("InteractivePage", () => {
     expect(screen.getByTestId("redirects")).toHaveAttribute("data-disable-not-found", "true")
   })
 
+  it("trails Interactives to this one by its title, as wide as the page it sits on", async () => {
+    await renderPage()
+    const nav = screen.getByRole("navigation", { name: "breadcrumb" })
+    expect(nav).not.toHaveClass("max-w-3xl")
+    expect(screen.getByRole("link", { name: "Interactives" })).toHaveAttribute(
+      "href",
+      "/interactives",
+    )
+    expect(nav).toHaveTextContent(interactive.title)
+  })
+
   it("leaves out the data line's extra when the snapshot has none", async () => {
     load.loadInteractiveOverview.mockResolvedValue({ ...composed, metaLine: undefined })
     await renderPage()
@@ -144,15 +152,5 @@ describe("generateMetadata", () => {
     load.queryInteractiveBySlug.mockResolvedValue(null)
     await generateMetadata(args())
     expect(load.queryInteractiveBySlug).toHaveBeenCalledWith("")
-  })
-})
-
-describe("generateStaticParams", () => {
-  it("prebuilds every interactive readers can see", async () => {
-    find.mockResolvedValue({ docs: [{ slug: "courts" }, { slug: "maps" }] })
-    await expect(generateStaticParams()).resolves.toEqual([{ slug: "courts" }, { slug: "maps" }])
-    expect(find).toHaveBeenCalledWith(
-      expect.objectContaining({ collection: "interactives", draft: false, overrideAccess: false }),
-    )
   })
 })

@@ -17,7 +17,7 @@ type SlugFieldArgs = NonNullable<Parameters<typeof payloadSlugField>[0]>
  * awaits `slugify` before assigning `data.slug`, and sibling fields run their
  * `beforeChange` step concurrently, so the required `slug` validates before
  * the value arrives: every create without a slug fails with "Slug: This field
- * is required" (payloadcms/payload#18334, #996).
+ * is required" (payloadcms/payload#18334).
  *
  * A field validates only after its own `beforeChange` hooks resolve, so
  * generating the slug in a hook on `slug` makes it present in time on any

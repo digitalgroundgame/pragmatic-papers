@@ -1,4 +1,4 @@
-# Dockerfile for Pragmatic Papers images built in GitHub Actions (#1067)
+# Dockerfile for Pragmatic Papers images built in GitHub Actions
 #
 # PragmaticPapers.Dockerfile is built by Coolify on its own build server, which can
 # reach the database: it copies and migrates the deployment's database while building,

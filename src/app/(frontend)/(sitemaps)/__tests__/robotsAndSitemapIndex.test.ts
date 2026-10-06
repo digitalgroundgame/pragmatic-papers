@@ -8,9 +8,9 @@ afterEach(() => {
   vi.unstubAllEnvs()
 })
 
-// Both used to be files next-sitemap wrote at build time, naming the build's host for
-// good. As routes, they render with whatever SERVER_URL the server has when they're
-// (re)rendered, so revalidate-all can point an image at the host it serves (#1090).
+// Both are routes rather than files written at build time, so they render with whatever
+// SERVER_URL the server has when they're (re)rendered, and revalidate-all can point an
+// image at the host it serves.
 describe("GET /robots.txt", () => {
   it("names the host from SERVER_URL as it is when rendered", async () => {
     vi.stubEnv("SERVER_URL", "https://pr-1.pragmaticpapers.com")

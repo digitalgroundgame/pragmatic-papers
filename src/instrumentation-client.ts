@@ -41,7 +41,7 @@ Sentry.init({
     // silently drop ALL client errors. Once we've confirmed in Sentry that real
     // errors are untagged and third-party ones are tagged, flip this to
     // `drop-error-if-exclusively-contains-third-party-frames`. Filter the issue
-    // stream in the meantime with `!third_party_code:True`. See PR/issue #855.
+    // stream in the meantime with `!third_party_code:True`.
     Sentry.thirdPartyErrorFilterIntegration({
       filterKeys: ["pragmatic-papers"],
       behaviour: "apply-tag-if-exclusively-contains-third-party-frames",

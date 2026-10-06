@@ -441,6 +441,28 @@ describe("start.sh", () => {
     expect(output).toContain("node started")
   })
 
+  // A Coolify build prerenders articles and volumes from the database as it was then, so
+  // edits saved since, or regenerated pages a recreated container lost, would be served stale.
+  it("refreshes the prerendered routes in an image Coolify built too", () => {
+    const { status, output } = start("", {
+      DATABASE_URI: URI,
+      BUILD_ENV: "production",
+      SERVER_URL: "https://pragmaticpapers.com",
+      PAYLOAD_SECRET: "payload-s3cret",
+      PORT: "3000",
+    })
+
+    expect(status).toBe(0)
+    const log = calls().join("\n")
+    const ready = log.indexOf("http://127.0.0.1:3000/api/users/me")
+    const refresh = log.indexOf(
+      "--header=Authorization: Bearer payload-s3cret http://127.0.0.1:3000/next/revalidate-all",
+    )
+    expect(ready).toBeGreaterThanOrEqual(0)
+    expect(refresh).toBeGreaterThan(ready)
+    expect(output).toContain("Prerendered routes refreshed from pragmatic_papers")
+  })
+
   // Media URLs point at SUPABASE_URL, and next/image only loads *.supabase.co (#1090).
   describe("a deployed image on S3 storage", () => {
     const production = {

@@ -1,5 +1,4 @@
 import { AdminBar } from "@/components/AdminBar"
-import { Breadcrumbs } from "@/components/Breadcrumbs"
 import { Footer } from "@/Footer/Component"
 import { Header } from "@/Header/Component"
 import { sentryHtmlAttributes } from "@/sentryConfig"
@@ -41,7 +40,6 @@ export default async function RootLayout({
           <AdminBar />
           <Header />
           <main role="main" className="flex-1">
-            <Breadcrumbs />
             {children}
           </main>
           <Footer />

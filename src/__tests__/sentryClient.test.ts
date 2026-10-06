@@ -140,9 +140,29 @@ describe("startSentryWhenIdle", () => {
     expect(sdk.init).toHaveBeenCalledTimes(1)
   })
 
-  it("reports errors thrown before Sentry loaded, and leaves later ones to Sentry", async () => {
+  const unhandled = (handler: string) => ({
+    mechanism: { handled: false, type: `auto.browser.global_handlers.${handler}` },
+  })
+
+  it("loads Sentry at once on an error before the page has loaded, and only once", async () => {
     const { startSentryWhenIdle } = await importClient()
-    const { win, runIdle } = fakeWindow({ readyState: "complete" })
+    const { win, runIdle } = fakeWindow()
+    startSentryWhenIdle(win)
+
+    win.dispatchEvent(errorEvent(new Error("early")))
+    await settle()
+    // Neither `load` nor an idle moment has come: the error alone brought Sentry in.
+    expect(sdk.init).toHaveBeenCalledTimes(1)
+
+    win.dispatchEvent(new Event("load"))
+    runIdle()
+    await settle()
+    expect(sdk.init).toHaveBeenCalledTimes(1)
+  })
+
+  it("reports errors thrown before Sentry loaded as unhandled, and leaves later ones to Sentry", async () => {
+    const { startSentryWhenIdle } = await importClient()
+    const { win } = fakeWindow()
     startSentryWhenIdle(win)
 
     const early = new Error("early")
@@ -150,10 +170,12 @@ describe("startSentryWhenIdle", () => {
     const rejection = new Event("unhandledrejection")
     Object.assign(rejection, { reason: "rejected early" })
     win.dispatchEvent(rejection)
-
-    runIdle()
     await settle()
-    expect(sdk.captureException.mock.calls).toEqual([[early], ["rejected early"]])
+
+    expect(sdk.captureException.mock.calls).toEqual([
+      [early, unhandled("onerror")],
+      ["rejected early", unhandled("onunhandledrejection")],
+    ])
 
     win.dispatchEvent(errorEvent(new Error("late")))
     expect(sdk.captureException).toHaveBeenCalledTimes(2)
@@ -161,13 +183,15 @@ describe("startSentryWhenIdle", () => {
 
   it("reports an early error's message when it carries no Error", async () => {
     const { startSentryWhenIdle } = await importClient()
-    const { win, runIdle } = fakeWindow({ readyState: "complete" })
+    const { win } = fakeWindow()
     startSentryWhenIdle(win)
 
     win.dispatchEvent(new ErrorEvent("error", { message: "Script error." }))
-    runIdle()
     await settle()
-    expect(sdk.captureException).toHaveBeenCalledExactlyOnceWith("Script error.")
+    expect(sdk.captureException).toHaveBeenCalledExactlyOnceWith(
+      "Script error.",
+      unhandled("onerror"),
+    )
   })
 
   it("forwards router transitions only once Sentry has loaded", async () => {

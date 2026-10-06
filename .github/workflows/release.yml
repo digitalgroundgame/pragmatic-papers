@@ -1,5 +1,19 @@
 name: Release
 
+# Tags and releases each version that lands on main. When that version is a
+# hotfix (`pnpm hotfix`), it also opens the PR that back-merges main into dev,
+# which the release train waits on before it cuts another candidate, and
+# merges it once its checks pass. It merges as the release App, which is on
+# dev's ruleset bypass list, because dev's merge queue only squashes. It has to
+# be a merge commit: a squash leaves dev's merge base with main behind the
+# hotfix, so the next release conflicts with main (on package.json's version,
+# at least). A conflict, a failed check, or a timeout leaves the PR for a
+# person to merge the same way.
+#
+# The back-merge PR needs the same token as the release train (a GitHub App or
+# RELEASE_TOKEN; see release-train.yml), because CI doesn't run on PRs opened
+# with the workflow's own token. Without one it warns and skips.
+
 on:
   push:
     branches: [main]
@@ -12,6 +26,8 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+    outputs:
+      bumped: ${{ steps.version.outputs.bumped }}
 
     steps:
       - uses: actions/checkout@v7
@@ -35,3 +51,151 @@ jobs:
         run: gh release create "${{ steps.version.outputs.tag }}" --target main --title "${{ steps.version.outputs.tag }}" --generate-notes
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  back-merge:
+    name: Back-merge main into dev
+    needs: release
+    if: needs.release.outputs.bumped == 'true' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    permissions:
+      contents: read
+
+    steps:
+      - name: Get the release App's token
+        id: app-token
+        if: ${{ vars.RELEASE_APP_ID != '' }}
+        uses: actions/create-github-app-token@v3
+        with:
+          app-id: ${{ vars.RELEASE_APP_ID }}
+          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
+
+      - uses: actions/checkout@v7
+        with:
+          ref: main
+          fetch-depth: 0
+
+      # From main itself: a manual run is dispatched on dev by default, where
+      # the release job reads dev's version.
+      - name: Read main's version
+        id: version
+        run: echo "tag=v$(jq -r .version package.json)" >> "$GITHUB_OUTPUT"
+
+      # A release train merge brings main nothing dev lacks, so a trial merge of
+      # main into dev leaves dev's tree as it is. A hotfix changes it, or
+      # conflicts (merge-tree exits 1), and either way dev needs main.
+      - name: Check whether dev already has main
+        id: check
+        run: |
+          DEV_TREE=$(git rev-parse 'origin/dev^{tree}')
+          if MERGED_TREE=$(git merge-tree --write-tree origin/dev origin/main) && [ "$MERGED_TREE" = "$DEV_TREE" ]; then
+            echo "dev already has everything on main; nothing to back-merge."
+            echo "needed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "needed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      # Same branch and title as `pnpm hotfix <version> --phase 2`, so either
+      # one reuses what the other opened.
+      - name: Open the PR
+        id: pr
+        if: steps.check.outputs.needed == 'true'
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token || secrets.RELEASE_TOKEN }}
+          TAG: ${{ steps.version.outputs.tag }}
+        run: |
+          if [ -z "$GH_TOKEN" ]; then
+            echo "::warning::main has changes dev lacks, but there is no release token to open the back-merge PR with. Run \`pnpm hotfix ${TAG#v} --phase 2\`."
+            exit 0
+          fi
+          BRANCH="chore/back-merge-$TAG"
+          echo "branch=$BRANCH" >> "$GITHUB_OUTPUT"
+          EXISTING=$(gh pr list --head "$BRANCH" --base dev --state open --json url --jq '.[0].url')
+          if [ -n "$EXISTING" ]; then
+            echo "Back-merge PR already open: $EXISTING"
+            echo "url=$EXISTING" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          # Through the refs API, as the release train makes its branches: a git
+          # push of main could carry workflow changes, which the token has no
+          # permission to push.
+          if git ls-remote --exit-code --heads origin "$BRANCH" > /dev/null; then
+            echo "Reusing $BRANCH"
+          else
+            gh api "repos/$GITHUB_REPOSITORY/git/refs" -f "ref=refs/heads/$BRANCH" -f "sha=$(git rev-parse origin/main)" > /dev/null
+          fi
+          cat > "$RUNNER_TEMP/body.md" <<EOF
+          $TAG reached main as a hotfix, so dev doesn't have it yet. The release train cuts no new candidate until it does.
+
+          The Release workflow merges this itself, with a merge commit, once its checks pass. It doesn't wait for "Review acknowledged": main already reviewed this code.
+
+          If it's still open, the workflow left it for you: a check failed, it conflicts, or the checks took too long. Then **merge it by hand with a merge commit, using the ruleset bypass.** Don't add it to the merge queue or enable auto-merge, because the queue squashes, and don't use "Update branch". A squash leaves dev's merge base with main behind the hotfix, so the next release conflicts with main.
+
+          To resolve conflicts, merge \`origin/dev\` into this branch (a merge commit, never a rebase).
+          EOF
+          URL=$(gh pr create --base dev --head "$BRANCH" --title "Back-merge $TAG into dev" --body-file "$RUNNER_TEMP/body.md")
+          echo "Opened $URL"
+          echo "Back-merge PR: $URL" >> "$GITHUB_STEP_SUMMARY"
+          echo "url=$URL" >> "$GITHUB_OUTPUT"
+
+      # GitHub reports these PRs as blocked, because "Review acknowledged" never
+      # passes on them, so this checks the rest itself: mergeable, every other
+      # required check passed, and nothing else failed or still running. That
+      # review is only skipped because main already reviewed this code, so it
+      # merges only while the PR's head is main's commit.
+      - name: Merge it once its checks pass
+        if: steps.pr.outputs.url != ''
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token || secrets.RELEASE_TOKEN }}
+          URL: ${{ steps.pr.outputs.url }}
+          BRANCH: ${{ steps.pr.outputs.branch }}
+          SKIP_CHECK: Review acknowledged
+        run: |
+          leave() {
+            echo "::warning::Left $URL for a person to merge with a merge commit: $1"
+            echo "Left for a person: $1" >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          }
+          REPO="repos/$GITHUB_REPOSITORY"
+          MAIN_SHA=$(git rev-parse origin/main)
+          NUMBER="${URL##*/}"
+          REQUIRED=$(gh api "$REPO/rules/branches/dev" --jq '[.[] | select(.type == "required_status_checks") | .parameters.required_status_checks[].context] | unique')
+          echo "Required checks on dev: $REQUIRED"
+          # The App token expires an hour after the job's first step; stop well before.
+          DEADLINE=$(( $(date +%s) + 45 * 60 ))
+          while :; do
+            PR=$(gh api "$REPO/pulls/$NUMBER")
+            [ "$(jq -r .state <<< "$PR")" = "open" ] && [ "$(jq -r .merged <<< "$PR")" = "false" ] || { echo "Already merged or closed."; exit 0; }
+            SHA=$(jq -r .head.sha <<< "$PR")
+            [ "$SHA" = "$MAIN_SHA" ] || leave "the branch has commits beyond main's, which need a review"
+            MERGEABLE=$(jq -r .mergeable <<< "$PR")
+            [ "$MERGEABLE" = "false" ] && leave "it conflicts with dev"
+
+            # Check runs and commit statuses as {name, state}: state is "pass", "fail" or "pending".
+            # The head is main's commit, which also carries the checks of main's own
+            # push (this job among them), so only check suites run for this branch count.
+            SUITES=$(gh api --paginate "$REPO/commits/$SHA/check-suites?per_page=100" --jq "[.check_suites[] | select(.head_branch == \"$BRANCH\") | .id]" | jq -s 'add // []')
+            CHECKS=$(jq -s 'add' \
+              <(gh api --paginate "$REPO/commits/$SHA/check-runs?per_page=100" --jq '[.check_runs[] | {id, name, suite: .check_suite.id, state: (if .status != "completed" then "pending" elif (.conclusion | IN("success", "skipped", "neutral")) then "pass" else "fail" end)}]') \
+              <(gh api "$REPO/commits/$SHA/status" --jq '[.statuses[] | {name: .context, state: (if .state == "success" then "pass" elif .state == "pending" then "pending" else "fail" end)}]'))
+            # A re-run adds a check run under the same name: keep the newest.
+            CHECKS=$(jq --arg skip "$SKIP_CHECK" --argjson suites "$SUITES" \
+              '[.[] | select(.suite == null or (.suite | IN($suites[])))] | [group_by(.name)[] | max_by(.id // 0) | select(.name != $skip)]' <<< "$CHECKS")
+            FAILED=$(jq -r '[.[] | select(.state == "fail") | .name] | join(", ")' <<< "$CHECKS")
+            [ -n "$FAILED" ] && leave "checks failed: $FAILED"
+            MISSING=$(jq -r --argjson required "$REQUIRED" --arg skip "$SKIP_CHECK" \
+              '. as $checks | [$required[] | select(. != $skip) | . as $r | select([$checks[] | select(.name == $r and .state == "pass")] | length == 0)] | join(", ")' <<< "$CHECKS")
+            PENDING=$(jq -r '[.[] | select(.state == "pending") | .name] | join(", ")' <<< "$CHECKS")
+
+            if [ "$MERGEABLE" = "true" ] && [ -z "$MISSING" ] && [ -z "$PENDING" ]; then
+              if gh api -X PUT "$REPO/pulls/$NUMBER/merge" -f merge_method=merge -f "sha=$SHA" > /dev/null; then
+                echo "Merged $URL with a merge commit."
+                echo "Merged: $URL" >> "$GITHUB_STEP_SUMMARY"
+                exit 0
+              fi
+              leave "GitHub refused the merge (is the release App still on dev's ruleset bypass list?)"
+            fi
+            [ "$(date +%s)" -ge "$DEADLINE" ] && leave "checks still not done after 45 minutes (waiting on: ${MISSING:-}${MISSING:+, }${PENDING:-mergeability})"
+            echo "Waiting on: ${MISSING:-}${MISSING:+; running: }${PENDING:-mergeability}"
+            sleep 60
+          done

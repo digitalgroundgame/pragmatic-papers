@@ -151,6 +151,25 @@ const seo: Plugin = async (config) => ({
   collections: config.collections,
 })
 
+/**
+ * The public URL of an object in a Supabase bucket. `prefix` is the object's folder as the
+ * storage plugin passes it to `generateFileURL`: the collection's prefix joined with the
+ * `_objectKey` folder each client upload is stored under. Media uploaded before Payload 3.90
+ * has no `_objectKey`, so its folder is just the prefix.
+ */
+export const supabaseObjectURL = ({
+  supabaseUrl,
+  bucket,
+  prefix,
+  filename,
+}: {
+  supabaseUrl: string
+  bucket: string
+  prefix?: string
+  filename: string
+}): string =>
+  `${supabaseUrl}/storage/v1/object/public/${bucket}/${prefix ? `${prefix}/` : ""}${filename}`
+
 export const plugins: Plugin[] = [
   searchPlugin({
     collections: ["articles", "pages", "volumes", "topics"],
@@ -245,7 +264,7 @@ export const plugins: Plugin[] = [
     collections: {
       media: {
         disablePayloadAccessControl: true,
-        generateFileURL: ({ filename }) => {
+        generateFileURL: ({ filename, prefix }) => {
           const supabaseUrl = process.env.SUPABASE_URL
           const bucket = process.env.S3_BUCKET
 
@@ -254,13 +273,13 @@ export const plugins: Plugin[] = [
             return `/media/${filename}`
           }
 
-          return `${supabaseUrl}/storage/v1/object/public/${bucket}/${filename}`
+          return supabaseObjectURL({ supabaseUrl, bucket, prefix, filename })
         },
       },
       "map-assets": {
         disablePayloadAccessControl: true,
         prefix: "map-assets",
-        generateFileURL: ({ filename }) => {
+        generateFileURL: ({ filename, prefix }) => {
           const supabaseUrl = process.env.SUPABASE_URL
           const bucket = process.env.S3_BUCKET
 
@@ -268,7 +287,12 @@ export const plugins: Plugin[] = [
             return `/map-assets/${filename}`
           }
 
-          return `${supabaseUrl}/storage/v1/object/public/${bucket}/map-assets/${filename}`
+          return supabaseObjectURL({
+            supabaseUrl,
+            bucket,
+            prefix: prefix || "map-assets",
+            filename,
+          })
         },
       },
     },

@@ -3,7 +3,10 @@ name: Release
 # Tags and releases each version that lands on main. When that version is a
 # hotfix (`pnpm hotfix`), it also opens the PR that back-merges main into dev,
 # which the release train waits on before it cuts another candidate. A person
-# still merges it, with a merge commit.
+# still merges it, by hand with the ruleset bypass rather than through dev's
+# merge queue, because the queue squashes. It has to be a merge commit: a
+# squash leaves dev's merge base with main behind the hotfix, so a later dev
+# change to the same lines reads as a conflict here and in the release train.
 #
 # The back-merge PR needs the same token as the release train (a GitHub App or
 # RELEASE_TOKEN; see release-train.yml), because CI doesn't run on PRs opened
@@ -23,7 +26,6 @@ jobs:
       contents: write
     outputs:
       bumped: ${{ steps.version.outputs.bumped }}
-      tag: ${{ steps.version.outputs.tag }}
 
     steps:
       - uses: actions/checkout@v7
@@ -69,7 +71,12 @@ jobs:
         with:
           ref: main
           fetch-depth: 0
-          token: ${{ steps.app-token.outputs.token || secrets.RELEASE_TOKEN || github.token }}
+
+      # From main itself: a manual run is dispatched on dev by default, where
+      # the release job reads dev's version.
+      - name: Read main's version
+        id: version
+        run: echo "tag=v$(jq -r .version package.json)" >> "$GITHUB_OUTPUT"
 
       # A release train merge brings main nothing dev lacks, so a trial merge of
       # main into dev leaves dev's tree as it is. A hotfix changes it, or
@@ -91,7 +98,7 @@ jobs:
         if: steps.check.outputs.needed == 'true'
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token || secrets.RELEASE_TOKEN }}
-          TAG: ${{ needs.release.outputs.tag }}
+          TAG: ${{ steps.version.outputs.tag }}
         run: |
           if [ -z "$GH_TOKEN" ]; then
             echo "::warning::main has changes dev lacks, but there is no release token to open the back-merge PR with. Run \`pnpm hotfix ${TAG#v} --phase 2\`."
@@ -103,15 +110,18 @@ jobs:
             echo "Back-merge PR already open: $EXISTING"
             exit 0
           fi
+          # Through the refs API, as the release train makes its branches: a git
+          # push of main could carry workflow changes, which the token has no
+          # permission to push.
           if git ls-remote --exit-code --heads origin "$BRANCH" > /dev/null; then
             echo "Reusing $BRANCH"
           else
-            git push origin "origin/main:refs/heads/$BRANCH"
+            gh api "repos/$GITHUB_REPOSITORY/git/refs" -f "ref=refs/heads/$BRANCH" -f "sha=$(git rev-parse origin/main)" > /dev/null
           fi
           cat > "$RUNNER_TEMP/body.md" <<EOF
           $TAG reached main as a hotfix, so dev doesn't have it yet. The release train cuts no new candidate until it does.
 
-          **Merge this with a merge commit.** Don't squash it or use "Update branch": either one gives dev the change under a different commit, and main and dev keep diverging.
+          **Merge this by hand with a merge commit, using the ruleset bypass.** Don't add it to the merge queue or enable auto-merge, because the queue squashes, and don't use "Update branch". A squash gives dev the change under a different commit, so dev's merge base with main stays behind the hotfix and later changes to the same lines read as conflicts.
 
           If GitHub reports conflicts, resolve them on this branch with a merge commit (\`git merge origin/dev\`), never a rebase.
           EOF

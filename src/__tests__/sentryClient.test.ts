@@ -20,6 +20,7 @@ const settle = () => new Promise((resolve) => setTimeout(resolve, 0))
 
 const ORIGIN = "https://pragmaticpapers.test"
 const OUR_SCRIPT = `${ORIGIN}/_next/static/chunks/app.js`
+const PAGE = `${ORIGIN}/volumes/3#footnote-1`
 
 /** A window whose load and idle callbacks the test fires by hand. */
 function fakeWindow({ readyState = "loading", idle = true } = {}) {
@@ -27,7 +28,7 @@ function fakeWindow({ readyState = "loading", idle = true } = {}) {
   const idleCallbacks: (() => void)[] = []
   const win = Object.assign(target, {
     document: { readyState },
-    location: { origin: ORIGIN },
+    location: { origin: ORIGIN, href: PAGE },
     requestIdleCallback: idle
       ? vi.fn((callback: () => void) => {
           idleCallbacks.push(callback)
@@ -251,6 +252,7 @@ describe("startSentryWhenIdle", () => {
 
   it.each([
     ["Cloudflare's beacon", `${ORIGIN}/cdn-cgi/rum?v=1`],
+    ["a script injected inline into the page", `${ORIGIN}/volumes/3`],
     ["another origin", "https://ads.example/tag.js"],
     ["an extension", "chrome-extension://abc/content.js"],
     ["a muted cross-origin script", ""],

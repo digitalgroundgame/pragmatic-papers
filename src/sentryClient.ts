@@ -48,15 +48,23 @@ export function captureMessage(...args: Parameters<Sentry["captureMessage"]>): v
 }
 
 /**
- * Whether an error event's script is one we serve. Cloudflare injects scripts under
- * `/cdn-cgi/` (its RUM beacon throws on our JSON-LD), extensions run from their own schemes,
- * and a cross-origin script's error arrives muted, with no filename.
+ * Whether an error event's script is one of our chunks. Cloudflare injects scripts under
+ * `/cdn-cgi/` and inline into the HTML, where an error's filename is the page's own URL
+ * (its RUM beacon throws on our JSON-LD); our own inline scripts are only Next's data
+ * pushes, which don't throw. Extensions run from their own schemes, and a cross-origin
+ * script's error arrives muted, with no filename.
  */
 function isOurScript(filename: string, location: Location): boolean {
   if (!filename) return false
   try {
     const url = new URL(filename)
-    return url.origin === location.origin && !url.pathname.startsWith("/cdn-cgi/")
+    const page = new URL(location.href)
+    url.hash = page.hash = ""
+    return (
+      url.origin === location.origin &&
+      !url.pathname.startsWith("/cdn-cgi/") &&
+      url.href !== page.href
+    )
   } catch {
     return false
   }

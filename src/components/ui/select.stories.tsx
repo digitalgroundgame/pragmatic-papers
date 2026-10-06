@@ -61,7 +61,7 @@ export const Default: Story = {
 
 /**
  * Left open, so the axe check that follows `play` sees the listbox every time: an unnamed listbox
- * fails here on every run, not only when axe happens to beat the close animation (#1028).
+ * fails here on every run, not only when axe happens to beat the close animation.
  */
 export const Open: Story = {
   play: async ({ canvasElement }) => {

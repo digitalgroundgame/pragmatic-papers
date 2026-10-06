@@ -5,7 +5,7 @@ import { type NextRequest, NextResponse } from "next/server"
 // next/dist/shared/lib/server-reference-info.js), hex-encoded — one info byte plus a
 // SHA-1. Anything else makes Next throw "The Server Reference ID did not match the
 // expected format" and log a stack trace. Scanners probing for the late-2025 Server
-// Components vulnerability send short values like "x", so turn them away here (#1107).
+// Components vulnerability send short values like "x", so turn them away here.
 // A well-formed ID from an older deploy still reaches Next, which answers it itself.
 const SERVER_ACTION_ID = /^[0-9a-f]{42}$/i
 
@@ -15,10 +15,7 @@ export function proxy(request: NextRequest): ReturnType<typeof NextResponse.next
     return new NextResponse(null, { status: 404 })
   }
 
-  const requestHeaders = new Headers(request.headers)
-  requestHeaders.set("x-pathname", request.nextUrl.pathname)
-
-  const response = NextResponse.next({ request: { headers: requestHeaders } })
+  const response = NextResponse.next()
 
   // Prevent staging (and PR previews) from being search index. Pages
   // stays fully crawlable — so the sitemap and pages can be

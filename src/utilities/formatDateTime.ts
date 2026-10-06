@@ -1,5 +1,5 @@
 // Per-function entry points: the package index loads all ~250 functions, ~1.4s in an
-// integration test file, which doesn't tree-shake (#1016).
+// integration test file, which doesn't tree-shake.
 import { format } from "date-fns/format"
 import { formatDistanceToNow } from "date-fns/formatDistanceToNow"
 

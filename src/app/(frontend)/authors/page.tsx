@@ -12,6 +12,7 @@ import type { Metadata } from "next"
 import { draftMode } from "next/headers"
 import { getPayload } from "payload"
 import React, { cache, Suspense } from "react"
+import { Breadcrumbs } from "@/components/Breadcrumbs"
 
 export const metadata: Metadata = {
   title: "Authors — Pragmatic Papers",
@@ -125,19 +126,22 @@ export default async function AuthorsIndexPage({ searchParams }: Args): Promise<
   if (!Number.isInteger(page) || page < 1) page = 1
 
   return (
-    <article className="mx-auto max-w-3xl space-y-6 px-4">
-      {draft && <LivePreviewListener />}
+    <>
+      <Breadcrumbs items={[{ name: "Authors", path: "/authors" }]} />
+      <article className="mx-auto max-w-3xl space-y-6 px-4">
+        {draft && <LivePreviewListener />}
 
-      <header className="space-y-3">
-        <h1>Authors</h1>
-        <p className="text-muted-foreground text-sm">
-          Learn more about The Pragmatic Papers contributors and explore their work.
-        </p>
-      </header>
+        <header className="space-y-3">
+          <h1>Authors</h1>
+          <p className="text-muted-foreground text-sm">
+            Learn more about The Pragmatic Papers contributors and explore their work.
+          </p>
+        </header>
 
-      <Suspense fallback={<AuthorContentSkeleton />}>
-        <AuthorContent page={page} />
-      </Suspense>
-    </article>
+        <Suspense fallback={<AuthorContentSkeleton />}>
+          <AuthorContent page={page} />
+        </Suspense>
+      </article>
+    </>
   )
 }

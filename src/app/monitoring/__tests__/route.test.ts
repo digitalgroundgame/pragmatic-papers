@@ -40,7 +40,7 @@ describe("POST /monitoring", () => {
       INGEST,
       expect.objectContaining({ method: "POST" }),
     )
-    const sent = fetchMock.mock.calls[0]?.[1]?.body as ArrayBuffer
+    const sent = fetchMock.mock.calls[0]?.[1]?.body as Uint8Array
     expect(new TextDecoder().decode(sent)).toBe(body)
   })
 
@@ -65,6 +65,13 @@ describe("POST /monitoring", () => {
     const response = await POST(request(envelope(dsn)))
 
     expect(response.status).toBe(400)
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+
+  it("refuses a body over 1 MB without forwarding it", async () => {
+    const response = await POST(request(envelope(DSN) + "x".repeat(1024 * 1024)))
+
+    expect(response.status).toBe(413)
     expect(fetchMock).not.toHaveBeenCalled()
   })
 

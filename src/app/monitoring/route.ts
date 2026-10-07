@@ -1,5 +1,29 @@
 const RATE_LIMIT_HEADERS = ["x-sentry-rate-limits", "retry-after"]
 
+// Sentry drops an event over 1 MB, and a browser envelope is a few KB, so anything larger
+// isn't worth holding in memory for an anonymous caller.
+const MAX_ENVELOPE_BYTES = 1024 * 1024
+
+/** The body, or null once it passes `limit`, stopping there rather than reading it all. */
+async function readBody(request: Request, limit: number): Promise<Uint8Array<ArrayBuffer> | null> {
+  if (Number(request.headers.get("content-length")) > limit) return null
+  if (!request.body) return new Uint8Array()
+  const chunks: Uint8Array[] = []
+  let size = 0
+  for await (const chunk of request.body) {
+    size += chunk.byteLength
+    if (size > limit) return null
+    chunks.push(chunk)
+  }
+  const body = new Uint8Array(size)
+  let offset = 0
+  for (const chunk of chunks) {
+    body.set(chunk, offset)
+    offset += chunk.byteLength
+  }
+  return body
+}
+
 function readEnvelopeDsn(header: string): string | undefined {
   try {
     const { dsn } = JSON.parse(header) as { dsn?: unknown }
@@ -35,11 +59,12 @@ export async function POST(request: Request): Promise<Response> {
   const dsn = parseDsn(process.env.SENTRY_DSN)
   if (!dsn) return new Response(null, { status: 404 })
 
-  const envelope = await request.arrayBuffer()
+  const envelope = await readBody(request, MAX_ENVELOPE_BYTES)
+  if (!envelope) return new Response(null, { status: 413 })
   // An envelope starts with one line of JSON, its header, which names the DSN it's for.
-  const headerEnd = new Uint8Array(envelope).indexOf(0x0a)
+  const headerEnd = envelope.indexOf(0x0a)
   const header = new TextDecoder().decode(
-    headerEnd === -1 ? envelope : envelope.slice(0, headerEnd),
+    headerEnd === -1 ? envelope : envelope.subarray(0, headerEnd),
   )
   const target = parseDsn(readEnvelopeDsn(header))
   if (!target || target.host !== dsn.host || target.projectId !== dsn.projectId) {

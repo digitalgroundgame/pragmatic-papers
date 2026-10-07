@@ -20,11 +20,18 @@ export const Live: Story = {
     const ticker = within(canvasElement).getByRole("region", { name: "Live and latest" })
     await expect(within(ticker).getAllByRole("link")[0]).toHaveAttribute("href", liveBroadcast.url)
 
+    const track = canvasElement.querySelector(".ticker-track")!
+    await expect(getComputedStyle(track).animationPlayState).toBe("running")
+
     const pause = within(ticker).getByRole("checkbox", { name: "Pause ticker" })
     await userEvent.click(pause)
     await expect(pause).toBeChecked()
-    const track = canvasElement.querySelector(".ticker-track")!
     await expect(getComputedStyle(track).animationPlayState).toBe("paused")
+
+    // Leave it scrolling for whoever opens the story.
+    await userEvent.click(pause)
+    await expect(pause).not.toBeChecked()
+    await expect(getComputedStyle(track).animationPlayState).toBe("running")
   },
 }
 

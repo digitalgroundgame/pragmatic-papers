@@ -354,17 +354,7 @@
 
 .ticker-viewport:hover .ticker-track,
 .ticker-viewport:focus-within .ticker-track,
-.ticker:has(.ticker-pause:checked) .ticker-viewport {
-  mask-image: linear-gradient(
-    to right,
-    transparent,
-    black 1.5rem,
-    black calc(100% - 1.5rem),
-    transparent
-  );
-}
-
-.ticker-track {
+.ticker:has(.ticker-pause:checked) .ticker-track {
   animation-play-state: paused;
 }
 

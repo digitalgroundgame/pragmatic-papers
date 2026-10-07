@@ -31,21 +31,22 @@ function PostList({
       aria-label={copy ? undefined : "Latest posts"}
       aria-hidden={copy || undefined}
       inert={copy || undefined}
-      className={cn("flex shrink-0 items-center gap-8 pr-8", copy && "motion-reduce:hidden")}
+      className={cn("flex shrink-0 items-center gap-6 pr-6", copy && "motion-reduce:hidden")}
     >
       {posts.map((post) => {
         const { name, Icon } = SOURCES[post.source]
         return (
-          <li key={post.id} className="shrink-0">
+          <li key={post.id} className="flex shrink-0 items-center gap-6">
+            <span aria-hidden="true" className="bg-brand-high-contrast size-1 rounded-full" />
             <a
               href={post.url}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-2 whitespace-nowrap hover:underline"
+              className="group flex items-center gap-2 font-serif whitespace-nowrap"
             >
-              <Icon className="text-muted-foreground size-3.5 shrink-0" />
+              <Icon className="text-muted-foreground group-hover:text-foreground size-3.5 shrink-0" />
               <span className="sr-only">On {name}:</span>
-              {excerpt(post.text)}
+              <span className="group-hover:underline">{excerpt(post.text)}</span>
             </a>
           </li>
         )
@@ -58,7 +59,7 @@ function Posts({ posts, beside }: { posts: TickerPost[]; beside: boolean }): Rea
   return (
     // Beside a broadcast on a phone, there's room for one or the other, and the broadcast is
     // what a reader can't find elsewhere.
-    <div className={cn("flex min-w-0 flex-1 items-center gap-3", beside && "max-sm:hidden")}>
+    <div className={cn("flex min-w-0 flex-1 items-center gap-2", beside && "max-sm:hidden")}>
       <div className="ticker-viewport relative min-w-0 flex-1 overflow-hidden motion-reduce:overflow-x-auto">
         <div
           className="ticker-track flex w-max"
@@ -71,14 +72,18 @@ function Posts({ posts, beside }: { posts: TickerPost[]; beside: boolean }): Rea
           <PostList posts={posts} copy />
         </div>
       </div>
-      <label className="hover:bg-accent focus-within:ring-ring flex size-7 shrink-0 cursor-pointer items-center justify-center rounded-sm focus-within:ring-2 motion-reduce:hidden">
+      <label className="text-muted-foreground hover:text-foreground focus-within:ring-ring relative flex size-7 shrink-0 cursor-pointer items-center justify-center rounded-full focus-within:ring-2 motion-reduce:hidden">
         <input type="checkbox" className="ticker-pause sr-only" aria-label="Pause ticker" />
-        <Pause aria-hidden="true" className="ticker-pause-icon size-4" />
-        <Play aria-hidden="true" className="ticker-play-icon size-4" />
+        <Pause aria-hidden="true" className="ticker-pause-icon size-3.5 fill-current" />
+        <Play aria-hidden="true" className="ticker-play-icon size-3.5 fill-current" />
       </label>
     </div>
   )
 }
+
+/** The ticker's label: what the strip is, in the brand's accent, like a volume's dateline. */
+const LABEL =
+  "text-brand-high-contrast shrink-0 font-sans text-xs font-bold tracking-wider uppercase"
 
 function Broadcast({
   broadcast,
@@ -94,31 +99,30 @@ function Broadcast({
       target="_blank"
       rel="noopener noreferrer"
       className={cn(
-        "flex min-w-0 items-center gap-2 font-medium hover:underline",
+        "group flex min-w-0 items-center gap-2.5",
         pinned && "sm:max-w-[45%] sm:shrink-0",
       )}
     >
-      <span
-        className={cn(
-          "flex shrink-0 items-center gap-1 rounded-sm px-1.5 py-0.5 text-xs font-bold uppercase",
-          live ? "bg-red-700 text-white" : "border",
-        )}
-      >
-        {live && (
+      {live ? (
+        <span className="bg-brand-high-contrast text-background flex shrink-0 items-center gap-1.5 rounded-full px-2 py-0.5 font-sans text-xs font-bold tracking-wider uppercase">
           <span
             aria-hidden="true"
-            className="size-1.5 animate-pulse rounded-full bg-white motion-reduce:animate-none"
+            className="bg-background size-1.5 animate-pulse rounded-full motion-reduce:animate-none"
           />
-        )}
-        {live ? "Live" : "Upcoming"}
-      </span>
+          Live
+        </span>
+      ) : (
+        <span className={LABEL}>Upcoming</span>
+      )}
       <YoutubeIcon className="size-4 shrink-0" />
-      <span className="truncate">{broadcast.title}</span>
+      <span className="truncate font-sans font-semibold group-hover:underline">
+        {broadcast.title}
+      </span>
       {!live && broadcast.startsAt && (
         <time
           dateTime={broadcast.startsAt}
           title={formatFullTimestamp(broadcast.startsAt)}
-          className="text-muted-foreground shrink-0"
+          className="text-muted-foreground shrink-0 font-serif"
         >
           {formatTimeOfDay(broadcast.startsAt)}
         </time>
@@ -138,10 +142,18 @@ export function TickerView({ broadcast, posts }: TickerFeed): React.ReactNode {
   if (!broadcast && posts.length === 0) return null
 
   return (
-    <section aria-label="Live and latest" className="ticker bg-muted/40 border-b">
-      <div className="container flex h-10 items-center gap-3 text-sm">
-        {broadcast && <Broadcast broadcast={broadcast} pinned={posts.length > 0} />}
-        {posts.length > 0 && <Posts posts={posts} beside={Boolean(broadcast)} />}
+    <section aria-label="Live and latest" className="ticker bg-muted mb-6 md:mb-10 md:border-t">
+      {/* The mega menu sits right above on wider screens; the top border parts it from the
+          strip. On phones the header's own border already does. */}
+      <div className="container">
+        <div className="flex h-11 items-center gap-4 text-sm">
+          {broadcast ? (
+            <Broadcast broadcast={broadcast} pinned={posts.length > 0} />
+          ) : (
+            <span className={LABEL}>Latest</span>
+          )}
+          {posts.length > 0 && <Posts posts={posts} beside={Boolean(broadcast)} />}
+        </div>
       </div>
     </section>
   )

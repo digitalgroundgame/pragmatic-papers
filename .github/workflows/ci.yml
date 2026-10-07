@@ -287,9 +287,10 @@ jobs:
 
   # Publishes the tested build to the pragmatic-papers-storybook Cloudflare
   # Worker (.storybook/wrangler.jsonc): `dev` deploys to the main workers.dev
-  # address, and each PR uploads a version under a `pr-<number>` preview alias,
-  # records it as a "Storybook Preview" Deployment (listed on the PR beside the
-  # site's Preview), and links each component the PR changes at the top of its
+  # address, and each PR creates or updates a `pr-<number>` Worker Preview
+  # (deleted when the PR closes, by storybook-close.yml), records it as a
+  # "Storybook Preview" Deployment (listed on the PR beside the site's
+  # Preview), and links each component the PR changes at the top of its
   # description (scripts/storybook-pr.ts). Kept out of the Storybook job so a Cloudflare
   # outage never turns that required check red. Skips itself without the
   # Cloudflare secrets, which fork and Dependabot PRs never receive.
@@ -334,21 +335,25 @@ jobs:
         if: env.HAS_CLOUDFLARE == 'true' && github.event_name != 'pull_request'
         run: npx --yes wrangler@4 deploy --config .storybook/wrangler.jsonc
 
-      - name: Upload a PR preview
+      # A Worker Preview, unlike a `versions upload --preview-alias` alias, can
+      # be deleted, so storybook-close.yml removes it when the PR closes.
+      - name: Deploy a PR preview
         id: preview
         if: env.HAS_CLOUDFLARE == 'true' && github.event_name == 'pull_request'
         env:
-          ALIAS: pr-${{ github.event.pull_request.number }}
+          PREVIEW: pr-${{ github.event.pull_request.number }}
+          WRANGLER_OUTPUT_FILE_PATH: wrangler-output.json
         run: |
-          npx --yes wrangler@4 versions upload --config .storybook/wrangler.jsonc --preview-alias "$ALIAS" | tee wrangler.log
-          url=$(grep -oE "https://${ALIAS}-[a-z0-9.-]+\.workers\.dev" wrangler.log | head -n 1)
+          npx --yes wrangler@4 preview --config .storybook/wrangler.jsonc --name "$PREVIEW"
+          url=$(jq -r 'select(.type == "preview") | .preview_urls[]?' "$WRANGLER_OUTPUT_FILE_PATH" \
+            | grep -oE "^(https://)?${PREVIEW}-[a-z0-9.-]+\.workers\.dev" | head -n 1 || true)
           if [ -z "$url" ]; then
-            # Wrangler prints preview URLs only while the Worker has them on;
-            # `preview_urls` in wrangler.jsonc applies on the next `dev` deploy.
-            echo "::error::wrangler printed no preview alias URL for $ALIAS. Turn on Preview URLs for the Worker (Cloudflare dashboard: pragmatic-papers-storybook > Settings > Domains & Routes), then re-run this job."
+            # Previews get a workers.dev URL only while the Worker has Preview
+            # URLs on; `preview_urls` in wrangler.jsonc applies on the next `dev` deploy.
+            echo "::error::wrangler reported no workers.dev URL for the $PREVIEW Preview. Turn on Preview URLs for the Worker (Cloudflare dashboard: pragmatic-papers-storybook > Settings > Domains & Routes), then re-run this job."
             exit 1
           fi
-          echo "url=$url" >> "$GITHUB_OUTPUT"
+          echo "url=https://${url#https://}" >> "$GITHUB_OUTPUT"
 
       # Node 24 runs the TypeScript script directly; no install needed.
       - uses: actions/setup-node@v7

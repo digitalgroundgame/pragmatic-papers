@@ -297,15 +297,15 @@ jobs:
           git config --global user.name "github-actions[bot]"
           git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add tests/e2e/__screenshots__
-          mapfile -t added < <(git diff --cached --name-only --diff-filter=A)
-          if [ ${#added[@]} -eq 0 ]; then
+          added=$(git diff --cached --name-only --diff-filter=A)
+          if [ -z "$added" ]; then
             echo "No new baselines to commit."
             echo "committed=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
           export GIT_INDEX_FILE="$RUNNER_TEMP/baselines.index"
           git read-tree "$PARENT_SHA"
-          git update-index --add -- "${added[@]}"
+          echo "$added" | git update-index --add --stdin
           sha=$(git commit-tree "$(git write-tree)" -p "$PARENT_SHA" -m "test: add missing e2e snapshot baselines")
           git push origin "$sha:refs/heads/${GITHUB_HEAD_REF:-$GITHUB_REF_NAME}"
           echo "committed=true" >> "$GITHUB_OUTPUT"

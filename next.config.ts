@@ -28,7 +28,7 @@ const nextConfig: NextConfig = {
       {
         // Production's media, which generateFileURL (src/plugins/index.ts) points at
         // SUPABASE_URL's public bucket. Any Supabase project rather than SUPABASE_URL's own
-        // host, so the storage host isn't fixed when the image is built (#1090).
+        // host, so the storage host isn't fixed when the image is built.
         // start.sh refuses to start a deployed image whose SUPABASE_URL this doesn't match.
         protocol: "https",
         hostname: "*.supabase.co",
@@ -54,9 +54,12 @@ const nextConfig: NextConfig = {
       // an editor and a broken publish button today.
       //
       // There is no per-action override for this in Next — `bodySizeLimit` is one number
-      // for every Server Action in the app, so this also covers `getAuth.ts` and
-      // `SocialEmbed/hooks/revalidateSnapshot.ts`. Neither is publicly reachable, so the
-      // practical exposure is low; it is still wider than the one flow this was raised for.
+      // for every Server Action in the app, so this also covers the feed's `loadFeedBatch`
+      // (`src/app/feed/actions.ts`), which anyone can call, and
+      // `SocialEmbed/hooks/revalidateSnapshot.ts`, which only server code calls.
+      // `loadFeedBatch` takes a single number, yet a caller can now make Next read and parse up
+      // to 8 MB per request instead of 1 MB: low exposure, but wider than the one flow this was
+      // raised for.
       bodySizeLimit: "8mb",
     },
   },
@@ -149,7 +152,7 @@ const nextConfig: NextConfig = {
         // Only applies when both Payload cookies are absent; logged-in editors and draft-preview
         // sessions bypass this rule and always hit the origin with fresh responses.
         // Route Handlers that set their own Cache-Control are left out, because a config-level
-        // header always wins over one a Route Handler sets for the same key (#947):
+        // header always wins over one a Route Handler sets for the same key:
         // - interactives' region, geometry and search JSON (`/interactives/<slug>/regions/...`,
         //   `/interactives/<slug>/search`): an hour at the edge, and geometry, which names its
         //   own content in the URL, is immutable for a year — this rule capped both at 10 min.
@@ -211,7 +214,39 @@ const nextConfig: NextConfig = {
   },
 }
 
-export default withSentryConfig(withPayload(nextConfig, { devBundleServerPackages: false }), {
+// The client-hint headers withPayload adds to every path. Payload's admin reads
+// Sec-CH-Prefers-Color-Scheme to render in the editor's light or dark theme, and asks for it
+// with Critical-CH, which makes Chrome retry a first visit's navigation to send the hint: a
+// whole extra round trip before the first byte (about 570 ms on Home under Lighthouse's
+// throttling). Only the admin panel reads it, so only the admin panel asks.
+const PAYLOAD_CLIENT_HINTS = ["Accept-CH", "Critical-CH", "Vary"]
+
+/** `config` with Payload's client-hint headers moved from every path to /admin. */
+function clientHintsOnlyForAdmin(config: NextConfig): NextConfig {
+  const { headers } = config
+  if (!headers) return config
+  return {
+    ...config,
+    headers: async () =>
+      (await headers()).flatMap((rule) => {
+        const isHint = (header: { key: string; value: string }): boolean =>
+          PAYLOAD_CLIENT_HINTS.includes(header.key) &&
+          header.value === "Sec-CH-Prefers-Color-Scheme"
+        if (rule.source !== "/:path*" || !rule.headers.some(isHint)) return [rule]
+        const others = rule.headers.filter((header) => !isHint(header))
+        return [
+          ...(others.length ? [{ ...rule, headers: others }] : []),
+          { ...rule, source: "/admin/:path*", headers: rule.headers.filter(isHint) },
+        ]
+      }),
+  }
+}
+
+const payloadConfig = clientHintsOnlyForAdmin(
+  withPayload(nextConfig, { devBundleServerPackages: false }),
+)
+
+export default withSentryConfig(payloadConfig, {
   // For all available options, see:
   // https://www.npmjs.com/package/@sentry/webpack-plugin#options
 
@@ -219,13 +254,12 @@ export default withSentryConfig(withPayload(nextConfig, { devBundleServerPackage
 
   project: "pragmatic-papers",
 
-  // Tags our bundled code with this key so `thirdPartyErrorFilterIntegration`
-  // (in src/instrumentation-client.ts) can tell our frames from third-party ones.
-  // Top-level `applicationKey` injects module metadata for both webpack and Turbopack.
-  applicationKey: "pragmatic-papers",
+  // No `applicationKey`: the module metadata it injects into every client module made each
+  // one slower to evaluate, about 200 ms of Lighthouse's Total Blocking Time on Home.
+  // src/sentryThirdPartyFrames.ts tells our frames from third-party ones by URL instead.
 
   // The build-time dependency instrumentation roughly doubles peak compile memory
-  // (~4.6 → ~8.5 GiB), more than the Coolify build server's 8 GB of RAM (#1018).
+  // (~4.6 → ~8.5 GiB), more than the Coolify build server's 8 GB of RAM.
   buildTimeInstrumentation: false,
 
   // Log wherever source maps are uploaded: builds with SENTRY_AUTH_TOKEN (Coolify
@@ -244,11 +278,8 @@ export default withSentryConfig(withPayload(nextConfig, { devBundleServerPackage
     disable: process.env.BUILD_ENV === "preview",
   },
 
-  // Route browser requests to Sentry through a Next.js rewrite to circumvent ad-blockers.
-  // This can increase your server load as well as your hosting bill.
-  // Note: This needs to not conflict with our Next.js middleware/proxy.ts, otherwise reporting of client-
-  // side errors will fail.
-  tunnelRoute: "/monitoring",
+  // No `tunnelRoute`: the browser SDK reports through src/app/monitoring/route.ts instead,
+  // which says why.
 
   webpack: {
     // Tree-shaking options for reducing bundle size

@@ -35,7 +35,10 @@ This file provides guidance to tools like Claude Code (claude.ai/code) when work
 - `pnpm test:unit:coverage` — run unit tests with V8 coverage report (what CI uses; outputs `coverage/coverage-summary.json` and `coverage/coverage-final.json`)
 - `pnpm test:coverage` — run all tests with V8 coverage report (full picture for local inspection)
 - `pnpm test:unit -u` — regenerate snapshot baselines after intentional UI changes
-- `pnpm coverage:report` — post the combined coverage PR comment locally (requires `GITHUB_TOKEN`, `GITHUB_REPOSITORY`, `GITHUB_EVENT_PATH`)
+- `pnpm coverage:report` — post the coverage section of CI's PR comment locally (requires `GITHUB_TOKEN`, `GITHUB_REPOSITORY`, `GITHUB_EVENT_PATH`)
+- `pnpm bundle-size` — measure the gzipped client JS and CSS each public page loads, from the build in `.next` (run `pnpm build` first), and compare it with dev's last measurement when `BASE_BUNDLE_SIZE_PATH` names one (see [Page speed](#page-speed))
+- `pnpm analyze` — Turbopack's bundle analyzer, in the browser (it compiles but doesn't leave a build behind): each route's client and server modules, and the import chain that brings each one in. `pnpm analyze --output` writes it to `.next/diagnostics/analyze/` instead, which the next `pnpm build` deletes
+- `pnpm lighthouse` — seed a throwaway database, build and serve as `pnpm test:e2e` does, then run Lighthouse's performance audit on a few seeded pages; reports land in `lighthouse-results/`. Set `BASE_LIGHTHOUSE_PATH` to a `summary.json` from an earlier run to compare with it (see [Page speed](#page-speed))
 
 ### Test databases
 
@@ -152,12 +155,15 @@ too.
 - **Tabs pattern**: Content + SEO tabs; SEO tab uses standard fields (`OverviewField`, `MetaTitleField`, `MetaImageField`, `MetaDescriptionField`, `PreviewField`)
 - **Versions config**: `drafts.autosave: true`, `schedulePublish: true`, `maxPerDoc: 50`
 - **Live preview**: `generatePreviewPath()` for `admin.livePreview.url` and `admin.preview`
+- **Breadcrumbs**: a page builds its trail (`Crumb[]`, the steps after Home) from the documents it loaded and passes the same list to `<Breadcrumbs items={...} />` and `buildBreadcrumbJsonLd`. Labels are titles, never derived from slugs, and nothing reads the request. A nested collection (the nested-docs plugin) builds it with `nestedDocsTrail(doc.breadcrumbs, basePath)` from `@/components/Breadcrumbs`
 - **Media references**: media used by published content can't be deleted until it's detached (the Media **References** tab). An upload field or a block that holds media must be listed in `SOURCES` (`src/collections/Media/references/collectMediaReferences.ts`), or media it uses can be deleted without warning
 
 ### Block Conventions
 
 - **File structure**: `blocks/<Name>/config.ts` (Payload config) + `blocks/<Name>/Component.tsx` (React component)
 - **Two rendering systems**: `RenderBlocks` renders page layout blocks (Content, CTA, MediaBlock, Form, VolumeView); `RichText` renders Lexical inline/rich-text blocks (Banner, Code, Math, Footnote, SocialEmbed, SquiggleRule)
+- **Heavy client code loads lazily**: `RichText` and `RenderBlocks` import every block, so whatever a block's client component imports ships on every page that renders rich text, the footer included. A client component with a sizeable dependency (a highlighter, a carousel, a form library, a player) is imported through a sibling `*.lazy.tsx`: a `"use client"` file that wraps it in `next/dynamic` (`blocks/Code/Component.lazy.tsx`), so only pages that render it download it. The wrapper has to be a client file: `next/dynamic` in a Server Component doesn't split the code. Server rendering is unchanged. Unit tests get the real component (`vitest.setup.ts` maps each `.lazy` module to it), and stories wait for it with `findBy*`. `pnpm bundle-size` shows what a page loads up front
+- **Menus and toggles load on first use**: the header's sheets, mega menu and mode toggles are on every page, and most readers never open them. Their `*.lazy.tsx` wrappers render through `LoadOnInteraction` (`src/components/LoadOnInteraction`): markup that looks the same (the trigger button, or the menu's links) until the reader points at, touches, focuses or clicks it, then the base-ui component, with the click replayed and focus kept. Keep the layouts' server components from importing anything that imports base-ui's dialogs or menus (`ui/sheet`, `ui/dropdown-menu`, `ui/navigation-menu`): its client code would be back in every page's first-load JavaScript. `pnpm bundle-size` shows it
 - **Feed converters**: the RSS feeds (`/articles/feed.xml`, `/volumes/feed.xml`) and the Substack import feed render article content and volume editor's notes to HTML. A block's non-React renderings live in **`blocks/<Name>/converters.ts`**, one function per output **format**, named for the format rather than the feed (`timelineToHTML`, `displayMathToCode`). Each takes the block's fields plus a `FeedContext` (`src/utilities/feedHTML.ts`: `siteUrl`, `pageUrl`, `richTextToHTML` for nested rich text) and returns plain semantic HTML: absolute URLs, no inline styles, and every CMS value through `escapeHTML`. Shared logic used by several formats, or by `Component.tsx`, goes in the same file (`formatTimelineDate`). `converters.ts` must run in the browser, because Storybook imports it, so no server-only imports. The feed files only map block slugs to the format they want, through `fromBlock`: `createHtmlConverters` (`src/utilities/generateRssFeed.ts`) and, for article content, `createSubstackConverters` (`src/app/(frontend)/articles/_substack/generateSubstackFeed.ts`). A block added to those editors (or to the rich text inside their blocks) needs a converter, plus:
   - a `__tests__/converters.test.ts` using `toMatchInlineSnapshot()`, fed from `src/stories/fixtures/blocks.ts`
   - a `Feed` story that renders the output through `src/stories/FeedHTML.tsx`, so it gets the axe check
@@ -182,6 +188,7 @@ too.
 - **Pre-push hooks**: Husky runs full checks on all files (`lint:fix`, `format:fix`, `check-types`) before pushing
 - **Pre-commit hooks**: lint-staged runs ESLint + Prettier on staged files only (fast, ~1-2 seconds)
 - **Colocation**: Prefer colocating logic near where it's used. `src/utilities/` is only for genuinely reusable helpers shared across multiple features (e.g. `generateMeta`, `getURL`, `toRoman`, `cn`). Don't put single-use logic there.
+- **Issue and PR numbers in comments**: comments and docs describe the code as it is now; why and when it changed is what `git log` and `git blame` are for. Don't write "added in #970", "before #672" or "see #883" — the sentence should stand on its own. Two exceptions, each a pointer with an exit: an upstream bug a workaround depends on (full URL; remove the workaround when it's fixed), and an **open** issue tracking a known gap or a skipped check (say what to remove when it closes, as `knownContrastIssue` does for #998). When that issue closes, delete the comment and what it guards; never append to it.
 
 ### Integrations
 
@@ -217,7 +224,7 @@ Progress and the open questions live on issue #912.
 | Pure utility functions         | Unit test in `src/**/__tests__/`                                                           |
 | Blocks and components          | Storybook story next to the component (see [Storybook](#storybook))                        |
 | UI/presentational components   | Snapshot test (see `src/components/ui/__tests__/button.snapshot.test.tsx` for the pattern) |
-| Client components with state   | RTL interaction test (`fireEvent`; `user-event` is not installed — see #898)               |
+| Client components with state   | RTL interaction test (`fireEvent`; `user-event` is not installed)                          |
 | Server components (async, CMS) | Integration test with mocked Payload queries                                               |
 | API routes / Payload hooks     | Integration test (a Docker Postgres, see `tests/integration/`)                             |
 
@@ -275,6 +282,31 @@ function, and fails on any axe violation.
   PR's site preview redirects to its Storybook (404 on production). Needs the `CLOUDFLARE_API_TOKEN`
   (Workers Scripts: Edit) and `CLOUDFLARE_ACCOUNT_ID` repo secrets; without them it skips.
 
+### Page speed
+
+Two jobs in `playwright.yml` measure the image the PR deploys, and each compares it
+with the last run on `dev` in a dropdown under the coverage report, in the one
+PR analytics comment CI keeps on a PR. A dropdown starts open when it flags
+something. A new report joins that comment by registering a section in
+`PR_REPORT_SECTIONS` (`scripts/pr-report.ts`) and posting it with
+`postPrReportSection()`, rather than posting a comment of its own:
+
+- **Bundle size** (`scripts/bundle-size.ts`) reads the image's build manifests and
+  adds up the gzipped JavaScript and CSS each public page loads before it's
+  interactive (Next 16 no longer prints "First Load JS"). Pages are expected to
+  grow over time, so there are no fixed budgets: a route whose JavaScript grew by
+  more than 10 kB against dev is flagged in the comment and with a warning on the
+  PR's checks. It **only warns**; `pnpm analyze` shows which import brought the
+  growth in.
+- **Lighthouse** (`scripts/lighthouse.ts`) seeds the E2E database, starts the
+  PR's image and audits each page 5 times, comparing with the results the last
+  push to `dev` uploaded. The CPU slowdown is calibrated to the runner's benchmark
+  score, and Chrome can't reach any host but localhost. Dev's results come from
+  another runner, so a metric is flagged only when every PR run is worse than
+  every dev run by a wide margin (`THRESHOLDS`). It **only warns**: the HTML
+  reports are in the `lighthouse-results` artifact. A page added to the seed can
+  be audited by adding it to `PAGES`.
+
 ### Visual regression (screenshot) tests
 
 Adding, changing, or debugging a Playwright `toHaveScreenshot` test or a flaky
@@ -313,9 +345,10 @@ committing or uploading it:
 
 ## Hosting (Coolify)
 
-The site is built and hosted by Coolify, from `dockerfiles/PragmaticPapers.Dockerfile`:
-a **development** application (staging, from `dev`, plus a preview per PR) and a
-**production** application (from `main`). `dockerfiles/README.md` records how _our_
+The site is hosted by Coolify in three applications: **staging** (from `dev`) and
+**production** (from `main`), which Coolify builds from
+`dockerfiles/PragmaticPapers.Dockerfile`, and **preview** (one per PR), which runs the
+image GitHub Actions builds from `dockerfiles/PragmaticPapers.ci.Dockerfile`. `dockerfiles/README.md` records how _our_
 applications are set up and what's been verified about them; read it first.
 
 The zone's Cloudflare rules (Cache Rules today) are version-controlled in
@@ -325,15 +358,20 @@ change them there, not in the dashboard (`cloudflare/README.md`).
 ## Releases
 
 A release train (`.github/workflows/release-train.yml`, `scripts/release-train.ts`)
-runs every Saturday. It opens a "Bump package.json to vX.Y.Z" PR into `dev` (the
-next **candidate**, versioned from commit prefixes: `!` major, `feat` minor, anything
-else patch), and once a merged candidate has spent `SOAK_DAYS` (4) on staging, a
-"Release X.Y.Z" PR into `main` from a branch at that bump commit. People merge both;
-the release PR as a **merge commit**, after which `release.yml` tags it. Only one
-candidate settles at a time, and the bump lands on `dev` first, so nothing is
-back-merged. The exception is `pnpm hotfix`: a candidate cut before a hotfix would
-conflict with `main`, so the train skips it and cuts nothing until the hotfix is
-back-merged into `dev`. `pnpm release` remains for doing it by hand.
+cuts a candidate after Wednesday's dev meeting and puts it live at midnight going into
+Sunday, leaving a day to check production before Monday's articles. At midnight
+Pacific going into Thursday it opens a "Bump package.json to vX.Y.Z" PR into `dev`
+(the next **candidate**, versioned from commit prefixes: `!` major, `feat` minor,
+anything else patch). Saturday at 16:00 UTC (8am PST, 9am PDT), once a merged
+candidate has spent `SOAK_DAYS` (1) on staging, it opens a "Release X.Y.Z" PR into
+`main` from a branch at that bump commit. At midnight Pacific going into Sunday it
+merges that PR with a **merge commit** if a maintainer has approved it and its checks
+are green; `release.yml` then
+tags it. Unapproved, it waits for a person. Cron is UTC, so the midnight runs are at
+08:00 UTC: midnight PST, 1am PDT. Only one candidate settles at a time, and the bump
+lands on `dev` first, so nothing is back-merged. The exception is `pnpm hotfix`: a
+candidate cut before a hotfix would conflict with `main`, so the train skips it and
+cuts nothing until the hotfix is back-merged into `dev`. `pnpm release` remains for doing it by hand.
 
 ## Third-party docs
 

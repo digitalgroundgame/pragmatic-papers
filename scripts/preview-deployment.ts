@@ -1,30 +1,12 @@
 /**
- * Mirrors a PR's Coolify preview deploy into a GitHub Deployment, so the PR
- * shows the preview's state and a "View deployment" link to it.
+ * Deploys a PR's preview on Coolify and mirrors it into a GitHub Deployment, so the PR
+ * shows the preview's state and a "View deployment" link to it. Coolify never tells
+ * GitHub about previews itself: it only posts a PR comment
+ * (https://github.com/coollabsio/coolify/issues/9583). Runs under plain Node 24.
  *
- * Coolify builds previews itself (on its GitHub App's webhook) but never tells
- * GitHub about them: it only posts a PR comment
- * (https://github.com/coollabsio/coolify/issues/9583). Run by
- * .github/workflows/preview-deployment.yml under plain Node 24, with:
- *
- *   node scripts/preview-deployment.ts deploy   # PR opened, reopened or pushed
- *   node scripts/preview-deployment.ts close    # PR closed or merged
- *
- * `deploy` waits for Coolify to queue a preview for the PR's head commit, then
- * creates a Deployment for the PR's branch in the "Preview" environment and
- * copies Coolify's status onto it until the build finishes. The branch (not the
- * commit SHA) is the Deployment's ref, which is what ties it to the PR. When the
- * build succeeds, the PR's older preview Deployments are marked inactive.
- * `close` marks all of the PR's preview Deployments inactive, since Coolify
- * tears the preview down.
- *
- * The workflow only runs `deploy` on PRs Coolify previews (see its `if`). A PR
- * Coolify still doesn't build (previews off for its base branch, say) gets no
- * Deployment. Without the Coolify settings the script does nothing.
- *
- * Previews built in GitHub Actions instead (#1067; deployed by .github/workflows/playwright.yml,
- * removed by .github/workflows/preview-image.yml)
- * run on a Coolify "Docker Image" application, which never builds anything itself:
+ * Previews run on Coolify's **preview** app, a "Docker Image" application that never
+ * builds anything itself. .github/workflows/playwright.yml builds the image and deploys
+ * it, and .github/workflows/preview-image.yml removes it when the PR closes:
  *
  *   node scripts/preview-deployment.ts deploy <image-tag>   # deploy that image as the PR's preview
  *   node scripts/preview-deployment.ts close --delete-preview
@@ -33,7 +15,25 @@
  * preview on its first deploy), then follows that deployment, not the newest one it
  * can find for the commit. `close --delete-preview` also removes the preview from
  * Coolify, which nothing else does for an image application (there's no GitHub App
- * watching the PR). Both need a token with the `deploy` and `write` abilities.
+ * watching the PR), and fails if the preview still answers a few minutes later. Both need a token with the `deploy` and `write` abilities.
+ *
+ * The fallback, previews the staging app builds itself on its GitHub App's webhook
+ * (dockerfiles/README.md, "Falling back to Coolify-built previews"), is followed by
+ * .github/workflows/preview-deployment.yml instead:
+ *
+ *   node scripts/preview-deployment.ts deploy   # PR opened, reopened or pushed
+ *   node scripts/preview-deployment.ts close    # PR closed or merged
+ *
+ * There `deploy` waits for Coolify to queue a preview for the PR's head commit, then
+ * creates a Deployment for the PR's branch in the "Preview" environment and copies
+ * Coolify's status onto it until the build finishes. The workflow only runs it on PRs
+ * Coolify previews (see its `if`); a PR Coolify doesn't build gets no Deployment.
+ * `close` marks all of the PR's preview Deployments inactive, since Coolify tears the
+ * preview down.
+ *
+ * Either way the branch (not the commit SHA) is the Deployment's ref, which is what ties
+ * it to the PR, and once a preview is live the PR's older preview Deployments are marked
+ * inactive. Without the Coolify settings the script does nothing.
  */
 import { pathToFileURL } from "node:url"
 
@@ -91,12 +91,15 @@ export interface Timing {
   queueTimeoutMs: number
   /** How long the build may take once queued. */
   buildTimeoutMs: number
+  /** How long a deleted preview may keep answering before `close` fails. */
+  removalTimeoutMs: number
 }
 
 export const TIMING: Timing = {
   pollMs: 15_000,
   queueTimeoutMs: 10 * 60_000,
   buildTimeoutMs: 45 * 60_000,
+  removalTimeoutMs: 5 * 60_000,
 }
 
 const COOLIFY_STATES: Record<string, { state: GithubState; description: string }> = {
@@ -450,10 +453,30 @@ export async function deploy(
   }
 }
 
+/**
+ * Whether our app still answers at `url`. Asks for a path no page has, so neither
+ * Cloudflare's cache nor a page answers for it: our app replies with its own 404, which
+ * carries Next's `X-Powered-By`, while a removed preview gets Coolify's proxy or no answer.
+ */
+export async function previewAnswers(deps: Deps, url: string): Promise<boolean> {
+  try {
+    const response = await deps.fetch(`${url}/__preview-removed-check-${deps.now()}`, {
+      method: "HEAD",
+      redirect: "manual",
+      // A host that never answers counts as gone rather than stalling the caller.
+      signal: AbortSignal.timeout(10_000),
+    })
+    return response.headers.get("x-powered-by")?.includes("Next.js") ?? false
+  } catch {
+    return false
+  }
+}
+
 export async function close(
   deps: Deps,
   config: Config,
   { deletePreview }: ImageOptions = {},
+  timing: Timing = TIMING,
 ): Promise<void> {
   if (deletePreview) {
     const deleted = await coolify(deps, config).deletePreview()
@@ -465,6 +488,23 @@ export async function close(
   }
   const n = await deactivate(deps, config)
   deps.log(`Marked ${n} preview deployment(s) for PR #${config.pr} inactive.`)
+  if (!deletePreview) return
+
+  // Coolify can accept the delete, or say it has no such preview, and leave the container
+  // running. The preview then outlives its database, which the next preview build drops,
+  // and every request to it fails. Check that it actually stopped answering.
+  const url = previewUrl(config.previewUrlTemplate, config.pr)
+  const deadline = deps.now() + timing.removalTimeoutMs
+  while (await previewAnswers(deps, url)) {
+    if (deps.now() + timing.pollMs > deadline) {
+      throw new Error(
+        `PR #${config.pr}'s preview still answers at ${url} ${timing.removalTimeoutMs / 60_000} min ` +
+          "after asking Coolify to remove it. Delete it by hand in Coolify.",
+      )
+    }
+    await deps.sleep(timing.pollMs)
+  }
+  deps.log(`PR #${config.pr}'s preview no longer answers at ${url}.`)
 }
 
 const defaultDeps: Deps = {

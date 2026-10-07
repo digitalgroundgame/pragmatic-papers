@@ -27,6 +27,7 @@ import { detectMathBlocks } from "@/collections/Articles/hooks/detectMathBlocks"
 import { generateFootnotes } from "@/collections/Articles/hooks/generateFootnotes"
 import { populateTopics } from "@/collections/Articles/hooks/populateTopics"
 import { populateMetaImageFromHero } from "@/collections/Articles/hooks/populateMetaImageFromHero"
+import { removeFromRankings } from "@/collections/Articles/hooks/removeFromRankings"
 import { revalidateArticle, revalidateDelete } from "@/collections/Articles/hooks/revalidateArticle"
 import { revalidateNavLinks, revalidateNavLinksDelete } from "@/hooks/revalidateNavLinks"
 import { populateTableOfContentsAnchors, tableOfContentsField } from "@/components/TableOfContents"
@@ -340,6 +341,7 @@ export const Articles: CollectionConfig = {
     ],
     afterChange: [revalidateArticle, revalidateNavLinks],
     afterRead: [populateTopics],
+    beforeDelete: [removeFromRankings],
     afterDelete: [revalidateDelete, revalidateNavLinksDelete],
   },
   versions: {

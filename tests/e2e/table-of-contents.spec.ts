@@ -17,6 +17,8 @@ test("table of contents renders on rich-text showcase article @visual", async ({
   await expect(toc.getByRole("link", { name: "Conclusion" })).toBeVisible()
 
   test.skip(testInfo.project.name !== "chromium", "visual baseline captured on chromium only")
+  // The hero image pushes the list's end below the fold, and a clip can't leave the viewport.
+  await toc.scrollIntoViewIfNeeded()
   await waitForStableRender(page)
   const box = await waitForStableBox(toc)
   await expect(page).toHaveScreenshot("table-of-contents-list.png", {

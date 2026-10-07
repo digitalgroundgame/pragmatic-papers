@@ -3,8 +3,10 @@ import { createHash } from "node:crypto"
 import { lookup } from "node:dns/promises"
 import { appendFileSync, existsSync, readdirSync, readFileSync, rmSync } from "node:fs"
 import net from "node:net"
+import os from "node:os"
 import path from "node:path"
 import { blue, green, red } from "./ansi.mjs"
+import { onlyNewBaselinesFailed } from "./e2e-report.mjs"
 import { startTestDatabase } from "./test-db.mjs"
 
 function isPortInUse(port) {
@@ -77,7 +79,7 @@ console.warn(`${green("✔")} Test database ready.`)
 // uses it for stable screenshots. Local runs default to the faster dev server.
 const useProdServer = !!process.env.E2E_PROD_SERVER
 
-// CI tests the image it deploys (#1090): E2E_IMAGE names it, already loaded into Docker,
+// CI tests the image it deploys: E2E_IMAGE names it, already loaded into Docker,
 // and E2E_NETWORK_CONTAINER the container this script runs in. The server joins that
 // container's network namespace, so it answers on localhost:$PORT (the SERVER_URL the
 // baselines were rendered with) and reaches Postgres by the same hostname this script
@@ -204,16 +206,40 @@ try {
     )
   }
 
-  console.warn(`${blue("●")} Starting Playwright tests...`)
+  // E2E_COMMAND runs something else against the seeded server in place of the
+  // suite: `pnpm lighthouse` audits it with scripts/lighthouse.ts.
+  const command = process.env.E2E_COMMAND
+  const jsonReport =
+    process.env.GITHUB_OUTPUT && !command ? path.join(os.tmpdir(), "e2e-report.json") : null
+  if (jsonReport) rmSync(jsonReport, { force: true })
   const baselinesBefore = screenshotFingerprint()
-  const child = spawn(
-    "./node_modules/.bin/playwright",
-    ["test", "--config=playwright.config.ts", ...process.argv.slice(2).filter((a) => a !== "--")],
-    { env: process.env, stdio: "inherit" },
-  )
+  let child
+  if (command) {
+    console.warn(`${blue("●")} Running ${command}...`)
+    child = spawn(command, { env: process.env, stdio: "inherit", shell: true })
+  } else {
+    console.warn(`${blue("●")} Starting Playwright tests...`)
+    child = spawn(
+      "./node_modules/.bin/playwright",
+      ["test", "--config=playwright.config.ts", ...process.argv.slice(2).filter((a) => a !== "--")],
+      {
+        env: { ...process.env, ...(jsonReport && { E2E_JSON_REPORT: jsonReport }) },
+        stdio: "inherit",
+      },
+    )
+  }
 
   const exitCode = await new Promise((resolve) => child.on("exit", resolve))
   let finalExit = exitCode ?? 0
+
+  // `--update-snapshots=missing` fails every test that writes a baseline.
+  // Signal when those are the only failures, so CI can report the commit that
+  // adds the baselines as passing (playwright.yml) without hiding a real one.
+  if (jsonReport && finalExit !== 0 && existsSync(jsonReport)) {
+    if (onlyNewBaselinesFailed(JSON.parse(readFileSync(jsonReport, "utf8")))) {
+      appendFileSync(process.env.GITHUB_OUTPUT, "only_new_baselines_failed=true\n")
+    }
+  }
 
   // Flaky-baseline gate. When the run above wrote or changed a screenshot
   // baseline, re-render just the @visual tests two more times against the same
@@ -221,7 +247,7 @@ try {
   // baseline only matches its own first render. Opt in with E2E_VERIFY_VISUAL;
   // it skips itself when no baseline changed, so PRs that touch no screenshots
   // pay nothing — the same scope as gating on "a baseline was committed".
-  if (process.env.E2E_VERIFY_VISUAL) {
+  if (process.env.E2E_VERIFY_VISUAL && !command) {
     if (screenshotFingerprint() !== baselinesBefore) {
       console.warn(`${blue("●")} Verifying screenshot determinism (@visual ×2)...`)
       const verify = spawn(

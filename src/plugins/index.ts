@@ -1,5 +1,6 @@
 import { revalidateRedirects } from "@/hooks/revalidateRedirects"
-import type { Article, Page, Topic, Volume } from "@/payload-types"
+import type { Article, Interactive, Page, Topic, Volume } from "@/payload-types"
+import { collectionPrefixMap } from "@/utilities/generatePreviewPath"
 import { getServerSideURL } from "@/utilities/getURL"
 import { DEFAULT_DESCRIPTION } from "@/utilities/mergeOpenGraph"
 import { toRoman } from "@/utilities/toRoman"
@@ -16,9 +17,11 @@ import {
 } from "@payloadcms/plugin-seo/types"
 import { FixedToolbarFeature, HeadingFeature, lexicalEditor } from "@payloadcms/richtext-lexical"
 import { s3Storage } from "@payloadcms/storage-s3"
-import { type Payload, type Plugin } from "payload"
+import { type CollectionSlug, type Payload, type Plugin } from "payload"
 
-function isVolume(obj: Volume | Article | Page | Topic): obj is Volume {
+type SeoDoc = Volume | Article | Page | Topic | Interactive
+
+function isVolume(obj: SeoDoc): obj is Volume {
   return (obj as Volume).volumeNumber !== undefined
 }
 
@@ -35,7 +38,7 @@ function lexicalToPlainText(node: LexicalTextNode | undefined | null): string {
   return node.children.map(lexicalToPlainText).join(" ")
 }
 
-export const generateTitle: GenerateTitle<Volume | Article | Page | Topic> = ({ doc }) => {
+export const generateTitle: GenerateTitle<SeoDoc> = ({ doc }) => {
   if (isVolume(doc)) {
     return doc?.volumeNumber
       ? `Volume ${toRoman(doc.volumeNumber)} | The Pragmatic Papers`
@@ -46,14 +49,36 @@ export const generateTitle: GenerateTitle<Volume | Article | Page | Topic> = ({ 
   return "The Pragmatic Papers"
 }
 
-export const generateDescription: GenerateDescription<Volume | Article | Page | Topic> = ({
-  doc,
-}) => ("description" in doc && doc.description) || DEFAULT_DESCRIPTION
+const DESCRIPTION_LENGTH = 160
 
-const generateURL: GenerateURL<Volume | Article | Page | Topic> = ({ doc }) => {
+/** Cuts `text` to a meta description's length at a word boundary. */
+function truncateDescription(text: string): string {
+  if (text.length <= DESCRIPTION_LENGTH) return text
+  const cut = text.slice(0, DESCRIPTION_LENGTH - 1)
+  const lastSpace = cut.lastIndexOf(" ")
+  return `${(lastSpace > 0 ? cut.slice(0, lastSpace) : cut).replace(/[\s.,;:]+$/, "")}…`
+}
+
+export const generateDescription: GenerateDescription<SeoDoc> = ({ doc }) => {
+  if ("description" in doc && doc.description) return doc.description
+  // Interactives have no description field; their standfirst says what the page is.
+  if ("intro" in doc && doc.intro) {
+    const intro = lexicalToPlainText(doc.intro.root as LexicalTextNode)
+      .replace(/\s+/g, " ")
+      .trim()
+    if (intro) return truncateDescription(intro)
+  }
+  return DEFAULT_DESCRIPTION
+}
+
+export const generateURL: GenerateURL<SeoDoc> = ({ collectionConfig, doc }) => {
   const url = getServerSideURL()
+  if (!doc?.slug) return url
 
-  return doc?.slug ? `${url}/${doc.slug}` : url
+  const collection = collectionConfig?.slug
+  if (collection === "pages" && doc.slug === "home") return url
+  const prefix = (collection && collectionPrefixMap[collection as CollectionSlug]) ?? ""
+  return `${url}${prefix}/${doc.slug}`
 }
 
 /**
@@ -143,13 +168,32 @@ const beforeSync: BeforeSync = async ({ originalDoc, payload, searchDoc }) => {
 // https://github.com/payloadcms/payload/issues/18311
 const seo: Plugin = async (config) => ({
   ...(await seoPlugin({
-    collections: ["articles", "pages", "volumes", "topics"],
+    collections: ["articles", "pages", "volumes", "topics", "interactives"],
     generateTitle,
     generateDescription,
     generateURL,
   })(config)),
   collections: config.collections,
 })
+
+/**
+ * The public URL of an object in a Supabase bucket. `prefix` is the object's folder as the
+ * storage plugin passes it to `generateFileURL`: the collection's prefix joined with the
+ * `_objectKey` folder each client upload is stored under. Media uploaded before Payload 3.90
+ * has no `_objectKey`, so its folder is just the prefix.
+ */
+export const supabaseObjectURL = ({
+  supabaseUrl,
+  bucket,
+  prefix,
+  filename,
+}: {
+  supabaseUrl: string
+  bucket: string
+  prefix?: string
+  filename: string
+}): string =>
+  `${supabaseUrl}/storage/v1/object/public/${bucket}/${prefix ? `${prefix}/` : ""}${filename}`
 
 export const plugins: Plugin[] = [
   searchPlugin({
@@ -245,7 +289,7 @@ export const plugins: Plugin[] = [
     collections: {
       media: {
         disablePayloadAccessControl: true,
-        generateFileURL: ({ filename }) => {
+        generateFileURL: ({ filename, prefix }) => {
           const supabaseUrl = process.env.SUPABASE_URL
           const bucket = process.env.S3_BUCKET
 
@@ -254,13 +298,13 @@ export const plugins: Plugin[] = [
             return `/media/${filename}`
           }
 
-          return `${supabaseUrl}/storage/v1/object/public/${bucket}/${filename}`
+          return supabaseObjectURL({ supabaseUrl, bucket, prefix, filename })
         },
       },
       "map-assets": {
         disablePayloadAccessControl: true,
         prefix: "map-assets",
-        generateFileURL: ({ filename }) => {
+        generateFileURL: ({ filename, prefix }) => {
           const supabaseUrl = process.env.SUPABASE_URL
           const bucket = process.env.S3_BUCKET
 
@@ -268,7 +312,12 @@ export const plugins: Plugin[] = [
             return `/map-assets/${filename}`
           }
 
-          return `${supabaseUrl}/storage/v1/object/public/${bucket}/map-assets/${filename}`
+          return supabaseObjectURL({
+            supabaseUrl,
+            bucket,
+            prefix: prefix || "map-assets",
+            filename,
+          })
         },
       },
     },

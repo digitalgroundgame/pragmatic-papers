@@ -46,7 +46,8 @@ type Story = StoryObj<typeof meta>
 
 export const SingleMap: Story = {
   play: async ({ canvasElement }) => {
-    const region = within(canvasElement).getByLabelText(/^MO District 1:/)
+    // The map loads lazily, so it arrives a moment after the story mounts.
+    const region = await within(canvasElement).findByLabelText(/^MO District 1:/)
     await userEvent.hover(region)
     await expect(await screen.findByRole("tooltip")).toHaveTextContent("MO District 1")
   },

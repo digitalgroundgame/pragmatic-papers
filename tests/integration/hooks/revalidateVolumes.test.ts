@@ -42,7 +42,7 @@ describe("revalidateVolumes (afterChange)", () => {
 
     await update(volume, { title: "Retitled" })
 
-    expect(paths()).toEqual([`/volumes/${volume.slug}`, "/feed.volumes"])
+    expect(paths()).toEqual([`/volumes/${volume.slug}`, "/volumes/feed.xml"])
     expect(revalidateTag).toHaveBeenCalledWith("volumes-sitemap", "max")
   })
 
@@ -51,7 +51,7 @@ describe("revalidateVolumes (afterChange)", () => {
 
     await update(volume, { _status: "draft" })
 
-    expect(paths()).toEqual([`/volumes/${volume.slug}`, "/feed.volumes"])
+    expect(paths()).toEqual([`/volumes/${volume.slug}`, "/volumes/feed.xml"])
   })
 
   it("leaves a draft that was never published alone", async () => {
@@ -84,7 +84,7 @@ describe("revalidateDelete (afterDelete)", () => {
 
     await payload.delete({ collection: "volumes", id: volume.id, overrideAccess: true })
 
-    expect(paths()).toEqual([`/volumes/${volume.slug}`, "/feed.volumes"])
+    expect(paths()).toEqual([`/volumes/${volume.slug}`, "/volumes/feed.xml"])
     expect(revalidateTag).toHaveBeenCalledWith("volumes-sitemap", "max")
   })
 })

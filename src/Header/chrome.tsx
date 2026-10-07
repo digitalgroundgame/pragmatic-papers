@@ -3,7 +3,7 @@
 import { usePathname } from "next/navigation"
 import React from "react"
 
-import { AnimatedLogo } from "@/components/Logo/AnimatedLogo"
+import { LazyAnimatedLogo } from "@/components/Logo/AnimatedLogo.lazy"
 import { Logo } from "@/components/Logo"
 
 /** The one place the rule lives: which routes get the wordmark drawn rather than set. */
@@ -19,7 +19,7 @@ export function drawsLogo(pathname: string | null): boolean {
  */
 export function HeaderLogo({ className }: { className?: string }): React.ReactElement {
   return drawsLogo(usePathname()) ? (
-    <AnimatedLogo className={className} />
+    <LazyAnimatedLogo className={className} />
   ) : (
     <Logo className={className} />
   )

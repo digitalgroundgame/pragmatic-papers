@@ -21,8 +21,6 @@ import type {
   ViewBox,
 } from "@/interactives/engine/types"
 
-import type React from "react"
-
 import type { FileSource } from "@/integrations/files"
 import type { Integration } from "@/integrations/types"
 
@@ -159,11 +157,11 @@ export interface InteractiveProfile<Raw = unknown> {
   metaLine?(input: { data: DrilldownData }): string | null
   /**
    * The landing view shown before a reader picks a region. `compose` runs on the server and is
-   * cached with the overview, so its result must be serialisable; `render` is the only place
-   * that knows the shape, which keeps it inside the profile.
+   * cached with the overview, so its result must be serialisable. Its view is registered in
+   * `summaryViews.tsx`, not here: the Payload config reaches every profile (the collection's
+   * options, the sync job), and a client view a profile imports would ship on every page.
    */
   summary?: {
     compose(input: { presentation: DrilldownPresentation; data: DrilldownData }): unknown
-    render(composed: unknown): React.ReactNode
   }
 }

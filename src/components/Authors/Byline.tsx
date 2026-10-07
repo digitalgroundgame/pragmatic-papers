@@ -24,10 +24,7 @@ export function Byline({ authors }: BylineProps): React.ReactNode {
   if (!authors.length) return null
 
   return (
-    <div
-      data-slot="byline"
-      className="dark:text-brand-high-contrast text-brand font-serif font-bold underline-offset-4"
-    >
+    <div data-slot="byline" className="text-brand-text font-serif font-bold underline-offset-4">
       <AvatarGroup className="mr-2 inline-flex align-middle">
         {authors.map(({ id, slug, name, avatarUrl }, index) => (
           <Avatar

@@ -17,6 +17,8 @@ import { FullscreenMedia } from "./FullscreenMedia"
 
 export type LightboxMediaBlockProps = StyledMediaBlockProps & {
   containerClassName?: string
+  /** Classes for the button that wraps the image and opens the lightbox. */
+  triggerClassName?: string
 }
 
 export const LightboxMediaBlock: React.FC<LightboxMediaBlockProps> = ({
@@ -30,6 +32,7 @@ export const LightboxMediaBlock: React.FC<LightboxMediaBlockProps> = ({
   imgStyle,
   media,
   sizes,
+  triggerClassName,
   variant,
 }) => {
   if (!isMedia(media)) return null
@@ -40,7 +43,7 @@ export const LightboxMediaBlock: React.FC<LightboxMediaBlockProps> = ({
     <Dialog>
       <div className={cn("flow-root w-full", containerClassName)}>
         <MediaBlockFrame breakout={breakout} className={className} enableGutter={enableGutter}>
-          <DialogTrigger className="block w-full [&>*]:m-0">
+          <DialogTrigger className={cn("block w-full [&>*]:m-0", triggerClassName)}>
             <MediaBlockImage
               media={media}
               imgClassName={imgClassName}

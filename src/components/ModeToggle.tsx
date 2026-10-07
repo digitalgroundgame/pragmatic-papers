@@ -1,18 +1,16 @@
 "use client"
 
 import { useTheme } from "@wrksz/themes/client"
-import { Moon, Sun } from "lucide-react"
 import React from "react"
 
 import { FRESH, useFresh } from "@/components/Fresh"
-import { Button } from "@/components/ui/button"
+import { ModeToggleButton } from "@/components/ModeToggleButton"
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { cn } from "@/utilities/utils"
 
 export type Theme = "light" | "dark" | "system"
 
@@ -31,7 +29,7 @@ export function ModeToggle({
   showFresh = false,
 }: ModeToggleProps): React.JSX.Element {
   const { setTheme, theme } = useTheme()
-  const { freshDot, markSeen } = useFresh(FRESH.modeToggle)
+  const { markSeen } = useFresh(FRESH.modeToggle)
 
   function handleSetTheme(next: Theme): void {
     setTheme(next)
@@ -41,19 +39,7 @@ export function ModeToggle({
   return (
     <DropdownMenu onOpenChange={markSeen}>
       <DropdownMenuTrigger
-        render={
-          <Button
-            variant={showLabel ? "outline" : "ghost"}
-            size={showLabel ? "lg" : "icon-sm"}
-            className={cn("relative", showLabel && "w-full")}
-            data-tour="mode-toggle"
-          >
-            <Sun className="size-5 scale-100 rotate-0 transition-all dark:scale-0 dark:-rotate-90" />
-            <Moon className="absolute size-5 scale-0 rotate-90 transition-all dark:scale-100 dark:rotate-0" />
-            <span className={showLabel ? undefined : "sr-only"}>Toggle theme</span>
-            {showFresh && freshDot}
-          </Button>
-        }
+        render={<ModeToggleButton showLabel={showLabel} showFresh={showFresh} />}
       />
       <DropdownMenuContent align={showLabel ? "center" : "start"}>
         <DropdownMenuItem disabled={theme === "light"} onClick={() => handleSetTheme("light")}>

@@ -74,7 +74,7 @@ export const Topics: CollectionConfig = {
     slugField({ useAsSlug: "name" }),
   ],
   hooks: {
-    // A nav link can point at a topic (#970).
+    // A nav link can point at a topic.
     afterChange: [revalidateNavLinks],
     afterDelete: [revalidateNavLinksDelete],
   },

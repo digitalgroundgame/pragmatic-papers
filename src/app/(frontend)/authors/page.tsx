@@ -4,23 +4,32 @@ import { PageRange } from "@/components/PageRange"
 import { Pagination } from "@/components/Pagination"
 import { Skeleton } from "@/components/ui/skeleton"
 import type { UsersSelect } from "@/payload-types"
+import { paginatedPath } from "@/utilities/generateMeta"
 import { getServerSideURL } from "@/utilities/getURL"
 import { mergeOpenGraph } from "@/utilities/mergeOpenGraph"
 import { AUTHOR_ROLES } from "@/access/roles"
 import config from "@payload-config"
 import type { Metadata } from "next"
 import { draftMode } from "next/headers"
+import { notFound } from "next/navigation"
 import { getPayload } from "payload"
 import React, { cache, Suspense } from "react"
+import { Breadcrumbs } from "@/components/Breadcrumbs"
 
-export const metadata: Metadata = {
-  title: "Authors — Pragmatic Papers",
-  description: "Discover all Pragmatic Papers authors and explore their published work.",
-  openGraph: mergeOpenGraph({
+export async function generateMetadata({ searchParams }: Args): Promise<Metadata> {
+  const { p } = await searchParams
+  const canonicalUrl = `${getServerSideURL()}${paginatedPath("/authors", p)}`
+
+  return {
     title: "Authors — Pragmatic Papers",
     description: "Discover all Pragmatic Papers authors and explore their published work.",
-    url: `${getServerSideURL()}/authors`,
-  }),
+    alternates: { canonical: canonicalUrl },
+    openGraph: mergeOpenGraph({
+      title: "Authors — Pragmatic Papers",
+      description: "Discover all Pragmatic Papers authors and explore their published work.",
+      url: canonicalUrl,
+    }),
+  }
 }
 
 const AUTHORS_PER_PAGE = 5
@@ -55,6 +64,8 @@ const queryAuthors = cache(async (page: number = 1) => {
 
 async function AuthorContent({ page }: { page: number }) {
   const { docs: authors, totalDocs, totalPages, page: currentPage } = await queryAuthors(page)
+  // A page past the last one would be an empty listing that names itself as canonical.
+  if (page > 1 && page > totalPages) notFound()
 
   if (authors.length === 0) {
     return <p className="text-muted-foreground text-center text-sm">No authors found.</p>
@@ -125,19 +136,22 @@ export default async function AuthorsIndexPage({ searchParams }: Args): Promise<
   if (!Number.isInteger(page) || page < 1) page = 1
 
   return (
-    <article className="mx-auto max-w-3xl space-y-6 px-4">
-      {draft && <LivePreviewListener />}
+    <>
+      <Breadcrumbs items={[{ name: "Authors", path: "/authors" }]} />
+      <article className="mx-auto max-w-3xl space-y-6 px-4">
+        {draft && <LivePreviewListener />}
 
-      <header className="space-y-3">
-        <h1>Authors</h1>
-        <p className="text-muted-foreground text-sm">
-          Learn more about The Pragmatic Papers contributors and explore their work.
-        </p>
-      </header>
+        <header className="space-y-3">
+          <h1>Authors</h1>
+          <p className="text-muted-foreground text-sm">
+            Learn more about The Pragmatic Papers contributors and explore their work.
+          </p>
+        </header>
 
-      <Suspense fallback={<AuthorContentSkeleton />}>
-        <AuthorContent page={page} />
-      </Suspense>
-    </article>
+        <Suspense fallback={<AuthorContentSkeleton />}>
+          <AuthorContent page={page} />
+        </Suspense>
+      </article>
+    </>
   )
 }

@@ -103,9 +103,9 @@ export default buildConfig({
     pool: {
       connectionString: process.env.DATABASE_URI,
       // Notice a connection the server dropped while idle instead of finding out on the
-      // next query, and give up on an unreachable server rather than hanging a request.
+      // next query. (No connectionTimeoutMillis: pg-pool also applies it to queries waiting
+      // for a free client, which would turn a busy pool into failed requests.)
       keepAlive: true,
-      connectionTimeoutMillis: 10_000,
     },
     // prevent schema push in prod/test for static schema determinism and noise reduction
     push: process.env.NODE_ENV === "development",

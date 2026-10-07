@@ -463,6 +463,8 @@ export async function previewAnswers(deps: Deps, url: string): Promise<boolean> 
     const response = await deps.fetch(`${url}/__preview-removed-check-${deps.now()}`, {
       method: "HEAD",
       redirect: "manual",
+      // A host that never answers counts as gone rather than stalling the caller.
+      signal: AbortSignal.timeout(10_000),
     })
     return response.headers.get("x-powered-by")?.includes("Next.js") ?? false
   } catch {

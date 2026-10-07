@@ -33,7 +33,12 @@ export const DEFAULT_REPOSITORY = "digitalgroundgame/pragmatic-papers"
 export type PgClient = Pick<pg.Client, "connect" | "query" | "escapeIdentifier" | "end">
 export type Fetch = (
   url: string,
-  init?: { method?: string; headers?: Record<string, string>; redirect?: "manual" },
+  init?: {
+    method?: string
+    headers?: Record<string, string>
+    redirect?: "manual"
+    signal?: AbortSignal
+  },
 ) => Promise<Response>
 
 export const DEFAULT_PREVIEW_URL_TEMPLATE = "https://pr-{{pr_id}}.pragmaticpapers.com"
@@ -104,6 +109,8 @@ export async function previewAnswers(fetch: Fetch, template: string, pr: number)
     const response = await fetch(`${url}/__preview-removed-check-${Date.now()}`, {
       method: "HEAD",
       redirect: "manual",
+      // A host that never answers counts as gone rather than stalling the caller.
+      signal: AbortSignal.timeout(10_000),
     })
     return response.headers.get("x-powered-by")?.includes("Next.js") ?? false
   } catch {

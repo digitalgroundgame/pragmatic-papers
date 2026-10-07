@@ -190,10 +190,10 @@ describe("dropClosedPreviewDatabases", () => {
   it("keeps a closed PR's database while its preview still answers", async () => {
     // Coolify's delete can leave the container running, idle with no connection open.
     const github = fakeGitHub([[12, 40]])
-    const asked: { url: string; method?: string }[] = []
+    const asked: { url: string; method?: string; signal?: AbortSignal }[] = []
     const fetch: Fetch = async (url, init) => {
       if (!url.startsWith("https://pr-3.pragmaticpapers.com/")) return github.fetch(url, init)
-      asked.push({ url, method: init?.method })
+      asked.push({ url, method: init?.method, signal: init?.signal })
       return new Response(null, { status: 404, headers: { "X-Powered-By": "Next.js, Payload" } })
     }
     const { client, statements } = fakeClient(DATABASES)
@@ -206,6 +206,8 @@ describe("dropClosedPreviewDatabases", () => {
     expect(dropped).toEqual([])
     expect(statements.some((s) => s.startsWith("DROP"))).toBe(false)
     expect(asked[0]).toMatchObject({ method: "HEAD" })
+    // Bounded, so a hung host can't hold up the preview's startup.
+    expect(asked[0]!.signal).toBeInstanceOf(AbortSignal)
     expect(logs.join("\n")).toContain("PR 3 is closed but its preview still answers")
   })
 

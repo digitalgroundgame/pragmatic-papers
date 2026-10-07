@@ -94,3 +94,19 @@ export const MenuClosesOnLinkClick: Story = {
 export const Mobile: Story = {
   globals: { viewport: { value: "mobile1", isRotated: false } },
 }
+
+/** The mega menu's links are in the markup before it loads, and keep focus once it has. */
+export const MegaMenuByKeyboard: Story = {
+  play: async ({ canvasElement }) => {
+    const nav = await within(canvasElement).findByRole("navigation", { name: "Main" })
+    const first = within(nav).getAllByRole("link")[0]!
+    const name = first.textContent ?? ""
+    first.focus()
+    await waitFor(() => expect(first).not.toBeInTheDocument())
+    const live = within(within(canvasElement).getByRole("navigation", { name: "Main" })).getByRole(
+      "link",
+      { name },
+    )
+    await expect(live).toHaveFocus()
+  },
+}

@@ -1,8 +1,7 @@
-import { cpSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs"
+import { cpSync, existsSync, mkdirSync, readFileSync } from "node:fs"
 import { dirname, resolve } from "node:path"
 import process from "node:process"
 import { fileURLToPath } from "node:url"
-import subsetFont from "subset-font"
 import { blue, gray, green, red, yellow } from "./ansi.mjs"
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
@@ -25,60 +24,12 @@ const src = resolve(
 const dest = resolve(root, "public/fonts")
 const fontPath = resolve(dest, "FKScreamer-Bold.woff2")
 
-/**
- * The characters FKScreamer keeps: Google Fonts' "latin" subset plus Latin Extended-A and
- * Romanian's ș/ț, so names like Erdoğan or Wałęsa still render in it. Everything else
- * (Vietnamese, the rest of Extended-B) falls back per character. The font ships ~440
- * characters and 688 glyphs; trimming it takes the preload every page makes from 37 kB to 21 kB.
- */
-const DISPLAY_FONT_RANGES: [number, number][] = [
-  [0x0020, 0x007e],
-  [0x00a0, 0x017f],
-  [0x0218, 0x021b],
-  [0x02bb, 0x02bc],
-  [0x02c6, 0x02c6],
-  [0x02da, 0x02da],
-  [0x02dc, 0x02dc],
-  [0x2000, 0x206f],
-  [0x20ac, 0x20ac],
-  [0x2122, 0x2122],
-  [0x2212, 0x2212],
-]
-
-/**
- * Default text shaping only. The stylistic sets and alternates (ss01–ss03, salt, aalt)
- * aren't used anywhere, and their glyphs are most of what's left after the character trim.
- */
-const DISPLAY_FONT_FEATURES = ["ccmp", "locl", "liga", "calt", "kern", "mark", "mkmk"]
-
-async function subsetDisplayFont(path: string): Promise<void> {
-  const text = DISPLAY_FONT_RANGES.flatMap(([from, to]) =>
-    Array.from({ length: to - from + 1 }, (_, i) => String.fromCodePoint(from + i)),
-  ).join("")
-  const original = readFileSync(path)
-  try {
-    const subset = await subsetFont(original, text, {
-      targetFormat: "woff2",
-      keepFeatures: DISPLAY_FONT_FEATURES,
-    })
-    writeFileSync(path, subset)
-    const kB = (bytes: number): string => `${(bytes / 1000).toFixed(1)} kB`
-    console.warn(
-      `${green("✔")} Subset FKScreamer-Bold.woff2: ${kB(original.byteLength)} → ${kB(subset.byteLength)}`,
-    )
-  } catch (error) {
-    // The full font still renders correctly, so a failed subset only costs bytes.
-    console.warn(`${yellow("⚠")} Could not subset FKScreamer, shipping it whole: ${String(error)}`)
-  }
-}
-
 console.warn(`${blue("●")} Installing fonts...`)
 mkdirSync(dest, { recursive: true })
 
 if (existsSync(src)) {
   cpSync(src, dest, { recursive: true })
   console.warn(`${green("✔")} Fonts copied to public/fonts`)
-  await subsetDisplayFont(fontPath)
   process.exit(0)
 }
 

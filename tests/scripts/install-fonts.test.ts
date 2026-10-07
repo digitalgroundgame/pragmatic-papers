@@ -79,22 +79,6 @@ describe("install-fonts.ts", () => {
       )
     })
 
-    it("ships a font it can't subset whole, with a warning", () => {
-      const result = runScript(tmpRoot)
-      expect(result.status).toBe(0)
-      expect(result.stderr).toContain("Could not subset FKScreamer, shipping it whole")
-    })
-
-    it("subsets a real font to the characters and features the site uses", () => {
-      writeFileSync(resolve(PRIVATE_FONTS_SRC, "FKScreamer-Bold.woff2"), INTER_BOLD)
-      const result = runScript(tmpRoot)
-      expect(result.status).toBe(0)
-      expect(result.stderr).toContain("Subset FKScreamer-Bold.woff2")
-      const subset = readFileSync(FONT_FILE)
-      expect(subset.subarray(0, 4).toString("latin1")).toBe("wOF2")
-      expect(subset.byteLength).toBeLessThan(INTER_BOLD.byteLength)
-    })
-
     it("overwrites an existing font rather than skipping it", () => {
       writeFileSync(FONT_FILE, Buffer.alloc(2000, 0x41))
       runScript(tmpRoot)

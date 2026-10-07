@@ -19,12 +19,15 @@ import { sentryPlugin } from "@payloadcms/plugin-sentry"
 import * as Sentry from "@sentry/nextjs"
 import type { Plugin } from "payload"
 
-// The plugin's admin provider: a Sentry `ErrorBoundary` with no fallback, imported from
+// The plugin's admin provider is a Sentry `ErrorBoundary` with no fallback, imported from
 // `@sentry/nextjs` at the top of the admin's bundle. The browser SDK loads lazily
 // (src/sentryClient.ts), so it would drop a crash on first render, and it would render a
 // blank admin where Next's global error page (src/app/global-error.tsx) already reports the
-// crash and shows something.
+// crash and shows something. It also sits outside the boundaries Payload puts around fields,
+// so it never sees the crashes they catch. Ours takes its slot: it attaches the user, and
+// instrumentation-client.ts reports the crashes, caught or not.
 const ADMIN_ERROR_BOUNDARY = "@payloadcms/plugin-sentry/client#AdminErrorBoundary"
+const ADMIN_SENTRY_PROVIDER = "@/providers/AdminSentryProvider#AdminSentryProvider"
 
 /** The status the plugin reports an error under, as it reads it: no status means a 500. */
 function pluginStatus(error: unknown): number {
@@ -32,7 +35,10 @@ function pluginStatus(error: unknown): number {
   return typeof status === "number" ? status : 500
 }
 
-/** Reports Payload's 5xx responses to Sentry with the user who hit them. */
+/**
+ * @payloadcms/plugin-sentry: reports Payload's 5xx responses with the user who hit them, and
+ * attaches that user to what the admin panel reports from the browser.
+ */
 export const sentryPayloadPlugin: Plugin = (config) => {
   const withSentry = sentryPlugin({ Sentry })(config)
   return {
@@ -41,8 +47,8 @@ export const sentryPayloadPlugin: Plugin = (config) => {
       ...withSentry.admin,
       components: {
         ...withSentry.admin?.components,
-        providers: withSentry.admin?.components?.providers?.filter(
-          (provider) => provider !== ADMIN_ERROR_BOUNDARY,
+        providers: withSentry.admin?.components?.providers?.map((provider) =>
+          provider === ADMIN_ERROR_BOUNDARY ? ADMIN_SENTRY_PROVIDER : provider,
         ),
       },
     },

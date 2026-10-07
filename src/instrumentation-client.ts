@@ -4,6 +4,9 @@
 //
 // Sentry itself loads on the reader's first input, not here: see sentryClient.ts.
 
-import { startSentryOnFirstInput } from "./sentryClient"
+import { reportConsoleErrors, startSentryOnFirstInput } from "./sentryClient"
+import { isAdminPath } from "./sentryConfig"
+
+if (isAdminPath(window.location.pathname)) reportConsoleErrors()
 
 export const onRouterTransitionStart = startSentryOnFirstInput()

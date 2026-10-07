@@ -17,6 +17,7 @@ import type * as SentrySDK from "./sentrySdk"
 type Sentry = typeof SentrySDK
 
 let loading: Promise<Sentry> | undefined
+let user: Parameters<Sentry["setUser"]>[0] = null
 
 /** Sentry, imported and initialised on the first call. */
 export function loadSentry(): Promise<Sentry> {
@@ -26,6 +27,7 @@ export function loadSentry(): Promise<Sentry> {
   loading ??= import("./sentrySdk")
     .then((Sentry) => {
       Sentry.initSentry()
+      if (user) Sentry.setUser(user)
       return Sentry
     })
     .catch((error: unknown) => {
@@ -47,6 +49,34 @@ export function captureException(...args: Parameters<Sentry["captureException"]>
 
 export function captureMessage(...args: Parameters<Sentry["captureMessage"]>): void {
   loadSentry().then((Sentry) => Sentry.captureMessage(...args), ignore)
+}
+
+/**
+ * Who later reports are from, as Sentry's `setUser`. Doesn't load Sentry: it is applied
+ * when Sentry loads, or now if it already has.
+ */
+export function setUser(next: Parameters<Sentry["setUser"]>[0]): void {
+  user = next
+  loading?.then((Sentry) => Sentry.setUser(next), ignore)
+}
+
+/**
+ * Reports each error logged through `con.error`. For the admin panel, where Payload's own
+ * error boundaries (a rich-text field's "Something went wrong") catch a crash, and React
+ * hands a caught error to Next, which only logs it, through a `console.error` it keeps a
+ * reference to as it loads. So this has to run first, from instrumentation-client.ts: once
+ * the page has loaded, wrapping `console.error` (Sentry's own console integrations included)
+ * no longer sees them. Everything else the admin logs as an error is reported too.
+ */
+export function reportConsoleErrors(con: Pick<Console, "error"> = console): void {
+  const original = con.error
+  con.error = function (...args: unknown[]) {
+    const error = args.find((arg) => arg instanceof Error)
+    if (error) {
+      captureException(error, { mechanism: { handled: true, type: "auto.console.admin" } })
+    }
+    original.apply(this, args)
+  }
 }
 
 /**

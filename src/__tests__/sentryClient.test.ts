@@ -5,6 +5,7 @@ const sdk = vi.hoisted(() => ({
   captureException: vi.fn(),
   captureMessage: vi.fn(),
   captureRouterTransitionStart: vi.fn(),
+  setUser: vi.fn(),
 }))
 vi.mock("@sentry/nextjs", () => sdk)
 
@@ -161,6 +162,68 @@ describe("captureException and captureMessage", () => {
     )
     expect(sdk.captureException).toHaveBeenCalledWith(error)
     expect(sdk.captureMessage).toHaveBeenCalledWith("MathJax failed to load", { level: "warning" })
+  })
+})
+
+describe("setUser", () => {
+  const editor = { id: "7", email: "editor@example.com" }
+
+  it("waits for Sentry to load rather than loading it", async () => {
+    const { captureException, setUser } = await importClient()
+    setUser(editor)
+    await settle()
+    expect(sdk.init).not.toHaveBeenCalled()
+
+    captureException(new Error("boom"))
+    await settle()
+    expect(sdk.setUser).toHaveBeenCalledExactlyOnceWith(editor)
+    expect(sdk.setUser.mock.invocationCallOrder[0]).toBeLessThan(
+      sdk.captureException.mock.invocationCallOrder[0] ?? 0,
+    )
+  })
+
+  it("applies at once when Sentry has loaded, and clears on sign-out", async () => {
+    const { loadSentry, setUser } = await importClient()
+    await loadSentry()
+    setUser(editor)
+    setUser(null)
+    await settle()
+    expect(sdk.setUser.mock.calls).toEqual([[editor], [null]])
+  })
+})
+
+describe("reportConsoleErrors", () => {
+  it("reports an Error logged anywhere in the call as handled, and still logs it", async () => {
+    const { reportConsoleErrors } = await importClient()
+    const log = vi.fn()
+    const con = { error: log }
+    reportConsoleErrors(con)
+
+    const error = new Error("Cannot read properties of undefined")
+    con.error("%o\n\n%s", error, "It was handled by the <ErrorBoundary> error boundary.")
+    await settle()
+
+    expect(log).toHaveBeenCalledExactlyOnceWith(
+      "%o\n\n%s",
+      error,
+      "It was handled by the <ErrorBoundary> error boundary.",
+    )
+    expect(sdk.captureException).toHaveBeenCalledExactlyOnceWith(error, {
+      mechanism: { handled: true, type: "auto.console.admin" },
+    })
+  })
+
+  it("only logs a message with no Error, without loading Sentry", async () => {
+    const { reportConsoleErrors } = await importClient()
+    const log = vi.fn()
+    const con = { error: log }
+    reportConsoleErrors(con)
+
+    con.error("Warning: something", { detail: 1 })
+    await settle()
+
+    expect(log).toHaveBeenCalledOnce()
+    expect(sdk.init).not.toHaveBeenCalled()
   })
 })
 

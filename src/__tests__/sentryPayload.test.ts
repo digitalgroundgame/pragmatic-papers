@@ -82,9 +82,10 @@ async function routeError(error: Error): Promise<void> {
 }
 
 describe("sentryPayloadPlugin", () => {
-  it("keeps our admin providers and other hooks, without the plugin's error boundary", () => {
+  it("keeps our admin providers and other hooks, with ours in place of the plugin's", () => {
     expect(config.admin?.components?.providers).toEqual([
       "@/providers/MathJaxProvider#MathJaxProviderRoot",
+      "@/providers/AdminSentryProvider#AdminSentryProvider",
     ])
     expect(Object.keys(config.hooks ?? {}).sort()).toEqual(["afterError", "afterLogout"])
   })

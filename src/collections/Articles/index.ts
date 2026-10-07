@@ -62,6 +62,7 @@ import {
 } from "@payloadcms/richtext-lexical"
 import type { CollectionBeforeChangeHook, CollectionConfig, FieldHook } from "payload"
 import { slugField } from "@/fields/slug"
+import { grantPublicProfile } from "@/collections/Users/hooks/grantPublicProfile"
 
 const setPublishedAtDefault: FieldHook<Article, Article["publishedAt"]> = ({
   siblingData,
@@ -339,7 +340,11 @@ export const Articles: CollectionConfig = {
       detectMathBlocks,
       populateMetaImageFromHero,
     ],
-    afterChange: [revalidateArticle, revalidateNavLinks],
+    afterChange: [
+      revalidateArticle,
+      revalidateNavLinks,
+      grantPublicProfile<Article>((doc) => doc.authors ?? []),
+    ],
     afterRead: [populateTopics],
     beforeDelete: [removeFromRankings],
     afterDelete: [revalidateDelete, revalidateNavLinksDelete],

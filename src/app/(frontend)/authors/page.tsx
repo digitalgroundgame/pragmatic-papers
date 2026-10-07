@@ -48,7 +48,7 @@ const queryAuthors = cache(async (page: number = 1) => {
     sort: "name",
     depth: 1,
     where: {
-      roles: { in: AUTHOR_ROLES },
+      or: [{ roles: { in: AUTHOR_ROLES } }, { publicProfile: { equals: true } }],
     },
     select,
   })

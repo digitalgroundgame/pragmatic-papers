@@ -154,6 +154,23 @@ export const Users: CollectionConfig = {
         },
       ],
     },
+    {
+      // Byline credits outlive a role change, so whether a user's author page is public
+      // can't follow from `roles`. Set when an article or narration credits the user
+      // (`grantPublicProfile`); `readUsers` and the /authors index read it.
+      name: "publicProfile",
+      type: "checkbox",
+      defaultValue: false,
+      label: "Public author page",
+      access: {
+        update: adminFieldLevel,
+      },
+      admin: {
+        position: "sidebar",
+        description:
+          "Keeps /authors/<slug> public whatever the roles. Turned on when an article or narration credits this user.",
+      },
+    },
   ],
   hooks: {
     afterChange: [revalidateUser],

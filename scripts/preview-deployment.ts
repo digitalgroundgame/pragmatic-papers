@@ -15,7 +15,7 @@
  * preview on its first deploy), then follows that deployment, not the newest one it
  * can find for the commit. `close --delete-preview` also removes the preview from
  * Coolify, which nothing else does for an image application (there's no GitHub App
- * watching the PR). Both need a token with the `deploy` and `write` abilities.
+ * watching the PR), and fails if the preview still answers a few minutes later. Both need a token with the `deploy` and `write` abilities.
  *
  * The fallback, previews the staging app builds itself on its GitHub App's webhook
  * (dockerfiles/README.md, "Falling back to Coolify-built previews"), is followed by
@@ -91,12 +91,15 @@ export interface Timing {
   queueTimeoutMs: number
   /** How long the build may take once queued. */
   buildTimeoutMs: number
+  /** How long a deleted preview may keep answering before `close` fails. */
+  removalTimeoutMs: number
 }
 
 export const TIMING: Timing = {
   pollMs: 15_000,
   queueTimeoutMs: 10 * 60_000,
   buildTimeoutMs: 45 * 60_000,
+  removalTimeoutMs: 5 * 60_000,
 }
 
 const COOLIFY_STATES: Record<string, { state: GithubState; description: string }> = {
@@ -450,10 +453,30 @@ export async function deploy(
   }
 }
 
+/**
+ * Whether our app still answers at `url`. Asks for a path no page has, so neither
+ * Cloudflare's cache nor a page answers for it: our app replies with its own 404, which
+ * carries Next's `X-Powered-By`, while a removed preview gets Coolify's proxy or no answer.
+ */
+export async function previewAnswers(deps: Deps, url: string): Promise<boolean> {
+  try {
+    const response = await deps.fetch(`${url}/__preview-removed-check-${deps.now()}`, {
+      method: "HEAD",
+      redirect: "manual",
+      // A host that never answers counts as gone rather than stalling the caller.
+      signal: AbortSignal.timeout(10_000),
+    })
+    return response.headers.get("x-powered-by")?.includes("Next.js") ?? false
+  } catch {
+    return false
+  }
+}
+
 export async function close(
   deps: Deps,
   config: Config,
   { deletePreview }: ImageOptions = {},
+  timing: Timing = TIMING,
 ): Promise<void> {
   if (deletePreview) {
     const deleted = await coolify(deps, config).deletePreview()
@@ -465,6 +488,23 @@ export async function close(
   }
   const n = await deactivate(deps, config)
   deps.log(`Marked ${n} preview deployment(s) for PR #${config.pr} inactive.`)
+  if (!deletePreview) return
+
+  // Coolify can accept the delete, or say it has no such preview, and leave the container
+  // running. The preview then outlives its database, which the next preview build drops,
+  // and every request to it fails. Check that it actually stopped answering.
+  const url = previewUrl(config.previewUrlTemplate, config.pr)
+  const deadline = deps.now() + timing.removalTimeoutMs
+  while (await previewAnswers(deps, url)) {
+    if (deps.now() + timing.pollMs > deadline) {
+      throw new Error(
+        `PR #${config.pr}'s preview still answers at ${url} ${timing.removalTimeoutMs / 60_000} min ` +
+          "after asking Coolify to remove it. Delete it by hand in Coolify.",
+      )
+    }
+    await deps.sleep(timing.pollMs)
+  }
+  deps.log(`PR #${config.pr}'s preview no longer answers at ${url}.`)
 }
 
 const defaultDeps: Deps = {

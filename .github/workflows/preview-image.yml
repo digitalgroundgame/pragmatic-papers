@@ -44,7 +44,8 @@ jobs:
           node-version: "24.x"
 
       # The preview's database is dropped by the next preview that starts
-      # (drop-closed-preview-databases.ts), which can reach the database server.
+      # (drop-closed-preview-databases.ts), which can reach the database server. The
+      # step fails if the preview still answers a few minutes after Coolify's delete.
       - name: Remove the preview from Coolify
         env:
           GITHUB_TOKEN: ${{ github.token }}
@@ -54,4 +55,5 @@ jobs:
           COOLIFY_DASHBOARD_URL: ${{ vars.COOLIFY_DASHBOARD_URL }}
           COOLIFY_PREVIEW_APP_UUID: ${{ vars.COOLIFY_PREVIEW_IMAGE_APP_UUID }}
           COOLIFY_API_TOKEN: ${{ secrets.COOLIFY_API_TOKEN }}
+          PREVIEW_URL_TEMPLATE: ${{ vars.PREVIEW_URL_TEMPLATE }}
         run: node scripts/preview-deployment.ts close --delete-preview

@@ -4,7 +4,7 @@ import { mergeOpenGraph } from "@/utilities/mergeOpenGraph"
 import { ThemeProvider } from "@wrksz/themes/next"
 import type { Metadata, Viewport } from "next"
 import React from "react"
-import { fontVariables } from "../(frontend)/fonts"
+import { fontVariables } from "@/app/(frontend)/fonts"
 import "../(frontend)/globals.css"
 
 export default function FeedRootLayout({

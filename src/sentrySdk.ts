@@ -8,7 +8,7 @@ import {
   init,
 } from "@sentry/nextjs"
 
-import { sentryConfigFromDocument, tracesSampleRateFor } from "./sentryConfig"
+import { sentryConfigFromDocument, tracesSamplerFor } from "./sentryConfig"
 import { sentryIgnoredErrors } from "./sentryIgnoredErrors"
 import { thirdPartyFramesIntegration } from "./sentryThirdPartyFrames"
 
@@ -24,7 +24,7 @@ export function initSentry(): void {
     environment,
     initialScope: pr ? { tags: { pr } } : undefined,
 
-    tracesSampleRate: tracesSampleRateFor(window.location.pathname),
+    tracesSampler: tracesSamplerFor(window.location.pathname),
 
     // Bodies skip the key-based filtering headers and cookies get, so a login would send
     // its password; DB query data includes returned rows, e.g. users' hashes and reset

@@ -49,11 +49,19 @@ export function sentryConfigFromDocument(root: HTMLElement): SentryRuntimeConfig
 }
 
 /**
- * The share of the browser's page loads traced, which is also the share whose web vitals
+ * Decides whether the browser traces a page load, which also decides whether its web vitals
  * reach Sentry. None in the admin panel: editors keep it open for hours while lists and
  * forms load and resize, and its page loads were counted among the CMS pages' (`/:slug`)
  * layout shift, where only readers' pages belong. Its errors are still reported.
+ *
+ * A sampler rather than `tracesSampleRate`, because the page-load span continues the trace
+ * the server wrote into the page (`<meta name="sentry-trace">`), and an inherited decision
+ * overrides `tracesSampleRate`. A sampler is asked first, so the admin panel can refuse a
+ * trace the server sampled, while every other page keeps following the server's decision.
  */
-export function tracesSampleRateFor(pathname: string): number {
-  return pathname === "/admin" || pathname.startsWith("/admin/") ? 0 : 0.1
+export function tracesSamplerFor(
+  pathname: string,
+): (context: { inheritOrSampleWith: (fallbackSampleRate: number) => number }) => number {
+  const admin = pathname === "/admin" || pathname.startsWith("/admin/")
+  return ({ inheritOrSampleWith }) => (admin ? 0 : inheritOrSampleWith(0.1))
 }

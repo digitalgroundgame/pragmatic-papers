@@ -4,7 +4,7 @@ import {
   sentryConfigFromDocument,
   sentryHtmlAttributes,
   sentryRuntimeConfig,
-  tracesSampleRateFor,
+  tracesSamplerFor,
 } from "../sentryConfig"
 
 beforeEach(() => {
@@ -96,19 +96,31 @@ describe("sentryHtmlAttributes and sentryConfigFromDocument", () => {
   })
 })
 
-describe("tracesSampleRateFor", () => {
-  it("traces a tenth of readers' page loads", () => {
-    expect(tracesSampleRateFor("/")).toBe(0.1)
-    expect(tracesSampleRateFor("/about")).toBe(0.1)
-    expect(tracesSampleRateFor("/articles/some-article")).toBe(0.1)
+describe("tracesSamplerFor", () => {
+  // What Sentry passes the sampler: the parent's decision if the page has one (the server's
+  // <meta name="sentry-trace">), else the fallback rate.
+  const parentSampled = { inheritOrSampleWith: () => 1 }
+  const parentDropped = { inheritOrSampleWith: () => 0 }
+  const noParent = { inheritOrSampleWith: (rate: number) => rate }
+
+  it("follows the server's decision on readers' pages", () => {
+    expect(tracesSamplerFor("/about")(parentSampled)).toBe(1)
+    expect(tracesSamplerFor("/about")(parentDropped)).toBe(0)
   })
 
-  it("traces none of the admin panel", () => {
-    expect(tracesSampleRateFor("/admin")).toBe(0)
-    expect(tracesSampleRateFor("/admin/collections/articles")).toBe(0)
+  it("traces a tenth of readers' page loads the server didn't decide", () => {
+    expect(tracesSamplerFor("/")(noParent)).toBe(0.1)
+    expect(tracesSamplerFor("/articles/some-article")(noParent)).toBe(0.1)
+  })
+
+  it("traces none of the admin panel, even when the server sampled the request", () => {
+    expect(tracesSamplerFor("/admin")(parentSampled)).toBe(0)
+    expect(tracesSamplerFor("/admin/collections/articles")(parentSampled)).toBe(0)
+    expect(tracesSamplerFor("/admin/collections/articles")(noParent)).toBe(0)
   })
 
   it("still traces a CMS page whose slug only starts with admin", () => {
-    expect(tracesSampleRateFor("/administration")).toBe(0.1)
+    expect(tracesSamplerFor("/administration")(parentSampled)).toBe(1)
+    expect(tracesSamplerFor("/administration")(noParent)).toBe(0.1)
   })
 })

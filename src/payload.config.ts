@@ -22,6 +22,7 @@ import { syncShopifyProductsTask } from "@/jobs/syncShopifyProducts"
 import { updateRecommendationsTask } from "@/jobs/updateRecommendations"
 import { plugins } from "@/plugins"
 import { searchVectorAfterSchemaInit } from "@/plugins/searchVector"
+import { sentryPayloadPlugin, skipPluginErrorsInPino } from "@/sentryPayload"
 import { getServerSideURL } from "@/utilities/getURL"
 import { migrations } from "@/migrations"
 import { type PostgresAdapter, postgresAdapter } from "@payloadcms/db-postgres"
@@ -38,6 +39,7 @@ export default buildConfig({
   logger: {
     options: {
       level: process.env.PAYLOAD_LOG_LEVEL || "info",
+      hooks: { logMethod: skipPluginErrorsInPino },
     },
     destination: pretty({
       colorize: process.stdout.isTTY,
@@ -154,7 +156,11 @@ export default buildConfig({
   ],
   cors: [getServerSideURL()].filter(Boolean),
   globals: [Header, Footer, ArticleRecommendations, SiteSettings],
-  plugins: [...plugins],
+  // Nothing here reads Payload's GraphQL API (the site and admin use the Local and REST
+  // APIs), and its errors reach `afterError` with their status nested on `originalError`,
+  // which the Sentry plugin reads as a 500: anyone could fill Sentry from /api/graphql.
+  graphQL: { disable: true },
+  plugins: [...plugins, sentryPayloadPlugin],
   secret: process.env.PAYLOAD_SECRET,
   sharp: sharp as unknown as SharpDependency,
   typescript: {

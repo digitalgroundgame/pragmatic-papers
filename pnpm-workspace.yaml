@@ -4,6 +4,9 @@
 overrides:
   "@types/react": "19.3.0"
   "@types/react-dom": "19.3.0"
+  # The plugin depends on @sentry/nextjs 9; ours is newer. Only its admin provider imports
+  # it, and src/sentryPayload.ts drops that, but without this the whole v9 SDK is installed.
+  "@payloadcms/plugin-sentry>@sentry/nextjs": "$@sentry/nextjs"
 
 allowBuilds:
   esbuild: true

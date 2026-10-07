@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import {
+  isAdminPath,
   sentryConfigFromDocument,
   sentryHtmlAttributes,
   sentryRuntimeConfig,
@@ -93,6 +94,15 @@ describe("sentryHtmlAttributes and sentryConfigFromDocument", () => {
       environment: "development",
       pr: undefined,
     })
+  })
+})
+
+describe("isAdminPath", () => {
+  it("matches the admin panel and nothing that only starts like it", () => {
+    expect(isAdminPath("/admin")).toBe(true)
+    expect(isAdminPath("/admin/collections/articles")).toBe(true)
+    expect(isAdminPath("/administration")).toBe(false)
+    expect(isAdminPath("/articles/admin")).toBe(false)
   })
 })
 

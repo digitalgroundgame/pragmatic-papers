@@ -71,8 +71,6 @@ export const seed = async (
             },
           },
         })
-        // A ranking's article column is NOT NULL but its foreign key is ON DELETE
-        // SET NULL, so a ranked article can't be deleted until the rankings go.
         await payload.updateGlobal({
           slug: "article-recommendations",
           context,

@@ -9,7 +9,8 @@ export function skipA11yRules(...ids: string[]): {
 }
 
 /**
- * Brand and destructive colors fall short of AA — #998. Delete this once #998
- * lands; the type errors point at each story to re-enable.
+ * White text on the brand fill (`Button`/`LinkButton` `branded`, `Badge` `brand`) is
+ * 3.49:1, short of AA — #998. Delete this once #998 lands; the type errors point at
+ * each story to re-enable.
  */
-export const knownContrastIssue = skipA11yRules("color-contrast", "link-in-text-block")
+export const brandFillContrastIssue = skipA11yRules("color-contrast")

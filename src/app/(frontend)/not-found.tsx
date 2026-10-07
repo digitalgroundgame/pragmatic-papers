@@ -17,7 +17,7 @@ export default function NotFound(): React.ReactElement {
           <CircleAlert className="text-muted-foreground size-5" />
         </EmptyMedia>
         <EmptyTitle className="grid gap-1">
-          <h1 className="text-brand dark:text-brand-high-contrast">404</h1>
+          <h1 className="text-brand-foreground dark:text-brand-high-contrast">404</h1>
           <span className="text-xl">Page Not Found</span>
         </EmptyTitle>
         <EmptyDescription>The page you are looking for does not exist.</EmptyDescription>

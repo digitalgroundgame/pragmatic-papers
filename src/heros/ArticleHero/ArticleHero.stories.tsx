@@ -1,7 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite"
 import { expect, userEvent, waitFor, within } from "storybook/test"
 
-import { knownContrastIssue } from "@/stories/a11y"
 import { articleFixture, authors } from "@/stories/fixtures/docs"
 import { narrationAudio } from "@/stories/fixtures/media"
 
@@ -10,7 +9,7 @@ import { ArticleHero } from "."
 const meta = {
   title: "Heros/ArticleHero",
   component: ArticleHero,
-  parameters: { layout: "fullscreen", ...knownContrastIssue },
+  parameters: { layout: "fullscreen" },
   args: {
     article: articleFixture({
       authors: authors.slice(0, 2),

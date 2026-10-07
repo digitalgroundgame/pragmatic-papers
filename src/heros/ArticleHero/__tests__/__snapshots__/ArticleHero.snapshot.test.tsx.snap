@@ -13,7 +13,7 @@ exports[`ArticleHero > joins three authors with commas and a closing ampersand 1
     Test Article
   </h1>
   <div
-    class="dark:text-brand-high-contrast text-brand font-serif font-bold underline-offset-4"
+    class="dark:text-brand-high-contrast text-brand-foreground font-serif font-bold underline-offset-4"
     data-slot="byline"
   >
     <div
@@ -208,7 +208,7 @@ exports[`ArticleHero > names every author, however many, with no remainder 1`] =
     Test Article
   </h1>
   <div
-    class="dark:text-brand-high-contrast text-brand font-serif font-bold underline-offset-4"
+    class="dark:text-brand-high-contrast text-brand-foreground font-serif font-bold underline-offset-4"
     data-slot="byline"
   >
     <div
@@ -799,7 +799,7 @@ exports[`ArticleHero > renders with populated authors 1`] = `
     Test Article
   </h1>
   <div
-    class="dark:text-brand-high-contrast text-brand font-serif font-bold underline-offset-4"
+    class="dark:text-brand-high-contrast text-brand-foreground font-serif font-bold underline-offset-4"
     data-slot="byline"
   >
     <div

@@ -36,7 +36,7 @@ export const Entry: React.FC<{
           <HoverPrefetchLink href={href}>{titleToUse}</HoverPrefetchLink>
         </h3>
       )}
-      <div className="text-brand dark:text-brand-high-contrast flex gap-2 text-left font-serif">
+      <div className="text-brand-foreground dark:text-brand-high-contrast flex gap-2 text-left font-serif">
         {volumeNumber && <span className="font-semibold">Volume {toRoman(volumeNumber)}</span>}
         <span>•</span>
         {publishedAt && (

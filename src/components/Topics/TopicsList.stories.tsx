@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite"
 import { expect, within } from "storybook/test"
 
-import { knownContrastIssue } from "@/stories/a11y"
+import { brandFillContrastIssue } from "@/stories/a11y"
 import { topics } from "@/stories/fixtures/docs"
 
 import { TopicsList } from "./TopicsList"
@@ -9,7 +9,7 @@ import { TopicsList } from "./TopicsList"
 const meta = {
   title: "Components/TopicsList",
   component: TopicsList,
-  parameters: knownContrastIssue,
+  parameters: brandFillContrastIssue,
   args: { topics },
 } satisfies Meta<typeof TopicsList>
 

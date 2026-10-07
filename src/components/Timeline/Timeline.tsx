@@ -18,7 +18,7 @@ const Citation: React.FC<Pick<TimelineEvent, "date" | "enableCitation" | "citati
     <CMSLink
       link={citation}
       className={cn(
-        "text-brand dark:text-brand-high-contrast hover:text-foreground ml-1 text-sm transition-colors",
+        "text-brand-foreground dark:text-brand-high-contrast hover:text-foreground ml-1 text-sm underline underline-offset-2 transition-colors",
       )}
       aria-label={`Citation for ${date}`}
     />
@@ -47,7 +47,7 @@ const EventContent: React.FC<{
       <div className="size-16" />
     )}
     <div className={cn("w-full max-w-[240px]", isLeft ? "text-right" : "order-first")}>
-      <div className="text-brand dark:text-brand-high-contrast text-sm font-bold tracking-wide">
+      <div className="text-brand-foreground dark:text-brand-high-contrast text-sm font-bold tracking-wide">
         {formatTimelineDate(event.date)}
       </div>
       {event.title && <div>{event.title}</div>}

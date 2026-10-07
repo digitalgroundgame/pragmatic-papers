@@ -95,7 +95,7 @@ export const CollectionTile: React.FC<CollectionTileProps> = ({
       >
         {/* Kicker */}
         {kicker && (
-          <p className="text-brand font-serif text-sm font-bold tracking-wider uppercase">
+          <p className="text-brand-foreground dark:text-brand-high-contrast font-serif text-sm font-bold tracking-wider uppercase">
             {kicker}
           </p>
         )}

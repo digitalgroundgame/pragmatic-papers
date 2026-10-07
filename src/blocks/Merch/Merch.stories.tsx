@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from "@storybook/nextjs-vite"
 import { expect, mocked, within } from "storybook/test"
 
 import type { Merch } from "@/payload-types"
-import { knownContrastIssue } from "@/stories/a11y"
+import { brandFillContrastIssue } from "@/stories/a11y"
 import { createFakePayload } from "@/stories/fixtures/payload"
 import { getPayloadConfig } from "@/utilities/getPayloadConfig"
 
@@ -37,7 +37,7 @@ const products: Merch[] = [
 const meta = {
   title: "Blocks/Merch",
   component: MerchBlock,
-  parameters: { layout: "fullscreen", ...knownContrastIssue },
+  parameters: { layout: "fullscreen", ...brandFillContrastIssue },
   args: { blockType: "merch", heading: "Support the Papers", layout: "fullWidth" },
   argTypes: {
     layout: { control: "inline-radio", options: ["fullWidth", "square"] },

@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { SEEDED_UPDATED_AT, SEO_IMAGE_ALT } from "../../scripts/seed-e2e.constants"
+import { SEEDED_UPDATED_AT, ARTICLE_IMAGE_ALT } from "../../scripts/seed-e2e.constants"
 
 /**
  * Read a drizzle `sql` template back as the statement it stands for.
@@ -307,17 +307,17 @@ describe("seed-e2e main()", () => {
     ])
   })
 
-  it("gives every article an SEO image, for its card and its JSON-LD", async () => {
+  it("gives every article a hero and an SEO image", async () => {
     await main()
 
     // structured-data.spec.ts requires an image on every Article node.
     // mockCreate resolves every direct create to mockVolume, so the media's id is its id.
     const mediaCall = mockCreate.mock.calls.find(
-      ([args]) => args.collection === "media" && args.data.alt === SEO_IMAGE_ALT,
+      ([args]) => args.collection === "media" && args.data.alt === ARTICLE_IMAGE_ALT,
     )
     expect(mediaCall).toBeDefined()
     expect(mockExecute.mock.calls.map(([statement]) => renderStatement(statement))).toContain(
-      `UPDATE articles SET meta_image_id = ${mockVolume.id}`,
+      `UPDATE articles SET hero_image_id = ${mockVolume.id}, meta_image_id = ${mockVolume.id}`,
     )
   })
 

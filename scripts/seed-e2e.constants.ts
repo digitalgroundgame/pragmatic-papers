@@ -63,10 +63,10 @@ export const CODE_BLOCKS_SLUG = "code-blocks-syntax-samples-for-authors"
 
 /** An article with a single media block, which opens in a lightbox. */
 export const LIGHTBOX_SLUG = "seeing-the-evidence-a-media-block"
-export const LIGHTBOX_IMAGE_ALT = "The Pragmatic Papers mark, shown full screen"
+export const LIGHTBOX_IMAGE_ALT = "A printed page on a green desk, shown full screen"
 
-/** The SEO image every seeded article carries, shown on its card and in its JSON-LD. */
-export const SEO_IMAGE_ALT = "The Pragmatic Papers mark"
+/** The hero and SEO image every seeded article carries: Storybook's landscape fixture. */
+export const ARTICLE_IMAGE_ALT = "Mountains at sunset"
 
 /** An article with one social embed per platform, each with a saved snapshot. */
 export const SOCIAL_EMBEDS_SLUG = "social-media-embed-test-all-variations"

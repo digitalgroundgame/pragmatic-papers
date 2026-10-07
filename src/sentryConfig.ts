@@ -48,6 +48,11 @@ export function sentryConfigFromDocument(root: HTMLElement): SentryRuntimeConfig
   }
 }
 
+/** Whether a page is Payload's admin panel. */
+export function isAdminPath(pathname: string): boolean {
+  return pathname === "/admin" || pathname.startsWith("/admin/")
+}
+
 /**
  * Decides whether the browser traces a page load, which also decides whether its web vitals
  * reach Sentry. None in the admin panel: editors keep it open for hours while lists and
@@ -62,6 +67,6 @@ export function sentryConfigFromDocument(root: HTMLElement): SentryRuntimeConfig
 export function tracesSamplerFor(
   pathname: string,
 ): (context: { inheritOrSampleWith: (fallbackSampleRate: number) => number }) => number {
-  const admin = pathname === "/admin" || pathname.startsWith("/admin/")
+  const admin = isAdminPath(pathname)
   return ({ inheritOrSampleWith }) => (admin ? 0 : inheritOrSampleWith(0.1))
 }

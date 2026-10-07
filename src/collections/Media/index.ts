@@ -17,6 +17,7 @@ import { regenerateBlurHandler } from "./endpoints/regenerateBlur"
 import { detachHandler } from "./endpoints/detach"
 import { referencesHandler } from "./endpoints/references"
 import { generateBlurDataUrl } from "./hooks/generateBlurDataUrl"
+import { grantPublicProfile } from "@/collections/Users/hooks/grantPublicProfile"
 
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
@@ -165,6 +166,7 @@ export const Media: CollectionConfig = {
       },
       generateBlurDataUrl,
     ],
+    afterChange: [grantPublicProfile<MediaType>((doc) => doc.narrator)],
   },
   upload: {
     // Upload to the public/media directory in Next.js making them publicly accessible even outside of Payload

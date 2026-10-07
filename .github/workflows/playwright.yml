@@ -308,12 +308,14 @@ jobs:
       # its only failures. Then "E2E tests" is reported as passing on the new
       # commit, and the other checks are copied from the tested commit with
       # their real results (scripts/snapshot-commit-checks.ts). After a real
-      # failure nothing is reported, and the approved runs decide.
+      # failure nothing is reported, and the approved runs decide. On a PR the
+      # tested commit is GitHub's merge commit, which has no checks of its own:
+      # they're reported on the PR's head, so that's where they're copied from.
       - name: Report CI checks on snapshot commit
         if: ${{ !cancelled() && steps.commit.outputs.committed == 'true' && steps.e2e.outputs.only_new_baselines_failed == 'true' }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PARENT_SHA: ${{ steps.tested.outputs.sha }}
+          PARENT_SHA: ${{ github.event.pull_request.head.sha || steps.tested.outputs.sha }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: HEAD_SHA=$(git rev-parse HEAD) node scripts/snapshot-commit-checks.ts
 

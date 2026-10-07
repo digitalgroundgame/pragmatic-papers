@@ -8448,6 +8448,13 @@
           "primaryKey": false,
           "notNull": false
         },
+        "public_profile": {
+          "name": "public_profile",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": false
+        },
         "updated_at": {
           "name": "updated_at",
           "type": "timestamp(3) with time zone",
@@ -15987,13 +15994,6 @@
           "notNull": false,
           "default": false
         },
-        "experiments_ticker": {
-          "name": "experiments_ticker",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": false,
-          "default": false
-        },
         "experiments_table_of_contents": {
           "name": "experiments_table_of_contents",
           "type": "boolean",
@@ -16476,6 +16476,6 @@
     "tables": {},
     "columns": {}
   },
-  "id": "e2821040-a9c7-42d7-bd0a-c73b206e763c",
+  "id": "c38757e0-d414-4dd5-a84b-02e17177db23",
   "prevId": "00000000-0000-0000-0000-000000000000"
 }

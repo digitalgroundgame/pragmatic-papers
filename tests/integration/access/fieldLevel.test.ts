@@ -333,7 +333,7 @@ describe("field-level access", () => {
       expect(docs[0]?.authors).toEqual([writer.id])
     })
 
-    it("leaves a bare ID for an author who fails the read check", async () => {
+    async function publishWithDemotedAuthor(title: string, hideProfile: boolean) {
       const writer = await createUser("writer")
       // `filterOptions` on the authors field rejects a member outright, so the
       // only way an article ends up with one is a demotion after publication.
@@ -344,7 +344,7 @@ describe("field-level access", () => {
         overrideAccess: true,
         context: { disableRevalidate: true },
         data: {
-          title: "Demoted author - fieldLevel",
+          title,
           content: ARTICLE_CONTENT,
           authors: [writer.id, demoted.id],
           _status: "published",
@@ -356,20 +356,40 @@ describe("field-level access", () => {
         id: demoted.id,
         overrideAccess: true,
         context: { disableRevalidate: true },
-        data: { roles: ["member"] },
+        data: { roles: ["member"], ...(hideProfile && { publicProfile: false }) },
       })
 
-      // Payload leaves the bare ID for a user the caller cannot read, and the
-      // co-author it did populate is unaffected.
       const { docs } = await payload.find({
         collection: "articles",
         depth: 1,
         overrideAccess: false,
         user: null,
-        where: { title: { equals: "Demoted author - fieldLevel" } },
+        where: { title: { equals: title } },
       })
 
-      const authors = docs[0]?.authors ?? []
+      return { writer, demoted, authors: docs[0]?.authors ?? [] }
+    }
+
+    it("still populates a demoted author, whose credit keeps their profile public", async () => {
+      const { writer, demoted, authors } = await publishWithDemotedAuthor(
+        "Demoted author - fieldLevel",
+        false,
+      )
+
+      expect(authors.map((author) => (author as User).id)).toEqual([writer.id, demoted.id])
+      expect((authors[1] as User).email).toBeUndefined()
+      expect((authors[1] as User).roles).toBeUndefined()
+    })
+
+    it("leaves a bare ID for an author who fails the read check", async () => {
+      // An admin turning the public profile off is what makes a demoted author unreadable.
+      const { writer, demoted, authors } = await publishWithDemotedAuthor(
+        "Hidden author - fieldLevel",
+        true,
+      )
+
+      // Payload leaves the bare ID for a user the caller cannot read, and the
+      // co-author it did populate is unaffected.
       expect((authors[0] as User).id).toBe(writer.id)
       expect((authors[0] as User).email).toBeUndefined()
       expect((authors[0] as User).roles).toBeUndefined()

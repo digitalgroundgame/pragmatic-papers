@@ -16,6 +16,9 @@ export const ContributorsBlock: React.FC<ContributorsBlockProps> = async ({ titl
     limit: ids.length,
     pagination: false,
     depth: 1,
+    // As an anonymous reader: someone who has since lost their staff role and has no
+    // public profile would get a card linking to an author page that 404s.
+    overrideAccess: false,
     where: { id: { in: ids } },
   })
 

@@ -8448,6 +8448,13 @@
           "primaryKey": false,
           "notNull": false
         },
+        "public_profile": {
+          "name": "public_profile",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": false
+        },
         "updated_at": {
           "name": "updated_at",
           "type": "timestamp(3) with time zone",
@@ -16597,6 +16604,6 @@
     "tables": {},
     "columns": {}
   },
-  "id": "2937a75f-ef72-445e-81f1-f3d491905702",
+  "id": "43b11c2f-d57f-4437-b229-0126ca9d1446",
   "prevId": "00000000-0000-0000-0000-000000000000"
 }

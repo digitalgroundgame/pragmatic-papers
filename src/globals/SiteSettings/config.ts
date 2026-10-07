@@ -45,7 +45,7 @@ export const SiteSettings: GlobalConfig = {
           defaultValue: false,
           admin: {
             description:
-              "The strip under the header on the home page: the podcast when it's live on YouTube, and our latest posts from Bluesky and X.",
+              "The strip under the header on the home page: a broadcast when one of our YouTube channels is live, and our latest posts from Bluesky and X.",
           },
         },
         {

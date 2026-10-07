@@ -647,6 +647,10 @@ export interface User {
   profileImage?: (number | null) | Media;
   socials?: MenuField;
   roles?: ('admin' | 'chief-editor' | 'editor' | 'writer' | 'narrator' | 'member')[] | null;
+  /**
+   * Keeps /authors/<slug> public whatever the roles. Turned on when an article or narration credits this user.
+   */
+  publicProfile?: boolean | null;
   updatedAt: string;
   createdAt: string;
   email: string;
@@ -2127,6 +2131,7 @@ export interface UsersSelect<T extends boolean = true> {
   profileImage?: T;
   socials?: T | MenuFieldSelect<T>;
   roles?: T;
+  publicProfile?: T;
   updatedAt?: T;
   createdAt?: T;
   email?: T;
@@ -2592,7 +2597,7 @@ export interface SiteSetting {
      */
     interactives?: boolean | null;
     /**
-     * The strip under the header on the home page: the podcast when it's live on YouTube, and our latest posts from Bluesky and X.
+     * The strip under the header on the home page: a broadcast when one of our YouTube channels is live, and our latest posts from Bluesky and X.
      */
     ticker?: boolean | null;
     /**

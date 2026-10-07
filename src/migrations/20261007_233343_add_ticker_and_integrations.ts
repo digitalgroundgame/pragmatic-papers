@@ -17,6 +17,7 @@ export async function up({ db, payload, req }: MigrateUpArgs): Promise<void> {
   	"created_at" timestamp(3) with time zone
   );
   
+  ALTER TABLE "site_settings" ADD COLUMN "experiments_ticker" boolean DEFAULT false;
   ALTER TABLE "integrations_youtube_channels" ADD CONSTRAINT "integrations_youtube_channels_parent_id_fk" FOREIGN KEY ("_parent_id") REFERENCES "public"."integrations"("id") ON DELETE cascade ON UPDATE no action;
   CREATE INDEX "integrations_youtube_channels_order_idx" ON "integrations_youtube_channels" USING btree ("_order");
   CREATE INDEX "integrations_youtube_channels_parent_id_idx" ON "integrations_youtube_channels" USING btree ("_parent_id");`)
@@ -25,5 +26,6 @@ export async function up({ db, payload, req }: MigrateUpArgs): Promise<void> {
 export async function down({ db, payload, req }: MigrateDownArgs): Promise<void> {
   await db.execute(sql`
    DROP TABLE "integrations_youtube_channels" CASCADE;
-  DROP TABLE "integrations" CASCADE;`)
+  DROP TABLE "integrations" CASCADE;
+  ALTER TABLE "site_settings" DROP COLUMN "experiments_ticker";`)
 }

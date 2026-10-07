@@ -4,14 +4,14 @@ import type { TickerBroadcast, TickerPost } from "@/components/Ticker/items"
 
 export const liveBroadcast: TickerBroadcast = {
   status: "live",
-  title: "The Pragmatic Papers Podcast: Ep. 48, what the shutdown fight is really about",
+  title: "Pragmatic Papers Live: what the shutdown fight is really about",
   url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
   startsAt: null,
 }
 
 export const upcomingBroadcast: TickerBroadcast = {
   status: "upcoming",
-  title: "The Pragmatic Papers Podcast: Ep. 49",
+  title: "Pragmatic Papers Live: the week in Congress",
   url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
   startsAt: "2026-10-07T23:00:00Z",
 }

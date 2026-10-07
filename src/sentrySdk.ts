@@ -6,13 +6,14 @@ import {
   captureMessage,
   captureRouterTransitionStart,
   init,
+  setUser,
 } from "@sentry/nextjs"
 
 import { sentryConfigFromDocument, tracesSamplerFor } from "./sentryConfig"
 import { sentryIgnoredErrors } from "./sentryIgnoredErrors"
 import { thirdPartyFramesIntegration } from "./sentryThirdPartyFrames"
 
-export { captureException, captureMessage, captureRouterTransitionStart }
+export { captureException, captureMessage, captureRouterTransitionStart, setUser }
 
 export function initSentry(): void {
   // Both root layouts write the server's config onto <html> (sentryHtmlAttributes). No

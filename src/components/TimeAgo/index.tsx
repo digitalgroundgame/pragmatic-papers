@@ -1,5 +1,3 @@
-// Intl rather than date-fns: RecommendedArticles renders this on the client, and
-// date-fns would add ~7 kB to every article page for one phrase.
 const relativeTime = new Intl.RelativeTimeFormat("en", { numeric: "auto" })
 
 const MINUTE = 60

@@ -14,6 +14,21 @@ import {
 import type { Media as MediaType } from "@/payload-types"
 import React, { useState } from "react"
 
+// Each slide is a 16:9 box. Every wrapper between the slide and the image takes
+// the slide's full size and centres what it holds, and the frame is a size
+// container the image measures itself against: as wide as the slide, or as wide
+// as fits the slide's height at the image's own aspect ratio, whichever is
+// narrower. The width comes from the media's dimensions rather than the loaded
+// file, so the image holds its place (and its blur placeholder) before it loads,
+// and its border hugs the picture rather than the slide.
+const frameClassName =
+  "not-prose flex h-full w-full items-center justify-center [container-type:size]"
+const imgClassName = "h-auto max-w-full"
+
+function fitToSlide({ width, height }: MediaType): React.CSSProperties {
+  return { width: `min(100cqw, calc(100cqh * ${width || 16} / ${height || 9}))` }
+}
+
 interface MediaCarouselProps {
   images: { media: MediaType; id?: string | null }[]
   initialIndex?: number
@@ -67,16 +82,20 @@ export const MediaCarousel: React.FC<MediaCarouselProps> = ({
               <LightboxMediaBlock
                 media={media}
                 enableGutter={false}
-                className="not-prose h-full w-full"
-                imgClassName="object-contain"
+                containerClassName="h-full"
+                className={frameClassName}
+                triggerClassName="flex h-full items-center justify-center"
+                imgClassName={imgClassName}
+                imgStyle={fitToSlide(media)}
                 captionClassName="hidden"
               />
             ) : (
               <MediaBlock
                 media={media}
                 enableGutter={false}
-                className="not-prose h-full w-full"
-                imgClassName="object-contain"
+                className={frameClassName}
+                imgClassName={imgClassName}
+                imgStyle={fitToSlide(media)}
                 captionClassName="hidden"
               />
             )}

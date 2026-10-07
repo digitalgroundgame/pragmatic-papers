@@ -6,7 +6,7 @@ const { draft } = vi.hoisted(() => ({ draft: { isEnabled: false } }))
 vi.mock("next/headers", () => ({ draftMode: async () => draft }))
 
 import { AdminBar } from "../index"
-import { AdminBarClient } from "../client"
+import { LazyAdminBar } from "../client.lazy"
 
 beforeEach(() => {
   draft.isEnabled = false
@@ -18,7 +18,7 @@ describe("AdminBar", () => {
     async (enabled) => {
       draft.isEnabled = enabled
       const bar = (await AdminBar()) as React.ReactElement<Record<string, unknown>>
-      expect(bar.type).toBe(AdminBarClient)
+      expect(bar.type).toBe(LazyAdminBar)
       // Everything else the bar shows is looked up in the browser, so the page stays the same
       // for every reader and can be prerendered.
       expect(bar.props).toEqual({ preview: enabled })

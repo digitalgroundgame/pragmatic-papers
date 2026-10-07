@@ -1,7 +1,7 @@
 /**
  * Browser errors Sentry drops before sending. Each comes from code we don't ship, and
- * none carries a stack frame, so `thirdPartyErrorFilterIntegration` has nothing
- * to classify and can't catch it. Sentry tests each pattern against the event's message
+ * none carries a stack frame, so `thirdPartyFramesIntegration` has nothing
+ * to classify and can't tag it. Sentry tests each pattern against the event's message
  * and its `Type: value`. Keep them narrow: anything they match is never reported.
  */
 export const sentryIgnoredErrors: RegExp[] = [

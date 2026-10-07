@@ -5,6 +5,7 @@ import { useGlobals } from "storybook/preview-api"
 import { expect, screen, userEvent, waitFor, within } from "storybook/test"
 
 import { ModeToggle, type Theme } from "./ModeToggle"
+import { LazyModeToggle } from "./ModeToggleAnalytics.lazy"
 
 /** Keeps the toggle's theme and the toolbar's theme switch in step, whichever one changes. */
 function FollowToolbar({
@@ -93,5 +94,41 @@ export const LabeledDark: Story = {
     const label = within(button).getByText("Toggle theme").getBoundingClientRect()
     const moon = button.querySelector(".lucide-moon")!.getBoundingClientRect()
     await expect(moon.right).toBeLessThanOrEqual(label.left)
+  },
+}
+
+/**
+ * How the header and footer render it: the button alone until the reader reaches for it, then
+ * the menu. The click that loads the menu also opens it.
+ */
+export const LoadsOnFirstClick: Story = {
+  render: (args) => <LazyModeToggle showLabel={args.showLabel} location="storybook" />,
+  play: async ({ canvasElement }) => {
+    await userEvent.click(within(canvasElement).getByRole("button", { name: "Toggle theme" }))
+    await userEvent.click(await screen.findByRole("menuitem", { name: "Dark" }))
+    await waitFor(() => expect(document.documentElement).toHaveClass("dark"))
+    await waitFor(() => expect(screen.queryByRole("menu")).not.toBeInTheDocument())
+    await userEvent.click(within(canvasElement).getByRole("button", { name: "Toggle theme" }))
+    await userEvent.click(await screen.findByRole("menuitem", { name: "Light" }))
+    await waitFor(() => expect(document.documentElement).not.toHaveClass("dark"))
+    await waitFor(() => expect(screen.queryByRole("menu")).not.toBeInTheDocument())
+  },
+}
+
+/** By keyboard: focus loads the menu and stays on the button, and Enter opens it. */
+export const LoadsOnFocus: Story = {
+  render: (args) => <LazyModeToggle showLabel={args.showLabel} location="storybook" />,
+  play: async ({ canvasElement }) => {
+    await userEvent.tab()
+    const button = within(canvasElement).getByRole("button", { name: "Toggle theme" })
+    // The real trigger has replaced the placeholder, and has focus.
+    await waitFor(() => expect(button).not.toBeInTheDocument())
+    const trigger = within(canvasElement).getByRole("button", { name: "Toggle theme" })
+    await expect(trigger).toHaveFocus()
+    await userEvent.keyboard("{Enter}")
+    await expect(await screen.findByRole("menu")).toBeInTheDocument()
+    await userEvent.keyboard("{Escape}")
+    await waitFor(() => expect(screen.queryByRole("menu")).not.toBeInTheDocument())
+    await expect(trigger).toHaveFocus()
   },
 }

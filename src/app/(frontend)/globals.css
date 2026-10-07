@@ -7,6 +7,48 @@
 /* An ancestor of an expanded TableOfContents (it renders data-slot="toc", hidden when collapsed). */
 @custom-variant toc-open (&:has([data-slot="toc"]:not([hidden])));
 
+/*
+ * Stand-ins for FKScreamer (fonts.ts) while it loads, so a heading wraps onto the same
+ * lines before and after the swap. size-adjust makes a title-case heading as wide as
+ * it is in FKScreamer, a condensed face; ascent/descent put the text where FKScreamer
+ * puts it (1010 and 200 of 1100 units, divided by size-adjust). Measured against
+ * FKScreamer 2.0.3 in Chromium on a sample of headings: widths within ±4%.
+ */
+@font-face {
+  font-family: "FKScreamer Fallback Arial";
+  src: local("Arial"), local("ArialMT"), local("Liberation Sans"), local("Arimo");
+  size-adjust: 63.8%;
+  ascent-override: 143.9%;
+  descent-override: 28.5%;
+  line-gap-override: 0%;
+}
+@font-face {
+  font-family: "FKScreamer Fallback Roboto";
+  src: local("Roboto"), local("Roboto Regular"), local("Roboto-Regular");
+  size-adjust: 64.4%;
+  ascent-override: 142.6%;
+  descent-override: 28.2%;
+  line-gap-override: 0%;
+}
+
+/* The same for Geist (fonts.ts), which sets body text 4% wider than Arial or Roboto. */
+@font-face {
+  font-family: "Geist Fallback Arial";
+  src: local("Arial"), local("ArialMT"), local("Liberation Sans"), local("Arimo");
+  size-adjust: 104.4%;
+  ascent-override: 96.3%;
+  descent-override: 28.3%;
+  line-gap-override: 0%;
+}
+@font-face {
+  font-family: "Geist Fallback Roboto";
+  src: local("Roboto"), local("Roboto Regular"), local("Roboto-Regular");
+  size-adjust: 104.6%;
+  ascent-override: 96.1%;
+  descent-override: 28.2%;
+  line-gap-override: 0%;
+}
+
 :root {
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);

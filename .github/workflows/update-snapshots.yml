@@ -182,28 +182,17 @@ jobs:
           git push origin "HEAD:$BRANCH"
           echo "committed=true" >> "$GITHUB_OUTPUT"
 
-      # Pushes made with GITHUB_TOKEN don't trigger workflows, so the snapshot
-      # commit would otherwise sit with no checks and block merging. The commit
-      # only touches PNGs and this job just ran the E2E suite against them, so
-      # report all required checks as passed on the new sha.
+      # Pushes made with GITHUB_TOKEN start runs that wait for a maintainer's
+      # approval, so the snapshot commit would otherwise sit with no results.
+      # This job just ran the E2E suite and it passed, so "E2E tests" is
+      # reported as passing; the other checks are copied from the commit before
+      # with their real results (scripts/snapshot-commit-checks.ts).
       - name: Report CI checks on snapshot commit
         if: ${{ steps.commit.outputs.committed == 'true' }}
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          NEW_SHA=$(git rev-parse HEAD)
-          for check_name in "Static checks" "Unit tests" "Integration tests" "Storybook" "E2E tests"; do
-            gh api repos/${{ github.repository }}/check-runs \
-              --method POST \
-              -H "Accept: application/vnd.github+json" \
-              -f name="$check_name" \
-              -f head_sha="$NEW_SHA" \
-              -f status=completed \
-              -f conclusion=success \
-              -f "output[title]=Snapshot-only commit" \
-              -f "output[summary]=Only PNG baselines changed; generated and verified by the update-snapshots job." \
-              >/dev/null
-          done
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: PARENT_SHA=$(git rev-parse HEAD^) HEAD_SHA=$(git rev-parse HEAD) node scripts/snapshot-commit-checks.ts
 
       - name: Post snapshot updates comment
         if: ${{ steps.commit.outputs.committed == 'true' && steps.pr.outputs.number != '' }}

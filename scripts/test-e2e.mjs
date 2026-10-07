@@ -3,8 +3,10 @@ import { createHash } from "node:crypto"
 import { lookup } from "node:dns/promises"
 import { appendFileSync, existsSync, readdirSync, readFileSync, rmSync } from "node:fs"
 import net from "node:net"
+import os from "node:os"
 import path from "node:path"
 import { blue, green, red } from "./ansi.mjs"
+import { onlyNewBaselinesFailed } from "./e2e-report.mjs"
 import { startTestDatabase } from "./test-db.mjs"
 
 function isPortInUse(port) {
@@ -207,6 +209,9 @@ try {
   // E2E_COMMAND runs something else against the seeded server in place of the
   // suite: `pnpm lighthouse` audits it with scripts/lighthouse.ts.
   const command = process.env.E2E_COMMAND
+  const jsonReport =
+    process.env.GITHUB_OUTPUT && !command ? path.join(os.tmpdir(), "e2e-report.json") : null
+  if (jsonReport) rmSync(jsonReport, { force: true })
   const baselinesBefore = screenshotFingerprint()
   let child
   if (command) {
@@ -217,12 +222,24 @@ try {
     child = spawn(
       "./node_modules/.bin/playwright",
       ["test", "--config=playwright.config.ts", ...process.argv.slice(2).filter((a) => a !== "--")],
-      { env: process.env, stdio: "inherit" },
+      {
+        env: { ...process.env, ...(jsonReport && { E2E_JSON_REPORT: jsonReport }) },
+        stdio: "inherit",
+      },
     )
   }
 
   const exitCode = await new Promise((resolve) => child.on("exit", resolve))
   let finalExit = exitCode ?? 0
+
+  // `--update-snapshots=missing` fails every test that writes a baseline.
+  // Signal when those are the only failures, so CI can report the commit that
+  // adds the baselines as passing (playwright.yml) without hiding a real one.
+  if (jsonReport && finalExit !== 0 && existsSync(jsonReport)) {
+    if (onlyNewBaselinesFailed(JSON.parse(readFileSync(jsonReport, "utf8")))) {
+      appendFileSync(process.env.GITHUB_OUTPUT, "only_new_baselines_failed=true\n")
+    }
+  }
 
   // Flaky-baseline gate. When the run above wrote or changed a screenshot
   // baseline, re-render just the @visual tests two more times against the same

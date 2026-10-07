@@ -7,6 +7,7 @@ import { mergeOpenGraph } from "@/utilities/mergeOpenGraph"
 import config from "@payload-config"
 import type { Metadata } from "next"
 import { draftMode } from "next/headers"
+import { notFound } from "next/navigation"
 import { getPayload } from "payload"
 import React, { cache } from "react"
 import { Breadcrumbs } from "@/components/Breadcrumbs"
@@ -55,6 +56,8 @@ export default async function TopicsPage({ searchParams }: Args): Promise<React.
   if (!Number.isInteger(page) || page < 1) page = 1
 
   const { docs: topics, totalPages, page: currentPage } = await queryTopics(page)
+  // A page past the last one would be an empty listing that names itself as canonical.
+  if (page > 1 && page > totalPages) notFound()
 
   return (
     <>

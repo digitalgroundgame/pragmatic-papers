@@ -11,6 +11,7 @@ import { AUTHOR_ROLES } from "@/access/roles"
 import config from "@payload-config"
 import type { Metadata } from "next"
 import { draftMode } from "next/headers"
+import { notFound } from "next/navigation"
 import { getPayload } from "payload"
 import React, { cache, Suspense } from "react"
 import { Breadcrumbs } from "@/components/Breadcrumbs"
@@ -63,6 +64,8 @@ const queryAuthors = cache(async (page: number = 1) => {
 
 async function AuthorContent({ page }: { page: number }) {
   const { docs: authors, totalDocs, totalPages, page: currentPage } = await queryAuthors(page)
+  // A page past the last one would be an empty listing that names itself as canonical.
+  if (page > 1 && page > totalPages) notFound()
 
   if (authors.length === 0) {
     return <p className="text-muted-foreground text-center text-sm">No authors found.</p>

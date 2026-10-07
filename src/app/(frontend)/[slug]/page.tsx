@@ -27,7 +27,10 @@ export async function generateMetadata({
   const { p } = await searchParams
   const page = await queryPageBySlug(slug)
 
-  const canonicalPath = paginatedPath(slug === "home" ? "/" : `/${slug}`, p)
+  const path = slug === "home" ? "/" : `/${slug}`
+  // Only a page with a volume list is paginated; anywhere else `?p=` changes nothing.
+  const paginated = page?.layout?.some((block) => block.blockType === "volumeView")
+  const canonicalPath = paginated ? paginatedPath(path, p) : path
   return generateMeta({ doc: page, canonicalPath })
 }
 

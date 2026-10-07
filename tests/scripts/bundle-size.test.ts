@@ -5,14 +5,14 @@ import { gzipSync } from "node:zlib"
 
 import { afterEach, beforeEach, describe, expect, it, type MockInstance, vi } from "vitest"
 
-import type * as PrComment from "../../scripts/pr-comment"
+import type * as PrReport from "../../scripts/pr-report"
 
-vi.mock("../../scripts/pr-comment", async (importOriginal) => ({
-  ...(await importOriginal<typeof PrComment>()),
-  upsertPrCommentSection: vi.fn(),
+vi.mock("../../scripts/pr-report", async (importOriginal) => ({
+  ...(await importOriginal<typeof PrReport>()),
+  postPrReportSection: vi.fn(),
 }))
 
-import { upsertPrCommentSection } from "../../scripts/pr-comment"
+import { postPrReportSection } from "../../scripts/pr-report"
 
 import {
   formatDelta,
@@ -283,7 +283,7 @@ describe("main", () => {
     rmSync(dir, { recursive: true, force: true })
     vi.unstubAllEnvs()
     vi.restoreAllMocks()
-    vi.mocked(upsertPrCommentSection).mockReset()
+    vi.mocked(postPrReportSection).mockReset()
   })
 
   it("fails without a build to measure", async () => {
@@ -342,14 +342,13 @@ describe("main", () => {
     vi.stubEnv("GITHUB_REPOSITORY", "owner/repo")
     vi.stubEnv("GITHUB_TOKEN", "t0ken")
     vi.stubEnv("PR_NUMBER", "7")
-    vi.mocked(upsertPrCommentSection).mockRejectedValueOnce(new Error("GitHub API 403"))
+    vi.mocked(postPrReportSection).mockRejectedValueOnce(new Error("GitHub API 403"))
 
     expect(await main([])).toBe(0)
-    expect(upsertPrCommentSection).toHaveBeenCalledWith(
+    expect(postPrReportSection).toHaveBeenCalledWith(
       { repo: "owner/repo", prNumber: 7, token: "t0ken" },
       "bundle-size",
       expect.stringContaining("<details><summary><strong>Bundle size</strong>: no measurement"),
-      { staleMarkers: ["<!-- bundle-size -->"] },
     )
     expect(warn.mock.calls.some(([line]) => String(line).includes("GitHub API 403"))).toBe(true)
   })

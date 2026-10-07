@@ -26,7 +26,7 @@
 // HTML. CHROME_PATH picks the browser; by default it's
 // Playwright's Chromium. In CI (playwright.yml's "Lighthouse" job) the report goes to
 // the job summary and, with PR_NUMBER and GITHUB_TOKEN, to a dropdown in the PR's
-// report comment (scripts/pr-comment.ts), open when a page regressed; regressions also
+// report comment (scripts/pr-report.ts), open when a page regressed; regressions also
 // become warning annotations.
 
 import { chromium } from "@playwright/test"
@@ -39,7 +39,7 @@ import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } fr
 import { join } from "node:path"
 import { fileURLToPath } from "node:url"
 import { blue, green, red, yellow } from "./ansi.mjs"
-import { collapsible, prCommentTarget, upsertPrCommentSection } from "./pr-comment"
+import { collapsible, prCommentTarget, postPrReportSection } from "./pr-report"
 import { CODE_BLOCKS_SLUG, FOOTNOTES_SLUG, SHOWCASE_SLUG, VOLUME_SLUG } from "./seed-e2e.constants"
 
 export const PAGES = [
@@ -422,9 +422,7 @@ export async function main(): Promise<number> {
         body: report,
         open: flaggedPages(summary.pages).length > 0,
       })
-      await upsertPrCommentSection(target, "lighthouse", section, {
-        staleMarkers: ["<!-- lighthouse -->"],
-      })
+      await postPrReportSection(target, "lighthouse", section)
     } catch (err) {
       console.warn(`${yellow("⚠")} Could not post the PR comment: ${(err as Error).message}`)
     }

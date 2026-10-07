@@ -3,7 +3,7 @@ import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
-import type * as PrComment from "../../scripts/pr-comment"
+import type * as PrReport from "../../scripts/pr-report"
 
 const { audits, chrome } = vi.hoisted(() => ({
   /** Every Lighthouse run main() asked for, in order. */
@@ -14,16 +14,16 @@ const { audits, chrome } = vi.hoisted(() => ({
 vi.mock("@playwright/test", () => ({ chromium: { executablePath: () => "/playwright/chrome" } }))
 vi.mock("chrome-launcher", () => ({ launch: vi.fn(async () => chrome) }))
 vi.mock("lighthouse", () => ({ default: vi.fn() }))
-vi.mock("../../scripts/pr-comment", async (importOriginal) => ({
-  ...(await importOriginal<typeof PrComment>()),
-  upsertPrCommentSection: vi.fn(),
+vi.mock("../../scripts/pr-report", async (importOriginal) => ({
+  ...(await importOriginal<typeof PrReport>()),
+  postPrReportSection: vi.fn(),
 }))
 
 import { launch } from "chrome-launcher"
 import lighthouse from "lighthouse"
 
 import { main, METRICS, PAGES, type Samples, type Summary } from "../../scripts/lighthouse"
-import { upsertPrCommentSection } from "../../scripts/pr-comment"
+import { postPrReportSection } from "../../scripts/pr-report"
 
 const PR = "http://localhost:8000"
 
@@ -120,7 +120,7 @@ describe("main", () => {
     vi.restoreAllMocks()
     chrome.kill.mockClear()
     vi.mocked(launch).mockClear()
-    vi.mocked(upsertPrCommentSection).mockReset()
+    vi.mocked(postPrReportSection).mockReset()
   })
 
   const summary = () =>
@@ -221,13 +221,12 @@ describe("main", () => {
       .filter((line) => line.startsWith("::warning"))
     expect(annotations).toEqual(["::warning title=Lighthouse: Home::lcp 2.0 s → 4.0 s"])
     expect(readFileSync(join(dir, "step-summary.md"), "utf8")).toContain("⚠️ 1 page is much slower")
-    expect(upsertPrCommentSection).toHaveBeenCalledWith(
+    expect(postPrReportSection).toHaveBeenCalledWith(
       { repo: "owner/repo", prNumber: 7, token: "t0ken" },
       "lighthouse",
       expect.stringContaining(
         "<details open><summary><strong>Lighthouse</strong>: ⚠️ 1 page is much slower than on dev",
       ),
-      { staleMarkers: ["<!-- lighthouse -->"] },
     )
   })
 
@@ -235,7 +234,7 @@ describe("main", () => {
     vi.stubEnv("GITHUB_REPOSITORY", "owner/repo")
     vi.stubEnv("GITHUB_TOKEN", "t0ken")
     vi.stubEnv("PR_NUMBER", "7")
-    vi.mocked(upsertPrCommentSection).mockRejectedValueOnce(new Error("GitHub API 403"))
+    vi.mocked(postPrReportSection).mockRejectedValueOnce(new Error("GitHub API 403"))
     expect(await main()).toBe(0)
     expect(vi.mocked(console.warn).mock.calls.some(([l]) => String(l).includes("403"))).toBe(true)
   })

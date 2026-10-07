@@ -1,9 +1,9 @@
-// CI's reports share one comment on a PR: code coverage (scripts/coverage-report.ts),
-// then bundle size (scripts/bundle-size.ts) and Lighthouse (scripts/lighthouse.ts) as
-// dropdowns under it. Each job owns one section of that comment, between
-// `<!-- section:<name> -->` markers, and replaces only its own, so a push edits the
-// comment rather than adding another and a job that didn't run leaves its last
-// section in place.
+// CI's PR analytics share one comment on a PR. Each report registers a section in
+// PR_REPORT_SECTIONS below and posts it with postPrReportSection(); the comment shows
+// the sections in the order they're registered. A job replaces only its own section,
+// between `<!-- section:<name> -->` markers, so a push edits the comment rather than
+// adding another, and a job that didn't run leaves its last section in place. A
+// section that's no longer registered is dropped the next time any job writes.
 //
 // The jobs finish independently, in two workflows, and GitHub has no conditional
 // write for comments: two jobs that read the comment at the same moment would each
@@ -11,6 +11,21 @@
 // comment again and, if its section isn't there as written, writes it again. Two jobs
 // that each create the comment at once keep the older one: the other job moves its
 // section there and deletes the copy it made.
+
+/**
+ * Every report in the PR analytics comment, top to bottom. `replaces` lists the
+ * markers of the separate comment a report used to post, deleted when it next posts.
+ */
+export const PR_REPORT_SECTIONS = {
+  /** scripts/coverage-report.ts */
+  coverage: { replaces: ["<!-- vitest-coverage-report-marker-root -->"] },
+  /** scripts/bundle-size.ts */
+  "bundle-size": { replaces: ["<!-- bundle-size -->"] },
+  /** scripts/lighthouse.ts */
+  lighthouse: { replaces: ["<!-- lighthouse -->"] },
+} satisfies Record<string, { replaces: string[] }>
+
+export type PrReportSection = keyof typeof PR_REPORT_SECTIONS
 
 export interface PrCommentTarget {
   repo: string
@@ -20,8 +35,7 @@ export interface PrCommentTarget {
 
 /** The marker that finds the shared comment. It was the coverage comment's alone. */
 export const REPORT_MARKER = "<!-- coverage-report -->"
-/** The order sections appear in, top to bottom; a name not listed goes last. */
-const SECTION_ORDER = ["coverage", "bundle-size", "lighthouse"]
+const SECTION_ORDER = Object.keys(PR_REPORT_SECTIONS) as PrReportSection[]
 const ATTEMPTS = 4
 
 interface Comment {
@@ -70,28 +84,33 @@ function normalize(text: string): string {
   return text.replace(/\r\n/g, "\n").trim()
 }
 
-/** Every section in a comment body, by name. Text outside the markers is dropped. */
-export function readSections(body: string | undefined): Map<string, string> {
-  const sections = new Map<string, string>()
+const isSection = (name: string): name is PrReportSection => name in PR_REPORT_SECTIONS
+
+/**
+ * Every registered section in a comment body, by name. Text outside the markers, and
+ * sections no longer registered, are dropped.
+ */
+export function readSections(body: string | undefined): Map<PrReportSection, string> {
+  const sections = new Map<PrReportSection, string>()
   for (const [, name, content] of normalize(body ?? "").matchAll(sectionPattern())) {
-    sections.set(name!, content!)
+    if (isSection(name!)) sections.set(name, content!)
   }
   return sections
 }
 
-/** `body` with section `name` set to `content`, every section in SECTION_ORDER. */
-export function withSection(body: string | undefined, name: string, content: string): string {
+/** `body` with section `name` set to `content`, every section in registered order. */
+export function withSection(
+  body: string | undefined,
+  name: PrReportSection,
+  content: string,
+): string {
   const sections = readSections(body)
   sections.set(name, normalize(content))
-  const rank = (section: string) => {
-    const index = SECTION_ORDER.indexOf(section)
-    return index === -1 ? SECTION_ORDER.length : index
-  }
-  const ordered = [...sections].sort(([a], [z]) => rank(a) - rank(z))
   return [
     REPORT_MARKER,
-    ...ordered.map(
-      ([section, text]) => `<!-- section:${section} -->\n${text}\n<!-- /section:${section} -->`,
+    ...SECTION_ORDER.filter((section) => sections.has(section)).map(
+      (section) =>
+        `<!-- section:${section} -->\n${sections.get(section)}\n<!-- /section:${section} -->`,
     ),
   ].join("\n\n")
 }
@@ -99,19 +118,16 @@ export function withSection(body: string | undefined, name: string, content: str
 const defaultSleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms))
 
 /**
- * Sets this job's section of the shared report comment, creating the comment if the PR
- * has none. Comments carrying any of `staleMarkers` (an older, separate comment for the
- * same report) are deleted.
+ * Sets a report's section of the PR analytics comment, creating the comment if the PR
+ * has none, and deletes the separate comment the report used to post.
  */
-export async function upsertPrCommentSection(
+export async function postPrReportSection(
   { repo, prNumber, token }: PrCommentTarget,
-  name: string,
+  name: PrReportSection,
   content: string,
-  {
-    staleMarkers = [],
-    sleep = defaultSleep,
-  }: { staleMarkers?: string[]; sleep?: (ms: number) => Promise<void> } = {},
+  { sleep = defaultSleep }: { sleep?: (ms: number) => Promise<void> } = {},
 ): Promise<void> {
+  const staleMarkers: readonly string[] = PR_REPORT_SECTIONS[name].replaces
   const headers = {
     Accept: "application/vnd.github+json",
     Authorization: `Bearer ${token}`,

@@ -5,9 +5,9 @@ import {
   prCommentTarget,
   readSections,
   REPORT_MARKER,
-  upsertPrCommentSection,
+  postPrReportSection,
   withSection,
-} from "../../scripts/pr-comment"
+} from "../../scripts/pr-report"
 
 const target = { repo: "owner/repo", prNumber: 42, token: "t0ken" }
 const API = "https://api.github.com/repos/owner/repo"
@@ -117,6 +117,15 @@ describe("withSection", () => {
     )
   })
 
+  it("drops a section that's no longer registered", () => {
+    const body = withSection(
+      `${REPORT_MARKER}\n\n<!-- section:retired -->\nold\n<!-- /section:retired -->`,
+      "coverage",
+      "COV",
+    )
+    expect(body).not.toContain("retired")
+  })
+
   it("drops what an older comment had outside any section", () => {
     const body = withSection(`${REPORT_MARKER}\n<h2>Coverage Report</h2>`, "coverage", "new")
     expect(readSections(body)).toEqual(new Map([["coverage", "new"]]))
@@ -129,11 +138,11 @@ describe("withSection", () => {
   })
 })
 
-describe("upsertPrCommentSection", () => {
+describe("postPrReportSection", () => {
   it("creates the report comment when the PR has none", async () => {
     const comments = fakeGitHub([{ id: 1, body: "a person's comment" }])
 
-    await upsertPrCommentSection(target, "bundle-size", "BS", { sleep: noWait })
+    await postPrReportSection(target, "bundle-size", "BS", { sleep: noWait })
 
     expect(comments.get(1)).toBe("a person's comment")
     expect(readSections(comments.get(2))).toEqual(new Map([["bundle-size", "BS"]]))
@@ -147,7 +156,7 @@ describe("upsertPrCommentSection", () => {
       { id: 5, body: withSection(withSection(undefined, "coverage", "COV"), "lighthouse", "old") },
     ])
 
-    await upsertPrCommentSection(target, "lighthouse", "new", { sleep: noWait })
+    await postPrReportSection(target, "lighthouse", "new", { sleep: noWait })
 
     expect([...comments.keys()]).toEqual([5])
     expect(readSections(comments.get(5))).toEqual(
@@ -160,9 +169,12 @@ describe("upsertPrCommentSection", () => {
 
   it("finds the comment past the first page of a long thread", async () => {
     const people = Array.from({ length: 120 }, (_, i) => ({ id: i + 1, body: `comment ${i}` }))
-    const comments = fakeGitHub([...people, { id: 500, body: withSection(undefined, "a", "x") }])
+    const comments = fakeGitHub([
+      ...people,
+      { id: 500, body: withSection(undefined, "lighthouse", "x") },
+    ])
 
-    await upsertPrCommentSection(target, "coverage", "COV", { sleep: noWait })
+    await postPrReportSection(target, "coverage", "COV", { sleep: noWait })
 
     expect(comments.size).toBe(121)
     expect(readSections(comments.get(500)).get("coverage")).toBe("COV")
@@ -174,10 +186,7 @@ describe("upsertPrCommentSection", () => {
       { id: 2, body: "<!-- lighthouse -->\n## Lighthouse" },
     ])
 
-    await upsertPrCommentSection(target, "bundle-size", "BS", {
-      staleMarkers: ["<!-- bundle-size -->"],
-      sleep: noWait,
-    })
+    await postPrReportSection(target, "bundle-size", "BS", { sleep: noWait })
 
     expect([...comments.keys()]).toEqual([2, 3])
   })
@@ -193,7 +202,7 @@ describe("upsertPrCommentSection", () => {
       comments.set(1, withSection(before, "lighthouse", "LH"))
     }
 
-    await upsertPrCommentSection(target, "bundle-size", "BS", { sleep })
+    await postPrReportSection(target, "bundle-size", "BS", { sleep })
 
     expect(readSections(comments.get(1))).toEqual(
       new Map([
@@ -214,7 +223,7 @@ describe("upsertPrCommentSection", () => {
       comments.set(0, withSection(undefined, "coverage", "COV"))
     }
 
-    await upsertPrCommentSection(target, "lighthouse", "LH", { sleep })
+    await postPrReportSection(target, "lighthouse", "LH", { sleep })
 
     expect([...comments.keys()]).toEqual([0])
     expect(readSections(comments.get(0))).toEqual(
@@ -231,7 +240,7 @@ describe("upsertPrCommentSection", () => {
       comments.set(1, withSection(undefined, "coverage", "COV"))
     }
 
-    await expect(upsertPrCommentSection(target, "lighthouse", "LH", { sleep })).rejects.toThrow(
+    await expect(postPrReportSection(target, "lighthouse", "LH", { sleep })).rejects.toThrow(
       "another job kept overwriting the lighthouse section",
     )
   })
@@ -242,7 +251,7 @@ describe("upsertPrCommentSection", () => {
       status: 401,
       text: async () => "Bad credentials",
     } as Response)
-    await expect(upsertPrCommentSection(target, "m", "x", { sleep: noWait })).rejects.toThrow(
+    await expect(postPrReportSection(target, "coverage", "x", { sleep: noWait })).rejects.toThrow(
       "GitHub API 401: Bad credentials",
     )
   })

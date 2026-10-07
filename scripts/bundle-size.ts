@@ -18,7 +18,7 @@
 // In CI (playwright.yml's "Bundle size" job) it reads the `.next` copied out of the
 // image the PR deploys, compares with dev's last measurement (BASE_BUNDLE_SIZE_PATH),
 // writes the report to the job summary and, with PR_NUMBER and GITHUB_TOKEN, to a
-// dropdown in the PR's report comment (scripts/pr-comment.ts), open when a route jumped.
+// dropdown in the PR's report comment (scripts/pr-report.ts), open when a route jumped.
 
 import { appendFileSync, existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs"
 import { join, relative, sep } from "node:path"
@@ -26,7 +26,7 @@ import { fileURLToPath } from "node:url"
 import vm from "node:vm"
 import { gzipSync } from "node:zlib"
 import { blue, red, yellow } from "./ansi.mjs"
-import { collapsible, prCommentTarget, upsertPrCommentSection } from "./pr-comment"
+import { collapsible, prCommentTarget, postPrReportSection } from "./pr-report"
 
 /** Growth in a route's gzipped JavaScript against dev, in kB, that gets flagged. */
 export const JUMP_KB = 10
@@ -283,9 +283,7 @@ export async function main(args = process.argv.slice(2)): Promise<number> {
         body: report,
         open: jumped.size > 0,
       })
-      await upsertPrCommentSection(target, "bundle-size", section, {
-        staleMarkers: ["<!-- bundle-size -->"],
-      })
+      await postPrReportSection(target, "bundle-size", section)
     } catch (err) {
       console.warn(`${yellow("⚠")} Could not post the PR comment: ${(err as Error).message}`)
     }

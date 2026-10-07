@@ -285,8 +285,10 @@ function, and fails on any axe violation.
 
 Two jobs in `playwright.yml` measure the image the PR deploys, and each compares it
 with the last run on `dev` in a dropdown under the coverage report, in the one
-comment CI keeps on a PR (`scripts/pr-comment.ts`). A dropdown starts open when it
-flags something:
+PR analytics comment CI keeps on a PR. A dropdown starts open when it flags
+something. A new report joins that comment by registering a section in
+`PR_REPORT_SECTIONS` (`scripts/pr-report.ts`) and posting it with
+`postPrReportSection()`, rather than posting a comment of its own:
 
 - **Bundle size** (`scripts/bundle-size.ts`) reads the image's build manifests and
   adds up the gzipped JavaScript and CSS each public page loads before it's

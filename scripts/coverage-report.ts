@@ -1,5 +1,5 @@
 // Posts a combined coverage report at the top of the PR's report comment
-// (scripts/pr-comment.ts, which bundle size and Lighthouse add dropdowns to): project
+// (scripts/pr-report.ts, which bundle size and Lighthouse add dropdowns to): project
 // total, per-file coverage for changed files, and patch coverage (lines added or
 // modified in this PR's diff).
 // Coverage data comes from coverage-summary.json and coverage-final.json (istanbul/v8
@@ -13,7 +13,7 @@ import { appendFileSync, existsSync, readFileSync } from "node:fs"
 import { relative, sep } from "node:path"
 import { fileURLToPath } from "node:url"
 import { blue, gray, green, yellow } from "./ansi.mjs"
-import { upsertPrCommentSection } from "./pr-comment"
+import { postPrReportSection } from "./pr-report"
 
 // ─── Istanbul types ───────────────────────────────────────────────────────────
 
@@ -77,9 +77,6 @@ type MetricKey = keyof Metrics
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const STALE_MARKERS = [
-  "<!-- vitest-coverage-report-marker-root -->", // vitest action
-]
 const METRICS: MetricKey[] = ["lines", "statements", "functions", "branches"]
 const LABELS: Record<MetricKey, string> = {
   lines: "Lines",
@@ -586,9 +583,7 @@ export async function main(): Promise<void> {
   }
   if (token && repo) {
     try {
-      await upsertPrCommentSection({ repo, prNumber, token }, "coverage", report, {
-        staleMarkers: STALE_MARKERS,
-      })
+      await postPrReportSection({ repo, prNumber, token }, "coverage", report)
     } catch (err) {
       console.warn(`${yellow("⚠")} Could not post PR comment: ${(err as Error).message}`)
     }

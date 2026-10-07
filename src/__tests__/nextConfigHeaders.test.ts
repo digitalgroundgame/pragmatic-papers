@@ -50,8 +50,6 @@ describe("next.config.ts Cache-Control", () => {
       "/interactives/federal-courts/search",
       "/articles/feed.xml",
       "/volumes/feed.xml",
-      "/feed.articles",
-      "/feed.volumes",
       "/articles/substack.xml",
       "/articles/some-article/substack.xml",
       "/recommended-articles.json",

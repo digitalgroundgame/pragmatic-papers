@@ -3,11 +3,12 @@ import { LivePreviewListener } from "@/components/LivePreviewListener"
 import { Pagination } from "@/components/Pagination"
 import { PayloadRedirects } from "@/components/PayloadRedirects"
 import type { Volume } from "@/payload-types"
-import { generateMeta } from "@/utilities/generateMeta"
+import { generateMeta, paginatedPath } from "@/utilities/generateMeta"
 import { queryTopicBySlug, queryVolumesForArticles } from "@/utilities/queries"
 import config from "@payload-config"
 import type { Metadata } from "next"
 import { draftMode } from "next/headers"
+import { notFound } from "next/navigation"
 import { getPayload } from "payload"
 import React, { cache } from "react"
 import { Breadcrumbs } from "@/components/Breadcrumbs"
@@ -46,11 +47,12 @@ const queryArticlesByTopic = cache(async (topicId: number, page: number = 1) => 
   })
 })
 
-export async function generateMetadata({ params }: Args): Promise<Metadata> {
+export async function generateMetadata({ params, searchParams }: Args): Promise<Metadata> {
   const { slug = "" } = await params
+  const { p } = await searchParams
   const topic = await queryTopicBySlug(slug)
 
-  return generateMeta({ doc: topic, canonicalPath: `/topics/${slug}` })
+  return generateMeta({ doc: topic, canonicalPath: paginatedPath(`/topics/${slug}`, p) })
 }
 
 export default async function TopicPage({
@@ -74,6 +76,8 @@ export default async function TopicPage({
     totalPages,
     page: currentPage,
   } = await queryArticlesByTopic(topic.id, page)
+  // A page past the last one would be an empty listing that names itself as canonical.
+  if (page > 1 && page > totalPages) notFound()
   const articleIds = articles.map((article) => article.id).filter(Boolean)
   const volumes = await queryVolumesForArticles(articleIds)
 

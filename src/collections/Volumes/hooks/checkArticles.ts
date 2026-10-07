@@ -8,10 +8,12 @@ export const checkArticles: RelationshipFieldManyValidation = async (value) => {
 
   const payload = await getPayload({ config: configPromise })
 
+  // The published documents, not each article's latest version: an article edited since it was
+  // published has an autosave draft as its latest version, but it is still live.
   const articles = await payload.find({
     collection: "articles",
     where: { id: { in: fieldValue } },
-    draft: true,
+    draft: false,
     overrideAccess: true,
     depth: 0,
   })

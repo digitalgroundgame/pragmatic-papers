@@ -34,7 +34,7 @@ describe("checkArticles", () => {
       expect.objectContaining({
         collection: "articles",
         where: { id: { in: [1, 2] } },
-        draft: true,
+        draft: false,
         overrideAccess: true,
       }),
     )

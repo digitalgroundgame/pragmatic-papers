@@ -33,6 +33,15 @@ beforeEach(() => {
 })
 
 describe("buildArticleJsonLd", () => {
+  it("makes a locally stored image's path absolute", () => {
+    const result = buildArticleJsonLd(
+      makeArticle({ heroImage: image("/api/media/file/hero.jpg") }),
+      "/articles/x",
+    )
+
+    expect(result.image).toBe(`${SERVER_URL}/api/media/file/hero.jpg`)
+  })
+
   it("populates every optional field when the source data is present", () => {
     const result = buildArticleJsonLd(
       makeArticle({

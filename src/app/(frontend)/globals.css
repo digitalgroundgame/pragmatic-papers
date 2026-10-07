@@ -93,12 +93,11 @@
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
+  /* Exactly #ff401a, for marks, borders and fills without text: it is 3.49:1 on white */
   --brand: oklch(0.6567 0.2311 32.7);
-  /* 4.52:1 contrast ratio for WCAG 2.1 AA */
-  --brand-foreground: oklch(0.592 0.2125 32.7);
-  /* 7.11:1 contrast ratio for WCAG 2.1 AAA */
-  --brand-high-contrast: oklch(0.4827 0.16 32.7);
-  /* Fill under white text, 4.52:1 for WCAG 2.1 AA; the same in dark mode */
+  /* Brand-colored text, AA on this theme's backgrounds: 4.52:1 on white */
+  --brand-text: oklch(0.592 0.2125 32.7);
+  /* Fill behind white text: 4.52:1. The same in dark mode */
   --brand-fill: oklch(0.592 0.2125 32.7);
   --error: oklch(0.58 0.22 27);
   --success: oklch(0.55 0.18 150);
@@ -154,11 +153,8 @@
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.556 0 0);
-  --brand: oklch(0.6567 0.2311 32.7);
-  /* 6:1 contrast ratio for WCAG 2.1 AA */
-  --brand-foreground: oklch(0.6567 0.2311 32.7);
-  /* 7:1 contrast ratio for WCAG 2.1 AAA */
-  --brand-high-contrast: oklch(0.69 0.18 32.7);
+  /* 6.60:1 on the background, 5.05:1 on muted */
+  --brand-text: oklch(0.69 0.18 32.7);
   --error: oklch(0.704 0.191 22.216);
   --success: oklch(0.65 0.18 150);
   --warning: oklch(0.78 0.16 80);
@@ -206,8 +202,7 @@
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
   --color-brand: var(--brand);
-  --color-brand-foreground: var(--brand-foreground);
-  --color-brand-high-contrast: var(--brand-high-contrast);
+  --color-brand-text: var(--brand-text);
   --color-brand-fill: var(--brand-fill);
   --color-error: var(--error);
   --color-success: var(--success);

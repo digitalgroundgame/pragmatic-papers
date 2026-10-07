@@ -22,7 +22,7 @@ export default function FeedNotFound(): React.ReactElement {
             <CircleAlert className="text-muted-foreground size-5" />
           </EmptyMedia>
           <EmptyTitle className="grid gap-1">
-            <h1 className="text-brand-foreground dark:text-brand-high-contrast">404</h1>
+            <h1 className="text-brand-text">404</h1>
             <span className="text-xl">Not in the feed</span>
           </EmptyTitle>
           <EmptyDescription>

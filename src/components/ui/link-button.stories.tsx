@@ -1,8 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite"
 import { expect, within } from "storybook/test"
 
-import { brandFillContrastIssue } from "@/stories/a11y"
-
 import { LinkButton } from "./link-button"
 
 const meta = {
@@ -30,7 +28,6 @@ export const Default: Story = {
 
 export const Branded: Story = {
   args: { variant: "branded", size: "lg", children: "Subscribe" },
-  parameters: brandFillContrastIssue,
 }
 
 export const Outline: Story = {

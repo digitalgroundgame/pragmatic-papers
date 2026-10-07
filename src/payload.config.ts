@@ -153,6 +153,10 @@ export default buildConfig({
   ],
   cors: [getServerSideURL()].filter(Boolean),
   globals: [Header, Footer, ArticleRecommendations, SiteSettings],
+  // Nothing here reads Payload's GraphQL API (the site and admin use the Local and REST
+  // APIs), and its errors reach `afterError` with their status nested on `originalError`,
+  // which the Sentry plugin reads as a 500: anyone could fill Sentry from /api/graphql.
+  graphQL: { disable: true },
   plugins: [...plugins, sentryPayloadPlugin],
   secret: process.env.PAYLOAD_SECRET,
   sharp: sharp as unknown as SharpDependency,

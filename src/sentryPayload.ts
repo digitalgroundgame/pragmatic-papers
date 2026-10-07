@@ -35,12 +35,33 @@ function pluginStatus(error: unknown): number {
   return typeof status === "number" ? status : 500
 }
 
+/** The client's address from an `X-Forwarded-For` value: its first entry. */
+export function clientIp(forwardedFor: string | null | undefined): string | undefined {
+  return forwardedFor?.split(",")[0]?.trim() || undefined
+}
+
 /**
  * @payloadcms/plugin-sentry: reports Payload's 5xx responses with the user who hit them, and
  * attaches that user to what the admin panel reports from the browser.
  */
 export const sentryPayloadPlugin: Plugin = (config) => {
-  const withSentry = sentryPlugin({ Sentry })(config)
+  const withSentry = sentryPlugin({
+    options: {
+      // The plugin sends `X-Forwarded-For` whole, and behind Cloudflare and Coolify's proxy
+      // that is a list, which Sentry drops as an invalid IP. The first entry is the client.
+      context: ({ defaultContext }) =>
+        defaultContext.user
+          ? {
+              ...defaultContext,
+              user: {
+                ...defaultContext.user,
+                ip_address: clientIp(defaultContext.user.ip_address),
+              },
+            }
+          : defaultContext,
+    },
+    Sentry,
+  })(config)
   return {
     ...withSentry,
     admin: {

@@ -16,7 +16,7 @@ import {
 } from "payload"
 import { beforeAll, beforeEach, describe, expect, it } from "vitest"
 
-import { sentryPayloadPlugin, skipPluginErrorsInPino } from "../sentryPayload"
+import { clientIp, sentryPayloadPlugin, skipPluginErrorsInPino } from "../sentryPayload"
 
 // Payload's own pino, which isn't a dependency of ours.
 const pino = createRequire(import.meta.resolve("payload"))("pino") as (
@@ -74,7 +74,11 @@ async function routeError(error: Error): Promise<void> {
       collection: { slug: "articles" },
       context: {},
       error,
-      req: { headers: new Headers(), payload, user },
+      req: {
+        headers: new Headers({ "X-Forwarded-For": "203.0.113.5, 172.70.1.1" }),
+        payload,
+        user,
+      },
       result: {},
     } as unknown as Parameters<AfterErrorHook>[0])
   }
@@ -88,6 +92,15 @@ describe("sentryPayloadPlugin", () => {
       "@/providers/AdminSentryProvider#AdminSentryProvider",
     ])
     expect(Object.keys(config.hooks ?? {}).sort()).toEqual(["afterError", "afterLogout"])
+  })
+})
+
+describe("clientIp", () => {
+  it("takes the client from a proxy chain, and nothing from an empty header", () => {
+    expect(clientIp("203.0.113.5, 172.70.1.1, 10.0.0.2")).toBe("203.0.113.5")
+    expect(clientIp("2001:db8::1")).toBe("2001:db8::1")
+    expect(clientIp("")).toBeUndefined()
+    expect(clientIp(null)).toBeUndefined()
   })
 })
 
@@ -110,7 +123,11 @@ describe("Payload errors in Sentry", () => {
 
     expect(events).toHaveLength(1)
     expect(events[0]?.logger).toBeUndefined()
-    expect(events[0]?.user).toMatchObject({ id: 7, email: "writer@example.com" })
+    expect(events[0]?.user).toMatchObject({
+      id: 7,
+      email: "writer@example.com",
+      ip_address: "203.0.113.5",
+    })
   })
 
   it.each([

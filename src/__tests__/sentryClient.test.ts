@@ -213,6 +213,20 @@ describe("reportConsoleErrors", () => {
     })
   })
 
+  it("leaves a crash global-error.tsx reports in the same task to its unhandled report", async () => {
+    const { captureException, reportConsoleErrors } = await importClient()
+    const con = { error: vi.fn() }
+    reportConsoleErrors(con)
+
+    const crash = new Error("layout threw")
+    con.error(crash)
+    const unhandled = { mechanism: { handled: false, type: "auto.function.nextjs.global_error" } }
+    captureException(crash, unhandled)
+    await settle()
+
+    expect(sdk.captureException.mock.calls[0]).toEqual([crash, unhandled])
+  })
+
   it("only logs a message with no Error, without loading Sentry", async () => {
     const { reportConsoleErrors } = await importClient()
     const log = vi.fn()

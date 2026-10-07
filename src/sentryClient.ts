@@ -72,8 +72,13 @@ export function reportConsoleErrors(con: Pick<Console, "error"> = console): void
   const original = con.error
   con.error = function (...args: unknown[]) {
     const error = args.find((arg) => arg instanceof Error)
+    // A task later: a crash that reaches global-error.tsx is logged here first, and Sentry
+    // reports an error once, so this would report it as handled. Deferred, global-error's
+    // own report (from an effect React runs as it commits the error page) is first.
     if (error) {
-      captureException(error, { mechanism: { handled: true, type: "auto.console.admin" } })
+      setTimeout(() => {
+        captureException(error, { mechanism: { handled: true, type: "auto.console.admin" } })
+      }, 0)
     }
     original.apply(this, args)
   }

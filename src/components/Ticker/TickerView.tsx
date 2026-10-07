@@ -37,7 +37,7 @@ function PostList({
         const { name, Icon } = SOURCES[post.source]
         return (
           <li key={post.id} className="flex shrink-0 items-center gap-6">
-            <span aria-hidden="true" className="bg-brand-high-contrast size-1 rounded-full" />
+            <span aria-hidden="true" className="bg-brand size-1 rounded-full" />
             <a
               href={post.url}
               target="_blank"
@@ -81,9 +81,11 @@ function Posts({ posts, beside }: { posts: TickerPost[]; beside: boolean }): Rea
   )
 }
 
-/** The ticker's label: what the strip is, in the brand's accent, like a volume's dateline. */
-const LABEL =
-  "text-brand-high-contrast shrink-0 font-sans text-xs font-bold tracking-wider uppercase"
+/**
+ * The ticker's label: what the strip is. Brand-colored text misses AA on the muted band, so the
+ * brand is kept for the Live badge (white on `brand-fill`) and the dots between posts.
+ */
+const LABEL = "text-foreground shrink-0 font-sans text-xs font-bold tracking-wider uppercase"
 
 function Broadcast({
   broadcast,
@@ -104,10 +106,10 @@ function Broadcast({
       )}
     >
       {live ? (
-        <span className={cn(LABEL, "flex items-center gap-1.5")}>
+        <span className="bg-brand-fill flex shrink-0 items-center gap-1 rounded-sm px-1.5 py-0.5 font-sans text-xs font-bold tracking-wider text-white uppercase">
           <span
             aria-hidden="true"
-            className="bg-brand-high-contrast size-2 animate-pulse rounded-full motion-reduce:animate-none"
+            className="size-1.5 animate-pulse rounded-full bg-white motion-reduce:animate-none"
           />
           Live
         </span>

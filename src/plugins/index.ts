@@ -173,7 +173,7 @@ export const supabaseObjectURL = ({
 
 export const plugins: Plugin[] = [
   searchPlugin({
-    collections: ["articles", "pages", "volumes", "topics", "interactives"],
+    collections: ["articles", "pages", "volumes", "topics"],
     defaultPriorities: {
       articles: 40,
       volumes: 30,

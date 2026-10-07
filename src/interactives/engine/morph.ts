@@ -62,11 +62,17 @@ export function flipYInPlace(subs: Subpath[], k: number): Subpath[] {
   return subs
 }
 
-export function serializePath(subs: Subpath[]): string {
+/**
+ * Absolute `M`/`L` path data, rounded to `decimals` places: whole units for a file's own
+ * coordinates, a place more for a morph frame drawn in a coarser file's units than its target.
+ */
+export function serializePath(subs: Subpath[], decimals = 0): string {
+  const f = 10 ** decimals
+  const r = (v: number): number => Math.round(v * f) / f
   let out = ""
   for (const s of subs) {
-    out += `M${Math.round(s[0]!)} ${Math.round(s[1]!)}`
-    for (let i = 2; i < s.length; i += 2) out += `L${Math.round(s[i]!)} ${Math.round(s[i + 1]!)}`
+    out += `M${r(s[0]!)} ${r(s[1]!)}`
+    for (let i = 2; i < s.length; i += 2) out += `L${r(s[i]!)} ${r(s[i + 1]!)}`
   }
   return out
 }

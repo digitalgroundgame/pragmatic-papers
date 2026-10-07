@@ -67,6 +67,8 @@ export interface StageOptions {
   layersHost: HTMLElement
   overviewViewBox: ViewBox
   flipY: boolean
+  /** The overview's grid (`DrilldownAsset.step`); absent means 1. */
+  overviewStep?: number
   regions: RegionIndex
   seats: SeatBlockConfig | null
   callbacks: StageCallbacks
@@ -89,6 +91,8 @@ interface Layer {
   /** Map units reserved left of the map for the parent's own seat block; 0 on the overview. */
   gutter: number
   flipY: boolean
+  /** How many export units make one of this layer's (`DrilldownAsset.step`). */
+  step: number
   /** Overview: null. Child view: the drilled parent. */
   parentId: string | null
   /** Where a cluster put its members, worked out from their measured sizes. */
@@ -125,9 +129,15 @@ interface MorphPlan {
   vbStart: number[]
   /** Read live, never captured: a child's box is re-cut whenever the viewport changes. */
   layer: Layer
-  /** The paired shapes' extent in each frame — how far the drawing has moved by any point. */
+  /**
+   * The paired shapes' extent in each frame — how far the drawing has moved by any point.
+   * `contentTo` is in the overview's grid, the one the paired shapes travel in;
+   * `localContent` is the same extent in the child's own units, which its own shapes, its
+   * blocks and its camera box are in.
+   */
   contentFrom: number[]
   contentTo: number[]
+  localContent: number[]
   /** Cloned seat blocks, and the drawing they were taken from, so a redraw can be noticed. */
   blocksOut: SVGGElement
   blocksIn: SVGGElement
@@ -342,6 +352,7 @@ export class MapStage {
       opts.overviewViewBox,
       { vb: padViewBox(opts.overviewViewBox), gutter: 0 },
       opts.flipY,
+      opts.overviewStep ?? 1,
       null,
     )
     this.setLayerState(this.overview, "visible")
@@ -880,6 +891,7 @@ export class MapStage {
     viewBox: ViewBox,
     render: { vb: ViewBox; gutter: number },
     flipY: boolean,
+    step: number,
     parentId: string | null,
   ): Layer {
     const shapes = svg.querySelector<SVGGElement>("g[data-drilldown-shapes]")
@@ -906,6 +918,7 @@ export class MapStage {
       gutter: render.gutter,
       clusterAnchors: new Map(),
       flipY,
+      step,
       parentId,
     }
     // Only now is there a handler behind the shapes, so only now do they advertise as buttons.
@@ -1014,7 +1027,7 @@ export class MapStage {
     svg.append(shapes, annotations)
     el.appendChild(svg)
     this.opts.layersHost.appendChild(el)
-    const layer = this.adopt(el, svg, raw, render, asset.flipY, parentId)
+    const layer = this.adopt(el, svg, raw, render, asset.flipY, asset.step ?? 1, parentId)
     this.setLayerState(layer, "hidden")
     this.wire(layer)
     return layer
@@ -1853,6 +1866,15 @@ export class MapStage {
     )
     if (!pairing) return null
     if (!this.overview.flipY || !local.flipY) return null // mixed conventions: crossfade instead
+    // The paired shapes in the child's own units, measured before they are rescaled below.
+    const localContent = subpathBounds(pairing.pairs.map((pr) => pr.end))
+    // Each file is rounded to its own grid, so a child's units can be a tenth of the
+    // overview's. The camera's flight assumes the paired shapes keep roughly their size, as
+    // they do in the export's units, so their ends are put back on the overview's grid.
+    const grid = local.step / this.overview.step
+    if (grid !== 1)
+      for (const pr of pairing.pairs)
+        for (const sub of pr.end) for (let i = 0; i < sub.length; i++) sub[i]! *= grid
 
     const attrsByKey = new Map<string, SVGPathElement>()
     for (const layer of [this.overview, local]) {
@@ -1922,7 +1944,7 @@ export class MapStage {
     // the only thing that says where one frame sits inside the other.
     const contentFrom = subpathBounds(pairs.map((pr) => pr.start))
     const contentTo = subpathBounds(pairs.map((pr) => pr.end))
-    if (!contentFrom || !contentTo) return null
+    if (!contentFrom || !contentTo || !localContent) return null
     return {
       el,
       svg,
@@ -1931,6 +1953,7 @@ export class MapStage {
       layer: local,
       contentFrom,
       contentTo,
+      localContent,
       blocksOut,
       blocksIn,
       blocksGen: this.blocksGen,
@@ -1964,7 +1987,7 @@ export class MapStage {
 
   /** A plan's own destination in the overview's coordinates, which is where a flight aims. */
   private destOf(plan: MorphPlan): number[] {
-    return pullbackViewBox(plan.layer.render, plan.contentFrom, plan.contentTo)
+    return pullbackViewBox(plan.layer.render, plan.contentFrom, plan.localContent)
   }
 
   /**
@@ -1976,7 +1999,7 @@ export class MapStage {
    * zoomed twice snapped out to the whole country and only then flew in.
    */
   private zoomedDestOf(plan: MorphPlan, box: readonly number[] | null): number[] | undefined {
-    return box ? pullbackViewBox(box, plan.contentFrom, plan.contentTo) : undefined
+    return box ? pullbackViewBox(box, plan.contentFrom, plan.localContent) : undefined
   }
 
   /** Cached per parent; a null result is cached too — a view that cannot morph is not re-checked. */
@@ -2054,7 +2077,9 @@ export class MapStage {
     this.syncPlanBlocks(plan)
     for (const pr of plan.pairs) {
       lerpInto(pr.start, pr.end, pr.work, u)
-      pr.node.setAttribute("d", serializePath(pr.work))
+      // A place more than whole units: by the end the shapes are drawn at the child's scale,
+      // and a whole unit of the overview's grid can be several of the child's.
+      pr.node.setAttribute("d", serializePath(pr.work, 1))
     }
     // The paired shapes define the frame; each file's own shapes and blocks are a whole
     // projection away from it, so they are placed into it rather than left where they were.
@@ -2062,7 +2087,7 @@ export class MapStage {
     for (const n of plan.fadeOut)
       n.setAttribute("transform", frameTransform(plan.contentFrom, blended))
     for (const n of plan.fadeIn)
-      n.setAttribute("transform", frameTransform(plan.contentTo, blended))
+      n.setAttribute("transform", frameTransform(plan.localContent, blended))
     // Blocks are the exception to riding the frame: they are sized in px, not in map units.
     const shown = this.fitScale(vb)
     this.sizeBlocks(
@@ -2071,7 +2096,7 @@ export class MapStage {
     )
     this.sizeBlocks(
       plan.blocksIn,
-      this.fitScale(plan.layer.render) / (frameScale(plan.contentTo, blended) * shown),
+      this.fitScale(plan.layer.render) / (frameScale(plan.localContent, blended) * shown),
     )
     plan.svg.setAttribute("viewBox", vb.join(" "))
     this.setFades(plan, u)

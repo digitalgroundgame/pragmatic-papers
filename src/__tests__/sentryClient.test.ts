@@ -75,6 +75,7 @@ describe("loadSentry", () => {
         environment: "staging",
         initialScope: { tags: { pr: "1141" } },
         tracesSampler: expect.any(Function),
+        tunnel: "/monitoring",
       }),
     )
   })

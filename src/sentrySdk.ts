@@ -24,6 +24,10 @@ export function initSentry(): void {
     environment,
     initialScope: pr ? { tags: { pr } } : undefined,
 
+    // Our own origin, so ad blockers that block sentry.io let reports through:
+    // src/app/monitoring/route.ts forwards them.
+    tunnel: "/monitoring",
+
     tracesSampler: tracesSamplerFor(window.location.pathname),
 
     // Bodies skip the key-based filtering headers and cookies get, so a login would send

@@ -56,7 +56,10 @@ export default buildConfig({
         Icon: "@/components/Logo/icons/PaperIcon#PaperIconAdmin",
         Logo: "@/components/Logo/icons/LogomarkIcon#LogomarkIcon",
       },
-      providers: ["@/providers/MathJaxProvider#MathJaxProviderRoot"],
+      providers: [
+        "@/providers/MathJaxProvider#MathJaxProviderRoot",
+        "@/components/AdminBar/AdminBarHintProvider#AdminBarHintProvider",
+      ],
     },
     meta: {
       title: "Dashboard",

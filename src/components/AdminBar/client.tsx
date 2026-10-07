@@ -109,7 +109,12 @@ export const AdminBarClient: React.FC<{ preview?: boolean }> = ({ preview }) => 
         collectionSlug={collectionSlug}
         collectionLabels={collectionLabels}
         id={docId}
-        logo={<PaperIcon className="size-4" />}
+        logo={
+          <>
+            <PaperIcon className="size-4" />
+            <span className="sr-only">Admin dashboard</span>
+          </>
+        }
         onAuthChange={setUser}
         onPreviewExit={onPreviewExit}
         preview={preview}

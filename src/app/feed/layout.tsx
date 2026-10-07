@@ -1,4 +1,4 @@
-import { AdminBar } from "@/components/AdminBar"
+import { AdminBar, AdminBarHint } from "@/components/AdminBar"
 import { getServerSideURL } from "@/utilities/getURL"
 import { mergeOpenGraph } from "@/utilities/mergeOpenGraph"
 import { ThemeProvider } from "@wrksz/themes/next"
@@ -15,6 +15,7 @@ export default function FeedRootLayout({
   return (
     <html className={fontVariables} lang="en" suppressHydrationWarning>
       <head>
+        <AdminBarHint />
         <link href="/manifest.json" rel="manifest" />
         <link href="/favicon.ico" rel="icon" sizes="32x32" />
         <link href="/favicon.svg" rel="icon" type="image/svg+xml" />

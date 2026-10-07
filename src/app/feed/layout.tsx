@@ -1,28 +1,11 @@
 import { AdminBar } from "@/components/AdminBar"
 import { getServerSideURL } from "@/utilities/getURL"
 import { mergeOpenGraph } from "@/utilities/mergeOpenGraph"
-import { cn } from "@/utilities/utils"
 import { ThemeProvider } from "@wrksz/themes/next"
 import type { Metadata, Viewport } from "next"
-import { Geist } from "next/font/google"
-import localFont from "next/font/local"
 import React from "react"
-import "../(frontend)/globals.css"
-
-const FKScreamer = localFont({
-  src: "../../../public/fonts/FKScreamer-Bold.woff2",
-  weight: "700",
-  display: "swap",
-  fallback: ["fantasy", "sans-serif"],
-  variable: "--font-display",
-})
-
-const geist = Geist({
-  weight: ["400", "600"],
-  subsets: ["latin"],
-  fallback: ["Helvetica", "Arial", "sans-serif"],
-  variable: "--font-sans",
-})
+import { fontVariables } from "@/app/(frontend)/fonts"
+import "@/app/(frontend)/globals.css"
 
 export default function FeedRootLayout({
   children,
@@ -30,7 +13,7 @@ export default function FeedRootLayout({
   children: React.ReactNode
 }): React.ReactElement {
   return (
-    <html className={cn(FKScreamer.variable, geist.variable)} lang="en" suppressHydrationWarning>
+    <html className={fontVariables} lang="en" suppressHydrationWarning>
       <head>
         <link href="/manifest.json" rel="manifest" />
         <link href="/favicon.ico" rel="icon" sizes="32x32" />

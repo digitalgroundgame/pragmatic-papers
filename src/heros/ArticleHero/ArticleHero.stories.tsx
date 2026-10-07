@@ -3,6 +3,7 @@ import { expect, userEvent, waitFor, within } from "storybook/test"
 
 import { articleFixture, authors } from "@/stories/fixtures/docs"
 import { narrationAudio } from "@/stories/fixtures/media"
+import { stampTableOfContentsAnchors, TableOfContentsProvider } from "@/components/TableOfContents"
 
 import { ArticleHero } from "."
 
@@ -58,5 +59,31 @@ export const WithNarration: Story = {
       authors: authors.slice(0, 3),
       narration: { ...narrationAudio, narrator: authors[1] },
     }),
+  },
+}
+
+/** The page shows the button when the article and the `tableOfContents` experiment both allow it. */
+export const WithTableOfContents: Story = {
+  args: {
+    article: articleFixture({
+      authors: authors.slice(0, 2),
+      content: stampTableOfContentsAnchors(articleFixture().content),
+    }),
+    showTableOfContents: true,
+  },
+  decorators: [
+    (Story) => (
+      <TableOfContentsProvider>
+        <Story />
+      </TableOfContentsProvider>
+    ),
+  ],
+  play: async ({ canvasElement }) => {
+    // Open by default; the button collapses it.
+    const button = within(canvasElement).getByRole("button", {
+      name: "Collapse table of contents",
+    })
+    await userEvent.click(button)
+    await expect(button).toHaveAttribute("aria-expanded", "false")
   },
 }

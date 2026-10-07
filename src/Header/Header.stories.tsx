@@ -70,6 +70,9 @@ export const Desktop: Story = {
 }
 
 export const FeedExperimentOn: Story = {
+  // The docs page renders every story at once against one fake Payload, so this
+  // story's seed would put the feed button in every other story there too.
+  tags: ["!autodocs"],
   beforeEach: () => seedPayload({ feed: true }),
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)

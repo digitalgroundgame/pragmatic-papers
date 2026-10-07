@@ -25,7 +25,6 @@ import {
 } from "@/collections/Articles/endpoints/cloneFromProduction"
 import { detectMathBlocks } from "@/collections/Articles/hooks/detectMathBlocks"
 import { generateFootnotes } from "@/collections/Articles/hooks/generateFootnotes"
-import { populateTopics } from "@/collections/Articles/hooks/populateTopics"
 import { populateMetaImageFromHero } from "@/collections/Articles/hooks/populateMetaImageFromHero"
 import { removeFromRankings } from "@/collections/Articles/hooks/removeFromRankings"
 import { revalidateArticle, revalidateDelete } from "@/collections/Articles/hooks/revalidateArticle"
@@ -345,7 +344,6 @@ export const Articles: CollectionConfig = {
       revalidateNavLinks,
       grantPublicProfile<Article>((doc) => doc.authors ?? []),
     ],
-    afterRead: [populateTopics],
     beforeDelete: [removeFromRankings],
     afterDelete: [revalidateDelete, revalidateNavLinksDelete],
   },

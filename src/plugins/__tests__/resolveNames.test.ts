@@ -1,6 +1,6 @@
 import type { Payload } from "payload"
 import { beforeEach, describe, expect, it, vi } from "vitest"
-import { resolveAuthorNames } from "../index"
+import { resolveAuthorNames, resolveTopicNames } from "../index"
 
 const find = vi.fn()
 const error = vi.fn()
@@ -80,5 +80,37 @@ describe("resolveAuthorNames", () => {
 
     expect(error).toHaveBeenCalledOnce()
     expect(names).toBe("Jane Doe")
+  })
+})
+
+describe("resolveTopicNames", () => {
+  beforeEach(() => {
+    find.mockReset()
+    error.mockReset()
+  })
+
+  it("reads names straight off already populated topics", async () => {
+    expect(await resolveTopicNames([{ id: 1, name: "Ethics" }], payload)).toBe("Ethics")
+    expect(find).not.toHaveBeenCalled()
+  })
+
+  it("resolves bare IDs from topics in one batched query, keeping their order", async () => {
+    // Articles no longer populate topics on every read, so a depth-0 reindex sees IDs.
+    find.mockResolvedValue({
+      docs: [
+        { id: 3, name: "Politics" },
+        { id: 1, name: "Ethics" },
+      ],
+    })
+
+    const names = await resolveTopicNames([1, { id: 2, name: "Philosophy" }, 3], payload)
+
+    expect(find).toHaveBeenCalledTimes(1)
+    expect(find.mock.calls[0]?.[0]).toMatchObject({
+      collection: "topics",
+      where: { id: { in: [1, 3] } },
+      select: { name: true },
+    })
+    expect(names).toBe("Ethics, Philosophy, Politics")
   })
 })

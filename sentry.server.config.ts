@@ -23,4 +23,10 @@ Sentry.init({
     databaseQueryData: false,
     stackFrameVariables: false,
   },
+
+  integrations: [
+    // Payload's error-level log lines as issues: the errors it catches and answers with
+    // JSON never reach onRequestError. See src/sentryPayload.ts.
+    Sentry.pinoIntegration({ error: { levels: ["error", "fatal"] } }),
+  ],
 })

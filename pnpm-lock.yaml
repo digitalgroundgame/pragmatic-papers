@@ -7,6 +7,7 @@ settings:
 overrides:
   '@types/react': 19.3.0
   '@types/react-dom': 19.3.0
+  '@payloadcms/plugin-sentry>@sentry/nextjs': ^11.0.0
 
 importers:
 
@@ -45,6 +46,9 @@ importers:
       '@payloadcms/plugin-search':
         specifier: ^3.90.2
         version: 3.90.2(@types/react@19.3.0)(graphql@16.14.0)(monaco-editor@0.55.1)(next@16.3.8(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(@playwright/test@1.63.0)(@types/node@24.13.6)(babel-plugin-macros@3.1.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(sass@1.77.4))(payload@3.90.2(graphql@16.14.0)(typescript@6.0.3))(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(typescript@6.0.3)
+      '@payloadcms/plugin-sentry':
+        specifier: ^3.90.2
+        version: 3.90.2(next@16.3.8(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(@playwright/test@1.63.0)(@types/node@24.13.6)(babel-plugin-macros@3.1.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(sass@1.77.4))(payload@3.90.2(graphql@16.14.0)(typescript@6.0.3))(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(webpack@5.107.2(esbuild@0.28.2)(postcss@8.5.28))
       '@payloadcms/plugin-seo':
         specifier: ^3.90.2
         version: 3.90.2(@types/react@19.3.0)(monaco-editor@0.55.1)(next@16.3.8(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(@playwright/test@1.63.0)(@types/node@24.13.6)(babel-plugin-macros@3.1.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(sass@1.77.4))(payload@3.90.2(graphql@16.14.0)(typescript@6.0.3))(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(typescript@6.0.3)
@@ -2495,6 +2499,13 @@ packages:
       react: ^19.0.1 || ^19.1.2 || ^19.2.1
       react-dom: ^19.0.1 || ^19.1.2 || ^19.2.1
 
+  '@payloadcms/plugin-sentry@3.90.2':
+    resolution: {integrity: sha512-w8iJc5Fr/zmc/nXC7gQtqE5yp2+XESx+FGlmEXIxadnKA4hZQoF+zy7wFiEGZ0MqPjWcn8cTMUxEJCyD7T0LiQ==}
+    peerDependencies:
+      payload: 3.90.2
+      react: ^19.0.1 || ^19.1.2 || ^19.2.1
+      react-dom: ^19.0.1 || ^19.1.2 || ^19.2.1
+
   '@payloadcms/plugin-seo@3.90.2':
     resolution: {integrity: sha512-+7B8q3+pDsGO5JocwnIMUzpE7jgtmRyqZtZRbCWwLVQC7q5p6ZmB4zHwfUyJdmidJ+H7NoJueXHAy+R0ZRPwfA==}
     peerDependencies:
@@ -2892,6 +2903,10 @@ packages:
     resolution: {integrity: sha512-Sdmg21POKmNwZDz8pH/2FtilWeryh3yxhRxbfA1ph8SnX2DkXoqX6G+uXyjCSYagW2pefVklmSNeWHmUlSqioA==}
     engines: {node: '>=20.19.0 <22.0.0 || >=22.12.0 <23.0.0 || >=23.2.0'}
 
+  '@sentry/core@9.47.2':
+    resolution: {integrity: sha512-WYEP2ZHkTQMP7Gg5frzrQy1475TnK5Qv8wgvHiTlNerYaEBCNpAeWjUltTgfCQ8Hbv1iq4inca7Kqmmyv9gLnQ==}
+    engines: {node: '>=18'}
+
   '@sentry/feedback@11.0.0':
     resolution: {integrity: sha512-ZdUE6qSfMH4zturLHxg8idfI8cA+JdfrisqUQ6hE6MKaIAAZysNIPvvFysE2WQDjFbj3puS1iZm0jg0ym7kA5g==}
     engines: {node: '>=20.19.0 <22.0.0 || >=22.12.0 <23.0.0 || >=23.2.0'}
@@ -2974,6 +2989,10 @@ packages:
   '@sentry/server-utils@11.0.0':
     resolution: {integrity: sha512-XlKDtLoNqOhI+TgCNywan/tFy0yMRzw5+8mdp96KNHtF/YwO9s6c7qZcBG0x8+XDyC0EoNXDlBPJOMEZo5lD4Q==}
     engines: {node: '>=20.19.0 <22.0.0 || >=22.12.0 <23.0.0 || >=23.2.0'}
+
+  '@sentry/types@9.47.2':
+    resolution: {integrity: sha512-35GxkLuNVxkPD4H+aHKGs+KdqTpD9tgopwD51uD/lUSXvVGI6jgYzoKHxaHrGISQYayRZ1QakuAV/hIIK4TTMA==}
+    engines: {node: '>=18'}
 
   '@sentry/vercel-edge@11.0.0':
     resolution: {integrity: sha512-tcDbhQygLnTeU9KNBjO4xYiVt5LIx7zsV7ywKznun6hQc+oWnJYbWrEJd+4ERSN5n9S368rX7Q7CDAmb8ioj+g==}
@@ -10615,6 +10634,18 @@ snapshots:
       - supports-color
       - typescript
 
+  '@payloadcms/plugin-sentry@3.90.2(next@16.3.8(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(@playwright/test@1.63.0)(@types/node@24.13.6)(babel-plugin-macros@3.1.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(sass@1.77.4))(payload@3.90.2(graphql@16.14.0)(typescript@6.0.3))(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(webpack@5.107.2(esbuild@0.28.2)(postcss@8.5.28))':
+    dependencies:
+      '@sentry/nextjs': 11.0.0(next@16.3.8(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(@playwright/test@1.63.0)(@types/node@24.13.6)(babel-plugin-macros@3.1.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(sass@1.77.4))(react@19.3.0)(webpack@5.107.2(esbuild@0.28.2)(postcss@8.5.28))
+      '@sentry/types': 9.47.2
+      payload: 3.90.2(graphql@16.14.0)(typescript@6.0.3)
+      react: 19.3.0
+      react-dom: 19.3.0(react@19.3.0)
+    transitivePeerDependencies:
+      - next
+      - react-router
+      - webpack
+
   '@payloadcms/plugin-seo@3.90.2(@types/react@19.3.0)(monaco-editor@0.55.1)(next@16.3.8(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(@playwright/test@1.63.0)(@types/node@24.13.6)(babel-plugin-macros@3.1.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(sass@1.77.4))(payload@3.90.2(graphql@16.14.0)(typescript@6.0.3))(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(typescript@6.0.3)':
     dependencies:
       '@payloadcms/translations': 3.90.2
@@ -10967,6 +10998,8 @@ snapshots:
     dependencies:
       '@sentry/conventions': 0.23.0
 
+  '@sentry/core@9.47.2': {}
+
   '@sentry/feedback@11.0.0':
     dependencies:
       '@sentry/core': 11.0.0
@@ -11080,6 +11113,10 @@ snapshots:
       '@opentelemetry/api': 1.9.1
       '@sentry/conventions': 0.23.0
       '@sentry/core': 11.0.0
+
+  '@sentry/types@9.47.2':
+    dependencies:
+      '@sentry/core': 9.47.2
 
   '@sentry/vercel-edge@11.0.0':
     dependencies:

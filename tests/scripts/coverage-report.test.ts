@@ -8,7 +8,6 @@ import {
   computeFileMetrics,
   computePatchCoverage,
   deltaIcon,
-  fetchAllComments,
   fetchChangedFiles,
   htmlTable,
   indexCoverageByFile,
@@ -20,7 +19,6 @@ import {
   renderTotalSection,
   statusIcon,
   toLineRanges,
-  upsertComment,
 } from "../../scripts/coverage-report"
 
 // Minimal FileSummary fixture
@@ -378,7 +376,7 @@ describe("renderPatchByFile", () => {
 })
 
 describe("renderReport", () => {
-  it("always includes the comment marker and patch coverage section", () => {
+  it("always includes the patch coverage section", () => {
     const html = renderReport({
       total: null,
       baseTotal: null,
@@ -389,7 +387,6 @@ describe("renderReport", () => {
       repo: undefined,
       sha: undefined,
     })
-    expect(html).toContain("<!-- coverage-report -->")
     expect(html).toContain("Patch coverage")
   })
 
@@ -500,98 +497,6 @@ describe("computePatchCoverage", () => {
 function mockRes(body: unknown, ok = true, status = 200) {
   return { ok, status, json: async () => body, text: async () => JSON.stringify(body) }
 }
-
-describe("fetchAllComments", () => {
-  const headers = { Authorization: "Bearer token" }
-
-  beforeEach(() => {
-    vi.stubGlobal("fetch", vi.fn())
-  })
-  afterEach(() => vi.unstubAllGlobals())
-
-  it("returns comments from a single page", async () => {
-    const comments = [{ id: 1, body: "hello" }]
-    vi.mocked(fetch).mockResolvedValueOnce(mockRes(comments) as Response)
-    const result = await fetchAllComments("owner/repo", 42, headers)
-    expect(result).toEqual(comments)
-    expect(fetch).toHaveBeenCalledTimes(1)
-  })
-
-  it("paginates until a page returns fewer than 100 comments", async () => {
-    const page1 = Array.from({ length: 100 }, (_, i) => ({ id: i }))
-    const page2 = [{ id: 100, body: "last" }]
-    vi.mocked(fetch)
-      .mockResolvedValueOnce(mockRes(page1) as Response)
-      .mockResolvedValueOnce(mockRes(page2) as Response)
-    const result = await fetchAllComments("owner/repo", 1, headers)
-    expect(result).toHaveLength(101)
-    expect(fetch).toHaveBeenCalledTimes(2)
-  })
-
-  it("throws on a non-ok response", async () => {
-    vi.mocked(fetch).mockResolvedValueOnce(mockRes("Not Found", false, 404) as Response)
-    await expect(fetchAllComments("owner/repo", 1, headers)).rejects.toThrow("GitHub API 404")
-  })
-})
-
-describe("upsertComment", () => {
-  const base = { repo: "owner/repo", prNumber: 7, token: "tok", body: "<!-- coverage-report -->" }
-
-  beforeEach(() => {
-    vi.stubGlobal("fetch", vi.fn())
-  })
-  afterEach(() => vi.unstubAllGlobals())
-
-  it("POSTs a new comment when none exists", async () => {
-    vi.mocked(fetch)
-      .mockResolvedValueOnce(mockRes([]) as Response) // fetchAllComments page 1
-      .mockResolvedValueOnce(mockRes({}) as Response) // POST
-    await upsertComment(base)
-    const [, postCall] = vi.mocked(fetch).mock.calls
-    expect((postCall![1] as RequestInit).method).toBe("POST")
-    expect(postCall![0] as string).toContain(`/issues/${base.prNumber}/comments`)
-  })
-
-  it("PATCHes an existing comment when the marker is found", async () => {
-    const existing = [{ id: 99, body: "<!-- coverage-report --> old content" }]
-    vi.mocked(fetch)
-      .mockResolvedValueOnce(mockRes(existing) as Response)
-      .mockResolvedValueOnce(mockRes({}) as Response) // PATCH
-    await upsertComment(base)
-    const [, patchCall] = vi.mocked(fetch).mock.calls
-    expect((patchCall![1] as RequestInit).method).toBe("PATCH")
-    expect(patchCall![0] as string).toContain(`/comments/99`)
-  })
-
-  it("DELETEs stale comments before posting", async () => {
-    const stale = [{ id: 55, body: "<!-- vitest-coverage-report-marker-root --> stale" }]
-    vi.mocked(fetch)
-      .mockResolvedValueOnce(mockRes(stale) as Response) // fetchAllComments
-      .mockResolvedValueOnce(mockRes({}) as Response) // DELETE stale
-      .mockResolvedValueOnce(mockRes({}) as Response) // POST new
-    await upsertComment(base)
-    const [, deleteCall, postCall] = vi.mocked(fetch).mock.calls
-    expect((deleteCall![1] as RequestInit).method).toBe("DELETE")
-    expect(deleteCall![0] as string).toContain(`/comments/55`)
-    expect((postCall![1] as RequestInit).method).toBe("POST")
-  })
-
-  it("throws when the final POST/PATCH fails", async () => {
-    vi.mocked(fetch)
-      .mockResolvedValueOnce(mockRes([]) as Response)
-      .mockResolvedValueOnce(mockRes("Forbidden", false, 403) as Response)
-    await expect(upsertComment(base)).rejects.toThrow("GitHub API 403")
-  })
-
-  it("warns but continues when a stale comment DELETE fails", async () => {
-    const stale = [{ id: 55, body: "<!-- vitest-coverage-report-marker-root --> stale" }]
-    vi.mocked(fetch)
-      .mockResolvedValueOnce(mockRes(stale) as Response) // fetchAllComments
-      .mockResolvedValueOnce(mockRes("Forbidden", false, 403) as Response) // DELETE fails
-      .mockResolvedValueOnce(mockRes({}) as Response) // POST still succeeds
-    await expect(upsertComment(base)).resolves.toBeUndefined()
-  })
-})
 
 describe("fetchChangedFiles", () => {
   beforeEach(() => {

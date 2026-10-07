@@ -1,14 +1,59 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
-import { prCommentTarget, upsertPrComment } from "../../scripts/pr-comment"
+import {
+  collapsible,
+  prCommentTarget,
+  readSections,
+  REPORT_MARKER,
+  upsertPrCommentSection,
+  withSection,
+} from "../../scripts/pr-comment"
 
 const target = { repo: "owner/repo", prNumber: 42, token: "t0ken" }
+const API = "https://api.github.com/repos/owner/repo"
 
-const reply = (body: unknown, ok = true, status = 200) =>
-  ({ ok, status, json: async () => body, text: async () => JSON.stringify(body) }) as Response
+/** A PR's comments, served through a mocked `fetch` the way GitHub's REST API does. */
+function fakeGitHub(initial: { id: number; body: string }[] = []) {
+  const comments = new Map(initial.map((comment) => [comment.id, comment.body]))
+  let nextId = Math.max(0, ...comments.keys()) + 1
+  const json = (body: unknown, status = 200) =>
+    ({
+      ok: status < 400,
+      status,
+      json: async () => body,
+      text: async () => JSON.stringify(body),
+    }) as Response
+  vi.mocked(fetch).mockImplementation(async (input, init) => {
+    const url = String(input)
+    const method = init?.method ?? "GET"
+    const list = /\/issues\/42\/comments\?per_page=100&page=(\d+)$/.exec(url)
+    if (list && method === "GET") {
+      const page = Number(list[1])
+      const all = [...comments].map(([id, body]) => ({ id, body }))
+      return json(all.slice((page - 1) * 100, page * 100))
+    }
+    if (url === `${API}/issues/42/comments` && method === "POST") {
+      const id = nextId++
+      comments.set(id, JSON.parse(init!.body as string).body)
+      return json({ id }, 201)
+    }
+    const one = /\/issues\/comments\/(\d+)$/.exec(url)
+    if (one && comments.has(Number(one[1]))) {
+      if (method === "PATCH") {
+        comments.set(Number(one[1]), JSON.parse(init!.body as string).body)
+        return json({ id: Number(one[1]) })
+      }
+      if (method === "DELETE") {
+        comments.delete(Number(one[1]))
+        return json(null, 204)
+      }
+    }
+    return json({ message: "Not Found" }, 404)
+  })
+  return comments
+}
 
-const comments = (n: number, offset = 0) =>
-  Array.from({ length: n }, (_, i) => ({ id: offset + i, body: `comment ${offset + i}` }))
+const noWait = async () => undefined
 
 beforeEach(() => {
   vi.stubGlobal("fetch", vi.fn())
@@ -39,82 +84,166 @@ describe("prCommentTarget", () => {
   })
 })
 
-describe("upsertPrComment", () => {
-  it("posts a new comment, tagged with the marker, when the PR has none", async () => {
-    vi.mocked(fetch)
-      .mockResolvedValueOnce(reply(comments(3)))
-      .mockResolvedValueOnce(reply({ id: 99 }))
-
-    await upsertPrComment(target, "bundle-size", "## Bundle size")
-
-    const [listUrl, listInit] = vi.mocked(fetch).mock.calls[0]!
-    expect(listUrl).toBe(
-      "https://api.github.com/repos/owner/repo/issues/42/comments?per_page=100&page=1",
+describe("collapsible", () => {
+  it("is closed unless asked to start open", () => {
+    const args = { title: "Bundle size", summary: "no change", body: "| a |" }
+    expect(collapsible({ ...args, open: false })).toBe(
+      "<details><summary><strong>Bundle size</strong>: no change</summary>\n\n| a |\n\n</details>",
     )
-    expect(listInit?.headers).toMatchObject({ Authorization: "Bearer t0ken" })
+    expect(collapsible({ ...args, open: true })).toMatch(/^<details open>/)
+  })
+})
 
-    const [url, init] = vi.mocked(fetch).mock.calls[1]!
-    expect(url).toBe("https://api.github.com/repos/owner/repo/issues/42/comments")
-    expect(init?.method).toBe("POST")
-    expect(JSON.parse(init?.body as string)).toEqual({
-      body: "<!-- bundle-size -->\n## Bundle size",
+describe("withSection", () => {
+  it("keeps the other sections, in a fixed order whoever wrote last", () => {
+    let body = withSection(undefined, "lighthouse", "LH")
+    body = withSection(body, "coverage", "COV")
+    body = withSection(body, "bundle-size", "BS")
+    body = withSection(body, "lighthouse", "LH 2")
+    expect(body).toBe(
+      [
+        REPORT_MARKER,
+        "<!-- section:coverage -->\nCOV\n<!-- /section:coverage -->",
+        "<!-- section:bundle-size -->\nBS\n<!-- /section:bundle-size -->",
+        "<!-- section:lighthouse -->\nLH 2\n<!-- /section:lighthouse -->",
+      ].join("\n\n"),
+    )
+    expect(readSections(body)).toEqual(
+      new Map([
+        ["coverage", "COV"],
+        ["bundle-size", "BS"],
+        ["lighthouse", "LH 2"],
+      ]),
+    )
+  })
+
+  it("drops what an older comment had outside any section", () => {
+    const body = withSection(`${REPORT_MARKER}\n<h2>Coverage Report</h2>`, "coverage", "new")
+    expect(readSections(body)).toEqual(new Map([["coverage", "new"]]))
+    expect(body).not.toContain("Coverage Report")
+  })
+
+  it("reads a section back from a body GitHub returned with CRLFs", () => {
+    const body = withSection(undefined, "coverage", "a\nb").replaceAll("\n", "\r\n")
+    expect(readSections(body).get("coverage")).toBe("a\nb")
+  })
+})
+
+describe("upsertPrCommentSection", () => {
+  it("creates the report comment when the PR has none", async () => {
+    const comments = fakeGitHub([{ id: 1, body: "a person's comment" }])
+
+    await upsertPrCommentSection(target, "bundle-size", "BS", { sleep: noWait })
+
+    expect(comments.get(1)).toBe("a person's comment")
+    expect(readSections(comments.get(2))).toEqual(new Map([["bundle-size", "BS"]]))
+    expect(vi.mocked(fetch).mock.calls[0]![1]?.headers).toMatchObject({
+      Authorization: "Bearer t0ken",
     })
   })
 
-  it("edits its own comment, found by the marker, rather than adding another", async () => {
-    vi.mocked(fetch)
-      .mockResolvedValueOnce(
-        reply([
-          { id: 1, body: "<!-- lighthouse -->\nold Lighthouse report" },
-          { id: 2, body: "<!-- bundle-size -->\nold bundle report" },
-        ]),
-      )
-      .mockResolvedValueOnce(reply({ id: 2 }))
-
-    await upsertPrComment(target, "bundle-size", "new bundle report")
-
-    const [url, init] = vi.mocked(fetch).mock.calls[1]!
-    expect(url).toBe("https://api.github.com/repos/owner/repo/issues/comments/2")
-    expect(init?.method).toBe("PATCH")
-  })
-
-  it("pages through a long thread, and stops at the page that has the comment", async () => {
-    vi.mocked(fetch)
-      .mockResolvedValueOnce(reply(comments(100)))
-      .mockResolvedValueOnce(
-        reply([...comments(5, 100), { id: 500, body: "<!-- bundle-size -->\nold" }]),
-      )
-      .mockResolvedValueOnce(reply({ id: 500 }))
-
-    await upsertPrComment(target, "bundle-size", "new")
-
-    expect(vi.mocked(fetch).mock.calls.map(([url]) => url)).toEqual([
-      "https://api.github.com/repos/owner/repo/issues/42/comments?per_page=100&page=1",
-      "https://api.github.com/repos/owner/repo/issues/42/comments?per_page=100&page=2",
-      "https://api.github.com/repos/owner/repo/issues/comments/500",
+  it("replaces only its own section of an existing comment", async () => {
+    const comments = fakeGitHub([
+      { id: 5, body: withSection(withSection(undefined, "coverage", "COV"), "lighthouse", "old") },
     ])
+
+    await upsertPrCommentSection(target, "lighthouse", "new", { sleep: noWait })
+
+    expect([...comments.keys()]).toEqual([5])
+    expect(readSections(comments.get(5))).toEqual(
+      new Map([
+        ["coverage", "COV"],
+        ["lighthouse", "new"],
+      ]),
+    )
   })
 
-  it("posts once a full last page turns out to be the end", async () => {
-    vi.mocked(fetch)
-      .mockResolvedValueOnce(reply(comments(100)))
-      .mockResolvedValueOnce(reply([]))
-      .mockResolvedValueOnce(reply({ id: 1 }))
+  it("finds the comment past the first page of a long thread", async () => {
+    const people = Array.from({ length: 120 }, (_, i) => ({ id: i + 1, body: `comment ${i}` }))
+    const comments = fakeGitHub([...people, { id: 500, body: withSection(undefined, "a", "x") }])
 
-    await upsertPrComment(target, "bundle-size", "new")
+    await upsertPrCommentSection(target, "coverage", "COV", { sleep: noWait })
 
-    expect(vi.mocked(fetch).mock.calls[2]![1]?.method).toBe("POST")
+    expect(comments.size).toBe(121)
+    expect(readSections(comments.get(500)).get("coverage")).toBe("COV")
+  })
+
+  it("deletes the report's old, separate comment", async () => {
+    const comments = fakeGitHub([
+      { id: 1, body: "<!-- bundle-size -->\n## Bundle size" },
+      { id: 2, body: "<!-- lighthouse -->\n## Lighthouse" },
+    ])
+
+    await upsertPrCommentSection(target, "bundle-size", "BS", {
+      staleMarkers: ["<!-- bundle-size -->"],
+      sleep: noWait,
+    })
+
+    expect([...comments.keys()]).toEqual([2, 3])
+  })
+
+  it("writes its section again when another job's write dropped it", async () => {
+    const comments = fakeGitHub([{ id: 1, body: withSection(undefined, "coverage", "COV") }])
+    // Another job read the comment before this one wrote, and writes it back after.
+    const before = comments.get(1)!
+    let raced = false
+    const sleep = async () => {
+      if (raced) return
+      raced = true
+      comments.set(1, withSection(before, "lighthouse", "LH"))
+    }
+
+    await upsertPrCommentSection(target, "bundle-size", "BS", { sleep })
+
+    expect(readSections(comments.get(1))).toEqual(
+      new Map([
+        ["coverage", "COV"],
+        ["bundle-size", "BS"],
+        ["lighthouse", "LH"],
+      ]),
+    )
+  })
+
+  it("moves its section to the older comment when two jobs created one at once", async () => {
+    const comments = fakeGitHub()
+    let raced = false
+    const sleep = async () => {
+      if (raced) return
+      raced = true
+      // Another job posted its own comment just before this one did.
+      comments.set(0, withSection(undefined, "coverage", "COV"))
+    }
+
+    await upsertPrCommentSection(target, "lighthouse", "LH", { sleep })
+
+    expect([...comments.keys()]).toEqual([0])
+    expect(readSections(comments.get(0))).toEqual(
+      new Map([
+        ["coverage", "COV"],
+        ["lighthouse", "LH"],
+      ]),
+    )
+  })
+
+  it("gives up, saying so, when its section keeps being overwritten", async () => {
+    const comments = fakeGitHub([{ id: 1, body: withSection(undefined, "coverage", "COV") }])
+    const sleep = async () => {
+      comments.set(1, withSection(undefined, "coverage", "COV"))
+    }
+
+    await expect(upsertPrCommentSection(target, "lighthouse", "LH", { sleep })).rejects.toThrow(
+      "another job kept overwriting the lighthouse section",
+    )
   })
 
   it("throws with GitHub's answer when listing or writing fails", async () => {
-    vi.mocked(fetch).mockResolvedValueOnce(reply({ message: "Bad credentials" }, false, 401))
-    await expect(upsertPrComment(target, "m", "x")).rejects.toThrow("GitHub API 401")
-
-    vi.mocked(fetch)
-      .mockResolvedValueOnce(reply([]))
-      .mockResolvedValueOnce(reply({ message: "Resource not accessible" }, false, 403))
-    await expect(upsertPrComment(target, "m", "x")).rejects.toThrow(
-      /GitHub API 403: .*Resource not accessible/,
+    vi.mocked(fetch).mockResolvedValueOnce({
+      ok: false,
+      status: 401,
+      text: async () => "Bad credentials",
+    } as Response)
+    await expect(upsertPrCommentSection(target, "m", "x", { sleep: noWait })).rejects.toThrow(
+      "GitHub API 401: Bad credentials",
     )
   })
 })

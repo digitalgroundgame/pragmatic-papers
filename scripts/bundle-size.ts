@@ -18,7 +18,7 @@
 // In CI (playwright.yml's "Bundle size" job) it reads the `.next` copied out of the
 // image the PR deploys, compares with dev's last measurement (BASE_BUNDLE_SIZE_PATH),
 // writes the report to the job summary and, with PR_NUMBER and GITHUB_TOKEN, to a
-// PR comment.
+// dropdown in the PR's report comment (scripts/pr-comment.ts), open when a route jumped.
 
 import { appendFileSync, existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs"
 import { join, relative, sep } from "node:path"
@@ -26,11 +26,10 @@ import { fileURLToPath } from "node:url"
 import vm from "node:vm"
 import { gzipSync } from "node:zlib"
 import { blue, red, yellow } from "./ansi.mjs"
-import { prCommentTarget, upsertPrComment } from "./pr-comment"
+import { collapsible, prCommentTarget, upsertPrCommentSection } from "./pr-comment"
 
 /** Growth in a route's gzipped JavaScript against dev, in kB, that gets flagged. */
 export const JUMP_KB = 10
-const COMMENT_MARKER = "bundle-size"
 
 export interface RouteSize {
   route: string
@@ -143,6 +142,36 @@ export function jumps(routes: RouteSize[], base: RouteSize[] | null): RouteSize[
   })
 }
 
+/** The routes that are new to dev or whose JavaScript or CSS changed size. */
+function changedRoutes(routes: RouteSize[], base: RouteSize[] | null): RouteSize[] {
+  const baseByRoute = new Map(base?.map((r) => [r.route, r]))
+  return routes.filter((r) => {
+    const before = baseByRoute.get(r.route)
+    return (
+      !before ||
+      formatDelta(r.jsGzip - before.jsGzip) !== "±0" ||
+      formatDelta(r.cssGzip - before.cssGzip) !== "±0"
+    )
+  })
+}
+
+/** The report's one line, plain text, for the PR comment's closed dropdown. */
+export function renderSummary({
+  routes,
+  base,
+}: {
+  routes: RouteSize[]
+  base: RouteSize[] | null
+}): string {
+  const jumped = jumps(routes, base).length
+  const changed = changedRoutes(routes, base).length
+  if (jumped > 0)
+    return `⚠ ${jumped} ${jumped === 1 ? "route" : "routes"} grew by more than ${JUMP_KB} kB`
+  if (base === null) return "no measurement from dev to compare with yet"
+  if (changed === 0) return "no change"
+  return `${changed} ${changed === 1 ? "route" : "routes"} changed size, none by more than ${JUMP_KB} kB`
+}
+
 export function renderReport({
   routes,
   base,
@@ -152,14 +181,7 @@ export function renderReport({
 }): string {
   const baseByRoute = new Map(base?.map((r) => [r.route, r]))
   const jumped = new Set(jumps(routes, base).map((r) => r.route))
-  const changed = routes.filter((r) => {
-    const before = baseByRoute.get(r.route)
-    return (
-      !before ||
-      formatDelta(r.jsGzip - before.jsGzip) !== "±0" ||
-      formatDelta(r.cssGzip - before.cssGzip) !== "±0"
-    )
-  })
+  const changed = changedRoutes(routes, base)
 
   const rows = routes.map((r) => {
     const before = baseByRoute.get(r.route)
@@ -178,7 +200,7 @@ export function renderReport({
     ...rows.map((cells) => `| ${cells.join(" | ")} |`),
   ].join("\n")
 
-  const lines = ["## Bundle size", ""]
+  const lines: string[] = []
   if (jumped.size > 0) {
     lines.push(
       `⚠ **${jumped.size} ${jumped.size === 1 ? "route" : "routes"} grew by more than ` +
@@ -251,11 +273,19 @@ export async function main(args = process.argv.slice(2)): Promise<number> {
 
   const report = renderReport({ routes, base })
   if (process.env.GITHUB_STEP_SUMMARY)
-    appendFileSync(process.env.GITHUB_STEP_SUMMARY, report + "\n")
+    appendFileSync(process.env.GITHUB_STEP_SUMMARY, `## Bundle size\n\n${report}\n`)
   const target = prCommentTarget()
   if (target) {
     try {
-      await upsertPrComment(target, COMMENT_MARKER, report)
+      const section = collapsible({
+        title: "Bundle size",
+        summary: renderSummary({ routes, base }),
+        body: report,
+        open: jumped.size > 0,
+      })
+      await upsertPrCommentSection(target, "bundle-size", section, {
+        staleMarkers: ["<!-- bundle-size -->"],
+      })
     } catch (err) {
       console.warn(`${yellow("⚠")} Could not post the PR comment: ${(err as Error).message}`)
     }

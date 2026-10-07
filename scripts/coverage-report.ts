@@ -1,5 +1,7 @@
-// Posts a combined coverage report as a PR comment: project total, per-file coverage
-// for changed files, and patch coverage (lines added or modified in this PR's diff).
+// Posts a combined coverage report at the top of the PR's report comment
+// (scripts/pr-comment.ts, which bundle size and Lighthouse add dropdowns to): project
+// total, per-file coverage for changed files, and patch coverage (lines added or
+// modified in this PR's diff).
 // Coverage data comes from coverage-summary.json and coverage-final.json (istanbul/v8
 // format, produced by `pnpm test:unit:coverage`). It is purely informational — it
 // never fails the build.
@@ -11,6 +13,7 @@ import { appendFileSync, existsSync, readFileSync } from "node:fs"
 import { relative, sep } from "node:path"
 import { fileURLToPath } from "node:url"
 import { blue, gray, green, yellow } from "./ansi.mjs"
+import { upsertPrCommentSection } from "./pr-comment"
 
 // ─── Istanbul types ───────────────────────────────────────────────────────────
 
@@ -74,7 +77,6 @@ type MetricKey = keyof Metrics
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const COMMENT_MARKER = "<!-- coverage-report -->"
 const STALE_MARKERS = [
   "<!-- vitest-coverage-report-marker-root -->", // vitest action
 ]
@@ -489,7 +491,6 @@ export function renderReport({
       : null
   const patchByFile = renderPatchByFile({ files, repo, sha })
   const parts = [
-    COMMENT_MARKER,
     "<h2>Coverage Report</h2>",
     ...(total ? ["", renderTotalSection(total, baseTotal)] : []),
     ...(fileCoverage ? ["", fileCoverage] : []),
@@ -500,66 +501,6 @@ export function renderReport({
     ...(patchByFile ? ["", "<p>Patch coverage by file:</p>", patchByFile] : []),
   ]
   return parts.join("\n")
-}
-
-export async function fetchAllComments(
-  repo: string,
-  prNumber: number,
-  headers: Record<string, string>,
-): Promise<{ id: number; body?: string }[]> {
-  const all: { id: number; body?: string }[] = []
-  for (let page = 1; ; page++) {
-    const res = await fetch(
-      `https://api.github.com/repos/${repo}/issues/${prNumber}/comments?per_page=100&page=${page}`,
-      { headers },
-    )
-    if (!res.ok) throw new Error(`GitHub API ${res.status}: ${await res.text()}`)
-    const page_ = (await res.json()) as { id: number; body?: string }[]
-    all.push(...page_)
-    if (page_.length < 100) break
-  }
-  return all
-}
-
-export async function upsertComment({
-  repo,
-  prNumber,
-  token,
-  body,
-}: {
-  repo: string
-  prNumber: number
-  token: string
-  body: string
-}): Promise<void> {
-  const headers: Record<string, string> = {
-    Accept: "application/vnd.github+json",
-    "User-Agent": "coverage-report-script",
-    Authorization: `Bearer ${token}`,
-  }
-  const comments = await fetchAllComments(repo, prNumber, headers)
-
-  // Delete any stale coverage comments (old marker names, vitest action)
-  for (const comment of comments) {
-    if (STALE_MARKERS.some((m) => comment.body?.includes(m))) {
-      const delRes = await fetch(
-        `https://api.github.com/repos/${repo}/issues/comments/${comment.id}`,
-        { method: "DELETE", headers },
-      )
-      if (!delRes.ok) console.warn(`${yellow("⚠")} Could not delete stale comment ${comment.id}.`)
-    }
-  }
-
-  const existing = comments.find((c) => c.body?.includes(COMMENT_MARKER))
-  const url = existing
-    ? `https://api.github.com/repos/${repo}/issues/comments/${existing.id}`
-    : `https://api.github.com/repos/${repo}/issues/${prNumber}/comments`
-  const res = await fetch(url, {
-    method: existing ? "PATCH" : "POST",
-    headers: { ...headers, "Content-Type": "application/json" },
-    body: JSON.stringify({ body }),
-  })
-  if (!res.ok) throw new Error(`GitHub API ${res.status}: ${await res.text()}`)
 }
 
 // ─── Entry point ──────────────────────────────────────────────────────────────
@@ -645,7 +586,9 @@ export async function main(): Promise<void> {
   }
   if (token && repo) {
     try {
-      await upsertComment({ repo, prNumber, token, body: report })
+      await upsertPrCommentSection({ repo, prNumber, token }, "coverage", report, {
+        staleMarkers: STALE_MARKERS,
+      })
     } catch (err) {
       console.warn(`${yellow("⚠")} Could not post PR comment: ${(err as Error).message}`)
     }

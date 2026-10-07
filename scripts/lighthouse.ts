@@ -25,8 +25,9 @@
 // Results go to lighthouse-results/: summary.json and each page's median report as
 // HTML. CHROME_PATH picks the browser; by default it's
 // Playwright's Chromium. In CI (playwright.yml's "Lighthouse" job) the report goes to
-// the job summary and, with PR_NUMBER and GITHUB_TOKEN, to a PR comment; regressions
-// also become warning annotations.
+// the job summary and, with PR_NUMBER and GITHUB_TOKEN, to a dropdown in the PR's
+// report comment (scripts/pr-comment.ts), open when a page regressed; regressions also
+// become warning annotations.
 
 import { chromium } from "@playwright/test"
 import { launch } from "chrome-launcher"
@@ -38,7 +39,7 @@ import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } fr
 import { join } from "node:path"
 import { fileURLToPath } from "node:url"
 import { blue, green, red, yellow } from "./ansi.mjs"
-import { prCommentTarget, upsertPrComment } from "./pr-comment"
+import { collapsible, prCommentTarget, upsertPrCommentSection } from "./pr-comment"
 import { CODE_BLOCKS_SLUG, FOOTNOTES_SLUG, SHOWCASE_SLUG, VOLUME_SLUG } from "./seed-e2e.constants"
 
 export const PAGES = [
@@ -55,7 +56,6 @@ export const PAGES = [
 ]
 
 const OUT_DIR = "lighthouse-results"
-const COMMENT_MARKER = "lighthouse"
 
 /**
  * The benchmark index that gets Lighthouse's default 4× CPU slowdown: roughly what the
@@ -205,6 +205,22 @@ const COLUMNS: { metric: Metric; label: string }[] = [
   { metric: "totalBytes", label: "Total" },
 ]
 
+/** The pages much slower than on dev. */
+function flaggedPages(pages: PageResult[]): PageResult[] {
+  return pages.filter((page) => regressions(page).length > 0)
+}
+
+/** The report's one line, plain text, for the PR comment's closed dropdown. */
+export function renderSummary({ pages }: Summary): string {
+  const flagged = flaggedPages(pages).length
+  const homeScore = median(pages.find((page) => page.path === "/")?.pr.score ?? [])
+  const score = Number.isNaN(homeScore) ? "" : `, Home scores ${formatValue("score", homeScore)}`
+  if (pages.every((page) => !page.dev)) return `no results from dev to compare with yet${score}`
+  if (flagged > 0)
+    return `⚠️ ${flagged} ${flagged === 1 ? "page is" : "pages are"} much slower than on dev${score}`
+  return `no page is much slower than on dev${score}`
+}
+
 export function renderReport(summary: Summary): string {
   const { pages, runs } = summary
   const compared = pages.filter((p) => p.dev)
@@ -249,8 +265,6 @@ export function renderReport(summary: Summary): string {
           "artifact."
   const missing = pages.length - compared.length
   return [
-    "## Lighthouse",
-    "",
     headline,
     ...(compared.length > 0 && missing > 0
       ? ["", `Dev's results don't have ${missing} of the pages, so those aren't compared.`]
@@ -397,12 +411,20 @@ export async function main(): Promise<number> {
 
   const report = renderReport(summary)
   if (process.env.GITHUB_STEP_SUMMARY) {
-    appendFileSync(process.env.GITHUB_STEP_SUMMARY, report + "\n")
+    appendFileSync(process.env.GITHUB_STEP_SUMMARY, `## Lighthouse\n\n${report}\n`)
   }
   const target = prCommentTarget()
   if (target) {
     try {
-      await upsertPrComment(target, COMMENT_MARKER, report)
+      const section = collapsible({
+        title: "Lighthouse",
+        summary: renderSummary(summary),
+        body: report,
+        open: flaggedPages(summary.pages).length > 0,
+      })
+      await upsertPrCommentSection(target, "lighthouse", section, {
+        staleMarkers: ["<!-- lighthouse -->"],
+      })
     } catch (err) {
       console.warn(`${yellow("⚠")} Could not post the PR comment: ${(err as Error).message}`)
     }

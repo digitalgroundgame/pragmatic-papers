@@ -35,7 +35,7 @@ This file provides guidance to tools like Claude Code (claude.ai/code) when work
 - `pnpm test:unit:coverage` — run unit tests with V8 coverage report (what CI uses; outputs `coverage/coverage-summary.json` and `coverage/coverage-final.json`)
 - `pnpm test:coverage` — run all tests with V8 coverage report (full picture for local inspection)
 - `pnpm test:unit -u` — regenerate snapshot baselines after intentional UI changes
-- `pnpm coverage:report` — post the combined coverage PR comment locally (requires `GITHUB_TOKEN`, `GITHUB_REPOSITORY`, `GITHUB_EVENT_PATH`)
+- `pnpm coverage:report` — post the coverage section of CI's PR comment locally (requires `GITHUB_TOKEN`, `GITHUB_REPOSITORY`, `GITHUB_EVENT_PATH`)
 - `pnpm bundle-size` — measure the gzipped client JS and CSS each public page loads, from the build in `.next` (run `pnpm build` first), and compare it with dev's last measurement when `BASE_BUNDLE_SIZE_PATH` names one (see [Page speed](#page-speed))
 - `pnpm analyze` — Turbopack's bundle analyzer, in the browser (it compiles but doesn't leave a build behind): each route's client and server modules, and the import chain that brings each one in. `pnpm analyze --output` writes it to `.next/diagnostics/analyze/` instead, which the next `pnpm build` deletes
 - `pnpm lighthouse` — seed a throwaway database, build and serve as `pnpm test:e2e` does, then run Lighthouse's performance audit on a few seeded pages; reports land in `lighthouse-results/`. Set `BASE_LIGHTHOUSE_PATH` to a `summary.json` from an earlier run to compare with it (see [Page speed](#page-speed))
@@ -283,8 +283,10 @@ function, and fails on any axe violation.
 
 ### Page speed
 
-Two jobs in `playwright.yml` measure the image the PR deploys, and each posts a
-PR comment comparing it with the last run on `dev`:
+Two jobs in `playwright.yml` measure the image the PR deploys, and each compares it
+with the last run on `dev` in a dropdown under the coverage report, in the one
+comment CI keeps on a PR (`scripts/pr-comment.ts`). A dropdown starts open when it
+flags something:
 
 - **Bundle size** (`scripts/bundle-size.ts`) reads the image's build manifests and
   adds up the gzipped JavaScript and CSS each public page loads before it's

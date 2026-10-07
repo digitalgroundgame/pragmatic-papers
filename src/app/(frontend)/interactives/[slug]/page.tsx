@@ -58,8 +58,9 @@ export default async function InteractivePage({
   const composed = await loadInteractiveOverview(interactive)
   // Parked: the overview pane stays empty until the reader picks something, the same as every
   // other unselected state, rather than landing on a filled-in SCOTUS bench. The profile still
-  // composes and renders one (see `federalCourtsProfile.summary`) — nothing else has to change
-  // to bring it back, just this line.
+  // composes one (see `federalCourtsProfile.summary`). To bring it back, set this to
+  // `renderSummary(interactive.profile, composed.summary)` from `@/interactives/summaryViews`;
+  // importing that while it's parked would only ship the unused view.
   const summary: React.ReactNode = undefined
 
   return (

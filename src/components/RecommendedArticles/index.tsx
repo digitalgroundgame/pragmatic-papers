@@ -112,11 +112,11 @@ export function RecommendedArticles({
                   </div>
                 )}
                 <div className="flex flex-col gap-2">
-                  <h3 className="text-primary group-hover:text-primary/80 md:text-2xl">
+                  <h3 className="text-foreground group-hover:text-foreground/80 md:text-2xl">
                     {article.title}
                   </h3>
                   {article.metaDescription && (
-                    <p className="text-primary line-clamp-2 hidden font-serif text-sm md:block">
+                    <p className="text-foreground line-clamp-2 hidden font-serif text-sm md:block">
                       {article.metaDescription}
                     </p>
                   )}

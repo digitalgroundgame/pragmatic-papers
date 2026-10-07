@@ -1,7 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite"
 import { expect, within } from "storybook/test"
 
-import { knownContrastIssue } from "@/stories/a11y"
 import { authors } from "@/stories/fixtures/docs"
 
 import { Byline } from "./Byline"
@@ -10,7 +9,6 @@ import { toBylineAuthor } from "./BylineAuthor"
 const meta = {
   title: "Components/Byline",
   component: Byline,
-  parameters: knownContrastIssue,
   args: { authors: authors.slice(0, 1).map(toBylineAuthor) },
 } satisfies Meta<typeof Byline>
 

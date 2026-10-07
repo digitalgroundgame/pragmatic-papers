@@ -2,7 +2,6 @@ import type { Meta, StoryObj } from "@storybook/nextjs-vite"
 import { expect, within } from "storybook/test"
 
 import type { CollectionGridSlots } from "@/payload-types"
-import { knownContrastIssue } from "@/stories/a11y"
 import { articles, volumes } from "@/stories/fixtures/docs"
 
 import { CollectionGridBlock } from "./Component"
@@ -67,7 +66,6 @@ export const Gauss10WithoutOptionalSlots: Story = {
 }
 
 export const KickersAndOverrides: Story = {
-  parameters: knownContrastIssue,
   args: {
     layout: "euler-3",
     slots: [

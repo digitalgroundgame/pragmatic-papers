@@ -37,8 +37,8 @@ export const ArticleCard: React.FC<{
             priority={priority}
           />
         )}
-        {titleToUse && <h3 className="hover:text-primary/80 md:text-2xl">{titleToUse}</h3>}
-        {description && <p className="text-primary font-serif">{sanitizedDescription}</p>}
+        {titleToUse && <h3 className="hover:text-foreground/80 md:text-2xl">{titleToUse}</h3>}
+        {description && <p className="text-foreground font-serif">{sanitizedDescription}</p>}
       </div>
     </HoverPrefetchLink>
   )

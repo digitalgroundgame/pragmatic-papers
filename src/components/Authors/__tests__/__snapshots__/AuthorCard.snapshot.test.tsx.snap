@@ -41,7 +41,7 @@ exports[`AuthorCard > renders minimal author with no bio, image, or affiliation 
             class="text-pretty md:text-2xl"
           >
             <a
-              class="text-primary hover:text-primary/80"
+              class="text-foreground hover:text-foreground/80"
               href="/authors/alice-smith"
             >
               Alice Smith
@@ -98,7 +98,7 @@ exports[`AuthorCard > renders with affiliation and short biography 1`] = `
             class="text-pretty md:text-2xl"
           >
             <a
-              class="text-primary hover:text-primary/80"
+              class="text-foreground hover:text-foreground/80"
               href="/authors/bob-jones"
             >
               Bob Jones
@@ -111,7 +111,7 @@ exports[`AuthorCard > renders with affiliation and short biography 1`] = `
           </span>
         </div>
         <p
-          class="text-primary line-clamp-2 font-serif text-sm"
+          class="text-foreground line-clamp-2 font-serif text-sm"
         >
           A short bio.
         </p>
@@ -165,7 +165,7 @@ exports[`AuthorCard > renders with biography longer than 255 characters (truncat
             class="text-pretty md:text-2xl"
           >
             <a
-              class="text-primary hover:text-primary/80"
+              class="text-foreground hover:text-foreground/80"
               href="/authors/carol-white"
             >
               Carol White
@@ -173,7 +173,7 @@ exports[`AuthorCard > renders with biography longer than 255 characters (truncat
           </h3>
         </div>
         <p
-          class="text-primary line-clamp-2 font-serif text-sm"
+          class="text-foreground line-clamp-2 font-serif text-sm"
         >
           xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx…
         </p>
@@ -227,7 +227,7 @@ exports[`AuthorCard > renders with null name using fallback 1`] = `
             class="text-pretty md:text-2xl"
           >
             <a
-              class="text-primary hover:text-primary/80"
+              class="text-foreground hover:text-foreground/80"
               href="/authors/alice-smith"
             />
           </h3>
@@ -282,7 +282,7 @@ exports[`AuthorCard > renders with profileImage as a numeric id 1`] = `
             class="text-pretty md:text-2xl"
           >
             <a
-              class="text-primary hover:text-primary/80"
+              class="text-foreground hover:text-foreground/80"
               href="/authors/alice-smith"
             >
               Alice Smith
@@ -339,7 +339,7 @@ exports[`AuthorCard > renders with profileImage object containing a square URL 1
             class="text-pretty md:text-2xl"
           >
             <a
-              class="text-primary hover:text-primary/80"
+              class="text-foreground hover:text-foreground/80"
               href="/authors/alice-smith"
             >
               Alice Smith
@@ -396,7 +396,7 @@ exports[`AuthorCard > renders with profileImage object without a square URL 1`] 
             class="text-pretty md:text-2xl"
           >
             <a
-              class="text-primary hover:text-primary/80"
+              class="text-foreground hover:text-foreground/80"
               href="/authors/alice-smith"
             >
               Alice Smith

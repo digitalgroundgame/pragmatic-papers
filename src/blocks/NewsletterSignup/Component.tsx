@@ -15,7 +15,7 @@ export const NewsletterSignupBlock: React.FC<NewsletterSignupBlockProps> = ({
     notice={
       notice ? (
         <ConvertRichText
-          className="text-muted-foreground [&_a:hover]:text-primary text-sm [&_a]:underline [&_a]:underline-offset-4"
+          className="text-muted-foreground [&_a:hover]:text-foreground text-sm [&_a]:underline [&_a]:underline-offset-4"
           converters={({ defaultConverters }) => ({
             ...defaultConverters,
             ...LinkJSXConverter({

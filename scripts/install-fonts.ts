@@ -51,16 +51,10 @@ const DISPLAY_FONT_RANGES: [number, number][] = [
  */
 const DISPLAY_FONT_FEATURES = ["ccmp", "locl", "liga", "calt", "kern", "mark", "mkmk"]
 
-/** Every character in DISPLAY_FONT_RANGES, as the text subset-font keeps glyphs for. */
-export function displayFontText(): string {
-  return DISPLAY_FONT_RANGES.flatMap(([from, to]) =>
+async function subsetDisplayFont(path: string): Promise<void> {
+  const text = DISPLAY_FONT_RANGES.flatMap(([from, to]) =>
     Array.from({ length: to - from + 1 }, (_, i) => String.fromCodePoint(from + i)),
   ).join("")
-}
-
-/** Subsets the font at `path` in place. A font it can't subset is left whole, with a warning. */
-export async function subsetDisplayFont(path: string): Promise<void> {
-  const text = displayFontText()
   const original = readFileSync(path)
   try {
     const subset = await subsetFont(original, text, {
@@ -78,69 +72,64 @@ export async function subsetDisplayFont(path: string): Promise<void> {
   }
 }
 
-async function main(): Promise<void> {
-  console.warn(`${blue("●")} Installing fonts...`)
-  mkdirSync(dest, { recursive: true })
+console.warn(`${blue("●")} Installing fonts...`)
+mkdirSync(dest, { recursive: true })
 
-  if (existsSync(src)) {
-    cpSync(src, dest, { recursive: true })
-    console.warn(`${green("✔")} Fonts copied to public/fonts`)
-    await subsetDisplayFont(fontPath)
+if (existsSync(src)) {
+  cpSync(src, dest, { recursive: true })
+  console.warn(`${green("✔")} Fonts copied to public/fonts`)
+  await subsetDisplayFont(fontPath)
+  process.exit(0)
+}
+
+// Inter-Bold.woff2 fallback is ~24KB; anything under 1000 bytes is a stale empty placeholder.
+// A previous run's fallback also clears that bar, so compare bytes rather than trusting the
+// size alone — otherwise a stale Inter reports itself as "real" and skips the check below.
+if (existsSync(fontPath) && readFileSync(fontPath).byteLength > 1000) {
+  if (!readFileSync(fontPath).equals(readFileSync(fallbackFont))) {
+    console.warn(gray("○ Fonts already installed (real)"))
     process.exit(0)
   }
+  console.warn(gray("○ Installed font is the Inter fallback from an earlier run"))
+}
 
-  // Inter-Bold.woff2 fallback is ~24KB; anything under 1000 bytes is a stale empty placeholder.
-  // A previous run's fallback also clears that bar, so compare bytes rather than trusting the
-  // size alone — otherwise a stale Inter reports itself as "real" and skips the check below.
-  if (existsSync(fontPath) && readFileSync(fontPath).byteLength > 1000) {
-    if (!readFileSync(fontPath).equals(readFileSync(fallbackFont))) {
-      console.warn(gray("○ Fonts already installed (real)"))
-      process.exit(0)
-    }
-    console.warn(gray("○ Installed font is the Inter fallback from an earlier run"))
-  }
-
-  console.warn(`${yellow("⚠")} Optional dependency @digitalgroundgame/fonts is not installed.`)
-  if (!process.env.GH_FONT_READ) {
-    console.warn(
-      gray(
-        `  Reason: The GH_FONT_READ environment variable is not set.
+console.warn(`${yellow("⚠")} Optional dependency @digitalgroundgame/fonts is not installed.`)
+if (!process.env.GH_FONT_READ) {
+  console.warn(
+    gray(
+      `  Reason: The GH_FONT_READ environment variable is not set.
   This token is required to authenticate with the GitHub Packages registry
   to install the private @digitalgroundgame/fonts package.
   To resolve this, set GH_FONT_READ to a valid GitHub Personal Access Token (PAT)
   with read:packages scope, and then run 'pnpm reinstall'.`,
-      ),
-    )
-  } else {
-    console.warn(
-      gray(
-        `  Reason: GH_FONT_READ is set, but the package was not found.
+    ),
+  )
+} else {
+  console.warn(
+    gray(
+      `  Reason: GH_FONT_READ is set, but the package was not found.
   This can happen if the token is invalid/expired, or if optional dependencies
   were skipped. Run 'pnpm reinstall' to force a fresh install and verify the token.`,
-      ),
-    )
-  }
+    ),
+  )
+}
 
-  // A deploy that degrades to Inter ships the wrong typeface with a green build — the
-  // exact failure mode that put the fallback on a preview deployment unnoticed. Stop here
-  // so the build fails at install time instead of at somebody's eyeballs.
-  if (fontsRequired) {
-    console.error(`${red("✖")} FONTS_REQUIRED is set — refusing to fall back to Inter.`)
-    console.error(
-      gray(
-        `  This build must ship FKScreamer. Check GH_FONT_READ: a GitHub PAT with
+// A deploy that degrades to Inter ships the wrong typeface with a green build — the
+// exact failure mode that put the fallback on a preview deployment unnoticed. Stop here
+// so the build fails at install time instead of at somebody's eyeballs.
+if (fontsRequired) {
+  console.error(`${red("✖")} FONTS_REQUIRED is set — refusing to fall back to Inter.`)
+  console.error(
+    gray(
+      `  This build must ship FKScreamer. Check GH_FONT_READ: a GitHub PAT with
   read:packages scope that has not expired, exposed to the build (not just runtime).
   Note the pnpm store is cached, so rebuild WITHOUT cache after rotating the token,
   or the store will still be missing @digitalgroundgame/fonts.`,
-      ),
-    )
-    process.exit(1)
-  }
-
-  cpSync(fallbackFont, fontPath)
-  console.warn(`${green("✔")} Copied Inter Bold as fallback font`)
-  process.exit(0)
+    ),
+  )
+  process.exit(1)
 }
 
-// Run as the postinstall script, not when a test imports the helpers above.
-if (process.argv[1] && fileURLToPath(import.meta.url) === resolve(process.argv[1])) await main()
+cpSync(fallbackFont, fontPath)
+console.warn(`${green("✔")} Copied Inter Bold as fallback font`)
+process.exit(0)

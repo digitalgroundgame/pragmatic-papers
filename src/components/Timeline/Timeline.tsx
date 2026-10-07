@@ -47,7 +47,7 @@ const EventContent: React.FC<{
       <div className="size-16" />
     )}
     <div className={cn("w-full max-w-[240px]", isLeft ? "text-right" : "order-first")}>
-      <div className="text-brand-text text-sm font-bold tracking-wide">
+      <div className="text-brand-text font-serif text-sm font-bold tracking-wide">
         {formatTimelineDate(event.date)}
       </div>
       {event.title && <div>{event.title}</div>}
@@ -66,7 +66,7 @@ const EventContent: React.FC<{
 export const Timeline: React.FC<TimelineBaseProps> = ({ events, title, className }) => {
   return (
     <div className={cn("prose-p:my-0 prose-img:my-0 w-full", className)}>
-      {title && <h3>{title}</h3>}
+      {title && <h3 className="mb-4">{title}</h3>}
       <div className="relative space-y-12 border-t border-b py-6 md:space-y-6 lg:-mx-8 xl:-mx-16">
         <Separator
           orientation="vertical"

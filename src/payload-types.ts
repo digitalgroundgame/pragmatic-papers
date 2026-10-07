@@ -2612,13 +2612,21 @@ export interface SiteSetting {
 export interface IntegrationSettings {
   id: number;
   /**
-   * Shown in the home page ticker while it's live or about to be.
+   * Shown in the home page ticker while one is live or about to be. When two are live at once, the first listed wins.
    */
   youtube?: {
     /**
-     * From the channel's About page → Share channel → Copy channel ID. Empty uses YOUTUBE_CHANNEL_ID.
+     * Empty uses YOUTUBE_CHANNEL_IDS.
      */
-    channelId?: string | null;
+    channels?:
+      | {
+          /**
+           * From the channel's About page → Share channel → Copy channel ID.
+           */
+          channelId: string;
+          id?: string | null;
+        }[]
+      | null;
   };
   /**
    * Whose posts run in the home page ticker.
@@ -2729,7 +2737,12 @@ export interface IntegrationsSelect<T extends boolean = true> {
   youtube?:
     | T
     | {
-        channelId?: T;
+        channels?:
+          | T
+          | {
+              channelId?: T;
+              id?: T;
+            };
       };
   bluesky?:
     | T

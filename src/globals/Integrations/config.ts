@@ -38,23 +38,38 @@ export const Integrations: GlobalConfig = {
     },
     {
       name: "youtube",
-      label: "Podcast YouTube channel",
+      label: "YouTube channels",
       type: "group",
-      admin: { description: "Shown in the home page ticker while it's live or about to be." },
+      admin: {
+        description:
+          "Shown in the home page ticker while one is live or about to be. When two are live at once, the first listed wins.",
+      },
       fields: [
         {
-          name: "channelId",
-          label: "Channel ID",
-          type: "text",
+          name: "channels",
+          type: "array",
+          labels: { singular: "Channel", plural: "Channels" },
+          // `videos.list` reads at most 50 videos, ten from each channel.
+          maxRows: 5,
           admin: {
-            placeholder: "UC…",
-            description:
-              "From the channel's About page → Share channel → Copy channel ID. Empty uses YOUTUBE_CHANNEL_ID.",
+            description: "Empty uses YOUTUBE_CHANNEL_IDS.",
+            initCollapsed: false,
           },
-          validate: (value: string | null | undefined) =>
-            !value?.trim() ||
-            /^UC[\w-]{22}$/.test(value.trim()) ||
-            "A channel ID starts with UC and is 24 characters long.",
+          fields: [
+            {
+              name: "channelId",
+              label: "Channel ID",
+              type: "text",
+              required: true,
+              admin: {
+                placeholder: "UC…",
+                description: "From the channel's About page → Share channel → Copy channel ID.",
+              },
+              validate: (value: string | null | undefined) =>
+                /^UC[\w-]{22}$/.test(value?.trim() ?? "") ||
+                "A channel ID starts with UC and is 24 characters long.",
+            },
+          ],
         },
       ],
     },

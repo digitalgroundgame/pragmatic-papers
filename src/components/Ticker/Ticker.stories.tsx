@@ -13,7 +13,7 @@ const meta = {
 export default meta
 type Story = StoryObj<typeof meta>
 
-/** The podcast is on air: it's pinned at the start, and the posts scroll past beside it. */
+/** A channel is on air: its broadcast is pinned at the start, and the posts scroll past beside it. */
 export const Live: Story = {
   args: { broadcast: liveBroadcast, posts: tickerPosts },
   play: async ({ canvasElement }) => {

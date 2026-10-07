@@ -1,4 +1,4 @@
-import { blueskyPosts, podcastYouTube, xPosts } from "@/integrations"
+import { blueskyPosts, xPosts, youtubeLive } from "@/integrations"
 import { describeStatus, integrationStatus, type Integration } from "@/integrations"
 
 import { MAX_POSTS, type TickerBroadcast, type TickerPost } from "./items"
@@ -13,7 +13,7 @@ import { MAX_POSTS, type TickerBroadcast, type TickerPost } from "./items"
  * each connection's variable, then its default.
  */
 export interface TickerSettings {
-  youtubeChannelId?: string | null
+  youtubeChannelIds?: string[] | null
   blueskyHandle?: string | null
   xUsername?: string | null
 }
@@ -30,12 +30,13 @@ export interface TickerSource<T> {
 }
 
 export const broadcastSource: TickerSource<TickerBroadcast | null> = {
-  integration: podcastYouTube,
-  // 2 quota units a check: every 2 minutes is ~1,440 of the 10,000 a day.
-  revalidate: 120,
+  integration: youtubeLive,
+  // One quota unit per channel plus one a check: three channels every 5 minutes is ~1,150 of
+  // the key's 10,000 a day, so one key can serve production, staging and the previews.
+  revalidate: 300,
   async load(signal, settings) {
-    const broadcast = await podcastYouTube.currentBroadcast({
-      channelId: settings.youtubeChannelId,
+    const broadcast = await youtubeLive.currentBroadcast({
+      channelIds: settings.youtubeChannelIds,
       signal,
     })
     if (!broadcast) return null

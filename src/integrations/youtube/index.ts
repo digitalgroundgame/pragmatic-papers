@@ -1,6 +1,6 @@
 import { env, type Integration } from "../types"
 
-/** A broadcast on the channel that readers can join now, or soon. */
+/** A broadcast on one of the channels that readers can join now, or soon. */
 export interface YouTubeBroadcast {
   videoId: string
   title: string
@@ -11,40 +11,45 @@ export interface YouTubeBroadcast {
   scheduledStart: string | null
 }
 
-export interface YouTubeChannelIntegration extends Integration {
+export interface YouTubeChannelsIntegration extends Integration {
   /**
-   * The channel's broadcast that is live now, or else the soonest one scheduled to start
-   * within `upcomingWithinHours` (default 24), or null when there is neither. Throws when the
-   * connection has no key or channel, or YouTube refuses the request, with YouTube's own error
-   * message and never the key.
+   * The channel IDs to watch: `channelIds` when it has any (the admin's list), else the
+   * comma-separated channels variable.
+   */
+  channels(channelIds?: readonly string[] | null): string[]
+  /**
+   * A broadcast that is live now on any of the channels (the first channel listed wins when
+   * several are), or else the soonest one scheduled to start within `upcomingWithinHours`
+   * (default 24), or null when there is neither. Throws when the connection has no key or no
+   * channel, or YouTube refuses a request, with YouTube's own error message and never the key.
    */
   currentBroadcast(opts?: {
-    /** The channel to watch, as set in the admin; falls back to the channel variable. */
-    channelId?: string | null
+    /** The channels to watch, as set in the admin; falls back to the channels variable. */
+    channelIds?: readonly string[] | null
     upcomingWithinHours?: number
     fetchImpl?: typeof fetch
     signal?: AbortSignal
   }): Promise<YouTubeBroadcast | null>
 }
 
-export interface YouTubeChannelOptions {
+export interface YouTubeChannelsOptions {
   id: string
   label: string
   /**
-   * Environment variable holding the channel's ID (`UC…`, from its About page → Share), for
-   * when the admin doesn't set one.
+   * Environment variable holding channel IDs (`UC…`, from each About page → Share), comma
+   * separated, for when the admin doesn't list any.
    */
-  channelEnv: string
+  channelsEnv: string
   /**
    * Environment variable holding a YouTube Data API v3 key. A plain API key is enough: every
-   * read here is of public data, so no OAuth and no access to the channel's account.
+   * read here is of public data, so no OAuth and no access to the channels' accounts.
    */
   keyEnv: string
 }
 
 const API = "https://www.googleapis.com/youtube/v3"
 
-/** How many of the channel's newest uploads to look through for a broadcast. */
+/** How many of each channel's newest uploads to look through for a broadcast. */
 const RECENT = 10
 
 interface YouTubeError {
@@ -63,42 +68,54 @@ interface Videos {
   }[]
 }
 
+const list = (ids: readonly string[]): string[] => [
+  ...new Set(ids.map((id) => id.trim()).filter(Boolean)),
+]
+
 /**
- * A connection to one YouTube channel, for knowing when it is live.
+ * A connection to our YouTube channels, for knowing when one of them is live.
  *
- * It costs 2 units of the API's 10,000-a-day quota per call: one to list the channel's newest
- * uploads (a live or scheduled broadcast is one of them), one to read their broadcast status.
- * `search.list` with `eventType=live` answers in one request but costs 100 units, which would
- * spend the day's quota in a hundred checks.
+ * Each check costs one unit of the API's 10,000-a-day quota per channel, to list its newest
+ * uploads (a live or scheduled broadcast is one of them), plus one to read all their broadcast
+ * statuses at once. `search.list` with `eventType=live` answers in one request but costs 100
+ * units a channel, which would spend the day's quota in a hundred checks.
  */
-export function youtubeChannel({
+export function youtubeChannels({
   id,
   label,
-  channelEnv,
+  channelsEnv,
   keyEnv,
-}: YouTubeChannelOptions): YouTubeChannelIntegration {
-  const channelId = (): string | null => env(channelEnv)
+}: YouTubeChannelsOptions): YouTubeChannelsIntegration {
+  const channels = (channelIds?: readonly string[] | null): string[] => {
+    const chosen = list(channelIds ?? [])
+    return chosen.length > 0 ? chosen : list((env(channelsEnv) ?? "").split(","))
+  }
   return {
     id,
     label,
     service: "YouTube",
     describe: () => {
-      const channel = channelId()
-      return channel ? `youtube:channel/${channel}` : "youtube:(channel set in the admin)"
+      const ids = channels()
+      return ids.length > 0
+        ? ids.map((channel) => `youtube:channel/${channel}`).join(", ")
+        : "youtube:(channels set in the admin)"
     },
-    // The channel isn't a secret, so the admin can set it instead; only the key must be here.
+    // Channels aren't secrets, so the admin can list them instead; only the key must be here.
     required: [keyEnv],
-    optional: [channelEnv],
+    optional: [channelsEnv],
+    channels,
     async currentBroadcast({
-      channelId: chosen,
+      channelIds,
       upcomingWithinHours = 24,
       fetchImpl = fetch,
       signal,
     } = {}) {
-      const channel = chosen?.trim() || channelId()
+      const ids = channels(channelIds)
       const key = env(keyEnv)
       if (!key) throw new Error(`YouTube needs ${keyEnv}`)
-      if (!channel) throw new Error(`YouTube needs a channel: set it in the admin or ${channelEnv}`)
+      if (ids.length === 0) {
+        throw new Error(`YouTube needs a channel: list one in the admin or set ${channelsEnv}`)
+      }
 
       const get = async <T>(path: string, params: Record<string, string>): Promise<T> => {
         // The key goes in a header rather than the query string, so it never appears in a
@@ -117,30 +134,40 @@ export function youtubeChannel({
         return body
       }
 
-      // Every channel's uploads playlist is its ID with `UC` swapped for `UU`.
-      const uploads = await get<PlaylistItems>("playlistItems", {
-        part: "contentDetails",
-        playlistId: `UU${channel.slice(2)}`,
-        maxResults: String(RECENT),
-      })
-      const ids = (uploads.items ?? [])
+      // Every channel's uploads playlist is its ID with `UC` swapped for `UU`. Channel order is
+      // kept, so the first channel listed wins when two are live at once.
+      const uploads = await Promise.all(
+        ids.map((channel) =>
+          get<PlaylistItems>("playlistItems", {
+            part: "contentDetails",
+            playlistId: `UU${channel.slice(2)}`,
+            maxResults: String(RECENT),
+          }),
+        ),
+      )
+      const videoIds = uploads
+        .flatMap((playlist) => playlist.items ?? [])
         .map((item) => item.contentDetails?.videoId)
         .filter((videoId): videoId is string => Boolean(videoId))
-      if (ids.length === 0) return null
+        // `videos.list` takes at most 50 IDs: five channels' worth.
+        .slice(0, 50)
+      if (videoIds.length === 0) return null
 
       const videos = await get<Videos>("videos", {
         part: "snippet,liveStreamingDetails",
-        id: ids.join(","),
+        id: videoIds.join(","),
       })
+      const byId = new Map((videos.items ?? []).map((video) => [video.id, video]))
 
-      const broadcasts: YouTubeBroadcast[] = (videos.items ?? []).flatMap((video) => {
-        const status = video.snippet?.liveBroadcastContent
-        if (!video.id || (status !== "live" && status !== "upcoming")) return []
+      const broadcasts: YouTubeBroadcast[] = videoIds.flatMap((videoId) => {
+        const video = byId.get(videoId)
+        const status = video?.snippet?.liveBroadcastContent
+        if (!video || (status !== "live" && status !== "upcoming")) return []
         return [
           {
-            videoId: video.id,
+            videoId,
             title: video.snippet?.title?.trim() || "Live on YouTube",
-            url: `https://www.youtube.com/watch?v=${encodeURIComponent(video.id)}`,
+            url: `https://www.youtube.com/watch?v=${encodeURIComponent(videoId)}`,
             status,
             scheduledStart: video.liveStreamingDetails?.scheduledStartTime ?? null,
           },

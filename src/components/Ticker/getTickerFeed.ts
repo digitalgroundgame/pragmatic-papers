@@ -38,7 +38,7 @@ const posts = postSources.map((source) => cached(source.integration.id, source, 
 export const getTickerFeed = cache(async (): Promise<TickerFeed> => {
   const { youtube, bluesky, x } = await getCachedGlobal("integrations")()
   const settings: TickerSettings = {
-    youtubeChannelId: youtube?.channelId,
+    youtubeChannelIds: youtube?.channels?.map((channel) => channel.channelId),
     blueskyHandle: bluesky?.handle,
     xUsername: x?.username,
   }

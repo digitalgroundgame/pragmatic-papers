@@ -12,13 +12,13 @@ const meta = {
   args: {
     statuses: [
       {
-        id: "youtube-podcast",
-        label: "Podcast YouTube channel",
+        id: "youtube-live",
+        label: "YouTube channels",
         service: "YouTube",
-        target: "youtube:(channel set in the admin)",
+        target: "youtube:(channels set in the admin)",
         configured: false,
         missing: ["YOUTUBE_API_KEY"],
-        unset: ["YOUTUBE_CHANNEL_ID"],
+        unset: ["YOUTUBE_CHANNEL_IDS"],
       },
       {
         id: "bluesky-posts",
@@ -48,7 +48,7 @@ type Story = StoryObj<typeof meta>
 export const Default: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    const youtube = canvas.getByRole("row", { name: /Podcast YouTube channel/ })
+    const youtube = canvas.getByRole("row", { name: /YouTube channels/ })
     await expect(youtube).toHaveTextContent("Not connected")
     await expect(youtube).toHaveTextContent("Required: YOUTUBE_API_KEY")
     await expect(canvas.getByRole("row", { name: /Cloudflare/ })).toHaveTextContent("Nothing")

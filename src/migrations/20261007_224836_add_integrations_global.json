@@ -16022,6 +16022,84 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
+    "public.integrations_youtube_channels": {
+      "name": "integrations_youtube_channels",
+      "schema": "",
+      "columns": {
+        "_order": {
+          "name": "_order",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "_parent_id": {
+          "name": "_parent_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "id": {
+          "name": "id",
+          "type": "varchar",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "channel_id": {
+          "name": "channel_id",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "integrations_youtube_channels_order_idx": {
+          "name": "integrations_youtube_channels_order_idx",
+          "columns": [
+            {
+              "expression": "_order",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "integrations_youtube_channels_parent_id_idx": {
+          "name": "integrations_youtube_channels_parent_id_idx",
+          "columns": [
+            {
+              "expression": "_parent_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "integrations_youtube_channels_parent_id_fk": {
+          "name": "integrations_youtube_channels_parent_id_fk",
+          "tableFrom": "integrations_youtube_channels",
+          "tableTo": "integrations",
+          "columnsFrom": ["_parent_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
     "public.integrations": {
       "name": "integrations",
       "schema": "",
@@ -16031,12 +16109,6 @@
           "type": "serial",
           "primaryKey": true,
           "notNull": true
-        },
-        "youtube_channel_id": {
-          "name": "youtube_channel_id",
-          "type": "varchar",
-          "primaryKey": false,
-          "notNull": false
         },
         "bluesky_handle": {
           "name": "bluesky_handle",
@@ -16525,6 +16597,6 @@
     "tables": {},
     "columns": {}
   },
-  "id": "7084f98e-f289-4fc2-a68d-c46cb5990314",
+  "id": "2937a75f-ef72-445e-81f1-f3d491905702",
   "prevId": "00000000-0000-0000-0000-000000000000"
 }

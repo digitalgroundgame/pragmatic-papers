@@ -95,10 +95,10 @@ Public pages are cached at Cloudflare's edge for 10 minutes, then served stale f
 
 The strip under the header on Home (`src/components/Ticker`), shown when the **Home page ticker** experiment is on in Site Settings. Each source is skipped with a `[ticker] skipping …` log line until it's configured; all are **Runtime Variables**, set in the production, staging **and** preview apps (`dockerfiles/.env.example` lists them).
 
-- `YOUTUBE_API_KEY` — a YouTube Data API v3 key (any Google Cloud project, public reads only). Shows the podcast when it's live or starting within a day. Each check costs 2 of the key's 10,000 free daily quota units, every 2 minutes at most and only while Home is being visited, so one key can serve every app.
+- `YOUTUBE_API_KEY` — a YouTube Data API v3 key (any Google Cloud project, public reads only). Shows a channel's broadcast when it's live or starting within a day. Each check costs one of the key's 10,000 free daily quota units per channel plus one, every 5 minutes at most and only while Home is being visited, so one key can serve every app.
 - Bluesky needs nothing: it reads the public API.
 - `X_BEARER_TOKEN` — an app-only token. Reading posts needs a paid X API plan or pay-per-use credits; it's checked every 30 minutes at most.
-- Which channel and accounts it reads is set in the admin, under **System → Integrations**, which also shows which variables each connection is missing. `YOUTUBE_CHANNEL_ID`, `BLUESKY_HANDLE` and `X_USERNAME` are fallbacks for when it's left empty.
+- Which channels and accounts it reads are set in the admin, under **System → Integrations**, which also shows which variables each connection is missing. `YOUTUBE_CHANNEL_IDS` (comma separated), `BLUESKY_HANDLE` and `X_USERNAME` are fallbacks for when it's left empty.
 
 Readers can see an answer up to 10 minutes late, since Home is edge-cached for that long.
 

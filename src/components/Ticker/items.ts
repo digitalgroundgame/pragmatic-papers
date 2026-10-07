@@ -3,7 +3,7 @@
  * from. Pure, so the view and its stories never touch a connection.
  */
 
-/** The podcast's broadcast: on air now, or scheduled to start soon. */
+/** One of our channels' broadcasts: on air now, or scheduled to start soon. */
 export interface TickerBroadcast {
   status: "live" | "upcoming"
   title: string

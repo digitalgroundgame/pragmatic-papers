@@ -1,12 +1,12 @@
 import { afterEach, describe, expect, it, vi } from "vitest"
 
 import { integrationStatus } from "../../types"
-import { youtubeChannel } from "../index"
+import { youtubeChannels } from "../index"
 
-const channel = youtubeChannel({
+const channel = youtubeChannels({
   id: "youtube-example",
-  label: "Example channel",
-  channelEnv: "EXAMPLE_CHANNEL_ID",
+  label: "Example channels",
+  channelsEnv: "EXAMPLE_CHANNEL_IDS",
   keyEnv: "EXAMPLE_YOUTUBE_KEY",
 })
 
@@ -48,21 +48,21 @@ afterEach(() => {
 })
 
 describe("youtubeChannel", () => {
-  it("needs only the key, since the admin can set the channel", () => {
-    vi.stubEnv("EXAMPLE_CHANNEL_ID", "")
+  it("needs only the key, since the admin can list the channels", () => {
+    vi.stubEnv("EXAMPLE_CHANNEL_IDS", "")
     vi.stubEnv("EXAMPLE_YOUTUBE_KEY", "")
     expect(integrationStatus(channel)).toMatchObject({
       service: "YouTube",
-      target: "youtube:(channel set in the admin)",
+      target: "youtube:(channels set in the admin)",
       configured: false,
       missing: ["EXAMPLE_YOUTUBE_KEY"],
-      unset: ["EXAMPLE_CHANNEL_ID"],
+      unset: ["EXAMPLE_CHANNEL_IDS"],
     })
   })
 
   describe("currentBroadcast", () => {
     const configure = (): void => {
-      vi.stubEnv("EXAMPLE_CHANNEL_ID", "UCabc123")
+      vi.stubEnv("EXAMPLE_CHANNEL_IDS", "UCabc123")
       vi.stubEnv("EXAMPLE_YOUTUBE_KEY", "secret-key")
       vi.useFakeTimers({ now: NOW, toFake: ["Date"] })
     }
@@ -150,16 +150,53 @@ describe("youtubeChannel", () => {
       expect((error as Error).message).not.toContain("secret-key")
     })
 
-    it("prefers the channel set in the admin over the variable", async () => {
+    it("prefers the channels listed in the admin over the variable", async () => {
       configure()
       const fetchImpl = youtube([])
-      await channel.currentBroadcast({ channelId: " UCfromAdmin ", fetchImpl })
+      await channel.currentBroadcast({
+        channelIds: [" UCfromAdmin ", "", "UCfromAdmin"],
+        fetchImpl,
+      })
+      expect(fetchImpl).toHaveBeenCalledTimes(1)
       const uploadsUrl = new URL(String(fetchImpl.mock.calls[0]![0]))
       expect(uploadsUrl.searchParams.get("playlistId")).toBe("UUfromAdmin")
     })
 
+    it("reads a comma-separated list from the variable", () => {
+      vi.stubEnv("EXAMPLE_CHANNEL_IDS", "UCone, UCtwo,")
+      expect(channel.channels()).toEqual(["UCone", "UCtwo"])
+      expect(channel.channels([])).toEqual(["UCone", "UCtwo"])
+      expect(channel.channels(["UCadmin"])).toEqual(["UCadmin"])
+    })
+
+    it("watches every channel, reading all their statuses in one request", async () => {
+      configure()
+      const uploads: Record<string, string[]> = { UUone: ["a1", "a2"], UUtwo: ["b1"] }
+      const fetchImpl = vi.fn<typeof fetch>(async (input) => {
+        const url = new URL(String(input))
+        if (url.pathname.endsWith("/playlistItems")) {
+          const ids = uploads[url.searchParams.get("playlistId")!] ?? []
+          return reply({ items: ids.map((videoId) => ({ contentDetails: { videoId } })) })
+        }
+        return reply({
+          items: [
+            { id: "a1", snippet: { title: "a1", liveBroadcastContent: "none" } },
+            { id: "a2", snippet: { title: "a2", liveBroadcastContent: "none" } },
+            { id: "b1", snippet: { title: "Second channel, live", liveBroadcastContent: "live" } },
+          ],
+        })
+      })
+      const broadcast = await channel.currentBroadcast({
+        channelIds: ["UCone", "UCtwo"],
+        fetchImpl,
+      })
+      expect(broadcast).toMatchObject({ videoId: "b1", status: "live" })
+      expect(fetchImpl).toHaveBeenCalledTimes(3)
+      expect(new URL(String(fetchImpl.mock.calls[2]![0])).searchParams.get("id")).toBe("a1,a2,b1")
+    })
+
     it("refuses to call YouTube without a key or a channel", async () => {
-      vi.stubEnv("EXAMPLE_CHANNEL_ID", "")
+      vi.stubEnv("EXAMPLE_CHANNEL_IDS", "")
       vi.stubEnv("EXAMPLE_YOUTUBE_KEY", "")
       const fetchImpl = vi.fn<typeof fetch>()
       await expect(channel.currentBroadcast({ fetchImpl })).rejects.toThrow(
@@ -167,7 +204,7 @@ describe("youtubeChannel", () => {
       )
       vi.stubEnv("EXAMPLE_YOUTUBE_KEY", "secret-key")
       await expect(channel.currentBroadcast({ fetchImpl })).rejects.toThrow(
-        "YouTube needs a channel: set it in the admin or EXAMPLE_CHANNEL_ID",
+        "YouTube needs a channel: list one in the admin or set EXAMPLE_CHANNEL_IDS",
       )
       expect(fetchImpl).not.toHaveBeenCalled()
     })

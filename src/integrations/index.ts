@@ -3,7 +3,7 @@ import { cloudflareZone } from "./cloudflare"
 import { githubRepo } from "./github"
 import { shopifyStore } from "./shopify"
 import { xAccount } from "./x"
-import { youtubeChannel } from "./youtube"
+import { youtubeChannels } from "./youtube"
 import { integrationStatus, type Integration, type IntegrationStatus } from "./types"
 
 /**
@@ -44,14 +44,14 @@ export const cloudflareCache = cloudflareZone({
 })
 
 /**
- * The podcast's YouTube channel, which the home page ticker watches for a live or upcoming
- * broadcast. A plain Data API key from any Google Cloud project with "YouTube Data API v3"
- * enabled; it reads public data only.
+ * Our YouTube channels, which the home page ticker watches for a live or upcoming broadcast.
+ * A plain Data API key from any Google Cloud project with "YouTube Data API v3" enabled; it
+ * reads public data only.
  */
-export const podcastYouTube = youtubeChannel({
-  id: "youtube-podcast",
-  label: "Podcast YouTube channel",
-  channelEnv: "YOUTUBE_CHANNEL_ID",
+export const youtubeLive = youtubeChannels({
+  id: "youtube-live",
+  label: "YouTube channels",
+  channelsEnv: "YOUTUBE_CHANNEL_IDS",
   keyEnv: "YOUTUBE_API_KEY",
 })
 
@@ -80,7 +80,7 @@ export const INTEGRATIONS: readonly Integration[] = [
   courtTracker,
   shopifyStore,
   cloudflareCache,
-  podcastYouTube,
+  youtubeLive,
   blueskyPosts,
   xPosts,
 ]

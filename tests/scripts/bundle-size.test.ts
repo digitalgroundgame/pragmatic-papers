@@ -5,14 +5,14 @@ import { gzipSync } from "node:zlib"
 
 import { afterEach, beforeEach, describe, expect, it, type MockInstance, vi } from "vitest"
 
-import type * as PrComment from "../../scripts/pr-comment"
+import type * as PrReport from "../../scripts/pr-report"
 
-vi.mock("../../scripts/pr-comment", async (importOriginal) => ({
-  ...(await importOriginal<typeof PrComment>()),
-  upsertPrComment: vi.fn(),
+vi.mock("../../scripts/pr-report", async (importOriginal) => ({
+  ...(await importOriginal<typeof PrReport>()),
+  postPrReportSection: vi.fn(),
 }))
 
-import { upsertPrComment } from "../../scripts/pr-comment"
+import { postPrReportSection } from "../../scripts/pr-report"
 
 import {
   formatDelta,
@@ -21,6 +21,7 @@ import {
   measureRoutes,
   readClientManifest,
   renderReport,
+  renderSummary,
   routeFromManifestPath,
   type RouteSize,
 } from "../../scripts/bundle-size"
@@ -222,6 +223,30 @@ describe("renderReport", () => {
   })
 })
 
+describe("renderSummary", () => {
+  it("leads with the routes that jumped", () => {
+    expect(
+      renderSummary({
+        routes: [route("/", 130), route("/search", 120)],
+        base: [route("/", 100), route("/search", 100)],
+      }),
+    ).toBe("⚠ 2 routes grew by more than 10 kB")
+  })
+
+  it("counts the routes that changed, or says nothing did", () => {
+    expect(renderSummary({ routes: [route("/", 104)], base: [route("/", 100)] })).toBe(
+      "1 route changed size, none by more than 10 kB",
+    )
+    expect(renderSummary({ routes: [route("/", 100)], base: [route("/", 100)] })).toBe("no change")
+  })
+
+  it("says when there's no measurement from dev", () => {
+    expect(renderSummary({ routes: [route("/", 100)], base: null })).toBe(
+      "no measurement from dev to compare with yet",
+    )
+  })
+})
+
 describe("main", () => {
   const cwd = process.cwd()
   let dir: string
@@ -258,7 +283,7 @@ describe("main", () => {
     rmSync(dir, { recursive: true, force: true })
     vi.unstubAllEnvs()
     vi.restoreAllMocks()
-    vi.mocked(upsertPrComment).mockReset()
+    vi.mocked(postPrReportSection).mockReset()
   })
 
   it("fails without a build to measure", async () => {
@@ -317,13 +342,13 @@ describe("main", () => {
     vi.stubEnv("GITHUB_REPOSITORY", "owner/repo")
     vi.stubEnv("GITHUB_TOKEN", "t0ken")
     vi.stubEnv("PR_NUMBER", "7")
-    vi.mocked(upsertPrComment).mockRejectedValueOnce(new Error("GitHub API 403"))
+    vi.mocked(postPrReportSection).mockRejectedValueOnce(new Error("GitHub API 403"))
 
     expect(await main([])).toBe(0)
-    expect(upsertPrComment).toHaveBeenCalledWith(
+    expect(postPrReportSection).toHaveBeenCalledWith(
       { repo: "owner/repo", prNumber: 7, token: "t0ken" },
       "bundle-size",
-      expect.stringContaining("## Bundle size"),
+      expect.stringContaining("<details><summary><strong>Bundle size</strong>: no measurement"),
     )
     expect(warn.mock.calls.some(([line]) => String(line).includes("GitHub API 403"))).toBe(true)
   })

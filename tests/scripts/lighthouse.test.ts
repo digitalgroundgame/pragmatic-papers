@@ -9,6 +9,7 @@ import {
   regressed,
   regressions,
   renderReport,
+  renderSummary,
   type PageResult,
   type Samples,
   type Summary,
@@ -187,6 +188,29 @@ describe("renderReport", () => {
   it("states the CPU calibration", () => {
     expect(renderReport(summary([page()]))).toContain(
       "CPU 4.2× slower, from a benchmark index of 2100",
+    )
+  })
+})
+
+describe("renderSummary", () => {
+  it("names the regressions, with the home page's score", () => {
+    expect(renderSummary(summary([page({ lcp: [3000, 3100, 3200] })]))).toBe(
+      "⚠️ 1 page is much slower than on dev, Home scores 90",
+    )
+  })
+
+  it("says when nothing regressed, or there was nothing to compare with", () => {
+    expect(renderSummary(summary([page()]))).toBe(
+      "no page is much slower than on dev, Home scores 90",
+    )
+    expect(renderSummary(summary([page({}, null)]))).toBe(
+      "no results from dev to compare with yet, Home scores 90",
+    )
+  })
+
+  it("leaves the score out when the home page wasn't measured", () => {
+    expect(renderSummary(summary([{ ...page(), path: "/volumes/1" }]))).toBe(
+      "no page is much slower than on dev",
     )
   })
 })

@@ -222,6 +222,7 @@ export interface Config {
     footer: Footer;
     'article-recommendations': ArticleRecommendation;
     'site-settings': SiteSetting;
+    integrations: IntegrationSettings;
     'payload-jobs-stats': PayloadJobsStat;
   };
   globalsSelect: {
@@ -229,6 +230,7 @@ export interface Config {
     footer: FooterSelect<false> | FooterSelect<true>;
     'article-recommendations': ArticleRecommendationsSelect<false> | ArticleRecommendationsSelect<true>;
     'site-settings': SiteSettingsSelect<false> | SiteSettingsSelect<true>;
+    integrations: IntegrationsSelect<false> | IntegrationsSelect<true>;
     'payload-jobs-stats': PayloadJobsStatsSelect<false> | PayloadJobsStatsSelect<true>;
   };
   locale: null;
@@ -2602,6 +2604,44 @@ export interface SiteSetting {
   createdAt?: string | null;
 }
 /**
+ * Each environment keeps its own settings. Keys and tokens are set in the hosting environment, never here.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "integrations".
+ */
+export interface IntegrationSettings {
+  id: number;
+  /**
+   * Shown in the home page ticker while it's live or about to be.
+   */
+  youtube?: {
+    /**
+     * From the channel's About page → Share channel → Copy channel ID. Empty uses YOUTUBE_CHANNEL_ID.
+     */
+    channelId?: string | null;
+  };
+  /**
+   * Whose posts run in the home page ticker.
+   */
+  bluesky?: {
+    /**
+     * Empty uses BLUESKY_HANDLE, or thepragmaticpapers.bsky.social.
+     */
+    handle?: string | null;
+  };
+  /**
+   * Whose posts run in the home page ticker.
+   */
+  x?: {
+    /**
+     * Empty uses X_USERNAME, or PragPapers.
+     */
+    username?: string | null;
+  };
+  updatedAt?: string | null;
+  createdAt?: string | null;
+}
+/**
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload-jobs-stats".
  */
@@ -2676,6 +2716,30 @@ export interface SiteSettingsSelect<T extends boolean = true> {
         interactives?: T;
         ticker?: T;
         tableOfContents?: T;
+      };
+  updatedAt?: T;
+  createdAt?: T;
+  globalType?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "integrations_select".
+ */
+export interface IntegrationsSelect<T extends boolean = true> {
+  youtube?:
+    | T
+    | {
+        channelId?: T;
+      };
+  bluesky?:
+    | T
+    | {
+        handle?: T;
+      };
+  x?:
+    | T
+    | {
+        username?: T;
       };
   updatedAt?: T;
   createdAt?: T;

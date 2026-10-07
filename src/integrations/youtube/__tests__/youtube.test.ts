@@ -48,14 +48,15 @@ afterEach(() => {
 })
 
 describe("youtubeChannel", () => {
-  it("names both variables when unconfigured, never a value", () => {
+  it("needs only the key, since the admin can set the channel", () => {
     vi.stubEnv("EXAMPLE_CHANNEL_ID", "")
     vi.stubEnv("EXAMPLE_YOUTUBE_KEY", "")
     expect(integrationStatus(channel)).toMatchObject({
       service: "YouTube",
-      target: "youtube:(no channel configured)",
+      target: "youtube:(channel set in the admin)",
       configured: false,
-      missing: ["EXAMPLE_CHANNEL_ID", "EXAMPLE_YOUTUBE_KEY"],
+      missing: ["EXAMPLE_YOUTUBE_KEY"],
+      unset: ["EXAMPLE_CHANNEL_ID"],
     })
   })
 
@@ -149,12 +150,24 @@ describe("youtubeChannel", () => {
       expect((error as Error).message).not.toContain("secret-key")
     })
 
-    it("refuses to call YouTube when unconfigured", async () => {
+    it("prefers the channel set in the admin over the variable", async () => {
+      configure()
+      const fetchImpl = youtube([])
+      await channel.currentBroadcast({ channelId: " UCfromAdmin ", fetchImpl })
+      const uploadsUrl = new URL(String(fetchImpl.mock.calls[0]![0]))
+      expect(uploadsUrl.searchParams.get("playlistId")).toBe("UUfromAdmin")
+    })
+
+    it("refuses to call YouTube without a key or a channel", async () => {
       vi.stubEnv("EXAMPLE_CHANNEL_ID", "")
       vi.stubEnv("EXAMPLE_YOUTUBE_KEY", "")
       const fetchImpl = vi.fn<typeof fetch>()
       await expect(channel.currentBroadcast({ fetchImpl })).rejects.toThrow(
-        "YouTube needs EXAMPLE_CHANNEL_ID and EXAMPLE_YOUTUBE_KEY",
+        "YouTube needs EXAMPLE_YOUTUBE_KEY",
+      )
+      vi.stubEnv("EXAMPLE_YOUTUBE_KEY", "secret-key")
+      await expect(channel.currentBroadcast({ fetchImpl })).rejects.toThrow(
+        "YouTube needs a channel: set it in the admin or EXAMPLE_CHANNEL_ID",
       )
       expect(fetchImpl).not.toHaveBeenCalled()
     })

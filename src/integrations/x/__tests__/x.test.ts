@@ -64,6 +64,16 @@ describe("xAccount", () => {
     ])
   })
 
+  it("reads the username set in the admin over the variable", async () => {
+    vi.stubEnv("EXAMPLE_X_TOKEN", "secret-token")
+    vi.stubEnv("EXAMPLE_X_USERNAME", "FromEnv")
+    const fetchImpl = x({ meta: { result_count: 0 } })
+    await account.recentPosts({ username: "@FromAdmin", fetchImpl })
+    expect(String(fetchImpl.mock.calls[0]![0])).toBe(
+      "https://api.x.com/2/users/by/username/FromAdmin",
+    )
+  })
+
   it("reads an account with no posts as an empty list", async () => {
     vi.stubEnv("EXAMPLE_X_TOKEN", "secret-token")
     expect(await account.recentPosts({ fetchImpl: x({ meta: { result_count: 0 } }) })).toEqual([])

@@ -18,6 +18,8 @@ export interface XAccountIntegration extends Integration {
    * token.
    */
   recentPosts(opts?: {
+    /** The account to read, as set in the admin; falls back to the username variable. */
+    username?: string | null
     limit?: number
     fetchImpl?: typeof fetch
     signal?: AbortSignal
@@ -66,10 +68,10 @@ export function xAccount({
     required: [tokenEnv],
     optional: [usernameEnv],
     username,
-    async recentPosts({ limit = 5, fetchImpl = fetch, signal } = {}) {
+    async recentPosts({ username: chosen, limit = 5, fetchImpl = fetch, signal } = {}) {
       const token = env(tokenEnv)
       if (!token) throw new Error(`X needs ${tokenEnv}`)
-      const name = username()
+      const name = chosen?.trim().replace(/^@/, "") || username()
 
       const get = async <T>(
         path: string,

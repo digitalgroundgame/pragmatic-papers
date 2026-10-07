@@ -18,6 +18,8 @@ export interface BlueskyAccountIntegration extends Integration {
    * reposts. Throws when Bluesky refuses the request.
    */
   recentPosts(opts?: {
+    /** The account to read, as set in the admin; falls back to the handle variable. */
+    handle?: string | null
     limit?: number
     fetchImpl?: typeof fetch
     signal?: AbortSignal
@@ -66,8 +68,8 @@ export function blueskyAccount({
     required: [],
     optional: [handleEnv],
     handle,
-    async recentPosts({ limit = 5, fetchImpl = fetch, signal } = {}) {
-      const actor = handle()
+    async recentPosts({ handle: chosen, limit = 5, fetchImpl = fetch, signal } = {}) {
+      const actor = chosen?.trim().replace(/^@/, "") || handle()
       const params = new URLSearchParams({
         actor,
         filter: "posts_no_replies",

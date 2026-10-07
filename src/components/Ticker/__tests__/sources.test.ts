@@ -36,6 +36,14 @@ describe("loadSource", () => {
     ).toEqual(["a"])
   })
 
+  it("passes the admin's settings to the source", async () => {
+    const load = vi.fn(async () => ["a"])
+    await loadSource(source([], load), [], { blueskyHandle: "admin.bsky.social" })
+    expect(load).toHaveBeenCalledWith(expect.any(AbortSignal), {
+      blueskyHandle: "admin.bsky.social",
+    })
+  })
+
   it("skips an unconfigured source without calling it, naming what to set", async () => {
     vi.stubEnv("TEST_SOURCE_TOKEN", "")
     const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined)

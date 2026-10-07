@@ -14,6 +14,7 @@ import { Webhooks } from "@/collections/Webhooks"
 import { defaultLexical } from "@/fields/defaultLexical"
 import { Footer } from "@/Footer/config"
 import { ArticleRecommendations } from "@/globals/ArticleRecommendations/config"
+import { Integrations } from "@/globals/Integrations/config"
 import { SiteSettings } from "@/globals/SiteSettings/config"
 import { Header } from "@/Header/config"
 import { canRunJobs } from "@/jobs/access"
@@ -153,7 +154,7 @@ export default buildConfig({
     InteractiveSnapshots,
   ],
   cors: [getServerSideURL()].filter(Boolean),
-  globals: [Header, Footer, ArticleRecommendations, SiteSettings],
+  globals: [Header, Footer, ArticleRecommendations, SiteSettings, Integrations],
   plugins: [...plugins],
   secret: process.env.PAYLOAD_SECRET,
   sharp: sharp as unknown as SharpDependency,

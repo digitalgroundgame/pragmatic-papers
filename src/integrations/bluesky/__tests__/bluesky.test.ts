@@ -68,6 +68,14 @@ describe("blueskyAccount", () => {
     ])
   })
 
+  it("reads the handle set in the admin over the variable", async () => {
+    vi.stubEnv("EXAMPLE_BLUESKY_HANDLE", "env.bsky.social")
+    const fetchImpl = vi.fn<typeof fetch>(async () => reply({ feed: [] }))
+    await account.recentPosts({ handle: "@admin.bsky.social", fetchImpl })
+    const url = new URL(String(fetchImpl.mock.calls[0]![0]))
+    expect(url.searchParams.get("actor")).toBe("admin.bsky.social")
+  })
+
   it("keeps at most `limit` posts", async () => {
     const fetchImpl = vi.fn<typeof fetch>(async () =>
       reply({ feed: [post("a", "one"), post("b", "two"), post("c", "three")] }),

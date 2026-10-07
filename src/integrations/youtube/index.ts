@@ -15,10 +15,12 @@ export interface YouTubeChannelIntegration extends Integration {
   /**
    * The channel's broadcast that is live now, or else the soonest one scheduled to start
    * within `upcomingWithinHours` (default 24), or null when there is neither. Throws when the
-   * connection is not configured or YouTube refuses the request, with YouTube's own error
+   * connection has no key or channel, or YouTube refuses the request, with YouTube's own error
    * message and never the key.
    */
   currentBroadcast(opts?: {
+    /** The channel to watch, as set in the admin; falls back to the channel variable. */
+    channelId?: string | null
     upcomingWithinHours?: number
     fetchImpl?: typeof fetch
     signal?: AbortSignal
@@ -28,7 +30,10 @@ export interface YouTubeChannelIntegration extends Integration {
 export interface YouTubeChannelOptions {
   id: string
   label: string
-  /** Environment variable holding the channel's ID (`UC…`, from its About page → Share). */
+  /**
+   * Environment variable holding the channel's ID (`UC…`, from its About page → Share), for
+   * when the admin doesn't set one.
+   */
   channelEnv: string
   /**
    * Environment variable holding a YouTube Data API v3 key. A plain API key is enough: every
@@ -79,15 +84,21 @@ export function youtubeChannel({
     service: "YouTube",
     describe: () => {
       const channel = channelId()
-      return channel ? `youtube:channel/${channel}` : "youtube:(no channel configured)"
+      return channel ? `youtube:channel/${channel}` : "youtube:(channel set in the admin)"
     },
-    required: [channelEnv, keyEnv],
-    async currentBroadcast({ upcomingWithinHours = 24, fetchImpl = fetch, signal } = {}) {
-      const channel = channelId()
+    // The channel isn't a secret, so the admin can set it instead; only the key must be here.
+    required: [keyEnv],
+    optional: [channelEnv],
+    async currentBroadcast({
+      channelId: chosen,
+      upcomingWithinHours = 24,
+      fetchImpl = fetch,
+      signal,
+    } = {}) {
+      const channel = chosen?.trim() || channelId()
       const key = env(keyEnv)
-      if (!channel || !key) {
-        throw new Error(`YouTube needs ${[channelEnv, keyEnv].join(" and ")}`)
-      }
+      if (!key) throw new Error(`YouTube needs ${keyEnv}`)
+      if (!channel) throw new Error(`YouTube needs a channel: set it in the admin or ${channelEnv}`)
 
       const get = async <T>(path: string, params: Record<string, string>): Promise<T> => {
         // The key goes in a header rather than the query string, so it never appears in a

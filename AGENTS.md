@@ -211,6 +211,12 @@ brought across — Listmonk, Google, the rest.
   skips with `describeStatus()` when it is not, rather than reading
   `process.env` itself.
 
+- Settings that aren't secrets (a channel, an account handle) can live in the
+  admin's **Integrations** global (`src/globals/Integrations/config.ts`): the
+  feature reads the global and passes the value to the connection's method,
+  which falls back to its variable. The global's status table lists every
+  connection in `INTEGRATIONS` and the variables it's missing.
+
 Adding one: declare the connection in `src/integrations/index.ts`, put its
 client under `src/integrations/<service>/`, and have the feature import it.
 Progress and the open questions live on issue #912.

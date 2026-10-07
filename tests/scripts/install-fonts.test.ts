@@ -3,7 +3,9 @@ import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node
 import { tmpdir } from "node:os"
 import { dirname, resolve } from "node:path"
 import { fileURLToPath } from "node:url"
-import { afterEach, beforeEach, describe, expect, it } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
+
+import { displayFontText, subsetDisplayFont } from "../../scripts/install-fonts"
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const SCRIPT = resolve(__dirname, "../../scripts/install-fonts.ts")
@@ -226,5 +228,61 @@ describe("install-fonts.ts", () => {
       const result = runScript(tmpRoot)
       expect(result.stderr).not.toContain("already installed")
     })
+  })
+})
+
+// In-process, unlike the runs above, so coverage sees the subsetting code.
+describe("displayFontText", () => {
+  const text = displayFontText()
+
+  it("keeps English text, punctuation and symbols headings use", () => {
+    for (const char of ["A", "z", "0", "&", "’", "“", "—", "…", "€", "™", "−"]) {
+      expect(text).toContain(char)
+    }
+  })
+
+  it("keeps the accented letters of European names", () => {
+    for (const char of ["é", "ñ", "ü", "ğ", "ł", "ő", "ș", "ț"]) expect(text).toContain(char)
+  })
+
+  it("drops what headings don't need", () => {
+    for (const char of ["Ạ", "ǅ", "Ж", "α"]) expect(text).not.toContain(char)
+  })
+})
+
+describe("subsetDisplayFont", () => {
+  let dir: string
+  let font: string
+
+  beforeEach(() => {
+    dir = resolve(tmpdir(), `subset-font-test-${Date.now()}-${Math.random().toString(36).slice(2)}`)
+    mkdirSync(dir, { recursive: true })
+    font = resolve(dir, "FKScreamer-Bold.woff2")
+    vi.spyOn(console, "warn").mockImplementation(() => undefined)
+  })
+
+  afterEach(() => {
+    vi.restoreAllMocks()
+    rmSync(dir, { recursive: true, force: true })
+  })
+
+  it("rewrites a font in place as a smaller WOFF2", async () => {
+    writeFileSync(font, INTER_BOLD)
+    await subsetDisplayFont(font)
+    const subset = readFileSync(font)
+    expect(subset.subarray(0, 4).toString("latin1")).toBe("wOF2")
+    expect(subset.byteLength).toBeLessThan(INTER_BOLD.byteLength)
+    expect(console.warn).toHaveBeenCalledWith(
+      expect.stringMatching(/Subset FKScreamer-Bold\.woff2: [\d.]+ kB → [\d.]+ kB/),
+    )
+  })
+
+  it("leaves a font it can't parse untouched, and warns", async () => {
+    writeFileSync(font, "not-a-font")
+    await subsetDisplayFont(font)
+    expect(readFileSync(font, "utf8")).toBe("not-a-font")
+    expect(console.warn).toHaveBeenCalledWith(
+      expect.stringContaining("Could not subset FKScreamer, shipping it whole"),
+    )
   })
 })

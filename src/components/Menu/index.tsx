@@ -19,7 +19,7 @@ const menuVariants = cva("flex", {
   },
 })
 
-const menuItemVariants = cva("text-primary", {
+const menuItemVariants = cva("text-foreground", {
   defaultVariants: {
     layout: "responsive",
   },

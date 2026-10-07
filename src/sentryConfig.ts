@@ -47,3 +47,13 @@ export function sentryConfigFromDocument(root: HTMLElement): SentryRuntimeConfig
     pr: sentryPr || undefined,
   }
 }
+
+/**
+ * The share of the browser's page loads traced, which is also the share whose web vitals
+ * reach Sentry. None in the admin panel: editors keep it open for hours while lists and
+ * forms load and resize, and its page loads were counted among the CMS pages' (`/:slug`)
+ * layout shift, where only readers' pages belong. Its errors are still reported.
+ */
+export function tracesSampleRateFor(pathname: string): number {
+  return pathname === "/admin" || pathname.startsWith("/admin/") ? 0 : 0.1
+}

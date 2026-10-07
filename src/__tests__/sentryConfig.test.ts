@@ -4,6 +4,7 @@ import {
   sentryConfigFromDocument,
   sentryHtmlAttributes,
   sentryRuntimeConfig,
+  tracesSampleRateFor,
 } from "../sentryConfig"
 
 beforeEach(() => {
@@ -92,5 +93,22 @@ describe("sentryHtmlAttributes and sentryConfigFromDocument", () => {
       environment: "development",
       pr: undefined,
     })
+  })
+})
+
+describe("tracesSampleRateFor", () => {
+  it("traces a tenth of readers' page loads", () => {
+    expect(tracesSampleRateFor("/")).toBe(0.1)
+    expect(tracesSampleRateFor("/about")).toBe(0.1)
+    expect(tracesSampleRateFor("/articles/some-article")).toBe(0.1)
+  })
+
+  it("traces none of the admin panel", () => {
+    expect(tracesSampleRateFor("/admin")).toBe(0)
+    expect(tracesSampleRateFor("/admin/collections/articles")).toBe(0)
+  })
+
+  it("still traces a CMS page whose slug only starts with admin", () => {
+    expect(tracesSampleRateFor("/administration")).toBe(0.1)
   })
 })

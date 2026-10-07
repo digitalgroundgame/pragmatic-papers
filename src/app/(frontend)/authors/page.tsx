@@ -4,6 +4,7 @@ import { PageRange } from "@/components/PageRange"
 import { Pagination } from "@/components/Pagination"
 import { Skeleton } from "@/components/ui/skeleton"
 import type { UsersSelect } from "@/payload-types"
+import { paginatedPath } from "@/utilities/generateMeta"
 import { getServerSideURL } from "@/utilities/getURL"
 import { mergeOpenGraph } from "@/utilities/mergeOpenGraph"
 import { AUTHOR_ROLES } from "@/access/roles"
@@ -14,14 +15,20 @@ import { getPayload } from "payload"
 import React, { cache, Suspense } from "react"
 import { Breadcrumbs } from "@/components/Breadcrumbs"
 
-export const metadata: Metadata = {
-  title: "Authors — Pragmatic Papers",
-  description: "Discover all Pragmatic Papers authors and explore their published work.",
-  openGraph: mergeOpenGraph({
+export async function generateMetadata({ searchParams }: Args): Promise<Metadata> {
+  const { p } = await searchParams
+  const canonicalUrl = `${getServerSideURL()}${paginatedPath("/authors", p)}`
+
+  return {
     title: "Authors — Pragmatic Papers",
     description: "Discover all Pragmatic Papers authors and explore their published work.",
-    url: `${getServerSideURL()}/authors`,
-  }),
+    alternates: { canonical: canonicalUrl },
+    openGraph: mergeOpenGraph({
+      title: "Authors — Pragmatic Papers",
+      description: "Discover all Pragmatic Papers authors and explore their published work.",
+      url: canonicalUrl,
+    }),
+  }
 }
 
 const AUTHORS_PER_PAGE = 5

@@ -13,6 +13,7 @@ import type { Article as ArticleType, Volume } from "@/payload-types"
 import { getInitials } from "@/utilities/getInitials"
 import { isResolved } from "@/utilities/relationships"
 import { getMediaUrl } from "@/utilities/getMediaUrl"
+import { paginatedPath } from "@/utilities/generateMeta"
 import { getServerSideURL } from "@/utilities/getURL"
 import { mergeOpenGraph } from "@/utilities/mergeOpenGraph"
 import { queryUserBySlug, queryVolumesForArticles } from "@/utilities/queries"
@@ -57,8 +58,9 @@ const queryArticlesByAuthor = cache(async (userId: number, page: number = 1) => 
   })
 })
 
-export async function generateMetadata({ params }: Args): Promise<Metadata> {
+export async function generateMetadata({ params, searchParams }: Args): Promise<Metadata> {
   const { slug } = await params
+  const { p } = await searchParams
   const user = await queryUserBySlug(slug)
 
   const name = user?.name || "Author"
@@ -74,7 +76,7 @@ export async function generateMetadata({ params }: Args): Promise<Metadata> {
       : undefined
 
   const serverUrl = getServerSideURL()
-  const canonicalUrl = `${serverUrl}/authors/${slug}`
+  const canonicalUrl = `${serverUrl}${paginatedPath(`/authors/${slug}`, p)}`
 
   return {
     title,

@@ -10,7 +10,7 @@ import { RenderBlocks } from "@/blocks/RenderBlocks"
 import { JsonLd } from "@/components/JsonLd"
 import { LivePreviewListener } from "@/components/LivePreviewListener"
 import { RenderHero } from "@/heros/RenderHero"
-import { generateMeta } from "@/utilities/generateMeta"
+import { generateMeta, paginatedPath } from "@/utilities/generateMeta"
 import { getCachedGlobal } from "@/utilities/getGlobals"
 import { buildBreadcrumbJsonLd, buildHomeJsonLd } from "@/utilities/structuredData"
 import { Breadcrumbs, type Crumb } from "@/components/Breadcrumbs"
@@ -19,11 +19,15 @@ import { Breadcrumbs, type Crumb } from "@/components/Breadcrumbs"
 // also why there's no generateStaticParams: a prerendered slug would never be served.
 export const dynamic = "force-dynamic"
 
-export async function generateMetadata({ params: paramsPromise }: Args): Promise<Metadata> {
+export async function generateMetadata({
+  params: paramsPromise,
+  searchParams,
+}: Args): Promise<Metadata> {
   const { slug = "home" } = await paramsPromise
+  const { p } = await searchParams
   const page = await queryPageBySlug(slug)
 
-  const canonicalPath = slug === "home" ? "/" : `/${slug}`
+  const canonicalPath = paginatedPath(slug === "home" ? "/" : `/${slug}`, p)
   return generateMeta({ doc: page, canonicalPath })
 }
 

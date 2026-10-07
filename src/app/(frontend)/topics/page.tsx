@@ -1,6 +1,7 @@
 import { LivePreviewListener } from "@/components/LivePreviewListener"
 import { Pagination } from "@/components/Pagination"
 import { TopicsList } from "@/components/Topics/TopicsList"
+import { paginatedPath } from "@/utilities/generateMeta"
 import { getServerSideURL } from "@/utilities/getURL"
 import { mergeOpenGraph } from "@/utilities/mergeOpenGraph"
 import config from "@payload-config"
@@ -10,14 +11,20 @@ import { getPayload } from "payload"
 import React, { cache } from "react"
 import { Breadcrumbs } from "@/components/Breadcrumbs"
 
-export const metadata: Metadata = {
-  title: "Topics | The Pragmatic Papers",
-  description: "Browse all topics on Pragmatic Papers.",
-  openGraph: mergeOpenGraph({
+export async function generateMetadata({ searchParams }: Args): Promise<Metadata> {
+  const { p } = await searchParams
+  const canonicalUrl = `${getServerSideURL()}${paginatedPath("/topics", p)}`
+
+  return {
     title: "Topics | The Pragmatic Papers",
     description: "Browse all topics on Pragmatic Papers.",
-    url: `${getServerSideURL()}/topics`,
-  }),
+    alternates: { canonical: canonicalUrl },
+    openGraph: mergeOpenGraph({
+      title: "Topics | The Pragmatic Papers",
+      description: "Browse all topics on Pragmatic Papers.",
+      url: canonicalUrl,
+    }),
+  }
 }
 
 const TOPICS_PER_PAGE = 50

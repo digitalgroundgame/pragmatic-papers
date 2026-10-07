@@ -29,10 +29,13 @@ type Story = StoryObj<typeof meta>
 export const Default: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    await expect(
-      canvas.getByRole("heading", { level: 3, name: "Get every volume in your inbox" }),
-    ).toBeInTheDocument()
-    await expect(canvas.getByText(/One email a week/)).toBeInTheDocument()
+    const heading = canvas.getByRole("heading", {
+      level: 3,
+      name: "Get every volume in your inbox",
+    })
+    // The card is always dark, so its text stays white in light mode too.
+    await expect(heading).toHaveStyle({ color: "rgb(255, 255, 255)" })
+    await expect(canvas.getByText(/One email a week/)).toHaveStyle({ color: "rgb(255, 255, 255)" })
     const link = canvas.getByRole("link", { name: "Subscribe" })
     await expect(link).toHaveAttribute("href", "/newsletter")
   },

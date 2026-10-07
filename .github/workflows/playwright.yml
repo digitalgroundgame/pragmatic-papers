@@ -283,41 +283,50 @@ jobs:
       # determinism_failed only for a gate failure, not the benign
       # "wrote a missing baseline" failure, so legitimate new baselines still
       # commit.
+      # On a PR the checkout is GitHub's merge commit, and committing on top
+      # of it would also merge the base branch into the PR. So only the added
+      # baselines are committed, onto the PR's own head, through a separate
+      # index that leaves this checkout as it was tested.
       - name: Commit new snapshot baselines
         id: commit
         if: ${{ !cancelled() && github.event_name != 'merge_group' && steps.e2e.outputs.determinism_failed != 'true' }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PARENT_SHA: ${{ github.event.pull_request.head.sha || steps.tested.outputs.sha }}
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add tests/e2e/__screenshots__
-          if git diff --cached --quiet; then
+          added=$(git diff --cached --name-only --diff-filter=A)
+          if [ -z "$added" ]; then
             echo "No new baselines to commit."
             echo "committed=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          git commit -m "test: add missing e2e snapshot baselines"
-          git push origin "HEAD:${GITHUB_HEAD_REF:-$GITHUB_REF_NAME}"
+          export GIT_INDEX_FILE="$RUNNER_TEMP/baselines.index"
+          git read-tree "$PARENT_SHA"
+          echo "$added" | git update-index --add --stdin
+          sha=$(git commit-tree "$(git write-tree)" -p "$PARENT_SHA" -m "test: add missing e2e snapshot baselines")
+          git push origin "$sha:refs/heads/${GITHUB_HEAD_REF:-$GITHUB_REF_NAME}"
           echo "committed=true" >> "$GITHUB_OUTPUT"
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
 
       # Pushes made with GITHUB_TOKEN start runs that wait for a maintainer's
       # approval, so the new commit would otherwise sit with no results. Writing
       # a missing baseline fails its test, so the step above always fails when
       # there's something to commit; the wrapper says when those writes were
       # its only failures. Then "E2E tests" is reported as passing on the new
-      # commit, and the other checks are copied from the tested commit with
-      # their real results (scripts/snapshot-commit-checks.ts). After a real
-      # failure nothing is reported, and the approved runs decide. On a PR the
-      # tested commit is GitHub's merge commit, which has no checks of its own:
-      # they're reported on the PR's head, so that's where they're copied from.
+      # commit, and the other checks are copied from its parent with their
+      # real results (scripts/snapshot-commit-checks.ts). After a real failure
+      # nothing is reported, and the approved runs decide.
       - name: Report CI checks on snapshot commit
         if: ${{ !cancelled() && steps.commit.outputs.committed == 'true' && steps.e2e.outputs.only_new_baselines_failed == 'true' }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PARENT_SHA: ${{ github.event.pull_request.head.sha || steps.tested.outputs.sha }}
+          HEAD_SHA: ${{ steps.commit.outputs.sha }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-        run: HEAD_SHA=$(git rev-parse HEAD) node scripts/snapshot-commit-checks.ts
+        run: node scripts/snapshot-commit-checks.ts
 
       - name: Post visual regression comment
         if: ${{ failure() && github.event_name == 'pull_request' }}
@@ -370,16 +379,17 @@ jobs:
           PR_NUMBER: ${{ github.event.pull_request.number }}
           BASE_REF: ${{ github.event.pull_request.base.ref }}
           DELETE_WHEN_EMPTY: "true"
+          # The baseline commit the earlier step pushed, when it pushed one:
+          # this checkout stays on the tested commit, so HEAD doesn't have the
+          # new baselines and github.event.pull_request.head.sha predates them.
+          BASELINE_SHA: ${{ steps.commit.outputs.sha }}
         run: |
-          # Use the actual current HEAD, not github.event.pull_request.head.sha —
-          # if the earlier commit step pushed a new baseline commit, that event
-          # context still points at the pre-commit sha and would upload assets
-          # under the wrong (nonexistent-on-branch) path.
-          ASSET_DIR="$PR_NUMBER/$(git rev-parse HEAD)"
+          head=${BASELINE_SHA:-$(git rev-parse HEAD)}
+          ASSET_DIR="$PR_NUMBER/$head"
           export ASSET_DIR
           git fetch --no-tags --depth=1 origin "$BASE_REF"
           git diff --name-only --diff-filter=AM \
-            "origin/$BASE_REF...HEAD" -- '**/__screenshots__/**/*.png' \
+            "origin/$BASE_REF...$head" -- '**/__screenshots__/**/*.png' \
             | pnpm exec tsx scripts/pr-screenshot-comment.ts
 
   # The client JavaScript and CSS each public page loads, read from the image's

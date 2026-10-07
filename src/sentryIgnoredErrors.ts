@@ -20,3 +20,16 @@ export const sentryIgnoredErrors: RegExp[] = [
   // injected scripts, and an Event carries no URL or stack to act on.
   /^(?:Event: )?Event `Event` \(type=error\) captured as (?:promise rejection|exception)$/,
 ]
+
+/**
+ * Server errors Sentry drops before sending. Same rules as the browser list: Sentry tests
+ * each pattern against the message and its `Type: value`, and keep them narrow.
+ */
+export const sentryIgnoredServerErrors: RegExp[] = [
+  // A tab opened before a deploy calls router.refresh() (live preview, the admin bar's
+  // preview exit) with a route tree the new build's schema rejects. Next answers the RSC
+  // request with a 500, and the client router reloads the page in full when an RSC
+  // request fails, so the editor still gets the fresh page. Remove this once Next stops
+  // throwing here: https://github.com/vercel/next.js/pull/92933
+  /^(?:Error: )?The router state header was sent but could not be parsed\.$/,
+]

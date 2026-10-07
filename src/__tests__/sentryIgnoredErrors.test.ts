@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 
-import { sentryIgnoredErrors } from "../sentryIgnoredErrors"
+import { sentryIgnoredErrors, sentryIgnoredServerErrors } from "../sentryIgnoredErrors"
 
 const ignored = (message: string) => sentryIgnoredErrors.some((pattern) => pattern.test(message))
 
@@ -26,5 +26,25 @@ describe("sentryIgnoredErrors", () => {
     "Event `Event` (type=abort) captured as promise rejection",
   ])("keeps %j", (message) => {
     expect(ignored(message)).toBe(false)
+  })
+})
+
+describe("sentryIgnoredServerErrors", () => {
+  const ignoredOnServer = (message: string) =>
+    sentryIgnoredServerErrors.some((pattern) => pattern.test(message))
+
+  it.each([
+    "The router state header was sent but could not be parsed.",
+    "Error: The router state header was sent but could not be parsed.",
+  ])("drops %j", (message) => {
+    expect(ignoredOnServer(message)).toBe(true)
+  })
+
+  it.each([
+    "The router state header was too large.",
+    "Multiple router state headers were sent. This is not allowed.",
+    "TypeError: The router state header was sent but could not be parsed.",
+  ])("keeps %j", (message) => {
+    expect(ignoredOnServer(message)).toBe(false)
   })
 })

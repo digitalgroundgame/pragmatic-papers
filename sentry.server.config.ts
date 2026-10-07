@@ -5,6 +5,7 @@
 import * as Sentry from "@sentry/nextjs"
 
 import { sentryRuntimeConfig } from "./src/sentryConfig"
+import { sentryIgnoredServerErrors } from "./src/sentryIgnoredErrors"
 
 // Read when the server starts: PR previews report `preview`, tagged with their PR number.
 const { dsn, environment, pr } = sentryRuntimeConfig()
@@ -23,6 +24,8 @@ Sentry.init({
     databaseQueryData: false,
     stackFrameVariables: false,
   },
+
+  ignoreErrors: sentryIgnoredServerErrors,
 
   integrations: [
     // Payload's error-level log lines as issues: the errors it catches and answers with

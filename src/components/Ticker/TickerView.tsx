@@ -104,10 +104,10 @@ function Broadcast({
       )}
     >
       {live ? (
-        <span className="bg-brand-high-contrast text-background flex shrink-0 items-center gap-1.5 rounded-full px-2 py-0.5 font-sans text-xs font-bold tracking-wider uppercase">
+        <span className={cn(LABEL, "flex items-center gap-1.5")}>
           <span
             aria-hidden="true"
-            className="bg-background size-1.5 animate-pulse rounded-full motion-reduce:animate-none"
+            className="bg-brand-high-contrast size-2 animate-pulse rounded-full motion-reduce:animate-none"
           />
           Live
         </span>

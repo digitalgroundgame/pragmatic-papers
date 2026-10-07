@@ -146,6 +146,18 @@ describe("snapshot-federal-courts", () => {
       })
       expect(readJson("geometry/anchors.json")).toMatchObject({ mad: [247, 136] })
     })
+
+    it("keeps every anchor already placed and takes upstream's only for a court without one", async () => {
+      mkdirSync(path.join(profile, "geometry"), { recursive: true })
+      writeFileSync(
+        path.join(profile, "geometry", "anchors.json"),
+        JSON.stringify({ ca1: [7, 8], gud: [1, 2] }),
+      )
+      await run(["geometry", "--source", source()], {}, profile)
+      expect(readFileSync(path.join(profile, "geometry", "anchors.json"), "utf8")).toBe(
+        '{"ca1":[7,8],"gud":[1,2],"mad":[1235,679],"scotus":[20000,-250]}',
+      )
+    })
   })
 
   describe("data", () => {

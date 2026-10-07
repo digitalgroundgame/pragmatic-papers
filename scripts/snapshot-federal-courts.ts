@@ -106,29 +106,43 @@ const scalePoint = (at: readonly number[], by: number): [number, number] => [
 ]
 
 /**
- * Where each court's seat block is drawn, taken once from upstream's `seat_blocks.json` and
- * checked in beside the geometry it is measured against.
+ * Where each court's seat block is drawn: ours, checked in beside the geometry it is measured
+ * against, and seeded from upstream's `seat_blocks.json` only for a court that has none yet.
  *
  * Upstream tiers `anchor` as renderer-specific — hand-placed for their own map, free to move
  * without notice — and placement is ours to own anyway. Reading it from the feed daily meant
- * a nudge to their layout silently moved ours; taken here, it moves when the geometry it
- * belongs to moves, in a diff someone reviews. Upstream's are in the export's units, so each is
- * divided by the step of the map it is drawn on.
+ * a nudge to their layout silently moved ours. Ours are placed by hand with the layout tools,
+ * so a re-snapshot keeps every one already in `anchors.json`; to take upstream's again, delete
+ * that court's entry first. Upstream's are in the export's units, so each new one is divided by
+ * the step of the map it is drawn on.
  */
 function snapshotAnchors(source: string, outDir: string, maps: Maps): void {
   const blocks = JSON.parse(
     readFileSync(path.join(source, "data", "seat_blocks.json"), "utf8"),
   ) as Record<string, { anchor: [number, number] | null }>
+  const file = path.join(outDir, "anchors.json")
+  let ours: Record<string, [number, number]> = {}
+  try {
+    ours = JSON.parse(readFileSync(file, "utf8")) as Record<string, [number, number]>
+  } catch {
+    // No anchors yet: every one comes from upstream.
+  }
   const mapOf = anchorMap(maps)
   const anchors: Record<string, [number, number]> = {}
-  for (const id of Object.keys(blocks).sort()) {
-    const anchor = blocks[id]?.anchor
-    if (anchor) anchors[id] = scalePoint(anchor, maps[mapOf(id)]?.step ?? 1)
+  let added = 0
+  for (const id of [...new Set([...Object.keys(ours), ...Object.keys(blocks)])].sort()) {
+    const kept = ours[id]
+    const theirs = blocks[id]?.anchor
+    if (kept) anchors[id] = kept
+    else if (theirs) {
+      anchors[id] = scalePoint(theirs, maps[mapOf(id)]?.step ?? 1)
+      added += 1
+    }
   }
   const json = JSON.stringify(anchors)
-  writeFileSync(path.join(outDir, "anchors.json"), json)
+  writeFileSync(file, json)
   console.warn(
-    `anchors.json${" ".repeat(11)}${kb(json).padStart(8)} · ${Object.keys(anchors).length} blocks`,
+    `anchors.json${" ".repeat(11)}${kb(json).padStart(8)} · ${Object.keys(anchors).length} blocks · ${added} new from upstream`,
   )
 }
 

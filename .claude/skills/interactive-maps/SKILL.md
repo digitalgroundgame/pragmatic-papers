@@ -329,7 +329,9 @@ largest 1-2-5 step that moves no vertex a device pixel at the stage's deepest
 zoom) and records it in the JSON. No vertex is dropped, so morph pairs survive.
 `offsets.json` and `anchors.json` are in each map's **file** units, not the
 export's. A re-snapshot keeps the step a checked-in file already has, so the
-offsets measured against it still apply. The engine reads each asset's `step`
+offsets measured against it still apply, and keeps every anchor already in
+`anchors.json` (ours, placed with the layout tools), adding upstream's only for a
+court that has none. The engine reads each asset's `step`
 during a morph to put the overview and the child back on one scale.
 
 ### Validate before snapshotting

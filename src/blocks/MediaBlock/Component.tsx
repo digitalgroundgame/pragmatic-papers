@@ -103,7 +103,7 @@ export const MediaBlockImage: React.FC<MediaBlockImageProps> = ({
   variant = "medium",
 }) => (
   <Media
-    className={cn("border", imgClassName)}
+    className={cn("mx-auto border", imgClassName)}
     style={imgStyle}
     media={media}
     sizes={sizes || "(max-width: 768px) 100vw, 800px"}

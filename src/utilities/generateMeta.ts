@@ -6,6 +6,13 @@ import { getMediaUrl } from "./getMediaUrl"
 import { getServerSideURL } from "./getURL"
 import { DEFAULT_DESCRIPTION, mergeOpenGraph } from "./mergeOpenGraph"
 
+// A listing paginated with `?p=` is a different page from its first one, so each page names
+// itself as canonical. Pointing page 2 at page 1 would tell Google to drop what's only on page 2.
+export const paginatedPath = (path: string, p: string | undefined): string => {
+  const page = Number(p)
+  return Number.isInteger(page) && page > 1 ? `${path}?p=${page}` : path
+}
+
 export const generateMeta = async (args: {
   doc:
     | Partial<Page>
@@ -14,7 +21,7 @@ export const generateMeta = async (args: {
     | Partial<Topic>
     | Partial<Interactive>
     | null
-  canonicalPath?: string
+  canonicalPath: string
 }): Promise<Metadata> => {
   const { doc, canonicalPath } = args
   const ogImage =

@@ -1,5 +1,6 @@
 import { revalidateRedirects } from "@/hooks/revalidateRedirects"
-import type { Article, Page, Topic, Volume } from "@/payload-types"
+import type { Article, Interactive, Page, Topic, Volume } from "@/payload-types"
+import { collectionPrefixMap } from "@/utilities/generatePreviewPath"
 import { getServerSideURL } from "@/utilities/getURL"
 import { DEFAULT_DESCRIPTION } from "@/utilities/mergeOpenGraph"
 import { toRoman } from "@/utilities/toRoman"
@@ -16,9 +17,11 @@ import {
 } from "@payloadcms/plugin-seo/types"
 import { FixedToolbarFeature, HeadingFeature, lexicalEditor } from "@payloadcms/richtext-lexical"
 import { s3Storage } from "@payloadcms/storage-s3"
-import { type Payload, type Plugin } from "payload"
+import { type CollectionSlug, type Payload, type Plugin } from "payload"
 
-function isVolume(obj: Volume | Article | Page | Topic): obj is Volume {
+type SeoDoc = Volume | Article | Page | Topic | Interactive
+
+function isVolume(obj: SeoDoc): obj is Volume {
   return (obj as Volume).volumeNumber !== undefined
 }
 
@@ -35,7 +38,7 @@ function lexicalToPlainText(node: LexicalTextNode | undefined | null): string {
   return node.children.map(lexicalToPlainText).join(" ")
 }
 
-export const generateTitle: GenerateTitle<Volume | Article | Page | Topic> = ({ doc }) => {
+export const generateTitle: GenerateTitle<SeoDoc> = ({ doc }) => {
   if (isVolume(doc)) {
     return doc?.volumeNumber
       ? `Volume ${toRoman(doc.volumeNumber)} | The Pragmatic Papers`
@@ -46,14 +49,36 @@ export const generateTitle: GenerateTitle<Volume | Article | Page | Topic> = ({ 
   return "The Pragmatic Papers"
 }
 
-export const generateDescription: GenerateDescription<Volume | Article | Page | Topic> = ({
-  doc,
-}) => ("description" in doc && doc.description) || DEFAULT_DESCRIPTION
+const DESCRIPTION_LENGTH = 160
 
-const generateURL: GenerateURL<Volume | Article | Page | Topic> = ({ doc }) => {
+/** Cuts `text` to a meta description's length at a word boundary. */
+function truncateDescription(text: string): string {
+  if (text.length <= DESCRIPTION_LENGTH) return text
+  const cut = text.slice(0, DESCRIPTION_LENGTH - 1)
+  const lastSpace = cut.lastIndexOf(" ")
+  return `${(lastSpace > 0 ? cut.slice(0, lastSpace) : cut).replace(/[\s.,;:]+$/, "")}…`
+}
+
+export const generateDescription: GenerateDescription<SeoDoc> = ({ doc }) => {
+  if ("description" in doc && doc.description) return doc.description
+  // Interactives have no description field; their standfirst says what the page is.
+  if ("intro" in doc && doc.intro) {
+    const intro = lexicalToPlainText(doc.intro.root as LexicalTextNode)
+      .replace(/\s+/g, " ")
+      .trim()
+    if (intro) return truncateDescription(intro)
+  }
+  return DEFAULT_DESCRIPTION
+}
+
+export const generateURL: GenerateURL<SeoDoc> = ({ collectionConfig, doc }) => {
   const url = getServerSideURL()
+  if (!doc?.slug) return url
 
-  return doc?.slug ? `${url}/${doc.slug}` : url
+  const collection = collectionConfig?.slug
+  if (collection === "pages" && doc.slug === "home") return url
+  const prefix = (collection && collectionPrefixMap[collection as CollectionSlug]) ?? ""
+  return `${url}${prefix}/${doc.slug}`
 }
 
 /**
@@ -143,7 +168,7 @@ const beforeSync: BeforeSync = async ({ originalDoc, payload, searchDoc }) => {
 // https://github.com/payloadcms/payload/issues/18311
 const seo: Plugin = async (config) => ({
   ...(await seoPlugin({
-    collections: ["articles", "pages", "volumes", "topics"],
+    collections: ["articles", "pages", "volumes", "topics", "interactives"],
     generateTitle,
     generateDescription,
     generateURL,

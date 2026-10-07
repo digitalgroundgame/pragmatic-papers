@@ -10,7 +10,7 @@ import { RenderBlocks } from "@/blocks/RenderBlocks"
 import { JsonLd } from "@/components/JsonLd"
 import { LivePreviewListener } from "@/components/LivePreviewListener"
 import { RenderHero } from "@/heros/RenderHero"
-import { generateMeta } from "@/utilities/generateMeta"
+import { generateMeta, paginatedPath } from "@/utilities/generateMeta"
 import { getCachedGlobal } from "@/utilities/getGlobals"
 import { buildBreadcrumbJsonLd, buildHomeJsonLd } from "@/utilities/structuredData"
 import { Breadcrumbs, type Crumb } from "@/components/Breadcrumbs"
@@ -20,11 +20,18 @@ import { Ticker } from "@/components/Ticker"
 // also why there's no generateStaticParams: a prerendered slug would never be served.
 export const dynamic = "force-dynamic"
 
-export async function generateMetadata({ params: paramsPromise }: Args): Promise<Metadata> {
+export async function generateMetadata({
+  params: paramsPromise,
+  searchParams,
+}: Args): Promise<Metadata> {
   const { slug = "home" } = await paramsPromise
+  const { p } = await searchParams
   const page = await queryPageBySlug(slug)
 
-  const canonicalPath = slug === "home" ? "/" : `/${slug}`
+  const path = slug === "home" ? "/" : `/${slug}`
+  // Only a page with a volume list is paginated; anywhere else `?p=` changes nothing.
+  const paginated = page?.layout?.some((block) => block.blockType === "volumeView")
+  const canonicalPath = paginated ? paginatedPath(path, p) : path
   return generateMeta({ doc: page, canonicalPath })
 }
 

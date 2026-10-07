@@ -27,9 +27,12 @@ const PERIODICAL_ID = `${SERVER_URL}/#periodical`
 
 export type JsonLdData = Thing
 
+// Absolute, because a crawler resolves nothing against the page: with local
+// storage, Payload's media URLs are paths like /api/media/file/x.jpg.
 function getImageUrl(media: Media | number | null | undefined): string | undefined {
   if (!isResolved(media)) return undefined
-  return getMediaUrl(media.sizes?.og?.url || media.url) || undefined
+  const url = getMediaUrl(media.sizes?.og?.url || media.url)
+  return url ? new URL(url, SERVER_URL).href : undefined
 }
 
 export function buildArticleJsonLd(

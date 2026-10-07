@@ -1,7 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite"
 import { expect, mocked, within } from "storybook/test"
 
-import { knownContrastIssue } from "@/stories/a11y"
 import { volumes } from "@/stories/fixtures/docs"
 import { createFakePayload } from "@/stories/fixtures/payload"
 import { createHeadingNode, createParagraph, richText } from "@/stories/fixtures/richText"
@@ -12,7 +11,7 @@ import { VolumeViewBlock } from "./component"
 const meta = {
   title: "Blocks/VolumeView",
   component: VolumeViewBlock,
-  parameters: { layout: "fullscreen", ...knownContrastIssue },
+  parameters: { layout: "fullscreen" },
   args: {
     id: "volumes",
     blockType: "volumeView",

@@ -74,7 +74,8 @@ describe("loadSentry", () => {
         dsn: "https://key@o1.ingest.sentry.io/2",
         environment: "staging",
         initialScope: { tags: { pr: "1141" } },
-        tracesSampleRate: 0.1,
+        tracesSampler: expect.any(Function),
+        tunnel: "/monitoring",
       }),
     )
   })

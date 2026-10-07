@@ -1,4 +1,5 @@
 import {
+  ARTICLE_IMAGE_ALT,
   EXTRA_AUTHORS,
   FOUR_AUTHOR_SLUG,
   LIGHTBOX_IMAGE_ALT,
@@ -35,28 +36,31 @@ import config from "@payload-config"
 import { readFile } from "node:fs/promises"
 import path from "node:path"
 import { getPayload } from "payload"
+import sharp from "sharp"
 import type { Payload } from "payload"
 
 const ctx = { disableRevalidate: true }
 
-// Create a media doc from a file already committed to the repo. The rest of the
-// e2e seed deliberately ships no media (hero images resolve to null), but the
-// merch carousel screenshot needs something to render — so we upload one local
-// PNG and point every seeded product at it. Reading from disk keeps the seed
-// deterministic and network-free, unlike `createMediaFromURL`; synced products
-// carry a cdn.shopify.com URL, which no offline test run could fetch.
+// Create a media doc from one of Storybook's fixture images
+// (.storybook/assets), so the e2e site and the stories show the same mocked
+// content. They're SVGs, which Payload stores as-is without generating sizes,
+// so each is rasterized to a PNG first: the site gets the webp sizes and the
+// og JPEG a real upload would. Reading from disk keeps the seed deterministic
+// and network-free, unlike `createMediaFromURL`; synced products carry a
+// cdn.shopify.com URL, which no offline test run could fetch.
 async function createLocalMedia(
   payload: Payload,
-  repoRelativePath: string,
+  storybookAsset: "landscape.svg" | "portrait.svg" | "square.svg" | "wide.svg",
   alt: string,
 ): Promise<number> {
-  const data = await readFile(path.join(process.cwd(), repoRelativePath))
+  const svg = await readFile(path.join(process.cwd(), ".storybook/assets", storybookAsset))
+  const data = await sharp(svg).png().toBuffer()
   const media = await payload.create({
     collection: "media",
     context: ctx,
     data: { alt },
     file: {
-      name: `e2e-${path.basename(repoRelativePath)}`,
+      name: `e2e-${path.basename(storybookAsset, ".svg")}.png`,
       data,
       mimetype: "image/png",
       size: data.byteLength,
@@ -123,6 +127,23 @@ async function pinRevisionStamps(payload: Payload): Promise<void> {
   const { drizzle } = payload.db as unknown as PostgresAdapter
   await drizzle.execute(sql`UPDATE articles SET updated_at = ${SEEDED_UPDATED_AT}`)
   await drizzle.execute(sql`UPDATE volumes SET updated_at = ${SEEDED_UPDATED_AT}`)
+}
+
+/**
+ * Give every seeded article a hero and an SEO image, as every real article has
+ * both: the hero tops the article page, the SEO image is the card image on
+ * listings, and structured-data.spec.ts requires an `image` on each Article's
+ * JSON-LD.
+ *
+ * Straight to the columns, like `pinRevisionStamps`: the feature seeds take
+ * their media as a list they index into, and setting it through Payload
+ * afterwards would re-save every article.
+ */
+async function setArticleImages(payload: Payload, mediaId: number): Promise<void> {
+  const { drizzle } = payload.db as unknown as PostgresAdapter
+  await drizzle.execute(
+    sql`UPDATE articles SET hero_image_id = ${mediaId}, meta_image_id = ${mediaId}`,
+  )
 }
 
 // Co-authors for the four-author article. Deliberately plain compared with the e2e
@@ -297,11 +318,7 @@ export async function main(): Promise<void> {
     await createCodeBlocksArticle(payload, [writer], [], [topic.id], ctx)
 
     // One media block, which an article renders as a lightbox trigger.
-    const lightboxImage = await createLocalMedia(
-      payload,
-      "public/android-chrome-512x512.png",
-      LIGHTBOX_IMAGE_ALT,
-    )
+    const lightboxImage = await createLocalMedia(payload, "portrait.svg", LIGHTBOX_IMAGE_ALT)
     await createArticle(
       payload,
       {
@@ -348,11 +365,7 @@ export async function main(): Promise<void> {
 
     // One reused product image for the full-width Merch carousel below. See
     // createLocalMedia for why the e2e seed uploads a local file here.
-    const merchImage = await createLocalMedia(
-      payload,
-      "public/android-chrome-512x512.png",
-      "Pragmatic Papers merchandise",
-    )
+    const merchImage = await createLocalMedia(payload, "square.svg", "Pragmatic Papers merchandise")
 
     // The catalogue merch.spec.ts exercises. Titles, prices, and the sold-out
     // badge match what the block used to carry inline, so the visual baseline
@@ -590,6 +603,10 @@ export async function main(): Promise<void> {
       },
     })
 
+    await setArticleImages(
+      payload,
+      await createLocalMedia(payload, "landscape.svg", ARTICLE_IMAGE_ALT),
+    )
     await pinRevisionStamps(payload)
 
     console.warn(`✔ E2E seed complete: article="rich-text-showcase", volume="1"`)

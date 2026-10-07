@@ -1,6 +1,6 @@
 // The Cloudflare Worker CI's "Deploy Storybook" job publishes to
 // (.storybook/wrangler.jsonc): `dev` deploys to its main address, and each PR
-// uploads a version under a `pr-<number>` preview alias.
+// is a Worker Preview named `pr-<number>`.
 const WORKER = "pragmatic-papers-storybook"
 const SUBDOMAIN = "digital-ground-game.workers.dev"
 

@@ -12,9 +12,13 @@ import {
 const target = { repo: "owner/repo", prNumber: 42, token: "t0ken" }
 const API = "https://api.github.com/repos/owner/repo"
 
-/** A PR's comments, served through a mocked `fetch` the way GitHub's REST API does. */
-function fakeGitHub(initial: { id: number; body: string }[] = []) {
+/**
+ * A PR's comments, served through a mocked `fetch` the way GitHub's REST API does. CI's
+ * token writes as a bot; a comment marked `person` was written by someone.
+ */
+function fakeGitHub(initial: { id: number; body: string; person?: boolean }[] = []) {
   const comments = new Map(initial.map((comment) => [comment.id, comment.body]))
+  const people = new Set(initial.filter((comment) => comment.person).map(({ id }) => id))
   let nextId = Math.max(0, ...comments.keys()) + 1
   const json = (body: unknown, status = 200) =>
     ({
@@ -29,7 +33,11 @@ function fakeGitHub(initial: { id: number; body: string }[] = []) {
     const list = /\/issues\/42\/comments\?per_page=100&page=(\d+)$/.exec(url)
     if (list && method === "GET") {
       const page = Number(list[1])
-      const all = [...comments].map(([id, body]) => ({ id, body }))
+      const all = [...comments].map(([id, body]) => ({
+        id,
+        body,
+        user: { type: people.has(id) ? "User" : "Bot" },
+      }))
       return json(all.slice((page - 1) * 100, page * 100))
     }
     if (url === `${API}/issues/42/comments` && method === "POST") {
@@ -140,7 +148,7 @@ describe("withSection", () => {
 
 describe("postPrReportSection", () => {
   it("creates the report comment when the PR has none", async () => {
-    const comments = fakeGitHub([{ id: 1, body: "a person's comment" }])
+    const comments = fakeGitHub([{ id: 1, body: "a person's comment", person: true }])
 
     await postPrReportSection(target, "bundle-size", "BS", { sleep: noWait })
 
@@ -168,7 +176,11 @@ describe("postPrReportSection", () => {
   })
 
   it("finds the comment past the first page of a long thread", async () => {
-    const people = Array.from({ length: 120 }, (_, i) => ({ id: i + 1, body: `comment ${i}` }))
+    const people = Array.from({ length: 120 }, (_, i) => ({
+      id: i + 1,
+      body: `comment ${i}`,
+      person: true,
+    }))
     const comments = fakeGitHub([
       ...people,
       { id: 500, body: withSection(undefined, "lighthouse", "x") },
@@ -189,6 +201,16 @@ describe("postPrReportSection", () => {
     await postPrReportSection(target, "bundle-size", "BS", { sleep: noWait })
 
     expect([...comments.keys()]).toEqual([2, 3])
+  })
+
+  it("leaves alone a person's comment that quotes a marker", async () => {
+    const review = `Checked that \`<!-- bundle-size -->\` and \`${REPORT_MARKER}\` aren't read elsewhere.`
+    const comments = fakeGitHub([{ id: 1, body: review, person: true }])
+
+    await postPrReportSection(target, "bundle-size", "BS", { sleep: noWait })
+
+    expect(comments.get(1)).toBe(review)
+    expect(readSections(comments.get(2))).toEqual(new Map([["bundle-size", "BS"]]))
   })
 
   it("writes its section again when another job's write dropped it", async () => {

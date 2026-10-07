@@ -41,7 +41,15 @@ const ATTEMPTS = 4
 interface Comment {
   id: number
   body?: string
+  user?: { type?: string } | null
 }
+
+/**
+ * Whether CI wrote this comment, opening with `marker`. Only those are ours to edit or
+ * delete: a person quoting a marker in a comment (a review, say) must keep their comment.
+ */
+const postedByCI = (comment: Comment, marker: string) =>
+  comment.user?.type === "Bot" && (comment.body ?? "").trimStart().startsWith(marker)
 
 /** The PR a GitHub Actions run belongs to, or null outside a pull_request run. */
 export function prCommentTarget(env: NodeJS.ProcessEnv = process.env): PrCommentTarget | null {
@@ -152,13 +160,11 @@ export async function postPrReportSection(
   }
   /** The oldest comment carrying the marker: the one every job writes to. */
   const canonical = (comments: Comment[]) =>
-    comments
-      .filter((comment) => comment.body?.includes(REPORT_MARKER))
-      .sort((a, z) => a.id - z.id)[0]
+    comments.filter((comment) => postedByCI(comment, REPORT_MARKER)).sort((a, z) => a.id - z.id)[0]
 
   let comments = await listComments()
   for (const comment of comments) {
-    if (!staleMarkers.some((marker) => comment.body?.includes(marker))) continue
+    if (!staleMarkers.some((marker) => postedByCI(comment, marker))) continue
     try {
       await api(`/issues/comments/${comment.id}`, { method: "DELETE" })
     } catch (err) {

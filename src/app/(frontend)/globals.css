@@ -13,7 +13,18 @@
  * it is in FKScreamer, a condensed face; ascent/descent put the text where FKScreamer
  * puts it (1010 and 200 of 1100 units, divided by size-adjust). Measured against
  * FKScreamer 2.0.3 in Chromium on a sample of headings: widths within ±4%.
+ * `fantasy` isn't used: it's a different font in every browser and can't be resized.
  */
+/* Impact (Windows and macOS) is heavy and narrow like FKScreamer, so it's the closest look. */
+@font-face {
+  font-family: "FKScreamer Fallback Impact";
+  src: local("Impact");
+  font-weight: 700;
+  size-adjust: 71%;
+  ascent-override: 129.3%;
+  descent-override: 25.6%;
+  line-gap-override: 0%;
+}
 @font-face {
   font-family: "FKScreamer Fallback Arial";
   src: local("Arial"), local("ArialMT"), local("Liberation Sans"), local("Arimo");

@@ -8,9 +8,14 @@ const FKScreamer = localFont({
   display: "swap",
   // Next's own fallback is Arial alone, which Android doesn't have, so phones there
   // laid headings out in an unmatched font and reflowed when FKScreamer arrived. These
-  // faces (globals.css) cover Arial and Roboto, sized to FKScreamer's widths.
+  // faces (globals.css) cover Impact, Arial and Roboto, sized to FKScreamer's widths.
   adjustFontFallback: false,
-  fallback: ["FKScreamer Fallback Arial", "FKScreamer Fallback Roboto", "sans-serif"],
+  fallback: [
+    "FKScreamer Fallback Impact",
+    "FKScreamer Fallback Arial",
+    "FKScreamer Fallback Roboto",
+    "sans-serif",
+  ],
   variable: "--font-display",
 })
 

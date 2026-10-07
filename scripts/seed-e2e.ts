@@ -5,6 +5,7 @@ import {
   LIGHTBOX_SLUG,
   NARRATION_SECONDS,
   SEEDED_UPDATED_AT,
+  SEO_IMAGE_ALT,
   TOPIC_NAME,
   TOPIC_SLUG,
   VOLUME_SLUG,
@@ -123,6 +124,21 @@ async function pinRevisionStamps(payload: Payload): Promise<void> {
   const { drizzle } = payload.db as unknown as PostgresAdapter
   await drizzle.execute(sql`UPDATE articles SET updated_at = ${SEEDED_UPDATED_AT}`)
   await drizzle.execute(sql`UPDATE volumes SET updated_at = ${SEEDED_UPDATED_AT}`)
+}
+
+/**
+ * Give every seeded article an SEO image, as every real article has one: it's
+ * the card image on listings and the `image` structured-data.spec.ts requires
+ * of each Article's JSON-LD. Only `meta.image`, never the hero, so no article
+ * page's top changes.
+ *
+ * Straight to the column, like `pinRevisionStamps`: the feature seeds take one
+ * media list for both the hero and the SEO image, and setting it through
+ * Payload afterwards would re-save every article.
+ */
+async function setSeoImages(payload: Payload, mediaId: number): Promise<void> {
+  const { drizzle } = payload.db as unknown as PostgresAdapter
+  await drizzle.execute(sql`UPDATE articles SET meta_image_id = ${mediaId}`)
 }
 
 // Co-authors for the four-author article. Deliberately plain compared with the e2e
@@ -590,6 +606,10 @@ export async function main(): Promise<void> {
       },
     })
 
+    await setSeoImages(
+      payload,
+      await createLocalMedia(payload, "public/android-chrome-512x512.png", SEO_IMAGE_ALT),
+    )
     await pinRevisionStamps(payload)
 
     console.warn(`✔ E2E seed complete: article="rich-text-showcase", volume="1"`)

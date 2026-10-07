@@ -103,7 +103,7 @@ function findEmptyValues(value: Json, path: string, problems: string[]): void {
   }
 }
 
-type Rule = (node: JsonNode, problems: string[], notes: string[]) => void
+type Rule = (node: JsonNode, problems: string[]) => void
 
 function requireName(node: JsonNode, problems: string[]): void {
   if (!isNonEmptyString(node.name)) problems.push(`${label(node)} has no name`)
@@ -119,7 +119,7 @@ function requireUrl(node: JsonNode, problems: string[]): void {
  * A type with no rule fails, so a new builder gets one.
  */
 const RULES: Record<string, Rule> = {
-  Article(node, problems, notes) {
+  Article(node, problems) {
     // Google truncates longer headlines in rich results.
     if (!isNonEmptyString(node.headline)) problems.push(`${label(node)} has no headline`)
     else if (node.headline.length > 110)
@@ -142,10 +142,10 @@ const RULES: Record<string, Rule> = {
       requireUrl(author, problems)
     }
 
-    // Recommended rather than required, and only an article with a hero or SEO
-    // image has one. Present, it must be a URL Google can fetch.
+    // Google only recommends it, but every article we publish has one, and an
+    // article card in search results looks broken without it.
     const images = asArray(node.image)
-    if (images.length === 0) notes.push(`${label(node)} has no image`)
+    if (images.length === 0) problems.push(`${label(node)} has no image`)
     for (const image of images) {
       if (!isAbsoluteUrl(image)) problems.push(`${label(node)} image is not an absolute URL`)
     }
@@ -190,20 +190,12 @@ const RULES: Record<string, Rule> = {
   },
 }
 
-export interface Findings {
-  /** Failures: a block that's missing what its type needs. */
-  problems: string[]
-  /** Recommended fields the page goes without, worth knowing but not failing on. */
-  notes: string[]
-}
-
 /**
- * Checks one parsed `application/ld+json` block. `@context` must sit on the
+ * Checks one parsed `application/ld+json` block, returning what's wrong with it. `@context` must sit on the
  * block itself: `@graph` nodes inherit it, so they carry none of their own.
  */
-export function checkJsonLdBlock(block: JsonNode): Findings {
+export function checkJsonLdBlock(block: JsonNode): string[] {
   const problems: string[] = []
-  const notes: string[] = []
 
   if (block["@context"] !== SCHEMA_CONTEXT) {
     problems.push(`block's @context is ${JSON.stringify(block["@context"])}, not ${SCHEMA_CONTEXT}`)
@@ -215,8 +207,8 @@ export function checkJsonLdBlock(block: JsonNode): Findings {
       problems.push(`${label(node)} repeats @context inside @graph`)
     }
     const rule = RULES[String(node["@type"])]
-    if (rule) rule(node, problems, notes)
+    if (rule) rule(node, problems)
     else problems.push(`${label(node)} has no rule in tests/e2e/structuredData.ts`)
   }
-  return { problems, notes }
+  return problems
 }

@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { SEEDED_UPDATED_AT } from "../../scripts/seed-e2e.constants"
+import { SEEDED_UPDATED_AT, SEO_IMAGE_ALT } from "../../scripts/seed-e2e.constants"
 
 /**
  * Read a drizzle `sql` template back as the statement it stands for.
@@ -300,11 +300,25 @@ describe("seed-e2e main()", () => {
     // Whole-table rather than per-id on purpose: the per-document version of
     // this pinned only the crowded-byline article, and the share-button
     // baselines — framing a different article's hero — rotted unnoticed.
-    expect(mockExecute).toHaveBeenCalledTimes(2)
-    expect(mockExecute.mock.calls.map(([statement]) => renderStatement(statement))).toEqual([
+    const statements = mockExecute.mock.calls.map(([statement]) => renderStatement(statement))
+    expect(statements.slice(-2)).toEqual([
       `UPDATE articles SET updated_at = ${SEEDED_UPDATED_AT}`,
       `UPDATE volumes SET updated_at = ${SEEDED_UPDATED_AT}`,
     ])
+  })
+
+  it("gives every article an SEO image, for its card and its JSON-LD", async () => {
+    await main()
+
+    // structured-data.spec.ts requires an image on every Article node.
+    // mockCreate resolves every direct create to mockVolume, so the media's id is its id.
+    const mediaCall = mockCreate.mock.calls.find(
+      ([args]) => args.collection === "media" && args.data.alt === SEO_IMAGE_ALT,
+    )
+    expect(mediaCall).toBeDefined()
+    expect(mockExecute.mock.calls.map(([statement]) => renderStatement(statement))).toContain(
+      `UPDATE articles SET meta_image_id = ${mockVolume.id}`,
+    )
   })
 
   it("keeps the crowded-byline article off the homepage grid", async () => {

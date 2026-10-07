@@ -23,7 +23,7 @@ const PAGES = [
 ]
 
 for (const { path, types } of PAGES) {
-  test(`${path} renders valid JSON-LD`, async ({ page }, testInfo) => {
+  test(`${path} renders valid JSON-LD`, async ({ page }) => {
     const response = await page.goto(path)
     expect(response?.status(), `${path} should answer 200`).toBe(200)
 
@@ -42,11 +42,7 @@ for (const { path, types } of PAGES) {
       const expanded = await expandJsonLd(block)
       expect(expanded.length, "nodes left after JSON-LD expansion").toBeGreaterThan(0)
 
-      const { problems, notes } = checkJsonLdBlock(block)
-      expect(problems, JSON.stringify(block, null, 2)).toEqual([])
-      for (const note of notes) {
-        testInfo.annotations.push({ type: "structured data", description: note })
-      }
+      expect(checkJsonLdBlock(block), JSON.stringify(block, null, 2)).toEqual([])
     }
 
     expect(topLevelTypes(blocks)).toEqual(types)

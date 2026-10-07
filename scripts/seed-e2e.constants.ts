@@ -65,6 +65,9 @@ export const CODE_BLOCKS_SLUG = "code-blocks-syntax-samples-for-authors"
 export const LIGHTBOX_SLUG = "seeing-the-evidence-a-media-block"
 export const LIGHTBOX_IMAGE_ALT = "The Pragmatic Papers mark, shown full screen"
 
+/** The SEO image every seeded article carries, shown on its card and in its JSON-LD. */
+export const SEO_IMAGE_ALT = "The Pragmatic Papers mark"
+
 /** An article with one social embed per platform, each with a saved snapshot. */
 export const SOCIAL_EMBEDS_SLUG = "social-media-embed-test-all-variations"
 

@@ -98,7 +98,6 @@ function Broadcast({
         pinned && "sm:max-w-[45%] sm:shrink-0",
       )}
     >
-      <YoutubeIcon className="size-4 shrink-0" />
       <span
         className={cn(
           "flex shrink-0 items-center gap-1 rounded-sm px-1.5 py-0.5 text-xs font-bold uppercase",
@@ -113,6 +112,7 @@ function Broadcast({
         )}
         {live ? "Live" : "Upcoming"}
       </span>
+      <YoutubeIcon className="size-4 shrink-0" />
       <span className="truncate">{broadcast.title}</span>
       {!live && broadcast.startsAt && (
         <time

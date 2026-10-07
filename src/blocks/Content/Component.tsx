@@ -29,10 +29,15 @@ const containerVariants = cva("container my-4 grid grid-cols-4 gap-x-6 gap-y-2 l
   },
 })
 
-export const ContentBlock: React.FC<ContentBlockProps> = ({ id: blockId, columns, width }) => {
+export const ContentBlock: React.FC<ContentBlockProps & { className?: string }> = ({
+  id: blockId,
+  className,
+  columns,
+  width,
+}) => {
   if (!columns || !columns.length) return null
   return (
-    <section className={containerVariants({ width })}>
+    <section className={cn(containerVariants({ width }), className)}>
       {columns.map(({ id: colId, richText, size }, i) => (
         <RichText
           key={colId ?? `${blockId}-col-${i + 1}`}

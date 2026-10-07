@@ -7,6 +7,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import {
   computeFileMetrics,
   computePatchCoverage,
+  FILE_TABLE_BUDGET,
+  fitRows,
   deltaIcon,
   fetchChangedFiles,
   htmlTable,
@@ -302,6 +304,51 @@ describe("toLineRanges", () => {
 
   it("returns an empty array for no lines", () => {
     expect(toLineRanges([])).toEqual([])
+  })
+})
+
+describe("fitRows", () => {
+  it("keeps every row that fits", () => {
+    expect(fitRows(["a", "b"], 3, 10)).toEqual(["a", "b"])
+  })
+
+  it("counts the rows that don't fit, keeping the first ones", () => {
+    const rows = fitRows(["aaaa", "bbbb", "cccc"], 4, 8)
+    expect(rows.slice(0, 1)).toEqual(["aaaa"])
+    expect(rows[1]).toContain('colspan="4"')
+    expect(rows[1]).toContain("…and 2 more files")
+  })
+})
+
+describe("the per-file tables on a PR touching hundreds of files", () => {
+  const files = Array.from({ length: 400 }, (_, i) => `src/components/feature-${i}/Component.tsx`)
+
+  it("stay within the budget, least-covered files first", () => {
+    const summaryJson = Object.fromEntries(files.map((file, i) => [file, summary(i % 100)]))
+    const html = renderFileCoverage({
+      summaryJson,
+      changedFiles: files,
+      repo: "owner/repo",
+      sha: "abc123",
+    })!
+    expect(html.length).toBeLessThan(FILE_TABLE_BUDGET + 1000)
+    expect(html).toMatch(/…and \d+ more files/)
+    expect(html).toContain(">src/components/feature-0/Component.tsx<")
+    expect(html).not.toContain(">src/components/feature-99/Component.tsx<")
+  })
+
+  it("cap patch coverage by file too", () => {
+    const html = renderPatchByFile({
+      files: files.map((file) => ({
+        file,
+        lines: { covered: 0, total: 50, pct: 0 },
+        uncovered: Array.from({ length: 25 }, (_, i) => i * 2 + 1),
+      })),
+      repo: "owner/repo",
+      sha: "abc123",
+    })!
+    expect(html.length).toBeLessThan(FILE_TABLE_BUDGET + 1000)
+    expect(html).toMatch(/…and \d+ more files/)
   })
 })
 

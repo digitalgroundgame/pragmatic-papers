@@ -363,6 +363,30 @@ function blobUrl(repo: string, sha: string, file: string, fragment = ""): string
   return `https://github.com/${repo}/blob/${sha}/${path}${fragment}`
 }
 
+/**
+ * Characters each per-file table may use. GitHub caps a comment at 65,536 and this
+ * report shares one with bundle size and Lighthouse (scripts/pr-report.ts), so a PR
+ * touching many files shows its least-covered ones and counts the rest.
+ */
+export const FILE_TABLE_BUDGET = 20_000
+
+/** As many rows as fit in `budget` characters, then one saying how many didn't. */
+export function fitRows(rows: string[], columns: number, budget = FILE_TABLE_BUDGET): string[] {
+  const shown: string[] = []
+  let used = 0
+  for (const row of rows) {
+    if (used + row.length > budget) break
+    shown.push(row)
+    used += row.length + 1
+  }
+  const hidden = rows.length - shown.length
+  if (hidden === 0) return shown
+  return [
+    ...shown,
+    `  <tr><td colspan="${columns}"><em>…and ${hidden} more ${hidden === 1 ? "file" : "files"}, not shown to keep this comment under GitHub's size limit.</em></td></tr>`,
+  ]
+}
+
 export function renderFileCoverage({
   summaryJson,
   changedFiles,
@@ -375,9 +399,12 @@ export function renderFileCoverage({
   sha: string | undefined
 }): string | null {
   const rows: string[] = []
-  for (const file of changedFiles) {
-    const fc = summaryJson[file]
-    if (!fc) continue
+  // Least-covered first, so the files that need tests are the ones that fit.
+  const touched = changedFiles
+    .filter((file) => summaryJson[file])
+    .sort((a, z) => summaryJson[a]!.lines.pct - summaryJson[z]!.lines.pct)
+  for (const file of touched) {
+    const fc = summaryJson[file]!
     const cell = (m: keyof FileSummary) =>
       fc[m].total === 0 ? "n/a" : `${Math.round(fc[m].pct)}% ${fc[m].covered}/${fc[m].total}`
     const fileLink =
@@ -402,7 +429,7 @@ export function renderFileCoverage({
   <th align="right">Branches</th>
  </tr></thead>
  <tbody>
-${rows.join("\n")}
+${fitRows(rows, 5).join("\n")}
  </tbody>
 </table>`
   return `<details><summary>Touched files — whole-file coverage</summary>\n${table}\n</details>`
@@ -457,7 +484,7 @@ export function renderPatchByFile({
   <th align="left">Uncovered lines</th>
  </tr></thead>
  <tbody>
-${rows.join("\n")}
+${fitRows(rows, 4).join("\n")}
  </tbody>
 </table>`
 }

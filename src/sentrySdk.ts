@@ -6,11 +6,11 @@ import {
   captureMessage,
   captureRouterTransitionStart,
   init,
-  thirdPartyErrorFilterIntegration,
 } from "@sentry/nextjs"
 
 import { sentryConfigFromDocument } from "./sentryConfig"
 import { sentryIgnoredErrors } from "./sentryIgnoredErrors"
+import { thirdPartyFramesIntegration } from "./sentryThirdPartyFrames"
 
 export { captureException, captureMessage, captureRouterTransitionStart }
 
@@ -38,23 +38,10 @@ export function initSentry(): void {
     ignoreErrors: sentryIgnoredErrors,
 
     integrations: [
-      // Identify errors that originate entirely from scripts we don't ship — browser
-      // extensions and Cloudflare-injected code (e.g. the /cdn-cgi/rum beacon that
-      // throws `r["@context"].toLowerCase` while parsing our JSON-LD). "Third-party"
-      // frames are those not tagged with the `applicationKey` set in next.config.ts.
-      //
-      // Rollout is deliberately two-step. We start with `apply-tag-*`, which drops
-      // NOTHING and only adds a `third_party_code: true` tag — because if the
-      // applicationKey metadata failed to inject (notably on the Turbopack loader
-      // path), a `drop-*` behaviour would classify every frame as third-party and
-      // silently drop ALL client errors. Once we've confirmed in Sentry that real
-      // errors are untagged and third-party ones are tagged, flip this to
-      // `drop-error-if-exclusively-contains-third-party-frames`. Filter the issue
-      // stream in the meantime with `!third_party_code:True`.
-      thirdPartyErrorFilterIntegration({
-        filterKeys: ["pragmatic-papers"],
-        behaviour: "apply-tag-if-exclusively-contains-third-party-frames",
-      }),
+      // Tags errors that come entirely from scripts we don't ship (`third_party_code`), and
+      // drops nothing. Once the tag is confirmed to mark only those in Sentry, dropping them
+      // is a `return null` from a `beforeSend` that checks it.
+      thirdPartyFramesIntegration(),
     ],
   })
 }

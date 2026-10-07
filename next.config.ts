@@ -248,10 +248,9 @@ export default withSentryConfig(payloadConfig, {
 
   project: "pragmatic-papers",
 
-  // Tags our bundled code with this key so `thirdPartyErrorFilterIntegration`
-  // (in src/instrumentation-client.ts) can tell our frames from third-party ones.
-  // Top-level `applicationKey` injects module metadata for both webpack and Turbopack.
-  applicationKey: "pragmatic-papers",
+  // No `applicationKey`: the module metadata it injects into every client module made each
+  // one slower to evaluate, about 200 ms of Lighthouse's Total Blocking Time on Home.
+  // src/sentryThirdPartyFrames.ts tells our frames from third-party ones by URL instead.
 
   // The build-time dependency instrumentation roughly doubles peak compile memory
   // (~4.6 → ~8.5 GiB), more than the Coolify build server's 8 GB of RAM.

@@ -5,7 +5,6 @@ const sdk = vi.hoisted(() => ({
   captureException: vi.fn(),
   captureMessage: vi.fn(),
   captureRouterTransitionStart: vi.fn(),
-  thirdPartyErrorFilterIntegration: vi.fn(() => ({ name: "ThirdPartyErrorsFilter" })),
 }))
 vi.mock("@sentry/nextjs", () => sdk)
 

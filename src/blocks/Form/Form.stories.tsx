@@ -23,6 +23,7 @@ const form = {
       blockType: "select",
       name: "topic",
       label: "Topic",
+      required: true,
       options: [
         { label: "Pitch an article", value: "pitch" },
         { label: "Correction", value: "correction" },
@@ -61,15 +62,22 @@ type Story = StoryObj<typeof meta>
 
 export const Default: Story = {}
 
-// #999: the error isn't tied to its input (no aria-invalid / aria-describedby)
-// and its red falls short of AA.
 export const RequiredFields: Story = {
-  parameters: { a11y: { test: "todo" } },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     // The form loads lazily, so it arrives a moment after the story mounts.
     await userEvent.click(await canvas.findByRole("button", { name: "Send it" }))
-    await waitFor(() => expect(canvas.getAllByText("This field is required")).toHaveLength(3))
+    await waitFor(() => expect(canvas.getAllByRole("alert")).toHaveLength(4))
+    for (const control of [
+      canvas.getByLabelText(/^Name/),
+      canvas.getByLabelText(/^Email/),
+      canvas.getByRole("combobox", { name: /Topic/ }),
+      canvas.getByLabelText(/^Message/),
+    ]) {
+      await expect(control).toHaveAttribute("aria-invalid", "true")
+      await expect(control).toHaveAccessibleDescription("This field is required")
+    }
+    await expect(canvas.getByRole("checkbox")).not.toHaveAttribute("aria-invalid")
     await expect(window.fetch).not.toHaveBeenCalled()
   },
 }

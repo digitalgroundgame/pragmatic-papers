@@ -272,11 +272,8 @@ export default withSentryConfig(payloadConfig, {
     disable: process.env.BUILD_ENV === "preview",
   },
 
-  // Route browser requests to Sentry through a Next.js rewrite to circumvent ad-blockers.
-  // This can increase your server load as well as your hosting bill.
-  // Note: This needs to not conflict with our Next.js middleware/proxy.ts, otherwise reporting of client-
-  // side errors will fail.
-  tunnelRoute: "/monitoring",
+  // No `tunnelRoute`: the browser SDK reports through src/app/monitoring/route.ts instead,
+  // which says why.
 
   webpack: {
     // Tree-shaking options for reducing bundle size

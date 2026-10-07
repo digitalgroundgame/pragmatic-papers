@@ -379,16 +379,17 @@ jobs:
           PR_NUMBER: ${{ github.event.pull_request.number }}
           BASE_REF: ${{ github.event.pull_request.base.ref }}
           DELETE_WHEN_EMPTY: "true"
+          # The baseline commit the earlier step pushed, when it pushed one:
+          # this checkout stays on the tested commit, so HEAD doesn't have the
+          # new baselines and github.event.pull_request.head.sha predates them.
+          BASELINE_SHA: ${{ steps.commit.outputs.sha }}
         run: |
-          # Use the actual current HEAD, not github.event.pull_request.head.sha —
-          # if the earlier commit step pushed a new baseline commit, that event
-          # context still points at the pre-commit sha and would upload assets
-          # under the wrong (nonexistent-on-branch) path.
-          ASSET_DIR="$PR_NUMBER/$(git rev-parse HEAD)"
+          head=${BASELINE_SHA:-$(git rev-parse HEAD)}
+          ASSET_DIR="$PR_NUMBER/$head"
           export ASSET_DIR
           git fetch --no-tags --depth=1 origin "$BASE_REF"
           git diff --name-only --diff-filter=AM \
-            "origin/$BASE_REF...HEAD" -- '**/__screenshots__/**/*.png' \
+            "origin/$BASE_REF...$head" -- '**/__screenshots__/**/*.png' \
             | pnpm exec tsx scripts/pr-screenshot-comment.ts
 
   # The client JavaScript and CSS each public page loads, read from the image's

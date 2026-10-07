@@ -321,3 +321,64 @@
     animation: none;
   }
 }
+
+/*
+  The home page ticker (src/components/Ticker). The track holds the posts twice
+  and slides left by one copy's width per pass, so the loop has no seam. It
+  pauses while hovered or focused, or while its pause switch is on, and doesn't
+  move at all for reduced motion (the component then hides the second copy and
+  lets the posts scroll by hand).
+*/
+@keyframes ticker-scroll {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+.ticker-viewport {
+  mask-image: linear-gradient(
+    to right,
+    transparent,
+    black 1.5rem,
+    black calc(100% - 1.5rem),
+    transparent
+  );
+}
+
+.ticker-track {
+  animation: ticker-scroll var(--ticker-duration, 60s) linear infinite;
+}
+
+.ticker-viewport:hover .ticker-track,
+.ticker-viewport:focus-within .ticker-track,
+.ticker:has(.ticker-pause:checked) .ticker-viewport {
+  mask-image: linear-gradient(
+    to right,
+    transparent,
+    black 1.5rem,
+    black calc(100% - 1.5rem),
+    transparent
+  );
+}
+
+.ticker-track {
+  animation-play-state: paused;
+}
+
+.ticker-play-icon,
+.ticker:has(.ticker-pause:checked) .ticker-pause-icon {
+  display: none;
+}
+
+.ticker:has(.ticker-pause:checked) .ticker-play-icon {
+  display: block;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ticker-track {
+    animation: none;
+  }
+}

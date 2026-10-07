@@ -91,6 +91,16 @@ Public pages are cached at Cloudflare's edge for 10 minutes, then served stale f
 - Unset (or with `SERVER_URL` on localhost), each save logs `Skipping Cloudflare purge (…) — … set CLOUDFLARE_ZONE_ID, CLOUDFLARE_PURGE_TOKEN` and carries on. A purge Cloudflare refuses is logged as a warning, never thrown at the save.
 - Purges within a second of each other go out as one request. Hostname purges are rate-limited per account (5 a minute on the Free plan, more on paid plans); a refused one just leaves the edge to expire on its own.
 
+#### Home page ticker
+
+The strip under the header on Home (`src/components/Ticker`), shown when the **Home page ticker** experiment is on in Site Settings. Each source is skipped with a `[ticker] skipping …` log line until it's configured; all are **Runtime Variables**.
+
+- `YOUTUBE_CHANNEL_ID` and `YOUTUBE_API_KEY` — the podcast channel's ID (`UC…`) and a YouTube Data API v3 key (any Google Cloud project, public reads only). Shows the podcast when it's live or starting within a day. Each check costs 2 of the key's 10,000 free daily quota units, every 2 minutes at most.
+- Bluesky needs nothing: it reads `thepragmaticpapers.bsky.social` (override with `BLUESKY_HANDLE`) from the public API.
+- `X_BEARER_TOKEN` — an app-only token. Reading posts needs a paid X API plan or pay-per-use credits; it's checked every 30 minutes at most. `X_USERNAME` overrides `PragPapers`.
+
+Readers can see an answer up to 10 minutes late, since Home is edge-cached for that long.
+
 ### 4. Configure Domain
 
 - **Application:** Port `3000` → `your-domain.com`

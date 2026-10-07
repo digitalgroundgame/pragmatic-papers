@@ -2590,6 +2590,10 @@ export interface SiteSetting {
      */
     interactives?: boolean | null;
     /**
+     * The strip under the header on the home page: the podcast when it's live on YouTube, and our latest posts from Bluesky and X.
+     */
+    ticker?: boolean | null;
+    /**
      * The table of contents in an article's sidebar and its hero button, on articles with “Show table of contents” ticked.
      */
     tableOfContents?: boolean | null;
@@ -2670,6 +2674,7 @@ export interface SiteSettingsSelect<T extends boolean = true> {
     | {
         feed?: T;
         interactives?: T;
+        ticker?: T;
         tableOfContents?: T;
       };
   updatedAt?: T;

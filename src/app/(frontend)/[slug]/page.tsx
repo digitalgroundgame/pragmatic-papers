@@ -14,6 +14,7 @@ import { generateMeta } from "@/utilities/generateMeta"
 import { getCachedGlobal } from "@/utilities/getGlobals"
 import { buildBreadcrumbJsonLd, buildHomeJsonLd } from "@/utilities/structuredData"
 import { Breadcrumbs, type Crumb } from "@/components/Breadcrumbs"
+import { Ticker } from "@/components/Ticker"
 
 // Paginated with `?p=`, which only a request carries, so this is rendered per request. That's
 // also why there's no generateStaticParams: a prerendered slug would never be served.
@@ -61,6 +62,7 @@ export default async function Page({ params, searchParams }: Args): Promise<Reac
   const jsonLdData = slug === "home" ? buildHomeJsonLd(socials) : [buildBreadcrumbJsonLd(trail)]
   return (
     <>
+      {slug === "home" && <Ticker />}
       <Breadcrumbs items={trail} />
       <article>
         <JsonLd data={jsonLdData} />

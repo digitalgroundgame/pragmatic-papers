@@ -1,6 +1,9 @@
+import { blueskyAccount } from "./bluesky"
 import { cloudflareZone } from "./cloudflare"
 import { githubRepo } from "./github"
 import { shopifyStore } from "./shopify"
+import { xAccount } from "./x"
+import { youtubeChannel } from "./youtube"
 import { integrationStatus, type Integration, type IntegrationStatus } from "./types"
 
 /**
@@ -40,8 +43,47 @@ export const cloudflareCache = cloudflareZone({
   tokenEnv: "CLOUDFLARE_PURGE_TOKEN",
 })
 
+/**
+ * The podcast's YouTube channel, which the home page ticker watches for a live or upcoming
+ * broadcast. A plain Data API key from any Google Cloud project with "YouTube Data API v3"
+ * enabled; it reads public data only.
+ */
+export const podcastYouTube = youtubeChannel({
+  id: "youtube-podcast",
+  label: "Podcast YouTube channel",
+  channelEnv: "YOUTUBE_CHANNEL_ID",
+  keyEnv: "YOUTUBE_API_KEY",
+})
+
+/** The Pragmatic Papers Bluesky account, whose posts run in the home page ticker. */
+export const blueskyPosts = blueskyAccount({
+  id: "bluesky-posts",
+  label: "Bluesky posts",
+  defaultHandle: "thepragmaticpapers.bsky.social",
+  handleEnv: "BLUESKY_HANDLE",
+})
+
+/**
+ * The Pragmatic Papers X account, whose posts run in the home page ticker. Reading posts
+ * needs a paid X API plan or pay-per-use credits on the app behind the token.
+ */
+export const xPosts = xAccount({
+  id: "x-posts",
+  label: "X posts",
+  defaultUsername: "PragPapers",
+  usernameEnv: "X_USERNAME",
+  tokenEnv: "X_BEARER_TOKEN",
+})
+
 /** Declaration order is display order. */
-export const INTEGRATIONS: readonly Integration[] = [courtTracker, shopifyStore, cloudflareCache]
+export const INTEGRATIONS: readonly Integration[] = [
+  courtTracker,
+  shopifyStore,
+  cloudflareCache,
+  podcastYouTube,
+  blueskyPosts,
+  xPosts,
+]
 
 export function getIntegration(id: string): Integration | null {
   return INTEGRATIONS.find((i) => i.id === id) ?? null

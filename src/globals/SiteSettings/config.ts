@@ -39,6 +39,16 @@ export const SiteSettings: GlobalConfig = {
           },
         },
         {
+          name: "ticker",
+          label: "Home page ticker",
+          type: "checkbox",
+          defaultValue: false,
+          admin: {
+            description:
+              "The strip under the header on the home page: the podcast when it's live on YouTube, and our latest posts from Bluesky and X.",
+          },
+        },
+        {
           name: "tableOfContents",
           label: "Article table of contents",
           type: "checkbox",

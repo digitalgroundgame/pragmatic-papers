@@ -1,4 +1,4 @@
-import { RenderBlocks } from "@/blocks/RenderBlocks"
+import { ContentBlock } from "@/blocks/Content/Component"
 import { Logo } from "@/components/Logo"
 import { Menu } from "@/components/Menu"
 import { SocialLinks } from "@/components/SocialLinks"
@@ -14,7 +14,9 @@ export async function Footer(): Promise<React.ReactElement> {
     <footer className="container space-y-2 py-2">
       {layout && (
         <div className="border-t pt-6">
-          <RenderBlocks blocks={layout} />
+          {layout.map((block, index) => (
+            <ContentBlock key={block.id || index} {...block} />
+          ))}
         </div>
       )}
       <div className="flex flex-col justify-between gap-2 border-t pt-4 md:flex-row md:items-center">

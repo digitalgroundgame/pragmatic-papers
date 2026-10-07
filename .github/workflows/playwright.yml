@@ -390,3 +390,128 @@ jobs:
           git diff --name-only --diff-filter=AM \
             "origin/$BASE_REF...HEAD" -- '**/__screenshots__/**/*.png' \
             | pnpm exec tsx scripts/pr-screenshot-comment.ts
+
+  # The client JavaScript and CSS each public page loads, read from the image's
+  # build manifests (scripts/bundle-size.ts), compared with dev's last measurement.
+  # A page whose JavaScript grew by more than 10 kB gets a warning; it never fails.
+  # Pushes to dev upload the measurement PRs compare with.
+  bundle-size:
+    name: Bundle size
+    needs: [changes, image]
+    if: ${{ !cancelled() && needs.image.result == 'success' && ((github.event_name == 'pull_request' && (needs.changes.result != 'success' || needs.changes.outputs.e2e == 'true')) || (github.event_name == 'push' && github.ref == 'refs/heads/dev')) }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      actions: read
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up Node.js environment
+        uses: ./.github/actions/setup-project
+        with:
+          node-version: "24.x"
+          gh-font-read-token: ${{ secrets.GH_FONT_READ }}
+
+      - name: Download the app image
+        uses: actions/download-artifact@v7
+        with:
+          name: app-image
+          path: ${{ runner.temp }}
+
+      # The build the PR deploys, rather than a second `next build` here.
+      - name: Copy the build out of the image
+        run: |
+          docker load -i "$RUNNER_TEMP/app-image.tar"
+          id=$(docker create pragmatic-papers-app:ci)
+          docker cp "$id:/app/.next" "$RUNNER_TEMP/next"
+          docker rm "$id"
+
+      - name: Download dev's measurement
+        id: base
+        if: github.event_name == 'pull_request'
+        uses: ./.github/actions/download-dev-artifact
+        with:
+          name: bundle-size
+
+      - name: Measure and compare with dev
+        env:
+          BASE_BUNDLE_SIZE_PATH: ${{ steps.base.outputs.dir && format('{0}/bundle-size.json', steps.base.outputs.dir) || '' }}
+          BUNDLE_SIZE_OUT: bundle-size.json
+          GITHUB_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: pnpm bundle-size --next-dir "$RUNNER_TEMP/next"
+
+      - uses: actions/upload-artifact@v7
+        if: ${{ !cancelled() }}
+        with:
+          name: bundle-size
+          path: bundle-size.json
+          retention-days: 90
+
+  # Lighthouse's performance audit of a few seeded pages (scripts/lighthouse.ts),
+  # compared with dev's last results. In its own job so the suite doesn't share the
+  # runner's CPU with it. Report-only: it posts how each page compares with dev and
+  # annotates big regressions, but never fails. Pushes to dev upload the results PRs
+  # compare with.
+  lighthouse:
+    name: Lighthouse
+    needs: [changes, image]
+    if: ${{ !cancelled() && needs.image.result == 'success' && ((github.event_name == 'pull_request' && (needs.changes.result != 'success' || needs.changes.outputs.e2e == 'true')) || (github.event_name == 'push' && github.ref == 'refs/heads/dev')) }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    # The E2E job's container, for its Chromium and the shared setup-e2e action.
+    container:
+      image: mcr.microsoft.com/playwright:v1.63.0-noble
+    permissions:
+      actions: read
+      contents: read
+      pull-requests: write
+
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          # Must match TEST_DATABASE_URI in .github/actions/setup-e2e.
+          POSTGRES_DB: pragmatic-papers-e2e
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up E2E
+        uses: ./.github/actions/setup-e2e
+        with:
+          gh-font-read-token: ${{ secrets.GH_FONT_READ }}
+
+      - name: Download dev's results
+        id: base
+        if: github.event_name == 'pull_request'
+        uses: ./.github/actions/download-dev-artifact
+        with:
+          name: lighthouse-results
+
+      # Seeds the database and starts the image as the E2E suite does, then runs
+      # Lighthouse against it in place of Playwright.
+      - name: Run Lighthouse
+        env:
+          E2E_COMMAND: pnpm exec tsx scripts/lighthouse.ts
+          BASE_LIGHTHOUSE_PATH: ${{ steps.base.outputs.dir && format('{0}/summary.json', steps.base.outputs.dir) || '' }}
+          E2E_NETWORK_CONTAINER: ${{ job.container.id }}
+          GITHUB_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: pnpm test:e2e
+
+      - uses: actions/upload-artifact@v7
+        if: ${{ !cancelled() }}
+        with:
+          name: lighthouse-results
+          path: lighthouse-results/
+          retention-days: 90

@@ -57,7 +57,8 @@ export const FullWidth: Story = {
     const section = await within(canvasElement).findByRole("region", {
       name: "Support the Papers",
     })
-    const tee = within(section).getByRole("link", { name: /Pragmatic Papers Tee/ })
+    // The carousel loads lazily, so its slides arrive a moment after the section.
+    const tee = await within(section).findByRole("link", { name: /Pragmatic Papers Tee/ })
     await expect(tee).toHaveAttribute(
       "href",
       expect.stringContaining(`${STORE}/pragmatic-papers-tee`),

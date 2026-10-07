@@ -1,7 +1,8 @@
 "use client"
 
-import * as Sentry from "@sentry/nextjs"
 import dynamic from "next/dynamic"
+
+import { captureMessage } from "@/sentryClient"
 
 const MathJaxContext = dynamic(
   () => import("better-react-mathjax").then((mod) => mod.MathJaxContext),
@@ -15,7 +16,7 @@ const MathJaxContext = dynamic(
 // that sometimes, so report it once as a handled warning and let `TypesetMath`
 // leave the raw TeX in place.
 const reportLoadFailure = (error: unknown) => {
-  Sentry.captureMessage("MathJax failed to load", { level: "warning", extra: { error } })
+  captureMessage("MathJax failed to load", { level: "warning", extra: { error } })
 }
 
 // MathJax's default is to typeset the whole document as soon as it loads,

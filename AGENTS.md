@@ -36,6 +36,9 @@ This file provides guidance to tools like Claude Code (claude.ai/code) when work
 - `pnpm test:coverage` — run all tests with V8 coverage report (full picture for local inspection)
 - `pnpm test:unit -u` — regenerate snapshot baselines after intentional UI changes
 - `pnpm coverage:report` — post the combined coverage PR comment locally (requires `GITHUB_TOKEN`, `GITHUB_REPOSITORY`, `GITHUB_EVENT_PATH`)
+- `pnpm bundle-size` — measure the gzipped client JS and CSS each public page loads, from the build in `.next` (run `pnpm build` first), and compare it with dev's last measurement when `BASE_BUNDLE_SIZE_PATH` names one (see [Page speed](#page-speed))
+- `pnpm analyze` — Turbopack's bundle analyzer, in the browser (it compiles but doesn't leave a build behind): each route's client and server modules, and the import chain that brings each one in. `pnpm analyze --output` writes it to `.next/diagnostics/analyze/` instead, which the next `pnpm build` deletes
+- `pnpm lighthouse` — seed a throwaway database, build and serve as `pnpm test:e2e` does, then run Lighthouse's performance audit on a few seeded pages; reports land in `lighthouse-results/`. Set `BASE_LIGHTHOUSE_PATH` to a `summary.json` from an earlier run to compare with it (see [Page speed](#page-speed))
 
 ### Test databases
 
@@ -159,6 +162,7 @@ too.
 
 - **File structure**: `blocks/<Name>/config.ts` (Payload config) + `blocks/<Name>/Component.tsx` (React component)
 - **Two rendering systems**: `RenderBlocks` renders page layout blocks (Content, CTA, MediaBlock, Form, VolumeView); `RichText` renders Lexical inline/rich-text blocks (Banner, Code, Math, Footnote, SocialEmbed, SquiggleRule)
+- **Heavy client code loads lazily**: `RichText` and `RenderBlocks` import every block, so whatever a block's client component imports ships on every page that renders rich text, the footer included. A client component with a sizeable dependency (a highlighter, a carousel, a form library, a player) is imported through a sibling `*.lazy.tsx`: a `"use client"` file that wraps it in `next/dynamic` (`blocks/Code/Component.lazy.tsx`), so only pages that render it download it. The wrapper has to be a client file: `next/dynamic` in a Server Component doesn't split the code. Server rendering is unchanged. Unit tests get the real component (`vitest.setup.ts` maps each `.lazy` module to it), and stories wait for it with `findBy*`. `pnpm bundle-size` shows what a page loads up front
 - **Feed converters**: the RSS feeds (`/feed.articles`, `/feed.volumes`) and the Substack import feed render article content and volume editor's notes to HTML. A block's non-React renderings live in **`blocks/<Name>/converters.ts`**, one function per output **format**, named for the format rather than the feed (`timelineToHTML`, `displayMathToCode`). Each takes the block's fields plus a `FeedContext` (`src/utilities/feedHTML.ts`: `siteUrl`, `pageUrl`, `richTextToHTML` for nested rich text) and returns plain semantic HTML: absolute URLs, no inline styles, and every CMS value through `escapeHTML`. Shared logic used by several formats, or by `Component.tsx`, goes in the same file (`formatTimelineDate`). `converters.ts` must run in the browser, because Storybook imports it, so no server-only imports. The feed files only map block slugs to the format they want, through `fromBlock`: `createHtmlConverters` (`src/utilities/generateRssFeed.ts`) and, for article content, `createSubstackConverters` (`src/app/(frontend)/articles/_substack/generateSubstackFeed.ts`). A block added to those editors (or to the rich text inside their blocks) needs a converter, plus:
   - a `__tests__/converters.test.ts` using `toMatchInlineSnapshot()`, fed from `src/stories/fixtures/blocks.ts`
   - a `Feed` story that renders the output through `src/stories/FeedHTML.tsx`, so it gets the axe check
@@ -276,6 +280,27 @@ function, and fails on any axe violation.
   matched through the build's `index.json` by story file, `component` file or folder. `/storybook` on staging and on a
   PR's site preview redirects to its Storybook (404 on production). Needs the `CLOUDFLARE_API_TOKEN`
   (Workers Scripts: Edit) and `CLOUDFLARE_ACCOUNT_ID` repo secrets; without them it skips.
+
+### Page speed
+
+Two jobs in `playwright.yml` measure the image the PR deploys, and each posts a
+PR comment comparing it with the last run on `dev`:
+
+- **Bundle size** (`scripts/bundle-size.ts`) reads the image's build manifests and
+  adds up the gzipped JavaScript and CSS each public page loads before it's
+  interactive (Next 16 no longer prints "First Load JS"). Pages are expected to
+  grow over time, so there are no fixed budgets: a route whose JavaScript grew by
+  more than 10 kB against dev is flagged in the comment and with a warning on the
+  PR's checks. It **only warns**; `pnpm analyze` shows which import brought the
+  growth in.
+- **Lighthouse** (`scripts/lighthouse.ts`) seeds the E2E database, starts the
+  PR's image and audits each page 5 times, comparing with the results the last
+  push to `dev` uploaded. The CPU slowdown is calibrated to the runner's benchmark
+  score, and Chrome can't reach any host but localhost. Dev's results come from
+  another runner, so a metric is flagged only when every PR run is worse than
+  every dev run by a wide margin (`THRESHOLDS`). It **only warns**: the HTML
+  reports are in the `lighthouse-results` artifact. A page added to the seed can
+  be audited by adding it to `PAGES`.
 
 ### Visual regression (screenshot) tests
 

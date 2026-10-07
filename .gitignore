@@ -81,6 +81,9 @@ tsconfig.tsbuildinfo
 /playwright/.cache/
 /playwright/.auth/
 
+# pnpm lighthouse
+/lighthouse-results/
+
 # Devenv
 .devenv*
 devenv.local.nix

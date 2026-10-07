@@ -1,10 +1,11 @@
 import type { Media as MediaType } from "@/payload-types"
 import React from "react"
 
-import { AudioMedia, type AudioMediaProps } from "./AudioMedia"
+import type { AudioMediaProps } from "./AudioMedia"
+import { AudioMedia, VideoMedia } from "./lazy"
 import { ImageMedia, type ImageMediaProps } from "./ImageMedia"
 import { isAudioMedia, isImageMedia, isVideoMedia } from "./types"
-import { VideoMedia, type VideoMediaProps } from "./VideoMedia"
+import type { VideoMediaProps } from "./VideoMedia"
 
 export * from "./types"
 

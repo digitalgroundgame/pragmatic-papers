@@ -21,10 +21,11 @@ const ORIGIN = "https://pragmaticpapers.test"
 const OUR_SCRIPT = `${ORIGIN}/_next/static/chunks/app.js`
 const PAGE = `${ORIGIN}/volumes/3#footnote-1`
 
-/** A window whose load and idle callbacks the test fires by hand. */
+/** A window whose load, timers and idle callbacks the test fires by hand. */
 function fakeWindow({ readyState = "loading", idle = true } = {}) {
   const target = new EventTarget()
   const idleCallbacks: (() => void)[] = []
+  const timers: (() => void)[] = []
   const win = Object.assign(target, {
     document: { readyState },
     location: { origin: ORIGIN, href: PAGE },
@@ -35,12 +36,14 @@ function fakeWindow({ readyState = "loading", idle = true } = {}) {
         })
       : undefined,
     setTimeout: vi.fn((callback: () => void) => {
-      idleCallbacks.push(callback)
-      return idleCallbacks.length
+      timers.push(callback)
+      return timers.length
     }),
   })
   const runIdle = () => idleCallbacks.splice(0).forEach((callback) => callback())
-  return { win: win as unknown as Window, runIdle }
+  const runTimers = () => timers.splice(0).forEach((callback) => callback())
+  const input = (type = "pointerdown") => win.dispatchEvent(new Event(type))
+  return { win: win as unknown as Window, runIdle, runTimers, input }
 }
 
 const errorEvent = (error: Error, filename = OUR_SCRIPT) =>
@@ -121,9 +124,9 @@ describe("a failed load", () => {
 
   it("keeps early errors and listening, so the next error tries again", async () => {
     failOnce()
-    const { startSentryWhenIdle } = await importClient()
+    const { startSentryOnFirstInput } = await importClient()
     const { win } = fakeWindow()
-    startSentryWhenIdle(win)
+    startSentryOnFirstInput(win)
 
     const first = new Error("first")
     win.dispatchEvent(errorEvent(first))
@@ -161,15 +164,16 @@ describe("captureException and captureMessage", () => {
   })
 })
 
-describe("startSentryWhenIdle", () => {
-  it("waits for load, then for the browser to be idle", async () => {
-    const { startSentryWhenIdle } = await importClient()
-    const { win, runIdle } = fakeWindow()
-    startSentryWhenIdle(win, { timeout: 1234 })
-    await settle()
-    expect(sdk.init).not.toHaveBeenCalled()
-
+describe("startSentryOnFirstInput", () => {
+  it("waits for the reader's first input, then for the browser to be idle", async () => {
+    const { startSentryOnFirstInput } = await importClient()
+    const { win, runIdle, input } = fakeWindow()
+    startSentryOnFirstInput(win, { timeout: 1234 })
     win.dispatchEvent(new Event("load"))
+    await settle()
+    expect(win.requestIdleCallback).not.toHaveBeenCalled()
+
+    input()
     expect(win.requestIdleCallback).toHaveBeenCalledWith(expect.any(Function), { timeout: 1234 })
     await settle()
     expect(sdk.init).not.toHaveBeenCalled()
@@ -179,21 +183,61 @@ describe("startSentryWhenIdle", () => {
     expect(sdk.init).toHaveBeenCalledTimes(1)
   })
 
-  it("starts straight away on a page that has already loaded", async () => {
-    const { startSentryWhenIdle } = await importClient()
-    const { win, runIdle } = fakeWindow({ readyState: "complete" })
-    startSentryWhenIdle(win)
+  it.each(["pointerdown", "keydown", "touchstart", "scroll"])(
+    "takes %s as an input, before load too",
+    async (type) => {
+      const { startSentryOnFirstInput } = await importClient()
+      const { win, runIdle, input } = fakeWindow()
+      startSentryOnFirstInput(win)
+      input(type)
+      runIdle()
+      await settle()
+      expect(sdk.init).toHaveBeenCalledTimes(1)
+    },
+  )
+
+  it("asks for the load once, however many inputs come", async () => {
+    const { startSentryOnFirstInput } = await importClient()
+    const { win, input } = fakeWindow({ readyState: "complete" })
+    startSentryOnFirstInput(win)
+    input("pointerdown")
+    input("keydown")
+    input("scroll")
+    expect(win.requestIdleCallback).toHaveBeenCalledTimes(1)
+  })
+
+  it("loads it `fallback` ms after load for a reader who never does anything", async () => {
+    const { startSentryOnFirstInput } = await importClient()
+    const { win, runIdle, runTimers, input } = fakeWindow()
+    startSentryOnFirstInput(win, { fallback: 4321 })
+    expect(win.setTimeout).not.toHaveBeenCalled()
+
+    win.dispatchEvent(new Event("load"))
+    expect(win.setTimeout).toHaveBeenCalledWith(expect.any(Function), 4321)
+    runTimers()
     runIdle()
     await settle()
     expect(sdk.init).toHaveBeenCalledTimes(1)
+
+    // The inputs have stopped listening.
+    input()
+    expect(win.requestIdleCallback).toHaveBeenCalledTimes(1)
+  })
+
+  it("counts the fallback from now on a page that has already loaded", async () => {
+    const { startSentryOnFirstInput } = await importClient()
+    const { win } = fakeWindow({ readyState: "complete" })
+    startSentryOnFirstInput(win, { fallback: 4321 })
+    expect(win.setTimeout).toHaveBeenCalledWith(expect.any(Function), 4321)
   })
 
   it("falls back to a timeout without requestIdleCallback", async () => {
-    const { startSentryWhenIdle } = await importClient()
-    const { win, runIdle } = fakeWindow({ readyState: "complete", idle: false })
-    startSentryWhenIdle(win)
+    const { startSentryOnFirstInput } = await importClient()
+    const { win, runTimers, input } = fakeWindow({ idle: false })
+    startSentryOnFirstInput(win)
+    input()
     expect(win.setTimeout).toHaveBeenCalledWith(expect.any(Function), 0)
-    runIdle()
+    runTimers()
     await settle()
     expect(sdk.init).toHaveBeenCalledTimes(1)
   })
@@ -203,25 +247,26 @@ describe("startSentryWhenIdle", () => {
   })
 
   it("loads Sentry at once on an error before the page has loaded, and only once", async () => {
-    const { startSentryWhenIdle } = await importClient()
-    const { win, runIdle } = fakeWindow()
-    startSentryWhenIdle(win)
+    const { startSentryOnFirstInput } = await importClient()
+    const { win, runIdle, input } = fakeWindow()
+    startSentryOnFirstInput(win)
 
     win.dispatchEvent(errorEvent(new Error("early")))
     await settle()
-    // Neither `load` nor an idle moment has come: the error alone brought Sentry in.
+    // Neither `load` nor an input has come: the error alone brought Sentry in.
     expect(sdk.init).toHaveBeenCalledTimes(1)
 
     win.dispatchEvent(new Event("load"))
+    input()
     runIdle()
     await settle()
     expect(sdk.init).toHaveBeenCalledTimes(1)
   })
 
   it("reports errors thrown before Sentry loaded as unhandled, and leaves later ones to Sentry", async () => {
-    const { startSentryWhenIdle } = await importClient()
+    const { startSentryOnFirstInput } = await importClient()
     const { win } = fakeWindow()
-    startSentryWhenIdle(win)
+    startSentryOnFirstInput(win)
 
     const early = new Error("early")
     win.dispatchEvent(errorEvent(early))
@@ -240,9 +285,9 @@ describe("startSentryWhenIdle", () => {
   })
 
   it("reports an early error's message when it carries no Error", async () => {
-    const { startSentryWhenIdle } = await importClient()
+    const { startSentryOnFirstInput } = await importClient()
     const { win } = fakeWindow()
-    startSentryWhenIdle(win)
+    startSentryOnFirstInput(win)
 
     win.dispatchEvent(new ErrorEvent("error", { message: "Muted.", filename: OUR_SCRIPT }))
     await settle()
@@ -256,9 +301,9 @@ describe("startSentryWhenIdle", () => {
     ["an extension", "chrome-extension://abc/content.js"],
     ["a muted cross-origin script", ""],
   ])("keeps an early error from %s without hurrying the load", async (_, filename) => {
-    const { startSentryWhenIdle } = await importClient()
-    const { win, runIdle } = fakeWindow()
-    startSentryWhenIdle(win)
+    const { startSentryOnFirstInput } = await importClient()
+    const { win, runIdle, input } = fakeWindow()
+    startSentryOnFirstInput(win)
 
     const error = new Error("not ours")
     win.dispatchEvent(errorEvent(error, filename))
@@ -266,15 +311,16 @@ describe("startSentryWhenIdle", () => {
     expect(sdk.init).not.toHaveBeenCalled()
 
     win.dispatchEvent(new Event("load"))
+    input()
     runIdle()
     await settle()
     expect(sdk.captureException).toHaveBeenCalledExactlyOnceWith(error, unhandled("onerror"))
   })
 
   it("keeps an early rejection with a DOM Event as its reason without hurrying the load", async () => {
-    const { startSentryWhenIdle } = await importClient()
-    const { win, runIdle } = fakeWindow()
-    startSentryWhenIdle(win)
+    const { startSentryOnFirstInput } = await importClient()
+    const { win, runIdle, input } = fakeWindow()
+    startSentryOnFirstInput(win)
 
     // What a promise wrapping a failed <script> load rejects with.
     const failedLoad = new Event("error")
@@ -285,6 +331,7 @@ describe("startSentryWhenIdle", () => {
     expect(sdk.init).not.toHaveBeenCalled()
 
     win.dispatchEvent(new Event("load"))
+    input()
     runIdle()
     await settle()
     expect(sdk.captureException).toHaveBeenCalledExactlyOnceWith(
@@ -294,13 +341,14 @@ describe("startSentryWhenIdle", () => {
   })
 
   it("forwards router transitions only once Sentry has loaded", async () => {
-    const { startSentryWhenIdle } = await importClient()
-    const { win, runIdle } = fakeWindow({ readyState: "complete" })
-    const onRouterTransitionStart = startSentryWhenIdle(win)
+    const { startSentryOnFirstInput } = await importClient()
+    const { win, runIdle, input } = fakeWindow({ readyState: "complete" })
+    const onRouterTransitionStart = startSentryOnFirstInput(win)
 
     onRouterTransitionStart("/articles/a", "push")
     expect(sdk.captureRouterTransitionStart).not.toHaveBeenCalled()
 
+    input()
     runIdle()
     await settle()
     onRouterTransitionStart("/articles/b", "push")

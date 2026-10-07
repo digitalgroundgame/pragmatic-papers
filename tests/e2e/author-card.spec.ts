@@ -8,7 +8,12 @@ import { waitForStableBox, waitForStableRender } from "./helpers"
 test("author card renders social media links @visual", async ({ page }, testInfo) => {
   await page.goto("/authors")
 
-  const card = page.locator('[data-slot="card"]').filter({ hasText: "Teagan Wordsmith" })
+  // Visible only: the list streams in behind a Suspense skeleton, and for a
+  // moment React holds the resolved cards in a hidden node before it swaps
+  // them in, so the page can briefly carry two copies of this card.
+  const card = page
+    .locator('[data-slot="card"]')
+    .filter({ hasText: "Teagan Wordsmith", visible: true })
   await expect(card).toBeVisible()
 
   // Functional check (runs on every project, even when screenshots are skipped

@@ -5,7 +5,7 @@ import { ThemeProvider } from "@wrksz/themes/next"
 import type { Metadata, Viewport } from "next"
 import React from "react"
 import { fontVariables } from "@/app/(frontend)/fonts"
-import "../(frontend)/globals.css"
+import "@/app/(frontend)/globals.css"
 
 export default function FeedRootLayout({
   children,

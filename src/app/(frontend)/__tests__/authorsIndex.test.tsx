@@ -66,8 +66,13 @@ describe("authors index", () => {
     ["0", 1],
     ["nope", 1],
   ])("reads ?p=%s as page %i", async (p, page) => {
+    find.mockResolvedValue({ docs: authors, totalDocs: 15, totalPages: 3, page })
     await renderPage(p)
     expect(find).toHaveBeenCalledWith(expect.objectContaining({ page }))
+  })
+
+  it("404s past the last page", async () => {
+    await expect(renderPage("2")).rejects.toThrow("NEXT_HTTP_ERROR_FALLBACK;404")
   })
 
   it("says so when there are no authors", async () => {

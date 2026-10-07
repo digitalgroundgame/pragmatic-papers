@@ -9,8 +9,8 @@
  * `deploy` records the preview as a GitHub Deployment of the PR's branch in the
  * "Storybook Preview" environment, so the PR's deployments list it next to the
  * site's Preview (scripts/preview-deployment.ts), and marks the PR's older ones
- * inactive. `close` marks all of them inactive, as the site's Preview does; the
- * Cloudflare alias itself keeps serving.
+ * inactive. `close` marks all of them inactive, as the site's Preview does;
+ * storybook-close.yml then deletes the Worker Preview itself.
  *
  * `link` rewrites the block between LINKS_START and LINKS_END in the PR's
  * description: a link to each component the PR changes in the preview. It goes

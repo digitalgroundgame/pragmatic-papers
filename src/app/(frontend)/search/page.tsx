@@ -107,7 +107,12 @@ const querySearch = cache(async (rawQuery: string, page: number) => {
   return { ...emptyPage, docs: sorted }
 })
 
-export const metadata: Metadata = { title: "Search | The Pragmatic Papers" }
+// Results pages are endless variations of pages that are already indexed, and Google asks sites
+// not to let them into its index. Links on them are still followed.
+export const metadata: Metadata = {
+  title: "Search | The Pragmatic Papers",
+  robots: { index: false, follow: true },
+}
 
 interface Args {
   searchParams: Promise<{ q?: string; p?: string }>

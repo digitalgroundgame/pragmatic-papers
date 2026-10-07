@@ -47,7 +47,7 @@ export const AuthorCard: React.FC<AuthorCardProps> = ({ author }) => {
               <h3 className="text-pretty md:text-2xl">
                 <HoverPrefetchLink
                   href={`/authors/${slug}`}
-                  className="text-primary hover:text-primary/80"
+                  className="text-foreground hover:text-foreground/80"
                 >
                   {name}
                 </HoverPrefetchLink>
@@ -59,7 +59,7 @@ export const AuthorCard: React.FC<AuthorCardProps> = ({ author }) => {
               )}
             </div>
             {bioSnippet && (
-              <p className="text-primary line-clamp-2 font-serif text-sm">{bioSnippet}</p>
+              <p className="text-foreground line-clamp-2 font-serif text-sm">{bioSnippet}</p>
             )}
           </div>
           <AuthorLinks socials={author.socials} authorName={name} />

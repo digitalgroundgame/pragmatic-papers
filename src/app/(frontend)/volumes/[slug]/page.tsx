@@ -101,7 +101,7 @@ export default async function VolumePage({
           {publishedAt && (
             <HoverPrefetchLink
               href={`/volumes/${volume.slug}`}
-              className="dark:text-brand-high-contrast text-brand font-serif font-semibold underline-offset-4 hover:underline"
+              className="text-brand-text font-serif font-semibold underline-offset-4 hover:underline"
             >
               <time dateTime={publishedAt}>{formatDateTime(publishedAt)}</time>
             </HoverPrefetchLink>
@@ -117,8 +117,14 @@ export default async function VolumePage({
         <section className="space-y-4">
           <h2>Articles in this Volume</h2>
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-            {articles?.map((article) => (
-              <ArticleCard key={article.id} doc={article} relationTo="articles" />
+            {/* The first row is in view on load, and its image is usually the page's largest paint. */}
+            {articles?.map((article, index) => (
+              <ArticleCard
+                key={article.id}
+                doc={article}
+                priority={index < 2}
+                relationTo="articles"
+              />
             ))}
           </div>
         </section>

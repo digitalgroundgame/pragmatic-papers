@@ -14,8 +14,9 @@ export async function Footer(): Promise<React.ReactElement> {
     <footer className="container space-y-2 py-2">
       {layout && (
         <div className="border-t pt-6">
+          {/* The footer is already a padded container, so its blocks don't pad again. */}
           {layout.map((block, index) => (
-            <ContentBlock key={block.id || index} {...block} />
+            <ContentBlock key={block.id || index} {...block} className="px-0" />
           ))}
         </div>
       )}

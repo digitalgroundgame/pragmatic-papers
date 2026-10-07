@@ -9,7 +9,11 @@ export default defineConfig({
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
   workers: process.env.CI ? 1 : undefined,
-  reporter: "html",
+  // scripts/test-e2e.mjs adds a JSON report when CI needs to know which tests
+  // failed and why (it only fails on a missing baseline the run just wrote).
+  reporter: process.env.E2E_JSON_REPORT
+    ? [["html"], ["json", { outputFile: process.env.E2E_JSON_REPORT }]]
+    : "html",
   snapshotPathTemplate: "{testDir}/__screenshots__/{testFilePath}/{arg}{ext}",
   // Screenshots are compared only in the pinned Playwright image — CI's E2E
   // job and `pnpm test:e2e:update-snapshots`, which both set CI. A bare host

@@ -81,7 +81,7 @@ interface PlayToggleProps {
 
 function PlayToggle({ isPlaying, label, variant, expanded, onToggle }: PlayToggleProps) {
   return (
-    <div className="text-primary hover:text-primary/70 flex shrink-0 items-center transition-colors">
+    <div className="text-foreground hover:text-foreground/70 flex shrink-0 items-center transition-colors">
       <Button
         variant="ghost"
         onClick={onToggle}

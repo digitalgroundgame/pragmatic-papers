@@ -82,31 +82,36 @@ export const generateURL: GenerateURL<SeoDoc> = ({ collectionConfig, doc }) => {
 }
 
 /**
- * Resolves author names for the search index.
+ * Joins the names of a document's `users` or `topics` relationship for the search index.
  *
- * The reindex handler fetches documents at `depth: 0`, so `authors` arrives as
- * bare IDs. This used to be papered over by a `populateAuthors` afterRead hook
- * on Articles, which ran on *every* article read just so this one caller could
- * see names. Resolving here keeps it at the call site that needs it.
+ * The reindex handler fetches documents at `depth: 0`, so the relationship arrives as bare
+ * IDs. Articles used to paper over that with `populateAuthors` and `populateTopics`
+ * afterRead hooks, which ran on *every* article read, one query per article, just so this
+ * one caller could see names. Resolving here keeps it at the call site that needs it, in
+ * one batched query.
  */
-export async function resolveAuthorNames(raw: unknown, payload: Payload): Promise<string> {
+async function resolveNames(
+  raw: unknown,
+  payload: Payload,
+  collection: "users" | "topics",
+): Promise<string> {
   if (!Array.isArray(raw) || !raw.length) return ""
 
   const names = new Map<number, string | null | undefined>()
   const unresolvedIds: number[] = []
 
-  for (const author of raw) {
-    if (typeof author === "number") {
-      unresolvedIds.push(author)
-    } else if (author && typeof author === "object") {
-      names.set(author.id, author.name)
+  for (const item of raw) {
+    if (typeof item === "number") {
+      unresolvedIds.push(item)
+    } else if (item && typeof item === "object") {
+      names.set(item.id, item.name)
     }
   }
 
   if (unresolvedIds.length) {
     try {
       const { docs } = await payload.find({
-        collection: "users",
+        collection,
         where: { id: { in: unresolvedIds } },
         depth: 0,
         limit: unresolvedIds.length,
@@ -116,17 +121,23 @@ export async function resolveAuthorNames(raw: unknown, payload: Payload): Promis
       for (const doc of docs) names.set(doc.id, doc.name)
     } catch (error) {
       payload.logger.error(
-        { err: error, unresolvedIds },
-        "Failed to resolve author names for search",
+        { err: error, collection, unresolvedIds },
+        `Failed to resolve ${collection} names for search`,
       )
     }
   }
 
   return raw
-    .map((author) => (typeof author === "number" ? names.get(author) : author?.name))
+    .map((item) => (typeof item === "number" ? names.get(item) : item?.name))
     .filter(Boolean)
     .join(", ")
 }
+
+export const resolveAuthorNames = (raw: unknown, payload: Payload): Promise<string> =>
+  resolveNames(raw, payload, "users")
+
+export const resolveTopicNames = (raw: unknown, payload: Payload): Promise<string> =>
+  resolveNames(raw, payload, "topics")
 
 const beforeSync: BeforeSync = async ({ originalDoc, payload, searchDoc }) => {
   const title =
@@ -139,14 +150,7 @@ const beforeSync: BeforeSync = async ({ originalDoc, payload, searchDoc }) => {
   const slug = (originalDoc.slug as string | undefined) || ""
 
   const authors = await resolveAuthorNames(originalDoc.authors, payload)
-
-  const topicsRaw = originalDoc.topics as ({ name?: string | null } | number)[] | undefined | null
-  const topics = Array.isArray(topicsRaw)
-    ? topicsRaw
-        .map((t) => (typeof t === "object" && t !== null ? t.name : null))
-        .filter(Boolean)
-        .join(", ")
-    : ""
+  const topics = await resolveTopicNames(originalDoc.topics, payload)
 
   // Prefer heroImage, fall back to meta image, then profileImage (users)
   const image =

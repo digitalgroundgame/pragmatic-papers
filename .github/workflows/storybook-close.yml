@@ -9,7 +9,8 @@ on:
     types: [closed]
 
 # CI's Deploy Storybook job's group: a deploy still running for this PR
-# finishes first, so its "success" can't land after this run's "inactive".
+# finishes first, so its "success" can't land after this run's "inactive", and
+# one that starts after this run finds the PR closed and skips.
 concurrency:
   group: storybook-deploy-${{ github.event.pull_request.number }}
 

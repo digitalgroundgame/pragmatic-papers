@@ -335,11 +335,27 @@ jobs:
         if: env.HAS_CLOUDFLARE == 'true' && github.event_name != 'pull_request'
         run: npx --yes wrangler@4 deploy --config .storybook/wrangler.jsonc
 
+      # A PR closed while this run was building has already had its Preview
+      # deleted by storybook-close.yml; deploying now would bring it back.
+      - name: Skip a closed PR
+        id: open
+        if: env.HAS_CLOUDFLARE == 'true' && github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          state=$(gh pr view "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" --json state --jq .state)
+          if [ "$state" = "OPEN" ]; then
+            echo "open=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice::PR #$PR_NUMBER is $state; skipping its Storybook preview."
+          fi
+
       # A Worker Preview, unlike a `versions upload --preview-alias` alias, can
       # be deleted, so storybook-close.yml removes it when the PR closes.
       - name: Deploy a PR preview
         id: preview
-        if: env.HAS_CLOUDFLARE == 'true' && github.event_name == 'pull_request'
+        if: steps.open.outputs.open == 'true'
         env:
           PREVIEW: pr-${{ github.event.pull_request.number }}
           WRANGLER_OUTPUT_FILE_PATH: wrangler-output.json

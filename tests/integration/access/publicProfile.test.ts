@@ -1,7 +1,9 @@
 import type { Payload } from "payload"
+import type React from "react"
 import { beforeAll, describe, expect, it, vi } from "vitest"
 
-import type { Article, Media, User } from "@/payload-types"
+import { ContributorsBlock } from "@/blocks/Contributors/Component"
+import type { Article, Media, Page, User } from "@/payload-types"
 import { ARTICLE_CONTENT } from "../fixtures/content"
 import { MINIMAL_PNG } from "../fixtures/media"
 import { createUser, getPayload } from "../helpers/testUsers"
@@ -122,5 +124,66 @@ describe("publicProfile", () => {
       context: { disableRevalidate: true },
     })
     expect(updated.publicProfile).toBeFalsy()
+  })
+})
+
+describe("contributors block", () => {
+  async function savePage(people: number[]) {
+    // Only admins and chief editors may create pages.
+    const chief = await createUser("chief-editor")
+    return payload.create({
+      collection: "pages",
+      overrideAccess: false,
+      user: chief,
+      context: { disableRevalidate: true },
+      data: {
+        title: `Contributors ${Date.now()}`,
+        hero: { type: "lowImpact" },
+        layout: [{ blockType: "contributors", title: "Contributors", people }],
+        _status: "published",
+      } as unknown as Page,
+    })
+  }
+
+  /** The users a Contributors block renders a card for. */
+  async function rendered(people: number[]): Promise<number[]> {
+    const tree = (await ContributorsBlock({
+      blockType: "contributors",
+      title: "Contributors",
+      people,
+    })) as React.ReactElement<{ children: React.ReactElement<{ children: unknown }>[] }> | null
+    if (!tree) return []
+    const list = tree.props.children[1]!.props.children as React.ReactElement<{ author: User }>[]
+    return list.map((card) => card.props.author.id)
+  }
+
+  it("lets a chief editor list staff and public profiles", async () => {
+    const [writer, demoted] = await Promise.all([createUser("writer"), createUser("writer")])
+    await publishArticle([demoted.id])
+    await demote(demoted)
+
+    await expect(savePage([writer.id, demoted.id])).resolves.toMatchObject({
+      id: expect.any(Number),
+    })
+  })
+
+  it("rejects a member without a public profile", async () => {
+    const member = await createUser("member")
+    await expect(savePage([member.id])).rejects.toThrow(/People/)
+  })
+
+  it("leaves out anyone whose author page readers can't open", async () => {
+    const [writer, credited, uncredited] = await Promise.all([
+      createUser("writer"),
+      createUser("writer"),
+      createUser("writer"),
+    ])
+    await publishArticle([credited.id])
+    await Promise.all([demote(credited), demote(uncredited)])
+
+    expect(await rendered([uncredited.id, credited.id, writer.id])).toEqual([
+      credited.id,
+      writer.id,
+    ])
   })
 })

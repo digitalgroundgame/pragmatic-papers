@@ -1,5 +1,5 @@
 import { revalidateRedirects } from "@/hooks/revalidateRedirects"
-import type { Article, Page, Topic, Volume } from "@/payload-types"
+import type { Article, Interactive, Page, Topic, Volume } from "@/payload-types"
 import { getServerSideURL } from "@/utilities/getURL"
 import { DEFAULT_DESCRIPTION } from "@/utilities/mergeOpenGraph"
 import { toRoman } from "@/utilities/toRoman"
@@ -18,7 +18,9 @@ import { FixedToolbarFeature, HeadingFeature, lexicalEditor } from "@payloadcms/
 import { s3Storage } from "@payloadcms/storage-s3"
 import { type Payload, type Plugin } from "payload"
 
-function isVolume(obj: Volume | Article | Page | Topic): obj is Volume {
+type SeoDoc = Volume | Article | Page | Topic | Interactive
+
+function isVolume(obj: SeoDoc): obj is Volume {
   return (obj as Volume).volumeNumber !== undefined
 }
 
@@ -35,7 +37,7 @@ function lexicalToPlainText(node: LexicalTextNode | undefined | null): string {
   return node.children.map(lexicalToPlainText).join(" ")
 }
 
-export const generateTitle: GenerateTitle<Volume | Article | Page | Topic> = ({ doc }) => {
+export const generateTitle: GenerateTitle<SeoDoc> = ({ doc }) => {
   if (isVolume(doc)) {
     return doc?.volumeNumber
       ? `Volume ${toRoman(doc.volumeNumber)} | The Pragmatic Papers`
@@ -46,11 +48,10 @@ export const generateTitle: GenerateTitle<Volume | Article | Page | Topic> = ({ 
   return "The Pragmatic Papers"
 }
 
-export const generateDescription: GenerateDescription<Volume | Article | Page | Topic> = ({
-  doc,
-}) => ("description" in doc && doc.description) || DEFAULT_DESCRIPTION
+export const generateDescription: GenerateDescription<SeoDoc> = ({ doc }) =>
+  ("description" in doc && doc.description) || DEFAULT_DESCRIPTION
 
-const generateURL: GenerateURL<Volume | Article | Page | Topic> = ({ doc }) => {
+const generateURL: GenerateURL<SeoDoc> = ({ doc }) => {
   const url = getServerSideURL()
 
   return doc?.slug ? `${url}/${doc.slug}` : url
@@ -143,7 +144,7 @@ const beforeSync: BeforeSync = async ({ originalDoc, payload, searchDoc }) => {
 // https://github.com/payloadcms/payload/issues/18311
 const seo: Plugin = async (config) => ({
   ...(await seoPlugin({
-    collections: ["articles", "pages", "volumes", "topics"],
+    collections: ["articles", "pages", "volumes", "topics", "interactives"],
     generateTitle,
     generateDescription,
     generateURL,
@@ -172,7 +173,7 @@ export const supabaseObjectURL = ({
 
 export const plugins: Plugin[] = [
   searchPlugin({
-    collections: ["articles", "pages", "volumes", "topics"],
+    collections: ["articles", "pages", "volumes", "topics", "interactives"],
     defaultPriorities: {
       articles: 40,
       volumes: 30,

@@ -100,6 +100,16 @@ describe("unsplashFileHandler", () => {
     expect(unsplash.photo).not.toHaveBeenCalled()
   })
 
+  it("logs a failed download and answers 502", async () => {
+    vi.mocked(unsplash.image).mockRejectedValue(new Error("Unsplash image failed (HTTP 404)"))
+    const res = await unsplashFileHandler(request(writer, { routeParams: { photoId: "abc123" } }))
+    expect(res.status).toBe(502)
+    await expect(res.json()).resolves.toEqual({
+      error: "Unsplash download failed. Try again in a moment.",
+    })
+    expect(logger.warn).toHaveBeenCalled()
+  })
+
   it("refuses anyone but staff", async () => {
     const res = await unsplashFileHandler(request(null, { routeParams: { photoId: "abc123" } }))
     expect(res.status).toBe(401)

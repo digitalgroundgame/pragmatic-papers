@@ -7,6 +7,8 @@
   "scripts": {
     "postinstall": "tsx scripts/install-fonts.ts",
     "build": "cross-env NODE_OPTIONS=--no-deprecation next build",
+    "build:worker": "node scripts/build-worker.mjs",
+    "start:worker": "wrangler dev",
     "dev": "pnpm dev:db && pnpm dev:next && pnpm dev:db-down",
     "dev:db": "docker compose -p pragmatic-papers -f docker-compose.yml up -d",
     "dev:db-nuke": "docker compose -p pragmatic-papers -f docker-compose.yml down -v",

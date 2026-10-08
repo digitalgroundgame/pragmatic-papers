@@ -104,6 +104,6 @@ devenv.local.yaml
 # Upstream docs fetched on demand by .claude/skills/upstream-docs
 /.cache/
 
-# OpenNext / Wrangler build output (#916 spike)
+# Cloudflare Worker build output (pnpm build:worker, wrangler dev)
 .open-next/
 .wrangler/

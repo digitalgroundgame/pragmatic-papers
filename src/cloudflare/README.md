@@ -1,116 +1,70 @@
-# Cloudflare Worker spike (#916)
+# The public site as a Cloudflare Worker
 
-Can the public site run as a Cloudflare Worker (OpenNext), with Payload's Local API
-reading the same Postgres, while the admin panel stays on Coolify? This is step 1 of
-the plan sketched on #916: the decision gate.
+The public site can be built as a Cloudflare Worker with
+[OpenNext](https://opennext.js.org/cloudflare). Payload's Local API reads the same
+Postgres, and the admin panel, Payload's REST/GraphQL API, uploads, migrations and jobs
+stay on Coolify. The point is client-side navigation: Next adds an `_rsc` value to each
+navigation request that changes with the page it came from, so Cloudflare's zone cache
+stores every variation separately and almost every click misses. OpenNext keys its cache
+by route, so navigations from any page read the same entry. It needs Workers Paid: the
+Worker is ~8.3 MiB gzipped against a 10 MiB limit (3 MiB on Free). Open issue #916
+tracks turning `next/link` back on.
 
-## How to run it
+Nothing here changes the Coolify build: everything Worker-specific is behind
+`OPENNEXT_BUILD=true`, which only `pnpm build:worker` sets.
+
+## Build and run it locally
 
 ```sh
-# Postgres with the schema (or a seeded database), then:
-DATABASE_URI=… PAYLOAD_SECRET=… SERVER_URL=… USE_LOCAL_STORAGE=true node scripts/build-worker.mjs
-pnpm exec wrangler deploy --dry-run --outdir /tmp/worker   # size, nothing uploaded
-pnpm exec wrangler dev --var DATABASE_URI:… --var PAYLOAD_SECRET:… --var SERVER_URL:… --var USE_LOCAL_STORAGE:true
+# A database with the schema, seeded (e.g. pnpm dev:db-seed), then:
+DATABASE_URI=… PAYLOAD_SECRET=… SERVER_URL=http://localhost:8787 USE_LOCAL_STORAGE=true pnpm build:worker
+pnpm start:worker --var DATABASE_URI:… --var PAYLOAD_SECRET:… --var SERVER_URL:http://localhost:8787 --var USE_LOCAL_STORAGE:true
+pnpm exec wrangler deploy --dry-run --outdir .wrangler/dry-run   # gzipped size; uploads nothing
 ```
 
-`scripts/build-worker.mjs` sets `OPENNEXT_BUILD=true`, which turns on everything
-Worker-specific in `next.config.ts`; without it the app builds exactly as before.
+The build takes several minutes and prerenders against the database, like `pnpm build`.
+`wrangler dev` simulates R2 locally, so `x-nextjs-cache: HIT` on a second request to an
+article shows the cache working. `scripts/bench-cache.sh <origin> <path>` times full
+pages and navigations against any deployment.
 
-## Results
+## How the build works
 
-### Size: fits, with webpack and without the admin panel
+| Piece                                          | Why                                                                                                                                                                        |
+| ---------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `scripts/build-worker.mjs`                     | Builds with webpack (Turbopack copies the Payload config into every route group: 2.4×, ~20 MiB) and without `src/app/(payload)`, which it moves aside and puts back        |
+| `withCloudflare.ts`                            | The Next config for the Worker: stubs, `pg` handling and traces, applied by `next.config.ts` when `OPENNEXT_BUILD=true`. Unit-tested in `__tests__/`                       |
+| `stubs/unavailable.ts`                         | Stands in for `drizzle-kit/api`, `sharp` and `@google-analytics/data` (~17 MB with its gRPC stack), which only Coolify's code paths call. Calling one in the Worker throws |
+| `sharp.ts`                                     | Payload's `sharp`, imported from here because Next keeps `sharp` external however it's aliased; the Worker build swaps this module instead                                 |
+| `pg` external, `pg-cloudflare` traced          | Bundled by webpack, `pg` would get `pg-cloudflare`'s empty Node build. Left external, OpenNext's esbuild bundles it with the `workerd` condition                           |
+| `maxUses: 1` in `payload.config.ts`            | A Worker can't reuse a socket opened during another request; without it every request after the first hangs. Applies only when running in a Worker                         |
+| `open-next.config.ts`, `wrangler.jsonc` (root) | OpenNext's R2 incremental cache, the `IMAGES` binding and the Worker's self-reference, from the package's templates                                                        |
 
-Cloudflare's limit is 10 MiB gzipped on the Workers Paid plan (3 MiB on Free).
-`wrangler deploy --dry-run`:
+## Measured
 
-| Build                                                      | Raw      | Gzipped    |
-| ---------------------------------------------------------- | -------- | ---------- |
-| Turbopack, everything                                      | 125.1 MB | 24.4 MB    |
-| Turbopack, Google Analytics client stubbed                 | 93.3 MB  | 20.4 MB    |
-| Turbopack, that and no `(payload)` route group             | 78.2 MB  | 17.4 MB    |
-| Webpack, with `(payload)`                                  | 44.2 MB  | 10.5 MB    |
-| **Webpack, no `(payload)` (what `build-worker.mjs` does)** | 35.1 MB  | **8.3 MB** |
+- **Size** (`wrangler deploy --dry-run`): 35.5 MB raw, 8.29 MiB gzipped. With
+  Turbopack it was 17.4–24.4 MiB; with webpack but keeping `(payload)`, 10.5 MiB. If it
+  needs to shrink, the next cuts are the newsletter's email stack (react-email,
+  Tailwind, `css-tree`: ~3.9 MB raw), the seed endpoint and `prompts`, and the
+  `email-preview` and `next/seed` routes.
+- **Cache** (`wrangler dev`, seeded Postgres): articles and volumes, which prerender
+  with `revalidate = 3600`, come from R2 in 20–40 ms, for full pages and navigations
+  alike, and a navigation with a different `_rsc` value reads the same entry. `/` and
+  the other dynamic pages render each time (90–280 ms warm); a cold isolate's first
+  request pays Payload's init (~1.4 s locally).
+- **Today, through Cloudflare's zone cache**: a navigation that misses waits ~500 ms on
+  Coolify; a full page from Cloudflare's cache ~65 ms.
 
-- **Turbopack duplicates.** Every route loads the Payload config through the Local
-  API, and Turbopack copies that module graph into each route group's chunks: 36.6 MB
-  of mapped code is 15.1 MB of unique code (2.4×). Webpack shares the chunks.
-- **The `updateRecommendations` job's `@google-analytics/data`** (with `google-gax`,
-  `@grpc`, `protobufjs`, `google-auth-library`) was ~17 MB raw, because the job is in
-  `payload.config.ts`. OpenNext bundles every server chunk, so a lazy `import()` wouldn't
-  help; the Worker build stubs it. Jobs keep running on Coolify.
-- Headroom is ~1.9 MiB. The next things to cut, if needed: the newsletter's email
-  stack (react-email + Tailwind + `css-tree`, ~3.9 MB raw), the seed endpoint and
-  `prompts`, and the `email-preview` and `next/seed` routes, which can stay on Coolify.
+## Before it can serve real traffic
 
-### Re-run on 2026-10-08, after merging `dev`
-
-Merging `dev` (83 commits: runtime config, prerendered articles and volumes, purge on
-save, Sentry and Payload logging changes, Next 16.3.8) changed neither the approach nor
-the size. `wrangler deploy --dry-run`: **35.5 MB raw, 8.29 MiB gzipped** (8,494 KiB),
-against 8.3 MB on 2026-10-01. Headroom is still ~1.7 MiB.
-
-The difference that matters: `articles/[slug]` and `volumes/[slug]` are no longer
-`force-dynamic` (they prerender with `revalidate = 3600`), so the Worker now serves them
-from OpenNext's incremental cache, R2 (simulated locally by `wrangler dev`):
-
-| Request (`wrangler dev`, seeded Postgres)             | Result                                                |
-| ----------------------------------------------------- | ----------------------------------------------------- |
-| `/` (cold, first request to the isolate)              | 200, 103 KB, 1.38 s                                   |
-| `/` (warm; still dynamic, rendered each time)         | 200, 0.28 s                                           |
-| `/articles/<slug>`, repeated                          | 200, `x-nextjs-cache: HIT`, 0.02–0.03 s               |
-| `/articles/<slug>` with `RSC: 1`                      | 200 `text/x-component`, `HIT`, 0.03–0.04 s            |
-| `/volumes/1` with `RSC: 1`, navigating from `/`       | 200, `HIT`, 0.02 s                                    |
-| `/volumes/1` with `RSC: 1`, navigating from `/topics` | different `_rsc` value, **same entry**: `HIT`, 0.02 s |
-| `/topics`, `/authors`, `/search` (dynamic)            | 200, 0.09–0.17 s                                      |
-| `/articles/feed.xml`, `/sitemap.xml`, `/robots.txt`   | 200                                                   |
-| `/articles/does-not-exist`                            | 404                                                   |
-
-The last navigation row is the point of #916: a navigation from a different page sends a
-different `_rsc` value, which Cloudflare's zone cache stores separately, but OpenNext keys
-its cache by route, so both navigations read the same entry.
-
-Still rendered on every request: `/`, `[slug]`, `topics/[slug]`, `authors/[slug]`,
-`interactives/[slug]` and the indexes (pagination reads `?p=`; see #1140).
-
-### First run (2026-10-01)
-
-| Request                                 | Result                                                                     |
-| --------------------------------------- | -------------------------------------------------------------------------- |
-| `/` (cold)                              | 200, 71.8 KB, 2.0 s                                                        |
-| `/` (warm)                              | 200, 0.07 s                                                                |
-| `/articles/<slug>` ×3                   | 200, 121 KB, 0.11–0.16 s                                                   |
-| `/articles/<slug>` with `RSC: 1`        | 200 `text/x-component`, 68.7 KB, 0.13 s (after Next's own `_rsc` redirect) |
-| `/topics`, `/authors`, `/feed.articles` | 200                                                                        |
-| `/robots.txt`, `/sitemap.xml`           | 200 (prerendered)                                                          |
-
-The cold request includes Payload's init (`getPayload`), so each new isolate pays ~2 s
-locally before Hyperdrive's network round trips.
-
-### What it took
-
-All behind `OPENNEXT_BUILD=true` unless noted:
-
-- **Stubs** (`src/cloudflare/stubs/unavailable.ts`) for what a Worker can't load and
-  the public site never calls: `drizzle-kit/api` (migrations, schema push; withPayload
-  leaves it out of Next's traces, so the Worker bundle can't resolve it), `sharp`
-  (native) and `@google-analytics/data`.
-- **`sharp` through `src/cloudflare/sharp.ts`** (always): Next keeps `sharp` external
-  however it's aliased, so the Worker build swaps our module that imports it.
-- **`pg` kept external**, so OpenNext's esbuild bundles it with the `workerd` condition:
-  bundled by webpack, `pg-cloudflare` resolved to its empty Node build (`CloudflareSocket
-is not a constructor`). `pg-cloudflare` is added to Next's traces for the same reason.
-- **`maxUses: 1` on the pool when running in a Worker** (always; `payload.config.ts`):
-  a Worker can't reuse a socket opened during another request. Without it, every
-  request after the first hung until workerd cancelled it.
-
-## Not tested yet
-
-- **Hyperdrive** and real network latency: needs a deploy (a Cloudflare token with
-  Workers, R2 and Hyperdrive access) and a Hyperdrive config for the database.
-- **The R2 incremental cache against a real bucket**: articles and volumes now hit
-  OpenNext's cache in `wrangler dev`'s local R2; the rest of the pages are still dynamic.
-  Revalidation from Coolify's hooks into the Worker's cache isn't built yet.
-- **CPU limits** on a cold start (Payload's init) in production.
-- **Images** (the `IMAGES` binding) and media.
-- **Routing** `/admin`, `/api`, `/media` and `/map-assets` to Coolify (a custom Worker
-  entry), and revalidation from Coolify's hooks.
+- **Hyperdrive** for the database connection, and real latency and cold-start CPU,
+  measured on a deployment.
+- **Routing**: `/admin`, `/api`, `/media` and `/map-assets` to Coolify,
+  everything else to the Worker.
+- **Revalidation**: Coolify's `revalidate*` hooks have to clear the Worker's R2 cache
+  too, not just Next's cache on Coolify and Cloudflare's edge.
+- **Images** through the `IMAGES` binding, and media URLs.
+- **Skew protection** (`skewProtection` in `open-next.config.ts`, experimental): sends a
+  tab opened before a deploy to the version that built its page, which also avoids
+  Next's "router state header could not be parsed" error on stale tabs.
+- **Deploys**: a workflow that builds and uploads the Worker, with a Cloudflare token
+  for Workers, R2 and Hyperdrive.

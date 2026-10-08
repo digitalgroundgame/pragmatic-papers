@@ -111,8 +111,8 @@ export default buildConfig({
       // next query. (No connectionTimeoutMillis: pg-pool also applies it to queries waiting
       // for a free client, which would turn a busy pool into failed requests.)
       keepAlive: true,
-      // #916 spike: a Worker can't reuse a socket opened during another request, so in
-      // one, give each query a fresh connection (Hyperdrive pools them for us).
+      // A Cloudflare Worker can't reuse a socket opened during another request, so in one,
+      // give each query a fresh connection (Hyperdrive pools them for us).
       ...(globalThis.navigator?.userAgent === "Cloudflare-Workers" && { maxUses: 1 }),
     },
     // prevent schema push in prod/test for static schema determinism and noise reduction

@@ -4,12 +4,10 @@ import type { NextConfig } from "next"
 import path from "path"
 import { fileURLToPath } from "url"
 
+import { withCloudflare } from "./src/cloudflare/withCloudflare"
+
 const __filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(__filename)
-
-// #916 spike: building the public site as a Cloudflare Worker with OpenNext
-// (`OPENNEXT_BUILD=true pnpm exec opennextjs-cloudflare build`).
-const OPENNEXT_BUILD = process.env.OPENNEXT_BUILD === "true"
 
 // Read while building, so a Coolify build needs SERVER_URL as a build variable too.
 const SERVER_URL = new URL(process.env.SERVER_URL || "http://localhost:8000")
@@ -49,13 +47,6 @@ const NOT_EDGE_CACHED = [
 
 const nextConfig: NextConfig = {
   output: "standalone",
-  // In a Worker, pg connects through pg-cloudflare, which Next's trace (run under Node)
-  // never reaches, so OpenNext wouldn't copy it into the Worker bundle.
-  ...(OPENNEXT_BUILD && {
-    outputFileTracingIncludes: {
-      "/**/*": ["./node_modules/.pnpm/pg-cloudflare@*/node_modules/pg-cloudflare/**/*"],
-    },
-  }),
   // Temporarily required on Windows until Next.js fixes Turbopack Sass resolution.
   // See: https://github.com/vercel/next.js/issues/86431
   sassOptions: {
@@ -225,15 +216,6 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: path.resolve(dirname),
     resolveExtensions: [".mdx", ".tsx", ".ts", ".jsx", ".js", ".mjs", ".json"],
-    // A Worker bundle has to resolve every import at build time. drizzle-kit (migrations,
-    // schema push) is left out of Next's traces by withPayload, and sharp is native.
-    ...(OPENNEXT_BUILD && {
-      resolveAlias: {
-        "drizzle-kit/api": "./src/cloudflare/stubs/unavailable.ts",
-        sharp: "./src/cloudflare/stubs/unavailable.ts",
-        "@google-analytics/data": "./src/cloudflare/stubs/unavailable.ts",
-      },
-    }),
     rules: {
       "*.svg": {
         loaders: ["@svgr/webpack"],
@@ -319,46 +301,5 @@ const config = withSentryConfig(payloadConfig, {
   },
 })
 
-// #916 spike: the packages a Worker can't load, aliased to stubs. Turbopack takes the
-// aliases in `turbopack.resolveAlias` above; webpack checks `serverExternalPackages`
-// before aliases, so they come off that list too.
-const WORKER_STUBS = ["drizzle-kit/api", "sharp", "@google-analytics/data"]
-
-function forCloudflare(base: NextConfig): NextConfig {
-  const stub = path.resolve(dirname, "src/cloudflare/stubs/unavailable.ts")
-  return {
-    ...base,
-    serverExternalPackages: base.serverExternalPackages?.filter(
-      (name) => name !== "drizzle-kit" && !WORKER_STUBS.includes(name),
-    ),
-    webpack: (webpackConfig, options) => {
-      const resolved = base.webpack ? base.webpack(webpackConfig, options) : webpackConfig
-      // withPayload's own webpack function lists them in `externals` as well.
-      if (Array.isArray(resolved.externals)) {
-        resolved.externals = resolved.externals.filter(
-          (external: unknown) =>
-            typeof external !== "string" ||
-            (external !== "drizzle-kit" && !WORKER_STUBS.includes(external)),
-        )
-      }
-      // Left to webpack, pg resolves pg-cloudflare under Node's conditions and gets its
-      // empty build. External, it's bundled by OpenNext's esbuild with `workerd`.
-      if (options.isServer) resolved.externals = [...(resolved.externals ?? []), "pg"]
-      resolved.resolve.alias = {
-        ...resolved.resolve.alias,
-        ...Object.fromEntries(WORKER_STUBS.map((name) => [`${name}$`, stub])),
-      }
-      // Next keeps sharp external whatever the aliases say, so swap our own module
-      // that imports it (src/cloudflare/sharp.ts) instead.
-      resolved.plugins.push(
-        new options.webpack.NormalModuleReplacementPlugin(
-          /src[\\/]cloudflare[\\/]sharp\.ts$/,
-          stub,
-        ),
-      )
-      return resolved
-    },
-  }
-}
-
-export default OPENNEXT_BUILD ? forCloudflare(config) : config
+// The public site as a Cloudflare Worker (`pnpm build:worker`); see src/cloudflare/README.md.
+export default process.env.OPENNEXT_BUILD === "true" ? withCloudflare(config) : config

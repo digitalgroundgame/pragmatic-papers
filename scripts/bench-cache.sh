@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# #916: how a page and a client-side navigation perform through Cloudflare today, from the
+# How a page and a client-side navigation perform through Cloudflare, from the
 # cache and from the origin. Prints the median server wait (time to first byte minus the
 # TCP/TLS setup) and the cf-cache-status counts for each kind of request.
 #
@@ -7,7 +7,8 @@
 #
 # A random query parameter forces a cache miss. With only `RSC: 1` sent, Next expects an
 # empty `_rsc`, so `?x=..&_rsc` is a valid navigation request rather than a redirect;
-# a real navigation's `_rsc` differs by the page it came from, which is #916's problem.
+# a real navigation's `_rsc` differs by the page it came from, so Cloudflare's zone cache
+# stores each one separately (src/cloudflare/README.md).
 set -euo pipefail
 H=$1 A=$2 N=${3:-10}
 headers=$(mktemp)

@@ -61,6 +61,7 @@ processes they start.
 ### Build & Payload
 
 - `pnpm build` — build the application
+- `pnpm build:worker` / `pnpm start:worker` — build the public site as a Cloudflare Worker with OpenNext (webpack, without the admin panel) and run it in `wrangler dev`. Everything Worker-specific is behind `OPENNEXT_BUILD=true`, so `pnpm build` is unchanged; see `src/cloudflare/README.md`
 - `pnpm payload generate:types` — regenerate Payload TypeScript types
 - `pnpm payload generate:importmap` — regenerate Payload import map
 - `pnpm payload migrate` — run database migrations

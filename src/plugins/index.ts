@@ -1,4 +1,5 @@
 import { revalidateRedirects } from "@/hooks/revalidateRedirects"
+import { helpDocsPlugin } from "@/plugins/helpDocs"
 import type { Article, Interactive, Page, Topic, Volume } from "@/payload-types"
 import { collectionPrefixMap } from "@/utilities/generatePreviewPath"
 import { getServerSideURL } from "@/utilities/getURL"
@@ -337,4 +338,5 @@ export const plugins: Plugin[] = [
     },
     clientUploads: true,
   }),
+  helpDocsPlugin(),
 ]

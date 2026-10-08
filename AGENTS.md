@@ -127,6 +127,29 @@ every public page is purged too, when the deployment has
 see the old answer until the edge's copy expires (10 minutes, or up to a day
 served stale). When the feature graduates, delete the checkbox and the checks.
 
+### Help docs (the admin's bell)
+
+A release that changes what staff do in the admin ships a help article in the
+same PR. Articles are Markdown in `src/docs/<slug>.md` (only `.md`: Storybook
+reads every `.mdx` under `src/` as a page of its own), served at
+`/docs/<slug>` and listed at `/docs`. The bell beside the avatar in the admin
+header (`src/plugins/helpDocs/`, a plugin registered in `src/plugins/index.ts`)
+lists them for logged-in staff, with an unread count. To add one:
+
+1. Write `src/docs/<slug>.md`: no title or front matter, the page adds both.
+2. Add an entry at the top of `helpDocs` in `src/docs/index.ts`: `title`,
+   a one- or two-sentence `summary` (the bell shows it), `publishedAt` (the
+   day the release reaches production) and, for an article only some roles
+   need, `audience` (e.g. `["editor"]`; admins and chief editors see every
+   article). `src/docs/__tests__/helpDocs.test.ts` fails when the list and the
+   files disagree.
+
+Articles are public, and they ship with the code rather than living in the
+database, so every environment shows the same ones without anyone re-entering
+them. Which articles a user has opened is kept in their Payload preferences
+(`payload-preferences`, key `help-docs`); articles published before the
+account was made don't count as unread.
+
 ### Edge cache (Cloudflare)
 
 Public pages are cached at Cloudflare's edge (`s-maxage=600`,

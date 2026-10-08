@@ -57,6 +57,9 @@
   "dependencies": {
     "@base-ui/react": "^1.8.0",
     "@google-analytics/data": "^7.2.0",
+    "@mdx-js/loader": "^3.1.1",
+    "@mdx-js/react": "^3.1.1",
+    "@next/mdx": "16.3.8",
     "@next/third-parties": "16.3.8",
     "@payloadcms/admin-bar": "^3.90.2",
     "@payloadcms/db-postgres": "^3.90.2",
@@ -118,6 +121,7 @@
     "@testing-library/react": "^16.3.3",
     "@types/escape-html": "^1.0.4",
     "@types/jsonld": "^1.5.15",
+    "@types/mdx": "^2.0.14",
     "@types/node": "^24.13.6",
     "@types/pg": "^8.23.1",
     "@types/react": "19.3.0",

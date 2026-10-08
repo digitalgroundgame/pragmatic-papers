@@ -63,7 +63,7 @@ describe("media picked from Unsplash", () => {
     const caption = JSON.stringify(media.caption)
     expect(caption).toContain('"text":"Ada Lovelace"')
     expect(caption).toContain(
-      "https://unsplash.com/@ada?utm_source=pragmatic_papers&utm_medium=referral",
+      "https://unsplash.com/@ada?utm_source=pragmatic_papers_development&utm_medium=referral",
     )
     await vi.waitFor(() => expect(unsplashCalls).toContain(rawPhoto.links.download_location))
   })

@@ -52,7 +52,7 @@ export const unsplash = unsplashApp({
   label: "Unsplash photo search",
   keyEnv: "UNSPLASH_ACCESS_KEY",
   appNameEnv: "UNSPLASH_APP_NAME",
-  defaultAppName: "pragmatic_papers",
+  defaultAppName: "pragmatic_papers_development",
 })
 
 /** Declaration order is display order. */

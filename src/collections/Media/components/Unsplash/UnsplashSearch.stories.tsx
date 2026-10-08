@@ -29,7 +29,7 @@ const page = (results: UnsplashPhoto[], totalPages = 1): UnsplashResults => ({
   total: results.length * totalPages,
   totalPages,
   results,
-  homeUrl: "https://unsplash.com/?utm_source=pragmatic_papers&utm_medium=referral",
+  homeUrl: "https://unsplash.com/?utm_source=pragmatic_papers_development&utm_medium=referral",
 })
 
 const first = [

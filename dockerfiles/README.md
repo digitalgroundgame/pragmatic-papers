@@ -96,7 +96,7 @@ Public pages are cached at Cloudflare's edge for 10 minutes, then served stale f
 Media's upload form has a **Search Unsplash** button beside "Paste URL", in the Media collection and in an upload field's "Create New" drawer. A picked photo is fetched by the server and saved like any other upload, so it lands in local storage or S3 the same way. Saving it credits the photographer in the caption and tells Unsplash the photo was downloaded, as their API guidelines require (`src/collections/Media/hooks/attributeUnsplashPhoto.ts`).
 
 - `UNSPLASH_ACCESS_KEY` — the Unsplash application's Access Key (unsplash.com/oauth/applications). The Secret Key isn't used. A **Runtime Variable** only. Unset, the button isn't shown.
-- `UNSPLASH_APP_NAME` — optional; the application's name on Unsplash, used as `utm_source` on links back to Unsplash. Defaults to `pragmatic_papers`.
+- `UNSPLASH_APP_NAME` — optional; the application's name on Unsplash, used as `utm_source` on links back to Unsplash. Defaults to `pragmatic_papers_development` ("Pragmatic Papers Development" on Unsplash); set it if the app is renamed or another app's key is used.
 - A demo application allows 50 searches an hour. Apply for production access on the application's page once the integration is live.
 
 ### 4. Configure Domain

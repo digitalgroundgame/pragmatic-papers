@@ -25,7 +25,10 @@ async function dbDebug(request, env) {
         inet_server_addr()::text as server, current_setting('search_path') as search_path,
         (select count(*)::int from information_schema.tables where table_schema = 'public') as public_tables,
         (select string_agg(nspname, ',') from pg_namespace where nspname not like 'pg_%') as schemas,
-        version()`,
+        version(),
+        (select string_agg(datname || '=' || pg_size_pretty(pg_database_size(datname)), ', ')
+          from pg_database where not datistemplate) as databases,
+        inet_server_port() as port, pg_postmaster_start_time()::text as started`,
     )
     return Response.json(rows[0])
   } catch (error) {

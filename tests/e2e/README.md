@@ -33,7 +33,9 @@ against committed baselines in `__screenshots__/`.
   a `concurrency` group keyed by branch, so pushing a new commit cancels any
   older run still in flight on that branch. Cancellation isn't instant, so
   this shrinks the race window rather than eliminating it — but it rules out
-  the practical case of two full runs finishing close together.
+  the practical case of two full runs finishing close together. Adding the
+  `needs screenshots` label doesn't cancel anything: it waits for the E2E run
+  already in flight on the same commit to finish, then starts.
 
 ## Adding a new screenshot test
 

@@ -18,11 +18,17 @@ on:
 
 # Shared with playwright.yml's group: both workflows can push a baseline
 # commit to the same branch, so a stale run's push would otherwise race a
-# newer one's. Cancelling the older run shrinks that race window from the
-# whole E2E run down to GitHub's cancellation grace period.
+# newer one's.
+#
+# This workflow waits its turn rather than cancelling (cancel-in-progress is
+# false): it doesn't change the commit, so cancelling the E2E run in flight
+# on it would leave E2E and Page speed cancelled there for good whenever this
+# run finds no baselines to commit. Queued behind it, this run starts once it
+# finishes; a new push still cancels both, since playwright.yml's own run
+# cancels whatever is in progress.
 concurrency:
   group: snapshot-baselines-${{ github.ref_name }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 # The E2E environment is set by .github/actions/setup-e2e, shared with
 # playwright.yml so regenerated baselines render the same page it checks:

@@ -3,9 +3,15 @@ import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync } from "
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
+import { setPrLink } from "../../scripts/pr-description"
+import type * as PrDescription from "../../scripts/pr-description"
 import type * as SnapshotComment from "../../scripts/snapshot-comment"
 
 vi.mock("node:child_process", () => ({ execFileSync: vi.fn() }))
+vi.mock("../../scripts/pr-description", async (importOriginal) => ({
+  ...(await importOriginal<typeof PrDescription>()),
+  setPrLink: vi.fn(),
+}))
 vi.mock("node:fs", () => ({
   existsSync: vi.fn(),
   copyFileSync: vi.fn(),
@@ -24,6 +30,8 @@ const { main, fingerprintFiles, referencedShas } =
 const { readStdin } = await import("../../scripts/snapshot-comment")
 
 const mockExecFileSync = vi.mocked(execFileSync)
+const mockSetPrLink = vi.mocked(setPrLink)
+const PR = { repo: "org/repo", prNumber: 42, token: expect.any(String) as string }
 const mockExistsSync = vi.mocked(existsSync)
 const mockReaddirSync = vi.mocked(readdirSync)
 const mockReadStdin = vi.mocked(readStdin)
@@ -130,6 +138,20 @@ describe("main", () => {
       expect.anything(),
     )
     expect(warn).toHaveBeenCalledWith("Removed stale 'screenshots' comment.")
+    expect(mockSetPrLink).toHaveBeenCalledWith(PR, "Screenshots", null)
+  })
+
+  it("links a visual regressions comment under its own label", async () => {
+    process.env.MARKER = "visual-regressions"
+    process.env.DELETE_WHEN_EMPTY = "true"
+    mockReadStdin.mockResolvedValue("")
+    mockExec({
+      "issues/42/comments": JSON.stringify([{ id: 7, body: "<!-- visual-regressions:abc -->" }]),
+    })
+
+    await main()
+
+    expect(mockSetPrLink).toHaveBeenCalledWith(PR, "Visual regressions", null)
   })
 
   it("skips the upload when the fingerprint matches the existing comment", async () => {
@@ -156,6 +178,7 @@ describe("main", () => {
     mockExec({
       "issues/42/comments": "[]",
       "ls-remote": new Error("no such branch"),
+      "pr comment": "https://github.com/org/repo/pull/42#issuecomment-55\n",
     })
 
     await main()
@@ -178,6 +201,11 @@ describe("main", () => {
       expect.anything(),
     )
     expect(warn).toHaveBeenCalledWith("'screenshots' comment posted on PR #42.")
+    expect(mockSetPrLink).toHaveBeenCalledWith(
+      PR,
+      "Screenshots",
+      "[Screenshots](https://github.com/org/repo/pull/42#issuecomment-55)",
+    )
   })
 
   it("clones the existing assets branch and PATCHes the existing comment", async () => {
@@ -205,6 +233,11 @@ describe("main", () => {
       expect.anything(),
     )
     expect(warn).toHaveBeenCalledWith("'screenshots' comment updated on PR #42.")
+    expect(mockSetPrLink).toHaveBeenCalledWith(
+      PR,
+      "Screenshots",
+      "[Screenshots](https://github.com/org/repo/pull/42#issuecomment-9)",
+    )
   })
 
   it("filters out stdin lines whose files don't exist on disk", async () => {

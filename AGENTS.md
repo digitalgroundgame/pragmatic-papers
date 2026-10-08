@@ -188,6 +188,7 @@ too.
 - **Pre-push hooks**: Husky runs full checks on all files (`lint:fix`, `format:fix`, `check-types`) before pushing
 - **Pre-commit hooks**: lint-staged runs ESLint + Prettier on staged files only (fast, ~1-2 seconds)
 - **Colocation**: Prefer colocating logic near where it's used. `src/utilities/` is only for genuinely reusable helpers shared across multiple features (e.g. `generateMeta`, `getURL`, `toRoman`, `cn`). Don't put single-use logic there.
+- **Commit trailers**: don't add a `Claude-Session:` trailer (or any other link to an agent session) to commit messages. A `Co-Authored-By:` trailer is fine.
 - **Issue and PR numbers in comments**: comments and docs describe the code as it is now; why and when it changed is what `git log` and `git blame` are for. Don't write "added in #970", "before #672" or "see #883" — the sentence should stand on its own. Two exceptions, each a pointer with an exit: an upstream bug a workaround depends on (full URL; remove the workaround when it's fixed), and an **open** issue tracking a known gap or a skipped check (say what to remove when it closes, as `knownContrastIssue` does for #998). When that issue closes, delete the comment and what it guards; never append to it.
 
 ### Integrations
@@ -277,10 +278,26 @@ function, and fails on any axe violation.
   `dev` at `pragmatic-papers-storybook.digital-ground-game.workers.dev`, and each PR at a
   `pr-<number>-` preview URL, which `scripts/storybook-pr.ts` records as a "Storybook Preview"
   GitHub Deployment (in the PR's deployments, beside the site's Preview). When the PR changes
-  components, it also links each one at the top of the PR description (under any showcase links),
+  components, it also links each one at the top of the PR description (under the showcase links and the links line),
   matched through the build's `index.json` by story file, `component` file or folder. `/storybook` on staging and on a
   PR's site preview redirects to its Storybook (404 on production). Needs the `CLOUDFLARE_API_TOKEN`
   (Workers Scripts: Edit) and `CLOUDFLARE_ACCOUNT_ID` repo secrets; without them it skips.
+
+### PR description links
+
+CI keeps the top of a PR's description up to date, under any `Closes #N` lines:
+the showcase links (`scripts/showcase-pr.ts`), then one line of links, then the
+Storybook links (`scripts/storybook-pr.ts`). The line holds the live preview,
+the PR analytics comment ("Coverage") and the screenshot and visual regression
+comments; each job sets its own link with `setPrLink`, and the Preview link is
+left out while showcase links point at the same site. Each block sits between
+`<!-- name -->` markers, and every job edits the description through
+`scripts/pr-description.ts`: `withBlock` places a block, and `editPrBody`
+reads the description back after writing and writes again when another job's
+edit replaced it (GitHub has no conditional write). A script run under plain
+Node imports it as `./pr-description.ts`, and its workflow's sparse checkout
+lists it. `.github/pull_request_template.md` lists the blocks above Context,
+Screenshots and Test Plan.
 
 ### Page speed
 

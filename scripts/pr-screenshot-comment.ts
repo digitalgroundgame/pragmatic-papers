@@ -4,6 +4,10 @@
 //
 // Reads PNG file paths from stdin (one per line, order preserved in the grid).
 // Required env: GH_TOKEN, OWNER, REPO, PR_NUMBER, ASSET_DIR
+// The comment is linked on the links line at the top of the PR's description
+// (setPrLink in scripts/preview-deployment.ts): "Visual regressions" for the
+// visual-regressions marker, "Screenshots" otherwise; deleting it removes the link.
+//
 // Optional env: ASSETS_BRANCH (default pr-screenshots), MARKER, TITLE,
 //   COLUMNS_PER_ROW, FOOTER (comment rendering), DELETE_WHEN_EMPTY=true to
 //   remove a stale comment when no files are given.
@@ -21,6 +25,7 @@ import {
 import { tmpdir } from "node:os"
 import { basename, join } from "node:path"
 
+import { commentLink, setPrLink } from "./pr-description"
 import { buildCommentBody, readStdin } from "./snapshot-comment"
 
 function run(
@@ -97,6 +102,14 @@ export async function main(): Promise<void> {
   const commentsJson = run("gh", ["api", `repos/${OWNER}/${REPO}/issues/${PR_NUMBER}/comments`])
   const comments = JSON.parse(commentsJson) as { id: number; body: string }[]
   const existing = comments.find((c) => c.body.startsWith(`<!-- ${marker}:`))
+  const prNumber = Number(PR_NUMBER)
+  const label = marker === "visual-regressions" ? "Visual regressions" : "Screenshots"
+  const link = (id: number | null) =>
+    setPrLink(
+      { repo: `${OWNER}/${REPO}`, prNumber, token: GH_TOKEN },
+      label,
+      id === null ? null : commentLink(label, `${OWNER}/${REPO}`, prNumber, id),
+    )
 
   if (files.length === 0) {
     if (process.env.DELETE_WHEN_EMPTY === "true" && existing) {
@@ -107,6 +120,7 @@ export async function main(): Promise<void> {
         `repos/${OWNER}/${REPO}/issues/comments/${existing.id}`,
       ])
       console.warn(`Removed stale '${marker}' comment.`)
+      await link(null)
     } else {
       console.warn("No files and no stale comment — nothing to do.")
     }
@@ -116,6 +130,7 @@ export async function main(): Promise<void> {
   const fingerprint = fingerprintFiles(files)
   if (existing && extractFingerprint(existing.body, marker) === fingerprint) {
     console.warn("Screenshots unchanged — skipping upload.")
+    await link(existing.id)
     return
   }
 
@@ -208,9 +223,21 @@ export async function main(): Promise<void> {
       `body=${body}`,
     ])
     console.warn(`'${marker}' comment updated on PR #${PR_NUMBER}.`)
+    await link(existing.id)
   } else {
-    run("gh", ["pr", "comment", PR_NUMBER, "--repo", `${OWNER}/${REPO}`, "--body", body])
+    // `gh pr comment` prints the new comment's URL, ending `#issuecomment-<id>`.
+    const url = run("gh", [
+      "pr",
+      "comment",
+      PR_NUMBER,
+      "--repo",
+      `${OWNER}/${REPO}`,
+      "--body",
+      body,
+    ])
     console.warn(`'${marker}' comment posted on PR #${PR_NUMBER}.`)
+    const id = /#issuecomment-(\d+)/.exec(url)?.[1]
+    if (id) await link(Number(id))
   }
 }
 

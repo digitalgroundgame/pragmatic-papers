@@ -61,7 +61,7 @@ test.describe("article hero meta row — dateline and controls on one line", () 
     expect(shareBox.x + shareBox.width).toBeCloseTo(rowBox.x + rowBox.width, 0)
 
     // Grouped, not spread: the player sits a gap away from the share button
-    // rather than being flung to the left edge. gap-3 is 12px; the tolerance
+    // rather than being flung to the left edge. gap-1 is 4px; the tolerance
     // leaves room for the button's own padding without admitting a spread,
     // which on this viewport would be several hundred pixels.
     expect(shareBox.x - (playerBox.x + playerBox.width)).toBeLessThan(24)

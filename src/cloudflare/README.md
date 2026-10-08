@@ -22,6 +22,8 @@ staging's database through Hyperdrive, while staging itself keeps running on Coo
 `wrangler.jsonc` declares the Worker and everything it binds. The deploy workflow creates
 the R2 bucket and D1 database by name if they're missing. The rest is set up by hand:
 
+0. **TLS on staging's Postgres**, which Hyperdrive requires: in Coolify, stop the
+   database, turn on **SSL** (mode `require`) on its General page, and start it again.
 1. **Tunnel to staging's Postgres**: in Zero Trust, Networks → Tunnels, create a tunnel
    and run its `cloudflared` connector on dev-worker (a Coolify service on the same
    network as staging's Postgres). Give it a public hostname with service type TCP,

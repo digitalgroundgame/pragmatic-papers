@@ -70,3 +70,29 @@ export function withOrigin<Env extends WorkerEnv>(handler: WorkerHandler<Env>): 
     },
   }
 }
+
+/**
+ * An error with what caused it, for the Worker's logs. Workers logs print only an error's
+ * message and stack, so Drizzle's "Failed query" would arrive without the database error
+ * that caused it.
+ */
+export function withCauses(value: unknown): unknown {
+  if (!(value instanceof Error) || value.cause === undefined) return value
+  const lines = [value.stack ?? String(value)]
+  let cause: unknown = value.cause
+  for (let depth = 0; cause !== undefined && depth < 5; depth++) {
+    lines.push(
+      `Caused by: ${cause instanceof Error ? (cause.stack ?? String(cause)) : String(cause)}`,
+    )
+    cause = cause instanceof Error ? cause.cause : undefined
+  }
+  return lines.join("\n")
+}
+
+/** Makes `console.error` and `console.warn` print each error's causes too. */
+export function logErrorCauses(target: Pick<Console, "error" | "warn"> = console): void {
+  for (const level of ["error", "warn"] as const) {
+    const log = target[level].bind(target)
+    target[level] = (...args: unknown[]) => log(...args.map(withCauses))
+  }
+}

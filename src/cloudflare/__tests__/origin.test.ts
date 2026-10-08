@@ -1,7 +1,14 @@
 // @vitest-environment node
 import { afterEach, describe, expect, it, vi } from "vitest"
 
-import { isOriginPath, toOrigin, withOrigin, type WorkerEnv } from "../origin"
+import {
+  isOriginPath,
+  logErrorCauses,
+  toOrigin,
+  withCauses,
+  withOrigin,
+  type WorkerEnv,
+} from "../origin"
 
 const ORIGIN = "https://staging.example.com"
 
@@ -104,5 +111,36 @@ describe("withOrigin", () => {
       {},
     )
     expect(process.env.DATABASE_URI).toBe("postgres://hyperdrive")
+  })
+})
+
+describe("withCauses", () => {
+  it("adds each cause to an error's stack", () => {
+    const error = new Error("Failed query", {
+      cause: new Error('relation "pages" does not exist', { cause: "deeper" }),
+    })
+    const logged = withCauses(error)
+    expect(logged).toContain("Failed query")
+    expect(logged).toContain('Caused by: Error: relation "pages" does not exist')
+    expect(logged).toContain("Caused by: deeper")
+  })
+
+  it("leaves anything else as it is", () => {
+    const plain = new Error("plain")
+    expect(withCauses(plain)).toBe(plain)
+    expect(withCauses("text")).toBe("text")
+  })
+})
+
+describe("logErrorCauses", () => {
+  it("logs errors with their causes", () => {
+    const error = vi.fn()
+    const target = { error, warn: vi.fn() }
+    logErrorCauses(target)
+    target.error("rendering failed", new Error("outer", { cause: new Error("inner") }))
+    expect(error).toHaveBeenCalledWith(
+      "rendering failed",
+      expect.stringContaining("Caused by: Error: inner"),
+    )
   })
 })

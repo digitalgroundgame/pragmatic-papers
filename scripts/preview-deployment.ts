@@ -18,16 +18,16 @@
  * watching the PR), and fails if the preview still answers a few minutes later. Both need a token with the `deploy` and `write` abilities.
  *
  * The fallback, previews the staging app builds itself on its GitHub App's webhook
- * (dockerfiles/README.md, "Falling back to Coolify-built previews"), is followed by
- * .github/workflows/preview-deployment.yml instead:
+ * (dockerfiles/README.md, "Falling back to Coolify-built previews"), is followed by the
+ * same two workflows, without an image:
  *
  *   node scripts/preview-deployment.ts deploy   # PR opened, reopened or pushed
  *   node scripts/preview-deployment.ts close    # PR closed or merged
  *
  * There `deploy` waits for Coolify to queue a preview for the PR's head commit, then
  * creates a Deployment for the PR's branch in the "Preview" environment and copies
- * Coolify's status onto it until the build finishes. The workflow only runs it on PRs
- * Coolify previews (see its `if`); a PR Coolify doesn't build gets no Deployment.
+ * Coolify's status onto it until the build finishes. playwright.yml only runs it on PRs
+ * Coolify previews (its plan); a PR Coolify doesn't build gets no Deployment.
  * `close` marks all of the PR's preview Deployments inactive, since Coolify tears the
  * preview down.
  *

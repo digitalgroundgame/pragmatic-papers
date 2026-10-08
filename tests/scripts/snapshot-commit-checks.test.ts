@@ -77,8 +77,7 @@ describe("snapshot-commit-checks", () => {
       run("Unit tests", "failure"),
       run("Integration tests", "success"),
       run("Storybook", "skipped"),
-      run("Bundle size", "success"),
-      run("Lighthouse", "neutral"),
+      run("Page speed", "neutral"),
       run("Detect changes", "success"),
       run("Deploy preview", "success"),
     ])
@@ -91,8 +90,7 @@ describe("snapshot-commit-checks", () => {
       "Unit tests": "failure",
       "Integration tests": "success",
       Storybook: "skipped",
-      "Bundle size": "success",
-      Lighthouse: "neutral",
+      "Page speed": "neutral",
     })
     expect(gh.reported.every((r) => r.head_sha === HEAD && r.status === "completed")).toBe(true)
     const unit = gh.reported.find((r) => r.name === "Unit tests")
@@ -113,16 +111,16 @@ describe("snapshot-commit-checks", () => {
 
   it("waits for checks the parent is still running, or hasn't started", async () => {
     const gh = fake(
-      [run("Static checks", null, "in_progress"), run("Lighthouse", null, "queued")],
-      [...ci().slice(1), run("Static checks", null, "in_progress"), run("Lighthouse", "success")],
-      [...ci().slice(1), run("Static checks", "failure"), run("Lighthouse", "success")],
+      [run("Static checks", null, "in_progress"), run("Page speed", null, "queued")],
+      [...ci().slice(1), run("Static checks", null, "in_progress"), run("Page speed", "success")],
+      [...ci().slice(1), run("Static checks", "failure"), run("Page speed", "success")],
     )
     await main(ENV, gh.deps)
     expect(gh.polls()).toBe(3)
     expect(gh.elapsed()).toBe(2 * POLL_MS)
     expect(conclusions(gh.reported)).toMatchObject({
       "Static checks": "failure",
-      Lighthouse: "success",
+      "Page speed": "success",
     })
   })
 

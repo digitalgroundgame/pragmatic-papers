@@ -284,21 +284,21 @@ function, and fails on any axe violation.
 
 ### Page speed
 
-Two jobs in `playwright.yml` measure the image the PR deploys, and each compares it
-with the last run on `dev` in a dropdown under the coverage report, in the one
+The "Page speed" job in `playwright.yml` measures the image the PR deploys two ways,
+and each compares it with the last run on `dev` in a dropdown under the coverage report, in the one
 PR analytics comment CI keeps on a PR. A dropdown starts open when it flags
 something. A new report joins that comment by registering a section in
 `PR_REPORT_SECTIONS` (`scripts/pr-report.ts`) and posting it with
 `postPrReportSection()`, rather than posting a comment of its own:
 
-- **Bundle size** (`scripts/bundle-size.ts`) reads the image's build manifests and
+- **Bundle size** (`scripts/bundle-size.ts`, the job's first part) reads the image's build manifests and
   adds up the gzipped JavaScript and CSS each public page loads before it's
   interactive (Next 16 no longer prints "First Load JS"). Pages are expected to
   grow over time, so there are no fixed budgets: a route whose JavaScript grew by
   more than 10 kB against dev is flagged in the comment and with a warning on the
   PR's checks. It **only warns**; `pnpm analyze` shows which import brought the
   growth in.
-- **Lighthouse** (`scripts/lighthouse.ts`) seeds the E2E database, starts the
+- **Lighthouse** (`scripts/lighthouse.ts`, run even when bundle size fails) seeds the E2E database, starts the
   PR's image and audits each page 5 times, comparing with the results the last
   push to `dev` uploaded. The CPU slowdown is calibrated to the runner's benchmark
   score, and Chrome can't reach any host but localhost. Dev's results come from

@@ -103,8 +103,8 @@ export const MediaCarousel: React.FC<MediaCarouselProps> = ({
         ))}
       </CarouselContent>
       <CarouselIndicators count={validImages.length} current={current} />
-      <CarouselPrevious className="left-3 lg:-left-12" />
-      <CarouselNext className="right-3 lg:-right-12" />
+      <CarouselPrevious className="left-3" />
+      <CarouselNext className="right-3" />
     </Carousel>
   )
 }

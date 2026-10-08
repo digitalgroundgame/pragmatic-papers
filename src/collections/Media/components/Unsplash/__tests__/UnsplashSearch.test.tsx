@@ -18,10 +18,15 @@ const photo = (id: string, name: string, alt: string | null = `${id} alt`): Unsp
   photographer: { name, username: name.toLowerCase(), profileUrl: `https://unsplash.com/@${id}` },
 })
 
-const page = (results: UnsplashPhoto[], totalPages = 1): UnsplashResults => ({
+const page = (
+  results: UnsplashPhoto[],
+  totalPages = 1,
+  rateLimit: UnsplashResults["rateLimit"] = null,
+): UnsplashResults => ({
   total: results.length,
   totalPages,
   results,
+  rateLimit,
   homeUrl: "https://unsplash.com/?utm_source=x",
 })
 
@@ -62,6 +67,28 @@ describe("UnsplashSearch", () => {
       "https://unsplash.com/?utm_source=x",
     )
     expect(screen.queryByRole("button", { name: "More photos" })).not.toBeInTheDocument()
+  })
+
+  it("shows the requests left as of the latest search, when Unsplash says", async () => {
+    const searchFn = vi
+      .fn<() => Promise<UnsplashResults>>()
+      .mockResolvedValueOnce(page([photo("a1", "Ada")], 2, { limit: 50, remaining: 41 }))
+      .mockResolvedValueOnce(page([photo("b2", "Grace")], 2, { limit: 50, remaining: 40 }))
+    render(<UnsplashSearch search={searchFn} onPick={vi.fn()} />)
+
+    search("dusk")
+    expect(await screen.findByText(/41 of 50 Unsplash requests left this hour/)).toBeInTheDocument()
+    fireEvent.click(screen.getByRole("button", { name: "More photos" }))
+    expect(await screen.findByText(/40 of 50 Unsplash requests left this hour/)).toBeInTheDocument()
+  })
+
+  it("leaves the count out when Unsplash doesn't send one", async () => {
+    render(
+      <UnsplashSearch search={vi.fn(async () => page([photo("a1", "Ada")]))} onPick={vi.fn()} />,
+    )
+    search("dusk")
+    await screen.findAllByRole("listitem")
+    expect(screen.queryByText(/requests left this hour/)).not.toBeInTheDocument()
   })
 
   it("says so while searching, and when nothing matches", async () => {
@@ -135,7 +162,7 @@ describe("UnsplashSearch", () => {
     search("x")
     fireEvent.click(await screen.findByRole("button", { name: "Use a1 alt by Ada" }))
 
-    expect(onPick).toHaveBeenCalledWith(a1)
+    expect(onPick).toHaveBeenCalledWith(a1, "https://unsplash.com/?utm_source=x")
     expect(screen.getByText("Adding…")).toBeInTheDocument()
     expect(screen.getByRole("button", { name: "Use b2 alt by Grace" })).toBeDisabled()
 

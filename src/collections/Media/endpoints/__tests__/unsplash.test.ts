@@ -19,7 +19,12 @@ const writer = { id: 1, roles: ["writer"] } as Partial<User>
 
 beforeEach(() => {
   vi.stubEnv("UNSPLASH_ACCESS_KEY", "key")
-  vi.spyOn(unsplash, "search").mockResolvedValue({ total: 0, totalPages: 0, results: [] })
+  vi.spyOn(unsplash, "search").mockResolvedValue({
+    total: 0,
+    totalPages: 0,
+    results: [],
+    rateLimit: null,
+  })
   vi.spyOn(unsplash, "photo").mockResolvedValue(photo)
   vi.spyOn(unsplash, "image").mockResolvedValue(
     new Response("jpeg-bytes", { headers: { "Content-Type": "image/jpeg" } }),

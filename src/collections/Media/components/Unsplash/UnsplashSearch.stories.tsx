@@ -29,6 +29,7 @@ const page = (results: UnsplashPhoto[], totalPages = 1): UnsplashResults => ({
   total: results.length * totalPages,
   totalPages,
   results,
+  rateLimit: { limit: 50, remaining: 38 },
   homeUrl: "https://unsplash.com/?utm_source=pragmatic_papers_development&utm_medium=referral",
 })
 
@@ -76,7 +77,7 @@ export const SearchAndPick: Story = {
     await expect(canvas.queryByRole("button", { name: "More photos" })).not.toBeInTheDocument()
 
     await userEvent.click(canvas.getByRole("button", { name: "Use portrait photo by Grace" }))
-    await expect(args.onPick).toHaveBeenCalledWith(first[1])
+    await expect(args.onPick).toHaveBeenCalledWith(first[1], page(first).homeUrl)
   },
 }
 

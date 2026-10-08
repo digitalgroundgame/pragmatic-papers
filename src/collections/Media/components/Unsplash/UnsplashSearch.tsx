@@ -19,8 +19,11 @@ export type SearchUnsplash = (
   orientation: UnsplashOrientation | "",
 ) => Promise<UnsplashResults>
 
-/** Brings the photo into the upload form; rejects with the message to show. */
-export type PickUnsplashPhoto = (photo: UnsplashPhoto) => Promise<void>
+/**
+ * Brings the photo into the upload form, with Unsplash's home page for its credit; rejects
+ * with the message to show.
+ */
+export type PickUnsplashPhoto = (photo: UnsplashPhoto, homeUrl: string) => Promise<void>
 
 const baseClass = "unsplash-search"
 
@@ -89,11 +92,11 @@ export function UnsplashSearch({
     }
   }
 
-  const pick = async (photo: UnsplashPhoto): Promise<void> => {
+  const pick = async (photo: UnsplashPhoto, homeUrl: string): Promise<void> => {
     setPicking(photo.id)
     setPickError(null)
     try {
-      await onPick(photo)
+      await onPick(photo, homeUrl)
     } catch (err) {
       setPickError(err instanceof Error ? err.message : String(err))
     } finally {
@@ -144,6 +147,13 @@ export function UnsplashSearch({
         </p>
       )}
 
+      {state.step === "done" && state.results.rateLimit && (
+        <p className={`${baseClass}__note`}>
+          {state.results.rateLimit.remaining} of {state.results.rateLimit.limit} Unsplash requests
+          left this hour. Each search, pick and save uses one or two.
+        </p>
+      )}
+
       {state.step === "done" && state.results.results.length === 0 && (
         <p className={`${baseClass}__note`}>No photos match “{state.query}”.</p>
       )}
@@ -157,7 +167,7 @@ export function UnsplashSearch({
                   aria-label={`Use ${photo.alt ?? "this photo"} by ${photo.photographer.name}`}
                   className={`${baseClass}__photo`}
                   disabled={picking != null}
-                  onClick={() => void pick(photo)}
+                  onClick={() => void pick(photo, state.results.homeUrl)}
                   style={{
                     aspectRatio: `${photo.width} / ${photo.height}`,
                     background: photo.color ?? undefined,
@@ -182,7 +192,7 @@ export function UnsplashSearch({
               <a href={state.results.homeUrl} rel="noopener noreferrer" target="_blank">
                 Unsplash
               </a>
-              . The photographer is credited in the caption when you save.
+              . Picking one credits its photographer in the caption.
             </span>
             {state.page < state.results.totalPages && (
               <button

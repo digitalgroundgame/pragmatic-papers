@@ -5,7 +5,8 @@ import { unsplash } from "@/integrations"
 import type { UnsplashPhoto } from "@/integrations/unsplash"
 import type { Media } from "@/payload-types"
 
-import { attributeUnsplashPhoto, unsplashCredit, withCredit } from "../attributeUnsplashPhoto"
+import { unsplashCredit, withCredit } from "../../unsplashCredit"
+import { attributeUnsplashPhoto } from "../attributeUnsplashPhoto"
 
 const photo: UnsplashPhoto = {
   id: "abc123",
@@ -91,6 +92,22 @@ describe("attributeUnsplashPhoto", () => {
     ])
   })
 
+  it("replaces the credit the picker showed, rather than adding a second", async () => {
+    const picked = withCredit(
+      null,
+      unsplashCredit(
+        { photographer: { name: "Someone Else", username: "x", profileUrl: "https://x" } },
+        "https://unsplash.com/?utm_source=old",
+      ),
+    )
+
+    const data = await run({ unsplashId: "abc123", caption: picked })
+
+    expect(captionText(data.caption)).toEqual([
+      "Photo by [Ada Lovelace](https://unsplash.com/@ada?r) on [Unsplash](https://unsplash.com/?r).",
+    ])
+  })
+
   it("does nothing for media that didn't come from Unsplash, or whose photo hasn't changed", async () => {
     await run({ alt: "x" })
     await run({ unsplashId: "abc123" }, { unsplashId: "abc123" })
@@ -115,6 +132,27 @@ describe("attributeUnsplashPhoto", () => {
     await vi.waitFor(() => expect(logger.warn).toHaveBeenCalled())
 
     expect(captionText(data.caption)).toHaveLength(1)
+  })
+})
+
+describe("withCredit", () => {
+  it("takes the credit out, keeping the editor's words", () => {
+    const own = {
+      type: "paragraph",
+      version: 1,
+      children: [{ type: "text", text: "Dusk over the bay.", version: 1 }],
+    }
+    const credited = withCredit(
+      withCredit(null, own),
+      unsplashCredit(photo, "https://unsplash.com/?r"),
+    )
+
+    expect(captionText(withCredit(credited, null))).toEqual(["Dusk over the bay."])
+    expect(
+      captionText(
+        withCredit(withCredit(null, unsplashCredit(photo, "https://unsplash.com/?r")), null),
+      ),
+    ).toEqual([""])
   })
 })
 

@@ -2,19 +2,23 @@ import { render } from "@testing-library/react"
 import type { TextFieldClientProps } from "payload"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { unsplashCredit, withCredit } from "../../../unsplashCredit"
 import { rememberPickedFile } from "../pickedFiles"
 import { UnsplashIdField } from "../UnsplashIdField"
 
 const form = vi.hoisted(() => ({
   value: null as string | null,
   file: undefined as unknown,
+  caption: undefined as unknown,
   setValue: vi.fn(),
+  dispatchFields: vi.fn(),
 }))
 
 vi.mock("@payloadcms/ui", () => ({
   useField: () => ({ value: form.value, setValue: form.setValue }),
+  useForm: () => ({ dispatchFields: form.dispatchFields }),
   useFormFields: (select: (ctx: [Record<string, { value: unknown }>]) => unknown) =>
-    select([{ file: { value: form.file } }]),
+    select([{ file: { value: form.file }, caption: { value: form.caption } }]),
 }))
 
 const props = { path: "unsplashId" } as TextFieldClientProps
@@ -26,7 +30,9 @@ const picked = new File(["jpeg"], "unsplash-ada-abc123.jpg", {
 beforeEach(() => {
   form.value = null
   form.file = undefined
+  form.caption = undefined
   form.setValue.mockReset()
+  form.dispatchFields.mockReset()
   rememberPickedFile("abc123", picked)
 })
 
@@ -49,6 +55,33 @@ describe("UnsplashIdField", () => {
     render(<UnsplashIdField {...props} />)
 
     expect(form.setValue).toHaveBeenCalledWith(null)
+    expect(form.dispatchFields).not.toHaveBeenCalled()
+  })
+
+  it("takes the picked photo's credit out of the caption with the id", () => {
+    const own = {
+      type: "paragraph",
+      version: 1,
+      children: [{ type: "text", text: "Dusk over the bay.", version: 1 }],
+    }
+    form.caption = withCredit(
+      withCredit(null, own),
+      unsplashCredit(
+        { photographer: { name: "Ada", username: "ada", profileUrl: "https://unsplash.com/@ada" } },
+        "https://unsplash.com/?utm_source=x",
+      ),
+    )
+    form.value = "abc123"
+    form.file = new File(["something else"], "mine.png", { type: "image/png" })
+    render(<UnsplashIdField {...props} />)
+
+    const uncredited = withCredit(null, own)
+    expect(form.dispatchFields).toHaveBeenCalledWith({
+      type: "UPDATE",
+      path: "caption",
+      value: uncredited,
+      initialValue: uncredited,
+    })
   })
 
   it("clears the id when the picked file is removed, but not before it arrives", () => {

@@ -12,6 +12,9 @@ import {
 import React, { useCallback } from "react"
 
 import type { UnsplashPhoto } from "@/integrations/unsplash"
+import type { Media } from "@/payload-types"
+
+import { unsplashCredit, withCredit } from "../../unsplashCredit"
 
 import { rememberPickedFile } from "./pickedFiles"
 import { UnsplashSearch, type SearchUnsplash, type UnsplashResults } from "./UnsplashSearch"
@@ -33,7 +36,8 @@ const searchUnsplash: SearchUnsplash = async (query, page, orientation) => {
  * "Search Unsplash", beside "Select a file" and "Paste URL" wherever a Media upload is made,
  * the "Create New" drawer of an upload field included. A picked photo becomes the form's file
  * like any other upload, so it's stored wherever Media is (local disk or S3) and gets every
- * image size. The photo's id rides along in `unsplashId` so the save can credit it.
+ * image size. The photo's id rides along in `unsplashId` so the save can credit it, and the
+ * credit goes in the caption straight away so the editor sees it before saving.
  */
 export function UnsplashPicker(): React.ReactNode {
   const slug = useDrawerSlug("unsplash")
@@ -41,9 +45,10 @@ export function UnsplashPicker(): React.ReactNode {
   const { setUploadControlFile } = useUploadControls()
   const { dispatchFields } = useForm()
   const alt = useFormFields(([fields]) => fields.alt?.value)
+  const caption = useFormFields(([fields]) => fields.caption?.value)
 
   const pick = useCallback(
-    async (photo: UnsplashPhoto): Promise<void> => {
+    async (photo: UnsplashPhoto, homeUrl: string): Promise<void> => {
       const res = await fetch(`/api/media/unsplash/${encodeURIComponent(photo.id)}/file`, {
         credentials: "include",
       })
@@ -58,10 +63,14 @@ export function UnsplashPicker(): React.ReactNode {
       if (photo.alt && !(typeof alt === "string" && alt.trim())) {
         dispatchFields({ type: "UPDATE", path: "alt", value: photo.alt })
       }
+      // The save writes the credit again from its own lookup; this shows it now. The caption
+      // editor only redraws when its initial value changes, so that's set too.
+      const credited = withCredit(caption as Media["caption"], unsplashCredit(photo, homeUrl))
+      dispatchFields({ type: "UPDATE", path: "caption", value: credited, initialValue: credited })
       closeModal(slug)
       setUploadControlFile(file)
     },
-    [alt, closeModal, dispatchFields, setUploadControlFile, slug],
+    [alt, caption, closeModal, dispatchFields, setUploadControlFile, slug],
   )
 
   return (

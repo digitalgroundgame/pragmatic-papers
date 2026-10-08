@@ -3,6 +3,9 @@ import type React from "react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import type { UnsplashPhoto } from "@/integrations/unsplash"
+import type { Media } from "@/payload-types"
+
+import { unsplashCredit, withCredit } from "../../../unsplashCredit"
 
 import { isPickedFile } from "../pickedFiles"
 import { UnsplashPicker } from "../UnsplashPicker"
@@ -10,6 +13,7 @@ import type { PickUnsplashPhoto, SearchUnsplash } from "../UnsplashSearch"
 
 const ui = vi.hoisted(() => ({
   alt: undefined as unknown,
+  caption: undefined as unknown,
   openModal: vi.fn(),
   closeModal: vi.fn(),
   setUploadControlFile: vi.fn(),
@@ -30,7 +34,7 @@ vi.mock("@payloadcms/ui", () => ({
   useUploadControls: () => ({ setUploadControlFile: ui.setUploadControlFile }),
   useForm: () => ({ dispatchFields: ui.dispatchFields }),
   useFormFields: (select: (ctx: [Record<string, { value: unknown }>]) => unknown) =>
-    select([{ alt: { value: ui.alt } }]),
+    select([{ alt: { value: ui.alt }, caption: { value: ui.caption } }]),
 }))
 
 // The search UI has its own tests; here it's a seam to reach the picker's callbacks.
@@ -49,13 +53,15 @@ vi.mock("../UnsplashSearch", () => ({
 const photo = {
   id: "abc123",
   alt: "a lighthouse at dusk",
-  photographer: { username: "ada" },
+  photographer: { name: "Ada Lovelace", username: "ada", profileUrl: "https://unsplash.com/@ada" },
 } as UnsplashPhoto
+const homeUrl = "https://unsplash.com/?utm_source=x"
 
 const fetchMock = vi.fn()
 
 beforeEach(() => {
   ui.alt = undefined
+  ui.caption = undefined
   vi.stubGlobal("fetch", fetchMock)
 })
 
@@ -107,7 +113,7 @@ describe("UnsplashPicker", () => {
     )
     render(<UnsplashPicker />)
 
-    await act(() => seam.onPick!(photo))
+    await act(() => seam.onPick!(photo, homeUrl))
 
     expect(fetchMock).toHaveBeenCalledWith("/api/media/unsplash/abc123/file", {
       credentials: "include",
@@ -129,15 +135,37 @@ describe("UnsplashPicker", () => {
     expect(ui.closeModal).toHaveBeenCalledWith("drawer_1_unsplash")
   })
 
+  it("shows the credit in the caption before the save, after the editor's own words", async () => {
+    ui.caption = withCredit(null, {
+      type: "paragraph",
+      version: 1,
+      children: [{ type: "text", text: "Dusk over the bay.", version: 1 }],
+    })
+    fetchMock.mockResolvedValue(new Response(new Uint8Array([1, 2, 3])))
+    render(<UnsplashPicker />)
+
+    await act(() => seam.onPick!(photo, homeUrl))
+
+    const expected = withCredit(ui.caption as Media["caption"], unsplashCredit(photo, homeUrl))
+    expect(expected.root.children).toHaveLength(2)
+    // The caption editor redraws only when its initial value changes.
+    expect(ui.dispatchFields).toHaveBeenCalledWith({
+      type: "UPDATE",
+      path: "caption",
+      value: expected,
+      initialValue: expected,
+    })
+  })
+
   it("keeps alt text the editor already wrote", async () => {
     ui.alt = "Their words"
     fetchMock.mockResolvedValue(new Response(new Uint8Array([1, 2, 3])))
     render(<UnsplashPicker />)
 
-    await act(() => seam.onPick!(photo))
+    await act(() => seam.onPick!(photo, homeUrl))
 
     const paths = ui.dispatchFields.mock.calls.map(([action]) => (action as { path: string }).path)
-    expect(paths).toEqual(["unsplashId"])
+    expect(paths).toEqual(["unsplashId", "caption"])
     // A blob without a type is still saved as a JPEG, which is what the endpoint serves.
     expect((ui.setUploadControlFile.mock.calls[0]![0] as File).type).toBe("image/jpeg")
   })
@@ -148,7 +176,7 @@ describe("UnsplashPicker", () => {
     )
     render(<UnsplashPicker />)
 
-    await expect(seam.onPick!(photo)).rejects.toThrow("Unsplash download failed.")
+    await expect(seam.onPick!(photo, homeUrl)).rejects.toThrow("Unsplash download failed.")
     expect(ui.setUploadControlFile).not.toHaveBeenCalled()
     expect(ui.dispatchFields).not.toHaveBeenCalled()
     expect(ui.closeModal).not.toHaveBeenCalled()

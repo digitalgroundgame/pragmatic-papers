@@ -31,8 +31,11 @@ const rawPhoto = {
   likes: 12,
 }
 
-const reply = (status: number, body: unknown): Response =>
-  new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } })
+const reply = (status: number, body: unknown, headers: Record<string, string> = {}): Response =>
+  new Response(JSON.stringify(body), {
+    status,
+    headers: { "Content-Type": "application/json", ...headers },
+  })
 
 afterEach(() => {
   vi.unstubAllEnvs()
@@ -53,10 +56,20 @@ describe("unsplashApp", () => {
     expect(JSON.stringify(status)).not.toContain("secret-key")
   })
 
+  it("reports no allowance when Unsplash doesn't send one", async () => {
+    vi.stubEnv("EXAMPLE_UNSPLASH_KEY", "secret-key")
+    const fetchImpl = vi.fn(async () => reply(200, { total: 0, total_pages: 0, results: [] }))
+    expect(await app.search({ query: "x" }, { fetchImpl })).toMatchObject({ rateLimit: null })
+  })
+
   it("searches with the key as Client-ID and trims each photo to what the site uses", async () => {
     vi.stubEnv("EXAMPLE_UNSPLASH_KEY", "secret-key")
     const fetchImpl = vi.fn(async () =>
-      reply(200, { total: 1, total_pages: 1, results: [rawPhoto] }),
+      reply(
+        200,
+        { total: 1, total_pages: 1, results: [rawPhoto] },
+        { "X-Ratelimit-Limit": "50", "X-Ratelimit-Remaining": "37" },
+      ),
     )
 
     const page = await app.search(
@@ -97,6 +110,7 @@ describe("unsplashApp", () => {
           },
         },
       ],
+      rateLimit: { limit: 50, remaining: 37 },
     })
   })
 

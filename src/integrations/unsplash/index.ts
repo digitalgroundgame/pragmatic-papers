@@ -27,10 +27,21 @@ export interface UnsplashPhoto {
   }
 }
 
+/**
+ * What's left of the application's hourly request allowance, from the headers Unsplash sends
+ * with every API response. Shared by every site that uses the same key.
+ */
+export interface UnsplashRateLimit {
+  limit: number
+  remaining: number
+}
+
 export interface UnsplashSearchPage {
   total: number
   totalPages: number
   results: UnsplashPhoto[]
+  /** As of this search; null when Unsplash didn't say. */
+  rateLimit: UnsplashRateLimit | null
 }
 
 export type UnsplashOrientation = "landscape" | "portrait" | "squarish"
@@ -89,6 +100,13 @@ interface RawPhoto {
   user: { name: string; username: string; links: { html: string } }
 }
 
+function rateLimitOf(headers: Headers): UnsplashRateLimit | null {
+  const limit = Number(headers.get("X-Ratelimit-Limit"))
+  const remaining = Number(headers.get("X-Ratelimit-Remaining"))
+  if (!headers.has("X-Ratelimit-Remaining") || !Number.isFinite(limit + remaining)) return null
+  return { limit, remaining }
+}
+
 function isOn(url: string, hostname: string): boolean {
   try {
     const parsed = new URL(url)
@@ -136,7 +154,10 @@ export function unsplashApp({
     },
   })
 
-  const call = async (url: string, fetchImpl: typeof fetch): Promise<unknown> => {
+  const call = async (
+    url: string,
+    fetchImpl: typeof fetch,
+  ): Promise<{ body: unknown; rateLimit: UnsplashRateLimit | null }> => {
     const key = env(keyEnv)
     if (!key) throw new Error(`Unsplash needs ${keyEnv}`)
     if (!isOn(url, "api.unsplash.com")) throw new Error("Not an Unsplash API URL")
@@ -155,7 +176,7 @@ export function unsplashApp({
         `Unsplash request failed (HTTP ${response.status})${reasons.length ? `: ${reasons.join("; ")}` : ""}`,
       )
     }
-    return response.json()
+    return { body: await response.json(), rateLimit: rateLimitOf(response.headers) }
   }
 
   return {
@@ -175,24 +196,19 @@ export function unsplashApp({
       url.searchParams.set("content_filter", "high")
       if (orientation) url.searchParams.set("orientation", orientation)
 
-      const body = (await call(url.toString(), fetchImpl)) as {
-        total: number
-        total_pages: number
-        results: RawPhoto[]
-      }
+      const { body, rateLimit } = await call(url.toString(), fetchImpl)
+      const found = body as { total: number; total_pages: number; results: RawPhoto[] }
       return {
-        total: body.total,
-        totalPages: body.total_pages,
-        results: body.results.map(toPhoto),
+        total: found.total,
+        totalPages: found.total_pages,
+        results: found.results.map(toPhoto),
+        rateLimit,
       }
     },
 
     async photo(photoId, { fetchImpl = fetch } = {}) {
-      const body = (await call(
-        `${API}/photos/${encodeURIComponent(photoId)}`,
-        fetchImpl,
-      )) as RawPhoto
-      return toPhoto(body)
+      const { body } = await call(`${API}/photos/${encodeURIComponent(photoId)}`, fetchImpl)
+      return toPhoto(body as RawPhoto)
     },
 
     async trackDownload(photo, { fetchImpl = fetch } = {}) {

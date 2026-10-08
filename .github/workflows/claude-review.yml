@@ -2,7 +2,7 @@ name: Claude Code Review
 
 # Runs once when the "ready for review" label is added (or when a labeled
 # draft is marked ready); to review again, remove and re-add the label. Drafts
-# and unlabeled PRs never run it. pr-automation.yml starts it on the PR's
+# and unlabeled PRs never run it. pr-events.yml starts it on the PR's
 # branch, so its check lands on the commit it reviews without every other
 # label leaving a skipped one. Not a required check: what gates merging is
 # "Review acknowledged" (review-ack.yml), which a person gives either by

@@ -1,8 +1,8 @@
-name: PR automation
+name: PR events
 
 # Everything a PR's labels and description start, in one job. GitHub has no
 # way to start a workflow on one label only, so a workflow per label shows a
-# skipped check for every other label added; this shows one "PR automation"
+# skipped check for every other label added; this shows one "PR events"
 # check that passes. Work that takes longer runs in its own workflow, which
 # this starts with workflow_dispatch:
 #
@@ -29,12 +29,12 @@ on:
     types: [opened, reopened, edited, labeled, unlabeled, ready_for_review]
 
 concurrency:
-  group: pr-automation-${{ github.event.pull_request.number }}
+  group: pr-events-${{ github.event.pull_request.number }}
   cancel-in-progress: false
 
 jobs:
   route:
-    name: PR automation
+    name: PR events
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:

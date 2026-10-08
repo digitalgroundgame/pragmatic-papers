@@ -45,7 +45,7 @@ export const NOT_COPIED = {
   "Remove preview": "runs when the PR closes",
   "Retire Storybook preview": "runs when the PR closes",
   "Apply Cloudflare rules": "doesn't run on PRs",
-  "PR automation": "starts other workflows and edits the PR and issues, doesn't check",
+  "PR events": "starts other workflows and edits the PR and issues, doesn't check",
 } as const
 
 /** The GitHub Actions app, which both the workflows' jobs and this script report as. */

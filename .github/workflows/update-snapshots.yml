@@ -9,7 +9,7 @@ name: Update snapshot baselines
 # Two ways to fire it:
 #   - workflow_dispatch (Actions tab, or `gh workflow run update-snapshots.yml
 #     --ref <branch>`)
-#   - adding the "needs screenshots" label to a PR, which pr-automation.yml
+#   - adding the "needs screenshots" label to a PR, which pr-events.yml
 #     turns into a workflow_dispatch on the PR's branch. The label is removed
 #     automatically once this job finishes so it can be re-added later to
 #     retrigger.

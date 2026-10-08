@@ -27,7 +27,7 @@ name: Showcase
 # workflow's conclusion doesn't say: it finishes after its tests, and fails
 # on a test failure even when the preview deployed.
 #
-# The sync runs in pr-automation.yml, on the PR's events, and starts this
+# The sync runs in pr-events.yml, on the PR's events, and starts this
 # workflow for the PR (workflow_dispatch with no slugs) when it says to push.
 # It edits the PR with the workflow's own token, and GitHub starts no workflow
 # from such edits, so it can't loop.
@@ -37,7 +37,7 @@ name: Showcase
 # SHOWCASE_STAGING_URL variable). On a PR they join the Showcase line, which
 # it gains, with the label, if it had none, so later deploys push them too.
 #
-# workflow_run and pr-automation.yml's dispatch run this file from the default
+# workflow_run and pr-events.yml's dispatch run this file from the default
 # branch with secrets, while the push script comes from the PR, so the push
 # only runs PR code from this repository, never from a fork.
 on:

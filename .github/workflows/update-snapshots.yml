@@ -39,13 +39,19 @@ concurrency:
 # both serve the app from the image .github/actions/build-app-image builds.
 
 jobs:
+  # Reuses the image the commit's own Playwright run built when there is one,
+  # and builds it otherwise. That run built it from GitHub's merge commit with
+  # the base, the same app the PR's "E2E tests" compares baselines against.
   image:
     name: Build image
     if: ${{ github.event_name == 'workflow_dispatch' || github.event.label.name == 'needs screenshots' }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
+      actions: read
       contents: read
+    outputs:
+      run-id: ${{ steps.reuse.outputs.run-id }}
 
     # What `next build` prerenders from; see playwright.yml's image job.
     services:
@@ -64,11 +70,30 @@ jobs:
           --health-retries 10
 
     steps:
+      # The artifact lasts a day, so an older commit's is gone and this builds.
+      - name: Look for this commit's image
+        id: reuse
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          for run in $(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/playwright.yml/runs?head_sha=$SHA&per_page=10" --jq '.workflow_runs[].id'); do
+            if gh api "repos/$GITHUB_REPOSITORY/actions/runs/$run/artifacts?name=app-image" --jq '.artifacts[] | select(.expired | not) | .id' | grep -q .; then
+              echo "::notice::Reusing the image Playwright Tests run $run built for ${SHA::7}."
+              echo "run-id=$run" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+          done
+          echo "No image for ${SHA::7} yet; building one."
+
       - uses: actions/checkout@v7
+        if: steps.reuse.outputs.run-id == ''
         with:
           ref: ${{ github.event.pull_request.head.sha || github.ref }}
 
       - uses: ./.github/actions/build-app-image
+        if: steps.reuse.outputs.run-id == ''
         with:
           gh-font-read-token: ${{ secrets.GH_FONT_READ }}
           source-commit: ${{ github.event.pull_request.head.sha || github.sha }}
@@ -87,6 +112,8 @@ jobs:
       image: mcr.microsoft.com/playwright:v1.63.0-noble
 
     permissions:
+      # The image, when the commit's Playwright run built it.
+      actions: read
       contents: write
       pull-requests: write
       checks: write
@@ -125,6 +152,7 @@ jobs:
         uses: ./.github/actions/setup-e2e
         with:
           gh-font-read-token: ${{ secrets.GH_FONT_READ }}
+          image-run-id: ${{ needs.image.outputs.run-id }}
 
       # pull_request's $GITHUB_REF_NAME is "<number>/merge", not the branch —
       # resolve the real branch/PR/base once so every later step can rely on

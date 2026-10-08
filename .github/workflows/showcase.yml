@@ -18,13 +18,14 @@ name: Showcase
 # The articles are pushed to the PR's Coolify preview once it's up, and the
 # Showcase line then links each by title and moves to the top of the
 # description, under any `Closes #N` line (a link still reads as its slug):
-#   - after each preview deploy, when "Preview deployment" finishes. A deploy
-#     may re-copy the preview database, so this re-pushes after each one.
+#   - after each preview deploy, when "Playwright Tests" (whose "Deploy
+#     preview" job deploys it) finishes. A deploy may re-copy the preview
+#     database, so this re-pushes after each one.
 #   - when the label is added or the line edited, for a preview that is
 #     already up. Otherwise this skips, and the next deploy pushes.
 # "Up" means the PR's head commit has a successful Preview deployment. That
-# workflow succeeds even when a build fails, so its conclusion alone doesn't
-# say.
+# workflow's conclusion doesn't say: it finishes after its tests, and fails
+# on a test failure even when the preview deployed.
 #
 # The sync edits the PR with the workflow's own token, and GitHub starts no
 # workflow from such edits, so it can't loop, and it pushes itself rather than
@@ -35,12 +36,15 @@ name: Showcase
 # SHOWCASE_STAGING_URL variable). On a PR they join the Showcase line, which
 # it gains, with the label, if it had none, so later deploys push them too.
 #
+# One job does both, so a PR shows one Showcase check rather than a sync
+# and a push that is skipped nearly every time.
+#
 # workflow_run runs this file from the default branch with secrets, while the
 # push script comes from the PR, so the push only runs PR code from this
 # repository, never from a fork.
 on:
   workflow_run:
-    workflows: [Preview deployment]
+    workflows: [Playwright Tests]
     types: [completed]
   pull_request:
     types: [opened, edited, labeled, unlabeled]
@@ -62,63 +66,26 @@ permissions:
   pull-requests: read
 
 jobs:
-  sync:
-    name: Sync showcase label
+  showcase:
+    name: Showcase
     if: >-
+      github.event_name == 'workflow_dispatch' ||
+      github.event_name == 'workflow_run' &&
+        github.event.workflow_run.event == 'pull_request' &&
+        github.event.workflow_run.head_repository.full_name == github.repository &&
+        github.event.workflow_run.pull_requests[0] ||
       github.event_name == 'pull_request' &&
-      github.event.pull_request.head.repo.full_name == github.repository && (
-        github.event.action == 'opened' ||
-        github.event.action == 'edited' && github.event.changes.body ||
-        github.event.label.name == 'showcase'
-      )
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      pull-requests: write
-      issues: write
-    outputs:
-      push: ${{ steps.sync.outputs.push }}
-    steps:
-      # The head, not the test merge, which is missing while the PR conflicts.
-      - uses: actions/checkout@v7
-        with:
-          ref: ${{ github.event.pull_request.head.sha }}
-          sparse-checkout: scripts/showcase-pr.ts
-          sparse-checkout-cone-mode: false
-
-      # Node 24 runs the TypeScript script directly; no install needed.
-      - uses: actions/setup-node@v7
-        with:
-          node-version: "24.x"
-
-      - name: Sync the label and the Showcase line
-        id: sync
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
-          ACTION: ${{ github.event.action }}
-          HAS_LABEL: ${{ contains(github.event.pull_request.labels.*.name, 'showcase') }}
-          BASE_REF: ${{ github.event.pull_request.base.ref }}
-        run: node scripts/showcase-pr.ts sync
-
-  push:
-    name: Push showcase articles
-    needs: sync
-    if: >-
-      !cancelled() && (
-        github.event_name == 'workflow_dispatch' ||
-        github.event_name == 'workflow_run' &&
-          github.event.workflow_run.event == 'pull_request' &&
-          github.event.workflow_run.head_repository.full_name == github.repository &&
-          github.event.workflow_run.pull_requests[0] ||
-        github.event_name == 'pull_request' && needs.sync.outputs.push == 'true'
-      )
+        github.event.pull_request.head.repo.full_name == github.repository && (
+          github.event.action == 'opened' ||
+          github.event.action == 'edited' && github.event.changes.body ||
+          github.event.label.name == 'showcase'
+        )
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
       contents: read
       pull-requests: write
-      # The label, when a manual push adds the Showcase line.
+      # The label, which the sync and a manual push add and remove.
       issues: write
       deployments: read
     steps:
@@ -137,11 +104,28 @@ jobs:
         with:
           node-version: "24.x"
 
+      - name: Sync the label and the Showcase line
+        id: sync
+        if: github.event_name == 'pull_request'
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          ACTION: ${{ github.event.action }}
+          HAS_LABEL: ${{ contains(github.event.pull_request.labels.*.name, 'showcase') }}
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
+        run: node scripts/showcase-pr.ts sync
+
+      # A PR event pushes only when the sync says to; the others always try.
+      - name: Decide whether to push
+        id: go
+        if: github.event_name != 'pull_request' || steps.sync.outputs.push == 'true'
+        run: echo "push=true" >> "$GITHUB_OUTPUT"
+
       # A PR run reads the PR fresh, so the code and description are current
       # even when the triggering event is stale.
       - name: Resolve the PR
         id: pr
-        if: github.event_name != 'workflow_dispatch' || inputs.target != 'staging'
+        if: steps.go.outputs.push == 'true' && (github.event_name != 'workflow_dispatch' || inputs.target != 'staging')
         env:
           GITHUB_TOKEN: ${{ github.token }}
           PR_NUMBER: ${{ github.event.workflow_run.pull_requests[0].number || github.event.pull_request.number || inputs.target }}
@@ -150,7 +134,7 @@ jobs:
         run: node scripts/showcase-pr.ts resolve
 
       - uses: actions/checkout@v7
-        if: steps.pr.outputs.skip != 'true'
+        if: steps.go.outputs.push == 'true' && steps.pr.outputs.skip != 'true'
         with:
           # A PR's head, or for staging the branch the dispatch was started on.
           ref: ${{ steps.pr.outputs.sha || github.ref }}
@@ -163,14 +147,14 @@ jobs:
           sparse-checkout-cone-mode: false
 
       - name: Set up Node.js environment
-        if: steps.pr.outputs.skip != 'true'
+        if: steps.go.outputs.push == 'true' && steps.pr.outputs.skip != 'true'
         uses: ./.github/actions/setup-project
         with:
           node-version: "24.x"
           gh-font-read-token: ${{ secrets.GH_FONT_READ }}
 
       - name: Push
-        if: steps.pr.outputs.skip != 'true'
+        if: steps.go.outputs.push == 'true' && steps.pr.outputs.skip != 'true'
         env:
           SHOWCASE_EMAIL: ${{ secrets.SHOWCASE_EMAIL }}
           SHOWCASE_PASSWORD: ${{ secrets.SHOWCASE_PASSWORD }}
@@ -198,7 +182,7 @@ jobs:
           exit "$status"
 
       - name: List the links in the description
-        if: steps.pr.outputs.number && steps.pr.outputs.skip != 'true'
+        if: steps.go.outputs.push == 'true' && steps.pr.outputs.number && steps.pr.outputs.skip != 'true'
         env:
           GITHUB_TOKEN: ${{ github.token }}
           PR_NUMBER: ${{ steps.pr.outputs.number }}

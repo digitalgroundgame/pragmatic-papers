@@ -72,7 +72,7 @@ function Posts({ posts, beside }: { posts: TickerPost[]; beside: boolean }): Rea
           <PostList posts={posts} copy />
         </div>
       </div>
-      <label className="text-muted-foreground hover:text-foreground focus-within:ring-ring relative flex size-7 shrink-0 cursor-pointer items-center justify-center rounded-full focus-within:ring-2 motion-reduce:hidden">
+      <label className="ticker-switch text-muted-foreground hover:text-foreground focus-within:ring-ring relative flex size-7 shrink-0 cursor-pointer items-center justify-center rounded-full focus-within:ring-2 motion-reduce:hidden">
         <input type="checkbox" className="ticker-pause sr-only" aria-label="Pause ticker" />
         <Pause aria-hidden="true" className="ticker-pause-icon size-3.5 fill-current" />
         <Play aria-hidden="true" className="ticker-play-icon size-3.5 fill-current" />
@@ -102,7 +102,7 @@ function Broadcast({
       rel="noopener noreferrer"
       className={cn(
         "group flex min-w-0 items-center gap-2.5",
-        pinned && "sm:max-w-[45%] sm:shrink-0",
+        pinned && "sm:max-w-[min(45%,36rem)] sm:shrink-0",
       )}
     >
       {live ? (
@@ -147,15 +147,16 @@ export function TickerView({ broadcast, posts }: TickerFeed): React.ReactNode {
     <section aria-label="Live and latest" className="ticker bg-muted mb-6 md:mb-10 md:border-t">
       {/* The mega menu sits right above on wider screens; the top border parts it from the
           strip. On phones the header's own border already does. */}
-      <div className="container">
-        <div className="flex h-11 items-center gap-4 text-sm">
-          {broadcast ? (
-            <Broadcast broadcast={broadcast} pinned={posts.length > 0} />
-          ) : (
-            <span className={LABEL}>Latest</span>
-          )}
-          {posts.length > 0 && <Posts posts={posts} beside={Boolean(broadcast)} />}
-        </div>
+      {/* The label lines up with the page's container; the posts run on to the window's
+          right edge. The left padding is the container's own inset: its 1rem gutter, plus
+          half of whatever the window has beyond its 80rem. */}
+      <div className="flex h-11 items-center gap-4 pr-4 pl-[max(1rem,calc((100%-80rem)/2+1rem))] text-sm">
+        {broadcast ? (
+          <Broadcast broadcast={broadcast} pinned={posts.length > 0} />
+        ) : (
+          <span className={LABEL}>Latest</span>
+        )}
+        {posts.length > 0 && <Posts posts={posts} beside={Boolean(broadcast)} />}
       </div>
     </section>
   )

@@ -409,6 +409,24 @@
   animation-play-state: paused;
 }
 
+/*
+  The pause switch shows while the reader points at the ticker, while a keyboard
+  is on it, and while it's paused (so there's a way back). It keeps its space
+  when hidden, so nothing shifts. Touch screens can't hover, so it stays.
+*/
+@media (hover: hover) {
+  .ticker-switch {
+    opacity: 0;
+    transition: opacity 150ms;
+  }
+
+  .ticker:hover .ticker-switch,
+  .ticker:focus-within .ticker-switch,
+  .ticker:has(.ticker-pause:checked) .ticker-switch {
+    opacity: 1;
+  }
+}
+
 .ticker-play-icon,
 .ticker:has(.ticker-pause:checked) .ticker-pause-icon {
   display: none;

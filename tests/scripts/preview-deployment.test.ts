@@ -263,6 +263,12 @@ describe("withPrLink", () => {
     expect(withPrLink("", "Coverage", coverage)).toBe(`${line(coverage)}\n`)
   })
 
+  it("goes under the template's unfilled Closes line too", () => {
+    expect(withPrLink("Closes #\n\n## Context", "Preview", preview)).toBe(
+      `Closes #\n\n${line(preview)}\n\n## Context`,
+    )
+  })
+
   it("keeps the other jobs' links, in a fixed order", () => {
     const body = `${line(shots)}\n\nText`
     const both = withPrLink(body, "Coverage", coverage)

@@ -61,8 +61,11 @@ export const LINK_LABELS = ["Preview", "Coverage", "Screenshots", "Visual regres
 export type LinkLabel = (typeof LINK_LABELS)[number]
 const SEPARATOR = " · "
 
-/** A line linking an issue the PR closes, such as `Closes #743`. */
-const CLOSING_LINE = /^\s*(close[sd]?|fix(e[sd])?|resolve[sd]?):?\s+([\w.-]+\/[\w.-]+)?#\d+/i
+/**
+ * A line linking an issue the PR closes, such as `Closes #743`, or the template's
+ * `Closes #` left unfilled, so links go under it rather than above it.
+ */
+const CLOSING_LINE = /^\s*(close[sd]?|fix(e[sd])?|resolve[sd]?):?\s+([\w.-]+\/[\w.-]+)?#(\d+|\s*$)/i
 
 export interface Config {
   repo: string

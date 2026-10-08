@@ -87,6 +87,12 @@ describe("withLinks", () => {
     )
   })
 
+  it("puts the line under the template's unfilled Closes line", () => {
+    expect(withLinks("Closes #\n\n## Context\n\nShowcase: first", [LINK])).toBe(
+      `Closes #\n\n${block(LINK)}\n\n## Context`,
+    )
+  })
+
   it.each(["Text\n\nCloses #743", "Fix the carousel, as #743 asks"])(
     "puts the line above %j, which closes nothing at the top",
     (body) => {

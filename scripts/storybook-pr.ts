@@ -46,8 +46,14 @@ export const MAX_STORIES_PER_FOLDER = 3
 
 const LINKS_BLOCK = new RegExp(`${LINKS_START}[\\s\\S]*?${LINKS_END}`)
 
-/** A line linking an issue the PR closes, such as `Closes #743`. */
-const CLOSING_LINE = /^\s*(close[sd]?|fix(e[sd])?|resolve[sd]?):?\s+([\w.-]+\/[\w.-]+)?#\d+/i
+/**
+ * A line linking an issue the PR closes, such as `Closes #743`, or the template's
+ * `Closes #` left unfilled, so links go under it rather than above it.
+ */
+const CLOSING_LINE = /^\s*(close[sd]?|fix(e[sd])?|resolve[sd]?):?\s+([\w.-]+\/[\w.-]+)?#(\d+|\s*$)/i
+
+/** Writes of the description before giving up on other jobs' concurrent edits. */
+const LINK_ATTEMPTS = 3
 
 /** Changed files that never render a component on their own. */
 const IGNORED = /(^|\/)__tests__\/|\.test\.tsx?$|^src\/migrations\/|^src\/payload-types\.ts$/
@@ -160,6 +166,7 @@ export interface Deps {
   /** Adds to the job summary (GITHUB_STEP_SUMMARY). */
   summary: (markdown: string) => void
   readFile: (path: string) => string
+  sleep: (ms: number) => Promise<void>
 }
 
 function required(env: Env, name: string): string {
@@ -266,10 +273,21 @@ async function link(env: Env, deps: Deps): Promise<void> {
   }
   const components = changedComponents(await gh.files(pr), Object.values(index.entries))
   const block = linksBlock(required(env, "PREVIEW_URL"), components)
-  // Read last, so an edit made meanwhile survives.
-  const body = (await gh.pull(pr)).body ?? ""
-  const next = withStorybookLinks(body, block)
-  if (next !== body) await gh.setBody(pr, next)
+  // Other jobs edit the description too (scripts/preview-deployment.ts's links line,
+  // scripts/showcase-pr.ts), and GitHub has no conditional write: read last, then
+  // read back after writing and try again if another job's write replaced ours.
+  let body = (await gh.pull(pr)).body ?? ""
+  for (let attempt = 1; withStorybookLinks(body, block) !== body; attempt++) {
+    if (attempt > LINK_ATTEMPTS) {
+      deps.log("::warning::Other jobs kept rewriting the PR's description; no Storybook links.")
+      return
+    }
+    await gh.setBody(pr, withStorybookLinks(body, block))
+    // Long enough for another job's read-then-write to land, staggered so two jobs
+    // that collided don't collide again.
+    await deps.sleep(2000 + Math.random() * 3000)
+    body = (await gh.pull(pr)).body ?? ""
+  }
   deps.log(`Linked ${components.length} changed component(s) in the description.`)
   if (block) deps.summary(block.split("\n").slice(1, -1).join("\n"))
 }
@@ -300,5 +318,6 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
         appendFileSync(process.env.GITHUB_STEP_SUMMARY, `${markdown}\n`)
     },
     readFile: (path) => readFileSync(path, "utf8"),
+    sleep: (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
   })
 }

@@ -1,21 +1,13 @@
-import {
-  expect,
-  type Locator,
-  type Page,
-  type PageAssertionsToHaveScreenshotOptions,
-} from "@playwright/test"
+import { expect, type Locator, type Page } from "@playwright/test"
 
 import { SEEDED_DATELINE, SEEDED_REVISION } from "../../scripts/seed-e2e.constants"
 
 /**
  * Assert that an article hero's two instants read the words the seed pinned.
  *
- * Every baseline that frames a hero bakes these in, and Payload stamps
- * `updatedAt` with the current time on every non-draft save — so without the
- * seed's pin the revision line tracks the day the seed ran. Call this before
- * any such screenshot: a stamp that goes back to following the clock then
- * fails here, naming the cause, instead of surfacing as an unexplained
- * whole-suite visual diff months later.
+ * Payload stamps `updatedAt` with the current time on every non-draft save, so
+ * without the seed's pin the revision line tracks the day the seed ran. A stamp
+ * that goes back to following the clock fails here, naming the cause.
  */
 export async function expectPinnedDateline(page: Page): Promise<void> {
   const stamps = page.locator("#article-dateline").locator("time")
@@ -70,15 +62,12 @@ export async function gotoFirstVolume(page: Page): Promise<string | null> {
 }
 
 /**
- * Settle sources of pixel nondeterminism before taking a screenshot or
- * measuring layout: wait for web fonts to finish loading (late font swaps
- * shift every glyph), for all <img>s in the DOM to finish decoding (a
- * still-loading hero image behind a clipped screenshot region is a common
- * source of flaky diffs), for every finite CSS animation/transition
- * currently running to finish (e.g. a dropdown's enter animation — grabbing
- * its bounding box mid-animation produces a crop that doesn't match the
- * animation-frozen pixels `toHaveScreenshot` actually captures), and for two
- * animation frames so any remaining layout/paint work has flushed.
+ * Settle the page before measuring layout: wait for web fonts to finish
+ * loading (late font swaps shift every glyph), for all <img>s in the DOM to
+ * finish decoding (a still-loading hero image changes the height of what sits
+ * below it), for every finite CSS animation/transition currently running to
+ * finish, and for two animation frames so any remaining layout/paint work has
+ * flushed.
  *
  * Infinite animations (loading skeletons) are intentionally excluded —
  * waiting on one would hang forever.
@@ -106,41 +95,6 @@ export async function waitForStableRender(page: Page): Promise<void> {
   })
 }
 
-const SHOW_FRESH = "data-e2e-show-fresh"
-
-/**
- * Keep fresh dots in this test's screenshots. `tests/e2e/screenshot.css`
- * hides them from every capture by default, since each test starts in a fresh
- * browser where every fresh dot shows; call this in a test whose baseline is
- * about one. It applies to the current page and to any page the test navigates to
- * afterwards.
- */
-export async function showFresh(page: Page): Promise<void> {
-  await page.addInitScript((attribute) => {
-    document.addEventListener("DOMContentLoaded", () => {
-      document.documentElement.setAttribute(attribute, "")
-    })
-  }, SHOW_FRESH)
-  await page.evaluate((attribute) => {
-    document.documentElement.setAttribute(attribute, "")
-  }, SHOW_FRESH)
-}
-
-/**
- * `expect(page).toHaveScreenshot(...)`, but always preceded by
- * `waitForStableRender`. Use this instead of the raw assertion for every
- * visual regression screenshot — it's the one thing every screenshot test
- * needs and the easiest thing to forget when writing a new one.
- */
-export async function expectStableScreenshot(
-  page: Page,
-  name: string | ReadonlyArray<string>,
-  options?: PageAssertionsToHaveScreenshotOptions,
-): Promise<void> {
-  await waitForStableRender(page)
-  await expect(page).toHaveScreenshot(name, options)
-}
-
 interface BoundingBox {
   x: number
   y: number
@@ -151,10 +105,9 @@ interface BoundingBox {
 /**
  * Poll an element's bounding box until it stops changing across several
  * consecutive animation frames, then return the settled box. Use this before
- * computing a screenshot clip from an element whose position can shift late in
- * layout — e.g. a popover sitting below a hero image that resolves its
- * intrinsic height a frame or two after decode. Without it, a clip captured
- * mid-reflow lands ~1px off and ghosts every glyph/icon in the diff.
+ * asserting on the geometry of an element whose position can shift late in
+ * layout — e.g. a control sitting below a hero image that resolves its
+ * intrinsic height a frame or two after decode.
  */
 export async function waitForStableBox(
   locator: Locator,
@@ -182,97 +135,4 @@ export async function waitForStableBox(
   }
   if (!last) throw new Error("Element never produced a bounding box")
   return last
-}
-
-export function mergeBoundingBoxes(...boxes: BoundingBox[]): BoundingBox {
-  const x = Math.min(...boxes.map((b) => b.x))
-  const y = Math.min(...boxes.map((b) => b.y))
-  const right = Math.max(...boxes.map((b) => b.x + b.width))
-  const bottom = Math.max(...boxes.map((b) => b.y + b.height))
-  return { x, y, width: right - x, height: bottom - y }
-}
-
-// Returns a clip region expanded from one or more bounding boxes (plus padding)
-// to the viewport's aspect ratio, centered on the content.
-// gridSnap rounds the clip width up to the nearest multiple of that value so
-// small layout variations (e.g. flex-sized popovers) don't shift the dimensions.
-export function viewportRatioClip(
-  boxes: BoundingBox | BoundingBox[],
-  viewport: { width: number; height: number },
-  { padding = 16, gridSnap = 0 }: { padding?: number; gridSnap?: number } = {},
-): BoundingBox {
-  const box = Array.isArray(boxes) ? mergeBoundingBoxes(...boxes) : boxes
-  const x0 = Math.round(Math.max(0, box.x - padding))
-  const y0 = Math.round(Math.max(0, box.y - padding))
-  const x1 = Math.round(box.x + box.width + padding)
-  const y1 = Math.round(box.y + box.height + padding)
-  const ratio = viewport.width / viewport.height
-  let w = x1 - x0
-  let h = y1 - y0
-  if (w / h > ratio) {
-    h = Math.round(w / ratio)
-  } else {
-    w = Math.round(h * ratio)
-  }
-  if (gridSnap > 0) {
-    w = Math.ceil(w / gridSnap) * gridSnap
-    h = Math.round(w / ratio)
-  }
-  const cx = Math.round((x0 + x1) / 2)
-  const cy = Math.round((y0 + y1) / 2)
-  const x = Math.max(0, Math.min(cx - Math.round(w / 2), viewport.width - w))
-  const y = Math.max(0, Math.min(cy - Math.round(h / 2), viewport.height - h))
-  return { x, y, width: w, height: h }
-}
-
-const NAMED_RATIOS = {
-  square: 1,
-  photo: 4 / 3,
-  classic: 3 / 2,
-  video: 16 / 9,
-  vertical: 9 / 16,
-} as const
-
-type NamedRatio = keyof typeof NAMED_RATIOS
-
-export class Screenshot {
-  private box: BoundingBox | null
-
-  constructor(box: BoundingBox | null) {
-    this.box = box
-  }
-
-  padding(amount: number): Screenshot {
-    if (!this.box) return this
-    return new Screenshot({
-      x: Math.max(0, this.box.x - amount),
-      y: Math.max(0, this.box.y - amount),
-      width: this.box.width + amount * 2,
-      height: this.box.height + amount * 2,
-    })
-  }
-
-  aspectRatio(ratio: number | NamedRatio): Screenshot {
-    if (!this.box) return this
-    const resolved = typeof ratio === "string" ? NAMED_RATIOS[ratio] : ratio
-    const { x, y, width, height } = this.box
-    const current = width / height
-    if (current > resolved) {
-      const newHeight = width / resolved
-      const delta = (newHeight - height) / 2
-      const newY = Math.max(0, y - delta)
-      const actualDelta = y - newY
-      return new Screenshot({ x, y: newY, width, height: height + actualDelta * 2 })
-    } else {
-      const newWidth = height * resolved
-      const delta = (newWidth - width) / 2
-      const newX = Math.max(0, x - delta)
-      const actualDelta = x - newX
-      return new Screenshot({ x: newX, y, width: width + actualDelta * 2, height })
-    }
-  }
-
-  get clip(): BoundingBox | undefined {
-    return this.box ?? undefined
-  }
 }

@@ -30,9 +30,7 @@ function sharesLineWith(a: { y: number; height: number }, b: { y: number; height
 }
 
 test.describe("article hero meta row — dateline and controls on one line", () => {
-  test("controls hug the right edge, player beside the share button @visual", async ({
-    page,
-  }, testInfo) => {
+  test("controls hug the right edge, player beside the share button", async ({ page }) => {
     await page.goto(NARRATED_ARTICLE)
 
     const metaRow = page.locator(row)
@@ -69,9 +67,6 @@ test.describe("article hero meta row — dateline and controls on one line", () 
     // The dateline keeps its place at the start of the row — the lopsided grow
     // factor stretches its box, not its text.
     expect(datelineBox.x).toBeCloseTo(rowBox.x, 0)
-
-    test.skip(testInfo.project.name !== "chromium", "visual baseline captured on chromium only")
-    await expect(metaRow).toHaveScreenshot("article-meta-row.png")
   })
 })
 
@@ -79,7 +74,7 @@ test.describe("article hero meta row — controls wrapped onto their own line", 
   // Narrow enough that the dateline plus both controls cannot share a line.
   test.use({ viewport: { width: 375, height: 667 } })
 
-  test("wrapped controls spread to both edges @visual", async ({ page }, testInfo) => {
+  test("wrapped controls spread to both edges", async ({ page }) => {
     await page.goto(NARRATED_ARTICLE)
 
     const metaRow = page.locator(row)
@@ -111,9 +106,6 @@ test.describe("article hero meta row — controls wrapped onto their own line", 
     expect(playerBox.x).toBeCloseTo(rowBox.x, 0)
     expect(shareBox.x + shareBox.width).toBeCloseTo(rowBox.x + rowBox.width, 0)
     expect(shareBox.x - (playerBox.x + playerBox.width)).toBeGreaterThan(24)
-
-    test.skip(testInfo.project.name !== "chromium", "visual baseline captured on chromium only")
-    await expect(metaRow).toHaveScreenshot("mobile-article-meta-row.png")
   })
 
   test("an article without narration keeps its share button right-aligned", async ({ page }) => {

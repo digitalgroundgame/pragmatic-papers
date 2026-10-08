@@ -1,10 +1,10 @@
 name: "Set up E2E"
 description: >-
-  Shared setup for the E2E jobs in playwright.yml and update-snapshots.yml:
-  the E2E environment, the GitHub and Docker CLIs, dependencies, and the app
-  image the workflow's "Build image" job saved (the `app-image` artifact),
-  loaded into Docker (or another run's, with `image-run-id`). Runs inside the pinned Playwright image, after
-  actions/checkout.
+  Shared setup for the jobs in playwright.yml that serve the app image (E2E
+  tests and Page speed): the E2E environment, the GitHub and Docker CLIs,
+  dependencies, and the app image the workflow's "Build image" job saved (the
+  `app-image` artifact), loaded into Docker. Runs inside the pinned Playwright
+  image, after actions/checkout.
 
 inputs:
   gh-font-read-token:
@@ -14,19 +14,12 @@ inputs:
     description: "Passed to setup-project"
     required: false
     default: "false"
-  image-run-id:
-    description: >-
-      Another run of this repository to take the `app-image` artifact from,
-      instead of this run's. The calling job needs `actions: read`.
-    required: false
-    default: ""
 
 runs:
   using: composite
   steps:
-    # Both workflows render and commit baselines, so they must render the same
-    # page: a variable set in one and not the other rewrites every baseline it
-    # touches. Written to $GITHUB_ENV, so it reaches every later step of the
+    # Every job that serves the image renders the same page from the same
+    # environment. Written to $GITHUB_ENV, so it reaches every later step of the
     # calling job, including pnpm install below.
     - name: Set the E2E environment
       shell: bash
@@ -42,8 +35,7 @@ runs:
         FONTS_REQUIRED=true
         EOF
       # MERCH_SITE_URL: the Merch block has no built-in store site. Without it
-      # the block renders nothing, merch.spec.ts has no carousel to exercise,
-      # and every baseline that shares a page with it is rendered without it.
+      # the block renders nothing and merch.spec.ts has no carousel to exercise.
       #
       # TEST_DATABASE_URI: scripts/test-e2e.mjs runs against it instead of
       # starting a Postgres container (scripts/test-db.mjs), whose random
@@ -55,17 +47,16 @@ runs:
       # which the helper refuses to test against.
       #
       # E2E_IMAGE: scripts/test-e2e.mjs serves the image the workflow built,
-      # the one a PR's preview deploys, instead of building Next.js itself
+      # the one a PR's preview deploys, instead of building Next.js itself.
       # Must match the build-app-image action's `image` output.
       #
       # FONTS_REQUIRED: refuse to render with the Inter fallback.
       # scripts/install-fonts.ts silently substitutes Inter when
       # @digitalgroundgame/fonts can't be fetched, which turns a broken
-      # GH_FONT_READ into a whole-suite "visual regression" whose PR comment
-      # invites you to commit Inter-rendered baselines. The pnpm store cache
-      # hides the breakage on dev: an unchanged lockfile means `reused N,
-      # downloaded 0`, so the token is never exercised until a PR touches the
-      # lockfile. Failing at install turns that into one legible error.
+      # GH_FONT_READ into pages measured and tested with the wrong font. The
+      # pnpm store cache hides the breakage on dev: an unchanged lockfile means
+      # `reused N, downloaded 0`, so the token is never exercised until a PR
+      # touches the lockfile. Failing at install turns that into one legible error.
 
     # actions/checkout's files are owned by a different UID than this
     # container's user, so git's dubious-ownership check blocks every git
@@ -74,8 +65,8 @@ runs:
       shell: bash
       run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
 
-    # The Playwright image doesn't ship the GitHub CLI, but both workflows
-    # commit baselines and post PR comments with `gh`. Pull the release tarball
+    # The Playwright image doesn't ship the GitHub CLI, and Page speed fetches
+    # dev's results with `gh` (download-dev-artifact). Pull the release tarball
     # straight from GitHub instead of going through the apt repo, which ran
     # `apt-get update` twice (~20-40s) just to land one static binary. The
     # pinned version only needs to be recent enough for the `gh api`/`gh run`/
@@ -111,20 +102,10 @@ runs:
         docker version
 
     - name: Download the app image
-      if: inputs.image-run-id == ''
       uses: actions/download-artifact@v7
       with:
         name: app-image
         path: ${{ runner.temp }}
-
-    - name: Download the app image from the run that built it
-      if: inputs.image-run-id != ''
-      uses: actions/download-artifact@v7
-      with:
-        name: app-image
-        path: ${{ runner.temp }}
-        run-id: ${{ inputs.image-run-id }}
-        github-token: ${{ github.token }}
 
     - name: Load the app image
       shell: bash

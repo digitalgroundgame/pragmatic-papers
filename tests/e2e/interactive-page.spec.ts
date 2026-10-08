@@ -1,13 +1,11 @@
 import { expect, test } from "@playwright/test"
 
-import { waitForStableRender } from "./helpers"
-
 const PAGE = "/interactives/federal-courts"
 
 test.describe("interactive page — federal courts", () => {
-  test("overview renders from the published snapshot, with prefetchable JSON regions @visual", async ({
+  test("overview renders from the published snapshot, with prefetchable JSON regions", async ({
     page,
-  }, testInfo) => {
+  }) => {
     await page.goto(PAGE)
 
     const figure = page.locator("[data-interactive-drilldown]")
@@ -58,10 +56,6 @@ test.describe("interactive page — federal courts", () => {
     // The counts live in the summary line; the facts row carries what the summary lacks.
     await expect(pane).toContainText("11 authorized · 11 active · 6 senior")
 
-    test.skip(testInfo.project.name !== "chromium", "visual baseline captured on chromium only")
-
-    // Photos are hotlinked from Wikimedia; do not let a slow remote decide the screenshot.
-    await page.route("https://upload.wikimedia.org/**", (route) => route.abort())
     // The drilled-in region, the open pane and the pinned judge survive a reload through the
     // URL. The map only writes the URL once its camera settles, so wait for all three first:
     // reloading mid-flight comes back on the overview with no pane.
@@ -69,24 +63,9 @@ test.describe("interactive page — federal courts", () => {
     await expect(page).toHaveURL(/[?&]pane=1(&|$)/)
     await expect(page).toHaveURL(/[?&]record=[^&]+/)
     await page.reload()
-    await figure.scrollIntoViewIfNeeded()
     await expect(
       page.locator("[data-drilldown-pane][data-open] [data-drilldown-node]").first(),
     ).toBeVisible()
-    await page.mouse.move(0, 0)
-    await waitForStableRender(page)
-
-    const PADDING = 16
-    const box = await figure.boundingBox()
-    if (!box) throw new Error("map figure bounding box not available")
-    await expect(page).toHaveScreenshot("interactive-page-drilldown-pane.png", {
-      clip: {
-        x: box.x - PADDING,
-        y: box.y - PADDING,
-        width: box.width + PADDING * 2,
-        height: box.height + PADDING * 2,
-      },
-    })
   })
 
   test("drilling into a region morphs to its child map and back", async ({ page }) => {

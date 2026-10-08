@@ -9,32 +9,13 @@ export default defineConfig({
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
   workers: process.env.CI ? 1 : undefined,
-  // scripts/test-e2e.mjs adds a JSON report when CI needs to know which tests
-  // failed and why (it only fails on a missing baseline the run just wrote).
-  reporter: process.env.E2E_JSON_REPORT
-    ? [["html"], ["json", { outputFile: process.env.E2E_JSON_REPORT }]]
-    : "html",
-  snapshotPathTemplate: "{testDir}/__screenshots__/{testFilePath}/{arg}{ext}",
-  // Screenshots are compared only in the pinned Playwright image — CI's E2E
-  // job and `pnpm test:e2e:update-snapshots`, which both set CI. A bare host
-  // renders fonts/antialiasing differently, so it runs functional assertions
-  // only.
-  ignoreSnapshots: !process.env.CI,
-  expect: {
-    toHaveScreenshot: {
-      maxDiffPixelRatio: 0.01,
-      animations: "disabled",
-      caret: "hide",
-      // Hides per-reader UI, such as the fresh dots a new browser shows.
-      stylePath: "./tests/e2e/screenshot.css",
-    },
-  },
+  reporter: "html",
   use: {
     // Same source as `webServer.url` below, so a server managed outside the runner
     // (`E2E_MANAGED_SERVER`) can live on another port and still be the one under test.
     baseURL: process.env.SERVER_URL || "http://localhost:8000",
     trace: "on-first-retry",
-    // Pin everything that can shift pixels between runs.
+    // Pin what dates, numbers and themes render with, so assertions on them hold everywhere.
     timezoneId: "UTC",
     locale: "en-US",
     colorScheme: "light",

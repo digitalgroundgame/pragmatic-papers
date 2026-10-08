@@ -295,11 +295,9 @@ describe("seed-e2e main()", () => {
     await main()
 
     // Payload overwrites updatedAt on every non-draft save, so the revision
-    // line would otherwise read the day the seed ran and diff any baseline
-    // that frames it (article-meta-row.spec.ts, share-buttons.spec.ts).
-    // Whole-table rather than per-id on purpose: the per-document version of
-    // this pinned only the crowded-byline article, and the share-button
-    // baselines — framing a different article's hero — rotted unnoticed.
+    // line would otherwise read the day the seed ran, and
+    // article-meta-row.spec.ts asserts the pinned one. Whole-table rather than
+    // per-id, so every hero reads the same stamp.
     const statements = mockExecute.mock.calls.map(([statement]) => renderStatement(statement))
     expect(statements.slice(-2)).toEqual([
       `UPDATE articles SET updated_at = ${SEEDED_UPDATED_AT}`,
@@ -324,9 +322,8 @@ describe("seed-e2e main()", () => {
   it("keeps the crowded-byline article off the homepage grid", async () => {
     await main()
 
-    // gotoFirstArticle follows the first article link on the homepage and
-    // smoke.spec.ts screenshots the whole page, so a third tile here would
-    // shift unrelated baselines.
+    // gotoFirstArticle follows the first article link on the homepage, and the
+    // specs that use it expect an article without narration.
     const pageCall = mockCreate.mock.calls.find(([args]) => args.collection === "pages")?.[0]
     const grid = pageCall.data.layout.find(
       (block: { blockType: string }) => block.blockType === "collectionGrid",

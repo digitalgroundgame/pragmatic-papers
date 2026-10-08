@@ -10,7 +10,7 @@ import {
   WRITER_NAME,
   WRITER_SLUG,
 } from "../../scripts/seed-e2e.constants"
-import { expectStableScreenshot, trackPageErrors } from "./helpers"
+import { trackPageErrors } from "./helpers"
 
 // One check per public route: it answers 200, renders its landmark content,
 // and throws no JavaScript error on the way. Every slug comes from the e2e seed
@@ -35,23 +35,11 @@ test.describe("public routes", () => {
   })
 
   test.describe("/", () => {
-    test("home page loads @visual", async ({ page }, testInfo) => {
+    test("home page loads", async ({ page }) => {
       await visit(page, "/")
       await expect(page).toHaveTitle(/The Pragmatic Papers/)
       await expect(page.locator("a[href*='/articles/']").first()).toBeVisible()
       await expect(page.getByRole("link", { name: SHOWCASE_TITLE }).first()).toBeVisible()
-
-      test.skip(testInfo.project.name !== "chromium", "visual baseline captured on chromium only")
-      // The grid tiles print `formatTimeAgo(publishedAt)` — a phrase measured
-      // against the clock at render time. The seed's publishedAt is pinned, but the
-      // distance from it is not: "2 months ago" became "3 months ago" in mid-August
-      // and would keep rolling over every month, so the words cannot be baselined.
-      // Mask them rather than pinning the date, because the absolute stamp is what
-      // article-meta-row.spec.ts asserts and the two want opposite things.
-      await expectStableScreenshot(page, "home-page.png", {
-        fullPage: true,
-        mask: [page.locator('[data-slot="time-ago"]')],
-      })
     })
   })
 

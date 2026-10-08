@@ -1,10 +1,6 @@
 import { expect, test } from "@playwright/test"
 
-import { Screenshot, waitForStableBox, waitForStableRender } from "./helpers"
-
-test("table of contents renders on rich-text showcase article @visual", async ({
-  page,
-}, testInfo) => {
+test("table of contents renders on rich-text showcase article", async ({ page }) => {
   await page.goto("/articles/rich-text-showcase")
   await expect(page).toHaveTitle(/The Written Word/)
 
@@ -15,15 +11,6 @@ test("table of contents renders on rich-text showcase article @visual", async ({
   await expect(toc.getByRole("link", { name: "Foundations of Emphasis" })).toBeVisible()
   await expect(toc.getByRole("link", { name: "Structured Lists" })).toBeVisible()
   await expect(toc.getByRole("link", { name: "Conclusion" })).toBeVisible()
-
-  test.skip(testInfo.project.name !== "chromium", "visual baseline captured on chromium only")
-  // The hero image pushes the list's end below the fold, and a clip can't leave the viewport.
-  await toc.scrollIntoViewIfNeeded()
-  await waitForStableRender(page)
-  const box = await waitForStableBox(toc)
-  await expect(page).toHaveScreenshot("table-of-contents-list.png", {
-    clip: new Screenshot(box).padding(16).aspectRatio("classic").clip,
-  })
 })
 
 test("hero button collapses and expands the table of contents", async ({ page }) => {

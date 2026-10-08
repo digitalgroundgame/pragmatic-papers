@@ -113,18 +113,30 @@ export function optOut(body: string): string {
 const CLOSING_LINE = /^\s*(close[sd]?|fix(e[sd])?|resolve[sd]?):?\s+([\w.-]+\/[\w.-]+)?#\d+/i
 
 /**
- * scripts/preview-deployment.ts's link to the preview. The showcase links go to
- * the same site, so they take its place rather than sit under it.
+ * The links line scripts/preview-deployment.ts keeps under these links. Its Preview
+ * link goes to the same site as the showcase links, so it's dropped here.
  */
-const PREVIEW_LINK = /<!-- preview-link -->[\s\S]*?<!-- \/preview-link -->/
+const PR_LINKS = /<!-- pr-links -->\n?([\s\S]*?)\n?<!-- \/pr-links -->/
+
+function withoutPreviewLink(body: string): string {
+  const match = PR_LINKS.exec(body)
+  if (!match) return body
+  const rest = match[1]!.split(" · ").filter((item) => !item.trim().startsWith("[Preview]("))
+  if (rest.length > 0)
+    return body.replace(
+      PR_LINKS,
+      () => `<!-- pr-links -->\n${rest.join(" · ")}\n<!-- /pr-links -->`,
+    )
+  const before = body.slice(0, match.index).trimEnd()
+  const after = body.slice(match.index + match[0].length).trimStart()
+  return before && after ? `${before}\n\n${after}` : before || after
+}
 
 /**
- * Puts the block where LINKS_START stands, or else where the preview's link
- * stands, or else at the top, under any `Closes #N` lines.
+ * Puts the block where LINKS_START stands, or else at the top, under any
+ * `Closes #N` lines.
  */
 function placed(body: string, block: string, trailingNewline: boolean): string {
-  if (!body.includes(LINKS_START)) body = body.replace(PREVIEW_LINK, LINKS_START)
-  else body = body.replace(new RegExp(`${PREVIEW_LINK.source}\\s*`), "")
   if (body.includes(LINKS_START))
     return body.replace(LINKS_START, () => block).trimEnd() + (trailingNewline ? "\n" : "")
   const lines = body.split("\n")
@@ -172,7 +184,7 @@ export function withLinks(body: string, links: string[]): string {
   const block = `${LINKS_START}\nShowcase: ${mergeLinks(line, links).join(", ")}\n${LINKS_END}`
   // Out of the block, which carries the line from here on.
   const cleaned = LINKS_BLOCK.test(body) ? body.replace(LINKS_BLOCK, () => LINKS_START) : body
-  const rest = withoutShowcaseLines(cleaned)
+  const rest = withoutShowcaseLines(withoutPreviewLink(cleaned))
   return placed(rest, block, /\n$/.test(body))
 }
 

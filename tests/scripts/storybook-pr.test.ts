@@ -10,7 +10,7 @@ import {
   linksBlock,
   main,
   MAX_COMPONENTS,
-  PREVIEW_LINK_END,
+  PR_LINKS_END,
   SHOWCASE_LINKS_END,
   withStorybookLinks,
 } from "../../scripts/storybook-pr"
@@ -159,13 +159,13 @@ describe("withStorybookLinks", () => {
     expect(withStorybookLinks(showcase, block)).toBe(`${showcase}\n\n${block}\n`)
   })
 
-  it("adds the block under the preview link when there are no showcase links", () => {
-    const preview = `<!-- preview-link -->\n**Preview:** p\n${PREVIEW_LINK_END}`
-    expect(withStorybookLinks(`Closes #1\n\n${preview}\n\n## Context`, block)).toBe(
-      `Closes #1\n\n${preview}\n\n${block}\n\n## Context`,
+  it("adds the block under the links line, which sits under any showcase links", () => {
+    const links = `<!-- pr-links -->\n[Preview](p)\n${PR_LINKS_END}`
+    expect(withStorybookLinks(`Closes #1\n\n${links}\n\n## Context`, block)).toBe(
+      `Closes #1\n\n${links}\n\n${block}\n\n## Context`,
     )
-    expect(withStorybookLinks(`${preview}\n\n${showcase}\n\nText`, block)).toBe(
-      `${preview}\n\n${showcase}\n\n${block}\n\nText`,
+    expect(withStorybookLinks(`${showcase}\n\n${links}\n\nText`, block)).toBe(
+      `${showcase}\n\n${links}\n\n${block}\n\nText`,
     )
   })
 

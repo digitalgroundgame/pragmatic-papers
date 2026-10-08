@@ -35,7 +35,7 @@ exports[`ArticleHero > matches snapshot 1`] = `
       </span>
     </div>
     <div
-      class="flex grow items-center justify-end gap-3"
+      class="flex grow items-center justify-end gap-1"
       data-slot="article-meta-controls"
     >
       <div
@@ -43,15 +43,10 @@ exports[`ArticleHero > matches snapshot 1`] = `
         data-testid="narration-player"
       />
       <div
-        class="flex items-center gap-1"
-        data-slot="article-actions"
-      >
-        <div
-          data-testid="share-buttons"
-          data-title="Test Article"
-          data-url="https://example.com/articles/test-article"
-        />
-      </div>
+        data-testid="share-buttons"
+        data-title="Test Article"
+        data-url="https://example.com/articles/test-article"
+      />
     </div>
   </div>
   <div

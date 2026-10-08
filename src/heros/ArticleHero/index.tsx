@@ -44,15 +44,13 @@ export const ArticleHero: React.FC<ArticleHeroProps> = ({
         <div className="grow-999">
           <PublicationDates publishedAt={publishedAt} updatedAt={updatedAt} />
         </div>
-        <div data-slot="article-meta-controls" className="flex grow items-center justify-end gap-3">
+        <div data-slot="article-meta-controls" className="flex grow items-center justify-end gap-1">
           <NarrationPlayer narration={narration} className="mr-auto shrink-0" />
-          <div data-slot="article-actions" className="flex items-center gap-1">
-            {showTableOfContents && <TableOfContentsButton content={content} />}
-            <ShareButtons
-              url={`${getServerSideURL()}/articles/${article.slug}`}
-              title={article.title}
-            />
-          </div>
+          {showTableOfContents && <TableOfContentsButton content={content} />}
+          <ShareButtons
+            url={`${getServerSideURL()}/articles/${article.slug}`}
+            title={article.title}
+          />
         </div>
       </div>
       <Separator />

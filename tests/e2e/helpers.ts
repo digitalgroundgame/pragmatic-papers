@@ -43,24 +43,6 @@ export function trackPageErrors(page: Page): () => string[] {
   return () => [...errors]
 }
 
-export async function gotoFirstArticle(page: Page): Promise<string | null> {
-  await page.goto("/")
-  const link = page.locator('a[href*="/articles/"]').first()
-  const href = await link.getAttribute("href", { timeout: 5000 }).catch(() => null)
-  if (!href) return null
-  await page.goto(href)
-  return href
-}
-
-export async function gotoFirstVolume(page: Page): Promise<string | null> {
-  await page.goto("/")
-  const link = page.locator('a[href*="/volumes/"]').first()
-  const href = await link.getAttribute("href", { timeout: 5000 }).catch(() => null)
-  if (!href) return null
-  await page.goto(href)
-  return href
-}
-
 /**
  * Settle the page before measuring layout: wait for web fonts to finish
  * loading (late font swaps shift every glyph), for all <img>s in the DOM to

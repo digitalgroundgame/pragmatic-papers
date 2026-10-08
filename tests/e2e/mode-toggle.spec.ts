@@ -1,25 +1,26 @@
 import { expect, test, type Locator, type Page } from "@playwright/test"
 
-// Each toggle loads its menu on first interaction, so these check that the
-// first click both loads the menu and opens it.
+// Every placement of the theme toggle loads its menu on first interaction
+// (LoadOnInteraction), and the mobile sheets that hold two of them load the
+// same way. The ModeToggle stories cover one toggle's load-on-click and
+// load-on-focus; these check each placement on the real page, where the first
+// click has to both load the menu and open it.
 async function expectToggleOpensMenu(page: Page, scope: Locator) {
   const toggle = scope.getByRole("button", { name: "Toggle theme" })
   await toggle.scrollIntoViewIfNeeded()
   await expect(toggle).toBeVisible()
   await toggle.click()
-  await expect(page.locator('[data-slot="dropdown-menu-content"]')).toBeVisible()
+  // Visible only: a menu closed a moment ago may still be animating out.
+  const menu = page.locator('[data-slot="dropdown-menu-content"]').filter({ visible: true })
+  await expect(menu).toBeVisible()
+  await page.keyboard.press("Escape")
+  await expect(menu).toBeHidden()
 }
 
-test.describe("ModeToggle — desktop", () => {
-  test("header toggle opens the theme menu", async ({ page }) => {
-    await page.goto("/")
-    await expectToggleOpensMenu(page, page.locator("header"))
-  })
-
-  test("footer toggle opens the theme menu", async ({ page }) => {
-    await page.goto("/")
-    await expectToggleOpensMenu(page, page.locator("footer"))
-  })
+test("ModeToggle — the header and footer toggles open the theme menu", async ({ page }) => {
+  await page.goto("/")
+  await test.step("header", () => expectToggleOpensMenu(page, page.locator("header")))
+  await test.step("footer", () => expectToggleOpensMenu(page, page.locator("footer")))
 })
 
 test.describe("ModeToggle — mobile (iPhone SE)", () => {

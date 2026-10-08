@@ -9,6 +9,7 @@ import {
   TOPIC_NAME,
   TOPIC_SLUG,
   VOLUME_SLUG,
+  WRITER_SOCIALS,
 } from "./seed-e2e.constants"
 
 import type { User } from "@/payload-types"
@@ -147,7 +148,7 @@ async function setArticleImages(payload: Payload, mediaId: number): Promise<void
 }
 
 // Co-authors for the four-author article. Deliberately plain compared with the e2e
-// writer — author-card.spec.ts covers the fully-populated profile, and these
+// writer — the smoke test checks the fully-populated profile on /authors, and these
 // only ever appear as a name and a set of initials in a byline.
 const CO_AUTHORS = [
   { name: "Sienna Scribe", slug: "e2e-co-author-sienna", email: "sienna@e2e.test" },
@@ -173,52 +174,9 @@ export async function main(): Promise<void> {
         ]),
         roles: ["writer"],
         slug: "e2e-writer",
-        // A full spread of platforms so the author card exercises every
-        // branded icon variant (see AuthorLinks / detectPlatform). Capped at
-        // the socials field's maxRows: 6.
-        socials: [
-          { link: { type: "custom", label: "X", url: "https://x.com/e2ewriter", newTab: true } },
-          {
-            link: {
-              type: "custom",
-              label: "YouTube",
-              url: "https://youtube.com/@e2ewriter",
-              newTab: true,
-            },
-          },
-          {
-            link: {
-              type: "custom",
-              label: "Twitch",
-              url: "https://twitch.tv/e2ewriter",
-              newTab: true,
-            },
-          },
-          {
-            link: {
-              type: "custom",
-              label: "Instagram",
-              url: "https://instagram.com/e2ewriter",
-              newTab: true,
-            },
-          },
-          {
-            link: {
-              type: "custom",
-              label: "Discord",
-              url: "https://discord.gg/e2ewriter",
-              newTab: true,
-            },
-          },
-          {
-            link: {
-              type: "custom",
-              label: "GitHub",
-              url: "https://github.com/e2ewriter",
-              newTab: true,
-            },
-          },
-        ],
+        socials: WRITER_SOCIALS.map(({ label, url }) => ({
+          link: { type: "custom" as const, label, url, newTab: true },
+        })),
       },
       "e2e writer",
       ctx,
@@ -249,12 +207,9 @@ export async function main(): Promise<void> {
       data: { experiments: { interactives: true, tableOfContents: true } },
     })
 
-    // A four-author article, so the byline's collapsed state has something to
-    // render: two names and "& 2 more" beside two avatars and a "+2".
-    //
-    // Deliberately left off the homepage grid below: `gotoFirstArticle` follows
-    // the first article link there, and the specs that use it expect an article
-    // without narration. byline.spec.ts navigates to it by slug instead.
+    // A four-author article: the widest byline, and the one article with
+    // narration (article-meta-row.spec.ts). Specs reach it by slug; it stays off
+    // the homepage grid below, which keeps to the showcase article and volume.
     const coAuthors: User[] = []
     for (const coAuthor of CO_AUTHORS) {
       coAuthors.push(
@@ -417,8 +372,8 @@ export async function main(): Promise<void> {
       ctx,
     )
 
-    // Homepage with a CollectionGrid so gotoFirstArticle / gotoFirstVolume can
-    // find a[href*="/articles/"] and a[href*="/volumes/"] links to follow.
+    // Homepage with a CollectionGrid linking the showcase article and the
+    // volume, which the smoke and navigation specs follow from the home page.
     // A full-width Merch carousel ("Support The Papers") follows the grid so
     // merch.spec.ts has a deterministic block to exercise; autoplay stays off
     // so the carousel never moves under the test.

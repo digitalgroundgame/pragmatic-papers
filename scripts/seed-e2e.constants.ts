@@ -43,6 +43,20 @@ export const WRITER_NAME = "Teagan Wordsmith"
 export const WRITER_SLUG = "e2e-writer"
 
 /**
+ * The writer's social links: one per platform, so the author card exercises
+ * every branded icon variant (see AuthorLinks / detectPlatform). Capped at the
+ * socials field's maxRows: 6.
+ */
+export const WRITER_SOCIALS = [
+  { label: "X", url: "https://x.com/e2ewriter" },
+  { label: "YouTube", url: "https://youtube.com/@e2ewriter" },
+  { label: "Twitch", url: "https://twitch.tv/e2ewriter" },
+  { label: "Instagram", url: "https://instagram.com/e2ewriter" },
+  { label: "Discord", url: "https://discord.gg/e2ewriter" },
+  { label: "GitHub", url: "https://github.com/e2ewriter" },
+]
+
+/**
  * The topic the seeded feature articles (footnotes, code blocks, media, social
  * embeds) are filed under, so /topics and /topics/[slug] have something to
  * list. Only those articles carry it: the ones other specs photograph stay

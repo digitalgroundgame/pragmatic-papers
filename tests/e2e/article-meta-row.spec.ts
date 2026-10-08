@@ -1,12 +1,7 @@
 import { expect, test } from "@playwright/test"
 
-import { FOUR_AUTHOR_SLUG } from "../../scripts/seed-e2e.constants"
-import {
-  expectPinnedDateline,
-  gotoFirstArticle,
-  waitForStableBox,
-  waitForStableRender,
-} from "./helpers"
+import { FOUR_AUTHOR_SLUG, SHOWCASE_SLUG } from "../../scripts/seed-e2e.constants"
+import { expectPinnedDateline, waitForStableBox, waitForStableRender } from "./helpers"
 
 // The hero's meta row puts the dateline and the controls (narration player,
 // share button) on one line while they fit, and drops the controls onto their
@@ -112,8 +107,7 @@ test.describe("article hero meta row — controls wrapped onto their own line", 
     // Most articles have no narration, leaving the share button alone in the
     // group. `justify-between` would pin it to the left edge once wrapped; this
     // is the guard that it stays where the wide layout had it.
-    const href = await gotoFirstArticle(page)
-    test.skip(!href, "No articles found in the database")
+    await page.goto(`/articles/${SHOWCASE_SLUG}`)
     await expect(page.locator(audioPlayer)).toHaveCount(0)
 
     const metaRow = page.locator(row)

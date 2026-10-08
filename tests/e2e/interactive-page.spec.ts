@@ -24,6 +24,16 @@ test.describe("interactive page — federal courts", () => {
     )
     await expect(page.locator("[data-drilldown-layer='local']")).toHaveCount(0)
 
+    // The pane starts empty, not landed on the Supreme Court. The landing view (the whole
+    // bench, parked behind `summary`) is built and tested at the component level
+    // (SummaryView.tsx), but the page keeps the pane empty until the reader picks something.
+    const emptyPane = page.locator("[data-drilldown-pane]")
+    await expect(emptyPane).not.toHaveAttribute("data-open", "")
+    await expect(emptyPane.locator("[data-drilldown-empty]")).toHaveText(
+      "Select a court on the map or from the list to see who sits on its bench.",
+    )
+    await expect(emptyPane.locator("[data-summary-scotus]")).toHaveCount(0)
+
     // Seat blocks are drawn once the client adopts the SVG, from facts the snapshot carries.
     await expect(page.locator("svg[data-drilldown-overview] g[data-drilldown-block]")).toHaveCount(
       14,
@@ -62,10 +72,20 @@ test.describe("interactive page — federal courts", () => {
     await expect(page).toHaveURL(/[?&]region=ca8(&|$)/)
     await expect(page).toHaveURL(/[?&]pane=1(&|$)/)
     await expect(page).toHaveURL(/[?&]record=[^&]+/)
+    const pinnedCard = (await detail.textContent()) ?? ""
     await page.reload()
-    await expect(
-      page.locator("[data-drilldown-pane][data-open] [data-drilldown-node]").first(),
-    ).toBeVisible()
+
+    // Restoring is a fetch and a camera move: the pane opens on the region once its records
+    // have arrived, and the card is pinned once the bench is drawn. Wait on each in turn, so a
+    // failure says which part of the address was lost.
+    const restored = page.locator("[data-drilldown-pane][data-open]")
+    await expect(restored.locator("[data-drilldown-pane-title]")).toHaveText(
+      "U.S. Court of Appeals for the Eighth Circuit",
+    )
+    await expect(restored.locator("[data-drilldown-node]").first()).toBeVisible()
+    const restoredDetail = restored.locator("[data-drilldown-detail]")
+    await expect(restoredDetail).toHaveAttribute("data-pinned", "")
+    await expect(restoredDetail).toHaveText(pinnedCard)
   })
 
   test("drilling into a region morphs to its child map and back", async ({ page }) => {
@@ -109,20 +129,6 @@ test.describe("interactive page — federal courts", () => {
     await expect(page.locator("[data-drilldown-selector] [data-region-item='ca1']")).toBeVisible()
   })
 
-  test("the overview pane starts empty, not landed on the Supreme Court", async ({ page }) => {
-    await page.goto(PAGE)
-    // The landing view (the whole bench, parked behind `summary`) is built and tested at the
-    // component level (SummaryView.tsx), but the page itself keeps the pane empty until the reader
-    // picks something — every other unselected state works the same way, and opening straight
-    // onto a filled-in Supreme Court bench read as the page choosing for the reader.
-    const pane = page.locator("[data-drilldown-pane]")
-    await expect(pane).not.toHaveAttribute("data-open", "")
-    await expect(pane.locator("[data-drilldown-empty]")).toHaveText(
-      "Select a court on the map or from the list to see who sits on its bench.",
-    )
-    await expect(pane.locator("[data-summary-scotus]")).toHaveCount(0)
-  })
-
   test("searching a judge by name opens their court and pins them", async ({ page }) => {
     await page.goto(PAGE)
     const box = page.getByRole("combobox", { name: "Search judges" })
@@ -164,64 +170,6 @@ test.describe("interactive page — federal courts", () => {
       "U.S. District Court for the District of Massachusetts",
     )
     await expect(pane.locator("[data-drilldown-detail]")).toHaveAttribute("data-pinned", "")
-  })
-
-  test("the search index is served as JSON and names every record once", async ({ page }) => {
-    const res = await page.request.get(`${PAGE}/search`)
-    expect(res.ok()).toBe(true)
-    expect(res.headers()["content-type"]).toContain("application/json")
-    const index = (await res.json()) as { entries: { id: string; name: string; region: string }[] }
-    // The seeded fixture keeps three courts' benches (see scripts/snapshot-federal-courts.ts).
-    expect(index.entries.length).toBeGreaterThan(100)
-    expect(new Set(index.entries.map((e) => e.id)).size).toBe(index.entries.length)
-    expect(index.entries.every((e) => typeof e.name === "string" && e.name.length > 0)).toBe(true)
-  })
-
-  test("a region is composed server-side and served as two halves", async ({ page }) => {
-    await page.goto(PAGE)
-    const region = await page.request.get(`${PAGE}/regions/ca8`)
-    expect(region.ok()).toBe(true)
-    expect(region.headers()["content-type"]).toContain("application/json")
-    const data = (await region.json()) as {
-      paths: unknown[]
-      payload: { records: { items: unknown[] }; facts?: unknown; seats?: unknown }
-    }
-    expect(data.payload.records.items.length).toBeGreaterThan(50)
-    // Presentation-wide settings live on the overview, never repeated per region.
-    expect(data.payload.facts).toBeUndefined()
-    expect(data.payload.seats).toBeUndefined()
-    // The half that changes with every sync carries no shapes to change with it.
-    expect(data.paths).toEqual([])
-    expect(region.headers()["cache-control"]).not.toContain("immutable")
-
-    const href = await page
-      .locator(`head link[rel='prefetch'][href*='/regions/ca8/geometry/']`)
-      .getAttribute("href")
-    const geometry = await page.request.get(href!)
-    expect(geometry.ok()).toBe(true)
-    const shapes = (await geometry.json()) as { paths: { id: string | null }[]; payload: null }
-    expect(shapes.paths.filter((p) => p.id).length).toBe(11)
-    expect(shapes.payload).toBeNull()
-    // Its URL names its own content, so it can be held for as long as the browser likes.
-    expect(geometry.headers()["cache-control"]).toContain("immutable")
-  })
-
-  test("a region that is not drillable is a 404", async ({ page }) => {
-    const res = await page.request.get(`${PAGE}/regions/moed`)
-    expect(res.status()).toBe(404)
-  })
-
-  test("a geometry URL naming the wrong hash is a 404, not a year-long cache of the current map", async ({
-    page,
-  }) => {
-    await page.goto(PAGE)
-    const href = await page
-      .locator(`head link[rel='prefetch'][href*='/regions/ca8/geometry/']`)
-      .getAttribute("href")
-    const stale = href!.replace(/\/geometry\/[^/]+$/, "/geometry/not-the-real-hash")
-    const res = await page.request.get(stale)
-    expect(res.status()).toBe(404)
-    expect(res.headers()["cache-control"]).not.toContain("immutable")
   })
 
   test("the region list is one tab stop, and a keyboard selection lands in the pane", async ({

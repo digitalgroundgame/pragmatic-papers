@@ -322,8 +322,8 @@ describe("seed-e2e main()", () => {
   it("keeps the crowded-byline article off the homepage grid", async () => {
     await main()
 
-    // gotoFirstArticle follows the first article link on the homepage, and the
-    // specs that use it expect an article without narration.
+    // The grid keeps to the showcase article and the volume: the narrated
+    // four-author article is reached by slug.
     const pageCall = mockCreate.mock.calls.find(([args]) => args.collection === "pages")?.[0]
     const grid = pageCall.data.layout.find(
       (block: { blockType: string }) => block.blockType === "collectionGrid",

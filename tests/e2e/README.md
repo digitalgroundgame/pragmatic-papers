@@ -5,6 +5,13 @@ reader can see and do on it. Visual changes are reviewed in Storybook (every
 story runs with an axe check in CI and is published per PR) and on the PR's
 site preview, not here.
 
+They are the slowest tests we have, so they cover only what needs the real
+server and a real browser together: following links between pages, code that
+loads on first interaction, focus and scrolling, the clipboard, layout, the
+drilldown's URL state, and structured data on real pages. A component's own
+markup and states belong in its unit test or Storybook story (whose `play`
+function runs in Chromium too), and a route handler's headers in its unit test.
+
 ## Running them
 
 ```sh
@@ -19,6 +26,10 @@ it (the dev server locally; `E2E_PROD_SERVER=true` builds and runs
 `next start`), then runs Playwright against it. The HTML report lands in
 `playwright-report/`.
 
+The specs only read the seed: none signs up, saves or deletes anything. Keep it
+that way, because CI runs them on two workers in no fixed order. A test that
+has to write should create its own record rather than change a seeded one.
+
 Every slug, name and date the specs rely on comes from the seed through
 `scripts/seed-e2e.constants.ts`, so nothing depends on your dev database.
 
@@ -27,7 +38,8 @@ Every slug, name and date the specs rely on comes from the seed through
 The "E2E tests" job in `.github/workflows/playwright.yml` runs the suite
 inside the pinned `mcr.microsoft.com/playwright` image, against the app image
 the PR's preview deploys (`E2E_IMAGE`: its standalone `node server.js`).
-`.github/actions/setup-e2e` sets the environment it runs with. It runs with
+`.github/actions/setup-e2e` sets the environment it runs with. The job log
+lists each test with its duration. It runs with
 `FONTS_REQUIRED=true`, so an expired `GH_FONT_READ` token fails at
 `pnpm install` with a named error instead of silently falling back to Inter.
 
@@ -35,9 +47,13 @@ the PR's preview deploys (`E2E_IMAGE`: its standalone `node server.js`).
 
 - Assert behaviour a reader depends on: what renders, where links go, what a
   click opens. Prefer roles and accessible names over CSS selectors.
-- `tests/e2e/helpers.ts` has what several specs share: `gotoFirstArticle` /
-  `gotoFirstVolume`, `trackPageErrors`, `expectPinnedDateline`, and, for
-  geometry assertions, `waitForStableRender` and `waitForStableBox`, which
+- Before adding a test, check the component's story and unit test. When a
+  check needs the page, add it to a test that already loads that page (with
+  `test.step` to name each part) rather than paying for another page load.
+- Go to a seeded page by its slug from `scripts/seed-e2e.constants.ts`. Wait
+  on a condition (`expect(...)` retries), never on `waitForTimeout`.
+- `tests/e2e/helpers.ts` has what several specs share: `trackPageErrors`,
+  `expectPinnedDateline`, and, for geometry assertions, `waitForStableRender` and `waitForStableBox`, which
   let fonts, images and animations settle before you measure a box.
 - Timezone (`UTC`), locale (`en-US`) and color scheme (`light`) are pinned in
   `playwright.config.ts`.

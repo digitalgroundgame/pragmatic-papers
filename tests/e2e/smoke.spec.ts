@@ -9,6 +9,7 @@ import {
   VOLUME_SLUG,
   WRITER_NAME,
   WRITER_SLUG,
+  WRITER_SOCIALS,
 } from "../../scripts/seed-e2e.constants"
 import { trackPageErrors } from "./helpers"
 
@@ -44,12 +45,21 @@ test.describe("public routes", () => {
   })
 
   test.describe("/authors", () => {
-    test("lists author cards", async ({ page }) => {
+    test("lists author cards with their social links", async ({ page }) => {
       await visit(page, "/authors")
       await expect(page.getByRole("heading", { level: 1, name: "Authors" })).toBeVisible()
       const list = page.getByRole("region", { name: "All authors" })
-      await expect(list.locator('[data-slot="card"]').first()).toBeVisible()
       await expect(list.getByRole("link", { name: WRITER_NAME })).toBeVisible()
+
+      // The seed gives the writer one link per platform. Located by the card's own landmark
+      // rather than by text: the list streams in behind a Suspense skeleton, and role queries
+      // skip the hidden copy React holds before it swaps the resolved cards in.
+      const socials = list.getByRole("navigation", { name: `Links for ${WRITER_NAME}` })
+      const links = socials.getByRole("link")
+      await expect(links).toHaveCount(WRITER_SOCIALS.length)
+      for (const { url } of WRITER_SOCIALS) {
+        await expect(socials.locator(`a[href="${url}"]`)).toHaveAttribute("target", "_blank")
+      }
     })
   })
 
@@ -105,7 +115,10 @@ test.describe("public routes", () => {
       await expect(
         page.getByRole("heading", { level: 2, name: "Articles in this Volume" }),
       ).toBeVisible()
-      await expect(page.getByRole("link", { name: new RegExp(SHOWCASE_TITLE) })).toBeVisible()
+      await expect(page.getByRole("link", { name: new RegExp(SHOWCASE_TITLE) })).toHaveAttribute(
+        "href",
+        `/articles/${SHOWCASE_SLUG}`,
+      )
     })
   })
 })

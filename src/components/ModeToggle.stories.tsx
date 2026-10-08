@@ -63,6 +63,9 @@ export const Default: Story = {
     await userEvent.click(within(canvasElement).getByRole("button", { name: "Toggle theme" }))
     await userEvent.click(await screen.findByRole("menuitem", { name: "Dark" }))
     await waitFor(() => expect(document.documentElement).toHaveClass("dark"))
+    // The closing menu stays mounted, with pointer events off, while it animates
+    // out. Wait for it to go, or the next lookup can find its "Light" item.
+    await waitFor(() => expect(screen.queryByRole("menu")).not.toBeInTheDocument())
 
     await userEvent.click(within(canvasElement).getByRole("button", { name: "Toggle theme" }))
     await userEvent.click(await screen.findByRole("menuitem", { name: "Light" }))

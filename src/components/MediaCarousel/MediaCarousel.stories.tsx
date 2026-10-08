@@ -65,9 +65,21 @@ async function expectImagesFitSlides(canvasElement: HTMLElement) {
   }
 }
 
+/** The prev/next arrows sit inside the carousel's box, at every width. */
+async function expectArrowsInsideCarousel(canvasElement: HTMLElement) {
+  const carousel = within(canvasElement).getByRole("region")
+  const box = carousel.getBoundingClientRect()
+  for (const name of ["Previous slide", "Next slide"]) {
+    const rect = within(carousel).getByRole("button", { name }).getBoundingClientRect()
+    await expect(rect.left, `${name} left`).toBeGreaterThanOrEqual(box.left)
+    await expect(rect.right, `${name} right`).toBeLessThanOrEqual(box.right)
+  }
+}
+
 export const Default: Story = {
   play: async ({ canvasElement }) => {
     await expectImagesFitSlides(canvasElement)
+    await expectArrowsInsideCarousel(canvasElement)
   },
 }
 

@@ -116,9 +116,11 @@ jobs:
           OWNER: ${{ github.repository_owner }}
         run: |
           if [ "$ELIGIBLE" = "true" ] && [ -n "$IMAGE_APP" ]; then
-            echo "preview=image" >> "$GITHUB_OUTPUT"
-            echo "image=ghcr.io/${OWNER,,}/pragmatic-papers-preview" >> "$GITHUB_OUTPUT"
-            echo "tag=pr-${PR}-${SHA::12}" >> "$GITHUB_OUTPUT"
+            {
+              echo "preview=image"
+              echo "image=ghcr.io/${OWNER,,}/pragmatic-papers-preview"
+              echo "tag=pr-${PR}-${SHA::12}"
+            } >> "$GITHUB_OUTPUT"
           elif [ "$ELIGIBLE" = "true" ] && [ -n "$STAGING_APP" ]; then
             echo "preview=coolify" >> "$GITHUB_OUTPUT"
           fi

@@ -14,7 +14,9 @@ test("the article's table of contents links to its headings and collapses from t
   await expect(page.getByRole("heading", { level: 1, name: SHOWCASE_TITLE })).toBeVisible()
 
   const toc = page.getByRole("navigation", { name: "Table of contents" })
-  const sidebar = page.locator("aside", { has: toc })
+  // Found through the nav's slot rather than `toc`: a role locator skips hidden elements, so
+  // once the nav collapses (`hidden`) the aside would stop matching and have no box to measure.
+  const sidebar = page.locator("aside", { has: page.locator('[data-slot="toc"]') })
   await expect(toc).toBeVisible()
 
   await test.step("entries jump to their headings", async () => {

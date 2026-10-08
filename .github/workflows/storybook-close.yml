@@ -1,6 +1,6 @@
 # Retires a closed or merged PR's Storybook: marks its "Storybook Preview"
 # Deployments inactive, which CI's "Deploy Storybook" job records
-# (scripts/storybook-pr.ts), as preview-deployment.yml does for the site's
+# (scripts/storybook-pr.ts), as preview-image.yml does for the site's
 # Preview, then deletes its `pr-<number>` Worker Preview on Cloudflare.
 name: Storybook preview closed
 

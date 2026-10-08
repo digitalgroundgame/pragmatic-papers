@@ -247,7 +247,7 @@ replaces the list, so include any existing assignees; set `Status` by
 dispatching `project-fields.yml` with `field: "Status"`, `value: "In progress"`
 ([Setting fields](#setting-fields)).
 
-As a backstop, `.github/workflows/assign-linked-issues.yml` assigns a PR's
+As a backstop, the "PR events" job (`.github/workflows/pr-events.yml`) assigns a PR's
 author to any unassigned issue the PR closes (`Fixes #953`) when the PR is
 opened, reopened or edited, so adding the keyword later works too. It only
 covers work that already has a PR, and not PRs stacked on another branch

@@ -43,16 +43,23 @@ concurrency:
 # the PR's preview. Removing a closed PR's preview stays in preview-image.yml.
 
 jobs:
-  # Skips the suite on a PR that changes only Markdown, the same way ci.yml's
-  # "Detect changes" job does: a skipped required check passes, only PRs are
-  # filtered, and if this job fails the suite runs in full.
+  # Plans the run. Skips the suite on a PR that changes only Markdown, the
+  # same way ci.yml's "Detect changes" job does: a skipped required check
+  # passes, only PRs are filtered, and if this job fails the suite runs in
+  # full. On a push it notes whether the merge queue already ran this workflow
+  # on the commit, and decides whether and how a PR gets a preview.
   changes:
     name: Detect E2E changes
     runs-on: ubuntu-latest
     permissions:
+      actions: read
       pull-requests: read
     outputs:
       e2e: ${{ steps.filter.outputs.e2e }}
+      queued: ${{ steps.queued.outputs.queued }}
+      preview: ${{ steps.plan.outputs.preview }}
+      tag: ${{ steps.plan.outputs.tag }}
+      image: ${{ steps.plan.outputs.image }}
 
     steps:
       - uses: dorny/paths-filter@v4
@@ -65,43 +72,63 @@ jobs:
               - "**"
               - "!**/*.md"
 
-  # Whether this run deploys a preview: the PRs Coolify builds previews for
-  # itself (preview-deployment.yml's `if`): same-repo PRs from owners, members and
-  # collaborators, not titled [skip ci] / [skip cd]. Fork PRs get no secrets,
-  # and fork and Dependabot runs can't push to GHCR.
-  preview:
-    name: Plan preview
-    runs-on: ubuntu-latest
-    outputs:
-      deploy: ${{ steps.plan.outputs.deploy }}
-      tag: ${{ steps.plan.outputs.tag }}
-      image: ${{ steps.plan.outputs.image }}
-    steps:
+      # dev's merge queue lands the very commit it tested, so a push run on a
+      # commit whose merge_group run passed would only repeat the suite.
+      - name: Check the merge queue
+        id: queued
+        if: github.event_name == 'push'
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+          WORKFLOW_REF: ${{ github.workflow_ref }}
+        run: |
+          file="${WORKFLOW_REF%@*}"
+          file="${file##*/}"
+          passed=$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/$file/runs?head_sha=$GITHUB_SHA&event=merge_group&status=success&per_page=1" --jq .total_count)
+          if [ "${passed:-0}" -gt 0 ]; then
+            echo "::notice::The merge queue already passed this workflow on $GITHUB_SHA; skipping what it covered."
+            echo "queued=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      # Whether this run deploys a preview, and how. Previews go to the PRs
+      # Coolify would preview itself: same-repo PRs from owners, members and
+      # collaborators, not titled [skip ci] / [skip cd]. Fork PRs get no
+      # secrets, and fork and Dependabot runs can't push to GHCR.
+      #   - image: the preview app runs the image "Build image" builds
+      #     (COOLIFY_PREVIEW_IMAGE_APP_UUID set).
+      #   - coolify: the fallback, where staging builds previews on its own
+      #     webhook and "Deploy preview" only mirrors that build onto the PR
+      #     (dockerfiles/README.md, "Falling back to Coolify-built previews").
       - id: plan
         env:
-          DEPLOY: >-
+          ELIGIBLE: >-
             ${{
               github.event_name == 'pull_request' &&
-              vars.COOLIFY_PREVIEW_IMAGE_APP_UUID != '' &&
               github.event.pull_request.head.repo.full_name == github.repository &&
               contains(fromJSON('["OWNER", "MEMBER", "COLLABORATOR"]'), github.event.pull_request.author_association) &&
               !contains(github.event.pull_request.title, '[skip ci]') &&
               !contains(github.event.pull_request.title, '[skip cd]')
             }}
+          IMAGE_APP: ${{ vars.COOLIFY_PREVIEW_IMAGE_APP_UUID }}
+          STAGING_APP: ${{ vars.COOLIFY_PREVIEW_APP_UUID }}
           PR: ${{ github.event.pull_request.number }}
           SHA: ${{ github.event.pull_request.head.sha }}
           OWNER: ${{ github.repository_owner }}
         run: |
-          echo "deploy=$DEPLOY" >> "$GITHUB_OUTPUT"
-          if [ "$DEPLOY" = "true" ]; then
-            echo "image=ghcr.io/${OWNER,,}/pragmatic-papers-preview" >> "$GITHUB_OUTPUT"
-            echo "tag=pr-${PR}-${SHA::12}" >> "$GITHUB_OUTPUT"
+          if [ "$ELIGIBLE" = "true" ] && [ -n "$IMAGE_APP" ]; then
+            {
+              echo "preview=image"
+              echo "image=ghcr.io/${OWNER,,}/pragmatic-papers-preview"
+              echo "tag=pr-${PR}-${SHA::12}"
+            } >> "$GITHUB_OUTPUT"
+          elif [ "$ELIGIBLE" = "true" ] && [ -n "$STAGING_APP" ]; then
+            echo "preview=coolify" >> "$GITHUB_OUTPUT"
           fi
 
   image:
     name: Build image
-    needs: [changes, preview]
-    if: ${{ !cancelled() && needs.preview.result == 'success' && (needs.preview.outputs.deploy == 'true' || github.event_name != 'pull_request' || needs.changes.result != 'success' || needs.changes.outputs.e2e == 'true') }}
+    needs: changes
+    if: ${{ !cancelled() && (needs.changes.outputs.preview == 'image' || github.event_name != 'pull_request' || needs.changes.result != 'success' || needs.changes.outputs.e2e == 'true') }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
@@ -133,21 +160,25 @@ jobs:
         with:
           gh-font-read-token: ${{ secrets.GH_FONT_READ }}
           source-commit: ${{ github.event.pull_request.head.sha || github.sha }}
-          push-tag: ${{ needs.preview.outputs.deploy == 'true' && format('{0}:{1}', needs.preview.outputs.image, needs.preview.outputs.tag) || '' }}
+          push-tag: ${{ needs.changes.outputs.preview == 'image' && format('{0}:{1}', needs.changes.outputs.image, needs.changes.outputs.tag) || '' }}
           registry-token: ${{ github.token }}
 
   # Hands the image E2E is testing to Coolify as the PR's preview, alongside
-  # the tests rather than after them, as previews always have been. A new push
-  # cancels this run (the workflow's concurrency group) before it can deploy
-  # a stale image.
+  # the tests rather than after them, as previews always have been. In the
+  # fallback (the plan's `coolify`), staging builds the preview itself and this
+  # only mirrors that build onto the PR. A new push cancels this run (the
+  # workflow's concurrency group) before it can deploy a stale image.
+  # showcase.yml pushes showcase articles once this workflow finishes.
   deploy:
     name: Deploy preview
-    needs: [preview, image]
-    if: ${{ !cancelled() && needs.image.result == 'success' && needs.preview.outputs.deploy == 'true' }}
+    needs: [changes, image]
+    if: ${{ !cancelled() && (needs.changes.outputs.preview == 'image' && needs.image.result == 'success' || needs.changes.outputs.preview == 'coolify') }}
     runs-on: ubuntu-latest
     # scripts/preview-deployment.ts waits on Coolify, first boot included
-    # (copying staging).
-    timeout-minutes: 45
+    # (copying staging): up to 10 min for the fallback's build to be queued,
+    # then 45 for the build, so its own timeout marks the Deployment failed
+    # before the runner's does.
+    timeout-minutes: 60
     permissions:
       contents: read
       deployments: write
@@ -183,18 +214,22 @@ jobs:
           HEAD_REF: ${{ github.event.pull_request.head.ref }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
           COOLIFY_DASHBOARD_URL: ${{ vars.COOLIFY_DASHBOARD_URL }}
-          COOLIFY_PREVIEW_APP_UUID: ${{ vars.COOLIFY_PREVIEW_IMAGE_APP_UUID }}
+          COOLIFY_PREVIEW_APP_UUID: ${{ needs.changes.outputs.preview == 'image' && vars.COOLIFY_PREVIEW_IMAGE_APP_UUID || vars.COOLIFY_PREVIEW_APP_UUID }}
           PREVIEW_URL_TEMPLATE: ${{ vars.PREVIEW_URL_TEMPLATE }}
           COOLIFY_API_TOKEN: ${{ secrets.COOLIFY_API_TOKEN }}
-          TAG: ${{ needs.preview.outputs.tag }}
-        run: node scripts/preview-deployment.ts deploy "$TAG"
+          # The fallback has no tag, and follows the build staging started for
+          # this push (not one queued before it) instead of deploying an image.
+          EVENT_AT: ${{ github.event.pull_request.updated_at }}
+          TAG: ${{ needs.changes.outputs.tag }}
+        run: node scripts/preview-deployment.ts deploy ${TAG:+"$TAG"}
 
   test:
     name: E2E tests
     needs: [changes, image]
     # Runs even when the image failed, so the failure lands on this required
-    # check: a skipped required check counts as passing.
-    if: ${{ !cancelled() && (github.event_name != 'pull_request' || needs.changes.result != 'success' || needs.changes.outputs.e2e == 'true') }}
+    # check: a skipped required check counts as passing. Skipped on a push the
+    # merge queue already tested.
+    if: ${{ !cancelled() && needs.changes.outputs.queued != 'true' && (github.event_name != 'pull_request' || needs.changes.result != 'success' || needs.changes.outputs.e2e == 'true') }}
     timeout-minutes: 60
     runs-on: ubuntu-latest
     # Pinned to the exact @playwright/test version resolved in
@@ -395,72 +430,18 @@ jobs:
             "origin/$BASE_REF...$head" -- '**/__screenshots__/**/*.png' \
             | pnpm exec tsx scripts/pr-screenshot-comment.ts
 
-  # The client JavaScript and CSS each public page loads, read from the image's
-  # build manifests (scripts/bundle-size.ts), compared with dev's last measurement.
-  # A page whose JavaScript grew by more than 10 kB gets a warning; it never fails.
-  # Pushes to dev upload the measurement PRs compare with.
-  bundle-size:
-    name: Bundle size
-    needs: [changes, image]
-    if: ${{ !cancelled() && needs.image.result == 'success' && ((github.event_name == 'pull_request' && (needs.changes.result != 'success' || needs.changes.outputs.e2e == 'true')) || (github.event_name == 'push' && github.ref == 'refs/heads/dev')) }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    permissions:
-      actions: read
-      contents: read
-      pull-requests: write
-    steps:
-      - uses: actions/checkout@v7
-
-      - name: Set up Node.js environment
-        uses: ./.github/actions/setup-project
-        with:
-          node-version: "24.x"
-          gh-font-read-token: ${{ secrets.GH_FONT_READ }}
-
-      - name: Download the app image
-        uses: actions/download-artifact@v7
-        with:
-          name: app-image
-          path: ${{ runner.temp }}
-
-      # The build the PR deploys, rather than a second `next build` here.
-      - name: Copy the build out of the image
-        run: |
-          docker load -i "$RUNNER_TEMP/app-image.tar"
-          id=$(docker create pragmatic-papers-app:ci)
-          docker cp "$id:/app/.next" "$RUNNER_TEMP/next"
-          docker rm "$id"
-
-      - name: Download dev's measurement
-        id: base
-        if: github.event_name == 'pull_request'
-        uses: ./.github/actions/download-dev-artifact
-        with:
-          name: bundle-size
-
-      - name: Measure and compare with dev
-        env:
-          BASE_BUNDLE_SIZE_PATH: ${{ steps.base.outputs.dir && format('{0}/bundle-size.json', steps.base.outputs.dir) || '' }}
-          BUNDLE_SIZE_OUT: bundle-size.json
-          GITHUB_TOKEN: ${{ github.token }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
-        run: pnpm bundle-size --next-dir "$RUNNER_TEMP/next"
-
-      - uses: actions/upload-artifact@v7
-        if: ${{ !cancelled() }}
-        with:
-          name: bundle-size
-          path: bundle-size.json
-          retention-days: 90
-
-  # Lighthouse's performance audit of a few seeded pages (scripts/lighthouse.ts),
-  # compared with dev's last results. In its own job so the suite doesn't share the
-  # runner's CPU with it. Report-only: it posts how each page compares with dev and
-  # annotates big regressions, but never fails. Pushes to dev upload the results PRs
-  # compare with.
-  lighthouse:
-    name: Lighthouse
+  # Page speed, compared with dev's last measurement. Report-only: each part
+  # posts how the PR compares with dev to the PR's analytics comment and
+  # annotates big regressions, but never fails. Pushes to dev upload the
+  # measurements PRs compare with. In its own job so the E2E suite doesn't
+  # share the runner's CPU with Lighthouse.
+  #   - Bundle size: the client JavaScript and CSS each public page loads, read
+  #     from the image's build manifests (scripts/bundle-size.ts). A page whose
+  #     JavaScript grew by more than 10 kB gets a warning.
+  #   - Lighthouse: the performance audit of a few seeded pages
+  #     (scripts/lighthouse.ts).
+  page-speed:
+    name: Page speed
     needs: [changes, image]
     if: ${{ !cancelled() && needs.image.result == 'success' && ((github.event_name == 'pull_request' && (needs.changes.result != 'success' || needs.changes.outputs.e2e == 'true')) || (github.event_name == 'push' && github.ref == 'refs/heads/dev')) }}
     runs-on: ubuntu-latest
@@ -490,14 +471,46 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      # Also loads the app image into Docker, for both parts.
       - name: Set up E2E
+        id: setup
         uses: ./.github/actions/setup-e2e
         with:
           gh-font-read-token: ${{ secrets.GH_FONT_READ }}
 
-      - name: Download dev's results
-        id: base
+      # The build the PR deploys, rather than a second `next build` here.
+      - name: Copy the build out of the image
+        run: |
+          id=$(docker create pragmatic-papers-app:ci)
+          docker cp "$id:/app/.next" "$RUNNER_TEMP/next"
+          docker rm "$id"
+
+      - name: Download dev's bundle size
+        id: base-bundle
         if: github.event_name == 'pull_request'
+        uses: ./.github/actions/download-dev-artifact
+        with:
+          name: bundle-size
+
+      - name: Measure bundle size and compare with dev
+        env:
+          BASE_BUNDLE_SIZE_PATH: ${{ steps.base-bundle.outputs.dir && format('{0}/bundle-size.json', steps.base-bundle.outputs.dir) || '' }}
+          BUNDLE_SIZE_OUT: bundle-size.json
+          GITHUB_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: pnpm bundle-size --next-dir "$RUNNER_TEMP/next"
+
+      - uses: actions/upload-artifact@v7
+        if: ${{ !cancelled() }}
+        with:
+          name: bundle-size
+          path: bundle-size.json
+          retention-days: 90
+
+      # Lighthouse runs even if the bundle size measurement failed.
+      - name: Download dev's Lighthouse results
+        id: base
+        if: ${{ !cancelled() && steps.setup.outcome == 'success' && github.event_name == 'pull_request' }}
         uses: ./.github/actions/download-dev-artifact
         with:
           name: lighthouse-results
@@ -505,6 +518,7 @@ jobs:
       # Seeds the database and starts the image as the E2E suite does, then runs
       # Lighthouse against it in place of Playwright.
       - name: Run Lighthouse
+        if: ${{ !cancelled() && steps.setup.outcome == 'success' }}
         env:
           E2E_COMMAND: pnpm exec tsx scripts/lighthouse.ts
           BASE_LIGHTHOUSE_PATH: ${{ steps.base.outputs.dir && format('{0}/summary.json', steps.base.outputs.dir) || '' }}

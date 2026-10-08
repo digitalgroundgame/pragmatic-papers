@@ -1,0 +1,148 @@
+name: PR events
+
+# Everything a PR's labels and description start, in one job. GitHub has no
+# way to start a workflow on one label only, so a workflow per label shows a
+# skipped check for every other label added; this shows one "PR events"
+# check that passes. Work that takes longer runs in its own workflow, which
+# this starts with workflow_dispatch:
+#
+#   - The "needs screenshots" label runs update-snapshots.yml on the PR's
+#     branch, which takes the label off when it finishes.
+#   - The "ready for review" label, or marking a PR that has it ready, runs
+#     claude-review.yml on the PR's branch (PRs into dev, not drafts).
+#   - Opening the PR, editing its description, or adding or removing the
+#     "showcase" label syncs the label and the Showcase line
+#     (scripts/showcase-pr.ts), and when that says to push, runs showcase.yml
+#     from the default branch for the PR (see that file).
+#   - Opening, reopening or editing a PR that closes an issue (`Fixes #n`)
+#     assigns the PR's author to that issue if nobody owns it yet. Catches
+#     work that started without the assignee step in
+#     .claude/skills/github-issues/SKILL.md. Closing keywords only link
+#     issues on PRs into the default branch, so stacked PRs aren't covered.
+#
+# pull_request_target, so the workflow file comes from the base branch and
+# fork PRs get a token that can write issues. A fork PR only gets the issue
+# assignment, which runs no PR code; everything else is for this
+# repository's PRs, which a pull_request run would trust the same way.
+on:
+  pull_request_target:
+    types: [opened, reopened, edited, labeled, unlabeled, ready_for_review]
+
+# Only the showcase sync is serialized, since it edits the description. GitHub
+# keeps one pending run per group and cancels it for the next, so every other
+# event gets a group of its own: a label added while a sync runs can't drop
+# another label's run.
+concurrency:
+  group: >-
+    pr-events-${{ github.event.pull_request.number }}-${{
+      (github.event.action == 'opened' ||
+       github.event.action == 'edited' && github.event.changes.body ||
+       github.event.label.name == 'showcase') && 'showcase' || github.run_id }}
+  cancel-in-progress: false
+
+jobs:
+  route:
+    name: PR events
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      # workflow_dispatch.
+      actions: write
+      contents: read
+      # The showcase label.
+      issues: write
+      pull-requests: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      PR_NUMBER: ${{ github.event.pull_request.number }}
+      HEAD_REF: ${{ github.event.pull_request.head.ref }}
+      SAME_REPO: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
+
+    steps:
+      # GitHub silently ignores an assignee it won't accept (no repo access,
+      # never commented on the issue), so the response is checked.
+      - name: Assign the author to unassigned linked issues
+        if: >-
+          github.event.pull_request.user.type != 'Bot' &&
+          contains(fromJSON('["opened", "reopened", "edited", "ready_for_review"]'), github.event.action)
+        env:
+          AUTHOR: ${{ github.event.pull_request.user.login }}
+        run: |
+          set -euo pipefail
+          # shellcheck disable=SC2016 # $owner/$name/$pr are GraphQL variables
+          issues=$(gh api graphql \
+            -f query='query($owner:String!,$name:String!,$pr:Int!){
+              repository(owner:$owner,name:$name){ pullRequest(number:$pr){
+                closingIssuesReferences(first:20){ nodes {
+                  number repository { nameWithOwner } assignees(first:1){ totalCount } } } } } }' \
+            -f owner="${GITHUB_REPOSITORY%/*}" -f name="${GITHUB_REPOSITORY#*/}" -F pr="$PR_NUMBER" \
+            --jq ".data.repository.pullRequest.closingIssuesReferences.nodes[]
+              | select(.repository.nameWithOwner == \"$GITHUB_REPOSITORY\" and .assignees.totalCount == 0)
+              | .number")
+          for n in $issues; do
+            assigned=$(gh api -X POST "repos/$GITHUB_REPOSITORY/issues/$n/assignees" -f "assignees[]=$AUTHOR" \
+              --jq "[.assignees[].login] | index(\"$AUTHOR\") != null")
+            if [ "$assigned" = true ]; then
+              echo "Assigned @$AUTHOR to #$n" | tee -a "$GITHUB_STEP_SUMMARY"
+            else
+              echo "Could not assign @$AUTHOR to #$n (GitHub ignored the assignee)" | tee -a "$GITHUB_STEP_SUMMARY"
+            fi
+          done
+
+      - name: Regenerate screenshot baselines
+        if: env.SAME_REPO == 'true' && github.event.action == 'labeled' && github.event.label.name == 'needs screenshots'
+        run: gh workflow run update-snapshots.yml --repo "$GITHUB_REPOSITORY" --ref "$HEAD_REF"
+
+      - name: Start a Claude review
+        if: >-
+          env.SAME_REPO == 'true' &&
+          github.event.pull_request.base.ref == 'dev' &&
+          !github.event.pull_request.draft && (
+            github.event.action == 'labeled' && github.event.label.name == 'ready for review' ||
+            github.event.action == 'ready_for_review' && contains(github.event.pull_request.labels.*.name, 'ready for review')
+          )
+        run: gh workflow run claude-review.yml --repo "$GITHUB_REPOSITORY" --ref "$HEAD_REF" -f pr="$PR_NUMBER"
+
+      - name: Check whether the showcase needs a sync
+        id: showcase
+        if: >-
+          env.SAME_REPO == 'true' && (
+            github.event.action == 'opened' ||
+            github.event.action == 'edited' && github.event.changes.body ||
+            github.event.label.name == 'showcase'
+          )
+        run: echo "sync=true" >> "$GITHUB_OUTPUT"
+
+      # The script from the PR's head (this repository's, never a fork's).
+      - uses: actions/checkout@v7
+        if: steps.showcase.outputs.sync
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          sparse-checkout: |
+            scripts/showcase-pr.ts
+            scripts/pr-description.ts
+          sparse-checkout-cone-mode: false
+
+      # Node 24 runs the TypeScript script directly; no install needed.
+      - uses: actions/setup-node@v7
+        if: steps.showcase.outputs.sync
+        with:
+          node-version: "24.x"
+
+      - name: Sync the showcase label and the Showcase line
+        id: sync
+        if: steps.showcase.outputs.sync
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          ACTION: ${{ github.event.action }}
+          HAS_LABEL: ${{ contains(github.event.pull_request.labels.*.name, 'showcase') }}
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
+        run: node scripts/showcase-pr.ts sync
+
+      # From the default branch, as showcase.yml's workflow_run trigger runs:
+      # it checks out the PR's code itself, only for this repository's PRs.
+      - name: Push showcase articles
+        if: steps.sync.outputs.push == 'true'
+        env:
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: gh workflow run showcase.yml --repo "$GITHUB_REPOSITORY" --ref "$DEFAULT_BRANCH" -f target="$PR_NUMBER"

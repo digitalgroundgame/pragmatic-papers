@@ -123,12 +123,19 @@ jobs:
       - name: Check the home page answers
         if: env.READY == 'true'
         run: |
+          # The Worker's own logs for these requests, printed if it fails.
+          logs="$RUNNER_TEMP/tail.log"
+          pnpm exec wrangler tail pragmatic-papers-staging --format pretty > "$logs" 2>&1 &
+          tail_pid=$!
+          sleep 10
           body="$RUNNER_TEMP/home.html"
           for _ in 1 2 3; do
             status=$(curl --silent --max-time 60 --output "$body" --write-out '%{http_code}' "$SERVER_URL/" || true)
             echo "GET / → $status"
-            test "$status" = 200 && exit 0
+            if [ "$status" = 200 ]; then kill "$tail_pid"; exit 0; fi
             sleep 10
           done
-          head -c 2000 "$body" || true
+          sleep 5
+          kill "$tail_pid" || true
+          echo "::group::Worker logs"; cat "$logs"; echo "::endgroup::"
           exit 1

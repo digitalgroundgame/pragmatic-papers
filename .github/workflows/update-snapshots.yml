@@ -19,8 +19,14 @@ on:
 
 # Shared with playwright.yml's group: both workflows can push a baseline
 # commit to the same branch, so a stale run's push would otherwise race a
-# newer one's. Cancelling the older run shrinks that race window from the
-# whole E2E run down to GitHub's cancellation grace period.
+# newer one's.
+#
+# This workflow waits its turn rather than cancelling (cancel-in-progress is
+# false): it doesn't change the commit, so cancelling the E2E run in flight
+# on it would leave E2E, Bundle size and Lighthouse cancelled there for good
+# whenever this run finds no baselines to commit. Queued behind it, this run
+# starts once it finishes; a new push still cancels both, since
+# playwright.yml's own run cancels whatever is in progress.
 #
 # concurrency is resolved when the run is created — before the job-level
 # `if` below — so this workflow triggers (and would join the shared group)
@@ -32,7 +38,7 @@ on:
 # ever conflict with themselves.
 concurrency:
   group: ${{ (github.event_name == 'workflow_dispatch' || github.event.label.name == 'needs screenshots') && format('snapshot-baselines-{0}', github.event.pull_request.head.ref || github.ref_name) || github.run_id }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 # The E2E environment is set by .github/actions/setup-e2e, shared with
 # playwright.yml so regenerated baselines render the same page it checks:

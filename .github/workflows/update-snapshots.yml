@@ -9,29 +9,19 @@ name: Update snapshot baselines
 # Two ways to fire it:
 #   - workflow_dispatch (Actions tab, or `gh workflow run update-snapshots.yml
 #     --ref <branch>`)
-#   - adding the "needs screenshots" label to a PR. The label is removed
+#   - adding the "needs screenshots" label to a PR, which pr-automation.yml
+#     turns into a workflow_dispatch on the PR's branch. The label is removed
 #     automatically once this job finishes so it can be re-added later to
 #     retrigger.
 on:
   workflow_dispatch:
-  pull_request:
-    types: [labeled]
 
 # Shared with playwright.yml's group: both workflows can push a baseline
 # commit to the same branch, so a stale run's push would otherwise race a
 # newer one's. Cancelling the older run shrinks that race window from the
 # whole E2E run down to GitHub's cancellation grace period.
-#
-# concurrency is resolved when the run is created — before the job-level
-# `if` below — so this workflow triggers (and would join the shared group)
-# on EVERY `labeled` event, not just "needs screenshots". Since playwright.yml
-# doesn't re-run on `labeled`, joining the shared group unconditionally would
-# let an unrelated label (e.g. "bug") cancel an in-flight E2E run with
-# nothing to replace it. Fall back to a self-only group (this run's own id)
-# whenever the trigger isn't actually one we act on, so those events can only
-# ever conflict with themselves.
 concurrency:
-  group: ${{ (github.event_name == 'workflow_dispatch' || github.event.label.name == 'needs screenshots') && format('snapshot-baselines-{0}', github.event.pull_request.head.ref || github.ref_name) || github.run_id }}
+  group: snapshot-baselines-${{ github.ref_name }}
   cancel-in-progress: true
 
 # The E2E environment is set by .github/actions/setup-e2e, shared with
@@ -44,7 +34,6 @@ jobs:
   # the base, the same app the PR's "E2E tests" compares baselines against.
   image:
     name: Build image
-    if: ${{ github.event_name == 'workflow_dispatch' || github.event.label.name == 'needs screenshots' }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
@@ -76,7 +65,7 @@ jobs:
         continue-on-error: true
         env:
           GH_TOKEN: ${{ github.token }}
-          SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          SHA: ${{ github.sha }}
         run: |
           for run in $(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/playwright.yml/runs?head_sha=$SHA&per_page=10" --jq '.workflow_runs[].id'); do
             if gh api "repos/$GITHUB_REPOSITORY/actions/runs/$run/artifacts?name=app-image" --jq '.artifacts[] | select(.expired | not) | .id' | grep -q .; then
@@ -89,21 +78,19 @@ jobs:
 
       - uses: actions/checkout@v7
         if: steps.reuse.outputs.run-id == ''
-        with:
-          ref: ${{ github.event.pull_request.head.sha || github.ref }}
 
       - uses: ./.github/actions/build-app-image
         if: steps.reuse.outputs.run-id == ''
         with:
           gh-font-read-token: ${{ secrets.GH_FONT_READ }}
-          source-commit: ${{ github.event.pull_request.head.sha || github.sha }}
+          source-commit: ${{ github.sha }}
 
   update-snapshots:
     name: Update snapshot baselines
     needs: image
     # Runs even when the image failed, so the failure shows here and the
     # trigger label is still removed below.
-    if: ${{ !cancelled() && (github.event_name == 'workflow_dispatch' || github.event.label.name == 'needs screenshots') }}
+    if: ${{ !cancelled() }}
     timeout-minutes: 60
     runs-on: ubuntu-latest
     # Same pinned image as playwright.yml and scripts/test-e2e-docker.ts —
@@ -146,7 +133,6 @@ jobs:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
-          ref: ${{ github.event.pull_request.head.sha || github.ref }}
 
       - name: Set up E2E
         uses: ./.github/actions/setup-e2e
@@ -154,32 +140,20 @@ jobs:
           gh-font-read-token: ${{ secrets.GH_FONT_READ }}
           image-run-id: ${{ needs.image.outputs.run-id }}
 
-      # pull_request's $GITHUB_REF_NAME is "<number>/merge", not the branch —
-      # resolve the real branch/PR/base once so every later step can rely on
-      # it regardless of which trigger fired.
+      # The branch's open PR, if it has one, and its base, for the comments
+      # and the label below.
       - name: Resolve PR context
         id: pr
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          HEAD_REF: ${{ github.event.pull_request.head.ref }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
-          BASE_REF: ${{ github.event.pull_request.base.ref }}
         run: |
-          if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
-            {
-              echo "branch=$HEAD_REF"
-              echo "number=$PR_NUMBER"
-              echo "base=$BASE_REF"
-            } >> "$GITHUB_OUTPUT"
-          else
-            pr=$(gh pr list --repo "$GITHUB_REPOSITORY" --head "$GITHUB_REF_NAME" \
-              --state open --json number,baseRefName --jq 'first | @json' || true)
-            {
-              echo "branch=$GITHUB_REF_NAME"
-              echo "number=$(printf '%s' "$pr" | jq -r '.number // empty')"
-              echo "base=$(printf '%s' "$pr" | jq -r '.baseRefName // empty')"
-            } >> "$GITHUB_OUTPUT"
-          fi
+          pr=$(gh pr list --repo "$GITHUB_REPOSITORY" --head "$GITHUB_REF_NAME" \
+            --state open --json number,baseRefName --jq 'first | @json' || true)
+          {
+            echo "branch=$GITHUB_REF_NAME"
+            echo "number=$(printf '%s' "$pr" | jq -r '.number // empty')"
+            echo "base=$(printf '%s' "$pr" | jq -r '.baseRefName // empty')"
+          } >> "$GITHUB_OUTPUT"
 
       # E2E_VERIFY_VISUAL folds the flaky-baseline gate into this run: after
       # regenerating, the wrapper re-renders the @visual tests against the same
@@ -251,12 +225,13 @@ jobs:
         run: pnpm exec tsx scripts/pr-screenshot-comment.ts </dev/null
 
       - name: Remove trigger label
-        if: ${{ always() && github.event_name == 'pull_request' }}
+        if: ${{ always() && steps.pr.outputs.number != '' }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ steps.pr.outputs.number }}
         run: |
           gh api --method DELETE \
-            "repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/labels/needs%20screenshots" \
+            "repos/$GITHUB_REPOSITORY/issues/$PR_NUMBER/labels/needs%20screenshots" \
             || true
 
       - uses: actions/upload-artifact@v7

@@ -37,7 +37,6 @@ export const COPIED_CHECKS = {
  */
 export const NOT_COPIED = {
   "E2E tests": "reported by the job that pushed the commit",
-  "Update snapshot baselines": "the job that pushed the commit",
   "Detect changes": "plans this commit's own run",
   "Detect E2E changes": "plans this commit's own run",
   "Build image": "deploys, doesn't check",
@@ -46,9 +45,8 @@ export const NOT_COPIED = {
   "Remove preview": "runs when the PR closes",
   "Retire Storybook preview": "runs when the PR closes",
   "Apply Cloudflare rules": "doesn't run on PRs",
-  "Claude review": "a review of the code, not a pass or fail",
-  Showcase: "edits the PR and the preview, doesn't check",
   "Assign PR author to unassigned linked issues": "edits issues, doesn't check",
+  "PR automation": "starts other workflows and edits the PR, doesn't check",
 } as const
 
 /** The GitHub Actions app, which both the workflows' jobs and this script report as. */

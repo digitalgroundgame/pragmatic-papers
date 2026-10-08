@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { SEEDED_UPDATED_AT } from "../../scripts/seed-e2e.constants"
+import { SEEDED_UPDATED_AT, ARTICLE_IMAGE_ALT } from "../../scripts/seed-e2e.constants"
 
 /**
  * Read a drizzle `sql` template back as the statement it stands for.
@@ -59,6 +59,18 @@ vi.mock("@/endpoints/seed/features/interactive-maps", () => ({
   createMoCongressionalMapsArticle: vi.fn().mockResolvedValue(mockMapArticleId),
 }))
 
+vi.mock("@/endpoints/seed/features/footnotes", () => ({
+  createFootnotesArticle: vi.fn().mockResolvedValue(45),
+}))
+
+vi.mock("@/endpoints/seed/features/code-blocks", () => ({
+  createCodeBlocksArticle: vi.fn().mockResolvedValue(46),
+}))
+
+vi.mock("@/endpoints/seed/features/social-embeds", () => ({
+  createSocialEmbedArticle: vi.fn().mockResolvedValue(47),
+}))
+
 vi.mock("@/endpoints/seed/features/interactives", () => ({
   createFederalCourtsInteractive: vi.fn().mockResolvedValue(mockFederalCourtsInteractiveId),
 }))
@@ -77,6 +89,9 @@ const { createRichTextShowcaseArticle } =
 const { createMoCongressionalMapsArticle } =
   await import("@/endpoints/seed/features/interactive-maps")
 const { createFederalCourtsInteractive } = await import("@/endpoints/seed/features/interactives")
+const { createFootnotesArticle } = await import("@/endpoints/seed/features/footnotes")
+const { createCodeBlocksArticle } = await import("@/endpoints/seed/features/code-blocks")
+const { createSocialEmbedArticle } = await import("@/endpoints/seed/features/social-embeds")
 const { seedMerchProducts } = await import("@/endpoints/seed/merch")
 const { main } = await import("../../scripts/seed-e2e")
 
@@ -229,6 +244,53 @@ describe("seed-e2e main()", () => {
     expect(options.authors).toHaveLength(4)
   })
 
+  it("files the feature articles the article specs drive under one topic", async () => {
+    await main()
+
+    const topicCall = mockCreate.mock.calls.find(([args]) => args.collection === "topics")?.[0]
+    expect(topicCall).toMatchObject({
+      context: { disableRevalidate: true },
+      data: { name: "Research Methods", slug: "research-methods" },
+    })
+
+    // mockCreate resolves every direct create to mockVolume, so the topic's id is its id.
+    const topics = [mockVolume.id]
+    const ctx = { disableRevalidate: true }
+    expect(createFootnotesArticle).toHaveBeenCalledWith(
+      mockPayload,
+      [mockWriter],
+      [],
+      mockArticleId,
+      topics,
+      ctx,
+    )
+    expect(createCodeBlocksArticle).toHaveBeenCalledWith(mockPayload, [mockWriter], [], topics, ctx)
+    expect(createSocialEmbedArticle).toHaveBeenCalledWith(mockPayload, mockWriter, [], topics, ctx)
+    expect(createArticle).toHaveBeenCalledWith(
+      mockPayload,
+      expect.objectContaining({ slug: "seeing-the-evidence-a-media-block", topics }),
+      ctx,
+    )
+  })
+
+  it("seeds enough authors for /authors to paginate, sorted after the ones specs look for", async () => {
+    await main()
+
+    for (const [name, slug] of [
+      ["Victor Vellum", "e2e-author-victor"],
+      ["Winona Whitfield", "e2e-author-winona"],
+    ]) {
+      expect(createUser).toHaveBeenCalledWith(
+        mockPayload,
+        expect.objectContaining({ name, slug, roles: ["writer"] }),
+        `e2e author ${name}`,
+        { disableRevalidate: true },
+      )
+    }
+    // Five per page: six authors make a second page.
+    expect(createUser).toHaveBeenCalledTimes(6)
+  })
+
   it("pins every article's and volume's updatedAt so no dateline can drift", async () => {
     await main()
 
@@ -238,18 +300,32 @@ describe("seed-e2e main()", () => {
     // Whole-table rather than per-id on purpose: the per-document version of
     // this pinned only the crowded-byline article, and the share-button
     // baselines — framing a different article's hero — rotted unnoticed.
-    expect(mockExecute).toHaveBeenCalledTimes(2)
-    expect(mockExecute.mock.calls.map(([statement]) => renderStatement(statement))).toEqual([
+    const statements = mockExecute.mock.calls.map(([statement]) => renderStatement(statement))
+    expect(statements.slice(-2)).toEqual([
       `UPDATE articles SET updated_at = ${SEEDED_UPDATED_AT}`,
       `UPDATE volumes SET updated_at = ${SEEDED_UPDATED_AT}`,
     ])
+  })
+
+  it("gives every article a hero and an SEO image", async () => {
+    await main()
+
+    // structured-data.spec.ts requires an image on every Article node.
+    // mockCreate resolves every direct create to mockVolume, so the media's id is its id.
+    const mediaCall = mockCreate.mock.calls.find(
+      ([args]) => args.collection === "media" && args.data.alt === ARTICLE_IMAGE_ALT,
+    )
+    expect(mediaCall).toBeDefined()
+    expect(mockExecute.mock.calls.map(([statement]) => renderStatement(statement))).toContain(
+      `UPDATE articles SET hero_image_id = ${mockVolume.id}, meta_image_id = ${mockVolume.id}`,
+    )
   })
 
   it("keeps the crowded-byline article off the homepage grid", async () => {
     await main()
 
     // gotoFirstArticle follows the first article link on the homepage and
-    // example.spec.ts screenshots the whole page, so a third tile here would
+    // smoke.spec.ts screenshots the whole page, so a third tile here would
     // shift unrelated baselines.
     const pageCall = mockCreate.mock.calls.find(([args]) => args.collection === "pages")?.[0]
     const grid = pageCall.data.layout.find(

@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 const findGlobal = vi.fn()
 
@@ -48,5 +48,21 @@ describe("getCachedGlobal", () => {
 
     expect(findGlobal).toHaveBeenCalledWith({ slug: "footer", depth: 0 })
     expect(unstableCache.mock.calls[0]?.[1]).toEqual(["footer", "0"])
+  })
+
+  describe("in development", () => {
+    afterEach(() => {
+      vi.unstubAllEnvs()
+    })
+
+    // `next dev` keeps the Data Cache on disk, and a seed or `dev:db-nuke` writes the globals
+    // from outside Next where nothing clears it.
+    it("reads the database every time instead of the cross-request cache", async () => {
+      vi.stubEnv("NODE_ENV", "development")
+
+      expect(await getCachedGlobal("header", 1)()).toEqual({ slug: "header", depth: 1 })
+      expect(unstableCache).not.toHaveBeenCalled()
+      expect(findGlobal).toHaveBeenCalledWith({ slug: "header", depth: 1 })
+    })
   })
 })

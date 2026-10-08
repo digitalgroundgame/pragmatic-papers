@@ -81,6 +81,16 @@ SUPABASE_URL=https://<project>.supabase.co
 - The Sentry environment is `BUILD_ENV` (`production`, `staging` or `preview`); there's no separate variable for it. Preview errors also carry a `pr` tag (e.g. `986`) taken from `COOLIFY_FQDN`, so filter on `pr:986` to see one PR's. Both are read when the server starts, not compiled in.
 - Turn on **Include Source Commit in Build** so Coolify passes `SOURCE_COMMIT` into the build. `.git` is excluded from the Docker context, so the Dockerfile uses it as `SENTRY_RELEASE`; without it, releases (and every browser error's release tag) come out empty.
 
+**Cloudflare cache purge (every Coolify deployment — production, staging and previews):**
+
+Public pages are cached at Cloudflare's edge for 10 minutes, then served stale for up to a day while they revalidate (`next.config.ts`, and the zone's Cache Rules in `cloudflare/`). When an editor saves a global (Site Settings, Header, Footer) or publishes, changes or deletes a document readers see, the save's `revalidate*` hook asks Cloudflare to purge **this deployment's hostname** (from `SERVER_URL`), so anonymous readers get the change at once (`src/hooks/purgeEdgeCache.ts`). Only the hostname: the three environments share one zone, so a "purge everything" from a preview would empty production's cache too.
+
+- `CLOUDFLARE_ZONE_ID` — the zone's ID, from its Overview page in the Cloudflare dashboard.
+- `CLOUDFLARE_PURGE_TOKEN` — a custom API token with **Zone → Cache Purge → Purge**, on this zone only. Keep it apart from `CLOUDFLARE_API_TOKEN` (a GitHub secret that deploys Storybook) and the Cache Rules tokens (`cloudflare/README.md`).
+- Both are **Runtime Variables** only; the build never reads them. Set them in the production, staging **and** preview apps.
+- Unset (or with `SERVER_URL` on localhost), each save logs `Skipping Cloudflare purge (…) — … set CLOUDFLARE_ZONE_ID, CLOUDFLARE_PURGE_TOKEN` and carries on. A purge Cloudflare refuses is logged as a warning, never thrown at the save.
+- Purges within a second of each other go out as one request. Hostname purges are rate-limited per account (5 a minute on the Free plan, more on paid plans); a refused one just leaves the edge to expire on its own.
+
 ### 4. Configure Domain
 
 - **Application:** Port `3000` → `your-domain.com`
@@ -111,20 +121,20 @@ Use managed PostgreSQL service (AWS RDS, Supabase, Neon, etc.) for all deploymen
 
 ### Our Coolify setup
 
-| Coolify application | Environment    | Deploys                | `BUILD_ENV`  |
-| ------------------- | -------------- | ---------------------- | ------------ |
-| **development**     | **preview**    | Each PR, at `pr-<n>.…` | `preview`    |
-| **development**     | **production** | The `dev` branch       | `staging`    |
-| **production**      | **production** | The `main` branch      | `production` |
+| Coolify application | Deploys                | `BUILD_ENV`  | Built by                               |
+| ------------------- | ---------------------- | ------------ | -------------------------------------- |
+| **staging**         | The `dev` branch       | `staging`    | Coolify's build server                 |
+| **preview**         | Each PR, at `pr-<n>.…` | `preview`    | GitHub Actions; a **Docker Image** app |
+| **production**      | The `main` branch      | `production` | Coolify's build server                 |
 
-- The development app's **production** environment is what these docs call **staging**: it deploys `dev`, not the live site.
-- **Two servers run them:** `dev-worker` runs staging and the previews, and hosts the `docker-registry` service they're pulled from; `prod-worker` runs production, apparently pulling from the same registry.
-- **Every deployment builds on one Coolify build server, one build at a time**, so a queue of preview builds delays a `dev` or `main` deploy behind it. The build caches below (`/pnpm`, `/nextjs`) are shared by all three. The build server has 8 GB of RAM and a build peaks at ~4.6 GB, so two concurrent builds wouldn't fit; see [#1018](https://github.com/digitalgroundgame/pragmatic-papers/issues/1018) before adding build steps or dependencies that raise build memory.
-- **Public PR deployments are off**, so previews only build for PRs from people with access to the repo (see [Preview Deployments on the PR](#preview-deployments-on-the-pr-github-deployments)). Keep it that way: previews build on the same server as the live site.
+- **staging** deploys `dev`, not the live site. Its own preview deployments are off: the **preview** app serves the `pr-<n>` hostnames (see [Previews built in GitHub Actions](#previews-built-in-github-actions)).
+- **Two servers run them:** `dev-worker` runs staging and the previews, and hosts the `docker-registry` service staging's images are pulled from; `prod-worker` runs production, apparently pulling from the same registry.
+- **Staging and production build on one Coolify build server, one build at a time**, so a `dev` deploy can delay a `main` deploy behind it. The build caches below (`/pnpm`, `/nextjs`) are shared by both. The build server has 8 GB of RAM and a build peaks at ~4.6 GB, so two concurrent builds wouldn't fit. Keep that headroom in mind before adding build steps or dependencies that raise build memory. Previews never use it: they build on GitHub runners.
+- **Previews only deploy PRs from people with access to the repo**: same-repo PRs from owners, members and collaborators (the "Plan preview" job in `playwright.yml`). Keep it that way: a preview runs on dev-worker beside staging, with staging's media mounted read-write.
 
 What Coolify's docs say about behaviour that matters to this setup (read them with the `upstream-docs` skill, `coolify` source; paths are under `content/docs/`):
 
-- **Preview variables are a separate group.** The development app's **Production Environment Variables** are staging's; **Preview Deployment Environment Variables** are the previews'. Changing a value for both means changing it twice (`applications/deployments/preview-deployments.mdx`).
+- **Preview variables are a separate group.** An app's **Production Environment Variables** are for its own deployment; its **Preview Deployment Environment Variables** are for its previews. Changing a value for both means changing it twice (`applications/deployments/preview-deployments.mdx`).
 - **Closing a PR deletes its preview's containers, not its database.** Data a preview wrote to an external service stays, so each preview's `pragmatic_papers_pr_<n>` copy of staging outlives the PR; later preview builds drop it (see [Dropping closed PRs' preview databases](#dropping-closed-prs-preview-databases)).
 - **Build secrets need BuildKit.** With **Use Docker Build Secrets** on, Coolify mounts build-time variables as secrets; without BuildKit it silently falls back to build arguments, which can show in the image's metadata (`applications/configuration/environment-variables.mdx`). Each variable also has independent **Build Variable** / **Runtime Variable** toggles; turn **Build Variable** off for secrets the build doesn't read.
 - **Old images are kept for rollback**, a configured number per app, and Docker cleanup skips them unless **Disable Application Image Retention** is on. A rollback runs an old image with the _current_ variables (`applications/deployments/rollbacks.mdx`, `core/infrastructure/servers/automated-docker-cleanup.mdx`).
@@ -138,7 +148,7 @@ Coolify passes every build-time variable into the Dockerfile as a BuildKit secre
 - **So every step whose output depends on a value must come after `COPY . .`**, which reruns on every deploy. That covers migrations (`DATABASE_URI`) and `next build` (`SERVER_URL`, `SENTRY_RELEASE`). Only value-independent steps belong above it: system packages and the dependency install.
 - **Staging and previews keep separate caches** because their variable names differ (below). Sharing would only save the dependency install on each one's first build of the day, so they aren't kept in sync for that.
 - **Redeploys:** an unchanged commit on staging/production reuses its existing image ("No build configuration changed & image found"). PR previews always rebuild, reusing cached layers up to `COPY . .`.
-- **Server cleanup:** Coolify's Docker cleanup runs `docker builder prune -af`, which removes all build cache, including the pnpm-store and `.next/cache` mounts. Keep its trigger on a **disk-usage threshold** rather than "Run on every schedule", or every day's first build starts cold.
+- **Server cleanup:** Coolify's Docker cleanup runs `docker builder prune -af`, which removes all build cache, including the pnpm-store and `.next/cache` mounts. On dev-worker it runs on **every schedule** (every 6 hours), because the disk-usage threshold trigger never fired there, so the first build after each run starts cold. Daily was too slow: a busy day of builds filled the disk, and staging's Postgres crash-looped on `No space left on device` until the cleanup was run by hand.
 - **Corrupt Turbopack cache:** the `.next/cache` mount (`id=nextjs`) is shared by every app and branch on the server. A build killed mid-compile (out of memory, a cancelled deploy) can leave it half-written, and every later build then fails within seconds with a `TurbopackInternalError` such as `Failed to restore data for task`. `dockerfiles/scripts/build-next.sh` recognises Turbopack's cache-storage errors, deletes `.next/cache/turbopack` and builds once more; the mount is `sharing=locked`, so two builds never write it at once. To clear it by hand on the build server: `docker buildx prune -f --filter id=$(docker buildx du --verbose | grep -B6 'id "/nextjs"' | awk '/^ID:/{print $2}')`.
 
 ### Variables that differ between staging and previews
@@ -152,10 +162,10 @@ Snapshot of the variable names each has, from the 2026-09-26 build logs. Product
 | `SEED_ENABLED`                  | —       | set      | nothing — no code reads it (from an unmerged branch); delete it                                |
 | `LISTMONK_NEWSLETTER_LIST_UUID` | set     | —        | Listmonk calls throw "Missing required env var", so newsletter signup doesn't work on previews |
 
-`NEXT_PUBLIC_*` variables are compiled into the image when it builds, in server code as well as browser code, so changing one in Coolify would need a rebuild. None is read any more: `SERVER_URL`, `TURNSTILE_SITE_KEY`, `GOOGLE_ANALYTICS_ID`, `SENTRY_DSN` and `SUPABASE_URL` are read by the server instead ([#1090](https://github.com/digitalgroundgame/pragmatic-papers/issues/1090)). They replace `NEXT_PUBLIC_SERVER_URL`, `NEXT_PUBLIC_TURNSTILE_SITE_KEY`, `NEXT_PUBLIC_GOOGLE_ANALYTICS_ID`, `NEXT_PUBLIC_SENTRY_DSN` and `NEXT_PUBLIC_SUPABASE_URL`.
+`NEXT_PUBLIC_*` variables are compiled into the image when it builds, in server code as well as browser code, so changing one in Coolify would need a rebuild. None is read any more: `SERVER_URL`, `TURNSTILE_SITE_KEY`, `GOOGLE_ANALYTICS_ID`, `SENTRY_DSN` and `SUPABASE_URL` are read by the server instead. They replace `NEXT_PUBLIC_SERVER_URL`, `NEXT_PUBLIC_TURNSTILE_SITE_KEY`, `NEXT_PUBLIC_GOOGLE_ANALYTICS_ID`, `NEXT_PUBLIC_SENTRY_DSN` and `NEXT_PUBLIC_SUPABASE_URL`.
 
-- **In an app Coolify builds** (staging, production, Coolify-built previews), give each one both **Build Variable** and **Runtime Variable**. Pages rendered during the build read the build's value, and `next.config.ts` reads `SERVER_URL` while building. Pages rendered later read the container's value.
-- **In the Docker Image app for previews built in GitHub Actions**, set them as runtime variables. `start.sh` re-renders every page once the server starts.
+- **In an app Coolify builds** (staging, production), give each one both **Build Variable** and **Runtime Variable**. Pages rendered during the build read the build's value, and `next.config.ts` reads `SERVER_URL` while building. Pages rendered later read the container's value.
+- **In the preview app**, set them as runtime variables. `start.sh` re-renders every page once the server starts.
 - **`SERVER_URL` is the site's origin, with no trailing slash.** Production uses its canonical URL, `https://pragmaticpapers.com` (the same value as `PRODUCTION_URL` in the clone-from-production endpoint). Staging uses its own domain. Previews use `$COOLIFY_URL`, the URL Coolify gives each preview (**Preview Deployment Environment Variables**). An app with more than one domain should use a literal URL, because `COOLIFY_URL` lists all of them.
 - **Unset,** `SERVER_URL` fails a Coolify build (the Dockerfile checks it before `next build`), and `start.sh` refuses to start without it, so a deploy missing it never replaces the running container. Outside a deployed image (no `BUILD_ENV`) it falls back to `http://localhost:8000`. Without `TURNSTILE_SITE_KEY` the signup form renders with no challenge, and the subscribe route rejects it. Without `GOOGLE_ANALYTICS_ID` pages render with no analytics tag.
 
@@ -236,7 +246,7 @@ DATABASE_URI=postgresql://postgres:password@postgres:5432/pragmatic_papers
 
 ### Preview Deployments on the PR (GitHub Deployments)
 
-Coolify only comments on the PR; it doesn't create GitHub Deployments ([coollabsio/coolify#9583](https://github.com/coollabsio/coolify/issues/9583)). `.github/workflows/preview-deployment.yml` fills the gap: on each push to a PR it waits for Coolify to queue the preview build for that commit, then creates a Deployment for the PR's branch in the **Preview** environment and copies Coolify's status onto it. The PR then shows the build as queued, in progress, failed or live, with **View deployment** linking to `pr-<n>.pragmaticpapers.com`. There's deliberately no log link to the build in Coolify: Deployments are public on this repo, and it would publish the Coolify dashboard's address. Older previews of the PR go inactive when a newer one goes live, and all of them when the PR closes.
+Coolify only comments on the PR; it doesn't create GitHub Deployments ([coollabsio/coolify#9583](https://github.com/coollabsio/coolify/issues/9583)). For the previews built in GitHub Actions, `playwright.yml`'s "Deploy preview" job creates the Deployment and mirrors Coolify's status onto it (`scripts/preview-deployment.ts`). This section covers the fallback, previews staging builds itself (see [Falling back](#previews-built-in-github-actions)), where `.github/workflows/preview-deployment.yml` fills the gap: on each push to a PR it waits for Coolify to queue the preview build for that commit, then creates a Deployment for the PR's branch in the **Preview** environment and copies Coolify's status onto it. The PR then shows the build as queued, in progress, failed or live, with **View deployment** linking to `pr-<n>.pragmaticpapers.com`. There's deliberately no log link to the build in Coolify: Deployments are public on this repo, and it would publish the Coolify dashboard's address. Older previews of the PR go inactive when a newer one goes live, and all of them when the PR closes.
 
 Set these under **Settings → Secrets and variables → Actions**:
 
@@ -244,14 +254,16 @@ Set these under **Settings → Secrets and variables → Actions**:
 | -------------------------- | -------- | -------------------------------------------------------------------------------------------------------------------- |
 | `COOLIFY_API_TOKEN`        | secret   | A Coolify API token with `read` access (**Keys & Tokens → API tokens**; enable the API under **Settings**)           |
 | `COOLIFY_DASHBOARD_URL`    | variable | The Coolify server's URL, e.g. `https://coolify.example.com` (with or without `/api/v1`)                             |
-| `COOLIFY_PREVIEW_APP_UUID` | variable | The UUID of the application that builds previews (the last segment of its dashboard URL)                             |
+| `COOLIFY_PREVIEW_APP_UUID` | variable | The **staging** app's UUID, for the fallback (the last segment of its dashboard URL)                                 |
 | `PREVIEW_URL_TEMPLATE`     | variable | Optional. The app's preview URL template in Coolify's syntax; defaults to `https://pr-{{pr_id}}.pragmaticpapers.com` |
 
-Until all three required values are set, the workflow does nothing. It also skips the PRs Coolify doesn't preview while **public PR deployments** are off in Coolify: PRs from forks, PRs whose author isn't an owner, member or collaborator of the repo (Dependabot's included), and PRs titled `[skip ci]` or `[skip cd]`. If you turn public PR deployments on, widen the job's `if` to match. Any other PR Coolify doesn't build gets no Deployment; the job gives up after waiting 10 minutes. If the build runs longer than 45 minutes, the Deployment is marked as errored.
+Until all three required values are set, or while `COOLIFY_PREVIEW_IMAGE_APP_UUID` is set, the workflow does nothing. It also skips the PRs Coolify doesn't preview while **public PR deployments** are off in Coolify: PRs from forks, PRs whose author isn't an owner, member or collaborator of the repo (Dependabot's included), and PRs titled `[skip ci]` or `[skip cd]`. If you turn public PR deployments on, widen the job's `if` to match. Any other PR Coolify doesn't build gets no Deployment; the job gives up after waiting 10 minutes. If the build runs longer than 45 minutes, the Deployment is marked as errored.
 
 ### Automatic Database Naming for Preview Deployments (Coolify)
 
 When deploying with Coolify, preview deployments automatically get unique database names based on the `COOLIFY_FQDN` environment variable.
+
+This section and the next describe these steps as a Coolify build runs them (the fallback, previews staging builds). The **preview** app runs the same scripts when its container starts instead; [Where each step runs](#previews-built-in-github-actions) maps one onto the other.
 
 **How it works:**
 
@@ -300,9 +312,9 @@ FORCE_DATABASE_COPY=false
 
 **What happens for PR #330** (`COOLIFY_FQDN=pr-330.pragmaticpapers.com`):
 
-1. `modify-database-uri.sh` names the preview database `pragmatic_papers_pr_330` and writes only that name to `/tmp/database_name`. A preview build without `COOLIFY_FQDN` fails instead of falling back to the database every preview shares ([#1058](https://github.com/digitalgroundgame/pragmatic-papers/issues/1058)).
-2. `copy-database.sh` creates it as a copy of `pragmatic_papers`, on the same server and with `DATABASE_URI`'s credentials. It tries `CREATE DATABASE … WITH TEMPLATE` first, which only works while nothing is connected to the source; with staging's app running it falls back to `pg_dump`/`pg_restore`. It never disconnects the source's clients: doing so failed whatever staging was serving ([#1057](https://github.com/digitalgroundgame/pragmatic-papers/issues/1057)). If the dump or restore fails, the half-restored database is dropped, so the next build copies again.
-3. It leaves an existing preview database alone unless `FORCE_DATABASE_COPY=true`. Then the previous deploy's container is still using it, so the script copies into `pragmatic_papers_pr_330_incoming`, migrates that, and only then drops the old database and renames the copy into place. The running preview is never left on a missing or unmigrated database ([#1058](https://github.com/digitalgroundgame/pragmatic-papers/issues/1058)); if the migration fails, the build fails and the old database is kept.
+1. `modify-database-uri.sh` names the preview database `pragmatic_papers_pr_330` and writes only that name to `/tmp/database_name`. A preview build without `COOLIFY_FQDN` fails instead of falling back to the database every preview shares.
+2. `copy-database.sh` creates it as a copy of `pragmatic_papers`, on the same server and with `DATABASE_URI`'s credentials. It tries `CREATE DATABASE … WITH TEMPLATE` first, which only works while nothing is connected to the source; with staging's app running it falls back to `pg_dump`/`pg_restore`. It never disconnects the source's clients: doing so failed whatever staging was serving. If the dump or restore fails, the half-restored database is dropped, so the next build copies again.
+3. It leaves an existing preview database alone unless `FORCE_DATABASE_COPY=true`. Then the previous deploy's container is still using it, so the script copies into `pragmatic_papers_pr_330_incoming`, migrates that, and only then drops the old database and renames the copy into place. The running preview is never left on a missing or unmigrated database; if the migration fails, the build fails and the old database is kept.
 4. Migrations and `next build` run against the preview database.
 5. The runner image carries `/app/database_name`, and `start.sh` applies it to the runtime `DATABASE_URI`. No credential is written into the image.
 
@@ -324,9 +336,9 @@ Set `BUILD_ENV=staging` or `BUILD_ENV=production` and leave `COPY_SOURCE_DATABAS
 
 ### Previews built in GitHub Actions
 
-[#1067](https://github.com/digitalgroundgame/pragmatic-papers/issues/1067) moves preview builds off the Coolify build server (see [#1018](https://github.com/digitalgroundgame/pragmatic-papers/issues/1018)): `.github/workflows/playwright.yml` builds each PR's image on a GitHub runner (`.github/actions/build-app-image`), pushes it to GHCR, and has Coolify run it as the PR's preview; `preview-image.yml` removes it when the PR closes. It stays off until `COOLIFY_PREVIEW_IMAGE_APP_UUID` is set; until then previews build in Coolify as described above.
+Previews are built off the Coolify build server, so they don't queue in front of `dev` and `main` deploys or compete for its memory: `.github/workflows/playwright.yml` builds each PR's image on a GitHub runner (`.github/actions/build-app-image`), pushes it to GHCR, and has the **preview** app run it as the PR's preview; `preview-image.yml` removes it when the PR closes. `COOLIFY_PREVIEW_IMAGE_APP_UUID` is the switch: cleared, previews fall back to building on staging as described above.
 
-**The preview is the image E2E tested** ([#1090](https://github.com/digitalgroundgame/pragmatic-papers/issues/1090)). Nothing environment-specific is built in: `SERVER_URL` and the rest are read at runtime. What the build prerenders from its localhost default (the feeds, `robots.txt` and the sitemap index) is re-rendered once the server starts, when `/next/revalidate-all` is called. So the same image serves E2E on `http://localhost:8000` and the preview on `pr-<n>.pragmaticpapers.com`. The "E2E tests" job starts it with `node server.js` rather than `start.sh`: there's no preview database to name or copy, and `scripts/test-e2e.mjs` seeds, copies the uploads in and calls `/next/revalidate-all` itself.
+**The preview is the image E2E tested.** Nothing environment-specific is built in: `SERVER_URL` and the rest are read at runtime. What the build prerenders from its localhost default (the feeds, `robots.txt` and the sitemap index) is re-rendered once the server starts, when `/next/revalidate-all` is called. So the same image serves E2E on `http://localhost:8000` and the preview on `pr-<n>.pragmaticpapers.com`. The "E2E tests" job starts it with `node server.js` rather than `start.sh`: there's no preview database to name or copy, and `scripts/test-e2e.mjs` seeds, copies the uploads in and calls `/next/revalidate-all` itself.
 
 **Where each step runs.** The runner never gets a route to our database or its password, so the database work moves to the container:
 
@@ -337,9 +349,9 @@ Set `BUILD_ENV=staging` or `BUILD_ENV=production` and leave `COPY_SOURCE_DATABAS
 | Drop closed PRs' databases           | while building                               | at container start                                                                            |
 | Migrate                              | `payload migrate` while building             | when Payload starts (`prodMigrations`), before the health check passes                        |
 | `next build`                         | against the preview's database               | against a throwaway Postgres beside the job                                                   |
-| Routes prerendered from the database | served as built                              | thrown away once the server is up (`POST /next/revalidate-all`), then rendered from real data |
+| Routes prerendered from the database | thrown away once the server is up, as in CI  | thrown away once the server is up (`POST /next/revalidate-all`), then rendered from real data |
 
-The image sets `BUILT_WITHOUT_DATABASE=true`, which switches on the start-time steps in `start.sh` and `prodMigrations` in `src/payload.config.ts`. Images Coolify builds don't set it, so staging and production behave as before. Two differences from a Coolify-built preview:
+The image sets `BUILT_WITHOUT_DATABASE=true`, which switches on the database steps at the top of `start.sh` and `prodMigrations` in `src/payload.config.ts`. Images Coolify builds don't set it, so staging and production do that work while building. Differences from a Coolify-built preview:
 
 - **First boot takes longer**: it copies staging before the server starts, so the health check below allows 5 minutes before counting failures.
 - **`FORCE_DATABASE_COPY=true` swaps the fresh copy in unmigrated.** There's no Payload CLI in the image, so the new container migrates it as it starts, and the old container serves the unmigrated copy until then.
@@ -347,13 +359,13 @@ The image sets `BUILT_WITHOUT_DATABASE=true`, which switches on the start-time s
 
 **Setup.** In Coolify:
 
-1. Create an application of type **Docker Image** in the development project, on the server and destination the development app deploys to, with image `ghcr.io/digitalgroundgame/pragmatic-papers-preview`. Any tag will do (e.g. `unused`): each preview deploy sends its own, and the app's own deployment is never run. Then:
+1. The **preview** app is a **Docker Image** application in the same project as staging, on the server and destination staging deploys to, with image `ghcr.io/digitalgroundgame/pragmatic-papers-preview`. Any tag will do (e.g. `unused`): each preview deploy sends its own, and the app's own deployment is never run. Then:
    - **Exposed port** `3000` (the default is 80).
    - **Keep a domain on the app** (`https://…`). Coolify only generates a preview's URL when the app has one, and takes the preview's scheme from it (`ApplicationPreview::generate_preview_fqdn`).
    - **Preview URL template** `pr-{{pr_id}}.pragmaticpapers.com`, host only: Coolify puts the scheme in front.
    - **Healthcheck on**: GET `/api/users/me` on port `3000`, expecting `200`, with a start period of `300` seconds. Coolify doesn't read the image's own `HEALTHCHECK` for a Docker Image app, and with its check off it swaps a preview in before the copy and migrations have finished.
    - **Healthcheck host** `127.0.0.1`, not `localhost`: the server listens on IPv4 only, and in the Alpine image `localhost` resolves to `::1` first, so the check is refused and Traefik answers 503 "No available server".
-   - **Persistent storage**, two mounts. A **volume** at `/app/public/media` (any name): the preview's own uploads. Coolify gives each preview its own copy of the app's volumes, and a fresh volume takes the image's ownership, so the app can write to it. The development app's media folder (`/data/coolify/applications/<its uuid>/public/media`) at `/staging-media`, added as a **Directory mount** (Coolify v4.3.23's Volume mount takes no source path). Coolify mounts a Directory mount's source path as-is for every preview, with no `-pr-<n>` suffix. `start.sh` copies what the preview's volume lacks from it at every start (`cp -n`, so a preview's own uploads are never overwritten), and logs an error when it's empty. The database copy brings staging's media rows but not their files, so without it every image is broken.
+   - **Persistent storage**, two mounts. A **volume** at `/app/public/media` (any name): the preview's own uploads. Coolify gives each preview its own copy of the app's volumes, and a fresh volume takes the image's ownership, so the app can write to it. Staging's media folder (`/data/coolify/applications/<its uuid>/public/media`) at `/staging-media`, added as a **Directory mount** (Coolify v4.3.23's Volume mount takes no source path). Coolify mounts a Directory mount's source path as-is for every preview, with no `-pr-<n>` suffix. `start.sh` copies what the preview's volume lacks from it at every start (`cp -n`, so a preview's own uploads are never overwritten), and logs an error when it's empty. The database copy brings staging's media rows but not their files, so without it every image is broken.
 
      **This mount points at staging's only copy of its media, and Coolify deletes it without asking in three ways** (v4.3.23, `LocalFileVolume`). On 2026-09-30 one of them emptied staging's media folder, and there was no copy to restore from:
 
@@ -367,26 +379,24 @@ The image sets `BUILT_WITHOUT_DATABASE=true`, which switches on the start-time s
      3. Straight away, click **Configure Backup** on it and set a schedule. That locks out Convert To File and Delete, and backs up staging's media from then on.
 
      Never edit the mount afterwards; delete it only after removing its backup schedule and copying staging's media again. `start.sh` only reads `/staging-media`, but Coolify has no read-only option for a Docker Image app's mounts, so it is mounted read-write. What keeps previews off staging's files is that only `start.sh` touches that path, and previews only deploy PRs from trusted authors (the "Plan preview" job in `playwright.yml`).
-2. Copy the development app's **Preview Deployment Environment Variables** into it as **runtime** variables: `DATABASE_URI`, `COPY_SOURCE_DATABASE`, `FORCE_DATABASE_COPY`, `PAYLOAD_SECRET`, `USE_LOCAL_STORAGE`, `SERVER_URL=$COOLIFY_URL`, `TURNSTILE_SITE_KEY`, `GOOGLE_ANALYTICS_ID`, `SENTRY_DSN` and the rest the app reads at runtime. `BUILD_ENV` is baked into the image. Build variables aren't used: nothing builds in Coolify.
+2. Its variables are all **runtime** variables: `DATABASE_URI`, `COPY_SOURCE_DATABASE`, `FORCE_DATABASE_COPY`, `PAYLOAD_SECRET`, `USE_LOCAL_STORAGE`, `SERVER_URL=$COOLIFY_URL`, `TURNSTILE_SITE_KEY`, `GOOGLE_ANALYTICS_ID`, `SENTRY_DSN` and the rest the app reads at runtime. `BUILD_ENV` is baked into the image. Build variables aren't used: nothing builds in Coolify.
 3. Let the server pull from GHCR: the package is private, so log its Docker in to `ghcr.io` (`docker login ghcr.io`, as the user Coolify connects with) with a GitHub token that has `read:packages`.
 4. Give `COOLIFY_API_TOKEN` the `deploy` and `write` abilities as well as `read` (the token's owner must be a team admin). The workflow uses them to deploy the image (`POST /api/v1/deploy?uuid=…&pr=…&docker_tag=…`, Coolify `v4.0.0-beta.471` or later) and to remove the preview when the PR closes.
 
 In GitHub (**Settings → Secrets and variables → Actions**):
 
-| Name                             | Kind     | Value                                                                   |
-| -------------------------------- | -------- | ----------------------------------------------------------------------- |
-| `COOLIFY_PREVIEW_IMAGE_APP_UUID` | variable | The Docker Image application's UUID. Setting it switches previews over. |
-| `PREVIEW_USE_LOCAL_STORAGE`      | variable | Optional; defaults to `true`, as previews use.                          |
+| Name                             | Kind     | Value                                                               |
+| -------------------------------- | -------- | ------------------------------------------------------------------- |
+| `COOLIFY_PREVIEW_IMAGE_APP_UUID` | variable | The **preview** app's UUID. Cleared, previews fall back to staging. |
+| `PREVIEW_USE_LOCAL_STORAGE`      | variable | Optional; defaults to `true`, as previews use.                      |
 
 `GH_FONT_READ`, `COOLIFY_API_TOKEN`, `COOLIFY_DASHBOARD_URL` and `PREVIEW_URL_TEMPLATE` are shared with the workflows above.
 
-**Cutover.** Setting `COOLIFY_PREVIEW_IMAGE_APP_UUID` hands PRs to `playwright.yml` and `preview-image.yml`, and `preview-deployment.yml` stops following Coolify's builds. Then turn off preview deployments on the development app and delete its running previews: they'd claim the same `pr-<n>` hostnames as the new app's. Each PR's next push redeploys it on the new app, which names databases the same way, so a preview keeps its data.
-
-**Rolling back.** Clear the variable and turn the development app's preview deployments back on.
+**Falling back to Coolify-built previews.** Clear `COOLIFY_PREVIEW_IMAGE_APP_UUID` and turn staging's preview deployments on: `preview-deployment.yml` follows its builds again, and `playwright.yml` and `preview-image.yml` leave PRs alone. To return, set the variable, then turn staging's preview deployments off and delete its running previews: the two apps would claim the same `pr-<n>` hostnames. Either way each PR's next push redeploys it on the other app, which names databases the same way, so a preview keeps its data.
 
 ### Dropping closed PRs' preview databases
 
-Coolify deletes a closed PR's preview containers but not its database, so every preview's copy of staging used to stay on the database server. Each preview build now cleans up after copying: `dockerfiles/scripts/drop-closed-preview-databases.ts` asks GitHub which PRs are open and drops `pragmatic_papers_pr_<n>` and `pragmatic_papers_pr_<n>_incoming` for every PR that isn't open. It logs each database it drops, by name.
+Coolify deletes a closed PR's preview containers but not its database, so every preview's copy of staging would stay on the database server. Each preview cleans up after copying (at container start for previews built in GitHub Actions, while building for Coolify-built ones): `dockerfiles/scripts/drop-closed-preview-databases.ts` asks GitHub which PRs are open and drops `pragmatic_papers_pr_<n>` and `pragmatic_papers_pr_<n>_incoming` for every PR that isn't open. It logs each database it drops, by name.
 
 - **It touches nothing else.** A name must be exactly the source database plus `_pr_<number>`, optionally followed by `_incoming`.
 - **It skips when unsure.** If GitHub can't be reached, or its open list doesn't include the PR being built (the wrong repository, say), it drops nothing.
@@ -394,11 +404,11 @@ Coolify deletes a closed PR's preview containers but not its database, so every 
 - **It never fails the build.** Any error is logged as `Skipping cleanup: …` and the build carries on.
 - **Previews only.** Staging and production builds skip it (`COPY_SOURCE_DATABASE` isn't `true` there).
 - **A reopened PR** gets a fresh copy on its next build, like a new one.
-- **Credentials:** it reads open PRs from GitHub's public API without a token, which works while the repository is public (60 requests an hour per server, one or two per build). For a private repository, add a `GITHUB_TOKEN` build variable to the development application's preview variables: a fine-grained token with read access to pull requests. `GITHUB_REPOSITORY` overrides `digitalgroundgame/pragmatic-papers`.
+- **Credentials:** it reads open PRs from GitHub's public API without a token, which works while the repository is public (60 requests an hour per server, one or two per build). For a private repository, add a `GITHUB_TOKEN` variable to the preview app (runtime) or, for the fallback, staging's preview variables (build): a fine-grained token with read access to pull requests. `GITHUB_REPOSITORY` overrides `digitalgroundgame/pragmatic-papers`.
 
 ### Pruning the image registry
 
-Coolify pushes every build's image to the `docker-registry` resource (a `registry:2` service in the Pragmatic Papers project's **development** environment, running on dev-worker as `registry-<uuid>`), tagged `pr-<n>-<sha>` for a preview. A registry never deletes anything by itself, so by September 2026 it held 224 tags and 6.5 GB, the largest single use of dev-worker's 38 GB disk after the swap file. `dockerfiles/scripts/prune-registry.sh` trims it. The production app, which runs on `prod-worker`, appears to use the same registry (its settings name the same domain), though in September 2026 the registry held none of `main`'s commits.
+Coolify pushes every image it builds to the `docker-registry` resource (a `registry:2` service in the Pragmatic Papers project's **development** environment, running on dev-worker as `registry-<uuid>`), tagged `pr-<n>-<sha>` for a preview. Previews built in GitHub Actions go to GHCR instead, so new `pr-` tags only appear while previews fall back to staging. A registry never deletes anything by itself, so by September 2026 it held 224 tags and 6.5 GB, the largest single use of dev-worker's 38 GB disk after the swap file. `dockerfiles/scripts/prune-registry.sh` trims it. The production app, which runs on `prod-worker`, appears to use the same registry (its settings name the same domain), though in September 2026 the registry held none of `main`'s commits.
 
 It runs as a **Coolify Scheduled Task** on the `docker-registry` service, so its schedule and every run's output are in Coolify, not in a crontab. The task can't run in the registry's own container, which the script stops, so the service has a second container for it:
 
@@ -456,7 +466,7 @@ USE_LOCAL_STORAGE=true
 
 **Requirements:**
 
-- Configure a persistent mount in Coolify at `/app/public/media` (the development app bind-mounts `/data/coolify/applications/<its uuid>/public/media`; previews: see the preview image setup above)
+- Configure a persistent mount in Coolify at `/app/public/media` (staging bind-mounts `/data/coolify/applications/<its uuid>/public/media`; previews: see the preview image setup above)
 - The app runs as uid `1001` (`nextjs`), so it must be able to write the mount's source folder. When Docker creates a missing bind source it makes it `root`-owned, and every upload fails; fix it with `chown 1001:1001 /data/coolify/applications/<uuid>/public/media`. `start.sh` warns at startup when the folder is missing, empty, or not writable.
 - Back up the media folder. It's the only copy of staging's uploads (see the preview mount's warning above).
 
@@ -472,7 +482,7 @@ S3_ENDPOINT=https://s3.amazonaws.com
 SUPABASE_URL=https://<project>.supabase.co
 ```
 
-`SUPABASE_URL` is where media is served from: `generateFileURL` (`src/plugins/index.ts`) points each file at `<SUPABASE_URL>/storage/v1/object/public/<S3_BUCKET>/…`. It's read when pages render, not compiled in. Give it and `S3_BUCKET` both **Build Variable** and **Runtime Variable**, like `SERVER_URL`: a Coolify build renders the `force-static` feeds (`/feed.articles`, `/feed.volumes`, each article's `substack.xml`) from the database, and without them their images point at `/media/<file>`, which production doesn't have. The feeds keep those URLs until each one next re-renders. `next/image` only loads remote images from hosts `next.config.ts` lists, and that list is fixed when the image builds, so it allows any `https://*.supabase.co` public bucket rather than one project's host. For the same reason `start.sh` refuses to start a deployed image using S3 (`USE_LOCAL_STORAGE` not `true`) whose `S3_BUCKET` or `SUPABASE_URL` is unset, or whose `SUPABASE_URL` isn't a `*.supabase.co` origin or ends in a slash: every image on the site would break ([#791](https://github.com/digitalgroundgame/pragmatic-papers/issues/791)). A custom storage domain needs a pattern for it in `next.config.ts`, and in `start.sh`.
+`SUPABASE_URL` is where media is served from: `generateFileURL` (`src/plugins/index.ts`) points each file at `<SUPABASE_URL>/storage/v1/object/public/<S3_BUCKET>/…`. It's read when pages render, not compiled in. Give it and `S3_BUCKET` both **Build Variable** and **Runtime Variable**, like `SERVER_URL`: a Coolify build renders the `force-static` feeds (`/articles/feed.xml`, `/volumes/feed.xml`, each article's `substack.xml`) and every article and volume page from the database, and without them their images point at `/media/<file>`, which production doesn't have. `start.sh` throws those away once the server answers (`POST /next/revalidate-all`), but if that call fails they keep those URLs until each one next re-renders. `next/image` only loads remote images from hosts `next.config.ts` lists, and that list is fixed when the image builds, so it allows any `https://*.supabase.co` public bucket rather than one project's host. For the same reason `start.sh` refuses to start a deployed image using S3 (`USE_LOCAL_STORAGE` not `true`) whose `S3_BUCKET` or `SUPABASE_URL` is unset, or whose `SUPABASE_URL` isn't a `*.supabase.co` origin or ends in a slash: every image on the site would break. A custom storage domain needs a pattern for it in `next.config.ts`, and in `start.sh`.
 
 **Benefits:**
 

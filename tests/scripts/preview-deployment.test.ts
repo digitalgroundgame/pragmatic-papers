@@ -47,7 +47,8 @@ interface Call {
  * (the last one repeats); an entry that is a number is returned as that HTTP
  * status instead. Fetching one deployment by UUID polls too, and gets the
  * entry's first row. `deployed` is Coolify's answer to a deploy request, and
- * `deleteStatus` its status for deleting a preview.
+ * `deleteStatus` its status for deleting a preview. The preview's own URL answers as our
+ * app for the first `previewAnswers` requests, then as a removed preview.
  */
 function harness({
   polls = [[row("finished")]],
@@ -55,12 +56,14 @@ function harness({
   existing = [] as { id: number; state: string }[],
   deployed = { deployments: [{ message: "queued", deployment_uuid: "img-dep" }] } as unknown,
   deleteStatus = 200,
+  previewAnswers = 0,
 }: {
   polls?: (CoolifyDeployment[] | number)[]
   deploymentSha?: string
   existing?: { id: number; state: string }[]
   deployed?: unknown
   deleteStatus?: number
+  previewAnswers?: number
 } = {}) {
   const calls: Call[] = []
   const logs: string[] = []
@@ -72,6 +75,15 @@ function harness({
   const deps: Deps = {
     fetch: (async (input: string, init?: RequestInit) => {
       const method = init?.method ?? "GET"
+      if (input.startsWith("https://pr-42.pragmaticpapers.com/")) {
+        calls.push({ method, url: input, auth: "" })
+        if (previewAnswers-- > 0)
+          return new Response(null, {
+            status: 404,
+            headers: { "X-Powered-By": "Next.js, Payload" },
+          })
+        return new Response("no available server", { status: 503 })
+      }
       const body = init?.body ? JSON.parse(init.body as string) : undefined
       calls.push({
         method,
@@ -417,10 +429,34 @@ describe("main close --delete-preview", () => {
     expect(h.logs.join("\n")).toContain("no preview for PR #42")
   })
 
-  it("leaves Coolify alone without the flag", async () => {
-    const h = harness()
+  it("waits for the preview to stop answering", async () => {
+    const h = harness({ previewAnswers: 2 })
+    expect(await main(["close", "--delete-preview"], ENV, h.deps)).toBe(0)
+    const checks = h.calls.filter((c) => c.url.startsWith("https://pr-42.pragmaticpapers.com/"))
+    expect(checks).toHaveLength(3)
+    expect(checks[0]).toMatchObject({ method: "HEAD" })
+    expect(h.logs.join("\n")).toContain("no longer answers")
+  })
+
+  it("fails when the preview keeps answering after Coolify's delete", async () => {
+    const h = harness({ previewAnswers: Infinity })
+    expect(await main(["close", "--delete-preview"], ENV, h.deps)).toBe(1)
+    expect(h.logs.join("\n")).toContain("still answers at https://pr-42.pragmaticpapers.com")
+    // The PR's deployments are retired before the check, so they don't stay active.
+    expect(h.statuses().map((s) => s.id)).toEqual([100])
+    expect(h.elapsed()).toBeLessThanOrEqual(5 * 60_000)
+  })
+
+  it("fails when Coolify has no preview but one still answers", async () => {
+    const h = harness({ deleteStatus: 404, previewAnswers: Infinity })
+    expect(await main(["close", "--delete-preview"], ENV, h.deps)).toBe(1)
+  })
+
+  it("leaves Coolify and the preview alone without the flag", async () => {
+    const h = harness({ previewAnswers: Infinity })
     expect(await main(["close"], ENV, h.deps)).toBe(0)
     expect(h.calls.some((c) => c.url.startsWith("https://coolify.test/"))).toBe(false)
+    expect(h.calls.some((c) => c.url.startsWith("https://pr-42."))).toBe(false)
   })
 
   it("rejects an unknown flag", async () => {

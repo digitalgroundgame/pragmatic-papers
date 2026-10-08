@@ -22,10 +22,12 @@ import { syncShopifyProductsTask } from "@/jobs/syncShopifyProducts"
 import { updateRecommendationsTask } from "@/jobs/updateRecommendations"
 import { plugins } from "@/plugins"
 import { searchVectorAfterSchemaInit } from "@/plugins/searchVector"
+import { sentryPayloadPlugin, skipPluginErrorsInPino } from "@/sentryPayload"
 import { getServerSideURL } from "@/utilities/getURL"
 import { migrations } from "@/migrations"
-import { postgresAdapter } from "@payloadcms/db-postgres"
+import { type PostgresAdapter, postgresAdapter } from "@payloadcms/db-postgres"
 import path from "path"
+import pretty from "pino-pretty"
 import { buildConfig, type SharpDependency } from "payload"
 import sharp from "@/cloudflare/sharp"
 import { fileURLToPath } from "url"
@@ -37,8 +39,14 @@ export default buildConfig({
   logger: {
     options: {
       level: process.env.PAYLOAD_LOG_LEVEL || "info",
-      transport: process.env.NODE_ENV !== "production" ? { target: "pino-pretty" } : undefined,
+      hooks: { logMethod: skipPluginErrorsInPino },
     },
+    destination: pretty({
+      colorize: process.stdout.isTTY,
+      translateTime: "SYS:HH:MM:ss",
+      ignore: "pid,hostname",
+      sync: true,
+    }),
   },
   admin: {
     components: {
@@ -50,7 +58,10 @@ export default buildConfig({
         Icon: "@/components/Logo/icons/PaperIcon#PaperIconAdmin",
         Logo: "@/components/Logo/icons/LogomarkIcon#LogomarkIcon",
       },
-      providers: ["@/providers/MathJaxProvider#MathJaxProviderRoot"],
+      providers: [
+        "@/providers/MathJaxProvider#MathJaxProviderRoot",
+        "@/components/AdminBar/AdminBarHintProvider#AdminBarHintProvider",
+      ],
     },
     meta: {
       title: "Dashboard",
@@ -96,13 +107,17 @@ export default buildConfig({
   db: postgresAdapter({
     pool: {
       connectionString: process.env.DATABASE_URI,
+      // Notice a connection the server dropped while idle instead of finding out on the
+      // next query. (No connectionTimeoutMillis: pg-pool also applies it to queries waiting
+      // for a free client, which would turn a busy pool into failed requests.)
+      keepAlive: true,
       // #916 spike: a Worker can't reuse a socket opened during another request, so in
       // one, give each query a fresh connection (Hyperdrive pools them for us).
       ...(globalThis.navigator?.userAgent === "Cloudflare-Workers" && { maxUses: 1 }),
     },
     // prevent schema push in prod/test for static schema determinism and noise reduction
     push: process.env.NODE_ENV === "development",
-    // Images built in GitHub Actions (dockerfiles/PragmaticPapers.ci.Dockerfile, #1067) never
+    // Images built in GitHub Actions (dockerfiles/PragmaticPapers.ci.Dockerfile) never
     // touch the real database while building, so they migrate when Payload starts (Payload
     // only does under NODE_ENV=production). Coolify's builds run `payload migrate` instead.
     prodMigrations: process.env.BUILT_WITHOUT_DATABASE === "true" ? migrations : undefined,
@@ -116,6 +131,18 @@ export default buildConfig({
    * Raised to 32 MB: the ceiling is only there to stop a runaway request, and ours are known.
    */
   bodyParser: { limits: { fieldSize: 32 * 1024 * 1024 } },
+  onInit: async (payload) => {
+    // When the database server closes a connection sitting idle in the pool (a restart,
+    // an admin_shutdown), node-postgres drops the client and emits "error" on the pool.
+    // Payload only listens on the one client it holds, so with no listener here the event
+    // is thrown as an uncaught exception. The pool opens a new connection on the next
+    // query, so a warning is all it needs. Commands that skip connecting
+    // (`disableDBConnect`) have no pool yet.
+    const { pool } = payload.db as unknown as Partial<PostgresAdapter>
+    pool?.on("error", (err) => {
+      payload.logger.warn({ err }, "Postgres closed an idle connection")
+    })
+  },
   collections: [
     Pages,
     Articles,
@@ -132,7 +159,11 @@ export default buildConfig({
   ],
   cors: [getServerSideURL()].filter(Boolean),
   globals: [Header, Footer, ArticleRecommendations, SiteSettings],
-  plugins: [...plugins],
+  // Nothing here reads Payload's GraphQL API (the site and admin use the Local and REST
+  // APIs), and its errors reach `afterError` with their status nested on `originalError`,
+  // which the Sentry plugin reads as a 500: anyone could fill Sentry from /api/graphql.
+  graphQL: { disable: true },
+  plugins: [...plugins, sentryPayloadPlugin],
   secret: process.env.PAYLOAD_SECRET,
   sharp: sharp as unknown as SharpDependency,
   typescript: {

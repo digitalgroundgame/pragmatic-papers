@@ -543,6 +543,7 @@ export interface Media {
    * Duration in seconds (auto-populated from the audio file)
    */
   duration?: number | null;
+  _objectKey?: string | null;
   updatedAt: string;
   createdAt: string;
   url?: string | null;
@@ -644,6 +645,10 @@ export interface User {
   profileImage?: (number | null) | Media;
   socials?: MenuField;
   roles?: ('admin' | 'chief-editor' | 'editor' | 'writer' | 'narrator' | 'member')[] | null;
+  /**
+   * Keeps /authors/<slug> public whatever the roles. Turned on when an article or narration credits this user.
+   */
+  publicProfile?: boolean | null;
   updatedAt: string;
   createdAt: string;
   email: string;
@@ -1183,6 +1188,7 @@ export interface MapAsset {
   source?: LinkField;
   createdBy?: (number | null) | User;
   prefix?: string | null;
+  _objectKey?: string | null;
   updatedAt: string;
   createdAt: string;
   url?: string | null;
@@ -1980,6 +1986,7 @@ export interface MediaSelect<T extends boolean = true> {
   createdBy?: T;
   narrator?: T;
   duration?: T;
+  _objectKey?: T;
   updatedAt?: T;
   createdAt?: T;
   url?: T;
@@ -2076,6 +2083,7 @@ export interface MapAssetsSelect<T extends boolean = true> {
   source?: T | LinkFieldSelect<T>;
   createdBy?: T;
   prefix?: T;
+  _objectKey?: T;
   updatedAt?: T;
   createdAt?: T;
   url?: T;
@@ -2121,6 +2129,7 @@ export interface UsersSelect<T extends boolean = true> {
   profileImage?: T;
   socials?: T | MenuFieldSelect<T>;
   roles?: T;
+  publicProfile?: T;
   updatedAt?: T;
   createdAt?: T;
   email?: T;

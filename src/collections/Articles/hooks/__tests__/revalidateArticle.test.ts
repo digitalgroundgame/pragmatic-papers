@@ -3,8 +3,10 @@ import type { Article } from "@/payload-types"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn(), revalidateTag: vi.fn() }))
+vi.mock("@/hooks/purgeEdgeCache", () => ({ purgeEdgeCache: vi.fn() }))
 
 const { revalidatePath, revalidateTag } = await import("next/cache")
+const { purgeEdgeCache } = await import("@/hooks/purgeEdgeCache")
 const { revalidateArticle, revalidateDelete } = await import("../revalidateArticle")
 
 const payload = {
@@ -30,12 +32,13 @@ describe("revalidateArticle", () => {
 
     expect(paths()).toEqual([
       "/articles/new-piece",
-      "/feed.articles",
+      "/articles/feed.xml",
       "/articles/substack.xml",
       "/articles/new-piece/substack.xml",
       "/volumes/volume-1",
     ])
     expect(revalidateTag).toHaveBeenCalledWith("articles-sitemap", "max")
+    expect(purgeEdgeCache).toHaveBeenCalledWith(payload.logger, "article new-piece")
   })
 
   it("refreshes the old paths when a published article is unpublished", async () => {
@@ -94,6 +97,7 @@ describe("revalidateArticle", () => {
     } as never)
 
     expect(revalidatePath).not.toHaveBeenCalled()
+    expect(purgeEdgeCache).not.toHaveBeenCalled()
   })
 })
 

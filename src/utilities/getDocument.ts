@@ -23,10 +23,13 @@ async function getDocument(collection: Collection, slug: string, depth = 0) {
 }
 
 /**
- * Returns a unstable_cache function mapped with the cache tag for the slug
+ * Returns a unstable_cache function mapped with the cache tag for the slug. Uncached in
+ * development, for the reason `getCachedGlobal` gives.
  */
 // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
 export const getCachedDocument = (collection: Collection, slug: string) =>
-  unstable_cache(async () => getDocument(collection, slug), [collection, slug], {
-    tags: [`${collection}_${slug}`],
-  })
+  process.env.NODE_ENV === "development"
+    ? async () => getDocument(collection, slug)
+    : unstable_cache(async () => getDocument(collection, slug), [collection, slug], {
+        tags: [`${collection}_${slug}`],
+      })

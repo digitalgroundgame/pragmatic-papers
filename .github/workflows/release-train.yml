@@ -1,0 +1,117 @@
+name: Release train
+
+# Cuts a release candidate after Wednesday's dev meeting and puts it live at
+# midnight going into Sunday (scripts/release-train.ts has the details):
+#
+#   - Thursday, midnight Pacific: "Bump package.json to vX.Y.Z" into dev, the
+#     next candidate, with the version worked out from the commit subjects since
+#     the last one, so PRs merged Wednesday evening make it. It goes through
+#     review and the merge queue like any PR. Merge it by Friday morning
+#     (SOAK_DAYS, 1, before Saturday's run) for it to go out that weekend.
+#   - Saturday morning: "Release X.Y.Z" into main, from a branch at the
+#     candidate's bump commit. Check staging and approve it during the day.
+#   - Sunday, midnight Pacific: the train merges the release PR with a merge
+#     commit if it's approved and its checks are green; release.yml then tags
+#     and releases it. That leaves Sunday to check production before Monday's
+#     articles. Unapproved, it waits for a person to merge it.
+#
+# After a hotfix (`pnpm hotfix`), a candidate cut before it conflicts with
+# main: the run closes its release PR and cuts nothing until the hotfix is
+# back-merged into dev (a trial merge with `git merge-tree` decides).
+#
+# Nothing reaches production without a person: the bump PR waits on a merge,
+# and the release PR on an approval. Holding a release is not approving it (or
+# closing it); next week's run offers a newer one.
+#
+# Run it by hand with dry_run to see what it would do; by hand, step "all"
+# cuts and promotes in one run, and "merge" merges an approved release PR now. To ship a fix that landed after the candidate
+# without waiting a week, run it with soak_days: 0 to cut a candidate that
+# includes the fix, merge that bump PR, and run it again with soak_days: 0 to
+# open its release PR (closing the older one).
+#
+# AUTHENTICATION
+# --------------
+# CI doesn't run on PRs opened with the workflow's own token, and both PRs
+# need it, so this uses one of:
+#   1. GitHub App (recommended): variable RELEASE_APP_ID and secret
+#      RELEASE_APP_PRIVATE_KEY (the full .pem). The App needs Repository →
+#      Contents: Read and write, and Pull requests: Read and write. It can be
+#      the Projects App with those permissions added. To merge into main, it
+#      also has to be allowed past main's branch protection (an approved PR
+#      with green checks is enough unless the rules restrict who may merge).
+#   2. PAT fallback: secret RELEASE_TOKEN, fine-grained, with the same two
+#      permissions on this repository.
+on:
+  schedule:
+    # Cron is always UTC. 08:00 UTC is midnight Pacific in winter (PST) and 1am
+    # in summer (PDT), so the cut never comes before midnight. TRAIN_STEP below
+    # maps each schedule to its step: change both together, or the run falls
+    # back to "all".
+    - cron: "0 8 * * 4" # Thursday 12am PST / 3am EST: cut
+    - cron: "0 16 * * 6" # Saturday 8am PST / 9am PDT: promote
+    - cron: "0 8 * * 0" # Sunday 12am PST / 3am EST: merge
+  workflow_dispatch:
+    inputs:
+      step:
+        description: Which step to take
+        type: choice
+        options: [all, cut, promote, merge]
+        default: all
+      soak_days:
+        description: Days a candidate must spend on dev before it's promoted
+        default: "1"
+      dry_run:
+        description: Report the plan without opening or changing any PR
+        type: boolean
+        default: false
+
+concurrency:
+  group: release-train
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  train:
+    name: Cut, promote or merge
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Generate App token
+        id: app-token
+        if: ${{ vars.RELEASE_APP_ID != '' }}
+        uses: actions/create-github-app-token@v3
+        with:
+          app-id: ${{ vars.RELEASE_APP_ID }}
+          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
+
+      # Every branch's history (origin/dev and origin/main), to find the
+      # candidates and what each holds.
+      - uses: actions/checkout@v7
+        with:
+          ref: dev
+          fetch-depth: 0
+
+      # Node 24 runs the TypeScript directly; no install needed.
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24.x"
+
+      - name: Run the train
+        env:
+          GITHUB_TOKEN: ${{ steps.app-token.outputs.token || secrets.RELEASE_TOKEN }}
+          SOAK_DAYS: ${{ inputs.soak_days }}
+          # Keep these strings in sync with on.schedule above.
+          TRAIN_STEP: >-
+            ${{ github.event.schedule == '0 8 * * 4' && 'cut'
+            || github.event.schedule == '0 16 * * 6' && 'promote'
+            || github.event.schedule == '0 8 * * 0' && 'merge'
+            || inputs.step }}
+          DRY_RUN: ${{ inputs.dry_run }}
+        run: |
+          if [ -z "$GITHUB_TOKEN" ] && [ "$DRY_RUN" != "true" ]; then
+            echo "::error::No token to open PRs with. Configure a GitHub App (RELEASE_APP_ID + RELEASE_APP_PRIVATE_KEY) or a RELEASE_TOKEN PAT; see the header of this workflow."
+            exit 1
+          fi
+          node scripts/release-train.ts

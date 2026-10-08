@@ -8,6 +8,7 @@ import {
 } from "@payloadcms/plugin-seo/fields"
 import type { CollectionConfig } from "payload"
 import { slugField } from "@/fields/slug"
+import { revalidateNavLinks, revalidateNavLinksDelete } from "@/hooks/revalidateNavLinks"
 
 export const Topics: CollectionConfig = {
   slug: "topics",
@@ -72,4 +73,9 @@ export const Topics: CollectionConfig = {
     },
     slugField({ useAsSlug: "name" }),
   ],
+  hooks: {
+    // A nav link can point at a topic.
+    afterChange: [revalidateNavLinks],
+    afterDelete: [revalidateNavLinksDelete],
+  },
 }

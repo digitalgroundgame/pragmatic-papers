@@ -1,7 +1,21 @@
-import { FOUR_AUTHOR_SLUG, NARRATION_SECONDS, SEEDED_UPDATED_AT } from "./seed-e2e.constants"
+import {
+  ARTICLE_IMAGE_ALT,
+  EXTRA_AUTHORS,
+  FOUR_AUTHOR_SLUG,
+  LIGHTBOX_IMAGE_ALT,
+  LIGHTBOX_SLUG,
+  NARRATION_SECONDS,
+  SEEDED_UPDATED_AT,
+  TOPIC_NAME,
+  TOPIC_SLUG,
+  VOLUME_SLUG,
+} from "./seed-e2e.constants"
 
 import type { User } from "@/payload-types"
 import { createArticle } from "@/endpoints/seed/articles"
+import { createCodeBlocksArticle } from "@/endpoints/seed/features/code-blocks"
+import { createFootnotesArticle } from "@/endpoints/seed/features/footnotes"
+import { createSocialEmbedArticle } from "@/endpoints/seed/features/social-embeds"
 import { createMoCongressionalMapsArticle } from "@/endpoints/seed/features/interactive-maps"
 import { createFederalCourtsInteractive } from "@/endpoints/seed/features/interactives"
 import { createRichTextShowcaseArticle } from "@/endpoints/seed/features/rich-text-showcase"
@@ -9,6 +23,7 @@ import {
   createCTABlockNode,
   createHeadingNode,
   createLinkNode,
+  createMediaBlockNode,
   createNewsletterSignupBlockNode,
   createParagraph,
   createRichText,
@@ -21,28 +36,31 @@ import config from "@payload-config"
 import { readFile } from "node:fs/promises"
 import path from "node:path"
 import { getPayload } from "payload"
+import sharp from "sharp"
 import type { Payload } from "payload"
 
 const ctx = { disableRevalidate: true }
 
-// Create a media doc from a file already committed to the repo. The rest of the
-// e2e seed deliberately ships no media (hero images resolve to null), but the
-// merch carousel screenshot needs something to render — so we upload one local
-// PNG and point every seeded product at it. Reading from disk keeps the seed
-// deterministic and network-free, unlike `createMediaFromURL`; synced products
-// carry a cdn.shopify.com URL, which no offline test run could fetch.
+// Create a media doc from one of Storybook's fixture images
+// (.storybook/assets), so the e2e site and the stories show the same mocked
+// content. They're SVGs, which Payload stores as-is without generating sizes,
+// so each is rasterized to a PNG first: the site gets the webp sizes and the
+// og JPEG a real upload would. Reading from disk keeps the seed deterministic
+// and network-free, unlike `createMediaFromURL`; synced products carry a
+// cdn.shopify.com URL, which no offline test run could fetch.
 async function createLocalMedia(
   payload: Payload,
-  repoRelativePath: string,
+  storybookAsset: "landscape.svg" | "portrait.svg" | "square.svg" | "wide.svg",
   alt: string,
 ): Promise<number> {
-  const data = await readFile(path.join(process.cwd(), repoRelativePath))
+  const svg = await readFile(path.join(process.cwd(), ".storybook/assets", storybookAsset))
+  const data = await sharp(svg).png().toBuffer()
   const media = await payload.create({
     collection: "media",
     context: ctx,
     data: { alt },
     file: {
-      name: `e2e-${path.basename(repoRelativePath)}`,
+      name: `e2e-${path.basename(storybookAsset, ".svg")}.png`,
       data,
       mimetype: "image/png",
       size: data.byteLength,
@@ -109,6 +127,23 @@ async function pinRevisionStamps(payload: Payload): Promise<void> {
   const { drizzle } = payload.db as unknown as PostgresAdapter
   await drizzle.execute(sql`UPDATE articles SET updated_at = ${SEEDED_UPDATED_AT}`)
   await drizzle.execute(sql`UPDATE volumes SET updated_at = ${SEEDED_UPDATED_AT}`)
+}
+
+/**
+ * Give every seeded article a hero and an SEO image, as every real article has
+ * both: the hero tops the article page, the SEO image is the card image on
+ * listings, and structured-data.spec.ts requires an `image` on each Article's
+ * JSON-LD.
+ *
+ * Straight to the columns, like `pinRevisionStamps`: the feature seeds take
+ * their media as a list they index into, and setting it through Payload
+ * afterwards would re-save every article.
+ */
+async function setArticleImages(payload: Payload, mediaId: number): Promise<void> {
+  const { drizzle } = payload.db as unknown as PostgresAdapter
+  await drizzle.execute(
+    sql`UPDATE articles SET hero_image_id = ${mediaId}, meta_image_id = ${mediaId}`,
+  )
 }
 
 // Co-authors for the four-author article. Deliberately plain compared with the e2e
@@ -218,7 +253,7 @@ export async function main(): Promise<void> {
     // render: two names and "& 2 more" beside two avatars and a "+2".
     //
     // Deliberately left off the homepage grid below. `gotoFirstArticle` follows
-    // the first article link there and example.spec.ts screenshots the whole
+    // the first article link there and smoke.spec.ts screenshots the whole
     // page, so adding a tile would shift baselines that have nothing to do with
     // this article. byline.spec.ts navigates to it by slug instead.
     const coAuthors: User[] = []
@@ -261,6 +296,59 @@ export async function main(): Promise<void> {
       ctx,
     )
 
+    // Feature articles for the article-interaction specs, all filed under one
+    // topic so /topics and /topics/[slug] have something to list. None is on
+    // the homepage grid or in the volume, and none is an article another spec
+    // photographs, so no baseline moves.
+    const topic = await payload.create({
+      collection: "topics",
+      context: ctx,
+      draft: false,
+      data: {
+        name: TOPIC_NAME,
+        slug: TOPIC_SLUG,
+        description: "How the evidence gets gathered, cited, and shown.",
+      },
+    })
+
+    // Five footnotes, the last a reference back to the showcase article.
+    await createFootnotesArticle(payload, [writer], [], articleId, [topic.id], ctx)
+
+    // TypeScript, JavaScript and CSS samples, each with a Copy button.
+    await createCodeBlocksArticle(payload, [writer], [], [topic.id], ctx)
+
+    // One media block, which an article renders as a lightbox trigger.
+    const lightboxImage = await createLocalMedia(payload, "portrait.svg", LIGHTBOX_IMAGE_ALT)
+    await createArticle(
+      payload,
+      {
+        title: "Seeing the Evidence: A Media Block",
+        slug: LIGHTBOX_SLUG,
+        authors: [writer.id],
+        topics: [topic.id],
+        content: createRichText([
+          createParagraph("Click the image below to see it full screen."),
+          createMediaBlockNode(lightboxImage),
+          createParagraph("Press Escape, or the close button, to come back."),
+        ]),
+        publishedAt: PUBLISHED_AT,
+      },
+      ctx,
+    )
+
+    // One embed per platform, each with a saved snapshot so nothing is fetched.
+    await createSocialEmbedArticle(payload, writer, [], [topic.id], ctx)
+
+    // Two more authors, so /authors (five per page) has a second page.
+    for (const author of EXTRA_AUTHORS) {
+      await createUser(
+        payload,
+        { ...author, password: "e2e-test-password-123", roles: ["writer"] },
+        `e2e author ${author.name}`,
+        ctx,
+      )
+    }
+
     const volume = await payload.create({
       collection: "volumes",
       context: ctx,
@@ -269,7 +357,7 @@ export async function main(): Promise<void> {
         volumeNumber: 1,
         description: "A test volume for E2E testing.",
         articles: [articleId],
-        slug: "1",
+        slug: VOLUME_SLUG,
         _status: "published",
         publishedAt: PUBLISHED_AT,
       },
@@ -277,11 +365,7 @@ export async function main(): Promise<void> {
 
     // One reused product image for the full-width Merch carousel below. See
     // createLocalMedia for why the e2e seed uploads a local file here.
-    const merchImage = await createLocalMedia(
-      payload,
-      "public/android-chrome-512x512.png",
-      "Pragmatic Papers merchandise",
-    )
+    const merchImage = await createLocalMedia(payload, "square.svg", "Pragmatic Papers merchandise")
 
     // The catalogue merch.spec.ts exercises. Titles, prices, and the sold-out
     // badge match what the block used to carry inline, so the visual baseline
@@ -519,6 +603,10 @@ export async function main(): Promise<void> {
       },
     })
 
+    await setArticleImages(
+      payload,
+      await createLocalMedia(payload, "landscape.svg", ARTICLE_IMAGE_ALT),
+    )
     await pinRevisionStamps(payload)
 
     console.warn(`✔ E2E seed complete: article="rich-text-showcase", volume="1"`)

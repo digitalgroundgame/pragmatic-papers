@@ -2,13 +2,21 @@
  * The PR side of CI's "Deploy Storybook" job (.github/workflows/ci.yml), run
  * under plain Node 24 (no install needed):
  *
- *   node scripts/storybook-pr.ts link   # after a preview upload: list it in the description
+ *   node scripts/storybook-pr.ts deploy   # after a preview upload: record it as a Deployment
+ *   node scripts/storybook-pr.ts link     # then link the components it changes
+ *   node scripts/storybook-pr.ts close    # PR closed or merged (.github/workflows/storybook-close.yml)
+ *
+ * `deploy` records the preview as a GitHub Deployment of the PR's branch in the
+ * "Storybook Preview" environment, so the PR's deployments list it next to the
+ * site's Preview (scripts/preview-deployment.ts), and marks the PR's older ones
+ * inactive. `close` marks all of them inactive, as the site's Preview does;
+ * storybook-close.yml then deletes the Worker Preview itself.
  *
  * `link` rewrites the block between LINKS_START and LINKS_END in the PR's
- * description: the Storybook preview, then a link to each component the PR
- * changes. It goes under the showcase links when there are any (see
- * scripts/showcase-pr.ts), else at the top under any `Closes #N` lines, where
- * reviewers see it first.
+ * description: a link to each component the PR changes in the preview. It goes
+ * under the showcase links when there are any (see scripts/showcase-pr.ts),
+ * else at the top under any `Closes #N` lines, where reviewers see it first. A
+ * PR that changes no component gets no block, and loses one it had.
  *
  * A component is matched through the build's index.json: a changed file that
  * is a story file or a story's `component`, else the stories nearest above it
@@ -25,6 +33,7 @@ export const LINKS_START = "<!-- storybook-links -->"
 export const LINKS_END = "<!-- /storybook-links -->"
 /** scripts/showcase-pr.ts's closing marker; this block goes right after it. */
 export const SHOWCASE_LINKS_END = "<!-- /showcase-links -->"
+export const ENVIRONMENT = "Storybook Preview"
 
 /** More components than this are summarised as "and N more". */
 export const MAX_COMPONENTS = 20
@@ -93,26 +102,31 @@ export function changedComponents(files: string[], entries: IndexEntry[]): Compo
   })
 }
 
-/** The block's content: the preview, then the components it changes. */
-export function linksBlock(previewUrl: string, components: Component[]): string {
+/** The block's content: a link to each component the PR changes, or null when there are none. */
+export function linksBlock(previewUrl: string, components: Component[]): string | null {
+  if (components.length === 0) return null
   const base = previewUrl.replace(/\/$/, "")
-  const lines = [`**Storybook:** ${base}`]
-  if (components.length > 0) {
-    lines.push("", "Components this PR changes:")
-    for (const { title, id, type } of components.slice(0, MAX_COMPONENTS))
-      lines.push(`- [${title}](${base}/?path=/${type}/${id})`)
-    const more = components.length - MAX_COMPONENTS
-    if (more > 0) lines.push(`- …and ${more} more`)
-  }
+  const lines = ["**Storybook** — components this PR changes:"]
+  for (const { title, id, type } of components.slice(0, MAX_COMPONENTS))
+    lines.push(`- [${title}](${base}/?path=/${type}/${id})`)
+  const more = components.length - MAX_COMPONENTS
+  if (more > 0) lines.push(`- …and ${more} more`)
   return `${LINKS_START}\n${lines.join("\n")}\n${LINKS_END}`
 }
 
 /**
  * Replaces the block, or adds it under the showcase links, or at the top under
- * any `Closes #N` lines.
+ * any `Closes #N` lines. With no block, removes the one there was.
  */
-export function withStorybookLinks(body: string, block: string): string {
-  if (LINKS_BLOCK.test(body)) return body.replace(LINKS_BLOCK, () => block)
+export function withStorybookLinks(body: string, block: string | null): string {
+  const match = LINKS_BLOCK.exec(body)
+  if (match && block) return body.replace(LINKS_BLOCK, () => block)
+  if (match) {
+    const before = body.slice(0, match.index).trimEnd()
+    const after = body.slice(match.index + match[0].length).trimStart()
+    return before && after ? `${before}\n\n${after}` : before || after
+  }
+  if (!block) return body
   const showcaseEnd = body.indexOf(SHOWCASE_LINKS_END)
   if (showcaseEnd >= 0) {
     const cut = showcaseEnd + SHOWCASE_LINKS_END.length
@@ -168,7 +182,7 @@ function github(deps: Deps, repo: string, token: string) {
     return (await res.json()) as T
   }
   return {
-    body: async (pr: number) => (await json<{ body: string | null }>(`/pulls/${pr}`)).body ?? "",
+    pull: (pr: number) => json<{ body: string | null; head: { ref: string } }>(`/pulls/${pr}`),
     setBody: (pr: number, body: string) =>
       json(`/pulls/${pr}`, { method: "PATCH", body: { body } }),
     /** The files the PR adds or changes (GitHub lists at most 3,000). */
@@ -183,7 +197,58 @@ function github(deps: Deps, repo: string, token: string) {
       }
       return files
     },
+    createDeployment: (ref: string, pr: number) =>
+      json<{ id: number }>("/deployments", {
+        method: "POST",
+        body: {
+          ref,
+          environment: ENVIRONMENT,
+          description: `Storybook for PR #${pr}`,
+          auto_merge: false,
+          // CI is still running; the preview is already built from tested code.
+          required_contexts: [],
+          transient_environment: true,
+          production_environment: false,
+          payload: { pr },
+        },
+      }),
+    deployments: (ref: string) =>
+      json<{ id: number }[]>(
+        `/deployments?environment=${encodeURIComponent(ENVIRONMENT)}&ref=${encodeURIComponent(ref)}&per_page=100`,
+      ),
+    setStatus: (id: number, state: "success" | "inactive", environmentUrl?: string) =>
+      json(`/deployments/${id}/statuses`, {
+        method: "POST",
+        body: {
+          state,
+          environment: ENVIRONMENT,
+          ...(environmentUrl && { environment_url: environmentUrl }),
+          // Other PRs share the environment: only this PR's are marked inactive, below.
+          auto_inactive: false,
+        },
+      }),
   }
+}
+
+async function deploy(env: Env, deps: Deps): Promise<void> {
+  const gh = github(deps, required(env, "GITHUB_REPOSITORY"), required(env, "GITHUB_TOKEN"))
+  const pr = Number(required(env, "PR_NUMBER"))
+  const url = required(env, "PREVIEW_URL")
+  // The branch, not the commit, is what ties a Deployment to the PR.
+  const ref = (await gh.pull(pr)).head.ref
+  const { id } = await gh.createDeployment(ref, pr)
+  await gh.setStatus(id, "success", url)
+  for (const old of await gh.deployments(ref))
+    if (old.id !== id) await gh.setStatus(old.id, "inactive")
+  deps.log(`Recorded ${url} as a ${ENVIRONMENT} deployment of ${ref}.`)
+}
+
+async function close(env: Env, deps: Deps): Promise<void> {
+  const gh = github(deps, required(env, "GITHUB_REPOSITORY"), required(env, "GITHUB_TOKEN"))
+  const ref = (await gh.pull(Number(required(env, "PR_NUMBER")))).head.ref
+  const deployments = await gh.deployments(ref)
+  for (const { id } of deployments) await gh.setStatus(id, "inactive")
+  deps.log(`Marked ${deployments.length} ${ENVIRONMENT} deployment(s) of ${ref} inactive.`)
 }
 
 async function link(env: Env, deps: Deps): Promise<void> {
@@ -195,19 +260,19 @@ async function link(env: Env, deps: Deps): Promise<void> {
   const components = changedComponents(await gh.files(pr), Object.values(index.entries))
   const block = linksBlock(required(env, "PREVIEW_URL"), components)
   // Read last, so an edit made meanwhile survives.
-  const body = await gh.body(pr)
+  const body = (await gh.pull(pr)).body ?? ""
   const next = withStorybookLinks(body, block)
   if (next !== body) await gh.setBody(pr, next)
-  deps.log(`Listed the Storybook preview and ${components.length} component(s) in the description.`)
-  deps.summary(`### Storybook\n\n${block.split("\n").slice(1, -1).join("\n")}`)
+  deps.log(`Linked ${components.length} changed component(s) in the description.`)
+  if (block) deps.summary(block.split("\n").slice(1, -1).join("\n"))
 }
 
-const COMMANDS = { link }
+const COMMANDS = { deploy, link, close }
 
 export async function main(argv: string[], env: Env, deps: Deps): Promise<number> {
   const command = COMMANDS[argv[0] as keyof typeof COMMANDS]
   if (!command) {
-    deps.log("Usage: node scripts/storybook-pr.ts link")
+    deps.log("Usage: node scripts/storybook-pr.ts deploy|link|close")
     return 2
   }
   try {

@@ -2,6 +2,7 @@ import type { CollectionAfterChangeHook, CollectionAfterDeleteHook, Payload } fr
 
 import { revalidatePath, revalidateTag } from "next/cache"
 
+import { purgeEdgeCache } from "@/hooks/purgeEdgeCache"
 import type { Article } from "@/payload-types"
 
 const revalidateDoc = async (givenDoc: Article, payload: Payload) => {
@@ -9,7 +10,7 @@ const revalidateDoc = async (givenDoc: Article, payload: Payload) => {
 
   payload.logger.info(`Revalidating article at path: ${path}`)
   revalidatePath(path)
-  revalidatePath("/feed.articles")
+  revalidatePath("/articles/feed.xml")
   revalidatePath("/articles/substack.xml")
   revalidatePath(`/articles/${givenDoc.slug}/substack.xml`)
   revalidateTag("articles-sitemap", "max")
@@ -33,6 +34,8 @@ const revalidateDoc = async (givenDoc: Article, payload: Payload) => {
     payload.logger.info(`Revalidating volume at path: ${volumePath}`)
     revalidatePath(volumePath)
   })
+
+  purgeEdgeCache(payload.logger, `article ${givenDoc.slug}`)
 }
 
 export const revalidateArticle: CollectionAfterChangeHook<Article> = async ({

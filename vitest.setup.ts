@@ -1,6 +1,6 @@
 // Register @testing-library/jest-dom's matchers (toBeInTheDocument, toHaveAttribute,
-// toHaveClass, ...) on Vitest's `expect`. Harmless for the node-environment
-// integration project, which loads this file too but never asserts on DOM nodes.
+// toHaveClass, ...) on Vitest's `expect`. The integration project doesn't load this
+// file: it uses tests/setup/integration-env.ts, which skips all of this.
 import "@testing-library/jest-dom/vitest"
 
 // Load .env files
@@ -16,7 +16,7 @@ import { configure } from "@testing-library/dom"
 configure({ asyncUtilTimeout: 3_000 })
 
 import { cleanup } from "@testing-library/react"
-import { afterEach } from "vitest"
+import { afterEach, vi } from "vitest"
 
 afterEach(() => {
   cleanup()
@@ -120,3 +120,26 @@ if (typeof SVGGraphicsElement !== "undefined" && !SVGGraphicsElement.prototype.g
     return bboxOf(this)
   }
 }
+
+// Components that load their heavy parts lazily (`*.lazy.tsx`: `next/dynamic` or
+// `React.lazy`) render nothing on their first pass, then the real component once its chunk
+// arrives. Tests assert on markup synchronously, so they get the real component directly.
+// What the lazy loading buys is checked in the build: `pnpm bundle-size`.
+vi.mock("@/blocks/Code/Component.lazy", () => import("@/blocks/Code/Component.client"))
+vi.mock("@/blocks/Form/FormBlockClient.lazy", () => import("@/blocks/Form/FormBlockClient"))
+vi.mock(
+  "@/blocks/InteractiveMap/InteractiveMapClient.lazy",
+  () => import("@/blocks/InteractiveMap/InteractiveMapClient"),
+)
+vi.mock(
+  "@/blocks/MediaCollageBlock/component.lazy",
+  () => import("@/blocks/MediaCollageBlock/component"),
+)
+vi.mock("@/blocks/Merch/MerchCarousel.lazy", () => import("@/blocks/Merch/MerchCarousel"))
+vi.mock("@/components/Media/lazy", async () => ({
+  AudioMedia: (await import("@/components/Media/AudioMedia")).AudioMedia,
+  VideoMedia: (await import("@/components/Media/VideoMedia")).VideoMedia,
+}))
+vi.mock("@/components/Logo/AnimatedLogo.lazy", async () => ({
+  LazyAnimatedLogo: (await import("@/components/Logo/AnimatedLogo")).AnimatedLogo,
+}))

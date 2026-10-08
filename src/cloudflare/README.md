@@ -42,9 +42,37 @@ Cloudflare's limit is 10 MiB gzipped on the Workers Paid plan (3 MiB on Free).
   stack (react-email + Tailwind + `css-tree`, ~3.9 MB raw), the seed endpoint and
   `prompts`, and the `email-preview` and `next/seed` routes, which can stay on Coolify.
 
-### Rendering: works, through the Local API, against Postgres
+### Re-run on 2026-10-08, after merging `dev`
 
-`wrangler dev` (workerd) against a seeded Postgres over TCP sockets:
+Merging `dev` (83 commits: runtime config, prerendered articles and volumes, purge on
+save, Sentry and Payload logging changes, Next 16.3.8) changed neither the approach nor
+the size. `wrangler deploy --dry-run`: **35.5 MB raw, 8.29 MiB gzipped** (8,494 KiB),
+against 8.3 MB on 2026-10-01. Headroom is still ~1.7 MiB.
+
+The difference that matters: `articles/[slug]` and `volumes/[slug]` are no longer
+`force-dynamic` (they prerender with `revalidate = 3600`), so the Worker now serves them
+from OpenNext's incremental cache, R2 (simulated locally by `wrangler dev`):
+
+| Request (`wrangler dev`, seeded Postgres)             | Result                                                |
+| ----------------------------------------------------- | ----------------------------------------------------- |
+| `/` (cold, first request to the isolate)              | 200, 103 KB, 1.38 s                                   |
+| `/` (warm; still dynamic, rendered each time)         | 200, 0.28 s                                           |
+| `/articles/<slug>`, repeated                          | 200, `x-nextjs-cache: HIT`, 0.02–0.03 s               |
+| `/articles/<slug>` with `RSC: 1`                      | 200 `text/x-component`, `HIT`, 0.03–0.04 s            |
+| `/volumes/1` with `RSC: 1`, navigating from `/`       | 200, `HIT`, 0.02 s                                    |
+| `/volumes/1` with `RSC: 1`, navigating from `/topics` | different `_rsc` value, **same entry**: `HIT`, 0.02 s |
+| `/topics`, `/authors`, `/search` (dynamic)            | 200, 0.09–0.17 s                                      |
+| `/articles/feed.xml`, `/sitemap.xml`, `/robots.txt`   | 200                                                   |
+| `/articles/does-not-exist`                            | 404                                                   |
+
+The last navigation row is the point of #916: a navigation from a different page sends a
+different `_rsc` value, which Cloudflare's zone cache stores separately, but OpenNext keys
+its cache by route, so both navigations read the same entry.
+
+Still rendered on every request: `/`, `[slug]`, `topics/[slug]`, `authors/[slug]`,
+`interactives/[slug]` and the indexes (pagination reads `?p=`; see #1140).
+
+### First run (2026-10-01)
 
 | Request                                 | Result                                                                     |
 | --------------------------------------- | -------------------------------------------------------------------------- |
@@ -79,8 +107,9 @@ is not a constructor`). `pg-cloudflare` is added to Next's traces for the same r
 
 - **Hyperdrive** and real network latency: needs a deploy (a Cloudflare token with
   Workers, R2 and Hyperdrive access) and a Hyperdrive config for the database.
-- **The R2 incremental cache and ISR**: pages are still `force-dynamic`, so nothing was
-  cached; step 2 of the #916 plan.
+- **The R2 incremental cache against a real bucket**: articles and volumes now hit
+  OpenNext's cache in `wrangler dev`'s local R2; the rest of the pages are still dynamic.
+  Revalidation from Coolify's hooks into the Worker's cache isn't built yet.
 - **CPU limits** on a cold start (Payload's init) in production.
 - **Images** (the `IMAGES` binding) and media.
 - **Routing** `/admin`, `/api`, `/media` and `/map-assets` to Coolify (a custom Worker

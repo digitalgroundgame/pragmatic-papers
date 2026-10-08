@@ -2,6 +2,7 @@ import type { CollectionAfterChangeHook, CollectionAfterDeleteHook } from "paylo
 
 import { revalidateTag } from "next/cache"
 
+import { purgeEdgeCache } from "@/hooks/purgeEdgeCache"
 import type { Merch as MerchProductDoc } from "@/payload-types"
 
 import { MERCH_TAG } from "../tag"
@@ -17,16 +18,22 @@ import { MERCH_TAG } from "../tag"
 
 export const revalidateMerchProduct: CollectionAfterChangeHook<MerchProductDoc> = ({
   doc,
-  req: { context },
+  req: { payload, context },
 }) => {
-  if (!context.disableRevalidate) revalidateTag(MERCH_TAG, "max")
+  if (!context.disableRevalidate) {
+    revalidateTag(MERCH_TAG, "max")
+    purgeEdgeCache(payload.logger, "merch product changed")
+  }
   return doc
 }
 
 export const revalidateMerchProductDelete: CollectionAfterDeleteHook<MerchProductDoc> = ({
   doc,
-  req: { context },
+  req: { payload, context },
 }) => {
-  if (!context.disableRevalidate) revalidateTag(MERCH_TAG, "max")
+  if (!context.disableRevalidate) {
+    revalidateTag(MERCH_TAG, "max")
+    purgeEdgeCache(payload.logger, "merch product deleted")
+  }
   return doc
 }

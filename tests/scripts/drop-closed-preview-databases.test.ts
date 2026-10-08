@@ -187,6 +187,47 @@ describe("dropClosedPreviewDatabases", () => {
     expect(logs).toContain("Keeping pragmatic_papers_pr_3: something is still connected to it")
   })
 
+  it("keeps a closed PR's database while its preview still answers", async () => {
+    // Coolify's delete can leave the container running, idle with no connection open.
+    const github = fakeGitHub([[12, 40]])
+    const asked: { url: string; method?: string; signal?: AbortSignal }[] = []
+    const fetch: Fetch = async (url, init) => {
+      if (!url.startsWith("https://pr-3.pragmaticpapers.com/")) return github.fetch(url, init)
+      asked.push({ url, method: init?.method, signal: init?.signal })
+      return new Response(null, { status: 404, headers: { "X-Powered-By": "Next.js, Payload" } })
+    }
+    const { client, statements } = fakeClient(DATABASES)
+    const logs: string[] = []
+    const dropped = await dropClosedPreviewDatabases(
+      { client, fetch, log: (m) => logs.push(m) },
+      options,
+    )
+
+    expect(dropped).toEqual([])
+    expect(statements.some((s) => s.startsWith("DROP"))).toBe(false)
+    expect(asked[0]).toMatchObject({ method: "HEAD" })
+    // Bounded, so a hung host can't hold up the preview's startup.
+    expect(asked[0]!.signal).toBeInstanceOf(AbortSignal)
+    expect(logs.join("\n")).toContain("PR 3 is closed but its preview still answers")
+  })
+
+  it("asks the preview URL template it's given", async () => {
+    const github = fakeGitHub([[12, 40]])
+    const asked: string[] = []
+    const fetch: Fetch = async (url, init) => {
+      if (url.startsWith("https://api.github.com/")) return github.fetch(url, init)
+      asked.push(url)
+      throw new Error("getaddrinfo ENOTFOUND")
+    }
+    const dropped = await dropClosedPreviewDatabases(
+      { client: fakeClient(DATABASES).client, fetch, log: () => undefined },
+      { ...options, previewUrlTemplate: "https://preview-{{pr_id}}.example.org" },
+    )
+
+    expect(dropped).toEqual(["pragmatic_papers_pr_3", "pragmatic_papers_pr_3_incoming"])
+    expect(asked[0]).toMatch(/^https:\/\/preview-3\.example\.org\//)
+  })
+
   it("drops nothing when GitHub's list doesn't include the PR being built", async () => {
     const { client, statements } = fakeClient(DATABASES)
     const logs: string[] = []

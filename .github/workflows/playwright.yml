@@ -38,7 +38,7 @@ concurrency:
 # .github/actions/setup-e2e, shared with update-snapshots.yml so the two
 # workflows always render the same page.
 #
-# One image per run (#1090): "Build image" builds it, "E2E tests" runs the
+# One image per run: "Build image" builds it, "E2E tests" runs the
 # suite against it, and "Deploy preview" hands the same image to Coolify as
 # the PR's preview. Removing a closed PR's preview stays in preview-image.yml.
 
@@ -65,8 +65,8 @@ jobs:
               - "**"
               - "!**/*.md"
 
-  # Whether this run deploys a preview: the PRs Coolify previewed before #1067
-  # (see preview-deployment.yml), same-repo PRs from owners, members and
+  # Whether this run deploys a preview: the PRs Coolify builds previews for
+  # itself (preview-deployment.yml's `if`): same-repo PRs from owners, members and
   # collaborators, not titled [skip ci] / [skip cd]. Fork PRs get no secrets,
   # and fork and Dependabot runs can't push to GHCR.
   preview:
@@ -218,7 +218,7 @@ jobs:
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
-          # Must match DATABASE_URI in .github/actions/setup-e2e.
+          # Must match TEST_DATABASE_URI in .github/actions/setup-e2e.
           POSTGRES_DB: pragmatic-papers-e2e
         ports:
           - 5432:5432
@@ -283,50 +283,50 @@ jobs:
       # determinism_failed only for a gate failure, not the benign
       # "wrote a missing baseline" failure, so legitimate new baselines still
       # commit.
+      # On a PR the checkout is GitHub's merge commit, and committing on top
+      # of it would also merge the base branch into the PR. So only the added
+      # baselines are committed, onto the PR's own head, through a separate
+      # index that leaves this checkout as it was tested.
       - name: Commit new snapshot baselines
         id: commit
         if: ${{ !cancelled() && github.event_name != 'merge_group' && steps.e2e.outputs.determinism_failed != 'true' }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PARENT_SHA: ${{ github.event.pull_request.head.sha || steps.tested.outputs.sha }}
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add tests/e2e/__screenshots__
-          if git diff --cached --quiet; then
+          added=$(git diff --cached --name-only --diff-filter=A)
+          if [ -z "$added" ]; then
             echo "No new baselines to commit."
             echo "committed=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          git commit -m "test: add missing e2e snapshot baselines"
-          git push origin "HEAD:${GITHUB_HEAD_REF:-$GITHUB_REF_NAME}"
+          export GIT_INDEX_FILE="$RUNNER_TEMP/baselines.index"
+          git read-tree "$PARENT_SHA"
+          echo "$added" | git update-index --add --stdin
+          sha=$(git commit-tree "$(git write-tree)" -p "$PARENT_SHA" -m "test: add missing e2e snapshot baselines")
+          git push origin "$sha:refs/heads/${GITHUB_HEAD_REF:-$GITHUB_REF_NAME}"
           echo "committed=true" >> "$GITHUB_OUTPUT"
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
 
-      # Pushes made with GITHUB_TOKEN don't trigger workflows, so the new
-      # commit would otherwise sit with no status checks and block merging.
-      # This job already ran the full E2E suite against it, so report the
-      # required checks — including "E2E tests" (this very job) — as passed on
-      # the new sha too. Omitting "E2E tests" left the auto-commit with its
-      # required E2E check unreported, so the PR stayed blocked / a run would
-      # park in "action_required" until a maintainer approved it (matches
-      # update-snapshots.yml, which already reports "E2E tests").
+      # Pushes made with GITHUB_TOKEN start runs that wait for a maintainer's
+      # approval, so the new commit would otherwise sit with no results. Writing
+      # a missing baseline fails its test, so the step above always fails when
+      # there's something to commit; the wrapper says when those writes were
+      # its only failures. Then "E2E tests" is reported as passing on the new
+      # commit, and the other checks are copied from its parent with their
+      # real results (scripts/snapshot-commit-checks.ts). After a real failure
+      # nothing is reported, and the approved runs decide.
       - name: Report CI checks on snapshot commit
-        if: ${{ steps.commit.outputs.committed == 'true' }}
+        if: ${{ !cancelled() && steps.commit.outputs.committed == 'true' && steps.e2e.outputs.only_new_baselines_failed == 'true' }}
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          NEW_SHA=$(git rev-parse HEAD)
-          for check_name in "Static checks" "Unit tests" "Integration tests" "Storybook" "E2E tests"; do
-            gh api repos/${{ github.repository }}/check-runs \
-              --method POST \
-              -H "Accept: application/vnd.github+json" \
-              -f name="$check_name" \
-              -f head_sha="$NEW_SHA" \
-              -f status=completed \
-              -f conclusion=success \
-              -f "output[title]=Skipped — snapshot-only commit" \
-              -f "output[summary]=Only new PNG baselines were added. No code to check." \
-              >/dev/null
-          done
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PARENT_SHA: ${{ github.event.pull_request.head.sha || steps.tested.outputs.sha }}
+          HEAD_SHA: ${{ steps.commit.outputs.sha }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: node scripts/snapshot-commit-checks.ts
 
       - name: Post visual regression comment
         if: ${{ failure() && github.event_name == 'pull_request' }}
@@ -379,14 +379,140 @@ jobs:
           PR_NUMBER: ${{ github.event.pull_request.number }}
           BASE_REF: ${{ github.event.pull_request.base.ref }}
           DELETE_WHEN_EMPTY: "true"
+          # The baseline commit the earlier step pushed, when it pushed one:
+          # this checkout stays on the tested commit, so HEAD doesn't have the
+          # new baselines and github.event.pull_request.head.sha predates them.
+          BASELINE_SHA: ${{ steps.commit.outputs.sha }}
         run: |
-          # Use the actual current HEAD, not github.event.pull_request.head.sha —
-          # if the earlier commit step pushed a new baseline commit, that event
-          # context still points at the pre-commit sha and would upload assets
-          # under the wrong (nonexistent-on-branch) path.
-          ASSET_DIR="$PR_NUMBER/$(git rev-parse HEAD)"
+          head=${BASELINE_SHA:-$(git rev-parse HEAD)}
+          ASSET_DIR="$PR_NUMBER/$head"
           export ASSET_DIR
           git fetch --no-tags --depth=1 origin "$BASE_REF"
           git diff --name-only --diff-filter=AM \
-            "origin/$BASE_REF...HEAD" -- '**/__screenshots__/**/*.png' \
+            "origin/$BASE_REF...$head" -- '**/__screenshots__/**/*.png' \
             | pnpm exec tsx scripts/pr-screenshot-comment.ts
+
+  # The client JavaScript and CSS each public page loads, read from the image's
+  # build manifests (scripts/bundle-size.ts), compared with dev's last measurement.
+  # A page whose JavaScript grew by more than 10 kB gets a warning; it never fails.
+  # Pushes to dev upload the measurement PRs compare with.
+  bundle-size:
+    name: Bundle size
+    needs: [changes, image]
+    if: ${{ !cancelled() && needs.image.result == 'success' && ((github.event_name == 'pull_request' && (needs.changes.result != 'success' || needs.changes.outputs.e2e == 'true')) || (github.event_name == 'push' && github.ref == 'refs/heads/dev')) }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      actions: read
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up Node.js environment
+        uses: ./.github/actions/setup-project
+        with:
+          node-version: "24.x"
+          gh-font-read-token: ${{ secrets.GH_FONT_READ }}
+
+      - name: Download the app image
+        uses: actions/download-artifact@v7
+        with:
+          name: app-image
+          path: ${{ runner.temp }}
+
+      # The build the PR deploys, rather than a second `next build` here.
+      - name: Copy the build out of the image
+        run: |
+          docker load -i "$RUNNER_TEMP/app-image.tar"
+          id=$(docker create pragmatic-papers-app:ci)
+          docker cp "$id:/app/.next" "$RUNNER_TEMP/next"
+          docker rm "$id"
+
+      - name: Download dev's measurement
+        id: base
+        if: github.event_name == 'pull_request'
+        uses: ./.github/actions/download-dev-artifact
+        with:
+          name: bundle-size
+
+      - name: Measure and compare with dev
+        env:
+          BASE_BUNDLE_SIZE_PATH: ${{ steps.base.outputs.dir && format('{0}/bundle-size.json', steps.base.outputs.dir) || '' }}
+          BUNDLE_SIZE_OUT: bundle-size.json
+          GITHUB_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: pnpm bundle-size --next-dir "$RUNNER_TEMP/next"
+
+      - uses: actions/upload-artifact@v7
+        if: ${{ !cancelled() }}
+        with:
+          name: bundle-size
+          path: bundle-size.json
+          retention-days: 90
+
+  # Lighthouse's performance audit of a few seeded pages (scripts/lighthouse.ts),
+  # compared with dev's last results. In its own job so the suite doesn't share the
+  # runner's CPU with it. Report-only: it posts how each page compares with dev and
+  # annotates big regressions, but never fails. Pushes to dev upload the results PRs
+  # compare with.
+  lighthouse:
+    name: Lighthouse
+    needs: [changes, image]
+    if: ${{ !cancelled() && needs.image.result == 'success' && ((github.event_name == 'pull_request' && (needs.changes.result != 'success' || needs.changes.outputs.e2e == 'true')) || (github.event_name == 'push' && github.ref == 'refs/heads/dev')) }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    # The E2E job's container, for its Chromium and the shared setup-e2e action.
+    container:
+      image: mcr.microsoft.com/playwright:v1.63.0-noble
+    permissions:
+      actions: read
+      contents: read
+      pull-requests: write
+
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          # Must match TEST_DATABASE_URI in .github/actions/setup-e2e.
+          POSTGRES_DB: pragmatic-papers-e2e
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up E2E
+        uses: ./.github/actions/setup-e2e
+        with:
+          gh-font-read-token: ${{ secrets.GH_FONT_READ }}
+
+      - name: Download dev's results
+        id: base
+        if: github.event_name == 'pull_request'
+        uses: ./.github/actions/download-dev-artifact
+        with:
+          name: lighthouse-results
+
+      # Seeds the database and starts the image as the E2E suite does, then runs
+      # Lighthouse against it in place of Playwright.
+      - name: Run Lighthouse
+        env:
+          E2E_COMMAND: pnpm exec tsx scripts/lighthouse.ts
+          BASE_LIGHTHOUSE_PATH: ${{ steps.base.outputs.dir && format('{0}/summary.json', steps.base.outputs.dir) || '' }}
+          E2E_NETWORK_CONTAINER: ${{ job.container.id }}
+          GITHUB_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: pnpm test:e2e
+
+      - uses: actions/upload-artifact@v7
+        if: ${{ !cancelled() }}
+        with:
+          name: lighthouse-results
+          path: lighthouse-results/
+          retention-days: 90

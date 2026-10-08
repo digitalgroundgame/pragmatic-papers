@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest"
 import {
   changedComponents,
   type Deps,
+  ENVIRONMENT,
   type IndexEntry,
   LINKS_END,
   LINKS_START,
@@ -102,22 +103,20 @@ describe("changedComponents", () => {
 })
 
 describe("linksBlock", () => {
-  it("links the preview alone when no component changed", () => {
-    expect(linksBlock(`${URL}/`, [])).toBe(`${LINKS_START}\n**Storybook:** ${URL}\n${LINKS_END}`)
+  it("is null when no component changed", () => {
+    expect(linksBlock(URL, [])).toBeNull()
   })
 
   it("links each changed component's docs page or story", () => {
     expect(
-      linksBlock(URL, [
+      linksBlock(`${URL}/`, [
         { title: "Layout/Header", id: "layout-header--default", type: "story" },
         { title: "UI/Button", id: "ui-button--docs", type: "docs" },
       ]),
     ).toBe(
       [
         LINKS_START,
-        `**Storybook:** ${URL}`,
-        "",
-        "Components this PR changes:",
+        "**Storybook** — components this PR changes:",
         `- [Layout/Header](${URL}/?path=/story/layout-header--default)`,
         `- [UI/Button](${URL}/?path=/docs/ui-button--docs)`,
         LINKS_END,
@@ -131,14 +130,15 @@ describe("linksBlock", () => {
       id: `c-${i}--docs`,
       type: "docs" as const,
     }))
-    const block = linksBlock(URL, many)
+    const block = linksBlock(URL, many)!
     expect(block.match(/^- \[/gm)).toHaveLength(MAX_COMPONENTS)
     expect(block).toContain("- …and 3 more")
   })
 })
 
 describe("withStorybookLinks", () => {
-  const block = linksBlock(URL, [])
+  const block = linksBlock(URL, [{ title: "UI/Button", id: "ui-button--docs", type: "docs" }])!
+  const old = `${LINKS_START}\n**Storybook:** old\n${LINKS_END}`
   const showcase = `<!-- showcase-links -->\n**On the preview:**\n\n- [first](u)\n${SHOWCASE_LINKS_END}`
 
   it("adds the block at the top, under the issues the PR closes", () => {
@@ -159,9 +159,14 @@ describe("withStorybookLinks", () => {
   })
 
   it("replaces the block in place, leaving the rest untouched", () => {
-    const old = `${LINKS_START}\n**Storybook:** old\n${LINKS_END}`
     const body = `${showcase}\n\n${old}\r\n\r\n## Context\r\n`
     expect(withStorybookLinks(body, block)).toBe(`${showcase}\n\n${block}\r\n\r\n## Context\r\n`)
+  })
+
+  it("removes the block when no component changed", () => {
+    expect(withStorybookLinks(`${old}\n\n## Context\n\nText\n`, null)).toBe("## Context\n\nText\n")
+    expect(withStorybookLinks(`Closes #1\n\n${old}\n\n## B`, null)).toBe("Closes #1\n\n## B")
+    expect(withStorybookLinks("## Context\n", null)).toBe("## Context\n")
   })
 })
 
@@ -182,7 +187,13 @@ describe("main", () => {
         const url = String(input)
         const method = init?.method ?? "GET"
         calls.push({ method, url, body: init?.body ? JSON.parse(String(init.body)) : undefined })
-        const payload = url.includes("/files?") ? files : { body }
+        const payload = url.includes("/files?")
+          ? files
+          : url.includes("/deployments?")
+            ? [{ id: 7 }, { id: 8 }]
+            : url.endsWith("/deployments")
+              ? { id: 8 }
+              : { body, head: { ref: "feat/thing" } }
         return new Response(JSON.stringify(payload), { status: 200 })
       }) as typeof fetch,
       log: (message) => logs.push(message),
@@ -193,7 +204,51 @@ describe("main", () => {
     return { deps, calls, logs }
   }
 
-  it("lists the preview and the changed components in the description", async () => {
+  it("records the preview as a Deployment and retires the PR's older ones", async () => {
+    const { deps, calls } = fakeDeps([], "")
+    expect(await main(["deploy"], ENV, deps)).toBe(0)
+    const posts = calls.filter((call) => call.method === "POST")
+    const api = "https://api.github.com/repos/digitalgroundgame/pragmatic-papers"
+    expect(posts[0]).toMatchObject({
+      url: `${api}/deployments`,
+      body: { ref: "feat/thing", environment: ENVIRONMENT, required_contexts: [] },
+    })
+    expect(posts.slice(1)).toEqual([
+      {
+        method: "POST",
+        url: `${api}/deployments/8/statuses`,
+        body: {
+          state: "success",
+          environment: ENVIRONMENT,
+          environment_url: URL,
+          auto_inactive: false,
+        },
+      },
+      {
+        method: "POST",
+        url: `${api}/deployments/7/statuses`,
+        body: { state: "inactive", environment: ENVIRONMENT, auto_inactive: false },
+      },
+    ])
+  })
+
+  it("retires all of the PR's Deployments when it closes", async () => {
+    const { deps, calls } = fakeDeps([], "")
+    expect(await main(["close"], { ...ENV, PREVIEW_URL: "" }, deps)).toBe(0)
+    const api = "https://api.github.com/repos/digitalgroundgame/pragmatic-papers"
+    expect(calls.filter((call) => call.method === "POST")).toEqual(
+      [7, 8].map((id) => ({
+        method: "POST",
+        url: `${api}/deployments/${id}/statuses`,
+        body: { state: "inactive", environment: ENVIRONMENT, auto_inactive: false },
+      })),
+    )
+    expect(calls[1]?.url).toBe(
+      `${api}/deployments?environment=Storybook%20Preview&ref=feat%2Fthing&per_page=100`,
+    )
+  })
+
+  it("links the changed components at the top of the description", async () => {
     const { deps, calls } = fakeDeps(
       [
         { filename: "src/components/ui/button.tsx", status: "modified" },

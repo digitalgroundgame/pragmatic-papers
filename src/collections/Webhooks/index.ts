@@ -1,7 +1,8 @@
 import { admin } from "@/access/collections"
 import { type Webhook } from "@/payload-types"
 import { type FieldHookArgs, type CollectionConfig } from "payload"
-import { format, isAfter } from "date-fns"
+import { format } from "date-fns/format"
+import { isAfter } from "date-fns/isAfter"
 
 export const Webhooks: CollectionConfig = {
   slug: "webhooks",
@@ -29,11 +30,16 @@ export const Webhooks: CollectionConfig = {
       hooks: {
         afterRead: [
           (ctx: FieldHookArgs<Webhook>): string => {
+            // `reduce` with no seed throws on an empty array, which a webhook that has never
+            // pushed (or had its history cleared) stores, failing every read of it.
             const latest = ctx.data?.pushed
               ?.map((v) => {
                 return { vol: v.volumeNumber, time: new Date(v.timePushed ?? 0) }
               })
-              .reduce((prev, curr) => (isAfter(prev.time, curr.time) ? prev : curr))
+              .reduce<{ vol?: number | null; time: Date } | undefined>(
+                (prev, curr) => (prev && isAfter(prev.time, curr.time) ? prev : curr),
+                undefined,
+              )
             return latest ? `Vol. ${latest.vol} - ${format(latest.time, "PP pp")}` : "-"
           },
         ],

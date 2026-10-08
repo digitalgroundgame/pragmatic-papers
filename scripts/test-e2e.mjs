@@ -1,11 +1,13 @@
-import { PostgreSqlContainer } from "@testcontainers/postgresql"
 import { execFileSync, execSync, spawn } from "node:child_process"
 import { createHash } from "node:crypto"
 import { lookup } from "node:dns/promises"
 import { appendFileSync, existsSync, readdirSync, readFileSync, rmSync } from "node:fs"
 import net from "node:net"
+import os from "node:os"
 import path from "node:path"
 import { blue, green, red } from "./ansi.mjs"
+import { onlyNewBaselinesFailed } from "./e2e-report.mjs"
+import { startTestDatabase } from "./test-db.mjs"
 
 function isPortInUse(port) {
   return new Promise((resolve) => {
@@ -38,41 +40,46 @@ function screenshotFingerprint() {
 }
 
 process.env.PAYLOAD_SECRET ||= "test-secret-for-e2e-tests"
-
-let container = null
-
-if (process.env.DATABASE_URI) {
-  console.warn(`${green("✔")} Using existing DATABASE_URI — skipping container startup.`)
-} else {
-  console.warn(`${blue("●")} Starting Postgres container...`)
-  container = await new PostgreSqlContainer("postgres:17-alpine")
-    .withDatabase("pragmatic-papers-test")
-    .start()
-  process.env.DATABASE_URI = container.getConnectionUri()
-  console.warn(`${green("✔")} Test database started at ${process.env.DATABASE_URI}`)
-}
 process.env.USE_LOCAL_STORAGE ||= "true"
 process.env.PORT ||= "8000"
 process.env.SERVER_URL ||= `http://localhost:${process.env.PORT}`
 process.env.PAYLOAD_CONFIG_PATH ||= "src/payload.config.ts"
 process.env.E2E_MANAGED_SERVER = "true"
 
+// Checked before the database starts, so a busy port leaves nothing to clean up.
 const port = Number(process.env.PORT)
 if (await isPortInUse(port)) {
   console.error(
     `${red("✖")} Port ${port} is already in use. ` +
       `Stop the process bound to it (e.g. \`lsof -ti:${port} | xargs kill\`) before running E2E tests.`,
   )
-  await container.stop()
   process.exit(1)
 }
+
+console.warn(`${blue("●")} Starting the test database...`)
+// A snapshot image skips `payload migrate` while the migrations are unchanged
+// (scripts/test-db.mjs). The seed below writes to this run's container only.
+const database = await startTestDatabase({
+  snapshot: true,
+  migrate: (uri) => {
+    console.warn(`${blue("●")} Running database migrations...`)
+    execSync("pnpm payload migrate", {
+      env: { ...process.env, DATABASE_URI: uri },
+      stdio: "inherit",
+    })
+  },
+})
+// Set, never read: every Payload process this script starts (the seed, the server)
+// inherits it in place of the dev database `.env` names.
+process.env.DATABASE_URI = database.uri
+console.warn(`${green("✔")} Test database ready.`)
 
 // A production server (`next build` + `next start`) renders deterministically —
 // no dev overlay, no on-demand compilation, no hot-reload artifacts — so CI
 // uses it for stable screenshots. Local runs default to the faster dev server.
 const useProdServer = !!process.env.E2E_PROD_SERVER
 
-// CI tests the image it deploys (#1090): E2E_IMAGE names it, already loaded into Docker,
+// CI tests the image it deploys: E2E_IMAGE names it, already loaded into Docker,
 // and E2E_NETWORK_CONTAINER the container this script runs in. The server joins that
 // container's network namespace, so it answers on localhost:$PORT (the SERVER_URL the
 // baselines were rendered with) and reaches Postgres by the same hostname this script
@@ -109,8 +116,8 @@ async function startImageServer() {
   }
   // The database host as an address: a container sharing another's network namespace
   // may not share its resolver, which is what knows the job's service names.
-  const database = new URL(process.env.DATABASE_URI)
-  database.hostname = (await lookup(database.hostname, { family: 4 })).address
+  const databaseUri = new URL(database.uri)
+  databaseUri.hostname = (await lookup(databaseUri.hostname, { family: 4 })).address
 
   execFileSync("docker", ["rm", "-f", APP_CONTAINER], { stdio: "ignore" })
   docker(
@@ -121,7 +128,7 @@ async function startImageServer() {
     `container:${process.env.E2E_NETWORK_CONTAINER}`,
     ...APP_ENV.flatMap((name) => ["-e", name]),
     "-e",
-    `DATABASE_URI=${database}`,
+    `DATABASE_URI=${databaseUri}`,
     // Rendered as a local build, as E2E always has been, not as a preview.
     "-e",
     "BUILD_ENV=",
@@ -159,12 +166,6 @@ try {
     console.warn(`${blue("●")} Clearing .next build cache...`)
     rmSync(".next", { recursive: true, force: true })
   }
-
-  console.warn(`${blue("●")} Running database migrations...`)
-  execSync("pnpm payload migrate", {
-    env: process.env,
-    stdio: "inherit",
-  })
 
   console.warn(`${blue("●")} Seeding E2E test data...`)
   execSync("pnpm exec tsx scripts/seed-e2e.ts", {
@@ -205,16 +206,40 @@ try {
     )
   }
 
-  console.warn(`${blue("●")} Starting Playwright tests...`)
+  // E2E_COMMAND runs something else against the seeded server in place of the
+  // suite: `pnpm lighthouse` audits it with scripts/lighthouse.ts.
+  const command = process.env.E2E_COMMAND
+  const jsonReport =
+    process.env.GITHUB_OUTPUT && !command ? path.join(os.tmpdir(), "e2e-report.json") : null
+  if (jsonReport) rmSync(jsonReport, { force: true })
   const baselinesBefore = screenshotFingerprint()
-  const child = spawn(
-    "./node_modules/.bin/playwright",
-    ["test", "--config=playwright.config.ts", ...process.argv.slice(2).filter((a) => a !== "--")],
-    { env: process.env, stdio: "inherit" },
-  )
+  let child
+  if (command) {
+    console.warn(`${blue("●")} Running ${command}...`)
+    child = spawn(command, { env: process.env, stdio: "inherit", shell: true })
+  } else {
+    console.warn(`${blue("●")} Starting Playwright tests...`)
+    child = spawn(
+      "./node_modules/.bin/playwright",
+      ["test", "--config=playwright.config.ts", ...process.argv.slice(2).filter((a) => a !== "--")],
+      {
+        env: { ...process.env, ...(jsonReport && { E2E_JSON_REPORT: jsonReport }) },
+        stdio: "inherit",
+      },
+    )
+  }
 
   const exitCode = await new Promise((resolve) => child.on("exit", resolve))
   let finalExit = exitCode ?? 0
+
+  // `--update-snapshots=missing` fails every test that writes a baseline.
+  // Signal when those are the only failures, so CI can report the commit that
+  // adds the baselines as passing (playwright.yml) without hiding a real one.
+  if (jsonReport && finalExit !== 0 && existsSync(jsonReport)) {
+    if (onlyNewBaselinesFailed(JSON.parse(readFileSync(jsonReport, "utf8")))) {
+      appendFileSync(process.env.GITHUB_OUTPUT, "only_new_baselines_failed=true\n")
+    }
+  }
 
   // Flaky-baseline gate. When the run above wrote or changed a screenshot
   // baseline, re-render just the @visual tests two more times against the same
@@ -222,7 +247,7 @@ try {
   // baseline only matches its own first render. Opt in with E2E_VERIFY_VISUAL;
   // it skips itself when no baseline changed, so PRs that touch no screenshots
   // pay nothing — the same scope as gating on "a baseline was committed".
-  if (process.env.E2E_VERIFY_VISUAL) {
+  if (process.env.E2E_VERIFY_VISUAL && !command) {
     if (screenshotFingerprint() !== baselinesBefore) {
       console.warn(`${blue("●")} Verifying screenshot determinism (@visual ×2)...`)
       const verify = spawn(
@@ -272,8 +297,6 @@ try {
   if (image) {
     execFileSync("docker", ["rm", "-f", APP_CONTAINER], { stdio: "ignore" })
   }
-  if (container) {
-    console.warn(`${blue("●")} Stopping Postgres container...`)
-    await container.stop()
-  }
+  console.warn(`${blue("●")} Stopping the test database...`)
+  database.stop()
 }

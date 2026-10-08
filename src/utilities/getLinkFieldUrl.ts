@@ -13,6 +13,18 @@ import type { LinkField } from "@/payload-types"
  * @param {LinkField | undefined} link - The link field object from Payload CMS.
  * @returns {string | null} - The resolved URL or null if unavailable.
  */
+/**
+ * Whether the link points at a document that exists but isn't published. Nav menus leave such
+ * a link out rather than send readers to a 404; the global's cached copy populates linked
+ * documents without read access checks, so a draft still comes back populated.
+ */
+export function linksToUnpublished(link?: LinkField): boolean {
+  const value = link?.type === "reference" ? link.reference?.value : undefined
+  return typeof value === "object" && value !== null && "_status" in value
+    ? value._status === "draft"
+    : false
+}
+
 export function getLinkFieldUrl(link?: LinkField): string | null {
   if (!link) return null
   if (

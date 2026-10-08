@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest"
 import nextConfig from "../../next.config"
 
 // images.remotePatterns is fixed when the image builds, so production's media host has to
-// be allowed without knowing it then (#1090). These are the URLs generateFileURL
+// be allowed without knowing it then. These are the URLs generateFileURL
 // (src/plugins/index.ts) gives media with S3 storage.
 const allowed = (url: string): boolean =>
   hasRemoteMatch([], nextConfig.images?.remotePatterns ?? [], new URL(url))

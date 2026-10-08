@@ -47,6 +47,8 @@ import * as migration_20260928_111332_add_site_settings from "./20260928_111332_
 import * as migration_20260928_115534_interactives from "./20260928_115534_interactives"
 import * as migration_20260928_123759_add_table_of_contents from "./20260928_123759_add_table_of_contents"
 import * as migration_20260929_170519_add_table_of_contents_experiment from "./20260929_170519_add_table_of_contents_experiment"
+import * as migration_20261006_025343_add_storage_object_key from "./20261006_025343_add_storage_object_key"
+import * as migration_20261007_150906_add_user_public_profile from "./20261007_150906_add_user_public_profile"
 
 export const migrations = [
   {
@@ -293,5 +295,15 @@ export const migrations = [
     up: migration_20260929_170519_add_table_of_contents_experiment.up,
     down: migration_20260929_170519_add_table_of_contents_experiment.down,
     name: "20260929_170519_add_table_of_contents_experiment",
+  },
+  {
+    up: migration_20261006_025343_add_storage_object_key.up,
+    down: migration_20261006_025343_add_storage_object_key.down,
+    name: "20261006_025343_add_storage_object_key",
+  },
+  {
+    up: migration_20261007_150906_add_user_public_profile.up,
+    down: migration_20261007_150906_add_user_public_profile.down,
+    name: "20261007_150906_add_user_public_profile",
   },
 ]

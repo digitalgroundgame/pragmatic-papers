@@ -1,9 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-const { revalidateTag } = vi.hoisted(() => ({
+const { revalidateTag, purgeEdgeCache } = vi.hoisted(() => ({
   revalidateTag: vi.fn(),
+  purgeEdgeCache: vi.fn(),
 }))
 vi.mock("next/cache", () => ({ revalidateTag }))
+vi.mock("@/hooks/purgeEdgeCache", () => ({ purgeEdgeCache }))
 
 import { revalidateInteractive, revalidateInteractiveDelete } from "../revalidateInteractive"
 
@@ -28,6 +30,7 @@ const PAGE_TAGS = [
 
 beforeEach(() => {
   revalidateTag.mockClear()
+  purgeEdgeCache.mockClear()
 })
 
 describe("revalidateInteractive", () => {
@@ -35,6 +38,7 @@ describe("revalidateInteractive", () => {
     const doc = { id: 1, slug: "courts", _status: "published" as const }
     expect(revalidateInteractive(change(doc))).toBe(doc)
     expect(revalidateTag.mock.calls).toEqual(PAGE_TAGS)
+    expect(purgeEdgeCache).toHaveBeenCalledWith(expect.anything(), "interactive courts")
   })
 
   it("leaves every cache alone for a draft of something never published", () => {

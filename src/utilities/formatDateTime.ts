@@ -1,4 +1,6 @@
-import { format, formatDistanceToNow } from "date-fns"
+// Per-function entry points: the package index loads all ~250 functions, ~1.4s in an
+// integration test file, which doesn't tree-shake.
+import { format } from "date-fns/format"
 
 export const formatDateTime = (timestamp: string): string => {
   const now = new Date()
@@ -19,15 +21,4 @@ export const formatDateTime = (timestamp: string): string => {
   // const SS = (seconds < 10) ? `0${seconds}` : seconds;
 
   return format(date, "MMMM d, yyyy")
-}
-
-/**
- * Relative phrasing — "3 hours ago" — as used on the collection tiles.
- *
- * Computed at render time, so on a statically generated page it is frozen at
- * the moment the page was built or revalidated. Pair it with an absolute date
- * (a tooltip or `title`) wherever the exact instant matters.
- */
-export const formatTimeAgo = (timestamp: string): string => {
-  return formatDistanceToNow(new Date(timestamp), { addSuffix: true })
 }

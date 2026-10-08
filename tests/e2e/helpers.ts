@@ -24,6 +24,33 @@ export async function expectPinnedDateline(page: Page): Promise<void> {
   await expect(stamps.nth(1)).toHaveText(SEEDED_REVISION)
 }
 
+/**
+ * Messages a page may log as errors without failing a smoke test. A failed
+ * network fetch (a third-party script the test sandbox can't reach, an image
+ * the seed never uploaded) is logged by the browser as
+ * "Failed to load resource" — it is not a JavaScript error in our code.
+ */
+const ALLOWED_CONSOLE_ERRORS: RegExp[] = [/^Failed to load resource\b/]
+
+/**
+ * Collect every console error and uncaught exception a page produces from now
+ * on. Call the returned function to read them; assert it is empty once the
+ * page has done its work.
+ */
+export function trackPageErrors(page: Page): () => string[] {
+  const errors: string[] = []
+  page.on("console", (message) => {
+    if (message.type() !== "error") return
+    const text = message.text()
+    if (ALLOWED_CONSOLE_ERRORS.some((pattern) => pattern.test(text))) return
+    errors.push(`console.error: ${text}`)
+  })
+  page.on("pageerror", (error) => {
+    errors.push(`uncaught: ${error.message}`)
+  })
+  return () => [...errors]
+}
+
 export async function gotoFirstArticle(page: Page): Promise<string | null> {
   await page.goto("/")
   const link = page.locator('a[href*="/articles/"]').first()

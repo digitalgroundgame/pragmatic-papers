@@ -14,6 +14,39 @@ const OPENNEXT_BUILD = process.env.OPENNEXT_BUILD === "true"
 // Read while building, so a Coolify build needs SERVER_URL as a build variable too.
 const SERVER_URL = new URL(process.env.SERVER_URL || "http://localhost:8000")
 
+// Paths the public-page Cache-Control rule in headers() leaves alone, as regexes matched
+// against the path after its leading slash.
+const NOT_EDGE_CACHED = [
+  // `/admin` and `/api` have their own no-store rules. When rules match the same path the
+  // last one wins, so without this a request without Payload's cookies got public caching.
+  // Upload files stay cached: with local storage (staging, previews) media and map assets
+  // are served from `/api/<collection>/file/...`, anyone can read them, and narration audio
+  // and video shouldn't re-download on every load. (Cloudflare's cache rule skips `/api`.)
+  "admin(?:/|$)",
+  "api(?:/(?!(?:media|map-assets)/file/)|$)",
+
+  // Route Handlers that set their own Cache-Control, because a config-level header always
+  // wins over one a Route Handler sets for the same key:
+  // - interactives' region, geometry and search JSON: an hour at the edge, and geometry,
+  //   which names its own content in the URL, is immutable for a year.
+  "interactives/[^/]+/(?:regions/|search$)",
+  // - the RSS and Substack feeds: 20 minutes.
+  "(?:articles|volumes)/feed\\.xml$",
+  "articles/(?:[^/]+/)?substack\\.xml$",
+  // - recommendations: no-store.
+  "recommended-articles\\.json$",
+
+  // The feed page (`/feed`, `/feed/...`) is rendered per request, its 404 follows a Site
+  // Settings switch that should apply on save, and a stale copy would call load-more's
+  // server action with an ID the current build no longer has.
+  "feed(?:/|$)",
+
+  // The image optimizer sets its own Cache-Control on each image it serves
+  // (images.minimumCacheTTL, or the upstream image's max-age) and none on an error, so under
+  // this rule Cloudflare kept the 400 for a missing media file for up to a day.
+  "_next/image$",
+]
+
 const nextConfig: NextConfig = {
   output: "standalone",
   // In a Worker, pg connects through pg-cloudflare, which Next's trace (run under Node)
@@ -39,7 +72,7 @@ const nextConfig: NextConfig = {
       {
         // Production's media, which generateFileURL (src/plugins/index.ts) points at
         // SUPABASE_URL's public bucket. Any Supabase project rather than SUPABASE_URL's own
-        // host, so the storage host isn't fixed when the image is built (#1090).
+        // host, so the storage host isn't fixed when the image is built.
         // start.sh refuses to start a deployed image whose SUPABASE_URL this doesn't match.
         protocol: "https",
         hostname: "*.supabase.co",
@@ -65,9 +98,12 @@ const nextConfig: NextConfig = {
       // an editor and a broken publish button today.
       //
       // There is no per-action override for this in Next — `bodySizeLimit` is one number
-      // for every Server Action in the app, so this also covers `getAuth.ts` and
-      // `SocialEmbed/hooks/revalidateSnapshot.ts`. Neither is publicly reachable, so the
-      // practical exposure is low; it is still wider than the one flow this was raised for.
+      // for every Server Action in the app, so this also covers the feed's `loadFeedBatch`
+      // (`src/app/feed/actions.ts`), which anyone can call, and
+      // `SocialEmbed/hooks/revalidateSnapshot.ts`, which only server code calls.
+      // `loadFeedBatch` takes a single number, yet a caller can now make Next read and parse up
+      // to 8 MB per request instead of 1 MB: low exposure, but wider than the one flow this was
+      // raised for.
       bodySizeLimit: "8mb",
     },
   },
@@ -84,6 +120,11 @@ const nextConfig: NextConfig = {
       permanent: false,
       source: "/:path((?!ie-incompatible.html$).*)", // all pages except the incompatibility page
     },
+    // The RSS feeds moved under the section they list, ending in `.xml` like
+    // every other feed and sitemap. Permanent, so feed readers that
+    // honour 301/308 update the URL they have stored.
+    { source: "/feed.articles", destination: "/articles/feed.xml", permanent: true },
+    { source: "/feed.volumes", destination: "/volumes/feed.xml", permanent: true },
     {
       source: "/iceout/:state*",
       destination: "https://iceout.org/en/location/report",
@@ -154,27 +195,8 @@ const nextConfig: NextConfig = {
         // stale-while-revalidate=86400 — CDN may serve stale for up to 24h while revalidating in the background.
         // Only applies when both Payload cookies are absent; logged-in editors and draft-preview
         // sessions bypass this rule and always hit the origin with fresh responses.
-        // The geometry route names its own content in the URL and sets its own (much longer,
-        // hash-conditional) Cache-Control — a config-level header always wins over one set in a
-        // Route Handler, so without this exclusion this blanket rule silently overwrote it,
-        // capping a year-long immutable cache down to 10 minutes.
-        // The feed (`/feed`, `/feed/...`; not the `/feed.articles` RSS) is left out too: it's
-        // rendered per request, its 404 follows a Site Settings switch that should apply on
-        // save, and a stale copy would call load-more's server action with an ID the current
-        // build no longer has.
-        // The image optimizer (`/_next/image`) is left out as well. It sets its own Cache-Control
-        // on each image it serves (images.minimumCacheTTL, or the upstream image's max-age), and
-        // Next's docs say to shape that through the upstream image, not /_next/image. It sets
-        // none on an error, so under this rule Cloudflare kept the 400 for a missing media file
-        // for up to a day (stale-while-revalidate=86400), long after the file came back.
-        // `/admin` and `/api` have their own no-store rules above. When rules match the same
-        // path the last one wins, so without this exclusion a request without Payload's
-        // cookies got this rule's public caching instead. Upload files stay under this rule:
-        // with local storage (staging, previews) media and map assets are served from
-        // `/api/<collection>/file/...`, anyone can read them, and narration audio and video
-        // shouldn't re-download on every load. (Cloudflare's cache rule skips `/api` anyway.)
-        source:
-          "/:path((?!admin(?:/|$)|api(?:/(?!(?:media|map-assets)/file/)|$)|interactives/[^/]+/regions/[^/]+/geometry/|feed(?:/|$)|_next/image$).*)",
+        // Every path except those in NOT_EDGE_CACHED, which says why each is left out.
+        source: `/:path((?!${NOT_EDGE_CACHED.join("|")}).*)`,
         headers: [
           {
             key: "Cache-Control",
@@ -221,7 +243,39 @@ const nextConfig: NextConfig = {
   },
 }
 
-const config = withSentryConfig(withPayload(nextConfig, { devBundleServerPackages: false }), {
+// The client-hint headers withPayload adds to every path. Payload's admin reads
+// Sec-CH-Prefers-Color-Scheme to render in the editor's light or dark theme, and asks for it
+// with Critical-CH, which makes Chrome retry a first visit's navigation to send the hint: a
+// whole extra round trip before the first byte (about 570 ms on Home under Lighthouse's
+// throttling). Only the admin panel reads it, so only the admin panel asks.
+const PAYLOAD_CLIENT_HINTS = ["Accept-CH", "Critical-CH", "Vary"]
+
+/** `config` with Payload's client-hint headers moved from every path to /admin. */
+function clientHintsOnlyForAdmin(config: NextConfig): NextConfig {
+  const { headers } = config
+  if (!headers) return config
+  return {
+    ...config,
+    headers: async () =>
+      (await headers()).flatMap((rule) => {
+        const isHint = (header: { key: string; value: string }): boolean =>
+          PAYLOAD_CLIENT_HINTS.includes(header.key) &&
+          header.value === "Sec-CH-Prefers-Color-Scheme"
+        if (rule.source !== "/:path*" || !rule.headers.some(isHint)) return [rule]
+        const others = rule.headers.filter((header) => !isHint(header))
+        return [
+          ...(others.length ? [{ ...rule, headers: others }] : []),
+          { ...rule, source: "/admin/:path*", headers: rule.headers.filter(isHint) },
+        ]
+      }),
+  }
+}
+
+const payloadConfig = clientHintsOnlyForAdmin(
+  withPayload(nextConfig, { devBundleServerPackages: false }),
+)
+
+const config = withSentryConfig(payloadConfig, {
   // For all available options, see:
   // https://www.npmjs.com/package/@sentry/webpack-plugin#options
 
@@ -229,13 +283,12 @@ const config = withSentryConfig(withPayload(nextConfig, { devBundleServerPackage
 
   project: "pragmatic-papers",
 
-  // Tags our bundled code with this key so `thirdPartyErrorFilterIntegration`
-  // (in src/instrumentation-client.ts) can tell our frames from third-party ones.
-  // Top-level `applicationKey` injects module metadata for both webpack and Turbopack.
-  applicationKey: "pragmatic-papers",
+  // No `applicationKey`: the module metadata it injects into every client module made each
+  // one slower to evaluate, about 200 ms of Lighthouse's Total Blocking Time on Home.
+  // src/sentryThirdPartyFrames.ts tells our frames from third-party ones by URL instead.
 
   // The build-time dependency instrumentation roughly doubles peak compile memory
-  // (~4.6 → ~8.5 GiB), more than the Coolify build server's 8 GB of RAM (#1018).
+  // (~4.6 → ~8.5 GiB), more than the Coolify build server's 8 GB of RAM.
   buildTimeInstrumentation: false,
 
   // Log wherever source maps are uploaded: builds with SENTRY_AUTH_TOKEN (Coolify
@@ -254,11 +307,8 @@ const config = withSentryConfig(withPayload(nextConfig, { devBundleServerPackage
     disable: process.env.BUILD_ENV === "preview",
   },
 
-  // Route browser requests to Sentry through a Next.js rewrite to circumvent ad-blockers.
-  // This can increase your server load as well as your hosting bill.
-  // Note: This needs to not conflict with our Next.js middleware/proxy.ts, otherwise reporting of client-
-  // side errors will fail.
-  tunnelRoute: "/monitoring",
+  // No `tunnelRoute`: the browser SDK reports through src/app/monitoring/route.ts instead,
+  // which says why.
 
   webpack: {
     // Tree-shaking options for reducing bundle size

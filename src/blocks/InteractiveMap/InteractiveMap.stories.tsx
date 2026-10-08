@@ -2,7 +2,11 @@ import type { Meta, StoryObj } from "@storybook/nextjs-vite"
 import { expect, screen, userEvent, within } from "storybook/test"
 
 import type { MapAsset } from "@/payload-types"
+import { FeedHTML } from "@/stories/FeedHTML"
+import { interactiveMapBlock, mapAsset } from "@/stories/fixtures/blocks"
+import { storyFeedContext } from "@/stories/fixtures/feedContext"
 
+import { interactiveMapToHTML } from "./converters"
 import { InteractiveMapBlock } from "./InteractiveMapBlock"
 
 // The seed's district maps, served from the static dir in .storybook/main.ts: an
@@ -14,38 +18,12 @@ async function loadSvgs(): Promise<{ svgs: Record<number, string> }> {
   return { svgs: { 119: svg119, 120: svg120 } }
 }
 
-function asset(id: number): MapAsset {
-  return {
-    id,
-    filename: `mo-districts-${id}.svg`,
-    mimeType: "image/svg+xml",
-    createdAt: "2026-01-15T12:00:00.000Z",
-    updatedAt: "2026-01-15T12:00:00.000Z",
-  }
-}
-
-const sources = [
-  {
-    link: {
-      type: "custom" as const,
-      url: "https://www.census.gov/",
-      label: "U.S. Census Bureau",
-      newTab: true,
-    },
-  },
-]
+const asset = mapAsset
 
 const meta = {
   title: "Blocks/InteractiveMap",
   component: InteractiveMapBlock,
-  args: {
-    blockType: "interactiveMap",
-    widgetTitle: "Missouri congressional districts",
-    layout: "row",
-    colorScale: "divergingRedBlue",
-    maps: [{ title: "119th Congress", svgAsset: asset(119), dataAttribute: "data-margin" }],
-    sources,
-  },
+  args: interactiveMapBlock,
   loaders: [loadSvgs],
   render: (args, { loaded }) => (
     <InteractiveMapBlock
@@ -68,7 +46,8 @@ type Story = StoryObj<typeof meta>
 
 export const SingleMap: Story = {
   play: async ({ canvasElement }) => {
-    const region = within(canvasElement).getByLabelText(/^MO District 1:/)
+    // The map loads lazily, so it arrives a moment after the story mounts.
+    const region = await within(canvasElement).findByLabelText(/^MO District 1:/)
     await userEvent.hover(region)
     await expect(await screen.findByRole("tooltip")).toHaveTextContent("MO District 1")
   },
@@ -106,4 +85,13 @@ export const WithOverrides: Story = {
 
 export const Biased: Story = {
   args: { colorBias: 8 },
+}
+
+/** The map in the feeds: a link back to the page, since no feed reader runs the map. */
+export const Feed: Story = {
+  render: (args) => <FeedHTML html={interactiveMapToHTML(args, storyFeedContext())} />,
+  play: async ({ canvasElement }) => {
+    const link = within(canvasElement).getByRole("link", { name: /View the interactive map/ })
+    await expect(link).toHaveAttribute("href", storyFeedContext().pageUrl)
+  },
 }

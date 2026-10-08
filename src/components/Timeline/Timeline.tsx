@@ -1,3 +1,4 @@
+import { formatTimelineDate } from "@/blocks/Timeline/converters"
 import { CMSLink } from "@/components/Link/CMSLink2"
 import { getLinkFieldUrl } from "@/utilities/getLinkFieldUrl"
 import { cn } from "@/utilities/utils"
@@ -17,7 +18,7 @@ const Citation: React.FC<Pick<TimelineEvent, "date" | "enableCitation" | "citati
     <CMSLink
       link={citation}
       className={cn(
-        "text-brand dark:text-brand-high-contrast hover:text-foreground ml-1 text-sm transition-colors",
+        "text-brand-text hover:text-foreground ml-1 text-sm underline underline-offset-2 transition-colors",
       )}
       aria-label={`Citation for ${date}`}
     />
@@ -46,12 +47,8 @@ const EventContent: React.FC<{
       <div className="size-16" />
     )}
     <div className={cn("w-full max-w-[240px]", isLeft ? "text-right" : "order-first")}>
-      <div className="text-brand dark:text-brand-high-contrast text-sm font-bold tracking-wide">
-        {new Date(event.date).toLocaleDateString(undefined, {
-          month: "long",
-          day: "numeric",
-          year: "numeric",
-        })}
+      <div className="text-brand-text font-serif text-sm font-bold tracking-wide">
+        {formatTimelineDate(event.date)}
       </div>
       {event.title && <div>{event.title}</div>}
       <p className={cn("text-muted-foreground text-sm text-pretty")}>
@@ -69,7 +66,7 @@ const EventContent: React.FC<{
 export const Timeline: React.FC<TimelineBaseProps> = ({ events, title, className }) => {
   return (
     <div className={cn("prose-p:my-0 prose-img:my-0 w-full", className)}>
-      {title && <h3>{title}</h3>}
+      {title && <h3 className="mb-4">{title}</h3>}
       <div className="relative space-y-12 border-t border-b py-6 md:space-y-6 lg:-mx-8 xl:-mx-16">
         <Separator
           orientation="vertical"
@@ -83,7 +80,7 @@ export const Timeline: React.FC<TimelineBaseProps> = ({ events, title, className
               <div
                 className={cn(
                   "absolute top-1 left-0 z-10 h-3 w-3 -translate-x-1/2 rounded-full md:left-1/2",
-                  isLeft ? "bg-brand dark:text-brand-high-contrast" : "bg-foreground",
+                  isLeft ? "bg-brand" : "bg-foreground",
                 )}
               />
             </TimelineEventReveal>

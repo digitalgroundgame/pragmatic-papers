@@ -17,6 +17,7 @@ import { regenerateBlurHandler } from "./endpoints/regenerateBlur"
 import { detachHandler } from "./endpoints/detach"
 import { referencesHandler } from "./endpoints/references"
 import { generateBlurDataUrl } from "./hooks/generateBlurDataUrl"
+import { grantPublicProfile } from "@/collections/Users/hooks/grantPublicProfile"
 
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
@@ -138,6 +139,18 @@ export const Media: CollectionConfig = {
         },
       ],
     },
+    // The s3Storage plugin stores each upload's object key here, but only injects the
+    // field when storage is enabled, which never happens locally (USE_LOCAL_STORAGE=true).
+    // Declaring it keeps the column in the schema in every environment so push and
+    // generated migrations stay in sync with prod.
+    {
+      name: "_objectKey",
+      type: "text",
+      admin: {
+        readOnly: true,
+        hidden: true,
+      },
+    },
   ],
   hooks: {
     beforeDelete: [protectPublishedMedia],
@@ -153,6 +166,7 @@ export const Media: CollectionConfig = {
       },
       generateBlurDataUrl,
     ],
+    afterChange: [grantPublicProfile<MediaType>((doc) => doc.narrator)],
   },
   upload: {
     // Upload to the public/media directory in Next.js making them publicly accessible even outside of Payload

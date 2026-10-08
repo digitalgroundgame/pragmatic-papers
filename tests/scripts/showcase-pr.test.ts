@@ -94,6 +94,17 @@ describe("withLinks", () => {
     },
   )
 
+  it("takes the place of the preview's link, which goes to the same site", () => {
+    const preview = "<!-- preview-link -->\n**Preview:** p\n<!-- /preview-link -->"
+    expect(withLinks(`Closes #1\n\n${preview}\n\nText\n\nShowcase: first`, [LINK])).toBe(
+      `Closes #1\n\n${block(LINK)}\n\nText`,
+    )
+    expect(withLinks(`${preview}\n\nShowcase: first\n`, [LINK])).toBe(`${block(LINK)}\n`)
+    expect(withLinks(`${block("first")}\n\n${preview}\n\nText`, [LINK])).toBe(
+      `${block(LINK)}\n\nText`,
+    )
+  })
+
   it("adds the line to a description that is only the line", () => {
     expect(withLinks("Showcase: first", [LINK])).toBe(`${block(LINK)}\n`)
     expect(withLinks("Closes #1\n\nShowcase: first", [LINK])).toBe(`Closes #1\n\n${block(LINK)}\n`)

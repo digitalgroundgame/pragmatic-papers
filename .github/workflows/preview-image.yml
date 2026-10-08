@@ -26,6 +26,8 @@ on:
 permissions:
   contents: read
   deployments: write
+  # Removes the preview's link from the PR's description.
+  pull-requests: write
 
 jobs:
   close:

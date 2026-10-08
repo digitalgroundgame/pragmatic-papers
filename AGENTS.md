@@ -277,10 +277,18 @@ function, and fails on any axe violation.
   `dev` at `pragmatic-papers-storybook.digital-ground-game.workers.dev`, and each PR at a
   `pr-<number>-` preview URL, which `scripts/storybook-pr.ts` records as a "Storybook Preview"
   GitHub Deployment (in the PR's deployments, beside the site's Preview). When the PR changes
-  components, it also links each one at the top of the PR description (under any showcase links),
+  components, it also links each one at the top of the PR description (under the preview or showcase links),
   matched through the build's `index.json` by story file, `component` file or folder. `/storybook` on staging and on a
   PR's site preview redirects to its Storybook (404 on production). Needs the `CLOUDFLARE_API_TOKEN`
   (Workers Scripts: Edit) and `CLOUDFLARE_ACCOUNT_ID` repo secrets; without them it skips.
+
+### PR description links
+
+Once a PR's preview is live, `scripts/preview-deployment.ts` links it at the top of
+the description (under any `Closes #N` lines) and removes the link when the PR closes.
+Showcase links take its place, since they go to the same site, and the Storybook
+links go under whichever is there. Each block sits between `<!-- name -->` markers
+its script rewrites in place; `.github/pull_request_template.md` lists them.
 
 ### Page speed
 

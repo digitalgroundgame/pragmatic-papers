@@ -15,7 +15,8 @@
  * `link` rewrites the block between LINKS_START and LINKS_END in the PR's
  * description: a link to each component the PR changes in the preview. It goes
  * under the showcase links when there are any (see scripts/showcase-pr.ts),
- * else at the top under any `Closes #N` lines, where reviewers see it first. A
+ * else under the site preview's link (scripts/preview-deployment.ts), else at
+ * the top under any `Closes #N` lines, where reviewers see it first. A
  * PR that changes no component gets no block, and loses one it had.
  *
  * A component is matched through the build's index.json: a changed file that
@@ -33,6 +34,8 @@ export const LINKS_START = "<!-- storybook-links -->"
 export const LINKS_END = "<!-- /storybook-links -->"
 /** scripts/showcase-pr.ts's closing marker; this block goes right after it. */
 export const SHOWCASE_LINKS_END = "<!-- /showcase-links -->"
+/** scripts/preview-deployment.ts's closing marker; with no showcase links, this block goes after it. */
+export const PREVIEW_LINK_END = "<!-- /preview-link -->"
 export const ENVIRONMENT = "Storybook Preview"
 
 /** More components than this are summarised as "and N more". */
@@ -115,8 +118,9 @@ export function linksBlock(previewUrl: string, components: Component[]): string 
 }
 
 /**
- * Replaces the block, or adds it under the showcase links, or at the top under
- * any `Closes #N` lines. With no block, removes the one there was.
+ * Replaces the block, or adds it under the showcase links, or under the preview
+ * link, or at the top under any `Closes #N` lines. With no block, removes the
+ * one there was.
  */
 export function withStorybookLinks(body: string, block: string | null): string {
   const match = LINKS_BLOCK.exec(body)
@@ -127,9 +131,11 @@ export function withStorybookLinks(body: string, block: string | null): string {
     return before && after ? `${before}\n\n${after}` : before || after
   }
   if (!block) return body
-  const showcaseEnd = body.indexOf(SHOWCASE_LINKS_END)
-  if (showcaseEnd >= 0) {
-    const cut = showcaseEnd + SHOWCASE_LINKS_END.length
+  const [above, end] = body.includes(SHOWCASE_LINKS_END)
+    ? [body.indexOf(SHOWCASE_LINKS_END), SHOWCASE_LINKS_END]
+    : [body.indexOf(PREVIEW_LINK_END), PREVIEW_LINK_END]
+  if (above >= 0) {
+    const cut = above + end.length
     const rest = body.slice(cut).trimStart()
     return `${body.slice(0, cut)}\n\n${block}${rest ? `\n\n${rest}` : "\n"}`
   }

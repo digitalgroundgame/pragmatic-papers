@@ -34,11 +34,28 @@
  * Either way the branch (not the commit SHA) is the Deployment's ref, which is what ties
  * it to the PR, and once a preview is live the PR's older preview Deployments are marked
  * inactive. Without the Coolify settings the script does nothing.
+ *
+ * Once a preview is live, `deploy` also links it at the very top of the PR's description
+ * (under any `Closes #N` lines), between LINK_START and LINK_END, so reviewers needn't
+ * scroll down to the Deployments box; `close` removes the link. Showcase links
+ * (scripts/showcase-pr.ts) go to the same site, so they replace it, and a description
+ * that has them gets none; the Storybook links (scripts/storybook-pr.ts) go under it. A
+ * failed edit is only a warning: the Deployment already links the preview. Edits made
+ * with the workflow's token start no workflow, so this can't loop.
  */
 import { pathToFileURL } from "node:url"
 
 export const ENVIRONMENT = "Preview"
 export const DEFAULT_PREVIEW_URL_TEMPLATE = "https://pr-{{pr_id}}.pragmaticpapers.com"
+
+export const LINK_START = "<!-- preview-link -->"
+export const LINK_END = "<!-- /preview-link -->"
+const LINK_BLOCK = new RegExp(`${LINK_START}[\\s\\S]*?${LINK_END}`)
+/** scripts/showcase-pr.ts's closing marker: its links to the preview stand in for this one. */
+export const SHOWCASE_LINKS_END = "<!-- /showcase-links -->"
+
+/** A line linking an issue the PR closes, such as `Closes #743`. */
+const CLOSING_LINE = /^\s*(close[sd]?|fix(e[sd])?|resolve[sd]?):?\s+([\w.-]+\/[\w.-]+)?#\d+/i
 
 export interface Config {
   repo: string
@@ -113,6 +130,37 @@ const COOLIFY_STATES: Record<string, { state: GithubState; description: string }
 /** The GitHub state for a Coolify status, or null for one it doesn't know. */
 export function toGithubState(status: string): { state: GithubState; description: string } | null {
   return COOLIFY_STATES[status] ?? null
+}
+
+/** The description's link to the live preview, naming the commit it runs. */
+export function previewLinkBlock(url: string, sha: string): string {
+  const host = new URL(url).host
+  return `${LINK_START}\n**Preview:** [${host}](${url}) at \`${sha.slice(0, 7)}\`\n${LINK_END}`
+}
+
+/**
+ * Replaces the link, or adds it at the top under any `Closes #N` lines. With no
+ * block, or showcase links in the description, removes the one there was.
+ */
+export function withPreviewLink(body: string, block: string | null): string {
+  if (body.includes(SHOWCASE_LINKS_END)) block = null
+  const match = LINK_BLOCK.exec(body)
+  if (match && block) return body.replace(LINK_BLOCK, () => block)
+  if (match) {
+    const before = body.slice(0, match.index).trimEnd()
+    const after = body.slice(match.index + match[0].length).trimStart()
+    return before && after ? `${before}\n\n${after}` : before || after
+  }
+  if (!block) return body
+  const lines = body.split("\n")
+  let top = 0
+  for (let i = 0; i < lines.length; i++) {
+    if (CLOSING_LINE.test(lines[i]!)) top = i + 1
+    else if (lines[i]!.trim()) break
+  }
+  const head = lines.slice(0, top).join("\n").trimEnd()
+  const rest = lines.slice(top).join("\n").trimStart()
+  return [head, block, rest].filter(Boolean).join("\n\n") + (rest ? "" : "\n")
 }
 
 export function isFinal(state: GithubState): boolean {
@@ -230,6 +278,8 @@ export interface GithubApi {
   setStatus: (id: number, status: Status) => Promise<unknown>
   listDeployments: () => Promise<{ id: number }[]>
   latestState: (id: number) => Promise<GithubState | undefined>
+  prBody: () => Promise<string>
+  setPrBody: (body: string) => Promise<unknown>
 }
 
 export function github(deps: Deps, config: Config): GithubApi {
@@ -273,6 +323,22 @@ export function github(deps: Deps, config: Config): GithubApi {
       )
       return statuses[0]?.state
     },
+    prBody: async () => (await call<{ body: string | null }>(`/pulls/${config.pr}`)).body ?? "",
+    setPrBody: (body) => call<unknown>(`/pulls/${config.pr}`, "PATCH", { body }),
+  }
+}
+
+/** Puts `block` in the PR's description (none removes it); a failure only warns. */
+export async function linkPreview(deps: Deps, config: Config, block: string | null): Promise<void> {
+  try {
+    const gh = github(deps, config)
+    const body = await gh.prBody()
+    const next = withPreviewLink(body, block)
+    if (next === body) return
+    await gh.setPrBody(next)
+    deps.log(block ? "Linked the preview in the PR's description." : "Removed the preview link.")
+  } catch (err) {
+    deps.log(`::warning::Couldn't update the PR's description: ${(err as Error).message}`)
   }
 }
 
@@ -434,6 +500,7 @@ export async function deploy(
       if (mapped.state === "success") {
         const n = await deactivate(deps, config, deployment.id)
         if (n) deps.log(`Marked ${n} older preview deployment(s) inactive.`)
+        await linkPreview(deps, config, previewLinkBlock(environmentUrl, config.headSha))
       }
       return
     }
@@ -488,6 +555,7 @@ export async function close(
   }
   const n = await deactivate(deps, config)
   deps.log(`Marked ${n} preview deployment(s) for PR #${config.pr} inactive.`)
+  await linkPreview(deps, config, null)
   if (!deletePreview) return
 
   // Coolify can accept the delete, or say it has no such preview, and leave the container

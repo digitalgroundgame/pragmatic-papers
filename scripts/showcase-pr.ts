@@ -113,10 +113,18 @@ export function optOut(body: string): string {
 const CLOSING_LINE = /^\s*(close[sd]?|fix(e[sd])?|resolve[sd]?):?\s+([\w.-]+\/[\w.-]+)?#\d+/i
 
 /**
- * Puts the block where LINKS_START stands, or else at the top, under any
- * `Closes #N` lines.
+ * scripts/preview-deployment.ts's link to the preview. The showcase links go to
+ * the same site, so they take its place rather than sit under it.
+ */
+const PREVIEW_LINK = /<!-- preview-link -->[\s\S]*?<!-- \/preview-link -->/
+
+/**
+ * Puts the block where LINKS_START stands, or else where the preview's link
+ * stands, or else at the top, under any `Closes #N` lines.
  */
 function placed(body: string, block: string, trailingNewline: boolean): string {
+  if (!body.includes(LINKS_START)) body = body.replace(PREVIEW_LINK, LINKS_START)
+  else body = body.replace(new RegExp(`${PREVIEW_LINK.source}\\s*`), "")
   if (body.includes(LINKS_START))
     return body.replace(LINKS_START, () => block).trimEnd() + (trailingNewline ? "\n" : "")
   const lines = body.split("\n")

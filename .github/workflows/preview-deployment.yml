@@ -38,6 +38,8 @@ concurrency:
 permissions:
   contents: read
   deployments: write
+  # Links the live preview at the top of the PR's description.
+  pull-requests: write
 
 jobs:
   report:

@@ -1,27 +1,54 @@
 // The public site as a Cloudflare Worker, built by OpenNext (`pnpm build:worker`;
 // src/cloudflare/README.md). Starts from node_modules/@opennextjs/cloudflare/templates/wrangler.jsonc.
+//
+// This is staging's Worker, on workers.dev, reading staging's database through Hyperdrive.
+// The deploy workflow (.github/workflows/worker.yml) passes SERVER_URL and ORIGIN_URL.
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "main": ".open-next/worker.js",
-  "name": "pragmatic-papers",
+  "main": "src/cloudflare/worker.mjs",
+  "name": "pragmatic-papers-staging",
   "compatibility_date": "2026-09-30",
   "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "workers_dev": true,
+  "observability": { "enabled": true },
   "assets": {
     "directory": ".open-next/assets",
     "binding": "ASSETS",
   },
+  "vars": {
+    "USE_LOCAL_STORAGE": "true",
+  },
   "services": [
     {
       "binding": "WORKER_SELF_REFERENCE",
-      "service": "pragmatic-papers",
+      "service": "pragmatic-papers-staging",
     },
   ],
   "r2_buckets": [
     {
       "binding": "NEXT_INC_CACHE_R2_BUCKET",
-      "bucket_name": "pragmatic-papers-opennext-cache",
+      "bucket_name": "pragmatic-papers-staging-cache",
     },
   ],
+  "d1_databases": [
+    {
+      "binding": "NEXT_TAG_CACHE_D1",
+      // No ID: the deploy workflow creates it by name if it's missing, and wrangler finds
+      // it by name.
+      "database_name": "pragmatic-papers-staging-tags",
+    },
+  ],
+  "hyperdrive": [
+    {
+      "binding": "HYPERDRIVE",
+      // TODO(setup): the Hyperdrive config's ID, from the Cloudflare dashboard.
+      "id": "00000000000000000000000000000000",
+    },
+  ],
+  "durable_objects": {
+    "bindings": [{ "name": "NEXT_CACHE_DO_QUEUE", "class_name": "DOQueueHandler" }],
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["DOQueueHandler"] }],
   "images": {
     "binding": "IMAGES",
   },

@@ -13,31 +13,70 @@ tracks turning `next/link` back on.
 Nothing here changes the Coolify build: everything Worker-specific is behind
 `OPENNEXT_BUILD=true`, which only `pnpm build:worker` sets.
 
+Today it runs as **staging's Worker**, `pragmatic-papers-staging` on workers.dev, reading
+staging's database through Hyperdrive, while staging itself keeps running on Coolify.
+`.github/workflows/worker.yml` deploys it on every push to `dev`.
+
+## Cloudflare setup (once)
+
+`wrangler.jsonc` declares the Worker and everything it binds. The deploy workflow creates
+the R2 bucket and D1 database by name if they're missing. The rest is set up by hand:
+
+1. **Tunnel to staging's Postgres**: in Zero Trust, Networks → Tunnels, create a tunnel
+   and run its `cloudflared` connector on dev-worker (a Coolify service on the same
+   network as staging's Postgres). Give it a public hostname with service type TCP,
+   pointing at the Postgres container's port 5432. Postgres gets no public port.
+2. **Hyperdrive**: create a config with "Connect to private database", using the tunnel's
+   hostname and Postgres's credentials. Cloudflare creates the Access application and
+   service token. Put the config's ID in `wrangler.jsonc`.
+3. **API token** with Workers Scripts, Workers R2 Storage, D1 and Hyperdrive, all Edit:
+   the repo secret `CLOUDFLARE_WORKERS_TOKEN`. `CLOUDFLARE_ACCOUNT_ID` is shared with the
+   Storybook deploy.
+4. **Repo secret** `STAGING_PAYLOAD_SECRET` (staging's `PAYLOAD_SECRET`), and **variables**
+   `WORKER_STAGING_URL` (the Worker's workers.dev URL) and `SHOWCASE_STAGING_URL`
+   (staging's Coolify URL, which the Worker sends `/admin` and `/api` to).
+
+Until all of them are set, the workflow skips itself.
+
+## Each deploy
+
+1. Builds against a throwaway, migrated Postgres (`pnpm build:worker`), so nothing reaches
+   staging's database while building.
+2. `opennextjs-cloudflare deploy` uploads the prerendered pages to R2, creates D1's table,
+   and runs `wrangler deploy` with `SERVER_URL`, `ORIGIN_URL` and `PAYLOAD_SECRET`.
+3. `POST /next/revalidate-all` throws away the build's pages (it built from an empty
+   database), so each renders from staging's data on its next request.
+
 ## Build and run it locally
 
 ```sh
-# A database with the schema, seeded (e.g. pnpm dev:db-seed), then:
-DATABASE_URI=… PAYLOAD_SECRET=… SERVER_URL=http://localhost:8787 USE_LOCAL_STORAGE=true pnpm build:worker
-pnpm start:worker --var DATABASE_URI:… --var PAYLOAD_SECRET:… --var SERVER_URL:http://localhost:8787 --var USE_LOCAL_STORAGE:true
+# A database with the schema, seeded (e.g. pnpm dev:db-seed). The Worker reaches it as
+# its Hyperdrive binding, so wrangler needs it under this name too.
+export DATABASE_URI=… CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_HYPERDRIVE=…
+PAYLOAD_SECRET=… SERVER_URL=http://localhost:8787 USE_LOCAL_STORAGE=true pnpm build:worker
+pnpm exec opennextjs-cloudflare populateCache local   # the build's pages into local R2, and D1's table
+pnpm start:worker --var PAYLOAD_SECRET:… --var SERVER_URL:http://localhost:8787 --var ORIGIN_URL:<a Coolify URL>
 pnpm exec wrangler deploy --dry-run --outdir .wrangler/dry-run   # gzipped size; uploads nothing
 ```
 
 The build takes several minutes and prerenders against the database, like `pnpm build`.
-`wrangler dev` simulates R2 locally, so `x-nextjs-cache: HIT` on a second request to an
-article shows the cache working. `scripts/bench-cache.sh <origin> <path>` times full
-pages and navigations against any deployment.
+`wrangler dev` simulates R2, D1 and Durable Objects locally. Without `ORIGIN_URL`,
+`/admin`, `/api` and media 404.
+`scripts/bench-cache.sh <origin> <path>` times full pages and navigations against any
+deployment.
 
-## How the build works
+## How it works
 
-| Piece                                          | Why                                                                                                                                                                        |
-| ---------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `scripts/build-worker.mjs`                     | Builds with webpack (Turbopack copies the Payload config into every route group: 2.4×, ~20 MiB) and without `src/app/(payload)`, which it moves aside and puts back        |
-| `withCloudflare.ts`                            | The Next config for the Worker: stubs, `pg` handling and traces, applied by `next.config.ts` when `OPENNEXT_BUILD=true`. Unit-tested in `__tests__/`                       |
-| `stubs/unavailable.ts`                         | Stands in for `drizzle-kit/api`, `sharp` and `@google-analytics/data` (~17 MB with its gRPC stack), which only Coolify's code paths call. Calling one in the Worker throws |
-| `sharp.ts`                                     | Payload's `sharp`, imported from here because Next keeps `sharp` external however it's aliased; the Worker build swaps this module instead                                 |
-| `pg` external, `pg-cloudflare` traced          | Bundled by webpack, `pg` would get `pg-cloudflare`'s empty Node build. Left external, OpenNext's esbuild bundles it with the `workerd` condition                           |
-| `maxUses: 1` in `payload.config.ts`            | A Worker can't reuse a socket opened during another request; without it every request after the first hangs. Applies only when running in a Worker                         |
-| `open-next.config.ts`, `wrangler.jsonc` (root) | OpenNext's R2 incremental cache, the `IMAGES` binding and the Worker's self-reference, from the package's templates                                                        |
+| Piece                                 | Why                                                                                                                                                                                                                            |
+| ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `scripts/build-worker.mjs`            | Builds with webpack (Turbopack copies the Payload config into every route group: 2.4×, ~20 MiB) and without `src/app/(payload)`, which it moves aside and puts back                                                            |
+| `withCloudflare.ts`                   | The Next config for the Worker: stubs, `pg` handling and traces, applied by `next.config.ts` when `OPENNEXT_BUILD=true`. Unit-tested in `__tests__/`                                                                           |
+| `worker.mjs`, `origin.ts`             | The Worker's entry: OpenNext's handler, behind one that sends `/admin`, `/api` and the admin's `/_next/static` files to `ORIGIN_URL`, reads media for next/image from there too, and points Payload at Hyperdrive. Unit-tested |
+| `open-next.config.ts`                 | OpenNext's caches: pages in R2 keyed by route, a Durable Object queue that re-renders pages past their `revalidate` time, and D1 for `revalidatePath` / `revalidateTag`                                                        |
+| `stubs/unavailable.ts`                | Stands in for `drizzle-kit/api`, `sharp` and `@google-analytics/data` (~17 MB with its gRPC stack), which only Coolify's code paths call. Calling one in the Worker throws                                                     |
+| `sharp.ts`                            | Payload's `sharp`, imported from here because Next keeps `sharp` external however it's aliased; the Worker build swaps this module instead                                                                                     |
+| `pg` external, `pg-cloudflare` traced | Bundled by webpack, `pg` would get `pg-cloudflare`'s empty Node build. Left external, OpenNext's esbuild bundles it with the `workerd` condition                                                                               |
+| `maxUses: 1` in `payload.config.ts`   | A Worker can't reuse a socket opened during another request; without it every request after the first hangs. Applies only when running in a Worker                                                                             |
 
 ## Measured
 
@@ -54,17 +93,15 @@ pages and navigations against any deployment.
 - **Today, through Cloudflare's zone cache**: a navigation that misses waits ~500 ms on
   Coolify; a full page from Cloudflare's cache ~65 ms.
 
-## Before it can serve real traffic
+## Before it can serve production
 
-- **Hyperdrive** for the database connection, and real latency and cold-start CPU,
-  measured on a deployment.
-- **Routing**: `/admin`, `/api`, `/media` and `/map-assets` to Coolify,
-  everything else to the Worker.
-- **Revalidation**: Coolify's `revalidate*` hooks have to clear the Worker's R2 cache
-  too, not just Next's cache on Coolify and Cloudflare's edge.
-- **Images** through the `IMAGES` binding, and media URLs.
+- **Edits reaching the Worker**: Coolify's `revalidate*` hooks clear Next's cache on
+  Coolify and Cloudflare's edge, not the Worker's. Until they also call the Worker's
+  `/next/revalidate-all`, an edit to an article or volume shows on the Worker when its
+  `revalidate` time (an hour) passes or the next deploy. Dynamic pages are always current.
+- **Real latency and cold-start CPU**, measured on the staging Worker.
+- **A custom domain**, and the zone's cache rules for it (`cloudflare/rulesets/`).
 - **Skew protection** (`skewProtection` in `open-next.config.ts`, experimental): sends a
   tab opened before a deploy to the version that built its page, which also avoids
   Next's "router state header could not be parsed" error on stale tabs.
-- **Deploys**: a workflow that builds and uploads the Worker, with a Cloudflare token
-  for Workers, R2 and Hyperdrive.
+- **Production**: a second Worker (a wrangler environment) on production's database.

@@ -352,6 +352,11 @@ The site is hosted by Coolify in three applications: **staging** (from `dev`) an
 image GitHub Actions builds from `dockerfiles/PragmaticPapers.ci.Dockerfile`. `dockerfiles/README.md` records how _our_
 applications are set up and what's been verified about them; read it first.
 
+Staging's public site also runs as a Cloudflare Worker on workers.dev (OpenNext, reading
+staging's database through Hyperdrive), deployed on every push to `dev` by
+`.github/workflows/worker.yml`; setup and what's left before production are in
+`src/cloudflare/README.md`.
+
 The zone's Cloudflare rules (Cache Rules today) are version-controlled in
 `cloudflare/rulesets/` and applied on release by `.github/workflows/cloudflare-rules.yml`;
 change them there, not in the dashboard (`cloudflare/README.md`).

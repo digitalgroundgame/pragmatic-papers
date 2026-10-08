@@ -175,8 +175,10 @@ jobs:
     if: ${{ !cancelled() && (needs.changes.outputs.preview == 'image' && needs.image.result == 'success' || needs.changes.outputs.preview == 'coolify') }}
     runs-on: ubuntu-latest
     # scripts/preview-deployment.ts waits on Coolify, first boot included
-    # (copying staging).
-    timeout-minutes: 45
+    # (copying staging): up to 10 min for the fallback's build to be queued,
+    # then 45 for the build, so its own timeout marks the Deployment failed
+    # before the runner's does.
+    timeout-minutes: 60
     permissions:
       contents: read
       deployments: write

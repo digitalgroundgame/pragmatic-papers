@@ -28,8 +28,16 @@ on:
   pull_request_target:
     types: [opened, reopened, edited, labeled, unlabeled, ready_for_review]
 
+# Only the showcase sync is serialized, since it edits the description. GitHub
+# keeps one pending run per group and cancels it for the next, so every other
+# event gets a group of its own: a label added while a sync runs can't drop
+# another label's run.
 concurrency:
-  group: pr-events-${{ github.event.pull_request.number }}
+  group: >-
+    pr-events-${{ github.event.pull_request.number }}-${{
+      (github.event.action == 'opened' ||
+       github.event.action == 'edited' && github.event.changes.body ||
+       github.event.label.name == 'showcase') && 'showcase' || github.run_id }}
   cancel-in-progress: false
 
 jobs:

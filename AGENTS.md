@@ -289,11 +289,15 @@ CI keeps the top of a PR's description up to date, under any `Closes #N` lines:
 the showcase links (`scripts/showcase-pr.ts`), then one line of links, then the
 Storybook links (`scripts/storybook-pr.ts`). The line holds the live preview,
 the PR analytics comment ("Coverage") and the screenshot and visual regression
-comments; each job sets its own link with `setPrLink`
-(`scripts/preview-deployment.ts`), and the Preview link is left out while
-showcase links point at the same site. Each block sits between `<!-- name -->`
-markers its script rewrites in place. `.github/pull_request_template.md` lists
-them above Context, Screenshots and Test Plan.
+comments; each job sets its own link with `setPrLink`, and the Preview link is
+left out while showcase links point at the same site. Each block sits between
+`<!-- name -->` markers, and every job edits the description through
+`scripts/pr-description.ts`: `withBlock` places a block, and `editPrBody`
+reads the description back after writing and writes again when another job's
+edit replaced it (GitHub has no conditional write). A script run under plain
+Node imports it as `./pr-description.ts`, and its workflow's sparse checkout
+lists it. `.github/pull_request_template.md` lists the blocks above Context,
+Screenshots and Test Plan.
 
 ### Page speed
 

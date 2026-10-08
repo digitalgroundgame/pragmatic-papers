@@ -3,13 +3,13 @@ import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync } from "
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
-import { setPrLink } from "../../scripts/preview-deployment"
-import type * as PreviewDeployment from "../../scripts/preview-deployment"
+import { setPrLink } from "../../scripts/pr-description"
+import type * as PrDescription from "../../scripts/pr-description"
 import type * as SnapshotComment from "../../scripts/snapshot-comment"
 
 vi.mock("node:child_process", () => ({ execFileSync: vi.fn() }))
-vi.mock("../../scripts/preview-deployment", async (importOriginal) => ({
-  ...(await importOriginal<typeof PreviewDeployment>()),
+vi.mock("../../scripts/pr-description", async (importOriginal) => ({
+  ...(await importOriginal<typeof PrDescription>()),
   setPrLink: vi.fn(),
 }))
 vi.mock("node:fs", () => ({

@@ -15,7 +15,7 @@
 // The comment is linked as "Coverage" on the links line at the top of the PR's
 // description (setPrLink in scripts/preview-deployment.ts).
 
-import { commentLink, setPrLink } from "./preview-deployment"
+import { commentLink, setPrLink } from "./pr-description"
 
 /**
  * Every report in the PR analytics comment, top to bottom. `replaces` lists the

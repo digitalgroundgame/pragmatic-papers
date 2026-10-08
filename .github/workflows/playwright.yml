@@ -156,7 +156,9 @@ jobs:
     steps:
       - uses: actions/checkout@v7
         with:
-          sparse-checkout: scripts/preview-deployment.ts
+          sparse-checkout: |
+            scripts/preview-deployment.ts
+            scripts/pr-description.ts
           sparse-checkout-cone-mode: false
 
       # Node 24 runs the TypeScript script directly; no install needed.

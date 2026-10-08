@@ -293,7 +293,10 @@ function harness({
           labels: labels.map((name) => ({ name })),
           head: { sha: SHA, ref: "feat/demo", repo: headRepo && { full_name: headRepo } },
         })
-      if (path === "/pulls/42" && method === "PATCH") return json({})
+      if (path === "/pulls/42" && method === "PATCH") {
+        body = (data as { body: string }).body
+        return json({ body })
+      }
       if (path === "/issues/42/labels" && method === "POST") return json([])
       if (path === "/issues/42/labels/showcase" && method === "DELETE")
         return new Response(null, { status: 204 })
@@ -318,6 +321,7 @@ function harness({
     writeFile: (path, content) => {
       written[path] = content
     },
+    sleep: async () => undefined,
   }
 
   const edits = () => calls.filter((c) => c.method === "PATCH").map((c) => c.body?.body)

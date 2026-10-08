@@ -14,11 +14,9 @@
  *
  * `link` rewrites the block between LINKS_START and LINKS_END in the PR's
  * description: a link to each component the PR changes in the preview. It goes
- * under the links line (preview, coverage, screenshots: see
- * scripts/preview-deployment.ts), else under the showcase links (see
- * scripts/showcase-pr.ts), else at the top under any `Closes #N` lines, where
- * reviewers see it first. A
- * PR that changes no component gets no block, and loses one it had.
+ * under the showcase links and the links line, else at the top (see
+ * scripts/pr-description.ts), where reviewers see it first. A PR that changes no
+ * component gets no block, and loses one it had.
  *
  * A component is matched through the build's index.json: a changed file that
  * is a story file or a story's `component`, else the stories nearest above it
@@ -31,29 +29,16 @@
 import { appendFileSync, readFileSync } from "node:fs"
 import { pathToFileURL } from "node:url"
 
-export const LINKS_START = "<!-- storybook-links -->"
-export const LINKS_END = "<!-- /storybook-links -->"
-/** scripts/showcase-pr.ts's closing marker; this block goes right after it. */
-export const SHOWCASE_LINKS_END = "<!-- /showcase-links -->"
-/** scripts/preview-deployment.ts's links line, under the showcase links; this block goes right after it. */
-export const PR_LINKS_END = "<!-- /pr-links -->"
+import { blockEnd, blockStart, editPrBody, renderBlock, withBlock } from "./pr-description.ts"
+
+export const LINKS_START = blockStart("storybook-links")
+export const LINKS_END = blockEnd("storybook-links")
 export const ENVIRONMENT = "Storybook Preview"
 
 /** More components than this are summarised as "and N more". */
 export const MAX_COMPONENTS = 20
 /** A folder with more stories than this is too broad to match a file by folder alone. */
 export const MAX_STORIES_PER_FOLDER = 3
-
-const LINKS_BLOCK = new RegExp(`${LINKS_START}[\\s\\S]*?${LINKS_END}`)
-
-/**
- * A line linking an issue the PR closes, such as `Closes #743`, or the template's
- * `Closes #` left unfilled, so links go under it rather than above it.
- */
-const CLOSING_LINE = /^\s*(close[sd]?|fix(e[sd])?|resolve[sd]?):?\s+([\w.-]+\/[\w.-]+)?#(\d+|\s*$)/i
-
-/** Writes of the description before giving up on other jobs' concurrent edits. */
-const LINK_ATTEMPTS = 3
 
 /** Changed files that never render a component on their own. */
 const IGNORED = /(^|\/)__tests__\/|\.test\.tsx?$|^src\/migrations\/|^src\/payload-types\.ts$/
@@ -121,40 +106,12 @@ export function linksBlock(previewUrl: string, components: Component[]): string 
     lines.push(`- [${title}](${base}/?path=/${type}/${id})`)
   const more = components.length - MAX_COMPONENTS
   if (more > 0) lines.push(`- …and ${more} more`)
-  return `${LINKS_START}\n${lines.join("\n")}\n${LINKS_END}`
+  return renderBlock("storybook-links", lines.join("\n"))
 }
 
-/**
- * Replaces the block, or adds it under the links line, or under the showcase
- * links, or at the top under any `Closes #N` lines. With no block, removes the
- * one there was.
- */
+/** Replaces the block, or adds it (see scripts/pr-description.ts); null removes it. */
 export function withStorybookLinks(body: string, block: string | null): string {
-  const match = LINKS_BLOCK.exec(body)
-  if (match && block) return body.replace(LINKS_BLOCK, () => block)
-  if (match) {
-    const before = body.slice(0, match.index).trimEnd()
-    const after = body.slice(match.index + match[0].length).trimStart()
-    return before && after ? `${before}\n\n${after}` : before || after
-  }
-  if (!block) return body
-  const [above, end] = body.includes(PR_LINKS_END)
-    ? [body.indexOf(PR_LINKS_END), PR_LINKS_END]
-    : [body.indexOf(SHOWCASE_LINKS_END), SHOWCASE_LINKS_END]
-  if (above >= 0) {
-    const cut = above + end.length
-    const rest = body.slice(cut).trimStart()
-    return `${body.slice(0, cut)}\n\n${block}${rest ? `\n\n${rest}` : "\n"}`
-  }
-  const lines = body.split("\n")
-  let top = 0
-  for (let i = 0; i < lines.length; i++) {
-    if (CLOSING_LINE.test(lines[i]!)) top = i + 1
-    else if (lines[i]!.trim()) break
-  }
-  const head = lines.slice(0, top).join("\n").trimEnd()
-  const rest = lines.slice(top).join("\n").trimStart()
-  return [head, block, rest].filter(Boolean).join("\n\n") + (rest ? "" : "\n")
+  return withBlock(body, "storybook-links", block)
 }
 
 /** The workflow's env; not NodeJS.ProcessEnv, which the app's typings narrow. */
@@ -196,9 +153,7 @@ function github(deps: Deps, repo: string, token: string) {
     return (await res.json()) as T
   }
   return {
-    pull: (pr: number) => json<{ body: string | null; head: { ref: string } }>(`/pulls/${pr}`),
-    setBody: (pr: number, body: string) =>
-      json(`/pulls/${pr}`, { method: "PATCH", body: { body } }),
+    pull: (pr: number) => json<{ head: { ref: string } }>(`/pulls/${pr}`),
     /** The files the PR adds or changes (GitHub lists at most 3,000). */
     files: async (pr: number) => {
       const files: string[] = []
@@ -273,21 +228,20 @@ async function link(env: Env, deps: Deps): Promise<void> {
   }
   const components = changedComponents(await gh.files(pr), Object.values(index.entries))
   const block = linksBlock(required(env, "PREVIEW_URL"), components)
-  // Other jobs edit the description too (scripts/preview-deployment.ts's links line,
-  // scripts/showcase-pr.ts), and GitHub has no conditional write: read last, then
-  // read back after writing and try again if another job's write replaced ours.
-  let body = (await gh.pull(pr)).body ?? ""
-  for (let attempt = 1; withStorybookLinks(body, block) !== body; attempt++) {
-    if (attempt > LINK_ATTEMPTS) {
-      deps.log("::warning::Other jobs kept rewriting the PR's description; no Storybook links.")
-      return
-    }
-    await gh.setBody(pr, withStorybookLinks(body, block))
-    // Long enough for another job's read-then-write to land, staggered so two jobs
-    // that collided don't collide again.
-    await deps.sleep(2000 + Math.random() * 3000)
-    body = (await gh.pull(pr)).body ?? ""
+  const target = {
+    repo: required(env, "GITHUB_REPOSITORY"),
+    prNumber: pr,
+    token: required(env, "GITHUB_TOKEN"),
   }
+  if (
+    (await editPrBody(
+      target,
+      (body) => withStorybookLinks(body, block),
+      "Storybook links",
+      deps,
+    )) === null
+  )
+    return
   deps.log(`Linked ${components.length} changed component(s) in the description.`)
   if (block) deps.summary(block.split("\n").slice(1, -1).join("\n"))
 }

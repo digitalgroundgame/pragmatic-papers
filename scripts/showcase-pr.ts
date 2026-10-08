@@ -29,11 +29,13 @@
 import { appendFileSync, readFileSync, writeFileSync } from "node:fs"
 import { pathToFileURL } from "node:url"
 
+import { atTop, blockEnd, blockStart, editPrBody, withPrLink } from "./pr-description.ts"
+
 export const LABEL = "showcase"
 export const CATALOG = "src/endpoints/seed/showcase.ts"
 export const ENVIRONMENT = "Preview"
-export const LINKS_START = "<!-- showcase-links -->"
-export const LINKS_END = "<!-- /showcase-links -->"
+export const LINKS_START = blockStart("showcase-links")
+export const LINKS_END = blockEnd("showcase-links")
 
 /** A `Showcase:` line, as scripts/showcase.ts reads it (slugsFromDescription). */
 export const SHOWCASE_LINE = /^[\s>*_-]*showcase\s*:[*_\s]*(.*)$/im
@@ -110,47 +112,14 @@ export function optOut(body: string): string {
 }
 
 /**
- * A line linking an issue the PR closes, such as `Closes #743`, or the template's
- * `Closes #` left unfilled, so links go under it rather than above it.
- */
-const CLOSING_LINE = /^\s*(close[sd]?|fix(e[sd])?|resolve[sd]?):?\s+([\w.-]+\/[\w.-]+)?#(\d+|\s*$)/i
-
-/**
- * The links line scripts/preview-deployment.ts keeps under these links. Its Preview
- * link goes to the same site as the showcase links, so it's dropped here.
- */
-const PR_LINKS = /<!-- pr-links -->\n?([\s\S]*?)\n?<!-- \/pr-links -->/
-
-function withoutPreviewLink(body: string): string {
-  const match = PR_LINKS.exec(body)
-  if (!match) return body
-  const rest = match[1]!.split(" · ").filter((item) => !item.trim().startsWith("[Preview]("))
-  if (rest.length > 0)
-    return body.replace(
-      PR_LINKS,
-      () => `<!-- pr-links -->\n${rest.join(" · ")}\n<!-- /pr-links -->`,
-    )
-  const before = body.slice(0, match.index).trimEnd()
-  const after = body.slice(match.index + match[0].length).trimStart()
-  return before && after ? `${before}\n\n${after}` : before || after
-}
-
-/**
  * Puts the block where LINKS_START stands, or else at the top, under any
  * `Closes #N` lines.
  */
 function placed(body: string, block: string, trailingNewline: boolean): string {
   if (body.includes(LINKS_START))
     return body.replace(LINKS_START, () => block).trimEnd() + (trailingNewline ? "\n" : "")
-  const lines = body.split("\n")
-  let top = 0
-  for (let i = 0; i < lines.length; i++) {
-    if (CLOSING_LINE.test(lines[i]!)) top = i + 1
-    else if (lines[i]!.trim()) break
-  }
-  const head = lines.slice(0, top).join("\n").trimEnd()
-  const tail = lines.slice(top).join("\n").trim()
-  return [head, block, tail].filter(Boolean).join("\n\n") + (!tail || trailingNewline ? "\n" : "")
+  const out = atTop(body.trimEnd(), block)
+  return trailingNewline && !out.endsWith("\n") ? `${out}\n` : out
 }
 
 /**
@@ -187,7 +156,8 @@ export function withLinks(body: string, links: string[]): string {
   const block = `${LINKS_START}\nShowcase: ${mergeLinks(line, links).join(", ")}\n${LINKS_END}`
   // Out of the block, which carries the line from here on.
   const cleaned = LINKS_BLOCK.test(body) ? body.replace(LINKS_BLOCK, () => LINKS_START) : body
-  const rest = withoutShowcaseLines(withoutPreviewLink(cleaned))
+  // The links line's Preview link goes to the same site as these.
+  const rest = withoutShowcaseLines(withPrLink(cleaned, "Preview", null))
   return placed(rest, block, /\n$/.test(body))
 }
 
@@ -281,6 +251,7 @@ export interface Deps {
   summary: (markdown: string) => void
   readFile: (path: string) => string
   writeFile: (path: string, content: string) => void
+  sleep: (ms: number) => Promise<void>
 }
 
 interface Pull {
@@ -446,16 +417,19 @@ async function link(env: Env, deps: Deps): Promise<void> {
     .readFile(required(env, "LINKS_FILE"))
     .split("\n")
     .filter((line) => line.trim())
-  // Read fresh, so an edit made during the push survives.
-  const pull = await gh.pull(pr)
-  const body = pull.body ?? ""
-  const next = (isLegacyLinks(links) ? withLegacyLinks : withLinks)(body, links)
-  if (next !== body) {
-    await gh.setBody(pr, next)
-    deps.log(`Listed ${links.length} article(s) in the description.`)
+  const target = {
+    repo: required(env, "GITHUB_REPOSITORY"),
+    prNumber: pr,
+    token: required(env, "GITHUB_TOKEN"),
   }
+  const edit = (body: string): string =>
+    (isLegacyLinks(links) ? withLegacyLinks : withLinks)(body, links)
+  const next = await editPrBody(target, edit, "showcase links", deps)
+  if (next === null) return
+  deps.log(`Listed ${links.length} article(s) in the description.`)
   // A manual push to a PR without the line adds it, so the label follows, as
   // sync would; this edit starts no workflow to do it.
+  const pull = await gh.pull(pr)
   if (hasShowcaseLine(next) && !pull.labels.some((label) => label.name === LABEL)) {
     await gh.addLabel(pr)
     deps.log(`Added the ${LABEL} label.`)
@@ -490,5 +464,6 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
     summary: (markdown) => append(process.env.GITHUB_STEP_SUMMARY, `${markdown}\n`),
     readFile: (path) => readFileSync(path, "utf8"),
     writeFile: (path, content) => writeFileSync(path, content),
+    sleep: (ms) => new Promise((done) => setTimeout(done, ms)),
   })
 }

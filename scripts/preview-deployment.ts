@@ -35,37 +35,17 @@
  * it to the PR, and once a preview is live the PR's older preview Deployments are marked
  * inactive. Without the Coolify settings the script does nothing.
  *
- * Once a preview is live, `deploy` also links it on a line at the top of the PR's
- * description (under any `Closes #N` lines), between LINKS_START and LINKS_END, so
- * reviewers needn't scroll down to the Deployments box; `close` removes it. Other CI
- * jobs add their own links to the same line with setPrLink: the analytics comment
- * (scripts/pr-report.ts) and the screenshot comments (scripts/pr-screenshot-comment.ts).
- * Each writer replaces only its own link, in LINK_LABELS order. Showcase links
- * (scripts/showcase-pr.ts) go above the line and to the same site, so the line drops
- * its Preview link while they're there; the Storybook links (scripts/storybook-pr.ts)
- * go under it. A failed edit is only a warning. Edits made with the workflow's token
- * start no workflow, so this can't loop.
+ * Once a preview is live, `deploy` also sets the Preview link on the links line at
+ * the top of the PR's description, so reviewers needn't scroll down to the
+ * Deployments box; `close` removes it. The line and the other blocks CI keeps
+ * there are described in scripts/pr-description.ts. A failed edit is only a warning.
  */
 import { pathToFileURL } from "node:url"
 
+import { type PrTarget, setPrLink } from "./pr-description.ts"
+
 export const ENVIRONMENT = "Preview"
 export const DEFAULT_PREVIEW_URL_TEMPLATE = "https://pr-{{pr_id}}.pragmaticpapers.com"
-
-export const LINKS_START = "<!-- pr-links -->"
-export const LINKS_END = "<!-- /pr-links -->"
-const LINKS_BLOCK = new RegExp(`${LINKS_START}\\n?([\\s\\S]*?)\\n?${LINKS_END}`)
-/** scripts/showcase-pr.ts's closing marker: the line goes under its links. */
-export const SHOWCASE_LINKS_END = "<!-- /showcase-links -->"
-/** The line's links, left to right. Each starts `[Label](`. */
-export const LINK_LABELS = ["Preview", "Coverage", "Screenshots", "Visual regressions"] as const
-export type LinkLabel = (typeof LINK_LABELS)[number]
-const SEPARATOR = " · "
-
-/**
- * A line linking an issue the PR closes, such as `Closes #743`, or the template's
- * `Closes #` left unfilled, so links go under it rather than above it.
- */
-const CLOSING_LINE = /^\s*(close[sd]?|fix(e[sd])?|resolve[sd]?):?\s+([\w.-]+\/[\w.-]+)?#(\d+|\s*$)/i
 
 export interface Config {
   repo: string
@@ -145,53 +125,6 @@ export function toGithubState(status: string): { state: GithubState; description
 /** The line's link to the live preview, naming the commit it runs. */
 export function previewLink(url: string, sha: string): string {
   return `[Preview](${url}) at \`${sha.slice(0, 7)}\``
-}
-
-/** A link to a comment on the PR. */
-export function commentLink(label: LinkLabel, repo: string, pr: number, id: number): string {
-  return `[${label}](https://github.com/${repo}/pull/${pr}#issuecomment-${id})`
-}
-
-/**
- * Sets the line's `label` link (null removes it), keeping the others. The line goes
- * under any showcase links, else at the top under any `Closes #N` lines; it loses
- * its Preview link while there are showcase links, and goes when it has no links.
- */
-export function withPrLink(body: string, label: LinkLabel, link: string | null): string {
-  const match = LINKS_BLOCK.exec(body)
-  const links = new Map<string, string>()
-  for (const item of match?.[1]!.split(SEPARATOR) ?? []) {
-    const name = /^\[([^\]]+)\]\(/.exec(item.trim())?.[1]
-    if (name) links.set(name, item.trim())
-  }
-  if (link) links.set(label, link)
-  else links.delete(label)
-  if (body.includes(SHOWCASE_LINKS_END)) links.delete("Preview")
-  const items = LINK_LABELS.flatMap((name) => links.get(name) ?? [])
-  const block = items.length ? `${LINKS_START}\n${items.join(SEPARATOR)}\n${LINKS_END}` : null
-
-  if (match && block) return body.replace(LINKS_BLOCK, () => block)
-  if (match) {
-    const before = body.slice(0, match.index).trimEnd()
-    const after = body.slice(match.index + match[0].length).trimStart()
-    return before && after ? `${before}\n\n${after}` : before || after
-  }
-  if (!block) return body
-  const showcaseEnd = body.indexOf(SHOWCASE_LINKS_END)
-  if (showcaseEnd >= 0) {
-    const cut = showcaseEnd + SHOWCASE_LINKS_END.length
-    const rest = body.slice(cut).trimStart()
-    return `${body.slice(0, cut)}\n\n${block}${rest ? `\n\n${rest}` : "\n"}`
-  }
-  const lines = body.split("\n")
-  let top = 0
-  for (let i = 0; i < lines.length; i++) {
-    if (CLOSING_LINE.test(lines[i]!)) top = i + 1
-    else if (lines[i]!.trim()) break
-  }
-  const head = lines.slice(0, top).join("\n").trimEnd()
-  const rest = lines.slice(top).join("\n").trimStart()
-  return [head, block, rest].filter(Boolean).join("\n\n") + (rest ? "" : "\n")
 }
 
 export function isFinal(state: GithubState): boolean {
@@ -367,56 +300,6 @@ const prTarget = (config: Config): PrTarget => ({
   prNumber: config.pr,
   token: config.githubToken,
 })
-
-export interface PrTarget {
-  repo: string
-  prNumber: number
-  token: string
-}
-
-/** Writes per attempt before giving up on a description other jobs keep rewriting. */
-const LINK_ATTEMPTS = 3
-
-/**
- * Sets the `label` link on the PR description's links line (null removes it). Other
- * jobs edit the description too, and GitHub has no conditional write, so after
- * writing it waits, reads it back and writes again if another job's edit replaced
- * this one. A failure only warns: every link is a convenience.
- */
-export async function setPrLink(
-  { repo, prNumber, token }: PrTarget,
-  label: LinkLabel,
-  link: string | null,
-  deps: Pick<Deps, "fetch" | "log" | "sleep"> = defaultDeps,
-): Promise<void> {
-  const url = `https://api.github.com/repos/${repo}/pulls/${prNumber}`
-  const read = async () =>
-    (await request<{ body: string | null }>(deps, url, { token, github: true })).body ?? ""
-  try {
-    let body = await read()
-    for (let attempt = 1; attempt <= LINK_ATTEMPTS; attempt++) {
-      const next = withPrLink(body, label, link)
-      if (next === body) return
-      await request<unknown>(deps, url, {
-        method: "PATCH",
-        body: JSON.stringify({ body: next }),
-        token,
-        github: true,
-      })
-      // Long enough for another job's read-then-write to land, staggered so two
-      // jobs that collided don't collide again.
-      await deps.sleep(2000 + Math.random() * 3000)
-      body = await read()
-      if (withPrLink(body, label, link) === body) {
-        deps.log(`${link ? "Set" : "Removed"} the ${label} link in the PR's description.`)
-        return
-      }
-    }
-    deps.log(`::warning::Other jobs kept rewriting the PR's description; no ${label} link.`)
-  } catch (err) {
-    deps.log(`::warning::Couldn't set the ${label} link: ${(err as Error).message}`)
-  }
-}
 
 export interface CoolifyApi {
   listDeployments: () => Promise<CoolifyDeployment[]>

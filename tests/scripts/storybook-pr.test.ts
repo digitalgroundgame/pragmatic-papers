@@ -10,10 +10,11 @@ import {
   linksBlock,
   main,
   MAX_COMPONENTS,
-  PR_LINKS_END,
-  SHOWCASE_LINKS_END,
   withStorybookLinks,
 } from "../../scripts/storybook-pr"
+
+const SHOWCASE_LINKS_END = "<!-- /showcase-links -->"
+const PR_LINKS_END = "<!-- /pr-links -->"
 
 const URL = "https://pr-42-pragmatic-papers-storybook.example.workers.dev"
 
@@ -306,7 +307,7 @@ describe("main", () => {
     expect(await main(["link"], ENV, deps)).toBe(0)
     expect(calls.filter((call) => call.method === "PATCH")).toHaveLength(3)
     expect(logs).toContain(
-      "::warning::Other jobs kept rewriting the PR's description; no Storybook links.",
+      "::warning::Other jobs kept rewriting the PR's description; Storybook links not updated.",
     )
   })
 

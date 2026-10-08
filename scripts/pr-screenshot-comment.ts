@@ -25,7 +25,7 @@ import {
 import { tmpdir } from "node:os"
 import { basename, join } from "node:path"
 
-import { commentLink, setPrLink } from "./preview-deployment"
+import { commentLink, setPrLink } from "./pr-description"
 import { buildCommentBody, readStdin } from "./snapshot-comment"
 
 function run(

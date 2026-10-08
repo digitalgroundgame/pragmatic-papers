@@ -323,6 +323,7 @@ jobs:
           sparse-checkout: |
             .storybook/
             scripts/storybook-pr.ts
+            scripts/pr-description.ts
           sparse-checkout-cone-mode: false
 
       - uses: actions/download-artifact@v8

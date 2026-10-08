@@ -43,10 +43,15 @@ exports[`ArticleHero > matches snapshot 1`] = `
         data-testid="narration-player"
       />
       <div
-        data-testid="share-buttons"
-        data-title="Test Article"
-        data-url="https://example.com/articles/test-article"
-      />
+        class="flex items-center gap-1"
+        data-slot="article-actions"
+      >
+        <div
+          data-testid="share-buttons"
+          data-title="Test Article"
+          data-url="https://example.com/articles/test-article"
+        />
+      </div>
     </div>
   </div>
   <div

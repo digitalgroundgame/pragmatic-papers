@@ -60,7 +60,7 @@ import { ReindexButton as ReindexButton_aead06e4cbf6b2620c5c51c9ab283634 } from 
 import { RunNowField as RunNowField_a9d86fb0496ebd76a3dd880c805864b5 } from '@/globals/ArticleRecommendations/components/RunNowField'
 import { PaperIconAdmin as PaperIconAdmin_de5f3b464da8d97ce80441fdb9ee9751 } from '@/components/Logo/icons/PaperIcon'
 import { LogomarkIcon as LogomarkIcon_715cf00332be8c15b8f2b121ec0215b0 } from '@/components/Logo/icons/LogomarkIcon'
-import { HelpDocsBell as HelpDocsBell_fad175e68e0411d36e066153fb77f8b6 } from '@/plugins/helpDocs/HelpDocsBell'
+import { NotificationsBell as NotificationsBell_f3c70f24075a4653f65298cbdfcfc38f } from '@/plugins/notifications/NotificationsBell'
 import { default as default_1a7510af427896d367a49dbf838d2de6 } from '@/components/BeforeDashboard'
 import { default as default_8a7ab0eb7ab5c511aba12e68480bfe5e } from '@/components/BeforeLogin'
 import { MathJaxProviderRoot as MathJaxProviderRoot_5e6ec76a4009b641df710b8874095c4b } from '@/providers/MathJaxProvider'
@@ -133,7 +133,7 @@ export const importMap = {
   "@/globals/ArticleRecommendations/components/RunNowField#RunNowField": RunNowField_a9d86fb0496ebd76a3dd880c805864b5,
   "@/components/Logo/icons/PaperIcon#PaperIconAdmin": PaperIconAdmin_de5f3b464da8d97ce80441fdb9ee9751,
   "@/components/Logo/icons/LogomarkIcon#LogomarkIcon": LogomarkIcon_715cf00332be8c15b8f2b121ec0215b0,
-  "@/plugins/helpDocs/HelpDocsBell#HelpDocsBell": HelpDocsBell_fad175e68e0411d36e066153fb77f8b6,
+  "@/plugins/notifications/NotificationsBell#NotificationsBell": NotificationsBell_f3c70f24075a4653f65298cbdfcfc38f,
   "@/components/BeforeDashboard#default": default_1a7510af427896d367a49dbf838d2de6,
   "@/components/BeforeLogin#default": default_8a7ab0eb7ab5c511aba12e68480bfe5e,
   "@/providers/MathJaxProvider#MathJaxProviderRoot": MathJaxProviderRoot_5e6ec76a4009b641df710b8874095c4b,

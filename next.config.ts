@@ -1,6 +1,5 @@
 import { withSentryConfig } from "@sentry/nextjs/config"
 import { withPayload } from "@payloadcms/next/withPayload"
-import createMDX from "@next/mdx"
 import type { NextConfig } from "next"
 import path from "path"
 import { fileURLToPath } from "url"
@@ -46,6 +45,10 @@ const NOT_EDGE_CACHED = [
 
 const nextConfig: NextConfig = {
   output: "standalone",
+  // The docs plugin reads src/docs/ when the site starts (syncDocs), which no import traces.
+  outputFileTracingIncludes: {
+    "/**": ["./src/docs/**/*"],
+  },
   // Temporarily required on Windows until Next.js fixes Turbopack Sass resolution.
   // See: https://github.com/vercel/next.js/issues/86431
   sassOptions: {
@@ -252,12 +255,8 @@ function clientHintsOnlyForAdmin(config: NextConfig): NextConfig {
   }
 }
 
-// The help articles at /docs are Markdown files in src/docs/, imported by their page. Only
-// `.md`: Storybook reads every `.mdx` under src/ as a docs page of its own.
-const withMDX = createMDX({ extension: /\.md$/ })
-
 const payloadConfig = clientHintsOnlyForAdmin(
-  withPayload(withMDX(nextConfig), { devBundleServerPackages: false }),
+  withPayload(nextConfig, { devBundleServerPackages: false }),
 )
 
 export default withSentryConfig(payloadConfig, {

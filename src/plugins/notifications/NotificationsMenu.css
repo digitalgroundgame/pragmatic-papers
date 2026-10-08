@@ -1,6 +1,6 @@
 /* Admin panel styles: Payload's theme variables, not Tailwind (the admin doesn't load it). */
 
-.help-docs-menu__bell {
+.notifications-menu__bell {
   position: relative;
   display: flex;
   align-items: center;
@@ -15,16 +15,16 @@
   cursor: pointer;
 }
 
-.help-docs-menu__bell:hover {
+.notifications-menu__bell:hover {
   background: var(--theme-elevation-100);
 }
 
-.help-docs-menu__bell:focus-visible {
+.notifications-menu__bell:focus-visible {
   outline: 2px solid var(--theme-text);
   outline-offset: 2px;
 }
 
-.help-docs-menu__badge {
+.notifications-menu__badge {
   position: absolute;
   top: -2px;
   right: -4px;
@@ -41,7 +41,7 @@
   text-align: center;
 }
 
-.help-docs-menu__panel {
+.notifications-menu__panel {
   /* A popover is centred in the viewport by default; this one hangs from the bell. */
   position: fixed;
   inset: auto;
@@ -60,7 +60,7 @@
   text-align: left;
 }
 
-.help-docs-menu__header {
+.notifications-menu__header {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -69,14 +69,14 @@
   border-bottom: 1px solid var(--theme-elevation-100);
 }
 
-.help-docs-menu__heading {
+.notifications-menu__heading {
   margin: 0;
   font-size: 14px;
   font-weight: 600;
   line-height: 1.4;
 }
 
-.help-docs-menu__text-button {
+.notifications-menu__text-button {
   padding: 0;
   border: 0;
   background: none;
@@ -87,13 +87,13 @@
   cursor: pointer;
 }
 
-.help-docs-menu__list {
+.notifications-menu__list {
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
-.help-docs-menu__item {
+.notifications-menu__item {
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -103,12 +103,12 @@
   text-decoration: none;
 }
 
-.help-docs-menu__item:hover,
-.help-docs-menu__item:focus-visible {
+.notifications-menu__item:hover,
+.notifications-menu__item:focus-visible {
   background: var(--theme-elevation-50);
 }
 
-.help-docs-menu__title {
+.notifications-menu__title {
   display: flex;
   align-items: baseline;
   gap: 8px;
@@ -117,7 +117,7 @@
   line-height: 1.4;
 }
 
-.help-docs-menu__dot {
+.notifications-menu__dot {
   flex-shrink: 0;
   width: 8px;
   height: 8px;
@@ -125,17 +125,17 @@
   background: #b3261e;
 }
 
-.help-docs-menu__summary {
+.notifications-menu__summary {
   font-size: 13px;
   line-height: 1.4;
 }
 
-.help-docs-menu__date {
+.notifications-menu__date {
   color: var(--theme-elevation-650);
   font-size: 12px;
 }
 
-.help-docs-menu__footer {
+.notifications-menu__footer {
   display: block;
   padding: 12px 16px;
   color: inherit;
@@ -143,11 +143,61 @@
   text-align: center;
 }
 
-.help-docs-menu__sr-only {
+.notifications-menu__sr-only {
   position: absolute;
   width: 1px;
   height: 1px;
   overflow: hidden;
   clip-path: inset(50%);
   white-space: nowrap;
+}
+
+.notifications-menu__actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.notifications-menu__icon-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+}
+
+.notifications-menu__icon-button:hover,
+.notifications-menu__icon-button[aria-pressed="true"] {
+  background: var(--theme-elevation-100);
+}
+
+.notifications-menu__setting {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--theme-elevation-100);
+  cursor: pointer;
+}
+
+.notifications-menu__setting > span {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.notifications-menu__setting input {
+  margin-top: 3px;
+}
+
+.notifications-menu__empty {
+  margin: 0;
+  padding: 16px;
+  font-size: 13px;
 }

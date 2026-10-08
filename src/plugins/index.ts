@@ -1,5 +1,7 @@
 import { revalidateRedirects } from "@/hooks/revalidateRedirects"
-import { helpDocsPlugin } from "@/plugins/helpDocs"
+import { docsPlugin } from "@/plugins/docs"
+import { docsNotifications } from "@/plugins/docs/notifications"
+import { notificationsPlugin } from "@/plugins/notifications"
 import type { Article, Interactive, Page, Topic, Volume } from "@/payload-types"
 import { collectionPrefixMap } from "@/utilities/generatePreviewPath"
 import { getServerSideURL } from "@/utilities/getURL"
@@ -338,5 +340,6 @@ export const plugins: Plugin[] = [
     },
     clientUploads: true,
   }),
-  helpDocsPlugin(),
+  docsPlugin(),
+  notificationsPlugin({ sources: [docsNotifications()] }),
 ]

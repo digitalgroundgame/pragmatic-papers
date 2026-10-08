@@ -48,6 +48,8 @@ import { BlurDataURLField as BlurDataURLField_3bf98f0d72a9b7fcf13045923bb48189 }
 import { NarratorField as NarratorField_ac420e631edc2776947f590c2e50edcc } from '@/collections/Media/components/NarratorField'
 import { DurationField as DurationField_eac2b3e17fa524aff4add76374d4c8eb } from '@/collections/Media/components/DurationField'
 import { ReferencesView as ReferencesView_c329fcebdf040acacbee1d48915ea93f } from '@/collections/Media/components/ReferencesView'
+import { UnsplashIdField as UnsplashIdField_a670a6c67f969b542abb2f6080e4c37c } from '@/collections/Media/components/Unsplash/UnsplashIdField'
+import { UnsplashControl as UnsplashControl_37484b8563f5c930e248b1c5321bcd0f } from '@/collections/Media/components/Unsplash'
 import { RowLabel as RowLabel_b9b9938cf466765c7ed61773d838e057 } from '@/fields/menu/RowLabel'
 import { ProductTitleCell as ProductTitleCell_8dff8d8bb04003b09cb89f916f5bb9bc } from '@/collections/Merch/components/ProductTitleCell'
 import { ProductThumbnailCell as ProductThumbnailCell_c79e04f7b9e53b2f3afaedb264d44732 } from '@/collections/Merch/components/ProductThumbnailCell'
@@ -119,6 +121,8 @@ export const importMap = {
   "@/collections/Media/components/NarratorField#NarratorField": NarratorField_ac420e631edc2776947f590c2e50edcc,
   "@/collections/Media/components/DurationField#DurationField": DurationField_eac2b3e17fa524aff4add76374d4c8eb,
   "@/collections/Media/components/ReferencesView#ReferencesView": ReferencesView_c329fcebdf040acacbee1d48915ea93f,
+  "@/collections/Media/components/Unsplash/UnsplashIdField#UnsplashIdField": UnsplashIdField_a670a6c67f969b542abb2f6080e4c37c,
+  "@/collections/Media/components/Unsplash#UnsplashControl": UnsplashControl_37484b8563f5c930e248b1c5321bcd0f,
   "@/fields/menu/RowLabel#RowLabel": RowLabel_b9b9938cf466765c7ed61773d838e057,
   "@/collections/Merch/components/ProductTitleCell#ProductTitleCell": ProductTitleCell_8dff8d8bb04003b09cb89f916f5bb9bc,
   "@/collections/Merch/components/ProductThumbnailCell#ProductThumbnailCell": ProductThumbnailCell_c79e04f7b9e53b2f3afaedb264d44732,

@@ -46,7 +46,9 @@ jobs:
       - name: Run Claude code review
         uses: anthropics/claude-code-action@v1
         with:
-          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY_CODE_REVIEW }}
+          # A Claude subscription token from `claude setup-token`, so reviews
+          # count against that plan rather than an API key's credits.
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           prompt: "/code-review --comment ${{ github.repository }}/pull/${{ github.event.pull_request.number }} --head ${{ github.event.pull_request.head.sha }}"
           claude_args: |
             --model opus

@@ -6918,6 +6918,12 @@
           "primaryKey": false,
           "notNull": false
         },
+        "unsplash_id": {
+          "name": "unsplash_id",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
         "_objectkey": {
           "name": "_objectkey",
           "type": "varchar",
@@ -15994,140 +16000,12 @@
           "notNull": false,
           "default": false
         },
-        "experiments_ticker": {
-          "name": "experiments_ticker",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": false,
-          "default": false
-        },
         "experiments_table_of_contents": {
           "name": "experiments_table_of_contents",
           "type": "boolean",
           "primaryKey": false,
           "notNull": false,
           "default": true
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "timestamp(3) with time zone",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp(3) with time zone",
-          "primaryKey": false,
-          "notNull": false
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {},
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.integrations_youtube_channels": {
-      "name": "integrations_youtube_channels",
-      "schema": "",
-      "columns": {
-        "_order": {
-          "name": "_order",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "_parent_id": {
-          "name": "_parent_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "id": {
-          "name": "id",
-          "type": "varchar",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "channel_id": {
-          "name": "channel_id",
-          "type": "varchar",
-          "primaryKey": false,
-          "notNull": true
-        }
-      },
-      "indexes": {
-        "integrations_youtube_channels_order_idx": {
-          "name": "integrations_youtube_channels_order_idx",
-          "columns": [
-            {
-              "expression": "_order",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "integrations_youtube_channels_parent_id_idx": {
-          "name": "integrations_youtube_channels_parent_id_idx",
-          "columns": [
-            {
-              "expression": "_parent_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "integrations_youtube_channels_parent_id_fk": {
-          "name": "integrations_youtube_channels_parent_id_fk",
-          "tableFrom": "integrations_youtube_channels",
-          "tableTo": "integrations",
-          "columnsFrom": ["_parent_id"],
-          "columnsTo": ["id"],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.integrations": {
-      "name": "integrations",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "serial",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "bluesky_handle": {
-          "name": "bluesky_handle",
-          "type": "varchar",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "x_username": {
-          "name": "x_username",
-          "type": "varchar",
-          "primaryKey": false,
-          "notNull": false
         },
         "updated_at": {
           "name": "updated_at",
@@ -16604,6 +16482,6 @@
     "tables": {},
     "columns": {}
   },
-  "id": "43b11c2f-d57f-4437-b229-0126ca9d1446",
+  "id": "165a7c4f-d270-4abd-b5f1-54c3c52df04e",
   "prevId": "00000000-0000-0000-0000-000000000000"
 }

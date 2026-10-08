@@ -17,6 +17,8 @@ import { regenerateBlurHandler } from "./endpoints/regenerateBlur"
 import { detachHandler } from "./endpoints/detach"
 import { referencesHandler } from "./endpoints/references"
 import { generateBlurDataUrl } from "./hooks/generateBlurDataUrl"
+import { attributeUnsplashPhoto } from "./hooks/attributeUnsplashPhoto"
+import { unsplashFileHandler, unsplashSearchHandler } from "./endpoints/unsplash"
 import { grantPublicProfile } from "@/collections/Users/hooks/grantPublicProfile"
 
 const filename = fileURLToPath(import.meta.url)
@@ -25,6 +27,16 @@ const dirname = path.dirname(filename)
 export const Media: CollectionConfig = {
   slug: "media",
   endpoints: [
+    {
+      path: "/unsplash/search",
+      method: "get",
+      handler: unsplashSearchHandler,
+    },
+    {
+      path: "/unsplash/:photoId/file",
+      method: "get",
+      handler: unsplashFileHandler,
+    },
     {
       path: "/:id/regenerate-blur",
       method: "post",
@@ -143,6 +155,18 @@ export const Media: CollectionConfig = {
     // field when storage is enabled, which never happens locally (USE_LOCAL_STORAGE=true).
     // Declaring it keeps the column in the schema in every environment so push and
     // generated migrations stay in sync with prod.
+    // Set by the upload controls' "Search Unsplash" when the file came from Unsplash;
+    // `attributeUnsplashPhoto` credits the photographer from it. The component renders
+    // nothing: it clears the id when that file is swapped for another.
+    {
+      name: "unsplashId",
+      type: "text",
+      admin: {
+        components: {
+          Field: "@/collections/Media/components/Unsplash/UnsplashIdField#UnsplashIdField",
+        },
+      },
+    },
     {
       name: "_objectKey",
       type: "text",
@@ -165,10 +189,17 @@ export const Media: CollectionConfig = {
         }
       },
       generateBlurDataUrl,
+      attributeUnsplashPhoto,
     ],
     afterChange: [grantPublicProfile<MediaType>((doc) => doc.narrator)],
   },
   upload: {
+    admin: {
+      components: {
+        // "Search Unsplash" beside "Paste URL"; renders nothing when Unsplash isn't set up.
+        controls: ["@/collections/Media/components/Unsplash#UnsplashControl"],
+      },
+    },
     // Upload to the public/media directory in Next.js making them publicly accessible even outside of Payload
     staticDir: path.resolve(dirname, "../../../public/media"),
     adminThumbnail: ({ doc }: { doc: Partial<MediaType> }) => doc.sizes?.thumbnail?.url || "",

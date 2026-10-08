@@ -5,6 +5,7 @@ import { shopifyStore } from "./shopify"
 import { xAccount } from "./x"
 import { youtubeChannels } from "./youtube"
 import { integrationStatus, type Integration, type IntegrationStatus } from "./types"
+import { unsplashApp } from "./unsplash"
 
 /**
  * Every outside connection this site has, declared in one place.
@@ -75,6 +76,20 @@ export const xPosts = xAccount({
   tokenEnv: "X_BEARER_TOKEN",
 })
 
+/**
+ * Unsplash — the photo library editors can search from Media's upload controls and save
+ * into Media (`collections/Media/components/Unsplash`). The key is the application's Access
+ * Key; `UNSPLASH_APP_NAME` is its name on unsplash.com/oauth/applications, used for the
+ * referral parameters Unsplash's guidelines ask every link back to carry.
+ */
+export const unsplash = unsplashApp({
+  id: "unsplash",
+  label: "Unsplash photo search",
+  keyEnv: "UNSPLASH_ACCESS_KEY",
+  appNameEnv: "UNSPLASH_APP_NAME",
+  defaultAppName: "pragmatic_papers_development",
+})
+
 /** Declaration order is display order. */
 export const INTEGRATIONS: readonly Integration[] = [
   courtTracker,
@@ -83,6 +98,7 @@ export const INTEGRATIONS: readonly Integration[] = [
   youtubeLive,
   blueskyPosts,
   xPosts,
+  unsplash,
 ]
 
 export function getIntegration(id: string): Integration | null {

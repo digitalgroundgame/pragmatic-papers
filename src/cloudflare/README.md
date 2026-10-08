@@ -26,11 +26,15 @@ the R2 bucket and D1 database by name if they're missing. The rest is set up by 
    database, turn on **SSL** (mode `require`) on its General page, and start it again.
 1. **Tunnel to staging's Postgres**: in Zero Trust, Networks → Tunnels, create a tunnel
    and run its `cloudflared` connector on dev-worker (a Coolify service on the same
-   network as staging's Postgres). Give it a public hostname with service type TCP,
-   pointing at the Postgres container's port 5432. Postgres gets no public port.
+   network as staging's Postgres). Coolify's Cloudflared template runs it on the host
+   network, where container names don't resolve (`lookup <id>: server misbehaving`):
+   delete `network_mode: host` from its compose and turn on **Connect to Predefined
+   Network**. Give the tunnel a public hostname with service type TCP, pointing at the
+   Postgres container's port 5432 (the host in Coolify's internal Postgres URL).
+   Postgres gets no public port.
 2. **Hyperdrive**: create a config with "Connect to private database", using the tunnel's
    hostname and Postgres's credentials. Cloudflare creates the Access application and
-   service token. Put the config's ID in `wrangler.jsonc`.
+   service token. Its ID is in `wrangler.jsonc`.
 3. **API token** with Workers Scripts, Workers R2 Storage, D1 and Hyperdrive, all Edit:
    the repo secret `CLOUDFLARE_WORKERS_TOKEN`. `CLOUDFLARE_ACCOUNT_ID` is shared with the
    Storybook deploy.

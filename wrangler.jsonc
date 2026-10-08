@@ -41,8 +41,8 @@
   "hyperdrive": [
     {
       "binding": "HYPERDRIVE",
-      // TODO(setup): the Hyperdrive config's ID, from the Cloudflare dashboard.
-      "id": "00000000000000000000000000000000",
+      // pragmatic-papers-staging: staging's Postgres through the dev-worker tunnel.
+      "id": "e9c93f410862461e8cb49911e75d0307",
     },
   ],
   "durable_objects": {

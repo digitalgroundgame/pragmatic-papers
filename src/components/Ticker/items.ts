@@ -1,5 +1,5 @@
 /**
- * What the home page ticker shows, in shapes that don't care which service each item came
+ * What the ticker shows, in shapes that don't care which service each item came
  * from. Pure, so the view and its stories never touch a connection.
  */
 

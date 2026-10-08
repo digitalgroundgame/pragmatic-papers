@@ -2,6 +2,7 @@ import { LazyModeToggle } from "@/components/ModeToggleAnalytics.lazy"
 import { MegaMenu } from "@/components/MegaMenu"
 import { Menu } from "@/components/Menu"
 import { SocialLinks } from "@/components/SocialLinks"
+import { Ticker } from "@/components/Ticker"
 import { LinkButton } from "@/components/ui/link-button"
 import { isExperimentEnabled } from "@/globals/SiteSettings/isExperimentEnabled"
 import { HeaderLogo } from "@/Header/chrome"
@@ -63,6 +64,8 @@ export async function Header(): Promise<React.JSX.Element> {
         </div>
       </header>
       <MegaMenu menu={navItems} label="Main" />
+      {/* Outside the sticky header, so it scrolls away with the page. */}
+      <Ticker />
     </>
   )
 }

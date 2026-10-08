@@ -44,7 +44,7 @@ export const cloudflareCache = cloudflareZone({
 })
 
 /**
- * Our YouTube channels, which the home page ticker watches for a live or upcoming broadcast.
+ * Our YouTube channels, which the ticker watches for a live or upcoming broadcast.
  * A plain Data API key from any Google Cloud project with "YouTube Data API v3" enabled; it
  * reads public data only.
  */
@@ -55,7 +55,7 @@ export const youtubeLive = youtubeChannels({
   keyEnv: "YOUTUBE_API_KEY",
 })
 
-/** The Pragmatic Papers Bluesky account, whose posts run in the home page ticker. */
+/** The Pragmatic Papers Bluesky account, whose posts run in the ticker. */
 export const blueskyPosts = blueskyAccount({
   id: "bluesky-posts",
   label: "Bluesky posts",
@@ -64,7 +64,7 @@ export const blueskyPosts = blueskyAccount({
 })
 
 /**
- * The Pragmatic Papers X account, whose posts run in the home page ticker. Reading posts
+ * The Pragmatic Papers X account, whose posts run in the ticker. Reading posts
  * needs a paid X API plan or pay-per-use credits on the app behind the token.
  */
 export const xPosts = xAccount({

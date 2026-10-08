@@ -94,7 +94,7 @@ const TIMEOUT_MS = 3000
 
 /**
  * A source's items, or `fallback` when it isn't configured, is slow or fails. The ticker is
- * never worth an error page, and a source that's down shouldn't hold the home page up.
+ * never worth an error page, and a source that's down shouldn't hold a page up.
  */
 export async function loadSource<T>(
   source: TickerSource<T>,

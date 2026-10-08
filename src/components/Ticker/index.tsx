@@ -4,7 +4,7 @@ import { getTickerFeed } from "./getTickerFeed"
 import { TickerView } from "./TickerView"
 
 /**
- * The home page ticker, when the `ticker` experiment is on. Renders nothing when it's off, or
+ * The ticker, when the `ticker` experiment is on. Renders nothing when it's off, or
  * when no source has anything to show.
  */
 export async function Ticker(): Promise<React.ReactNode> {

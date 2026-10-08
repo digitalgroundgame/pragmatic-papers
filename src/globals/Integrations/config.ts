@@ -42,7 +42,7 @@ export const Integrations: GlobalConfig = {
       type: "group",
       admin: {
         description:
-          "Shown in the home page ticker while one is live or about to be. When two are live at once, the first listed wins.",
+          "Shown in the ticker while one is live or about to be. When two are live at once, the first listed wins.",
       },
       fields: [
         {
@@ -77,7 +77,7 @@ export const Integrations: GlobalConfig = {
       name: "bluesky",
       label: "Bluesky posts",
       type: "group",
-      admin: { description: "Whose posts run in the home page ticker." },
+      admin: { description: "Whose posts run in the ticker." },
       fields: [
         {
           name: "handle",
@@ -93,7 +93,7 @@ export const Integrations: GlobalConfig = {
       name: "x",
       label: "X posts",
       type: "group",
-      admin: { description: "Whose posts run in the home page ticker." },
+      admin: { description: "Whose posts run in the ticker." },
       fields: [
         {
           name: "username",

@@ -2597,7 +2597,7 @@ export interface SiteSetting {
      */
     interactives?: boolean | null;
     /**
-     * The strip under the header on the home page: a broadcast when one of our YouTube channels is live, and our latest posts from Bluesky and X.
+     * The strip under the header on every page: a broadcast when one of our YouTube channels is live, and our latest posts from Bluesky and X.
      */
     ticker?: boolean | null;
     /**
@@ -2617,7 +2617,7 @@ export interface SiteSetting {
 export interface IntegrationSettings {
   id: number;
   /**
-   * Shown in the home page ticker while one is live or about to be. When two are live at once, the first listed wins.
+   * Shown in the ticker while one is live or about to be. When two are live at once, the first listed wins.
    */
   youtube?: {
     /**
@@ -2634,7 +2634,7 @@ export interface IntegrationSettings {
       | null;
   };
   /**
-   * Whose posts run in the home page ticker.
+   * Whose posts run in the ticker.
    */
   bluesky?: {
     /**
@@ -2643,7 +2643,7 @@ export interface IntegrationSettings {
     handle?: string | null;
   };
   /**
-   * Whose posts run in the home page ticker.
+   * Whose posts run in the ticker.
    */
   x?: {
     /**

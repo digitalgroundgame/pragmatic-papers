@@ -134,7 +134,7 @@ function Broadcast({
 }
 
 /**
- * The home page ticker: a YouTube broadcast pinned at the start while it's live (or about to be), then
+ * The ticker: a YouTube broadcast pinned at the start while it's live (or about to be), then
  * our latest posts scrolling past. Server-rendered at a fixed height, and moved by CSS alone
  * (`.ticker-*` in `globals.css`), so it ships no JavaScript and shifts nothing as it loads.
  * The scroll pauses on hover, on focus, with its pause switch, and stops for readers who ask

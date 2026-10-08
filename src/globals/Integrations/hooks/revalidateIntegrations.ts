@@ -11,7 +11,7 @@ export const revalidateIntegrations: GlobalAfterChangeHook = ({
   if (!context.disableRevalidate) {
     payload.logger.info(`Revalidating integrations`)
     revalidateTag("global_integrations", "max")
-    // A new channel or account changes what the home page ticker shows.
+    // A new channel or account changes what the ticker shows.
     revalidateTag("ticker", "max")
     purgeEdgeCache(payload.logger, "integrations saved")
   }

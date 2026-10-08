@@ -14,11 +14,19 @@ name: PR automation
 #     "showcase" label syncs the label and the Showcase line
 #     (scripts/showcase-pr.ts), and when that says to push, runs showcase.yml
 #     from the default branch for the PR (see that file).
+#   - Opening, reopening or editing a PR that closes an issue (`Fixes #n`)
+#     assigns the PR's author to that issue if nobody owns it yet. Catches
+#     work that started without the assignee step in
+#     .claude/skills/github-issues/SKILL.md. Closing keywords only link
+#     issues on PRs into the default branch, so stacked PRs aren't covered.
 #
-# Fork PRs get a read-only token and no secrets, so this skips them.
+# pull_request_target, so the workflow file comes from the base branch and
+# fork PRs get a token that can write issues. A fork PR only gets the issue
+# assignment, which runs no PR code; everything else is for this
+# repository's PRs, which a pull_request run would trust the same way.
 on:
-  pull_request:
-    types: [opened, edited, labeled, unlabeled, ready_for_review]
+  pull_request_target:
+    types: [opened, reopened, edited, labeled, unlabeled, ready_for_review]
 
 concurrency:
   group: pr-automation-${{ github.event.pull_request.number }}
@@ -27,7 +35,6 @@ concurrency:
 jobs:
   route:
     name: PR automation
-    if: github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
@@ -41,14 +48,46 @@ jobs:
       GH_TOKEN: ${{ github.token }}
       PR_NUMBER: ${{ github.event.pull_request.number }}
       HEAD_REF: ${{ github.event.pull_request.head.ref }}
+      SAME_REPO: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
 
     steps:
+      # GitHub silently ignores an assignee it won't accept (no repo access,
+      # never commented on the issue), so the response is checked.
+      - name: Assign the author to unassigned linked issues
+        if: >-
+          github.event.pull_request.user.type != 'Bot' &&
+          contains(fromJSON('["opened", "reopened", "edited", "ready_for_review"]'), github.event.action)
+        env:
+          AUTHOR: ${{ github.event.pull_request.user.login }}
+        run: |
+          set -euo pipefail
+          # shellcheck disable=SC2016 # $owner/$name/$pr are GraphQL variables
+          issues=$(gh api graphql \
+            -f query='query($owner:String!,$name:String!,$pr:Int!){
+              repository(owner:$owner,name:$name){ pullRequest(number:$pr){
+                closingIssuesReferences(first:20){ nodes {
+                  number repository { nameWithOwner } assignees(first:1){ totalCount } } } } } }' \
+            -f owner="${GITHUB_REPOSITORY%/*}" -f name="${GITHUB_REPOSITORY#*/}" -F pr="$PR_NUMBER" \
+            --jq ".data.repository.pullRequest.closingIssuesReferences.nodes[]
+              | select(.repository.nameWithOwner == \"$GITHUB_REPOSITORY\" and .assignees.totalCount == 0)
+              | .number")
+          for n in $issues; do
+            assigned=$(gh api -X POST "repos/$GITHUB_REPOSITORY/issues/$n/assignees" -f "assignees[]=$AUTHOR" \
+              --jq "[.assignees[].login] | index(\"$AUTHOR\") != null")
+            if [ "$assigned" = true ]; then
+              echo "Assigned @$AUTHOR to #$n" | tee -a "$GITHUB_STEP_SUMMARY"
+            else
+              echo "Could not assign @$AUTHOR to #$n (GitHub ignored the assignee)" | tee -a "$GITHUB_STEP_SUMMARY"
+            fi
+          done
+
       - name: Regenerate screenshot baselines
-        if: github.event.action == 'labeled' && github.event.label.name == 'needs screenshots'
+        if: env.SAME_REPO == 'true' && github.event.action == 'labeled' && github.event.label.name == 'needs screenshots'
         run: gh workflow run update-snapshots.yml --repo "$GITHUB_REPOSITORY" --ref "$HEAD_REF"
 
       - name: Start a Claude review
         if: >-
+          env.SAME_REPO == 'true' &&
           github.event.pull_request.base.ref == 'dev' &&
           !github.event.pull_request.draft && (
             github.event.action == 'labeled' && github.event.label.name == 'ready for review' ||
@@ -59,12 +98,14 @@ jobs:
       - name: Check whether the showcase needs a sync
         id: showcase
         if: >-
-          github.event.action == 'opened' ||
-          github.event.action == 'edited' && github.event.changes.body ||
-          github.event.label.name == 'showcase'
+          env.SAME_REPO == 'true' && (
+            github.event.action == 'opened' ||
+            github.event.action == 'edited' && github.event.changes.body ||
+            github.event.label.name == 'showcase'
+          )
         run: echo "sync=true" >> "$GITHUB_OUTPUT"
 
-      # The script from the PR's head, not its test merge.
+      # The script from the PR's head (this repository's, never a fork's).
       - uses: actions/checkout@v7
         if: steps.showcase.outputs.sync
         with:

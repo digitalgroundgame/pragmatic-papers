@@ -123,6 +123,12 @@ jobs:
       - name: Check the home page answers
         if: env.READY == 'true'
         run: |
-          status=$(curl --silent --output /dev/null --write-out '%{http_code}' --retry 3 --retry-all-errors "$SERVER_URL/")
-          echo "GET / → $status"
-          test "$status" = 200
+          body="$RUNNER_TEMP/home.html"
+          for attempt in 1 2 3; do
+            status=$(curl --silent --max-time 60 --output "$body" --write-out '%{http_code}' "$SERVER_URL/" || true)
+            echo "GET / → $status"
+            test "$status" = 200 && exit 0
+            sleep 10
+          done
+          head -c 2000 "$body" || true
+          exit 1

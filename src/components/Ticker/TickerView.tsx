@@ -145,12 +145,10 @@ export function TickerView({ broadcast, posts }: TickerFeed): React.ReactNode {
 
   return (
     <section aria-label="Live and latest" className="ticker bg-muted mb-6 md:mb-10 md:border-t">
-      {/* The mega menu sits right above on wider screens; the top border parts it from the
-          strip. On phones the header's own border already does. */}
-      {/* The label lines up with the page's container; the posts run on to the window's
-          right edge. The left padding is the container's own inset: its 1rem gutter, plus
-          half of whatever the window has beyond its 80rem. */}
-      <div className="flex h-11 items-center gap-4 pr-4 pl-[max(1rem,calc((100%-80rem)/2+1rem))] text-sm">
+      {/* The strip runs the window's full width, wider than the page's container. The mega
+          menu sits right above on wider screens; the top border parts it from the strip. On
+          phones the header's own border already does. */}
+      <div className="flex h-11 items-center gap-4 px-4 text-sm">
         {broadcast ? (
           <Broadcast broadcast={broadcast} pinned={posts.length > 0} />
         ) : (

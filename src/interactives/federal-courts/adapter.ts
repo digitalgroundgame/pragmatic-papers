@@ -60,7 +60,7 @@ const CIRCUIT_LABEL: Record<string, string> = {
  * where its own goes, in national map units — a fallback, since the profile's cluster places
  * the courts with no territory against the frame.
  */
-const SCOTUS_ANCHOR: [number, number] = [2029097, -25000]
+const SCOTUS_ANCHOR: [number, number] = [10145, -125]
 
 /** Where a court's seat block is drawn, in the units of the map it is drawn on. */
 const anchorFor = (courtId: string): number[] | undefined =>

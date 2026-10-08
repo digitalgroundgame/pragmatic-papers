@@ -46,6 +46,9 @@ jobs:
       # The build prerenders from a throwaway database: nothing reaches staging's while
       # building. /next/revalidate-all throws those pages away once the Worker is up.
       DATABASE_URI: postgres://postgres:postgres@localhost:5432/build
+      # The deploy loads the bindings locally first, and wrangler won't without a stand-in
+      # for Hyperdrive. Only that step uses it; the Worker gets the real one.
+      CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_HYPERDRIVE: postgres://postgres:postgres@localhost:5432/build
       PAYLOAD_SECRET: build-only-secret
       USE_LOCAL_STORAGE: "true"
 
@@ -57,7 +60,7 @@ jobs:
           POSTGRES_DB: build
         ports: ["5432:5432"]
         options: >-
-          --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 10
+          --health-cmd "pg_isready -U postgres" --health-interval 5s --health-timeout 5s --health-retries 10
 
     steps:
       - name: Skip until set up

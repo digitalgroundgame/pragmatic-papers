@@ -120,6 +120,15 @@ jobs:
             --request POST --header "Authorization: Bearer $STAGING_PAYLOAD_SECRET" \
             "$SERVER_URL/next/revalidate-all"
 
+      # TODO(before merge): remove with /__db-debug in src/cloudflare/worker.mjs.
+      - name: Which database the Worker reaches
+        if: env.READY == 'true'
+        env:
+          STAGING_PAYLOAD_SECRET: ${{ secrets.STAGING_PAYLOAD_SECRET }}
+        run: |
+          curl --silent --show-error --max-time 60 --header "Authorization: Bearer $STAGING_PAYLOAD_SECRET" "$SERVER_URL/__db-debug" || true
+          echo
+
       - name: Check the home page answers
         if: env.READY == 'true'
         run: |

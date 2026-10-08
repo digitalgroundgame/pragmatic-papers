@@ -33,8 +33,10 @@ the R2 bucket and D1 database by name if they're missing. The rest is set up by 
    Postgres container's port 5432 (the host in Coolify's internal Postgres URL).
    Postgres gets no public port.
 2. **Hyperdrive**: create a config with "Connect to private database", using the tunnel's
-   hostname and Postgres's credentials. Cloudflare creates the Access application and
-   service token. Its ID is in `wrangler.jsonc`.
+   hostname and the user, password and database from staging's `DATABASE_URI` (the
+   database is `pragmatic_papers`, with an underscore; the same server also has an empty
+   `pragmatic-papers`). Cloudflare creates the Access application and service token. Its
+   ID is in `wrangler.jsonc`.
 3. **API token** with Workers Scripts, Workers R2 Storage, D1 and Hyperdrive, all Edit:
    the repo secret `CLOUDFLARE_WORKERS_TOKEN`. `CLOUDFLARE_ACCOUNT_ID` is shared with the
    Storybook deploy.

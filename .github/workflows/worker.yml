@@ -120,18 +120,6 @@ jobs:
             --request POST --header "Authorization: Bearer $STAGING_PAYLOAD_SECRET" \
             "$SERVER_URL/next/revalidate-all"
 
-      # TODO(before merge): remove with /__db-debug in src/cloudflare/worker.mjs.
-      - name: Which database the Worker reaches
-        if: env.READY == 'true'
-        env:
-          STAGING_PAYLOAD_SECRET: ${{ secrets.STAGING_PAYLOAD_SECRET }}
-        run: |
-          # The new version takes a few seconds to replace the old one, which 404s here.
-          for _ in 1 2 3 4 5 6; do
-            out=$(curl --silent --show-error --max-time 60 --header "Authorization: Bearer $STAGING_PAYLOAD_SECRET" "$SERVER_URL/__db-debug" || true)
-            case "$out" in "<!DOCTYPE"*) echo "Old version still answering"; sleep 10 ;; *) echo "$out"; exit 0 ;; esac
-          done
-
       - name: Check the home page answers
         if: env.READY == 'true'
         run: |

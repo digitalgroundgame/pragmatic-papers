@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest"
 
+import { parseDrilldownAssetJson } from "@/interactives/engine/parseAsset"
 import { displayFacts } from "@/interactives/engine/regions"
 import type { DrilldownRecord, RecordDisplay } from "@/interactives/engine/types"
 
@@ -177,6 +178,21 @@ describe("composeChild — the two halves", () => {
     const geometryHalf = composeChildGeometry(geometry, "cafc")
     expect(geometryHalf?.paths).toEqual([])
     expect(geometryHalf?.viewBox).toBeNull()
+  })
+
+  it("carries each file's grid to the client, so a morph can put the two on one scale", () => {
+    const stepped: DrilldownGeometry = {
+      overview: { ...geometry.overview, step: 200 },
+      children: { ...geometry.children, ca8: { ...geometry.children.ca8!, step: 20 } },
+    }
+    const overview = composeOverview({ presentation, geometry: stepped, data })
+    const child = composeChildGeometry(stepped, "ca8")
+    expect(overview.step).toBe(200)
+    expect(child?.step).toBe(20)
+    // Through the wire format the client reads; a file with no grid still has none.
+    expect(parseDrilldownAssetJson(JSON.parse(JSON.stringify(child))).step).toBe(20)
+    expect(composeChildGeometry(geometry, "ca8")).not.toHaveProperty("step")
+    expect(parseDrilldownAssetJson({ ...child, step: -1 }).step).toBeUndefined()
   })
 
   it("returns null for a region that is not drillable", () => {

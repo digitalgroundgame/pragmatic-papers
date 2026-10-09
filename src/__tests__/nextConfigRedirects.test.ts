@@ -39,6 +39,21 @@ describe("next.config.ts redirects", () => {
     expect(rule?.permanent).toBe(true)
   })
 
+  it.each(["/authors", "/authors/jane-doe", "/authors/8"])(
+    "permanently redirects the old contributor URL %s to /contributors",
+    async (from) => {
+      const rule = await redirectFor(from)
+      expect(rule?.source).toBe("/authors/:path*")
+      expect(rule?.destination).toBe("/contributors/:path*")
+      expect(rule?.permanent).toBe(true)
+    },
+  )
+
+  it("leaves the contributor URLs alone", async () => {
+    expect(await redirectFor("/contributors")).toBeUndefined()
+    expect(await redirectFor("/contributors/jane-doe")).toBeUndefined()
+  })
+
   it("leaves the new sitemap URLs alone", async () => {
     for (const path of [
       "/sitemap.xml",

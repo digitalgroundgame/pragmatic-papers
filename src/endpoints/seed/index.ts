@@ -118,8 +118,8 @@ export const seed = async (
         ctx.narrator = narrator
         validateWriters([writers[0]!, writers[1]!])
         if (!context.disableRevalidate) {
-          revalidatePath("/authors")
-          revalidatePath("/authors/[slug]", "page")
+          revalidatePath("/contributors")
+          revalidatePath("/contributors/[slug]", "page")
         }
       },
     },

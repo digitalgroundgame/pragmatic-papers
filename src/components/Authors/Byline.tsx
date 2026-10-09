@@ -45,7 +45,7 @@ export function Byline({ authors }: BylineProps): React.ReactNode {
               } as React.CSSProperties
             }
             render={
-              <HoverPrefetchLink href={`/authors/${slug}`} aria-hidden="true" tabIndex={-1} />
+              <HoverPrefetchLink href={`/contributors/${slug}`} aria-hidden="true" tabIndex={-1} />
             }
           >
             <AvatarImage src={avatarUrl ?? undefined} />
@@ -59,7 +59,7 @@ export function Byline({ authors }: BylineProps): React.ReactNode {
             {index > 0 && (
               <span className="text-foreground">{getSeparator(index, authors.length)}</span>
             )}
-            <HoverPrefetchLink href={`/authors/${slug}`} className="hover:underline">
+            <HoverPrefetchLink href={`/contributors/${slug}`} className="hover:underline">
               {name}
             </HoverPrefetchLink>
           </React.Fragment>

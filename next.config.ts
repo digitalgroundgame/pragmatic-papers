@@ -126,6 +126,9 @@ const nextConfig: NextConfig = {
     // Permanent, so Search Console and crawlers that stored the old URL follow it.
     { source: "/articles-sitemap.xml", destination: "/articles/sitemap.xml", permanent: true },
     { source: "/volumes-sitemap.xml", destination: "/volumes/sitemap.xml", permanent: true },
+    // Contributor pages were /authors, which didn't fit narrators. `/authors/:path*` also
+    // covers the index, its `?p=` pages and the old id URLs the profile page resolves.
+    { source: "/authors/:path*", destination: "/contributors/:path*", permanent: true },
     {
       source: "/iceout/:state*",
       destination: "https://iceout.org/en/location/report",

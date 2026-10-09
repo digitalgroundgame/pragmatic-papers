@@ -11,7 +11,7 @@ const routes = {
   articles: () => import("../articles/[slug]/page"),
   volumes: () => import("../volumes/[slug]/page"),
   pages: () => import("../[slug]/page"),
-  authors: () => import("../authors/[slug]/page"),
+  authors: () => import("../contributors/[slug]/page"),
   topics: () => import("../topics/[slug]/page"),
   interactives: () => import("../interactives/[slug]/page"),
 }

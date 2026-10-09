@@ -1,11 +1,13 @@
 # Dockerfile for Pragmatic Papers (Next.js + Payload CMS)
 # Based on official Next.js Docker deployment guides
 ARG NODE_VERSION=24.15.0
+# Docker Hub's official node image, through Amazon ECR Public's mirror of it, as
+# PragmaticPapers.ci.Dockerfile pulls it: Docker Hub rate-limits anonymous pulls.
 
 # ============================================
 # Base stage - setup pnpm and environment
 # ============================================
-FROM node:${NODE_VERSION}-alpine AS base
+FROM public.ecr.aws/docker/library/node:${NODE_VERSION}-alpine AS base
 # Install dependencies for native modules (libc6-compat is required for many node native modules on Alpine)
 RUN apk add --no-cache libc6-compat
 
@@ -140,7 +142,7 @@ RUN --mount=type=cache,id=nextjs,target=/app/.next/cache,sharing=locked \
 # ============================================
 # Runner stage - minimal production runtime
 # ============================================
-FROM node:${NODE_VERSION}-alpine AS runner
+FROM public.ecr.aws/docker/library/node:${NODE_VERSION}-alpine AS runner
 WORKDIR /app
 
 # Production environment

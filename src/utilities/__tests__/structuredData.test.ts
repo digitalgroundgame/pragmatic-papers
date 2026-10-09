@@ -75,9 +75,9 @@ describe("buildArticleJsonLd", () => {
     expect(result.author).toEqual([
       {
         "@type": "Person",
-        "@id": `${SERVER_URL}/authors/alice`,
+        "@id": `${SERVER_URL}/contributors/alice`,
         name: "Alice",
-        url: `${SERVER_URL}/authors/alice`,
+        url: `${SERVER_URL}/contributors/alice`,
       },
     ])
     expect(result.isPartOf).toEqual({
@@ -194,11 +194,11 @@ describe("buildPersonJsonLd", () => {
           { link: { type: "reference" } },
         ] as MenuField,
       }),
-      "/authors/alice",
+      "/contributors/alice",
     )
 
     expect(result["@type"]).toBe("Person")
-    expect(result["@id"]).toBe(`${SERVER_URL}/authors/alice`)
+    expect(result["@id"]).toBe(`${SERVER_URL}/contributors/alice`)
     expect(result.name).toBe("Alice")
     expect(result.description).toBe("Bio text")
     expect(result.image).toBe("https://cdn/alice.png")
@@ -208,7 +208,7 @@ describe("buildPersonJsonLd", () => {
   })
 
   it("omits optional fields when data is missing", () => {
-    const result = buildPersonJsonLd(makeUser({ name: null }), "/authors/anon")
+    const result = buildPersonJsonLd(makeUser({ name: null }), "/contributors/anon")
 
     expect(result.name).toBeUndefined()
     expect(result.description).toBeUndefined()
@@ -222,7 +222,7 @@ describe("buildPersonJsonLd", () => {
     convertLexicalToPlaintext.mockReturnValue("")
     const result = buildPersonJsonLd(
       makeUser({ name: "Alice", biography: { root: {} } as User["biography"] }),
-      "/authors/alice",
+      "/contributors/alice",
     )
 
     expect(result.description).toBeUndefined()
@@ -252,11 +252,11 @@ describe("buildBreadcrumbJsonLd", () => {
 
 describe("buildCollectionPageJsonLd", () => {
   it("builds a collection page with an absolute url", () => {
-    expect(buildCollectionPageJsonLd("Authors", "All authors", "/authors")).toEqual({
+    expect(buildCollectionPageJsonLd("Authors", "All authors", "/contributors")).toEqual({
       "@type": "CollectionPage",
       name: "Authors",
       description: "All authors",
-      url: `${SERVER_URL}/authors`,
+      url: `${SERVER_URL}/contributors`,
     })
   })
 })

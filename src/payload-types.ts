@@ -599,7 +599,7 @@ export interface User {
   socials?: MenuField;
   roles?: ('admin' | 'chief-editor' | 'editor' | 'writer' | 'narrator' | 'member')[] | null;
   /**
-   * Keeps /authors/<slug> public whatever the roles. Turned on when an article or narration credits this user.
+   * Keeps /contributors/<slug> public whatever the roles. Turned on when an article or narration credits this user.
    */
   publicProfile?: boolean | null;
   updatedAt: string;

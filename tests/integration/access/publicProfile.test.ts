@@ -38,7 +38,7 @@ async function demote(user: User): Promise<void> {
   })
 }
 
-/** What an anonymous reader gets for `/authors/<slug>`. */
+/** What an anonymous reader gets for `/contributors/<slug>`. */
 async function anonymousProfile(user: User) {
   const { docs } = await payload.find({
     collection: "users",

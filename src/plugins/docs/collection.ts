@@ -7,6 +7,7 @@ import { MediaBlock } from "@/blocks/MediaBlock/config"
 import { MediaCollageBlock } from "@/blocks/MediaCollageBlock/config"
 import { populateTableOfContentsAnchors, tableOfContentsField } from "@/components/TableOfContents"
 import { slugField } from "@/fields/slug"
+import { TOURS } from "@/plugins/tours"
 import { generatePreviewPath } from "@/utilities/generatePreviewPath"
 import {
   BlocksFeature,
@@ -173,6 +174,16 @@ export const Docs: CollectionConfig<"docs"> = {
         position: "sidebar",
         description: "Who the help bell tells. Empty means all staff; admins see every doc.",
       },
+    },
+    {
+      name: "tour",
+      type: "text",
+      admin: {
+        position: "sidebar",
+        description: `A guided tour of the feature, offered as Show me in the help bell and on the doc. One of: ${Object.keys(TOURS).join(", ")}.`,
+      },
+      validate: (value: string | null | undefined) =>
+        !value || value in TOURS || `No tour is called "${value}".`,
     },
     // On by default: a doc is reference reading, skimmed for the one section a reader needs.
     tableOfContentsField({ defaultValue: true }),

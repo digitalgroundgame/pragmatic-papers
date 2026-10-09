@@ -189,6 +189,18 @@ muted types are kept in their Payload preferences (`payload-preferences`, key
 `notifications`); items dated before the account was made don't count as
 unread.
 
+A doc can come with a guided tour of the admin (the tours plugin,
+`src/plugins/tours/`): driver.js popovers that walk staff through the real
+screens, page by page. Tours are code, in `TOURS` (`registry.ts`), and ship with
+the release that changes the screens they point at, since their steps name
+Payload's stable hooks (`#card-articles`, `.tabs-field__tabs`). A link from
+`tourHref(key)` (`/admin?tour=<key>`) starts one; the step it's on is kept in
+sessionStorage, so it carries on across page changes, and a step whose element
+never appears ends it quietly. A doc names its tour in `tour`, and the bell then
+offers it as **Show me** beside **Read more** (any `NotificationItem` can, with
+`showMe`), as does the doc's page. After changing a screen a tour points at, run
+the tour locally.
+
 The bell is built from the site's shadcn components (`src/components/ui/`).
 Payload 3 has no Tailwind of its own, so `NotificationsMenu.css` brings in
 Tailwind's theme and only the utilities those files use, without preflight, and

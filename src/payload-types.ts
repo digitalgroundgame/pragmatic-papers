@@ -1456,6 +1456,10 @@ export interface Doc {
    */
   audience?: ('admin' | 'chief-editor' | 'editor' | 'writer' | 'narrator')[] | null;
   /**
+   * A guided tour of the feature, offered as Show me in the help bell and on the doc. One of: articles.
+   */
+  tour?: string | null;
+  /**
    * Auto-generates a navigable list of headings (and any resolver-matched blocks). Readers see it only while the table of contents experiment is on in Settings.
    */
   showTableOfContents?: boolean | null;
@@ -2468,6 +2472,7 @@ export interface DocsSelect<T extends boolean = true> {
   revisedAt?: T;
   section?: T;
   audience?: T;
+  tour?: T;
   showTableOfContents?: T;
   sourceHash?: T;
   generateSlug?: T;

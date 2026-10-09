@@ -74,6 +74,16 @@ describe("docsNotifications", () => {
     expect(await titlesFor(["chief-editor"])).toEqual(["For editors", "For all staff"])
   })
 
+  it("offers a doc's tour as Show me, and leaves out a tour that doesn't exist", async () => {
+    queryPublishedDocs.mockResolvedValue([
+      { ...docs[1], tour: "articles" },
+      { ...docs[1], id: 3, slug: "gone", tour: "no-such-tour" },
+    ])
+    const [withTour, missing] = await source.itemsFor({ payload, user: user(["writer"]) })
+    expect(withTour).toMatchObject({ href: "/docs/everyone", showMe: "/admin?tour=articles" })
+    expect(missing).not.toHaveProperty("showMe")
+  })
+
   it("shows nothing to readers, without querying", async () => {
     expect(await titlesFor(["member"])).toEqual([])
     expect(await titlesFor([])).toEqual([])

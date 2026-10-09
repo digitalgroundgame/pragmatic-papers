@@ -82,6 +82,7 @@
     "cross-env": "^10.1.0",
     "date-fns": "^4.4.0",
     "dotenv": "^18.0.5",
+    "driver.js": "1.9.0",
     "embla-carousel-autoplay": "^8.6.0",
     "embla-carousel-react": "^8.6.0",
     "feed": "^6.0.0",

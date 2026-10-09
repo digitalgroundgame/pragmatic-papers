@@ -88,6 +88,9 @@ importers:
       dotenv:
         specifier: ^18.0.5
         version: 18.0.5
+      driver.js:
+        specifier: 1.9.0
+        version: 1.9.0
       embla-carousel-autoplay:
         specifier: ^8.6.0
         version: 8.6.0(embla-carousel@8.6.0)
@@ -5312,6 +5315,9 @@ packages:
     resolution: {integrity: sha512-aBrGvt6KhjxbEnatqMWOMidftwsrCiCvqh1yNIGB9QyF0J+VcWkKDMsvYOEm7ZS82oiV+BT1sTOtIlAmUlTpwQ==}
     engines: {node: '>=12'}
     hasBin: true
+
+  driver.js@1.9.0:
+    resolution: {integrity: sha512-+YWVdNVUrY1/2spszQshohWYY4soIjNBnMFS6lfmousT8igos2lmswhlqyuuNMhr+qbV0EjJ+L6i2FECPr6Ygg==}
 
   drizzle-kit@0.31.7:
     resolution: {integrity: sha512-hOzRGSdyKIU4FcTSFYGKdXEjFsncVwHZ43gY3WU5Bz9j5Iadp6Rh6hxLSQ1IWXpKLBKt/d5y1cpSPcV+FcoQ1A==}
@@ -14600,6 +14606,8 @@ snapshots:
   dotenv@17.4.2: {}
 
   dotenv@18.0.5: {}
+
+  driver.js@1.9.0: {}
 
   drizzle-kit@0.31.7:
     dependencies:

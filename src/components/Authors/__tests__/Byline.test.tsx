@@ -68,7 +68,7 @@ describe("Byline", () => {
     expect(screen.getAllByRole("link")).toHaveLength(FOUR.length)
     expect(screen.getByRole("link", { name: "Dan Reed" })).toHaveAttribute(
       "href",
-      "/authors/dan-reed",
+      "/contributors/dan-reed",
     )
   })
 

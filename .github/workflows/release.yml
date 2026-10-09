@@ -165,7 +165,10 @@ jobs:
           DEADLINE=$(( $(date +%s) + 45 * 60 ))
           while :; do
             PR=$(gh api "$REPO/pulls/$NUMBER")
-            [ "$(jq -r .state <<< "$PR")" = "open" ] && [ "$(jq -r .merged <<< "$PR")" = "false" ] || { echo "Already merged or closed."; exit 0; }
+            if [ "$(jq -r .state <<< "$PR")" != "open" ] || [ "$(jq -r .merged <<< "$PR")" != "false" ]; then
+              echo "Already merged or closed."
+              exit 0
+            fi
             SHA=$(jq -r .head.sha <<< "$PR")
             [ "$SHA" = "$MAIN_SHA" ] || leave "the branch has commits beyond main's, which need a review"
             MERGEABLE=$(jq -r .mergeable <<< "$PR")

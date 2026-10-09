@@ -1,0 +1,81 @@
+/* Admin panel styles: Payload's theme variables, not Tailwind (the admin doesn't load it).
+   Payload swaps the variables for its dark theme, so the switch follows it. Scoped to
+   .experiment-switch so nothing reaches Payload's own fields. */
+.experiment-switch {
+  margin-bottom: 1.5rem;
+  color: var(--theme-text);
+}
+
+.experiment-switch__row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.experiment-switch__label {
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.experiment-switch__description {
+  margin-top: 0.375rem;
+  padding-left: calc(2.25rem + 0.75rem);
+  color: var(--theme-elevation-650);
+  font-size: 0.8125rem;
+  line-height: 1.4;
+}
+
+.experiment-switch [data-slot="switch"] {
+  position: relative;
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  box-sizing: border-box;
+  width: 2.25rem;
+  height: 1.25rem;
+  padding: 2px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--theme-elevation-400);
+  cursor: pointer;
+  transition: background-color 150ms;
+}
+
+.experiment-switch [data-slot="switch"][data-checked] {
+  background: var(--theme-success-500);
+}
+
+.experiment-switch [data-slot="switch"]:focus-visible {
+  outline: 2px solid var(--theme-elevation-800);
+  outline-offset: 2px;
+}
+
+.experiment-switch [data-slot="switch"][data-disabled] {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.experiment-switch [data-slot="switch-thumb"] {
+  display: block;
+  width: 1rem;
+  height: 1rem;
+  border-radius: 999px;
+  background: var(--theme-bg);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.25);
+  /* `translate`, not `transform`: where Tailwind also loads (Storybook), its
+     translate-x utility sets the same property, so this replaces it instead of adding to it. */
+  translate: 0;
+  transition: translate 150ms;
+}
+
+.experiment-switch [data-slot="switch-thumb"][data-checked] {
+  /* The track's inner width (2.25rem - 4px of padding) minus the 1rem thumb. */
+  translate: calc(1.25rem - 4px) 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .experiment-switch [data-slot="switch"],
+  .experiment-switch [data-slot="switch-thumb"] {
+    transition: none;
+  }
+}

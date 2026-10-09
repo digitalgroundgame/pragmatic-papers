@@ -273,7 +273,7 @@ describe("seed-e2e main()", () => {
     )
   })
 
-  it("seeds enough authors for /authors to paginate, sorted after the ones specs look for", async () => {
+  it("seeds enough authors for /contributors to paginate, sorted after the ones specs look for", async () => {
     await main()
 
     for (const [name, slug] of [

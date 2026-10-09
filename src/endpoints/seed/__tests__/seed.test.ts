@@ -105,8 +105,8 @@ describe("seed", () => {
 
     await seed(payload)
 
-    expect(revalidatePath).toHaveBeenCalledWith("/authors")
-    expect(revalidatePath).toHaveBeenCalledWith("/authors/[slug]", "page")
+    expect(revalidatePath).toHaveBeenCalledWith("/contributors")
+    expect(revalidatePath).toHaveBeenCalledWith("/contributors/[slug]", "page")
   })
 
   it("empties the recommendation rankings before deleting articles", async () => {

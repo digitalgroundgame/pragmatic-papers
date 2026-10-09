@@ -8,6 +8,7 @@ import { GoogleAnalytics } from "@/components/GoogleAnalytics.lazy"
 import { ThemeProvider } from "@wrksz/themes/next"
 import type { Metadata } from "next"
 import React from "react"
+import { FEEDS } from "./feeds/feeds"
 import { fontVariables } from "./fonts"
 import "./globals.css"
 
@@ -62,10 +63,7 @@ export const metadata: Metadata = {
   },
   alternates: {
     types: {
-      "application/rss+xml": [
-        { url: "/articles/feed.xml", title: "Pragmatic Papers - Articles RSS Feed" },
-        { url: "/volumes/feed.xml", title: "Pragmatic Papers - Volumes RSS Feed" },
-      ],
+      "application/rss+xml": FEEDS.map((feed) => ({ url: feed.path, title: feed.headTitle })),
     },
   },
 }

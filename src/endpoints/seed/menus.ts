@@ -201,6 +201,13 @@ export const createMenus = async (
         {
           link: {
             type: "custom",
+            label: "Feeds",
+            url: "/feeds",
+          },
+        },
+        {
+          link: {
+            type: "custom",
             label: "Log In",
             url: "/admin/login",
           },

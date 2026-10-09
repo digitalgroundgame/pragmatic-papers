@@ -543,6 +543,7 @@ export interface Media {
    * Duration in seconds (auto-populated from the audio file)
    */
   duration?: number | null;
+  unsplashId?: string | null;
   _objectKey?: string | null;
   updatedAt: string;
   createdAt: string;
@@ -1986,6 +1987,7 @@ export interface MediaSelect<T extends boolean = true> {
   createdBy?: T;
   narrator?: T;
   duration?: T;
+  unsplashId?: T;
   _objectKey?: T;
   updatedAt?: T;
   createdAt?: T;

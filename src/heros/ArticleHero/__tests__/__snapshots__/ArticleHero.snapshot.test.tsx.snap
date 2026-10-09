@@ -124,7 +124,7 @@ exports[`ArticleHero > joins three authors with commas and a closing ampersand 1
       </span>
     </div>
     <div
-      class="flex grow items-center justify-end gap-3"
+      class="flex grow items-center justify-end gap-1"
       data-slot="article-meta-controls"
     >
       <div
@@ -400,7 +400,7 @@ exports[`ArticleHero > names every author, however many, with no remainder 1`] =
       </span>
     </div>
     <div
-      class="flex grow items-center justify-end gap-3"
+      class="flex grow items-center justify-end gap-1"
       data-slot="article-meta-controls"
     >
       <div
@@ -505,7 +505,7 @@ exports[`ArticleHero > renders narration as numeric id (no player shown) 1`] = `
       </span>
     </div>
     <div
-      class="flex grow items-center justify-end gap-3"
+      class="flex grow items-center justify-end gap-1"
       data-slot="article-meta-controls"
     >
       <div
@@ -610,7 +610,7 @@ exports[`ArticleHero > renders narration as object (shows player) 1`] = `
       </span>
     </div>
     <div
-      class="flex grow items-center justify-end gap-3"
+      class="flex grow items-center justify-end gap-1"
       data-slot="article-meta-controls"
     >
       <div
@@ -715,7 +715,7 @@ exports[`ArticleHero > renders with hero image 1`] = `
       </span>
     </div>
     <div
-      class="flex grow items-center justify-end gap-3"
+      class="flex grow items-center justify-end gap-1"
       data-slot="article-meta-controls"
     >
       <div
@@ -883,7 +883,7 @@ exports[`ArticleHero > renders with populated authors 1`] = `
       </span>
     </div>
     <div
-      class="flex grow items-center justify-end gap-3"
+      class="flex grow items-center justify-end gap-1"
       data-slot="article-meta-controls"
     >
       <div
@@ -988,7 +988,7 @@ exports[`ArticleHero > renders without authors or hero image 1`] = `
       </span>
     </div>
     <div
-      class="flex grow items-center justify-end gap-3"
+      class="flex grow items-center justify-end gap-1"
       data-slot="article-meta-controls"
     >
       <div

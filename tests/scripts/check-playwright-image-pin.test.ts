@@ -54,7 +54,7 @@ describe("getPinnedTags", () => {
 describe("checkPins", () => {
   it("returns no mismatches when every file matches the resolved version", () => {
     const mismatches = checkPins("1.60.0", {
-      "docker-compose.e2e.yml": pin("1.60.0"),
+      "ci.yml": pin("1.60.0"),
       "playwright.yml": pin("1.60.0"),
     })
     expect(mismatches).toEqual([])
@@ -62,10 +62,10 @@ describe("checkPins", () => {
 
   it("reports a file whose pinned version diverges from the resolved version", () => {
     const mismatches = checkPins("1.60.0", {
-      "docker-compose.e2e.yml": pin("1.59.0"),
+      "ci.yml": pin("1.59.0"),
     })
     expect(mismatches).toEqual([
-      "docker-compose.e2e.yml: pinned to v1.59.0-noble, but pnpm-lock.yaml resolves @playwright/test to 1.60.0",
+      "ci.yml: pinned to v1.59.0-noble, but pnpm-lock.yaml resolves @playwright/test to 1.60.0",
     ])
   })
 
@@ -76,7 +76,7 @@ describe("checkPins", () => {
 
   it("reports inconsistent Ubuntu codenames across otherwise-matching files", () => {
     const mismatches = checkPins("1.60.0", {
-      "docker-compose.e2e.yml": pin("1.60.0", "noble"),
+      "ci.yml": pin("1.60.0", "noble"),
       "playwright.yml": pin("1.60.0", "jammy"),
     })
     expect(mismatches).toEqual([
@@ -86,7 +86,7 @@ describe("checkPins", () => {
 
   it("reports both a version mismatch and a codename mismatch together", () => {
     const mismatches = checkPins("1.60.0", {
-      "docker-compose.e2e.yml": pin("1.60.0", "noble"),
+      "ci.yml": pin("1.60.0", "noble"),
       "playwright.yml": pin("1.59.0", "jammy"),
     })
     expect(mismatches).toEqual([

@@ -15,7 +15,7 @@
 // Pages are expected to grow over time, so there are no fixed budgets: a jump of more
 // than JUMP_KB in one PR is what gets flagged, and it only warns.
 //
-// In CI (playwright.yml's "Bundle size" job) it reads the `.next` copied out of the
+// In CI (playwright.yml's "Page speed" job) it reads the `.next` copied out of the
 // image the PR deploys, compares with dev's last measurement (BASE_BUNDLE_SIZE_PATH),
 // writes the report to the job summary and, with PR_NUMBER and GITHUB_TOKEN, to a
 // dropdown in the PR's report comment (scripts/pr-report.ts), open when a route jumped.

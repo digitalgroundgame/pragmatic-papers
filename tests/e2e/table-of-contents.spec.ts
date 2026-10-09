@@ -1,49 +1,53 @@
 import { expect, test } from "@playwright/test"
 
-import { Screenshot, waitForStableBox, waitForStableRender } from "./helpers"
+import { SHOWCASE_SLUG, SHOWCASE_TITLE } from "../../scripts/seed-e2e.constants"
 
-test("table of contents renders on rich-text showcase article @visual", async ({
+// The TableOfContents stories cover the entries and the collapse button on
+// their own. On the article page the button sits in the hero and the list in
+// the sidebar, so this checks the two are wired together, and that an entry
+// lands on its heading.
+
+test("the article's table of contents links to its headings and collapses from the hero", async ({
   page,
-}, testInfo) => {
-  await page.goto("/articles/rich-text-showcase")
-  await expect(page).toHaveTitle(/The Written Word/)
+}) => {
+  await page.goto(`/articles/${SHOWCASE_SLUG}`)
+  await expect(page.getByRole("heading", { level: 1, name: SHOWCASE_TITLE })).toBeVisible()
 
-  const toc = page.locator('nav[aria-label="Table of contents"]')
+  const toc = page.getByRole("navigation", { name: "Table of contents" })
+  // Found through the nav's slot rather than `toc`: a role locator skips hidden elements, so
+  // once the nav collapses (`hidden`) the aside would stop matching and have no box to measure.
+  const sidebar = page.locator("aside", { has: page.locator('[data-slot="toc"]') })
   await expect(toc).toBeVisible()
 
-  // Spot-check a few expected heading entries
-  await expect(toc.getByRole("link", { name: "Foundations of Emphasis" })).toBeVisible()
-  await expect(toc.getByRole("link", { name: "Structured Lists" })).toBeVisible()
-  await expect(toc.getByRole("link", { name: "Conclusion" })).toBeVisible()
+  await test.step("entries jump to their headings", async () => {
+    await expect(toc.getByRole("link", { name: "Foundations of Emphasis" })).toBeVisible()
+    await expect(toc.getByRole("link", { name: "Structured Lists" })).toBeVisible()
+    const conclusion = toc.getByRole("link", { name: "Conclusion" })
+    const anchor = await conclusion.getAttribute("href")
+    expect(anchor).toMatch(/^#./)
+    const heading = page.locator(`[id="${anchor!.slice(1)}"]`)
+    await expect(heading).not.toBeInViewport()
 
-  test.skip(testInfo.project.name !== "chromium", "visual baseline captured on chromium only")
-  // The hero image pushes the list's end below the fold, and a clip can't leave the viewport.
-  await toc.scrollIntoViewIfNeeded()
-  await waitForStableRender(page)
-  const box = await waitForStableBox(toc)
-  await expect(page).toHaveScreenshot("table-of-contents-list.png", {
-    clip: new Screenshot(box).padding(16).aspectRatio("classic").clip,
+    await conclusion.click()
+
+    await expect(heading).toBeInViewport()
   })
-})
 
-test("hero button collapses and expands the table of contents", async ({ page }) => {
-  await page.goto("/articles/rich-text-showcase")
+  await test.step("the hero button collapses and expands it", async () => {
+    await page.evaluate(() => window.scrollTo(0, 0))
+    const collapse = page.getByRole("button", { name: "Collapse table of contents" })
+    await expect(collapse).toHaveAttribute("aria-controls", (await toc.getAttribute("id")) ?? "")
+    const openWidth = (await sidebar.boundingBox())?.width ?? 0
 
-  const toc = page.locator('nav[aria-label="Table of contents"]')
-  const sidebar = page.locator("aside", { has: toc })
-  const toggle = page.getByRole("button", { name: "Collapse table of contents" })
-  await expect(toc).toBeVisible()
-  await expect(toggle).toHaveAttribute("aria-controls", (await toc.getAttribute("id")) ?? "")
-  const openWidth = (await sidebar.boundingBox())?.width ?? 0
+    await collapse.click()
 
-  await toggle.click()
-  await expect(toc).toBeHidden()
-  await expect(page.getByRole("button", { name: "Expand table of contents" })).toHaveAttribute(
-    "aria-expanded",
-    "false",
-  )
-  await expect.poll(async () => (await sidebar.boundingBox())?.width ?? 0).toBeLessThan(openWidth)
+    await expect(toc).toBeHidden()
+    const expand = page.getByRole("button", { name: "Expand table of contents" })
+    await expect(expand).toHaveAttribute("aria-expanded", "false")
+    await expect.poll(async () => (await sidebar.boundingBox())?.width ?? 0).toBeLessThan(openWidth)
 
-  await page.getByRole("button", { name: "Expand table of contents" }).click()
-  await expect(toc).toBeVisible()
+    await expand.click()
+
+    await expect(toc).toBeVisible()
+  })
 })

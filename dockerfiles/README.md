@@ -91,6 +91,14 @@ Public pages are cached at Cloudflare's edge for 10 minutes, then served stale f
 - Unset (or with `SERVER_URL` on localhost), each save logs `Skipping Cloudflare purge (…) — … set CLOUDFLARE_ZONE_ID, CLOUDFLARE_PURGE_TOKEN` and carries on. A purge Cloudflare refuses is logged as a warning, never thrown at the save.
 - Purges within a second of each other go out as one request. Hostname purges are rate-limited per account (5 a minute on the Free plan, more on paid plans); a refused one just leaves the edge to expire on its own.
 
+**Unsplash (every Coolify deployment — production, staging and previews):**
+
+Media's upload form has a **Search Unsplash** button beside "Paste URL", in the Media collection and in an upload field's "Create New" drawer. A picked photo is fetched by the server and saved like any other upload, so it lands in local storage or S3 the same way. Saving it credits the photographer in the caption and tells Unsplash the photo was downloaded, as their API guidelines require (`src/collections/Media/hooks/attributeUnsplashPhoto.ts`).
+
+- `UNSPLASH_ACCESS_KEY` — the Unsplash application's Access Key (unsplash.com/oauth/applications). The Secret Key isn't used. A **Runtime Variable** only. Unset, the button isn't shown.
+- `UNSPLASH_APP_NAME` — optional; the application's name on Unsplash, used as `utm_source` on links back to Unsplash. Defaults to `pragmatic_papers_development` ("Pragmatic Papers Development" on Unsplash); set it if the app is renamed or another app's key is used.
+- A demo application allows 50 searches an hour. Apply for production access on the application's page once the integration is live.
+
 ### 4. Configure Domain
 
 - **Application:** Port `3000` → `your-domain.com`
@@ -130,7 +138,7 @@ Use managed PostgreSQL service (AWS RDS, Supabase, Neon, etc.) for all deploymen
 - **staging** deploys `dev`, not the live site. Its own preview deployments are off: the **preview** app serves the `pr-<n>` hostnames (see [Previews built in GitHub Actions](#previews-built-in-github-actions)).
 - **Two servers run them:** `dev-worker` runs staging and the previews, and hosts the `docker-registry` service staging's images are pulled from; `prod-worker` runs production, apparently pulling from the same registry.
 - **Staging and production build on one Coolify build server, one build at a time**, so a `dev` deploy can delay a `main` deploy behind it. The build caches below (`/pnpm`, `/nextjs`) are shared by both. The build server has 8 GB of RAM and a build peaks at ~4.6 GB, so two concurrent builds wouldn't fit. Keep that headroom in mind before adding build steps or dependencies that raise build memory. Previews never use it: they build on GitHub runners.
-- **Previews only deploy PRs from people with access to the repo**: same-repo PRs from owners, members and collaborators (the "Plan preview" job in `playwright.yml`). Keep it that way: a preview runs on dev-worker beside staging, with staging's media mounted read-write.
+- **Previews only deploy PRs from people with access to the repo**: same-repo PRs from owners, members and collaborators (the "Detect E2E changes" job in `playwright.yml` plans previews). Keep it that way: a preview runs on dev-worker beside staging, with staging's media mounted read-write.
 
 What Coolify's docs say about behaviour that matters to this setup (read them with the `upstream-docs` skill, `coolify` source; paths are under `content/docs/`):
 
@@ -246,7 +254,7 @@ DATABASE_URI=postgresql://postgres:password@postgres:5432/pragmatic_papers
 
 ### Preview Deployments on the PR (GitHub Deployments)
 
-Coolify only comments on the PR; it doesn't create GitHub Deployments ([coollabsio/coolify#9583](https://github.com/coollabsio/coolify/issues/9583)). For the previews built in GitHub Actions, `playwright.yml`'s "Deploy preview" job creates the Deployment and mirrors Coolify's status onto it (`scripts/preview-deployment.ts`). This section covers the fallback, previews staging builds itself (see [Falling back](#previews-built-in-github-actions)), where `.github/workflows/preview-deployment.yml` fills the gap: on each push to a PR it waits for Coolify to queue the preview build for that commit, then creates a Deployment for the PR's branch in the **Preview** environment and copies Coolify's status onto it. The PR then shows the build as queued, in progress, failed or live, with **View deployment** linking to `pr-<n>.pragmaticpapers.com`. There's deliberately no log link to the build in Coolify: Deployments are public on this repo, and it would publish the Coolify dashboard's address. Older previews of the PR go inactive when a newer one goes live, and all of them when the PR closes.
+Coolify only comments on the PR; it doesn't create GitHub Deployments ([coollabsio/coolify#9583](https://github.com/coollabsio/coolify/issues/9583)). For the previews built in GitHub Actions, `playwright.yml`'s "Deploy preview" job creates the Deployment and mirrors Coolify's status onto it (`scripts/preview-deployment.ts`). This section covers the fallback, previews staging builds itself (see [Falling back](#previews-built-in-github-actions)), where the same "Deploy preview" job fills the gap with no image to deploy: on each push to a PR it waits for Coolify to queue the preview build for that commit, then creates a Deployment for the PR's branch in the **Preview** environment and copies Coolify's status onto it. The PR then shows the build as queued, in progress, failed or live, with **View deployment** linking to `pr-<n>.pragmaticpapers.com`. There's deliberately no log link to the build in Coolify: Deployments are public on this repo, and it would publish the Coolify dashboard's address. Older previews of the PR go inactive when a newer one goes live, and all of them when the PR closes.
 
 Set these under **Settings → Secrets and variables → Actions**:
 
@@ -257,7 +265,7 @@ Set these under **Settings → Secrets and variables → Actions**:
 | `COOLIFY_PREVIEW_APP_UUID` | variable | The **staging** app's UUID, for the fallback (the last segment of its dashboard URL)                                 |
 | `PREVIEW_URL_TEMPLATE`     | variable | Optional. The app's preview URL template in Coolify's syntax; defaults to `https://pr-{{pr_id}}.pragmaticpapers.com` |
 
-Until all three required values are set, or while `COOLIFY_PREVIEW_IMAGE_APP_UUID` is set, the workflow does nothing. It also skips the PRs Coolify doesn't preview while **public PR deployments** are off in Coolify: PRs from forks, PRs whose author isn't an owner, member or collaborator of the repo (Dependabot's included), and PRs titled `[skip ci]` or `[skip cd]`. If you turn public PR deployments on, widen the job's `if` to match. Any other PR Coolify doesn't build gets no Deployment; the job gives up after waiting 10 minutes. If the build runs longer than 45 minutes, the Deployment is marked as errored.
+Until all three required values are set, or while `COOLIFY_PREVIEW_IMAGE_APP_UUID` is set, the job doesn't follow staging's builds. It also skips the PRs Coolify doesn't preview while **public PR deployments** are off in Coolify: PRs from forks, PRs whose author isn't an owner, member or collaborator of the repo (Dependabot's included), and PRs titled `[skip ci]` or `[skip cd]`. If you turn public PR deployments on, widen the job's `if` to match. Any other PR Coolify doesn't build gets no Deployment; the job gives up after waiting 10 minutes. If the build runs longer than 45 minutes, the Deployment is marked as errored.
 
 ### Automatic Database Naming for Preview Deployments (Coolify)
 
@@ -378,7 +386,7 @@ The image sets `BUILT_WITHOUT_DATABASE=true`, which switches on the database ste
      2. Add the mount as a **Directory mount**. Double-check the type before saving.
      3. Straight away, click **Configure Backup** on it and set a schedule. That locks out Convert To File and Delete, and backs up staging's media from then on.
 
-     Never edit the mount afterwards; delete it only after removing its backup schedule and copying staging's media again. `start.sh` only reads `/staging-media`, but Coolify has no read-only option for a Docker Image app's mounts, so it is mounted read-write. What keeps previews off staging's files is that only `start.sh` touches that path, and previews only deploy PRs from trusted authors (the "Plan preview" job in `playwright.yml`).
+     Never edit the mount afterwards; delete it only after removing its backup schedule and copying staging's media again. `start.sh` only reads `/staging-media`, but Coolify has no read-only option for a Docker Image app's mounts, so it is mounted read-write. What keeps previews off staging's files is that only `start.sh` touches that path, and previews only deploy PRs from trusted authors (the "Detect E2E changes" job in `playwright.yml` plans previews).
 2. Its variables are all **runtime** variables: `DATABASE_URI`, `COPY_SOURCE_DATABASE`, `FORCE_DATABASE_COPY`, `PAYLOAD_SECRET`, `USE_LOCAL_STORAGE`, `SERVER_URL=$COOLIFY_URL`, `TURNSTILE_SITE_KEY`, `GOOGLE_ANALYTICS_ID`, `SENTRY_DSN` and the rest the app reads at runtime. `BUILD_ENV` is baked into the image. Build variables aren't used: nothing builds in Coolify.
 3. Let the server pull from GHCR: the package is private, so log its Docker in to `ghcr.io` (`docker login ghcr.io`, as the user Coolify connects with) with a GitHub token that has `read:packages`.
 4. Give `COOLIFY_API_TOKEN` the `deploy` and `write` abilities as well as `read` (the token's owner must be a team admin). The workflow uses them to deploy the image (`POST /api/v1/deploy?uuid=…&pr=…&docker_tag=…`, Coolify `v4.0.0-beta.471` or later) and to remove the preview when the PR closes.
@@ -392,7 +400,7 @@ In GitHub (**Settings → Secrets and variables → Actions**):
 
 `GH_FONT_READ`, `COOLIFY_API_TOKEN`, `COOLIFY_DASHBOARD_URL` and `PREVIEW_URL_TEMPLATE` are shared with the workflows above.
 
-**Falling back to Coolify-built previews.** Clear `COOLIFY_PREVIEW_IMAGE_APP_UUID` and turn staging's preview deployments on: `preview-deployment.yml` follows its builds again, and `playwright.yml` and `preview-image.yml` leave PRs alone. To return, set the variable, then turn staging's preview deployments off and delete its running previews: the two apps would claim the same `pr-<n>` hostnames. Either way each PR's next push redeploys it on the other app, which names databases the same way, so a preview keeps its data.
+**Falling back to Coolify-built previews.** Clear `COOLIFY_PREVIEW_IMAGE_APP_UUID` and turn staging's preview deployments on: `playwright.yml`'s "Deploy preview" follows its builds instead of deploying the image, and `preview-image.yml` only marks a closed PR's Deployments inactive. To return, set the variable, then turn staging's preview deployments off and delete its running previews: the two apps would claim the same `pr-<n>` hostnames. Either way each PR's next push redeploys it on the other app, which names databases the same way, so a preview keeps its data.
 
 ### Dropping closed PRs' preview databases
 

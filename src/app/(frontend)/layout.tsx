@@ -63,7 +63,9 @@ export const metadata: Metadata = {
   },
   alternates: {
     types: {
-      "application/rss+xml": FEEDS.map((feed) => ({ url: feed.path, title: feed.headTitle })),
+      "application/rss+xml": FEEDS.flatMap((feed) =>
+        "headTitle" in feed ? [{ url: feed.path, title: feed.headTitle }] : [],
+      ),
     },
   },
 }

@@ -45,6 +45,16 @@ describe("FeedsPage", () => {
     expect(sitemaps.getAllByRole("link")).toHaveLength(SITEMAPS.length + 1)
   })
 
+  it("explains the Substack feed is for Substack's importer", () => {
+    renderPage()
+    const feeds = within(section("RSS feeds"))
+    expect(feeds.getByRole("link", { name: "Substack syndication" })).toHaveAttribute(
+      "href",
+      "/articles/substack.xml",
+    )
+    expect(feeds.getByText(/Substack's importer/)).toBeInTheDocument()
+  })
+
   it("has a canonical URL and title", () => {
     const meta = generateMetadata()
     expect(meta.title).toBe("Feeds and sitemaps — Pragmatic Papers")

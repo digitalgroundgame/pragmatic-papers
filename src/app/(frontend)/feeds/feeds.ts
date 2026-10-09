@@ -1,4 +1,7 @@
-/** The RSS feeds readers can follow: listed on /feeds and in every page's `<head>`. */
+/**
+ * The RSS feeds, all listed on /feeds. Those with a `headTitle` are for feed readers and are also
+ * advertised in every page's `<head>`.
+ */
 export const FEEDS = [
   {
     path: "/articles/feed.xml",
@@ -11,5 +14,11 @@ export const FEEDS = [
     title: "Volumes",
     description: "Each volume as it's published.",
     headTitle: "Pragmatic Papers - Volumes RSS Feed",
+  },
+  {
+    path: "/articles/substack.xml",
+    title: "Substack syndication",
+    description:
+      "The articles we republish on our Substack, in markup Substack's importer accepts. It's how they get there; to read along, use the Articles feed.",
   },
 ] as const

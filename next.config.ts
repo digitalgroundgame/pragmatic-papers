@@ -118,12 +118,6 @@ const nextConfig: NextConfig = {
     // honour 301/308 update the URL they have stored.
     { source: "/feed.articles", destination: "/articles/feed.xml", permanent: true },
     { source: "/feed.volumes", destination: "/volumes/feed.xml", permanent: true },
-    // Likewise the interactives sitemap, now beside the pages it lists.
-    {
-      source: "/interactives-sitemap.xml",
-      destination: "/interactives/sitemap.xml",
-      permanent: true,
-    },
     {
       source: "/iceout/:state*",
       destination: "https://iceout.org/en/location/report",

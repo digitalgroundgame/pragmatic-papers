@@ -33,7 +33,7 @@ describe("GET /robots.txt", () => {
         "Sitemap: https://pragmaticpapers.com/pages-sitemap.xml",
         "Sitemap: https://pragmaticpapers.com/articles-sitemap.xml",
         "Sitemap: https://pragmaticpapers.com/volumes-sitemap.xml",
-        "Sitemap: https://pragmaticpapers.com/interactives/sitemap.xml",
+        "Sitemap: https://pragmaticpapers.com/interactives-sitemap.xml",
         "Sitemap: https://pragmaticpapers.com/docs/sitemap.xml",
         "",
       ].join("\n"),
@@ -53,7 +53,7 @@ describe("GET /sitemap.xml", () => {
       "http://localhost:8000/pages-sitemap.xml",
       "http://localhost:8000/articles-sitemap.xml",
       "http://localhost:8000/volumes-sitemap.xml",
-      "http://localhost:8000/interactives/sitemap.xml",
+      "http://localhost:8000/interactives-sitemap.xml",
       "http://localhost:8000/docs/sitemap.xml",
     ])
   })

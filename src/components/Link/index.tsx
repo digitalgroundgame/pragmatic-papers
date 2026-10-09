@@ -4,6 +4,7 @@ import React from "react"
 
 import { LinkButton } from "@/components/ui/link-button"
 import type { Article, Page, Volume } from "@/payload-types"
+import { HoverPrefetchLink } from "./HoverPrefetchLink"
 
 interface CMSLinkType {
   appearance?: "inline" | ButtonProps["variant"]
@@ -49,10 +50,10 @@ export const CMSLink: React.FC<CMSLinkType> = (props) => {
   /* Ensure we don't break any styles set by richText */
   if (appearance === "inline") {
     return (
-      <a className={cn(className)} href={href || url || ""} {...newTabProps}>
+      <HoverPrefetchLink className={cn(className)} href={href || url || ""} {...newTabProps}>
         {label && label}
         {children && children}
-      </a>
+      </HoverPrefetchLink>
     )
   }
 

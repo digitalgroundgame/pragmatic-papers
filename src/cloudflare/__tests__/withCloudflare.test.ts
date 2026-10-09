@@ -38,6 +38,11 @@ describe("withCloudflare", () => {
     expect(config.output).toBe("standalone")
   })
 
+  it("turns on client-side navigation, keeping the base env", () => {
+    const withEnv = withCloudflare({ ...base, env: { KEPT: "yes" } })
+    expect(withEnv.env).toEqual({ KEPT: "yes", NEXT_PUBLIC_CLIENT_NAVIGATION: "true" })
+  })
+
   it("takes the stubbed packages off serverExternalPackages", () => {
     expect(config.serverExternalPackages).toEqual(["pino"])
   })

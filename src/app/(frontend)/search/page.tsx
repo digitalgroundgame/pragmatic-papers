@@ -11,6 +11,7 @@ import type { PaginatedDocs } from "payload"
 import { getPayload } from "payload"
 import React, { cache } from "react"
 import { Breadcrumbs } from "@/components/Breadcrumbs"
+import { HoverPrefetchLink } from "@/components/Link/HoverPrefetchLink"
 
 interface SearchResult {
   id: number
@@ -171,20 +172,20 @@ export default async function SearchPage({ searchParams }: Args): Promise<React.
                     <div className="flex gap-4">
                       {image && (
                         <div className="bg-muted shrink-0 overflow-hidden rounded-sm border md:h-20 md:w-28">
-                          <a href={href} tabIndex={-1} aria-hidden>
+                          <HoverPrefetchLink href={href} tabIndex={-1} aria-hidden>
                             <Media
                               media={image}
                               variant="thumbnail"
                               sizes="112px"
                               className="aspect-3/2 h-full w-full object-cover"
                             />
-                          </a>
+                          </HoverPrefetchLink>
                         </div>
                       )}
                       <div className="flex flex-col gap-1">
-                        <a href={href} className="hover:underline">
+                        <HoverPrefetchLink href={href} className="hover:underline">
                           <h2 className="text-lg font-semibold">{result.title}</h2>
-                        </a>
+                        </HoverPrefetchLink>
                         {result.excerpt && (
                           <p className="text-muted-foreground line-clamp-2 text-sm">
                             {result.excerpt}

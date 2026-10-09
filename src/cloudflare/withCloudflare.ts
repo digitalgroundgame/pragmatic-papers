@@ -29,6 +29,8 @@ const isStubbed = (external: unknown): boolean =>
 export function withCloudflare(base: NextConfig): NextConfig {
   return {
     ...base,
+    // Links navigate client-side with next/link (HoverPrefetchLink).
+    env: { ...base.env, NEXT_PUBLIC_CLIENT_NAVIGATION: "true" },
     // In a Worker, pg connects through pg-cloudflare, which Next's trace (run under Node)
     // never reaches, so OpenNext wouldn't copy it into the Worker bundle.
     outputFileTracingIncludes: {

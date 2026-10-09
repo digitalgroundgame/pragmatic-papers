@@ -60,8 +60,8 @@ const queryArticlesByAuthor = cache(async (userId: number, page: number = 1) => 
   })
 })
 
-// Author pages were first served at /authors/<user id>, and search engines still request those
-// URLs. A number that isn't anyone's slug is looked up as an id and sent to that author's page.
+// Contributor pages were first served at /authors/<user id>, and search engines still request those
+// URLs (next.config.ts redirects them here). A number that isn't anyone's slug is looked up as an id and sent to that author's page.
 const queryUserSlugById = cache(async (slug: string): Promise<string | null> => {
   if (!/^\d+$/.test(slug)) return null
   const payload = await getPayloadConfig()
@@ -81,7 +81,7 @@ export async function generateMetadata({ params, searchParams }: Args): Promise<
   const { p } = await searchParams
   const user = await queryUserBySlug(slug)
 
-  const name = user?.name || "Author"
+  const name = user?.name || "Contributor"
   const title = `${name} — Pragmatic Papers`
 
   const affiliationPart = user?.affiliation ? `, ${user.affiliation}` : ""
@@ -94,7 +94,7 @@ export async function generateMetadata({ params, searchParams }: Args): Promise<
       : undefined
 
   const serverUrl = getServerSideURL()
-  const canonicalUrl = `${serverUrl}${paginatedPath(`/authors/${slug}`, p)}`
+  const canonicalUrl = `${serverUrl}${paginatedPath(`/contributors/${slug}`, p)}`
 
   return {
     title,
@@ -126,10 +126,10 @@ export default async function AuthorPage({ params, searchParams }: Args): Promis
   if (!Number.isInteger(page) || page < 1) page = 1
 
   const user = await queryUserBySlug(slug)
-  const url = `/authors/${slug}`
+  const url = `/contributors/${slug}`
   if (!user) {
     const currentSlug = await queryUserSlugById(slug)
-    if (currentSlug) permanentRedirect(`/authors/${currentSlug}`)
+    if (currentSlug) permanentRedirect(`/contributors/${currentSlug}`)
     return <PayloadRedirects url={url} />
   }
 
@@ -165,10 +165,10 @@ export default async function AuthorPage({ params, searchParams }: Args): Promis
   const profileImageUrl = isResolved(profile)
     ? (profile.sizes?.square?.url ?? undefined)
     : undefined
-  const initials = getInitials(user.name || "Author")
+  const initials = getInitials(user.name || "Contributor")
   const trail = [
-    { name: "Authors", path: "/authors" },
-    { name: user.name || "Author", path: url },
+    { name: "Contributors", path: "/contributors" },
+    { name: user.name || "Contributor", path: url },
   ]
 
   return (
@@ -191,7 +191,7 @@ export default async function AuthorPage({ params, searchParams }: Args): Promis
               <AvatarFallback>{initials}</AvatarFallback>
             </Avatar>
           )}
-          <h1>{user.name || "Author"}</h1>
+          <h1>{user.name || "Contributor"}</h1>
           {user.affiliation && <p className="text-muted-foreground text-sm">{user.affiliation}</p>}
           <AuthorLinks socials={user.socials} />
         </header>

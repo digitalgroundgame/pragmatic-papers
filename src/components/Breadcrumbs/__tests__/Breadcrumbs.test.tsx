@@ -4,8 +4,8 @@ import { describe, expect, it } from "vitest"
 import { Breadcrumbs } from "../index"
 
 const trail = [
-  { name: "Authors", path: "/authors" },
-  { name: "Jane Doe", path: "/authors/jane-doe" },
+  { name: "Authors", path: "/contributors" },
+  { name: "Jane Doe", path: "/contributors/jane-doe" },
 ]
 
 describe("Breadcrumbs", () => {
@@ -17,7 +17,7 @@ describe("Breadcrumbs", () => {
   it("links each step but the last, which is the current page", () => {
     render(<Breadcrumbs items={trail} />)
     expect(screen.getByRole("link", { name: "Home" })).toHaveAttribute("href", "/")
-    expect(screen.getByRole("link", { name: "Authors" })).toHaveAttribute("href", "/authors")
+    expect(screen.getByRole("link", { name: "Authors" })).toHaveAttribute("href", "/contributors")
     const current = screen.getByText("Jane Doe")
     expect(current).toHaveAttribute("aria-current", "page")
     expect(current).not.toHaveAttribute("href")

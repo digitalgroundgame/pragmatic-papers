@@ -108,6 +108,6 @@ describe("paginatedPath", () => {
 
   it("ignores page numbers the listing itself would ignore", () => {
     for (const p of ["0", "-2", "2.5", "abc", ""])
-      expect(paginatedPath("/authors", p)).toBe("/authors")
+      expect(paginatedPath("/contributors", p)).toBe("/contributors")
   })
 })

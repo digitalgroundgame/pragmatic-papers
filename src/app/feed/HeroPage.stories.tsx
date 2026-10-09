@@ -28,7 +28,7 @@ export const Default: Story = {
     await expect(canvas.getByText("Elections, Housing")).toBeVisible()
     await expect(canvas.getByRole("link", { name: "Jordan Rivera" })).toHaveAttribute(
       "href",
-      "/authors/jordan-rivera",
+      "/contributors/jordan-rivera",
     )
   },
 }

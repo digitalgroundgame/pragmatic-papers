@@ -25,7 +25,7 @@ test.describe("navigation", () => {
 
     await page.locator('[data-slot="byline"]').getByRole("link", { name: WRITER_NAME }).click()
 
-    await expect(page).toHaveURL(`/authors/${WRITER_SLUG}`)
+    await expect(page).toHaveURL(`/contributors/${WRITER_SLUG}`)
     await expect(page.getByRole("heading", { level: 1, name: WRITER_NAME })).toBeVisible()
 
     await page.goBack()
@@ -35,8 +35,8 @@ test.describe("navigation", () => {
   })
 
   test("authors list pagination", async ({ page }) => {
-    await page.goto("/authors")
-    const list = page.getByRole("region", { name: "All authors" })
+    await page.goto("/contributors")
+    const list = page.getByRole("region", { name: "All contributors" })
     const names = list.getByRole("heading", { level: 3 })
     await expect(names.first()).toBeVisible()
     const firstPage = await names.allTextContents()
@@ -44,7 +44,7 @@ test.describe("navigation", () => {
 
     await page.getByRole("link", { name: "Go to next page" }).click()
 
-    await expect(page).toHaveURL(/\/authors\?p=2$/)
+    await expect(page).toHaveURL(/\/contributors\?p=2$/)
     await expect(
       page.getByRole("navigation", { name: "pagination" }).locator('[aria-current="page"]'),
     ).toHaveText("2")

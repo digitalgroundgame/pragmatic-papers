@@ -24,7 +24,7 @@ describe("FeedActionColumn", () => {
 
     expect(screen.getByRole("link", { name: "Jordan Rivera" })).toHaveAttribute(
       "href",
-      "/authors/jordan",
+      "/contributors/jordan",
     )
     expect(screen.getAllByRole("link")).toHaveLength(3)
     expect(screen.getByLabelText("1 more authors")).toHaveTextContent("+1")

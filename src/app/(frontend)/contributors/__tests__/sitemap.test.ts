@@ -14,8 +14,8 @@ beforeEach(() => {
 })
 afterEach(() => vi.unstubAllEnvs())
 
-describe("/authors/sitemap.xml", () => {
-  it("lists the authors /authors lists", async () => {
+describe("/contributors/sitemap.xml", () => {
+  it("lists the authors /contributors lists", async () => {
     find.mockResolvedValue({ docs: [] })
     await sitemap()
     expect(find).toHaveBeenCalledWith(
@@ -32,7 +32,7 @@ describe("/authors/sitemap.xml", () => {
     )
   })
 
-  it("links /authors, as fresh as its newest author, and every author with a slug", async () => {
+  it("links /contributors, as fresh as its newest author, and every author with a slug", async () => {
     find.mockResolvedValue({
       docs: [
         { slug: "ada", updatedAt: "2026-10-02T00:00:00.000Z" },
@@ -41,9 +41,9 @@ describe("/authors/sitemap.xml", () => {
       ],
     })
     expect(await sitemap()).toEqual([
-      { url: `${SITE_URL}/authors`, lastModified: "2026-10-08T00:00:00.000Z" },
-      { url: `${SITE_URL}/authors/ada`, lastModified: "2026-10-02T00:00:00.000Z" },
-      { url: `${SITE_URL}/authors/grace`, lastModified: "2026-10-08T00:00:00.000Z" },
+      { url: `${SITE_URL}/contributors`, lastModified: "2026-10-08T00:00:00.000Z" },
+      { url: `${SITE_URL}/contributors/ada`, lastModified: "2026-10-02T00:00:00.000Z" },
+      { url: `${SITE_URL}/contributors/grace`, lastModified: "2026-10-08T00:00:00.000Z" },
     ])
   })
 

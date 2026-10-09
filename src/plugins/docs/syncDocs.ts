@@ -66,7 +66,7 @@ async function uploadOnce(
 
 /**
  * Writes each doc in `dir` into this site's database, published, with its files uploaded to
- * Media. A doc whose JSON and files hash the same as last time is skipped, so a start with
+ * Media. A doc whose JSON and files hash the same as last time is skipped, so a deploy with
  * nothing new costs one query per doc. Docs that aren't in the repo are left alone, and so is
  * a repo doc edited in the admin, until the repo's copy changes.
  */

@@ -223,6 +223,7 @@ export interface Config {
     'article-recommendations': ArticleRecommendation;
     'site-settings': SiteSetting;
     integrations: IntegrationSettings;
+    ticker: TickerGlobal;
     'payload-jobs-stats': PayloadJobsStat;
   };
   globalsSelect: {
@@ -231,6 +232,7 @@ export interface Config {
     'article-recommendations': ArticleRecommendationsSelect<false> | ArticleRecommendationsSelect<true>;
     'site-settings': SiteSettingsSelect<false> | SiteSettingsSelect<true>;
     integrations: IntegrationsSelect<false> | IntegrationsSelect<true>;
+    ticker: TickerSelect<false> | TickerSelect<true>;
     'payload-jobs-stats': PayloadJobsStatsSelect<false> | PayloadJobsStatsSelect<true>;
   };
   locale: null;
@@ -2667,6 +2669,26 @@ export interface IntegrationSettings {
   createdAt?: string | null;
 }
 /**
+ * The strip under the header with our live broadcasts and latest posts.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "ticker".
+ */
+export interface TickerGlobal {
+  id: number;
+  /**
+   * Posts the ticker leaves out. Paste the post's link from Bluesky or X; it's gone from the ticker as soon as you save.
+   */
+  hidden?:
+    | {
+        url: string;
+        id?: string | null;
+      }[]
+    | null;
+  updatedAt?: string | null;
+  createdAt?: string | null;
+}
+/**
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload-jobs-stats".
  */
@@ -2780,6 +2802,21 @@ export interface IntegrationsSelect<T extends boolean = true> {
               username?: T;
               id?: T;
             };
+      };
+  updatedAt?: T;
+  createdAt?: T;
+  globalType?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "ticker_select".
+ */
+export interface TickerSelect<T extends boolean = true> {
+  hidden?:
+    | T
+    | {
+        url?: T;
+        id?: T;
       };
   updatedAt?: T;
   createdAt?: T;

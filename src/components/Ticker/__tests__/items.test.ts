@@ -1,6 +1,15 @@
 import { describe, expect, it } from "vitest"
 
-import { excerpt, mergePosts, postLinks, postText, tickerDuration, type TickerPost } from "../items"
+import {
+  excerpt,
+  mergePosts,
+  postKey,
+  postLinks,
+  postText,
+  tickerDuration,
+  withoutHidden,
+  type TickerPost,
+} from "../items"
 
 const post = (
   id: string,
@@ -116,5 +125,43 @@ describe("tickerDuration", () => {
       )
     const posts = Array.from({ length: 4 }, (_, i) => linked(i))
     expect(tickerDuration(posts)).toBe(Math.round((4 * (100 + 3)) / 4.5))
+  })
+})
+
+describe("postKey", () => {
+  it.each([
+    ["https://bsky.app/profile/PP.bsky.social/post/3k1", "bluesky:pp.bsky.social/3k1"],
+    [" https://bsky.app/profile/pp.bsky.social/post/3k1?ref=share ", "bluesky:pp.bsky.social/3k1"],
+    ["https://x.com/PragPapers/status/42", "x:42"],
+    ["https://twitter.com/PragPapers/status/42?s=20", "x:42"],
+    ["https://mobile.x.com/i/status/42", "x:42"],
+  ])("reads %s as one post however it's written", (link, key) => {
+    expect(postKey(link)).toBe(key)
+  })
+
+  it.each([
+    ["a profile", "https://bsky.app/profile/pp.bsky.social"],
+    ["another site", "https://example.com/profile/pp/post/1"],
+    ["not a link", "PragPapers 42"],
+  ])("is null for %s", (_, link) => {
+    expect(postKey(link)).toBeNull()
+  })
+})
+
+describe("withoutHidden", () => {
+  const bluesky = {
+    ...post("b1", "2026-10-07T10:00:00Z"),
+    url: "https://bsky.app/profile/pp.bsky.social/post/3k1",
+  }
+  const x = { ...post("x1", "2026-10-07T10:00:00Z"), url: "https://x.com/PragPapers/status/42" }
+
+  it("leaves out the posts whose links an editor listed", () => {
+    expect(withoutHidden([bluesky, x], ["https://twitter.com/PragPapers/status/42?s=20"])).toEqual([
+      bluesky,
+    ])
+  })
+
+  it("ignores entries that aren't links to posts", () => {
+    expect(withoutHidden([bluesky, x], ["", "https://example.com"])).toEqual([bluesky, x])
   })
 })

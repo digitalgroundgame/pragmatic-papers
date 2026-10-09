@@ -72,6 +72,35 @@ function normalize(post: TickerPost): string {
 }
 
 /**
+ * What identifies a post across the ways its link can be written (Bluesky or X, `www.`,
+ * `twitter.com`, a trailing `?s=20`), or null for a link that isn't to a post.
+ */
+export function postKey(link: string): string | null {
+  let url: URL
+  try {
+    url = new URL(link.trim())
+  } catch {
+    return null
+  }
+  const host = url.hostname.replace(/^(www|mobile)\./, "")
+  if (host === "bsky.app") {
+    const [, handle, rkey] = url.pathname.match(/^\/profile\/([^/]+)\/post\/([^/]+)/) ?? []
+    return handle && rkey ? `bluesky:${handle.toLowerCase()}/${rkey}` : null
+  }
+  if (host === "x.com" || host === "twitter.com") {
+    const [, id] = url.pathname.match(/^\/[^/]+\/status\/(\d+)/) ?? []
+    return id ? `x:${id}` : null
+  }
+  return null
+}
+
+/** The posts, without the ones an editor hid by their link. */
+export function withoutHidden(posts: TickerPost[], hidden: readonly string[]): TickerPost[] {
+  const keys = new Set(hidden.map(postKey).filter(Boolean))
+  return keys.size === 0 ? posts : posts.filter((post) => !keys.has(postKey(post.url)))
+}
+
+/**
  * Every source's posts as one list, newest first. The same thing cross-posted to Bluesky and X
  * shows once: the newer copy.
  */

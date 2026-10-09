@@ -100,6 +100,7 @@ processes they start.
 - **Header** (`slug: 'header'`) — nav items, action button; revalidated via `revalidateHeader` hook
 - **Footer** (`slug: 'footer'`) — nav items; revalidated via `revalidateFooter` hook
 - **Site Settings** (`slug: 'site-settings'`) — admin-only; its `experiments` group switches beta features on per environment; revalidated via `revalidateSiteSettings` hook
+- **Ticker** (`slug: 'ticker'`) — editors and admins; posts hidden from the header's ticker, by link; revalidated via `revalidateTicker` hook. Which accounts the ticker reads is in **Integrations** (admin-only)
 - Fetched via `getCachedGlobal('header' | 'footer', depth)()` using `unstable_cache` with tags
 
 ### Experiments

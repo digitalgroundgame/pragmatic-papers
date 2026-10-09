@@ -5,8 +5,9 @@ import type * as ReactModule from "react"
 import type { TickerPost } from "../items"
 import type * as SourcesModule from "../sources"
 
-const { integrations, cacheCalls, loadSource } = vi.hoisted(() => ({
+const { integrations, ticker, cacheCalls, loadSource } = vi.hoisted(() => ({
   integrations: { current: {} as Record<string, unknown> },
+  ticker: { current: {} as Record<string, unknown> },
   cacheCalls: [] as { keys: string[]; options: { revalidate: number; tags: string[] } }[],
   loadSource: vi.fn(),
 }))
@@ -28,7 +29,7 @@ vi.mock("react", async (importOriginal) => ({
 }))
 vi.mock("@/utilities/getGlobals", () => ({
   getCachedGlobal: (slug: string) => async () =>
-    slug === "integrations" ? integrations.current : {},
+    slug === "integrations" ? integrations.current : slug === "ticker" ? ticker.current : {},
 }))
 vi.mock("../sources", async (importOriginal) => ({
   ...(await importOriginal<typeof SourcesModule>()),
@@ -50,6 +51,7 @@ const post = (id: string, createdAt: string): TickerPost => ({
 beforeEach(() => {
   loadSource.mockReset()
   integrations.current = {}
+  ticker.current = {}
 })
 
 describe("getTickerFeed", () => {
@@ -102,5 +104,18 @@ describe("getTickerFeed", () => {
       source === broadcastSource ? live : source === postSources[0] ? [older] : [newer],
     )
     expect(await getTickerFeed()).toEqual({ broadcast: live, posts: [newer, older] })
+  })
+
+  it("leaves out the posts an editor hid, and fills their places with the next newest", async () => {
+    const hidden = {
+      ...post("hidden", "2026-10-08T12:00:00Z"),
+      url: "https://x.com/PragPapers/status/9",
+    }
+    const kept = post("kept", "2026-10-08T10:00:00Z")
+    ticker.current = { hidden: [{ url: "https://twitter.com/PragPapers/status/9" }] }
+    loadSource.mockImplementation(async (source) =>
+      source === broadcastSource ? null : source === postSources[0] ? [hidden, kept] : [],
+    )
+    expect((await getTickerFeed()).posts).toEqual([kept])
   })
 })

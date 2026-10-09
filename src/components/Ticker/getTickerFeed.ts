@@ -1,7 +1,7 @@
 import { unstable_cache } from "next/cache"
 import { cache } from "react"
 
-import { mergePosts, type TickerFeed } from "./items"
+import { mergePosts, withoutHidden, type TickerFeed } from "./items"
 import { getCachedGlobal } from "@/utilities/getGlobals"
 
 import {
@@ -36,7 +36,10 @@ const posts = postSources.map((source) => cached(source.integration.id, source, 
 
 /** Everything the ticker shows right now, from every source at once. */
 export const getTickerFeed = cache(async (): Promise<TickerFeed> => {
-  const { youtube, bluesky, x } = await getCachedGlobal("integrations")()
+  const [{ youtube, bluesky, x }, { hidden }] = await Promise.all([
+    getCachedGlobal("integrations")(),
+    getCachedGlobal("ticker")(),
+  ])
   const settings: TickerSettings = {
     youtubeChannelIds: youtube?.channels?.map((channel) => channel.channelId),
     blueskyHandles: bluesky?.handles?.map((account) => account.handle),
@@ -46,5 +49,11 @@ export const getTickerFeed = cache(async (): Promise<TickerFeed> => {
     broadcast(settings),
     ...posts.map((load) => load(settings)),
   ])
-  return { broadcast: current, posts: mergePosts(lists) }
+  // Hidden posts are left out before the newest are picked, so the ticker stays full. The hidden
+  // list has its own cache, so a post an editor hides goes at once, whatever the sources hold.
+  const urls = hidden?.map((post) => post.url) ?? []
+  return {
+    broadcast: current,
+    posts: mergePosts(lists.map((list) => withoutHidden(list, urls))),
+  }
 })

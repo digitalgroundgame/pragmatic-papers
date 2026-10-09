@@ -68,6 +68,7 @@ import { MathJaxProviderRoot as MathJaxProviderRoot_5e6ec76a4009b641df710b887409
 import { AdminBarHintProvider as AdminBarHintProvider_0a143f595a642b35392c6258a68b49d3 } from '@/components/AdminBar/AdminBarHintProvider'
 import { AdminSentryProvider as AdminSentryProvider_667ceb8bba780e4bbe5e9cc4600c3631 } from '@/providers/AdminSentryProvider'
 import { CollectionCards as CollectionCards_f9c02e79a4aed9a3924487c0cd4cafb1 } from '@payloadcms/next/rsc'
+import { ExperimentSwitchField as ExperimentSwitchField_bfc53fcaa9b90365c2431ea18727763a } from '@/globals/SiteSettings/components/ExperimentSwitchField'
 import { S3ClientUploadHandler as S3ClientUploadHandler_f97aa6c64367fa259c5bc0567239ef24 } from '@payloadcms/storage-s3/client'
 
 /** @type import('payload').ImportMap */
@@ -141,6 +142,7 @@ export const importMap = {
   "@/providers/MathJaxProvider#MathJaxProviderRoot": MathJaxProviderRoot_5e6ec76a4009b641df710b8874095c4b,
   "@/components/AdminBar/AdminBarHintProvider#AdminBarHintProvider": AdminBarHintProvider_0a143f595a642b35392c6258a68b49d3,
   "@/providers/AdminSentryProvider#AdminSentryProvider": AdminSentryProvider_667ceb8bba780e4bbe5e9cc4600c3631,
+  "@/globals/SiteSettings/components/ExperimentSwitchField#ExperimentSwitchField": ExperimentSwitchField_bfc53fcaa9b90365c2431ea18727763a,
   "@payloadcms/next/rsc#CollectionCards": CollectionCards_f9c02e79a4aed9a3924487c0cd4cafb1,
   "@payloadcms/storage-s3/client#S3ClientUploadHandler": S3ClientUploadHandler_f97aa6c64367fa259c5bc0567239ef24
 }

@@ -222,7 +222,7 @@ too.
 - Use `getPayloadConfig` imported from `@/utilities/getPayloadConfig`
 - Wrap data queries in `React.cache()` for per-request deduplication
 - Use `unstable_cache` with cache tags for long-lived caching (globals, redirects, sitemaps)
-- Sitemaps: a new one is a `sitemap.ts` in its route's folder (Next's metadata convention, served at `/<route>/sitemap.xml`, e.g. `docs/sitemap.ts`), added to `SITEMAP_PATHS` in `(sitemaps)/sitemaps.ts`. The `(sitemaps)/*-sitemap.xml` routes are the URLs production already serves to crawlers, so they stay where they are
+- Sitemaps: a new one is a `sitemap.ts` in its route's folder (Next's metadata convention, served at `/<route>/sitemap.xml`, e.g. `docs/sitemap.ts`, `interactives/sitemap.ts`), added to `SITEMAP_PATHS` in `(sitemaps)/sitemaps.ts`. The `(sitemaps)/*-sitemap.xml` routes are the URLs production already serves to crawlers, so they stay where they are
 - Always respect `draftMode()` — pass `draft` and `overrideAccess: draft` into Payload queries
 - Next.js 15: `params` and `searchParams` are `Promise`s (must be `await`ed)
 - Metadata: use `generateMeta({ doc, canonicalPath })` from `@/utilities/generateMeta`

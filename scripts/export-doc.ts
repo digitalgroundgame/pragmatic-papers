@@ -71,10 +71,12 @@ export async function main(slug: string | undefined): Promise<void> {
   }
 }
 
-main(process.argv[2]).then(
-  () => process.exit(0),
-  (err: unknown) => {
-    console.error(err instanceof Error ? err.message : err)
-    process.exit(1)
-  },
-)
+if (process.argv[1] === import.meta.filename) {
+  main(process.argv[2]).then(
+    () => process.exit(0),
+    (err: unknown) => {
+      console.error(err instanceof Error ? err.message : err)
+      process.exit(1)
+    },
+  )
+}

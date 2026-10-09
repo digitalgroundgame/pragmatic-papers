@@ -16,9 +16,9 @@ inputs:
   save-pnpm-cache:
     description: >-
       "true" to save the pnpm store when the lockfile's cache entry is missing.
-      Every job restores it, but only one job per runner environment should
-      save it: on a lockfile change each saver compresses and uploads the whole
-      store (~300 MB), and all but the first upload are thrown away.
+      Every job restores it, but only one job should save it (Unit tests): on
+      a lockfile change each saver compresses and uploads the whole store
+      (~420 MB), and all but the first upload are thrown away.
     required: false
     default: "false"
 
@@ -38,9 +38,16 @@ runs:
 
     # Cached here rather than with setup-node's `cache: pnpm`, which saves from
     # every job that misses. The store path is part of a cache entry's
-    # identity, so jobs in the Playwright container (store under /github/home)
-    # and on the bare runner (under /home/runner) keep separate entries under
-    # the same key, and each needs its own saver.
+    # identity, so it's pinned to one path for every job. Otherwise jobs in the
+    # Playwright container (store under /github/home) and on the bare runner
+    # (under /home/runner) would need separate entries, and the container's
+    # would never be saved on dev, which skips E2E after the merge queue. In
+    # the container /tmp is on another filesystem than the workspace, so pnpm
+    # copies from the store there instead of hard-linking.
+    - name: Pin the pnpm store
+      shell: bash
+      run: echo "npm_config_store_dir=/tmp/pnpm-store" >> "$GITHUB_ENV"
+
     - name: Locate the pnpm store
       id: pnpm-store
       shell: bash

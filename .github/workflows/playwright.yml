@@ -254,9 +254,6 @@ jobs:
         uses: ./.github/actions/setup-e2e
         with:
           gh-font-read-token: ${{ secrets.GH_FONT_READ }}
-          # The job that saves the pnpm store for the Playwright image, which
-          # the Storybook job in ci.yml also restores from.
-          save-pnpm-cache: "true"
 
       - name: Run Playwright tests
         env:

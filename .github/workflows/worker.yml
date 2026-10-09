@@ -20,8 +20,7 @@ name: Staging Worker
 
 on:
   push:
-    # TODO(before merge): drop claude/opennext-spike, which deploys the PR to try it first.
-    branches: [dev, claude/opennext-spike]
+    branches: [dev]
   workflow_dispatch:
 
 permissions:

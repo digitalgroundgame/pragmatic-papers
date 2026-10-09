@@ -6,9 +6,6 @@ interface CMSLinkProps extends React.ComponentProps<"a"> {
   link?: LinkField
 }
 
-// Planning to replace the CMSLink component with this one in the future.
-// Need to add appearance handling before replacing. Use class-variance-authority for handling sizes and variants.
-
 /**
  * CMSLink: A flexible link component for CMS-driven navigation.
  *

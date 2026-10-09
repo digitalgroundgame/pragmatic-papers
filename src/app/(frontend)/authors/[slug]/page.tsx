@@ -13,6 +13,7 @@ import type { Article as ArticleType, Volume } from "@/payload-types"
 import { getInitials } from "@/utilities/getInitials"
 import { isResolved } from "@/utilities/relationships"
 import { getMediaUrl } from "@/utilities/getMediaUrl"
+import { getPayloadConfig } from "@/utilities/getPayloadConfig"
 import { paginatedPath } from "@/utilities/generateMeta"
 import { getServerSideURL } from "@/utilities/getURL"
 import { mergeOpenGraph } from "@/utilities/mergeOpenGraph"
@@ -21,7 +22,7 @@ import { buildBreadcrumbJsonLd, buildPersonJsonLd } from "@/utilities/structured
 import config from "@payload-config"
 import type { Metadata } from "next"
 import { draftMode } from "next/headers"
-import { notFound } from "next/navigation"
+import { notFound, permanentRedirect } from "next/navigation"
 import { getPayload } from "payload"
 import React, { cache } from "react"
 import { Breadcrumbs } from "@/components/Breadcrumbs"
@@ -57,6 +58,22 @@ const queryArticlesByAuthor = cache(async (userId: number, page: number = 1) => 
     },
     depth: 2,
   })
+})
+
+// Author pages were first served at /authors/<user id>, and search engines still request those
+// URLs. A number that isn't anyone's slug is looked up as an id and sent to that author's page.
+const queryUserSlugById = cache(async (slug: string): Promise<string | null> => {
+  if (!/^\d+$/.test(slug)) return null
+  const payload = await getPayloadConfig()
+  const { docs } = await payload.find({
+    collection: "users",
+    limit: 1,
+    overrideAccess: false,
+    pagination: false,
+    select: { slug: true },
+    where: { id: { equals: Number(slug) } },
+  })
+  return docs[0]?.slug || null
 })
 
 export async function generateMetadata({ params, searchParams }: Args): Promise<Metadata> {
@@ -110,7 +127,11 @@ export default async function AuthorPage({ params, searchParams }: Args): Promis
 
   const user = await queryUserBySlug(slug)
   const url = `/authors/${slug}`
-  if (!user) return <PayloadRedirects url={url} />
+  if (!user) {
+    const currentSlug = await queryUserSlugById(slug)
+    if (currentSlug) permanentRedirect(`/authors/${currentSlug}`)
+    return <PayloadRedirects url={url} />
+  }
 
   const {
     docs: articles,

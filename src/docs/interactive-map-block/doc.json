@@ -1,6 +1,6 @@
 {
   "title": "Shade a map by value with the Interactive Map block",
-  "summary": "Upload a pre-projected SVG to Map Assets, then show it in an article with each region coloured by its margin, hoverable for the numbers.",
+  "summary": "Upload a pre-projected SVG to Maps, then show it in an article with each region coloured by its margin, hoverable for the numbers.",
   "publishedAt": "2026-06-15",
   "audience": ["writer", "editor"],
   "content": {
@@ -348,7 +348,7 @@
           "children": [
             {
               "mode": "normal",
-              "text": "2. Upload it to Map Assets",
+              "text": "2. Upload it to Maps",
               "type": "text",
               "style": "",
               "detail": 0,
@@ -375,7 +375,7 @@
             },
             {
               "mode": "normal",
-              "text": "Map Assets",
+              "text": "Maps",
               "type": "text",
               "style": "",
               "detail": 0,
@@ -384,7 +384,25 @@
             },
             {
               "mode": "normal",
-              "text": ", upload the SVG, give it a ",
+              "text": " (under ",
+              "type": "text",
+              "style": "",
+              "detail": 0,
+              "format": 0,
+              "version": 1
+            },
+            {
+              "mode": "normal",
+              "text": "Interactives",
+              "type": "text",
+              "style": "",
+              "detail": 0,
+              "format": 1,
+              "version": 1
+            },
+            {
+              "mode": "normal",
+              "text": "), upload the SVG, give it a ",
               "type": "text",
               "style": "",
               "detail": 0,
@@ -533,7 +551,7 @@
                 },
                 {
                   "mode": "normal",
-                  "text": ": the Map Asset.",
+                  "text": ": the map you uploaded.",
                   "type": "text",
                   "style": "",
                   "detail": 0,

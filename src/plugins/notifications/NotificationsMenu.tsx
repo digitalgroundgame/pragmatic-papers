@@ -62,10 +62,12 @@ export function NotificationsMenu({
     <Popover onOpenChange={(open) => open && setView("list")}>
       <PopoverTrigger
         render={
+          // Bare like Payload's own header icons (the account avatar): no fill on hover or
+          // while open.
           <Button
             variant="ghost"
             size="icon"
-            className="relative rounded-full"
+            className="relative rounded-full hover:bg-transparent hover:opacity-75 aria-expanded:bg-transparent dark:hover:bg-transparent"
             aria-label={count ? `Notifications, ${count} unread` : "Notifications"}
             title="Notifications"
           />

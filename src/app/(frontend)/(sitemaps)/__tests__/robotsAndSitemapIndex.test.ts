@@ -30,9 +30,10 @@ describe("GET /robots.txt", () => {
         "",
         "# Sitemaps",
         "Sitemap: https://pragmaticpapers.com/sitemap.xml",
-        "Sitemap: https://pragmaticpapers.com/pages-sitemap.xml",
-        "Sitemap: https://pragmaticpapers.com/articles-sitemap.xml",
-        "Sitemap: https://pragmaticpapers.com/volumes-sitemap.xml",
+        "Sitemap: https://pragmaticpapers.com/pages/sitemap.xml",
+        "Sitemap: https://pragmaticpapers.com/articles/sitemap.xml",
+        "Sitemap: https://pragmaticpapers.com/articles/news-sitemap.xml",
+        "Sitemap: https://pragmaticpapers.com/volumes/sitemap.xml",
         "Sitemap: https://pragmaticpapers.com/interactives/sitemap.xml",
         "Sitemap: https://pragmaticpapers.com/authors/sitemap.xml",
         "Sitemap: https://pragmaticpapers.com/topics/sitemap.xml",
@@ -52,9 +53,10 @@ describe("GET /sitemap.xml", () => {
     const xml = await res.text()
     expect(xml).toContain('<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">')
     expect([...xml.matchAll(/<loc>(.*?)<\/loc>/g)].map(([, loc]) => loc)).toEqual([
-      "http://localhost:8000/pages-sitemap.xml",
-      "http://localhost:8000/articles-sitemap.xml",
-      "http://localhost:8000/volumes-sitemap.xml",
+      "http://localhost:8000/pages/sitemap.xml",
+      "http://localhost:8000/articles/sitemap.xml",
+      "http://localhost:8000/articles/news-sitemap.xml",
+      "http://localhost:8000/volumes/sitemap.xml",
       "http://localhost:8000/interactives/sitemap.xml",
       "http://localhost:8000/authors/sitemap.xml",
       "http://localhost:8000/topics/sitemap.xml",

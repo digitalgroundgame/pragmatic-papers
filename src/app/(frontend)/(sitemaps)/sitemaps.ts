@@ -1,10 +1,11 @@
-// The sitemaps the index and robots.txt point crawlers at, one route each. The `*-sitemap.xml`
-// routes in this folder are the ones production served first; newer ones are a `sitemap.ts`
-// in their own route's folder.
+// The sitemaps the index and robots.txt point crawlers at, each a `sitemap.ts` (or, for the
+// Google News tags `sitemap.ts` can't write, a route handler) in the folder of the section it
+// lists.
 export const SITEMAP_PATHS = [
-  "/pages-sitemap.xml",
-  "/articles-sitemap.xml",
-  "/volumes-sitemap.xml",
+  "/pages/sitemap.xml",
+  "/articles/sitemap.xml",
+  "/articles/news-sitemap.xml",
+  "/volumes/sitemap.xml",
   "/interactives/sitemap.xml",
   "/authors/sitemap.xml",
   "/topics/sitemap.xml",

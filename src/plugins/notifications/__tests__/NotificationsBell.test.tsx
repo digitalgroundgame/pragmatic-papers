@@ -153,4 +153,20 @@ describe("NotificationsBell", () => {
     fireEvent.click(screen.getByRole("checkbox", { name: /Docs/ }))
     expect(setPreference).toHaveBeenCalledWith("notifications", { read: [], muted: ["docs"] })
   })
+
+  it("saves a muted type turned back on", async () => {
+    await renderBell(
+      fakePayload([source("docs", ["Alpha"]), source("published", [], false)], {
+        read: [],
+        muted: ["docs", "published"],
+      }).payload,
+    )
+    openMenu()
+    fireEvent.click(await screen.findByRole("button", { name: "Notification settings" }))
+    fireEvent.click(screen.getByRole("checkbox", { name: /Docs/ }))
+    expect(setPreference).toHaveBeenCalledWith("notifications", {
+      read: [],
+      muted: ["published"],
+    })
+  })
 })

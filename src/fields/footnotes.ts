@@ -6,7 +6,7 @@ import type {
   NumberField,
   TextareaField,
 } from "payload"
-import { link, type LinkFieldOverrides } from "./link2"
+import { link, type LinkFieldOverrides } from "./link"
 
 const prependHttpsHook: FieldHook = ({ siblingData, value }) => {
   if (siblingData?.type !== "custom") {

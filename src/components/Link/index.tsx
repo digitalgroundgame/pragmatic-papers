@@ -1,72 +1,44 @@
-import { type ButtonProps } from "@/components/ui/button"
-import { cn } from "@/utilities/utils"
-import React from "react"
-
-import { LinkButton } from "@/components/ui/link-button"
-import type { Article, Page, Volume } from "@/payload-types"
+import type { LinkField } from "@/payload-types"
+import { getLinkFieldUrl } from "@/utilities/getLinkFieldUrl"
 import { HoverPrefetchLink } from "./HoverPrefetchLink"
 
-interface CMSLinkType {
-  appearance?: "inline" | ButtonProps["variant"]
-  children?: React.ReactNode
-  className?: string
-  label?: string | null
-  newTab?: boolean | null
-  reference?: {
-    relationTo: "pages" | "volumes" | "articles"
-    value: Page | Volume | Article | string | number
-  } | null
-  size?: ButtonProps["size"] | null
-  type?: "custom" | "reference" | null
-  url?: string | null
+interface CMSLinkProps extends React.ComponentProps<"a"> {
+  link?: LinkField
 }
+
+// Planning to replace the CMSLink component with this one in the future.
+// Need to add appearance handling before replacing. Use class-variance-authority for handling sizes and variants.
+
 /**
- * @deprecated Use CMSLink2 instead
+ * CMSLink: A flexible link component for CMS-driven navigation.
+ *
+ * This component chooses the appropriate element for a given CMS link:
+ * - Renders through HoverPrefetchLink, which navigates client-side to paths on this site
+ *   and is a plain <a> for external URLs.
+ *
+ * Props:
+ * - link: (LinkField) The CMS-provided link data object. Required.
+ * - children: (ReactNode) Content to show in the link. If not provided, falls back to link.label.
+ * - ...props: Remaining anchor-tag props (className, style, etc).
+ *
+ * Example usage:
+ * ```tsx
+ *    <CMSLink link={myLink} className="nav-link" />
+ *    <CMSLink link={myLink} className="nav-link">Go to Page</CMSLink>
+ * ```
  */
-export const CMSLink: React.FC<CMSLinkType> = (props) => {
-  const {
-    type,
-    appearance = "inline",
-    children,
-    className,
-    label,
-    newTab,
-    reference,
-    size,
-    url,
-  } = props
-
-  const href =
-    type === "reference" && typeof reference?.value === "object" && reference.value.slug
-      ? `${reference?.relationTo !== "pages" ? `/${reference?.relationTo}` : ""}/${
-          reference.value.slug
-        }`
-      : url
-
-  if (!href) return null
-
-  const newTabProps = newTab ? { rel: "noopener noreferrer", target: "_blank" } : {}
-
-  /* Ensure we don't break any styles set by richText */
-  if (appearance === "inline") {
-    return (
-      <HoverPrefetchLink className={cn(className)} href={href || url || ""} {...newTabProps}>
-        {label && label}
-        {children && children}
-      </HoverPrefetchLink>
-    )
-  }
-
+export const CMSLink: React.FC<CMSLinkProps> = ({ link, children, ...props }) => {
+  if (!link) return null
+  const url = getLinkFieldUrl(link)
+  if (!url) return null
   return (
-    <LinkButton
-      className={cn(className, appearance === "link" && "h-auto px-0 py-0")}
-      size={size}
-      variant={appearance}
-      href={href || url || ""}
-      {...newTabProps}
+    <HoverPrefetchLink
+      href={url}
+      target={link?.newTab ? "_blank" : undefined}
+      rel={link?.newTab ? "noopener noreferrer" : undefined}
+      {...props}
     >
-      {label && label}
-      {children && children}
-    </LinkButton>
+      {children || link?.label}
+    </HoverPrefetchLink>
   )
 }

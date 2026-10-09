@@ -494,7 +494,7 @@ export async function main(): Promise<void> {
                           url: "https://discord.gg/digitalgroundgame",
                           label: "Join the Community",
                           newTab: true,
-                          appearance: "default",
+                          variant: "default",
                         },
                       },
                     ],

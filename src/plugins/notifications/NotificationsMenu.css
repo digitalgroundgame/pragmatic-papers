@@ -18,7 +18,9 @@
  */
 @layer base {
   [data-slot="button"],
-  [data-slot="checkbox"] {
+  [data-slot="checkbox"],
+  /* A Button rendered as the popover's trigger takes the trigger's data-slot */
+  [data-slot="popover-trigger"] {
     margin: 0;
     padding: 0;
     border: 0 solid;

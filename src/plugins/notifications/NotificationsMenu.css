@@ -1,203 +1,82 @@
-/* Admin panel styles: Payload's theme variables, not Tailwind (the admin doesn't load it). */
+/*
+ * Tailwind for the bell's shadcn components, which render inside Payload's admin. Payload 3
+ * ships no Tailwind, so this brings in only the theme and the utilities these files use.
+ * No preflight: it would restyle the rest of the admin. Payload's own styles sit in the
+ * `payload-default` layer, so these layers, declared after it, win where both apply.
+ */
+@layer theme, base, components, utilities;
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/utilities.css" layer(utilities) source(none);
+@import "tw-animate-css";
 
-.notifications-menu__bell {
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  padding: 0;
-  border: 0;
-  border-radius: 50%;
-  background: none;
-  color: var(--theme-text);
-  cursor: pointer;
+@source "./NotificationsMenu.tsx";
+@source "../../components/ui/{badge,button,checkbox,empty,field,label,link-button,popover,separator}.tsx";
+
+/*
+ * What preflight would have given these buttons: without it a <button> keeps the browser's
+ * grey fill, border and font. In the base layer, so each variant's own classes still win.
+ */
+@layer base {
+  [data-slot="button"],
+  [data-slot="checkbox"] {
+    margin: 0;
+    padding: 0;
+    border: 0 solid;
+    background-color: transparent;
+    color: inherit;
+    font: inherit;
+  }
 }
 
-.notifications-menu__bell:hover {
-  background: var(--theme-elevation-100);
+@custom-variant dark (&:is([data-theme="dark"] *));
+
+/*
+ * The shadcn tokens, on Payload's theme variables, which already follow the admin's light
+ * and dark modes. Only the admin's <html> carries data-theme, so the site and Storybook keep
+ * their own values from globals.css.
+ */
+html[data-theme] {
+  --background: var(--theme-bg);
+  --foreground: var(--theme-text);
+  --popover: var(--theme-input-bg);
+  --popover-foreground: var(--theme-text);
+  --primary: var(--theme-elevation-800);
+  --primary-foreground: var(--theme-bg);
+  --secondary: var(--theme-elevation-100);
+  --secondary-foreground: var(--theme-text);
+  --muted: var(--theme-elevation-50);
+  --muted-foreground: var(--theme-elevation-650);
+  --accent: var(--theme-elevation-100);
+  --accent-foreground: var(--theme-text);
+  --destructive: var(--theme-error-500);
+  --border: var(--theme-elevation-150);
+  --input: var(--theme-elevation-250);
+  --ring: var(--theme-elevation-400);
+  --radius: var(--style-radius-m, 0.375rem);
+  /* Exactly #ff401a, as on the site (globals.css) */
+  --brand: oklch(0.6567 0.2311 32.7);
 }
 
-.notifications-menu__bell:focus-visible {
-  outline: 2px solid var(--theme-text);
-  outline-offset: 2px;
-}
-
-.notifications-menu__badge {
-  position: absolute;
-  top: -2px;
-  right: -4px;
-  min-width: 18px;
-  height: 18px;
-  padding: 0 4px;
-  border-radius: 9px;
-  /* Not the brand orange: white text on it is too faint at this size. */
-  background: #b3261e;
-  color: #fff;
-  font-size: 11px;
-  font-weight: 600;
-  line-height: 18px;
-  text-align: center;
-}
-
-.notifications-menu__panel {
-  /* A popover is centred in the viewport by default; this one hangs from the bell. */
-  position: fixed;
-  inset: auto;
-  margin: 0;
-  width: min(360px, calc(100vw - 16px));
-  max-height: min(480px, calc(100vh - 80px));
-  overflow-y: auto;
-  padding: 0;
-  border: 1px solid var(--theme-elevation-100);
-  border-radius: var(--style-radius-m, 4px);
-  background: var(--theme-bg);
-  color: var(--theme-text);
-  box-shadow: 0 8px 24px rgb(0 0 0 / 0.15);
-  /* It's a child of the header's actions, which don't wrap. */
-  white-space: normal;
-  text-align: left;
-}
-
-.notifications-menu__header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 12px 16px;
-  border-bottom: 1px solid var(--theme-elevation-100);
-}
-
-.notifications-menu__heading {
-  margin: 0;
-  font-size: 14px;
-  font-weight: 600;
-  line-height: 1.4;
-}
-
-.notifications-menu__text-button {
-  padding: 0;
-  border: 0;
-  background: none;
-  color: inherit;
-  font: inherit;
-  font-size: 13px;
-  text-decoration: underline;
-  cursor: pointer;
-}
-
-.notifications-menu__list {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.notifications-menu__item {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding: 12px 16px;
-  border-bottom: 1px solid var(--theme-elevation-100);
-  color: inherit;
-  text-decoration: none;
-}
-
-.notifications-menu__item:hover,
-.notifications-menu__item:focus-visible {
-  background: var(--theme-elevation-50);
-}
-
-.notifications-menu__title {
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-  font-size: 14px;
-  font-weight: 600;
-  line-height: 1.4;
-}
-
-.notifications-menu__dot {
-  flex-shrink: 0;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: #b3261e;
-}
-
-.notifications-menu__summary {
-  font-size: 13px;
-  line-height: 1.4;
-}
-
-.notifications-menu__date {
-  color: var(--theme-elevation-650);
-  font-size: 12px;
-}
-
-.notifications-menu__footer {
-  display: block;
-  padding: 12px 16px;
-  color: inherit;
-  font-size: 13px;
-  text-align: center;
-}
-
-.notifications-menu__sr-only {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip-path: inset(50%);
-  white-space: nowrap;
-}
-
-.notifications-menu__actions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.notifications-menu__icon-button {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  padding: 0;
-  border: 0;
-  border-radius: 50%;
-  background: none;
-  color: inherit;
-  cursor: pointer;
-}
-
-.notifications-menu__icon-button:hover,
-.notifications-menu__icon-button[aria-pressed="true"] {
-  background: var(--theme-elevation-100);
-}
-
-.notifications-menu__setting {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  padding: 12px 16px;
-  border-bottom: 1px solid var(--theme-elevation-100);
-  cursor: pointer;
-}
-
-.notifications-menu__setting > span {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.notifications-menu__setting input {
-  margin-top: 3px;
-}
-
-.notifications-menu__empty {
-  margin: 0;
-  padding: 16px;
-  font-size: 13px;
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-brand: var(--brand);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
 }

@@ -11,13 +11,15 @@ export { DOCS_CACHE_TAG }
 /**
  * Only the running site syncs: not `next build`, which loads Payload to prerender, not the
  * Payload CLI (`payload migrate` and friends, which Next doesn't run), and not tests, which
- * call `syncDocs` themselves when they want it.
+ * call `syncDocs` themselves when they want it. `process.env.NEXT_RUNTIME` has to be read
+ * literally: Next writes its value into the bundle at build time, and a production server
+ * never sets it in the environment.
  */
-const shouldSync = (env = process.env): boolean =>
-  env.NEXT_RUNTIME === "nodejs" &&
-  env.NEXT_PHASE !== "phase-production-build" &&
-  !env.VITEST &&
-  env.DOCS_SYNC !== "false"
+const shouldSync = (): boolean =>
+  process.env.NEXT_RUNTIME === "nodejs" &&
+  process.env.NEXT_PHASE !== "phase-production-build" &&
+  !process.env.VITEST &&
+  process.env.DOCS_SYNC !== "false"
 
 /**
  * Help docs at /docs/<slug>: the Docs collection, and the docs in src/docs/ written into

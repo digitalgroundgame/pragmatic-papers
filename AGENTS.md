@@ -161,6 +161,12 @@ muted types are kept in their Payload preferences (`payload-preferences`, key
 `notifications`); items dated before the account was made don't count as
 unread.
 
+The bell is built from the site's shadcn components (`src/components/ui/`).
+Payload 3 has no Tailwind of its own, so `NotificationsMenu.css` brings in
+Tailwind's theme and only the utilities those files use, without preflight, and
+maps the shadcn tokens onto Payload's theme variables under `html[data-theme]`.
+Another admin component on shadcn adds its files to that CSS's `@source` list.
+
 ### Edge cache (Cloudflare)
 
 Public pages are cached at Cloudflare's edge (`s-maxage=600`,

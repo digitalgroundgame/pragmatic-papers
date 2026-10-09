@@ -1,7 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite"
-import { expect, fn, userEvent, waitFor, within } from "storybook/test"
-
-import { withPayloadAdminTheme } from "@/stories/payloadAdminTheme"
+import { expect, fn, screen, userEvent, waitFor, within } from "storybook/test"
 
 import { NotificationsMenu } from "./NotificationsMenu"
 import type { NotificationItem } from "./types"
@@ -29,7 +27,6 @@ const items: NotificationItem[] = [
 const meta = {
   title: "Admin/NotificationsMenu",
   component: NotificationsMenu,
-  decorators: [withPayloadAdminTheme],
   args: {
     items,
     unread: ["docs:unsplash-photos"],
@@ -51,23 +48,25 @@ const meta = {
 export default meta
 type Story = StoryObj<typeof meta>
 
+// The dropdown renders in a portal on <body>, outside the story's canvas, so it's found
+// through `screen`.
 export const Unread: Story = {
   play: async ({ args, canvasElement }) => {
     const canvas = within(canvasElement)
     await userEvent.click(canvas.getByRole("button", { name: "Notifications, 1 unread" }))
 
-    const item = await canvas.findByRole("link", { name: /Find a photo on Unsplash.*\(unread\)/ })
+    const item = await screen.findByRole("link", { name: /Find a photo on Unsplash.*\(unread\)/ })
     await waitFor(() => expect(item).toBeVisible())
     await expect(item).toHaveAttribute("href", "/docs/unsplash-photos")
-    await expect(canvas.getByText("October 18, 2026")).toBeVisible()
-    await expect(canvas.getByRole("link", { name: "All help docs" })).toHaveAttribute(
+    await expect(screen.getByText("October 18, 2026")).toBeVisible()
+    await expect(screen.getByRole("link", { name: "All help docs" })).toHaveAttribute(
       "href",
       "/docs",
     )
 
     await userEvent.click(item)
     await expect(args.onOpen).toHaveBeenCalledWith("docs:unsplash-photos")
-    await userEvent.click(canvas.getByRole("button", { name: "Mark all as read" }))
+    await userEvent.click(screen.getByRole("button", { name: "Mark all as read" }))
     await expect(args.onMarkAllRead).toHaveBeenCalledOnce()
   },
 }
@@ -76,9 +75,9 @@ export const Settings: Story = {
   play: async ({ args, canvasElement }) => {
     const canvas = within(canvasElement)
     await userEvent.click(canvas.getByRole("button", { name: "Notifications, 1 unread" }))
-    await userEvent.click(await canvas.findByRole("button", { name: "Notification settings" }))
+    await userEvent.click(await screen.findByRole("button", { name: "Notification settings" }))
 
-    const docs = canvas.getByRole("checkbox", { name: /Help docs/ })
+    const docs = await screen.findByRole("checkbox", { name: /Help docs/ })
     await expect(docs).toBeChecked()
     await userEvent.click(docs)
     await expect(args.onMutedChange).toHaveBeenCalledWith(["docs"])
@@ -90,6 +89,6 @@ export const Empty: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     await userEvent.click(canvas.getByRole("button", { name: "Notifications" }))
-    await waitFor(() => expect(canvas.getByText("Nothing new.")).toBeVisible())
+    await waitFor(() => expect(screen.getByText("Nothing new.")).toBeVisible())
   },
 }

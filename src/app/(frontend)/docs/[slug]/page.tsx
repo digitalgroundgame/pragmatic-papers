@@ -3,6 +3,7 @@ import { JsonLd } from "@/components/JsonLd"
 import { LivePreviewListener } from "@/components/LivePreviewListener"
 import { PayloadRedirects } from "@/components/PayloadRedirects"
 import RichText from "@/components/RichText"
+import { Separator } from "@/components/ui/separator"
 import { queryDocBySlug, queryPublishedDocs } from "@/plugins/docs/queries"
 import { formatNotificationDate } from "@/plugins/notifications/unread"
 import { getServerSideURL } from "@/utilities/getURL"
@@ -52,21 +53,23 @@ export default async function DocPage({ params }: Args): Promise<React.ReactNode
     { name: doc.title, path: url },
   ]
 
+  // The article page's layout and type, so a doc reads like one.
   return (
     <>
       <Breadcrumbs items={trail} />
-      <article className="pb-16">
+      <article className="mx-auto max-w-5xl min-w-0 space-y-6 px-4 pb-16">
         <JsonLd data={[buildBreadcrumbJsonLd(trail)]} />
         {draft && <LivePreviewListener />}
-        <header className="container max-w-3xl space-y-3">
-          <h1>{doc.title}</h1>
-          <p className="text-muted-foreground text-sm">
-            <time dateTime={doc.publishedAt.slice(0, 10)}>
-              {formatNotificationDate(doc.publishedAt)}
-            </time>
-          </p>
+        <header className="flex flex-col gap-2">
+          <h1 className="mt-3">{doc.title}</h1>
+          <time className="text-foreground font-serif" dateTime={doc.publishedAt.slice(0, 10)}>
+            {formatNotificationDate(doc.publishedAt)}
+          </time>
+          <Separator />
         </header>
-        <RichText className="mt-6 max-w-3xl" data={doc.content} />
+        <div className="mx-auto max-w-2xl">
+          <RichText data={doc.content} enableGutter={false} className="drop-cap" />
+        </div>
       </article>
     </>
   )

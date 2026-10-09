@@ -2,13 +2,20 @@
 
 import { Bell, Settings } from "lucide-react"
 import type React from "react"
-import { useEffect, useId, useRef, useState } from "react"
+import { useId, useState } from "react"
+
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { Checkbox } from "@/components/ui/checkbox"
+import { Empty, EmptyDescription } from "@/components/ui/empty"
+import { Field, FieldContent, FieldDescription, FieldLabel } from "@/components/ui/field"
+import { LinkButton } from "@/components/ui/link-button"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Separator } from "@/components/ui/separator"
 
 import "./NotificationsMenu.css"
 import type { NotificationItem, NotificationType } from "./types"
 import { formatNotificationDate, itemKey } from "./unread"
-
-const baseClass = "notifications-menu"
 
 /** A footer link to everything of one type. */
 export interface NotificationIndex {
@@ -31,10 +38,9 @@ interface NotificationsMenuProps {
 }
 
 /**
- * The bell and its dropdown: what's new, or with the gear, which types to show. A native
- * popover, so it sits in the top layer: the admin header clips anything that overflows it,
- * and the popover brings light dismiss and Escape with it. Nothing here imports
- * `@payloadcms/ui`, so Storybook can render it.
+ * The bell and its dropdown: what's new, or with the gear, which types to show. Built from
+ * the site's shadcn components, styled in the admin by NotificationsMenu.css. Nothing here
+ * imports `@payloadcms/ui`, so Storybook can render it.
  */
 export function NotificationsMenu({
   items,
@@ -47,117 +53,120 @@ export function NotificationsMenu({
   onMutedChange,
 }: NotificationsMenuProps): React.ReactNode {
   const id = useId()
-  const buttonRef = useRef<HTMLButtonElement>(null)
-  const popoverRef = useRef<HTMLDivElement>(null)
   const [view, setView] = useState<"list" | "settings">("list")
 
-  // Hang the panel under the bell, right edges aligned, each time it opens.
-  useEffect(() => {
-    const popover = popoverRef.current
-    if (!popover) return
-    const place = (event: Event): void => {
-      if ((event as ToggleEvent).newState !== "open" || !buttonRef.current) return
-      setView("list")
-      const rect = buttonRef.current.getBoundingClientRect()
-      popover.style.top = `${rect.bottom + 8}px`
-      popover.style.right = `${Math.max(window.innerWidth - rect.right, 8)}px`
-    }
-    popover.addEventListener("beforetoggle", place)
-    return () => popover.removeEventListener("beforetoggle", place)
-  }, [])
-
   const count = unread.length
-  const label = count ? `Notifications, ${count} unread` : "Notifications"
   const settings = view === "settings"
 
   return (
-    <>
-      <button
-        ref={buttonRef}
-        type="button"
-        className={`${baseClass}__bell`}
-        popoverTarget={id}
-        aria-label={label}
-        title="Notifications"
+    <Popover onOpenChange={(open) => open && setView("list")}>
+      <PopoverTrigger
+        render={
+          <Button
+            variant="ghost"
+            size="icon"
+            className="relative rounded-full"
+            aria-label={count ? `Notifications, ${count} unread` : "Notifications"}
+            title="Notifications"
+          />
+        }
       >
-        <Bell aria-hidden size={20} />
+        <Bell aria-hidden className="size-5" />
         {count > 0 && (
-          <span className={`${baseClass}__badge`} aria-hidden>
+          // Not the brand orange: white text on it is too faint at this size.
+          <Badge
+            aria-hidden
+            className="absolute -top-0.5 -right-1 h-4.5 min-w-4.5 bg-[#b3261e] px-1 text-[11px] text-white"
+          >
             {count > 9 ? "9+" : count}
-          </span>
+          </Badge>
         )}
-      </button>
-      <div ref={popoverRef} id={id} popover="auto" className={`${baseClass}__panel`}>
-        <div className={`${baseClass}__header`}>
-          <h2 className={`${baseClass}__heading`}>{settings ? "Notify me about" : "What's new"}</h2>
-          <div className={`${baseClass}__actions`}>
+      </PopoverTrigger>
+      <PopoverContent
+        align="end"
+        sideOffset={8}
+        aria-labelledby={`${id}-heading`}
+        className="flex max-h-[min(32rem,var(--available-height))] w-[min(22rem,calc(100vw-1rem))] flex-col p-0"
+      >
+        <div className="flex items-center justify-between gap-2 py-2 pr-2 pl-4">
+          <h2
+            id={`${id}-heading`}
+            className="m-0 font-sans text-sm leading-normal font-semibold tracking-normal"
+          >
+            {settings ? "Notify me about" : "What's new"}
+          </h2>
+          <div className="flex items-center gap-1">
             {!settings && count > 0 && (
-              <button type="button" className={`${baseClass}__text-button`} onClick={onMarkAllRead}>
+              <Button variant="link" size="sm" onClick={onMarkAllRead}>
                 Mark all as read
-              </button>
+              </Button>
             )}
-            <button
-              type="button"
-              className={`${baseClass}__icon-button`}
+            <Button
+              variant="ghost"
+              size="icon-sm"
               aria-label="Notification settings"
               aria-pressed={settings}
               onClick={() => setView(settings ? "list" : "settings")}
             >
-              <Settings aria-hidden size={16} />
-            </button>
+              <Settings aria-hidden />
+            </Button>
           </div>
         </div>
+        <Separator />
         {settings ? (
-          <ul className={`${baseClass}__list`}>
+          <div className="flex flex-col gap-4 overflow-y-auto p-4">
             {types.map((type) => (
-              <li key={type.slug}>
-                <label className={`${baseClass}__setting`}>
-                  <input
-                    type="checkbox"
-                    checked={!muted.includes(type.slug)}
-                    onChange={(event) =>
-                      onMutedChange(
-                        event.target.checked
-                          ? muted.filter((slug) => slug !== type.slug)
-                          : [...muted, type.slug],
-                      )
-                    }
-                  />
-                  <span>
-                    <span className={`${baseClass}__title`}>{type.label}</span>
-                    {type.description && (
-                      <span className={`${baseClass}__summary`}>{type.description}</span>
-                    )}
-                  </span>
-                </label>
-              </li>
+              <Field key={type.slug} orientation="horizontal">
+                <Checkbox
+                  id={`${id}-${type.slug}`}
+                  checked={!muted.includes(type.slug)}
+                  onCheckedChange={(checked) =>
+                    onMutedChange(
+                      checked ? muted.filter((slug) => slug !== type.slug) : [...muted, type.slug],
+                    )
+                  }
+                />
+                <FieldContent>
+                  <FieldLabel htmlFor={`${id}-${type.slug}`}>{type.label}</FieldLabel>
+                  {type.description && <FieldDescription>{type.description}</FieldDescription>}
+                </FieldContent>
+              </Field>
             ))}
-          </ul>
+          </div>
         ) : items.length === 0 ? (
-          <p className={`${baseClass}__empty`}>Nothing new.</p>
+          <Empty className="p-6">
+            <EmptyDescription>Nothing new.</EmptyDescription>
+          </Empty>
         ) : (
-          <ul className={`${baseClass}__list`}>
+          <ul className="divide-border m-0 list-none divide-y overflow-y-auto p-0">
             {items.map((item) => {
               const key = itemKey(item)
               const isUnread = unread.includes(key)
               return (
                 <li key={key}>
                   <a
-                    className={`${baseClass}__item`}
+                    className="hover:bg-muted focus-visible:bg-muted flex flex-col gap-1 px-4 py-3 text-inherit no-underline outline-none"
                     href={item.href}
                     target="_blank"
                     rel="noopener"
                     onClick={() => onOpen(key)}
                   >
-                    <span className={`${baseClass}__title`}>
-                      {isUnread && <span className={`${baseClass}__dot`} aria-hidden />}
-                      {item.title}
-                      {isUnread && <span className={`${baseClass}__sr-only`}> (unread)</span>}
+                    <span className="flex items-baseline gap-2 text-sm font-semibold">
+                      {isUnread && (
+                        <span aria-hidden className="bg-brand size-2 shrink-0 rounded-full" />
+                      )}
+                      <span>
+                        {item.title}
+                        {isUnread && <span className="sr-only"> (unread)</span>}
+                      </span>
                     </span>
                     {item.summary && (
-                      <span className={`${baseClass}__summary`}>{item.summary}</span>
+                      <span className="text-muted-foreground text-sm">{item.summary}</span>
                     )}
-                    <time className={`${baseClass}__date`} dateTime={item.date.slice(0, 10)}>
+                    <time
+                      className="text-muted-foreground text-xs"
+                      dateTime={item.date.slice(0, 10)}
+                    >
                       {formatNotificationDate(item.date)}
                     </time>
                   </a>
@@ -166,19 +175,26 @@ export function NotificationsMenu({
             })}
           </ul>
         )}
-        {!settings &&
-          indexes.map((index) => (
-            <a
-              key={index.type}
-              className={`${baseClass}__footer`}
-              href={index.href}
-              target="_blank"
-              rel="noopener"
-            >
-              {index.label}
-            </a>
-          ))}
-      </div>
-    </>
+        {!settings && indexes.length > 0 && (
+          <>
+            <Separator />
+            <div className="flex justify-center p-1">
+              {indexes.map((index) => (
+                <LinkButton
+                  key={index.type}
+                  variant="ghost"
+                  className="w-full"
+                  href={index.href}
+                  target="_blank"
+                  rel="noopener"
+                >
+                  {index.label}
+                </LinkButton>
+              ))}
+            </div>
+          </>
+        )}
+      </PopoverContent>
+    </Popover>
   )
 }

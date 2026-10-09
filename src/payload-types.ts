@@ -1489,6 +1489,10 @@ export interface Doc {
    * Who the help bell tells. Empty means all staff; admins see every doc.
    */
   audience?: ('admin' | 'chief-editor' | 'editor' | 'writer' | 'narrator')[] | null;
+  /**
+   * Auto-generates a navigable list of headings (and any resolver-matched blocks). Readers see it only while the table of contents experiment is on in Site Settings.
+   */
+  showTableOfContents?: boolean | null;
   sourceHash?: string | null;
   /**
    * When enabled, the slug will auto-generate from the title field on save and autosave.
@@ -2519,6 +2523,7 @@ export interface DocsSelect<T extends boolean = true> {
   content?: T;
   publishedAt?: T;
   audience?: T;
+  showTableOfContents?: T;
   sourceHash?: T;
   generateSlug?: T;
   slug?: T;

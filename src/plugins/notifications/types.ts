@@ -5,7 +5,7 @@ import type { Payload } from "payload"
 export interface NotificationType {
   /** Stable: muted types are stored by it. */
   slug: string
-  /** Shown in the bell's settings, e.g. "Help docs". */
+  /** Shown in the bell's settings, e.g. "Docs". */
   label: string
   description?: string
 }

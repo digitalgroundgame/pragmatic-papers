@@ -5,6 +5,7 @@ import { Banner } from "@/blocks/Banner/config"
 import { Code } from "@/blocks/Code/config"
 import { MediaBlock } from "@/blocks/MediaBlock/config"
 import { MediaCollageBlock } from "@/blocks/MediaCollageBlock/config"
+import { populateTableOfContentsAnchors, tableOfContentsField } from "@/components/TableOfContents"
 import { slugField } from "@/fields/slug"
 import { generatePreviewPath } from "@/utilities/generatePreviewPath"
 import {
@@ -79,6 +80,9 @@ export const Docs: CollectionConfig<"docs"> = {
       name: "content",
       type: "richText",
       required: true,
+      hooks: {
+        beforeChange: [populateTableOfContentsAnchors],
+      },
       editor: lexicalEditor({
         features: ({ rootFeatures }) => [
           ...rootFeatures,
@@ -112,6 +116,8 @@ export const Docs: CollectionConfig<"docs"> = {
         description: "Who the help bell tells. Empty means all staff; admins see every doc.",
       },
     },
+    // On by default: a doc is reference reading, skimmed for the one section a reader needs.
+    tableOfContentsField({ defaultValue: true }),
     {
       // Set by `syncDocs` on a doc it wrote from src/docs/, so the next start can tell
       // whether the repo's copy changed. Empty on docs written here.

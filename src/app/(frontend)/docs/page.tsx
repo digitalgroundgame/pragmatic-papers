@@ -9,7 +9,7 @@ import type { Metadata } from "next"
 import Link from "next/link"
 import React from "react"
 
-const TITLE = "Help docs — Pragmatic Papers"
+const TITLE = "Docs — Pragmatic Papers"
 const DESCRIPTION = "What's new in the Pragmatic Papers admin, and how to use it."
 
 // Saving a doc refreshes it. The docs a release adds are synced after the build prerendered
@@ -28,7 +28,7 @@ export function generateMetadata(): Metadata {
 
 export default async function DocsIndexPage(): Promise<React.ReactNode> {
   const docs = await queryPublishedDocs()
-  const trail: Crumb[] = [{ name: "Help docs", path: "/docs" }]
+  const trail: Crumb[] = [{ name: "Docs", path: "/docs" }]
 
   return (
     <>
@@ -36,13 +36,13 @@ export default async function DocsIndexPage(): Promise<React.ReactNode> {
       <article className="mx-auto max-w-3xl space-y-6 px-4">
         <JsonLd data={[buildBreadcrumbJsonLd(trail)]} />
         <header className="space-y-3">
-          <h1>Help docs</h1>
+          <h1>Docs</h1>
           <p className="text-muted-foreground text-sm">
             New features in the admin, and how to use them.
           </p>
         </header>
         {docs.length === 0 ? (
-          <p className="text-muted-foreground text-sm">No help docs yet.</p>
+          <p className="text-muted-foreground text-sm">No docs yet.</p>
         ) : (
           <ul className="divide-y border-y">
             {docs.map((doc) => (

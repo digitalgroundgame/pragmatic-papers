@@ -13,6 +13,8 @@ export interface RepoDoc {
   /** `YYYY-MM-DD`. */
   publishedAt: string
   audience?: Role[]
+  /** Left out means shown. */
+  showTableOfContents?: boolean
   content: unknown
 }
 

@@ -33,12 +33,12 @@ const meta = {
     types: [
       {
         slug: "docs",
-        label: "Help docs",
+        label: "Docs",
         description: "New features in the admin, and how to use them.",
       },
     ],
     muted: [],
-    indexes: [{ type: "docs", label: "All help docs", href: "/docs" }],
+    indexes: [{ type: "docs", label: "All docs", href: "/docs" }],
     onOpen: fn(),
     onMarkAllRead: fn(),
     onMutedChange: fn(),
@@ -59,10 +59,7 @@ export const Unread: Story = {
     await waitFor(() => expect(item).toBeVisible())
     await expect(item).toHaveAttribute("href", "/docs/unsplash-photos")
     await expect(screen.getByText("October 18, 2026")).toBeVisible()
-    await expect(screen.getByRole("link", { name: "All help docs" })).toHaveAttribute(
-      "href",
-      "/docs",
-    )
+    await expect(screen.getByRole("link", { name: "All docs" })).toHaveAttribute("href", "/docs")
 
     await userEvent.click(item)
     await expect(args.onOpen).toHaveBeenCalledWith("docs:unsplash-photos")
@@ -77,7 +74,7 @@ export const Settings: Story = {
     await userEvent.click(canvas.getByRole("button", { name: "Notifications, 1 unread" }))
     await userEvent.click(await screen.findByRole("button", { name: "Notification settings" }))
 
-    const docs = await screen.findByRole("checkbox", { name: /Help docs/ })
+    const docs = await screen.findByRole("checkbox", { name: /Docs/ })
     await expect(docs).toBeChecked()
     await userEvent.click(docs)
     await expect(args.onMutedChange).toHaveBeenCalledWith(["docs"])

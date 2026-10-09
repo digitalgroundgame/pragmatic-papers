@@ -24,6 +24,8 @@ interface BreadcrumbsProps {
    * does everywhere else.
    */
   fullWidth?: boolean
+  /** Widens the column to match what the trail sits over, e.g. `max-w-5xl` for an article-width hero. */
+  className?: string
 }
 
 /**
@@ -31,11 +33,15 @@ interface BreadcrumbsProps {
  * loaded (the same list it gives `buildBreadcrumbJsonLd`), so labels are real titles and nothing
  * is read from the request, which would stop the page being prerendered.
  */
-export function Breadcrumbs({ items, fullWidth = false }: BreadcrumbsProps): ReactElement | null {
+export function Breadcrumbs({
+  items,
+  fullWidth = false,
+  className,
+}: BreadcrumbsProps): ReactElement | null {
   if (items.length === 0) return null
 
   return (
-    <Breadcrumb className={cn("mb-4", fullWidth ? "container" : "container max-w-3xl")}>
+    <Breadcrumb className={cn("mb-4", fullWidth ? "container" : "container max-w-3xl", className)}>
       <BreadcrumbList className="flex-nowrap">
         <BreadcrumbItem>
           <BreadcrumbLink href="/">

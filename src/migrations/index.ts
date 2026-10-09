@@ -51,6 +51,7 @@ import * as migration_20261006_025343_add_storage_object_key from "./20261006_02
 import * as migration_20261007_150906_add_user_public_profile from "./20261007_150906_add_user_public_profile"
 import * as migration_20261008_005532_add_media_unsplash_id from "./20261008_005532_add_media_unsplash_id"
 import * as migration_20261008_225042_add_docs from "./20261008_225042_add_docs"
+import * as migration_20261009_003903_docs_table_of_contents from "./20261009_003903_docs_table_of_contents"
 
 export const migrations = [
   {
@@ -317,5 +318,10 @@ export const migrations = [
     up: migration_20261008_225042_add_docs.up,
     down: migration_20261008_225042_add_docs.down,
     name: "20261008_225042_add_docs",
+  },
+  {
+    up: migration_20261009_003903_docs_table_of_contents.up,
+    down: migration_20261009_003903_docs_table_of_contents.down,
+    name: "20261009_003903_docs_table_of_contents",
   },
 ]

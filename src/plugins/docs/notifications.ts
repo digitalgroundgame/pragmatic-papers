@@ -8,10 +8,10 @@ import type { NotificationSource } from "@/plugins/notifications"
 export const docsNotifications = (): NotificationSource => ({
   type: {
     slug: "docs",
-    label: "Help docs",
+    label: "Docs",
     description: "New features in the admin, and how to use them.",
   },
-  index: { label: "All help docs", href: "/docs" },
+  index: { label: "All docs", href: "/docs" },
   itemsFor: async ({ user }) => {
     if (!isStaff(user)) return []
     // Imported here: the queries reach the Payload config, which imports this file.

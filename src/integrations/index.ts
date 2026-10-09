@@ -1,5 +1,5 @@
 import { blueskyAccounts } from "./bluesky"
-import { cloudflareZone } from "./cloudflare"
+import { cloudflareWorker, cloudflareZone } from "./cloudflare"
 import { githubRepo } from "./github"
 import { shopifyStore } from "./shopify"
 import { xAccounts } from "./x"
@@ -42,6 +42,21 @@ export const cloudflareCache = cloudflareZone({
   label: "Cloudflare edge cache",
   zoneEnv: "CLOUDFLARE_ZONE_ID",
   tokenEnv: "CLOUDFLARE_PURGE_TOKEN",
+})
+
+/**
+ * The Cloudflare Worker serving the public pages (`src/cloudflare/`), when this deployment
+ * has one in front of it. Its cache (R2 and D1) is separate from this deployment's Next cache
+ * and from Cloudflare's edge, so an editor's save clears it too (`src/hooks/purgeEdgeCache.ts`).
+ *
+ * `WORKER_URL` is set only on the Coolify app whose database the Worker reads (staging's
+ * Worker: staging). The secret is `PAYLOAD_SECRET`, which the Worker shares with that app.
+ */
+export const cloudflareWorkerCache = cloudflareWorker({
+  id: "cloudflare-worker",
+  label: "Cloudflare Worker cache",
+  urlEnv: "WORKER_URL",
+  secretEnv: "PAYLOAD_SECRET",
 })
 
 /**
@@ -95,6 +110,7 @@ export const INTEGRATIONS: readonly Integration[] = [
   courtTracker,
   shopifyStore,
   cloudflareCache,
+  cloudflareWorkerCache,
   youtubeLive,
   blueskyPosts,
   xPosts,

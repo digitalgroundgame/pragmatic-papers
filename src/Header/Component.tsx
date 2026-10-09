@@ -13,6 +13,7 @@ import type { Footer, Header } from "@/payload-types"
 import { getCachedGlobal } from "@/utilities/getGlobals"
 import { Newspaper } from "lucide-react"
 import React from "react"
+import { HoverPrefetchLink } from "@/components/Link/HoverPrefetchLink"
 
 // The menus, sheets and mode toggles here render as their buttons and links, and load their
 // interactive parts when the reader first reaches for them (`LoadOnInteraction`), so none of
@@ -42,13 +43,13 @@ export async function Header(): Promise<React.JSX.Element> {
                 </LinkButton>
               )}
             </div>
-            <a
+            <HoverPrefetchLink
               href="/"
               aria-label="Link to Home"
               className="inline-flex items-center justify-center"
             >
               <HeaderLogo />
-            </a>
+            </HoverPrefetchLink>
             <div className="flex items-center justify-end gap-2">
               <div className="hidden lg:flex">
                 <LazyModeToggle location="header" showFresh />

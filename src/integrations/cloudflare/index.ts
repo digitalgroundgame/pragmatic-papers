@@ -96,3 +96,5 @@ export function cloudflareZone({
     },
   }
 }
+
+export { cloudflareWorker, type CloudflareWorkerIntegration } from "./worker"

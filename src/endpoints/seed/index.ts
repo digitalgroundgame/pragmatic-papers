@@ -467,7 +467,9 @@ export const seed = async (
         await payload.updateGlobal({
           slug: "site-settings",
           context,
-          data: { experiments: { feed: true, interactives: true, tableOfContents: true } },
+          data: {
+            experiments: { feed: true, interactives: true, tableOfContents: true, ticker: true },
+          },
         })
       },
     },

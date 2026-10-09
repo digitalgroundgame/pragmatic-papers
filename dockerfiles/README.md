@@ -92,6 +92,17 @@ Public pages are cached at Cloudflare's edge for 10 minutes, then served stale f
 - Unset (or with `SERVER_URL` on localhost), each save logs `Skipping Cloudflare purge (…) — … set CLOUDFLARE_ZONE_ID, CLOUDFLARE_PURGE_TOKEN` and carries on. A purge Cloudflare refuses is logged as a warning, never thrown at the save.
 - Purges within a second of each other go out as one request. Hostname purges are rate-limited per account (5 a minute on the Free plan, more on paid plans); a refused one just leaves the edge to expire on its own.
 
+#### Ticker
+
+The strip under the header on every page (`src/components/Ticker`, rendered by the header), shown when the **Ticker** experiment is on in Site Settings. Each source is skipped with a `[ticker] skipping …` log line until it's configured; all are **Runtime Variables**, set in the production, staging **and** preview apps (`dockerfiles/.env.example` lists them).
+
+- `YOUTUBE_API_KEY` — a YouTube Data API v3 key (any Google Cloud project, public reads only). Shows a channel's broadcast when it's live or starting within a day. Each check costs one of the key's 10,000 free daily quota units per channel plus one, every 5 minutes at most and only while the site is being visited, so one key can serve every app.
+- Bluesky needs nothing: it reads the public API.
+- `X_BEARER_TOKEN` — an app-only token. Reading posts needs a paid X API plan or pay-per-use credits; it's checked every 30 minutes at most.
+- Which channels and accounts it reads are set in the admin, under **System → Integrations**, which also shows which variables each connection is missing. `YOUTUBE_CHANNEL_IDS` (comma separated), `BLUESKY_HANDLES` and `X_USERNAMES` (each comma separated) are fallbacks for when it's left empty.
+
+Readers can see an answer up to 10 minutes late, since pages are edge-cached for that long.
+
 **Unsplash (every Coolify deployment — production, staging and previews):**
 
 Media's upload form has a **Search Unsplash** button beside "Paste URL", in the Media collection and in an upload field's "Create New" drawer. A picked photo is fetched by the server and saved like any other upload, so it lands in local storage or S3 the same way. Saving it credits the photographer in the caption and tells Unsplash the photo was downloaded, as their API guidelines require (`src/collections/Media/hooks/attributeUnsplashPhoto.ts`).

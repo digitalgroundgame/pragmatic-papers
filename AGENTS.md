@@ -101,6 +101,7 @@ processes they start.
 - **Header** (`slug: 'header'`) — nav items, action button; revalidated via `revalidateHeader` hook
 - **Footer** (`slug: 'footer'`) — nav items; revalidated via `revalidateFooter` hook
 - **Site Settings** (`slug: 'site-settings'`) — admin-only; its `experiments` group switches beta features on per environment; revalidated via `revalidateSiteSettings` hook
+- **Ticker** (`slug: 'ticker'`) — editors and admins; posts hidden from the header's ticker, by link; revalidated via `revalidateTicker` hook. Which accounts the ticker reads is in **Integrations** (admin-only)
 - Fetched via `getCachedGlobal('header' | 'footer', depth)()` using `unstable_cache` with tags
 
 ### Experiments
@@ -263,6 +264,12 @@ brought across — Listmonk, Google, the rest.
 - A job that needs credentials asks the connection whether it is configured and
   skips with `describeStatus()` when it is not, rather than reading
   `process.env` itself.
+
+- Settings that aren't secrets (a channel, an account handle) can live in the
+  admin's **Integrations** global (`src/globals/Integrations/config.ts`): the
+  feature reads the global and passes the value to the connection's method,
+  which falls back to its variable. The global's status table lists every
+  connection in `INTEGRATIONS` and the variables it's missing.
 
 Adding one: declare the connection in `src/integrations/index.ts`, put its
 client under `src/integrations/<service>/`, and have the feature import it.

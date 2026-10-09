@@ -10,7 +10,7 @@ import {
 
 import { editor } from "@/access/collections"
 import { isPublishedOrStaff } from "@/access/policies"
-import { link } from "@/fields/link2"
+import { link } from "@/fields/link"
 import { slugField } from "@/fields/slug"
 import { populatePublishedAt } from "@/hooks/populatePublishedAt"
 import { profileOptions } from "@/interactives/profiles"

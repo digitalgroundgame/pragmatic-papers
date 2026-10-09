@@ -73,7 +73,7 @@ processes they start.
 - **`payload.config.ts`** — Central Payload CMS configuration
 - **`collections/`** — Payload collections: Articles, Pages, Users, Volumes, Media, Categories, Webhooks
 - **`blocks/`** — Content blocks used in Lexical rich text: Banner, Code, Content, Footnote, Math, MediaBlock, SocialEmbed, etc.
-- **`fields/`** — Custom Payload fields: colorPicker, menu, numberSlug, link, linkGroup, footnotes, button, defaultLexical. New fields should include `Field` in the name (e.g. `buttonField`, `linkGroupField`).
+- **`fields/`** — Custom Payload fields: colorPicker, menu, numberSlug, link, footnotes, button, defaultLexical. New fields should include `Field` in the name (e.g. `buttonField`, `menuField`).
 - **`access/`** — Access control: `roles.ts` (e.g., `admin`, `editor`, `writer`) and `policies.ts` (e.g., `isSelfOrAdmin`, `isCreatedByOrEditor`, `isPublishedOrStaff`, `isDraftOrEditor`)
 - **`app/(frontend)/`** — Public-facing Next.js pages using App Router
 - **`app/(payload)/`** — Payload admin panel routes

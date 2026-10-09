@@ -9,7 +9,7 @@ import type {
 
 import { anyone, writerOrEditor } from "@/access/collections"
 import { isCreatedByOrEditor } from "@/access/policies"
-import { link } from "@/fields/link2"
+import { link } from "@/fields/link"
 import type { MapAsset } from "@/payload-types"
 
 const filename = fileURLToPath(import.meta.url)

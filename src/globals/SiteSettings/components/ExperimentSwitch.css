@@ -30,9 +30,11 @@
   display: inline-flex;
   flex-shrink: 0;
   align-items: center;
+  box-sizing: border-box;
   width: 2.25rem;
   height: 1.25rem;
   padding: 2px;
+  border: 0;
   border-radius: 999px;
   background: var(--theme-elevation-400);
   cursor: pointer;
@@ -60,11 +62,15 @@
   border-radius: 999px;
   background: var(--theme-bg);
   box-shadow: 0 1px 2px rgb(0 0 0 / 0.25);
-  transition: transform 150ms;
+  /* `translate`, not `transform`: where Tailwind also loads (Storybook), its
+     translate-x utility sets the same property, so this replaces it instead of adding to it. */
+  translate: 0;
+  transition: translate 150ms;
 }
 
 .experiment-switch [data-slot="switch-thumb"][data-checked] {
-  transform: translateX(1rem);
+  /* The track's inner width (2.25rem - 4px of padding) minus the 1rem thumb. */
+  translate: calc(1.25rem - 4px) 0;
 }
 
 @media (prefers-reduced-motion: reduce) {

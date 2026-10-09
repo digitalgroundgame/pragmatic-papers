@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite"
-import { expect, fn, userEvent, within } from "storybook/test"
+import { expect, fn, userEvent, waitFor, within } from "storybook/test"
 
 import { Label } from "./label"
 import { Switch } from "./switch"
@@ -31,6 +31,17 @@ export const Default: Story = {
 
 export const Checked: Story = {
   args: { defaultChecked: true },
+  play: async ({ canvasElement }) => {
+    const toggle = within(canvasElement).getByRole("switch", { name: "Show the ticker" })
+    await expect(toggle).toBeChecked()
+    // The knob stays inside the track.
+    const thumb = toggle.querySelector<HTMLElement>('[data-slot="switch-thumb"]')!
+    await waitFor(() => {
+      expect(thumb.getBoundingClientRect().right).toBeLessThanOrEqual(
+        toggle.getBoundingClientRect().right,
+      )
+    })
+  },
 }
 
 export const Small: Story = {

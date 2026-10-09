@@ -6,6 +6,9 @@ import { isAfter } from "date-fns/isAfter"
 
 export const Webhooks: CollectionConfig = {
   slug: "webhooks",
+  admin: {
+    group: "System",
+  },
   access: {
     create: admin,
     delete: admin,

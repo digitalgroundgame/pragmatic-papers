@@ -17,7 +17,7 @@ const items: NotificationItem[] = [
   {
     type: "docs",
     id: "experiments",
-    title: "Switch beta features on per site in Site Settings",
+    title: "Switch beta features on per site in Settings",
     summary: "Experiments let a new feature run on staging before readers on the live site see it.",
     href: "/docs/experiments",
     date: "2026-10-11T00:00:00.000Z",

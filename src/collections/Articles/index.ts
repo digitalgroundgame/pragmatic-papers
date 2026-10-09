@@ -84,6 +84,7 @@ export const Articles: CollectionConfig = {
   },
   endpoints: [productionSearchEndpoint, cloneFromProductionEndpoint],
   admin: {
+    group: "Content",
     components: {
       // Payload shows the ⋯ menu whenever this is set, so leave it unset where cloning is off.
       listMenuItems: canCloneFromProduction()

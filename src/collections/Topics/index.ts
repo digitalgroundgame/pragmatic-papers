@@ -19,6 +19,7 @@ export const Topics: CollectionConfig = {
     update: editor,
   },
   admin: {
+    group: "Content",
     defaultColumns: ["name", "slug", "updatedAt"],
     useAsTitle: "name",
   },

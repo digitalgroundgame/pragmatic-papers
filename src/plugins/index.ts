@@ -213,6 +213,8 @@ export const plugins: Plugin[] = [
     },
     beforeSync,
     searchOverrides: {
+      labels: { singular: "Search Result", plural: "Search" },
+      admin: { group: "System" },
       fields: ({ defaultFields }) => [
         ...defaultFields,
         { name: "excerpt", type: "text", admin: { readOnly: true } },

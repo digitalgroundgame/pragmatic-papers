@@ -28,8 +28,8 @@ const syncOwnedAdmin = { readOnly: true, disableBulkEdit: true } as const
 export const InteractiveSnapshots: CollectionConfig = {
   slug: "interactive-snapshots",
   labels: {
-    singular: "Interactive Snapshot",
-    plural: "Interactive Snapshots",
+    singular: "Snapshot",
+    plural: "Snapshots",
   },
   access: {
     // Rows come from the sync; a hand-made one has no feed behind it.

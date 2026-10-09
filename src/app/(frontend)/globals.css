@@ -439,6 +439,34 @@
   }
 }
 
+/*
+  Where the page's own sticky things (the article sidebar) and scroll targets (the drilldown
+  pane) should stop: under the header, and under the ticker too while it sticks. The
+  conditions mirror the two rules above; :has() can't nest, so they read the pause switch,
+  which a ticker that can stick always has.
+*/
+:root {
+  --sticky-top: var(--header-height);
+  /* h-10 plus its bottom border, and its top border from md up */
+  --ticker-height: calc(2.5rem + 1px);
+}
+
+:root:has(.ticker[data-live] .ticker-pause:not(:checked)) {
+  --sticky-top: calc(var(--header-height) + var(--ticker-height));
+}
+
+@media (min-width: 48rem) {
+  :root {
+    --ticker-height: calc(2.5rem + 2px);
+  }
+}
+
+@media (min-width: 48rem) and (prefers-reduced-motion: no-preference) {
+  :root:has(.ticker .ticker-pause:not(:checked)) {
+    --sticky-top: calc(var(--header-height) + var(--ticker-height));
+  }
+}
+
 .ticker-play-icon,
 .ticker:has(.ticker-pause:checked) .ticker-pause-icon {
   display: none;

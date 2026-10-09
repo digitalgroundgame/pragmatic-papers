@@ -94,6 +94,20 @@ describe("blueskyAccounts", () => {
     expect(url.searchParams.get("actor")).toBe("admin.bsky.social")
   })
 
+  it("keeps the account's posts when its handle is typed with capitals, or as its DID", async () => {
+    const author = { handle: "example.bsky.social", did: "did:plc:abc" }
+    const fetchImpl = vi.fn<typeof fetch>(async () =>
+      reply({ feed: [{ post: { ...post("3k1", "Hello").post, author } }] }),
+    )
+    for (const typed of ["Example.Bsky.Social", "did:plc:abc"]) {
+      const posts = await account.recentPosts({ handle: typed, fetchImpl })
+      expect(posts.map((p) => p.url)).toEqual([
+        "https://bsky.app/profile/example.bsky.social/post/3k1",
+      ])
+    }
+    expect(account.handles(["@Admin.Bsky.Social"])).toEqual(["admin.bsky.social"])
+  })
+
   it("finds links by their byte offsets, as shortened in the text, then the link card's", async () => {
     // The emoji is four bytes in UTF-8 and two characters in JavaScript.
     const text = "🎉 Out now: pragmaticpapers.com/vol..."

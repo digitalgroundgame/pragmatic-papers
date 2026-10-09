@@ -55,7 +55,7 @@ interface AuthorFeed {
   feed?: {
     post?: {
       uri?: string
-      author?: { handle?: string }
+      author?: { handle?: string; did?: string }
       record?: { text?: string; createdAt?: string; facets?: Facet[] }
       /** A link card, when the post has one. */
       embed?: { external?: { uri?: string } }
@@ -65,8 +65,11 @@ interface AuthorFeed {
   message?: string
 }
 
+/** Bluesky's handles are lowercase however they're typed, so they're kept that way here. */
+const normalize = (handle: string): string => handle.trim().replace(/^@/, "").toLowerCase()
+
 const list = (handles: readonly string[]): string[] => [
-  ...new Set(handles.map((handle) => handle.trim().replace(/^@/, "")).filter(Boolean)),
+  ...new Set(handles.map(normalize).filter(Boolean)),
 ]
 
 interface Facet {
@@ -124,7 +127,8 @@ export function blueskyAccounts({
     optional: [handlesEnv],
     handles,
     async recentPosts({ handle, limit = 5, fetchImpl = fetch, signal }) {
-      const actor = handle.trim().replace(/^@/, "")
+      // A handle or a DID; the feed names the author by both, the handle in lowercase.
+      const actor = normalize(handle)
       const params = new URLSearchParams({
         actor,
         filter: "posts_no_replies",
@@ -142,7 +146,8 @@ export function blueskyAccounts({
       return (body.feed ?? [])
         .flatMap(({ post, reason }): BlueskyPost[] => {
           // A repost comes back as someone else's post with a `reason` saying who reposted it.
-          if (reason || !post?.uri || post.author?.handle !== actor) return []
+          const own = post?.author?.handle === actor || post?.author?.did === actor
+          if (reason || !post?.uri || !own) return []
           const text = post.record?.text?.trim()
           const createdAt = post.record?.createdAt
           if (!text || !createdAt) return []
@@ -155,7 +160,7 @@ export function blueskyAccounts({
                 facetLinks(post.record!.text!, post.record?.facets),
                 post.embed?.external?.uri,
               ),
-              url: `https://bsky.app/profile/${actor}/post/${rkey}`,
+              url: `https://bsky.app/profile/${post.author?.handle ?? actor}/post/${rkey}`,
               createdAt,
             },
           ]

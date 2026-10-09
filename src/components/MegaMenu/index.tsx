@@ -7,7 +7,7 @@ import {
 import { type MenuField } from "@/payload-types"
 import { getLinkFieldUrl, linksToUnpublished } from "@/utilities/getLinkFieldUrl"
 import { cn } from "@/utilities/utils"
-import { CMSLink } from "../Link/CMSLink2"
+import { CMSLink } from "../Link"
 import type { MegaMenuItem } from "./Interactive"
 import { LazyMegaMenu } from "./MegaMenu.lazy"
 

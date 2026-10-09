@@ -2,7 +2,7 @@ import React from "react"
 
 import type { CallToActionBlock as CTABlockProps } from "@/payload-types"
 
-import { CMSLink } from "@/components/Link/CMSLink2"
+import { CMSLink } from "@/components/Link"
 import { PaperIcon } from "@/components/Logo/icons/PaperIcon"
 import { PaperIconPattern } from "@/components/Logo/icons/PaperIconPattern"
 import RichText from "@/components/RichText"

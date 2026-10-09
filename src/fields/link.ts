@@ -27,7 +27,7 @@ export type LinkFieldOverrides = Omit<
 }
 
 /**
- * New Link Field with component overrides
+ * Link field with component overrides
  * @param component - The component overrides
  * @param props - The props for the base link field
  * @returns The link field

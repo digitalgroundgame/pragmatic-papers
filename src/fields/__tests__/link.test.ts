@@ -2,10 +2,10 @@
 import type { GroupField } from "payload"
 import { describe, expect, it } from "vitest"
 
-import { link } from "../link2"
+import { link } from "../link"
 import { namedFields, showsFor } from "./helpers"
 
-describe("link (link2)", () => {
+describe("link", () => {
   it("returns a named LinkField group with its defaults", () => {
     const field = link()
 

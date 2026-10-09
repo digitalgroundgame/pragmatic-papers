@@ -1,7 +1,7 @@
 import { MigrateUpArgs, MigrateDownArgs, sql } from "@payloadcms/db-postgres"
 
 // Hero and Call to Action links move from the old link field's `appearance` (default, outline)
-// to link2's `variant`. Drizzle generates this as a new column plus a drop, so each row's
+// to the current link field's `variant`. Drizzle generates this as a new column plus a drop, so each row's
 // appearance is copied across before the old column goes.
 export async function up({ db, payload, req }: MigrateUpArgs): Promise<void> {
   await db.execute(sql`

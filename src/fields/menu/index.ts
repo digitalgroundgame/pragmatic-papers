@@ -1,4 +1,4 @@
-import { link } from "@/fields/link2"
+import { link } from "@/fields/link"
 import type { ArrayField, Field } from "payload"
 
 /**

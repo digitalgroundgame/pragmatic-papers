@@ -2,7 +2,7 @@ import React from "react"
 
 import type { Page } from "@/payload-types"
 
-import { CMSLink } from "@/components/Link"
+import { CMSButton } from "@/components/Button"
 import { Media } from "@/components/Media"
 import RichText from "@/components/RichText"
 
@@ -17,7 +17,7 @@ export const MediumImpactHero: React.FC<Page["hero"]> = ({ links, media, richTex
             {links.map(({ link }, i) => {
               return (
                 <li key={i}>
-                  <CMSLink {...link} />
+                  <CMSButton link={link} variant={link?.variant ?? "default"} />
                 </li>
               )
             })}

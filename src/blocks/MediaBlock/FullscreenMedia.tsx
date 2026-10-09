@@ -23,7 +23,7 @@ export const FullscreenMedia: React.FC<FullscreenMediaProps> = ({ media, classNa
         enableGutter={false}
         className="text-muted-foreground [&_a]:text-foreground flex w-full flex-col items-center gap-2"
         imgClassName="border max-h-[80dvh] w-auto max-w-full h-auto"
-        captionClassName="max-h-24 overflow-y-auto px-4 text-center"
+        captionClassName="max-h-24 w-0 min-w-full overflow-y-auto px-4 text-center"
         disableInnerContainer
       />
     </div>

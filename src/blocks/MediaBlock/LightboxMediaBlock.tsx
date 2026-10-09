@@ -60,7 +60,7 @@ export const LightboxMediaBlock: React.FC<LightboxMediaBlockProps> = ({
         </MediaBlockFrame>
       </div>
       <DialogContent
-        className="[&>button]:bg-background max-h-[90dvh] overflow-hidden rounded-none bg-transparent p-0 text-base shadow-none ring-0 sm:max-w-max [&>button]:top-2 [&>button]:right-2 [&>button]:rounded-sm [&>button]:p-0.5 [&>button_svg]:size-6"
+        className="[&>button]:bg-background max-h-[90dvh] w-max overflow-hidden rounded-none bg-transparent p-0 text-base shadow-none ring-0 sm:max-w-max [&>button]:top-2 [&>button]:right-2 [&>button]:rounded-sm [&>button]:p-0.5 [&>button_svg]:size-6"
         style={{
           maxWidth: `min(calc(100vw - 2rem), calc(80dvh * ${media.width ?? 1} / ${media.height ?? 1}))`,
         }}

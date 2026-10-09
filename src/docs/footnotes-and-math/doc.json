@@ -1,7 +1,7 @@
 {
   "title": "Footnotes and math in an article",
   "summary": "Type [^ your note ] to add a footnote where you are, or reuse one you've already written. Math is written in LaTeX, inline or on its own line.",
-  "publishedAt": "2026-05-04",
+  "publishedAt": "2026-04-27",
   "audience": ["writer", "editor"],
   "content": {
     "root": {

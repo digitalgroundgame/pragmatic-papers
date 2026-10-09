@@ -51,8 +51,6 @@ describe("docsNotifications", () => {
     expect(await titlesFor(["writer"])).toEqual(["For all staff"])
     expect(await titlesFor(["editor"])).toEqual(["For editors", "For all staff"])
     expect(await titlesFor(["chief-editor"])).toEqual(["For editors", "For all staff"])
-    // As staff: visitors can't read a doc with an audience at all.
-    expect(queryPublishedDocs).toHaveBeenCalledWith({ staff: true })
   })
 
   it("announces older docs a batch a week from launch, newest feature first", async () => {

@@ -143,8 +143,8 @@ syncs them too. To add one:
    two (the bell shows it), `publishedAt` (the day the release reaches
    production; for a feature that shipped before the bell, the day it did) and,
    for a doc only some roles need, `audience` (e.g. `["editor"]`; admins and
-   chief editors see every doc). A doc with an audience is staff-only: /docs
-   shows it only to someone signed in to the admin.
+   chief editors see every doc). It only decides who the bell tells: every
+   published doc is public at /docs, as the repo is.
 2. `pnpm docs:export <slug>` writes it into `src/docs/<slug>/`, swapping each
    Media document for a `{ "$media": "<file>" }` reference to a copy beside the
    JSON, since Media ids differ from site to site. Links to other documents

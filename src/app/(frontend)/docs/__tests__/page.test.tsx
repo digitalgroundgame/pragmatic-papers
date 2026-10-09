@@ -2,11 +2,8 @@ import { cleanup, render, screen } from "@testing-library/react"
 import type React from "react"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
-const { queryPublishedDocs, isStaffReader } = vi.hoisted(() => ({
-  queryPublishedDocs: vi.fn(),
-  isStaffReader: vi.fn(async () => false),
-}))
-vi.mock("@/plugins/docs/queries", () => ({ queryPublishedDocs, isStaffReader }))
+const { queryPublishedDocs } = vi.hoisted(() => ({ queryPublishedDocs: vi.fn() }))
+vi.mock("@/plugins/docs/queries", () => ({ queryPublishedDocs }))
 
 import DocsIndexPage, { generateMetadata } from "../page"
 
@@ -34,16 +31,6 @@ describe("DocsIndexPage", () => {
     expect(screen.getByText("Search Unsplash from Media.")).toBeInTheDocument()
     expect(screen.getByText("October 18, 2026")).toHaveAttribute("datetime", "2026-10-18")
     expect(screen.getByRole("navigation", { name: "breadcrumb" })).toHaveTextContent("Docs")
-  })
-
-  it.each([
-    ["a visitor", false],
-    ["staff, who also see docs written for some roles", true],
-  ])("lists the docs %s can read", async (_, staff) => {
-    isStaffReader.mockResolvedValueOnce(staff)
-    queryPublishedDocs.mockResolvedValue([])
-    await renderPage()
-    expect(queryPublishedDocs).toHaveBeenCalledWith({ staff })
   })
 
   it("says so when there are no docs", async () => {

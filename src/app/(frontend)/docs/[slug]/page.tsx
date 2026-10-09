@@ -27,8 +27,8 @@ interface Args {
   params: Promise<{ slug: string }>
 }
 
-// Rendered per request, because a doc written for some roles is shown only to staff. The doc
-// comes from the data cache, which saving a doc or the start-up sync refreshes.
+// Rendered per request from the data cache, which saving a doc or the start-up sync refreshes:
+// a prerendered copy would keep the doc the build saw.
 export const dynamic = "force-dynamic"
 
 export async function generateMetadata({ params }: Args): Promise<Metadata> {

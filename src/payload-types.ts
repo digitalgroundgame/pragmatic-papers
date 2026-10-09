@@ -1486,7 +1486,7 @@ export interface Doc {
    */
   publishedAt: string;
   /**
-   * Who it's for: only staff can read it, and the bell tells only these roles (admins see every doc). Empty means anyone can read it and the bell tells all staff.
+   * Who the help bell tells. Empty means all staff; admins see every doc.
    */
   audience?: ('admin' | 'chief-editor' | 'editor' | 'writer' | 'narrator')[] | null;
   /**

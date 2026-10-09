@@ -33,7 +33,7 @@ describe("TickerView", () => {
     expect(screen.getByRole("link", { name: /^On X:\s*The filibuster/ })).toBeInTheDocument()
   })
 
-  it("shows each link in a post as an icon, with the full URL on hover", () => {
+  it("shows each link in a post as an icon after its words", () => {
     render(<TickerView broadcast={null} posts={tickerPosts} />)
     const post = screen.getByRole("link", { name: /^On X:\s*The filibuster/ })
     expect(post).not.toHaveTextContent("t.co")
@@ -41,7 +41,6 @@ describe("TickerView", () => {
 
     const link = screen.getByRole("link", { name: "Link: pragmaticpapers.com/articles/filibuster" })
     expect(link).toHaveAttribute("href", "https://pragmaticpapers.com/articles/filibuster")
-    expect(link).toHaveAttribute("title", "https://pragmaticpapers.com/articles/filibuster")
     expect(link).toHaveAttribute("target", "_blank")
     expect(link.querySelector("svg")).toHaveAttribute("aria-hidden", "true")
   })

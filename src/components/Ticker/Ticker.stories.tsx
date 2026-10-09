@@ -1,7 +1,8 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite"
-import { expect, userEvent, within } from "storybook/test"
+import { expect, screen, userEvent, waitFor, within } from "storybook/test"
 
 import { liveBroadcast, tickerPosts, upcomingBroadcast } from "@/stories/fixtures/ticker"
+import { shortURL } from "./LinkIcon"
 import { TickerView } from "./TickerView"
 
 const meta = {
@@ -48,4 +49,28 @@ export const PostsOnly: Story = {
 /** On air with no posts to show: the broadcast takes the whole strip. */
 export const LiveOnly: Story = {
   args: { broadcast: liveBroadcast, posts: [] },
+}
+
+const filibuster = "https://pragmaticpapers.com/articles/filibuster"
+
+/**
+ * Pointing at a link's icon shows its full URL. The tooltip loads on that first point, so the
+ * ticker ships no JavaScript until then.
+ */
+export const LinkTooltip: Story = {
+  args: { broadcast: null, posts: tickerPosts },
+  play: async ({ canvasElement }) => {
+    const ticker = within(canvasElement).getByRole("region", { name: "Live and latest" })
+    const name = `Link: ${shortURL(filibuster)}`
+    await userEvent.hover(within(ticker).getByRole("link", { name }))
+    // It fades in, so it's visible once the animation is under way.
+    await waitFor(() => expect(screen.getByText(filibuster)).toBeVisible())
+
+    // It closes when the pointer leaves, and the icon still opens the link.
+    const link = within(ticker).getByRole("link", { name })
+    await userEvent.unhover(link)
+    await waitFor(() => expect(screen.queryByText(filibuster)).not.toBeInTheDocument())
+    await expect(link).toHaveAttribute("href", filibuster)
+    await expect(link).toHaveAttribute("target", "_blank")
+  },
 }

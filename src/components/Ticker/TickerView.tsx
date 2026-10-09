@@ -1,10 +1,12 @@
-import { Link2, Pause, Play } from "lucide-react"
+import { Pause, Play } from "lucide-react"
 import type { CSSProperties, FC, SVGProps } from "react"
 
 import { BlueskyIcon, XIcon, YoutubeIcon } from "@/components/SocialLinks/icons"
 import { formatFullTimestamp, formatTimeOfDay } from "@/heros/ArticleHero/dates"
 import { cn } from "@/utilities/utils"
 
+import { LinkIcon, shortURL } from "./LinkIcon"
+import { LazyLinkTooltip } from "./LinkTooltip.lazy"
 import {
   excerpt,
   postLinks,
@@ -19,11 +21,6 @@ import {
 const SOURCES: Record<TickerPostSource, { name: string; Icon: FC<SVGProps<SVGSVGElement>> }> = {
   bluesky: { name: "Bluesky", Icon: BlueskyIcon },
   x: { name: "X", Icon: XIcon },
-}
-
-/** A URL as a reader says it: no scheme, no `www.`, no trailing slash. */
-function shortURL(url: string): string {
-  return url.replace(/^https?:\/\/(www\.)?/, "").replace(/\/$/, "")
 }
 
 function PostList({
@@ -61,19 +58,9 @@ function PostList({
                   {excerpt(postText(post)) || shortURL(links[0] ?? post.url)}
                 </span>
               </a>
-              {links.map((url) => (
-                <a
-                  key={url}
-                  href={url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  title={url}
-                  aria-label={`Link: ${shortURL(url)}`}
-                  className="text-muted-foreground hover:text-brand-text flex size-5 items-center justify-center transition-colors"
-                >
-                  <Link2 aria-hidden="true" className="size-3.5" />
-                </a>
-              ))}
+              {links.map((url) =>
+                copy ? <LinkIcon key={url} url={url} /> : <LazyLinkTooltip key={url} url={url} />,
+              )}
             </span>
           </li>
         )

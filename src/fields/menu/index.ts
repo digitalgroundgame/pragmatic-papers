@@ -1,4 +1,4 @@
-import { link } from "@/fields/link"
+import { link, type LinkFieldOverrides } from "@/fields/link"
 import type { ArrayField, Field } from "payload"
 
 /**
@@ -6,6 +6,7 @@ import type { ArrayField, Field } from "payload"
  * as an array of link fields. Includes sensible defaults for
  * admin UI and typing, but accepts overrides.
  *
+ * @param link - Overrides for each item's link field (e.g. a different default variant).
  * @param props - Any ArrayField properties except 'type' and 'fields'.
  * @returns Field config for use in a collection or global.
  *
@@ -18,12 +19,15 @@ import type { ArrayField, Field } from "payload"
  *     })
  *   ]
  */
-export const menu = ({ ...props }: Omit<ArrayField, "type" | "fields">): Field => {
+export const menu = ({
+  link: linkOverrides,
+  ...props
+}: Omit<ArrayField, "type" | "fields"> & { link?: LinkFieldOverrides }): Field => {
   return {
     label: "Menu",
     ...props,
     type: "array",
-    fields: [link()],
+    fields: [link(linkOverrides)],
     interfaceName: "MenuField",
     admin: {
       initCollapsed: true, // collapse by default for UI clarity

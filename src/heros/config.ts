@@ -57,7 +57,13 @@ export const hero: Field = {
       }),
       label: false,
     },
-    menu({ name: "links", label: "Links", maxRows: 2 }),
+    menu({
+      name: "links",
+      label: "Links",
+      maxRows: 2,
+      // Hero links render as buttons, so a new one starts as the filled button.
+      link: { component: { variant: { defaultValue: "default" } } },
+    }),
     {
       name: "media",
       type: "upload",

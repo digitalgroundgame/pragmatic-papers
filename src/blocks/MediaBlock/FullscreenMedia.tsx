@@ -7,13 +7,19 @@ interface FullscreenMediaProps {
   media: MediaType
   /** Applied to the outer wrapper. */
   className?: string
+  /** Applied to the image, after its own classes. */
+  imgClassName?: string
 }
 
 // The "opened lightbox" presentation of a single piece of media —
 // image scaled to viewport, caption in a scrollable footer underneath.
 // Shared between the feed's mediaBlock renderer (MediaBlockFeed) and the
 // LightboxMediaBlock dialog content so both surfaces look identical.
-export const FullscreenMedia: React.FC<FullscreenMediaProps> = ({ media, className }) => {
+export const FullscreenMedia: React.FC<FullscreenMediaProps> = ({
+  media,
+  className,
+  imgClassName,
+}) => {
   return (
     <div className={cn("flex h-full w-full flex-col items-center justify-center gap-3", className)}>
       <MediaBlock
@@ -22,7 +28,7 @@ export const FullscreenMedia: React.FC<FullscreenMediaProps> = ({ media, classNa
         variant="xlarge"
         enableGutter={false}
         className="text-muted-foreground [&_a]:text-foreground flex w-full flex-col items-center gap-2"
-        imgClassName="border max-h-[80dvh] w-auto max-w-full h-auto"
+        imgClassName={cn("border max-h-[80dvh] w-auto max-w-full h-auto", imgClassName)}
         captionClassName="max-h-24 w-0 min-w-full overflow-y-auto px-4 text-center"
         disableInnerContainer
       />

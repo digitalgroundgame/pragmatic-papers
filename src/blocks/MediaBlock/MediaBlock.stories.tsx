@@ -32,13 +32,23 @@ const longCaption = mediaFixture({
   caption: richText(createParagraph(SENTENCES.join(" "))) as Media["caption"],
 })
 
-/** Opens the lightbox and checks its close button sits inside the image's top-right corner. */
+/**
+ * Opens the lightbox and checks the image grows to the viewport (its width, or the height
+ * left under any caption) and its close button sits inside the image's top-right corner.
+ */
 async function openLightbox(canvasElement: HTMLElement): Promise<HTMLElement> {
   await userEvent.click(within(canvasElement).getByRole("button"))
   const dialog = await screen.findByRole("dialog")
   const img = within(dialog).getByRole<HTMLImageElement>("img")
   await waitFor(() => expect(img.complete && img.naturalWidth > 0).toBe(true))
   const close = within(dialog).getByRole("button", { name: "Close" })
+  const height = dialog.querySelector("figcaption")
+    ? Math.min(0.8 * window.innerHeight, 0.9 * window.innerHeight - 104)
+    : 0.8 * window.innerHeight
+  const fill = Math.min(window.innerWidth - 32, (height * img.naturalWidth) / img.naturalHeight)
+  await waitFor(() => {
+    expect(img.getBoundingClientRect().width).toBeGreaterThan(fill - 2)
+  })
   await waitFor(() => {
     const image = img.getBoundingClientRect()
     const button = close.getBoundingClientRect()

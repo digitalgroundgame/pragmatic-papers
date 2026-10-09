@@ -1,15 +1,11 @@
-import type { MetadataRoute } from "next"
+import { getServerSideSitemap } from "next-sitemap"
 import { unstable_cache } from "next/cache"
 
 import { getPayloadConfig } from "@/utilities/getPayloadConfig"
 import { getServerSideURL } from "@/utilities/getURL"
 
-// Rendered per request from the cached list below, which saving a page refreshes
-// (revalidatePage): Next would otherwise prerender it at build time, from the build's database.
-export const dynamic = "force-dynamic"
-
 const getPagesSitemap = unstable_cache(
-  async (): Promise<MetadataRoute.Sitemap> => {
+  async () => {
     const payload = await getPayloadConfig()
     const siteUrl = getServerSideURL().replace(/\/$/, "")
 
@@ -29,8 +25,8 @@ const getPagesSitemap = unstable_cache(
       page.slug
         ? [
             {
-              url: page.slug === "home" ? siteUrl : `${siteUrl}/${page.slug}`,
-              lastModified: page.updatedAt || dateFallback,
+              loc: page.slug === "home" ? siteUrl : `${siteUrl}/${page.slug}`,
+              lastmod: page.updatedAt || dateFallback,
             },
           ]
         : [],
@@ -41,9 +37,10 @@ const getPagesSitemap = unstable_cache(
 )
 
 /**
- * /pages/sitemap.xml: each published page. Pages are served from the site root (`/<slug>`),
- * which has no folder of its own to hold a sitemap.
+ * /pages-sitemap.xml: each published page. Pages are served from the site root (`/<slug>`), so
+ * their sitemap sits at the root too, beside the /sitemap.xml index, which can't list pages
+ * itself. A route handler because a root `sitemap.ts` would be /sitemap.xml.
  */
-export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  return getPagesSitemap()
+export async function GET(): Promise<Response> {
+  return getServerSideSitemap(await getPagesSitemap())
 }

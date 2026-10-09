@@ -120,9 +120,8 @@ const nextConfig: NextConfig = {
     // honour 301/308 update the URL they have stored.
     { source: "/feed.articles", destination: "/articles/feed.xml", permanent: true },
     { source: "/feed.volumes", destination: "/volumes/feed.xml", permanent: true },
-    // The first sitemaps sat at the site root; each now lives under the section it lists.
+    // The articles and volumes sitemaps sat at the site root; each now lives under its section.
     // Permanent, so Search Console and crawlers that stored the old URL follow it.
-    { source: "/pages-sitemap.xml", destination: "/pages/sitemap.xml", permanent: true },
     { source: "/articles-sitemap.xml", destination: "/articles/sitemap.xml", permanent: true },
     { source: "/volumes-sitemap.xml", destination: "/volumes/sitemap.xml", permanent: true },
     {

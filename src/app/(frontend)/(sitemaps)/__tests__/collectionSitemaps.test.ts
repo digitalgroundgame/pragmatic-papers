@@ -7,7 +7,7 @@ vi.mock("@/utilities/getPayloadConfig", () => ({ getPayloadConfig: vi.fn(async (
 // Straight through, so each sitemap reads the `find` fixture it was given.
 vi.mock("next/cache", () => ({ unstable_cache: (fn: () => unknown) => fn }))
 
-const { default: pagesSitemap } = await import("../../pages/sitemap")
+const { GET: pagesRoute } = await import("../pages-sitemap.xml/route")
 const { default: articlesSitemap } = await import("../../articles/sitemap")
 const { GET: newsSitemap } = await import("../../articles/news-sitemap.xml/route")
 const { default: volumesSitemap } = await import("../../volumes/sitemap")
@@ -18,8 +18,8 @@ const PUBLISHED_AT = "2026-08-30T09:00:00.000Z"
 
 const withDocs = (docs: Record<string, unknown>[]) => find.mockResolvedValue({ docs })
 
-const renderNews = async () => {
-  const res = await newsSitemap()
+const renderXml = async (GET: () => Promise<Response>) => {
+  const res = await GET()
   expect(res.headers.get("Content-Type")).toContain("xml")
   return res.text()
 }
@@ -30,7 +30,11 @@ const routes = [
   {
     name: "pages",
     collection: "pages",
-    list: async () => (await pagesSitemap()).map((e) => [e.url, e.lastModified]),
+    list: async () => {
+      const xml = await renderXml(pagesRoute)
+      const dates = [...xml.matchAll(/<lastmod>(.*?)<\/lastmod>/g)].map(([, date]) => date)
+      return locs(xml).map((loc, i) => [loc, dates[i]])
+    },
   },
   {
     name: "articles",
@@ -53,21 +57,21 @@ afterEach(() => {
   vi.unstubAllEnvs()
 })
 
-describe("/pages/sitemap.xml", () => {
+describe("/pages-sitemap.xml", () => {
   it("puts the home page at the site root and every other page at its slug", async () => {
     withDocs([
       { slug: "home", updatedAt: UPDATED_AT },
       { slug: "about", updatedAt: UPDATED_AT },
     ])
 
-    expect((await pagesSitemap()).map((e) => e.url)).toEqual([SITE_URL, `${SITE_URL}/about`])
+    expect(locs(await renderXml(pagesRoute))).toEqual([SITE_URL, `${SITE_URL}/about`])
   })
 
   it("leaves no trailing slash on the root when SERVER_URL has one", async () => {
     vi.stubEnv("SERVER_URL", `${SITE_URL}/`)
     withDocs([{ slug: "home", updatedAt: UPDATED_AT }])
 
-    expect((await pagesSitemap()).map((e) => e.url)).toEqual([SITE_URL])
+    expect(locs(await renderXml(pagesRoute))).toEqual([SITE_URL])
   })
 })
 
@@ -86,7 +90,7 @@ describe("/articles/news-sitemap.xml", () => {
     try {
       withDocs([])
 
-      await renderNews()
+      await renderXml(newsSitemap)
 
       expect(find).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -115,7 +119,7 @@ describe("/articles/news-sitemap.xml", () => {
       },
     ])
 
-    const xml = await renderNews()
+    const xml = await renderXml(newsSitemap)
 
     expect(locs(xml)).toEqual([`${SITE_URL}/articles/the-case-for-reform`])
     expect(xml).toContain("<news:title>The Case for Reform</news:title>")
@@ -134,7 +138,7 @@ describe("/articles/news-sitemap.xml", () => {
       { slug: "kept", title: "Kept", publishedAt: PUBLISHED_AT },
     ])
 
-    expect(locs(await renderNews())).toEqual([`${SITE_URL}/articles/kept`])
+    expect(locs(await renderXml(newsSitemap))).toEqual([`${SITE_URL}/articles/kept`])
   })
 })
 
@@ -152,7 +156,7 @@ describe("/volumes/sitemap.xml", () => {
   })
 })
 
-describe.each(routes)("/$name/sitemap.xml", ({ collection, list }) => {
+describe.each(routes)("the $name sitemap", ({ collection, list }) => {
   it("asks only for published documents, as an anonymous reader", async () => {
     withDocs([])
 

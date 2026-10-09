@@ -30,7 +30,6 @@ describe("next.config.ts redirects", () => {
   })
 
   it.each([
-    ["/pages-sitemap.xml", "/pages/sitemap.xml"],
     ["/articles-sitemap.xml", "/articles/sitemap.xml"],
     ["/volumes-sitemap.xml", "/volumes/sitemap.xml"],
   ])("permanently redirects the old sitemap URL %s to %s", async (from, to) => {
@@ -40,7 +39,7 @@ describe("next.config.ts redirects", () => {
   })
 
   it("leaves the new sitemap URLs alone", async () => {
-    for (const path of ["/pages/sitemap.xml", "/articles/sitemap.xml", "/volumes/sitemap.xml"]) {
+    for (const path of ["/pages-sitemap.xml", "/articles/sitemap.xml", "/volumes/sitemap.xml"]) {
       expect(await redirectFor(path)).toBeUndefined()
     }
   })

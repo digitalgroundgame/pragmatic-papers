@@ -3,7 +3,7 @@ import type { Payload } from "payload"
 import type { Article, Media, User } from "@/payload-types"
 import { getPayload, createUser } from "../helpers/testUsers"
 import { ARTICLE_CONTENT } from "../fixtures/content"
-import { MINIMAL_PNG } from "../fixtures/media"
+import { testFile } from "../fixtures/media"
 
 describe("narrator access", () => {
   let payload: Payload
@@ -81,12 +81,7 @@ describe("narrator access", () => {
       data: {
         alt: "Test upload by narrator",
       } as Media,
-      file: {
-        data: MINIMAL_PNG,
-        mimetype: "image/png",
-        name: "test.png",
-        size: MINIMAL_PNG.length,
-      },
+      file: testFile(),
     })
 
     expect(media.id).toBeDefined()
@@ -99,12 +94,7 @@ describe("narrator access", () => {
       collection: "media",
       overrideAccess: true,
       context: { disableRevalidate: true },
-      file: {
-        data: MINIMAL_PNG,
-        mimetype: "image/png",
-        name: "test.png",
-        size: MINIMAL_PNG.length,
-      },
+      file: testFile(),
       data: { alt: "Media Narrator Update - narrator" } as unknown as Media,
     })
 
@@ -127,12 +117,7 @@ describe("narrator access", () => {
       collection: "media",
       overrideAccess: true,
       context: { disableRevalidate: true },
-      file: {
-        data: MINIMAL_PNG,
-        mimetype: "image/png",
-        name: "test.png",
-        size: MINIMAL_PNG.length,
-      },
+      file: testFile(),
       data: { alt: "Media Narrator Delete - narrator" } as unknown as Media,
     })
 

@@ -135,10 +135,11 @@ PR. Docs are the `docs` collection (`src/plugins/docs/`, the docs plugin),
 served at `/docs/<slug>` and listed at `/docs`, so they can hold blocks and
 images like an article. The ones a release ships live in the repo, one folder
 each: `src/docs/<slug>/doc.json` beside the files it shows. Once per deploy,
-`/next/revalidate-all` (which `start.sh` and the Worker's deploy call when a
-deploy goes live) writes every folder into that site's database, published,
-uploading its files to Media (`syncRepoDocs`); a doc whose JSON and files hash
-the same as last time is skipped (`DOCS_SYNC=false` turns the sync off).
+`/next/revalidate-all` (which `start.sh` calls when a deploy goes live) writes
+every folder into that site's database, published, uploading its files to Media
+(`syncRepoDocs`); a doc whose JSON and files hash the same as last time is
+skipped (`DOCS_SYNC=false` turns the sync off, as the staging Worker does: it
+reads staging's database and has no `src/docs/` of its own).
 `pnpm dev:db-seed` syncs them locally. To add one:
 
 1. Write it in the local admin (**Help → Docs**): a `summary` of a sentence or

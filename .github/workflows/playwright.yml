@@ -162,11 +162,14 @@ jobs:
     permissions:
       contents: read
       deployments: write
-      pull-requests: read
+      # Links the live preview at the top of the PR's description.
+      pull-requests: write
     steps:
       - uses: actions/checkout@v7
         with:
-          sparse-checkout: scripts/preview-deployment.ts
+          sparse-checkout: |
+            scripts/preview-deployment.ts
+            scripts/pr-description.ts
           sparse-checkout-cone-mode: false
 
       # Node 24 runs the TypeScript script directly; no install needed.

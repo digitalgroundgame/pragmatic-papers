@@ -112,7 +112,9 @@ jobs:
         if: steps.showcase.outputs.sync
         with:
           ref: ${{ github.event.pull_request.head.sha }}
-          sparse-checkout: scripts/showcase-pr.ts
+          sparse-checkout: |
+            scripts/showcase-pr.ts
+            scripts/pr-description.ts
           sparse-checkout-cone-mode: false
 
       # Node 24 runs the TypeScript script directly; no install needed.

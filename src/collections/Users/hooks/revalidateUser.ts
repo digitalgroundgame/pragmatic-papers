@@ -19,14 +19,14 @@ export const revalidateUser: CollectionAfterChangeHook<User> = async ({
 
   for (const slug of slugsToRevalidate) {
     if (slug) {
-      const path = `/authors/${slug}`
+      const path = `/contributors/${slug}`
       payload.logger.info(`Revalidating author at path: ${path}`)
       revalidatePath(path)
     }
   }
 
-  payload.logger.info(`Revalidating authors index at path: /authors`)
-  revalidatePath("/authors")
+  payload.logger.info(`Revalidating authors index at path: /contributors`)
+  revalidatePath("/contributors")
 
   // Find all published articles where this user is an author and revalidate them
   const articles = await payload.find({

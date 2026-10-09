@@ -34,7 +34,7 @@ describe("ContributorsBlock", () => {
     )
     expect(screen.getByRole("link", { name: authors[0]!.name! })).toHaveAttribute(
       "href",
-      `/authors/${authors[0]!.slug}`,
+      `/contributors/${authors[0]!.slug}`,
     )
   })
 

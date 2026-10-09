@@ -83,7 +83,7 @@ export const ARTICLE_IMAGE_ALT = "Mountains at sunset"
 export const SOCIAL_EMBEDS_SLUG = "social-media-embed-test-all-variations"
 
 /**
- * Authors with no articles, seeded so /authors runs past its five-per-page
+ * Authors with no articles, seeded so /contributors runs past its five-per-page
  * limit. Their names sort after every other seeded author's, so the authors
  * other specs look for stay on page 1.
  */

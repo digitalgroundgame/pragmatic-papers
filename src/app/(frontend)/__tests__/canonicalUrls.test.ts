@@ -80,8 +80,8 @@ describe("canonical URLs", () => {
   })
 
   it("names an author's later pages, and ignores a page number the listing ignores", async () => {
-    const { generateMetadata } = await import("../authors/[slug]/page")
-    const path = `${SITE}/authors/${author.slug}`
+    const { generateMetadata } = await import("../contributors/[slug]/page")
+    const path = `${SITE}/contributors/${author.slug}`
 
     expect(urls(await generateMetadata(page(author.slug!, "abc")))).toEqual(both(path))
     expect(urls(await generateMetadata(page(author.slug!, "2")))).toEqual(both(`${path}?p=2`))
@@ -95,10 +95,10 @@ describe("canonical URLs", () => {
   })
 
   it("gives the authors index a canonical URL", async () => {
-    const { generateMetadata } = await import("../authors/page")
+    const { generateMetadata } = await import("../contributors/page")
 
-    expect(urls(await generateMetadata(listing()))).toEqual(both(`${SITE}/authors`))
-    expect(urls(await generateMetadata(listing("3")))).toEqual(both(`${SITE}/authors?p=3`))
+    expect(urls(await generateMetadata(listing()))).toEqual(both(`${SITE}/contributors`))
+    expect(urls(await generateMetadata(listing("3")))).toEqual(both(`${SITE}/contributors?p=3`))
   })
 })
 
@@ -120,7 +120,7 @@ describe("pages past the last one", () => {
   })
 
   it("are not found on an author's article list", async () => {
-    const { default: AuthorPage } = await import("../authors/[slug]/page")
+    const { default: AuthorPage } = await import("../contributors/[slug]/page")
 
     await expect(AuthorPage(page(author.slug!, "3"))).rejects.toMatchObject(is404)
   })

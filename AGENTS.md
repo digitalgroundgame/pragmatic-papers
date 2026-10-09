@@ -13,7 +13,7 @@ This file provides guidance to tools like Claude Code (claude.ai/code) when work
 - `pnpm dev` — starts everything in Docker Compose (Postgres + Next.js dev server on port 8000)
 - `pnpm dev:db-nuke` — stop Postgres and delete its volume (`docker compose down -v`), wiping the entire data directory. Use this after a Postgres major-version bump or whenever the local data is corrupt; the next `pnpm dev` recreates a fresh cluster and Drizzle push re-syncs the schema
 - `pnpm dev:db-fresh` — bring Postgres up and rebuild the schema by re-running all migrations from scratch (`payload migrate:fresh`). Unlike `dev:db-nuke`, this keeps the volume and exercises the committed migration files (the same path prod uses), so it surfaces migration drift that Drizzle push masks in dev
-- `pnpm dev:db-seed` — bring Postgres up, seed it from the terminal, and stop it again. Runs the same `seed()` as the admin dashboard's "Seed your database" button, so it first deletes **every** article, volume, page, media file, topic, map asset, interactive, form and form submission (not just seeded ones), the seed users, and the recommendation rankings. Drizzle push builds the schema on an empty database, so it works straight after `dev:db-nuke`. It refuses to run unless `DATABASE_URI` points at localhost and `USE_LOCAL_STORAGE=true` (override with `SEED_ALLOW_REMOTE=true`), and exits 1 if you decline Drizzle's data-loss prompt. Stop `pnpm dev` first: this command stops the Postgres container it shares.
+- `pnpm dev:db-seed` — bring Postgres up, seed it from the terminal, and stop it again. Runs the same `seed()` as the admin dashboard's "Seed your database" button, so it first deletes **every** article, volume, page, media file, topic, map asset, interactive, form and form submission (not just seeded ones), the seed users, and the recommendation rankings, then syncs the help docs in `src/docs/` back in. Drizzle push builds the schema on an empty database, so it works straight after `dev:db-nuke`. It refuses to run unless `DATABASE_URI` points at localhost and `USE_LOCAL_STORAGE=true` (override with `SEED_ALLOW_REMOTE=true`), and exits 1 if you decline Drizzle's data-loss prompt. Stop `pnpm dev` first: this command stops the Postgres container it shares.
 - `pnpm showcase <pr-number | staging | url> (<slug...> | --all) [--draft]` — push feature articles from the catalog in `src/endpoints/seed/showcase.ts` to a live site through its REST API, as `SHOWCASE_EMAIL` / `SHOWCASE_PASSWORD` (an account with an author role). A PR number means its `pr-<n>.pragmaticpapers.com` preview; `staging` means `SHOWCASE_STAGING_URL`, and pushes drafts. Only adds articles whose slug is missing; deletes nothing. A PR with the `showcase` label or a `Showcase: <slug...>` line in its description (the workflow keeps the two in sync; the label alone inserts a line naming the articles the PR adds to the catalog) gets them pushed to its preview after every deploy by `.github/workflows/showcase.yml`, which then turns that line into links to them, titled, at the top of the description, and can also be run by hand for a PR (the articles join that line, which opts the PR in) or staging. Nothing is pushed by default: when a PR adds a seeded article to that catalog, opt it in by adding the `showcase` label or putting `Showcase: <slug>` in its description
 
 ### Quality Checks
@@ -129,6 +129,54 @@ every public page is purged too, when the deployment has
 see the old answer until the edge's copy expires (10 minutes, or up to a day
 served stale). When the feature graduates, delete the checkbox and the checks.
 
+### Help docs and notifications
+
+A release that changes what staff do in the admin ships a help doc in the same
+PR. Docs are the `docs` collection (`src/plugins/docs/`, the docs plugin),
+served at `/docs/<slug>` and listed at `/docs`, so they can hold blocks and
+images like an article. The ones a release ships live in the repo, one folder
+each: `src/docs/<slug>/doc.json` beside the files it shows. Once per deploy,
+`/next/revalidate-all` (which `start.sh` calls when a deploy goes live) writes
+every folder into that site's database, published, uploading its files to Media
+(`syncRepoDocs`); a doc whose JSON and files hash the same as last time is
+skipped (`DOCS_SYNC=false` turns the sync off, as the staging Worker does: it
+reads staging's database and has no `src/docs/` of its own).
+`pnpm dev:db-seed` syncs them locally. To add one:
+
+1. Write it in the local admin (**Help → Docs**): a `summary` of a sentence or
+   two (the bell shows it), `publishedAt` (the day the release reaches
+   production; for a feature that shipped earlier, the day it did) and,
+   for a doc only some roles need, `audience` (e.g. `["editor"]`; admins and
+   chief editors see every doc). It only decides who the bell tells: every
+   published doc is public at /docs, as the repo is.
+2. `pnpm docs:export <slug>` writes it into `src/docs/<slug>/`, swapping each
+   Media document for a `{ "$media": "<file>" }` reference to a copy beside the
+   JSON, since Media ids differ from site to site. Links to other documents
+   carry this database's ids, so link to their URLs instead.
+
+The bell lists each doc under its `publishedAt`, newest first.
+
+The repo copy wins, so on a deployed site a doc from `src/docs/` is read-only in
+the admin (local dev leaves it editable, for `docs:export`); docs written in a
+site's admin stay editable there. Readers' pages and the bell read docs through
+`unstable_cache` with the `docs` tag, which saving a doc or a sync that changed
+one clears, along with the edge cache.
+
+The bell beside the avatar in the admin header is the notifications plugin
+(`src/plugins/notifications/`). Features plug into it with a
+`NotificationSource` (`types.ts`): a type users can mute, and `itemsFor(user)`,
+which decides who sees what (help docs come from `docsNotifications()`, staff
+only). Register a source in `src/plugins/index.ts`. Each user's read items and
+muted types are kept in their Payload preferences (`payload-preferences`, key
+`notifications`); items dated before the account was made don't count as
+unread.
+
+The bell is built from the site's shadcn components (`src/components/ui/`).
+Payload 3 has no Tailwind of its own, so `NotificationsMenu.css` brings in
+Tailwind's theme and only the utilities those files use, without preflight, and
+maps the shadcn tokens onto Payload's theme variables under `html[data-theme]`.
+Another admin component on shadcn adds its files to that CSS's `@source` list.
+
 ### Edge cache (Cloudflare)
 
 Public pages are cached at Cloudflare's edge (`s-maxage=600`,
@@ -179,6 +227,7 @@ A new hook for content readers see should call it too.
 - Use `getPayloadConfig` imported from `@/utilities/getPayloadConfig`
 - Wrap data queries in `React.cache()` for per-request deduplication
 - Use `unstable_cache` with cache tags for long-lived caching (globals, redirects, sitemaps)
+- Sitemaps: a new one is a `sitemap.ts` in its route's folder (Next's metadata convention, served at `/<route>/sitemap.xml`, e.g. `docs/sitemap.ts`), added to `SITEMAP_PATHS` in `(sitemaps)/sitemaps.ts`. The `(sitemaps)/*-sitemap.xml` routes are the URLs production already serves to crawlers, so they stay where they are
 - Always respect `draftMode()` — pass `draft` and `overrideAccess: draft` into Payload queries
 - Next.js 15: `params` and `searchParams` are `Promise`s (must be `await`ed)
 - Metadata: use `generateMeta({ doc, canonicalPath })` from `@/utilities/generateMeta`

@@ -3,6 +3,7 @@ import type { User } from "@/payload-types"
 import { draftMode } from "next/headers"
 import React from "react"
 
+import { EndRule } from "@/blocks/SquiggleRule/EndRule"
 import { ArticleSidebar } from "@/components/ArticleSidebar"
 import { AuthorList } from "@/components/Authors/AuthorList"
 import { FootnoteList } from "@/components/FootnoteList"
@@ -114,6 +115,7 @@ export default async function Article({ params: paramsPromise }: Args): Promise<
                     parentDoc={{ collection: "articles", id: article.id }}
                   />
                 </MathJaxProvider>
+                <EndRule content={content} />
                 <FootnoteList footnotes={footnotes} />
                 <Separator />
                 <TopicsList topics={topics} />

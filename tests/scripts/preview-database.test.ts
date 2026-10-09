@@ -88,7 +88,7 @@ function sh(script: string, env: Record<string, string> = {}) {
       TARGET_EXISTS: "",
       SOURCE_BUSY: "",
       BUILT_WITHOUT_DATABASE: "",
-      SOURCE_COMMIT: "",
+      IMAGE_COMMIT: "",
       DATABASE_COMMENT: "",
       TARGET_MIGRATIONS: "",
       SOURCE_MIGRATIONS: "",
@@ -294,7 +294,7 @@ describe("preview database build", () => {
       TARGET_EXISTS: "true",
       FORCE_DATABASE_COPY: "true",
       BUILT_WITHOUT_DATABASE: "true",
-      SOURCE_COMMIT: "abc123",
+      IMAGE_COMMIT: "abc123",
     }
 
     const restart = copyToPreview({ ...image, DATABASE_COMMENT: "copied for commit abc123" })
@@ -312,11 +312,11 @@ describe("preview database build", () => {
   })
 
   it("marks a first copy with the image's commit, and leaves Coolify builds unmarked", () => {
-    copyToPreview({ BUILT_WITHOUT_DATABASE: "true", SOURCE_COMMIT: "abc123" })
+    copyToPreview({ BUILT_WITHOUT_DATABASE: "true", IMAGE_COMMIT: "abc123" })
     expect(indexOf("COMMENT ON DATABASE")).toBeGreaterThan(indexOf("WITH TEMPLATE"))
 
     rmSync(join(dir, "calls.log"), { force: true })
-    copyToPreview({ SOURCE_COMMIT: "abc123" })
+    copyToPreview({ IMAGE_COMMIT: "abc123" })
     expect(indexOf("COMMENT ON DATABASE")).toBe(-1)
   })
 
@@ -332,7 +332,7 @@ describe("preview database build", () => {
   })
 
   describe("a preview database that ran a migration the PR has since rewritten", () => {
-    const image = { TARGET_EXISTS: "true", BUILT_WITHOUT_DATABASE: "true", SOURCE_COMMIT: "abc123" }
+    const image = { TARGET_EXISTS: "true", BUILT_WITHOUT_DATABASE: "true", IMAGE_COMMIT: "abc123" }
     beforeEach(() => {
       writeFileSync(join(dir, "migration_names"), "20261001_000000_base\n20261008_000000_ticker\n")
     })

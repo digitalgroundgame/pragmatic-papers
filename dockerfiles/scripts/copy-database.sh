@@ -132,8 +132,36 @@ mark_copied() {
     fi
 }
 
+# The migrations this image ships, one name per line, written by the Dockerfile that built
+# it. Without the file, a preview database is only replaced when FORCE_DATABASE_COPY says so.
+MIGRATION_NAMES_FILE=${MIGRATION_NAMES_FILE:-$(dirname "$0")/migration_names}
+
+# Prints the migrations database $1 has run that neither this image nor the source has: one
+# an earlier commit of the PR added and a later one renamed, rebuilt or dropped. Payload
+# would apply the new version over what the old one left and fail, so the copy is stale.
+# Migrations the source has run are expected (staging can be ahead of the PR), as are the
+# image's own.
+stale_migrations() {
+    [ -f "$MIGRATION_NAMES_FILE" ] || return 0
+    target_ran=$(psql "$(uri_with_database "$DATABASE_URI" "$1")" -tAc "SELECT name FROM payload_migrations" 2>/dev/null) || return 0
+    source_ran=$(psql "$SOURCE_URI" -tAc "SELECT name FROM payload_migrations" 2>/dev/null) || return 0
+    printf '%s\n' "$target_ran" | while read -r name; do
+        [ -n "$name" ] || continue
+        grep -qxF "$name" "$MIGRATION_NAMES_FILE" && continue
+        printf '%s\n' "$source_ran" | grep -qxF "$name" && continue
+        echo "$name"
+    done
+}
+
 echo "Checking if target database '$TARGET_DB' exists..."
 if database_exists "$TARGET_DB"; then
+    stale=$(stale_migrations "$TARGET_DB")
+    if [ -n "$stale" ]; then
+        echo "'$TARGET_DB' has run migrations that this image and '$SOURCE_DB' don't have:"
+        printf '  %s\n' $stale
+        echo "Replacing it with a fresh copy, as FORCE_DATABASE_COPY=true would"
+        FORCE_DATABASE_COPY=true
+    fi
     if [ "$FORCE_DATABASE_COPY" != "true" ]; then
         echo "Target database already exists and FORCE_DATABASE_COPY is not true"
         echo "Skipping database copy step"

@@ -92,6 +92,10 @@ RUN export PAYLOAD_SECRET=build-only && \
     SENTRY_RELEASE="${SOURCE_COMMIT}" pnpm build && \
     echo "--- COMPLETED: BUILDING NEXT.JS ---"
 
+# The migrations this image ships, for copy-database.sh to spot a preview database that ran
+# one a later commit renamed or rebuilt.
+RUN find src/migrations -maxdepth 1 -name '2*.ts' -exec basename {} .ts \; | sort > migration_names
+
 # ============================================
 # Runner stage - minimal production runtime
 # ============================================
@@ -137,6 +141,7 @@ COPY --from=builder --chown=nextjs:nodejs --chmod=755 \
     /app/dockerfiles/scripts/copy-database.sh \
     /app/dockerfiles/scripts/drop-closed-preview-databases.ts \
     ./
+COPY --from=builder --chown=nextjs:nodejs /app/migration_names ./
 
 USER nextjs
 EXPOSE 3000

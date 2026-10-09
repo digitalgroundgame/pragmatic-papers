@@ -1,6 +1,6 @@
 {
-  "title": "Footnotes and math in an article",
-  "summary": "Type [^ your note ] to add a footnote where you are, or reuse one you've already written. Math is written in LaTeX, inline or on its own line.",
+  "title": "Add footnotes as you type",
+  "summary": "Type [^ your note ] to add a footnote where you are, or reuse one you've already written. They're numbered for you.",
   "publishedAt": "2026-04-27",
   "audience": ["writer", "editor"],
   "content": {
@@ -10,25 +10,6 @@
       "indent": 0,
       "version": 1,
       "children": [
-        {
-          "tag": "h2",
-          "type": "heading",
-          "format": "",
-          "indent": 0,
-          "version": 1,
-          "children": [
-            {
-              "mode": "normal",
-              "text": "Footnotes",
-              "type": "text",
-              "style": "",
-              "detail": 0,
-              "format": 0,
-              "version": 1
-            }
-          ],
-          "direction": null
-        },
         {
           "type": "paragraph",
           "format": "",
@@ -254,169 +235,6 @@
             {
               "mode": "normal",
               "text": " at the end of the article.",
-              "type": "text",
-              "style": "",
-              "detail": 0,
-              "format": 0,
-              "version": 1
-            }
-          ],
-          "direction": null,
-          "textStyle": "",
-          "textFormat": 0
-        },
-        {
-          "tag": "h2",
-          "type": "heading",
-          "format": "",
-          "indent": 0,
-          "version": 1,
-          "children": [
-            {
-              "mode": "normal",
-              "text": "Math",
-              "type": "text",
-              "style": "",
-              "detail": 0,
-              "format": 0,
-              "version": 1
-            }
-          ],
-          "direction": null
-        },
-        {
-          "type": "paragraph",
-          "format": "",
-          "indent": 0,
-          "version": 1,
-          "children": [
-            {
-              "mode": "normal",
-              "text": "Math is written in LaTeX. There are two blocks:",
-              "type": "text",
-              "style": "",
-              "detail": 0,
-              "format": 0,
-              "version": 1
-            }
-          ],
-          "direction": null,
-          "textStyle": "",
-          "textFormat": 0
-        },
-        {
-          "tag": "ul",
-          "type": "list",
-          "start": 1,
-          "format": "",
-          "indent": 0,
-          "version": 1,
-          "children": [
-            {
-              "type": "listitem",
-              "value": 1,
-              "format": "",
-              "indent": 0,
-              "version": 1,
-              "children": [
-                {
-                  "mode": "normal",
-                  "text": "Inline Math Block",
-                  "type": "text",
-                  "style": "",
-                  "detail": 0,
-                  "format": 1,
-                  "version": 1
-                },
-                {
-                  "mode": "normal",
-                  "text": " sits inside a sentence, like a word.",
-                  "type": "text",
-                  "style": "",
-                  "detail": 0,
-                  "format": 0,
-                  "version": 1
-                }
-              ],
-              "direction": null
-            },
-            {
-              "type": "listitem",
-              "value": 2,
-              "format": "",
-              "indent": 0,
-              "version": 1,
-              "children": [
-                {
-                  "mode": "normal",
-                  "text": "Display Math Block",
-                  "type": "text",
-                  "style": "",
-                  "detail": 0,
-                  "format": 1,
-                  "version": 1
-                },
-                {
-                  "mode": "normal",
-                  "text": " goes on its own line, centred, for longer equations. It's in the block menu with the other blocks.",
-                  "type": "text",
-                  "style": "",
-                  "detail": 0,
-                  "format": 0,
-                  "version": 1
-                }
-              ],
-              "direction": null
-            }
-          ],
-          "listType": "bullet",
-          "direction": null
-        },
-        {
-          "type": "paragraph",
-          "format": "",
-          "indent": 0,
-          "version": 1,
-          "children": [
-            {
-              "mode": "normal",
-              "text": "Fill in ",
-              "type": "text",
-              "style": "",
-              "detail": 0,
-              "format": 0,
-              "version": 1
-            },
-            {
-              "mode": "normal",
-              "text": "Math Expression",
-              "type": "text",
-              "style": "",
-              "detail": 0,
-              "format": 1,
-              "version": 1
-            },
-            {
-              "mode": "normal",
-              "text": " with the LaTeX. Use ",
-              "type": "text",
-              "style": "",
-              "detail": 0,
-              "format": 0,
-              "version": 1
-            },
-            {
-              "mode": "normal",
-              "text": "Description",
-              "type": "text",
-              "style": "",
-              "detail": 0,
-              "format": 1,
-              "version": 1
-            },
-            {
-              "mode": "normal",
-              "text": " to say what the formula is in plain words: screen readers and the narration voice read it instead of the symbols.",
               "type": "text",
               "style": "",
               "detail": 0,

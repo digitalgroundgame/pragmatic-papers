@@ -18,8 +18,14 @@ export interface NotificationItem {
   id: string
   title: string
   summary?: string
-  /** Where clicking it goes; opens in a new tab. */
+  /** Where clicking it goes, or its Read more when it has a tour; opens in a new tab. */
   href: string
+  /**
+   * A link that shows the reader what the item is about, such as a guided tour of a new admin
+   * feature (`tourHref` from the tours plugin). The bell offers it as Show me, beside Read more,
+   * and opens it in the same tab.
+   */
+  showMe?: string
   /** ISO date-time it happened or was published. */
   date: string
   /** A thumbnail shown beside the title. */

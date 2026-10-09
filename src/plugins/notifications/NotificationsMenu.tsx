@@ -144,52 +144,87 @@ export function NotificationsMenu({
             {items.map((item) => {
               const key = itemKey(item)
               const isUnread = unread.includes(key)
-              return (
-                <li key={key}>
-                  <a
-                    className="hover:bg-muted focus-visible:bg-muted flex gap-3 px-4 py-3 text-inherit no-underline outline-none"
-                    href={item.href}
-                    target="_blank"
-                    rel="noopener"
-                    onClick={() => onOpen(key)}
-                  >
-                    {item.image && (
-                      // Decorative: the title beside it says what it's about. The thumbnail size
-                      // is already small, so it needs none of next/image's resizing. Shaped like
-                      // a link preview (1200×630), so a hero shows whole.
-                      // eslint-disable-next-line @next/next/no-img-element -- a fixed 80px thumbnail
-                      <img
-                        src={item.image.url}
-                        alt=""
-                        loading="lazy"
-                        width={80}
-                        height={42}
-                        className="bg-muted border-border mt-0.5 h-[42px] w-20 shrink-0 rounded-md border object-cover"
+              const thumbnail = item.image && (
+                // Decorative: the title beside it says what it's about. The thumbnail size
+                // is already small, so it needs none of next/image's resizing. Shaped like
+                // a link preview (1200×630), so a hero shows whole.
+                // eslint-disable-next-line @next/next/no-img-element -- a fixed 80px thumbnail
+                <img
+                  src={item.image.url}
+                  alt=""
+                  loading="lazy"
+                  width={80}
+                  height={42}
+                  className="bg-muted border-border mt-0.5 h-[42px] w-20 shrink-0 rounded-md border object-cover"
+                />
+              )
+              const heading = (
+                <>
+                  {/* Inline, so a long title wraps under the dot rather than beside it. */}
+                  <span className="text-sm font-semibold">
+                    {isUnread && (
+                      <span
+                        aria-hidden
+                        className="bg-brand mr-2 inline-block size-2 rounded-full align-middle"
                       />
                     )}
-                    <span className="flex min-w-0 flex-col gap-1">
-                      {/* Inline, so a long title wraps under the dot rather than beside it. */}
-                      <span className="text-sm font-semibold">
-                        {isUnread && (
-                          <span
-                            aria-hidden
-                            className="bg-brand mr-2 inline-block size-2 rounded-full align-middle"
-                          />
-                        )}
-                        {item.title}
-                        {isUnread && <span className="sr-only"> (unread)</span>}
-                      </span>
-                      {item.summary && (
-                        <span className="text-muted-foreground text-sm">{item.summary}</span>
-                      )}
-                      <time
-                        className="text-muted-foreground text-xs"
-                        dateTime={item.date.slice(0, 10)}
-                      >
-                        {formatNotificationDate(item.date)}
-                      </time>
-                    </span>
-                  </a>
+                    {item.title}
+                    {isUnread && <span className="sr-only"> (unread)</span>}
+                  </span>
+                  {item.summary && (
+                    <span className="text-muted-foreground text-sm">{item.summary}</span>
+                  )}
+                  <time className="text-muted-foreground text-xs" dateTime={item.date.slice(0, 10)}>
+                    {formatNotificationDate(item.date)}
+                  </time>
+                </>
+              )
+              return (
+                <li key={key}>
+                  {item.showMe ? (
+                    // Two things to do with it, so the item isn't one link: Show me stays in this
+                    // tab (a tour runs in the admin), Read more opens a new one like other items.
+                    <div className="flex gap-3 px-4 py-3">
+                      {thumbnail}
+                      <div className="flex min-w-0 flex-col gap-1">
+                        {heading}
+                        <div className="mt-1 flex gap-2">
+                          <LinkButton
+                            size="sm"
+                            className="no-underline"
+                            href={item.showMe}
+                            aria-label={`Show me: ${item.title}`}
+                            onClick={() => onOpen(key)}
+                          >
+                            Show me
+                          </LinkButton>
+                          <LinkButton
+                            size="sm"
+                            variant="outline"
+                            className="no-underline"
+                            href={item.href}
+                            target="_blank"
+                            rel="noopener"
+                            aria-label={`Read more: ${item.title}`}
+                            onClick={() => onOpen(key)}
+                          >
+                            Read more
+                          </LinkButton>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <a
+                      className="hover:bg-muted focus-visible:bg-muted flex gap-3 px-4 py-3 text-inherit no-underline outline-none"
+                      href={item.href}
+                      target="_blank"
+                      rel="noopener"
+                      onClick={() => onOpen(key)}
+                    >
+                      {thumbnail}
+                      <span className="flex min-w-0 flex-col gap-1">{heading}</span>
+                    </a>
+                  )}
                 </li>
               )
             })}

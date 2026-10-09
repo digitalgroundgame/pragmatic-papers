@@ -2,6 +2,7 @@ import { revalidateRedirects } from "@/hooks/revalidateRedirects"
 import { docsPlugin } from "@/plugins/docs"
 import { docsNotifications } from "@/plugins/docs/notifications"
 import { notificationsPlugin } from "@/plugins/notifications"
+import { toursPlugin } from "@/plugins/tours"
 import type { Article, Interactive, Page, Topic, Volume } from "@/payload-types"
 import { getSiteURL } from "@/utilities/getURL"
 import { DEFAULT_DESCRIPTION } from "@/utilities/mergeOpenGraph"
@@ -327,4 +328,5 @@ export const plugins: Plugin[] = [
   }),
   docsPlugin(),
   notificationsPlugin({ sources: [docsNotifications()] }),
+  toursPlugin(),
 ]

@@ -1,5 +1,6 @@
 import { hasRoleOrAdmin, isStaff, type Role } from "@/access/roles"
 import type { NotificationSource } from "@/plugins/notifications"
+import { findTour, tourHref } from "@/plugins/tours"
 
 import { HOME_DOC_SLUG, WHATS_NEW_PATH } from "./sections"
 import { docThumbnail } from "./thumbnail"
@@ -7,7 +8,8 @@ import { docThumbnail } from "./thumbnail"
 /**
  * Help docs for the notifications bell, for staff only: every published doc whose audience
  * includes one of the user's roles (or that has none), newest first, dated by its
- * `publishedAt`, leaving out the docs' home page. The list is the cached one What's new reads.
+ * `publishedAt`, leaving out the docs' home page. The list is the cached one What's new reads. A
+ * doc with a tour offers it as Show me.
  */
 export const docsNotifications = (): NotificationSource => ({
   type: {
@@ -31,6 +33,7 @@ export const docsNotifications = (): NotificationSource => ({
         href: `/docs/${doc.slug}`,
         date: doc.publishedAt,
         image: docThumbnail(doc.heroImage),
+        ...(findTour(doc.tour) ? { showMe: tourHref(doc.tour!) } : {}),
       }))
   },
 })

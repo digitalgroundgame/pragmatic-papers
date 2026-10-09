@@ -79,6 +79,7 @@ export async function main(slug: string | undefined): Promise<void> {
         ...(heroImage ? { heroImage: heroImage.$media, heroAlt: heroImage.alt ?? "" } : {}),
         ...(doc.audience?.length ? { audience: doc.audience } : {}),
         ...(doc.showTableOfContents === false ? { showTableOfContents: false } : {}),
+        ...(doc.tour ? { tour: doc.tour } : {}),
       },
       body,
     })

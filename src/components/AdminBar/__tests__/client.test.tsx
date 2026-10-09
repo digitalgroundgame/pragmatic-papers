@@ -76,9 +76,9 @@ describe("AdminBarClient", () => {
 
   it("looks up authors in the users collection and the home page by its slug", async () => {
     const fetchMock = stubPayload({ user: { id: "7", email: "ed@example.com" }, docs: [{ id: 3 }] })
-    path.value = "/authors/jane-doe"
+    path.value = "/contributors/jane-doe"
     render(<AdminBarClient />)
-    await screen.findByRole("link", { name: "Edit Author" })
+    await screen.findByRole("link", { name: "Edit Contributor" })
     expect(new URL(fetchMock.mock.calls[1]![0]).pathname).toBe("/api/users")
 
     cleanup()

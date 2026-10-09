@@ -8,12 +8,12 @@ import { getServerSideURL } from "@/utilities/getURL"
 // time, from the build's database.
 export const dynamic = "force-dynamic"
 
-/** /authors/sitemap.xml: the /authors index and every author it lists. Not in SITEMAPS yet. */
+/** /contributors/sitemap.xml: the /contributors index and every contributor it lists. */
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const payload = await getPayloadConfig()
   const siteUrl = getServerSideURL().replace(/\/$/, "")
 
-  // The same authors as /authors: staff who write, and anyone with a public profile.
+  // The same authors as /contributors: staff who write, and anyone with a public profile.
   const { docs } = await payload.find({
     collection: "users",
     depth: 0,
@@ -27,12 +27,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   })
 
   const authors = docs.flatMap((user) =>
-    user.slug ? [{ url: `${siteUrl}/authors/${user.slug}`, lastModified: user.updatedAt }] : [],
+    user.slug
+      ? [{ url: `${siteUrl}/contributors/${user.slug}`, lastModified: user.updatedAt }]
+      : [],
   )
   const newest = authors
     .map((author) => author.lastModified)
     .sort()
     .at(-1)
 
-  return [...(newest ? [{ url: `${siteUrl}/authors`, lastModified: newest }] : []), ...authors]
+  return [...(newest ? [{ url: `${siteUrl}/contributors`, lastModified: newest }] : []), ...authors]
 }

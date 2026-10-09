@@ -21,11 +21,14 @@
 #   docker buildx build -f dockerfiles/PragmaticPapers.ci.Dockerfile --network host \
 #     --secret id=GH_FONT_READ,env=GH_FONT_READ --build-arg DATABASE_URI=... .
 ARG NODE_VERSION=24.15.0
+# Docker Hub's official node image, through Amazon ECR Public's mirror of it: Docker Hub
+# rate-limits anonymous pulls by address, and GitHub's shared runners run out. The
+# postgres services in the workflows and scripts/test-db.mjs pull from the same mirror.
 
 # ============================================
 # Base stage - setup pnpm and environment
 # ============================================
-FROM node:${NODE_VERSION}-alpine AS base
+FROM public.ecr.aws/docker/library/node:${NODE_VERSION}-alpine AS base
 RUN apk add --no-cache libc6-compat
 
 ENV PNPM_HOME="/pnpm" \
@@ -99,7 +102,7 @@ RUN find src/migrations -maxdepth 1 -name '2*.ts' -exec basename {} .ts \; | sor
 # ============================================
 # Runner stage - minimal production runtime
 # ============================================
-FROM node:${NODE_VERSION}-alpine AS runner
+FROM public.ecr.aws/docker/library/node:${NODE_VERSION}-alpine AS runner
 WORKDIR /app
 
 ARG BUILD_ENV=preview

@@ -19,7 +19,7 @@ const PAGES = [
   // Four authors, each a Person inside the Article.
   { path: `/articles/${FOUR_AUTHOR_SLUG}`, types: ["NewsArticle", "BreadcrumbList"] },
   { path: `/volumes/${VOLUME_SLUG}`, types: ["PublicationVolume", "BreadcrumbList"] },
-  { path: `/authors/${WRITER_SLUG}`, types: ["Person", "BreadcrumbList"] },
+  { path: `/contributors/${WRITER_SLUG}`, types: ["Person", "BreadcrumbList"] },
 ]
 
 for (const { path, types } of PAGES) {

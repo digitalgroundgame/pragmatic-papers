@@ -27,10 +27,10 @@ beforeEach(() => {
   queryUserBySlug.mockResolvedValue(null)
 })
 
-describe("/authors/<id>", () => {
+describe("/contributors/<id>", () => {
   it("sends an old id URL to the author's page", async () => {
     find.mockResolvedValue({ docs: [{ id: 8, slug: "jane-doe" }] })
-    await expect(render("8")).rejects.toThrow("NEXT_REDIRECT /authors/jane-doe")
+    await expect(render("8")).rejects.toThrow("NEXT_REDIRECT /contributors/jane-doe")
     expect(find).toHaveBeenCalledWith(
       expect.objectContaining({
         collection: "users",

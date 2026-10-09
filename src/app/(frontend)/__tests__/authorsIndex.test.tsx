@@ -11,7 +11,7 @@ vi.mock("@payload-config", () => ({ default: {} }))
 vi.mock("payload", () => ({ getPayload: async () => ({ find }) }))
 vi.mock("@/components/LivePreviewListener", () => ({ LivePreviewListener: () => null }))
 
-const { default: AuthorsIndexPage } = await import("../authors/page")
+const { default: AuthorsIndexPage } = await import("../contributors/page")
 
 /** Every element in the tree, without rendering its children. */
 function elements(node: React.ReactNode): React.ReactElement<Record<string, unknown>>[] {
@@ -56,7 +56,7 @@ describe("authors index", () => {
     for (const author of authors) {
       expect(screen.getByRole("link", { name: author.name! })).toHaveAttribute(
         "href",
-        `/authors/${author.slug}`,
+        `/contributors/${author.slug}`,
       )
     }
   })
@@ -78,6 +78,6 @@ describe("authors index", () => {
   it("says so when there are no authors", async () => {
     find.mockResolvedValue({ docs: [], totalDocs: 0, totalPages: 0, page: 1 })
     await renderPage()
-    expect(screen.getByText("No authors found.")).toBeInTheDocument()
+    expect(screen.getByText("No contributors found.")).toBeInTheDocument()
   })
 })

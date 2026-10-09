@@ -66,13 +66,16 @@ afterEach(cleanup)
 
 describe("breadcrumb trails", () => {
   it("names an author by their name, and tells search engines the same", async () => {
-    const { default: AuthorPage } = await import("../authors/[slug]/page")
+    const { default: AuthorPage } = await import("../contributors/[slug]/page")
     render((await AuthorPage(args(author.slug!))) as React.ReactElement)
 
-    expect(screen.getByRole("link", { name: "Authors" })).toHaveAttribute("href", "/authors")
+    expect(screen.getByRole("link", { name: "Contributors" })).toHaveAttribute(
+      "href",
+      "/contributors",
+    )
     expect(trails()).toEqual({
-      visible: ["Authors", author.name],
-      jsonLd: ["Authors", author.name],
+      visible: ["Contributors", author.name],
+      jsonLd: ["Contributors", author.name],
     })
   })
 

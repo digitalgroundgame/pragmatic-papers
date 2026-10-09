@@ -6,14 +6,14 @@ import type { MenuField } from "@/payload-types"
 import { Menu } from ".."
 
 vi.mock("next/navigation", () => ({
-  usePathname: () => "/authors",
+  usePathname: () => "/contributors",
 }))
 
 afterEach(cleanup)
 
 const menu: MenuField = [
   { id: "home", link: { type: "custom", label: "Home", url: "/" } },
-  { id: "authors", link: { type: "custom", label: "Authors", url: "/authors" } },
+  { id: "authors", link: { type: "custom", label: "Authors", url: "/contributors" } },
   {
     id: "unresolved",
     link: {

@@ -12,7 +12,7 @@ exports[`AuthorCard > renders minimal author with no bio, image, or affiliation 
   >
     <a
       aria-hidden="true"
-      href="/authors/alice-smith"
+      href="/contributors/alice-smith"
       tabindex="-1"
     >
       <span
@@ -42,7 +42,7 @@ exports[`AuthorCard > renders minimal author with no bio, image, or affiliation 
           >
             <a
               class="text-foreground hover:text-foreground/80"
-              href="/authors/alice-smith"
+              href="/contributors/alice-smith"
             >
               Alice Smith
             </a>
@@ -69,7 +69,7 @@ exports[`AuthorCard > renders with affiliation and short biography 1`] = `
   >
     <a
       aria-hidden="true"
-      href="/authors/bob-jones"
+      href="/contributors/bob-jones"
       tabindex="-1"
     >
       <span
@@ -99,7 +99,7 @@ exports[`AuthorCard > renders with affiliation and short biography 1`] = `
           >
             <a
               class="text-foreground hover:text-foreground/80"
-              href="/authors/bob-jones"
+              href="/contributors/bob-jones"
             >
               Bob Jones
             </a>
@@ -136,7 +136,7 @@ exports[`AuthorCard > renders with biography longer than 255 characters (truncat
   >
     <a
       aria-hidden="true"
-      href="/authors/carol-white"
+      href="/contributors/carol-white"
       tabindex="-1"
     >
       <span
@@ -166,7 +166,7 @@ exports[`AuthorCard > renders with biography longer than 255 characters (truncat
           >
             <a
               class="text-foreground hover:text-foreground/80"
-              href="/authors/carol-white"
+              href="/contributors/carol-white"
             >
               Carol White
             </a>
@@ -198,7 +198,7 @@ exports[`AuthorCard > renders with null name using fallback 1`] = `
   >
     <a
       aria-hidden="true"
-      href="/authors/alice-smith"
+      href="/contributors/alice-smith"
       tabindex="-1"
     >
       <span
@@ -228,7 +228,7 @@ exports[`AuthorCard > renders with null name using fallback 1`] = `
           >
             <a
               class="text-foreground hover:text-foreground/80"
-              href="/authors/alice-smith"
+              href="/contributors/alice-smith"
             />
           </h3>
         </div>
@@ -253,7 +253,7 @@ exports[`AuthorCard > renders with profileImage as a numeric id 1`] = `
   >
     <a
       aria-hidden="true"
-      href="/authors/alice-smith"
+      href="/contributors/alice-smith"
       tabindex="-1"
     >
       <span
@@ -283,7 +283,7 @@ exports[`AuthorCard > renders with profileImage as a numeric id 1`] = `
           >
             <a
               class="text-foreground hover:text-foreground/80"
-              href="/authors/alice-smith"
+              href="/contributors/alice-smith"
             >
               Alice Smith
             </a>
@@ -310,7 +310,7 @@ exports[`AuthorCard > renders with profileImage object containing a square URL 1
   >
     <a
       aria-hidden="true"
-      href="/authors/alice-smith"
+      href="/contributors/alice-smith"
       tabindex="-1"
     >
       <span
@@ -340,7 +340,7 @@ exports[`AuthorCard > renders with profileImage object containing a square URL 1
           >
             <a
               class="text-foreground hover:text-foreground/80"
-              href="/authors/alice-smith"
+              href="/contributors/alice-smith"
             >
               Alice Smith
             </a>
@@ -367,7 +367,7 @@ exports[`AuthorCard > renders with profileImage object without a square URL 1`] 
   >
     <a
       aria-hidden="true"
-      href="/authors/alice-smith"
+      href="/contributors/alice-smith"
       tabindex="-1"
     >
       <span
@@ -397,7 +397,7 @@ exports[`AuthorCard > renders with profileImage object without a square URL 1`] 
           >
             <a
               class="text-foreground hover:text-foreground/80"
-              href="/authors/alice-smith"
+              href="/contributors/alice-smith"
             >
               Alice Smith
             </a>

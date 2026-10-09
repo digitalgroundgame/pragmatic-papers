@@ -44,9 +44,9 @@ export function buildArticleJsonLd(
 
   const authors = (article.authors || []).filter(isResolved<User>).map((author): PersonLeaf => ({
     "@type": "Person",
-    "@id": `${SERVER_URL}/authors/${author.slug}`,
+    "@id": `${SERVER_URL}/contributors/${author.slug}`,
     name: author.name || undefined,
-    url: `${SERVER_URL}/authors/${author.slug}`,
+    url: `${SERVER_URL}/contributors/${author.slug}`,
   }))
 
   const keywords = (article.topics || []).filter(isResolved<Topic>).map((t) => t.name)

@@ -64,7 +64,8 @@ export async function Header(): Promise<React.JSX.Element> {
         </div>
       </header>
       <MegaMenu menu={navItems} label="Main" />
-      {/* Outside the sticky header, so it scrolls away with the page. */}
+      {/* Outside the sticky header: it sticks below it on its own while it scrolls, and scrolls
+          away with the page once paused. */}
       <Ticker />
     </>
   )

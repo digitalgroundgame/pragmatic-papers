@@ -45,6 +45,20 @@ describe("TickerView", () => {
     expect(link.querySelector("svg")).toHaveAttribute("aria-hidden", "true")
   })
 
+  it("puts the script that remembers a pause right after the switch", () => {
+    render(<TickerView broadcast={null} posts={tickerPosts} />)
+    const pause = screen.getByRole("checkbox", { name: "Pause ticker" })
+    expect(pause.nextElementSibling?.tagName).toBe("SCRIPT")
+    expect(pause.nextElementSibling).toHaveTextContent("pp:ticker-paused")
+  })
+
+  it("marks a live broadcast, and lets the reader pause it with no posts beside it", () => {
+    render(<TickerView broadcast={liveBroadcast} posts={[]} />)
+    const ticker = screen.getByRole("region", { name: "Live and latest" })
+    expect(ticker).toHaveAttribute("data-live")
+    expect(within(ticker).getByRole("checkbox", { name: "Pause ticker" })).toBeInTheDocument()
+  })
+
   it("shows an upcoming broadcast with its start time in the paper's zone", () => {
     render(<TickerView broadcast={upcomingBroadcast} posts={[]} />)
     const link = screen.getByRole("link")
@@ -54,5 +68,6 @@ describe("TickerView", () => {
       upcomingBroadcast.startsAt,
     )
     expect(screen.queryByRole("checkbox")).not.toBeInTheDocument()
+    expect(screen.getByRole("region")).not.toHaveAttribute("data-live")
   })
 })

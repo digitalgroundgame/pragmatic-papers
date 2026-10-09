@@ -6,6 +6,7 @@ import { formatFullTimestamp, formatTimeOfDay } from "@/heros/ArticleHero/dates"
 import { cn } from "@/utilities/utils"
 
 import { LinkIcon, shortURL } from "./LinkIcon"
+import { TICKER_PAUSE_SCRIPT } from "./pause"
 import { LazyLinkTooltip } from "./LinkTooltip.lazy"
 import {
   excerpt,
@@ -69,6 +70,28 @@ function PostList({
   )
 }
 
+/**
+ * Pauses the scroll, and is how a reader quiets the ticker: paused, it stops sticking under the
+ * header too, and stays paused on the next page (`pause.ts`). For reduced motion nothing
+ * scrolls, so it's left out unless a live broadcast is holding the ticker in place.
+ */
+function PauseSwitch({ live }: { live: boolean }): React.ReactNode {
+  return (
+    <label
+      className={cn(
+        "ticker-switch text-muted-foreground hover:text-foreground focus-within:ring-ring relative -ml-2 flex size-7 shrink-0 cursor-pointer items-center justify-center rounded-full focus-within:ring-2",
+        !live && "motion-reduce:hidden",
+      )}
+    >
+      <input type="checkbox" className="ticker-pause sr-only" aria-label="Pause ticker" />
+      {/* eslint-disable-next-line react/no-danger -- a constant, with nothing from the request in it */}
+      <script dangerouslySetInnerHTML={{ __html: TICKER_PAUSE_SCRIPT }} />
+      <Pause aria-hidden="true" className="ticker-pause-icon size-3.5 fill-current" />
+      <Play aria-hidden="true" className="ticker-play-icon size-3.5 fill-current" />
+    </label>
+  )
+}
+
 function Posts({ posts, beside }: { posts: TickerPost[]; beside: boolean }): React.ReactNode {
   return (
     // Beside a broadcast on a phone, there's room for one or the other, and the broadcast is
@@ -86,11 +109,6 @@ function Posts({ posts, beside }: { posts: TickerPost[]; beside: boolean }): Rea
           <PostList posts={posts} copy />
         </div>
       </div>
-      <label className="ticker-switch text-muted-foreground hover:text-foreground focus-within:ring-ring relative flex size-7 shrink-0 cursor-pointer items-center justify-center rounded-full focus-within:ring-2 motion-reduce:hidden">
-        <input type="checkbox" className="ticker-pause sr-only" aria-label="Pause ticker" />
-        <Pause aria-hidden="true" className="ticker-pause-icon size-3.5 fill-current" />
-        <Play aria-hidden="true" className="ticker-play-icon size-3.5 fill-current" />
-      </label>
     </div>
   )
 }
@@ -150,12 +168,21 @@ function Broadcast({
  * (`.ticker-*` in `globals.css`), so it ships no JavaScript and shifts nothing as it loads.
  * The scroll pauses on hover, on focus, with its pause switch, and stops for readers who ask
  * for reduced motion, leaving the posts to scroll by hand.
+ *
+ * While it scrolls, it sticks under the header on tablets and wider, and while one of our
+ * channels is live it sticks on phones too. Pausing it is the reader's way to quiet the page: it
+ * stops, scrolls away with the page, and stays that way on the next page (`pause.ts`).
  */
 export function TickerView({ broadcast, posts }: TickerFeed): React.ReactNode {
   if (!broadcast && posts.length === 0) return null
 
+  const live = broadcast?.status === "live"
   return (
-    <section aria-label="Live and latest" className="ticker mb-6 border-b md:mb-10 md:border-t">
+    <section
+      aria-label="Live and latest"
+      data-live={live || undefined}
+      className="ticker bg-background mb-6 border-b md:mb-10 md:border-t"
+    >
       {/* The strip runs the window's full width, wider than the page's container, between two
           hairlines rather than on a band of its own, so it reads as part of the masthead. The
           mega menu sits right above on wider screens; on phones the header's own border is
@@ -167,6 +194,7 @@ export function TickerView({ broadcast, posts }: TickerFeed): React.ReactNode {
           <span className={LABEL}>Latest</span>
         )}
         {posts.length > 0 && <Posts posts={posts} beside={Boolean(broadcast)} />}
+        {(posts.length > 0 || live) && <PauseSwitch live={live} />}
       </div>
     </section>
   )

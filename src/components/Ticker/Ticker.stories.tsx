@@ -24,10 +24,15 @@ export const Live: Story = {
     const track = canvasElement.querySelector(".ticker-track")!
     await expect(getComputedStyle(track).animationPlayState).toBe("running")
 
+    // Scrolling, it sticks under the header on wider screens; paused, it lets go.
+    const wide = matchMedia("(min-width: 48rem)").matches
+    await expect(getComputedStyle(ticker).position).toBe(wide ? "sticky" : "static")
+
     const pause = within(ticker).getByRole("checkbox", { name: "Pause ticker" })
     await userEvent.click(pause)
     await expect(pause).toBeChecked()
     await expect(getComputedStyle(track).animationPlayState).toBe("paused")
+    await expect(getComputedStyle(ticker).position).toBe("static")
 
     // Leave it scrolling for whoever opens the story.
     await userEvent.click(pause)
@@ -49,6 +54,15 @@ export const PostsOnly: Story = {
 /** On air with no posts to show: the broadcast takes the whole strip. */
 export const LiveOnly: Story = {
   args: { broadcast: liveBroadcast, posts: [] },
+  play: async ({ canvasElement }) => {
+    // Live, it sticks under the header on every screen, until the reader pauses it.
+    const ticker = within(canvasElement).getByRole("region", { name: "Live and latest" })
+    await expect(getComputedStyle(ticker).position).toBe("sticky")
+    const pause = within(ticker).getByRole("checkbox", { name: "Pause ticker" })
+    await userEvent.click(pause)
+    await expect(getComputedStyle(ticker).position).toBe("static")
+    await userEvent.click(pause)
+  },
 }
 
 const filibuster = "https://pragmaticpapers.com/articles/filibuster"

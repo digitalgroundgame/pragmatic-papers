@@ -18,24 +18,31 @@
  * watching the PR), and fails if the preview still answers a few minutes later. Both need a token with the `deploy` and `write` abilities.
  *
  * The fallback, previews the staging app builds itself on its GitHub App's webhook
- * (dockerfiles/README.md, "Falling back to Coolify-built previews"), is followed by
- * .github/workflows/preview-deployment.yml instead:
+ * (dockerfiles/README.md, "Falling back to Coolify-built previews"), is followed by the
+ * same two workflows, without an image:
  *
  *   node scripts/preview-deployment.ts deploy   # PR opened, reopened or pushed
  *   node scripts/preview-deployment.ts close    # PR closed or merged
  *
  * There `deploy` waits for Coolify to queue a preview for the PR's head commit, then
  * creates a Deployment for the PR's branch in the "Preview" environment and copies
- * Coolify's status onto it until the build finishes. The workflow only runs it on PRs
- * Coolify previews (see its `if`); a PR Coolify doesn't build gets no Deployment.
+ * Coolify's status onto it until the build finishes. playwright.yml only runs it on PRs
+ * Coolify previews (its plan); a PR Coolify doesn't build gets no Deployment.
  * `close` marks all of the PR's preview Deployments inactive, since Coolify tears the
  * preview down.
  *
  * Either way the branch (not the commit SHA) is the Deployment's ref, which is what ties
  * it to the PR, and once a preview is live the PR's older preview Deployments are marked
  * inactive. Without the Coolify settings the script does nothing.
+ *
+ * Once a preview is live, `deploy` also sets the Preview link on the links line at
+ * the top of the PR's description, so reviewers needn't scroll down to the
+ * Deployments box; `close` removes it. The line and the other blocks CI keeps
+ * there are described in scripts/pr-description.ts. A failed edit is only a warning.
  */
 import { pathToFileURL } from "node:url"
+
+import { type PrTarget, setPrLink } from "./pr-description.ts"
 
 export const ENVIRONMENT = "Preview"
 export const DEFAULT_PREVIEW_URL_TEMPLATE = "https://pr-{{pr_id}}.pragmaticpapers.com"
@@ -113,6 +120,11 @@ const COOLIFY_STATES: Record<string, { state: GithubState; description: string }
 /** The GitHub state for a Coolify status, or null for one it doesn't know. */
 export function toGithubState(status: string): { state: GithubState; description: string } | null {
   return COOLIFY_STATES[status] ?? null
+}
+
+/** The line's link to the live preview, naming the commit it runs. */
+export function previewLink(url: string, sha: string): string {
+  return `[Preview](${url}) at \`${sha.slice(0, 7)}\``
 }
 
 export function isFinal(state: GithubState): boolean {
@@ -197,7 +209,7 @@ export class FatalHttpError extends Error {
 }
 
 async function request<T>(
-  deps: Deps,
+  deps: Pick<Deps, "fetch">,
   url: string,
   init: RequestInit & { token: string; github?: boolean },
 ): Promise<T> {
@@ -275,6 +287,19 @@ export function github(deps: Deps, config: Config): GithubApi {
     },
   }
 }
+
+const defaultDeps: Deps = {
+  fetch: (...args) => fetch(...args),
+  sleep: (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
+  now: () => Date.now(),
+  log: (message) => process.stdout.write(`${message}\n`),
+}
+
+const prTarget = (config: Config): PrTarget => ({
+  repo: config.repo,
+  prNumber: config.pr,
+  token: config.githubToken,
+})
 
 export interface CoolifyApi {
   listDeployments: () => Promise<CoolifyDeployment[]>
@@ -434,6 +459,12 @@ export async function deploy(
       if (mapped.state === "success") {
         const n = await deactivate(deps, config, deployment.id)
         if (n) deps.log(`Marked ${n} older preview deployment(s) inactive.`)
+        await setPrLink(
+          prTarget(config),
+          "Preview",
+          previewLink(environmentUrl, config.headSha),
+          deps,
+        )
       }
       return
     }
@@ -488,6 +519,7 @@ export async function close(
   }
   const n = await deactivate(deps, config)
   deps.log(`Marked ${n} preview deployment(s) for PR #${config.pr} inactive.`)
+  await setPrLink(prTarget(config), "Preview", null, deps)
   if (!deletePreview) return
 
   // Coolify can accept the delete, or say it has no such preview, and leave the container
@@ -505,13 +537,6 @@ export async function close(
     await deps.sleep(timing.pollMs)
   }
   deps.log(`PR #${config.pr}'s preview no longer answers at ${url}.`)
-}
-
-const defaultDeps: Deps = {
-  fetch: (...args) => fetch(...args),
-  sleep: (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
-  now: () => Date.now(),
-  log: (message) => process.stdout.write(`${message}\n`),
 }
 
 export async function main(

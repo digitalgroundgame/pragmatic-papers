@@ -1,5 +1,5 @@
 import { formatTimelineDate } from "@/blocks/Timeline/converters"
-import { CMSLink } from "@/components/Link/CMSLink2"
+import { CMSLink } from "@/components/Link"
 import { getLinkFieldUrl } from "@/utilities/getLinkFieldUrl"
 import { cn } from "@/utilities/utils"
 

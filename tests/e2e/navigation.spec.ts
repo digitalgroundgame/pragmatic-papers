@@ -5,48 +5,33 @@ import {
   SHOWCASE_SLUG,
   SHOWCASE_TITLE,
   TOPIC_NAME,
-  VOLUME_SLUG,
   WRITER_NAME,
   WRITER_SLUG,
 } from "../../scripts/seed-e2e.constants"
 
 // Click-through journeys across pages, driven the way a reader would: by the
 // links' names, never by URL or class. Everything named here comes from the
-// e2e seed (scripts/seed-e2e.ts).
+// e2e seed (scripts/seed-e2e.ts). Where each listing's links point is checked
+// by the smoke test; these check that following them, and coming back, works.
 
 test.describe("navigation", () => {
-  test("home → article", async ({ page }) => {
+  test("home → article → author profile → back", async ({ page }) => {
     await page.goto("/")
 
     await page.getByRole("link", { name: SHOWCASE_TITLE }).first().click()
 
     await expect(page).toHaveURL(`/articles/${SHOWCASE_SLUG}`)
     await expect(page.getByRole("heading", { level: 1, name: SHOWCASE_TITLE })).toBeVisible()
-  })
-
-  test("article → author profile", async ({ page }) => {
-    await page.goto(`/articles/${SHOWCASE_SLUG}`)
 
     await page.locator('[data-slot="byline"]').getByRole("link", { name: WRITER_NAME }).click()
-
-    await expect(page).toHaveURL(`/authors/${WRITER_SLUG}`)
-    await expect(page.getByRole("heading", { level: 1, name: WRITER_NAME })).toBeVisible()
-  })
-
-  test("authors list → author profile → back", async ({ page }) => {
-    await page.goto("/authors")
-    const list = page.getByRole("region", { name: "All authors" })
-
-    await list.getByRole("link", { name: WRITER_NAME }).click()
 
     await expect(page).toHaveURL(`/authors/${WRITER_SLUG}`)
     await expect(page.getByRole("heading", { level: 1, name: WRITER_NAME })).toBeVisible()
 
     await page.goBack()
 
-    await expect(page).toHaveURL("/authors")
-    await expect(page.getByRole("heading", { level: 1, name: "Authors" })).toBeVisible()
-    await expect(list.getByRole("link", { name: WRITER_NAME })).toBeVisible()
+    await expect(page).toHaveURL(`/articles/${SHOWCASE_SLUG}`)
+    await expect(page.getByRole("heading", { level: 1, name: SHOWCASE_TITLE })).toBeVisible()
   })
 
   test("authors list pagination", async ({ page }) => {
@@ -79,19 +64,8 @@ test.describe("navigation", () => {
 
     await expect(page.getByRole("heading", { level: 1, name: TOPIC_NAME })).toBeVisible()
     const articles = page.getByRole("region", { name: "Articles for this topic" })
-    await expect(articles.getByRole("link").first()).toBeVisible()
-
     await articles.getByRole("link", { name: FOOTNOTES_TITLE }).first().click()
 
     await expect(page.getByRole("heading", { level: 1, name: FOOTNOTES_TITLE })).toBeVisible()
-  })
-
-  test("volume → article", async ({ page }) => {
-    await page.goto(`/volumes/${VOLUME_SLUG}`)
-
-    await page.getByRole("link", { name: new RegExp(SHOWCASE_TITLE) }).click()
-
-    await expect(page).toHaveURL(`/articles/${SHOWCASE_SLUG}`)
-    await expect(page.getByRole("heading", { level: 1, name: SHOWCASE_TITLE })).toBeVisible()
   })
 })

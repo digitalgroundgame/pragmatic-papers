@@ -119,7 +119,7 @@ export function createCTABlockNode(fields: {
       url?: string | null
       label?: string | null
       newTab?: boolean | null
-      appearance?: "default" | "outline"
+      variant?: "link" | "default" | "outline" | "ghost" | "branded"
     }
   }>
 }): SerializedLexicalNode {

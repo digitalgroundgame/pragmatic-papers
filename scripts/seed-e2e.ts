@@ -9,6 +9,7 @@ import {
   TOPIC_NAME,
   TOPIC_SLUG,
   VOLUME_SLUG,
+  WRITER_SOCIALS,
 } from "./seed-e2e.constants"
 
 import type { User } from "@/payload-types"
@@ -106,8 +107,8 @@ async function createSilentNarration(payload: Payload, seconds: number): Promise
   return media.id
 }
 
-// Screenshot baselines bake in this date via the article/volume byline, so it
-// must stay fixed rather than tracking the day the seed happens to run.
+// Specs read this date in the article/volume dateline, so it must stay fixed
+// rather than tracking the day the seed happens to run.
 const PUBLISHED_AT = "2026-06-04T00:00:00.000Z"
 
 /**
@@ -116,12 +117,12 @@ const PUBLISHED_AT = "2026-06-04T00:00:00.000Z"
  * Straight to the column, because there is no way through the API: Payload
  * overwrites `updatedAt` with the current time on every non-draft save
  * (collections/operations/utilities/update.js), so each hero's dateline would
- * read the day the seed ran and diff against its baseline the next day. The
- * instant is arbitrary; that it never moves is the point.
+ * read the day the seed ran. The instant is arbitrary; that it never moves is
+ * the point.
  *
- * Applied to whole tables after seeding rather than per document: the previous
- * per-document version pinned only the narrated article, and the share-button
- * baselines — framing a different article's hero — quietly rotted instead.
+ * Applied to whole tables after seeding rather than per document, so every
+ * article's and volume's hero reads the same stamp, not only the ones a spec
+ * happens to check.
  */
 async function pinRevisionStamps(payload: Payload): Promise<void> {
   const { drizzle } = payload.db as unknown as PostgresAdapter
@@ -147,7 +148,7 @@ async function setArticleImages(payload: Payload, mediaId: number): Promise<void
 }
 
 // Co-authors for the four-author article. Deliberately plain compared with the e2e
-// writer — author-card.spec.ts covers the fully-populated profile, and these
+// writer — the smoke test checks the fully-populated profile on /authors, and these
 // only ever appear as a name and a set of initials in a byline.
 const CO_AUTHORS = [
   { name: "Sienna Scribe", slug: "e2e-co-author-sienna", email: "sienna@e2e.test" },
@@ -173,52 +174,9 @@ export async function main(): Promise<void> {
         ]),
         roles: ["writer"],
         slug: "e2e-writer",
-        // A full spread of platforms so the author card exercises every
-        // branded icon variant (see AuthorLinks / detectPlatform). Capped at
-        // the socials field's maxRows: 6.
-        socials: [
-          { link: { type: "custom", label: "X", url: "https://x.com/e2ewriter", newTab: true } },
-          {
-            link: {
-              type: "custom",
-              label: "YouTube",
-              url: "https://youtube.com/@e2ewriter",
-              newTab: true,
-            },
-          },
-          {
-            link: {
-              type: "custom",
-              label: "Twitch",
-              url: "https://twitch.tv/e2ewriter",
-              newTab: true,
-            },
-          },
-          {
-            link: {
-              type: "custom",
-              label: "Instagram",
-              url: "https://instagram.com/e2ewriter",
-              newTab: true,
-            },
-          },
-          {
-            link: {
-              type: "custom",
-              label: "Discord",
-              url: "https://discord.gg/e2ewriter",
-              newTab: true,
-            },
-          },
-          {
-            link: {
-              type: "custom",
-              label: "GitHub",
-              url: "https://github.com/e2ewriter",
-              newTab: true,
-            },
-          },
-        ],
+        socials: WRITER_SOCIALS.map(({ label, url }) => ({
+          link: { type: "custom" as const, label, url, newTab: true },
+        })),
       },
       "e2e writer",
       ctx,
@@ -249,13 +207,9 @@ export async function main(): Promise<void> {
       data: { experiments: { interactives: true, tableOfContents: true } },
     })
 
-    // A four-author article, so the byline's collapsed state has something to
-    // render: two names and "& 2 more" beside two avatars and a "+2".
-    //
-    // Deliberately left off the homepage grid below. `gotoFirstArticle` follows
-    // the first article link there and smoke.spec.ts screenshots the whole
-    // page, so adding a tile would shift baselines that have nothing to do with
-    // this article. byline.spec.ts navigates to it by slug instead.
+    // A four-author article: the widest byline, and the one article with
+    // narration (article-meta-row.spec.ts). Specs reach it by slug; it stays off
+    // the homepage grid below, which keeps to the showcase article and volume.
     const coAuthors: User[] = []
     for (const coAuthor of CO_AUTHORS) {
       coAuthors.push(
@@ -275,8 +229,8 @@ export async function main(): Promise<void> {
     }
 
     // The only seeded article with narration, so article-meta-row.spec.ts can
-    // photograph the hero's meta row carrying both controls. Kept on this
-    // article rather than the homepage one so no existing baseline moves.
+    // check the hero's meta row carrying both controls. Kept on this article
+    // rather than the homepage one, whose row keeps the share button alone.
     const narration = await createSilentNarration(payload, NARRATION_SECONDS)
 
     await createArticle(
@@ -298,8 +252,8 @@ export async function main(): Promise<void> {
 
     // Feature articles for the article-interaction specs, all filed under one
     // topic so /topics and /topics/[slug] have something to list. None is on
-    // the homepage grid or in the volume, and none is an article another spec
-    // photographs, so no baseline moves.
+    // the homepage grid or in the volume, so the specs that follow those links
+    // still land where they expect.
     const topic = await payload.create({
       collection: "topics",
       context: ctx,
@@ -367,9 +321,7 @@ export async function main(): Promise<void> {
     // createLocalMedia for why the e2e seed uploads a local file here.
     const merchImage = await createLocalMedia(payload, "square.svg", "Pragmatic Papers merchandise")
 
-    // The catalogue merch.spec.ts exercises. Titles, prices, and the sold-out
-    // badge match what the block used to carry inline, so the visual baseline
-    // is unaffected by the move to synced products.
+    // The catalogue merch.spec.ts exercises: six products, one sold out.
     await seedMerchProducts(
       payload,
       [
@@ -420,11 +372,11 @@ export async function main(): Promise<void> {
       ctx,
     )
 
-    // Homepage with a CollectionGrid so gotoFirstArticle / gotoFirstVolume can
-    // find a[href*="/articles/"] and a[href*="/volumes/"] links to follow.
+    // Homepage with a CollectionGrid linking the showcase article and the
+    // volume, which the smoke and navigation specs follow from the home page.
     // A full-width Merch carousel ("Support The Papers") follows the grid so
-    // merch.spec.ts has a deterministic block to exercise and screenshot;
-    // autoplay stays off so the carousel never moves mid-capture.
+    // merch.spec.ts has a deterministic block to exercise; autoplay stays off
+    // so the carousel never moves under the test.
     await payload.create({
       collection: "pages",
       context: ctx,
@@ -542,7 +494,7 @@ export async function main(): Promise<void> {
                           url: "https://discord.gg/digitalgroundgame",
                           label: "Join the Community",
                           newTab: true,
-                          appearance: "default",
+                          variant: "default",
                         },
                       },
                     ],

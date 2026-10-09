@@ -11,6 +11,11 @@
 // comment again and, if its section isn't there as written, writes it again. Two jobs
 // that each create the comment at once keep the older one: the other job moves its
 // section there and deletes the copy it made.
+//
+// The comment is linked as "Coverage" on the links line at the top of the PR's
+// description (setPrLink in scripts/preview-deployment.ts).
+
+import { commentLink, setPrLink } from "./pr-description"
 
 /**
  * Every report in the PR analytics comment, top to bottom. `replaces` lists the
@@ -197,7 +202,16 @@ export async function postPrReportSection(
     // that collided don't collide again.
     await sleep(3000 + Math.random() * 4000)
     comments = await listComments()
-    if (readSections(canonical(comments)?.body).get(name) === wanted) return
+    const current = canonical(comments)
+    if (readSections(current?.body).get(name) === wanted) {
+      const link = commentLink("Coverage", repo, prNumber, current!.id)
+      await setPrLink({ repo, prNumber, token }, "Coverage", link, {
+        fetch: (...args) => fetch(...args),
+        log: (message) => console.warn(message),
+        sleep,
+      })
+      return
+    }
   }
   throw new Error(`another job kept overwriting the ${name} section`)
 }

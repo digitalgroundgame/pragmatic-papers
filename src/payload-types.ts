@@ -8,6 +8,16 @@
 
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "MenuField".
+ */
+export type MenuField =
+  | {
+      link?: LinkField;
+      id?: string | null;
+    }[]
+  | null;
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "FootnotesField".
  */
 export type FootnotesField =
@@ -24,16 +34,6 @@ export type FootnotesField =
        * Optionally add a source link to the footnote.
        */
       attributionEnabled: boolean;
-      link?: LinkField;
-      id?: string | null;
-    }[]
-  | null;
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "MenuField".
- */
-export type MenuField =
-  | {
       link?: LinkField;
       id?: string | null;
     }[]
@@ -296,34 +296,7 @@ export interface Page {
       };
       [k: string]: unknown;
     } | null;
-    links?:
-      | {
-          link: {
-            type?: ('reference' | 'custom') | null;
-            newTab?: boolean | null;
-            reference?:
-              | ({
-                  relationTo: 'pages';
-                  value: number | Page;
-                } | null)
-              | ({
-                  relationTo: 'volumes';
-                  value: number | Volume;
-                } | null)
-              | ({
-                  relationTo: 'articles';
-                  value: number | Article;
-                } | null);
-            url?: string | null;
-            label: string;
-            /**
-             * Choose how the link should be rendered.
-             */
-            appearance?: ('default' | 'outline') | null;
-          };
-          id?: string | null;
-        }[]
-      | null;
+    links?: MenuField;
     media?: (number | null) | Media;
   };
   layout: (
@@ -355,6 +328,34 @@ export interface Page {
   updatedAt: string;
   createdAt: string;
   _status?: ('draft' | 'published') | null;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "LinkField".
+ */
+export interface LinkField {
+  type?: ('reference' | 'custom') | null;
+  newTab?: boolean | null;
+  variant?: ('link' | 'default' | 'outline' | 'ghost' | 'branded') | null;
+  reference?:
+    | ({
+        relationTo: 'pages';
+        value: number | Page;
+      } | null)
+    | ({
+        relationTo: 'volumes';
+        value: number | Volume;
+      } | null)
+    | ({
+        relationTo: 'articles';
+        value: number | Article;
+      } | null)
+    | ({
+        relationTo: 'topics';
+        value: number | Topic;
+      } | null);
+  url?: string | null;
+  label?: string | null;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -456,61 +457,6 @@ export interface Article {
   updatedAt: string;
   createdAt: string;
   _status?: ('draft' | 'published') | null;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "LinkField".
- */
-export interface LinkField {
-  type?: ('reference' | 'custom') | null;
-  newTab?: boolean | null;
-  variant?: ('link' | 'default' | 'outline' | 'ghost' | 'branded') | null;
-  reference?:
-    | ({
-        relationTo: 'pages';
-        value: number | Page;
-      } | null)
-    | ({
-        relationTo: 'volumes';
-        value: number | Volume;
-      } | null)
-    | ({
-        relationTo: 'articles';
-        value: number | Article;
-      } | null)
-    | ({
-        relationTo: 'topics';
-        value: number | Topic;
-      } | null);
-  url?: string | null;
-  label?: string | null;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "topics".
- */
-export interface Topic {
-  id: number;
-  name: string;
-  /**
-   * Optional description for this topic
-   */
-  description?: string | null;
-  meta?: {
-    title?: string | null;
-    /**
-     * Maximum upload file size: 12MB. Recommended file size for images is <500KB.
-     */
-    image?: (number | null) | Media;
-    description?: string | null;
-  };
-  /**
-   * When enabled, the slug will auto-generate from the title field on save and autosave.
-   */
-  generateSlug?: boolean | null;
-  slug: string;
-  updatedAt: string;
-  createdAt: string;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -676,6 +622,33 @@ export interface User {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "topics".
+ */
+export interface Topic {
+  id: number;
+  name: string;
+  /**
+   * Optional description for this topic
+   */
+  description?: string | null;
+  meta?: {
+    title?: string | null;
+    /**
+     * Maximum upload file size: 12MB. Recommended file size for images is <500KB.
+     */
+    image?: (number | null) | Media;
+    description?: string | null;
+  };
+  /**
+   * When enabled, the slug will auto-generate from the title field on save and autosave.
+   */
+  generateSlug?: boolean | null;
+  slug: string;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "CollectionGridBlock".
  */
 export interface CollectionGridBlock {
@@ -705,34 +678,7 @@ export interface CallToActionBlock {
     };
     [k: string]: unknown;
   } | null;
-  links?:
-    | {
-        link: {
-          type?: ('reference' | 'custom') | null;
-          newTab?: boolean | null;
-          reference?:
-            | ({
-                relationTo: 'pages';
-                value: number | Page;
-              } | null)
-            | ({
-                relationTo: 'volumes';
-                value: number | Volume;
-              } | null)
-            | ({
-                relationTo: 'articles';
-                value: number | Article;
-              } | null);
-          url?: string | null;
-          label: string;
-          /**
-           * Choose how the link should be rendered.
-           */
-          appearance?: ('default' | 'outline') | null;
-        };
-        id?: string | null;
-      }[]
-    | null;
+  links?: MenuField;
   id?: string | null;
   blockName?: string | null;
   blockType: 'cta';
@@ -1701,21 +1647,7 @@ export interface PagesSelect<T extends boolean = true> {
     | {
         type?: T;
         richText?: T;
-        links?:
-          | T
-          | {
-              link?:
-                | T
-                | {
-                    type?: T;
-                    newTab?: T;
-                    reference?: T;
-                    url?: T;
-                    label?: T;
-                    appearance?: T;
-                  };
-              id?: T;
-            };
+        links?: T | MenuFieldSelect<T>;
         media?: T;
       };
   layout?:
@@ -1748,6 +1680,26 @@ export interface PagesSelect<T extends boolean = true> {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "MenuField_select".
+ */
+export interface MenuFieldSelect<T extends boolean = true> {
+  link?: T | LinkFieldSelect<T>;
+  id?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "LinkField_select".
+ */
+export interface LinkFieldSelect<T extends boolean = true> {
+  type?: T;
+  newTab?: T;
+  variant?: T;
+  reference?: T;
+  url?: T;
+  label?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "CollectionGridBlock_select".
  */
 export interface CollectionGridBlockSelect<T extends boolean = true> {
@@ -1773,21 +1725,7 @@ export interface CollectionGridSlotsSelect<T extends boolean = true> {
  */
 export interface CallToActionBlockSelect<T extends boolean = true> {
   richText?: T;
-  links?:
-    | T
-    | {
-        link?:
-          | T
-          | {
-              type?: T;
-              newTab?: T;
-              reference?: T;
-              url?: T;
-              label?: T;
-              appearance?: T;
-            };
-        id?: T;
-      };
+  links?: T | MenuFieldSelect<T>;
   id?: T;
   blockName?: T;
 }
@@ -1878,18 +1816,6 @@ export interface TimelineEventsSelect<T extends boolean = true> {
   enableCitation?: T;
   citation?: T | LinkFieldSelect<T>;
   id?: T;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "LinkField_select".
- */
-export interface LinkFieldSelect<T extends boolean = true> {
-  type?: T;
-  newTab?: T;
-  variant?: T;
-  reference?: T;
-  url?: T;
-  label?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -2153,14 +2079,6 @@ export interface UsersSelect<T extends boolean = true> {
         createdAt?: T;
         expiresAt?: T;
       };
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "MenuField_select".
- */
-export interface MenuFieldSelect<T extends boolean = true> {
-  link?: T | LinkFieldSelect<T>;
-  id?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema

@@ -10,12 +10,13 @@
 # SETUP (Settings → Secrets and variables → Actions)
 # --------------------------------------------------
 #   - variable COOLIFY_PREVIEW_IMAGE_APP_UUID  the preview app (a Docker Image
-#                                              application). Cleared, nothing is
-#                                              deployed or removed here, and
-#                                              preview-deployment.yml follows the
-#                                              previews staging builds instead.
+#                                              application). Cleared, playwright.yml's
+#                                              "Deploy preview" follows the previews
+#                                              staging builds instead, and this only
+#                                              retires their Deployments.
 #   - secret   COOLIFY_API_TOKEN               needs `deploy` and `write` as well as `read`
-#   - variable COOLIFY_DASHBOARD_URL, PREVIEW_URL_TEMPLATE   as for preview-deployment.yml
+#   - variable COOLIFY_DASHBOARD_URL, PREVIEW_URL_TEMPLATE   see dockerfiles/README.md
+#   - variable COOLIFY_PREVIEW_APP_UUID        the staging app, for the fallback
 # The Coolify side is in dockerfiles/README.md ("Previews built in GitHub Actions").
 name: Preview image
 
@@ -26,17 +27,21 @@ on:
 permissions:
   contents: read
   deployments: write
+  # Removes the preview's link from the PR's description.
+  pull-requests: write
 
 jobs:
   close:
     name: Remove preview
-    if: vars.COOLIFY_PREVIEW_IMAGE_APP_UUID != '' && github.event.action == 'closed'
+    if: (vars.COOLIFY_PREVIEW_IMAGE_APP_UUID != '' || vars.COOLIFY_PREVIEW_APP_UUID != '') && github.event.action == 'closed'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
         with:
-          sparse-checkout: scripts/preview-deployment.ts
+          sparse-checkout: |
+            scripts/preview-deployment.ts
+            scripts/pr-description.ts
           sparse-checkout-cone-mode: false
 
       - uses: actions/setup-node@v7
@@ -46,6 +51,8 @@ jobs:
       # The preview's database is dropped by the next preview that starts
       # (drop-closed-preview-databases.ts), which can reach the database server. The
       # step fails if the preview still answers a few minutes after Coolify's delete.
+      # In the fallback Coolify tears the preview down itself, so this only marks
+      # its Deployments inactive.
       - name: Remove the preview from Coolify
         env:
           GITHUB_TOKEN: ${{ github.token }}
@@ -53,7 +60,8 @@ jobs:
           HEAD_REF: ${{ github.event.pull_request.head.ref }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
           COOLIFY_DASHBOARD_URL: ${{ vars.COOLIFY_DASHBOARD_URL }}
-          COOLIFY_PREVIEW_APP_UUID: ${{ vars.COOLIFY_PREVIEW_IMAGE_APP_UUID }}
+          COOLIFY_PREVIEW_APP_UUID: ${{ vars.COOLIFY_PREVIEW_IMAGE_APP_UUID || vars.COOLIFY_PREVIEW_APP_UUID }}
           COOLIFY_API_TOKEN: ${{ secrets.COOLIFY_API_TOKEN }}
           PREVIEW_URL_TEMPLATE: ${{ vars.PREVIEW_URL_TEMPLATE }}
-        run: node scripts/preview-deployment.ts close --delete-preview
+          DELETE: ${{ vars.COOLIFY_PREVIEW_IMAGE_APP_UUID != '' && '--delete-preview' || '' }}
+        run: node scripts/preview-deployment.ts close ${DELETE:+"$DELETE"}

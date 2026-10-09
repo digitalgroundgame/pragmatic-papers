@@ -38,6 +38,14 @@
           "primaryKey": false,
           "notNull": false
         },
+        "link_variant": {
+          "name": "link_variant",
+          "type": "enum_pages_hero_links_link_variant",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "'default'"
+        },
         "link_url": {
           "name": "link_url",
           "type": "varchar",
@@ -49,14 +57,6 @@
           "type": "varchar",
           "primaryKey": false,
           "notNull": false
-        },
-        "link_appearance": {
-          "name": "link_appearance",
-          "type": "enum_pages_hero_links_link_appearance",
-          "typeSchema": "public",
-          "primaryKey": false,
-          "notNull": false,
-          "default": "'default'"
         }
       },
       "indexes": {
@@ -341,6 +341,14 @@
           "primaryKey": false,
           "notNull": false
         },
+        "link_variant": {
+          "name": "link_variant",
+          "type": "enum_pages_blocks_cta_links_link_variant",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "'link'"
+        },
         "link_url": {
           "name": "link_url",
           "type": "varchar",
@@ -352,14 +360,6 @@
           "type": "varchar",
           "primaryKey": false,
           "notNull": false
-        },
-        "link_appearance": {
-          "name": "link_appearance",
-          "type": "enum_pages_blocks_cta_links_link_appearance",
-          "typeSchema": "public",
-          "primaryKey": false,
-          "notNull": false,
-          "default": "'default'"
         }
       },
       "indexes": {
@@ -2024,6 +2024,12 @@
           "primaryKey": false,
           "notNull": false
         },
+        "topics_id": {
+          "name": "topics_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
         "users_id": {
           "name": "users_id",
           "type": "integer",
@@ -2032,12 +2038,6 @@
         },
         "merch_id": {
           "name": "merch_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "topics_id": {
-          "name": "topics_id",
           "type": "integer",
           "primaryKey": false,
           "notNull": false
@@ -2134,6 +2134,21 @@
           "method": "btree",
           "with": {}
         },
+        "pages_rels_topics_id_idx": {
+          "name": "pages_rels_topics_id_idx",
+          "columns": [
+            {
+              "expression": "topics_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
         "pages_rels_users_id_idx": {
           "name": "pages_rels_users_id_idx",
           "columns": [
@@ -2154,21 +2169,6 @@
           "columns": [
             {
               "expression": "merch_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "pages_rels_topics_id_idx": {
-          "name": "pages_rels_topics_id_idx",
-          "columns": [
-            {
-              "expression": "topics_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -2217,6 +2217,15 @@
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
+        "pages_rels_topics_fk": {
+          "name": "pages_rels_topics_fk",
+          "tableFrom": "pages_rels",
+          "tableTo": "topics",
+          "columnsFrom": ["topics_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
         "pages_rels_users_fk": {
           "name": "pages_rels_users_fk",
           "tableFrom": "pages_rels",
@@ -2231,15 +2240,6 @@
           "tableFrom": "pages_rels",
           "tableTo": "merch",
           "columnsFrom": ["merch_id"],
-          "columnsTo": ["id"],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "pages_rels_topics_fk": {
-          "name": "pages_rels_topics_fk",
-          "tableFrom": "pages_rels",
-          "tableTo": "topics",
-          "columnsFrom": ["topics_id"],
           "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
@@ -2287,6 +2287,14 @@
           "primaryKey": false,
           "notNull": false
         },
+        "link_variant": {
+          "name": "link_variant",
+          "type": "enum__pages_v_version_hero_links_link_variant",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "'default'"
+        },
         "link_url": {
           "name": "link_url",
           "type": "varchar",
@@ -2298,14 +2306,6 @@
           "type": "varchar",
           "primaryKey": false,
           "notNull": false
-        },
-        "link_appearance": {
-          "name": "link_appearance",
-          "type": "enum__pages_v_version_hero_links_link_appearance",
-          "typeSchema": "public",
-          "primaryKey": false,
-          "notNull": false,
-          "default": "'default'"
         },
         "_uuid": {
           "name": "_uuid",
@@ -2608,6 +2608,14 @@
           "primaryKey": false,
           "notNull": false
         },
+        "link_variant": {
+          "name": "link_variant",
+          "type": "enum__pages_v_blocks_cta_links_link_variant",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "'link'"
+        },
         "link_url": {
           "name": "link_url",
           "type": "varchar",
@@ -2619,14 +2627,6 @@
           "type": "varchar",
           "primaryKey": false,
           "notNull": false
-        },
-        "link_appearance": {
-          "name": "link_appearance",
-          "type": "enum__pages_v_blocks_cta_links_link_appearance",
-          "typeSchema": "public",
-          "primaryKey": false,
-          "notNull": false,
-          "default": "'default'"
         },
         "_uuid": {
           "name": "_uuid",
@@ -4477,6 +4477,12 @@
           "primaryKey": false,
           "notNull": false
         },
+        "topics_id": {
+          "name": "topics_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
         "users_id": {
           "name": "users_id",
           "type": "integer",
@@ -4485,12 +4491,6 @@
         },
         "merch_id": {
           "name": "merch_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "topics_id": {
-          "name": "topics_id",
           "type": "integer",
           "primaryKey": false,
           "notNull": false
@@ -4587,6 +4587,21 @@
           "method": "btree",
           "with": {}
         },
+        "_pages_v_rels_topics_id_idx": {
+          "name": "_pages_v_rels_topics_id_idx",
+          "columns": [
+            {
+              "expression": "topics_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
         "_pages_v_rels_users_id_idx": {
           "name": "_pages_v_rels_users_id_idx",
           "columns": [
@@ -4607,21 +4622,6 @@
           "columns": [
             {
               "expression": "merch_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "_pages_v_rels_topics_id_idx": {
-          "name": "_pages_v_rels_topics_id_idx",
-          "columns": [
-            {
-              "expression": "topics_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -4670,6 +4670,15 @@
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
+        "_pages_v_rels_topics_fk": {
+          "name": "_pages_v_rels_topics_fk",
+          "tableFrom": "_pages_v_rels",
+          "tableTo": "topics",
+          "columnsFrom": ["topics_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
         "_pages_v_rels_users_fk": {
           "name": "_pages_v_rels_users_fk",
           "tableFrom": "_pages_v_rels",
@@ -4684,15 +4693,6 @@
           "tableFrom": "_pages_v_rels",
           "tableTo": "merch",
           "columnsFrom": ["merch_id"],
-          "columnsTo": ["id"],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "_pages_v_rels_topics_fk": {
-          "name": "_pages_v_rels_topics_fk",
-          "tableFrom": "_pages_v_rels",
-          "tableTo": "topics",
-          "columnsFrom": ["topics_id"],
           "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
@@ -16453,10 +16453,10 @@
       "schema": "public",
       "values": ["reference", "custom"]
     },
-    "public.enum_pages_hero_links_link_appearance": {
-      "name": "enum_pages_hero_links_link_appearance",
+    "public.enum_pages_hero_links_link_variant": {
+      "name": "enum_pages_hero_links_link_variant",
       "schema": "public",
-      "values": ["default", "outline"]
+      "values": ["link", "default", "outline", "ghost", "branded"]
     },
     "public.enum_pages_blocks_collection_grid_layout": {
       "name": "enum_pages_blocks_collection_grid_layout",
@@ -16479,10 +16479,10 @@
       "schema": "public",
       "values": ["reference", "custom"]
     },
-    "public.enum_pages_blocks_cta_links_link_appearance": {
-      "name": "enum_pages_blocks_cta_links_link_appearance",
+    "public.enum_pages_blocks_cta_links_link_variant": {
+      "name": "enum_pages_blocks_cta_links_link_variant",
       "schema": "public",
-      "values": ["default", "outline"]
+      "values": ["link", "default", "outline", "ghost", "branded"]
     },
     "public.enum_pages_blocks_content_columns_size": {
       "name": "enum_pages_blocks_content_columns_size",
@@ -16544,10 +16544,10 @@
       "schema": "public",
       "values": ["reference", "custom"]
     },
-    "public.enum__pages_v_version_hero_links_link_appearance": {
-      "name": "enum__pages_v_version_hero_links_link_appearance",
+    "public.enum__pages_v_version_hero_links_link_variant": {
+      "name": "enum__pages_v_version_hero_links_link_variant",
       "schema": "public",
-      "values": ["default", "outline"]
+      "values": ["link", "default", "outline", "ghost", "branded"]
     },
     "public.enum__pages_v_blocks_collection_grid_layout": {
       "name": "enum__pages_v_blocks_collection_grid_layout",
@@ -16570,10 +16570,10 @@
       "schema": "public",
       "values": ["reference", "custom"]
     },
-    "public.enum__pages_v_blocks_cta_links_link_appearance": {
-      "name": "enum__pages_v_blocks_cta_links_link_appearance",
+    "public.enum__pages_v_blocks_cta_links_link_variant": {
+      "name": "enum__pages_v_blocks_cta_links_link_variant",
       "schema": "public",
-      "values": ["default", "outline"]
+      "values": ["link", "default", "outline", "ghost", "branded"]
     },
     "public.enum__pages_v_blocks_content_columns_size": {
       "name": "enum__pages_v_blocks_content_columns_size",
@@ -16863,6 +16863,6 @@
     "tables": {},
     "columns": {}
   },
-  "id": "205570bf-db3f-4815-a015-6729ce53efcd",
+  "id": "a14b559c-edd4-4eb2-9cd5-3db2d139fc0a",
   "prevId": "00000000-0000-0000-0000-000000000000"
 }

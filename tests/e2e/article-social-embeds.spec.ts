@@ -7,7 +7,8 @@ import { SOCIAL_EMBEDS_SLUG } from "../../scripts/seed-e2e.constants"
 // each carrying a saved snapshot, so the server renders the wrapper without
 // calling the platform. Only the wrapper is ours to test — every request off
 // this site is aborted, so no third-party script or iframe content can make
-// the run depend on the network (or on a post still existing).
+// the run depend on the network (or on a post still existing). The fallbacks
+// a failed embed shows are covered by the SocialEmbed stories.
 
 const PLATFORMS: { name: string; wrapper: (page: Page) => Locator }[] = [
   // Snapshot markup rendered into a container keyed by the block's id.
@@ -19,18 +20,16 @@ const PLATFORMS: { name: string; wrapper: (page: Page) => Locator }[] = [
   { name: "YouTube", wrapper: (page) => page.locator('iframe[src*="youtube.com/embed/"]') },
 ]
 
-test.describe("article social embeds", () => {
-  test.beforeEach(async ({ page, baseURL }) => {
-    const origin = new URL(baseURL ?? "http://localhost:8000").origin
-    await page.route(
-      (url) => url.origin !== origin,
-      (route) => route.abort(),
-    )
-    await page.goto(`/articles/${SOCIAL_EMBEDS_SLUG}`)
-  })
+test("every platform's embed renders from its saved snapshot", async ({ page, baseURL }) => {
+  const origin = new URL(baseURL ?? "http://localhost:8000").origin
+  await page.route(
+    (url) => url.origin !== origin,
+    (route) => route.abort(),
+  )
+  await page.goto(`/articles/${SOCIAL_EMBEDS_SLUG}`)
 
   for (const { name, wrapper } of PLATFORMS) {
-    test(`renders the ${name} embed`, async ({ page }) => {
+    await test.step(name, async () => {
       const embed = wrapper(page)
       await expect(embed).toHaveCount(1)
       await embed.scrollIntoViewIfNeeded()
@@ -38,10 +37,8 @@ test.describe("article social embeds", () => {
     })
   }
 
-  test("shows no embed error", async ({ page }) => {
-    // EmbedError is the fallback every platform renders when it can't embed:
-    // an alert card offering "Click to view on <platform>".
-    await expect(page.getByText(/^Click to view on /)).toHaveCount(0)
-    await expect(page.getByText("Social Media platform is not supported.")).toHaveCount(0)
-  })
+  // EmbedError is the fallback every platform renders when it can't embed:
+  // an alert card offering "Click to view on <platform>".
+  await expect(page.getByText(/^Click to view on /)).toHaveCount(0)
+  await expect(page.getByText("Social Media platform is not supported.")).toHaveCount(0)
 })

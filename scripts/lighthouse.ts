@@ -24,7 +24,7 @@
 //
 // Results go to lighthouse-results/: summary.json and each page's median report as
 // HTML. CHROME_PATH picks the browser; by default it's
-// Playwright's Chromium. In CI (playwright.yml's "Lighthouse" job) the report goes to
+// Playwright's Chromium. In CI (playwright.yml's "Page speed" job) the report goes to
 // the job summary and, with PR_NUMBER and GITHUB_TOKEN, to a dropdown in the PR's
 // report comment (scripts/pr-report.ts), open when a page regressed; regressions also
 // become warning annotations.

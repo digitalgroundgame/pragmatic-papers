@@ -5,7 +5,7 @@ import { beforeAll, describe, expect, it, vi } from "vitest"
 import { ContributorsBlock } from "@/blocks/Contributors/Component"
 import type { Article, Media, Page, User } from "@/payload-types"
 import { ARTICLE_CONTENT } from "../fixtures/content"
-import { MINIMAL_PNG } from "../fixtures/media"
+import { testFile } from "../fixtures/media"
 import { createUser, getPayload } from "../helpers/testUsers"
 
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn(), revalidateTag: vi.fn() }))
@@ -100,12 +100,7 @@ describe("publicProfile", () => {
     await payload.create({
       collection: "media",
       context: { disableRevalidate: true },
-      file: {
-        data: MINIMAL_PNG,
-        mimetype: "image/png",
-        name: "test.png",
-        size: MINIMAL_PNG.length,
-      },
+      file: testFile(),
       data: { alt: "Narrated", narrator: narrator.id } as unknown as Media,
     })
 

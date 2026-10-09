@@ -119,7 +119,7 @@ function requireUrl(node: JsonNode, problems: string[]): void {
  * A type with no rule fails, so a new builder gets one.
  */
 const RULES: Record<string, Rule> = {
-  Article(node, problems) {
+  NewsArticle(node, problems) {
     // Google truncates longer headlines in rich results.
     if (!isNonEmptyString(node.headline)) problems.push(`${label(node)} has no headline`)
     else if (node.headline.length > 110)

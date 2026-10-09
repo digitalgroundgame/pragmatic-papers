@@ -29,6 +29,27 @@ describe("next.config.ts redirects", () => {
     expect(rule?.permanent).toBe(true)
   })
 
+  it.each([
+    ["/pages-sitemap.xml", "/sitemap.xml"],
+    ["/articles-sitemap.xml", "/articles/sitemap.xml"],
+    ["/volumes-sitemap.xml", "/volumes/sitemap.xml"],
+  ])("permanently redirects the old sitemap URL %s to %s", async (from, to) => {
+    const rule = await redirectFor(from)
+    expect(rule?.destination).toBe(to)
+    expect(rule?.permanent).toBe(true)
+  })
+
+  it("leaves the new sitemap URLs alone", async () => {
+    for (const path of [
+      "/sitemap.xml",
+      "/sitemap_index.xml",
+      "/articles/sitemap.xml",
+      "/volumes/sitemap.xml",
+    ]) {
+      expect(await redirectFor(path)).toBeUndefined()
+    }
+  })
+
   it("leaves the new feed URLs alone", async () => {
     expect(await redirectFor("/articles/feed.xml")).toBeUndefined()
     expect(await redirectFor("/volumes/feed.xml")).toBeUndefined()

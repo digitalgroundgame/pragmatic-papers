@@ -8,7 +8,9 @@ import { SITEMAP_PATHS } from "../sitemaps"
 // be able to fetch a page to see it.
 export async function GET(): Promise<Response> {
   const siteUrl = getServerSideURL()
-  const sitemaps = ["/sitemap.xml", ...SITEMAP_PATHS].map((path) => `Sitemap: ${siteUrl}${path}`)
+  const sitemaps = ["/sitemap_index.xml", ...SITEMAP_PATHS].map(
+    (path) => `Sitemap: ${siteUrl}${path}`,
+  )
 
   const body = [
     "# *",

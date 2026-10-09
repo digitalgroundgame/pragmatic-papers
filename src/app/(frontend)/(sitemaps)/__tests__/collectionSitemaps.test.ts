@@ -3,14 +3,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 const find = vi.fn()
 
-vi.mock("payload", () => ({ getPayload: vi.fn(async () => ({ find })) }))
-vi.mock("@payload-config", () => ({ default: Promise.resolve({}) }))
-// Straight through, so each GET reads the `find` fixture it was given.
+vi.mock("@/utilities/getPayloadConfig", () => ({ getPayloadConfig: vi.fn(async () => ({ find })) }))
+// Straight through, so each sitemap reads the `find` fixture it was given.
 vi.mock("next/cache", () => ({ unstable_cache: (fn: () => unknown) => fn }))
 
-const { GET: pagesSitemap } = await import("../pages-sitemap.xml/route")
-const { GET: articlesSitemap } = await import("../articles-sitemap.xml/route")
-const { GET: volumesSitemap } = await import("../volumes-sitemap.xml/route")
+const { default: pagesSitemap } = await import("../../sitemap")
+const { default: articlesSitemap } = await import("../../articles/sitemap")
+const { GET: newsSitemap } = await import("../../articles/news-sitemap.xml/route")
+const { default: volumesSitemap } = await import("../../volumes/sitemap")
 
 const SITE_URL = "https://pragmaticpapers.com"
 const UPDATED_AT = "2026-09-01T12:00:00.000Z"
@@ -18,20 +18,30 @@ const PUBLISHED_AT = "2026-08-30T09:00:00.000Z"
 
 const withDocs = (docs: Record<string, unknown>[]) => find.mockResolvedValue({ docs })
 
-const render = async (GET: () => Promise<Response>) => {
+const renderXml = async (GET: () => Promise<Response>) => {
   const res = await GET()
   expect(res.headers.get("Content-Type")).toContain("xml")
   return res.text()
 }
 
 const locs = (xml: string) => [...xml.matchAll(/<loc>(.*?)<\/loc>/g)].map(([, loc]) => loc)
-const lastmods = (xml: string) =>
-  [...xml.matchAll(/<lastmod>(.*?)<\/lastmod>/g)].map(([, lastmod]) => lastmod)
 
 const routes = [
-  { name: "pages", collection: "pages", GET: pagesSitemap },
-  { name: "articles", collection: "articles", GET: articlesSitemap },
-  { name: "volumes", collection: "volumes", GET: volumesSitemap },
+  {
+    name: "pages",
+    collection: "pages",
+    list: async () => (await pagesSitemap()).map((e) => [e.url, e.lastModified]),
+  },
+  {
+    name: "articles",
+    collection: "articles",
+    list: async () => (await articlesSitemap()).map((e) => [e.url, e.lastModified]),
+  },
+  {
+    name: "volumes",
+    collection: "volumes",
+    list: async () => (await volumesSitemap()).map((e) => [e.url, e.lastModified]),
+  },
 ] as const
 
 beforeEach(() => {
@@ -43,31 +53,56 @@ afterEach(() => {
   vi.unstubAllEnvs()
 })
 
-describe("GET /pages-sitemap.xml", () => {
+describe("/sitemap.xml (pages)", () => {
   it("puts the home page at the site root and every other page at its slug", async () => {
     withDocs([
       { slug: "home", updatedAt: UPDATED_AT },
       { slug: "about", updatedAt: UPDATED_AT },
     ])
 
-    expect(locs(await render(pagesSitemap))).toEqual([SITE_URL, `${SITE_URL}/about`])
+    expect((await pagesSitemap()).map((e) => e.url)).toEqual([SITE_URL, `${SITE_URL}/about`])
   })
 
   it("leaves no trailing slash on the root when SERVER_URL has one", async () => {
     vi.stubEnv("SERVER_URL", `${SITE_URL}/`)
     withDocs([{ slug: "home", updatedAt: UPDATED_AT }])
 
-    expect(locs(await render(pagesSitemap))).toEqual([SITE_URL])
+    expect((await pagesSitemap()).map((e) => e.url)).toEqual([SITE_URL])
   })
 })
 
-describe("GET /articles-sitemap.xml", () => {
-  // #964: an article slugged `home` used to be sent to the site root, the bug #961
-  // found in getLinkFieldUrl. Only pages own the root.
+describe("/articles/sitemap.xml", () => {
+  // Only pages own the root: an article slugged `home` stays under /articles.
   it("keeps an article slugged home under /articles", async () => {
-    withDocs([{ slug: "home", title: "Home", updatedAt: UPDATED_AT, publishedAt: PUBLISHED_AT }])
+    withDocs([{ slug: "home", updatedAt: UPDATED_AT }])
 
-    expect(locs(await render(articlesSitemap))).toEqual([`${SITE_URL}/articles/home`])
+    expect((await articlesSitemap()).map((e) => e.url)).toEqual([`${SITE_URL}/articles/home`])
+  })
+})
+
+describe("/articles/news-sitemap.xml", () => {
+  it("asks only for articles published in the last two days, newest first", async () => {
+    vi.useFakeTimers({ now: new Date("2026-10-03T00:00:00.000Z"), toFake: ["Date"] })
+    try {
+      withDocs([])
+
+      await renderXml(newsSitemap)
+
+      expect(find).toHaveBeenCalledWith(
+        expect.objectContaining({
+          collection: "articles",
+          overrideAccess: false,
+          draft: false,
+          sort: "-publishedAt",
+          where: {
+            _status: { equals: "published" },
+            publishedAt: { greater_than_equal: "2026-10-01T00:00:00.000Z" },
+          },
+        }),
+      )
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
   it("adds a Google News entry with the title, publication and publish date", async () => {
@@ -80,7 +115,7 @@ describe("GET /articles-sitemap.xml", () => {
       },
     ])
 
-    const xml = await render(articlesSitemap)
+    const xml = await renderXml(newsSitemap)
 
     expect(locs(xml)).toEqual([`${SITE_URL}/articles/the-case-for-reform`])
     expect(xml).toContain("<news:title>The Case for Reform</news:title>")
@@ -91,27 +126,37 @@ describe("GET /articles-sitemap.xml", () => {
       "<news:publication_date>2026-08-30T09:00:00.000+00:00</news:publication_date>",
     )
   })
+
+  it("skips articles without a slug or a publish date", async () => {
+    withDocs([
+      { slug: "", title: "No slug", publishedAt: PUBLISHED_AT },
+      { slug: "undated", title: "Undated" },
+      { slug: "kept", title: "Kept", publishedAt: PUBLISHED_AT },
+    ])
+
+    expect(locs(await renderXml(newsSitemap))).toEqual([`${SITE_URL}/articles/kept`])
+  })
 })
 
-describe("GET /volumes-sitemap.xml", () => {
+describe("/volumes/sitemap.xml", () => {
   it("lists each volume under /volumes", async () => {
     withDocs([
       { slug: "1", updatedAt: UPDATED_AT },
       { slug: "2", updatedAt: UPDATED_AT },
     ])
 
-    expect(locs(await render(volumesSitemap))).toEqual([
+    expect((await volumesSitemap()).map((e) => e.url)).toEqual([
       `${SITE_URL}/volumes/1`,
       `${SITE_URL}/volumes/2`,
     ])
   })
 })
 
-describe.each(routes)("GET /$name-sitemap.xml", ({ collection, GET }) => {
+describe.each(routes)("the $name sitemap", ({ collection, list }) => {
   it("asks only for published documents, as an anonymous reader", async () => {
     withDocs([])
 
-    await render(GET)
+    await list()
 
     expect(find).toHaveBeenCalledOnce()
     expect(find).toHaveBeenCalledWith(
@@ -131,13 +176,13 @@ describe.each(routes)("GET /$name-sitemap.xml", ({ collection, GET }) => {
       { slug: "kept", title: "Kept", updatedAt: UPDATED_AT, publishedAt: PUBLISHED_AT },
     ])
 
-    const xml = await render(GET)
+    const entries = await list()
 
-    expect(locs(xml)).toHaveLength(1)
-    expect(locs(xml)[0]).toMatch(/\/kept$/)
+    expect(entries).toHaveLength(1)
+    expect(entries[0]?.[0]).toMatch(/\/kept$/)
   })
 
-  it("uses updatedAt for lastmod, and the current time when it's missing", async () => {
+  it("uses updatedAt for the last-modified date, and the current time when it's missing", async () => {
     vi.useFakeTimers({ now: new Date("2026-10-03T00:00:00.000Z"), toFake: ["Date"] })
     try {
       withDocs([
@@ -145,7 +190,10 @@ describe.each(routes)("GET /$name-sitemap.xml", ({ collection, GET }) => {
         { slug: "undated", title: "Undated", publishedAt: PUBLISHED_AT },
       ])
 
-      expect(lastmods(await render(GET))).toEqual([UPDATED_AT, "2026-10-03T00:00:00.000Z"])
+      expect((await list()).map(([, date]) => date)).toEqual([
+        UPDATED_AT,
+        "2026-10-03T00:00:00.000Z",
+      ])
     } finally {
       vi.useRealTimers()
     }

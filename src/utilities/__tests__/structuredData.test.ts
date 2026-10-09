@@ -64,7 +64,7 @@ describe("buildArticleJsonLd", () => {
       makeVolume({ id: 7, slug: "vol-7", title: "Volume Seven", volumeNumber: 7 }),
     )
 
-    expect(result["@type"]).toBe("Article")
+    expect(result["@type"]).toBe("NewsArticle")
     expect(result["@id"]).toBe(`${SERVER_URL}/articles/my-post#article`)
     expect(result.headline).toBe("Meta title")
     expect(result.description).toBe("A description")

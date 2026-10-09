@@ -227,7 +227,7 @@ A new hook for content readers see should call it too.
 - Use `getPayloadConfig` imported from `@/utilities/getPayloadConfig`
 - Wrap data queries in `React.cache()` for per-request deduplication
 - Use `unstable_cache` with cache tags for long-lived caching (globals, redirects, sitemaps)
-- Sitemaps: a new one is a `sitemap.ts` in its route's folder (Next's metadata convention, served at `/<route>/sitemap.xml`, e.g. `docs/sitemap.ts`), added to `SITEMAP_PATHS` in `(sitemaps)/sitemaps.ts`. The `(sitemaps)/*-sitemap.xml` routes are the URLs production already serves to crawlers, so they stay where they are
+- Sitemaps: each is a `sitemap.ts` in the folder of the section it lists (Next's metadata convention, served at `/<route>/sitemap.xml`, e.g. `docs/sitemap.ts`), added with a title to `SITEMAPS` in `(sitemaps)/sitemaps.ts`, which `/sitemap_index.xml`, robots.txt and the public `/feeds` page read (RSS feeds are listed there from `FEEDS` in `feeds/feeds.ts`). Pages live at the root, so theirs is the root `sitemap.ts` (`/sitemap.xml`), and the index of them all is `/sitemap_index.xml` (`(sitemaps)/sitemap_index.xml`), which robots.txt and Search Console point at; Google News reads `articles/news-sitemap.xml/route.ts`, a route handler (`sitemap.ts` can't write `news:` tags) listing only the last two days' articles, as Google asks. The old `/pages-sitemap.xml`, `/articles-sitemap.xml` and `/volumes-sitemap.xml` redirect permanently in `next.config.ts`
 - Always respect `draftMode()` — pass `draft` and `overrideAccess: draft` into Payload queries
 - Next.js 15: `params` and `searchParams` are `Promise`s (must be `await`ed)
 - Metadata: use `generateMeta({ doc, canonicalPath })` from `@/utilities/generateMeta`

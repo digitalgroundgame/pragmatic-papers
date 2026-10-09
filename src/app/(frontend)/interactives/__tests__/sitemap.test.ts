@@ -3,18 +3,13 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 const { find, experiment } = vi.hoisted(() => ({ find: vi.fn(), experiment: { on: true } }))
 
-vi.mock("@payload-config", () => ({ default: {} }))
-vi.mock("payload", () => ({ getPayload: async () => ({ find }) }))
+vi.mock("@/utilities/getPayloadConfig", () => ({ getPayloadConfig: async () => ({ find }) }))
 // The cache is Next's concern; the route's own job is which interactives it lists.
 vi.mock("next/cache", () => ({ unstable_cache: <T>(fn: T): T => fn }))
 vi.mock("@/globals/SiteSettings/isExperimentEnabled", () => ({
   isExperimentEnabled: async () => experiment.on,
 }))
-vi.mock("next-sitemap", () => ({
-  getServerSideSitemap: (entries: unknown) => Response.json(entries),
-}))
-
-import { GET } from "../route"
+import sitemap from "../sitemap"
 
 beforeEach(() => {
   vi.clearAllMocks()
@@ -22,10 +17,10 @@ beforeEach(() => {
   process.env.SERVER_URL = "https://example.test"
 })
 
-describe("GET /interactives-sitemap.xml", () => {
+describe("/interactives/sitemap.xml", () => {
   it("lists only published interactives, as readers see them", async () => {
     find.mockResolvedValue({ docs: [] })
-    await GET()
+    await sitemap()
     expect(find).toHaveBeenCalledWith(
       expect.objectContaining({
         collection: "interactives",
@@ -43,15 +38,14 @@ describe("GET /interactives-sitemap.xml", () => {
         { slug: "state-courts", updatedAt: "2026-09-02T00:00:00.000Z" },
       ],
     })
-    const res = await GET()
-    await expect(res.json()).resolves.toEqual([
+    await expect(sitemap()).resolves.toEqual([
       {
-        loc: "https://example.test/interactives/federal-courts",
-        lastmod: "2026-09-01T00:00:00.000Z",
+        url: "https://example.test/interactives/federal-courts",
+        lastModified: "2026-09-01T00:00:00.000Z",
       },
       {
-        loc: "https://example.test/interactives/state-courts",
-        lastmod: "2026-09-02T00:00:00.000Z",
+        url: "https://example.test/interactives/state-courts",
+        lastModified: "2026-09-02T00:00:00.000Z",
       },
     ])
   })
@@ -60,17 +54,16 @@ describe("GET /interactives-sitemap.xml", () => {
     vi.useFakeTimers()
     vi.setSystemTime(new Date("2026-09-28T12:00:00.000Z"))
     find.mockResolvedValue({ docs: [{ slug: null }, { slug: "courts", updatedAt: null }] })
-    const res = await GET()
+    const entries = await sitemap()
     vi.useRealTimers()
-    await expect(res.json()).resolves.toEqual([
-      { loc: "https://example.test/interactives/courts", lastmod: "2026-09-28T12:00:00.000Z" },
+    expect(entries).toEqual([
+      { url: "https://example.test/interactives/courts", lastModified: "2026-09-28T12:00:00.000Z" },
     ])
   })
 
   it("lists nothing, without reading the collection, while the experiment is off", async () => {
     experiment.on = false
-    const res = await GET()
-    await expect(res.json()).resolves.toEqual([])
+    await expect(sitemap()).resolves.toEqual([])
     expect(find).not.toHaveBeenCalled()
   })
 })

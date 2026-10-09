@@ -1,6 +1,9 @@
+import { blueskyAccounts } from "./bluesky"
 import { cloudflareWorker, cloudflareZone } from "./cloudflare"
 import { githubRepo } from "./github"
 import { shopifyStore } from "./shopify"
+import { xAccounts } from "./x"
+import { youtubeChannels } from "./youtube"
 import { integrationStatus, type Integration, type IntegrationStatus } from "./types"
 import { unsplashApp } from "./unsplash"
 
@@ -57,6 +60,38 @@ export const cloudflareWorkerCache = cloudflareWorker({
 })
 
 /**
+ * Our YouTube channels, which the ticker watches for a live or upcoming broadcast.
+ * A plain Data API key from any Google Cloud project with "YouTube Data API v3" enabled; it
+ * reads public data only.
+ */
+export const youtubeLive = youtubeChannels({
+  id: "youtube-live",
+  label: "YouTube channels",
+  channelsEnv: "YOUTUBE_CHANNEL_IDS",
+  keyEnv: "YOUTUBE_API_KEY",
+})
+
+/** Our Bluesky accounts, whose posts run in the ticker. */
+export const blueskyPosts = blueskyAccounts({
+  id: "bluesky-posts",
+  label: "Bluesky posts",
+  defaultHandles: ["thepragmaticpapers.bsky.social"],
+  handlesEnv: "BLUESKY_HANDLES",
+})
+
+/**
+ * Our X accounts, whose posts run in the ticker. Reading posts needs a paid X API plan or
+ * pay-per-use credits on the app behind the token.
+ */
+export const xPosts = xAccounts({
+  id: "x-posts",
+  label: "X posts",
+  defaultUsernames: ["PragPapers"],
+  usernamesEnv: "X_USERNAMES",
+  tokenEnv: "X_BEARER_TOKEN",
+})
+
+/**
  * Unsplash — the photo library editors can search from Media's upload controls and save
  * into Media (`collections/Media/components/Unsplash`). The key is the application's Access
  * Key; `UNSPLASH_APP_NAME` is its name on unsplash.com/oauth/applications, used for the
@@ -76,6 +111,9 @@ export const INTEGRATIONS: readonly Integration[] = [
   shopifyStore,
   cloudflareCache,
   cloudflareWorkerCache,
+  youtubeLive,
+  blueskyPosts,
+  xPosts,
   unsplash,
 ]
 

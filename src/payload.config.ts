@@ -14,6 +14,8 @@ import { Webhooks } from "@/collections/Webhooks"
 import { defaultLexical } from "@/fields/defaultLexical"
 import { Footer } from "@/Footer/config"
 import { ArticleRecommendations } from "@/globals/ArticleRecommendations/config"
+import { Integrations } from "@/globals/Integrations/config"
+import { Ticker } from "@/globals/Ticker/config"
 import { SiteSettings } from "@/globals/SiteSettings/config"
 import { Header } from "@/Header/config"
 import { canRunJobs } from "@/jobs/access"
@@ -158,7 +160,7 @@ export default buildConfig({
     InteractiveSnapshots,
   ],
   cors: [getServerSideURL()].filter(Boolean),
-  globals: [Header, Footer, ArticleRecommendations, SiteSettings],
+  globals: [Header, Footer, ArticleRecommendations, SiteSettings, Integrations, Ticker],
   // Nothing here reads Payload's GraphQL API (the site and admin use the Local and REST
   // APIs), and its errors reach `afterError` with their status nested on `originalError`,
   // which the Sentry plugin reads as a 500: anyone could fill Sentry from /api/graphql.

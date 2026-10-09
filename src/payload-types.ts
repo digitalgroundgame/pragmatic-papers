@@ -222,6 +222,8 @@ export interface Config {
     footer: Footer;
     'article-recommendations': ArticleRecommendation;
     'site-settings': SiteSetting;
+    integrations: IntegrationSettings;
+    ticker: TickerGlobal;
     'payload-jobs-stats': PayloadJobsStat;
   };
   globalsSelect: {
@@ -229,6 +231,8 @@ export interface Config {
     footer: FooterSelect<false> | FooterSelect<true>;
     'article-recommendations': ArticleRecommendationsSelect<false> | ArticleRecommendationsSelect<true>;
     'site-settings': SiteSettingsSelect<false> | SiteSettingsSelect<true>;
+    integrations: IntegrationsSelect<false> | IntegrationsSelect<true>;
+    ticker: TickerSelect<false> | TickerSelect<true>;
     'payload-jobs-stats': PayloadJobsStatsSelect<false> | PayloadJobsStatsSelect<true>;
   };
   locale: null;
@@ -2515,10 +2519,90 @@ export interface SiteSetting {
      */
     interactives?: boolean | null;
     /**
+     * The strip under the header on every page: a broadcast when one of our YouTube channels is live, and our latest posts from Bluesky and X.
+     */
+    ticker?: boolean | null;
+    /**
      * The table of contents in an article's sidebar and its hero button, on articles with “Show table of contents” ticked.
      */
     tableOfContents?: boolean | null;
   };
+  updatedAt?: string | null;
+  createdAt?: string | null;
+}
+/**
+ * Each environment keeps its own settings. Keys and tokens are set in the hosting environment, never here.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "integrations".
+ */
+export interface IntegrationSettings {
+  id: number;
+  /**
+   * Shown in the ticker while one is live or about to be. When two are live at once, the first listed wins.
+   */
+  youtube?: {
+    /**
+     * Empty uses YOUTUBE_CHANNEL_IDS.
+     */
+    channels?:
+      | {
+          /**
+           * From the channel's About page → Share channel → Copy channel ID.
+           */
+          channelId: string;
+          id?: string | null;
+        }[]
+      | null;
+  };
+  /**
+   * Whose posts run in the ticker.
+   */
+  bluesky?: {
+    /**
+     * Empty uses BLUESKY_HANDLES, or thepragmaticpapers.bsky.social.
+     */
+    handles?:
+      | {
+          handle: string;
+          id?: string | null;
+        }[]
+      | null;
+  };
+  /**
+   * Whose posts run in the ticker.
+   */
+  x?: {
+    /**
+     * Empty uses X_USERNAMES, or PragPapers.
+     */
+    usernames?:
+      | {
+          username: string;
+          id?: string | null;
+        }[]
+      | null;
+  };
+  updatedAt?: string | null;
+  createdAt?: string | null;
+}
+/**
+ * The strip under the header with our live broadcasts and latest posts.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "ticker".
+ */
+export interface TickerGlobal {
+  id: number;
+  /**
+   * Posts the ticker leaves out. Paste the post's link from Bluesky or X; it's gone from the ticker as soon as you save.
+   */
+  hidden?:
+    | {
+        url: string;
+        id?: string | null;
+      }[]
+    | null;
   updatedAt?: string | null;
   createdAt?: string | null;
 }
@@ -2595,7 +2679,62 @@ export interface SiteSettingsSelect<T extends boolean = true> {
     | {
         feed?: T;
         interactives?: T;
+        ticker?: T;
         tableOfContents?: T;
+      };
+  updatedAt?: T;
+  createdAt?: T;
+  globalType?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "integrations_select".
+ */
+export interface IntegrationsSelect<T extends boolean = true> {
+  youtube?:
+    | T
+    | {
+        channels?:
+          | T
+          | {
+              channelId?: T;
+              id?: T;
+            };
+      };
+  bluesky?:
+    | T
+    | {
+        handles?:
+          | T
+          | {
+              handle?: T;
+              id?: T;
+            };
+      };
+  x?:
+    | T
+    | {
+        usernames?:
+          | T
+          | {
+              username?: T;
+              id?: T;
+            };
+      };
+  updatedAt?: T;
+  createdAt?: T;
+  globalType?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "ticker_select".
+ */
+export interface TickerSelect<T extends boolean = true> {
+  hidden?:
+    | T
+    | {
+        url?: T;
+        id?: T;
       };
   updatedAt?: T;
   createdAt?: T;

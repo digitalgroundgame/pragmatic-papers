@@ -50,8 +50,7 @@ import * as migration_20260929_170519_add_table_of_contents_experiment from "./2
 import * as migration_20261006_025343_add_storage_object_key from "./20261006_025343_add_storage_object_key"
 import * as migration_20261007_150906_add_user_public_profile from "./20261007_150906_add_user_public_profile"
 import * as migration_20261008_005532_add_media_unsplash_id from "./20261008_005532_add_media_unsplash_id"
-import * as migration_20261008_225042_add_docs from "./20261008_225042_add_docs"
-import * as migration_20261009_003903_docs_table_of_contents from "./20261009_003903_docs_table_of_contents"
+import * as migration_20261009_024337_add_docs from "./20261009_024337_add_docs"
 
 export const migrations = [
   {
@@ -315,13 +314,8 @@ export const migrations = [
     name: "20261008_005532_add_media_unsplash_id",
   },
   {
-    up: migration_20261008_225042_add_docs.up,
-    down: migration_20261008_225042_add_docs.down,
-    name: "20261008_225042_add_docs",
-  },
-  {
-    up: migration_20261009_003903_docs_table_of_contents.up,
-    down: migration_20261009_003903_docs_table_of_contents.down,
-    name: "20261009_003903_docs_table_of_contents",
+    up: migration_20261009_024337_add_docs.up,
+    down: migration_20261009_024337_add_docs.down,
+    name: "20261009_024337_add_docs",
   },
 ]

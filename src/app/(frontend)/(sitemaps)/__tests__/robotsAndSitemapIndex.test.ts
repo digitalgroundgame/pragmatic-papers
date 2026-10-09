@@ -34,7 +34,6 @@ describe("GET /robots.txt", () => {
         "Sitemap: https://pragmaticpapers.com/articles/sitemap.xml",
         "Sitemap: https://pragmaticpapers.com/articles/news-sitemap.xml",
         "Sitemap: https://pragmaticpapers.com/volumes/sitemap.xml",
-        "Sitemap: https://pragmaticpapers.com/authors/sitemap.xml",
         "Sitemap: https://pragmaticpapers.com/topics/sitemap.xml",
         "Sitemap: https://pragmaticpapers.com/docs/sitemap.xml",
         "",
@@ -56,7 +55,6 @@ describe("GET /sitemap_index.xml", () => {
       "http://localhost:8000/articles/sitemap.xml",
       "http://localhost:8000/articles/news-sitemap.xml",
       "http://localhost:8000/volumes/sitemap.xml",
-      "http://localhost:8000/authors/sitemap.xml",
       "http://localhost:8000/topics/sitemap.xml",
       "http://localhost:8000/docs/sitemap.xml",
     ])

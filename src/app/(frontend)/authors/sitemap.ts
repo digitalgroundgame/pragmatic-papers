@@ -8,7 +8,7 @@ import { getServerSideURL } from "@/utilities/getURL"
 // time, from the build's database.
 export const dynamic = "force-dynamic"
 
-/** /authors/sitemap.xml: the /authors index and every author it lists. */
+/** /authors/sitemap.xml: the /authors index and every author it lists. Not in SITEMAPS yet. */
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const payload = await getPayloadConfig()
   const siteUrl = getServerSideURL().replace(/\/$/, "")

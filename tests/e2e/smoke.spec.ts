@@ -44,11 +44,11 @@ test.describe("public routes", () => {
     })
   })
 
-  test.describe("/authors", () => {
+  test.describe("/contributors", () => {
     test("lists author cards with their social links", async ({ page }) => {
-      await visit(page, "/authors")
-      await expect(page.getByRole("heading", { level: 1, name: "Authors" })).toBeVisible()
-      const list = page.getByRole("region", { name: "All authors" })
+      await visit(page, "/contributors")
+      await expect(page.getByRole("heading", { level: 1, name: "Contributors" })).toBeVisible()
+      const list = page.getByRole("region", { name: "All contributors" })
       await expect(list.getByRole("link", { name: WRITER_NAME })).toBeVisible()
 
       // The seed gives the writer one link per platform. Located by the card's own landmark
@@ -63,9 +63,9 @@ test.describe("public routes", () => {
     })
   })
 
-  test.describe("/authors/[slug]", () => {
+  test.describe("/contributors/[slug]", () => {
     test("renders the author's name and articles", async ({ page }) => {
-      await visit(page, `/authors/${WRITER_SLUG}`)
+      await visit(page, `/contributors/${WRITER_SLUG}`)
       await expect(page.getByRole("heading", { level: 1, name: WRITER_NAME })).toBeVisible()
       const articles = page.getByRole("region", { name: "Articles by this author" })
       // The seed's writer has more articles than fit on one page, so assert

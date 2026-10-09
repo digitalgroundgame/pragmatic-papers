@@ -17,7 +17,7 @@ export const Contributors: Block = {
       relationTo: "users",
       hasMany: true,
       required: true,
-      // Each card links to /authors/<slug>, which only staff and public profiles have.
+      // Each card links to /contributors/<slug>, which only staff and public profiles have.
       filterOptions: {
         or: [{ roles: { in: STAFF_ROLES } }, { publicProfile: { equals: true } }],
       },

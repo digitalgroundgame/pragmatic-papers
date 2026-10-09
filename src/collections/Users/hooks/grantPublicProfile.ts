@@ -26,7 +26,7 @@ async function markPublic(refs: UserRef[], req: PayloadRequest): Promise<void> {
 /**
  * Builds an `afterChange` hook that gives the users a document credits (an article's
  * authors, a narration's narrator) a public profile. Their byline links to
- * `/authors/<slug>`, and `publicProfile` keeps that page readable after a role change
+ * `/contributors/<slug>`, and `publicProfile` keeps that page readable after a role change
  * takes their staff role away.
  */
 export const grantPublicProfile =

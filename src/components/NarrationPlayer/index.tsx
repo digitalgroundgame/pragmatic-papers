@@ -23,7 +23,7 @@ function narratorCredit(narrator: Relationship<User>): React.ReactNode {
     <div>
       <p className="text-muted-foreground mb-1 text-xs font-medium">Narrated by</p>
       <a
-        href={`/authors/${slug}`}
+        href={`/contributors/${slug}`}
         className="focus-visible:ring-ring/50 rounded-sm font-serif text-sm outline-none hover:underline focus-visible:ring-3"
       >
         {name}

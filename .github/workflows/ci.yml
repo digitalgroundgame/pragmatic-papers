@@ -289,6 +289,9 @@ jobs:
           node-version: "24.x"
           gh-font-read-token: ${{ secrets.GH_FONT_READ }}
           payload-secret: ci-storybook-secret
+          # The Playwright image's saver of the pnpm store (see setup-project):
+          # unlike E2E, this job runs on every push to dev, so PRs restore it.
+          save-pnpm-cache: "true"
 
       # The tests never execute a story's lazy imports; the build bundles them,
       # which is where a server-only module reaching the browser shows up.

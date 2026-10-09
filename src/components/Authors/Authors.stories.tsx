@@ -29,7 +29,7 @@ export const Card: Story = {
     const links = canvas.getByRole("navigation", { name: "Links for Jordan Rivera" })
     await expect(within(links).getAllByRole("link")).toHaveLength(2)
     for (const profile of canvas.getAllByRole("link", { name: "Jordan Rivera" })) {
-      await expect(profile).toHaveAttribute("href", "/authors/jordan-rivera")
+      await expect(profile).toHaveAttribute("href", "/contributors/jordan-rivera")
     }
   },
 }

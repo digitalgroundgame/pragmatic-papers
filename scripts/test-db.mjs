@@ -23,7 +23,9 @@ import { hostname } from "node:os"
 import path from "node:path"
 import { parse } from "dotenv"
 
-export const BASE_IMAGE = "postgres:17-alpine"
+// Docker Hub's official image, through Amazon ECR Public's mirror of it: Docker Hub
+// rate-limits anonymous pulls by address, and CI's shared runners run out.
+export const BASE_IMAGE = "public.ecr.aws/docker/library/postgres:17-alpine"
 export const SNAPSHOT_REPO = "pragmatic-papers-test-db"
 export const OWNER_LABEL = "pragmatic-papers.test-db.owner"
 export const DATABASE = "pragmatic-papers-test"

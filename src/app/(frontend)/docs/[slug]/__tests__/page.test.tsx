@@ -3,7 +3,7 @@ import type React from "react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 const { queries, draft, experiment } = vi.hoisted(() => ({
-  queries: { queryDocBySlug: vi.fn(), queryPublishedDocs: vi.fn() },
+  queries: { queryDocBySlug: vi.fn() },
   draft: { isEnabled: false },
   experiment: { enabled: true },
 }))
@@ -21,7 +21,7 @@ vi.mock("@/components/LivePreviewListener", () => ({
   LivePreviewListener: () => <div data-testid="live-preview" />,
 }))
 
-import DocPage, { generateMetadata, generateStaticParams } from "../page"
+import DocPage, { generateMetadata } from "../page"
 
 const heading = (text: string) => ({
   type: "heading",
@@ -112,13 +112,6 @@ describe("DocPage", () => {
     draft.isEnabled = true
     await renderPage()
     expect(screen.getByTestId("live-preview")).toBeInTheDocument()
-  })
-})
-
-describe("generateStaticParams", () => {
-  it("prerenders every published doc with a slug", async () => {
-    queries.queryPublishedDocs.mockResolvedValue([{ slug: "a" }, { slug: null }, { slug: "b" }])
-    await expect(generateStaticParams()).resolves.toEqual([{ slug: "a" }, { slug: "b" }])
   })
 })
 

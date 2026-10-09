@@ -1,6 +1,6 @@
 import { Breadcrumbs, type Crumb } from "@/components/Breadcrumbs"
 import { JsonLd } from "@/components/JsonLd"
-import { queryPublishedDocs } from "@/plugins/docs/queries"
+import { isStaffReader, queryPublishedDocs } from "@/plugins/docs/queries"
 import { formatNotificationDate } from "@/plugins/notifications/unread"
 import { getServerSideURL } from "@/utilities/getURL"
 import { mergeOpenGraph } from "@/utilities/mergeOpenGraph"
@@ -12,9 +12,9 @@ import React from "react"
 const TITLE = "Docs — Pragmatic Papers"
 const DESCRIPTION = "What's new in the Pragmatic Papers admin, and how to use it."
 
-// Saving a doc refreshes it. The docs a release adds are synced after the build prerendered
-// this, so they show up within the hour.
-export const revalidate = 3600
+// Rendered per request, because staff also see the docs written for some roles. The docs come
+// from the data cache, which saving a doc or the start-up sync refreshes.
+export const dynamic = "force-dynamic"
 
 export function generateMetadata(): Metadata {
   const canonicalUrl = `${getServerSideURL()}/docs`
@@ -27,7 +27,7 @@ export function generateMetadata(): Metadata {
 }
 
 export default async function DocsIndexPage(): Promise<React.ReactNode> {
-  const docs = await queryPublishedDocs()
+  const docs = await queryPublishedDocs({ staff: await isStaffReader() })
   const trail: Crumb[] = [{ name: "Docs", path: "/docs" }]
 
   return (

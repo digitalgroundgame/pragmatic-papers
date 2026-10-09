@@ -14,7 +14,7 @@ import {
 import { ShareButtons } from "@/components/ShareButtons"
 import { Separator } from "@/components/ui/separator"
 import { isExperimentEnabled } from "@/globals/SiteSettings/isExperimentEnabled"
-import { queryDocBySlug, queryPublishedDocs } from "@/plugins/docs/queries"
+import { queryDocBySlug } from "@/plugins/docs/queries"
 import { formatNotificationDate } from "@/plugins/notifications/unread"
 import { getServerSideURL } from "@/utilities/getURL"
 import { mergeOpenGraph } from "@/utilities/mergeOpenGraph"
@@ -27,14 +27,9 @@ interface Args {
   params: Promise<{ slug: string }>
 }
 
-// Prerendered from generateStaticParams; a doc published since the build is rendered on its
-// first request and cached the same way. Saving a doc revalidates it.
-export const revalidate = 3600
-
-export async function generateStaticParams(): Promise<{ slug: string }[]> {
-  const docs = await queryPublishedDocs()
-  return docs.flatMap(({ slug }) => (slug ? [{ slug }] : []))
-}
+// Rendered per request, because a doc written for some roles is shown only to staff. The doc
+// comes from the data cache, which saving a doc or the start-up sync refreshes.
+export const dynamic = "force-dynamic"
 
 export async function generateMetadata({ params }: Args): Promise<Metadata> {
   const { slug } = await params

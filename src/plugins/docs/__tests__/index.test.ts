@@ -1,8 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import type { Config, Payload } from "payload"
 
-const { syncDocs } = vi.hoisted(() => ({ syncDocs: vi.fn() }))
+const { syncDocs, purgeEdgeCache } = vi.hoisted(() => ({
+  syncDocs: vi.fn(),
+  purgeEdgeCache: vi.fn(),
+}))
 vi.mock("../syncDocs", () => ({ syncDocs }))
+vi.mock("@/hooks/purgeEdgeCache", () => ({ purgeEdgeCache }))
 vi.mock("../collection", () => ({ DOCS_SLUG: "docs", Docs: { slug: "docs", fields: [] } }))
 
 import { docsPlugin } from ".."
@@ -37,20 +41,22 @@ describe("docsPlugin", () => {
     expect(config.collections?.map((c) => c.slug)).toEqual(["docs"])
   })
 
-  it("syncs the repo's docs when the site starts, and moves the cache key on a change", async () => {
+  it("syncs the repo's docs when the site starts, and refreshes the caches on a change", async () => {
     syncDocs.mockResolvedValue({ created: ["a"], updated: [], unchanged: [] })
     const before = syncVersion()
     await start(SITE)
     expect(syncDocs).toHaveBeenCalledWith(payload)
     expect(logger.info).toHaveBeenCalled()
     await vi.waitFor(() => expect(syncVersion()).not.toBe(before))
+    expect(purgeEdgeCache).toHaveBeenCalledWith(logger, "docs synced")
   })
 
-  it("keeps the cache key when nothing changed", async () => {
+  it("leaves the caches alone when nothing changed", async () => {
     const before = syncVersion()
     await start(SITE)
     expect(syncDocs).toHaveBeenCalled()
     expect(syncVersion()).toBe(before)
+    expect(purgeEdgeCache).not.toHaveBeenCalled()
   })
 
   it("logs a failed sync rather than stopping the site", async () => {

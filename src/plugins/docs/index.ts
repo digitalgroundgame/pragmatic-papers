@@ -1,5 +1,7 @@
 import type { Plugin } from "payload"
 
+import { purgeEdgeCache } from "@/hooks/purgeEdgeCache"
+
 import { Docs } from "./collection"
 import { DOCS_CACHE_TAG } from "./revalidateDoc"
 import { markDocsSynced } from "./syncVersion"
@@ -39,6 +41,8 @@ export const docsPlugin = (): Plugin => (config) => ({
         if (!created.length && !updated.length) return
         payload.logger.info({ created, updated }, "Synced help docs from the repo")
         markDocsSynced()
+        // The pages read through the sync stamp above; Cloudflare's copies of them don't.
+        purgeEdgeCache(payload.logger, "docs synced")
       })
       .catch((err: unknown) => payload.logger.error({ err }, "Syncing help docs failed"))
   },

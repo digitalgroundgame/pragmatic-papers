@@ -143,7 +143,8 @@ syncs them too. To add one:
    two (the bell shows it), `publishedAt` (the day the release reaches
    production; for a feature that shipped before the bell, the day it did) and,
    for a doc only some roles need, `audience` (e.g. `["editor"]`; admins and
-   chief editors see every doc).
+   chief editors see every doc). A doc with an audience is staff-only: /docs
+   shows it only to someone signed in to the admin.
 2. `pnpm docs:export <slug>` writes it into `src/docs/<slug>/`, swapping each
    Media document for a `{ "$media": "<file>" }` reference to a copy beside the
    JSON, since Media ids differ from site to site. Links to other documents
@@ -157,7 +158,8 @@ lists every doc from the start.
 
 The repo copy wins: a repo doc edited in a site's admin is overwritten the next
 time its folder changes. Readers' pages and the bell read docs through
-`unstable_cache` with the `docs` tag, which saving a doc clears.
+`unstable_cache` with the `docs` tag, which saving a doc clears; a start-up sync
+that changed a doc moves the cache keys on and purges the edge cache instead.
 
 The bell beside the avatar in the admin header is the notifications plugin
 (`src/plugins/notifications/`). Features plug into it with a

@@ -25,7 +25,7 @@ export const docsNotifications = (
     if (!isStaff(user)) return []
     // Imported here: the queries reach the Payload config, which imports this file.
     const { queryPublishedDocs } = await import("./queries")
-    const docs = await queryPublishedDocs()
+    const docs = await queryPublishedDocs({ staff: true })
     return (
       // Scheduled across every doc, so each audience gets the same weeks.
       announcements(docs, backlog, now())

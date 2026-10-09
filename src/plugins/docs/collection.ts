@@ -1,6 +1,5 @@
 import { editor } from "@/access/collections"
-import { isPublishedOrStaff } from "@/access/policies"
-import { type Role, STAFF_ROLES } from "@/access/roles"
+import { type Role, STAFF_ROLES, isStaff } from "@/access/roles"
 import { Banner } from "@/blocks/Banner/config"
 import { Code } from "@/blocks/Code/config"
 import { MediaBlock } from "@/blocks/MediaBlock/config"
@@ -18,7 +17,7 @@ import {
   OrderedListFeature,
   UnorderedListFeature,
 } from "@payloadcms/richtext-lexical"
-import type { CollectionConfig } from "payload"
+import type { CollectionConfig, Where } from "payload"
 
 import { revalidateDoc, revalidateDocDelete } from "./revalidateDoc"
 
@@ -44,7 +43,12 @@ export const Docs: CollectionConfig<"docs"> = {
   access: {
     create: editor,
     delete: editor,
-    read: isPublishedOrStaff,
+    // Staff read every doc. Anyone else reads published docs written for everyone: one with an
+    // audience is about a part of the admin only those roles see, so it stays off the public site.
+    read: ({ req: { user } }): Where | boolean =>
+      isStaff(user) || {
+        and: [{ _status: { equals: "published" } }, { audience: { exists: false } }],
+      },
     update: editor,
   },
   defaultPopulate: {
@@ -113,7 +117,8 @@ export const Docs: CollectionConfig<"docs"> = {
       options: STAFF_ROLES.map((role) => ({ label: ROLE_LABELS[role], value: role })),
       admin: {
         position: "sidebar",
-        description: "Who the help bell tells. Empty means all staff; admins see every doc.",
+        description:
+          "Who it's for: only staff can read it, and the bell tells only these roles (admins see every doc). Empty means anyone can read it and the bell tells all staff.",
       },
     },
     // On by default: a doc is reference reading, skimmed for the one section a reader needs.

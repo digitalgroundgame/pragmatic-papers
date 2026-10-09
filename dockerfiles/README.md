@@ -363,7 +363,7 @@ The image sets `BUILT_WITHOUT_DATABASE=true`, which switches on the database ste
 
 - **First boot takes longer**: it copies staging before the server starts, so the health check below allows 5 minutes before counting failures.
 - **`FORCE_DATABASE_COPY=true` swaps the fresh copy in unmigrated.** There's no Payload CLI in the image, so the new container migrates it as it starts, and the old container serves the unmigrated copy until then.
-- **`FORCE_DATABASE_COPY=true` copies once per image, not once per start.** The copy runs whenever the container starts, restarts included, so the script marks the database with the image's commit (a Postgres comment) and skips the forced copy when the mark matches. Restarting a preview keeps what testers entered; deploying a new commit copies afresh. Still turn it back off once the preview you meant to refresh has been redeployed.
+- **`FORCE_DATABASE_COPY=true` copies once per image, not once per start.** The copy runs whenever the container starts, restarts included, so the script marks the database with the image's commit (a Postgres comment; `IMAGE_COMMIT`, baked in at build, since Coolify sets `SOURCE_COMMIT=HEAD` on the container) and skips the forced copy when the mark matches. Restarting a preview keeps what testers entered; deploying a new commit copies afresh. Still turn it back off once the preview you meant to refresh has been redeployed.
 
 **Setup.** In Coolify:
 

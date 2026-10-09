@@ -119,14 +119,15 @@ copy_database() {
 # build, so a restart of the same image must not take FORCE_DATABASE_COPY as a request
 # for another fresh copy: that would throw away what testers entered. The commit a copy
 # was made for is kept as the database's comment, and a forced copy is made once per
-# commit.
-FORCED_MARK="copied for commit ${SOURCE_COMMIT}"
+# commit. The image carries it as IMAGE_COMMIT: Coolify sets SOURCE_COMMIT=HEAD on a
+# Docker Image app's container, which would make every image look like the last one.
+FORCED_MARK="copied for commit ${IMAGE_COMMIT}"
 copied_for_this_commit() {
-    [ "$BUILT_WITHOUT_DATABASE" = "true" ] && [ -n "$SOURCE_COMMIT" ] &&
+    [ "$BUILT_WITHOUT_DATABASE" = "true" ] && [ -n "$IMAGE_COMMIT" ] &&
         [ "$(psql "$ADMIN_URI" -tAc "SELECT shobj_description(oid, 'pg_database') FROM pg_database WHERE datname='$1'")" = "$FORCED_MARK" ]
 }
 mark_copied() {
-    if [ "$BUILT_WITHOUT_DATABASE" = "true" ] && [ -n "$SOURCE_COMMIT" ]; then
+    if [ "$BUILT_WITHOUT_DATABASE" = "true" ] && [ -n "$IMAGE_COMMIT" ]; then
         psql "$ADMIN_URI" -v ON_ERROR_STOP=1 -c "COMMENT ON DATABASE \"$1\" IS '$FORCED_MARK';"
     fi
 }
@@ -139,7 +140,7 @@ if database_exists "$TARGET_DB"; then
         exit 0
     fi
     if copied_for_this_commit "$TARGET_DB"; then
-        echo "Target database was already copied for this image (${SOURCE_COMMIT}); a restart keeps its data"
+        echo "Target database was already copied for this image (${IMAGE_COMMIT}); a restart keeps its data"
         echo "Skipping database copy step"
         exit 0
     fi

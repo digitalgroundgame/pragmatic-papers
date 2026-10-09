@@ -102,15 +102,16 @@ ARG BUILD_ENV=preview
 ARG SOURCE_COMMIT=
 
 # BUILT_WITHOUT_DATABASE switches on the start-time database work in start.sh and
-# Payload's prodMigrations (src/payload.config.ts). SOURCE_COMMIT lets copy-database.sh
-# tell a new image from a restart, so FORCE_DATABASE_COPY copies once per image.
+# Payload's prodMigrations (src/payload.config.ts). IMAGE_COMMIT lets copy-database.sh
+# tell a new image from a restart, so FORCE_DATABASE_COPY copies once per image. Not
+# SOURCE_COMMIT: Coolify sets that to HEAD on the container, overriding the image's.
 ENV NODE_ENV=production \
     NEXT_TELEMETRY_DISABLED=1 \
     PORT=3000 \
     HOSTNAME="0.0.0.0" \
     BUILD_ENV=${BUILD_ENV} \
     BUILT_WITHOUT_DATABASE=true \
-    SOURCE_COMMIT=${SOURCE_COMMIT}
+    IMAGE_COMMIT=${SOURCE_COMMIT}
 
 # The PostgreSQL client for copy-database.sh, now run here rather than while building.
 # Pinned to the server's major version, as in PragmaticPapers.Dockerfile's builder:

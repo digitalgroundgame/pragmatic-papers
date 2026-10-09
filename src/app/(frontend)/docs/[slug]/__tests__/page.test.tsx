@@ -81,6 +81,8 @@ describe("DocPage", () => {
     expect(trail).toHaveClass("max-w-5xl")
     expect(trail).toHaveTextContent("Docs")
     expect(screen.getByRole("button", { name: /share/i })).toBeInTheDocument()
+    // Signed off with the squiggle, as articles are.
+    expect(document.querySelector("[class*='squiggle.svg']")).toBeInTheDocument()
     expect(screen.queryByTestId("live-preview")).not.toBeInTheDocument()
   })
 

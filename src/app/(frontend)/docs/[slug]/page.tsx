@@ -1,3 +1,4 @@
+import { EndRule } from "@/blocks/SquiggleRule/EndRule"
 import { ArticleSidebar } from "@/components/ArticleSidebar"
 import { Breadcrumbs, type Crumb } from "@/components/Breadcrumbs"
 import { JsonLd } from "@/components/JsonLd"
@@ -101,6 +102,7 @@ export default async function DocPage({ params }: Args): Promise<React.ReactNode
             )}
             <div className="mx-auto max-w-2xl">
               <RichText data={content} enableGutter={false} className="drop-cap" />
+              <EndRule content={content} />
             </div>
           </div>
         </TableOfContentsProvider>

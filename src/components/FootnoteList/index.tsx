@@ -1,4 +1,4 @@
-import { CMSLink } from "@/components/Link/CMSLink2"
+import { CMSLink } from "@/components/Link"
 import type { FootnotesField } from "@/payload-types"
 import { getLinkFieldUrl } from "@/utilities/getLinkFieldUrl"
 import { getClientSideURL } from "@/utilities/getURL"

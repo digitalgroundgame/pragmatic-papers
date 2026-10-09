@@ -11,25 +11,22 @@ export const FOUR_AUTHOR_SLUG = "committee-work-notes-from-a-crowded-byline"
 
 /**
  * Length of the silent WAV the seed attaches to that article as narration. The
- * player prints it ("Listen · 0:03"), so a baseline depends on it.
+ * player prints it ("Listen · 0:03").
  */
 export const NARRATION_SECONDS = 3
 
 /**
  * The revision stamp the seed pins onto every article and volume it creates.
  * Payload stamps `updatedAt` with the current time on every non-draft save,
- * which would otherwise put the day the seed ran into each hero's dateline —
- * and into every baseline that frames one. Pinning only the narrated article
- * left the share-button baselines reading the seed date, so they rotted the
- * first time a run rebuilt the page instead of serving a cached prerender.
+ * which would otherwise put the day the seed ran into each hero's dateline.
  */
 export const SEEDED_UPDATED_AT = "2026-06-11T16:30:00.000Z"
 
 /**
  * What a hero prints for its two instants, in the publication's timezone
- * (America/New_York). Asserted wherever a spec frames a dateline: if either
- * date ever goes back to tracking the clock, the spec fails loudly instead of
- * the baseline quietly rotting.
+ * (America/New_York). Asserted by `expectPinnedDateline` (tests/e2e/helpers.ts):
+ * if either date ever goes back to tracking the clock, the spec fails, naming
+ * the cause.
  */
 export const SEEDED_DATELINE = "June 3, 2026"
 export const SEEDED_REVISION = "Updated June 11, 2026"
@@ -44,6 +41,20 @@ export const VOLUME_SLUG = "1"
 /** The author of every seeded article, and the one whose author card is fully populated. */
 export const WRITER_NAME = "Teagan Wordsmith"
 export const WRITER_SLUG = "e2e-writer"
+
+/**
+ * The writer's social links: one per platform, so the author card exercises
+ * every branded icon variant (see AuthorLinks / detectPlatform). Capped at the
+ * socials field's maxRows: 6.
+ */
+export const WRITER_SOCIALS = [
+  { label: "X", url: "https://x.com/e2ewriter" },
+  { label: "YouTube", url: "https://youtube.com/@e2ewriter" },
+  { label: "Twitch", url: "https://twitch.tv/e2ewriter" },
+  { label: "Instagram", url: "https://instagram.com/e2ewriter" },
+  { label: "Discord", url: "https://discord.gg/e2ewriter" },
+  { label: "GitHub", url: "https://github.com/e2ewriter" },
+]
 
 /**
  * The topic the seeded feature articles (footnotes, code blocks, media, social

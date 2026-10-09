@@ -1,6 +1,6 @@
 # Retires a closed or merged PR's Storybook: marks its "Storybook Preview"
 # Deployments inactive, which CI's "Deploy Storybook" job records
-# (scripts/storybook-pr.ts), as preview-deployment.yml does for the site's
+# (scripts/storybook-pr.ts), as preview-image.yml does for the site's
 # Preview, then deletes its `pr-<number>` Worker Preview on Cloudflare.
 name: Storybook preview closed
 
@@ -27,7 +27,9 @@ jobs:
     steps:
       - uses: actions/checkout@v7
         with:
-          sparse-checkout: scripts/storybook-pr.ts
+          sparse-checkout: |
+            scripts/storybook-pr.ts
+            scripts/pr-description.ts
           sparse-checkout-cone-mode: false
 
       # Node 24 runs the TypeScript script directly; no install needed.

@@ -17,7 +17,7 @@ truth for agents. When the two disagree, say so rather than picking one.
 | Releasing, hotfixes                          | `Creating-Releases.md`, `Creating-Hotfix-Releases.md`                                                  |
 | Opening and reviewing PRs, the Claude review | `Creating-Pull-Requests.md`, `Pull-Request-Checklist.md`, `Claude-Code-Review.md`, `PR-Screenshots.md` |
 | Getting started, contributing, story points  | `Getting-Started.md`, `How-to-Contribute.md`, `Story-Points.md`                                        |
-| Seeding, visual regression tests             | `Seeding-the-Database.md`, `E2E-Visual-Regression-Testing.md`                                          |
+| Seeding the database                         | `Seeding-the-Database.md`                                                                              |
 | Common questions                             | `Frequently-Asked-Questions.md`                                                                        |
 
 Pages change; list the directory rather than trusting this table.

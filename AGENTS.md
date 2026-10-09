@@ -31,7 +31,7 @@ This file provides guidance to tools like Claude Code (claude.ai/code) when work
 - `pnpm test:storybook` — run every Storybook story in headless Chromium: its `play` function, then an axe check (see [Storybook](#storybook))
 - `pnpm storybook` — Storybook dev server on port 6006; `pnpm storybook:build` builds it into `storybook-static/`
 - `pnpm test:integration` — run integration tests against a throwaway Postgres in Docker (see [Test databases](#test-databases))
-- `pnpm test:e2e` — run Playwright E2E tests against a throwaway Postgres in Docker (see [Test databases](#test-databases)). Screenshot comparisons are skipped unless `CI` is set; generate visual baselines with `pnpm test:e2e:update-snapshots` (Dockerized; matches CI pixel-for-pixel on x86_64 hosts — see `tests/e2e/README.md` for the full lifecycle) and commit them with the PR — never generate/commit baselines from a bare local machine
+- `pnpm test:e2e` — run Playwright E2E tests against a throwaway Postgres in Docker (see [Test databases](#test-databases)). Functional assertions only; visual changes are reviewed in Storybook and the PR's site preview (see `tests/e2e/README.md`)
 - `pnpm test:unit:coverage` — run unit tests with V8 coverage report (what CI uses; outputs `coverage/coverage-summary.json` and `coverage/coverage-final.json`)
 - `pnpm test:coverage` — run all tests with V8 coverage report (full picture for local inspection)
 - `pnpm test:unit -u` — regenerate snapshot baselines after intentional UI changes
@@ -54,9 +54,9 @@ processes they start.
   so they skip `payload migrate` until a migration changes; a miss migrates once and commits
   a new one. The pending-migrations check always replays from scratch, and CI (`CI` set)
   never uses a snapshot. `docker image rm` the tags to force a fresh migrate.
-- `TEST_DATABASE_URI` points them at an existing database instead (CI's E2E jobs, and
-  `pnpm test:e2e:update-snapshots`, whose containers can't start their own). It is refused if
-  it names the same database as `DATABASE_URI` in `.env`.
+- `TEST_DATABASE_URI` points them at an existing database instead (CI's E2E jobs, whose
+  containers can't start their own). It is refused if it names the same database as
+  `DATABASE_URI` in `.env`.
 
 ### Build & Payload
 
@@ -73,7 +73,7 @@ processes they start.
 - **`payload.config.ts`** — Central Payload CMS configuration
 - **`collections/`** — Payload collections: Articles, Pages, Users, Volumes, Media, Categories, Webhooks
 - **`blocks/`** — Content blocks used in Lexical rich text: Banner, Code, Content, Footnote, Math, MediaBlock, SocialEmbed, etc.
-- **`fields/`** — Custom Payload fields: colorPicker, menu, numberSlug, link, linkGroup, footnotes, button, defaultLexical. New fields should include `Field` in the name (e.g. `buttonField`, `linkGroupField`).
+- **`fields/`** — Custom Payload fields: colorPicker, menu, numberSlug, link, footnotes, button, defaultLexical. New fields should include `Field` in the name (e.g. `buttonField`, `menuField`).
 - **`access/`** — Access control: `roles.ts` (e.g., `admin`, `editor`, `writer`) and `policies.ts` (e.g., `isSelfOrAdmin`, `isCreatedByOrEditor`, `isPublishedOrStaff`, `isDraftOrEditor`)
 - **`app/(frontend)/`** — Public-facing Next.js pages using App Router
 - **`app/(payload)/`** — Payload admin panel routes
@@ -237,6 +237,7 @@ too.
 - **Pre-push hooks**: Husky runs full checks on all files (`lint:fix`, `format:fix`, `check-types`) before pushing
 - **Pre-commit hooks**: lint-staged runs ESLint + Prettier on staged files only (fast, ~1-2 seconds)
 - **Colocation**: Prefer colocating logic near where it's used. `src/utilities/` is only for genuinely reusable helpers shared across multiple features (e.g. `generateMeta`, `getURL`, `toRoman`, `cn`). Don't put single-use logic there.
+- **Commit trailers**: don't add a `Claude-Session:` trailer (or any other link to an agent session) to commit messages. A `Co-Authored-By:` trailer is fine.
 - **Issue and PR numbers in comments**: comments and docs describe the code as it is now; why and when it changed is what `git log` and `git blame` are for. Don't write "added in #970", "before #672" or "see #883" — the sentence should stand on its own. Two exceptions, each a pointer with an exit: an upstream bug a workaround depends on (full URL; remove the workaround when it's fixed), and an **open** issue tracking a known gap or a skipped check (say what to remove when it closes, as `knownContrastIssue` does for #998). When that issue closes, delete the comment and what it guards; never append to it.
 
 ### Integrations
@@ -326,28 +327,43 @@ function, and fails on any axe violation.
   `dev` at `pragmatic-papers-storybook.digital-ground-game.workers.dev`, and each PR at a
   `pr-<number>-` preview URL, which `scripts/storybook-pr.ts` records as a "Storybook Preview"
   GitHub Deployment (in the PR's deployments, beside the site's Preview). When the PR changes
-  components, it also links each one at the top of the PR description (under any showcase links),
+  components, it also links each one at the top of the PR description (under the showcase links and the links line),
   matched through the build's `index.json` by story file, `component` file or folder. `/storybook` on staging and on a
   PR's site preview redirects to its Storybook (404 on production). Needs the `CLOUDFLARE_API_TOKEN`
   (Workers Scripts: Edit) and `CLOUDFLARE_ACCOUNT_ID` repo secrets; without them it skips.
 
+### PR description links
+
+CI keeps the top of a PR's description up to date, under any `Closes #N` lines:
+the showcase links (`scripts/showcase-pr.ts`), then one line of links, then the
+Storybook links (`scripts/storybook-pr.ts`). The line holds the live preview,
+and the PR analytics comment ("Coverage"); each job sets its own link with `setPrLink`, and the Preview link is
+left out while showcase links point at the same site. Each block sits between
+`<!-- name -->` markers, and every job edits the description through
+`scripts/pr-description.ts`: `withBlock` places a block, and `editPrBody`
+reads the description back after writing and writes again when another job's
+edit replaced it (GitHub has no conditional write). A script run under plain
+Node imports it as `./pr-description.ts`, and its workflow's sparse checkout
+lists it. `.github/pull_request_template.md` lists the blocks above Context,
+Screenshots and Test Plan.
+
 ### Page speed
 
-Two jobs in `playwright.yml` measure the image the PR deploys, and each compares it
-with the last run on `dev` in a dropdown under the coverage report, in the one
+The "Page speed" job in `playwright.yml` measures the image the PR deploys two ways,
+and each compares it with the last run on `dev` in a dropdown under the coverage report, in the one
 PR analytics comment CI keeps on a PR. A dropdown starts open when it flags
 something. A new report joins that comment by registering a section in
 `PR_REPORT_SECTIONS` (`scripts/pr-report.ts`) and posting it with
 `postPrReportSection()`, rather than posting a comment of its own:
 
-- **Bundle size** (`scripts/bundle-size.ts`) reads the image's build manifests and
+- **Bundle size** (`scripts/bundle-size.ts`, the job's first part) reads the image's build manifests and
   adds up the gzipped JavaScript and CSS each public page loads before it's
   interactive (Next 16 no longer prints "First Load JS"). Pages are expected to
   grow over time, so there are no fixed budgets: a route whose JavaScript grew by
   more than 10 kB against dev is flagged in the comment and with a warning on the
   PR's checks. It **only warns**; `pnpm analyze` shows which import brought the
   growth in.
-- **Lighthouse** (`scripts/lighthouse.ts`) seeds the E2E database, starts the
+- **Lighthouse** (`scripts/lighthouse.ts`, run even when bundle size fails) seeds the E2E database, starts the
   PR's image and audits each page 5 times, comparing with the results the last
   push to `dev` uploaded. The CPU slowdown is calibrated to the runner's benchmark
   score, and Chrome can't reach any host but localhost. Dev's results come from
@@ -355,13 +371,6 @@ something. A new report joins that comment by registering a section in
   every dev run by a wide margin (`THRESHOLDS`). It **only warns**: the HTML
   reports are in the `lighthouse-results` artifact. A page added to the seed can
   be audited by adding it to `PAGES`.
-
-### Visual regression (screenshot) tests
-
-Adding, changing, or debugging a Playwright `toHaveScreenshot` test or a flaky
-visual diff? Use the **`e2e-visual-tests`** skill
-(`.claude/skills/e2e-visual-tests/SKILL.md`) for the checklist; full lifecycle
-in `tests/e2e/README.md`.
 
 ### Interactive maps
 

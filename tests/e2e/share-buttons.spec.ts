@@ -1,292 +1,39 @@
 import { expect, test } from "@playwright/test"
 
-import {
-  expectPinnedDateline,
-  expectStableScreenshot,
-  gotoFirstArticle,
-  gotoFirstVolume,
-  viewportRatioClip,
-  waitForStableBox,
-  waitForStableRender,
-} from "./helpers"
+import { SHOWCASE_SLUG, VOLUME_SLUG } from "../../scripts/seed-e2e.constants"
 
-test.describe("ShareButtons — article page", () => {
-  test("share button is visible", async ({ page }) => {
-    const href = await gotoFirstArticle(page)
-    test.skip(!href, "No articles found in the database")
-    await expect(page.getByRole("button", { name: "Share" })).toBeVisible()
-  })
+// What each share link points at, the read-only field and the "Copied!" reset
+// are covered by ShareButtons' unit test and its Open story. These check that
+// a real page hands the popover its own absolute URL, and that Copy link puts
+// it on the real clipboard.
 
-  test("popover opens on click and shows URL input", async ({ page }) => {
-    const href = await gotoFirstArticle(page)
-    test.skip(!href, "No articles found in the database")
+test("an article's share popover copies the article's URL", async ({
+  page,
+  context,
+  baseURL,
+  browserName,
+}) => {
+  test.skip(browserName !== "chromium", "clipboard permissions are granted on Chromium only")
+  await context.grantPermissions(["clipboard-read", "clipboard-write"], { origin: baseURL })
+  await page.goto(`/articles/${SHOWCASE_SLUG}`)
 
-    await page.getByRole("button", { name: "Share" }).click()
-    const dialog = page.getByRole("dialog")
-    await expect(dialog).toBeVisible()
+  await page.getByRole("button", { name: "Share" }).click()
+  const dialog = page.getByRole("dialog")
+  const input = dialog.getByRole("textbox")
+  await expect(input).toHaveValue(new RegExp(`^https?://[^/]+/articles/${SHOWCASE_SLUG}$`))
+  const url = await input.inputValue()
 
-    const input = dialog.getByRole("textbox")
-    await expect(input).toBeVisible()
-    const value = await input.inputValue()
-    expect(value).toContain("/articles/")
-    expect(value).toMatch(/^https?:\/\//)
-  })
-
-  test("URL input is read-only", async ({ page }) => {
-    const href = await gotoFirstArticle(page)
-    test.skip(!href, "No articles found in the database")
-
-    await page.getByRole("button", { name: "Share" }).click()
-    const input = page.getByRole("dialog").getByRole("textbox")
-    await expect(input).toBeVisible()
-    expect(await input.getAttribute("readonly")).not.toBeNull()
-  })
-
-  test("copy button writes URL to clipboard", async ({ page, context, browserName }) => {
-    test.skip(browserName !== "chromium", "Clipboard permissions only supported in Chromium")
-    await context.grantPermissions(["clipboard-read", "clipboard-write"])
-    const href = await gotoFirstArticle(page)
-    test.skip(!href, "No articles found in the database")
-
-    await page.getByRole("button", { name: "Share" }).click()
-    const expectedUrl = await page.getByRole("dialog").getByRole("textbox").inputValue()
-
-    await page.getByRole("button", { name: "Copy link" }).click()
-    await expect(page.getByRole("button", { name: "Copied!" })).toBeVisible()
-
-    const clipped = await page.evaluate(() => navigator.clipboard.readText())
-    expect(clipped).toBe(expectedUrl)
-  })
-
-  test("copy button label resets after 2 seconds", async ({ page, context, browserName }) => {
-    test.skip(browserName !== "chromium", "Clipboard permissions only supported in Chromium")
-    await context.grantPermissions(["clipboard-read", "clipboard-write"])
-    const href = await gotoFirstArticle(page)
-    test.skip(!href, "No articles found in the database")
-
-    await page.getByRole("button", { name: "Share" }).click()
-    await page.getByRole("button", { name: "Copy link" }).click()
-    await expect(page.getByRole("button", { name: "Copied!" })).toBeVisible()
-    await expect(page.getByRole("button", { name: "Copy link" })).toBeVisible({ timeout: 4000 })
-  })
-
-  test("share links have correct hrefs", async ({ page }) => {
-    const href = await gotoFirstArticle(page)
-    test.skip(!href, "No articles found in the database")
-
-    await page.getByRole("button", { name: "Share" }).click()
-    const dialog = page.getByRole("dialog")
-
-    // Share links render as <a target="_blank"> via LinkButton — check href attributes.
-    const cases = [
-      { label: "Share on X", fragment: "x.com/intent/tweet" },
-      { label: "Share on Bluesky", fragment: "bsky.app/intent/compose" },
-      { label: "Share on Facebook", fragment: "facebook.com/sharer" },
-      { label: "Share on Threads", fragment: "threads.net/intent/post" },
-      { label: "Share on Reddit", fragment: "reddit.com/submit" },
-      { label: "Share on LinkedIn", fragment: "linkedin.com/shareArticle" },
-      { label: "Share via Email", fragment: "mailto:" },
-    ]
-
-    for (const { label, fragment } of cases) {
-      const link = dialog.getByRole("link", { name: label })
-      await expect(link).toBeVisible()
-      const linkHref = await link.getAttribute("href")
-      expect(linkHref).toContain(fragment)
-      expect(await link.getAttribute("target")).toBe("_blank")
-    }
-  })
-
-  const SOCIAL_LINKS = [
-    { label: "Share on X", fragment: "x.com/intent/tweet" },
-    { label: "Share on Bluesky", fragment: "bsky.app/intent/compose" },
-    { label: "Share on Facebook", fragment: "facebook.com/sharer" },
-    { label: "Share on Threads", fragment: "threads.net/intent/post" },
-    { label: "Share on Reddit", fragment: "reddit.com/submit" },
-    { label: "Share on LinkedIn", fragment: "linkedin.com/shareArticle" },
-  ]
-
-  for (const { label, fragment } of SOCIAL_LINKS) {
-    test(`${label} opens in new tab`, async ({ page, context, isMobile }) => {
-      test.skip(isMobile, "New-tab behaviour is tested on desktop browsers only")
-      const href = await gotoFirstArticle(page)
-      test.skip(!href, "No articles found in the database")
-
-      await page.getByRole("button", { name: "Share" }).click()
-      const link = page.getByRole("dialog").getByRole("link", { name: label })
-
-      // Check the share URL before clicking — third-party platforms may redirect
-      // unauthenticated users so newPage.url() after load would be a login page.
-      expect(await link.getAttribute("href")).toContain(fragment)
-
-      const [newPage] = await Promise.all([context.waitForEvent("page"), link.click()])
-      await newPage.close()
-    })
-  }
+  await dialog.getByRole("button", { name: "Copy link" }).click()
+  await expect(dialog.getByRole("button", { name: "Copied!" })).toBeVisible()
+  expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(url)
 })
 
-// Every shot below frames the article hero, dateline included, so each one
-// asserts the seed's pinned stamps first — see expectPinnedDateline for why a
-// clock-tracking date has to fail by name rather than as a pixel diff.
-test.describe("ShareButtons — screenshots", () => {
-  test("article share button and popover close-up @visual", async ({ page }, testInfo) => {
-    test.skip(testInfo.project.name !== "chromium", "visual baseline captured on chromium only")
-    const href = await gotoFirstArticle(page)
-    test.skip(!href, "No articles found in the database")
+test("a volume's share popover offers the volume's URL", async ({ page }) => {
+  await page.goto(`/volumes/${VOLUME_SLUG}`)
 
-    await expectPinnedDateline(page)
+  await page.getByRole("button", { name: "Share" }).click()
 
-    const share = page.getByRole("button", { name: "Share" })
-    await share.waitFor({ state: "visible" })
-    await share.scrollIntoViewIfNeeded()
-    await share.click()
-
-    const popover = page.locator('[data-slot="popover-content"]')
-    await expect(popover).toBeVisible()
-
-    const viewport = page.viewportSize() ?? { width: 1280, height: 720 }
-
-    // The clip captures the popover *with* its surrounding hero context, so its
-    // position must be identical every run. The flake came from taking the
-    // screenshot mid-reflow: the hero image resolves its intrinsic height a
-    // frame or two after waitForStableRender's decode wait, nudging the
-    // popover's Y by ~1px and ghosting every glyph/icon (measured 7-23% diff).
-    // waitForStableBox blocks until the layout stops moving, so box.y — and
-    // thus the computed clip — is deterministic.
-    const box = await waitForStableBox(popover)
-
-    // Pin the popover to a fixed viewport Y so the clip frames the same slice
-    // of hero content each run.
-    const targetY = Math.round(viewport.height * 0.45)
-    await page.evaluate((delta) => window.scrollBy(0, delta), Math.round(box.y - targetY))
-
-    await waitForStableRender(page)
-    const stableBox = await waitForStableBox(popover)
-    await expectStableScreenshot(page, "article-share-popover-close-up.png", {
-      clip: viewportRatioClip(stableBox, viewport, { gridSnap: 16 }),
-    })
-  })
-
-  test("article share trigger @visual", async ({ page }, testInfo) => {
-    test.skip(testInfo.project.name !== "chromium", "visual baseline captured on chromium only")
-    const href = await gotoFirstArticle(page)
-    test.skip(!href, "No articles found in the database")
-
-    await expectPinnedDateline(page)
-
-    const share = page.getByRole("button", { name: "Share" })
-    await share.waitFor({ state: "visible" })
-    await share.scrollIntoViewIfNeeded()
-    await expectStableScreenshot(page, "article-share-trigger.png", { fullPage: false })
-  })
-
-  test("article share popover open @visual", async ({ page }, testInfo) => {
-    test.skip(testInfo.project.name !== "chromium", "visual baseline captured on chromium only")
-    const href = await gotoFirstArticle(page)
-    test.skip(!href, "No articles found in the database")
-
-    await expectPinnedDateline(page)
-
-    const share = page.getByRole("button", { name: "Share" })
-    await share.waitFor({ state: "visible" })
-    await share.scrollIntoViewIfNeeded()
-    await share.click()
-    await expect(page.locator('[data-slot="popover-content"]')).toBeVisible()
-    await expectStableScreenshot(page, "article-share-popover-open.png", { fullPage: false })
-  })
-
-  test("volume share popover open @visual", async ({ page }, testInfo) => {
-    test.skip(testInfo.project.name !== "chromium", "visual baseline captured on chromium only")
-    const href = await gotoFirstVolume(page)
-    test.skip(!href, "No volumes found in the database")
-
-    const share = page.getByRole("button", { name: "Share" })
-    await share.waitFor({ state: "visible" })
-    await share.scrollIntoViewIfNeeded()
-    await share.click()
-    await expect(page.locator('[data-slot="popover-content"]')).toBeVisible()
-    await expectStableScreenshot(page, "volume-share-popover-open.png", { fullPage: false })
-  })
-})
-
-test.describe("ShareButtons — mobile screenshots (iPhone SE)", () => {
-  // iPhone SE (2nd/3rd gen) CSS viewport. Baselines are captured on chromium
-  // only (see other screenshot tests in this file) — this overrides the
-  // viewport size rather than switching to a WebKit device profile, so the
-  // rendering engine (and thus font/anti-aliasing) stays consistent with
-  // every other baseline in this suite.
-  test.use({ viewport: { width: 375, height: 667 } })
-
-  test("article share trigger @visual", async ({ page }, testInfo) => {
-    test.skip(testInfo.project.name !== "chromium", "visual baseline captured on chromium only")
-    const href = await gotoFirstArticle(page)
-    test.skip(!href, "No articles found in the database")
-
-    await expectPinnedDateline(page)
-
-    const share = page.getByRole("button", { name: "Share" })
-    await share.waitFor({ state: "visible" })
-    await share.scrollIntoViewIfNeeded()
-    await expectStableScreenshot(page, "mobile-article-share-trigger.png", { fullPage: false })
-  })
-
-  test("article share popover open @visual", async ({ page }, testInfo) => {
-    test.skip(testInfo.project.name !== "chromium", "visual baseline captured on chromium only")
-    const href = await gotoFirstArticle(page)
-    test.skip(!href, "No articles found in the database")
-
-    await expectPinnedDateline(page)
-
-    const share = page.getByRole("button", { name: "Share" })
-    await share.waitFor({ state: "visible" })
-    await share.scrollIntoViewIfNeeded()
-    await share.click()
-    await expect(page.locator('[data-slot="popover-content"]')).toBeVisible()
-    await expectStableScreenshot(page, "mobile-article-share-popover-open.png", {
-      fullPage: false,
-    })
-  })
-
-  test("volume share popover open @visual", async ({ page }, testInfo) => {
-    test.skip(testInfo.project.name !== "chromium", "visual baseline captured on chromium only")
-    const href = await gotoFirstVolume(page)
-    test.skip(!href, "No volumes found in the database")
-
-    const share = page.getByRole("button", { name: "Share" })
-    await share.waitFor({ state: "visible" })
-    await share.scrollIntoViewIfNeeded()
-    await share.click()
-    await expect(page.locator('[data-slot="popover-content"]')).toBeVisible()
-    await expectStableScreenshot(page, "mobile-volume-share-popover-open.png", {
-      fullPage: false,
-    })
-  })
-})
-
-test.describe("ShareButtons — volume page", () => {
-  test("share button is visible and aligned to the right", async ({ page }) => {
-    const href = await gotoFirstVolume(page)
-    test.skip(!href, "No volumes found in the database")
-
-    const shareButton = page.getByRole("button", { name: "Share" })
-    await expect(shareButton).toBeVisible()
-
-    // The button should be to the right of the date (ml-auto). Verify it sits
-    // at least halfway across the article container.
-    const box = await shareButton.boundingBox()
-    const viewportWidth = page.viewportSize()?.width ?? 1280
-    expect(box?.x ?? 0).toBeGreaterThan(viewportWidth / 2)
-  })
-
-  test("popover opens and shows a volume URL", async ({ page }) => {
-    const href = await gotoFirstVolume(page)
-    test.skip(!href, "No volumes found in the database")
-
-    await page.getByRole("button", { name: "Share" }).click()
-    const input = page.getByRole("dialog").getByRole("textbox")
-    await expect(input).toBeVisible()
-    const value = await input.inputValue()
-    expect(value).toContain("/volumes/")
-    expect(value).toMatch(/^https?:\/\//)
-  })
+  await expect(page.getByRole("dialog").getByRole("textbox")).toHaveValue(
+    new RegExp(`^https?://[^/]+/volumes/${VOLUME_SLUG}$`),
+  )
 })

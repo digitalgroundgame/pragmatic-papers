@@ -50,7 +50,9 @@ import * as migration_20260929_170519_add_table_of_contents_experiment from "./2
 import * as migration_20261006_025343_add_storage_object_key from "./20261006_025343_add_storage_object_key"
 import * as migration_20261007_150906_add_user_public_profile from "./20261007_150906_add_user_public_profile"
 import * as migration_20261008_005532_add_media_unsplash_id from "./20261008_005532_add_media_unsplash_id"
-import * as migration_20261009_024337_add_docs from "./20261009_024337_add_docs"
+import * as migration_20261009_022245_links_onto_link2 from "./20261009_022245_links_onto_link2"
+import * as migration_20261009_032243_hero_links_default_button from "./20261009_032243_hero_links_default_button"
+import * as migration_20261009_035724_add_docs from "./20261009_035724_add_docs"
 
 export const migrations = [
   {
@@ -314,8 +316,18 @@ export const migrations = [
     name: "20261008_005532_add_media_unsplash_id",
   },
   {
-    up: migration_20261009_024337_add_docs.up,
-    down: migration_20261009_024337_add_docs.down,
-    name: "20261009_024337_add_docs",
+    up: migration_20261009_022245_links_onto_link2.up,
+    down: migration_20261009_022245_links_onto_link2.down,
+    name: "20261009_022245_links_onto_link2",
+  },
+  {
+    up: migration_20261009_032243_hero_links_default_button.up,
+    down: migration_20261009_032243_hero_links_default_button.down,
+    name: "20261009_032243_hero_links_default_button",
+  },
+  {
+    up: migration_20261009_035724_add_docs.up,
+    down: migration_20261009_035724_add_docs.down,
+    name: "20261009_035724_add_docs",
   },
 ]

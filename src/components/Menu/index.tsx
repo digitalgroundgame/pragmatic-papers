@@ -1,4 +1,4 @@
-import { CMSLink } from "@/components/Link/CMSLink2"
+import { CMSLink } from "@/components/Link"
 import type { MenuField } from "@/payload-types"
 import { getLinkFieldUrl, linksToUnpublished } from "@/utilities/getLinkFieldUrl"
 import { cn } from "@/utilities/utils"

@@ -34,7 +34,7 @@ describe("FeedsPage", () => {
     const sitemaps = within(section("Sitemaps"))
     expect(sitemaps.getByRole("link", { name: "Sitemap index" })).toHaveAttribute(
       "href",
-      "/sitemap.xml",
+      "/sitemap_index.xml",
     )
     for (const sitemap of SITEMAPS) {
       expect(sitemaps.getByRole("link", { name: sitemap.title })).toHaveAttribute(

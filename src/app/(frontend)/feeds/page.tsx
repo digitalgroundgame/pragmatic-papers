@@ -76,7 +76,7 @@ export default function FeedsPage(): React.ReactNode {
           <p className="text-muted-foreground text-sm">
             For search engines: the sitemap index lists all the others.
           </p>
-          <LinkList links={[{ path: "/sitemap.xml", title: "Sitemap index" }, ...SITEMAPS]} />
+          <LinkList links={[{ path: "/sitemap_index.xml", title: "Sitemap index" }, ...SITEMAPS]} />
         </section>
       </article>
     </>

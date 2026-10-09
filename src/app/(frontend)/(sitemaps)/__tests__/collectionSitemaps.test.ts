@@ -7,7 +7,7 @@ vi.mock("@/utilities/getPayloadConfig", () => ({ getPayloadConfig: vi.fn(async (
 // Straight through, so each sitemap reads the `find` fixture it was given.
 vi.mock("next/cache", () => ({ unstable_cache: (fn: () => unknown) => fn }))
 
-const { GET: pagesRoute } = await import("../pages-sitemap.xml/route")
+const { default: pagesSitemap } = await import("../../sitemap")
 const { default: articlesSitemap } = await import("../../articles/sitemap")
 const { GET: newsSitemap } = await import("../../articles/news-sitemap.xml/route")
 const { default: volumesSitemap } = await import("../../volumes/sitemap")
@@ -30,11 +30,7 @@ const routes = [
   {
     name: "pages",
     collection: "pages",
-    list: async () => {
-      const xml = await renderXml(pagesRoute)
-      const dates = [...xml.matchAll(/<lastmod>(.*?)<\/lastmod>/g)].map(([, date]) => date)
-      return locs(xml).map((loc, i) => [loc, dates[i]])
-    },
+    list: async () => (await pagesSitemap()).map((e) => [e.url, e.lastModified]),
   },
   {
     name: "articles",
@@ -57,21 +53,21 @@ afterEach(() => {
   vi.unstubAllEnvs()
 })
 
-describe("/pages-sitemap.xml", () => {
+describe("/sitemap.xml (pages)", () => {
   it("puts the home page at the site root and every other page at its slug", async () => {
     withDocs([
       { slug: "home", updatedAt: UPDATED_AT },
       { slug: "about", updatedAt: UPDATED_AT },
     ])
 
-    expect(locs(await renderXml(pagesRoute))).toEqual([SITE_URL, `${SITE_URL}/about`])
+    expect((await pagesSitemap()).map((e) => e.url)).toEqual([SITE_URL, `${SITE_URL}/about`])
   })
 
   it("leaves no trailing slash on the root when SERVER_URL has one", async () => {
     vi.stubEnv("SERVER_URL", `${SITE_URL}/`)
     withDocs([{ slug: "home", updatedAt: UPDATED_AT }])
 
-    expect(locs(await renderXml(pagesRoute))).toEqual([SITE_URL])
+    expect((await pagesSitemap()).map((e) => e.url)).toEqual([SITE_URL])
   })
 })
 

@@ -195,20 +195,18 @@ confidence:
 
 Then write the summary, which is what most readers will read:
 
-1. The verdict, first and on its own, as a GitHub alert so it stands out:
+1. A `## Code Review` heading, then the verdict on its own line, led by a
+   colored circle and in bold:
 
    ```md
-   > [!TIP]
-   > **Pass:** no blockers.
+   ## Code Review
+
+   🟢 **Pass:** no blockers.
    ```
 
-   ```md
-   > [!CAUTION]
-   > **Blocker:** <the blocking finding, in one line>.
-   ```
-
-   Use `[!WARNING]` with **Pass, with should-fix findings** when there are
-   `should-fix` findings but no blocker.
+   Use 🟡 **Pass, with should-fix findings.** when there are `should-fix`
+   findings but no blocker, and 🔴 **Blocker:** followed by the blocking
+   finding in one line when there is one.
 
 2. At most 6 sentences: what this PR changes at runtime and which surfaces
    it touches. Don't name this prompt's steps or headings.

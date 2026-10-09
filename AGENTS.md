@@ -61,6 +61,7 @@ processes they start.
 ### Build & Payload
 
 - `pnpm build` — build the application
+- `pnpm build:worker` / `pnpm start:worker` — build the public site as a Cloudflare Worker with OpenNext (webpack, without the admin panel) and run it in `wrangler dev`. Everything Worker-specific is behind `OPENNEXT_BUILD=true`, so `pnpm build` is unchanged; see `src/cloudflare/README.md`
 - `pnpm payload generate:types` — regenerate Payload TypeScript types
 - `pnpm payload generate:importmap` — regenerate Payload import map
 - `pnpm payload migrate` — run database migrations
@@ -137,8 +138,10 @@ after its own `revalidatePath` / `revalidateTag`, and only when
 `context.disableRevalidate` is unset. It purges this deployment's hostname
 (production, staging and previews share a zone), batches a burst of saves into
 one request, returns at once, and logs and skips when the `cloudflareCache`
-connection isn't configured. A new hook for content readers see should call it
-too.
+connection isn't configured. When the `cloudflareWorkerCache` connection is
+configured (`WORKER_URL`, on the Coolify app a Cloudflare Worker reads from), the
+same flush first clears that Worker's cache through its `/next/revalidate-all`.
+A new hook for content readers see should call it too.
 
 ### Payload Plugins
 
@@ -359,6 +362,11 @@ The site is hosted by Coolify in three applications: **staging** (from `dev`) an
 `dockerfiles/PragmaticPapers.Dockerfile`, and **preview** (one per PR), which runs the
 image GitHub Actions builds from `dockerfiles/PragmaticPapers.ci.Dockerfile`. `dockerfiles/README.md` records how _our_
 applications are set up and what's been verified about them; read it first.
+
+Staging's public site also runs as a Cloudflare Worker on workers.dev (OpenNext, reading
+staging's database through Hyperdrive), deployed on every push to `dev` by
+`.github/workflows/worker.yml`; setup and what's left before production are in
+`src/cloudflare/README.md`.
 
 The zone's Cloudflare rules (Cache Rules today) are version-controlled in
 `cloudflare/rulesets/` and applied on release by `.github/workflows/cloudflare-rules.yml`;

@@ -37,6 +37,8 @@ import type {
   TimelineBlock as TimelineBlockProps,
 } from "@/payload-types"
 import { internalDocToHref } from "./internalDocToHref"
+import { HoverPrefetchLink } from "@/components/Link/HoverPrefetchLink"
+import { sanitizeUrl } from "payload/shared"
 import { getTurnstileSiteKey } from "@/utilities/turnstile"
 import { cn } from "@/utilities/utils"
 import type {
@@ -73,6 +75,21 @@ function createJsxConverters(parentDoc?: ParentDocContext): JSXConvertersFunctio
   return ({ defaultConverters }) => ({
     ...defaultConverters,
     ...LinkJSXConverter({ internalDocToHref }),
+    // Payload's converter renders a plain <a>; links to this site navigate client-side.
+    link: ({ node, nodesToJSX }) => {
+      const href =
+        node.fields.linkType === "internal"
+          ? internalDocToHref({ linkNode: node })
+          : sanitizeUrl(node.fields.url ?? "")
+      return (
+        <HoverPrefetchLink
+          href={href}
+          {...(node.fields.newTab ? { rel: "noopener noreferrer", target: "_blank" } : {})}
+        >
+          {nodesToJSX({ nodes: node.children })}
+        </HoverPrefetchLink>
+      )
+    },
     ...tableOfContentsConverter,
     blocks: withTableOfContentsAnchors({
       banner: ({ node }) => <BannerBlock className="col-start-2 mb-4" {...node.fields} />,

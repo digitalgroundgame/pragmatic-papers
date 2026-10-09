@@ -42,7 +42,10 @@ const getInteractivesSitemap = unstable_cache(
   { tags: ["interactives-sitemap"] },
 )
 
-/** /interactives/sitemap.xml: each published interactive page. */
+/**
+ * /interactives/sitemap.xml: each published interactive page. Not in SITEMAPS (the index,
+ * robots.txt and /feeds) until the experiment graduates.
+ */
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // An experiment that is off lists nothing: its pages 404 in this environment.
   return (await isExperimentEnabled("interactives")) ? getInteractivesSitemap() : []

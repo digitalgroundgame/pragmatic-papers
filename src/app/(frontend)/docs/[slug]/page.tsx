@@ -27,7 +27,7 @@ interface Args {
   params: Promise<{ slug: string }>
 }
 
-// Rendered per request from the data cache, which saving a doc or the start-up sync refreshes:
+// Rendered per request from the data cache, which saving a doc or a deploy's docs sync refreshes:
 // a prerendered copy would keep the doc the build saw.
 export const dynamic = "force-dynamic"
 

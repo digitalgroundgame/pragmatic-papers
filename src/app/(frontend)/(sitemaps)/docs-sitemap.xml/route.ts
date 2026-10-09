@@ -4,7 +4,7 @@ import { queryPublishedDocs } from "@/plugins/docs/queries"
 import { getServerSideURL } from "@/utilities/getURL"
 
 // The /docs index and each published doc. The list comes from the docs' data cache, which
-// saving a doc or the start-up sync refreshes.
+// saving a doc or a deploy's docs sync refreshes.
 export async function GET(): Promise<Response> {
   const siteUrl = getServerSideURL().replace(/\/$/, "")
   const docs = await queryPublishedDocs()

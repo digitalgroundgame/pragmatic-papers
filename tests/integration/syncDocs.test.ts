@@ -7,7 +7,7 @@ import type { Payload } from "payload"
 
 import { DOCS_DIR, syncDocs } from "@/plugins/docs/syncDocs"
 import type { RepoDoc } from "@/plugins/docs/repoDoc"
-import { getPayload } from "./helpers/testUsers"
+import { createUser, getPayload } from "./helpers/testUsers"
 
 // The repo's own doc with a picture in it, synced from a copy so the test can change it.
 const SLUG = "unsplash-photos"
@@ -80,5 +80,58 @@ describe("syncDocs", () => {
     expect(result.updated).toEqual([SLUG])
     expect((await findDoc())?.summary).toBe("A new summary.")
     expect(await syncedMedia()).toHaveLength(1)
+  })
+
+  it("leaves a synced doc read-only to editors, unlike one written in the admin", async () => {
+    const editor = await createUser("editor")
+    const doc = await findDoc()
+    await expect(
+      payload.update({
+        collection: "docs",
+        id: doc!.id,
+        data: { summary: "Edited in the admin." },
+        context: ctx,
+        overrideAccess: false,
+        user: editor,
+      }),
+    ).rejects.toThrow()
+
+    const own = await payload.create({
+      collection: "docs",
+      context: ctx,
+      overrideAccess: true,
+      data: {
+        title: "Written here",
+        slug: "written-here",
+        summary: "A doc from the admin.",
+        publishedAt: "2026-10-18",
+        content: {
+          root: {
+            type: "root",
+            children: [
+              {
+                type: "paragraph",
+                children: [{ type: "text", text: "Hello.", version: 1 }],
+                version: 1,
+              },
+            ],
+            direction: null,
+            format: "",
+            indent: 0,
+            version: 1,
+          },
+        },
+      },
+    })
+    const updated = await payload.update({
+      collection: "docs",
+      id: own.id,
+      data: { summary: "Edited in the admin." },
+      context: ctx,
+      overrideAccess: false,
+      user: editor,
+    })
+    expect(updated.summary).toBe("Edited in the admin.")
+    await payload.delete({ collection: "docs", id: own.id, context: ctx, overrideAccess: true })
   })
 })

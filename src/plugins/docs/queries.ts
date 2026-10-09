@@ -5,7 +5,6 @@ import { cache } from "react"
 
 import { DOCS_SLUG } from "./collection"
 import { DOCS_CACHE_TAG } from "./revalidateDoc"
-import { syncVersion } from "./syncVersion"
 
 const findPublishedDocs = async () => {
   const payload = await getPayloadConfig()
@@ -31,7 +30,7 @@ const findPublishedDocs = async () => {
 
 /** Every published doc, newest first, without its content: the /docs index, its sitemap and the bell. */
 export const queryPublishedDocs = (): ReturnType<typeof findPublishedDocs> =>
-  unstable_cache(findPublishedDocs, ["docs-published", syncVersion()], {
+  unstable_cache(findPublishedDocs, ["docs-published"], {
     tags: [DOCS_CACHE_TAG],
   })()
 
@@ -50,7 +49,7 @@ const findDoc = async (slug: string, draft: boolean) => {
 }
 
 const findPublishedDoc = (slug: string) =>
-  unstable_cache(() => findDoc(slug, false), ["doc", slug, syncVersion()], {
+  unstable_cache(() => findDoc(slug, false), ["doc", slug], {
     tags: [DOCS_CACHE_TAG],
   })()
 

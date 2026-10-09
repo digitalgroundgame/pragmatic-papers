@@ -22,7 +22,6 @@ vi.mock("react", async (importOriginal) => ({
 }))
 
 import { queryDocBySlug, queryPublishedDocs } from "../queries"
-import { markDocsSynced } from "../syncVersion"
 
 const doc = { id: 1, slug: "unsplash-photos", title: "Unsplash photos" }
 
@@ -44,15 +43,7 @@ describe("queryPublishedDocs", () => {
         select: expect.not.objectContaining({ content: true }),
       }),
     )
-    expect(cached).toHaveBeenCalledWith(["docs-published", expect.any(String)], ["docs"])
-  })
-
-  it("caches under a new key once the start-up sync has written docs", async () => {
-    await queryPublishedDocs()
-    markDocsSynced()
-    await queryPublishedDocs()
-    const [before, after] = cached.mock.calls.map(([keys]) => keys as string[])
-    expect(after).not.toEqual(before)
+    expect(cached).toHaveBeenCalledWith(["docs-published"], ["docs"])
   })
 })
 
@@ -66,7 +57,7 @@ describe("queryDocBySlug", () => {
         where: { slug: { equals: "unsplash-photos" } },
       }),
     )
-    expect(cached).toHaveBeenCalledWith(["doc", "unsplash-photos", expect.any(String)], ["docs"])
+    expect(cached).toHaveBeenCalledWith(["doc", "unsplash-photos"], ["docs"])
   })
 
   it("reads the latest draft, uncached, in a draft preview", async () => {

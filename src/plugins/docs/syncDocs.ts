@@ -72,7 +72,12 @@ async function uploadOnce(
  */
 export async function syncDocs(payload: Payload, dir = DOCS_DIR): Promise<SyncResult> {
   const result: SyncResult = { created: [], updated: [], unchanged: [] }
-  if (!existsSync(dir)) return result
+  if (!existsSync(dir)) {
+    // A deploy without the folder (a runtime with no file system for it) would otherwise
+    // look like one with nothing to sync.
+    payload.logger.warn(`No help docs to sync: ${dir} doesn't exist here`)
+    return result
+  }
 
   const entries = await readdir(dir, { withFileTypes: true })
   const slugs = entries

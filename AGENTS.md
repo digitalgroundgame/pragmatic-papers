@@ -133,15 +133,16 @@ A release that changes what staff do in the admin ships a help doc in the same
 PR. Docs are the `docs` collection (`src/plugins/docs/`, the docs plugin),
 served at `/docs/<slug>` and listed at `/docs`, so they can hold blocks and
 images like an article. The ones a release ships live in the repo, one folder
-each: `src/docs/<slug>/doc.json` beside the files it shows. When the site
-starts, the plugin writes every folder into that site's database, published,
-uploading its files to Media; a doc whose JSON and files hash the same as last
-time is skipped (`DOCS_SYNC=false` turns the sync off). `pnpm dev:db-seed`
-syncs them too. To add one:
+each: `src/docs/<slug>/doc.json` beside the files it shows. Once per deploy,
+`/next/revalidate-all` (which `start.sh` and the Worker's deploy call when a
+deploy goes live) writes every folder into that site's database, published,
+uploading its files to Media (`syncRepoDocs`); a doc whose JSON and files hash
+the same as last time is skipped (`DOCS_SYNC=false` turns the sync off).
+`pnpm dev:db-seed` syncs them locally. To add one:
 
 1. Write it in the local admin (**Help → Docs**): a `summary` of a sentence or
    two (the bell shows it), `publishedAt` (the day the release reaches
-   production; for a feature that shipped before the bell, the day it did) and,
+   production; for a feature that shipped earlier, the day it did) and,
    for a doc only some roles need, `audience` (e.g. `["editor"]`; admins and
    chief editors see every doc). It only decides who the bell tells: every
    published doc is public at /docs, as the repo is.
@@ -150,16 +151,13 @@ syncs them too. To add one:
    JSON, since Media ids differ from site to site. Links to other documents
    carry this database's ids, so link to their URLs instead.
 
-The bell announces a doc dated from its launch (`BACKLOG` in
-`src/plugins/docs/notifications.ts`) at once. Backdated docs, about features
-older than that, are the backlog: it releases a few a week, newest feature
-first, so catching up never floods it (`announcements` in `schedule.ts`). /docs
-lists every doc from the start.
+The bell lists each doc under its `publishedAt`, newest first.
 
-The repo copy wins: a repo doc edited in a site's admin is overwritten the next
-time its folder changes. Readers' pages and the bell read docs through
-`unstable_cache` with the `docs` tag, which saving a doc clears; a start-up sync
-that changed a doc moves the cache keys on and purges the edge cache instead.
+The repo copy wins, so on a deployed site a doc from `src/docs/` is read-only in
+the admin (local dev leaves it editable, for `docs:export`); docs written in a
+site's admin stay editable there. Readers' pages and the bell read docs through
+`unstable_cache` with the `docs` tag, which saving a doc or a sync that changed
+one clears, along with the edge cache.
 
 The bell beside the avatar in the admin header is the notifications plugin
 (`src/plugins/notifications/`). Features plug into it with a

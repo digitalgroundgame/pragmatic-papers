@@ -12,7 +12,7 @@ import React from "react"
 const TITLE = "Docs — Pragmatic Papers"
 const DESCRIPTION = "What's new in the Pragmatic Papers admin, and how to use it."
 
-// Rendered per request from the data cache, which saving a doc or the start-up sync refreshes:
+// Rendered per request from the data cache, which saving a doc or a deploy's docs sync refreshes:
 // a prerendered copy would keep the docs the build saw.
 export const dynamic = "force-dynamic"
 

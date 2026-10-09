@@ -1439,6 +1439,9 @@ export interface Doc {
    * Auto-generates a navigable list of headings (and any resolver-matched blocks). Readers see it only while the table of contents experiment is on in Site Settings.
    */
   showTableOfContents?: boolean | null;
+  /**
+   * This doc ships with the code (src/docs/), so it can't be edited here. Change it locally and export it with pnpm docs:export.
+   */
   sourceHash?: string | null;
   /**
    * When enabled, the slug will auto-generate from the title field on save and autosave.

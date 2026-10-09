@@ -138,8 +138,10 @@ after its own `revalidatePath` / `revalidateTag`, and only when
 `context.disableRevalidate` is unset. It purges this deployment's hostname
 (production, staging and previews share a zone), batches a burst of saves into
 one request, returns at once, and logs and skips when the `cloudflareCache`
-connection isn't configured. A new hook for content readers see should call it
-too.
+connection isn't configured. When the `cloudflareWorkerCache` connection is
+configured (`WORKER_URL`, on the Coolify app a Cloudflare Worker reads from), the
+same flush first clears that Worker's cache through its `/next/revalidate-all`.
+A new hook for content readers see should call it too.
 
 ### Payload Plugins
 

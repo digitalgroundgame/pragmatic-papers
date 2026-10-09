@@ -43,6 +43,11 @@ the R2 bucket and D1 database by name if they're missing. The rest is set up by 
 4. **Repo secret** `STAGING_PAYLOAD_SECRET` (staging's `PAYLOAD_SECRET`), and **variables**
    `WORKER_STAGING_URL` (the Worker's workers.dev URL) and `SHOWCASE_STAGING_URL`
    (staging's Coolify URL, which the Worker sends `/admin` and `/api` to).
+5. **Coolify staging**: the runtime variable `WORKER_URL` (the Worker's workers.dev URL).
+   With it, every save that purges Cloudflare's edge clears the Worker's cache first,
+   through `/next/revalidate-all` with staging's `PAYLOAD_SECRET`
+   (`src/hooks/purgeEdgeCache.ts`). Without it, an edit to an article or volume shows on
+   the Worker when its `revalidate` time (an hour) passes or the next deploy.
 
 Until all of them are set, the workflow skips itself.
 
@@ -50,9 +55,16 @@ Until all of them are set, the workflow skips itself.
 
 1. Builds against a throwaway, migrated Postgres (`pnpm build:worker`), so nothing reaches
    staging's database while building.
-2. `opennextjs-cloudflare deploy` uploads the prerendered pages to R2, creates D1's table,
+2. Waits until staging's Coolify app reports, at `/next/migrations`, that its database has
+   run the newest migration in the commit. Coolify migrates while it builds the same push,
+   so this keeps the new Worker off the old schema. A push without a migration passes at
+   once. The other way round stays open: while Coolify migrates, the Worker still serving
+   the previous commit meets the new schema, as Coolify's own old container does. A
+   migration that drops or renames a column breaks both for that window, so split it:
+   add the new column in one release and drop the old one in the next.
+3. `opennextjs-cloudflare deploy` uploads the prerendered pages to R2, creates D1's table,
    and runs `wrangler deploy` with `SERVER_URL`, `ORIGIN_URL` and `PAYLOAD_SECRET`.
-3. `POST /next/revalidate-all` throws away the build's pages (it built from an empty
+4. `POST /next/revalidate-all` throws away the build's pages (it built from an empty
    database), so each renders from staging's data on its next request.
 
 ## Build and run it locally
@@ -103,10 +115,6 @@ deployment.
 
 ## Before it can serve production
 
-- **Edits reaching the Worker**: Coolify's `revalidate*` hooks clear Next's cache on
-  Coolify and Cloudflare's edge, not the Worker's. Until they also call the Worker's
-  `/next/revalidate-all`, an edit to an article or volume shows on the Worker when its
-  `revalidate` time (an hour) passes or the next deploy. Dynamic pages are always current.
 - **Real latency and cold-start CPU**, measured on the staging Worker.
 - **A custom domain**, and the zone's cache rules for it (`cloudflare/rulesets/`).
 - **Skew protection** (`skewProtection` in `open-next.config.ts`, experimental): sends a

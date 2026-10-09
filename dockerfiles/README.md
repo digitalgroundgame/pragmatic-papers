@@ -88,6 +88,7 @@ Public pages are cached at Cloudflare's edge for 10 minutes, then served stale f
 - `CLOUDFLARE_ZONE_ID` — the zone's ID, from its Overview page in the Cloudflare dashboard.
 - `CLOUDFLARE_PURGE_TOKEN` — a custom API token with **Zone → Cache Purge → Purge**, on this zone only. Keep it apart from `CLOUDFLARE_API_TOKEN` (a GitHub secret that deploys Storybook) and the Cache Rules tokens (`cloudflare/README.md`).
 - Both are **Runtime Variables** only; the build never reads them. Set them in the production, staging **and** preview apps.
+- `WORKER_URL` — staging only: the staging Cloudflare Worker's URL (`src/cloudflare/README.md`). The same save then clears the Worker's cache too, before the edge's, authenticated with this app's `PAYLOAD_SECRET`, which the Worker shares. A runtime variable; leave it unset where no Worker reads this app's database.
 - Unset (or with `SERVER_URL` on localhost), each save logs `Skipping Cloudflare purge (…) — … set CLOUDFLARE_ZONE_ID, CLOUDFLARE_PURGE_TOKEN` and carries on. A purge Cloudflare refuses is logged as a warning, never thrown at the save.
 - Purges within a second of each other go out as one request. Hostname purges are rate-limited per account (5 a minute on the Free plan, more on paid plans); a refused one just leaves the edge to expire on its own.
 

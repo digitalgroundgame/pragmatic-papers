@@ -1,4 +1,4 @@
-import { cloudflareZone } from "./cloudflare"
+import { cloudflareWorker, cloudflareZone } from "./cloudflare"
 import { githubRepo } from "./github"
 import { shopifyStore } from "./shopify"
 import { integrationStatus, type Integration, type IntegrationStatus } from "./types"
@@ -42,6 +42,21 @@ export const cloudflareCache = cloudflareZone({
 })
 
 /**
+ * The Cloudflare Worker serving the public pages (`src/cloudflare/`), when this deployment
+ * has one in front of it. Its cache (R2 and D1) is separate from this deployment's Next cache
+ * and from Cloudflare's edge, so an editor's save clears it too (`src/hooks/purgeEdgeCache.ts`).
+ *
+ * `WORKER_URL` is set only on the Coolify app whose database the Worker reads (staging's
+ * Worker: staging). The secret is `PAYLOAD_SECRET`, which the Worker shares with that app.
+ */
+export const cloudflareWorkerCache = cloudflareWorker({
+  id: "cloudflare-worker",
+  label: "Cloudflare Worker cache",
+  urlEnv: "WORKER_URL",
+  secretEnv: "PAYLOAD_SECRET",
+})
+
+/**
  * Unsplash — the photo library editors can search from Media's upload controls and save
  * into Media (`collections/Media/components/Unsplash`). The key is the application's Access
  * Key; `UNSPLASH_APP_NAME` is its name on unsplash.com/oauth/applications, used for the
@@ -60,6 +75,7 @@ export const INTEGRATIONS: readonly Integration[] = [
   courtTracker,
   shopifyStore,
   cloudflareCache,
+  cloudflareWorkerCache,
   unsplash,
 ]
 

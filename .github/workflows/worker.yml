@@ -10,7 +10,8 @@
 #                                        Hyperdrive, all Edit
 #   - secret   CLOUDFLARE_ACCOUNT_ID     shared with the Storybook deploy
 #   - secret   STAGING_PAYLOAD_SECRET    staging's PAYLOAD_SECRET: the Worker's own secret,
-#                                        and the token for /next/revalidate-all
+#                                        and the token for /next/revalidate-all and
+#                                        staging's /next/migrations
 #   - variable SHOWCASE_STAGING_URL      staging's Coolify URL, which the Worker proxies to
 #   - variable WORKER_STAGING_URL        the Worker's own URL, e.g.
 #                                        https://pragmatic-papers-staging.<subdomain>.workers.dev
@@ -94,6 +95,31 @@ jobs:
           database=pragmatic-papers-staging-tags
           pnpm exec wrangler r2 bucket info "$bucket" >/dev/null 2>&1 || pnpm exec wrangler r2 bucket create "$bucket"
           pnpm exec wrangler d1 info "$database" >/dev/null 2>&1 || pnpm exec wrangler d1 create "$database"
+
+      # Staging's Coolify app migrates its database while it builds the same push. Deploying
+      # before that would run this commit's code against the old schema, so wait until
+      # staging reports the newest migration in this commit (`/next/migrations`). A push
+      # without a new migration passes at once.
+      - name: Wait for staging's database to be migrated
+        if: env.READY == 'true'
+        timeout-minutes: 45
+        env:
+          STAGING_PAYLOAD_SECRET: ${{ secrets.STAGING_PAYLOAD_SECRET }}
+        run: |
+          newest=$(find src/migrations -maxdepth 1 -name '2*.ts' -printf '%f\n' | sort | tail -n 1)
+          newest=${newest%.ts}
+          echo "Waiting for staging to have run $newest"
+          while true; do
+            # The query string keeps Cloudflare's edge from answering with an older copy.
+            applied=$(curl --silent --max-time 30 --header "Authorization: Bearer $STAGING_PAYLOAD_SECRET" \
+              "$ORIGIN_URL/next/migrations?at=$(date +%s%N)" | jq -r '.applied[]?' 2>/dev/null || true)
+            if printf '%s\n' "$applied" | grep -qxF "$newest"; then
+              echo "Staging has run $newest"
+              exit 0
+            fi
+            echo "Not yet; checking again in 30s"
+            sleep 30
+          done
 
       # Uploads the prerendered pages to R2, creates the D1 table if it's missing, then
       # `wrangler deploy`s with the runtime variables and Payload's secret.

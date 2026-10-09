@@ -1,16 +1,18 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-const { revalidatePath, syncRepoDocs } = vi.hoisted(() => ({
+const { purgeEdgeCache, revalidatePath, syncRepoDocs } = vi.hoisted(() => ({
+  purgeEdgeCache: vi.fn(),
   revalidatePath: vi.fn(),
   syncRepoDocs: vi.fn(),
 }))
-const payload = {}
+const payload = { logger: { info: vi.fn(), warn: vi.fn() } }
 
 vi.mock("next/cache", () => ({ revalidatePath }))
+vi.mock("@/hooks/purgeEdgeCache", () => ({ purgeEdgeCache }))
 vi.mock("@/plugins/docs/syncRepoDocs", () => ({ syncRepoDocs }))
 vi.mock("@/utilities/getPayloadConfig", () => ({ getPayloadConfig: async () => payload }))
 
-const { POST } = await import("../route")
+const { DEPLOY_REPURGE_MS, POST } = await import("../route")
 
 const request = (authorization?: string): Request =>
   new Request("http://localhost/next/revalidate-all", {
@@ -40,6 +42,28 @@ describe("POST /next/revalidate-all", () => {
     )
   })
 
+  it("purges the edge now, and again once traffic has moved to the new container", async () => {
+    vi.useFakeTimers()
+    try {
+      await POST(request("Bearer s3cret"))
+
+      expect(purgeEdgeCache).toHaveBeenCalledExactlyOnceWith(payload.logger, "deploy")
+      expect(purgeEdgeCache.mock.invocationCallOrder[0]).toBeGreaterThan(
+        revalidatePath.mock.invocationCallOrder[0]!,
+      )
+
+      vi.advanceTimersByTime(DEPLOY_REPURGE_MS - 1)
+      expect(purgeEdgeCache).toHaveBeenCalledOnce()
+      vi.advanceTimersByTime(1)
+      expect(purgeEdgeCache).toHaveBeenLastCalledWith(
+        payload.logger,
+        "deploy, after the switchover",
+      )
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
   it("still revalidates when the docs sync fails", async () => {
     syncRepoDocs.mockResolvedValue(null)
     const response = await POST(request("Bearer s3cret"))
@@ -59,6 +83,7 @@ describe("POST /next/revalidate-all", () => {
     expect(response.status).toBe(401)
     expect(syncRepoDocs).not.toHaveBeenCalled()
     expect(revalidatePath).not.toHaveBeenCalled()
+    expect(purgeEdgeCache).not.toHaveBeenCalled()
   })
 
   it("refuses everything when PAYLOAD_SECRET is unset", async () => {

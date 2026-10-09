@@ -52,7 +52,9 @@ function PostList({
                 rel="noopener noreferrer"
                 className="group text-muted-foreground hover:text-foreground flex items-center gap-2 font-serif transition-colors"
               >
-                <Icon className="size-3 shrink-0" />
+                {/* A solid mark reads heavier than the thin serif beside it, so it's dimmed until the
+                    post is pointed at. */}
+                <Icon className="size-3 shrink-0 opacity-60 transition-opacity group-hover:opacity-100" />
                 <span className="sr-only">On {name}:</span>
                 <span className="group-hover:underline">
                   {excerpt(postText(post)) || shortURL(links[0] ?? post.url)}
@@ -159,8 +161,10 @@ export function TickerView({ broadcast, posts }: TickerFeed): React.ReactNode {
       {/* The strip runs the window's full width, wider than the page's container, between two
           hairlines rather than on a band of its own, so it reads as part of the masthead. The
           mega menu sits right above on wider screens; on phones the header's own border is
-          the top line. */}
-      <div className="flex h-10 items-center gap-4 px-4 text-sm">
+          the top line. Its start lines up with the container's content (`container` is 80rem
+          with 1rem of padding), so the label sits over the page's left edge; the posts run on
+          to the window's. */}
+      <div className="flex h-10 items-center gap-4 pr-4 pl-[max(1rem,calc((100%-80rem)/2+1rem))] text-sm">
         {broadcast ? (
           <Broadcast broadcast={broadcast} pinned={posts.length > 0} />
         ) : (

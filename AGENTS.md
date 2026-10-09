@@ -398,7 +398,7 @@ PRs into `dev` need the **Review acknowledged** check (`review-ack.yml`) on
 their final commit. A person gives it one of two ways: approving the PR with a
 GitHub review, or replying `/reviewed` or `LGTM` (any case) after a Claude
 review is on the PR:
-CI's (`claude-review.yml`, run by adding the "ready for review" label) or one
+CI's (`claude-review.yml`, run by adding the "in review" label) or one
 they posted with a local `/code-review --comment <pr>` (they need write access).
 Fixes pushed after a review need a new approval or reply, not a new
 review. **Never post `/reviewed` or `LGTM` (or anything starting with either),

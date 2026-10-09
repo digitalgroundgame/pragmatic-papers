@@ -101,7 +101,7 @@ the uncertainty in the body.
 | **Kind**        | `documentation`, `dependencies`, `testing`, `ci`, `security`, `performance`, `reference` | the nature of the work — docs / deps / tests / CI / security / perf / saved-ref PR |
 | **Discussion**  | `question`, `discussion`                                                                 | needs an answer or an open design conversation                                     |
 | **Status**      | `in progress`, `blocked`, `stale`                                                        | tracking workflow state                                                            |
-| **Review** (PR) | `ready for review`, `review comments`                                                    | on pull requests moving through review                                             |
+| **Review** (PR) | `in review`, `review comments`                                                           | on pull requests moving through review                                             |
 | **Design**      | `waiting on design`                                                                      | backlogged pending design                                                          |
 | **Community**   | `good first issue`, `help wanted`                                                        | inviting outside contribution                                                      |
 | **Resolution**  | `duplicate`, `invalid`, `wontfix`                                                        | when closing (pair with the matching `state_reason`)                               |

@@ -153,14 +153,16 @@ export function NotificationsMenu({
                     rel="noopener"
                     onClick={() => onOpen(key)}
                   >
-                    <span className="flex items-baseline gap-2 text-sm font-semibold">
+                    {/* Inline, so a long title wraps under the dot rather than beside it. */}
+                    <span className="text-sm font-semibold">
                       {isUnread && (
-                        <span aria-hidden className="bg-brand size-2 shrink-0 rounded-full" />
+                        <span
+                          aria-hidden
+                          className="bg-brand mr-2 inline-block size-2 rounded-full align-middle"
+                        />
                       )}
-                      <span>
-                        {item.title}
-                        {isUnread && <span className="sr-only"> (unread)</span>}
-                      </span>
+                      {item.title}
+                      {isUnread && <span className="sr-only"> (unread)</span>}
                     </span>
                     {item.summary && (
                       <span className="text-muted-foreground text-sm">{item.summary}</span>

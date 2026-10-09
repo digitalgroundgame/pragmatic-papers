@@ -39,8 +39,8 @@ export const getTickerFeed = cache(async (): Promise<TickerFeed> => {
   const { youtube, bluesky, x } = await getCachedGlobal("integrations")()
   const settings: TickerSettings = {
     youtubeChannelIds: youtube?.channels?.map((channel) => channel.channelId),
-    blueskyHandle: bluesky?.handle,
-    xUsername: x?.username,
+    blueskyHandles: bluesky?.handles?.map((account) => account.handle),
+    xUsernames: x?.usernames?.map((account) => account.username),
   }
   const [current, ...lists] = await Promise.all([
     broadcast(settings),

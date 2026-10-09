@@ -75,33 +75,54 @@ export const Integrations: GlobalConfig = {
     },
     {
       name: "bluesky",
-      label: "Bluesky posts",
+      label: "Bluesky accounts",
       type: "group",
       admin: { description: "Whose posts run in the ticker." },
       fields: [
         {
-          name: "handle",
-          type: "text",
+          name: "handles",
+          type: "array",
+          labels: { singular: "Account", plural: "Accounts" },
+          maxRows: 5,
           admin: {
-            placeholder: "thepragmaticpapers.bsky.social",
-            description: "Empty uses BLUESKY_HANDLE, or thepragmaticpapers.bsky.social.",
+            description: "Empty uses BLUESKY_HANDLES, or thepragmaticpapers.bsky.social.",
+            initCollapsed: false,
           },
+          fields: [
+            {
+              name: "handle",
+              type: "text",
+              required: true,
+              admin: { placeholder: "thepragmaticpapers.bsky.social" },
+            },
+          ],
         },
       ],
     },
     {
       name: "x",
-      label: "X posts",
+      label: "X accounts",
       type: "group",
       admin: { description: "Whose posts run in the ticker." },
       fields: [
         {
-          name: "username",
-          type: "text",
+          name: "usernames",
+          type: "array",
+          labels: { singular: "Account", plural: "Accounts" },
+          // Each account is two paid reads a check.
+          maxRows: 5,
           admin: {
-            placeholder: "PragPapers",
-            description: "Empty uses X_USERNAME, or PragPapers.",
+            description: "Empty uses X_USERNAMES, or PragPapers.",
+            initCollapsed: false,
           },
+          fields: [
+            {
+              name: "username",
+              type: "text",
+              required: true,
+              admin: { placeholder: "PragPapers" },
+            },
+          ],
         },
       ],
     },

@@ -27,7 +27,7 @@ const meta = {
         target: "bluesky:@thepragmaticpapers.bsky.social",
         configured: true,
         missing: [],
-        unset: ["BLUESKY_HANDLE"],
+        unset: ["BLUESKY_HANDLES"],
       },
       {
         id: "cloudflare-cache",

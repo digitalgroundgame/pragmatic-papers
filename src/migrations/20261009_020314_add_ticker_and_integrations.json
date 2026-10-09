@@ -16113,6 +16113,162 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
+    "public.integrations_bluesky_handles": {
+      "name": "integrations_bluesky_handles",
+      "schema": "",
+      "columns": {
+        "_order": {
+          "name": "_order",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "_parent_id": {
+          "name": "_parent_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "id": {
+          "name": "id",
+          "type": "varchar",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "handle": {
+          "name": "handle",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "integrations_bluesky_handles_order_idx": {
+          "name": "integrations_bluesky_handles_order_idx",
+          "columns": [
+            {
+              "expression": "_order",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "integrations_bluesky_handles_parent_id_idx": {
+          "name": "integrations_bluesky_handles_parent_id_idx",
+          "columns": [
+            {
+              "expression": "_parent_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "integrations_bluesky_handles_parent_id_fk": {
+          "name": "integrations_bluesky_handles_parent_id_fk",
+          "tableFrom": "integrations_bluesky_handles",
+          "tableTo": "integrations",
+          "columnsFrom": ["_parent_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.integrations_x_usernames": {
+      "name": "integrations_x_usernames",
+      "schema": "",
+      "columns": {
+        "_order": {
+          "name": "_order",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "_parent_id": {
+          "name": "_parent_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "id": {
+          "name": "id",
+          "type": "varchar",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "username": {
+          "name": "username",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "integrations_x_usernames_order_idx": {
+          "name": "integrations_x_usernames_order_idx",
+          "columns": [
+            {
+              "expression": "_order",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "integrations_x_usernames_parent_id_idx": {
+          "name": "integrations_x_usernames_parent_id_idx",
+          "columns": [
+            {
+              "expression": "_parent_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "integrations_x_usernames_parent_id_fk": {
+          "name": "integrations_x_usernames_parent_id_fk",
+          "tableFrom": "integrations_x_usernames",
+          "tableTo": "integrations",
+          "columnsFrom": ["_parent_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
     "public.integrations": {
       "name": "integrations",
       "schema": "",
@@ -16122,18 +16278,6 @@
           "type": "serial",
           "primaryKey": true,
           "notNull": true
-        },
-        "bluesky_handle": {
-          "name": "bluesky_handle",
-          "type": "varchar",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "x_username": {
-          "name": "x_username",
-          "type": "varchar",
-          "primaryKey": false,
-          "notNull": false
         },
         "updated_at": {
           "name": "updated_at",
@@ -16610,6 +16754,6 @@
     "tables": {},
     "columns": {}
   },
-  "id": "75c704a9-85ef-4175-b8ab-c952c58c0738",
+  "id": "b55b7f52-bf20-4a02-b6a7-0ab399784721",
   "prevId": "00000000-0000-0000-0000-000000000000"
 }

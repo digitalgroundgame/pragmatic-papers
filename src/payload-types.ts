@@ -2640,18 +2640,28 @@ export interface IntegrationSettings {
    */
   bluesky?: {
     /**
-     * Empty uses BLUESKY_HANDLE, or thepragmaticpapers.bsky.social.
+     * Empty uses BLUESKY_HANDLES, or thepragmaticpapers.bsky.social.
      */
-    handle?: string | null;
+    handles?:
+      | {
+          handle: string;
+          id?: string | null;
+        }[]
+      | null;
   };
   /**
    * Whose posts run in the ticker.
    */
   x?: {
     /**
-     * Empty uses X_USERNAME, or PragPapers.
+     * Empty uses X_USERNAMES, or PragPapers.
      */
-    username?: string | null;
+    usernames?:
+      | {
+          username: string;
+          id?: string | null;
+        }[]
+      | null;
   };
   updatedAt?: string | null;
   createdAt?: string | null;
@@ -2754,12 +2764,22 @@ export interface IntegrationsSelect<T extends boolean = true> {
   bluesky?:
     | T
     | {
-        handle?: T;
+        handles?:
+          | T
+          | {
+              handle?: T;
+              id?: T;
+            };
       };
   x?:
     | T
     | {
-        username?: T;
+        usernames?:
+          | T
+          | {
+              username?: T;
+              id?: T;
+            };
       };
   updatedAt?: T;
   createdAt?: T;

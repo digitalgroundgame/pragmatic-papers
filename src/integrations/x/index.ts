@@ -1,37 +1,48 @@
 import { env, type Integration } from "../types"
 
+/** A link in a post's text: the t.co link the text holds, and where it leads. */
+export interface PostLink {
+  text: string
+  url: string
+}
+
 /** One of the account's own posts. */
 export interface XPost {
   id: string
   text: string
+  /** The links in `text`, in order. */
+  links: PostLink[]
   /** The post on x.com. */
   url: string
   /** When it was posted (ISO 8601). */
   createdAt: string
 }
 
-export interface XAccountIntegration extends Integration {
-  username(): string
+export interface XAccountsIntegration extends Integration {
   /**
-   * The account's newest posts, newest first: no replies and no reposts. Throws when the
+   * The accounts to read: `usernames` when it has any (the admin's list), else the usernames
+   * variable, else the default.
+   */
+  usernames(usernames?: readonly string[] | null): string[]
+  /**
+   * One account's newest posts, newest first: no replies and no reposts. Throws when the
    * connection is not configured or X refuses the request, with X's own error and never the
    * token.
    */
-  recentPosts(opts?: {
-    /** The account to read, as set in the admin; falls back to the username variable. */
-    username?: string | null
+  recentPosts(opts: {
+    username: string
     limit?: number
     fetchImpl?: typeof fetch
     signal?: AbortSignal
   }): Promise<XPost[]>
 }
 
-export interface XAccountOptions {
+export interface XAccountsOptions {
   id: string
   label: string
-  defaultUsername: string
-  /** Environment variable that points the connection at another account. */
-  usernameEnv: string
+  defaultUsernames: readonly string[]
+  /** Environment variable holding usernames, comma separated, for when the admin lists none. */
+  usernamesEnv: string
   /** Environment variable holding an app-only Bearer Token from the X developer portal. */
   tokenEnv: string
 }
@@ -45,33 +56,50 @@ interface XEnvelope<T> {
   errors?: { message?: string; detail?: string }[]
 }
 
+const list = (usernames: readonly string[]): string[] => [
+  ...new Set(usernames.map((name) => name.trim().replace(/^@/, "")).filter(Boolean)),
+]
+
 /**
- * A connection to one X account, for reading its posts.
+ * A connection to our X accounts, for reading their posts.
  *
  * Reading posts is not in X's free API tier: the app behind the token needs a paid plan or
- * pay-per-use credits. Each call is two reads (the username's ID, then its posts), so the
+ * pay-per-use credits. Each account is two reads (the username's ID, then its posts), so the
  * caller should cache the result for a long while.
  */
-export function xAccount({
+export function xAccounts({
   id,
   label,
-  defaultUsername,
-  usernameEnv,
+  defaultUsernames,
+  usernamesEnv,
   tokenEnv,
-}: XAccountOptions): XAccountIntegration {
-  const username = (): string => (env(usernameEnv) ?? defaultUsername).replace(/^@/, "")
+}: XAccountsOptions): XAccountsIntegration {
+  const usernames = (chosen?: readonly string[] | null): string[] => {
+    for (const candidate of [
+      chosen ?? [],
+      (env(usernamesEnv) ?? "").split(","),
+      defaultUsernames,
+    ]) {
+      const found = list(candidate)
+      if (found.length > 0) return found
+    }
+    return []
+  }
   return {
     id,
     label,
     service: "X",
-    describe: () => `x:@${username()}`,
+    describe: () =>
+      usernames()
+        .map((name) => `x:@${name}`)
+        .join(", "),
     required: [tokenEnv],
-    optional: [usernameEnv],
-    username,
-    async recentPosts({ username: chosen, limit = 5, fetchImpl = fetch, signal } = {}) {
+    optional: [usernamesEnv],
+    usernames,
+    async recentPosts({ username, limit = 5, fetchImpl = fetch, signal }) {
       const token = env(tokenEnv)
       if (!token) throw new Error(`X needs ${tokenEnv}`)
-      const name = chosen?.trim().replace(/^@/, "") || username()
+      const name = username.trim().replace(/^@/, "")
 
       const get = async <T>(
         path: string,
@@ -98,19 +126,26 @@ export function xAccount({
       if (!user) throw new Error(`X has no account @${name}`)
       // An account with no posts comes back with no `data` at all.
       const posts =
-        (await get<{ id: string; text: string; created_at: string }[]>(
-          `users/${encodeURIComponent(user.id)}/tweets`,
+        (await get<
           {
-            // X's floor for this endpoint is 5.
-            max_results: String(Math.min(Math.max(limit, 5), 100)),
-            exclude: "replies,retweets",
-            "tweet.fields": "created_at",
-          },
-        )) ?? []
+            id: string
+            text: string
+            created_at: string
+            entities?: { urls?: { url?: string; expanded_url?: string }[] }
+          }[]
+        >(`users/${encodeURIComponent(user.id)}/tweets`, {
+          // X's floor for this endpoint is 5.
+          max_results: String(Math.min(Math.max(limit, 5), 100)),
+          exclude: "replies,retweets",
+          "tweet.fields": "created_at,entities",
+        })) ?? []
 
       return posts.slice(0, limit).map((post) => ({
         id: post.id,
         text: post.text,
+        links: (post.entities?.urls ?? []).flatMap(({ url, expanded_url }) =>
+          url && expanded_url ? [{ text: url, url: expanded_url }] : [],
+        ),
         url: `https://x.com/${name}/status/${post.id}`,
         createdAt: post.created_at,
       }))

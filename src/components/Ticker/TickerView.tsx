@@ -1,4 +1,4 @@
-import { Pause, Play } from "lucide-react"
+import { Link2, Pause, Play } from "lucide-react"
 import type { CSSProperties, FC, SVGProps } from "react"
 
 import { BlueskyIcon, XIcon, YoutubeIcon } from "@/components/SocialLinks/icons"
@@ -7,6 +7,8 @@ import { cn } from "@/utilities/utils"
 
 import {
   excerpt,
+  postLinks,
+  postText,
   tickerDuration,
   type TickerBroadcast,
   type TickerFeed,
@@ -17,6 +19,11 @@ import {
 const SOURCES: Record<TickerPostSource, { name: string; Icon: FC<SVGProps<SVGSVGElement>> }> = {
   bluesky: { name: "Bluesky", Icon: BlueskyIcon },
   x: { name: "X", Icon: XIcon },
+}
+
+/** A URL as a reader says it: no scheme, no `www.`, no trailing slash. */
+function shortURL(url: string): string {
+  return url.replace(/^https?:\/\/(www\.)?/, "").replace(/\/$/, "")
 }
 
 function PostList({
@@ -35,19 +42,39 @@ function PostList({
     >
       {posts.map((post) => {
         const { name, Icon } = SOURCES[post.source]
+        const links = postLinks(post)
         return (
           <li key={post.id} className="flex shrink-0 items-center gap-6">
             <span aria-hidden="true" className="bg-brand size-1 rounded-full" />
-            <a
-              href={post.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="group flex items-center gap-2 font-serif whitespace-nowrap"
-            >
-              <Icon className="text-muted-foreground group-hover:text-foreground size-3.5 shrink-0" />
-              <span className="sr-only">On {name}:</span>
-              <span className="group-hover:underline">{excerpt(post.text)}</span>
-            </a>
+            {/* The words link to the post, and each link in it is an icon beside them: an
+                anchor can't hold another, and a URL would take the line. */}
+            <span className="flex items-center gap-2 whitespace-nowrap">
+              <a
+                href={post.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="group text-muted-foreground hover:text-foreground flex items-center gap-2 font-serif transition-colors"
+              >
+                <Icon className="size-3 shrink-0" />
+                <span className="sr-only">On {name}:</span>
+                <span className="group-hover:underline">
+                  {excerpt(postText(post)) || shortURL(links[0] ?? post.url)}
+                </span>
+              </a>
+              {links.map((url) => (
+                <a
+                  key={url}
+                  href={url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  title={url}
+                  aria-label={`Link: ${shortURL(url)}`}
+                  className="text-muted-foreground hover:text-brand-text flex size-5 items-center justify-center transition-colors"
+                >
+                  <Link2 aria-hidden="true" className="size-3.5" />
+                </a>
+              ))}
+            </span>
           </li>
         )
       })}
@@ -81,11 +108,8 @@ function Posts({ posts, beside }: { posts: TickerPost[]; beside: boolean }): Rea
   )
 }
 
-/**
- * The ticker's label: what the strip is. Brand-colored text misses AA on the muted band, so the
- * brand is kept for the Live badge (white on `brand-fill`) and the dots between posts.
- */
-const LABEL = "text-foreground shrink-0 font-sans text-xs font-bold tracking-wider uppercase"
+/** The ticker's label: what the strip is, set like a tile's kicker. */
+const LABEL = "text-brand-text shrink-0 font-serif text-xs font-bold tracking-wider uppercase"
 
 function Broadcast({
   broadcast,
@@ -144,11 +168,12 @@ export function TickerView({ broadcast, posts }: TickerFeed): React.ReactNode {
   if (!broadcast && posts.length === 0) return null
 
   return (
-    <section aria-label="Live and latest" className="ticker bg-muted mb-6 md:mb-10 md:border-t">
-      {/* The strip runs the window's full width, wider than the page's container. The mega
-          menu sits right above on wider screens; the top border parts it from the strip. On
-          phones the header's own border already does. */}
-      <div className="flex h-11 items-center gap-4 px-4 text-sm">
+    <section aria-label="Live and latest" className="ticker mb-6 border-b md:mb-10 md:border-t">
+      {/* The strip runs the window's full width, wider than the page's container, between two
+          hairlines rather than on a band of its own, so it reads as part of the masthead. The
+          mega menu sits right above on wider screens; on phones the header's own border is
+          the top line. */}
+      <div className="flex h-10 items-center gap-4 px-4 text-sm">
         {broadcast ? (
           <Broadcast broadcast={broadcast} pinned={posts.length > 0} />
         ) : (

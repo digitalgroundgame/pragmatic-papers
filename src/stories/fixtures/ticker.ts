@@ -20,14 +20,23 @@ export const tickerPosts: TickerPost[] = [
   {
     id: "bluesky:1",
     source: "bluesky",
-    text: "New in Volume 12: why permitting reform is the climate fight nobody is watching.",
+    text: "New in Volume 12: why permitting reform is the climate fight nobody is watching. pragmaticpapers.com/articles/perm...",
+    links: [
+      {
+        text: "pragmaticpapers.com/articles/perm...",
+        url: "https://pragmaticpapers.com/articles/permitting-reform",
+      },
+    ],
     url: "https://bsky.app/profile/thepragmaticpapers.bsky.social/post/1",
     createdAt: "2026-10-07T16:00:00Z",
   },
   {
     id: "x:2",
     source: "x",
-    text: "The filibuster, explained in five charts. Read it before the next cloture vote.",
+    text: "The filibuster, explained in five charts. Read it before the next cloture vote. https://t.co/abc123",
+    links: [
+      { text: "https://t.co/abc123", url: "https://pragmaticpapers.com/articles/filibuster" },
+    ],
     url: "https://x.com/PragPapers/status/2",
     createdAt: "2026-10-07T14:00:00Z",
   },
@@ -35,6 +44,7 @@ export const tickerPosts: TickerPost[] = [
     id: "bluesky:3",
     source: "bluesky",
     text: "We're live on YouTube at 7 p.m. ET tonight with the editors. Bring your questions about the budget, the courts, and anything else on your mind this week.",
+    links: [],
     url: "https://bsky.app/profile/thepragmaticpapers.bsky.social/post/3",
     createdAt: "2026-10-06T22:00:00Z",
   },

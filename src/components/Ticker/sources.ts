@@ -14,8 +14,33 @@ import { MAX_POSTS, type TickerBroadcast, type TickerPost } from "./items"
  */
 export interface TickerSettings {
   youtubeChannelIds?: string[] | null
-  blueskyHandle?: string | null
-  xUsername?: string | null
+  blueskyHandles?: string[] | null
+  xUsernames?: string[] | null
+}
+
+/**
+ * Every account's posts, read at once. An account that fails is logged and left out, so one
+ * bad handle doesn't empty the ticker; only when every account fails does the source fail.
+ */
+async function fromEach<T>(
+  service: string,
+  accounts: string[],
+  read: (account: string) => Promise<T[]>,
+): Promise<T[]> {
+  const results = await Promise.allSettled(accounts.map(read))
+  const failures = results.flatMap((result, i) =>
+    result.status === "rejected"
+      ? [{ account: accounts[i], reason: result.reason as unknown }]
+      : [],
+  )
+  if (failures.length > 0 && failures.length === results.length) throw failures[0]!.reason
+  for (const { account, reason } of failures) {
+    console.warn(
+      `[ticker] ${service} @${account} failed:`,
+      reason instanceof Error ? reason.message : reason,
+    )
+  }
+  return results.flatMap((result) => (result.status === "fulfilled" ? result.value : []))
 }
 
 export interface TickerSource<T> {
@@ -54,15 +79,16 @@ export const postSources: TickerSource<TickerPost[]>[] = [
     integration: blueskyPosts,
     revalidate: 300,
     async load(signal: AbortSignal, settings: TickerSettings): Promise<TickerPost[]> {
-      const posts = await blueskyPosts.recentPosts({
-        handle: settings.blueskyHandle,
-        limit: MAX_POSTS,
-        signal,
-      })
+      const posts = await fromEach(
+        "Bluesky",
+        blueskyPosts.handles(settings.blueskyHandles),
+        (handle) => blueskyPosts.recentPosts({ handle, limit: MAX_POSTS, signal }),
+      )
       return posts.map((post) => ({
         id: `bluesky:${post.uri}`,
         source: "bluesky",
         text: post.text,
+        links: post.links,
         url: post.url,
         createdAt: post.createdAt,
       }))
@@ -70,18 +96,17 @@ export const postSources: TickerSource<TickerPost[]>[] = [
   },
   {
     integration: xPosts,
-    // Two paid reads a check, so it's checked least often.
+    // Two paid reads an account a check, so it's checked least often.
     revalidate: 1800,
     async load(signal: AbortSignal, settings: TickerSettings): Promise<TickerPost[]> {
-      const posts = await xPosts.recentPosts({
-        username: settings.xUsername,
-        limit: MAX_POSTS,
-        signal,
-      })
+      const posts = await fromEach("X", xPosts.usernames(settings.xUsernames), (username) =>
+        xPosts.recentPosts({ username, limit: MAX_POSTS, signal }),
+      )
       return posts.map((post) => ({
         id: `x:${post.id}`,
         source: "x",
         text: post.text,
+        links: post.links,
         url: post.url,
         createdAt: post.createdAt,
       }))

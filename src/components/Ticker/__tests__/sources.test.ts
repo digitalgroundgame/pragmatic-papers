@@ -38,9 +38,9 @@ describe("loadSource", () => {
 
   it("passes the admin's settings to the source", async () => {
     const load = vi.fn(async () => ["a"])
-    await loadSource(source([], load), [], { blueskyHandle: "admin.bsky.social" })
+    await loadSource(source([], load), [], { blueskyHandles: ["admin.bsky.social"] })
     expect(load).toHaveBeenCalledWith(expect.any(AbortSignal), {
-      blueskyHandle: "admin.bsky.social",
+      blueskyHandles: ["admin.bsky.social"],
     })
   })
 
@@ -112,47 +112,89 @@ describe("postSources", () => {
     expect(x!.revalidate).toBeGreaterThan(bluesky!.revalidate)
   })
 
-  it("maps Bluesky posts, keyed by their URI, from the admin's handle", async () => {
-    const recent = vi.spyOn(blueskyPosts, "recentPosts").mockResolvedValue([
+  it("maps every admin handle's Bluesky posts, keyed by their URI, with their links", async () => {
+    const recent = vi.spyOn(blueskyPosts, "recentPosts").mockImplementation(async ({ handle }) => [
       {
-        uri: "at://did:plc:1/app.bsky.feed.post/1",
-        text: "Hello",
-        url: "https://bsky.app/profile/pp/post/1",
-        createdAt: "2026-10-08T12:00:00Z",
-      },
-    ] as never)
-    expect(await bluesky!.load(signal, { blueskyHandle: "admin.bsky.social" })).toEqual([
-      {
-        id: "bluesky:at://did:plc:1/app.bsky.feed.post/1",
-        source: "bluesky",
-        text: "Hello",
-        url: "https://bsky.app/profile/pp/post/1",
+        uri: `at://${handle}/app.bsky.feed.post/1`,
+        text: `Hello from ${handle}`,
+        links: [{ text: "pp.com/a", url: "https://pp.com/a" }],
+        url: `https://bsky.app/profile/${handle}/post/1`,
         createdAt: "2026-10-08T12:00:00Z",
       },
     ])
+    const posts = await bluesky!.load(signal, {
+      blueskyHandles: ["one.bsky.social", "two.bsky.social"],
+    })
+    expect(posts).toEqual([
+      {
+        id: "bluesky:at://one.bsky.social/app.bsky.feed.post/1",
+        source: "bluesky",
+        text: "Hello from one.bsky.social",
+        links: [{ text: "pp.com/a", url: "https://pp.com/a" }],
+        url: "https://bsky.app/profile/one.bsky.social/post/1",
+        createdAt: "2026-10-08T12:00:00Z",
+      },
+      expect.objectContaining({ id: "bluesky:at://two.bsky.social/app.bsky.feed.post/1" }),
+    ])
     expect(recent).toHaveBeenCalledWith(
-      expect.objectContaining({ handle: "admin.bsky.social", signal }),
+      expect.objectContaining({ handle: "one.bsky.social", signal }),
+    )
+    expect(recent).toHaveBeenCalledWith(
+      expect.objectContaining({ handle: "two.bsky.social", signal }),
     )
   })
 
-  it("maps X posts, keyed by their ID, from the admin's username", async () => {
+  it("maps every admin username's X posts, keyed by their ID", async () => {
     const recent = vi.spyOn(xPosts, "recentPosts").mockResolvedValue([
       {
         id: "42",
         text: "Hi",
+        links: [],
         url: "https://x.com/PragPapers/status/42",
         createdAt: "2026-10-08T13:00:00Z",
       },
-    ] as never)
-    expect(await x!.load(signal, { xUsername: "AdminPick" })).toEqual([
+    ])
+    expect(await x!.load(signal, { xUsernames: ["AdminPick"] })).toEqual([
       {
         id: "x:42",
         source: "x",
         text: "Hi",
+        links: [],
         url: "https://x.com/PragPapers/status/42",
         createdAt: "2026-10-08T13:00:00Z",
       },
     ])
     expect(recent).toHaveBeenCalledWith(expect.objectContaining({ username: "AdminPick", signal }))
+  })
+
+  it("leaves out an account that fails, and keeps the rest", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined)
+    vi.spyOn(blueskyPosts, "recentPosts").mockImplementation(async ({ handle }) => {
+      if (handle === "gone.bsky.social") throw new Error("Profile not found")
+      return [
+        {
+          uri: "at://ok/1",
+          text: "Still here",
+          links: [],
+          url: "https://bsky.app/1",
+          createdAt: "2026-10-08T12:00:00Z",
+        },
+      ]
+    })
+    const posts = await bluesky!.load(signal, {
+      blueskyHandles: ["gone.bsky.social", "ok.bsky.social"],
+    })
+    expect(posts.map((post) => post.text)).toEqual(["Still here"])
+    expect(warn).toHaveBeenCalledWith(
+      "[ticker] Bluesky @gone.bsky.social failed:",
+      "Profile not found",
+    )
+  })
+
+  it("fails when every account does, so the source falls back", async () => {
+    vi.spyOn(blueskyPosts, "recentPosts").mockRejectedValue(new Error("HTTP 503"))
+    await expect(bluesky!.load(signal, { blueskyHandles: ["a.bsky.social"] })).rejects.toThrow(
+      "HTTP 503",
+    )
   })
 })

@@ -10,7 +10,7 @@ vi.mock("@/hooks/purgeEdgeCache", () => ({ purgeEdgeCache: mockPurgeEdgeCache })
 
 const { revalidateIntegrations } = await import("../hooks/revalidateIntegrations")
 
-const doc = { bluesky: { handle: "someone.bsky.social" } }
+const doc = { bluesky: { handles: [{ handle: "someone.bsky.social" }] } }
 const logger = { info: vi.fn() }
 
 const args = (disableRevalidate: boolean) =>

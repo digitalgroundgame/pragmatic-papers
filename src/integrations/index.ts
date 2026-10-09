@@ -1,8 +1,8 @@
-import { blueskyAccount } from "./bluesky"
+import { blueskyAccounts } from "./bluesky"
 import { cloudflareZone } from "./cloudflare"
 import { githubRepo } from "./github"
 import { shopifyStore } from "./shopify"
-import { xAccount } from "./x"
+import { xAccounts } from "./x"
 import { youtubeChannels } from "./youtube"
 import { integrationStatus, type Integration, type IntegrationStatus } from "./types"
 import { unsplashApp } from "./unsplash"
@@ -56,23 +56,23 @@ export const youtubeLive = youtubeChannels({
   keyEnv: "YOUTUBE_API_KEY",
 })
 
-/** The Pragmatic Papers Bluesky account, whose posts run in the ticker. */
-export const blueskyPosts = blueskyAccount({
+/** Our Bluesky accounts, whose posts run in the ticker. */
+export const blueskyPosts = blueskyAccounts({
   id: "bluesky-posts",
   label: "Bluesky posts",
-  defaultHandle: "thepragmaticpapers.bsky.social",
-  handleEnv: "BLUESKY_HANDLE",
+  defaultHandles: ["thepragmaticpapers.bsky.social"],
+  handlesEnv: "BLUESKY_HANDLES",
 })
 
 /**
- * The Pragmatic Papers X account, whose posts run in the ticker. Reading posts
- * needs a paid X API plan or pay-per-use credits on the app behind the token.
+ * Our X accounts, whose posts run in the ticker. Reading posts needs a paid X API plan or
+ * pay-per-use credits on the app behind the token.
  */
-export const xPosts = xAccount({
+export const xPosts = xAccounts({
   id: "x-posts",
   label: "X posts",
-  defaultUsername: "PragPapers",
-  usernameEnv: "X_USERNAME",
+  defaultUsernames: ["PragPapers"],
+  usernamesEnv: "X_USERNAMES",
   tokenEnv: "X_BEARER_TOKEN",
 })
 

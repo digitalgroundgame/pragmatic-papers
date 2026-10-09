@@ -42,6 +42,7 @@ const post = (id: string, createdAt: string): TickerPost => ({
   id,
   source: "bluesky",
   text: id,
+  links: [],
   url: `https://example.com/${id}`,
   createdAt,
 })
@@ -66,15 +67,15 @@ describe("getTickerFeed", () => {
   it("passes the admin's settings to every source", async () => {
     integrations.current = {
       youtube: { channels: [{ channelId: "UC1" }, { channelId: "UC2" }] },
-      bluesky: { handle: "admin.bsky.social" },
-      x: { username: "AdminPick" },
+      bluesky: { handles: [{ handle: "admin.bsky.social" }, { handle: "other.bsky.social" }] },
+      x: { usernames: [{ username: "AdminPick" }] },
     }
     loadSource.mockImplementation(async (_source, fallback) => fallback)
     await getTickerFeed()
     const settings = {
       youtubeChannelIds: ["UC1", "UC2"],
-      blueskyHandle: "admin.bsky.social",
-      xUsername: "AdminPick",
+      blueskyHandles: ["admin.bsky.social", "other.bsky.social"],
+      xUsernames: ["AdminPick"],
     }
     expect(loadSource).toHaveBeenCalledTimes(1 + postSources.length)
     expect(loadSource).toHaveBeenCalledWith(broadcastSource, null, settings)
@@ -88,8 +89,8 @@ describe("getTickerFeed", () => {
     await getTickerFeed()
     expect(loadSource).toHaveBeenCalledWith(broadcastSource, null, {
       youtubeChannelIds: undefined,
-      blueskyHandle: undefined,
-      xUsername: undefined,
+      blueskyHandles: undefined,
+      xUsernames: undefined,
     })
   })
 

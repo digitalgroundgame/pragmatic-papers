@@ -5,8 +5,8 @@ CI fills in the top of this description, under the Closes line:
 1. Links to the showcase articles on the preview, when the PR showcases any
    (add a `Showcase: <slug>` line or the `showcase` label).
 2. One line of links: the preview once it deploys (left out when there are
-   showcase links, which go to the same site), the coverage and page speed
-   report, and any screenshot or visual regression comments.
+   showcase links, which go to the same site) and the coverage and page speed
+   report.
 3. Links to the Storybook pages of the components this PR changes.
 Leave the hidden markers around those links where they are: CI rewrites what's
 between them. Delete the Closes line if the PR closes no issue.

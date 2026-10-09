@@ -5,9 +5,8 @@
  *
  *   showcase-links   scripts/showcase-pr.ts: the showcase articles on the preview
  *   pr-links         one line of links, each set by its own job with setPrLink:
- *                    Preview (scripts/preview-deployment.ts), Coverage
- *                    (scripts/pr-report.ts), Screenshots and Visual regressions
- *                    (scripts/pr-screenshot-comment.ts)
+ *                    Preview (scripts/preview-deployment.ts) and Coverage
+ *                    (scripts/pr-report.ts)
  *   storybook-links  scripts/storybook-pr.ts: the components the PR changes
  *
  * A new block goes under the blocks above it in BLOCKS, else at the very top, under
@@ -85,7 +84,7 @@ export function withBlock(body: string, name: BlockName, block: string | null): 
 }
 
 /** The links line's links, left to right. Each starts `[Label](`. */
-export const LINK_LABELS = ["Preview", "Coverage", "Screenshots", "Visual regressions"] as const
+export const LINK_LABELS = ["Preview", "Coverage"] as const
 export type LinkLabel = (typeof LINK_LABELS)[number]
 const SEPARATOR = " · "
 

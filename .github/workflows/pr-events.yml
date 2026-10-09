@@ -6,8 +6,6 @@ name: PR events
 # check that passes. Work that takes longer runs in its own workflow, which
 # this starts with workflow_dispatch:
 #
-#   - The "needs screenshots" label runs update-snapshots.yml on the PR's
-#     branch, which takes the label off when it finishes.
 #   - The "ready for review" label, or marking a PR that has it ready, runs
 #     claude-review.yml on the PR's branch (PRs into dev, not drafts).
 #   - Opening the PR, editing its description, or adding or removing the
@@ -88,10 +86,6 @@ jobs:
               echo "Could not assign @$AUTHOR to #$n (GitHub ignored the assignee)" | tee -a "$GITHUB_STEP_SUMMARY"
             fi
           done
-
-      - name: Regenerate screenshot baselines
-        if: env.SAME_REPO == 'true' && github.event.action == 'labeled' && github.event.label.name == 'needs screenshots'
-        run: gh workflow run update-snapshots.yml --repo "$GITHUB_REPOSITORY" --ref "$HEAD_REF"
 
       - name: Start a Claude review
         if: >-

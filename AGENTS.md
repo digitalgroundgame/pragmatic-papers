@@ -31,7 +31,7 @@ This file provides guidance to tools like Claude Code (claude.ai/code) when work
 - `pnpm test:storybook` — run every Storybook story in headless Chromium: its `play` function, then an axe check (see [Storybook](#storybook))
 - `pnpm storybook` — Storybook dev server on port 6006; `pnpm storybook:build` builds it into `storybook-static/`
 - `pnpm test:integration` — run integration tests against a throwaway Postgres in Docker (see [Test databases](#test-databases))
-- `pnpm test:e2e` — run Playwright E2E tests against a throwaway Postgres in Docker (see [Test databases](#test-databases)). Screenshot comparisons are skipped unless `CI` is set; generate visual baselines with `pnpm test:e2e:update-snapshots` (Dockerized; matches CI pixel-for-pixel on x86_64 hosts — see `tests/e2e/README.md` for the full lifecycle) and commit them with the PR — never generate/commit baselines from a bare local machine
+- `pnpm test:e2e` — run Playwright E2E tests against a throwaway Postgres in Docker (see [Test databases](#test-databases)). Functional assertions only; visual changes are reviewed in Storybook and the PR's site preview (see `tests/e2e/README.md`)
 - `pnpm test:unit:coverage` — run unit tests with V8 coverage report (what CI uses; outputs `coverage/coverage-summary.json` and `coverage/coverage-final.json`)
 - `pnpm test:coverage` — run all tests with V8 coverage report (full picture for local inspection)
 - `pnpm test:unit -u` — regenerate snapshot baselines after intentional UI changes
@@ -54,9 +54,9 @@ processes they start.
   so they skip `payload migrate` until a migration changes; a miss migrates once and commits
   a new one. The pending-migrations check always replays from scratch, and CI (`CI` set)
   never uses a snapshot. `docker image rm` the tags to force a fresh migrate.
-- `TEST_DATABASE_URI` points them at an existing database instead (CI's E2E jobs, and
-  `pnpm test:e2e:update-snapshots`, whose containers can't start their own). It is refused if
-  it names the same database as `DATABASE_URI` in `.env`.
+- `TEST_DATABASE_URI` points them at an existing database instead (CI's E2E jobs, whose
+  containers can't start their own). It is refused if it names the same database as
+  `DATABASE_URI` in `.env`.
 
 ### Build & Payload
 
@@ -288,8 +288,7 @@ function, and fails on any axe violation.
 CI keeps the top of a PR's description up to date, under any `Closes #N` lines:
 the showcase links (`scripts/showcase-pr.ts`), then one line of links, then the
 Storybook links (`scripts/storybook-pr.ts`). The line holds the live preview,
-the PR analytics comment ("Coverage") and the screenshot and visual regression
-comments; each job sets its own link with `setPrLink`, and the Preview link is
+and the PR analytics comment ("Coverage"); each job sets its own link with `setPrLink`, and the Preview link is
 left out while showcase links point at the same site. Each block sits between
 `<!-- name -->` markers, and every job edits the description through
 `scripts/pr-description.ts`: `withBlock` places a block, and `editPrBody`
@@ -323,13 +322,6 @@ something. A new report joins that comment by registering a section in
   every dev run by a wide margin (`THRESHOLDS`). It **only warns**: the HTML
   reports are in the `lighthouse-results` artifact. A page added to the seed can
   be audited by adding it to `PAGES`.
-
-### Visual regression (screenshot) tests
-
-Adding, changing, or debugging a Playwright `toHaveScreenshot` test or a flaky
-visual diff? Use the **`e2e-visual-tests`** skill
-(`.claude/skills/e2e-visual-tests/SKILL.md`) for the checklist; full lifecycle
-in `tests/e2e/README.md`.
 
 ### Interactive maps
 

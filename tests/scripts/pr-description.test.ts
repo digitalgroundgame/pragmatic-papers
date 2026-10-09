@@ -40,7 +40,6 @@ describe("withBlock", () => {
 describe("withPrLink", () => {
   const preview = "[Preview](https://pr-42.pragmaticpapers.com) at `aaaaaaa`"
   const coverage = "[Coverage](https://github.com/o/r/pull/42#issuecomment-1)"
-  const shots = "[Screenshots](https://github.com/o/r/pull/42#issuecomment-2)"
 
   it("goes at the very top, above the Storybook links", () => {
     const body = "<!-- storybook-links -->\nS\n<!-- /storybook-links -->\n\n## Context"
@@ -61,10 +60,8 @@ describe("withPrLink", () => {
   })
 
   it("keeps the other jobs' links, in a fixed order", () => {
-    const body = `${line(shots)}\n\nText`
-    const both = withPrLink(body, "Coverage", coverage)
-    expect(both).toBe(`${line(coverage, shots)}\n\nText`)
-    expect(withPrLink(both, "Preview", preview)).toBe(`${line(preview, coverage, shots)}\n\nText`)
+    const body = `${line(coverage)}\n\nText`
+    expect(withPrLink(body, "Preview", preview)).toBe(`${line(preview, coverage)}\n\nText`)
   })
 
   it("replaces its own link in place, and is idempotent", () => {

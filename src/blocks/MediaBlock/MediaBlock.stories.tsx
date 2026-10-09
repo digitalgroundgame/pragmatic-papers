@@ -42,13 +42,16 @@ async function openLightbox(canvasElement: HTMLElement): Promise<HTMLElement> {
   const img = within(dialog).getByRole<HTMLImageElement>("img")
   await waitFor(() => expect(img.complete && img.naturalWidth > 0).toBe(true))
   const close = within(dialog).getByRole("button", { name: "Close" })
-  const height = dialog.querySelector("figcaption")
-    ? Math.min(0.8 * window.innerHeight, 0.9 * window.innerHeight - 104)
-    : 0.8 * window.innerHeight
+  const height = window.innerHeight - (dialog.querySelector("figcaption") ? 152 : 32)
   const fill = Math.min(window.innerWidth - 32, (height * img.naturalWidth) / img.naturalHeight)
   await waitFor(() => {
     expect(img.getBoundingClientRect().width).toBeGreaterThan(fill - 2)
   })
+  // The caption still fits on screen, under the image.
+  const caption = dialog.querySelector("figcaption")
+  if (caption) {
+    expect(caption.getBoundingClientRect().bottom).toBeLessThanOrEqual(window.innerHeight)
+  }
   await waitFor(() => {
     const image = img.getBoundingClientRect()
     const button = close.getBoundingClientRect()

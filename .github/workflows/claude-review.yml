@@ -46,6 +46,10 @@ jobs:
           # A Claude subscription token from `claude setup-token`, so reviews
           # count against that plan rather than an API key's credits.
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          # pr-events.yml dispatches this with the workflow token, so the run's
+          # actor is github-actions[bot], which the action refuses by default.
+          # Dispatching needs write access, so no outside bot can start it.
+          allowed_bots: github-actions
           prompt: "/code-review --comment ${{ github.repository }}/pull/${{ inputs.pr }} --head ${{ github.sha }}"
           claude_args: |
             --model opus

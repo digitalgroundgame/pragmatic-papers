@@ -6,8 +6,6 @@ name: PR events
 # check that passes. Work that takes longer runs in its own workflow, which
 # this starts with workflow_dispatch:
 #
-#   - The "needs screenshots" label runs update-snapshots.yml on the PR's
-#     branch, which takes the label off when it finishes.
 #   - The "ready for review" label, or marking a PR that has it ready, runs
 #     claude-review.yml on the PR's branch (PRs into dev, not drafts).
 #   - Opening the PR, editing its description, or adding or removing the
@@ -89,10 +87,6 @@ jobs:
             fi
           done
 
-      - name: Regenerate screenshot baselines
-        if: env.SAME_REPO == 'true' && github.event.action == 'labeled' && github.event.label.name == 'needs screenshots'
-        run: gh workflow run update-snapshots.yml --repo "$GITHUB_REPOSITORY" --ref "$HEAD_REF"
-
       - name: Start a Claude review
         if: >-
           env.SAME_REPO == 'true' &&
@@ -118,7 +112,9 @@ jobs:
         if: steps.showcase.outputs.sync
         with:
           ref: ${{ github.event.pull_request.head.sha }}
-          sparse-checkout: scripts/showcase-pr.ts
+          sparse-checkout: |
+            scripts/showcase-pr.ts
+            scripts/pr-description.ts
           sparse-checkout-cone-mode: false
 
       # Node 24 runs the TypeScript script directly; no install needed.

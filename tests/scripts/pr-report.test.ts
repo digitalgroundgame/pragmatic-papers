@@ -16,8 +16,12 @@ const API = "https://api.github.com/repos/owner/repo"
  * A PR's comments, served through a mocked `fetch` the way GitHub's REST API does. CI's
  * token writes as a bot; a comment marked `person` was written by someone.
  */
+/** The PR's description, which links the report comment. */
+let description = ""
+
 function fakeGitHub(initial: { id: number; body: string; person?: boolean }[] = []) {
   const comments = new Map(initial.map((comment) => [comment.id, comment.body]))
+  description = "## Context"
   const people = new Set(initial.filter((comment) => comment.person).map(({ id }) => id))
   let nextId = Math.max(0, ...comments.keys()) + 1
   const json = (body: unknown, status = 200) =>
@@ -44,6 +48,10 @@ function fakeGitHub(initial: { id: number; body: string; person?: boolean }[] = 
       const id = nextId++
       comments.set(id, JSON.parse(init!.body as string).body)
       return json({ id }, 201)
+    }
+    if (url === `${API}/pulls/42`) {
+      if (method === "PATCH") description = JSON.parse(init!.body as string).body
+      return json({ body: description })
     }
     const one = /\/issues\/comments\/(\d+)$/.exec(url)
     if (one && comments.has(Number(one[1]))) {
@@ -157,6 +165,16 @@ describe("postPrReportSection", () => {
     expect(vi.mocked(fetch).mock.calls[0]![1]?.headers).toMatchObject({
       Authorization: "Bearer t0ken",
     })
+  })
+
+  it("links the comment as Coverage at the top of the PR's description", async () => {
+    fakeGitHub([{ id: 7, body: withSection(undefined, "coverage", "COV") }])
+
+    await postPrReportSection(target, "lighthouse", "LH", { sleep: noWait })
+
+    expect(description).toBe(
+      "<!-- pr-links -->\n[Coverage](https://github.com/owner/repo/pull/42#issuecomment-7)\n<!-- /pr-links -->\n\n## Context",
+    )
   })
 
   it("replaces only its own section of an existing comment", async () => {

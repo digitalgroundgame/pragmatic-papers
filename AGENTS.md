@@ -191,10 +191,9 @@ connection isn't configured. When the `cloudflareWorkerCache` connection is
 configured (`WORKER_URL`, on the Coolify app a Cloudflare Worker reads from), the
 same flush first clears that Worker's cache through its `/next/revalidate-all`.
 A new hook for content readers see should call it too.
-A deploy purges too: `/next/revalidate-all`, which `start.sh` calls once the new
-container answers, purges at once and again two minutes later (`DEPLOY_REPURGE_MS`),
-after Coolify has moved traffic off the old container, which refills the edge with the
-previous release's pages in between.
+A deploy purges too: `start.sh` waits until the site's public URL is answered by the
+new container (`/next/purge-edge` names its `INSTANCE_ID`), so the old container can't
+refill the edge with the previous release's pages, then POSTs `/next/purge-edge`.
 
 ### Payload Plugins
 
@@ -231,7 +230,7 @@ previous release's pages in between.
 - Use `getPayloadConfig` imported from `@/utilities/getPayloadConfig`
 - Wrap data queries in `React.cache()` for per-request deduplication
 - Use `unstable_cache` with cache tags for long-lived caching (globals, redirects, sitemaps)
-- Sitemaps: a new one is a `sitemap.ts` in its route's folder (Next's metadata convention, served at `/<route>/sitemap.xml`, e.g. `docs/sitemap.ts`), added to `SITEMAP_PATHS` in `(sitemaps)/sitemaps.ts`. The `(sitemaps)/*-sitemap.xml` routes are the URLs production already serves to crawlers, so they stay where they are
+- Sitemaps: each is a `sitemap.ts` in the folder of the section it lists (Next's metadata convention, served at `/<route>/sitemap.xml`, e.g. `docs/sitemap.ts`), added with a title to `SITEMAPS` in `(sitemaps)/sitemaps.ts`, which `/sitemap_index.xml`, robots.txt and the public `/feeds` page read (RSS feeds are listed there from `FEEDS` in `feeds/feeds.ts`). Pages live at the root, so theirs is the root `sitemap.ts` (`/sitemap.xml`), and the index of them all is `/sitemap_index.xml` (`(sitemaps)/sitemap_index.xml`), which robots.txt and Search Console point at; Google News reads `articles/news-sitemap.xml/route.ts`, a route handler (`sitemap.ts` can't write `news:` tags) listing only the last two days' articles, as Google asks. The old `/pages-sitemap.xml`, `/articles-sitemap.xml` and `/volumes-sitemap.xml` redirect permanently in `next.config.ts`
 - Always respect `draftMode()` — pass `draft` and `overrideAccess: draft` into Payload queries
 - Next.js 15: `params` and `searchParams` are `Promise`s (must be `await`ed)
 - Metadata: use `generateMeta({ doc, canonicalPath })` from `@/utilities/generateMeta`

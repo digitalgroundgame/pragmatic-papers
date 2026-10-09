@@ -10,8 +10,8 @@ interface CMSLinkProps extends React.ComponentProps<"a"> {
  * CMSLink: A flexible link component for CMS-driven navigation.
  *
  * This component chooses the appropriate element for a given CMS link:
- * - For 'reference' links, uses HoverPrefetchLink (enabling Next.js client-side prefetching on hover).
- * - For 'custom' links (external or manually-entered URLs), renders as a plain <a>.
+ * - Renders through HoverPrefetchLink, which navigates client-side to paths on this site
+ *   and is a plain <a> for external URLs.
  *
  * Props:
  * - link: (LinkField) The CMS-provided link data object. Required.
@@ -28,15 +28,14 @@ export const CMSLink: React.FC<CMSLinkProps> = ({ link, children, ...props }) =>
   if (!link) return null
   const url = getLinkFieldUrl(link)
   if (!url) return null
-  const Slot = link.type === "custom" ? "a" : HoverPrefetchLink
   return (
-    <Slot
+    <HoverPrefetchLink
       href={url}
       target={link?.newTab ? "_blank" : undefined}
       rel={link?.newTab ? "noopener noreferrer" : undefined}
       {...props}
     >
       {children || link?.label}
-    </Slot>
+    </HoverPrefetchLink>
   )
 }

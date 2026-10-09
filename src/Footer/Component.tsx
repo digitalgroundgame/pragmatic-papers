@@ -6,6 +6,7 @@ import type { Footer } from "@/payload-types"
 import { getCachedGlobal } from "@/utilities/getGlobals"
 import { Copyright } from "./Copyright"
 import { LazyModeToggle } from "@/components/ModeToggleAnalytics.lazy"
+import { HoverPrefetchLink } from "@/components/Link/HoverPrefetchLink"
 
 export async function Footer(): Promise<React.ReactElement> {
   const { id, navItems, socials, copyright, layout }: Footer = await getCachedGlobal("footer", 2)()
@@ -21,9 +22,9 @@ export async function Footer(): Promise<React.ReactElement> {
         </div>
       )}
       <div className="flex flex-col justify-between gap-2 border-t pt-4 md:flex-row md:items-center">
-        <a href="/" className="flex-1">
+        <HoverPrefetchLink href="/" className="flex-1">
           <Logo size="sm" />
-        </a>
+        </HoverPrefetchLink>
         <div className="flex flex-row items-center gap-2">
           <SocialLinks parentId={id} socials={socials} aria-label="Footer Social Links" />
           <LazyModeToggle location="footer" />

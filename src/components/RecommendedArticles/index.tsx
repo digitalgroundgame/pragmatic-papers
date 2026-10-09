@@ -3,6 +3,7 @@
 import type { RecommendedArticleCandidate } from "@/app/(frontend)/recommended-articles.json/route"
 import { sendGAEvent } from "@next/third-parties/google"
 import React, { useEffect, useState } from "react"
+import { HoverPrefetchLink } from "@/components/Link/HoverPrefetchLink"
 import { Media } from "@/components/Media"
 import { Skeleton } from "@/components/ui/skeleton"
 import { TimeAgo } from "@/components/TimeAgo"
@@ -89,7 +90,7 @@ export function RecommendedArticles({
               </div>
             ))
           : sampled.map((article, index) => (
-              <a
+              <HoverPrefetchLink
                 key={article.slug}
                 href={`/articles/${article.slug}`}
                 className="group flex flex-row gap-x-4 gap-y-2 md:flex-col"
@@ -122,7 +123,7 @@ export function RecommendedArticles({
                   )}
                   <TimeAgo publishedAt={article.publishedAt} />
                 </div>
-              </a>
+              </HoverPrefetchLink>
             ))}
       </div>
     </section>

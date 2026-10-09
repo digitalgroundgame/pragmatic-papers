@@ -92,8 +92,9 @@ const eslintConfig = [
           },
         },
       ],
-      // Intentionally using <a> instead of next/link to avoid RSC Vary headers
-      // that prevent Cloudflare free-tier from caching page responses.
+      // Links go through HoverPrefetchLink, which is next/link only in the Cloudflare
+      // Worker build: in front of Coolify, Cloudflare's cache can't tell a page's HTML
+      // from the RSC payload next/link fetches for the same URL.
       "@next/next/no-html-link-for-pages": "off",
     },
   },

@@ -1,15 +1,9 @@
-import { createHash, timingSafeEqual } from "node:crypto"
 import { revalidatePath } from "next/cache"
 
 import { syncRepoDocs } from "@/plugins/docs/syncRepoDocs"
 import { getPayloadConfig } from "@/utilities/getPayloadConfig"
 
-function isBearer(header: string | null, secret: string): boolean {
-  if (!header?.startsWith("Bearer ")) return false
-  // Hashing first gives both sides the same length, which timingSafeEqual requires.
-  const digest = (value: string) => createHash("sha256").update(value).digest()
-  return timingSafeEqual(digest(header.slice("Bearer ".length)), digest(secret))
-}
+import { hasPayloadSecret } from "../bearer"
 
 /**
  * Run once each time a deploy goes live. Writes the help docs in src/docs/ into this
@@ -28,8 +22,7 @@ function isBearer(header: string | null, secret: string): boolean {
  * container already holds.
  */
 export async function POST(request: Request): Promise<Response> {
-  const secret = process.env.PAYLOAD_SECRET
-  if (!secret || !isBearer(request.headers.get("authorization"), secret)) {
+  if (!hasPayloadSecret(request)) {
     return Response.json({ error: "Unauthorized" }, { status: 401 })
   }
 

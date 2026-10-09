@@ -8,6 +8,7 @@ import React from "react"
 
 import { Media } from "@/components/Media"
 import { isMedia } from "@/components/Media"
+import { HoverPrefetchLink } from "@/components/Link/HoverPrefetchLink"
 import { type ImageVariant } from "@/components/Media/ImageMedia"
 import { internalDocToHref } from "@/components/RichText/internalDocToHref"
 import { cn } from "@/utilities/utils"
@@ -37,9 +38,14 @@ const converters: JSXConvertersFunction<DefaultNodeTypes> = ({ defaultConverters
         ? internalDocToHref({ linkNode: node })
         : (node.fields.url ?? "")
     return (
-      <a className="underline underline-offset-2" href={href} rel={rel} target={target}>
+      <HoverPrefetchLink
+        className="underline underline-offset-2"
+        href={href}
+        rel={rel}
+        target={target}
+      >
         {children}
-      </a>
+      </HoverPrefetchLink>
     )
   },
   autolink: ({ node, nodesToJSX }) => {

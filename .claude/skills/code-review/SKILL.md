@@ -195,13 +195,28 @@ confidence:
 
 Then write the summary, which is what most readers will read:
 
-1. At most 6 sentences: what this PR changes at runtime, which surfaces it
-   touches, and the verdict. Don't name this prompt's steps or headings.
-2. One line per finding: severity, file, and what goes wrong. When the
+1. The verdict, first and on its own, as a GitHub alert so it stands out:
+
+   ```md
+   > [!TIP]
+   > **Pass:** no blockers.
+   ```
+
+   ```md
+   > [!CAUTION]
+   > **Blocker:** <the blocking finding, in one line>.
+   ```
+
+   Use `[!WARNING]` with **Pass, with should-fix findings** when there are
+   `should-fix` findings but no blocker.
+
+2. At most 6 sentences: what this PR changes at runtime and which surfaces
+   it touches. Don't name this prompt's steps or headings.
+3. One line per finding: severity, file, and what goes wrong. When the
    finding has an inline comment, that line is all the summary says about
    it; the detail lives inline.
-3. Manual checks a person must make, if any, one line each.
-4. What you checked, inside a collapsed block, a few lines at most:
+4. Manual checks a person must make, if any, one line each.
+5. What you checked, inside a collapsed block, a few lines at most:
 
    ```md
    <details><summary>What I checked</summary>
@@ -211,9 +226,9 @@ Then write the summary, which is what most readers will read:
    </details>
    ```
 
-If nothing of substance was found, say so in one sentence and keep only
-the collapsed block. Don't pad the review with invented nitpicks to look
-thorough.
+If nothing of substance was found, say so in one sentence under the
+verdict and keep only the collapsed block. Don't pad the review with
+invented nitpicks to look thorough.
 
 ## Posting results (`--comment` mode)
 

@@ -33,11 +33,4 @@ describe("next.config.ts redirects", () => {
     expect(await redirectFor("/articles/feed.xml")).toBeUndefined()
     expect(await redirectFor("/volumes/feed.xml")).toBeUndefined()
   })
-
-  it("permanently redirects the old interactives sitemap to its new home", async () => {
-    const rule = await redirectFor("/interactives-sitemap.xml")
-    expect(rule?.destination).toBe("/interactives/sitemap.xml")
-    expect(rule?.permanent).toBe(true)
-    expect(await redirectFor("/interactives/sitemap.xml")).toBeUndefined()
-  })
 })

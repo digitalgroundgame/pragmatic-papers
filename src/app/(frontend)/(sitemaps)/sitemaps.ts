@@ -6,4 +6,6 @@ export const SITEMAP_PATHS = [
   "/articles-sitemap.xml",
   "/volumes-sitemap.xml",
   "/interactives/sitemap.xml",
+  "/authors/sitemap.xml",
+  "/topics/sitemap.xml",
 ] as const

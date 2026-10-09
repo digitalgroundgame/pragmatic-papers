@@ -92,6 +92,10 @@ RUN export PAYLOAD_SECRET=build-only && \
     SENTRY_RELEASE="${SOURCE_COMMIT}" pnpm build && \
     echo "--- COMPLETED: BUILDING NEXT.JS ---"
 
+# The migrations this image ships, for copy-database.sh to spot a preview database that ran
+# one a later commit renamed or rebuilt.
+RUN find src/migrations -maxdepth 1 -name '2*.ts' -exec basename {} .ts \; | sort > migration_names
+
 # ============================================
 # Runner stage - minimal production runtime
 # ============================================
@@ -102,15 +106,16 @@ ARG BUILD_ENV=preview
 ARG SOURCE_COMMIT=
 
 # BUILT_WITHOUT_DATABASE switches on the start-time database work in start.sh and
-# Payload's prodMigrations (src/payload.config.ts). SOURCE_COMMIT lets copy-database.sh
-# tell a new image from a restart, so FORCE_DATABASE_COPY copies once per image.
+# Payload's prodMigrations (src/payload.config.ts). IMAGE_COMMIT lets copy-database.sh
+# tell a new image from a restart, so FORCE_DATABASE_COPY copies once per image. Not
+# SOURCE_COMMIT: Coolify sets that to HEAD on the container, overriding the image's.
 ENV NODE_ENV=production \
     NEXT_TELEMETRY_DISABLED=1 \
     PORT=3000 \
     HOSTNAME="0.0.0.0" \
     BUILD_ENV=${BUILD_ENV} \
     BUILT_WITHOUT_DATABASE=true \
-    SOURCE_COMMIT=${SOURCE_COMMIT}
+    IMAGE_COMMIT=${SOURCE_COMMIT}
 
 # The PostgreSQL client for copy-database.sh, now run here rather than while building.
 # Pinned to the server's major version, as in PragmaticPapers.Dockerfile's builder:
@@ -136,6 +141,7 @@ COPY --from=builder --chown=nextjs:nodejs --chmod=755 \
     /app/dockerfiles/scripts/copy-database.sh \
     /app/dockerfiles/scripts/drop-closed-preview-databases.ts \
     ./
+COPY --from=builder --chown=nextjs:nodejs /app/migration_names ./
 
 USER nextjs
 EXPOSE 3000

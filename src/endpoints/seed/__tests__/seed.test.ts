@@ -16,6 +16,7 @@ const REVALIDATING = new Set([
   "redirects",
   "header",
   "footer",
+  "docs",
 ])
 
 interface Write {
@@ -136,7 +137,7 @@ describe("seed", () => {
       (write) => write.op === "updateGlobal" && write.target === "site-settings",
     )
     expect(siteSettings?.data).toEqual({
-      experiments: { feed: true, interactives: true, tableOfContents: true },
+      experiments: { feed: true, interactives: true, tableOfContents: true, ticker: true },
     })
     expect(siteSettings?.context?.disableRevalidate).toBe(true)
   })
@@ -147,8 +148,8 @@ describe("seed", () => {
 
     await seed(payload, onProgress, { disableRevalidate: true })
 
-    expect(onProgress).toHaveBeenCalledWith("Clearing existing data...", 1, 13)
-    expect(onProgress).toHaveBeenLastCalledWith("Seeding article recommendations...", 13, 13)
+    expect(onProgress).toHaveBeenCalledWith("Clearing existing data...", 1, 14)
+    expect(onProgress).toHaveBeenLastCalledWith("Seeding article recommendations...", 14, 14)
   })
 
   it("names the step that failed", async () => {

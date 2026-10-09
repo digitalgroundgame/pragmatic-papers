@@ -14,6 +14,8 @@ import { Webhooks } from "@/collections/Webhooks"
 import { defaultLexical } from "@/fields/defaultLexical"
 import { Footer } from "@/Footer/config"
 import { ArticleRecommendations } from "@/globals/ArticleRecommendations/config"
+import { Integrations } from "@/globals/Integrations/config"
+import { Ticker } from "@/globals/Ticker/config"
 import { SiteSettings } from "@/globals/SiteSettings/config"
 import { Header } from "@/Header/config"
 import { canRunJobs } from "@/jobs/access"
@@ -29,7 +31,7 @@ import { type PostgresAdapter, postgresAdapter } from "@payloadcms/db-postgres"
 import path from "path"
 import pretty from "pino-pretty"
 import { buildConfig, type SharpDependency } from "payload"
-import sharp from "sharp"
+import sharp from "@/cloudflare/sharp"
 import { fileURLToPath } from "url"
 
 const filename = fileURLToPath(import.meta.url)
@@ -111,6 +113,9 @@ export default buildConfig({
       // next query. (No connectionTimeoutMillis: pg-pool also applies it to queries waiting
       // for a free client, which would turn a busy pool into failed requests.)
       keepAlive: true,
+      // A Cloudflare Worker can't reuse a socket opened during another request, so in one,
+      // give each query a fresh connection (Hyperdrive pools them for us).
+      ...(globalThis.navigator?.userAgent === "Cloudflare-Workers" && { maxUses: 1 }),
     },
     // prevent schema push in prod/test for static schema determinism and noise reduction
     push: process.env.NODE_ENV === "development",
@@ -155,7 +160,7 @@ export default buildConfig({
     InteractiveSnapshots,
   ],
   cors: [getServerSideURL()].filter(Boolean),
-  globals: [Header, Footer, ArticleRecommendations, SiteSettings],
+  globals: [Header, Footer, ArticleRecommendations, SiteSettings, Integrations, Ticker],
   // Nothing here reads Payload's GraphQL API (the site and admin use the Local and REST
   // APIs), and its errors reach `afterError` with their status nested on `originalError`,
   // which the Sentry plugin reads as a 500: anyone could fill Sentry from /api/graphql.

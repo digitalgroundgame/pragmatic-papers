@@ -4,6 +4,8 @@ import type { NextConfig } from "next"
 import path from "path"
 import { fileURLToPath } from "url"
 
+import { withCloudflare } from "./src/cloudflare/withCloudflare"
+
 const __filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(__filename)
 
@@ -45,6 +47,10 @@ const NOT_EDGE_CACHED = [
 
 const nextConfig: NextConfig = {
   output: "standalone",
+  // Each deploy reads src/docs/ to sync the help docs (syncDocs), which no import traces.
+  outputFileTracingIncludes: {
+    "/**": ["./src/docs/**/*"],
+  },
   // Temporarily required on Windows until Next.js fixes Turbopack Sass resolution.
   // See: https://github.com/vercel/next.js/issues/86431
   sassOptions: {
@@ -255,7 +261,7 @@ const payloadConfig = clientHintsOnlyForAdmin(
   withPayload(nextConfig, { devBundleServerPackages: false }),
 )
 
-export default withSentryConfig(payloadConfig, {
+const config = withSentryConfig(payloadConfig, {
   // For all available options, see:
   // https://www.npmjs.com/package/@sentry/webpack-plugin#options
 
@@ -298,3 +304,6 @@ export default withSentryConfig(payloadConfig, {
     },
   },
 })
+
+// The public site as a Cloudflare Worker (`pnpm build:worker`); see src/cloudflare/README.md.
+export default process.env.OPENNEXT_BUILD === "true" ? withCloudflare(config) : config

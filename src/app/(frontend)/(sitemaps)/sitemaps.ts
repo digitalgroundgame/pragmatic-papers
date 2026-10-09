@@ -8,4 +8,5 @@ export const SITEMAP_PATHS = [
   "/interactives/sitemap.xml",
   "/authors/sitemap.xml",
   "/topics/sitemap.xml",
+  "/docs/sitemap.xml",
 ] as const

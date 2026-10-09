@@ -103,3 +103,7 @@ devenv.local.yaml
 
 # Upstream docs fetched on demand by .claude/skills/upstream-docs
 /.cache/
+
+# Cloudflare Worker build output (pnpm build:worker, wrangler dev)
+.open-next/
+.wrangler/

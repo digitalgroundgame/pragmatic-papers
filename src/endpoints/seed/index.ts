@@ -1,6 +1,7 @@
 import { DELETE_MEDIA_IN_USE } from "@/collections/Media/hooks/protectPublishedMedia"
 import { seedRandomRankings } from "@/jobs/updateRecommendations/logic"
 import type { Media, User } from "@/payload-types"
+import { syncDocs } from "@/plugins/docs/syncDocs"
 import { revalidatePath } from "next/cache"
 import type { Payload } from "payload"
 import { createArticle, getWriterOrThrow, validateWriters } from "./articles"
@@ -86,6 +87,7 @@ export const seed = async (
         // Snapshots point at their interactive, so they go first.
         await payload.delete({ collection: "interactive-snapshots", context, where: {} })
         await payload.delete({ collection: "interactives", context, where: {} })
+        await payload.delete({ collection: "docs", context, where: {} })
         // Last, once the content that uses it is gone. The flag also clears media
         // that content the seed doesn't own (a real user's profile image) still uses,
         // which the delete would otherwise skip without saying so.
@@ -465,8 +467,17 @@ export const seed = async (
         await payload.updateGlobal({
           slug: "site-settings",
           context,
-          data: { experiments: { feed: true, interactives: true, tableOfContents: true } },
+          data: {
+            experiments: { feed: true, interactives: true, tableOfContents: true, ticker: true },
+          },
         })
+      },
+    },
+    {
+      name: "Syncing help docs...",
+      fn: async () => {
+        // The ones a running site writes on start, so they're back after the wipe above.
+        await syncDocs(payload)
       },
     },
     {

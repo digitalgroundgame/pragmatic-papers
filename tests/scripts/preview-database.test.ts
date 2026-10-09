@@ -21,10 +21,15 @@ const PREVIEW_URI = URI.replace("pragmatic_papers?", "pragmatic_papers_pr_330?")
 // $CALLS_LOG, one line per call. psql answers the "does the target exist?" query from
 // $TARGET_EXISTS and, while $SOURCE_BUSY is set, refuses a template copy the way Postgres
 // does while anything is connected to the template. pnpm also logs the DATABASE_URI it
-// migrated. $DUMP_STATUS, $RESTORE_STATUS and $MIGRATE_STATUS make those steps fail;
+// migrated. Asked which migrations a database has run, it answers $TARGET_MIGRATIONS for the
+// preview's and $SOURCE_MIGRATIONS for the source's. $DUMP_STATUS, $RESTORE_STATUS and $MIGRATE_STATUS make those steps fail;
 // $SERVER_VERSION_NUM and $CLIENT_VERSION set the server's and pg_dump's versions.
 const FAKES: Record<string, string> = {
   psql: `case "$*" in
+  *"payload_migrations"*) case "$*" in
+    *pragmatic_papers_pr_330*) printf '%b' "$TARGET_MIGRATIONS" ;;
+    *) printf '%b' "$SOURCE_MIGRATIONS" ;;
+  esac ;;
   *"shobj_description"*) echo "$DATABASE_COMMENT" ;;
   *"FROM pg_database"*) [ "$TARGET_EXISTS" = "true" ] && echo 1 ;;
   *"server_version_num"*) echo "\${SERVER_VERSION_NUM:-170006}" ;;
@@ -83,8 +88,11 @@ function sh(script: string, env: Record<string, string> = {}) {
       TARGET_EXISTS: "",
       SOURCE_BUSY: "",
       BUILT_WITHOUT_DATABASE: "",
-      SOURCE_COMMIT: "",
+      IMAGE_COMMIT: "",
       DATABASE_COMMENT: "",
+      TARGET_MIGRATIONS: "",
+      SOURCE_MIGRATIONS: "",
+      MIGRATION_NAMES_FILE: join(dir, "migration_names"),
       ...env,
     },
   })
@@ -286,7 +294,7 @@ describe("preview database build", () => {
       TARGET_EXISTS: "true",
       FORCE_DATABASE_COPY: "true",
       BUILT_WITHOUT_DATABASE: "true",
-      SOURCE_COMMIT: "abc123",
+      IMAGE_COMMIT: "abc123",
     }
 
     const restart = copyToPreview({ ...image, DATABASE_COMMENT: "copied for commit abc123" })
@@ -304,11 +312,11 @@ describe("preview database build", () => {
   })
 
   it("marks a first copy with the image's commit, and leaves Coolify builds unmarked", () => {
-    copyToPreview({ BUILT_WITHOUT_DATABASE: "true", SOURCE_COMMIT: "abc123" })
+    copyToPreview({ BUILT_WITHOUT_DATABASE: "true", IMAGE_COMMIT: "abc123" })
     expect(indexOf("COMMENT ON DATABASE")).toBeGreaterThan(indexOf("WITH TEMPLATE"))
 
     rmSync(join(dir, "calls.log"), { force: true })
-    copyToPreview({ SOURCE_COMMIT: "abc123" })
+    copyToPreview({ IMAGE_COMMIT: "abc123" })
     expect(indexOf("COMMENT ON DATABASE")).toBe(-1)
   })
 
@@ -321,6 +329,64 @@ describe("preview database build", () => {
 
     expect(status).not.toBe(0)
     expect(indexOf('DROP DATABASE IF EXISTS "pragmatic_papers_pr_330";')).toBe(-1)
+  })
+
+  describe("a preview database that ran a migration the PR has since rewritten", () => {
+    const image = { TARGET_EXISTS: "true", BUILT_WITHOUT_DATABASE: "true", IMAGE_COMMIT: "abc123" }
+    beforeEach(() => {
+      writeFileSync(join(dir, "migration_names"), "20261001_000000_base\n20261008_000000_ticker\n")
+    })
+
+    it("is replaced with a fresh copy, without FORCE_DATABASE_COPY", () => {
+      const { status, output } = copyToPreview({
+        ...image,
+        TARGET_MIGRATIONS: "20261001_000000_base\n20261007_000000_ticker_draft\n",
+        SOURCE_MIGRATIONS: "20261001_000000_base\n",
+      })
+
+      expect(status).toBe(0)
+      expect(output).toContain("20261007_000000_ticker_draft")
+      expect(indexOf('RENAME TO "pragmatic_papers_pr_330"')).toBeGreaterThan(
+        indexOf('WITH TEMPLATE "pragmatic_papers"'),
+      )
+      expect(
+        indexOf(`COMMENT ON DATABASE "pragmatic_papers_pr_330" IS 'copied for commit abc123'`),
+      ).toBeGreaterThan(indexOf("RENAME TO"))
+    })
+
+    it("is kept when the source ran it, as when staging is ahead of the PR", () => {
+      const { status, output } = copyToPreview({
+        ...image,
+        TARGET_MIGRATIONS: "20261001_000000_base\n20261009_000000_from_dev\n",
+        SOURCE_MIGRATIONS: "20261001_000000_base\n20261009_000000_from_dev\n",
+      })
+
+      expect(status).toBe(0)
+      expect(output).toContain("already exists")
+      expect(indexOf("DROP DATABASE")).toBe(-1)
+    })
+
+    it("is kept when it has only run the image's own migrations", () => {
+      const { output } = copyToPreview({
+        ...image,
+        TARGET_MIGRATIONS: "20261001_000000_base\n20261008_000000_ticker\n",
+        SOURCE_MIGRATIONS: "20261001_000000_base\n",
+      })
+
+      expect(output).toContain("already exists")
+      expect(indexOf("DROP DATABASE")).toBe(-1)
+    })
+
+    it("is kept by an image that lists no migrations", () => {
+      rmSync(join(dir, "migration_names"))
+      const { output } = copyToPreview({
+        ...image,
+        TARGET_MIGRATIONS: "20261007_000000_ticker_draft\n",
+      })
+
+      expect(output).toContain("already exists")
+      expect(indexOf("DROP DATABASE")).toBe(-1)
+    })
   })
 
   it("never copies onto a database that isn't a preview's", () => {

@@ -141,12 +141,19 @@ syncs them too. To add one:
 
 1. Write it in the local admin (**Help → Docs**): a `summary` of a sentence or
    two (the bell shows it), `publishedAt` (the day the release reaches
-   production) and, for a doc only some roles need, `audience` (e.g.
-   `["editor"]`; admins and chief editors see every doc).
+   production; for a feature that shipped before the bell, the day it did) and,
+   for a doc only some roles need, `audience` (e.g. `["editor"]`; admins and
+   chief editors see every doc).
 2. `pnpm docs:export <slug>` writes it into `src/docs/<slug>/`, swapping each
    Media document for a `{ "$media": "<file>" }` reference to a copy beside the
    JSON, since Media ids differ from site to site. Links to other documents
    carry this database's ids, so link to their URLs instead.
+
+The bell announces a doc dated from its launch (`BACKLOG` in
+`src/plugins/docs/notifications.ts`) at once. Backdated docs, about features
+older than that, are the backlog: it releases a few a week, newest feature
+first, so catching up never floods it (`announcements` in `schedule.ts`). /docs
+lists every doc from the start.
 
 The repo copy wins: a repo doc edited in a site's admin is overwritten the next
 time its folder changes. Readers' pages and the bell read docs through

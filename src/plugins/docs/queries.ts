@@ -27,7 +27,7 @@ const findPublishedDocs = async () => {
     },
     // Enough of the hero image for a thumbnail.
     populate: {
-      media: { alt: true, filename: true, mimeType: true, url: true, sizes: { square: true } },
+      media: { alt: true, filename: true, mimeType: true, url: true, sizes: { thumbnail: true } },
     },
   })
   return docs

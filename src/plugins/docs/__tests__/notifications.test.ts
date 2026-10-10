@@ -31,7 +31,7 @@ const docs = [
       id: 7,
       alt: "The bell",
       url: "/api/media/file/bell.png",
-      sizes: { square: { url: "/api/media/file/bell-500x500.webp" } },
+      sizes: { thumbnail: { url: "/api/media/file/bell-300x158.webp" } },
     },
   },
 ]
@@ -54,11 +54,11 @@ describe("docsNotifications", () => {
       summary: "a",
       href: "/docs/everyone",
       date: "2026-10-18",
-      image: { url: "/api/media/file/bell-500x500.webp", alt: "The bell" },
+      image: { url: "/api/media/file/bell-300x158.webp", alt: "The bell" },
     })
   })
 
-  it("falls back to the hero image itself where it has no square crop, and to none", async () => {
+  it("falls back to the hero image itself where it has no thumbnail size, and to none", async () => {
     expect(docThumbnail({ id: 7, alt: null, url: "/api/media/file/bell.svg" } as never)).toEqual({
       url: "/api/media/file/bell.svg",
       alt: "",

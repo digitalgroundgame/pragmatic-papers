@@ -154,16 +154,17 @@ export function NotificationsMenu({
                     onClick={() => onOpen(key)}
                   >
                     {item.image && (
-                      // Decorative: the title beside it says what it's about. The square crop is
-                      // already small, so it needs none of next/image's resizing.
-                      // eslint-disable-next-line @next/next/no-img-element -- a fixed 48px thumbnail
+                      // Decorative: the title beside it says what it's about. The thumbnail size
+                      // is already small, so it needs none of next/image's resizing. Shaped like
+                      // a link preview (1200×630), so a hero shows whole.
+                      // eslint-disable-next-line @next/next/no-img-element -- a fixed 80px thumbnail
                       <img
                         src={item.image.url}
                         alt=""
                         loading="lazy"
-                        width={48}
-                        height={48}
-                        className="bg-muted border-border mt-0.5 size-12 shrink-0 rounded-md border object-cover"
+                        width={80}
+                        height={42}
+                        className="bg-muted border-border mt-0.5 h-[42px] w-20 shrink-0 rounded-md border object-cover"
                       />
                     )}
                     <span className="flex min-w-0 flex-col gap-1">

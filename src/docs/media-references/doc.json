@@ -2,6 +2,10 @@
   "title": "Why some media can't be deleted, and how to free it",
   "summary": "A photo or recording used by published content is protected from deletion. The References tab shows where it's used and can detach it for you.",
   "publishedAt": "2026-09-28",
+  "heroImage": {
+    "$media": "hero.webp",
+    "alt": "Chain link icon"
+  },
   "content": {
     "root": {
       "type": "root",

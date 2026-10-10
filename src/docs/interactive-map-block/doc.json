@@ -2,6 +2,10 @@
   "title": "Shade a map by value with the Interactive Map block",
   "summary": "Upload a pre-projected SVG to Maps, then show it in an article with each region coloured by its margin, hoverable for the numbers.",
   "publishedAt": "2026-06-15",
+  "heroImage": {
+    "$media": "hero.webp",
+    "alt": "Folded map icon"
+  },
   "audience": ["writer", "editor"],
   "content": {
     "root": {

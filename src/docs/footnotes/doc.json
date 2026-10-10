@@ -2,6 +2,10 @@
   "title": "Add footnotes as you type",
   "summary": "Type [^ your note ] to add a footnote where you are, or reuse one you've already written. They're numbered for you.",
   "publishedAt": "2026-04-27",
+  "heroImage": {
+    "$media": "hero.webp",
+    "alt": "Superscript icon"
+  },
   "audience": ["writer", "editor"],
   "content": {
     "root": {

@@ -2,6 +2,10 @@
   "title": "Who can write, publish and schedule an article",
   "summary": "Writers draft their own articles and editors publish them. Your work saves itself as you go, and Live Preview shows it as readers will see it.",
   "publishedAt": "2025-07-01",
+  "heroImage": {
+    "$media": "hero.webp",
+    "alt": "Paper plane icon"
+  },
   "audience": ["writer", "editor"],
   "content": {
     "root": {

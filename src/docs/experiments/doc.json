@@ -2,6 +2,10 @@
   "title": "Switch beta features on per site in Site Settings",
   "summary": "Experiments let a new feature run on staging before readers on the live site see it.",
   "publishedAt": "2026-10-18",
+  "heroImage": {
+    "$media": "hero.webp",
+    "alt": "Lab flask icon"
+  },
   "audience": ["admin"],
   "content": {
     "root": {

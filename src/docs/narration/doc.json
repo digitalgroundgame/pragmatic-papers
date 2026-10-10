@@ -2,6 +2,10 @@
   "title": "Add a narration to an article",
   "summary": "Upload a recording to Media, credit its narrator, then attach it on the article's Narration tab. Readers get a player in the article header.",
   "publishedAt": "2026-05-04",
+  "heroImage": {
+    "$media": "hero.webp",
+    "alt": "Headphones icon"
+  },
   "audience": ["narrator", "writer", "editor"],
   "content": {
     "root": {

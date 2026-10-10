@@ -12,6 +12,8 @@ export interface RepoDoc {
   summary: string
   /** `YYYY-MM-DD`. */
   publishedAt: string
+  /** A file in the doc's folder: the bell's thumbnail and the link preview's image. */
+  heroImage: MediaRef
   audience?: Role[]
   /** Left out means shown. */
   showTableOfContents?: boolean

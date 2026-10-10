@@ -1416,6 +1416,10 @@ export interface Doc {
    * One or two sentences. The help bell shows it under the title.
    */
   summary: string;
+  /**
+   * The help bell shows it beside the title, and link previews use it. It isn't shown on the doc.
+   */
+  heroImage: number | Media;
   content: {
     root: {
       type: string;
@@ -2445,6 +2449,7 @@ export interface FormSubmissionsSelect<T extends boolean = true> {
 export interface DocsSelect<T extends boolean = true> {
   title?: T;
   summary?: T;
+  heroImage?: T;
   content?: T;
   publishedAt?: T;
   audience?: T;

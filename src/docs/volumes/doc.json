@@ -2,6 +2,10 @@
   "title": "Put together a volume",
   "summary": "A volume collects published articles in the order you choose, with an editor's note. Its number and URL fill themselves in.",
   "publishedAt": "2025-06-26",
+  "heroImage": {
+    "$media": "hero.webp",
+    "alt": "Open book icon"
+  },
   "audience": ["editor"],
   "content": {
     "root": {

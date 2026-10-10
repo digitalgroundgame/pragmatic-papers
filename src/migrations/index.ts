@@ -54,6 +54,7 @@ import * as migration_20261009_022245_links_onto_link2 from "./20261009_022245_l
 import * as migration_20261009_032243_hero_links_default_button from "./20261009_032243_hero_links_default_button"
 import * as migration_20261009_040730_add_ticker_and_integrations from "./20261009_040730_add_ticker_and_integrations"
 import * as migration_20261009_080507_add_docs from "./20261009_080507_add_docs"
+import * as migration_20261010_000818_add_docs_hero_image from "./20261010_000818_add_docs_hero_image"
 
 export const migrations = [
   {
@@ -335,5 +336,10 @@ export const migrations = [
     up: migration_20261009_080507_add_docs.up,
     down: migration_20261009_080507_add_docs.down,
     name: "20261009_080507_add_docs",
+  },
+  {
+    up: migration_20261010_000818_add_docs_hero_image.up,
+    down: migration_20261010_000818_add_docs_hero_image.down,
+    name: "20261010_000818_add_docs_hero_image",
   },
 ]

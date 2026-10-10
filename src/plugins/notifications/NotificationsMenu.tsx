@@ -147,32 +147,47 @@ export function NotificationsMenu({
               return (
                 <li key={key}>
                   <a
-                    className="hover:bg-muted focus-visible:bg-muted flex flex-col gap-1 px-4 py-3 text-inherit no-underline outline-none"
+                    className="hover:bg-muted focus-visible:bg-muted flex gap-3 px-4 py-3 text-inherit no-underline outline-none"
                     href={item.href}
                     target="_blank"
                     rel="noopener"
                     onClick={() => onOpen(key)}
                   >
-                    {/* Inline, so a long title wraps under the dot rather than beside it. */}
-                    <span className="text-sm font-semibold">
-                      {isUnread && (
-                        <span
-                          aria-hidden
-                          className="bg-brand mr-2 inline-block size-2 rounded-full align-middle"
-                        />
-                      )}
-                      {item.title}
-                      {isUnread && <span className="sr-only"> (unread)</span>}
-                    </span>
-                    {item.summary && (
-                      <span className="text-muted-foreground text-sm">{item.summary}</span>
+                    {item.image && (
+                      // Decorative: the title beside it says what it's about. The square crop is
+                      // already small, so it needs none of next/image's resizing.
+                      // eslint-disable-next-line @next/next/no-img-element -- a fixed 48px thumbnail
+                      <img
+                        src={item.image.url}
+                        alt=""
+                        loading="lazy"
+                        width={48}
+                        height={48}
+                        className="bg-muted mt-0.5 size-12 shrink-0 rounded-md object-cover"
+                      />
                     )}
-                    <time
-                      className="text-muted-foreground text-xs"
-                      dateTime={item.date.slice(0, 10)}
-                    >
-                      {formatNotificationDate(item.date)}
-                    </time>
+                    <span className="flex min-w-0 flex-col gap-1">
+                      {/* Inline, so a long title wraps under the dot rather than beside it. */}
+                      <span className="text-sm font-semibold">
+                        {isUnread && (
+                          <span
+                            aria-hidden
+                            className="bg-brand mr-2 inline-block size-2 rounded-full align-middle"
+                          />
+                        )}
+                        {item.title}
+                        {isUnread && <span className="sr-only"> (unread)</span>}
+                      </span>
+                      {item.summary && (
+                        <span className="text-muted-foreground text-sm">{item.summary}</span>
+                      )}
+                      <time
+                        className="text-muted-foreground text-xs"
+                        dateTime={item.date.slice(0, 10)}
+                      >
+                        {formatNotificationDate(item.date)}
+                      </time>
+                    </span>
                   </a>
                 </li>
               )

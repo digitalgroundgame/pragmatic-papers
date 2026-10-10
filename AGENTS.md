@@ -148,7 +148,8 @@ reads staging's database and has no `src/docs/` of its own).
 `pnpm dev:db-seed` syncs them locally. To add one:
 
 1. Write it in the local admin (**Help → Docs**): a `summary` of a sentence or
-   two (the bell shows it), `publishedAt` (the day the release reaches
+   two (the bell shows it), a `heroImage` (the bell's thumbnail, cropped square,
+   and the link preview's image; the doc page doesn't show it), `publishedAt` (the day the release reaches
    production; for a feature that shipped earlier, the day it did) and,
    for a doc only some roles need, `audience` (e.g. `["editor"]`; admins and
    chief editors see every doc). It only decides who the bell tells: every

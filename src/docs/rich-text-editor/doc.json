@@ -2,6 +2,10 @@
   "title": "Find your way around the rich text editor",
   "summary": "Format as you type, add blocks from the slash menu or the + handle, and drag anything into place. The same editor writes articles and help docs.",
   "publishedAt": "2025-06-20",
+  "heroImage": {
+    "$media": "hero.webp",
+    "alt": "Pen icon"
+  },
   "audience": ["writer", "editor"],
   "content": {
     "root": {

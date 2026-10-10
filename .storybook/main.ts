@@ -50,6 +50,8 @@ const config: StorybookConfig = {
     "../public",
     { from: "./assets", to: "/storybook-assets" },
     { from: "../src/endpoints/seed/fixtures", to: "/seed-fixtures" },
+    // Help docs' pictures, for stories that show a doc as the admin does.
+    { from: "../src/docs", to: "/docs-assets" },
   ],
   core: {
     disableTelemetry: true,

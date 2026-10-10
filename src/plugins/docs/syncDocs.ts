@@ -38,13 +38,16 @@ async function uploadOnce(
   ref: { alt?: string | null; caption?: unknown },
 ): Promise<number | string> {
   const filename = mediaFilename(slug, file, bytes)
+  // Matched without its extension: Media converts images to WebP, so a PNG is stored as .webp,
+  // and adds a number to a name already taken on disk.
+  const stem = filename.slice(0, filename.length - path.extname(filename).length)
   const { docs } = await payload.find({
     collection: "media",
     depth: 0,
     limit: 1,
     overrideAccess: true,
     pagination: false,
-    where: { filename: { equals: filename } },
+    where: { filename: { like: stem } },
   })
   if (docs[0]) return docs[0].id
 
@@ -89,7 +92,7 @@ export async function syncDocs(payload: Payload, dir = DOCS_DIR): Promise<SyncRe
     const folder = path.join(dir, slug)
     const json = await readFile(path.join(folder, "doc.json"), "utf8")
     const repoDoc = JSON.parse(json) as RepoDoc
-    const refs = mediaRefsIn(repoDoc.content)
+    const refs = mediaRefsIn([repoDoc.heroImage, repoDoc.content])
     const files = await Promise.all(refs.map((ref) => readFile(path.join(folder, ref.$media))))
     const sourceHash = hashRepoDoc(json, files)
 
@@ -117,6 +120,7 @@ export async function syncDocs(payload: Payload, dir = DOCS_DIR): Promise<SyncRe
       title: repoDoc.title,
       summary: repoDoc.summary,
       publishedAt: repoDoc.publishedAt,
+      heroImage: unpackMedia(repoDoc.heroImage, ids) as number,
       audience: (repoDoc.audience ?? []) as Doc["audience"],
       showTableOfContents: repoDoc.showTableOfContents ?? true,
       content: unpackMedia(repoDoc.content, ids) as never,

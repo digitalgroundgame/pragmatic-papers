@@ -62,8 +62,11 @@ describe("syncDocs", () => {
     expect(doc?.publishedAt?.slice(0, 10)).toBe("2026-10-18")
 
     const media = await syncedMedia()
-    expect(media).toHaveLength(1)
-    expect(JSON.stringify(doc?.content)).toContain(`"filename":"${media[0]!.filename}"`)
+    const hero = doc?.heroImage
+    expect(typeof hero === "object" && hero?.filename).toMatch(new RegExp(`^docs-${SLUG}-`))
+    const pictures = media.filter((item) => typeof hero !== "object" || item.id !== hero?.id)
+    expect(pictures).toHaveLength(1)
+    expect(JSON.stringify(doc?.content)).toContain(`"filename":"${pictures[0]!.filename}"`)
   })
 
   it("skips a doc that hasn't changed", async () => {
@@ -79,7 +82,23 @@ describe("syncDocs", () => {
     const result = await syncDocs(payload, dir)
     expect(result.updated).toEqual([SLUG])
     expect((await findDoc())?.summary).toBe("A new summary.")
-    expect(await syncedMedia()).toHaveLength(1)
+    expect(await syncedMedia()).toHaveLength(2)
+  })
+
+  it("reuses a PNG it uploaded, though Media stored it as WebP", async () => {
+    const folder = path.join(dir, SLUG)
+    const file = path.join(folder, "doc.json")
+    await cp(path.join(folder, "hero.webp"), path.join(folder, "hero-copy.png"))
+    const repoDoc = JSON.parse(await readFile(file, "utf8")) as RepoDoc
+    const withPng = { ...repoDoc, heroImage: { $media: "hero-copy.png", alt: "Camera icon" } }
+    await writeFile(file, JSON.stringify(withPng))
+    await syncDocs(payload, dir)
+    await writeFile(file, JSON.stringify({ ...withPng, summary: "Changed again." }))
+    await syncDocs(payload, dir)
+
+    const copies = (await syncedMedia()).filter((item) => item.filename?.includes("hero-copy"))
+    expect(copies).toHaveLength(1)
+    expect(copies[0]!.filename).toMatch(/\.webp$/)
   })
 
   it("leaves a synced doc read-only to editors, unlike one written in the admin", async () => {
@@ -105,6 +124,7 @@ describe("syncDocs", () => {
         slug: "written-here",
         summary: "A doc from the admin.",
         publishedAt: "2026-10-18",
+        heroImage: (await syncedMedia())[0]!.id,
         content: {
           root: {
             type: "root",

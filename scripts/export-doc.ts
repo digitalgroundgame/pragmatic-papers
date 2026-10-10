@@ -49,11 +49,18 @@ export async function main(slug: string | undefined): Promise<void> {
     if (!doc) throw new Error(`No doc with the slug "${slug}"`)
     if (!doc.publishedAt) throw new Error(`"${slug}" has no published date yet`)
 
-    const { content, media } = packMedia(slug, doc.content)
+    if (!doc.heroImage) throw new Error(`"${slug}" has no hero image yet`)
+
+    const { content: packed, media } = packMedia(slug, {
+      heroImage: doc.heroImage,
+      content: doc.content,
+    })
+    const { heroImage, content } = packed as Pick<RepoDoc, "heroImage" | "content">
     const repoDoc: RepoDoc = {
       title: doc.title,
       summary: doc.summary,
       publishedAt: doc.publishedAt.slice(0, 10),
+      heroImage,
       ...(doc.audience?.length ? { audience: doc.audience } : {}),
       ...(doc.showTableOfContents === false ? { showTableOfContents: false } : {}),
       content,

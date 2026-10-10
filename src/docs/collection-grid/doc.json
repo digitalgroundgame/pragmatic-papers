@@ -2,6 +2,10 @@
   "title": "Arrange articles on a page with the Collection Grid",
   "summary": "The Collection Grid block lays out published articles and volumes in one of ten preset arrangements, each with an optional kicker, byline and title override.",
   "publishedAt": "2026-03-16",
+  "heroImage": {
+    "$media": "hero.webp",
+    "alt": "Grid of four squares icon"
+  },
   "audience": ["admin"],
   "content": {
     "root": {

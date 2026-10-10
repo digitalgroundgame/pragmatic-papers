@@ -9,10 +9,12 @@ import { hashRepoDoc, mediaFilename } from "../repoDoc"
 import { syncDocs } from "../syncDocs"
 
 const image = Buffer.from("not really a png")
+const hero = Buffer.from("not really a hero image either")
 const doc = {
   title: "Experiments",
   summary: "Switch beta features on per site.",
   publishedAt: "2026-10-09",
+  heroImage: { $media: "hero.png", alt: "Switches" },
   content: {
     root: { children: [{ type: "upload", value: { $media: "drawer.png", alt: "Drawer" } }] },
   },
@@ -44,6 +46,7 @@ beforeEach(async () => {
   await mkdir(path.join(dir, "experiments"))
   await writeFile(path.join(dir, "experiments", "doc.json"), json)
   await writeFile(path.join(dir, "experiments", "drawer.png"), image)
+  await writeFile(path.join(dir, "experiments", "hero.png"), hero)
   // A folder without a doc.json isn't a doc.
   await mkdir(path.join(dir, "drafts"))
 })
@@ -62,7 +65,7 @@ describe("syncDocs", () => {
     expect(payload.find).not.toHaveBeenCalled()
   })
 
-  it("creates a new doc, published, with its file uploaded and its id in place", async () => {
+  it("creates a new doc, published, with its files uploaded and their ids in place", async () => {
     const payload = fakePayload()
     await expect(syncDocs(payload, dir)).resolves.toEqual({
       created: ["experiments"],
@@ -89,7 +92,8 @@ describe("syncDocs", () => {
           _status: "published",
           audience: [],
           showTableOfContents: true,
-          sourceHash: hashRepoDoc(json, [image]),
+          sourceHash: hashRepoDoc(json, [hero, image]),
+          heroImage: 41,
           content: { root: { children: [{ type: "upload", value: 41 }] } },
         }),
       }),
@@ -97,7 +101,9 @@ describe("syncDocs", () => {
   })
 
   it("skips a doc whose JSON and files hash the same as last time", async () => {
-    const payload = fakePayload({ docs: [{ id: 3, sourceHash: hashRepoDoc(json, [image]) }] })
+    const payload = fakePayload({
+      docs: [{ id: 3, sourceHash: hashRepoDoc(json, [hero, image]) }],
+    })
     await expect(syncDocs(payload, dir)).resolves.toEqual({
       created: [],
       updated: [],
@@ -120,6 +126,7 @@ describe("syncDocs", () => {
         collection: "docs",
         id: 3,
         data: expect.objectContaining({
+          heroImage: 9,
           content: { root: { children: [{ type: "upload", value: 9 }] } },
         }),
       }),

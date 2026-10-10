@@ -2,6 +2,10 @@
   "title": "Add a newsletter sign-up form",
   "summary": "The Newsletter Signup block lets readers subscribe with their email address, straight from a page.",
   "publishedAt": "2026-06-15",
+  "heroImage": {
+    "$media": "hero.webp",
+    "alt": "Envelope icon"
+  },
   "audience": ["admin"],
   "content": {
     "root": {

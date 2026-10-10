@@ -2,6 +2,10 @@
   "title": "Embed a post from X, YouTube, Reddit, Bluesky or TikTok",
   "summary": "Paste a post's link into the Social Embed block. We keep a copy, so the article still shows it if the post is later deleted.",
   "publishedAt": "2026-03-03",
+  "heroImage": {
+    "$media": "hero.webp",
+    "alt": "At sign icon"
+  },
   "audience": ["writer", "editor"],
   "content": {
     "root": {

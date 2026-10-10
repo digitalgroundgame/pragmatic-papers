@@ -16,6 +16,7 @@ import { Separator } from "@/components/ui/separator"
 import { isExperimentEnabled } from "@/globals/SiteSettings/isExperimentEnabled"
 import { queryDocBySlug } from "@/plugins/docs/queries"
 import { formatNotificationDate } from "@/plugins/notifications/unread"
+import { getMediaUrl } from "@/utilities/getMediaUrl"
 import { getServerSideURL } from "@/utilities/getURL"
 import { mergeOpenGraph } from "@/utilities/mergeOpenGraph"
 import { buildBreadcrumbJsonLd } from "@/utilities/structuredData"
@@ -38,11 +39,18 @@ export async function generateMetadata({ params }: Args): Promise<Metadata> {
 
   const title = `${doc.title} — Pragmatic Papers`
   const canonicalUrl = `${getServerSideURL()}/docs/${slug}`
+  const ogImage =
+    typeof doc.heroImage === "object" ? getMediaUrl(doc.heroImage?.sizes?.og?.url) : undefined
   return {
     title,
     description: doc.summary,
     alternates: { canonical: canonicalUrl },
-    openGraph: mergeOpenGraph({ title, description: doc.summary, url: canonicalUrl }),
+    openGraph: mergeOpenGraph({
+      title,
+      description: doc.summary,
+      url: canonicalUrl,
+      ...(ogImage ? { images: [{ url: ogImage }] } : {}),
+    }),
   }
 }
 

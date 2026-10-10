@@ -54,6 +54,7 @@ describe("next.config.ts Cache-Control", () => {
       "/articles/some-article/substack.xml",
       "/recommended-articles.json",
       "/next/purge-edge",
+      "/next/version",
     ]) {
       expect(await cacheControlFor(path)).toBeUndefined()
     }

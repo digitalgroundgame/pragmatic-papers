@@ -36,6 +36,8 @@ const NOT_EDGE_CACHED = [
   // - the deploy's switchover check (`/next/purge-edge`): no-store, so the edge never keeps
   //   an answer naming the old container.
   "next/purge-edge$",
+  // - the deployed commit (`/next/version`): no-store, for the same reason.
+  "next/version$",
 
   // The feed page (`/feed`, `/feed/...`) is rendered per request, its 404 follows a Site
   // Settings switch that should apply on save, and a stale copy would call load-more's

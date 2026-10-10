@@ -379,7 +379,9 @@ committing or uploading it:
 The site is hosted by Coolify in three applications: **staging** (from `dev`) and
 **production** (from `main`), which Coolify builds from
 `dockerfiles/PragmaticPapers.Dockerfile`, and **preview** (one per PR), which runs the
-image GitHub Actions builds from `dockerfiles/PragmaticPapers.ci.Dockerfile`. `dockerfiles/README.md` records how _our_
+image GitHub Actions builds from `dockerfiles/PragmaticPapers.ci.Dockerfile`. Coolify doesn't report
+its deploys to GitHub, so `.github/workflows/deployments.yml` records each push to `dev` and `main` as a
+Staging or Production Deployment, live once the site's `/next/version` names the commit. `dockerfiles/README.md` records how _our_
 applications are set up and what's been verified about them; read it first.
 
 Staging's public site also runs as a Cloudflare Worker on workers.dev (OpenNext, reading

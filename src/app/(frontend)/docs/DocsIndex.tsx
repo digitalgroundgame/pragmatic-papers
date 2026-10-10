@@ -1,4 +1,4 @@
-import { Breadcrumbs, type Crumb } from "@/components/Breadcrumbs"
+import type { Crumb } from "@/components/Breadcrumbs"
 import { DocsLayout } from "@/components/DocsNav"
 import { JsonLd } from "@/components/JsonLd"
 import { docThumbnail } from "@/plugins/docs/thumbnail"
@@ -24,8 +24,7 @@ export function DocsIndex({ docs }: { docs: DocsIndexDoc[] }): React.ReactNode {
 
   return (
     <>
-      <Breadcrumbs items={trail} className="max-w-7xl" />
-      <DocsLayout sections={sections}>
+      <DocsLayout sections={sections} breadcrumbs={trail}>
         <article className="space-y-10">
           <JsonLd data={[buildBreadcrumbJsonLd(trail)]} />
           <header className="space-y-3">

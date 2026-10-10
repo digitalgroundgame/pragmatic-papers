@@ -42,6 +42,14 @@ const doc = {
   summary: "Experiments, per site.",
   publishedAt: "2026-10-18T00:00:00.000Z",
   showTableOfContents: true,
+  heroImage: {
+    id: 5,
+    url: "/media/switches.webp",
+    alt: "The experiment switches",
+    mimeType: "image/webp",
+    width: 1200,
+    height: 630,
+  },
   content: {
     root: {
       type: "root",
@@ -71,15 +79,20 @@ describe("DocPage", () => {
     expect(screen.getByTestId("redirects")).toHaveAttribute("data-url", "/docs/nope")
   })
 
-  it("renders the doc with its date, breadcrumbs and share buttons", async () => {
+  it("renders the doc with its hero, date, breadcrumbs and share buttons", async () => {
     await renderPage()
-    expect(
-      screen.getByRole("heading", { level: 1, name: "Switch beta features on" }),
-    ).toBeInTheDocument()
+    const title = screen.getByRole("heading", { level: 1, name: "Switch beta features on" })
+    const hero = screen.getByRole("img", { name: "The experiment switches" })
+    // The hero sits above the title.
+    expect(hero.compareDocumentPosition(title) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     expect(screen.getByText("Some features arrive off.")).toBeInTheDocument()
     expect(screen.getByText("Oct. 18, 2026")).toHaveAttribute("datetime", "2026-10-18")
+    // The breadcrumbs head the doc's column, not the row above the sidebar.
     const trail = screen.getByRole("navigation", { name: "breadcrumb" })
-    expect(trail).toHaveClass("max-w-7xl")
+    expect(trail.parentElement).toContainElement(title)
+    expect(trail.parentElement).not.toContainElement(
+      screen.getByRole("navigation", { name: "Docs" }),
+    )
     expect(trail).toHaveTextContent("Docs")
     expect(screen.queryByText(/Updated/)).not.toBeInTheDocument()
     expect(screen.getByRole("button", { name: /share/i })).toBeInTheDocument()
@@ -104,9 +117,10 @@ describe("DocPage", () => {
     expect(within(nav).getByRole("link", { name: "All docs" })).not.toHaveAttribute("aria-current")
   })
 
-  it("shows a table of contents linking to the doc's headings", async () => {
+  it("always shows a table of contents linking to the doc's headings, with no toggle", async () => {
     await renderPage()
-    expect(screen.getByRole("button", { name: /contents/i })).toBeInTheDocument()
+    expect(screen.getByRole("navigation", { name: "Table of contents" })).toBeVisible()
+    expect(screen.queryByRole("button", { name: /contents/i })).not.toBeInTheDocument()
     const sidebar = screen.getByRole("complementary")
     const link = within(sidebar).getByRole("link", { name: "Where the switches are" })
     const anchor = link.getAttribute("href")!.slice(1)

@@ -1,14 +1,14 @@
 import { EndRule } from "@/blocks/SquiggleRule/EndRule"
 import { ArticleSidebar } from "@/components/ArticleSidebar"
-import { Breadcrumbs, type Crumb } from "@/components/Breadcrumbs"
+import type { Crumb } from "@/components/Breadcrumbs"
 import { DocsLayout } from "@/components/DocsNav"
 import { JsonLd } from "@/components/JsonLd"
 import { LivePreviewListener } from "@/components/LivePreviewListener"
+import { Media } from "@/components/Media"
 import { PayloadRedirects } from "@/components/PayloadRedirects"
 import RichText from "@/components/RichText"
 import {
   TableOfContents,
-  TableOfContentsButton,
   TableOfContentsProvider,
   stampTableOfContentsAnchors,
 } from "@/components/TableOfContents"
@@ -78,18 +78,23 @@ export default async function DocPage({ params }: Args): Promise<React.ReactNode
   // The article page's type beside the docs' sidebar, so a doc reads like an article in a wiki.
   return (
     <>
-      <Breadcrumbs items={trail} className="max-w-7xl" />
-      <DocsLayout sections={groupDocsBySection(docs)} current={slug}>
+      <DocsLayout sections={groupDocsBySection(docs)} current={slug} breadcrumbs={trail}>
         <article className="min-w-0 space-y-6">
           <JsonLd data={[buildBreadcrumbJsonLd(trail)]} />
           {draft && <LivePreviewListener />}
           <TableOfContentsProvider>
             <header className="flex flex-col gap-2">
+              <Media
+                priority
+                sizes="(max-width: 1024px) 100vw, 900px"
+                media={doc.heroImage}
+                variant="large"
+                className="border shadow"
+              />
               <h1 className="mt-3">{doc.title}</h1>
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <DocDates publishedAt={doc.publishedAt} revisedAt={doc.revisedAt} />
                 <div className="flex items-center gap-1">
-                  {showTableOfContents && <TableOfContentsButton content={content} />}
                   <ShareButtons url={`${getServerSideURL()}${url}`} title={doc.title} />
                 </div>
               </div>
@@ -100,12 +105,14 @@ export default async function DocPage({ params }: Args): Promise<React.ReactNode
               className="xl:toc-open:gap-10 relative flex flex-col justify-between gap-3 xl:flex-row xl:gap-6"
             >
               {showTableOfContents && (
-                // Beside the doc only from xl, where the docs' sidebar leaves room for both.
-                <ArticleSidebar className="lg:static xl:sticky xl:top-[calc(var(--sticky-top)+1rem)] xl:max-w-56">
-                  <TableOfContents content={content} />
+                // Always shown, with no toggle: above the doc on narrow screens, and to its right
+                // from xl, where the docs' sidebar leaves room for both. No heading: the nav's
+                // label names it for screen readers.
+                <ArticleSidebar className="lg:static xl:sticky xl:top-[calc(var(--sticky-top)+1rem)] xl:order-last xl:max-w-56">
+                  <TableOfContents content={content} title="" />
                 </ArticleSidebar>
               )}
-              <div className="mx-auto max-w-2xl">
+              <div className="max-w-2xl">
                 <RichText data={content} enableGutter={false} className="drop-cap" />
                 <EndRule content={content} />
               </div>

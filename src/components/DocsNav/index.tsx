@@ -1,3 +1,4 @@
+import { ChevronRight } from "lucide-react"
 import Link from "next/link"
 import React from "react"
 
@@ -16,7 +17,7 @@ interface DocsNavProps {
   className?: string
 }
 
-/** Every doc under its section, like a wiki's sidebar. */
+/** Every doc under its section, like a wiki's sidebar; each section folds. */
 export function DocsNav({ sections, current, className }: DocsNavProps): React.ReactNode {
   return (
     <nav aria-label="Docs" className={cn("font-serif", className)}>
@@ -30,38 +31,48 @@ export function DocsNav({ sections, current, className }: DocsNavProps): React.R
       >
         All docs
       </Link>
-      {sections.map((section) => (
-        <div key={section.value} className="mt-6">
-          {/* Not a heading: the nav comes before the page's h1. */}
-          <p
-            id={`docs-nav-${section.value}`}
-            className="text-muted-foreground mb-2 text-sm font-bold tracking-wider uppercase"
-          >
-            {section.label}
-          </p>
-          <ul aria-labelledby={`docs-nav-${section.value}`} className="border-border border-l-2">
-            {section.docs.map((doc) => {
-              const active = doc.slug === current
-              return (
-                <li key={doc.slug}>
-                  <Link
-                    href={`/docs/${doc.slug}`}
-                    aria-current={active ? "page" : undefined}
-                    className={cn(
-                      "-ml-0.5 block border-l-2 py-1.5 pl-3 leading-snug no-underline underline-offset-4 hover:underline",
-                      active
-                        ? "border-brand text-foreground font-bold"
-                        : "text-foreground hover:text-foreground/80 border-transparent",
-                    )}
-                  >
-                    {doc.title}
-                  </Link>
-                </li>
-              )
-            })}
-          </ul>
-        </div>
-      ))}
+      {sections.map((section) => {
+        // On a doc, only its own section starts open; on the index, every section does.
+        const open = !current || section.docs.some((doc) => doc.slug === current)
+        return (
+          <details key={section.value} open={open} className="group mt-5">
+            <summary
+              id={`docs-nav-${section.value}`}
+              className="text-muted-foreground hover:text-foreground mb-2 flex cursor-pointer list-none items-center gap-1 text-sm font-bold tracking-wider uppercase [&::-webkit-details-marker]:hidden"
+            >
+              <ChevronRight
+                aria-hidden="true"
+                className="size-4 shrink-0 transition-transform group-open:rotate-90"
+              />
+              {section.label}
+            </summary>
+            <ul
+              aria-labelledby={`docs-nav-${section.value}`}
+              className="border-border ml-2 border-l-2"
+            >
+              {section.docs.map((doc) => {
+                const active = doc.slug === current
+                return (
+                  <li key={doc.slug}>
+                    <Link
+                      href={`/docs/${doc.slug}`}
+                      aria-current={active ? "page" : undefined}
+                      className={cn(
+                        "-ml-0.5 block border-l-2 py-1.5 pl-3 leading-snug no-underline underline-offset-4 hover:underline",
+                        active
+                          ? "border-brand text-foreground font-bold"
+                          : "text-foreground hover:text-foreground/80 border-transparent",
+                      )}
+                    >
+                      {doc.title}
+                    </Link>
+                  </li>
+                )
+              })}
+            </ul>
+          </details>
+        )
+      })}
     </nav>
   )
 }

@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite"
-import { expect, within } from "storybook/test"
+import { expect, userEvent, within } from "storybook/test"
 
 import { groupDocsBySection } from "@/plugins/docs/sections"
 
@@ -39,6 +39,13 @@ export const OnADoc: Story = {
     await expect(within(nav).getByRole("link", { name: "All docs" })).not.toHaveAttribute(
       "aria-current",
     )
+    // Only the open doc's section starts open; the others unfold on a click.
+    await expect(within(nav).queryByRole("link", { name: "Footnotes" })).toBeVisible()
+    await expect(
+      within(nav).queryByRole("link", { name: "Find photos on Unsplash" }),
+    ).not.toBeVisible()
+    await userEvent.click(within(nav).getByText("Photos and media"))
+    await expect(within(nav).getByRole("link", { name: "Find photos on Unsplash" })).toBeVisible()
   },
 }
 

@@ -50,9 +50,12 @@ processes they start.
 - By default it `docker run`s `postgres:17-alpine` on a random localhost port and removes
   it on exit, Ctrl-C or SIGTERM. A container left by a `kill -9` is swept by the next run.
 - It pulls Docker Hub's official image through Amazon's mirror,
-  `public.ecr.aws/docker/library/`, as `docker-compose.yml`, CI's Postgres services and
-  both Dockerfiles do: Docker Hub rate-limits anonymous pulls, and GitHub's shared
-  runners run out.
+  `public.ecr.aws/docker/library/`, as `docker-compose.yml` and both Dockerfiles do:
+  Docker Hub rate-limits anonymous pulls. CI pulls its copy in GHCR instead
+  (`ghcr.io/digitalgroundgame/postgres:17-alpine`, set by `TEST_DB_IMAGE` and used by
+  every Postgres service), logged in with the job's `GITHUB_TOKEN`, because GitHub's
+  shared runners share their IPs and ran out of ECR Public's anonymous pulls too.
+  `.github/workflows/postgres-image.yml` refreshes that copy weekly.
 - Integration and E2E start from a **pre-migrated snapshot image**
   (`pragmatic-papers-test-db:<hash>`, keyed on `src/migrations/**` and the Postgres image),
   so they skip `payload migrate` until a migration changes; a miss migrates once and commits

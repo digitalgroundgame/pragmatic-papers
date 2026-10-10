@@ -44,3 +44,11 @@ describe("CMSImage placeholder", () => {
     expect(img.style.backgroundImage).toBe("")
   })
 })
+
+describe("CMSImage alt text", () => {
+  it("renders an image uploaded before alt text was required, as decorative", () => {
+    const { container } = render(<CMSImage media={makeMedia({ alt: null })} />)
+
+    expect(container.querySelector("img")).toHaveAttribute("alt", "")
+  })
+})

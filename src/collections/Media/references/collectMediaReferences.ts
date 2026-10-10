@@ -60,6 +60,14 @@ export const SOURCES: Source[] = [
     blockFields: [],
   },
   {
+    collection: "docs",
+    drafts: true,
+    titleField: "title",
+    hasSlug: true,
+    fields: [],
+    blockFields: ["content"],
+  },
+  {
     collection: "topics",
     drafts: false,
     titleField: "name",

@@ -345,11 +345,14 @@ jobs:
   # Preview), and links each component the PR changes at the top of its
   # description (scripts/storybook-pr.ts). Kept out of the Storybook job so a Cloudflare
   # outage never turns that required check red. Skips itself without the
-  # Cloudflare secrets, which fork and Dependabot PRs never receive.
+  # Cloudflare secrets, which fork and Dependabot PRs never receive. The release
+  # train's PRs (`release-train/*`: the version bump and the release into
+  # `main`) get none: neither changes a component, so `dev`'s Storybook at the
+  # main address already shows them.
   storybook-deploy:
     name: Deploy Storybook
     needs: storybook
-    if: ${{ !cancelled() && needs.storybook.result == 'success' && (github.event_name == 'pull_request' || github.ref == 'refs/heads/dev') }}
+    if: ${{ !cancelled() && needs.storybook.result == 'success' && ((github.event_name == 'pull_request' && !startsWith(github.head_ref, 'release-train/')) || github.ref == 'refs/heads/dev') }}
     runs-on: ubuntu-latest
     # One deploy per PR (or dev) at a time, so an older build never lands last.
     concurrency:

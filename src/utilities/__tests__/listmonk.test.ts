@@ -7,7 +7,6 @@ import {
   listRecentCampaigns,
   listRecentSignups,
   listScheduledCampaigns,
-  missingListmonkEnv,
   subscribeMember,
 } from "../listmonk"
 
@@ -240,16 +239,6 @@ describe("listScheduledCampaigns", () => {
     const result = await listScheduledCampaigns()
     expect(result[0]!.sendAt).toBeInstanceOf(Date)
     expect(result[0]!.sendAt.toISOString()).toBe("2026-01-15T12:00:00.000Z")
-  })
-})
-
-describe("missingListmonkEnv", () => {
-  afterEach(() => vi.unstubAllEnvs())
-
-  it("names the variables this environment lacks", () => {
-    stubEnv()
-    vi.stubEnv("LISTMONK_API_TOKEN", "")
-    expect(missingListmonkEnv()).toEqual(["LISTMONK_API_TOKEN"])
   })
 })
 

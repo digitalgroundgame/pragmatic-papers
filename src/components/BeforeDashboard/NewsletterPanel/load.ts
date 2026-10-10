@@ -1,10 +1,10 @@
+import { integrationStatus, listmonkNewsletter } from "@/integrations"
 import {
   getNewsletterListStats,
   listmonkAdminUrl,
   ListmonkError,
   listRecentCampaigns,
   listRecentSignups,
-  missingListmonkEnv,
   type NewsletterCampaign,
   type NewsletterListStats,
   type NewsletterSignup,
@@ -17,7 +17,7 @@ import {
 export type Section<T> = { ok: true; data: T } | { ok: false; reason: "forbidden" | "error" }
 
 export type NewsletterOverview =
-  | { connected: false; missing: string[] }
+  | { connected: false }
   | {
       connected: true
       adminUrl: string
@@ -40,8 +40,8 @@ function toSection<T>(result: PromiseSettledResult<T>, what: string): Section<T>
 
 /** Reads the newsletter's list, newest signups and campaigns from Listmonk, all at once. */
 export async function loadNewsletterOverview(): Promise<NewsletterOverview> {
-  const missing = missingListmonkEnv()
-  if (missing.length > 0) return { connected: false, missing }
+  // What's missing is listed on the Integrations global, not here.
+  if (!integrationStatus(listmonkNewsletter).configured) return { connected: false }
 
   const init = { signal: AbortSignal.timeout(TIMEOUT_MS) }
   const [list, signups, campaigns] = await Promise.allSettled([

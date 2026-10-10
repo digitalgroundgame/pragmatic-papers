@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest"
 
 import { githubRepo } from "../github"
-import { INTEGRATIONS, courtTracker, integrationStatuses } from "../index"
+import { INTEGRATIONS, courtTracker, integrationStatuses, listmonkNewsletter } from "../index"
 import { describeStatus, integrationStatus, type Integration } from "../types"
 
 const repo = githubRepo({
@@ -111,5 +111,21 @@ describe("the declared connections", () => {
   it("points the court-tracker connection at the researcher's repository", () => {
     expect(courtTracker.describe()).toBe("github:digitalgroundgame/court-tracker")
     expect(courtTracker.required).toEqual(["COURT_TRACKER_GITHUB_TOKEN"])
+  })
+
+  it("names the Listmonk host, never a credential, and what's missing", () => {
+    vi.stubEnv("LISTMONK_BASE_URL", "https://list.example.com/")
+    vi.stubEnv("LISTMONK_API_TOKEN", "secret-token")
+    vi.stubEnv("LISTMONK_API_USER", "")
+    expect(listmonkNewsletter.describe()).toBe("listmonk:list.example.com")
+    const status = integrationStatus(listmonkNewsletter)
+    expect(status.configured).toBe(false)
+    expect(status.missing).toContain("LISTMONK_API_USER")
+    expect(JSON.stringify(status)).not.toContain("secret-token")
+    vi.stubEnv("LISTMONK_BASE_URL", "not a url")
+    expect(listmonkNewsletter.describe()).toBe("listmonk:(invalid URL)")
+    vi.stubEnv("LISTMONK_BASE_URL", "")
+    expect(listmonkNewsletter.describe()).toBe("listmonk:(no URL)")
+    vi.unstubAllEnvs()
   })
 })

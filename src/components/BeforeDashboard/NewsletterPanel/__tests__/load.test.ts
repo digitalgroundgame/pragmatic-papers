@@ -30,13 +30,10 @@ describe("loadNewsletterOverview", () => {
     vi.restoreAllMocks()
   })
 
-  it("reports what's missing without calling Listmonk when it isn't configured", async () => {
+  it("says it isn't connected without calling Listmonk when it isn't configured", async () => {
     vi.stubEnv("LISTMONK_API_TOKEN", "")
     const fetchSpy = vi.spyOn(global, "fetch")
-    await expect(loadNewsletterOverview()).resolves.toEqual({
-      connected: false,
-      missing: ["LISTMONK_API_TOKEN"],
-    })
+    await expect(loadNewsletterOverview()).resolves.toEqual({ connected: false })
     expect(fetchSpy).not.toHaveBeenCalled()
   })
 

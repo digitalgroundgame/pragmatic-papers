@@ -194,13 +194,8 @@ export function NewsletterStats({ overview }: { overview: NewsletterOverview }):
 
       {!overview.connected ? (
         <p style={muted}>
-          Listmonk isn&apos;t connected in this environment. To set in the hosting environment:{" "}
-          {overview.missing.map((name, i) => (
-            <span key={name}>
-              {i > 0 && ", "}
-              <code>{name}</code>
-            </span>
-          ))}
+          Listmonk isn&apos;t connected in this environment.{" "}
+          <a href="/admin/globals/integrations">Integrations</a> lists what to set.
         </p>
       ) : (
         <>

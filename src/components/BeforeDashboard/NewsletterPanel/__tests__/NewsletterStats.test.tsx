@@ -146,14 +146,12 @@ describe("NewsletterStats", () => {
     expect(screen.getByText("No campaigns yet.")).toBeInTheDocument()
   })
 
-  it("lists the missing variables, and no Listmonk link, when it isn't connected", () => {
-    render(
-      <NewsletterStats
-        overview={{ connected: false, missing: ["LISTMONK_BASE_URL", "LISTMONK_API_TOKEN"] }}
-      />,
-    )
-    expect(screen.getByText(/isn't connected in this environment/)).toHaveTextContent(
-      "LISTMONK_BASE_URL, LISTMONK_API_TOKEN",
+  it("points to Integrations, with no Listmonk link, when it isn't connected", () => {
+    render(<NewsletterStats overview={{ connected: false }} />)
+    expect(screen.getByText(/isn't connected in this environment/)).toBeInTheDocument()
+    expect(screen.getByRole("link", { name: "Integrations" })).toHaveAttribute(
+      "href",
+      "/admin/globals/integrations",
     )
     expect(screen.queryByRole("link", { name: "Open Listmonk" })).not.toBeInTheDocument()
     expect(screen.queryByRole("table")).not.toBeInTheDocument()

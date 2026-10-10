@@ -17,7 +17,8 @@
  *   NEWSLETTER_FROM_EMAIL               e.g. "Pragmatic Papers <newsletter@newsletter.example.com>"
  */
 
-const REQUIRED_ENV = [
+/** What the site needs set to talk to Listmonk; the Integrations global reports which are missing. */
+export const LISTMONK_ENV = [
   "LISTMONK_BASE_URL",
   "LISTMONK_API_USER",
   "LISTMONK_API_TOKEN",
@@ -35,11 +36,6 @@ interface ListmonkConfig {
   fromEmail: string
 }
 
-/** The variables this environment is missing for Listmonk, by name. */
-export function missingListmonkEnv(): string[] {
-  return REQUIRED_ENV.filter((key) => !process.env[key])
-}
-
 /** A non-2xx answer from Listmonk's admin API, with its status. */
 export class ListmonkError extends Error {
   constructor(
@@ -52,7 +48,7 @@ export class ListmonkError extends Error {
 }
 
 function readConfig(): ListmonkConfig {
-  for (const key of REQUIRED_ENV) {
+  for (const key of LISTMONK_ENV) {
     if (!process.env[key]) throw new Error(`Missing required env var: ${key}`)
   }
   // Must be a real integer — a non-numeric value (e.g. the list name or UUID set

@@ -121,11 +121,12 @@ export const Refused: Story = {
 }
 
 export const NotConnected: Story = {
-  args: { overview: { connected: false, missing: ["LISTMONK_BASE_URL", "LISTMONK_API_TOKEN"] } },
+  args: { overview: { connected: false } },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    await expect(canvas.getByText(/isn't connected in this environment/)).toHaveTextContent(
-      "LISTMONK_BASE_URL, LISTMONK_API_TOKEN",
+    await expect(canvas.getByRole("link", { name: "Integrations" })).toHaveAttribute(
+      "href",
+      "/admin/globals/integrations",
     )
     await expect(canvas.queryByRole("link", { name: "Open Listmonk" })).not.toBeInTheDocument()
   },

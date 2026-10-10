@@ -4,8 +4,9 @@ import { githubRepo } from "./github"
 import { shopifyStore } from "./shopify"
 import { xAccounts } from "./x"
 import { youtubeChannels } from "./youtube"
-import { integrationStatus, type Integration, type IntegrationStatus } from "./types"
+import { env, integrationStatus, type Integration, type IntegrationStatus } from "./types"
 import { unsplashApp } from "./unsplash"
+import { LISTMONK_ENV } from "@/utilities/listmonk"
 
 /**
  * Every outside connection this site has, declared in one place.
@@ -105,6 +106,27 @@ export const unsplash = unsplashApp({
   defaultAppName: "pragmatic_papers_development",
 })
 
+/**
+ * Listmonk — the newsletter's mailing list server (`src/utilities/listmonk.ts`): signup, the
+ * scheduled volume emails and the dashboard's Newsletter panel. The API user is a Listmonk API
+ * user (Users → Users), not a person's login.
+ */
+export const listmonkNewsletter: Integration = {
+  id: "listmonk-newsletter",
+  label: "Newsletter (Listmonk)",
+  service: "Listmonk",
+  describe() {
+    const url = env("LISTMONK_BASE_URL")
+    if (!url) return "listmonk:(no URL)"
+    try {
+      return `listmonk:${new URL(url).host}`
+    } catch {
+      return "listmonk:(invalid URL)"
+    }
+  },
+  required: LISTMONK_ENV,
+}
+
 /** Declaration order is display order. */
 export const INTEGRATIONS: readonly Integration[] = [
   courtTracker,
@@ -115,6 +137,7 @@ export const INTEGRATIONS: readonly Integration[] = [
   blueskyPosts,
   xPosts,
   unsplash,
+  listmonkNewsletter,
 ]
 
 export function getIntegration(id: string): Integration | null {

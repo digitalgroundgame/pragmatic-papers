@@ -77,7 +77,7 @@ describe("DocPage", () => {
       screen.getByRole("heading", { level: 1, name: "Switch beta features on" }),
     ).toBeInTheDocument()
     expect(screen.getByText("Some features arrive off.")).toBeInTheDocument()
-    expect(screen.getByText("October 18, 2026")).toHaveAttribute("datetime", "2026-10-18")
+    expect(screen.getByText("Oct. 18, 2026")).toHaveAttribute("datetime", "2026-10-18")
     const trail = screen.getByRole("navigation", { name: "breadcrumb" })
     expect(trail).toHaveClass("max-w-7xl")
     expect(trail).toHaveTextContent("Docs")
@@ -91,7 +91,7 @@ describe("DocPage", () => {
   it("shows the day it was updated beside its date", async () => {
     queries.queryDocBySlug.mockResolvedValue({ ...doc, revisedAt: "2026-10-20T00:00:00.000Z" })
     await renderPage()
-    expect(screen.getByText("Updated October 20, 2026")).toHaveAttribute("datetime", "2026-10-20")
+    expect(screen.getByText("Updated Oct. 20, 2026")).toHaveAttribute("datetime", "2026-10-20")
   })
 
   it("marks the doc as the current page in the docs sidebar", async () => {

@@ -17,7 +17,6 @@ import { Separator } from "@/components/ui/separator"
 import { isExperimentEnabled } from "@/globals/SiteSettings/isExperimentEnabled"
 import { queryDocBySlug, queryPublishedDocs } from "@/plugins/docs/queries"
 import { groupDocsBySection } from "@/plugins/docs/sections"
-import { formatNotificationDate } from "@/plugins/notifications/unread"
 import { getMediaUrl } from "@/utilities/getMediaUrl"
 import { getServerSideURL } from "@/utilities/getURL"
 import { mergeOpenGraph } from "@/utilities/mergeOpenGraph"
@@ -25,6 +24,8 @@ import { buildBreadcrumbJsonLd } from "@/utilities/structuredData"
 import type { Metadata } from "next"
 import { draftMode } from "next/headers"
 import React from "react"
+
+import { DocDates } from "./DocDates"
 
 interface Args {
   params: Promise<{ slug: string }>
@@ -86,20 +87,7 @@ export default async function DocPage({ params }: Args): Promise<React.ReactNode
             <header className="flex flex-col gap-2">
               <h1 className="mt-3">{doc.title}</h1>
               <div className="flex flex-wrap items-center justify-between gap-3">
-                {/* The article dateline's shape, by day: a doc's dates carry no time. */}
-                <p className="text-foreground font-serif">
-                  <time dateTime={doc.publishedAt.slice(0, 10)}>
-                    {formatNotificationDate(doc.publishedAt)}
-                  </time>
-                  {doc.revisedAt && (
-                    <time
-                      className="text-muted-foreground ml-2"
-                      dateTime={doc.revisedAt.slice(0, 10)}
-                    >
-                      Updated {formatNotificationDate(doc.revisedAt)}
-                    </time>
-                  )}
-                </p>
+                <DocDates publishedAt={doc.publishedAt} revisedAt={doc.revisedAt} />
                 <div className="flex items-center gap-1">
                   {showTableOfContents && <TableOfContentsButton content={content} />}
                   <ShareButtons url={`${getServerSideURL()}${url}`} title={doc.title} />

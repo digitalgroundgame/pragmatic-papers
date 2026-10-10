@@ -15,11 +15,11 @@ import { checkJsonLdBlock, expandJsonLd, topLevelTypes } from "./structuredData"
 const PAGES = [
   { path: "/", types: ["WebSite", "Organization", "Periodical", "BreadcrumbList"] },
   // In volume 1, so its Article points at the volume through isPartOf.
-  { path: `/articles/${SHOWCASE_SLUG}`, types: ["Article", "BreadcrumbList"] },
+  { path: `/articles/${SHOWCASE_SLUG}`, types: ["NewsArticle", "BreadcrumbList"] },
   // Four authors, each a Person inside the Article.
-  { path: `/articles/${FOUR_AUTHOR_SLUG}`, types: ["Article", "BreadcrumbList"] },
+  { path: `/articles/${FOUR_AUTHOR_SLUG}`, types: ["NewsArticle", "BreadcrumbList"] },
   { path: `/volumes/${VOLUME_SLUG}`, types: ["PublicationVolume", "BreadcrumbList"] },
-  { path: `/authors/${WRITER_SLUG}`, types: ["Person", "BreadcrumbList"] },
+  { path: `/contributors/${WRITER_SLUG}`, types: ["Person", "BreadcrumbList"] },
 ]
 
 for (const { path, types } of PAGES) {

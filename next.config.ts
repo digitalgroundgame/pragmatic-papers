@@ -33,6 +33,9 @@ const NOT_EDGE_CACHED = [
   "articles/(?:[^/]+/)?substack\\.xml$",
   // - recommendations: no-store.
   "recommended-articles\\.json$",
+  // - the deploy's switchover check (`/next/purge-edge`): no-store, so the edge never keeps
+  //   an answer naming the old container.
+  "next/purge-edge$",
 
   // The feed page (`/feed`, `/feed/...`) is rendered per request, its 404 follows a Site
   // Settings switch that should apply on save, and a stale copy would call load-more's
@@ -116,6 +119,15 @@ const nextConfig: NextConfig = {
     // honour 301/308 update the URL they have stored.
     { source: "/feed.articles", destination: "/articles/feed.xml", permanent: true },
     { source: "/feed.volumes", destination: "/volumes/feed.xml", permanent: true },
+    // The first sitemaps sat at the site root under their own names; pages are now the root
+    // sitemap.xml, and articles and volumes each live under their section.
+    { source: "/pages-sitemap.xml", destination: "/sitemap.xml", permanent: true },
+    // Permanent, so Search Console and crawlers that stored the old URL follow it.
+    { source: "/articles-sitemap.xml", destination: "/articles/sitemap.xml", permanent: true },
+    { source: "/volumes-sitemap.xml", destination: "/volumes/sitemap.xml", permanent: true },
+    // Contributor pages were /authors, which didn't fit narrators. `/authors/:path*` also
+    // covers the index, its `?p=` pages and the old id URLs the profile page resolves.
+    { source: "/authors/:path*", destination: "/contributors/:path*", permanent: true },
     {
       source: "/iceout/:state*",
       destination: "https://iceout.org/en/location/report",

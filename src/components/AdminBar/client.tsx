@@ -11,7 +11,7 @@ interface RouteConfig {
   plural: string
   singular: string
   // Payload collection slug — differs from the route key when the frontend
-  // URL uses a different name (e.g. /authors → "users" collection).
+  // URL uses a different name (e.g. /contributors → "users" collection).
   collectionSlug: string
 }
 
@@ -19,11 +19,11 @@ const routes = new Map<string, RouteConfig>([
   ["pages", { collectionSlug: "pages", plural: "Pages", singular: "Page" }],
   ["volumes", { collectionSlug: "volumes", plural: "Volumes", singular: "Volume" }],
   ["articles", { collectionSlug: "articles", plural: "Articles", singular: "Article" }],
-  ["authors", { collectionSlug: "users", plural: "Authors", singular: "Author" }],
+  ["contributors", { collectionSlug: "users", plural: "Contributors", singular: "Contributor" }],
   ["topics", { collectionSlug: "topics", plural: "Topics", singular: "Topic" }],
 ])
 
-const collectionRouteKeys = new Set(["articles", "volumes", "authors", "topics"])
+const collectionRouteKeys = new Set(["articles", "volumes", "contributors", "topics"])
 
 function parsePath(pathname: string): { routeKey: string; docSlug: string | undefined } {
   const [, first = "", second] = pathname.split("/")

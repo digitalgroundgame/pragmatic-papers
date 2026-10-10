@@ -48,6 +48,7 @@ export const Volumes: CollectionConfig = {
     update: editor,
   },
   admin: {
+    group: "Content",
     useAsTitle: "title",
     defaultColumns: ["title", "volumeNumber", "publishedAt", "description"],
     livePreview: {

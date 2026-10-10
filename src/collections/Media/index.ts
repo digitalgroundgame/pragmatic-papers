@@ -60,6 +60,7 @@ export const Media: CollectionConfig = {
     update: isCreatedByOrEditor,
   },
   admin: {
+    group: "Content",
     defaultColumns: ["filename", "alt", "caption"],
   },
   fields: [

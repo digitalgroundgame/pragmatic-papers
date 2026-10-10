@@ -160,7 +160,7 @@ export function DrilldownPane({
       data-drilldown-pane=""
       data-open={open ? "" : undefined}
       aria-label={region ? `${region.label} details` : "Region details"}
-      className={cn("@container flex min-h-0 scroll-mt-20 flex-col")}
+      className={cn("@container flex min-h-0 scroll-mt-[calc(var(--sticky-top)+1.5rem)] flex-col")}
       onClick={() => detail?.pinned && setDetail((d) => (d ? { ...d, pinned: false } : d))}
     >
       <h2

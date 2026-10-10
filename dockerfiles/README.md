@@ -83,7 +83,7 @@ SUPABASE_URL=https://<project>.supabase.co
 
 **Cloudflare cache purge (every Coolify deployment — production, staging and previews):**
 
-Public pages are cached at Cloudflare's edge for 10 minutes, then served stale for up to a day while they revalidate (`next.config.ts`, and the zone's Cache Rules in `cloudflare/`). When an editor saves a global (Site Settings, Header, Footer) or publishes, changes or deletes a document readers see, the save's `revalidate*` hook asks Cloudflare to purge **this deployment's hostname** (from `SERVER_URL`), so anonymous readers get the change at once (`src/hooks/purgeEdgeCache.ts`). Only the hostname: the three environments share one zone, so a "purge everything" from a preview would empty production's cache too.
+Public pages are cached at Cloudflare's edge for 10 minutes, then served stale for up to a day while they revalidate (`next.config.ts`, and the zone's Cache Rules in `cloudflare/`). When an editor saves a global (Settings, Header, Footer) or publishes, changes or deletes a document readers see, the save's `revalidate*` hook asks Cloudflare to purge **this deployment's hostname** (from `SERVER_URL`), so anonymous readers get the change at once (`src/hooks/purgeEdgeCache.ts`). Only the hostname: the three environments share one zone, so a "purge everything" from a preview would empty production's cache too.
 
 - `CLOUDFLARE_ZONE_ID` — the zone's ID, from its Overview page in the Cloudflare dashboard.
 - `CLOUDFLARE_PURGE_TOKEN` — a custom API token with **Zone → Cache Purge → Purge**, on this zone only. Keep it apart from `CLOUDFLARE_API_TOKEN` (a GitHub secret that deploys Storybook) and the Cache Rules tokens (`cloudflare/README.md`).
@@ -91,6 +91,17 @@ Public pages are cached at Cloudflare's edge for 10 minutes, then served stale f
 - `WORKER_URL` — staging only: the staging Cloudflare Worker's URL (`src/cloudflare/README.md`). The same save then clears the Worker's cache too, before the edge's, authenticated with this app's `PAYLOAD_SECRET`, which the Worker shares. A runtime variable; leave it unset where no Worker reads this app's database.
 - Unset (or with `SERVER_URL` on localhost), each save logs `Skipping Cloudflare purge (…) — … set CLOUDFLARE_ZONE_ID, CLOUDFLARE_PURGE_TOKEN` and carries on. A purge Cloudflare refuses is logged as a warning, never thrown at the save.
 - Purges within a second of each other go out as one request. Hostname purges are rate-limited per account (5 a minute on the Free plan, more on paid plans); a refused one just leaves the edge to expire on its own.
+
+#### Ticker
+
+The strip under the header on every page (`src/components/Ticker`, rendered by the header), shown when the **Ticker** experiment is on in **System → Settings**. Each source is skipped with a `[ticker] skipping …` log line until it's configured; all are **Runtime Variables**, set in the production, staging **and** preview apps (`dockerfiles/.env.example` lists them).
+
+- `YOUTUBE_API_KEY` — a YouTube Data API v3 key (any Google Cloud project, public reads only). Shows a channel's broadcast when it's live or starting within a day. Each check costs one of the key's 10,000 free daily quota units per channel plus one, every 5 minutes at most and only while the site is being visited, so one key can serve every app.
+- Bluesky needs nothing: it reads the public API.
+- `X_BEARER_TOKEN` — an app-only token. Reading posts needs a paid X API plan or pay-per-use credits; it's checked every 30 minutes at most.
+- Which channels and accounts it reads are set in the admin, under **System → Integrations**, which also shows which variables each connection is missing. `YOUTUBE_CHANNEL_IDS` (comma separated), `BLUESKY_HANDLES` and `X_USERNAMES` (each comma separated) are fallbacks for when it's left empty.
+
+Readers can see an answer up to 10 minutes late, since pages are edge-cached for that long.
 
 **Unsplash (every Coolify deployment — production, staging and previews):**
 
@@ -308,7 +319,7 @@ COOLIFY_FQDN=pr-330.pragmaticpapers.com
 
 ### Database Copy for Preview Deployments
 
-With `COPY_SOURCE_DATABASE=true`, a preview's database starts as a copy of the database its `DATABASE_URI` names, so it has that database's content (articles, pages, Site Settings experiments) while its migrations run on the copy.
+With `COPY_SOURCE_DATABASE=true`, a preview's database starts as a copy of the database its `DATABASE_URI` names, so it has that database's content (articles, pages, Settings experiments) while its migrations run on the copy.
 
 ```env
 BUILD_ENV=preview
@@ -323,7 +334,7 @@ FORCE_DATABASE_COPY=false
 
 1. `modify-database-uri.sh` names the preview database `pragmatic_papers_pr_330` and writes only that name to `/tmp/database_name`. A preview build without `COOLIFY_FQDN` fails instead of falling back to the database every preview shares.
 2. `copy-database.sh` creates it as a copy of `pragmatic_papers`, on the same server and with `DATABASE_URI`'s credentials. It tries `CREATE DATABASE … WITH TEMPLATE` first, which only works while nothing is connected to the source; with staging's app running it falls back to `pg_dump`/`pg_restore`. It never disconnects the source's clients: doing so failed whatever staging was serving. If the dump or restore fails, the half-restored database is dropped, so the next build copies again.
-3. It leaves an existing preview database alone unless `FORCE_DATABASE_COPY=true`. Then the previous deploy's container is still using it, so the script copies into `pragmatic_papers_pr_330_incoming`, migrates that, and only then drops the old database and renames the copy into place. The running preview is never left on a missing or unmigrated database; if the migration fails, the build fails and the old database is kept.
+3. It leaves an existing preview database alone unless `FORCE_DATABASE_COPY=true`, or unless that database has run a migration that neither the image nor the source has: one an earlier commit of the PR added and a later one renamed or rebuilt. Payload would apply the new version over the old one's tables and fail, so the script makes a fresh copy as if forced. Only images built in GitHub Actions list their migrations (`/app/migration_names`), so only they do this. Then the previous deploy's container is still using it, so the script copies into `pragmatic_papers_pr_330_incoming`, migrates that, and only then drops the old database and renames the copy into place. The running preview is never left on a missing or unmigrated database; if the migration fails, the build fails and the old database is kept.
 4. Migrations and `next build` run against the preview database.
 5. The runner image carries `/app/database_name`, and `start.sh` applies it to the runtime `DATABASE_URI`. No credential is written into the image.
 
@@ -364,7 +375,7 @@ The image sets `BUILT_WITHOUT_DATABASE=true`, which switches on the database ste
 
 - **First boot takes longer**: it copies staging before the server starts, so the health check below allows 5 minutes before counting failures.
 - **`FORCE_DATABASE_COPY=true` swaps the fresh copy in unmigrated.** There's no Payload CLI in the image, so the new container migrates it as it starts, and the old container serves the unmigrated copy until then.
-- **`FORCE_DATABASE_COPY=true` copies once per image, not once per start.** The copy runs whenever the container starts, restarts included, so the script marks the database with the image's commit (a Postgres comment) and skips the forced copy when the mark matches. Restarting a preview keeps what testers entered; deploying a new commit copies afresh. Still turn it back off once the preview you meant to refresh has been redeployed.
+- **`FORCE_DATABASE_COPY=true` copies once per image, not once per start.** The copy runs whenever the container starts, restarts included, so the script marks the database with the image's commit (a Postgres comment; `IMAGE_COMMIT`, baked in at build, since Coolify sets `SOURCE_COMMIT=HEAD` on the container) and skips the forced copy when the mark matches. Restarting a preview keeps what testers entered; deploying a new commit copies afresh. Still turn it back off once the preview you meant to refresh has been redeployed.
 
 **Setup.** In Coolify:
 

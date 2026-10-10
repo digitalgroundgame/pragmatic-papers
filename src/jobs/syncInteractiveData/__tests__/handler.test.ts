@@ -50,7 +50,7 @@ describe("syncInteractiveDataTask", () => {
     expect(find).not.toHaveBeenCalled()
     expect(syncInteractive).not.toHaveBeenCalled()
     expect(log.info).toHaveBeenCalledWith(
-      "[interactive-sync] skipped: the interactives experiment is off in Site Settings",
+      "[interactive-sync] skipped: the interactives experiment is off in Settings",
     )
     expect(findGlobal).toHaveBeenCalledWith(expect.objectContaining({ slug: "site-settings" }))
   })

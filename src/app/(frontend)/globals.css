@@ -364,3 +364,120 @@
     animation: none;
   }
 }
+
+/*
+  The home page ticker (src/components/Ticker). The track holds the posts twice
+  and slides left by one copy's width per pass, so the loop has no seam. It
+  pauses while hovered or focused, or while its pause switch is on, and doesn't
+  move at all for reduced motion (the component then hides the second copy and
+  lets the posts scroll by hand).
+*/
+@keyframes ticker-scroll {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+.ticker-viewport {
+  mask-image: linear-gradient(
+    to right,
+    transparent,
+    black 1.5rem,
+    black calc(100% - 1.5rem),
+    transparent
+  );
+}
+
+.ticker-track {
+  animation: ticker-scroll var(--ticker-duration, 60s) linear infinite;
+}
+
+.ticker-viewport:hover .ticker-track,
+.ticker-viewport:focus-within .ticker-track,
+.ticker:has(.ticker-pause:checked) .ticker-track {
+  animation-play-state: paused;
+}
+
+/*
+  The pause switch shows while the reader points at the ticker, while a keyboard
+  is on it, and while it's paused (so there's a way back). It keeps its space
+  when hidden, so nothing shifts. Touch screens can't hover, so it stays.
+*/
+@media (hover: hover) {
+  .ticker-switch {
+    opacity: 0;
+    transition: opacity 150ms;
+  }
+
+  .ticker:hover .ticker-switch,
+  .ticker:focus-within .ticker-switch,
+  .ticker:has(.ticker-pause:checked) .ticker-switch {
+    opacity: 1;
+  }
+}
+
+/*
+  While it scrolls, the ticker sticks under the header on tablets and wider (phones keep
+  the room for the article), and while a broadcast is live it sticks on every screen.
+  Paused, it scrolls away with the page; so does a ticker that isn't scrolling for reduced
+  motion, or has nothing to scroll (no posts, so no switch), unless it's live.
+*/
+.ticker[data-live]:not(:has(.ticker-pause:checked)) {
+  position: sticky;
+  top: var(--header-height);
+  z-index: 40;
+}
+
+@media (min-width: 48rem) and (prefers-reduced-motion: no-preference) {
+  .ticker:has(.ticker-pause:not(:checked)) {
+    position: sticky;
+    top: var(--header-height);
+    z-index: 40;
+  }
+}
+
+/*
+  Where the page's own sticky things (the article sidebar) and scroll targets (the drilldown
+  pane) should stop: under the header, and under the ticker too while it sticks. The
+  conditions mirror the two rules above; :has() can't nest, so they read the pause switch,
+  which a ticker that can stick always has.
+*/
+:root {
+  --sticky-top: var(--header-height);
+  /* h-10 plus its bottom border, and its top border from md up */
+  --ticker-height: calc(2.5rem + 1px);
+}
+
+:root:has(.ticker[data-live] .ticker-pause:not(:checked)) {
+  --sticky-top: calc(var(--header-height) + var(--ticker-height));
+}
+
+@media (min-width: 48rem) {
+  :root {
+    --ticker-height: calc(2.5rem + 2px);
+  }
+}
+
+@media (min-width: 48rem) and (prefers-reduced-motion: no-preference) {
+  :root:has(.ticker .ticker-pause:not(:checked)) {
+    --sticky-top: calc(var(--header-height) + var(--ticker-height));
+  }
+}
+
+.ticker-play-icon,
+.ticker:has(.ticker-pause:checked) .ticker-pause-icon {
+  display: none;
+}
+
+.ticker:has(.ticker-pause:checked) .ticker-play-icon {
+  display: block;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ticker-track {
+    animation: none;
+  }
+}

@@ -21,10 +21,16 @@ const PREVIEW_URI = URI.replace("pragmatic_papers?", "pragmatic_papers_pr_330?")
 // $CALLS_LOG, one line per call. psql answers the "does the target exist?" query from
 // $TARGET_EXISTS and, while $SOURCE_BUSY is set, refuses a template copy the way Postgres
 // does while anything is connected to the template. pnpm also logs the DATABASE_URI it
-// migrated. $DUMP_STATUS, $RESTORE_STATUS and $MIGRATE_STATUS make those steps fail;
-// $SERVER_VERSION_NUM and $CLIENT_VERSION set the server's and pg_dump's versions.
+// migrated. Asked which migrations a database has run, it answers $TARGET_MIGRATIONS for the
+// preview's and $SOURCE_MIGRATIONS for the source's. $DUMP_STATUS, $RESTORE_STATUS and $MIGRATE_STATUS make those steps fail;
+// $SERVER_VERSION_NUM and $CLIENT_VERSION set the server's and pg_dump's versions. wget
+// answers start.sh's switchover check as the new container would, naming $INSTANCE_ID.
 const FAKES: Record<string, string> = {
   psql: `case "$*" in
+  *"payload_migrations"*) case "$*" in
+    *pragmatic_papers_pr_330*) printf '%b' "$TARGET_MIGRATIONS" ;;
+    *) printf '%b' "$SOURCE_MIGRATIONS" ;;
+  esac ;;
   *"shobj_description"*) echo "$DATABASE_COMMENT" ;;
   *"FROM pg_database"*) [ "$TARGET_EXISTS" = "true" ] && echo 1 ;;
   *"server_version_num"*) echo "\${SERVER_VERSION_NUM:-170006}" ;;
@@ -40,7 +46,10 @@ exit "\${DUMP_STATUS:-0}"`,
 exit "\${MIGRATE_STATUS:-0}"`,
   node: `[ "$1" = "--version" ] && echo v24 && exit 0
 echo "node started with DATABASE_URI=$DATABASE_URI"`,
-  wget: `case "$*" in *revalidate-all*) exit "\${REFRESH_STATUS:-0}" ;; esac`,
+  wget: `case "$*" in
+  *revalidate-all*) exit "\${REFRESH_STATUS:-0}" ;;
+  *purge-edge?at=*) printf '{"instance":"%s"}' "$INSTANCE_ID" ;;
+esac`,
 }
 const LOG_CALL = `echo "$(basename "$0") $*" | tr '\\n' ' ' >> "$CALLS_LOG"; echo >> "$CALLS_LOG"`
 
@@ -83,8 +92,11 @@ function sh(script: string, env: Record<string, string> = {}) {
       TARGET_EXISTS: "",
       SOURCE_BUSY: "",
       BUILT_WITHOUT_DATABASE: "",
-      SOURCE_COMMIT: "",
+      IMAGE_COMMIT: "",
       DATABASE_COMMENT: "",
+      TARGET_MIGRATIONS: "",
+      SOURCE_MIGRATIONS: "",
+      MIGRATION_NAMES_FILE: join(dir, "migration_names"),
       ...env,
     },
   })
@@ -286,7 +298,7 @@ describe("preview database build", () => {
       TARGET_EXISTS: "true",
       FORCE_DATABASE_COPY: "true",
       BUILT_WITHOUT_DATABASE: "true",
-      SOURCE_COMMIT: "abc123",
+      IMAGE_COMMIT: "abc123",
     }
 
     const restart = copyToPreview({ ...image, DATABASE_COMMENT: "copied for commit abc123" })
@@ -304,11 +316,11 @@ describe("preview database build", () => {
   })
 
   it("marks a first copy with the image's commit, and leaves Coolify builds unmarked", () => {
-    copyToPreview({ BUILT_WITHOUT_DATABASE: "true", SOURCE_COMMIT: "abc123" })
+    copyToPreview({ BUILT_WITHOUT_DATABASE: "true", IMAGE_COMMIT: "abc123" })
     expect(indexOf("COMMENT ON DATABASE")).toBeGreaterThan(indexOf("WITH TEMPLATE"))
 
     rmSync(join(dir, "calls.log"), { force: true })
-    copyToPreview({ SOURCE_COMMIT: "abc123" })
+    copyToPreview({ IMAGE_COMMIT: "abc123" })
     expect(indexOf("COMMENT ON DATABASE")).toBe(-1)
   })
 
@@ -321,6 +333,64 @@ describe("preview database build", () => {
 
     expect(status).not.toBe(0)
     expect(indexOf('DROP DATABASE IF EXISTS "pragmatic_papers_pr_330";')).toBe(-1)
+  })
+
+  describe("a preview database that ran a migration the PR has since rewritten", () => {
+    const image = { TARGET_EXISTS: "true", BUILT_WITHOUT_DATABASE: "true", IMAGE_COMMIT: "abc123" }
+    beforeEach(() => {
+      writeFileSync(join(dir, "migration_names"), "20261001_000000_base\n20261008_000000_ticker\n")
+    })
+
+    it("is replaced with a fresh copy, without FORCE_DATABASE_COPY", () => {
+      const { status, output } = copyToPreview({
+        ...image,
+        TARGET_MIGRATIONS: "20261001_000000_base\n20261007_000000_ticker_draft\n",
+        SOURCE_MIGRATIONS: "20261001_000000_base\n",
+      })
+
+      expect(status).toBe(0)
+      expect(output).toContain("20261007_000000_ticker_draft")
+      expect(indexOf('RENAME TO "pragmatic_papers_pr_330"')).toBeGreaterThan(
+        indexOf('WITH TEMPLATE "pragmatic_papers"'),
+      )
+      expect(
+        indexOf(`COMMENT ON DATABASE "pragmatic_papers_pr_330" IS 'copied for commit abc123'`),
+      ).toBeGreaterThan(indexOf("RENAME TO"))
+    })
+
+    it("is kept when the source ran it, as when staging is ahead of the PR", () => {
+      const { status, output } = copyToPreview({
+        ...image,
+        TARGET_MIGRATIONS: "20261001_000000_base\n20261009_000000_from_dev\n",
+        SOURCE_MIGRATIONS: "20261001_000000_base\n20261009_000000_from_dev\n",
+      })
+
+      expect(status).toBe(0)
+      expect(output).toContain("already exists")
+      expect(indexOf("DROP DATABASE")).toBe(-1)
+    })
+
+    it("is kept when it has only run the image's own migrations", () => {
+      const { output } = copyToPreview({
+        ...image,
+        TARGET_MIGRATIONS: "20261001_000000_base\n20261008_000000_ticker\n",
+        SOURCE_MIGRATIONS: "20261001_000000_base\n",
+      })
+
+      expect(output).toContain("already exists")
+      expect(indexOf("DROP DATABASE")).toBe(-1)
+    })
+
+    it("is kept by an image that lists no migrations", () => {
+      rmSync(join(dir, "migration_names"))
+      const { output } = copyToPreview({
+        ...image,
+        TARGET_MIGRATIONS: "20261007_000000_ticker_draft\n",
+      })
+
+      expect(output).toContain("already exists")
+      expect(indexOf("DROP DATABASE")).toBe(-1)
+    })
   })
 
   it("never copies onto a database that isn't a preview's", () => {
@@ -461,6 +531,30 @@ describe("start.sh", () => {
     expect(ready).toBeGreaterThanOrEqual(0)
     expect(refresh).toBeGreaterThan(ready)
     expect(output).toContain("Prerendered routes refreshed from pragmatic_papers")
+  })
+
+  // The edge is purged only once the public URL is served by this container, so the old one
+  // can't refill it with the previous release's pages.
+  it("purges the edge once the public URL answers with this container's id", () => {
+    const { status, output } = start("", {
+      DATABASE_URI: URI,
+      BUILD_ENV: "production",
+      SERVER_URL: "https://pragmaticpapers.com",
+      PAYLOAD_SECRET: "payload-s3cret",
+      PORT: "3000",
+    })
+
+    expect(status).toBe(0)
+    const log = calls().join("\n")
+    const refresh = log.indexOf("http://127.0.0.1:3000/next/revalidate-all")
+    const check = log.indexOf("https://pragmaticpapers.com/next/purge-edge?at=")
+    const purge = log.indexOf(
+      "--header=Authorization: Bearer payload-s3cret http://127.0.0.1:3000/next/purge-edge",
+    )
+    expect(refresh).toBeGreaterThanOrEqual(0)
+    expect(check).toBeGreaterThan(refresh)
+    expect(purge).toBeGreaterThan(check)
+    expect(output).toContain("Edge purge queued now that https://pragmaticpapers.com is served")
   })
 
   // Media URLs point at SUPABASE_URL, and next/image only loads *.supabase.co (#1090).

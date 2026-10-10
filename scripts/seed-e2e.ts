@@ -148,7 +148,7 @@ async function setArticleImages(payload: Payload, mediaId: number): Promise<void
 }
 
 // Co-authors for the four-author article. Deliberately plain compared with the e2e
-// writer — the smoke test checks the fully-populated profile on /authors, and these
+// writer — the smoke test checks the fully-populated profile on /contributors, and these
 // only ever appear as a name and a set of initials in a byline.
 const CO_AUTHORS = [
   { name: "Sienna Scribe", slug: "e2e-co-author-sienna", email: "sienna@e2e.test" },
@@ -199,7 +199,7 @@ export async function main(): Promise<void> {
     // The Federal Courts drilldown, as an interactive page (/interactives/federal-courts)
     // with a published data snapshot — what interactive-page.spec.ts drives.
     await createFederalCourtsInteractive(payload, ctx, PUBLISHED_AT)
-    // Interactives and the table of contents are experiments (Site Settings);
+    // Interactives and the table of contents are experiments (Settings);
     // off, interactive pages 404 and articles render without a table of contents.
     await payload.updateGlobal({
       slug: "site-settings",
@@ -293,7 +293,7 @@ export async function main(): Promise<void> {
     // One embed per platform, each with a saved snapshot so nothing is fetched.
     await createSocialEmbedArticle(payload, writer, [], [topic.id], ctx)
 
-    // Two more authors, so /authors (five per page) has a second page.
+    // Two more authors, so /contributors (five per page) has a second page.
     for (const author of EXTRA_AUTHORS) {
       await createUser(
         payload,

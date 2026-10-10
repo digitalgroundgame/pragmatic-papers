@@ -11,7 +11,8 @@ import { hasPayloadSecret } from "../bearer"
  * the sitemap index name the build's host rather than this deployment's. An image
  * Coolify builds bakes in every article and volume as the database held them during
  * the build, which edits saved since never reach.
- * `dockerfiles/scripts/start.sh` calls this once the server is up, for both.
+ * `dockerfiles/scripts/start.sh` calls this once the server is up, for both, and the
+ * Worker's deploy workflow once it has deployed.
  *
  * Authenticated with `Authorization: Bearer <PAYLOAD_SECRET>`, which the
  * container already holds.

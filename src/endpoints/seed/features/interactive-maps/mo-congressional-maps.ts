@@ -117,7 +117,7 @@ export const createMoCongressionalMapsArticle = async (
         ]),
         createHeadingNode("How the block works", "h2"),
         createParagraph(
-          "Writers upload a pre-projected SVG (here in Albers Equal Area, ESRI:102003) into the Map Assets collection. Each path carries a region attribute (in this case data-district) that joins to a regions table the writer fills in with values and labels. The block reads the SVG content the collection captured at upload time, sanitizes it, parses out the paths, applies the color scale, and renders them as real JSX — so the colored map is SSR-friendly and accessible.",
+          "Writers upload a pre-projected SVG (here in Albers Equal Area, ESRI:102003) into the Maps collection. Each path carries a region attribute (in this case data-district) that joins to a regions table the writer fills in with values and labels. The block reads the SVG content the collection captured at upload time, sanitizes it, parses out the paths, applies the color scale, and renders them as real JSX — so the colored map is SSR-friendly and accessible.",
         ),
       ]),
       authors: [writer.id],

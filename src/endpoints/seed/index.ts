@@ -116,8 +116,8 @@ export const seed = async (
         ctx.narrator = narrator
         validateWriters([writers[0]!, writers[1]!])
         if (!context.disableRevalidate) {
-          revalidatePath("/authors")
-          revalidatePath("/authors/[slug]", "page")
+          revalidatePath("/contributors")
+          revalidatePath("/contributors/[slug]", "page")
         }
       },
     },
@@ -465,7 +465,9 @@ export const seed = async (
         await payload.updateGlobal({
           slug: "site-settings",
           context,
-          data: { experiments: { feed: true, interactives: true, tableOfContents: true } },
+          data: {
+            experiments: { feed: true, interactives: true, tableOfContents: true, ticker: true },
+          },
         })
       },
     },

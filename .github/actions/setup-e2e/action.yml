@@ -10,10 +10,6 @@ inputs:
   gh-font-read-token:
     description: "GitHub Token for private font packages"
     required: true
-  save-pnpm-cache:
-    description: "Passed to setup-project"
-    required: false
-    default: "false"
 
 runs:
   using: composite
@@ -87,7 +83,6 @@ runs:
         node-version: "24.x"
         gh-font-read-token: ${{ inputs.gh-font-read-token }}
         payload-secret: e2e-payload-secret
-        save-pnpm-cache: ${{ inputs.save-pnpm-cache }}
 
     # The job container talks to the runner's Docker daemon through the socket
     # the runner mounts into it: test-e2e.mjs starts the app image beside it.

@@ -7,6 +7,7 @@ import { mocked } from "storybook/test"
 
 import { fontVariables } from "../src/app/(frontend)/fonts"
 import "../src/app/(frontend)/globals.css"
+import "./preview.css"
 
 // The site sets the font variables on <html>, and globals.css reads them from
 // there, so a wrapper element would leave `html { font-sans }` unresolved.

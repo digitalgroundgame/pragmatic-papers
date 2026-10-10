@@ -473,6 +473,7 @@ export function DrilldownMapClient({
         layersHost,
         overviewViewBox: overview.viewBox ?? DEFAULT_VIEWBOX,
         flipY: overview.flipY,
+        overviewStep: overview.step,
         regions: buildRegionIndex([overview]),
         seats: overview.payload?.seats ?? null,
         callbacks: {

@@ -7,6 +7,7 @@ import {
   type Deps,
   findDeployment,
   main,
+  previewLink,
   previewUrl,
   readConfig,
   toGithubState,
@@ -47,7 +48,9 @@ interface Call {
  * (the last one repeats); an entry that is a number is returned as that HTTP
  * status instead. Fetching one deployment by UUID polls too, and gets the
  * entry's first row. `deployed` is Coolify's answer to a deploy request, and
- * `deleteStatus` its status for deleting a preview.
+ * `deleteStatus` its status for deleting a preview. The preview's own URL answers as our
+ * app for the first `previewAnswers` requests, then as a removed preview. The PR's
+ * description starts as `prBody`; `prStatus` fails reading it with that status.
  */
 function harness({
   polls = [[row("finished")]],
@@ -55,12 +58,18 @@ function harness({
   existing = [] as { id: number; state: string }[],
   deployed = { deployments: [{ message: "queued", deployment_uuid: "img-dep" }] } as unknown,
   deleteStatus = 200,
+  previewAnswers = 0,
+  prBody = "## Context\n\nText" as string | null,
+  prStatus = 200,
 }: {
   polls?: (CoolifyDeployment[] | number)[]
   deploymentSha?: string
   existing?: { id: number; state: string }[]
   deployed?: unknown
   deleteStatus?: number
+  previewAnswers?: number
+  prBody?: string | null
+  prStatus?: number
 } = {}) {
   const calls: Call[] = []
   const logs: string[] = []
@@ -72,6 +81,15 @@ function harness({
   const deps: Deps = {
     fetch: (async (input: string, init?: RequestInit) => {
       const method = init?.method ?? "GET"
+      if (input.startsWith("https://pr-42.pragmaticpapers.com/")) {
+        calls.push({ method, url: input, auth: "" })
+        if (previewAnswers-- > 0)
+          return new Response(null, {
+            status: 404,
+            headers: { "X-Powered-By": "Next.js, Payload" },
+          })
+        return new Response("no available server", { status: 503 })
+      }
       const body = init?.body ? JSON.parse(init.body as string) : undefined
       calls.push({
         method,
@@ -80,6 +98,13 @@ function harness({
         body,
       })
 
+      if (input.endsWith("/pulls/42")) {
+        if (method === "PATCH") {
+          prBody = body!.body as string
+          return json({})
+        }
+        return prStatus === 200 ? json({ body: prBody }) : json({ message: "nope" }, prStatus)
+      }
       if (input.startsWith("https://coolify.test/api/v1/deploy?")) return json(deployed)
       if (method === "DELETE") return json({ message: "queued" }, deleteStatus)
       if (input.startsWith("https://coolify.test/")) {
@@ -121,7 +146,9 @@ function harness({
           },
       )
 
-  return { deps, calls, logs, statuses, elapsed: () => clock }
+  const prEdits = () => calls.filter((c) => c.method === "PATCH").map((c) => c.body!.body as string)
+
+  return { deps, calls, logs, statuses, prEdits, elapsed: () => clock }
 }
 
 describe("toGithubState", () => {
@@ -211,6 +238,16 @@ describe("readConfig", () => {
   })
 })
 
+const line = (...links: string[]) => `<!-- pr-links -->\n${links.join(" · ")}\n<!-- /pr-links -->`
+
+describe("previewLink", () => {
+  it("links the preview and the commit it runs", () => {
+    expect(previewLink("https://pr-42.pragmaticpapers.com", SHA)).toBe(
+      "[Preview](https://pr-42.pragmaticpapers.com) at `aaaaaaa`",
+    )
+  })
+})
+
 describe("main deploy", () => {
   it("skips without Coolify settings, making no requests", async () => {
     const h = harness()
@@ -278,10 +315,33 @@ describe("main deploy", () => {
     )
   })
 
+  it("links the live preview at the top of the PR's description", async () => {
+    const h = harness({ prBody: "Closes #7\n\n## Context" })
+    expect(await main(["deploy"], ENV, h.deps)).toBe(0)
+    expect(h.prEdits()).toEqual([
+      `Closes #7\n\n${line(previewLink("https://pr-42.pragmaticpapers.com", SHA))}\n\n## Context`,
+    ])
+  })
+
+  it("leaves a description that already links this commit alone", async () => {
+    const block = line(previewLink("https://pr-42.pragmaticpapers.com", SHA))
+    const h = harness({ prBody: `${block}\n\nText` })
+    expect(await main(["deploy"], ENV, h.deps)).toBe(0)
+    expect(h.prEdits()).toEqual([])
+  })
+
+  it("only warns when the description can't be read", async () => {
+    const h = harness({ prStatus: 403, prBody: null })
+    expect(await main(["deploy"], ENV, h.deps)).toBe(0)
+    expect(h.statuses()).toContainEqual(expect.objectContaining({ state: "success" }))
+    expect(h.logs.join("\n")).toContain("::warning::Couldn't update the Preview link")
+  })
+
   it("reports a failed build as failure and leaves older deployments alone", async () => {
     const h = harness({ polls: [[row("failed")]], existing: [{ id: 90, state: "success" }] })
     expect(await main(["deploy"], ENV, h.deps)).toBe(0)
     expect(h.statuses()).toEqual([expect.objectContaining({ id: 100, state: "failure" })])
+    expect(h.prEdits()).toEqual([])
   })
 
   it("creates nothing when Coolify never queues the commit", async () => {
@@ -342,6 +402,13 @@ describe("main close", () => {
     expect(h.statuses().every((s) => s.state === "inactive")).toBe(true)
     const list = h.calls.find((c) => c.url.includes("/deployments?"))!
     expect(list.url).toContain("environment=Preview&ref=feat%2Fthing")
+  })
+
+  it("removes the preview link from the PR's description, keeping the others", async () => {
+    const preview = previewLink("https://pr-42.pragmaticpapers.com", SHA)
+    const h = harness({ prBody: `${line(preview, "[Coverage](u)")}\n\n## Context` })
+    expect(await main(["close"], ENV, h.deps)).toBe(0)
+    expect(h.prEdits()).toEqual([`${line("[Coverage](u)")}\n\n## Context`])
   })
 })
 
@@ -417,10 +484,34 @@ describe("main close --delete-preview", () => {
     expect(h.logs.join("\n")).toContain("no preview for PR #42")
   })
 
-  it("leaves Coolify alone without the flag", async () => {
-    const h = harness()
+  it("waits for the preview to stop answering", async () => {
+    const h = harness({ previewAnswers: 2 })
+    expect(await main(["close", "--delete-preview"], ENV, h.deps)).toBe(0)
+    const checks = h.calls.filter((c) => c.url.startsWith("https://pr-42.pragmaticpapers.com/"))
+    expect(checks).toHaveLength(3)
+    expect(checks[0]).toMatchObject({ method: "HEAD" })
+    expect(h.logs.join("\n")).toContain("no longer answers")
+  })
+
+  it("fails when the preview keeps answering after Coolify's delete", async () => {
+    const h = harness({ previewAnswers: Infinity })
+    expect(await main(["close", "--delete-preview"], ENV, h.deps)).toBe(1)
+    expect(h.logs.join("\n")).toContain("still answers at https://pr-42.pragmaticpapers.com")
+    // The PR's deployments are retired before the check, so they don't stay active.
+    expect(h.statuses().map((s) => s.id)).toEqual([100])
+    expect(h.elapsed()).toBeLessThanOrEqual(5 * 60_000)
+  })
+
+  it("fails when Coolify has no preview but one still answers", async () => {
+    const h = harness({ deleteStatus: 404, previewAnswers: Infinity })
+    expect(await main(["close", "--delete-preview"], ENV, h.deps)).toBe(1)
+  })
+
+  it("leaves Coolify and the preview alone without the flag", async () => {
+    const h = harness({ previewAnswers: Infinity })
     expect(await main(["close"], ENV, h.deps)).toBe(0)
     expect(h.calls.some((c) => c.url.startsWith("https://coolify.test/"))).toBe(false)
+    expect(h.calls.some((c) => c.url.startsWith("https://pr-42."))).toBe(false)
   })
 
   it("rejects an unknown flag", async () => {

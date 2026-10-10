@@ -141,7 +141,7 @@ export const createMenus = async (
                         url: "https://discord.gg/digitalgroundgame",
                         label: "Join the Community",
                         newTab: true,
-                        appearance: "default",
+                        variant: "default",
                       },
                     },
                   ],
@@ -196,6 +196,13 @@ export const createMenus = async (
               relationTo: "pages",
               value: termsOfUsePage.id,
             },
+          },
+        },
+        {
+          link: {
+            type: "custom",
+            label: "Feeds",
+            url: "/feeds",
           },
         },
         {

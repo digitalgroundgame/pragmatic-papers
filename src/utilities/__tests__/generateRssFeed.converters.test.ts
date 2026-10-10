@@ -20,14 +20,14 @@ const rssConverters = resolve(createHtmlConverters)
 /** The rich-text fields each feed renders, and the converters it renders them with. */
 const FEED_FIELDS = [
   {
-    feed: "feed.articles",
+    feed: "articles/feed.xml",
     collection: "articles",
     field: "content",
     converters: rssConverters,
     factory: "createHtmlConverters",
   },
   {
-    feed: "feed.volumes",
+    feed: "volumes/feed.xml",
     collection: "volumes",
     field: "editorsNote",
     converters: rssConverters,
@@ -97,8 +97,8 @@ const collect = (fields: ResolvedField[], coverage: Coverage): void => {
 
 /**
  * Every node type and block a feed-rendered rich-text field allows needs an
- * HTML converter, or the feed prints "unknown node" in its place (#402,
- * #1022). This reads the resolved Payload config, the same one the admin
+ * HTML converter, or the feed prints "unknown node" in its place. This
+ * reads the resolved Payload config, the same one the admin
  * editor uses, so enabling a feature or adding a block anywhere those fields
  * reach fails here until every feed's converter factory handles it.
  */

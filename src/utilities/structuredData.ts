@@ -4,9 +4,9 @@ import { isResolved } from "@/utilities/relationships"
 import { getServerSideURL } from "@/utilities/getURL"
 import { convertLexicalToPlaintext } from "@payloadcms/richtext-lexical/plaintext"
 import type {
-  ArticleLeaf,
   BreadcrumbListLeaf,
   CollectionPageLeaf,
+  NewsArticleLeaf,
   OrganizationLeaf,
   PeriodicalLeaf,
   PersonLeaf,
@@ -27,23 +27,26 @@ const PERIODICAL_ID = `${SERVER_URL}/#periodical`
 
 export type JsonLdData = Thing
 
+// Absolute, because a crawler resolves nothing against the page: with local
+// storage, Payload's media URLs are paths like /api/media/file/x.jpg.
 function getImageUrl(media: Media | number | null | undefined): string | undefined {
   if (!isResolved(media)) return undefined
-  return getMediaUrl(media.sizes?.og?.url || media.url) || undefined
+  const url = getMediaUrl(media.sizes?.og?.url || media.url)
+  return url ? new URL(url, SERVER_URL).href : undefined
 }
 
 export function buildArticleJsonLd(
   article: Article,
   path: string,
   volume?: Pick<Volume, "id" | "slug" | "title" | "volumeNumber" | "publishedAt"> | null,
-): ArticleLeaf {
+): NewsArticleLeaf {
   const fullUrl = `${SERVER_URL}${path}`
 
   const authors = (article.authors || []).filter(isResolved<User>).map((author): PersonLeaf => ({
     "@type": "Person",
-    "@id": `${SERVER_URL}/authors/${author.slug}`,
+    "@id": `${SERVER_URL}/contributors/${author.slug}`,
     name: author.name || undefined,
-    url: `${SERVER_URL}/authors/${author.slug}`,
+    url: `${SERVER_URL}/contributors/${author.slug}`,
   }))
 
   const keywords = (article.topics || []).filter(isResolved<Topic>).map((t) => t.name)
@@ -51,7 +54,7 @@ export function buildArticleJsonLd(
   const image = getImageUrl(article.meta?.image || article.heroImage)
 
   return {
-    "@type": "Article",
+    "@type": "NewsArticle",
     "@id": `${fullUrl}#article`,
     headline: article.meta?.title || article.title || undefined,
     description: article.meta?.description || undefined,

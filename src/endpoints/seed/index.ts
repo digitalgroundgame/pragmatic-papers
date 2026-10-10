@@ -71,8 +71,6 @@ export const seed = async (
             },
           },
         })
-        // A ranking's article column is NOT NULL but its foreign key is ON DELETE
-        // SET NULL, so a ranked article can't be deleted until the rankings go.
         await payload.updateGlobal({
           slug: "article-recommendations",
           context,
@@ -118,8 +116,8 @@ export const seed = async (
         ctx.narrator = narrator
         validateWriters([writers[0]!, writers[1]!])
         if (!context.disableRevalidate) {
-          revalidatePath("/authors")
-          revalidatePath("/authors/[slug]", "page")
+          revalidatePath("/contributors")
+          revalidatePath("/contributors/[slug]", "page")
         }
       },
     },
@@ -467,7 +465,9 @@ export const seed = async (
         await payload.updateGlobal({
           slug: "site-settings",
           context,
-          data: { experiments: { feed: true, interactives: true, tableOfContents: true } },
+          data: {
+            experiments: { feed: true, interactives: true, tableOfContents: true, ticker: true },
+          },
         })
       },
     },

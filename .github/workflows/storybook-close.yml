@@ -1,7 +1,7 @@
-# Retires a closed or merged PR's "Storybook Preview" Deployments, which CI's
-# "Deploy Storybook" job records (scripts/storybook-pr.ts), as
-# preview-deployment.yml does for the site's Preview. The Cloudflare preview
-# alias itself stays up.
+# Retires a closed or merged PR's Storybook: marks its "Storybook Preview"
+# Deployments inactive, which CI's "Deploy Storybook" job records
+# (scripts/storybook-pr.ts), as preview-image.yml does for the site's
+# Preview, then deletes its `pr-<number>` Worker Preview on Cloudflare.
 name: Storybook preview closed
 
 on:
@@ -9,7 +9,8 @@ on:
     types: [closed]
 
 # CI's Deploy Storybook job's group: a deploy still running for this PR
-# finishes first, so its "success" can't land after this run's "inactive".
+# finishes first, so its "success" can't land after this run's "inactive", and
+# one that starts after this run finds the PR closed and skips.
 concurrency:
   group: storybook-deploy-${{ github.event.pull_request.number }}
 
@@ -26,7 +27,9 @@ jobs:
     steps:
       - uses: actions/checkout@v7
         with:
-          sparse-checkout: scripts/storybook-pr.ts
+          sparse-checkout: |
+            scripts/storybook-pr.ts
+            scripts/pr-description.ts
           sparse-checkout-cone-mode: false
 
       # Node 24 runs the TypeScript script directly; no install needed.
@@ -39,3 +42,32 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
         run: node scripts/storybook-pr.ts close
+
+      # The Cloudflare API rather than `wrangler preview delete`, so a PR that
+      # never had a Preview (no Storybook change, or deployed before PRs used
+      # Previews) answers 404 and passes. Those older PRs' `versions upload`
+      # aliases can't be deleted; Cloudflare keeps the 1,000 most recently
+      # deployed and drops the oldest.
+      - name: Delete the PR's Worker Preview
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          WORKER: pragmatic-papers-storybook
+          PREVIEW: pr-${{ github.event.pull_request.number }}
+        run: |
+          if [ -z "$CLOUDFLARE_API_TOKEN" ] || [ -z "$CLOUDFLARE_ACCOUNT_ID" ]; then
+            echo "::notice::CLOUDFLARE_API_TOKEN / CLOUDFLARE_ACCOUNT_ID not available; leaving the $PREVIEW Preview."
+            exit 0
+          fi
+          status=$(curl -sS -o response.json -w '%{http_code}' -X DELETE \
+            -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+            "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/workers/$WORKER/previews/$PREVIEW")
+          case "$status" in
+            2??) echo "Deleted the $PREVIEW Preview of $WORKER." ;;
+            404) echo "$WORKER has no $PREVIEW Preview; nothing to delete." ;;
+            *)
+              echo "::error::Deleting the $PREVIEW Preview of $WORKER failed with HTTP $status."
+              cat response.json
+              exit 1
+              ;;
+          esac

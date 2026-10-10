@@ -7,21 +7,33 @@ import { getPayloadConfig } from "@/utilities/getPayloadConfig"
 
 import { Header } from "./Component"
 
-/** Seeds the fake Payload; `feed` switches the feed experiment in Site Settings. */
+/** Seeds the fake Payload; `feed` switches the feed experiment in Settings. */
 function seedPayload({ feed = false }: { feed?: boolean } = {}): void {
   mocked(getPayloadConfig).mockResolvedValue(
     createFakePayload({
       globals: {
         header: {
           navItems,
+          // The seeded header's actions (src/endpoints/seed/menus.ts).
           actions: [
             {
               id: "a1",
               link: {
                 type: "custom",
-                url: "/newsletter",
-                label: "Subscribe",
-                variant: "default",
+                url: "https://example.com/donate",
+                label: "Donate",
+                newTab: true,
+                variant: "branded",
+              },
+            },
+            {
+              id: "a2",
+              link: {
+                type: "custom",
+                url: "https://discord.gg/digitalgroundgame",
+                label: "Join Us",
+                newTab: true,
+                variant: "outline",
               },
             },
           ],
@@ -50,13 +62,17 @@ export const Desktop: Story = {
       "href",
       "/",
     )
-    await expect(canvas.getByRole("link", { name: "Subscribe" })).toBeVisible()
+    await expect(canvas.getByRole("link", { name: /Donate/ })).toBeVisible()
+    await expect(canvas.getByRole("link", { name: /Join Us/ })).toBeVisible()
     // The feed experiment is off by default, so there's no way into it.
     await expect(canvas.queryByRole("link", { name: "Feed" })).not.toBeInTheDocument()
   },
 }
 
 export const FeedExperimentOn: Story = {
+  // The docs page renders every story at once against one fake Payload, so this
+  // story's seed would put the feed button in every other story there too.
+  tags: ["!autodocs"],
   beforeEach: () => seedPayload({ feed: true }),
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
@@ -93,4 +109,20 @@ export const MenuClosesOnLinkClick: Story = {
 
 export const Mobile: Story = {
   globals: { viewport: { value: "mobile1", isRotated: false } },
+}
+
+/** The mega menu's links are in the markup before it loads, and keep focus once it has. */
+export const MegaMenuByKeyboard: Story = {
+  play: async ({ canvasElement }) => {
+    const nav = await within(canvasElement).findByRole("navigation", { name: "Main" })
+    const first = within(nav).getAllByRole("link")[0]!
+    const name = first.textContent ?? ""
+    first.focus()
+    await waitFor(() => expect(first).not.toBeInTheDocument())
+    const live = within(within(canvasElement).getByRole("navigation", { name: "Main" })).getByRole(
+      "link",
+      { name },
+    )
+    await expect(live).toHaveFocus()
+  },
 }

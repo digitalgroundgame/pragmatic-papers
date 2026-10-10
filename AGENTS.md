@@ -31,11 +31,14 @@ This file provides guidance to tools like Claude Code (claude.ai/code) when work
 - `pnpm test:storybook` — run every Storybook story in headless Chromium: its `play` function, then an axe check (see [Storybook](#storybook))
 - `pnpm storybook` — Storybook dev server on port 6006; `pnpm storybook:build` builds it into `storybook-static/`
 - `pnpm test:integration` — run integration tests against a throwaway Postgres in Docker (see [Test databases](#test-databases))
-- `pnpm test:e2e` — run Playwright E2E tests against a throwaway Postgres in Docker (see [Test databases](#test-databases)). Screenshot comparisons are skipped unless `CI` is set; generate visual baselines with `pnpm test:e2e:update-snapshots` (Dockerized; matches CI pixel-for-pixel on x86_64 hosts — see `tests/e2e/README.md` for the full lifecycle) and commit them with the PR — never generate/commit baselines from a bare local machine
+- `pnpm test:e2e` — run Playwright E2E tests against a throwaway Postgres in Docker (see [Test databases](#test-databases)). Functional assertions only; visual changes are reviewed in Storybook and the PR's site preview (see `tests/e2e/README.md`)
 - `pnpm test:unit:coverage` — run unit tests with V8 coverage report (what CI uses; outputs `coverage/coverage-summary.json` and `coverage/coverage-final.json`)
 - `pnpm test:coverage` — run all tests with V8 coverage report (full picture for local inspection)
 - `pnpm test:unit -u` — regenerate snapshot baselines after intentional UI changes
-- `pnpm coverage:report` — post the combined coverage PR comment locally (requires `GITHUB_TOKEN`, `GITHUB_REPOSITORY`, `GITHUB_EVENT_PATH`)
+- `pnpm coverage:report` — post the coverage section of CI's PR comment locally (requires `GITHUB_TOKEN`, `GITHUB_REPOSITORY`, `GITHUB_EVENT_PATH`)
+- `pnpm bundle-size` — measure the gzipped client JS and CSS each public page loads, from the build in `.next` (run `pnpm build` first), and compare it with dev's last measurement when `BASE_BUNDLE_SIZE_PATH` names one (see [Page speed](#page-speed))
+- `pnpm analyze` — Turbopack's bundle analyzer, in the browser (it compiles but doesn't leave a build behind): each route's client and server modules, and the import chain that brings each one in. `pnpm analyze --output` writes it to `.next/diagnostics/analyze/` instead, which the next `pnpm build` deletes
+- `pnpm lighthouse` — seed a throwaway database, build and serve as `pnpm test:e2e` does, then run Lighthouse's performance audit on a few seeded pages; reports land in `lighthouse-results/`. Set `BASE_LIGHTHOUSE_PATH` to a `summary.json` from an earlier run to compare with it (see [Page speed](#page-speed))
 
 ### Test databases
 
@@ -46,18 +49,26 @@ processes they start.
 
 - By default it `docker run`s `postgres:17-alpine` on a random localhost port and removes
   it on exit, Ctrl-C or SIGTERM. A container left by a `kill -9` is swept by the next run.
+- It pulls Docker Hub's official image through Amazon's mirror,
+  `public.ecr.aws/docker/library/`, as `docker-compose.yml` and both Dockerfiles do:
+  Docker Hub rate-limits anonymous pulls. CI pulls its copy in GHCR instead
+  (`ghcr.io/digitalgroundgame/postgres:17-alpine`, set by `TEST_DB_IMAGE` and used by
+  every Postgres service), logged in with the job's `GITHUB_TOKEN`, because GitHub's
+  shared runners share their IPs and ran out of ECR Public's anonymous pulls too.
+  `.github/workflows/postgres-image.yml` refreshes that copy weekly.
 - Integration and E2E start from a **pre-migrated snapshot image**
   (`pragmatic-papers-test-db:<hash>`, keyed on `src/migrations/**` and the Postgres image),
   so they skip `payload migrate` until a migration changes; a miss migrates once and commits
   a new one. The pending-migrations check always replays from scratch, and CI (`CI` set)
   never uses a snapshot. `docker image rm` the tags to force a fresh migrate.
-- `TEST_DATABASE_URI` points them at an existing database instead (CI's E2E jobs, and
-  `pnpm test:e2e:update-snapshots`, whose containers can't start their own). It is refused if
-  it names the same database as `DATABASE_URI` in `.env`.
+- `TEST_DATABASE_URI` points them at an existing database instead (CI's E2E jobs, whose
+  containers can't start their own). It is refused if it names the same database as
+  `DATABASE_URI` in `.env`.
 
 ### Build & Payload
 
 - `pnpm build` — build the application
+- `pnpm build:worker` / `pnpm start:worker` — build the public site as a Cloudflare Worker with OpenNext (webpack, without the admin panel) and run it in `wrangler dev`. Everything Worker-specific is behind `OPENNEXT_BUILD=true`, so `pnpm build` is unchanged; see `src/cloudflare/README.md`
 - `pnpm payload generate:types` — regenerate Payload TypeScript types
 - `pnpm payload generate:importmap` — regenerate Payload import map
 - `pnpm payload migrate` — run database migrations
@@ -70,7 +81,7 @@ processes they start.
 - **`payload.config.ts`** — Central Payload CMS configuration
 - **`collections/`** — Payload collections: Articles, Pages, Users, Volumes, Media, Categories, Webhooks
 - **`blocks/`** — Content blocks used in Lexical rich text: Banner, Code, Content, Footnote, Math, MediaBlock, SocialEmbed, etc.
-- **`fields/`** — Custom Payload fields: colorPicker, menu, numberSlug, link, linkGroup, footnotes, button, defaultLexical. New fields should include `Field` in the name (e.g. `buttonField`, `linkGroupField`).
+- **`fields/`** — Custom Payload fields: colorPicker, menu, numberSlug, link, footnotes, button, defaultLexical. New fields should include `Field` in the name (e.g. `buttonField`, `menuField`).
 - **`access/`** — Access control: `roles.ts` (e.g., `admin`, `editor`, `writer`) and `policies.ts` (e.g., `isSelfOrAdmin`, `isCreatedByOrEditor`, `isPublishedOrStaff`, `isDraftOrEditor`)
 - **`app/(frontend)/`** — Public-facing Next.js pages using App Router
 - **`app/(payload)/`** — Payload admin panel routes
@@ -96,13 +107,14 @@ processes they start.
 
 - **Header** (`slug: 'header'`) — nav items, action button; revalidated via `revalidateHeader` hook
 - **Footer** (`slug: 'footer'`) — nav items; revalidated via `revalidateFooter` hook
-- **Site Settings** (`slug: 'site-settings'`) — admin-only; its `experiments` group switches beta features on per environment; revalidated via `revalidateSiteSettings` hook
+- **Settings** (`slug: 'site-settings'`, the `SiteSettings` global) — admin-only; its `experiments` group switches beta features on per environment; revalidated via `revalidateSiteSettings` hook
+- **Ticker** (`slug: 'ticker'`) — editors and admins; posts hidden from the header's ticker, by link; revalidated via `revalidateTicker` hook. Which accounts the ticker reads is in **Integrations** (admin-only)
 - Fetched via `getCachedGlobal('header' | 'footer', depth)()` using `unstable_cache` with tags
 
 ### Experiments
 
 A beta feature that should run on staging before production goes behind a
-checkbox in the Site Settings global's `experiments` group
+checkbox in the Settings global's `experiments` group
 (`src/globals/SiteSettings/config.ts`). Each environment has its own database,
 so each has its own switches; PR previews start with staging's. To add one:
 
@@ -134,8 +146,13 @@ after its own `revalidatePath` / `revalidateTag`, and only when
 `context.disableRevalidate` is unset. It purges this deployment's hostname
 (production, staging and previews share a zone), batches a burst of saves into
 one request, returns at once, and logs and skips when the `cloudflareCache`
-connection isn't configured. A new hook for content readers see should call it
-too.
+connection isn't configured. When the `cloudflareWorkerCache` connection is
+configured (`WORKER_URL`, on the Coolify app a Cloudflare Worker reads from), the
+same flush first clears that Worker's cache through its `/next/revalidate-all`.
+A new hook for content readers see should call it too.
+A deploy purges too: `start.sh` waits until the site's public URL is answered by the
+new container (`/next/purge-edge` names its `INSTANCE_ID`), so the old container can't
+refill the edge with the previous release's pages, then POSTs `/next/purge-edge`.
 
 ### Payload Plugins
 
@@ -149,16 +166,20 @@ too.
 
 - **File structure**: `collections/<Name>/index.ts` with optional `hooks/` and `components/` subdirectories
 - **Hook naming**: `revalidate*` for cache invalidation, `generate*`/`populate*` for data transformation, `pushTo*`/`check*` for side effects
+- **Admin sidebar**: every collection and global sets `admin.group` to one of Content, Site, Interactives, Store or System, and labels are a single word where one reads clearly (`labels`/`label`, never the slug). Groups appear in the order of their first entry in `payload.config.ts`
 - **Tabs pattern**: Content + SEO tabs; SEO tab uses standard fields (`OverviewField`, `MetaTitleField`, `MetaImageField`, `MetaDescriptionField`, `PreviewField`)
 - **Versions config**: `drafts.autosave: true`, `schedulePublish: true`, `maxPerDoc: 50`
 - **Live preview**: `generatePreviewPath()` for `admin.livePreview.url` and `admin.preview`
+- **Breadcrumbs**: a page builds its trail (`Crumb[]`, the steps after Home) from the documents it loaded and passes the same list to `<Breadcrumbs items={...} />` and `buildBreadcrumbJsonLd`. Labels are titles, never derived from slugs, and nothing reads the request. A nested collection (the nested-docs plugin) builds it with `nestedDocsTrail(doc.breadcrumbs, basePath)` from `@/components/Breadcrumbs`
 - **Media references**: media used by published content can't be deleted until it's detached (the Media **References** tab). An upload field or a block that holds media must be listed in `SOURCES` (`src/collections/Media/references/collectMediaReferences.ts`), or media it uses can be deleted without warning
 
 ### Block Conventions
 
 - **File structure**: `blocks/<Name>/config.ts` (Payload config) + `blocks/<Name>/Component.tsx` (React component)
 - **Two rendering systems**: `RenderBlocks` renders page layout blocks (Content, CTA, MediaBlock, Form, VolumeView); `RichText` renders Lexical inline/rich-text blocks (Banner, Code, Math, Footnote, SocialEmbed, SquiggleRule)
-- **Feed converters**: the RSS feeds (`/feed.articles`, `/feed.volumes`) and the Substack import feed render article content and volume editor's notes to HTML. A block's non-React renderings live in **`blocks/<Name>/converters.ts`**, one function per output **format**, named for the format rather than the feed (`timelineToHTML`, `displayMathToCode`). Each takes the block's fields plus a `FeedContext` (`src/utilities/feedHTML.ts`: `siteUrl`, `pageUrl`, `richTextToHTML` for nested rich text) and returns plain semantic HTML: absolute URLs, no inline styles, and every CMS value through `escapeHTML`. Shared logic used by several formats, or by `Component.tsx`, goes in the same file (`formatTimelineDate`). `converters.ts` must run in the browser, because Storybook imports it, so no server-only imports. The feed files only map block slugs to the format they want, through `fromBlock`: `createHtmlConverters` (`src/utilities/generateRssFeed.ts`) and, for article content, `createSubstackConverters` (`src/app/(frontend)/articles/_substack/generateSubstackFeed.ts`). A block added to those editors (or to the rich text inside their blocks) needs a converter, plus:
+- **Heavy client code loads lazily**: `RichText` and `RenderBlocks` import every block, so whatever a block's client component imports ships on every page that renders rich text, the footer included. A client component with a sizeable dependency (a highlighter, a carousel, a form library, a player) is imported through a sibling `*.lazy.tsx`: a `"use client"` file that wraps it in `next/dynamic` (`blocks/Code/Component.lazy.tsx`), so only pages that render it download it. The wrapper has to be a client file: `next/dynamic` in a Server Component doesn't split the code. Server rendering is unchanged. Unit tests get the real component (`vitest.setup.ts` maps each `.lazy` module to it), and stories wait for it with `findBy*`. `pnpm bundle-size` shows what a page loads up front
+- **Menus and toggles load on first use**: the header's sheets, mega menu and mode toggles are on every page, and most readers never open them. Their `*.lazy.tsx` wrappers render through `LoadOnInteraction` (`src/components/LoadOnInteraction`): markup that looks the same (the trigger button, or the menu's links) until the reader points at, touches, focuses or clicks it, then the base-ui component, with the click replayed and focus kept. Keep the layouts' server components from importing anything that imports base-ui's dialogs or menus (`ui/sheet`, `ui/dropdown-menu`, `ui/navigation-menu`): its client code would be back in every page's first-load JavaScript. `pnpm bundle-size` shows it
+- **Feed converters**: the RSS feeds (`/articles/feed.xml`, `/volumes/feed.xml`) and the Substack import feed render article content and volume editor's notes to HTML. A block's non-React renderings live in **`blocks/<Name>/converters.ts`**, one function per output **format**, named for the format rather than the feed (`timelineToHTML`, `displayMathToCode`). Each takes the block's fields plus a `FeedContext` (`src/utilities/feedHTML.ts`: `siteUrl`, `pageUrl`, `richTextToHTML` for nested rich text) and returns plain semantic HTML: absolute URLs, no inline styles, and every CMS value through `escapeHTML`. Shared logic used by several formats, or by `Component.tsx`, goes in the same file (`formatTimelineDate`). `converters.ts` must run in the browser, because Storybook imports it, so no server-only imports. The feed files only map block slugs to the format they want, through `fromBlock`: `createHtmlConverters` (`src/utilities/generateRssFeed.ts`) and, for article content, `createSubstackConverters` (`src/app/(frontend)/articles/_substack/generateSubstackFeed.ts`). A block added to those editors (or to the rich text inside their blocks) needs a converter, plus:
   - a `__tests__/converters.test.ts` using `toMatchInlineSnapshot()`, fed from `src/stories/fixtures/blocks.ts`
   - a `Feed` story that renders the output through `src/stories/FeedHTML.tsx`, so it gets the axe check
 
@@ -169,6 +190,7 @@ too.
 - Use `getPayloadConfig` imported from `@/utilities/getPayloadConfig`
 - Wrap data queries in `React.cache()` for per-request deduplication
 - Use `unstable_cache` with cache tags for long-lived caching (globals, redirects, sitemaps)
+- Sitemaps: each is a `sitemap.ts` in the folder of the section it lists (Next's metadata convention, served at `/<route>/sitemap.xml`, e.g. `topics/sitemap.ts`), added with a title to `SITEMAPS` in `(sitemaps)/sitemaps.ts`, which `/sitemap_index.xml`, robots.txt and the public `/feeds` page read (RSS feeds are listed there from `FEEDS` in `feeds/feeds.ts`). Pages live at the root, so theirs is the root `sitemap.ts` (`/sitemap.xml`), and the index of them all is `/sitemap_index.xml` (`(sitemaps)/sitemap_index.xml`), which robots.txt and Search Console point at; Google News reads `articles/news-sitemap.xml/route.ts`, a route handler (`sitemap.ts` can't write `news:` tags) listing only the last two days' articles, as Google asks. The old `/pages-sitemap.xml`, `/articles-sitemap.xml` and `/volumes-sitemap.xml` redirect permanently in `next.config.ts`
 - Always respect `draftMode()` — pass `draft` and `overrideAccess: draft` into Payload queries
 - Next.js 15: `params` and `searchParams` are `Promise`s (must be `await`ed)
 - Metadata: use `generateMeta({ doc, canonicalPath })` from `@/utilities/generateMeta`
@@ -182,6 +204,8 @@ too.
 - **Pre-push hooks**: Husky runs full checks on all files (`lint:fix`, `format:fix`, `check-types`) before pushing
 - **Pre-commit hooks**: lint-staged runs ESLint + Prettier on staged files only (fast, ~1-2 seconds)
 - **Colocation**: Prefer colocating logic near where it's used. `src/utilities/` is only for genuinely reusable helpers shared across multiple features (e.g. `generateMeta`, `getURL`, `toRoman`, `cn`). Don't put single-use logic there.
+- **Commit trailers**: don't add a `Claude-Session:` trailer (or any other link to an agent session) to commit messages. A `Co-Authored-By:` trailer is fine.
+- **Issue and PR numbers in comments**: comments and docs describe the code as it is now; why and when it changed is what `git log` and `git blame` are for. Don't write "added in #970", "before #672" or "see #883" — the sentence should stand on its own. Two exceptions, each a pointer with an exit: an upstream bug a workaround depends on (full URL; remove the workaround when it's fixed), and an **open** issue tracking a known gap or a skipped check (say what to remove when it closes, as `knownContrastIssue` does for #998). When that issue closes, delete the comment and what it guards; never append to it.
 
 ### Integrations
 
@@ -204,6 +228,12 @@ brought across — Listmonk, Google, the rest.
   skips with `describeStatus()` when it is not, rather than reading
   `process.env` itself.
 
+- Settings that aren't secrets (a channel, an account handle) can live in the
+  admin's **Integrations** global (`src/globals/Integrations/config.ts`): the
+  feature reads the global and passes the value to the connection's method,
+  which falls back to its variable. The global's status table lists every
+  connection in `INTEGRATIONS` and the variables it's missing.
+
 Adding one: declare the connection in `src/integrations/index.ts`, put its
 client under `src/integrations/<service>/`, and have the feature import it.
 Progress and the open questions live on issue #912.
@@ -217,7 +247,7 @@ Progress and the open questions live on issue #912.
 | Pure utility functions         | Unit test in `src/**/__tests__/`                                                           |
 | Blocks and components          | Storybook story next to the component (see [Storybook](#storybook))                        |
 | UI/presentational components   | Snapshot test (see `src/components/ui/__tests__/button.snapshot.test.tsx` for the pattern) |
-| Client components with state   | RTL interaction test (`fireEvent`; `user-event` is not installed — see #898)               |
+| Client components with state   | RTL interaction test (`fireEvent`; `user-event` is not installed)                          |
 | Server components (async, CMS) | Integration test with mocked Payload queries                                               |
 | API routes / Payload hooks     | Integration test (a Docker Postgres, see `tests/integration/`)                             |
 
@@ -270,28 +300,61 @@ function, and fails on any axe violation.
   `dev` at `pragmatic-papers-storybook.digital-ground-game.workers.dev`, and each PR at a
   `pr-<number>-` preview URL, which `scripts/storybook-pr.ts` records as a "Storybook Preview"
   GitHub Deployment (in the PR's deployments, beside the site's Preview). When the PR changes
-  components, it also links each one at the top of the PR description (under any showcase links),
+  components, it also links each one at the top of the PR description (under the showcase links and the links line),
   matched through the build's `index.json` by story file, `component` file or folder. `/storybook` on staging and on a
   PR's site preview redirects to its Storybook (404 on production). Needs the `CLOUDFLARE_API_TOKEN`
   (Workers Scripts: Edit) and `CLOUDFLARE_ACCOUNT_ID` repo secrets; without them it skips.
 
-### Visual regression (screenshot) tests
+### PR description links
 
-Adding, changing, or debugging a Playwright `toHaveScreenshot` test or a flaky
-visual diff? Use the **`e2e-visual-tests`** skill
-(`.claude/skills/e2e-visual-tests/SKILL.md`) for the checklist; full lifecycle
-in `tests/e2e/README.md`.
+CI keeps the top of a PR's description up to date, under any `Closes #N` lines:
+the showcase links (`scripts/showcase-pr.ts`), then one line of links, then the
+Storybook links (`scripts/storybook-pr.ts`). The line holds the live preview,
+and the PR analytics comment ("Coverage"); each job sets its own link with `setPrLink`, and the Preview link is
+left out while showcase links point at the same site. Each block sits between
+`<!-- name -->` markers, and every job edits the description through
+`scripts/pr-description.ts`: `withBlock` places a block, and `editPrBody`
+reads the description back after writing and writes again when another job's
+edit replaced it (GitHub has no conditional write). A script run under plain
+Node imports it as `./pr-description.ts`, and its workflow's sparse checkout
+lists it. `.github/pull_request_template.md` lists the blocks above Context,
+Screenshots and Test Plan.
+
+### Page speed
+
+The "Page speed" job in `playwright.yml` measures the image the PR deploys two ways,
+and each compares it with the last run on `dev` in a dropdown under the coverage report, in the one
+PR analytics comment CI keeps on a PR. A dropdown starts open when it flags
+something. A new report joins that comment by registering a section in
+`PR_REPORT_SECTIONS` (`scripts/pr-report.ts`) and posting it with
+`postPrReportSection()`, rather than posting a comment of its own:
+
+- **Bundle size** (`scripts/bundle-size.ts`, the job's first part) reads the image's build manifests and
+  adds up the gzipped JavaScript and CSS each public page loads before it's
+  interactive (Next 16 no longer prints "First Load JS"). Pages are expected to
+  grow over time, so there are no fixed budgets: a route whose JavaScript grew by
+  more than 10 kB against dev is flagged in the comment and with a warning on the
+  PR's checks. It **only warns**; `pnpm analyze` shows which import brought the
+  growth in.
+- **Lighthouse** (`scripts/lighthouse.ts`, run even when bundle size fails) seeds the E2E database, starts the
+  PR's image and audits each page 5 times, comparing with the results the last
+  push to `dev` uploaded. The CPU slowdown is calibrated to the runner's benchmark
+  score, and Chrome can't reach any host but localhost. Dev's results come from
+  another runner, so a metric is flagged only when every PR run is worse than
+  every dev run by a wide margin (`THRESHOLDS`). It **only warns**: the HTML
+  reports are in the `lighthouse-results` artifact. A page added to the seed can
+  be audited by adding it to `PAGES`.
 
 ### Interactive maps
 
-Preparing a pre-projected SVG, uploading a Map Asset, or chasing a map that
+Preparing a pre-projected SVG, uploading to Maps (the `map-assets` collection), or chasing a map that
 renders blank, all-grey, without tooltips, or drills into nothing? Use the
 **`interactive-maps`** skill (`.claude/skills/interactive-maps/SKILL.md`).
 
 Two things live there, and they are not two modes of one block:
 
 - The **Interactive Map block** is a **choropleth** only — regions shaded by a
-  value, R+/D+ color scale, from an SVG a writer uploads to Map Assets. The
+  value, R+/D+ color scale, from an SVG a writer uploads to Maps. The
   skill covers the sanitizer allowlist that silently eats most exports.
 - A **drilldown** is an **interactive page** (`/interactives/<slug>`, the
   `interactives` + `interactive-snapshots` collections, `src/interactives/`):
@@ -306,17 +369,23 @@ snapshot time into `geometry/*.json`, and never parsed again;
 and data fixture from a court-tracker checkout. The fixture is trimmed to three
 courts' benches (`--keep`); `pnpm dev:db-seed` with `COURT_TRACKER_GITHUB_TOKEN`
 set seeds every judge from upstream's newest release instead. Interactive pages
-are the `interactives` experiment: with it off in Site Settings they 404, their
+are the `interactives` experiment: with it off in Settings they 404, their
 sitemap is empty, and the daily sync skips. Validate a file before
 committing or uploading it:
 `pnpm tsx .claude/skills/interactive-maps/validate-map-svg.ts <file.svg> [--mode geometry]`.
 
 ## Hosting (Coolify)
 
-The site is built and hosted by Coolify, from `dockerfiles/PragmaticPapers.Dockerfile`:
-a **development** application (staging, from `dev`, plus a preview per PR) and a
-**production** application (from `main`). `dockerfiles/README.md` records how _our_
+The site is hosted by Coolify in three applications: **staging** (from `dev`) and
+**production** (from `main`), which Coolify builds from
+`dockerfiles/PragmaticPapers.Dockerfile`, and **preview** (one per PR), which runs the
+image GitHub Actions builds from `dockerfiles/PragmaticPapers.ci.Dockerfile`. `dockerfiles/README.md` records how _our_
 applications are set up and what's been verified about them; read it first.
+
+Staging's public site also runs as a Cloudflare Worker on workers.dev (OpenNext, reading
+staging's database through Hyperdrive), deployed on every push to `dev` by
+`.github/workflows/worker.yml`; setup and what's left before production are in
+`src/cloudflare/README.md`.
 
 The zone's Cloudflare rules (Cache Rules today) are version-controlled in
 `cloudflare/rulesets/` and applied on release by `.github/workflows/cloudflare-rules.yml`;
@@ -356,7 +425,7 @@ PRs into `dev` need the **Review acknowledged** check (`review-ack.yml`) on
 their final commit. A person gives it one of two ways: approving the PR with a
 GitHub review, or replying `/reviewed` or `LGTM` (any case) after a Claude
 review is on the PR:
-CI's (`claude-review.yml`, run by adding the "ready for review" label) or one
+CI's (`claude-review.yml`, run by adding the "in review" label) or one
 they posted with a local `/code-review --comment <pr>` (they need write access).
 Fixes pushed after a review need a new approval or reply, not a new
 review. **Never post `/reviewed` or `LGTM` (or anything starting with either),

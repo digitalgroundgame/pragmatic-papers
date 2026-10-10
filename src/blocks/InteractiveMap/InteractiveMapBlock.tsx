@@ -7,7 +7,7 @@ import { cn } from "@/utilities/utils"
 import { isResolved } from "@/utilities/relationships"
 
 import { getDivergingRedBlueLegend } from "./colorScale"
-import { InteractiveMapClient } from "./InteractiveMapClient"
+import { InteractiveMapClient } from "./InteractiveMapClient.lazy"
 import { Legend } from "./Legend"
 import { Sources } from "./Sources"
 

@@ -3,6 +3,7 @@ import type { User } from "@/payload-types"
 import { draftMode } from "next/headers"
 import React from "react"
 
+import { EndRule } from "@/blocks/SquiggleRule/EndRule"
 import { ArticleSidebar } from "@/components/ArticleSidebar"
 import { AuthorList } from "@/components/Authors/AuthorList"
 import { FootnoteList } from "@/components/FootnoteList"
@@ -23,11 +24,10 @@ import { queryArticleBySlug, queryVolumesForArticles } from "@/utilities/queries
 import { isResolved } from "@/utilities/relationships"
 import { buildArticleJsonLd, buildBreadcrumbJsonLd } from "@/utilities/structuredData"
 
-// Explicit, not left to Next's dynamic-API bailout: this page reads draftMode(), which makes
-// Next render it per request, but it only finds that out by prerendering one. When
-// generateStaticParams returns nothing (a build against an empty database, #1067) the route
-// is classed static instead, and every request then fails with DYNAMIC_SERVER_USAGE.
-export const dynamic = "force-dynamic"
+// Prerendered from generateStaticParams; a slug published since the build is rendered on its
+// first request and cached the same way. Saving the article or one of its authors revalidates it.
+// The hour is a backstop for what changes without either (a topic renamed, a volume it joined).
+export const revalidate = 3600
 
 export async function generateStaticParams(): Promise<{ slug: string | null | undefined }[]> {
   const payload = await getPayloadConfig()
@@ -39,9 +39,6 @@ export async function generateStaticParams(): Promise<{ slug: string | null | un
     pagination: false,
     select: {
       slug: true,
-    },
-    context: {
-      skipAfterRead: true,
     },
   })
 
@@ -118,6 +115,7 @@ export default async function Article({ params: paramsPromise }: Args): Promise<
                     parentDoc={{ collection: "articles", id: article.id }}
                   />
                 </MathJaxProvider>
+                <EndRule content={content} />
                 <FootnoteList footnotes={footnotes} />
                 <Separator />
                 <TopicsList topics={topics} />

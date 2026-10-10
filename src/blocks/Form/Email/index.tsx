@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import React from "react"
 
-import { Error } from "../Error"
+import { Error, useErrorProps } from "../Error"
 import { Width } from "../Width"
 
 export const Email: React.FC<
@@ -13,6 +13,7 @@ export const Email: React.FC<
     register: UseFormRegister<FieldValues>
   }
 > = ({ name, defaultValue, label, register, required, width }) => {
+  const errorProps = useErrorProps(name)
   return (
     <Width width={width}>
       <Label htmlFor={name}>
@@ -29,6 +30,7 @@ export const Email: React.FC<
         id={name}
         type="text"
         {...register(name, { pattern: /^\S[^\s@]*@\S+$/, required })}
+        {...errorProps}
       />
 
       <Error name={name} />

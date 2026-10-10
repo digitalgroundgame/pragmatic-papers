@@ -10,6 +10,11 @@ describe("sentryIgnoredErrors", () => {
     "Non-Error promise rejection captured with value: Object Not Found Matching Id:12, MethodName:simulateEvent, ParamCount:1",
     "undefined is not an object (evaluating 'window.ethereum.selectedAddress = undefined')",
     "TypeError: undefined is not an object (evaluating 'window.__firefox__.reader')",
+    "TypeError: Cannot assign to read only property 'push' of object '[object Array]'",
+    "Cannot assign to read only property 'push' of object '[object Array]'",
+    "Event `Event` (type=error) captured as promise rejection",
+    "Event: Event `Event` (type=error) captured as promise rejection",
+    "Event `Event` (type=error) captured as exception",
   ])("drops %j", (message) => {
     expect(ignored(message)).toBe(true)
   })
@@ -19,6 +24,9 @@ describe("sentryIgnoredErrors", () => {
     "Non-Error promise rejection captured with value: Object Not Found",
     "undefined is not an object (evaluating 'window.MathJax.typeset')",
     "TypeError: Failed to fetch",
+    "TypeError: Cannot assign to read only property 'title' of object '#<Object>'",
+    "Event `ErrorEvent` (type=error) captured as promise rejection",
+    "Event `Event` (type=abort) captured as promise rejection",
   ])("keeps %j", (message) => {
     expect(ignored(message)).toBe(false)
   })

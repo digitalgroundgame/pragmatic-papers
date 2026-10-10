@@ -46,10 +46,15 @@ export const ImageWithFocalPoint: Story = {
 export const Video: Story = {
   args: { media: loopVideo },
   play: async ({ canvasElement }) => {
-    const video = canvasElement.querySelector("video")
-    await expect(video?.querySelector("source")).toHaveAttribute("src", loopVideo.url)
+    // The player loads lazily, so the <video> arrives a moment after the story mounts.
+    const video = await waitFor(() => {
+      const element = canvasElement.querySelector("video")
+      if (!element) throw new Error("no <video> yet")
+      return element
+    })
+    await expect(video.querySelector("source")).toHaveAttribute("src", loopVideo.url)
     // HAVE_CURRENT_DATA or better: the url resolved to a file Chromium can decode.
-    await waitFor(() => expect(video?.readyState).toBeGreaterThanOrEqual(2))
+    await waitFor(() => expect(video.readyState).toBeGreaterThanOrEqual(2))
   },
 }
 
@@ -95,7 +100,7 @@ export const Narration: Story = {
     await userEvent.click(canvas.getByRole("button", { name: "Player settings" }))
     await expect(await screen.findByRole("link", { name: "Jordan Rivera" })).toHaveAttribute(
       "href",
-      "/authors/jordan-rivera",
+      "/contributors/jordan-rivera",
     )
   },
 }

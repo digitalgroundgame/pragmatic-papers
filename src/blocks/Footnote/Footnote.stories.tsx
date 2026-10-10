@@ -1,7 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite"
 import { expect, within } from "storybook/test"
 
-import { knownContrastIssue } from "@/stories/a11y"
 import { FeedHTML } from "@/stories/FeedHTML"
 import { footnoteBlock, footnotes } from "@/stories/fixtures/blocks"
 import { storyFeedContext } from "@/stories/fixtures/feedContext"
@@ -12,7 +11,6 @@ import { footnotesToHTML, footnoteToHTML } from "./converters"
 const meta = {
   title: "Blocks/Footnote",
   component: FootnoteBlock,
-  parameters: knownContrastIssue,
   args: footnoteBlock,
   render: (args) => (
     <>

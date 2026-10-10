@@ -16,6 +16,13 @@ updates:
         patterns:
           - "payload"
           - "@payloadcms/*"
+      # next, @next/third-parties and eslint-config-next are pinned to the
+      # same exact version and released together, so they move together too.
+      next:
+        patterns:
+          - "next"
+          - "@next/*"
+          - "eslint-config-next"
     ignore:
       # Majors follow the Node runtime (Dockerfile NODE_VERSION, CI node-version).
       - dependency-name: "@types/node"

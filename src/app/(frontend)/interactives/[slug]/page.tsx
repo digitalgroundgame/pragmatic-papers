@@ -1,7 +1,5 @@
-import configPromise from "@payload-config"
 import type { Metadata } from "next"
 import { draftMode } from "next/headers"
-import { getPayload } from "payload"
 import React from "react"
 
 import { Sources } from "@/blocks/InteractiveMap/Sources"
@@ -15,24 +13,12 @@ import { Separator } from "@/components/ui/separator"
 import { InteractiveDrilldown } from "@/interactives/InteractiveDrilldown"
 import { loadInteractiveOverview, queryInteractiveBySlug } from "@/interactives/load"
 import { generateMeta } from "@/utilities/generateMeta"
+import { Breadcrumbs } from "@/components/Breadcrumbs"
 
-export async function generateStaticParams(): Promise<{ slug: string }[]> {
-  const payload = await getPayload({ config: configPromise })
-  const interactives = await payload.find({
-    collection: "interactives",
-    draft: false,
-    limit: 1000,
-    overrideAccess: false,
-    pagination: false,
-    select: { slug: true },
-  })
-  return interactives.docs.map(({ slug }) => ({ slug }))
-}
-
-// Explicit, not left to Next's dynamic-API bailout: this page reads draftMode() unconditionally
-// and was never meant to hold a Full Route Cache entry (see revalidateInteractive.ts /
-// revalidateSnapshot.ts). Declaring it here means revalidateTag/revalidatePath can never trigger
-// an out-of-request regeneration attempt for it — the DynamicServerError (DYNAMIC_SERVER_USAGE)
+// Explicit, not left to Next's dynamic-API bailout: this page was never meant to hold a Full
+// Route Cache entry (see revalidateInteractive.ts / revalidateSnapshot.ts). Declaring it here
+// means revalidateTag/revalidatePath can never trigger an out-of-request regeneration attempt
+// for it — the DynamicServerError (DYNAMIC_SERVER_USAGE)
 // that kept surfacing to real visitors even after those hooks stopped calling revalidatePath.
 export const dynamic = "force-dynamic"
 
@@ -72,58 +58,68 @@ export default async function InteractivePage({
   const composed = await loadInteractiveOverview(interactive)
   // Parked: the overview pane stays empty until the reader picks something, the same as every
   // other unselected state, rather than landing on a filled-in SCOTUS bench. The profile still
-  // composes and renders one (see `federalCourtsProfile.summary`) — nothing else has to change
-  // to bring it back, just this line.
+  // composes one (see `federalCourtsProfile.summary`). To bring it back, set this to
+  // `renderSummary(interactive.profile, composed.summary)` from `@/interactives/summaryViews`;
+  // importing that while it's parked would only ship the unused view.
   const summary: React.ReactNode = undefined
 
   return (
-    <div className="container pt-8 pb-16">
-      <PayloadRedirects disableNotFound url={url} />
-      {draft && <LivePreviewListener />}
+    <>
+      <Breadcrumbs
+        fullWidth
+        items={[
+          { name: "Interactives", path: "/interactives" },
+          { name: interactive.title, path: url },
+        ]}
+      />
+      <div className="container pt-8 pb-16">
+        <PayloadRedirects disableNotFound url={url} />
+        {draft && <LivePreviewListener />}
 
-      <header className="max-w-3xl">
-        <p className="text-brand dark:text-brand-high-contrast font-serif text-xs font-semibold tracking-widest uppercase">
-          Interactive
-        </p>
-        <h1 className="mt-2">{interactive.title}</h1>
-        <RichText data={interactive.intro} enableGutter={false} className="mt-4" />
-        {composed && (
-          <p data-interactive-meta="" className="text-muted-foreground mt-4 text-sm">
-            Data as of{" "}
-            <time dateTime={composed.generatedAt}>
-              {dataDate.format(new Date(composed.generatedAt))}
-            </time>
-            {" · "}synced from {composed.source.name}
-            {composed.metaLine ? ` · ${composed.metaLine}` : ""}
+        <header className="max-w-3xl">
+          <p className="text-brand-text font-serif text-xs font-semibold tracking-widest uppercase">
+            Interactive
+          </p>
+          <h1 className="mt-2">{interactive.title}</h1>
+          <RichText data={interactive.intro} enableGutter={false} className="mt-4" />
+          {composed && (
+            <p data-interactive-meta="" className="text-muted-foreground mt-4 text-sm">
+              Data as of{" "}
+              <time dateTime={composed.generatedAt}>
+                {dataDate.format(new Date(composed.generatedAt))}
+              </time>
+              {" · "}synced from {composed.source.name}
+              {composed.metaLine ? ` · ${composed.metaLine}` : ""}
+            </p>
+          )}
+        </header>
+
+        <Separator className="my-6" />
+
+        {composed ? (
+          <InteractiveDrilldown
+            composed={composed}
+            emptyHint="Select a court on the map or from the list to see who sits on its bench."
+            searchLabel="Search judges"
+            summary={summary}
+          />
+        ) : (
+          <p
+            data-interactive-empty
+            className="border-border text-muted-foreground my-8 rounded-lg border border-dashed p-8 text-center text-sm"
+          >
+            {draft
+              ? "No data snapshot has been synced for this interactive yet. Run the sync from Snapshots (under Interactives) in the admin, then reload this preview."
+              : "This interactive has no published data yet."}
           </p>
         )}
-      </header>
 
-      <Separator className="my-6" />
-
-      {composed ? (
-        <InteractiveDrilldown
-          composed={composed}
-          emptyHint="Select a court on the map or from the list to see who sits on its bench."
-          searchLabel="Search judges"
-          summary={summary}
+        <Sources
+          sources={interactive.sources}
+          notes={[...MAP_SHORTCUTS, ...LAYOUT_TOOL_NOTES]}
+          className="mt-4"
         />
-      ) : (
-        <p
-          data-interactive-empty
-          className="border-border text-muted-foreground my-8 rounded-lg border border-dashed p-8 text-center text-sm"
-        >
-          {draft
-            ? "No data snapshot has been synced for this interactive yet. Run the sync from Interactive Snapshots in the admin, then reload this preview."
-            : "This interactive has no published data yet."}
-        </p>
-      )}
-
-      <Sources
-        sources={interactive.sources}
-        notes={[...MAP_SHORTCUTS, ...LAYOUT_TOOL_NOTES]}
-        className="mt-4"
-      />
-    </div>
+      </div>
+    </>
   )
 }

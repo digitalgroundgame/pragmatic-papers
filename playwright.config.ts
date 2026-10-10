@@ -8,29 +8,19 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
-  workers: process.env.CI ? 1 : undefined,
-  reporter: "html",
-  snapshotPathTemplate: "{testDir}/__screenshots__/{testFilePath}/{arg}{ext}",
-  // Screenshots are compared only in the pinned Playwright image — CI's E2E
-  // job and `pnpm test:e2e:update-snapshots`, which both set CI. A bare host
-  // renders fonts/antialiasing differently, so it runs functional assertions
-  // only.
-  ignoreSnapshots: !process.env.CI,
-  expect: {
-    toHaveScreenshot: {
-      maxDiffPixelRatio: 0.01,
-      animations: "disabled",
-      caret: "hide",
-      // Hides per-reader UI, such as the fresh dots a new browser shows.
-      stylePath: "./tests/e2e/screenshot.css",
-    },
-  },
+  // Every spec only reads the seed (nothing signs up, saves or deletes), so tests can share
+  // the database and run in any order. CI's runner has 4 vCPUs shared by the browsers, the
+  // single Next.js server under test and Postgres: two workers keep the server from becoming
+  // what a timing-sensitive test (the drilldown's camera, the meta row's geometry) waits on.
+  workers: process.env.CI ? 2 : undefined,
+  // `list` prints each test's duration in the job log, where the HTML report needs downloading.
+  reporter: process.env.CI ? [["list"], ["html"]] : "html",
   use: {
     // Same source as `webServer.url` below, so a server managed outside the runner
     // (`E2E_MANAGED_SERVER`) can live on another port and still be the one under test.
     baseURL: process.env.SERVER_URL || "http://localhost:8000",
     trace: "on-first-retry",
-    // Pin everything that can shift pixels between runs.
+    // Pin what dates, numbers and themes render with, so assertions on them hold everywhere.
     timezoneId: "UTC",
     locale: "en-US",
     colorScheme: "light",

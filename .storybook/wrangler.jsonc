@@ -8,6 +8,10 @@
     "directory": "../storybook-static",
   },
   "workers_dev": true,
-  // PRs upload a version under a `pr-<number>` alias instead of deploying.
+  // Each PR is a Worker Preview named `pr-<number>` (`wrangler preview`),
+  // served on workers.dev, and deleted when the PR closes
+  // (.github/workflows/storybook-close.yml). A static Storybook needs no
+  // Preview-specific settings, but `wrangler preview` requires the block.
   "preview_urls": true,
+  "previews": {},
 }

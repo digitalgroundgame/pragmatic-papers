@@ -10,7 +10,7 @@ import {
   UnorderedListFeature,
 } from "@payloadcms/richtext-lexical"
 
-import { linkGroup } from "../../fields/linkGroup"
+import { menu } from "@/fields/menu"
 
 export const CallToAction: Block = {
   slug: "cta",
@@ -34,12 +34,7 @@ export const CallToAction: Block = {
       }),
       label: false,
     },
-    linkGroup({
-      appearances: ["default", "outline"],
-      overrides: {
-        maxRows: 2,
-      },
-    }),
+    menu({ name: "links", label: "Links", maxRows: 2 }),
   ],
   labels: {
     plural: "Calls to Action",

@@ -75,7 +75,7 @@ describe("Select", () => {
 
     const options = await screen.findAllByRole("option")
     expect(options.map((option) => option.textContent)).toEqual(["Red", "Blue"])
-    // The open list carries the field's label, not only the trigger (#1028).
+    // The open list carries the field's label, not only the trigger.
     expect(screen.getByRole("listbox", { name: "Favourite colour" })).toBeInTheDocument()
   })
 

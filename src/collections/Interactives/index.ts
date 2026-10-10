@@ -10,7 +10,7 @@ import {
 
 import { editor } from "@/access/collections"
 import { isPublishedOrStaff } from "@/access/policies"
-import { link } from "@/fields/link2"
+import { link } from "@/fields/link"
 import { slugField } from "@/fields/slug"
 import { populatePublishedAt } from "@/hooks/populatePublishedAt"
 import { profileOptions } from "@/interactives/profiles"
@@ -114,7 +114,7 @@ export const Interactives: CollectionConfig<"interactives"> = {
               type: "group",
               admin: {
                 description:
-                  "How the sync job reads this interactive's data. It runs daily and can be run now from Interactive Snapshots. Each run that finds new data writes a draft snapshot for review; auto-publish skips the review.",
+                  "How the sync job reads this interactive's data. It runs daily and can be run now from Snapshots. Each run that finds new data writes a draft snapshot for review; auto-publish skips the review.",
               },
               fields: [
                 {

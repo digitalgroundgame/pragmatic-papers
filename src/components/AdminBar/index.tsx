@@ -1,79 +1,24 @@
-import { draftMode, headers } from "next/headers"
+import { draftMode } from "next/headers"
 import React from "react"
 
-import { getAuth } from "@/utilities/getAuth"
-import {
-  queryArticleBySlug,
-  queryPageBySlug,
-  queryTopicBySlug,
-  queryUserBySlug,
-  queryVolumeBySlug,
-} from "@/utilities/queries"
-import { AdminBarClient } from "./client"
+import { LazyAdminBar } from "./client.lazy"
+import { ADMIN_BAR_HINT_SCRIPT } from "./hint"
 
-interface RouteConfig {
-  plural: string
-  singular: string
-  // Payload collection slug — differs from the route key when the frontend
-  // URL uses a different name (e.g. /authors → "users" collection).
-  collectionSlug: string
-}
-
-const routes = new Map<string, RouteConfig>([
-  ["pages", { collectionSlug: "pages", plural: "Pages", singular: "Page" }],
-  ["volumes", { collectionSlug: "volumes", plural: "Volumes", singular: "Volume" }],
-  ["articles", { collectionSlug: "articles", plural: "Articles", singular: "Article" }],
-  ["authors", { collectionSlug: "users", plural: "Authors", singular: "Author" }],
-  ["topics", { collectionSlug: "topics", plural: "Topics", singular: "Topic" }],
-])
-
-const collectionRouteKeys = new Set(["articles", "volumes", "authors", "topics"])
-
-function parsePath(pathname: string): { routeKey: string; docSlug: string | undefined } {
-  const [, first = "", second] = pathname.split("/")
-  if (collectionRouteKeys.has(first)) {
-    return { routeKey: first, docSlug: second || undefined }
-  }
-  return { routeKey: "pages", docSlug: first || "home" }
-}
-
-async function queryDocId(routeKey: string, docSlug: string): Promise<number | undefined> {
-  const queries: Record<string, (slug: string) => Promise<{ id: number } | null>> = {
-    articles: queryArticleBySlug,
-    volumes: queryVolumeBySlug,
-    authors: queryUserBySlug,
-    topics: queryTopicBySlug,
-    pages: queryPageBySlug,
-  }
-  const doc = await queries[routeKey]?.(docSlug)
-  return doc?.id ?? undefined
-}
-
+/**
+ * Reads only draft mode, which a prerender sees as off, so the layout this sits in can still be
+ * prerendered. Who is logged in, and which document the page shows, the client asks Payload for;
+ * the bar itself loads only once someone is.
+ */
 export async function AdminBar(): Promise<React.ReactNode> {
   const { isEnabled } = await draftMode()
-  const { user } = await getAuth()
-  if (!user) return null
+  return <LazyAdminBar preview={isEnabled} />
+}
 
-  const headersList = await headers()
-  const pathname = headersList.get("x-pathname") ?? "/"
-  const { routeKey, docSlug } = parsePath(pathname)
-
-  const routeConfig = routes.get(routeKey)
-  const collectionSlug = routeConfig?.collectionSlug ?? routeKey
-  const collectionLabels = routeConfig
-    ? { plural: routeConfig.plural, singular: routeConfig.singular }
-    : undefined
-
-  const docId = docSlug ? await queryDocId(routeKey, docSlug) : undefined
-
-  return (
-    <div className="h-8 w-full bg-black text-white">
-      <AdminBarClient
-        preview={isEnabled}
-        collectionSlug={collectionSlug}
-        collectionLabels={collectionLabels}
-        id={docId ? String(docId) : undefined}
-      />
-    </div>
-  )
+/**
+ * Goes in `<head>` beside `AdminBar`, so a page makes room for the bar before it paints when the
+ * last one saw someone logged in.
+ */
+export function AdminBarHint(): React.ReactNode {
+  // eslint-disable-next-line react/no-danger -- a constant, with nothing from the request in it
+  return <script dangerouslySetInnerHTML={{ __html: ADMIN_BAR_HINT_SCRIPT }} />
 }

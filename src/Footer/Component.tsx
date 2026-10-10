@@ -1,11 +1,12 @@
-import { RenderBlocks } from "@/blocks/RenderBlocks"
+import { ContentBlock } from "@/blocks/Content/Component"
 import { Logo } from "@/components/Logo"
 import { Menu } from "@/components/Menu"
 import { SocialLinks } from "@/components/SocialLinks"
 import type { Footer } from "@/payload-types"
 import { getCachedGlobal } from "@/utilities/getGlobals"
 import { Copyright } from "./Copyright"
-import { ModeToggleAnalytics } from "@/components/ModeToggleAnalytics"
+import { LazyModeToggle } from "@/components/ModeToggleAnalytics.lazy"
+import { HoverPrefetchLink } from "@/components/Link/HoverPrefetchLink"
 
 export async function Footer(): Promise<React.ReactElement> {
   const { id, navItems, socials, copyright, layout }: Footer = await getCachedGlobal("footer", 2)()
@@ -14,16 +15,19 @@ export async function Footer(): Promise<React.ReactElement> {
     <footer className="container space-y-2 py-2">
       {layout && (
         <div className="border-t pt-6">
-          <RenderBlocks blocks={layout} />
+          {/* The footer is already a padded container, so its blocks don't pad again. */}
+          {layout.map((block, index) => (
+            <ContentBlock key={block.id || index} {...block} className="px-0" />
+          ))}
         </div>
       )}
       <div className="flex flex-col justify-between gap-2 border-t pt-4 md:flex-row md:items-center">
-        <a href="/" className="flex-1">
+        <HoverPrefetchLink href="/" className="flex-1">
           <Logo size="sm" />
-        </a>
+        </HoverPrefetchLink>
         <div className="flex flex-row items-center gap-2">
           <SocialLinks parentId={id} socials={socials} aria-label="Footer Social Links" />
-          <ModeToggleAnalytics location="footer" />
+          <LazyModeToggle location="footer" />
         </div>
       </div>
       <div className="flex flex-col-reverse items-start gap-1 md:flex-row md:items-center md:justify-between md:gap-2">

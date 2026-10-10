@@ -618,7 +618,7 @@ describe("productionUrl", () => {
   it.each([
     ["articles", { slug: "a" }, `${PROD}/articles/a`],
     ["volumes", { slug: "49" }, `${PROD}/volumes/49`],
-    ["users", { slug: "jane" }, `${PROD}/authors/jane`],
+    ["users", { slug: "jane" }, `${PROD}/contributors/jane`],
     ["pages", { slug: "about" }, `${PROD}/about`],
     ["pages", { slug: "home" }, `${PROD}/`],
     ["articles", 12, PROD],

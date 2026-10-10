@@ -1,7 +1,7 @@
 name: "Build the app image"
 description: >-
   Builds dockerfiles/PragmaticPapers.ci.Dockerfile once, for E2E to test and the
-  PR preview to deploy (#1090). Nothing environment-specific is built in: the
+  PR preview to deploy. Nothing environment-specific is built in: the
   server reads SERVER_URL and the rest at runtime. Saves the image as the
   `app-image` artifact, and pushes it to GHCR when `push-tag` is set.
   The calling job must run on the bare runner (not in a container), with a
@@ -37,8 +37,11 @@ runs:
         # The build reaches the Postgres service on the runner's network. BuildKit runs
         # in its own container, so that container needs the host's network too: without
         # network=host, the build's `network: host` is the container's, and
-        # 127.0.0.1:5432 refuses.
-        driver-opts: network=host
+        # 127.0.0.1:5432 refuses. BuildKit's own image comes through Google's Docker Hub
+        # mirror: Docker Hub rate-limits anonymous pulls, and shared runners run out.
+        driver-opts: |
+          network=host
+          image=mirror.gcr.io/moby/buildkit:buildx-stable-1
         buildkitd-flags: --allow-insecure-entitlement network.host
 
     # Written as a tar for the artifact rather than pushed: fork, Dependabot and

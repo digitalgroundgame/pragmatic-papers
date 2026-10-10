@@ -7,6 +7,59 @@
 /* An ancestor of an expanded TableOfContents (it renders data-slot="toc", hidden when collapsed). */
 @custom-variant toc-open (&:has([data-slot="toc"]:not([hidden])));
 
+/*
+ * Stand-ins for FKScreamer (fonts.ts) while it loads, so a heading wraps onto the same
+ * lines before and after the swap. size-adjust makes a title-case heading as wide as
+ * it is in FKScreamer, a condensed face; ascent/descent put the text where FKScreamer
+ * puts it (1010 and 200 of 1100 units, divided by size-adjust). Measured against
+ * FKScreamer 2.0.3 in Chromium on a sample of headings: widths within ±4%.
+ * `fantasy` isn't used: it's a different font in every browser and can't be resized.
+ */
+/* Impact (Windows and macOS) is heavy and narrow like FKScreamer, so it's the closest look. */
+@font-face {
+  font-family: "FKScreamer Fallback Impact";
+  src: local("Impact");
+  font-weight: 700;
+  size-adjust: 71%;
+  ascent-override: 129.3%;
+  descent-override: 25.6%;
+  line-gap-override: 0%;
+}
+@font-face {
+  font-family: "FKScreamer Fallback Arial";
+  src: local("Arial"), local("ArialMT"), local("Liberation Sans"), local("Arimo");
+  size-adjust: 63.8%;
+  ascent-override: 143.9%;
+  descent-override: 28.5%;
+  line-gap-override: 0%;
+}
+@font-face {
+  font-family: "FKScreamer Fallback Roboto";
+  src: local("Roboto"), local("Roboto Regular"), local("Roboto-Regular");
+  size-adjust: 64.4%;
+  ascent-override: 142.6%;
+  descent-override: 28.2%;
+  line-gap-override: 0%;
+}
+
+/* The same for Geist (fonts.ts), which sets body text 4% wider than Arial or Roboto. */
+@font-face {
+  font-family: "Geist Fallback Arial";
+  src: local("Arial"), local("ArialMT"), local("Liberation Sans"), local("Arimo");
+  size-adjust: 104.4%;
+  ascent-override: 96.3%;
+  descent-override: 28.3%;
+  line-gap-override: 0%;
+}
+@font-face {
+  font-family: "Geist Fallback Roboto";
+  src: local("Roboto"), local("Roboto Regular"), local("Roboto-Regular");
+  size-adjust: 104.6%;
+  ascent-override: 96.1%;
+  descent-override: 28.2%;
+  line-gap-override: 0%;
+}
+
 :root {
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
@@ -22,7 +75,7 @@
   --muted-foreground: oklch(45.316% 0.00005 271.152);
   --accent: oklch(0.97 0 0);
   --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.58 0.22 27);
+  --destructive: oklch(0.53 0.2 27);
   --border: oklch(0.922 0 0);
   --input: oklch(0.922 0 0);
   --ring: oklch(0.708 0 0);
@@ -40,11 +93,12 @@
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
+  /* Exactly #ff401a, for marks, borders and fills without text: it is 3.49:1 on white */
   --brand: oklch(0.6567 0.2311 32.7);
-  /* 4.52:1 contrast ratio for WCAG 2.1 AA */
-  --brand-foreground: oklch(0.592 0.2125 32.7);
-  /* 7.11:1 contrast ratio for WCAG 2.1 AAA */
-  --brand-high-contrast: oklch(0.4827 0.16 32.7);
+  /* Brand-colored text, AA on this theme's backgrounds: 4.52:1 on white */
+  --brand-text: oklch(0.592 0.2125 32.7);
+  /* Fill behind white text: 4.52:1. The same in dark mode */
+  --brand-fill: oklch(0.592 0.2125 32.7);
   --error: oklch(0.58 0.22 27);
   --success: oklch(0.55 0.18 150);
   --warning: oklch(0.7 0.18 80);
@@ -99,11 +153,8 @@
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.556 0 0);
-  --brand: oklch(0.6567 0.2311 32.7);
-  /* 6:1 contrast ratio for WCAG 2.1 AA */
-  --brand-foreground: oklch(0.6567 0.2311 32.7);
-  /* 7:1 contrast ratio for WCAG 2.1 AAA */
-  --brand-high-contrast: oklch(0.69 0.18 32.7);
+  /* 6.60:1 on the background, 5.05:1 on muted */
+  --brand-text: oklch(0.69 0.18 32.7);
   --error: oklch(0.704 0.191 22.216);
   --success: oklch(0.65 0.18 150);
   --warning: oklch(0.78 0.16 80);
@@ -151,22 +202,14 @@
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
   --color-brand: var(--brand);
-  --color-brand-foreground: var(--brand-foreground);
-  --color-brand-high-contrast: var(--brand-high-contrast);
+  --color-brand-text: var(--brand-text);
+  --color-brand-fill: var(--brand-fill);
   --color-error: var(--error);
   --color-success: var(--success);
   --color-warning: var(--warning);
   /* FK Screamer ligatures render incorrectly at 30px and below, so bumping 3xl to 32px. Overriding this core utilty to prevent us from accidently using it at 30px. */
   --text-3xl: 2rem;
   --text-3xl--line-height: calc(2.25 / 2);
-
-  --animate-paper-drift: paper-drift 6s linear infinite;
-  /* One (64, -64) tile of PaperIconPattern, rotated by its -15° patternTransform, so the loop is seamless. */
-  @keyframes paper-drift {
-    to {
-      transform: translate(45.2548px, -78.3837px);
-    }
-  }
 }
 
 @layer base {
@@ -318,6 +361,123 @@
 
 @media (prefers-reduced-motion: reduce) {
   .feed-marquee {
+    animation: none;
+  }
+}
+
+/*
+  The home page ticker (src/components/Ticker). The track holds the posts twice
+  and slides left by one copy's width per pass, so the loop has no seam. It
+  pauses while hovered or focused, or while its pause switch is on, and doesn't
+  move at all for reduced motion (the component then hides the second copy and
+  lets the posts scroll by hand).
+*/
+@keyframes ticker-scroll {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+.ticker-viewport {
+  mask-image: linear-gradient(
+    to right,
+    transparent,
+    black 1.5rem,
+    black calc(100% - 1.5rem),
+    transparent
+  );
+}
+
+.ticker-track {
+  animation: ticker-scroll var(--ticker-duration, 60s) linear infinite;
+}
+
+.ticker-viewport:hover .ticker-track,
+.ticker-viewport:focus-within .ticker-track,
+.ticker:has(.ticker-pause:checked) .ticker-track {
+  animation-play-state: paused;
+}
+
+/*
+  The pause switch shows while the reader points at the ticker, while a keyboard
+  is on it, and while it's paused (so there's a way back). It keeps its space
+  when hidden, so nothing shifts. Touch screens can't hover, so it stays.
+*/
+@media (hover: hover) {
+  .ticker-switch {
+    opacity: 0;
+    transition: opacity 150ms;
+  }
+
+  .ticker:hover .ticker-switch,
+  .ticker:focus-within .ticker-switch,
+  .ticker:has(.ticker-pause:checked) .ticker-switch {
+    opacity: 1;
+  }
+}
+
+/*
+  While it scrolls, the ticker sticks under the header on tablets and wider (phones keep
+  the room for the article), and while a broadcast is live it sticks on every screen.
+  Paused, it scrolls away with the page; so does a ticker that isn't scrolling for reduced
+  motion, or has nothing to scroll (no posts, so no switch), unless it's live.
+*/
+.ticker[data-live]:not(:has(.ticker-pause:checked)) {
+  position: sticky;
+  top: var(--header-height);
+  z-index: 40;
+}
+
+@media (min-width: 48rem) and (prefers-reduced-motion: no-preference) {
+  .ticker:has(.ticker-pause:not(:checked)) {
+    position: sticky;
+    top: var(--header-height);
+    z-index: 40;
+  }
+}
+
+/*
+  Where the page's own sticky things (the article sidebar) and scroll targets (the drilldown
+  pane) should stop: under the header, and under the ticker too while it sticks. The
+  conditions mirror the two rules above; :has() can't nest, so they read the pause switch,
+  which a ticker that can stick always has.
+*/
+:root {
+  --sticky-top: var(--header-height);
+  /* h-10 plus its bottom border, and its top border from md up */
+  --ticker-height: calc(2.5rem + 1px);
+}
+
+:root:has(.ticker[data-live] .ticker-pause:not(:checked)) {
+  --sticky-top: calc(var(--header-height) + var(--ticker-height));
+}
+
+@media (min-width: 48rem) {
+  :root {
+    --ticker-height: calc(2.5rem + 2px);
+  }
+}
+
+@media (min-width: 48rem) and (prefers-reduced-motion: no-preference) {
+  :root:has(.ticker .ticker-pause:not(:checked)) {
+    --sticky-top: calc(var(--header-height) + var(--ticker-height));
+  }
+}
+
+.ticker-play-icon,
+.ticker:has(.ticker-pause:checked) .ticker-pause-icon {
+  display: none;
+}
+
+.ticker:has(.ticker-pause:checked) .ticker-play-icon {
+  display: block;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ticker-track {
     animation: none;
   }
 }

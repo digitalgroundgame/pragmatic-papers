@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import type { Article, Media } from "@/payload-types"
-import { generateMeta } from "@/utilities/generateMeta"
+import { generateMeta, paginatedPath } from "@/utilities/generateMeta"
 import { DEFAULT_DESCRIPTION } from "@/utilities/mergeOpenGraph"
 
 const SITE = "https://pragmaticpapers.com"
@@ -93,5 +93,21 @@ describe("generateMeta", () => {
 
     expect(meta.openGraph?.images).toEqual(DEFAULT_OG_IMAGES)
     expect(meta.twitter).toMatchObject({ images: undefined })
+  })
+})
+
+describe("paginatedPath", () => {
+  it("leaves the first page at the bare path", () => {
+    expect(paginatedPath("/topics", undefined)).toBe("/topics")
+    expect(paginatedPath("/topics", "1")).toBe("/topics")
+  })
+
+  it("keeps a later page's number, so each page is its own canonical", () => {
+    expect(paginatedPath("/topics/economy", "3")).toBe("/topics/economy?p=3")
+  })
+
+  it("ignores page numbers the listing itself would ignore", () => {
+    for (const p of ["0", "-2", "2.5", "abc", ""])
+      expect(paginatedPath("/contributors", p)).toBe("/contributors")
   })
 })

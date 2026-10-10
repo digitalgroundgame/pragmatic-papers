@@ -157,7 +157,18 @@ export function parseDrilldownAssetJson(value: unknown): DrilldownAsset {
     payload = result.payload
     if (result.errors.length > 0) payloadError = result.errors.join("; ")
   }
-  return { viewBox, flipY: value.flipY === true, paths, payload, payloadError }
+  const step =
+    typeof value.step === "number" && Number.isFinite(value.step) && value.step > 0
+      ? value.step
+      : undefined
+  return {
+    viewBox,
+    flipY: value.flipY === true,
+    ...(step ? { step } : {}),
+    paths,
+    payload,
+    payloadError,
+  }
 }
 
 export { isReservedFact }

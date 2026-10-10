@@ -35,7 +35,7 @@ exports[`ArticleHero > matches snapshot 1`] = `
       </span>
     </div>
     <div
-      class="flex grow items-center justify-end gap-3"
+      class="flex grow items-center justify-end gap-1"
       data-slot="article-meta-controls"
     >
       <div

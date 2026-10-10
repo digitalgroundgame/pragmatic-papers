@@ -68,7 +68,7 @@ export async function seedMerchProducts(
     const media = await payload.findByID({ collection: "media", id: product.imageId })
 
     // The square resize is what the block used to render, so borrowing it keeps
-    // seeded placements pixel-identical to the pre-sync baselines.
+    // seeded placements looking as they did before products were synced.
     const square = media.sizes?.square
     const url = square?.url || media.url
     const width = square?.width || media.width

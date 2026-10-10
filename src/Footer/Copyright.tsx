@@ -1,4 +1,4 @@
-import { CMSLink } from "@/components/Link/CMSLink2"
+import { CMSLink } from "@/components/Link"
 import type { LinkField } from "@/payload-types"
 import { cn } from "@/utilities/utils"
 

@@ -35,6 +35,22 @@ interface ListmonkConfig {
   fromEmail: string
 }
 
+/** The variables this environment is missing for Listmonk, by name. */
+export function missingListmonkEnv(): string[] {
+  return REQUIRED_ENV.filter((key) => !process.env[key])
+}
+
+/** A non-2xx answer from Listmonk's admin API, with its status. */
+export class ListmonkError extends Error {
+  constructor(
+    message: string,
+    readonly status: number,
+  ) {
+    super(message)
+    this.name = "ListmonkError"
+  }
+}
+
 function readConfig(): ListmonkConfig {
   for (const key of REQUIRED_ENV) {
     if (!process.env[key]) throw new Error(`Missing required env var: ${key}`)
@@ -87,7 +103,10 @@ async function listmonkFetch<T>(
   })
   if (!res.ok) {
     const body = await res.text().catch(() => "")
-    throw new Error(`Listmonk ${init.method ?? "GET"} ${path} → ${res.status}: ${body}`)
+    throw new ListmonkError(
+      `Listmonk ${init.method ?? "GET"} ${path} → ${res.status}: ${body}`,
+      res.status,
+    )
   }
   const json = (await res.json()) as { data: T }
   return json.data
@@ -264,4 +283,148 @@ export async function subscribeMember(input: SubscribeMemberInput): Promise<void
     const body = await res.text().catch(() => "")
     throw new Error(`Listmonk public subscription → ${res.status}: ${body}`)
   }
+}
+
+/** Where the newsletter list stands, from Listmonk's own counts. */
+export interface NewsletterListStats {
+  name: string
+  /** Everyone on the list, whatever their subscription status. */
+  total: number
+  /** Clicked the double-opt-in link: these get the newsletter. */
+  confirmed: number
+  /** Signed up but haven't confirmed yet. */
+  unconfirmed: number
+  unsubscribed: number
+}
+
+export interface NewsletterSignup {
+  id: number
+  email: string
+  /** When the subscriber was created in Listmonk. */
+  createdAt: string
+  /** Their subscription to the newsletter list: confirmed, unconfirmed or unsubscribed. */
+  subscriptionStatus: string
+  /** `blocklisted` when Listmonk won't email them at all, whatever the list says. */
+  status: string
+}
+
+export interface NewsletterCampaign {
+  id: number
+  name: string
+  subject: string
+  status: string
+  /** When it went (or goes) out: started_at once sending began, else send_at. */
+  sendAt: string | null
+  sent: number
+  toSend: number
+  views: number
+  clicks: number
+  bounces: number
+}
+
+interface ListmonkList {
+  name: string
+  subscriber_count: number
+  /** Count per subscription status. Missing on Listmonk versions before it was added. */
+  subscriber_statuses?: Record<string, number> | null
+}
+
+interface ListmonkSubscriber {
+  id: number
+  email: string
+  status: string
+  created_at: string
+  lists: { id: number; subscription_status: string }[] | null
+}
+
+interface ListmonkCampaignWithStats extends ListmonkCampaign {
+  subject: string
+  started_at: string | null
+  sent: number
+  to_send: number
+  views: number
+  clicks: number
+  bounces: number
+}
+
+/** The newsletter list's subscriber counts. Needs `lists:get_all` (or that list's Get). */
+export async function getNewsletterListStats(init: RequestInit = {}): Promise<NewsletterListStats> {
+  const cfg = readConfig()
+  const list = await listmonkFetch<ListmonkList>(`/lists/${cfg.newsletterListId}`, init)
+  const statuses = list.subscriber_statuses ?? {}
+  return {
+    name: list.name,
+    total: list.subscriber_count,
+    confirmed: statuses.confirmed ?? 0,
+    unconfirmed: statuses.unconfirmed ?? 0,
+    unsubscribed: statuses.unsubscribed ?? 0,
+  }
+}
+
+/**
+ * The newest subscribers on the newsletter list, newest first. Needs `subscribers:get_all`, or
+ * `subscribers:get` with Get on the list.
+ */
+export async function listRecentSignups(
+  limit: number,
+  init: RequestInit = {},
+): Promise<NewsletterSignup[]> {
+  const cfg = readConfig()
+  const data = await listmonkFetch<{ results: ListmonkSubscriber[] | null }>("/subscribers", {
+    ...init,
+    searchParams: {
+      list_id: String(cfg.newsletterListId),
+      order_by: "created_at",
+      order: "desc",
+      per_page: String(limit),
+    },
+  })
+  return (data.results ?? []).map((s) => ({
+    id: s.id,
+    email: s.email,
+    createdAt: s.created_at,
+    subscriptionStatus:
+      s.lists?.find((l) => l.id === cfg.newsletterListId)?.subscription_status ?? "unknown",
+    status: s.status,
+  }))
+}
+
+/**
+ * The newest campaigns sent to the newsletter list, with Listmonk's send and tracking counts.
+ * `/api/campaigns` has no list filter, so this reads a page and keeps the newsletter's.
+ */
+export async function listRecentCampaigns(
+  limit: number,
+  init: RequestInit = {},
+): Promise<NewsletterCampaign[]> {
+  const cfg = readConfig()
+  const data = await listmonkFetch<{ results: ListmonkCampaignWithStats[] | null }>("/campaigns", {
+    ...init,
+    searchParams: {
+      order_by: "created_at",
+      order: "desc",
+      per_page: "50",
+      no_body: "true",
+    },
+  })
+  return (data.results ?? [])
+    .filter((c) => c.lists?.some((l) => l.id === cfg.newsletterListId))
+    .slice(0, limit)
+    .map((c) => ({
+      id: c.id,
+      name: c.name,
+      subject: c.subject,
+      status: c.status,
+      sendAt: c.started_at ?? c.send_at,
+      sent: c.sent,
+      toSend: c.to_send,
+      views: c.views,
+      clicks: c.clicks,
+      bounces: c.bounces,
+    }))
+}
+
+/** Listmonk's own admin, for everything the dashboard doesn't show. */
+export function listmonkAdminUrl(): string {
+  return `${readConfig().baseUrl}/admin`
 }

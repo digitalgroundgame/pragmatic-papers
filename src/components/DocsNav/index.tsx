@@ -84,7 +84,7 @@ export function DocsLayout({ children, className, ...nav }: DocsLayoutProps): Re
     >
       <DocsNav
         {...nav}
-        className="order-last border-t pt-6 lg:sticky lg:top-[calc(var(--sticky-top)+1rem)] lg:order-first lg:max-h-[calc(100vh-var(--sticky-top)-2rem)] lg:self-start lg:overflow-y-auto lg:border-t-0 lg:pt-2"
+        className="order-last border-t pt-6 lg:sticky lg:top-[calc(var(--sticky-top)+1rem)] lg:order-first lg:max-h-[calc(100vh-var(--sticky-top)-2rem)] lg:[scrollbar-width:thin] lg:[scrollbar-gutter:stable] lg:self-start lg:overflow-y-auto lg:border-t-0 lg:pt-2 lg:pr-4"
       />
       <div className="min-w-0">{children}</div>
     </div>

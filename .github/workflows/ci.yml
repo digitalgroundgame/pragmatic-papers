@@ -341,7 +341,7 @@ jobs:
   # Worker (.storybook/wrangler.jsonc): `dev` deploys to the main workers.dev
   # address, and each PR creates or updates a `pr-<number>` Worker Preview
   # (deleted when the PR closes, by storybook-close.yml), records it as a
-  # "Storybook Preview" Deployment (listed on the PR beside the site's
+  # "Storybook" Deployment (listed on the PR beside the site's
   # Preview), and links each component the PR changes at the top of its
   # description (scripts/storybook-pr.ts). Kept out of the Storybook job so a Cloudflare
   # outage never turns that required check red. Skips itself without the

@@ -298,7 +298,7 @@ function, and fails on any axe violation.
 - **Published**: CI's "Deploy Storybook" job uploads the tested build to the
   `pragmatic-papers-storybook` Cloudflare Worker (`.storybook/wrangler.jsonc`):
   `dev` at `pragmatic-papers-storybook.digital-ground-game.workers.dev`, and each PR at a
-  `pr-<number>-` preview URL, which `scripts/storybook-pr.ts` records as a "Storybook Preview"
+  `pr-<number>-` preview URL, which `scripts/storybook-pr.ts` records as a "Storybook"
   GitHub Deployment (in the PR's deployments, beside the site's Preview). When the PR changes
   components, it also links each one at the top of the PR description (under the showcase links and the links line),
   matched through the build's `index.json` by story file, `component` file or folder. `/storybook` on staging and on a

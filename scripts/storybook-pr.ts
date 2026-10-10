@@ -7,7 +7,7 @@
  *   node scripts/storybook-pr.ts close    # PR closed or merged (.github/workflows/storybook-close.yml)
  *
  * `deploy` records the preview as a GitHub Deployment of the PR's branch in the
- * "Storybook Preview" environment, so the PR's deployments list it next to the
+ * "Storybook" environment, so the PR's deployments list it next to the
  * site's Preview (scripts/preview-deployment.ts), and marks the PR's older ones
  * inactive. `close` marks all of them inactive, as the site's Preview does;
  * storybook-close.yml then deletes the Worker Preview itself.
@@ -33,7 +33,7 @@ import { blockEnd, blockStart, editPrBody, renderBlock, withBlock } from "./pr-d
 
 export const LINKS_START = blockStart("storybook-links")
 export const LINKS_END = blockEnd("storybook-links")
-export const ENVIRONMENT = "Storybook Preview"
+export const ENVIRONMENT = "Storybook"
 
 /** More components than this are summarised as "and N more". */
 export const MAX_COMPONENTS = 20

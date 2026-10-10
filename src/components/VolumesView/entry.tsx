@@ -6,6 +6,7 @@ import { HoverPrefetchLink } from "@/components/Link/HoverPrefetchLink"
 import { Separator } from "@/components/ui/separator"
 import { formatDateTime } from "@/utilities/formatDateTime"
 import { toRoman } from "@/utilities/toRoman"
+import { docPath } from "@/utilities/routes"
 
 // import { Media } from '@/components/Media'
 
@@ -21,13 +22,13 @@ export const Entry: React.FC<{
   relationTo?: "volumes"
   title?: string
 }> = (props) => {
-  const { className, doc, relationTo, title: titleFromProps } = props
+  const { className, doc, relationTo = "volumes", title: titleFromProps } = props
 
   const { slug, description, title, volumeNumber, publishedAt } = doc || {}
 
   const titleToUse = titleFromProps || title
   const sanitizedDescription = description?.replace(/\s/g, " ") // replace non-breaking space with white space
-  const href = `/${relationTo}/${slug}`
+  const href = docPath(relationTo, slug ?? "")
 
   return (
     <div className={cn("group space-y-3 overflow-hidden", className)}>

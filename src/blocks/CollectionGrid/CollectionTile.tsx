@@ -7,6 +7,7 @@ import type { ImageVariant } from "@/components/Media/ImageMedia"
 import { TimeAgo } from "@/components/TimeAgo"
 import { cn } from "@/utilities/utils"
 import { isResolved } from "@/utilities/relationships"
+import { docPath } from "@/utilities/routes"
 
 export type ImagePosition = "above" | "below" | "left" | "right" | "none"
 
@@ -34,7 +35,7 @@ export const CollectionTile: React.FC<CollectionTileProps> = ({
   if (!collection || !isResolved(collection.value)) return null
 
   const { title, slug, publishedAt, meta } = collection.value
-  const href = `/${collection.relationTo}/${slug}`
+  const href = docPath(collection.relationTo, slug ?? "")
 
   let populatedAuthors: User[] = []
   let heroImage: MediaType | null = null

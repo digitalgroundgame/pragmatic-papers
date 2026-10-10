@@ -1,8 +1,8 @@
 import { revalidateRedirects } from "@/hooks/revalidateRedirects"
 import type { Article, Interactive, Page, Topic, Volume } from "@/payload-types"
-import { collectionPrefixMap } from "@/utilities/generatePreviewPath"
 import { getServerSideURL } from "@/utilities/getURL"
 import { DEFAULT_DESCRIPTION } from "@/utilities/mergeOpenGraph"
+import { docPath } from "@/utilities/routes"
 import { toRoman } from "@/utilities/toRoman"
 import { formBuilderPlugin } from "@payloadcms/plugin-form-builder"
 import { nestedDocsPlugin } from "@payloadcms/plugin-nested-docs"
@@ -17,7 +17,7 @@ import {
 } from "@payloadcms/plugin-seo/types"
 import { FixedToolbarFeature, HeadingFeature, lexicalEditor } from "@payloadcms/richtext-lexical"
 import { s3Storage } from "@payloadcms/storage-s3"
-import { type CollectionSlug, type Payload, type Plugin } from "payload"
+import { type Payload, type Plugin } from "payload"
 
 type SeoDoc = Volume | Article | Page | Topic | Interactive
 
@@ -75,10 +75,8 @@ export const generateURL: GenerateURL<SeoDoc> = ({ collectionConfig, doc }) => {
   const url = getServerSideURL()
   if (!doc?.slug) return url
 
-  const collection = collectionConfig?.slug
-  if (collection === "pages" && doc.slug === "home") return url
-  const prefix = (collection && collectionPrefixMap[collection as CollectionSlug]) ?? ""
-  return `${url}${prefix}/${doc.slug}`
+  const path = docPath(collectionConfig?.slug ?? "pages", doc.slug)
+  return path === "/" ? url : `${url}${path}`
 }
 
 /**

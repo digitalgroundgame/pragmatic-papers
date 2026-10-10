@@ -12,6 +12,7 @@ import { getPayload } from "payload"
 import React, { cache } from "react"
 import { Breadcrumbs } from "@/components/Breadcrumbs"
 import { HoverPrefetchLink } from "@/components/Link/HoverPrefetchLink"
+import { docPath } from "@/utilities/routes"
 
 interface SearchResult {
   id: number
@@ -26,13 +27,6 @@ interface SearchResult {
 
 const RESULTS_PER_PAGE = 10
 const MAX_QUERY_LENGTH = 200
-
-function collectionHref(relationTo: string, slug: string): string {
-  if (relationTo === "articles") return `/articles/${slug}`
-  if (relationTo === "volumes") return `/volumes/${slug}`
-  if (relationTo === "topics") return `/topics/${slug}`
-  return `/${slug}`
-}
 
 const querySearch = cache(async (rawQuery: string, page: number) => {
   const { isEnabled: draft } = await draftMode()
@@ -164,7 +158,7 @@ export default async function SearchPage({ searchParams }: Args): Promise<React.
             <ul className="space-y-4">
               {docs.map((result: SearchResult) => {
                 const relationTo = result.doc?.relationTo ?? ""
-                const href = collectionHref(relationTo, result.slug ?? "")
+                const href = docPath(relationTo, result.slug ?? "")
 
                 const image = isMedia(result.image) ? result.image : null
                 return (

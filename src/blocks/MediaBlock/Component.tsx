@@ -10,7 +10,7 @@ import { Media } from "@/components/Media"
 import { isMedia } from "@/components/Media"
 import { HoverPrefetchLink } from "@/components/Link/HoverPrefetchLink"
 import { type ImageVariant } from "@/components/Media/ImageMedia"
-import { internalDocToHref } from "@/components/RichText/internalDocToHref"
+import { internalDocToHref } from "@/utilities/routes"
 import { cn } from "@/utilities/utils"
 import { type DefaultNodeTypes } from "@payloadcms/richtext-lexical"
 

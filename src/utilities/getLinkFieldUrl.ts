@@ -1,5 +1,7 @@
 import type { LinkField } from "@/payload-types"
 
+import { docPath } from "./routes"
+
 /**
  * Generates a URL string from a given LinkField object.
  *
@@ -27,20 +29,9 @@ export function linksToUnpublished(link?: LinkField): boolean {
 
 export function getLinkFieldUrl(link?: LinkField): string | null {
   if (!link) return null
-  if (
-    link.type === "reference" &&
-    typeof link.reference?.value === "object" &&
-    link.reference?.value.slug
-  ) {
-    let url = ""
-    if (link.reference?.relationTo !== "pages") {
-      url += `/${link.reference?.relationTo}`
-    } else if (link.reference?.value.slug === "home") {
-      return "/"
-    }
-
-    url += `/${link.reference?.value.slug}`
-    return url
+  const reference = link.type === "reference" ? link.reference : undefined
+  if (typeof reference?.value === "object" && reference.value.slug) {
+    return docPath(reference.relationTo, reference.value.slug)
   }
   return link.url || null
 }

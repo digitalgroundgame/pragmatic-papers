@@ -3,7 +3,8 @@ import { describe, expect, it } from "vitest"
 
 import { Ticker } from "../config"
 
-const urlField = (Ticker.fields[0] as Extract<Field, { type: "array" }>).fields[0] as {
+const hiddenField = Ticker.fields.find((field) => "name" in field && field.name === "hidden")
+const urlField = (hiddenField as Extract<Field, { type: "array" }>).fields[0] as {
   validate: (value: string | null | undefined) => true | string
 }
 

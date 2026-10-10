@@ -36,7 +36,7 @@ vi.mock("../sources", async (importOriginal) => ({
   loadSource,
 }))
 
-const { getTickerFeed } = await import("../getTickerFeed")
+const { getTickerFeed, getTickerPostLists } = await import("../getTickerFeed")
 const { broadcastSource, postSources } = await import("../sources")
 
 const post = (id: string, createdAt: string): TickerPost => ({
@@ -117,5 +117,18 @@ describe("getTickerFeed", () => {
       source === broadcastSource ? null : source === postSources[0] ? [hidden, kept] : [],
     )
     expect((await getTickerFeed()).posts).toEqual([kept])
+  })
+
+  it("lists every source's posts for the admin, hidden ones included", async () => {
+    const hidden = { ...post("hidden", "2026-10-08T12:00:00Z"), url: "https://x.com/P/status/9" }
+    const kept = post("kept", "2026-10-08T10:00:00Z")
+    ticker.current = { hidden: [{ url: hidden.url }] }
+    loadSource.mockImplementation(async (source) =>
+      source === broadcastSource ? null : source === postSources[0] ? [hidden, kept] : [],
+    )
+    expect(await getTickerPostLists()).toEqual([
+      [hidden, kept],
+      ...postSources.slice(1).map(() => []),
+    ])
   })
 })

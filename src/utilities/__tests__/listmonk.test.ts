@@ -1,6 +1,15 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
-import { createScheduledCampaign, listScheduledCampaigns, subscribeMember } from "../listmonk"
+import {
+  createScheduledCampaign,
+  getNewsletterListStats,
+  ListmonkError,
+  listRecentCampaigns,
+  listRecentSignups,
+  listScheduledCampaigns,
+  missingListmonkEnv,
+  subscribeMember,
+} from "../listmonk"
 
 const ENV_DEFAULTS = {
   LISTMONK_BASE_URL: "https://listmonk.example.com",
@@ -231,5 +240,121 @@ describe("listScheduledCampaigns", () => {
     const result = await listScheduledCampaigns()
     expect(result[0]!.sendAt).toBeInstanceOf(Date)
     expect(result[0]!.sendAt.toISOString()).toBe("2026-01-15T12:00:00.000Z")
+  })
+})
+
+describe("missingListmonkEnv", () => {
+  afterEach(() => vi.unstubAllEnvs())
+
+  it("names the variables this environment lacks", () => {
+    stubEnv()
+    vi.stubEnv("LISTMONK_API_TOKEN", "")
+    expect(missingListmonkEnv()).toEqual(["LISTMONK_API_TOKEN"])
+  })
+})
+
+describe("newsletter dashboard reads", () => {
+  beforeEach(stubEnv)
+  afterEach(() => {
+    vi.unstubAllEnvs()
+    vi.restoreAllMocks()
+  })
+
+  it("throws a ListmonkError carrying the status when the API user is refused", async () => {
+    mockListmonkFetch(null, 403)
+    const error = await getNewsletterListStats().catch((e: unknown) => e)
+    expect(error).toBeInstanceOf(ListmonkError)
+    expect(error).toHaveProperty("status", 403)
+  })
+
+  it("reads the list's counts per subscription status", async () => {
+    const spy = mockListmonkFetch({
+      name: "Newsletter",
+      subscriber_count: 10,
+      subscriber_statuses: { confirmed: 7, unconfirmed: 2, unsubscribed: 1 },
+    })
+    await expect(getNewsletterListStats()).resolves.toEqual({
+      name: "Newsletter",
+      total: 10,
+      confirmed: 7,
+      unconfirmed: 2,
+      unsubscribed: 1,
+    })
+    expect(new URL(String(spy.mock.calls[0]![0])).pathname).toBe("/api/lists/42")
+  })
+
+  it("counts zero for statuses an older Listmonk doesn't report", async () => {
+    mockListmonkFetch({ name: "Newsletter", subscriber_count: 3 })
+    await expect(getNewsletterListStats()).resolves.toMatchObject({ total: 3, confirmed: 0 })
+  })
+
+  it("asks for the newest subscribers on the newsletter list, with their status on it", async () => {
+    const spy = mockListmonkFetch({
+      results: [
+        {
+          id: 5,
+          email: "a@example.com",
+          status: "enabled",
+          created_at: "2026-10-10T18:00:00Z",
+          lists: [
+            { id: 9, subscription_status: "confirmed" },
+            { id: 42, subscription_status: "unconfirmed" },
+          ],
+        },
+      ],
+    })
+    const signups = await listRecentSignups(8)
+    expect(signups).toEqual([
+      {
+        id: 5,
+        email: "a@example.com",
+        createdAt: "2026-10-10T18:00:00Z",
+        subscriptionStatus: "unconfirmed",
+        status: "enabled",
+      },
+    ])
+    const url = new URL(String(spy.mock.calls[0]![0]))
+    expect(Object.fromEntries(url.searchParams)).toEqual({
+      list_id: "42",
+      order_by: "created_at",
+      order: "desc",
+      per_page: "8",
+    })
+  })
+
+  it("treats a null results page as no signups", async () => {
+    mockListmonkFetch({ results: null })
+    await expect(listRecentSignups(8)).resolves.toEqual([])
+  })
+
+  it("keeps only the newsletter list's campaigns, newest first, up to the limit", async () => {
+    const campaign = (id: number, listId: number) => ({
+      id,
+      name: `Campaign ${id}`,
+      subject: `Subject ${id}`,
+      status: "finished",
+      send_at: "2026-10-01T15:00:00Z",
+      started_at: "2026-10-01T15:00:05Z",
+      tags: [],
+      lists: [{ id: listId, name: "list" }],
+      sent: 100,
+      to_send: 100,
+      views: 40,
+      clicks: 5,
+      bounces: 1,
+    })
+    const spy = mockListmonkFetch({
+      results: [campaign(3, 42), campaign(2, 7), campaign(1, 42), campaign(0, 42)],
+    })
+    const campaigns = await listRecentCampaigns(2)
+    expect(campaigns.map((c) => c.id)).toEqual([3, 1])
+    expect(campaigns[0]).toMatchObject({
+      subject: "Subject 3",
+      sendAt: "2026-10-01T15:00:05Z",
+      sent: 100,
+      views: 40,
+      clicks: 5,
+    })
+    expect(new URL(String(spy.mock.calls[0]![0])).searchParams.get("no_body")).toBe("true")
   })
 })

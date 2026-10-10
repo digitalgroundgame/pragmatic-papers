@@ -1,0 +1,64 @@
+# Copies the Postgres image CI uses into GHCR, as ghcr.io/digitalgroundgame/postgres.
+#
+# CI's jobs pull Postgres on every run. Logged-out pulls from Docker Hub or ECR Public
+# are rate-limited per IP, and GitHub's shared runners share their IPs with other
+# repositories, so jobs failed with `toomanyrequests`. Pulls from GHCR are made logged
+# in with the job's own GITHUB_TOKEN, which isn't throttled that way.
+#
+# The image is rebuilt weekly, so it picks up Postgres 17's patch releases. Its
+# `org.opencontainers.image.source` label links the package to this repository, so
+# every workflow here can read it with `packages: read`, private or not.
+#
+# Local dev, docker-compose.yml and the Dockerfiles keep pulling from ECR Public:
+# a laptop isn't on a shared IP, and Coolify's builds have no GITHUB_TOKEN.
+name: Postgres image
+
+on:
+  schedule:
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+  push:
+    branches: [dev]
+    paths: [.github/workflows/postgres-image.yml]
+  # A PR that changes this file publishes the image too, so the jobs it changes can
+  # pull it before it merges.
+  pull_request:
+    paths: [.github/workflows/postgres-image.yml]
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: postgres-image
+
+jobs:
+  publish:
+    name: Publish Postgres image
+    # A fork's PR can't write packages.
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      SOURCE: public.ecr.aws/docker/library/postgres:17-alpine
+      TARGET: ghcr.io/digitalgroundgame/postgres:17-alpine
+    steps:
+      - name: Log in to GHCR
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push
+        run: |
+          # Retries the one logged-out pull this needs, should ECR Public throttle it.
+          for delay in 5 15 30 60 0; do
+            docker pull "$SOURCE" && break
+            [ "$delay" = 0 ] && exit 1
+            sleep "$delay"
+          done
+          printf 'FROM %s\nLABEL org.opencontainers.image.source=%s\n' \
+            "$SOURCE" "${{ github.server_url }}/${{ github.repository }}" |
+            docker build --pull=false --tag "$TARGET" -
+          docker push "$TARGET"

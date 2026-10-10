@@ -129,7 +129,12 @@ jobs:
     runs-on: ubuntu-latest
     # No Postgres service: check-pending-migrations starts its own with
     # scripts/test-db.mjs, the same way it does locally.
+    permissions:
+      contents: read
+      packages: read
     env:
+      # Copied into GHCR by postgres-image.yml, and pulled logged in (see the login step).
+      TEST_DB_IMAGE: ghcr.io/digitalgroundgame/postgres:17-alpine
       SERVER_URL: http://localhost:8000
       PAYLOAD_SECRET: ci-payload-secret
       USE_LOCAL_STORAGE: "true"
@@ -156,6 +161,13 @@ jobs:
 
       - name: Check migration order
         run: pnpm exec tsx scripts/check-migration-order.ts
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Check for pending migrations
         run: node scripts/check-pending-migrations.mjs
@@ -247,7 +259,12 @@ jobs:
     # No Postgres service: the integration global setup starts its own with
     # scripts/test-db.mjs, as it does locally. CI sets `CI`, so it always
     # migrates a fresh database rather than reusing a snapshot.
+    permissions:
+      contents: read
+      packages: read
     env:
+      # Copied into GHCR by postgres-image.yml, and pulled logged in (see the login step).
+      TEST_DB_IMAGE: ghcr.io/digitalgroundgame/postgres:17-alpine
       PAYLOAD_SECRET: ci-integration-secret
       USE_LOCAL_STORAGE: "true"
 
@@ -260,6 +277,13 @@ jobs:
           node-version: "24.x"
           gh-font-read-token: ${{ secrets.GH_FONT_READ }}
           payload-secret: ci-integration-secret
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Run integration tests
         run: pnpm test:integration -- --run

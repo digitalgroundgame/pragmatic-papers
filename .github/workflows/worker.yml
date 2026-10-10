@@ -26,6 +26,7 @@ on:
 
 permissions:
   contents: read
+  packages: read
 
 # One deploy at a time, so an older build never lands last.
 concurrency:
@@ -54,7 +55,11 @@ jobs:
 
     services:
       postgres:
-        image: public.ecr.aws/docker/library/postgres:17-alpine
+        # Copied into GHCR by postgres-image.yml; pulled logged in, so not rate-limited.
+        image: ghcr.io/digitalgroundgame/postgres:17-alpine
+        credentials:
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
         env:
           POSTGRES_PASSWORD: postgres
           POSTGRES_DB: build

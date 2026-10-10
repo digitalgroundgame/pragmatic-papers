@@ -32,6 +32,7 @@ const doc = {
   title: "Find photos",
   summary: "Search Unsplash.",
   publishedAt: "2026-10-18T00:00:00.000Z",
+  heroImage: image,
   audience: [],
   showTableOfContents: true,
   content: { root: { children: [{ type: "upload", value: image }] } },
@@ -68,6 +69,7 @@ describe("docs:export", () => {
       title: "Find photos",
       summary: "Search Unsplash.",
       publishedAt: "2026-10-18",
+      heroImage: { $media: "search.webp", alt: "The search drawer" },
       content: {
         root: {
           children: [
@@ -81,6 +83,8 @@ describe("docs:export", () => {
   })
 
   it("keeps the audience, and a table of contents turned off", async () => {
+    await mkdir(path.join(dir.cwd, "public/media"), { recursive: true })
+    await writeFile(path.join(dir.cwd, "public/media/search.webp"), "local bytes")
     find.mockResolvedValue({
       docs: [{ ...doc, audience: ["editor"], showTableOfContents: false, content: {} }],
     })
@@ -107,6 +111,7 @@ describe("docs:export", () => {
     ["no slug is given", undefined, [doc], /Usage/],
     ["no doc has the slug", "nope", [], /No doc with the slug "nope"/],
     ["the doc has no date", "photos", [{ ...doc, publishedAt: null }], /no published date/],
+    ["the doc has no hero image", "photos", [{ ...doc, heroImage: null }], /no hero image/],
   ])("fails when %s", async (_, slug, docs, message) => {
     find.mockResolvedValue({ docs })
     await expect(main(slug)).rejects.toThrow(message)

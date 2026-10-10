@@ -4,7 +4,7 @@
   "publishedAt": "2026-05-04",
   "heroImage": {
     "$media": "hero.webp",
-    "alt": "Headphones icon"
+    "alt": "An article byline with the narration audio player"
   },
   "audience": ["narrator", "writer", "editor"],
   "content": {

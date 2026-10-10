@@ -4,7 +4,7 @@
   "publishedAt": "2026-03-16",
   "heroImage": {
     "$media": "hero.webp",
-    "alt": "Grid of four squares icon"
+    "alt": "A Collection Grid block of article cards with titles and images"
   },
   "audience": ["admin"],
   "content": {

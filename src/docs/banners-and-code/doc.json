@@ -4,7 +4,7 @@
   "publishedAt": "2025-06-20",
   "heroImage": {
     "$media": "hero.webp",
-    "alt": "Code brackets icon"
+    "alt": "A Code block showing a TypeScript function with a Copy button"
   },
   "audience": ["writer", "editor"],
   "content": {

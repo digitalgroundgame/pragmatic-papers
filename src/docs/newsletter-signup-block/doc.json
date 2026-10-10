@@ -4,7 +4,7 @@
   "publishedAt": "2026-06-15",
   "heroImage": {
     "$media": "hero.webp",
-    "alt": "Envelope icon"
+    "alt": "A Newsletter Signup block with an email field and Sign Up button"
   },
   "audience": ["admin"],
   "content": {

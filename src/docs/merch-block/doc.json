@@ -4,7 +4,7 @@
   "publishedAt": "2026-08-16",
   "heroImage": {
     "$media": "hero.webp",
-    "alt": "Shopping bag icon"
+    "alt": "A Merch block showing three products under Support the Papers"
   },
   "audience": ["admin"],
   "content": {

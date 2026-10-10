@@ -4,7 +4,7 @@
   "publishedAt": "2026-03-08",
   "heroImage": {
     "$media": "hero.webp",
-    "alt": "Gallery icon"
+    "alt": "A Media Collage block arranging several images"
   },
   "audience": ["writer", "editor"],
   "content": {

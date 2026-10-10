@@ -4,7 +4,7 @@
   "publishedAt": "2026-10-18",
   "heroImage": {
     "$media": "hero.webp",
-    "alt": "Lab flask icon"
+    "alt": "The Site Settings switch for the Ticker experiment, turned on"
   },
   "audience": ["admin"],
   "content": {

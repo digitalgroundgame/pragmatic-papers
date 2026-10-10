@@ -4,7 +4,7 @@
   "publishedAt": "2025-06-20",
   "heroImage": {
     "$media": "hero.webp",
-    "alt": "Pen icon"
+    "alt": "Article text with a banner and an image block in the rich text"
   },
   "audience": ["writer", "editor"],
   "content": {

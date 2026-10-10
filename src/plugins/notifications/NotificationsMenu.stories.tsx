@@ -13,7 +13,10 @@ const items: NotificationItem[] = [
       "Search Unsplash from any Media upload. The photographer's credit goes into the caption for you.",
     href: "/docs/unsplash-photos",
     date: "2026-10-18T00:00:00.000Z",
-    image: { url: "/docs-assets/unsplash-photos/hero.webp", alt: "Camera icon" },
+    image: {
+      url: "/docs-assets/unsplash-photos/hero.webp",
+      alt: "The Unsplash search in Media uploads with a grid of photos",
+    },
   },
   {
     type: "docs",
@@ -22,7 +25,10 @@ const items: NotificationItem[] = [
     summary: "Experiments let a new feature run on staging before readers on the live site see it.",
     href: "/docs/experiments",
     date: "2026-10-11T00:00:00.000Z",
-    image: { url: "/docs-assets/experiments/hero.webp", alt: "Lab flask icon" },
+    image: {
+      url: "/docs-assets/experiments/hero.webp",
+      alt: "The Site Settings switch for the Ticker experiment, turned on",
+    },
   },
 ]
 

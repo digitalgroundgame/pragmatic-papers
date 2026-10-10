@@ -4,7 +4,7 @@
   "publishedAt": "2025-07-02",
   "heroImage": {
     "$media": "hero.webp",
-    "alt": "Sigma icon"
+    "alt": "A Math block showing the equation a squared plus b squared equals c squared"
   },
   "audience": ["writer", "editor"],
   "content": {

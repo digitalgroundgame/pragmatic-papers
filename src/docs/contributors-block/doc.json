@@ -4,7 +4,7 @@
   "publishedAt": "2026-05-03",
   "heroImage": {
     "$media": "hero.webp",
-    "alt": "Two people icon"
+    "alt": "A Contributors block listing three people with their roles"
   },
   "audience": ["admin"],
   "content": {

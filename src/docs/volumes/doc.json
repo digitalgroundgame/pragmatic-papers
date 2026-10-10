@@ -4,7 +4,7 @@
   "publishedAt": "2025-06-26",
   "heroImage": {
     "$media": "hero.webp",
-    "alt": "Open book icon"
+    "alt": "A Volumes block listing volumes with their articles"
   },
   "audience": ["editor"],
   "content": {

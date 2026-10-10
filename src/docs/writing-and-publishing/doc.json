@@ -4,7 +4,7 @@
   "publishedAt": "2025-07-01",
   "heroImage": {
     "$media": "hero.webp",
-    "alt": "Paper plane icon"
+    "alt": "An article title with its published and updated dates"
   },
   "audience": ["writer", "editor"],
   "content": {

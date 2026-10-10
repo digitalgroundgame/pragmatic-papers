@@ -4,7 +4,7 @@
   "publishedAt": "2026-04-25",
   "heroImage": {
     "$media": "hero.webp",
-    "alt": "Clock with a back arrow icon"
+    "alt": "A Timeline block showing how a district map changed"
   },
   "audience": ["writer", "editor"],
   "content": {

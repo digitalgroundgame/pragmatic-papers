@@ -4,7 +4,7 @@
   "publishedAt": "2025-06-20",
   "heroImage": {
     "$media": "hero.webp",
-    "alt": "Picture icon"
+    "alt": "A Media block showing a landscape image with its caption"
   },
   "audience": ["writer", "editor"],
   "content": {

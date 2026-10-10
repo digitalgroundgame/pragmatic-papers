@@ -4,7 +4,7 @@
   "publishedAt": "2026-03-03",
   "heroImage": {
     "$media": "hero.webp",
-    "alt": "At sign icon"
+    "alt": "A Social Embed block showing a quoted post"
   },
   "audience": ["writer", "editor"],
   "content": {

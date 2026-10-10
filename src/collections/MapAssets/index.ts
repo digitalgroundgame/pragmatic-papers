@@ -41,8 +41,8 @@ export const captureSvgContent: CollectionBeforeValidateHook<MapAsset> = ({ data
 export const MapAssets: CollectionConfig = {
   slug: "map-assets",
   labels: {
-    singular: "Map Asset",
-    plural: "Map Assets",
+    singular: "Map",
+    plural: "Maps",
   },
   access: {
     create: writerOrEditor,
@@ -51,6 +51,7 @@ export const MapAssets: CollectionConfig = {
     update: isCreatedByOrEditor,
   },
   admin: {
+    group: "Interactives",
     defaultColumns: ["filename", "label", "mimeType", "updatedAt"],
     useAsTitle: "label",
     description:

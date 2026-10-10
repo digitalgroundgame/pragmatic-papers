@@ -129,7 +129,7 @@ describe("InteractivePage", () => {
     await renderPage()
     expect(screen.getByTestId("live-preview")).toBeInTheDocument()
     expect(document.querySelector("[data-interactive-empty]")).toHaveTextContent(
-      /Run the sync from Interactive Snapshots/,
+      /Run the sync from Snapshots/,
     )
   })
 

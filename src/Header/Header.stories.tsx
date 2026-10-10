@@ -7,7 +7,7 @@ import { getPayloadConfig } from "@/utilities/getPayloadConfig"
 
 import { Header } from "./Component"
 
-/** Seeds the fake Payload; `feed` switches the feed experiment in Site Settings. */
+/** Seeds the fake Payload; `feed` switches the feed experiment in Settings. */
 function seedPayload({ feed = false }: { feed?: boolean } = {}): void {
   mocked(getPayloadConfig).mockResolvedValue(
     createFakePayload({

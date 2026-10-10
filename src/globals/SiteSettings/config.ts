@@ -18,6 +18,7 @@ function experimentField(field: Omit<CheckboxField, "type">): CheckboxField {
 
 export const SiteSettings: GlobalConfig = {
   slug: "site-settings",
+  label: "Settings",
   access: {
     read: () => true,
     update: ({ req: { user } }) => isAdmin(user),

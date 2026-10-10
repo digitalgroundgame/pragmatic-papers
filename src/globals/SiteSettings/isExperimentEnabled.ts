@@ -4,7 +4,7 @@ import { getCachedGlobal } from "@/utilities/getGlobals"
 export type Experiment = keyof NonNullable<SiteSetting["experiments"]>
 
 /**
- * Whether a beta feature is switched on in this environment's Site Settings.
+ * Whether a beta feature is switched on in this environment's Settings global.
  * Gate every entry point of an experiment (routes, header links, sitemaps,
  * jobs) with it; routes should `notFound()` when it's off.
  */

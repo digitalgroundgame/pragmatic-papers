@@ -27,7 +27,7 @@ import { DRILLDOWN_DATA_SCHEMA, type DrilldownData, type InteractiveProfile } fr
 
 /**
  * The interactive at a slug, or null — which the page and every JSON route under it already
- * answer with a 404. Interactives are an experiment (Site Settings), so with it off in this
+ * answer with a 404. Interactives are an experiment (Settings), so with it off in this
  * environment there is no interactive at any slug, and one check here closes all of them.
  */
 export const queryInteractiveBySlug = cache(async (slug: string): Promise<Interactive | null> => {

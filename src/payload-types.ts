@@ -8,16 +8,6 @@
 
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "MenuField".
- */
-export type MenuField =
-  | {
-      link?: LinkField;
-      id?: string | null;
-    }[]
-  | null;
-/**
- * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "FootnotesField".
  */
 export type FootnotesField =
@@ -34,6 +24,16 @@ export type FootnotesField =
        * Optionally add a source link to the footnote.
        */
       attributionEnabled: boolean;
+      link?: LinkField;
+      id?: string | null;
+    }[]
+  | null;
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "MenuField".
+ */
+export type MenuField =
+  | {
       link?: LinkField;
       id?: string | null;
     }[]
@@ -167,18 +167,18 @@ export interface Config {
   };
   blocks: {};
   collections: {
-    pages: Page;
     articles: Article;
     volumes: Volume;
-    media: Media;
-    'map-assets': MapAsset;
-    categories: Category;
-    users: User;
-    webhooks: Webhook;
     topics: Topic;
-    merch: Merch;
+    media: Media;
+    pages: Page;
     interactives: Interactive;
     'interactive-snapshots': InteractiveSnapshot;
+    'map-assets': MapAsset;
+    merch: Merch;
+    users: User;
+    webhooks: Webhook;
+    categories: Category;
     search: Search;
     redirects: Redirect;
     forms: Form;
@@ -192,18 +192,18 @@ export interface Config {
   };
   collectionsJoins: {};
   collectionsSelect: {
-    pages: PagesSelect<false> | PagesSelect<true>;
     articles: ArticlesSelect<false> | ArticlesSelect<true>;
     volumes: VolumesSelect<false> | VolumesSelect<true>;
-    media: MediaSelect<false> | MediaSelect<true>;
-    'map-assets': MapAssetsSelect<false> | MapAssetsSelect<true>;
-    categories: CategoriesSelect<false> | CategoriesSelect<true>;
-    users: UsersSelect<false> | UsersSelect<true>;
-    webhooks: WebhooksSelect<false> | WebhooksSelect<true>;
     topics: TopicsSelect<false> | TopicsSelect<true>;
-    merch: MerchSelect<false> | MerchSelect<true>;
+    media: MediaSelect<false> | MediaSelect<true>;
+    pages: PagesSelect<false> | PagesSelect<true>;
     interactives: InteractivesSelect<false> | InteractivesSelect<true>;
     'interactive-snapshots': InteractiveSnapshotsSelect<false> | InteractiveSnapshotsSelect<true>;
+    'map-assets': MapAssetsSelect<false> | MapAssetsSelect<true>;
+    merch: MerchSelect<false> | MerchSelect<true>;
+    users: UsersSelect<false> | UsersSelect<true>;
+    webhooks: WebhooksSelect<false> | WebhooksSelect<true>;
+    categories: CategoriesSelect<false> | CategoriesSelect<true>;
     search: SearchSelect<false> | SearchSelect<true>;
     redirects: RedirectsSelect<false> | RedirectsSelect<true>;
     forms: FormsSelect<false> | FormsSelect<true>;
@@ -222,19 +222,19 @@ export interface Config {
   globals: {
     header: Header;
     footer: Footer;
-    'article-recommendations': ArticleRecommendation;
+    ticker: TickerGlobal;
     'site-settings': SiteSetting;
     integrations: IntegrationSettings;
-    ticker: TickerGlobal;
+    'article-recommendations': ArticleRecommendation;
     'payload-jobs-stats': PayloadJobsStat;
   };
   globalsSelect: {
     header: HeaderSelect<false> | HeaderSelect<true>;
     footer: FooterSelect<false> | FooterSelect<true>;
-    'article-recommendations': ArticleRecommendationsSelect<false> | ArticleRecommendationsSelect<true>;
+    ticker: TickerSelect<false> | TickerSelect<true>;
     'site-settings': SiteSettingsSelect<false> | SiteSettingsSelect<true>;
     integrations: IntegrationsSelect<false> | IntegrationsSelect<true>;
-    ticker: TickerSelect<false> | TickerSelect<true>;
+    'article-recommendations': ArticleRecommendationsSelect<false> | ArticleRecommendationsSelect<true>;
     'payload-jobs-stats': PayloadJobsStatsSelect<false> | PayloadJobsStatsSelect<true>;
   };
   locale: null;
@@ -273,6 +273,89 @@ export interface UserAuthOperations {
     email: string;
     password: string;
   };
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "articles".
+ */
+export interface Article {
+  id: number;
+  title: string;
+  content: {
+    root: {
+      type: string;
+      children: {
+        type: any;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  };
+  footnotes?: FootnotesField;
+  meta?: {
+    title?: string | null;
+    /**
+     * Maximum upload file size: 12MB. Recommended file size for images is <500KB.
+     */
+    image?: (number | null) | Media;
+    description?: string | null;
+  };
+  narration?: (number | null) | Media;
+  heroImage?: (number | null) | Media;
+  /**
+   * When enabled, the slug will auto-generate from the title field on save and autosave.
+   */
+  generateSlug?: boolean | null;
+  slug: string;
+  enableMathRendering?: boolean | null;
+  publishedAt?: string | null;
+  authors?: (number | User)[] | null;
+  topics?: (number | Topic)[] | null;
+  /**
+   * Auto-generates a navigable list of headings (and any resolver-matched blocks). Readers see it only while the table of contents experiment is on in Settings.
+   */
+  showTableOfContents?: boolean | null;
+  /**
+   * Adds the published article to the Substack import feed. Takes effect once the article is published.
+   */
+  syndicateToSubstack?: boolean | null;
+  createdBy?: (number | null) | User;
+  updatedAt: string;
+  createdAt: string;
+  _status?: ('draft' | 'published') | null;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "LinkField".
+ */
+export interface LinkField {
+  type?: ('reference' | 'custom') | null;
+  newTab?: boolean | null;
+  variant?: ('link' | 'default' | 'outline' | 'ghost' | 'branded') | null;
+  reference?:
+    | ({
+        relationTo: 'pages';
+        value: number | Page;
+      } | null)
+    | ({
+        relationTo: 'volumes';
+        value: number | Volume;
+      } | null)
+    | ({
+        relationTo: 'articles';
+        value: number | Article;
+      } | null)
+    | ({
+        relationTo: 'topics';
+        value: number | Topic;
+      } | null);
+  url?: string | null;
+  label?: string | null;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -327,135 +410,6 @@ export interface Page {
    */
   generateSlug?: boolean | null;
   slug: string;
-  updatedAt: string;
-  createdAt: string;
-  _status?: ('draft' | 'published') | null;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "LinkField".
- */
-export interface LinkField {
-  type?: ('reference' | 'custom') | null;
-  newTab?: boolean | null;
-  variant?: ('link' | 'default' | 'outline' | 'ghost' | 'branded') | null;
-  reference?:
-    | ({
-        relationTo: 'pages';
-        value: number | Page;
-      } | null)
-    | ({
-        relationTo: 'volumes';
-        value: number | Volume;
-      } | null)
-    | ({
-        relationTo: 'articles';
-        value: number | Article;
-      } | null)
-    | ({
-        relationTo: 'topics';
-        value: number | Topic;
-      } | null);
-  url?: string | null;
-  label?: string | null;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "volumes".
- */
-export interface Volume {
-  id: number;
-  title: string;
-  volumeNumber: number;
-  description: string;
-  editorsNote?: {
-    root: {
-      type: string;
-      children: {
-        type: any;
-        version: number;
-        [k: string]: unknown;
-      }[];
-      direction: ('ltr' | 'rtl') | null;
-      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
-      indent: number;
-      version: number;
-    };
-    [k: string]: unknown;
-  } | null;
-  /**
-   * Select and order articles for this volume
-   */
-  articles?: (number | Article)[] | null;
-  meta?: {
-    title?: string | null;
-    /**
-     * Maximum upload file size: 12MB. Recommended file size for images is <500KB.
-     */
-    image?: (number | null) | Media;
-    description?: string | null;
-  };
-  publishedAt?: string | null;
-  /**
-   * When enabled, the slug will auto-generate from the title field on save and autosave.
-   */
-  generateSlug?: boolean | null;
-  slug: string;
-  updatedAt: string;
-  createdAt: string;
-  _status?: ('draft' | 'published') | null;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "articles".
- */
-export interface Article {
-  id: number;
-  title: string;
-  content: {
-    root: {
-      type: string;
-      children: {
-        type: any;
-        version: number;
-        [k: string]: unknown;
-      }[];
-      direction: ('ltr' | 'rtl') | null;
-      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
-      indent: number;
-      version: number;
-    };
-    [k: string]: unknown;
-  };
-  footnotes?: FootnotesField;
-  meta?: {
-    title?: string | null;
-    /**
-     * Maximum upload file size: 12MB. Recommended file size for images is <500KB.
-     */
-    image?: (number | null) | Media;
-    description?: string | null;
-  };
-  narration?: (number | null) | Media;
-  heroImage?: (number | null) | Media;
-  /**
-   * When enabled, the slug will auto-generate from the title field on save and autosave.
-   */
-  generateSlug?: boolean | null;
-  slug: string;
-  enableMathRendering?: boolean | null;
-  publishedAt?: string | null;
-  authors?: (number | User)[] | null;
-  topics?: (number | Topic)[] | null;
-  /**
-   * Auto-generates a navigable list of headings (and any resolver-matched blocks). Readers see it only while the table of contents experiment is on in Site Settings.
-   */
-  showTableOfContents?: boolean | null;
-  /**
-   * Adds the published article to the Substack import feed. Takes effect once the article is published.
-   */
-  syndicateToSubstack?: boolean | null;
-  createdBy?: (number | null) | User;
   updatedAt: string;
   createdAt: string;
   _status?: ('draft' | 'published') | null;
@@ -624,33 +578,6 @@ export interface User {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "topics".
- */
-export interface Topic {
-  id: number;
-  name: string;
-  /**
-   * Optional description for this topic
-   */
-  description?: string | null;
-  meta?: {
-    title?: string | null;
-    /**
-     * Maximum upload file size: 12MB. Recommended file size for images is <500KB.
-     */
-    image?: (number | null) | Media;
-    description?: string | null;
-  };
-  /**
-   * When enabled, the slug will auto-generate from the title field on save and autosave.
-   */
-  generateSlug?: boolean | null;
-  slug: string;
-  updatedAt: string;
-  createdAt: string;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "CollectionGridBlock".
  */
 export interface CollectionGridBlock {
@@ -659,6 +586,52 @@ export interface CollectionGridBlock {
   id?: string | null;
   blockName?: string | null;
   blockType: 'collectionGrid';
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "volumes".
+ */
+export interface Volume {
+  id: number;
+  title: string;
+  volumeNumber: number;
+  description: string;
+  editorsNote?: {
+    root: {
+      type: string;
+      children: {
+        type: any;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  } | null;
+  /**
+   * Select and order articles for this volume
+   */
+  articles?: (number | Article)[] | null;
+  meta?: {
+    title?: string | null;
+    /**
+     * Maximum upload file size: 12MB. Recommended file size for images is <500KB.
+     */
+    image?: (number | null) | Media;
+    description?: string | null;
+  };
+  publishedAt?: string | null;
+  /**
+   * When enabled, the slug will auto-generate from the title field on save and autosave.
+   */
+  generateSlug?: boolean | null;
+  slug: string;
+  updatedAt: string;
+  createdAt: string;
+  _status?: ('draft' | 'published') | null;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -1123,80 +1096,29 @@ export interface Form {
   createdAt: string;
 }
 /**
- * Raw vector geometry for the Interactive Map block — SVG today, GeoJSON/TopoJSON later. Files are stored without image processing so vector data round-trips intact.
- *
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "map-assets".
+ * via the `definition` "topics".
  */
-export interface MapAsset {
+export interface Topic {
   id: number;
+  name: string;
   /**
-   * Human-readable name shown in the admin (e.g. 'Missouri Congressional Districts — 119th Congress').
+   * Optional description for this topic
    */
-  label?: string | null;
-  /**
-   * Auto-populated with the uploaded SVG's text content so blocks can read it without a runtime file fetch.
-   */
-  svgContent?: string | null;
-  source?: LinkField;
-  createdBy?: (number | null) | User;
-  prefix?: string | null;
-  _objectKey?: string | null;
-  updatedAt: string;
-  createdAt: string;
-  url?: string | null;
-  thumbnailURL?: string | null;
-  filename?: string | null;
-  mimeType?: string | null;
-  filesize?: number | null;
-  width?: number | null;
-  height?: number | null;
-  focalX?: number | null;
-  focalY?: number | null;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "categories".
- */
-export interface Category {
-  id: number;
-  title: string;
+  description?: string | null;
+  meta?: {
+    title?: string | null;
+    /**
+     * Maximum upload file size: 12MB. Recommended file size for images is <500KB.
+     */
+    image?: (number | null) | Media;
+    description?: string | null;
+  };
   /**
    * When enabled, the slug will auto-generate from the title field on save and autosave.
    */
   generateSlug?: boolean | null;
   slug: string;
-  parent?: (number | null) | Category;
-  breadcrumbs?:
-    | {
-        doc?: (number | null) | Category;
-        url?: string | null;
-        label?: string | null;
-        id?: string | null;
-      }[]
-    | null;
-  updatedAt: string;
-  createdAt: string;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "webhooks".
- */
-export interface Webhook {
-  id: number;
-  name?: string | null;
-  url: string;
-  /**
-   * The most recent volume number that has been pushed to this webhook
-   */
-  mostRecent?: string | null;
-  pushed?:
-    | {
-        volumeNumber?: number | null;
-        timePushed?: string | null;
-        id?: string | null;
-      }[]
-    | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -1241,7 +1163,7 @@ export interface Interactive {
       }[]
     | null;
   /**
-   * How the sync job reads this interactive's data. It runs daily and can be run now from Interactive Snapshots. Each run that finds new data writes a draft snapshot for review; auto-publish skips the review.
+   * How the sync job reads this interactive's data. It runs daily and can be run now from Snapshots. Each run that finds new data writes a draft snapshot for review; auto-publish skips the review.
    */
   feed: {
     /**
@@ -1321,6 +1243,84 @@ export interface InteractiveSnapshot {
   updatedAt: string;
   createdAt: string;
   _status?: ('draft' | 'published') | null;
+}
+/**
+ * Raw vector geometry for the Interactive Map block — SVG today, GeoJSON/TopoJSON later. Files are stored without image processing so vector data round-trips intact.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "map-assets".
+ */
+export interface MapAsset {
+  id: number;
+  /**
+   * Human-readable name shown in the admin (e.g. 'Missouri Congressional Districts — 119th Congress').
+   */
+  label?: string | null;
+  /**
+   * Auto-populated with the uploaded SVG's text content so blocks can read it without a runtime file fetch.
+   */
+  svgContent?: string | null;
+  source?: LinkField;
+  createdBy?: (number | null) | User;
+  prefix?: string | null;
+  _objectKey?: string | null;
+  updatedAt: string;
+  createdAt: string;
+  url?: string | null;
+  thumbnailURL?: string | null;
+  filename?: string | null;
+  mimeType?: string | null;
+  filesize?: number | null;
+  width?: number | null;
+  height?: number | null;
+  focalX?: number | null;
+  focalY?: number | null;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "webhooks".
+ */
+export interface Webhook {
+  id: number;
+  name?: string | null;
+  url: string;
+  /**
+   * The most recent volume number that has been pushed to this webhook
+   */
+  mostRecent?: string | null;
+  pushed?:
+    | {
+        volumeNumber?: number | null;
+        timePushed?: string | null;
+        id?: string | null;
+      }[]
+    | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "categories".
+ */
+export interface Category {
+  id: number;
+  title: string;
+  /**
+   * When enabled, the slug will auto-generate from the title field on save and autosave.
+   */
+  generateSlug?: boolean | null;
+  slug: string;
+  parent?: (number | null) | Category;
+  breadcrumbs?:
+    | {
+        doc?: (number | null) | Category;
+        url?: string | null;
+        label?: string | null;
+        id?: string | null;
+      }[]
+    | null;
+  updatedAt: string;
+  createdAt: string;
 }
 /**
  * This is a collection of automatically created search results. These results are used by the global site search and will be updated automatically as documents in the CMS are created or updated.
@@ -1440,7 +1440,7 @@ export interface Doc {
    */
   audience?: ('admin' | 'chief-editor' | 'editor' | 'writer' | 'narrator')[] | null;
   /**
-   * Auto-generates a navigable list of headings (and any resolver-matched blocks). Readers see it only while the table of contents experiment is on in Site Settings.
+   * Auto-generates a navigable list of headings (and any resolver-matched blocks). Readers see it only while the table of contents experiment is on in Settings.
    */
   showTableOfContents?: boolean | null;
   /**
@@ -1584,10 +1584,6 @@ export interface PayloadLockedDocument {
   id: number;
   document?:
     | ({
-        relationTo: 'pages';
-        value: number | Page;
-      } | null)
-    | ({
         relationTo: 'articles';
         value: number | Article;
       } | null)
@@ -1596,16 +1592,32 @@ export interface PayloadLockedDocument {
         value: number | Volume;
       } | null)
     | ({
+        relationTo: 'topics';
+        value: number | Topic;
+      } | null)
+    | ({
         relationTo: 'media';
         value: number | Media;
+      } | null)
+    | ({
+        relationTo: 'pages';
+        value: number | Page;
+      } | null)
+    | ({
+        relationTo: 'interactives';
+        value: number | Interactive;
+      } | null)
+    | ({
+        relationTo: 'interactive-snapshots';
+        value: number | InteractiveSnapshot;
       } | null)
     | ({
         relationTo: 'map-assets';
         value: number | MapAsset;
       } | null)
     | ({
-        relationTo: 'categories';
-        value: number | Category;
+        relationTo: 'merch';
+        value: number | Merch;
       } | null)
     | ({
         relationTo: 'users';
@@ -1616,20 +1628,8 @@ export interface PayloadLockedDocument {
         value: number | Webhook;
       } | null)
     | ({
-        relationTo: 'topics';
-        value: number | Topic;
-      } | null)
-    | ({
-        relationTo: 'merch';
-        value: number | Merch;
-      } | null)
-    | ({
-        relationTo: 'interactives';
-        value: number | Interactive;
-      } | null)
-    | ({
-        relationTo: 'interactive-snapshots';
-        value: number | InteractiveSnapshot;
+        relationTo: 'categories';
+        value: number | Category;
       } | null)
     | ({
         relationTo: 'search';
@@ -1695,6 +1695,201 @@ export interface PayloadMigration {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "articles_select".
+ */
+export interface ArticlesSelect<T extends boolean = true> {
+  title?: T;
+  content?: T;
+  footnotes?: T | FootnotesFieldSelect<T>;
+  meta?:
+    | T
+    | {
+        title?: T;
+        image?: T;
+        description?: T;
+      };
+  narration?: T;
+  heroImage?: T;
+  generateSlug?: T;
+  slug?: T;
+  enableMathRendering?: T;
+  publishedAt?: T;
+  authors?: T;
+  topics?: T;
+  showTableOfContents?: T;
+  syndicateToSubstack?: T;
+  createdBy?: T;
+  updatedAt?: T;
+  createdAt?: T;
+  _status?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "FootnotesField_select".
+ */
+export interface FootnotesFieldSelect<T extends boolean = true> {
+  note?: T;
+  index?: T;
+  attributionEnabled?: T;
+  link?: T | LinkFieldSelect<T>;
+  id?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "LinkField_select".
+ */
+export interface LinkFieldSelect<T extends boolean = true> {
+  type?: T;
+  newTab?: T;
+  variant?: T;
+  reference?: T;
+  url?: T;
+  label?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "volumes_select".
+ */
+export interface VolumesSelect<T extends boolean = true> {
+  title?: T;
+  volumeNumber?: T;
+  description?: T;
+  editorsNote?: T;
+  articles?: T;
+  meta?:
+    | T
+    | {
+        title?: T;
+        image?: T;
+        description?: T;
+      };
+  publishedAt?: T;
+  generateSlug?: T;
+  slug?: T;
+  updatedAt?: T;
+  createdAt?: T;
+  _status?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "topics_select".
+ */
+export interface TopicsSelect<T extends boolean = true> {
+  name?: T;
+  description?: T;
+  meta?:
+    | T
+    | {
+        title?: T;
+        image?: T;
+        description?: T;
+      };
+  generateSlug?: T;
+  slug?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "media_select".
+ */
+export interface MediaSelect<T extends boolean = true> {
+  alt?: T;
+  caption?: T;
+  blurDataURL?: T;
+  createdBy?: T;
+  narrator?: T;
+  duration?: T;
+  unsplashId?: T;
+  _objectKey?: T;
+  updatedAt?: T;
+  createdAt?: T;
+  url?: T;
+  thumbnailURL?: T;
+  filename?: T;
+  mimeType?: T;
+  filesize?: T;
+  width?: T;
+  height?: T;
+  focalX?: T;
+  focalY?: T;
+  sizes?:
+    | T
+    | {
+        thumbnail?:
+          | T
+          | {
+              url?: T;
+              width?: T;
+              height?: T;
+              mimeType?: T;
+              filesize?: T;
+              filename?: T;
+            };
+        square?:
+          | T
+          | {
+              url?: T;
+              width?: T;
+              height?: T;
+              mimeType?: T;
+              filesize?: T;
+              filename?: T;
+            };
+        small?:
+          | T
+          | {
+              url?: T;
+              width?: T;
+              height?: T;
+              mimeType?: T;
+              filesize?: T;
+              filename?: T;
+            };
+        medium?:
+          | T
+          | {
+              url?: T;
+              width?: T;
+              height?: T;
+              mimeType?: T;
+              filesize?: T;
+              filename?: T;
+            };
+        large?:
+          | T
+          | {
+              url?: T;
+              width?: T;
+              height?: T;
+              mimeType?: T;
+              filesize?: T;
+              filename?: T;
+            };
+        xlarge?:
+          | T
+          | {
+              url?: T;
+              width?: T;
+              height?: T;
+              mimeType?: T;
+              filesize?: T;
+              filename?: T;
+            };
+        og?:
+          | T
+          | {
+              url?: T;
+              width?: T;
+              height?: T;
+              mimeType?: T;
+              filesize?: T;
+              filename?: T;
+            };
+      };
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "pages_select".
  */
 export interface PagesSelect<T extends boolean = true> {
@@ -1742,18 +1937,6 @@ export interface PagesSelect<T extends boolean = true> {
 export interface MenuFieldSelect<T extends boolean = true> {
   link?: T | LinkFieldSelect<T>;
   id?: T;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "LinkField_select".
- */
-export interface LinkFieldSelect<T extends boolean = true> {
-  type?: T;
-  newTab?: T;
-  variant?: T;
-  reference?: T;
-  url?: T;
-  label?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -1900,55 +2083,25 @@ export interface FormBlockSelect<T extends boolean = true> {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "articles_select".
+ * via the `definition` "interactives_select".
  */
-export interface ArticlesSelect<T extends boolean = true> {
+export interface InteractivesSelect<T extends boolean = true> {
   title?: T;
-  content?: T;
-  footnotes?: T | FootnotesFieldSelect<T>;
-  meta?:
+  profile?: T;
+  intro?: T;
+  sources?:
     | T
     | {
-        title?: T;
-        image?: T;
-        description?: T;
+        link?: T | LinkFieldSelect<T>;
+        id?: T;
       };
-  narration?: T;
-  heroImage?: T;
-  generateSlug?: T;
-  slug?: T;
-  enableMathRendering?: T;
-  publishedAt?: T;
-  authors?: T;
-  topics?: T;
-  showTableOfContents?: T;
-  syndicateToSubstack?: T;
-  createdBy?: T;
-  updatedAt?: T;
-  createdAt?: T;
-  _status?: T;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "FootnotesField_select".
- */
-export interface FootnotesFieldSelect<T extends boolean = true> {
-  note?: T;
-  index?: T;
-  attributionEnabled?: T;
-  link?: T | LinkFieldSelect<T>;
-  id?: T;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "volumes_select".
- */
-export interface VolumesSelect<T extends boolean = true> {
-  title?: T;
-  volumeNumber?: T;
-  description?: T;
-  editorsNote?: T;
-  articles?: T;
+  feed?:
+    | T
+    | {
+        enabled?: T;
+        ref?: T;
+        autoPublish?: T;
+      };
   meta?:
     | T
     | {
@@ -1965,102 +2118,21 @@ export interface VolumesSelect<T extends boolean = true> {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "media_select".
+ * via the `definition` "interactive-snapshots_select".
  */
-export interface MediaSelect<T extends boolean = true> {
-  alt?: T;
-  caption?: T;
-  blurDataURL?: T;
-  createdBy?: T;
-  narrator?: T;
-  duration?: T;
-  unsplashId?: T;
-  _objectKey?: T;
+export interface InteractiveSnapshotsSelect<T extends boolean = true> {
+  label?: T;
+  interactive?: T;
+  summary?: T;
+  sourceVersion?: T;
+  sourceRef?: T;
+  contentHash?: T;
+  generatedAt?: T;
+  syncedAt?: T;
+  data?: T;
   updatedAt?: T;
   createdAt?: T;
-  url?: T;
-  thumbnailURL?: T;
-  filename?: T;
-  mimeType?: T;
-  filesize?: T;
-  width?: T;
-  height?: T;
-  focalX?: T;
-  focalY?: T;
-  sizes?:
-    | T
-    | {
-        thumbnail?:
-          | T
-          | {
-              url?: T;
-              width?: T;
-              height?: T;
-              mimeType?: T;
-              filesize?: T;
-              filename?: T;
-            };
-        square?:
-          | T
-          | {
-              url?: T;
-              width?: T;
-              height?: T;
-              mimeType?: T;
-              filesize?: T;
-              filename?: T;
-            };
-        small?:
-          | T
-          | {
-              url?: T;
-              width?: T;
-              height?: T;
-              mimeType?: T;
-              filesize?: T;
-              filename?: T;
-            };
-        medium?:
-          | T
-          | {
-              url?: T;
-              width?: T;
-              height?: T;
-              mimeType?: T;
-              filesize?: T;
-              filename?: T;
-            };
-        large?:
-          | T
-          | {
-              url?: T;
-              width?: T;
-              height?: T;
-              mimeType?: T;
-              filesize?: T;
-              filename?: T;
-            };
-        xlarge?:
-          | T
-          | {
-              url?: T;
-              width?: T;
-              height?: T;
-              mimeType?: T;
-              filesize?: T;
-              filename?: T;
-            };
-        og?:
-          | T
-          | {
-              url?: T;
-              width?: T;
-              height?: T;
-              mimeType?: T;
-              filesize?: T;
-              filename?: T;
-            };
-      };
+  _status?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -2087,21 +2159,30 @@ export interface MapAssetsSelect<T extends boolean = true> {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "categories_select".
+ * via the `definition` "merch_select".
  */
-export interface CategoriesSelect<T extends boolean = true> {
+export interface MerchSelect<T extends boolean = true> {
   title?: T;
-  generateSlug?: T;
-  slug?: T;
-  parent?: T;
-  breadcrumbs?:
-    | T
-    | {
-        doc?: T;
-        url?: T;
-        label?: T;
-        id?: T;
-      };
+  externalId?: T;
+  source?: T;
+  handle?: T;
+  description?: T;
+  price?: T;
+  compareAtPrice?: T;
+  currencyCode?: T;
+  availableForSale?: T;
+  imageUrl?: T;
+  imageWidth?: T;
+  imageHeight?: T;
+  imageAlt?: T;
+  tags?: T;
+  collections?: T;
+  status?: T;
+  lastSyncedAt?: T;
+  featured?: T;
+  hidden?: T;
+  badgeOverride?: T;
+  sortOrder?: T;
   updatedAt?: T;
   createdAt?: T;
 }
@@ -2157,104 +2238,23 @@ export interface WebhooksSelect<T extends boolean = true> {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "topics_select".
+ * via the `definition` "categories_select".
  */
-export interface TopicsSelect<T extends boolean = true> {
-  name?: T;
-  description?: T;
-  meta?:
-    | T
-    | {
-        title?: T;
-        image?: T;
-        description?: T;
-      };
+export interface CategoriesSelect<T extends boolean = true> {
+  title?: T;
   generateSlug?: T;
   slug?: T;
-  updatedAt?: T;
-  createdAt?: T;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "merch_select".
- */
-export interface MerchSelect<T extends boolean = true> {
-  title?: T;
-  externalId?: T;
-  source?: T;
-  handle?: T;
-  description?: T;
-  price?: T;
-  compareAtPrice?: T;
-  currencyCode?: T;
-  availableForSale?: T;
-  imageUrl?: T;
-  imageWidth?: T;
-  imageHeight?: T;
-  imageAlt?: T;
-  tags?: T;
-  collections?: T;
-  status?: T;
-  lastSyncedAt?: T;
-  featured?: T;
-  hidden?: T;
-  badgeOverride?: T;
-  sortOrder?: T;
-  updatedAt?: T;
-  createdAt?: T;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "interactives_select".
- */
-export interface InteractivesSelect<T extends boolean = true> {
-  title?: T;
-  profile?: T;
-  intro?: T;
-  sources?:
+  parent?: T;
+  breadcrumbs?:
     | T
     | {
-        link?: T | LinkFieldSelect<T>;
+        doc?: T;
+        url?: T;
+        label?: T;
         id?: T;
       };
-  feed?:
-    | T
-    | {
-        enabled?: T;
-        ref?: T;
-        autoPublish?: T;
-      };
-  meta?:
-    | T
-    | {
-        title?: T;
-        image?: T;
-        description?: T;
-      };
-  publishedAt?: T;
-  generateSlug?: T;
-  slug?: T;
   updatedAt?: T;
   createdAt?: T;
-  _status?: T;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "interactive-snapshots_select".
- */
-export interface InteractiveSnapshotsSelect<T extends boolean = true> {
-  label?: T;
-  interactive?: T;
-  summary?: T;
-  sourceVersion?: T;
-  sourceRef?: T;
-  contentHash?: T;
-  generatedAt?: T;
-  syncedAt?: T;
-  data?: T;
-  updatedAt?: T;
-  createdAt?: T;
-  _status?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -2553,22 +2553,19 @@ export interface Footer {
   createdAt?: string | null;
 }
 /**
+ * The strip under the header with our live broadcasts and latest posts.
+ *
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "article-recommendations".
+ * via the `definition` "ticker".
  */
-export interface ArticleRecommendation {
+export interface TickerGlobal {
   id: number;
-  lastUpdated?: string | null;
   /**
-   * Ranked articles by engagement score. Updated automatically by the recommendations script.
+   * Posts the ticker leaves out. Paste the post's link from Bluesky or X; it's gone from the ticker as soon as you save.
    */
-  rankings?:
+  hidden?:
     | {
-        article: number | Article;
-        /**
-         * Volume-normalized scrolledUsers * recency decay
-         */
-        engagementScore: number;
+        url: string;
         id?: string | null;
       }[]
     | null;
@@ -2662,19 +2659,22 @@ export interface IntegrationSettings {
   createdAt?: string | null;
 }
 /**
- * The strip under the header with our live broadcasts and latest posts.
- *
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "ticker".
+ * via the `definition` "article-recommendations".
  */
-export interface TickerGlobal {
+export interface ArticleRecommendation {
   id: number;
+  lastUpdated?: string | null;
   /**
-   * Posts the ticker leaves out. Paste the post's link from Bluesky or X; it's gone from the ticker as soon as you save.
+   * Ranked articles by engagement score. Updated automatically by the recommendations script.
    */
-  hidden?:
+  rankings?:
     | {
-        url: string;
+        article: number | Article;
+        /**
+         * Volume-normalized scrolledUsers * recency decay
+         */
+        engagementScore: number;
         id?: string | null;
       }[]
     | null;
@@ -2729,15 +2729,13 @@ export interface FooterSelect<T extends boolean = true> {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "article-recommendations_select".
+ * via the `definition` "ticker_select".
  */
-export interface ArticleRecommendationsSelect<T extends boolean = true> {
-  lastUpdated?: T;
-  rankings?:
+export interface TickerSelect<T extends boolean = true> {
+  hidden?:
     | T
     | {
-        article?: T;
-        engagementScore?: T;
+        url?: T;
         id?: T;
       };
   updatedAt?: T;
@@ -2802,13 +2800,15 @@ export interface IntegrationsSelect<T extends boolean = true> {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "ticker_select".
+ * via the `definition` "article-recommendations_select".
  */
-export interface TickerSelect<T extends boolean = true> {
-  hidden?:
+export interface ArticleRecommendationsSelect<T extends boolean = true> {
+  lastUpdated?: T;
+  rankings?:
     | T
     | {
-        url?: T;
+        article?: T;
+        engagementScore?: T;
         id?: T;
       };
   updatedAt?: T;
@@ -2884,16 +2884,16 @@ export interface TaskSchedulePublish {
     locale?: string | null;
     doc?:
       | ({
-          relationTo: 'pages';
-          value: number | Page;
-        } | null)
-      | ({
           relationTo: 'articles';
           value: number | Article;
         } | null)
       | ({
           relationTo: 'volumes';
           value: number | Volume;
+        } | null)
+      | ({
+          relationTo: 'pages';
+          value: number | Page;
         } | null)
       | ({
           relationTo: 'interactives';

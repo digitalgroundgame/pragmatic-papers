@@ -14,7 +14,7 @@ function translate(text: Static, language: string): string | undefined {
   return text[language] ?? Object.values(text)[0]
 }
 
-/** Site Settings' experiment checkboxes, shown as on/off switches. The value stays a boolean. */
+/** Settings' experiment checkboxes, shown as on/off switches. The value stays a boolean. */
 export const ExperimentSwitchField: CheckboxFieldClientComponent = ({ field, path, readOnly }) => {
   const { value, setValue, disabled } = useField<boolean>({ path })
   const { i18n } = useTranslation()

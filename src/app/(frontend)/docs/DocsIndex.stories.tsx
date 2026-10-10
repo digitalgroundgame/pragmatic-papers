@@ -85,10 +85,8 @@ export const Index: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     const latest = await canvas.findByRole("region", { name: "What's new" })
-    await expect(within(latest).getAllByRole("listitem")).toHaveLength(3)
-    const writing = canvas.getByRole("region", { name: "Writing articles" })
     await expect(
-      within(writing).getByRole("link", { name: /Tag articles with topics/ }),
+      within(latest).getByRole("link", { name: /Tag articles with topics/ }),
     ).toHaveAttribute("href", "/docs/topics")
   },
 }

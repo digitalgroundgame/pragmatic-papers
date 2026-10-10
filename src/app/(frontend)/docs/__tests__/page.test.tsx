@@ -45,15 +45,14 @@ describe("DocsIndexPage", () => {
     expect(screen.getByRole("navigation", { name: "breadcrumb" })).toHaveTextContent("Docs")
   })
 
-  it("groups the docs by section, in the sidebar and as cards", async () => {
+  it("shows each new doc's thumbnail and summary, and every doc by section in the sidebar", async () => {
     queryPublishedDocs.mockResolvedValue(docs)
     await renderPage()
-    const media = screen.getByRole("region", { name: "Photos and media" })
-    const card = within(media).getByRole("link", { name: /Find photos on Unsplash/ })
+    const latest = screen.getByRole("region", { name: "What's new" })
+    const card = within(latest).getByRole("link", { name: /Find photos on Unsplash/ })
     expect(card).toHaveTextContent("Search Unsplash from Media.")
     expect(card.querySelector("img")).toHaveAttribute("src", "/hero-300x158.webp")
-    expect(screen.getByRole("region", { name: "Writing articles" })).toHaveTextContent("Footnotes")
-    expect(screen.queryByRole("region", { name: "Blocks" })).not.toBeInTheDocument()
+    expect(screen.queryByRole("region", { name: "Writing articles" })).not.toBeInTheDocument()
 
     const nav = screen.getByRole("navigation", { name: "Docs" })
     expect(within(nav).getByRole("link", { name: "All docs" })).toHaveAttribute(

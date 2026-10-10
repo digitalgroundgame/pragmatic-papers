@@ -150,7 +150,9 @@ reads staging's database and has no `src/docs/` of its own).
 1. Write it in the local admin (**Help → Docs**): a `summary` of a sentence or
    two (the bell shows it), a `heroImage` (1200×630, the bell's
    thumbnail and the link preview's image; the doc page doesn't show it), `publishedAt` (the day the release reaches
-   production; for a feature that shipped earlier, the day it did), its
+   production; for a feature that shipped earlier, the day it did), `revisedAt`
+   when a later release changes it (shown as "Updated …" beside the date; the
+   bell keeps it under `publishedAt`), its
    `section` (where it sits in /docs' sidebar; the list is `DOC_SECTIONS` in
    `src/plugins/docs/sections.ts`) and, for a doc only some roles need, `audience` (e.g. `["editor"]`; admins and
    chief editors see every doc). It only decides who the bell tells: every

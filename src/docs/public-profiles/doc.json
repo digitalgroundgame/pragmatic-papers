@@ -2,6 +2,7 @@
   "title": "Your public contributor page",
   "summary": "Everyone credited on an article gets a page at /contributors with their photo, bio, links and articles. Fill yours in from your account.",
   "publishedAt": "2026-03-04",
+  "revisedAt": "2026-10-09",
   "heroImage": {
     "$media": "hero.webp",
     "alt": "A contributor card with a photo, name, role, bio and social links"
@@ -23,7 +24,7 @@
           "children": [
             {
               "mode": "normal",
-              "text": "Updated October 9, 2026:",
+              "text": "What changed:",
               "type": "text",
               "style": "",
               "detail": 0,

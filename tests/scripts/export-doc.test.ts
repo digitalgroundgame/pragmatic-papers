@@ -84,14 +84,26 @@ describe("docs:export", () => {
     expect(destroy).toHaveBeenCalled()
   })
 
-  it("keeps the audience, and a table of contents turned off", async () => {
+  it("keeps the audience, the updated day, and a table of contents turned off", async () => {
     await mkdir(path.join(dir.cwd, "public/media"), { recursive: true })
     await writeFile(path.join(dir.cwd, "public/media/search.webp"), "local bytes")
     find.mockResolvedValue({
-      docs: [{ ...doc, audience: ["editor"], showTableOfContents: false, content: {} }],
+      docs: [
+        {
+          ...doc,
+          revisedAt: "2026-10-20T00:00:00.000Z",
+          audience: ["editor"],
+          showTableOfContents: false,
+          content: {},
+        },
+      ],
     })
     await main("photos")
-    expect(await exported()).toMatchObject({ audience: ["editor"], showTableOfContents: false })
+    expect(await exported()).toMatchObject({
+      revisedAt: "2026-10-20",
+      audience: ["editor"],
+      showTableOfContents: false,
+    })
   })
 
   it("downloads media that isn't stored locally", async () => {

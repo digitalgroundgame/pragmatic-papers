@@ -120,6 +120,7 @@ export async function syncDocs(payload: Payload, dir = DOCS_DIR): Promise<SyncRe
       title: repoDoc.title,
       summary: repoDoc.summary,
       publishedAt: repoDoc.publishedAt,
+      revisedAt: repoDoc.revisedAt ?? null,
       heroImage: unpackMedia(repoDoc.heroImage, ids) as number,
       section: repoDoc.section,
       audience: (repoDoc.audience ?? []) as Doc["audience"],

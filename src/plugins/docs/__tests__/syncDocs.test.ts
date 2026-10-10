@@ -91,6 +91,7 @@ describe("syncDocs", () => {
         data: expect.objectContaining({
           slug: "experiments",
           section: "site",
+          revisedAt: null,
           _status: "published",
           audience: [],
           showTableOfContents: true,

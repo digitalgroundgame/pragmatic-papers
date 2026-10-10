@@ -14,6 +14,8 @@ export interface RepoDoc {
   summary: string
   /** `YYYY-MM-DD`. */
   publishedAt: string
+  /** `YYYY-MM-DD`: when it last changed in a way readers should know about, shown beside its date. */
+  revisedAt?: string
   /** A file in the doc's folder: the bell's thumbnail and the link preview's image. */
   heroImage: MediaRef
   /** Where it sits in the sidebar at /docs. */

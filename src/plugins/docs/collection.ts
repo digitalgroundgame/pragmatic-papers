@@ -131,6 +131,17 @@ export const Docs: CollectionConfig<"docs"> = {
       },
     },
     {
+      name: "revisedAt",
+      label: "Updated",
+      type: "date",
+      admin: {
+        position: "sidebar",
+        date: { pickerAppearance: "dayOnly", displayFormat: "MMMM d, yyyy" },
+        description:
+          "The day the doc last changed in a way readers should know about, shown beside its date. The bell still lists it under the published date.",
+      },
+    },
+    {
       name: "section",
       type: "select",
       required: true,

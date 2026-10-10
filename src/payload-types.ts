@@ -1440,6 +1440,10 @@ export interface Doc {
    */
   publishedAt: string;
   /**
+   * The day the doc last changed in a way readers should know about, shown beside its date. The bell still lists it under the published date.
+   */
+  revisedAt?: string | null;
+  /**
    * Where the doc sits in the sidebar at /docs.
    */
   section: 'getting-started' | 'writing' | 'blocks' | 'media' | 'site';
@@ -2456,6 +2460,7 @@ export interface DocsSelect<T extends boolean = true> {
   heroImage?: T;
   content?: T;
   publishedAt?: T;
+  revisedAt?: T;
   section?: T;
   audience?: T;
   showTableOfContents?: T;

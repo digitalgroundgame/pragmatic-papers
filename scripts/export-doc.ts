@@ -60,6 +60,7 @@ export async function main(slug: string | undefined): Promise<void> {
       title: doc.title,
       summary: doc.summary,
       publishedAt: doc.publishedAt.slice(0, 10),
+      ...(doc.revisedAt ? { revisedAt: doc.revisedAt.slice(0, 10) } : {}),
       heroImage,
       section: doc.section,
       ...(doc.audience?.length ? { audience: doc.audience } : {}),

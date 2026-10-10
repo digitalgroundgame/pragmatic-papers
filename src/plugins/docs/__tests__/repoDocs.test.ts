@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest"
 
 import { imagesIn, parseDocFile } from "../docFile"
 import { listDocFiles } from "../syncDocs"
+import { TOURS } from "@/plugins/tours"
 
 const docs = await listDocFiles()
 
@@ -22,6 +23,10 @@ describe.each(docs.map((doc) => [`${doc.section}/${doc.slug}.md`, doc] as const)
     it("has a short sidebar title", () => {
       expect(meta.navTitle?.trim()).toBeTruthy()
       expect(meta.navTitle!.length).toBeLessThanOrEqual(24)
+    })
+
+    it.runIf(meta.tour !== undefined)("names a tour that exists", () => {
+      expect(Object.keys(TOURS)).toContain(meta.tour)
     })
 
     it("has every picture it shows beside it, named for the doc", () => {

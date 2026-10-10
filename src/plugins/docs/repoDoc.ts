@@ -25,6 +25,8 @@ export interface RepoDoc {
   audience?: Role[]
   /** Left out means shown. */
   showTableOfContents?: boolean
+  /** The key of the guided tour the doc's Show me starts (see `TOURS`). */
+  tour?: string
   content: unknown
 }
 

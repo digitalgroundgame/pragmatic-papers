@@ -26,6 +26,7 @@ const findPublishedDocs = async () => {
       section: true,
       audience: true,
       heroImage: true,
+      tour: true,
     },
     // Enough of the hero image for a thumbnail.
     populate: {

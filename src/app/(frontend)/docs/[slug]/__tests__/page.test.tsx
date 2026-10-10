@@ -126,6 +126,24 @@ describe("DocPage", () => {
     expect(screen.queryByRole("complementary")).not.toBeInTheDocument()
   })
 
+  it("offers the doc's tour as Show me", async () => {
+    queries.queryDocBySlug.mockResolvedValue({ ...doc, tour: "articles" })
+    await renderPage()
+    expect(screen.getByRole("link", { name: "Show me" })).toHaveAttribute(
+      "href",
+      "/admin?tour=articles",
+    )
+  })
+
+  it.each([
+    ["has no tour", doc],
+    ["names a tour that doesn't exist", { ...doc, tour: "no-such-tour" }],
+  ])("has no Show me when the doc %s", async (_, value) => {
+    queries.queryDocBySlug.mockResolvedValue(value)
+    await renderPage()
+    expect(screen.queryByRole("link", { name: "Show me" })).not.toBeInTheDocument()
+  })
+
   it("listens for live preview in draft mode", async () => {
     draft.isEnabled = true
     await renderPage()

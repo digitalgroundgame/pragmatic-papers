@@ -102,3 +102,47 @@ export const Empty: Story = {
     await waitFor(() => expect(screen.getByText("Nothing new.")).toBeVisible())
   },
 }
+
+export const ShowMe: Story = {
+  args: {
+    items: [
+      {
+        type: "docs",
+        id: "guided-tours",
+        title: "Take a guided tour of a feature in the admin",
+        summary:
+          "Show me walks you through a feature on the real screens, one step at a time. Read more opens its doc.",
+        href: "/docs/guided-tours",
+        showMe: "/admin?tour=articles",
+        date: "2026-10-18T00:00:00.000Z",
+        image: {
+          url: "/docs-assets/getting-started/guided-tours-hero.webp",
+          alt: "A help doc in the bell with two buttons, Show me and Read more",
+        },
+      },
+      ...items,
+    ],
+    unread: ["docs:guided-tours"],
+  },
+  play: async ({ args, canvasElement }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(canvas.getByRole("button", { name: "Notifications, 1 unread" }))
+
+    // A tour runs in the admin, so Show me stays in this tab; Read more opens the doc beside it.
+    const showMe = await screen.findByRole("link", { name: /Show me: Take a guided tour/ })
+    await waitFor(() => expect(showMe).toBeVisible())
+    await expect(showMe).toHaveAttribute("href", "/admin?tour=articles")
+    await expect(showMe).not.toHaveAttribute("target")
+    const readMore = screen.getByRole("link", { name: /Read more: Take a guided tour/ })
+    await expect(readMore).toHaveAttribute("href", "/docs/guided-tours")
+    await expect(readMore).toHaveAttribute("target", "_blank")
+    // Items without a tour are still one link.
+    await expect(screen.getByRole("link", { name: /Find a photo on Unsplash/ })).toHaveAttribute(
+      "href",
+      "/docs/unsplash-photos",
+    )
+
+    await userEvent.click(readMore)
+    await expect(args.onOpen).toHaveBeenCalledWith("docs:guided-tours")
+  },
+}

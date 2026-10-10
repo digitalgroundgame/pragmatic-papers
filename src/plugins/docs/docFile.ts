@@ -20,6 +20,8 @@ export interface DocFrontMatter {
   audience?: Role[]
   /** Left out means shown. */
   showTableOfContents?: boolean
+  /** The key of the guided tour the doc's Show me starts (see `TOURS`). */
+  tour?: string
 }
 
 export interface DocFile {
@@ -37,6 +39,7 @@ const KEYS = [
   "heroAlt",
   "audience",
   "showTableOfContents",
+  "tour",
 ] as const satisfies (keyof DocFrontMatter)[]
 
 const REQUIRED = ["title", "summary", "publishedAt", "heroImage", "heroAlt"] as const
@@ -112,6 +115,9 @@ export function parseDocFile(source: string, name: string): DocFile {
   }
   if (meta.showTableOfContents !== undefined && typeof meta.showTableOfContents !== "boolean") {
     throw new Error(`${name}: "showTableOfContents" should be true or false`)
+  }
+  if (meta.tour !== undefined && typeof meta.tour !== "string") {
+    throw new Error(`${name}: "tour" should be a tour's key, e.g. articles`)
   }
 
   return { meta: meta as unknown as DocFrontMatter, body: source.slice(match[0].length).trim() }

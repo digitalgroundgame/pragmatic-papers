@@ -8,11 +8,11 @@ import { DOCS_SLUG } from "./collection"
 import { imagesIn, parseDocFile } from "./docFile"
 import { docsEditorConfig, markdownToContent } from "./markdown"
 import { hashRepoDoc, mediaFilename, mediaRefsIn, type RepoDoc, unpackMedia } from "./repoDoc"
-import { DOC_SECTIONS, type DocSection } from "./sections"
+import { DEFAULT_DOC_SECTION, DOC_SECTIONS, type DocSection, HOME_DOC_SLUG } from "./sections"
 
 /**
  * Where the repo keeps its docs: a folder per section, holding `<slug>.md` and the files it
- * shows. The build traces it into the image.
+ * shows, and the home doc, `home.md`, at the top. The build traces it into the image.
  */
 export const DOCS_DIR = path.resolve(process.cwd(), "src/docs")
 
@@ -24,11 +24,23 @@ export interface DocFileEntry {
   file: string
 }
 
-/** Every `<section>/<slug>.md` in `dir`, by slug. Throws on an unknown section or a slug used twice. */
+/**
+ * Every `<section>/<slug>.md` in `dir`, and `home.md`, by slug. Throws on an unknown section, a
+ * slug used twice, or another Markdown file outside a section.
+ */
 export async function listDocFiles(dir = DOCS_DIR): Promise<DocFileEntry[]> {
   const sections = DOC_SECTIONS.map((section) => section.value as string)
   const found: DocFileEntry[] = []
   for (const entry of await readdir(dir, { withFileTypes: true })) {
+    if (entry.isFile() && entry.name.endsWith(".md")) {
+      if (entry.name !== `${HOME_DOC_SLUG}.md`) {
+        throw new Error(`src/docs/${entry.name} should be in a section's folder`)
+      }
+      // Kept in the default section, which the sidebar leaves it out of.
+      const file = path.join(dir, entry.name)
+      found.push({ slug: HOME_DOC_SLUG, section: DEFAULT_DOC_SECTION, folder: dir, file })
+      continue
+    }
     if (!entry.isDirectory()) continue
     const folder = path.join(dir, entry.name)
     const files = (await readdir(folder)).filter((name) => name.endsWith(".md"))

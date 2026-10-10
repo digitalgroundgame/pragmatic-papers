@@ -126,6 +126,17 @@ heroAlt: The search drawer
     expect(existsSync(path.join(dir.docs, "site/photos.md"))).toBe(false)
   })
 
+  it("writes the home doc at the top of src/docs/, outside the sections", async () => {
+    await mkdir(path.join(dir.docs, "getting-started"), { recursive: true })
+    await writeFile(path.join(dir.docs, "getting-started/home.md"), "old")
+    vi.stubGlobal("fetch", async () => new Response("bytes"))
+    find.mockResolvedValue({ docs: [{ ...doc, slug: "home", section: "getting-started" }] })
+    await main("home")
+    expect(await readFile(path.join(dir.docs, "home.md"), "utf8")).toContain("title:")
+    expect(existsSync(path.join(dir.docs, "home-hero.webp"))).toBe(true)
+    expect(existsSync(path.join(dir.docs, "getting-started/home.md"))).toBe(false)
+  })
+
   it("downloads media that isn't stored locally", async () => {
     vi.stubEnv("NEXT_PUBLIC_SERVER_URL", "")
     const fetch = vi.fn(async () => new Response("remote bytes"))

@@ -1,31 +1,9 @@
-import { EndRule } from "@/blocks/SquiggleRule/EndRule"
-import { ArticleSidebar } from "@/components/ArticleSidebar"
-import type { Crumb } from "@/components/Breadcrumbs"
-import { DocsLayout } from "@/components/DocsNav"
-import { JsonLd } from "@/components/JsonLd"
-import { LivePreviewListener } from "@/components/LivePreviewListener"
-import { Media } from "@/components/Media"
-import { PayloadRedirects } from "@/components/PayloadRedirects"
-import RichText from "@/components/RichText"
-import {
-  TableOfContents,
-  TableOfContentsProvider,
-  stampTableOfContentsAnchors,
-} from "@/components/TableOfContents"
-import { ShareButtons } from "@/components/ShareButtons"
-import { Separator } from "@/components/ui/separator"
-import { isExperimentEnabled } from "@/globals/SiteSettings/isExperimentEnabled"
-import { queryDocBySlug, queryPublishedDocs } from "@/plugins/docs/queries"
-import { groupDocsBySection } from "@/plugins/docs/sections"
-import { getMediaUrl } from "@/utilities/getMediaUrl"
-import { getServerSideURL } from "@/utilities/getURL"
-import { mergeOpenGraph } from "@/utilities/mergeOpenGraph"
-import { buildBreadcrumbJsonLd } from "@/utilities/structuredData"
+import { HOME_DOC_SLUG } from "@/plugins/docs/sections"
 import type { Metadata } from "next"
-import { draftMode } from "next/headers"
+import { permanentRedirect } from "next/navigation"
 import React from "react"
 
-import { DocDates } from "./DocDates"
+import { DocView, docMetadata } from "./DocView"
 
 interface Args {
   params: Promise<{ slug: string }>
@@ -37,94 +15,12 @@ export const dynamic = "force-dynamic"
 
 export async function generateMetadata({ params }: Args): Promise<Metadata> {
   const { slug } = await params
-  const doc = await queryDocBySlug(slug)
-  if (!doc) return {}
-
-  const title = `${doc.title} — Pragmatic Papers`
-  const canonicalUrl = `${getServerSideURL()}/docs/${slug}`
-  const ogImage =
-    typeof doc.heroImage === "object" ? getMediaUrl(doc.heroImage?.sizes?.og?.url) : undefined
-  return {
-    title,
-    description: doc.summary,
-    alternates: { canonical: canonicalUrl },
-    openGraph: mergeOpenGraph({
-      title,
-      description: doc.summary,
-      url: canonicalUrl,
-      ...(ogImage ? { images: [{ url: ogImage }] } : {}),
-    }),
-  }
+  return (await docMetadata(slug)) ?? {}
 }
 
 export default async function DocPage({ params }: Args): Promise<React.ReactNode> {
-  const { isEnabled: draft } = await draftMode()
   const { slug } = await params
-  const url = `/docs/${slug}`
-  const [doc, docs] = await Promise.all([queryDocBySlug(slug), queryPublishedDocs()])
-  if (!doc) return <PayloadRedirects url={url} />
-
-  // Docs saved in the admin are stamped on save; stamping here too covers any synced before the
-  // field existed, and is a no-op on content that already has its anchors.
-  const content = stampTableOfContentsAnchors(doc.content)
-  const showTableOfContents =
-    doc.showTableOfContents !== false && (await isExperimentEnabled("tableOfContents"))
-
-  const trail: Crumb[] = [
-    { name: "Docs", path: "/docs" },
-    { name: doc.title, path: url },
-  ]
-
-  // The article page's type beside the docs' sidebar, so a doc reads like an article in a wiki.
-  return (
-    <>
-      <DocsLayout sections={groupDocsBySection(docs)} current={slug} breadcrumbs={trail}>
-        <article className="min-w-0 space-y-6">
-          <JsonLd data={[buildBreadcrumbJsonLd(trail)]} />
-          {draft && <LivePreviewListener />}
-          <TableOfContentsProvider>
-            <header className="flex flex-col gap-2">
-              <Media
-                priority
-                sizes="(max-width: 1024px) 100vw, 900px"
-                media={doc.heroImage}
-                variant="large"
-                className="border shadow"
-              />
-              <h1 className="mt-3">{doc.title}</h1>
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <DocDates publishedAt={doc.publishedAt} revisedAt={doc.revisedAt} />
-                <div className="flex items-center gap-1">
-                  <ShareButtons url={`${getServerSideURL()}${url}`} title={doc.title} />
-                </div>
-              </div>
-              <Separator />
-            </header>
-            <div
-              id="intro"
-              className="xl:toc-open:gap-10 relative flex flex-col justify-between gap-3 xl:flex-row xl:gap-6"
-            >
-              {showTableOfContents && (
-                // Always shown, with no toggle: above the doc on narrow screens, and to its right
-                // from xl, where the docs' sidebar leaves room for both. No heading: the nav's
-                // label names it for screen readers.
-                <ArticleSidebar className="lg:static xl:sticky xl:top-[calc(var(--sticky-top)+1rem)] xl:order-last xl:max-w-56">
-                  <TableOfContents content={content} title="" />
-                </ArticleSidebar>
-              )}
-              <div className="max-w-2xl">
-                <RichText
-                  data={content}
-                  enableGutter={false}
-                  // The separator above already sets the doc off from its header.
-                  className="drop-cap [&>:first-child]:mt-0"
-                />
-                <EndRule content={content} />
-              </div>
-            </div>
-          </TableOfContentsProvider>
-        </article>
-      </DocsLayout>
-    </>
-  )
+  // The home doc lives at /docs.
+  if (slug === HOME_DOC_SLUG) permanentRedirect("/docs")
+  return <DocView slug={slug} />
 }

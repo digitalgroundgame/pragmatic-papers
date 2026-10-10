@@ -1,10 +1,23 @@
-import { ChevronRight } from "lucide-react"
 import Link from "next/link"
 import React from "react"
 
 import { Breadcrumbs, type Crumb } from "@/components/Breadcrumbs"
-import { DEFAULT_DOC_SECTION, docNavTitle, type DocsSection } from "@/plugins/docs/sections"
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion"
+import {
+  docNavTitle,
+  type DocsSection,
+  groupSectionsByArea,
+  HOME_DOC_SLUG,
+  WHATS_NEW_PATH,
+} from "@/plugins/docs/sections"
 import { cn } from "@/utilities/utils"
+
+export { DocPager } from "./DocPager"
 
 export interface DocsNavItem {
   slug?: string | null
@@ -14,74 +27,114 @@ export interface DocsNavItem {
 
 interface DocsNavProps {
   sections: DocsSection<DocsNavItem>[]
-  /** The open doc's slug; left out on the /docs index. */
+  /** The open page: a doc's slug, the home doc's, or What's new's path. */
   current?: string
   className?: string
 }
 
-/** Every doc under its section, like a wiki's sidebar; each section folds. */
+/** A link at the top of the sidebar, above the areas. */
+function TopLink({
+  href,
+  active,
+  children,
+}: {
+  href: string
+  active: boolean
+  children: React.ReactNode
+}): React.ReactNode {
+  return (
+    <Link
+      href={href}
+      aria-current={active ? "page" : undefined}
+      className={cn(
+        "block py-1 font-bold no-underline underline-offset-4 hover:underline",
+        active ? "text-foreground" : "text-muted-foreground hover:text-foreground",
+      )}
+    >
+      {children}
+    </Link>
+  )
+}
+
+/**
+ * Home and What's new, then every doc under its area and section, like a wiki's sidebar; each
+ * section folds.
+ */
 export function DocsNav({ sections, current, className }: DocsNavProps): React.ReactNode {
-  // Only one section starts open: the open doc's, or Getting started on the index.
+  // Only one section starts open: the open doc's, or the first elsewhere.
   const currentSection = sections.find((section) =>
     section.docs.some((doc) => doc.slug === current),
   )?.value
-  const openSection = currentSection ?? DEFAULT_DOC_SECTION
+  const openSection = currentSection ?? sections[0]?.value
   return (
     <nav aria-label="Docs" className={cn("font-sans", className)}>
-      <Link
-        href="/docs"
-        aria-current={current ? undefined : "page"}
-        className={cn(
-          "block font-bold no-underline underline-offset-4 hover:underline",
-          current ? "text-muted-foreground hover:text-foreground" : "text-foreground",
-        )}
-      >
-        All docs
-      </Link>
-      {sections.map((section) => {
-        return (
-          <details key={section.value} open={section.value === openSection} className="group mt-5">
-            <summary
-              id={`docs-nav-${section.value}`}
-              className={cn(
-                "hover:text-foreground mb-2 flex cursor-pointer list-none items-center gap-1 text-sm font-bold tracking-wider uppercase [&::-webkit-details-marker]:hidden",
-                // The open doc's section reads as hovered, so the reader sees where they are.
-                section.value === currentSection ? "text-foreground" : "text-muted-foreground",
-              )}
-            >
-              <ChevronRight
-                aria-hidden="true"
-                className="size-4 shrink-0 transition-transform group-open:rotate-90"
-              />
-              {section.label}
-            </summary>
-            <ul
-              aria-labelledby={`docs-nav-${section.value}`}
-              className="border-border ml-2 border-l-2"
-            >
-              {section.docs.map((doc) => {
-                const active = doc.slug === current
-                return (
-                  <li key={doc.slug}>
-                    <Link
-                      href={`/docs/${doc.slug}`}
-                      aria-current={active ? "page" : undefined}
-                      className={cn(
-                        "-ml-0.5 block border-l-2 py-1.5 pl-3 leading-snug no-underline underline-offset-4 hover:underline",
-                        active
-                          ? "border-brand text-foreground font-bold"
-                          : "text-foreground hover:text-foreground/80 border-transparent",
-                      )}
-                    >
-                      {docNavTitle(doc)}
-                    </Link>
-                  </li>
-                )
-              })}
-            </ul>
-          </details>
-        )
-      })}
+      <TopLink href="/docs" active={current === HOME_DOC_SLUG}>
+        Home
+      </TopLink>
+      <TopLink href={WHATS_NEW_PATH} active={current === WHATS_NEW_PATH}>
+        What&apos;s new
+      </TopLink>
+      {groupSectionsByArea(sections).map((area) => (
+        <div key={area.value} className="mt-6">
+          <p id={`docs-nav-area-${area.value}`} className="text-foreground text-lg font-bold">
+            {area.label}
+          </p>
+          <Accordion
+            multiple
+            // Folded sections stay in the page, so find-in-page and search engines see every doc.
+            hiddenUntilFound
+            defaultValue={
+              area.sections.some((section) => section.value === openSection) ? [openSection] : []
+            }
+            className="mt-2"
+          >
+            {area.sections.map((section) => (
+              <AccordionItem
+                key={section.value}
+                value={section.value}
+                className="not-last:border-b-0"
+              >
+                <AccordionTrigger
+                  id={`docs-nav-${section.value}`}
+                  className={cn(
+                    "hover:text-foreground py-2 font-bold tracking-wider uppercase hover:no-underline",
+                    // The open doc's section reads as hovered, so the reader sees where they are.
+                    section.value === currentSection ? "text-foreground" : "text-muted-foreground",
+                  )}
+                >
+                  {section.label}
+                </AccordionTrigger>
+                <AccordionContent className="pb-2 text-base [&_a]:no-underline">
+                  <ul
+                    aria-labelledby={`docs-nav-${section.value}`}
+                    className="border-border ml-0.5 border-l-2"
+                  >
+                    {section.docs.map((doc) => {
+                      const active = doc.slug === current
+                      return (
+                        <li key={doc.slug}>
+                          <Link
+                            href={`/docs/${doc.slug}`}
+                            aria-current={active ? "page" : undefined}
+                            className={cn(
+                              "-ml-0.5 block border-l-2 py-1.5 pl-3 leading-snug underline-offset-4 hover:underline",
+                              active
+                                ? "border-brand text-foreground font-bold"
+                                : "text-foreground hover:text-foreground/80 border-transparent",
+                            )}
+                          >
+                            {docNavTitle(doc)}
+                          </Link>
+                        </li>
+                      )
+                    })}
+                  </ul>
+                </AccordionContent>
+              </AccordionItem>
+            ))}
+          </Accordion>
+        </div>
+      ))}
     </nav>
   )
 }

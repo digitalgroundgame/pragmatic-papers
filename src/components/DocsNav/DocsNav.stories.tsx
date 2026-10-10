@@ -6,6 +6,8 @@ import { groupDocsBySection } from "@/plugins/docs/sections"
 import { DocsLayout, DocsNav } from "."
 
 const sections = groupDocsBySection([
+  // Left out of its section: the sidebar links it as Home.
+  { slug: "home", title: "Pragmatic Papers docs", section: "getting-started" },
   { slug: "notifications", title: "What's new: the bell", section: "getting-started" },
   { slug: "writing-and-publishing", title: "Writing and publishing", section: "getting-started" },
   { slug: "footnotes", title: "Footnotes", section: "writing" },
@@ -36,7 +38,7 @@ export const OnADoc: Story = {
       "aria-current",
       "page",
     )
-    await expect(within(nav).getByRole("link", { name: "All docs" })).not.toHaveAttribute(
+    await expect(within(nav).getByRole("link", { name: "What's new" })).not.toHaveAttribute(
       "aria-current",
     )
     // Its section's name reads as hovered; the others stay muted.
@@ -52,16 +54,36 @@ export const OnADoc: Story = {
   },
 }
 
-/** On the /docs index: "All docs" is the current page, and only Getting started is open. */
-export const OnTheIndex: Story = {
+/** On the docs' home: Home is the current page, and only Getting started is open. */
+export const OnHome: Story = {
+  args: { current: "home" },
   play: async ({ canvasElement }) => {
     const nav = within(canvasElement).getByRole("navigation", { name: "Docs" })
-    await expect(within(nav).getByRole("link", { name: "All docs" })).toHaveAttribute(
+    await expect(within(nav).getByRole("link", { name: "Home" })).toHaveAttribute(
       "aria-current",
       "page",
     )
+    await expect(within(nav).queryByRole("link", { name: "Pragmatic Papers docs" })).toBeNull()
+    // Sections sit under their area; one with no docs yet isn't shown.
+    await expect(within(nav).getByText("Admin")).toBeVisible()
+    await expect(within(nav).queryByText("Development")).toBeNull()
     await expect(within(nav).getByRole("link", { name: "Writing and publishing" })).toBeVisible()
     await expect(within(nav).queryByRole("link", { name: "Footnotes" })).not.toBeVisible()
+  },
+}
+
+/** On What's new: its link is the current page. */
+export const OnWhatsNew: Story = {
+  args: { current: "/docs/whats-new" },
+  play: async ({ canvasElement }) => {
+    const nav = within(canvasElement).getByRole("navigation", { name: "Docs" })
+    await expect(within(nav).getByRole("link", { name: "What's new" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    )
+    await expect(within(nav).getByRole("link", { name: "Home" })).not.toHaveAttribute(
+      "aria-current",
+    )
   },
 }
 

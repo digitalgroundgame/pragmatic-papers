@@ -1421,7 +1421,7 @@ export interface Doc {
    */
   summary: string;
   /**
-   * The help bell shows it beside the title, and link previews use it. It isn't shown on the doc.
+   * Shown above the doc's title, beside it in the help bell, and in link previews.
    */
   heroImage: number | Media;
   content: {

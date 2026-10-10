@@ -3,7 +3,7 @@ import { expect, within } from "storybook/test"
 
 import { landscapeImage, squareImage, wideImage } from "@/stories/fixtures/media"
 
-import { DocsIndex, type DocsIndexDoc } from "./DocsIndex"
+import { WhatsNew, type WhatsNewDoc } from "./WhatsNew"
 
 const doc = (
   id: number,
@@ -13,7 +13,7 @@ const doc = (
   publishedAt: string,
   summary: string,
   heroImage = landscapeImage,
-) => ({ id, slug, title, section, publishedAt, summary, heroImage }) as DocsIndexDoc
+) => ({ id, slug, title, section, publishedAt, summary, heroImage }) as WhatsNewDoc
 
 // Newest first, as the query sorts them.
 const docs = [
@@ -70,13 +70,13 @@ const docs = [
   ),
 ]
 
-/** The /docs index (`DocsIndex`, which the page renders with every published doc). */
+/** /docs/whats-new (`WhatsNew`, which the page renders with every published doc). */
 const meta = {
-  title: "Pages/Docs",
-  component: DocsIndex,
+  title: "Pages/Docs/What's new",
+  component: WhatsNew,
   parameters: { layout: "fullscreen" },
   args: { docs },
-} satisfies Meta<typeof DocsIndex>
+} satisfies Meta<typeof WhatsNew>
 
 export default meta
 type Story = StoryObj<typeof meta>

@@ -162,6 +162,21 @@ describe("listDocFiles", () => {
     ])
   })
 
+  it("finds the home doc at the top, in the default section", async () => {
+    await writeFile(path.join(dir, "home.md"), source)
+    await expect(listDocFiles(dir)).resolves.toContainEqual({
+      slug: "home",
+      section: "getting-started",
+      folder: dir,
+      file: path.join(dir, "home.md"),
+    })
+  })
+
+  it("refuses any other doc outside a section", async () => {
+    await writeFile(path.join(dir, "stray.md"), source)
+    await expect(listDocFiles(dir)).rejects.toThrow(/stray\.md should be in a section's folder/)
+  })
+
   it("refuses a folder that isn't a section", async () => {
     await writeFile(path.join(dir, "drafts", "idea.md"), source)
     await expect(listDocFiles(dir)).rejects.toThrow(/drafts\/ isn't a section/)

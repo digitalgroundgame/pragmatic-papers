@@ -10,6 +10,7 @@ import { format, resolveConfig } from "prettier"
 import { formatDocFile } from "@/plugins/docs/docFile"
 import { contentToMarkdown, docsEditorConfig } from "@/plugins/docs/markdown"
 import { packMedia, type MediaRef } from "@/plugins/docs/repoDoc"
+import { HOME_DOC_SLUG } from "@/plugins/docs/sections"
 import { DOCS_DIR } from "@/plugins/docs/syncDocs"
 
 /** Copies the original upload: from public/media with local storage, otherwise from its URL. */
@@ -83,10 +84,12 @@ export async function main(slug: string | undefined): Promise<void> {
       body,
     })
 
-    const folder = path.join(DOCS_DIR, doc.section)
+    // The home doc sits at the top of src/docs/, outside the sections.
+    const home = slug === HOME_DOC_SLUG
+    const folder = home ? DOCS_DIR : path.join(DOCS_DIR, doc.section)
     await mkdir(folder, { recursive: true })
     for (const other of await readdir(DOCS_DIR, { withFileTypes: true })) {
-      if (other.isDirectory() && other.name !== doc.section) {
+      if (other.isDirectory() && (home || other.name !== doc.section)) {
         await rm(path.join(DOCS_DIR, other.name, `${slug}.md`), { force: true })
       }
     }

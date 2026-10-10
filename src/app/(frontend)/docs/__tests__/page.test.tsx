@@ -1,79 +1,90 @@
-import { cleanup, render, screen, within } from "@testing-library/react"
+import { cleanup, render, screen } from "@testing-library/react"
 import type React from "react"
-import { afterEach, describe, expect, it, vi } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
-const { queryPublishedDocs } = vi.hoisted(() => ({ queryPublishedDocs: vi.fn() }))
-vi.mock("@/plugins/docs/queries", () => ({ queryPublishedDocs }))
+const { queries } = vi.hoisted(() => ({
+  queries: { queryDocBySlug: vi.fn(), queryPublishedDocs: vi.fn() },
+}))
 
-import DocsIndexPage, { generateMetadata } from "../page"
+vi.mock("server-only", () => ({}))
+vi.mock("@/plugins/docs/queries", () => queries)
+vi.mock("next/headers", () => ({ draftMode: async () => ({ isEnabled: false }) }))
+vi.mock("@/globals/SiteSettings/isExperimentEnabled", () => ({
+  isExperimentEnabled: async () => true,
+}))
 
-const renderPage = async () => render((await DocsIndexPage()) as React.ReactElement)
+import { DocView } from "../[slug]/DocView"
+import DocsHomePage, { generateMetadata } from "../page"
 
-const docs = [
-  {
-    id: 1,
-    slug: "unsplash-photos",
-    title: "Find photos on Unsplash",
-    summary: "Search Unsplash from Media.",
-    publishedAt: "2026-10-18T00:00:00.000Z",
-    section: "media",
-    heroImage: { url: "/hero.webp", sizes: { thumbnail: { url: "/hero-300x158.webp" } } },
+const home = {
+  id: 1,
+  slug: "home",
+  title: "Pragmatic Papers docs",
+  navTitle: "Home",
+  summary: "How Pragmatic Papers works.",
+  publishedAt: "2026-10-10T00:00:00.000Z",
+  section: "getting-started",
+  content: {
+    root: {
+      type: "root",
+      version: 1,
+      children: [
+        { type: "paragraph", version: 1, children: [{ type: "text", text: "Hi.", version: 1 }] },
+      ],
+    },
   },
-  {
-    id: 2,
-    slug: "footnotes",
-    title: "Footnotes",
-    summary: "Cite your sources.",
-    publishedAt: "2026-03-04T00:00:00.000Z",
-    section: "writing",
-  },
-]
+}
+const footnotes = {
+  id: 2,
+  slug: "footnotes",
+  title: "Add footnotes",
+  navTitle: "Footnotes",
+  summary: "Cite your sources.",
+  publishedAt: "2026-03-04T00:00:00.000Z",
+  section: "writing",
+}
 
+// The page hands the home slug to DocView, an async component the test renders itself.
+const renderPage = async () => {
+  const page = (await DocsHomePage()) as React.ReactElement<React.ComponentProps<typeof DocView>>
+  return render((await DocView(page.props)) as React.ReactElement)
+}
+
+beforeEach(() => {
+  queries.queryDocBySlug.mockResolvedValue(home)
+  queries.queryPublishedDocs.mockResolvedValue([home, footnotes])
+})
 afterEach(cleanup)
 
-describe("DocsIndexPage", () => {
-  it("lists the newest docs with their dates", async () => {
-    queryPublishedDocs.mockResolvedValue(docs)
+describe("DocsHomePage", () => {
+  it("shows the home doc, current in the sidebar, which lists it only as Home", async () => {
     await renderPage()
-    expect(screen.getByRole("heading", { level: 1, name: "Docs" })).toBeInTheDocument()
-    const latest = screen.getByRole("region", { name: "What's new" })
-    expect(within(latest).getByRole("link", { name: /Find photos on Unsplash/ })).toHaveAttribute(
-      "href",
-      "/docs/unsplash-photos",
-    )
-    expect(within(latest).getByText("October 18, 2026")).toHaveAttribute("datetime", "2026-10-18")
-    expect(screen.getByRole("navigation", { name: "breadcrumb" })).toHaveTextContent("Docs")
-  })
-
-  it("shows each new doc's thumbnail and summary, and every doc by section in the sidebar", async () => {
-    queryPublishedDocs.mockResolvedValue(docs)
-    await renderPage()
-    const latest = screen.getByRole("region", { name: "What's new" })
-    const card = within(latest).getByRole("link", { name: /Find photos on Unsplash/ })
-    expect(card).toHaveTextContent("Search Unsplash from Media.")
-    expect(card.querySelector("img")).toHaveAttribute("src", "/hero-300x158.webp")
-    expect(screen.queryByRole("region", { name: "Writing articles" })).not.toBeInTheDocument()
-
+    expect(
+      screen.getByRole("heading", { level: 1, name: "Pragmatic Papers docs" }),
+    ).toBeInTheDocument()
     const nav = screen.getByRole("navigation", { name: "Docs" })
-    expect(within(nav).getByRole("link", { name: "All docs" })).toHaveAttribute(
+    expect(screen.getAllByRole("link", { name: "Home" }).at(0)).toHaveAttribute(
       "aria-current",
       "page",
     )
-    expect(within(nav).getByRole("list", { name: "Writing articles" })).toHaveTextContent(
-      "Footnotes",
+    expect(nav).toHaveTextContent("Admin")
+    expect(screen.getByRole("link", { name: /Next.*Footnotes/ })).toHaveAttribute(
+      "href",
+      "/docs/footnotes",
     )
   })
 
-  it("says so when there are no docs", async () => {
-    queryPublishedDocs.mockResolvedValue([])
+  it("falls back to What's new until the home doc has synced", async () => {
+    queries.queryDocBySlug.mockResolvedValue(null)
     await renderPage()
-    expect(screen.getByText("No docs yet.")).toBeInTheDocument()
-    expect(screen.queryByRole("heading", { level: 2 })).not.toBeInTheDocument()
+    expect(screen.getByRole("heading", { level: 1, name: "What's new" })).toBeInTheDocument()
   })
+})
 
-  it("has a canonical URL and title", () => {
-    const meta = generateMetadata()
-    expect(meta.title).toBe("Docs — Pragmatic Papers")
+describe("generateMetadata", () => {
+  it("is the home doc's, at /docs", async () => {
+    const meta = await generateMetadata()
+    expect(meta.title).toBe("Pragmatic Papers docs — Pragmatic Papers")
     expect(meta.alternates?.canonical).toMatch(/\/docs$/)
   })
 })

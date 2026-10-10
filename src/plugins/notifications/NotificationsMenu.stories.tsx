@@ -46,7 +46,7 @@ const meta = {
       },
     ],
     muted: [],
-    indexes: [{ type: "docs", label: "All docs", href: "/docs" }],
+    indexes: [{ type: "docs", label: "See all", href: "/docs/whats-new" }],
     onOpen: fn(),
     onMarkAllRead: fn(),
     onMutedChange: fn(),
@@ -72,7 +72,10 @@ export const Unread: Story = {
       "/docs-assets/media/unsplash-photos-hero.webp",
     )
     await expect(screen.getByText("October 18, 2026")).toBeVisible()
-    await expect(screen.getByRole("link", { name: "All docs" })).toHaveAttribute("href", "/docs")
+    await expect(screen.getByRole("link", { name: "See all" })).toHaveAttribute(
+      "href",
+      "/docs/whats-new",
+    )
 
     await userEvent.click(item)
     await expect(args.onOpen).toHaveBeenCalledWith("docs:unsplash-photos")

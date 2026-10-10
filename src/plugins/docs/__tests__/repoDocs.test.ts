@@ -4,12 +4,12 @@ import path from "node:path"
 import { describe, expect, it } from "vitest"
 
 import { imagesIn, parseDocFile } from "../docFile"
-import { listDocFiles } from "../syncDocs"
+import { DOCS_DIR, listDocFiles } from "../syncDocs"
 
 const docs = await listDocFiles()
 
 // A doc that fails here fails its deploy's sync instead, where nobody is watching.
-describe.each(docs.map((doc) => [`${doc.section}/${doc.slug}.md`, doc] as const))(
+describe.each(docs.map((doc) => [path.relative(DOCS_DIR, doc.file), doc] as const))(
   "src/docs/%s",
   (name, { slug, folder, file }) => {
     const { meta, body } = parseDocFile(readFileSync(file, "utf8"), name)

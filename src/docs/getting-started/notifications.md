@@ -15,12 +15,12 @@ The bell in the top right of the admin, beside your avatar, is where new feature
 - **Click the bell** to see the list, newest first. Each item has a picture, a title, a sentence about the feature and the day it arrived. A dot marks the ones you haven't opened.
 - **Click an item** to open its doc in a new tab. It counts as read.
 - **Mark all as read** clears the dot from everything.
-- **All docs** opens [/docs](/docs), every help doc in one place.
+- **See all** opens [What's new](/docs/whats-new), every doc, newest first.
 
 You're only told about features that matter to your role. A doc for editors doesn't reach writers, for example, but every doc is still on /docs for anyone who wants it. Docs dated before your account was made don't count as unread.
 
 ## Turning it down
 
-Click the gear in the bell's menu to choose what it tells you about. Untick **Docs** and new docs stop counting on the bell. You can still open the list and /docs whenever you like.
+Click the gear in the bell's menu to choose what it tells you about. Untick **Docs** and new docs stop counting on the bell. You can still open the list and the docs whenever you like.
 
 What you've read and what you've turned off are saved to your account, so they follow you to another computer.

@@ -14,6 +14,7 @@ const user = (roles: User["roles"]) => ({ id: 1, roles }) as User
 
 // Newest first, as queryPublishedDocs returns them.
 const docs = [
+  { id: 3, slug: "home", title: "Docs home", summary: "c", publishedAt: "2026-10-20" },
   {
     id: 2,
     slug: "editors",
@@ -42,12 +43,17 @@ beforeEach(() => {
 })
 
 describe("docsNotifications", () => {
+  it("leaves out the docs' home page", async () => {
+    const items = await docsNotifications().itemsFor({ payload, user: user(["admin"]) })
+    expect(items.map((item) => item.id)).not.toContain("home")
+  })
+
   const source = docsNotifications()
   const titlesFor = async (roles: User["roles"]) =>
     (await source.itemsFor({ payload, user: user(roles) })).map((item) => item.title)
 
-  it("links each doc and the /docs index", async () => {
-    expect(source.index).toEqual({ label: "All docs", href: "/docs" })
+  it("links each doc and What's new", async () => {
+    expect(source.index).toEqual({ label: "See all", href: "/docs/whats-new" })
     const [item] = await source.itemsFor({ payload, user: user(["writer"]) })
     expect(item).toEqual({
       id: "everyone",

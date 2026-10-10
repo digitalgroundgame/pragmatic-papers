@@ -140,11 +140,16 @@ served stale). When the feature graduates, delete the checkbox and the checks.
 
 A release that changes what staff do in the admin ships a help doc in the same
 PR. Docs are the `docs` collection (`src/plugins/docs/`, the docs plugin),
-served at `/docs/<slug>` and listed at `/docs`, so they can hold blocks and
-images like an article. The ones a release ships live in the repo as Markdown,
-a folder per sidebar section (`DOC_SECTIONS` in `src/plugins/docs/sections.ts`):
-`src/docs/<section>/<slug>.md`, with the pictures it shows beside it, each named
-for the doc (`<slug>-hero.webp`, `<slug>-drawer.webp`). Once per deploy,
+served at `/docs/<slug>`, so they can hold blocks and images like an article.
+`/docs` shows the home doc (`src/docs/home.md`), and `/docs/whats-new` lists every
+doc, newest first. The sidebar groups sections under three areas (`DOC_AREAS`):
+Admin for staff, Frontend for readers' features, and Development for contributors
+(the GitHub wiki, for now); an area shows once it has docs. Each doc ends with
+Previous and Next links in the sidebar's order. The ones a release ships live in
+the repo as Markdown, a folder per sidebar section (`DOC_SECTIONS` in
+`src/plugins/docs/sections.ts`): `src/docs/<section>/<slug>.md`, with the pictures
+it shows beside it, each named for the doc (`<slug>-hero.webp`,
+`<slug>-drawer.webp`). Once per deploy,
 `/next/revalidate-all` (which `start.sh` calls when a deploy goes live) writes
 every doc into that site's database, published, converting the Markdown with the
 docs editor and uploading its pictures to Media (`syncRepoDocs`); a doc whose

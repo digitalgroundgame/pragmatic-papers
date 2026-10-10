@@ -1,28 +1,20 @@
 import { queryPublishedDocs } from "@/plugins/docs/queries"
-import { getServerSideURL } from "@/utilities/getURL"
-import { mergeOpenGraph } from "@/utilities/mergeOpenGraph"
+import { HOME_DOC_SLUG } from "@/plugins/docs/sections"
 import type { Metadata } from "next"
 import React from "react"
 
-import { DocsIndex } from "./DocsIndex"
-
-const TITLE = "Docs — Pragmatic Papers"
-const DESCRIPTION = "What's new in the Pragmatic Papers admin, and how to use it."
+import { DocView, docMetadata } from "./[slug]/DocView"
+import { WhatsNew } from "./whats-new/WhatsNew"
 
 // Rendered per request from the data cache, which saving a doc or a deploy's docs sync refreshes:
 // a prerendered copy would keep the docs the build saw.
 export const dynamic = "force-dynamic"
 
-export function generateMetadata(): Metadata {
-  const canonicalUrl = `${getServerSideURL()}/docs`
-  return {
-    title: TITLE,
-    description: DESCRIPTION,
-    alternates: { canonical: canonicalUrl },
-    openGraph: mergeOpenGraph({ title: TITLE, description: DESCRIPTION, url: canonicalUrl }),
-  }
+export async function generateMetadata(): Promise<Metadata> {
+  return (await docMetadata(HOME_DOC_SLUG)) ?? { title: "Docs — Pragmatic Papers" }
 }
 
-export default async function DocsIndexPage(): Promise<React.ReactNode> {
-  return <DocsIndex docs={await queryPublishedDocs()} />
+/** The docs' home: the home doc, or What's new on a site whose docs haven't synced it yet. */
+export default async function DocsHomePage(): Promise<React.ReactNode> {
+  return <DocView slug={HOME_DOC_SLUG} fallback={<WhatsNew docs={await queryPublishedDocs()} />} />
 }

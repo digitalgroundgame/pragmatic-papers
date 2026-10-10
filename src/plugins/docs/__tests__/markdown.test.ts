@@ -1,5 +1,6 @@
 // @vitest-environment node
 import { readFileSync } from "node:fs"
+import path from "node:path"
 
 import configPromise from "@payload-config"
 import { format as prettier } from "prettier"
@@ -7,7 +8,7 @@ import { describe, expect, it } from "vitest"
 
 import { formatDocFile, parseDocFile } from "../docFile"
 import { contentToMarkdown, docsEditorConfig, markdownToContent } from "../markdown"
-import { listDocFiles } from "../syncDocs"
+import { DOCS_DIR, listDocFiles } from "../syncDocs"
 
 const editorConfig = docsEditorConfig(await configPromise)
 const docs = await listDocFiles()
@@ -72,7 +73,7 @@ describe("contentToMarkdown", () => {
 
 // What the export writes (formatted by Prettier, as the commit hook would) is what the sync
 // reads, so a doc that comes back different here would change the next time it's exported.
-describe.each(docs.map((doc) => [`${doc.section}/${doc.slug}.md`, doc] as const))(
+describe.each(docs.map((doc) => [path.relative(DOCS_DIR, doc.file), doc] as const))(
   "src/docs/%s",
   (name, { slug, file }) => {
     it("comes back the same through the editor", async () => {

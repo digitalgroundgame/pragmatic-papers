@@ -165,6 +165,9 @@ jobs:
     needs: changes
     if: ${{ !cancelled() && (github.event_name != 'pull_request' || needs.changes.result != 'success' || needs.changes.outputs.unit == 'true') }}
     runs-on: ubuntu-latest
+    # Usually about 4 minutes. A hung test would otherwise hold the runner for GitHub's
+    # 6-hour default before anything reports it.
+    timeout-minutes: 15
     permissions:
       pull-requests: write
 

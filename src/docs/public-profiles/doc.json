@@ -1,5 +1,6 @@
 {
   "title": "Your public contributor page",
+  "navTitle": "Contributor page",
   "summary": "Everyone credited on an article gets a page at /contributors with their photo, bio, links and articles. Fill yours in from your account.",
   "publishedAt": "2026-03-04",
   "revisedAt": "2026-10-09",

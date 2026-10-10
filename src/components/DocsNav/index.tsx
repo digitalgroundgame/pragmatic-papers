@@ -2,12 +2,13 @@ import { ChevronRight } from "lucide-react"
 import Link from "next/link"
 import React from "react"
 
-import type { DocsSection } from "@/plugins/docs/sections"
+import { docNavTitle, type DocsSection } from "@/plugins/docs/sections"
 import { cn } from "@/utilities/utils"
 
 export interface DocsNavItem {
   slug?: string | null
   title: string
+  navTitle?: string | null
 }
 
 interface DocsNavProps {
@@ -64,7 +65,7 @@ export function DocsNav({ sections, current, className }: DocsNavProps): React.R
                           : "text-foreground hover:text-foreground/80 border-transparent",
                       )}
                     >
-                      {doc.title}
+                      {docNavTitle(doc)}
                     </Link>
                   </li>
                 )

@@ -1,5 +1,6 @@
 {
   "title": "Add a table of contents to an article",
+  "navTitle": "Table of contents",
   "summary": "Tick \"Show table of contents\" and the article gets a list of its sections, built from your headings, that follows the reader down the page.",
   "publishedAt": "2026-09-29",
   "heroImage": {

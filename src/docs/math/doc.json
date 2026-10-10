@@ -1,5 +1,6 @@
 {
   "title": "Write math in an article",
+  "navTitle": "Math",
   "summary": "Math is written in LaTeX, inline in a sentence or centred on its own line.",
   "publishedAt": "2025-07-02",
   "heroImage": {

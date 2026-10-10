@@ -9,7 +9,7 @@ const sections = groupDocsBySection([
   { slug: "notifications", title: "What's new: the bell", section: "getting-started" },
   { slug: "writing-and-publishing", title: "Writing and publishing", section: "getting-started" },
   { slug: "footnotes", title: "Footnotes", section: "writing" },
-  { slug: "topics", title: "Topics", section: "writing" },
+  { slug: "topics", title: "Tag articles with topics", navTitle: "Topics", section: "writing" },
   { slug: "seo-tab", title: "The SEO tab", section: "writing" },
   { slug: "timeline-block", title: "The Timeline block", section: "blocks" },
   { slug: "media-collage", title: "The Media Collage block", section: "blocks" },

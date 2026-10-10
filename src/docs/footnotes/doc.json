@@ -1,5 +1,6 @@
 {
   "title": "Add footnotes as you type",
+  "navTitle": "Footnotes",
   "summary": "Type [^ your note ] to add a footnote where you are, or reuse one you've already written. They're numbered for you.",
   "publishedAt": "2026-04-27",
   "heroImage": {

@@ -1,5 +1,6 @@
 {
   "title": "Find a photo on Unsplash without leaving the admin",
+  "navTitle": "Unsplash photos",
   "summary": "Search Unsplash from any Media upload. The photographer's credit goes into the caption for you.",
   "publishedAt": "2026-10-18",
   "heroImage": {

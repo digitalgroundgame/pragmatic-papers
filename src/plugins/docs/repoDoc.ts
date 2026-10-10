@@ -11,6 +11,8 @@ import type { DocSection } from "./sections"
  */
 export interface RepoDoc {
   title: string
+  /** A short name for the docs sidebar; the title when left out. */
+  navTitle?: string
   summary: string
   /** `YYYY-MM-DD`. */
   publishedAt: string

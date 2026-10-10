@@ -1,5 +1,6 @@
 {
   "title": "Show store products on a page with the Merch block",
+  "navTitle": "Merch block",
   "summary": "Products sync from Shopify every six hours. Choose which appear in a page's Merch carousel, and feature, hide or badge them without touching Shopify.",
   "publishedAt": "2026-08-16",
   "heroImage": {

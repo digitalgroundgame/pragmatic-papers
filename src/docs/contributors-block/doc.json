@@ -1,5 +1,6 @@
 {
   "title": "List people on a page with the Contributors block",
+  "navTitle": "Contributors block",
   "summary": "The Contributors block shows a titled list of people, each card linking to their contributor page.",
   "publishedAt": "2026-05-03",
   "heroImage": {

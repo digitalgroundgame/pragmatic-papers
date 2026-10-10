@@ -1,5 +1,6 @@
 {
   "title": "Change the header, footer and other site-wide settings",
+  "navTitle": "Site-wide settings",
   "summary": "The menus, footer, ticker and system settings each have one page in the admin. Saving one changes every page on the site within a minute.",
   "publishedAt": "2025-06-20",
   "heroImage": {

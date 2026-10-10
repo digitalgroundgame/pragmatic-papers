@@ -1,5 +1,6 @@
 {
   "title": "Switch beta features on per site in Site Settings",
+  "navTitle": "Experiments",
   "summary": "Experiments let a new feature run on staging before readers on the live site see it.",
   "publishedAt": "2026-10-18",
   "heroImage": {

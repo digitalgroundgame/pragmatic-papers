@@ -17,8 +17,14 @@ export interface DocsSection<T> {
   docs: T[]
 }
 
-/** Docs under their sections, in the sidebar's order and by title within each; empty sections are left out. */
-export const groupDocsBySection = <T extends { section?: string | null; title: string }>(
+/** The name the sidebar shows for a doc: its short sidebar title, or its title. */
+export const docNavTitle = (doc: { navTitle?: string | null; title: string }): string =>
+  doc.navTitle || doc.title
+
+/** Docs under their sections, in the sidebar's order and by sidebar name within each; empty sections are left out. */
+export const groupDocsBySection = <
+  T extends { section?: string | null; title: string; navTitle?: string | null },
+>(
   docs: T[],
 ): DocsSection<T>[] =>
   DOC_SECTIONS.map(({ value, label }) => ({
@@ -26,5 +32,5 @@ export const groupDocsBySection = <T extends { section?: string | null; title: s
     label,
     docs: docs
       .filter((doc) => (doc.section ?? DEFAULT_DOC_SECTION) === value)
-      .sort((a, b) => a.title.localeCompare(b.title)),
+      .sort((a, b) => docNavTitle(a).localeCompare(docNavTitle(b))),
   })).filter((section) => section.docs.length > 0)

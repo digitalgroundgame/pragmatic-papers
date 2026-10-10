@@ -1,5 +1,6 @@
 {
   "title": "Call out a note with a Banner, or show code",
+  "navTitle": "Banner and Code blocks",
   "summary": "A Banner sets a short note apart in a coloured box. The Code block shows code with syntax highlighting.",
   "publishedAt": "2025-06-20",
   "heroImage": {

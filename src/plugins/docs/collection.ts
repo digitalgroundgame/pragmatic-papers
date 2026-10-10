@@ -80,6 +80,15 @@ export const Docs: CollectionConfig<"docs"> = {
       required: true,
     },
     {
+      name: "navTitle",
+      label: "Sidebar title",
+      type: "text",
+      admin: {
+        description:
+          'A short name for the docs sidebar, like "Footnotes". Left empty, the sidebar shows the title.',
+      },
+    },
+    {
       name: "summary",
       type: "textarea",
       required: true,

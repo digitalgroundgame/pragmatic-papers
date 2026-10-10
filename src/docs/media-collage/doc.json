@@ -1,5 +1,6 @@
 {
   "title": "Show several photos as a grid or a carousel",
+  "navTitle": "Media Collage",
   "summary": "The Media Collage block lays out a set of images or videos as a two-column grid or a swipeable carousel. Readers can click any of them to see it full size.",
   "publishedAt": "2026-03-08",
   "heroImage": {

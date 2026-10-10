@@ -58,6 +58,7 @@ export async function main(slug: string | undefined): Promise<void> {
     const { heroImage, content } = packed as Pick<RepoDoc, "heroImage" | "content">
     const repoDoc: RepoDoc = {
       title: doc.title,
+      ...(doc.navTitle ? { navTitle: doc.navTitle } : {}),
       summary: doc.summary,
       publishedAt: doc.publishedAt.slice(0, 10),
       ...(doc.revisedAt ? { revisedAt: doc.revisedAt.slice(0, 10) } : {}),

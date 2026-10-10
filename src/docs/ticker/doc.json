@@ -1,5 +1,6 @@
 {
   "title": "Hide a post from the ticker",
+  "navTitle": "Ticker",
   "summary": "The ticker under the header shows our live broadcasts and latest posts. Editors can keep a post out of it by pasting its link.",
   "publishedAt": "2026-10-09",
   "heroImage": {

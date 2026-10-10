@@ -1413,6 +1413,10 @@ export interface Doc {
   id: number;
   title: string;
   /**
+   * A short name for the docs sidebar, like "Footnotes". Left empty, the sidebar shows the title.
+   */
+  navTitle?: string | null;
+  /**
    * One or two sentences. The help bell shows it under the title.
    */
   summary: string;
@@ -2456,6 +2460,7 @@ export interface FormSubmissionsSelect<T extends boolean = true> {
  */
 export interface DocsSelect<T extends boolean = true> {
   title?: T;
+  navTitle?: T;
   summary?: T;
   heroImage?: T;
   content?: T;

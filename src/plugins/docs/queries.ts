@@ -19,6 +19,7 @@ const findPublishedDocs = async () => {
     select: {
       slug: true,
       title: true,
+      navTitle: true,
       summary: true,
       publishedAt: true,
       updatedAt: true,

@@ -1,5 +1,6 @@
 {
   "title": "Tag articles with topics",
+  "navTitle": "Topics",
   "summary": "Topics group articles by subject. Each one gets its own page listing its articles, and readers see an article's topics as links.",
   "publishedAt": "2026-03-09",
   "heroImage": {

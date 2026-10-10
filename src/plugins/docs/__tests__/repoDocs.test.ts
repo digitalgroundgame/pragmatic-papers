@@ -21,6 +21,11 @@ describe.each(slugs)("src/docs/%s", (slug) => {
     expect(doc.heroImage.alt?.trim()).toBeTruthy()
   })
 
+  it("has a short sidebar title", () => {
+    expect(doc.navTitle?.trim()).toBeTruthy()
+    expect(doc.navTitle!.length).toBeLessThanOrEqual(24)
+  })
+
   it("sits in one of the sidebar's sections", () => {
     expect(DOC_SECTIONS.map((section) => section.value)).toContain(doc.section)
   })

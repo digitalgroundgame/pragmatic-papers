@@ -92,6 +92,7 @@ describe("syncDocs", () => {
           slug: "experiments",
           section: "site",
           revisedAt: null,
+          navTitle: null,
           _status: "published",
           audience: [],
           showTableOfContents: true,

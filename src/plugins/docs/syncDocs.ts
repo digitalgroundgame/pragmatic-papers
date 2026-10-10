@@ -118,6 +118,7 @@ export async function syncDocs(payload: Payload, dir = DOCS_DIR): Promise<SyncRe
 
     const data = {
       title: repoDoc.title,
+      navTitle: repoDoc.navTitle ?? null,
       summary: repoDoc.summary,
       publishedAt: repoDoc.publishedAt,
       revisedAt: repoDoc.revisedAt ?? null,

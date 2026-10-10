@@ -1,5 +1,6 @@
 {
   "title": "Add a photo or video with the Media block",
+  "navTitle": "Media block",
   "summary": "The Media block puts one image or video from Media into an article or page. Readers can click a photo to see it full size, and videos play silently on a loop.",
   "publishedAt": "2025-06-20",
   "heroImage": {

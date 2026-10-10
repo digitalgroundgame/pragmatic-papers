@@ -1,5 +1,6 @@
 {
   "title": "Show a sequence of events with the Timeline block",
+  "navTitle": "Timeline block",
   "summary": "A vertical timeline of dated events, each with an optional picture and source link, for articles and pages.",
   "publishedAt": "2026-04-25",
   "heroImage": {

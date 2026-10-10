@@ -84,7 +84,7 @@ describe("docs:export", () => {
     expect(destroy).toHaveBeenCalled()
   })
 
-  it("keeps the audience, the updated day, and a table of contents turned off", async () => {
+  it("keeps the audience, the updated day, the sidebar title, and a table of contents turned off", async () => {
     await mkdir(path.join(dir.cwd, "public/media"), { recursive: true })
     await writeFile(path.join(dir.cwd, "public/media/search.webp"), "local bytes")
     find.mockResolvedValue({
@@ -92,6 +92,7 @@ describe("docs:export", () => {
         {
           ...doc,
           revisedAt: "2026-10-20T00:00:00.000Z",
+          navTitle: "Unsplash",
           audience: ["editor"],
           showTableOfContents: false,
           content: {},
@@ -101,6 +102,7 @@ describe("docs:export", () => {
     await main("photos")
     expect(await exported()).toMatchObject({
       revisedAt: "2026-10-20",
+      navTitle: "Unsplash",
       audience: ["editor"],
       showTableOfContents: false,
     })

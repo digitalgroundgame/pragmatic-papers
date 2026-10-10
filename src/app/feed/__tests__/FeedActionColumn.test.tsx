@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest"
 import { makeSummary, userFixture } from "./fixtures"
 
 vi.mock("@/components/Media", async () => (await import("./mediaStub")).mediaStub)
-vi.mock("@/utilities/getURL", () => ({ getClientSideURL: () => "https://example.com" }))
+vi.mock("@/utilities/getURL", () => ({ getClientURL: () => "https://example.com" }))
 
 const { FeedActionColumn } = await import("../FeedActionColumn")
 

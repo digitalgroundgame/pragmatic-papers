@@ -8,9 +8,9 @@ import RichText from "@/components/RichText"
 import { ShareButtons } from "@/components/ShareButtons"
 import { Separator } from "@/components/ui/separator"
 import type { Article, User } from "@/payload-types"
-import { formatDateTime } from "@/utilities/formatDateTime"
+import { formatLongDate } from "@/utilities/formatDate"
 import { generateMeta } from "@/utilities/generateMeta"
-import { getServerSideURL } from "@/utilities/getURL"
+import { getSiteURL } from "@/utilities/getURL"
 import { queryVolumeBySlug } from "@/utilities/queries"
 import { isResolved } from "@/utilities/relationships"
 import { buildBreadcrumbJsonLd, buildVolumeJsonLd } from "@/utilities/structuredData"
@@ -103,14 +103,10 @@ export default async function VolumePage({
               href={`/volumes/${volume.slug}`}
               className="text-brand-text font-serif font-semibold underline-offset-4 hover:underline"
             >
-              <time dateTime={publishedAt}>{formatDateTime(publishedAt)}</time>
+              <time dateTime={publishedAt}>{formatLongDate(publishedAt)}</time>
             </HoverPrefetchLink>
           )}
-          <ShareButtons
-            url={`${getServerSideURL()}${url}`}
-            title={volumeTitle}
-            className="ml-auto"
-          />
+          <ShareButtons url={`${getSiteURL()}${url}`} title={volumeTitle} className="ml-auto" />
         </div>
         <RichText className="drop-cap" enableGutter={false} data={editorsNote} />
         <Separator className="my-6" />

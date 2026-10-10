@@ -5,6 +5,8 @@ import type {
 
 import { describeTimeline } from "@/blocks/Timeline/narration"
 import { describeVisual } from "@/utilities/describeVisual"
+import { formatLongDate } from "./formatDate"
+import { isRecord } from "./isRecord"
 
 export type MediaMap = Record<
   string | number,
@@ -147,8 +149,8 @@ function resolveMediaInfo(
 
   if (typeof mediaVal === "number" || typeof mediaVal === "string") {
     mediaId = mediaVal
-  } else if (typeof mediaVal === "object" && mediaVal !== null && !Array.isArray(mediaVal)) {
-    const obj = mediaVal as Record<string, unknown>
+  } else if (isRecord(mediaVal)) {
+    const obj = mediaVal
     if (typeof obj.alt === "string" || obj.caption || typeof obj.filename === "string") {
       mediaObj = obj
     } else if (
@@ -371,16 +373,8 @@ export function extractNarrationText(options: ExtractNarrationTextOptions): stri
 
   // 3. Published Date
   if (publishedAt) {
-    const dateObj = publishedAt instanceof Date ? publishedAt : new Date(publishedAt)
-    if (!isNaN(dateObj.getTime())) {
-      const formattedDate = dateObj.toLocaleDateString("en-US", {
-        month: "long",
-        day: "numeric",
-        year: "numeric",
-        timeZone: "UTC",
-      })
-      parts.push(`Published on ${formattedDate}`)
-    }
+    const formattedDate = formatLongDate(publishedAt)
+    if (formattedDate) parts.push(`Published on ${formattedDate}`)
   }
 
   let byline = parts.join("\n")

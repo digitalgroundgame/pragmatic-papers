@@ -5,7 +5,7 @@ import { Pagination } from "@/components/Pagination"
 import { Skeleton } from "@/components/ui/skeleton"
 import type { UsersSelect } from "@/payload-types"
 import { paginatedPath } from "@/utilities/generateMeta"
-import { getServerSideURL } from "@/utilities/getURL"
+import { getSiteURL } from "@/utilities/getURL"
 import { mergeOpenGraph } from "@/utilities/mergeOpenGraph"
 import { AUTHOR_ROLES } from "@/access/roles"
 import config from "@payload-config"
@@ -18,7 +18,7 @@ import { Breadcrumbs } from "@/components/Breadcrumbs"
 
 export async function generateMetadata({ searchParams }: Args): Promise<Metadata> {
   const { p } = await searchParams
-  const canonicalUrl = `${getServerSideURL()}${paginatedPath("/contributors", p)}`
+  const canonicalUrl = `${getSiteURL()}${paginatedPath("/contributors", p)}`
 
   return {
     title: "Contributors — Pragmatic Papers",

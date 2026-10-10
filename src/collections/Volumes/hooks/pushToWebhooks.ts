@@ -2,7 +2,7 @@ import { type Volume } from "@/payload-types"
 import { type CollectionAfterChangeHook } from "payload"
 import { Volumes } from ".."
 
-import { getServerSideURL } from "@/utilities/getURL"
+import { getSiteURL } from "@/utilities/getURL"
 
 export const pushToWebhooks: CollectionAfterChangeHook<Volume> = async (args) => {
   // NOTE: current check is supposed to filter for first publish
@@ -14,7 +14,7 @@ export const pushToWebhooks: CollectionAfterChangeHook<Volume> = async (args) =>
     return
 
   // The saved doc, not the request's `data`: a publish that sends only `_status` has no slug.
-  const url = `${getServerSideURL()}/${Volumes.slug}/${args.doc.slug}`
+  const url = `${getSiteURL()}/${Volumes.slug}/${args.doc.slug}`
   const { payload } = args.req
   const webhooks = await payload.find({ collection: "webhooks" })
 
@@ -34,7 +34,7 @@ export const pushToWebhooks: CollectionAfterChangeHook<Volume> = async (args) =>
       body: JSON.stringify({
         content: url,
         username: "The Pragmatic Papers",
-        avatar_url: `${getServerSideURL()}/android-chrome-192x192.png`,
+        avatar_url: `${getSiteURL()}/android-chrome-192x192.png`,
       }),
     }).catch((e) => {
       console.error(e)

@@ -4,7 +4,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Media } from "@/components/Media"
 import type { User } from "@/payload-types"
-import { getClientSideURL } from "@/utilities/getURL"
+import { getClientURL } from "@/utilities/getURL"
 import { isResolved } from "@/utilities/relationships"
 import { cn } from "@/utilities/utils"
 import { Share2 } from "lucide-react"
@@ -38,7 +38,7 @@ function getProfileImageUrl(author: ResolvedAuthor): string | undefined {
 // where future narration / comments controls will live too.
 export function FeedActionColumn({ article }: FeedActionColumnProps): React.ReactNode {
   const handleShare = useCallback(() => {
-    const url = `${getClientSideURL()}/articles/${article.slug}`
+    const url = `${getClientURL()}/articles/${article.slug}`
     const title = article.title
     if (typeof navigator !== "undefined" && typeof navigator.share === "function") {
       navigator.share({ title, url }).catch(() => {

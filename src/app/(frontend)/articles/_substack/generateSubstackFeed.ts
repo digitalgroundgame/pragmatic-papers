@@ -10,8 +10,8 @@ import { squiggleRuleToHTML } from "@/blocks/SquiggleRule/converters"
 import { timelineToHTML } from "@/blocks/Timeline/converters"
 import { internalDocToHref } from "@/utilities/routes"
 import type { Article, Media, User } from "@/payload-types"
-import { escapeHTML, fromBlock, absoluteURL as toAbsoluteURL } from "@/utilities/feedHTML"
-import { getServerSideURL } from "@/utilities/getURL"
+import { escapeHTML, fromBlock } from "@/utilities/feedHTML"
+import { absoluteURL, getSiteURL } from "@/utilities/getURL"
 import { isResolved } from "@/utilities/relationships"
 import type {
   SerializedLinkNode,
@@ -40,8 +40,6 @@ import type { SerializedLexicalNode } from "@/utilities/lexical"
  */
 
 const SITE_NAME = "The Pragmatic Papers"
-
-const absoluteURL = (url: string): string => toAbsoluteURL(url, getServerSideURL())
 
 export const articleURL = (article: Pick<Article, "slug">): string =>
   absoluteURL(`/articles/${article.slug}`)
@@ -128,7 +126,7 @@ const tableCellToHTML = ({
  */
 export const createSubstackConverters = (url: string): HTMLConvertersFunction => {
   return ({ defaultConverters }) => {
-    const context = { siteUrl: getServerSideURL(), pageUrl: url }
+    const context = { siteUrl: getSiteURL(), pageUrl: url }
     return {
       ...defaultConverters,
       ...LinkHTMLConverter({
@@ -191,7 +189,7 @@ export const substackArticleHTML = (article: Article): string => {
   const url = articleURL(article)
   const options = { disableContainer: true, disableIndent: true, disableTextAlign: true }
   const hero = mediaToFigure(article.heroImage, {
-    siteUrl: getServerSideURL(),
+    siteUrl: getSiteURL(),
     richTextToHTML: (data) =>
       convertLexicalToHTML({
         data: data as Article["content"],
@@ -204,14 +202,14 @@ export const substackArticleHTML = (article: Article): string => {
     converters: createSubstackConverters(url),
     ...options,
   })
-  const notes = footnotesToHTML(article.footnotes, { siteUrl: getServerSideURL() })
+  const notes = footnotesToHTML(article.footnotes, { siteUrl: getSiteURL() })
   const footer = `<hr /><p><em>Originally published at <a href="${escapeHTML(url)}">${SITE_NAME}</a>.</em></p>`
 
   return hero + body + notes + footer
 }
 
 export const generateSubstackFeed = (articles: Article[]): string => {
-  const siteURL = getServerSideURL()
+  const siteURL = getSiteURL()
   const feed = new Feed({
     title: SITE_NAME,
     description: `Articles from ${SITE_NAME}, formatted for import into Substack`,

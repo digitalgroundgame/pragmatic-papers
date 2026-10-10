@@ -1,8 +1,9 @@
 import { revalidateRedirects } from "@/hooks/revalidateRedirects"
 import type { Article, Interactive, Page, Topic, Volume } from "@/payload-types"
-import { getServerSideURL } from "@/utilities/getURL"
+import { getSiteURL } from "@/utilities/getURL"
 import { DEFAULT_DESCRIPTION } from "@/utilities/mergeOpenGraph"
 import { docPath } from "@/utilities/routes"
+import { truncate } from "@/utilities/truncate"
 import { toRoman } from "@/utilities/toRoman"
 import { formBuilderPlugin } from "@payloadcms/plugin-form-builder"
 import { nestedDocsPlugin } from "@payloadcms/plugin-nested-docs"
@@ -16,6 +17,8 @@ import {
   type GenerateURL,
 } from "@payloadcms/plugin-seo/types"
 import { FixedToolbarFeature, HeadingFeature, lexicalEditor } from "@payloadcms/richtext-lexical"
+import type { SerializedEditorState } from "@payloadcms/richtext-lexical/lexical"
+import { convertLexicalToPlaintext } from "@payloadcms/richtext-lexical/plaintext"
 import { s3Storage } from "@payloadcms/storage-s3"
 import { type Payload, type Plugin } from "payload"
 
@@ -23,19 +26,6 @@ type SeoDoc = Volume | Article | Page | Topic | Interactive
 
 function isVolume(obj: SeoDoc): obj is Volume {
   return (obj as Volume).volumeNumber !== undefined
-}
-
-interface LexicalTextNode {
-  type?: string
-  text?: string
-  children?: LexicalTextNode[]
-}
-
-function lexicalToPlainText(node: LexicalTextNode | undefined | null): string {
-  if (!node) return ""
-  if (typeof node.text === "string") return node.text
-  if (!Array.isArray(node.children)) return ""
-  return node.children.map(lexicalToPlainText).join(" ")
 }
 
 export const generateTitle: GenerateTitle<SeoDoc> = ({ doc }) => {
@@ -51,28 +41,21 @@ export const generateTitle: GenerateTitle<SeoDoc> = ({ doc }) => {
 
 const DESCRIPTION_LENGTH = 160
 
-/** Cuts `text` to a meta description's length at a word boundary. */
-function truncateDescription(text: string): string {
-  if (text.length <= DESCRIPTION_LENGTH) return text
-  const cut = text.slice(0, DESCRIPTION_LENGTH - 1)
-  const lastSpace = cut.lastIndexOf(" ")
-  return `${(lastSpace > 0 ? cut.slice(0, lastSpace) : cut).replace(/[\s.,;:]+$/, "")}…`
-}
-
 export const generateDescription: GenerateDescription<SeoDoc> = ({ doc }) => {
   if ("description" in doc && doc.description) return doc.description
   // Interactives have no description field; their standfirst says what the page is.
   if ("intro" in doc && doc.intro) {
-    const intro = lexicalToPlainText(doc.intro.root as LexicalTextNode)
-      .replace(/\s+/g, " ")
-      .trim()
-    if (intro) return truncateDescription(intro)
+    const intro = convertLexicalToPlaintext({ data: doc.intro }).replace(/\s+/g, " ").trim()
+    if (intro.length > DESCRIPTION_LENGTH) {
+      return truncate(intro, DESCRIPTION_LENGTH - 1, { atWord: true })
+    }
+    if (intro) return intro
   }
   return DEFAULT_DESCRIPTION
 }
 
 export const generateURL: GenerateURL<SeoDoc> = ({ collectionConfig, doc }) => {
-  const url = getServerSideURL()
+  const url = getSiteURL()
   if (!doc?.slug) return url
 
   const path = docPath(collectionConfig?.slug ?? "pages", doc.slug)
@@ -158,8 +141,10 @@ const beforeSync: BeforeSync = async ({ originalDoc, payload, searchDoc }) => {
     (originalDoc.profileImage as number | null | undefined) ??
     null
 
-  const content = originalDoc.content as { root?: LexicalTextNode } | undefined
-  const body = lexicalToPlainText(content?.root).replace(/\s+/g, " ").trim().slice(0, 39000)
+  const content = originalDoc.content as SerializedEditorState | undefined
+  const body = content
+    ? convertLexicalToPlaintext({ data: content }).replace(/\s+/g, " ").trim().slice(0, 39000)
+    : ""
 
   return { ...searchDoc, title, excerpt, slug, authors, topics, image, body }
 }

@@ -4,7 +4,7 @@ import React from "react"
 
 import { HoverPrefetchLink } from "@/components/Link/HoverPrefetchLink"
 import { Separator } from "@/components/ui/separator"
-import { formatDateTime } from "@/utilities/formatDateTime"
+import { formatLongDate } from "@/utilities/formatDate"
 import { toRoman } from "@/utilities/toRoman"
 import { docPath } from "@/utilities/routes"
 
@@ -45,7 +45,7 @@ export const Entry: React.FC<{
             href={href}
             className="font-semibold underline-offset-2 hover:underline"
           >
-            <time dateTime={publishedAt}>{formatDateTime(publishedAt)}</time>
+            <time dateTime={publishedAt}>{formatLongDate(publishedAt)}</time>
           </HoverPrefetchLink>
         )}
       </div>

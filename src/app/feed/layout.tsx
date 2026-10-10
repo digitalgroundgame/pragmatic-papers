@@ -1,5 +1,5 @@
 import { AdminBar, AdminBarHint } from "@/components/AdminBar"
-import { getServerSideURL } from "@/utilities/getURL"
+import { getSiteURL } from "@/utilities/getURL"
 import { mergeOpenGraph } from "@/utilities/mergeOpenGraph"
 import { ThemeProvider } from "@wrksz/themes/next"
 import type { Metadata, Viewport } from "next"
@@ -43,7 +43,7 @@ export const viewport: Viewport = {
 }
 
 export const metadata: Metadata = {
-  metadataBase: new URL(getServerSideURL()),
+  metadataBase: new URL(getSiteURL()),
   title: "Feed · Pragmatic Papers",
   openGraph: mergeOpenGraph({ title: "Feed · Pragmatic Papers" }),
 }

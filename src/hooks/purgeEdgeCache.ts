@@ -6,7 +6,7 @@ import {
   describeStatus,
   integrationStatus,
 } from "@/integrations"
-import { getServerSideURL } from "@/utilities/getURL"
+import { getSiteURL } from "@/utilities/getURL"
 
 type Logger = Pick<Payload["logger"], "info" | "warn">
 
@@ -26,7 +26,7 @@ let inFlight: Promise<void> = Promise.resolve()
 /** This deployment's public hostname, or null when it isn't one Cloudflare could be fronting. */
 function siteHost(): string | null {
   try {
-    const host = new URL(getServerSideURL()).hostname
+    const host = new URL(getSiteURL()).hostname
     return LOCAL_HOSTS.has(host) || host.endsWith(".localhost") ? null : host
   } catch {
     return null

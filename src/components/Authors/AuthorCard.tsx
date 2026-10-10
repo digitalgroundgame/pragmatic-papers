@@ -8,11 +8,12 @@ import { isMedia, Media } from "@/components/Media"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Card, CardContent } from "@/components/ui/card"
 import { getInitials } from "@/utilities/getInitials"
+import { truncate } from "@/utilities/truncate"
 
 function extractBioSnippet(author: User, maxLength = 255): string | undefined {
   if (!author.biography) return
   const text = convertLexicalToPlaintext({ data: author.biography })
-  return text.length > maxLength ? `${text.slice(0, maxLength).trimEnd()}…` : text
+  return truncate(text, maxLength)
 }
 
 export interface AuthorCardProps {

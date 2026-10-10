@@ -25,7 +25,7 @@ import { updateRecommendationsTask } from "@/jobs/updateRecommendations"
 import { plugins } from "@/plugins"
 import { searchVectorAfterSchemaInit } from "@/plugins/searchVector"
 import { sentryPayloadPlugin, skipPluginErrorsInPino } from "@/sentryPayload"
-import { getServerSideURL } from "@/utilities/getURL"
+import { getSiteURL } from "@/utilities/getURL"
 import { migrations } from "@/migrations"
 import { type PostgresAdapter, postgresAdapter } from "@payloadcms/db-postgres"
 import path from "path"
@@ -160,7 +160,7 @@ export default buildConfig({
     Webhooks,
     Categories,
   ],
-  cors: [getServerSideURL()].filter(Boolean),
+  cors: [getSiteURL()].filter(Boolean),
   globals: [Header, Footer, Ticker, SiteSettings, Integrations, ArticleRecommendations],
   // Nothing here reads Payload's GraphQL API (the site and admin use the Local and REST
   // APIs), and its errors reach `afterError` with their status nested on `originalError`,

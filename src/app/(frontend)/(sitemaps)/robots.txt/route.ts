@@ -1,4 +1,4 @@
-import { getServerSideURL } from "@/utilities/getURL"
+import { getSiteURL } from "@/utilities/getURL"
 
 import { SITEMAP_PATHS } from "../sitemaps"
 
@@ -7,7 +7,7 @@ import { SITEMAP_PATHS } from "../sitemaps"
 // of search indexes by the X-Robots-Tag header in src/proxy.ts, not here: crawlers must
 // be able to fetch a page to see it.
 export async function GET(): Promise<Response> {
-  const siteUrl = getServerSideURL()
+  const siteUrl = getSiteURL()
   const sitemaps = ["/sitemap_index.xml", ...SITEMAP_PATHS].map(
     (path) => `Sitemap: ${siteUrl}${path}`,
   )

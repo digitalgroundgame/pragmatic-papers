@@ -3,7 +3,7 @@ import React from "react"
 
 import { Breadcrumbs, type Crumb } from "@/components/Breadcrumbs"
 import { JsonLd } from "@/components/JsonLd"
-import { getServerSideURL } from "@/utilities/getURL"
+import { getSiteURL } from "@/utilities/getURL"
 import { mergeOpenGraph } from "@/utilities/mergeOpenGraph"
 import { buildBreadcrumbJsonLd } from "@/utilities/structuredData"
 
@@ -19,7 +19,7 @@ const DESCRIPTION = "Follow Pragmatic Papers in a feed reader, or find every pag
 export const dynamic = "force-static"
 
 export function generateMetadata(): Metadata {
-  const canonicalUrl = `${getServerSideURL()}/feeds`
+  const canonicalUrl = `${getSiteURL()}/feeds`
   return {
     title: TITLE,
     description: DESCRIPTION,
@@ -31,7 +31,7 @@ export function generateMetadata(): Metadata {
 const LinkList: React.FC<{
   links: readonly { path: string; title: string; description?: string }[]
 }> = ({ links }) => {
-  const siteUrl = getServerSideURL().replace(/\/$/, "")
+  const siteUrl = getSiteURL()
   return (
     <ul className="divide-y border-y">
       {links.map((link) => (

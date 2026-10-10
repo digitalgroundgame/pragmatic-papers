@@ -1,5 +1,6 @@
 import type { FootnoteBlock, FootnotesField } from "@/payload-types"
-import { absoluteURL, escapeHTML, type FeedContext } from "@/utilities/feedHTML"
+import { escapeHTML, type FeedContext } from "@/utilities/feedHTML"
+import { absoluteURL } from "@/utilities/getURL"
 import { getLinkFieldUrl } from "@/utilities/getLinkFieldUrl"
 
 /**

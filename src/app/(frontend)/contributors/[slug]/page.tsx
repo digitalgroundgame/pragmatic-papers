@@ -15,7 +15,7 @@ import { isResolved } from "@/utilities/relationships"
 import { getMediaUrl } from "@/utilities/getMediaUrl"
 import { getPayloadConfig } from "@/utilities/getPayloadConfig"
 import { paginatedPath } from "@/utilities/generateMeta"
-import { getServerSideURL } from "@/utilities/getURL"
+import { getSiteURL } from "@/utilities/getURL"
 import { mergeOpenGraph } from "@/utilities/mergeOpenGraph"
 import { queryUserBySlug, queryVolumesForArticles } from "@/utilities/queries"
 import { buildBreadcrumbJsonLd, buildPersonJsonLd } from "@/utilities/structuredData"
@@ -26,6 +26,7 @@ import { notFound, permanentRedirect } from "next/navigation"
 import { getPayload } from "payload"
 import React, { cache } from "react"
 import { Breadcrumbs } from "@/components/Breadcrumbs"
+import { relationshipId } from "@/utilities/relationships"
 
 // Paginated with `?p=`, which only a request carries, so this is rendered per request. That's
 // also why there's no generateStaticParams: a prerendered slug would never be served.
@@ -93,7 +94,7 @@ export async function generateMetadata({ params, searchParams }: Args): Promise<
       ? getMediaUrl(profileImage.sizes?.og?.url || profileImage.url)
       : undefined
 
-  const serverUrl = getServerSideURL()
+  const serverUrl = getSiteURL()
   const canonicalUrl = `${serverUrl}${paginatedPath(`/contributors/${slug}`, p)}`
 
   return {
@@ -149,10 +150,7 @@ export default async function AuthorPage({ params, searchParams }: Args): Promis
   for (const volume of volumes) {
     const volumeArticles = volume.articles || []
     for (const articleRef of volumeArticles) {
-      const articleId =
-        typeof articleRef === "object" && articleRef !== null
-          ? articleRef.id
-          : (articleRef as number | undefined)
+      const articleId = relationshipId(articleRef)
       if (articleId != null && !volumeByArticleId.has(articleId)) {
         volumeByArticleId.set(articleId, volume)
       }

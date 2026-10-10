@@ -6,6 +6,7 @@ import type { ParentDocContext } from "@/blocks/SocialEmbed/types"
 import type { Article, SocialEmbedSnapshot } from "@/payload-types"
 import { getPayloadConfig } from "@/utilities/getPayloadConfig"
 import { unstable_cache } from "next/cache"
+import { isRecord } from "@/utilities/isRecord"
 
 function getCachedSnapshotCheck(args: BuildSnapshotArgs): () => Promise<SocialEmbedSnapshot> {
   const revalidate = Math.ceil(SOCIAL_EMBED_SNAPSHOT_TTL_MS / 1000)
@@ -24,10 +25,6 @@ function getCachedSnapshotCheck(args: BuildSnapshotArgs): () => Promise<SocialEm
 
 type LexicalNode = Record<string, unknown>
 
-function isObject(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null
-}
-
 function updateEmbedSnapshotInLexicalTree(
   node: unknown,
   embedBlockId: string,
@@ -43,10 +40,10 @@ function updateEmbedSnapshotInLexicalTree(
     return { next: updated ? nextArr : node, updated }
   }
 
-  if (!isObject(node)) return { next: node, updated: false }
+  if (!isRecord(node)) return { next: node, updated: false }
 
   // Detect payload lexical block nodes
-  if (node.type === "block" && isObject(node.fields) && node.fields.id === embedBlockId) {
+  if (node.type === "block" && isRecord(node.fields) && node.fields.id === embedBlockId) {
     const fields = node.fields as Record<string, unknown>
     return {
       next: { ...(node as LexicalNode), fields: { ...fields, snapshot: nextSnapshot } },
@@ -59,7 +56,7 @@ function updateEmbedSnapshotInLexicalTree(
 
   for (const [key, value] of Object.entries(node)) {
     if (key === "parent") continue
-    if (!(Array.isArray(value) || isObject(value))) continue
+    if (!(Array.isArray(value) || isRecord(value))) continue
 
     const res = updateEmbedSnapshotInLexicalTree(value, embedBlockId, nextSnapshot)
     if (!res.updated) continue

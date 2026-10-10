@@ -6,7 +6,7 @@ import React, { useCallback, useState } from "react"
 import { type FieldValues, FormProvider, type SubmitHandler, useForm } from "react-hook-form"
 
 import { Button } from "@/components/ui/button"
-import { getClientSideURL } from "@/utilities/getURL"
+import { getClientURL } from "@/utilities/getURL"
 import { fields } from "./fields"
 
 interface FormBlockClientProps {
@@ -52,7 +52,7 @@ export const FormBlockClient: React.FC<FormBlockClientProps> = ({
         }, 1000)
 
         try {
-          const req = await fetch(`${getClientSideURL()}/api/form-submissions`, {
+          const req = await fetch(`${getClientURL()}/api/form-submissions`, {
             body: JSON.stringify({
               form: id,
               submissionData,

@@ -1,4 +1,5 @@
 import type { CollectionBeforeDeleteHook, PayloadRequest } from "payload"
+import { relationshipId } from "@/utilities/relationships"
 
 /**
  * A bulk delete runs this hook for every article at once, in one transaction. Each run
@@ -15,7 +16,7 @@ async function removeArticle(id: number | string, req: PayloadRequest): Promise<
   })
   const rankings = recommendations.rankings ?? []
   const kept = rankings.filter((ranking) => {
-    const articleId = typeof ranking.article === "object" ? ranking.article.id : ranking.article
+    const articleId = relationshipId(ranking.article)
     return String(articleId) !== String(id)
   })
   if (kept.length === rankings.length) return

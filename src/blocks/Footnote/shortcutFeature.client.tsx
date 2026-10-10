@@ -23,7 +23,7 @@ import { createPortal } from "react-dom"
 
 import type { FootnoteBlock } from "@/payload-types"
 
-import { truncate } from "./utils"
+import { truncate } from "@/utilities/truncate"
 
 type CreateInlineBlockFields = Parameters<typeof $createInlineBlockNode>[0]
 const createFootnoteNode = (fields: Partial<FootnoteBlock> & { blockType: "footnote" }) =>

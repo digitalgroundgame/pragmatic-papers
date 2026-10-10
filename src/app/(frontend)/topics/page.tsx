@@ -2,7 +2,7 @@ import { LivePreviewListener } from "@/components/LivePreviewListener"
 import { Pagination } from "@/components/Pagination"
 import { TopicsList } from "@/components/Topics/TopicsList"
 import { paginatedPath } from "@/utilities/generateMeta"
-import { getServerSideURL } from "@/utilities/getURL"
+import { getSiteURL } from "@/utilities/getURL"
 import { mergeOpenGraph } from "@/utilities/mergeOpenGraph"
 import config from "@payload-config"
 import type { Metadata } from "next"
@@ -14,7 +14,7 @@ import { Breadcrumbs } from "@/components/Breadcrumbs"
 
 export async function generateMetadata({ searchParams }: Args): Promise<Metadata> {
   const { p } = await searchParams
-  const canonicalUrl = `${getServerSideURL()}${paginatedPath("/topics", p)}`
+  const canonicalUrl = `${getSiteURL()}${paginatedPath("/topics", p)}`
 
   return {
     title: "Topics | The Pragmatic Papers",

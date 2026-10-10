@@ -3,7 +3,7 @@
 import dynamic from "next/dynamic"
 import React, { useEffect, useState, useSyncExternalStore } from "react"
 
-import { getClientSideURL } from "@/utilities/getURL"
+import { getClientURL } from "@/utilities/getURL"
 
 import { readAdminBarHint, writeAdminBarHint } from "./hint"
 
@@ -31,7 +31,7 @@ export function LazyAdminBar({ preview }: { preview?: boolean }): React.ReactNod
 
   useEffect(() => {
     const controller = new AbortController()
-    fetch(`${getClientSideURL()}/api/users/me`, {
+    fetch(`${getClientURL()}/api/users/me`, {
       credentials: "include",
       signal: controller.signal,
     })

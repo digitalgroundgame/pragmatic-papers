@@ -18,14 +18,11 @@ import {
   type HTMLConvertersFunction,
 } from "@payloadcms/richtext-lexical/html"
 import { Feed } from "feed"
-import { absoluteURL, escapeHTML, fromBlock } from "./feedHTML"
-import { getServerSideURL } from "./getURL"
-
-// Read on each call, not at import: SERVER_URL is a runtime variable.
-const siteUrl = (): string => getServerSideURL()
+import { escapeHTML, fromBlock } from "./feedHTML"
+import { absoluteURL, getSiteURL } from "./getURL"
 
 const getMediaUrl = (url: string) => {
-  const absolute = absoluteURL(url, siteUrl())
+  const absolute = absoluteURL(url)
   try {
     return new URL(absolute).href
   } catch {
@@ -48,7 +45,7 @@ const getMediaUrl = (url: string) => {
 export const createHtmlConverters =
   (pageUrl: string): HTMLConvertersFunction =>
   ({ defaultConverters }) => {
-    const context = { siteUrl: siteUrl(), pageUrl }
+    const context = { siteUrl: getSiteURL(), pageUrl }
     return {
       ...defaultConverters,
       // Payload's default link converter has no `internalDocToHref`, so every
@@ -96,7 +93,7 @@ export const createHtmlConverters =
   }
 
 const articleLinkHTML = (article: Article): string => {
-  const href = escapeHTML(`${siteUrl()}/articles/${article.slug}`)
+  const href = escapeHTML(`${getSiteURL()}/articles/${article.slug}`)
   const description = article.meta?.description
     ? `<p>${escapeHTML(article.meta.description)}</p>`
     : ""
@@ -108,7 +105,7 @@ const volumeContentHTML = (volume: Volume): string => {
   const editorsNote = volume.editorsNote
     ? convertLexicalToHTML({
         data: volume.editorsNote,
-        converters: createHtmlConverters(`${siteUrl()}/volumes/${volume.slug}`),
+        converters: createHtmlConverters(`${getSiteURL()}/volumes/${volume.slug}`),
       })
     : ""
   // An article not loaded at this depth is a bare numeric ID: leave it out
@@ -127,10 +124,10 @@ const articleContentHTML = (article: Article): string => {
     const content = article.content
       ? convertLexicalToHTML({
           data: article.content,
-          converters: createHtmlConverters(`${siteUrl()}/articles/${article.slug}`),
+          converters: createHtmlConverters(`${getSiteURL()}/articles/${article.slug}`),
         })
       : ""
-    return content + footnotesToHTML(article.footnotes, { siteUrl: siteUrl() })
+    return content + footnotesToHTML(article.footnotes, { siteUrl: getSiteURL() })
   } catch (error) {
     console.error("Error converting article content to HTML:", error)
     return ""
@@ -140,15 +137,15 @@ const articleContentHTML = (article: Article): string => {
 const createBaseFeedConfig = (type: "Articles" | "Volumes") => ({
   title: `The Pragmatic Papers - ${type}`,
   description: `Latest ${type.toLowerCase()} from The Pragmatic Papers`,
-  id: siteUrl(),
-  link: siteUrl(),
+  id: getSiteURL(),
+  link: getSiteURL(),
   language: "en",
-  favicon: `${siteUrl()}/favicon.ico`,
+  favicon: `${getSiteURL()}/favicon.ico`,
   copyright: `All rights reserved ${new Date().getFullYear()}`,
   generator: "The Pragmatic Papers",
   updated: new Date(),
   feedLinks: {
-    atom: `${siteUrl()}/${type.toLowerCase()}/feed.xml`,
+    atom: `${getSiteURL()}/${type.toLowerCase()}/feed.xml`,
   },
 })
 
@@ -165,8 +162,8 @@ export const generateArticleFeed = (articles: Article[]): string => {
     if (article._status === "published" && article.publishedAt) {
       feed.addItem({
         title: article.title,
-        id: `${siteUrl()}/articles/${article.slug}`,
-        link: `${siteUrl()}/articles/${article.slug}`,
+        id: `${getSiteURL()}/articles/${article.slug}`,
+        link: `${getSiteURL()}/articles/${article.slug}`,
         published: new Date(article.publishedAt),
         description: article.meta?.description ? article.meta.description : "",
         date: new Date(article.publishedAt),
@@ -193,8 +190,8 @@ export const generateVolumeFeed = (volumes: Volume[]): string => {
     if (volume._status === "published" && volume.publishedAt) {
       feed.addItem({
         title: volume.title,
-        id: `${siteUrl()}/volumes/${volume.slug}`,
-        link: `${siteUrl()}/volumes/${volume.slug}`,
+        id: `${getSiteURL()}/volumes/${volume.slug}`,
+        link: `${getSiteURL()}/volumes/${volume.slug}`,
         description: volume.meta?.description || "",
         date: new Date(volume.publishedAt),
         image: imageUrl(volume.meta?.image),

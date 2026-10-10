@@ -5,7 +5,7 @@ import { getPayload, type PayloadRequest } from "payload"
 import { isEditor } from "@/access/roles"
 import configPromise from "@payload-config"
 import { VolumeArticleEmail } from "@/emails/VolumeArticle"
-import { getServerSideURL } from "@/utilities/getURL"
+import { getSiteURL } from "@/utilities/getURL"
 import { isResolved } from "@/utilities/relationships"
 
 import type { Article, Volume } from "@/payload-types"
@@ -56,7 +56,7 @@ export async function GET(
 
   const articles = (vol.articles ?? []).filter(isResolved<Article>)
 
-  const siteUrl = getServerSideURL()
+  const siteUrl = getSiteURL()
 
   const dayIndex = Number(dayParam)
   const article = articles[dayIndex]

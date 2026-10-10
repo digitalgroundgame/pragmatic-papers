@@ -1,4 +1,5 @@
 import { describeVisual } from "@/utilities/describeVisual"
+import { formatLongDate } from "@/utilities/formatDate"
 
 /**
  * Narration for the Timeline block. Unlike an image or a formula, a timeline's
@@ -27,14 +28,7 @@ function sentence(value: string): string {
  */
 function spokenDate(value: unknown): string {
   if (typeof value !== "string" && !(value instanceof Date)) return ""
-  const date = value instanceof Date ? value : new Date(value)
-  if (Number.isNaN(date.getTime())) return ""
-  return date.toLocaleDateString("en-US", {
-    month: "long",
-    day: "numeric",
-    year: "numeric",
-    timeZone: "UTC",
-  })
+  return formatLongDate(value)
 }
 
 /**

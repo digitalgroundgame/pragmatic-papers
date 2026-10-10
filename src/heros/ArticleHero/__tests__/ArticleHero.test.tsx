@@ -38,7 +38,7 @@ vi.mock("@/components/TableOfContents", () => ({
 }))
 
 vi.mock("@/utilities/getURL", () => ({
-  getServerSideURL: () => "https://example.com",
+  getSiteURL: () => "https://example.com",
 }))
 
 afterEach(cleanup)

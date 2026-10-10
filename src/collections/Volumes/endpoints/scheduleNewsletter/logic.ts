@@ -3,7 +3,7 @@ import type { Payload } from "payload"
 
 import { VolumeArticleEmail } from "@/emails/VolumeArticle"
 import type { Article, Volume } from "@/payload-types"
-import { getServerSideURL } from "@/utilities/getURL"
+import { getSiteURL } from "@/utilities/getURL"
 import { isResolved } from "@/utilities/relationships"
 import {
   createScheduledCampaign,
@@ -101,7 +101,7 @@ export async function scheduleVolumeNewsletter(
     `[newsletter] baseline = ${baseline.toISOString()} (existing campaigns on list: ${existingCampaigns.length}, this volume: ${campaignByArticleId.size})`,
   )
 
-  const siteUrl = getServerSideURL()
+  const siteUrl = getSiteURL()
   let cursor = baseline
   let created = 0
   let updated = 0

@@ -1,5 +1,5 @@
 import type { Article, Media, MenuField, User, Volume } from "@/payload-types"
-import { getServerSideURL } from "@/utilities/getURL"
+import { getSiteURL } from "@/utilities/getURL"
 import {
   buildArticleJsonLd,
   buildBreadcrumbJsonLd,
@@ -16,7 +16,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 const convertLexicalToPlaintext = vi.hoisted(() => vi.fn())
 vi.mock("@payloadcms/richtext-lexical/plaintext", () => ({ convertLexicalToPlaintext }))
 
-const SERVER_URL = getServerSideURL()
+const SERVER_URL = getSiteURL()
 
 const makeArticle = (overrides: Partial<Article>): Article => overrides as Article
 const makeUser = (overrides: Partial<User>): User => overrides as User

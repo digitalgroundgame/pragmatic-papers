@@ -3,7 +3,7 @@ import type { Metadata } from "next"
 import type { Article, Interactive, Page, Topic, Volume } from "../payload-types"
 
 import { getMediaUrl } from "./getMediaUrl"
-import { getServerSideURL } from "./getURL"
+import { getSiteURL } from "./getURL"
 import { DEFAULT_DESCRIPTION, mergeOpenGraph } from "./mergeOpenGraph"
 
 // A listing paginated with `?p=` is a different page from its first one, so each page names
@@ -28,7 +28,7 @@ export const generateMeta = async (args: {
     typeof doc?.meta?.image === "object" ? getMediaUrl(doc?.meta?.image?.sizes?.og?.url) : undefined
 
   const title = doc?.meta?.title ? doc?.meta?.title : "The Pragmatic Papers"
-  const canonicalUrl = `${getServerSideURL()}${canonicalPath}`
+  const canonicalUrl = `${getSiteURL()}${canonicalPath}`
   const description = doc?.meta?.description || DEFAULT_DESCRIPTION
 
   return {

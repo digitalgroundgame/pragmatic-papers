@@ -12,6 +12,7 @@ import { notFound } from "next/navigation"
 import { getPayload } from "payload"
 import React, { cache } from "react"
 import { Breadcrumbs } from "@/components/Breadcrumbs"
+import { relationshipId } from "@/utilities/relationships"
 
 interface Args {
   params: Promise<{
@@ -86,10 +87,7 @@ export default async function TopicPage({
   for (const volume of volumes) {
     const volumeArticles = volume.articles || []
     for (const articleRef of volumeArticles) {
-      const articleId =
-        typeof articleRef === "object" && articleRef !== null
-          ? articleRef.id
-          : (articleRef as number | undefined)
+      const articleId = relationshipId(articleRef)
 
       if (articleId != null && !volumeByArticleId.has(articleId)) {
         volumeByArticleId.set(articleId, volume)

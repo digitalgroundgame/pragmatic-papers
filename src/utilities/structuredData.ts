@@ -1,7 +1,7 @@
 import type { Article, Media, MenuField, Topic, User, Volume } from "@/payload-types"
 import { getMediaUrl } from "@/utilities/getMediaUrl"
 import { isResolved } from "@/utilities/relationships"
-import { getServerSideURL } from "@/utilities/getURL"
+import { getSiteURL } from "@/utilities/getURL"
 import { convertLexicalToPlaintext } from "@payloadcms/richtext-lexical/plaintext"
 import type {
   BreadcrumbListLeaf,
@@ -15,7 +15,7 @@ import type {
   WebSiteLeaf,
 } from "schema-dts"
 
-const SERVER_URL = getServerSideURL()
+const SERVER_URL = getSiteURL()
 const SITE_NAME = "The Pragmatic Papers"
 const SITE_DESCRIPTION =
   "Pragmatic, community-driven articles focusing on news, politics, economics, and more."

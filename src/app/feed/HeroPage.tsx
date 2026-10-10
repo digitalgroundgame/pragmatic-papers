@@ -2,7 +2,7 @@
 
 import { Media } from "@/components/Media"
 import type { User } from "@/payload-types"
-import { formatDateTime } from "@/utilities/formatDateTime"
+import { formatLongDate } from "@/utilities/formatDate"
 import { isResolved } from "@/utilities/relationships"
 import React from "react"
 import { FeedActionColumn } from "./FeedActionColumn"
@@ -80,7 +80,7 @@ export function HeroPage({ article, topInset }: HeroPageProps): React.ReactNode 
             {authors.length > 0 && <span>{`by ${authors.join(", ")}`}</span>}
             {authors.length > 0 && article.publishedAt && <span aria-hidden>•</span>}
             {article.publishedAt && (
-              <time dateTime={article.publishedAt}>{formatDateTime(article.publishedAt)}</time>
+              <time dateTime={article.publishedAt}>{formatLongDate(article.publishedAt)}</time>
             )}
           </div>
           {topicNames.length > 0 && (

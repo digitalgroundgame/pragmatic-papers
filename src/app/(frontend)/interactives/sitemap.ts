@@ -3,7 +3,7 @@ import { unstable_cache } from "next/cache"
 
 import { isExperimentEnabled } from "@/globals/SiteSettings/isExperimentEnabled"
 import { getPayloadConfig } from "@/utilities/getPayloadConfig"
-import { getServerSideURL } from "@/utilities/getURL"
+import { getSiteURL } from "@/utilities/getURL"
 
 // Rendered per request from the cached list below, which saving an interactive refreshes
 // (revalidateInteractive): Next would otherwise prerender it at build time, from the build's
@@ -13,7 +13,7 @@ export const dynamic = "force-dynamic"
 const getInteractivesSitemap = unstable_cache(
   async (): Promise<MetadataRoute.Sitemap> => {
     const payload = await getPayloadConfig()
-    const siteUrl = getServerSideURL()
+    const siteUrl = getSiteURL()
 
     const { docs } = await payload.find({
       collection: "interactives",

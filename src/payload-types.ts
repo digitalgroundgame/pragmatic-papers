@@ -1460,7 +1460,7 @@ export interface Doc {
    */
   showTableOfContents?: boolean | null;
   /**
-   * This doc ships with the code (src/docs/), so it can't be edited here. Change it locally and export it with pnpm docs:export.
+   * This doc ships with the code, so it can't be edited here. Change its Markdown file in src/docs/ instead.
    */
   sourceHash?: string | null;
   /**

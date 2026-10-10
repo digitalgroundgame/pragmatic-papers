@@ -13,6 +13,7 @@ import {
   FixedToolbarFeature,
   HeadingFeature,
   HorizontalRuleFeature,
+  InlineCodeFeature,
   InlineToolbarFeature,
   lexicalEditor,
   OrderedListFeature,
@@ -124,6 +125,8 @@ export const Docs: CollectionConfig<"docs"> = {
           FixedToolbarFeature(),
           InlineToolbarFeature(),
           HorizontalRuleFeature(),
+          // Docs name things to type, like /banner, in code.
+          InlineCodeFeature(),
           UnorderedListFeature(),
           OrderedListFeature(),
         ],
@@ -184,7 +187,7 @@ export const Docs: CollectionConfig<"docs"> = {
         readOnly: true,
         condition: (data) => Boolean(data?.sourceHash),
         description:
-          "This doc ships with the code (src/docs/), so it can't be edited here. Change it locally and export it with pnpm docs:export.",
+          "This doc ships with the code, so it can't be edited here. Change its Markdown file in src/docs/ instead.",
       },
     },
     slugField(),

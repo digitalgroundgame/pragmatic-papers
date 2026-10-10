@@ -14,7 +14,7 @@ const items: NotificationItem[] = [
     href: "/docs/unsplash-photos",
     date: "2026-10-18T00:00:00.000Z",
     image: {
-      url: "/docs-assets/unsplash-photos/hero.webp",
+      url: "/docs-assets/media/unsplash-photos-hero.webp",
       alt: "The Unsplash search in Media uploads with a grid of photos",
     },
   },
@@ -26,7 +26,7 @@ const items: NotificationItem[] = [
     href: "/docs/experiments",
     date: "2026-10-11T00:00:00.000Z",
     image: {
-      url: "/docs-assets/experiments/hero.webp",
+      url: "/docs-assets/site/experiments-hero.webp",
       alt: "The Site Settings switch for the Ticker experiment, turned on",
     },
   },
@@ -69,7 +69,7 @@ export const Unread: Story = {
     // The thumbnail is decorative, so the link's name is still its title.
     await expect(item.querySelector("img")).toHaveAttribute(
       "src",
-      "/docs-assets/unsplash-photos/hero.webp",
+      "/docs-assets/media/unsplash-photos-hero.webp",
     )
     await expect(screen.getByText("October 18, 2026")).toBeVisible()
     await expect(screen.getByRole("link", { name: "All docs" })).toHaveAttribute("href", "/docs")

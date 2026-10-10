@@ -6,21 +6,33 @@ import type { Payload } from "payload"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { hashRepoDoc, mediaFilename } from "../repoDoc"
-import { syncDocs } from "../syncDocs"
+import { listDocFiles, syncDocs } from "../syncDocs"
+
+// The editor's own conversion is tested against the real config in markdown.test.ts.
+vi.mock("../markdown", () => ({
+  docsEditorConfig: () => ({}),
+  markdownToContent: (_slug: string, body: string) => ({
+    root: {
+      children: body.split("\n").flatMap((line) => {
+        const image = /^!\[(.*)\]\((.*)\)$/.exec(line)
+        return image ? [{ type: "upload", value: { $media: image[2], alt: image[1] } }] : []
+      }),
+    },
+  }),
+}))
 
 const image = Buffer.from("not really a png")
 const hero = Buffer.from("not really a hero image either")
-const doc = {
-  title: "Experiments",
-  summary: "Switch beta features on per site.",
-  publishedAt: "2026-10-09",
-  heroImage: { $media: "hero.png", alt: "Switches" },
-  section: "site",
-  content: {
-    root: { children: [{ type: "upload", value: { $media: "drawer.png", alt: "Drawer" } }] },
-  },
-}
-const json = `${JSON.stringify(doc)}\n`
+const source = `---
+title: Experiments
+summary: Switch beta features on per site.
+publishedAt: 2026-10-09
+heroImage: experiments-hero.png
+heroAlt: Switches
+---
+
+![Drawer](experiments-drawer.png)
+`
 
 let dir: string
 
@@ -44,11 +56,11 @@ const fakePayload = ({
 
 beforeEach(async () => {
   dir = await mkdtemp(path.join(tmpdir(), "docs-"))
-  await mkdir(path.join(dir, "experiments"))
-  await writeFile(path.join(dir, "experiments", "doc.json"), json)
-  await writeFile(path.join(dir, "experiments", "drawer.png"), image)
-  await writeFile(path.join(dir, "experiments", "hero.png"), hero)
-  // A folder without a doc.json isn't a doc.
+  await mkdir(path.join(dir, "site"))
+  await writeFile(path.join(dir, "site", "experiments.md"), source)
+  await writeFile(path.join(dir, "site", "experiments-drawer.png"), image)
+  await writeFile(path.join(dir, "site", "experiments-hero.png"), hero)
+  // A folder without Markdown in it isn't a section.
   await mkdir(path.join(dir, "drafts"))
 })
 
@@ -79,7 +91,7 @@ describe("syncDocs", () => {
         collection: "media",
         data: { alt: "Drawer" },
         file: expect.objectContaining({
-          name: mediaFilename("experiments", "drawer.png", image),
+          name: mediaFilename("experiments-drawer.png", image),
           mimetype: "image/png",
         }),
       }),
@@ -96,7 +108,7 @@ describe("syncDocs", () => {
           _status: "published",
           audience: [],
           showTableOfContents: true,
-          sourceHash: hashRepoDoc(json, [hero, image]),
+          sourceHash: hashRepoDoc("site", source, [hero, image]),
           heroImage: 41,
           content: { root: { children: [{ type: "upload", value: 41 }] } },
         }),
@@ -104,9 +116,9 @@ describe("syncDocs", () => {
     )
   })
 
-  it("skips a doc whose JSON and files hash the same as last time", async () => {
+  it("skips a doc whose file and pictures hash the same as last time", async () => {
     const payload = fakePayload({
-      docs: [{ id: 3, sourceHash: hashRepoDoc(json, [hero, image]) }],
+      docs: [{ id: 3, sourceHash: hashRepoDoc("site", source, [hero, image]) }],
     })
     await expect(syncDocs(payload, dir)).resolves.toEqual({
       created: [],
@@ -135,5 +147,29 @@ describe("syncDocs", () => {
         }),
       }),
     )
+  })
+})
+
+describe("listDocFiles", () => {
+  it("finds each section's docs", async () => {
+    await expect(listDocFiles(dir)).resolves.toEqual([
+      {
+        slug: "experiments",
+        section: "site",
+        folder: path.join(dir, "site"),
+        file: path.join(dir, "site", "experiments.md"),
+      },
+    ])
+  })
+
+  it("refuses a folder that isn't a section", async () => {
+    await writeFile(path.join(dir, "drafts", "idea.md"), source)
+    await expect(listDocFiles(dir)).rejects.toThrow(/drafts\/ isn't a section/)
+  })
+
+  it("refuses two docs with one slug", async () => {
+    await mkdir(path.join(dir, "blocks"))
+    await writeFile(path.join(dir, "blocks", "experiments.md"), source)
+    await expect(listDocFiles(dir)).rejects.toThrow(/Two docs are called "experiments"/)
   })
 })

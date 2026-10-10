@@ -1,14 +1,10 @@
 import { revalidatePath } from "next/cache"
 
-import { syncRepoDocs } from "@/plugins/docs/syncRepoDocs"
-import { getPayloadConfig } from "@/utilities/getPayloadConfig"
-
 import { hasPayloadSecret } from "../bearer"
 
 /**
- * Run once each time a deploy goes live. Writes the help docs in src/docs/ into this
- * deployment's database (`syncRepoDocs`), then throws away every page and route Next.js
- * prerendered at build time, so each renders again from that database on its next request.
+ * Throws away every page and route Next.js prerendered at build time, so each
+ * renders again from this deployment's database on its next request.
  *
  * An image built in CI is built against an empty database, so the
  * routes it bakes in (the RSS and Substack feeds) hold no content, and robots.txt and
@@ -26,11 +22,7 @@ export async function POST(request: Request): Promise<Response> {
     return Response.json({ error: "Unauthorized" }, { status: 401 })
   }
 
-  const docs = await syncRepoDocs(await getPayloadConfig())
   revalidatePath("/", "layout")
 
-  return Response.json({
-    revalidated: true,
-    docs: docs && { created: docs.created, updated: docs.updated },
-  })
+  return Response.json({ revalidated: true })
 }

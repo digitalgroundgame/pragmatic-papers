@@ -17,9 +17,6 @@
   },
   "vars": {
     "USE_LOCAL_STORAGE": "true",
-    // The Worker reads staging's database, whose docs staging's own deploy syncs. It has no
-    // src/docs/ to read, and its /next/revalidate-all also runs on every save (purgeEdgeCache).
-    "DOCS_SYNC": "false",
   },
   "services": [
     {

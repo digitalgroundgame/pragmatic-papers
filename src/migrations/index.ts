@@ -53,7 +53,6 @@ import * as migration_20261008_005532_add_media_unsplash_id from "./20261008_005
 import * as migration_20261009_022245_links_onto_link2 from "./20261009_022245_links_onto_link2"
 import * as migration_20261009_032243_hero_links_default_button from "./20261009_032243_hero_links_default_button"
 import * as migration_20261009_040730_add_ticker_and_integrations from "./20261009_040730_add_ticker_and_integrations"
-import * as migration_20261009_080507_add_docs from "./20261009_080507_add_docs"
 
 export const migrations = [
   {
@@ -330,10 +329,5 @@ export const migrations = [
     up: migration_20261009_040730_add_ticker_and_integrations.up,
     down: migration_20261009_040730_add_ticker_and_integrations.down,
     name: "20261009_040730_add_ticker_and_integrations",
-  },
-  {
-    up: migration_20261009_080507_add_docs.up,
-    down: migration_20261009_080507_add_docs.down,
-    name: "20261009_080507_add_docs",
   },
 ]

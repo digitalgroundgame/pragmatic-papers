@@ -8,7 +8,6 @@ export const collectionPrefixMap: Partial<Record<CollectionSlug, string>> = {
   volumes: "/volumes",
   topics: "/topics",
   interactives: "/interactives",
-  docs: "/docs",
 }
 
 // eslint-disable-next-line @typescript-eslint/consistent-type-definitions

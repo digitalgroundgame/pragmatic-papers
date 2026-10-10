@@ -21,7 +21,7 @@ export const Newton4: LayoutDefinition = {
 export const Newton4Layout: React.FC<LayoutProps> = ({
   className,
   slots,
-  priority,
+  preload,
   loading,
   ...props
 }) => {
@@ -33,7 +33,7 @@ export const Newton4Layout: React.FC<LayoutProps> = ({
       <CollectionTile
         className="h-full"
         tile={featured}
-        priority={priority}
+        preload={preload}
         sizes="(max-width: 768px) 100vw, 920px"
         variant="large"
       />

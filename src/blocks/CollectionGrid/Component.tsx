@@ -31,9 +31,9 @@ const layouts = {
 } as const satisfies Record<NonNullable<CollectionGridLayout>, React.FC<LayoutProps>>
 
 export const CollectionGridBlock: React.FC<
-  CollectionGridBlockType & { priority?: boolean }
+  CollectionGridBlockType & { preload?: boolean }
 > = async (props) => {
-  const { layout, id, slots, priority } = props
+  const { layout, id, slots, preload } = props
   if (!layout) return null
   const LayoutComponent = layouts[layout]
   if (!LayoutComponent) return null
@@ -43,8 +43,8 @@ export const CollectionGridBlock: React.FC<
         id={id ?? undefined}
         className="container mb-9 items-stretch md:mb-12"
         slots={slots}
-        priority={priority}
-        loading={priority ? "eager" : undefined}
+        preload={preload}
+        loading={preload ? "eager" : undefined}
       />
       <div className="container mb-9 last:hidden md:mb-12">
         <Separator />

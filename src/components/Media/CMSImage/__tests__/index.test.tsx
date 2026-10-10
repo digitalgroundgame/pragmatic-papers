@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it } from "vitest"
 
 import type { Media as MediaType } from "@/payload-types"
 
-import { ImageMedia } from ".."
+import { CMSImage } from ".."
 
 type ImageMediaDoc = MediaType & { mimeType: `image/${string}` }
 
@@ -23,10 +23,10 @@ function makeMedia(overrides: Partial<MediaType> = {}): ImageMediaDoc {
 
 afterEach(cleanup)
 
-describe("ImageMedia placeholder", () => {
+describe("CMSImage placeholder", () => {
   it("blurs over a preview derived from the image itself", () => {
     const { container } = render(
-      <ImageMedia media={makeMedia({ blurDataURL: "data:image/png;base64,AAAA" })} />,
+      <CMSImage media={makeMedia({ blurDataURL: "data:image/png;base64,AAAA" })} />,
     )
 
     const img = container.querySelector("img")!
@@ -38,7 +38,7 @@ describe("ImageMedia placeholder", () => {
     // bytes to derive a preview from. A stand-in blob would be a fixed colour
     // over a transparent PNG: wrong in one theme, and visible through the
     // product. Better to let the container's themed background show.
-    const { container } = render(<ImageMedia media={makeMedia({ blurDataURL: null })} />)
+    const { container } = render(<CMSImage media={makeMedia({ blurDataURL: null })} />)
 
     const img = container.querySelector("img")!
     expect(img.style.backgroundImage).toBe("")

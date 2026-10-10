@@ -43,7 +43,7 @@ export const Gauss10: LayoutDefinition = {
 export const Gauss10Layout: React.FC<LayoutProps> = ({
   className,
   slots,
-  priority,
+  preload,
   loading,
   ...props
 }) => {
@@ -80,7 +80,7 @@ export const Gauss10Layout: React.FC<LayoutProps> = ({
           className="flex-1"
           tile={featured}
           imagePosition="above"
-          priority={priority}
+          preload={preload}
           sizes="(max-width: 768px) 100vw, 460px"
           variant="medium"
         />

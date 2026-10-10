@@ -13,6 +13,6 @@ export interface LayoutDefinition {
 
 export interface LayoutProps extends React.ComponentProps<"section"> {
   slots: CollectionGridSlots
-  priority?: boolean
+  preload?: boolean
   loading?: "eager" | "lazy"
 }

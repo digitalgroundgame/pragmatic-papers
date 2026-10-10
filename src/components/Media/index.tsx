@@ -3,14 +3,14 @@ import React from "react"
 
 import type { AudioMediaProps } from "./AudioMedia"
 import { AudioMedia, VideoMedia } from "./lazy"
-import { ImageMedia, type ImageMediaProps } from "./ImageMedia"
+import { CMSImage, type CMSImageProps } from "./CMSImage"
 import { isAudioMedia, isImageMedia, isVideoMedia } from "./types"
 import type { VideoMediaProps } from "./VideoMedia"
 
 export * from "./types"
 
 type MediaPropsTypes =
-  VideoMediaProps | ImageMediaProps | AudioMediaProps | { media?: MediaType | number | null }
+  VideoMediaProps | CMSImageProps | AudioMediaProps | { media?: MediaType | number | null }
 
 // Narrowing `props.media` doesn't narrow `props` itself — mimeType is a template
 // literal, not a discriminant — so the guards are lifted to the props object.
@@ -22,7 +22,7 @@ function isAudioMediaProps(props: MediaPropsTypes): props is AudioMediaProps {
   return isAudioMedia(props.media)
 }
 
-function isImageMediaProps(props: MediaPropsTypes): props is ImageMediaProps {
+function isImageMediaProps(props: MediaPropsTypes): props is CMSImageProps {
   return isImageMedia(props.media)
 }
 
@@ -36,7 +36,7 @@ export const Media: React.FC<MediaPropsTypes> = (props) => {
   }
 
   if (isImageMediaProps(props)) {
-    return <ImageMedia {...props} />
+    return <CMSImage {...props} />
   }
 
   return null

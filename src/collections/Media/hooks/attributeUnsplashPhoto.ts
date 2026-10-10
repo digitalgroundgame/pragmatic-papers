@@ -1,4 +1,4 @@
-import { APIError, type CollectionBeforeChangeHook } from "payload"
+import { APIError, type CollectionBeforeValidateHook } from "payload"
 
 import { unsplash } from "@/integrations"
 import type { UnsplashPhoto } from "@/integrations/unsplash"
@@ -14,16 +14,19 @@ import { unsplashCredit, withCredit } from "../unsplashCredit"
  * rather than trusted from the form, so the credit always names the real photographer; it
  * replaces the credit the picker put in the caption, so there's only ever one.
  *
+ * It runs before validation, so the alt text it fills in counts toward the alt text an image
+ * needs (`validateAlt`).
+ *
  * When Unsplash can't be reached the save fails and says so, rather than keeping a photo
  * nobody is credited for; saving again retries.
  */
-export const attributeUnsplashPhoto: CollectionBeforeChangeHook<Media> = async ({
+export const attributeUnsplashPhoto: CollectionBeforeValidateHook<Media> = async ({
   data,
   originalDoc,
   req,
 }) => {
-  const photoId = data.unsplashId
-  if (!photoId || photoId === originalDoc?.unsplashId) return data
+  const photoId = data?.unsplashId
+  if (!data || !photoId || photoId === originalDoc?.unsplashId) return data
 
   let photo: UnsplashPhoto
   try {

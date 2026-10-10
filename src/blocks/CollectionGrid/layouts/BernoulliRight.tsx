@@ -15,7 +15,7 @@ export const BernoulliRight: LayoutDefinition = {
  */
 export const BernoulliRightLayout: React.FC<LayoutProps> = ({
   slots,
-  priority,
+  preload,
   loading: _loading,
   ...props
 }) => {
@@ -25,7 +25,7 @@ export const BernoulliRightLayout: React.FC<LayoutProps> = ({
       <CollectionTile
         tile={featured}
         imagePosition="right"
-        priority={priority}
+        preload={preload}
         sizes="(max-width: 768px) 100vw, 620px"
         variant="medium"
       />

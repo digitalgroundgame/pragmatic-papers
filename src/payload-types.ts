@@ -418,6 +418,9 @@ export interface Page {
  */
 export interface Media {
   id: number;
+  /**
+   * What the image shows, for readers who can't see it. Required for images.
+   */
   alt?: string | null;
   caption?: {
     root: {

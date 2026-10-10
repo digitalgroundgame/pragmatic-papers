@@ -68,7 +68,7 @@ describe("changedComponents", () => {
 
   it("matches a file in a component's folder or below it", () => {
     expect(titles(["src/blocks/Banner/config.ts"])).toEqual(["Blocks/Banner"])
-    expect(titles(["src/components/Media/ImageMedia/index.tsx"])).toEqual(["Components/Media"])
+    expect(titles(["src/components/Media/CMSImage/index.tsx"])).toEqual(["Components/Media"])
   })
 
   it("doesn't match a whole folder of primitives by folder alone", () => {

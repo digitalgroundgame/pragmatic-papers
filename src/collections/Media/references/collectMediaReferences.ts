@@ -64,7 +64,7 @@ export const SOURCES: Source[] = [
     drafts: true,
     titleField: "title",
     hasSlug: true,
-    fields: [],
+    fields: ["heroImage"],
     blockFields: ["content"],
   },
   {

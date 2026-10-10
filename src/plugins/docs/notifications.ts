@@ -1,6 +1,8 @@
 import { hasRoleOrAdmin, isStaff, type Role } from "@/access/roles"
 import type { NotificationSource } from "@/plugins/notifications"
 
+import { docThumbnail } from "./thumbnail"
+
 /**
  * Help docs for the notifications bell, for staff only: every published doc whose audience
  * includes one of the user's roles (or that has none), newest first, dated by its
@@ -26,6 +28,7 @@ export const docsNotifications = (): NotificationSource => ({
         summary: doc.summary,
         href: `/docs/${doc.slug}`,
         date: doc.publishedAt,
+        image: docThumbnail(doc.heroImage),
       }))
   },
 })

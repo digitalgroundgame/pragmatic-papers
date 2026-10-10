@@ -141,25 +141,36 @@ served stale). When the feature graduates, delete the checkbox and the checks.
 A release that changes what staff do in the admin ships a help doc in the same
 PR. Docs are the `docs` collection (`src/plugins/docs/`, the docs plugin),
 served at `/docs/<slug>` and listed at `/docs`, so they can hold blocks and
-images like an article. The ones a release ships live in the repo, one folder
-each: `src/docs/<slug>/doc.json` beside the files it shows. Once per deploy,
+images like an article. The ones a release ships live in the repo as Markdown,
+a folder per sidebar section (`DOC_SECTIONS` in `src/plugins/docs/sections.ts`):
+`src/docs/<section>/<slug>.md`, with the pictures it shows beside it, each named
+for the doc (`<slug>-hero.webp`, `<slug>-drawer.webp`). Once per deploy,
 `/next/revalidate-all` (which `start.sh` calls when a deploy goes live) writes
-every folder into that site's database, published, uploading its files to Media
-(`syncRepoDocs`); a doc whose JSON and files hash the same as last time is
-skipped (`DOCS_SYNC=false` turns the sync off, as the staging Worker does: it
-reads staging's database and has no `src/docs/` of its own).
-`pnpm dev:db-seed` syncs them locally. To add one:
+every doc into that site's database, published, converting the Markdown with the
+docs editor and uploading its pictures to Media (`syncRepoDocs`); a doc whose
+file and pictures hash the same as last time is skipped (`DOCS_SYNC=false` turns
+the sync off, as the staging Worker does: it reads staging's database and has no
+`src/docs/` of its own). `pnpm dev:db-seed` syncs them locally.
 
-1. Write it in the local admin (**Help → Docs**): a `summary` of a sentence or
-   two (the bell shows it), `publishedAt` (the day the release reaches
-   production; for a feature that shipped earlier, the day it did) and,
-   for a doc only some roles need, `audience` (e.g. `["editor"]`; admins and
-   chief editors see every doc). It only decides who the bell tells: every
-   published doc is public at /docs, as the repo is.
-2. `pnpm docs:export <slug>` writes it into `src/docs/<slug>/`, swapping each
-   Media document for a `{ "$media": "<file>" }` reference to a copy beside the
-   JSON, since Media ids differ from site to site. Links to other documents
-   carry this database's ids, so link to their URLs instead.
+A doc's front matter (`src/plugins/docs/docFile.ts`) holds its `title`, a
+`navTitle` of 24 characters at most for the sidebar, a `summary` of a sentence
+or two (the bell shows it), `publishedAt` (the day the release reaches
+production; for a feature that shipped earlier, the day it did), `revisedAt`
+when a later release changes it (shown as "Updated …" beside the date; the bell
+keeps it under `publishedAt`), `heroImage` and `heroAlt` (1200×630, the bell's
+thumbnail and the link preview's image; the doc page doesn't show it) and, for a
+doc only some roles need, `audience` (e.g. `[editor]`; admins and chief editors
+see every doc). `audience` only decides who the bell tells: every published doc
+is public at /docs, as the repo is. The body is Markdown the docs editor can
+hold (headings, lists, bold, italic, inline code, links), plus pictures on a
+line of their own, `![alt](<slug>-picture.webp)`, which become Media blocks.
+Link to other pages by URL. Other blocks can't be written in Markdown.
+`src/plugins/docs/__tests__/repoDocs.test.ts` and `markdown.test.ts` check every
+doc.
+
+To write one in the local admin instead (**Help → Docs**), `pnpm docs:export
+<slug>` writes it into its section's folder, copying the pictures it uses beside
+it.
 
 The bell lists each doc under its `publishedAt`, newest first.
 

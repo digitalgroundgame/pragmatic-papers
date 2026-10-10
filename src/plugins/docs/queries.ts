@@ -10,7 +10,7 @@ const findPublishedDocs = async () => {
   const payload = await getPayloadConfig()
   const { docs } = await payload.find({
     collection: DOCS_SLUG,
-    depth: 0,
+    depth: 1,
     draft: false,
     limit: 1000,
     overrideAccess: false,
@@ -19,16 +19,23 @@ const findPublishedDocs = async () => {
     select: {
       slug: true,
       title: true,
+      navTitle: true,
       summary: true,
       publishedAt: true,
       updatedAt: true,
+      section: true,
       audience: true,
+      heroImage: true,
+    },
+    // Enough of the hero image for a thumbnail.
+    populate: {
+      media: { alt: true, filename: true, mimeType: true, url: true, sizes: { thumbnail: true } },
     },
   })
   return docs
 }
 
-/** Every published doc, newest first, without its content: the /docs index, its sitemap and the bell. */
+/** Every published doc, newest first, without its content: the /docs index, its sitemap and the bell (with each hero image's thumbnail). */
 export const queryPublishedDocs = (): ReturnType<typeof findPublishedDocs> =>
   unstable_cache(findPublishedDocs, ["docs-published"], {
     tags: [DOCS_CACHE_TAG],

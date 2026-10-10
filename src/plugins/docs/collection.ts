@@ -13,6 +13,7 @@ import {
   FixedToolbarFeature,
   HeadingFeature,
   HorizontalRuleFeature,
+  InlineCodeFeature,
   InlineToolbarFeature,
   lexicalEditor,
   OrderedListFeature,
@@ -21,6 +22,7 @@ import {
 import type { Access, CollectionConfig } from "payload"
 
 import { revalidateDoc, revalidateDocDelete } from "./revalidateDoc"
+import { DEFAULT_DOC_SECTION, DOC_SECTIONS } from "./sections"
 
 export const DOCS_SLUG = "docs"
 
@@ -65,7 +67,7 @@ export const Docs: CollectionConfig<"docs"> = {
   admin: {
     group: "Help",
     useAsTitle: "title",
-    defaultColumns: ["title", "audience", "publishedAt", "updatedAt"],
+    defaultColumns: ["title", "section", "audience", "publishedAt", "updatedAt"],
     livePreview: {
       url: ({ data, req }) => generatePreviewPath({ slug: data?.slug, collection: DOCS_SLUG, req }),
     },
@@ -79,12 +81,33 @@ export const Docs: CollectionConfig<"docs"> = {
       required: true,
     },
     {
+      name: "navTitle",
+      label: "Sidebar title",
+      type: "text",
+      admin: {
+        description:
+          'A short name for the docs sidebar, like "Footnotes". Left empty, the sidebar shows the title.',
+      },
+    },
+    {
       name: "summary",
       type: "textarea",
       required: true,
       maxLength: 200,
       admin: {
         description: "One or two sentences. The help bell shows it under the title.",
+      },
+    },
+    {
+      // Not shown on the doc itself: it's the doc's picture elsewhere.
+      name: "heroImage",
+      type: "upload",
+      relationTo: "media",
+      required: true,
+      admin: {
+        position: "sidebar",
+        description:
+          "The help bell shows it beside the title, and link previews use it. It isn't shown on the doc.",
       },
     },
     {
@@ -102,6 +125,8 @@ export const Docs: CollectionConfig<"docs"> = {
           FixedToolbarFeature(),
           InlineToolbarFeature(),
           HorizontalRuleFeature(),
+          // Docs name things to type, like /banner, in code.
+          InlineCodeFeature(),
           UnorderedListFeature(),
           OrderedListFeature(),
         ],
@@ -115,6 +140,28 @@ export const Docs: CollectionConfig<"docs"> = {
         position: "sidebar",
         date: { pickerAppearance: "dayOnly", displayFormat: "MMMM d, yyyy" },
         description: "The day the feature reaches the live site. Newest docs list first.",
+      },
+    },
+    {
+      name: "revisedAt",
+      label: "Updated",
+      type: "date",
+      admin: {
+        position: "sidebar",
+        date: { pickerAppearance: "dayOnly", displayFormat: "MMMM d, yyyy" },
+        description:
+          "The day the doc last changed in a way readers should know about, shown beside its date. The bell still lists it under the published date.",
+      },
+    },
+    {
+      name: "section",
+      type: "select",
+      required: true,
+      defaultValue: DEFAULT_DOC_SECTION,
+      options: DOC_SECTIONS.map(({ value, label }) => ({ value, label })),
+      admin: {
+        position: "sidebar",
+        description: "Where the doc sits in the sidebar at /docs.",
       },
     },
     {
@@ -140,7 +187,7 @@ export const Docs: CollectionConfig<"docs"> = {
         readOnly: true,
         condition: (data) => Boolean(data?.sourceHash),
         description:
-          "This doc ships with the code (src/docs/), so it can't be edited here. Change it locally and export it with pnpm docs:export.",
+          "This doc ships with the code, so it can't be edited here. Change its Markdown file in src/docs/ instead.",
       },
     },
     slugField(),

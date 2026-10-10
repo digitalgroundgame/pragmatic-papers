@@ -4,6 +4,12 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vites
 import { seed } from "../index"
 
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn(), revalidateTag: vi.fn() }))
+// The repo's help docs are synced for real; only the editor's Markdown conversion, which needs
+// Payload's config, is left out.
+vi.mock("@/plugins/docs/markdown", () => ({
+  docsEditorConfig: () => ({}),
+  markdownToContent: () => ({ root: { children: [] } }),
+}))
 
 // Collections and globals whose hooks call revalidatePath/revalidateTag. A
 // write to one of these without `disableRevalidate` crashes `pnpm dev:db-seed`.

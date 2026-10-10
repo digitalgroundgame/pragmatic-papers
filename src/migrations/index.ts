@@ -54,6 +54,10 @@ import * as migration_20261009_022245_links_onto_link2 from "./20261009_022245_l
 import * as migration_20261009_032243_hero_links_default_button from "./20261009_032243_hero_links_default_button"
 import * as migration_20261009_040730_add_ticker_and_integrations from "./20261009_040730_add_ticker_and_integrations"
 import * as migration_20261009_080507_add_docs from "./20261009_080507_add_docs"
+import * as migration_20261010_000818_add_docs_hero_image from "./20261010_000818_add_docs_hero_image"
+import * as migration_20261010_035205_add_docs_section from "./20261010_035205_add_docs_section"
+import * as migration_20261010_041032_add_docs_revised_at from "./20261010_041032_add_docs_revised_at"
+import * as migration_20261010_051703_add_docs_nav_title from "./20261010_051703_add_docs_nav_title"
 
 export const migrations = [
   {
@@ -335,5 +339,25 @@ export const migrations = [
     up: migration_20261009_080507_add_docs.up,
     down: migration_20261009_080507_add_docs.down,
     name: "20261009_080507_add_docs",
+  },
+  {
+    up: migration_20261010_000818_add_docs_hero_image.up,
+    down: migration_20261010_000818_add_docs_hero_image.down,
+    name: "20261010_000818_add_docs_hero_image",
+  },
+  {
+    up: migration_20261010_035205_add_docs_section.up,
+    down: migration_20261010_035205_add_docs_section.down,
+    name: "20261010_035205_add_docs_section",
+  },
+  {
+    up: migration_20261010_041032_add_docs_revised_at.up,
+    down: migration_20261010_041032_add_docs_revised_at.down,
+    name: "20261010_041032_add_docs_revised_at",
+  },
+  {
+    up: migration_20261010_051703_add_docs_nav_title.up,
+    down: migration_20261010_051703_add_docs_nav_title.down,
+    name: "20261010_051703_add_docs_nav_title",
   },
 ]

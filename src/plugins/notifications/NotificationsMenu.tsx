@@ -163,7 +163,7 @@ export function NotificationsMenu({
                         loading="lazy"
                         width={48}
                         height={48}
-                        className="bg-muted mt-0.5 size-12 shrink-0 rounded-md object-cover"
+                        className="bg-muted border-border mt-0.5 size-12 shrink-0 rounded-md border object-cover"
                       />
                     )}
                     <span className="flex min-w-0 flex-col gap-1">

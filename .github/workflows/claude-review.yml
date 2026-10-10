@@ -42,8 +42,12 @@ jobs:
         with:
           fetch-depth: 0
 
+      # Under the job's limit: a job timeout cancels the run, which skips the
+      # steps below and leaves the PR's status pending. A step timeout only
+      # stops this step, so the verdict is still reported.
       - name: Run Claude code review
         id: review
+        timeout-minutes: 17
         uses: anthropics/claude-code-action@v1
         with:
           # A Claude subscription token from `claude setup-token`, so reviews

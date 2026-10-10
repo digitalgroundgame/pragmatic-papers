@@ -113,7 +113,12 @@ export default async function DocPage({ params }: Args): Promise<React.ReactNode
                 </ArticleSidebar>
               )}
               <div className="max-w-2xl">
-                <RichText data={content} enableGutter={false} className="drop-cap" />
+                <RichText
+                  data={content}
+                  enableGutter={false}
+                  // The separator above already sets the doc off from its header.
+                  className="drop-cap [&>:first-child]:mt-0"
+                />
                 <EndRule content={content} />
               </div>
             </div>

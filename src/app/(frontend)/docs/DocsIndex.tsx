@@ -12,8 +12,8 @@ import React from "react"
 /** How many of the newest docs the index lists; the sidebar lists every doc. */
 const LATEST = 8
 
-/** The site's kicker: the small brand-colored label over a list. */
-const KICKER = "text-brand-text font-serif text-sm font-bold tracking-wider uppercase"
+/** The small serif label over a list, as the sidebar labels its sections. */
+const KICKER = "text-muted-foreground font-serif text-sm font-bold tracking-wider uppercase"
 
 export type DocsIndexDoc = Awaited<ReturnType<typeof queryPublishedDocs>>[number]
 

@@ -25,7 +25,7 @@ export function DocsNav({ sections, current, className }: DocsNavProps): React.R
         aria-current={current ? undefined : "page"}
         className={cn(
           "block font-bold no-underline underline-offset-4 hover:underline",
-          current ? "text-foreground hover:text-foreground/80" : "text-brand-text",
+          current ? "text-muted-foreground hover:text-foreground" : "text-foreground",
         )}
       >
         All docs
@@ -35,7 +35,7 @@ export function DocsNav({ sections, current, className }: DocsNavProps): React.R
           {/* Not a heading: the nav comes before the page's h1. */}
           <p
             id={`docs-nav-${section.value}`}
-            className="text-brand-text mb-2 text-sm font-bold tracking-wider uppercase"
+            className="text-muted-foreground mb-2 text-sm font-bold tracking-wider uppercase"
           >
             {section.label}
           </p>

@@ -7,6 +7,7 @@ import {
   BASE_IMAGE,
   OWNER_LABEL,
   pruneSnapshots,
+  pullImage,
   snapshotTag,
   startTestDatabase,
   sweepOrphans,
@@ -122,6 +123,49 @@ describe("pruneSnapshots()", () => {
   })
 })
 
+describe("pullImage()", () => {
+  const rateLimited = () =>
+    Object.assign(new Error("Command failed: docker pull"), {
+      stderr: "docker: toomanyrequests: Rate exceeded",
+    })
+
+  it("retries while the registry rate-limits, waiting longer each time", async () => {
+    let failures = 2
+    const docker = vi.fn((): string => {
+      if (failures-- > 0) throw rateLimited()
+      return ""
+    })
+    const wait = vi.fn(async () => undefined)
+    await pullImage(docker, BASE_IMAGE, { log: vi.fn(), wait })
+    expect(docker).toHaveBeenCalledTimes(3)
+    expect(docker).toHaveBeenLastCalledWith(["pull", BASE_IMAGE])
+    expect(wait.mock.calls).toEqual([[5_000], [15_000]])
+  })
+
+  it("gives up after its last wait", async () => {
+    const docker = vi.fn((): string => {
+      throw rateLimited()
+    })
+    const wait = vi.fn(async () => undefined)
+    await expect(pullImage(docker, BASE_IMAGE, { log: vi.fn(), wait })).rejects.toThrow(
+      "docker pull",
+    )
+    expect(wait).toHaveBeenCalledTimes(4)
+    expect(docker).toHaveBeenCalledTimes(5)
+  })
+
+  it("doesn't retry any other failure", async () => {
+    const docker = vi.fn((): string => {
+      throw new Error("manifest unknown")
+    })
+    const wait = vi.fn(async () => undefined)
+    await expect(pullImage(docker, BASE_IMAGE, { log: vi.fn(), wait })).rejects.toThrow(
+      "manifest unknown",
+    )
+    expect(wait).not.toHaveBeenCalled()
+  })
+})
+
 describe("startTestDatabase()", () => {
   const log = vi.fn()
 
@@ -218,6 +262,27 @@ describe("startTestDatabase()", () => {
     })
     expect(migrate).toHaveBeenCalledTimes(1)
     expect(calls.some(([command]) => command === "commit")).toBe(false)
+    db.stop()
+  })
+
+  it("pulls Postgres first when it isn't on this machine, in CI too", async () => {
+    const { docker, calls, images } = fakeDocker([])
+    const pull = vi.fn()
+    // A pull fetches the image; everything else goes to the fake.
+    const wrapped = vi.fn((args: string[]) => {
+      if (args[0] !== "pull") return docker(args)
+      pull(args)
+      images.push(BASE_IMAGE)
+      return ""
+    })
+    const db = await startTestDatabase({
+      migrate: vi.fn(),
+      docker: wrapped,
+      log,
+      env: { CI: "true" },
+    })
+    expect(pull).toHaveBeenCalledWith(["pull", BASE_IMAGE])
+    expect(runs(calls)[0]!.at(-1)).toBe(BASE_IMAGE)
     db.stop()
   })
 

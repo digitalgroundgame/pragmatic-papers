@@ -49,6 +49,31 @@ const defaultDocker = (args) =>
 /** @param {number} ms */
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 
+// Waits between pulls when the registry rate-limits. ECR Public throttles anonymous pulls per
+// IP, and GitHub's shared runners share their IPs with other repositories.
+const PULL_RETRY_DELAYS_MS = [5_000, 15_000, 30_000, 60_000]
+
+/**
+ * Pulls `image`, retrying while the registry answers `toomanyrequests`.
+ * @param {(args: string[]) => string} docker
+ * @param {string} image
+ * @param {{ log?: (message: string) => void, wait?: (ms: number) => Promise<unknown> }} [options]
+ */
+export async function pullImage(docker, image, { log = console.warn, wait = sleep } = {}) {
+  for (let attempt = 0; ; attempt++) {
+    try {
+      docker(["pull", image])
+      return
+    } catch (error) {
+      const delay = PULL_RETRY_DELAYS_MS[attempt]
+      const output = `${/** @type {{ stderr?: unknown }} */ (error).stderr ?? ""} ${error}`
+      if (delay === undefined || !/toomanyrequests|rate exceeded/i.test(output)) throw error
+      log(`The registry is rate-limiting pulls of ${image}; retrying in ${delay / 1000}s...`)
+      await wait(delay)
+    }
+  }
+}
+
 const LOCAL_HOSTS = new Set(["localhost", "127.0.0.1", "::1", "[::1]"])
 
 /**
@@ -281,6 +306,7 @@ function stopOnExit(stop) {
  * @param {(message: string) => void} [options.log]
  * @param {(args: string[]) => string} [options.docker]
  * @param {Record<string, string | undefined>} [options.env]
+ * @param {(ms: number) => Promise<unknown>} [options.wait] Waits between rate-limited pulls.
  * @returns {Promise<TestDatabase>}
  */
 export async function startTestDatabase({
@@ -289,6 +315,7 @@ export async function startTestDatabase({
   log = console.warn,
   docker = defaultDocker,
   env = process.env,
+  wait = sleep,
 }) {
   const external = env.TEST_DATABASE_URI
   if (external) {
@@ -302,15 +329,16 @@ export async function startTestDatabase({
     log(`Removed test database ${id.slice(0, 12)}, left by a run that was killed.`)
   }
 
+  try {
+    docker(["image", "inspect", BASE_IMAGE])
+  } catch {
+    log(`Pulling ${BASE_IMAGE}...`)
+    await pullImage(docker, BASE_IMAGE, { log, wait })
+  }
+
   const useSnapshot = snapshot && !env.CI
   let tag = null
   if (useSnapshot) {
-    try {
-      docker(["image", "inspect", BASE_IMAGE])
-    } catch {
-      log(`Pulling ${BASE_IMAGE}...`)
-      docker(["pull", BASE_IMAGE])
-    }
     tag = snapshotTag({ baseImageId: docker(["image", "inspect", "-f", "{{.Id}}", BASE_IMAGE]) })
   }
 

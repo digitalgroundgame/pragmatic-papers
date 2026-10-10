@@ -18,15 +18,15 @@ import { Breadcrumbs } from "@/components/Breadcrumbs"
 
 export async function generateMetadata({ searchParams }: Args): Promise<Metadata> {
   const { p } = await searchParams
-  const canonicalUrl = `${getServerSideURL()}${paginatedPath("/authors", p)}`
+  const canonicalUrl = `${getServerSideURL()}${paginatedPath("/contributors", p)}`
 
   return {
-    title: "Authors — Pragmatic Papers",
-    description: "Discover all Pragmatic Papers authors and explore their published work.",
+    title: "Contributors — Pragmatic Papers",
+    description: "Discover all Pragmatic Papers contributors and explore their published work.",
     alternates: { canonical: canonicalUrl },
     openGraph: mergeOpenGraph({
-      title: "Authors — Pragmatic Papers",
-      description: "Discover all Pragmatic Papers authors and explore their published work.",
+      title: "Contributors — Pragmatic Papers",
+      description: "Discover all Pragmatic Papers contributors and explore their published work.",
       url: canonicalUrl,
     }),
   }
@@ -68,16 +68,16 @@ async function AuthorContent({ page }: { page: number }) {
   if (page > 1 && page > totalPages) notFound()
 
   if (authors.length === 0) {
-    return <p className="text-muted-foreground text-center text-sm">No authors found.</p>
+    return <p className="text-muted-foreground text-center text-sm">No contributors found.</p>
   }
 
   return (
     <>
-      <section aria-label="All authors">
+      <section aria-label="All contributors">
         <div className="mb-4 flex items-center justify-between">
-          <h2>Meet the Author{authors.length > 1 ? "s" : ""}</h2>
+          <h2>Meet the Contributor{authors.length > 1 ? "s" : ""}</h2>
           <PageRange
-            collectionLabels={{ plural: "Authors", singular: "Author" }}
+            collectionLabels={{ plural: "Contributors", singular: "Contributor" }}
             currentPage={currentPage}
             limit={AUTHORS_PER_PAGE}
             totalDocs={totalDocs}
@@ -98,7 +98,7 @@ function AuthorContentSkeleton() {
   return (
     <div>
       <div className="mb-4 flex items-center justify-between">
-        <h2>Meet the Authors</h2>
+        <h2>Meet the Contributors</h2>
         <Skeleton className="h-5 w-48" />
       </div>
       <div className="flex flex-col gap-4">
@@ -137,12 +137,12 @@ export default async function AuthorsIndexPage({ searchParams }: Args): Promise<
 
   return (
     <>
-      <Breadcrumbs items={[{ name: "Authors", path: "/authors" }]} />
+      <Breadcrumbs items={[{ name: "Contributors", path: "/contributors" }]} />
       <article className="mx-auto max-w-3xl space-y-6 px-4">
         {draft && <LivePreviewListener />}
 
         <header className="space-y-3">
-          <h1>Authors</h1>
+          <h1>Contributors</h1>
           <p className="text-muted-foreground text-sm">
             Learn more about The Pragmatic Papers contributors and explore their work.
           </p>

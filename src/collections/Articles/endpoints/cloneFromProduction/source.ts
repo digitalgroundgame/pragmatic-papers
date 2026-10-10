@@ -71,7 +71,7 @@ const frontendPaths: Partial<Record<CollectionSlug, string>> = {
   articles: "/articles/",
   volumes: "/volumes/",
   topics: "/topics/",
-  users: "/authors/",
+  users: "/contributors/",
   pages: "/",
 }
 

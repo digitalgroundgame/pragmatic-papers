@@ -1,16 +1,7 @@
 import { hasRoleOrAdmin, isStaff, type Role } from "@/access/roles"
-import type { Doc } from "@/payload-types"
-import type { NotificationItem, NotificationSource } from "@/plugins/notifications"
-import { getMediaUrl } from "@/utilities/getMediaUrl"
+import type { NotificationSource } from "@/plugins/notifications"
 
-/** The hero image's 300px-wide thumbnail size, or the image itself where it has none (an SVG). */
-export const docThumbnail = (
-  heroImage: Doc["heroImage"] | null | undefined,
-): NotificationItem["image"] => {
-  if (!heroImage || typeof heroImage !== "object") return undefined
-  const url = getMediaUrl(heroImage.sizes?.thumbnail?.url || heroImage.url)
-  return url ? { url, alt: heroImage.alt ?? "" } : undefined
-}
+import { docThumbnail } from "./thumbnail"
 
 /**
  * Help docs for the notifications bell, for staff only: every published doc whose audience

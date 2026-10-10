@@ -19,13 +19,13 @@ interface DocsNavProps {
 /** Every doc under its section, like a wiki's sidebar. */
 export function DocsNav({ sections, current, className }: DocsNavProps): React.ReactNode {
   return (
-    <nav aria-label="Docs" className={cn("text-sm", className)}>
+    <nav aria-label="Docs" className={cn("font-serif", className)}>
       <Link
         href="/docs"
         aria-current={current ? undefined : "page"}
         className={cn(
-          "block font-semibold no-underline hover:underline",
-          current ? "text-muted-foreground hover:text-foreground" : "text-foreground",
+          "block font-bold no-underline underline-offset-4 hover:underline",
+          current ? "text-foreground hover:text-foreground/80" : "text-brand-text",
         )}
       >
         All docs
@@ -35,11 +35,11 @@ export function DocsNav({ sections, current, className }: DocsNavProps): React.R
           {/* Not a heading: the nav comes before the page's h1. */}
           <p
             id={`docs-nav-${section.value}`}
-            className="text-muted-foreground mb-2 text-xs font-semibold tracking-wide uppercase"
+            className="text-brand-text mb-2 text-sm font-bold tracking-wider uppercase"
           >
             {section.label}
           </p>
-          <ul aria-labelledby={`docs-nav-${section.value}`} className="border-border border-l">
+          <ul aria-labelledby={`docs-nav-${section.value}`} className="border-border border-l-2">
             {section.docs.map((doc) => {
               const active = doc.slug === current
               return (
@@ -48,10 +48,10 @@ export function DocsNav({ sections, current, className }: DocsNavProps): React.R
                     href={`/docs/${doc.slug}`}
                     aria-current={active ? "page" : undefined}
                     className={cn(
-                      "-ml-px block border-l py-1.5 pl-3 leading-snug no-underline hover:underline",
+                      "-ml-0.5 block border-l-2 py-1.5 pl-3 leading-snug no-underline underline-offset-4 hover:underline",
                       active
-                        ? "border-foreground text-foreground font-semibold"
-                        : "text-muted-foreground hover:text-foreground border-transparent",
+                        ? "border-brand text-foreground font-bold"
+                        : "text-foreground hover:text-foreground/80 border-transparent",
                     )}
                   >
                     {doc.title}

@@ -6,7 +6,8 @@ import type { User } from "@/payload-types"
 const { queryPublishedDocs } = vi.hoisted(() => ({ queryPublishedDocs: vi.fn() }))
 vi.mock("../queries", () => ({ queryPublishedDocs }))
 
-import { docsNotifications, docThumbnail } from "../notifications"
+import { docsNotifications } from "../notifications"
+import { docThumbnail } from "../thumbnail"
 
 const payload = {} as Payload
 const user = (roles: User["roles"]) => ({ id: 1, roles }) as User

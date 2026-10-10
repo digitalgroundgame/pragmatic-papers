@@ -63,7 +63,7 @@ export function DocsIndex({ docs }: { docs: DocsIndexDoc[] }): React.ReactNode {
                           />
                         )}
                         <span className="flex flex-col gap-2">
-                          <span className="font-display group-hover:text-foreground/80 text-2xl leading-none font-bold tracking-wide text-balance md:text-3xl">
+                          <span className="group-hover:text-foreground/80 font-sans text-xl leading-tight font-semibold tracking-tight text-balance md:text-2xl">
                             {doc.title}
                           </span>
                           <time

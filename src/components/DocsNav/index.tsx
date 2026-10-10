@@ -79,6 +79,9 @@ export function DocsLayout({ children, className, ...nav }: DocsLayoutProps): Re
     <div
       className={cn(
         "mx-auto grid max-w-7xl gap-10 px-4 pb-16 lg:grid-cols-[15rem_minmax(0,1fr)]",
+        // Docs are reference pages: their headings, the doc's own included, are in the body's
+        // sans rather than the site's display face.
+        "[&_:is(h1,h2,h3,h4,h5,h6)]:font-sans [&_:is(h1,h2,h3,h4,h5,h6)]:font-semibold [&_:is(h1,h2,h3,h4,h5,h6)]:tracking-tight",
         className,
       )}
     >

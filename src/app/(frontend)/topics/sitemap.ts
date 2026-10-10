@@ -1,6 +1,6 @@
 import type { MetadataRoute } from "next"
 
-import { getPayloadConfig } from "@/utilities/getPayloadConfig"
+import { getPayloadClient } from "@/data/payload"
 import { getSiteURL } from "@/utilities/getURL"
 
 // Read per request, like the topic pages it lists: Next would otherwise prerender it at build
@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic"
 
 /** /topics/sitemap.xml: the /topics index and every topic. */
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const payload = await getPayloadConfig()
+  const payload = await getPayloadClient()
   const siteUrl = getSiteURL()
 
   const { docs } = await payload.find({

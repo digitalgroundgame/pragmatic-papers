@@ -8,13 +8,12 @@ import { paginatedPath } from "@/utilities/generateMeta"
 import { getSiteURL } from "@/utilities/getURL"
 import { mergeOpenGraph } from "@/utilities/mergeOpenGraph"
 import { AUTHOR_ROLES } from "@/access/roles"
-import config from "@payload-config"
 import type { Metadata } from "next"
 import { draftMode } from "next/headers"
 import { notFound } from "next/navigation"
-import { getPayload } from "payload"
 import React, { cache, Suspense } from "react"
 import { Breadcrumbs } from "@/components/Breadcrumbs"
+import { getPayloadClient } from "@/data/payload"
 
 export async function generateMetadata({ searchParams }: Args): Promise<Metadata> {
   const { p } = await searchParams
@@ -36,7 +35,7 @@ const AUTHORS_PER_PAGE = 5
 
 const queryAuthors = cache(async (page: number = 1) => {
   const { isEnabled: draft } = await draftMode()
-  const payload = await getPayload({ config })
+  const payload = await getPayloadClient()
 
   const select: UsersSelect<true> = {
     name: true,

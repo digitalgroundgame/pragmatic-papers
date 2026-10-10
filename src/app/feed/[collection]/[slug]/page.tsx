@@ -1,6 +1,6 @@
 import { isExperimentEnabled } from "@/globals/SiteSettings/isExperimentEnabled"
 import { generateMeta } from "@/utilities/generateMeta"
-import { queryArticleBySlug } from "@/utilities/queries"
+import { queryArticleBySlug } from "@/data/queries"
 import type { Metadata } from "next"
 import { notFound } from "next/navigation"
 import React from "react"

@@ -20,7 +20,7 @@ vi.mock("../getFeedBatch", () => ({
   getFeedBatch: (args: unknown) => getFeedBatch(args),
   withVolumes: async (articles: unknown[]) => articles,
 }))
-vi.mock("@/utilities/queries", () => ({
+vi.mock("@/data/queries", () => ({
   queryArticleBySlug: (slug: string) => queryArticleBySlug(slug),
 }))
 vi.mock("../renderFeedArticle", () => ({

@@ -8,8 +8,8 @@ const { footer } = vi.hoisted(() => ({ footer: { current: {} as Partial<FooterGl
 
 // A marker: the blocks themselves, and the RichText behind them, have their own tests.
 vi.mock("@/blocks/Content/Component", () => ({ ContentBlock: () => null }))
-vi.mock("@/utilities/getGlobals", () => ({
-  getCachedGlobal: (slug: string) => async () => (slug === "footer" ? footer.current : {}),
+vi.mock("@/data/globals", () => ({
+  getGlobal: async (slug: string) => (slug === "footer" ? footer.current : {}),
 }))
 
 const { Footer } = await import("../Component")

@@ -14,8 +14,8 @@ const draftMode = vi.fn(async () => ({ isEnabled: false }))
 
 vi.mock("next/headers", () => ({ draftMode: () => draftMode() }))
 
-vi.mock("../getPayloadConfig", () => ({
-  getPayloadConfig: vi.fn(async () => ({ find })),
+vi.mock("@/data/payload", () => ({
+  getPayloadClient: vi.fn(async () => ({ find })),
 }))
 
 const { queryUserBySlug, queryVolumesForArticles } = await import("../queries")

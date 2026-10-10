@@ -2,7 +2,7 @@ import type { Metadata } from "next"
 
 import { PayloadRedirects } from "@/components/PayloadRedirects"
 import { homeStatic } from "@/endpoints/seed/home-static"
-import { queryPageBySlug } from "@/utilities/queries"
+import { queryPageBySlug } from "@/data/queries"
 import { draftMode } from "next/headers"
 import type { RequiredDataFromCollectionSlug } from "payload"
 
@@ -11,7 +11,7 @@ import { JsonLd } from "@/components/JsonLd"
 import { LivePreviewListener } from "@/components/LivePreviewListener"
 import { RenderHero } from "@/heros/RenderHero"
 import { generateMeta, paginatedPath } from "@/utilities/generateMeta"
-import { getCachedGlobal } from "@/utilities/getGlobals"
+import { getGlobal } from "@/data/globals"
 import { buildBreadcrumbJsonLd, buildHomeJsonLd } from "@/utilities/structuredData"
 import { Breadcrumbs, type Crumb } from "@/components/Breadcrumbs"
 
@@ -50,7 +50,7 @@ export default async function Page({ params, searchParams }: Args): Promise<Reac
   const pageNumber = pageString ? Math.max(Number(pageString) || 1, 1) : undefined
   const url = `/${slug}${pageNumber ? `?p=${pageNumber}` : ""}`
   let page: RequiredDataFromCollectionSlug<"pages"> | null = await queryPageBySlug(slug)
-  const { socials } = await getCachedGlobal("footer", 2)()
+  const { socials } = await getGlobal("footer", 2)
 
   // Remove this code once your website is seeded
   if (!page && slug === "home") {

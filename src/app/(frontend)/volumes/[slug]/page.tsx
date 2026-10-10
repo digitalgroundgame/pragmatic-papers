@@ -11,16 +11,15 @@ import type { Article, User } from "@/payload-types"
 import { formatLongDate } from "@/utilities/formatDate"
 import { generateMeta } from "@/utilities/generateMeta"
 import { getSiteURL } from "@/utilities/getURL"
-import { queryVolumeBySlug } from "@/utilities/queries"
+import { queryVolumeBySlug } from "@/data/queries"
 import { isResolved } from "@/utilities/relationships"
 import { buildBreadcrumbJsonLd, buildVolumeJsonLd } from "@/utilities/structuredData"
 import { toRoman } from "@/utilities/toRoman"
-import configPromise from "@payload-config"
 import type { Metadata } from "next"
 import { draftMode } from "next/headers"
-import { getPayload } from "payload"
 import React from "react"
 import { Breadcrumbs } from "@/components/Breadcrumbs"
+import { getPayloadClient } from "@/data/payload"
 
 // Prerendered from generateStaticParams; a slug published since the build is rendered on its
 // first request and cached the same way. Saving the volume, one of its articles or an author
@@ -28,7 +27,7 @@ import { Breadcrumbs } from "@/components/Breadcrumbs"
 export const revalidate = 3600
 
 export async function generateStaticParams(): Promise<{ slug: string | null | undefined }[]> {
-  const payload = await getPayload({ config: configPromise })
+  const payload = await getPayloadClient()
   const volumes = await payload.find({
     collection: "volumes",
     draft: false,

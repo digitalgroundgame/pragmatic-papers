@@ -3,16 +3,15 @@ import { PageRange } from "@/components/PageRange"
 import { Pagination } from "@/components/Pagination"
 import type { Media as MediaType } from "@/payload-types"
 import { arrayStringToPlainText } from "@/utilities/formatAuthors"
-import configPromise from "@payload-config"
 import { sql } from "@payloadcms/db-postgres"
 import type { Metadata } from "next"
 import { draftMode } from "next/headers"
 import type { PaginatedDocs } from "payload"
-import { getPayload } from "payload"
 import React, { cache } from "react"
 import { Breadcrumbs } from "@/components/Breadcrumbs"
 import { HoverPrefetchLink } from "@/components/Link/HoverPrefetchLink"
 import { docPath } from "@/utilities/routes"
+import { getPayloadClient } from "@/data/payload"
 
 interface SearchResult {
   id: number
@@ -30,7 +29,7 @@ const MAX_QUERY_LENGTH = 200
 
 const querySearch = cache(async (rawQuery: string, page: number) => {
   const { isEnabled: draft } = await draftMode()
-  const payload = await getPayload({ config: configPromise })
+  const payload = await getPayloadClient()
   const query = rawQuery.slice(0, MAX_QUERY_LENGTH).trim()
 
   if (!query) {

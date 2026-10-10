@@ -5,8 +5,8 @@ vi.mock("@/components/Logo/AnimatedLogo", () => ({ AnimatedLogo: () => null }))
 vi.mock("@/globals/SiteSettings/isExperimentEnabled", () => ({
   isExperimentEnabled: async () => false,
 }))
-vi.mock("@/utilities/getGlobals", () => ({
-  getCachedGlobal: (slug: string) => async () =>
+vi.mock("@/data/globals", () => ({
+  getGlobal: async (slug: string) =>
     slug === "header" ? { navItems: [], actions: [] } : { socials: [] },
 }))
 

@@ -3,12 +3,11 @@ import { afterEach, describe, expect, it, vi } from "vitest"
 
 const find = vi.fn()
 
-vi.mock("payload", () => ({ getPayload: vi.fn(async () => ({ find })) }))
-vi.mock("@payload-config", () => ({ default: Promise.resolve({}) }))
-
 const { checkArticles } = await import("../checkArticles")
 
-const check = (value: number[] | null | undefined) => checkArticles(value as never, {} as never)
+const req = { payload: { find } }
+const check = (value: number[] | null | undefined) =>
+  checkArticles(value as never, { req } as never)
 
 afterEach(() => {
   vi.clearAllMocks()

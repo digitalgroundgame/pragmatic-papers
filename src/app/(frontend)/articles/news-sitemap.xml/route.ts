@@ -1,7 +1,7 @@
 import { getServerSideSitemap } from "next-sitemap"
 import { unstable_cache } from "next/cache"
 
-import { getPayloadConfig } from "@/utilities/getPayloadConfig"
+import { getPayloadClient } from "@/data/payload"
 import { getSiteURL } from "@/utilities/getURL"
 
 // Google News reads only articles from the last two days, and asks that older ones leave the
@@ -10,7 +10,7 @@ const NEWS_WINDOW_MS = 2 * 24 * 60 * 60 * 1000
 
 const getNewsSitemap = unstable_cache(
   async () => {
-    const payload = await getPayloadConfig()
+    const payload = await getPayloadClient()
     const siteUrl = getSiteURL()
 
     const { docs } = await payload.find({

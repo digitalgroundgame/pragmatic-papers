@@ -3,15 +3,15 @@ import type { Config } from "@/payload-types"
 import { unstable_cache } from "next/cache"
 import { cache } from "react"
 
-import { getPayloadConfig } from "./getPayloadConfig"
+import { getPayloadClient } from "@/data/payload"
 
 type Global = keyof Config["globals"]
 
-const getGlobal = cache(async function getGlobalCached<T extends Global>(
+const readGlobal = cache(async function readGlobalUncached<T extends Global>(
   slug: T,
   depth = 0,
 ): Promise<Config["globals"][T]> {
-  const payload = await getPayloadConfig()
+  const payload = await getPayloadClient()
 
   const global = await payload.findGlobal({
     slug,
@@ -22,7 +22,8 @@ const getGlobal = cache(async function getGlobalCached<T extends Global>(
 })
 
 /**
- * Returns a unstable_cache function mapped with the cache tag for the slug.
+ * A global, cached across requests under the tag `global_<slug>`, which its revalidate hook
+ * clears.
  *
  * In development it skips `unstable_cache` and reads the database on every request
  * (`React.cache` still dedupes within one). `next dev` keeps that cache on disk in
@@ -30,10 +31,9 @@ const getGlobal = cache(async function getGlobalCached<T extends Global>(
  * it — so a seed, `dev:db-nuke`, `dev:db-fresh` or a script writing the globals would leave
  * the header and footer showing an earlier database's nav across restarts.
  */
-// eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
-export const getCachedGlobal = <T extends Global>(slug: T, depth = 0) =>
-  process.env.NODE_ENV === "development"
-    ? async () => getGlobal(slug, depth)
-    : unstable_cache(async () => getGlobal(slug, depth), [slug, String(depth)], {
-        tags: [`global_${slug}`],
-      })
+export function getGlobal<T extends Global>(slug: T, depth = 0): Promise<Config["globals"][T]> {
+  if (process.env.NODE_ENV === "development") return readGlobal(slug, depth)
+  return unstable_cache(async () => readGlobal(slug, depth), [slug, String(depth)], {
+    tags: [`global_${slug}`],
+  })()
+}

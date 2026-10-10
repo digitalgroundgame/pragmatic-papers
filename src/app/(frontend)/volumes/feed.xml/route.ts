@@ -1,11 +1,10 @@
 import { type NextRequest } from "next/server"
-import configPromise from "@payload-config"
-import { getPayload } from "payload"
 import { generateVolumeFeed } from "@/app/(frontend)/feeds/generateRssFeed"
 import { cache } from "react"
+import { getPayloadClient } from "@/data/payload"
 
 const queryVolumes = cache(async () => {
-  const payload = await getPayload({ config: configPromise })
+  const payload = await getPayloadClient()
 
   const volumes = await payload.find({
     collection: "volumes",

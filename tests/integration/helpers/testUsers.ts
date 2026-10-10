@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto"
-import { getPayloadConfig } from "@/utilities/getPayloadConfig"
+import { getPayloadClient } from "@/data/payload"
 import type { User } from "@/payload-types"
 import type { Payload } from "payload"
 
@@ -7,7 +7,7 @@ let payloadPromise: Promise<Payload> | null = null
 
 export function getPayload(): Promise<Payload> {
   if (!payloadPromise) {
-    payloadPromise = getPayloadConfig()
+    payloadPromise = getPayloadClient()
   }
   return payloadPromise
 }

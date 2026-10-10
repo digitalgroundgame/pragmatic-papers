@@ -1,6 +1,6 @@
 import type React from "react"
 
-import { getCachedRedirects } from "./getRedirects"
+import { getRedirects } from "./getRedirects"
 import { isResolved } from "@/utilities/relationships"
 import { docPath } from "@/utilities/routes"
 import { notFound, redirect } from "next/navigation"
@@ -12,7 +12,7 @@ interface Props {
 
 /* This component helps us with SSR based dynamic redirects */
 export const PayloadRedirects: React.FC<Props> = async ({ disableNotFound, url }) => {
-  const redirects = await getCachedRedirects()()
+  const redirects = await getRedirects()
 
   // eslint-disable-next-line @typescript-eslint/no-shadow
   const redirectItem = redirects.find((redirect) => redirect.from === url)

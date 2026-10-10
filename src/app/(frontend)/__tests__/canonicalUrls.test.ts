@@ -18,8 +18,8 @@ vi.mock("next/headers", () => ({ draftMode: async () => ({ isEnabled: false }) }
 vi.mock("@payload-config", () => ({ default: {} }))
 vi.mock("payload", () => ({ getPayload: async () => ({ find }) }))
 vi.mock("@payloadcms/db-postgres", () => ({ sql: vi.fn() }))
-vi.mock("@/utilities/queries", () => queries)
-vi.mock("@/utilities/getGlobals", () => ({ getCachedGlobal: () => async () => ({ socials: [] }) }))
+vi.mock("@/data/queries", () => queries)
+vi.mock("@/data/globals", () => ({ getGlobal: async () => ({ socials: [] }) }))
 vi.mock("@/endpoints/seed/home-static", () => ({ homeStatic: null }))
 
 const SITE = "https://pragmaticpapers.com"

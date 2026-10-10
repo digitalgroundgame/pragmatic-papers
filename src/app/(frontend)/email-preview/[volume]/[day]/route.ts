@@ -1,14 +1,14 @@
 import { render } from "@react-email/render"
 import { type NextRequest } from "next/server"
-import { getPayload, type PayloadRequest } from "payload"
+import { type PayloadRequest } from "payload"
 
 import { isEditor } from "@/access/roles"
-import configPromise from "@payload-config"
 import { VolumeArticleEmail } from "@/emails/VolumeArticle"
 import { getSiteURL } from "@/utilities/getURL"
 import { isResolved } from "@/utilities/relationships"
 
 import type { Article, Volume } from "@/payload-types"
+import { getPayloadClient } from "@/data/payload"
 
 /**
  * Editor-only HTML preview of the daily Volume-article email.
@@ -28,7 +28,7 @@ export async function GET(
 ): Promise<Response> {
   const { volume: volumeParam, day: dayParam } = await params
 
-  const payload = await getPayload({ config: configPromise })
+  const payload = await getPayloadClient()
   let user
   try {
     const auth = await payload.auth({

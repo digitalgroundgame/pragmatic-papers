@@ -1,11 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 const find = vi.fn()
-vi.mock("@/utilities/getPayloadConfig", () => ({
-  getPayloadConfig: vi.fn(async () => ({ find })),
+vi.mock("@/data/payload", () => ({
+  getPayloadClient: vi.fn(async () => ({ find })),
 }))
 const queryVolumesForArticles = vi.fn()
-vi.mock("@/utilities/queries", () => ({
+vi.mock("@/data/queries", () => ({
   queryVolumesForArticles: (ids: number[]) => queryVolumesForArticles(ids),
 }))
 

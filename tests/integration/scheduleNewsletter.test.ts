@@ -11,7 +11,7 @@ vi.mock("@react-email/render", () => ({
 }))
 
 import { scheduleVolumeNewsletter } from "@/collections/Volumes/endpoints/scheduleNewsletter/logic"
-import { getPayloadConfig } from "@/utilities/getPayloadConfig"
+import { getPayloadClient } from "@/data/payload"
 import type { ScheduledCampaignSummary } from "@/integrations/listmonk"
 import {
   createScheduledCampaign,
@@ -47,7 +47,7 @@ beforeAll(async () => {
   // Exercise the production code path so campaigns carry the bare "newsletter"
   // tag asserted below; env-namespacing is unit-tested in logic.test.ts.
   process.env.BUILD_ENV = "production"
-  payload = await getPayloadConfig()
+  payload = await getPayloadClient()
 })
 
 afterAll(async () => {

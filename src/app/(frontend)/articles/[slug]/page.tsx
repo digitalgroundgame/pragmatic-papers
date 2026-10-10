@@ -19,8 +19,8 @@ import { isExperimentEnabled } from "@/globals/SiteSettings/isExperimentEnabled"
 import { ArticleHero } from "@/heros/ArticleHero"
 import { MathJaxProvider } from "@/providers/MathJaxProvider"
 import { generateMeta } from "@/utilities/generateMeta"
-import { getPayloadConfig } from "@/utilities/getPayloadConfig"
-import { queryArticleBySlug, queryVolumesForArticles } from "@/utilities/queries"
+import { getPayloadClient } from "@/data/payload"
+import { queryArticleBySlug, queryVolumesForArticles } from "@/data/queries"
 import { isResolved } from "@/utilities/relationships"
 import { buildArticleJsonLd, buildBreadcrumbJsonLd } from "@/utilities/structuredData"
 
@@ -30,7 +30,7 @@ import { buildArticleJsonLd, buildBreadcrumbJsonLd } from "@/utilities/structure
 export const revalidate = 3600
 
 export async function generateStaticParams(): Promise<{ slug: string | null | undefined }[]> {
-  const payload = await getPayloadConfig()
+  const payload = await getPayloadClient()
   const articles = await payload.find({
     collection: "articles",
     draft: false,

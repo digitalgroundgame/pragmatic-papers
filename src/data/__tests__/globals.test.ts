@@ -14,9 +14,9 @@ vi.mock("next/cache", () => ({
   unstable_cache: (...args: Parameters<typeof unstableCache>) => unstableCache(...args),
 }))
 
-const { getCachedGlobal } = await import("../getGlobals")
+const { getGlobal } = await import("../globals")
 
-describe("getCachedGlobal", () => {
+describe("getGlobal", () => {
   beforeEach(() => {
     findGlobal.mockReset()
     unstableCache.mockClear()
@@ -27,8 +27,8 @@ describe("getCachedGlobal", () => {
   })
 
   it("keys the cache by slug and depth so different depths don't collide", async () => {
-    await getCachedGlobal("footer", 1)()
-    await getCachedGlobal("footer", 2)()
+    await getGlobal("footer", 1)
+    await getGlobal("footer", 2)
 
     const keyParts = unstableCache.mock.calls.map(([, keys]) => keys)
     expect(keyParts).toEqual([
@@ -38,13 +38,13 @@ describe("getCachedGlobal", () => {
   })
 
   it("forwards the requested depth to payload.findGlobal", async () => {
-    await getCachedGlobal("header", 3)()
+    await getGlobal("header", 3)
 
     expect(findGlobal).toHaveBeenCalledWith({ slug: "header", depth: 3 })
   })
 
   it("defaults depth to 0 when not provided", async () => {
-    await getCachedGlobal("footer")()
+    await getGlobal("footer")
 
     expect(findGlobal).toHaveBeenCalledWith({ slug: "footer", depth: 0 })
     expect(unstableCache.mock.calls[0]?.[1]).toEqual(["footer", "0"])
@@ -60,7 +60,7 @@ describe("getCachedGlobal", () => {
     it("reads the database every time instead of the cross-request cache", async () => {
       vi.stubEnv("NODE_ENV", "development")
 
-      expect(await getCachedGlobal("header", 1)()).toEqual({ slug: "header", depth: 1 })
+      expect(await getGlobal("header", 1)).toEqual({ slug: "header", depth: 1 })
       expect(unstableCache).not.toHaveBeenCalled()
       expect(findGlobal).toHaveBeenCalledWith({ slug: "header", depth: 1 })
     })

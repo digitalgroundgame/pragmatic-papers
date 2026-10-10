@@ -2,8 +2,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 const find = vi.fn()
 
-vi.mock("@/utilities/getPayloadConfig", () => ({
-  getPayloadConfig: async () => ({ find }),
+vi.mock("@/data/payload", () => ({
+  getPayloadClient: async () => ({ find }),
 }))
 
 const { GET } = await import("../route")

@@ -1,7 +1,6 @@
 import type { Article, Media } from "@/payload-types"
-import configPromise from "@payload-config"
 import { type NextRequest } from "next/server"
-import { getPayload } from "payload"
+import { getPayloadClient } from "@/data/payload"
 
 export interface RecommendedArticleCandidate {
   slug: string
@@ -13,7 +12,7 @@ export interface RecommendedArticleCandidate {
 }
 
 export async function GET(_request: NextRequest): Promise<Response> {
-  const payload = await getPayload({ config: configPromise })
+  const payload = await getPayloadClient()
   const recommendations = await payload.findGlobal({
     slug: "article-recommendations",
     depth: 2,

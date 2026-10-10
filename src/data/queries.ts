@@ -1,11 +1,11 @@
 import type { Topic, User, Volume } from "@/payload-types"
 import { draftMode } from "next/headers"
 import { cache } from "react"
-import { getPayloadConfig } from "./getPayloadConfig"
+import { getPayloadClient } from "@/data/payload"
 
 export const queryUserBySlug = cache(async (slug: string): Promise<User | null> => {
   const { isEnabled: draft } = await draftMode()
-  const payload = await getPayloadConfig()
+  const payload = await getPayloadClient()
   const { docs } = await payload.find({
     collection: "users",
     draft,
@@ -25,7 +25,7 @@ export const queryUserBySlug = cache(async (slug: string): Promise<User | null> 
 
 export const queryTopicBySlug = cache(async (slug: string): Promise<Topic | null> => {
   const { isEnabled: draft } = await draftMode()
-  const payload = await getPayloadConfig()
+  const payload = await getPayloadClient()
   const { docs } = await payload.find({
     collection: "topics",
     draft,
@@ -45,7 +45,7 @@ export const queryTopicBySlug = cache(async (slug: string): Promise<Topic | null
 
 export const queryVolumeBySlug = cache(async (slug: string) => {
   const { isEnabled: draft } = await draftMode()
-  const payload = await getPayloadConfig()
+  const payload = await getPayloadClient()
   const { docs } = await payload.find({
     collection: "volumes",
     draft,
@@ -67,7 +67,7 @@ export const queryVolumeBySlug = cache(async (slug: string) => {
 
 export const queryArticleBySlug = cache(async (slug: string) => {
   const { isEnabled: draft } = await draftMode()
-  const payload = await getPayloadConfig()
+  const payload = await getPayloadClient()
   const { docs } = await payload.find({
     collection: "articles",
     draft,
@@ -89,7 +89,7 @@ const queryVolumesForArticleKey = cache(async (key: string): Promise<Volume[]> =
   const articleIds = key.split(",").map(Number)
 
   const { isEnabled: draft } = await draftMode()
-  const payload = await getPayloadConfig()
+  const payload = await getPayloadClient()
   const { docs } = await payload.find({
     collection: "volumes",
     draft,
@@ -120,7 +120,7 @@ export const queryVolumesForArticles = async (articleIds: number[]): Promise<Vol
 
 export const queryPageBySlug = cache(async (slug: string) => {
   const { isEnabled: draft } = await draftMode()
-  const payload = await getPayloadConfig()
+  const payload = await getPayloadClient()
   const { docs } = await payload.find({
     collection: "pages",
     draft,

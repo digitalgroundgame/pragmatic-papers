@@ -13,17 +13,15 @@ import type { Article as ArticleType, Volume } from "@/payload-types"
 import { getInitials } from "@/utilities/getInitials"
 import { isResolved } from "@/utilities/relationships"
 import { getMediaUrl } from "@/utilities/getMediaUrl"
-import { getPayloadConfig } from "@/utilities/getPayloadConfig"
+import { getPayloadClient } from "@/data/payload"
 import { paginatedPath } from "@/utilities/generateMeta"
 import { getSiteURL } from "@/utilities/getURL"
 import { mergeOpenGraph } from "@/utilities/mergeOpenGraph"
-import { queryUserBySlug, queryVolumesForArticles } from "@/utilities/queries"
+import { queryUserBySlug, queryVolumesForArticles } from "@/data/queries"
 import { buildBreadcrumbJsonLd, buildPersonJsonLd } from "@/utilities/structuredData"
-import config from "@payload-config"
 import type { Metadata } from "next"
 import { draftMode } from "next/headers"
 import { notFound, permanentRedirect } from "next/navigation"
-import { getPayload } from "payload"
 import React, { cache } from "react"
 import { Breadcrumbs } from "@/components/Breadcrumbs"
 import { relationshipId } from "@/utilities/relationships"
@@ -45,7 +43,7 @@ const ARTICLES_PER_PAGE = 5
 const queryArticlesByAuthor = cache(async (userId: number, page: number = 1) => {
   const { isEnabled: draft } = await draftMode()
 
-  const payload = await getPayload({ config })
+  const payload = await getPayloadClient()
 
   return payload.find({
     collection: "articles",
@@ -65,7 +63,7 @@ const queryArticlesByAuthor = cache(async (userId: number, page: number = 1) => 
 // URLs (next.config.ts redirects them here). A number that isn't anyone's slug is looked up as an id and sent to that author's page.
 const queryUserSlugById = cache(async (slug: string): Promise<string | null> => {
   if (!/^\d+$/.test(slug)) return null
-  const payload = await getPayloadConfig()
+  const payload = await getPayloadClient()
   const { docs } = await payload.find({
     collection: "users",
     limit: 1,

@@ -3,7 +3,7 @@ import { expect, mocked, within } from "storybook/test"
 
 import type { Merch } from "@/payload-types"
 import { createFakePayload } from "@/stories/fixtures/payload"
-import { getPayloadConfig } from "@/utilities/getPayloadConfig"
+import { getPayloadClient } from "@/data/payload"
 
 import { MerchBlock } from "./Component"
 
@@ -42,7 +42,7 @@ const meta = {
     layout: { control: "inline-radio", options: ["fullWidth", "square"] },
   },
   beforeEach: () => {
-    mocked(getPayloadConfig).mockResolvedValue(
+    mocked(getPayloadClient).mockResolvedValue(
       createFakePayload({ collections: { merch: products } }),
     )
   },

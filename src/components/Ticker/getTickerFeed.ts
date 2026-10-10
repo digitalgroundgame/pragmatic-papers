@@ -2,7 +2,7 @@ import { unstable_cache } from "next/cache"
 import { cache } from "react"
 
 import { mergePosts, withoutHidden, type TickerFeed } from "./items"
-import { getCachedGlobal } from "@/utilities/getGlobals"
+import { getGlobal } from "@/data/globals"
 
 import {
   broadcastSource,
@@ -37,8 +37,8 @@ const posts = postSources.map((source) => cached(source.integration.id, source, 
 /** Everything the ticker shows right now, from every source at once. */
 export const getTickerFeed = cache(async (): Promise<TickerFeed> => {
   const [{ youtube, bluesky, x }, { hidden }] = await Promise.all([
-    getCachedGlobal("integrations")(),
-    getCachedGlobal("ticker")(),
+    getGlobal("integrations"),
+    getGlobal("ticker"),
   ])
   const settings: TickerSettings = {
     youtubeChannelIds: youtube?.channels?.map((channel) => channel.channelId),

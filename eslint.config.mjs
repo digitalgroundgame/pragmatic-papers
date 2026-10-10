@@ -5,6 +5,31 @@ import pluginReact from "eslint-plugin-react"
 import storybook from "eslint-plugin-storybook"
 import globals from "globals"
 
+// The "@payloadcms/ui" root is pre-bundled with its own copy of the admin's React contexts. A
+// field imported from the unbundled deep path is a second module instance reading contexts no
+// provider filled, so it type-checks and unit-tests clean but throws on first render in the
+// admin.
+const payloadUiFields = {
+  group: ["@payloadcms/ui/fields/*"],
+  message: 'Import Payload field components from "@payloadcms/ui" instead.',
+}
+
+// What only this app has: its config, its schema, its features. Utilities and our own plugins
+// may not import it. An override's options replace the base rule's, so each one repeats
+// payloadUiFields.
+const appModules = [
+  "@payload-config",
+  "@/access/*",
+  "@/app/*",
+  "@/blocks/*",
+  "@/collections/*",
+  "@/endpoints/*",
+  "@/fields/*",
+  "@/globals/*",
+  "@/hooks/*",
+  "@/jobs/*",
+]
+
 const eslintConfig = [
   ...eslintConfigNext,
   ...eslintConfigNextTypescript,
@@ -35,21 +60,7 @@ const eslintConfig = [
       "@typescript-eslint/no-use-before-define": "error",
       "@typescript-eslint/no-require-imports": "error",
       "@typescript-eslint/prefer-ts-expect-error": "error",
-      // The "@payloadcms/ui" root is pre-bundled with its own copy of the admin's
-      // React contexts. A field imported from the unbundled deep path is a second
-      // module instance reading contexts no provider filled, so it type-checks and
-      // unit-tests clean but throws on first render in the admin.
-      "no-restricted-imports": [
-        "error",
-        {
-          patterns: [
-            {
-              group: ["@payloadcms/ui/fields/*"],
-              message: 'Import Payload field components from "@payloadcms/ui" instead.',
-            },
-          ],
-        },
-      ],
+      "no-restricted-imports": ["error", { patterns: [payloadUiFields] }],
       "prefer-const": ["error"],
       "react/jsx-boolean-value": ["error", "never"],
       "react/jsx-curly-brace-presence": ["error", { props: "never", children: "ignore" }],
@@ -96,6 +107,63 @@ const eslintConfig = [
       // Worker build: in front of Coolify, Cloudflare's cache can't tell a page's HTML
       // from the RSC payload next/link fetches for the same URL.
       "@next/next/no-html-link-for-pages": "off",
+    },
+  },
+  // src/utilities is the library every feature and plugin builds on, so it depends on none of
+  // them: no app modules, no components, no request-scoped Next APIs, no Payload reads.
+  {
+    files: ["src/utilities/*.ts", "src/utilities/*.tsx"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            payloadUiFields,
+            {
+              group: [
+                ...appModules,
+                "@/cloudflare/*",
+                "@/components/*",
+                "@/data/*",
+                "@/integrations/*",
+                "@/interactives/*",
+                "@/plugins/*",
+                "next/headers",
+              ],
+              message:
+                "src/utilities can't depend on a feature. Move the helper next to its feature, or pass the value in.",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  // Our plugins (src/plugins/<name>/) are shaped to be published one day: what is this app's
+  // comes in through the plugin's options, and Payload through `req.payload`.
+  {
+    files: ["src/plugins/*/**/*.{ts,tsx}"],
+    // docs and notifications predate the rule: they import access, blocks, fields and
+    // purgeEdgeCache directly. Drop each from this list once it takes those as options.
+    ignores: [
+      "**/__tests__/**",
+      "**/*.stories.tsx",
+      "src/plugins/docs/**",
+      "src/plugins/notifications/**",
+    ],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            payloadUiFields,
+            {
+              group: [...appModules, "@/data/*"],
+              message:
+                "A plugin takes what's app-specific as an option, and reads Payload through req.payload. @/utilities is fine.",
+            },
+          ],
+        },
+      ],
     },
   },
   // A story's exports are Storybook's input, not an API other modules call.

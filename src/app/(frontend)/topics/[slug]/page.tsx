@@ -4,15 +4,14 @@ import { Pagination } from "@/components/Pagination"
 import { PayloadRedirects } from "@/components/PayloadRedirects"
 import type { Volume } from "@/payload-types"
 import { generateMeta, paginatedPath } from "@/utilities/generateMeta"
-import { queryTopicBySlug, queryVolumesForArticles } from "@/utilities/queries"
-import config from "@payload-config"
+import { queryTopicBySlug, queryVolumesForArticles } from "@/data/queries"
 import type { Metadata } from "next"
 import { draftMode } from "next/headers"
 import { notFound } from "next/navigation"
-import { getPayload } from "payload"
 import React, { cache } from "react"
 import { Breadcrumbs } from "@/components/Breadcrumbs"
 import { relationshipId } from "@/utilities/relationships"
+import { getPayloadClient } from "@/data/payload"
 
 interface Args {
   params: Promise<{
@@ -31,7 +30,7 @@ const ARTICLES_PER_PAGE = 5
 const queryArticlesByTopic = cache(async (topicId: number, page: number = 1) => {
   const { isEnabled: draft } = await draftMode()
 
-  const payload = await getPayload({ config })
+  const payload = await getPayloadClient()
 
   return await payload.find({
     collection: "articles",

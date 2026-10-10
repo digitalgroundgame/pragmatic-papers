@@ -1,5 +1,5 @@
 import type { Article } from "@/payload-types"
-import { getPayloadConfig } from "@/utilities/getPayloadConfig"
+import { getPayloadClient } from "@/data/payload"
 import type { Where } from "payload"
 import { cache } from "react"
 
@@ -8,7 +8,7 @@ const syndicated: Where = {
 }
 
 export const querySyndicatedArticles = cache(async (): Promise<Article[]> => {
-  const payload = await getPayloadConfig()
+  const payload = await getPayloadClient()
 
   const articles = await payload.find({
     collection: "articles",
@@ -24,7 +24,7 @@ export const querySyndicatedArticles = cache(async (): Promise<Article[]> => {
 })
 
 export const querySyndicatedArticleBySlug = cache(async (slug: string): Promise<Article | null> => {
-  const payload = await getPayloadConfig()
+  const payload = await getPayloadClient()
 
   const articles = await payload.find({
     collection: "articles",

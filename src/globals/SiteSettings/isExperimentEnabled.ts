@@ -1,5 +1,5 @@
 import type { SiteSetting } from "@/payload-types"
-import { getCachedGlobal } from "@/utilities/getGlobals"
+import { getGlobal } from "@/data/globals"
 
 export type Experiment = keyof NonNullable<SiteSetting["experiments"]>
 
@@ -9,6 +9,6 @@ export type Experiment = keyof NonNullable<SiteSetting["experiments"]>
  * jobs) with it; routes should `notFound()` when it's off.
  */
 export const isExperimentEnabled = async (experiment: Experiment): Promise<boolean> => {
-  const settings = await getCachedGlobal("site-settings")()
+  const settings = await getGlobal("site-settings")
   return settings.experiments?.[experiment] === true
 }

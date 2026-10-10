@@ -7,7 +7,7 @@ import {
 } from "@/interactives/federal-courts/__tests__/miniUpstream"
 import { findLatestSnapshot, syncInteractive } from "@/jobs/syncInteractiveData/logic"
 import type { Interactive } from "@/payload-types"
-import { getPayloadConfig } from "@/utilities/getPayloadConfig"
+import { getPayloadClient } from "@/data/payload"
 
 import { createUser } from "./helpers/testUsers"
 
@@ -16,7 +16,7 @@ const silentLog = { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn()
 const created: number[] = []
 
 beforeAll(async () => {
-  payload = await getPayloadConfig()
+  payload = await getPayloadClient()
 })
 
 afterAll(async () => {

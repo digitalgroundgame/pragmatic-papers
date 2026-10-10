@@ -4,7 +4,7 @@ import { buildSnapshot, type BuildSnapshotArgs } from "@/blocks/SocialEmbed/help
 import { SOCIAL_EMBED_SNAPSHOT_TTL_MS } from "@/blocks/SocialEmbed/helpers/snapshotFreshness"
 import type { ParentDocContext } from "@/blocks/SocialEmbed/types"
 import type { Article, SocialEmbedSnapshot } from "@/payload-types"
-import { getPayloadConfig } from "@/utilities/getPayloadConfig"
+import { getPayloadClient } from "@/data/payload"
 import { unstable_cache } from "next/cache"
 import { isRecord } from "@/utilities/isRecord"
 
@@ -96,7 +96,7 @@ export async function revalidateSnapshot({
     ...checkSnapshot,
   }
 
-  const payload = await getPayloadConfig()
+  const payload = await getPayloadClient()
   const article = await payload.findByID({
     collection: parentDoc.collection,
     id: parentDoc.id,

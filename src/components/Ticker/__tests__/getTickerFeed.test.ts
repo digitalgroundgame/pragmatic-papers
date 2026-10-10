@@ -27,8 +27,8 @@ vi.mock("react", async (importOriginal) => ({
   ...(await importOriginal<typeof ReactModule>()),
   cache: <T>(fn: T) => fn,
 }))
-vi.mock("@/utilities/getGlobals", () => ({
-  getCachedGlobal: (slug: string) => async () =>
+vi.mock("@/data/globals", () => ({
+  getGlobal: async (slug: string) =>
     slug === "integrations" ? integrations.current : slug === "ticker" ? ticker.current : {},
 }))
 vi.mock("../sources", async (importOriginal) => ({

@@ -4,7 +4,7 @@ import { expect, mocked, within } from "storybook/test"
 import { volumes } from "@/stories/fixtures/docs"
 import { createFakePayload } from "@/stories/fixtures/payload"
 import { createHeadingNode, createParagraph, richText } from "@/stories/fixtures/richText"
-import { getPayloadConfig } from "@/utilities/getPayloadConfig"
+import { getPayloadClient } from "@/data/payload"
 
 import { VolumeViewBlock } from "./component"
 
@@ -21,7 +21,7 @@ const meta = {
     ),
   },
   beforeEach: () => {
-    mocked(getPayloadConfig).mockResolvedValue(createFakePayload({ collections: { volumes } }))
+    mocked(getPayloadClient).mockResolvedValue(createFakePayload({ collections: { volumes } }))
   },
 } satisfies Meta<typeof VolumeViewBlock>
 

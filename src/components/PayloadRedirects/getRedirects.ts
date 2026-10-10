@@ -1,30 +1,27 @@
-import { getPayloadConfig } from "@/utilities/getPayloadConfig"
+import { getPayloadClient } from "@/data/payload"
 import { unstable_cache } from "next/cache"
 
-// eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
-export async function getRedirects(depth = 1) {
-  const payload = await getPayloadConfig()
+import type { Redirect } from "@/payload-types"
 
-  const { docs: redirects } = await payload.find({
+async function readRedirects(): Promise<Redirect[]> {
+  const payload = await getPayloadClient()
+
+  const { docs } = await payload.find({
     collection: "redirects",
-    depth,
+    depth: 1,
     limit: 0,
     pagination: false,
   })
 
-  return redirects
+  return docs
 }
 
 /**
- * Returns a unstable_cache function mapped with the cache tag for 'redirects'.
- *
- * Cache all redirects together to avoid multiple fetches. Uncached in development, for the
- * reason `getCachedGlobal` gives.
+ * Every redirect, cached together under the tag `redirects` (cleared by
+ * `revalidateRedirects`) so a request reads them once. Uncached in development, for the
+ * reason `getGlobal` gives.
  */
-// eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
-export const getCachedRedirects = () =>
-  process.env.NODE_ENV === "development"
-    ? async () => getRedirects()
-    : unstable_cache(async () => getRedirects(), ["redirects"], {
-        tags: ["redirects"],
-      })
+export function getRedirects(): Promise<Redirect[]> {
+  if (process.env.NODE_ENV === "development") return readRedirects()
+  return unstable_cache(readRedirects, ["redirects"], { tags: ["redirects"] })()
+}

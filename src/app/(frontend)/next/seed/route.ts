@@ -1,10 +1,9 @@
 import { isAdmin } from "@/access/roles"
 import { seed } from "@/endpoints/seed"
-import configPromise from "@payload-config"
 import type { NextRequest } from "next/server"
 import { NextResponse } from "next/server"
 import type { PayloadRequest } from "payload"
-import { getPayload } from "payload"
+import { getPayloadClient } from "@/data/payload"
 
 type SeedEvent =
   | { type: "progress"; message: string; step: number; total: number }
@@ -16,7 +15,7 @@ export async function POST(req: NextRequest): Promise<Response> {
     return NextResponse.json({ error: "Seeding is not allowed in production" }, { status: 403 })
   }
 
-  const payload = await getPayload({ config: configPromise })
+  const payload = await getPayloadClient()
   const { user } = await payload.auth({
     req: req as unknown as PayloadRequest,
     headers: req.headers,

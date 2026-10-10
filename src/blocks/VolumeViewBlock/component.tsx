@@ -1,7 +1,7 @@
 import type { Volume, VolumeView as VolumeBlockProps } from "@/payload-types"
 
 import RichText from "@/components/RichText"
-import { getPayloadConfig } from "@/utilities/getPayloadConfig"
+import { getPayloadClient } from "@/data/payload"
 import React from "react"
 
 import { PageRange } from "@/components/PageRange"
@@ -17,7 +17,7 @@ export const VolumeViewBlock: React.FC<
   const { id, introContent, populateBy, selectedDocs, pageNumber, limit: limitFromProps } = props
 
   if (populateBy === "collection") {
-    const payload = await getPayloadConfig()
+    const payload = await getPayloadClient()
 
     const limit = limitFromProps || 6
 

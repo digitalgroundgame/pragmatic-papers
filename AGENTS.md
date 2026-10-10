@@ -87,6 +87,10 @@ processes they start.
 - **`app/(payload)/`** — Payload admin panel routes
 - **`components/`** — Reusable React components for layouts, pagination, etc; `components/ui/` uses shadcn/ui;
 - **`providers/`** — Context providers (MathJaxProvider)
+- **`utilities/`** — the library every feature and plugin builds on (see [Utilities](#utilities))
+- **`data/`** — server reads shared across pages: `getPayloadClient` (`payload.ts`), `getGlobal` (`globals.ts`), the `query*BySlug` helpers (`queries.ts`)
+- **`hooks/`** — shared React hooks (`useInView`, `useDebounce`, shadcn's `use-mobile`) and the Payload hooks several collections share (`purgeEdgeCache`, `revalidate*`)
+- **`plugins/`** — `index.ts` configures the third-party Payload plugins; each folder beside it is one of ours (see [Our plugins](#our-plugins))
 - **`integrations/`** — the outside services we read from, one **connection** per entry (see below)
 - **`migrations/`** — Drizzle database migrations
 
@@ -109,7 +113,7 @@ processes they start.
 - **Footer** (`slug: 'footer'`) — nav items; revalidated via `revalidateFooter` hook
 - **Settings** (`slug: 'site-settings'`, the `SiteSettings` global) — admin-only; its `experiments` group switches beta features on per environment; revalidated via `revalidateSiteSettings` hook
 - **Ticker** (`slug: 'ticker'`) — editors and admins; posts hidden from the header's ticker, by link; revalidated via `revalidateTicker` hook. Which accounts the ticker reads is in **Integrations** (admin-only)
-- Fetched via `getCachedGlobal('header' | 'footer', depth)()` using `unstable_cache` with tags
+- Fetched via `getGlobal('header' | 'footer', depth)` from `@/data/globals`, which caches with `unstable_cache` under the tag `global_<slug>`
 
 ### Experiments
 
@@ -162,6 +166,24 @@ refill the edge with the previous release's pages, then POSTs `/next/purge-edge`
 - **formBuilderPlugin** — form builder (admin currently hidden)
 - **s3Storage** — S3/Supabase media storage; falls back to local when `USE_LOCAL_STORAGE=true`
 
+### Our plugins
+
+A feature that could be published one day lives in `src/plugins/<name>/`, shaped like
+Payload's own plugins so it can be lifted out without a rewrite:
+
+- `index.ts` exports `<name>Plugin(options): Plugin`, and nothing else the app needs.
+- `types.ts` holds `<Name>PluginConfig`. Options have defaults, and `disabled: true` leaves
+  the schema in place (so migrations don't change) but turns the behavior off.
+- `collections/`, `hooks/`, `endpoints/` and `components/` as the plugin needs them. Admin
+  components are referenced by path through `exports/client.ts` and `exports/rsc.ts`, so
+  the import map paths survive a move into a package.
+- Whatever is this app's comes in through the options: preview paths, access and roles,
+  blocks and fields, side effects like `purgeEdgeCache` (as a callback). Payload comes from
+  `req.payload` or the `payload` a hook is handed, never `@/data/payload`.
+- `@/utilities` may be imported directly: it would ship alongside as a shared package.
+
+ESLint enforces the import rules for every folder under `src/plugins/` (`eslint.config.mjs`).
+
 ### Collection Conventions
 
 - **File structure**: `collections/<Name>/index.ts` with optional `hooks/` and `components/` subdirectories
@@ -187,7 +209,7 @@ refill the edge with the previous release's pages, then POSTs `/next/purge-edge`
 
 ### Data Fetching Patterns
 
-- Use `getPayloadConfig` imported from `@/utilities/getPayloadConfig`
+- Code with a request (hooks, endpoints, access functions, validation, jobs) reads Payload from `req.payload`, inside the request's transaction. Code without one (pages, layouts, route handlers, `generateMetadata`) uses `getPayloadClient` from `@/data/payload`, never `getPayload({ config })`
 - Wrap data queries in `React.cache()` for per-request deduplication
 - Use `unstable_cache` with cache tags for long-lived caching (globals, redirects, sitemaps)
 - Sitemaps: each is a `sitemap.ts` in the folder of the section it lists (Next's metadata convention, served at `/<route>/sitemap.xml`, e.g. `topics/sitemap.ts`), added with a title to `SITEMAPS` in `(sitemaps)/sitemaps.ts`, which `/sitemap_index.xml`, robots.txt and the public `/feeds` page read (RSS feeds are listed there from `FEEDS` in `feeds/feeds.ts`). Pages live at the root, so theirs is the root `sitemap.ts` (`/sitemap.xml`), and the index of them all is `/sitemap_index.xml` (`(sitemaps)/sitemap_index.xml`), which robots.txt and Search Console point at; Google News reads `articles/news-sitemap.xml/route.ts`, a route handler (`sitemap.ts` can't write `news:` tags) listing only the last two days' articles, as Google asks. The old `/pages-sitemap.xml`, `/articles-sitemap.xml` and `/volumes-sitemap.xml` redirect permanently in `next.config.ts`
@@ -203,9 +225,28 @@ refill the edge with the previous release's pages, then POSTs `/next/purge-edge`
 - **Content rendering**: Blocks system with Lexical rich text editor; each block has a config and a React component
 - **Pre-push hooks**: Husky runs full checks on all files (`lint:fix`, `format:fix`, `check-types`) before pushing
 - **Pre-commit hooks**: lint-staged runs ESLint + Prettier on staged files only (fast, ~1-2 seconds)
-- **Colocation**: Prefer colocating logic near where it's used. `src/utilities/` is only for genuinely reusable helpers shared across multiple features (e.g. `generateMeta`, `getURL`, `toRoman`, `cn`). Don't put single-use logic there.
+- **Colocation**: Prefer colocating logic near where it's used. A helper only one feature uses lives with that feature; `src/utilities/` is for what several features share (see [Utilities](#utilities)).
 - **Commit trailers**: don't add a `Claude-Session:` trailer (or any other link to an agent session) to commit messages. A `Co-Authored-By:` trailer is fine.
 - **Issue and PR numbers in comments**: comments and docs describe the code as it is now; why and when it changed is what `git log` and `git blame` are for. Don't write "added in #970", "before #672" or "see #883" — the sentence should stand on its own. Two exceptions, each a pointer with an exit: an upstream bug a workaround depends on (full URL; remove the workaround when it's fixed), and an **open** issue tracking a known gap or a skipped check (say what to remove when it closes, as `knownContrastIssue` does for #998). When that issue closes, delete the comment and what it guards; never append to it.
+
+### Utilities
+
+`src/utilities/` is the library features and plugins depend on, so it depends on none of them.
+A file there may import `@/payload-types` (types), React, Payload and Next types, framework
+hooks, and other utilities; ESLint rejects anything app-specific (`@payload-config`,
+collections, blocks, components, `@/data`, integrations, `next/headers`). A helper that needs
+one of those belongs with its feature, or takes the value as an argument.
+
+Reach for these before writing your own:
+
+- URLs: `docPath(collection, slug)` and `internalDocToHref` (`routes.ts`, the one
+  collection-to-path map), `getSiteURL()` / `getClientURL()` / `absoluteURL(path)`
+  (`getURL.ts`), `getLinkFieldUrl`, `getMediaUrl`
+- Dates and text: `formatLongDate`, `formatTimeAgo` (`formatDate.ts`), `truncate`,
+  `formatAuthors`, `getInitials`, `toRoman`
+- Narrowing: `isRecord`, `isResolved` / `relationshipId` (`relationships.ts`), `Result`
+  (`results.ts`)
+- Metadata and feeds: `generateMeta`, `mergeOpenGraph`, `structuredData`, `feedHTML`
 
 ### Integrations
 
@@ -286,10 +327,10 @@ function, and fails on any axe violation.
 - **Fixtures** live in `src/stories/fixtures/` (docs, media, rich text, navigation). Reuse them
   rather than inlining Payload shapes. Media points at `.storybook/assets`, so no story touches
   the network.
-- **Payload**: `.storybook/main.ts` swaps `@/utilities/getPayloadConfig` for
-  `src/stories/mocks/getPayloadConfig.ts`. Seed a story in `beforeEach` with
-  `mocked(getPayloadConfig).mockResolvedValue(createFakePayload({ collections, globals }))`.
-  Server code must reach Payload through `getPayloadConfig`: a direct `getPayload({ config })`
+- **Payload**: `.storybook/main.ts` swaps `@/data/payload` for
+  `src/stories/mocks/payload.ts`. Seed a story in `beforeEach` with
+  `mocked(getPayloadClient).mockResolvedValue(createFakePayload({ collections, globals }))`.
+  Server code must reach Payload through `getPayloadClient`: a direct `getPayload({ config })`
   pulls the Payload config into the browser bundle and breaks `pnpm storybook:build`.
 - **Known a11y failures**: skip only the failing rule with `skipA11yRules("rule-id")` from
   `src/stories/a11y.ts` and cite the issue tracking the fix; `knownContrastIssue` covers the

@@ -10,7 +10,6 @@ export const SITEMAPS = [
   { path: "/volumes/sitemap.xml", title: "Volumes" },
   { path: "/contributors/sitemap.xml", title: "Contributors" },
   { path: "/topics/sitemap.xml", title: "Topics" },
-  { path: "/docs/sitemap.xml", title: "Docs" },
 ] as const
 
 export const SITEMAP_PATHS = SITEMAPS.map((sitemap) => sitemap.path)

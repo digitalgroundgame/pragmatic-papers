@@ -50,10 +50,6 @@ const NOT_EDGE_CACHED = [
 
 const nextConfig: NextConfig = {
   output: "standalone",
-  // Each deploy reads src/docs/ to sync the help docs (syncDocs), which no import traces.
-  outputFileTracingIncludes: {
-    "/**": ["./src/docs/**/*"],
-  },
   // Temporarily required on Windows until Next.js fixes Turbopack Sass resolution.
   // See: https://github.com/vercel/next.js/issues/86431
   sassOptions: {

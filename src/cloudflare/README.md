@@ -7,7 +7,7 @@ stay on Coolify. The point is client-side navigation: Next adds an `_rsc` value 
 navigation request that changes with the page it came from, so Cloudflare's zone cache
 stores every variation separately and almost every click misses. OpenNext keys its cache
 by route, so navigations from any page read the same entry. It needs Workers Paid: the
-Worker is ~8.3 MiB gzipped against a 10 MiB limit (3 MiB on Free). Open issue #916
+Worker is ~6.6 MiB gzipped against a 10 MiB limit (3 MiB on Free). Open issue #916
 tracks turning `next/link` back on.
 
 Nothing here changes the Coolify build: everything Worker-specific is behind
@@ -94,17 +94,26 @@ deployment.
 | `worker.mjs`, `origin.ts`             | The Worker's entry: OpenNext's handler, behind one that sends `/admin`, `/api` and the admin's `/_next/static` files to `ORIGIN_URL`, reads media for next/image from there too, and points Payload at Hyperdrive. Unit-tested |
 | `open-next.config.ts`                 | OpenNext's caches: pages in R2 keyed by route, a Durable Object queue that re-renders pages past their `revalidate` time, and D1 for `revalidatePath` / `revalidateTag`                                                        |
 | `stubs/unavailable.ts`                | Stands in for `drizzle-kit/api`, `sharp` and `@google-analytics/data` (~17 MB with its gRPC stack), which only Coolify's code paths call. Calling one in the Worker throws                                                     |
+| `stubs/sentry.ts`                     | Stands in for `@sentry/nextjs` in the server code. The Worker has no `SENTRY_DSN`, so it reported nothing, and its Node SDK and OpenTelemetry were ~1.8 MiB gzipped of what every new isolate loads. The browser's SDK is kept |
+| `_headers`                            | Copied into `.open-next/assets` by the build: hashed `/_next/static` files are cached for a year, where Workers Static Assets would send `max-age=0, must-revalidate`                                                          |
+| `withImageCaching` in `origin.ts`     | Gives `/_next/image` responses the `Cache-Control` Next's optimizer sends on Coolify. OpenNext sets one only on images it can call immutable, which Payload's media never are                                                  |
 | `sharp.ts`                            | Payload's `sharp`, imported from here because Next keeps `sharp` external however it's aliased; the Worker build swaps this module instead                                                                                     |
 | `pg` external, `pg-cloudflare` traced | Bundled by webpack, `pg` would get `pg-cloudflare`'s empty Node build. Left external, OpenNext's esbuild bundles it with the `workerd` condition                                                                               |
 | `maxUses: 1` in `payload.config.ts`   | A Worker can't reuse a socket opened during another request; without it every request after the first hangs. Applies only when running in a Worker                                                                             |
 
 ## Measured
 
-- **Size** (`wrangler deploy --dry-run`): 35.5 MB raw, 8.29 MiB gzipped. With
-  Turbopack it was 17.4–24.4 MiB; with webpack but keeping `(payload)`, 10.5 MiB. If it
-  needs to shrink, the next cuts are the newsletter's email stack (react-email,
-  Tailwind, `css-tree`: ~3.9 MB raw), the seed endpoint and `prompts`, and the
-  `email-preview` and `next/seed` routes.
+- **Size** (`wrangler deploy --dry-run`): 30.0 MB raw, 6.61 MiB gzipped (8.38 MiB
+  before the server's Sentry SDK was stubbed). With Turbopack it was 17.4–24.4 MiB; with
+  webpack but keeping `(payload)`, 10.5 MiB. If it needs to shrink, the next cuts are a
+  second copy of Payload's module graph (~4–5 MB raw), which webpack builds for the
+  feed's `"use server"` action (`src/app/feed/actions.ts`, imported by a client
+  component), the newsletter's email stack (react-email, Tailwind, `css-tree`: ~3.9 MB
+  raw), the seed endpoint and `prompts`, and the `email-preview` and `next/seed` routes.
+- **Cold isolate** (`wrangler dev`): the first request that reaches Next's server takes
+  ~1.7 s (2.1 s with Sentry's server SDK), mostly compiling webpack's runtime and
+  Payload's chunk. Later requests take 80–100 ms. Pages already in R2 skip it: OpenNext's
+  cache interceptor answers them before Next loads.
 - **Cache** (`wrangler dev`, seeded Postgres): articles and volumes, which prerender
   with `revalidate = 3600`, come from R2 in 20–40 ms, for full pages and navigations
   alike, and a navigation with a different `_rsc` value reads the same entry. `/` and
@@ -117,6 +126,11 @@ deployment.
 
 - **Real latency and cold-start CPU**, measured on the staging Worker.
 - **A custom domain**, and the zone's cache rules for it (`cloudflare/rulesets/`).
+  workers.dev isn't in a zone, so nothing there is cached at Cloudflare's edge: every
+  request runs the Worker, and a HIT is read from R2.
+- **Error reporting**: the Worker sends nothing to Sentry. That would be
+  `@sentry/cloudflare` around the fetch handler, with `SENTRY_DSN` as a secret, and the
+  browser SDK's DSN at build time.
 - **Skew protection** (`skewProtection` in `open-next.config.ts`, experimental): sends a
   tab opened before a deploy to the version that built its page, which also avoids
   Next's "router state header could not be parsed" error on stale tabs.

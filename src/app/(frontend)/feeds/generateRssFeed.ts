@@ -18,8 +18,8 @@ import {
   type HTMLConvertersFunction,
 } from "@payloadcms/richtext-lexical/html"
 import { Feed } from "feed"
-import { escapeHTML, fromBlock } from "./feedHTML"
-import { absoluteURL, getSiteURL } from "./getURL"
+import { escapeHTML, fromBlock } from "@/utilities/feedHTML"
+import { absoluteURL, getSiteURL } from "@/utilities/getURL"
 
 const getMediaUrl = (url: string) => {
   const absolute = absoluteURL(url)

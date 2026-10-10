@@ -9,7 +9,7 @@ beforeAll(() => {
 
 // Imported after SERVER_URL is set: the module reads it once, on load.
 const { createHtmlConverters, generateArticleFeed, generateVolumeFeed } =
-  await import("../generateRssFeed")
+  await import("@/app/(frontend)/feeds/generateRssFeed")
 
 const PAGE_URL = "https://example.org/articles/test-article"
 

@@ -10,7 +10,7 @@ import {
   listScheduledCampaigns,
   updateScheduledCampaign,
   type ScheduledCampaignSummary,
-} from "@/utilities/listmonk"
+} from "@/integrations/listmonk"
 import {
   articleTag,
   buildEnv,

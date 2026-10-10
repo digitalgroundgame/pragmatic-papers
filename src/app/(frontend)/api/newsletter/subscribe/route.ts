@@ -1,7 +1,7 @@
 import { type NextRequest } from "next/server"
 
-import { subscribeMember } from "@/utilities/listmonk"
-import { verifyTurnstileToken } from "@/utilities/turnstile"
+import { subscribeMember } from "@/integrations/listmonk"
+import { verifyTurnstileToken } from "@/integrations/cloudflare/turnstile"
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 

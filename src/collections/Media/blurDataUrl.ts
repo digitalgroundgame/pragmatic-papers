@@ -1,6 +1,6 @@
 import sharp from "@/cloudflare/sharp"
 
-export async function getBlurDataUrlFromBuffer(buffer: Buffer): Promise<string> {
+export async function blurDataUrl(buffer: Buffer): Promise<string> {
   const blurBuffer = await sharp(buffer)
     .resize(10, 10, { fit: "inside" })
     .blur(1)

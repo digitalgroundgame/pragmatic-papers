@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
-import { getTurnstileSiteKey, verifyTurnstileToken } from "../turnstile"
+import { getTurnstileSiteKey, verifyTurnstileToken } from "@/integrations/cloudflare/turnstile"
 
 function mockFetchOnce(opts: { ok: boolean; status?: number; json?: unknown }) {
   return vi.spyOn(global, "fetch").mockResolvedValueOnce({

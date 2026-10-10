@@ -1,6 +1,6 @@
 import type React from "react"
 
-import { getCachedRedirects } from "@/utilities/getRedirects"
+import { getCachedRedirects } from "./getRedirects"
 import { isResolved } from "@/utilities/relationships"
 import { docPath } from "@/utilities/routes"
 import { notFound, redirect } from "next/navigation"

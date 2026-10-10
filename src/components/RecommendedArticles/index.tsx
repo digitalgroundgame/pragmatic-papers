@@ -7,7 +7,7 @@ import { HoverPrefetchLink } from "@/components/Link/HoverPrefetchLink"
 import { Media } from "@/components/Media"
 import { Skeleton } from "@/components/ui/skeleton"
 import { TimeAgo } from "@/components/TimeAgo"
-import { useInView } from "@/utilities/useInView"
+import { useInView } from "@/hooks/useInView"
 
 interface RecommendedArticlesProps {
   currentArticleSlug: string

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 
-import { getSeparator, type SeparatorOptions } from "@/utilities/getSeparator"
+import { getSeparator, type SeparatorOptions } from "../getSeparator"
 
 /** Rebuild the byline the way ArticleHero does, so the assertions read as prose. */
 const join = (names: string[], options?: SeparatorOptions): string =>

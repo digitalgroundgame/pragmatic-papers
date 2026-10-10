@@ -1,7 +1,7 @@
 import type { Payload } from "payload"
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest"
 
-vi.mock("@/utilities/listmonk", () => ({
+vi.mock("@/integrations/listmonk", () => ({
   listScheduledCampaigns: vi.fn(),
   createScheduledCampaign: vi.fn(),
   updateScheduledCampaign: vi.fn(),
@@ -12,12 +12,12 @@ vi.mock("@react-email/render", () => ({
 
 import { scheduleVolumeNewsletter } from "@/collections/Volumes/endpoints/scheduleNewsletter/logic"
 import { getPayloadConfig } from "@/utilities/getPayloadConfig"
-import type { ScheduledCampaignSummary } from "@/utilities/listmonk"
+import type { ScheduledCampaignSummary } from "@/integrations/listmonk"
 import {
   createScheduledCampaign,
   listScheduledCampaigns,
   updateScheduledCampaign,
-} from "@/utilities/listmonk"
+} from "@/integrations/listmonk"
 
 const MINIMAL_CONTENT = {
   root: {

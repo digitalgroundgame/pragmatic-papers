@@ -1,7 +1,7 @@
 // @vitest-environment node
 import configPromise from "@payload-config"
 import { createSubstackConverters } from "@/app/(frontend)/articles/_substack/generateSubstackFeed"
-import { createHtmlConverters } from "@/utilities/generateRssFeed"
+import { createHtmlConverters } from "@/app/(frontend)/feeds/generateRssFeed"
 import {
   convertLexicalToHTML,
   defaultHTMLConverters,

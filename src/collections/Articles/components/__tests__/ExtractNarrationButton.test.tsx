@@ -1,8 +1,8 @@
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react"
 import type * as ReactTypes from "react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
-import type { ExtractNarrationTextOptions } from "@/utilities/extractNarrationText"
-import type * as extractModule from "@/utilities/extractNarrationText"
+import type { ExtractNarrationTextOptions } from "@/collections/Articles/narration/extractNarrationText"
+import type * as extractModule from "@/collections/Articles/narration/extractNarrationText"
 
 const { mockRef } = vi.hoisted(() => ({ mockRef: { shouldMockNotMounted: false } }))
 
@@ -53,7 +53,7 @@ vi.mock("@payloadcms/ui", () => ({
 
 let shouldThrowGenerationError = false
 
-vi.mock("@/utilities/extractNarrationText", async (importOriginal) => {
+vi.mock("@/collections/Articles/narration/extractNarrationText", async (importOriginal) => {
   const original = await importOriginal<typeof extractModule>()
   return {
     ...original,

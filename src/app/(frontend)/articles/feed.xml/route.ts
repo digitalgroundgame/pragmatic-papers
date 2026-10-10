@@ -1,7 +1,7 @@
 import { type NextRequest } from "next/server"
 import configPromise from "@payload-config"
 import { getPayload } from "payload"
-import { generateArticleFeed } from "@/utilities/generateRssFeed"
+import { generateArticleFeed } from "@/app/(frontend)/feeds/generateRssFeed"
 import { cache } from "react"
 
 const queryArticles = cache(async () => {

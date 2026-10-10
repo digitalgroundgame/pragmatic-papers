@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import {
   isAdminPath,
+  prNumberFromFqdn,
   sentryConfigFromDocument,
   sentryHtmlAttributes,
   sentryRuntimeConfig,
@@ -132,5 +133,18 @@ describe("tracesSamplerFor", () => {
   it("still traces a CMS page whose slug only starts with admin", () => {
     expect(tracesSamplerFor("/administration")(parentSampled)).toBe(1)
     expect(tracesSamplerFor("/administration")(noParent)).toBe(0.1)
+  })
+})
+
+describe("prNumberFromFqdn", () => {
+  it("reads the PR number from a preview's host", () => {
+    expect(prNumberFromFqdn("pr-986.pragmaticpapers.com")).toBe("986")
+  })
+
+  it("returns an empty string for a host that isn't a PR preview", () => {
+    expect(prNumberFromFqdn("staging.pragmaticpapers.com")).toBe("")
+    expect(prNumberFromFqdn("pr-.pragmaticpapers.com")).toBe("")
+    expect(prNumberFromFqdn("")).toBe("")
+    expect(prNumberFromFqdn(undefined)).toBe("")
   })
 })

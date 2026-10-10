@@ -5,8 +5,8 @@ import type {
 
 import { describeTimeline } from "@/blocks/Timeline/narration"
 import { describeVisual } from "@/utilities/describeVisual"
-import { formatLongDate } from "./formatDate"
-import { isRecord } from "./isRecord"
+import { formatLongDate } from "@/utilities/formatDate"
+import { isRecord } from "@/utilities/isRecord"
 
 export type MediaMap = Record<
   string | number,

@@ -1,7 +1,7 @@
 import type { PayloadRequest } from "payload"
 
 import type { RegenerateBlurResponse } from "@/collections/Media/types"
-import { getBlurDataUrlFromBuffer } from "@/utilities/getBlurDataUrlFromBuffer"
+import { blurDataUrl } from "@/collections/Media/blurDataUrl"
 import { getSiteURL } from "@/utilities/getURL"
 
 export async function regenerateBlurHandler(req: PayloadRequest): Promise<Response> {
@@ -37,7 +37,7 @@ export async function regenerateBlurHandler(req: PayloadRequest): Promise<Respon
   }
 
   const imageBuffer = Buffer.from(await imageResponse.arrayBuffer())
-  const blurDataURL = await getBlurDataUrlFromBuffer(imageBuffer)
+  const blurDataURL = await blurDataUrl(imageBuffer)
 
   await req.payload.update({
     collection: "media",

@@ -1,10 +1,9 @@
-import configPromise from "@payload-config"
-import { getPayload } from "payload"
+import { getPayloadConfig } from "@/utilities/getPayloadConfig"
 import { unstable_cache } from "next/cache"
 
 // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
 export async function getRedirects(depth = 1) {
-  const payload = await getPayload({ config: configPromise })
+  const payload = await getPayloadConfig()
 
   const { docs: redirects } = await payload.find({
     collection: "redirects",

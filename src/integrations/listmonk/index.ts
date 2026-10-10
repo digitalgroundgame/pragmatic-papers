@@ -1,3 +1,5 @@
+import type { Integration } from "../types"
+
 /**
  * Listmonk REST client.
  *
@@ -25,6 +27,15 @@ const REQUIRED_ENV = [
   "LISTMONK_NEWSLETTER_LIST_UUID",
   "NEWSLETTER_FROM_EMAIL",
 ] as const
+
+/** The Listmonk instance behind the newsletter: signups and the daily campaign queue. */
+export const listmonkServer: Integration = {
+  id: "listmonk",
+  label: "Newsletter mailing list",
+  service: "Listmonk",
+  describe: () => `listmonk:${process.env.LISTMONK_BASE_URL || "(no server configured)"}`,
+  required: REQUIRED_ENV,
+}
 
 interface ListmonkConfig {
   baseUrl: string

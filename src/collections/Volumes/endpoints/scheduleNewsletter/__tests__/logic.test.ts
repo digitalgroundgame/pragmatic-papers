@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 vi.mock("@react-email/render", () => ({ render: vi.fn().mockResolvedValue("<html>body</html>") }))
 vi.mock("@/utilities/getURL", () => ({ getSiteURL: () => "https://site.example.com" }))
-vi.mock("@/utilities/listmonk", () => ({
+vi.mock("@/integrations/listmonk", () => ({
   listScheduledCampaigns: vi.fn(),
   createScheduledCampaign: vi.fn().mockResolvedValue(123),
   updateScheduledCampaign: vi.fn().mockResolvedValue(undefined),
@@ -13,7 +13,7 @@ import {
   listScheduledCampaigns,
   updateScheduledCampaign,
   type ScheduledCampaignSummary,
-} from "@/utilities/listmonk"
+} from "@/integrations/listmonk"
 import { scheduleVolumeNewsletter } from "../logic"
 
 function makePayload(articles: unknown[]) {

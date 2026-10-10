@@ -1,6 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
-import { createScheduledCampaign, listScheduledCampaigns, subscribeMember } from "../listmonk"
+import {
+  createScheduledCampaign,
+  listScheduledCampaigns,
+  subscribeMember,
+} from "@/integrations/listmonk"
 
 const ENV_DEFAULTS = {
   LISTMONK_BASE_URL: "https://listmonk.example.com",

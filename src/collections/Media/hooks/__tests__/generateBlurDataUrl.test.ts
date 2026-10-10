@@ -2,9 +2,9 @@
 import type { Media } from "@/payload-types"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
-vi.mock("@/utilities/getBlurDataUrlFromBuffer", () => ({ getBlurDataUrlFromBuffer: vi.fn() }))
+vi.mock("@/collections/Media/blurDataUrl", () => ({ blurDataUrl: vi.fn() }))
 
-const { getBlurDataUrlFromBuffer } = await import("@/utilities/getBlurDataUrlFromBuffer")
+const { blurDataUrl } = await import("@/collections/Media/blurDataUrl")
 const { generateBlurDataUrl } = await import("../generateBlurDataUrl")
 
 const logger = { info: vi.fn(), error: vi.fn() }
@@ -21,12 +21,12 @@ afterEach(() => {
 
 describe("generateBlurDataUrl", () => {
   it("adds a blur placeholder for an uploaded image", async () => {
-    vi.mocked(getBlurDataUrlFromBuffer).mockResolvedValue("data:image/png;base64,abc")
+    vi.mocked(blurDataUrl).mockResolvedValue("data:image/png;base64,abc")
     const data = Buffer.from("png")
 
     const result = await run({ name: "photo.png", mimetype: "image/png", data })
 
-    expect(getBlurDataUrlFromBuffer).toHaveBeenCalledWith(data)
+    expect(blurDataUrl).toHaveBeenCalledWith(data)
     expect(result).toEqual({ alt: "x", blurDataURL: "data:image/png;base64,abc" })
   })
 
@@ -36,11 +36,11 @@ describe("generateBlurDataUrl", () => {
       run({ name: "doc.pdf", mimetype: "application/pdf", data: Buffer.from("") }),
     ).resolves.toEqual({ alt: "x" })
     await expect(run({ name: "unknown", data: Buffer.from("") })).resolves.toEqual({ alt: "x" })
-    expect(getBlurDataUrlFromBuffer).not.toHaveBeenCalled()
+    expect(blurDataUrl).not.toHaveBeenCalled()
   })
 
   it("logs and still saves when the placeholder can't be generated", async () => {
-    vi.mocked(getBlurDataUrlFromBuffer).mockRejectedValue(new Error("corrupt image"))
+    vi.mocked(blurDataUrl).mockRejectedValue(new Error("corrupt image"))
 
     const result = await run({ name: "bad.jpg", mimetype: "image/jpeg", data: Buffer.from("") })
 

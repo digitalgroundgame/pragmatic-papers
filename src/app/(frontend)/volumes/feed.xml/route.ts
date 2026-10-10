@@ -1,7 +1,7 @@
 import { type NextRequest } from "next/server"
 import configPromise from "@payload-config"
 import { getPayload } from "payload"
-import { generateVolumeFeed } from "@/utilities/generateRssFeed"
+import { generateVolumeFeed } from "@/app/(frontend)/feeds/generateRssFeed"
 import { cache } from "react"
 
 const queryVolumes = cache(async () => {

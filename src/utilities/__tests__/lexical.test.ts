@@ -11,7 +11,6 @@ import {
   createParagraph,
   createQuoteNode,
   createRichText,
-  createRichTextContent,
   createRichTextFromParagraphs,
   createRichTextFromString,
   createTableCellNode,
@@ -113,7 +112,6 @@ describe("lexical builders", () => {
 
     it("builds one paragraph from a string", () => {
       expect(createRichTextFromString("Hello").root.children).toEqual([createParagraph("Hello")])
-      expect(createRichTextContent).toBe(createRichTextFromString)
     })
 
     it("puts an empty paragraph between paragraphs, not after the last, when spaced", () => {

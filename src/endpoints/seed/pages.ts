@@ -6,7 +6,7 @@ import { devMerchCatalogue, seedMerchProducts } from "./merch"
 import {
   createMerchBlockNode,
   createRichText,
-  createRichTextContent,
+  createRichTextFromString,
   createRichTextFromParagraphs,
 } from "./richtext"
 
@@ -308,7 +308,7 @@ export const createPages = async (
           columns: [
             {
               size: "full",
-              richText: createRichTextContent(contact.content),
+              richText: createRichTextFromString(contact.content),
             },
           ],
         },
@@ -346,7 +346,7 @@ export const createPages = async (
           columns: [
             {
               size: "full",
-              richText: createRichTextContent(privacyPolicy.content),
+              richText: createRichTextFromString(privacyPolicy.content),
             },
           ],
         },
@@ -379,7 +379,7 @@ export const createPages = async (
           columns: [
             {
               size: "full",
-              richText: createRichTextContent(termsOfUse.content),
+              richText: createRichTextFromString(termsOfUse.content),
             },
           ],
         },

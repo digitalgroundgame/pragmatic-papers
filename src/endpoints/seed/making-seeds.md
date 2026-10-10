@@ -22,7 +22,7 @@ Seed scripts populate the database with sample content for development. Rather t
 
 **High-Level Functions:**
 
-- `createRichTextFromString(text)` / `createRichTextContent(text)` - Single paragraph from string (aliases)
+- `createRichTextFromString(text)` - Single paragraph from string
 - `createRichTextFromParagraphs(paragraphs[], addSpacing?)` - Multiple paragraphs with auto-spacing between them
 - `createLoremIpsumContent(numParagraphs)` - Lorem ipsum for testing
 

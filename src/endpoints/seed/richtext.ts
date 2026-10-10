@@ -8,7 +8,6 @@ export {
   createParagraph,
   createQuoteNode,
   createRichText,
-  createRichTextContent,
   createRichTextFromParagraphs,
   createRichTextFromString,
   createTableCellNode,

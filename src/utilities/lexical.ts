@@ -106,8 +106,6 @@ export function createRichTextFromString(text: string): LexicalContent {
   return createRichText([createParagraph(text)])
 }
 
-export const createRichTextContent = createRichTextFromString
-
 export function createRichTextFromParagraphs(
   paragraphs: string[],
   addSpacing = false,

@@ -109,7 +109,7 @@ export default async function InteractivePage({
             className="border-border text-muted-foreground my-8 rounded-lg border border-dashed p-8 text-center text-sm"
           >
             {draft
-              ? "No data snapshot has been synced for this interactive yet. Run the sync from Interactive Snapshots in the admin, then reload this preview."
+              ? "No data snapshot has been synced for this interactive yet. Run the sync from Snapshots (under Interactives) in the admin, then reload this preview."
               : "This interactive has no published data yet."}
           </p>
         )}

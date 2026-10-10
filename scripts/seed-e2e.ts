@@ -199,7 +199,7 @@ export async function main(): Promise<void> {
     // The Federal Courts drilldown, as an interactive page (/interactives/federal-courts)
     // with a published data snapshot — what interactive-page.spec.ts drives.
     await createFederalCourtsInteractive(payload, ctx, PUBLISHED_AT)
-    // Interactives and the table of contents are experiments (Site Settings);
+    // Interactives and the table of contents are experiments (Settings);
     // off, interactive pages 404 and articles render without a table of contents.
     await payload.updateGlobal({
       slug: "site-settings",

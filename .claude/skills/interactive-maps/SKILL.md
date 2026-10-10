@@ -1,6 +1,6 @@
 ---
 name: interactive-maps
-description: Build a map — a choropleth Interactive Map block in an article (regions shaded by a value), or an interactive page (an overview map whose regions open into their children and records, fed by a researcher's data feed). Covers preparing the pre-projected SVG, uploading to Map Assets, configuring the block, snapshotting drilldown geometry, the ownership split and validating before upload. Use whenever a writer wants regions shaded by a value (election margins, turnout, per-capita rates), an overview-to-detail map (circuits → districts → judges, states → counties → returns), or when a map renders blank, all-neutral, without tooltips, or drills into nothing.
+description: Build a map — a choropleth Interactive Map block in an article (regions shaded by a value), or an interactive page (an overview map whose regions open into their children and records, fed by a researcher's data feed). Covers preparing the pre-projected SVG, uploading to Maps, configuring the block, snapshotting drilldown geometry, the ownership split and validating before upload. Use whenever a writer wants regions shaded by a value (election margins, turnout, per-capita rates), an overview-to-detail map (circuits → districts → judges, states → counties → returns), or when a map renders blank, all-neutral, without tooltips, or drills into nothing.
 ---
 
 # Authoring an Interactive Map
@@ -174,10 +174,10 @@ map would render inert.
 `.claude/skills/interactive-maps/example-map.svg` is a minimal valid file to
 copy from; `src/endpoints/seed/fixtures/mo-districts-119.svg` is a real one.
 
-## Uploading to Map Assets
+## Uploading to Maps
 
-Interactive-map SVGs go in the **Map Assets** collection (`map-assets`), not
-Media. Map Assets skips image processing so the vector data round-trips
+Interactive-map SVGs go in the **Maps** collection (`map-assets`, under **Interactives** in the admin), not
+Media. Maps skips image processing so the vector data round-trips
 intact, and a `beforeValidate` hook copies the file's text into a hidden
 `svgContent` field — that captured text is what the block renders, so **a file
 edited outside the CMS must be re-uploaded**, not swapped on disk.
@@ -205,7 +205,7 @@ block inside the article body.
 | **Layout**                | `Side by side` / `Stacked` — how multiple maps are arranged. Both currently place maps in one column on phones and two columns from the `sm` breakpoint up, so the visible difference is small. |
 | **Color Scale**           | `Diverging Red/Blue` (color by value) or `Per-region custom colors` (no automatic fill; you set every color yourself).                                                                          |
 | **Color Bias**            | Warps the breakpoints — see below. Leave at `1` unless the map reads flat.                                                                                                                      |
-| **Maps** (≥1)             | Each: **Title**, **Pre-projected SVG** (a Map Asset), **Data Attribute**, **Overrides**.                                                                                                        |
+| **Maps** (≥1)             | Each: **Title**, **Pre-projected SVG** (from Maps), **Data Attribute**, **Overrides**.                                                                                                          |
 | **Sources / Attribution** | Links rendered as a small footer under the maps. Always credit the data source.                                                                                                                 |
 
 Two or more maps in one block share the scale, bias, and legend — that is what
@@ -379,7 +379,7 @@ per-path facts from geometry. Source of truth: `src/interactives/types.ts`.
    block (ours are checked in as `geometry/anchors.json`, taken once by the
    geometry snapshot).
 2. `syncInteractiveData` runs daily (06:15 UTC) and from the **Sync data
-   feeds** button on Interactive Snapshots (`POST
+   feeds** button on Snapshots (under Interactives) (`POST
 /api/interactive-snapshots/sync[?interactive=<id>&force=true]`). It reads
    upstream at an **immutable ref** (see below), skips if upstream's `version`
    has not moved, fetches, adapts,
@@ -623,7 +623,7 @@ shows the full overview, strip, facts and any records carried in the overview.
    feed and prints every problem. With no checkout to hand,
    `gh release download data-v<version> --repo digitalgroundgame/court-tracker
 --pattern data-package.tar.gz` and untar it is enough of one.
-4. Switch on **Interactives** under Site Settings → Experiments in the
+4. Switch on **Interactives** under System → Settings → Experiments in the
    environment it should appear in (off, every interactive page 404s and the
    sync skips). Then create the **Interactive** in the admin (title, slug,
    profile, standfirst, sources, feed ref), press **Sync data feeds**, review
@@ -633,8 +633,8 @@ shows the full overview, strip, facts and any records carried in the overview.
 
 | Symptom                                                                                      | Cause                                                                                                                                                                                                                              |
 | -------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Every interactive page 404s, and the sync logs "skipped: the interactives experiment is off" | The `interactives` experiment is off in this environment's Site Settings. Switch it on under Experiments.                                                                                                                          |
-| Page says "no published data yet"                                                            | No snapshot is published for the interactive. Open Interactive Snapshots: publish the draft, or run the sync and then publish.                                                                                                     |
+| Every interactive page 404s, and the sync logs "skipped: the interactives experiment is off" | The `interactives` experiment is off in this environment's Settings (under System). Switch it on under Experiments.                                                                                                                |
+| Page says "no published data yet"                                                            | No snapshot is published for the interactive. Open Snapshots (under Interactives): publish the draft, or run the sync and then publish.                                                                                            |
 | Sync says "skipped — COURT_TRACKER_GITHUB_TOKEN not set"                                     | The upstream is private; set the token in the environment the job runs in.                                                                                                                                                         |
 | Sync says "unchanged" but the researcher pushed                                              | Their manifest `version` did not move (they did not rebuild), or the rendered content is identical. Use `?force=true` to re-read.                                                                                                  |
 | Sync fails with `geometry draws "x" but the feed declares…`                                  | Upstream renamed or dropped a region id. Fix the adapter's mapping or re-snapshot the geometry; the last good snapshot still serves.                                                                                               |
@@ -662,7 +662,7 @@ shows the full overview, strip, facts and any records carried in the overview.
 - Sanitizer allowlist — `src/blocks/InteractiveMap/sanitize.ts`
 - Parser (id / value / transform extraction) — `src/blocks/InteractiveMap/parseInlineSvg.ts`
 - Color scale, breakpoints, bias, formatting — `src/blocks/InteractiveMap/colorScale.ts`
-- Map Assets collection — `src/collections/MapAssets/index.ts`
+- Maps collection (`map-assets`) — `src/collections/MapAssets/index.ts`
 - Drilldown engine contract — `src/interactives/engine/types.ts`, `contract.ts`
 - Drilldown rendering, regions, morph, seat layout, search — `src/interactives/engine/`
 - Drilldown stylesheet — `src/interactives/engine/styles.css`; the `--map-*` palette both

@@ -25,7 +25,9 @@ import { parse } from "dotenv"
 
 // Docker Hub's official image, through Amazon ECR Public's mirror of it: Docker Hub
 // rate-limits anonymous pulls by address, and CI's shared runners run out.
-export const BASE_IMAGE = "public.ecr.aws/docker/library/postgres:17-alpine"
+// CI sets TEST_DB_IMAGE to its copy in GHCR, which it pulls logged in.
+export const BASE_IMAGE =
+  process.env.TEST_DB_IMAGE || "public.ecr.aws/docker/library/postgres:17-alpine"
 export const SNAPSHOT_REPO = "pragmatic-papers-test-db"
 export const OWNER_LABEL = "pragmatic-papers.test-db.owner"
 export const DATABASE = "pragmatic-papers-test"

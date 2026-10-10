@@ -137,13 +137,45 @@ refresh_prerendered_routes() {
     fi
 }
 
+# Once traffic reaches this container, empty Cloudflare's edge of the previous release's
+# pages. Until Coolify's health check passes and it moves traffic over, the old container
+# answers on SERVER_URL, so wait until /next/purge-edge there names this container's
+# INSTANCE_ID; purging sooner would let the old container refill the edge.
+purge_edge_after_switchover() {
+    if [ -z "$SERVER_URL" ]; then
+        return 0
+    fi
+    tries=0
+    until wget -q -O - --header="Authorization: Bearer $PAYLOAD_SECRET" \
+        "$SERVER_URL/next/purge-edge?at=$(date +%s)" 2>/dev/null | grep -q "\"$INSTANCE_ID\""; do
+        tries=$((tries + 1))
+        if [ "$tries" -ge 120 ]; then
+            echo "WARNING: $SERVER_URL still not served by this container after 10 min; purging the edge anyway"
+            break
+        fi
+        sleep 5
+    done
+    if wget -q -O /dev/null --post-data="" \
+        --header="Authorization: Bearer $PAYLOAD_SECRET" "http://127.0.0.1:${PORT:-3000}/next/purge-edge"; then
+        echo "Edge purge queued now that $SERVER_URL is served by this container"
+    else
+        echo "WARNING: couldn't queue the edge purge; the edge keeps old pages until they expire"
+    fi
+}
+
+INSTANCE_ID=$(cat /proc/sys/kernel/random/uuid)
+export INSTANCE_ID
+
 echo "Starting Next.js server..."
 node server.js &
 server=$!
 # dumb-init already signals the whole process group; don't let the signal end this
 # shell before the server has shut down.
 trap 'kill -TERM "$server" 2>/dev/null || true' TERM INT
-refresh_prerendered_routes &
+{
+    refresh_prerendered_routes
+    purge_edge_after_switchover
+} &
 
 set +e
 wait "$server"

@@ -15,6 +15,7 @@ export const Ticker: GlobalConfig = {
     update: ({ req: { user } }) => isEditor(user),
   },
   admin: {
+    group: "Site",
     hidden: ({ user }) => !isEditor(user),
     description: "The strip under the header with our live broadcasts and latest posts.",
   },

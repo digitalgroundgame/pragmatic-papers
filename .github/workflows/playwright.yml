@@ -120,7 +120,11 @@ jobs:
     # database (dockerfiles/scripts/start.sh, and scripts/test-e2e.mjs here).
     services:
       postgres:
-        image: public.ecr.aws/docker/library/postgres:17-alpine
+        # Copied into GHCR by postgres-image.yml; pulled logged in, so not rate-limited.
+        image: ghcr.io/digitalgroundgame/postgres:17-alpine
+        credentials:
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
@@ -222,10 +226,15 @@ jobs:
 
     permissions:
       contents: read
+      packages: read
 
     services:
       postgres:
-        image: public.ecr.aws/docker/library/postgres:17-alpine
+        # Copied into GHCR by postgres-image.yml; pulled logged in, so not rate-limited.
+        image: ghcr.io/digitalgroundgame/postgres:17-alpine
+        credentials:
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
@@ -290,11 +299,16 @@ jobs:
     permissions:
       actions: read
       contents: read
+      packages: read
       pull-requests: write
 
     services:
       postgres:
-        image: public.ecr.aws/docker/library/postgres:17-alpine
+        # Copied into GHCR by postgres-image.yml; pulled logged in, so not rate-limited.
+        image: ghcr.io/digitalgroundgame/postgres:17-alpine
+        credentials:
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres

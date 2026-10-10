@@ -5,7 +5,7 @@ import { Switch } from "@/components/ui/switch"
 import "./ExperimentSwitch.css"
 
 /**
- * One experiment's on/off switch in the Site Settings admin, with its label and description.
+ * One experiment's on/off switch in the Settings admin, with its label and description.
  * Presentational: `ExperimentSwitchField` connects it to the form.
  */
 export function ExperimentSwitch({

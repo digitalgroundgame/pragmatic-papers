@@ -50,9 +50,12 @@ processes they start.
 - By default it `docker run`s `postgres:17-alpine` on a random localhost port and removes
   it on exit, Ctrl-C or SIGTERM. A container left by a `kill -9` is swept by the next run.
 - It pulls Docker Hub's official image through Amazon's mirror,
-  `public.ecr.aws/docker/library/`, as `docker-compose.yml`, CI's Postgres services and
-  both Dockerfiles do: Docker Hub rate-limits anonymous pulls, and GitHub's shared
-  runners run out.
+  `public.ecr.aws/docker/library/`, as `docker-compose.yml` and both Dockerfiles do:
+  Docker Hub rate-limits anonymous pulls. CI pulls its copy in GHCR instead
+  (`ghcr.io/digitalgroundgame/postgres:17-alpine`, set by `TEST_DB_IMAGE` and used by
+  every Postgres service), logged in with the job's `GITHUB_TOKEN`, because GitHub's
+  shared runners share their IPs and ran out of ECR Public's anonymous pulls too.
+  `.github/workflows/postgres-image.yml` refreshes that copy weekly.
 - Integration and E2E start from a **pre-migrated snapshot image**
   (`pragmatic-papers-test-db:<hash>`, keyed on `src/migrations/**` and the Postgres image),
   so they skip `payload migrate` until a migration changes; a miss migrates once and commits
@@ -104,14 +107,14 @@ processes they start.
 
 - **Header** (`slug: 'header'`) — nav items, action button; revalidated via `revalidateHeader` hook
 - **Footer** (`slug: 'footer'`) — nav items; revalidated via `revalidateFooter` hook
-- **Site Settings** (`slug: 'site-settings'`) — admin-only; its `experiments` group switches beta features on per environment; revalidated via `revalidateSiteSettings` hook
+- **Settings** (`slug: 'site-settings'`, the `SiteSettings` global) — admin-only; its `experiments` group switches beta features on per environment; revalidated via `revalidateSiteSettings` hook
 - **Ticker** (`slug: 'ticker'`) — editors and admins; posts hidden from the header's ticker, by link; revalidated via `revalidateTicker` hook. Which accounts the ticker reads is in **Integrations** (admin-only)
 - Fetched via `getCachedGlobal('header' | 'footer', depth)()` using `unstable_cache` with tags
 
 ### Experiments
 
 A beta feature that should run on staging before production goes behind a
-checkbox in the Site Settings global's `experiments` group
+checkbox in the Settings global's `experiments` group
 (`src/globals/SiteSettings/config.ts`). Each environment has its own database,
 so each has its own switches; PR previews start with staging's. To add one:
 
@@ -206,6 +209,9 @@ connection isn't configured. When the `cloudflareWorkerCache` connection is
 configured (`WORKER_URL`, on the Coolify app a Cloudflare Worker reads from), the
 same flush first clears that Worker's cache through its `/next/revalidate-all`.
 A new hook for content readers see should call it too.
+A deploy purges too: `start.sh` waits until the site's public URL is answered by the
+new container (`/next/purge-edge` names its `INSTANCE_ID`), so the old container can't
+refill the edge with the previous release's pages, then POSTs `/next/purge-edge`.
 
 ### Payload Plugins
 
@@ -219,6 +225,7 @@ A new hook for content readers see should call it too.
 
 - **File structure**: `collections/<Name>/index.ts` with optional `hooks/` and `components/` subdirectories
 - **Hook naming**: `revalidate*` for cache invalidation, `generate*`/`populate*` for data transformation, `pushTo*`/`check*` for side effects
+- **Admin sidebar**: every collection and global sets `admin.group` to one of Content, Site, Interactives, Store, System or Help, and labels are a single word where one reads clearly (`labels`/`label`, never the slug). Groups appear in the order of their first entry in `payload.config.ts`
 - **Tabs pattern**: Content + SEO tabs; SEO tab uses standard fields (`OverviewField`, `MetaTitleField`, `MetaImageField`, `MetaDescriptionField`, `PreviewField`)
 - **Versions config**: `drafts.autosave: true`, `schedulePublish: true`, `maxPerDoc: 50`
 - **Live preview**: `generatePreviewPath()` for `admin.livePreview.url` and `admin.preview`
@@ -399,14 +406,14 @@ something. A new report joins that comment by registering a section in
 
 ### Interactive maps
 
-Preparing a pre-projected SVG, uploading a Map Asset, or chasing a map that
+Preparing a pre-projected SVG, uploading to Maps (the `map-assets` collection), or chasing a map that
 renders blank, all-grey, without tooltips, or drills into nothing? Use the
 **`interactive-maps`** skill (`.claude/skills/interactive-maps/SKILL.md`).
 
 Two things live there, and they are not two modes of one block:
 
 - The **Interactive Map block** is a **choropleth** only — regions shaded by a
-  value, R+/D+ color scale, from an SVG a writer uploads to Map Assets. The
+  value, R+/D+ color scale, from an SVG a writer uploads to Maps. The
   skill covers the sanitizer allowlist that silently eats most exports.
 - A **drilldown** is an **interactive page** (`/interactives/<slug>`, the
   `interactives` + `interactive-snapshots` collections, `src/interactives/`):
@@ -421,7 +428,7 @@ snapshot time into `geometry/*.json`, and never parsed again;
 and data fixture from a court-tracker checkout. The fixture is trimmed to three
 courts' benches (`--keep`); `pnpm dev:db-seed` with `COURT_TRACKER_GITHUB_TOKEN`
 set seeds every judge from upstream's newest release instead. Interactive pages
-are the `interactives` experiment: with it off in Site Settings they 404, their
+are the `interactives` experiment: with it off in Settings they 404, their
 sitemap is empty, and the daily sync skips. Validate a file before
 committing or uploading it:
 `pnpm tsx .claude/skills/interactive-maps/validate-map-svg.ts <file.svg> [--mode geometry]`.

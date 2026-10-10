@@ -6,6 +6,7 @@
     "$media": "hero.webp",
     "alt": "A contributor card with a photo, name, role, bio and social links"
   },
+  "section": "getting-started",
   "audience": ["writer", "narrator", "editor"],
   "content": {
     "root": {

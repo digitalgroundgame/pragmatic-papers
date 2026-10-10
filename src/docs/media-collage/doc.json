@@ -6,6 +6,7 @@
     "$media": "hero.webp",
     "alt": "A Media Collage block arranging several images"
   },
+  "section": "blocks",
   "audience": ["writer", "editor"],
   "content": {
     "root": {

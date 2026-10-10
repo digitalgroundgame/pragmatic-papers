@@ -6,6 +6,7 @@
     "$media": "hero.webp",
     "alt": "A Sources list of numbered footnotes with links"
   },
+  "section": "writing",
   "audience": ["writer", "editor"],
   "content": {
     "root": {

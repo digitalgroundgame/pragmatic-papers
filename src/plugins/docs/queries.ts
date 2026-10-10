@@ -22,6 +22,7 @@ const findPublishedDocs = async () => {
       summary: true,
       publishedAt: true,
       updatedAt: true,
+      section: true,
       audience: true,
       heroImage: true,
     },

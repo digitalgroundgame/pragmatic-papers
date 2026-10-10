@@ -6,6 +6,7 @@
     "$media": "hero.webp",
     "alt": "A Volumes block listing volumes with their articles"
   },
+  "section": "site",
   "audience": ["editor"],
   "content": {
     "root": {

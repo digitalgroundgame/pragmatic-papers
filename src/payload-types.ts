@@ -1440,6 +1440,10 @@ export interface Doc {
    */
   publishedAt: string;
   /**
+   * Where the doc sits in the sidebar at /docs.
+   */
+  section: 'getting-started' | 'writing' | 'blocks' | 'media' | 'site';
+  /**
    * Who the help bell tells. Empty means all staff; admins see every doc.
    */
   audience?: ('admin' | 'chief-editor' | 'editor' | 'writer' | 'narrator')[] | null;
@@ -2452,6 +2456,7 @@ export interface DocsSelect<T extends boolean = true> {
   heroImage?: T;
   content?: T;
   publishedAt?: T;
+  section?: T;
   audience?: T;
   showTableOfContents?: T;
   sourceHash?: T;

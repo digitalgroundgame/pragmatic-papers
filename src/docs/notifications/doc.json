@@ -6,6 +6,7 @@
     "$media": "hero.webp",
     "alt": "The bell's What's new list with two help docs, one unread"
   },
+  "section": "getting-started",
   "content": {
     "root": {
       "type": "root",

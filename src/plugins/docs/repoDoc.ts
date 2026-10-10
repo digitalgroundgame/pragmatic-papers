@@ -2,6 +2,8 @@ import { createHash } from "node:crypto"
 
 import type { Role } from "@/access/roles"
 
+import type { DocSection } from "./sections"
+
 /**
  * A doc as it's kept in the repo, at `src/docs/<slug>/doc.json`, beside the files it shows.
  * Media ids differ from site to site, so wherever the doc uses media the JSON holds a
@@ -14,6 +16,8 @@ export interface RepoDoc {
   publishedAt: string
   /** A file in the doc's folder: the bell's thumbnail and the link preview's image. */
   heroImage: MediaRef
+  /** Where it sits in the sidebar at /docs. */
+  section: DocSection
   audience?: Role[]
   /** Left out means shown. */
   showTableOfContents?: boolean

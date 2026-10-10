@@ -6,6 +6,7 @@
     "$media": "hero.webp",
     "alt": "An Interactive Map block shading Missouri's congressional districts"
   },
+  "section": "blocks",
   "audience": ["writer", "editor"],
   "content": {
     "root": {

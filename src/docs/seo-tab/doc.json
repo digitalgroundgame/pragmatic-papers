@@ -6,6 +6,7 @@
     "$media": "hero.webp",
     "alt": "An article's Google result and its link preview card"
   },
+  "section": "writing",
   "audience": ["writer", "editor"],
   "content": {
     "root": {

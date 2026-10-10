@@ -6,6 +6,7 @@
     "$media": "hero.webp",
     "alt": "The Site Settings switch for the Ticker experiment, turned on"
   },
+  "section": "site",
   "audience": ["admin"],
   "content": {
     "root": {

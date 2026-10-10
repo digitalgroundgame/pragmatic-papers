@@ -6,6 +6,7 @@
     "$media": "hero.webp",
     "alt": "The Unsplash search in Media uploads with a grid of photos"
   },
+  "section": "media",
   "content": {
     "root": {
       "type": "root",

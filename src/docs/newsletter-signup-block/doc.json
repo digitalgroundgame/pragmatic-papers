@@ -6,6 +6,7 @@
     "$media": "hero.webp",
     "alt": "A Newsletter Signup block with an email field and Sign Up button"
   },
+  "section": "blocks",
   "audience": ["admin"],
   "content": {
     "root": {

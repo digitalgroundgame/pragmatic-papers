@@ -33,6 +33,7 @@ const doc = {
   summary: "Search Unsplash.",
   publishedAt: "2026-10-18T00:00:00.000Z",
   heroImage: image,
+  section: "media",
   audience: [],
   showTableOfContents: true,
   content: { root: { children: [{ type: "upload", value: image }] } },
@@ -70,6 +71,7 @@ describe("docs:export", () => {
       summary: "Search Unsplash.",
       publishedAt: "2026-10-18",
       heroImage: { $media: "search.webp", alt: "The search drawer" },
+      section: "media",
       content: {
         root: {
           children: [

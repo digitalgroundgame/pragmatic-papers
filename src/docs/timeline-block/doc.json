@@ -6,6 +6,7 @@
     "$media": "hero.webp",
     "alt": "A Timeline block showing how a district map changed"
   },
+  "section": "blocks",
   "audience": ["writer", "editor"],
   "content": {
     "root": {

@@ -6,6 +6,7 @@
     "$media": "hero.webp",
     "alt": "An article title with its published and updated dates"
   },
+  "section": "getting-started",
   "audience": ["writer", "editor"],
   "content": {
     "root": {

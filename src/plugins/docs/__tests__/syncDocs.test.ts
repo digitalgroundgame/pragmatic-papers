@@ -15,6 +15,7 @@ const doc = {
   summary: "Switch beta features on per site.",
   publishedAt: "2026-10-09",
   heroImage: { $media: "hero.png", alt: "Switches" },
+  section: "site",
   content: {
     root: { children: [{ type: "upload", value: { $media: "drawer.png", alt: "Drawer" } }] },
   },
@@ -89,6 +90,7 @@ describe("syncDocs", () => {
         context: { disableRevalidate: true },
         data: expect.objectContaining({
           slug: "experiments",
+          section: "site",
           _status: "published",
           audience: [],
           showTableOfContents: true,

@@ -6,6 +6,7 @@
     "$media": "hero.webp",
     "alt": "An article's table of contents listing its sections, a map, images and a table"
   },
+  "section": "writing",
   "audience": ["writer", "editor"],
   "content": {
     "root": {

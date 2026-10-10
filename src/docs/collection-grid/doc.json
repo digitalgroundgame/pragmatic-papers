@@ -6,6 +6,7 @@
     "$media": "hero.webp",
     "alt": "A Collection Grid block of article cards with titles and images"
   },
+  "section": "blocks",
   "audience": ["admin"],
   "content": {
     "root": {

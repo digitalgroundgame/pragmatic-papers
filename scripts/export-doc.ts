@@ -61,6 +61,7 @@ export async function main(slug: string | undefined): Promise<void> {
       summary: doc.summary,
       publishedAt: doc.publishedAt.slice(0, 10),
       heroImage,
+      section: doc.section,
       ...(doc.audience?.length ? { audience: doc.audience } : {}),
       ...(doc.showTableOfContents === false ? { showTableOfContents: false } : {}),
       content,

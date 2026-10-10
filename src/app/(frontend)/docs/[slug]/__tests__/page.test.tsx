@@ -3,7 +3,7 @@ import type React from "react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 const { queries, draft, experiment } = vi.hoisted(() => ({
-  queries: { queryDocBySlug: vi.fn() },
+  queries: { queryDocBySlug: vi.fn(), queryPublishedDocs: vi.fn() },
   draft: { isEnabled: false },
   experiment: { enabled: true },
 }))
@@ -60,6 +60,7 @@ beforeEach(() => {
   draft.isEnabled = false
   experiment.enabled = true
   queries.queryDocBySlug.mockResolvedValue(doc)
+  queries.queryPublishedDocs.mockResolvedValue([{ ...doc, section: "site" }])
 })
 afterEach(cleanup)
 
@@ -78,12 +79,22 @@ describe("DocPage", () => {
     expect(screen.getByText("Some features arrive off.")).toBeInTheDocument()
     expect(screen.getByText("October 18, 2026")).toHaveAttribute("datetime", "2026-10-18")
     const trail = screen.getByRole("navigation", { name: "breadcrumb" })
-    expect(trail).toHaveClass("max-w-5xl")
+    expect(trail).toHaveClass("max-w-7xl")
     expect(trail).toHaveTextContent("Docs")
     expect(screen.getByRole("button", { name: /share/i })).toBeInTheDocument()
     // Signed off with the squiggle, as articles are.
     expect(document.querySelector("[class*='squiggle.svg']")).toBeInTheDocument()
     expect(screen.queryByTestId("live-preview")).not.toBeInTheDocument()
+  })
+
+  it("marks the doc as the current page in the docs sidebar", async () => {
+    await renderPage()
+    const nav = screen.getByRole("navigation", { name: "Docs" })
+    expect(within(nav).getByRole("link", { name: "Switch beta features on" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    )
+    expect(within(nav).getByRole("link", { name: "All docs" })).not.toHaveAttribute("aria-current")
   })
 
   it("shows a table of contents linking to the doc's headings", async () => {

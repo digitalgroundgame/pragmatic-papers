@@ -125,6 +125,7 @@ describe("syncDocs", () => {
         summary: "A doc from the admin.",
         publishedAt: "2026-10-18",
         heroImage: (await syncedMedia())[0]!.id,
+        section: "writing",
         content: {
           root: {
             type: "root",

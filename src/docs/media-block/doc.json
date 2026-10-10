@@ -6,6 +6,7 @@
     "$media": "hero.webp",
     "alt": "A Media block showing a landscape image with its caption"
   },
+  "section": "blocks",
   "audience": ["writer", "editor"],
   "content": {
     "root": {

@@ -6,6 +6,7 @@
     "$media": "hero.webp",
     "alt": "A Merch block showing three products under Support the Papers"
   },
+  "section": "blocks",
   "audience": ["admin"],
   "content": {
     "root": {

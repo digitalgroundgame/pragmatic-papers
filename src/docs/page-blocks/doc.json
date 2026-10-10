@@ -6,6 +6,7 @@
     "$media": "hero.webp",
     "alt": "A Call to Action block inviting readers to get every volume in their inbox"
   },
+  "section": "site",
   "audience": ["admin"],
   "content": {
     "root": {

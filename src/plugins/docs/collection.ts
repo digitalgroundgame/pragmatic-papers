@@ -21,6 +21,7 @@ import {
 import type { Access, CollectionConfig } from "payload"
 
 import { revalidateDoc, revalidateDocDelete } from "./revalidateDoc"
+import { DEFAULT_DOC_SECTION, DOC_SECTIONS } from "./sections"
 
 export const DOCS_SLUG = "docs"
 
@@ -65,7 +66,7 @@ export const Docs: CollectionConfig<"docs"> = {
   admin: {
     group: "Help",
     useAsTitle: "title",
-    defaultColumns: ["title", "audience", "publishedAt", "updatedAt"],
+    defaultColumns: ["title", "section", "audience", "publishedAt", "updatedAt"],
     livePreview: {
       url: ({ data, req }) => generatePreviewPath({ slug: data?.slug, collection: DOCS_SLUG, req }),
     },
@@ -127,6 +128,17 @@ export const Docs: CollectionConfig<"docs"> = {
         position: "sidebar",
         date: { pickerAppearance: "dayOnly", displayFormat: "MMMM d, yyyy" },
         description: "The day the feature reaches the live site. Newest docs list first.",
+      },
+    },
+    {
+      name: "section",
+      type: "select",
+      required: true,
+      defaultValue: DEFAULT_DOC_SECTION,
+      options: DOC_SECTIONS.map(({ value, label }) => ({ value, label })),
+      admin: {
+        position: "sidebar",
+        description: "Where the doc sits in the sidebar at /docs.",
       },
     },
     {

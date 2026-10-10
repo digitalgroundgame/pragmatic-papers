@@ -6,6 +6,7 @@
     "$media": "hero.webp",
     "alt": "The ticker showing a live YouTube broadcast beside our latest posts"
   },
+  "section": "site",
   "audience": ["editor"],
   "content": {
     "root": {

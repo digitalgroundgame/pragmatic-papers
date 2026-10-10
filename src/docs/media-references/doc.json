@@ -6,6 +6,7 @@
     "$media": "hero.webp",
     "alt": "The Media References tab listing the documents that use an image"
   },
+  "section": "media",
   "content": {
     "root": {
       "type": "root",

@@ -6,6 +6,7 @@
     "$media": "hero.webp",
     "alt": "An article's title, byline and narration audio player"
   },
+  "section": "writing",
   "audience": ["narrator", "writer", "editor"],
   "content": {
     "root": {

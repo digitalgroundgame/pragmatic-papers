@@ -6,6 +6,7 @@
     "$media": "hero.webp",
     "alt": "A Social Embed block showing a quoted post"
   },
+  "section": "blocks",
   "audience": ["writer", "editor"],
   "content": {
     "root": {

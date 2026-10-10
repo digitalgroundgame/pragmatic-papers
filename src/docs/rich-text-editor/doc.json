@@ -6,6 +6,7 @@
     "$media": "hero.webp",
     "alt": "Article text with a banner and an image block in the rich text"
   },
+  "section": "getting-started",
   "audience": ["writer", "editor"],
   "content": {
     "root": {

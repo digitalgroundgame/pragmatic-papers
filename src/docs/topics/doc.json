@@ -6,6 +6,7 @@
     "$media": "hero.webp",
     "alt": "Three topic tags on an article: Elections, Housing and Courts"
   },
+  "section": "writing",
   "audience": ["writer", "editor"],
   "content": {
     "root": {

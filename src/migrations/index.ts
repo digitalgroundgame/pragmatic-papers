@@ -55,6 +55,7 @@ import * as migration_20261009_032243_hero_links_default_button from "./20261009
 import * as migration_20261009_040730_add_ticker_and_integrations from "./20261009_040730_add_ticker_and_integrations"
 import * as migration_20261009_080507_add_docs from "./20261009_080507_add_docs"
 import * as migration_20261010_000818_add_docs_hero_image from "./20261010_000818_add_docs_hero_image"
+import * as migration_20261010_035205_add_docs_section from "./20261010_035205_add_docs_section"
 
 export const migrations = [
   {
@@ -341,5 +342,10 @@ export const migrations = [
     up: migration_20261010_000818_add_docs_hero_image.up,
     down: migration_20261010_000818_add_docs_hero_image.down,
     name: "20261010_000818_add_docs_hero_image",
+  },
+  {
+    up: migration_20261010_035205_add_docs_section.up,
+    down: migration_20261010_035205_add_docs_section.down,
+    name: "20261010_035205_add_docs_section",
   },
 ]

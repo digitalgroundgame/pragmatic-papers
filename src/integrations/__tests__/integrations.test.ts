@@ -1,5 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest"
 
+import { LISTMONK_ENV } from "@/utilities/listmonk"
+
 import { githubRepo } from "../github"
 import { INTEGRATIONS, courtTracker, integrationStatuses, listmonkNewsletter } from "../index"
 import { describeStatus, integrationStatus, type Integration } from "../types"
@@ -117,6 +119,7 @@ describe("the declared connections", () => {
     vi.stubEnv("LISTMONK_BASE_URL", "https://list.example.com/")
     vi.stubEnv("LISTMONK_API_TOKEN", "secret-token")
     vi.stubEnv("LISTMONK_API_USER", "")
+    expect(listmonkNewsletter.required).toEqual(LISTMONK_ENV)
     expect(listmonkNewsletter.describe()).toBe("listmonk:list.example.com")
     const status = integrationStatus(listmonkNewsletter)
     expect(status.configured).toBe(false)

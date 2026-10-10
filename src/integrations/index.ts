@@ -6,7 +6,6 @@ import { xAccounts } from "./x"
 import { youtubeChannels } from "./youtube"
 import { env, integrationStatus, type Integration, type IntegrationStatus } from "./types"
 import { unsplashApp } from "./unsplash"
-import { LISTMONK_ENV } from "@/utilities/listmonk"
 
 /**
  * Every outside connection this site has, declared in one place.
@@ -124,7 +123,16 @@ export const listmonkNewsletter: Integration = {
       return "listmonk:(invalid URL)"
     }
   },
-  required: LISTMONK_ENV,
+  // The same list `src/utilities/listmonk.ts` checks (`LISTMONK_ENV`), kept here so declaring the
+  // connection doesn't load its client; a test holds the two together.
+  required: [
+    "LISTMONK_BASE_URL",
+    "LISTMONK_API_USER",
+    "LISTMONK_API_TOKEN",
+    "LISTMONK_NEWSLETTER_LIST_ID",
+    "LISTMONK_NEWSLETTER_LIST_UUID",
+    "NEWSLETTER_FROM_EMAIL",
+  ],
 }
 
 /** Declaration order is display order. */

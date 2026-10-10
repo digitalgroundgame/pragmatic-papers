@@ -15,7 +15,7 @@ const syncOwned: FieldAccess = () => false
 const syncOwnedAdmin = { readOnly: true, disableBulkEdit: true } as const
 
 /**
- * Interactive Snapshots — the researcher's half of an interactive, as the sync job last
+ * Snapshots — the researcher's half of an interactive, as the sync job last
  * read it. One document per interactive; every sync that changes something writes a new
  * version, so the history and the rollback come from Payload's versions for free.
  *

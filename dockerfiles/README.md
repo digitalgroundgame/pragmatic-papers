@@ -83,7 +83,7 @@ SUPABASE_URL=https://<project>.supabase.co
 
 **Cloudflare cache purge (every Coolify deployment — production, staging and previews):**
 
-Public pages are cached at Cloudflare's edge for 10 minutes, then served stale for up to a day while they revalidate (`next.config.ts`, and the zone's Cache Rules in `cloudflare/`). When an editor saves a global (Site Settings, Header, Footer) or publishes, changes or deletes a document readers see, the save's `revalidate*` hook asks Cloudflare to purge **this deployment's hostname** (from `SERVER_URL`), so anonymous readers get the change at once (`src/hooks/purgeEdgeCache.ts`). Only the hostname: the three environments share one zone, so a "purge everything" from a preview would empty production's cache too.
+Public pages are cached at Cloudflare's edge for 10 minutes, then served stale for up to a day while they revalidate (`next.config.ts`, and the zone's Cache Rules in `cloudflare/`). When an editor saves a global (Settings, Header, Footer) or publishes, changes or deletes a document readers see, the save's `revalidate*` hook asks Cloudflare to purge **this deployment's hostname** (from `SERVER_URL`), so anonymous readers get the change at once (`src/hooks/purgeEdgeCache.ts`). Only the hostname: the three environments share one zone, so a "purge everything" from a preview would empty production's cache too.
 
 - `CLOUDFLARE_ZONE_ID` — the zone's ID, from its Overview page in the Cloudflare dashboard.
 - `CLOUDFLARE_PURGE_TOKEN` — a custom API token with **Zone → Cache Purge → Purge**, on this zone only. Keep it apart from `CLOUDFLARE_API_TOKEN` (a GitHub secret that deploys Storybook) and the Cache Rules tokens (`cloudflare/README.md`).
@@ -94,7 +94,7 @@ Public pages are cached at Cloudflare's edge for 10 minutes, then served stale f
 
 #### Ticker
 
-The strip under the header on every page (`src/components/Ticker`, rendered by the header), shown when the **Ticker** experiment is on in Site Settings. Each source is skipped with a `[ticker] skipping …` log line until it's configured; all are **Runtime Variables**, set in the production, staging **and** preview apps (`dockerfiles/.env.example` lists them).
+The strip under the header on every page (`src/components/Ticker`, rendered by the header), shown when the **Ticker** experiment is on in **System → Settings**. Each source is skipped with a `[ticker] skipping …` log line until it's configured; all are **Runtime Variables**, set in the production, staging **and** preview apps (`dockerfiles/.env.example` lists them).
 
 - `YOUTUBE_API_KEY` — a YouTube Data API v3 key (any Google Cloud project, public reads only). Shows a channel's broadcast when it's live or starting within a day. Each check costs one of the key's 10,000 free daily quota units per channel plus one, every 5 minutes at most and only while the site is being visited, so one key can serve every app.
 - Bluesky needs nothing: it reads the public API.
@@ -319,7 +319,7 @@ COOLIFY_FQDN=pr-330.pragmaticpapers.com
 
 ### Database Copy for Preview Deployments
 
-With `COPY_SOURCE_DATABASE=true`, a preview's database starts as a copy of the database its `DATABASE_URI` names, so it has that database's content (articles, pages, Site Settings experiments) while its migrations run on the copy.
+With `COPY_SOURCE_DATABASE=true`, a preview's database starts as a copy of the database its `DATABASE_URI` names, so it has that database's content (articles, pages, Settings experiments) while its migrations run on the copy.
 
 ```env
 BUILD_ENV=preview

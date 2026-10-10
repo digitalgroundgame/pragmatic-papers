@@ -111,7 +111,7 @@ processes they start.
 ### Experiments
 
 A beta feature that should run on staging before production goes behind a
-checkbox in the Site Settings global's `experiments` group
+checkbox in the Settings global's `experiments` group
 (`src/globals/SiteSettings/config.ts`). Each environment has its own database,
 so each has its own switches; PR previews start with staging's. To add one:
 

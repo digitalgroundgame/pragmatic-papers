@@ -195,6 +195,9 @@ connection isn't configured. When the `cloudflareWorkerCache` connection is
 configured (`WORKER_URL`, on the Coolify app a Cloudflare Worker reads from), the
 same flush first clears that Worker's cache through its `/next/revalidate-all`.
 A new hook for content readers see should call it too.
+A deploy purges too: `start.sh` waits until the site's public URL is answered by the
+new container (`/next/purge-edge` names its `INSTANCE_ID`), so the old container can't
+refill the edge with the previous release's pages, then POSTs `/next/purge-edge`.
 
 ### Payload Plugins
 

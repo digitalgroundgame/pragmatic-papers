@@ -23,7 +23,8 @@ const PREVIEW_URI = URI.replace("pragmatic_papers?", "pragmatic_papers_pr_330?")
 // does while anything is connected to the template. pnpm also logs the DATABASE_URI it
 // migrated. Asked which migrations a database has run, it answers $TARGET_MIGRATIONS for the
 // preview's and $SOURCE_MIGRATIONS for the source's. $DUMP_STATUS, $RESTORE_STATUS and $MIGRATE_STATUS make those steps fail;
-// $SERVER_VERSION_NUM and $CLIENT_VERSION set the server's and pg_dump's versions.
+// $SERVER_VERSION_NUM and $CLIENT_VERSION set the server's and pg_dump's versions. wget
+// answers start.sh's switchover check as the new container would, naming $INSTANCE_ID.
 const FAKES: Record<string, string> = {
   psql: `case "$*" in
   *"payload_migrations"*) case "$*" in
@@ -45,7 +46,10 @@ exit "\${DUMP_STATUS:-0}"`,
 exit "\${MIGRATE_STATUS:-0}"`,
   node: `[ "$1" = "--version" ] && echo v24 && exit 0
 echo "node started with DATABASE_URI=$DATABASE_URI"`,
-  wget: `case "$*" in *revalidate-all*) exit "\${REFRESH_STATUS:-0}" ;; esac`,
+  wget: `case "$*" in
+  *revalidate-all*) exit "\${REFRESH_STATUS:-0}" ;;
+  *purge-edge?at=*) printf '{"instance":"%s"}' "$INSTANCE_ID" ;;
+esac`,
 }
 const LOG_CALL = `echo "$(basename "$0") $*" | tr '\\n' ' ' >> "$CALLS_LOG"; echo >> "$CALLS_LOG"`
 
@@ -527,6 +531,30 @@ describe("start.sh", () => {
     expect(ready).toBeGreaterThanOrEqual(0)
     expect(refresh).toBeGreaterThan(ready)
     expect(output).toContain("Prerendered routes refreshed from pragmatic_papers")
+  })
+
+  // The edge is purged only once the public URL is served by this container, so the old one
+  // can't refill it with the previous release's pages.
+  it("purges the edge once the public URL answers with this container's id", () => {
+    const { status, output } = start("", {
+      DATABASE_URI: URI,
+      BUILD_ENV: "production",
+      SERVER_URL: "https://pragmaticpapers.com",
+      PAYLOAD_SECRET: "payload-s3cret",
+      PORT: "3000",
+    })
+
+    expect(status).toBe(0)
+    const log = calls().join("\n")
+    const refresh = log.indexOf("http://127.0.0.1:3000/next/revalidate-all")
+    const check = log.indexOf("https://pragmaticpapers.com/next/purge-edge?at=")
+    const purge = log.indexOf(
+      "--header=Authorization: Bearer payload-s3cret http://127.0.0.1:3000/next/purge-edge",
+    )
+    expect(refresh).toBeGreaterThanOrEqual(0)
+    expect(check).toBeGreaterThan(refresh)
+    expect(purge).toBeGreaterThan(check)
+    expect(output).toContain("Edge purge queued now that https://pragmaticpapers.com is served")
   })
 
   // Media URLs point at SUPABASE_URL, and next/image only loads *.supabase.co (#1090).

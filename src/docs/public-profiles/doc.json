@@ -23,6 +23,89 @@
           "children": [
             {
               "mode": "normal",
+              "text": "Updated October 9, 2026:",
+              "type": "text",
+              "style": "",
+              "detail": 0,
+              "format": 1,
+              "version": 1
+            },
+            {
+              "mode": "normal",
+              "text": " author pages moved from ",
+              "type": "text",
+              "style": "",
+              "detail": 0,
+              "format": 0,
+              "version": 1
+            },
+            {
+              "mode": "normal",
+              "text": "/authors",
+              "type": "text",
+              "style": "",
+              "detail": 0,
+              "format": 16,
+              "version": 1
+            },
+            {
+              "mode": "normal",
+              "text": " to ",
+              "type": "text",
+              "style": "",
+              "detail": 0,
+              "format": 0,
+              "version": 1
+            },
+            {
+              "mode": "normal",
+              "text": "/contributors",
+              "type": "text",
+              "style": "",
+              "detail": 0,
+              "format": 16,
+              "version": 1
+            },
+            {
+              "mode": "normal",
+              "text": " (old links still work), and the new ",
+              "type": "text",
+              "style": "",
+              "detail": 0,
+              "format": 0,
+              "version": 1
+            },
+            {
+              "mode": "normal",
+              "text": "Public author page",
+              "type": "text",
+              "style": "",
+              "detail": 0,
+              "format": 1,
+              "version": 1
+            },
+            {
+              "mode": "normal",
+              "text": " setting keeps a page for anyone credited on an article, whatever their role. Both are described below.",
+              "type": "text",
+              "style": "",
+              "detail": 0,
+              "format": 0,
+              "version": 1
+            }
+          ],
+          "direction": null,
+          "textStyle": "",
+          "textFormat": 0
+        },
+        {
+          "type": "paragraph",
+          "format": "",
+          "indent": 0,
+          "version": 1,
+          "children": [
+            {
+              "mode": "normal",
               "text": "Each person credited on the site has a contributor page at ",
               "type": "text",
               "style": "",

@@ -21,7 +21,7 @@ interface DocsNavProps {
 /** Every doc under its section, like a wiki's sidebar; each section folds. */
 export function DocsNav({ sections, current, className }: DocsNavProps): React.ReactNode {
   return (
-    <nav aria-label="Docs" className={cn("font-serif", className)}>
+    <nav aria-label="Docs" className={cn("font-sans", className)}>
       <Link
         href="/docs"
         aria-current={current ? undefined : "page"}

@@ -20,10 +20,6 @@ on:
   push:
     branches: [dev]
     paths: [.github/workflows/postgres-image.yml]
-  # A PR that changes this file publishes the image too, so the jobs it changes can
-  # pull it before it merges.
-  pull_request:
-    paths: [.github/workflows/postgres-image.yml]
 
 permissions:
   contents: read
@@ -35,8 +31,6 @@ concurrency:
 jobs:
   publish:
     name: Publish Postgres image
-    # A fork's PR can't write packages.
-    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:

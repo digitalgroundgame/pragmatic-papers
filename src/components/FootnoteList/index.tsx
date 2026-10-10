@@ -1,6 +1,6 @@
 import { CMSLink } from "@/components/Link"
 import type { FootnotesField } from "@/payload-types"
-import { getLinkFieldUrl } from "@/utilities/getLinkFieldUrl"
+import { linkHref } from "@/utilities/linkField"
 import { getClientURL } from "@/utilities/getURL"
 import React from "react"
 
@@ -15,7 +15,7 @@ export const FootnoteList: React.FC<FootnoteListProps> = ({ footnotes }) => {
       <h2>Sources</h2>
       <ol className="list-inside list-decimal font-serif">
         {footnotes.map(({ index, note, attributionEnabled, link }) => {
-          const url = getLinkFieldUrl(link)
+          const url = linkHref(link)
           return (
             <li key={index}>
               <span id={`footnote-${index}`} className="mr-1">

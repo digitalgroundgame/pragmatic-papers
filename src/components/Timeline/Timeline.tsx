@@ -1,6 +1,6 @@
 import { formatTimelineDate } from "@/blocks/Timeline/converters"
 import { CMSLink } from "@/components/Link"
-import { getLinkFieldUrl } from "@/utilities/getLinkFieldUrl"
+import { linkHref } from "@/utilities/linkField"
 import { cn } from "@/utilities/utils"
 
 import { Media } from "@/components/Media"
@@ -13,7 +13,7 @@ const Citation: React.FC<Pick<TimelineEvent, "date" | "enableCitation" | "citati
   enableCitation,
   citation,
 }) => {
-  if (!enableCitation || !citation || !getLinkFieldUrl(citation)) return null
+  if (!enableCitation || !citation || !linkHref(citation)) return null
   return (
     <CMSLink
       link={citation}

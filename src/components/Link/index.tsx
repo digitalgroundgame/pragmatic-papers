@@ -1,5 +1,5 @@
 import type { LinkField } from "@/payload-types"
-import { getLinkFieldUrl } from "@/utilities/getLinkFieldUrl"
+import { linkHref } from "@/utilities/linkField"
 import { HoverPrefetchLink } from "./HoverPrefetchLink"
 
 interface CMSLinkProps extends React.ComponentProps<"a"> {
@@ -26,7 +26,7 @@ interface CMSLinkProps extends React.ComponentProps<"a"> {
  */
 export const CMSLink: React.FC<CMSLinkProps> = ({ link, children, ...props }) => {
   if (!link) return null
-  const url = getLinkFieldUrl(link)
+  const url = linkHref(link)
   if (!url) return null
   return (
     <HoverPrefetchLink

@@ -1,6 +1,6 @@
 import { CMSLink } from "@/components/Link"
 import type { MenuField } from "@/payload-types"
-import { getLinkFieldUrl, linksToUnpublished } from "@/utilities/getLinkFieldUrl"
+import { linkHref, linksToUnpublished } from "@/utilities/linkField"
 import { cn } from "@/utilities/utils"
 import { type VariantProps, cva } from "class-variance-authority"
 import React from "react"
@@ -59,7 +59,7 @@ export const Menu: React.FC<MenuProps> = ({ menu, label, className, layout, ...p
     <nav aria-label={label}>
       <ul className={cn(menuVariants({ className, layout }))} {...props}>
         {menu.map(({ link, id }, index) => {
-          const url = getLinkFieldUrl(link)
+          const url = linkHref(link)
           if (!url || linksToUnpublished(link)) return null
           const isStacked = layout === "stacked"
           return (

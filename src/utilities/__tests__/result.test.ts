@@ -8,7 +8,7 @@ import {
   type Failure,
   type Result,
   type Success,
-} from "@/utilities/results"
+} from "@/utilities/result"
 
 describe("results", () => {
   it("wraps a value in a success", () => {

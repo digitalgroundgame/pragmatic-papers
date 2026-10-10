@@ -7,7 +7,7 @@ import { EmbedError } from "@/blocks/SocialEmbed/embeds/EmbedError"
 import { RedditEmbedClient } from "@/blocks/SocialEmbed/embeds/RedditEmbed/client"
 import { shouldEnhance } from "@/blocks/SocialEmbed/helpers/snapshotFreshness"
 import type { SocialEmbedBlock } from "@/payload-types"
-import { isFailure } from "@/utilities/results"
+import { isFailure } from "@/utilities/result"
 
 export async function RedditEmbedBlock(props: SocialEmbedBlock): Promise<React.ReactNode> {
   const { url, snapshot, id } = props

@@ -1,6 +1,6 @@
 import { isOEmbed, type OEmbedResponse } from "@/blocks/SocialEmbed/helpers/oEmbed"
 import type { SocialEmbedSnapshot } from "@/payload-types"
-import { failure, type Result, success } from "@/utilities/results"
+import { failure, type Result, success } from "@/utilities/result"
 
 const DEFAULT_TIMEOUT_MS = 15_000
 

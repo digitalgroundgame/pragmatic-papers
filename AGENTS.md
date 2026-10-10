@@ -241,11 +241,11 @@ Reach for these before writing your own:
 
 - URLs: `docPath(collection, slug)` and `internalDocToHref` (`routes.ts`, the one
   collection-to-path map), `getSiteURL()` / `getClientURL()` / `absoluteURL(path)`
-  (`getURL.ts`), `getLinkFieldUrl`, `getMediaUrl`
+  (`getURL.ts`), `linkHref`, `getMediaUrl`
 - Dates and text: `formatLongDate`, `formatTimeAgo` (`formatDate.ts`), `truncate`,
   `formatAuthors`, `getInitials`, `toRoman`
 - Narrowing: `isRecord`, `isResolved` / `relationshipId` (`relationships.ts`), `Result`
-  (`results.ts`)
+  (`result.ts`)
 - Metadata and feeds: `generateMeta`, `mergeOpenGraph`, `structuredData`, `feedHTML`
 
 ### Integrations

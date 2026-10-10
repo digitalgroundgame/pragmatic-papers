@@ -6,7 +6,7 @@ import type {
   OEmbedVideo,
 } from "@/blocks/SocialEmbed/helpers/oEmbed"
 import type { Prettify } from "@/utilities/prettify"
-import { failure, type Result } from "@/utilities/results"
+import { failure, type Result } from "@/utilities/result"
 import sanitizeHtml from "sanitize-html"
 
 export function parseTikTokPostId(input: string): string | null {

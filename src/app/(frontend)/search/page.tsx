@@ -2,7 +2,7 @@ import { Media, isMedia } from "@/components/Media"
 import { PageRange } from "@/components/PageRange"
 import { Pagination } from "@/components/Pagination"
 import type { Media as MediaType } from "@/payload-types"
-import { arrayStringToPlainText } from "@/utilities/formatAuthors"
+import { formatList } from "@/utilities/formatList"
 import { sql } from "@payloadcms/db-postgres"
 import type { Metadata } from "next"
 import { draftMode } from "next/headers"
@@ -189,13 +189,13 @@ export default async function SearchPage({ searchParams }: Args): Promise<React.
                           {result.topics && (
                             <>
                               <span>{"•"}</span>
-                              <span>{`${arrayStringToPlainText(result.topics, ", ", "&")}`}</span>
+                              <span>{`${formatList(result.topics.split(", "), { conjunction: "&" })}`}</span>
                             </>
                           )}
                           {result.authors && (
                             <>
                               <span>{"•"}</span>
-                              <span>{`by ${arrayStringToPlainText(result.authors, ", ", "&")}`}</span>
+                              <span>{`by ${formatList(result.authors.split(", "), { conjunction: "&" })}`}</span>
                             </>
                           )}
                         </div>

@@ -2,7 +2,7 @@ import { getAdapter } from "@/blocks/SocialEmbed/adapters"
 import { OEmbedRequestError } from "@/blocks/SocialEmbed/helpers/fetchOEmbed"
 import { isOEmbedRich, isOEmbedThumbnail } from "@/blocks/SocialEmbed/helpers/oEmbed"
 import type { SocialEmbedBlock, SocialEmbedSnapshot } from "@/payload-types"
-import { isFailure } from "@/utilities/results"
+import { isFailure } from "@/utilities/result"
 
 export type BuildSnapshotArgs = Pick<
   SocialEmbedBlock,

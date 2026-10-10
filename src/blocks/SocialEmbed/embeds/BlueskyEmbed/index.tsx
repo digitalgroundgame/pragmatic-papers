@@ -7,7 +7,7 @@ import { BlueskyEmbedClient } from "@/blocks/SocialEmbed/embeds/BlueskyEmbed/cli
 import { EmbedError } from "@/blocks/SocialEmbed/embeds/EmbedError"
 import { shouldEnhance } from "@/blocks/SocialEmbed/helpers/snapshotFreshness"
 import type { SocialEmbedBlock } from "@/payload-types"
-import { isFailure } from "@/utilities/results"
+import { isFailure } from "@/utilities/result"
 
 export async function BlueskyEmbedBlock(props: SocialEmbedBlock): Promise<React.ReactNode> {
   const { url, snapshot, id } = props

@@ -3,7 +3,7 @@ import { fetchOEmbed } from "@/blocks/SocialEmbed/helpers/fetchOEmbed"
 import type { OEmbedRequestQuery } from "@/blocks/SocialEmbed/helpers/oEmbed"
 import { type OEmbedRich } from "@/blocks/SocialEmbed/helpers/oEmbed"
 import type { Prettify } from "@/utilities/prettify"
-import { failure, type Result } from "@/utilities/results"
+import { failure, type Result } from "@/utilities/result"
 import sanitizeHtml from "sanitize-html"
 
 /**

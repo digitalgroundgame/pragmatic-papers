@@ -7,7 +7,7 @@ import { EmbedError } from "@/blocks/SocialEmbed/embeds/EmbedError"
 import { TwitterEmbedClient } from "@/blocks/SocialEmbed/embeds/TwitterEmbed/client"
 import { shouldEnhance } from "@/blocks/SocialEmbed/helpers/snapshotFreshness"
 import type { SocialEmbedBlock } from "@/payload-types"
-import { isFailure } from "@/utilities/results"
+import { isFailure } from "@/utilities/result"
 
 export async function TwitterEmbedBlock(props: SocialEmbedBlock): Promise<React.ReactNode> {
   const { url, snapshot, id, hideMedia, hideThread } = props

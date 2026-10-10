@@ -17,7 +17,7 @@ import * as React from "react"
 
 import type { Article, Topic, User, Volume } from "@/payload-types"
 import { formatTimeAgo } from "@/utilities/formatDate"
-import { formatAuthors } from "@/utilities/formatAuthors"
+import { formatAuthors } from "@/utilities/formatList"
 import { getMediaUrl } from "@/utilities/getMediaUrl"
 import { isResolved } from "@/utilities/relationships"
 import { cn } from "@/utilities/utils"

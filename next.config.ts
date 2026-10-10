@@ -305,6 +305,13 @@ const config = withSentryConfig(payloadConfig, {
   // which says why.
 
   webpack: {
+    // The Worker's server swaps the SDK for a stub (src/cloudflare/stubs/sentry.ts), so
+    // nothing should wrap its routes and components with it.
+    ...(process.env.OPENNEXT_BUILD === "true" && {
+      autoInstrumentServerFunctions: false,
+      autoInstrumentMiddleware: false,
+      autoInstrumentAppDirectory: false,
+    }),
     // Tree-shaking options for reducing bundle size
     treeshake: {
       // Automatically tree-shake Sentry logger statements to reduce bundle size

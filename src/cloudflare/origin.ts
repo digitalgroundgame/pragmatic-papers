@@ -39,19 +39,37 @@ export function toOrigin(request: Request, origin: string): Request {
   return new Request(forwarded, { redirect: "manual" })
 }
 
+/** Next's default `images.minimumCacheTTL`, which its image optimizer on Coolify sends. */
+const IMAGE_MAX_AGE = 14400
+
+/**
+ * A resized image with the caching Next's optimizer gives it. OpenNext's image handler sets
+ * Cache-Control only on images it can call immutable, and media from Payload never is, so
+ * the rest went out without one and every view resized the image again.
+ */
+export function withImageCaching(pathname: string, response: Response): Response {
+  if (pathname !== "/_next/image" || !response.ok || response.headers.has("Cache-Control")) {
+    return response
+  }
+  const cached = new Response(response.body, response)
+  cached.headers.set("Cache-Control", `public, max-age=${IMAGE_MAX_AGE}, must-revalidate`)
+  return cached
+}
+
 export function withOrigin<Env extends WorkerEnv>(handler: WorkerHandler<Env>): WorkerHandler<Env> {
   return {
     async fetch(request, env, ctx) {
       // Payload reads it when its config first loads, on the isolate's first request.
       if (env.HYPERDRIVE) process.env.DATABASE_URI = env.HYPERDRIVE.connectionString
 
+      const { pathname } = new URL(request.url)
       const origin = env.ORIGIN_URL
-      if (!origin) return handler.fetch(request, env, ctx)
+      if (!origin) return withImageCaching(pathname, await handler.fetch(request, env, ctx))
 
-      if (isOriginPath(new URL(request.url).pathname)) return fetch(toOrigin(request, origin))
+      if (isOriginPath(pathname)) return fetch(toOrigin(request, origin))
 
       const assets = env.ASSETS
-      return handler.fetch(
+      const response = await handler.fetch(
         request,
         {
           ...env,
@@ -67,6 +85,7 @@ export function withOrigin<Env extends WorkerEnv>(handler: WorkerHandler<Env>): 
         },
         ctx,
       )
+      return withImageCaching(pathname, response)
     },
   }
 }

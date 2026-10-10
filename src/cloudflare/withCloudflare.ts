@@ -22,6 +22,7 @@ export const WORKER_STUBS = [
 ]
 
 const STUB = fileURLToPath(new URL("./stubs/unavailable.ts", import.meta.url))
+const SENTRY_STUB = fileURLToPath(new URL("./stubs/sentry.ts", import.meta.url))
 
 const isStubbed = (external: unknown): boolean =>
   typeof external === "string" && (external === "drizzle-kit" || WORKER_STUBS.includes(external))
@@ -52,6 +53,8 @@ export function withCloudflare(base: NextConfig): NextConfig {
       resolved.resolve.alias = {
         ...resolved.resolve.alias,
         ...Object.fromEntries(WORKER_STUBS.map((name) => [`${name}$`, STUB])),
+        // The server's Sentry SDK, which reports nothing without a DSN (stubs/sentry.ts).
+        ...(options.isServer && { "@sentry/nextjs$": SENTRY_STUB }),
       }
       // Next keeps sharp external whatever the aliases say, so swap our own module
       // that imports it (./sharp.ts) instead.

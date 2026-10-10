@@ -1,0 +1,9 @@
+# Headers for the Worker's static assets, which Cloudflare serves before the Worker runs
+# (https://developers.cloudflare.com/workers/static-assets/headers/). scripts/build-worker.mjs
+# copies this file into .open-next/assets; it isn't in public/, where Coolify would serve it
+# as a page.
+#
+# Without it, assets go out with `max-age=0, must-revalidate`, so a browser asks again for
+# every hashed chunk on every page. Their names change whenever their content does.
+/_next/static/*
+  Cache-Control: public, max-age=31536000, immutable

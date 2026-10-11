@@ -643,6 +643,20 @@ describe("checkCoverageGoals", () => {
     ])
   })
 
+  it("skips the project goal when the PR changes no measured file", () => {
+    const total = summary(90)
+    total.branches = { ...total.branches, pct: 89 }
+    expect(
+      checkCoverageGoals({
+        total,
+        baseTotal: summary(90),
+        patch: emptyMetrics,
+        touchesCode: false,
+        goals,
+      }),
+    ).toEqual([])
+  })
+
   it("skips the project goal without base coverage", () => {
     expect(
       checkCoverageGoals({ total: summary(50), baseTotal: null, patch: emptyMetrics, goals }),

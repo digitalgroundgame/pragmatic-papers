@@ -284,22 +284,27 @@ export function patchTarget(
  * - tests run the PR's changed lines at least as well as the project's lines are
  *   run (the base's line coverage, or this run's when there's no base), unless no
  *   more than `patchAllowance` changed lines are left uncovered.
- * With no base (no story coverage on this run, or no finished run on the base
- * commit) the project goal isn't checked.
+ * The project goal isn't checked with no base (no story coverage on this run, or
+ * no finished run on the base commit), or when the PR changes no measured file:
+ * a docs or CI change can still move the totals by a few hundredths of a point,
+ * and that's the run's noise, not the PR's.
  */
 export function checkCoverageGoals({
   total,
   baseTotal,
   patch,
+  touchesCode = true,
   goals = COVERAGE_GOALS,
 }: {
   total: FileSummary | null
   baseTotal: FileSummary | null
   patch: MetricsWithPct
+  /** Whether the PR changes any file the coverage run measures. */
+  touchesCode?: boolean
   goals?: CoverageGoals
 }): string[] {
   const misses: string[] = []
-  if (total && baseTotal) {
+  if (total && baseTotal && touchesCode) {
     for (const k of METRICS) {
       if (total[k].total === 0 || baseTotal[k].total === 0) continue
       const drop = baseTotal[k].pct - total[k].pct
@@ -733,7 +738,8 @@ export async function main(): Promise<void> {
           .map(([k, v]) => [relative(root, k).split(sep).join("/"), v]),
       )
     : null
-  const misses = checkCoverageGoals({ total, baseTotal, patch: metrics })
+  const touchesCode = Object.keys(addedLinesByFile).some((file) => coverageByFile[file])
+  const misses = checkCoverageGoals({ total, baseTotal, patch: metrics, touchesCode })
   let exempt = false
   if (misses.length > 0) {
     try {

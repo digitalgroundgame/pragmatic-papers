@@ -343,7 +343,10 @@ export const Articles: CollectionConfig = {
     afterChange: [
       revalidateArticle,
       revalidateNavLinks,
-      grantPublicProfile<Article>((doc) => doc.authors ?? []),
+      // Only a published byline links to a contributor page, so drafts and autosaves credit no one.
+      grantPublicProfile<Article>((doc) =>
+        doc._status === "published" ? (doc.authors ?? []) : [],
+      ),
     ],
     beforeDelete: [removeFromRankings],
     afterDelete: [revalidateDelete, revalidateNavLinksDelete],

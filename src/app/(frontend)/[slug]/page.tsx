@@ -1,7 +1,6 @@
 import type { Metadata } from "next"
 
 import { PayloadRedirects } from "@/components/PayloadRedirects"
-import { feedsStatic } from "@/endpoints/seed/feeds-static"
 import { homeStatic } from "@/endpoints/seed/home-static"
 import { queryPageBySlug } from "@/data/queries"
 import { draftMode } from "next/headers"
@@ -20,22 +19,13 @@ import { Breadcrumbs, type Crumb } from "@/components/Breadcrumbs"
 // also why there's no generateStaticParams: a prerendered slug would never be served.
 export const dynamic = "force-dynamic"
 
-type PageData = RequiredDataFromCollectionSlug<"pages">
-
-// What a slug shows before anyone has made its page: home until the site is seeded, and /feeds,
-// which the footer links to, until an editor makes a page to arrange it differently.
-const FALLBACK_PAGES: Record<string, PageData | null> = { home: homeStatic, feeds: feedsStatic }
-
-const pageOrFallback = async (slug: string): Promise<PageData | null> =>
-  (await queryPageBySlug(slug)) ?? FALLBACK_PAGES[slug] ?? null
-
 export async function generateMetadata({
   params: paramsPromise,
   searchParams,
 }: Args): Promise<Metadata> {
   const { slug = "home" } = await paramsPromise
   const { p } = await searchParams
-  const page = await pageOrFallback(slug)
+  const page = await queryPageBySlug(slug)
 
   const path = slug === "home" ? "/" : `/${slug}`
   // Only a page with a volume list is paginated; anywhere else `?p=` changes nothing.
@@ -59,8 +49,13 @@ export default async function Page({ params, searchParams }: Args): Promise<Reac
   const { p: pageString } = await searchParams
   const pageNumber = pageString ? Math.max(Number(pageString) || 1, 1) : undefined
   const url = `/${slug}${pageNumber ? `?p=${pageNumber}` : ""}`
-  const page = await pageOrFallback(slug)
+  let page: RequiredDataFromCollectionSlug<"pages"> | null = await queryPageBySlug(slug)
   const { socials } = await getGlobal("footer", 2)
+
+  // Remove this code once your website is seeded
+  if (!page && slug === "home") {
+    page = homeStatic
+  }
 
   if (!page) {
     return <PayloadRedirects url={url} />

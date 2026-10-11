@@ -1,17 +1,20 @@
 import type { Page } from "@/payload-types"
 import type { Payload, RequiredDataFromCollectionSlug } from "payload"
 
-import { feedsStatic } from "./feeds-static"
 import { createContactForm } from "./forms"
 import { devMerchCatalogue, seedMerchProducts } from "./merch"
 import {
+  createHeadingNode,
   createMerchBlockNode,
+  createParagraph,
   createRichText,
   createRichTextFromString,
   createRichTextFromParagraphs,
 } from "./richtext"
 
 type PageData = RequiredDataFromCollectionSlug<"pages">
+
+const FEEDS_DESCRIPTION = "Follow Pragmatic Papers in a feed reader, or find every page we publish."
 
 /**
  * Creates a page, or updates the existing one if a slug conflict is detected.
@@ -429,9 +432,45 @@ export const createPages = async (
     context,
   )
 
+  // The footer links here. Deployed sites make this page in the admin; the seed only fills
+  // local databases.
   const feedsPage = await createOrUpdatePage(
     payload,
-    { ...feedsStatic, publishedAt: new Date().toISOString() },
+    {
+      title: "Feeds and sitemaps",
+      slug: "feeds",
+      hero: {
+        type: "pageHero",
+        richText: createRichText([
+          createHeadingNode("Feeds and sitemaps", "h1"),
+          createParagraph(FEEDS_DESCRIPTION),
+        ]),
+        links: [],
+        media: null,
+      },
+      layout: [
+        {
+          blockType: "feedsList",
+          list: "feeds",
+          title: "RSS feeds",
+          description:
+            "Paste a feed's address into your feed reader to get new pieces as they're published.",
+        },
+        {
+          blockType: "feedsList",
+          list: "sitemaps",
+          title: "Sitemaps",
+          description: "For search engines: the sitemap index lists all the others.",
+        },
+      ],
+      meta: {
+        title: "Feeds and sitemaps — Pragmatic Papers",
+        description: FEEDS_DESCRIPTION,
+        image: null,
+      },
+      _status: "published",
+      publishedAt: new Date().toISOString(),
+    },
     context,
   )
 

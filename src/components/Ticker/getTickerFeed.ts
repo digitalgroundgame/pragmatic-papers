@@ -1,7 +1,7 @@
 import { unstable_cache } from "next/cache"
 import { cache } from "react"
 
-import { mergePosts, withoutHidden, type TickerFeed } from "./items"
+import { mergePosts, withoutHidden, type TickerFeed, type TickerPost } from "./items"
 import { getCachedGlobal } from "@/utilities/getGlobals"
 
 import {
@@ -34,8 +34,12 @@ function cached<T>(
 const broadcast = cached("broadcast", broadcastSource, null)
 const posts = postSources.map((source) => cached(source.integration.id, source, []))
 
-/** Everything the ticker shows right now, from every source at once. */
-export const getTickerFeed = cache(async (): Promise<TickerFeed> => {
+/**
+ * What every source holds right now, and the links editors hid. Read once per request, by the
+ * ticker and by the Ticker global's list of posts in the admin, from the same caches, so opening
+ * the admin never costs a source an extra read.
+ */
+const getTickerSources = cache(async () => {
   const [{ youtube, bluesky, x }, { hidden }] = await Promise.all([
     getCachedGlobal("integrations")(),
     getCachedGlobal("ticker")(),
@@ -49,11 +53,18 @@ export const getTickerFeed = cache(async (): Promise<TickerFeed> => {
     broadcast(settings),
     ...posts.map((load) => load(settings)),
   ])
+  return { broadcast: current, lists, hidden: hidden?.map((post) => post.url) ?? [] }
+})
+
+/** Each source's posts, hidden ones included: what an editor picks from to hide. */
+export const getTickerPostLists = cache(
+  async (): Promise<TickerPost[][]> => (await getTickerSources()).lists,
+)
+
+/** Everything the ticker shows right now, from every source at once. */
+export const getTickerFeed = cache(async (): Promise<TickerFeed> => {
+  const { broadcast: current, lists, hidden } = await getTickerSources()
   // Hidden posts are left out before the newest are picked, so the ticker stays full. The hidden
   // list has its own cache, so a post an editor hides goes at once, whatever the sources hold.
-  const urls = hidden?.map((post) => post.url) ?? []
-  return {
-    broadcast: current,
-    posts: mergePosts(lists.map((list) => withoutHidden(list, urls))),
-  }
+  return { broadcast: current, posts: mergePosts(lists.map((list) => withoutHidden(list, hidden))) }
 })

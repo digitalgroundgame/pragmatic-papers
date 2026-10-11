@@ -12,11 +12,11 @@ export const ArticleCard: React.FC<{
   className?: string
   doc?: CardPostData
   /** Preload the image at high priority, for a card that's above the fold. */
-  priority?: boolean
+  preload?: boolean
   relationTo: "articles"
   title?: string
 }> = (props) => {
-  const { className, doc, priority, relationTo, title: titleFromProps } = props
+  const { className, doc, preload, relationTo, title: titleFromProps } = props
 
   const { slug, meta, title } = doc || {}
   const { description, image } = meta || {}
@@ -34,7 +34,7 @@ export const ArticleCard: React.FC<{
             variant="square"
             className="aspect-4/3 border object-cover"
             sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, 352px"
-            priority={priority}
+            preload={preload}
           />
         )}
         {titleToUse && <h3 className="hover:text-foreground/80 md:text-2xl">{titleToUse}</h3>}

@@ -33,7 +33,7 @@ export const HighImpactHero: React.FC<Page["hero"]> = ({ links, media, richText 
           <Media
             fill
             className="-z-10 object-cover"
-            priority
+            preload
             sizes="100vw"
             media={media}
             variant="xlarge"

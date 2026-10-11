@@ -50,6 +50,8 @@ jobs:
       # The showcase label.
       issues: write
       pull-requests: write
+      # The Claude review's pending status.
+      statuses: write
     env:
       GH_TOKEN: ${{ github.token }}
       PR_NUMBER: ${{ github.event.pull_request.number }}
@@ -95,7 +97,16 @@ jobs:
             github.event.action == 'labeled' && github.event.label.name == 'in review' ||
             github.event.action == 'ready_for_review' && contains(github.event.pull_request.labels.*.name, 'in review')
           )
-        run: gh workflow run claude-review.yml --repo "$GITHUB_REPOSITORY" --ref "$HEAD_REF" -f pr="$PR_NUMBER"
+        env:
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          gh workflow run claude-review.yml --repo "$GITHUB_REPOSITORY" --ref "$HEAD_REF" -f pr="$PR_NUMBER"
+          # A dispatched run's check isn't listed on the PR while it runs, so a
+          # commit status shows the review as pending; claude-review.yml sets
+          # its result.
+          gh api -X POST "repos/$GITHUB_REPOSITORY/statuses/$HEAD_SHA" \
+            -f state=pending -f context="Claude review" -f description="Reviewing…" \
+            -f target_url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/workflows/claude-review.yml" >/dev/null
 
       - name: Check whether the showcase needs a sync
         id: showcase

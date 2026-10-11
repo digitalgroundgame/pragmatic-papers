@@ -141,7 +141,8 @@ deployment.
   (`edgeCache.ts`), which holds full pages and images but not navigations: Next varies
   those on the router's state and redirects when `_rsc` doesn't match it. They come from
   R2 (~130 ms), and dynamic pages' navigations render each time. With caching on, every
-  request is billed as a Worker request, static files included.
+  request is billed as a Worker request, static files included, and a request the gateway
+  hands to `CachedSite` counts twice.
 - **Error reporting**: the Worker sends nothing to Sentry. That would be
   `@sentry/cloudflare` around the fetch handler, with `SENTRY_DSN` as a secret, and the
   browser SDK's DSN at build time.

@@ -54,4 +54,13 @@ describe("robots.txt", () => {
       "https://pragmaticpapers.com/articles/news-sitemap.xml",
     )
   })
+
+  it("lists every sitemap when the news sitemap can't be read", async () => {
+    vi.mocked(getNewsSitemap).mockRejectedValue(new Error("cannot connect to Postgres"))
+    vi.stubEnv("SERVER_URL", "https://pragmaticpapers.com")
+
+    expect((await robots()).sitemap).toContain(
+      "https://pragmaticpapers.com/articles/news-sitemap.xml",
+    )
+  })
 })

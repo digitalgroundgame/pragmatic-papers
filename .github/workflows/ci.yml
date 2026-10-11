@@ -180,8 +180,6 @@ jobs:
     # Usually about 4 minutes. A hung test would otherwise hold the runner for GitHub's
     # 6-hour default before anything reports it.
     timeout-minutes: 15
-    permissions:
-      pull-requests: write
 
     steps:
       - uses: actions/checkout@v7
@@ -200,6 +198,69 @@ jobs:
       - name: Run unit and script tests
         run: pnpm test:unit:coverage
 
+      - name: Upload coverage for the report
+        if: ${{ !cancelled() && hashFiles('coverage/coverage-final.json') != '' }}
+        uses: ./.github/actions/upload-coverage
+        with:
+          name: coverage-final-unit
+          path: coverage/coverage-final.json
+
+  # One coverage report for the unit, script and story tests: each job uploads
+  # its coverage-final.json, and scripts/merge-coverage.ts adds the stories'
+  # hits onto the unit run's map. Integration tests aren't in it: they run
+  # Payload against a real database and are measured by what they assert.
+  coverage:
+    name: Coverage
+    needs: [changes, unit-tests, storybook]
+    # A failed unit run writes no coverage (Vitest's reportOnFailure is off), so
+    # there is nothing to report until it passes.
+    if: ${{ !cancelled() && github.event_name != 'merge_group' && needs.unit-tests.result == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      actions: read
+      pull-requests: write
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up Node.js environment
+        uses: ./.github/actions/setup-project
+        with:
+          node-version: "24.x"
+          gh-font-read-token: ${{ secrets.GH_FONT_READ }}
+          payload-secret: ci-coverage-secret
+
+      - name: Download unit coverage
+        uses: actions/download-artifact@v8
+        with:
+          name: coverage-final-unit
+          path: /tmp/coverage-parts/unit
+
+      # Missing when Storybook was skipped or its tests failed.
+      - name: Download story coverage
+        continue-on-error: true
+        uses: actions/download-artifact@v8
+        with:
+          name: coverage-final-storybook
+          path: /tmp/coverage-parts/storybook
+
+      # Coverage names files by absolute path, and the story tests ran in a
+      # container whose workspace path differs from this runner's. Each upload
+      # replaced its workspace with a placeholder; put this one back.
+      - name: Merge coverage
+        id: merge
+        run: |
+          sed -i "s#/__COVERAGE_ROOT__/#${GITHUB_WORKSPACE}/#g" /tmp/coverage-parts/*/coverage-final.json
+          PARTS=(/tmp/coverage-parts/unit/coverage-final.json)
+          if [ -f /tmp/coverage-parts/storybook/coverage-final.json ]; then
+            PARTS+=(/tmp/coverage-parts/storybook/coverage-final.json)
+            echo "storybook=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice::No story coverage (Storybook skipped or failed), so the coverage report leaves the stories out and shows no change column."
+          fi
+          node scripts/merge-coverage.ts coverage "${PARTS[@]}"
+
       # A PR's coverage is compared against its base branch's, so both `dev`
       # and `main` (release and hotfix PRs) keep a baseline. The artifact keeps
       # its old name so runs from before `main` uploaded one still match.
@@ -216,10 +277,11 @@ jobs:
       # for release and hotfix PRs). Asking for "the latest successful run on
       # dev" instead can return a run from weeks ago, since GitHub doesn't keep
       # that list newest-first. With no finished run on the base SHA (it failed,
-      # or is still running), the report leaves out the change column rather
-      # than compare against some other commit.
+      # or is still running), or no story coverage on this PR to compare like
+      # with like, the report leaves out the change column rather than compare
+      # against some other commit.
       - name: Download base coverage
-        if: always() && github.event_name == 'pull_request'
+        if: github.event_name == 'pull_request' && steps.merge.outputs.storybook == 'true'
         continue-on-error: true
         id: base-coverage
         run: |
@@ -242,7 +304,6 @@ jobs:
           BASE_REF: ${{ github.event.pull_request.base.ref }}
 
       - name: Post coverage report
-        if: always()
         run: pnpm coverage:report
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -325,8 +386,17 @@ jobs:
       - name: Build Storybook
         run: pnpm storybook:build
 
+      # Coverage too, so the report counts what the stories render. The
+      # Coverage job merges it into the unit tests'.
       - name: Run story tests (interactions and axe)
-        run: pnpm test:storybook --run
+        run: pnpm test:storybook --run --coverage --coverage.reporter=json --coverage.reporter=text-summary --coverage.reportsDirectory=coverage-storybook
+
+      - name: Upload coverage for the report
+        if: ${{ !cancelled() && github.event_name != 'merge_group' && hashFiles('coverage-storybook/coverage-final.json') != '' }}
+        uses: ./.github/actions/upload-coverage
+        with:
+          name: coverage-final-storybook
+          path: coverage-storybook/coverage-final.json
 
       # Handed to Deploy Storybook, so what gets published is the build these
       # tests just passed.

@@ -1,5 +1,6 @@
 import { revalidatePath } from "next/cache"
 
+import { createMissingStarterPages } from "@/collections/Pages/starterPages"
 import { syncRepoDocs } from "@/plugins/docs/syncRepoDocs"
 import { getPayloadClient } from "@/data/payload"
 
@@ -7,7 +8,8 @@ import { hasPayloadSecret } from "../bearer"
 
 /**
  * Run once each time a deploy goes live. Writes the help docs in src/docs/ into this
- * deployment's database (`syncRepoDocs`), then throws away every page and route Next.js
+ * deployment's database (`syncRepoDocs`), creates any starter page the site doesn't have yet
+ * as a draft for an editor to publish (`createMissingStarterPages`), then throws away every page and route Next.js
  * prerendered at build time, so each renders again from that database on its next request.
  *
  * An image built in CI is built against an empty database, so the
@@ -26,11 +28,14 @@ export async function POST(request: Request): Promise<Response> {
     return Response.json({ error: "Unauthorized" }, { status: 401 })
   }
 
-  const docs = await syncRepoDocs(await getPayloadClient())
+  const payload = await getPayloadClient()
+  const docs = await syncRepoDocs(payload)
+  const pages = await createMissingStarterPages(payload)
   revalidatePath("/", "layout")
 
   return Response.json({
     revalidated: true,
     docs: docs && { created: docs.created, updated: docs.updated, deleted: docs.deleted },
+    pages: { created: pages },
   })
 }

@@ -121,14 +121,18 @@ export async function afterCachedSite(
   return uncached
 }
 
-/** Requests this isolate has served, so a timing can say whether it was a cold start. */
+/**
+ * Requests this isolate has handled, through either entrypoint, so a timing can say whether
+ * it was a cold start. A request the gateway hands to `CachedSite` counts once for each.
+ */
 let isolateRequests = 0
 
 /**
  * Adds a `Server-Timing` entry, `cached-site`, to the cached entrypoint's answer: how long it
- * ran (a Worker's clock only moves on I/O, so this leaves out CPU work such as compiling a
- * cold isolate), the data center it ran in, and how many requests its isolate has served (1
- * is a cold start). An edge-cache miss takes far longer than the same request served by the
+ * took to have the answer's headers (a page that streams renders the rest after that, and a
+ * Worker's clock only moves on I/O, so this leaves out CPU work such as compiling a cold
+ * isolate), the data center it ran in, and how many requests its isolate has handled (1 is a
+ * cold start). An edge-cache miss takes far longer than the same request served by the
  * gateway, and these say whether that time is spent in this entrypoint or in the cache tiers
  * around it. Stored with the page, so on a HIT it describes the request that filled it.
  */
@@ -158,6 +162,7 @@ export function withEdgeCache<Env extends WorkerEnv>(
 ): WorkerHandler<Env> {
   return {
     fetch(request, env, ctx) {
+      isolateRequests += 1
       const cached = (ctx as GatewayContext | undefined)?.exports?.CachedSite
       if (cached && goesToCachedSite(request)) return cached.fetch(request)
       return handler.fetch(request, env, ctx)

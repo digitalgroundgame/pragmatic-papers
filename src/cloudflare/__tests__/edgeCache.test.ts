@@ -173,6 +173,18 @@ describe("withServerTiming", () => {
     expect(await first.text()).toBe("page")
   })
 
+  it("counts the requests the gateway runs itself", async () => {
+    const request = new Request(`${W}/`)
+    const count = (response: Response) =>
+      Number(/isolate request (\d+)/.exec(timing(response) ?? "")?.[1])
+    const before = count(withServerTiming(request, new Response(), 0, 0))
+    const env: WorkerEnv = { ASSETS: { fetch: async () => new Response("asset") } }
+    const site = { fetch: vi.fn(async () => new Response("nav")) }
+    await withEdgeCache(site).fetch(new Request(`${W}/a`, { headers: { RSC: "1" } }), env, {})
+    const after = withServerTiming(request, new Response(), 0, 0)
+    expect(timing(after)).toContain(`isolate request ${before + 2}`)
+  })
+
   it("keeps the app's own Server-Timing and names an unknown data center", () => {
     const answer = new Response("page", { headers: { "Server-Timing": "db;dur=5" } })
     const timed = withServerTiming(new Request(`${W}/`), answer, 0, 0)

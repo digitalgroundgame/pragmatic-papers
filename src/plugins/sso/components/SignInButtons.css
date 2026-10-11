@@ -1,0 +1,115 @@
+/* Admin panel styles: Payload's theme variables, not Tailwind (the admin doesn't load it).
+   Each provider's button follows its own branding guidelines. */
+.sso-sign-in {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  /* Payload's login column is 480px wide, so the buttons line up with its form; the cap keeps
+     them button-sized anywhere wider. */
+  width: 100%;
+  max-width: 480px;
+  margin-inline: auto;
+  margin-bottom: 1.5rem;
+}
+
+.sso-sign-in__error {
+  margin: 0 0 0.25rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--theme-error-500, #d03a3a);
+  border-radius: var(--style-radius-s, 4px);
+  background: var(--theme-error-50, #fdecec);
+  color: var(--theme-error-750, #7a1c1c);
+  line-height: 1.4;
+}
+
+.sso-sign-in__button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  width: 100%;
+  min-height: 2.75rem;
+  padding: 0 1rem;
+  border: 1px solid transparent;
+  border-radius: var(--style-radius-s, 4px);
+  font: inherit;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  line-height: 1;
+  cursor: pointer;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.sso-sign-in__button:focus-visible {
+  outline: 2px solid var(--theme-success-500, #1587ba);
+  outline-offset: 2px;
+}
+
+.sso-sign-in__button:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+
+.sso-sign-in__logo {
+  display: inline-flex;
+  flex-shrink: 0;
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+.sso-sign-in__logo svg {
+  width: 100%;
+  height: 100%;
+}
+
+/* Google: white, with a grey outline (or its dark variant). */
+.sso-sign-in__button--google {
+  border-color: #747775;
+  background: #fff;
+  color: #1f1f1f;
+}
+
+.sso-sign-in__button--google:hover:not(:disabled) {
+  background: #f8f9fa;
+  box-shadow: 0 1px 2px rgb(60 64 67 / 30%);
+}
+
+[data-theme="dark"] .sso-sign-in__button--google {
+  border-color: #8e918f;
+  background: #131314;
+  color: #e3e3e3;
+}
+
+[data-theme="dark"] .sso-sign-in__button--google:hover:not(:disabled) {
+  background: #1f1f20;
+}
+
+/* Discord: its "blurple", in both themes. */
+.sso-sign-in__button--discord {
+  background: #5865f2;
+  color: #fff;
+}
+
+.sso-sign-in__button--discord:hover:not(:disabled) {
+  background: #4752c4;
+}
+
+.sso-sign-in__divider {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+  color: var(--theme-elevation-650, #575757);
+  font-size: 0.8125rem;
+}
+
+.sso-sign-in__divider::before,
+.sso-sign-in__divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--theme-elevation-200, #d0d0d0);
+}

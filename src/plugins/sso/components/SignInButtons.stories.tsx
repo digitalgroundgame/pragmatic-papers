@@ -28,6 +28,33 @@ export const Default: Story = {
   },
 }
 
+/** In the admin's dark theme, where Google's button switches to its dark variant. */
+export const Dark: Story = {
+  decorators: [
+    (Story) => (
+      <div
+        data-theme="dark"
+        // Payload's dark theme inverts its elevation scale; Storybook has no admin styles.
+        style={
+          {
+            background: "rgb(20, 20, 20)",
+            color: "rgb(235, 235, 235)",
+            padding: "1rem",
+            "--theme-elevation-200": "rgb(60, 60, 60)",
+            "--theme-elevation-650": "rgb(166, 166, 166)",
+          } as React.CSSProperties
+        }
+      >
+        <Story />
+      </div>
+    ),
+  ],
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByRole("button", { name: "Sign in with Google" })).toBeEnabled()
+  },
+}
+
 export const OneProvider: Story = {
   args: { providers: ["discord"] },
   play: async ({ canvasElement }) => {

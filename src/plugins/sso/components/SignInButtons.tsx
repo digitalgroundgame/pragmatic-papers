@@ -5,6 +5,8 @@ import React, { useState } from "react"
 
 import { PROVIDER_LABELS } from "../constants"
 import type { SsoProviderId } from "../types"
+import { ProviderLogo } from "./ProviderLogo"
+import "./SignInButtons.css"
 
 /** What Better Auth puts in `?error=` when it sends someone back to the login page. */
 const ERRORS: Record<string, string> = {
@@ -14,9 +16,6 @@ const ERRORS: Record<string, string> = {
     "That provider hasn't verified your email address, so it can't be matched to your account.",
   email_not_found: "That provider didn't share an email address.",
 }
-
-const BUTTON_CLASS =
-  "btn btn--icon-style-without-border btn--size-large btn--withoutPopup btn--style-secondary btn--no-margin"
 
 const FALLBACK_ERROR = "Sign-in didn't complete. Try again, or use your email and password."
 
@@ -58,25 +57,27 @@ export const SignInButtons: React.FC<SignInButtonsProps> = ({ providers, authPat
   const error = failed ? FALLBACK_ERROR : errorCode ? (ERRORS[errorCode] ?? FALLBACK_ERROR) : null
 
   return (
-    <div style={{ display: "grid", gap: "0.75rem", marginBottom: "1.5rem" }}>
-      {error ? <p role="alert">{error}</p> : null}
+    <div className="sso-sign-in">
+      {error ? (
+        <p className="sso-sign-in__error" role="alert">
+          {error}
+        </p>
+      ) : null}
       {providers.map((provider) => (
-        // Payload's own button classes rather than its `Button`: importing @payloadcms/ui
-        // here breaks the Storybook build, and these render the same in the admin.
         <button
           key={provider}
           type="button"
-          className={pending === null ? BUTTON_CLASS : `${BUTTON_CLASS} btn--disabled`}
+          className={`sso-sign-in__button sso-sign-in__button--${provider}`}
           disabled={pending !== null}
           onClick={() => void signIn(provider)}
         >
-          <span className="btn__content">
-            <span className="btn__label">
-              {pending === provider ? "Redirecting…" : `Sign in with ${PROVIDER_LABELS[provider]}`}
-            </span>
+          <span className="sso-sign-in__logo">
+            <ProviderLogo provider={provider} />
           </span>
+          {pending === provider ? "Redirecting…" : `Sign in with ${PROVIDER_LABELS[provider]}`}
         </button>
       ))}
+      <p className="sso-sign-in__divider">or use your email and password</p>
     </div>
   )
 }

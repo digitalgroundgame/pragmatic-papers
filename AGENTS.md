@@ -407,7 +407,7 @@ integration, per the table above), in the same PR. CI holds the line against the
 base branch's merged unit + story coverage, so the bar rises as coverage does:
 the Coverage job fails a PR when a project metric falls more than 0.1 points
 under the base's, or when tests run its changed lines less than the project's
-lines are run (a PR may leave 5 changed lines uncovered regardless). The
+lines are run (a PR may leave 2 changed lines uncovered regardless). The
 tolerances are `COVERAGE_GOALS` in `scripts/coverage-report.ts`. Integration
 tests aren't counted, so a change only they can reach gets the `coverage exempt`
 label (then re-run the Coverage job), which turns the failure into a warning. A

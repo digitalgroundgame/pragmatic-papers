@@ -263,7 +263,7 @@ export interface CoverageGoals {
 
 export const COVERAGE_GOALS: CoverageGoals = {
   projectTolerance: 0.1,
-  patchAllowance: 5,
+  patchAllowance: 2,
 }
 
 /** Label that turns a failed goal into a note, for code only integration tests reach. */

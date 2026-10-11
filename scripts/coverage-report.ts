@@ -7,8 +7,8 @@
 // scripts/merge-coverage.ts in CI).
 //
 // It also enforces the coverage goals below (`COVERAGE_GOALS`): the step fails when
-// the project total drops under its floor, or when the PR leaves too many of its
-// changed lines untested. The `coverage exempt` label keeps the report but drops the
+// the project total drops against the base branch's, or when the PR's changed lines
+// are less covered than the project's. The `coverage exempt` label keeps the report but drops the
 // failure, for code only the integration tests reach (they aren't counted here).
 //
 // Changed lines come from the GitHub PR "files" API (its per-file `patch` hunks).
@@ -251,88 +251,105 @@ export function computePatchCoverage(
 // ─── Coverage goals ───────────────────────────────────────────────────────────
 
 /**
- * What a PR must keep. The project floors sit at the merged unit + story coverage
- * on dev, rounded down to a whole percent; raise them as coverage climbs, never
- * lower them to let a PR through.
+ * What a PR must keep, measured against its base branch's coverage rather than
+ * fixed numbers, so the bar rises on its own as coverage does.
  */
 export interface CoverageGoals {
-  project: Record<MetricKey, number>
-  /** Share of the PR's changed, coverable lines its tests must run. */
-  patchLines: number
-  /** Uncovered changed lines a PR may leave before the patch goal applies. */
+  /** Points a project metric may fall below the base, e.g. for deleting well-tested code. */
+  projectTolerance: number
+  /** Uncovered changed lines a PR may leave whatever its patch coverage. */
   patchAllowance: number
 }
 
 export const COVERAGE_GOALS: CoverageGoals = {
-  project: { lines: 90, statements: 89, functions: 88, branches: 83 },
-  patchLines: 80,
+  projectTolerance: 0.1,
   patchAllowance: 2,
 }
 
 /** Label that turns a failed goal into a note, for code only integration tests reach. */
 export const EXEMPT_LABEL = "coverage exempt"
 
+/** The line coverage changed lines must reach: the base's, else this run's. */
+export function patchTarget(
+  total: FileSummary | null,
+  baseTotal: FileSummary | null,
+): number | null {
+  const lines = baseTotal?.lines ?? total?.lines
+  return lines && lines.total > 0 ? lines.pct : null
+}
+
 /**
- * The goals this run misses, one sentence each. The project floors are only
- * checked when the stories' coverage was merged in: the unit run alone sits
- * well under them, and Storybook is skipped on PRs that touch no component.
+ * The goals this run misses, one sentence each:
+ * - no project metric falls more than `projectTolerance` points under the base's;
+ * - tests run the PR's changed lines at least as well as the project's lines are
+ *   run (the base's line coverage, or this run's when there's no base), unless no
+ *   more than `patchAllowance` changed lines are left uncovered.
+ * With no base (no story coverage on this run, or no finished run on the base
+ * commit) the project goal isn't checked.
  */
 export function checkCoverageGoals({
   total,
+  baseTotal,
   patch,
-  includesStories,
   goals = COVERAGE_GOALS,
 }: {
   total: FileSummary | null
+  baseTotal: FileSummary | null
   patch: MetricsWithPct
-  includesStories: boolean
   goals?: CoverageGoals
 }): string[] {
   const misses: string[] = []
-  if (total && includesStories) {
+  if (total && baseTotal) {
     for (const k of METRICS) {
-      const floor = goals.project[k]
-      if (total[k].total > 0 && total[k].pct < floor) {
+      if (total[k].total === 0 || baseTotal[k].total === 0) continue
+      const drop = baseTotal[k].pct - total[k].pct
+      if (drop > goals.projectTolerance) {
         misses.push(
-          `Project ${LABELS[k].toLowerCase()} coverage is ${total[k].pct.toFixed(2)}%, under the ${floor}% floor.`,
+          `Project ${LABELS[k].toLowerCase()} coverage fell ${drop.toFixed(2)} points, to ${total[k].pct.toFixed(2)}% from ${baseTotal[k].pct.toFixed(2)}% on the base branch.`,
         )
       }
     }
   }
+  const target = patchTarget(total, baseTotal)
   const { covered, total: changed, pct } = patch.lines
   const uncovered = changed - covered
-  if (changed > 0 && pct < goals.patchLines && uncovered > goals.patchAllowance) {
+  if (target != null && changed > 0 && pct < target && uncovered > goals.patchAllowance) {
     misses.push(
-      `Tests run ${pct.toFixed(2)}% of this PR's changed lines (${uncovered} of ${changed} uncovered); the goal is ${goals.patchLines}%.`,
+      `Tests run ${pct.toFixed(2)}% of this PR's changed lines (${uncovered} of ${changed} uncovered), under the project's ${target.toFixed(2)}%.`,
     )
   }
   return misses
 }
 
-/** The goals section at the top of the report: met, missed, or missed but exempt. */
+/**
+ * The goals section at the top of the report. The rules are the same on every PR,
+ * so they sit in a dropdown; only the verdict and any misses show.
+ */
 export function renderGoals({
   misses,
   exempt,
-  includesStories,
+  hasBase,
   goals = COVERAGE_GOALS,
 }: {
   misses: string[]
   exempt: boolean
-  includesStories: boolean
+  hasBase: boolean
   goals?: CoverageGoals
 }): string {
-  const floors = METRICS.map((k) => `${LABELS[k].toLowerCase()} ${goals.project[k]}%`).join(", ")
-  const rules =
-    `<sub>Goals: project ${floors}` +
-    (includesStories ? "" : " (not checked: this run has no story coverage)") +
-    `; changed lines ${goals.patchLines}%, unless ${goals.patchAllowance} or fewer are uncovered. ` +
-    `Add the <code>${EXEMPT_LABEL}</code> label and re-run this job for code only integration tests reach.</sub>`
-  if (misses.length === 0) return `<p>✅ Coverage goals met.</p>\n${rules}`
-  const list = `<ul>\n${misses.map((m) => `<li>${m}</li>`).join("\n")}\n</ul>`
-  const head = exempt
-    ? `<p>⚪ Coverage goals missed, but this PR is labelled <code>${EXEMPT_LABEL}</code>:</p>`
-    : `<p>❌ Coverage goals missed:</p>`
-  return `${head}\n${list}\n${rules}`
+  const rules = `<ul>
+<li>No project metric falls more than ${goals.projectTolerance} points under the base branch's${hasBase ? "" : " (not checked on this run: no base coverage to compare with)"}.</li>
+<li>Tests run this PR's changed lines at least as well as the project's lines are run, unless ${goals.patchAllowance} or fewer are left uncovered.</li>
+<li>Code only integration tests reach (they aren't counted): add the <code>${EXEMPT_LABEL}</code> label and re-run the Coverage job.</li>
+</ul>`
+  const summary =
+    misses.length === 0
+      ? "✅ Coverage goals met"
+      : exempt
+        ? `⚪ Coverage goals missed, but this PR is labelled <code>${EXEMPT_LABEL}</code>`
+        : "❌ Coverage goals missed"
+  const list =
+    misses.length === 0 ? "" : `<ul>\n${misses.map((m) => `<li>${m}</li>`).join("\n")}\n</ul>\n`
+  return `<details><summary><strong>${summary}</strong></summary>\n${rules}\n</details>\n${list}`.trimEnd()
 }
 
 // ─── GitHub API ───────────────────────────────────────────────────────────────
@@ -716,8 +733,7 @@ export async function main(): Promise<void> {
           .map(([k, v]) => [relative(root, k).split(sep).join("/"), v]),
       )
     : null
-  const includesStories = process.env.COVERAGE_INCLUDES_STORIES === "true"
-  const misses = checkCoverageGoals({ total, patch: metrics, includesStories })
+  const misses = checkCoverageGoals({ total, baseTotal, patch: metrics })
   let exempt = false
   if (misses.length > 0) {
     try {
@@ -726,7 +742,7 @@ export async function main(): Promise<void> {
       console.warn(`${yellow("⚠")} Could not read the PR's labels: ${(err as Error).message}`)
     }
   }
-  const goals = renderGoals({ misses, exempt, includesStories })
+  const goals = renderGoals({ misses, exempt, hasBase: baseTotal != null })
 
   const changedFiles = Object.keys(addedLinesByFile)
   const report = renderReport({

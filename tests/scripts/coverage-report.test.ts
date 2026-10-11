@@ -10,6 +10,7 @@ import {
   COVERAGE_GOALS,
   EXEMPT_LABEL,
   fetchLabels,
+  patchTarget,
   renderGoals,
   computePatchCoverage,
   FILE_TABLE_BUDGET,
@@ -618,110 +619,127 @@ function patchLines(covered: number, total: number) {
 }
 
 describe("checkCoverageGoals", () => {
-  const goals = {
-    project: { lines: 90, statements: 89, functions: 88, branches: 83 },
-    patchLines: 80,
-    patchAllowance: 2,
-  }
+  const goals = { projectTolerance: 0.1, patchAllowance: 2 }
 
-  it("passes when the project total and the patch meet every goal", () => {
+  it("passes when nothing drops and the patch is as covered as the project", () => {
     expect(
       checkCoverageGoals({
-        total: summary(95),
+        total: summary(90),
+        baseTotal: summary(90),
         patch: patchLines(9, 10),
-        includesStories: true,
         goals,
       }),
     ).toEqual([])
   })
 
-  it("names each project metric that drops under its floor", () => {
-    const total = summary(95)
-    total.branches = { ...total.branches, pct: 82.5 }
+  it("names each project metric that falls more than the tolerance under the base", () => {
+    const total = summary(90)
+    total.branches = { ...total.branches, pct: 89.5 }
+    total.lines = { ...total.lines, pct: 89.95 }
     expect(
-      checkCoverageGoals({ total, patch: emptyMetrics, includesStories: true, goals }),
-    ).toEqual(["Project branches coverage is 82.50%, under the 83% floor."])
+      checkCoverageGoals({ total, baseTotal: summary(90), patch: emptyMetrics, goals }),
+    ).toEqual([
+      "Project branches coverage fell 0.50 points, to 89.50% from 90.00% on the base branch.",
+    ])
   })
 
-  it("skips the project floors without story coverage", () => {
+  it("skips the project goal without base coverage", () => {
     expect(
-      checkCoverageGoals({
-        total: summary(50),
-        patch: emptyMetrics,
-        includesStories: false,
-        goals,
-      }),
+      checkCoverageGoals({ total: summary(50), baseTotal: null, patch: emptyMetrics, goals }),
     ).toEqual([])
   })
 
   it("ignores a metric with nothing to count", () => {
-    const total = summary(95)
+    const total = summary(90)
     total.functions = { total: 0, covered: 0, skipped: 0, pct: 0 }
     expect(
-      checkCoverageGoals({ total, patch: emptyMetrics, includesStories: true, goals }),
+      checkCoverageGoals({ total, baseTotal: summary(90), patch: emptyMetrics, goals }),
     ).toEqual([])
   })
 
-  it("fails a patch under the goal with more uncovered lines than the allowance", () => {
+  it("fails a patch less covered than the base's lines with more than the allowance uncovered", () => {
     expect(
-      checkCoverageGoals({ total: null, patch: patchLines(5, 10), includesStories: true, goals }),
-    ).toEqual(["Tests run 50.00% of this PR's changed lines (5 of 10 uncovered); the goal is 80%."])
+      checkCoverageGoals({
+        total: summary(90),
+        baseTotal: summary(90),
+        patch: patchLines(5, 10),
+        goals,
+      }),
+    ).toEqual([
+      "Tests run 50.00% of this PR's changed lines (5 of 10 uncovered), under the project's 90.00%.",
+    ])
   })
 
   it("lets a small patch leave up to the allowance uncovered", () => {
+    const base = { total: null, baseTotal: summary(90), goals }
+    expect(checkCoverageGoals({ ...base, patch: patchLines(0, 2) })).toEqual([])
+    expect(checkCoverageGoals({ ...base, patch: patchLines(0, 3) })).toHaveLength(1)
+  })
+
+  it("measures the patch against this run's lines without a base", () => {
     expect(
-      checkCoverageGoals({ total: null, patch: patchLines(0, 2), includesStories: true, goals }),
+      checkCoverageGoals({ total: summary(40), baseTotal: null, patch: patchLines(5, 10), goals }),
     ).toEqual([])
     expect(
-      checkCoverageGoals({ total: null, patch: patchLines(0, 3), includesStories: true, goals }),
+      checkCoverageGoals({ total: summary(60), baseTotal: null, patch: patchLines(5, 10), goals }),
     ).toHaveLength(1)
   })
 
-  it("checks the patch even without story coverage", () => {
+  it("skips the patch goal with no coverage to measure against", () => {
     expect(
-      checkCoverageGoals({ total: null, patch: patchLines(0, 10), includesStories: false, goals }),
-    ).toHaveLength(1)
+      checkCoverageGoals({ total: null, baseTotal: null, patch: patchLines(0, 10), goals }),
+    ).toEqual([])
   })
 
   it("passes a PR with no coverable changed lines", () => {
     expect(
-      checkCoverageGoals({ total: null, patch: patchLines(0, 0), includesStories: true, goals }),
+      checkCoverageGoals({
+        total: summary(90),
+        baseTotal: summary(90),
+        patch: patchLines(0, 0),
+        goals,
+      }),
     ).toEqual([])
   })
+})
 
-  it("defaults to floors no higher than 100% and a patch goal between 0 and 100%", () => {
-    for (const floor of Object.values(COVERAGE_GOALS.project)) {
-      expect(floor).toBeGreaterThan(0)
-      expect(floor).toBeLessThanOrEqual(100)
-    }
-    expect(COVERAGE_GOALS.patchLines).toBeGreaterThan(0)
-    expect(COVERAGE_GOALS.patchLines).toBeLessThanOrEqual(100)
+describe("patchTarget", () => {
+  it("prefers the base's line coverage", () => {
+    expect(patchTarget(summary(80), summary(90))).toBe(90)
+  })
+  it("falls back to this run's", () => {
+    expect(patchTarget(summary(80), null)).toBe(80)
+  })
+  it("is null with no lines to measure", () => {
+    expect(patchTarget(null, null)).toBeNull()
+    expect(patchTarget(summary(0, 0, 0), null)).toBeNull()
   })
 })
 
 describe("renderGoals", () => {
-  it("says the goals are met and lists them", () => {
-    const html = renderGoals({ misses: [], exempt: false, includesStories: true })
-    expect(html).toContain("✅ Coverage goals met.")
-    expect(html).toContain(`lines ${COVERAGE_GOALS.project.lines}%`)
+  it("collapses the rules under a met verdict", () => {
+    const html = renderGoals({ misses: [], exempt: false, hasBase: true })
+    expect(html).toMatch(/^<details><summary><strong>✅ Coverage goals met<\/strong><\/summary>/)
+    expect(html).toContain(`${COVERAGE_GOALS.projectTolerance} points`)
     expect(html).not.toContain("not checked")
+    expect(html.endsWith("</details>")).toBe(true)
   })
 
-  it("lists each missed goal", () => {
-    const html = renderGoals({ misses: ["One.", "Two."], exempt: false, includesStories: true })
-    expect(html).toContain("❌ Coverage goals missed:")
-    expect(html).toContain("<li>One.</li>\n<li>Two.</li>")
+  it("lists each missed goal outside the dropdown", () => {
+    const html = renderGoals({ misses: ["One.", "Two."], exempt: false, hasBase: true })
+    expect(html).toContain("❌ Coverage goals missed")
+    expect(html).toMatch(/<\/details>\n<ul>\n<li>One\.<\/li>\n<li>Two\.<\/li>\n<\/ul>$/)
   })
 
   it("says an exempt PR missed its goals without failing", () => {
-    const html = renderGoals({ misses: ["One."], exempt: true, includesStories: true })
+    const html = renderGoals({ misses: ["One."], exempt: true, hasBase: true })
     expect(html).toContain(`labelled <code>${EXEMPT_LABEL}</code>`)
     expect(html).not.toContain("❌")
   })
 
-  it("notes when the project floors weren't checked", () => {
-    expect(renderGoals({ misses: [], exempt: false, includesStories: false })).toContain(
-      "not checked: this run has no story coverage",
+  it("notes when the project goal wasn't checked", () => {
+    expect(renderGoals({ misses: [], exempt: false, hasBase: false })).toContain(
+      "not checked on this run",
     )
   })
 })
@@ -812,7 +830,8 @@ describe("main", () => {
       process.env.GITHUB_EVENT_PATH = eventPath
       process.env.GITHUB_WORKSPACE = tmpDir
       process.env.COVERAGE_FINAL_PATH = join(tmpDir, "coverage-final.json")
-      process.env.COVERAGE_SUMMARY_PATH = join(tmpDir, "missing-summary.json")
+      process.env.COVERAGE_SUMMARY_PATH = join(tmpDir, "coverage-summary.json")
+      writeFileSync(process.env.COVERAGE_SUMMARY_PATH, JSON.stringify({ total: summary(90) }))
       const path = join(tmpDir, "src/a.ts")
       const statementMap = Object.fromEntries(
         [1, 2, 3, 4].map((line) => [line, { start: { line } }]),

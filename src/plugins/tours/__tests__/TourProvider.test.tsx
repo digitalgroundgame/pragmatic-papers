@@ -135,6 +135,19 @@ describe("TourProvider", () => {
     expect(warn).toHaveBeenCalledWith(expect.stringContaining(".search-bar"))
   })
 
+  it("stops looking for a step's element once it's unmounted", async () => {
+    vi.useFakeTimers()
+    window.sessionStorage.setItem(PROGRESS_KEY, JSON.stringify({ key: "articles", step: 2 }))
+    const view = renderAt("/admin/collections/articles")
+    await act(() => vi.advanceTimersByTimeAsync(500))
+
+    const query = vi.spyOn(document, "querySelector")
+    view.unmount()
+    await act(() => vi.advanceTimersByTimeAsync(11_000))
+    expect(query).not.toHaveBeenCalledWith(".search-bar")
+    expect(showStep).not.toHaveBeenCalled()
+  })
+
   it("forgets the tour when it's closed", async () => {
     window.sessionStorage.setItem(PROGRESS_KEY, JSON.stringify({ key: "articles", step: 0 }))
     renderAt("/admin")

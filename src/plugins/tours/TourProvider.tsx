@@ -10,10 +10,16 @@ import { matchesPath, parseProgress, placeStep, PROGRESS_KEY, type TourProgress 
 /** How long a step waits for what it points at, e.g. a list still loading. */
 const WAIT_MS = 10_000
 
-const waitForElement = (selector: string, timeout: number): Promise<Element | null> =>
+/** Polls for `selector`, giving up after `timeout` or once `cancelled()` (the step was left). */
+const waitForElement = (
+  selector: string,
+  timeout: number,
+  cancelled: () => boolean,
+): Promise<Element | null> =>
   new Promise((resolve) => {
     const started = Date.now()
     const look = (): void => {
+      if (cancelled()) return resolve(null)
       const element = document.querySelector(selector)
       if (element || Date.now() - started > timeout) resolve(element)
       else window.setTimeout(look, 100)
@@ -112,7 +118,9 @@ export function TourProvider({ children }: { children: React.ReactNode }): React
     let cancelled = false
     let remove: (() => void) | undefined
     void (async () => {
-      const element = step.element ? await waitForElement(step.element, WAIT_MS) : undefined
+      const element = step.element
+        ? await waitForElement(step.element, WAIT_MS, () => cancelled)
+        : undefined
       if (cancelled) return
       if (step.element && !element) {
         console.warn(`Tour "${tour.key}" ended: step ${progress.step + 1} found no ${step.element}`)

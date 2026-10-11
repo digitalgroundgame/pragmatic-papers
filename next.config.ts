@@ -61,7 +61,8 @@ const nextConfig: NextConfig = {
     "/**": ["./src/docs/**/*"],
   },
   // The CI image's build sets this (dockerfiles/PragmaticPapers.ci.Dockerfile): CI's Static
-  // checks already run `tsc` on the same commit, and next build's own pass costs ~25 s.
+  // checks run `next typegen` and `tsc` on the same commit, which cover what next build's
+  // own pass (~25 s) checks, route types included.
   // Coolify's builds and local builds still type-check.
   typescript: { ignoreBuildErrors: process.env.SKIP_BUILD_TYPE_CHECK === "true" },
   // Temporarily required on Windows until Next.js fixes Turbopack Sass resolution.

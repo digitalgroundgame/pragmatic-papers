@@ -156,6 +156,12 @@ jobs:
       - name: Lint
         run: pnpm run lint:ci
 
+      # tsconfig includes .next/types: the route types (each page's params, props and
+      # exports) that next build used to check. The CI image's build skips its type
+      # pass, so generate them here for tsc to check instead.
+      - name: Generate route types
+        run: pnpm exec next typegen
+
       - name: Type check
         run: pnpm run check-types
 

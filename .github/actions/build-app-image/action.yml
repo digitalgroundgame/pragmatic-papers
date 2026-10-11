@@ -26,8 +26,9 @@ inputs:
   save-cache:
     description: >-
       "true" to write the layer cache back to GitHub's cache. Exporting it takes
-      one to two and a half minutes, so only pushes to dev save it; PRs and the
-      merge queue read dev's entry, which every branch can.
+      one to two and a half minutes, so only pushes (to dev and main) save it; PRs
+      and the merge queue read dev's entry, which every branch can, being the
+      default branch's.
     required: false
     default: "false"
 

@@ -90,8 +90,8 @@ ENV NODE_ENV=production \
 # Migrate the throwaway database first: the build reads the schema, and Payload's
 # prodMigrations stays off here, so parallel prerender workers never race to apply them.
 # A fresh runner has no Turbopack cache to go corrupt, so this skips build-next.sh.
-# SKIP_BUILD_TYPE_CHECK: CI's Static checks run `tsc` on every commit this image is
-# built from, so next build doesn't type-check a second time.
+# SKIP_BUILD_TYPE_CHECK: CI's Static checks run `next typegen` and `tsc` on every commit
+# this image is built from, so next build doesn't type-check a second time.
 # PAYLOAD_SECRET only has to exist for the build; the deployment's real one comes from
 # Coolify at runtime. It's set here rather than as an ARG, which Docker's
 # SecretsUsedInArgOrEnv check flags whatever the value.

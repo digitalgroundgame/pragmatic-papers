@@ -74,6 +74,8 @@ export interface SyncResult {
   created: string[]
   updated: string[]
   unchanged: string[]
+  /** Repo docs whose file is gone from the repo, deleted from this site. */
+  deleted: string[]
 }
 
 const context = { disableRevalidate: true }
@@ -115,14 +117,39 @@ async function uploadOnce(
   return media.id
 }
 
+/** Deletes the repo docs (those with a `sourceHash`) whose slug no longer has a file. */
+async function deleteRemovedDocs(payload: Payload, entries: DocFileEntry[]): Promise<string[]> {
+  const { docs } = await payload.find({
+    collection: DOCS_SLUG,
+    depth: 0,
+    draft: true,
+    overrideAccess: true,
+    pagination: false,
+    select: { slug: true },
+    where: {
+      and: [
+        { sourceHash: { exists: true } },
+        { slug: { not_in: entries.map((entry) => entry.slug) } },
+      ],
+    },
+  })
+  const deleted: string[] = []
+  for (const doc of docs) {
+    await payload.delete({ collection: DOCS_SLUG, id: doc.id, context, overrideAccess: true })
+    deleted.push(doc.slug)
+  }
+  return deleted
+}
+
 /**
  * Writes each doc in `dir` into this site's database, published, with its files uploaded to
  * Media. A doc whose file and pictures hash the same as last time is skipped, so a deploy with
- * nothing new costs one query per doc. Docs that aren't in the repo are left alone, and so is
- * a repo doc edited in the admin, until the repo's copy changes.
+ * nothing new costs one query per doc. A repo doc edited in the admin is left alone until the
+ * repo's copy changes. A doc the repo synced before whose file has since been removed or renamed
+ * is deleted; docs written in the admin are never touched.
  */
 export async function syncDocs(payload: Payload, dir = DOCS_DIR): Promise<SyncResult> {
-  const result: SyncResult = { created: [], updated: [], unchanged: [] }
+  const result: SyncResult = { created: [], updated: [], unchanged: [], deleted: [] }
   if (!existsSync(dir)) {
     // A deploy without the folder (a runtime with no file system for it) would otherwise
     // look like one with nothing to sync.
@@ -130,8 +157,9 @@ export async function syncDocs(payload: Payload, dir = DOCS_DIR): Promise<SyncRe
     return result
   }
 
+  const entries = await listDocFiles(dir)
   let editorConfig: ReturnType<typeof docsEditorConfig> | undefined
-  for (const { slug, section, folder, file } of await listDocFiles(dir)) {
+  for (const { slug, section, folder, file } of entries) {
     const source = await readFile(file, "utf8")
     const { meta, body } = parseDocFile(source, path.relative(dir, file))
     const refs = mediaRefsIn([
@@ -201,5 +229,7 @@ export async function syncDocs(payload: Payload, dir = DOCS_DIR): Promise<SyncRe
     }
   }
 
+  // An empty folder is more likely a broken build than a repo with no docs left.
+  if (entries.length) result.deleted = await deleteRemovedDocs(payload, entries)
   return result
 }

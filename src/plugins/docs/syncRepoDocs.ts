@@ -17,9 +17,9 @@ export async function syncRepoDocs(payload: Payload): Promise<SyncResult | null>
   if (process.env.DOCS_SYNC === "false") return null
   try {
     const result = await syncDocs(payload)
-    if (result.created.length || result.updated.length) {
-      const { created, updated } = result
-      payload.logger.info({ created, updated }, "Synced help docs from the repo")
+    const { created, updated, deleted } = result
+    if (created.length || updated.length || deleted.length) {
+      payload.logger.info({ created, updated, deleted }, "Synced help docs from the repo")
       revalidateTag(DOCS_CACHE_TAG, "max")
       purgeEdgeCache(payload.logger, "docs synced")
     }

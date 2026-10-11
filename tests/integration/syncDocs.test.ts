@@ -163,4 +163,37 @@ describe("syncDocs", () => {
     expect(updated.summary).toBe("Edited in the admin.")
     await payload.delete({ collection: "docs", id: own.id, context: ctx, overrideAccess: true })
   })
+
+  it("deletes a synced doc once its file is gone, and leaves docs written in the admin", async () => {
+    const own = await payload.create({
+      collection: "docs",
+      context: ctx,
+      draft: true,
+      overrideAccess: true,
+      data: {
+        title: "Written here",
+        slug: "written-here",
+        summary: "A doc from the admin.",
+        publishedAt: "2026-10-18",
+        section: "writing",
+      },
+    })
+    // Another doc keeps the folder from looking empty, which deletes nothing.
+    const source = await readFile(path.join(dir, SECTION, `${SLUG}.md`), "utf8")
+    await writeFile(path.join(dir, SECTION, "renamed.md"), source)
+    await rm(path.join(dir, SECTION, `${SLUG}.md`))
+
+    const result = await syncDocs(payload, dir)
+    expect(result.deleted).toContain(SLUG)
+    expect(result.deleted).not.toContain("written-here")
+    expect(await findDoc()).toBeUndefined()
+
+    await payload.delete({ collection: "docs", id: own.id, context: ctx, overrideAccess: true })
+    await payload.delete({
+      collection: "docs",
+      overrideAccess: true,
+      context: ctx,
+      where: { slug: { equals: "renamed" } },
+    })
+  })
 })

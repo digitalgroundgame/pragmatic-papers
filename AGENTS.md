@@ -158,7 +158,9 @@ it shows beside it, each named for the doc (`<slug>-hero.webp`,
 `/next/revalidate-all` (which `start.sh` calls when a deploy goes live) writes
 every doc into that site's database, published, converting the Markdown with the
 docs editor and uploading its pictures to Media (`syncRepoDocs`); a doc whose
-file and pictures hash the same as last time is skipped (`DOCS_SYNC=false` turns
+file and pictures hash the same as last time is skipped, and a doc the sync wrote
+before whose file has since been removed or renamed is deleted (docs written in
+a site's admin are never touched) (`DOCS_SYNC=false` turns
 the sync off, as the staging Worker does: it reads staging's database and has no
 `src/docs/` of its own). `pnpm dev:db-seed` syncs them locally.
 

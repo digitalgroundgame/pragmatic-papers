@@ -36,19 +36,24 @@ heroAlt: Switches
 
 let dir: string
 
-/** A Payload whose find answers from `docs` and `media`, and records what was written. */
+/**
+ * A Payload whose find answers from `docs` and `media`, or from `removed` for the query for repo
+ * docs that lost their file, and records what was written.
+ */
 const fakePayload = ({
   docs = [] as Record<string, unknown>[],
   media = [] as Record<string, unknown>[],
+  removed = [] as Record<string, unknown>[],
 } = {}) => {
   const payload = {
-    find: vi.fn(async ({ collection }: { collection: string }) => ({
-      docs: collection === "media" ? media : docs,
+    find: vi.fn(async ({ collection, where }: { collection: string; where?: object }) => ({
+      docs: collection === "media" ? media : where && "and" in where ? removed : docs,
     })),
     create: vi.fn(async ({ collection }: { collection: string }) => ({
       id: collection === "media" ? 41 : 1,
     })),
     update: vi.fn(async () => ({})),
+    delete: vi.fn(async () => ({})),
     logger: { warn: vi.fn() },
   }
   return payload as typeof payload & Payload
@@ -73,6 +78,7 @@ describe("syncDocs", () => {
       created: [],
       updated: [],
       unchanged: [],
+      deleted: [],
     })
     expect(payload.logger.warn).toHaveBeenCalledWith(expect.stringContaining("doesn't exist"))
     expect(payload.find).not.toHaveBeenCalled()
@@ -84,6 +90,7 @@ describe("syncDocs", () => {
       created: ["experiments"],
       updated: [],
       unchanged: [],
+      deleted: [],
     })
 
     expect(payload.create).toHaveBeenCalledWith(
@@ -139,6 +146,7 @@ describe("syncDocs", () => {
       created: [],
       updated: [],
       unchanged: ["experiments"],
+      deleted: [],
     })
     expect(payload.create).not.toHaveBeenCalled()
     expect(payload.update).not.toHaveBeenCalled()
@@ -150,6 +158,7 @@ describe("syncDocs", () => {
       created: [],
       updated: ["experiments"],
       unchanged: [],
+      deleted: [],
     })
     expect(payload.create).not.toHaveBeenCalled()
     expect(payload.update).toHaveBeenCalledWith(
@@ -162,6 +171,31 @@ describe("syncDocs", () => {
         }),
       }),
     )
+  })
+})
+
+describe("syncDocs pruning", () => {
+  it("deletes a repo doc whose file is gone, and asks only for repo docs", async () => {
+    const payload = fakePayload({ removed: [{ id: 7, slug: "old-name" }] })
+    await expect(syncDocs(payload, dir)).resolves.toMatchObject({ deleted: ["old-name"] })
+    expect(payload.find).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        collection: "docs",
+        where: {
+          and: [{ sourceHash: { exists: true } }, { slug: { not_in: ["experiments"] } }],
+        },
+      }),
+    )
+    expect(payload.delete).toHaveBeenCalledWith(
+      expect.objectContaining({ collection: "docs", id: 7, context: { disableRevalidate: true } }),
+    )
+  })
+
+  it("deletes nothing when the folder holds no docs", async () => {
+    await rm(path.join(dir, "site"), { recursive: true })
+    const payload = fakePayload({ removed: [{ id: 7, slug: "old-name" }] })
+    await expect(syncDocs(payload, dir)).resolves.toMatchObject({ deleted: [] })
+    expect(payload.delete).not.toHaveBeenCalled()
   })
 })
 

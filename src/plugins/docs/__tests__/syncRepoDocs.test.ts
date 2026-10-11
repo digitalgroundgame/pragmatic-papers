@@ -17,17 +17,24 @@ const payload = { logger } as unknown as Payload
 
 beforeEach(() => {
   vi.clearAllMocks()
-  syncDocs.mockResolvedValue({ created: [], updated: [], unchanged: ["a"] })
+  syncDocs.mockResolvedValue({ created: [], updated: [], unchanged: ["a"], deleted: [] })
 })
 afterEach(() => vi.unstubAllEnvs())
 
 describe("syncRepoDocs", () => {
   it("syncs the repo's docs and refreshes the caches on a change", async () => {
-    const result = { created: ["a"], updated: [], unchanged: [] }
+    const result = { created: ["a"], updated: [], unchanged: [], deleted: [] }
     syncDocs.mockResolvedValue(result)
     await expect(syncRepoDocs(payload)).resolves.toEqual(result)
     expect(syncDocs).toHaveBeenCalledWith(payload)
     expect(logger.info).toHaveBeenCalled()
+    expect(revalidateTag).toHaveBeenCalledWith("docs", "max")
+    expect(purgeEdgeCache).toHaveBeenCalledWith(logger, "docs synced")
+  })
+
+  it("refreshes the caches when a doc was deleted", async () => {
+    syncDocs.mockResolvedValue({ created: [], updated: [], unchanged: [], deleted: ["a"] })
+    await syncRepoDocs(payload)
     expect(revalidateTag).toHaveBeenCalledWith("docs", "max")
     expect(purgeEdgeCache).toHaveBeenCalledWith(logger, "docs synced")
   })

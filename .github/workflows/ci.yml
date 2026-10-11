@@ -252,7 +252,9 @@ jobs:
           fi
           # A failed test fails its own job; this one still reports coverage.
           pnpm vitest --merge-reports=.vitest-reports --coverage --reporter=dot || true
-          test -f coverage/coverage-summary.json
+          # Files both runs instrumented come out of the merge with each function
+          # listed twice; collapse them and rebuild the summary.
+          pnpm tsx scripts/dedupe-coverage.ts coverage
 
       # A PR's coverage is compared against its base branch's, so both `dev`
       # and `main` (release and hotfix PRs) keep a baseline. The artifact keeps

@@ -79,7 +79,7 @@ describe("syncDocs", () => {
 
   it("skips a doc that hasn't changed", async () => {
     const result = await syncDocs(payload, dir)
-    expect(result).toEqual({ created: [], updated: [], unchanged: [SLUG] })
+    expect(result).toEqual({ created: [], updated: [], unchanged: [SLUG], deleted: [] })
   })
 
   it("updates a changed doc without uploading its unchanged pictures again", async () => {

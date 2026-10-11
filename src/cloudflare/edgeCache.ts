@@ -6,7 +6,8 @@
  *
  * Workers Cache keys a response by path and query only, never by cookie, so anything
  * personal has to skip it: Payload's login, Next's draft mode, anything with an
- * Authorization header. So do OpenNext's own revalidation requests
+ * Authorization header. So do Server Action requests (`Next-Action`), which Next answers
+ * differently at the same URL, and OpenNext's own revalidation requests
  * (`x-prerender-revalidate`, through `WORKER_SELF_REFERENCE`), which must re-render, and
  * navigations (RSC requests): Next varies those on the router's state and checks `_rsc`
  * against it, and OpenNext already answers them from its R2 cache by route. What's left
@@ -57,7 +58,8 @@ export function isEdgeCacheable(request: Request): boolean {
   if (isOriginPath(url.pathname)) return false
   const { headers } = request
   if (headers.has("RSC") || url.searchParams.has("_rsc")) return false
-  if (["Authorization", "Upgrade", "x-prerender-revalidate"].some((name) => headers.has(name))) {
+  const uncached = ["Authorization", "Upgrade", "x-prerender-revalidate", "Next-Action"]
+  if (uncached.some((name) => headers.has(name))) {
     return false
   }
   const cookies = headers.get("Cookie") ?? ""

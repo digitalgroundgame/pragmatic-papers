@@ -32,6 +32,7 @@ describe("isEdgeCacheable", () => {
     ["OpenNext's revalidation", { "x-prerender-revalidate": "id", "x-isr": "1" }],
     ["a navigation", { RSC: "1" }],
     ["a WebSocket", { Upgrade: "websocket" }],
+    ["a Server Action", { "Next-Action": "x" }],
   ])("skips %s", (_, headers) => {
     expect(isEdgeCacheable(new Request(`${W}/articles/a`, { headers }))).toBe(false)
   })

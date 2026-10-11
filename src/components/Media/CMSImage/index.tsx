@@ -8,7 +8,7 @@ import type { ImageMediaType } from "../types"
 
 export type ImageVariant = keyof Required<MediaType>["sizes"]
 
-export interface ImageMediaProps extends Omit<ImageProps, "src" | "alt" | "width" | "height"> {
+export interface CMSImageProps extends Omit<ImageProps, "src" | "alt" | "width" | "height"> {
   media: ImageMediaType
   variant?: ImageVariant
   containerClassName?: string
@@ -22,21 +22,20 @@ function getMediaByVariant(
 }
 
 /**
- * ImageMedia
- * TODO: Rename ImageMedia to `CMSImage`
+ * An image from the Media collection, through next/image.
  *
  * Locally-stored media (Payload local storage) has relative URLs like `/api/media/file/...`.
  * getMediaUrl() passes these through as-is so next/image handles them internally — no upstream
  * HTTP fetch, no private-IP SSRF block. External CDN URLs (Supabase, S3) are absolute and must
  * be allowed via remotePatterns in next.config.ts.
  */
-export const ImageMedia: React.FC<ImageMediaProps> = ({
+export const CMSImage: React.FC<CMSImageProps> = ({
   media,
   variant,
   sizes,
   className,
   quality = 80,
-  priority, // TODO rename to `preload` after upgrading to Next.js 16
+  preload,
   loading,
   fill,
   style,
@@ -44,7 +43,9 @@ export const ImageMedia: React.FC<ImageMediaProps> = ({
 }) => {
   if (!media.url) return null
   let src = getMediaUrl(media.url, media.updatedAt)
-  const alt = media.alt || "" // TODO: alt should be required
+  // Editors can't upload an image without alt text (`validateAlt`), but images from before
+  // that check, and remote images shaped into a `Media`, may have none.
+  const alt = media.alt || ""
   let width = media.width ?? undefined
   let height = media.height ?? undefined
   // Blur only over a preview derived from this image. Uploads get one from the
@@ -56,7 +57,7 @@ export const ImageMedia: React.FC<ImageMediaProps> = ({
   // layout puts behind the image shows instead — a themed `bg-*` on the
   // container, in our cases, which is correct in both themes for free.
   const blurDataURL = media.blurDataURL ?? undefined
-  loading = priority !== undefined ? undefined : loading // loading and priority are mutually exclusive
+  loading = preload !== undefined ? undefined : loading // loading and preload are mutually exclusive
 
   if (variant) {
     const mediaBySize = getMediaByVariant(media, variant)
@@ -87,8 +88,8 @@ export const ImageMedia: React.FC<ImageMediaProps> = ({
       fill={fill}
       sizes={sizes}
       quality={quality}
-      priority={priority}
-      fetchPriority={priority ? "high" : undefined}
+      preload={preload}
+      fetchPriority={preload ? "high" : undefined}
       loading={loading}
       placeholder={blurDataURL ? "blur" : "empty"}
       blurDataURL={blurDataURL}

@@ -29,7 +29,7 @@ export function HeroPage({ article, topInset }: HeroPageProps): React.ReactNode 
       {article.heroImage && typeof article.heroImage !== "number" ? (
         <div className="absolute inset-0">
           <Media
-            priority
+            preload
             fill
             sizes="100vw"
             media={article.heroImage}

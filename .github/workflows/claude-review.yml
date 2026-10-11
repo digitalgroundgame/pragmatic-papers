@@ -3,8 +3,9 @@ name: Claude Code Review
 # Runs once when the "in review" label is added (or when a labeled
 # draft is marked ready); to review again, remove and re-add the label. Drafts
 # and unlabeled PRs never run it. pr-events.yml starts it on the PR's
-# branch, so its check lands on the commit it reviews without every other
-# label leaving a skipped one. Not a required check: what gates merging is
+# branch, so every other label doesn't leave a skipped check, and sets a
+# pending "Claude review" commit status on the PR's head, which the last step
+# here completes: a dispatched run's own check isn't listed on the PR. Not a required check: what gates merging is
 # "Review acknowledged" (review-ack.yml), which a person gives either by
 # approving the PR or, on their own PR, by replying `/reviewed` on its final
 # commit after a review like this one has run. So only PRs that take the
@@ -33,6 +34,7 @@ jobs:
       contents: read
       pull-requests: write
       id-token: write
+      statuses: write
 
     steps:
       - name: Checkout repository
@@ -40,8 +42,12 @@ jobs:
         with:
           fetch-depth: 0
 
+      # Under the job's limit: a job timeout cancels the run, which skips the
+      # steps below and leaves the PR's status pending. A step timeout only
+      # stops this step, so the verdict is still reported.
       - name: Run Claude code review
         id: review
+        timeout-minutes: 17
         uses: anthropics/claude-code-action@v1
         with:
           # A Claude subscription token from `claude setup-token`, so reviews
@@ -71,6 +77,7 @@ jobs:
       # The summary comment ends with a marker naming the commit reviewed and
       # the verdict (see `--head` in .claude/skills/code-review/SKILL.md).
       - name: Check the verdict
+        id: verdict
         env:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
@@ -81,11 +88,30 @@ jobs:
             --jq '.[] | select(.user.login == "claude[bot]") | .body' \
             | grep -o "<!-- claude-review sha=$HEAD_SHA verdict=[a-z]* -->" | tail -n 1 || true)
           if [ -z "$marker" ]; then
+            echo "description=No review summary was posted" >> "$GITHUB_OUTPUT"
             echo "::error::No review summary for $HEAD_SHA was posted. See the step above."
             exit 1
           fi
           if [[ "$marker" == *"verdict=blocker"* ]]; then
+            echo "description=Found a blocker" >> "$GITHUB_OUTPUT"
             echo "::error::The review found a blocker. Fix it, then reply /reviewed on the PR."
             exit 1
           fi
+          echo "description=No blockers" >> "$GITHUB_OUTPUT"
           echo "No blockers on $HEAD_SHA."
+
+      # Completes the pending status pr-events.yml set when it started this run.
+      # A cancelled run reports nothing: the run that replaced it set its own
+      # pending status, which this one must not overwrite.
+      - name: Report the result on the PR
+        if: ${{ !cancelled() }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          HEAD_SHA: ${{ github.sha }}
+          STATE: ${{ job.status == 'success' && 'success' || 'failure' }}
+          DESCRIPTION: ${{ steps.verdict.outputs.description || 'The review failed' }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          gh api -X POST "repos/$REPO/statuses/$HEAD_SHA" -f state="$STATE" \
+            -f context="Claude review" -f description="$DESCRIPTION" -f target_url="$RUN_URL" >/dev/null

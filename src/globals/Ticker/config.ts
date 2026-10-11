@@ -24,13 +24,22 @@ export const Ticker: GlobalConfig = {
   },
   fields: [
     {
+      name: "posts",
+      type: "ui",
+      admin: {
+        components: {
+          Field: "@/globals/Ticker/components/TickerPostsField#TickerPostsField",
+        },
+      },
+    },
+    {
       name: "hidden",
       label: "Hidden posts",
       type: "array",
       labels: { singular: "Post", plural: "Posts" },
       admin: {
         description:
-          "Posts the ticker leaves out. Paste the post's link from Bluesky or X; it's gone from the ticker as soon as you save.",
+          "Posts the ticker leaves out: the ones hidden above, or a link pasted from Bluesky or X. It's gone from the ticker as soon as you save.",
         initCollapsed: false,
       },
       fields: [

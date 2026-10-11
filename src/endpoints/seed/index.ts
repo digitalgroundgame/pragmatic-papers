@@ -466,7 +466,7 @@ export const seed = async (
           slug: "site-settings",
           context,
           data: {
-            experiments: { feed: true, interactives: true, tableOfContents: true, ticker: true },
+            experiments: { feed: true, interactives: true, tableOfContents: true },
           },
         })
       },

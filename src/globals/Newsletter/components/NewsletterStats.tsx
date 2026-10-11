@@ -167,7 +167,7 @@ function Campaigns({ campaigns }: { campaigns: NewsletterCampaign[] }): React.Re
 }
 
 /**
- * The newsletter at a glance on the admin dashboard: subscriber counts, the newest signups and
+ * The newsletter at a glance, on System → Newsletter: subscriber counts, the newest signups and
  * the latest campaigns, as Listmonk reports them.
  */
 export function NewsletterStats({ overview }: { overview: NewsletterOverview }): React.ReactNode {
@@ -182,9 +182,9 @@ export function NewsletterStats({ overview }: { overview: NewsletterOverview }):
           justifyContent: "space-between",
         }}
       >
-        <h2 id="newsletter-panel-heading" style={{ fontSize: "1.25rem", margin: 0 }}>
+        <h1 id="newsletter-panel-heading" style={{ margin: 0 }}>
           Newsletter
-        </h2>
+        </h1>
         {overview.connected && (
           <a href={overview.adminUrl} rel="noopener noreferrer" target="_blank">
             Open Listmonk
@@ -221,9 +221,9 @@ export function NewsletterStats({ overview }: { overview: NewsletterOverview }):
             />
           )}
 
-          <h3 id="newsletter-signups-heading" style={heading}>
+          <h2 id="newsletter-signups-heading" style={heading}>
             Recent signups
-          </h3>
+          </h2>
           {overview.signups.ok ? (
             <Signups signups={overview.signups.data} />
           ) : (
@@ -234,9 +234,9 @@ export function NewsletterStats({ overview }: { overview: NewsletterOverview }):
             />
           )}
 
-          <h3 id="newsletter-campaigns-heading" style={heading}>
+          <h2 id="newsletter-campaigns-heading" style={heading}>
             Recent campaigns
-          </h3>
+          </h2>
           {overview.campaigns.ok ? (
             <Campaigns campaigns={overview.campaigns.data} />
           ) : (

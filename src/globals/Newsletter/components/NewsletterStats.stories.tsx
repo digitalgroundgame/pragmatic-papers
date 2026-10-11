@@ -6,7 +6,7 @@ import { withPayloadAdminTheme } from "@/stories/payloadAdminTheme"
 import { NewsletterStats } from "./NewsletterStats"
 
 const meta = {
-  title: "Admin/Dashboard/NewsletterStats",
+  title: "Admin/Newsletter/NewsletterStats",
   component: NewsletterStats,
   decorators: [withPayloadAdminTheme],
   args: {

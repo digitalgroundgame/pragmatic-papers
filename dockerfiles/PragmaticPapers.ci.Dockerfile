@@ -59,7 +59,7 @@ RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
     pnpm fetch --store-dir /pnpm/store
 
 COPY package.json ./
-COPY scripts/install-fonts.ts scripts/ansi.mjs scripts/Inter-Bold.woff2 ./scripts/
+COPY scripts/install-fonts.ts scripts/ansi.mjs scripts/Inter-Bold.woff2 scripts/setup-git.mjs ./scripts/
 
 # A deploy must ship the real FKScreamer (see PragmaticPapers.Dockerfile).
 ENV FONTS_REQUIRED=true

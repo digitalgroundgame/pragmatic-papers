@@ -50,6 +50,9 @@ runs:
           network=host
           image=mirror.gcr.io/moby/buildkit:buildx-stable-1
         buildkitd-flags: --allow-insecure-entitlement network.host
+        # The runner is thrown away after the job, so skip removing the builder, which
+        # took ~40 s at the end of every run, ahead of the jobs waiting on the image.
+        cleanup: false
 
     # The pnpm version, for the base stage's corepack. Passed as a build arg rather
     # than read from a bind-mounted package.json there, because a bind mount's

@@ -82,6 +82,18 @@ export async function installFonts(
   if (existsSync(src)) {
     cpSync(src, dest, { recursive: true })
     console.warn(`${green("✔")} Fonts copied to public/fonts`)
+    // A package file that isn't WOFF2 renders as nothing at all, so every page falls back
+    // to system fonts. It happens when something overwrote the installed file in place.
+    const font = readFileSync(fontPath)
+    if (font.subarray(0, 4).toString("latin1") !== "wOF2") {
+      const required = env.FONTS_REQUIRED === "true"
+      const log = required ? console.error : console.warn
+      log(
+        `${required ? red("✖") : yellow("⚠")} FKScreamer-Bold.woff2 in @digitalgroundgame/fonts isn't a WOFF2 file (${font.byteLength} bytes), so pages fall back to system fonts.`,
+      )
+      log(gray("  Something overwrote the installed package. Run 'pnpm reinstall' to restore it."))
+      return required ? 1 : 0
+    }
     await subsetDisplayFont(fontPath)
     return 0
   }

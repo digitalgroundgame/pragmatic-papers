@@ -32,7 +32,7 @@ export const ArticleHero: React.FC<ArticleHeroProps> = ({
   return (
     <div className="relative flex flex-col gap-2">
       <Media
-        priority
+        preload
         sizes="(max-width: 768px) 100vw, 1024px"
         media={heroImage}
         variant="large"

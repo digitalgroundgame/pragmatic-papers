@@ -117,7 +117,7 @@ export default async function VolumePage({
               <ArticleCard
                 key={article.id}
                 doc={article}
-                priority={index < 2}
+                preload={index < 2}
                 relationTo="articles"
               />
             ))}

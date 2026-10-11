@@ -5,7 +5,7 @@ import { Media } from "../index"
 import type { Media as MediaType } from "@/payload-types"
 
 // Each renderer is stubbed so these assert the dispatch, not the rendering.
-vi.mock("../ImageMedia", () => ({ ImageMedia: () => <div data-testid="image-media" /> }))
+vi.mock("../CMSImage", () => ({ CMSImage: () => <div data-testid="image-media" /> }))
 vi.mock("../VideoMedia", () => ({ VideoMedia: () => <div data-testid="video-media" /> }))
 vi.mock("../AudioMedia", () => ({ AudioMedia: () => <div data-testid="audio-media" /> }))
 

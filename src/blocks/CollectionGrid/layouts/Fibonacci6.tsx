@@ -35,7 +35,7 @@ export const Fibonacci6: LayoutDefinition = {
 export const Fibonacci6Layout: React.FC<LayoutProps> = ({
   className,
   slots,
-  priority,
+  preload,
   loading,
   ...props
 }) => {
@@ -50,7 +50,7 @@ export const Fibonacci6Layout: React.FC<LayoutProps> = ({
         className="md:col-span-2 lg:col-span-3"
         tile={featured}
         imagePosition="right"
-        priority={priority}
+        preload={preload}
         sizes="(max-width: 768px) 100vw, 460px"
         variant="medium"
       />

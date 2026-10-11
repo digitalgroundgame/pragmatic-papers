@@ -6,6 +6,7 @@ import {
   logErrorCauses,
   toOrigin,
   withCauses,
+  withImageCaching,
   withOrigin,
   type WorkerEnv,
 } from "../origin"
@@ -98,6 +99,23 @@ describe("withOrigin", () => {
     expect(await local.text()).toBe("asset")
   })
 
+  it("gives resized images Next's caching when OpenNext sets none", async () => {
+    const image = await worker.fetch(
+      new Request("https://w.dev/_next/image?url=%2Fapi%2Fmedia%2Ffile%2Fa.png&w=640&q=80"),
+      env({ ORIGIN_URL: ORIGIN }),
+      {},
+    )
+    expect(image.headers.get("cache-control")).toBe("public, max-age=14400, must-revalidate")
+    expect(await image.text()).toBe(`origin ${ORIGIN}/api/media/file/a.png`)
+
+    const page = await worker.fetch(
+      new Request("https://w.dev/articles/a"),
+      env({ ORIGIN_URL: ORIGIN }),
+      {},
+    )
+    expect(page.headers.get("cache-control")).toBeNull()
+  })
+
   it("leaves everything to OpenNext without ORIGIN_URL", async () => {
     const response = await worker.fetch(new Request("https://w.dev/api/users"), env(), {})
     expect(await response.text()).toBe("next")
@@ -142,5 +160,16 @@ describe("logErrorCauses", () => {
       "rendering failed",
       expect.stringContaining("Caused by: Error: inner"),
     )
+  })
+})
+
+describe("withImageCaching", () => {
+  it("keeps the Cache-Control OpenNext set, and leaves errors uncached", () => {
+    const immutable = new Response("img", { headers: { "Cache-Control": "public, immutable" } })
+    expect(withImageCaching("/_next/image", immutable).headers.get("cache-control")).toBe(
+      "public, immutable",
+    )
+    const missing = new Response("bad", { status: 400 })
+    expect(withImageCaching("/_next/image", missing).headers.get("cache-control")).toBeNull()
   })
 })

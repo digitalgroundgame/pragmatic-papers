@@ -2,16 +2,16 @@ import { Media, isMedia } from "@/components/Media"
 import { PageRange } from "@/components/PageRange"
 import { Pagination } from "@/components/Pagination"
 import type { Media as MediaType } from "@/payload-types"
-import { arrayStringToPlainText } from "@/utilities/formatAuthors"
-import configPromise from "@payload-config"
+import { formatList } from "@/utilities/formatList"
 import { sql } from "@payloadcms/db-postgres"
 import type { Metadata } from "next"
 import { draftMode } from "next/headers"
 import type { PaginatedDocs } from "payload"
-import { getPayload } from "payload"
 import React, { cache } from "react"
 import { Breadcrumbs } from "@/components/Breadcrumbs"
 import { HoverPrefetchLink } from "@/components/Link/HoverPrefetchLink"
+import { docPath } from "@/utilities/routes"
+import { getPayloadClient } from "@/data/payload"
 
 interface SearchResult {
   id: number
@@ -27,16 +27,9 @@ interface SearchResult {
 const RESULTS_PER_PAGE = 10
 const MAX_QUERY_LENGTH = 200
 
-function collectionHref(relationTo: string, slug: string): string {
-  if (relationTo === "articles") return `/articles/${slug}`
-  if (relationTo === "volumes") return `/volumes/${slug}`
-  if (relationTo === "topics") return `/topics/${slug}`
-  return `/${slug}`
-}
-
 const querySearch = cache(async (rawQuery: string, page: number) => {
   const { isEnabled: draft } = await draftMode()
-  const payload = await getPayload({ config: configPromise })
+  const payload = await getPayloadClient()
   const query = rawQuery.slice(0, MAX_QUERY_LENGTH).trim()
 
   if (!query) {
@@ -164,7 +157,7 @@ export default async function SearchPage({ searchParams }: Args): Promise<React.
             <ul className="space-y-4">
               {docs.map((result: SearchResult) => {
                 const relationTo = result.doc?.relationTo ?? ""
-                const href = collectionHref(relationTo, result.slug ?? "")
+                const href = docPath(relationTo, result.slug ?? "")
 
                 const image = isMedia(result.image) ? result.image : null
                 return (
@@ -196,13 +189,13 @@ export default async function SearchPage({ searchParams }: Args): Promise<React.
                           {result.topics && (
                             <>
                               <span>{"•"}</span>
-                              <span>{`${arrayStringToPlainText(result.topics, ", ", "&")}`}</span>
+                              <span>{`${formatList(result.topics.split(", "), { conjunction: "&" })}`}</span>
                             </>
                           )}
                           {result.authors && (
                             <>
                               <span>{"•"}</span>
-                              <span>{`by ${arrayStringToPlainText(result.authors, ", ", "&")}`}</span>
+                              <span>{`by ${formatList(result.authors.split(", "), { conjunction: "&" })}`}</span>
                             </>
                           )}
                         </div>

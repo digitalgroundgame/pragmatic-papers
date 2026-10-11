@@ -153,7 +153,7 @@ try {
 
   // CI restores .next/cache from a prior run to speed up `next build`'s
   // compilation — but that directory also holds Next.js's unstable_cache
-  // Data Cache (e.g. getCachedGlobal's `global_header`/`global_footer`
+  // Data Cache (e.g. getGlobal's `global_header`/`global_footer`
   // entries), which persists independent of build freshness. A stale entry
   // cached before this run's seed data existed would otherwise survive the
   // rebuild and serve outdated content. Clear just the data cache, not the

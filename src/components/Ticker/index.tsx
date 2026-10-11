@@ -1,4 +1,4 @@
-import { getCachedGlobal } from "@/utilities/getGlobals"
+import { getGlobal } from "@/data/globals"
 
 import { getTickerFeed } from "./getTickerFeed"
 import { TickerView } from "./TickerView"
@@ -9,7 +9,7 @@ import { TickerView } from "./TickerView"
  */
 export async function Ticker(): Promise<React.ReactNode> {
   // The depth the header reads it at, so they share one cache entry.
-  const { ticker } = await getCachedGlobal("header", 1)()
+  const { ticker } = await getGlobal("header", 1)
   if (ticker?.enabled !== true) return null
   return <TickerView {...await getTickerFeed()} />
 }

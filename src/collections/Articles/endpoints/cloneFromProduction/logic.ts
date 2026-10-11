@@ -13,6 +13,8 @@ import {
   productionUrl,
   type SourceDoc,
 } from "./source"
+import { isRecord } from "@/utilities/isRecord"
+import { relationshipId } from "@/utilities/relationships"
 
 /**
  * Articles linked from a cloned article are cloned too when they're missing
@@ -38,11 +40,8 @@ const NARRATOR_ROLES: Role[] = ["narrator"]
 
 type Json = Record<string, unknown>
 
-const isObject = (value: unknown): value is Json =>
-  typeof value === "object" && value !== null && !Array.isArray(value)
-
 const isDoc = (value: unknown): value is SourceDoc =>
-  isObject(value) && typeof value.id === "number"
+  isRecord(value) && typeof value.id === "number"
 
 const str = (value: unknown): string | undefined => (typeof value === "string" ? value : undefined)
 
@@ -64,10 +63,10 @@ export interface CloneResult {
 
 /** The original file first, then its resized copies in case the original is gone. */
 function mediaUrls(doc: SourceDoc): string[] {
-  const sizes = isObject(doc.sizes) ? doc.sizes : {}
+  const sizes = isRecord(doc.sizes) ? doc.sizes : {}
   const sizeUrl = (name: string) => {
     const size = sizes[name]
-    return isObject(size) ? str(size.url) : undefined
+    return isRecord(size) ? str(size.url) : undefined
   }
   const urls = [
     str(doc.url),
@@ -126,7 +125,7 @@ class Cloner {
     { incrementSlug }: { incrementSlug: boolean },
   ): Promise<Article> {
     this.articlesInProgress.add(source.id)
-    const meta = isObject(source.meta) ? source.meta : {}
+    const meta = isRecord(source.meta) ? source.meta : {}
     const title = str(source.title) ?? "Untitled"
     const baseSlug = str(source.slug) ?? "cloned-article"
 
@@ -183,7 +182,7 @@ class Cloner {
     if (!volumeId) return
 
     const volume = await this.payload.findByID({ collection: "volumes", id: volumeId, depth: 0 })
-    const articleIds = (volume.articles ?? []).map((a) => (typeof a === "number" ? a : a.id))
+    const articleIds = (volume.articles ?? []).map(relationshipId).filter((id) => id !== null)
     if (articleIds.includes(articleId)) return
 
     await this.payload.update({
@@ -381,7 +380,7 @@ class Cloner {
     const sameName = await this.findLocal("topics", { name: { equals: name } })
     if (sameName) return sameName
 
-    const meta = isObject(doc.meta) ? doc.meta : {}
+    const meta = isRecord(doc.meta) ? doc.meta : {}
     const topic = await this.payload.create({
       collection: "topics",
       data: {
@@ -406,7 +405,7 @@ class Cloner {
     const sameNumber = await this.findLocal("volumes", { volumeNumber: { equals: volumeNumber } })
     if (sameNumber) return sameNumber
 
-    const meta = isObject(doc.meta) ? doc.meta : {}
+    const meta = isRecord(doc.meta) ? doc.meta : {}
     // Created without articles: only the cloned ones get added, by `addToVolume`.
     const volume = await this.payload.create({
       collection: "volumes",
@@ -442,12 +441,12 @@ class Cloner {
       const items = await Promise.all(value.map((item) => this.rewrite(item, depth)))
       return items.filter((item) => item !== undefined)
     }
-    if (!isObject(value)) return value
+    if (!isRecord(value)) return value
 
     const node: Json = { ...value }
 
     // Lexical internal link: { type: "link", fields: { linkType: "internal", doc: { relationTo, value } } }
-    if (isObject(node.fields) && node.fields.linkType === "internal" && isObject(node.fields.doc)) {
+    if (isRecord(node.fields) && node.fields.linkType === "internal" && isRecord(node.fields.doc)) {
       const { relationTo, value: target } = node.fields.doc
       const id = await this.resolve(relationTo as CollectionSlug, target, depth)
       node.fields = id
@@ -463,7 +462,7 @@ class Cloner {
     }
 
     // Link field group: { type: "reference", reference: { relationTo, value } }
-    if (node.type === "reference" && isObject(node.reference)) {
+    if (node.type === "reference" && isRecord(node.reference)) {
       const { relationTo, value: target } = node.reference
       const id = await this.resolve(relationTo as CollectionSlug, target, depth)
       return id

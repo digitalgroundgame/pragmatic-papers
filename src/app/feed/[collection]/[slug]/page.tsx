@@ -1,9 +1,10 @@
 import { isExperimentEnabled } from "@/globals/SiteSettings/isExperimentEnabled"
 import { generateMeta } from "@/utilities/generateMeta"
-import { queryArticleBySlug } from "@/utilities/queries"
+import { queryArticleBySlug } from "@/data/queries"
 import type { Metadata } from "next"
 import { notFound } from "next/navigation"
 import React from "react"
+import { loadFeedBatch } from "../../actions"
 import { FeedShell } from "../../FeedShell"
 import { getFeedBatch, withVolumes } from "../../getFeedBatch"
 import { renderFeedArticle } from "../../renderFeedArticle"
@@ -67,6 +68,7 @@ export default async function DeepLinkFeedPage({
       initialNextCursor={batch.nextCursor}
       initialPinnedArticleId={target.id}
       initialPageIndex={initialPageIndex}
+      loadBatch={loadFeedBatch}
     />
   )
 }

@@ -2,19 +2,18 @@ import { LivePreviewListener } from "@/components/LivePreviewListener"
 import { Pagination } from "@/components/Pagination"
 import { TopicsList } from "@/components/Topics/TopicsList"
 import { paginatedPath } from "@/utilities/generateMeta"
-import { getServerSideURL } from "@/utilities/getURL"
+import { getSiteURL } from "@/utilities/getURL"
 import { mergeOpenGraph } from "@/utilities/mergeOpenGraph"
-import config from "@payload-config"
 import type { Metadata } from "next"
 import { draftMode } from "next/headers"
 import { notFound } from "next/navigation"
-import { getPayload } from "payload"
 import React, { cache } from "react"
 import { Breadcrumbs } from "@/components/Breadcrumbs"
+import { getPayloadClient } from "@/data/payload"
 
 export async function generateMetadata({ searchParams }: Args): Promise<Metadata> {
   const { p } = await searchParams
-  const canonicalUrl = `${getServerSideURL()}${paginatedPath("/topics", p)}`
+  const canonicalUrl = `${getSiteURL()}${paginatedPath("/topics", p)}`
 
   return {
     title: "Topics | The Pragmatic Papers",
@@ -32,7 +31,7 @@ const TOPICS_PER_PAGE = 50
 
 const queryTopics = cache(async (page: number = 1) => {
   const { isEnabled: draft } = await draftMode()
-  const payload = await getPayload({ config })
+  const payload = await getPayloadClient()
 
   return await payload.find({
     collection: "topics",

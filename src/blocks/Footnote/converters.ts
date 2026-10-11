@@ -1,6 +1,7 @@
 import type { FootnoteBlock, FootnotesField } from "@/payload-types"
-import { absoluteURL, escapeHTML, type FeedContext } from "@/utilities/feedHTML"
-import { getLinkFieldUrl } from "@/utilities/getLinkFieldUrl"
+import { escapeHTML, type FeedContext } from "@/utilities/feedHTML"
+import { absoluteURL } from "@/utilities/getURL"
+import { linkHref } from "@/utilities/linkField"
 
 /**
  * A footnote reference as a plain `[n]` marker. No anchor: feed readers and
@@ -22,7 +23,7 @@ export const footnotesToHTML = (
     .filter((footnote) => footnote?.note && typeof footnote.index === "number")
     .sort((a, b) => (a.index ?? 0) - (b.index ?? 0))
     .map(({ index, note, attributionEnabled, link }) => {
-      const source = attributionEnabled ? getLinkFieldUrl(link) : null
+      const source = attributionEnabled ? linkHref(link) : null
       const href = source ? absoluteURL(source, siteUrl) : null
       const sourceHTML = href
         ? ` <a href="${escapeHTML(href)}">${escapeHTML(link?.label || href)}</a>`

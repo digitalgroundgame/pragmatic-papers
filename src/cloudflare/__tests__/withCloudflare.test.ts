@@ -63,6 +63,13 @@ describe("withCloudflare", () => {
     }
   })
 
+  it("swaps the server's Sentry SDK for a stub, and keeps the browser's", () => {
+    expect(runWebpack(config, true).resolve.alias["@sentry/nextjs$"]).toMatch(
+      /stubs[\\/]sentry\.ts$/,
+    )
+    expect(runWebpack(config, false).resolve.alias).not.toHaveProperty("@sentry/nextjs$")
+  })
+
   it("keeps pg external on the server, for OpenNext to bundle with workerd", () => {
     expect(runWebpack(config, true).externals).toEqual(["pino", "pg"])
     expect(runWebpack(config, false).externals).not.toContain("pg")

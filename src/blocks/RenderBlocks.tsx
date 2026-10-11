@@ -13,7 +13,7 @@ import { MerchBlock } from "@/blocks/Merch/Component"
 import { TimelineBlock } from "@/blocks/Timeline/Component"
 import { VolumeViewBlock } from "@/blocks/VolumeViewBlock/component"
 import { isResolved } from "@/utilities/relationships"
-import { getTurnstileSiteKey } from "@/utilities/turnstile"
+import { getTurnstileSiteKey } from "@/integrations/cloudflare/turnstile"
 
 interface RenderBlocksProps {
   blocks: Page["layout"][number][]

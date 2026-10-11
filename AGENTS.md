@@ -87,6 +87,10 @@ processes they start.
 - **`app/(payload)/`** — Payload admin panel routes
 - **`components/`** — Reusable React components for layouts, pagination, etc; `components/ui/` uses shadcn/ui;
 - **`providers/`** — Context providers (MathJaxProvider)
+- **`utilities/`** — the library every feature and plugin builds on (see [Utilities](#utilities))
+- **`data/`** — server reads shared across pages: `getPayloadClient` (`payload.ts`), `getGlobal` (`globals.ts`), the `query*BySlug` helpers (`queries.ts`)
+- **`hooks/`** — shared React hooks (`useInView`, `useDebounce`, shadcn's `use-mobile`) and the Payload hooks several collections share (`purgeEdgeCache`, `revalidate*`)
+- **`plugins/`** — `index.ts` configures the third-party Payload plugins; each folder beside it is one of ours (see [Our plugins](#our-plugins))
 - **`integrations/`** — the outside services we read from, one **connection** per entry (see below)
 - **`migrations/`** — Drizzle database migrations
 
@@ -108,7 +112,7 @@ processes they start.
 - **Header** (`slug: 'header'`) — nav items, action button (admins), and a **Ticker** tab: admins switch the ticker on, and while it's on editors see the posts its sources hold now, each with a Hide button that adds its link to the hidden posts (or paste a link). Editors can save the global, but every field except the hidden posts is admin-only. Which accounts the ticker reads is in **Integrations** (admin-only); revalidated via `revalidateHeader` hook
 - **Footer** (`slug: 'footer'`) — nav items; revalidated via `revalidateFooter` hook
 - **Settings** (`slug: 'site-settings'`, the `SiteSettings` global) — admin-only; its `experiments` group switches beta features on per environment; revalidated via `revalidateSiteSettings` hook
-- Fetched via `getCachedGlobal('header' | 'footer', depth)()` using `unstable_cache` with tags
+- Fetched via `getGlobal('header' | 'footer', depth)` from `@/data/globals`, which caches with `unstable_cache` under the tag `global_<slug>`
 
 ### Experiments
 
@@ -161,6 +165,24 @@ refill the edge with the previous release's pages, then POSTs `/next/purge-edge`
 - **formBuilderPlugin** — form builder (admin currently hidden)
 - **s3Storage** — S3/Supabase media storage; falls back to local when `USE_LOCAL_STORAGE=true`
 
+### Our plugins
+
+A feature that could be published one day lives in `src/plugins/<name>/`, shaped like
+Payload's own plugins so it can be lifted out without a rewrite:
+
+- `index.ts` exports `<name>Plugin(options): Plugin`, and nothing else the app needs.
+- `types.ts` holds `<Name>PluginConfig`. Options have defaults, and `disabled: true` leaves
+  the schema in place (so migrations don't change) but turns the behavior off.
+- `collections/`, `hooks/`, `endpoints/` and `components/` as the plugin needs them. Admin
+  components are referenced by path through `exports/client.ts` and `exports/rsc.ts`, so
+  the import map paths survive a move into a package.
+- Whatever is this app's comes in through the options: preview paths, access and roles,
+  blocks and fields, side effects like `purgeEdgeCache` (as a callback). Payload comes from
+  `req.payload` or the `payload` a hook is handed, never `@/data/payload`.
+- `@/utilities` may be imported directly: it would ship alongside as a shared package.
+
+ESLint enforces the import rules for every folder under `src/plugins/` (`eslint.config.mjs`).
+
 ### Collection Conventions
 
 - **File structure**: `collections/<Name>/index.ts` with optional `hooks/` and `components/` subdirectories
@@ -178,15 +200,15 @@ refill the edge with the previous release's pages, then POSTs `/next/purge-edge`
 - **Two rendering systems**: `RenderBlocks` renders page layout blocks (Content, CTA, MediaBlock, Form, VolumeView); `RichText` renders Lexical inline/rich-text blocks (Banner, Code, Math, Footnote, SocialEmbed, SquiggleRule)
 - **Heavy client code loads lazily**: `RichText` and `RenderBlocks` import every block, so whatever a block's client component imports ships on every page that renders rich text, the footer included. A client component with a sizeable dependency (a highlighter, a carousel, a form library, a player) is imported through a sibling `*.lazy.tsx`: a `"use client"` file that wraps it in `next/dynamic` (`blocks/Code/Component.lazy.tsx`), so only pages that render it download it. The wrapper has to be a client file: `next/dynamic` in a Server Component doesn't split the code. Server rendering is unchanged. Unit tests get the real component (`vitest.setup.ts` maps each `.lazy` module to it), and stories wait for it with `findBy*`. `pnpm bundle-size` shows what a page loads up front
 - **Menus and toggles load on first use**: the header's sheets, mega menu and mode toggles are on every page, and most readers never open them. Their `*.lazy.tsx` wrappers render through `LoadOnInteraction` (`src/components/LoadOnInteraction`): markup that looks the same (the trigger button, or the menu's links) until the reader points at, touches, focuses or clicks it, then the base-ui component, with the click replayed and focus kept. Keep the layouts' server components from importing anything that imports base-ui's dialogs or menus (`ui/sheet`, `ui/dropdown-menu`, `ui/navigation-menu`): its client code would be back in every page's first-load JavaScript. `pnpm bundle-size` shows it
-- **Feed converters**: the RSS feeds (`/articles/feed.xml`, `/volumes/feed.xml`) and the Substack import feed render article content and volume editor's notes to HTML. A block's non-React renderings live in **`blocks/<Name>/converters.ts`**, one function per output **format**, named for the format rather than the feed (`timelineToHTML`, `displayMathToCode`). Each takes the block's fields plus a `FeedContext` (`src/utilities/feedHTML.ts`: `siteUrl`, `pageUrl`, `richTextToHTML` for nested rich text) and returns plain semantic HTML: absolute URLs, no inline styles, and every CMS value through `escapeHTML`. Shared logic used by several formats, or by `Component.tsx`, goes in the same file (`formatTimelineDate`). `converters.ts` must run in the browser, because Storybook imports it, so no server-only imports. The feed files only map block slugs to the format they want, through `fromBlock`: `createHtmlConverters` (`src/utilities/generateRssFeed.ts`) and, for article content, `createSubstackConverters` (`src/app/(frontend)/articles/_substack/generateSubstackFeed.ts`). A block added to those editors (or to the rich text inside their blocks) needs a converter, plus:
+- **Feed converters**: the RSS feeds (`/articles/feed.xml`, `/volumes/feed.xml`) and the Substack import feed render article content and volume editor's notes to HTML. A block's non-React renderings live in **`blocks/<Name>/converters.ts`**, one function per output **format**, named for the format rather than the feed (`timelineToHTML`, `displayMathToCode`). Each takes the block's fields plus a `FeedContext` (`src/utilities/feedHTML.ts`: `siteUrl`, `pageUrl`, `richTextToHTML` for nested rich text) and returns plain semantic HTML: absolute URLs, no inline styles, and every CMS value through `escapeHTML`. Shared logic used by several formats, or by `Component.tsx`, goes in the same file (`formatTimelineDate`). `converters.ts` must run in the browser, because Storybook imports it, so no server-only imports. The feed files only map block slugs to the format they want, through `fromBlock`: `createHtmlConverters` (`src/app/(frontend)/feeds/generateRssFeed.ts`) and, for article content, `createSubstackConverters` (`src/app/(frontend)/articles/_substack/generateSubstackFeed.ts`). A block added to those editors (or to the rich text inside their blocks) needs a converter, plus:
   - a `__tests__/converters.test.ts` using `toMatchInlineSnapshot()`, fed from `src/stories/fixtures/blocks.ts`
   - a `Feed` story that renders the output through `src/stories/FeedHTML.tsx`, so it gets the axe check
 
-  `src/utilities/__tests__/generateRssFeed.converters.test.ts` reads the resolved Payload config and fails, naming what's missing, until every feed has a converter
+  `src/app/(frontend)/feeds/__tests__/generateRssFeed.converters.test.ts` reads the resolved Payload config and fails, naming what's missing, until every feed has a converter
 
 ### Data Fetching Patterns
 
-- Use `getPayloadConfig` imported from `@/utilities/getPayloadConfig`
+- Code with a request (hooks, endpoints, access functions, validation, jobs) reads Payload from `req.payload`, inside the request's transaction. Code without one (pages, layouts, route handlers, `generateMetadata`) uses `getPayloadClient` from `@/data/payload`, never `getPayload({ config })`
 - Wrap data queries in `React.cache()` for per-request deduplication
 - Use `unstable_cache` with cache tags for long-lived caching (globals, redirects, sitemaps)
 - Sitemaps: each is a `sitemap.ts` in the folder of the section it lists (Next's metadata convention, served at `/<route>/sitemap.xml`, e.g. `topics/sitemap.ts`), added with a title to `SITEMAPS` in `(sitemaps)/sitemaps.ts`, which `/sitemap_index.xml`, robots.txt and the public `/feeds` page read (RSS feeds are listed there from `FEEDS` in `feeds/feeds.ts`). Pages live at the root, so theirs is the root `sitemap.ts` (`/sitemap.xml`), and the index of them all is `/sitemap_index.xml` (`(sitemaps)/sitemap_index.xml`), which robots.txt and Search Console point at; Google News reads `articles/news-sitemap.xml/route.ts`, a route handler (`sitemap.ts` can't write `news:` tags) listing only the last two days' articles, as Google asks. The old `/pages-sitemap.xml`, `/articles-sitemap.xml` and `/volumes-sitemap.xml` redirect permanently in `next.config.ts`
@@ -202,9 +224,28 @@ refill the edge with the previous release's pages, then POSTs `/next/purge-edge`
 - **Content rendering**: Blocks system with Lexical rich text editor; each block has a config and a React component
 - **Pre-push hooks**: Husky runs full checks on all files (`lint:fix`, `format:fix`, `check-types`) before pushing
 - **Pre-commit hooks**: lint-staged runs ESLint + Prettier on staged files only (fast, ~1-2 seconds)
-- **Colocation**: Prefer colocating logic near where it's used. `src/utilities/` is only for genuinely reusable helpers shared across multiple features (e.g. `generateMeta`, `getURL`, `toRoman`, `cn`). Don't put single-use logic there.
+- **Colocation**: Prefer colocating logic near where it's used. A helper only one feature uses lives with that feature; `src/utilities/` is for what several features share (see [Utilities](#utilities)).
 - **Commit trailers**: don't add a `Claude-Session:` trailer (or any other link to an agent session) to commit messages. A `Co-Authored-By:` trailer is fine.
 - **Issue and PR numbers in comments**: comments and docs describe the code as it is now; why and when it changed is what `git log` and `git blame` are for. Don't write "added in #970", "before #672" or "see #883" — the sentence should stand on its own. Two exceptions, each a pointer with an exit: an upstream bug a workaround depends on (full URL; remove the workaround when it's fixed), and an **open** issue tracking a known gap or a skipped check (say what to remove when it closes, as `knownContrastIssue` does for #998). When that issue closes, delete the comment and what it guards; never append to it.
+
+### Utilities
+
+`src/utilities/` is the library features and plugins depend on, so it depends on none of them.
+A file there may import `@/payload-types` (types), React, Payload and Next types, framework
+hooks, and other utilities; ESLint rejects anything app-specific (`@payload-config`,
+collections, blocks, components, `@/data`, integrations, `next/headers`). A helper that needs
+one of those belongs with its feature, or takes the value as an argument.
+
+Reach for these before writing your own:
+
+- URLs: `docPath(collection, slug)` and `internalDocToHref` (`routes.ts`, the one
+  collection-to-path map), `getSiteURL()` / `getClientURL()` / `absoluteURL(path)`
+  (`getURL.ts`), `linkHref`, `getMediaUrl`
+- Dates and text: `formatLongDate`, `formatTimeAgo` (`formatDate.ts`), `truncate`,
+  `formatAuthors`, `getInitials`, `toRoman`
+- Narrowing: `isRecord`, `isResolved` / `relationshipId` (`relationships.ts`), `Result`
+  (`result.ts`)
+- Metadata and feeds: `generateMeta`, `mergeOpenGraph`, `structuredData`, `feedHTML`
 
 ### Integrations
 
@@ -285,10 +326,10 @@ function, and fails on any axe violation.
 - **Fixtures** live in `src/stories/fixtures/` (docs, media, rich text, navigation). Reuse them
   rather than inlining Payload shapes. Media points at `.storybook/assets`, so no story touches
   the network.
-- **Payload**: `.storybook/main.ts` swaps `@/utilities/getPayloadConfig` for
-  `src/stories/mocks/getPayloadConfig.ts`. Seed a story in `beforeEach` with
-  `mocked(getPayloadConfig).mockResolvedValue(createFakePayload({ collections, globals }))`.
-  Server code must reach Payload through `getPayloadConfig`: a direct `getPayload({ config })`
+- **Payload**: `.storybook/main.ts` swaps `@/data/payload` for
+  `src/stories/mocks/payload.ts`. Seed a story in `beforeEach` with
+  `mocked(getPayloadClient).mockResolvedValue(createFakePayload({ collections, globals }))`.
+  Server code must reach Payload through `getPayloadClient`: a direct `getPayload({ config })`
   pulls the Payload config into the browser bundle and breaks `pnpm storybook:build`.
 - **Known a11y failures**: skip only the failing rule with `skipA11yRules("rule-id")` from
   `src/stories/a11y.ts` and cite the issue tracking the fix; `knownContrastIssue` covers the

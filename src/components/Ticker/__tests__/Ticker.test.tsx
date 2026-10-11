@@ -8,8 +8,8 @@ const { header, getTickerFeed } = vi.hoisted(() => ({
   getTickerFeed: vi.fn(),
 }))
 
-vi.mock("@/utilities/getGlobals", () => ({
-  getCachedGlobal: (slug: string) => async () =>
+vi.mock("@/data/globals", () => ({
+  getGlobal: async (slug: string) =>
     slug === "header" ? { ticker: { enabled: header.ticker } } : {},
 }))
 vi.mock("../getTickerFeed", () => ({ getTickerFeed }))

@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 const find = vi.fn()
 
-vi.mock("@/utilities/getPayloadConfig", () => ({ getPayloadConfig: vi.fn(async () => ({ find })) }))
+vi.mock("@/data/payload", () => ({ getPayloadClient: vi.fn(async () => ({ find })) }))
 // Straight through, so each sitemap reads the `find` fixture it was given.
 vi.mock("next/cache", () => ({ unstable_cache: (fn: () => unknown) => fn }))
 

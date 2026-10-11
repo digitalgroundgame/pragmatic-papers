@@ -4,8 +4,8 @@ name: Playwright Tests
 # page speed. Visual changes are reviewed in Storybook and the preview.
 #
 # A push to a PR builds the image, deploys the preview and measures bundle
-# size. The E2E suite runs in the merge queue, and on a PR only when it has
-# the "e2e" label; Lighthouse runs on a PR only when it has the "in review"
+# size. The E2E suite runs in the merge queue, on PRs into main (which skip
+# the queue), and on a PR into dev only when it has the "e2e" label; Lighthouse runs on a PR only when it has the "in review"
 # label. Adding either label starts this workflow for the PR (pr-events.yml
 # dispatches it), and later pushes keep running it while the label stays.
 on:
@@ -68,21 +68,26 @@ jobs:
               - "!**/*.md"
 
       # The labels that opt a PR into the E2E suite and Lighthouse. A
-      # dispatched run (a label was just added) reads them from the PR.
+      # dispatched run (a label was just added) reads them from the PR. PRs
+      # into main (releases, hotfixes) never pass through the merge queue, so
+      # they always get the suite.
       - name: Read the PR's labels
         id: labels
         if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
         env:
           GH_TOKEN: ${{ github.token }}
           EVENT_LABELS: ${{ toJSON(github.event.pull_request.labels.*.name) }}
+          BASE: ${{ github.base_ref }}
           PR: ${{ inputs.pr }}
         run: |
           if [ -n "$PR" ]; then
-            labels=$(gh api "repos/$GITHUB_REPOSITORY/pulls/$PR" --jq '[.labels[].name]')
+            pr=$(gh api "repos/$GITHUB_REPOSITORY/pulls/$PR")
+            labels=$(jq '[.labels[].name]' <<< "$pr")
+            BASE=$(jq -r .base.ref <<< "$pr")
           else
             labels=$EVENT_LABELS
           fi
-          echo "e2e=$(jq -r 'index("e2e") != null' <<< "$labels")" >> "$GITHUB_OUTPUT"
+          echo "e2e=$(jq -r --arg base "$BASE" 'index("e2e") != null or $base == "main"' <<< "$labels")" >> "$GITHUB_OUTPUT"
           echo "lighthouse=$(jq -r 'index("in review") != null' <<< "$labels")" >> "$GITHUB_OUTPUT"
 
       # dev's merge queue lands the very commit it tested, so a push run on a
@@ -246,7 +251,7 @@ jobs:
     needs: [changes, image]
     # Runs even when the image failed, so the failure lands on this required
     # check: a skipped required check counts as passing. Skipped on a push the
-    # merge queue already tested, and on a PR without the "e2e" label.
+    # merge queue already tested, and on a PR into dev without the "e2e" label.
     if: ${{ !cancelled() && needs.changes.outputs.queued != 'true' && (github.event_name == 'push' || github.event_name == 'merge_group' || needs.changes.result != 'success' || (needs.changes.outputs.e2e-label == 'true' && (github.event_name == 'workflow_dispatch' || needs.changes.outputs.e2e == 'true'))) }}
     timeout-minutes: 60
     runs-on: ubuntu-latest

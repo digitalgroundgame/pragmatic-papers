@@ -36,7 +36,8 @@ Every slug, name and date the specs rely on comes from the seed through
 ## In CI
 
 The "E2E tests" job in `.github/workflows/playwright.yml` runs the suite in
-the merge queue, and on a PR only once it has the `e2e` label (adding the label
+the merge queue, on PRs into `main` (which skip the queue), and on a PR into
+`dev` only once it has the `e2e` label (adding the label
 starts a run; later pushes run it while the label stays). Without the label the
 required check is skipped on the PR, which counts as passing, and the queue
 catches a failure before the PR lands. It runs

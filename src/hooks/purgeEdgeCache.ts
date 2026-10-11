@@ -121,7 +121,10 @@ export function purgeEdgeCache(logger: Logger, reason: string): void {
   pending.timer.unref?.()
 }
 
-/** Tests only: send any gathered purge now and wait for it. */
+/**
+ * Send any gathered purge now and wait for it, for a caller that has to act on an empty edge
+ * (the deploy's warm-up in `/next/purge-edge`) and for tests. Never throws.
+ */
 export async function flushEdgeCachePurge(): Promise<void> {
   if (pending) {
     clearTimeout(pending.timer)

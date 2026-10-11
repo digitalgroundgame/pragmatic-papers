@@ -140,7 +140,8 @@ refresh_prerendered_routes() {
 # Once traffic reaches this container, empty Cloudflare's edge of the previous release's
 # pages. Until Coolify's health check passes and it moves traffic over, the old container
 # answers on SERVER_URL, so wait until /next/purge-edge there names this container's
-# INSTANCE_ID; purging sooner would let the old container refill the edge.
+# INSTANCE_ID; purging sooner would let the old container refill the edge. The route then
+# requests the most-read pages through SERVER_URL, so the first readers find them cached.
 purge_edge_after_switchover() {
     if [ -z "$SERVER_URL" ]; then
         return 0
@@ -157,7 +158,7 @@ purge_edge_after_switchover() {
     done
     if wget -q -O /dev/null --post-data="" \
         --header="Authorization: Bearer $PAYLOAD_SECRET" "http://127.0.0.1:${PORT:-3000}/next/purge-edge"; then
-        echo "Edge purge queued now that $SERVER_URL is served by this container"
+        echo "Edge purge and page warm-up queued now that $SERVER_URL is served by this container"
     else
         echo "WARNING: couldn't queue the edge purge; the edge keeps old pages until they expire"
     fi

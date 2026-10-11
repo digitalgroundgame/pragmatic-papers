@@ -7,6 +7,7 @@ import {
   isEdgeCacheable,
   REVALIDATE_ALL_PATH,
   withEdgeCache,
+  withServerTiming,
 } from "../edgeCache"
 import type { WorkerEnv } from "../origin"
 
@@ -153,5 +154,42 @@ describe("withEdgeCache", () => {
   it("renders everything itself without ctx.exports", async () => {
     const response = await gateway.fetch(new Request(`${W}/articles/a`), env, {})
     expect(await response.text()).toBe("rendered")
+  })
+})
+
+describe("withServerTiming", () => {
+  const timing = (response: Response) => response.headers.get("Server-Timing")
+
+  it("says how long the entrypoint ran, where, and on which isolate request", async () => {
+    const request = Object.assign(new Request(`${W}/`), { cf: { colo: "LAX" } })
+    const page = new Response("page", { headers: PUBLIC })
+    const first = withServerTiming(request, page, 1000, 1140)
+    const second = withServerTiming(request, new Response("page"), 2000, 2010)
+
+    const count = Number(/isolate request (\d+)/.exec(timing(first) ?? "")?.[1])
+    expect(timing(first)).toBe(`cached-site;dur=140;desc="LAX, isolate request ${count}"`)
+    expect(timing(second)).toBe(`cached-site;dur=10;desc="LAX, isolate request ${count + 1}"`)
+    expect(first.headers.get("CDN-Cache-Control")).toBe("max-age=600")
+    expect(await first.text()).toBe("page")
+  })
+
+  it("counts the requests the gateway runs itself", async () => {
+    const request = new Request(`${W}/`)
+    const count = (response: Response) =>
+      Number(/isolate request (\d+)/.exec(timing(response) ?? "")?.[1])
+    const before = count(withServerTiming(request, new Response(), 0, 0))
+    const env: WorkerEnv = { ASSETS: { fetch: async () => new Response("asset") } }
+    const site = { fetch: vi.fn(async () => new Response("nav")) }
+    await withEdgeCache(site).fetch(new Request(`${W}/a`, { headers: { RSC: "1" } }), env, {})
+    const after = withServerTiming(request, new Response(), 0, 0)
+    expect(timing(after)).toContain(`isolate request ${before + 2}`)
+  })
+
+  it("keeps the app's own Server-Timing and names an unknown data center", () => {
+    const answer = new Response("page", { headers: { "Server-Timing": "db;dur=5" } })
+    const timed = withServerTiming(new Request(`${W}/`), answer, 0, 0)
+    expect(timing(timed)).toMatch(
+      /^db;dur=5, cached-site;dur=0;desc="unknown, isolate request \d+"$/,
+    )
   })
 })

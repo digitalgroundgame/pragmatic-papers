@@ -7,7 +7,7 @@
 import { WorkerEntrypoint } from "cloudflare:workers"
 
 import openNext from "../../.open-next/worker.js"
-import { afterCachedSite, withEdgeCache } from "./edgeCache"
+import { afterCachedSite, withEdgeCache, withServerTiming } from "./edgeCache"
 import { logErrorCauses, withOrigin } from "./origin"
 
 export { DOQueueHandler } from "../../.open-next/worker.js"
@@ -17,11 +17,13 @@ logErrorCauses()
 const site = withOrigin(openNext)
 
 export class CachedSite extends WorkerEntrypoint {
-  // A .mjs file can't carry the types; afterCachedSite's are checked in edgeCache.ts.
+  // A .mjs file can't carry the types; afterCachedSite's and withServerTiming's are checked in edgeCache.ts.
   // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
   async fetch(request) {
+    const startedAt = Date.now()
     const response = await site.fetch(request, this.env, this.ctx)
-    return afterCachedSite(request, response, this.ctx.cache)
+    const answer = await afterCachedSite(request, response, this.ctx.cache)
+    return withServerTiming(request, answer, startedAt)
   }
 }
 

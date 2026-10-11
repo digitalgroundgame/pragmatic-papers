@@ -186,7 +186,7 @@ export default async function AuthorPage({ params, searchParams }: Args): Promis
             <Avatar size="2xl" className="aspect-square border">
               <AvatarImage
                 src={profileImageUrl}
-                render={<Media media={profile} variant="square" sizes="128px" priority />}
+                render={<Media media={profile} variant="square" sizes="128px" preload />}
               />
               <AvatarFallback>{initials}</AvatarFallback>
             </Avatar>

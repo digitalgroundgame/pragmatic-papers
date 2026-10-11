@@ -20,7 +20,7 @@
  *
  * A component is matched through the build's index.json: a changed file that
  * is a story file or a story's `component`, else the stories nearest above it
- * (say `Media/ImageMedia/index.tsx` under `Media/Media.stories.tsx`), as long
+ * (say `Media/CMSImage/index.tsx` under `Media/Media.stories.tsx`), as long
  * as that folder has only a few of them: a helper in `components/ui` shouldn't
  * list all 27 primitives.
  *

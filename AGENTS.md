@@ -72,7 +72,9 @@ processes they start.
 - `pnpm payload generate:types` — regenerate Payload TypeScript types
 - `pnpm payload generate:importmap` — regenerate Payload import map
 - `pnpm payload migrate` — run database migrations
-- `pnpm payload migrate:create "migration_name"` — create a new migration. Pass a name as the first argument.
+- `pnpm migrate:create "migration_name"` — create a new migration. Pass a name as the first argument. It also runs `pnpm migrate:index`, which rewrites `src/migrations/index.ts` from the migration files, one line per migration in timestamp order
+- `pnpm migrate:index` — rewrite `src/migrations/index.ts` from the migration files. Two branches that each add a migration both append to it; `.gitattributes` merges it with `union`, keeping both, and this puts them back in order. CI's Static checks run `pnpm migrate:index --check`
+- `pnpm generate:importmap` after a merge conflict in `src/app/(payload)/admin/importMap.js`: it's generated, so regenerate it rather than resolving the conflict by hand
 
 ## Architecture
 
@@ -123,7 +125,7 @@ checkbox in the Settings global's `experiments` group
 so each has its own switches; PR previews start with staging's. To add one:
 
 1. Add a `checkbox` to the `experiments` group, `defaultValue: false`, then
-   run `pnpm payload generate:types` and `pnpm payload migrate:create`.
+   run `pnpm payload generate:types` and `pnpm migrate:create`.
 2. Turn it on in the seed's "Enabling experiments..." step
    (`src/endpoints/seed/index.ts`), so local dev shows it.
 3. Gate **every** entry point with

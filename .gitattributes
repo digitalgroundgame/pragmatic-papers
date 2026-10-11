@@ -1,2 +1,4 @@
 payload-types.ts text eol=lf
 importMap.js text eol=lf
+# Keeps both sides when two branches add a migration; `pnpm migrate:index` restores the order.
+src/migrations/index.ts merge=union

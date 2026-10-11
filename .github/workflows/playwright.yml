@@ -5,8 +5,8 @@ name: Playwright Tests
 #
 # A push to a PR builds the image, deploys the preview and measures bundle
 # size. The E2E suite runs in the merge queue, on PRs into main (which skip
-# the queue), and on a PR into dev only when it has the "e2e" label; Lighthouse runs on a PR only when it has the "in review"
-# label. Adding either label starts this workflow for the PR (pr-events.yml
+# the queue), and on a PR into dev only when it has the "e2e" label;
+# Lighthouse runs on a PR only when it has the "in review" label. Adding either label starts this workflow for the PR (pr-events.yml
 # dispatches it), and later pushes keep running it while the label stays.
 on:
   push:
@@ -31,7 +31,8 @@ concurrency:
 # .github/actions/setup-e2e, shared by the E2E tests and Page speed jobs.
 #
 # One image per run: "Build image" builds it, "E2E tests" runs the
-# suite against it, and "Deploy preview" hands the same image to Coolify as
+# suite against it (setting up and seeding while it builds), and "Deploy
+# preview" hands the same image to Coolify as
 # the PR's preview. Removing a closed PR's preview stays in preview-image.yml.
 
 jobs:
@@ -246,12 +247,15 @@ jobs:
           TAG: ${{ needs.changes.outputs.tag }}
         run: node scripts/preview-deployment.ts deploy ${TAG:+"$TAG"}
 
+  # Doesn't wait for "Build image": it pulls its container, installs and seeds
+  # while the image builds, then waits for it (scripts/wait-for-app-image.sh).
   test:
     name: E2E tests
-    needs: [changes, image]
-    # Runs even when the image failed, so the failure lands on this required
-    # check: a skipped required check counts as passing. Skipped on a push the
-    # merge queue already tested, and on a PR into dev without the "e2e" label.
+    needs: changes
+    # Runs whenever the image does, so an image that failed fails this
+    # required check: a skipped required check counts as passing. Skipped on a
+    # push the merge queue already tested, and on a PR into dev without the
+    # "e2e" label.
     if: ${{ !cancelled() && needs.changes.outputs.queued != 'true' && (github.event_name == 'push' || github.event_name == 'merge_group' || needs.changes.result != 'success' || (needs.changes.outputs.e2e-label == 'true' && (github.event_name == 'workflow_dispatch' || needs.changes.outputs.e2e == 'true'))) }}
     timeout-minutes: 60
     runs-on: ubuntu-latest
@@ -264,6 +268,8 @@ jobs:
       image: mcr.microsoft.com/playwright:v1.63.0-noble
 
     permissions:
+      # Reads the run's jobs and downloads the image (wait-for-app-image.sh).
+      actions: read
       contents: read
       packages: read
 
@@ -283,28 +289,23 @@ jobs:
           - 5432:5432
         options: >-
           --health-cmd pg_isready
-          --health-interval 10s
+          --health-interval 2s
           --health-timeout 5s
-          --health-retries 5
+          --health-retries 30
 
     steps:
-      - name: Stop if the image didn't build
-        if: needs.image.result != 'success'
-        env:
-          RESULT: ${{ needs.image.result }}
-        run: |
-          echo "::error::The Build image job ended with '$RESULT'; there's no image to test."
-          exit 1
-
       - uses: actions/checkout@v7
 
       - name: Set up E2E
         uses: ./.github/actions/setup-e2e
         with:
           gh-font-read-token: ${{ secrets.GH_FONT_READ }}
+          load-image: "false"
 
       - name: Run Playwright tests
         env:
+          E2E_IMAGE_WAIT: bash scripts/wait-for-app-image.sh
+          GH_TOKEN: ${{ github.token }}
           # The image's server shares this container's network (scripts/test-e2e.mjs).
           E2E_NETWORK_CONTAINER: ${{ job.container.id }}
         run: pnpm test:e2e
@@ -359,9 +360,9 @@ jobs:
           POSTGRES_DB: pragmatic-papers-e2e
         options: >-
           --health-cmd pg_isready
-          --health-interval 10s
+          --health-interval 2s
           --health-timeout 5s
-          --health-retries 5
+          --health-retries 30
 
     steps:
       - uses: actions/checkout@v7

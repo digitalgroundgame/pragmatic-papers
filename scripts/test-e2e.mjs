@@ -162,6 +162,13 @@ try {
   rmSync(".next/cache/fetch-cache", { recursive: true, force: true })
 
   if (image) {
+    // CI seeds while the workflow's "Build image" job is still running, then
+    // waits here for the image (scripts/wait-for-app-image.sh).
+    const wait = process.env.E2E_IMAGE_WAIT
+    if (wait) {
+      console.warn(`${blue("●")} Waiting for ${image}...`)
+      execSync(wait, { env: process.env, stdio: "inherit" })
+    }
     console.warn(`${blue("●")} Starting ${image}...`)
     server = await startImageServer()
   } else if (useProdServer) {

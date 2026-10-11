@@ -7,8 +7,7 @@ import { INTERACTIVE_SEL } from "./constants"
 import { FEED_AD_INTERVAL, FEED_ADS } from "./ads/registry"
 import { FeedShellContext, type FeedShellContextValue } from "./FeedShellContext"
 import { usePageMemory } from "./hooks/usePageMemory"
-import { loadFeedBatch } from "./actions"
-import type { FeedSlot, RenderedFeedArticle } from "./types"
+import type { FeedBatch, FeedSlot, RenderedFeedArticle } from "./types"
 
 const RELOADED_KEY = "pp:feed:reloaded-after-load-failure"
 
@@ -32,6 +31,12 @@ interface FeedShellProps {
   initialPinnedArticleId?: number
   /** In-article page index to open at when `initialPinnedArticleId` is set. */
   initialPageIndex?: number
+  /**
+   * The next page of the feed: the `loadFeedBatch` server action, passed down by the page.
+   * Imported here instead, webpack would compile the action for client code, a second
+   * copy of everything it reaches, Payload's config included.
+   */
+  loadBatch: (cursor: number) => Promise<FeedBatch>
 }
 
 export function FeedShell({
@@ -39,6 +44,7 @@ export function FeedShell({
   initialNextCursor,
   initialPinnedArticleId,
   initialPageIndex,
+  loadBatch,
 }: FeedShellProps): React.ReactNode {
   const [articles, setArticles] = useState<RenderedFeedArticle[]>(initialItems)
   const [nextCursor, setNextCursor] = useState<number | null>(initialNextCursor)
@@ -127,7 +133,7 @@ export function FeedShell({
     if (loadingMoreRef.current || nextCursor === null) return
     loadingMoreRef.current = true
     try {
-      const batch = await loadFeedBatch(nextCursor).catch((error: unknown) => {
+      const batch = await loadBatch(nextCursor).catch((error: unknown) => {
         // Most likely a page from an earlier deploy calling a server action the
         // new build no longer has. Reload once: the URL already names the
         // current article, so the reader lands back where they were.
@@ -152,7 +158,7 @@ export function FeedShell({
     } finally {
       loadingMoreRef.current = false
     }
-  }, [nextCursor])
+  }, [nextCursor, loadBatch])
 
   useEffect(() => {
     if (activeIndex >= slots.length - 3) {

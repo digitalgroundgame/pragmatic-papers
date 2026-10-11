@@ -7,7 +7,7 @@ stay on Coolify. The point is client-side navigation: Next adds an `_rsc` value 
 navigation request that changes with the page it came from, so Cloudflare's zone cache
 stores every variation separately and almost every click misses. OpenNext keys its cache
 by route, so navigations from any page read the same entry. It needs Workers Paid: the
-Worker is ~6.6 MiB gzipped against a 10 MiB limit (3 MiB on Free). Open issue #916
+Worker is ~4.4 MiB gzipped against a 10 MiB limit (3 MiB on Free). Open issue #916
 tracks turning `next/link` back on.
 
 Nothing here changes the Coolify build: everything Worker-specific is behind
@@ -103,16 +103,17 @@ deployment.
 
 ## Measured
 
-- **Size** (`wrangler deploy --dry-run`): 30.0 MB raw, 6.61 MiB gzipped (8.38 MiB
-  before the server's Sentry SDK was stubbed). With Turbopack it was 17.4–24.4 MiB; with
-  webpack but keeping `(payload)`, 10.5 MiB. If it needs to shrink, the next cuts are a
-  second copy of Payload's module graph (~4–5 MB raw), which webpack builds for the
-  feed's `"use server"` action (`src/app/feed/actions.ts`, imported by a client
-  component), the newsletter's email stack (react-email, Tailwind, `css-tree`: ~3.9 MB
-  raw), the seed endpoint and `prompts`, and the `email-preview` and `next/seed` routes.
+- **Size** (`wrangler deploy --dry-run`): 20.7 MB raw, 4.43 MiB gzipped. Stubbing the
+  server's Sentry SDK took it from 8.38 to 6.61 MiB, and passing the feed's server action
+  down from its pages to 4.43 MiB: imported by a client component, an action is compiled
+  in a layer of its own, with a second copy of everything it reaches, Payload's config
+  included. Keep server actions out of client imports. With Turbopack it was 17.4–24.4
+  MiB; with webpack but keeping `(payload)`, 10.5 MiB. If it needs to shrink, the next
+  cuts are the newsletter's email stack (react-email, Tailwind, `css-tree`: ~3.9 MB raw),
+  the seed endpoint and `prompts`, and the `email-preview` and `next/seed` routes.
 - **Cold isolate** (`wrangler dev`): the first request that reaches Next's server takes
-  ~1.7 s (2.1 s with Sentry's server SDK), mostly compiling webpack's runtime and
-  Payload's chunk. Later requests take 80–100 ms. Pages already in R2 skip it: OpenNext's
+  ~1.5 s (2.1 s before the two cuts above), mostly compiling webpack's runtime and
+  Payload's chunk. Later requests take 70–100 ms. Pages already in R2 skip it: OpenNext's
   cache interceptor answers them before Next loads.
 - **Cache** (`wrangler dev`, seeded Postgres): articles and volumes, which prerender
   with `revalidate = 3600`, come from R2 in 20–40 ms, for full pages and navigations
@@ -126,8 +127,13 @@ deployment.
 
 - **Real latency and cold-start CPU**, measured on the staging Worker.
 - **A custom domain**, and the zone's cache rules for it (`cloudflare/rulesets/`).
-  workers.dev isn't in a zone, so nothing there is cached at Cloudflare's edge: every
-  request runs the Worker, and a HIT is read from R2.
+  The zone's Cache Rules don't apply to a Worker's responses, so today every request runs
+  the Worker, and a HIT is read from R2.
+- **An edge cache** in front of the Worker:
+  [Workers Cache](https://developers.cloudflare.com/workers/cache/) (`cache.enabled` in
+  `wrangler.jsonc`), which works on workers.dev too. Its key leaves out cookies, so draft
+  previews and `/admin` need an entrypoint with caching off in front of the cached one,
+  and `/next/revalidate-all` has to purge it.
 - **Error reporting**: the Worker sends nothing to Sentry. That would be
   `@sentry/cloudflare` around the fetch handler, with `SENTRY_DSN` as a secret, and the
   browser SDK's DSN at build time.

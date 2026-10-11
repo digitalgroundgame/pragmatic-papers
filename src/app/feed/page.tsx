@@ -4,6 +4,7 @@ import { isExperimentEnabled } from "@/globals/SiteSettings/isExperimentEnabled"
 import type { Metadata } from "next"
 import { notFound } from "next/navigation"
 import React from "react"
+import { loadFeedBatch } from "./actions"
 import { FeedShell } from "./FeedShell"
 import { getFeedBatch } from "./getFeedBatch"
 import { renderFeedArticle } from "./renderFeedArticle"
@@ -47,6 +48,7 @@ export default async function FeedPage(): Promise<React.ReactNode> {
     <FeedShell
       initialItems={batch.items.map(renderFeedArticle)}
       initialNextCursor={batch.nextCursor}
+      loadBatch={loadFeedBatch}
     />
   )
 }

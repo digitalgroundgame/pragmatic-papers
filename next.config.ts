@@ -60,6 +60,10 @@ const nextConfig: NextConfig = {
   outputFileTracingIncludes: {
     "/**": ["./src/docs/**/*"],
   },
+  // The CI image's build sets this (dockerfiles/PragmaticPapers.ci.Dockerfile): CI's Static
+  // checks already run `tsc` on the same commit, and next build's own pass costs ~25 s.
+  // Coolify's builds and local builds still type-check.
+  typescript: { ignoreBuildErrors: process.env.SKIP_BUILD_TYPE_CHECK === "true" },
   // Temporarily required on Windows until Next.js fixes Turbopack Sass resolution.
   // See: https://github.com/vercel/next.js/issues/86431
   sassOptions: {

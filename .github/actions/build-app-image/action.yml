@@ -23,6 +23,13 @@ inputs:
     description: "Token that can write packages; required with push-tag"
     required: false
     default: ""
+  save-cache:
+    description: >-
+      "true" to write the layer cache back to GitHub's cache. Exporting it takes
+      one to two and a half minutes, so only pushes to dev save it; PRs and the
+      merge queue read dev's entry, which every branch can.
+    required: false
+    default: "false"
 
 outputs:
   image:
@@ -43,6 +50,15 @@ runs:
           network=host
           image=mirror.gcr.io/moby/buildkit:buildx-stable-1
         buildkitd-flags: --allow-insecure-entitlement network.host
+
+    # The pnpm version, for the base stage's corepack. Passed as a build arg rather
+    # than read from a bind-mounted package.json there, because a bind mount's
+    # contents are part of the layer's cache key: any edit to package.json, a
+    # script included, would rebuild every dependency layer after it.
+    - name: Read the package manager
+      id: package-manager
+      shell: bash
+      run: echo "value=$(jq -r .packageManager package.json)" >> "$GITHUB_OUTPUT"
 
     # Written as a tar for the artifact rather than pushed: fork, Dependabot and
     # merge-queue runs can't push to GHCR, and E2E runs on every one of them.
@@ -65,13 +81,14 @@ runs:
         build-args: |
           DATABASE_URI=postgres://postgres:postgres@127.0.0.1:5432/build
           SOURCE_COMMIT=${{ inputs.source-commit }}
+          PACKAGE_MANAGER=${{ steps.package-manager.outputs.value }}
         labels: |
           org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
           org.opencontainers.image.revision=${{ inputs.source-commit }}
         # The dependency layers only change with the lockfile; everything from
         # `COPY . .` on rebuilds each time anyway.
         cache-from: type=gha,scope=app-image
-        cache-to: type=gha,scope=app-image,mode=max
+        cache-to: ${{ inputs.save-cache == 'true' && 'type=gha,scope=app-image,mode=max' || '' }}
 
     - name: Save the image for later jobs
       uses: actions/upload-artifact@v7

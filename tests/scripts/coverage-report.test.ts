@@ -5,7 +5,12 @@ import { join } from "node:path"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import {
+  checkCoverageGoals,
   computeFileMetrics,
+  COVERAGE_GOALS,
+  EXEMPT_LABEL,
+  fetchLabels,
+  renderGoals,
   computePatchCoverage,
   FILE_TABLE_BUDGET,
   fitRows,
@@ -604,6 +609,170 @@ describe("fetchChangedFiles", () => {
   })
 })
 
+// Patch metrics with `covered` of `total` changed lines run.
+function patchLines(covered: number, total: number) {
+  return {
+    ...emptyMetrics,
+    lines: { covered, total, pct: total === 0 ? 100 : (covered / total) * 100 },
+  }
+}
+
+describe("checkCoverageGoals", () => {
+  const goals = {
+    project: { lines: 90, statements: 89, functions: 88, branches: 83 },
+    patchLines: 80,
+    patchAllowance: 2,
+  }
+
+  it("passes when the project total and the patch meet every goal", () => {
+    expect(
+      checkCoverageGoals({
+        total: summary(95),
+        patch: patchLines(9, 10),
+        includesStories: true,
+        goals,
+      }),
+    ).toEqual([])
+  })
+
+  it("names each project metric that drops under its floor", () => {
+    const total = summary(95)
+    total.branches = { ...total.branches, pct: 82.5 }
+    expect(
+      checkCoverageGoals({ total, patch: emptyMetrics, includesStories: true, goals }),
+    ).toEqual(["Project branches coverage is 82.50%, under the 83% floor."])
+  })
+
+  it("skips the project floors without story coverage", () => {
+    expect(
+      checkCoverageGoals({
+        total: summary(50),
+        patch: emptyMetrics,
+        includesStories: false,
+        goals,
+      }),
+    ).toEqual([])
+  })
+
+  it("ignores a metric with nothing to count", () => {
+    const total = summary(95)
+    total.functions = { total: 0, covered: 0, skipped: 0, pct: 0 }
+    expect(
+      checkCoverageGoals({ total, patch: emptyMetrics, includesStories: true, goals }),
+    ).toEqual([])
+  })
+
+  it("fails a patch under the goal with more uncovered lines than the allowance", () => {
+    expect(
+      checkCoverageGoals({ total: null, patch: patchLines(5, 10), includesStories: true, goals }),
+    ).toEqual(["Tests run 50.00% of this PR's changed lines (5 of 10 uncovered); the goal is 80%."])
+  })
+
+  it("lets a small patch leave up to the allowance uncovered", () => {
+    expect(
+      checkCoverageGoals({ total: null, patch: patchLines(0, 2), includesStories: true, goals }),
+    ).toEqual([])
+    expect(
+      checkCoverageGoals({ total: null, patch: patchLines(0, 3), includesStories: true, goals }),
+    ).toHaveLength(1)
+  })
+
+  it("checks the patch even without story coverage", () => {
+    expect(
+      checkCoverageGoals({ total: null, patch: patchLines(0, 10), includesStories: false, goals }),
+    ).toHaveLength(1)
+  })
+
+  it("passes a PR with no coverable changed lines", () => {
+    expect(
+      checkCoverageGoals({ total: null, patch: patchLines(0, 0), includesStories: true, goals }),
+    ).toEqual([])
+  })
+
+  it("defaults to floors no higher than 100% and a patch goal between 0 and 100%", () => {
+    for (const floor of Object.values(COVERAGE_GOALS.project)) {
+      expect(floor).toBeGreaterThan(0)
+      expect(floor).toBeLessThanOrEqual(100)
+    }
+    expect(COVERAGE_GOALS.patchLines).toBeGreaterThan(0)
+    expect(COVERAGE_GOALS.patchLines).toBeLessThanOrEqual(100)
+  })
+})
+
+describe("renderGoals", () => {
+  it("says the goals are met and lists them", () => {
+    const html = renderGoals({ misses: [], exempt: false, includesStories: true })
+    expect(html).toContain("✅ Coverage goals met.")
+    expect(html).toContain(`lines ${COVERAGE_GOALS.project.lines}%`)
+    expect(html).not.toContain("not checked")
+  })
+
+  it("lists each missed goal", () => {
+    const html = renderGoals({ misses: ["One.", "Two."], exempt: false, includesStories: true })
+    expect(html).toContain("❌ Coverage goals missed:")
+    expect(html).toContain("<li>One.</li>\n<li>Two.</li>")
+  })
+
+  it("says an exempt PR missed its goals without failing", () => {
+    const html = renderGoals({ misses: ["One."], exempt: true, includesStories: true })
+    expect(html).toContain(`labelled <code>${EXEMPT_LABEL}</code>`)
+    expect(html).not.toContain("❌")
+  })
+
+  it("notes when the project floors weren't checked", () => {
+    expect(renderGoals({ misses: [], exempt: false, includesStories: false })).toContain(
+      "not checked: this run has no story coverage",
+    )
+  })
+})
+
+describe("renderReport with goals", () => {
+  it("puts the goals right under the heading", () => {
+    const html = renderReport({
+      goals: "<p>GOALS</p>",
+      total: summary(75),
+      baseTotal: null,
+      summaryJson: null,
+      metrics: emptyMetrics,
+      files: [],
+      changedFiles: [],
+      repo: undefined,
+      sha: undefined,
+    })
+    expect(html.indexOf("<p>GOALS</p>")).toBeGreaterThan(html.indexOf("Coverage Report"))
+    expect(html.indexOf("<p>GOALS</p>")).toBeLessThan(html.indexOf("Project total"))
+  })
+})
+
+describe("fetchLabels", () => {
+  beforeEach(() => {
+    vi.stubGlobal("fetch", vi.fn())
+  })
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  it("returns the PR's label names", async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(
+      new Response(JSON.stringify([{ name: "ci" }, { name: EXEMPT_LABEL }])),
+    )
+    await expect(fetchLabels({ repo: "owner/repo", prNumber: 7, token: "tok" })).resolves.toEqual([
+      "ci",
+      EXEMPT_LABEL,
+    ])
+    expect(vi.mocked(fetch).mock.calls[0]![0]).toBe(
+      "https://api.github.com/repos/owner/repo/issues/7/labels?per_page=100",
+    )
+  })
+
+  it("throws on an API error", async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(new Response("nope", { status: 500 }))
+    await expect(fetchLabels({ repo: "owner/repo", prNumber: 7, token: "tok" })).rejects.toThrow(
+      "GitHub API 500",
+    )
+  })
+})
+
 describe("main", () => {
   let tmpDir: string
 
@@ -634,5 +803,70 @@ describe("main", () => {
     process.env.GITHUB_EVENT_PATH = eventPath
     process.env.COVERAGE_FINAL_PATH = join(tmpDir, "nonexistent.json")
     await expect(main()).resolves.toBeUndefined()
+  })
+
+  describe("on a PR whose changed lines no test runs", () => {
+    beforeEach(() => {
+      const eventPath = join(tmpDir, "event.json")
+      writeFileSync(eventPath, JSON.stringify({ pull_request: { number: 42 } }))
+      process.env.GITHUB_EVENT_PATH = eventPath
+      process.env.GITHUB_WORKSPACE = tmpDir
+      process.env.COVERAGE_FINAL_PATH = join(tmpDir, "coverage-final.json")
+      process.env.COVERAGE_SUMMARY_PATH = join(tmpDir, "missing-summary.json")
+      const path = join(tmpDir, "src/a.ts")
+      const statementMap = Object.fromEntries(
+        [1, 2, 3, 4].map((line) => [line, { start: { line } }]),
+      )
+      writeFileSync(
+        process.env.COVERAGE_FINAL_PATH,
+        JSON.stringify({
+          [path]: {
+            path,
+            statementMap,
+            s: { 1: 0, 2: 0, 3: 0, 4: 0 },
+            fnMap: {},
+            f: {},
+            branchMap: {},
+            b: {},
+          },
+        }),
+      )
+      vi.stubGlobal("fetch", vi.fn())
+      vi.spyOn(process.stdout, "write").mockReturnValue(true)
+      vi.spyOn(console, "warn").mockReturnValue(undefined)
+    })
+    afterEach(() => {
+      vi.unstubAllGlobals()
+      vi.restoreAllMocks()
+      process.exitCode = undefined
+      delete process.env.GITHUB_WORKSPACE
+      delete process.env.COVERAGE_SUMMARY_PATH
+    })
+
+    const changedFiles = [
+      { filename: "src/a.ts", status: "modified", patch: "@@ -0,0 +1,4 @@\n+a\n+b\n+c\n+d" },
+    ]
+
+    it("fails the step and annotates the missed goal", async () => {
+      vi.mocked(fetch)
+        .mockResolvedValueOnce(new Response(JSON.stringify(changedFiles)))
+        .mockResolvedValueOnce(new Response(JSON.stringify([])))
+      await main()
+      expect(process.exitCode).toBe(1)
+      expect(process.stdout.write).toHaveBeenCalledWith(
+        expect.stringContaining("::error title=Coverage goal::Tests run 0.00%"),
+      )
+    })
+
+    it("only warns when the PR has the exempt label", async () => {
+      vi.mocked(fetch)
+        .mockResolvedValueOnce(new Response(JSON.stringify(changedFiles)))
+        .mockResolvedValueOnce(new Response(JSON.stringify([{ name: EXEMPT_LABEL }])))
+      await main()
+      expect(process.exitCode).toBeUndefined()
+      expect(process.stdout.write).toHaveBeenCalledWith(
+        expect.stringContaining("::warning title=Coverage goal::"),
+      )
+    })
   })
 })

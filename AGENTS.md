@@ -402,7 +402,16 @@ Partial attribute values go through an asymmetric matcher —
 
 File-level exclusions are configured in `vitest.config.mts` `coverage.exclude` for auto-generated files (`src/migrations/**`, `src/payload-types.ts`, `src/app/(payload)/**`, `src/payload.config.ts`).
 
-Coverage reporting is informational only — chore/docs PRs don't need special handling.
+**Every code change ships with tests** for what it touches (unit, story or
+integration, per the table above), in the same PR. CI holds the line: the
+Coverage job fails a PR when the merged unit + story coverage drops under its
+project floors, or when tests run less than 80% of the PR's changed lines (a PR
+may leave 2 changed lines uncovered regardless). The numbers are
+`COVERAGE_GOALS` in `scripts/coverage-report.ts`; raise the floors as coverage
+climbs, never lower them to get a PR through. Integration tests aren't counted,
+so a change only they can reach gets the `coverage exempt` label (then re-run
+the Coverage job), which turns the failure into a warning. A PR with no
+coverable changed lines (docs, config, CI) passes the patch goal as is.
 
 ### Testing your changes
 

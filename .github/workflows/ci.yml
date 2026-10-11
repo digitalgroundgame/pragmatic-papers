@@ -309,11 +309,16 @@ jobs:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           BASE_REF: ${{ github.event.pull_request.base.ref }}
 
-      - name: Post coverage report
+      # Posts the report, then fails the job when the PR misses a coverage goal
+      # (COVERAGE_GOALS in the script). The project floors are only checked when
+      # the stories' coverage was merged in. A PR labelled `coverage exempt`
+      # passes with a warning; re-run this job after adding the label.
+      - name: Post coverage report and check goals
         run: pnpm coverage:report
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           BASE_COVERAGE_SUMMARY_PATH: ${{ steps.base-coverage.outputs.path }}
+          COVERAGE_INCLUDES_STORIES: ${{ steps.merge.outputs.storybook }}
 
   integration-tests:
     name: Integration tests

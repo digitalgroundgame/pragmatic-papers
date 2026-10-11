@@ -3,8 +3,13 @@
 // total, per-file coverage for changed files, and patch coverage (lines added or
 // modified in this PR's diff).
 // Coverage data comes from coverage-summary.json and coverage-final.json (istanbul/v8
-// format, produced by `pnpm test:unit:coverage`). It is purely informational — it
-// never fails the build.
+// format, produced by `pnpm test:unit:coverage`, merged with the stories' coverage by
+// scripts/merge-coverage.ts in CI).
+//
+// It also enforces the coverage goals below (`COVERAGE_GOALS`): the step fails when
+// the project total drops under its floor, or when the PR leaves too many of its
+// changed lines untested. The `coverage exempt` label keeps the report but drops the
+// failure, for code only the integration tests reach (they aren't counted here).
 //
 // Changed lines come from the GitHub PR "files" API (its per-file `patch` hunks).
 // On non-PR runs (e.g. push to main) there is no diff to measure, so it no-ops.
@@ -243,6 +248,93 @@ export function computePatchCoverage(
   return { metrics, files }
 }
 
+// ─── Coverage goals ───────────────────────────────────────────────────────────
+
+/**
+ * What a PR must keep. The project floors sit at the merged unit + story coverage
+ * on dev, rounded down to a whole percent; raise them as coverage climbs, never
+ * lower them to let a PR through.
+ */
+export interface CoverageGoals {
+  project: Record<MetricKey, number>
+  /** Share of the PR's changed, coverable lines its tests must run. */
+  patchLines: number
+  /** Uncovered changed lines a PR may leave before the patch goal applies. */
+  patchAllowance: number
+}
+
+export const COVERAGE_GOALS: CoverageGoals = {
+  project: { lines: 90, statements: 89, functions: 88, branches: 83 },
+  patchLines: 80,
+  patchAllowance: 2,
+}
+
+/** Label that turns a failed goal into a note, for code only integration tests reach. */
+export const EXEMPT_LABEL = "coverage exempt"
+
+/**
+ * The goals this run misses, one sentence each. The project floors are only
+ * checked when the stories' coverage was merged in: the unit run alone sits
+ * well under them, and Storybook is skipped on PRs that touch no component.
+ */
+export function checkCoverageGoals({
+  total,
+  patch,
+  includesStories,
+  goals = COVERAGE_GOALS,
+}: {
+  total: FileSummary | null
+  patch: MetricsWithPct
+  includesStories: boolean
+  goals?: CoverageGoals
+}): string[] {
+  const misses: string[] = []
+  if (total && includesStories) {
+    for (const k of METRICS) {
+      const floor = goals.project[k]
+      if (total[k].total > 0 && total[k].pct < floor) {
+        misses.push(
+          `Project ${LABELS[k].toLowerCase()} coverage is ${total[k].pct.toFixed(2)}%, under the ${floor}% floor.`,
+        )
+      }
+    }
+  }
+  const { covered, total: changed, pct } = patch.lines
+  const uncovered = changed - covered
+  if (changed > 0 && pct < goals.patchLines && uncovered > goals.patchAllowance) {
+    misses.push(
+      `Tests run ${pct.toFixed(2)}% of this PR's changed lines (${uncovered} of ${changed} uncovered); the goal is ${goals.patchLines}%.`,
+    )
+  }
+  return misses
+}
+
+/** The goals section at the top of the report: met, missed, or missed but exempt. */
+export function renderGoals({
+  misses,
+  exempt,
+  includesStories,
+  goals = COVERAGE_GOALS,
+}: {
+  misses: string[]
+  exempt: boolean
+  includesStories: boolean
+  goals?: CoverageGoals
+}): string {
+  const floors = METRICS.map((k) => `${LABELS[k].toLowerCase()} ${goals.project[k]}%`).join(", ")
+  const rules =
+    `<sub>Goals: project ${floors}` +
+    (includesStories ? "" : " (not checked: this run has no story coverage)") +
+    `; changed lines ${goals.patchLines}%, unless ${goals.patchAllowance} or fewer are uncovered. ` +
+    `Add the <code>${EXEMPT_LABEL}</code> label and re-run this job for code only integration tests reach.</sub>`
+  if (misses.length === 0) return `<p>✅ Coverage goals met.</p>\n${rules}`
+  const list = `<ul>\n${misses.map((m) => `<li>${m}</li>`).join("\n")}\n</ul>`
+  const head = exempt
+    ? `<p>⚪ Coverage goals missed, but this PR is labelled <code>${EXEMPT_LABEL}</code>:</p>`
+    : `<p>❌ Coverage goals missed:</p>`
+  return `${head}\n${list}\n${rules}`
+}
+
 // ─── GitHub API ───────────────────────────────────────────────────────────────
 
 export async function fetchChangedFiles({
@@ -274,6 +366,33 @@ export async function fetchChangedFiles({
     if (files.length < 100) break
   }
   return byFile
+}
+
+/**
+ * The PR's labels as they are now. The event payload's are frozen at the run's
+ * start, so a label added afterwards only counts if a re-run reads them live.
+ */
+export async function fetchLabels({
+  repo,
+  prNumber,
+  token,
+}: {
+  repo: string | undefined
+  prNumber: number
+  token: string | undefined
+}): Promise<string[]> {
+  const res = await fetch(
+    `https://api.github.com/repos/${repo}/issues/${prNumber}/labels?per_page=100`,
+    {
+      headers: {
+        Accept: "application/vnd.github+json",
+        "User-Agent": "coverage-report-script",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+    },
+  )
+  if (!res.ok) throw new Error(`GitHub API ${res.status}: ${await res.text()}`)
+  return ((await res.json()) as { name: string }[]).map((l) => l.name)
 }
 
 // ─── Rendering ────────────────────────────────────────────────────────────────
@@ -498,7 +617,9 @@ export function renderReport({
   changedFiles,
   repo,
   sha,
+  goals = null,
 }: {
+  goals?: string | null
   total: FileSummary | null
   baseTotal: FileSummary | null
   summaryJson: Record<string, FileSummary> | null
@@ -516,6 +637,7 @@ export function renderReport({
   const patchByFile = renderPatchByFile({ files, repo, sha })
   const parts = [
     "<h2>Coverage Report</h2>",
+    ...(goals ? ["", goals] : []),
     ...(total ? ["", renderTotalSection(total, baseTotal)] : []),
     ...(fileCoverage ? ["", fileCoverage] : []),
     "",
@@ -594,8 +716,21 @@ export async function main(): Promise<void> {
           .map(([k, v]) => [relative(root, k).split(sep).join("/"), v]),
       )
     : null
+  const includesStories = process.env.COVERAGE_INCLUDES_STORIES === "true"
+  const misses = checkCoverageGoals({ total, patch: metrics, includesStories })
+  let exempt = false
+  if (misses.length > 0) {
+    try {
+      exempt = (await fetchLabels({ repo, prNumber, token })).includes(EXEMPT_LABEL)
+    } catch (err) {
+      console.warn(`${yellow("⚠")} Could not read the PR's labels: ${(err as Error).message}`)
+    }
+  }
+  const goals = renderGoals({ misses, exempt, includesStories })
+
   const changedFiles = Object.keys(addedLinesByFile)
   const report = renderReport({
+    goals,
     total,
     baseTotal,
     summaryJson: summaryByFile,
@@ -615,6 +750,12 @@ export async function main(): Promise<void> {
       console.warn(`${yellow("⚠")} Could not post PR comment: ${(err as Error).message}`)
     }
   }
+
+  for (const miss of misses) {
+    // A workflow command, so the miss shows on the PR's checks.
+    process.stdout.write(`::${exempt ? "warning" : "error"} title=Coverage goal::${miss}\n`)
+  }
+  if (misses.length > 0 && !exempt) process.exitCode = 1
 }
 
 // Only run when invoked directly, so the pure helpers above can be unit-tested.

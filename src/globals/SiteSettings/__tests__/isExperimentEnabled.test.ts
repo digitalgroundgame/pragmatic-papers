@@ -2,8 +2,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 const findGlobal = vi.fn()
 
-vi.mock("@/utilities/getPayloadConfig", () => ({
-  getPayloadConfig: vi.fn(async () => ({ findGlobal })),
+vi.mock("@/data/payload", () => ({
+  getPayloadClient: vi.fn(async () => ({ findGlobal })),
 }))
 
 // `unstable_cache` needs an active Next.js request context to cache; here the

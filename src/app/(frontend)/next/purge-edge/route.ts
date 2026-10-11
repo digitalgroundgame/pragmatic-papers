@@ -1,5 +1,5 @@
 import { purgeEdgeCache } from "@/hooks/purgeEdgeCache"
-import { getPayloadConfig } from "@/utilities/getPayloadConfig"
+import { getPayloadClient } from "@/data/payload"
 
 import { hasPayloadSecret } from "../bearer"
 
@@ -27,6 +27,6 @@ export async function POST(request: Request): Promise<Response> {
   if (!hasPayloadSecret(request)) {
     return Response.json({ error: "Unauthorized" }, { status: 401 })
   }
-  purgeEdgeCache((await getPayloadConfig()).logger, "deploy")
+  purgeEdgeCache((await getPayloadClient()).logger, "deploy")
   return Response.json({ queued: true })
 }

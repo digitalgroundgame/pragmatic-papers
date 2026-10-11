@@ -5,7 +5,7 @@ const { find } = vi.hoisted(() => ({ find: vi.fn() }))
 vi.mock("server-only", () => ({}))
 vi.mock("@payload-config", () => ({ default: {} }))
 vi.mock("payload", () => ({ getPayload: async () => ({ find }) }))
-vi.mock("@/utilities/getPayloadConfig", () => ({ getPayloadConfig: async () => ({ find }) }))
+vi.mock("@/data/payload", () => ({ getPayloadClient: async () => ({ find }) }))
 
 const routes = {
   articles: () => import("../articles/[slug]/page"),

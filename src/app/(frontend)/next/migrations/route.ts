@@ -1,4 +1,4 @@
-import { getPayloadConfig } from "@/utilities/getPayloadConfig"
+import { getPayloadClient } from "@/data/payload"
 
 import { hasPayloadSecret } from "../bearer"
 
@@ -17,7 +17,7 @@ export async function GET(request: Request): Promise<Response> {
     return Response.json({ error: "Unauthorized" }, { status: 401 })
   }
 
-  const payload = await getPayloadConfig()
+  const payload = await getPayloadClient()
   const { docs } = await payload.find({
     collection: "payload-migrations",
     pagination: false,

@@ -3,13 +3,13 @@ import { Logo } from "@/components/Logo"
 import { Menu } from "@/components/Menu"
 import { SocialLinks } from "@/components/SocialLinks"
 import type { Footer } from "@/payload-types"
-import { getCachedGlobal } from "@/utilities/getGlobals"
+import { getGlobal } from "@/data/globals"
 import { Copyright } from "./Copyright"
 import { LazyModeToggle } from "@/components/ModeToggleAnalytics.lazy"
 import { HoverPrefetchLink } from "@/components/Link/HoverPrefetchLink"
 
 export async function Footer(): Promise<React.ReactElement> {
-  const { id, navItems, socials, copyright, layout }: Footer = await getCachedGlobal("footer", 2)()
+  const { id, navItems, socials, copyright, layout }: Footer = await getGlobal("footer", 2)
 
   return (
     <footer className="container space-y-2 py-2">

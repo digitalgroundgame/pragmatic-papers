@@ -2,7 +2,7 @@
 
 import { Button, toast, useDocumentInfo, useFormFields } from "@payloadcms/ui"
 import React, { useState, useSyncExternalStore } from "react"
-import { extractNarrationText } from "@/utilities/extractNarrationText"
+import { extractNarrationText } from "@/collections/Articles/narration/extractNarrationText"
 
 const noop = (): void => {
   // no-op for useSyncExternalStore

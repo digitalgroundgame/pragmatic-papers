@@ -33,7 +33,7 @@ vi.mock("next/headers", () => ({ draftMode: async () => draft }))
 vi.mock("next/cache", () => ({
   unstable_cache: (...args: Parameters<typeof unstableCache>) => unstableCache(...args),
 }))
-vi.mock("@/utilities/getPayloadConfig", () => ({ getPayloadConfig: async () => ({ find }) }))
+vi.mock("@/data/payload", () => ({ getPayloadClient: async () => ({ find }) }))
 vi.mock("@/globals/SiteSettings/isExperimentEnabled", () => ({
   isExperimentEnabled: async (name: string) => name === "interactives" && experiment.on,
 }))

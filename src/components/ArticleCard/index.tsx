@@ -4,6 +4,7 @@ import React from "react"
 import { HoverPrefetchLink } from "@/components/Link/HoverPrefetchLink"
 import { Media } from "@/components/Media"
 import { cn } from "@/utilities/utils"
+import { docPath } from "@/utilities/routes"
 
 export type CardPostData = Pick<Article, "slug" | "meta" | "title">
 
@@ -23,7 +24,7 @@ export const ArticleCard: React.FC<{
 
   const titleToUse = titleFromProps || title
   const sanitizedDescription = description?.replace(/\s/g, " ") // replace non-breaking space with white space
-  const href = `/${relationTo}/${slug}`
+  const href = docPath(relationTo, slug ?? "")
 
   return (
     <HoverPrefetchLink href={href} className="block">

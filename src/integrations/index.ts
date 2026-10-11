@@ -1,6 +1,7 @@
 import { blueskyAccounts } from "./bluesky"
 import { cloudflareWorker, cloudflareZone } from "./cloudflare"
 import { githubRepo } from "./github"
+import { listmonkServer } from "./listmonk/connection"
 import { shopifyStore } from "./shopify"
 import { xAccounts } from "./x"
 import { youtubeChannels } from "./youtube"
@@ -27,7 +28,16 @@ export const courtTracker = githubRepo({
   tokenEnv: "COURT_TRACKER_GITHUB_TOKEN",
 })
 
-export { shopifyStore }
+export { listmonkServer, shopifyStore }
+
+/** Turnstile, which the newsletter signup form checks before subscribing anyone. */
+export const cloudflareTurnstile: Integration = {
+  id: "cloudflare-turnstile",
+  label: "Newsletter signup bot check",
+  service: "Cloudflare",
+  describe: () => "cloudflare:turnstile",
+  required: ["CLOUDFLARE_TURNSTILE_SECRET_KEY", "TURNSTILE_SITE_KEY"],
+}
 
 /**
  * The Cloudflare zone in front of every environment — production, staging and each PR
@@ -115,6 +125,8 @@ export const INTEGRATIONS: readonly Integration[] = [
   blueskyPosts,
   xPosts,
   unsplash,
+  listmonkServer,
+  cloudflareTurnstile,
 ]
 
 export function getIntegration(id: string): Integration | null {

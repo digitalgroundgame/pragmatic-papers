@@ -1,4 +1,5 @@
 import type { CollectionAfterChangeHook, PayloadRequest, TypeWithID } from "payload"
+import { relationshipId } from "@/utilities/relationships"
 
 type UserRef = number | { id: number } | null | undefined
 
@@ -8,9 +9,7 @@ type UserRef = number | { id: number } | null | undefined
  * that credits no one new writes nothing.
  */
 async function markPublic(refs: UserRef[], req: PayloadRequest): Promise<void> {
-  const ids = refs
-    .map((ref) => (typeof ref === "object" && ref !== null ? ref.id : ref))
-    .filter((id): id is number => id != null)
+  const ids = refs.map(relationshipId).filter((id) => id !== null)
   if (ids.length === 0) return
 
   await req.payload.update({

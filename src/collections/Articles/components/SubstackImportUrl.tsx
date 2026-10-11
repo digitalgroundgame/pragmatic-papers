@@ -2,7 +2,7 @@
 
 import { Button, FieldLabel, toast, useFormFields } from "@payloadcms/ui"
 import React from "react"
-import { getClientSideURL } from "@/utilities/getURL"
+import { getClientURL } from "@/utilities/getURL"
 
 /**
  * Shows the single-article feed URL an editor pastes into Substack's importer
@@ -13,7 +13,7 @@ export const SubstackImportUrl: React.FC = () => {
 
   if (!slug) return null
 
-  const url = `${getClientSideURL()}/articles/${encodeURIComponent(slug)}/substack.xml`
+  const url = `${getClientURL()}/articles/${encodeURIComponent(slug)}/substack.xml`
 
   const copy = async (): Promise<void> => {
     try {

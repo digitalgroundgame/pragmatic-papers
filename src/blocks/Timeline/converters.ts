@@ -1,6 +1,8 @@
 import type { TimelineBlock } from "@/payload-types"
-import { absoluteURL, escapeHTML, type FeedContext } from "@/utilities/feedHTML"
-import { getLinkFieldUrl } from "@/utilities/getLinkFieldUrl"
+import { escapeHTML, type FeedContext } from "@/utilities/feedHTML"
+import { absoluteURL } from "@/utilities/getURL"
+import { linkHref } from "@/utilities/linkField"
+import { formatLongDate } from "@/utilities/formatDate"
 
 type TimelineEvent = TimelineBlock["events"][number]
 
@@ -13,12 +15,7 @@ type TimelineEvent = TimelineBlock["events"][number]
 export const formatTimelineDate = (date: string): string => {
   const parsed = new Date(date)
   if (!/^\d{4}-\d{2}-\d{2}/.test(date) || Number.isNaN(parsed.getTime())) return date
-  return parsed.toLocaleDateString("en-US", {
-    month: "long",
-    day: "numeric",
-    year: "numeric",
-    timeZone: "UTC",
-  })
+  return formatLongDate(parsed)
 }
 
 /** What a rendering of a timeline event shows: the date formatted, and the citation as a URL. */
@@ -34,7 +31,7 @@ export const timelineEventDisplay = (event: TimelineEvent): TimelineEventDisplay
   date: formatTimelineDate(event.date),
   title: event.title || null,
   description: event.description ?? "",
-  citationUrl: event.enableCitation ? getLinkFieldUrl(event.citation) : null,
+  citationUrl: event.enableCitation ? linkHref(event.citation) : null,
 })
 
 /** A timeline as a heading and a list of dated events, each linking to its source. */

@@ -4,7 +4,7 @@ import type { BylineAuthor } from "@/components/Authors/BylineAuthor"
 import { Avatar, AvatarFallback, AvatarGroup, AvatarImage } from "@/components/ui/avatar"
 import { HoverPrefetchLink } from "@/components/Link/HoverPrefetchLink"
 import { getInitials } from "@/utilities/getInitials"
-import { getSeparator } from "@/utilities/getSeparator"
+import { getSeparator } from "./getSeparator"
 
 interface BylineProps extends React.HTMLAttributes<HTMLDivElement> {
   authors: BylineAuthor[]

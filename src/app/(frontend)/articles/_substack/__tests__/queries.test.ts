@@ -2,8 +2,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest"
 
 const find = vi.fn()
-vi.mock("@/utilities/getPayloadConfig", () => ({
-  getPayloadConfig: vi.fn(async () => ({ find })),
+vi.mock("@/data/payload", () => ({
+  getPayloadClient: vi.fn(async () => ({ find })),
 }))
 
 const { querySyndicatedArticleBySlug, querySyndicatedArticles } = await import("../queries")

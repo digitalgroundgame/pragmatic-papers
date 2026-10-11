@@ -1,7 +1,7 @@
 import type { Form } from "@/payload-types"
 import type { Payload } from "payload"
 
-import { createRichTextContent } from "./richtext"
+import { createRichTextFromString } from "./richtext"
 
 export async function createContactForm(payload: Payload, title = "Contact Form"): Promise<Form> {
   return await payload.create({
@@ -40,7 +40,7 @@ export async function createContactForm(payload: Payload, title = "Contact Form"
       ],
       submitButtonLabel: "Send Message",
       confirmationType: "message",
-      confirmationMessage: createRichTextContent(
+      confirmationMessage: createRichTextFromString(
         "Thank you for reaching out! We will get back to you as soon as possible.",
       ),
     },

@@ -5,6 +5,7 @@ import { docsPlugin } from "@/plugins/docs"
 import { docsNotifications } from "@/plugins/docs/notifications"
 import { notificationsPlugin } from "@/plugins/notifications"
 import { toursPlugin } from "@/plugins/tours"
+import { discordSignIn, googleSignIn } from "@/integrations"
 import type { Article, Interactive, Page, Topic, Volume } from "@/payload-types"
 import { getSiteURL } from "@/utilities/getURL"
 import { DEFAULT_DESCRIPTION } from "@/utilities/mergeOpenGraph"
@@ -27,6 +28,8 @@ import type { SerializedEditorState } from "@payloadcms/richtext-lexical/lexical
 import { convertLexicalToPlaintext } from "@payloadcms/richtext-lexical/plaintext"
 import { s3Storage } from "@payloadcms/storage-s3"
 import { type Payload, type Plugin } from "payload"
+
+import { ssoPlugin } from "./sso"
 
 // Reads the switch in Site Settings when called. Imported then, not here: the
 // Settings global reaches the Payload config, which imports this file.
@@ -406,5 +409,31 @@ export const plugins: Plugin[] = [
       settings: [EXPERIMENTS],
     },
     toursPlugin({ enabled: experiment("tours") }),
+  ),
+  installedPlugin(
+    {
+      name: "SSO",
+      source: "src/plugins/sso",
+      description:
+        "Staff sign-in to the admin with Google or Discord, through Better Auth. Email and password login stays on.",
+      enabled: experiment("sso"),
+      settings: [EXPERIMENTS, { label: "Integrations", path: "/globals/integrations" }],
+    },
+    ssoPlugin({
+      // The `sso` experiment, read from the database on each request rather than through
+      // `isExperimentEnabled`'s cache, so turning it off ends SSO sessions at once.
+      enabled: async ({ payload }) =>
+        (await payload.findGlobal({ slug: "site-settings", depth: 0 })).experiments?.sso === true,
+      providers: () => ({
+        google: googleSignIn.credentials(),
+        discord: discordSignIn.credentials(),
+      }),
+      baseURL: getSiteURL,
+      secret: () => process.env.PAYLOAD_SECRET || "",
+      // The Users collection's slug field (`src/fields/slug`), set by Payload on create.
+      requiredUserColumns: ["slug"],
+      // Staff stay signed in for a month after a Google or Discord sign-in.
+      sessionSeconds: 60 * 60 * 24 * 30,
+    }),
   ),
 ]

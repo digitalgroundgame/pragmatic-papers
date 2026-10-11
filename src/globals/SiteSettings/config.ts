@@ -76,6 +76,15 @@ export const SiteSettings: GlobalConfig = {
           },
         }),
         experimentField({
+          name: "sso",
+          label: "Single sign-on",
+          defaultValue: false,
+          admin: {
+            description:
+              "“Sign in with Google” and “Sign in with Discord” on the admin's login page, for people who already have an account here. Each provider also needs its credentials (System → Integrations).",
+          },
+        }),
+        experimentField({
           name: "tableOfContents",
           label: "Article table of contents",
           // On by default, unlike the other experiments: readers get it unless

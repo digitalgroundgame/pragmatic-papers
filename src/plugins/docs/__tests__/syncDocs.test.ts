@@ -37,16 +37,16 @@ heroAlt: Switches
 let dir: string
 
 /**
- * A Payload that holds `docs` (count answers from them) and `media` (find answers from them), and
- * records what was written.
+ * A Payload whose find answers from `docs` and `media`, and records what was written.
  */
 const fakePayload = ({
   docs = [] as Record<string, unknown>[],
   media = [] as Record<string, unknown>[],
 } = {}) => {
   const payload = {
-    count: vi.fn(async () => ({ totalDocs: docs.length })),
-    find: vi.fn(async () => ({ docs: media })),
+    find: vi.fn(async ({ collection }: { collection: string }) => ({
+      docs: collection === "media" ? media : docs,
+    })),
     create: vi.fn(async ({ collection }: { collection: string }) => ({
       id: collection === "media" ? 41 : 1,
     })),
@@ -77,7 +77,7 @@ describe("syncDocs", () => {
       existing: [],
     })
     expect(payload.logger.warn).toHaveBeenCalledWith(expect.stringContaining("doesn't exist"))
-    expect(payload.count).not.toHaveBeenCalled()
+    expect(payload.find).not.toHaveBeenCalled()
   })
 
   it("creates a new doc as a draft, with its files uploaded and their ids in place", async () => {
@@ -87,7 +87,7 @@ describe("syncDocs", () => {
       existing: [],
     })
 
-    expect(payload.count).toHaveBeenCalledWith(
+    expect(payload.find).toHaveBeenCalledWith(
       expect.objectContaining({ collection: "docs", where: { slug: { equals: "experiments" } } }),
     )
     expect(payload.create).toHaveBeenCalledWith(

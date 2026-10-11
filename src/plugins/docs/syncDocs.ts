@@ -147,12 +147,17 @@ export async function syncDocs(
   const entries = await listDocFiles(dir)
   let editorConfig: ReturnType<typeof docsEditorConfig> | undefined
   for (const { slug, section, folder, file } of entries) {
-    const { totalDocs } = await payload.count({
+    const { docs } = await payload.find({
       collection: DOCS_SLUG,
+      depth: 0,
+      draft: true,
+      limit: 1,
       overrideAccess: true,
+      pagination: false,
+      select: { slug: true },
       where: { slug: { equals: slug } },
     })
-    if (totalDocs) {
+    if (docs.length) {
       result.existing.push(slug)
       continue
     }

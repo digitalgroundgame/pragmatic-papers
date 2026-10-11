@@ -69,7 +69,7 @@ const posted = new Intl.DateTimeFormat("en-US", {
 })
 
 /**
- * The Ticker global's list of what the sources hold right now, each post with a button that
+ * The Header's ticker tab: what the sources hold right now, each post with a button that
  * hides it from the ticker or shows it again.
  */
 export function TickerPostsTable({

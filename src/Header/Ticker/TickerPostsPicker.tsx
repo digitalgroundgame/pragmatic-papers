@@ -7,7 +7,7 @@ import { postKey, type TickerPost } from "@/components/Ticker/items"
 import { TickerPostsTable } from "./TickerPostsTable"
 
 /** The array field the picker adds to and removes from. */
-const HIDDEN = "hidden"
+const HIDDEN = "ticker.hidden"
 
 /**
  * The posts table, wired to the Hidden posts array in the form: Hide adds the post's link as a

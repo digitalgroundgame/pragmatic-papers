@@ -52,15 +52,6 @@ export const SiteSettings: GlobalConfig = {
           },
         }),
         experimentField({
-          name: "ticker",
-          label: "Ticker",
-          defaultValue: false,
-          admin: {
-            description:
-              "The strip under the header on every page: a broadcast when one of our YouTube channels is live, and our latest posts from Bluesky and X.",
-          },
-        }),
-        experimentField({
           name: "tableOfContents",
           label: "Article table of contents",
           // On by default, unlike the other experiments: readers get it unless

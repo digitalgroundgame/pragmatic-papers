@@ -1,13 +1,15 @@
-import { isExperimentEnabled } from "@/globals/SiteSettings/isExperimentEnabled"
+import { getGlobal } from "@/data/globals"
 
 import { getTickerFeed } from "./getTickerFeed"
 import { TickerView } from "./TickerView"
 
 /**
- * The ticker, when the `ticker` experiment is on. Renders nothing when it's off, or
+ * The ticker, when it's switched on in the Header global. Renders nothing when it's off, or
  * when no source has anything to show.
  */
 export async function Ticker(): Promise<React.ReactNode> {
-  if (!(await isExperimentEnabled("ticker"))) return null
+  // The depth the header reads it at, so they share one cache entry.
+  const { ticker } = await getGlobal("header", 1)
+  if (ticker?.enabled !== true) return null
   return <TickerView {...await getTickerFeed()} />
 }

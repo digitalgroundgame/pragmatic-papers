@@ -94,7 +94,7 @@ Public pages are cached at Cloudflare's edge for 10 minutes, then served stale f
 
 #### Ticker
 
-The strip under the header on every page (`src/components/Ticker`, rendered by the header), shown when the **Ticker** experiment is on in **System → Settings**. Each source is skipped with a `[ticker] skipping …` log line until it's configured; all are **Runtime Variables**, set in the production, staging **and** preview apps (`dockerfiles/.env.example` lists them).
+The strip under the header on every page (`src/components/Ticker`, rendered by the header), shown when **Ticker** is switched on in **Site → Header → Ticker**. Each source is skipped with a `[ticker] skipping …` log line until it's configured; all are **Runtime Variables**, set in the production, staging **and** preview apps (`dockerfiles/.env.example` lists them).
 
 - `YOUTUBE_API_KEY` — a YouTube Data API v3 key (any Google Cloud project, public reads only). Shows a channel's broadcast when it's live or starting within a day. Each check costs one of the key's 10,000 free daily quota units per channel plus one, every 5 minutes at most and only while the site is being visited, so one key can serve every app.
 - Bluesky needs nothing: it reads the public API.

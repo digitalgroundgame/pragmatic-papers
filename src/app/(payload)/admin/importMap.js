@@ -57,8 +57,8 @@ import { ProductThumbnailCell as ProductThumbnailCell_c79e04f7b9e53b2f3afaedb264
 import { SyncNowButton as SyncNowButton_6b13e2821b4c35428e02347e7578e840 } from '@/collections/Merch/components/SyncNowButton'
 import { LinkToDoc as LinkToDoc_aead06e4cbf6b2620c5c51c9ab283634 } from '@payloadcms/plugin-search/client'
 import { ReindexButton as ReindexButton_aead06e4cbf6b2620c5c51c9ab283634 } from '@payloadcms/plugin-search/client'
-import { TickerPostsField as TickerPostsField_eb80cb436828d816aeab384fed2fd9bf } from '@/globals/Ticker/components/TickerPostsField'
 import { ExperimentSwitchField as ExperimentSwitchField_bfc53fcaa9b90365c2431ea18727763a } from '@/globals/SiteSettings/components/ExperimentSwitchField'
+import { TickerPostsField as TickerPostsField_d65ef9a49dad00363969240f35d9582b } from '@/Header/Ticker/TickerPostsField'
 import { IntegrationStatusField as IntegrationStatusField_1900110be8e66af69bcbacc986bd055a } from '@/globals/Integrations/components/IntegrationStatusField'
 import { NewsletterView as NewsletterView_bb918406547ab798cea1ede5dc83eb82 } from '@/globals/Newsletter/components/NewsletterView'
 import { RunNowField as RunNowField_a9d86fb0496ebd76a3dd880c805864b5 } from '@/globals/ArticleRecommendations/components/RunNowField'
@@ -133,8 +133,8 @@ export const importMap = {
   "@/collections/Merch/components/SyncNowButton#SyncNowButton": SyncNowButton_6b13e2821b4c35428e02347e7578e840,
   "@payloadcms/plugin-search/client#LinkToDoc": LinkToDoc_aead06e4cbf6b2620c5c51c9ab283634,
   "@payloadcms/plugin-search/client#ReindexButton": ReindexButton_aead06e4cbf6b2620c5c51c9ab283634,
-  "@/globals/Ticker/components/TickerPostsField#TickerPostsField": TickerPostsField_eb80cb436828d816aeab384fed2fd9bf,
   "@/globals/SiteSettings/components/ExperimentSwitchField#ExperimentSwitchField": ExperimentSwitchField_bfc53fcaa9b90365c2431ea18727763a,
+  "@/Header/Ticker/TickerPostsField#TickerPostsField": TickerPostsField_d65ef9a49dad00363969240f35d9582b,
   "@/globals/Integrations/components/IntegrationStatusField#IntegrationStatusField": IntegrationStatusField_1900110be8e66af69bcbacc986bd055a,
   "@/globals/Newsletter/components/NewsletterView#NewsletterView": NewsletterView_bb918406547ab798cea1ede5dc83eb82,
   "@/globals/ArticleRecommendations/components/RunNowField#RunNowField": RunNowField_a9d86fb0496ebd76a3dd880c805864b5,

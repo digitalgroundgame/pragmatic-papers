@@ -29,7 +29,11 @@ vi.mock("react", async (importOriginal) => ({
 }))
 vi.mock("@/data/globals", () => ({
   getGlobal: async (slug: string) =>
-    slug === "integrations" ? integrations.current : slug === "ticker" ? ticker.current : {},
+    slug === "integrations"
+      ? integrations.current
+      : slug === "header"
+        ? { ticker: ticker.current }
+        : {},
 }))
 vi.mock("../sources", async (importOriginal) => ({
   ...(await importOriginal<typeof SourcesModule>()),

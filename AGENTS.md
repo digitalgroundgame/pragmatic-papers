@@ -557,10 +557,11 @@ sessions, which can't reach most documentation sites. Next.js's docs are already
 
 ## Landing work
 
-A feature readers or staff will see, and anything that takes more than one PR to finish,
-merges behind an experiment switch that is off by default (see [Experiments](#experiments)).
-If it turns out wrong after it merges, turn the switch off and fix it in a follow-up PR rather
-than reverting. Revert only what breaks staging with the switch off.
+A feature readers or staff will see, and anything in the app that takes more than one PR to
+finish, merges behind an experiment switch that is off by default (see
+[Experiments](#experiments)). If it turns out wrong after it merges, turn the switch off and
+fix it in a follow-up PR rather than reverting. Revert only what breaks staging with the switch
+off. CI, Dockerfiles and other tooling can't be switched, so they land whole.
 
 ## Claude review gate
 

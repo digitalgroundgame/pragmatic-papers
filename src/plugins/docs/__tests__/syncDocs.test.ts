@@ -37,13 +37,21 @@ heroAlt: Switches
 let dir: string
 
 /**
- * A Payload whose find answers from `docs` and `media`, and records what was written.
+ * A Payload whose find answers from `docs` and `media`, whose key-value store holds `kv`, and
+ * which records what was written.
  */
 const fakePayload = ({
   docs = [] as Record<string, unknown>[],
   media = [] as Record<string, unknown>[],
+  kv = [] as string[],
 } = {}) => {
+  const keys = new Set(kv)
   const payload = {
+    kv: {
+      keys,
+      has: vi.fn(async (key: string) => keys.has(key)),
+      set: vi.fn(async (key: string) => void keys.add(key)),
+    },
     find: vi.fn(async ({ collection }: { collection: string }) => ({
       docs: collection === "media" ? media : docs,
     })),
@@ -75,6 +83,7 @@ describe("syncDocs", () => {
     await expect(syncDocs(payload, path.join(dir, "missing"))).resolves.toEqual({
       created: [],
       existing: [],
+      deleted: [],
     })
     expect(payload.logger.warn).toHaveBeenCalledWith(expect.stringContaining("doesn't exist"))
     expect(payload.find).not.toHaveBeenCalled()
@@ -85,7 +94,9 @@ describe("syncDocs", () => {
     await expect(syncDocs(payload, dir)).resolves.toEqual({
       created: ["experiments"],
       existing: [],
+      deleted: [],
     })
+    expect(payload.kv.keys).toContain("seeded:docs:experiments")
 
     expect(payload.find).toHaveBeenCalledWith(
       expect.objectContaining({ collection: "docs", where: { slug: { equals: "experiments" } } }),
@@ -121,9 +132,19 @@ describe("syncDocs", () => {
     )
   })
 
-  it("publishes what it creates when asked, as the local seed does", async () => {
-    const payload = fakePayload()
-    await syncDocs(payload, dir, { publish: true })
+  it("leaves a doc it seeded before and an editor deleted since deleted", async () => {
+    const payload = fakePayload({ kv: ["seeded:docs:experiments"] })
+    await expect(syncDocs(payload, dir)).resolves.toEqual({
+      created: [],
+      existing: [],
+      deleted: ["experiments"],
+    })
+    expect(payload.create).not.toHaveBeenCalled()
+  })
+
+  it("publishes what it creates for the local seed, and seeds a doc it seeded before again", async () => {
+    const payload = fakePayload({ kv: ["seeded:docs:experiments"] })
+    await syncDocs(payload, dir, { localSeed: true })
     expect(payload.create).toHaveBeenLastCalledWith(
       expect.objectContaining({
         collection: "docs",
@@ -168,7 +189,10 @@ describe("syncDocs", () => {
     await expect(syncDocs(payload, dir)).resolves.toEqual({
       created: [],
       existing: ["experiments"],
+      deleted: [],
     })
+    // Recorded, so it stays deleted if an editor deletes it.
+    expect(payload.kv.keys).toContain("seeded:docs:experiments")
     expect(payload.create).not.toHaveBeenCalled()
     expect(payload.update).not.toHaveBeenCalled()
     expect(payload.delete).not.toHaveBeenCalled()
@@ -177,7 +201,11 @@ describe("syncDocs", () => {
   it("deletes nothing, even when the folder holds no docs", async () => {
     await rm(path.join(dir, "site"), { recursive: true })
     const payload = fakePayload({ docs: [{ id: 7, slug: "old-name", sourceHash: "abc" }] })
-    await expect(syncDocs(payload, dir)).resolves.toEqual({ created: [], existing: [] })
+    await expect(syncDocs(payload, dir)).resolves.toEqual({
+      created: [],
+      existing: [],
+      deleted: [],
+    })
     expect(payload.delete).not.toHaveBeenCalled()
   })
 })

@@ -2,6 +2,7 @@ import { existsSync } from "node:fs"
 import { readdir, readFile } from "node:fs/promises"
 import path from "node:path"
 import type { Doc } from "@/payload-types"
+import { markSeeded, wasSeeded } from "@/utilities/seedOnce"
 import type { Payload } from "payload"
 
 import { DOCS_SLUG } from "./collection"
@@ -75,14 +76,18 @@ export interface SyncResult {
   created: string[]
   /** Docs the site already has, left as they are: once seeded, a doc is the site's. */
   existing: string[]
+  /** Docs seeded here before and deleted since, which stay deleted. */
+  deleted: string[]
 }
 
 export interface SyncOptions {
   /**
-   * Publish the docs it creates. Only the local seed does: on a deployed site a doc from the
-   * repo waits for an editor, so nothing reaches readers or the bell unread by a person.
+   * For the local seed, which has just wiped every doc: publish the docs it creates, and seed
+   * docs again that it seeded before. On a deployed site a doc from the repo waits for an
+   * editor, so nothing reaches readers or the bell unread by a person, and one an editor
+   * deleted stays deleted.
    */
-  publish?: boolean
+  localSeed?: boolean
 }
 
 const context = { disableRevalidate: true }
@@ -125,18 +130,18 @@ async function uploadOnce(
 }
 
 /**
- * Seeds this site's database with each doc in `dir` it doesn't have yet, as a draft, with its
+ * Seeds this site's database with each doc in `dir` it has never had, as a draft, with its
  * files uploaded to Media. Push only: a doc the site already has (by slug, draft or published,
  * seeded or written in the admin) is never overwritten, and nothing is ever deleted, so editors
- * own a doc from the moment it arrives. A doc deleted in the admin whose file is still in the
- * repo comes back as a draft on the next deploy.
+ * own a doc from the moment it arrives. Each doc is recorded as seeded (`markSeeded`), so one an
+ * editor deletes isn't seeded again.
  */
 export async function syncDocs(
   payload: Payload,
   dir = DOCS_DIR,
-  { publish = false }: SyncOptions = {},
+  { localSeed = false }: SyncOptions = {},
 ): Promise<SyncResult> {
-  const result: SyncResult = { created: [], existing: [] }
+  const result: SyncResult = { created: [], existing: [], deleted: [] }
   if (!existsSync(dir)) {
     // A deploy without the folder (a runtime with no file system for it) would otherwise
     // look like one with nothing to sync.
@@ -147,6 +152,7 @@ export async function syncDocs(
   const entries = await listDocFiles(dir)
   let editorConfig: ReturnType<typeof docsEditorConfig> | undefined
   for (const { slug, section, folder, file } of entries) {
+    const seeded = await wasSeeded(payload, DOCS_SLUG, slug)
     const { docs } = await payload.find({
       collection: DOCS_SLUG,
       depth: 0,
@@ -158,7 +164,14 @@ export async function syncDocs(
       where: { slug: { equals: slug } },
     })
     if (docs.length) {
+      // Recorded too, so a doc the site had before seeding was recorded stays deleted once an
+      // editor deletes it.
+      if (!seeded) await markSeeded(payload, DOCS_SLUG, slug)
       result.existing.push(slug)
+      continue
+    }
+    if (seeded && !localSeed) {
+      result.deleted.push(slug)
       continue
     }
 
@@ -198,15 +211,16 @@ export async function syncDocs(
       content: unpackMedia(repoDoc.content, ids) as never,
       slug,
       sourceHash: hashRepoDoc(section, source, files),
-      _status: publish ? ("published" as const) : ("draft" as const),
+      _status: localSeed ? ("published" as const) : ("draft" as const),
     }
     await payload.create({
       collection: DOCS_SLUG,
       data,
       context,
-      draft: !publish,
+      draft: !localSeed,
       overrideAccess: true,
     })
+    await markSeeded(payload, DOCS_SLUG, slug)
     result.created.push(slug)
   }
   return result

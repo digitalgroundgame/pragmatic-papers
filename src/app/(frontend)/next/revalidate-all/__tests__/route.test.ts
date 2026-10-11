@@ -22,7 +22,7 @@ describe("POST /next/revalidate-all", () => {
   beforeEach(() => {
     vi.stubEnv("PAYLOAD_SECRET", "s3cret")
     vi.clearAllMocks()
-    syncRepoDocs.mockResolvedValue({ created: ["a"], existing: ["b"] })
+    syncRepoDocs.mockResolvedValue({ created: ["a"], existing: ["b"], deleted: [] })
   })
 
   it("syncs the repo's docs, then throws away every prerendered route", async () => {

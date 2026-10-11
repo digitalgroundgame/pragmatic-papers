@@ -40,6 +40,8 @@ describe("syncDocs", () => {
 
   beforeAll(async () => {
     payload = await getPayload()
+    for (const slug of [SLUG, "another", "and-another"])
+      await payload.kv.delete(`seeded:docs:${slug}`)
     dir = await mkdtemp(path.join(tmpdir(), "docs-"))
     await mkdir(path.join(dir, SECTION))
     for (const name of await readdir(path.join(DOCS_DIR, SECTION))) {
@@ -105,48 +107,57 @@ describe("syncDocs", () => {
     await writeFile(file, source.replace(/^summary: .*$/m, "summary: A new summary."))
 
     const result = await syncDocs(payload, dir)
-    expect(result).toEqual({ created: [], existing: [SLUG] })
+    expect(result).toEqual({ created: [], existing: [SLUG], deleted: [] })
     const after = await findDoc()
     expect(after?.summary).toBe("Edited in the admin.")
     expect(after?._status).toBe("published")
     expect(await syncedMedia()).toHaveLength(2)
   })
 
-  it("deletes nothing when a doc's file is gone", async () => {
-    await rm(path.join(dir, SECTION, `${SLUG}.md`))
-    const result = await syncDocs(payload, dir)
-    expect(result).toEqual({ created: [], existing: [] })
-    expect(await findDoc()).toBeDefined()
-  })
-
-  it("seeds a doc deleted in the admin again, reusing a PNG Media stored as WebP", async () => {
+  it("reuses a PNG it uploaded, though Media stored it as WebP", async () => {
     const folder = path.join(dir, SECTION)
     const copy = `${SLUG}-hero-copy.png`
     await cp(path.join(folder, `${SLUG}-hero.webp`), path.join(folder, copy))
     const source = await readFile(path.join(DOCS_DIR, SECTION, `${SLUG}.md`), "utf8")
-    await writeFile(
-      path.join(folder, "another.md"),
-      source.replace(/^heroImage: .*$/m, `heroImage: ${copy}`),
-    )
-    expect((await syncDocs(payload, dir)).created).toEqual(["another"])
-
-    await payload.delete({
-      collection: "docs",
-      overrideAccess: true,
-      context: ctx,
-      where: { slug: { equals: "another" } },
-    })
-    expect((await syncDocs(payload, dir)).created).toEqual(["another"])
+    const withPng = source.replace(/^heroImage: .*$/m, `heroImage: ${copy}`)
+    await writeFile(path.join(folder, "another.md"), withPng)
+    await writeFile(path.join(folder, "and-another.md"), withPng)
+    expect((await syncDocs(payload, dir)).created).toEqual(["and-another", "another"])
 
     const copies = (await syncedMedia()).filter((item) => item.filename?.includes("hero-copy"))
     expect(copies).toHaveLength(1)
     expect(copies[0]!.filename).toMatch(/\.webp$/)
+  })
+
+  it("leaves a doc an editor deleted deleted, though its file is still there", async () => {
+    await payload.delete({
+      collection: "docs",
+      overrideAccess: true,
+      context: ctx,
+      where: { slug: { equals: SLUG } },
+    })
+    const result = await syncDocs(payload, dir)
+    expect(result).toEqual({ created: [], existing: ["and-another", "another"], deleted: [SLUG] })
+    expect(await findDoc()).toBeUndefined()
+  })
+
+  it("deletes nothing when a doc's file is gone", async () => {
+    await rm(path.join(dir, SECTION, "another.md"))
+    const result = await syncDocs(payload, dir)
+    expect(result.existing).toEqual(["and-another"])
+    const { docs } = await payload.find({
+      collection: "docs",
+      draft: true,
+      overrideAccess: true,
+      where: { slug: { equals: "another" } },
+    })
+    expect(docs).toHaveLength(1)
 
     await payload.delete({
       collection: "docs",
       overrideAccess: true,
       context: ctx,
-      where: { slug: { in: [SLUG, "another"] } },
+      where: { slug: { in: ["another", "and-another"] } },
     })
   })
 })

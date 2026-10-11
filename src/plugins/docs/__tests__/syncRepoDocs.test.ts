@@ -11,13 +11,13 @@ const payload = { logger } as unknown as Payload
 
 beforeEach(() => {
   vi.clearAllMocks()
-  syncDocs.mockResolvedValue({ created: [], existing: ["a"] })
+  syncDocs.mockResolvedValue({ created: [], existing: ["a"], deleted: [] })
 })
 afterEach(() => vi.unstubAllEnvs())
 
 describe("syncRepoDocs", () => {
   it("seeds the repo's new docs as drafts and logs them", async () => {
-    const result = { created: ["a"], existing: ["b"] }
+    const result = { created: ["a"], existing: ["b"], deleted: [] }
     syncDocs.mockResolvedValue(result)
     await expect(syncRepoDocs(payload)).resolves.toEqual(result)
     expect(syncDocs).toHaveBeenCalledWith(payload)

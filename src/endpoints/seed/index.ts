@@ -484,8 +484,8 @@ export const seed = async (
       name: "Syncing help docs...",
       fn: async () => {
         // The ones a deploy seeds, back after the wipe above. Published here, so local dev
-        // shows them; a deployed site gets them as drafts for an editor to publish.
-        await syncDocs(payload, undefined, { publish: true })
+        // shows them; a deployed site gets them as drafts for an editor to publish, once.
+        await syncDocs(payload, undefined, { localSeed: true })
       },
     },
     {

@@ -164,11 +164,12 @@ published, is never overwritten, and nothing is ever deleted, so a doc belongs t
 the site's editors from the moment it arrives. A draft is on neither `/docs` nor
 the bell until an editor publishes it. To change a doc on a site that has it, edit
 it in that site's admin; changing its file only changes what a site without it
-gets. A doc deleted in the admin whose file is still in the repo comes back as a
-draft on the next deploy, so retire a doc by removing its file too
+gets. Each doc it seeds, or finds already there, is recorded in Payload's
+key-value store (`markSeeded` in `src/utilities/seedOnce.ts`, which other
+deploy-seeded content uses too), so one an editor deletes stays deleted
 (`DOCS_SYNC=false` turns the sync off, as the staging Worker does: it reads
 staging's database and has no `src/docs/` of its own). `pnpm dev:db-seed` seeds
-them locally, published.
+them locally, published, deleted or not.
 
 A doc's front matter (`src/plugins/docs/docFile.ts`) holds its `title`, a
 `navTitle` of 24 characters at most for the sidebar, a `summary` of a sentence

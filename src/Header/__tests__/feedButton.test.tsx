@@ -11,8 +11,8 @@ const { experiment } = vi.hoisted(() => ({ experiment: { feed: false } }))
 vi.mock("@/globals/SiteSettings/isExperimentEnabled", () => ({
   isExperimentEnabled: async (name: string) => name === "feed" && experiment.feed,
 }))
-vi.mock("@/utilities/getGlobals", () => ({
-  getCachedGlobal: (slug: string) => async () =>
+vi.mock("@/data/globals", () => ({
+  getGlobal: async (slug: string) =>
     slug === "header" ? { navItems: [], actions: [] } : { socials: [] },
 }))
 

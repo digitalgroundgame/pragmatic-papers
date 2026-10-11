@@ -1,4 +1,4 @@
-import { integrationStatus, listmonkNewsletter } from "@/integrations"
+import { integrationStatus, listmonkServer } from "@/integrations"
 import {
   getNewsletterListStats,
   listmonkAdminUrl,
@@ -8,7 +8,7 @@ import {
   type NewsletterCampaign,
   type NewsletterListStats,
   type NewsletterSignup,
-} from "@/utilities/listmonk"
+} from "@/integrations/listmonk"
 
 /**
  * One part of the panel. Each is read on its own, so a role that can read the list but not its
@@ -41,7 +41,7 @@ function toSection<T>(result: PromiseSettledResult<T>, what: string): Section<T>
 /** Reads the newsletter's list, newest signups and campaigns from Listmonk, all at once. */
 export async function loadNewsletterOverview(): Promise<NewsletterOverview> {
   // What's missing is listed on the Integrations global, not here.
-  if (!integrationStatus(listmonkNewsletter).configured) return { connected: false }
+  if (!integrationStatus(listmonkServer).configured) return { connected: false }
 
   const init = { signal: AbortSignal.timeout(TIMEOUT_MS) }
   const [list, signups, campaigns] = await Promise.allSettled([

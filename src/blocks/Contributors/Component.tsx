@@ -3,14 +3,14 @@ import React from "react"
 import type { ContributorsBlock as ContributorsBlockProps } from "@/payload-types"
 
 import { AuthorCard } from "@/components/Authors/AuthorCard"
-import { getPayloadConfig } from "@/utilities/getPayloadConfig"
+import { getPayloadClient } from "@/data/payload"
 import { relationshipId } from "@/utilities/relationships"
 
 export const ContributorsBlock: React.FC<ContributorsBlockProps> = async ({ title, people }) => {
   const ids = people.map(relationshipId).filter((id): id is number => id !== null)
   if (!ids.length) return null
 
-  const payload = await getPayloadConfig()
+  const payload = await getPayloadClient()
   const { docs } = await payload.find({
     collection: "users",
     limit: ids.length,

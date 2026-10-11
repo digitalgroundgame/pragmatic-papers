@@ -4,7 +4,7 @@ import { expect, mocked, within } from "storybook/test"
 import { createFakePayload } from "@/stories/fixtures/payload"
 import { navItems, socials } from "@/stories/fixtures/navigation"
 import { paragraphs } from "@/stories/fixtures/richText"
-import { getPayloadConfig } from "@/utilities/getPayloadConfig"
+import { getPayloadClient } from "@/data/payload"
 
 import { Footer } from "./Component"
 
@@ -16,7 +16,7 @@ const footer = {
 
 function withFooter(overrides: Record<string, unknown> = {}) {
   return () => {
-    mocked(getPayloadConfig).mockResolvedValue(
+    mocked(getPayloadClient).mockResolvedValue(
       createFakePayload({ globals: { footer: { ...footer, ...overrides } } }),
     )
   }

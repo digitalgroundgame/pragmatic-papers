@@ -40,7 +40,6 @@ vi.mock("../AdSlotView", () => ({
   AdSlotView: ({ ad }: { ad: { id: string } }) => <div data-testid="ad" data-id={ad.id} />,
 }))
 const loadFeedBatch = vi.fn()
-vi.mock("../actions", () => ({ loadFeedBatch: (cursor: number) => loadFeedBatch(cursor) }))
 
 const { FeedShell } = await import("../FeedShell")
 
@@ -58,14 +57,24 @@ describe("FeedShell", () => {
 
   it("puts an ad after every fifth article", () => {
     const { container } = render(
-      <FeedShell initialItems={items(1, 2, 3, 4, 5, 6)} initialNextCursor={null} />,
+      <FeedShell
+        loadBatch={loadFeedBatch}
+        initialItems={items(1, 2, 3, 4, 5, 6)}
+        initialNextCursor={null}
+      />,
     )
     // Six articles plus one ad slot.
     expect(container.querySelectorAll("section[data-idx]")).toHaveLength(7)
   })
 
   it("mounts only the active slot and its neighbours", () => {
-    render(<FeedShell initialItems={items(1, 2, 3, 4)} initialNextCursor={null} />)
+    render(
+      <FeedShell
+        loadBatch={loadFeedBatch}
+        initialItems={items(1, 2, 3, 4)}
+        initialNextCursor={null}
+      />,
+    )
 
     const mounted = screen.getAllByTestId("article")
     expect(mounted.map((el) => el.dataset.id)).toEqual(["1", "2"])
@@ -76,6 +85,7 @@ describe("FeedShell", () => {
   it("opens a deep-linked article on its page", () => {
     render(
       <FeedShell
+        loadBatch={loadFeedBatch}
         initialItems={items(7, 2)}
         initialNextCursor={null}
         initialPinnedArticleId={7}
@@ -88,7 +98,7 @@ describe("FeedShell", () => {
   it("loads the next batch near the end, skipping articles it already has", async () => {
     loadFeedBatch.mockResolvedValue({ items: items(2, 3), nextCursor: null })
 
-    render(<FeedShell initialItems={items(1, 2)} initialNextCursor={2} />)
+    render(<FeedShell loadBatch={loadFeedBatch} initialItems={items(1, 2)} initialNextCursor={2} />)
 
     expect(loadFeedBatch).toHaveBeenCalledWith(2)
     await vi.waitFor(() => {
@@ -114,7 +124,9 @@ describe("FeedShell", () => {
     })
 
     it("stops paging and reloads once, instead of retrying on every scroll", async () => {
-      render(<FeedShell initialItems={items(1, 2)} initialNextCursor={2} />)
+      render(
+        <FeedShell loadBatch={loadFeedBatch} initialItems={items(1, 2)} initialNextCursor={2} />,
+      )
 
       await vi.waitFor(() => expect(reload).toHaveBeenCalledOnce())
       // The effect re-runs once the failure clears the cursor, and doesn't ask again.
@@ -124,7 +136,9 @@ describe("FeedShell", () => {
     it("doesn't reload a second time in the same tab", async () => {
       sessionStorage.setItem("pp:feed:reloaded-after-load-failure", "1")
 
-      render(<FeedShell initialItems={items(1, 2)} initialNextCursor={2} />)
+      render(
+        <FeedShell loadBatch={loadFeedBatch} initialItems={items(1, 2)} initialNextCursor={2} />,
+      )
 
       await vi.waitFor(() => expect(console.error).toHaveBeenCalled())
       expect(reload).not.toHaveBeenCalled()
@@ -135,7 +149,9 @@ describe("FeedShell", () => {
         throw new DOMException("blocked", "SecurityError")
       })
 
-      render(<FeedShell initialItems={items(1, 2)} initialNextCursor={2} />)
+      render(
+        <FeedShell loadBatch={loadFeedBatch} initialItems={items(1, 2)} initialNextCursor={2} />,
+      )
 
       await vi.waitFor(() => expect(console.error).toHaveBeenCalled())
       expect(reload).not.toHaveBeenCalled()
@@ -143,12 +159,12 @@ describe("FeedShell", () => {
   })
 
   it("doesn't ask for more once the feed has run out", () => {
-    render(<FeedShell initialItems={items(1)} initialNextCursor={null} />)
+    render(<FeedShell loadBatch={loadFeedBatch} initialItems={items(1)} initialNextCursor={null} />)
     expect(loadFeedBatch).not.toHaveBeenCalled()
   })
 
   it("pauses and resumes auto-play with the space bar", () => {
-    render(<FeedShell initialItems={items(1)} initialNextCursor={null} />)
+    render(<FeedShell loadBatch={loadFeedBatch} initialItems={items(1)} initialNextCursor={null} />)
     const article = () => screen.getByTestId("article")
     expect(article()).toHaveAttribute("data-autoplay", "true")
 
@@ -163,7 +179,7 @@ describe("FeedShell", () => {
     render(
       <>
         <button type="button">Share</button>
-        <FeedShell initialItems={items(1)} initialNextCursor={null} />
+        <FeedShell loadBatch={loadFeedBatch} initialItems={items(1)} initialNextCursor={null} />
       </>,
     )
     const event = fireEvent.keyDown(screen.getByRole("button", { name: "Share" }), { key: " " })
@@ -202,7 +218,13 @@ describe("FeedShell", () => {
     const mountedIds = () => screen.getAllByTestId("article").map((el) => el.dataset.id)
 
     it("makes the mostly-visible slot active and mounts its neighbours", () => {
-      render(<FeedShell initialItems={items(1, 2, 3, 4)} initialNextCursor={null} />)
+      render(
+        <FeedShell
+          loadBatch={loadFeedBatch}
+          initialItems={items(1, 2, 3, 4)}
+          initialNextCursor={null}
+        />,
+      )
 
       report([
         [1, 0.3],
@@ -213,7 +235,13 @@ describe("FeedShell", () => {
     })
 
     it("ignores a slot that is only partly in view, or has no index", () => {
-      render(<FeedShell initialItems={items(1, 2, 3, 4)} initialNextCursor={null} />)
+      render(
+        <FeedShell
+          loadBatch={loadFeedBatch}
+          initialItems={items(1, 2, 3, 4)}
+          initialNextCursor={null}
+        />,
+      )
 
       report([
         [2, 0.5],
@@ -226,7 +254,13 @@ describe("FeedShell", () => {
       vi.useFakeTimers()
       const replaceState = vi.spyOn(window.history, "replaceState")
       try {
-        render(<FeedShell initialItems={items(1, 2, 3)} initialNextCursor={null} />)
+        render(
+          <FeedShell
+            loadBatch={loadFeedBatch}
+            initialItems={items(1, 2, 3)}
+            initialNextCursor={null}
+          />,
+        )
 
         fireEvent.click(screen.getByRole("button", { name: "turn 1 to page 3" }))
         act(() => vi.advanceTimersByTime(300))
@@ -252,7 +286,13 @@ describe("FeedShell", () => {
       vi.useFakeTimers()
       const replaceState = vi.spyOn(window.history, "replaceState")
       try {
-        render(<FeedShell initialItems={items(1, 2, 3, 4, 5, 6)} initialNextCursor={null} />)
+        render(
+          <FeedShell
+            loadBatch={loadFeedBatch}
+            initialItems={items(1, 2, 3, 4, 5, 6)}
+            initialNextCursor={null}
+          />,
+        )
         act(() => vi.advanceTimersByTime(300))
         replaceState.mockClear()
 
@@ -284,7 +324,9 @@ describe("FeedShell", () => {
     })
 
     it("scrolls one slot down or up with the arrow keys", () => {
-      render(<FeedShell initialItems={items(1, 2)} initialNextCursor={null} />)
+      render(
+        <FeedShell loadBatch={loadFeedBatch} initialItems={items(1, 2)} initialNextCursor={null} />,
+      )
 
       fireEvent.keyDown(window, { key: "ArrowDown" })
       fireEvent.keyDown(window, { key: "ArrowUp" })
@@ -295,7 +337,7 @@ describe("FeedShell", () => {
       render(
         <>
           <input aria-label="Email" />
-          <FeedShell initialItems={items(1)} initialNextCursor={null} />
+          <FeedShell loadBatch={loadFeedBatch} initialItems={items(1)} initialNextCursor={null} />
         </>,
       )
       const input = screen.getByRole("textbox", { name: "Email" })
@@ -307,14 +349,16 @@ describe("FeedShell", () => {
     })
 
     it("scrolls to the next slot when an article finishes", () => {
-      render(<FeedShell initialItems={items(1, 2)} initialNextCursor={null} />)
+      render(
+        <FeedShell loadBatch={loadFeedBatch} initialItems={items(1, 2)} initialNextCursor={null} />,
+      )
       fireEvent.click(screen.getByRole("button", { name: "finish 1" }))
       expect(scrollBy).toHaveBeenCalledOnce()
     })
   })
 
   it("holds auto-play while any child asks it to pause", () => {
-    render(<FeedShell initialItems={items(1)} initialNextCursor={null} />)
+    render(<FeedShell loadBatch={loadFeedBatch} initialItems={items(1)} initialNextCursor={null} />)
     const article = () => screen.getByTestId("article")
 
     fireEvent.click(screen.getByRole("button", { name: "pause from 1" }))

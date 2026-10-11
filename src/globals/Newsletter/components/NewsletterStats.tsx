@@ -1,4 +1,4 @@
-import type { NewsletterCampaign, NewsletterSignup } from "@/utilities/listmonk"
+import type { NewsletterCampaign, NewsletterSignup } from "@/integrations/listmonk"
 
 import type { NewsletterOverview, Section } from "./load"
 

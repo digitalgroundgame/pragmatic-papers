@@ -1,84 +1,84 @@
 import { afterEach, describe, expect, it, vi } from "vitest"
 
-import type * as GetURL from "@/utilities/getURL"
-
-// canUseDOM is fixed at import, so each case mocks it and re-imports getURL.
-const load = async (canUseDOM: boolean): Promise<typeof GetURL> => {
-  vi.resetModules()
-  vi.doMock("@/utilities/canUseDOM", () => ({ default: canUseDOM }))
-  return import("@/utilities/getURL")
-}
-
-const stubLocation = (location: Pick<Location, "protocol" | "hostname" | "port">): void => {
-  vi.stubGlobal("window", { location })
-}
+import { absoluteURL, getClientURL, getSiteURL } from "@/utilities/getURL"
 
 afterEach(() => {
   vi.unstubAllEnvs()
   vi.unstubAllGlobals()
-  vi.doUnmock("@/utilities/canUseDOM")
 })
 
-describe("getServerSideURL", () => {
-  it("uses SERVER_URL", async () => {
+describe("getSiteURL", () => {
+  it("uses SERVER_URL", () => {
     vi.stubEnv("SERVER_URL", "https://pragmaticpapers.com")
-    const { getServerSideURL } = await load(false)
 
-    expect(getServerSideURL()).toBe("https://pragmaticpapers.com")
+    expect(getSiteURL()).toBe("https://pragmaticpapers.com")
+  })
+
+  it("drops a trailing slash", () => {
+    vi.stubEnv("SERVER_URL", "https://pragmaticpapers.com/")
+
+    expect(getSiteURL()).toBe("https://pragmaticpapers.com")
   })
 
   // Read when called, not compiled in: the same build serves whatever the server is given.
-  it("reads SERVER_URL at call time", async () => {
+  it("reads SERVER_URL at call time", () => {
     vi.stubEnv("SERVER_URL", "https://pr-1.pragmaticpapers.com")
-    const { getServerSideURL } = await load(false)
-    vi.stubEnv("SERVER_URL", "http://localhost:3000")
+    expect(getSiteURL()).toBe("https://pr-1.pragmaticpapers.com")
 
-    expect(getServerSideURL()).toBe("http://localhost:3000")
+    vi.stubEnv("SERVER_URL", "http://localhost:3000")
+    expect(getSiteURL()).toBe("http://localhost:3000")
   })
 
-  it("ignores NEXT_PUBLIC_SERVER_URL", async () => {
+  it("ignores NEXT_PUBLIC_SERVER_URL", () => {
     vi.stubEnv("SERVER_URL", undefined)
     vi.stubEnv("NEXT_PUBLIC_SERVER_URL", "https://pragmaticpapers.com")
-    const { getServerSideURL } = await load(false)
 
-    expect(getServerSideURL()).toBe("http://localhost:8000")
+    expect(getSiteURL()).toBe("http://localhost:8000")
   })
 
-  it.each([undefined, ""])("falls back to the dev server when it is %j", async (value) => {
+  it.each([undefined, ""])("falls back to the dev server when it is %j", (value) => {
     vi.stubEnv("SERVER_URL", value)
-    const { getServerSideURL } = await load(false)
 
-    expect(getServerSideURL()).toBe("http://localhost:8000")
+    expect(getSiteURL()).toBe("http://localhost:8000")
   })
 })
 
-describe("getClientSideURL", () => {
-  it("reads the origin from the browser, ignoring the env", async () => {
+describe("getClientURL", () => {
+  it("reads the origin from the browser, ignoring the env", () => {
     vi.stubEnv("SERVER_URL", "https://pragmaticpapers.com")
-    stubLocation({ protocol: "https:", hostname: "preview.example.com", port: "" })
-    const { getClientSideURL } = await load(true)
+    vi.stubGlobal("window", { location: { origin: "https://preview.example.com" } })
 
-    expect(getClientSideURL()).toBe("https://preview.example.com")
+    expect(getClientURL()).toBe("https://preview.example.com")
   })
 
-  it("keeps a non-default port", async () => {
-    stubLocation({ protocol: "http:", hostname: "localhost", port: "8000" })
-    const { getClientSideURL } = await load(true)
+  it("uses SERVER_URL on the server", () => {
+    vi.stubGlobal("window", undefined)
+    vi.stubEnv("SERVER_URL", "https://pragmaticpapers.com/")
 
-    expect(getClientSideURL()).toBe("http://localhost:8000")
+    expect(getClientURL()).toBe("https://pragmaticpapers.com")
   })
 
-  it("uses SERVER_URL on the server", async () => {
-    vi.stubEnv("SERVER_URL", "https://pragmaticpapers.com")
-    const { getClientSideURL } = await load(false)
-
-    expect(getClientSideURL()).toBe("https://pragmaticpapers.com")
-  })
-
-  it("returns an empty string on the server without SERVER_URL", async () => {
+  it("returns an empty string on the server without SERVER_URL", () => {
+    vi.stubGlobal("window", undefined)
     vi.stubEnv("SERVER_URL", undefined)
-    const { getClientSideURL } = await load(false)
 
-    expect(getClientSideURL()).toBe("")
+    expect(getClientURL()).toBe("")
+  })
+})
+
+describe("absoluteURL", () => {
+  it("prefixes a path with the site", () => {
+    vi.stubEnv("SERVER_URL", "https://pragmaticpapers.com")
+
+    expect(absoluteURL("/articles/a")).toBe("https://pragmaticpapers.com/articles/a")
+    expect(absoluteURL("articles/a")).toBe("https://pragmaticpapers.com/articles/a")
+  })
+
+  it("takes another base", () => {
+    expect(absoluteURL("/a", "https://example.test")).toBe("https://example.test/a")
+  })
+
+  it("passes absolute URLs through", () => {
+    expect(absoluteURL("https://cdn.example.test/x.jpg")).toBe("https://cdn.example.test/x.jpg")
   })
 })

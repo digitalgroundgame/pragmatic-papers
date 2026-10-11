@@ -10,7 +10,7 @@ import { HeaderActions } from "@/Header/HeaderActions/Component"
 import { LazyMobileMenu } from "@/Header/MobileMenu/Component.lazy"
 import { LazySettingsSheet } from "@/Header/SettingsSheet/Component.lazy"
 import type { Footer, Header } from "@/payload-types"
-import { getCachedGlobal } from "@/utilities/getGlobals"
+import { getGlobal } from "@/data/globals"
 import { Newspaper } from "lucide-react"
 import React from "react"
 import { HoverPrefetchLink } from "@/components/Link/HoverPrefetchLink"
@@ -20,11 +20,7 @@ import { HoverPrefetchLink } from "@/components/Link/HoverPrefetchLink"
 // base-ui's dialogs and menus is in the JavaScript a page loads first.
 export async function Header(): Promise<React.JSX.Element> {
   const [{ navItems, actions }, { socials }, feedEnabled]: [Header, Footer, boolean] =
-    await Promise.all([
-      getCachedGlobal("header", 1)(),
-      getCachedGlobal("footer", 2)(),
-      isExperimentEnabled("feed"),
-    ])
+    await Promise.all([getGlobal("header", 1), getGlobal("footer", 2), isExperimentEnabled("feed")])
 
   return (
     <>

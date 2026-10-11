@@ -5,7 +5,7 @@ import { unstable_cache } from "next/cache"
 import type { Media, Merch as MerchProductDoc, MerchBlock } from "@/payload-types"
 
 import { MERCH_TAG } from "@/collections/Merch/tag"
-import { getPayloadConfig } from "@/utilities/getPayloadConfig"
+import { getPayloadClient } from "@/data/payload"
 import { relationshipId } from "@/utilities/relationships"
 import { getMerchProductUrl, getMerchStoreUrl } from "./urls"
 
@@ -143,7 +143,7 @@ export function sortFor({ orderBy }: SortableBlock): string {
 }
 
 async function queryMerchProducts(block: MerchBlock): Promise<MerchProductDoc[]> {
-  const payload = await getPayloadConfig()
+  const payload = await getPayloadClient()
 
   const { docs } = await payload.find({
     collection: "merch",

@@ -1,10 +1,11 @@
 import { blueskyAccounts } from "./bluesky"
 import { cloudflareWorker, cloudflareZone } from "./cloudflare"
 import { githubRepo } from "./github"
+import { listmonkServer } from "./listmonk/connection"
 import { shopifyStore } from "./shopify"
 import { xAccounts } from "./x"
 import { youtubeChannels } from "./youtube"
-import { env, integrationStatus, type Integration, type IntegrationStatus } from "./types"
+import { integrationStatus, type Integration, type IntegrationStatus } from "./types"
 import { unsplashApp } from "./unsplash"
 
 /**
@@ -27,7 +28,16 @@ export const courtTracker = githubRepo({
   tokenEnv: "COURT_TRACKER_GITHUB_TOKEN",
 })
 
-export { shopifyStore }
+export { listmonkServer, shopifyStore }
+
+/** Turnstile, which the newsletter signup form checks before subscribing anyone. */
+export const cloudflareTurnstile: Integration = {
+  id: "cloudflare-turnstile",
+  label: "Newsletter signup bot check",
+  service: "Cloudflare",
+  describe: () => "cloudflare:turnstile",
+  required: ["CLOUDFLARE_TURNSTILE_SECRET_KEY", "TURNSTILE_SITE_KEY"],
+}
 
 /**
  * The Cloudflare zone in front of every environment — production, staging and each PR
@@ -105,36 +115,6 @@ export const unsplash = unsplashApp({
   defaultAppName: "pragmatic_papers_development",
 })
 
-/**
- * Listmonk — the newsletter's mailing list server (`src/utilities/listmonk.ts`): signup, the
- * scheduled volume emails and the dashboard's Newsletter panel. The API user is a Listmonk API
- * user (Users → Users), not a person's login.
- */
-export const listmonkNewsletter: Integration = {
-  id: "listmonk-newsletter",
-  label: "Newsletter (Listmonk)",
-  service: "Listmonk",
-  describe() {
-    const url = env("LISTMONK_BASE_URL")
-    if (!url) return "listmonk:(no URL)"
-    try {
-      return `listmonk:${new URL(url).host}`
-    } catch {
-      return "listmonk:(invalid URL)"
-    }
-  },
-  // The same list `src/utilities/listmonk.ts` checks (`LISTMONK_ENV`), kept here so declaring the
-  // connection doesn't load its client; a test holds the two together.
-  required: [
-    "LISTMONK_BASE_URL",
-    "LISTMONK_API_USER",
-    "LISTMONK_API_TOKEN",
-    "LISTMONK_NEWSLETTER_LIST_ID",
-    "LISTMONK_NEWSLETTER_LIST_UUID",
-    "NEWSLETTER_FROM_EMAIL",
-  ],
-}
-
 /** Declaration order is display order. */
 export const INTEGRATIONS: readonly Integration[] = [
   courtTracker,
@@ -145,7 +125,8 @@ export const INTEGRATIONS: readonly Integration[] = [
   blueskyPosts,
   xPosts,
   unsplash,
-  listmonkNewsletter,
+  listmonkServer,
+  cloudflareTurnstile,
 ]
 
 export function getIntegration(id: string): Integration | null {

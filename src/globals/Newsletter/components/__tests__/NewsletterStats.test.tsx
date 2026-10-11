@@ -1,7 +1,7 @@
 import { render, screen, within } from "@testing-library/react"
 import { describe, expect, it } from "vitest"
 
-import type { NewsletterCampaign } from "@/utilities/listmonk"
+import type { NewsletterCampaign } from "@/integrations/listmonk"
 
 import type { NewsletterOverview } from "../load"
 import { NewsletterStats } from "../NewsletterStats"

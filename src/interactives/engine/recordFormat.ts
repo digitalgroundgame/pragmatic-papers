@@ -6,6 +6,7 @@ import type {
   LookupEntry,
   RecordDisplay,
 } from "./types"
+import { formatLongDate } from "@/utilities/formatDate"
 
 export function fieldString(record: DrilldownRecord, field: string | undefined): string | null {
   if (!field) return null
@@ -117,12 +118,7 @@ export function parseIsoDate(value: string | null): Date | null {
 export function formatDate(value: string | null): string | null {
   const d = parseIsoDate(value)
   if (!d) return value
-  return d.toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-    timeZone: "UTC",
-  })
+  return formatLongDate(d, { month: "short" })
 }
 
 export function yearsBetween(from: Date, to: Date): number {

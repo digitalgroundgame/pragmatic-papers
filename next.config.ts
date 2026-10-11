@@ -38,6 +38,10 @@ const NOT_EDGE_CACHED = [
   "next/purge-edge$",
   // - the deployed commit (`/next/version`): no-store, for the same reason.
   "next/version$",
+  // - the applied migrations (`/next/migrations`): no-store. It answers a bearer token, and
+  //   Cloudflare's cache key ignores `Authorization`, so a cached copy (or a cached 401)
+  //   would reach readers and the staging Worker deploy's wait loop.
+  "next/migrations$",
 
   // The feed page (`/feed`, `/feed/...`) is rendered per request, its 404 follows a Site
   // Settings switch that should apply on save, and a stale copy would call load-more's

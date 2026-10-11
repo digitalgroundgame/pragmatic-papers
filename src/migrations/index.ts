@@ -55,6 +55,7 @@ import * as migration_20261009_032243_hero_links_default_button from "./20261009
 import * as migration_20261009_040730_add_ticker_and_integrations from "./20261009_040730_add_ticker_and_integrations"
 import * as migration_20261011_004029_add_newsletter_global from "./20261011_004029_add_newsletter_global"
 import * as migration_20261011_031222_ticker_on_header from "./20261011_031222_ticker_on_header"
+import * as migration_20261011_080611_add_sso from "./20261011_080611_add_sso"
 
 export const migrations = [
   {
@@ -341,5 +342,10 @@ export const migrations = [
     up: migration_20261011_031222_ticker_on_header.up,
     down: migration_20261011_031222_ticker_on_header.down,
     name: "20261011_031222_ticker_on_header",
+  },
+  {
+    up: migration_20261011_080611_add_sso.up,
+    down: migration_20261011_080611_add_sso.down,
+    name: "20261011_080611_add_sso",
   },
 ]

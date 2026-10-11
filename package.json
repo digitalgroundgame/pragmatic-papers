@@ -75,6 +75,7 @@
     "@react-email/render": "^2.1.0",
     "@sentry/nextjs": "^11.0.0",
     "@wrksz/themes": "^2.0.2",
+    "better-auth": "1.7.7",
     "better-react-mathjax": "^3.0.2",
     "class-variance-authority": "^0.7.1",
     "cn": "^0.4.0",

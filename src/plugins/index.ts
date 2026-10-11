@@ -1,4 +1,5 @@
 import { revalidateRedirects } from "@/hooks/revalidateRedirects"
+import { discordSignIn, googleSignIn } from "@/integrations"
 import type { Article, Interactive, Page, Topic, Volume } from "@/payload-types"
 import { getSiteURL } from "@/utilities/getURL"
 import { DEFAULT_DESCRIPTION } from "@/utilities/mergeOpenGraph"
@@ -21,6 +22,8 @@ import type { SerializedEditorState } from "@payloadcms/richtext-lexical/lexical
 import { convertLexicalToPlaintext } from "@payloadcms/richtext-lexical/plaintext"
 import { s3Storage } from "@payloadcms/storage-s3"
 import { type Payload, type Plugin } from "payload"
+
+import { ssoPlugin } from "./sso"
 
 type SeoDoc = Volume | Article | Page | Topic | Interactive
 
@@ -310,5 +313,17 @@ export const plugins: Plugin[] = [
       endpoint: process.env.S3_ENDPOINT || "",
     },
     clientUploads: true,
+  }),
+  ssoPlugin({
+    // The `sso` experiment, read from the database rather than `isExperimentEnabled`: its
+    // cached read imports the Payload config, which imports this file.
+    enabled: async ({ payload }) =>
+      (await payload.findGlobal({ slug: "site-settings", depth: 0 })).experiments?.sso === true,
+    providers: () => ({
+      google: googleSignIn.credentials(),
+      discord: discordSignIn.credentials(),
+    }),
+    baseURL: getSiteURL,
+    secret: () => process.env.PAYLOAD_SECRET || "",
   }),
 ]

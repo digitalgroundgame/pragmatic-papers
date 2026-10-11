@@ -227,6 +227,13 @@ const nextConfig: NextConfig = {
             type: "cookie",
             key: "payload-token",
           },
+          {
+            // The single sign-on session (src/plugins/sso), for an editor who signed in
+            // through a provider and so has no Payload token. Cloudflare's own rule
+            // (cloudflare/rulesets) matches it too: its name contains "payload-token".
+            type: "cookie",
+            key: "payload-token-sso",
+          },
         ],
       },
     ]

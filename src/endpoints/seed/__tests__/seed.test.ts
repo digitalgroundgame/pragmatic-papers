@@ -136,7 +136,7 @@ describe("seed", () => {
       (write) => write.op === "updateGlobal" && write.target === "site-settings",
     )
     expect(siteSettings?.data).toEqual({
-      experiments: { feed: true, interactives: true, tableOfContents: true },
+      experiments: { feed: true, interactives: true, sso: true, tableOfContents: true },
     })
     expect(siteSettings?.context?.disableRevalidate).toBe(true)
   })

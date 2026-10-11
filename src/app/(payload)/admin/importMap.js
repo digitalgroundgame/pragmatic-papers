@@ -66,11 +66,12 @@ import { PaperIconAdmin as PaperIconAdmin_de5f3b464da8d97ce80441fdb9ee9751 } fro
 import { LogomarkIcon as LogomarkIcon_715cf00332be8c15b8f2b121ec0215b0 } from '@/components/Logo/icons/LogomarkIcon'
 import { default as default_1a7510af427896d367a49dbf838d2de6 } from '@/components/BeforeDashboard'
 import { default as default_8a7ab0eb7ab5c511aba12e68480bfe5e } from '@/components/BeforeLogin'
+import { SignIn as SignIn_34dad4c6fc433e004d883df4dbe637c4 } from '@/plugins/sso/exports/rsc'
 import { MathJaxProviderRoot as MathJaxProviderRoot_5e6ec76a4009b641df710b8874095c4b } from '@/providers/MathJaxProvider'
 import { AdminBarHintProvider as AdminBarHintProvider_0a143f595a642b35392c6258a68b49d3 } from '@/components/AdminBar/AdminBarHintProvider'
+import { S3ClientUploadHandler as S3ClientUploadHandler_f97aa6c64367fa259c5bc0567239ef24 } from '@payloadcms/storage-s3/client'
 import { AdminSentryProvider as AdminSentryProvider_667ceb8bba780e4bbe5e9cc4600c3631 } from '@/providers/AdminSentryProvider'
 import { CollectionCards as CollectionCards_f9c02e79a4aed9a3924487c0cd4cafb1 } from '@payloadcms/next/rsc'
-import { S3ClientUploadHandler as S3ClientUploadHandler_f97aa6c64367fa259c5bc0567239ef24 } from '@payloadcms/storage-s3/client'
 
 /** @type import('payload').ImportMap */
 export const importMap = {
@@ -142,9 +143,10 @@ export const importMap = {
   "@/components/Logo/icons/LogomarkIcon#LogomarkIcon": LogomarkIcon_715cf00332be8c15b8f2b121ec0215b0,
   "@/components/BeforeDashboard#default": default_1a7510af427896d367a49dbf838d2de6,
   "@/components/BeforeLogin#default": default_8a7ab0eb7ab5c511aba12e68480bfe5e,
+  "@/plugins/sso/exports/rsc#SignIn": SignIn_34dad4c6fc433e004d883df4dbe637c4,
   "@/providers/MathJaxProvider#MathJaxProviderRoot": MathJaxProviderRoot_5e6ec76a4009b641df710b8874095c4b,
   "@/components/AdminBar/AdminBarHintProvider#AdminBarHintProvider": AdminBarHintProvider_0a143f595a642b35392c6258a68b49d3,
+  "@payloadcms/storage-s3/client#S3ClientUploadHandler": S3ClientUploadHandler_f97aa6c64367fa259c5bc0567239ef24,
   "@/providers/AdminSentryProvider#AdminSentryProvider": AdminSentryProvider_667ceb8bba780e4bbe5e9cc4600c3631,
-  "@payloadcms/next/rsc#CollectionCards": CollectionCards_f9c02e79a4aed9a3924487c0cd4cafb1,
-  "@payloadcms/storage-s3/client#S3ClientUploadHandler": S3ClientUploadHandler_f97aa6c64367fa259c5bc0567239ef24
+  "@payloadcms/next/rsc#CollectionCards": CollectionCards_f9c02e79a4aed9a3924487c0cd4cafb1
 }

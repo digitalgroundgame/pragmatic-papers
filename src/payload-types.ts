@@ -557,6 +557,7 @@ export interface User {
    * Keeps /contributors/<slug> public whatever the roles. Turned on when an article or narration credits this user.
    */
   publicProfile?: boolean | null;
+  emailVerified?: boolean | null;
   updatedAt: string;
   createdAt: string;
   email: string;
@@ -2146,6 +2147,7 @@ export interface UsersSelect<T extends boolean = true> {
   socials?: T | MenuFieldSelect<T>;
   roles?: T;
   publicProfile?: T;
+  emailVerified?: T;
   updatedAt?: T;
   createdAt?: T;
   email?: T;
@@ -2514,6 +2516,10 @@ export interface SiteSetting {
      */
     interactives?: boolean | null;
     /**
+     * “Sign in with Google” and “Sign in with Discord” on the admin's login page, for people who already have an account here. Each provider also needs its credentials (System → Integrations).
+     */
+    sso?: boolean | null;
+    /**
      * The table of contents in an article's sidebar and its hero button, on articles with “Show table of contents” ticked.
      */
     tableOfContents?: boolean | null;
@@ -2676,6 +2682,7 @@ export interface SiteSettingsSelect<T extends boolean = true> {
     | {
         feed?: T;
         interactives?: T;
+        sso?: T;
         tableOfContents?: T;
       };
   updatedAt?: T;

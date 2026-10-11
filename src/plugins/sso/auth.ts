@@ -37,8 +37,22 @@ function createAuth(betterAuth: typeof BetterAuth, payload: Payload, config: Res
       modelName: config.usersSlug,
       fields: {
         emailVerified: "email_verified",
+        image: "avatar_url",
         createdAt: "created_at",
         updatedAt: "updated_at",
+      },
+      additionalFields: Object.fromEntries(
+        config.requiredUserColumns.map((column) => [
+          column,
+          { type: "string", required: false, input: false, returned: false } as const,
+        ]),
+      ),
+    },
+    databaseHooks: {
+      user: {
+        // Users are Payload's to create. Sign-up is already off for every provider; this
+        // refuses any other path to an insert too.
+        create: { before: async () => false },
       },
     },
     session: {
@@ -90,11 +104,6 @@ function createAuth(betterAuth: typeof BetterAuth, payload: Payload, config: Res
       database: {
         // Payload's ids are serial integers, and so are these tables'.
         generateId: "serial",
-        // Better Auth's startup check refuses a users table it couldn't insert into: ours has
-        // no `image` column and requires fields it knows nothing about. It never inserts
-        // (sign-up is off for every provider) and never writes a profile picture, and
-        // tests/integration/sso.test.ts runs a whole sign-in against the real tables.
-        validateSchema: false,
       },
       // No `__Secure-` name prefix, so the session cookie has one name everywhere and the
       // cache rules can look for it; the Secure attribute is still set over HTTPS.

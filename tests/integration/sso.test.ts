@@ -143,6 +143,7 @@ describe("single sign-on", () => {
       "email",
       "emailVerified",
       "id",
+      "image",
       "name",
       "updatedAt",
     ])

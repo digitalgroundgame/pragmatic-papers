@@ -325,5 +325,7 @@ export const plugins: Plugin[] = [
     }),
     baseURL: getSiteURL,
     secret: () => process.env.PAYLOAD_SECRET || "",
+    // The Users collection's slug field (`src/fields/slug`), set by Payload on create.
+    requiredUserColumns: ["slug"],
   }),
 ]

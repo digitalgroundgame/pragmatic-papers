@@ -39,6 +39,12 @@ export interface SsoPluginConfig {
   cookieName?: string
   /** How long a sign-in lasts, in seconds. Default 7 days. */
   sessionSeconds?: number
+  /**
+   * Required columns on the users table that Better Auth knows nothing about (a slug, say).
+   * It never fills them, since it never creates a user, but its startup schema check refuses
+   * a table with a required column it couldn't insert, so they're named to it here.
+   */
+  requiredUserColumns?: string[]
 }
 
 export type ResolvedSsoConfig = Required<Omit<SsoPluginConfig, "disabled">>

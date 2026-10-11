@@ -25,6 +25,7 @@ export function ssoPlugin(options: SsoPluginConfig): Plugin {
     usersSlug: "users",
     cookieName: DEFAULT_COOKIE_NAME,
     sessionSeconds: 60 * 60 * 24 * 7,
+    requiredUserColumns: [],
     ...options,
   }
 
@@ -42,6 +43,14 @@ export function ssoPlugin(options: SsoPluginConfig): Plugin {
             name: "emailVerified",
             type: "checkbox",
             defaultValue: false,
+            access: { create: () => false, update: () => false },
+            admin: { hidden: true },
+          },
+          {
+            // Better Auth's `image`. Its user model reads the column, but only a user it
+            // created would have one written, and it creates none.
+            name: "avatarUrl",
+            type: "text",
             access: { create: () => false, update: () => false },
             admin: { hidden: true },
           },

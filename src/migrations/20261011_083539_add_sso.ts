@@ -39,6 +39,7 @@ export async function up({ db, payload, req }: MigrateUpArgs): Promise<void> {
   );
   
   ALTER TABLE "users" ADD COLUMN "email_verified" boolean DEFAULT false;
+  ALTER TABLE "users" ADD COLUMN "avatar_url" varchar;
   ALTER TABLE "site_settings" ADD COLUMN "experiments_sso" boolean DEFAULT false;
   ALTER TABLE "auth_sessions" ADD CONSTRAINT "auth_sessions_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;
   ALTER TABLE "auth_accounts" ADD CONSTRAINT "auth_accounts_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;
@@ -55,5 +56,6 @@ export async function down({ db, payload, req }: MigrateDownArgs): Promise<void>
   DROP TABLE "auth_accounts" CASCADE;
   DROP TABLE "auth_verifications" CASCADE;
   ALTER TABLE "users" DROP COLUMN "email_verified";
+  ALTER TABLE "users" DROP COLUMN "avatar_url";
   ALTER TABLE "site_settings" DROP COLUMN "experiments_sso";`)
 }

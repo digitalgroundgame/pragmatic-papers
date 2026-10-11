@@ -10312,6 +10312,12 @@
           "notNull": false,
           "default": false
         },
+        "avatar_url": {
+          "name": "avatar_url",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
         "updated_at": {
           "name": "updated_at",
           "type": "timestamp(3) with time zone",
@@ -17182,6 +17188,6 @@
     "tables": {},
     "columns": {}
   },
-  "id": "404cea2e-ebb3-43df-8197-6bdeff70358d",
+  "id": "412fc30d-92dd-4b61-b38b-2e2a4bd5d772",
   "prevId": "00000000-0000-0000-0000-000000000000"
 }

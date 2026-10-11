@@ -36,6 +36,8 @@ async function newestVolumePaths(payload: Pick<Payload, "find">): Promise<string
     depth: 1,
     overrideAccess: false,
     select: { slug: true, articles: true },
+    // Only what a path needs from each article, not its content.
+    populate: { articles: { slug: true, _status: true } },
   })
   const volume = docs[0]
   if (!volume?.slug) return []

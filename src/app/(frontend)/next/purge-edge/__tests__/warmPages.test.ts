@@ -37,7 +37,11 @@ describe("warmPages", () => {
       `${SITE}/articles/first`,
     ])
     expect(payload.find).toHaveBeenCalledWith(
-      expect.objectContaining({ collection: "volumes", overrideAccess: false }),
+      expect.objectContaining({
+        collection: "volumes",
+        overrideAccess: false,
+        populate: { articles: { slug: true, _status: true } },
+      }),
     )
     expect(payload.logger.info).toHaveBeenCalledWith(
       `Warmed ${WARM_PATHS.length + 2} pages after the deploy`,

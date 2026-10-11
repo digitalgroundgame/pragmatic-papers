@@ -1,5 +1,3 @@
-import type { Integration } from "../types"
-
 /**
  * Cloudflare Turnstile siteverify client.
  *
@@ -15,15 +13,6 @@ import type { Integration } from "../types"
  *   TURNSTILE_SITE_KEY               public site key, read on the server and passed to
  *                                    the widget
  */
-
-/** Turnstile, which the newsletter signup form checks before subscribing anyone. */
-export const cloudflareTurnstile: Integration = {
-  id: "cloudflare-turnstile",
-  label: "Newsletter signup bot check",
-  service: "Cloudflare",
-  describe: () => "cloudflare:turnstile",
-  required: ["CLOUDFLARE_TURNSTILE_SECRET_KEY", "TURNSTILE_SITE_KEY"],
-}
 
 /**
  * The public site key for the signup widget, or undefined to render the form without it.

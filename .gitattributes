@@ -1,2 +1,5 @@
 payload-types.ts text eol=lf
 importMap.js text eol=lf
+# Two branches that each add a migration both append here; the driver keeps both
+# (scripts/migrations-index.ts, registered by scripts/setup-git.mjs on `pnpm install`).
+src/migrations/index.ts merge=migrations-index

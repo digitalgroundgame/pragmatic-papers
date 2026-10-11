@@ -1,6 +1,5 @@
 "use client"
 
-import { Button } from "@payloadcms/ui"
 import { useSearchParams } from "next/navigation"
 import React, { useState } from "react"
 
@@ -15,6 +14,9 @@ const ERRORS: Record<string, string> = {
     "That provider hasn't verified your email address, so it can't be matched to your account.",
   email_not_found: "That provider didn't share an email address.",
 }
+
+const BUTTON_CLASS =
+  "btn btn--icon-style-without-border btn--size-large btn--withoutPopup btn--style-secondary btn--no-margin"
 
 const FALLBACK_ERROR = "Sign-in didn't complete. Try again, or use your email and password."
 
@@ -59,17 +61,21 @@ export const SignInButtons: React.FC<SignInButtonsProps> = ({ providers, authPat
     <div style={{ display: "grid", gap: "0.75rem", marginBottom: "1.5rem" }}>
       {error ? <p role="alert">{error}</p> : null}
       {providers.map((provider) => (
-        <Button
+        // Payload's own button classes rather than its `Button`: importing @payloadcms/ui
+        // here breaks the Storybook build, and these render the same in the admin.
+        <button
           key={provider}
           type="button"
-          size="large"
-          buttonStyle="secondary"
+          className={pending === null ? BUTTON_CLASS : `${BUTTON_CLASS} btn--disabled`}
           disabled={pending !== null}
           onClick={() => void signIn(provider)}
-          margin={false}
         >
-          {pending === provider ? "Redirecting…" : `Sign in with ${PROVIDER_LABELS[provider]}`}
-        </Button>
+          <span className="btn__content">
+            <span className="btn__label">
+              {pending === provider ? "Redirecting…" : `Sign in with ${PROVIDER_LABELS[provider]}`}
+            </span>
+          </span>
+        </button>
       ))}
     </div>
   )

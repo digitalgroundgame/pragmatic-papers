@@ -94,18 +94,5 @@ export const adjacentDocs = <T extends { slug?: string | null }>(
 export const docPath = (slug: string): string =>
   slug === HOME_DOC_SLUG ? "/docs" : `/docs/${slug}`
 
-/** The repository the docs in src/docs/ ship from, and the branch changes go to. */
-const DOCS_REPO = "https://github.com/digitalgroundgame/pragmatic-papers"
-const DOCS_BRANCH = "dev"
-
-/** GitHub's editor for a repo doc's Markdown file: `src/docs/<section>/<slug>.md`, or `src/docs/home.md`. */
-export const docEditUrl = (doc: { slug?: string | null; section?: string | null }): string => {
-  const file =
-    doc.slug === HOME_DOC_SLUG
-      ? `${HOME_DOC_SLUG}.md`
-      : `${doc.section ?? DEFAULT_DOC_SECTION}/${doc.slug}.md`
-  return `${DOCS_REPO}/edit/${DOCS_BRANCH}/src/docs/${file}`
-}
-
 /** Every doc, newest first: the sidebar links it under Home, and the bell's "See all" opens it. */
 export const WHATS_NEW_PATH = "/docs/whats-new"

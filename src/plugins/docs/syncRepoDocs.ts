@@ -1,14 +1,11 @@
-import { revalidateTag } from "next/cache"
 import type { Payload } from "payload"
 
-import { purgeEdgeCache } from "@/hooks/purgeEdgeCache"
-
-import { DOCS_CACHE_TAG } from "./revalidateDoc"
 import { type SyncResult, syncDocs } from "./syncDocs"
 
 /**
- * Writes the repo's docs into this site's database, then drops the cached copies of any it
- * changed, here and at Cloudflare's edge. Run once per deploy, inside the request
+ * Seeds this site's database with the repo's docs it doesn't have yet, as drafts. Drafts aren't
+ * on /docs or in the bell, so nothing is cached to drop: an editor publishing one clears the
+ * caches, as any save does. Run once per deploy, inside the request
  * `/next/revalidate-all` gets when a deploy goes live, not when a server starts: a Worker
  * starts many times, and would cut short a sync left running after its response. Never
  * throws: a failed sync is logged, and the deploy keeps the docs it had.
@@ -17,11 +14,8 @@ export async function syncRepoDocs(payload: Payload): Promise<SyncResult | null>
   if (process.env.DOCS_SYNC === "false") return null
   try {
     const result = await syncDocs(payload)
-    const { created, updated, deleted } = result
-    if (created.length || updated.length || deleted.length) {
-      payload.logger.info({ created, updated, deleted }, "Synced help docs from the repo")
-      revalidateTag(DOCS_CACHE_TAG, "max")
-      purgeEdgeCache(payload.logger, "docs synced")
+    if (result.created.length) {
+      payload.logger.info({ created: result.created }, "Seeded help docs from the repo as drafts")
     }
     return result
   } catch (err) {

@@ -37,18 +37,16 @@ heroAlt: Switches
 let dir: string
 
 /**
- * A Payload whose find answers from `docs` and `media`, or from `removed` for the query for repo
- * docs that lost their file, and records what was written.
+ * A Payload that holds `docs` (count answers from them) and `media` (find answers from them), and
+ * records what was written.
  */
 const fakePayload = ({
   docs = [] as Record<string, unknown>[],
   media = [] as Record<string, unknown>[],
-  removed = [] as Record<string, unknown>[],
 } = {}) => {
   const payload = {
-    find: vi.fn(async ({ collection, where }: { collection: string; where?: object }) => ({
-      docs: collection === "media" ? media : where && "and" in where ? removed : docs,
-    })),
+    count: vi.fn(async () => ({ totalDocs: docs.length })),
+    find: vi.fn(async () => ({ docs: media })),
     create: vi.fn(async ({ collection }: { collection: string }) => ({
       id: collection === "media" ? 41 : 1,
     })),
@@ -76,23 +74,22 @@ describe("syncDocs", () => {
     const payload = fakePayload()
     await expect(syncDocs(payload, path.join(dir, "missing"))).resolves.toEqual({
       created: [],
-      updated: [],
-      unchanged: [],
-      deleted: [],
+      existing: [],
     })
     expect(payload.logger.warn).toHaveBeenCalledWith(expect.stringContaining("doesn't exist"))
-    expect(payload.find).not.toHaveBeenCalled()
+    expect(payload.count).not.toHaveBeenCalled()
   })
 
-  it("creates a new doc, published, with its files uploaded and their ids in place", async () => {
+  it("creates a new doc as a draft, with its files uploaded and their ids in place", async () => {
     const payload = fakePayload()
     await expect(syncDocs(payload, dir)).resolves.toEqual({
       created: ["experiments"],
-      updated: [],
-      unchanged: [],
-      deleted: [],
+      existing: [],
     })
 
+    expect(payload.count).toHaveBeenCalledWith(
+      expect.objectContaining({ collection: "docs", where: { slug: { equals: "experiments" } } }),
+    )
     expect(payload.create).toHaveBeenCalledWith(
       expect.objectContaining({
         collection: "media",
@@ -107,17 +104,45 @@ describe("syncDocs", () => {
       expect.objectContaining({
         collection: "docs",
         context: { disableRevalidate: true },
+        draft: true,
         data: expect.objectContaining({
           slug: "experiments",
           section: "site",
           revisedAt: null,
           navTitle: null,
-          _status: "published",
+          _status: "draft",
           audience: [],
           showTableOfContents: true,
           sourceHash: hashRepoDoc("site", source, [hero, image]),
           heroImage: 41,
           content: { root: { children: [{ type: "upload", value: 41 }] } },
+        }),
+      }),
+    )
+  })
+
+  it("publishes what it creates when asked, as the local seed does", async () => {
+    const payload = fakePayload()
+    await syncDocs(payload, dir, { publish: true })
+    expect(payload.create).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        collection: "docs",
+        draft: false,
+        data: expect.objectContaining({ _status: "published" }),
+      }),
+    )
+  })
+
+  it("reuses a file it already uploaded", async () => {
+    const payload = fakePayload({ media: [{ id: 9 }] })
+    await syncDocs(payload, dir)
+    expect(payload.create).toHaveBeenCalledOnce()
+    expect(payload.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        collection: "docs",
+        data: expect.objectContaining({
+          heroImage: 9,
+          content: { root: { children: [{ type: "upload", value: 9 }] } },
         }),
       }),
     )
@@ -138,63 +163,21 @@ describe("syncDocs", () => {
     )
   })
 
-  it("skips a doc whose file and pictures hash the same as last time", async () => {
-    const payload = fakePayload({
-      docs: [{ id: 3, sourceHash: hashRepoDoc("site", source, [hero, image]) }],
-    })
+  it("leaves a doc the site already has alone, whatever the repo's copy says now", async () => {
+    const payload = fakePayload({ docs: [{ id: 3, sourceHash: "old" }] })
     await expect(syncDocs(payload, dir)).resolves.toEqual({
       created: [],
-      updated: [],
-      unchanged: ["experiments"],
-      deleted: [],
+      existing: ["experiments"],
     })
     expect(payload.create).not.toHaveBeenCalled()
     expect(payload.update).not.toHaveBeenCalled()
+    expect(payload.delete).not.toHaveBeenCalled()
   })
 
-  it("updates a changed doc in place, reusing a file it already uploaded", async () => {
-    const payload = fakePayload({ docs: [{ id: 3, sourceHash: "old" }], media: [{ id: 9 }] })
-    await expect(syncDocs(payload, dir)).resolves.toEqual({
-      created: [],
-      updated: ["experiments"],
-      unchanged: [],
-      deleted: [],
-    })
-    expect(payload.create).not.toHaveBeenCalled()
-    expect(payload.update).toHaveBeenCalledWith(
-      expect.objectContaining({
-        collection: "docs",
-        id: 3,
-        data: expect.objectContaining({
-          heroImage: 9,
-          content: { root: { children: [{ type: "upload", value: 9 }] } },
-        }),
-      }),
-    )
-  })
-})
-
-describe("syncDocs pruning", () => {
-  it("deletes a repo doc whose file is gone, and asks only for repo docs", async () => {
-    const payload = fakePayload({ removed: [{ id: 7, slug: "old-name" }] })
-    await expect(syncDocs(payload, dir)).resolves.toMatchObject({ deleted: ["old-name"] })
-    expect(payload.find).toHaveBeenLastCalledWith(
-      expect.objectContaining({
-        collection: "docs",
-        where: {
-          and: [{ sourceHash: { exists: true } }, { slug: { not_in: ["experiments"] } }],
-        },
-      }),
-    )
-    expect(payload.delete).toHaveBeenCalledWith(
-      expect.objectContaining({ collection: "docs", id: 7, context: { disableRevalidate: true } }),
-    )
-  })
-
-  it("deletes nothing when the folder holds no docs", async () => {
+  it("deletes nothing, even when the folder holds no docs", async () => {
     await rm(path.join(dir, "site"), { recursive: true })
-    const payload = fakePayload({ removed: [{ id: 7, slug: "old-name" }] })
-    await expect(syncDocs(payload, dir)).resolves.toMatchObject({ deleted: [] })
+    const payload = fakePayload({ docs: [{ id: 7, slug: "old-name", sourceHash: "abc" }] })
+    await expect(syncDocs(payload, dir)).resolves.toEqual({ created: [], existing: [] })
     expect(payload.delete).not.toHaveBeenCalled()
   })
 })

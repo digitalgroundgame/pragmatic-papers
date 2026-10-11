@@ -116,6 +116,11 @@ export default buildConfig({
       // A Cloudflare Worker can't reuse a socket opened during another request, so in one,
       // give each query a fresh connection (Hyperdrive pools them for us).
       ...(globalThis.navigator?.userAgent === "Cloudflare-Workers" && { maxUses: 1 }),
+      // `next build` prerenders pages in several workers, each with its own pool, while
+      // the live container keeps its connections. Production's database sits behind
+      // Supabase's session-mode pooler, which refuses clients past its pool size, so cap
+      // each build worker at a few connections rather than node-postgres's default 10.
+      ...(process.env.NEXT_PHASE === "phase-production-build" && { max: 3 }),
     },
     // prevent schema push in prod/test for static schema determinism and noise reduction
     push: process.env.NODE_ENV === "development",

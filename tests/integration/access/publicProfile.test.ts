@@ -59,6 +59,25 @@ describe("publicProfile", () => {
     expect(after.publicProfile).toBe(true)
   })
 
+  it("isn't set by an article that was only saved as a draft", async () => {
+    const writer = await createUser("writer")
+
+    await payload.create({
+      collection: "articles",
+      context: { disableRevalidate: true },
+      draft: true,
+      data: {
+        title: `Draft credit ${Date.now()}`,
+        content: ARTICLE_CONTENT,
+        authors: [writer.id],
+        _status: "draft",
+      } as unknown as Article,
+    })
+
+    const after = await payload.findByID({ collection: "users", id: writer.id })
+    expect(after.publicProfile).toBeFalsy()
+  })
+
   it("keeps a demoted author's page and byline readable", async () => {
     const writer = await createUser("writer")
     const article = await publishArticle([writer.id])

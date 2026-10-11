@@ -25,6 +25,7 @@ import { notFound, permanentRedirect } from "next/navigation"
 import React, { cache } from "react"
 import { Breadcrumbs } from "@/components/Breadcrumbs"
 import { relationshipId } from "@/utilities/relationships"
+import { ARTICLES_PER_PAGE, queryArticlesByAuthor } from "./queryArticlesByAuthor"
 
 // Paginated with `?p=`, which only a request carries, so this is rendered per request. That's
 // also why there's no generateStaticParams: a prerendered slug would never be served.
@@ -38,26 +39,6 @@ interface Args {
     p?: string
   }>
 }
-
-const ARTICLES_PER_PAGE = 5
-const queryArticlesByAuthor = cache(async (userId: number, page: number = 1) => {
-  const { isEnabled: draft } = await draftMode()
-
-  const payload = await getPayloadClient()
-
-  return payload.find({
-    collection: "articles",
-    draft,
-    limit: ARTICLES_PER_PAGE,
-    page,
-    where: {
-      authors: {
-        equals: userId,
-      },
-    },
-    depth: 2,
-  })
-})
 
 // Contributor pages were first served at /authors/<user id>, and search engines still request those
 // URLs (next.config.ts redirects them here). A number that isn't anyone's slug is looked up as an id and sent to that author's page.

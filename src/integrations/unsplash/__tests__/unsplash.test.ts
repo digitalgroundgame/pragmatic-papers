@@ -39,6 +39,7 @@ const reply = (status: number, body: unknown, headers: Record<string, string> = 
 
 afterEach(() => {
   vi.unstubAllEnvs()
+  vi.restoreAllMocks()
 })
 
 describe("unsplashApp", () => {
@@ -181,6 +182,25 @@ describe("unsplashApp", () => {
       "Unsplash request failed (HTTP 401): OAuth error: The access token is invalid",
     )
     await expect(failure).rejects.not.toThrow("secret-key")
+  })
+
+  it("gives up on a call Unsplash never answers", async () => {
+    vi.stubEnv("EXAMPLE_UNSPLASH_KEY", "secret-key")
+    const timedOut = new AbortController()
+    const timeout = vi.spyOn(AbortSignal, "timeout").mockReturnValue(timedOut.signal)
+    // Answers only by failing once the request is aborted, as fetch does.
+    const fetchImpl = vi.fn<typeof fetch>(
+      (_url, init) =>
+        new Promise((_, reject) => {
+          init?.signal?.addEventListener("abort", () => reject(init.signal!.reason))
+        }),
+    )
+
+    const failure = app.photo("abc123", { fetchImpl })
+    timedOut.abort(new DOMException("The operation timed out.", "TimeoutError"))
+
+    await expect(failure).rejects.toThrow("The operation timed out.")
+    expect(timeout).toHaveBeenCalledWith(10_000)
   })
 
   it("throws before calling out when the key is missing", async () => {

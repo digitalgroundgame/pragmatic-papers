@@ -212,7 +212,9 @@ jobs:
   coverage:
     name: Coverage
     needs: [changes, unit-tests, storybook]
-    if: ${{ !cancelled() && github.event_name != 'merge_group' && (needs.unit-tests.result == 'success' || needs.unit-tests.result == 'failure') }}
+    # A failed unit run writes no coverage (Vitest's reportOnFailure is off), so
+    # there is nothing to report until it passes.
+    if: ${{ !cancelled() && github.event_name != 'merge_group' && needs.unit-tests.result == 'success' }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:

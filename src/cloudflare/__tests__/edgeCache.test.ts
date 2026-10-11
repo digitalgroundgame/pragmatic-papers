@@ -11,6 +11,7 @@ import {
 import type { WorkerEnv } from "../origin"
 
 const W = "https://w.dev"
+const PUBLIC = { "Cache-Control": "public, s-maxage=600", "CDN-Cache-Control": "max-age=600" }
 
 describe("isEdgeCacheable", () => {
   it.each(["/", "/articles/a", "/topics?page=2", "/_next/image?url=%2Fa.png&w=640&q=75"])(
@@ -80,14 +81,32 @@ describe("afterCachedSite", () => {
     expect(await response.text()).toBe("down")
   })
 
+  it.each([
+    ["an empty 404", new Response(null, { status: 404 })],
+    ["a 200 without caching headers", new Response("page")],
+    ["a 404 the app marked public", new Response("gone", { status: 404, headers: PUBLIC })],
+  ])("doesn't keep %s", async (_, answer) => {
+    const response = await afterCachedSite(new Request(`${W}/articles/a`), answer, undefined)
+    expect(response.headers.get("cache-control")).toBe("no-store")
+    expect(response.headers.has("cdn-cache-control")).toBe(false)
+  })
+
+  it("keeps a redirect the app gave caching headers", async () => {
+    const redirect = new Response(null, {
+      status: 308,
+      headers: { ...PUBLIC, Location: `${W}/contributors` },
+    })
+    expect(await afterCachedSite(new Request(`${W}/authors`), redirect, undefined)).toBe(redirect)
+  })
+
   it("purges the cache after a successful revalidate-all", async () => {
-    const purge = vi.fn(async () => ({}))
+    const purge = vi.fn(async () => ({ success: true }))
     await afterCachedSite(revalidate(), new Response("ok"), { purge })
     expect(purge).toHaveBeenCalledWith({ purgeEverything: true })
   })
 
   it("doesn't purge when revalidate-all was refused", async () => {
-    const purge = vi.fn(async () => ({}))
+    const purge = vi.fn(async () => ({ success: true }))
     await afterCachedSite(revalidate(), new Response("no", { status: 401 }), { purge })
     expect(purge).not.toHaveBeenCalled()
   })
@@ -99,6 +118,15 @@ describe("afterCachedSite", () => {
     expect(await ok.text()).toBe("ok")
     await afterCachedSite(revalidate(), new Response("ok"), {}, log)
     expect(log.warn).toHaveBeenCalledTimes(2)
+  })
+
+  it("logs a purge Cloudflare refused, which resolves rather than throws", async () => {
+    const log = { warn: vi.fn() }
+    const errors = [{ code: 1015, message: "rate limited" }]
+    const refused = { purge: vi.fn(async () => ({ success: false, errors })) }
+    const ok = await afterCachedSite(revalidate(), new Response("ok"), refused, log)
+    expect(await ok.text()).toBe("ok")
+    expect(log.warn).toHaveBeenCalledWith(expect.stringContaining("refused"), errors)
   })
 })
 

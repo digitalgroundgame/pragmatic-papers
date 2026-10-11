@@ -28,9 +28,15 @@ export interface GatewayContext {
   exports?: { CachedSite?: EdgeCachedSite }
 }
 
+/** What `ctx.cache.purge()` resolves to. A refusal (a rate limit) resolves, it doesn't throw. */
+export interface EdgeCachePurgeResult {
+  success: boolean
+  errors?: { code: number; message: string }[]
+}
+
 /** `ctx.cache` in the cached entrypoint. */
 export interface EdgeCache {
-  purge?: (options: { purgeEverything: true }) => Promise<unknown>
+  purge?: (options: { purgeEverything: true }) => Promise<EdgeCachePurgeResult>
 }
 
 /** Cookies that make a page personal: Payload's login and Next's draft mode. */
@@ -68,8 +74,20 @@ export function goesToCachedSite(request: Request): boolean {
 }
 
 /**
- * The cached entrypoint's answer: an error isn't kept, so a failed database read doesn't
- * stick for ten minutes, and a successful `/next/revalidate-all` empties the cache.
+ * Whether the cache may keep this answer: a 2xx or 3xx the app gave caching headers to.
+ * Workers Cache keeps a response without `Cache-Control` too, by heuristic (a 200 for two
+ * hours, a 404 for three minutes), and the entry answers every reader of that URL, so an
+ * empty 404 the Worker gives one request would blank the page for everyone.
+ */
+function isKeepable(response: Response): boolean {
+  if (response.status < 200 || response.status >= 400) return false
+  return response.headers.has("CDN-Cache-Control") || response.headers.has("Cache-Control")
+}
+
+/**
+ * The cached entrypoint's answer: only what `isKeepable` allows is left cacheable, so an
+ * error or a failed database read doesn't stick, and a successful `/next/revalidate-all`
+ * empties the cache.
  */
 export async function afterCachedSite(
   request: Request,
@@ -81,7 +99,10 @@ export async function afterCachedSite(
     if (response.ok) {
       if (typeof cache?.purge === "function") {
         try {
-          await cache.purge({ purgeEverything: true })
+          const result = await cache.purge({ purgeEverything: true })
+          if (!result.success) {
+            log.warn("Cloudflare refused to purge the Worker's edge cache", result.errors)
+          }
         } catch (error) {
           log.warn("Couldn't purge the Worker's edge cache", error)
         }
@@ -91,7 +112,7 @@ export async function afterCachedSite(
     }
     return response
   }
-  if (response.status < 500) return response
+  if (isKeepable(response)) return response
   const uncached = new Response(response.body, response)
   uncached.headers.set("Cache-Control", "no-store")
   uncached.headers.delete("CDN-Cache-Control")

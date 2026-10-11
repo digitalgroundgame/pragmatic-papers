@@ -10,6 +10,11 @@ inputs:
   gh-font-read-token:
     description: "GitHub Token for private font packages"
     required: true
+  load-image:
+    description: >-
+      Load the app image now. The E2E job sets "false" and loads it later with
+      scripts/wait-for-app-image.sh, so its setup runs while the image builds.
+    default: "true"
 
 runs:
   using: composite
@@ -97,11 +102,13 @@ runs:
         docker version
 
     - name: Download the app image
+      if: inputs.load-image == 'true'
       uses: actions/download-artifact@v7
       with:
         name: app-image
         path: ${{ runner.temp }}
 
     - name: Load the app image
+      if: inputs.load-image == 'true'
       shell: bash
       run: docker load -i "$RUNNER_TEMP/app-image.tar"

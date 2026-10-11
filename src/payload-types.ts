@@ -395,6 +395,7 @@ export interface Page {
     | TimelineBlock
     | VolumeView
     | FormBlock
+    | FeedsListBlock
   )[];
   meta?: {
     title?: string | null;
@@ -1097,6 +1098,21 @@ export interface Form {
     | null;
   updatedAt: string;
   createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "FeedsListBlock".
+ */
+export interface FeedsListBlock {
+  /**
+   * Which links to show. They're kept up to date by the site itself: you only write the heading and introduction.
+   */
+  list: 'feeds' | 'sitemaps';
+  title?: string | null;
+  description?: string | null;
+  id?: string | null;
+  blockName?: string | null;
+  blockType: 'feedsList';
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -1938,6 +1954,7 @@ export interface PagesSelect<T extends boolean = true> {
         timeline?: T | TimelineBlockSelect<T>;
         volumeView?: T | VolumeViewSelect<T>;
         formBlock?: T | FormBlockSelect<T>;
+        feedsList?: T | FeedsListBlockSelect<T>;
       };
   meta?:
     | T
@@ -2101,6 +2118,17 @@ export interface FormBlockSelect<T extends boolean = true> {
   form?: T;
   enableIntro?: T;
   introContent?: T;
+  id?: T;
+  blockName?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "FeedsListBlock_select".
+ */
+export interface FeedsListBlockSelect<T extends boolean = true> {
+  list?: T;
+  title?: T;
+  description?: T;
   id?: T;
   blockName?: T;
 }

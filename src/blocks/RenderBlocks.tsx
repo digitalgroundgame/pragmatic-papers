@@ -6,6 +6,7 @@ import { CallToActionBlock } from "@/blocks/CallToAction/Component"
 import { CollectionGridBlock } from "@/blocks/CollectionGrid/Component"
 import { ContentBlock } from "@/blocks/Content/Component"
 import { ContributorsBlock } from "@/blocks/Contributors/Component"
+import { FeedsListBlock } from "@/blocks/FeedsList/Component"
 import { FormBlock } from "@/blocks/Form/Component"
 import { MediaBlock } from "@/blocks/MediaBlock/Component"
 import { NewsletterSignupBlock } from "@/blocks/NewsletterSignup/Component"
@@ -34,6 +35,8 @@ export const RenderBlocks: React.FC<RenderBlocksProps> = ({ blocks, pageNumber }
           return <ContributorsBlock key={key} {...block} />
         } else if (blockType === "cta") {
           return <CallToActionBlock key={key} {...block} />
+        } else if (blockType === "feedsList") {
+          return <FeedsListBlock key={key} {...block} />
         } else if (blockType === "formBlock") {
           if (!isResolved(block.form)) return null
           return <FormBlock key={key} {...block} />

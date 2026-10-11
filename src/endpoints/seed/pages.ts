@@ -1,6 +1,7 @@
 import type { Page } from "@/payload-types"
 import type { Payload, RequiredDataFromCollectionSlug } from "payload"
 
+import { feedsStatic } from "./feeds-static"
 import { createContactForm } from "./forms"
 import { devMerchCatalogue, seedMerchProducts } from "./merch"
 import {
@@ -61,6 +62,7 @@ interface CreatePagesResult {
   aboutPage: Page
   articlesPage: Page
   contactPage: Page
+  feedsPage: Page
   privacyPolicyPage: Page
   termsOfUsePage: Page
   volumesPage: Page
@@ -427,10 +429,17 @@ export const createPages = async (
     context,
   )
 
+  const feedsPage = await createOrUpdatePage(
+    payload,
+    { ...feedsStatic, publishedAt: new Date().toISOString() },
+    context,
+  )
+
   return {
     aboutPage,
     articlesPage,
     contactPage,
+    feedsPage,
     privacyPolicyPage,
     termsOfUsePage,
     volumesPage,

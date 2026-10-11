@@ -327,5 +327,7 @@ export const plugins: Plugin[] = [
     secret: () => process.env.PAYLOAD_SECRET || "",
     // The Users collection's slug field (`src/fields/slug`), set by Payload on create.
     requiredUserColumns: ["slug"],
+    // Staff stay signed in for a month after a Google or Discord sign-in.
+    sessionSeconds: 60 * 60 * 24 * 30,
   }),
 ]

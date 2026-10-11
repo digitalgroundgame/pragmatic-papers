@@ -61,6 +61,7 @@ import { InlineCodeFeatureClient as InlineCodeFeatureClient_e70f5e05f09f93e00b99
 import { TickerPostsField as TickerPostsField_eb80cb436828d816aeab384fed2fd9bf } from '@/globals/Ticker/components/TickerPostsField'
 import { ExperimentSwitchField as ExperimentSwitchField_bfc53fcaa9b90365c2431ea18727763a } from '@/globals/SiteSettings/components/ExperimentSwitchField'
 import { IntegrationStatusField as IntegrationStatusField_1900110be8e66af69bcbacc986bd055a } from '@/globals/Integrations/components/IntegrationStatusField'
+import { NewsletterView as NewsletterView_bb918406547ab798cea1ede5dc83eb82 } from '@/globals/Newsletter/components/NewsletterView'
 import { RunNowField as RunNowField_a9d86fb0496ebd76a3dd880c805864b5 } from '@/globals/ArticleRecommendations/components/RunNowField'
 import { PaperIconAdmin as PaperIconAdmin_de5f3b464da8d97ce80441fdb9ee9751 } from '@/components/Logo/icons/PaperIcon'
 import { LogomarkIcon as LogomarkIcon_715cf00332be8c15b8f2b121ec0215b0 } from '@/components/Logo/icons/LogomarkIcon'
@@ -139,6 +140,7 @@ export const importMap = {
   "@/globals/Ticker/components/TickerPostsField#TickerPostsField": TickerPostsField_eb80cb436828d816aeab384fed2fd9bf,
   "@/globals/SiteSettings/components/ExperimentSwitchField#ExperimentSwitchField": ExperimentSwitchField_bfc53fcaa9b90365c2431ea18727763a,
   "@/globals/Integrations/components/IntegrationStatusField#IntegrationStatusField": IntegrationStatusField_1900110be8e66af69bcbacc986bd055a,
+  "@/globals/Newsletter/components/NewsletterView#NewsletterView": NewsletterView_bb918406547ab798cea1ede5dc83eb82,
   "@/globals/ArticleRecommendations/components/RunNowField#RunNowField": RunNowField_a9d86fb0496ebd76a3dd880c805864b5,
   "@/components/Logo/icons/PaperIcon#PaperIconAdmin": PaperIconAdmin_de5f3b464da8d97ce80441fdb9ee9751,
   "@/components/Logo/icons/LogomarkIcon#LogomarkIcon": LogomarkIcon_715cf00332be8c15b8f2b121ec0215b0,

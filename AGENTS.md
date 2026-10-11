@@ -113,6 +113,7 @@ processes they start.
 - **Footer** (`slug: 'footer'`) — nav items; revalidated via `revalidateFooter` hook
 - **Settings** (`slug: 'site-settings'`, the `SiteSettings` global) — admin-only; its `experiments` group switches beta features on per environment; revalidated via `revalidateSiteSettings` hook
 - **Ticker** (`slug: 'ticker'`) — editors and admins; lists the posts the ticker's sources hold now, each with a Hide button that adds its link to the hidden posts (or paste a link); revalidated via `revalidateTicker` hook. Which accounts the ticker reads is in **Integrations** (admin-only)
+- **Newsletter** (`slug: 'newsletter'`) — admin-only, stores nothing: its page (`NewsletterView`, replacing the edit view) shows Listmonk's subscriber counts, newest signups and latest campaigns
 - Fetched via `getGlobal('header' | 'footer', depth)` from `@/data/globals`, which caches with `unstable_cache` under the tag `global_<slug>`
 
 ### Experiments

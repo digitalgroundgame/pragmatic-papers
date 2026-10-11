@@ -1,5 +1,6 @@
 # Deploys staging's Cloudflare Worker (wrangler.jsonc, src/cloudflare/README.md): the public
-# site, built by OpenNext, on workers.dev, reading staging's database through Hyperdrive.
+# site, built by OpenNext, at staging-worker.pragmaticpapers.com, reading staging's database
+# through Hyperdrive.
 # Staging itself keeps running on Coolify, which the Worker sends /admin and /api to.
 #
 # Runs on every push to `dev`, and by hand. Skips itself until it's set up.
@@ -14,7 +15,7 @@
 #                                        staging's /next/migrations
 #   - variable SHOWCASE_STAGING_URL      staging's Coolify URL, which the Worker proxies to
 #   - variable WORKER_STAGING_URL        the Worker's own URL, e.g.
-#                                        https://pragmatic-papers-staging.<subdomain>.workers.dev
+#                                        https://staging-worker.pragmaticpapers.com
 # The Hyperdrive config in wrangler.jsonc must exist; the R2 bucket and D1 database are
 # created here if they don't.
 name: Staging Worker

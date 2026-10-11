@@ -19,7 +19,7 @@ vi.mock("server-only", () => ({}))
 vi.mock("next/headers", () => ({ draftMode: async () => ({ isEnabled: false }) }))
 vi.mock("@payload-config", () => ({ default: {} }))
 vi.mock("payload", () => ({ getPayload: async () => ({ find }) }))
-vi.mock("@/utilities/queries", () => queries)
+vi.mock("@/data/queries", () => queries)
 vi.mock("@/components/PayloadRedirects", () => ({ PayloadRedirects: () => null }))
 vi.mock("@/components/LivePreviewListener", () => ({ LivePreviewListener: () => null }))
 vi.mock("@/components/JsonLd", () => ({

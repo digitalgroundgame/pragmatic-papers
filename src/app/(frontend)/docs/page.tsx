@@ -2,7 +2,7 @@ import { Breadcrumbs, type Crumb } from "@/components/Breadcrumbs"
 import { JsonLd } from "@/components/JsonLd"
 import { queryPublishedDocs } from "@/plugins/docs/queries"
 import { formatNotificationDate } from "@/plugins/notifications/unread"
-import { getServerSideURL } from "@/utilities/getURL"
+import { getSiteURL } from "@/utilities/getURL"
 import { mergeOpenGraph } from "@/utilities/mergeOpenGraph"
 import { buildBreadcrumbJsonLd } from "@/utilities/structuredData"
 import type { Metadata } from "next"
@@ -17,7 +17,7 @@ const DESCRIPTION = "What's new in the Pragmatic Papers admin, and how to use it
 export const dynamic = "force-dynamic"
 
 export function generateMetadata(): Metadata {
-  const canonicalUrl = `${getServerSideURL()}/docs`
+  const canonicalUrl = `${getSiteURL()}/docs`
   return {
     title: TITLE,
     description: DESCRIPTION,

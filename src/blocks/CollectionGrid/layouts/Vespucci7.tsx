@@ -34,7 +34,7 @@ export const Vespucci7: LayoutDefinition = {
 export const Vespucci7Layout: React.FC<LayoutProps> = ({
   className,
   slots,
-  priority,
+  preload,
   loading,
   ...props
 }) => {
@@ -49,7 +49,7 @@ export const Vespucci7Layout: React.FC<LayoutProps> = ({
       <CollectionTile
         className="h-full md:col-span-2 md:row-span-2 lg:col-span-1 lg:row-span-2"
         tile={featured}
-        priority={priority}
+        preload={preload}
         sizes="(max-width: 768px) 100vw, 600px"
         variant="medium"
       />

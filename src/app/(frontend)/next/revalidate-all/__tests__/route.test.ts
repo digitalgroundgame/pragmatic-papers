@@ -8,7 +8,7 @@ const payload = {}
 
 vi.mock("next/cache", () => ({ revalidatePath }))
 vi.mock("@/plugins/docs/syncRepoDocs", () => ({ syncRepoDocs }))
-vi.mock("@/utilities/getPayloadConfig", () => ({ getPayloadConfig: async () => payload }))
+vi.mock("@/data/payload", () => ({ getPayloadClient: async () => payload }))
 
 const { POST } = await import("../route")
 

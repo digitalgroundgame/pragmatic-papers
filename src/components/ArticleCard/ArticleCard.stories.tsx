@@ -37,7 +37,7 @@ export const NoImage: Story = {
 }
 
 export const Priority: Story = {
-  args: { priority: true },
+  args: { preload: true },
   play: async ({ canvasElement }) => {
     const image = within(canvasElement).getByRole("img")
     await expect(image).toHaveAttribute("fetchpriority", "high")

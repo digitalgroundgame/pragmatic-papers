@@ -5,7 +5,7 @@ import { unstable_cache } from "next/cache"
 import type { Media, Merch as MerchProductDoc, MerchBlock } from "@/payload-types"
 
 import { MERCH_TAG } from "@/collections/Merch/tag"
-import { getPayloadConfig } from "@/utilities/getPayloadConfig"
+import { getPayloadClient } from "@/data/payload"
 import { relationshipId } from "@/utilities/relationships"
 import { getMerchProductUrl, getMerchStoreUrl } from "./urls"
 
@@ -57,7 +57,7 @@ export function deriveBadge(product: MerchProductDoc): string | null {
 /**
  * Present a remote Shopify image as a Media doc.
  *
- * `ImageMedia` takes a Payload `Media` and dispatches on its `mimeType`, but
+ * `CMSImage` takes a Payload `Media` and dispatches on its `mimeType`, but
  * synced products have a `cdn.shopify.com` URL rather than an upload. Shaping
  * one here keeps a single rendering path: `getMediaUrl` already passes absolute
  * URLs through untouched, and `cdn.shopify.com` is allow-listed in
@@ -72,7 +72,7 @@ export function toMediaShape(product: MerchProductDoc): Media | null {
     alt: product.imageAlt || product.title,
     width: product.imageWidth ?? undefined,
     height: product.imageHeight ?? undefined,
-    // Drives `isImageMedia`, which is what routes this to `ImageMedia`.
+    // Drives `isImageMedia`, which is what routes this to `CMSImage`.
     mimeType: "image/jpeg",
     // A remote file has no resize variants, so `variant` is a no-op for merch
     // and the block's per-layout `sizes` hints do the responsive work.
@@ -143,7 +143,7 @@ export function sortFor({ orderBy }: SortableBlock): string {
 }
 
 async function queryMerchProducts(block: MerchBlock): Promise<MerchProductDoc[]> {
-  const payload = await getPayloadConfig()
+  const payload = await getPayloadClient()
 
   const { docs } = await payload.find({
     collection: "merch",

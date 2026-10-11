@@ -16,7 +16,7 @@ import { Separator } from "@/components/ui/separator"
 import { isExperimentEnabled } from "@/globals/SiteSettings/isExperimentEnabled"
 import { queryDocBySlug } from "@/plugins/docs/queries"
 import { formatNotificationDate } from "@/plugins/notifications/unread"
-import { getServerSideURL } from "@/utilities/getURL"
+import { getSiteURL } from "@/utilities/getURL"
 import { mergeOpenGraph } from "@/utilities/mergeOpenGraph"
 import { buildBreadcrumbJsonLd } from "@/utilities/structuredData"
 import type { Metadata } from "next"
@@ -37,7 +37,7 @@ export async function generateMetadata({ params }: Args): Promise<Metadata> {
   if (!doc) return {}
 
   const title = `${doc.title} — Pragmatic Papers`
-  const canonicalUrl = `${getServerSideURL()}/docs/${slug}`
+  const canonicalUrl = `${getSiteURL()}/docs/${slug}`
   return {
     title,
     description: doc.summary,
@@ -81,7 +81,7 @@ export default async function DocPage({ params }: Args): Promise<React.ReactNode
               </time>
               <div className="flex items-center gap-1">
                 {showTableOfContents && <TableOfContentsButton content={content} />}
-                <ShareButtons url={`${getServerSideURL()}${url}`} title={doc.title} />
+                <ShareButtons url={`${getSiteURL()}${url}`} title={doc.title} />
               </div>
             </div>
             <Separator />

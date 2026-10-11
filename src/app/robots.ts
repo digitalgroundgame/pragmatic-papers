@@ -1,6 +1,6 @@
 import type { MetadataRoute } from "next"
 
-import { getServerSideURL } from "@/utilities/getURL"
+import { getSiteURL } from "@/utilities/getURL"
 
 import { SITEMAP_PATHS } from "./(frontend)/(sitemaps)/sitemaps"
 
@@ -10,7 +10,7 @@ import { SITEMAP_PATHS } from "./(frontend)/(sitemaps)/sitemaps"
 // search indexes by the X-Robots-Tag header in src/proxy.ts, not here: crawlers must be able
 // to fetch a page to see it.
 export default function robots(): MetadataRoute.Robots {
-  const siteUrl = getServerSideURL()
+  const siteUrl = getSiteURL()
 
   return {
     rules: { userAgent: "*", disallow: "/admin/*" },

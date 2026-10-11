@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 
-import { getFootnotes, truncate } from "../utils"
+import { getFootnotes } from "../utils"
 
 describe("getFootnotes", () => {
   it("returns the footnotes array as-is when it's a valid array", () => {
@@ -26,21 +26,5 @@ describe("getFootnotes", () => {
     // state, so a malformed shape shouldn't crash callers that call .find()/.filter().
     expect(getFootnotes({ footnotes: "not an array" })).toEqual([])
     expect(getFootnotes({ footnotes: { note: "not wrapped in an array" } })).toEqual([])
-  })
-})
-
-describe("truncate", () => {
-  it("leaves text at or under the limit alone", () => {
-    expect(truncate("short", 10)).toBe("short")
-    expect(truncate("exactly10!", 10)).toBe("exactly10!")
-    expect(truncate("", 0)).toBe("")
-  })
-
-  it("cuts longer text at the limit and adds an ellipsis", () => {
-    expect(truncate("A long footnote about something", 6)).toBe("A long…")
-  })
-
-  it("leaves only the ellipsis at a zero limit", () => {
-    expect(truncate("abc", 0)).toBe("…")
   })
 })

@@ -10,8 +10,8 @@ const { queryPageBySlug, jsonLd } = vi.hoisted(() => ({
 vi.mock("next/headers", () => ({ draftMode: async () => ({ isEnabled: false }) }))
 vi.mock("@payload-config", () => ({ default: {} }))
 vi.mock("payload", () => ({ getPayload: async () => ({ find: vi.fn() }) }))
-vi.mock("@/utilities/queries", () => ({ queryPageBySlug }))
-vi.mock("@/utilities/getGlobals", () => ({ getCachedGlobal: () => async () => ({ socials: [] }) }))
+vi.mock("@/data/queries", () => ({ queryPageBySlug }))
+vi.mock("@/data/globals", () => ({ getGlobal: async () => ({ socials: [] }) }))
 vi.mock("@/utilities/generateMeta", () => ({ generateMeta: vi.fn() }))
 vi.mock("@/endpoints/seed/home-static", () => ({ homeStatic: null }))
 // Children with their own tests render as markers: these tests are about the trail.

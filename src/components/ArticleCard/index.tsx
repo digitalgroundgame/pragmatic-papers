@@ -4,6 +4,7 @@ import React from "react"
 import { HoverPrefetchLink } from "@/components/Link/HoverPrefetchLink"
 import { Media } from "@/components/Media"
 import { cn } from "@/utilities/utils"
+import { docPath } from "@/utilities/routes"
 
 export type CardPostData = Pick<Article, "slug" | "meta" | "title">
 
@@ -12,18 +13,18 @@ export const ArticleCard: React.FC<{
   className?: string
   doc?: CardPostData
   /** Preload the image at high priority, for a card that's above the fold. */
-  priority?: boolean
+  preload?: boolean
   relationTo: "articles"
   title?: string
 }> = (props) => {
-  const { className, doc, priority, relationTo, title: titleFromProps } = props
+  const { className, doc, preload, relationTo, title: titleFromProps } = props
 
   const { slug, meta, title } = doc || {}
   const { description, image } = meta || {}
 
   const titleToUse = titleFromProps || title
   const sanitizedDescription = description?.replace(/\s/g, " ") // replace non-breaking space with white space
-  const href = `/${relationTo}/${slug}`
+  const href = docPath(relationTo, slug ?? "")
 
   return (
     <HoverPrefetchLink href={href} className="block">
@@ -34,7 +35,7 @@ export const ArticleCard: React.FC<{
             variant="square"
             className="aspect-4/3 border object-cover"
             sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, 352px"
-            priority={priority}
+            preload={preload}
           />
         )}
         {titleToUse && <h3 className="hover:text-foreground/80 md:text-2xl">{titleToUse}</h3>}

@@ -88,7 +88,16 @@ describe("install-fonts.ts", () => {
       )
     })
 
+    it("flags a package file that isn't a font, and doesn't try to subset it", async () => {
+      const result = await runScript(tmpRoot)
+      expect(result.status).toBe(0)
+      expect(result.stderr).toContain("isn't a WOFF2 file (14 bytes)")
+      expect(result.stderr).toContain("pnpm reinstall")
+      expect(result.stderr).not.toContain("subset")
+    })
+
     it("ships a font it can't subset whole, with a warning", async () => {
+      writeFileSync(resolve(PRIVATE_FONTS_SRC, "FKScreamer-Bold.woff2"), "wOF2-broken-font-data")
       const result = await runScript(tmpRoot)
       expect(result.status).toBe(0)
       expect(result.stderr).toContain("Could not subset FKScreamer, shipping it whole")
@@ -186,9 +195,17 @@ describe("install-fonts.ts", () => {
 
     it("succeeds when the real fonts are present", async () => {
       mkdirSync(PRIVATE_FONTS_SRC, { recursive: true })
-      writeFileSync(resolve(PRIVATE_FONTS_SRC, "FKScreamer-Bold.woff2"), "fake-font-data")
+      writeFileSync(resolve(PRIVATE_FONTS_SRC, "FKScreamer-Bold.woff2"), INTER_BOLD)
       const result = await runScript(tmpRoot, { FONTS_REQUIRED: "true" })
       expect(result.status).toBe(0)
+    })
+
+    it("fails when the package's font file isn't a font", async () => {
+      mkdirSync(PRIVATE_FONTS_SRC, { recursive: true })
+      writeFileSync(resolve(PRIVATE_FONTS_SRC, "FKScreamer-Bold.woff2"), "fake-font-data")
+      const result = await runScript(tmpRoot, { FONTS_REQUIRED: "true" })
+      expect(result.status).toBe(1)
+      expect(result.stderr).toContain("isn't a WOFF2 file")
     })
 
     it("rejects a stale Inter fallback left by an earlier run", async () => {

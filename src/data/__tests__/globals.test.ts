@@ -1,0 +1,68 @@
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
+
+const findGlobal = vi.fn()
+
+vi.mock("payload", () => ({ getPayload: vi.fn(async () => ({ findGlobal })) }))
+vi.mock("@payload-config", () => ({ default: Promise.resolve({}) }))
+
+// `unstable_cache` needs an active Next.js request context to actually cache;
+// here we only care about the arguments it's called with (the cache key).
+const unstableCache = vi.fn(
+  (fn: () => Promise<unknown>, _keyParts?: string[], _options?: { tags?: string[] }) => fn,
+)
+vi.mock("next/cache", () => ({
+  unstable_cache: (...args: Parameters<typeof unstableCache>) => unstableCache(...args),
+}))
+
+const { getGlobal } = await import("../globals")
+
+describe("getGlobal", () => {
+  beforeEach(() => {
+    findGlobal.mockReset()
+    unstableCache.mockClear()
+    findGlobal.mockImplementation(async ({ slug, depth }: { slug: string; depth: number }) => ({
+      slug,
+      depth,
+    }))
+  })
+
+  it("keys the cache by slug and depth so different depths don't collide", async () => {
+    await getGlobal("footer", 1)
+    await getGlobal("footer", 2)
+
+    const keyParts = unstableCache.mock.calls.map(([, keys]) => keys)
+    expect(keyParts).toEqual([
+      ["footer", "1"],
+      ["footer", "2"],
+    ])
+  })
+
+  it("forwards the requested depth to payload.findGlobal", async () => {
+    await getGlobal("header", 3)
+
+    expect(findGlobal).toHaveBeenCalledWith({ slug: "header", depth: 3 })
+  })
+
+  it("defaults depth to 0 when not provided", async () => {
+    await getGlobal("footer")
+
+    expect(findGlobal).toHaveBeenCalledWith({ slug: "footer", depth: 0 })
+    expect(unstableCache.mock.calls[0]?.[1]).toEqual(["footer", "0"])
+  })
+
+  describe("in development", () => {
+    afterEach(() => {
+      vi.unstubAllEnvs()
+    })
+
+    // `next dev` keeps the Data Cache on disk, and a seed or `dev:db-nuke` writes the globals
+    // from outside Next where nothing clears it.
+    it("reads the database every time instead of the cross-request cache", async () => {
+      vi.stubEnv("NODE_ENV", "development")
+
+      expect(await getGlobal("header", 1)).toEqual({ slug: "header", depth: 1 })
+      expect(unstableCache).not.toHaveBeenCalled()
+      expect(findGlobal).toHaveBeenCalledWith({ slug: "header", depth: 1 })
+    })
+  })
+})

@@ -13,7 +13,7 @@ import { MerchBlock } from "@/blocks/Merch/Component"
 import { TimelineBlock } from "@/blocks/Timeline/Component"
 import { VolumeViewBlock } from "@/blocks/VolumeViewBlock/component"
 import { isResolved } from "@/utilities/relationships"
-import { getTurnstileSiteKey } from "@/utilities/turnstile"
+import { getTurnstileSiteKey } from "@/integrations/cloudflare/turnstile"
 
 interface RenderBlocksProps {
   blocks: Page["layout"][number][]
@@ -27,7 +27,7 @@ export const RenderBlocks: React.FC<RenderBlocksProps> = ({ blocks, pageNumber }
         const { blockType } = block
         const key = `block-${block.id || index}`
         if (blockType === "collectionGrid") {
-          return <CollectionGridBlock key={key} {...block} priority={index === 0 || index === 1} />
+          return <CollectionGridBlock key={key} {...block} preload={index === 0 || index === 1} />
         } else if (blockType === "content") {
           return <ContentBlock key={key} {...block} />
         } else if (blockType === "contributors") {

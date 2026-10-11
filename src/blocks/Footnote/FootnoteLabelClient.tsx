@@ -4,7 +4,9 @@ import type { FootnoteBlock, FootnotesField } from "@/payload-types"
 import { useDocumentInfo } from "@payloadcms/ui"
 import React from "react"
 
-import { getFootnotes, truncate } from "./utils"
+import { truncate } from "@/utilities/truncate"
+
+import { getFootnotes } from "./utils"
 
 const PREVIEW_LIMIT = 20
 

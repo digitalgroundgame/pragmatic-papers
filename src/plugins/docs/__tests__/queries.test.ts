@@ -7,7 +7,7 @@ const { find, draft, cached } = vi.hoisted(() => ({
   cached: vi.fn(),
 }))
 
-vi.mock("@/utilities/getPayloadConfig", () => ({ getPayloadConfig: async () => ({ find }) }))
+vi.mock("@/data/payload", () => ({ getPayloadClient: async () => ({ find }) }))
 vi.mock("next/headers", () => ({ draftMode: async () => draft }))
 // Runs the query straight through, recording the key and tags it was cached under.
 vi.mock("next/cache", () => ({

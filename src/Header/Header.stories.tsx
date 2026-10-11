@@ -3,13 +3,13 @@ import { expect, mocked, screen, userEvent, waitFor, within } from "storybook/te
 
 import { createFakePayload } from "@/stories/fixtures/payload"
 import { navItems, socials } from "@/stories/fixtures/navigation"
-import { getPayloadConfig } from "@/utilities/getPayloadConfig"
+import { getPayloadClient } from "@/data/payload"
 
 import { Header } from "./Component"
 
 /** Seeds the fake Payload; `feed` switches the feed experiment in Settings. */
 function seedPayload({ feed = false }: { feed?: boolean } = {}): void {
-  mocked(getPayloadConfig).mockResolvedValue(
+  mocked(getPayloadClient).mockResolvedValue(
     createFakePayload({
       globals: {
         header: {

@@ -37,6 +37,11 @@ jobs:
     name: Deploy staging Worker
     runs-on: ubuntu-latest
     timeout-minutes: 45
+    # Lists each deploy under the repo's Deployments as Staging Worker, linked to the Worker,
+    # beside Coolify's Staging (deployments.yml).
+    environment:
+      name: Staging Worker
+      url: ${{ vars.WORKER_STAGING_URL }}
     env:
       READY: ${{ secrets.CLOUDFLARE_WORKERS_TOKEN != '' && secrets.CLOUDFLARE_ACCOUNT_ID != '' && secrets.STAGING_PAYLOAD_SECRET != '' && vars.SHOWCASE_STAGING_URL != '' && vars.WORKER_STAGING_URL != '' }}
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_WORKERS_TOKEN }}

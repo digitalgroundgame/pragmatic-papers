@@ -7,7 +7,7 @@ import { isExperimentEnabled } from "@/globals/SiteSettings/isExperimentEnabled"
 import type { SearchIndex } from "@/interactives/engine/search"
 import type { ChildAssetRef, DrilldownAsset } from "@/interactives/engine/types"
 import type { Interactive } from "@/payload-types"
-import { getPayloadConfig } from "@/utilities/getPayloadConfig"
+import { getPayloadClient } from "@/data/payload"
 import { isRecord } from "@/utilities/isRecord"
 
 import { childKeys, composeChildData, composeChildGeometry, composeOverview } from "./compose"
@@ -33,7 +33,7 @@ import { DRILLDOWN_DATA_SCHEMA, type DrilldownData, type InteractiveProfile } fr
 export const queryInteractiveBySlug = cache(async (slug: string): Promise<Interactive | null> => {
   if (!(await isExperimentEnabled("interactives"))) return null
   const { isEnabled: draft } = await draftMode()
-  const payload = await getPayloadConfig()
+  const payload = await getPayloadClient()
   const { docs } = await payload.find({
     collection: "interactives",
     draft,
@@ -49,7 +49,7 @@ export const queryInteractiveBySlug = cache(async (slug: string): Promise<Intera
 /** The snapshot as the sync validated it; drafts only when asked. */
 const readSnapshotData = cache(
   async (interactiveId: number, draft: boolean): Promise<DrilldownData | null> => {
-    const payload = await getPayloadConfig()
+    const payload = await getPayloadClient()
     const { docs } = await payload.find({
       collection: "interactive-snapshots",
       where: { interactive: { equals: interactiveId } },

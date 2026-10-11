@@ -420,6 +420,9 @@ export interface Page {
  */
 export interface Media {
   id: number;
+  /**
+   * What the image shows, for readers who can't see it. Required for images.
+   */
   alt?: string | null;
   caption?: {
     root: {
@@ -2561,7 +2564,7 @@ export interface Footer {
 export interface TickerGlobal {
   id: number;
   /**
-   * Posts the ticker leaves out. Paste the post's link from Bluesky or X; it's gone from the ticker as soon as you save.
+   * Posts the ticker leaves out: the ones hidden above, or a link pasted from Bluesky or X. It's gone from the ticker as soon as you save.
    */
   hidden?:
     | {

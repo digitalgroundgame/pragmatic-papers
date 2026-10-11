@@ -31,6 +31,6 @@ export async function POST(request: Request): Promise<Response> {
 
   return Response.json({
     revalidated: true,
-    docs: docs && { created: docs.created, updated: docs.updated },
+    docs: docs && { created: docs.created, updated: docs.updated, deleted: docs.deleted },
   })
 }

@@ -22,7 +22,12 @@ describe("POST /next/revalidate-all", () => {
   beforeEach(() => {
     vi.stubEnv("PAYLOAD_SECRET", "s3cret")
     vi.clearAllMocks()
-    syncRepoDocs.mockResolvedValue({ created: ["a"], updated: [], unchanged: ["b"] })
+    syncRepoDocs.mockResolvedValue({
+      created: ["a"],
+      updated: [],
+      unchanged: ["b"],
+      deleted: ["c"],
+    })
   })
 
   it("syncs the repo's docs, then throws away every prerendered route", async () => {
@@ -31,7 +36,7 @@ describe("POST /next/revalidate-all", () => {
     expect(response.status).toBe(200)
     await expect(response.json()).resolves.toEqual({
       revalidated: true,
-      docs: { created: ["a"], updated: [] },
+      docs: { created: ["a"], updated: [], deleted: ["c"] },
     })
     expect(syncRepoDocs).toHaveBeenCalledExactlyOnceWith(payload)
     expect(revalidatePath).toHaveBeenCalledExactlyOnceWith("/", "layout")

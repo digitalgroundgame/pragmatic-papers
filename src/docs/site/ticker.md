@@ -20,8 +20,9 @@ It fills itself in: YouTube is checked every few minutes, Bluesky every few minu
 If a post shouldn't run on the site, an editor can take it out:
 
 1. Copy the post's link with its **Share** button on Bluesky or X.
-2. In the admin, open **Ticker** and add it under **Hidden posts**.
-3. Save. It's gone from the ticker straight away.
+2. In the admin, open **Site → Header** and go to the **Ticker** tab.
+3. Click **Hide** beside the post under **Posts right now**, or paste its link under **Hidden posts**.
+4. Save. It's gone from the ticker straight away.
 
 The link has to be a bsky.app or x.com post link; anything else is refused with a message saying so. Remove the row to let the post back in.
 
@@ -31,4 +32,4 @@ Admins choose the YouTube channels, Bluesky accounts and X accounts in **System 
 
 ## Where it's switched on
 
-The ticker is a beta feature, switched on separately on staging and the live site under **Site Settings → Experiments → Ticker**. While it's off, readers don't see it and there's nothing to hide. See [Switch beta features on per site in Site Settings](/docs/experiments).
+Admins switch the ticker on and off at the top of the same **Ticker** tab in **Site → Header**. Staging and the live site each have their own switch. While it's off, readers don't see it and the posts and hidden list are out of the way.

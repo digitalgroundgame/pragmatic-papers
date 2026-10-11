@@ -12,7 +12,7 @@ Some things appear on every page rather than in one document: the header's menu,
 
 ## Header
 
-Admins only. **Header** holds:
+Admins edit its **Navigation** tab; editors see it read-only. It holds:
 
 - **Navigation Items**: the menu, up to 12 links.
 - **Action Buttons**: up to 4 buttons in the top right. Give the most important one the **Branded** appearance.
@@ -30,7 +30,7 @@ Admins only. **Footer** holds:
 
 ## Ticker
 
-Editors and admins. The ticker is the strip under the header that shows a live broadcast and our latest posts. **Ticker → Hidden posts** lists posts it leaves out: paste a post's link from Bluesky or X, as its Share button copies it, and save. It's gone from the ticker straight away.
+The ticker is the strip under the header that shows a live broadcast and our latest posts. It lives on the **Ticker** tab of **Header**: admins switch it on there, and editors hide a post with its **Hide** button, or by pasting its link from Bluesky or X under **Hidden posts**, then save. It's gone from the ticker straight away.
 
 ## System settings
 

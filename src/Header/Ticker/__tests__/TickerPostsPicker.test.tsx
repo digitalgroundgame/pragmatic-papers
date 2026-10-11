@@ -26,8 +26,8 @@ afterEach(() => {
 })
 
 function setHidden(urls: string[]): void {
-  formFields = { hidden: { rows: urls.map(() => ({})) } }
-  urls.forEach((url, i) => (formFields[`hidden.${i}.url`] = { value: url }))
+  formFields = { "ticker.hidden": { rows: urls.map(() => ({})) } }
+  urls.forEach((url, i) => (formFields[`ticker.hidden.${i}.url`] = { value: url }))
 }
 
 const [bluesky, x] = tickerPosts as [TickerPost, TickerPost]
@@ -40,8 +40,8 @@ describe("TickerPostsPicker", () => {
     expect(row).toHaveTextContent("Visible")
     fireEvent.click(within(row).getByRole("button", { name: /^Hide/ }))
     expect(addFieldRow).toHaveBeenCalledWith({
-      path: "hidden",
-      schemaPath: "hidden",
+      path: "ticker.hidden",
+      schemaPath: "ticker.hidden",
       rowIndex: 1,
       subFieldState: { url: { initialValue: x.url, value: x.url, valid: true } },
     })
@@ -58,8 +58,8 @@ describe("TickerPostsPicker", () => {
     expect(row).toHaveTextContent("Hidden")
     fireEvent.click(within(row).getByRole("button", { name: /^Show/ }))
     expect(removeFieldRow.mock.calls).toEqual([
-      [{ path: "hidden", rowIndex: 2 }],
-      [{ path: "hidden", rowIndex: 0 }],
+      [{ path: "ticker.hidden", rowIndex: 2 }],
+      [{ path: "ticker.hidden", rowIndex: 0 }],
     ])
     expect(addFieldRow).not.toHaveBeenCalled()
   })

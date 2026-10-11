@@ -222,7 +222,6 @@ export interface Config {
   globals: {
     header: Header;
     footer: Footer;
-    ticker: TickerGlobal;
     'site-settings': SiteSetting;
     integrations: IntegrationSettings;
     newsletter: Newsletter;
@@ -232,7 +231,6 @@ export interface Config {
   globalsSelect: {
     header: HeaderSelect<false> | HeaderSelect<true>;
     footer: FooterSelect<false> | FooterSelect<true>;
-    ticker: TickerSelect<false> | TickerSelect<true>;
     'site-settings': SiteSettingsSelect<false> | SiteSettingsSelect<true>;
     integrations: IntegrationsSelect<false> | IntegrationsSelect<true>;
     newsletter: NewsletterSelect<false> | NewsletterSelect<true>;
@@ -2566,6 +2564,21 @@ export interface Header {
   id: number;
   navItems?: MenuField;
   actions?: MenuField;
+  ticker?: {
+    /**
+     * The strip under the header on every page: a broadcast when one of our YouTube channels is live, and our latest posts from Bluesky and X.
+     */
+    enabled?: boolean | null;
+    /**
+     * Posts the ticker leaves out: the ones hidden above, or a link pasted from Bluesky or X. It's gone from the ticker as soon as you save.
+     */
+    hidden?:
+      | {
+          url: string;
+          id?: string | null;
+        }[]
+      | null;
+  };
   updatedAt?: string | null;
   createdAt?: string | null;
 }
@@ -2579,26 +2592,6 @@ export interface Footer {
   navItems?: MenuField;
   socials?: MenuField;
   copyright?: LinkField;
-  updatedAt?: string | null;
-  createdAt?: string | null;
-}
-/**
- * The strip under the header with our live broadcasts and latest posts.
- *
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "ticker".
- */
-export interface TickerGlobal {
-  id: number;
-  /**
-   * Posts the ticker leaves out: the ones hidden above, or a link pasted from Bluesky or X. It's gone from the ticker as soon as you save.
-   */
-  hidden?:
-    | {
-        url: string;
-        id?: string | null;
-      }[]
-    | null;
   updatedAt?: string | null;
   createdAt?: string | null;
 }
@@ -2620,10 +2613,6 @@ export interface SiteSetting {
      * Interactive pages at /interactives/<slug>, their sitemap and the daily data sync.
      */
     interactives?: boolean | null;
-    /**
-     * The strip under the header on every page: a broadcast when one of our YouTube channels is live, and our latest posts from Bluesky and X.
-     */
-    ticker?: boolean | null;
     /**
      * The table of contents in an article's sidebar and its hero button, on articles with “Show table of contents” ticked.
      */
@@ -2745,6 +2734,17 @@ export interface PayloadJobsStat {
 export interface HeaderSelect<T extends boolean = true> {
   navItems?: T | MenuFieldSelect<T>;
   actions?: T | MenuFieldSelect<T>;
+  ticker?:
+    | T
+    | {
+        enabled?: T;
+        hidden?:
+          | T
+          | {
+              url?: T;
+              id?: T;
+            };
+      };
   updatedAt?: T;
   createdAt?: T;
   globalType?: T;
@@ -2768,21 +2768,6 @@ export interface FooterSelect<T extends boolean = true> {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "ticker_select".
- */
-export interface TickerSelect<T extends boolean = true> {
-  hidden?:
-    | T
-    | {
-        url?: T;
-        id?: T;
-      };
-  updatedAt?: T;
-  createdAt?: T;
-  globalType?: T;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "site-settings_select".
  */
 export interface SiteSettingsSelect<T extends boolean = true> {
@@ -2791,7 +2776,6 @@ export interface SiteSettingsSelect<T extends boolean = true> {
     | {
         feed?: T;
         interactives?: T;
-        ticker?: T;
         tableOfContents?: T;
       };
   updatedAt?: T;

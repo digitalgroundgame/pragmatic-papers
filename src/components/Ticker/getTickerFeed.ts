@@ -36,13 +36,14 @@ const posts = postSources.map((source) => cached(source.integration.id, source, 
 
 /**
  * What every source holds right now, and the links editors hid. Read once per request, by the
- * ticker and by the Ticker global's list of posts in the admin, from the same caches, so opening
+ * ticker and by the Header's list of posts in the admin, from the same caches, so opening
  * the admin never costs a source an extra read.
  */
 const getTickerSources = cache(async () => {
-  const [{ youtube, bluesky, x }, { hidden }] = await Promise.all([
+  const [{ youtube, bluesky, x }, { ticker }] = await Promise.all([
     getGlobal("integrations"),
-    getGlobal("ticker"),
+    // The depth the header reads it at, so they share one cache entry.
+    getGlobal("header", 1),
   ])
   const settings: TickerSettings = {
     youtubeChannelIds: youtube?.channels?.map((channel) => channel.channelId),
@@ -53,7 +54,7 @@ const getTickerSources = cache(async () => {
     broadcast(settings),
     ...posts.map((load) => load(settings)),
   ])
-  return { broadcast: current, lists, hidden: hidden?.map((post) => post.url) ?? [] }
+  return { broadcast: current, lists, hidden: ticker?.hidden?.map((post) => post.url) ?? [] }
 })
 
 /** Each source's posts, hidden ones included: what an editor picks from to hide. */
@@ -65,6 +66,6 @@ export const getTickerPostLists = cache(
 export const getTickerFeed = cache(async (): Promise<TickerFeed> => {
   const { broadcast: current, lists, hidden } = await getTickerSources()
   // Hidden posts are left out before the newest are picked, so the ticker stays full. The hidden
-  // list has its own cache, so a post an editor hides goes at once, whatever the sources hold.
+  // list is cached with the header, apart from the sources, so a post an editor hides goes at once, whatever the sources hold.
   return { broadcast: current, posts: mergePosts(lists.map((list) => withoutHidden(list, hidden))) }
 })

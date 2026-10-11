@@ -32,7 +32,7 @@ This file provides guidance to tools like Claude Code (claude.ai/code) when work
 - `pnpm storybook` — Storybook dev server on port 6006; `pnpm storybook:build` builds it into `storybook-static/`
 - `pnpm test:integration` — run integration tests against a throwaway Postgres in Docker (see [Test databases](#test-databases))
 - `pnpm test:e2e` — run Playwright E2E tests against a throwaway Postgres in Docker (see [Test databases](#test-databases)). Functional assertions only; visual changes are reviewed in Storybook and the PR's site preview (see `tests/e2e/README.md`)
-- `pnpm test:unit:coverage` — run unit tests with V8 coverage report (what CI uses; outputs `coverage/coverage-summary.json` and `coverage/coverage-final.json`)
+- `pnpm test:unit:coverage` — run unit tests with V8 coverage report (outputs `coverage/coverage-summary.json` and `coverage/coverage-final.json`). CI's coverage report adds the stories' coverage: the Unit tests and Storybook jobs each upload a `coverage-final.json`, and the Coverage job's `scripts/merge-coverage.ts` adds the stories' hits onto the unit run's map, matching entries by start line (the two transforms disagree on columns, so istanbul's own merge would count them twice). Integration tests aren't counted
 - `pnpm test:coverage` — run all tests with V8 coverage report (full picture for local inspection)
 - `pnpm test:unit -u` — regenerate snapshot baselines after intentional UI changes
 - `pnpm coverage:report` — post the coverage section of CI's PR comment locally (requires `GITHUB_TOKEN`, `GITHUB_REPOSITORY`, `GITHUB_EVENT_PATH`)
@@ -109,10 +109,9 @@ processes they start.
 
 ### Payload Globals
 
-- **Header** (`slug: 'header'`) — nav items, action button; revalidated via `revalidateHeader` hook
+- **Header** (`slug: 'header'`) — nav items, action button (admins), and a **Ticker** tab: admins switch the ticker on, and while it's on editors see the posts its sources hold now, each with a Hide button that adds its link to the hidden posts (or paste a link). Editors can save the global, but every field except the hidden posts is admin-only. Which accounts the ticker reads is in **Integrations** (admin-only); revalidated via `revalidateHeader` hook
 - **Footer** (`slug: 'footer'`) — nav items; revalidated via `revalidateFooter` hook
 - **Settings** (`slug: 'site-settings'`, the `SiteSettings` global) — admin-only; its `experiments` group switches beta features on per environment; revalidated via `revalidateSiteSettings` hook
-- **Ticker** (`slug: 'ticker'`) — editors and admins; lists the posts the ticker's sources hold now, each with a Hide button that adds its link to the hidden posts (or paste a link); revalidated via `revalidateTicker` hook. Which accounts the ticker reads is in **Integrations** (admin-only)
 - **Newsletter** (`slug: 'newsletter'`) — admin-only, stores nothing: its page (`NewsletterView`, replacing the edit view) shows Listmonk's subscriber counts, newest signups and latest campaigns
 - Fetched via `getGlobal('header' | 'footer', depth)` from `@/data/globals`, which caches with `unstable_cache` under the tag `global_<slug>`
 

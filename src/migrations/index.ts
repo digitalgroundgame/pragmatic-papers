@@ -57,6 +57,7 @@ import * as migration_20261009_080507_add_docs from "./20261009_080507_add_docs"
 import * as migration_20261011_004029_add_newsletter_global from "./20261011_004029_add_newsletter_global"
 import * as migration_20261011_013150_add_docs_layout_fields from "./20261011_013150_add_docs_layout_fields"
 import * as migration_20261011_023346_add_docs_tour from "./20261011_023346_add_docs_tour"
+import * as migration_20261011_031222_ticker_on_header from "./20261011_031222_ticker_on_header"
 
 export const migrations = [
   {
@@ -353,5 +354,10 @@ export const migrations = [
     up: migration_20261011_023346_add_docs_tour.up,
     down: migration_20261011_023346_add_docs_tour.down,
     name: "20261011_023346_add_docs_tour",
+  },
+  {
+    up: migration_20261011_031222_ticker_on_header.up,
+    down: migration_20261011_031222_ticker_on_header.down,
+    name: "20261011_031222_ticker_on_header",
   },
 ]

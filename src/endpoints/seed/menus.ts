@@ -38,6 +38,8 @@ export const createMenus = async (
     slug: "header",
     context,
     data: {
+      // Local dev shows the ticker; staging and production switch it on in the admin.
+      ticker: { enabled: true, hidden: [] },
       navItems: [
         {
           link: {

@@ -39,11 +39,12 @@ export function ssoPlugin(options: SsoPluginConfig): Plugin {
           ...collection.fields,
           {
             // Better Auth's record that a provider vouched for this address. Nothing in
-            // Payload sets or reads it.
+            // Payload sets or reads it, and the API never returns it: public authors' records
+            // are readable, and it would show who signs in with a provider.
             name: "emailVerified",
             type: "checkbox",
             defaultValue: false,
-            access: { create: () => false, update: () => false },
+            access: { create: () => false, read: () => false, update: () => false },
             admin: { hidden: true },
           },
           {
@@ -51,7 +52,7 @@ export function ssoPlugin(options: SsoPluginConfig): Plugin {
             // created would have one written, and it creates none.
             name: "avatarUrl",
             type: "text",
-            access: { create: () => false, update: () => false },
+            access: { create: () => false, read: () => false, update: () => false },
             admin: { hidden: true },
           },
         ],

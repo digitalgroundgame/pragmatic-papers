@@ -35,6 +35,7 @@ describe("ssoPlugin", () => {
     for (const field of usersOf(apply(options)).fields.slice(1)) {
       if (!("access" in field) || !field.access) throw new Error("no access")
       expect(field.access.create?.({} as never)).toBe(false)
+      expect(field.access.read?.({} as never)).toBe(false)
       expect(field.access.update?.({} as never)).toBe(false)
       expect(field.admin?.hidden).toBe(true)
     }

@@ -412,7 +412,7 @@ export async function listRecentCampaigns(
     }))
 }
 
-/** Listmonk's own admin, for everything the dashboard doesn't show. */
+/** Listmonk's own admin, for everything System → Newsletter doesn't show. */
 export function listmonkAdminUrl(): string {
   return `${readConfig().baseUrl}/admin`
 }

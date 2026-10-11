@@ -242,7 +242,7 @@ describe("listScheduledCampaigns", () => {
   })
 })
 
-describe("newsletter dashboard reads", () => {
+describe("System → Newsletter reads", () => {
   beforeEach(stubEnv)
   afterEach(() => {
     vi.unstubAllEnvs()

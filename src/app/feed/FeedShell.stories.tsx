@@ -29,8 +29,12 @@ const meta = {
   component: FeedShell,
   globals: { theme: "dark" },
   parameters: { layout: "fullscreen" },
-  // No next page, so the story never calls the load-more server action.
-  args: { initialItems: items, initialNextCursor: null },
+  // No next page, so the story never loads more.
+  args: {
+    initialItems: items,
+    initialNextCursor: null,
+    loadBatch: async () => ({ items: [], nextCursor: null }),
+  },
 } satisfies Meta<typeof FeedShell>
 
 export default meta

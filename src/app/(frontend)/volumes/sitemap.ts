@@ -1,8 +1,8 @@
 import type { MetadataRoute } from "next"
 import { unstable_cache } from "next/cache"
 
-import { getPayloadConfig } from "@/utilities/getPayloadConfig"
-import { getServerSideURL } from "@/utilities/getURL"
+import { getPayloadClient } from "@/data/payload"
+import { getSiteURL } from "@/utilities/getURL"
 
 // Rendered per request from the cached list below, which saving a volume refreshes
 // (revalidateVolumes): Next would otherwise prerender it at build time, from the build's database.
@@ -10,8 +10,8 @@ export const dynamic = "force-dynamic"
 
 const getVolumesSitemap = unstable_cache(
   async (): Promise<MetadataRoute.Sitemap> => {
-    const payload = await getPayloadConfig()
-    const siteUrl = getServerSideURL().replace(/\/$/, "")
+    const payload = await getPayloadClient()
+    const siteUrl = getSiteURL()
 
     const { docs } = await payload.find({
       collection: "volumes",

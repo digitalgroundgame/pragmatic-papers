@@ -8,7 +8,7 @@ import { NarrationPlayer } from "@/components/NarrationPlayer"
 import { TableOfContentsButton } from "@/components/TableOfContents"
 import { Separator } from "@/components/ui/separator"
 import type { Article, User } from "@/payload-types"
-import { getServerSideURL } from "@/utilities/getURL"
+import { getSiteURL } from "@/utilities/getURL"
 import { isResolved } from "@/utilities/relationships"
 import { PublicationDates } from "./PublicationDates"
 
@@ -32,7 +32,7 @@ export const ArticleHero: React.FC<ArticleHeroProps> = ({
   return (
     <div className="relative flex flex-col gap-2">
       <Media
-        priority
+        preload
         sizes="(max-width: 768px) 100vw, 1024px"
         media={heroImage}
         variant="large"
@@ -47,10 +47,7 @@ export const ArticleHero: React.FC<ArticleHeroProps> = ({
         <div data-slot="article-meta-controls" className="flex grow items-center justify-end gap-1">
           <NarrationPlayer narration={narration} className="mr-auto shrink-0" />
           {showTableOfContents && <TableOfContentsButton content={content} />}
-          <ShareButtons
-            url={`${getServerSideURL()}/articles/${article.slug}`}
-            title={article.title}
-          />
+          <ShareButtons url={`${getSiteURL()}/articles/${article.slug}`} title={article.title} />
         </div>
       </div>
       <Separator />

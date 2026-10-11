@@ -8,19 +8,18 @@ import RichText from "@/components/RichText"
 import { ShareButtons } from "@/components/ShareButtons"
 import { Separator } from "@/components/ui/separator"
 import type { Article, User } from "@/payload-types"
-import { formatDateTime } from "@/utilities/formatDateTime"
+import { formatLongDate } from "@/utilities/formatDate"
 import { generateMeta } from "@/utilities/generateMeta"
-import { getServerSideURL } from "@/utilities/getURL"
-import { queryVolumeBySlug } from "@/utilities/queries"
+import { getSiteURL } from "@/utilities/getURL"
+import { queryVolumeBySlug } from "@/data/queries"
 import { isResolved } from "@/utilities/relationships"
 import { buildBreadcrumbJsonLd, buildVolumeJsonLd } from "@/utilities/structuredData"
 import { toRoman } from "@/utilities/toRoman"
-import configPromise from "@payload-config"
 import type { Metadata } from "next"
 import { draftMode } from "next/headers"
-import { getPayload } from "payload"
 import React from "react"
 import { Breadcrumbs } from "@/components/Breadcrumbs"
+import { getPayloadClient } from "@/data/payload"
 
 // Prerendered from generateStaticParams; a slug published since the build is rendered on its
 // first request and cached the same way. Saving the volume, one of its articles or an author
@@ -28,7 +27,7 @@ import { Breadcrumbs } from "@/components/Breadcrumbs"
 export const revalidate = 3600
 
 export async function generateStaticParams(): Promise<{ slug: string | null | undefined }[]> {
-  const payload = await getPayload({ config: configPromise })
+  const payload = await getPayloadClient()
   const volumes = await payload.find({
     collection: "volumes",
     draft: false,
@@ -103,14 +102,10 @@ export default async function VolumePage({
               href={`/volumes/${volume.slug}`}
               className="text-brand-text font-serif font-semibold underline-offset-4 hover:underline"
             >
-              <time dateTime={publishedAt}>{formatDateTime(publishedAt)}</time>
+              <time dateTime={publishedAt}>{formatLongDate(publishedAt)}</time>
             </HoverPrefetchLink>
           )}
-          <ShareButtons
-            url={`${getServerSideURL()}${url}`}
-            title={volumeTitle}
-            className="ml-auto"
-          />
+          <ShareButtons url={`${getSiteURL()}${url}`} title={volumeTitle} className="ml-auto" />
         </div>
         <RichText className="drop-cap" enableGutter={false} data={editorsNote} />
         <Separator className="my-6" />
@@ -122,7 +117,7 @@ export default async function VolumePage({
               <ArticleCard
                 key={article.id}
                 doc={article}
-                priority={index < 2}
+                preload={index < 2}
                 relationTo="articles"
               />
             ))}

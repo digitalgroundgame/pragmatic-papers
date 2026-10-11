@@ -24,7 +24,7 @@ import {
   HOME_DOC_SLUG,
 } from "@/plugins/docs/sections"
 import { getMediaUrl } from "@/utilities/getMediaUrl"
-import { getServerSideURL } from "@/utilities/getURL"
+import { getSiteURL } from "@/utilities/getURL"
 import { mergeOpenGraph } from "@/utilities/mergeOpenGraph"
 import { buildBreadcrumbJsonLd } from "@/utilities/structuredData"
 import { SquarePen } from "lucide-react"
@@ -40,7 +40,7 @@ export async function docMetadata(slug: string): Promise<Metadata | null> {
   if (!doc) return null
 
   const title = `${doc.title} — Pragmatic Papers`
-  const canonicalUrl = `${getServerSideURL()}${docPath(slug)}`
+  const canonicalUrl = `${getSiteURL()}${docPath(slug)}`
   const ogImage =
     typeof doc.heroImage === "object" ? getMediaUrl(doc.heroImage?.sizes?.og?.url) : undefined
   return {
@@ -116,7 +116,7 @@ export async function DocView({ slug, fallback }: DocViewProps): Promise<React.R
             <div className="flex flex-wrap items-center justify-between gap-3">
               <DocDates publishedAt={doc.publishedAt} revisedAt={doc.revisedAt} />
               <div className="flex items-center gap-1">
-                <ShareButtons url={`${getServerSideURL()}${url}`} title={doc.title} />
+                <ShareButtons url={`${getSiteURL()}${url}`} title={doc.title} />
               </div>
             </div>
             <Separator />

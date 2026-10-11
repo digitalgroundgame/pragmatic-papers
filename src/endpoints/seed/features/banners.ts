@@ -7,7 +7,7 @@ import {
   createHeadingNode,
   createParagraph,
   createRichText,
-  createRichTextContent,
+  createRichTextFromString,
 } from "../richtext"
 
 export const createBannerBlock = (
@@ -19,7 +19,7 @@ export const createBannerBlock = (
     fields: {
       blockType: "banner",
       style,
-      content: createRichTextContent(message),
+      content: createRichTextFromString(message),
     },
     format: "",
     version: 2,

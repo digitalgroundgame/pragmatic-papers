@@ -1,21 +1,19 @@
-import { type RelationshipFieldManyValidation, getPayload } from "payload"
-import configPromise from "@payload-config"
+import type { RelationshipFieldManyValidation } from "payload"
 
-export const checkArticles: RelationshipFieldManyValidation = async (value) => {
+export const checkArticles: RelationshipFieldManyValidation = async (value, { req }) => {
   const fieldValue = value as number[]
 
   if (!fieldValue?.length) return true
 
-  const payload = await getPayload({ config: configPromise })
-
   // The published documents, not each article's latest version: an article edited since it was
   // published has an autosave draft as its latest version, but it is still live.
-  const articles = await payload.find({
+  const articles = await req.payload.find({
     collection: "articles",
     where: { id: { in: fieldValue } },
     draft: false,
     overrideAccess: true,
     depth: 0,
+    req,
   })
 
   const unpublished = articles.docs.filter((article) => article._status !== "published")

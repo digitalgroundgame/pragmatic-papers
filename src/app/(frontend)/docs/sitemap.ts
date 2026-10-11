@@ -2,7 +2,7 @@ import type { MetadataRoute } from "next"
 
 import { queryPublishedDocs } from "@/plugins/docs/queries"
 import { docPath, WHATS_NEW_PATH } from "@/plugins/docs/sections"
-import { getServerSideURL } from "@/utilities/getURL"
+import { getSiteURL } from "@/utilities/getURL"
 
 // Rendered per request from the docs' data cache, which saving a doc or a deploy's docs sync
 // refreshes: Next would otherwise prerender it at build time, from the build's database.
@@ -13,7 +13,7 @@ export const dynamic = "force-dynamic"
  * newest doc.
  */
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const siteUrl = getServerSideURL().replace(/\/$/, "")
+  const siteUrl = getSiteURL().replace(/\/$/, "")
   const docs = await queryPublishedDocs()
   const newest = docs
     .map((doc) => doc.updatedAt)

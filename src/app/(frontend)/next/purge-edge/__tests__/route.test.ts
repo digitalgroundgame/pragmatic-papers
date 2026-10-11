@@ -4,7 +4,7 @@ const { purgeEdgeCache } = vi.hoisted(() => ({ purgeEdgeCache: vi.fn() }))
 const payload = { logger: { info: vi.fn(), warn: vi.fn() } }
 
 vi.mock("@/hooks/purgeEdgeCache", () => ({ purgeEdgeCache }))
-vi.mock("@/utilities/getPayloadConfig", () => ({ getPayloadConfig: async () => payload }))
+vi.mock("@/data/payload", () => ({ getPayloadClient: async () => payload }))
 
 const { GET, POST } = await import("../route")
 

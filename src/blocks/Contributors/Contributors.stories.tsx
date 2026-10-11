@@ -3,7 +3,7 @@ import { expect, mocked, within } from "storybook/test"
 
 import { authors } from "@/stories/fixtures/docs"
 import { createFakePayload } from "@/stories/fixtures/payload"
-import { getPayloadConfig } from "@/utilities/getPayloadConfig"
+import { getPayloadClient } from "@/data/payload"
 
 import { ContributorsBlock } from "./Component"
 
@@ -17,7 +17,7 @@ const meta = {
     people: authors.map((author) => author.id),
   },
   beforeEach: () => {
-    mocked(getPayloadConfig).mockResolvedValue(
+    mocked(getPayloadClient).mockResolvedValue(
       createFakePayload({ collections: { users: authors } }),
     )
   },

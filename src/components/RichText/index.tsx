@@ -36,10 +36,10 @@ import type {
   SquiggleRuleBlock as SquiggleRuleBlockProps,
   TimelineBlock as TimelineBlockProps,
 } from "@/payload-types"
-import { internalDocToHref } from "./internalDocToHref"
+import { internalDocToHref } from "@/utilities/routes"
 import { HoverPrefetchLink } from "@/components/Link/HoverPrefetchLink"
 import { sanitizeUrl } from "payload/shared"
-import { getTurnstileSiteKey } from "@/utilities/turnstile"
+import { getTurnstileSiteKey } from "@/integrations/cloudflare/turnstile"
 import { cn } from "@/utilities/utils"
 import type {
   DefaultNodeTypes,

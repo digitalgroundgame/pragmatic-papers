@@ -1,4 +1,4 @@
-import { getPayloadConfig } from "@/utilities/getPayloadConfig"
+import { getPayloadClient } from "@/data/payload"
 import { draftMode } from "next/headers"
 import { unstable_cache } from "next/cache"
 import { cache } from "react"
@@ -7,7 +7,7 @@ import { DOCS_SLUG } from "./collection"
 import { DOCS_CACHE_TAG } from "./revalidateDoc"
 
 const findPublishedDocs = async () => {
-  const payload = await getPayloadConfig()
+  const payload = await getPayloadClient()
   const { docs } = await payload.find({
     collection: DOCS_SLUG,
     depth: 1,
@@ -50,7 +50,7 @@ export const queryPublishedDocs = (): ReturnType<typeof findPublishedDocs> =>
   })()
 
 const findDoc = async (slug: string, draft: boolean) => {
-  const payload = await getPayloadConfig()
+  const payload = await getPayloadClient()
   const { docs } = await payload.find({
     collection: DOCS_SLUG,
     depth: 2,

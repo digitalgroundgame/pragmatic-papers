@@ -2,7 +2,7 @@ import type { Payload } from "payload"
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest"
 
 import { syncProducts, type ShopifyProductNode } from "@/jobs/syncShopifyProducts/logic"
-import { getPayloadConfig } from "@/utilities/getPayloadConfig"
+import { getPayloadClient } from "@/data/payload"
 
 let payload: Payload
 let productSeq = 900 // high number to avoid conflicts with other integration tests
@@ -13,7 +13,7 @@ const SYNCED_AT = "2026-08-11T00:00:00.000Z"
 const LATER = "2026-08-11T01:00:00.000Z"
 
 beforeAll(async () => {
-  payload = await getPayloadConfig()
+  payload = await getPayloadClient()
 })
 
 afterAll(async () => {

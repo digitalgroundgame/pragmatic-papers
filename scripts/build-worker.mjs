@@ -9,9 +9,10 @@
  *   Coolify, so the build moves the folder aside and puts it back afterwards. If a build
  *   is killed before it can, the next run puts it back first.
  * - `OPENNEXT_BUILD=true` turns on `withCloudflare` in next.config.ts.
+ * - The static assets' headers (`src/cloudflare/_headers`) go into `.open-next/assets`.
  */
 import { spawnSync } from "node:child_process"
-import { existsSync, mkdirSync, renameSync } from "node:fs"
+import { copyFileSync, existsSync, mkdirSync, renameSync } from "node:fs"
 import path from "node:path"
 
 const ADMIN = path.resolve("src/app/(payload)")
@@ -44,6 +45,7 @@ try {
     NODE_OPTIONS: "--no-deprecation --max-old-space-size=12288",
   })
   run("pnpm", ["exec", "opennextjs-cloudflare", "build", "--skipNextBuild"])
+  copyFileSync("src/cloudflare/_headers", ".open-next/assets/_headers")
 } finally {
   restore()
 }

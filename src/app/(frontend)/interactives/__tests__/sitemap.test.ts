@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 const { find, experiment } = vi.hoisted(() => ({ find: vi.fn(), experiment: { on: true } }))
 
-vi.mock("@/utilities/getPayloadConfig", () => ({ getPayloadConfig: async () => ({ find }) }))
+vi.mock("@/data/payload", () => ({ getPayloadClient: async () => ({ find }) }))
 // The cache is Next's concern; the route's own job is which interactives it lists.
 vi.mock("next/cache", () => ({ unstable_cache: <T>(fn: T): T => fn }))
 vi.mock("@/globals/SiteSettings/isExperimentEnabled", () => ({

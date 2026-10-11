@@ -1,6 +1,6 @@
 import { queryPublishedDocs } from "@/plugins/docs/queries"
 import { WHATS_NEW_PATH } from "@/plugins/docs/sections"
-import { getServerSideURL } from "@/utilities/getURL"
+import { getSiteURL } from "@/utilities/getURL"
 import { mergeOpenGraph } from "@/utilities/mergeOpenGraph"
 import type { Metadata } from "next"
 import React from "react"
@@ -15,7 +15,7 @@ const DESCRIPTION = "Every Pragmatic Papers doc, newest first."
 export const dynamic = "force-dynamic"
 
 export function generateMetadata(): Metadata {
-  const canonicalUrl = `${getServerSideURL()}${WHATS_NEW_PATH}`
+  const canonicalUrl = `${getSiteURL()}${WHATS_NEW_PATH}`
   return {
     title: TITLE,
     description: DESCRIPTION,

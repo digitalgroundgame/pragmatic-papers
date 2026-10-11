@@ -1,7 +1,7 @@
 import { revalidatePath } from "next/cache"
 
 import { syncRepoDocs } from "@/plugins/docs/syncRepoDocs"
-import { getPayloadConfig } from "@/utilities/getPayloadConfig"
+import { getPayloadClient } from "@/data/payload"
 
 import { hasPayloadSecret } from "../bearer"
 
@@ -26,7 +26,7 @@ export async function POST(request: Request): Promise<Response> {
     return Response.json({ error: "Unauthorized" }, { status: 401 })
   }
 
-  const docs = await syncRepoDocs(await getPayloadConfig())
+  const docs = await syncRepoDocs(await getPayloadClient())
   revalidatePath("/", "layout")
 
   return Response.json({

@@ -1,8 +1,8 @@
 import { admin } from "@/access/collections"
 import { type Webhook } from "@/payload-types"
 import { type FieldHookArgs, type CollectionConfig } from "payload"
-import { format } from "date-fns/format"
-import { isAfter } from "date-fns/isAfter"
+
+const PUSHED_AT = new Intl.DateTimeFormat("en-US", { dateStyle: "medium", timeStyle: "medium" })
 
 export const Webhooks: CollectionConfig = {
   slug: "webhooks",
@@ -40,10 +40,10 @@ export const Webhooks: CollectionConfig = {
                 return { vol: v.volumeNumber, time: new Date(v.timePushed ?? 0) }
               })
               .reduce<{ vol?: number | null; time: Date } | undefined>(
-                (prev, curr) => (prev && isAfter(prev.time, curr.time) ? prev : curr),
+                (prev, curr) => (prev && prev.time > curr.time ? prev : curr),
                 undefined,
               )
-            return latest ? `Vol. ${latest.vol} - ${format(latest.time, "PP pp")}` : "-"
+            return latest ? `Vol. ${latest.vol} - ${PUSHED_AT.format(latest.time)}` : "-"
           },
         ],
       },

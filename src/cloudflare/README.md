@@ -13,7 +13,8 @@ tracks turning `next/link` back on.
 Nothing here changes the Coolify build: everything Worker-specific is behind
 `OPENNEXT_BUILD=true`, which only `pnpm build:worker` sets.
 
-Today it runs as **staging's Worker**, `pragmatic-papers-staging` on workers.dev, reading
+Today it runs as **staging's Worker**, `pragmatic-papers-staging` at
+`staging-worker.pragmaticpapers.com` (a Custom Domain) and on workers.dev, reading
 staging's database through Hyperdrive, while staging itself keeps running on Coolify.
 `.github/workflows/worker.yml` deploys it on every push to `dev`.
 
@@ -37,13 +38,15 @@ the R2 bucket and D1 database by name if they're missing. The rest is set up by 
    database is `pragmatic_papers`, with an underscore; the same server also has an empty
    `pragmatic-papers`). Cloudflare creates the Access application and service token. Its
    ID is in `wrangler.jsonc`.
-3. **API token** with Workers Scripts, Workers R2 Storage, D1 and Hyperdrive, all Edit:
-   the repo secret `CLOUDFLARE_WORKERS_TOKEN`. `CLOUDFLARE_ACCOUNT_ID` is shared with the
-   Storybook deploy.
+3. **API token** with Workers Scripts, Workers R2 Storage, D1 and Hyperdrive, all Edit,
+   plus Workers Routes and DNS, both Edit, on the `pragmaticpapers.com` zone (for the
+   Custom Domain): the repo secret `CLOUDFLARE_WORKERS_TOKEN`. `CLOUDFLARE_ACCOUNT_ID` is
+   shared with the Storybook deploy.
 4. **Repo secret** `STAGING_PAYLOAD_SECRET` (staging's `PAYLOAD_SECRET`), and **variables**
-   `WORKER_STAGING_URL` (the Worker's workers.dev URL) and `SHOWCASE_STAGING_URL`
-   (staging's Coolify URL, which the Worker sends `/admin` and `/api` to).
-5. **Coolify staging**: the runtime variable `WORKER_URL` (the Worker's workers.dev URL).
+   `WORKER_STAGING_URL` (`https://staging-worker.pragmaticpapers.com`) and
+   `SHOWCASE_STAGING_URL` (staging's Coolify URL, which the Worker sends `/admin` and
+   `/api` to; the deploy passes it as `ORIGIN_URL`).
+5. **Coolify staging**: the runtime variable `WORKER_URL` (the same URL).
    With it, every save that purges Cloudflare's edge clears the Worker's cache first,
    through `/next/revalidate-all` with staging's `PAYLOAD_SECRET`
    (`src/hooks/purgeEdgeCache.ts`). Without it, an edit to an article or volume shows on
@@ -126,9 +129,10 @@ deployment.
 ## Before it can serve production
 
 - **Real latency and cold-start CPU**, measured on the staging Worker.
-- **A custom domain**, and the zone's cache rules for it (`cloudflare/rulesets/`).
-  The zone's Cache Rules don't apply to a Worker's responses, so today every request runs
-  the Worker, and a HIT is read from R2.
+- **Production's hostname** as a Custom Domain. Coolify then needs a hostname of its own
+  for `ORIGIN_URL`, and the deploy checks' `/next/version` and `/next/purge-edge` have to
+  reach Coolify. The zone's Cache Rules don't apply to a Worker's responses, so today
+  every request runs the Worker, and a HIT is read from R2.
 - **An edge cache** in front of the Worker:
   [Workers Cache](https://developers.cloudflare.com/workers/cache/) (`cache.enabled` in
   `wrangler.jsonc`), which works on workers.dev too. Its key leaves out cookies, so draft

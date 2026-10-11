@@ -1,7 +1,8 @@
 // The public site as a Cloudflare Worker, built by OpenNext (`pnpm build:worker`;
 // src/cloudflare/README.md). Starts from node_modules/@opennextjs/cloudflare/templates/wrangler.jsonc.
 //
-// This is staging's Worker, on workers.dev, reading staging's database through Hyperdrive.
+// This is staging's Worker, at staging-worker.pragmaticpapers.com and on workers.dev,
+// reading staging's database through Hyperdrive.
 // The deploy workflow (.github/workflows/worker.yml) passes SERVER_URL and ORIGIN_URL.
 {
   "$schema": "node_modules/wrangler/config-schema.json",
@@ -10,6 +11,9 @@
   "compatibility_date": "2026-09-30",
   "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
   "workers_dev": true,
+  // A Custom Domain: the Worker is the hostname's origin, and the deploy creates its DNS
+  // record and certificate. It can't be created over an existing DNS record.
+  "routes": [{ "pattern": "staging-worker.pragmaticpapers.com", "custom_domain": true }],
   "observability": { "enabled": true },
   "assets": {
     "directory": ".open-next/assets",

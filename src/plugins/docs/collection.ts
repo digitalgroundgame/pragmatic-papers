@@ -181,7 +181,7 @@ export const Docs: CollectionConfig<"docs"> = {
         description: `A guided tour of the feature, offered as Show me in the help bell and on the doc. One of: ${Object.keys(TOURS).join(", ")}.`,
       },
       validate: (value: string | null | undefined) =>
-        !value || value in TOURS || `No tour is called "${value}".`,
+        !value || Object.hasOwn(TOURS, value) || `No tour is called "${value}".`,
     },
     // On by default: a doc is reference reading, skimmed for the one section a reader needs.
     tableOfContentsField({ defaultValue: true }),

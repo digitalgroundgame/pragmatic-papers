@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 
-import { TOURS, tourHref } from "../registry"
+import { findTour, TOURS, tourHref } from "../registry"
 import { canGoBack, isOpenable, matchesPath, parseProgress, placeStep } from "../steps"
 import type { Tour } from "../types"
 
@@ -98,5 +98,14 @@ describe("TOURS", () => {
       // Either already on this page, or the step before opens it with Next.
       expect(previous?.path === step.path || previous?.follow).toBe(true)
     })
+  })
+})
+
+describe("findTour", () => {
+  it("finds a tour by its key, and nothing for other names an object has", () => {
+    expect(findTour("articles")?.key).toBe("articles")
+    for (const key of ["toString", "constructor", "__proto__", "", null, undefined]) {
+      expect(findTour(key)).toBeUndefined()
+    }
   })
 })

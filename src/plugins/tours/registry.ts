@@ -10,7 +10,7 @@ export const TOURS: Record<string, Tour> = Object.fromEntries(
 export const TOUR_PARAM = "tour"
 
 export const findTour = (key: string | null | undefined): Tour | undefined =>
-  key ? TOURS[key] : undefined
+  key && Object.hasOwn(TOURS, key) ? TOURS[key] : undefined
 
 /** A link that opens the admin and starts the tour, from the bell, a doc, or anywhere else. */
 export const tourHref = (key: string): string => `/admin?${TOUR_PARAM}=${encodeURIComponent(key)}`

@@ -55,18 +55,18 @@ export async function main(slug: string | undefined): Promise<void> {
     if (!doc) throw new Error(`No doc with the slug "${slug}"`)
     if (!doc.publishedAt) throw new Error(`"${slug}" has no published date yet`)
 
-    if (!doc.heroImage) throw new Error(`"${slug}" has no hero image yet`)
-
     const hero = doc.heroImage
     const heroName =
-      typeof hero === "object" ? `${slug}-hero${path.extname(hero.filename ?? ".webp")}` : null
-    const names = new Map(typeof hero === "object" && heroName ? [[hero.id, heroName]] : [])
+      hero && typeof hero === "object"
+        ? `${slug}-hero${path.extname(hero.filename ?? ".webp")}`
+        : null
+    const names = new Map(hero && typeof hero === "object" && heroName ? [[hero.id, heroName]] : [])
     const { content: packed, media } = packMedia(
       slug,
       { heroImage: doc.heroImage, content: doc.content },
       names,
     )
-    const { heroImage, content } = packed as { heroImage: MediaRef; content: unknown }
+    const { heroImage, content } = packed as { heroImage?: MediaRef | null; content: unknown }
     const body = contentToMarkdown(content, docsEditorConfig(payload.config))
 
     const markdown = formatDocFile({
@@ -76,8 +76,7 @@ export async function main(slug: string | undefined): Promise<void> {
         summary: doc.summary,
         publishedAt: doc.publishedAt.slice(0, 10),
         ...(doc.revisedAt ? { revisedAt: doc.revisedAt.slice(0, 10) } : {}),
-        heroImage: heroImage.$media,
-        heroAlt: heroImage.alt ?? "",
+        ...(heroImage ? { heroImage: heroImage.$media, heroAlt: heroImage.alt ?? "" } : {}),
         ...(doc.audience?.length ? { audience: doc.audience } : {}),
         ...(doc.showTableOfContents === false ? { showTableOfContents: false } : {}),
       },

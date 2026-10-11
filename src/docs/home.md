@@ -3,8 +3,6 @@ title: Pragmatic Papers docs
 navTitle: Home
 summary: How Pragmatic Papers works, for the people who write and edit it, the people who read it and the people who build it.
 publishedAt: 2026-10-10
-heroImage: home-hero.webp
-heroAlt: Three views of the docs' sidebar, each with a different section open under Admin
 ---
 
 Pragmatic Papers publishes pragmatic, community-driven articles on news, politics, economics and more. Writers and editors put it together in the admin, readers find it on the site, and Digital Ground Game builds both. These docs cover all three.

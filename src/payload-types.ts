@@ -1421,9 +1421,9 @@ export interface Doc {
    */
   summary: string;
   /**
-   * Shown above the doc's title, beside it in the help bell, and in link previews.
+   * Shown above the doc's title, beside it in the help bell, and in link previews. Optional.
    */
-  heroImage: number | Media;
+  heroImage?: (number | null) | Media;
   content: {
     root: {
       type: string;

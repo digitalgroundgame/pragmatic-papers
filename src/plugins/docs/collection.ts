@@ -99,15 +99,13 @@ export const Docs: CollectionConfig<"docs"> = {
       },
     },
     {
-      // Not shown on the doc itself: it's the doc's picture elsewhere.
       name: "heroImage",
       type: "upload",
       relationTo: "media",
-      required: true,
       admin: {
         position: "sidebar",
         description:
-          "Shown above the doc's title, beside it in the help bell, and in link previews.",
+          "Shown above the doc's title, beside it in the help bell, and in link previews. Optional.",
       },
     },
     {

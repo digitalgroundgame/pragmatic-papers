@@ -44,6 +44,15 @@ describe("parseDocFile", () => {
     expect(parseDocFile(formatted, "a.md")).toEqual(parseDocFile(source, "a.md"))
   })
 
+  it("reads a doc with no hero image", () => {
+    const bare = source
+      .replace("heroImage: unsplash-photos-hero.webp\n", "")
+      .replace("heroAlt: The search\n", "")
+    const { meta } = parseDocFile(bare, "a.md")
+    expect(meta.heroImage).toBeUndefined()
+    expect(formatDocFile({ meta, body: "Hi." })).not.toContain("hero")
+  })
+
   it.each([
     ["no front matter", "Just text", /no front matter/],
     [
@@ -51,7 +60,12 @@ describe("parseDocFile", () => {
       source.replace("navTitle", "navTitel"),
       /unknown front matter key "navTitel"/,
     ],
-    ["a missing key", source.replace("heroAlt: The search\n", ""), /needs "heroAlt"/],
+    ["a missing key", source.replace("summary:", "sumary:"), /unknown front matter key/],
+    [
+      "a hero image with no alt text",
+      source.replace("heroAlt: The search\n", ""),
+      /needs "heroAlt"/,
+    ],
     [
       "a date that isn't a day",
       source.replace("2026-10-18", "18 Oct"),

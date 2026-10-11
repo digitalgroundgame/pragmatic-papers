@@ -163,7 +163,8 @@ or two (the bell shows it), `publishedAt` (the day the release reaches
 production; for a feature that shipped earlier, the day it did), `revisedAt`
 when a later release changes it (shown as "Updated …" beside the date; the bell
 keeps it under `publishedAt`), `heroImage` and `heroAlt` (1200×630, the bell's
-thumbnail, the link preview's image and the banner above the doc's title) and, for a
+thumbnail, the link preview's image and the banner above the doc's title; optional,
+but give a doc one where a picture helps) and, for a
 doc only some roles need, `audience` (e.g. `[editor]`; admins and chief editors
 see every doc). `audience` only decides who the bell tells: every published doc
 is public at /docs, as the repo is. The body is Markdown the docs editor can

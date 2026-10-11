@@ -135,7 +135,7 @@ export async function syncDocs(payload: Payload, dir = DOCS_DIR): Promise<SyncRe
     const source = await readFile(file, "utf8")
     const { meta, body } = parseDocFile(source, path.relative(dir, file))
     const refs = mediaRefsIn([
-      { $media: meta.heroImage, alt: meta.heroAlt },
+      meta.heroImage ? { $media: meta.heroImage, alt: meta.heroAlt } : [],
       imagesIn(body).map((image) => ({ $media: image.file, alt: image.alt })),
     ])
     const files = await Promise.all(refs.map((ref) => readFile(path.join(folder, ref.$media))))
@@ -166,7 +166,7 @@ export async function syncDocs(payload: Payload, dir = DOCS_DIR): Promise<SyncRe
     const { heroAlt, heroImage, ...rest } = meta
     const repoDoc: RepoDoc = {
       ...rest,
-      heroImage: { $media: heroImage, alt: heroAlt },
+      ...(heroImage ? { heroImage: { $media: heroImage, alt: heroAlt } } : {}),
       section,
       content: markdownToContent(slug, body, editorConfig),
     }
@@ -176,7 +176,7 @@ export async function syncDocs(payload: Payload, dir = DOCS_DIR): Promise<SyncRe
       summary: repoDoc.summary,
       publishedAt: repoDoc.publishedAt,
       revisedAt: repoDoc.revisedAt ?? null,
-      heroImage: unpackMedia(repoDoc.heroImage, ids) as number,
+      heroImage: repoDoc.heroImage ? (unpackMedia(repoDoc.heroImage, ids) as number) : null,
       section: repoDoc.section,
       audience: (repoDoc.audience ?? []) as Doc["audience"],
       showTableOfContents: repoDoc.showTableOfContents ?? true,

@@ -14,9 +14,13 @@ export interface DocFrontMatter {
   publishedAt: string
   /** `YYYY-MM-DD`: when it last changed in a way readers should know about, shown beside its date. */
   revisedAt?: string
-  /** A file beside the doc, `<slug>-hero.webp` by convention: the bell's thumbnail and the link preview's image. */
-  heroImage: string
-  heroAlt: string
+  /**
+   * A file beside the doc, `<slug>-hero.webp` by convention: the banner over its title, the
+   * bell's thumbnail and the link preview's image. Left out, the doc has none.
+   */
+  heroImage?: string
+  /** Needed with a hero image. */
+  heroAlt?: string
   audience?: Role[]
   /** Left out means shown. */
   showTableOfContents?: boolean
@@ -39,7 +43,7 @@ const KEYS = [
   "showTableOfContents",
 ] as const satisfies (keyof DocFrontMatter)[]
 
-const REQUIRED = ["title", "summary", "publishedAt", "heroImage", "heroAlt"] as const
+const REQUIRED = ["title", "summary", "publishedAt"] as const
 
 const DAY = /^\d{4}-\d{2}-\d{2}$/
 
@@ -98,6 +102,9 @@ export function parseDocFile(source: string, name: string): DocFile {
     if (typeof meta[key] !== "string" || !(meta[key] as string).trim()) {
       throw new Error(`${name}: front matter needs "${key}"`)
     }
+  }
+  if (meta.heroImage !== undefined && !String(meta.heroAlt ?? "").trim()) {
+    throw new Error(`${name}: front matter needs "heroAlt" to describe the hero image`)
   }
   for (const key of ["publishedAt", "revisedAt"] as const) {
     if (meta[key] !== undefined && !DAY.test(String(meta[key]))) {

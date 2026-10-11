@@ -116,6 +116,21 @@ describe("syncDocs", () => {
     )
   })
 
+  it("creates a doc with no hero image", async () => {
+    await writeFile(
+      path.join(dir, "site", "experiments.md"),
+      source.replace("heroImage: experiments-hero.png\nheroAlt: Switches\n", ""),
+    )
+    const payload = fakePayload()
+    await syncDocs(payload, dir)
+    expect(payload.create).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        collection: "docs",
+        data: expect.objectContaining({ slug: "experiments", heroImage: null }),
+      }),
+    )
+  })
+
   it("skips a doc whose file and pictures hash the same as last time", async () => {
     const payload = fakePayload({
       docs: [{ id: 3, sourceHash: hashRepoDoc("site", source, [hero, image]) }],

@@ -14,10 +14,14 @@ describe.each(docs.map((doc) => [path.relative(DOCS_DIR, doc.file), doc] as cons
   (name, { slug, folder, file }) => {
     const { meta, body } = parseDocFile(readFileSync(file, "utf8"), name)
 
-    it("has a hero image, described for screen readers", () => {
-      expect(meta.heroImage).toMatch(new RegExp(`^${slug}-hero\\.`))
-      expect(meta.heroAlt.trim()).toBeTruthy()
-    })
+    // A hero image is optional.
+    it.skipIf(!meta.heroImage)(
+      "names its hero image for the doc, described for screen readers",
+      () => {
+        expect(meta.heroImage).toMatch(new RegExp(`^${slug}-hero\\.`))
+        expect(meta.heroAlt?.trim()).toBeTruthy()
+      },
+    )
 
     it("has a short sidebar title", () => {
       expect(meta.navTitle?.trim()).toBeTruthy()
@@ -30,7 +34,9 @@ describe.each(docs.map((doc) => [path.relative(DOCS_DIR, doc.file), doc] as cons
         expect(existsSync(path.join(folder, picture)), picture).toBe(true)
         expect(alt.trim(), picture).toBeTruthy()
       }
-      expect(existsSync(path.join(folder, meta.heroImage)), meta.heroImage).toBe(true)
+      if (meta.heroImage) {
+        expect(existsSync(path.join(folder, meta.heroImage)), meta.heroImage).toBe(true)
+      }
     })
   },
 )

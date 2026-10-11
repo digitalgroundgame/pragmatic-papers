@@ -154,11 +154,17 @@ heroAlt: The search drawer
     expect(destroy).toHaveBeenCalled()
   })
 
+  it("writes a doc with no hero image without one", async () => {
+    vi.stubGlobal("fetch", async () => new Response("bytes"))
+    find.mockResolvedValue({ docs: [{ ...doc, heroImage: null }] })
+    await main("photos")
+    expect(await exported()).not.toContain("hero")
+  })
+
   it.each([
     ["no slug is given", undefined, [doc], /Usage/],
     ["no doc has the slug", "nope", [], /No doc with the slug "nope"/],
     ["the doc has no date", "photos", [{ ...doc, publishedAt: null }], /no published date/],
-    ["the doc has no hero image", "photos", [{ ...doc, heroImage: null }], /no hero image/],
   ])("fails when %s", async (_, slug, docs, message) => {
     find.mockResolvedValue({ docs })
     await expect(main(slug)).rejects.toThrow(message)

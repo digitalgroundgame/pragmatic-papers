@@ -99,13 +99,15 @@ export async function DocView({ slug, fallback }: DocViewProps): Promise<React.R
         {draft && <LivePreviewListener />}
         <TableOfContentsProvider>
           <header className="flex flex-col gap-2">
-            <Media
-              priority
-              sizes="(max-width: 1024px) 100vw, 900px"
-              media={doc.heroImage}
-              variant="large"
-              className="border shadow"
-            />
+            {doc.heroImage && (
+              <Media
+                priority
+                sizes="(max-width: 1024px) 100vw, 900px"
+                media={doc.heroImage}
+                variant="large"
+                className="border shadow"
+              />
+            )}
             <h1 className="mt-3">{doc.title}</h1>
             {/* The dek: the summary the bell and link previews show. */}
             <p className="text-muted-foreground font-sans text-lg leading-snug text-pretty md:text-xl">

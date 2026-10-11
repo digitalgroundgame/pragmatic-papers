@@ -7,7 +7,9 @@
 set -euo pipefail
 
 job="Build image"
-jobs_url="repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/attempts/${GITHUB_RUN_ATTEMPT:-1}/jobs?per_page=100"
+# filter=latest: each job's newest attempt, so re-running only this job still
+# finds the image an earlier attempt built.
+jobs_url="repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/jobs?filter=latest&per_page=100"
 deadline=$((SECONDS + ${WAIT_TIMEOUT_SECONDS:-2100}))
 
 echo "Waiting for the $job job..."

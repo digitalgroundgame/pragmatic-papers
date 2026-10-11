@@ -298,7 +298,7 @@ function, and fails on any axe violation.
 - **Published**: CI's "Deploy Storybook" job uploads the tested build to the
   `pragmatic-papers-storybook` Cloudflare Worker (`.storybook/wrangler.jsonc`):
   `dev` at `pragmatic-papers-storybook.digital-ground-game.workers.dev`, and each PR at a
-  `pr-<number>-` preview URL, which `scripts/storybook-pr.ts` records as a "Storybook Preview"
+  `pr-<number>-` preview URL, which `scripts/storybook-pr.ts` records as a "Storybook"
   GitHub Deployment (in the PR's deployments, beside the site's Preview). When the PR changes
   components, it also links each one at the top of the PR description (under the showcase links and the links line),
   matched through the build's `index.json` by story file, `component` file or folder. `/storybook` on staging and on a
@@ -379,7 +379,9 @@ committing or uploading it:
 The site is hosted by Coolify in three applications: **staging** (from `dev`) and
 **production** (from `main`), which Coolify builds from
 `dockerfiles/PragmaticPapers.Dockerfile`, and **preview** (one per PR), which runs the
-image GitHub Actions builds from `dockerfiles/PragmaticPapers.ci.Dockerfile`. `dockerfiles/README.md` records how _our_
+image GitHub Actions builds from `dockerfiles/PragmaticPapers.ci.Dockerfile`. Coolify doesn't report
+its deploys to GitHub, so `.github/workflows/deployments.yml` records each push to `dev` and `main` as a
+Staging or Production Deployment, live once the site's `/next/version` names the commit. `dockerfiles/README.md` records how _our_
 applications are set up and what's been verified about them; read it first.
 
 Staging's public site also runs as a Cloudflare Worker on workers.dev (OpenNext, reading

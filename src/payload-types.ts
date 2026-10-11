@@ -222,6 +222,7 @@ export interface Config {
     footer: Footer;
     'site-settings': SiteSetting;
     integrations: IntegrationSettings;
+    newsletter: Newsletter;
     'article-recommendations': ArticleRecommendation;
     'payload-jobs-stats': PayloadJobsStat;
   };
@@ -230,6 +231,7 @@ export interface Config {
     footer: FooterSelect<false> | FooterSelect<true>;
     'site-settings': SiteSettingsSelect<false> | SiteSettingsSelect<true>;
     integrations: IntegrationsSelect<false> | IntegrationsSelect<true>;
+    newsletter: NewsletterSelect<false> | NewsletterSelect<true>;
     'article-recommendations': ArticleRecommendationsSelect<false> | ArticleRecommendationsSelect<true>;
     'payload-jobs-stats': PayloadJobsStatsSelect<false> | PayloadJobsStatsSelect<true>;
   };
@@ -2577,6 +2579,15 @@ export interface IntegrationSettings {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "newsletter".
+ */
+export interface Newsletter {
+  id: number;
+  updatedAt?: string | null;
+  createdAt?: string | null;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "article-recommendations".
  */
 export interface ArticleRecommendation {
@@ -2706,6 +2717,15 @@ export interface IntegrationsSelect<T extends boolean = true> {
               id?: T;
             };
       };
+  updatedAt?: T;
+  createdAt?: T;
+  globalType?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "newsletter_select".
+ */
+export interface NewsletterSelect<T extends boolean = true> {
   updatedAt?: T;
   createdAt?: T;
   globalType?: T;

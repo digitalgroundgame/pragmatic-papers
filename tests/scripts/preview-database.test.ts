@@ -554,7 +554,9 @@ describe("start.sh", () => {
     expect(refresh).toBeGreaterThanOrEqual(0)
     expect(check).toBeGreaterThan(refresh)
     expect(purge).toBeGreaterThan(check)
-    expect(output).toContain("Edge purge queued now that https://pragmaticpapers.com is served")
+    expect(output).toContain(
+      "Edge purge and page warm-up queued now that https://pragmaticpapers.com is served",
+    )
   })
 
   // Media URLs point at SUPABASE_URL, and next/image only loads *.supabase.co (#1090).

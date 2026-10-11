@@ -25,6 +25,7 @@ describe("GET /sitemap_index.xml", () => {
       "http://localhost:8000/volumes/sitemap.xml",
       "http://localhost:8000/contributors/sitemap.xml",
       "http://localhost:8000/topics/sitemap.xml",
+      "http://localhost:8000/docs/sitemap.xml",
     ])
   })
 })

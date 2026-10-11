@@ -41,7 +41,7 @@ export function createTableOfContentsConverter(
           {id ? (
             <a
               href={`#${id}`}
-              className="group inline-flex items-baseline gap-1 text-inherit no-underline"
+              className="group inline-flex items-baseline gap-1 [font-weight:inherit] text-inherit no-underline"
             >
               {children}
               <Icon

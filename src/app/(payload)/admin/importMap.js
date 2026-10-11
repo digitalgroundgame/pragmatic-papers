@@ -57,6 +57,7 @@ import { ProductThumbnailCell as ProductThumbnailCell_c79e04f7b9e53b2f3afaedb264
 import { SyncNowButton as SyncNowButton_6b13e2821b4c35428e02347e7578e840 } from '@/collections/Merch/components/SyncNowButton'
 import { LinkToDoc as LinkToDoc_aead06e4cbf6b2620c5c51c9ab283634 } from '@payloadcms/plugin-search/client'
 import { ReindexButton as ReindexButton_aead06e4cbf6b2620c5c51c9ab283634 } from '@payloadcms/plugin-search/client'
+import { InlineCodeFeatureClient as InlineCodeFeatureClient_e70f5e05f09f93e00b997edb1ef0c864 } from '@payloadcms/richtext-lexical/client'
 import { ExperimentSwitchField as ExperimentSwitchField_bfc53fcaa9b90365c2431ea18727763a } from '@/globals/SiteSettings/components/ExperimentSwitchField'
 import { TickerPostsField as TickerPostsField_d65ef9a49dad00363969240f35d9582b } from '@/Header/Ticker/TickerPostsField'
 import { IntegrationStatusField as IntegrationStatusField_1900110be8e66af69bcbacc986bd055a } from '@/globals/Integrations/components/IntegrationStatusField'
@@ -64,10 +65,12 @@ import { NewsletterView as NewsletterView_bb918406547ab798cea1ede5dc83eb82 } fro
 import { RunNowField as RunNowField_a9d86fb0496ebd76a3dd880c805864b5 } from '@/globals/ArticleRecommendations/components/RunNowField'
 import { PaperIconAdmin as PaperIconAdmin_de5f3b464da8d97ce80441fdb9ee9751 } from '@/components/Logo/icons/PaperIcon'
 import { LogomarkIcon as LogomarkIcon_715cf00332be8c15b8f2b121ec0215b0 } from '@/components/Logo/icons/LogomarkIcon'
+import { NotificationsBell as NotificationsBell_f3c70f24075a4653f65298cbdfcfc38f } from '@/plugins/notifications/NotificationsBell'
 import { default as default_1a7510af427896d367a49dbf838d2de6 } from '@/components/BeforeDashboard'
 import { default as default_8a7ab0eb7ab5c511aba12e68480bfe5e } from '@/components/BeforeLogin'
 import { MathJaxProviderRoot as MathJaxProviderRoot_5e6ec76a4009b641df710b8874095c4b } from '@/providers/MathJaxProvider'
 import { AdminBarHintProvider as AdminBarHintProvider_0a143f595a642b35392c6258a68b49d3 } from '@/components/AdminBar/AdminBarHintProvider'
+import { TourGate as TourGate_0c37a05e6e36249360109969f95aaf61 } from '@/plugins/tours/TourGate'
 import { AdminSentryProvider as AdminSentryProvider_667ceb8bba780e4bbe5e9cc4600c3631 } from '@/providers/AdminSentryProvider'
 import { CollectionCards as CollectionCards_f9c02e79a4aed9a3924487c0cd4cafb1 } from '@payloadcms/next/rsc'
 import { S3ClientUploadHandler as S3ClientUploadHandler_f97aa6c64367fa259c5bc0567239ef24 } from '@payloadcms/storage-s3/client'
@@ -133,6 +136,7 @@ export const importMap = {
   "@/collections/Merch/components/SyncNowButton#SyncNowButton": SyncNowButton_6b13e2821b4c35428e02347e7578e840,
   "@payloadcms/plugin-search/client#LinkToDoc": LinkToDoc_aead06e4cbf6b2620c5c51c9ab283634,
   "@payloadcms/plugin-search/client#ReindexButton": ReindexButton_aead06e4cbf6b2620c5c51c9ab283634,
+  "@payloadcms/richtext-lexical/client#InlineCodeFeatureClient": InlineCodeFeatureClient_e70f5e05f09f93e00b997edb1ef0c864,
   "@/globals/SiteSettings/components/ExperimentSwitchField#ExperimentSwitchField": ExperimentSwitchField_bfc53fcaa9b90365c2431ea18727763a,
   "@/Header/Ticker/TickerPostsField#TickerPostsField": TickerPostsField_d65ef9a49dad00363969240f35d9582b,
   "@/globals/Integrations/components/IntegrationStatusField#IntegrationStatusField": IntegrationStatusField_1900110be8e66af69bcbacc986bd055a,
@@ -140,10 +144,12 @@ export const importMap = {
   "@/globals/ArticleRecommendations/components/RunNowField#RunNowField": RunNowField_a9d86fb0496ebd76a3dd880c805864b5,
   "@/components/Logo/icons/PaperIcon#PaperIconAdmin": PaperIconAdmin_de5f3b464da8d97ce80441fdb9ee9751,
   "@/components/Logo/icons/LogomarkIcon#LogomarkIcon": LogomarkIcon_715cf00332be8c15b8f2b121ec0215b0,
+  "@/plugins/notifications/NotificationsBell#NotificationsBell": NotificationsBell_f3c70f24075a4653f65298cbdfcfc38f,
   "@/components/BeforeDashboard#default": default_1a7510af427896d367a49dbf838d2de6,
   "@/components/BeforeLogin#default": default_8a7ab0eb7ab5c511aba12e68480bfe5e,
   "@/providers/MathJaxProvider#MathJaxProviderRoot": MathJaxProviderRoot_5e6ec76a4009b641df710b8874095c4b,
   "@/components/AdminBar/AdminBarHintProvider#AdminBarHintProvider": AdminBarHintProvider_0a143f595a642b35392c6258a68b49d3,
+  "@/plugins/tours/TourGate#TourGate": TourGate_0c37a05e6e36249360109969f95aaf61,
   "@/providers/AdminSentryProvider#AdminSentryProvider": AdminSentryProvider_667ceb8bba780e4bbe5e9cc4600c3631,
   "@payloadcms/next/rsc#CollectionCards": CollectionCards_f9c02e79a4aed9a3924487c0cd4cafb1,
   "@payloadcms/storage-s3/client#S3ClientUploadHandler": S3ClientUploadHandler_f97aa6c64367fa259c5bc0567239ef24

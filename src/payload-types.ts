@@ -183,6 +183,7 @@ export interface Config {
     redirects: Redirect;
     forms: Form;
     'form-submissions': FormSubmission;
+    docs: Doc;
     'payload-kv': PayloadKv;
     'payload-jobs': PayloadJob;
     'payload-locked-documents': PayloadLockedDocument;
@@ -207,6 +208,7 @@ export interface Config {
     redirects: RedirectsSelect<false> | RedirectsSelect<true>;
     forms: FormsSelect<false> | FormsSelect<true>;
     'form-submissions': FormSubmissionsSelect<false> | FormSubmissionsSelect<true>;
+    docs: DocsSelect<false> | DocsSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
     'payload-jobs': PayloadJobsSelect<false> | PayloadJobsSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
@@ -1408,6 +1410,77 @@ export interface FormSubmission {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "docs".
+ */
+export interface Doc {
+  id: number;
+  title: string;
+  /**
+   * A short name for the docs sidebar, like "Footnotes". Left empty, the sidebar shows the title.
+   */
+  navTitle?: string | null;
+  /**
+   * One or two sentences. The help bell shows it under the title.
+   */
+  summary: string;
+  /**
+   * Shown above the doc's title, beside it in the help bell, and in link previews. Optional.
+   */
+  heroImage?: (number | null) | Media;
+  content: {
+    root: {
+      type: string;
+      children: {
+        type: any;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  };
+  /**
+   * The day the feature reaches the live site. Newest docs list first.
+   */
+  publishedAt: string;
+  /**
+   * The day the doc last changed in a way readers should know about, shown beside its date. The bell still lists it under the published date.
+   */
+  revisedAt?: string | null;
+  /**
+   * Where the doc sits in the sidebar at /docs.
+   */
+  section: 'getting-started' | 'writing' | 'blocks' | 'media' | 'site';
+  /**
+   * Who the help bell tells. Empty means all staff; admins see every doc.
+   */
+  audience?: ('admin' | 'chief-editor' | 'editor' | 'writer' | 'narrator')[] | null;
+  /**
+   * A guided tour of the feature, offered as Show me in the help bell and on the doc. One of: articles.
+   */
+  tour?: string | null;
+  /**
+   * Auto-generates a navigable list of headings (and any resolver-matched blocks). Readers see it only while the table of contents experiment is on in Settings.
+   */
+  showTableOfContents?: boolean | null;
+  /**
+   * This doc ships with the code, so it can't be edited here. Change its Markdown file in src/docs/ instead.
+   */
+  sourceHash?: string | null;
+  /**
+   * When enabled, the slug will auto-generate from the title field on save and autosave.
+   */
+  generateSlug?: boolean | null;
+  slug: string;
+  updatedAt: string;
+  createdAt: string;
+  _status?: ('draft' | 'published') | null;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload-kv".
  */
 export interface PayloadKv {
@@ -1596,6 +1669,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'form-submissions';
         value: number | FormSubmission;
+      } | null)
+    | ({
+        relationTo: 'docs';
+        value: number | Doc;
       } | null);
   globalSlug?: string | null;
   user: {
@@ -2386,6 +2463,29 @@ export interface FormSubmissionsSelect<T extends boolean = true> {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "docs_select".
+ */
+export interface DocsSelect<T extends boolean = true> {
+  title?: T;
+  navTitle?: T;
+  summary?: T;
+  heroImage?: T;
+  content?: T;
+  publishedAt?: T;
+  revisedAt?: T;
+  section?: T;
+  audience?: T;
+  tour?: T;
+  showTableOfContents?: T;
+  sourceHash?: T;
+  generateSlug?: T;
+  slug?: T;
+  updatedAt?: T;
+  createdAt?: T;
+  _status?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload-kv_select".
  */
 export interface PayloadKvSelect<T extends boolean = true> {
@@ -2513,6 +2613,18 @@ export interface SiteSetting {
      * Interactive pages at /interactives/<slug>, their sitemap and the daily data sync.
      */
     interactives?: boolean | null;
+    /**
+     * The help docs at /docs, their sitemap, and their items in the notifications bell. Staff can write docs in the admin either way.
+     */
+    docs?: boolean | null;
+    /**
+     * The bell beside the avatar in the admin header.
+     */
+    notifications?: boolean | null;
+    /**
+     * Guided tours of the admin, and the Show me buttons that start them in the bell and on help docs.
+     */
+    tours?: boolean | null;
     /**
      * The table of contents in an article's sidebar and its hero button, on articles with “Show table of contents” ticked.
      */
@@ -2676,6 +2788,9 @@ export interface SiteSettingsSelect<T extends boolean = true> {
     | {
         feed?: T;
         interactives?: T;
+        docs?: T;
+        notifications?: T;
+        tours?: T;
         tableOfContents?: T;
       };
   updatedAt?: T;

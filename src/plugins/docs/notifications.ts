@@ -31,9 +31,9 @@ export const docsNotifications = ({
     description: "New features in the admin, and how to use them.",
   },
   index: { label: "See all", href: WHATS_NEW_PATH },
+  enabled,
   itemsFor: async ({ payload, user }) => {
     if (!isStaff(user)) return []
-    if (enabled && !(await enabled(payload))) return []
     const showTours = !tours || (await tours(payload))
     // Imported here: the queries reach the Payload config, which imports this file.
     const { queryPublishedDocs } = await import("./queries")

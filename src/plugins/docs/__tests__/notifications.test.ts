@@ -98,12 +98,10 @@ describe("docsNotifications", () => {
     expect(tours).toHaveBeenCalledWith(payload)
   })
 
-  it("shows nothing while docs are off, without querying", async () => {
+  it("hands the bell its docs switch, so the bell leaves the source out while it's off", () => {
     const enabled = vi.fn(async () => false)
-    const items = await docsNotifications({ enabled }).itemsFor({ payload, user: user(["admin"]) })
-    expect(items).toEqual([])
-    expect(enabled).toHaveBeenCalledWith(payload)
-    expect(queryPublishedDocs).not.toHaveBeenCalled()
+    expect(docsNotifications({ enabled }).enabled).toBe(enabled)
+    expect(docsNotifications().enabled).toBeUndefined()
   })
 
   it("shows nothing to readers, without querying", async () => {

@@ -43,6 +43,11 @@ export interface NotificationSource {
   itemsFor: (args: { payload: Payload; user: User }) => Promise<Omit<NotificationItem, "type">[]>
   /** A footer link to everything of this type, e.g. `/docs`. */
   index?: { label: string; href: string }
+  /**
+   * Whether this source is in the bell at all, checked on each admin page (e.g. a beta switch).
+   * Off, its items, its index link and its mute switch are left out. Always, when unset.
+   */
+  enabled?: (payload: Payload) => boolean | Promise<boolean>
 }
 
 export interface NotificationsOptions {

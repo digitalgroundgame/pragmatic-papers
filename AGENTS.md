@@ -216,7 +216,7 @@ the tour locally.
 The three plugins are experiments (`docs`, `notifications`, `tours` in Settings),
 switched from `src/plugins/index.ts` through each plugin's `enabled` option, so
 the plugins never read Settings themselves. With `docs` off, `/docs` pages 404,
-their sitemap is empty and the bell has no docs; the Docs collection and the
+their sitemap is empty and the bell leaves docs out (a source's `enabled`); the Docs collection and the
 deploy's docs sync carry on, so docs are ready when it's switched on. With
 `notifications` off there's no bell; with `tours` off, `TourGate` doesn't mount
 the tour provider and no Show me button appears.

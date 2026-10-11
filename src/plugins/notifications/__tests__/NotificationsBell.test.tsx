@@ -112,6 +112,23 @@ describe("NotificationsBell", () => {
     expect(screen.getByRole("button", { name: "Notifications, 1 unread" })).toBeInTheDocument()
   })
 
+  it("leaves a switched-off source out, items, index link and all", async () => {
+    const published = { ...source("published", ["Published one"]), enabled: async () => false }
+    const { payload } = fakePayload([source("docs", ["Alpha"]), published])
+    await renderBell(payload)
+    openMenu()
+    const menu = await screen.findByRole("dialog")
+    expect(within(menu).getByRole("link", { name: /^Alpha/ })).toBeInTheDocument()
+    expect(within(menu).queryByRole("link", { name: "All published" })).not.toBeInTheDocument()
+    expect(published.itemsFor).not.toHaveBeenCalled()
+  })
+
+  it("renders nothing when every source is switched off", async () => {
+    const docs = { ...source("docs", ["Alpha"]), enabled: async () => false }
+    const { payload } = fakePayload([docs])
+    expect(await NotificationsBell({ payload, user } as unknown as ServerProps)).toBeNull()
+  })
+
   it("leaves a muted type's items and index link out", async () => {
     const { payload } = fakePayload(
       [source("docs", ["Alpha"]), source("published", ["Published one"])],

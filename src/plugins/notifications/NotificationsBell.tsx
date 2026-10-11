@@ -17,9 +17,11 @@ const PER_TYPE = 8
 export async function NotificationsBell({ payload, user }: ServerProps): Promise<React.ReactNode> {
   if (!user) return null
   const options = payload.config.custom?.notifications as NotificationsOptions | undefined
-  const sources = options?.sources ?? []
-  if (sources.length === 0) return null
   if (options?.enabled && !(await options.enabled(payload))) return null
+  const all = options?.sources ?? []
+  const on = await Promise.all(all.map((source) => !source.enabled || source.enabled(payload)))
+  const sources = all.filter((_, i) => on[i])
+  if (sources.length === 0) return null
 
   const [lists, preferences] = await Promise.all([
     Promise.all(

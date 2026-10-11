@@ -53,6 +53,13 @@ describe("parseDocFile", () => {
     expect(formatDocFile({ meta, body: "Hi." })).not.toContain("hero")
   })
 
+  it("reads a doc's tour", () => {
+    const withTour = source.replace("---\n\n", "tour: articles\n---\n\n")
+    const { meta } = parseDocFile(withTour, "a.md")
+    expect(meta.tour).toBe("articles")
+    expect(formatDocFile({ meta, body: "Hi." })).toContain("tour: articles\n")
+  })
+
   it.each([
     ["no front matter", "Just text", /no front matter/],
     [
@@ -76,6 +83,11 @@ describe("parseDocFile", () => {
       "a table of contents that isn't on or off",
       source.replace(": false", ": no"),
       /true or false/,
+    ],
+    [
+      "a tour that isn't a key",
+      source.replace("---\n\n", "tour: [articles]\n---\n\n"),
+      /tour's key/,
     ],
   ])("refuses %s", (_, text, message) => {
     expect(() => parseDocFile(text, "a.md")).toThrow(message)

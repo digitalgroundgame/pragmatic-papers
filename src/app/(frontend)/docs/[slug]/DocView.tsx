@@ -13,6 +13,7 @@ import {
   stampTableOfContentsAnchors,
 } from "@/components/TableOfContents"
 import { ShareButtons } from "@/components/ShareButtons"
+import { LinkButton } from "@/components/ui/link-button"
 import { Separator } from "@/components/ui/separator"
 import { isExperimentEnabled } from "@/globals/SiteSettings/isExperimentEnabled"
 import { queryDocBySlug, queryPublishedDocs } from "@/plugins/docs/queries"
@@ -23,6 +24,7 @@ import {
   groupDocsBySection,
   HOME_DOC_SLUG,
 } from "@/plugins/docs/sections"
+import { findTour, tourHref } from "@/plugins/tours"
 import { getMediaUrl } from "@/utilities/getMediaUrl"
 import { getSiteURL } from "@/utilities/getURL"
 import { mergeOpenGraph } from "@/utilities/mergeOpenGraph"
@@ -78,6 +80,7 @@ export async function DocView({ slug, fallback }: DocViewProps): Promise<React.R
   const showTableOfContents =
     doc.showTableOfContents !== false && (await isExperimentEnabled("tableOfContents"))
 
+  const tour = findTour(doc.tour)
   const home = slug === HOME_DOC_SLUG
   const trail: Crumb[] = [
     { name: "Docs", path: "/docs" },
@@ -116,6 +119,12 @@ export async function DocView({ slug, fallback }: DocViewProps): Promise<React.R
             <div className="flex flex-wrap items-center justify-between gap-3">
               <DocDates publishedAt={doc.publishedAt} revisedAt={doc.revisedAt} />
               <div className="flex items-center gap-1">
+                {tour && (
+                  // Starts the tour in the admin, which asks a reader who isn't signed in to.
+                  <LinkButton size="sm" className="mr-2" href={tourHref(tour.key)}>
+                    Show me
+                  </LinkButton>
+                )}
                 <ShareButtons url={`${getSiteURL()}${url}`} title={doc.title} />
               </div>
             </div>

@@ -26,6 +26,7 @@ const findPublishedDocs = async () => {
       section: true,
       audience: true,
       heroImage: true,
+      tour: true,
     },
     // Enough of the hero image for a thumbnail. With S3, the storage plugin builds each URL
     // from `_objectKey` (an admin upload's folder), so a select without it loses the folder.

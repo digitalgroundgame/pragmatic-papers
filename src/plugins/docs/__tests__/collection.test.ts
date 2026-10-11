@@ -37,6 +37,27 @@ describe("Docs fields: sourceHash", () => {
   })
 })
 
+describe("Docs fields: tour", () => {
+  const field = Docs.fields.find((f) => "name" in f && f.name === "tour") as TextField
+  const validate = (value: string | null | undefined) =>
+    (field.validate as unknown as (value: string | null | undefined) => true | string)(value)
+
+  it("takes no tour, or one that exists", () => {
+    expect(validate(undefined)).toBe(true)
+    expect(validate("")).toBe(true)
+    expect(validate("articles")).toBe(true)
+  })
+
+  it("refuses a name that isn't a tour, inherited ones included", () => {
+    expect(validate("nope")).toBe('No tour is called "nope".')
+    expect(validate("toString")).toBe('No tour is called "toString".')
+  })
+
+  it("lists the tours an editor can name", () => {
+    expect(field.admin!.description).toContain("One of: articles.")
+  })
+})
+
 describe("Docs admin: preview", () => {
   it("previews a doc at /docs/<slug>", () => {
     const previewReq = { headers: new Headers() } as unknown as PayloadRequest

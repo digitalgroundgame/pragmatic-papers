@@ -8,6 +8,7 @@
 //   pnpm migrate:index          rewrite the index from the migration files
 //   pnpm migrate:index --check  only compare (CI's Static checks)
 //   node scripts/migrations-index.ts --merge <base> <ours> <theirs>   (git runs this)
+import { execFileSync } from "node:child_process"
 import { mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
@@ -63,26 +64,65 @@ export async function renderMigrationsIndex(names: readonly string[]): Promise<s
   }
 }
 
-if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  const args = process.argv.slice(2)
-  if (args[0] === "--merge") {
-    const [base, ours, theirs] = args
-      .slice(1)
-      .map((file) => listedMigrations(readFileSync(file!, "utf8")))
-    writeFileSync(args[2]!, await renderMigrationsIndex(mergeMigrations(base!, ours!, theirs!)))
-  } else {
-    const expected = await renderMigrationsIndex(migrationFiles(readdirSync(DIR)))
-    if (readFileSync(INDEX, "utf8") === expected) {
-      console.warn("src/migrations/index.ts lists every migration, in order.")
-    } else if (args.includes("--check")) {
-      console.error(
-        "src/migrations/index.ts doesn't list the migration files the way Payload writes it " +
-          "(often a conflict resolved by hand). Run `pnpm migrate:index` and commit the result.",
-      )
-      process.exit(1)
-    } else {
-      writeFileSync(INDEX, expected)
-      console.warn("Rewrote src/migrations/index.ts.")
+/**
+ * The merge driver: writes the merge of `base`, `ours` and `theirs` into `ours`, as git
+ * expects. If that fails, it falls back to git's own text merge and reports a conflict,
+ * so the file gets conflict markers instead of silently keeping only our side.
+ */
+async function mergeIndexFiles(base: string, ours: string, theirs: string): Promise<number> {
+  try {
+    const [b, o, t] = [base, ours, theirs].map((file) =>
+      listedMigrations(readFileSync(file, "utf8")),
+    )
+    writeFileSync(ours, await renderMigrationsIndex(mergeMigrations(b!, o!, t!)))
+    return 0
+  } catch (error) {
+    console.error("Couldn't merge src/migrations/index.ts; left conflict markers instead.", error)
+    try {
+      execFileSync("git", [
+        "merge-file",
+        "-L",
+        "ours",
+        "-L",
+        "base",
+        "-L",
+        "theirs",
+        ours,
+        base,
+        theirs,
+      ])
+    } catch {
+      // merge-file exits with the number of conflicts, which is the expected case here.
     }
+    return 1
   }
+}
+
+/**
+ * The command line, with the migrations folder as an argument so tests can point it
+ * elsewhere. Returns the exit code.
+ */
+export async function main(args: readonly string[], dir = DIR): Promise<number> {
+  if (args[0] === "--merge") return mergeIndexFiles(args[1]!, args[2]!, args[3]!)
+
+  const index = join(dir, "index.ts")
+  const expected = await renderMigrationsIndex(migrationFiles(readdirSync(dir)))
+  if (readFileSync(index, "utf8") === expected) {
+    console.warn("src/migrations/index.ts lists every migration, in order.")
+    return 0
+  }
+  if (args.includes("--check")) {
+    console.error(
+      "src/migrations/index.ts doesn't list the migration files the way Payload writes it " +
+        "(often a conflict resolved by hand). Run `pnpm migrate:index` and commit the result.",
+    )
+    return 1
+  }
+  writeFileSync(index, expected)
+  console.warn("Rewrote src/migrations/index.ts.")
+  return 0
+}
+
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  process.exitCode = await main(process.argv.slice(2))
 }

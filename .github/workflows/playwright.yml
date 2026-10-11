@@ -2,17 +2,29 @@ name: Playwright Tests
 
 # Functional E2E tests against the image a PR deploys, the PR's preview, and
 # page speed. Visual changes are reviewed in Storybook and the preview.
+#
+# A push to a PR builds the image, deploys the preview and measures bundle
+# size. The E2E suite runs in the merge queue, on PRs into main (which skip
+# the queue), and on a PR into dev only when it has the "e2e" label; Lighthouse runs on a PR only when it has the "in review"
+# label. Adding either label starts this workflow for the PR (pr-events.yml
+# dispatches it), and later pushes keep running it while the label stays.
 on:
   push:
     branches: [main, dev]
   pull_request:
   # See ci.yml: required checks must also run in the merge queue.
   merge_group:
+  workflow_dispatch:
+    inputs:
+      pr:
+        description: The PR to test, run on its branch (runs what its labels ask for)
+        required: true
 
 # A new push to the same branch cancels the run testing the old one, so a
-# stale run can't deploy its image as the preview.
+# stale run can't deploy its image as the preview. A label's run has a group
+# of its own, so adding a label doesn't cancel the push's run and its preview.
 concurrency:
-  group: playwright-${{ github.event.pull_request.head.ref || github.ref_name }}
+  group: playwright-${{ github.event.pull_request.head.ref || github.ref_name }}${{ github.event_name == 'workflow_dispatch' && '-dispatch' || '' }}
   cancel-in-progress: true
 
 # The E2E environment (database, server URL, FONTS_REQUIRED, ...) is set by
@@ -23,11 +35,12 @@ concurrency:
 # the PR's preview. Removing a closed PR's preview stays in preview-image.yml.
 
 jobs:
-  # Plans the run. Skips the suite on a PR that changes only Markdown, the
-  # same way ci.yml's "Detect changes" job does: a skipped required check
-  # passes, only PRs are filtered, and if this job fails the suite runs in
-  # full. On a push it notes whether the merge queue already ran this workflow
-  # on the commit, and decides whether and how a PR gets a preview.
+  # Plans the run. Skips the suite on a PR that changes only Markdown, or
+  # that has no "e2e" label, the same way ci.yml's "Detect changes" job skips
+  # its jobs: a skipped required check passes, and the merge queue runs the
+  # suite before anything lands. If this job fails the suite runs in full. On
+  # a push it notes whether the merge queue already ran this workflow on the
+  # commit, and decides whether and how a PR gets a preview.
   changes:
     name: Detect E2E changes
     runs-on: ubuntu-latest
@@ -36,6 +49,8 @@ jobs:
       pull-requests: read
     outputs:
       e2e: ${{ steps.filter.outputs.e2e }}
+      e2e-label: ${{ steps.labels.outputs.e2e }}
+      lighthouse-label: ${{ steps.labels.outputs.lighthouse }}
       queued: ${{ steps.queued.outputs.queued }}
       preview: ${{ steps.plan.outputs.preview }}
       tag: ${{ steps.plan.outputs.tag }}
@@ -51,6 +66,29 @@ jobs:
             e2e:
               - "**"
               - "!**/*.md"
+
+      # The labels that opt a PR into the E2E suite and Lighthouse. A
+      # dispatched run (a label was just added) reads them from the PR. PRs
+      # into main (releases, hotfixes) never pass through the merge queue, so
+      # they always get the suite.
+      - name: Read the PR's labels
+        id: labels
+        if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT_LABELS: ${{ toJSON(github.event.pull_request.labels.*.name) }}
+          BASE: ${{ github.base_ref }}
+          PR: ${{ inputs.pr }}
+        run: |
+          if [ -n "$PR" ]; then
+            pr=$(gh api "repos/$GITHUB_REPOSITORY/pulls/$PR")
+            labels=$(jq '[.labels[].name]' <<< "$pr")
+            BASE=$(jq -r .base.ref <<< "$pr")
+          else
+            labels=$EVENT_LABELS
+          fi
+          echo "e2e=$(jq -r --arg base "$BASE" 'index("e2e") != null or $base == "main"' <<< "$labels")" >> "$GITHUB_OUTPUT"
+          echo "lighthouse=$(jq -r 'index("in review") != null' <<< "$labels")" >> "$GITHUB_OUTPUT"
 
       # dev's merge queue lands the very commit it tested, so a push run on a
       # commit whose merge_group run passed would only repeat the suite.
@@ -108,7 +146,8 @@ jobs:
   image:
     name: Build image
     needs: changes
-    if: ${{ !cancelled() && (needs.changes.outputs.preview == 'image' || github.event_name != 'pull_request' || needs.changes.result != 'success' || needs.changes.outputs.e2e == 'true') }}
+    # On a PR, for its preview or for what its labels ask for.
+    if: ${{ !cancelled() && (needs.changes.outputs.preview == 'image' || github.event_name == 'push' || github.event_name == 'merge_group' || needs.changes.result != 'success' || (github.event_name == 'workflow_dispatch' || needs.changes.outputs.e2e == 'true') && (needs.changes.outputs.e2e-label == 'true' || needs.changes.outputs.lighthouse-label == 'true')) }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
@@ -212,8 +251,8 @@ jobs:
     needs: [changes, image]
     # Runs even when the image failed, so the failure lands on this required
     # check: a skipped required check counts as passing. Skipped on a push the
-    # merge queue already tested.
-    if: ${{ !cancelled() && needs.changes.outputs.queued != 'true' && (github.event_name != 'pull_request' || needs.changes.result != 'success' || needs.changes.outputs.e2e == 'true') }}
+    # merge queue already tested, and on a PR into dev without the "e2e" label.
+    if: ${{ !cancelled() && needs.changes.outputs.queued != 'true' && (github.event_name == 'push' || github.event_name == 'merge_group' || needs.changes.result != 'success' || (needs.changes.outputs.e2e-label == 'true' && (github.event_name == 'workflow_dispatch' || needs.changes.outputs.e2e == 'true'))) }}
     timeout-minutes: 60
     runs-on: ubuntu-latest
     # Pinned to the exact @playwright/test version resolved in
@@ -281,7 +320,8 @@ jobs:
   # posts how the PR compares with dev to the PR's analytics comment and
   # annotates big regressions, but never fails. Pushes to dev upload the
   # measurements PRs compare with. In its own job so the E2E suite doesn't
-  # share the runner's CPU with Lighthouse.
+  # share the runner's CPU with Lighthouse. Bundle size runs on every PR push;
+  # Lighthouse, six minutes of it, only on a PR with the "in review" label.
   #   - Bundle size: the client JavaScript and CSS each public page loads, read
   #     from the image's build manifests (scripts/bundle-size.ts). A page whose
   #     JavaScript grew by more than 10 kB gets a warning.
@@ -290,7 +330,7 @@ jobs:
   page-speed:
     name: Page speed
     needs: [changes, image]
-    if: ${{ !cancelled() && needs.image.result == 'success' && ((github.event_name == 'pull_request' && (needs.changes.result != 'success' || needs.changes.outputs.e2e == 'true')) || (github.event_name == 'push' && github.ref == 'refs/heads/dev')) }}
+    if: ${{ !cancelled() && needs.image.result == 'success' && ((github.event_name == 'pull_request' && (needs.changes.result != 'success' || needs.changes.outputs.e2e == 'true')) || (github.event_name == 'workflow_dispatch' && needs.changes.outputs.lighthouse-label == 'true') || (github.event_name == 'push' && github.ref == 'refs/heads/dev')) }}
     runs-on: ubuntu-latest
     timeout-minutes: 60
     # The E2E job's container, for its Chromium and the shared setup-e2e action.
@@ -301,6 +341,9 @@ jobs:
       contents: read
       packages: read
       pull-requests: write
+    env:
+      # Pushes to dev upload the baseline PRs compare with, so they always run it.
+      LIGHTHOUSE: ${{ github.event_name == 'push' || needs.changes.outputs.lighthouse-label == 'true' }}
 
     services:
       postgres:
@@ -339,7 +382,7 @@ jobs:
 
       - name: Download dev's bundle size
         id: base-bundle
-        if: github.event_name == 'pull_request'
+        if: github.event_name != 'push'
         uses: ./.github/actions/download-dev-artifact
         with:
           name: bundle-size
@@ -349,7 +392,7 @@ jobs:
           BASE_BUNDLE_SIZE_PATH: ${{ steps.base-bundle.outputs.dir && format('{0}/bundle-size.json', steps.base-bundle.outputs.dir) || '' }}
           BUNDLE_SIZE_OUT: bundle-size.json
           GITHUB_TOKEN: ${{ github.token }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_NUMBER: ${{ github.event.pull_request.number || inputs.pr }}
         run: pnpm bundle-size --next-dir "$RUNNER_TEMP/next"
 
       - uses: actions/upload-artifact@v7
@@ -362,7 +405,7 @@ jobs:
       # Lighthouse runs even if the bundle size measurement failed.
       - name: Download dev's Lighthouse results
         id: base
-        if: ${{ !cancelled() && steps.setup.outcome == 'success' && github.event_name == 'pull_request' }}
+        if: ${{ !cancelled() && steps.setup.outcome == 'success' && env.LIGHTHOUSE == 'true' && github.event_name != 'push' }}
         uses: ./.github/actions/download-dev-artifact
         with:
           name: lighthouse-results
@@ -370,17 +413,17 @@ jobs:
       # Seeds the database and starts the image as the E2E suite does, then runs
       # Lighthouse against it in place of Playwright.
       - name: Run Lighthouse
-        if: ${{ !cancelled() && steps.setup.outcome == 'success' }}
+        if: ${{ !cancelled() && steps.setup.outcome == 'success' && env.LIGHTHOUSE == 'true' }}
         env:
           E2E_COMMAND: pnpm exec tsx scripts/lighthouse.ts
           BASE_LIGHTHOUSE_PATH: ${{ steps.base.outputs.dir && format('{0}/summary.json', steps.base.outputs.dir) || '' }}
           E2E_NETWORK_CONTAINER: ${{ job.container.id }}
           GITHUB_TOKEN: ${{ github.token }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_NUMBER: ${{ github.event.pull_request.number || inputs.pr }}
         run: pnpm test:e2e
 
       - uses: actions/upload-artifact@v7
-        if: ${{ !cancelled() }}
+        if: ${{ !cancelled() && env.LIGHTHOUSE == 'true' }}
         with:
           name: lighthouse-results
           path: lighthouse-results/

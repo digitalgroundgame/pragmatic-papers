@@ -8,6 +8,9 @@ name: PR events
 #
 #   - The "in review" label, or marking a PR that has it ready, runs
 #     claude-review.yml on the PR's branch (PRs into dev, not drafts).
+#   - The "e2e" label runs the E2E suite on the PR, and "in review" runs
+#     Lighthouse, by starting playwright.yml on the PR's branch. Its runs on
+#     later pushes read the labels themselves.
 #   - Opening the PR, editing its description, or adding or removing the
 #     "showcase" label syncs the label and the Showcase line
 #     (scripts/showcase-pr.ts), and when that says to push, runs showcase.yml
@@ -107,6 +110,13 @@ jobs:
           gh api -X POST "repos/$GITHUB_REPOSITORY/statuses/$HEAD_SHA" \
             -f state=pending -f context="Claude review" -f description="Reviewing…" \
             -f target_url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/workflows/claude-review.yml" >/dev/null
+
+      - name: Run E2E or Lighthouse on the PR
+        if: >-
+          env.SAME_REPO == 'true' &&
+          github.event.action == 'labeled' &&
+          contains(fromJSON('["e2e", "in review"]'), github.event.label.name)
+        run: gh workflow run playwright.yml --repo "$GITHUB_REPOSITORY" --ref "$HEAD_REF" -f pr="$PR_NUMBER"
 
       - name: Check whether the showcase needs a sync
         id: showcase

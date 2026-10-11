@@ -31,7 +31,7 @@ This file provides guidance to tools like Claude Code (claude.ai/code) when work
 - `pnpm test:storybook` — run every Storybook story in headless Chromium: its `play` function, then an axe check (see [Storybook](#storybook))
 - `pnpm storybook` — Storybook dev server on port 6006; `pnpm storybook:build` builds it into `storybook-static/`
 - `pnpm test:integration` — run integration tests against a throwaway Postgres in Docker (see [Test databases](#test-databases))
-- `pnpm test:e2e` — run Playwright E2E tests against a throwaway Postgres in Docker (see [Test databases](#test-databases)). Functional assertions only; visual changes are reviewed in Storybook and the PR's site preview (see `tests/e2e/README.md`)
+- `pnpm test:e2e` — run Playwright E2E tests against a throwaway Postgres in Docker (see [Test databases](#test-databases)). Functional assertions only; visual changes are reviewed in Storybook and the PR's site preview (see `tests/e2e/README.md`). CI runs the suite in the merge queue, on PRs into `main`, and on a PR into `dev` only once it has the `e2e` label
 - `pnpm test:unit:coverage` — run unit tests with V8 coverage report (outputs `coverage/coverage-summary.json` and `coverage/coverage-final.json`). CI's coverage report adds the stories' coverage: the Unit tests and Storybook jobs each upload a `coverage-final.json`, and the Coverage job's `scripts/merge-coverage.ts` adds the stories' hits onto the unit run's map, matching entries by start line (the two transforms disagree on columns, so istanbul's own merge would count them twice). Integration tests aren't counted
 - `pnpm test:coverage` — run all tests with V8 coverage report (full picture for local inspection)
 - `pnpm test:unit -u` — regenerate snapshot baselines after intentional UI changes
@@ -380,8 +380,9 @@ something. A new report joins that comment by registering a section in
   more than 10 kB against dev is flagged in the comment and with a warning on the
   PR's checks. It **only warns**; `pnpm analyze` shows which import brought the
   growth in.
-- **Lighthouse** (`scripts/lighthouse.ts`, run even when bundle size fails) seeds the E2E database, starts the
-  PR's image and audits each page 5 times, comparing with the results the last
+- **Lighthouse** (`scripts/lighthouse.ts`, run even when bundle size fails) runs on a PR only
+  once it has the `in review` label (six minutes on every push otherwise), and on every push to
+  `dev`. It seeds the E2E database, starts the PR's image and audits each page 5 times, comparing with the results the last
   push to `dev` uploaded. The CPU slowdown is calibrated to the runner's benchmark
   score, and Chrome can't reach any host but localhost. Dev's results come from
   another runner, so a metric is flagged only when every PR run is worse than

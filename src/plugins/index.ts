@@ -120,7 +120,7 @@ export const resolveAuthorNames = (raw: unknown, payload: Payload): Promise<stri
 export const resolveTopicNames = (raw: unknown, payload: Payload): Promise<string> =>
   resolveNames(raw, payload, "topics")
 
-const beforeSync: BeforeSync = async ({ originalDoc, payload, searchDoc }) => {
+export const beforeSync: BeforeSync = async ({ originalDoc, payload, searchDoc }) => {
   const title =
     (originalDoc.title as string | undefined) || (originalDoc.name as string | undefined) || ""
   const meta = originalDoc.meta as Record<string, unknown> | undefined
@@ -181,6 +181,19 @@ export const supabaseObjectURL = ({
   filename: string
 }): string =>
   `${supabaseUrl}/storage/v1/object/public/${bucket}/${prefix ? `${prefix}/` : ""}${filename}`
+
+/**
+ * A storage collection's `generateFileURL`: the object's Supabase URL, or `/<localPath>/<filename>`
+ * when `SUPABASE_URL` or `S3_BUCKET` is unset. `defaultPrefix` stands in for a missing prefix.
+ */
+export const storageFileURL =
+  (localPath: string, defaultPrefix?: string) =>
+  ({ filename, prefix }: { filename: string; prefix?: string }): string => {
+    const supabaseUrl = process.env.SUPABASE_URL
+    const bucket = process.env.S3_BUCKET
+    if (!supabaseUrl || !bucket) return `/${localPath}/${filename}`
+    return supabaseObjectURL({ supabaseUrl, bucket, prefix: prefix || defaultPrefix, filename })
+  }
 
 export const plugins: Plugin[] = [
   searchPlugin({
@@ -278,36 +291,12 @@ export const plugins: Plugin[] = [
     collections: {
       media: {
         disablePayloadAccessControl: true,
-        generateFileURL: ({ filename, prefix }) => {
-          const supabaseUrl = process.env.SUPABASE_URL
-          const bucket = process.env.S3_BUCKET
-
-          if (!supabaseUrl || !bucket) {
-            // Fallback to local media path if env vars are not set
-            return `/media/${filename}`
-          }
-
-          return supabaseObjectURL({ supabaseUrl, bucket, prefix, filename })
-        },
+        generateFileURL: storageFileURL("media"),
       },
       "map-assets": {
         disablePayloadAccessControl: true,
         prefix: "map-assets",
-        generateFileURL: ({ filename, prefix }) => {
-          const supabaseUrl = process.env.SUPABASE_URL
-          const bucket = process.env.S3_BUCKET
-
-          if (!supabaseUrl || !bucket) {
-            return `/map-assets/${filename}`
-          }
-
-          return supabaseObjectURL({
-            supabaseUrl,
-            bucket,
-            prefix: prefix || "map-assets",
-            filename,
-          })
-        },
+        generateFileURL: storageFileURL("map-assets", "map-assets"),
       },
     },
     bucket: process.env.S3_BUCKET || "",

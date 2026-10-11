@@ -1,0 +1,28 @@
+name: "Upload Vitest blob"
+description: >-
+  Uploads a Vitest blob report for the Coverage job. The blob names files by
+  absolute path, which differs between a container job and a bare runner, so
+  the workspace is swapped for a placeholder the Coverage job puts back.
+
+inputs:
+  name:
+    description: Artifact name (the Coverage job downloads `vitest-blob-*`)
+    required: true
+  path:
+    description: Path to the blob file
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Replace the workspace path
+      shell: bash
+      run: sed -i "s#${GITHUB_WORKSPACE}/#/__VITEST_ROOT__/#g" "$BLOB"
+      env:
+        BLOB: ${{ inputs.path }}
+
+    - uses: actions/upload-artifact@v7
+      with:
+        name: ${{ inputs.name }}
+        path: ${{ inputs.path }}
+        retention-days: 1

@@ -1,0 +1,48 @@
+name: Deployments
+
+# Coolify deploys staging (each push to `dev`) and production (each push to
+# `main`) itself and never tells GitHub (dockerfiles/README.md). This records
+# each push as a Deployment of that site, Staging or Production, which stays in
+# progress until the site's `/next/version` names the pushed commit: then it's
+# live, and the repo's Deployments list links to it. A deploy that never goes
+# live fails it at the timeout. A newer push cancels the older one's wait,
+# because Coolify only goes on to deploy the newest.
+#
+# Uses the repo variable SHOWCASE_STAGING_URL for staging; skips staging without it.
+
+on:
+  push:
+    branches: [main, dev]
+
+permissions: {}
+
+concurrency:
+  group: deployment-${{ github.ref_name }}
+  cancel-in-progress: true
+
+jobs:
+  wait:
+    name: Wait for Coolify to deploy
+    if: github.ref_name == 'main' || vars.SHOWCASE_STAGING_URL != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    environment:
+      name: ${{ github.ref_name == 'main' && 'Production' || 'Staging' }}
+      url: ${{ github.ref_name == 'main' && 'https://pragmaticpapers.com' || vars.SHOWCASE_STAGING_URL }}
+    env:
+      SITE_URL: ${{ github.ref_name == 'main' && 'https://pragmaticpapers.com' || vars.SHOWCASE_STAGING_URL }}
+    steps:
+      - name: Wait for the site to serve this commit
+        run: |
+          echo "Waiting for $SITE_URL to serve $GITHUB_SHA"
+          while true; do
+            # The query string keeps Cloudflare's edge from answering with an older copy.
+            commit=$(curl --silent --max-time 30 "$SITE_URL/next/version?at=$(date +%s%N)" \
+              | jq -r '.commit // empty' 2>/dev/null || true)
+            if [ "$commit" = "$GITHUB_SHA" ]; then
+              echo "$SITE_URL serves $GITHUB_SHA"
+              exit 0
+            fi
+            echo "Serving ${commit:-an unknown commit}; checking again in 30s"
+            sleep 30
+          done

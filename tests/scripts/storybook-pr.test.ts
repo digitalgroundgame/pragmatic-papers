@@ -267,7 +267,7 @@ describe("main", () => {
       })),
     )
     expect(calls[1]?.url).toBe(
-      `${api}/deployments?environment=Storybook%20Preview&ref=feat%2Fthing&per_page=100`,
+      `${api}/deployments?environment=Storybook&ref=feat%2Fthing&per_page=100`,
     )
   })
 

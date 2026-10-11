@@ -1,4 +1,4 @@
-import Link from "next/link"
+import { HoverPrefetchLink } from "@/components/Link/HoverPrefetchLink"
 import React from "react"
 
 import { Breadcrumbs, type Crumb } from "@/components/Breadcrumbs"
@@ -43,7 +43,7 @@ function TopLink({
   children: React.ReactNode
 }): React.ReactNode {
   return (
-    <Link
+    <HoverPrefetchLink
       href={href}
       aria-current={active ? "page" : undefined}
       className={cn(
@@ -52,7 +52,7 @@ function TopLink({
       )}
     >
       {children}
-    </Link>
+    </HoverPrefetchLink>
   )
 }
 
@@ -113,7 +113,7 @@ export function DocsNav({ sections, current, className }: DocsNavProps): React.R
                       const active = doc.slug === current
                       return (
                         <li key={doc.slug}>
-                          <Link
+                          <HoverPrefetchLink
                             href={`/docs/${doc.slug}`}
                             aria-current={active ? "page" : undefined}
                             className={cn(
@@ -124,7 +124,7 @@ export function DocsNav({ sections, current, className }: DocsNavProps): React.R
                             )}
                           >
                             {docNavTitle(doc)}
-                          </Link>
+                          </HoverPrefetchLink>
                         </li>
                       )
                     })}

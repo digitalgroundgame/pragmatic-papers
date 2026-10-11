@@ -1,5 +1,5 @@
 import { ChevronLeft, ChevronRight } from "lucide-react"
-import Link from "next/link"
+import { HoverPrefetchLink } from "@/components/Link/HoverPrefetchLink"
 import React from "react"
 
 import { docNavTitle, docPath } from "@/plugins/docs/sections"
@@ -27,7 +27,7 @@ function PagerLink({
   const next = direction === "next"
   const Icon = next ? ChevronRight : ChevronLeft
   return (
-    <Link
+    <HoverPrefetchLink
       href={docPath(doc.slug ?? "")}
       rel={direction === "next" ? "next" : "prev"}
       className={cn(
@@ -42,7 +42,7 @@ function PagerLink({
         {docNavTitle(doc)}
         {next && <Icon aria-hidden="true" className="size-4 shrink-0" />}
       </span>
-    </Link>
+    </HoverPrefetchLink>
   )
 }
 

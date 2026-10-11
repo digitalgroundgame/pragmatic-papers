@@ -6,7 +6,7 @@ import type { queryPublishedDocs } from "@/plugins/docs/queries"
 import { groupDocsBySection, HOME_DOC_SLUG, WHATS_NEW_PATH } from "@/plugins/docs/sections"
 import { formatNotificationDate } from "@/plugins/notifications/unread"
 import { buildBreadcrumbJsonLd } from "@/utilities/structuredData"
-import Link from "next/link"
+import { HoverPrefetchLink } from "@/components/Link/HoverPrefetchLink"
 import React from "react"
 
 export type WhatsNewDoc = Awaited<ReturnType<typeof queryPublishedDocs>>[number]
@@ -39,7 +39,7 @@ export function WhatsNew({ docs }: { docs: WhatsNewDoc[] }): React.ReactNode {
                 const thumbnail = docThumbnail(doc.heroImage)
                 return (
                   <li key={doc.id} className="border-b py-6">
-                    <Link
+                    <HoverPrefetchLink
                       href={`/docs/${doc.slug}`}
                       className="group flex flex-col gap-4 sm:flex-row sm:items-start sm:gap-6"
                     >
@@ -69,7 +69,7 @@ export function WhatsNew({ docs }: { docs: WhatsNewDoc[] }): React.ReactNode {
                           {doc.summary}
                         </span>
                       </span>
-                    </Link>
+                    </HoverPrefetchLink>
                   </li>
                 )
               })}

@@ -16,6 +16,8 @@ import { Footer } from "@/Footer/config"
 import { ArticleRecommendations } from "@/globals/ArticleRecommendations/config"
 import { Integrations } from "@/globals/Integrations/config"
 import { Newsletter } from "@/globals/Newsletter/config"
+import { installedPlugin } from "@/globals/Plugins/installedPlugin"
+import { Plugins } from "@/globals/Plugins/config"
 import { SiteSettings } from "@/globals/SiteSettings/config"
 import { Header } from "@/Header/config"
 import { canRunJobs } from "@/jobs/access"
@@ -161,12 +163,31 @@ export default buildConfig({
     Categories,
   ],
   cors: [getSiteURL()].filter(Boolean),
-  globals: [Header, Footer, SiteSettings, Integrations, Newsletter, ArticleRecommendations],
+  globals: [
+    Header,
+    Footer,
+    SiteSettings,
+    Integrations,
+    Newsletter,
+    Plugins,
+    ArticleRecommendations,
+  ],
   // Nothing here reads Payload's GraphQL API (the site and admin use the Local and REST
   // APIs), and its errors reach `afterError` with their status nested on `originalError`,
   // which the Sentry plugin reads as a 500: anyone could fill Sentry from /api/graphql.
   graphQL: { disable: true },
-  plugins: [...plugins, sentryPayloadPlugin],
+  plugins: [
+    ...plugins,
+    installedPlugin(
+      {
+        name: "Sentry",
+        source: "@payloadcms/plugin-sentry",
+        description:
+          "Reports the errors Payload answers with a 5xx to Sentry, with the signed-in user.",
+      },
+      sentryPayloadPlugin,
+    ),
+  ],
   secret: process.env.PAYLOAD_SECRET,
   sharp: sharp as unknown as SharpDependency,
   typescript: {

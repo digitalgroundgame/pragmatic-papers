@@ -1,3 +1,4 @@
+import { installedPlugin, type PluginLink } from "@/globals/Plugins/installedPlugin"
 import type { Experiment } from "@/globals/SiteSettings/isExperimentEnabled"
 import { revalidateRedirects } from "@/hooks/revalidateRedirects"
 import { docsPlugin } from "@/plugins/docs"
@@ -31,6 +32,8 @@ import { type Payload, type Plugin } from "payload"
 // Settings global reaches the Payload config, which imports this file.
 const experiment = (name: Experiment) => async (): Promise<boolean> =>
   (await import("@/globals/SiteSettings/isExperimentEnabled")).isExperimentEnabled(name)
+
+const EXPERIMENTS: PluginLink = { label: "Settings → Experiments", path: "/globals/site-settings" }
 
 type SeoDoc = Volume | Article | Page | Topic | Interactive
 
@@ -206,125 +209,202 @@ export const storageFileURL =
   }
 
 export const plugins: Plugin[] = [
-  searchPlugin({
-    collections: ["articles", "pages", "volumes", "topics"],
-    defaultPriorities: {
-      articles: 40,
-      volumes: 30,
-      pages: 20,
-      topics: 10,
+  installedPlugin(
+    {
+      name: "Search",
+      source: "@payloadcms/plugin-search",
+      description:
+        "Keeps a search index of articles, pages, volumes and topics, which the site's search reads.",
     },
-    beforeSync,
-    searchOverrides: {
-      labels: { singular: "Search Result", plural: "Search" },
-      admin: { group: "System" },
-      fields: ({ defaultFields }) => [
-        ...defaultFields,
-        { name: "excerpt", type: "text", admin: { readOnly: true } },
-        { name: "slug", type: "text", admin: { readOnly: true } },
-        { name: "authors", type: "text", admin: { readOnly: true } },
-        { name: "topics", type: "text", admin: { readOnly: true } },
-        { name: "image", type: "upload", relationTo: "media", admin: { readOnly: true } },
-        { name: "body", type: "textarea", admin: { readOnly: true, hidden: true } },
-      ],
-    },
-  }),
-  redirectsPlugin({
-    collections: ["pages", "volumes", "articles"],
-    overrides: {
-      // @ts-expect-error - This is a valid override, mapped fields don't resolve to the same type
-      fields: ({ defaultFields }) => {
-        return defaultFields.map((field) => {
-          if ("name" in field && field.name === "from") {
-            return {
-              ...field,
-              admin: {
-                description: "You will need to rebuild the website when changing this field.",
-              },
-            }
-          }
-          return field
-        })
+    searchPlugin({
+      collections: ["articles", "pages", "volumes", "topics"],
+      defaultPriorities: {
+        articles: 40,
+        volumes: 30,
+        pages: 20,
+        topics: 10,
       },
-      hooks: {
-        afterChange: [revalidateRedirects],
+      beforeSync,
+      searchOverrides: {
+        labels: { singular: "Search Result", plural: "Search" },
+        admin: { group: "System" },
+        fields: ({ defaultFields }) => [
+          ...defaultFields,
+          { name: "excerpt", type: "text", admin: { readOnly: true } },
+          { name: "slug", type: "text", admin: { readOnly: true } },
+          { name: "authors", type: "text", admin: { readOnly: true } },
+          { name: "topics", type: "text", admin: { readOnly: true } },
+          { name: "image", type: "upload", relationTo: "media", admin: { readOnly: true } },
+          { name: "body", type: "textarea", admin: { readOnly: true, hidden: true } },
+        ],
       },
-      admin: {
-        hidden: true, // TODO: Setup redirects plugin
-      },
+    }),
+  ),
+  installedPlugin(
+    {
+      name: "Redirects",
+      source: "@payloadcms/plugin-redirects",
+      description:
+        "Redirects from old URLs to pages, volumes and articles. Hidden in the admin until it's set up.",
     },
-  }),
-  nestedDocsPlugin({
-    collections: ["categories"],
-    generateURL: (docs) => docs.reduce((url, doc) => `${url}/${doc.slug}`, ""),
-  }),
-  seo,
-  formBuilderPlugin({
-    fields: {
-      payment: false,
-    },
-    formOverrides: {
-      fields: ({ defaultFields }) => {
-        return defaultFields.map((field) => {
-          if ("name" in field && field.name === "confirmationMessage") {
-            return {
-              ...field,
-              editor: lexicalEditor({
-                features: ({ rootFeatures }) => {
-                  return [
-                    ...rootFeatures,
-                    FixedToolbarFeature(),
-                    HeadingFeature({ enabledHeadingSizes: ["h1", "h2", "h3", "h4"] }),
-                  ]
+    redirectsPlugin({
+      collections: ["pages", "volumes", "articles"],
+      overrides: {
+        // @ts-expect-error - This is a valid override, mapped fields don't resolve to the same type
+        fields: ({ defaultFields }) => {
+          return defaultFields.map((field) => {
+            if ("name" in field && field.name === "from") {
+              return {
+                ...field,
+                admin: {
+                  description: "You will need to rebuild the website when changing this field.",
                 },
-              }),
+              }
             }
-          }
-          return field
-        })
+            return field
+          })
+        },
+        hooks: {
+          afterChange: [revalidateRedirects],
+        },
+        admin: {
+          hidden: true, // TODO: Setup redirects plugin
+        },
       },
-      admin: {
-        hidden: true, // TODO: Setup form builder plugin
-      },
+    }),
+  ),
+  installedPlugin(
+    {
+      name: "Nested docs",
+      source: "@payloadcms/plugin-nested-docs",
+      description: "Parents and breadcrumb URLs for categories.",
     },
-    formSubmissionOverrides: {
-      admin: {
-        hidden: true, // TODO: Setup form builder plugin
-      },
+    nestedDocsPlugin({
+      collections: ["categories"],
+      generateURL: (docs) => docs.reduce((url, doc) => `${url}/${doc.slug}`, ""),
+    }),
+  ),
+  installedPlugin(
+    {
+      name: "SEO",
+      source: "@payloadcms/plugin-seo",
+      description:
+        "The Auto-generate buttons in the SEO tab of articles, pages, volumes, topics and interactives.",
     },
-  }),
-  s3Storage({
-    // Enable S3 storage only when not using local storage
-    // For staging/preview: set USE_LOCAL_STORAGE=true to use local file system
-    // For production: set USE_LOCAL_STORAGE=false (or leave unset) to use S3
-    enabled: process.env.USE_LOCAL_STORAGE !== "true",
-    collections: {
-      media: {
-        disablePayloadAccessControl: true,
-        generateFileURL: storageFileURL("media"),
-      },
-      "map-assets": {
-        disablePayloadAccessControl: true,
-        prefix: "map-assets",
-        generateFileURL: storageFileURL("map-assets", "map-assets"),
-      },
+    seo,
+  ),
+  installedPlugin(
+    {
+      name: "Form builder",
+      source: "@payloadcms/plugin-form-builder",
+      description: "Forms and their submissions. Hidden in the admin until it's set up.",
     },
-    bucket: process.env.S3_BUCKET || "",
-    config: {
-      forcePathStyle: true,
-      credentials: {
-        accessKeyId: process.env.S3_ACCESS_KEY_ID || "",
-        secretAccessKey: process.env.S3_SECRET_ACCESS_KEY || "",
+    formBuilderPlugin({
+      fields: {
+        payment: false,
       },
-      region: process.env.S3_REGION,
-      endpoint: process.env.S3_ENDPOINT || "",
+      formOverrides: {
+        fields: ({ defaultFields }) => {
+          return defaultFields.map((field) => {
+            if ("name" in field && field.name === "confirmationMessage") {
+              return {
+                ...field,
+                editor: lexicalEditor({
+                  features: ({ rootFeatures }) => {
+                    return [
+                      ...rootFeatures,
+                      FixedToolbarFeature(),
+                      HeadingFeature({ enabledHeadingSizes: ["h1", "h2", "h3", "h4"] }),
+                    ]
+                  },
+                }),
+              }
+            }
+            return field
+          })
+        },
+        admin: {
+          hidden: true, // TODO: Setup form builder plugin
+        },
+      },
+      formSubmissionOverrides: {
+        admin: {
+          hidden: true, // TODO: Setup form builder plugin
+        },
+      },
+    }),
+  ),
+  installedPlugin(
+    {
+      name: "S3 storage",
+      source: "@payloadcms/storage-s3",
+      description:
+        "Keeps media and map uploads in the S3 bucket. Off where USE_LOCAL_STORAGE=true, which keeps them on disk.",
+      enabled: process.env.USE_LOCAL_STORAGE !== "true",
     },
-    clientUploads: true,
-  }),
-  docsPlugin(),
-  notificationsPlugin({
-    sources: [docsNotifications({ enabled: experiment("docs"), tours: experiment("tours") })],
-    enabled: experiment("notifications"),
-  }),
-  toursPlugin({ enabled: experiment("tours") }),
+    s3Storage({
+      // Enable S3 storage only when not using local storage
+      // For staging/preview: set USE_LOCAL_STORAGE=true to use local file system
+      // For production: set USE_LOCAL_STORAGE=false (or leave unset) to use S3
+      enabled: process.env.USE_LOCAL_STORAGE !== "true",
+      collections: {
+        media: {
+          disablePayloadAccessControl: true,
+          generateFileURL: storageFileURL("media"),
+        },
+        "map-assets": {
+          disablePayloadAccessControl: true,
+          prefix: "map-assets",
+          generateFileURL: storageFileURL("map-assets", "map-assets"),
+        },
+      },
+      bucket: process.env.S3_BUCKET || "",
+      config: {
+        forcePathStyle: true,
+        credentials: {
+          accessKeyId: process.env.S3_ACCESS_KEY_ID || "",
+          secretAccessKey: process.env.S3_SECRET_ACCESS_KEY || "",
+        },
+        region: process.env.S3_REGION,
+        endpoint: process.env.S3_ENDPOINT || "",
+      },
+      clientUploads: true,
+    }),
+  ),
+  installedPlugin(
+    {
+      name: "Help docs",
+      source: "src/plugins/docs",
+      description:
+        "Help docs at /docs, written in the admin or shipped in src/docs/ with a release.",
+      enabled: experiment("docs"),
+      settings: [EXPERIMENTS],
+    },
+    docsPlugin(),
+  ),
+  installedPlugin(
+    {
+      name: "Notifications",
+      source: "src/plugins/notifications",
+      description:
+        "The bell beside the avatar in the admin header: help docs and other news for each staff member.",
+      enabled: experiment("notifications"),
+      settings: [EXPERIMENTS],
+    },
+    notificationsPlugin({
+      sources: [docsNotifications({ enabled: experiment("docs"), tours: experiment("tours") })],
+      enabled: experiment("notifications"),
+    }),
+  ),
+  installedPlugin(
+    {
+      name: "Guided tours",
+      source: "src/plugins/tours",
+      description:
+        "driver.js walkthroughs of the admin, started from a help doc or the bell's Show me.",
+      enabled: experiment("tours"),
+      settings: [EXPERIMENTS],
+    },
+    toursPlugin({ enabled: experiment("tours") }),
+  ),
 ]

@@ -225,6 +225,7 @@ export interface Config {
     'site-settings': SiteSetting;
     integrations: IntegrationSettings;
     newsletter: Newsletter;
+    plugins: Plugin;
     'article-recommendations': ArticleRecommendation;
     'payload-jobs-stats': PayloadJobsStat;
   };
@@ -234,6 +235,7 @@ export interface Config {
     'site-settings': SiteSettingsSelect<false> | SiteSettingsSelect<true>;
     integrations: IntegrationsSelect<false> | IntegrationsSelect<true>;
     newsletter: NewsletterSelect<false> | NewsletterSelect<true>;
+    plugins: PluginsSelect<false> | PluginsSelect<true>;
     'article-recommendations': ArticleRecommendationsSelect<false> | ArticleRecommendationsSelect<true>;
     'payload-jobs-stats': PayloadJobsStatsSelect<false> | PayloadJobsStatsSelect<true>;
   };
@@ -2700,6 +2702,15 @@ export interface Newsletter {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "plugins".
+ */
+export interface Plugin {
+  id: number;
+  updatedAt?: string | null;
+  createdAt?: string | null;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "article-recommendations".
  */
 export interface ArticleRecommendation {
@@ -2841,6 +2852,15 @@ export interface IntegrationsSelect<T extends boolean = true> {
  * via the `definition` "newsletter_select".
  */
 export interface NewsletterSelect<T extends boolean = true> {
+  updatedAt?: T;
+  createdAt?: T;
+  globalType?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "plugins_select".
+ */
+export interface PluginsSelect<T extends boolean = true> {
   updatedAt?: T;
   createdAt?: T;
   globalType?: T;

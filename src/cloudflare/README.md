@@ -38,15 +38,18 @@ the R2 bucket and D1 database by name if they're missing. The rest is set up by 
    database is `pragmatic_papers`, with an underscore; the same server also has an empty
    `pragmatic-papers`). Cloudflare creates the Access application and service token. Its
    ID is in `wrangler.jsonc`.
-3. **API token** with Workers Scripts, Workers R2 Storage, D1 and Hyperdrive, all Edit,
-   plus Workers Routes and DNS, both Edit, on the `pragmaticpapers.com` zone (for the
-   Custom Domain): the repo secret `CLOUDFLARE_WORKERS_TOKEN`. `CLOUDFLARE_ACCOUNT_ID` is
-   shared with the Storybook deploy.
-4. **Repo secret** `STAGING_PAYLOAD_SECRET` (staging's `PAYLOAD_SECRET`), and **variables**
+3. **API token** with Workers Scripts, Workers R2 Storage, D1 and Hyperdrive, all Edit:
+   the repo secret `CLOUDFLARE_WORKERS_TOKEN`. `CLOUDFLARE_ACCOUNT_ID` is shared with the
+   Storybook deploy.
+4. **Custom Domain** `staging-worker.pragmaticpapers.com`: Workers & Pages →
+   `pragmatic-papers-staging` → Settings → Domains & Routes → Add → Custom Domain, enabled
+   for Production. Cloudflare creates its DNS record and certificate. It isn't in
+   `wrangler.jsonc`, which would need the deploy token to have zone permissions.
+5. **Repo secret** `STAGING_PAYLOAD_SECRET` (staging's `PAYLOAD_SECRET`), and **variables**
    `WORKER_STAGING_URL` (`https://staging-worker.pragmaticpapers.com`) and
    `SHOWCASE_STAGING_URL` (staging's Coolify URL, which the Worker sends `/admin` and
    `/api` to; the deploy passes it as `ORIGIN_URL`).
-5. **Coolify staging**: the runtime variable `WORKER_URL` (the same URL).
+6. **Coolify staging**: the runtime variable `WORKER_URL` (the same URL).
    With it, every save that purges Cloudflare's edge clears the Worker's cache first,
    through `/next/revalidate-all` with staging's `PAYLOAD_SECRET`
    (`src/hooks/purgeEdgeCache.ts`). Without it, an edit to an article or volume shows on

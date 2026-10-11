@@ -11,9 +11,9 @@
   "compatibility_date": "2026-09-30",
   "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
   "workers_dev": true,
-  // A Custom Domain: the Worker is the hostname's origin, and the deploy creates its DNS
-  // record and certificate. It can't be created over an existing DNS record.
-  "routes": [{ "pattern": "staging-worker.pragmaticpapers.com", "custom_domain": true }],
+  // staging-worker.pragmaticpapers.com is a Custom Domain added in the dashboard (Settings,
+  // Domains & Routes), so the deploy token needs no zone permissions. With no `routes`
+  // here, `wrangler deploy` leaves it alone; listing one would replace the dashboard's.
   "observability": { "enabled": true },
   "assets": {
     "directory": ".open-next/assets",

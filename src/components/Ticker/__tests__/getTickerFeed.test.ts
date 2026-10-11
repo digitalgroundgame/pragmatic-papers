@@ -76,10 +76,12 @@ describe("getTickerFeed", () => {
       bluesky: { handles: [{ handle: "admin.bsky.social" }, { handle: "other.bsky.social" }] },
       x: { usernames: [{ username: "AdminPick" }] },
     }
+    ticker.current = { upcomingHours: 6 }
     loadSource.mockImplementation(async (_source, fallback) => fallback)
     await getTickerFeed()
     const settings = {
       youtubeChannelIds: ["UC1", "UC2"],
+      youtubeUpcomingHours: 6,
       blueskyHandles: ["admin.bsky.social", "other.bsky.social"],
       xUsernames: ["AdminPick"],
     }
@@ -95,6 +97,7 @@ describe("getTickerFeed", () => {
     await getTickerFeed()
     expect(loadSource).toHaveBeenCalledWith(broadcastSource, null, {
       youtubeChannelIds: undefined,
+      youtubeUpcomingHours: undefined,
       blueskyHandles: undefined,
       xUsernames: undefined,
     })

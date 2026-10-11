@@ -33,6 +33,21 @@ export const tickerField: GroupField = {
       },
     },
     {
+      name: "upcomingHours",
+      label: "Scheduled streams",
+      type: "number",
+      defaultValue: 24,
+      min: 0,
+      max: 168,
+      access: { update: adminFieldLevel },
+      admin: {
+        condition: whileOn,
+        description:
+          "How many hours before a scheduled YouTube stream starts that the ticker shows it. 0 shows only streams that are live.",
+        step: 1,
+      },
+    },
+    {
       name: "posts",
       type: "ui",
       admin: {

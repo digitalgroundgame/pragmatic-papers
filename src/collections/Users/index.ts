@@ -26,6 +26,7 @@ export const Users: CollectionConfig = {
     update: isSelfOrAdmin,
   },
   admin: {
+    group: "System",
     defaultColumns: ["name", "roles", "email"],
     useAsTitle: "name",
   },
@@ -153,6 +154,23 @@ export const Users: CollectionConfig = {
           value: "member",
         },
       ],
+    },
+    {
+      // Byline credits outlive a role change, so whether a user's author page is public
+      // can't follow from `roles`. Set when an article or narration credits the user
+      // (`grantPublicProfile`); `readUsers` and the /contributors index read it.
+      name: "publicProfile",
+      type: "checkbox",
+      defaultValue: false,
+      label: "Public author page",
+      access: {
+        update: adminFieldLevel,
+      },
+      admin: {
+        position: "sidebar",
+        description:
+          "Keeps /contributors/<slug> public whatever the roles. Turned on when an article or narration credits this user.",
+      },
     },
   ],
   hooks: {

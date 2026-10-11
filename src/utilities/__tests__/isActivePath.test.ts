@@ -11,7 +11,7 @@ describe("isActivePath", () => {
   })
 
   it("does not mark sibling routes active", () => {
-    expect(isActivePath("/authors", "/topics")).toBe(false)
+    expect(isActivePath("/contributors", "/topics")).toBe(false)
   })
 
   it("matches whole segments, not string prefixes", () => {

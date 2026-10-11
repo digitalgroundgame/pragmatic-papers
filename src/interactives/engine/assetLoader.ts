@@ -43,6 +43,7 @@ export class AssetLoader {
       const asset: DrilldownAsset = {
         viewBox: geometry.viewBox,
         flipY: geometry.flipY,
+        ...(geometry.step ? { step: geometry.step } : {}),
         paths: geometry.paths,
         payload: data.payload,
         payloadError: data.payloadError,

@@ -10,7 +10,7 @@ export interface TypesetMathProps {
 
 // `<MathJax>` chains a `.catch` that re-throws onto the script's load promise
 // the moment it mounts, so if cdnjs is unreachable every formula on the page
-// raises its own unhandled "Typesetting failed" rejection (#915). Hand it the
+// raises its own unhandled "Typesetting failed" rejection. Hand it the
 // formula only once MathJax has loaded; until then, and for good if it never
 // does, readers get the raw TeX. The provider's `onError` reports the failure.
 export const TypesetMath: React.FC<TypesetMathProps> = ({ inline = false, children }) => {

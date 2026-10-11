@@ -69,7 +69,7 @@ const inlineBlock = (fields: Record<string, unknown>) => ({
   version: 1,
 })
 
-describe("RSS feed escapes CMS text (#1024)", () => {
+describe("RSS feed escapes CMS text", () => {
   it("escapes a quoted alt text in a media block", () => {
     const html = renderContent(
       block({
@@ -193,7 +193,7 @@ describe("generateArticleFeed", () => {
     expect(feed).toContain('<feed xmlns="http://www.w3.org/2005/Atom">')
     expect(feed).toContain("<title>The Pragmatic Papers - Articles</title>")
     expect(feed).toContain("<id>https://example.org</id>")
-    expect(feed).toContain('<link rel="self" href="https://example.org/feed.articles"/>')
+    expect(feed).toContain('<link rel="self" href="https://example.org/articles/feed.xml"/>')
   })
 
   it("has no entries for no articles", () => {
@@ -292,7 +292,7 @@ describe("generateVolumeFeed", () => {
     const feed = generateVolumeFeed([])
 
     expect(feed).toContain("<title>The Pragmatic Papers - Volumes</title>")
-    expect(feed).toContain('<link rel="self" href="https://example.org/feed.volumes"/>')
+    expect(feed).toContain('<link rel="self" href="https://example.org/volumes/feed.xml"/>')
     expect(entries(feed)).toEqual([])
   })
 

@@ -1,14 +1,11 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite"
 import { expect, within } from "storybook/test"
 
-import { knownContrastIssue } from "@/stories/a11y"
-
 import { FootnoteList } from "."
 
 const meta = {
   title: "Components/FootnoteList",
   component: FootnoteList,
-  parameters: knownContrastIssue,
   args: {
     footnotes: [
       {

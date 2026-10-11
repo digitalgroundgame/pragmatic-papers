@@ -25,7 +25,7 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs"
 import path from "node:path"
 
 import { validateDrilldownData } from "../src/interactives/contract"
-import type { DrilldownData } from "../src/interactives/types"
+import type { DrilldownData, GeometryFile } from "../src/interactives/types"
 import { courtTrackerFeed } from "../src/interactives/federal-courts/feed"
 import { loadFederalCourtsGeometry } from "../src/interactives/federal-courts/geometry"
 import { svgToGeometryFile } from "../src/interactives/geometry"
@@ -81,46 +81,100 @@ function kb(s: string): string {
   return `${(Buffer.byteLength(s) / 1024).toFixed(0)} KB`
 }
 
+/** A geometry file by map: `national`, or a circuit id. */
+type Maps = Record<string, GeometryFile>
+
 /**
- * Where each court's seat block is drawn, taken once from upstream's `seat_blocks.json` and
- * checked in beside the geometry it is measured against.
+ * The map a region's seat block is drawn on, which is also the units its anchor is in: the
+ * national map for a circuit and for anything with no shape of its own (the Supreme Court, the
+ * specialist courts), the circuit's own map for a district.
+ */
+export function anchorMap(maps: Maps): (regionId: string) => string {
+  const topLevel = new Set(maps.national?.paths.filter((p) => !p.parentId).map((p) => p.id))
+  const home = new Map<string, string>()
+  for (const [map, file] of Object.entries(maps)) {
+    if (map === "national") continue
+    for (const p of file.paths) if (p.id && p.parentId) home.set(p.id, map)
+  }
+  return (id) => (topLevel.has(id) ? "national" : (home.get(id) ?? "national"))
+}
+
+/** A point divided by `by`, rounded to the file's grid. */
+const scalePoint = (at: readonly number[], by: number): [number, number] => [
+  Math.round(at[0]! / by) || 0,
+  Math.round(at[1]! / by) || 0,
+]
+
+/**
+ * Where each court's seat block is drawn: ours, checked in beside the geometry it is measured
+ * against, and seeded from upstream's `seat_blocks.json` only for a court that has none yet.
  *
  * Upstream tiers `anchor` as renderer-specific — hand-placed for their own map, free to move
  * without notice — and placement is ours to own anyway. Reading it from the feed daily meant
- * a nudge to their layout silently moved ours; taken here, it moves when the geometry it
- * belongs to moves, in a diff someone reviews.
+ * a nudge to their layout silently moved ours. Ours are placed by hand with the layout tools,
+ * so a re-snapshot keeps every one already in `anchors.json`; to take upstream's again, delete
+ * that court's entry first. Upstream's are in the export's units, so each new one is divided by
+ * the step of the map it is drawn on.
  */
-function snapshotAnchors(source: string, outDir: string): void {
+function snapshotAnchors(source: string, outDir: string, maps: Maps): void {
   const blocks = JSON.parse(
     readFileSync(path.join(source, "data", "seat_blocks.json"), "utf8"),
   ) as Record<string, { anchor: [number, number] | null }>
+  const file = path.join(outDir, "anchors.json")
+  let ours: Record<string, [number, number]> = {}
+  try {
+    ours = JSON.parse(readFileSync(file, "utf8")) as Record<string, [number, number]>
+  } catch {
+    // No anchors yet: every one comes from upstream.
+  }
+  const mapOf = anchorMap(maps)
   const anchors: Record<string, [number, number]> = {}
-  for (const id of Object.keys(blocks).sort()) {
-    const anchor = blocks[id]?.anchor
-    if (anchor) anchors[id] = anchor
+  let added = 0
+  for (const id of [...new Set([...Object.keys(ours), ...Object.keys(blocks)])].sort()) {
+    const kept = ours[id]
+    const theirs = blocks[id]?.anchor
+    if (kept) anchors[id] = kept
+    else if (theirs) {
+      anchors[id] = scalePoint(theirs, maps[mapOf(id)]?.step ?? 1)
+      added += 1
+    }
   }
   const json = JSON.stringify(anchors)
-  writeFileSync(path.join(outDir, "anchors.json"), json)
+  writeFileSync(file, json)
   console.warn(
-    `anchors.json${" ".repeat(11)}${kb(json).padStart(8)} · ${Object.keys(anchors).length} blocks`,
+    `anchors.json${" ".repeat(11)}${kb(json).padStart(8)} · ${Object.keys(anchors).length} blocks · ${added} new from upstream`,
   )
+}
+
+const geometryFiles = (): [string, string][] => [
+  ["national", "national.json"],
+  ...CIRCUITS.map((id): [string, string] => [id, `circuits/${id}.json`]),
+]
+
+function readGeometry(outDir: string, rel: string): GeometryFile | null {
+  try {
+    return JSON.parse(readFileSync(path.join(outDir, rel), "utf8")) as GeometryFile
+  } catch {
+    return null
+  }
 }
 
 export function snapshotGeometry(source: string, profileDir = PROFILE_DIR): number {
   const geoDir = path.join(source, "assets", "geo")
   const outDir = path.join(profileDir, "geometry")
   mkdirSync(path.join(outDir, "circuits"), { recursive: true })
-  const write = (rel: string, svg: string): void => {
-    const file = svgToGeometryFile(svg)
+  const maps: Maps = {}
+  for (const [map, rel] of geometryFiles()) {
+    const svg = readFileSync(path.join(geoDir, rel.replace(/\.json$/, ".svg")), "utf8")
+    // The step the checked-in file already has, if any: `offsets.json` is written in its units.
+    const file = svgToGeometryFile(svg, readGeometry(outDir, rel)?.step)
     const json = JSON.stringify(file)
     writeFileSync(path.join(outDir, rel), json)
+    maps[map] = file
     const ids = file.paths.filter((p) => p.id).length
-    console.warn(`${rel.padEnd(22)} ${kb(json).padStart(8)} · ${ids} regions`)
+    console.warn(`${rel.padEnd(22)} ${kb(json).padStart(8)} · ${ids} regions · step ${file.step}`)
   }
-  write("national.json", readFileSync(path.join(geoDir, "national.svg"), "utf8"))
-  for (const id of CIRCUITS)
-    write(`circuits/${id}.json`, readFileSync(path.join(geoDir, "circuits", `${id}.svg`), "utf8"))
-  snapshotAnchors(source, outDir)
+  snapshotAnchors(source, outDir, maps)
   return 0
 }
 

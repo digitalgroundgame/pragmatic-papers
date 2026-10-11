@@ -3,7 +3,7 @@ import React from "react"
 
 import RichText from "@/components/RichText"
 import { isResolved } from "@/utilities/relationships"
-import { FormBlockClient } from "./FormBlockClient"
+import { FormBlockClient } from "./FormBlockClient.lazy"
 import { Message } from "./Message"
 
 /**

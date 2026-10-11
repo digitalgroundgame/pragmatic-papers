@@ -1,8 +1,10 @@
 name: Claude Code Review
 
-# Runs once when the "ready for review" label is added (or when a labeled
+# Runs once when the "in review" label is added (or when a labeled
 # draft is marked ready); to review again, remove and re-add the label. Drafts
-# and unlabeled PRs never run it. Not a required check: what gates merging is
+# and unlabeled PRs never run it. pr-events.yml starts it on the PR's
+# branch, so its check lands on the commit it reviews without every other
+# label leaving a skipped one. Not a required check: what gates merging is
 # "Review acknowledged" (review-ack.yml), which a person gives either by
 # approving the PR or, on their own PR, by replying `/reviewed` on its final
 # commit after a review like this one has run. So only PRs that take the
@@ -12,24 +14,19 @@ name: Claude Code Review
 # The job fails when the review reports a blocker, which marks the reviewed
 # commit with a ✗. It never approves.
 on:
-  pull_request:
-    types: [labeled, ready_for_review]
-    branches: [dev]
+  workflow_dispatch:
+    inputs:
+      pr:
+        description: The PR to review, run on its branch
+        required: true
 
 concurrency:
-  group: claude-review-${{ github.event.pull_request.number }}
+  group: claude-review-${{ inputs.pr }}
   cancel-in-progress: true
 
 jobs:
   review:
     name: Claude review
-    # Same-repo PRs only: a fork PR gets no secrets here.
-    if: >-
-      github.event.pull_request.head.repo.full_name == github.repository &&
-      !github.event.pull_request.draft && (
-        github.event.action == 'labeled' && github.event.label.name == 'ready for review' ||
-        github.event.action == 'ready_for_review' && contains(github.event.pull_request.labels.*.name, 'ready for review')
-      )
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
@@ -44,13 +41,32 @@ jobs:
           fetch-depth: 0
 
       - name: Run Claude code review
+        id: review
         uses: anthropics/claude-code-action@v1
         with:
-          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY_CODE_REVIEW }}
-          prompt: "/code-review --comment ${{ github.repository }}/pull/${{ github.event.pull_request.number }} --head ${{ github.event.pull_request.head.sha }}"
+          # A Claude subscription token from `claude setup-token`, so reviews
+          # count against that plan rather than an API key's credits.
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          # pr-events.yml dispatches this with the workflow token, so the run's
+          # actor is github-actions[bot], which the action refuses by default.
+          # Dispatching needs write access, so no outside bot can start it.
+          allowed_bots: github-actions
+          prompt: "/code-review --comment ${{ github.repository }}/pull/${{ inputs.pr }} --head ${{ github.sha }}"
           claude_args: |
             --model opus
-            --allowedTools "mcp__github_inline_comment__create_inline_comment,Bash(gh pr comment:*),Bash(gh pr diff:*),Bash(gh pr view:*)"
+            --allowedTools "mcp__github_inline_comment__create_inline_comment,Bash(gh pr comment:*),Bash(gh pr diff:*),Bash(gh pr view:*),Bash(git log:*),Bash(git show:*),Bash(git diff:*),Bash(git blame:*)"
+
+      # The action logs only how many tool calls were denied. Its execution
+      # file holds the result message, whose permission_denials name each
+      # tool and its input, so a denial shows up as a warning on the run.
+      - name: List denied tool calls
+        if: always() && steps.review.outputs.execution_file != ''
+        env:
+          EXECUTION_FILE: ${{ steps.review.outputs.execution_file }}
+        run: |
+          jq -r '.[] | select(.type == "result") | .permission_denials[]?
+            | "\(.tool_name): \(.tool_input | tojson | .[0:300])"' "$EXECUTION_FILE" \
+            | while IFS= read -r line; do echo "::warning::Denied $line"; done || true
 
       # The summary comment ends with a marker naming the commit reviewed and
       # the verdict (see `--head` in .claude/skills/code-review/SKILL.md).
@@ -58,8 +74,8 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
-          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          PR_NUMBER: ${{ inputs.pr }}
+          HEAD_SHA: ${{ github.sha }}
         run: |
           marker=$(gh api --paginate "repos/$REPO/issues/$PR_NUMBER/comments" \
             --jq '.[] | select(.user.login == "claude[bot]") | .body' \

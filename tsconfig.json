@@ -19,6 +19,7 @@
     "allowJs": true,
     "jsx": "react-jsx",
     "noEmit": true,
+    "allowImportingTsExtensions": true,
     "plugins": [
       {
         "name": "next"

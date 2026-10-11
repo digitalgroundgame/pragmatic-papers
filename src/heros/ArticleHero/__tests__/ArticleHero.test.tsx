@@ -84,7 +84,7 @@ describe("ArticleHero", () => {
     }
     render(<ArticleHero article={article} />)
     const aliceLink = screen.getByRole("link", { name: "Alice" }) as HTMLAnchorElement
-    expect(aliceLink.href).toContain("/authors/alice")
+    expect(aliceLink.href).toContain("/contributors/alice")
   })
 
   it("renders Media when heroImage is present", () => {

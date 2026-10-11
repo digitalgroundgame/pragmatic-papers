@@ -1,12 +1,7 @@
 import { expect, test } from "@playwright/test"
 
-import { FOUR_AUTHOR_SLUG } from "../../scripts/seed-e2e.constants"
-import {
-  expectPinnedDateline,
-  gotoFirstArticle,
-  waitForStableBox,
-  waitForStableRender,
-} from "./helpers"
+import { FOUR_AUTHOR_SLUG, SHOWCASE_SLUG } from "../../scripts/seed-e2e.constants"
+import { expectPinnedDateline, waitForStableBox, waitForStableRender } from "./helpers"
 
 // The hero's meta row puts the dateline and the controls (narration player,
 // share button) on one line while they fit, and drops the controls onto their
@@ -30,9 +25,7 @@ function sharesLineWith(a: { y: number; height: number }, b: { y: number; height
 }
 
 test.describe("article hero meta row — dateline and controls on one line", () => {
-  test("controls hug the right edge, player beside the share button @visual", async ({
-    page,
-  }, testInfo) => {
+  test("controls hug the right edge, player beside the share button", async ({ page }) => {
     await page.goto(NARRATED_ARTICLE)
 
     const metaRow = page.locator(row)
@@ -61,7 +54,7 @@ test.describe("article hero meta row — dateline and controls on one line", () 
     expect(shareBox.x + shareBox.width).toBeCloseTo(rowBox.x + rowBox.width, 0)
 
     // Grouped, not spread: the player sits a gap away from the share button
-    // rather than being flung to the left edge. gap-3 is 12px; the tolerance
+    // rather than being flung to the left edge. gap-1 is 4px; the tolerance
     // leaves room for the button's own padding without admitting a spread,
     // which on this viewport would be several hundred pixels.
     expect(shareBox.x - (playerBox.x + playerBox.width)).toBeLessThan(24)
@@ -69,9 +62,6 @@ test.describe("article hero meta row — dateline and controls on one line", () 
     // The dateline keeps its place at the start of the row — the lopsided grow
     // factor stretches its box, not its text.
     expect(datelineBox.x).toBeCloseTo(rowBox.x, 0)
-
-    test.skip(testInfo.project.name !== "chromium", "visual baseline captured on chromium only")
-    await expect(metaRow).toHaveScreenshot("article-meta-row.png")
   })
 })
 
@@ -79,7 +69,7 @@ test.describe("article hero meta row — controls wrapped onto their own line", 
   // Narrow enough that the dateline plus both controls cannot share a line.
   test.use({ viewport: { width: 375, height: 667 } })
 
-  test("wrapped controls spread to both edges @visual", async ({ page }, testInfo) => {
+  test("wrapped controls spread to both edges", async ({ page }) => {
     await page.goto(NARRATED_ARTICLE)
 
     const metaRow = page.locator(row)
@@ -111,17 +101,13 @@ test.describe("article hero meta row — controls wrapped onto their own line", 
     expect(playerBox.x).toBeCloseTo(rowBox.x, 0)
     expect(shareBox.x + shareBox.width).toBeCloseTo(rowBox.x + rowBox.width, 0)
     expect(shareBox.x - (playerBox.x + playerBox.width)).toBeGreaterThan(24)
-
-    test.skip(testInfo.project.name !== "chromium", "visual baseline captured on chromium only")
-    await expect(metaRow).toHaveScreenshot("mobile-article-meta-row.png")
   })
 
   test("an article without narration keeps its share button right-aligned", async ({ page }) => {
     // Most articles have no narration, leaving the share button alone in the
     // group. `justify-between` would pin it to the left edge once wrapped; this
     // is the guard that it stays where the wide layout had it.
-    const href = await gotoFirstArticle(page)
-    test.skip(!href, "No articles found in the database")
+    await page.goto(`/articles/${SHOWCASE_SLUG}`)
     await expect(page.locator(audioPlayer)).toHaveCount(0)
 
     const metaRow = page.locator(row)

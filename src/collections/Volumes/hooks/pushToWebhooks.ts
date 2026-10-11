@@ -19,8 +19,8 @@ export const pushToWebhooks: CollectionAfterChangeHook<Volume> = async (args) =>
   const webhooks = await payload.find({ collection: "webhooks" })
 
   for (const webhook of webhooks.docs) {
-    // Rows written before #672 carry the volume's ID as their own row ID; newer ones only the
-    // volume number, since a row ID is unique across every webhook (see below).
+    // Older rows carry the volume's ID as their own row ID; newer ones only the volume
+    // number, since a row ID is unique across every webhook (see below).
     const hasBeenPushed = webhook.pushed?.some(
       (v) => v.volumeNumber === args.doc.volumeNumber || v.id === args.doc.id.toString(),
     )

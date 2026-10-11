@@ -9,7 +9,7 @@ export function ArticleSidebar({
   return (
     <aside
       className={cn(
-        "max-w-2xl self-start lg:sticky lg:top-[calc(var(--header-height)+1rem)] lg:mb-8",
+        "max-w-2xl self-start lg:sticky lg:top-[calc(var(--sticky-top)+1rem)] lg:mb-8",
         "toc-open:mx-auto toc-open:w-full",
         className,
       )}

@@ -17,7 +17,7 @@ export const revalidateArticle: CollectionAfterChangeHook<Article> = ({
       payload.logger.info(`Revalidating article at path: ${path}`)
 
       revalidatePath(path)
-      revalidatePath("/feed.volumes")
+      revalidatePath("/volumes/feed.xml")
       revalidateTag("volumes-sitemap", "max")
       purgeEdgeCache(payload.logger, `volume ${doc.slug}`)
     }
@@ -29,7 +29,7 @@ export const revalidateArticle: CollectionAfterChangeHook<Article> = ({
       payload.logger.info(`Revalidating old article at path: ${oldPath}`)
 
       revalidatePath(oldPath)
-      revalidatePath("/feed.volumes")
+      revalidatePath("/volumes/feed.xml")
       revalidateTag("volumes-sitemap", "max")
       purgeEdgeCache(payload.logger, `volume ${previousDoc.slug} unpublished`)
     }
@@ -45,7 +45,7 @@ export const revalidateDelete: CollectionAfterDeleteHook<Article> = ({
     const path = `/volumes/${doc?.slug}`
 
     revalidatePath(path)
-    revalidatePath("/feed.volumes")
+    revalidatePath("/volumes/feed.xml")
     revalidateTag("volumes-sitemap", "max")
     purgeEdgeCache(payload.logger, `volume ${doc?.slug} deleted`)
   }

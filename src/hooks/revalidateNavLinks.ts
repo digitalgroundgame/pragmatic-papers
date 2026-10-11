@@ -6,10 +6,10 @@ import { purgeEdgeCache } from "./purgeEdgeCache"
 
 /**
  * The Header and Footer globals' nav links can point at a page, article, volume or topic
- * (`relationTo` in `src/fields/link2.ts`). `getCachedGlobal` caches each global with the
+ * (`relationTo` in `src/fields/link.ts`). `getCachedGlobal` caches each global with the
  * linked documents populated, and builds every href from the cached `slug`, so renaming,
- * unpublishing or deleting a linked document left the nav pointing at a 404 until someone
- * re-saved the global (#970).
+ * unpublishing or deleting a linked document would leave the nav pointing at a 404 until
+ * someone re-saved the global.
  *
  * These hooks drop both globals' caches when a document a link could point at changes in a
  * way the nav would show: its slug, or whether it's published. A link's label is its own

@@ -3,13 +3,15 @@ import { LivePreviewListener } from "@/components/LivePreviewListener"
 import { Pagination } from "@/components/Pagination"
 import { PayloadRedirects } from "@/components/PayloadRedirects"
 import type { Volume } from "@/payload-types"
-import { generateMeta } from "@/utilities/generateMeta"
+import { generateMeta, paginatedPath } from "@/utilities/generateMeta"
 import { queryTopicBySlug, queryVolumesForArticles } from "@/utilities/queries"
 import config from "@payload-config"
 import type { Metadata } from "next"
 import { draftMode } from "next/headers"
+import { notFound } from "next/navigation"
 import { getPayload } from "payload"
 import React, { cache } from "react"
+import { Breadcrumbs } from "@/components/Breadcrumbs"
 
 interface Args {
   params: Promise<{
@@ -20,29 +22,9 @@ interface Args {
   }>
 }
 
-// Explicit, not left to Next's dynamic-API bailout: this page reads draftMode(), which makes
-// Next render it per request, but it only finds that out by prerendering one. When
-// generateStaticParams returns nothing (a build against an empty database, #1067) the route
-// is classed static instead, and every request then fails with DYNAMIC_SERVER_USAGE.
+// Paginated with `?p=`, which only a request carries, so this is rendered per request. That's
+// also why there's no generateStaticParams: a prerendered slug would never be served.
 export const dynamic = "force-dynamic"
-
-export async function generateStaticParams(): Promise<{ slug: string | null | undefined }[]> {
-  const payload = await getPayload({ config })
-  const { docs } = await payload.find({
-    collection: "topics",
-    draft: false,
-    limit: 1000,
-    overrideAccess: true,
-    pagination: false,
-    where: {
-      slug: {
-        not_equals: null,
-      },
-    },
-  })
-
-  return docs.map(({ slug }) => ({ slug }))
-}
 
 const ARTICLES_PER_PAGE = 5
 const queryArticlesByTopic = cache(async (topicId: number, page: number = 1) => {
@@ -65,11 +47,12 @@ const queryArticlesByTopic = cache(async (topicId: number, page: number = 1) => 
   })
 })
 
-export async function generateMetadata({ params }: Args): Promise<Metadata> {
+export async function generateMetadata({ params, searchParams }: Args): Promise<Metadata> {
   const { slug = "" } = await params
+  const { p } = await searchParams
   const topic = await queryTopicBySlug(slug)
 
-  return generateMeta({ doc: topic, canonicalPath: `/topics/${slug}` })
+  return generateMeta({ doc: topic, canonicalPath: paginatedPath(`/topics/${slug}`, p) })
 }
 
 export default async function TopicPage({
@@ -93,6 +76,8 @@ export default async function TopicPage({
     totalPages,
     page: currentPage,
   } = await queryArticlesByTopic(topic.id, page)
+  // A page past the last one would be an empty listing that names itself as canonical.
+  if (page > 1 && page > totalPages) notFound()
   const articleIds = articles.map((article) => article.id).filter(Boolean)
   const volumes = await queryVolumesForArticles(articleIds)
 
@@ -113,32 +98,42 @@ export default async function TopicPage({
   }
 
   return (
-    <article className="mx-auto max-w-3xl space-y-6 px-4">
-      <PayloadRedirects disableNotFound url={url} />
+    <>
+      <Breadcrumbs
+        items={[
+          { name: "Topics", path: "/topics" },
+          { name: topic.name, path: url },
+        ]}
+      />
+      <article className="mx-auto max-w-3xl space-y-6 px-4">
+        <PayloadRedirects disableNotFound url={url} />
 
-      {draft && <LivePreviewListener />}
+        {draft && <LivePreviewListener />}
 
-      <header className="space-y-3">
-        <h1>{topic.name}</h1>
-        {topic.description && <p className="text-muted-foreground text-sm">{topic.description}</p>}
-      </header>
+        <header className="space-y-3">
+          <h1>{topic.name}</h1>
+          {topic.description && (
+            <p className="text-muted-foreground text-sm">{topic.description}</p>
+          )}
+        </header>
 
-      <section aria-label="Articles for this topic">
-        <h2 className="mb-3">Articles</h2>
-        {totalDocs === 0 ? (
-          <p className="text-muted-foreground text-sm">No articles found for this topic yet.</p>
-        ) : (
-          <>
-            <div className="flex flex-col gap-4">
-              {articles.map((article) => {
-                const volume = volumeByArticleId.get(article.id)
-                return <AuthorArticleCard key={article.id} article={article} volume={volume} />
-              })}
-            </div>
-            <Pagination page={currentPage} totalPages={totalPages} />
-          </>
-        )}
-      </section>
-    </article>
+        <section aria-label="Articles for this topic">
+          <h2 className="mb-3">Articles</h2>
+          {totalDocs === 0 ? (
+            <p className="text-muted-foreground text-sm">No articles found for this topic yet.</p>
+          ) : (
+            <>
+              <div className="flex flex-col gap-4">
+                {articles.map((article) => {
+                  const volume = volumeByArticleId.get(article.id)
+                  return <AuthorArticleCard key={article.id} article={article} volume={volume} />
+                })}
+              </div>
+              <Pagination page={currentPage} totalPages={totalPages} />
+            </>
+          )}
+        </section>
+      </article>
+    </>
   )
 }

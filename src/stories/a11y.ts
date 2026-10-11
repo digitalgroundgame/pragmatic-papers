@@ -7,9 +7,3 @@ export function skipA11yRules(...ids: string[]): {
 } {
   return { a11y: { config: { rules: ids.map((id) => ({ id, enabled: false })) } } }
 }
-
-/**
- * Brand and destructive colors fall short of AA — #998. Delete this once #998
- * lands; the type errors point at each story to re-enable.
- */
-export const knownContrastIssue = skipA11yRules("color-contrast", "link-in-text-block")

@@ -56,7 +56,7 @@ describe("getCachedGlobal", () => {
     })
 
     // `next dev` keeps the Data Cache on disk, and a seed or `dev:db-nuke` writes the globals
-    // from outside Next where nothing clears it (#971).
+    // from outside Next where nothing clears it.
     it("reads the database every time instead of the cross-request cache", async () => {
       vi.stubEnv("NODE_ENV", "development")
 

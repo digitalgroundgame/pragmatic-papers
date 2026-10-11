@@ -38,9 +38,10 @@ runs:
 
     # Cached here rather than with setup-node's `cache: pnpm`, which saves from
     # every job that misses. The store path is part of a cache entry's
-    # identity, so jobs in the Playwright container (store under /github/home)
-    # and on the bare runner (under /home/runner) keep separate entries under
-    # the same key, and each needs its own saver.
+    # identity, and so is the compression (zstd on the bare runner, gzip in
+    # the Playwright image, which has no zstd), so jobs in the container and
+    # on the bare runner keep separate entries under the same key, and each
+    # needs its own saver: Unit tests and Storybook.
     - name: Locate the pnpm store
       id: pnpm-store
       shell: bash

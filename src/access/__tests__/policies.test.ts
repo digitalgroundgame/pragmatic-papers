@@ -131,7 +131,7 @@ describe("readUsers policy", () => {
     }
   })
 
-  it("restricts member role to staff users and themselves", () => {
+  it("restricts member role to staff users, public profiles and themselves", () => {
     const user = { id: 123, roles: ["member"] } as unknown as User
     expect(readUsers(makeArgs(user))).toEqual({
       or: [
@@ -141,19 +141,25 @@ describe("readUsers policy", () => {
           },
         },
         {
+          publicProfile: { equals: true },
+        },
+        {
           id: { equals: 123 },
         },
       ],
     })
   })
 
-  it("restricts anonymous users to staff users only", () => {
+  it("restricts anonymous users to staff users and public profiles", () => {
     expect(readUsers(makeArgs(null))).toEqual({
       or: [
         {
           roles: {
             in: ["admin", "chief-editor", "editor", "writer", "narrator"],
           },
+        },
+        {
+          publicProfile: { equals: true },
         },
       ],
     })

@@ -4,7 +4,7 @@ import { expect, within } from "storybook/test"
 import { CMSButton } from "@/components/Button"
 import { articles } from "@/stories/fixtures/docs"
 
-import { CMSLink } from "./CMSLink2"
+import { CMSLink } from "."
 
 const meta = {
   title: "Components/CMSLink",

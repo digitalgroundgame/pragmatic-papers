@@ -5,6 +5,9 @@ import type { GlobalConfig } from "payload"
 
 export const Header: GlobalConfig = {
   slug: "header",
+  admin: {
+    group: "Site",
+  },
   access: {
     read: () => true,
     update: adminFieldLevel,

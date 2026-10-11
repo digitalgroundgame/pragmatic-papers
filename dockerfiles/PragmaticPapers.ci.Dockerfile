@@ -1,4 +1,4 @@
-# Dockerfile for Pragmatic Papers images built in GitHub Actions (#1067)
+# Dockerfile for Pragmatic Papers images built in GitHub Actions
 #
 # PragmaticPapers.Dockerfile is built by Coolify on its own build server, which can
 # reach the database: it copies and migrates the deployment's database while building,
@@ -21,11 +21,14 @@
 #   docker buildx build -f dockerfiles/PragmaticPapers.ci.Dockerfile --network host \
 #     --secret id=GH_FONT_READ,env=GH_FONT_READ --build-arg DATABASE_URI=... .
 ARG NODE_VERSION=24.15.0
+# Docker Hub's official node image, through Amazon ECR Public's mirror of it: Docker Hub
+# rate-limits anonymous pulls by address, and GitHub's shared runners run out. The
+# postgres services in the workflows and scripts/test-db.mjs pull from the same mirror.
 
 # ============================================
 # Base stage - setup pnpm and environment
 # ============================================
-FROM node:${NODE_VERSION}-alpine AS base
+FROM public.ecr.aws/docker/library/node:${NODE_VERSION}-alpine AS base
 RUN apk add --no-cache libc6-compat
 
 ENV PNPM_HOME="/pnpm" \
@@ -92,25 +95,30 @@ RUN export PAYLOAD_SECRET=build-only && \
     SENTRY_RELEASE="${SOURCE_COMMIT}" pnpm build && \
     echo "--- COMPLETED: BUILDING NEXT.JS ---"
 
+# The migrations this image ships, for copy-database.sh to spot a preview database that ran
+# one a later commit renamed or rebuilt.
+RUN find src/migrations -maxdepth 1 -name '2*.ts' -exec basename {} .ts \; | sort > migration_names
+
 # ============================================
 # Runner stage - minimal production runtime
 # ============================================
-FROM node:${NODE_VERSION}-alpine AS runner
+FROM public.ecr.aws/docker/library/node:${NODE_VERSION}-alpine AS runner
 WORKDIR /app
 
 ARG BUILD_ENV=preview
 ARG SOURCE_COMMIT=
 
 # BUILT_WITHOUT_DATABASE switches on the start-time database work in start.sh and
-# Payload's prodMigrations (src/payload.config.ts). SOURCE_COMMIT lets copy-database.sh
-# tell a new image from a restart, so FORCE_DATABASE_COPY copies once per image.
+# Payload's prodMigrations (src/payload.config.ts). IMAGE_COMMIT lets copy-database.sh
+# tell a new image from a restart, so FORCE_DATABASE_COPY copies once per image. Not
+# SOURCE_COMMIT: Coolify sets that to HEAD on the container, overriding the image's.
 ENV NODE_ENV=production \
     NEXT_TELEMETRY_DISABLED=1 \
     PORT=3000 \
     HOSTNAME="0.0.0.0" \
     BUILD_ENV=${BUILD_ENV} \
     BUILT_WITHOUT_DATABASE=true \
-    SOURCE_COMMIT=${SOURCE_COMMIT}
+    IMAGE_COMMIT=${SOURCE_COMMIT}
 
 # The PostgreSQL client for copy-database.sh, now run here rather than while building.
 # Pinned to the server's major version, as in PragmaticPapers.Dockerfile's builder:
@@ -136,6 +144,7 @@ COPY --from=builder --chown=nextjs:nodejs --chmod=755 \
     /app/dockerfiles/scripts/copy-database.sh \
     /app/dockerfiles/scripts/drop-closed-preview-databases.ts \
     ./
+COPY --from=builder --chown=nextjs:nodejs /app/migration_names ./
 
 USER nextjs
 EXPOSE 3000

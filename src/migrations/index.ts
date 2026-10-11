@@ -48,6 +48,11 @@ import * as migration_20260928_115534_interactives from "./20260928_115534_inter
 import * as migration_20260928_123759_add_table_of_contents from "./20260928_123759_add_table_of_contents"
 import * as migration_20260929_170519_add_table_of_contents_experiment from "./20260929_170519_add_table_of_contents_experiment"
 import * as migration_20261006_025343_add_storage_object_key from "./20261006_025343_add_storage_object_key"
+import * as migration_20261007_150906_add_user_public_profile from "./20261007_150906_add_user_public_profile"
+import * as migration_20261008_005532_add_media_unsplash_id from "./20261008_005532_add_media_unsplash_id"
+import * as migration_20261009_022245_links_onto_link2 from "./20261009_022245_links_onto_link2"
+import * as migration_20261009_032243_hero_links_default_button from "./20261009_032243_hero_links_default_button"
+import * as migration_20261009_040730_add_ticker_and_integrations from "./20261009_040730_add_ticker_and_integrations"
 
 export const migrations = [
   {
@@ -299,5 +304,30 @@ export const migrations = [
     up: migration_20261006_025343_add_storage_object_key.up,
     down: migration_20261006_025343_add_storage_object_key.down,
     name: "20261006_025343_add_storage_object_key",
+  },
+  {
+    up: migration_20261007_150906_add_user_public_profile.up,
+    down: migration_20261007_150906_add_user_public_profile.down,
+    name: "20261007_150906_add_user_public_profile",
+  },
+  {
+    up: migration_20261008_005532_add_media_unsplash_id.up,
+    down: migration_20261008_005532_add_media_unsplash_id.down,
+    name: "20261008_005532_add_media_unsplash_id",
+  },
+  {
+    up: migration_20261009_022245_links_onto_link2.up,
+    down: migration_20261009_022245_links_onto_link2.down,
+    name: "20261009_022245_links_onto_link2",
+  },
+  {
+    up: migration_20261009_032243_hero_links_default_button.up,
+    down: migration_20261009_032243_hero_links_default_button.down,
+    name: "20261009_032243_hero_links_default_button",
+  },
+  {
+    up: migration_20261009_040730_add_ticker_and_integrations.up,
+    down: migration_20261009_040730_add_ticker_and_integrations.down,
+    name: "20261009_040730_add_ticker_and_integrations",
   },
 ]

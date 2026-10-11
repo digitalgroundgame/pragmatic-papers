@@ -3,6 +3,7 @@ import { isAdmin } from "@/access/roles"
 
 export const ArticleRecommendations: GlobalConfig = {
   slug: "article-recommendations",
+  label: "Recommendations",
   access: {
     read: () => true,
     update: ({ req: { user } }) => isAdmin(user),

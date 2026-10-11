@@ -2,12 +2,15 @@ import type { GlobalConfig } from "payload"
 
 import { adminFieldLevel } from "@/access/fields"
 import { Content } from "@/blocks/Content/config"
-import { link } from "@/fields/link2"
+import { link } from "@/fields/link"
 import { menu } from "@/fields/menu"
 import { revalidateFooter } from "./hooks/revalidateFooter"
 
 export const Footer: GlobalConfig = {
   slug: "footer",
+  admin: {
+    group: "Site",
+  },
   access: {
     read: () => true,
     update: adminFieldLevel,

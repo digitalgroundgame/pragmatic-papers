@@ -39,17 +39,17 @@ export const AuthorArticleCard: React.FC<AuthorArticleCardProps> = ({
         </div>
         <div className="flex flex-col gap-1">
           {title && (
-            <h3 className="text-primary hover:text-primary/80 line-clamp-3 text-pretty md:text-2xl">
+            <h3 className="text-foreground hover:text-foreground/80 line-clamp-3 text-pretty md:text-2xl">
               <HoverPrefetchLink href={href}>{title}</HoverPrefetchLink>
             </h3>
           )}
           {description && (
-            <p className="text-primary line-clamp-2 font-serif text-sm">{description}</p>
+            <p className="text-foreground line-clamp-2 font-serif text-sm">{description}</p>
           )}
           {volume && (
             <HoverPrefetchLink
               href={`/volumes/${volume.slug}`}
-              className="text-muted-foreground hover:text-primary mt-auto line-clamp-1 text-sm underline underline-offset-2"
+              className="text-muted-foreground hover:text-foreground mt-auto line-clamp-1 text-sm underline underline-offset-2"
             >
               {volume.title ?? volume.slug}
             </HoverPrefetchLink>

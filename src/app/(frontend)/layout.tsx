@@ -1,14 +1,14 @@
-import { AdminBar } from "@/components/AdminBar"
-import { Breadcrumbs } from "@/components/Breadcrumbs"
+import { AdminBar, AdminBarHint } from "@/components/AdminBar"
 import { Footer } from "@/Footer/Component"
 import { Header } from "@/Header/Component"
 import { sentryHtmlAttributes } from "@/sentryConfig"
 import { getServerSideURL } from "@/utilities/getURL"
 import { DEFAULT_DESCRIPTION, mergeOpenGraph } from "@/utilities/mergeOpenGraph"
-import { GoogleAnalytics } from "@next/third-parties/google"
+import { GoogleAnalytics } from "@/components/GoogleAnalytics.lazy"
 import { ThemeProvider } from "@wrksz/themes/next"
 import type { Metadata } from "next"
 import React from "react"
+import { FEEDS } from "./feeds/feeds"
 import { fontVariables } from "./fonts"
 import "./globals.css"
 
@@ -26,6 +26,7 @@ export default async function RootLayout({
       {...sentryHtmlAttributes()}
     >
       <head>
+        <AdminBarHint />
         <link href="/manifest.json" rel="manifest" />
         <link href="/favicon.ico" rel="icon" sizes="32x32" />
         <link href="/favicon.svg" rel="icon" type="image/svg+xml" />
@@ -41,7 +42,6 @@ export default async function RootLayout({
           <AdminBar />
           <Header />
           <main role="main" className="flex-1">
-            <Breadcrumbs />
             {children}
           </main>
           <Footer />
@@ -63,10 +63,9 @@ export const metadata: Metadata = {
   },
   alternates: {
     types: {
-      "application/rss+xml": [
-        { url: "/feed.articles", title: "Pragmatic Papers - Articles RSS Feed" },
-        { url: "/feed.volumes", title: "Pragmatic Papers - Volumes RSS Feed" },
-      ],
+      "application/rss+xml": FEEDS.flatMap((feed) =>
+        "headTitle" in feed ? [{ url: feed.path, title: feed.headTitle }] : [],
+      ),
     },
   },
 }

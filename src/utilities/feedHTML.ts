@@ -54,7 +54,7 @@ export const fromBlock =
 /**
  * Escape a CMS value for HTML element content or a quoted attribute. Lexical
  * text is escaped by Payload's converters; every value a converter
- * interpolates itself has to go through this (#1024).
+ * interpolates itself has to go through this.
  */
 export const escapeHTML = (value: string | null | undefined): string =>
   (value ?? "")

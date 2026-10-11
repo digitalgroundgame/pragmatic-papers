@@ -1,5 +1,5 @@
 // The throwaway Postgres that integration tests, E2E tests and the pending-migrations
-// check run against (#1015, #953). One helper decides where tests run, so none of them
+// check run against. One helper decides where tests run, so none of them
 // reads DATABASE_URI: that variable names the dev database in `.env`, and a test that
 // trusted it would migrate, seed and litter the dev cluster. Callers only *set*
 // DATABASE_URI, for the Payload processes they start.
@@ -23,7 +23,11 @@ import { hostname } from "node:os"
 import path from "node:path"
 import { parse } from "dotenv"
 
-export const BASE_IMAGE = "postgres:17-alpine"
+// Docker Hub's official image, through Amazon ECR Public's mirror of it: Docker Hub
+// rate-limits anonymous pulls by address, and CI's shared runners run out.
+// CI sets TEST_DB_IMAGE to its copy in GHCR, which it pulls logged in.
+export const BASE_IMAGE =
+  process.env.TEST_DB_IMAGE || "public.ecr.aws/docker/library/postgres:17-alpine"
 export const SNAPSHOT_REPO = "pragmatic-papers-test-db"
 export const OWNER_LABEL = "pragmatic-papers.test-db.owner"
 export const DATABASE = "pragmatic-papers-test"

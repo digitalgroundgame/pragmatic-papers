@@ -1,4 +1,4 @@
-import sharp from "sharp"
+import sharp from "@/cloudflare/sharp"
 
 export async function getBlurDataUrlFromBuffer(buffer: Buffer): Promise<string> {
   const blurBuffer = await sharp(buffer)

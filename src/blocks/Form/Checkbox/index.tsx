@@ -7,7 +7,7 @@ import { Checkbox as CheckboxUi } from "@/components/ui/checkbox"
 import { Label } from "@/components/ui/label"
 import React from "react"
 
-import { Error } from "../Error"
+import { Error, useErrorProps } from "../Error"
 import { Width } from "../Width"
 
 export const Checkbox: React.FC<
@@ -15,6 +15,7 @@ export const Checkbox: React.FC<
     register: UseFormRegister<FieldValues>
   }
 > = ({ name, defaultValue, label, register, required, width }) => {
+  const errorProps = useErrorProps(name)
   const props = register(name, { required: required })
   const { setValue } = useFormContext()
 
@@ -25,6 +26,7 @@ export const Checkbox: React.FC<
           defaultChecked={defaultValue}
           id={name}
           {...props}
+          {...errorProps}
           onCheckedChange={(checked) => {
             setValue(props.name, checked)
           }}

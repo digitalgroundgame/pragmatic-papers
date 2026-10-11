@@ -85,7 +85,7 @@ check_client_version() {
 #
 # Never disconnects the source's clients: the source is staging, and killing them
 # fails whatever staging is serving at that moment with "terminating connection due
-# to administrator command" (#1057). A template copy needs the source to have no
+# to administrator command". A template copy needs the source to have no
 # connections, so it's only tried as the fast path; while staging's app is connected
 # Postgres refuses it straight away and the copy falls back to pg_dump/pg_restore.
 copy_database() {
@@ -119,34 +119,63 @@ copy_database() {
 # build, so a restart of the same image must not take FORCE_DATABASE_COPY as a request
 # for another fresh copy: that would throw away what testers entered. The commit a copy
 # was made for is kept as the database's comment, and a forced copy is made once per
-# commit (#1067).
-FORCED_MARK="copied for commit ${SOURCE_COMMIT}"
+# commit. The image carries it as IMAGE_COMMIT: Coolify sets SOURCE_COMMIT=HEAD on a
+# Docker Image app's container, which would make every image look like the last one.
+FORCED_MARK="copied for commit ${IMAGE_COMMIT}"
 copied_for_this_commit() {
-    [ "$BUILT_WITHOUT_DATABASE" = "true" ] && [ -n "$SOURCE_COMMIT" ] &&
+    [ "$BUILT_WITHOUT_DATABASE" = "true" ] && [ -n "$IMAGE_COMMIT" ] &&
         [ "$(psql "$ADMIN_URI" -tAc "SELECT shobj_description(oid, 'pg_database') FROM pg_database WHERE datname='$1'")" = "$FORCED_MARK" ]
 }
 mark_copied() {
-    if [ "$BUILT_WITHOUT_DATABASE" = "true" ] && [ -n "$SOURCE_COMMIT" ]; then
+    if [ "$BUILT_WITHOUT_DATABASE" = "true" ] && [ -n "$IMAGE_COMMIT" ]; then
         psql "$ADMIN_URI" -v ON_ERROR_STOP=1 -c "COMMENT ON DATABASE \"$1\" IS '$FORCED_MARK';"
     fi
 }
 
+# The migrations this image ships, one name per line, written by the Dockerfile that built
+# it. Without the file, a preview database is only replaced when FORCE_DATABASE_COPY says so.
+MIGRATION_NAMES_FILE=${MIGRATION_NAMES_FILE:-$(dirname "$0")/migration_names}
+
+# Prints the migrations database $1 has run that neither this image nor the source has: one
+# an earlier commit of the PR added and a later one renamed, rebuilt or dropped. Payload
+# would apply the new version over what the old one left and fail, so the copy is stale.
+# Migrations the source has run are expected (staging can be ahead of the PR), as are the
+# image's own.
+stale_migrations() {
+    [ -f "$MIGRATION_NAMES_FILE" ] || return 0
+    target_ran=$(psql "$(uri_with_database "$DATABASE_URI" "$1")" -tAc "SELECT name FROM payload_migrations" 2>/dev/null) || return 0
+    source_ran=$(psql "$SOURCE_URI" -tAc "SELECT name FROM payload_migrations" 2>/dev/null) || return 0
+    printf '%s\n' "$target_ran" | while read -r name; do
+        [ -n "$name" ] || continue
+        grep -qxF "$name" "$MIGRATION_NAMES_FILE" && continue
+        printf '%s\n' "$source_ran" | grep -qxF "$name" && continue
+        echo "$name"
+    done
+}
+
 echo "Checking if target database '$TARGET_DB' exists..."
 if database_exists "$TARGET_DB"; then
+    stale=$(stale_migrations "$TARGET_DB")
+    if [ -n "$stale" ]; then
+        echo "'$TARGET_DB' has run migrations that this image and '$SOURCE_DB' don't have:"
+        printf '  %s\n' $stale
+        echo "Replacing it with a fresh copy, as FORCE_DATABASE_COPY=true would"
+        FORCE_DATABASE_COPY=true
+    fi
     if [ "$FORCE_DATABASE_COPY" != "true" ]; then
         echo "Target database already exists and FORCE_DATABASE_COPY is not true"
         echo "Skipping database copy step"
         exit 0
     fi
     if copied_for_this_commit "$TARGET_DB"; then
-        echo "Target database was already copied for this image (${SOURCE_COMMIT}); a restart keeps its data"
+        echo "Target database was already copied for this image (${IMAGE_COMMIT}); a restart keeps its data"
         echo "Skipping database copy step"
         exit 0
     fi
 
     # The previous deploy's container is still serving the target. Dropping it now would
     # leave that container on a missing database, and then on an unmigrated copy of the
-    # source, until this build finishes or for good if it fails (#1057, #1058). So build
+    # source, until this build finishes or for good if it fails. So build
     # and migrate the new copy beside it, and swap it in only once it's ready.
     STAGE_DB="${TARGET_DB}_incoming"
     echo "Target database exists. FORCE_DATABASE_COPY=true, preparing a fresh copy in '$STAGE_DB'..."
@@ -155,7 +184,7 @@ if database_exists "$TARGET_DB"; then
 
     # An image built in GitHub Actions runs this at start and has no Payload CLI: the
     # app migrates the database once it's swapped in, before its health check passes, so
-    # the old container serves the unmigrated copy for that long (#1067).
+    # the old container serves the unmigrated copy for that long.
     if [ "$BUILT_WITHOUT_DATABASE" = "true" ]; then
         echo "Leaving '$STAGE_DB' for the app to migrate when it starts"
     else

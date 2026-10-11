@@ -3,14 +3,9 @@ import { blue, green, red } from "./ansi.mjs"
 
 // Every place that pins a Playwright Docker image tag — these must all
 // resolve to the same version as the `@playwright/test` version pnpm
-// actually installed, or CI/local baseline generation silently runs a
-// different Chromium build than the one `pnpm test` uses.
-export const PINNED_FILES = [
-  "docker-compose.e2e.yml",
-  ".github/workflows/ci.yml",
-  ".github/workflows/playwright.yml",
-  ".github/workflows/update-snapshots.yml",
-]
+// actually installed. The image ships the browsers for one Playwright
+// release, and a mismatched @playwright/test can't launch them.
+export const PINNED_FILES = [".github/workflows/ci.yml", ".github/workflows/playwright.yml"]
 
 const IMAGE_TAG_RE = /mcr\.microsoft\.com\/playwright:v(\d+\.\d+\.\d+)-([a-z]+)/g
 
@@ -86,8 +81,7 @@ export function main(): void {
     }
     console.error(
       `\nUpdate the image tag in ${PINNED_FILES.join(", ")} to match v${resolvedVersion} ` +
-        `(mcr.microsoft.com/playwright:v${resolvedVersion}-<codename>), then regenerate ` +
-        `baselines with 'pnpm test:e2e:update-snapshots -- --update-snapshots=all'.`,
+        `(mcr.microsoft.com/playwright:v${resolvedVersion}-<codename>).`,
     )
     process.exit(1)
   }

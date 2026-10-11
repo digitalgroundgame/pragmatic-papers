@@ -58,4 +58,10 @@ export const WithLayout: Story = {
       },
     ],
   }),
+  play: async ({ canvasElement }) => {
+    const contentinfo = await within(canvasElement).findByRole("contentinfo")
+    const section = contentinfo.querySelector("section")
+    // The footer pads its content once, so the columns line up with the logo below.
+    await expect(section).toHaveStyle({ paddingLeft: "0px", paddingRight: "0px" })
+  },
 }

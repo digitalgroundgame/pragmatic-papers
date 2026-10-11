@@ -6,8 +6,9 @@
 #
 # Without --apply it only prints what it would delete.
 #
-# Every deploy pushes a tag (`pr-<n>-<sha>` for a preview), and a registry never deletes
-# anything on its own, so they piled up: 224 tags and 6.5 GB on dev-worker. It keeps:
+# Every Coolify build pushes a tag (`pr-<n>-<sha>` for a preview staging built; previews
+# built in GitHub Actions go to GHCR instead), and a registry never deletes anything on
+# its own, so they piled up: 224 tags and 6.5 GB on dev-worker. It keeps:
 #
 #   - every tag a container on this server is running
 #   - the newest KEEP_PER_PR tags of each open PR, and every tag of a PR newer than all

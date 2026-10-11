@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { SEEDED_UPDATED_AT } from "../../scripts/seed-e2e.constants"
+import { SEEDED_UPDATED_AT, ARTICLE_IMAGE_ALT } from "../../scripts/seed-e2e.constants"
 
 /**
  * Read a drizzle `sql` template back as the statement it stands for.
@@ -273,7 +273,7 @@ describe("seed-e2e main()", () => {
     )
   })
 
-  it("seeds enough authors for /authors to paginate, sorted after the ones specs look for", async () => {
+  it("seeds enough authors for /contributors to paginate, sorted after the ones specs look for", async () => {
     await main()
 
     for (const [name, slug] of [
@@ -295,24 +295,35 @@ describe("seed-e2e main()", () => {
     await main()
 
     // Payload overwrites updatedAt on every non-draft save, so the revision
-    // line would otherwise read the day the seed ran and diff any baseline
-    // that frames it (article-meta-row.spec.ts, share-buttons.spec.ts).
-    // Whole-table rather than per-id on purpose: the per-document version of
-    // this pinned only the crowded-byline article, and the share-button
-    // baselines — framing a different article's hero — rotted unnoticed.
-    expect(mockExecute).toHaveBeenCalledTimes(2)
-    expect(mockExecute.mock.calls.map(([statement]) => renderStatement(statement))).toEqual([
+    // line would otherwise read the day the seed ran, and
+    // article-meta-row.spec.ts asserts the pinned one. Whole-table rather than
+    // per-id, so every hero reads the same stamp.
+    const statements = mockExecute.mock.calls.map(([statement]) => renderStatement(statement))
+    expect(statements.slice(-2)).toEqual([
       `UPDATE articles SET updated_at = ${SEEDED_UPDATED_AT}`,
       `UPDATE volumes SET updated_at = ${SEEDED_UPDATED_AT}`,
     ])
   })
 
+  it("gives every article a hero and an SEO image", async () => {
+    await main()
+
+    // structured-data.spec.ts requires an image on every Article node.
+    // mockCreate resolves every direct create to mockVolume, so the media's id is its id.
+    const mediaCall = mockCreate.mock.calls.find(
+      ([args]) => args.collection === "media" && args.data.alt === ARTICLE_IMAGE_ALT,
+    )
+    expect(mediaCall).toBeDefined()
+    expect(mockExecute.mock.calls.map(([statement]) => renderStatement(statement))).toContain(
+      `UPDATE articles SET hero_image_id = ${mockVolume.id}, meta_image_id = ${mockVolume.id}`,
+    )
+  })
+
   it("keeps the crowded-byline article off the homepage grid", async () => {
     await main()
 
-    // gotoFirstArticle follows the first article link on the homepage and
-    // smoke.spec.ts screenshots the whole page, so a third tile here would
-    // shift unrelated baselines.
+    // The grid keeps to the showcase article and the volume: the narrated
+    // four-author article is reached by slug.
     const pageCall = mockCreate.mock.calls.find(([args]) => args.collection === "pages")?.[0]
     const grid = pageCall.data.layout.find(
       (block: { blockType: string }) => block.blockType === "collectionGrid",

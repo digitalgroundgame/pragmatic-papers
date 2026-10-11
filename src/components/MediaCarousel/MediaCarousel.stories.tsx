@@ -38,10 +38,56 @@ const meta = {
 export default meta
 type Story = StoryObj<typeof meta>
 
-export const Default: Story = {}
+/**
+ * Every slide's image fits inside the slide's 16:9 box, centred, whatever its
+ * shape: nothing spills past the bottom, and a wide image isn't pinned to the top.
+ */
+async function expectImagesFitSlides(canvasElement: HTMLElement) {
+  const slides = within(canvasElement).getAllByRole("group")
+  for (const slide of slides) {
+    const img = within(slide).getByRole("img") as HTMLImageElement
+    const style = getComputedStyle(slide)
+    const box = slide.getBoundingClientRect()
+    const left = box.left + parseFloat(style.paddingLeft)
+    const top = box.top + parseFloat(style.paddingTop)
+    const right = box.right - parseFloat(style.paddingRight)
+    const bottom = box.bottom - parseFloat(style.paddingBottom)
+    const rect = img.getBoundingClientRect()
+    const name = img.alt
+    // Allow a pixel for sub-pixel rounding.
+    await expect(rect.width, `${name} has a width`).toBeGreaterThan(0)
+    await expect(rect.top, `${name} top`).toBeGreaterThanOrEqual(top - 1)
+    await expect(rect.bottom, `${name} bottom`).toBeLessThanOrEqual(bottom + 1)
+    await expect(rect.left, `${name} left`).toBeGreaterThanOrEqual(left - 1)
+    await expect(rect.right, `${name} right`).toBeLessThanOrEqual(right + 1)
+    await expect(Math.abs(rect.top + rect.bottom - top - bottom), `${name} centred`).toBeLessThan(2)
+    await expect(Math.abs(rect.left + rect.right - left - right), `${name} centred`).toBeLessThan(2)
+  }
+}
+
+/** The prev/next arrows sit inside the carousel's box, at every width. */
+async function expectArrowsInsideCarousel(canvasElement: HTMLElement) {
+  const carousel = within(canvasElement).getByRole("region")
+  const box = carousel.getBoundingClientRect()
+  for (const name of ["Previous slide", "Next slide"]) {
+    const rect = within(carousel).getByRole("button", { name }).getBoundingClientRect()
+    await expect(rect.left, `${name} left`).toBeGreaterThanOrEqual(box.left)
+    await expect(rect.right, `${name} right`).toBeLessThanOrEqual(box.right)
+  }
+}
+
+export const Default: Story = {
+  play: async ({ canvasElement }) => {
+    await expectImagesFitSlides(canvasElement)
+    await expectArrowsInsideCarousel(canvasElement)
+  },
+}
 
 export const StartsOnThird: Story = {
   args: { initialIndex: 2 },
+  play: async ({ canvasElement }) => {
+    await expectImagesFitSlides(canvasElement)
+  },
 }
 
 const captionedLandscape = mediaFixture({
@@ -56,6 +102,8 @@ const captionedLandscape = mediaFixture({
 export const WithLightbox: Story = {
   args: { enableModal: true, images: [{ id: "captioned", media: captionedLandscape }, ...images] },
   play: async ({ canvasElement }) => {
+    await expectImagesFitSlides(canvasElement)
+
     const slides = within(canvasElement).getAllByRole("group")
     const trigger = within(slides[0]!).getByRole("button")
     // The slide hides its caption; the trigger holds only the image.

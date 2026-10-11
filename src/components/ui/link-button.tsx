@@ -1,5 +1,6 @@
 import { type ButtonProps, buttonVariants } from "@/components/ui/button"
 import { cn } from "@/utilities/utils"
+import { HoverPrefetchLink } from "@/components/Link/HoverPrefetchLink"
 
 interface LinkButtonProps extends React.ComponentProps<"a"> {
   variant?: ButtonProps["variant"]
@@ -14,9 +15,13 @@ const LinkButton: React.FC<LinkButtonProps> = ({
   ...props
 }) => {
   return (
-    <a data-slot="button" className={cn(buttonVariants({ variant, size, className }))} {...props}>
+    <HoverPrefetchLink
+      data-slot="button"
+      className={cn(buttonVariants({ variant, size, className }))}
+      {...props}
+    >
       {children}
-    </a>
+    </HoverPrefetchLink>
   )
 }
 

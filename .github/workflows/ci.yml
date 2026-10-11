@@ -14,15 +14,18 @@ on:
 # commit's Static/Unit/Integration jobs (each starting its own test Postgres)
 # running to completion for nothing. Scoped per-ref. Pushes to main/dev use a
 # per-run group (github.run_id) so they never cancel each other — every commit
-# landing on a protected branch is still validated in full.
+# landing on a protected branch is still validated in full, by the merge
+# queue's run on that same commit or by its push run.
 concurrency:
   group: ci-${{ github.event.pull_request.number || github.run_id }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   # Decides which path-sensitive jobs below a PR needs. Only PRs are filtered:
-  # on pushes to main/dev and in the merge queue this job does nothing, and the
-  # jobs gated on it run in full. A job skipped by its `if` reports "skipped",
+  # in the merge queue this job does nothing, and the jobs gated on it run in
+  # full. On a push it notes whether the merge queue already passed this
+  # workflow on the commit (dev's queue lands the very commit it tested), so
+  # the jobs that only check the code aren't run on it twice. A job skipped by its `if` reports "skipped",
   # which a required status check accepts, so gating a required job here never
   # blocks a PR. The gated jobs fail open: if this job fails, they run in full
   # rather than being skipped (and so passing) along with it.
@@ -30,14 +33,32 @@ jobs:
     name: Detect changes
     runs-on: ubuntu-latest
     permissions:
+      actions: read
       pull-requests: read
     outputs:
+      queued: ${{ steps.queued.outputs.queued }}
       static: ${{ steps.filter.outputs.static }}
       unit: ${{ steps.filter.outputs.unit }}
       storybook: ${{ steps.filter.outputs.storybook }}
       integration: ${{ steps.filter.outputs.integration }}
 
     steps:
+      - name: Check the merge queue
+        id: queued
+        if: github.event_name == 'push'
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+          WORKFLOW_REF: ${{ github.workflow_ref }}
+        run: |
+          file="${WORKFLOW_REF%@*}"
+          file="${file##*/}"
+          passed=$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/$file/runs?head_sha=$GITHUB_SHA&event=merge_group&status=success&per_page=1" --jq .total_count)
+          if [ "${passed:-0}" -gt 0 ]; then
+            echo "::notice::The merge queue already passed this workflow on $GITHUB_SHA; skipping what it covered."
+            echo "queued=true" >> "$GITHUB_OUTPUT"
+          fi
+
       # On pull_request the filter lists changed files through the API, so
       # no checkout is needed.
       - uses: dorny/paths-filter@v4
@@ -104,11 +125,16 @@ jobs:
   static:
     name: Static checks
     needs: changes
-    if: ${{ !cancelled() && (github.event_name != 'pull_request' || needs.changes.result != 'success' || needs.changes.outputs.static == 'true') }}
+    if: ${{ !cancelled() && needs.changes.outputs.queued != 'true' && (github.event_name != 'pull_request' || needs.changes.result != 'success' || needs.changes.outputs.static == 'true') }}
     runs-on: ubuntu-latest
     # No Postgres service: check-pending-migrations starts its own with
     # scripts/test-db.mjs, the same way it does locally.
+    permissions:
+      contents: read
+      packages: read
     env:
+      # Copied into GHCR by postgres-image.yml, and pulled logged in (see the login step).
+      TEST_DB_IMAGE: ghcr.io/digitalgroundgame/postgres:17-alpine
       SERVER_URL: http://localhost:8000
       PAYLOAD_SECRET: ci-payload-secret
       USE_LOCAL_STORAGE: "true"
@@ -136,6 +162,13 @@ jobs:
       - name: Check migration order
         run: pnpm exec tsx scripts/check-migration-order.ts
 
+      - name: Log in to GHCR
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Check for pending migrations
         run: node scripts/check-pending-migrations.mjs
 
@@ -144,6 +177,9 @@ jobs:
     needs: changes
     if: ${{ !cancelled() && (github.event_name != 'pull_request' || needs.changes.result != 'success' || needs.changes.outputs.unit == 'true') }}
     runs-on: ubuntu-latest
+    # Usually about 4 minutes. A hung test would otherwise hold the runner for GitHub's
+    # 6-hour default before anything reports it.
+    timeout-minutes: 15
     permissions:
       pull-requests: write
 
@@ -164,31 +200,46 @@ jobs:
       - name: Run unit and script tests
         run: pnpm test:unit:coverage
 
+      # A PR's coverage is compared against its base branch's, so both `dev`
+      # and `main` (release and hotfix PRs) keep a baseline. The artifact keeps
+      # its old name so runs from before `main` uploaded one still match.
       - name: Upload base coverage artifact
-        if: github.ref == 'refs/heads/dev'
+        if: github.ref == 'refs/heads/dev' || github.ref == 'refs/heads/main'
         uses: actions/upload-artifact@v7
         with:
           name: coverage-summary-dev
           path: coverage/coverage-summary.json
           retention-days: 90
 
-      - name: Download base coverage from dev
+      # The baseline is the coverage of the commit this PR is compared against:
+      # the push run on the PR's base SHA, on its base branch (`dev`, or `main`
+      # for release and hotfix PRs). Asking for "the latest successful run on
+      # dev" instead can return a run from weeks ago, since GitHub doesn't keep
+      # that list newest-first. With no finished run on the base SHA (it failed,
+      # or is still running), the report leaves out the change column rather
+      # than compare against some other commit.
+      - name: Download base coverage
         if: always() && github.event_name == 'pull_request'
         continue-on-error: true
         id: base-coverage
         run: |
           RUN_ID=$(gh api \
-            "repos/${{ github.repository }}/actions/workflows/ci.yml/runs?branch=dev&status=success&per_page=1" \
-            --jq '.workflow_runs[0].id // empty')
-          if [ -n "$RUN_ID" ]; then
-            gh run download "$RUN_ID" \
-              --name coverage-summary-dev \
-              --dir /tmp/base-coverage \
-              --repo "${{ github.repository }}"
-            echo "path=/tmp/base-coverage/coverage-summary.json" >> "$GITHUB_OUTPUT"
+            "repos/${{ github.repository }}/actions/workflows/ci.yml/runs?head_sha=$BASE_SHA&event=push&per_page=20" \
+            --jq '[.workflow_runs[] | select(.head_branch == env.BASE_REF and .conclusion == "success")] | max_by(.run_attempt) | .id // empty')
+          if [ -z "$RUN_ID" ]; then
+            echo "::notice::No successful $BASE_REF run on base commit $BASE_SHA yet; the coverage report will show no change column."
+            exit 0
           fi
+          echo "Base coverage: run $RUN_ID on $BASE_SHA"
+          gh run download "$RUN_ID" \
+            --name coverage-summary-dev \
+            --dir /tmp/base-coverage \
+            --repo "${{ github.repository }}"
+          echo "path=/tmp/base-coverage/coverage-summary.json" >> "$GITHUB_OUTPUT"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
 
       - name: Post coverage report
         if: always()
@@ -200,14 +251,20 @@ jobs:
   integration-tests:
     name: Integration tests
     needs: changes
-    # Fails open: runs in full unless Detect changes succeeded and cleared it.
-    if: ${{ !cancelled() && (github.event_name != 'pull_request' || needs.changes.result != 'success' || needs.changes.outputs.integration == 'true') }}
+    # Fails open: runs in full unless Detect changes succeeded and cleared it,
+    # or found the merge queue already passed the pushed commit.
+    if: ${{ !cancelled() && needs.changes.outputs.queued != 'true' && (github.event_name != 'pull_request' || needs.changes.result != 'success' || needs.changes.outputs.integration == 'true') }}
     runs-on: ubuntu-latest
 
     # No Postgres service: the integration global setup starts its own with
     # scripts/test-db.mjs, as it does locally. CI sets `CI`, so it always
     # migrates a fresh database rather than reusing a snapshot.
+    permissions:
+      contents: read
+      packages: read
     env:
+      # Copied into GHCR by postgres-image.yml, and pulled logged in (see the login step).
+      TEST_DB_IMAGE: ghcr.io/digitalgroundgame/postgres:17-alpine
       PAYLOAD_SECRET: ci-integration-secret
       USE_LOCAL_STORAGE: "true"
 
@@ -220,6 +277,13 @@ jobs:
           node-version: "24.x"
           gh-font-read-token: ${{ secrets.GH_FONT_READ }}
           payload-secret: ci-integration-secret
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Run integration tests
         run: pnpm test:integration -- --run
@@ -252,6 +316,9 @@ jobs:
           node-version: "24.x"
           gh-font-read-token: ${{ secrets.GH_FONT_READ }}
           payload-secret: ci-storybook-secret
+          # The Playwright image's saver of the pnpm store (see setup-project):
+          # unlike E2E, this job runs on every push to dev, so PRs restore it.
+          save-pnpm-cache: "true"
 
       # The tests never execute a story's lazy imports; the build bundles them,
       # which is where a server-only module reaching the browser shows up.
@@ -272,9 +339,10 @@ jobs:
 
   # Publishes the tested build to the pragmatic-papers-storybook Cloudflare
   # Worker (.storybook/wrangler.jsonc): `dev` deploys to the main workers.dev
-  # address, and each PR uploads a version under a `pr-<number>` preview alias,
-  # records it as a "Storybook Preview" Deployment (listed on the PR beside the
-  # site's Preview), and links each component the PR changes at the top of its
+  # address, and each PR creates or updates a `pr-<number>` Worker Preview
+  # (deleted when the PR closes, by storybook-close.yml), records it as a
+  # "Storybook Preview" Deployment (listed on the PR beside the site's
+  # Preview), and links each component the PR changes at the top of its
   # description (scripts/storybook-pr.ts). Kept out of the Storybook job so a Cloudflare
   # outage never turns that required check red. Skips itself without the
   # Cloudflare secrets, which fork and Dependabot PRs never receive.
@@ -307,9 +375,10 @@ jobs:
           sparse-checkout: |
             .storybook/
             scripts/storybook-pr.ts
+            scripts/pr-description.ts
           sparse-checkout-cone-mode: false
 
-      - uses: actions/download-artifact@v7
+      - uses: actions/download-artifact@v8
         if: env.HAS_CLOUDFLARE == 'true'
         with:
           name: storybook-static
@@ -319,21 +388,41 @@ jobs:
         if: env.HAS_CLOUDFLARE == 'true' && github.event_name != 'pull_request'
         run: npx --yes wrangler@4 deploy --config .storybook/wrangler.jsonc
 
-      - name: Upload a PR preview
-        id: preview
+      # A PR closed while this run was building has already had its Preview
+      # deleted by storybook-close.yml; deploying now would bring it back.
+      - name: Skip a closed PR
+        id: open
         if: env.HAS_CLOUDFLARE == 'true' && github.event_name == 'pull_request'
         env:
-          ALIAS: pr-${{ github.event.pull_request.number }}
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
-          npx --yes wrangler@4 versions upload --config .storybook/wrangler.jsonc --preview-alias "$ALIAS" | tee wrangler.log
-          url=$(grep -oE "https://${ALIAS}-[a-z0-9.-]+\.workers\.dev" wrangler.log | head -n 1)
+          state=$(gh pr view "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" --json state --jq .state)
+          if [ "$state" = "OPEN" ]; then
+            echo "open=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice::PR #$PR_NUMBER is $state; skipping its Storybook preview."
+          fi
+
+      # A Worker Preview, unlike a `versions upload --preview-alias` alias, can
+      # be deleted, so storybook-close.yml removes it when the PR closes.
+      - name: Deploy a PR preview
+        id: preview
+        if: steps.open.outputs.open == 'true'
+        env:
+          PREVIEW: pr-${{ github.event.pull_request.number }}
+          WRANGLER_OUTPUT_FILE_PATH: wrangler-output.json
+        run: |
+          npx --yes wrangler@4 preview --config .storybook/wrangler.jsonc --name "$PREVIEW"
+          url=$(jq -r 'select(.type == "preview") | .preview_urls[]?' "$WRANGLER_OUTPUT_FILE_PATH" \
+            | grep -oE "^(https://)?${PREVIEW}-[a-z0-9.-]+\.workers\.dev" | head -n 1 || true)
           if [ -z "$url" ]; then
-            # Wrangler prints preview URLs only while the Worker has them on;
-            # `preview_urls` in wrangler.jsonc applies on the next `dev` deploy.
-            echo "::error::wrangler printed no preview alias URL for $ALIAS. Turn on Preview URLs for the Worker (Cloudflare dashboard: pragmatic-papers-storybook > Settings > Domains & Routes), then re-run this job."
+            # Previews get a workers.dev URL only while the Worker has Preview
+            # URLs on; `preview_urls` in wrangler.jsonc applies on the next `dev` deploy.
+            echo "::error::wrangler reported no workers.dev URL for the $PREVIEW Preview. Turn on Preview URLs for the Worker (Cloudflare dashboard: pragmatic-papers-storybook > Settings > Domains & Routes), then re-run this job."
             exit 1
           fi
-          echo "url=$url" >> "$GITHUB_OUTPUT"
+          echo "url=https://${url#https://}" >> "$GITHUB_OUTPUT"
 
       # Node 24 runs the TypeScript script directly; no install needed.
       - uses: actions/setup-node@v7

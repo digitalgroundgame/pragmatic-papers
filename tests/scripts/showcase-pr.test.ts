@@ -87,12 +87,32 @@ describe("withLinks", () => {
     )
   })
 
+  it("puts the line under the template's unfilled Closes line", () => {
+    expect(withLinks("Closes #\n\n## Context\n\nShowcase: first", [LINK])).toBe(
+      `Closes #\n\n${block(LINK)}\n\n## Context`,
+    )
+  })
+
   it.each(["Text\n\nCloses #743", "Fix the carousel, as #743 asks"])(
     "puts the line above %j, which closes nothing at the top",
     (body) => {
       expect(withLinks(`${body}\n\nShowcase: first`, [LINK])).toBe(`${block(LINK)}\n\n${body}`)
     },
   )
+
+  it("goes above the links line and drops its Preview link, which goes to the same site", () => {
+    const links = (...items: string[]) =>
+      `<!-- pr-links -->\n${items.join(" · ")}\n<!-- /pr-links -->`
+    expect(
+      withLinks(
+        `Closes #1\n\n${links("[Preview](p)", "[Coverage](c)")}\n\nText\n\nShowcase: first`,
+        [LINK],
+      ),
+    ).toBe(`Closes #1\n\n${block(LINK)}\n\n${links("[Coverage](c)")}\n\nText`)
+    expect(withLinks(`${links("[Preview](p)")}\n\nShowcase: first\n`, [LINK])).toBe(
+      `${block(LINK)}\n`,
+    )
+  })
 
   it("adds the line to a description that is only the line", () => {
     expect(withLinks("Showcase: first", [LINK])).toBe(`${block(LINK)}\n`)
@@ -273,7 +293,10 @@ function harness({
           labels: labels.map((name) => ({ name })),
           head: { sha: SHA, ref: "feat/demo", repo: headRepo && { full_name: headRepo } },
         })
-      if (path === "/pulls/42" && method === "PATCH") return json({})
+      if (path === "/pulls/42" && method === "PATCH") {
+        body = (data as { body: string }).body
+        return json({ body })
+      }
       if (path === "/issues/42/labels" && method === "POST") return json([])
       if (path === "/issues/42/labels/showcase" && method === "DELETE")
         return new Response(null, { status: 204 })
@@ -298,6 +321,7 @@ function harness({
     writeFile: (path, content) => {
       written[path] = content
     },
+    sleep: async () => undefined,
   }
 
   const edits = () => calls.filter((c) => c.method === "PATCH").map((c) => c.body?.body)

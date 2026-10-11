@@ -2,7 +2,6 @@ import type { Meta, StoryObj } from "@storybook/nextjs-vite"
 import { expect, within } from "storybook/test"
 
 import type { Page } from "@/payload-types"
-import { knownContrastIssue } from "@/stories/a11y"
 import {
   articleBody,
   createHeadingNode,
@@ -53,7 +52,7 @@ const unknown = { id: "retired", blockType: "retiredBlock" } as unknown as Block
 const meta = {
   title: "Blocks/RenderBlocks",
   component: RenderBlocks,
-  parameters: { layout: "fullscreen", ...knownContrastIssue },
+  parameters: { layout: "fullscreen" },
   args: { blocks: [content, unresolvedForm, cta, unknown, timeline] },
 } satisfies Meta<typeof RenderBlocks>
 

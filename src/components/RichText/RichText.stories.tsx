@@ -3,7 +3,6 @@ import type { Meta, StoryObj } from "@storybook/nextjs-vite"
 import { expect, screen, userEvent, within } from "storybook/test"
 
 import { MathJaxProviderRoot } from "@/providers/MathJaxProvider"
-import { knownContrastIssue } from "@/stories/a11y"
 import { landscapeImage, mediaFixture, portraitImage } from "@/stories/fixtures/media"
 import {
   articleBody,
@@ -50,7 +49,6 @@ export const WithoutProse: Story = {
 
 /** An article body mixing the blocks writers reach for most. */
 export const ArticleWithBlocks: Story = {
-  parameters: knownContrastIssue,
   decorators: [
     (Story) => (
       <MathJaxProviderRoot>

@@ -6,12 +6,17 @@ import { cva } from "class-variance-authority"
 import { ShoppingCart } from "lucide-react"
 
 import { isMedia, Media } from "@/components/Media"
-import { MerchCarousel, MerchCarouselControls, MerchCarouselDots } from "./MerchCarousel"
+import {
+  CarouselContent,
+  CarouselItem,
+  MerchCarousel,
+  MerchCarouselControls,
+  MerchCarouselDots,
+} from "./MerchCarousel.lazy"
 import { getMerchProducts, type MerchProduct } from "./products"
 import { getMerchStoreUrl } from "./urls"
 import { withMerchUtm } from "./utm"
 import { Badge } from "@/components/ui/badge"
-import { CarouselContent, CarouselItem } from "@/components/ui/carousel"
 import { Separator } from "@/components/ui/separator"
 import { LinkButton } from "@/components/ui/link-button"
 import { cn } from "@/utilities/utils"

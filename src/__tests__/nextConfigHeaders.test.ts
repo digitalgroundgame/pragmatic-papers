@@ -42,17 +42,18 @@ describe("next.config.ts Cache-Control", () => {
   })
 
   // Route Handlers that set their own Cache-Control: a config header for the same key would
-  // replace it, so none of these may match a Cache-Control rule at all (#947).
+  // replace it, so none of these may match a Cache-Control rule at all.
   it("leaves routes that set their own Cache-Control alone", async () => {
     for (const path of [
       "/interactives/federal-courts/regions/ca1",
       "/interactives/federal-courts/regions/ca1/geometry/abc123",
       "/interactives/federal-courts/search",
-      "/feed.articles",
-      "/feed.volumes",
+      "/articles/feed.xml",
+      "/volumes/feed.xml",
       "/articles/substack.xml",
       "/articles/some-article/substack.xml",
       "/recommended-articles.json",
+      "/next/purge-edge",
     ]) {
       expect(await cacheControlFor(path)).toBeUndefined()
     }
@@ -77,5 +78,43 @@ describe("next.config.ts Cache-Control", () => {
     ]) {
       expect(await cacheControlFor(path)).toBe("public, s-maxage=600, stale-while-revalidate=86400")
     }
+  })
+})
+
+describe("next.config.ts client hints", () => {
+  // Every header a path gets from next.config.ts, with later rules overriding earlier ones.
+  const headersFor = async (path: string): Promise<Record<string, string>> => {
+    const headers: Record<string, string> = {}
+    for (const rule of (await nextConfig.headers?.()) ?? []) {
+      const { regex } = buildCustomRoute("header", rule)
+      if (!new RegExp(regex).test(path)) continue
+      for (const { key, value } of rule.headers) headers[key] = value
+    }
+    return headers
+  }
+
+  // Critical-CH makes Chrome restart a first visit's navigation to send the hint, which costs
+  // public pages a round trip for a theme only Payload's admin panel reads.
+  it("doesn't ask readers' browsers for the color-scheme hint", async () => {
+    for (const path of ["/", "/articles/some-article", "/volumes/1", "/api/users/me"]) {
+      const headers = await headersFor(path)
+      expect(headers).not.toHaveProperty("Critical-CH")
+      expect(headers).not.toHaveProperty("Accept-CH")
+      expect(headers["Vary"]).toBeUndefined()
+    }
+  })
+
+  it("still asks for it on the admin panel, which themes itself by it", async () => {
+    for (const path of ["/admin", "/admin/login", "/admin/collections/articles/1"]) {
+      expect(await headersFor(path)).toMatchObject({
+        "Accept-CH": "Sec-CH-Prefers-Color-Scheme",
+        "Critical-CH": "Sec-CH-Prefers-Color-Scheme",
+        Vary: "Sec-CH-Prefers-Color-Scheme",
+      })
+    }
+  })
+
+  it("keeps Payload's other headers on every path", async () => {
+    expect(await headersFor("/")).toHaveProperty("X-Powered-By")
   })
 })

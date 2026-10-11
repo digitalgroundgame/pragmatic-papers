@@ -29,17 +29,8 @@ export const PaperIconPattern: React.FC<React.ComponentProps<"svg"> & { id: stri
           />
         </pattern>
       </defs>
-      {/* A CSS animation, not SMIL, so prefers-reduced-motion and Playwright's
-          `animations: "disabled"` can stop it. Oversized so its edges stay out
-          of view while it drifts. */}
-      <rect
-        x="-100%"
-        y="-100%"
-        width="300%"
-        height="300%"
-        fill={`url(#${id})`}
-        className="motion-safe:animate-paper-drift"
-      />
+      {/* Static on purpose: drifting it repainted (and re-blurred) the whole pattern every frame. */}
+      <rect width="100%" height="100%" fill={`url(#${id})`} />
     </svg>
   )
 }

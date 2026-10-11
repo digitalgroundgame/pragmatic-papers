@@ -32,7 +32,7 @@ export const AuthorCard: React.FC<AuthorCardProps> = ({ author }) => {
     <Card className="rounded-sm">
       <CardContent className="flex flex-col gap-4 sm:flex-row">
         {/* The name below is the card's link; this one is for pointers only. */}
-        <HoverPrefetchLink href={`/authors/${slug}`} aria-hidden="true" tabIndex={-1}>
+        <HoverPrefetchLink href={`/contributors/${slug}`} aria-hidden="true" tabIndex={-1}>
           <Avatar size="xl" className="aspect-square border hover:opacity-80">
             <AvatarImage
               src={profileImageUrl}
@@ -46,8 +46,8 @@ export const AuthorCard: React.FC<AuthorCardProps> = ({ author }) => {
             <div className="flex flex-col md:flex-row md:items-end">
               <h3 className="text-pretty md:text-2xl">
                 <HoverPrefetchLink
-                  href={`/authors/${slug}`}
-                  className="text-primary hover:text-primary/80"
+                  href={`/contributors/${slug}`}
+                  className="text-foreground hover:text-foreground/80"
                 >
                   {name}
                 </HoverPrefetchLink>
@@ -59,7 +59,7 @@ export const AuthorCard: React.FC<AuthorCardProps> = ({ author }) => {
               )}
             </div>
             {bioSnippet && (
-              <p className="text-primary line-clamp-2 font-serif text-sm">{bioSnippet}</p>
+              <p className="text-foreground line-clamp-2 font-serif text-sm">{bioSnippet}</p>
             )}
           </div>
           <AuthorLinks socials={author.socials} authorName={name} />

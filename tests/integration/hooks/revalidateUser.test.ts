@@ -44,8 +44,8 @@ describe("revalidateUser", () => {
 
     expect(paths()).toEqual(
       expect.arrayContaining([
-        `/authors/${renamed.slug}`,
-        "/authors",
+        `/contributors/${renamed.slug}`,
+        "/contributors",
         `/articles/${theirs.slug}`,
         `/articles/${shared.slug}`,
         `/volumes/${listing.slug}`,
@@ -68,7 +68,11 @@ describe("revalidateUser", () => {
 
     expect(renamed.slug).toBe(`renamed-${author.id}`)
     expect(paths()).toEqual(
-      expect.arrayContaining([`/authors/${renamed.slug}`, `/authors/${author.slug}`, "/authors"]),
+      expect.arrayContaining([
+        `/contributors/${renamed.slug}`,
+        `/contributors/${author.slug}`,
+        "/contributors",
+      ]),
     )
   })
 
@@ -77,7 +81,7 @@ describe("revalidateUser", () => {
 
     const renamed = await rename(author, author.name!)
 
-    expect(paths()).toEqual([`/authors/${renamed.slug}`, "/authors"])
+    expect(paths()).toEqual([`/contributors/${renamed.slug}`, "/contributors"])
   })
 
   it("refreshes no volume when the author's articles aren't in one", async () => {

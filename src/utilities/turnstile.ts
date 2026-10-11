@@ -17,7 +17,7 @@
 /**
  * The public site key for the signup widget, or undefined to render the form without it.
  * Read when the server renders the block rather than compiled into the browser bundle,
- * so one build can run with a different key (#1090).
+ * so one build can run with a different key.
  */
 export const getTurnstileSiteKey = (): string | undefined =>
   process.env.TURNSTILE_SITE_KEY || undefined

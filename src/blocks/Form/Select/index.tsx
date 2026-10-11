@@ -12,7 +12,7 @@ import {
 import React from "react"
 import { Controller } from "react-hook-form"
 
-import { Error } from "../Error"
+import { Error, useErrorProps } from "../Error"
 import { Width } from "../Width"
 
 export const Select: React.FC<
@@ -20,6 +20,7 @@ export const Select: React.FC<
     control: Control
   }
 > = ({ name, control, label, options, required, width, defaultValue }) => {
+  const errorProps = useErrorProps(name)
   return (
     <Width width={width}>
       <Label htmlFor={name}>
@@ -37,7 +38,7 @@ export const Select: React.FC<
         render={({ field: { onChange, value } }) => {
           return (
             <SelectComponent items={options} onValueChange={(val) => onChange(val)} value={value}>
-              <SelectTrigger className="w-full" id={name}>
+              <SelectTrigger className="w-full" id={name} {...errorProps}>
                 <SelectValue placeholder={label} />
               </SelectTrigger>
               <SelectContent aria-label={label || name}>

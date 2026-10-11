@@ -1,6 +1,6 @@
 import type { Block } from "payload"
 
-import { link } from "@/fields/link2"
+import { link } from "@/fields/link"
 
 export const Timeline: Block = {
   slug: "timeline",

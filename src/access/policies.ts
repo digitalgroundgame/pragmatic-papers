@@ -22,7 +22,11 @@ export const isSelfOrAdmin: Access = ({ req: { user } }) => {
   )
 }
 
-/** Allows staff to view all users, users to view themselves, and anyone to view staff users (authors/narrators/editors). */
+/**
+ * Allows staff to view all users, users to view themselves, and anyone to view staff users
+ * (authors/narrators/editors) and users with a public profile: anyone an article or
+ * narration has credited, who keeps their author page after losing a staff role.
+ */
 export const readUsers: Access = ({ req: { user } }) => {
   if (isStaff(user)) {
     return true
@@ -32,6 +36,11 @@ export const readUsers: Access = ({ req: { user } }) => {
     {
       roles: {
         in: STAFF_ROLES,
+      },
+    },
+    {
+      publicProfile: {
+        equals: true,
       },
     },
   ]

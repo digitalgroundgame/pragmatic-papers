@@ -1,5 +1,7 @@
 import type { Block } from "payload"
 
+import { STAFF_ROLES } from "@/access/roles"
+
 export const Contributors: Block = {
   slug: "contributors",
   interfaceName: "ContributorsBlock",
@@ -15,6 +17,10 @@ export const Contributors: Block = {
       relationTo: "users",
       hasMany: true,
       required: true,
+      // Each card links to /contributors/<slug>, which only staff and public profiles have.
+      filterOptions: {
+        or: [{ roles: { in: STAFF_ROLES } }, { publicProfile: { equals: true } }],
+      },
     },
   ],
   labels: {

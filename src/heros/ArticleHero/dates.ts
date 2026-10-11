@@ -13,7 +13,7 @@
  * Settings global next to Header and Footer; when one exists, the formatters
  * below take the zone as an argument instead of reading it from here.
  *
- * Tracked in #934, which grew out of the settings-panel discussion in #912.
+ * Tracked in #934.
  */
 export const PUBLICATION_TIME_ZONE = "America/New_York"
 

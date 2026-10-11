@@ -25,7 +25,8 @@ export const TypeScript: Story = {
     return () => writeText.mockRestore()
   },
   play: async ({ args, canvasElement }) => {
-    const button = within(canvasElement).getByRole("button", { name: /Copy/ })
+    // The highlighter loads lazily, so the block arrives a moment after the story mounts.
+    const button = await within(canvasElement).findByRole("button", { name: /Copy/ })
     await userEvent.click(button)
     await expect(navigator.clipboard.writeText).toHaveBeenCalledWith(args.code)
     await waitFor(() => expect(button).toHaveTextContent("Copied!"))

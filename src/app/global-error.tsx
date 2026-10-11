@@ -1,6 +1,6 @@
 "use client"
 
-import * as Sentry from "@sentry/nextjs"
+import { captureException } from "@/sentryClient"
 import NextError from "next/error"
 import { useEffect } from "react"
 
@@ -10,7 +10,11 @@ export default function GlobalError({
   error: Error & { digest?: string }
 }): React.ReactElement {
   useEffect(() => {
-    Sentry.captureException(error)
+    // Unhandled: this page replaced the whole layout. Reported before the admin's console
+    // capture (sentryClient.ts `reportConsoleErrors`), which sees the same error.
+    captureException(error, {
+      mechanism: { handled: false, type: "auto.function.nextjs.global_error" },
+    })
   }, [error])
 
   return (

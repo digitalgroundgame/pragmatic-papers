@@ -71,7 +71,7 @@ describe("NarrationPlayer", () => {
     render(<NarrationPlayer narration={{ ...narration, narrator }} />)
     openSettings()
 
-    expect(screen.getByRole("link", { name: "Ada" })).toHaveAttribute("href", "/authors/ada")
+    expect(screen.getByRole("link", { name: "Ada" })).toHaveAttribute("href", "/contributors/ada")
     expect(screen.getByText("Narrated by")).toBeInTheDocument()
   })
 

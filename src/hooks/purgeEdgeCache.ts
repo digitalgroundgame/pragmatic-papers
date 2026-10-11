@@ -1,6 +1,11 @@
 import type { Payload } from "payload"
 
-import { cloudflareCache, describeStatus, integrationStatus } from "@/integrations"
+import {
+  cloudflareCache,
+  cloudflareWorkerCache,
+  describeStatus,
+  integrationStatus,
+} from "@/integrations"
 import { getServerSideURL } from "@/utilities/getURL"
 
 type Logger = Pick<Payload["logger"], "info" | "warn">
@@ -28,13 +33,26 @@ function siteHost(): string | null {
   }
 }
 
-async function flush(): Promise<void> {
-  if (!pending) return
-  const { reasons, logger } = pending
-  pending = null
-  const host = siteHost()
-  if (!host) return
-  const why = [...reasons].join(", ")
+/** Why the edge can't be purged right now, or null when it can. */
+function edgeSkipReason(): string | null {
+  const status = integrationStatus(cloudflareCache)
+  if (!status.configured) return describeStatus(status)
+  if (!siteHost()) return "SERVER_URL is not a public hostname"
+  return null
+}
+
+async function revalidateWorker(logger: Logger, why: string): Promise<void> {
+  try {
+    await cloudflareWorkerCache.revalidateAll()
+    logger.info(`Cleared the Worker's cache at ${cloudflareWorkerCache.url()} (${why})`)
+  } catch (err) {
+    logger.warn(
+      `Clearing the Worker's cache at ${cloudflareWorkerCache.url()} failed (${why}): ${err instanceof Error ? err.message : String(err)}`,
+    )
+  }
+}
+
+async function purgeEdge(logger: Logger, why: string, host: string): Promise<void> {
   try {
     await cloudflareCache.purge({ hosts: [host] })
     logger.info(`Purged Cloudflare's cache for ${host} (${why})`)
@@ -45,6 +63,17 @@ async function flush(): Promise<void> {
       `Cloudflare purge for ${host} failed (${why}): ${err instanceof Error ? err.message : String(err)}`,
     )
   }
+}
+
+async function flush(): Promise<void> {
+  if (!pending) return
+  const { reasons, logger } = pending
+  pending = null
+  const why = [...reasons].join(", ")
+  // The Worker first: once the edge is empty it refills from whatever the Worker answers.
+  if (integrationStatus(cloudflareWorkerCache).configured) await revalidateWorker(logger, why)
+  const host = siteHost()
+  if (host && !edgeSkipReason()) await purgeEdge(logger, why, host)
 }
 
 /**
@@ -61,17 +90,19 @@ async function flush(): Promise<void> {
  * so a slow Cloudflare API never holds up the editor's save. Call it from a `revalidate*` hook
  * after Next's own revalidation, and only when `context.disableRevalidate` is unset.
  *
- * With the connection unconfigured (local dev, CI, anything not behind Cloudflare) it logs the
- * missing variables by name and does nothing.
+ * When the deployment has a Cloudflare Worker serving its pages (`cloudflareWorkerCache`), the
+ * same flush clears the Worker's cache first, through its `/next/revalidate-all`: the Worker
+ * keeps its own copy of every prerendered page, which neither Next's revalidation here nor the
+ * edge purge reaches.
+ *
+ * With neither connection configured (local dev, CI, anything not behind Cloudflare) it logs
+ * the missing variables by name and does nothing.
  */
 export function purgeEdgeCache(logger: Logger, reason: string): void {
-  const status = integrationStatus(cloudflareCache)
-  if (!status.configured) {
-    logger.info(`Skipping Cloudflare purge (${reason}) — ${describeStatus(status)}`)
-    return
-  }
-  if (!siteHost()) {
-    logger.info(`Skipping Cloudflare purge (${reason}) — SERVER_URL is not a public hostname`)
+  const edgeSkip = edgeSkipReason()
+  const worker = integrationStatus(cloudflareWorkerCache)
+  if (edgeSkip && !worker.configured) {
+    logger.info(`Skipping Cloudflare purge (${reason}) — ${edgeSkip}`)
     return
   }
 

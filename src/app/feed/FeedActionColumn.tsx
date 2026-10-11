@@ -70,7 +70,7 @@ export function FeedActionColumn({ article }: FeedActionColumnProps): React.Reac
             return (
               <Link
                 key={author.id}
-                href={`/authors/${author.slug}`}
+                href={`/contributors/${author.slug}`}
                 aria-label={name}
                 className={cn(
                   "block",

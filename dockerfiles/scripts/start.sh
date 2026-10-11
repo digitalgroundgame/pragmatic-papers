@@ -9,7 +9,7 @@ if [ -z "$DATABASE_URI" ]; then
 fi
 
 # Every deployed image sets BUILD_ENV. Without SERVER_URL the app would put
-# http://localhost:8000 in canonical tags, sitemaps and share links (#1090), so refuse
+# http://localhost:8000 in canonical tags, sitemaps and share links, so refuse
 # to start: the healthcheck fails and Coolify keeps the previous container.
 if [ -n "$BUILD_ENV" ] && [ -z "$SERVER_URL" ]; then
     echo "ERROR: SERVER_URL is not set at runtime (Coolify: enable Runtime for it)"
@@ -18,7 +18,7 @@ fi
 
 # With S3 storage, media URLs point at SUPABASE_URL's public bucket S3_BUCKET, and
 # next/image only optimizes them from a *.supabase.co host (next.config.ts). Anything else
-# would break every image on the site (#791), so refuse to start, as above.
+# would break every image on the site, so refuse to start, as above.
 if [ -n "$BUILD_ENV" ] && [ "$USE_LOCAL_STORAGE" != "true" ]; then
     if [ -z "$S3_BUCKET" ]; then
         echo "ERROR: S3_BUCKET is not set at runtime, and USE_LOCAL_STORAGE isn't true (Coolify: enable Runtime for it)"
@@ -42,7 +42,7 @@ APP_DIR=$(dirname "$0")
 . "$APP_DIR/database-uri.sh"
 
 if [ "$BUILT_WITHOUT_DATABASE" = "true" ]; then
-    # Built in GitHub Actions (PragmaticPapers.ci.Dockerfile, #1067): the database work a
+    # Built in GitHub Actions (PragmaticPapers.ci.Dockerfile): the database work a
     # Coolify build does happens here instead, next to the database. Name the preview's
     # database from the runtime COOLIFY_FQDN, copy staging into it on its first boot, and
     # drop closed PRs' copies. Payload migrates it when it starts (prodMigrations).
@@ -110,13 +110,12 @@ echo "Hostname: $HOSTNAME"
 echo "Storage: $([ "$USE_LOCAL_STORAGE" = "true" ] && echo "Local" || echo "S3")"
 echo "========================================="
 
-if [ "$BUILT_WITHOUT_DATABASE" != "true" ]; then
-    echo "Starting Next.js server..."
-    exec node server.js
-fi
-
-# The build prerendered its feeds from an empty database. Once the server answers (and
-# so has started Payload and migrated), throw those away so they render from this one.
+# Pages the build prerendered from the database are out of date once this starts. An image
+# built in GitHub Actions saw an empty database. One Coolify built saw the database as it was
+# then: edits saved since only revalidated the container they reached, and a container
+# recreated from the image has lost every page regenerated after the build. Once the server
+# answers (and so has started Payload and migrated), throw them away so each page renders
+# from this database on its next request.
 refresh_prerendered_routes() {
     url="http://127.0.0.1:${PORT:-3000}"
     tries=0
@@ -138,13 +137,45 @@ refresh_prerendered_routes() {
     fi
 }
 
+# Once traffic reaches this container, empty Cloudflare's edge of the previous release's
+# pages. Until Coolify's health check passes and it moves traffic over, the old container
+# answers on SERVER_URL, so wait until /next/purge-edge there names this container's
+# INSTANCE_ID; purging sooner would let the old container refill the edge.
+purge_edge_after_switchover() {
+    if [ -z "$SERVER_URL" ]; then
+        return 0
+    fi
+    tries=0
+    until wget -q -O - --header="Authorization: Bearer $PAYLOAD_SECRET" \
+        "$SERVER_URL/next/purge-edge?at=$(date +%s)" 2>/dev/null | grep -q "\"$INSTANCE_ID\""; do
+        tries=$((tries + 1))
+        if [ "$tries" -ge 120 ]; then
+            echo "WARNING: $SERVER_URL still not served by this container after 10 min; purging the edge anyway"
+            break
+        fi
+        sleep 5
+    done
+    if wget -q -O /dev/null --post-data="" \
+        --header="Authorization: Bearer $PAYLOAD_SECRET" "http://127.0.0.1:${PORT:-3000}/next/purge-edge"; then
+        echo "Edge purge queued now that $SERVER_URL is served by this container"
+    else
+        echo "WARNING: couldn't queue the edge purge; the edge keeps old pages until they expire"
+    fi
+}
+
+INSTANCE_ID=$(cat /proc/sys/kernel/random/uuid)
+export INSTANCE_ID
+
 echo "Starting Next.js server..."
 node server.js &
 server=$!
 # dumb-init already signals the whole process group; don't let the signal end this
 # shell before the server has shut down.
 trap 'kill -TERM "$server" 2>/dev/null || true' TERM INT
-refresh_prerendered_routes &
+{
+    refresh_prerendered_routes
+    purge_edge_after_switchover
+} &
 
 set +e
 wait "$server"

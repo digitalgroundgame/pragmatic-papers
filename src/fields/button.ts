@@ -1,5 +1,5 @@
 import { colorPicker } from "@/fields/colorPicker"
-import { link } from "@/fields/link2"
+import { link } from "@/fields/link"
 import type { NamedGroupField } from "payload"
 
 type ButtonProps = Omit<NamedGroupField, "fields" | "name" | "type" | "interfaceName">

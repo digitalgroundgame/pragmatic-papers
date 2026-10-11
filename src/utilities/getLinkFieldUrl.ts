@@ -16,7 +16,7 @@ import type { LinkField } from "@/payload-types"
 /**
  * Whether the link points at a document that exists but isn't published. Nav menus leave such
  * a link out rather than send readers to a 404; the global's cached copy populates linked
- * documents without read access checks, so a draft still comes back populated (#970).
+ * documents without read access checks, so a draft still comes back populated.
  */
 export function linksToUnpublished(link?: LinkField): boolean {
   const value = link?.type === "reference" ? link.reference?.value : undefined

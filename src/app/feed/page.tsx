@@ -20,7 +20,7 @@ export const dynamic = "force-dynamic"
 export const revalidate = 0
 
 export default async function FeedPage(): Promise<React.ReactNode> {
-  // The feed is an experiment (Site Settings): off in this environment, it 404s.
+  // The feed is an experiment (Settings): off in this environment, it 404s.
   if (!(await isExperimentEnabled("feed"))) notFound()
 
   const batch = await getFeedBatch({ cursor: 1 })

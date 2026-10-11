@@ -2,11 +2,18 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import type * as Integrations from "@/integrations"
 
-const { mockPurge } = vi.hoisted(() => ({ mockPurge: vi.fn() }))
+const { mockPurge, mockRevalidateAll } = vi.hoisted(() => ({
+  mockPurge: vi.fn(),
+  mockRevalidateAll: vi.fn(),
+}))
 
 vi.mock("@/integrations", async (importOriginal) => {
   const actual = await importOriginal<typeof Integrations>()
-  return { ...actual, cloudflareCache: { ...actual.cloudflareCache, purge: mockPurge } }
+  return {
+    ...actual,
+    cloudflareCache: { ...actual.cloudflareCache, purge: mockPurge },
+    cloudflareWorkerCache: { ...actual.cloudflareWorkerCache, revalidateAll: mockRevalidateAll },
+  }
 })
 
 const { purgeEdgeCache, flushEdgeCachePurge } = await import("../purgeEdgeCache")
@@ -19,8 +26,15 @@ function configure(): void {
   vi.stubEnv("SERVER_URL", "https://pr-42.pragmaticpapers.com")
 }
 
+function configureWorker(): void {
+  vi.stubEnv("WORKER_URL", "https://pragmatic-papers-staging.example.workers.dev")
+  vi.stubEnv("PAYLOAD_SECRET", "secret")
+}
+
 beforeEach(() => {
+  vi.stubEnv("WORKER_URL", "")
   mockPurge.mockReset().mockResolvedValue(undefined)
+  mockRevalidateAll.mockReset().mockResolvedValue(undefined)
   logger.info.mockClear()
   logger.warn.mockClear()
 })
@@ -99,5 +113,49 @@ describe("purgeEdgeCache", () => {
     expect(logger.warn).toHaveBeenCalledWith(
       "Cloudflare purge for pr-42.pragmaticpapers.com failed (footer saved): Cloudflare purge failed (HTTP 429)",
     )
+  })
+
+  describe("with a Worker in front", () => {
+    it("clears the Worker's cache even when the edge can't be purged", async () => {
+      configureWorker()
+      vi.stubEnv("SERVER_URL", "http://localhost:8000")
+
+      purgeEdgeCache(logger, "article published")
+      await flushEdgeCachePurge()
+
+      expect(mockRevalidateAll).toHaveBeenCalledTimes(1)
+      expect(mockPurge).not.toHaveBeenCalled()
+      expect(logger.info).toHaveBeenCalledWith(
+        "Cleared the Worker's cache at https://pragmatic-papers-staging.example.workers.dev (article published)",
+      )
+    })
+
+    it("clears the Worker before purging the edge, once for a burst", async () => {
+      configure()
+      configureWorker()
+      const order: string[] = []
+      mockRevalidateAll.mockImplementation(async () => void order.push("worker"))
+      mockPurge.mockImplementation(async () => void order.push("edge"))
+
+      purgeEdgeCache(logger, "article published")
+      purgeEdgeCache(logger, "volume published")
+      await flushEdgeCachePurge()
+
+      expect(order).toEqual(["worker", "edge"])
+    })
+
+    it("still purges the edge when the Worker fails, and warns", async () => {
+      configure()
+      configureWorker()
+      mockRevalidateAll.mockRejectedValue(new Error("Worker revalidation failed (HTTP 401)"))
+
+      purgeEdgeCache(logger, "footer saved")
+      await flushEdgeCachePurge()
+
+      expect(mockPurge).toHaveBeenCalledTimes(1)
+      expect(logger.warn).toHaveBeenCalledWith(
+        "Clearing the Worker's cache at https://pragmatic-papers-staging.example.workers.dev failed (footer saved): Worker revalidation failed (HTTP 401)",
+      )
+    })
   })
 })

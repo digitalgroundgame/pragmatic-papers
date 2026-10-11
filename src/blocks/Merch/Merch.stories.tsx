@@ -2,7 +2,6 @@ import type { Meta, StoryObj } from "@storybook/nextjs-vite"
 import { expect, mocked, within } from "storybook/test"
 
 import type { Merch } from "@/payload-types"
-import { knownContrastIssue } from "@/stories/a11y"
 import { createFakePayload } from "@/stories/fixtures/payload"
 import { getPayloadConfig } from "@/utilities/getPayloadConfig"
 
@@ -37,7 +36,7 @@ const products: Merch[] = [
 const meta = {
   title: "Blocks/Merch",
   component: MerchBlock,
-  parameters: { layout: "fullscreen", ...knownContrastIssue },
+  parameters: { layout: "fullscreen" },
   args: { blockType: "merch", heading: "Support the Papers", layout: "fullWidth" },
   argTypes: {
     layout: { control: "inline-radio", options: ["fullWidth", "square"] },
@@ -57,7 +56,8 @@ export const FullWidth: Story = {
     const section = await within(canvasElement).findByRole("region", {
       name: "Support the Papers",
     })
-    const tee = within(section).getByRole("link", { name: /Pragmatic Papers Tee/ })
+    // The carousel loads lazily, so its slides arrive a moment after the section.
+    const tee = await within(section).findByRole("link", { name: /Pragmatic Papers Tee/ })
     await expect(tee).toHaveAttribute(
       "href",
       expect.stringContaining(`${STORE}/pragmatic-papers-tee`),

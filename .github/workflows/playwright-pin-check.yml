@@ -19,10 +19,8 @@ on:
     branches: [main, dev]
     paths:
       - pnpm-lock.yaml
-      - docker-compose.e2e.yml
       - .github/workflows/ci.yml
       - .github/workflows/playwright.yml
-      - .github/workflows/update-snapshots.yml
       - .github/workflows/playwright-pin-check.yml
       - scripts/check-playwright-image-pin.ts
   workflow_dispatch:

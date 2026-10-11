@@ -1,7 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite"
 import { expect, within } from "storybook/test"
 
-import { knownContrastIssue } from "@/stories/a11y"
 import { FeedHTML } from "@/stories/FeedHTML"
 import { timelineBlock } from "@/stories/fixtures/blocks"
 import { storyFeedContext } from "@/stories/fixtures/feedContext"
@@ -12,7 +11,6 @@ import { timelineToHTML } from "./converters"
 const meta = {
   title: "Blocks/Timeline",
   component: TimelineBlock,
-  parameters: knownContrastIssue,
   args: timelineBlock,
 } satisfies Meta<typeof TimelineBlock>
 

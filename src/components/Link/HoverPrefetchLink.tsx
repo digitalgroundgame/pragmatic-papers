@@ -1,53 +1,54 @@
-// "use client"
+"use client"
 
-// import Link from "next/link"
-// import { usePathname } from "next/navigation"
-// import { useState } from "react"
+import Link from "next/link"
+import { useState } from "react"
 
 /**
- * `HoverPrefetchLink` is a wrapper around Next.js's `Link` component.
- *
- * Feature Summary:
- * - Adds a hover-based prefetching behavior: prefetch is enabled (`null`) only after mouse enter.
- *   Before that, prefetch is explicitly disabled to minimize unnecessary background requests.
- * - Indicates the current page via a "data-active" attribute, based on `pathname.startsWith(href)`.
- * - Applies provided className and other 'a' props to the rendered Link.
- *
- * Usage:
- * ```tsx
- * <HoverPrefetchLink href="/some-path">My Link</HoverPrefetchLink>
- * ```
- *
- * Props:
- * - `href`: string. The link destination, passed directly to Next.js Link.
- * - `children`: ReactNode. Contents of the link.
- * - `className`: string (optional). Additional classes for the anchor element.
- * - All other anchor ('a') tag props are supported.
- *
- * Notes:
- * - Will NOT prefetch on initial render; triggers prefetch on first hover.
+ * Whether links navigate client-side. Set by the Cloudflare Worker build
+ * (`withCloudflare`); the Coolify build keeps plain `<a>` links, because Cloudflare's
+ * cache in front of it can't tell a page's HTML from the RSC payload next/link fetches
+ * for the same URL.
+ */
+const CLIENT_NAVIGATION = process.env.NEXT_PUBLIC_CLIENT_NAVIGATION === "true"
+
+/**
+ * Paths the Worker hands to the Coolify origin (`withOrigin` in src/cloudflare/origin.ts):
+ * the admin panel and Payload's API aren't routes of the Worker's app, so next/link
+ * can't render them.
+ */
+const ORIGIN_PATHS = /^\/(admin|api)(\/|$|\?|#)/
+
+/** A same-site path next/link can navigate to, rather than a URL, hash or origin route. */
+export function isClientRoute(href: string): boolean {
+  return href.startsWith("/") && !href.startsWith("//") && !ORIGIN_PATHS.test(href)
+}
+
+/**
+ * A link that navigates client-side with next/link where it can, prefetching the
+ * destination only once the pointer is over it, and is a plain `<a>` otherwise: in the
+ * Coolify build, for URLs off the site, for routes the Worker sends to the origin, and
+ * for links that open a new tab.
  */
 export const HoverPrefetchLink: React.FC<React.ComponentProps<"a">> = ({
-  href = "",
-  children,
-  className,
+  href,
+  onMouseEnter,
   ...props
 }) => {
-  // const [active, setActive] = useState(false)
-  // const pathname = usePathname()
-  // Starts-with matching (e.g. href='/about', pathname='/about/me') for active indication
-  // const isCurrent = href === "/" ? pathname === href : pathname.startsWith(href)
+  const [hovered, setHovered] = useState(false)
+
+  if (!CLIENT_NAVIGATION || !href || !isClientRoute(href) || props.target === "_blank") {
+    return <a href={href} onMouseEnter={onMouseEnter} {...props} />
+  }
 
   return (
-    <a
+    <Link
       href={href}
-      className={className}
+      prefetch={hovered ? null : false}
+      onMouseEnter={(event) => {
+        setHovered(true)
+        onMouseEnter?.(event)
+      }}
       {...props}
-      // prefetch={active ? null : false}
-      // onMouseEnter={() => setActive(true)}
-      // data-active={isCurrent}
-    >
-      {children}
-    </a>
+    />
   )
 }

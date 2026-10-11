@@ -92,7 +92,7 @@ function SelectScrollDownButton({
 
 /**
  * What names the open listbox. Base UI names the trigger (from `aria-label` or a `<label>`) but
- * leaves the listbox it opens unnamed, so a screen reader announces an unlabelled list (#1028).
+ * leaves the listbox it opens unnamed, so a screen reader announces an unlabelled list.
  * One of the two is required, so no `Select` can ship without it.
  */
 type ListboxName =

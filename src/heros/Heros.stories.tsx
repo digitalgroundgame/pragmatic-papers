@@ -17,7 +17,7 @@ const links = [
       type: "custom" as const,
       url: "/volumes/12",
       label: "Read the volume",
-      appearance: "default" as const,
+      variant: "default" as const,
     },
   },
   {
@@ -25,7 +25,7 @@ const links = [
       type: "custom" as const,
       url: "/about",
       label: "About us",
-      appearance: "outline" as const,
+      variant: "outline" as const,
     },
   },
 ]

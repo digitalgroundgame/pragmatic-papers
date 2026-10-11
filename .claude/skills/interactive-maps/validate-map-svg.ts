@@ -1,6 +1,6 @@
 /**
  * Reports what the Interactive Map block will actually see in an SVG, before a
- * writer uploads it to Map Assets.
+ * writer uploads it to Maps.
  *
  * Choropleth mode (default):
  *   pnpm tsx .claude/skills/interactive-maps/validate-map-svg.ts <file.svg> [--data-attribute data-margin] [--scale divergingRedBlue|perRegion] [--bias 1]

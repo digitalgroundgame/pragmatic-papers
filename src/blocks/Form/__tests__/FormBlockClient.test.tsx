@@ -135,6 +135,20 @@ describe("FormBlockClient", () => {
     expect(fetchMock).not.toHaveBeenCalled()
   })
 
+  it("ties each error to its field and announces it", async () => {
+    mockFetch({ status: 200 })
+    renderBlock()
+
+    submit()
+
+    await waitFor(() => expect(screen.getAllByRole("alert")).toHaveLength(2))
+    for (const name of [/^First name/, /^Email/]) {
+      const input = screen.getByLabelText(name)
+      expect(input).toHaveAttribute("aria-invalid", "true")
+      expect(input).toHaveAccessibleDescription("This field is required")
+    }
+  })
+
   it("posts the visitor's answers to the form-submissions endpoint", async () => {
     const fetchMock = mockFetch({ status: 200 })
     renderBlock()

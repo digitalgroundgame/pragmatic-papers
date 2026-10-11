@@ -4,7 +4,7 @@ import { beforeAll, describe, expect, it, vi } from "vitest"
 
 import type { Media, User } from "@/payload-types"
 import { ARTICLE_CONTENT } from "../fixtures/content"
-import { MINIMAL_PNG } from "../fixtures/media"
+import { testFile } from "../fixtures/media"
 import { createUser, getPayload, type Role } from "../helpers/testUsers"
 
 // Publishing revalidates the article's pages, which needs a Next.js request.
@@ -73,12 +73,7 @@ describe("media narrator", () => {
     const media = await payload.create({
       collection: "media",
       context: { disableRevalidate: true },
-      file: {
-        data: MINIMAL_PNG,
-        mimetype: "image/png",
-        name: "test.png",
-        size: MINIMAL_PNG.length,
-      },
+      file: testFile(),
       data: { alt: "Narrated" } as unknown as Media,
     })
     return payload.update({

@@ -34,6 +34,12 @@ export interface DrilldownAsset {
    * recomputed from the viewBox at render time rather than trusted from the file.
    */
   flipY: boolean
+  /**
+   * How many of the source export's units make one of this asset's, when its coordinates were
+   * rounded to a grid (`geometryStep`). A morph multiplies by it to put two files rounded to
+   * different grids back on one scale. Absent means 1.
+   */
+  step?: number
   paths: DrilldownPath[]
   payload: DrilldownPayload | null
   /** Why `payload` is null when the file did carry a `<metadata>` element. */

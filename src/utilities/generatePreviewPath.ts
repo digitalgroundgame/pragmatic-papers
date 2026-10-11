@@ -1,10 +1,12 @@
 // eslint-disable-next-line @typescript-eslint/consistent-type-imports
 import { PayloadRequest, CollectionSlug } from "payload"
 
-const collectionPrefixMap: Partial<Record<CollectionSlug, string>> = {
+/** The path each collection's documents are served under, before the slug. */
+export const collectionPrefixMap: Partial<Record<CollectionSlug, string>> = {
   pages: "",
   articles: "/articles",
   volumes: "/volumes",
+  topics: "/topics",
   interactives: "/interactives",
 }
 

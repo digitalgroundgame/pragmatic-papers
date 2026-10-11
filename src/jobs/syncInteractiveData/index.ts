@@ -12,7 +12,7 @@ import { syncInteractive, type SyncOutcome } from "./logic"
  * Once a day. A researcher's tracker changes a few times a month, and each run that finds
  * nothing costs one small request (the upstream manifest) per interactive. What needs to be
  * prompt — "I just pushed the new appointments, get them on the site" — is the "run now"
- * endpoint on Interactive Snapshots, which runs this same task immediately.
+ * endpoint on Snapshots, which runs this same task immediately.
  *
  * A run writes drafts unless the interactive is set to auto-publish, so the schedule never
  * changes what readers see on its own; an editor does, by publishing the snapshot.
@@ -46,7 +46,7 @@ export const syncInteractiveDataTask: TaskConfig<"syncInteractiveData"> = {
     const interactiveId = typeof input?.interactiveId === "number" ? input.interactiveId : null
     const force = input?.force === true
 
-    // Interactives are an experiment (Site Settings). The global is read straight from
+    // Interactives are an experiment (Settings). The global is read straight from
     // Payload rather than through `isExperimentEnabled`, whose cache wants the request scope
     // a scheduled run does not have.
     const settings = await payload.findGlobal({
@@ -55,7 +55,7 @@ export const syncInteractiveDataTask: TaskConfig<"syncInteractiveData"> = {
       overrideAccess: true,
     })
     if (settings.experiments?.interactives !== true) {
-      log.info("[interactive-sync] skipped: the interactives experiment is off in Site Settings")
+      log.info("[interactive-sync] skipped: the interactives experiment is off in Settings")
       return { output: counts }
     }
 

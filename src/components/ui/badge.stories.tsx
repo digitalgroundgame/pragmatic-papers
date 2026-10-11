@@ -1,7 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite"
 
-import { knownContrastIssue } from "@/stories/a11y"
-
 import { Badge } from "./badge"
 
 const variants = [
@@ -29,7 +27,6 @@ type Story = StoryObj<typeof meta>
 export const Default: Story = {}
 
 export const Variants: Story = {
-  parameters: knownContrastIssue,
   render: (args) => (
     <div className="flex flex-wrap gap-2">
       {variants.map((variant) => (

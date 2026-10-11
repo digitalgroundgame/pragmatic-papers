@@ -35,3 +35,20 @@ export const TitleOverride: Story = {
 export const NoImage: Story = {
   args: { doc: { ...articles[1]!, meta: { ...articles[1]!.meta, image: null } } },
 }
+
+export const Priority: Story = {
+  args: { priority: true },
+  play: async ({ canvasElement }) => {
+    const image = within(canvasElement).getByRole("img")
+    await expect(image).toHaveAttribute("fetchpriority", "high")
+    await expect(image).not.toHaveAttribute("loading", "lazy")
+  },
+}
+
+export const Lazy: Story = {
+  play: async ({ canvasElement }) => {
+    const image = within(canvasElement).getByRole("img")
+    await expect(image).toHaveAttribute("loading", "lazy")
+    await expect(image).not.toHaveAttribute("fetchpriority")
+  },
+}

@@ -7,7 +7,7 @@
  *
  * The shared contract is deliberately thin — identity, the environment it needs, and a probe.
  * What a connection *does* is its own API; forcing a common `sync()` on a Storefront catalogue
- * and a tagged data release would encode the accidents of whichever two came first (#912).
+ * and a tagged data release would encode the accidents of whichever two came first.
  *
  * **Secrets stay in the environment.** A connection names the variables it needs and reports
  * which are missing, never a value, and nothing here writes a credential to the database.

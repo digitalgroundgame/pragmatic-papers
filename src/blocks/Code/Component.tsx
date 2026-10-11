@@ -2,7 +2,7 @@ import React from "react"
 
 import type { CodeBlock as CodeBlockType } from "@/payload-types"
 import { cn } from "@/utilities/utils"
-import { Code } from "./Component.client"
+import { Code } from "./Component.lazy"
 
 type Props = CodeBlockType & {
   className?: string

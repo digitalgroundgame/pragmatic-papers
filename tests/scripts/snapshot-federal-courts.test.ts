@@ -81,6 +81,85 @@ describe("snapshot-federal-courts", () => {
     })
   })
 
+  describe("geometry on a grid", () => {
+    const source = (): string => path.join(work, "court-tracker")
+    const geoSvg = (viewBox: string, paths: string) =>
+      `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${viewBox}">${paths}</svg>`
+
+    beforeEach(() => {
+      const geo = path.join(source(), "assets", "geo")
+      mkdirSync(path.join(geo, "circuits"), { recursive: true })
+      mkdirSync(path.join(source(), "data"))
+      // National: 4M units across → step 100. The First Circuit's own map: 400k → step 10.
+      writeFileSync(
+        path.join(geo, "national.svg"),
+        geoSvg("0 0 4000000 2000000", '<path id="ca1" d="M0 0 L1000000 500000"/>'),
+      )
+      for (const id of CIRCUITS) writeFileSync(path.join(geo, "circuits", `${id}.svg`), svg(id))
+      writeFileSync(
+        path.join(geo, "circuits", "ca1.svg"),
+        geoSvg(
+          "0 0 400000 400000",
+          '<path id="ca1" d="M0 0 L400000 400000"/>' +
+            '<path id="mad" data-parent-id="ca1" d="M12345 6789 L400000 400000"/>',
+        ),
+      )
+      writeFileSync(
+        path.join(source(), "data", "seat_blocks.json"),
+        JSON.stringify({
+          ca1: { anchor: [1_000_000, 500_000] },
+          mad: { anchor: [12345, 6789] },
+          scotus: { anchor: [2_000_000, -25_000] },
+        }),
+      )
+    })
+
+    it("rounds each map to its own step and divides each anchor by its map's", async () => {
+      await expect(run(["geometry", "--source", source()], {}, profile)).resolves.toBe(0)
+      expect(readJson("geometry/national.json")).toMatchObject({
+        viewBox: [0, 0, 40_000, 20_000],
+        step: 100,
+        paths: [expect.objectContaining({ d: "M0 0L10000 5000" })],
+      })
+      expect(readJson("geometry/circuits/ca1.json")).toMatchObject({
+        step: 10,
+        paths: [expect.anything(), expect.objectContaining({ d: "M1235 679L40000 40000" })],
+      })
+      // A circuit and a court with no shape are drawn on the national map; a district on its circuit's.
+      expect(readJson("geometry/anchors.json")).toEqual({
+        ca1: [10_000, 5000],
+        mad: [1235, 679],
+        scotus: [20_000, -250],
+      })
+    })
+
+    it("keeps the step a checked-in file already has, which offsets.json is written in", async () => {
+      mkdirSync(path.join(profile, "geometry", "circuits"), { recursive: true })
+      writeFileSync(
+        path.join(profile, "geometry", "circuits", "ca1.json"),
+        JSON.stringify({ viewBox: [0, 0, 8000, 8000], flipY: false, step: 50, paths: [] }),
+      )
+      await run(["geometry", "--source", source()], {}, profile)
+      expect(readJson("geometry/circuits/ca1.json")).toMatchObject({
+        step: 50,
+        viewBox: [0, 0, 8000, 8000],
+      })
+      expect(readJson("geometry/anchors.json")).toMatchObject({ mad: [247, 136] })
+    })
+
+    it("keeps every anchor already placed and takes upstream's only for a court without one", async () => {
+      mkdirSync(path.join(profile, "geometry"), { recursive: true })
+      writeFileSync(
+        path.join(profile, "geometry", "anchors.json"),
+        JSON.stringify({ ca1: [7, 8], gud: [1, 2] }),
+      )
+      await run(["geometry", "--source", source()], {}, profile)
+      expect(readFileSync(path.join(profile, "geometry", "anchors.json"), "utf8")).toBe(
+        '{"ca1":[7,8],"gud":[1,2],"mad":[1235,679],"scotus":[20000,-250]}',
+      )
+    })
+  })
+
   describe("data", () => {
     it("refuses to guess where to read from without a checkout or a token", async () => {
       await expect(run(["data"], {}, profile)).resolves.toBe(1)

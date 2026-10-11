@@ -63,6 +63,11 @@ function geometryPaths(file: GeometryFile | null): DrilldownPath[] {
   return file ? file.paths.map((p) => ({ ...p, facts: {} })) : []
 }
 
+/** The file's grid, carried to the client so a morph can put two files on one scale. */
+function stepOf(file: GeometryFile | null): Pick<DrilldownAsset, "step"> {
+  return file?.step ? { step: file.step } : {}
+}
+
 /** Region ids that have a child asset — the ones a reader can drill into. */
 export function childKeys(geometry: DrilldownGeometry): string[] {
   return Object.keys(geometry.children)
@@ -78,6 +83,7 @@ export function composeIndex({ geometry, data }: Omit<ComposeInput, "presentatio
     {
       viewBox: geometry.overview.viewBox,
       flipY: geometry.overview.flipY,
+      ...stepOf(geometry.overview),
       paths: geometryPaths(geometry.overview),
       payload: { schema: DRILLDOWN_SCHEMA, regions: data.regions },
       payloadError: null,
@@ -87,6 +93,7 @@ export function composeIndex({ geometry, data }: Omit<ComposeInput, "presentatio
       .map((c) => ({
         viewBox: c.viewBox,
         flipY: c.flipY,
+        ...stepOf(c),
         paths: geometryPaths(c),
         payload: null,
         payloadError: null,
@@ -119,6 +126,7 @@ export function composeOverview({ presentation, geometry, data }: ComposeInput):
   return {
     viewBox: geometry.overview.viewBox,
     flipY: geometry.overview.flipY,
+    ...stepOf(geometry.overview),
     paths: geometryPaths(geometry.overview),
     payload: {
       schema: DRILLDOWN_SCHEMA,
@@ -171,6 +179,7 @@ export function composeChildGeometry(
   return {
     viewBox: file?.viewBox ?? null,
     flipY: file?.flipY ?? false,
+    ...stepOf(file),
     paths: geometryPaths(file),
     payload: null,
     payloadError: null,

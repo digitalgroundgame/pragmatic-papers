@@ -7,7 +7,7 @@ import {
   lexicalEditor,
 } from "@payloadcms/richtext-lexical"
 
-import { linkGroup } from "@/fields/linkGroup"
+import { menu } from "@/fields/menu"
 
 export const hero: Field = {
   name: "hero",
@@ -57,10 +57,12 @@ export const hero: Field = {
       }),
       label: false,
     },
-    linkGroup({
-      overrides: {
-        maxRows: 2,
-      },
+    menu({
+      name: "links",
+      label: "Links",
+      maxRows: 2,
+      // Hero links render as buttons, so a new one starts as the filled button.
+      link: { component: { variant: { defaultValue: "default" } } },
     }),
     {
       name: "media",

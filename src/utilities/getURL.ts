@@ -1,7 +1,7 @@
 import canUseDOM from "./canUseDOM"
 
 // SERVER_URL is read when the server runs, not compiled in like a NEXT_PUBLIC_ variable
-// (which Next inlines into server code too), so one image can serve any host (#1090).
+// (which Next inlines into server code too), so one image can serve any host.
 // Browser code never needs it: getClientSideURL reads the page's own origin there.
 
 // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types

@@ -10,9 +10,11 @@ import {
   linksBlock,
   main,
   MAX_COMPONENTS,
-  SHOWCASE_LINKS_END,
   withStorybookLinks,
 } from "../../scripts/storybook-pr"
+
+const SHOWCASE_LINKS_END = "<!-- /showcase-links -->"
+const PR_LINKS_END = "<!-- /pr-links -->"
 
 const URL = "https://pr-42-pragmatic-papers-storybook.example.workers.dev"
 
@@ -148,6 +150,9 @@ describe("withStorybookLinks", () => {
     expect(withStorybookLinks("Closes #743\n\n## Context", block)).toBe(
       `Closes #743\n\n${block}\n\n## Context`,
     )
+    expect(withStorybookLinks("Closes #\n\n## Context", block)).toBe(
+      `Closes #\n\n${block}\n\n## Context`,
+    )
     expect(withStorybookLinks("", block)).toBe(`${block}\n`)
   })
 
@@ -156,6 +161,16 @@ describe("withStorybookLinks", () => {
       `Closes #1\n\n${showcase}\n\n${block}\n\n## Context`,
     )
     expect(withStorybookLinks(showcase, block)).toBe(`${showcase}\n\n${block}\n`)
+  })
+
+  it("adds the block under the links line, which sits under any showcase links", () => {
+    const links = `<!-- pr-links -->\n[Preview](p)\n${PR_LINKS_END}`
+    expect(withStorybookLinks(`Closes #1\n\n${links}\n\n## Context`, block)).toBe(
+      `Closes #1\n\n${links}\n\n${block}\n\n## Context`,
+    )
+    expect(withStorybookLinks(`${showcase}\n\n${links}\n\nText`, block)).toBe(
+      `${showcase}\n\n${links}\n\n${block}\n\nText`,
+    )
   })
 
   it("replaces the block in place, leaving the rest untouched", () => {
@@ -179,14 +194,21 @@ describe("main", () => {
     INDEX_FILE: "index.json",
   }
 
-  function fakeDeps(files: { filename: string; status: string }[], body: string) {
+  /** `rewrites`: what another job writes over the description after each of ours. */
+  function fakeDeps(
+    files: { filename: string; status: string }[],
+    body: string,
+    rewrites: string[] = [],
+  ) {
     const calls: { method: string; url: string; body?: unknown }[] = []
     const logs: string[] = []
     const deps: Deps = {
       fetch: (async (input: string | URL | Request, init?: RequestInit) => {
         const url = String(input)
         const method = init?.method ?? "GET"
-        calls.push({ method, url, body: init?.body ? JSON.parse(String(init.body)) : undefined })
+        const sent = init?.body ? JSON.parse(String(init.body)) : undefined
+        calls.push({ method, url, body: sent })
+        if (method === "PATCH") body = rewrites.shift() ?? (sent as { body: string }).body
         const payload = url.includes("/files?")
           ? files
           : url.includes("/deployments?")
@@ -200,6 +222,7 @@ describe("main", () => {
       summary: (markdown) => logs.push(markdown),
       readFile: () =>
         JSON.stringify({ v: 5, entries: Object.fromEntries(ENTRIES.map((e) => [e.id, e])) }),
+      sleep: () => Promise.resolve(),
     }
     return { deps, calls, logs }
   }
@@ -264,6 +287,28 @@ describe("main", () => {
     expect(patch?.body).toEqual({
       body: `${linksBlock(URL, [{ title: "UI/Button", id: "ui-button--docs", type: "docs" }])}\n\n## Context\n\nText`,
     })
+  })
+
+  it("writes again when another job's edit replaced its links", async () => {
+    const files = [{ filename: "src/components/ui/button.tsx", status: "modified" }]
+    const { deps, calls, logs } = fakeDeps(files, "## Context", ["Closes #1\n\n## Context"])
+    expect(await main(["link"], ENV, deps)).toBe(0)
+    const patches = calls.filter((call) => call.method === "PATCH")
+    expect(patches).toHaveLength(2)
+    expect(patches[1]?.body).toEqual({
+      body: `Closes #1\n\n${linksBlock(URL, [{ title: "UI/Button", id: "ui-button--docs", type: "docs" }])}\n\n## Context`,
+    })
+    expect(logs).toContain("Linked 1 changed component(s) in the description.")
+  })
+
+  it("warns, without failing, when other jobs keep rewriting the description", async () => {
+    const files = [{ filename: "src/components/ui/button.tsx", status: "modified" }]
+    const { deps, calls, logs } = fakeDeps(files, "A", ["B", "C", "D"])
+    expect(await main(["link"], ENV, deps)).toBe(0)
+    expect(calls.filter((call) => call.method === "PATCH")).toHaveLength(3)
+    expect(logs).toContain(
+      "::warning::Other jobs kept rewriting the PR's description; Storybook links not updated.",
+    )
   })
 
   it("leaves an up-to-date description alone", async () => {

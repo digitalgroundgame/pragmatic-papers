@@ -2,7 +2,7 @@ import React from "react"
 
 import type { InteractiveMapBlock as InteractiveMapBlockProps } from "@/payload-types"
 
-import { CMSLink } from "@/components/Link/CMSLink2"
+import { CMSLink } from "@/components/Link"
 import { Logo } from "@/components/Logo"
 import { cn } from "@/utilities/utils"
 import { Info, type Data } from "./Info"

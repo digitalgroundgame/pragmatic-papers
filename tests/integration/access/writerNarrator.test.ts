@@ -6,7 +6,7 @@ import { ARTICLE_CONTENT } from "../fixtures/content"
 
 /**
  * A user may hold multiple roles at once (e.g. writer + narrator). Access
- * checks resolve the union of every role's permissions — see #883. Narrator
+ * checks resolve the union of every role's permissions. Narrator
  * alone cannot create or update articles; adding the writer role grants those
  * capabilities without losing the narrator's staff-level read access.
  */

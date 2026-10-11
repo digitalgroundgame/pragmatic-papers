@@ -1,4 +1,9 @@
+import type { Experiment } from "@/globals/SiteSettings/isExperimentEnabled"
 import { revalidateRedirects } from "@/hooks/revalidateRedirects"
+import { docsPlugin } from "@/plugins/docs"
+import { docsNotifications } from "@/plugins/docs/notifications"
+import { notificationsPlugin } from "@/plugins/notifications"
+import { toursPlugin } from "@/plugins/tours"
 import { discordSignIn, googleSignIn } from "@/integrations"
 import type { Article, Interactive, Page, Topic, Volume } from "@/payload-types"
 import { getSiteURL } from "@/utilities/getURL"
@@ -24,6 +29,11 @@ import { s3Storage } from "@payloadcms/storage-s3"
 import { type Payload, type Plugin } from "payload"
 
 import { ssoPlugin } from "./sso"
+
+// Reads the switch in Site Settings when called. Imported then, not here: the
+// Settings global reaches the Payload config, which imports this file.
+const experiment = (name: Experiment) => async (): Promise<boolean> =>
+  (await import("@/globals/SiteSettings/isExperimentEnabled")).isExperimentEnabled(name)
 
 type SeoDoc = Volume | Article | Page | Topic | Interactive
 
@@ -314,9 +324,15 @@ export const plugins: Plugin[] = [
     },
     clientUploads: true,
   }),
+  docsPlugin(),
+  notificationsPlugin({
+    sources: [docsNotifications({ enabled: experiment("docs"), tours: experiment("tours") })],
+    enabled: experiment("notifications"),
+  }),
+  toursPlugin({ enabled: experiment("tours") }),
   ssoPlugin({
-    // The `sso` experiment, read from the database rather than `isExperimentEnabled`: its
-    // cached read imports the Payload config, which imports this file.
+    // The `sso` experiment, read from the database on each request rather than through
+    // `isExperimentEnabled`'s cache, so turning it off ends SSO sessions at once.
     enabled: async ({ payload }) =>
       (await payload.findGlobal({ slug: "site-settings", depth: 0 })).experiments?.sso === true,
     providers: () => ({

@@ -4,6 +4,12 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vites
 import { seed } from "../index"
 
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn(), revalidateTag: vi.fn() }))
+// The repo's help docs are synced for real; only the editor's Markdown conversion, which needs
+// Payload's config, is left out.
+vi.mock("@/plugins/docs/markdown", () => ({
+  docsEditorConfig: () => ({}),
+  markdownToContent: () => ({ root: { children: [] } }),
+}))
 
 // Collections and globals whose hooks call revalidatePath/revalidateTag. A
 // write to one of these without `disableRevalidate` crashes `pnpm dev:db-seed`.
@@ -16,6 +22,7 @@ const REVALIDATING = new Set([
   "redirects",
   "header",
   "footer",
+  "docs",
 ])
 
 interface Write {
@@ -136,7 +143,15 @@ describe("seed", () => {
       (write) => write.op === "updateGlobal" && write.target === "site-settings",
     )
     expect(siteSettings?.data).toEqual({
-      experiments: { feed: true, interactives: true, sso: true, tableOfContents: true },
+      experiments: {
+        feed: true,
+        interactives: true,
+        sso: true,
+        tableOfContents: true,
+        docs: true,
+        notifications: true,
+        tours: true,
+      },
     })
     expect(siteSettings?.context?.disableRevalidate).toBe(true)
   })
@@ -147,8 +162,8 @@ describe("seed", () => {
 
     await seed(payload, onProgress, { disableRevalidate: true })
 
-    expect(onProgress).toHaveBeenCalledWith("Clearing existing data...", 1, 13)
-    expect(onProgress).toHaveBeenLastCalledWith("Seeding article recommendations...", 13, 13)
+    expect(onProgress).toHaveBeenCalledWith("Clearing existing data...", 1, 14)
+    expect(onProgress).toHaveBeenLastCalledWith("Seeding article recommendations...", 14, 14)
   })
 
   it("names the step that failed", async () => {

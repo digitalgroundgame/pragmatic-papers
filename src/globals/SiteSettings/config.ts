@@ -52,6 +52,30 @@ export const SiteSettings: GlobalConfig = {
           },
         }),
         experimentField({
+          name: "docs",
+          label: "Help docs",
+          defaultValue: false,
+          admin: {
+            description:
+              "The help docs at /docs, their sitemap, and their items in the notifications bell. Staff can write docs in the admin either way.",
+          },
+        }),
+        experimentField({
+          name: "notifications",
+          label: "Notifications bell",
+          defaultValue: false,
+          admin: { description: "The bell beside the avatar in the admin header." },
+        }),
+        experimentField({
+          name: "tours",
+          label: "Guided tours",
+          defaultValue: false,
+          admin: {
+            description:
+              "Guided tours of the admin, and the Show me buttons that start them in the bell and on help docs.",
+          },
+        }),
+        experimentField({
           name: "sso",
           label: "Single sign-on",
           defaultValue: false,

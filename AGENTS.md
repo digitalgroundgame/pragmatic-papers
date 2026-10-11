@@ -13,7 +13,7 @@ This file provides guidance to tools like Claude Code (claude.ai/code) when work
 - `pnpm dev` — starts everything in Docker Compose (Postgres + Next.js dev server on port 8000)
 - `pnpm dev:db-nuke` — stop Postgres and delete its volume (`docker compose down -v`), wiping the entire data directory. Use this after a Postgres major-version bump or whenever the local data is corrupt; the next `pnpm dev` recreates a fresh cluster and Drizzle push re-syncs the schema
 - `pnpm dev:db-fresh` — bring Postgres up and rebuild the schema by re-running all migrations from scratch (`payload migrate:fresh`). Unlike `dev:db-nuke`, this keeps the volume and exercises the committed migration files (the same path prod uses), so it surfaces migration drift that Drizzle push masks in dev
-- `pnpm dev:db-seed` — bring Postgres up, seed it from the terminal, and stop it again. Runs the same `seed()` as the admin dashboard's "Seed your database" button, so it first deletes **every** article, volume, page, media file, topic, map asset, interactive, form and form submission (not just seeded ones), the seed users, and the recommendation rankings. Drizzle push builds the schema on an empty database, so it works straight after `dev:db-nuke`. It refuses to run unless `DATABASE_URI` points at localhost and `USE_LOCAL_STORAGE=true` (override with `SEED_ALLOW_REMOTE=true`), and exits 1 if you decline Drizzle's data-loss prompt. Stop `pnpm dev` first: this command stops the Postgres container it shares.
+- `pnpm dev:db-seed` — bring Postgres up, seed it from the terminal, and stop it again. Runs the same `seed()` as the admin dashboard's "Seed your database" button, so it first deletes **every** article, volume, page, media file, topic, map asset, interactive, form and form submission (not just seeded ones), the seed users, and the recommendation rankings, then syncs the help docs in `src/docs/` back in. Drizzle push builds the schema on an empty database, so it works straight after `dev:db-nuke`. It refuses to run unless `DATABASE_URI` points at localhost and `USE_LOCAL_STORAGE=true` (override with `SEED_ALLOW_REMOTE=true`), and exits 1 if you decline Drizzle's data-loss prompt. Stop `pnpm dev` first: this command stops the Postgres container it shares.
 - `pnpm showcase <pr-number | staging | url> (<slug...> | --all) [--draft]` — push feature articles from the catalog in `src/endpoints/seed/showcase.ts` to a live site through its REST API, as `SHOWCASE_EMAIL` / `SHOWCASE_PASSWORD` (an account with an author role). A PR number means its `pr-<n>.pragmaticpapers.com` preview; `staging` means `SHOWCASE_STAGING_URL`, and pushes drafts. Only adds articles whose slug is missing; deletes nothing. A PR with the `showcase` label or a `Showcase: <slug...>` line in its description (the workflow keeps the two in sync; the label alone inserts a line naming the articles the PR adds to the catalog) gets them pushed to its preview after every deploy by `.github/workflows/showcase.yml`, which then turns that line into links to them, titled, at the top of the description, and can also be run by hand for a PR (the articles join that line, which opts the PR in) or staging. Nothing is pushed by default: when a PR adds a seeded article to that catalog, opt it in by adding the `showcase` label or putting `Showcase: <slug>` in its description
 
 ### Quality Checks
@@ -140,6 +140,93 @@ every public page is purged too, when the deployment has
 see the old answer until the edge's copy expires (10 minutes, or up to a day
 served stale). When the feature graduates, delete the checkbox and the checks.
 
+### Help docs and notifications
+
+A release that changes what staff do in the admin ships a help doc in the same
+PR. Docs are the `docs` collection (`src/plugins/docs/`, the docs plugin),
+served at `/docs/<slug>`, so they can hold blocks and images like an article.
+`/docs` shows the home doc (`src/docs/home.md`), and `/docs/whats-new` lists every
+doc, newest first. The sidebar groups sections under three areas (`DOC_AREAS`):
+Admin for staff, Frontend for readers' features, and Development for contributors
+(the GitHub wiki, for now); an area shows once it has docs. Each doc ends with
+Previous and Next links in the sidebar's order. The ones a release ships live in
+the repo as Markdown, a folder per sidebar section (`DOC_SECTIONS` in
+`src/plugins/docs/sections.ts`): `src/docs/<section>/<slug>.md`, with the pictures
+it shows beside it, each named for the doc (`<slug>-hero.webp`,
+`<slug>-drawer.webp`). Once per deploy,
+`/next/revalidate-all` (which `start.sh` calls when a deploy goes live) writes
+every doc into that site's database, published, converting the Markdown with the
+docs editor and uploading its pictures to Media (`syncRepoDocs`); a doc whose
+file and pictures hash the same as last time is skipped, and a doc the sync wrote
+before whose file has since been removed or renamed is deleted (docs written in
+a site's admin are never touched) (`DOCS_SYNC=false` turns
+the sync off, as the staging Worker does: it reads staging's database and has no
+`src/docs/` of its own). `pnpm dev:db-seed` syncs them locally.
+
+A doc's front matter (`src/plugins/docs/docFile.ts`) holds its `title`, a
+`navTitle` of 24 characters at most for the sidebar, a `summary` of a sentence
+or two (the bell shows it), `publishedAt` (the day the release reaches
+production; for a feature that shipped earlier, the day it did), `revisedAt`
+when a later release changes it (shown as "Updated …" beside the date; the bell
+keeps it under `publishedAt`), `heroImage` and `heroAlt` (1200×630, the bell's
+thumbnail, the link preview's image and the banner above the doc's title; optional,
+but give a doc one where a picture helps) and, for a
+doc only some roles need, `audience` (e.g. `[editor]`; admins and chief editors
+see every doc). `audience` only decides who the bell tells: every published doc
+is public at /docs, as the repo is. The body is Markdown the docs editor can
+hold (headings, lists, bold, italic, inline code, links), plus pictures on a
+line of their own, `![alt](<slug>-picture.webp)`, which become Media blocks.
+Link to other pages by URL. Other blocks can't be written in Markdown.
+`src/plugins/docs/__tests__/repoDocs.test.ts` and `markdown.test.ts` check every
+doc.
+
+To write one in the local admin instead (**Help → Docs**), `pnpm docs:export
+<slug>` writes it into its section's folder, copying the pictures it uses beside
+it.
+
+The bell lists each doc under its `publishedAt`, newest first.
+
+The repo copy wins, so on a deployed site a doc from `src/docs/` is read-only in
+the admin (local dev leaves it editable, for `docs:export`); docs written in a
+site's admin stay editable there. Readers' pages and the bell read docs through
+`unstable_cache` with the `docs` tag, which saving a doc or a sync that changed
+one clears, along with the edge cache.
+
+The bell beside the avatar in the admin header is the notifications plugin
+(`src/plugins/notifications/`). Features plug into it with a
+`NotificationSource` (`types.ts`): a type users can mute, and `itemsFor(user)`,
+which decides who sees what (help docs come from `docsNotifications()`, staff
+only). Register a source in `src/plugins/index.ts`. Each user's read items and
+muted types are kept in their Payload preferences (`payload-preferences`, key
+`notifications`); items dated before the account was made don't count as
+unread.
+
+A doc can come with a guided tour of the admin (the tours plugin,
+`src/plugins/tours/`): driver.js popovers that walk staff through the real
+screens, page by page. Tours are code, in `TOURS` (`registry.ts`), and ship with
+the release that changes the screens they point at, since their steps name
+Payload's stable hooks (`#card-articles`, `.tabs-field__tabs`). A link from
+`tourHref(key)` (`/admin?tour=<key>`) starts one; the step it's on is kept in
+sessionStorage, so it carries on across page changes, and a step whose element
+never appears ends it quietly. A doc names its tour in `tour`, and the bell then
+offers it as **Show me** beside **Read more** (any `NotificationItem` can, with
+`showMe`), as does the doc's page. After changing a screen a tour points at, run
+the tour locally.
+
+The three plugins are experiments (`docs`, `notifications`, `tours` in Settings),
+switched from `src/plugins/index.ts` through each plugin's `enabled` option, so
+the plugins never read Settings themselves. With `docs` off, `/docs` pages 404,
+their sitemap is empty and the bell leaves docs out (a source's `enabled`); the Docs collection and the
+deploy's docs sync carry on, so docs are ready when it's switched on. With
+`notifications` off there's no bell; with `tours` off, `TourGate` doesn't mount
+the tour provider and no Show me button appears.
+
+The bell is built from the site's shadcn components (`src/components/ui/`).
+Payload 3 has no Tailwind of its own, so `NotificationsMenu.css` brings in
+Tailwind's theme and only the utilities those files use, without preflight, and
+maps the shadcn tokens onto Payload's theme variables under `html[data-theme]`.
+Another admin component on shadcn adds its files to that CSS's `@source` list.
+
 ### Edge cache (Cloudflare)
 
 Public pages are cached at Cloudflare's edge (`s-maxage=600`,
@@ -191,7 +278,7 @@ ESLint enforces the import rules for every folder under `src/plugins/` (`eslint.
 
 - **File structure**: `collections/<Name>/index.ts` with optional `hooks/` and `components/` subdirectories
 - **Hook naming**: `revalidate*` for cache invalidation, `generate*`/`populate*` for data transformation, `pushTo*`/`check*` for side effects
-- **Admin sidebar**: every collection and global sets `admin.group` to one of Content, Site, Interactives, Store or System, and labels are a single word where one reads clearly (`labels`/`label`, never the slug). Groups appear in the order of their first entry in `payload.config.ts`
+- **Admin sidebar**: every collection and global sets `admin.group` to one of Content, Site, Interactives, Store, System or Help, and labels are a single word where one reads clearly (`labels`/`label`, never the slug). Groups appear in the order of their first entry in `payload.config.ts`
 - **Tabs pattern**: Content + SEO tabs; SEO tab uses standard fields (`OverviewField`, `MetaTitleField`, `MetaImageField`, `MetaDescriptionField`, `PreviewField`)
 - **Versions config**: `drafts.autosave: true`, `schedulePublish: true`, `maxPerDoc: 50`
 - **Live preview**: `generatePreviewPath()` for `admin.livePreview.url` and `admin.preview`
@@ -215,7 +302,7 @@ ESLint enforces the import rules for every folder under `src/plugins/` (`eslint.
 - Code with a request (hooks, endpoints, access functions, validation, jobs) reads Payload from `req.payload`, inside the request's transaction. Code without one (pages, layouts, route handlers, `generateMetadata`) uses `getPayloadClient` from `@/data/payload`, never `getPayload({ config })`
 - Wrap data queries in `React.cache()` for per-request deduplication
 - Use `unstable_cache` with cache tags for long-lived caching (globals, redirects, sitemaps)
-- Sitemaps: each is a `sitemap.ts` in the folder of the section it lists (Next's metadata convention, served at `/<route>/sitemap.xml`, e.g. `topics/sitemap.ts`), added with a title to `SITEMAPS` in `(sitemaps)/sitemaps.ts`, which `/sitemap_index.xml`, robots.txt and the public `/feeds` page read (RSS feeds are listed there from `FEEDS` in `feeds/feeds.ts`). Pages live at the root, so theirs is the root `sitemap.ts` (`/sitemap.xml`), and the index of them all is `/sitemap_index.xml` (`(sitemaps)/sitemap_index.xml`), which robots.txt and Search Console point at; Google News reads `articles/news-sitemap.xml/route.ts`, a route handler (`sitemap.ts` can't write `news:` tags) listing only the last two days' articles, as Google asks. The old `/pages-sitemap.xml`, `/articles-sitemap.xml` and `/volumes-sitemap.xml` redirect permanently in `next.config.ts`
+- Sitemaps: each is a `sitemap.ts` in the folder of the section it lists (Next's metadata convention, served at `/<route>/sitemap.xml`, e.g. `docs/sitemap.ts`), added with a title to `SITEMAPS` in `(sitemaps)/sitemaps.ts`, which `/sitemap_index.xml`, robots.txt and the public `/feeds` page read (RSS feeds are listed there from `FEEDS` in `feeds/feeds.ts`). Pages live at the root, so theirs is the root `sitemap.ts` (`/sitemap.xml`), and the index of them all is `/sitemap_index.xml` (`(sitemaps)/sitemap_index.xml`), which robots.txt and Search Console point at; Google News reads `articles/news-sitemap.xml/route.ts`, a route handler (`sitemap.ts` can't write `news:` tags) listing only the last two days' articles, as Google asks. The old `/pages-sitemap.xml`, `/articles-sitemap.xml` and `/volumes-sitemap.xml` redirect permanently in `next.config.ts`
 - Always respect `draftMode()` — pass `draft` and `overrideAccess: draft` into Payload queries
 - Next.js 15: `params` and `searchParams` are `Promise`s (must be `await`ed)
 - Metadata: use `generateMeta({ doc, canonicalPath })` from `@/utilities/generateMeta`

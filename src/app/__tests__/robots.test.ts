@@ -24,6 +24,7 @@ describe("robots.txt", () => {
         "https://pragmaticpapers.com/volumes/sitemap.xml",
         "https://pragmaticpapers.com/contributors/sitemap.xml",
         "https://pragmaticpapers.com/topics/sitemap.xml",
+        "https://pragmaticpapers.com/docs/sitemap.xml",
       ],
     })
   })

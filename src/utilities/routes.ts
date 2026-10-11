@@ -8,6 +8,7 @@ export const COLLECTION_PATHS = {
   volumes: "/volumes",
   topics: "/topics",
   interactives: "/interactives",
+  docs: "/docs",
 } as const satisfies Partial<Record<CollectionSlug, string>>
 
 /** A collection whose documents have a public page. */

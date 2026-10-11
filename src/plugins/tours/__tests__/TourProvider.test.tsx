@@ -22,6 +22,7 @@ import { TourProvider } from "../TourProvider"
 interface StepOptions {
   index: number
   onNext: () => void
+  onPrevious: () => void
   onClose: () => void
 }
 const lastStep = (): StepOptions => showStep.mock.calls.at(-1)![0] as StepOptions
@@ -61,6 +62,7 @@ afterEach(() => {
   document.body.innerHTML = ""
   window.sessionStorage.clear()
   vi.clearAllMocks()
+  vi.restoreAllMocks()
   vi.useRealTimers()
 })
 
@@ -140,5 +142,59 @@ describe("TourProvider", () => {
 
     act(() => lastStep().onClose())
     expect(stored()).toBeNull()
+  })
+
+  it("goes back a step with Back", async () => {
+    window.sessionStorage.setItem(PROGRESS_KEY, JSON.stringify({ key: "articles", step: 2 }))
+    document.body.insertAdjacentHTML("beforeend", `<div class="search-bar"></div>`)
+    renderAt("/admin/collections/articles")
+    await waitFor(() => expect(lastStep().index).toBe(2))
+
+    act(() => lastStep().onPrevious())
+    expect(stored()).toEqual({ key: "articles", step: 1 })
+  })
+
+  it("ends after the last step's Done", async () => {
+    window.sessionStorage.setItem(PROGRESS_KEY, JSON.stringify({ key: "articles", step: 7 }))
+    document.body.insertAdjacentHTML("beforeend", `<div class="form-submit"></div>`)
+    renderAt("/admin/collections/articles/20")
+    await waitFor(() => expect(lastStep().index).toBe(7))
+
+    act(() => lastStep().onNext())
+    expect(stored()).toBeNull()
+    expect(nav.push).not.toHaveBeenCalled()
+  })
+
+  it("ends instead of opening a step's page again when it sends the reader elsewhere", async () => {
+    window.sessionStorage.setItem(PROGRESS_KEY, JSON.stringify({ key: "articles", step: 1 }))
+    const view = renderAt("/admin")
+    expect(nav.push).toHaveBeenCalledWith("/admin/collections/articles")
+
+    // The page sent the reader on, e.g. to the login page.
+    rerenderAt(view, "/admin/login")
+    rerenderAt(view, "/admin")
+    await waitFor(() => expect(stored()).toBeNull())
+    expect(nav.push).toHaveBeenCalledOnce()
+    expect(showStep).not.toHaveBeenCalled()
+  })
+
+  it("ends at once on a step whose page can't be opened from here", () => {
+    window.sessionStorage.setItem(PROGRESS_KEY, JSON.stringify({ key: "articles", step: 4 }))
+    renderAt("/admin")
+    expect(stored()).toBeNull()
+    expect(nav.push).not.toHaveBeenCalled()
+  })
+
+  it("keeps the tour in memory when sessionStorage is blocked", async () => {
+    vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => {
+      throw new Error("blocked")
+    })
+    vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+      throw new Error("blocked")
+    })
+    const view = renderAt("/admin", "tour=articles")
+    rerenderAt(view, "/admin")
+    await waitFor(() => expect(showStep).toHaveBeenCalledOnce())
+    expect(lastStep().index).toBe(0)
   })
 })

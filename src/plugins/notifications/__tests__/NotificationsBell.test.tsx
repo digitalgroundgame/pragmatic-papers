@@ -122,6 +122,30 @@ describe("NotificationsBell", () => {
     expect(screen.getByRole("button", { name: "Notifications, 1 unread" })).toBeInTheDocument()
   })
 
+  it("offers Show me beside Read more on an item with a tour, and saves either as read", async () => {
+    const tours = source("docs", ["Alpha", "Beta"])
+    vi.mocked(tours.itemsFor).mockResolvedValue([
+      { id: "a", title: "Alpha", href: "/docs/a", date: "2026-10-18", showMe: "/admin?tour=a" },
+      { id: "b", title: "Beta", href: "/docs/b", date: "2026-10-17", showMe: "/admin?tour=b" },
+    ])
+    await renderBell(fakePayload([tours]).payload)
+    openMenu()
+
+    const showMe = await screen.findByRole("link", { name: "Show me: Alpha" })
+    expect(showMe).toHaveAttribute("href", "/admin?tour=a")
+    expect(showMe).not.toHaveAttribute("target")
+    fireEvent.click(showMe)
+    expect(setPreference).toHaveBeenLastCalledWith("notifications", { read: ["docs:a"], muted: [] })
+
+    const readMore = screen.getByRole("link", { name: "Read more: Beta" })
+    expect(readMore).toHaveAttribute("target", "_blank")
+    fireEvent.click(readMore)
+    expect(setPreference).toHaveBeenLastCalledWith("notifications", {
+      read: ["docs:a", "docs:b"],
+      muted: [],
+    })
+  })
+
   it("saves everything as read at once", async () => {
     await renderBell(fakePayload([source("docs", ["Alpha", "Beta"])]).payload)
     openMenu()

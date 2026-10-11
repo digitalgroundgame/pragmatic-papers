@@ -555,6 +555,16 @@ from memory. It clones each project's docs source into the gitignored `.cache/up
 sessions, which can't reach most documentation sites. Next.js's docs are already in
 `node_modules/next/dist/docs/`.
 
+## Landing work
+
+- **Switch it off rather than revert.** A feature readers or staff will see, and anything that
+  takes more than one PR to finish, merges behind an experiment switch that is off by default
+  (see [Experiments](#experiments)). If it turns out wrong after it merges, turn the switch off
+  and fix it in a follow-up PR. Revert only what breaks staging with the switch off.
+- **One PR per feature, not a stack.** Grow the one PR, or wait for the first to merge before
+  branching the next from `dev`. A PR branched from another PR has to resolve the same
+  conflicts again every time it merges `dev`.
+
 ## Claude review gate
 
 PRs into `dev` need the **Review acknowledged** check (`review-ack.yml`) on

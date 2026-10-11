@@ -13,6 +13,10 @@ const items: NotificationItem[] = [
       "Search Unsplash from any Media upload. The photographer's credit goes into the caption for you.",
     href: "/docs/unsplash-photos",
     date: "2026-10-18T00:00:00.000Z",
+    image: {
+      url: "/docs-assets/media/unsplash-photos-hero.webp",
+      alt: "The Unsplash search in Media uploads with a grid of photos",
+    },
   },
   {
     type: "docs",
@@ -21,6 +25,10 @@ const items: NotificationItem[] = [
     summary: "Experiments let a new feature run on staging before readers on the live site see it.",
     href: "/docs/experiments",
     date: "2026-10-11T00:00:00.000Z",
+    image: {
+      url: "/docs-assets/site/experiments-hero.webp",
+      alt: "The Site Settings switch for the Ticker experiment, turned on",
+    },
   },
 ]
 
@@ -38,7 +46,7 @@ const meta = {
       },
     ],
     muted: [],
-    indexes: [{ type: "docs", label: "All docs", href: "/docs" }],
+    indexes: [{ type: "docs", label: "See all", href: "/docs/whats-new" }],
     onOpen: fn(),
     onMarkAllRead: fn(),
     onMutedChange: fn(),
@@ -58,8 +66,16 @@ export const Unread: Story = {
     const item = await screen.findByRole("link", { name: /Find a photo on Unsplash.*\(unread\)/ })
     await waitFor(() => expect(item).toBeVisible())
     await expect(item).toHaveAttribute("href", "/docs/unsplash-photos")
+    // The thumbnail is decorative, so the link's name is still its title.
+    await expect(item.querySelector("img")).toHaveAttribute(
+      "src",
+      "/docs-assets/media/unsplash-photos-hero.webp",
+    )
     await expect(screen.getByText("October 18, 2026")).toBeVisible()
-    await expect(screen.getByRole("link", { name: "All docs" })).toHaveAttribute("href", "/docs")
+    await expect(screen.getByRole("link", { name: "See all" })).toHaveAttribute(
+      "href",
+      "/docs/whats-new",
+    )
 
     await userEvent.click(item)
     await expect(args.onOpen).toHaveBeenCalledWith("docs:unsplash-photos")

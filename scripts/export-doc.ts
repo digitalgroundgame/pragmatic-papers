@@ -1,13 +1,17 @@
 import "dotenv/config"
 import { existsSync } from "node:fs"
-import { copyFile, mkdir, writeFile } from "node:fs/promises"
+import { copyFile, mkdir, readdir, rm, writeFile } from "node:fs/promises"
 import path from "node:path"
 
 import config from "@payload-config"
 import { getPayload } from "payload"
+import { format, resolveConfig } from "prettier"
 
+import { formatDocFile } from "@/plugins/docs/docFile"
+import { contentToMarkdown, docsEditorConfig } from "@/plugins/docs/markdown"
+import { packMedia, type MediaRef } from "@/plugins/docs/repoDoc"
+import { HOME_DOC_SLUG } from "@/plugins/docs/sections"
 import { DOCS_DIR } from "@/plugins/docs/syncDocs"
-import { packMedia, type RepoDoc } from "@/plugins/docs/repoDoc"
 
 /** Copies the original upload: from public/media with local storage, otherwise from its URL. */
 async function saveMediaFile(
@@ -27,9 +31,11 @@ async function saveMediaFile(
 }
 
 /**
- * `pnpm docs:export <slug>`: writes a doc written in the admin into the repo, at
- * `src/docs/<slug>/doc.json` with the files it shows beside it, so the release that ships the
- * feature ships its doc to every site. Reads the latest draft, from the database in `.env`.
+ * `pnpm docs:export <slug>`: writes a doc written in the admin into the repo, as
+ * `src/docs/<section>/<slug>.md` with the files it shows beside it (each named for the doc, the
+ * hero image `<slug>-hero`), so the release that ships the feature ships its doc to every site.
+ * Reads the latest draft, from the database in `.env`. A doc in another section's folder is
+ * moved.
  */
 export async function main(slug: string | undefined): Promise<void> {
   if (!slug) throw new Error("Usage: pnpm docs:export <slug>")
@@ -49,23 +55,53 @@ export async function main(slug: string | undefined): Promise<void> {
     if (!doc) throw new Error(`No doc with the slug "${slug}"`)
     if (!doc.publishedAt) throw new Error(`"${slug}" has no published date yet`)
 
-    const { content, media } = packMedia(slug, doc.content)
-    const repoDoc: RepoDoc = {
-      title: doc.title,
-      summary: doc.summary,
-      publishedAt: doc.publishedAt.slice(0, 10),
-      ...(doc.audience?.length ? { audience: doc.audience } : {}),
-      ...(doc.showTableOfContents === false ? { showTableOfContents: false } : {}),
-      content,
-    }
+    const hero = doc.heroImage
+    const heroName =
+      hero && typeof hero === "object"
+        ? `${slug}-hero${path.extname(hero.filename ?? ".webp")}`
+        : null
+    const names = new Map(hero && typeof hero === "object" && heroName ? [[hero.id, heroName]] : [])
+    const { content: packed, media } = packMedia(
+      slug,
+      { heroImage: doc.heroImage, content: doc.content },
+      names,
+    )
+    const { heroImage, content } = packed as { heroImage?: MediaRef | null; content: unknown }
+    const body = contentToMarkdown(content, docsEditorConfig(payload.config))
 
-    const folder = path.join(DOCS_DIR, slug)
+    const markdown = formatDocFile({
+      meta: {
+        title: doc.title,
+        ...(doc.navTitle ? { navTitle: doc.navTitle } : {}),
+        summary: doc.summary,
+        publishedAt: doc.publishedAt.slice(0, 10),
+        ...(doc.revisedAt ? { revisedAt: doc.revisedAt.slice(0, 10) } : {}),
+        ...(heroImage ? { heroImage: heroImage.$media, heroAlt: heroImage.alt ?? "" } : {}),
+        ...(doc.audience?.length ? { audience: doc.audience } : {}),
+        ...(doc.showTableOfContents === false ? { showTableOfContents: false } : {}),
+      },
+      body,
+    })
+
+    // The home doc sits at the top of src/docs/, outside the sections.
+    const home = slug === HOME_DOC_SLUG
+    const folder = home ? DOCS_DIR : path.join(DOCS_DIR, doc.section)
     await mkdir(folder, { recursive: true })
-    await writeFile(path.join(folder, "doc.json"), `${JSON.stringify(repoDoc, null, 2)}\n`)
+    for (const other of await readdir(DOCS_DIR, { withFileTypes: true })) {
+      if (other.isDirectory() && (home || other.name !== doc.section)) {
+        await rm(path.join(DOCS_DIR, other.name, `${slug}.md`), { force: true })
+      }
+    }
+    // As the commit hook would write it.
+    const docPath = path.join(folder, `${slug}.md`)
+    const prettier = await resolveConfig(docPath)
+    await writeFile(docPath, await format(markdown, { ...prettier, parser: "markdown" }))
     for (const [file, item] of media) {
       await saveMediaFile(item, path.join(folder, file))
     }
-    console.warn(`✔ Wrote ${path.relative(process.cwd(), folder)} (${media.size} files)`)
+    console.warn(
+      `✔ Wrote ${path.relative(process.cwd(), path.join(folder, `${slug}.md`))} (${media.size} files)`,
+    )
   } finally {
     await payload.db.destroy?.()
   }

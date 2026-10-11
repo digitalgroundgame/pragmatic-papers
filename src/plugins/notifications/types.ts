@@ -22,6 +22,8 @@ export interface NotificationItem {
   href: string
   /** ISO date-time it happened or was published. */
   date: string
+  /** A thumbnail shown beside the title. */
+  image?: { url: string; alt: string }
 }
 
 /**

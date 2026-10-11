@@ -12,17 +12,19 @@ beforeEach(() => vi.stubEnv("SERVER_URL", `${SITE_URL}/`))
 afterEach(() => vi.unstubAllEnvs())
 
 describe("/docs/sitemap.xml", () => {
-  it("lists the /docs index, as fresh as its newest doc, and every doc with a slug", async () => {
+  it("lists every doc with a slug, the home doc at /docs, and What's new as fresh as the newest", async () => {
     queryPublishedDocs.mockResolvedValue([
+      { slug: "home", updatedAt: "2026-10-01T00:00:00.000Z" },
       { slug: "experiments", updatedAt: "2026-10-02T00:00:00.000Z" },
       { slug: null, updatedAt: "2026-10-05T00:00:00.000Z" },
       { slug: "unsplash-photos", updatedAt: "2026-10-08T00:00:00.000Z" },
     ])
 
     expect(await sitemap()).toEqual([
-      { url: `${SITE_URL}/docs`, lastModified: "2026-10-08T00:00:00.000Z" },
+      { url: `${SITE_URL}/docs`, lastModified: "2026-10-01T00:00:00.000Z" },
       { url: `${SITE_URL}/docs/experiments`, lastModified: "2026-10-02T00:00:00.000Z" },
       { url: `${SITE_URL}/docs/unsplash-photos`, lastModified: "2026-10-08T00:00:00.000Z" },
+      { url: `${SITE_URL}/docs/whats-new`, lastModified: "2026-10-08T00:00:00.000Z" },
     ])
   })
 

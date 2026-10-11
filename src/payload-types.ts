@@ -1416,9 +1416,17 @@ export interface Doc {
   id: number;
   title: string;
   /**
+   * A short name for the docs sidebar, like "Footnotes". Left empty, the sidebar shows the title.
+   */
+  navTitle?: string | null;
+  /**
    * One or two sentences. The help bell shows it under the title.
    */
   summary: string;
+  /**
+   * Shown above the doc's title, beside it in the help bell, and in link previews. Optional.
+   */
+  heroImage?: (number | null) | Media;
   content: {
     root: {
       type: string;
@@ -1439,6 +1447,14 @@ export interface Doc {
    */
   publishedAt: string;
   /**
+   * The day the doc last changed in a way readers should know about, shown beside its date. The bell still lists it under the published date.
+   */
+  revisedAt?: string | null;
+  /**
+   * Where the doc sits in the sidebar at /docs.
+   */
+  section: 'getting-started' | 'writing' | 'blocks' | 'media' | 'site';
+  /**
    * Who the help bell tells. Empty means all staff; admins see every doc.
    */
   audience?: ('admin' | 'chief-editor' | 'editor' | 'writer' | 'narrator')[] | null;
@@ -1447,7 +1463,7 @@ export interface Doc {
    */
   showTableOfContents?: boolean | null;
   /**
-   * This doc ships with the code (src/docs/), so it can't be edited here. Change it locally and export it with pnpm docs:export.
+   * This doc ships with the code, so it can't be edited here. Change its Markdown file in src/docs/ instead.
    */
   sourceHash?: string | null;
   /**
@@ -2447,9 +2463,13 @@ export interface FormSubmissionsSelect<T extends boolean = true> {
  */
 export interface DocsSelect<T extends boolean = true> {
   title?: T;
+  navTitle?: T;
   summary?: T;
+  heroImage?: T;
   content?: T;
   publishedAt?: T;
+  revisedAt?: T;
+  section?: T;
   audience?: T;
   showTableOfContents?: T;
   sourceHash?: T;

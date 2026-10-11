@@ -7,12 +7,14 @@ const { queryPublishedDocs } = vi.hoisted(() => ({ queryPublishedDocs: vi.fn() }
 vi.mock("../queries", () => ({ queryPublishedDocs }))
 
 import { docsNotifications } from "../notifications"
+import { docThumbnail } from "../thumbnail"
 
 const payload = {} as Payload
 const user = (roles: User["roles"]) => ({ id: 1, roles }) as User
 
 // Newest first, as queryPublishedDocs returns them.
 const docs = [
+  { id: 3, slug: "home", title: "Docs home", summary: "c", publishedAt: "2026-10-20" },
   {
     id: 2,
     slug: "editors",
@@ -21,7 +23,19 @@ const docs = [
     publishedAt: "2026-10-19",
     audience: ["editor"],
   },
-  { id: 1, slug: "everyone", title: "For all staff", summary: "a", publishedAt: "2026-10-18" },
+  {
+    id: 1,
+    slug: "everyone",
+    title: "For all staff",
+    summary: "a",
+    publishedAt: "2026-10-18",
+    heroImage: {
+      id: 7,
+      alt: "The bell",
+      url: "/api/media/file/bell.png",
+      sizes: { thumbnail: { url: "/api/media/file/bell-300x158.webp" } },
+    },
+  },
 ]
 
 beforeEach(() => {
@@ -29,12 +43,17 @@ beforeEach(() => {
 })
 
 describe("docsNotifications", () => {
+  it("leaves out the docs' home page", async () => {
+    const items = await docsNotifications().itemsFor({ payload, user: user(["admin"]) })
+    expect(items.map((item) => item.id)).not.toContain("home")
+  })
+
   const source = docsNotifications()
   const titlesFor = async (roles: User["roles"]) =>
     (await source.itemsFor({ payload, user: user(roles) })).map((item) => item.title)
 
-  it("links each doc and the /docs index", async () => {
-    expect(source.index).toEqual({ label: "All docs", href: "/docs" })
+  it("links each doc and What's new", async () => {
+    expect(source.index).toEqual({ label: "See all", href: "/docs/whats-new" })
     const [item] = await source.itemsFor({ payload, user: user(["writer"]) })
     expect(item).toEqual({
       id: "everyone",
@@ -42,7 +61,17 @@ describe("docsNotifications", () => {
       summary: "a",
       href: "/docs/everyone",
       date: "2026-10-18",
+      image: { url: "/api/media/file/bell-300x158.webp", alt: "The bell" },
     })
+  })
+
+  it("falls back to the hero image itself where it has no thumbnail size, and to none", async () => {
+    expect(docThumbnail({ id: 7, alt: null, url: "/api/media/file/bell.svg" } as never)).toEqual({
+      url: "/api/media/file/bell.svg",
+      alt: "",
+    })
+    expect(docThumbnail(7)).toBeUndefined()
+    expect(docThumbnail(null)).toBeUndefined()
   })
 
   it("shows a doc with an audience only to those roles, and to admins", async () => {

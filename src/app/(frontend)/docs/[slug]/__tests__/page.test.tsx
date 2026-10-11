@@ -2,17 +2,17 @@ import { cleanup, render, screen, within } from "@testing-library/react"
 import type React from "react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
-const { queries, draft, experiment } = vi.hoisted(() => ({
+const { queries, draft, experiments } = vi.hoisted(() => ({
   queries: { queryDocBySlug: vi.fn(), queryPublishedDocs: vi.fn() },
   draft: { isEnabled: false },
-  experiment: { enabled: true },
+  experiments: {} as Record<string, boolean>,
 }))
 
 vi.mock("server-only", () => ({}))
 vi.mock("@/plugins/docs/queries", () => queries)
 vi.mock("next/headers", () => ({ draftMode: async () => draft }))
 vi.mock("@/globals/SiteSettings/isExperimentEnabled", () => ({
-  isExperimentEnabled: async () => experiment.enabled,
+  isExperimentEnabled: async (name: string) => experiments[name] ?? true,
 }))
 vi.mock("@/components/PayloadRedirects", () => ({
   PayloadRedirects: ({ url }: { url: string }) => <div data-testid="redirects" data-url={url} />,
@@ -20,6 +20,9 @@ vi.mock("@/components/PayloadRedirects", () => ({
 vi.mock("next/navigation", () => ({
   permanentRedirect: (url: string) => {
     throw new Error(`redirect:${url}`)
+  },
+  notFound: () => {
+    throw new Error("notFound")
   },
 }))
 vi.mock("@/components/LivePreviewListener", () => ({
@@ -75,7 +78,7 @@ const renderPage = async (slug?: string) => {
 beforeEach(() => {
   vi.clearAllMocks()
   draft.isEnabled = false
-  experiment.enabled = true
+  for (const name of Object.keys(experiments)) delete experiments[name]
   queries.queryDocBySlug.mockResolvedValue(doc)
   queries.queryPublishedDocs.mockResolvedValue([{ ...doc, section: "site" }])
 })
@@ -150,7 +153,7 @@ describe("DocPage", () => {
     ["the experiment is off", doc, false],
   ])("has no table of contents when %s", async (_, value, enabled) => {
     queries.queryDocBySlug.mockResolvedValue(value)
-    experiment.enabled = enabled
+    experiments.tableOfContents = enabled
     await renderPage()
     expect(screen.queryByRole("button", { name: /contents/i })).not.toBeInTheDocument()
     expect(screen.queryByRole("complementary")).not.toBeInTheDocument()
@@ -210,6 +213,19 @@ describe("DocPage", () => {
     expect(screen.queryByRole("link", { name: "Show me" })).not.toBeInTheDocument()
   })
 
+  it("has no Show me while the tours experiment is off", async () => {
+    queries.queryDocBySlug.mockResolvedValue({ ...doc, tour: "articles" })
+    experiments.tours = false
+    await renderPage()
+    expect(screen.queryByRole("link", { name: "Show me" })).not.toBeInTheDocument()
+  })
+
+  it("is not found while the docs experiment is off", async () => {
+    experiments.docs = false
+    await expect(renderPage()).rejects.toThrow("notFound")
+    expect(queries.queryDocBySlug).not.toHaveBeenCalled()
+  })
+
   it("listens for live preview in draft mode", async () => {
     draft.isEnabled = true
     await renderPage()
@@ -223,6 +239,11 @@ describe("generateMetadata", () => {
     expect(meta.title).toBe("Switch beta features on — Pragmatic Papers")
     expect(meta.description).toBe("Experiments, per site.")
     expect(meta.alternates?.canonical).toMatch(/\/docs\/experiments$/)
+  })
+
+  it("is empty while the docs experiment is off", async () => {
+    experiments.docs = false
+    await expect(generateMetadata(args())).resolves.toEqual({})
   })
 
   it("is empty for an unknown slug", async () => {

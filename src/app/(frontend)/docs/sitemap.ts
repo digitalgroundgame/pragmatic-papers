@@ -1,5 +1,6 @@
 import type { MetadataRoute } from "next"
 
+import { isExperimentEnabled } from "@/globals/SiteSettings/isExperimentEnabled"
 import { queryPublishedDocs } from "@/plugins/docs/queries"
 import { docPath, WHATS_NEW_PATH } from "@/plugins/docs/sections"
 import { getSiteURL } from "@/utilities/getURL"
@@ -13,6 +14,7 @@ export const dynamic = "force-dynamic"
  * newest doc.
  */
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+  if (!(await isExperimentEnabled("docs"))) return []
   const siteUrl = getSiteURL().replace(/\/$/, "")
   const docs = await queryPublishedDocs()
   const newest = docs

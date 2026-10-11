@@ -1,3 +1,4 @@
+import type { Experiment } from "@/globals/SiteSettings/isExperimentEnabled"
 import { revalidateRedirects } from "@/hooks/revalidateRedirects"
 import { docsPlugin } from "@/plugins/docs"
 import { docsNotifications } from "@/plugins/docs/notifications"
@@ -25,6 +26,11 @@ import type { SerializedEditorState } from "@payloadcms/richtext-lexical/lexical
 import { convertLexicalToPlaintext } from "@payloadcms/richtext-lexical/plaintext"
 import { s3Storage } from "@payloadcms/storage-s3"
 import { type Payload, type Plugin } from "payload"
+
+// Reads the switch in Site Settings when called. Imported then, not here: the
+// Settings global reaches the Payload config, which imports this file.
+const experiment = (name: Experiment) => async (): Promise<boolean> =>
+  (await import("@/globals/SiteSettings/isExperimentEnabled")).isExperimentEnabled(name)
 
 type SeoDoc = Volume | Article | Page | Topic | Interactive
 
@@ -316,6 +322,9 @@ export const plugins: Plugin[] = [
     clientUploads: true,
   }),
   docsPlugin(),
-  notificationsPlugin({ sources: [docsNotifications()] }),
-  toursPlugin(),
+  notificationsPlugin({
+    sources: [docsNotifications({ enabled: experiment("docs"), tours: experiment("tours") })],
+    enabled: experiment("notifications"),
+  }),
+  toursPlugin({ enabled: experiment("tours") }),
 ]

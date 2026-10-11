@@ -3,10 +3,10 @@ import { describe, expect, it } from "vitest"
 
 import { toursPlugin } from ".."
 
-const PROVIDER = "@/plugins/tours/TourProvider#TourProvider"
+const PROVIDER = "@/plugins/tours/TourGate#TourGate"
 
 describe("toursPlugin", () => {
-  it("adds the tour provider to the admin", () => {
+  it("adds the tours' provider to the admin", () => {
     const config = toursPlugin()({} as Config) as Config
     expect(config.admin?.components?.providers).toEqual([PROVIDER])
   })
@@ -18,5 +18,11 @@ describe("toursPlugin", () => {
     expect(config.admin?.user).toBe("users")
     expect(config.admin?.components?.header).toEqual(["@/h#H"])
     expect(config.admin?.components?.providers).toEqual(["@/other#Other", PROVIDER])
+  })
+
+  it("keeps its options in the config's custom, beside what's already there", () => {
+    const enabled = async () => false
+    const config = toursPlugin({ enabled })({ custom: { other: 1 } } as unknown as Config) as Config
+    expect(config.custom).toEqual({ other: 1, tours: { enabled } })
   })
 })

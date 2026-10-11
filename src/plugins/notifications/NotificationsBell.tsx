@@ -19,6 +19,7 @@ export async function NotificationsBell({ payload, user }: ServerProps): Promise
   const options = payload.config.custom?.notifications as NotificationsOptions | undefined
   const sources = options?.sources ?? []
   if (sources.length === 0) return null
+  if (options?.enabled && !(await options.enabled(payload))) return null
 
   const [lists, preferences] = await Promise.all([
     Promise.all(

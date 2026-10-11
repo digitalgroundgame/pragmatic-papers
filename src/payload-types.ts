@@ -2614,6 +2614,18 @@ export interface SiteSetting {
      */
     interactives?: boolean | null;
     /**
+     * The help docs at /docs, their sitemap, and their items in the notifications bell. Staff can write docs in the admin either way.
+     */
+    docs?: boolean | null;
+    /**
+     * The bell beside the avatar in the admin header.
+     */
+    notifications?: boolean | null;
+    /**
+     * Guided tours of the admin, and the Show me buttons that start them in the bell and on help docs.
+     */
+    tours?: boolean | null;
+    /**
      * The table of contents in an article's sidebar and its hero button, on articles with “Show table of contents” ticked.
      */
     tableOfContents?: boolean | null;
@@ -2776,6 +2788,9 @@ export interface SiteSettingsSelect<T extends boolean = true> {
     | {
         feed?: T;
         interactives?: T;
+        docs?: T;
+        notifications?: T;
+        tours?: T;
         tableOfContents?: T;
       };
   updatedAt?: T;

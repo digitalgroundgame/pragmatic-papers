@@ -24,10 +24,14 @@ const source = (slug: string, titles: string[], index = true): NotificationSourc
   ),
 })
 
-const fakePayload = (sources: NotificationSource[], preference?: unknown) => {
+const fakePayload = (
+  sources: NotificationSource[],
+  preference?: unknown,
+  enabled?: () => Promise<boolean>,
+) => {
   const find = vi.fn(async () => ({ docs: preference ? [{ value: preference }] : [] }))
   const payload = {
-    config: { custom: { notifications: { sources } } },
+    config: { custom: { notifications: { sources, enabled } } },
     find,
     logger: { error: vi.fn() },
   } as unknown as Payload
@@ -53,6 +57,20 @@ describe("NotificationsBell", () => {
     expect(await NotificationsBell({ payload } as unknown as ServerProps)).toBeNull()
     const empty = fakePayload([]).payload
     expect(await NotificationsBell({ payload: empty, user } as unknown as ServerProps)).toBeNull()
+  })
+
+  it("renders nothing while switched off, without asking its sources", async () => {
+    const docs = source("docs", ["Alpha"])
+    const { payload, find } = fakePayload([docs], undefined, async () => false)
+    expect(await NotificationsBell({ payload, user } as unknown as ServerProps)).toBeNull()
+    expect(docs.itemsFor).not.toHaveBeenCalled()
+    expect(find).not.toHaveBeenCalled()
+  })
+
+  it("shows while switched on", async () => {
+    const { payload } = fakePayload([source("docs", ["Alpha"])], undefined, async () => true)
+    await renderBell(payload)
+    expect(screen.getByRole("button", { name: /^Notifications/ })).toBeInTheDocument()
   })
 
   it("counts what the user hasn't read, from their saved preference", async () => {

@@ -213,6 +213,14 @@ offers it as **Show me** beside **Read more** (any `NotificationItem` can, with
 `showMe`), as does the doc's page. After changing a screen a tour points at, run
 the tour locally.
 
+The three plugins are experiments (`docs`, `notifications`, `tours` in Settings),
+switched from `src/plugins/index.ts` through each plugin's `enabled` option, so
+the plugins never read Settings themselves. With `docs` off, `/docs` pages 404,
+their sitemap is empty and the bell has no docs; the Docs collection and the
+deploy's docs sync carry on, so docs are ready when it's switched on. With
+`notifications` off there's no bell; with `tours` off, `TourGate` doesn't mount
+the tour provider and no Show me button appears.
+
 The bell is built from the site's shadcn components (`src/components/ui/`).
 Payload 3 has no Tailwind of its own, so `NotificationsMenu.css` brings in
 Tailwind's theme and only the utilities those files use, without preflight, and

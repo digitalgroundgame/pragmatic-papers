@@ -1,9 +1,20 @@
 import { cleanup, render, screen, within } from "@testing-library/react"
 import type React from "react"
-import { afterEach, describe, expect, it, vi } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
-const { queryPublishedDocs } = vi.hoisted(() => ({ queryPublishedDocs: vi.fn() }))
+const { queryPublishedDocs, experiment } = vi.hoisted(() => ({
+  queryPublishedDocs: vi.fn(),
+  experiment: { enabled: true },
+}))
 vi.mock("@/plugins/docs/queries", () => ({ queryPublishedDocs }))
+vi.mock("@/globals/SiteSettings/isExperimentEnabled", () => ({
+  isExperimentEnabled: async () => experiment.enabled,
+}))
+vi.mock("next/navigation", () => ({
+  notFound: () => {
+    throw new Error("notFound")
+  },
+}))
 
 import WhatsNewPage, { generateMetadata } from "../page"
 
@@ -29,6 +40,9 @@ const docs = [
   },
 ]
 
+beforeEach(() => {
+  experiment.enabled = true
+})
 afterEach(cleanup)
 
 describe("WhatsNewPage", () => {
@@ -73,8 +87,14 @@ describe("WhatsNewPage", () => {
     expect(screen.queryByRole("heading", { level: 2 })).not.toBeInTheDocument()
   })
 
-  it("has a canonical URL and title", () => {
-    const meta = generateMetadata()
+  it("is not found while the docs experiment is off", async () => {
+    experiment.enabled = false
+    await expect(WhatsNewPage()).rejects.toThrow("notFound")
+    await expect(generateMetadata()).resolves.toEqual({})
+  })
+
+  it("has a canonical URL and title", async () => {
+    const meta = await generateMetadata()
     expect(meta.title).toBe("What's new — Pragmatic Papers docs")
     expect(meta.alternates?.canonical).toMatch(/\/docs\/whats-new$/)
   })

@@ -47,6 +47,8 @@ export interface NotificationSource {
 
 export interface NotificationsOptions {
   sources: NotificationSource[]
+  /** Whether the bell shows, checked on each admin page (e.g. a beta switch). Always, when unset. */
+  enabled?: (payload: Payload) => boolean | Promise<boolean>
 }
 
 /** What the bell keeps in each user's Payload preferences. */

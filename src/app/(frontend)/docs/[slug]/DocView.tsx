@@ -32,12 +32,14 @@ import { buildBreadcrumbJsonLd } from "@/utilities/structuredData"
 import { SquarePen } from "lucide-react"
 import type { Metadata } from "next"
 import { draftMode } from "next/headers"
+import { notFound } from "next/navigation"
 import React from "react"
 
 import { DocDates } from "./DocDates"
 
 /** A doc's title, summary, canonical URL and hero image for search and link previews. */
 export async function docMetadata(slug: string): Promise<Metadata | null> {
+  if (!(await isExperimentEnabled("docs"))) return null
   const doc = await queryDocBySlug(slug)
   if (!doc) return null
 
@@ -69,6 +71,7 @@ interface DocViewProps {
  * wiki: /docs/<slug>, and the home doc at /docs.
  */
 export async function DocView({ slug, fallback }: DocViewProps): Promise<React.ReactNode> {
+  if (!(await isExperimentEnabled("docs"))) notFound()
   const { isEnabled: draft } = await draftMode()
   const url = docPath(slug)
   const [doc, docs] = await Promise.all([queryDocBySlug(slug), queryPublishedDocs()])
@@ -80,7 +83,7 @@ export async function DocView({ slug, fallback }: DocViewProps): Promise<React.R
   const showTableOfContents =
     doc.showTableOfContents !== false && (await isExperimentEnabled("tableOfContents"))
 
-  const tour = findTour(doc.tour)
+  const tour = (await isExperimentEnabled("tours")) ? findTour(doc.tour) : undefined
   const home = slug === HOME_DOC_SLUG
   const trail: Crumb[] = [
     { name: "Docs", path: "/docs" },

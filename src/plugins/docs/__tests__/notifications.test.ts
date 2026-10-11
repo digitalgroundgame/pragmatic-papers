@@ -90,6 +90,22 @@ describe("docsNotifications", () => {
     expect(missing).not.toHaveProperty("showMe")
   })
 
+  it("leaves out Show me while tours are off", async () => {
+    queryPublishedDocs.mockResolvedValue([{ ...docs[2], tour: "articles" }])
+    const tours = vi.fn(async () => false)
+    const [item] = await docsNotifications({ tours }).itemsFor({ payload, user: user(["writer"]) })
+    expect(item).not.toHaveProperty("showMe")
+    expect(tours).toHaveBeenCalledWith(payload)
+  })
+
+  it("shows nothing while docs are off, without querying", async () => {
+    const enabled = vi.fn(async () => false)
+    const items = await docsNotifications({ enabled }).itemsFor({ payload, user: user(["admin"]) })
+    expect(items).toEqual([])
+    expect(enabled).toHaveBeenCalledWith(payload)
+    expect(queryPublishedDocs).not.toHaveBeenCalled()
+  })
+
   it("shows nothing to readers, without querying", async () => {
     expect(await titlesFor(["member"])).toEqual([])
     expect(await titlesFor([])).toEqual([])

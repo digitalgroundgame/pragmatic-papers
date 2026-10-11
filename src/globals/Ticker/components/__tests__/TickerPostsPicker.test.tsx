@@ -37,7 +37,7 @@ describe("TickerPostsPicker", () => {
     setHidden(["https://bsky.app/profile/someone.bsky.social/post/old"])
     render(<TickerPostsPicker lists={[[bluesky], [x]]} />)
     const row = screen.getByRole("row", { name: /filibuster/ })
-    expect(row).toHaveTextContent("On the ticker")
+    expect(row).toHaveTextContent("Visible")
     fireEvent.click(within(row).getByRole("button", { name: /^Hide/ }))
     expect(addFieldRow).toHaveBeenCalledWith({
       path: "hidden",

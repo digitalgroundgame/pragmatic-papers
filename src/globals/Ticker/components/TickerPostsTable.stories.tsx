@@ -27,7 +27,7 @@ export const Default: Story = {
   play: async ({ args, canvasElement }) => {
     const canvas = within(canvasElement)
     const row = canvas.getByRole("row", { name: /filibuster/ })
-    await expect(row).toHaveTextContent("On the ticker")
+    await expect(row).toHaveTextContent("Visible")
     await userEvent.click(within(row).getByRole("button", { name: /^Hide/ }))
     await expect(args.onToggle).toHaveBeenCalledWith(tickerPosts[1], true)
   },

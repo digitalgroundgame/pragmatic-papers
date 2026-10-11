@@ -30,9 +30,9 @@ const SOURCE_LABELS: Record<TickerPost["source"], string> = { bluesky: "Bluesky"
 export type TickerPostStatus = "shown" | "hidden" | "waiting"
 
 const STATUS_LABELS: Record<TickerPostStatus, string> = {
-  shown: "On the ticker",
+  shown: "Visible",
   hidden: "Hidden",
-  waiting: "Not shown",
+  waiting: "Queued",
 }
 
 /**

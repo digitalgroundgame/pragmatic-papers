@@ -173,9 +173,9 @@ jobs:
           - 5432:5432
         options: >-
           --health-cmd "pg_isready -U postgres"
-          --health-interval 5s
+          --health-interval 2s
           --health-timeout 5s
-          --health-retries 10
+          --health-retries 30
 
     steps:
       - uses: actions/checkout@v7
@@ -186,6 +186,7 @@ jobs:
           source-commit: ${{ github.event.pull_request.head.sha || github.sha }}
           push-tag: ${{ needs.changes.outputs.preview == 'image' && format('{0}:{1}', needs.changes.outputs.image, needs.changes.outputs.tag) || '' }}
           registry-token: ${{ github.token }}
+          save-cache: ${{ github.event_name == 'push' }}
 
   # Hands the image E2E is testing to Coolify as the PR's preview, alongside
   # the tests rather than after them, as previews always have been. In the

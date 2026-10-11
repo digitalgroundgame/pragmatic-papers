@@ -93,19 +93,20 @@ deployment.
 
 ## How it works
 
-| Piece                                 | Why                                                                                                                                                                                                                            |
-| ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `scripts/build-worker.mjs`            | Builds with webpack (Turbopack copies the Payload config into every route group: 2.4×, ~20 MiB) and without `src/app/(payload)`, which it moves aside and puts back                                                            |
-| `withCloudflare.ts`                   | The Next config for the Worker: stubs, `pg` handling and traces, applied by `next.config.ts` when `OPENNEXT_BUILD=true`. Unit-tested in `__tests__/`                                                                           |
-| `worker.mjs`, `origin.ts`             | The Worker's entry: OpenNext's handler, behind one that sends `/admin`, `/api` and the admin's `/_next/static` files to `ORIGIN_URL`, reads media for next/image from there too, and points Payload at Hyperdrive. Unit-tested |
-| `open-next.config.ts`                 | OpenNext's caches: pages in R2 keyed by route, a Durable Object queue that re-renders pages past their `revalidate` time, and D1 for `revalidatePath` / `revalidateTag`                                                        |
-| `stubs/unavailable.ts`                | Stands in for `drizzle-kit/api`, `sharp` and `@google-analytics/data` (~17 MB with its gRPC stack), which only Coolify's code paths call. Calling one in the Worker throws                                                     |
-| `stubs/sentry.ts`                     | Stands in for `@sentry/nextjs` in the server code. The Worker has no `SENTRY_DSN`, so it reported nothing, and its Node SDK and OpenTelemetry were ~1.8 MiB gzipped of what every new isolate loads. The browser's SDK is kept |
-| `_headers`                            | Copied into `.open-next/assets` by the build: hashed `/_next/static` files are cached for a year, where Workers Static Assets would send `max-age=0, must-revalidate`                                                          |
-| `withImageCaching` in `origin.ts`     | Gives `/_next/image` responses the `Cache-Control` Next's optimizer sends on Coolify. OpenNext sets one only on images it can call immutable, which Payload's media never are                                                  |
-| `sharp.ts`                            | Payload's `sharp`, imported from here because Next keeps `sharp` external however it's aliased; the Worker build swaps this module instead                                                                                     |
-| `pg` external, `pg-cloudflare` traced | Bundled by webpack, `pg` would get `pg-cloudflare`'s empty Node build. Left external, OpenNext's esbuild bundles it with the `workerd` condition                                                                               |
-| `maxUses: 1` in `payload.config.ts`   | A Worker can't reuse a socket opened during another request; without it every request after the first hangs. Applies only when running in a Worker                                                                             |
+| Piece                                 | Why                                                                                                                                                                                                                                                                                                                                                                  |
+| ------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `scripts/build-worker.mjs`            | Builds with webpack (Turbopack copies the Payload config into every route group: 2.4×, ~20 MiB) and without `src/app/(payload)`, which it moves aside and puts back                                                                                                                                                                                                  |
+| `withCloudflare.ts`                   | The Next config for the Worker: stubs, `pg` handling and traces, applied by `next.config.ts` when `OPENNEXT_BUILD=true`. Unit-tested in `__tests__/`                                                                                                                                                                                                                 |
+| `worker.mjs`, `origin.ts`             | The Worker's entry: OpenNext's handler, behind one that sends `/admin`, `/api` and the admin's `/_next/static` files to `ORIGIN_URL`, reads media for next/image from there too, and points Payload at Hyperdrive. Unit-tested                                                                                                                                       |
+| `open-next.config.ts`                 | OpenNext's caches: pages in R2 keyed by route, a Durable Object queue that re-renders pages past their `revalidate` time, and D1 for `revalidatePath` / `revalidateTag`                                                                                                                                                                                              |
+| `stubs/unavailable.ts`                | Stands in for `drizzle-kit/api`, `sharp` and `@google-analytics/data` (~17 MB with its gRPC stack), which only Coolify's code paths call. Calling one in the Worker throws                                                                                                                                                                                           |
+| `stubs/sentry.ts`                     | Stands in for `@sentry/nextjs` in the server code. The Worker has no `SENTRY_DSN`, so it reported nothing, and its Node SDK and OpenTelemetry were ~1.8 MiB gzipped of what every new isolate loads. The browser's SDK is kept                                                                                                                                       |
+| `_headers`                            | Copied into `.open-next/assets` by the build: hashed `/_next/static` files are cached for a year, where Workers Static Assets would send `max-age=0, must-revalidate`                                                                                                                                                                                                |
+| `edgeCache.ts`, `CachedSite`          | Workers Cache, on the `CachedSite` entrypoint (`exports` in `wrangler.jsonc`). The default entrypoint is a gateway that sends it anonymous full pages and images only: logins, drafts, `Authorization`, Server Actions, OpenNext's revalidations and navigations (RSC) skip it. Only a 2xx or 3xx with caching headers is kept, and `/next/revalidate-all` purges it |
+| `withImageCaching` in `origin.ts`     | Gives `/_next/image` responses the `Cache-Control` Next's optimizer sends on Coolify. OpenNext sets one only on images it can call immutable, which Payload's media never are                                                                                                                                                                                        |
+| `sharp.ts`                            | Payload's `sharp`, imported from here because Next keeps `sharp` external however it's aliased; the Worker build swaps this module instead                                                                                                                                                                                                                           |
+| `pg` external, `pg-cloudflare` traced | Bundled by webpack, `pg` would get `pg-cloudflare`'s empty Node build. Left external, OpenNext's esbuild bundles it with the `workerd` condition                                                                                                                                                                                                                     |
+| `maxUses: 1` in `payload.config.ts`   | A Worker can't reuse a socket opened during another request; without it every request after the first hangs. Applies only when running in a Worker                                                                                                                                                                                                                   |
 
 ## Measured
 
@@ -134,13 +135,14 @@ deployment.
 - **Real latency and cold-start CPU**, measured on the staging Worker.
 - **Production's hostname** as a Custom Domain. Coolify then needs a hostname of its own
   for `ORIGIN_URL`, and the deploy checks' `/next/version` and `/next/purge-edge` have to
-  reach Coolify. The zone's Cache Rules don't apply to a Worker's responses, so today
-  every request runs the Worker, and a HIT is read from R2.
-- **An edge cache** in front of the Worker:
-  [Workers Cache](https://developers.cloudflare.com/workers/cache/) (`cache.enabled` in
-  `wrangler.jsonc`), which works on workers.dev too. Its key leaves out cookies, so draft
-  previews and `/admin` need an entrypoint with caching off in front of the cached one,
-  and `/next/revalidate-all` has to purge it.
+  reach Coolify.
+- **Navigations from the edge cache.** The zone's Cache Rules don't apply to a Worker,
+  so its edge cache is [Workers Cache](https://developers.cloudflare.com/workers/cache/)
+  (`edgeCache.ts`), which holds full pages and images but not navigations: Next varies
+  those on the router's state and redirects when `_rsc` doesn't match it. They come from
+  R2 (~130 ms), and dynamic pages' navigations render each time. With caching on, every
+  request is billed as a Worker request, static files included, and a request the gateway
+  hands to `CachedSite` counts twice.
 - **Error reporting**: the Worker sends nothing to Sentry. That would be
   `@sentry/cloudflare` around the fetch handler, with `SENTRY_DSN` as a secret, and the
   browser SDK's DSN at build time.

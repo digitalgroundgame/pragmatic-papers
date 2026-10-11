@@ -72,7 +72,9 @@ processes they start.
 - `pnpm payload generate:types` — regenerate Payload TypeScript types
 - `pnpm payload generate:importmap` — regenerate Payload import map
 - `pnpm payload migrate` — run database migrations
-- `pnpm payload migrate:create "migration_name"` — create a new migration. Pass a name as the first argument.
+- `pnpm migrate:create "migration_name"` — create a new migration. Pass a name as the first argument.
+- `pnpm migrate:index` — rewrite `src/migrations/index.ts` from the migration files, as `migrate:create` writes it. Two branches that each add a migration both append to that file; `.gitattributes` gives it a merge driver (`scripts/migrations-index.ts`, registered in your clone by `pnpm install`) that keeps both, so a merge doesn't stop there. CI's Static checks run `pnpm migrate:index --check`
+- `pnpm generate:importmap` after a merge conflict in `src/app/(payload)/admin/importMap.js`: it's generated, so regenerate it rather than resolving the conflict by hand
 
 ## Architecture
 
@@ -123,7 +125,7 @@ checkbox in the Settings global's `experiments` group
 so each has its own switches; PR previews start with staging's. To add one:
 
 1. Add a `checkbox` to the `experiments` group, `defaultValue: false`, then
-   run `pnpm payload generate:types` and `pnpm payload migrate:create`.
+   run `pnpm payload generate:types` and `pnpm migrate:create`.
 2. Turn it on in the seed's "Enabling experiments..." step
    (`src/endpoints/seed/index.ts`), so local dev shows it.
 3. Gate **every** entry point with
@@ -490,9 +492,9 @@ something. A new report joins that comment by registering a section in
   more than 10 kB against dev is flagged in the comment and with a warning on the
   PR's checks. It **only warns**; `pnpm analyze` shows which import brought the
   growth in.
-- **Lighthouse** (`scripts/lighthouse.ts`, run even when bundle size fails) runs on a PR only
-  once it has the `in review` label (six minutes on every push otherwise), and on every push to
-  `dev`. It seeds the E2E database, starts the PR's image and audits each page 5 times, comparing with the results the last
+- **Lighthouse** (`scripts/lighthouse.ts`, run even when bundle size fails) runs on a PR when
+  the `in review` label is added (six minutes on every push otherwise; the Claude review takes
+  the label off when it finishes), and on every push to `dev`. It seeds the E2E database, starts the PR's image and audits each page 5 times, comparing with the results the last
   push to `dev` uploaded. The CPU slowdown is calibrated to the runner's benchmark
   score, and Chrome can't reach any host but localhost. Dev's results come from
   another runner, so a metric is flagged only when every PR run is worse than
@@ -582,7 +584,8 @@ PRs into `dev` need the **Review acknowledged** check (`review-ack.yml`) on
 their final commit. A person gives it one of two ways: approving the PR with a
 GitHub review, or replying `/reviewed` or `LGTM` (any case) after a Claude
 review is on the PR:
-CI's (`claude-review.yml`, run by adding the "in review" label) or one
+CI's (`claude-review.yml`, run by adding the "in review" label, which the
+review removes when it's done, so adding it again asks for another) or one
 they posted with a local `/code-review --comment <pr>` (they need write access).
 Fixes pushed after a review need a new approval or reply, not a new
 review. **Never post `/reviewed` or `LGTM` (or anything starting with either),

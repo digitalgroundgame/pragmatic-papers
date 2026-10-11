@@ -47,7 +47,7 @@ RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
 
 # 3. Copy package.json and necessary post-install scripts.
 COPY package.json ./
-COPY scripts/install-fonts.ts scripts/ansi.mjs scripts/Inter-Bold.woff2 ./scripts/
+COPY scripts/install-fonts.ts scripts/ansi.mjs scripts/Inter-Bold.woff2 scripts/setup-git.mjs ./scripts/
 
 # A deploy must ship the real FKScreamer. Without this, an expired or unscoped
 # GH_FONT_READ degrades to the bundled Inter fallback and the build still succeeds —

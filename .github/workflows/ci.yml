@@ -141,7 +141,7 @@ jobs:
 
     steps:
       # Shallow clone: none of the static checks below read git history
-      # (check-migration-order sorts files by name; check-pending-migrations
+      # (migrations-index.ts sorts files by name; check-pending-migrations
       # replays migrations into a fresh database), so the default depth-1 fetch
       # is enough and skips pulling the full history.
       - uses: actions/checkout@v7
@@ -156,11 +156,17 @@ jobs:
       - name: Lint
         run: pnpm run lint:ci
 
+      # tsconfig includes .next/types: the route types (each page's params, props and
+      # exports) that next build used to check. The CI image's build skips its type
+      # pass, so generate them here for tsc to check instead.
+      - name: Generate route types
+        run: pnpm exec next typegen
+
       - name: Type check
         run: pnpm run check-types
 
-      - name: Check migration order
-        run: pnpm exec tsx scripts/check-migration-order.ts
+      - name: Check the migrations index
+        run: pnpm migrate:index --check
 
       - name: Log in to GHCR
         uses: docker/login-action@v4

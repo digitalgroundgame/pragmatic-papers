@@ -1,54 +1,81 @@
 import { execFileSync } from "node:child_process"
-import { mkdtempSync, readFileSync, writeFileSync } from "node:fs"
+import { mkdtempSync, readdirSync, readFileSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
+import { fileURLToPath } from "node:url"
 import { describe, expect, it } from "vitest"
-import { buildMigrationsIndex } from "../../scripts/migrations-index"
+import {
+  listedMigrations,
+  mergeMigrations,
+  migrationFiles,
+  renderMigrationsIndex,
+} from "../../scripts/migrations-index"
 
-const BASE = ["20250703_194534_init.ts", "20250703_194534_init.json", "index.ts"]
+const SCRIPT = fileURLToPath(new URL("../../scripts/migrations-index.ts", import.meta.url))
+const MIGRATIONS = fileURLToPath(new URL("../../src/migrations/", import.meta.url))
 
-describe("buildMigrationsIndex", () => {
+describe("migrationFiles", () => {
   it("lists only migration files, in timestamp order", () => {
-    const index = buildMigrationsIndex(["20261012_100000_b.ts", ...BASE, "20261011_120000_a.ts"])
-    expect(index).toMatchInlineSnapshot(`
-      "import * as migration_20250703_194534_init from "./20250703_194534_init"
-      import * as migration_20261011_120000_a from "./20261011_120000_a"
-      import * as migration_20261012_100000_b from "./20261012_100000_b"
+    expect(
+      migrationFiles([
+        "20261012_100000_b.ts",
+        "20261012_100000_b.json",
+        "index.ts",
+        "20261011_120000_a.ts",
+      ]),
+    ).toEqual(["20261011_120000_a", "20261012_100000_b"])
+  })
+})
 
-      // Written by scripts/migrations-index.ts (\`pnpm migrate:index\`), in timestamp order.
-      const MIGRATIONS = {
-        "20250703_194534_init": migration_20250703_194534_init,
-        "20261011_120000_a": migration_20261011_120000_a,
-        "20261012_100000_b": migration_20261012_100000_b,
-      }
-
-      export const migrations = Object.entries(MIGRATIONS).map(([name, migration]) => ({
-        up: migration.up,
-        down: migration.down,
-        name,
-      }))
-      "
-    `)
+describe("mergeMigrations", () => {
+  it("keeps what either side added, in order", () => {
+    expect(mergeMigrations(["a"], ["a", "c"], ["a", "b"])).toEqual(["a", "b", "c"])
   })
 
-  // What .gitattributes' `merge=union` does when two branches each add a migration.
-  it("keeps both branches' migrations whole through a union merge", () => {
-    const dir = mkdtempSync(join(tmpdir(), "migrations-index-"))
-    const write = (name: string, files: string[]) => {
-      writeFileSync(join(dir, name), buildMigrationsIndex(files))
-      return join(dir, name)
+  it("drops what either side removed", () => {
+    expect(mergeMigrations(["a", "b"], ["a"], ["a", "b", "c"])).toEqual(["a", "c"])
+  })
+})
+
+describe("renderMigrationsIndex", () => {
+  it("writes what Payload writes, as Prettier formats it: the committed index", async () => {
+    const index = await renderMigrationsIndex(migrationFiles(readdirSync(MIGRATIONS)))
+    expect(index).toBe(readFileSync(join(MIGRATIONS, "index.ts"), "utf8"))
+    expect(listedMigrations(index)).toEqual(migrationFiles(readdirSync(MIGRATIONS)))
+  })
+})
+
+// What .gitattributes' `merge=migrations-index` does when two branches each add a migration.
+describe("the merge driver", () => {
+  it("merges two branches that each add a migration without a conflict", async () => {
+    const repo = mkdtempSync(join(tmpdir(), "migrations-index-merge-"))
+    const git = (...args: string[]) =>
+      execFileSync("git", ["-c", "user.name=test", "-c", "user.email=test@example.com", ...args], {
+        cwd: repo,
+        stdio: "pipe",
+      })
+    const commit = async (names: string[], message: string) => {
+      writeFileSync(join(repo, "index.ts"), await renderMigrationsIndex(names))
+      git("add", ".")
+      git("commit", "-qm", message)
     }
-    const ours = write("ours.ts", [...BASE, "20261012_100000_ours.ts"])
-    const base = write("base.ts", BASE)
-    const theirs = write("theirs.ts", [...BASE, "20261011_120000_theirs.ts"])
-    execFileSync("git", ["merge-file", "--union", ours, base, theirs])
 
-    const merged = readFileSync(ours, "utf8")
-    const both = buildMigrationsIndex([
-      ...BASE,
-      "20261012_100000_ours.ts",
-      "20261011_120000_theirs.ts",
-    ])
-    expect(merged.split("\n").sort()).toEqual(both.split("\n").sort())
-  })
+    git("init", "-q", "-b", "main")
+    git("config", "merge.migrations-index.driver", `node ${SCRIPT} --merge %O %A %B`)
+    writeFileSync(join(repo, ".gitattributes"), "index.ts merge=migrations-index\n")
+    await commit(["20250703_194534_init"], "base")
+    git("checkout", "-qb", "theirs")
+    await commit(["20250703_194534_init", "20261011_120000_theirs"], "theirs")
+    git("checkout", "-q", "main")
+    await commit(["20250703_194534_init", "20261012_100000_ours"], "ours")
+    git("merge", "-q", "--no-edit", "theirs")
+
+    expect(readFileSync(join(repo, "index.ts"), "utf8")).toBe(
+      await renderMigrationsIndex([
+        "20250703_194534_init",
+        "20261011_120000_theirs",
+        "20261012_100000_ours",
+      ]),
+    )
+  }, 30_000)
 })

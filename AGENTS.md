@@ -72,8 +72,8 @@ processes they start.
 - `pnpm payload generate:types` — regenerate Payload TypeScript types
 - `pnpm payload generate:importmap` — regenerate Payload import map
 - `pnpm payload migrate` — run database migrations
-- `pnpm migrate:create "migration_name"` — create a new migration. Pass a name as the first argument. It also runs `pnpm migrate:index`, which rewrites `src/migrations/index.ts` from the migration files, one line per migration in timestamp order
-- `pnpm migrate:index` — rewrite `src/migrations/index.ts` from the migration files. Two branches that each add a migration both append to it; `.gitattributes` merges it with `union`, keeping both, and this puts them back in order. CI's Static checks run `pnpm migrate:index --check`
+- `pnpm migrate:create "migration_name"` — create a new migration. Pass a name as the first argument.
+- `pnpm migrate:index` — rewrite `src/migrations/index.ts` from the migration files, as `migrate:create` writes it. Two branches that each add a migration both append to that file; `.gitattributes` gives it a merge driver (`scripts/migrations-index.ts`, registered in your clone by `pnpm install`) that keeps both, so a merge doesn't stop there. CI's Static checks run `pnpm migrate:index --check`
 - `pnpm generate:importmap` after a merge conflict in `src/app/(payload)/admin/importMap.js`: it's generated, so regenerate it rather than resolving the conflict by hand
 
 ## Architecture

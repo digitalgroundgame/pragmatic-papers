@@ -38,7 +38,8 @@ export const tickerField: GroupField = {
       type: "number",
       defaultValue: 24,
       min: 0,
-      max: 168,
+      // Six days: the ticker names a later day by its weekday, which a week out would repeat today's.
+      max: 144,
       access: { update: adminFieldLevel },
       admin: {
         condition: whileOn,

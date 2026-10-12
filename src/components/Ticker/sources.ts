@@ -9,11 +9,13 @@ import { MAX_POSTS, type TickerBroadcast, type TickerPost } from "./items"
  * `TickerPost` (or `TickerBroadcast`), with how long its answer may be reused.
  */
 /**
- * Which channel and accounts to read, as set on the Integrations global. Empty falls back to
- * each connection's variable, then its default.
+ * Which channel and accounts to read, as set on the Integrations global, and how far ahead a
+ * scheduled stream shows, as set on the Header's ticker. Empty falls back to each connection's
+ * variable, then its default.
  */
 export interface TickerSettings {
   youtubeChannelIds?: string[] | null
+  youtubeUpcomingHours?: number | null
   blueskyHandles?: string[] | null
   xUsernames?: string[] | null
 }
@@ -62,6 +64,7 @@ export const broadcastSource: TickerSource<TickerBroadcast | null> = {
   async load(signal, settings) {
     const broadcast = await youtubeLive.currentBroadcast({
       channelIds: settings.youtubeChannelIds,
+      upcomingWithinHours: settings.youtubeUpcomingHours ?? undefined,
       signal,
     })
     if (!broadcast) return null

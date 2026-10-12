@@ -60,7 +60,13 @@ describe("TickerView", () => {
   })
 
   it("shows an upcoming broadcast with its start time in the paper's zone", () => {
-    render(<TickerView broadcast={upcomingBroadcast} posts={[]} />)
+    render(
+      <TickerView
+        broadcast={upcomingBroadcast}
+        posts={[]}
+        now={new Date("2026-10-07T16:00:00Z")}
+      />,
+    )
     const link = screen.getByRole("link")
     expect(link).toHaveTextContent("Upcoming")
     expect(within(link).getByText("7:00 p.m. ET")).toHaveAttribute(
@@ -69,5 +75,19 @@ describe("TickerView", () => {
     )
     expect(screen.queryByRole("checkbox")).not.toBeInTheDocument()
     expect(screen.getByRole("region")).not.toHaveAttribute("data-live")
+  })
+
+  it("puts the weekday before the start time when the broadcast isn't today", () => {
+    render(
+      <TickerView
+        broadcast={upcomingBroadcast}
+        posts={[]}
+        now={new Date("2026-10-05T16:00:00Z")}
+      />,
+    )
+    expect(screen.getByText("Wednesday 7:00 p.m. ET")).toHaveAttribute(
+      "dateTime",
+      upcomingBroadcast.startsAt,
+    )
   })
 })

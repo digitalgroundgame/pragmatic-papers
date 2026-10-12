@@ -113,6 +113,22 @@ describe("youtubeChannel", () => {
       expect(broadcast).toMatchObject({ videoId: "next", status: "upcoming" })
     })
 
+    it("takes the window from upcomingWithinHours, where 0 means live only", async () => {
+      configure()
+      const broadcasts = [
+        { id: "next", status: "upcoming" as const, scheduledStart: hoursFromNow(2) },
+      ]
+      expect(
+        await channel.currentBroadcast({ fetchImpl: youtube(broadcasts), upcomingWithinHours: 3 }),
+      ).toMatchObject({ videoId: "next" })
+      expect(
+        await channel.currentBroadcast({ fetchImpl: youtube(broadcasts), upcomingWithinHours: 1 }),
+      ).toBeNull()
+      expect(
+        await channel.currentBroadcast({ fetchImpl: youtube(broadcasts), upcomingWithinHours: 0 }),
+      ).toBeNull()
+    })
+
     it("returns null when nothing is live or about to be", async () => {
       configure()
       const fetchImpl = youtube([

@@ -2574,6 +2574,10 @@ export interface Header {
      */
     enabled?: boolean | null;
     /**
+     * How many hours before a scheduled YouTube stream starts that the ticker shows it. 0 shows only streams that are live.
+     */
+    upcomingHours?: number | null;
+    /**
      * Posts the ticker leaves out: the ones hidden above, or a link pasted from Bluesky or X. It's gone from the ticker as soon as you save.
      */
     hidden?:
@@ -2758,6 +2762,7 @@ export interface HeaderSelect<T extends boolean = true> {
     | T
     | {
         enabled?: T;
+        upcomingHours?: T;
         hidden?:
           | T
           | {

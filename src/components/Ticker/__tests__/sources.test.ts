@@ -93,7 +93,17 @@ describe("broadcastSource", () => {
       url: "https://www.youtube.com/watch?v=abc",
       startsAt: "2026-10-08T23:00:00Z",
     })
-    expect(current).toHaveBeenCalledWith({ channelIds: ["UC1", "UC2"], signal })
+    expect(current).toHaveBeenCalledWith({
+      channelIds: ["UC1", "UC2"],
+      upcomingWithinHours: undefined,
+      signal,
+    })
+  })
+
+  it("passes the Header's window for scheduled streams, 0 included", async () => {
+    const current = vi.spyOn(youtubeLive, "currentBroadcast").mockResolvedValue(null)
+    await broadcastSource.load(signal, { youtubeUpcomingHours: 0 })
+    expect(current).toHaveBeenCalledWith(expect.objectContaining({ upcomingWithinHours: 0 }))
   })
 
   it("is null when nothing is on air", async () => {

@@ -3,6 +3,7 @@ title: Hide a post from the ticker
 navTitle: Ticker
 summary: The ticker under the header shows our live broadcasts and latest posts. Editors can keep a post out of it by pasting its link.
 publishedAt: 2026-10-09
+revisedAt: 2026-10-18
 heroImage: ticker-hero.webp
 heroAlt: The ticker showing a live YouTube broadcast beside our latest posts
 audience: [editor]
@@ -33,3 +34,5 @@ Admins choose the YouTube channels, Bluesky accounts and X accounts in **System 
 ## Where it's switched on
 
 Admins switch the ticker on and off at the top of the same **Ticker** tab in **Site → Header**. Staging and the live site each have their own switch. While it's off, readers don't see it and the posts and hidden list are out of the way.
+
+Below the switch, **Scheduled streams** sets how many hours before a scheduled YouTube stream starts that the ticker shows it: 24 unless an admin changes it, up to 144 (six days). A stream on a later day shows its weekday before the time. Set it to 0 to show streams only while they're live.

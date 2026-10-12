@@ -17,19 +17,12 @@ import { LinkButton } from "@/components/ui/link-button"
 import { Separator } from "@/components/ui/separator"
 import { isExperimentEnabled } from "@/globals/SiteSettings/isExperimentEnabled"
 import { queryDocBySlug, queryPublishedDocs } from "@/plugins/docs/queries"
-import {
-  adjacentDocs,
-  docEditUrl,
-  docPath,
-  groupDocsBySection,
-  HOME_DOC_SLUG,
-} from "@/plugins/docs/sections"
+import { adjacentDocs, docPath, groupDocsBySection, HOME_DOC_SLUG } from "@/plugins/docs/sections"
 import { findTour, tourHref } from "@/plugins/tours"
 import { getMediaUrl } from "@/utilities/getMediaUrl"
 import { getSiteURL } from "@/utilities/getURL"
 import { mergeOpenGraph } from "@/utilities/mergeOpenGraph"
 import { buildBreadcrumbJsonLd } from "@/utilities/structuredData"
-import { SquarePen } from "lucide-react"
 import type { Metadata } from "next"
 import { draftMode } from "next/headers"
 import { notFound } from "next/navigation"
@@ -95,8 +88,6 @@ export async function DocView({ slug, fallback }: DocViewProps): Promise<React.R
     slug,
     docs.find((item) => item.slug === HOME_DOC_SLUG),
   )
-  // Only a doc from src/docs/ has a file to edit; one written in the admin is edited there.
-  const editUrl = doc.sourceHash ? docEditUrl(doc) : null
 
   return (
     <DocsLayout sections={sections} current={slug} breadcrumbs={trail}>
@@ -157,17 +148,6 @@ export async function DocView({ slug, fallback }: DocViewProps): Promise<React.R
           </div>
         </TableOfContentsProvider>
         <footer className="max-w-2xl space-y-6">
-          {editUrl && (
-            <a
-              href={editUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1.5 font-sans text-sm no-underline hover:underline"
-            >
-              <SquarePen aria-hidden="true" className="size-4" />
-              Edit this page on GitHub
-            </a>
-          )}
           <DocPager previous={previous} next={next} />
         </footer>
       </article>

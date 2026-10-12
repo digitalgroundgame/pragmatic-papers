@@ -38,7 +38,9 @@ describe("revalidateInteractive", () => {
     const doc = { id: 1, slug: "courts", _status: "published" as const }
     expect(revalidateInteractive(change(doc))).toBe(doc)
     expect(revalidateTag.mock.calls).toEqual(PAGE_TAGS)
-    expect(purgeEdgeCache).toHaveBeenCalledWith(expect.anything(), "interactive courts")
+    expect(purgeEdgeCache).toHaveBeenCalledWith(expect.anything(), "interactive courts", {
+      paths: ["/interactives/courts", "/interactives/sitemap.xml"],
+    })
   })
 
   it("leaves every cache alone for a draft of something never published", () => {

@@ -48,6 +48,21 @@ describe("warmPages", () => {
     )
   })
 
+  it("requests them from another URL when given one, and says where in the log", async () => {
+    const payload = fakePayload(null)
+
+    await warmPages(payload as never, {
+      fetchImpl: ok,
+      baseURL: "https://worker.example.com",
+      occasion: "on the Worker",
+    })
+
+    expect(requested(ok)).toEqual(WARM_PATHS.map((path) => `https://worker.example.com${path}`))
+    expect(payload.logger.info).toHaveBeenCalledWith(
+      `Warmed ${WARM_PATHS.length} pages on the Worker`,
+    )
+  })
+
   it(`stops at ${MAX_WARM_PAGES} pages`, async () => {
     const articles = Array.from({ length: 100 }, (_, i) => ({
       slug: `a${i}`,

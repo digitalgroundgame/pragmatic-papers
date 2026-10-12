@@ -26,13 +26,18 @@ describe("revalidateDoc", () => {
     expect(revalidateTag).toHaveBeenCalledWith("docs", "max")
     expect(revalidatePath).toHaveBeenCalledWith("/docs")
     expect(revalidatePath).toHaveBeenCalledWith("/docs/a")
-    expect(purgeEdgeCache).toHaveBeenCalledOnce()
+    expect(purgeEdgeCache).toHaveBeenCalledExactlyOnceWith({}, "doc a", {
+      paths: ["/docs"],
+    })
   })
 
   it("refreshes the old URL when a published doc's slug changes", () => {
     change({ slug: "b", _status: "published" }, { slug: "a", _status: "published" })
     expect(revalidatePath).toHaveBeenCalledWith("/docs/a")
     expect(revalidatePath).toHaveBeenCalledWith("/docs/b")
+    expect(purgeEdgeCache).toHaveBeenCalledWith({}, "doc b", {
+      paths: ["/docs"],
+    })
   })
 
   it("refreshes when a doc is unpublished", () => {
@@ -52,7 +57,9 @@ describe("revalidateDocDelete", () => {
   it("refreshes the index and the deleted doc's page", () => {
     revalidateDocDelete({ doc: { slug: "a" }, req: req() } as unknown as DeleteArgs)
     expect(revalidatePath).toHaveBeenCalledWith("/docs/a")
-    expect(purgeEdgeCache).toHaveBeenCalledOnce()
+    expect(purgeEdgeCache).toHaveBeenCalledExactlyOnceWith({}, "doc a deleted", {
+      paths: ["/docs"],
+    })
   })
 
   it("does nothing when told to", () => {

@@ -156,14 +156,20 @@ the repo as Markdown, a folder per sidebar section (`DOC_SECTIONS` in
 `src/plugins/docs/sections.ts`): `src/docs/<section>/<slug>.md`, with the pictures
 it shows beside it, each named for the doc (`<slug>-hero.webp`,
 `<slug>-drawer.webp`). Once per deploy,
-`/next/revalidate-all` (which `start.sh` calls when a deploy goes live) writes
-every doc into that site's database, published, converting the Markdown with the
-docs editor and uploading its pictures to Media (`syncRepoDocs`); a doc whose
-file and pictures hash the same as last time is skipped, and a doc the sync wrote
-before whose file has since been removed or renamed is deleted (docs written in
-a site's admin are never touched) (`DOCS_SYNC=false` turns
-the sync off, as the staging Worker does: it reads staging's database and has no
-`src/docs/` of its own). `pnpm dev:db-seed` syncs them locally.
+`/next/revalidate-all` (which `start.sh` calls when a deploy goes live) seeds that
+site's database with each doc whose slug it doesn't have yet, as a **draft**,
+converting the Markdown with the docs editor and uploading its pictures to Media
+(`syncRepoDocs`). Seeding is push only: a doc the site already has, draft or
+published, is never overwritten, and nothing is ever deleted, so a doc belongs to
+the site's editors from the moment it arrives. A draft is on neither `/docs` nor
+the bell until an editor publishes it. To change a doc on a site that has it, edit
+it in that site's admin; changing its file only changes what a site without it
+gets. Each doc it seeds, or finds already there, is recorded in Payload's
+key-value store (`markSeeded` in `src/utilities/seedOnce.ts`, which other
+deploy-seeded content uses too), so one an editor deletes stays deleted
+(`DOCS_SYNC=false` turns the sync off, as the staging Worker does: it reads
+staging's database and has no `src/docs/` of its own). `pnpm dev:db-seed` seeds
+them locally, published, deleted or not.
 
 A doc's front matter (`src/plugins/docs/docFile.ts`) holds its `title`, a
 `navTitle` of 24 characters at most for the sidebar, a `summary` of a sentence
@@ -188,11 +194,9 @@ it.
 
 The bell lists each doc under its `publishedAt`, newest first.
 
-The repo copy wins, so on a deployed site a doc from `src/docs/` is read-only in
-the admin (local dev leaves it editable, for `docs:export`); docs written in a
-site's admin stay editable there. Readers' pages and the bell read docs through
-`unstable_cache` with the `docs` tag, which saving a doc or a sync that changed
-one clears, along with the edge cache.
+Editors can change any doc in the admin, seeded or not. Readers' pages and the
+bell read docs through `unstable_cache` with the `docs` tag, which saving a doc
+clears, along with the edge cache.
 
 The bell beside the avatar in the admin header is the notifications plugin
 (`src/plugins/notifications/`). Features plug into it with a
@@ -210,9 +214,9 @@ the release that changes the screens they point at, since their steps name
 Payload's stable hooks (`#card-articles`, `.tabs-field__tabs`). A link from
 `tourHref(key)` (`/admin?tour=<key>`) starts one; the step it's on is kept in
 sessionStorage, so it carries on across page changes, and a step whose element
-never appears ends it quietly. A doc names its tour in `tour`, and the bell then
-offers it as **Show me** beside **Read more** (any `NotificationItem` can, with
-`showMe`), as does the doc's page. After changing a screen a tour points at, run
+never appears ends it quietly. A doc names its tour in `tour`, and once the doc
+is published the bell offers it as **Show me** beside **Read more** (any
+`NotificationItem` can, with `showMe`), as does the doc's page. After changing a screen a tour points at, run
 the tour locally.
 
 The three plugins are experiments (`docs`, `notifications`, `tours` in Settings),
@@ -241,14 +245,21 @@ after its own `revalidatePath` / `revalidateTag`, and only when
 one request, returns at once, and logs and skips when the `cloudflareCache`
 connection isn't configured. When the `cloudflareWorkerCache` connection is
 configured (`WORKER_URL`, on the Coolify app a Cloudflare Worker reads from), the
-same flush first clears that Worker's cache through its `/next/revalidate-all`.
+same flush first clears that Worker's cache through its `/next/revalidate-all`:
+only the `paths` the hook passes (the ones it revalidated) and, with `shared`, every
+page listing articles, volumes or contributors, or every page when it passes neither
+(the Worker tags each page it keeps, `edgeCacheTags`). Pass the paths a new hook
+revalidates. It then requests the same most-read pages through the Worker's URL in the background
+(`warmWorkerSoon`), since a Worker renders a page on a cold isolate in seconds.
 A new hook for content readers see should call it too.
 A deploy purges too: `start.sh` waits until the site's public URL is answered by the
 new container (`/next/purge-edge` names its `INSTANCE_ID`), so the old container can't
 refill the edge with the previous release's pages, then POSTs `/next/purge-edge`, which
 purges and then requests the most-read pages through the public URL (`warmPages`: the
 section indexes, feeds, sitemap index and the newest volume's articles) so the first readers
-find them cached. A warm-up failure only logs a warning.
+find them cached. A warm-up failure only logs a warning. A deploy leaves the Worker alone
+(`{ worker: false }`): its own workflow empties it, then POSTs the Coolify app's
+`/next/warm-worker` to warm it.
 
 ### Payload Plugins
 
@@ -304,7 +315,7 @@ ESLint enforces the import rules for every folder under `src/plugins/` (`eslint.
 - Code with a request (hooks, endpoints, access functions, validation, jobs) reads Payload from `req.payload`, inside the request's transaction. Code without one (pages, layouts, route handlers, `generateMetadata`) uses `getPayloadClient` from `@/data/payload`, never `getPayload({ config })`
 - Wrap data queries in `React.cache()` for per-request deduplication
 - Use `unstable_cache` with cache tags for long-lived caching (globals, redirects, sitemaps)
-- Sitemaps: each is a `sitemap.ts` in the folder of the section it lists (Next's metadata convention, served at `/<route>/sitemap.xml`, e.g. `docs/sitemap.ts`), added with a title to `SITEMAPS` in `(sitemaps)/sitemaps.ts`, which `/sitemap_index.xml`, robots.txt and the public `/feeds` page read (RSS feeds are listed there from `FEEDS` in `feeds/feeds.ts`). Pages live at the root, so theirs is the root `sitemap.ts` (`/sitemap.xml`), and the index of them all is `/sitemap_index.xml` (`(sitemaps)/sitemap_index.xml`), which robots.txt and Search Console point at; Google News reads `articles/news-sitemap.xml/route.ts`, a route handler (`sitemap.ts` can't write `news:` tags) listing only the last two days' articles, as Google asks. The old `/pages-sitemap.xml`, `/articles-sitemap.xml` and `/volumes-sitemap.xml` redirect permanently in `next.config.ts`
+- Sitemaps: each is a `sitemap.ts` in the folder of the section it lists (Next's metadata convention, served at `/<route>/sitemap.xml`, e.g. `docs/sitemap.ts`), added with a title to `SITEMAPS` in `(sitemaps)/sitemaps.ts`, which `/sitemap_index.xml`, robots.txt and the Feed list block read (that block, `blocks/FeedsList`, lists them and the RSS feeds in `FEEDS` from `feeds/feeds.ts` on the `/feeds` page, a Pages document editors own: a deploy creates it once per site as a draft for an editor to publish, then never touches it again, even once deleted (`STARTER_PAGES` in `collections/Pages/starterPages/`), and the seed creates it published locally). Pages live at the root, so theirs is the root `sitemap.ts` (`/sitemap.xml`), and the index of them all is `/sitemap_index.xml` (`(sitemaps)/sitemap_index.xml`), which robots.txt and Search Console point at; Google News reads `articles/news-sitemap.xml/route.ts`, a route handler (`sitemap.ts` can't write `news:` tags) listing only the last two days' articles, as Google asks. The old `/pages-sitemap.xml`, `/articles-sitemap.xml` and `/volumes-sitemap.xml` redirect permanently in `next.config.ts`
 - Always respect `draftMode()` — pass `draft` and `overrideAccess: draft` into Payload queries
 - Next.js 15: `params` and `searchParams` are `Promise`s (must be `await`ed)
 - Metadata: use `generateMeta({ doc, canonicalPath })` from `@/utilities/generateMeta`

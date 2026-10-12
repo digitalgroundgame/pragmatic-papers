@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest"
 
 import { integrationStatus } from "../../types"
 import { cloudflareWorker } from "../index"
+import { MAX_PURGE_PATHS } from "../worker"
 
 const worker = cloudflareWorker({
   id: "worker-example",
@@ -41,6 +42,30 @@ describe("cloudflareWorker", () => {
     const [url, init] = fetchImpl.mock.calls[0]!
     expect(String(url)).toBe("https://w.example.dev/next/revalidate-all")
     expect(init).toMatchObject({ method: "POST", headers: { Authorization: "Bearer s3cret" } })
+  })
+
+  it("names the paths to purge, and the shared pages, when given them", async () => {
+    vi.stubEnv("EXAMPLE_WORKER_URL", "https://w.example.dev")
+    vi.stubEnv("EXAMPLE_SECRET", "s3cret")
+    const fetchImpl = vi.fn().mockResolvedValue(Response.json({ revalidated: true }))
+
+    await worker.revalidateAll({ fetchImpl, paths: ["/articles/a", "/volumes/1"], shared: true })
+
+    const url = new URL(String(fetchImpl.mock.calls[0]![0]))
+    expect(url.pathname).toBe("/next/revalidate-all")
+    expect(url.searchParams.getAll("path")).toEqual(["/articles/a", "/volumes/1"])
+    expect(url.searchParams.get("shared")).toBe("1")
+  })
+
+  it(`purges everything rather than name more than ${MAX_PURGE_PATHS} paths`, async () => {
+    vi.stubEnv("EXAMPLE_WORKER_URL", "https://w.example.dev")
+    vi.stubEnv("EXAMPLE_SECRET", "s3cret")
+    const fetchImpl = vi.fn().mockResolvedValue(Response.json({ revalidated: true }))
+    const paths = Array.from({ length: MAX_PURGE_PATHS + 1 }, (_, i) => `/articles/a${i}`)
+
+    await worker.revalidateAll({ fetchImpl, paths, shared: true })
+
+    expect(String(fetchImpl.mock.calls[0]![0])).toBe("https://w.example.dev/next/revalidate-all")
   })
 
   it("throws with the status, never the secret, when the Worker refuses", async () => {

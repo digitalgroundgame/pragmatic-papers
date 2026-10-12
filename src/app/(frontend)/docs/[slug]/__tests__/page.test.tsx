@@ -177,16 +177,8 @@ describe("DocPage", () => {
     )
   })
 
-  it("links a doc from the repo to its file on GitHub", async () => {
+  it("has no GitHub link, even on a doc seeded from the repo: editors change it here", async () => {
     queries.queryDocBySlug.mockResolvedValue({ ...doc, section: "site", sourceHash: "abc" })
-    await renderPage()
-    expect(screen.getByRole("link", { name: "Edit this page on GitHub" })).toHaveAttribute(
-      "href",
-      "https://github.com/digitalgroundgame/pragmatic-papers/edit/dev/src/docs/site/experiments.md",
-    )
-  })
-
-  it("has no GitHub link for a doc written in the admin", async () => {
     await renderPage()
     expect(screen.queryByRole("link", { name: /GitHub/ })).not.toBeInTheDocument()
   })

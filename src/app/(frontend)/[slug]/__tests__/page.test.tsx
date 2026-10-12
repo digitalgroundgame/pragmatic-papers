@@ -2,9 +2,10 @@ import { cleanup, render, screen } from "@testing-library/react"
 import type React from "react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
-const { queryPageBySlug, jsonLd } = vi.hoisted(() => ({
+const { queryPageBySlug, jsonLd, renderBlocks } = vi.hoisted(() => ({
   queryPageBySlug: vi.fn(),
   jsonLd: vi.fn(),
+  renderBlocks: vi.fn(),
 }))
 
 vi.mock("next/headers", () => ({ draftMode: async () => ({ isEnabled: false }) }))
@@ -16,7 +17,12 @@ vi.mock("@/utilities/generateMeta", () => ({ generateMeta: vi.fn() }))
 vi.mock("@/endpoints/seed/home-static", () => ({ homeStatic: null }))
 // Children with their own tests render as markers: these tests are about the trail.
 vi.mock("@/heros/RenderHero", () => ({ RenderHero: () => null }))
-vi.mock("@/blocks/RenderBlocks", () => ({ RenderBlocks: () => null }))
+vi.mock("@/blocks/RenderBlocks", () => ({
+  RenderBlocks: ({ blocks }: { blocks: unknown }) => {
+    renderBlocks(blocks)
+    return null
+  },
+}))
 vi.mock("@/components/PayloadRedirects", () => ({ PayloadRedirects: () => null }))
 vi.mock("@/components/LivePreviewListener", () => ({ LivePreviewListener: () => null }))
 vi.mock("@/components/JsonLd", () => ({
@@ -71,5 +77,28 @@ describe("CMS page trail", () => {
     await renderPage()
     expect(queryPageBySlug).toHaveBeenCalledWith("home")
     expect(screen.queryByRole("navigation", { name: "breadcrumb" })).not.toBeInTheDocument()
+  })
+})
+
+describe("/feeds", () => {
+  it("has nothing to show until an editor publishes a page slugged feeds", async () => {
+    queryPageBySlug.mockResolvedValue(null)
+    await renderPage("feeds")
+    expect(renderBlocks).not.toHaveBeenCalled()
+    expect(screen.queryByRole("navigation", { name: "breadcrumb" })).not.toBeInTheDocument()
+  })
+
+  it("renders the layout of a page slugged feeds", async () => {
+    const layout = [{ blockType: "feedsList", list: "sitemaps", title: "Just sitemaps" }]
+    queryPageBySlug.mockResolvedValue({
+      slug: "feeds",
+      title: "Our feeds",
+      hero: { type: "none" },
+      layout,
+    })
+    await renderPage("feeds")
+    expect(queryPageBySlug).toHaveBeenCalledWith("feeds")
+    expect(renderBlocks).toHaveBeenCalledWith(layout)
+    expect(screen.getByRole("navigation", { name: "breadcrumb" })).toHaveTextContent("Our feeds")
   })
 })

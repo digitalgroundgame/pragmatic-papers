@@ -1,13 +1,15 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-const { revalidatePath, syncRepoDocs } = vi.hoisted(() => ({
+const { revalidatePath, syncRepoDocs, createMissingStarterPages } = vi.hoisted(() => ({
   revalidatePath: vi.fn(),
   syncRepoDocs: vi.fn(),
+  createMissingStarterPages: vi.fn(),
 }))
 const payload = {}
 
 vi.mock("next/cache", () => ({ revalidatePath }))
 vi.mock("@/plugins/docs/syncRepoDocs", () => ({ syncRepoDocs }))
+vi.mock("@/collections/Pages/starterPages", () => ({ createMissingStarterPages }))
 vi.mock("@/data/payload", () => ({ getPayloadClient: async () => payload }))
 
 const { POST } = await import("../route")
@@ -22,23 +24,24 @@ describe("POST /next/revalidate-all", () => {
   beforeEach(() => {
     vi.stubEnv("PAYLOAD_SECRET", "s3cret")
     vi.clearAllMocks()
-    syncRepoDocs.mockResolvedValue({
-      created: ["a"],
-      updated: [],
-      unchanged: ["b"],
-      deleted: ["c"],
-    })
+    syncRepoDocs.mockResolvedValue({ created: ["a"], existing: ["b"], deleted: [] })
+    createMissingStarterPages.mockResolvedValue(["feeds"])
   })
 
-  it("syncs the repo's docs, then throws away every prerendered route", async () => {
+  it("syncs the repo's docs and starter pages, then throws away every prerendered route", async () => {
     const response = await POST(request("Bearer s3cret"))
 
     expect(response.status).toBe(200)
     await expect(response.json()).resolves.toEqual({
       revalidated: true,
-      docs: { created: ["a"], updated: [], deleted: ["c"] },
+      docs: { created: ["a"] },
+      pages: { created: ["feeds"] },
     })
     expect(syncRepoDocs).toHaveBeenCalledExactlyOnceWith(payload)
+    expect(createMissingStarterPages).toHaveBeenCalledExactlyOnceWith(payload)
+    expect(createMissingStarterPages.mock.invocationCallOrder[0]).toBeLessThan(
+      revalidatePath.mock.invocationCallOrder[0]!,
+    )
     expect(revalidatePath).toHaveBeenCalledExactlyOnceWith("/", "layout")
     expect(syncRepoDocs.mock.invocationCallOrder[0]).toBeLessThan(
       revalidatePath.mock.invocationCallOrder[0]!,
@@ -49,7 +52,11 @@ describe("POST /next/revalidate-all", () => {
     syncRepoDocs.mockResolvedValue(null)
     const response = await POST(request("Bearer s3cret"))
 
-    await expect(response.json()).resolves.toEqual({ revalidated: true, docs: null })
+    await expect(response.json()).resolves.toEqual({
+      revalidated: true,
+      docs: null,
+      pages: { created: ["feeds"] },
+    })
     expect(revalidatePath).toHaveBeenCalledOnce()
   })
 

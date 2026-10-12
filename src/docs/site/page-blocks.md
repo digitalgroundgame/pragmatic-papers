@@ -3,6 +3,7 @@ title: Build a page from blocks
 navTitle: Page blocks
 summary: "Pages are stacked from blocks: text columns, calls to action, media, volume lists, article grids and more. Here's what each is for."
 publishedAt: 2025-06-26
+revisedAt: 2026-10-18
 heroImage: page-blocks-hero.webp
 heroAlt: A Call to Action block inviting readers to get every volume in their inbox
 audience: [admin]
@@ -19,6 +20,7 @@ A page under **Pages** has a **Hero** tab for the top of the page and a **Conten
 - **Collection Grid**: articles and volumes in a designed arrangement ([more](/docs/collection-grid)).
 - **Timeline**: dated events ([more](/docs/timeline-block)).
 - **Merch**: products from the store ([more](/docs/merch-block)).
+- **Feed list**: the site's RSS feeds or its sitemaps, each with its address. The links keep themselves up to date; you write only the heading and introduction. The **Feeds and sitemaps** page (`/feeds`, linked from the footer) is made of two of these, one for the feeds and one for the sitemaps.
 - **Contributors** and **Newsletter Signup** each have their own doc.
 
 ## Before publishing

@@ -20,7 +20,7 @@ export const revalidatePage: CollectionAfterChangeHook<Page> = ({
     }
     revalidatePath(path)
     revalidateTag("pages-sitemap", "max")
-    purgeEdgeCache(payload.logger, `page ${doc.slug}`)
+    purgeEdgeCache(payload.logger, `page ${doc.slug}`, { paths: [path, "/sitemap.xml"] })
   }
 
   // If the page was previously published, we need to revalidate the old path
@@ -31,7 +31,9 @@ export const revalidatePage: CollectionAfterChangeHook<Page> = ({
 
     revalidatePath(oldPath)
     revalidateTag("pages-sitemap", "max")
-    purgeEdgeCache(payload.logger, `page ${previousDoc.slug} unpublished`)
+    purgeEdgeCache(payload.logger, `page ${previousDoc.slug} unpublished`, {
+      paths: [oldPath, "/sitemap.xml"],
+    })
   }
 
   return doc
@@ -45,7 +47,9 @@ export const revalidateDelete: CollectionAfterDeleteHook<Page> = ({
     const path = doc?.slug === "home" ? "/" : `/${doc?.slug}`
     revalidatePath(path)
     revalidateTag("pages-sitemap", "max")
-    purgeEdgeCache(payload.logger, `page ${doc?.slug} deleted`)
+    purgeEdgeCache(payload.logger, `page ${doc?.slug} deleted`, {
+      paths: [path, "/sitemap.xml"],
+    })
   }
 
   return doc

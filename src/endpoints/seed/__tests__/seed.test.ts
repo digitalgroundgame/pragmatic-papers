@@ -146,6 +146,7 @@ describe("seed", () => {
       experiments: {
         feed: true,
         interactives: true,
+        sso: true,
         tableOfContents: true,
         docs: true,
         notifications: true,

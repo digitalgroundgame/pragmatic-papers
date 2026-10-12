@@ -1,0 +1,118 @@
+import type { BetterAuthOptions } from "better-auth"
+import type { Payload } from "payload"
+import { beforeEach, describe, expect, it, vi } from "vitest"
+
+import { configuredProviders, getAuth } from "../auth"
+import type { ResolvedSsoConfig } from "../types"
+
+const betterAuth = vi.fn((options: BetterAuthOptions) => ({ options }))
+vi.mock("better-auth", () => ({ betterAuth }))
+
+const google = { clientId: "google-id", clientSecret: "google-secret" }
+const discord = { clientId: "discord-id", clientSecret: "discord-secret" }
+
+const config = (overrides: Partial<ResolvedSsoConfig> = {}): ResolvedSsoConfig => ({
+  enabled: () => true,
+  providers: () => ({ google, discord }),
+  baseURL: () => "https://example.com",
+  secret: () => "secret",
+  usersSlug: "users",
+  cookieName: "payload-token-sso",
+  sessionSeconds: 3600,
+  requiredUserColumns: [],
+  ...overrides,
+})
+
+const pool = { query: vi.fn() }
+const newPayload = () =>
+  ({ db: { pool }, config: { routes: { api: "/api" } } }) as unknown as Payload
+
+/** The options `getAuth` handed Better Auth for a fresh Payload instance. */
+async function optionsFor(sso: ResolvedSsoConfig): Promise<BetterAuthOptions> {
+  const auth = (await getAuth(newPayload(), sso)) as unknown as { options: BetterAuthOptions }
+  return auth.options
+}
+
+beforeEach(() => {
+  betterAuth.mockClear()
+})
+
+describe("getAuth", () => {
+  it("creates one Better Auth per Payload instance", async () => {
+    const payload = newPayload()
+    const first = await getAuth(payload, config())
+    const second = await getAuth(payload, config())
+    await getAuth(newPayload(), config())
+
+    expect(second).toBe(first)
+    expect(betterAuth).toHaveBeenCalledTimes(2)
+  })
+
+  it("runs on Payload's own pool, under Payload's API route", async () => {
+    const options = await optionsFor(config())
+    expect(options.database).toBe(pool)
+    expect(options.basePath).toBe("/api/auth")
+    expect(options.baseURL).toBe("https://example.com")
+    expect(options.secret).toBe("secret")
+    expect(options.telemetry).toEqual({ enabled: false })
+  })
+
+  it("offers only the providers with credentials, none of them allowing sign-up", async () => {
+    const options = await optionsFor(config({ providers: () => ({ google, discord: null }) }))
+    expect(options.socialProviders).toEqual({ google: { ...google, disableSignUp: true } })
+  })
+
+  it("refuses to create a user however it's asked", async () => {
+    const options = await optionsFor(config())
+    expect(await options.databaseHooks?.user?.create?.before?.({} as never, null)).toBe(false)
+    expect(options.disabledPaths).toEqual(
+      expect.arrayContaining(["/sign-up/email", "/update-user", "/delete-user"]),
+    )
+  })
+
+  it("reads the users collection, and names its required columns without returning them", async () => {
+    const options = await optionsFor(config({ usersSlug: "staff", requiredUserColumns: ["slug"] }))
+    expect(options.user?.modelName).toBe("staff")
+    expect(options.user?.additionalFields).toEqual({
+      slug: { type: "string", required: false, input: false, returned: false },
+    })
+  })
+
+  it("keeps sessions for the configured time, in the configured cookie", async () => {
+    const options = await optionsFor(config({ sessionSeconds: 60, cookieName: "sso" }))
+    expect(options.session?.expiresIn).toBe(60)
+    expect(options.advanced?.cookies).toEqual({ session_token: { name: "sso" } })
+    expect(options.advanced?.useSecureCookies).toBe(false)
+  })
+
+  it.each([
+    ["https://example.com", true],
+    ["http://localhost:8000", false],
+  ])("marks the cookie Secure for %s: %s", async (baseURL, secure) => {
+    const options = await optionsFor(config({ baseURL: () => baseURL }))
+    expect(options.advanced?.defaultCookieAttributes).toEqual({ secure })
+  })
+
+  it("links a provider login to an existing user, and generates serial ids", async () => {
+    const options = await optionsFor(config())
+    expect(options.account?.accountLinking).toEqual({
+      enabled: true,
+      requireLocalEmailVerified: false,
+    })
+    expect(options.account?.encryptOAuthTokens).toBe(true)
+    expect(options.advanced?.database).toEqual({ generateId: "serial" })
+  })
+})
+
+describe("configuredProviders", () => {
+  it("lists the providers with credentials, in the config's order", () => {
+    expect(configuredProviders(config({ providers: () => ({ discord, google }) }))).toEqual([
+      "discord",
+      "google",
+    ])
+    expect(configuredProviders(config({ providers: () => ({ google: null, discord }) }))).toEqual([
+      "discord",
+    ])
+    expect(configuredProviders(config({ providers: () => ({}) }))).toEqual([])
+  })
+})

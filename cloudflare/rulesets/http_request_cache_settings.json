@@ -7,7 +7,8 @@
         "and not starts_with(http.request.uri.path, \"/api\")",
         "and not http.cookie contains \"__prerender_bypass\"",
         "and not http.cookie contains \"payload-token\"",
-        "and http.host ne \"list.pragmaticpapers.com\")"
+        "and http.host ne \"list.pragmaticpapers.com\"",
+        "and not any(lower(http.request.headers.names[*])[*] eq \"next-action\"))"
       ],
       "action": "set_cache_settings",
       "action_parameters": {

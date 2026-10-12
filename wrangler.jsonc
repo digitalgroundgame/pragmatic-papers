@@ -15,6 +15,11 @@
   // Domains & Routes), so the deploy token needs no zone permissions. With no `routes`
   // here, `wrangler deploy` leaves it alone; listing one would replace the dashboard's.
   "observability": { "enabled": true },
+  // Workers Cache, on the CachedSite entrypoint only: the default one is the gateway that
+  // keeps drafts, logins and navigations out of it (src/cloudflare/edgeCache.ts).
+  "exports": {
+    "CachedSite": { "type": "worker", "cache": { "enabled": true } },
+  },
   "assets": {
     "directory": ".open-next/assets",
     "binding": "ASSETS",

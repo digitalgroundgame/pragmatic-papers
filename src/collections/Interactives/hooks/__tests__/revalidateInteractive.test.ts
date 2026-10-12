@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
+import { draftsCollection, readersRow } from "@/utilities/__tests__/readersCopyHelpers"
 
 const { revalidateTag, purgeEdgeCache } = vi.hoisted(() => ({
   revalidateTag: vi.fn(),
@@ -16,12 +17,17 @@ interface Doc {
 }
 
 const req = (disableRevalidate = false) => ({
-  payload: { logger: { info: vi.fn() } },
+  payload: { logger: { info: vi.fn() }, findByID: readersRow() },
   context: { disableRevalidate },
 })
 
 const change = (doc: Doc, previousDoc?: Doc, disableRevalidate = false) =>
-  ({ doc, previousDoc, req: req(disableRevalidate) }) as never
+  ({
+    collection: draftsCollection("interactives"),
+    doc,
+    previousDoc,
+    req: req(disableRevalidate),
+  }) as never
 
 const PAGE_TAGS = [
   ["interactive:1", "max"],
@@ -34,23 +40,23 @@ beforeEach(() => {
 })
 
 describe("revalidateInteractive", () => {
-  it("drops the interactive's data and the sitemap when a version is published", () => {
+  it("drops the interactive's data and the sitemap when a version is published", async () => {
     const doc = { id: 1, slug: "courts", _status: "published" as const }
-    expect(revalidateInteractive(change(doc))).toBe(doc)
+    expect(await revalidateInteractive(change(doc))).toBe(doc)
     expect(revalidateTag.mock.calls).toEqual(PAGE_TAGS)
     expect(purgeEdgeCache).toHaveBeenCalledWith(expect.anything(), "interactive courts", {
       paths: ["/interactives/courts", "/interactives/sitemap.xml"],
     })
   })
 
-  it("leaves every cache alone for a draft of something never published", () => {
+  it("leaves every cache alone for a draft of something never published", async () => {
     const doc = { id: 1, slug: "courts", _status: "draft" as const }
-    revalidateInteractive(change(doc, { ...doc }))
+    await revalidateInteractive(change(doc, { ...doc }))
     expect(revalidateTag).not.toHaveBeenCalled()
   })
 
-  it("drops caches when a published interactive is unpublished", () => {
-    revalidateInteractive(
+  it("drops caches when a published interactive is unpublished", async () => {
+    await revalidateInteractive(
       change(
         { id: 1, slug: "courts", _status: "draft" },
         { id: 1, slug: "courts", _status: "published" },
@@ -59,8 +65,8 @@ describe("revalidateInteractive", () => {
     expect(revalidateTag.mock.calls).toEqual(PAGE_TAGS)
   })
 
-  it("drops caches once per transition when a published slug moves", () => {
-    revalidateInteractive(
+  it("drops caches once per transition when a published slug moves", async () => {
+    await revalidateInteractive(
       change(
         { id: 1, slug: "federal-courts", _status: "published" },
         { id: 1, slug: "courts", _status: "published" },
@@ -69,9 +75,9 @@ describe("revalidateInteractive", () => {
     expect(revalidateTag.mock.calls).toEqual([...PAGE_TAGS, ...PAGE_TAGS])
   })
 
-  it("does nothing when the caller disabled revalidation", () => {
+  it("does nothing when the caller disabled revalidation", async () => {
     const doc = { id: 1, slug: "courts", _status: "published" as const }
-    expect(revalidateInteractive(change(doc, undefined, true))).toBe(doc)
+    expect(await revalidateInteractive(change(doc, undefined, true))).toBe(doc)
     expect(revalidateTag).not.toHaveBeenCalled()
   })
 })

@@ -24,6 +24,7 @@ import { SquiggleRule } from "@/blocks/SquiggleRule/config"
 import { isPublishedOrStaff } from "@/access/policies"
 
 import { generatePreviewPath } from "@/utilities/generatePreviewPath"
+import { rememberReadersCopy } from "@/utilities/readersCopy"
 import {
   MetaDescriptionField,
   MetaImageField,
@@ -201,7 +202,7 @@ export const Volumes: CollectionConfig = {
   hooks: {
     afterChange: [revalidateArticle, revalidateNavLinks, pushToWebhooks],
     afterDelete: [revalidateDelete, revalidateNavLinksDelete],
-    beforeChange: [setDefaultSeoTitle],
+    beforeChange: [rememberReadersCopy, setDefaultSeoTitle],
   },
   versions: {
     drafts: {

@@ -17,6 +17,7 @@ import { profileOptions } from "@/interactives/profiles"
 import { generatePreviewPath } from "@/utilities/generatePreviewPath"
 
 import { revalidateInteractive, revalidateInteractiveDelete } from "./hooks/revalidateInteractive"
+import { rememberReadersCopy } from "@/utilities/readersCopy"
 
 /**
  * Interactives — long-lived interactive pages, one per document, at /interactives/<slug>.
@@ -177,7 +178,7 @@ export const Interactives: CollectionConfig<"interactives"> = {
   ],
   hooks: {
     afterChange: [revalidateInteractive],
-    beforeChange: [populatePublishedAt],
+    beforeChange: [rememberReadersCopy, populatePublishedAt],
     afterDelete: [revalidateInteractiveDelete],
   },
   versions: {

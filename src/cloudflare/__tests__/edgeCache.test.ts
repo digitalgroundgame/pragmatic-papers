@@ -68,6 +68,28 @@ describe("afterCachedSite", () => {
     expect(response).toBe(page)
   })
 
+  it("drops s-maxage where CDN-Cache-Control sets the edge's lifetime, so stale pages are served", async () => {
+    const page = new Response("page", {
+      headers: {
+        "Cache-Control": "public, s-maxage=600, stale-while-revalidate=86400",
+        "CDN-Cache-Control": "max-age=600, stale-while-revalidate=86400",
+      },
+    })
+    const response = await afterCachedSite(new Request(`${W}/`), page, undefined)
+    expect(response.headers.get("Cache-Control")).toBe("public, stale-while-revalidate=86400")
+    expect(response.headers.get("CDN-Cache-Control")).toBe(
+      "max-age=600, stale-while-revalidate=86400",
+    )
+    expect(await response.text()).toBe("page")
+  })
+
+  it("keeps s-maxage when nothing else sets the edge's lifetime", async () => {
+    const image = new Response("img", { headers: { "Cache-Control": "public, s-maxage=600" } })
+    expect(await afterCachedSite(new Request(`${W}/_next/image?url=a`), image, undefined)).toBe(
+      image,
+    )
+  })
+
   it("doesn't keep an error", async () => {
     const error = new Response("down", {
       status: 500,
@@ -98,7 +120,10 @@ describe("afterCachedSite", () => {
       status: 308,
       headers: { ...PUBLIC, Location: `${W}/contributors` },
     })
-    expect(await afterCachedSite(new Request(`${W}/authors`), redirect, undefined)).toBe(redirect)
+    const kept = await afterCachedSite(new Request(`${W}/authors`), redirect, undefined)
+    expect(kept.status).toBe(308)
+    expect(kept.headers.get("Location")).toBe(`${W}/contributors`)
+    expect(kept.headers.get("CDN-Cache-Control")).toBe("max-age=600")
   })
 
   it("purges the cache after a successful revalidate-all", async () => {

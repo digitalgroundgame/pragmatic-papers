@@ -87,6 +87,25 @@ function isKeepable(response: Response): boolean {
 }
 
 /**
+ * The answer as the cache should store it. Public pages carry `s-maxage` in `Cache-Control`
+ * for Coolify's zone cache beside `CDN-Cache-Control: max-age=…, stale-while-revalidate=…`,
+ * and Workers Cache won't serve a stale copy of a response that carries `s-maxage` (RFC 9111
+ * forbids it), so an expired page would wait for a full render instead of being served while
+ * it refreshes. Where `CDN-Cache-Control` sets the edge's lifetime, `s-maxage` is dropped.
+ * Browsers ignore `s-maxage`, so what they see doesn't change.
+ */
+function forEdge(response: Response): Response {
+  const cacheControl = response.headers.get("Cache-Control")
+  if (!cacheControl || !response.headers.has("CDN-Cache-Control")) return response
+  const directives = cacheControl.split(",").map((directive) => directive.trim())
+  const kept = directives.filter((directive) => !/^s-maxage\s*=/i.test(directive))
+  if (kept.length === directives.length) return response
+  const stored = new Response(response.body, response)
+  stored.headers.set("Cache-Control", kept.join(", "))
+  return stored
+}
+
+/**
  * The cached entrypoint's answer: only what `isKeepable` allows is left cacheable, so an
  * error or a failed database read doesn't stick, and a successful `/next/revalidate-all`
  * empties the cache.
@@ -114,7 +133,7 @@ export async function afterCachedSite(
     }
     return response
   }
-  if (isKeepable(response)) return response
+  if (isKeepable(response)) return forEdge(response)
   const uncached = new Response(response.body, response)
   uncached.headers.set("Cache-Control", "no-store")
   uncached.headers.delete("CDN-Cache-Control")

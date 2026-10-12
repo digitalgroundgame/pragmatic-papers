@@ -160,7 +160,7 @@ jobs:
     # database (dockerfiles/scripts/start.sh, and scripts/test-e2e.mjs here).
     services:
       postgres:
-        # Copied into GHCR by postgres-image.yml; pulled logged in, so not rate-limited.
+        # Copied into GHCR by ci-images.yml; pulled logged in, so not rate-limited.
         image: ghcr.io/digitalgroundgame/postgres:17-alpine
         credentials:
           username: ${{ github.actor }}
@@ -276,7 +276,7 @@ jobs:
 
     services:
       postgres:
-        # Copied into GHCR by postgres-image.yml; pulled logged in, so not rate-limited.
+        # Copied into GHCR by ci-images.yml; pulled logged in, so not rate-limited.
         image: ghcr.io/digitalgroundgame/postgres:17-alpine
         credentials:
           username: ${{ github.actor }}
@@ -349,7 +349,7 @@ jobs:
 
     services:
       postgres:
-        # Copied into GHCR by postgres-image.yml; pulled logged in, so not rate-limited.
+        # Copied into GHCR by ci-images.yml; pulled logged in, so not rate-limited.
         image: ghcr.io/digitalgroundgame/postgres:17-alpine
         credentials:
           username: ${{ github.actor }}

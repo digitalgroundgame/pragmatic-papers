@@ -20,16 +20,20 @@
 # Build (see .github/actions/build-app-image, which playwright.yml's image job runs):
 #   docker buildx build -f dockerfiles/PragmaticPapers.ci.Dockerfile --network host \
 #     --secret id=GH_FONT_READ,env=GH_FONT_READ --build-arg DATABASE_URI=... \
-#     --build-arg PACKAGE_MANAGER="$(jq -r .packageManager package.json)" .
+#     --build-arg PACKAGE_MANAGER="$(jq -r .packageManager package.json)" \
+#     [--build-arg NODE_REGISTRY=ghcr.io/digitalgroundgame] .
 ARG NODE_VERSION=24.15.0
-# Docker Hub's official node image, through Amazon ECR Public's mirror of it: Docker Hub
-# rate-limits anonymous pulls by address, and GitHub's shared runners run out. The
-# postgres services in the workflows and scripts/test-db.mjs pull from the same mirror.
+# Where Docker Hub's official node image comes from. Docker Hub rate-limits anonymous
+# pulls by address, and so does Amazon ECR Public's mirror of it, the default here;
+# GitHub's shared runners run out of both. build-app-image passes the GHCR copy
+# ci-images.yml keeps (ghcr.io/digitalgroundgame), pulled logged in, whenever it exists,
+# and Google's Docker Hub mirror (mirror.gcr.io/library) otherwise.
+ARG NODE_REGISTRY=public.ecr.aws/docker/library
 
 # ============================================
 # Base stage - setup pnpm and environment
 # ============================================
-FROM public.ecr.aws/docker/library/node:${NODE_VERSION}-alpine AS base
+FROM ${NODE_REGISTRY}/node:${NODE_VERSION}-alpine AS base
 RUN apk add --no-cache libc6-compat
 
 ENV PNPM_HOME="/pnpm" \
@@ -109,7 +113,7 @@ RUN find src/migrations -maxdepth 1 -name '2*.ts' -exec basename {} .ts \; | sor
 # ============================================
 # Runner stage - minimal production runtime
 # ============================================
-FROM public.ecr.aws/docker/library/node:${NODE_VERSION}-alpine AS runner
+FROM ${NODE_REGISTRY}/node:${NODE_VERSION}-alpine AS runner
 WORKDIR /app
 
 ARG BUILD_ENV=preview

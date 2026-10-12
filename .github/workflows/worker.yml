@@ -156,6 +156,19 @@ jobs:
             --request POST --header "Authorization: Bearer $STAGING_PAYLOAD_SECRET" \
             "$SERVER_URL/next/revalidate-all"
 
+      # Staging requests the most-read pages through the Worker's URL, so the first readers
+      # find them in its now-empty cache. Staging answers at once and warms in the background.
+      # Best-effort: a deploy staging hasn't caught up with yet answers 404.
+      - name: Warm the most-read pages
+        if: env.READY == 'true'
+        continue-on-error: true
+        env:
+          STAGING_PAYLOAD_SECRET: ${{ secrets.STAGING_PAYLOAD_SECRET }}
+        run: |
+          curl --fail-with-body --silent --show-error --retry 3 --retry-all-errors \
+            --request POST --header "Authorization: Bearer $STAGING_PAYLOAD_SECRET" \
+            "$ORIGIN_URL/next/warm-worker"
+
       - name: Check the home page answers
         if: env.READY == 'true'
         run: |

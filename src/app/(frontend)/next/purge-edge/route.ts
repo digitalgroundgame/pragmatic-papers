@@ -1,10 +1,10 @@
 import { after } from "next/server"
 
 import { flushEdgeCachePurge, purgeEdgeCache } from "@/hooks/purgeEdgeCache"
+import { PURGE_SETTLE_MS, warmPages } from "@/hooks/warmPages"
 import { getPayloadClient } from "@/data/payload"
 
 import { hasPayloadSecret } from "../bearer"
-import { PURGE_SETTLE_MS, warmPages } from "./warmPages"
 
 /**
  * Purge Cloudflare's edge once a deploy has taken over. `dockerfiles/scripts/start.sh` gives
@@ -13,7 +13,9 @@ import { PURGE_SETTLE_MS, warmPages } from "./warmPages"
  * moves traffic over, the old container answers, and a purge would only refill the edge with
  * the previous release's pages (whose scripts the new container no longer serves). Then it
  * POSTs here on localhost to purge. Once the purge has gone out, the most-read pages are
- * requested through the public URL (`warmPages`), so the first readers find them cached.
+ * requested through the public URL (`warmPages`), so the first readers find them cached. A
+ * Cloudflare Worker serving the same database (`cloudflareWorkerCache`) is left alone: its own
+ * deploy workflow empties and warms it.
  *
  * Both authenticated with `Authorization: Bearer <PAYLOAD_SECRET>`, like `/next/revalidate-all`.
  */
@@ -32,7 +34,7 @@ export async function POST(request: Request): Promise<Response> {
     return Response.json({ error: "Unauthorized" }, { status: 401 })
   }
   const payload = await getPayloadClient()
-  purgeEdgeCache(payload.logger, "deploy")
+  purgeEdgeCache(payload.logger, "deploy", { worker: false })
   // The purge and the warm-up run after the response, and neither throws.
   after(async () => {
     await flushEdgeCachePurge()

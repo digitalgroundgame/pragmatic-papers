@@ -245,14 +245,18 @@ after its own `revalidatePath` / `revalidateTag`, and only when
 one request, returns at once, and logs and skips when the `cloudflareCache`
 connection isn't configured. When the `cloudflareWorkerCache` connection is
 configured (`WORKER_URL`, on the Coolify app a Cloudflare Worker reads from), the
-same flush first clears that Worker's cache through its `/next/revalidate-all`.
+same flush first clears that Worker's cache through its `/next/revalidate-all`,
+then requests the same most-read pages through the Worker's URL in the background
+(`warmWorkerSoon`), since a Worker renders a page on a cold isolate in seconds.
 A new hook for content readers see should call it too.
 A deploy purges too: `start.sh` waits until the site's public URL is answered by the
 new container (`/next/purge-edge` names its `INSTANCE_ID`), so the old container can't
 refill the edge with the previous release's pages, then POSTs `/next/purge-edge`, which
 purges and then requests the most-read pages through the public URL (`warmPages`: the
 section indexes, feeds, sitemap index and the newest volume's articles) so the first readers
-find them cached. A warm-up failure only logs a warning.
+find them cached. A warm-up failure only logs a warning. A deploy leaves the Worker alone
+(`{ worker: false }`): its own workflow empties it, then POSTs the Coolify app's
+`/next/warm-worker` to warm it.
 
 ### Payload Plugins
 

@@ -8,6 +8,8 @@ import {
 } from "@/integrations"
 import { getSiteURL } from "@/utilities/getURL"
 
+import { warmWorkerSoon } from "./warmWorker"
+
 type Logger = Pick<Payload["logger"], "info" | "warn">
 
 /**
@@ -19,8 +21,13 @@ export const PURGE_DEBOUNCE_MS = 1000
 
 const LOCAL_HOSTS = new Set(["localhost", "127.0.0.1", "[::1]", "0.0.0.0"])
 
-let pending: { reasons: Set<string>; logger: Logger; timer: ReturnType<typeof setTimeout> } | null =
-  null
+let pending: {
+  reasons: Set<string>
+  logger: Logger
+  /** Whether any purge in the burst asked for the Worker's cache too. */
+  worker: boolean
+  timer: ReturnType<typeof setTimeout>
+} | null = null
 let inFlight: Promise<void> = Promise.resolve()
 
 /** This deployment's public hostname, or null when it isn't one Cloudflare could be fronting. */
@@ -41,14 +48,16 @@ function edgeSkipReason(): string | null {
   return null
 }
 
-async function revalidateWorker(logger: Logger, why: string): Promise<void> {
+async function revalidateWorker(logger: Logger, why: string): Promise<boolean> {
   try {
     await cloudflareWorkerCache.revalidateAll()
     logger.info(`Cleared the Worker's cache at ${cloudflareWorkerCache.url()} (${why})`)
+    return true
   } catch (err) {
     logger.warn(
       `Clearing the Worker's cache at ${cloudflareWorkerCache.url()} failed (${why}): ${err instanceof Error ? err.message : String(err)}`,
     )
+    return false
   }
 }
 
@@ -67,11 +76,13 @@ async function purgeEdge(logger: Logger, why: string, host: string): Promise<voi
 
 async function flush(): Promise<void> {
   if (!pending) return
-  const { reasons, logger } = pending
+  const { reasons, logger, worker } = pending
   pending = null
   const why = [...reasons].join(", ")
   // The Worker first: once the edge is empty it refills from whatever the Worker answers.
-  if (integrationStatus(cloudflareWorkerCache).configured) await revalidateWorker(logger, why)
+  if (worker && integrationStatus(cloudflareWorkerCache).configured) {
+    if (await revalidateWorker(logger, why)) warmWorkerSoon(logger)
+  }
   const host = siteHost()
   if (host && !edgeSkipReason()) await purgeEdge(logger, why, host)
 }
@@ -95,24 +106,36 @@ async function flush(): Promise<void> {
  * keeps its own copy of every prerendered page, which neither Next's revalidation here nor the
  * edge purge reaches.
  *
+ * Once the Worker has cleared its cache, its most-read pages are requested through its URL in
+ * the background (`warmWorkerSoon`): a Worker renders a page on a cold isolate in seconds, and
+ * readers would otherwise meet that after every save. `{ worker: false }` leaves the Worker
+ * alone, for a Coolify deploy: the Worker reads the same database and is deployed, emptied and
+ * re-rendered by its own workflow, so this deployment's start has nothing new for it.
+ *
  * With neither connection configured (local dev, CI, anything not behind Cloudflare) it logs
  * the missing variables by name and does nothing.
  */
-export function purgeEdgeCache(logger: Logger, reason: string): void {
+export function purgeEdgeCache(
+  logger: Logger,
+  reason: string,
+  { worker: clearWorker = true }: { worker?: boolean } = {},
+): void {
   const edgeSkip = edgeSkipReason()
-  const worker = integrationStatus(cloudflareWorkerCache)
-  if (edgeSkip && !worker.configured) {
+  const worker = clearWorker && integrationStatus(cloudflareWorkerCache).configured
+  if (edgeSkip && !worker) {
     logger.info(`Skipping Cloudflare purge (${reason}) — ${edgeSkip}`)
     return
   }
 
   if (pending) {
     pending.reasons.add(reason)
+    pending.worker ||= clearWorker
     return
   }
   pending = {
     reasons: new Set([reason]),
     logger,
+    worker: clearWorker,
     timer: setTimeout(() => {
       inFlight = inFlight.then(flush)
     }, PURGE_DEBOUNCE_MS),

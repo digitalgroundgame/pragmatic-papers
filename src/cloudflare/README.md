@@ -72,6 +72,10 @@ Until all of them are set, the workflow skips itself.
    and runs `wrangler deploy` with `SERVER_URL`, `ORIGIN_URL` and `PAYLOAD_SECRET`.
 4. `POST /next/revalidate-all` throws away the build's pages (it built from an empty
    database), so each renders from staging's data on its next request.
+5. `POST /next/warm-worker` on staging requests the most-read pages through the Worker's
+   URL, so the first readers find them cached. Staging, not the Worker, warms it: it can
+   look up the newest volume, and it does the same after every save that clears the
+   Worker's cache.
 
 ## Build and run it locally
 

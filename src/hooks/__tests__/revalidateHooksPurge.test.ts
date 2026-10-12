@@ -41,31 +41,37 @@ describe("hooks that purge the edge", () => {
       "a published page",
       () => revalidatePage(args({ doc: published("about"), previousDoc: draft("about") })),
       "page about",
+      { paths: ["/about", "/sitemap.xml"] },
     ],
     [
       "an unpublished page",
       () => revalidatePage(args({ doc: draft("about"), previousDoc: published("about") })),
       "page about unpublished",
+      { paths: ["/about", "/sitemap.xml"] },
     ],
     [
       "a deleted page",
       () => revalidatePageDelete(args({ doc: published("about") })),
       "page about deleted",
+      { paths: ["/about", "/sitemap.xml"] },
     ],
     [
       "a published volume",
       () => revalidateVolume(args({ doc: published("vol-1"), previousDoc: draft("vol-1") })),
       "volume vol-1",
+      { paths: ["/volumes/vol-1", "/volumes/feed.xml"], shared: true },
     ],
     [
       "an unpublished volume",
       () => revalidateVolume(args({ doc: draft("vol-1"), previousDoc: published("vol-1") })),
       "volume vol-1 unpublished",
+      { paths: ["/volumes/vol-1", "/volumes/feed.xml"], shared: true },
     ],
     [
       "a deleted volume",
       () => revalidateVolumeDelete(args({ doc: published("vol-1") })),
       "volume vol-1 deleted",
+      { paths: ["/volumes/vol-1", "/volumes/feed.xml"], shared: true },
     ],
     ["a merch product", () => revalidateMerchProduct(args({ doc: {} })), "merch product changed"],
     [
@@ -73,16 +79,19 @@ describe("hooks that purge the edge", () => {
       () => revalidateMerchProductDelete(args({ doc: {} })),
       "merch product deleted",
     ],
-  ])("purges for %s", (_, run, reason) => {
+  ])("purges for %s", (_, run, reason, ...options: unknown[]) => {
     run()
-    expect(purgeEdgeCache).toHaveBeenCalledWith(payload.logger, reason)
+    expect(purgeEdgeCache).toHaveBeenCalledWith(payload.logger, reason, ...options)
   })
 
   it("purges for an author", async () => {
     await revalidateUser(
       args({ doc: { id: 7, slug: "jane" }, previousDoc: { id: 7, slug: "jane" } }),
     )
-    expect(purgeEdgeCache).toHaveBeenCalledWith(payload.logger, "author jane")
+    expect(purgeEdgeCache).toHaveBeenCalledWith(payload.logger, "author jane", {
+      paths: ["/contributors/jane", "/contributors"],
+      shared: true,
+    })
   })
 
   it("leaves a never-published draft alone", () => {

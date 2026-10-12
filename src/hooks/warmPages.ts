@@ -60,17 +60,25 @@ async function warm(url: string, fetchImpl: typeof fetch): Promise<boolean> {
   }
 }
 
+export interface WarmOptions {
+  fetchImpl?: typeof fetch
+  /** Where to request the pages: the site's public URL unless given (the Worker's, say). */
+  baseURL?: string
+  /** Ends the log line: "Warmed 12 pages after the deploy". */
+  occasion?: string
+}
+
 /**
- * Request the most-read pages through the site's public URL, so the origin renders them and
- * Cloudflare's edge stores them before readers arrive. A deploy empties both caches
- * (`/next/revalidate-all`, then the edge purge), and the first reader of each page would
+ * Request the most-read pages through the site's public URL (or `baseURL`), so the origin
+ * renders them and Cloudflare's edge stores them before readers arrive. A deploy empties both
+ * caches (`/next/revalidate-all`, then the edge purge), and the first reader of each page would
  * otherwise wait for its render, along with everyone who arrived with them.
  *
  * Never throws: a page that fails is logged and left for its first reader.
  */
 export async function warmPages(
   payload: Pick<Payload, "find"> & { logger: Logger },
-  { fetchImpl = fetch }: { fetchImpl?: typeof fetch } = {},
+  { fetchImpl = fetch, baseURL, occasion = "after the deploy" }: WarmOptions = {},
 ): Promise<void> {
   let volumePaths: string[] = []
   try {
@@ -82,7 +90,7 @@ export async function warmPages(
   }
   const urls = [...new Set([...WARM_PATHS, ...volumePaths])]
     .slice(0, MAX_WARM_PAGES)
-    .map((path) => absoluteURL(path))
+    .map((path) => (baseURL ? new URL(path, baseURL).href : absoluteURL(path)))
 
   const failed: string[] = []
   let next = 0
@@ -96,9 +104,9 @@ export async function warmPages(
 
   if (failed.length) {
     payload.logger.warn(
-      `Warmed ${urls.length - failed.length} of ${urls.length} pages after the deploy; failed: ${failed.join(", ")}`,
+      `Warmed ${urls.length - failed.length} of ${urls.length} pages ${occasion}; failed: ${failed.join(", ")}`,
     )
   } else {
-    payload.logger.info(`Warmed ${urls.length} pages after the deploy`)
+    payload.logger.info(`Warmed ${urls.length} pages ${occasion}`)
   }
 }

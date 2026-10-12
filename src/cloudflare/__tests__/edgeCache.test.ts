@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest"
 
 import {
   afterCachedSite,
+  edgeCacheTags,
   goesToCachedSite,
   isEdgeCacheable,
   REVALIDATE_ALL_PATH,
@@ -62,10 +63,12 @@ describe("goesToCachedSite", () => {
 describe("afterCachedSite", () => {
   const revalidate = () => new Request(`${W}${REVALIDATE_ALL_PATH}`, { method: "POST" })
 
-  it("keeps a page's caching", async () => {
+  it("keeps a page's caching, tagged with its path", async () => {
     const page = new Response("page", { headers: { "CDN-Cache-Control": "max-age=600" } })
-    const response = await afterCachedSite(new Request(`${W}/`), page, undefined)
-    expect(response).toBe(page)
+    const response = await afterCachedSite(new Request(`${W}/articles/a?x=1`), page, undefined)
+    expect(response.headers.get("CDN-Cache-Control")).toBe("max-age=600")
+    expect(response.headers.get("Cache-Tag")).toBe("path:/articles/a")
+    expect(await response.text()).toBe("page")
   })
 
   it("doesn't keep an error", async () => {
@@ -98,13 +101,46 @@ describe("afterCachedSite", () => {
       status: 308,
       headers: { ...PUBLIC, Location: `${W}/contributors` },
     })
-    expect(await afterCachedSite(new Request(`${W}/authors`), redirect, undefined)).toBe(redirect)
+    const response = await afterCachedSite(new Request(`${W}/authors`), redirect, undefined)
+    expect(response.status).toBe(308)
+    expect(response.headers.get("Location")).toBe(`${W}/contributors`)
+    expect(response.headers.get("CDN-Cache-Control")).toBe("max-age=600")
   })
 
   it("purges the cache after a successful revalidate-all", async () => {
     const purge = vi.fn(async () => ({ success: true }))
     await afterCachedSite(revalidate(), new Response("ok"), { purge })
     expect(purge).toHaveBeenCalledWith({ purgeEverything: true })
+  })
+
+  it("purges only the paths a revalidate-all names, with the pages beneath them", async () => {
+    const purge = vi.fn(async () => ({ success: true }))
+    const named = new Request(
+      `${W}${REVALIDATE_ALL_PATH}?path=/interactives/a&path=/docs/b/&path=nope&shared=1`,
+      { method: "POST" },
+    )
+    await afterCachedSite(named, new Response("ok"), { purge })
+    expect(purge).toHaveBeenCalledExactlyOnceWith({
+      tags: [
+        "path:/interactives/a",
+        "within:/interactives/a",
+        "path:/docs/b",
+        "within:/docs/b",
+        "shared",
+      ],
+    })
+  })
+
+  it("purges many tags in batches", async () => {
+    const purge = vi.fn(async (_options: { purgeEverything: true } | { tags: string[] }) => ({
+      success: true,
+    }))
+    const query = Array.from({ length: 20 }, (_, i) => `path=/articles/a${i}`).join("&")
+    const named = new Request(`${W}${REVALIDATE_ALL_PATH}?${query}`, { method: "POST" })
+    await afterCachedSite(named, new Response("ok"), { purge })
+    expect(purge).toHaveBeenCalledTimes(2)
+    const sent = purge.mock.calls.flatMap(([options]) => ("tags" in options ? options.tags : []))
+    expect(sent).toHaveLength(40)
   })
 
   it("doesn't purge when revalidate-all was refused", async () => {
@@ -129,6 +165,26 @@ describe("afterCachedSite", () => {
     const ok = await afterCachedSite(revalidate(), new Response("ok"), refused, log)
     expect(await ok.text()).toBe("ok")
     expect(log.warn).toHaveBeenCalledWith(expect.stringContaining("refused"), errors)
+  })
+})
+
+describe("edgeCacheTags", () => {
+  it.each([
+    ["/", ["path:/", "shared"]],
+    ["/about", ["path:/about", "shared"]],
+    ["/articles", ["path:/articles", "shared"]],
+    ["/articles/feed.xml", ["path:/articles/feed.xml", "shared"]],
+    ["/topics/politics", ["path:/topics/politics", "shared"]],
+    ["/contributors/jane/", ["path:/contributors/jane", "shared"]],
+    ["/articles/a", ["path:/articles/a"]],
+    ["/articles/a/substack.xml", ["path:/articles/a/substack.xml", "within:/articles/a"]],
+    ["/volumes/12", ["path:/volumes/12"]],
+    ["/docs", ["path:/docs", "within:/docs"]],
+    ["/docs/whats-new", ["path:/docs/whats-new", "within:/docs"]],
+    ["/interactives/a/regions/x", ["path:/interactives/a/regions/x", "within:/interactives/a"]],
+    ["/_next/image", ["path:/_next/image"]],
+  ])("tags %s", (path, tags) => {
+    expect(edgeCacheTags(path)).toEqual(tags)
   })
 })
 

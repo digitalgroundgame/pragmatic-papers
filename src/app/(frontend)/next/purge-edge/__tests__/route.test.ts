@@ -10,7 +10,7 @@ const payload = { logger: { info: vi.fn(), warn: vi.fn() } }
 
 vi.mock("@/hooks/purgeEdgeCache", () => ({ purgeEdgeCache, flushEdgeCachePurge }))
 vi.mock("@/data/payload", () => ({ getPayloadClient: async () => payload }))
-vi.mock("../warmPages", () => ({ warmPages, PURGE_SETTLE_MS: 0 }))
+vi.mock("@/hooks/warmPages", () => ({ warmPages, PURGE_SETTLE_MS: 0 }))
 vi.mock("next/server", () => ({ after }))
 
 const { GET, POST } = await import("../route")
@@ -42,11 +42,13 @@ describe("/next/purge-edge", () => {
     await expect(GET(request("GET", "Bearer s3cret")).json()).resolves.toEqual({ instance: null })
   })
 
-  it("purges the edge on POST", async () => {
+  it("purges the edge on POST, leaving the Worker to its own deploy", async () => {
     const response = await POST(request("POST", "Bearer s3cret"))
 
     expect(response.status).toBe(200)
-    expect(purgeEdgeCache).toHaveBeenCalledExactlyOnceWith(payload.logger, "deploy")
+    expect(purgeEdgeCache).toHaveBeenCalledExactlyOnceWith(payload.logger, "deploy", {
+      worker: false,
+    })
   })
 
   it("warms pages once the purge has gone out, after answering", async () => {

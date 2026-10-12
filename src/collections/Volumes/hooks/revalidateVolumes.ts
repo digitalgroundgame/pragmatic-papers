@@ -19,7 +19,10 @@ export const revalidateArticle: CollectionAfterChangeHook<Article> = ({
       revalidatePath(path)
       revalidatePath("/volumes/feed.xml")
       revalidateTag("volumes-sitemap", "max")
-      purgeEdgeCache(payload.logger, `volume ${doc.slug}`)
+      purgeEdgeCache(payload.logger, `volume ${doc.slug}`, {
+        paths: [path, "/volumes/feed.xml"],
+        shared: true,
+      })
     }
 
     // If the article was previously published, we need to revalidate the old path
@@ -31,7 +34,10 @@ export const revalidateArticle: CollectionAfterChangeHook<Article> = ({
       revalidatePath(oldPath)
       revalidatePath("/volumes/feed.xml")
       revalidateTag("volumes-sitemap", "max")
-      purgeEdgeCache(payload.logger, `volume ${previousDoc.slug} unpublished`)
+      purgeEdgeCache(payload.logger, `volume ${previousDoc.slug} unpublished`, {
+        paths: [oldPath, "/volumes/feed.xml"],
+        shared: true,
+      })
     }
   }
   return doc
@@ -47,7 +53,10 @@ export const revalidateDelete: CollectionAfterDeleteHook<Article> = ({
     revalidatePath(path)
     revalidatePath("/volumes/feed.xml")
     revalidateTag("volumes-sitemap", "max")
-    purgeEdgeCache(payload.logger, `volume ${doc?.slug} deleted`)
+    purgeEdgeCache(payload.logger, `volume ${doc?.slug} deleted`, {
+      paths: [path, "/volumes/feed.xml"],
+      shared: true,
+    })
   }
 
   return doc

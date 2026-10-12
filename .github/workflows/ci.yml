@@ -228,7 +228,11 @@ jobs:
       pull-requests: write
 
     steps:
+      # Two commits deep: the PR's changed lines are the diff from the merge
+      # commit's first parent (the base tip).
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 2
 
       - name: Set up Node.js environment
         uses: ./.github/actions/setup-project
@@ -318,6 +322,10 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           BASE_COVERAGE_SUMMARY_PATH: ${{ steps.base-coverage.outputs.path }}
+          # Changed lines from the merge commit's own diff, numbered as the
+          # coverage run numbers them (the checkout above fetches its parent).
+          COVERAGE_DIFF_BASE: HEAD^1
+          STORYBOOK_RESULT: ${{ needs.storybook.result }}
 
   integration-tests:
     name: Integration tests

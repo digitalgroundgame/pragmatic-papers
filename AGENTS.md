@@ -433,8 +433,9 @@ under the base's, or when tests run its changed lines less than the project's
 lines are run (a PR may leave 2 changed lines uncovered regardless). The
 tolerances are `COVERAGE_GOALS` in `scripts/coverage-report.ts`. Integration
 tests aren't counted, so a change only they can reach gets the `coverage exempt`
-label (then re-run the Coverage job), which turns the failure into a warning. A
-PR with no coverable changed lines (docs, config, CI) passes as is.
+label (then re-run the Coverage job), which turns the failure into a warning, as
+a failed Storybook job does (its stories' coverage is missing). A PR with no
+coverable changed lines (docs, config, CI) passes as is.
 
 ### Testing your changes
 

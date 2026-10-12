@@ -11,9 +11,11 @@
 // are less covered than the project's. The `coverage exempt` label keeps the report but drops the
 // failure, for code only the integration tests reach (they aren't counted here).
 //
-// Changed lines come from the GitHub PR "files" API (its per-file `patch` hunks).
-// On non-PR runs (e.g. push to main) there is no diff to measure, so it no-ops.
+// Changed lines come from `git diff $COVERAGE_DIFF_BASE HEAD` when that's set (CI
+// sets HEAD^1, the merge commit's base side), else from the GitHub PR "files" API
+// (its per-file `patch` hunks). On non-PR runs (e.g. push to main) there is no diff to measure, so it no-ops.
 
+import { execFileSync } from "node:child_process"
 import { appendFileSync, existsSync, readFileSync } from "node:fs"
 import { relative, sep } from "node:path"
 import { fileURLToPath } from "node:url"
@@ -332,12 +334,13 @@ export function checkCoverageGoals({
  */
 export function renderGoals({
   misses,
-  exempt,
+  waived = null,
   hasBase,
   goals = COVERAGE_GOALS,
 }: {
   misses: string[]
-  exempt: boolean
+  /** Why missed goals only warn this run (see `waiver`), or null when they fail it. */
+  waived?: string | null
   hasBase: boolean
   goals?: CoverageGoals
 }): string {
@@ -349,12 +352,64 @@ export function renderGoals({
   const summary =
     misses.length === 0
       ? "✅ Coverage goals met"
-      : exempt
-        ? `⚪ Coverage goals missed, but this PR is labelled <code>${EXEMPT_LABEL}</code>`
+      : waived
+        ? `⚪ Coverage goals missed, but ${waived}`
         : "❌ Coverage goals missed"
   const list =
     misses.length === 0 ? "" : `<ul>\n${misses.map((m) => `<li>${m}</li>`).join("\n")}\n</ul>\n`
   return `<details><summary><strong>${summary}</strong></summary>\n${rules}\n</details>\n${list}`.trimEnd()
+}
+
+/**
+ * Why missed goals only warn on this run, or null when they fail it: the PR has
+ * the exempt label, or the Storybook job failed, so components the stories reach
+ * would read as untested.
+ */
+export function waiver({
+  labels,
+  storybookResult,
+}: {
+  labels: string[]
+  storybookResult: string | undefined
+}): string | null {
+  if (labels.includes(EXEMPT_LABEL)) return `this PR is labelled <code>${EXEMPT_LABEL}</code>`
+  if (storybookResult === "failure" || storybookResult === "cancelled") {
+    return "the Storybook job didn't finish, so the stories' coverage is missing"
+  }
+  return null
+}
+
+// ─── Changed lines ────────────────────────────────────────────────────────────
+
+/**
+ * Added lines per file in a multi-file unified diff (`git diff`), numbered on the
+ * new side. Deleted files are left out, as the PR files API leaves them out.
+ */
+export function parseDiffAddedLines(diff: string): Record<string, Set<number>> {
+  const byFile: Record<string, Set<number>> = {}
+  for (const section of diff.split(/^diff --git /m).slice(1)) {
+    const target = /^\+\+\+ (?:b\/(.+)|\/dev\/null)$/m.exec(section)
+    if (!target?.[1]) continue
+    const hunks = section.slice(section.search(/^@@/m))
+    byFile[target[1]] = section.search(/^@@/m) === -1 ? new Set() : parseAddedLines(hunks)
+  }
+  return byFile
+}
+
+/**
+ * The PR's added lines, numbered as in the commit CI checked out. On
+ * `pull_request` that's GitHub's merge commit, whose first parent is the base
+ * branch's tip, so `git diff HEAD^1 HEAD` is exactly the PR's change. The PR
+ * files API numbers lines in the PR head instead, which drifts from the coverage
+ * run's numbering when the base changed the same file since the branch point.
+ */
+export function gitAddedLines(base: string, cwd: string): Record<string, Set<number>> {
+  const diff = execFileSync(
+    "git",
+    ["diff", "--no-color", "--no-ext-diff", "--unified=0", base, "HEAD"],
+    { cwd, encoding: "utf8", maxBuffer: 256 * 1024 * 1024 },
+  )
+  return parseDiffAddedLines(diff)
 }
 
 // ─── GitHub API ───────────────────────────────────────────────────────────────
@@ -403,18 +458,16 @@ export async function fetchLabels({
   prNumber: number
   token: string | undefined
 }): Promise<string[]> {
-  const res = await fetch(
-    `https://api.github.com/repos/${repo}/issues/${prNumber}/labels?per_page=100`,
-    {
-      headers: {
-        Accept: "application/vnd.github+json",
-        "User-Agent": "coverage-report-script",
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      },
+  // The pull request itself, which the job's pull-requests permission can read.
+  const res = await fetch(`https://api.github.com/repos/${repo}/pulls/${prNumber}`, {
+    headers: {
+      Accept: "application/vnd.github+json",
+      "User-Agent": "coverage-report-script",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
-  )
+  })
   if (!res.ok) throw new Error(`GitHub API ${res.status}: ${await res.text()}`)
-  return ((await res.json()) as { name: string }[]).map((l) => l.name)
+  return ((await res.json()) as { labels?: { name: string }[] }).labels?.map((l) => l.name) ?? []
 }
 
 // ─── Rendering ────────────────────────────────────────────────────────────────
@@ -718,7 +771,18 @@ export async function main(): Promise<void> {
   const repo = process.env.GITHUB_REPOSITORY
   const sha = process.env.GITHUB_SHA
   const token = process.env.GITHUB_TOKEN
-  const addedLinesByFile = await fetchChangedFiles({ repo, prNumber, token })
+  const diffBase = process.env.COVERAGE_DIFF_BASE
+  let addedLinesByFile: Record<string, Set<number>> | null = null
+  if (diffBase) {
+    try {
+      addedLinesByFile = gitAddedLines(diffBase, root)
+    } catch (err) {
+      console.warn(
+        `${yellow("⚠")} git diff ${diffBase} failed, so changed lines come from the API: ${(err as Error).message}`,
+      )
+    }
+  }
+  addedLinesByFile ??= await fetchChangedFiles({ repo, prNumber, token })
   const { metrics, files } = computePatchCoverage(coverageByFile, addedLinesByFile)
 
   if (metrics.lines.total === 0) {
@@ -740,15 +804,17 @@ export async function main(): Promise<void> {
     : null
   const touchesCode = Object.keys(addedLinesByFile).some((file) => coverageByFile[file])
   const misses = checkCoverageGoals({ total, baseTotal, patch: metrics, touchesCode })
-  let exempt = false
+  let waived: string | null = null
   if (misses.length > 0) {
+    let labels: string[] = []
     try {
-      exempt = (await fetchLabels({ repo, prNumber, token })).includes(EXEMPT_LABEL)
+      labels = await fetchLabels({ repo, prNumber, token })
     } catch (err) {
       console.warn(`${yellow("⚠")} Could not read the PR's labels: ${(err as Error).message}`)
     }
+    waived = waiver({ labels, storybookResult: process.env.STORYBOOK_RESULT })
   }
-  const goals = renderGoals({ misses, exempt, hasBase: baseTotal != null })
+  const goals = renderGoals({ misses, waived, hasBase: baseTotal != null })
 
   const changedFiles = Object.keys(addedLinesByFile)
   const report = renderReport({
@@ -775,9 +841,9 @@ export async function main(): Promise<void> {
 
   for (const miss of misses) {
     // A workflow command, so the miss shows on the PR's checks.
-    process.stdout.write(`::${exempt ? "warning" : "error"} title=Coverage goal::${miss}\n`)
+    process.stdout.write(`::${waived ? "warning" : "error"} title=Coverage goal::${miss}\n`)
   }
-  if (misses.length > 0 && !exempt) process.exitCode = 1
+  if (misses.length > 0 && !waived) process.exitCode = 1
 }
 
 // Only run when invoked directly, so the pure helpers above can be unit-tested.

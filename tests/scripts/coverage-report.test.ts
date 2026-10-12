@@ -1,4 +1,5 @@
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs"
+import { execFileSync } from "node:child_process"
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 
@@ -11,7 +12,9 @@ import {
   EXEMPT_LABEL,
   fetchLabels,
   patchTarget,
+  parseDiffAddedLines,
   renderGoals,
+  waiver,
   computePatchCoverage,
   FILE_TABLE_BUDGET,
   fitRows,
@@ -732,7 +735,7 @@ describe("patchTarget", () => {
 
 describe("renderGoals", () => {
   it("collapses the rules under a met verdict", () => {
-    const html = renderGoals({ misses: [], exempt: false, hasBase: true })
+    const html = renderGoals({ misses: [], hasBase: true })
     expect(html).toMatch(/^<details><summary><strong>✅ Coverage goals met<\/strong><\/summary>/)
     expect(html).toContain(`${COVERAGE_GOALS.projectTolerance} points`)
     expect(html).not.toContain("not checked")
@@ -740,21 +743,19 @@ describe("renderGoals", () => {
   })
 
   it("lists each missed goal outside the dropdown", () => {
-    const html = renderGoals({ misses: ["One.", "Two."], exempt: false, hasBase: true })
+    const html = renderGoals({ misses: ["One.", "Two."], hasBase: true })
     expect(html).toContain("❌ Coverage goals missed")
     expect(html).toMatch(/<\/details>\n<ul>\n<li>One\.<\/li>\n<li>Two\.<\/li>\n<\/ul>$/)
   })
 
-  it("says an exempt PR missed its goals without failing", () => {
-    const html = renderGoals({ misses: ["One."], exempt: true, hasBase: true })
-    expect(html).toContain(`labelled <code>${EXEMPT_LABEL}</code>`)
+  it("says why missed goals only warn", () => {
+    const html = renderGoals({ misses: ["One."], waived: "the reason", hasBase: true })
+    expect(html).toContain("⚪ Coverage goals missed, but the reason")
     expect(html).not.toContain("❌")
   })
 
   it("notes when the project goal wasn't checked", () => {
-    expect(renderGoals({ misses: [], exempt: false, hasBase: false })).toContain(
-      "not checked on this run",
-    )
+    expect(renderGoals({ misses: [], hasBase: false })).toContain("not checked on this run")
   })
 })
 
@@ -786,14 +787,21 @@ describe("fetchLabels", () => {
 
   it("returns the PR's label names", async () => {
     vi.mocked(fetch).mockResolvedValueOnce(
-      new Response(JSON.stringify([{ name: "ci" }, { name: EXEMPT_LABEL }])),
+      new Response(JSON.stringify({ labels: [{ name: "ci" }, { name: EXEMPT_LABEL }] })),
     )
     await expect(fetchLabels({ repo: "owner/repo", prNumber: 7, token: "tok" })).resolves.toEqual([
       "ci",
       EXEMPT_LABEL,
     ])
     expect(vi.mocked(fetch).mock.calls[0]![0]).toBe(
-      "https://api.github.com/repos/owner/repo/issues/7/labels?per_page=100",
+      "https://api.github.com/repos/owner/repo/pulls/7",
+    )
+  })
+
+  it("returns none when the pull request has no labels field", async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(new Response(JSON.stringify({})))
+    await expect(fetchLabels({ repo: "owner/repo", prNumber: 7, token: "tok" })).resolves.toEqual(
+      [],
     )
   })
 
@@ -802,6 +810,58 @@ describe("fetchLabels", () => {
     await expect(fetchLabels({ repo: "owner/repo", prNumber: 7, token: "tok" })).rejects.toThrow(
       "GitHub API 500",
     )
+  })
+})
+
+describe("waiver", () => {
+  it("waives a PR with the exempt label", () => {
+    expect(waiver({ labels: ["ci", EXEMPT_LABEL], storybookResult: "success" })).toContain(
+      EXEMPT_LABEL,
+    )
+  })
+  it.each(["failure", "cancelled"])("waives a run whose Storybook job ended in %s", (result) => {
+    expect(waiver({ labels: [], storybookResult: result })).toContain("Storybook")
+  })
+  it.each(["success", "skipped", undefined])("doesn't waive Storybook %s", (result) => {
+    expect(waiver({ labels: [], storybookResult: result })).toBeNull()
+  })
+})
+
+describe("parseDiffAddedLines", () => {
+  it("collects added lines per file and leaves out deleted files", () => {
+    const diff = [
+      "diff --git a/src/a.ts b/src/a.ts",
+      "index 1..2 100644",
+      "--- a/src/a.ts",
+      "+++ b/src/a.ts",
+      "@@ -3,0 +4,2 @@",
+      "+one",
+      "+two",
+      "@@ -10 +12 @@",
+      "-old",
+      "+new",
+      "diff --git a/src/gone.ts b/src/gone.ts",
+      "deleted file mode 100644",
+      "--- a/src/gone.ts",
+      "+++ /dev/null",
+      "@@ -1 +0,0 @@",
+      "-bye",
+      "diff --git a/img.png b/img.png",
+      "new file mode 100644",
+      "Binary files /dev/null and b/img.png differ",
+      "diff --git a/src/empty.ts b/src/empty.ts",
+      "new file mode 100644",
+      "--- /dev/null",
+      "+++ b/src/empty.ts",
+    ].join("\n")
+    const byFile = parseDiffAddedLines(diff)
+    expect(Object.keys(byFile)).toEqual(["src/a.ts", "src/empty.ts"])
+    expect([...byFile["src/a.ts"]!]).toEqual([4, 5, 12])
+    expect(byFile["src/empty.ts"]!.size).toBe(0)
+  })
+
+  it("returns nothing for an empty diff", () => {
+    expect(parseDiffAddedLines("")).toEqual({})
   })
 })
 
@@ -883,7 +943,7 @@ describe("main", () => {
     it("fails the step and annotates the missed goal", async () => {
       vi.mocked(fetch)
         .mockResolvedValueOnce(new Response(JSON.stringify(changedFiles)))
-        .mockResolvedValueOnce(new Response(JSON.stringify([])))
+        .mockResolvedValueOnce(new Response(JSON.stringify({ labels: [] })))
       await main()
       expect(process.exitCode).toBe(1)
       expect(process.stdout.write).toHaveBeenCalledWith(
@@ -891,10 +951,60 @@ describe("main", () => {
       )
     })
 
+    it("only warns when the Storybook job failed", async () => {
+      process.env.STORYBOOK_RESULT = "failure"
+      vi.mocked(fetch)
+        .mockResolvedValueOnce(new Response(JSON.stringify(changedFiles)))
+        .mockResolvedValueOnce(new Response(JSON.stringify({ labels: [] })))
+      await main()
+      delete process.env.STORYBOOK_RESULT
+      expect(process.exitCode).toBeUndefined()
+    })
+
+    it("still fails when the labels can't be read", async () => {
+      vi.mocked(fetch)
+        .mockResolvedValueOnce(new Response(JSON.stringify(changedFiles)))
+        .mockResolvedValueOnce(new Response("nope", { status: 500 }))
+      await main()
+      expect(process.exitCode).toBe(1)
+    })
+
+    it("reads changed lines from git when COVERAGE_DIFF_BASE is set", async () => {
+      const git = (...args: string[]) =>
+        execFileSync("git", ["-c", "user.name=t", "-c", "user.email=t@t", ...args], {
+          cwd: tmpDir,
+        })
+      git("init", "-q")
+      mkdirSync(join(tmpDir, "src"), { recursive: true })
+      writeFileSync(join(tmpDir, "src/a.ts"), "")
+      git("add", ".")
+      git("commit", "-qm", "base")
+      writeFileSync(join(tmpDir, "src/a.ts"), "a\nb\nc\nd\n")
+      git("commit", "-qam", "change")
+      process.env.COVERAGE_DIFF_BASE = "HEAD^1"
+      vi.mocked(fetch).mockResolvedValueOnce(new Response(JSON.stringify({ labels: [] })))
+      await main()
+      delete process.env.COVERAGE_DIFF_BASE
+      expect(process.exitCode).toBe(1)
+      // Only the labels came from the API.
+      expect(fetch).toHaveBeenCalledTimes(1)
+    })
+
+    it("falls back to the API when git diff fails", async () => {
+      process.env.COVERAGE_DIFF_BASE = "HEAD^1" // tmpDir isn't a repository
+      vi.mocked(fetch)
+        .mockResolvedValueOnce(new Response(JSON.stringify(changedFiles)))
+        .mockResolvedValueOnce(new Response(JSON.stringify({ labels: [] })))
+      await main()
+      delete process.env.COVERAGE_DIFF_BASE
+      expect(process.exitCode).toBe(1)
+      expect(console.warn).toHaveBeenCalledWith(expect.stringContaining("git diff HEAD^1 failed"))
+    })
+
     it("only warns when the PR has the exempt label", async () => {
       vi.mocked(fetch)
         .mockResolvedValueOnce(new Response(JSON.stringify(changedFiles)))
-        .mockResolvedValueOnce(new Response(JSON.stringify([{ name: EXEMPT_LABEL }])))
+        .mockResolvedValueOnce(new Response(JSON.stringify({ labels: [{ name: EXEMPT_LABEL }] })))
       await main()
       expect(process.exitCode).toBeUndefined()
       expect(process.stdout.write).toHaveBeenCalledWith(

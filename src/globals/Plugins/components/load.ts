@@ -2,7 +2,7 @@ import type { SanitizedConfig } from "payload"
 
 import type { User } from "@/payload-types"
 
-import { installedPlugins } from "../installedPlugin"
+import { installedPlugins } from "../trackPlugins"
 
 /** A link to an admin page, or `href: null` when that page is hidden from this user. */
 export interface PluginPage {

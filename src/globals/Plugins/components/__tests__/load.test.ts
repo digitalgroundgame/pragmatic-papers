@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest"
 
 import type { User } from "@/payload-types"
 
-import type { InstalledPlugin } from "../../installedPlugin"
+import type { InstalledPlugin } from "../../trackPlugins"
 import { loadPlugins } from "../load"
 
 const admin = { id: 1, roles: ["admin"] } as unknown as User

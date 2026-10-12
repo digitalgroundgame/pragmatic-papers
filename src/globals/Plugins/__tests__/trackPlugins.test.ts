@@ -2,8 +2,9 @@ import type { Config, Plugin } from "payload"
 import { describe, expect, it } from "vitest"
 
 import { plugins } from "@/plugins"
+import { PLUGIN_INFO } from "@/plugins/catalog"
 
-import { installedPlugin, installedPlugins } from "../installedPlugin"
+import { installedPlugins, trackPlugins } from "../trackPlugins"
 
 const base = (): Config =>
   ({
@@ -20,38 +21,38 @@ const run = async (config: Config, list: Plugin[]): Promise<Config> => {
   return config
 }
 
-describe("installedPlugin", () => {
+const info = (name: string) => ({ name, source: name.toLowerCase(), description: "" })
+
+describe("trackPlugins", () => {
   it("records each plugin with what it added, in the order they ran", async () => {
     const addsGlobal: Plugin = (config) => ({
       ...config,
       globals: [...(config.globals ?? []), { slug: "plugin-settings", fields: [] }],
     })
-    const config = await run(base(), [
-      installedPlugin({ name: "First", source: "first", description: "" }, addsCollection("one")),
-      installedPlugin({ name: "Second", source: "second", description: "" }, addsGlobal),
-    ])
+    const config = await run(
+      base(),
+      trackPlugins(
+        { first: addsCollection("one"), second: addsGlobal },
+        { first: info("First"), second: info("Second") },
+      ),
+    )
 
     expect(installedPlugins(config)).toEqual([
-      { name: "First", source: "first", description: "", collections: ["one"], globals: [] },
-      {
-        name: "Second",
-        source: "second",
-        description: "",
-        collections: [],
-        globals: ["plugin-settings"],
-      },
+      { ...info("First"), collections: ["one"], globals: [] },
+      { ...info("Second"), collections: [], globals: ["plugin-settings"] },
     ])
     expect(config.collections?.map((c) => c.slug)).toEqual(["articles", "one"])
   })
 
   it("keeps what's already in custom", async () => {
-    const config = await run({ ...base(), custom: { tours: { enabled: true } } }, [
-      installedPlugin({ name: "A", source: "a", description: "" }, addsCollection("a")),
-    ])
+    const config = await run(
+      { ...base(), custom: { tours: { enabled: true } } },
+      trackPlugins({ a: addsCollection("a") }, { a: info("A") }),
+    )
     expect(config.custom?.tours).toEqual({ enabled: true })
   })
 
-  it("lists nothing for a config no wrapped plugin ran on", () => {
+  it("lists nothing for a config no tracked plugin ran on", () => {
     expect(installedPlugins(base())).toEqual([])
     expect(installedPlugins({ custom: { installedPlugins: "nope" } })).toEqual([])
   })
@@ -66,12 +67,11 @@ describe("the site's plugins", () => {
           (slug) => ({ slug, fields: [] }),
         ),
       } as unknown as Config,
-      plugins,
+      trackPlugins({ ...plugins, sentry: (c: Config) => c }, PLUGIN_INFO),
     )
     const listed = installedPlugins(config)
 
-    expect(listed).toHaveLength(plugins.length)
-    expect(new Set(listed.map((p) => p.name)).size).toBe(listed.length)
+    expect(listed.map((p) => p.name)).toEqual(Object.values(PLUGIN_INFO).map((p) => p.name))
     expect(listed.find((p) => p.name === "Search")?.collections).toEqual(["search"])
     expect(listed.find((p) => p.name === "Help docs")?.collections).toEqual(["docs"])
     expect(listed.find((p) => p.name === "SEO")?.collections).toEqual([])

@@ -16,7 +16,7 @@ import { Footer } from "@/Footer/config"
 import { ArticleRecommendations } from "@/globals/ArticleRecommendations/config"
 import { Integrations } from "@/globals/Integrations/config"
 import { Newsletter } from "@/globals/Newsletter/config"
-import { installedPlugin } from "@/globals/Plugins/installedPlugin"
+import { trackPlugins } from "@/globals/Plugins/trackPlugins"
 import { Plugins } from "@/globals/Plugins/config"
 import { SiteSettings } from "@/globals/SiteSettings/config"
 import { Header } from "@/Header/config"
@@ -25,6 +25,7 @@ import { syncInteractiveDataTask } from "@/jobs/syncInteractiveData"
 import { syncShopifyProductsTask } from "@/jobs/syncShopifyProducts"
 import { updateRecommendationsTask } from "@/jobs/updateRecommendations"
 import { plugins } from "@/plugins"
+import { PLUGIN_INFO } from "@/plugins/catalog"
 import { searchVectorAfterSchemaInit } from "@/plugins/searchVector"
 import { ssoAfterSchemaInit } from "@/plugins/sso"
 import { sentryPayloadPlugin, skipPluginErrorsInPino } from "@/sentryPayload"
@@ -182,18 +183,7 @@ export default buildConfig({
   // APIs), and its errors reach `afterError` with their status nested on `originalError`,
   // which the Sentry plugin reads as a 500: anyone could fill Sentry from /api/graphql.
   graphQL: { disable: true },
-  plugins: [
-    ...plugins,
-    installedPlugin(
-      {
-        name: "Sentry",
-        source: "@payloadcms/plugin-sentry",
-        description:
-          "Reports the errors Payload answers with a 5xx to Sentry, with the signed-in user.",
-      },
-      sentryPayloadPlugin,
-    ),
-  ],
+  plugins: trackPlugins({ ...plugins, sentry: sentryPayloadPlugin }, PLUGIN_INFO),
   secret: process.env.PAYLOAD_SECRET,
   sharp: sharp as unknown as SharpDependency,
   typescript: {

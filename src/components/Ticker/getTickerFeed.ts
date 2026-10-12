@@ -47,6 +47,7 @@ const getTickerSources = cache(async () => {
   ])
   const settings: TickerSettings = {
     youtubeChannelIds: youtube?.channels?.map((channel) => channel.channelId),
+    youtubeUpcomingHours: ticker?.upcomingHours,
     blueskyHandles: bluesky?.handles?.map((account) => account.handle),
     xUsernames: x?.usernames?.map((account) => account.username),
   }

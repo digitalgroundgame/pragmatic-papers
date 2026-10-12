@@ -2,10 +2,11 @@ import { Pause, Play } from "lucide-react"
 import type { CSSProperties, FC, SVGProps } from "react"
 
 import { BlueskyIcon, XIcon, YoutubeIcon } from "@/components/SocialLinks/icons"
-import { formatFullTimestamp, formatTimeOfDay } from "@/heros/ArticleHero/dates"
+import { formatFullTimestamp } from "@/heros/ArticleHero/dates"
 import { cn } from "@/utilities/utils"
 
 import { LinkIcon, shortURL } from "./LinkIcon"
+import { formatStartsAt } from "./startsAt"
 import { TICKER_PAUSE_SCRIPT } from "./pause"
 import { LazyLinkTooltip } from "./LinkTooltip.lazy"
 import {
@@ -119,9 +120,11 @@ const LABEL = "text-brand-text shrink-0 font-serif text-xs font-bold tracking-wi
 function Broadcast({
   broadcast,
   pinned,
+  now,
 }: {
   broadcast: TickerBroadcast
   pinned: boolean
+  now?: Date
 }): React.ReactNode {
   const live = broadcast.status === "live"
   return (
@@ -155,7 +158,7 @@ function Broadcast({
           title={formatFullTimestamp(broadcast.startsAt)}
           className="text-muted-foreground shrink-0 font-serif"
         >
-          {formatTimeOfDay(broadcast.startsAt)}
+          {formatStartsAt(broadcast.startsAt, now)}
         </time>
       )}
     </a>
@@ -173,7 +176,14 @@ function Broadcast({
  * channels is live it sticks on phones too. Pausing it is the reader's way to quiet the page: it
  * stops, scrolls away with the page, and stays that way on the next page (`pause.ts`).
  */
-export function TickerView({ broadcast, posts }: TickerFeed): React.ReactNode {
+export function TickerView({
+  broadcast,
+  posts,
+  now,
+}: TickerFeed & {
+  /** What an upcoming broadcast's day is measured from; stories and tests pin it. */
+  now?: Date
+}): React.ReactNode {
   if (!broadcast && posts.length === 0) return null
 
   const live = broadcast?.status === "live"
@@ -189,7 +199,7 @@ export function TickerView({ broadcast, posts }: TickerFeed): React.ReactNode {
           the top line. */}
       <div className="flex h-10 items-center gap-4 px-4 text-sm">
         {broadcast ? (
-          <Broadcast broadcast={broadcast} pinned={posts.length > 0} />
+          <Broadcast broadcast={broadcast} pinned={posts.length > 0} now={now} />
         ) : (
           <span className={LABEL}>Latest</span>
         )}

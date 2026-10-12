@@ -43,7 +43,23 @@ export const Live: Story = {
 
 /** A broadcast scheduled for later today. */
 export const Upcoming: Story = {
-  args: { broadcast: upcomingBroadcast, posts: tickerPosts },
+  args: {
+    broadcast: upcomingBroadcast,
+    posts: tickerPosts,
+    now: new Date("2026-10-07T16:00:00Z"),
+  },
+}
+
+/** A broadcast scheduled for a later day: its weekday comes before the time. */
+export const UpcomingLaterInTheWeek: Story = {
+  args: {
+    broadcast: upcomingBroadcast,
+    posts: tickerPosts,
+    now: new Date("2026-10-05T16:00:00Z"),
+  },
+  play: async ({ canvasElement }) => {
+    await expect(within(canvasElement).getByText("Wednesday 7:00 p.m. ET")).toBeInTheDocument()
+  },
 }
 
 /** Nothing on air: only the posts. */

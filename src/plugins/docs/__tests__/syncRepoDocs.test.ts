@@ -1,14 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import type { Payload } from "payload"
 
-const { syncDocs, purgeEdgeCache, revalidateTag } = vi.hoisted(() => ({
-  syncDocs: vi.fn(),
-  purgeEdgeCache: vi.fn(),
-  revalidateTag: vi.fn(),
-}))
+const { syncDocs } = vi.hoisted(() => ({ syncDocs: vi.fn() }))
 vi.mock("../syncDocs", () => ({ syncDocs }))
-vi.mock("@/hooks/purgeEdgeCache", () => ({ purgeEdgeCache }))
-vi.mock("next/cache", () => ({ revalidateTag }))
 
 import { syncRepoDocs } from "../syncRepoDocs"
 
@@ -17,33 +11,23 @@ const payload = { logger } as unknown as Payload
 
 beforeEach(() => {
   vi.clearAllMocks()
-  syncDocs.mockResolvedValue({ created: [], updated: [], unchanged: ["a"], deleted: [] })
+  syncDocs.mockResolvedValue({ created: [], existing: ["a"], deleted: [] })
 })
 afterEach(() => vi.unstubAllEnvs())
 
 describe("syncRepoDocs", () => {
-  it("syncs the repo's docs and refreshes the caches on a change", async () => {
-    const result = { created: ["a"], updated: [], unchanged: [], deleted: [] }
+  it("seeds the repo's new docs as drafts and logs them", async () => {
+    const result = { created: ["a"], existing: ["b"], deleted: [] }
     syncDocs.mockResolvedValue(result)
     await expect(syncRepoDocs(payload)).resolves.toEqual(result)
     expect(syncDocs).toHaveBeenCalledWith(payload)
-    expect(logger.info).toHaveBeenCalled()
-    expect(revalidateTag).toHaveBeenCalledWith("docs", "max")
-    expect(purgeEdgeCache).toHaveBeenCalledWith(logger, "docs synced")
+    expect(logger.info).toHaveBeenCalledWith({ created: ["a"] }, expect.any(String))
   })
 
-  it("refreshes the caches when a doc was deleted", async () => {
-    syncDocs.mockResolvedValue({ created: [], updated: [], unchanged: [], deleted: ["a"] })
-    await syncRepoDocs(payload)
-    expect(revalidateTag).toHaveBeenCalledWith("docs", "max")
-    expect(purgeEdgeCache).toHaveBeenCalledWith(logger, "docs synced")
-  })
-
-  it("leaves the caches alone when nothing changed", async () => {
+  it("logs nothing when the site has every doc already", async () => {
     await syncRepoDocs(payload)
     expect(syncDocs).toHaveBeenCalled()
-    expect(revalidateTag).not.toHaveBeenCalled()
-    expect(purgeEdgeCache).not.toHaveBeenCalled()
+    expect(logger.info).not.toHaveBeenCalled()
   })
 
   it("logs a failed sync rather than failing the deploy", async () => {

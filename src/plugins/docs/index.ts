@@ -7,10 +7,10 @@ export { DOCS_SLUG } from "./collection"
 export { DOCS_CACHE_TAG }
 
 /**
- * Help docs at /docs/<slug>: the Docs collection. The docs in src/docs/ are written into each
- * site's database once per deploy, by `/next/revalidate-all` (see `syncRepoDocs`), so a
- * release that ships a doc has it on every site the moment it's live. `pnpm docs:export
- * <slug>` writes one from the admin into the repo.
+ * Help docs at /docs/<slug>: the Docs collection. Once per deploy, `/next/revalidate-all`
+ * seeds each site with the docs in src/docs/ it doesn't have yet, as drafts (see
+ * `syncRepoDocs`), so a release that ships a doc has it waiting for an editor to publish.
+ * `pnpm docs:export <slug>` writes one from the admin into the repo.
  */
 export const docsPlugin = (): Plugin => (config) => ({
   ...config,

@@ -15976,6 +15976,13 @@
           "notNull": false,
           "default": false
         },
+        "ticker_upcoming_hours": {
+          "name": "ticker_upcoming_hours",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": false,
+          "default": 24
+        },
         "updated_at": {
           "name": "updated_at",
           "type": "timestamp(3) with time zone",
@@ -18213,6 +18220,6 @@
     "tables": {},
     "columns": {}
   },
-  "id": "0ea3ac68-d019-4005-9571-52a8931461a0",
+  "id": "4f45aa75-4bee-41cc-90a2-af743307ca38",
   "prevId": "00000000-0000-0000-0000-000000000000"
 }

@@ -2,6 +2,7 @@ import { existsSync } from "node:fs"
 import { readdir, readFile } from "node:fs/promises"
 import path from "node:path"
 import type { Doc } from "@/payload-types"
+import { markSeeded, wasSeeded } from "@/utilities/seedOnce"
 import type { Payload } from "payload"
 
 import { DOCS_SLUG } from "./collection"
@@ -71,11 +72,22 @@ const MIME_TYPES: Record<string, string> = {
 }
 
 export interface SyncResult {
+  /** Docs new to this site, created as drafts for an editor to publish. */
   created: string[]
-  updated: string[]
-  unchanged: string[]
-  /** Repo docs whose file is gone from the repo, deleted from this site. */
+  /** Docs the site already has, left as they are: once seeded, a doc is the site's. */
+  existing: string[]
+  /** Docs seeded here before and deleted since, which stay deleted. */
   deleted: string[]
+}
+
+export interface SyncOptions {
+  /**
+   * For the local seed, which has just wiped every doc: publish the docs it creates, and seed
+   * docs again that it seeded before. On a deployed site a doc from the repo waits for an
+   * editor, so nothing reaches readers or the bell unread by a person, and one an editor
+   * deleted stays deleted.
+   */
+  localSeed?: boolean
 }
 
 const context = { disableRevalidate: true }
@@ -117,39 +129,19 @@ async function uploadOnce(
   return media.id
 }
 
-/** Deletes the repo docs (those with a `sourceHash`) whose slug no longer has a file. */
-async function deleteRemovedDocs(payload: Payload, entries: DocFileEntry[]): Promise<string[]> {
-  const { docs } = await payload.find({
-    collection: DOCS_SLUG,
-    depth: 0,
-    draft: true,
-    overrideAccess: true,
-    pagination: false,
-    select: { slug: true },
-    where: {
-      and: [
-        { sourceHash: { exists: true } },
-        { slug: { not_in: entries.map((entry) => entry.slug) } },
-      ],
-    },
-  })
-  const deleted: string[] = []
-  for (const doc of docs) {
-    await payload.delete({ collection: DOCS_SLUG, id: doc.id, context, overrideAccess: true })
-    deleted.push(doc.slug)
-  }
-  return deleted
-}
-
 /**
- * Writes each doc in `dir` into this site's database, published, with its files uploaded to
- * Media. A doc whose file and pictures hash the same as last time is skipped, so a deploy with
- * nothing new costs one query per doc. A repo doc edited in the admin is left alone until the
- * repo's copy changes. A doc the repo synced before whose file has since been removed or renamed
- * is deleted; docs written in the admin are never touched.
+ * Seeds this site's database with each doc in `dir` it has never had, as a draft, with its
+ * files uploaded to Media. Push only: a doc the site already has (by slug, draft or published,
+ * seeded or written in the admin) is never overwritten, and nothing is ever deleted, so editors
+ * own a doc from the moment it arrives. Each doc is recorded as seeded (`markSeeded`), so one an
+ * editor deletes isn't seeded again.
  */
-export async function syncDocs(payload: Payload, dir = DOCS_DIR): Promise<SyncResult> {
-  const result: SyncResult = { created: [], updated: [], unchanged: [], deleted: [] }
+export async function syncDocs(
+  payload: Payload,
+  dir = DOCS_DIR,
+  { localSeed = false }: SyncOptions = {},
+): Promise<SyncResult> {
+  const result: SyncResult = { created: [], existing: [], deleted: [] }
   if (!existsSync(dir)) {
     // A deploy without the folder (a runtime with no file system for it) would otherwise
     // look like one with nothing to sync.
@@ -160,15 +152,7 @@ export async function syncDocs(payload: Payload, dir = DOCS_DIR): Promise<SyncRe
   const entries = await listDocFiles(dir)
   let editorConfig: ReturnType<typeof docsEditorConfig> | undefined
   for (const { slug, section, folder, file } of entries) {
-    const source = await readFile(file, "utf8")
-    const { meta, body } = parseDocFile(source, path.relative(dir, file))
-    const refs = mediaRefsIn([
-      meta.heroImage ? { $media: meta.heroImage, alt: meta.heroAlt } : [],
-      imagesIn(body).map((image) => ({ $media: image.file, alt: image.alt })),
-    ])
-    const files = await Promise.all(refs.map((ref) => readFile(path.join(folder, ref.$media))))
-    const sourceHash = hashRepoDoc(section, source, files)
-
+    const seeded = await wasSeeded(payload, DOCS_SLUG, slug)
     const { docs } = await payload.find({
       collection: DOCS_SLUG,
       depth: 0,
@@ -176,20 +160,35 @@ export async function syncDocs(payload: Payload, dir = DOCS_DIR): Promise<SyncRe
       limit: 1,
       overrideAccess: true,
       pagination: false,
+      select: { slug: true },
       where: { slug: { equals: slug } },
     })
-    const existing = docs[0]
-    if (existing?.sourceHash === sourceHash) {
-      result.unchanged.push(slug)
+    if (docs.length) {
+      // Recorded too, so a doc the site had before seeding was recorded stays deleted once an
+      // editor deletes it.
+      if (!seeded) await markSeeded(payload, DOCS_SLUG, slug)
+      result.existing.push(slug)
       continue
     }
+    if (seeded && !localSeed) {
+      result.deleted.push(slug)
+      continue
+    }
+
+    const source = await readFile(file, "utf8")
+    const { meta, body } = parseDocFile(source, path.relative(dir, file))
+    const refs = mediaRefsIn([
+      meta.heroImage ? { $media: meta.heroImage, alt: meta.heroAlt } : [],
+      imagesIn(body).map((image) => ({ $media: image.file, alt: image.alt })),
+    ])
+    const files = await Promise.all(refs.map((ref) => readFile(path.join(folder, ref.$media))))
 
     const ids = new Map<string, number | string>()
     for (const [i, ref] of refs.entries()) {
       ids.set(ref.$media, await uploadOnce(payload, ref.$media, files[i]!, ref))
     }
 
-    // Converted only once it's known to have changed: a deploy reads every doc.
+    // Converted only for a doc it creates: a deploy reads every doc.
     editorConfig ??= docsEditorConfig(payload.config)
     const { heroAlt, heroImage, ...rest } = meta
     const repoDoc: RepoDoc = {
@@ -211,25 +210,18 @@ export async function syncDocs(payload: Payload, dir = DOCS_DIR): Promise<SyncRe
       tour: repoDoc.tour ?? null,
       content: unpackMedia(repoDoc.content, ids) as never,
       slug,
-      sourceHash,
-      _status: "published" as const,
+      sourceHash: hashRepoDoc(section, source, files),
+      _status: localSeed ? ("published" as const) : ("draft" as const),
     }
-    if (existing) {
-      await payload.update({
-        collection: DOCS_SLUG,
-        id: existing.id,
-        data,
-        context,
-        overrideAccess: true,
-      })
-      result.updated.push(slug)
-    } else {
-      await payload.create({ collection: DOCS_SLUG, data, context, overrideAccess: true })
-      result.created.push(slug)
-    }
+    await payload.create({
+      collection: DOCS_SLUG,
+      data,
+      context,
+      draft: !localSeed,
+      overrideAccess: true,
+    })
+    await markSeeded(payload, DOCS_SLUG, slug)
+    result.created.push(slug)
   }
-
-  // An empty folder is more likely a broken build than a repo with no docs left.
-  if (entries.length) result.deleted = await deleteRemovedDocs(payload, entries)
   return result
 }

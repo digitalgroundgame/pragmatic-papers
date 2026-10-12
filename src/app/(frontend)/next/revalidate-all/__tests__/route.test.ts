@@ -24,12 +24,7 @@ describe("POST /next/revalidate-all", () => {
   beforeEach(() => {
     vi.stubEnv("PAYLOAD_SECRET", "s3cret")
     vi.clearAllMocks()
-    syncRepoDocs.mockResolvedValue({
-      created: ["a"],
-      updated: [],
-      unchanged: ["b"],
-      deleted: ["c"],
-    })
+    syncRepoDocs.mockResolvedValue({ created: ["a"], existing: ["b"], deleted: [] })
     createMissingStarterPages.mockResolvedValue(["feeds"])
   })
 
@@ -39,7 +34,7 @@ describe("POST /next/revalidate-all", () => {
     expect(response.status).toBe(200)
     await expect(response.json()).resolves.toEqual({
       revalidated: true,
-      docs: { created: ["a"], updated: [], deleted: ["c"] },
+      docs: { created: ["a"] },
       pages: { created: ["feeds"] },
     })
     expect(syncRepoDocs).toHaveBeenCalledExactlyOnceWith(payload)

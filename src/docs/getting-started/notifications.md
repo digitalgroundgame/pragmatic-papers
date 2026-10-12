@@ -3,11 +3,12 @@ title: Find what's new in the bell
 navTitle: The bell
 summary: The bell beside your avatar lists help docs for features you use, newest first. A dot marks what you haven't read yet.
 publishedAt: 2026-10-09
+revisedAt: 2026-10-12
 heroImage: notifications-hero.webp
 heroAlt: The bell's What's new list with two help docs, one unread
 ---
 
-The bell in the top right of the admin, beside your avatar, is where new features are announced. Each one comes with a help doc, like this one.
+The bell in the top right of the admin, beside your avatar, is where new features are announced. Each one comes with a help doc, like this one, which reaches the bell once an editor publishes it.
 
 ## Reading it
 
@@ -24,3 +25,7 @@ You're only told about features that matter to your role. A doc for editors does
 Click the gear in the bell's menu to choose what it tells you about. Untick **Docs** and new docs stop counting on the bell. You can still open the list and the docs whenever you like.
 
 What you've read and what you've turned off are saved to your account, so they follow you to another computer.
+
+## Publishing a release's docs
+
+Editors: a release that ships a help doc adds it under **Help → Docs** as a draft, and nobody is told until it's published. After a release, look there for drafts, read each one, change what you like, and publish it. The bell announces it then. The doc is yours from then on: later releases never change or delete it, and one you delete stays deleted.

@@ -42,6 +42,12 @@ describe("revalidateSnapshot", () => {
     })
   })
 
+  it("reads the interactive in the save's transaction", async () => {
+    const args = change(published, drafted) as { req: unknown }
+    await revalidateSnapshot(args as never)
+    expect(findByID).toHaveBeenCalledWith(expect.objectContaining({ req: args.req, id: 3 }))
+  })
+
   it("reads the interactive off a populated relationship too", async () => {
     await revalidateSnapshot(change({ ...published, interactive: { id: 3, slug: "courts" } }))
     expect(revalidateTag).toHaveBeenCalledWith("interactive:3", "max")

@@ -1,4 +1,4 @@
-import type { CollectionAfterChangeHook, CollectionAfterDeleteHook, Payload } from "payload"
+import type { CollectionAfterChangeHook, CollectionAfterDeleteHook, PayloadRequest } from "payload"
 
 import { revalidateTag } from "next/cache"
 
@@ -15,12 +15,14 @@ import { interactivePaths, interactiveTag } from "../tag"
 async function interactivePagePath(
   snapshot: InteractiveSnapshot,
   interactiveId: number | string,
-  payload: Payload,
+  req: PayloadRequest,
 ): Promise<string | null> {
   const given = typeof snapshot.interactive === "object" ? snapshot.interactive?.slug : null
   if (given) return interactivePaths(given)[0]!
   try {
-    const interactive = await payload.findByID({
+    // In the save's transaction, so an interactive created alongside the snapshot is found.
+    const interactive = await req.payload.findByID({
+      req,
       collection: "interactives",
       id: interactiveId,
       depth: 0,
@@ -42,31 +44,31 @@ async function interactivePagePath(
  * it outside a real request throws DynamicServerError (no cookies to read draftMode from),
  * which surfaces as a crash to whichever visitor's request lands during that regeneration.
  */
-async function revalidate(snapshot: InteractiveSnapshot, payload: Payload): Promise<void> {
+async function revalidate(snapshot: InteractiveSnapshot, req: PayloadRequest): Promise<void> {
   const interactiveId = relationshipId(snapshot.interactive)
   if (interactiveId == null) return
   revalidateTag(interactiveTag(interactiveId), "max")
-  purgeEdgeCache(payload.logger, `interactive ${interactiveId} snapshot`, {
-    paths: [await interactivePagePath(snapshot, interactiveId, payload)],
+  purgeEdgeCache(req.payload.logger, `interactive ${interactiveId} snapshot`, {
+    paths: [await interactivePagePath(snapshot, interactiveId, req)],
   })
 }
 
 export const revalidateSnapshot: CollectionAfterChangeHook<InteractiveSnapshot> = async ({
   doc,
   previousDoc,
-  req: { payload, context },
+  req,
 }) => {
-  if (context.disableRevalidate) return doc
+  if (req.context.disableRevalidate) return doc
   const wasPublished = previousDoc?._status === "published"
   const isPublished = doc._status === "published"
-  if (isPublished || wasPublished) await revalidate(doc, payload)
+  if (isPublished || wasPublished) await revalidate(doc, req)
   return doc
 }
 
 export const revalidateSnapshotDelete: CollectionAfterDeleteHook<InteractiveSnapshot> = async ({
   doc,
-  req: { payload, context },
+  req,
 }) => {
-  if (!context.disableRevalidate) await revalidate(doc, payload)
+  if (!req.context.disableRevalidate) await revalidate(doc, req)
   return doc
 }

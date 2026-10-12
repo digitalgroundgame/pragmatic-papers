@@ -97,11 +97,20 @@ function isShared(pathname: string): boolean {
   return true
 }
 
+/**
+ * Sections whose every page shows the whole section, as each doc's sidebar and Previous and
+ * Next links show every doc: their pages are all `within` the section, so purging its path
+ * takes them all.
+ */
+const WHOLE_SECTIONS = new Set(["docs"])
+
 /** The tags the cache keeps a page under. */
 export function edgeCacheTags(pathname: string): string[] {
   const tags = [pathTag(pathname)]
   const document = documentPath(pathname)
   if (document) tags.push(withinTag(document))
+  const [section = ""] = normalize(pathname).split("/").slice(1)
+  if (WHOLE_SECTIONS.has(section)) tags.push(withinTag(`/${section}`))
   if (isShared(pathname)) tags.push(SHARED_TAG)
   return tags
 }

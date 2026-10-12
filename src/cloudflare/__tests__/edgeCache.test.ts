@@ -179,7 +179,8 @@ describe("edgeCacheTags", () => {
     ["/articles/a", ["path:/articles/a"]],
     ["/articles/a/substack.xml", ["path:/articles/a/substack.xml", "within:/articles/a"]],
     ["/volumes/12", ["path:/volumes/12"]],
-    ["/docs/whats-new", ["path:/docs/whats-new"]],
+    ["/docs", ["path:/docs", "within:/docs"]],
+    ["/docs/whats-new", ["path:/docs/whats-new", "within:/docs"]],
     ["/interactives/a/regions/x", ["path:/interactives/a/regions/x", "within:/interactives/a"]],
     ["/_next/image", ["path:/_next/image"]],
   ])("tags %s", (path, tags) => {

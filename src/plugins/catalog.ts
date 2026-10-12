@@ -50,6 +50,7 @@ export const PLUGIN_INFO = {
     source: "src/plugins/docs",
     description: "Help docs at /docs, written in the admin or shipped in src/docs/ with a release.",
     enabled: experiment("docs"),
+    beta: true,
     settings: [EXPERIMENTS],
   },
   notifications: {
@@ -58,6 +59,7 @@ export const PLUGIN_INFO = {
     description:
       "The bell beside the avatar in the admin header: help docs and other news for each staff member.",
     enabled: experiment("notifications"),
+    beta: true,
     settings: [EXPERIMENTS],
   },
   tours: {
@@ -66,6 +68,7 @@ export const PLUGIN_INFO = {
     description:
       "driver.js walkthroughs of the admin, started from a help doc or the bell's Show me.",
     enabled: experiment("tours"),
+    beta: true,
     settings: [EXPERIMENTS],
   },
   sso: {
@@ -74,6 +77,7 @@ export const PLUGIN_INFO = {
     description:
       "Staff sign-in to the admin with Google or Discord, through Better Auth. Email and password login stays on.",
     enabled: experiment("sso"),
+    beta: true,
     settings: [EXPERIMENTS, { label: "Integrations", path: "/globals/integrations" }],
   },
   sentry: {

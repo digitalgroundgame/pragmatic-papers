@@ -19,6 +19,18 @@ const STATUS = {
   },
 } as const
 
+const pill = {
+  borderRadius: "4px",
+  display: "inline-block",
+  padding: "0.125rem 0.5rem",
+  whiteSpace: "nowrap",
+} as const
+
+const STAGE = {
+  beta: { text: "Beta", background: "var(--theme-elevation-100)", color: "var(--theme-text)" },
+  stable: { text: "Stable", background: "transparent", color: "var(--theme-elevation-650)" },
+} as const
+
 function Pages({ pages }: { pages: PluginRow["pages"] }): React.ReactNode {
   if (pages.length === 0) return <span style={muted}>No settings in the admin</span>
   return (
@@ -37,8 +49,9 @@ function Pages({ pages }: { pages: PluginRow["pages"] }): React.ReactNode {
 }
 
 /**
- * The installed Payload plugins, in the order they run: where each comes from, whether it's on
- * here, and the admin pages that hold its collections and settings.
+ * The installed Payload plugins, in the order they run: where each comes from, whether it's
+ * still a beta behind an experiment, whether it's on here, and the admin pages that hold its
+ * collections and settings.
  */
 export function PluginsTable({ plugins }: { plugins: PluginRow[] }): React.ReactNode {
   return (
@@ -53,6 +66,9 @@ export function PluginsTable({ plugins }: { plugins: PluginRow[] }): React.React
               Plugin
             </th>
             <th scope="col" style={cell}>
+              Stage
+            </th>
+            <th scope="col" style={cell}>
               Status
             </th>
             <th scope="col" style={cell}>
@@ -63,6 +79,7 @@ export function PluginsTable({ plugins }: { plugins: PluginRow[] }): React.React
         <tbody>
           {plugins.map((plugin) => {
             const status = STATUS[plugin.status]
+            const stage = STAGE[plugin.stage]
             return (
               <tr key={plugin.name}>
                 <th scope="row" style={{ ...cell, fontWeight: 400 }}>
@@ -73,16 +90,12 @@ export function PluginsTable({ plugins }: { plugins: PluginRow[] }): React.React
                   </div>
                 </th>
                 <td style={cell}>
-                  <span
-                    style={{
-                      background: status.background,
-                      borderRadius: "4px",
-                      color: status.color,
-                      display: "inline-block",
-                      padding: "0.125rem 0.5rem",
-                      whiteSpace: "nowrap",
-                    }}
-                  >
+                  <span style={{ ...pill, background: stage.background, color: stage.color }}>
+                    {stage.text}
+                  </span>
+                </td>
+                <td style={cell}>
+                  <span style={{ ...pill, background: status.background, color: status.color }}>
                     {status.text}
                   </span>
                 </td>

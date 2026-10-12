@@ -14,6 +14,11 @@ export interface PluginInfo {
   description: string
   /** Whether it's on in this environment. Leave it out for a plugin that's always on. */
   enabled?: boolean | (() => Promise<boolean>)
+  /**
+   * Still behind an experiment in Settings. When it graduates, the experiment's checkbox is
+   * deleted and so is this, and the plugin reads as stable.
+   */
+  beta?: boolean
   /** Where it's configured or switched on in the admin, beyond the collections it adds. */
   settings?: PluginLink[]
 }

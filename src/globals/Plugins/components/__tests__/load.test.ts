@@ -70,6 +70,17 @@ describe("loadPlugins", () => {
     expect(atRoot?.pages[0]?.href).toBe("/collections/search")
   })
 
+  it("marks a plugin still behind an experiment as beta", async () => {
+    const rows = await loadPlugins(
+      config([plugin({ name: "Stable" }), plugin({ name: "Beta", beta: true })]),
+      admin,
+    )
+    expect(rows.map((r) => [r.name, r.stage])).toEqual([
+      ["Stable", "stable"],
+      ["Beta", "beta"],
+    ])
+  })
+
   it("reads each plugin's switch now", async () => {
     const rows = await loadPlugins(
       config([

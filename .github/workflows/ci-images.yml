@@ -9,11 +9,12 @@
 # `toomanyrequests`. Pulls from GHCR are made logged in with the job's own
 # GITHUB_TOKEN, which isn't throttled that way.
 #
-# The images are rebuilt weekly, so Postgres 17 picks up its patch releases. Node's tag
-# is read from the CI Dockerfile's NODE_VERSION, so a version bump publishes its copy
-# when it reaches dev; until then build-app-image falls back to ECR Public. Each
-# image's `org.opencontainers.image.source` label links the package to this
-# repository, so every workflow here can read it with `packages: read`, private or not.
+# It runs weekly, so Postgres 17 picks up its patch releases, but a copy is only rebuilt
+# when its ECR image has changed. Node's tag is read from the CI Dockerfile's
+# NODE_VERSION, so a version bump publishes its copy when it reaches dev; until then
+# build-app-image falls back to ECR Public. Each image's
+# `org.opencontainers.image.source` label links the package to this repository, so
+# every workflow here can read it with `packages: read`, private or not.
 #
 # Local dev, docker-compose.yml and Coolify's Dockerfile keep pulling from ECR Public:
 # a laptop isn't on a shared IP, and Coolify's builds have no GITHUB_TOKEN.
@@ -75,6 +76,7 @@ jobs:
         env:
           SOURCE: public.ecr.aws/docker/library/${{ matrix.image }}:${{ steps.tag.outputs.value }}
           TARGET: ghcr.io/digitalgroundgame/${{ matrix.image }}:${{ steps.tag.outputs.value }}
+          SOURCE_REPO: ${{ github.server_url }}/${{ github.repository }}
         run: |
           # Retries the one logged-out pull this needs, should ECR Public throttle it.
           for delay in 5 15 30 60 0; do
@@ -82,7 +84,17 @@ jobs:
             [ "$delay" = 0 ] && exit 1
             sleep "$delay"
           done
-          printf 'FROM %s\nLABEL org.opencontainers.image.source=%s\n' \
-            "$SOURCE" "${{ github.server_url }}/${{ github.repository }}" |
+          # A rebuild gets a new digest even from the same base (the build stamps its
+          # time), and a new base digest misses every layer the app image's build cache
+          # holds. So the copy records the digest it was built from, and is only rebuilt
+          # when ECR's is different.
+          base=$(docker inspect --format '{{index .RepoDigests 0}}' "$SOURCE")
+          if docker buildx imagetools inspect "$TARGET" --format '{{json .Image}}' 2> /dev/null |
+            grep -qF "\"org.opencontainers.image.base.digest\":\"$base\""; then
+            echo "$TARGET is already built from $base"
+            exit 0
+          fi
+          printf 'FROM %s\nLABEL org.opencontainers.image.source=%s org.opencontainers.image.base.digest=%s\n' \
+            "$SOURCE" "$SOURCE_REPO" "$base" |
             docker build --pull=false --tag "$TARGET" -
           docker push "$TARGET"

@@ -148,3 +148,94 @@ describe("ci-images.yml's Choose the tag step", () => {
     expect(tag("postgres")).toBe("value=17-alpine\n")
   })
 })
+
+describe("ci-images.yml's Build and push step", () => {
+  const SOURCE = "public.ecr.aws/docker/library/node:24.15.0-alpine"
+  const TARGET = "ghcr.io/digitalgroundgame/node:24.15.0-alpine"
+  const BASE = "public.ecr.aws/docker/library/node@sha256:aaaa"
+  let dir: string
+
+  beforeEach(() => {
+    dir = mkdtempSync(join(tmpdir(), "ci-images-publish-"))
+  })
+
+  afterEach(() => {
+    rmSync(dir, { recursive: true, force: true })
+  })
+
+  // A fake `docker` that logs each call (and what `build` reads from stdin), reports
+  // BASE as the pulled image's digest, and answers `imagetools inspect` with `target`'s
+  // labels, or fails as GHCR does when the tag doesn't exist yet.
+  function publish(targetLabels: Record<string, string> | null) {
+    const docker = join(dir, "docker")
+    const inspect =
+      targetLabels === null
+        ? "exit 1"
+        : `echo '${JSON.stringify({ config: { Labels: targetLabels } })}'`
+    writeFileSync(
+      docker,
+      `#!/bin/sh
+echo "$1 $2" >> "${dir}/calls"
+case "$1 $2" in
+  "inspect "*) echo "${BASE}" ;;
+  "buildx imagetools") ${inspect} ;;
+  "build "*) cat > "${dir}/dockerfile" ;;
+esac
+`,
+    )
+    chmodSync(docker, 0o755)
+    const result = spawnSync("bash", ["-e", "-c", stepScript(WORKFLOW, "Build and push")], {
+      cwd: ROOT,
+      encoding: "utf8",
+      env: {
+        ...process.env,
+        PATH: `${dir}:${process.env.PATH}`,
+        SOURCE,
+        TARGET,
+        SOURCE_REPO: "https://github.com/digitalgroundgame/pragmatic-papers",
+      },
+    })
+    let dockerfile = ""
+    try {
+      dockerfile = readFileSync(join(dir, "dockerfile"), "utf8")
+    } catch {
+      // nothing was built
+    }
+    return {
+      status: result.status,
+      stdout: result.stdout,
+      calls: readFileSync(join(dir, "calls"), "utf8").trim().split("\n"),
+      dockerfile,
+    }
+  }
+
+  it("builds and pushes the first copy, recording the digest it was built from", () => {
+    const { status, calls, dockerfile } = publish(null)
+    expect(status).toBe(0)
+    expect(calls).toEqual([
+      "pull public.ecr.aws/docker/library/node:24.15.0-alpine",
+      "inspect --format",
+      "buildx imagetools",
+      "build --pull=false",
+      "push ghcr.io/digitalgroundgame/node:24.15.0-alpine",
+    ])
+    expect(dockerfile).toBe(
+      `FROM ${SOURCE}\nLABEL org.opencontainers.image.source=https://github.com/digitalgroundgame/pragmatic-papers org.opencontainers.image.base.digest=${BASE}\n`,
+    )
+  })
+
+  it("leaves the copy alone when ECR's image hasn't changed, so its digest stays put", () => {
+    const { status, stdout, calls } = publish({ "org.opencontainers.image.base.digest": BASE })
+    expect(status).toBe(0)
+    expect(stdout).toContain(`${TARGET} is already built from ${BASE}`)
+    expect(calls).not.toContainEqual(expect.stringMatching(/^(build|push) /))
+  })
+
+  it("rebuilds the copy once ECR's image has a new digest", () => {
+    const { status, calls } = publish({
+      "org.opencontainers.image.base.digest": "public.ecr.aws/docker/library/node@sha256:old",
+    })
+    expect(status).toBe(0)
+    expect(calls).toContain("push ghcr.io/digitalgroundgame/node:24.15.0-alpine")
+  })
+})

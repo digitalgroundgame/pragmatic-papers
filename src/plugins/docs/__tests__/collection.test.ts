@@ -15,13 +15,8 @@ describe("Docs access: update", () => {
     expect(update({ req: req(["writer"]) })).toBe(false)
   })
 
-  it("lets editors change only docs written in this admin on a deployed site", () => {
+  it("lets editors change any doc, including ones seeded from the repo", () => {
     vi.stubEnv("NODE_ENV", "production")
-    expect(update({ req: req(["editor"]) })).toEqual({ sourceHash: { exists: false } })
-  })
-
-  it("leaves repo docs editable in local dev, where docs:export reads them", () => {
-    vi.stubEnv("NODE_ENV", "development")
     expect(update({ req: req(["editor"]) })).toBe(true)
   })
 })

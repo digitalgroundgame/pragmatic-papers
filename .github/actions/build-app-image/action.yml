@@ -67,8 +67,9 @@ runs:
     # The Node base image from ci-images.yml's GHCR copy, pulled logged in: ECR Public
     # throttles logged-out pulls per IP, and shared runners run out ("429 Too Many
     # Requests: Data limit exceeded"). Until that copy has this NODE_VERSION (a bump
-    # publishes it once it reaches dev), or when the login fails, it's ECR Public.
-    # BuildKit reads the login from the runner's Docker config.
+    # publishes it once it reaches dev), or when the login fails, it's Google's Docker
+    # Hub mirror, which BuildKit's own image comes through too, and ECR Public only when
+    # neither has the tag. BuildKit reads the login from the runner's Docker config.
     - name: Log in to GHCR
       id: ghcr-login
       continue-on-error: true
@@ -86,13 +87,19 @@ runs:
         MIRROR: ghcr.io/digitalgroundgame
       run: |
         version=$(sed -n 's/^ARG NODE_VERSION=//p' dockerfiles/PragmaticPapers.ci.Dockerfile)
-        if [ "$LOGGED_IN" = true ] && [ -n "$version" ] &&
-          docker buildx imagetools inspect "$MIRROR/node:${version}-alpine" > /dev/null; then
-          echo "value=$MIRROR" >> "$GITHUB_OUTPUT"
+        has() { [ -n "$version" ] && docker buildx imagetools inspect "$1/node:${version}-alpine" > /dev/null; }
+        if [ "$LOGGED_IN" = true ] && has "$MIRROR"; then
+          registry=$MIRROR
         else
-          echo "::warning::No GHCR copy of node:${version}-alpine to pull; using ECR Public, which can throttle. Run the CI images workflow to publish it."
-          echo "value=public.ecr.aws/docker/library" >> "$GITHUB_OUTPUT"
+          echo "::warning::No GHCR copy of node:${version}-alpine to pull. Run the CI images workflow to publish it."
+          if has mirror.gcr.io/library; then
+            registry=mirror.gcr.io/library
+          else
+            registry=public.ecr.aws/docker/library
+          fi
         fi
+        echo "Building on $registry/node:${version}-alpine"
+        echo "value=$registry" >> "$GITHUB_OUTPUT"
 
     # Written as a tar for the artifact rather than pushed: fork, Dependabot and
     # merge-queue runs can't push to GHCR, and E2E runs on every one of them.

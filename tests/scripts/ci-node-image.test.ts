@@ -60,10 +60,14 @@ describe("build-app-image's Choose the Node base image step", () => {
   })
 
   // Runs the step from the repo root, with a fake `docker` that records its arguments
-  // and exits with `inspectStatus`.
-  function choose({ loggedIn = true, inspectStatus = 0 } = {}) {
+  // and finds the tag only in the registries listed in `has`.
+  function choose({ loggedIn = true, has = [] as string[] } = {}) {
     const docker = join(dir, "docker")
-    writeFileSync(docker, `#!/bin/sh\necho "$*" >> "${dir}/calls"\nexit ${inspectStatus}\n`)
+    const found = has.map((registry) => `*" ${registry}/node:"*) exit 0 ;;`).join("\n  ")
+    writeFileSync(
+      docker,
+      `#!/bin/sh\necho "$*" >> "${dir}/calls"\ncase " $*" in\n  ${found}\nesac\nexit 1\n`,
+    )
     chmodSync(docker, 0o755)
     const output = join(dir, "output")
     writeFileSync(output, "")
@@ -82,9 +86,9 @@ describe("build-app-image's Choose the Node base image step", () => {
         },
       },
     )
-    let calls = ""
+    let calls: string[] = []
     try {
-      calls = readFileSync(join(dir, "calls"), "utf8")
+      calls = readFileSync(join(dir, "calls"), "utf8").trim().split("\n")
     } catch {
       // docker was never called
     }
@@ -97,28 +101,41 @@ describe("build-app-image's Choose the Node base image step", () => {
   }
 
   const version = () => read(DOCKERFILE).match(/^ARG NODE_VERSION=(.+)$/m)![1]
+  const inspect = (registry: string) =>
+    `buildx imagetools inspect ${registry}/node:${version()}-alpine`
 
   it("uses the GHCR copy when it has this NODE_VERSION", () => {
-    const { status, output, calls } = choose()
+    const { status, output, calls, stdout } = choose({
+      has: ["ghcr.io/digitalgroundgame", "mirror.gcr.io/library"],
+    })
     expect(status).toBe(0)
     expect(output).toBe("value=ghcr.io/digitalgroundgame\n")
-    expect(calls).toBe(
-      `buildx imagetools inspect ghcr.io/digitalgroundgame/node:${version()}-alpine\n`,
-    )
+    expect(calls).toEqual([inspect("ghcr.io/digitalgroundgame")])
+    expect(stdout).not.toContain("::warning::")
   })
 
-  it("falls back to ECR Public, with a warning, when the copy is missing", () => {
-    const { status, output, stdout } = choose({ inspectStatus: 1 })
+  it("falls back to Google's Docker Hub mirror, with a warning, when the copy is missing", () => {
+    const { status, output, stdout, calls } = choose({ has: ["mirror.gcr.io/library"] })
     expect(status).toBe(0)
-    expect(output).toBe("value=public.ecr.aws/docker/library\n")
+    expect(output).toBe("value=mirror.gcr.io/library\n")
     expect(stdout).toContain(`::warning::No GHCR copy of node:${version()}-alpine`)
+    expect(calls).toEqual([inspect("ghcr.io/digitalgroundgame"), inspect("mirror.gcr.io/library")])
   })
 
-  it("falls back to ECR Public without asking GHCR when the login failed", () => {
-    const { status, output, calls } = choose({ loggedIn: false })
+  it("uses Google's mirror without asking GHCR when the login failed", () => {
+    const { status, output, calls } = choose({
+      loggedIn: false,
+      has: ["ghcr.io/digitalgroundgame", "mirror.gcr.io/library"],
+    })
+    expect(status).toBe(0)
+    expect(output).toBe("value=mirror.gcr.io/library\n")
+    expect(calls).toEqual([inspect("mirror.gcr.io/library")])
+  })
+
+  it("falls back to ECR Public when neither GHCR nor Google's mirror has the tag", () => {
+    const { status, output } = choose()
     expect(status).toBe(0)
     expect(output).toBe("value=public.ecr.aws/docker/library\n")
-    expect(calls).toBe("")
   })
 })
 

@@ -12,7 +12,7 @@
 # It runs weekly, so Postgres 17 picks up its patch releases, but a copy is only rebuilt
 # when its ECR image has changed. Node's tag is read from the CI Dockerfile's
 # NODE_VERSION, so a version bump publishes its copy when it reaches dev; until then
-# build-app-image falls back to ECR Public. Each image's
+# build-app-image falls back to mirror.gcr.io. Each image's
 # `org.opencontainers.image.source` label links the package to this repository, so
 # every workflow here can read it with `packages: read`, private or not.
 #

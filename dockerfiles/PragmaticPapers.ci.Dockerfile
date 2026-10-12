@@ -26,7 +26,8 @@ ARG NODE_VERSION=24.15.0
 # Where Docker Hub's official node image comes from. Docker Hub rate-limits anonymous
 # pulls by address, and so does Amazon ECR Public's mirror of it, the default here;
 # GitHub's shared runners run out of both. build-app-image passes the GHCR copy
-# ci-images.yml keeps (ghcr.io/digitalgroundgame), pulled logged in, whenever it exists.
+# ci-images.yml keeps (ghcr.io/digitalgroundgame), pulled logged in, whenever it exists,
+# and Google's Docker Hub mirror (mirror.gcr.io/library) otherwise.
 ARG NODE_REGISTRY=public.ecr.aws/docker/library
 
 # ============================================

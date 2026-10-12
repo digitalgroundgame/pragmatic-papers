@@ -2,6 +2,7 @@ import { blueskyAccounts } from "./bluesky"
 import { cloudflareWorker, cloudflareZone } from "./cloudflare"
 import { githubRepo } from "./github"
 import { listmonkServer } from "./listmonk/connection"
+import { oauthApp } from "./oauth"
 import { shopifyStore } from "./shopify"
 import { xAccounts } from "./x"
 import { youtubeChannels } from "./youtube"
@@ -115,6 +116,28 @@ export const unsplash = unsplashApp({
   defaultAppName: "pragmatic_papers_development",
 })
 
+/**
+ * The OAuth applications behind "Sign in with …" on the admin's login page (the `sso`
+ * experiment, `src/plugins/sso`). Each provider's button appears once its two variables are
+ * set; its application must list `<SERVER_URL>/api/auth/callback/<google|discord>` as a
+ * redirect URI.
+ */
+export const googleSignIn = oauthApp({
+  id: "google-sign-in",
+  label: "Sign in with Google",
+  service: "Google",
+  clientIdEnv: "GOOGLE_CLIENT_ID",
+  clientSecretEnv: "GOOGLE_CLIENT_SECRET",
+})
+
+export const discordSignIn = oauthApp({
+  id: "discord-sign-in",
+  label: "Sign in with Discord",
+  service: "Discord",
+  clientIdEnv: "DISCORD_CLIENT_ID",
+  clientSecretEnv: "DISCORD_CLIENT_SECRET",
+})
+
 /** Declaration order is display order. */
 export const INTEGRATIONS: readonly Integration[] = [
   courtTracker,
@@ -127,6 +150,8 @@ export const INTEGRATIONS: readonly Integration[] = [
   unsplash,
   listmonkServer,
   cloudflareTurnstile,
+  googleSignIn,
+  discordSignIn,
 ]
 
 export function getIntegration(id: string): Integration | null {

@@ -61,6 +61,7 @@ import * as migration_20261011_031222_ticker_on_header from "./20261011_031222_t
 import * as migration_20261011_074819_add_docs_notifications_tours_experiments from "./20261011_074819_add_docs_notifications_tours_experiments"
 import * as migration_20261011_100351_add_sso from "./20261011_100351_add_sso"
 import * as migration_20261012_001519_ticker_upcoming_hours from "./20261012_001519_ticker_upcoming_hours"
+import * as migration_20261012_011225_feeds_list_block from "./20261012_011225_feeds_list_block"
 
 export const migrations = [
   {
@@ -377,5 +378,10 @@ export const migrations = [
     up: migration_20261012_001519_ticker_upcoming_hours.up,
     down: migration_20261012_001519_ticker_upcoming_hours.down,
     name: "20261012_001519_ticker_upcoming_hours",
+  },
+  {
+    up: migration_20261012_011225_feeds_list_block.up,
+    down: migration_20261012_011225_feeds_list_block.down,
+    name: "20261012_011225_feeds_list_block",
   },
 ]

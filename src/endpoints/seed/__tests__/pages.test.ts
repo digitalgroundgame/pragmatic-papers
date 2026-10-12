@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
-import { createOrUpdatePage } from "../pages"
+import { createOrUpdatePage, createPages } from "../pages"
+
+vi.mock("../forms", () => ({ createContactForm: async () => ({ id: 9 }) }))
 
 const mockCreate = vi.fn()
 const mockUpdate = vi.fn()
@@ -56,5 +58,19 @@ describe("createOrUpdatePage", () => {
 
     await expect(createOrUpdatePage(mockPayload, pageData, context)).rejects.toBe(conflict)
     expect(mockUpdate).not.toHaveBeenCalled()
+  })
+})
+
+describe("createPages", () => {
+  it("lays out /feeds with a Feed list for the RSS feeds and one for the sitemaps", async () => {
+    mockCreate.mockImplementation(async ({ data }) => ({ id: 1, ...data }))
+
+    const { feedsPage } = await createPages(mockPayload, undefined, undefined, context)
+
+    expect(feedsPage.slug).toBe("feeds")
+    expect(feedsPage.layout.map((block) => block.blockType === "feedsList" && block.list)).toEqual([
+      "feeds",
+      "sitemaps",
+    ])
   })
 })

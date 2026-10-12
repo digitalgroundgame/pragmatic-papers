@@ -1,0 +1,88 @@
+# Copies the base images CI pulls into GHCR, as ghcr.io/digitalgroundgame/<name>:
+#
+#   - postgres:17-alpine, for every job's Postgres service and scripts/test-db.mjs
+#   - node:<NODE_VERSION>-alpine, the base of dockerfiles/PragmaticPapers.ci.Dockerfile,
+#     which .github/actions/build-app-image builds on every push, PR and merge group
+#
+# Logged-out pulls from Docker Hub or ECR Public are rate-limited per IP, and GitHub's
+# shared runners share their IPs with other repositories, so jobs failed with
+# `toomanyrequests`. Pulls from GHCR are made logged in with the job's own
+# GITHUB_TOKEN, which isn't throttled that way.
+#
+# The images are rebuilt weekly, so Postgres 17 picks up its patch releases. Node's tag
+# is read from the CI Dockerfile's NODE_VERSION, so a version bump publishes its copy
+# when it reaches dev; until then build-app-image falls back to ECR Public. Each
+# image's `org.opencontainers.image.source` label links the package to this
+# repository, so every workflow here can read it with `packages: read`, private or not.
+#
+# Local dev, docker-compose.yml and Coolify's Dockerfile keep pulling from ECR Public:
+# a laptop isn't on a shared IP, and Coolify's builds have no GITHUB_TOKEN.
+name: CI images
+
+on:
+  schedule:
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+  push:
+    branches: [dev]
+    paths:
+      - .github/workflows/ci-images.yml
+      - dockerfiles/PragmaticPapers.ci.Dockerfile
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: ci-images
+
+jobs:
+  publish:
+    name: Publish ${{ matrix.image }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        image: [postgres, node]
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          sparse-checkout: dockerfiles/PragmaticPapers.ci.Dockerfile
+          sparse-checkout-cone-mode: false
+
+      - name: Choose the tag
+        id: tag
+        env:
+          IMAGE: ${{ matrix.image }}
+        run: |
+          if [ "$IMAGE" = node ]; then
+            version=$(sed -n 's/^ARG NODE_VERSION=//p' dockerfiles/PragmaticPapers.ci.Dockerfile)
+            [ -n "$version" ] || { echo "::error::No ARG NODE_VERSION in the CI Dockerfile"; exit 1; }
+            echo "value=${version}-alpine" >> "$GITHUB_OUTPUT"
+          else
+            echo "value=17-alpine" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push
+        env:
+          SOURCE: public.ecr.aws/docker/library/${{ matrix.image }}:${{ steps.tag.outputs.value }}
+          TARGET: ghcr.io/digitalgroundgame/${{ matrix.image }}:${{ steps.tag.outputs.value }}
+        run: |
+          # Retries the one logged-out pull this needs, should ECR Public throttle it.
+          for delay in 5 15 30 60 0; do
+            docker pull "$SOURCE" && break
+            [ "$delay" = 0 ] && exit 1
+            sleep "$delay"
+          done
+          printf 'FROM %s\nLABEL org.opencontainers.image.source=%s\n' \
+            "$SOURCE" "${{ github.server_url }}/${{ github.repository }}" |
+            docker build --pull=false --tag "$TARGET" -
+          docker push "$TARGET"

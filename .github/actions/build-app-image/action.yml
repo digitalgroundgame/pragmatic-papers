@@ -64,6 +64,36 @@ runs:
       shell: bash
       run: echo "value=$(jq -r .packageManager package.json)" >> "$GITHUB_OUTPUT"
 
+    # The Node base image from ci-images.yml's GHCR copy, pulled logged in: ECR Public
+    # throttles logged-out pulls per IP, and shared runners run out ("429 Too Many
+    # Requests: Data limit exceeded"). Until that copy has this NODE_VERSION (a bump
+    # publishes it once it reaches dev), or when the login fails, it's ECR Public.
+    # BuildKit reads the login from the runner's Docker config.
+    - name: Log in to GHCR
+      id: ghcr-login
+      continue-on-error: true
+      uses: docker/login-action@v4
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ inputs.registry-token || github.token }}
+
+    - name: Choose the Node base image
+      id: node-registry
+      shell: bash
+      env:
+        LOGGED_IN: ${{ steps.ghcr-login.outcome == 'success' }}
+        MIRROR: ghcr.io/digitalgroundgame
+      run: |
+        version=$(sed -n 's/^ARG NODE_VERSION=//p' dockerfiles/PragmaticPapers.ci.Dockerfile)
+        if [ "$LOGGED_IN" = true ] && [ -n "$version" ] &&
+          docker buildx imagetools inspect "$MIRROR/node:${version}-alpine" > /dev/null; then
+          echo "value=$MIRROR" >> "$GITHUB_OUTPUT"
+        else
+          echo "::warning::No GHCR copy of node:${version}-alpine to pull; using ECR Public, which can throttle. Run the CI images workflow to publish it."
+          echo "value=public.ecr.aws/docker/library" >> "$GITHUB_OUTPUT"
+        fi
+
     # Written as a tar for the artifact rather than pushed: fork, Dependabot and
     # merge-queue runs can't push to GHCR, and E2E runs on every one of them.
     - name: Build
@@ -86,6 +116,7 @@ runs:
           DATABASE_URI=postgres://postgres:postgres@127.0.0.1:5432/build
           SOURCE_COMMIT=${{ inputs.source-commit }}
           PACKAGE_MANAGER=${{ steps.package-manager.outputs.value }}
+          NODE_REGISTRY=${{ steps.node-registry.outputs.value }}
         labels: |
           org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
           org.opencontainers.image.revision=${{ inputs.source-commit }}
@@ -101,14 +132,7 @@ runs:
         path: ${{ runner.temp }}/app-image.tar
         retention-days: 1
 
-    - name: Log in to GHCR
-      if: inputs.push-tag != ''
-      uses: docker/login-action@v4
-      with:
-        registry: ghcr.io
-        username: ${{ github.actor }}
-        password: ${{ inputs.registry-token }}
-
+    # Logged in by the first GHCR step, with registry-token.
     - name: Push to GHCR
       if: inputs.push-tag != ''
       shell: bash

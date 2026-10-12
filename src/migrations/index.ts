@@ -61,8 +61,8 @@ import * as migration_20261011_031222_ticker_on_header from "./20261011_031222_t
 import * as migration_20261011_074819_add_docs_notifications_tours_experiments from "./20261011_074819_add_docs_notifications_tours_experiments"
 import * as migration_20261011_100351_add_sso from "./20261011_100351_add_sso"
 import * as migration_20261012_001519_ticker_upcoming_hours from "./20261012_001519_ticker_upcoming_hours"
-import * as migration_20261012_010703_add_plugins_global from "./20261012_010703_add_plugins_global"
 import * as migration_20261012_011225_feeds_list_block from "./20261012_011225_feeds_list_block"
+import * as migration_20261012_055154_add_plugins_global from "./20261012_055154_add_plugins_global"
 
 export const migrations = [
   {
@@ -381,13 +381,13 @@ export const migrations = [
     name: "20261012_001519_ticker_upcoming_hours",
   },
   {
-    up: migration_20261012_010703_add_plugins_global.up,
-    down: migration_20261012_010703_add_plugins_global.down,
-    name: "20261012_010703_add_plugins_global",
-  },
-  {
     up: migration_20261012_011225_feeds_list_block.up,
     down: migration_20261012_011225_feeds_list_block.down,
     name: "20261012_011225_feeds_list_block",
+  },
+  {
+    up: migration_20261012_055154_add_plugins_global.up,
+    down: migration_20261012_055154_add_plugins_global.down,
+    name: "20261012_055154_add_plugins_global",
   },
 ]

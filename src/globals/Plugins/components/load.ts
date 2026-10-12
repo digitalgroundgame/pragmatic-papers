@@ -16,8 +16,6 @@ export interface PluginRow {
   description: string
   /** `unknown` when its switch couldn't be read. */
   status: "on" | "off" | "unknown"
-  /** `beta` while an experiment in Settings switches it, `stable` once that's gone. */
-  stage: "beta" | "stable"
   pages: PluginPage[]
 }
 
@@ -96,7 +94,6 @@ export async function loadPlugins(
         source: plugin.source,
         description: plugin.description,
         status: await status(plugin.enabled),
-        stage: plugin.beta ? "beta" : "stable",
         pages: [...collections, ...globals, ...settings],
       } satisfies PluginRow
     }),

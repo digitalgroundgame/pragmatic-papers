@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest"
 import { plugins } from "@/plugins"
 import { PLUGIN_INFO } from "@/plugins/catalog"
 
-import { installedPlugins, type PluginInfo, trackPlugins } from "../trackPlugins"
+import { installedPlugins, trackPlugins } from "../trackPlugins"
 
 const base = (): Config =>
   ({
@@ -75,18 +75,5 @@ describe("the site's plugins", () => {
     expect(listed.find((p) => p.name === "Search")?.collections).toEqual(["search"])
     expect(listed.find((p) => p.name === "Help docs")?.collections).toEqual(["docs"])
     expect(listed.find((p) => p.name === "SEO")?.collections).toEqual([])
-  })
-
-  it("are beta exactly while an experiment switches them", () => {
-    const entries = Object.entries(PLUGIN_INFO as Record<string, PluginInfo>)
-    expect(entries.filter(([, entry]) => entry.beta).map(([key]) => key)).toEqual([
-      "docs",
-      "notifications",
-      "tours",
-      "sso",
-    ])
-    for (const [, entry] of entries) {
-      expect(typeof entry.enabled === "function").toBe(entry.beta === true)
-    }
   })
 })

@@ -4,13 +4,23 @@ export interface CloudflareWorkerIntegration extends Integration {
   /** The Worker's URL, or null when unset. */
   url(): string | null
   /**
-   * Throw away every page the Worker has cached, through its `/next/revalidate-all`, so each
-   * renders again from the database on its next request. Resolves once the Worker has
-   * answered; throws when the connection is not configured or the Worker refuses, with the
-   * status and never the secret.
+   * Throw away the pages the Worker has cached, through its `/next/revalidate-all`, so each
+   * renders again from the database on its next request: the given paths and, with `shared`,
+   * every page that lists articles, volumes or contributors, or every page when neither is
+   * given. Resolves once the Worker has answered; throws when the connection is not
+   * configured or the Worker refuses, with the status and never the secret.
    */
-  revalidateAll(opts?: { fetchImpl?: typeof fetch }): Promise<void>
+  revalidateAll(opts?: RevalidateOptions): Promise<void>
 }
+
+export interface RevalidateOptions {
+  fetchImpl?: typeof fetch
+  paths?: readonly string[]
+  shared?: boolean
+}
+
+/** More paths than this purge everything instead, so the request's URL stays short. */
+export const MAX_PURGE_PATHS = 100
 
 export interface CloudflareWorkerOptions {
   id: string
@@ -45,14 +55,19 @@ export function cloudflareWorker({
     },
     required: [urlEnv, secretEnv],
     url,
-    async revalidateAll({ fetchImpl = fetch } = {}) {
+    async revalidateAll({ fetchImpl = fetch, paths = [], shared = false } = {}) {
       const base = url()
       const secret = env(secretEnv)
       if (!base || !secret) {
         throw new Error(`Worker revalidation needs ${[urlEnv, secretEnv].join(" and ")}`)
       }
 
-      const response = await fetchImpl(new URL("/next/revalidate-all", base), {
+      const target = new URL("/next/revalidate-all", base)
+      if (paths.length <= MAX_PURGE_PATHS) {
+        for (const path of paths) target.searchParams.append("path", path)
+        if (shared) target.searchParams.set("shared", "1")
+      }
+      const response = await fetchImpl(target, {
         method: "POST",
         headers: { Authorization: `Bearer ${secret}` },
         signal: AbortSignal.timeout(TIMEOUT_MS),

@@ -26,13 +26,18 @@ describe("revalidateDoc", () => {
     expect(revalidateTag).toHaveBeenCalledWith("docs", "max")
     expect(revalidatePath).toHaveBeenCalledWith("/docs")
     expect(revalidatePath).toHaveBeenCalledWith("/docs/a")
-    expect(purgeEdgeCache).toHaveBeenCalledOnce()
+    expect(purgeEdgeCache).toHaveBeenCalledExactlyOnceWith({}, "doc a", {
+      paths: ["/docs", "/docs/whats-new", "/docs/sitemap.xml", "/docs/a"],
+    })
   })
 
   it("refreshes the old URL when a published doc's slug changes", () => {
     change({ slug: "b", _status: "published" }, { slug: "a", _status: "published" })
     expect(revalidatePath).toHaveBeenCalledWith("/docs/a")
     expect(revalidatePath).toHaveBeenCalledWith("/docs/b")
+    expect(purgeEdgeCache).toHaveBeenCalledWith({}, "doc b", {
+      paths: ["/docs", "/docs/whats-new", "/docs/sitemap.xml", "/docs/b", "/docs/a"],
+    })
   })
 
   it("refreshes when a doc is unpublished", () => {

@@ -7,12 +7,15 @@ import type { Article } from "@/payload-types"
 
 const revalidateDoc = async (givenDoc: Article, payload: Payload) => {
   const path = `/articles/${givenDoc.slug}`
+  const paths = [
+    path,
+    "/articles/feed.xml",
+    "/articles/substack.xml",
+    `/articles/${givenDoc.slug}/substack.xml`,
+  ]
 
   payload.logger.info(`Revalidating article at path: ${path}`)
-  revalidatePath(path)
-  revalidatePath("/articles/feed.xml")
-  revalidatePath("/articles/substack.xml")
-  revalidatePath(`/articles/${givenDoc.slug}/substack.xml`)
+  for (const changed of paths) revalidatePath(changed)
   revalidateTag("articles-sitemap", "max")
 
   // Find and revalidate all volumes that reference this article
@@ -33,9 +36,11 @@ const revalidateDoc = async (givenDoc: Article, payload: Payload) => {
     const volumePath = `/volumes/${volume.slug}`
     payload.logger.info(`Revalidating volume at path: ${volumePath}`)
     revalidatePath(volumePath)
+    paths.push(volumePath)
   })
 
-  purgeEdgeCache(payload.logger, `article ${givenDoc.slug}`)
+  // The sitemap and the listings render per request here; `shared` covers them on the Worker.
+  purgeEdgeCache(payload.logger, `article ${givenDoc.slug}`, { paths, shared: true })
 }
 
 export const revalidateArticle: CollectionAfterChangeHook<Article> = async ({

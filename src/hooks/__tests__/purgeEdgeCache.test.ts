@@ -130,7 +130,7 @@ describe("purgeEdgeCache", () => {
       expect(mockRevalidateAll).toHaveBeenCalledTimes(1)
       expect(mockPurge).not.toHaveBeenCalled()
       expect(logger.info).toHaveBeenCalledWith(
-        "Cleared the Worker's cache at https://pragmatic-papers-staging.example.workers.dev (article published)",
+        "Cleared every page from the Worker's cache at https://pragmatic-papers-staging.example.workers.dev (article published)",
       )
     })
 
@@ -146,6 +146,32 @@ describe("purgeEdgeCache", () => {
       await flushEdgeCachePurge()
 
       expect(order).toEqual(["worker", "edge"])
+    })
+
+    it("purges only what a burst's saves named from the Worker", async () => {
+      configureWorker()
+
+      purgeEdgeCache(logger, "page about", { paths: ["/about", "/sitemap.xml"] })
+      purgeEdgeCache(logger, "article a", { paths: ["/articles/a", null], shared: true })
+      await flushEdgeCachePurge()
+
+      expect(mockRevalidateAll).toHaveBeenCalledExactlyOnceWith({
+        paths: ["/about", "/sitemap.xml", "/articles/a"],
+        shared: true,
+      })
+      expect(logger.info).toHaveBeenCalledWith(
+        expect.stringMatching(/^Cleared \/about, \/sitemap.xml, \/articles\/a, the shared pages /),
+      )
+    })
+
+    it("purges every page once any save in the burst named none", async () => {
+      configureWorker()
+
+      purgeEdgeCache(logger, "page about", { paths: ["/about"] })
+      purgeEdgeCache(logger, "header saved")
+      await flushEdgeCachePurge()
+
+      expect(mockRevalidateAll).toHaveBeenCalledExactlyOnceWith({})
     })
 
     it("warms the Worker's pages once its cache is cleared", async () => {

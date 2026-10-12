@@ -11,6 +11,9 @@ export const revalidateUser: CollectionAfterChangeHook<User> = async ({
 }) => {
   if (context.disableRevalidate) return doc
 
+  // Every path revalidated here, for the Worker to purge too.
+  const paths: string[] = []
+
   const slugsToRevalidate = new Set<string | null | undefined>()
   slugsToRevalidate.add(doc.slug)
   if (previousDoc?.slug && previousDoc.slug !== doc.slug) {
@@ -22,11 +25,13 @@ export const revalidateUser: CollectionAfterChangeHook<User> = async ({
       const path = `/contributors/${slug}`
       payload.logger.info(`Revalidating author at path: ${path}`)
       revalidatePath(path)
+      paths.push(path)
     }
   }
 
   payload.logger.info(`Revalidating authors index at path: /contributors`)
   revalidatePath("/contributors")
+  paths.push("/contributors")
 
   // Find all published articles where this user is an author and revalidate them
   const articles = await payload.find({
@@ -51,6 +56,7 @@ export const revalidateUser: CollectionAfterChangeHook<User> = async ({
     const path = `/articles/${article.slug}`
     payload.logger.info(`Revalidating article at path: ${path}`)
     revalidatePath(path)
+    paths.push(path)
   }
 
   // Find volumes that contain these articles
@@ -76,10 +82,12 @@ export const revalidateUser: CollectionAfterChangeHook<User> = async ({
       const volumePath = `/volumes/${volume.slug}`
       payload.logger.info(`Revalidating volume at path: ${volumePath}`)
       revalidatePath(volumePath)
+      paths.push(volumePath)
     }
   }
 
-  purgeEdgeCache(payload.logger, `author ${doc.slug ?? doc.id}`)
+  // Bylines show on the listings too; `shared` covers them on the Worker.
+  purgeEdgeCache(payload.logger, `author ${doc.slug ?? doc.id}`, { paths, shared: true })
 
   return doc
 }

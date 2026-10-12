@@ -14,8 +14,9 @@
  * is full page loads and resized images, the same set the zone cache holds for Coolify,
  * kept for as long as `CDN-Cache-Control` says.
  *
- * The cache belongs to the Worker version, so a deploy starts it empty, and
- * `/next/revalidate-all` empties it after every save.
+ * The cache belongs to the Worker version, so a deploy starts it empty. Every page it keeps
+ * is tagged with its path (`Cache-Tag`), so a save's `/next/revalidate-all` can purge just
+ * the paths that save revalidated (`?path=`), or everything when it names none.
  */
 import { isOriginPath, type WorkerEnv, type WorkerHandler } from "./origin"
 
@@ -37,7 +38,7 @@ export interface EdgeCachePurgeResult {
 
 /** `ctx.cache` in the cached entrypoint. */
 export interface EdgeCache {
-  purge?: (options: { purgeEverything: true }) => Promise<EdgeCachePurgeResult>
+  purge?: (options: { purgeEverything: true } | { tags: string[] }) => Promise<EdgeCachePurgeResult>
 }
 
 /** Cookies that make a page personal: Payload's login and Next's draft mode. */
@@ -50,6 +51,101 @@ export const REVALIDATE_ALL_PATH = "/next/revalidate-all"
 
 const isRevalidateAll = (request: Request): boolean =>
   request.method === "POST" && new URL(request.url).pathname === REVALIDATE_ALL_PATH
+
+/** Tags sent in one purge call. */
+const TAGS_PER_PURGE = 30
+
+const normalize = (pathname: string): string => pathname.replace(/\/+$/, "") || "/"
+
+/** The cache tag on every page at this path, whatever its query string. */
+export function pathTag(pathname: string): string {
+  return `path:${normalize(pathname)}`
+}
+
+/**
+ * The tag on every page under a document's path (`/interactives/a/regions/x` is under
+ * `/interactives/a`), so purging the document's path takes the routes beneath it too.
+ */
+function withinTag(pathname: string): string {
+  return `within:${normalize(pathname)}`
+}
+
+/** The document path a deeper path sits under, or null for one two segments deep or less. */
+function documentPath(pathname: string): string | null {
+  const segments = normalize(pathname).split("/").slice(1)
+  return segments.length > 2 ? `/${segments.slice(0, 2).join("/")}` : null
+}
+
+/**
+ * The tag on every page that lists or shows articles, volumes and contributors: the home
+ * page and other Pages, the indexes, topic and contributor pages, feeds, sitemaps and search.
+ * They render per request on Coolify, so no save's hook names them, and a save to an article,
+ * volume or contributor purges them all (`?shared`).
+ */
+export const SHARED_TAG = "shared"
+
+/** Files under /articles and /volumes that list them, rather than being one of them. */
+const SECTION_LISTINGS = new Set(["feed.xml", "sitemap.xml", "news-sitemap.xml", "substack.xml"])
+
+/** Whether a page shows more than one document: anything but an article or volume's own. */
+function isShared(pathname: string): boolean {
+  const [section = "", slug] = pathname.split("/").slice(1)
+  if (section === "docs" || section === "interactives" || section === "_next") return false
+  if ((section === "articles" || section === "volumes") && slug) {
+    return SECTION_LISTINGS.has(slug)
+  }
+  return true
+}
+
+/** The tags the cache keeps a page under. */
+export function edgeCacheTags(pathname: string): string[] {
+  const tags = [pathTag(pathname)]
+  const document = documentPath(pathname)
+  if (document) tags.push(withinTag(document))
+  if (isShared(pathname)) tags.push(SHARED_TAG)
+  return tags
+}
+
+/**
+ * The tags a `/next/revalidate-all` asks to purge: each `?path=`, and the shared pages with
+ * `?shared`. Null, for everything, when it names neither.
+ */
+function tagsToPurge(request: Request): string[] | null {
+  const { searchParams } = new URL(request.url)
+  const tags = searchParams
+    .getAll("path")
+    .filter((path) => path.startsWith("/"))
+    .flatMap((path) => [pathTag(path), withinTag(path)])
+  if (searchParams.has("shared")) tags.push(SHARED_TAG)
+  return tags.length ? [...new Set(tags)] : null
+}
+
+async function purge(
+  cache: EdgeCache | undefined,
+  tags: string[] | null,
+  log: Pick<Console, "warn">,
+): Promise<void> {
+  if (typeof cache?.purge !== "function") {
+    log.warn("The Worker's edge cache can't be purged here (no ctx.cache.purge)")
+    return
+  }
+  const calls: ({ purgeEverything: true } | { tags: string[] })[] = []
+  if (!tags) calls.push({ purgeEverything: true })
+  else
+    for (let i = 0; i < tags.length; i += TAGS_PER_PURGE) {
+      calls.push({ tags: tags.slice(i, i + TAGS_PER_PURGE) })
+    }
+  for (const options of calls) {
+    try {
+      const result = await cache.purge(options)
+      if (!result.success) {
+        log.warn("Cloudflare refused to purge the Worker's edge cache", result.errors)
+      }
+    } catch (error) {
+      log.warn("Couldn't purge the Worker's edge cache", error)
+    }
+  }
+}
 
 /** Whether the edge cache may answer this request, or store the answer. */
 export function isEdgeCacheable(request: Request): boolean {
@@ -88,8 +184,8 @@ function isKeepable(response: Response): boolean {
 
 /**
  * The cached entrypoint's answer: only what `isKeepable` allows is left cacheable, so an
- * error or a failed database read doesn't stick, and a successful `/next/revalidate-all`
- * empties the cache.
+ * error or a failed database read doesn't stick, and what's kept is tagged with its path. A
+ * successful `/next/revalidate-all` purges the paths it names, or the whole cache.
  */
 export async function afterCachedSite(
   request: Request,
@@ -98,23 +194,14 @@ export async function afterCachedSite(
   log: Pick<Console, "warn"> = console,
 ): Promise<Response> {
   if (isRevalidateAll(request)) {
-    if (response.ok) {
-      if (typeof cache?.purge === "function") {
-        try {
-          const result = await cache.purge({ purgeEverything: true })
-          if (!result.success) {
-            log.warn("Cloudflare refused to purge the Worker's edge cache", result.errors)
-          }
-        } catch (error) {
-          log.warn("Couldn't purge the Worker's edge cache", error)
-        }
-      } else {
-        log.warn("The Worker's edge cache can't be purged here (no ctx.cache.purge)")
-      }
-    }
+    if (response.ok) await purge(cache, tagsToPurge(request), log)
     return response
   }
-  if (isKeepable(response)) return response
+  if (isKeepable(response)) {
+    const tagged = new Response(response.body, response)
+    tagged.headers.append("Cache-Tag", edgeCacheTags(new URL(request.url).pathname).join(","))
+    return tagged
+  }
   const uncached = new Response(response.body, response)
   uncached.headers.set("Cache-Control", "no-store")
   uncached.headers.delete("CDN-Cache-Control")

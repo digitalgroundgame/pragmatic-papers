@@ -245,8 +245,11 @@ after its own `revalidatePath` / `revalidateTag`, and only when
 one request, returns at once, and logs and skips when the `cloudflareCache`
 connection isn't configured. When the `cloudflareWorkerCache` connection is
 configured (`WORKER_URL`, on the Coolify app a Cloudflare Worker reads from), the
-same flush first clears that Worker's cache through its `/next/revalidate-all`,
-then requests the same most-read pages through the Worker's URL in the background
+same flush first clears that Worker's cache through its `/next/revalidate-all`:
+only the `paths` the hook passes (the ones it revalidated) and, with `shared`, every
+page listing articles, volumes or contributors, or every page when it passes neither
+(the Worker tags each page it keeps, `edgeCacheTags`). Pass the paths a new hook
+revalidates. It then requests the same most-read pages through the Worker's URL in the background
 (`warmWorkerSoon`), since a Worker renders a page on a cold isolate in seconds.
 A new hook for content readers see should call it too.
 A deploy purges too: `start.sh` waits until the site's public URL is answered by the

@@ -10,7 +10,8 @@ const { revalidateArticle, revalidateDelete } = await import("../revalidateVolum
 
 const payload = { logger: { info: vi.fn() }, findByID: readersRow() }
 
-const doc = (slug: string, status: Volume["_status"]) => ({ slug, _status: status }) as Volume
+const doc = (slug: string, status: Volume["_status"]) =>
+  ({ id: 1, slug, _status: status }) as Volume
 const req = (context: Record<string, unknown> = {}) => ({ payload, context }) as never
 const paths = () => vi.mocked(revalidatePath).mock.calls.map(([path]) => path)
 

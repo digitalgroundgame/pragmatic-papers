@@ -16,7 +16,8 @@ const payload = {
   findByID: readersRow(),
 }
 
-const doc = (slug: string, status: Article["_status"]) => ({ slug, _status: status }) as Article
+const doc = (slug: string, status: Article["_status"]) =>
+  ({ id: 1, slug, _status: status }) as Article
 const req = (context: Record<string, unknown> = {}) => ({ payload, context }) as never
 const paths = () => vi.mocked(revalidatePath).mock.calls.map(([path]) => path)
 

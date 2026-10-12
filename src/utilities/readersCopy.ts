@@ -59,9 +59,9 @@ export const rememberReadersCopy: CollectionBeforeChangeHook = async ({
   const id = (originalDoc as Partial<ReadersCopy> | undefined)?.id
   if (operation !== "update" || !collection.versions?.drafts || id == null) return data
   if (req.context.disableRevalidate) return data
-  req.context[contextKey(collection.slug, id)] = {
-    copy: await readersCopyOf(req, collection.slug, id),
-  }
+  const copy = await readersCopyOf(req, collection.slug, id)
+  // Set after the read: a Local API call with `req` swaps `req.context` for a copy.
+  req.context[contextKey(collection.slug, id)] = { copy }
   return data
 }
 
@@ -86,7 +86,9 @@ export async function readersChange({
   "collection" | "doc" | "previousDoc" | "req"
 >): Promise<ReadersChange | null> {
   const next = doc as ReadersCopy
-  const prev = previousDoc as ReadersCopy | undefined
+  // On create Payload hands an empty `previousDoc`: there was nothing for readers to see.
+  const prev =
+    (previousDoc as ReadersCopy | undefined)?.id == null ? null : (previousDoc as ReadersCopy)
   const shown = (copy?: ReadersCopy | null) => (copy && isVisible(copy) ? copy : null)
   if (!collection.versions?.drafts) return { before: shown(prev), after: shown(next) }
 

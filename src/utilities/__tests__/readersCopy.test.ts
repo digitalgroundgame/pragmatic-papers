@@ -114,6 +114,17 @@ describe("readersChange", () => {
     expect(change).toEqual({ before: published("a"), after: published("b") })
   })
 
+  it("sees nothing before a create, whose previousDoc is empty", async () => {
+    const req = makeReq(readersRow())
+    const change = await readersChange({
+      collection: articles,
+      doc: published("a"),
+      previousDoc: {},
+      req,
+    } as never)
+    expect(change).toEqual({ before: null, after: published("a") })
+  })
+
   it("treats a row it can't read as one readers can't see", async () => {
     const req = makeReq(vi.fn().mockRejectedValue(new Error("not found")))
     const change = await readersChange({
@@ -153,6 +164,30 @@ describe("rememberReadersCopy", () => {
     expect(findByID).toHaveBeenCalledWith(
       expect.objectContaining({ collection: "articles", id: 1, draft: false }),
     )
+  })
+
+  it("keeps what it read when the read swaps req.context, as Payload's Local API does", async () => {
+    const req = { payload: {}, context: {} } as { payload: object; context: object }
+    req.payload = {
+      findByID: vi.fn(async () => {
+        req.context = { ...req.context }
+        return published("a")
+      }),
+    }
+    await rememberReadersCopy({
+      collection: articles,
+      data: {},
+      operation: "update",
+      originalDoc: draft("a"),
+      req,
+    } as never)
+    const change = await readersChange({
+      collection: articles,
+      doc: published("a"),
+      previousDoc: draft("a"),
+      req,
+    } as never)
+    expect(change).toEqual({ before: published("a"), after: published("a") })
   })
 
   it("reads nothing on create, without drafts, or when revalidation is off", async () => {

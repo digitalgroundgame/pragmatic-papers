@@ -60,7 +60,7 @@ import * as migration_20261011_023346_add_docs_tour from "./20261011_023346_add_
 import * as migration_20261011_031222_ticker_on_header from "./20261011_031222_ticker_on_header"
 import * as migration_20261011_074819_add_docs_notifications_tours_experiments from "./20261011_074819_add_docs_notifications_tours_experiments"
 import * as migration_20261011_100351_add_sso from "./20261011_100351_add_sso"
-import * as migration_20261011_205941_feeds_list_block from "./20261011_205941_feeds_list_block"
+import * as migration_20261012_002512_feeds_list_block from "./20261012_002512_feeds_list_block"
 
 export const migrations = [
   {
@@ -374,8 +374,8 @@ export const migrations = [
     name: "20261011_100351_add_sso",
   },
   {
-    up: migration_20261011_205941_feeds_list_block.up,
-    down: migration_20261011_205941_feeds_list_block.down,
-    name: "20261011_205941_feeds_list_block",
+    up: migration_20261012_002512_feeds_list_block.up,
+    down: migration_20261012_002512_feeds_list_block.down,
+    name: "20261012_002512_feeds_list_block",
   },
 ]

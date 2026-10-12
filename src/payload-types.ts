@@ -1485,7 +1485,7 @@ export interface Doc {
    */
   showTableOfContents?: boolean | null;
   /**
-   * This doc ships with the code, so it can't be edited here. Change its Markdown file in src/docs/ instead.
+   * Seeded from src/docs/ by a deploy. Edits here are kept: the repo never overwrites a doc the site already has.
    */
   sourceHash?: string | null;
   /**

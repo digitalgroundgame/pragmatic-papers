@@ -96,6 +96,19 @@ describe("registerPlugin", () => {
     expect(registeredPlugins(config)[0]?.enabled).toBe(false)
   })
 
+  it("hands a disabled plugin enabled: false, so it stops too", async () => {
+    let seen: unknown
+    await registerPlugin({
+      slug: "a",
+      manifest: manifest("A"),
+      plugin: ({ config: c, enabled }) => {
+        seen = enabled
+        return c
+      },
+    })({ enabled: true, disabled: true })(base())
+    expect(seen).toBe(false)
+  })
+
   it("keeps what's already in custom", async () => {
     const config = await run({ ...base(), custom: { tours: { enabled: true } } }, [
       describePlugin(addsCollection("a"), { slug: "a", manifest: manifest("A") }),

@@ -110,7 +110,8 @@ export const registerPlugin =
         recording(
           args.config,
           { ...manifest, slug: descriptor.slug, enabled: enabledOf(options) },
-          (config) => plugin({ ...args, config }),
+          // A disabled plugin is handed `enabled: false`, so it stops whatever its switch says.
+          (config) => plugin({ ...args, config, enabled: enabledOf(options) }),
         ),
     })(options as TOptions & Record<string, unknown>)
     return Object.assign(defined, { manifest })

@@ -6,14 +6,14 @@ import { AUTH_ENDPOINT_PATH, DISABLED_PATHS, TABLES } from "./constants"
 import { destinyPlugin, type DestinyProfile } from "./destiny"
 import { linkingPlugin } from "./linking"
 import { payloadUserCookiePlugin } from "./payloadUserCookie"
+import { isPlaceholderEmail, PLACEHOLDER_EMAIL_DOMAIN, placeholderEmail } from "./placeholderEmail"
 import type { ResolvedSsoConfig, SsoProviderId } from "./types"
 
 type Pool = PostgresAdapter["pool"]
 
 /**
  * The address of the user a Destiny.gg account is linked to, which it signs in as.
- * Destiny.gg shares no address, so an account signs in only once someone has linked it
- * from their account page; until then this is null.
+ * Destiny.gg shares no address, so an account nobody has linked has none here (null).
  */
 export async function destinyEmail(
   pool: Pool,
@@ -26,6 +26,26 @@ export async function destinyEmail(
     [String(profile.userId)],
   )
   return linked.rows[0]?.email ?? null
+}
+
+/**
+ * Gives a member whose address is a placeholder the one a provider they've just linked has
+ * verified, marked verified, unless another user already has it. Their placeholder came from
+ * Destiny.gg, which shares no address; this is how they get a real one.
+ */
+export async function adoptVerifiedEmail(
+  pool: Pool,
+  usersTable: string,
+  userId: string | number,
+  email: string,
+): Promise<void> {
+  if (isPlaceholderEmail(email)) return
+  await pool.query(
+    `update "${usersTable}" set email = $1, email_verified = true, updated_at = now()
+     where id = $2 and email like $3
+     and not exists (select 1 from "${usersTable}" where lower(email) = $1)`,
+    [email.toLowerCase(), Number(userId), `%@${PLACEHOLDER_EMAIL_DOMAIN}`],
+  )
 }
 
 function createAuth(betterAuth: typeof BetterAuth, payload: Payload, config: ResolvedSsoConfig) {
@@ -67,7 +87,11 @@ function createAuth(betterAuth: typeof BetterAuth, payload: Payload, config: Res
         ? [
             destinyPlugin({
               ...destiny,
-              emailFor: (profile) => destinyEmail(pool, config.usersSlug, profile),
+              signUp: Boolean(signUp),
+              // Someone new gets a placeholder to sign up with (`placeholderEmail.ts`).
+              emailFor: async (profile) =>
+                (await destinyEmail(pool, config.usersSlug, profile)) ??
+                (signUp ? placeholderEmail("destiny", profile.userId) : null),
             }),
           ]
         : []),
@@ -77,6 +101,18 @@ function createAuth(betterAuth: typeof BetterAuth, payload: Payload, config: Res
     // sign-up (`signUp`), which Payload then finishes (`signUp.afterCreate`).
     user: {
       modelName: config.usersSlug,
+      // A member who signed up with Destiny.gg and links Google or Discord takes the address
+      // that provider verified in place of their placeholder.
+      validateUserInfo: async ({ user, source }) => {
+        if (
+          source.action === "link-account" &&
+          user.emailVerified === true &&
+          typeof user.email === "string" &&
+          user.id !== undefined
+        ) {
+          await adoptVerifiedEmail(pool, config.usersSlug, String(user.id), user.email)
+        }
+      },
       fields: {
         emailVerified: "email_verified",
         image: "avatar_url",
@@ -96,9 +132,15 @@ function createAuth(betterAuth: typeof BetterAuth, payload: Payload, config: Res
           // Checked again here, so no path to an insert gets past it: sign-up must be
           // configured and open right now, and the provider must have verified the address.
           // An unverified one could be someone else's, and their later sign-in with it would
-          // be linked to this account (`accountLinking`).
-          before: async (user) => {
-            if (!signUp || !user.emailVerified || !(await signUp.enabled({ payload }))) {
+          // be linked to this account (`accountLinking`). The one exception is Destiny.gg's
+          // placeholder, which is made from its account id and belongs to nobody else.
+          before: async (user, ctx) => {
+            const placeholder = ctx?.params?.id === "destiny" && isPlaceholderEmail(user.email)
+            if (
+              !signUp ||
+              !(user.emailVerified || placeholder) ||
+              !(await signUp.enabled({ payload }))
+            ) {
               return false
             }
             return { data: { ...user, ...signUp.columns?.() } }

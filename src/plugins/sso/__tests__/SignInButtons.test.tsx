@@ -80,7 +80,7 @@ describe("SignInButtons", () => {
   })
 
   it.each([
-    ["signup_disabled", "No account here uses that address"],
+    ["signup_disabled", "No account here matches that sign-in"],
     ["account_not_linked", "hasn't verified your email address"],
     ["email_not_found", "That account isn't linked to anyone here"],
     ["something_else", "Sign-in didn't complete"],

@@ -121,7 +121,10 @@ function stubDestiny(profile: DestinyProfile) {
 }
 
 /** Starts a sign-in and comes back from Destiny.gg as `profile`. */
-async function signInWithDestiny(profile: DestinyProfile): Promise<Response> {
+async function signInWithDestiny(
+  profile: DestinyProfile,
+  { requestSignUp = false } = {},
+): Promise<Response> {
   stubDestiny(profile)
   const start = await api("/auth/sign-in/social", {
     method: "POST",
@@ -130,6 +133,7 @@ async function signInWithDestiny(profile: DestinyProfile): Promise<Response> {
       provider: "destiny",
       callbackURL: "/admin",
       errorCallbackURL: "/admin/login",
+      ...(requestSignUp && { requestSignUp: true }),
     }),
   })
   expect(start.status).toBe(200)
@@ -354,7 +358,7 @@ describe("linking an account from the account page", () => {
 
     const callback = await signInWithDestiny(destiny("Stranger"))
 
-    expect(callback.headers.get("location")).toContain("/admin/login?error=email_not_found")
+    expect(callback.headers.get("location")).toContain("/admin/login?error=signup_disabled")
     expect(cookiesFrom(callback)).not.toContain(`${SSO_COOKIE_NAME}=`)
     expect((await payload.count({ collection: "users" })).totalDocs).toBe(before.totalDocs)
   })
@@ -407,7 +411,7 @@ describe("linking an account from the account page", () => {
     expect(await me(ssoCookie)).toBeNull()
     expect(await me(cookie)).toMatchObject({ id: editor.id })
     const again = await signInWithDestiny(profile)
-    expect(again.headers.get("location")).toContain("error=email_not_found")
+    expect(again.headers.get("location")).toContain("error=signup_disabled")
   })
 
   it("answers only a signed-in user, and only while the experiment is on", async () => {
@@ -550,6 +554,70 @@ describe("members", () => {
       stubDestiny({ userId: nextId++, username: `Member${nextId}` }),
     )
     expect(linked.headers.get("location")).toBe("/account?linked=destiny")
+  })
+
+  it("signs someone new up with Destiny.gg, under a placeholder address", async () => {
+    const profile = { userId: nextId++, username: `Dgg${nextId}` }
+    const callback = await signInWithDestiny(profile, { requestSignUp: true })
+    expect(callback.headers.get("location")).toBe("/admin")
+    const cookie = cookiesFrom(callback)
+
+    const email = `destiny-${profile.userId}@no-email.invalid`
+    const { docs } = await payload.find({
+      collection: "users",
+      where: { email: { equals: email } },
+    })
+    expect(docs[0]).toMatchObject({ name: profile.username, roles: ["member"] })
+    expect(await me(cookie)).toBeNull()
+    const summary = (await (await account(cookie)).json()) as AccountSummary
+    expect(summary).toEqual({ name: profile.username, email: null, managedInAdmin: false })
+
+    // Signing in again finds the same member.
+    const again = await signInWithDestiny(profile)
+    expect(((await (await account(cookiesFrom(again))).json()) as AccountSummary).name).toBe(
+      profile.username,
+    )
+    expect(
+      (await payload.count({ collection: "users", where: { email: { equals: email } } })).totalDocs,
+    ).toBe(1)
+  })
+
+  it("swaps a Destiny.gg member's placeholder for the address Discord verified", async () => {
+    const profile = { userId: nextId++, username: `Dgg${nextId}` }
+    const cookie = cookiesFrom(await signInWithDestiny(profile, { requestSignUp: true }))
+    const placeholder = `destiny-${profile.userId}@no-email.invalid`
+    const emailOf = async () => ((await (await account(cookie)).json()) as AccountSummary).email
+
+    // An address Discord hasn't verified, or one another user has, is left alone.
+    const taken = await createUser("writer")
+    await link(cookie, "discord", () => stubDiscord({ ...stranger(), verified: false }))
+    await link(cookie, "discord", () =>
+      stubDiscord({ id: String(nextId++), email: taken.email, verified: true }),
+    )
+    expect(await emailOf()).toBeNull()
+
+    const discord = stranger()
+    const linked = await link(cookie, "discord", () => stubDiscord(discord))
+    expect(linked.headers.get("location")).toBe("/account?linked=discord")
+    expect(await emailOf()).toBe(discord.email)
+    const { pool } = payload.db as unknown as {
+      pool: {
+        query: (sql: string, values: unknown[]) => Promise<{ rows: { email_verified: boolean }[] }>
+      }
+    }
+    const verified = await pool.query("select email_verified from users where email = $1", [
+      discord.email,
+    ])
+    expect(verified.rows[0]?.email_verified).toBe(true)
+    expect(
+      (await payload.count({ collection: "users", where: { email: { equals: placeholder } } }))
+        .totalDocs,
+    ).toBe(0)
+
+    // Destiny.gg still signs them in, now under the real address.
+    const again = await signInWithDestiny(profile)
+    expect(await emailOf()).toBe(discord.email)
+    expect(cookiesFrom(again)).toContain(`${SSO_COOKIE_NAME}=`)
   })
 
   it("deletes a member's account, and signs them out", async () => {

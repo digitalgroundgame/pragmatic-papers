@@ -1,6 +1,7 @@
 import type { CollectionSlug, Endpoint, PayloadHandler, PayloadRequest } from "payload"
 
 import { ACCOUNT_ENDPOINT_PATH } from "../constants"
+import { isPlaceholderEmail } from "../placeholderEmail"
 import { getSignedInUser } from "../session"
 import type { ResolvedSsoConfig } from "../types"
 
@@ -13,6 +14,7 @@ const unauthorized = () => Response.json({ message: "Sign in first." }, { status
 /** What the account page shows about the signed-in user. */
 export interface AccountSummary {
   name: string
+  /** Null for a member with only a placeholder (they signed up with Destiny.gg). */
   email: string | null
   /** Their account is managed in the admin, where staff also delete it. */
   managedInAdmin: boolean
@@ -53,7 +55,7 @@ export function accountEndpoints(config: ResolvedSsoConfig): Endpoint[] {
 
   const summary = (user: Record<string, unknown>): AccountSummary => ({
     name: typeof user.name === "string" ? user.name : "",
-    email: typeof user.email === "string" ? user.email : null,
+    email: typeof user.email === "string" && !isPlaceholderEmail(user.email) ? user.email : null,
     managedInAdmin: config.isPayloadUser(user),
   })
 

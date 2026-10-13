@@ -2,7 +2,7 @@ import type { BetterAuthOptions } from "better-auth"
 import type { Payload } from "payload"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { configuredProviders, destinyEmail, getAuth } from "../auth"
+import { adoptVerifiedEmail, configuredProviders, destinyEmail, getAuth } from "../auth"
 import type { ResolvedSsoConfig } from "../types"
 
 const betterAuth = vi.fn((options: BetterAuthOptions) => ({ options }))
@@ -115,6 +115,16 @@ describe("getAuth", () => {
       expect(enabled).not.toHaveBeenCalled()
     })
 
+    it("takes Destiny.gg's placeholder, from Destiny.gg's callback only", async () => {
+      const options = await optionsFor(config({ signUp }))
+      const before = options.databaseHooks?.user?.create?.before
+      const user = newUser({ email: "destiny-42@no-email.invalid", emailVerified: false })
+      expect(await before?.(user, { params: { id: "destiny" } } as never)).toEqual({
+        data: expect.objectContaining({ email: "destiny-42@no-email.invalid" }),
+      })
+      expect(await before?.(user, { params: { id: "discord" } } as never)).toBe(false)
+    })
+
     it("hands the new user to Payload to finish", async () => {
       const options = await optionsFor(config({ signUp }))
       await options.databaseHooks?.user?.create?.after?.(newUser(), null)
@@ -185,6 +195,43 @@ describe("destinyEmail", () => {
   it("is null for an account nobody has linked", async () => {
     const query = vi.fn().mockResolvedValue({ rows: [] })
     expect(await destinyEmail({ query } as never, "users", profile)).toBeNull()
+  })
+})
+
+describe("adoptVerifiedEmail", () => {
+  beforeEach(() => pool.query.mockReset())
+
+  it("replaces only a placeholder, with an address nobody else has", async () => {
+    await adoptVerifiedEmail(pool as never, "users", "9", "Ada@Example.com")
+    const [sql, values] = pool.query.mock.calls[0]!
+    expect(sql).toContain("email like $3")
+    expect(sql).toContain("not exists")
+    expect(values).toEqual(["ada@example.com", 9, "%@no-email.invalid"])
+  })
+
+  it("never takes another placeholder", async () => {
+    await adoptVerifiedEmail(pool as never, "users", "9", "destiny-1@no-email.invalid")
+    expect(pool.query).not.toHaveBeenCalled()
+  })
+})
+
+describe("validateUserInfo", () => {
+  beforeEach(() => pool.query.mockReset())
+  const validate = async (action: string, user: Record<string, unknown>) =>
+    (await optionsFor(config())).user?.validateUserInfo?.(
+      { user, source: { action, method: "oauth", oauth: { providerId: "discord" } } } as never,
+      {} as never,
+    )
+
+  it("adopts the address a newly linked provider verified", async () => {
+    await validate("link-account", { id: "9", email: "ada@example.com", emailVerified: true })
+    expect(pool.query).toHaveBeenCalledOnce()
+  })
+
+  it("leaves sign-ins, and addresses nobody verified, alone", async () => {
+    await validate("sign-in", { id: "9", email: "ada@example.com", emailVerified: true })
+    await validate("link-account", { id: "9", email: "ada@example.com", emailVerified: false })
+    expect(pool.query).not.toHaveBeenCalled()
   })
 })
 

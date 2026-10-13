@@ -10,11 +10,13 @@ import "./SignInButtons.css"
 
 /** What Better Auth puts in `?error=` when it sends someone back to the login page. */
 const ERRORS: Record<string, string> = {
+  // An address no user has, or a Destiny.gg account nobody has linked.
   signup_disabled:
-    "No account here uses that address. Ask an admin to create one, then sign in again.",
+    "No account here matches that sign-in. Ask an admin to create one, or sign in another way and link it from your account page.",
   account_not_linked:
     "That provider hasn't verified your email address, so it can't be matched to your account.",
-  // Destiny.gg shares no address: an account nobody has linked lands here.
+  // Destiny.gg shares no address: an account nobody has linked lands here while sign-ups
+  // aren't configured.
   email_not_found:
     "That account isn't linked to anyone here. Sign in another way, then link it from your account page.",
 }

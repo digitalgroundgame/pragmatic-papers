@@ -69,7 +69,7 @@ export const NoAccount: Story = {
   parameters: { nextjs: { navigation: { query: { error: "signup_disabled" } } } },
   play: async ({ canvasElement }) => {
     await expect(within(canvasElement).getByRole("alert")).toHaveTextContent(
-      "No account here uses that address",
+      "No account here matches that sign-in",
     )
   },
 }

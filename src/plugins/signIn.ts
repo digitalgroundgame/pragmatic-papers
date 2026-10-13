@@ -6,7 +6,7 @@ import type { User } from "@/payload-types"
 import { getSiteURL } from "@/utilities/getURL"
 import type { Payload } from "payload"
 
-import { SSO_PROVIDER_LABELS, type SsoPluginConfig } from "./sso"
+import { SSO_PROVIDER_LABELS, type SsoPluginConfig, type SsoProviderId } from "./sso"
 
 const experimentOn = async (payload: Payload, name: "sso" | "comments") =>
   (await payload.findGlobal({ slug: "site-settings", depth: 0 })).experiments?.[name] === true
@@ -54,12 +54,16 @@ export const ssoOptions: SsoPluginConfig = {
 }
 
 /**
- * The providers someone can make an account with: those with credentials, apart from
- * Destiny.gg, which shares no address to make one from. A member links it from /account.
+ * The providers someone can make an account with: those with credentials. Destiny.gg shares
+ * no address, so its sign-ups get a placeholder until they link Google or Discord.
  */
-export function signUpProviders(): Array<{ id: "google" | "discord"; label: string }> {
-  const credentials = { google: googleSignIn.credentials(), discord: discordSignIn.credentials() }
-  return (["google", "discord"] as const)
+export function signUpProviders(): Array<{ id: SsoProviderId; label: string }> {
+  const credentials = {
+    google: googleSignIn.credentials(),
+    discord: discordSignIn.credentials(),
+    destiny: destinySignIn.credentials(),
+  }
+  return (["google", "discord", "destiny"] as const)
     .filter((id) => credentials[id])
     .map((id) => ({ id, label: SSO_PROVIDER_LABELS[id] }))
 }

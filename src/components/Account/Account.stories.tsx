@@ -77,6 +77,15 @@ export const Member: Story = {
   },
 }
 
+export const NoEmailAddress: Story = {
+  beforeEach: serve({ ...member, name: "DestinyFan", email: null }),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(await canvas.findByText(/no email address yet/)).toBeInTheDocument()
+    await expect(canvas.queryByText(/@/)).not.toBeInTheDocument()
+  },
+}
+
 export const Staff: Story = {
   beforeEach: serve({ ...member, name: "Grace Editor", managedInAdmin: true }),
   play: async ({ canvasElement }) => {

@@ -378,7 +378,10 @@ plugin and the account page read too.
   `requestSignUp: true` (the comment box and `/account` do, the admin's login page doesn't),
   the `comments` experiment is on, and the provider verified the address. Better Auth inserts
   the row with a random `member-…` slug, and `afterCreate` sets the role through Payload.
-  Destiny.gg shares no address, so it can't sign up: a member links it from `/account`.
+  Destiny.gg shares no address, so its sign-up gets a placeholder, `destiny-<id>@no-email.invalid`
+  (`placeholderEmail.ts`: `.invalid` can't receive mail, so never send to one), and is
+  unverified. Linking Google or Discord later swaps it for the address that provider verified
+  (`adoptVerifiedEmail`, from Better Auth's `validateUserInfo`), unless another user has it.
 - Any other provider login attaches to the user whose address the provider has verified.
 - Signed in, anyone can link more accounts: staff from **Linked accounts** on
   `/admin/account`, members from `/account`. `/api/auth-links` (`endpoints/links.ts`) acts on

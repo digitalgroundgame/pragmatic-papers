@@ -141,6 +141,18 @@ describe("destinyProvider", () => {
     expect(provider.disableSignUp).toBe(true)
     expect(provider.options?.disableSignUp).toBe(true)
   })
+
+  it("with sign-up, lets one that asks for it create a user", () => {
+    const signingUp = destinyProvider({
+      clientId: "id",
+      clientSecret: "secret",
+      emailFor,
+      signUp: true,
+    })
+    expect(signingUp.disableSignUp).toBe(false)
+    expect(signingUp.disableImplicitSignUp).toBe(true)
+    expect(signingUp.options?.disableSignUp).toBe(false)
+  })
 })
 
 describe("destinyPlugin", () => {

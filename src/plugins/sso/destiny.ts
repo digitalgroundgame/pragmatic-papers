@@ -38,6 +38,11 @@ export interface DestinyProviderOptions extends SsoProviderCredentials {
    * Destiny.gg never shares an address, so this is how Better Auth finds the user.
    */
   emailFor: (profile: DestinyProfile) => Promise<string | null>
+  /**
+   * Whether a Destiny.gg sign-in may make an account, when it asks for one
+   * (`requestSignUp`). Off, it only ever finds a user who exists.
+   */
+  signUp?: boolean
 }
 
 /**
@@ -46,14 +51,15 @@ export interface DestinyProviderOptions extends SsoProviderCredentials {
  * GET with query parameters, and a profile that's read with `?token=` and has no address.
  */
 export function destinyProvider(options: DestinyProviderOptions): OAuthProvider<DestinyProfile> {
-  const { clientId, clientSecret, emailFor } = options
+  const { clientId, clientSecret, emailFor, signUp = false } = options
 
   return {
     id: "destiny",
     name: "Destiny.gg",
     accountSubject: ({ profile }) => String(profile.userId),
-    disableSignUp: true,
-    options: { clientId, clientSecret, disableSignUp: true },
+    disableSignUp: !signUp,
+    disableImplicitSignUp: signUp,
+    options: { clientId, clientSecret, disableSignUp: !signUp },
 
     async createAuthorizationURL({ state, codeVerifier, redirectURI }) {
       const url = new URL(DESTINY_URLS.authorize)
@@ -118,8 +124,9 @@ export function destinyProvider(options: DestinyProviderOptions): OAuthProvider<
           name: data.username,
           // No address means nobody: the callback sends them back with `email_not_found`.
           email: (await emailFor(data)) ?? undefined,
-          // The address is ours, not one Destiny.gg vouched for, so it's never marked
-          // verified; the provider is trusted for linking instead (`auth.ts`).
+          // The address is ours (a linked user's, or a placeholder), not one Destiny.gg
+          // vouched for, so it's never marked verified; the provider is trusted for linking
+          // instead (`auth.ts`).
           emailVerified: false,
         },
         data,

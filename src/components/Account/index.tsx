@@ -259,6 +259,12 @@ export const Account: React.FC<AccountProps> = ({ providers, apiPath = "/api" })
         </p>
       ) : (
         <>
+          {account.email ? null : (
+            <p className="text-sm" role="status">
+              Your account has no email address yet. Connect Google or Discord below to add the one
+              they&apos;ve verified.
+            </p>
+          )}
           <NameForm
             name={account.name}
             url={url}

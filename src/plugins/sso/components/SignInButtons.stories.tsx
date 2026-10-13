@@ -10,7 +10,7 @@ const meta = {
   component: SignInButtons,
   decorators: [withPayloadAdminTheme],
   args: {
-    providers: ["google", "discord"],
+    providers: ["google", "discord", "destiny"],
     authPath: "/api/auth",
     adminPath: "/admin",
   },
@@ -24,6 +24,7 @@ export const Default: Story = {
     const canvas = within(canvasElement)
     await expect(canvas.getByRole("button", { name: "Sign in with Google" })).toBeEnabled()
     await expect(canvas.getByRole("button", { name: "Sign in with Discord" })).toBeEnabled()
+    await expect(canvas.getByRole("button", { name: "Sign in with Destiny.gg" })).toBeEnabled()
     await expect(canvas.queryByRole("alert")).not.toBeInTheDocument()
   },
 }
@@ -69,6 +70,16 @@ export const NoAccount: Story = {
   play: async ({ canvasElement }) => {
     await expect(within(canvasElement).getByRole("alert")).toHaveTextContent(
       "No account here uses that address",
+    )
+  },
+}
+
+/** Back from Destiny.gg, which shares no address, with an account nobody here has linked. */
+export const NoLinkedAccount: Story = {
+  parameters: { nextjs: { navigation: { query: { error: "email_not_found" } } } },
+  play: async ({ canvasElement }) => {
+    await expect(within(canvasElement).getByRole("alert")).toHaveTextContent(
+      "That account isn't linked to anyone here",
     )
   },
 }

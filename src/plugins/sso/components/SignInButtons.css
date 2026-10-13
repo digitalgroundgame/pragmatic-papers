@@ -97,6 +97,22 @@
   background: #4752c4;
 }
 
+/* Destiny.gg: its near-black, with the icon's blue on hover. */
+.sso-sign-in__button--destiny {
+  border-color: #1a1a1a;
+  background: #1a1a1a;
+  color: #fff;
+}
+
+.sso-sign-in__button--destiny:hover:not(:disabled) {
+  border-color: #59aeea;
+  background: #262626;
+}
+
+[data-theme="dark"] .sso-sign-in__button--destiny {
+  border-color: #3a3a3a;
+}
+
 .sso-sign-in__divider {
   display: flex;
   align-items: center;

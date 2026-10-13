@@ -2,8 +2,18 @@ import type { Payload } from "payload"
 
 import type { PluginEnabled } from "@/utilities/registerPlugin"
 
-/** A sign-in provider Better Auth has built in. */
-export type SsoProviderId = "google" | "discord"
+/**
+ * A sign-in provider: Google and Discord are built in to Better Auth, Destiny.gg is ours
+ * (`destiny.ts`).
+ */
+export type SsoProviderId = "google" | "discord" | "destiny"
+
+/** A row of the Connections panel: a configured provider, and whether it's linked. */
+export interface LinkedProvider {
+  id: SsoProviderId
+  label: string
+  linked: boolean
+}
 
 /** An OAuth application's credentials, from the provider's developer console. */
 export interface SsoProviderCredentials {

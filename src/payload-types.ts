@@ -564,6 +564,7 @@ export interface User {
   publicProfile?: boolean | null;
   emailVerified?: boolean | null;
   avatarUrl?: string | null;
+  ssoConnections?: boolean | null;
   updatedAt: string;
   createdAt: string;
   email: string;
@@ -2257,6 +2258,7 @@ export interface UsersSelect<T extends boolean = true> {
   publicProfile?: T;
   emailVerified?: T;
   avatarUrl?: T;
+  ssoConnections?: T;
   updatedAt?: T;
   createdAt?: T;
   email?: T;
@@ -2763,7 +2765,7 @@ export interface Plugin {
      */
     tours?: boolean | null;
     /**
-     * “Sign in with Google” and “Sign in with Discord” on the admin's login page, for people who already have an account here. Each provider also needs its credentials (System → Integrations).
+     * “Sign in with Google”, “Sign in with Discord” and “Sign in with Destiny.gg” on the admin's login page, for people who already have an account here, and the Connections tab that links them. Each provider also needs its credentials (System → Integrations).
      */
     sso?: boolean | null;
   };

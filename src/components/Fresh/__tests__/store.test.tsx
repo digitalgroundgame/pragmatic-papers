@@ -3,7 +3,15 @@ import React from "react"
 import { renderToString } from "react-dom/server"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
-import { markSeen, resetSeenStore, SEEN_KEY_PREFIX, useIsUnseen } from "../store"
+import {
+  addSeen,
+  markSeen,
+  resetSeenStore,
+  SEEN_KEY_PREFIX,
+  seenNames,
+  setOnMarkSeen,
+  useIsUnseen,
+} from "../store"
 
 beforeEach(() => {
   localStorage.clear()
@@ -12,6 +20,7 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup()
+  setOnMarkSeen(null)
   vi.restoreAllMocks()
 })
 
@@ -98,6 +107,39 @@ describe("the seen store", () => {
     writeFromAnotherTab("theme", "dark")
 
     expect(renders).not.toHaveBeenCalled()
+  })
+
+  it("clears dots for names seen elsewhere, and stores them", () => {
+    const { result } = renderHook(() => useIsUnseen("new-feature"))
+
+    act(() => addSeen(["new-feature", "other-feature"]))
+
+    expect(result.current).toBe(false)
+    expect(localStorage.getItem(`${SEEN_KEY_PREFIX}other-feature`)).toBe("1")
+    expect(seenNames()?.sort()).toEqual(["new-feature", "other-feature"])
+  })
+
+  it("doesn't re-render for names it already had", () => {
+    markSeen("new-feature")
+    const renders = vi.fn()
+    renderHook(() => renders(useIsUnseen("new-feature")))
+    renders.mockClear()
+
+    act(() => addSeen(["new-feature"]))
+
+    expect(renders).not.toHaveBeenCalled()
+  })
+
+  it("tells its listener about names this tab marks seen, not ones added", () => {
+    const listener = vi.fn()
+    setOnMarkSeen(listener)
+
+    act(() => addSeen(["from-account"]))
+    act(() => markSeen("new-feature"))
+    act(() => markSeen("new-feature"))
+
+    expect(listener).toHaveBeenCalledTimes(1)
+    expect(listener).toHaveBeenCalledWith("new-feature")
   })
 
   it("counts every dot as seen on the server, so nothing renders there", () => {

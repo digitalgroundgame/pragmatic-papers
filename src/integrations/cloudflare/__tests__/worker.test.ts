@@ -40,7 +40,7 @@ describe("cloudflareWorker", () => {
     await worker.revalidateAll({ fetchImpl })
 
     const [url, init] = fetchImpl.mock.calls[0]!
-    expect(String(url)).toBe("https://w.example.dev/next/revalidate-all")
+    expect(String(url)).toBe("https://w.example.dev/next/revalidate-all?save=1")
     expect(init).toMatchObject({ method: "POST", headers: { Authorization: "Bearer s3cret" } })
   })
 
@@ -55,6 +55,7 @@ describe("cloudflareWorker", () => {
     expect(url.pathname).toBe("/next/revalidate-all")
     expect(url.searchParams.getAll("path")).toEqual(["/articles/a", "/volumes/1"])
     expect(url.searchParams.get("shared")).toBe("1")
+    expect(url.searchParams.get("save")).toBe("1")
   })
 
   it(`purges everything rather than name more than ${MAX_PURGE_PATHS} paths`, async () => {
@@ -65,7 +66,9 @@ describe("cloudflareWorker", () => {
 
     await worker.revalidateAll({ fetchImpl, paths, shared: true })
 
-    expect(String(fetchImpl.mock.calls[0]![0])).toBe("https://w.example.dev/next/revalidate-all")
+    expect(String(fetchImpl.mock.calls[0]![0])).toBe(
+      "https://w.example.dev/next/revalidate-all?save=1",
+    )
   })
 
   it("throws with the status, never the secret, when the Worker refuses", async () => {

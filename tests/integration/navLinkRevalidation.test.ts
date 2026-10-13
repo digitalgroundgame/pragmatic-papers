@@ -9,8 +9,11 @@ import { getPayload } from "./helpers/testUsers"
 // The Header and Footer globals cache their nav with linked documents populated, so a
 // rename, unpublish or delete of a linked page or topic must drop both globals' caches. This
 // drives the real collections, so a hook that's written but never registered fails here.
-const { revalidateTag } = vi.hoisted(() => ({ revalidateTag: vi.fn() }))
-vi.mock("next/cache", () => ({ revalidatePath: vi.fn(), revalidateTag }))
+const { revalidatePath, revalidateTag } = vi.hoisted(() => ({
+  revalidatePath: vi.fn(),
+  revalidateTag: vi.fn(),
+}))
+vi.mock("next/cache", () => ({ revalidatePath, revalidateTag }))
 
 const navRevalidated = (): boolean =>
   ["global_header", "global_footer"].every((tag) =>
@@ -25,6 +28,7 @@ describe("nav links follow the documents they point at", () => {
   })
 
   beforeEach(() => {
+    revalidatePath.mockClear()
     revalidateTag.mockClear()
   })
 
@@ -106,5 +110,40 @@ describe("nav links follow the documents they point at", () => {
       data: { slug: "nav-topic-renamed" },
     })
     expect(navRevalidated()).toBe(true)
+  })
+
+  it("compares an edit in drafts with the copy readers see, not the autosaved draft", async () => {
+    const page = await payload.create({
+      collection: "pages",
+      overrideAccess: true,
+      context: { disableRevalidate: true },
+      data: {
+        title: "Draft Edits",
+        slug: "draft-edits",
+        layout: [{ blockType: "content", columns: [{ size: "full", richText: ARTICLE_CONTENT }] }],
+        _status: "published",
+      } as unknown as Page,
+    })
+    const save = (data: Partial<Page>, draft: boolean) =>
+      payload.update({ collection: "pages", id: page.id, overrideAccess: true, draft, data })
+
+    // An autosave over the published page changes nothing readers see.
+    await save({ title: "Draft Edits, typed" }, true)
+    expect(navRevalidated()).toBe(false)
+    expect(revalidatePath).not.toHaveBeenCalled()
+
+    // Publishing it changes the page, but not where the nav points.
+    await save({ title: "Draft Edits, typed", _status: "published" }, false)
+    expect(navRevalidated()).toBe(false)
+    expect(revalidatePath).toHaveBeenCalledWith("/draft-edits")
+
+    // A slug changed in a draft and then published moves the page: the old URL goes too.
+    revalidatePath.mockClear()
+    await save({ slug: "draft-edits-renamed" }, true)
+    expect(navRevalidated()).toBe(false)
+    await save({ slug: "draft-edits-renamed", _status: "published" }, false)
+    expect(navRevalidated()).toBe(true)
+    expect(revalidatePath).toHaveBeenCalledWith("/draft-edits-renamed")
+    expect(revalidatePath).toHaveBeenCalledWith("/draft-edits")
   })
 })

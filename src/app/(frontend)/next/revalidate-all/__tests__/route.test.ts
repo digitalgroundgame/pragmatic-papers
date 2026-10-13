@@ -14,8 +14,8 @@ vi.mock("@/data/payload", () => ({ getPayloadClient: async () => payload }))
 
 const { POST } = await import("../route")
 
-const request = (authorization?: string): Request =>
-  new Request("http://localhost/next/revalidate-all", {
+const request = (authorization?: string, query = ""): Request =>
+  new Request(`http://localhost/next/revalidate-all${query}`, {
     method: "POST",
     headers: authorization ? { authorization } : {},
   })
@@ -46,6 +46,15 @@ describe("POST /next/revalidate-all", () => {
     expect(syncRepoDocs.mock.invocationCallOrder[0]).toBeLessThan(
       revalidatePath.mock.invocationCallOrder[0]!,
     )
+  })
+
+  it("skips the deploy's seeding for a save", async () => {
+    const response = await POST(request("Bearer s3cret", "?save=1&path=/articles/a"))
+
+    await expect(response.json()).resolves.toEqual({ revalidated: true })
+    expect(syncRepoDocs).not.toHaveBeenCalled()
+    expect(createMissingStarterPages).not.toHaveBeenCalled()
+    expect(revalidatePath).toHaveBeenCalledExactlyOnceWith("/", "layout")
   })
 
   it("still revalidates when the docs sync fails", async () => {

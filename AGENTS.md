@@ -255,6 +255,11 @@ page listing articles, volumes or contributors, or every page when it passes nei
 revalidates. It then requests the same most-read pages through the Worker's URL in the background
 (`warmWorkerSoon`), since a Worker renders a page on a cold isolate in seconds.
 A new hook for content readers see should call it too.
+On a collection with drafts, a hook decides what a save changed with `readersChange`
+(`src/utilities/readersCopy.ts`, with `rememberReadersCopy` first in the collection's
+`beforeChange`), not `previousDoc`: Payload hands hooks the latest version, which is an
+autosaved draft once an editor types, so `previousDoc` makes an autosave look like an
+unpublish and hides a rename made in drafts.
 A deploy purges too: `start.sh` waits until the site's public URL is answered by the
 new container (`/next/purge-edge` names its `INSTANCE_ID`), so the old container can't
 refill the edge with the previous release's pages, then POSTs `/next/purge-edge`, which

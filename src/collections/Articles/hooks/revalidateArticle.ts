@@ -4,8 +4,9 @@ import { revalidatePath, revalidateTag } from "next/cache"
 
 import { purgeEdgeCache } from "@/hooks/purgeEdgeCache"
 import type { Article } from "@/payload-types"
+import { readersChange, type ReadersCopy } from "@/utilities/readersCopy"
 
-const revalidateDoc = async (givenDoc: Article, payload: Payload) => {
+const revalidateDoc = async (givenDoc: ReadersCopy, payload: Payload) => {
   const path = `/articles/${givenDoc.slug}`
   const paths = [
     path,
@@ -43,31 +44,16 @@ const revalidateDoc = async (givenDoc: Article, payload: Payload) => {
   purgeEdgeCache(payload.logger, `article ${givenDoc.slug}`, { paths, shared: true })
 }
 
-export const revalidateArticle: CollectionAfterChangeHook<Article> = async ({
-  doc,
-  previousDoc,
-  req: { payload, context },
-}) => {
-  if (!context.disableRevalidate) {
-    if (doc._status === "published") {
-      await revalidateDoc(doc, payload)
-    }
-
-    // A renamed published article leaves its old paths cached, including the
-    // Substack import URL an editor may already have copied.
-    if (
-      doc._status === "published" &&
-      previousDoc?._status === "published" &&
-      previousDoc.slug !== doc.slug
-    ) {
-      await revalidateDoc(previousDoc, payload)
-    }
-
-    // If the article was previously published, we need to revalidate the old path
-    if (previousDoc._status === "published" && doc._status !== "published") {
-      await revalidateDoc(previousDoc, payload)
-    }
-  }
+export const revalidateArticle: CollectionAfterChangeHook<Article> = async (args) => {
+  const { doc, req } = args
+  if (req.context.disableRevalidate) return doc
+  const change = await readersChange(args)
+  if (!change) return doc
+  const { before, after } = change
+  if (after) await revalidateDoc(after, req.payload)
+  // Unpublished or renamed: its old paths are still cached, including the Substack import
+  // URL an editor may already have copied.
+  if (before && (!after || before.slug !== after.slug)) await revalidateDoc(before, req.payload)
   return doc
 }
 

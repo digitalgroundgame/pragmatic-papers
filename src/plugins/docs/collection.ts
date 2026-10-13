@@ -1,3 +1,4 @@
+import { rememberReadersCopy } from "@/utilities/readersCopy"
 import { editor } from "@/access/collections"
 import { isPublishedOrStaff } from "@/access/policies"
 import { type Role, STAFF_ROLES } from "@/access/roles"
@@ -192,6 +193,7 @@ export const Docs: CollectionConfig<"docs"> = {
     slugField(),
   ],
   hooks: {
+    beforeChange: [rememberReadersCopy],
     afterChange: [revalidateDoc],
     afterDelete: [revalidateDocDelete],
   },

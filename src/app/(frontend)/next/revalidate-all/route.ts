@@ -21,12 +21,20 @@ import { hasPayloadSecret } from "../bearer"
  * `dockerfiles/scripts/start.sh` calls this once the server is up, for both, and the
  * Worker's deploy workflow once it has deployed.
  *
+ * The Worker also gets this request after every editor save (`cloudflareWorkerCache`), marked
+ * `?save`: that skips the docs and starter pages, which are for a deploy.
+ *
  * Authenticated with `Authorization: Bearer <PAYLOAD_SECRET>`, which the
  * container already holds.
  */
 export async function POST(request: Request): Promise<Response> {
   if (!hasPayloadSecret(request)) {
     return Response.json({ error: "Unauthorized" }, { status: 401 })
+  }
+
+  if (new URL(request.url).searchParams.has("save")) {
+    revalidatePath("/", "layout")
+    return Response.json({ revalidated: true })
   }
 
   const payload = await getPayloadClient()

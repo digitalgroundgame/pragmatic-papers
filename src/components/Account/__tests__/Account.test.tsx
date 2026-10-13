@@ -131,4 +131,62 @@ describe("Account", () => {
     expect(await screen.findByRole("button", { name: "Connect Google" })).toBeEnabled()
     expect(screen.getByRole("button", { name: "Disconnect Discord" })).toBeDisabled()
   })
+
+  it("sends a connect to the provider, and says when it didn't start", async () => {
+    const assign = vi.fn()
+    vi.stubGlobal("location", { ...window.location, assign })
+    let answer = () => Response.json({ message: "No" }, { status: 400 })
+    route({
+      "GET /api/account": () => Response.json(member),
+      "GET /api/auth-links": () =>
+        Response.json({ providers: [{ id: "discord", label: "Discord", linked: false }] }),
+      "POST /api/auth-links/discord": () => answer(),
+    })
+
+    render(<Account providers={providers} />)
+    fireEvent.click(await screen.findByRole("button", { name: "Connect Discord" }))
+    expect(await screen.findByRole("alert")).toHaveTextContent("That didn't work. Try again.")
+
+    answer = () => Response.json({ url: "https://discord.com/oauth2/authorize" })
+    fireEvent.click(screen.getByRole("button", { name: "Connect Discord" }))
+    await vi.waitFor(() =>
+      expect(assign).toHaveBeenCalledWith("https://discord.com/oauth2/authorize"),
+    )
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument()
+  })
+
+  it("shows why a disconnect was refused, or that it failed", async () => {
+    let answer: () => Response = () =>
+      Response.json({ message: "That's your last sign-in." }, { status: 400 })
+    route({
+      "GET /api/account": () => Response.json(member),
+      "GET /api/auth-links": () =>
+        Response.json({
+          providers: [
+            { id: "google", label: "Google", linked: true },
+            { id: "discord", label: "Discord", linked: true },
+          ],
+        }),
+      "DELETE /api/auth-links/google": () => answer(),
+    })
+
+    render(<Account providers={providers} />)
+    fireEvent.click(await screen.findByRole("button", { name: "Disconnect Google" }))
+    expect(await screen.findByRole("alert")).toHaveTextContent("That's your last sign-in.")
+
+    answer = () => {
+      throw new Error("offline")
+    }
+    fireEvent.click(await screen.findByRole("button", { name: "Disconnect Google" }))
+    expect(await screen.findByRole("alert")).toHaveTextContent("That didn't work. Try again.")
+  })
+
+  it("leaves sign-ins out when they can't be read", async () => {
+    route({ "GET /api/account": () => Response.json(member) })
+
+    render(<Account providers={providers} />)
+    expect(await screen.findByRole("button", { name: "Delete account" })).toBeInTheDocument()
+    await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2))
+    expect(screen.queryByRole("heading", { name: "Sign-ins" })).not.toBeInTheDocument()
+  })
 })

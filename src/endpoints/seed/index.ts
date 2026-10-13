@@ -476,6 +476,7 @@ export const seed = async (
               docs: true,
               notifications: true,
               tours: true,
+              comments: true,
             },
           },
         })

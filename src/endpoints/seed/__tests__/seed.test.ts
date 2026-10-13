@@ -152,6 +152,7 @@ describe("seed", () => {
         docs: true,
         notifications: true,
         tours: true,
+        comments: true,
       },
     })
     expect(siteSettings?.context?.disableRevalidate).toBe(true)

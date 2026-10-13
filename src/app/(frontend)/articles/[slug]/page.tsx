@@ -6,6 +6,7 @@ import React from "react"
 import { EndRule } from "@/blocks/SquiggleRule/EndRule"
 import { ArticleSidebar } from "@/components/ArticleSidebar"
 import { AuthorList } from "@/components/Authors/AuthorList"
+import { Comments } from "@/components/Comments"
 import { FootnoteList } from "@/components/FootnoteList"
 import { JsonLd } from "@/components/JsonLd"
 import { LivePreviewListener } from "@/components/LivePreviewListener"
@@ -74,9 +75,10 @@ export default async function Article({ params: paramsPromise }: Args): Promise<
 
   const populatedAuthors = (authors || []).filter(isResolved<User>)
 
-  const [[volume], tableOfContentsEnabled] = await Promise.all([
+  const [[volume], tableOfContentsEnabled, commentsEnabled] = await Promise.all([
     queryVolumesForArticles([article.id]),
     isExperimentEnabled("tableOfContents"),
+    isExperimentEnabled("comments"),
   ])
   const showTableOfContents = tableOfContentsEnabled && article.showTableOfContents === true
 
@@ -120,6 +122,7 @@ export default async function Article({ params: paramsPromise }: Args): Promise<
                 <Separator />
                 <TopicsList topics={topics} />
                 <AuthorList aria-label="Article Authors" authors={populatedAuthors} />
+                {commentsEnabled && !draft && <Comments articleId={article.id} />}
               </div>
             </div>
           </TableOfContentsProvider>

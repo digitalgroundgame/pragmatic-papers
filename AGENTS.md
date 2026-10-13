@@ -377,6 +377,24 @@ email and password login, which stays as the way in when a provider is down.
 - `tests/integration/sso.test.ts` runs a whole Discord sign-in against the database, with
   Discord stubbed.
 
+### Comments
+
+`src/plugins/comments/` puts comments under articles, behind the `comments` experiment. Readers
+sign in with Google or Discord through a second Better Auth instance (`/api/reader-auth/*`,
+cookie `pp-reader`), which **creates** a reader on their first login. Readers are the `readers`
+collection, not `users`: they have no way into the admin, and their sessions live in
+`reader_sessions`, `reader_accounts` and `reader_verifications` (`commentsAfterSchemaInit`).
+
+- The article page doesn't render comments. `src/components/Comments` loads them from
+  `GET /api/comments/thread/:id` once the reader scrolls near, and posts to the same path, so
+  the page stays one cached copy for everyone. Keep `payload-token` out of the reader cookie's
+  name, or signed-in readers skip the edge cache.
+- Editors moderate in the admin: a comment is hidden or deleted, never edited, and a banned
+  reader can't post. Deleting a reader or an article deletes its comments.
+- Each provider's OAuth app needs `<site>/api/reader-auth/callback/<provider>` as a redirect
+  URI, beside the staff sign-in's `/api/auth/callback/<provider>`.
+- `tests/integration/comments.test.ts` signs a reader in with Discord stubbed, and posts.
+
 ### Integrations
 
 `src/integrations/` is where an outside service lives: a GitHub repository we

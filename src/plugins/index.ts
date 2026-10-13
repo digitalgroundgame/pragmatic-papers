@@ -1,4 +1,5 @@
 import type { Experiment } from "@/globals/SiteSettings/isExperimentEnabled"
+import { editor } from "@/access/collections"
 import { revalidateRedirects } from "@/hooks/revalidateRedirects"
 import { docsPlugin } from "@/plugins/docs"
 import { docsNotifications } from "@/plugins/docs/notifications"
@@ -28,6 +29,7 @@ import { convertLexicalToPlaintext } from "@payloadcms/richtext-lexical/plaintex
 import { s3Storage } from "@payloadcms/storage-s3"
 import { type Payload, type Plugin } from "payload"
 
+import { commentsPlugin } from "./comments"
 import { ssoPlugin } from "./sso"
 
 // Reads the switch in Site Settings when called. Imported then, not here: the
@@ -345,5 +347,19 @@ export const plugins: Plugin[] = [
     requiredUserColumns: ["slug"],
     // Staff stay signed in for a month after a Google or Discord sign-in.
     sessionSeconds: 60 * 60 * 24 * 30,
+  }),
+  commentsPlugin({
+    // Read from the database on each request, like `sso`'s, so switching the experiment off
+    // stops sign-ins and posts at once.
+    enabled: async ({ payload }) =>
+      (await payload.findGlobal({ slug: "site-settings", depth: 0 })).experiments?.comments ===
+      true,
+    providers: () => ({
+      google: googleSignIn.credentials(),
+      discord: discordSignIn.credentials(),
+    }),
+    baseURL: getSiteURL,
+    secret: () => process.env.PAYLOAD_SECRET || "",
+    moderators: editor,
   }),
 ]

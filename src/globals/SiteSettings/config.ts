@@ -85,6 +85,15 @@ export const SiteSettings: GlobalConfig = {
           },
         }),
         experimentField({
+          name: "comments",
+          label: "Comments",
+          defaultValue: false,
+          admin: {
+            description:
+              "Comments under articles, from readers who sign in with Google or Discord, and their moderation under Content. The providers need their credentials (System → Integrations).",
+          },
+        }),
+        experimentField({
           name: "tableOfContents",
           label: "Article table of contents",
           // On by default, unlike the other experiments: readers get it unless

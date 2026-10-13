@@ -184,6 +184,8 @@ export interface Config {
     forms: Form;
     'form-submissions': FormSubmission;
     docs: Doc;
+    readers: Reader;
+    comments: Comment;
     'payload-kv': PayloadKv;
     'payload-jobs': PayloadJob;
     'payload-locked-documents': PayloadLockedDocument;
@@ -209,6 +211,8 @@ export interface Config {
     forms: FormsSelect<false> | FormsSelect<true>;
     'form-submissions': FormSubmissionsSelect<false> | FormSubmissionsSelect<true>;
     docs: DocsSelect<false> | DocsSelect<true>;
+    readers: ReadersSelect<false> | ReadersSelect<true>;
+    comments: CommentsSelect<false> | CommentsSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
     'payload-jobs': PayloadJobsSelect<false> | PayloadJobsSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
@@ -1498,6 +1502,40 @@ export interface Doc {
   _status?: ('draft' | 'published') | null;
 }
 /**
+ * People who signed in to comment. They're created by signing in, never here.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "readers".
+ */
+export interface Reader {
+  id: number;
+  name: string;
+  email: string;
+  /**
+   * Stops them posting. Their comments stay until you hide or delete them.
+   */
+  banned?: boolean | null;
+  emailVerified?: boolean | null;
+  avatarUrl?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * Readers' comments. Hide one to take it off the page, or delete it.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "comments".
+ */
+export interface Comment {
+  id: number;
+  body: string;
+  target: number | Article;
+  reader: number | Reader;
+  status: 'published' | 'hidden';
+  updatedAt: string;
+  createdAt: string;
+}
+/**
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload-kv".
  */
@@ -1691,6 +1729,14 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'docs';
         value: number | Doc;
+      } | null)
+    | ({
+        relationTo: 'readers';
+        value: number | Reader;
+      } | null)
+    | ({
+        relationTo: 'comments';
+        value: number | Comment;
       } | null);
   globalSlug?: string | null;
   user: {
@@ -2518,6 +2564,31 @@ export interface DocsSelect<T extends boolean = true> {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "readers_select".
+ */
+export interface ReadersSelect<T extends boolean = true> {
+  name?: T;
+  email?: T;
+  banned?: T;
+  emailVerified?: T;
+  avatarUrl?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "comments_select".
+ */
+export interface CommentsSelect<T extends boolean = true> {
+  body?: T;
+  target?: T;
+  reader?: T;
+  status?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload-kv_select".
  */
 export interface PayloadKvSelect<T extends boolean = true> {
@@ -2665,6 +2736,10 @@ export interface SiteSetting {
      * “Sign in with Google” and “Sign in with Discord” on the admin's login page, for people who already have an account here. Each provider also needs its credentials (System → Integrations).
      */
     sso?: boolean | null;
+    /**
+     * Comments under articles, from readers who sign in with Google or Discord, and their moderation under Content. The providers need their credentials (System → Integrations).
+     */
+    comments?: boolean | null;
     /**
      * The table of contents in an article's sidebar and its hero button, on articles with “Show table of contents” ticked.
      */
@@ -2833,6 +2908,7 @@ export interface SiteSettingsSelect<T extends boolean = true> {
         notifications?: T;
         tours?: T;
         sso?: T;
+        comments?: T;
         tableOfContents?: T;
       };
   updatedAt?: T;

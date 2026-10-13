@@ -414,6 +414,30 @@ describe("linking an account from the account page", () => {
     expect((await api("/auth-links", { headers: { Cookie: cookie } })).status).toBe(404)
   })
 
+  it("tells the Connections tab whether there's anything to connect, on your own record only", async () => {
+    const editor = await createUser("editor")
+    const other = await createUser("writer")
+    const flag = async (id: User["id"]) =>
+      (
+        await payload.findByID({
+          collection: "users",
+          id,
+          user: { ...editor, collection: "users" },
+          overrideAccess: false,
+        })
+      ).ssoConnections
+
+    expect(await flag(editor.id)).toBe(true)
+    expect(await flag(other.id)).toBeUndefined()
+
+    await setExperiment(false)
+    expect(await flag(editor.id)).toBe(false)
+
+    await setExperiment(true)
+    vi.unstubAllEnvs()
+    expect(await flag(editor.id)).toBe(false)
+  })
+
   it("has no HTTP route to the link it starts for a user", async () => {
     const response = await api("/auth/link-for-user", {
       method: "POST",

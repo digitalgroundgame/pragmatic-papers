@@ -1,5 +1,6 @@
 import type { CollectionConfig, Condition, Field, Plugin, TabsField } from "payload"
 
+import { configuredProviders } from "./auth"
 import { DEFAULT_COOKIE_NAME } from "./constants"
 import { authEndpoints } from "./endpoints/auth"
 import { linkEndpoints } from "./endpoints/links"
@@ -40,28 +41,70 @@ const connectionsField: Field = {
   admin: { components: { Field: "@/plugins/sso/exports/client#LinkedAccounts" } },
 }
 
-/** Only the signed-in user's own record has connections to show. */
-const isOwnRecord: Condition = (data, _siblingData, { user }) =>
-  user != null && data.id != null && String(user.id) === String(data.id)
+/** Names the virtual field that says whether this user's Connections tab has anything. */
+const CONNECTIONS_FLAG = "ssoConnections"
+
+/**
+ * True on the signed-in user's own record while single sign-on is on and a provider is
+ * configured. A tab's condition can't wait on Settings, so this reads it when the record
+ * is loaded and the condition reads this. It's virtual: no column.
+ */
+function connectionsFlag(sso: ResolvedSsoConfig): Field {
+  return {
+    name: CONNECTIONS_FLAG,
+    type: "checkbox",
+    virtual: true,
+    access: { create: () => false, update: () => false },
+    admin: { hidden: true },
+    hooks: {
+      afterRead: [
+        async ({ data, req }) => {
+          const own =
+            req.user?.collection === sso.usersSlug &&
+            data?.id != null &&
+            String(req.user.id) === String(data.id)
+          if (!own) return undefined
+          return (
+            configuredProviders(sso).length > 0 && (await sso.enabled({ payload: req.payload }))
+          )
+        },
+      ],
+    },
+  }
+}
+
+/** The Connections tab shows on the user's own record, while there's something to connect. */
+const hasConnections: Condition = (data, _siblingData, { user }) =>
+  user != null &&
+  data.id != null &&
+  String(user.id) === String(data.id) &&
+  data[CONNECTIONS_FLAG] === true
 
 /**
  * Adds the Connections panel to the users collection: as a tab of its first tabs field,
- * shown on the user's own record only, or below its fields when it has no tabs.
+ * or below its fields when it has no tabs.
  */
-function withConnections(fields: Field[]): Field[] {
+function withConnections(fields: Field[], sso: ResolvedSsoConfig): Field[] {
   const index = fields.findIndex((field) => field.type === "tabs")
   if (index === -1) return [...fields, connectionsField]
-  return fields.map((field, i): Field => {
-    if (i !== index) return field
-    const { tabs } = field as TabsField
-    return {
-      ...(field as TabsField),
-      tabs: [
-        ...tabs,
-        { label: "Connections", admin: { condition: isOwnRecord }, fields: [connectionsField] },
-      ],
-    }
-  })
+  return [
+    ...fields.map((field, i): Field => {
+      if (i !== index) return field
+      const { tabs } = field as TabsField
+      return {
+        ...(field as TabsField),
+        tabs: [
+          ...tabs,
+          {
+            label: "Connections",
+            admin: { condition: hasConnections },
+            fields: [connectionsField],
+          },
+        ],
+      }
+    }),
+    connectionsFlag(sso),
+  ]
 }
 
 /**
@@ -93,7 +136,7 @@ export function ssoPlugin(options: SsoPluginConfig): Plugin {
         ...collection,
         fields: [...collection.fields, ...betterAuthFields],
         ...(!options.disabled && {
-          fields: withConnections([...collection.fields, ...betterAuthFields]),
+          fields: withConnections([...collection.fields, ...betterAuthFields], sso),
           auth: { ...auth, strategies: [...(auth.strategies ?? []), ssoStrategy(sso)] },
           hooks: {
             ...collection.hooks,

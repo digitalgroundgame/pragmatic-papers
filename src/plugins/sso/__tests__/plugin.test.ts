@@ -36,7 +36,7 @@ describe("ssoPlugin", () => {
     expect(config.collections![1]).toBe(articles)
   })
 
-  it("puts the Connections panel in a tab of its own, on the user's own record only", () => {
+  it("puts the Connections panel in a tab of its own, shown only when there's something to connect", () => {
     const profile = { label: "Profile", fields: [{ name: "name", type: "text" as const }] }
     const tabbed: CollectionConfig = {
       ...users,
@@ -53,6 +53,7 @@ describe("ssoPlugin", () => {
       "roles",
       "emailVerified",
       "avatarUrl",
+      "ssoConnections",
     ])
     const [first, connections] = tabsField.tabs
     expect(first).toBe(profile)
@@ -62,12 +63,12 @@ describe("ssoPlugin", () => {
     })
 
     const condition = connections!.admin!.condition!
-    const as = (user: { id: number } | null, data: { id?: number }) =>
+    const as = (user: { id: number } | null, data: Record<string, unknown>) =>
       condition(data, {}, { user, blockData: {}, operation: "update", path: [] } as never)
-    expect(as({ id: 1 }, { id: 1 })).toBe(true)
-    expect(as({ id: 1 }, { id: 2 })).toBe(false)
-    expect(as(null, { id: 1 })).toBe(false)
-    expect(as({ id: 1 }, {})).toBe(false)
+    expect(as({ id: 1 }, { id: 1, ssoConnections: true })).toBe(true)
+    expect(as({ id: 1 }, { id: 1, ssoConnections: false })).toBe(false)
+    expect(as({ id: 1 }, { id: 2, ssoConnections: true })).toBe(false)
+    expect(as(null, { id: 1, ssoConnections: true })).toBe(false)
   })
 
   it("keeps Better Auth's columns out of reach of the admin and the API", () => {

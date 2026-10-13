@@ -562,6 +562,7 @@ export interface User {
   publicProfile?: boolean | null;
   emailVerified?: boolean | null;
   avatarUrl?: string | null;
+  ssoConnections?: boolean | null;
   updatedAt: string;
   createdAt: string;
   email: string;
@@ -2255,6 +2256,7 @@ export interface UsersSelect<T extends boolean = true> {
   publicProfile?: T;
   emailVerified?: T;
   avatarUrl?: T;
+  ssoConnections?: T;
   updatedAt?: T;
   createdAt?: T;
   email?: T;

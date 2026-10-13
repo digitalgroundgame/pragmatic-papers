@@ -3,7 +3,7 @@ import type { betterAuth as BetterAuth } from "better-auth"
 import type { Payload } from "payload"
 
 import { AUTH_ENDPOINT_PATH, DISABLED_PATHS, TABLES } from "./constants"
-import { destinyggPlugin, type DestinyggProfile } from "./destinygg"
+import { destinyPlugin, type DestinyProfile } from "./destiny"
 import { linkingPlugin } from "./linking"
 import type { ResolvedSsoConfig, SsoProviderId } from "./types"
 
@@ -14,14 +14,14 @@ type Pool = PostgresAdapter["pool"]
  * Destiny.gg shares no address, so an account signs in only once someone has linked it
  * from their account page; until then this is null.
  */
-export async function destinyggEmail(
+export async function destinyEmail(
   pool: Pool,
   usersTable: string,
-  profile: DestinyggProfile,
+  profile: DestinyProfile,
 ): Promise<string | null> {
   const linked = await pool.query<{ email: string }>(
     `select u.email from "${TABLES.account}" a join "${usersTable}" u on u.id = a.user_id
-     where a.provider_id = 'destinygg' and a.account_id = $1 limit 1`,
+     where a.provider_id = 'destiny' and a.account_id = $1 limit 1`,
     [String(profile.userId)],
   )
   return linked.rows[0]?.email ?? null
@@ -32,7 +32,7 @@ function createAuth(betterAuth: typeof BetterAuth, payload: Payload, config: Res
   const baseURL = config.baseURL()
   const secure = baseURL.startsWith("https://")
 
-  const { destinygg, ...builtIn } = config.providers()
+  const { destiny, ...builtIn } = config.providers()
   const socialProviders = Object.fromEntries(
     Object.entries(builtIn)
       .filter(([, credentials]) => credentials)
@@ -57,11 +57,11 @@ function createAuth(betterAuth: typeof BetterAuth, payload: Payload, config: Res
     plugins: [
       linkingPlugin(),
       // Destiny.gg isn't one of Better Auth's built-in providers.
-      ...(destinygg
+      ...(destiny
         ? [
-            destinyggPlugin({
-              ...destinygg,
-              emailFor: (profile) => destinyggEmail(pool, config.usersSlug, profile),
+            destinyPlugin({
+              ...destiny,
+              emailFor: (profile) => destinyEmail(pool, config.usersSlug, profile),
             }),
           ]
         : []),
@@ -126,8 +126,8 @@ function createAuth(betterAuth: typeof BetterAuth, payload: Payload, config: Res
         enabled: true,
         requireLocalEmailVerified: false,
         // Destiny.gg vouches for no address: the one it signs in with is that of the user
-        // its account is already linked to (`destinyggEmail`), so it's trusted to link.
-        trustedProviders: ["destinygg"],
+        // its account is already linked to (`destinyEmail`), so it's trusted to link.
+        trustedProviders: ["destiny"],
         // Linking from the account page (`linkingPlugin`): the signed-in user chose the
         // account, so its address needn't match theirs (Destiny.gg's has none at all).
         allowDifferentEmails: true,

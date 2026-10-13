@@ -13,7 +13,7 @@ const meta = {
     providers: [
       { id: "google", label: "Google", linked: true },
       { id: "discord", label: "Discord", linked: false },
-      { id: "destinygg", label: "Destiny.gg", linked: false },
+      { id: "destiny", label: "Destiny.gg", linked: false },
     ],
     pending: null,
     error: null,
@@ -30,13 +30,13 @@ export const Default: Story = {
     const canvas = within(canvasElement)
     await expect(canvas.getByRole("button", { name: "Disconnect Google" })).toBeEnabled()
     canvas.getByRole("button", { name: "Connect Destiny.gg" }).click()
-    await expect(args.onConnect).toHaveBeenCalledWith("destinygg")
+    await expect(args.onConnect).toHaveBeenCalledWith("destiny")
   },
 }
 
 /** Connecting: every button waits for the provider's redirect. */
 export const Pending: Story = {
-  args: { pending: "destinygg" },
+  args: { pending: "destiny" },
   play: async ({ canvasElement }) => {
     for (const button of within(canvasElement).getAllByRole("button")) {
       await expect(button).toBeDisabled()

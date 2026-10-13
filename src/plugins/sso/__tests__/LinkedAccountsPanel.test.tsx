@@ -8,7 +8,7 @@ import {
 
 const providers: LinkedAccountsPanelProps["providers"] = [
   { id: "discord", label: "Discord", linked: true },
-  { id: "destinygg", label: "Destiny.gg", linked: false },
+  { id: "destiny", label: "Destiny.gg", linked: false },
 ]
 
 const renderPanel = (props: Partial<LinkedAccountsPanelProps> = {}) => {
@@ -35,12 +35,12 @@ describe("LinkedAccountsPanel", () => {
     fireEvent.click(screen.getByRole("button", { name: "Connect Destiny.gg" }))
 
     expect(onDisconnect).toHaveBeenCalledWith("discord")
-    expect(onConnect).toHaveBeenCalledWith("destinygg")
+    expect(onConnect).toHaveBeenCalledWith("destiny")
     expect(screen.queryByRole("alert")).not.toBeInTheDocument()
   })
 
   it("holds every button while a request is in flight", () => {
-    renderPanel({ pending: "destinygg" })
+    renderPanel({ pending: "destiny" })
     for (const button of screen.getAllByRole("button")) expect(button).toBeDisabled()
     expect(screen.getByRole("button", { name: "Connect Destiny.gg" })).toHaveTextContent("…")
   })

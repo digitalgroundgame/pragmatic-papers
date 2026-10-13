@@ -18,7 +18,7 @@ export const TABLES = {
 export const PROVIDER_LABELS: Record<SsoProviderId, string> = {
   google: "Google",
   discord: "Discord",
-  destinygg: "Destiny.gg",
+  destiny: "Destiny.gg",
 }
 
 /**

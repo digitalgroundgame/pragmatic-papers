@@ -10,7 +10,7 @@ const meta = {
   component: SignInButtons,
   decorators: [withPayloadAdminTheme],
   args: {
-    providers: ["google", "discord", "destinygg"],
+    providers: ["google", "discord", "destiny"],
     authPath: "/api/auth",
     adminPath: "/admin",
   },

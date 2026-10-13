@@ -15,11 +15,11 @@ vi.mock("next/navigation", () => ({ useSearchParams: () => new URLSearchParams()
 const fetchMock = vi.fn<typeof fetch>()
 const assign = vi.fn()
 
-const list = (destinygg: boolean) =>
+const list = (destiny: boolean) =>
   Response.json({
     providers: [
       { id: "discord", label: "Discord", linked: true },
-      { id: "destinygg", label: "Destiny.gg", linked: destinygg },
+      { id: "destiny", label: "Destiny.gg", linked: destiny },
     ],
   })
 
@@ -70,7 +70,7 @@ describe("LinkedAccounts", () => {
       fireEvent.click(button)
     })
 
-    expect(fetchMock).toHaveBeenLastCalledWith("/api/auth-links/destinygg", {
+    expect(fetchMock).toHaveBeenLastCalledWith("/api/auth-links/destiny", {
       method: "POST",
       credentials: "include",
     })
@@ -89,7 +89,7 @@ describe("LinkedAccounts", () => {
       fireEvent.click(button)
     })
 
-    expect(fetchMock).toHaveBeenCalledWith("/api/auth-links/destinygg", {
+    expect(fetchMock).toHaveBeenCalledWith("/api/auth-links/destiny", {
       method: "DELETE",
       credentials: "include",
     })

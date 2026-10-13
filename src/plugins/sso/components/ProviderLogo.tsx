@@ -34,8 +34,8 @@ const DiscordLogo: React.FC = () => (
   </svg>
 )
 
-/** Destiny.gg's icon, unmodified (`assets/web/img/dgg-icon.svg` in destinygg/website). */
-const DestinyggLogo: React.FC = () => (
+/** Destiny.gg's icon, unmodified (`assets/web/img/dgg-icon.svg` in destiny/website). */
+const DestinyLogo: React.FC = () => (
   <svg viewBox="0 0 265 265" aria-hidden="true" focusable="false">
     <polygon
       fill="#59aeea"
@@ -59,7 +59,7 @@ const DestinyggLogo: React.FC = () => (
 const LOGOS: Record<SsoProviderId, React.FC> = {
   google: GoogleLogo,
   discord: DiscordLogo,
-  destinygg: DestinyggLogo,
+  destiny: DestinyLogo,
 }
 
 export const ProviderLogo: React.FC<{ provider: SsoProviderId }> = ({ provider }) => {

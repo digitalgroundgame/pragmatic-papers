@@ -3,17 +3,17 @@ import { createHash } from "node:crypto"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import {
-  DESTINYGG_URLS,
-  destinyggChallenge,
-  destinyggPlugin,
-  destinyggProvider,
-  type DestinyggProfile,
-} from "../destinygg"
+  DESTINY_URLS,
+  destinyChallenge,
+  destinyPlugin,
+  destinyProvider,
+  type DestinyProfile,
+} from "../destiny"
 
 const sha256Hex = (text: string) => createHash("sha256").update(text).digest("hex")
 
-const emailFor = vi.fn<(profile: DestinyggProfile) => Promise<string | null>>()
-const provider = destinyggProvider({ clientId: "dgg-id", clientSecret: "dgg-secret", emailFor })
+const emailFor = vi.fn<(profile: DestinyProfile) => Promise<string | null>>()
+const provider = destinyProvider({ clientId: "dgg-id", clientSecret: "dgg-secret", emailFor })
 
 const fetchMock = vi.fn<typeof fetch>()
 
@@ -28,31 +28,31 @@ afterEach(() => {
 
 const requestedURL = (call = 0) => new URL(String(fetchMock.mock.calls[call]?.[0]))
 
-describe("destinyggChallenge", () => {
+describe("destinyChallenge", () => {
   it("is what Destiny.gg's token endpoint checks: base64 of hex SHA-256, secret hashed", async () => {
     // OAuthController::tokenExchange: base64_encode(hash('sha256', $verifier . $storedSecret)),
     // where the stored secret is hash('sha256', $secret).
     const verifier = "v".repeat(43)
     const expected = Buffer.from(sha256Hex(verifier + sha256Hex("dgg-secret"))).toString("base64")
-    expect(await destinyggChallenge(verifier, "dgg-secret")).toBe(expected)
+    expect(await destinyChallenge(verifier, "dgg-secret")).toBe(expected)
   })
 })
 
-describe("destinyggProvider", () => {
+describe("destinyProvider", () => {
   it("sends people to Destiny.gg's authorize page with its own challenge", async () => {
     const url = await provider.createAuthorizationURL({
       state: "state-1",
       codeVerifier: "verifier-".padEnd(43, "x"),
-      redirectURI: "https://example.com/api/auth/callback/destinygg",
+      redirectURI: "https://example.com/api/auth/callback/destiny",
     })
 
-    expect(`${url.origin}${url.pathname}`).toBe(DESTINYGG_URLS.authorize)
+    expect(`${url.origin}${url.pathname}`).toBe(DESTINY_URLS.authorize)
     expect(Object.fromEntries(url.searchParams)).toEqual({
       response_type: "code",
       client_id: "dgg-id",
-      redirect_uri: "https://example.com/api/auth/callback/destinygg",
+      redirect_uri: "https://example.com/api/auth/callback/destiny",
       state: "state-1",
-      code_challenge: await destinyggChallenge("verifier-".padEnd(43, "x"), "dgg-secret"),
+      code_challenge: await destinyChallenge("verifier-".padEnd(43, "x"), "dgg-secret"),
     })
   })
 
@@ -70,16 +70,16 @@ describe("destinyggProvider", () => {
     const tokens = await provider.validateAuthorizationCode({
       code: "code-1",
       codeVerifier: "verifier",
-      redirectURI: "https://example.com/api/auth/callback/destinygg",
+      redirectURI: "https://example.com/api/auth/callback/destiny",
     })
 
     const url = requestedURL()
-    expect(`${url.origin}${url.pathname}`).toBe(DESTINYGG_URLS.token)
+    expect(`${url.origin}${url.pathname}`).toBe(DESTINY_URLS.token)
     expect(Object.fromEntries(url.searchParams)).toEqual({
       grant_type: "authorization_code",
       code: "code-1",
       client_id: "dgg-id",
-      redirect_uri: "https://example.com/api/auth/callback/destinygg",
+      redirect_uri: "https://example.com/api/auth/callback/destiny",
       code_verifier: "verifier",
     })
     expect(tokens).toMatchObject({
@@ -112,7 +112,7 @@ describe("destinyggProvider", () => {
     const result = await provider.getUserInfo({ accessToken: "access" })
 
     const url = requestedURL()
-    expect(`${url.origin}${url.pathname}`).toBe(DESTINYGG_URLS.userInfo)
+    expect(`${url.origin}${url.pathname}`).toBe(DESTINY_URLS.userInfo)
     expect(url.searchParams.get("token")).toBe("access")
     expect(emailFor).toHaveBeenCalledWith({ userId: 42, username: "Someone", nick: "Someone" })
     expect(result?.user).toEqual({
@@ -143,13 +143,13 @@ describe("destinyggProvider", () => {
   })
 })
 
-describe("destinyggPlugin", () => {
+describe("destinyPlugin", () => {
   it("adds Destiny.gg in front of the built-in providers", async () => {
     const google = { id: "google" }
-    const plugin = destinyggPlugin({ clientId: "id", clientSecret: "secret", emailFor })
+    const plugin = destinyPlugin({ clientId: "id", clientSecret: "secret", emailFor })
     const result = (await plugin.init!({ socialProviders: [google] } as never)) as {
       context: { socialProviders: { id: string }[] }
     }
-    expect(result.context.socialProviders.map(({ id }) => id)).toEqual(["destinygg", "google"])
+    expect(result.context.socialProviders.map(({ id }) => id)).toEqual(["destiny", "google"])
   })
 })

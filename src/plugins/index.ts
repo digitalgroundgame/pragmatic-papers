@@ -4,7 +4,7 @@ import { docsPlugin } from "@/plugins/docs"
 import { docsNotifications } from "@/plugins/docs/notifications"
 import { notificationsPlugin } from "@/plugins/notifications"
 import { toursPlugin } from "@/plugins/tours"
-import { destinyggSignIn, discordSignIn, googleSignIn } from "@/integrations"
+import { destinySignIn, discordSignIn, googleSignIn } from "@/integrations"
 import type { Article, Interactive, Page, Topic, Volume } from "@/payload-types"
 import { getSiteURL } from "@/utilities/getURL"
 import { DEFAULT_DESCRIPTION } from "@/utilities/mergeOpenGraph"
@@ -338,7 +338,7 @@ export const plugins: Plugin[] = [
     providers: () => ({
       google: googleSignIn.credentials(),
       discord: discordSignIn.credentials(),
-      destinygg: destinyggSignIn.credentials(),
+      destiny: destinySignIn.credentials(),
     }),
     baseURL: getSiteURL,
     secret: () => process.env.PAYLOAD_SECRET || "",

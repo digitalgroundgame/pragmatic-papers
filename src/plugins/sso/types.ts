@@ -2,9 +2,9 @@ import type { Payload } from "payload"
 
 /**
  * A sign-in provider: Google and Discord are built in to Better Auth, Destiny.gg is ours
- * (`destinygg.ts`).
+ * (`destiny.ts`).
  */
-export type SsoProviderId = "google" | "discord" | "destinygg"
+export type SsoProviderId = "google" | "discord" | "destiny"
 
 /** A row of the Linked accounts panel: a configured provider, and whether it's linked. */
 export interface LinkedProvider {

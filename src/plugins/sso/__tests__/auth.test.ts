@@ -2,7 +2,7 @@ import type { BetterAuthOptions } from "better-auth"
 import type { Payload } from "payload"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { configuredProviders, destinyggEmail, getAuth } from "../auth"
+import { configuredProviders, destinyEmail, getAuth } from "../auth"
 import type { ResolvedSsoConfig } from "../types"
 
 const betterAuth = vi.fn((options: BetterAuthOptions) => ({ options }))
@@ -10,7 +10,7 @@ vi.mock("better-auth", () => ({ betterAuth }))
 
 const google = { clientId: "google-id", clientSecret: "google-secret" }
 const discord = { clientId: "discord-id", clientSecret: "discord-secret" }
-const destinygg = { clientId: "dgg-id", clientSecret: "dgg-secret" }
+const destiny = { clientId: "dgg-id", clientSecret: "dgg-secret" }
 
 const config = (overrides: Partial<ResolvedSsoConfig> = {}): ResolvedSsoConfig => ({
   enabled: () => true,
@@ -99,7 +99,7 @@ describe("getAuth", () => {
     expect(options.account?.accountLinking).toEqual({
       enabled: true,
       requireLocalEmailVerified: false,
-      trustedProviders: ["destinygg"],
+      trustedProviders: ["destiny"],
       allowDifferentEmails: true,
     })
     expect(options.account?.encryptOAuthTokens).toBe(true)
@@ -107,29 +107,29 @@ describe("getAuth", () => {
   })
 
   it("registers Destiny.gg through a plugin, not as a built-in provider", async () => {
-    const options = await optionsFor(config({ providers: () => ({ google, destinygg }) }))
+    const options = await optionsFor(config({ providers: () => ({ google, destiny }) }))
     expect(Object.keys(options.socialProviders ?? {})).toEqual(["google"])
-    expect(options.plugins?.map(({ id }) => id)).toEqual(["payload-linking", "destinygg"])
+    expect(options.plugins?.map(({ id }) => id)).toEqual(["payload-linking", "destiny"])
   })
 
   it("registers no Destiny.gg plugin without its credentials", async () => {
-    const options = await optionsFor(config({ providers: () => ({ google, destinygg: null }) }))
+    const options = await optionsFor(config({ providers: () => ({ google, destiny: null }) }))
     expect(options.plugins?.map(({ id }) => id)).toEqual(["payload-linking"])
   })
 })
 
-describe("destinyggEmail", () => {
+describe("destinyEmail", () => {
   const profile = { userId: 42, username: "Someone" }
 
   it("is the address of the user the account is linked to, by its Destiny.gg id", async () => {
     const query = vi.fn().mockResolvedValue({ rows: [{ email: "linked@example.com" }] })
-    expect(await destinyggEmail({ query } as never, "users", profile)).toBe("linked@example.com")
+    expect(await destinyEmail({ query } as never, "users", profile)).toBe("linked@example.com")
     expect(query.mock.calls[0]?.[1]).toEqual(["42"])
   })
 
   it("is null for an account nobody has linked", async () => {
     const query = vi.fn().mockResolvedValue({ rows: [] })
-    expect(await destinyggEmail({ query } as never, "users", profile)).toBeNull()
+    expect(await destinyEmail({ query } as never, "users", profile)).toBeNull()
   })
 })
 

@@ -119,7 +119,7 @@ export const unsplash = unsplashApp({
 /**
  * The OAuth applications behind "Sign in with …" on the admin's login page (the `sso`
  * experiment, `src/plugins/sso`). Each provider's button appears once its two variables are
- * set; its application must list `<SERVER_URL>/api/auth/callback/<google|discord|destinygg>`
+ * set; its application must list `<SERVER_URL>/api/auth/callback/<google|discord|destiny>`
  * as a redirect URI.
  */
 export const googleSignIn = oauthApp({
@@ -143,12 +143,12 @@ export const discordSignIn = oauthApp({
  * start with, and shows its secret only when it's regenerated (the one it's created with
  * isn't the one its token exchange checks).
  */
-export const destinyggSignIn = oauthApp({
-  id: "destinygg-sign-in",
+export const destinySignIn = oauthApp({
+  id: "destiny-sign-in",
   label: "Sign in with Destiny.gg",
   service: "Destiny.gg",
-  clientIdEnv: "DESTINYGG_CLIENT_ID",
-  clientSecretEnv: "DESTINYGG_CLIENT_SECRET",
+  clientIdEnv: "DESTINY_CLIENT_ID",
+  clientSecretEnv: "DESTINY_CLIENT_SECRET",
 })
 
 /** Declaration order is display order. */
@@ -165,7 +165,7 @@ export const INTEGRATIONS: readonly Integration[] = [
   cloudflareTurnstile,
   googleSignIn,
   discordSignIn,
-  destinyggSignIn,
+  destinySignIn,
 ]
 
 export function getIntegration(id: string): Integration | null {

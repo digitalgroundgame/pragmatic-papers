@@ -1,4 +1,4 @@
-import { isExperimentEnabled } from "@/globals/SiteSettings/isExperimentEnabled"
+import { isPluginEnabled } from "@/globals/Plugins/isPluginEnabled"
 import { queryPublishedDocs } from "@/plugins/docs/queries"
 import { HOME_DOC_SLUG } from "@/plugins/docs/sections"
 import type { Metadata } from "next"
@@ -12,7 +12,7 @@ import { WhatsNew } from "./whats-new/WhatsNew"
 export const dynamic = "force-dynamic"
 
 export async function generateMetadata(): Promise<Metadata> {
-  if (!(await isExperimentEnabled("docs"))) return {}
+  if (!(await isPluginEnabled("docs"))) return {}
   return (await docMetadata(HOME_DOC_SLUG)) ?? { title: "Docs — Pragmatic Papers" }
 }
 

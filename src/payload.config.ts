@@ -16,6 +16,8 @@ import { Footer } from "@/Footer/config"
 import { ArticleRecommendations } from "@/globals/ArticleRecommendations/config"
 import { Integrations } from "@/globals/Integrations/config"
 import { Newsletter } from "@/globals/Newsletter/config"
+import { Plugins } from "@/globals/Plugins/config"
+import { pluginSwitches } from "@/globals/Plugins/pluginSwitches"
 import { SiteSettings } from "@/globals/SiteSettings/config"
 import { Header } from "@/Header/config"
 import { canRunJobs } from "@/jobs/access"
@@ -27,6 +29,7 @@ import { searchVectorAfterSchemaInit } from "@/plugins/searchVector"
 import { ssoAfterSchemaInit } from "@/plugins/sso"
 import { sentryPayloadPlugin, skipPluginErrorsInPino } from "@/sentryPayload"
 import { getSiteURL } from "@/utilities/getURL"
+import { describePlugin } from "@/utilities/registerPlugin"
 import { migrations } from "@/migrations"
 import { type PostgresAdapter, postgresAdapter } from "@payloadcms/db-postgres"
 import path from "path"
@@ -167,12 +170,32 @@ export default buildConfig({
     Categories,
   ],
   cors: [getSiteURL()].filter(Boolean),
-  globals: [Header, Footer, SiteSettings, Integrations, Newsletter, ArticleRecommendations],
+  globals: [
+    Header,
+    Footer,
+    SiteSettings,
+    Integrations,
+    Newsletter,
+    Plugins,
+    ArticleRecommendations,
+  ],
   // Nothing here reads Payload's GraphQL API (the site and admin use the Local and REST
   // APIs), and its errors reach `afterError` with their status nested on `originalError`,
   // which the Sentry plugin reads as a 500: anyone could fill Sentry from /api/graphql.
   graphQL: { disable: true },
-  plugins: [...plugins, sentryPayloadPlugin],
+  plugins: [
+    ...plugins,
+    describePlugin(sentryPayloadPlugin, {
+      slug: "plugin-sentry",
+      manifest: {
+        name: "Sentry",
+        source: "@payloadcms/plugin-sentry",
+        description:
+          "Reports the errors Payload answers with a 5xx to Sentry, with the signed-in user.",
+      },
+    }),
+    pluginSwitches(),
+  ],
   secret: process.env.PAYLOAD_SECRET,
   sharp: sharp as unknown as SharpDependency,
   typescript: {

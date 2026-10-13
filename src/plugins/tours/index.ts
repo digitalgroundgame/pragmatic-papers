@@ -1,4 +1,4 @@
-import type { Plugin } from "payload"
+import { registerPlugin } from "@/utilities/registerPlugin"
 
 import type { ToursOptions } from "./types"
 
@@ -10,9 +10,21 @@ export type { Tour, ToursOptions, TourStep } from "./types"
  * A tour is code (`registry.ts`), shipped with the release that changes the screens it points
  * at, and started by a link from `tourHref`: a notification's Show me, or a help doc's.
  */
-export const toursPlugin =
-  (options: ToursOptions = {}): Plugin =>
-  (config) => ({
+export const toursPlugin = registerPlugin<ToursOptions>({
+  slug: "tours",
+  manifest: {
+    name: "Guided tours",
+    source: "src/plugins/tours",
+    description:
+      "driver.js walkthroughs of the admin, started from a help doc or the bell's Show me.",
+    switch: {
+      label: "Guided tours",
+      description:
+        "Guided tours of the admin, and the Show me buttons that start them in the bell and on help docs.",
+      defaultValue: false,
+    },
+  },
+  plugin: ({ config, plugins: _plugins, ...options }) => ({
     ...config,
     // `custom` stays on the server, so `enabled` never reaches the client config.
     custom: { ...config.custom, tours: options },
@@ -26,4 +38,5 @@ export const toursPlugin =
         ],
       },
     },
-  })
+  }),
+})

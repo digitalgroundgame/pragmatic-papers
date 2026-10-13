@@ -1,6 +1,8 @@
 import type { Payload } from "payload"
 import type React from "react"
 
+import { isPluginOn } from "@/utilities/registerPlugin"
+
 import { TourProvider } from "./TourProvider"
 import type { ToursOptions } from "./types"
 
@@ -16,6 +18,6 @@ export async function TourGate({
   payload: Payload
 }): Promise<React.ReactNode> {
   const options = payload.config.custom?.tours as ToursOptions | undefined
-  if (options?.enabled && !(await options.enabled(payload))) return children
+  if (!(await isPluginOn(options?.enabled, payload))) return children
   return <TourProvider>{children}</TourProvider>
 }

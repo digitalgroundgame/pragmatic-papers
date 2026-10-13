@@ -1,6 +1,8 @@
 import type { Config } from "payload"
 import { describe, expect, it } from "vitest"
 
+import { registeredPlugins } from "@/utilities/registerPlugin"
+
 import { toursPlugin } from ".."
 
 const PROVIDER = "@/plugins/tours/TourGate#TourGate"
@@ -23,6 +25,14 @@ describe("toursPlugin", () => {
   it("keeps its options in the config's custom, beside what's already there", () => {
     const enabled = async () => false
     const config = toursPlugin({ enabled })({ custom: { other: 1 } } as unknown as Config) as Config
-    expect(config.custom).toEqual({ other: 1, tours: { enabled } })
+    expect(config.custom).toMatchObject({ other: 1, tours: { enabled } })
+  })
+
+  it("lists itself on System → Plugins, with its switch", () => {
+    const enabled = async () => false
+    const config = toursPlugin({ enabled })({} as Config) as Config
+    expect(registeredPlugins(config)).toEqual([
+      expect.objectContaining({ slug: "tours", name: "Guided tours", enabled }),
+    ])
   })
 })

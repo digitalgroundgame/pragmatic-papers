@@ -106,6 +106,31 @@ export function withoutHidden(posts: TickerPost[], hidden: readonly string[]): T
   return keys.size === 0 ? posts : posts.filter((post) => !keys.has(postKey(post.url)))
 }
 
+/** Our own sites: every Pragmatic Papers host, whatever deployment is reading the feed. */
+export const OWN_HOSTS = ["pragmaticpapers.com"] as const
+
+/** Whether a link leads to one of `hosts` or a subdomain of one. */
+function isOwnLink(link: string, hosts: readonly string[]): boolean {
+  let host: string
+  try {
+    host = new URL(link).hostname.toLowerCase()
+  } catch {
+    return false
+  }
+  return hosts.some((own) => host === own || host.endsWith(`.${own}`))
+}
+
+/**
+ * The posts, without the ones that link to our own site. The ticker sits on that site, so a
+ * post sending readers back to an article they can already reach from the page is circular.
+ */
+export function withoutOwnLinks(
+  posts: TickerPost[],
+  hosts: readonly string[] = OWN_HOSTS,
+): TickerPost[] {
+  return posts.filter((post) => !postLinks(post).some((link) => isOwnLink(link, hosts)))
+}
+
 /**
  * Every source's posts as one list, newest first. The same thing cross-posted to Bluesky and X
  * shows once: the newer copy.

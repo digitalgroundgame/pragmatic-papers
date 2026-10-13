@@ -130,6 +130,16 @@ describe("getTickerFeed", () => {
     expect((await getTickerFeed()).posts).toEqual([kept])
   })
 
+  it("leaves out posts that link to our own site, for readers and the admin alike", async () => {
+    const ours = { ...post("ours", "2026-10-08T12:00:00Z"), text: "https://pragmaticpapers.com/a" }
+    const kept = post("kept", "2026-10-08T10:00:00Z")
+    loadSource.mockImplementation(async (source) =>
+      source === broadcastSource ? null : source === postSources[0] ? [ours, kept] : [],
+    )
+    expect((await getTickerFeed()).posts).toEqual([kept])
+    expect((await getTickerPostLists())[0]).toEqual([kept])
+  })
+
   it("lists every source's posts for the admin, hidden ones included", async () => {
     const hidden = { ...post("hidden", "2026-10-08T12:00:00Z"), url: "https://x.com/P/status/9" }
     const kept = post("kept", "2026-10-08T10:00:00Z")

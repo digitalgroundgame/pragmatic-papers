@@ -3,14 +3,17 @@ import { cache } from "react"
 
 import {
   mergePosts,
+  OWN_HOSTS,
   TICKER_SETTINGS_TAG,
   withoutHidden,
+  withoutOwnLinks,
   type TickerFeed,
   type TickerPost,
 } from "./items"
 import { getGlobal } from "@/data/globals"
 import { getPayloadClient } from "@/data/payload"
 import type { Header } from "@/payload-types"
+import { getSiteURL } from "@/utilities/getURL"
 
 import {
   broadcastSource,
@@ -81,7 +84,13 @@ const getTickerSources = cache(async () => {
     broadcast(settings),
     ...posts.map((load) => load(settings)),
   ])
-  return { broadcast: current, lists, hidden: ticker?.hidden?.map((post) => post.url) ?? [] }
+  // Posts linking to our own site never show, so they're left out of the admin's list too.
+  const own = [...OWN_HOSTS, new URL(getSiteURL()).hostname]
+  return {
+    broadcast: current,
+    lists: lists.map((list) => withoutOwnLinks(list, own)),
+    hidden: ticker?.hidden?.map((post) => post.url) ?? [],
+  }
 })
 
 /** Each source's posts, hidden ones included: what an editor picks from to hide. */

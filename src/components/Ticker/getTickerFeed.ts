@@ -1,8 +1,16 @@
 import { unstable_cache } from "next/cache"
 import { cache } from "react"
 
-import { mergePosts, withoutHidden, type TickerFeed, type TickerPost } from "./items"
+import {
+  mergePosts,
+  TICKER_SETTINGS_TAG,
+  withoutHidden,
+  type TickerFeed,
+  type TickerPost,
+} from "./items"
 import { getGlobal } from "@/data/globals"
+import { getPayloadClient } from "@/data/payload"
+import type { Header } from "@/payload-types"
 
 import {
   broadcastSource,
@@ -32,6 +40,25 @@ function cached<T>(
 }
 
 const broadcast = cached("broadcast", broadcastSource, null)
+
+async function readTickerSettings(): Promise<Header["ticker"]> {
+  const payload = await getPayloadClient()
+  const header = await payload.findGlobal({ slug: "header", depth: 0, select: { ticker: true } })
+  return header.ticker
+}
+
+/**
+ * The Header's ticker settings, in a cache entry of their own rather than the header's: an
+ * editor hiding a post clears only this one, so no page, which renders from the header's,
+ * goes stale. Uncached in development, as `getGlobal` is.
+ */
+const cachedTickerSettings = unstable_cache(readTickerSettings, ["ticker", "settings"], {
+  tags: [TICKER_SETTINGS_TAG],
+})
+
+function getTickerSettings(): Promise<Header["ticker"]> {
+  return process.env.NODE_ENV === "development" ? readTickerSettings() : cachedTickerSettings()
+}
 const posts = postSources.map((source) => cached(source.integration.id, source, []))
 
 /**
@@ -40,10 +67,9 @@ const posts = postSources.map((source) => cached(source.integration.id, source, 
  * the admin never costs a source an extra read.
  */
 const getTickerSources = cache(async () => {
-  const [{ youtube, bluesky, x }, { ticker }] = await Promise.all([
+  const [{ youtube, bluesky, x }, ticker] = await Promise.all([
     getGlobal("integrations"),
-    // The depth the header reads it at, so they share one cache entry.
-    getGlobal("header", 1),
+    getTickerSettings(),
   ])
   const settings: TickerSettings = {
     youtubeChannelIds: youtube?.channels?.map((channel) => channel.channelId),
@@ -67,6 +93,7 @@ export const getTickerPostLists = cache(
 export const getTickerFeed = cache(async (): Promise<TickerFeed> => {
   const { broadcast: current, lists, hidden } = await getTickerSources()
   // Hidden posts are left out before the newest are picked, so the ticker stays full. The hidden
-  // list is cached with the header, apart from the sources, so a post an editor hides goes at once, whatever the sources hold.
+  // list is cached apart from the sources, so a post an editor hides goes at once, whatever the
+  // sources hold.
   return { broadcast: current, posts: mergePosts(lists.map((list) => withoutHidden(list, hidden))) }
 })

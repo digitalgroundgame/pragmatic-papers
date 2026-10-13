@@ -8,7 +8,7 @@ import type * as SourcesModule from "../sources"
 const { integrations, ticker, cacheCalls, loadSource } = vi.hoisted(() => ({
   integrations: { current: {} as Record<string, unknown> },
   ticker: { current: {} as Record<string, unknown> },
-  cacheCalls: [] as { keys: string[]; options: { revalidate: number; tags: string[] } }[],
+  cacheCalls: [] as { keys: string[]; options: { revalidate?: number; tags: string[] } }[],
   loadSource: vi.fn(),
 }))
 
@@ -17,7 +17,7 @@ vi.mock("next/cache", () => ({
   unstable_cache: (
     fn: (...args: unknown[]) => unknown,
     keys: string[],
-    options: { revalidate: number; tags: string[] },
+    options: { revalidate?: number; tags: string[] },
   ) => {
     cacheCalls.push({ keys, options })
     return fn
@@ -28,12 +28,13 @@ vi.mock("react", async (importOriginal) => ({
   cache: <T>(fn: T) => fn,
 }))
 vi.mock("@/data/globals", () => ({
-  getGlobal: async (slug: string) =>
-    slug === "integrations"
-      ? integrations.current
-      : slug === "header"
-        ? { ticker: ticker.current }
-        : {},
+  getGlobal: async (slug: string) => (slug === "integrations" ? integrations.current : {}),
+}))
+vi.mock("@/data/payload", () => ({
+  getPayloadClient: async () => ({
+    findGlobal: async ({ slug }: { slug: string }) =>
+      slug === "header" ? { ticker: ticker.current } : {},
+  }),
 }))
 vi.mock("../sources", async (importOriginal) => ({
   ...(await importOriginal<typeof SourcesModule>()),
@@ -42,6 +43,7 @@ vi.mock("../sources", async (importOriginal) => ({
 
 const { getTickerFeed, getTickerPostLists } = await import("../getTickerFeed")
 const { broadcastSource, postSources } = await import("../sources")
+const { TICKER_SETTINGS_TAG } = await import("../items")
 
 const post = (id: string, createdAt: string): TickerPost => ({
   id,
@@ -62,10 +64,12 @@ describe("getTickerFeed", () => {
   it("caches each source for its own period under the ticker tag", () => {
     expect(cacheCalls.map((call) => call.keys)).toEqual([
       ["ticker", "broadcast"],
+      ["ticker", "settings"],
       ...postSources.map((source) => ["ticker", source.integration.id]),
     ])
     expect(cacheCalls.map((call) => call.options)).toEqual([
       { revalidate: broadcastSource.revalidate, tags: ["ticker"] },
+      { tags: [TICKER_SETTINGS_TAG] },
       ...postSources.map((source) => ({ revalidate: source.revalidate, tags: ["ticker"] })),
     ])
   })

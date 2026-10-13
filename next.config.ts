@@ -33,6 +33,9 @@ const NOT_EDGE_CACHED = [
   "articles/(?:[^/]+/)?substack\\.xml$",
   // - recommendations: no-store.
   "recommended-articles\\.json$",
+  // - the ticker (`/ticker.json`): a minute, so a hidden post or a new stream shows soon
+  //   without purging every page.
+  "ticker\\.json$",
   // - the deploy's switchover check (`/next/purge-edge`): no-store, so the edge never keeps
   //   an answer naming the old container.
   "next/purge-edge$",

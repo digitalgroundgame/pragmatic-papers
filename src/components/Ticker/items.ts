@@ -40,6 +40,12 @@ export interface TickerFeed {
   posts: TickerPost[]
 }
 
+/**
+ * The cache tag on the Header's ticker settings as the feed reads them (`getTickerFeed`),
+ * which the Header's revalidate hook clears.
+ */
+export const TICKER_SETTINGS_TAG = "ticker_settings"
+
 /** How many posts run in the ticker at once. */
 export const MAX_POSTS = 8
 

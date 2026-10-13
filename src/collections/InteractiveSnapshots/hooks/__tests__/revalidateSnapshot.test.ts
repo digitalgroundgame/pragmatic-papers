@@ -39,6 +39,8 @@ describe("revalidateSnapshot", () => {
     expect(revalidateTag).toHaveBeenCalledWith("interactive:3", "max")
     expect(purgeEdgeCache).toHaveBeenCalledWith(logger, "interactive 3 snapshot", {
       paths: ["/interactives/courts"],
+      shared: false,
+      revalidated: { paths: [], tags: ["interactive:3"] },
     })
   })
 
@@ -54,6 +56,8 @@ describe("revalidateSnapshot", () => {
     expect(findByID).not.toHaveBeenCalled()
     expect(purgeEdgeCache).toHaveBeenCalledWith(logger, "interactive 3 snapshot", {
       paths: ["/interactives/courts"],
+      shared: false,
+      revalidated: { paths: [], tags: ["interactive:3"] },
     })
   })
 
@@ -62,6 +66,8 @@ describe("revalidateSnapshot", () => {
     await revalidateSnapshot(change(published, drafted))
     expect(purgeEdgeCache).toHaveBeenCalledWith(logger, "interactive 3 snapshot", {
       paths: [null],
+      shared: false,
+      revalidated: { paths: [], tags: ["interactive:3"] },
     })
   })
 

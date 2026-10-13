@@ -1,8 +1,6 @@
 import type { CollectionAfterChangeHook, CollectionAfterDeleteHook, PayloadRequest } from "payload"
 
-import { revalidateTag } from "next/cache"
-
-import { purgeEdgeCache } from "@/hooks/purgeEdgeCache"
+import { revalidateForReaders } from "@/hooks/revalidateForReaders"
 import type { InteractiveSnapshot } from "@/payload-types"
 import { relationshipId } from "@/utilities/relationships"
 
@@ -47,9 +45,9 @@ async function interactivePagePath(
 async function revalidate(snapshot: InteractiveSnapshot, req: PayloadRequest): Promise<void> {
   const interactiveId = relationshipId(snapshot.interactive)
   if (interactiveId == null) return
-  revalidateTag(interactiveTag(interactiveId), "max")
-  purgeEdgeCache(req.payload.logger, `interactive ${interactiveId} snapshot`, {
-    paths: [await interactivePagePath(snapshot, interactiveId, req)],
+  revalidateForReaders(req.payload.logger, `interactive ${interactiveId} snapshot`, {
+    tags: [interactiveTag(interactiveId)],
+    purgeOnly: [await interactivePagePath(snapshot, interactiveId, req)],
   })
 }
 

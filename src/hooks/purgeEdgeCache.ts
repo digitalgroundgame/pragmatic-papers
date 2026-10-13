@@ -8,6 +8,8 @@ import {
 } from "@/integrations"
 import { getSiteURL } from "@/utilities/getURL"
 
+import type { Revalidated } from "@/integrations/cloudflare/worker"
+
 import { warmWorkerSoon } from "./warmWorker"
 
 type Logger = Pick<Payload["logger"], "info" | "warn">
@@ -21,8 +23,17 @@ export const PURGE_DEBOUNCE_MS = 1000
 
 const LOCAL_HOSTS = new Set(["localhost", "127.0.0.1", "[::1]", "0.0.0.0"])
 
-/** What to purge from the Worker's cache: some paths and maybe the shared pages, or all. */
-type WorkerScope = { paths: Set<string>; shared: boolean } | "everything"
+/**
+ * What to revalidate in the Worker's own Next cache: the paths and tags a burst's saves
+ * revalidated here, or every page once one didn't say.
+ */
+type NextScope = { paths: Set<string>; tags: Set<string> } | "everything"
+
+/**
+ * What to purge from the Worker's cache: some paths and maybe the shared pages, and what to
+ * revalidate in its Next cache; or all of both.
+ */
+type WorkerScope = { paths: Set<string>; shared: boolean; next: NextScope } | "everything"
 
 export interface PurgeOptions {
   /** False leaves the Worker's cache alone. */
@@ -34,6 +45,12 @@ export interface PurgeOptions {
   paths?: readonly (string | null | undefined)[]
   /** Also purge every page that lists articles, volumes or contributors on the Worker. */
   shared?: boolean
+  /**
+   * The paths and tags the save revalidated in this deployment's Next cache, for the Worker
+   * to revalidate in its own. Omitted, the Worker revalidates every page in it.
+   * `revalidateForReaders` passes them for you.
+   */
+  revalidated?: Revalidated
 }
 
 let pending: {
@@ -65,14 +82,27 @@ function edgeSkipReason(): string | null {
   return null
 }
 
-function scopeOf({ paths = [], shared = false }: PurgeOptions): WorkerScope {
+function scopeOf({ paths = [], shared = false, revalidated }: PurgeOptions): WorkerScope {
   const named = paths.filter((path): path is string => !!path)
-  return named.length || shared ? { paths: new Set(named), shared } : "everything"
+  if (!named.length && !shared) return "everything"
+  const next: NextScope = revalidated
+    ? { paths: new Set(revalidated.paths), tags: new Set(revalidated.tags) }
+    : "everything"
+  return { paths: new Set(named), shared, next }
+}
+
+function mergeNext(a: NextScope, b: NextScope): NextScope {
+  if (a === "everything" || b === "everything") return "everything"
+  return { paths: new Set([...a.paths, ...b.paths]), tags: new Set([...a.tags, ...b.tags]) }
 }
 
 function mergeScopes(a: WorkerScope, b: WorkerScope): WorkerScope {
   if (a === "everything" || b === "everything") return "everything"
-  return { paths: new Set([...a.paths, ...b.paths]), shared: a.shared || b.shared }
+  return {
+    paths: new Set([...a.paths, ...b.paths]),
+    shared: a.shared || b.shared,
+    next: mergeNext(a.next, b.next),
+  }
 }
 
 function describeScope(scope: WorkerScope): string {
@@ -85,7 +115,16 @@ function describeScope(scope: WorkerScope): string {
 async function revalidateWorker(logger: Logger, why: string, scope: WorkerScope): Promise<boolean> {
   try {
     await cloudflareWorkerCache.revalidateAll(
-      scope === "everything" ? {} : { paths: [...scope.paths], shared: scope.shared },
+      scope === "everything"
+        ? {}
+        : {
+            paths: [...scope.paths],
+            shared: scope.shared,
+            revalidated:
+              scope.next === "everything"
+                ? undefined
+                : { paths: [...scope.next.paths], tags: [...scope.next.tags] },
+          },
     )
     logger.info(
       `Cleared ${describeScope(scope)} from the Worker's cache at ${cloudflareWorkerCache.url()} (${why})`,
@@ -175,7 +214,9 @@ export function purgeEdgeCache(logger: Logger, reason: string, options: PurgeOpt
     reasons: new Set([reason]),
     logger,
     worker: clearWorker,
-    scope: clearWorker ? scopeOf(options) : { paths: new Set(), shared: false },
+    scope: clearWorker
+      ? scopeOf(options)
+      : { paths: new Set(), shared: false, next: { paths: new Set(), tags: new Set() } },
     timer: setTimeout(() => {
       inFlight = inFlight.then(flush)
     }, PURGE_DEBOUNCE_MS),

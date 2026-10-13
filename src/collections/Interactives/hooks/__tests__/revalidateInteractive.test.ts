@@ -46,6 +46,8 @@ describe("revalidateInteractive", () => {
     expect(revalidateTag.mock.calls).toEqual(PAGE_TAGS)
     expect(purgeEdgeCache).toHaveBeenCalledWith(expect.anything(), "interactive courts", {
       paths: ["/interactives/courts", "/interactives/sitemap.xml"],
+      shared: false,
+      revalidated: { paths: [], tags: ["interactive:1", "interactives-sitemap"] },
     })
   })
 

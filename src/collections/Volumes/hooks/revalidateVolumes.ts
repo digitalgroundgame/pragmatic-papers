@@ -1,19 +1,13 @@
 import type { CollectionAfterChangeHook, CollectionAfterDeleteHook, Payload } from "payload"
 
-import { revalidatePath, revalidateTag } from "next/cache"
-
-import { purgeEdgeCache } from "@/hooks/purgeEdgeCache"
+import { revalidateForReaders } from "@/hooks/revalidateForReaders"
 import type { Article, Volume } from "@/payload-types"
 import { readersChange } from "@/utilities/readersCopy"
 
 const revalidateVolume = (slug: string | null | undefined, payload: Payload, why: string) => {
-  const path = `/volumes/${slug}`
-  payload.logger.info(`Revalidating volume at path: ${path}`)
-  revalidatePath(path)
-  revalidatePath("/volumes/feed.xml")
-  revalidateTag("volumes-sitemap", "max")
-  purgeEdgeCache(payload.logger, `volume ${slug}${why}`, {
-    paths: [path, "/volumes/feed.xml"],
+  revalidateForReaders(payload.logger, `volume ${slug}${why}`, {
+    paths: [`/volumes/${slug}`, "/volumes/feed.xml"],
+    tags: ["volumes-sitemap"],
     shared: true,
   })
 }
@@ -35,17 +29,7 @@ export const revalidateDelete: CollectionAfterDeleteHook<Article> = ({
   doc,
   req: { payload, context },
 }) => {
-  if (!context.disableRevalidate) {
-    const path = `/volumes/${doc?.slug}`
-
-    revalidatePath(path)
-    revalidatePath("/volumes/feed.xml")
-    revalidateTag("volumes-sitemap", "max")
-    purgeEdgeCache(payload.logger, `volume ${doc?.slug} deleted`, {
-      paths: [path, "/volumes/feed.xml"],
-      shared: true,
-    })
-  }
+  if (!context.disableRevalidate) revalidateVolume(doc?.slug, payload, " deleted")
 
   return doc
 }

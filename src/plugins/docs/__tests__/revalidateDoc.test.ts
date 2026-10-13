@@ -16,8 +16,9 @@ type ChangeArgs = Parameters<typeof revalidateDoc>[0]
 type DeleteArgs = Parameters<typeof revalidateDocDelete>[0]
 
 const findByID = readersRow()
+const logger = { info: vi.fn() }
 const req = (context: Record<string, unknown> = {}) => ({
-  payload: { logger: {}, findByID },
+  payload: { logger, findByID },
   context,
 })
 const change = (doc: Partial<Doc>, previousDoc?: Partial<Doc>, context = {}) =>
@@ -36,8 +37,10 @@ describe("revalidateDoc", () => {
     expect(revalidateTag).toHaveBeenCalledWith("docs", "max")
     expect(revalidatePath).toHaveBeenCalledWith("/docs")
     expect(revalidatePath).toHaveBeenCalledWith("/docs/a")
-    expect(purgeEdgeCache).toHaveBeenCalledExactlyOnceWith({}, "doc a", {
-      paths: ["/docs"],
+    expect(purgeEdgeCache).toHaveBeenCalledExactlyOnceWith(logger, "doc a", {
+      paths: ["/docs", "/docs/a"],
+      shared: false,
+      revalidated: { paths: ["/docs", "/docs/a"], tags: ["docs"] },
     })
   })
 
@@ -45,8 +48,10 @@ describe("revalidateDoc", () => {
     await change({ slug: "b", _status: "published" }, { slug: "a", _status: "published" })
     expect(revalidatePath).toHaveBeenCalledWith("/docs/a")
     expect(revalidatePath).toHaveBeenCalledWith("/docs/b")
-    expect(purgeEdgeCache).toHaveBeenCalledWith({}, "doc b", {
-      paths: ["/docs"],
+    expect(purgeEdgeCache).toHaveBeenCalledWith(logger, "doc b", {
+      paths: ["/docs", "/docs/b", "/docs/a"],
+      shared: false,
+      revalidated: { paths: ["/docs", "/docs/b", "/docs/a"], tags: ["docs"] },
     })
   })
 
@@ -74,8 +79,10 @@ describe("revalidateDocDelete", () => {
   it("refreshes the index and the deleted doc's page", () => {
     revalidateDocDelete({ doc: { slug: "a" }, req: req() } as unknown as DeleteArgs)
     expect(revalidatePath).toHaveBeenCalledWith("/docs/a")
-    expect(purgeEdgeCache).toHaveBeenCalledExactlyOnceWith({}, "doc a deleted", {
-      paths: ["/docs"],
+    expect(purgeEdgeCache).toHaveBeenCalledExactlyOnceWith(logger, "doc a deleted", {
+      paths: ["/docs", "/docs/a"],
+      shared: false,
+      revalidated: { paths: ["/docs", "/docs/a"], tags: ["docs"] },
     })
   })
 

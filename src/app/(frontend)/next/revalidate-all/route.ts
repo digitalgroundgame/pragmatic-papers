@@ -1,4 +1,4 @@
-import { revalidatePath } from "next/cache"
+import { revalidatePath, revalidateTag } from "next/cache"
 
 import { createMissingStarterPages } from "@/collections/Pages/starterPages"
 import { syncRepoDocs } from "@/plugins/docs/syncRepoDocs"
@@ -22,7 +22,9 @@ import { hasPayloadSecret } from "../bearer"
  * Worker's deploy workflow once it has deployed.
  *
  * The Worker also gets this request after every editor save (`cloudflareWorkerCache`), marked
- * `?save`: that skips the docs and starter pages, which are for a deploy.
+ * `?save`: that skips the docs and starter pages, which are for a deploy. A save that says
+ * what it revalidated (`?next`, with each `next-path` and `next-tag`) revalidates only those,
+ * as the save did in Coolify's Next cache; any other throws away every page.
  *
  * Authenticated with `Authorization: Bearer <PAYLOAD_SECRET>`, which the
  * container already holds.
@@ -32,7 +34,15 @@ export async function POST(request: Request): Promise<Response> {
     return Response.json({ error: "Unauthorized" }, { status: 401 })
   }
 
-  if (new URL(request.url).searchParams.has("save")) {
+  const { searchParams } = new URL(request.url)
+  if (searchParams.has("save")) {
+    if (searchParams.has("next")) {
+      const paths = searchParams.getAll("next-path").filter((path) => path.startsWith("/"))
+      const tags = searchParams.getAll("next-tag")
+      for (const path of paths) revalidatePath(path)
+      for (const tag of tags) revalidateTag(tag, "max")
+      return Response.json({ revalidated: true, paths, tags })
+    }
     revalidatePath("/", "layout")
     return Response.json({ revalidated: true })
   }

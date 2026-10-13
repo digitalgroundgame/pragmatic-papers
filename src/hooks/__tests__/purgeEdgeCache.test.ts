@@ -164,6 +164,43 @@ describe("purgeEdgeCache", () => {
       )
     })
 
+    it("tells the Worker what a burst's saves revalidated, to revalidate only that", async () => {
+      configureWorker()
+
+      purgeEdgeCache(logger, "page about", {
+        paths: ["/about", "/sitemap.xml"],
+        revalidated: { paths: ["/about"], tags: ["pages-sitemap"] },
+      })
+      purgeEdgeCache(logger, "doc a", {
+        paths: ["/docs"],
+        revalidated: { paths: ["/docs", "/about"], tags: ["docs"] },
+      })
+      await flushEdgeCachePurge()
+
+      expect(mockRevalidateAll).toHaveBeenCalledExactlyOnceWith({
+        paths: ["/about", "/sitemap.xml", "/docs"],
+        shared: false,
+        revalidated: { paths: ["/about", "/docs"], tags: ["pages-sitemap", "docs"] },
+      })
+    })
+
+    it("revalidates every page in the Worker's Next cache once a save didn't say", async () => {
+      configureWorker()
+
+      purgeEdgeCache(logger, "page about", {
+        paths: ["/about"],
+        revalidated: { paths: ["/about"], tags: [] },
+      })
+      purgeEdgeCache(logger, "article a", { paths: ["/articles/a"] })
+      await flushEdgeCachePurge()
+
+      expect(mockRevalidateAll).toHaveBeenCalledExactlyOnceWith({
+        paths: ["/about", "/articles/a"],
+        shared: false,
+        revalidated: undefined,
+      })
+    })
+
     it("purges every page once any save in the burst named none", async () => {
       configureWorker()
 

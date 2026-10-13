@@ -252,8 +252,12 @@ configured (`WORKER_URL`, on the Coolify app a Cloudflare Worker reads from), th
 same flush first clears that Worker's cache through its `/next/revalidate-all`:
 only the `paths` the hook passes (the ones it revalidated) and, with `shared`, every
 page listing articles, volumes or contributors, or every page when it passes neither
-(the Worker tags each page it keeps, `edgeCacheTags`). Pass the paths a new hook
-revalidates. It then requests the same most-read pages through the Worker's URL in the background
+(the Worker tags each page it keeps, `edgeCacheTags`). A hook for content readers see
+calls `revalidateForReaders` (`src/hooks/revalidateForReaders.ts`) rather than
+`revalidatePath`, `revalidateTag` and `purgeEdgeCache` itself: it revalidates the paths and
+tags here, purges them (and any `purgeOnly` paths, for pages that render per request) from
+the edge, and tells the Worker to revalidate exactly those in its own Next cache, which it
+otherwise empties whole. It then requests the same most-read pages through the Worker's URL in the background
 (`warmWorkerSoon`), since a Worker renders a page on a cold isolate in seconds.
 A new hook for content readers see should call it too.
 On a collection with drafts, a hook decides what a save changed with `readersChange`

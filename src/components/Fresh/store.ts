@@ -70,6 +70,7 @@ export function markSeen(name: string): void {
   const current = getSeen()
   // Unreadable storage shows no dots, so there's nothing to clear. Recording `name`
   // here would turn "unknown" into "seen only this", and every other dot would appear.
+  // Only an account (`addSeen`) can stand in for storage: its dots clear for good.
   if (current === null || current.has(name)) return
   try {
     localStorage.setItem(`${SEEN_KEY_PREFIX}${name}`, "1")
@@ -90,7 +91,8 @@ export function seenNames(): string[] | null {
 /**
  * Record names seen somewhere else (on the reader's account), in this tab and every other.
  * Unlike `markSeen`, this doesn't tell the account: it's where they came from. When
- * localStorage can't be read, they're kept for this page, as that's all that's known.
+ * localStorage can't be read, they're kept for this page and become what's known: dots the
+ * account hasn't recorded show, and clearing one records it there.
  */
 export function addSeen(names: Iterable<string>): void {
   const current = getSeen()

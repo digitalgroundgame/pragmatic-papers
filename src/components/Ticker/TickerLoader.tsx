@@ -5,8 +5,8 @@ import { useEffect, useState } from "react"
 import type { TickerFeed } from "./items"
 import { TickerView } from "./TickerView"
 
-/** Where the ticker's feed is served (`src/app/(frontend)/ticker.json/route.ts`). */
-export const TICKER_FEED_PATH = "/ticker.json"
+/** Where the ticker's feed is served (`src/app/(frontend)/api/ticker/route.ts`). */
+export const TICKER_FEED_PATH = "/api/ticker"
 
 /** The ticker's box, empty: its section's margins and borders around its h-10 row. */
 export function TickerPlaceholder(): React.ReactNode {

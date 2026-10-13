@@ -20,7 +20,7 @@ beforeEach(() => {
   getTickerFeed.mockReset().mockResolvedValue({ broadcast: liveBroadcast, posts: tickerPosts })
 })
 
-describe("/ticker.json", () => {
+describe("/api/ticker", () => {
   it("serves the feed while the ticker is switched on", async () => {
     header.enabled = true
     const response = await GET()

@@ -7,7 +7,7 @@ import { purgeEdgeCache } from "@/hooks/purgeEdgeCache"
 import type { Header } from "@/payload-types"
 
 /**
- * The ticker's settings that only `/ticker.json` reads: which posts are hidden, and how far
+ * The ticker's settings that only `/api/ticker` reads: which posts are hidden, and how far
  * ahead a scheduled stream shows. Pages render the ticker's switch alone.
  */
 const FEED_ONLY_FIELDS = ["hidden", "upcomingHours"] as const
@@ -23,7 +23,7 @@ function asPagesRenderIt(doc: Partial<Header> | undefined): string {
 
 /**
  * Whether a save changed only what the ticker's feed reads, such as an editor hiding a post.
- * That reaches readers through `/ticker.json` within its minute at the edge, so no page needs
+ * That reaches readers through `/api/ticker` within its minute at the edge, so no page needs
  * clearing.
  */
 export function onlyTickerFeedChanged(

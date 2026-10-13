@@ -9,12 +9,13 @@ const user = (roles: string[]) => ({ id: 1, roles }) as unknown as User
 const args = (u: User | null) => ({ req: { user: u } }) as never
 
 describe("Plugins global", () => {
-  it("lets admins read it and nobody save it", () => {
+  it("lets admins read and save it", () => {
     expect(Plugins.access?.read?.(args(user(["admin"])))).toBe(true)
     expect(Plugins.access?.read?.(args(user(["chief-editor"])))).toBe(true)
     expect(Plugins.access?.read?.(args(user(["editor"])))).toBe(false)
     expect(Plugins.access?.read?.(args(null))).toBe(false)
-    expect(Plugins.access?.update?.(args(user(["admin"])))).toBe(false)
+    expect(Plugins.access?.update?.(args(user(["admin"])))).toBe(true)
+    expect(Plugins.access?.update?.(args(user(["editor"])))).toBe(false)
   })
 
   it("shows up under System for admins only", () => {

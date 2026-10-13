@@ -17,6 +17,7 @@ import { ArticleRecommendations } from "@/globals/ArticleRecommendations/config"
 import { Integrations } from "@/globals/Integrations/config"
 import { Newsletter } from "@/globals/Newsletter/config"
 import { Plugins } from "@/globals/Plugins/config"
+import { pluginSwitches } from "@/globals/Plugins/pluginSwitches"
 import { SiteSettings } from "@/globals/SiteSettings/config"
 import { Header } from "@/Header/config"
 import { canRunJobs } from "@/jobs/access"
@@ -194,6 +195,7 @@ export default buildConfig({
       },
       sentryPayloadPlugin,
     ),
+    pluginSwitches(),
   ],
   secret: process.env.PAYLOAD_SECRET,
   sharp: sharp as unknown as SharpDependency,

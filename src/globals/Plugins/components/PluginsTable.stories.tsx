@@ -17,6 +17,7 @@ const meta = {
         description:
           "Keeps a search index of articles, pages, volumes and topics, which the site's search reads.",
         status: "on",
+        beta: false,
         pages: [{ label: "Search", href: "/admin/collections/search" }],
       },
       {
@@ -24,6 +25,7 @@ const meta = {
         source: "@payloadcms/plugin-form-builder",
         description: "Forms and their submissions. Hidden in the admin until it's set up.",
         status: "on",
+        beta: false,
         pages: [
           { label: "Forms", href: null },
           { label: "Form Submissions", href: null },
@@ -35,6 +37,7 @@ const meta = {
         description:
           "The Auto-generate buttons in the SEO tab of articles, pages, volumes, topics and interactives.",
         status: "on",
+        beta: false,
         pages: [],
       },
       {
@@ -43,17 +46,16 @@ const meta = {
         description:
           "Help docs at /docs, written in the admin or shipped in src/docs/ with a release.",
         status: "off",
-        pages: [
-          { label: "Docs", href: "/admin/collections/docs" },
-          { label: "Settings → Experiments", href: "/admin/globals/site-settings" },
-        ],
+        beta: true,
+        pages: [{ label: "Docs", href: "/admin/collections/docs" }],
       },
       {
         name: "Guided tours",
         source: "src/plugins/tours",
         description: "driver.js walkthroughs of the admin.",
         status: "unknown",
-        pages: [{ label: "Settings → Experiments", href: "/admin/globals/site-settings" }],
+        beta: true,
+        pages: [],
       },
     ],
   },
@@ -66,7 +68,9 @@ export const Default: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     const table = within(canvas.getByRole("table", { name: "Installed plugins" }))
+    await expect(table.getByRole("row", { name: /Help docs/ })).toHaveTextContent("Help docsBeta")
     await expect(table.getByRole("row", { name: /Help docs/ })).toHaveTextContent("Off")
+    await expect(table.getByRole("row", { name: /Search/ })).not.toHaveTextContent("Beta")
     await expect(table.getByRole("row", { name: /Guided tours/ })).toHaveTextContent(
       "Couldn't read",
     )
@@ -75,8 +79,6 @@ export const Default: Story = {
       "/admin/collections/docs",
     )
     await expect(table.getByText("Forms (hidden)")).toBeInTheDocument()
-    await expect(table.getByRole("row", { name: /SEO/ })).toHaveTextContent(
-      "No settings in the admin",
-    )
+    await expect(table.getByRole("row", { name: /SEO/ })).toHaveTextContent("None")
   },
 }

@@ -20,7 +20,7 @@ const STATUS = {
 } as const
 
 function Pages({ pages }: { pages: PluginRow["pages"] }): React.ReactNode {
-  if (pages.length === 0) return <span style={muted}>No settings in the admin</span>
+  if (pages.length === 0) return <span style={muted}>None</span>
   return (
     <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
       {pages.map((page) => (
@@ -66,7 +66,23 @@ export function PluginsTable({ plugins }: { plugins: PluginRow[] }): React.React
             return (
               <tr key={plugin.name}>
                 <th scope="row" style={{ ...cell, fontWeight: 400 }}>
-                  <div style={{ fontWeight: 600 }}>{plugin.name}</div>
+                  <div style={{ fontWeight: 600 }}>
+                    {plugin.name}
+                    {plugin.beta && (
+                      <span
+                        style={{
+                          background: "var(--theme-elevation-100)",
+                          borderRadius: "4px",
+                          fontSize: "0.75rem",
+                          fontWeight: 500,
+                          marginLeft: "0.5rem",
+                          padding: "0.0625rem 0.375rem",
+                        }}
+                      >
+                        Beta
+                      </span>
+                    )}
+                  </div>
                   <div style={{ ...muted, ...code }}>{plugin.source}</div>
                   <div style={{ marginTop: "0.25rem", maxWidth: "40rem" }}>
                     {plugin.description}

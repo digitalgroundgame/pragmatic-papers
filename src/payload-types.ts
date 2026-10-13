@@ -2746,6 +2746,27 @@ export interface Newsletter {
  */
 export interface Plugin {
   id: number;
+  /**
+   * Switch a plugin off here and it stops at once, without a deploy. Its data stays.
+   */
+  switches?: {
+    /**
+     * The help docs at /docs, their sitemap, and their items in the notifications bell. Staff can write docs in the admin either way.
+     */
+    docs?: boolean | null;
+    /**
+     * The bell beside the avatar in the admin header.
+     */
+    notifications?: boolean | null;
+    /**
+     * Guided tours of the admin, and the Show me buttons that start them in the bell and on help docs.
+     */
+    tours?: boolean | null;
+    /**
+     * “Sign in with Google” and “Sign in with Discord” on the admin's login page, for people who already have an account here. Each provider also needs its credentials (System → Integrations).
+     */
+    sso?: boolean | null;
+  };
   updatedAt?: string | null;
   createdAt?: string | null;
 }
@@ -2903,6 +2924,14 @@ export interface NewsletterSelect<T extends boolean = true> {
  * via the `definition` "plugins_select".
  */
 export interface PluginsSelect<T extends boolean = true> {
+  switches?:
+    | T
+    | {
+        docs?: T;
+        notifications?: T;
+        tours?: T;
+        sso?: T;
+      };
   updatedAt?: T;
   createdAt?: T;
   globalType?: T;

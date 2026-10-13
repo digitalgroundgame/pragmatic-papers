@@ -17286,6 +17286,34 @@
           "primaryKey": true,
           "notNull": true
         },
+        "switches_docs": {
+          "name": "switches_docs",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": false
+        },
+        "switches_notifications": {
+          "name": "switches_notifications",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": false
+        },
+        "switches_tours": {
+          "name": "switches_tours",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": false
+        },
+        "switches_sso": {
+          "name": "switches_sso",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": false
+        },
         "updated_at": {
           "name": "updated_at",
           "type": "timestamp(3) with time zone",
@@ -18251,6 +18279,6 @@
     "tables": {},
     "columns": {}
   },
-  "id": "9f308eea-4903-45ad-a7b9-50ee6ef162f2",
+  "id": "e8fc3697-73f6-432d-9617-a44fea0bcc39",
   "prevId": "00000000-0000-0000-0000-000000000000"
 }

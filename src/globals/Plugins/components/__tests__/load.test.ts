@@ -42,22 +42,15 @@ const config = (registeredPlugins: RegisteredPlugin[], adminRoute = "/admin") =>
   }) as unknown as Pick<Payload, "config">
 
 describe("loadPlugins", () => {
-  it("links the collections and globals a plugin added, then the switch it has", async () => {
+  it("links the collections and globals a plugin added", async () => {
     const [row] = await loadPlugins(
-      config([
-        plugin({
-          collections: ["search", "forms"],
-          globals: ["site-settings"],
-          enabled: () => true,
-        }),
-      ]),
+      config([plugin({ collections: ["search", "forms"], globals: ["site-settings"] })]),
       admin,
     )
     expect(row?.pages).toEqual([
       { label: "Search", href: "/admin/collections/search" },
       { label: "Forms", href: null },
       { label: "Settings", href: "/admin/globals/site-settings" },
-      { label: "Settings → Experiments", href: "/admin/globals/site-settings" },
     ])
   })
 
@@ -72,6 +65,23 @@ describe("loadPlugins", () => {
   it("builds links under a custom admin route", async () => {
     const [atRoot] = await loadPlugins(config([plugin({ collections: ["search"] })], "/"), admin)
     expect(atRoot?.pages[0]?.href).toBe("/collections/search")
+  })
+
+  it("marks a plugin whose switch starts off as a beta", async () => {
+    const theSwitch = { label: "On", description: "", defaultValue: false }
+    const rows = await loadPlugins(
+      config([
+        plugin({ name: "Package" }),
+        plugin({ name: "Beta", switch: theSwitch }),
+        plugin({ name: "Graduated", switch: { ...theSwitch, defaultValue: true } }),
+      ]),
+      admin,
+    )
+    expect(rows.map((r) => [r.name, r.beta])).toEqual([
+      ["Package", false],
+      ["Beta", true],
+      ["Graduated", false],
+    ])
   })
 
   it("reads each plugin's switch now", async () => {

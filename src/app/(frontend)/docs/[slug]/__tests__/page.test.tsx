@@ -14,6 +14,9 @@ vi.mock("next/headers", () => ({ draftMode: async () => draft }))
 vi.mock("@/globals/SiteSettings/isExperimentEnabled", () => ({
   isExperimentEnabled: async (name: string) => experiments[name] ?? true,
 }))
+vi.mock("@/globals/Plugins/isPluginEnabled", () => ({
+  isPluginEnabled: async (name: string) => experiments[name] ?? true,
+}))
 vi.mock("@/components/PayloadRedirects", () => ({
   PayloadRedirects: ({ url }: { url: string }) => <div data-testid="redirects" data-url={url} />,
 }))

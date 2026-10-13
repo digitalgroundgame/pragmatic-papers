@@ -17,8 +17,8 @@ export { DOCS_CACHE_TAG }
 export const docsPlugin = (
   options: {
     /**
-     * Whether readers see the docs here (e.g. a beta switch), as the admin's plugin list shows
-     * it. The pages and the bell check their own switch; the collection is always there.
+     * Whether readers see the docs here: the reading of the plugin's switch. The pages and the
+     * bell check the same switch; the collection is always there.
      */
     enabled?: (payload: Payload) => boolean | Promise<boolean>
   } = {},
@@ -31,6 +31,12 @@ export const docsPlugin = (
       description:
         "Help docs at /docs, written in the admin or shipped in src/docs/ with a release.",
       enabled: options.enabled,
+      switch: {
+        label: "Help docs",
+        description:
+          "The help docs at /docs, their sitemap, and their items in the notifications bell. Staff can write docs in the admin either way.",
+        defaultValue: false,
+      },
     },
     (config) => ({ ...config, collections: [...(config.collections ?? []), Docs] }),
   )

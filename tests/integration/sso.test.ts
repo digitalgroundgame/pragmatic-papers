@@ -90,10 +90,10 @@ const me = async (cookie: string): Promise<User | null> => {
   return ((await response.json()) as { user: User | null }).user
 }
 
-const setExperiment = (sso: boolean) =>
+const setSwitch = (sso: boolean) =>
   payload.updateGlobal({
-    slug: "site-settings",
-    data: { experiments: { sso } },
+    slug: "plugins",
+    data: { switches: { sso } },
     context: { disableRevalidate: true },
   })
 
@@ -104,7 +104,7 @@ beforeAll(async () => {
 beforeEach(async () => {
   vi.stubEnv("DISCORD_CLIENT_ID", "discord-client")
   vi.stubEnv("DISCORD_CLIENT_SECRET", "discord-secret")
-  await setExperiment(true)
+  await setSwitch(true)
 })
 
 afterEach(() => {
@@ -199,13 +199,13 @@ describe("single sign-on", () => {
     expect(await me(cookie)).toBeNull()
   })
 
-  it("is switched off with the experiment: no endpoints, and old sessions are ignored", async () => {
+  it("is switched off on System → Plugins: no endpoints, and old sessions are ignored", async () => {
     const editor = await createUser("editor")
     const cookie = cookiesFrom(
       await signInWithDiscord({ id: "1006", email: editor.email, verified: true }),
     )
 
-    await setExperiment(false)
+    await setSwitch(false)
 
     expect(await me(cookie)).toBeNull()
     const start = await api("/auth/sign-in/social", {

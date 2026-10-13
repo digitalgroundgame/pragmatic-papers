@@ -15,6 +15,8 @@ export interface PluginRow {
   description: string
   /** `unknown` when its switch couldn't be read. */
   status: "on" | "off" | "unknown"
+  /** Its switch starts off: it's still being tried out. */
+  beta: boolean
   pages: PluginPage[]
 }
 
@@ -54,8 +56,7 @@ async function status(
 /**
  * The plugins that registered themselves, as System → Plugins lists them, in the order Payload
  * runs them: each one's switch read now, and the collections and globals it added linked,
- * unless the admin hides them from `user`. A plugin with a switch links to Settings →
- * Experiments, where this site's switches are.
+ * unless the admin hides them from `user`. A plugin whose switch starts off is a beta.
  */
 export async function loadPlugins(
   payload: Pick<Payload, "config">,
@@ -89,16 +90,13 @@ export async function loadPlugins(
           },
         ]
       })
-      const settings =
-        typeof plugin.enabled === "function"
-          ? [{ label: "Settings → Experiments", href: `${admin}/globals/site-settings` }]
-          : []
       return {
         name: plugin.name,
         source: plugin.source,
         description: plugin.description,
         status: await status(plugin.enabled, payload),
-        pages: [...collections, ...globals, ...settings],
+        beta: plugin.switch?.defaultValue === false,
+        pages: [...collections, ...globals],
       } satisfies PluginRow
     }),
   )

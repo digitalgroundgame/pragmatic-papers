@@ -25,6 +25,11 @@ export const notificationsPlugin = (options: NotificationsOptions): Plugin =>
       description:
         "The bell beside the avatar in the admin header: help docs and other news for each staff member.",
       enabled: options.enabled,
+      switch: {
+        label: "Notifications bell",
+        description: "The bell beside the avatar in the admin header.",
+        defaultValue: false,
+      },
     },
     (config) => ({
       ...config,

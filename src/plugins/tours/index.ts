@@ -21,6 +21,12 @@ export const toursPlugin = (options: ToursOptions = {}): Plugin =>
       description:
         "driver.js walkthroughs of the admin, started from a help doc or the bell's Show me.",
       enabled: options.enabled,
+      switch: {
+        label: "Guided tours",
+        description:
+          "Guided tours of the admin, and the Show me buttons that start them in the bell and on help docs.",
+        defaultValue: false,
+      },
     },
     (config) => ({
       ...config,

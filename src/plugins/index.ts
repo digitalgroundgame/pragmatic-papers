@@ -1,4 +1,4 @@
-import type { Experiment } from "@/globals/SiteSettings/isExperimentEnabled"
+import type { PluginSwitchName } from "@/globals/Plugins/isPluginEnabled"
 import { revalidateRedirects } from "@/hooks/revalidateRedirects"
 import { docsPlugin } from "@/plugins/docs"
 import { docsNotifications } from "@/plugins/docs/notifications"
@@ -31,10 +31,10 @@ import { type Payload, type Plugin } from "payload"
 
 import { ssoPlugin } from "./sso"
 
-// Reads the switch in Site Settings when called. Imported then, not here: the
-// Settings global reaches the Payload config, which imports this file.
-const experiment = (name: Experiment) => async (): Promise<boolean> =>
-  (await import("@/globals/SiteSettings/isExperimentEnabled")).isExperimentEnabled(name)
+// Reads the plugin's switch on System → Plugins when called. Imported then, not here: the
+// Plugins global reaches the Payload config, which imports this file.
+const pluginSwitch = (name: PluginSwitchName) => async (): Promise<boolean> =>
+  (await import("@/globals/Plugins/isPluginEnabled")).isPluginEnabled(name)
 
 type SeoDoc = Volume | Article | Page | Topic | Interactive
 
@@ -382,17 +382,17 @@ export const plugins: Plugin[] = [
       clientUploads: true,
     }),
   ),
-  docsPlugin({ enabled: experiment("docs") }),
+  docsPlugin({ enabled: pluginSwitch("docs") }),
   notificationsPlugin({
-    sources: [docsNotifications({ enabled: experiment("docs"), tours: experiment("tours") })],
-    enabled: experiment("notifications"),
+    sources: [docsNotifications({ enabled: pluginSwitch("docs"), tours: pluginSwitch("tours") })],
+    enabled: pluginSwitch("notifications"),
   }),
-  toursPlugin({ enabled: experiment("tours") }),
+  toursPlugin({ enabled: pluginSwitch("tours") }),
   ssoPlugin({
-    // The `sso` experiment, read from the database on each request rather than through
-    // `isExperimentEnabled`'s cache, so turning it off ends SSO sessions at once.
+    // Its switch on System → Plugins, read from the database on each request rather than
+    // through `isPluginEnabled`'s cache, so turning it off ends SSO sessions at once.
     enabled: async ({ payload }) =>
-      (await payload.findGlobal({ slug: "site-settings", depth: 0 })).experiments?.sso === true,
+      (await payload.findGlobal({ slug: "plugins", depth: 0 })).switches?.sso === true,
     providers: () => ({
       google: googleSignIn.credentials(),
       discord: discordSignIn.credentials(),

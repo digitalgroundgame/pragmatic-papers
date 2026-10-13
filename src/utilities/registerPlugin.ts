@@ -1,5 +1,18 @@
 import { type Config, definePlugin, type Payload, type Plugin } from "payload"
 
+/**
+ * An on/off switch an admin can flip without a deploy, which a plugin offers when it checks
+ * `enabled` on each request. The host decides where the switch lives and passes its reading in
+ * as the plugin's `enabled` option.
+ */
+export interface PluginSwitch {
+  label: string
+  /** What switching it off takes away. */
+  description: string
+  /** Whether it's on before anyone touches it: off while it's a beta. */
+  defaultValue: boolean
+}
+
 /** What a plugin says about itself, the way a WordPress plugin's header does. */
 export interface PluginManifest {
   name: string
@@ -11,6 +24,7 @@ export interface PluginManifest {
    * plugin that's always on.
    */
   enabled?: boolean | ((payload: Payload) => boolean | Promise<boolean>)
+  switch?: PluginSwitch
 }
 
 /** A plugin as the config records it: its manifest, and the collections and globals it added. */

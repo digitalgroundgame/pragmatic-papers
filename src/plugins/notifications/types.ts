@@ -1,6 +1,8 @@
 import type { User } from "@/payload-types"
 import type { Payload } from "payload"
 
+import type { SitePluginOptions } from "@/utilities/registerPlugin"
+
 /** A kind of notification a user can mute: help docs, an article published, a review asked for. */
 export interface NotificationType {
   /** Stable: muted types are stored by it. */
@@ -50,10 +52,9 @@ export interface NotificationSource {
   enabled?: (payload: Payload) => boolean | Promise<boolean>
 }
 
-export interface NotificationsOptions {
+/** `enabled` decides whether the bell shows, checked on each admin page (e.g. a beta switch). */
+export interface NotificationsOptions extends SitePluginOptions {
   sources: NotificationSource[]
-  /** Whether the bell shows, checked on each admin page (e.g. a beta switch). Always, when unset. */
-  enabled?: (payload: Payload) => boolean | Promise<boolean>
 }
 
 /** What the bell keeps in each user's Payload preferences. */

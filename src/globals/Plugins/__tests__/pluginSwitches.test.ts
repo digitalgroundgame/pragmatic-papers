@@ -25,7 +25,11 @@ const manifest = (withSwitch: boolean) => ({
 
 const run = async (config: Config, slugs: Record<string, boolean>) => {
   for (const [slug, withSwitch] of Object.entries(slugs)) {
-    config = await registerPlugin(slug, manifest(withSwitch), (c) => c)(config)
+    config = await registerPlugin({
+      slug,
+      manifest: manifest(withSwitch),
+      plugin: ({ config: c }) => c,
+    })()(config)
   }
   return pluginSwitches()(config)
 }

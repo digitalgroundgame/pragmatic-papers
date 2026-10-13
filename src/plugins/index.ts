@@ -9,7 +9,7 @@ import type { Article, Interactive, Page, Topic, Volume } from "@/payload-types"
 import { getSiteURL } from "@/utilities/getURL"
 import { DEFAULT_DESCRIPTION } from "@/utilities/mergeOpenGraph"
 import { docPath } from "@/utilities/routes"
-import { registerPlugin } from "@/utilities/registerPlugin"
+import { describePlugin } from "@/utilities/registerPlugin"
 import { truncate } from "@/utilities/truncate"
 import { toRoman } from "@/utilities/toRoman"
 import { formBuilderPlugin } from "@payloadcms/plugin-form-builder"
@@ -211,17 +211,10 @@ export const storageFileURL =
 
 /**
  * The site's Payload plugins, in the order they run. Ours describe themselves for System →
- * Plugins (`registerPlugin`); the packages don't yet, so they're described here.
+ * Plugins (`registerPlugin`); the packages don't yet, so they're described here (`describePlugin`).
  */
 export const plugins: Plugin[] = [
-  registerPlugin(
-    "plugin-search",
-    {
-      name: "Search",
-      source: "@payloadcms/plugin-search",
-      description:
-        "Keeps a search index of articles, pages, volumes and topics, which the site's search reads.",
-    },
+  describePlugin(
     searchPlugin({
       collections: ["articles", "pages", "volumes", "topics"],
       defaultPriorities: {
@@ -245,15 +238,17 @@ export const plugins: Plugin[] = [
         ],
       },
     }),
-  ),
-  registerPlugin(
-    "plugin-redirects",
     {
-      name: "Redirects",
-      source: "@payloadcms/plugin-redirects",
-      description:
-        "Redirects from old URLs to pages, volumes and articles. Hidden in the admin until it's set up.",
+      slug: "plugin-search",
+      manifest: {
+        name: "Search",
+        source: "@payloadcms/plugin-search",
+        description:
+          "Keeps a search index of articles, pages, volumes and topics, which the site's search reads.",
+      },
     },
+  ),
+  describePlugin(
     redirectsPlugin({
       collections: ["pages", "volumes", "articles"],
       overrides: {
@@ -279,36 +274,40 @@ export const plugins: Plugin[] = [
         },
       },
     }),
-  ),
-  registerPlugin(
-    "plugin-nested-docs",
     {
-      name: "Nested docs",
-      source: "@payloadcms/plugin-nested-docs",
-      description: "Parents and breadcrumb URLs for categories.",
+      slug: "plugin-redirects",
+      manifest: {
+        name: "Redirects",
+        source: "@payloadcms/plugin-redirects",
+        description:
+          "Redirects from old URLs to pages, volumes and articles. Hidden in the admin until it's set up.",
+      },
     },
+  ),
+  describePlugin(
     nestedDocsPlugin({
       collections: ["categories"],
       generateURL: (docs) => docs.reduce((url, doc) => `${url}/${doc.slug}`, ""),
     }),
-  ),
-  registerPlugin(
-    "plugin-seo",
     {
+      slug: "plugin-nested-docs",
+      manifest: {
+        name: "Nested docs",
+        source: "@payloadcms/plugin-nested-docs",
+        description: "Parents and breadcrumb URLs for categories.",
+      },
+    },
+  ),
+  describePlugin(seo, {
+    slug: "plugin-seo",
+    manifest: {
       name: "SEO",
       source: "@payloadcms/plugin-seo",
       description:
         "The Auto-generate buttons in the SEO tab of articles, pages, volumes, topics and interactives.",
     },
-    seo,
-  ),
-  registerPlugin(
-    "plugin-form-builder",
-    {
-      name: "Form builder",
-      source: "@payloadcms/plugin-form-builder",
-      description: "Forms and their submissions. Hidden in the admin until it's set up.",
-    },
+  }),
+  describePlugin(
     formBuilderPlugin({
       fields: {
         payment: false,
@@ -343,16 +342,16 @@ export const plugins: Plugin[] = [
         },
       },
     }),
-  ),
-  registerPlugin(
-    "storage-s3",
     {
-      name: "S3 storage",
-      source: "@payloadcms/storage-s3",
-      description:
-        "Keeps media and map uploads in the S3 bucket. Off where USE_LOCAL_STORAGE=true, which keeps them on disk.",
-      enabled: process.env.USE_LOCAL_STORAGE !== "true",
+      slug: "plugin-form-builder",
+      manifest: {
+        name: "Form builder",
+        source: "@payloadcms/plugin-form-builder",
+        description: "Forms and their submissions. Hidden in the admin until it's set up.",
+      },
     },
+  ),
+  describePlugin(
     s3Storage({
       // Enable S3 storage only when not using local storage
       // For staging/preview: set USE_LOCAL_STORAGE=true to use local file system
@@ -381,6 +380,16 @@ export const plugins: Plugin[] = [
       },
       clientUploads: true,
     }),
+    {
+      slug: "storage-s3",
+      manifest: {
+        name: "S3 storage",
+        source: "@payloadcms/storage-s3",
+        description:
+          "Keeps media and map uploads in the S3 bucket. Off where USE_LOCAL_STORAGE=true, which keeps them on disk.",
+      },
+      enabled: process.env.USE_LOCAL_STORAGE !== "true",
+    },
   ),
   docsPlugin({ enabled: pluginSwitch("docs") }),
   notificationsPlugin({
@@ -391,7 +400,7 @@ export const plugins: Plugin[] = [
   ssoPlugin({
     // Its switch on System → Plugins, read from the database on each request rather than
     // through `isPluginEnabled`'s cache, so turning it off ends SSO sessions at once.
-    enabled: async ({ payload }) =>
+    enabled: async (payload) =>
       (await payload.findGlobal({ slug: "plugins", depth: 0 })).switches?.sso === true,
     providers: () => ({
       google: googleSignIn.credentials(),

@@ -1,4 +1,4 @@
-import { type Config, definePlugin, type Payload, type Plugin } from "payload"
+import { type Config, definePlugin, type Payload, type Plugin, type PluginsMap } from "payload"
 
 /**
  * An on/off switch an admin can flip without a deploy, which a plugin offers when it checks
@@ -19,17 +19,31 @@ export interface PluginManifest {
   /** The package it comes from, or the folder of one of ours. */
   source: string
   description: string
-  /**
-   * Whether it's on here: a constant, or a switch asked when someone looks. Leave it out for a
-   * plugin that's always on.
-   */
-  enabled?: boolean | ((payload: Payload) => boolean | Promise<boolean>)
   switch?: PluginSwitch
 }
+
+/** Whether a plugin is on here: a constant, or a switch asked when someone looks. */
+export type PluginEnabled = boolean | ((payload: Payload) => boolean | Promise<boolean>)
+
+/** The options every plugin `registerPlugin` defines takes, beside its own. */
+export interface SitePluginOptions {
+  /**
+   * Whether it's on, checked at runtime (a switch's reading). Its schema stays either way.
+   * Always on, when unset.
+   */
+  enabled?: PluginEnabled
+  /** Off in code: the plugin leaves its schema in place but registers no behavior. */
+  disabled?: boolean
+}
+
+/** A Payload plugin that carries its manifest, beside Payload's `slug` and `options`. */
+export type SitePlugin = Plugin & { manifest: PluginManifest }
 
 /** A plugin as the config records it: its manifest, and the collections and globals it added. */
 export interface RegisteredPlugin extends PluginManifest {
   slug: string
+  /** Its `enabled` option, or `false` when it's `disabled`; unset when it's always on. */
+  enabled?: PluginEnabled
   collections: string[]
   globals: string[]
 }
@@ -45,32 +59,78 @@ export const registeredPlugins = (config: Pick<Config, "custom">): RegisteredPlu
   return Array.isArray(list) ? (list as RegisteredPlugin[]) : []
 }
 
+/** Runs `run` on `config` and records `entry`, with the collections and globals it added. */
+const recording = (
+  config: Config,
+  entry: Omit<RegisteredPlugin, "collections" | "globals">,
+  run: (config: Config) => Config | Promise<Config>,
+): Config | Promise<Config> => {
+  const before = { collections: slugs(config.collections), globals: slugs(config.globals) }
+  const record = (next: Config): Config => {
+    const registered: RegisteredPlugin = {
+      ...entry,
+      collections: slugs(next.collections).filter((s) => !before.collections.includes(s)),
+      globals: slugs(next.globals).filter((s) => !before.globals.includes(s)),
+    }
+    return { ...next, custom: { ...next.custom, [KEY]: [...registeredPlugins(next), registered] } }
+  }
+  // A plugin that returns its config at once still does, so callers needn't await it.
+  const next = run(config)
+  return next instanceof Promise ? next.then(record) : record(next)
+}
+
+/** A plugin's options, which it can be called without when none is required. */
+type OptionsArgs<TOptions> =
+  Partial<TOptions> extends TOptions ? [options?: TOptions] : [options: TOptions]
+
+const enabledOf = ({ enabled, disabled }: SitePluginOptions): PluginEnabled | undefined =>
+  disabled ? false : enabled
+
 /**
- * A Payload plugin, under Payload's `slug` (`definePlugin`), that records its manifest and the
- * collections and globals it added in the config's `custom`, which stays on the server, for an
- * admin page to list. Our plugins call it with their own manifest; a package that doesn't
- * describe itself is wrapped where the site installs it.
+ * Payload's `definePlugin`, plus a `manifest` that System → Plugins lists, and the `enabled`
+ * and `disabled` options every one of our plugins takes. The descriptor is Payload's own with
+ * one key added, so once Payload covers what the manifest does, dropping that key is the move.
+ *
+ * The plugin it makes carries its manifest beside Payload's `slug` and `options`, for other
+ * plugins to read from the `plugins` map. Running it records the manifest and what the plugin
+ * added in the config's `custom`, which stays on the server.
  */
-export const registerPlugin = (
-  slug: string,
-  manifest: PluginManifest,
-  plugin: (config: Config) => Config | Promise<Config>,
-): Plugin =>
-  definePlugin({
-    slug,
-    plugin: ({ config }) => {
-      const before = { collections: slugs(config.collections), globals: slugs(config.globals) }
-      const record = (next: Config): Config => {
-        const entry: RegisteredPlugin = {
-          ...manifest,
-          slug,
-          collections: slugs(next.collections).filter((s) => !before.collections.includes(s)),
-          globals: slugs(next.globals).filter((s) => !before.globals.includes(s)),
-        }
-        return { ...next, custom: { ...next.custom, [KEY]: [...registeredPlugins(next), entry] } }
-      }
-      // A plugin that returns its config at once still does, so callers needn't await it.
-      const next = plugin(config)
-      return next instanceof Promise ? next.then(record) : record(next)
-    },
-  })()
+export const registerPlugin =
+  <TOptions extends SitePluginOptions = SitePluginOptions>(descriptor: {
+    slug: string
+    order?: number
+    manifest: PluginManifest
+    plugin: (args: { config: Config; plugins: PluginsMap } & TOptions) => Config | Promise<Config>
+  }): ((...args: OptionsArgs<TOptions>) => SitePlugin) =>
+  (...[options = {} as TOptions]: OptionsArgs<TOptions>) => {
+    const { manifest, plugin, ...payloadDescriptor } = descriptor
+    const defined = definePlugin<TOptions & Record<string, unknown>>({
+      ...payloadDescriptor,
+      plugin: (args) =>
+        recording(
+          args.config,
+          { ...manifest, slug: descriptor.slug, enabled: enabledOf(options) },
+          (config) => plugin({ ...args, config }),
+        ),
+    })(options as TOptions & Record<string, unknown>)
+    return Object.assign(defined, { manifest })
+  }
+
+/**
+ * A package's plugin, described for System → Plugins where the site installs it, until the
+ * package describes itself. It keeps the package's own `order`.
+ */
+export const describePlugin = (
+  plugin: Plugin,
+  { slug, manifest, enabled }: { slug: string; manifest: PluginManifest; enabled?: PluginEnabled },
+): SitePlugin =>
+  registerPlugin({ slug, order: plugin.order, manifest, plugin: ({ config }) => plugin(config) })({
+    enabled,
+  })
+
+/** Reads a plugin's `enabled` option: on when it's unset. */
+export const isPluginOn = async (
+  enabled: PluginEnabled | undefined,
+  payload: Payload,
+): Promise<boolean> =>
+  enabled === undefined || (typeof enabled === "function" ? await enabled(payload) : enabled)

@@ -283,11 +283,16 @@ find them cached. A warm-up failure only logs a warning. A deploy leaves the Wor
 A feature that could be published one day lives in `src/plugins/<name>/`, shaped like
 Payload's own plugins so it can be lifted out without a rewrite:
 
-- `index.ts` exports `<name>Plugin(options): Plugin`, and nothing else the app needs.
-- The plugin is built with `registerPlugin(slug, manifest, ...)` (`@/utilities/registerPlugin`,
-  on Payload's `definePlugin`), so it carries Payload's `slug` and describes itself (name,
-  source, description, its `enabled` reading) for the admin's **System → Plugins** page. A
-  package that doesn't describe itself is wrapped where `src/plugins/index.ts` installs it.
+- `index.ts` exports `<name>Plugin`, and nothing else the app needs. It's made with
+  `registerPlugin({ slug, order, manifest, plugin })` (`@/utilities/registerPlugin`): Payload's
+  `definePlugin` descriptor plus a `manifest` (name, source, description, `switch`), so
+  `<name>Plugin(options)` carries Payload's `slug` and `options`, and its `plugin` gets the
+  options and the other plugins (`plugins`). When Payload covers what the manifest does, drop
+  that key. The manifest is fixed facts about the plugin; what a site decides goes in options.
+  It lists the plugin on the admin's **System → Plugins** page. A package that doesn't describe
+  itself is wrapped with `describePlugin` where `src/plugins/index.ts` installs it.
+- Every plugin takes `enabled` (checked at runtime; `isPluginOn` reads it) and `disabled`
+  (`SitePluginOptions`). Switching a plugin off stops its behavior; its schema stays.
 - A plugin that checks `enabled` on each request offers a `switch` in its manifest:
   `pluginSwitches` (`src/globals/Plugins/`) gives it a checkbox on System → Plugins named for
   its slug (a camelCase one), `src/plugins/index.ts` passes `pluginSwitch("<slug>")` as its
@@ -295,8 +300,9 @@ Payload's own plugins so it can be lifted out without a rewrite:
   starts off (`defaultValue: false`), which shows a **Beta** badge; when it graduates, flip the
   default rather than deleting the switch. This replaces an experiment in Settings for a
   feature that's a plugin; anything else stays an experiment.
-- `types.ts` holds `<Name>PluginConfig`. Options have defaults, and `disabled: true` leaves
-  the schema in place (so migrations don't change) but turns the behavior off.
+- `types.ts` holds `<Name>PluginConfig`, extending `SitePluginOptions`. Options have defaults,
+  and `disabled: true` leaves the schema in place (so migrations don't change) but turns the
+  behavior off.
 - `collections/`, `hooks/`, `endpoints/` and `components/` as the plugin needs them. Admin
   components are referenced by path through `exports/client.ts` and `exports/rsc.ts`, so
   the import map paths survive a move into a package.

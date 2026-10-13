@@ -1,7 +1,7 @@
 import type { Payload } from "payload"
 
 import type { User } from "@/payload-types"
-import { type PluginManifest, registeredPlugins } from "@/utilities/registerPlugin"
+import { isPluginOn, type RegisteredPlugin, registeredPlugins } from "@/utilities/registerPlugin"
 
 /** A link to an admin page, or `href: null` when that page is hidden from this user. */
 export interface PluginPage {
@@ -40,14 +40,11 @@ function isHidden(hidden: Hidden, user: User | null | undefined): boolean {
 }
 
 async function status(
-  enabled: PluginManifest["enabled"],
+  enabled: RegisteredPlugin["enabled"],
   payload: Pick<Payload, "config">,
 ): Promise<PluginRow["status"]> {
-  if (enabled === undefined) return "on"
   try {
-    return (typeof enabled === "function" ? await enabled(payload as Payload) : enabled)
-      ? "on"
-      : "off"
+    return (await isPluginOn(enabled, payload as Payload)) ? "on" : "off"
   } catch {
     return "unknown"
   }

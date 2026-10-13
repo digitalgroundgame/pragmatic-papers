@@ -29,7 +29,7 @@ import { searchVectorAfterSchemaInit } from "@/plugins/searchVector"
 import { ssoAfterSchemaInit } from "@/plugins/sso"
 import { sentryPayloadPlugin, skipPluginErrorsInPino } from "@/sentryPayload"
 import { getSiteURL } from "@/utilities/getURL"
-import { registerPlugin } from "@/utilities/registerPlugin"
+import { describePlugin } from "@/utilities/registerPlugin"
 import { migrations } from "@/migrations"
 import { type PostgresAdapter, postgresAdapter } from "@payloadcms/db-postgres"
 import path from "path"
@@ -185,16 +185,15 @@ export default buildConfig({
   graphQL: { disable: true },
   plugins: [
     ...plugins,
-    registerPlugin(
-      "plugin-sentry",
-      {
+    describePlugin(sentryPayloadPlugin, {
+      slug: "plugin-sentry",
+      manifest: {
         name: "Sentry",
         source: "@payloadcms/plugin-sentry",
         description:
           "Reports the errors Payload answers with a 5xx to Sentry, with the signed-in user.",
       },
-      sentryPayloadPlugin,
-    ),
+    }),
     pluginSwitches(),
   ],
   secret: process.env.PAYLOAD_SECRET,

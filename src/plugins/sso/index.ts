@@ -1,6 +1,6 @@
-import type { CollectionConfig, Payload, Plugin } from "payload"
+import type { CollectionConfig } from "payload"
 
-import { registerPlugin } from "@/utilities/registerPlugin"
+import { isPluginOn, registerPlugin } from "@/utilities/registerPlugin"
 
 import { DEFAULT_COOKIE_NAME } from "./constants"
 import { authEndpoints } from "./endpoints/auth"
@@ -21,31 +21,30 @@ export type { SsoPluginConfig, SsoProviderCredentials, SsoProviderId } from "./t
  * email and password login, which stays as the way in when a provider is down. A provider
  * login never creates a user; it attaches to the one whose address it has verified.
  */
-export function ssoPlugin(options: SsoPluginConfig): Plugin {
-  const sso: ResolvedSsoConfig = {
-    enabled: () => true,
-    usersSlug: "users",
-    cookieName: DEFAULT_COOKIE_NAME,
-    sessionSeconds: 60 * 60 * 24 * 7,
-    requiredUserColumns: [],
-    ...options,
-  }
-
-  const manifest = {
+export const ssoPlugin = registerPlugin<SsoPluginConfig>({
+  slug: "sso",
+  manifest: {
     name: "SSO",
     source: "src/plugins/sso",
     description:
       "Staff sign-in to the admin with Google or Discord, through Better Auth. Email and password login stays on.",
-    enabled: options.disabled ? false : (payload: Payload) => sso.enabled({ payload }),
     switch: {
       label: "Single sign-on",
       description:
         "“Sign in with Google” and “Sign in with Discord” on the admin's login page, for people who already have an account here. Each provider also needs its credentials (System → Integrations).",
       defaultValue: false,
     },
-  }
+  },
+  plugin: ({ config, plugins: _plugins, ...options }) => {
+    const sso: ResolvedSsoConfig = {
+      usersSlug: "users",
+      cookieName: DEFAULT_COOKIE_NAME,
+      sessionSeconds: 60 * 60 * 24 * 7,
+      requiredUserColumns: [],
+      ...options,
+      enabled: ({ payload }) => isPluginOn(options.enabled, payload),
+    }
 
-  return registerPlugin("sso", manifest, (config) => {
     const collections = (config.collections ?? []).map((collection): CollectionConfig => {
       if (collection.slug !== sso.usersSlug) return collection
       const auth = typeof collection.auth === "object" ? collection.auth : {}
@@ -99,5 +98,5 @@ export function ssoPlugin(options: SsoPluginConfig): Plugin {
         },
       },
     }
-  })
-}
+  },
+})

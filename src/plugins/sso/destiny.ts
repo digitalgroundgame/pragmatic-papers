@@ -32,6 +32,29 @@ export async function destinyChallenge(verifier: string, clientSecret: string): 
   return btoa(await sha256Hex(verifier + (await sha256Hex(clientSecret))))
 }
 
+/** The first of `keys` that holds a non-empty string or number. */
+const pick = (body: Record<string, unknown>, keys: string[]) =>
+  keys
+    .map((key) => body[key])
+    .find((value) => typeof value === "number" || (typeof value === "string" && value !== ""))
+
+/**
+ * The profile from `/api/userinfo`, or null for an error. The field names come from an archived
+ * copy of Destiny.gg's source (`userId`, `username`, `nick`), so the usual OAuth spellings are
+ * read too in case the live API has moved on. An email address, if it ever sends one, is ignored:
+ * nothing says Destiny.gg verified it, and a sign-in only follows a linked account.
+ */
+export function readProfile(body: unknown): DestinyProfile | null {
+  if (typeof body !== "object" || body === null || "error" in body) return null
+  const fields = body as Record<string, unknown>
+  const userId = pick(fields, ["userId", "user_id", "id", "sub"]) as string | number | undefined
+  const nick = pick(fields, ["nick", "nickname"]) as string | undefined
+  const username =
+    (pick(fields, ["username", "preferred_username", "name"]) as string | undefined) ?? nick
+  if (userId === undefined || !username) return null
+  return { userId, username, nick }
+}
+
 export interface DestinyProviderOptions extends SsoProviderCredentials {
   /**
    * The email address of the user a Destiny.gg account signs in as, or null for nobody.
@@ -105,14 +128,8 @@ export function destinyProvider(options: DestinyProviderOptions): OAuthProvider<
       url.searchParams.set("token", accessToken)
       const response = await fetch(url)
       if (!response.ok) return null
-      const profile = (await response.json()) as Partial<DestinyProfile> & { error?: string }
-      if (profile.error || !profile.userId || !profile.username) return null
-
-      const data: DestinyProfile = {
-        userId: profile.userId,
-        username: profile.username,
-        nick: profile.nick,
-      }
+      const data = readProfile(await response.json())
+      if (!data) return null
       return {
         user: {
           name: data.username,

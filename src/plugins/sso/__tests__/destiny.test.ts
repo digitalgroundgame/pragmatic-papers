@@ -7,6 +7,7 @@ import {
   destinyChallenge,
   destinyPlugin,
   destinyProvider,
+  readProfile,
   type DestinyProfile,
 } from "../destiny"
 
@@ -179,5 +180,45 @@ describe("destinyPlugin", () => {
       context: { socialProviders: { id: string }[] }
     }
     expect(result.context.socialProviders.map(({ id }) => id)).toEqual(["destiny", "google"])
+  })
+})
+
+describe("readProfile", () => {
+  it("reads the archived source's fields", () => {
+    expect(
+      readProfile({ userId: 42, username: "Someone", nick: "Someone2", roles: ["USER"] }),
+    ).toEqual({
+      userId: 42,
+      username: "Someone",
+      nick: "Someone2",
+    })
+  })
+
+  it("reads the usual OAuth spellings too, in case the live API differs", () => {
+    expect(readProfile({ sub: "42", preferred_username: "Someone" })).toEqual({
+      userId: "42",
+      username: "Someone",
+      nick: undefined,
+    })
+    expect(readProfile({ id: 42, nick: "Someone" })).toEqual({
+      userId: 42,
+      username: "Someone",
+      nick: "Someone",
+    })
+  })
+
+  it("ignores any email address it's sent", () => {
+    expect(
+      readProfile({ userId: 42, username: "Someone", email: "a@example.com" }),
+    ).not.toHaveProperty("email")
+  })
+
+  it("returns nothing for an error, or without an id or a name", () => {
+    expect(readProfile({ error: "token_expired" })).toBeNull()
+    expect(readProfile({ username: "Someone" })).toBeNull()
+    expect(readProfile({ userId: 42 })).toBeNull()
+    expect(readProfile({ userId: "", username: "Someone" })).toBeNull()
+    expect(readProfile(null)).toBeNull()
+    expect(readProfile("nope")).toBeNull()
   })
 })

@@ -361,8 +361,8 @@ Reach for these before writing your own:
 
 ### Single sign-on
 
-`src/plugins/sso/` lets someone who already has an account sign in to the admin with Google
-or Discord, behind the `sso` experiment. Better Auth runs the OAuth exchange and keeps its
+`src/plugins/sso/` lets someone who already has an account sign in to the admin with Google,
+Discord or Destiny.gg, behind the `sso` experiment. Better Auth runs the OAuth exchange and keeps its
 sessions, linked accounts and OAuth state in three plain tables (`auth_sessions`,
 `auth_accounts`, `auth_verifications`; `ssoAfterSchemaInit` declares them, so they aren't
 collections and don't show in the admin). Payload keeps the users, their roles and its own
@@ -370,6 +370,13 @@ email and password login, which stays as the way in when a provider is down.
 
 - A provider login **never creates a user**. It attaches to the user whose address the
   provider has verified, and anyone else is sent back to the login page.
+- Signed in, a user can link more accounts from **Linked accounts** on their account page
+  (`/admin/account`), whatever their address: `/api/auth-links` (`endpoints/links.ts`) acts on
+  Payload's `req.user`, so a password login can link too, and starts the OAuth through a
+  server-only Better Auth endpoint (`linking.ts`). Disconnecting ends the user's other SSO
+  sessions. Destiny.gg shares no address, so linking is the only way its sign-in finds a user
+  (`destiny.ts`, a Better Auth plugin rather than a built-in provider: its PKCE challenge
+  isn't RFC 7636's).
 - Better Auth's endpoints are Payload endpoints under `/api/auth/*`. The ones that would
   write to the users table (`DISABLED_PATHS`) answer 404: create, edit and delete users
   through Payload only.
@@ -377,7 +384,7 @@ email and password login, which stays as the way in when a provider is down.
   `req.user`. The cache rules that keep signed-in editors off the edge look for it:
   `next.config.ts` by name, and Cloudflare's rule because the name contains `payload-token`.
   Rename it in both places or not at all.
-- The provider credentials are the `googleSignIn` and `discordSignIn` connections
+- The provider credentials are the `googleSignIn`, `discordSignIn` and `destinySignIn` connections
   (`src/integrations`); a provider's button appears once both of its variables are set.
 - `tests/integration/sso.test.ts` runs a whole Discord sign-in against the database, with
   Discord stubbed.

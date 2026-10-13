@@ -55,6 +55,7 @@ import { SyncNowButton as SyncNowButton_5c40eb2c313f4a5f050c97644b650016 } from 
 import { ProductTitleCell as ProductTitleCell_8dff8d8bb04003b09cb89f916f5bb9bc } from '@/collections/Merch/components/ProductTitleCell'
 import { ProductThumbnailCell as ProductThumbnailCell_c79e04f7b9e53b2f3afaedb264d44732 } from '@/collections/Merch/components/ProductThumbnailCell'
 import { SyncNowButton as SyncNowButton_6b13e2821b4c35428e02347e7578e840 } from '@/collections/Merch/components/SyncNowButton'
+import { LinkedAccounts as LinkedAccounts_b486c29a74421942d033e2dcba49c5a8 } from '@/plugins/sso/exports/client'
 import { LinkToDoc as LinkToDoc_aead06e4cbf6b2620c5c51c9ab283634 } from '@payloadcms/plugin-search/client'
 import { ReindexButton as ReindexButton_aead06e4cbf6b2620c5c51c9ab283634 } from '@payloadcms/plugin-search/client'
 import { InlineCodeFeatureClient as InlineCodeFeatureClient_e70f5e05f09f93e00b997edb1ef0c864 } from '@payloadcms/richtext-lexical/client'
@@ -135,6 +136,7 @@ export const importMap = {
   "@/collections/Merch/components/ProductTitleCell#ProductTitleCell": ProductTitleCell_8dff8d8bb04003b09cb89f916f5bb9bc,
   "@/collections/Merch/components/ProductThumbnailCell#ProductThumbnailCell": ProductThumbnailCell_c79e04f7b9e53b2f3afaedb264d44732,
   "@/collections/Merch/components/SyncNowButton#SyncNowButton": SyncNowButton_6b13e2821b4c35428e02347e7578e840,
+  "@/plugins/sso/exports/client#LinkedAccounts": LinkedAccounts_b486c29a74421942d033e2dcba49c5a8,
   "@payloadcms/plugin-search/client#LinkToDoc": LinkToDoc_aead06e4cbf6b2620c5c51c9ab283634,
   "@payloadcms/plugin-search/client#ReindexButton": ReindexButton_aead06e4cbf6b2620c5c51c9ab283634,
   "@payloadcms/richtext-lexical/client#InlineCodeFeatureClient": InlineCodeFeatureClient_e70f5e05f09f93e00b997edb1ef0c864,

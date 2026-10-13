@@ -3,15 +3,38 @@ import type { betterAuth as BetterAuth } from "better-auth"
 import type { Payload } from "payload"
 
 import { AUTH_ENDPOINT_PATH, DISABLED_PATHS, TABLES } from "./constants"
+import { destinyPlugin, type DestinyProfile } from "./destiny"
+import { linkingPlugin } from "./linking"
 import type { ResolvedSsoConfig, SsoProviderId } from "./types"
+
+type Pool = PostgresAdapter["pool"]
+
+/**
+ * The address of the user a Destiny.gg account is linked to, which it signs in as.
+ * Destiny.gg shares no address, so an account signs in only once someone has linked it
+ * from their account page; until then this is null.
+ */
+export async function destinyEmail(
+  pool: Pool,
+  usersTable: string,
+  profile: DestinyProfile,
+): Promise<string | null> {
+  const linked = await pool.query<{ email: string }>(
+    `select u.email from "${TABLES.account}" a join "${usersTable}" u on u.id = a.user_id
+     where a.provider_id = 'destiny' and a.account_id = $1 limit 1`,
+    [String(profile.userId)],
+  )
+  return linked.rows[0]?.email ?? null
+}
 
 function createAuth(betterAuth: typeof BetterAuth, payload: Payload, config: ResolvedSsoConfig) {
   const { pool } = payload.db as unknown as PostgresAdapter
   const baseURL = config.baseURL()
   const secure = baseURL.startsWith("https://")
 
+  const { destiny, ...builtIn } = config.providers()
   const socialProviders = Object.fromEntries(
-    Object.entries(config.providers())
+    Object.entries(builtIn)
       .filter(([, credentials]) => credentials)
       .map(([id, credentials]) => [
         id,
@@ -31,6 +54,18 @@ function createAuth(betterAuth: typeof BetterAuth, payload: Payload, config: Res
     telemetry: { enabled: false },
     disabledPaths: DISABLED_PATHS,
     socialProviders,
+    plugins: [
+      linkingPlugin(),
+      // Destiny.gg isn't one of Better Auth's built-in providers.
+      ...(destiny
+        ? [
+            destinyPlugin({
+              ...destiny,
+              emailFor: (profile) => destinyEmail(pool, config.usersSlug, profile),
+            }),
+          ]
+        : []),
+    ],
     // Payload's users table, read for id, email and name. Better Auth's only write to it is
     // `email_verified`, when a provider vouches for the address.
     user: {
@@ -90,6 +125,12 @@ function createAuth(betterAuth: typeof BetterAuth, payload: Payload, config: Res
         // an admin creates users, so the local address is one an admin chose.
         enabled: true,
         requireLocalEmailVerified: false,
+        // Destiny.gg vouches for no address: the one it signs in with is that of the user
+        // its account is already linked to (`destinyEmail`), so it's trusted to link.
+        trustedProviders: ["destiny"],
+        // Linking from the account page (`linkingPlugin`): the signed-in user chose the
+        // account, so its address needn't match theirs (Destiny.gg's has none at all).
+        allowDifferentEmails: true,
       },
     },
     verification: {

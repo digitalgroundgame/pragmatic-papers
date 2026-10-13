@@ -2,7 +2,12 @@ import type { User } from "@/payload-types"
 import { revalidatePath } from "next/cache"
 import type { CollectionAfterChangeHook } from "payload"
 
+import { isStaff } from "@/access/roles"
 import { purgeEdgeCache } from "@/hooks/purgeEdgeCache"
+
+/** Whether anything public shows this user: staff, or anyone with a public author page. */
+export const isOnPublicPages = (user: User | null | undefined): boolean =>
+  Boolean(user && (isStaff(user) || user.publicProfile))
 
 export const revalidateUser: CollectionAfterChangeHook<User> = async ({
   doc,
@@ -10,6 +15,8 @@ export const revalidateUser: CollectionAfterChangeHook<User> = async ({
   req: { payload, context },
 }) => {
   if (context.disableRevalidate) return doc
+  // A member (a commenter) has no page and is credited on none, before or after.
+  if (!isOnPublicPages(doc) && !isOnPublicPages(previousDoc)) return doc
 
   // Every path revalidated here, for the Worker to purge too.
   const paths: string[] = []

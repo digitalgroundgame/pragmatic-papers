@@ -1,12 +1,12 @@
 import type { Experiment } from "@/globals/SiteSettings/isExperimentEnabled"
-import { editor } from "@/access/collections"
+import { admin, editor } from "@/access/collections"
+import { isStaff } from "@/access/roles"
 import { revalidateRedirects } from "@/hooks/revalidateRedirects"
 import { docsPlugin } from "@/plugins/docs"
 import { docsNotifications } from "@/plugins/docs/notifications"
 import { notificationsPlugin } from "@/plugins/notifications"
 import { toursPlugin } from "@/plugins/tours"
-import { destinySignIn, discordSignIn, googleSignIn } from "@/integrations"
-import type { Article, Interactive, Page, Topic, Volume } from "@/payload-types"
+import type { Article, Interactive, Page, Topic, User, Volume } from "@/payload-types"
 import { getSiteURL } from "@/utilities/getURL"
 import { DEFAULT_DESCRIPTION } from "@/utilities/mergeOpenGraph"
 import { docPath } from "@/utilities/routes"
@@ -30,7 +30,9 @@ import { s3Storage } from "@payloadcms/storage-s3"
 import { type Payload, type Plugin } from "payload"
 
 import { commentsPlugin } from "./comments"
-import { ssoPlugin } from "./sso"
+import { signUpProviders, ssoOptions } from "./signIn"
+import { getSignedInUser, ssoPlugin } from "./sso"
+import { staffByDefault } from "./staffByDefault"
 
 // Reads the switch in Site Settings when called. Imported then, not here: the
 // Settings global reaches the Payload config, which imports this file.
@@ -293,6 +295,8 @@ export const plugins: Plugin[] = [
       },
     },
     formSubmissionOverrides: {
+      // The plugin lets any logged-in user read every submission.
+      access: { read: editor },
       admin: {
         hidden: true, // TODO: Setup form builder plugin
       },
@@ -332,35 +336,26 @@ export const plugins: Plugin[] = [
     enabled: experiment("notifications"),
   }),
   toursPlugin({ enabled: experiment("tours") }),
-  ssoPlugin({
-    // The `sso` experiment, read from the database on each request rather than through
-    // `isExperimentEnabled`'s cache, so turning it off ends SSO sessions at once.
-    enabled: async ({ payload }) =>
-      (await payload.findGlobal({ slug: "site-settings", depth: 0 })).experiments?.sso === true,
-    providers: () => ({
-      google: googleSignIn.credentials(),
-      discord: discordSignIn.credentials(),
-      destiny: destinySignIn.credentials(),
-    }),
-    baseURL: getSiteURL,
-    secret: () => process.env.PAYLOAD_SECRET || "",
-    // The Users collection's slug field (`src/fields/slug`), set by Payload on create.
-    requiredUserColumns: ["slug"],
-    // Staff stay signed in for a month after a provider sign-in.
-    sessionSeconds: 60 * 60 * 24 * 30,
-  }),
+  ssoPlugin(ssoOptions),
   commentsPlugin({
     // Read from the database on each request, like `sso`'s, so switching the experiment off
-    // stops sign-ins and posts at once.
+    // stops posts at once.
     enabled: async ({ payload }) =>
       (await payload.findGlobal({ slug: "site-settings", depth: 0 })).experiments?.comments ===
       true,
-    providers: () => ({
-      google: googleSignIn.credentials(),
-      discord: discordSignIn.credentials(),
+    // Members and staff alike: a member is signed in to the site but not to Payload.
+    currentUser: (req) => getSignedInUser(req, ssoOptions),
+    authorFields: ["name", "avatarUrl", "roles"],
+    describeAuthor: (author) => ({
+      name: typeof author.name === "string" && author.name ? author.name : "Anonymous",
+      image: typeof author.avatarUrl === "string" ? author.avatarUrl : null,
+      badge: isStaff(author as unknown as User) ? "Staff" : null,
     }),
+    signInProviders: signUpProviders,
     baseURL: getSiteURL,
-    secret: () => process.env.PAYLOAD_SECRET || "",
     moderators: editor,
+    admins: admin,
   }),
+  // Last, so it sees every other plugin's collections.
+  staffByDefault,
 ]

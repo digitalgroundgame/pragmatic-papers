@@ -1,15 +1,28 @@
 import type { CollectionConfig, Field, Plugin } from "payload"
 
-import { DEFAULT_COOKIE_NAME } from "./constants"
+import { accountEndpoints } from "./endpoints/account"
 import { authEndpoints } from "./endpoints/auth"
 import { linkEndpoints } from "./endpoints/links"
 import { endSsoSession } from "./hooks/endSsoSession"
+import { onlyPayloadUsers } from "./hooks/onlyPayloadUsers"
+import { resolveSsoConfig } from "./session"
 import { ssoStrategy } from "./strategy"
-import type { ResolvedSsoConfig, SsoPluginConfig } from "./types"
+import type { SsoPluginConfig } from "./types"
 
-export { DEFAULT_COOKIE_NAME as SSO_COOKIE_NAME } from "./constants"
+export {
+  DEFAULT_COOKIE_NAME as SSO_COOKIE_NAME,
+  DEFAULT_PAYLOAD_USER_COOKIE as SSO_PAYLOAD_USER_COOKIE,
+  PROVIDER_LABELS as SSO_PROVIDER_LABELS,
+} from "./constants"
 export { ssoAfterSchemaInit } from "./schema"
-export type { SsoPluginConfig, SsoProviderCredentials, SsoProviderId } from "./types"
+export { getSignedInUser, type SignedInUser } from "./session"
+export { MAX_NAME_LENGTH, type AccountSummary } from "./endpoints/account"
+export type {
+  SsoPluginConfig,
+  SsoProviderCredentials,
+  SsoProviderId,
+  SsoSignUpConfig,
+} from "./types"
 
 /** Columns Better Auth reads on the users table. */
 const betterAuthFields: Field[] = [
@@ -40,19 +53,16 @@ const betterAuthFields: Field[] = [
  * three tables (`ssoAfterSchemaInit`, which goes in the database adapter's
  * `afterSchemaInit`). Payload keeps everything else: its users, their roles, and its own
  * email and password login, which stays as the way in when a provider is down. A provider
- * login never creates a user; it attaches to the one whose address it has verified, or to
- * the one who linked it from their account page (the only way for Destiny.gg, which shares
- * no address).
+ * login attaches to the user whose address it has verified, or to the one who linked it from
+ * their account page (the only way for Destiny.gg, which shares no address). It creates a
+ * user only when `signUp` is configured and the sign-in asks for one.
+ *
+ * Only users `isPayloadUser` accepts become Payload's `req.user`. Everyone else signed in
+ * (members) is anonymous to Payload, and the site's own features find them with
+ * `getSignedInUser`.
  */
 export function ssoPlugin(options: SsoPluginConfig): Plugin {
-  const sso: ResolvedSsoConfig = {
-    enabled: () => true,
-    usersSlug: "users",
-    cookieName: DEFAULT_COOKIE_NAME,
-    sessionSeconds: 60 * 60 * 24 * 7,
-    requiredUserColumns: [],
-    ...options,
-  }
+  const sso = resolveSsoConfig(options)
 
   return (config) => {
     const collections = (config.collections ?? []).map((collection): CollectionConfig => {
@@ -75,6 +85,7 @@ export function ssoPlugin(options: SsoPluginConfig): Plugin {
           auth: { ...auth, strategies: [...(auth.strategies ?? []), ssoStrategy(sso)] },
           hooks: {
             ...collection.hooks,
+            beforeLogin: [...(collection.hooks?.beforeLogin ?? []), onlyPayloadUsers(sso)],
             afterLogout: [...(collection.hooks?.afterLogout ?? []), endSsoSession(sso)],
           },
         }),
@@ -86,7 +97,12 @@ export function ssoPlugin(options: SsoPluginConfig): Plugin {
     return {
       ...config,
       collections,
-      endpoints: [...(config.endpoints ?? []), ...authEndpoints(sso), ...linkEndpoints(sso)],
+      endpoints: [
+        ...(config.endpoints ?? []),
+        ...authEndpoints(sso),
+        ...linkEndpoints(sso),
+        ...accountEndpoints(sso),
+      ],
       admin: {
         ...config.admin,
         components: {

@@ -184,8 +184,8 @@ export interface Config {
     forms: Form;
     'form-submissions': FormSubmission;
     docs: Doc;
-    readers: Reader;
     comments: Comment;
+    'comment-violations': CommentViolation;
     'payload-kv': PayloadKv;
     'payload-jobs': PayloadJob;
     'payload-locked-documents': PayloadLockedDocument;
@@ -211,8 +211,8 @@ export interface Config {
     forms: FormsSelect<false> | FormsSelect<true>;
     'form-submissions': FormSubmissionsSelect<false> | FormSubmissionsSelect<true>;
     docs: DocsSelect<false> | DocsSelect<true>;
-    readers: ReadersSelect<false> | ReadersSelect<true>;
     comments: CommentsSelect<false> | CommentsSelect<true>;
+    'comment-violations': CommentViolationsSelect<false> | CommentViolationsSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
     'payload-jobs': PayloadJobsSelect<false> | PayloadJobsSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
@@ -230,6 +230,7 @@ export interface Config {
     integrations: IntegrationSettings;
     newsletter: Newsletter;
     'article-recommendations': ArticleRecommendation;
+    'comment-settings': CommentSetting;
     'payload-jobs-stats': PayloadJobsStat;
   };
   globalsSelect: {
@@ -239,6 +240,7 @@ export interface Config {
     integrations: IntegrationsSelect<false> | IntegrationsSelect<true>;
     newsletter: NewsletterSelect<false> | NewsletterSelect<true>;
     'article-recommendations': ArticleRecommendationsSelect<false> | ArticleRecommendationsSelect<true>;
+    'comment-settings': CommentSettingsSelect<false> | CommentSettingsSelect<true>;
     'payload-jobs-stats': PayloadJobsStatsSelect<false> | PayloadJobsStatsSelect<true>;
   };
   locale: null;
@@ -1502,36 +1504,36 @@ export interface Doc {
   _status?: ('draft' | 'published') | null;
 }
 /**
- * People who signed in to comment. They're created by signing in, never here.
- *
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "readers".
- */
-export interface Reader {
-  id: number;
-  name: string;
-  email: string;
-  /**
-   * Stops them posting. Their comments stay until you hide or delete them.
-   */
-  banned?: boolean | null;
-  emailVerified?: boolean | null;
-  avatarUrl?: string | null;
-  updatedAt: string;
-  createdAt: string;
-}
-/**
- * Readers' comments. Hide one to take it off the page, or delete it.
+ * Hide a comment to take it off the page and count it against its author; replies to it stay. Publish a held or hidden one to restore it and reverse its violation. Deleting a comment deletes its replies too.
  *
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "comments".
  */
 export interface Comment {
   id: number;
-  body: string;
+  body?: string | null;
   target: number | Article;
-  reader: number | Reader;
-  status: 'published' | 'hidden';
+  author?: (number | null) | User;
+  parent?: (number | null) | Comment;
+  depth: number;
+  status: 'published' | 'auto-hidden' | 'hidden' | 'deleted';
+  moderationReason?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * Too many recent violations stop an account commenting (Comment settings says how many). Tick Reversed to lift one. Add a Block to stop someone at once, until it's reversed.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "comment-violations".
+ */
+export interface CommentViolation {
+  id: number;
+  author: number | User;
+  source: 'check' | 'moderator' | 'block';
+  reason: string;
+  comment?: (number | null) | Comment;
+  reversed?: boolean | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -1731,12 +1733,12 @@ export interface PayloadLockedDocument {
         value: number | Doc;
       } | null)
     | ({
-        relationTo: 'readers';
-        value: number | Reader;
-      } | null)
-    | ({
         relationTo: 'comments';
         value: number | Comment;
+      } | null)
+    | ({
+        relationTo: 'comment-violations';
+        value: number | CommentViolation;
       } | null);
   globalSlug?: string | null;
   user: {
@@ -2564,26 +2566,29 @@ export interface DocsSelect<T extends boolean = true> {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "readers_select".
- */
-export interface ReadersSelect<T extends boolean = true> {
-  name?: T;
-  email?: T;
-  banned?: T;
-  emailVerified?: T;
-  avatarUrl?: T;
-  updatedAt?: T;
-  createdAt?: T;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "comments_select".
  */
 export interface CommentsSelect<T extends boolean = true> {
   body?: T;
   target?: T;
-  reader?: T;
+  author?: T;
+  parent?: T;
+  depth?: T;
   status?: T;
+  moderationReason?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "comment-violations_select".
+ */
+export interface CommentViolationsSelect<T extends boolean = true> {
+  author?: T;
+  source?: T;
+  reason?: T;
+  comment?: T;
+  reversed?: T;
   updatedAt?: T;
   createdAt?: T;
 }
@@ -2838,6 +2843,32 @@ export interface ArticleRecommendation {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "comment-settings".
+ */
+export interface CommentSetting {
+  id: number;
+  /**
+   * How many levels of replies can sit below a top-level comment. 0 allows no replies. Lowering it never removes replies already posted; it only stops new ones past the limit.
+   */
+  maxDepth: number;
+  /**
+   * An account with this many active violations can't comment until enough of them expire or are reversed.
+   */
+  violationThreshold: number;
+  violationWindowDays: number;
+  /**
+   * A comment with more links than this is held for a moderator.
+   */
+  maxLinks: number;
+  /**
+   * Hold a comment its author already posted, word for word, in the past day.
+   */
+  blockDuplicates?: boolean | null;
+  updatedAt?: string | null;
+  createdAt?: string | null;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload-jobs-stats".
  */
 export interface PayloadJobsStat {
@@ -2976,6 +3007,20 @@ export interface ArticleRecommendationsSelect<T extends boolean = true> {
         engagementScore?: T;
         id?: T;
       };
+  updatedAt?: T;
+  createdAt?: T;
+  globalType?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "comment-settings_select".
+ */
+export interface CommentSettingsSelect<T extends boolean = true> {
+  maxDepth?: T;
+  violationThreshold?: T;
+  violationWindowDays?: T;
+  maxLinks?: T;
+  blockDuplicates?: T;
   updatedAt?: T;
   createdAt?: T;
   globalType?: T;

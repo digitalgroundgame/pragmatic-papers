@@ -2,53 +2,45 @@ import type { Meta, StoryObj } from "@storybook/nextjs-vite"
 import { expect, spyOn, userEvent, waitFor, within } from "storybook/test"
 
 import type { CommentThread, PublicComment } from "@/plugins/comments"
+import { commentThread, commentViewer } from "@/stories/fixtures/comments"
 
 import { Comments } from "."
 
-const hoursAgo = (hours: number) => new Date(Date.now() - hours * 3_600_000).toISOString()
-
-const comments: PublicComment[] = [
-  {
-    id: 1,
-    body: "The section on zoning reform is the clearest explanation I've read.",
-    createdAt: hoursAgo(30),
-    author: { name: "Ada Reader", image: null },
-  },
-  {
-    id: 2,
-    body: "Agreed. Though the second chart could use a source.\n\nOtherwise great.",
-    createdAt: hoursAgo(2),
-    author: { name: "Grace Hopper", image: null },
-  },
-]
-
-const thread = (overrides: Partial<CommentThread> = {}): CommentThread => ({
-  comments,
-  viewer: null,
-  providers: ["google", "discord"],
-  maxLength: 2000,
-  ...overrides,
-})
-
-/** Answers the thread endpoint with `body`, and a post with the comment it was sent. */
-function serve(body: CommentThread, status = 200) {
+/**
+ * Answers the thread endpoint with `body`, and a post with the comment it was sent (held,
+ * with `held` as the reason, when that's given).
+ */
+function serve(
+  body: CommentThread,
+  { status = 200, held }: { status?: number; held?: string } = {},
+) {
   return () => {
     const fetchSpy = spyOn(window, "fetch").mockImplementation(async (_input, init) => {
       if (init?.method === "POST") {
-        const { body: text } = JSON.parse(String(init.body)) as { body: string }
+        const { body: text, parentId } = JSON.parse(String(init.body)) as {
+          body: string
+          parentId?: number
+        }
+        const parent = body.comments.find((c) => c.id === parentId)
         const comment: PublicComment = {
           id: 99,
+          parentId: parentId ?? null,
+          depth: parent ? parent.depth + 1 : 0,
           body: text,
           createdAt: new Date().toISOString(),
-          author: { name: body.viewer?.name ?? "", image: null },
+          author: body.viewer,
+          ...(held && { held: true as const }),
         }
-        return Response.json({ comment }, { status: 201 })
+        return Response.json({ comment, held }, { status: 201 })
       }
       return Response.json(body, { status })
     })
     return () => fetchSpy.mockRestore()
   }
 }
+
+const signedIn = (overrides: Partial<CommentThread> = {}) =>
+  commentThread({ viewer: commentViewer, providers: [], ...overrides })
 
 const meta = {
   title: "Components/Comments",
@@ -67,18 +59,19 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const SignedOut: Story = {
-  beforeEach: serve(thread()),
+  beforeEach: serve(commentThread()),
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    await expect(await canvas.findByText("Ada Reader")).toBeInTheDocument()
-    await expect(canvas.getByRole("heading", { name: "Comments (2)" })).toBeInTheDocument()
+    await expect(await canvas.findByText(/zoning reform/)).toBeInTheDocument()
+    await expect(canvas.getByRole("heading", { name: "Comments (3)" })).toBeInTheDocument()
+    await expect(canvas.getByText("This comment was removed.")).toBeInTheDocument()
     await expect(canvas.getByRole("button", { name: "Sign in with Google" })).toBeEnabled()
-    await expect(canvas.getByRole("button", { name: "Sign in with Discord" })).toBeEnabled()
+    await expect(canvas.queryByRole("button", { name: "Reply" })).not.toBeInTheDocument()
   },
 }
 
 export const SignedIn: Story = {
-  beforeEach: serve(thread({ viewer: { name: "Ada Reader", image: null, banned: false } })),
+  beforeEach: serve(signedIn()),
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     const box = await canvas.findByRole("textbox", { name: /Commenting as Ada Reader/ })
@@ -86,29 +79,80 @@ export const SignedIn: Story = {
     await userEvent.click(canvas.getByRole("button", { name: "Post comment" }))
     await expect(await canvas.findByText("Thanks for writing this.")).toBeInTheDocument()
     await waitFor(() => expect(box).toHaveValue(""))
+    await expect(canvas.getByRole("link", { name: "Your account" })).toHaveAttribute(
+      "href",
+      "/account",
+    )
+  },
+}
+
+export const Replying: Story = {
+  beforeEach: serve(signedIn()),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    const [first] = await canvas.findAllByRole("button", { name: "Reply" })
+    await userEvent.click(first!)
+    const box = canvas.getByRole("textbox", { name: "Reply to Ada Reader" })
+    await userEvent.type(box, "Which footnote?")
+    await userEvent.click(canvas.getByRole("button", { name: "Post reply" }))
+    await waitFor(() => expect(box).not.toBeInTheDocument())
+    await expect(canvas.getByText("Which footnote?")).toBeInTheDocument()
+  },
+}
+
+export const DepthLimit: Story = {
+  beforeEach: serve(signedIn({ maxDepth: 1 })),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(await canvas.findAllByText("Replies are limited to 1 levels here.")).toHaveLength(
+      2,
+    )
+  },
+}
+
+export const Held: Story = {
+  beforeEach: serve(signedIn(), { held: "More than 2 links" }),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    const box = await canvas.findByRole("textbox", { name: /Commenting as/ })
+    await userEvent.type(box, "Links: a.test b.test c.test")
+    await userEvent.click(canvas.getByRole("button", { name: "Post comment" }))
+    await expect(await canvas.findByText(/waiting for a moderator \(more than/)).toBeInTheDocument()
+    await expect(canvas.getByText(/Only you can see this/)).toBeInTheDocument()
+  },
+}
+
+export const Locked: Story = {
+  beforeEach: serve(
+    signedIn({ viewer: { ...commentViewer, locked: { until: "2026-11-01T00:00:00.000Z" } } }),
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(await canvas.findByText(/can't comment until/)).toBeInTheDocument()
+    await expect(canvas.queryByRole("textbox")).not.toBeInTheDocument()
+  },
+}
+
+export const Blocked: Story = {
+  beforeEach: serve(signedIn({ viewer: { ...commentViewer, locked: { until: null } } })),
+  play: async ({ canvasElement }) => {
+    await expect(
+      await within(canvasElement).findByText(
+        "A moderator has stopped this account from commenting.",
+      ),
+    ).toBeInTheDocument()
   },
 }
 
 export const Empty: Story = {
-  beforeEach: serve(thread({ comments: [] })),
+  beforeEach: serve(commentThread({ comments: [] })),
   play: async ({ canvasElement }) => {
     await expect(await within(canvasElement).findByText("No comments yet.")).toBeInTheDocument()
   },
 }
 
-export const Banned: Story = {
-  beforeEach: serve(thread({ viewer: { name: "Spammer", image: null, banned: true } })),
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement)
-    await expect(
-      await canvas.findByText("A moderator has stopped this account from commenting."),
-    ).toBeInTheDocument()
-    await expect(canvas.queryByRole("textbox")).not.toBeInTheDocument()
-  },
-}
-
 export const Unavailable: Story = {
-  beforeEach: serve(thread(), 500),
+  beforeEach: serve(commentThread(), { status: 500 }),
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     await expect(await canvas.findByText(/Comments couldn.t load/)).toBeInTheDocument()

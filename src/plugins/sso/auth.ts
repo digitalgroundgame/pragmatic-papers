@@ -5,6 +5,7 @@ import type { Payload } from "payload"
 import { AUTH_ENDPOINT_PATH, DISABLED_PATHS, TABLES } from "./constants"
 import { destinyPlugin, type DestinyProfile } from "./destiny"
 import { linkingPlugin } from "./linking"
+import { payloadUserCookiePlugin } from "./payloadUserCookie"
 import type { ResolvedSsoConfig, SsoProviderId } from "./types"
 
 type Pool = PostgresAdapter["pool"]
@@ -32,15 +33,19 @@ function createAuth(betterAuth: typeof BetterAuth, payload: Payload, config: Res
   const baseURL = config.baseURL()
   const secure = baseURL.startsWith("https://")
 
+  const { signUp } = config
   const { destiny, ...builtIn } = config.providers()
   const socialProviders = Object.fromEntries(
     Object.entries(builtIn)
       .filter(([, credentials]) => credentials)
       .map(([id, credentials]) => [
         id,
-        // Nobody becomes a user by signing in: an account is made in the admin first, and a
-        // provider login only ever attaches to one that exists.
-        { ...credentials, disableSignUp: true },
+        // Signing in never creates a user by accident. With sign-up off, a provider login
+        // only ever attaches to a user who exists. With it on, only a sign-in that asks for
+        // it (`requestSignUp: true`) may create one, and the admin's login page never asks.
+        signUp
+          ? { ...credentials, disableImplicitSignUp: true }
+          : { ...credentials, disableSignUp: true },
       ]),
   )
 
@@ -56,6 +61,7 @@ function createAuth(betterAuth: typeof BetterAuth, payload: Payload, config: Res
     socialProviders,
     plugins: [
       linkingPlugin(),
+      payloadUserCookiePlugin(payload, config, secure),
       // Destiny.gg isn't one of Better Auth's built-in providers.
       ...(destiny
         ? [
@@ -66,8 +72,9 @@ function createAuth(betterAuth: typeof BetterAuth, payload: Payload, config: Res
           ]
         : []),
     ],
-    // Payload's users table, read for id, email and name. Better Auth's only write to it is
-    // `email_verified`, when a provider vouches for the address.
+    // Payload's users table, read for id, email and name. Better Auth writes
+    // `email_verified` when a provider vouches for an address, and inserts a row only for a
+    // sign-up (`signUp`), which Payload then finishes (`signUp.afterCreate`).
     user: {
       modelName: config.usersSlug,
       fields: {
@@ -85,9 +92,21 @@ function createAuth(betterAuth: typeof BetterAuth, payload: Payload, config: Res
     },
     databaseHooks: {
       user: {
-        // Users are Payload's to create. Sign-up is already off for every provider; this
-        // refuses any other path to an insert too.
-        create: { before: async () => false },
+        create: {
+          // Checked again here, so no path to an insert gets past it: sign-up must be
+          // configured and open right now, and the provider must have verified the address.
+          // An unverified one could be someone else's, and their later sign-in with it would
+          // be linked to this account (`accountLinking`).
+          before: async (user) => {
+            if (!signUp || !user.emailVerified || !(await signUp.enabled({ payload }))) {
+              return false
+            }
+            return { data: { ...user, ...signUp.columns?.() } }
+          },
+          after: async (user) => {
+            await signUp?.afterCreate?.({ payload, userId: String(user.id) })
+          },
+        },
       },
     },
     session: {
@@ -121,8 +140,9 @@ function createAuth(betterAuth: typeof BetterAuth, payload: Payload, config: Res
       accountLinking: {
         // A first provider login attaches to the user with the same address, when the
         // provider says the address is verified. Better Auth also wants the local address
-        // verified, to stop someone registering a victim's address and waiting; here only
-        // an admin creates users, so the local address is one an admin chose.
+        // verified, to stop someone registering a victim's address and waiting. Here a user
+        // is created either by an admin, who chose the address, or by a sign-up, whose
+        // address a provider verified: nobody can register an address they don't hold.
         enabled: true,
         requireLocalEmailVerified: false,
         // Destiny.gg vouches for no address: the one it signs in with is that of the user

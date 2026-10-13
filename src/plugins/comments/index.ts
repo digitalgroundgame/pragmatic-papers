@@ -1,40 +1,50 @@
 import type { CollectionConfig, Plugin } from "payload"
 
-import { readersCollection } from "./collections/Readers"
 import { commentsCollection } from "./collections/Comments"
-import { DEFAULT_COOKIE_NAME } from "./constants"
-import { readerAuthEndpoints } from "./endpoints/auth"
-import { deleteCommentsOn } from "./hooks/deleteCommentsOn"
-import type { CommentsPluginConfig, ResolvedCommentsConfig } from "./types"
+import { violationsCollection } from "./collections/Violations"
+import { deleteAuthorsComments, deleteCommentsOnTarget } from "./hooks/deleteCommentsOn"
+import { settingsGlobal } from "./settings"
+import type { CommentAuthor, CommentsPluginConfig, ResolvedCommentsConfig } from "./types"
 
-export { DEFAULT_COOKIE_NAME as READER_COOKIE_NAME, PROVIDER_LABELS } from "./constants"
-export { commentsAfterSchemaInit } from "./schema"
+export { countLinks } from "./checks"
+export { lockFor } from "./lock"
 export type {
+  AuthorDisplay,
+  CommentAuthor,
+  CommentCheck,
+  CommentSettings,
   CommentThread,
   CommentViewer,
   CommentsPluginConfig,
   PublicComment,
-  ReaderProviderCredentials,
-  ReaderProviderId,
+  SignInProvider,
 } from "./types"
 
+const defaultDescribeAuthor = (author: CommentAuthor) => ({
+  name: typeof author.name === "string" && author.name ? author.name : "Anonymous",
+  image: null,
+  badge: null,
+})
+
 /**
- * Comments on articles, from readers who sign in with Google or Discord.
+ * Comments on a collection's documents, with replies, checks that hold suspect comments back,
+ * and violations that stop repeat offenders commenting for a while.
  *
- * Readers are their own collection, apart from staff `users`: Better Auth creates one on their
- * first provider login and keeps its sessions in its own tables (`commentsAfterSchemaInit`,
- * which goes in the database adapter's `afterSchemaInit`), and a reader has no way into the
- * admin. Pages don't render comments; they load them from `/api/comments/thread/:id`, so a
- * page stays one cached copy for everyone. Moderators hide or delete comments, and ban readers,
- * in the admin.
+ * The plugin doesn't sign anyone in: `currentUser` says who is asking, however the site knows
+ * them. Pages don't render comments; they load them from `/api/comments/thread/:id`, so a page
+ * stays one cached copy for everyone. Moderators hide, restore and delete comments and manage
+ * violations in the admin; admins set the reply depth and the checks in its settings global.
  */
 export function commentsPlugin(options: CommentsPluginConfig): Plugin {
   const comments: ResolvedCommentsConfig = {
     enabled: () => true,
     targetSlug: "articles",
+    authorsSlug: "users",
+    authorFields: ["name"],
+    describeAuthor: defaultDescribeAuthor,
+    checks: [],
+    signInProviders: () => [],
     adminGroup: "Content",
-    cookieName: DEFAULT_COOKIE_NAME,
-    sessionSeconds: 60 * 60 * 24 * 30,
     maxLength: 2000,
     cooldownSeconds: 20,
     ...options,
@@ -42,28 +52,28 @@ export function commentsPlugin(options: CommentsPluginConfig): Plugin {
 
   return (config) => {
     const collection = commentsCollection(comments)
+    const withHook = (target: CollectionConfig, hook: typeof deleteCommentsOnTarget) => ({
+      ...target,
+      hooks: { ...target.hooks, beforeDelete: [...(target.hooks?.beforeDelete ?? []), hook] },
+    })
     const collections = [
-      ...(config.collections ?? []).map((target): CollectionConfig => {
-        if (target.slug !== comments.targetSlug) return target
-        // Deleting an article deletes its comments.
-        return {
-          ...target,
-          hooks: {
-            ...target.hooks,
-            beforeDelete: [...(target.hooks?.beforeDelete ?? []), deleteCommentsOn("target")],
-          },
+      ...(config.collections ?? []).map((existing): CollectionConfig => {
+        if (existing.slug === comments.targetSlug) {
+          return withHook(existing, deleteCommentsOnTarget)
         }
+        if (existing.slug === comments.authorsSlug) {
+          return withHook(existing, deleteAuthorsComments)
+        }
+        return existing
       }),
-      readersCollection(comments),
       options.disabled ? { ...collection, endpoints: [] } : collection,
+      violationsCollection(comments),
     ]
-
-    if (options.disabled) return { ...config, collections }
 
     return {
       ...config,
       collections,
-      endpoints: [...(config.endpoints ?? []), ...readerAuthEndpoints(comments)],
+      globals: [...(config.globals ?? []), settingsGlobal(comments)],
     }
   }
 }

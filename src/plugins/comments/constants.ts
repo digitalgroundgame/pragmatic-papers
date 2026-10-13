@@ -1,40 +1,18 @@
-import type { ReaderProviderId } from "./types"
-
-export const DEFAULT_COOKIE_NAME = "pp-reader"
-
 export const COMMENTS_SLUG = "comments"
-export const READERS_SLUG = "readers"
+export const VIOLATIONS_SLUG = "comment-violations"
+export const SETTINGS_SLUG = "comment-settings"
 
-/** Where Better Auth's endpoints for readers are mounted, under Payload's API route. */
-export const READER_AUTH_PATH = "/reader-auth"
-
-/** Better Auth's own tables for readers, apart from the staff sign-in's `auth_*` ones. */
-export const TABLES = {
-  session: "reader_sessions",
-  account: "reader_accounts",
-  verification: "reader_verifications",
+/** What the settings global holds until an admin saves it. */
+export const DEFAULT_SETTINGS = {
+  maxDepth: 5,
+  violationThreshold: 3,
+  violationWindowDays: 30,
+  maxLinks: 2,
+  blockDuplicates: true,
 } as const
 
-export const PROVIDER_LABELS: Record<ReaderProviderId, string> = {
-  google: "Google",
-  discord: "Discord",
-}
+/** A comment's status. Only `published` is shown to everyone. */
+export const COMMENT_STATUSES = ["published", "auto-hidden", "hidden", "deleted"] as const
 
-/**
- * Better Auth endpoints for sign-in methods this site doesn't offer readers, or that would
- * change a reader's record (their name shows beside their comments, so a moderator who
- * looked at it once can trust it). Readers sign in with a provider, and that's all.
- */
-export const DISABLED_PATHS = [
-  "/sign-up/email",
-  "/sign-in/email",
-  "/update-user",
-  "/change-email",
-  "/change-password",
-  "/set-password",
-  "/reset-password",
-  "/request-password-reset",
-  "/delete-user",
-  "/send-verification-email",
-  "/verify-email",
-]
+/** Where a violation came from. */
+export const VIOLATION_SOURCES = ["check", "moderator", "block"] as const

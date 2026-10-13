@@ -1,39 +1,24 @@
 import type { CollectionSlug, Endpoint, PayloadHandler, PayloadRequest } from "payload"
 
-import { configuredProviders } from "../auth"
 import { normalizeCommentBody } from "../body"
-import { COMMENTS_SLUG } from "../constants"
-import { currentReader, type Reader } from "../reader"
-import type { CommentThread, PublicComment, ResolvedCommentsConfig } from "../types"
+import { duplicateCheck, linkCheck, runChecks } from "../checks"
+import { COMMENTS_SLUG, VIOLATIONS_SLUG } from "../constants"
+import { SKIP_MODERATION } from "../hooks/recordModeration"
+import { authorLock } from "../lock"
+import { readSettings } from "../settings"
+import { buildThread, type StoredComment } from "../thread"
+import type { CommentThread, CommentViewer, PublicComment, ResolvedCommentsConfig } from "../types"
 
-/** The most comments one thread returns, oldest first. */
+/** The most comments one thread reads, oldest first. */
 export const THREAD_LIMIT = 500
 
 const notFound = () => Response.json({ message: "Not Found" }, { status: 404 })
 const noStore = { "Cache-Control": "private, no-store" }
 
-interface StoredComment {
-  id: number | string
-  body: string
-  createdAt: string
-  reader?: Reader | number | string | null
-}
-
-/** What anyone may read about a comment: its words, when, and its author's public name. */
-export function toPublicComment(comment: StoredComment): PublicComment | null {
-  const { reader } = comment
-  // Its reader was deleted, or didn't populate.
-  if (!reader || typeof reader !== "object") return null
-  return {
-    id: comment.id,
-    body: comment.body,
-    createdAt: comment.createdAt,
-    author: { name: reader.name, image: reader.avatarUrl ?? null },
+function parseId(req: PayloadRequest, raw: unknown): number | string | null {
+  if (typeof raw === "number" && req.payload.db.defaultIDType === "number") {
+    return Number.isSafeInteger(raw) && raw > 0 ? raw : null
   }
-}
-
-function targetId(req: PayloadRequest): number | string | null {
-  const raw = req.routeParams?.id
   if (typeof raw !== "string" || !raw) return null
   if (req.payload.db.defaultIDType !== "number") return raw
   const id = Number(raw)
@@ -46,10 +31,15 @@ function isCrossSite(req: PayloadRequest, config: ResolvedCommentsConfig): boole
   return !origin || origin !== new URL(config.baseURL()).origin
 }
 
+const lockedMessage = (until: string | null) =>
+  until
+    ? "This account can't comment for now: too many of its comments were held or hidden."
+    : "A moderator has stopped this account from commenting."
+
 /**
- * `GET /api/comments/thread/:id`: a published document's published comments, the reader
- * asking (if they're signed in) and the providers they could sign in with.
- * `POST` posts a comment on it as the signed-in reader.
+ * `GET /api/comments/thread/:id`: a published document's comments as the viewer sees them,
+ * who the viewer is (if they're signed in) and the limits on posting.
+ * `POST` posts a comment, or a reply (`parentId`), as the signed-in author.
  *
  * Neither is cached: the article page stays one cached copy for everyone, and loads its
  * comments from here once a reader scrolls to them.
@@ -57,32 +47,51 @@ function isCrossSite(req: PayloadRequest, config: ResolvedCommentsConfig): boole
 export function threadEndpoints(config: ResolvedCommentsConfig): Endpoint[] {
   const get: PayloadHandler = async (req) => {
     if (!(await config.enabled({ payload: req.payload }))) return notFound()
-    const id = targetId(req)
+    const id = parseId(req, req.routeParams?.id)
     if (id === null) return notFound()
 
-    const [found, reader] = await Promise.all([
+    const [found, author, settings] = await Promise.all([
       req.payload.find({
         collection: COMMENTS_SLUG as CollectionSlug,
-        where: { target: { equals: id }, status: { equals: "published" } },
+        where: { target: { equals: id } },
         sort: "createdAt",
         limit: THREAD_LIMIT,
         depth: 1,
-        populate: { readers: { name: true, avatarUrl: true } },
-        select: { body: true, createdAt: true, reader: true },
+        populate: {
+          [config.authorsSlug]: Object.fromEntries(config.authorFields.map((f) => [f, true])),
+        },
+        select: {
+          body: true,
+          createdAt: true,
+          status: true,
+          depth: true,
+          parent: true,
+          author: true,
+        },
         overrideAccess: true,
         req,
       }),
-      currentReader(req, config),
+      config.currentUser(req),
+      readSettings(req.payload),
     ])
 
+    let viewer: CommentViewer | null = null
+    if (author) {
+      viewer = {
+        ...config.describeAuthor(author),
+        locked: await authorLock(req.payload, author.id, settings),
+      }
+    }
+
     const thread: CommentThread = {
-      comments: (found.docs as unknown as StoredComment[])
-        .map(toPublicComment)
-        .filter((c): c is PublicComment => c !== null),
-      viewer: reader
-        ? { name: reader.name, image: reader.avatarUrl ?? null, banned: reader.banned === true }
-        : null,
-      providers: configuredProviders(config),
+      comments: buildThread(
+        found.docs as unknown as StoredComment[],
+        author?.id ?? null,
+        config.describeAuthor,
+      ),
+      viewer,
+      providers: viewer ? [] : config.signInProviders(),
+      maxDepth: settings.maxDepth,
       maxLength: config.maxLength,
     }
     return Response.json(thread, { headers: noStore })
@@ -90,24 +99,29 @@ export function threadEndpoints(config: ResolvedCommentsConfig): Endpoint[] {
 
   const post: PayloadHandler = async (req) => {
     if (!(await config.enabled({ payload: req.payload }))) return notFound()
-    const id = targetId(req)
+    const id = parseId(req, req.routeParams?.id)
     if (id === null) return notFound()
     if (isCrossSite(req, config)) {
       return Response.json({ message: "Post comments from the site itself." }, { status: 403 })
     }
 
-    const reader = await currentReader(req, config)
-    if (!reader) {
+    const author = await config.currentUser(req)
+    if (!author) {
       return Response.json({ message: "Sign in to comment." }, { status: 401, headers: noStore })
     }
-    if (reader.banned) {
+    const settings = await readSettings(req.payload)
+    const lock = await authorLock(req.payload, author.id, settings)
+    if (lock) {
       return Response.json(
-        { message: "A moderator has stopped this account from commenting." },
+        { message: lockedMessage(lock.until), lockedUntil: lock.until },
         { status: 403, headers: noStore },
       )
     }
 
-    const json = (await req.json?.().catch(() => null)) as { body?: unknown } | null
+    const json = (await req.json?.().catch(() => null)) as {
+      body?: unknown
+      parentId?: unknown
+    } | null
     const body = normalizeCommentBody(json?.body, config.maxLength)
     if (!body.ok) return Response.json({ message: body.message }, { status: 400 })
 
@@ -123,10 +137,46 @@ export function threadEndpoints(config: ResolvedCommentsConfig): Endpoint[] {
     })
     if (!target) return notFound()
 
+    // A reply goes under a published comment on the same document, within the reply depth
+    // the settings allow now. Replies already deeper than that stay where they are.
+    let parentId: number | string | null = null
+    let depth = 0
+    if (json?.parentId !== undefined && json.parentId !== null) {
+      parentId = parseId(req, json.parentId)
+      const parent = parentId
+        ? ((await req.payload.findByID({
+            collection: COMMENTS_SLUG as CollectionSlug,
+            id: parentId,
+            depth: 0,
+            overrideAccess: true,
+            disableErrors: true,
+            select: { target: true, status: true, depth: true },
+          })) as unknown as { target: number | string; status: string; depth?: number } | null)
+        : null
+      if (!parent || String(parent.target) !== String(id) || parent.status !== "published") {
+        return Response.json(
+          { message: "That comment is no longer there to reply to." },
+          { status: 400 },
+        )
+      }
+      depth = (parent.depth ?? 0) + 1
+      if (depth > settings.maxDepth) {
+        return Response.json(
+          {
+            message:
+              settings.maxDepth === 0
+                ? "Replies are off here."
+                : `Replies are limited to ${settings.maxDepth} levels here.`,
+          },
+          { status: 400 },
+        )
+      }
+    }
+
     const since = new Date(Date.now() - config.cooldownSeconds * 1000).toISOString()
     const recent = await req.payload.count({
       collection: COMMENTS_SLUG as CollectionSlug,
-      where: { reader: { equals: reader.id }, createdAt: { greater_than: since } },
+      where: { author: { equals: author.id }, createdAt: { greater_than: since } },
       overrideAccess: true,
       req,
     })
@@ -137,16 +187,52 @@ export function threadEndpoints(config: ResolvedCommentsConfig): Endpoint[] {
       )
     }
 
+    const check = await runChecks([linkCheck, duplicateCheck, ...config.checks], {
+      body: body.body,
+      author,
+      targetId: id,
+      settings,
+      req,
+    })
+
     const created = (await req.payload.create({
       collection: COMMENTS_SLUG as CollectionSlug,
       // The slugs are the plugin's options, so the generated types can't name the fields.
-      data: { body: body.body, target: id, reader: reader.id, status: "published" } as never,
+      data: {
+        body: body.body,
+        target: id,
+        author: author.id,
+        parent: parentId,
+        depth,
+        status: check.ok ? "published" : "auto-hidden",
+        moderationReason: check.ok ? null : check.reason,
+      } as never,
       overrideAccess: true,
+      context: { [SKIP_MODERATION]: true },
       req,
     })) as unknown as StoredComment
 
-    const comment = toPublicComment({ ...created, reader })
-    return Response.json({ comment }, { status: 201, headers: noStore })
+    if (!check.ok) {
+      await req.payload.create({
+        collection: VIOLATIONS_SLUG as CollectionSlug,
+        data: {
+          author: author.id,
+          comment: created.id,
+          source: "check",
+          reason: check.reason,
+        } as never,
+        overrideAccess: true,
+        req,
+      })
+    }
+
+    const [comment] = buildThread([{ ...created, author }], author.id, config.describeAuthor) as [
+      PublicComment,
+    ]
+    return Response.json(
+      { comment, ...(!check.ok && { held: check.reason }) },
+      { status: 201, headers: noStore },
+    )
   }
 
   return [

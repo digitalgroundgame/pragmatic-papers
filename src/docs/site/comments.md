@@ -1,33 +1,48 @@
 ---
-title: Moderate readers' comments
+title: Moderate comments
 navTitle: Comments
-summary: Readers can sign in with Google or Discord and comment under articles. Editors hide or delete comments, and ban readers, in the admin.
+summary: Readers sign in with Google or Discord to comment and reply under articles. Checks hold suspect comments for you, and accounts that keep breaking the rules lose commenting for a while.
 publishedAt: 2026-10-18
 audience: [editor]
 ---
 
-Under each article, readers can leave a comment. They sign in with Google or Discord to do it, which makes them a **reader**: an account that can comment and do nothing else. Readers never see the admin, and they aren't staff users.
+Under each article, readers can comment and reply to each other. They sign in with Google or Discord, and their first sign-in makes them an account with the **Member** role. Members can comment and manage their account at /account, and nothing else: they never see the admin. Staff comment with their own accounts, marked **Staff**.
 
-Comments go up as soon as a reader posts them. Each one shows the reader's name and picture from Google or Discord, never their email address. A reader can post one comment every 20 seconds, of up to 2,000 characters.
+Each comment shows its author's name and picture, never their email address. Someone can post once every 20 seconds, up to 2,000 characters.
+
+## Comments a check holds back
+
+Before a comment goes up, it's checked. One with too many links, or one its author already posted word for word in the past day, is **held**: its author sees it, marked as waiting for a moderator, and nobody else does. It also counts against them as a **violation**.
+
+To review held comments, open **Content → Comments** and filter **Status** by **Held by a check**. **Why it was held** says which check stopped it.
+
+- If it's fine, set **Status** to **Published** and save. It appears for everyone, and its violation is reversed.
+- If it isn't, set it to **Hidden**, or leave it as it is.
 
 ## Hide or delete a comment
 
-1. In the admin, open **Content → Comments**, and sort or search the table to find the comment.
-2. Open the comment.
-3. To take it off the page, set **Status** to **Hidden** and save. It disappears for readers at once, and you can set it back to **Published** later.
-4. To remove it for good, use **Delete** instead.
+1. Open **Content → Comments** and find the comment.
+2. To take it off the page, set **Status** to **Hidden** and save. This counts as a violation against its author. Replies to it stay, under a note that the comment was removed. Set it back to **Published** to restore it and reverse the violation.
+3. To remove it for good, use **Delete**. Deleting a comment also deletes every reply under it.
 
-Nobody can change what a reader wrote: a comment is either shown, hidden or deleted.
+Nobody can change what someone wrote: a comment is shown, held, hidden or deleted.
 
-## Ban a reader
+## When an account loses commenting
 
-1. Open **Content → Readers** and find them by name or email address.
-2. Tick **Banned** and save. They stay signed in, but they can't post, and the comment box tells them a moderator stopped them.
+An account with too many recent violations can't comment until enough of them expire or are reversed. The comment box tells them when they can comment again. Admins set how many violations, and how long each one lasts, in **Content → Comment settings**: three in 30 days to start.
 
-A ban leaves the comments they already wrote. Hide those one by one, or delete the reader: deleting a reader deletes every comment they wrote.
+To stop someone at once, open **Content → Violations**, create one with their account as **Author** and **Block** as **Source**, and give a reason. A block lasts until someone ticks **Reversed** on it.
 
-Deleting an article deletes its comments too.
+To lift a violation early, open it and tick **Reversed**.
+
+## Reply depth
+
+Replies can nest five levels below a top-level comment. Admins change this in **Comment settings**. Lowering it never removes replies already posted; it only stops new ones past the limit, and the page says where replies stop.
+
+## Members' own accounts
+
+At /account, a member can change the name they comment under, connect Google, Discord or Destiny.gg, sign out, and delete their account. Deleting it removes their sign-ins and the words of their comments; replies other people wrote to them stay.
 
 ## Where it's switched on
 
-Comments are a beta feature. Admins switch them on in **System → Settings** under **Experiments**; staging and the live site each have their own switch. See [Switch beta features on per site in Settings](/docs/experiments). While it's off, articles show no comments and nobody can sign in to post, but the comments already written are kept.
+Comments are a beta feature. Admins switch them on in **System → Settings** under **Experiments**; staging and the live site each have their own switch. See [Switch beta features on per site in Settings](/docs/experiments). Readers sign in through **Single sign-on**, so that experiment needs to be on too. While comments are off, articles show no comments, nobody can post, and nobody can make a new account, but the comments already written are kept.

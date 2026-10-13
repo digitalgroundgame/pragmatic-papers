@@ -53,6 +53,7 @@ describe("ssoPlugin", () => {
     expect(auth.tokenExpiration).toBe(7200)
     expect(auth.strategies?.map(({ name }) => name)).toEqual(["sso"])
     expect(collection.hooks?.afterLogout).toHaveLength(2)
+    expect(collection.hooks?.beforeLogin).toHaveLength(1)
   })
 
   it("registers its endpoints and the login page's buttons", () => {
@@ -68,6 +69,9 @@ describe("ssoPlugin", () => {
       "/auth-links",
       "/auth-links/:provider",
       "/auth-links/:provider",
+      "/account",
+      "/account",
+      "/account",
     ])
     expect(config.admin?.components?.beforeLogin).toEqual([
       "@/other#Other",
@@ -81,11 +85,14 @@ describe("ssoPlugin", () => {
 
     expect(signIn.serverProps.sso).toMatchObject({
       usersSlug: "users",
-      cookieName: "payload-token-sso",
+      cookieName: "pp-session",
+      payloadUserCookie: "payload-token-sso",
+      accountPath: "/account",
       sessionSeconds: 60 * 60 * 24 * 7,
       requiredUserColumns: [],
     })
     expect((signIn.serverProps.sso.enabled as () => boolean)()).toBe(true)
+    expect((signIn.serverProps.sso.isPayloadUser as () => boolean)()).toBe(true)
   })
 
   it("keeps the schema but registers nothing else when disabled", () => {

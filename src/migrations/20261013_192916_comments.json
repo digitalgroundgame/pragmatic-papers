@@ -14288,117 +14288,6 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.readers": {
-      "name": "readers",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "serial",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "name": {
-          "name": "name",
-          "type": "varchar",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "email": {
-          "name": "email",
-          "type": "varchar",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "banned": {
-          "name": "banned",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": false,
-          "default": false
-        },
-        "email_verified": {
-          "name": "email_verified",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": false,
-          "default": false
-        },
-        "avatar_url": {
-          "name": "avatar_url",
-          "type": "varchar",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "timestamp(3) with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp(3) with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {
-        "readers_email_idx": {
-          "name": "readers_email_idx",
-          "columns": [
-            {
-              "expression": "email",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": true,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "readers_updated_at_idx": {
-          "name": "readers_updated_at_idx",
-          "columns": [
-            {
-              "expression": "updated_at",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "readers_created_at_idx": {
-          "name": "readers_created_at_idx",
-          "columns": [
-            {
-              "expression": "created_at",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {},
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
     "public.comments": {
       "name": "comments",
       "schema": "",
@@ -14413,7 +14302,7 @@
           "name": "body",
           "type": "varchar",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "target_id": {
           "name": "target_id",
@@ -14421,11 +14310,24 @@
           "primaryKey": false,
           "notNull": true
         },
-        "reader_id": {
-          "name": "reader_id",
+        "author_id": {
+          "name": "author_id",
           "type": "integer",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
+        },
+        "parent_id": {
+          "name": "parent_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "depth": {
+          "name": "depth",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
         },
         "status": {
           "name": "status",
@@ -14434,6 +14336,12 @@
           "primaryKey": false,
           "notNull": true,
           "default": "'published'"
+        },
+        "moderation_reason": {
+          "name": "moderation_reason",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
         },
         "updated_at": {
           "name": "updated_at",
@@ -14466,11 +14374,41 @@
           "method": "btree",
           "with": {}
         },
-        "comments_reader_idx": {
-          "name": "comments_reader_idx",
+        "comments_author_idx": {
+          "name": "comments_author_idx",
           "columns": [
             {
-              "expression": "reader_id",
+              "expression": "author_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "comments_parent_idx": {
+          "name": "comments_parent_idx",
+          "columns": [
+            {
+              "expression": "parent_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "comments_status_idx": {
+          "name": "comments_status_idx",
+          "columns": [
+            {
+              "expression": "status",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -14522,11 +14460,181 @@
           "onDelete": "set null",
           "onUpdate": "no action"
         },
-        "comments_reader_id_readers_id_fk": {
-          "name": "comments_reader_id_readers_id_fk",
+        "comments_author_id_users_id_fk": {
+          "name": "comments_author_id_users_id_fk",
           "tableFrom": "comments",
-          "tableTo": "readers",
-          "columnsFrom": ["reader_id"],
+          "tableTo": "users",
+          "columnsFrom": ["author_id"],
+          "columnsTo": ["id"],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "comments_parent_id_comments_id_fk": {
+          "name": "comments_parent_id_comments_id_fk",
+          "tableFrom": "comments",
+          "tableTo": "comments",
+          "columnsFrom": ["parent_id"],
+          "columnsTo": ["id"],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.comment_violations": {
+      "name": "comment_violations",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "author_id": {
+          "name": "author_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "source": {
+          "name": "source",
+          "type": "enum_comment_violations_source",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'block'"
+        },
+        "reason": {
+          "name": "reason",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "comment_id": {
+          "name": "comment_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "reversed": {
+          "name": "reversed",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": false
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp(3) with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp(3) with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "comment_violations_author_idx": {
+          "name": "comment_violations_author_idx",
+          "columns": [
+            {
+              "expression": "author_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "comment_violations_comment_idx": {
+          "name": "comment_violations_comment_idx",
+          "columns": [
+            {
+              "expression": "comment_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "comment_violations_reversed_idx": {
+          "name": "comment_violations_reversed_idx",
+          "columns": [
+            {
+              "expression": "reversed",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "comment_violations_updated_at_idx": {
+          "name": "comment_violations_updated_at_idx",
+          "columns": [
+            {
+              "expression": "updated_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "comment_violations_created_at_idx": {
+          "name": "comment_violations_created_at_idx",
+          "columns": [
+            {
+              "expression": "created_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "comment_violations_author_id_users_id_fk": {
+          "name": "comment_violations_author_id_users_id_fk",
+          "tableFrom": "comment_violations",
+          "tableTo": "users",
+          "columnsFrom": ["author_id"],
+          "columnsTo": ["id"],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "comment_violations_comment_id_comments_id_fk": {
+          "name": "comment_violations_comment_id_comments_id_fk",
+          "tableFrom": "comment_violations",
+          "tableTo": "comments",
+          "columnsFrom": ["comment_id"],
           "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
@@ -15156,14 +15264,14 @@
           "primaryKey": false,
           "notNull": false
         },
-        "readers_id": {
-          "name": "readers_id",
+        "comments_id": {
+          "name": "comments_id",
           "type": "integer",
           "primaryKey": false,
           "notNull": false
         },
-        "comments_id": {
-          "name": "comments_id",
+        "comment_violations_id": {
+          "name": "comment_violations_id",
           "type": "integer",
           "primaryKey": false,
           "notNull": false
@@ -15470,11 +15578,11 @@
           "method": "btree",
           "with": {}
         },
-        "payload_locked_documents_rels_readers_id_idx": {
-          "name": "payload_locked_documents_rels_readers_id_idx",
+        "payload_locked_documents_rels_comments_id_idx": {
+          "name": "payload_locked_documents_rels_comments_id_idx",
           "columns": [
             {
-              "expression": "readers_id",
+              "expression": "comments_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -15485,11 +15593,11 @@
           "method": "btree",
           "with": {}
         },
-        "payload_locked_documents_rels_comments_id_idx": {
-          "name": "payload_locked_documents_rels_comments_id_idx",
+        "payload_locked_documents_rels_comment_violations_id_idx": {
+          "name": "payload_locked_documents_rels_comment_violations_id_idx",
           "columns": [
             {
-              "expression": "comments_id",
+              "expression": "comment_violations_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -15664,20 +15772,20 @@
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
-        "payload_locked_documents_rels_readers_fk": {
-          "name": "payload_locked_documents_rels_readers_fk",
-          "tableFrom": "payload_locked_documents_rels",
-          "tableTo": "readers",
-          "columnsFrom": ["readers_id"],
-          "columnsTo": ["id"],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
         "payload_locked_documents_rels_comments_fk": {
           "name": "payload_locked_documents_rels_comments_fk",
           "tableFrom": "payload_locked_documents_rels",
           "tableTo": "comments",
           "columnsFrom": ["comments_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "payload_locked_documents_rels_comment_violations_fk": {
+          "name": "payload_locked_documents_rels_comment_violations_fk",
+          "tableFrom": "payload_locked_documents_rels",
+          "tableTo": "comment_violations",
+          "columnsFrom": ["comment_violations_id"],
           "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
@@ -17738,6 +17846,72 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
+    "public.comment_settings": {
+      "name": "comment_settings",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "max_depth": {
+          "name": "max_depth",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 5
+        },
+        "violation_threshold": {
+          "name": "violation_threshold",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 3
+        },
+        "violation_window_days": {
+          "name": "violation_window_days",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 30
+        },
+        "max_links": {
+          "name": "max_links",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 2
+        },
+        "block_duplicates": {
+          "name": "block_duplicates",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": true
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp(3) with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp(3) with time zone",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
     "public.payload_jobs_stats": {
       "name": "payload_jobs_stats",
       "schema": "",
@@ -18059,311 +18233,6 @@
       "indexes": {
         "auth_verifications_identifier_idx": {
           "name": "auth_verifications_identifier_idx",
-          "columns": [
-            {
-              "expression": "identifier",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {},
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.reader_sessions": {
-      "name": "reader_sessions",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "serial",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "token": {
-          "name": "token",
-          "type": "varchar",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "user_id": {
-          "name": "user_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "expires_at": {
-          "name": "expires_at",
-          "type": "timestamp(3) with time zone",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "ip_address": {
-          "name": "ip_address",
-          "type": "varchar",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "user_agent": {
-          "name": "user_agent",
-          "type": "varchar",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp(3) with time zone",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "timestamp(3) with time zone",
-          "primaryKey": false,
-          "notNull": true
-        }
-      },
-      "indexes": {
-        "reader_sessions_token_idx": {
-          "name": "reader_sessions_token_idx",
-          "columns": [
-            {
-              "expression": "token",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": true,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "reader_sessions_user_id_idx": {
-          "name": "reader_sessions_user_id_idx",
-          "columns": [
-            {
-              "expression": "user_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "reader_sessions_user_id_readers_id_fk": {
-          "name": "reader_sessions_user_id_readers_id_fk",
-          "tableFrom": "reader_sessions",
-          "tableTo": "readers",
-          "columnsFrom": ["user_id"],
-          "columnsTo": ["id"],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.reader_accounts": {
-      "name": "reader_accounts",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "serial",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "provider_id": {
-          "name": "provider_id",
-          "type": "varchar",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "account_id": {
-          "name": "account_id",
-          "type": "varchar",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "user_id": {
-          "name": "user_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "access_token": {
-          "name": "access_token",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "refresh_token": {
-          "name": "refresh_token",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "id_token": {
-          "name": "id_token",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "access_token_expires_at": {
-          "name": "access_token_expires_at",
-          "type": "timestamp(3) with time zone",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "refresh_token_expires_at": {
-          "name": "refresh_token_expires_at",
-          "type": "timestamp(3) with time zone",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "scope": {
-          "name": "scope",
-          "type": "varchar",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "password": {
-          "name": "password",
-          "type": "varchar",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp(3) with time zone",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "timestamp(3) with time zone",
-          "primaryKey": false,
-          "notNull": true
-        }
-      },
-      "indexes": {
-        "reader_accounts_provider_account_idx": {
-          "name": "reader_accounts_provider_account_idx",
-          "columns": [
-            {
-              "expression": "provider_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "account_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": true,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "reader_accounts_user_id_idx": {
-          "name": "reader_accounts_user_id_idx",
-          "columns": [
-            {
-              "expression": "user_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "reader_accounts_user_id_readers_id_fk": {
-          "name": "reader_accounts_user_id_readers_id_fk",
-          "tableFrom": "reader_accounts",
-          "tableTo": "readers",
-          "columnsFrom": ["user_id"],
-          "columnsTo": ["id"],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.reader_verifications": {
-      "name": "reader_verifications",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "serial",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "identifier": {
-          "name": "identifier",
-          "type": "varchar",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "value": {
-          "name": "value",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "expires_at": {
-          "name": "expires_at",
-          "type": "timestamp(3) with time zone",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp(3) with time zone",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "timestamp(3) with time zone",
-          "primaryKey": false,
-          "notNull": true
-        }
-      },
-      "indexes": {
-        "reader_verifications_identifier_idx": {
-          "name": "reader_verifications_identifier_idx",
           "columns": [
             {
               "expression": "identifier",
@@ -18747,7 +18616,12 @@
     "public.enum_comments_status": {
       "name": "enum_comments_status",
       "schema": "public",
-      "values": ["published", "hidden"]
+      "values": ["published", "auto-hidden", "hidden", "deleted"]
+    },
+    "public.enum_comment_violations_source": {
+      "name": "enum_comment_violations_source",
+      "schema": "public",
+      "values": ["check", "moderator", "block"]
     },
     "public.enum_payload_jobs_log_task_slug": {
       "name": "enum_payload_jobs_log_task_slug",
@@ -18847,6 +18721,6 @@
     "tables": {},
     "columns": {}
   },
-  "id": "8a0e798a-0079-4e8d-9e44-ee05fe588cf0",
+  "id": "6771a67e-ae5d-4725-9f45-3925d43b8583",
   "prevId": "00000000-0000-0000-0000-000000000000"
 }

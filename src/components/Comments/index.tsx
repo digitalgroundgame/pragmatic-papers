@@ -1,20 +1,23 @@
 "use client"
 
+import Link from "next/link"
 import React, { useEffect, useRef, useState } from "react"
 
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
-import { Textarea } from "@/components/ui/textarea"
+import type { CommentThread, SignInProvider } from "@/plugins/comments"
 import { useInView } from "@/hooks/useInView"
-import type { CommentThread, PublicComment, ReaderProviderId } from "@/plugins/comments"
-// The constants alone: the plugin's index brings in its schema, which is server code.
-import { PROVIDER_LABELS } from "@/plugins/comments/constants"
-import { formatLongDate, formatTimeAgo } from "@/utilities/formatDate"
-import { getInitials } from "@/utilities/getInitials"
+import { formatLongDate } from "@/utilities/formatDate"
+
+import { AuthorAvatar, CommentItem, type ReplyContext } from "./CommentItem"
+import { CommentForm, type Posted } from "./CommentForm"
+import { buildTree, visibleCount } from "./tree"
 
 /** What Better Auth puts in `?error=` when a sign-in comes back without a session. */
 const SIGN_IN_ERRORS: Record<string, string> = {
   email_not_found: "That provider didn't share an email address, so we can't sign you in with it.",
+  signup_disabled: "New accounts can't be made right now.",
+  unable_to_create_user:
+    "We couldn't make an account with that sign-in. The provider needs to have verified your email address.",
   account_not_linked:
     "That address already signed in with another provider, which this one couldn't confirm. Use the one you signed in with before.",
 }
@@ -30,136 +33,34 @@ export interface CommentsProps {
 type Load =
   { state: "idle" | "loading" } | { state: "failed" } | { state: "ready"; thread: CommentThread }
 
-const ReaderAvatar: React.FC<{ name: string; image: string | null }> = ({ name, image }) => (
-  <Avatar size="md" aria-hidden="true">
-    {image ? <AvatarImage src={image} alt="" referrerPolicy="no-referrer" /> : null}
-    <AvatarFallback>{getInitials(name)}</AvatarFallback>
-  </Avatar>
-)
-
-const CommentList: React.FC<{ comments: PublicComment[] }> = ({ comments }) =>
-  comments.length === 0 ? (
-    <p className="text-muted-foreground text-sm">No comments yet.</p>
-  ) : (
-    <ol className="space-y-5">
-      {comments.map((comment) => (
-        <li key={comment.id} className="flex gap-3">
-          <ReaderAvatar name={comment.author.name} image={comment.author.image} />
-          <div className="min-w-0 space-y-1">
-            <p className="text-sm">
-              <span className="font-semibold">{comment.author.name}</span>{" "}
-              <time
-                dateTime={comment.createdAt}
-                title={formatLongDate(comment.createdAt)}
-                className="text-muted-foreground"
-              >
-                {formatTimeAgo(comment.createdAt)}
-              </time>
-            </p>
-            <p className="text-base break-words whitespace-pre-line">{comment.body}</p>
-          </div>
-        </li>
-      ))}
-    </ol>
-  )
-
 const SignIn: React.FC<{
-  providers: ReaderProviderId[]
-  onSignIn: (provider: ReaderProviderId) => void
+  providers: SignInProvider[]
+  onSignIn: (provider: string) => void
 }> = ({ providers, onSignIn }) =>
   providers.length === 0 ? (
     <p className="text-muted-foreground text-sm">Commenting isn&apos;t open yet.</p>
   ) : (
     <div className="space-y-3">
-      <p className="text-sm">Sign in to join the conversation.</p>
+      <p className="text-sm">
+        Sign in to join the conversation. Your first sign-in makes an account.
+      </p>
       <div className="flex flex-wrap gap-2">
-        {providers.map((provider) => (
-          <Button key={provider} variant="outline" onClick={() => onSignIn(provider)}>
-            Sign in with {PROVIDER_LABELS[provider]}
+        {providers.map(({ id, label }) => (
+          <Button key={id} variant="outline" onClick={() => onSignIn(id)}>
+            Sign in with {label}
           </Button>
         ))}
       </div>
     </div>
   )
 
-const CommentForm: React.FC<{
-  thread: CommentThread
-  threadURL: string
-  onPosted: (comment: PublicComment) => void
-  onSignOut: () => void
-}> = ({ thread, threadURL, onPosted, onSignOut }) => {
-  const viewer = thread.viewer!
-  const [body, setBody] = useState("")
-  const [posting, setPosting] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-
-  if (viewer.banned) {
-    return (
-      <p className="text-muted-foreground text-sm">
-        A moderator has stopped this account from commenting.
-      </p>
-    )
-  }
-
-  const submit = async (event: React.FormEvent) => {
-    event.preventDefault()
-    setPosting(true)
-    setError(null)
-    try {
-      const response = await fetch(threadURL, {
-        method: "POST",
-        credentials: "same-origin",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ body }),
-      })
-      const result = (await response.json()) as { comment?: PublicComment; message?: string }
-      if (!response.ok || !result.comment) {
-        setError(result.message ?? "Your comment didn't post. Try again.")
-        return
-      }
-      onPosted(result.comment)
-      setBody("")
-    } catch {
-      setError("Your comment didn't post. Try again.")
-    } finally {
-      setPosting(false)
-    }
-  }
-
-  return (
-    <form className="space-y-2" onSubmit={(event) => void submit(event)}>
-      <label htmlFor="comment-body" className="flex items-center gap-2 text-sm">
-        <ReaderAvatar name={viewer.name} image={viewer.image} />
-        <span>
-          Commenting as <span className="font-semibold">{viewer.name}</span>
-        </span>
-      </label>
-      <Textarea
-        id="comment-body"
-        value={body}
-        maxLength={thread.maxLength}
-        required
-        rows={3}
-        aria-invalid={error ? true : undefined}
-        aria-describedby={error ? "comment-error" : undefined}
-        onChange={(event) => setBody(event.target.value)}
-      />
-      {error ? (
-        <p id="comment-error" role="alert" className="text-destructive text-sm">
-          {error}
-        </p>
-      ) : null}
-      <div className="flex items-center justify-between gap-2">
-        <Button type="button" variant="link" className="h-auto p-0" onClick={onSignOut}>
-          Sign out
-        </Button>
-        <Button type="submit" disabled={posting || !body.trim()}>
-          {posting ? "Posting…" : "Post comment"}
-        </Button>
-      </div>
-    </form>
-  )
-}
+const Locked: React.FC<{ until: string | null }> = ({ until }) => (
+  <p className="text-muted-foreground text-sm" role="status">
+    {until
+      ? `Too many of your comments were held or hidden recently, so you can't comment until ${formatLongDate(until)}.`
+      : "A moderator has stopped this account from commenting."}
+  </p>
+)
 
 /**
  * An article's comments, loaded once the reader scrolls near them, so the page itself stays
@@ -169,6 +70,7 @@ export const Comments: React.FC<CommentsProps> = ({ articleId, apiPath = "/api" 
   const { ref, inView } = useInView<HTMLElement>({ rootMargin: "400px" })
   const [load, setLoad] = useState<Load>({ state: "idle" })
   const [signInError, setSignInError] = useState<string | null>(null)
+  const [held, setHeld] = useState<string | null>(null)
   const returnedError = useRef(false)
   const threadURL = `${apiPath}/comments/thread/${articleId}`
 
@@ -205,15 +107,17 @@ export const Comments: React.FC<CommentsProps> = ({ articleId, apiPath = "/api" 
     }
   }, [inView, threadURL, reloads])
 
-  const signIn = async (provider: ReaderProviderId) => {
+  const signIn = async (provider: string) => {
     setSignInError(null)
     try {
-      const response = await fetch(`${apiPath}/reader-auth/sign-in/social`, {
+      const response = await fetch(`${apiPath}/auth/sign-in/social`, {
         method: "POST",
         credentials: "same-origin",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           provider,
+          // Someone new gets a member account; without this, only an existing one signs in.
+          requestSignUp: true,
           callbackURL: `${window.location.pathname}#comments`,
           errorCallbackURL: window.location.pathname,
         }),
@@ -227,14 +131,17 @@ export const Comments: React.FC<CommentsProps> = ({ articleId, apiPath = "/api" 
   }
 
   const signOut = async () => {
-    await fetch(`${apiPath}/reader-auth/sign-out`, {
+    await fetch(`${apiPath}/auth/sign-out`, {
       method: "POST",
       credentials: "same-origin",
+      headers: { "Content-Type": "application/json" },
+      body: "{}",
     }).catch(() => undefined)
     reload()
   }
 
-  const added = (comment: PublicComment) =>
+  const posted = ({ comment, held: reason }: Posted) => {
+    setHeld(reason ?? null)
     setLoad((current) =>
       current.state === "ready"
         ? {
@@ -243,6 +150,20 @@ export const Comments: React.FC<CommentsProps> = ({ articleId, apiPath = "/api" 
           }
         : current,
     )
+  }
+
+  const thread = load.state === "ready" ? load.thread : null
+  const count = thread ? visibleCount(thread.comments) : 0
+  const viewer = thread?.viewer ?? null
+  const reply: ReplyContext | null = thread
+    ? {
+        canReply: Boolean(viewer && !viewer.locked),
+        maxDepth: thread.maxDepth,
+        maxLength: thread.maxLength,
+        threadURL,
+        onPosted: posted,
+      }
+    : null
 
   return (
     <section
@@ -253,10 +174,10 @@ export const Comments: React.FC<CommentsProps> = ({ articleId, apiPath = "/api" 
     >
       <h2 id="comments-heading" className="font-display text-2xl">
         Comments
-        {load.state === "ready" && load.thread.comments.length > 0 ? (
+        {count > 0 ? (
           <>
             {" "}
-            <span className="text-muted-foreground">({load.thread.comments.length})</span>
+            <span className="text-muted-foreground">({count})</span>
           </>
         ) : null}
       </h2>
@@ -274,22 +195,63 @@ export const Comments: React.FC<CommentsProps> = ({ articleId, apiPath = "/api" 
             Try again
           </Button>
         </p>
-      ) : load.state !== "ready" ? (
+      ) : !thread || !reply ? (
         <p className="text-muted-foreground text-sm" aria-live="polite">
           Loading comments…
         </p>
       ) : (
         <>
-          <CommentList comments={load.thread.comments} />
-          {load.thread.viewer ? (
-            <CommentForm
-              thread={load.thread}
-              threadURL={threadURL}
-              onPosted={added}
-              onSignOut={() => void signOut()}
-            />
+          {viewer ? (
+            <div className="space-y-3">
+              {viewer.locked ? (
+                <Locked until={viewer.locked.until} />
+              ) : (
+                <CommentForm
+                  threadURL={threadURL}
+                  maxLength={thread.maxLength}
+                  onPosted={posted}
+                  label={
+                    <span className="flex items-center gap-2">
+                      <AuthorAvatar author={viewer} />
+                      <span>
+                        Commenting as <span className="font-semibold">{viewer.name}</span>
+                      </span>
+                    </span>
+                  }
+                />
+              )}
+              {held ? (
+                <p role="status" className="text-sm">
+                  Your comment is waiting for a moderator ({held.toLowerCase()}). Only you can see
+                  it until then.
+                </p>
+              ) : null}
+              <p className="text-muted-foreground flex gap-4 text-sm">
+                <Link href="/account" className="underline underline-offset-4">
+                  Your account
+                </Link>
+                <Button
+                  type="button"
+                  variant="link"
+                  className="h-auto p-0"
+                  onClick={() => void signOut()}
+                >
+                  Sign out
+                </Button>
+              </p>
+            </div>
           ) : (
-            <SignIn providers={load.thread.providers} onSignIn={(p) => void signIn(p)} />
+            <SignIn providers={thread.providers} onSignIn={(p) => void signIn(p)} />
+          )}
+
+          {thread.comments.length === 0 ? (
+            <p className="text-muted-foreground text-sm">No comments yet.</p>
+          ) : (
+            <ol className="space-y-6">
+              {buildTree(thread.comments).map((node) => (
+                <CommentItem key={node.comment.id} node={node} reply={reply} />
+              ))}
+            </ol>
           )}
         </>
       )}

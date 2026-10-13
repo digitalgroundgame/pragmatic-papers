@@ -1,18 +1,65 @@
-import type { Access, CollectionSlug, Payload } from "payload"
+import type { Access, CollectionSlug, Payload, PayloadRequest } from "payload"
 
-/** A sign-in provider Better Auth has built in. */
-export type ReaderProviderId = "google" | "discord"
+import type { COMMENT_STATUSES, VIOLATION_SOURCES } from "./constants"
 
-/** An OAuth application's credentials, from the provider's developer console. */
-export interface ReaderProviderCredentials {
-  clientId: string
-  clientSecret: string
+export type CommentStatus = (typeof COMMENT_STATUSES)[number]
+export type ViolationSource = (typeof VIOLATION_SOURCES)[number]
+
+/** A row of the authors collection, as Payload returns it. */
+export type CommentAuthor = Record<string, unknown> & { id: number | string }
+
+/** How an author shows beside their comments. */
+export interface AuthorDisplay {
+  name: string
+  image: string | null
+  /** A short label beside their name, like "Staff". */
+  badge: string | null
 }
+
+/** A way to sign in, as the comment box offers it. */
+export interface SignInProvider {
+  id: string
+  label: string
+}
+
+/** The admin's settings, from the plugin's global. */
+export interface CommentSettings {
+  /** How many levels of replies a new reply may sit below a top-level comment. */
+  maxDepth: number
+  /** Active violations that stop an author commenting. */
+  violationThreshold: number
+  /** How long a violation stays active, in days. */
+  violationWindowDays: number
+  /** The most links one comment may hold. */
+  maxLinks: number
+  /** Hold a comment its author already posted, word for word, in the past day. */
+  blockDuplicates: boolean
+}
+
+/** What a check is handed about a comment about to be posted. */
+export interface CommentCheckArgs {
+  body: string
+  author: CommentAuthor
+  targetId: number | string
+  settings: CommentSettings
+  req: PayloadRequest
+}
+
+/** A check passes, or holds the comment back with a reason moderators see. */
+export type CommentCheckResult = { ok: true } | { ok: false; reason: string }
+
+/**
+ * Runs on each comment before it's posted. One that fails holds the comment back from
+ * everyone but its author, and counts against them.
+ */
+export type CommentCheck = (
+  args: CommentCheckArgs,
+) => CommentCheckResult | Promise<CommentCheckResult>
 
 export interface CommentsPluginConfig {
   /**
-   * Leaves the schema in place (both collections, and the tables `commentsAfterSchemaInit`
-   * adds) but registers no endpoint, so readers can neither sign in nor read or post.
+   * Leaves the schema in place (both collections and the settings global) but registers no
+   * endpoint, so nobody can read or post.
    */
   disabled?: boolean
   /**
@@ -20,29 +67,37 @@ export interface CommentsPluginConfig {
    * takes effect without a restart. Off: every endpoint answers 404.
    */
   enabled?: (args: { payload: Payload }) => boolean | Promise<boolean>
-  /** The collection readers comment on. Default `articles`. */
+  /** The collection comments are on. Default `articles`. */
   targetSlug?: CollectionSlug
-  /** The providers readers sign in with, each with its credentials, or null while unset. */
-  providers: () => Partial<Record<ReaderProviderId, ReaderProviderCredentials | null>>
-  /** The site's public origin, which the providers redirect back to. */
-  baseURL: () => string
-  /** Signs the reader's session cookie and encrypts stored provider tokens. */
-  secret: () => string
-  /** Who can see, hide and delete comments and readers in the admin. */
-  moderators: Access
-  /** The admin sidebar group both collections sit in. Default `Content`. */
-  adminGroup?: string
+  /** The collection commenters are in. Default `users`. */
+  authorsSlug?: CollectionSlug
   /**
-   * The reader's session cookie. Default `pp-reader`. Keep `payload-token` out of it: the
-   * cache rules skip the edge for any cookie with that in its name, and a reader should get
-   * the same cached page as everyone else.
+   * Who is asking: a row of `authorsSlug`, or null when nobody is signed in. Commenters needn't
+   * be Payload's `req.user`; the site decides how it knows them.
    */
-  cookieName?: string
-  /** How long a reader stays signed in, in seconds. Default 30 days. */
-  sessionSeconds?: number
+  currentUser: (req: PayloadRequest) => Promise<CommentAuthor | null>
+  /** The author's fields `describeAuthor` reads. Default `["name"]`. */
+  authorFields?: string[]
+  /** How an author shows beside their comments. Default: their `name`, no picture or badge. */
+  describeAuthor?: (author: CommentAuthor) => AuthorDisplay
+  /**
+   * The ways to sign in that the comment box offers someone signed out, passed through as the
+   * thread's `providers`. The site's own page starts the sign-in. Default none.
+   */
+  signInProviders?: () => SignInProvider[]
+  /** The site's public origin. Posts from any other origin are refused. */
+  baseURL: () => string
+  /** Who can see, hide, restore and delete comments, and see and reverse violations. */
+  moderators: Access
+  /** Who can change the settings global. */
+  admins: Access
+  /** More checks, run after the built-in ones (links and duplicates). */
+  checks?: CommentCheck[]
+  /** The admin sidebar group. Default `Content`. */
+  adminGroup?: string
   /** The longest comment, in characters. Default 2000. */
   maxLength?: number
-  /** How long a reader waits between two comments, in seconds. Default 20. */
+  /** How long an author waits between two comments, in seconds. Default 20. */
   cooldownSeconds?: number
 }
 
@@ -51,24 +106,34 @@ export type ResolvedCommentsConfig = Required<Omit<CommentsPluginConfig, "disabl
 /** What anyone can read about a comment. */
 export interface PublicComment {
   id: number | string
+  /** The comment it replies to, or null for a top-level one. */
+  parentId: number | string | null
+  /** 0 for a top-level comment, 1 for a reply to one, and so on. */
+  depth: number
   body: string
   createdAt: string
-  author: { name: string; image: string | null }
+  author: AuthorDisplay | null
+  /**
+   * A comment that's gone (hidden, or its author deleted it or their account) but has replies
+   * still showing: kept as a placeholder so they stay in place. It has no body or author.
+   */
+  removed?: true
+  /** The viewer's own comment, held back by a check: nobody else sees it. */
+  held?: true
 }
 
-/** The signed-in reader, as the thread endpoint describes them to themselves. */
-export interface CommentViewer {
-  name: string
-  image: string | null
-  /** A moderator stopped them from posting. */
-  banned: boolean
+/** The signed-in author, as the thread endpoint describes them to themselves. */
+export interface CommentViewer extends AuthorDisplay {
+  /** Why they can't comment right now, and until when (null: until a moderator lifts it). */
+  locked: { until: string | null } | null
 }
 
 /** `GET /api/comments/thread/:id`. */
 export interface CommentThread {
   comments: PublicComment[]
   viewer: CommentViewer | null
-  /** The providers a reader can sign in with here. */
-  providers: ReaderProviderId[]
+  /** How to sign in, for a viewer who isn't. */
+  providers: SignInProvider[]
+  maxDepth: number
   maxLength: number
 }

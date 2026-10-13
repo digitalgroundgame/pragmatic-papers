@@ -52,11 +52,13 @@ describe("LinkedAccounts", () => {
     expect(fetchMock).not.toHaveBeenCalled()
   })
 
-  it("renders nothing while single sign-on is off", async () => {
+  it("says so while single sign-on is off", async () => {
     fetchMock.mockResolvedValue(Response.json({ message: "Not Found" }, { status: 404 }))
-    const { container } = render(<LinkedAccounts />)
-    await act(() => Promise.resolve())
-    expect(container).toBeEmptyDOMElement()
+    render(<LinkedAccounts />)
+    expect(
+      await screen.findByText("Signing in with another account isn't switched on here yet."),
+    ).toBeInTheDocument()
+    expect(screen.queryByRole("button")).not.toBeInTheDocument()
   })
 
   it("sends Connect to the provider", async () => {

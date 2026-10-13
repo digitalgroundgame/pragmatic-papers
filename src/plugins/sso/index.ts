@@ -1,4 +1,4 @@
-import type { CollectionConfig, Field, Plugin } from "payload"
+import type { CollectionConfig, Condition, Field, Plugin, TabsField } from "payload"
 
 import { DEFAULT_COOKIE_NAME } from "./constants"
 import { authEndpoints } from "./endpoints/auth"
@@ -33,6 +33,37 @@ const betterAuthFields: Field[] = [
   },
 ]
 
+/** The Connections panel: the signed-in user's linked sign-in accounts. */
+const connectionsField: Field = {
+  name: "linkedAccounts",
+  type: "ui",
+  admin: { components: { Field: "@/plugins/sso/exports/client#LinkedAccounts" } },
+}
+
+/** Only the signed-in user's own record has connections to show. */
+const isOwnRecord: Condition = (data, _siblingData, { user }) =>
+  user != null && data.id != null && String(user.id) === String(data.id)
+
+/**
+ * Adds the Connections panel to the users collection: as a tab of its first tabs field,
+ * shown on the user's own record only, or below its fields when it has no tabs.
+ */
+function withConnections(fields: Field[]): Field[] {
+  const index = fields.findIndex((field) => field.type === "tabs")
+  if (index === -1) return [...fields, connectionsField]
+  return fields.map((field, i): Field => {
+    if (i !== index) return field
+    const { tabs } = field as TabsField
+    return {
+      ...(field as TabsField),
+      tabs: [
+        ...tabs,
+        { label: "Connections", admin: { condition: isOwnRecord }, fields: [connectionsField] },
+      ],
+    }
+  })
+}
+
 /**
  * Sign in to Payload with Google, Discord or Destiny.gg, through Better Auth.
  *
@@ -62,16 +93,7 @@ export function ssoPlugin(options: SsoPluginConfig): Plugin {
         ...collection,
         fields: [...collection.fields, ...betterAuthFields],
         ...(!options.disabled && {
-          fields: [
-            ...collection.fields,
-            ...betterAuthFields,
-            {
-              // The Linked accounts panel, on the signed-in user's own account page.
-              name: "linkedAccounts",
-              type: "ui",
-              admin: { components: { Field: "@/plugins/sso/exports/client#LinkedAccounts" } },
-            },
-          ],
+          fields: withConnections([...collection.fields, ...betterAuthFields]),
           auth: { ...auth, strategies: [...(auth.strategies ?? []), ssoStrategy(sso)] },
           hooks: {
             ...collection.hooks,

@@ -24,7 +24,7 @@ export interface LinkedAccountsPanelProps {
 }
 
 /**
- * The account page's list of sign-in providers, each with Connect or Disconnect. A linked
+ * The Connections tab: the account page's list of sign-in providers, each with Connect or Disconnect. A linked
  * account signs this user in, whatever address it has.
  */
 export const LinkedAccountsPanel: React.FC<LinkedAccountsPanelProps> = ({
@@ -34,39 +34,40 @@ export const LinkedAccountsPanel: React.FC<LinkedAccountsPanelProps> = ({
   onConnect,
   onDisconnect,
 }) => (
-  <section className="sso-links" aria-labelledby="sso-links-heading">
-    <h3 id="sso-links-heading" className="sso-links__heading">
-      Linked accounts
-    </h3>
+  <section className="sso-links" aria-label="Connections">
     <p className="sso-links__description">
-      Sign in with any account linked here, as well as with your email and password.
+      {providers.length > 0
+        ? "Sign in with any account connected here, as well as with your email and password."
+        : "Signing in with another account isn't switched on here yet."}
     </p>
     {error ? (
       <p className="sso-links__error" role="alert">
         {ERRORS[error] ?? FALLBACK_ERROR}
       </p>
     ) : null}
-    <ul className="sso-links__list">
-      {providers.map(({ id, label, linked }) => (
-        <li key={id} className="sso-links__row">
-          <span className="sso-links__logo">
-            <ProviderLogo provider={id} />
-          </span>
-          <span className="sso-links__name">
-            {label}
-            <span className="sso-links__state">{linked ? "Linked" : "Not linked"}</span>
-          </span>
-          <button
-            type="button"
-            className="sso-links__button"
-            disabled={pending !== null}
-            aria-label={`${linked ? "Disconnect" : "Connect"} ${label}`}
-            onClick={() => (linked ? onDisconnect(id) : onConnect(id))}
-          >
-            {pending === id ? "…" : linked ? "Disconnect" : "Connect"}
-          </button>
-        </li>
-      ))}
-    </ul>
+    {providers.length > 0 ? (
+      <ul className="sso-links__list">
+        {providers.map(({ id, label, linked }) => (
+          <li key={id} className="sso-links__row">
+            <span className="sso-links__logo">
+              <ProviderLogo provider={id} />
+            </span>
+            <span className="sso-links__name">
+              {label}
+              <span className="sso-links__state">{linked ? "Linked" : "Not linked"}</span>
+            </span>
+            <button
+              type="button"
+              className="sso-links__button"
+              disabled={pending !== null}
+              aria-label={`${linked ? "Disconnect" : "Connect"} ${label}`}
+              onClick={() => (linked ? onDisconnect(id) : onConnect(id))}
+            >
+              {pending === id ? "…" : linked ? "Disconnect" : "Connect"}
+            </button>
+          </li>
+        ))}
+      </ul>
+    ) : null}
   </section>
 )

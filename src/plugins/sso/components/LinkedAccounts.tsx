@@ -9,8 +9,8 @@ import type { LinkedProvider } from "../types"
 import { LinkedAccountsPanel } from "./LinkedAccountsPanel"
 
 /**
- * The Linked accounts panel, on the signed-in user's own account page only. Renders
- * nothing while single sign-on is off or no provider is configured (the list answers 404).
+ * The Connections panel, on the signed-in user's own account page only. While single
+ * sign-on is off or no provider is configured (the list answers 404), it says so.
  */
 export const LinkedAccounts: React.FC = () => {
   const { user } = useAuth()
@@ -38,7 +38,7 @@ export const LinkedAccounts: React.FC = () => {
       )
       .catch(() => null)
       .then((list) => {
-        if (!cancelled) setProviders(list && list.length > 0 ? list : null)
+        if (!cancelled) setProviders(list ?? [])
       })
     return () => {
       cancelled = true

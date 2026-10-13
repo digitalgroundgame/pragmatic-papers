@@ -365,7 +365,7 @@ email and password login, which stays as the way in when a provider is down.
 
 - A provider login **never creates a user**. It attaches to the user whose address the
   provider has verified, and anyone else is sent back to the login page.
-- Signed in, a user can link more accounts from **Linked accounts** on their account page
+- Signed in, a user can link more accounts from the **Connections** tab of their account page
   (`/admin/account`), whatever their address: `/api/auth-links` (`endpoints/links.ts`) acts on
   Payload's `req.user`, so a password login can link too, and starts the OAuth through a
   server-only Better Auth endpoint (`linking.ts`). Disconnecting ends the user's other SSO

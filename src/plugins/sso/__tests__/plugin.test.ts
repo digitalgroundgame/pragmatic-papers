@@ -25,7 +25,7 @@ const fieldNames = (collection: CollectionConfig) =>
   collection.fields.map((field) => ("name" in field ? field.name : null))
 
 describe("ssoPlugin", () => {
-  it("adds Better Auth's hidden columns and the Linked accounts panel to the users collection only", () => {
+  it("adds Better Auth's hidden columns and the Connections panel to the users collection only", () => {
     const config = apply(options)
     expect(fieldNames(usersOf(config))).toEqual([
       "name",
@@ -34,6 +34,40 @@ describe("ssoPlugin", () => {
       "linkedAccounts",
     ])
     expect(config.collections![1]).toBe(articles)
+  })
+
+  it("puts the Connections panel in a tab of its own, on the user's own record only", () => {
+    const profile = { label: "Profile", fields: [{ name: "name", type: "text" as const }] }
+    const tabbed: CollectionConfig = {
+      ...users,
+      fields: [
+        { type: "tabs", tabs: [profile] },
+        { name: "roles", type: "text" },
+      ],
+    }
+    const config = ssoPlugin(options)({ collections: [tabbed] } as Config) as Config
+    const [tabsField, ...rest] = usersOf(config).fields
+    if (tabsField?.type !== "tabs") throw new Error("no tabs")
+
+    expect(rest.map((field) => ("name" in field ? field.name : null))).toEqual([
+      "roles",
+      "emailVerified",
+      "avatarUrl",
+    ])
+    const [first, connections] = tabsField.tabs
+    expect(first).toBe(profile)
+    expect(connections).toMatchObject({
+      label: "Connections",
+      fields: [{ name: "linkedAccounts", type: "ui" }],
+    })
+
+    const condition = connections!.admin!.condition!
+    const as = (user: { id: number } | null, data: { id?: number }) =>
+      condition(data, {}, { user, blockData: {}, operation: "update", path: [] } as never)
+    expect(as({ id: 1 }, { id: 1 })).toBe(true)
+    expect(as({ id: 1 }, { id: 2 })).toBe(false)
+    expect(as(null, { id: 1 })).toBe(false)
+    expect(as({ id: 1 }, {})).toBe(false)
   })
 
   it("keeps Better Auth's columns out of reach of the admin and the API", () => {

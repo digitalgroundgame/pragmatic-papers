@@ -10,11 +10,11 @@ import { collectMediaReferences, type MediaReference } from "../references/colle
 /** Collections whose pages Next caches (an hour, `revalidate = 3600`); the rest render per request. */
 const CACHED_PAGES = new Set(["articles", "volumes"])
 
-async function slugsOf(
+async function find(
   payload: Payload,
   collection: "articles" | "volumes",
   where: Parameters<Payload["find"]>[0]["where"],
-): Promise<string[]> {
+): Promise<{ id: number | string; slug?: string | null }[]> {
   const result = await payload.find({
     collection,
     where,
@@ -24,13 +24,13 @@ async function slugsOf(
     pagination: false,
     overrideAccess: true,
   })
-  return result.docs.flatMap((doc) => (doc.slug ? [doc.slug] : []))
+  return result.docs
 }
 
 /**
  * The pages a picture shows on, beyond the published documents that use it: an article's
  * hero is on its volume's page, and a contributor's profile picture is on their articles'
- * bylines.
+ * bylines and those articles' volumes.
  */
 async function pagesShowing(payload: Payload, references: MediaReference[]) {
   const paths = new Set<string>()
@@ -40,11 +40,14 @@ async function pagesShowing(payload: Payload, references: MediaReference[]) {
 
   for (const ref of references) {
     if (ref.collection === "users") {
-      const bylined = await slugsOf(payload, "articles", {
+      const bylined = await find(payload, "articles", {
         authors: { equals: ref.docId },
         _status: { equals: "published" },
       })
-      for (const slug of bylined) paths.add(`/articles/${slug}`)
+      for (const article of bylined) {
+        articleIds.push(article.id)
+        if (article.slug) paths.add(`/articles/${article.slug}`)
+      }
       continue
     }
     if (ref.collection === "docs") tags.add(DOCS_CACHE_TAG)
@@ -56,8 +59,8 @@ async function pagesShowing(payload: Payload, references: MediaReference[]) {
   }
 
   if (articleIds.length) {
-    const volumes = await slugsOf(payload, "volumes", { "articles.id": { in: articleIds } })
-    for (const slug of volumes) paths.add(`/volumes/${slug}`)
+    const volumes = await find(payload, "volumes", { "articles.id": { in: articleIds } })
+    for (const { slug } of volumes) if (slug) paths.add(`/volumes/${slug}`)
   }
   return { paths: [...paths], purgeOnly: [...purgeOnly], tags: [...tags] }
 }

@@ -45,7 +45,7 @@ describe("revalidateMediaUsers", () => {
       ref("users", 7),
     ])
     find.mockImplementation(async ({ collection }: { collection: string }) => ({
-      docs: collection === "volumes" ? [{ slug: "vol-1" }] : [{ slug: "by-jane" }],
+      docs: collection === "volumes" ? [{ id: 4, slug: "vol-1" }] : [{ id: 5, slug: "by-jane" }],
     }))
 
     await save({ ...media, alt: "A wheat field" })
@@ -57,6 +57,24 @@ describe("revalidateMediaUsers", () => {
       tags: ["docs"],
       shared: true,
     })
+  })
+
+  it("revalidates the volumes a contributor's articles are in when their picture changes", async () => {
+    collectMediaReferences.mockResolvedValue([ref("users", 7)])
+    find.mockImplementation(async ({ collection }: { collection: string }) => ({
+      docs: collection === "volumes" ? [{ id: 4, slug: "vol-1" }] : [{ id: 5, slug: "by-jane" }],
+    }))
+
+    await save({ ...media, alt: "A portrait" })
+
+    expect(find).toHaveBeenCalledWith(
+      expect.objectContaining({ collection: "volumes", where: { "articles.id": { in: [5] } } }),
+    )
+    expect(revalidateForReaders).toHaveBeenCalledWith(
+      logger,
+      "media 9",
+      expect.objectContaining({ paths: ["/articles/by-jane", "/volumes/vol-1"] }),
+    )
   })
 
   it("skips a save that changes nothing readers see, without reading content", async () => {

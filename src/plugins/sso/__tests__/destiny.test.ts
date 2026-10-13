@@ -98,6 +98,34 @@ describe("destinyProvider", () => {
     ).toBeNull()
   })
 
+  it("treats an error response from the token endpoint as no tokens", async () => {
+    fetchMock.mockResolvedValue(new Response("down", { status: 502 }))
+    expect(
+      await provider.validateAuthorizationCode({ code: "c", codeVerifier: "v", redirectURI: "r" }),
+    ).toBeNull()
+  })
+
+  it("accepts a bare access token, with no expiry, refresh token or scope", async () => {
+    fetchMock.mockResolvedValue(Response.json({ access_token: "access" }))
+    expect(
+      await provider.validateAuthorizationCode({ code: "c", codeVerifier: "v", redirectURI: "r" }),
+    ).toEqual({
+      accessToken: "access",
+      refreshToken: undefined,
+      accessTokenExpiresAt: undefined,
+      scopes: [],
+      tokenType: undefined,
+    })
+  })
+
+  it("reads no profile without an access token, or when the profile request fails", async () => {
+    expect(await provider.getUserInfo({})).toBeNull()
+    expect(fetchMock).not.toHaveBeenCalled()
+
+    fetchMock.mockResolvedValue(new Response("down", { status: 500 }))
+    expect(await provider.getUserInfo({ accessToken: "access" })).toBeNull()
+  })
+
   it("exchanges nothing without a verifier", async () => {
     expect(await provider.validateAuthorizationCode({ code: "c", redirectURI: "r" })).toBeNull()
     expect(fetchMock).not.toHaveBeenCalled()

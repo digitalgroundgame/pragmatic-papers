@@ -161,6 +161,16 @@ export const Empty: Story = {
   },
 }
 
+/** A thread past the most comments one loads shows its newest, and says so. */
+export const Truncated: Story = {
+  beforeEach: serve(commentThread({ truncated: true })),
+  play: async ({ canvasElement }) => {
+    await expect(
+      await within(canvasElement).findByText(/Showing the newest comments/),
+    ).toBeInTheDocument()
+  },
+}
+
 export const Unavailable: Story = {
   beforeEach: serve(commentThread(), { status: 500 }),
   play: async ({ canvasElement }) => {

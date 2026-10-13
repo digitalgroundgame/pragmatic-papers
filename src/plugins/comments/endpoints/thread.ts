@@ -9,7 +9,7 @@ import { readSettings } from "../settings"
 import { buildThread, type StoredComment } from "../thread"
 import type { CommentThread, CommentViewer, PublicComment, ResolvedCommentsConfig } from "../types"
 
-/** The most comments one thread reads, oldest first. */
+/** The most comments one thread reads: the newest, so a new comment always shows. */
 export const THREAD_LIMIT = 500
 
 const notFound = () => Response.json({ message: "Not Found" }, { status: 404 })
@@ -54,7 +54,7 @@ export function threadEndpoints(config: ResolvedCommentsConfig): Endpoint[] {
       req.payload.find({
         collection: COMMENTS_SLUG as CollectionSlug,
         where: { target: { equals: id } },
-        sort: "createdAt",
+        sort: "-createdAt",
         limit: THREAD_LIMIT,
         depth: 1,
         populate: {
@@ -85,8 +85,9 @@ export function threadEndpoints(config: ResolvedCommentsConfig): Endpoint[] {
     }
 
     const thread: CommentThread = {
+      // Oldest first, as readers read them.
       comments: buildThread(
-        found.docs as unknown as StoredComment[],
+        (found.docs as unknown as StoredComment[]).reverse(),
         author?.id ?? null,
         config.describeAuthor,
       ),
@@ -94,6 +95,7 @@ export function threadEndpoints(config: ResolvedCommentsConfig): Endpoint[] {
       providers: viewer ? [] : config.signInProviders(),
       maxDepth: settings.maxDepth,
       maxLength: config.maxLength,
+      truncated: found.totalDocs > found.docs.length,
     }
     return Response.json(thread, { headers: noStore })
   }

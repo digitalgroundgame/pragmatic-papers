@@ -2,6 +2,7 @@ import { render, screen, within } from "@testing-library/react"
 import { describe, expect, it } from "vitest"
 
 import { liveBroadcast, tickerPosts, upcomingBroadcast } from "@/stories/fixtures/ticker"
+import { TICKER_PAUSED_KEY } from "../pause"
 import { TickerView } from "../TickerView"
 
 describe("TickerView", () => {
@@ -45,11 +46,14 @@ describe("TickerView", () => {
     expect(link.querySelector("svg")).toHaveAttribute("aria-hidden", "true")
   })
 
-  it("puts the script that remembers a pause right after the switch", () => {
-    render(<TickerView broadcast={null} posts={tickerPosts} />)
-    const pause = screen.getByRole("checkbox", { name: "Pause ticker" })
-    expect(pause.nextElementSibling?.tagName).toBe("SCRIPT")
-    expect(pause.nextElementSibling).toHaveTextContent("pp:ticker-paused")
+  it("mounts paused for a reader who paused it on an earlier page", () => {
+    localStorage.setItem(TICKER_PAUSED_KEY, "1")
+    try {
+      render(<TickerView broadcast={null} posts={tickerPosts} />)
+      expect(screen.getByRole("checkbox", { name: "Pause ticker" })).toBeChecked()
+    } finally {
+      localStorage.clear()
+    }
   })
 
   it("marks a live broadcast, and lets the reader pause it with no posts beside it", () => {

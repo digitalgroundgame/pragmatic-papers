@@ -106,6 +106,20 @@ describe("destinyProvider", () => {
     ).toBeNull()
   })
 
+  it("gives up on Destiny.gg after a timeout, or when it can't be reached", async () => {
+    fetchMock.mockRejectedValue(new DOMException("The operation timed out.", "TimeoutError"))
+    expect(
+      await provider.validateAuthorizationCode({ code: "c", codeVerifier: "v", redirectURI: "r" }),
+    ).toBeNull()
+    expect(await provider.getUserInfo({ accessToken: "access" })).toBeNull()
+    for (const [, init] of fetchMock.mock.calls) {
+      expect(init?.signal).toBeInstanceOf(AbortSignal)
+    }
+
+    fetchMock.mockRejectedValue(new TypeError("fetch failed"))
+    expect(await provider.getUserInfo({ accessToken: "access" })).toBeNull()
+  })
+
   it("accepts a bare access token, with no expiry, refresh token or scope", async () => {
     fetchMock.mockResolvedValue(Response.json({ access_token: "access" }))
     expect(

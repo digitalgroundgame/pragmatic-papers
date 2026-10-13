@@ -13,7 +13,7 @@ const discord = { clientId: "discord-id", clientSecret: "discord-secret" }
 const destiny = { clientId: "dgg-id", clientSecret: "dgg-secret" }
 
 const config = (overrides: Partial<ResolvedSsoConfig> = {}): ResolvedSsoConfig => ({
-  enabled: () => true,
+  enabled: async () => true,
   providers: () => ({ google, discord }),
   baseURL: () => "https://example.com",
   secret: () => "secret",

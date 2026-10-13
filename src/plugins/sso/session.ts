@@ -1,5 +1,7 @@
 import type { CollectionSlug, Payload, PayloadRequest } from "payload"
 
+import { isPluginOn } from "@/utilities/registerPlugin"
+
 import { getAuth } from "./auth"
 import { DEFAULT_COOKIE_NAME, DEFAULT_PAYLOAD_USER_COOKIE } from "./constants"
 import type { ResolvedSsoConfig, SsoPluginConfig } from "./types"
@@ -15,7 +17,6 @@ export function resolveSsoConfig(options: SsoPluginConfig): ResolvedSsoConfig {
     Object.entries(given).filter(([, value]) => value !== undefined),
   ) as typeof given
   return {
-    enabled: () => true,
     usersSlug: "users",
     cookieName: DEFAULT_COOKIE_NAME,
     payloadUserCookie: DEFAULT_PAYLOAD_USER_COOKIE,
@@ -24,6 +25,7 @@ export function resolveSsoConfig(options: SsoPluginConfig): ResolvedSsoConfig {
     sessionSeconds: 60 * 60 * 24 * 7,
     requiredUserColumns: [],
     ...rest,
+    enabled: ({ payload }) => isPluginOn(given.enabled, payload),
   }
 }
 
@@ -70,6 +72,16 @@ export async function sessionUser(
   }
 }
 
+/** `getSignedInUser`, for the plugin's own code, which holds the resolved config. */
+export async function signedInUser(
+  req: Pick<PayloadRequest, "payload" | "headers" | "user">,
+  config: ResolvedSsoConfig,
+): Promise<SignedInUser | null> {
+  if (req.user && req.user.collection === config.usersSlug)
+    return req.user as unknown as SignedInUser
+  return sessionUser(req.payload, req.headers, config)
+}
+
 /**
  * Who is signed in: Payload's own user (a password login, or staff through a provider), or
  * else the user behind a provider session Payload doesn't accept (a member). For the site's
@@ -79,8 +91,5 @@ export async function getSignedInUser(
   req: Pick<PayloadRequest, "payload" | "headers" | "user">,
   options: SsoPluginConfig,
 ): Promise<SignedInUser | null> {
-  const config = resolveSsoConfig(options)
-  if (req.user && req.user.collection === config.usersSlug)
-    return req.user as unknown as SignedInUser
-  return sessionUser(req.payload, req.headers, config)
+  return signedInUser(req, resolveSsoConfig(options))
 }

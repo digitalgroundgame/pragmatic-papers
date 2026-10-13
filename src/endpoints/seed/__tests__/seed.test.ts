@@ -135,7 +135,7 @@ describe("seed", () => {
     expect(clearRankings).toBeLessThan(deleteArticles)
   })
 
-  it("switches every experiment on", async () => {
+  it("switches every experiment and beta plugin on", async () => {
     const { payload, writes } = createRecordingPayload()
 
     await seed(payload, undefined, { disableRevalidate: true })
@@ -147,15 +147,17 @@ describe("seed", () => {
       experiments: {
         feed: true,
         interactives: true,
-        sso: true,
         tableOfContents: true,
-        docs: true,
-        notifications: true,
-        tours: true,
-        comments: true,
       },
     })
     expect(siteSettings?.context?.disableRevalidate).toBe(true)
+
+    const plugins = writes.find(
+      (write) => write.op === "updateGlobal" && write.target === "plugins",
+    )
+    expect(plugins?.data).toEqual({
+      switches: { docs: true, notifications: true, tours: true, sso: true, comments: true },
+    })
   })
 
   it("reports each step's progress", async () => {

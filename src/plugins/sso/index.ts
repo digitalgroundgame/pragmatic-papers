@@ -1,4 +1,6 @@
-import type { CollectionConfig, Condition, Field, Plugin, TabsField } from "payload"
+import type { CollectionConfig, Condition, Field, TabsField } from "payload"
+
+import { registerPlugin } from "@/utilities/registerPlugin"
 
 import { configuredProviders } from "./auth"
 import { accountEndpoints } from "./endpoints/account"
@@ -135,10 +137,23 @@ function withConnections(fields: Field[], sso: ResolvedSsoConfig): Field[] {
  * (members) is anonymous to Payload, and the site's own features find them with
  * `getSignedInUser`.
  */
-export function ssoPlugin(options: SsoPluginConfig): Plugin {
-  const sso = resolveSsoConfig(options)
+export const ssoPlugin = registerPlugin<SsoPluginConfig>({
+  slug: "sso",
+  manifest: {
+    name: "SSO",
+    source: "src/plugins/sso",
+    description:
+      "Sign-in with Google, Discord or Destiny.gg, through Better Auth: staff to the admin, with a Connections tab on their account, and members to the site, when sign-ups are open. Email and password login stays on.",
+    switch: {
+      label: "Single sign-on",
+      description:
+        "“Sign in with Google”, “Sign in with Discord” and “Sign in with Destiny.gg” on the admin's login page, for people who already have an account here, the Connections tab that links them, and members' sign-ins on the site. Each provider also needs its credentials (System → Integrations).",
+      defaultValue: false,
+    },
+  },
+  plugin: ({ config, plugins: _plugins, ...options }) => {
+    const sso = resolveSsoConfig(options)
 
-  return (config) => {
     const collections = (config.collections ?? []).map((collection): CollectionConfig => {
       if (collection.slug !== sso.usersSlug) return collection
       const auth = typeof collection.auth === "object" ? collection.auth : {}
@@ -179,5 +194,5 @@ export function ssoPlugin(options: SsoPluginConfig): Plugin {
         },
       },
     }
-  }
-}
+  },
+})

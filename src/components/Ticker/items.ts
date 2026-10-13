@@ -40,6 +40,12 @@ export interface TickerFeed {
   posts: TickerPost[]
 }
 
+/**
+ * The cache tag on the Header's ticker settings as the feed reads them (`getTickerFeed`),
+ * which the Header's revalidate hook clears.
+ */
+export const TICKER_SETTINGS_TAG = "ticker_settings"
+
 /** How many posts run in the ticker at once. */
 export const MAX_POSTS = 8
 
@@ -98,6 +104,31 @@ export function postKey(link: string): string | null {
 export function withoutHidden(posts: TickerPost[], hidden: readonly string[]): TickerPost[] {
   const keys = new Set(hidden.map(postKey).filter(Boolean))
   return keys.size === 0 ? posts : posts.filter((post) => !keys.has(postKey(post.url)))
+}
+
+/** Our own sites: every Pragmatic Papers host, whatever deployment is reading the feed. */
+export const OWN_HOSTS = ["pragmaticpapers.com"] as const
+
+/** Whether a link leads to one of `hosts` or a subdomain of one. */
+function isOwnLink(link: string, hosts: readonly string[]): boolean {
+  let host: string
+  try {
+    host = new URL(link).hostname.toLowerCase()
+  } catch {
+    return false
+  }
+  return hosts.some((own) => host === own || host.endsWith(`.${own}`))
+}
+
+/**
+ * The posts, without the ones that link to our own site. The ticker sits on that site, so a
+ * post sending readers back to an article they can already reach from the page is circular.
+ */
+export function withoutOwnLinks(
+  posts: TickerPost[],
+  hosts: readonly string[] = OWN_HOSTS,
+): TickerPost[] {
+  return posts.filter((post) => !postLinks(post).some((link) => isOwnLink(link, hosts)))
 }
 
 /**

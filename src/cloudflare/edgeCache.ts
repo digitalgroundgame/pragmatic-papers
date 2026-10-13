@@ -41,8 +41,12 @@ export interface EdgeCache {
   purge?: (options: { purgeEverything: true } | { tags: string[] }) => Promise<EdgeCachePurgeResult>
 }
 
-/** Cookies that make a page personal: Payload's login and Next's draft mode. */
-const PERSONAL_COOKIES = ["payload-token", "__prerender_bypass"]
+/**
+ * Cookies that make a page personal: Payload's login, the marker single sign-on sets for staff
+ * (`payload-token-sso`, which `next.config.ts` and the zone's cache rule skip on too), and
+ * Next's draft mode. A member's session (`pp-session`) isn't one: members get cached pages.
+ */
+const PERSONAL_COOKIES = ["payload-token", "payload-token-sso", "__prerender_bypass"]
 
 const hasCookie = (cookies: string, name: string): boolean =>
   cookies.split(";").some((cookie) => cookie.trim().startsWith(`${name}=`))

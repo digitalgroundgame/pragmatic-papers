@@ -126,11 +126,13 @@ describe("GET /thread/:id", () => {
       providers: [{ id: "discord", label: "Discord" }],
       maxDepth: DEFAULT_SETTINGS.maxDepth,
       maxLength: 2000,
+      truncated: false,
     })
     expect(payload.find).toHaveBeenCalledWith(
       expect.objectContaining({
         collection: COMMENTS_SLUG,
         where: { target: { equals: 5 } },
+        sort: "-createdAt",
         limit: THREAD_LIMIT,
         populate: { users: { name: true } },
       }),
@@ -153,6 +155,27 @@ describe("GET /thread/:id", () => {
     })
     expect(body.providers).toEqual([])
     expect(body.maxDepth).toBe(2)
+  })
+})
+
+describe("a thread past the limit", () => {
+  it("shows its newest comments, oldest first, and says older ones were left out", async () => {
+    currentUser.mockResolvedValue(null)
+    const comment = (id: number) => ({
+      id,
+      body: `#${id}`,
+      status: "published",
+      depth: 0,
+      parent: null,
+      createdAt: `2026-10-13T1${id}:00:00.000Z`,
+      author: ada,
+    })
+    payload.find.mockResolvedValueOnce({ docs: [comment(3), comment(2)], totalDocs: 3 } as never)
+
+    const body = await json(await call(get))
+
+    expect((body.comments as { id: number }[]).map(({ id }) => id)).toEqual([2, 3])
+    expect(body.truncated).toBe(true)
   })
 })
 

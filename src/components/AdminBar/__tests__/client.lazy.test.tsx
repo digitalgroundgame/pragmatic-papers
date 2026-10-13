@@ -1,11 +1,18 @@
 import { act, cleanup, render, screen } from "@testing-library/react"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
+vi.mock("@/components/Fresh/sync", () => ({
+  linkSeenToAccount: vi.fn(async () => undefined),
+  unlinkSeenFromAccount: vi.fn(),
+}))
+
 vi.mock("../client", () => ({
   AdminBarClient: ({ preview }: { preview?: boolean }) => (
     <div data-testid="admin-bar">{preview ? "preview" : "live"}</div>
   ),
 }))
+
+import { linkSeenToAccount, unlinkSeenFromAccount } from "@/components/Fresh/sync"
 
 import { LazyAdminBar } from "../client.lazy"
 import { ADMIN_BAR_ATTRIBUTE, ADMIN_BAR_HINT_KEY } from "../hint"
@@ -24,6 +31,7 @@ const settle = () => act(() => new Promise((resolve) => setTimeout(resolve, 0)))
 
 afterEach(() => {
   cleanup()
+  vi.clearAllMocks()
   vi.unstubAllGlobals()
   localStorage.clear()
   document.documentElement.removeAttribute(ADMIN_BAR_ATTRIBUTE)
@@ -91,5 +99,30 @@ describe("LazyAdminBar", () => {
     render(<LazyAdminBar />)
     await settle()
     expect(localStorage.getItem(ADMIN_BAR_HINT_KEY)).toBe("1")
+  })
+
+  it("links the fresh dots to the account of someone logged in", async () => {
+    stubMe({ body: { user: { id: "7" } } })
+    render(<LazyAdminBar />)
+    await screen.findByTestId("admin-bar")
+    expect(linkSeenToAccount).toHaveBeenCalledTimes(1)
+    expect(unlinkSeenFromAccount).not.toHaveBeenCalled()
+  })
+
+  it("unlinks them once Payload says nobody is logged in", async () => {
+    stubMe({ body: { user: null } })
+    render(<LazyAdminBar />)
+    await settle()
+    await settle()
+    expect(unlinkSeenFromAccount).toHaveBeenCalledTimes(1)
+    expect(linkSeenToAccount).not.toHaveBeenCalled()
+  })
+
+  it("leaves them alone when Payload can't be reached", async () => {
+    stubMe(new Error("offline"))
+    render(<LazyAdminBar />)
+    await settle()
+    expect(linkSeenToAccount).not.toHaveBeenCalled()
+    expect(unlinkSeenFromAccount).not.toHaveBeenCalled()
   })
 })

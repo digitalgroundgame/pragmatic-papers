@@ -1,5 +1,7 @@
-import type { CollectionConfig, Config } from "payload"
-import { describe, expect, it } from "vitest"
+import type { CollectionConfig, Config, Payload } from "payload"
+import { describe, expect, it, vi } from "vitest"
+
+import { registeredPlugins } from "@/utilities/registerPlugin"
 
 import { ssoPlugin, type SsoPluginConfig } from ".."
 
@@ -140,7 +142,7 @@ describe("ssoPlugin", () => {
     ])
   })
 
-  it("hands the buttons its options, with defaults filled in", () => {
+  it("hands the buttons its options, with defaults filled in", async () => {
     const [, signIn] = apply(options, { admin: { components: { beforeLogin: ["@/o#O"] } } }).admin!
       .components!.beforeLogin as [unknown, { serverProps: { sso: Record<string, unknown> } }]
 
@@ -152,7 +154,10 @@ describe("ssoPlugin", () => {
       sessionSeconds: 60 * 60 * 24 * 7,
       requiredUserColumns: [],
     })
-    expect((signIn.serverProps.sso.enabled as () => boolean)()).toBe(true)
+    const enabled = signIn.serverProps.sso.enabled as (args: {
+      payload: Payload
+    }) => Promise<boolean>
+    expect(await enabled({ payload: {} as Payload })).toBe(true)
     expect((signIn.serverProps.sso.isPayloadUser as () => boolean)()).toBe(true)
   })
 
@@ -175,5 +180,17 @@ describe("ssoPlugin", () => {
       "avatarUrl",
       "linkedAccounts",
     ])
+  })
+
+  it("lists itself on System → Plugins, asking its own switch", async () => {
+    const payload = {} as Payload
+    const enabled = vi.fn(async () => true)
+    const [entry] = registeredPlugins(apply({ ...options, enabled }))
+    expect(entry).toMatchObject({ slug: "sso", name: "SSO" })
+    if (typeof entry?.enabled !== "function") throw new Error("no switch")
+    expect(await entry.enabled(payload)).toBe(true)
+    expect(enabled).toHaveBeenCalledWith(payload)
+
+    expect(registeredPlugins(apply({ ...options, disabled: true }))[0]?.enabled).toBe(false)
   })
 })

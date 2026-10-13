@@ -1,5 +1,7 @@
 import type { Access, CollectionSlug, Payload, PayloadRequest } from "payload"
 
+import type { PluginEnabled } from "@/utilities/registerPlugin"
+
 import type { COMMENT_STATUSES, VIOLATION_SOURCES } from "./constants"
 
 export type CommentStatus = (typeof COMMENT_STATUSES)[number]
@@ -65,10 +67,10 @@ export interface CommentsPluginConfig {
    */
   disabled?: boolean
   /**
-   * Whether comments are switched on right now. Asked on every request, so a feature flag
-   * takes effect without a restart. Off: every endpoint answers 404.
+   * Whether comments are switched on right now. Asked on every request, so a switch takes
+   * effect without a restart. Off: every endpoint answers 404.
    */
-  enabled?: (args: { payload: Payload }) => boolean | Promise<boolean>
+  enabled?: PluginEnabled
   /** The collection comments are on. Default `articles`. */
   targetSlug?: CollectionSlug
   /** The collection commenters are in. Default `users`. */
@@ -108,7 +110,11 @@ export interface CommentsPluginConfig {
   cooldownSeconds?: number
 }
 
-export type ResolvedCommentsConfig = Required<Omit<CommentsPluginConfig, "disabled">>
+export type ResolvedCommentsConfig = Required<
+  Omit<CommentsPluginConfig, "disabled" | "enabled">
+> & {
+  enabled: (args: { payload: Payload }) => Promise<boolean>
+}
 
 /** What anyone can read about a comment. */
 export interface PublicComment {
@@ -145,4 +151,6 @@ export interface CommentThread {
   providers: SignInProvider[]
   maxDepth: number
   maxLength: number
+  /** Whether older comments were left out: a thread shows its newest `THREAD_LIMIT`. */
+  truncated?: boolean
 }

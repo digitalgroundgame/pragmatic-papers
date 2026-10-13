@@ -16,6 +16,7 @@ import RichText from "@/components/RichText"
 import { TableOfContents, TableOfContentsProvider } from "@/components/TableOfContents"
 import { TopicsList } from "@/components/Topics/TopicsList"
 import { Separator } from "@/components/ui/separator"
+import { isPluginEnabled } from "@/globals/Plugins/isPluginEnabled"
 import { isExperimentEnabled } from "@/globals/SiteSettings/isExperimentEnabled"
 import { ArticleHero } from "@/heros/ArticleHero"
 import { MathJaxProvider } from "@/providers/MathJaxProvider"
@@ -75,11 +76,14 @@ export default async function Article({ params: paramsPromise }: Args): Promise<
 
   const populatedAuthors = (authors || []).filter(isResolved<User>)
 
-  const [[volume], tableOfContentsEnabled, commentsEnabled] = await Promise.all([
+  const [[volume], tableOfContentsEnabled, commentsSwitch, ssoSwitch] = await Promise.all([
     queryVolumesForArticles([article.id]),
     isExperimentEnabled("tableOfContents"),
-    isExperimentEnabled("comments"),
+    isPluginEnabled("comments"),
+    // Readers sign in to comment, so comments need single sign-on on too.
+    isPluginEnabled("sso"),
   ])
+  const commentsEnabled = commentsSwitch && ssoSwitch
   const showTableOfContents = tableOfContentsEnabled && article.showTableOfContents === true
 
   return (

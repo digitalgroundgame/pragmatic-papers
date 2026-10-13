@@ -19,7 +19,8 @@ const NOT_EDGE_CACHED = [
   // last one wins, so without this a request without Payload's cookies got public caching.
   // Upload files stay cached: with local storage (staging, previews) media and map assets
   // are served from `/api/<collection>/file/...`, anyone can read them, and narration audio
-  // and video shouldn't re-download on every load. (Cloudflare's cache rule skips `/api`.)
+  // and video shouldn't re-download on every load. (Cloudflare's cache rule skips `/api`, but
+  // for `/api/ticker`.)
   "admin(?:/|$)",
   "api(?:/(?!(?:media|map-assets)/file/)|$)",
 
@@ -194,8 +195,10 @@ const nextConfig: NextConfig = {
         ],
       },
       {
-        // API routes are dynamic and may be authenticated; bypass all caching layers.
-        source: "/api/:path*",
+        // API routes are dynamic and may be authenticated; bypass all caching layers. Except
+        // the ticker's feed (`/api/ticker`), which is public and sets its own: a minute at the
+        // edge, so a hidden post or a new stream shows soon without purging every page.
+        source: "/api/:path((?!ticker$).*)",
         headers: [
           {
             key: "Cache-Control",

@@ -117,6 +117,7 @@ processes they start.
 - **Header** (`slug: 'header'`) — nav items, action button (admins), and a **Ticker** tab: admins switch the ticker on, and while it's on editors see the posts its sources hold now, each with a Hide button that adds its link to the hidden posts (or paste a link). Editors can save the global, but every field except the hidden posts is admin-only. Which accounts the ticker reads is in **Integrations** (admin-only); revalidated via `revalidateHeader` hook
 - **Footer** (`slug: 'footer'`) — nav items; revalidated via `revalidateFooter` hook
 - **Settings** (`slug: 'site-settings'`, the `SiteSettings` global) — admin-only; its `experiments` group switches beta features on per environment; revalidated via `revalidateSiteSettings` hook
+- **Plugins** (`slug: 'plugins'`) — admin-only: the installed plugins (`registeredPlugins`), and the switches of those that offer one; revalidated via `revalidatePlugins` hook
 - **Newsletter** (`slug: 'newsletter'`) — admin-only, stores nothing: its page (`NewsletterView`, replacing the edit view) shows Listmonk's subscriber counts, newest signups and latest campaigns
 - Fetched via `getGlobal('header' | 'footer', depth)` from `@/data/globals`, which caches with `unstable_cache` under the tag `global_<slug>`
 
@@ -222,9 +223,9 @@ is published the bell offers it as **Show me** beside **Read more** (any
 `NotificationItem` can, with `showMe`), as does the doc's page. After changing a screen a tour points at, run
 the tour locally.
 
-The three plugins are experiments (`docs`, `notifications`, `tours` in Settings),
-switched from `src/plugins/index.ts` through each plugin's `enabled` option, so
-the plugins never read Settings themselves. With `docs` off, `/docs` pages 404,
+The three plugins are betas, each with its switch on **System → Plugins** (`isPluginEnabled`),
+passed from `src/plugins/index.ts` through each plugin's `enabled` option, so
+the plugins never read the switches themselves. With `docs` off, `/docs` pages 404,
 their sitemap is empty and the bell leaves docs out (a source's `enabled`); the Docs collection and the
 deploy's docs sync carry on, so docs are ready when it's switched on. With
 `notifications` off there's no bell; with `tours` off, `TourGate` doesn't mount
@@ -282,9 +283,26 @@ find them cached. A warm-up failure only logs a warning. A deploy leaves the Wor
 A feature that could be published one day lives in `src/plugins/<name>/`, shaped like
 Payload's own plugins so it can be lifted out without a rewrite:
 
-- `index.ts` exports `<name>Plugin(options): Plugin`, and nothing else the app needs.
-- `types.ts` holds `<Name>PluginConfig`. Options have defaults, and `disabled: true` leaves
-  the schema in place (so migrations don't change) but turns the behavior off.
+- `index.ts` exports `<name>Plugin`, and nothing else the app needs. It's made with
+  `registerPlugin({ slug, order, manifest, plugin })` (`@/utilities/registerPlugin`): Payload's
+  `definePlugin` descriptor plus a `manifest` (name, source, description, `switch`), so
+  `<name>Plugin(options)` carries Payload's `slug` and `options`, and its `plugin` gets the
+  options and the other plugins (`plugins`). When Payload covers what the manifest does, drop
+  that key. The manifest is fixed facts about the plugin; what a site decides goes in options.
+  It lists the plugin on the admin's **System → Plugins** page. A package that doesn't describe
+  itself is wrapped with `describePlugin` where `src/plugins/index.ts` installs it.
+- Every plugin takes `enabled` (checked at runtime; `isPluginOn` reads it) and `disabled`
+  (`SitePluginOptions`). Switching a plugin off stops its behavior; its schema stays.
+- A plugin that checks `enabled` on each request offers a `switch` in its manifest:
+  `pluginSwitches` (`src/globals/Plugins/`) gives it a checkbox on System → Plugins named for
+  its slug (a camelCase one), `src/plugins/index.ts` passes `pluginSwitch("<slug>")` as its
+  `enabled`, and routes outside the plugin gate on `isPluginEnabled("<slug>")`. A beta's switch
+  starts off (`defaultValue: false`), which shows a **Beta** badge; when it graduates, flip the
+  default rather than deleting the switch. This replaces an experiment in Settings for a
+  feature that's a plugin; anything else stays an experiment.
+- `types.ts` holds `<Name>PluginConfig`, extending `SitePluginOptions`. Options have defaults,
+  and `disabled: true` leaves the schema in place (so migrations don't change) but turns the
+  behavior off.
 - `collections/`, `hooks/`, `endpoints/` and `components/` as the plugin needs them. Admin
   components are referenced by path through `exports/client.ts` and `exports/rsc.ts`, so
   the import map paths survive a move into a package.
@@ -361,8 +379,8 @@ Reach for these before writing your own:
 
 ### Single sign-on
 
-`src/plugins/sso/` signs people in with Google, Discord or Destiny.gg, behind the `sso`
-experiment. Better Auth runs the OAuth exchange and keeps its sessions, linked accounts and
+`src/plugins/sso/` signs people in with Google, Discord or Destiny.gg, behind its switch on
+System → Plugins. Better Auth runs the OAuth exchange and keeps its sessions, linked accounts and
 OAuth state in three plain tables (`auth_sessions`, `auth_accounts`, `auth_verifications`;
 `ssoAfterSchemaInit` declares them, so they aren't collections and don't show in the admin).
 Payload keeps the users, their roles and its own email and password login, which stays as the
@@ -376,7 +394,7 @@ plugin and the account page read too.
   asks `getSignedInUser(req, ssoOptions)` instead of reading `req.user`.
 - **Sign-up** makes a `member` (`signUp` in `signIn.ts`): only when the sign-in sends
   `requestSignUp: true` (the comment box and `/account` do, the admin's login page doesn't),
-  the `comments` experiment is on, and the provider verified the address. Better Auth inserts
+  the `comments` switch is on (System → Plugins), and the provider verified the address. Better Auth inserts
   the row with a random `member-…` slug, and `afterCreate` sets the role through Payload.
   Destiny.gg shares no address, so its sign-up gets a placeholder, `destiny-<id>@no-email.invalid`
   (`placeholderEmail.ts`: `.invalid` can't receive mail, so never send to one), and is
@@ -396,8 +414,9 @@ plugin and the account page read too.
 - The session cookie is `pp-session`, with no `payload-token` in its name, so members get
   cached pages. Staff also get `payload-token-sso` (`payloadUserCookie.ts`), which carries no
   authority: the cache rules that keep signed-in editors off the edge look for it,
-  `next.config.ts` by name and Cloudflare's rule because the name contains `payload-token`.
-  Rename either in both places or not at all.
+  `next.config.ts` and the Worker's cache (`PERSONAL_COOKIES` in `src/cloudflare/edgeCache.ts`)
+  by name, and Cloudflare's rule because the name contains `payload-token`. Rename either
+  everywhere or not at all.
 - `staffByDefault` (`src/plugins/staffByDefault.ts`, the last plugin) gives every access rule a
   collection or plugin leaves out to staff, where Payload's default is any logged-in user, so a
   forgotten rule can't reach members if one ever becomes `req.user`.
@@ -409,7 +428,8 @@ plugin and the account page read too.
 
 ### Comments
 
-`src/plugins/comments/` puts comments under articles, behind the `comments` experiment. It
+`src/plugins/comments/` puts comments under articles, behind its switch on System → Plugins, which
+needs Single sign-on on too (readers have no other way to sign in). It
 doesn't sign anyone in: `currentUser` (here `getSignedInUser`) says who is commenting, staff
 or member, and staff get a badge.
 
@@ -501,6 +521,10 @@ Coverage reporting is informational only — chore/docs PRs don't need special h
 - run linting and type-checks
 - run unit and integration tests as needed, _skip running e2e_.
 - touched a block or component? run `pnpm test:storybook`, and add or update its story.
+- does the change, or what you tell someone, depend on how Payload, Coolify, GitHub, Cloudflare or
+  Sentry behaves (an option, a setting, a permission, a sampling or cache rule)? Check it with the
+  **`upstream-docs`** skill or the package's source in `node_modules` first, even when the question
+  comes up partway through other work. Hosted settings aren't in `node_modules`; their docs are.
 
 ### Storybook
 

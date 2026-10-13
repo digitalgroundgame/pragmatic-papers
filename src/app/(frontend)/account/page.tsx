@@ -3,7 +3,7 @@ import type { Metadata } from "next"
 import React from "react"
 
 import { Account } from "@/components/Account"
-import { isExperimentEnabled } from "@/globals/SiteSettings/isExperimentEnabled"
+import { isPluginEnabled } from "@/globals/Plugins/isPluginEnabled"
 import { signUpProviders } from "@/plugins/signIn"
 
 export const metadata: Metadata = {
@@ -16,7 +16,7 @@ export const metadata: Metadata = {
  * other; `Account` reads who is signed in from `/api/account` once it loads.
  */
 export default async function AccountPage(): Promise<React.ReactNode> {
-  if (!(await isExperimentEnabled("sso"))) notFound()
+  if (!(await isPluginEnabled("sso"))) notFound()
 
   return (
     <article className="mx-auto max-w-xl space-y-8 px-4 pb-16">

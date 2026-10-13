@@ -1,20 +1,24 @@
 import type { Payload } from "payload"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
-import { signUpProviders, ssoOptions } from "../signIn"
+import { commentsOn, signUpProviders, ssoOptions } from "../signIn"
 
-const payloadWith = (experiments: Record<string, boolean>) =>
+const payloadWith = (switches: Record<string, boolean>) =>
   ({
-    findGlobal: vi.fn(async () => ({ experiments })),
+    findGlobal: vi.fn(async ({ slug }: { slug: string }) =>
+      slug === "plugins" ? { switches } : {},
+    ),
     update: vi.fn(),
   }) as unknown as Payload & { update: ReturnType<typeof vi.fn> }
 
 afterEach(() => vi.unstubAllEnvs())
 
 describe("ssoOptions", () => {
-  it("follows the sso experiment, read fresh each time", async () => {
-    expect(await ssoOptions.enabled?.({ payload: payloadWith({ sso: true }) })).toBe(true)
-    expect(await ssoOptions.enabled?.({ payload: payloadWith({ sso: false }) })).toBe(false)
+  it("follows the sso switch on System → Plugins, read fresh each time", async () => {
+    const { enabled } = ssoOptions
+    if (typeof enabled !== "function") throw new Error("enabled should read the switch")
+    expect(await enabled(payloadWith({ sso: true }))).toBe(true)
+    expect(await enabled(payloadWith({ sso: false }))).toBe(false)
   })
 
   it("makes only staff Payload's user", () => {
@@ -24,8 +28,12 @@ describe("ssoOptions", () => {
 
   it("opens sign-ups with comments", async () => {
     const { signUp } = ssoOptions
-    expect(await signUp?.enabled({ payload: payloadWith({ comments: true }) })).toBe(true)
-    expect(await signUp?.enabled({ payload: payloadWith({ comments: false }) })).toBe(false)
+    expect(await signUp?.enabled({ payload: payloadWith({ comments: true, sso: true }) })).toBe(
+      true,
+    )
+    expect(await signUp?.enabled({ payload: payloadWith({ comments: false, sso: true }) })).toBe(
+      false,
+    )
   })
 
   it("gives each new member a random slug", () => {
@@ -45,6 +53,14 @@ describe("ssoOptions", () => {
         overrideAccess: true,
       }),
     )
+  })
+})
+
+describe("commentsOn", () => {
+  it("needs single sign-on on too, since readers have no other way to sign in", async () => {
+    expect(await commentsOn(payloadWith({ comments: true, sso: true }))).toBe(true)
+    expect(await commentsOn(payloadWith({ comments: true, sso: false }))).toBe(false)
+    expect(await commentsOn(payloadWith({ comments: false, sso: true }))).toBe(false)
   })
 })
 

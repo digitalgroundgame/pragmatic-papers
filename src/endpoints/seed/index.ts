@@ -471,13 +471,16 @@ export const seed = async (
             experiments: {
               feed: true,
               interactives: true,
-              sso: true,
               tableOfContents: true,
-              docs: true,
-              notifications: true,
-              tours: true,
-              comments: true,
             },
+          },
+        })
+        // And every beta plugin's switch on System → Plugins.
+        await payload.updateGlobal({
+          slug: "plugins",
+          context,
+          data: {
+            switches: { docs: true, notifications: true, tours: true, sso: true, comments: true },
           },
         })
       },

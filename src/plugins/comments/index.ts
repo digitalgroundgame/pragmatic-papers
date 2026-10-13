@@ -1,4 +1,6 @@
-import type { CollectionConfig, Plugin } from "payload"
+import type { CollectionConfig } from "payload"
+
+import { isPluginOn, registerPlugin } from "@/utilities/registerPlugin"
 
 import { commentsCollection } from "./collections/Comments"
 import { violationsCollection } from "./collections/Violations"
@@ -35,23 +37,36 @@ const defaultDescribeAuthor = (author: CommentAuthor) => ({
  * stays one cached copy for everyone. Moderators hide, restore and delete comments and manage
  * violations in the admin; admins set the reply depth and the checks in its settings global.
  */
-export function commentsPlugin(options: CommentsPluginConfig): Plugin {
-  const comments: ResolvedCommentsConfig = {
-    enabled: () => true,
-    targetSlug: "articles",
-    authorsSlug: "users",
-    authorFields: ["name"],
-    describeAuthor: defaultDescribeAuthor,
-    checks: [],
-    isVerified: (author) => author.emailVerified === true,
-    signInProviders: () => [],
-    adminGroup: "Content",
-    maxLength: 2000,
-    cooldownSeconds: 20,
-    ...options,
-  }
+export const commentsPlugin = registerPlugin<CommentsPluginConfig>({
+  slug: "comments",
+  manifest: {
+    name: "Comments",
+    source: "src/plugins/comments",
+    description:
+      "Comments under articles, with replies, checks that hold suspect comments back and violations that stop repeat offenders. Moderators work in Content → Comments; admins set the rules in Comment settings.",
+    switch: {
+      label: "Comments",
+      description:
+        "The Comments section under each article, and sign-ups: readers make an account by signing in to comment. Needs Single sign-on on too.",
+      defaultValue: false,
+    },
+  },
+  plugin: ({ config, plugins: _plugins, ...options }) => {
+    const comments: ResolvedCommentsConfig = {
+      targetSlug: "articles",
+      authorsSlug: "users",
+      authorFields: ["name"],
+      describeAuthor: defaultDescribeAuthor,
+      checks: [],
+      isVerified: (author) => author.emailVerified === true,
+      signInProviders: () => [],
+      adminGroup: "Content",
+      maxLength: 2000,
+      cooldownSeconds: 20,
+      ...options,
+      enabled: ({ payload }) => isPluginOn(options.enabled, payload),
+    }
 
-  return (config) => {
     const collection = commentsCollection(comments)
     const withHook = (target: CollectionConfig, hook: typeof deleteCommentsOnTarget) => ({
       ...target,
@@ -76,5 +91,5 @@ export function commentsPlugin(options: CommentsPluginConfig): Plugin {
       collections,
       globals: [...(config.globals ?? []), settingsGlobal(comments)],
     }
-  }
-}
+  },
+})

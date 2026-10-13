@@ -8,6 +8,7 @@ import {
   postText,
   tickerDuration,
   withoutHidden,
+  withoutOwnLinks,
   type TickerPost,
 } from "../items"
 
@@ -163,5 +164,39 @@ describe("withoutHidden", () => {
 
   it("ignores entries that aren't links to posts", () => {
     expect(withoutHidden([bluesky, x], ["", "https://example.com"])).toEqual([bluesky, x])
+  })
+})
+
+describe("withoutOwnLinks", () => {
+  const ours = post(
+    "ours",
+    "2026-10-08T12:00:00Z",
+    "New piece pragmaticpapers.com/articles/perm...",
+    [
+      {
+        text: "pragmaticpapers.com/articles/perm...",
+        url: "https://pragmaticpapers.com/articles/permitting-reform",
+      },
+    ],
+  )
+  const card = post("card", "2026-10-08T11:00:00Z", "Read this", [
+    { text: "", url: "https://www.pragmaticpapers.com/volumes/12" },
+  ])
+  const bare = post("bare", "2026-10-08T10:00:00Z", "See https://staging.pragmaticpapers.com/x")
+  const elsewhere = post("elsewhere", "2026-10-08T09:00:00Z", "Good read https://example.com/a")
+  const plain = post("plain", "2026-10-08T08:00:00Z", "No links at all")
+
+  it("leaves out posts linking to our site, by marked link, card or bare URL, on any subdomain", () => {
+    expect(withoutOwnLinks([ours, card, bare, elsewhere, plain])).toEqual([elsewhere, plain])
+  })
+
+  it("also leaves out the hosts it's given, such as this deployment's", () => {
+    const local = post("local", "2026-10-08T07:00:00Z", "Try http://localhost:8000/articles/a")
+    expect(withoutOwnLinks([local, plain], ["localhost"])).toEqual([plain])
+  })
+
+  it("doesn't mistake a lookalike host for ours", () => {
+    const lookalike = post("lookalike", "2026-10-08T07:00:00Z", "https://notpragmaticpapers.com/a")
+    expect(withoutOwnLinks([lookalike])).toEqual([lookalike])
   })
 })

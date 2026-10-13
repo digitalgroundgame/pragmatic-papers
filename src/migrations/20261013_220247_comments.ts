@@ -42,7 +42,7 @@ export async function up({ db, payload, req }: MigrateUpArgs): Promise<void> {
   
   ALTER TABLE "payload_locked_documents_rels" ADD COLUMN "comments_id" integer;
   ALTER TABLE "payload_locked_documents_rels" ADD COLUMN "comment_violations_id" integer;
-  ALTER TABLE "site_settings" ADD COLUMN "experiments_comments" boolean DEFAULT false;
+  ALTER TABLE "plugins" ADD COLUMN "switches_comments" boolean DEFAULT false;
   ALTER TABLE "comments" ADD CONSTRAINT "comments_target_id_articles_id_fk" FOREIGN KEY ("target_id") REFERENCES "public"."articles"("id") ON DELETE set null ON UPDATE no action;
   ALTER TABLE "comments" ADD CONSTRAINT "comments_author_id_users_id_fk" FOREIGN KEY ("author_id") REFERENCES "public"."users"("id") ON DELETE set null ON UPDATE no action;
   ALTER TABLE "comments" ADD CONSTRAINT "comments_parent_id_comments_id_fk" FOREIGN KEY ("parent_id") REFERENCES "public"."comments"("id") ON DELETE set null ON UPDATE no action;
@@ -81,7 +81,7 @@ export async function down({ db, payload, req }: MigrateDownArgs): Promise<void>
   DROP INDEX "payload_locked_documents_rels_comment_violations_id_idx";
   ALTER TABLE "payload_locked_documents_rels" DROP COLUMN "comments_id";
   ALTER TABLE "payload_locked_documents_rels" DROP COLUMN "comment_violations_id";
-  ALTER TABLE "site_settings" DROP COLUMN "experiments_comments";
+  ALTER TABLE "plugins" DROP COLUMN "switches_comments";
   DROP TYPE "public"."enum_comments_status";
   DROP TYPE "public"."enum_comment_violations_source";`)
 }

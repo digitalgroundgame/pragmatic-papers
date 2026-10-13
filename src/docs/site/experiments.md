@@ -14,6 +14,8 @@ Some new features arrive switched off. They're **experiments**: finished enough 
 
 Open **Settings** (under **System** in the admin's sidebar; only admins and chief editors see it). The **Experiments** group has one checkbox per feature, with a line saying what it covers.
 
+A beta feature that's a plugin (help docs, the notifications bell, guided tours, single sign-on, comments) has its switch on **System → Plugins** instead, with a **Beta** badge beside its name. It works the same way.
+
 Each site keeps its own settings. Staging and the live site have separate databases, so ticking a box on staging changes nothing on the live site, and the reverse. Pull request previews start with staging's settings.
 
 ## What a switch does
@@ -24,4 +26,4 @@ Saving Settings takes effect without a redeploy. Readers normally see the change
 
 ## When an experiment is done
 
-Once a feature has proved itself, its checkbox is removed in a later release and the feature is simply on.
+Once a feature has proved itself, its checkbox is removed in a later release and the feature is simply on. A plugin keeps its switch on **System → Plugins**, now on unless someone turns it off, and loses its **Beta** badge.

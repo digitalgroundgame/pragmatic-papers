@@ -12,12 +12,12 @@ export const SEEN_KEY_PREFIX = "pp:seen:"
 /** The names this reader has seen, or null when localStorage can't be read. */
 type Seen = ReadonlySet<string> | null
 
-// One store per tab, backed by localStorage. When Layer 2 syncs seen names to Payload
-// users, turn this module into a factory, `createSeenStore(storage)`, with one default
-// instance, so the backend can be swapped (and tests get fresh instances instead of
-// `resetSeenStore`). useFresh's API shouldn't need to change.
+// One store per tab, backed by localStorage. For someone logged in, `./sync` merges it with
+// the copy kept on their account, so what they've seen follows them between browsers.
 let seen: Seen | undefined
 const listeners = new Set<() => void>()
+// Told each time this tab marks a name seen, so the account's copy can catch up.
+let onMarkSeen: ((name: string) => void) | null = null
 
 function notify(): void {
   listeners.forEach((listener) => listener())
@@ -70,6 +70,7 @@ export function markSeen(name: string): void {
   const current = getSeen()
   // Unreadable storage shows no dots, so there's nothing to clear. Recording `name`
   // here would turn "unknown" into "seen only this", and every other dot would appear.
+  // Only an account (`addSeen`) can stand in for storage: its dots clear for good.
   if (current === null || current.has(name)) return
   try {
     localStorage.setItem(`${SEEN_KEY_PREFIX}${name}`, "1")
@@ -78,6 +79,41 @@ export function markSeen(name: string): void {
   }
   seen = new Set(current).add(name)
   notify()
+  onMarkSeen?.(name)
+}
+
+/** Every name this reader has seen, or null when localStorage can't be read. */
+export function seenNames(): string[] | null {
+  const current = getSeen()
+  return current === null ? null : [...current]
+}
+
+/**
+ * Record names seen somewhere else (on the reader's account), in this tab and every other.
+ * Unlike `markSeen`, this doesn't tell the account: it's where they came from. When
+ * localStorage can't be read, they're kept for this page and become what's known: dots the
+ * account hasn't recorded show, and clearing one records it there.
+ */
+export function addSeen(names: Iterable<string>): void {
+  const current = getSeen()
+  const next = new Set(current ?? [])
+  for (const name of names) {
+    if (next.has(name)) continue
+    next.add(name)
+    try {
+      localStorage.setItem(`${SEEN_KEY_PREFIX}${name}`, "1")
+    } catch {
+      // Storage is full or blocked; this page still knows.
+    }
+  }
+  if (current !== null && next.size === current.size) return
+  seen = next
+  notify()
+}
+
+/** Call `listener` each time this tab marks a name seen, or stop with null. */
+export function setOnMarkSeen(listener: ((name: string) => void) | null): void {
+  onMarkSeen = listener
 }
 
 /** Forget the cached state so the next read comes from localStorage. For tests and stories. */

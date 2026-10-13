@@ -49,4 +49,4 @@ At /account, a member can change the name they comment under, connect Google, Di
 
 ## Where it's switched on
 
-Comments are a beta feature. Admins switch them on in **System → Settings** under **Experiments**; staging and the live site each have their own switch. See [Switch beta features on per site in Settings](/docs/experiments). Readers sign in through **Single sign-on**, so that experiment needs to be on too. While comments are off, articles show no comments, nobody can post, and nobody can make a new account, but the comments already written are kept.
+Comments are a beta feature. Admins switch them on in **System → Plugins** under **Comments**; staging and the live site each have their own switch. Readers sign in through **Single sign-on**, so that switch needs to be on too: with it off, comments stay off. While comments are off, articles show no comments, nobody can post, and nobody can make a new account, but the comments already written are kept.

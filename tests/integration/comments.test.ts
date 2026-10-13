@@ -120,10 +120,10 @@ async function posted(
   return (await response.json()) as { comment: PublicComment; held?: string }
 }
 
-const setExperiment = (comments: boolean) =>
+const setSwitch = (comments: boolean) =>
   payload.updateGlobal({
-    slug: "site-settings",
-    data: { experiments: { sso: true, comments } },
+    slug: "plugins",
+    data: { switches: { sso: true, comments } },
     context: { disableRevalidate: true },
   })
 
@@ -148,7 +148,7 @@ beforeAll(async () => {
 beforeEach(async () => {
   vi.stubEnv("DISCORD_CLIENT_ID", "discord-client")
   vi.stubEnv("DISCORD_CLIENT_SECRET", "discord-secret")
-  await setExperiment(true)
+  await setSwitch(true)
   await setSettings({
     maxDepth: 5,
     violationThreshold: 3,
@@ -434,7 +434,9 @@ describe("comments", () => {
     ).resolves.toBeNull()
 
     vi.useFakeTimers({ now: Date.now() + 60_000, toFake: ["Date"] })
-    await posted(own, cookie, "Also soon gone")
+    const { comment: later } = await posted(own, cookie, "Also soon gone")
+    vi.setSystemTime(Date.now() + 60_000)
+    await posted(own, other, "And its reply", later.id)
     await payload.delete({
       collection: "articles",
       id: own.id,
@@ -442,6 +444,24 @@ describe("comments", () => {
     })
     expect(
       (await payload.count({ collection: "comments", where: { target: { equals: own.id } } }))
+        .totalDocs,
+    ).toBe(0)
+  })
+
+  it("deletes a comment and its reply together, as a moderator's bulk delete does", async () => {
+    const cookie = await signIn(reader())
+    const other = await signIn(reader())
+    const { comment: top } = await posted(article, cookie, "Top")
+    const { comment: reply } = await posted(article, other, "Reply", top.id)
+
+    const { errors } = await payload.delete({
+      collection: "comments",
+      where: { id: { in: [top.id, reply.id] } },
+    })
+
+    expect(errors).toEqual([])
+    expect(
+      (await payload.count({ collection: "comments", where: { id: { in: [top.id, reply.id] } } }))
         .totalDocs,
     ).toBe(0)
   })
@@ -483,10 +503,10 @@ describe("comments", () => {
     ).resolves.toMatchObject({ maxDepth: 4 })
   })
 
-  it("is switched off with the experiment, sign-ups included", async () => {
+  it("is switched off on System → Plugins, sign-ups included", async () => {
     const cookie = await signIn(reader())
 
-    await setExperiment(false)
+    await setSwitch(false)
 
     expect((await api(`/comments/thread/${article.id}`)).status).toBe(404)
     expect((await post(article, cookie, "Hello")).status).toBe(404)

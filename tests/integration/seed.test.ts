@@ -68,6 +68,8 @@ describe("seed outside Next.js", () => {
       interactives: true,
       tableOfContents: true,
     })
+    const plugins = await payload.findGlobal({ slug: "plugins" })
+    expect(plugins.switches).toEqual({ docs: true, notifications: true, tours: true, sso: true })
   }, 300_000)
 
   it("re-seeds over its own data, ranked articles included", async () => {

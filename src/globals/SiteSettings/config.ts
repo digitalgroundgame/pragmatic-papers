@@ -16,6 +16,15 @@ function experimentField(field: Omit<CheckboxField, "type">): CheckboxField {
   }
 }
 
+/**
+ * An experiment whose switch moved to its plugin on System → Plugins. Hidden, and read by
+ * nothing, but kept so a deploy's old container can still read its column. Delete these
+ * fields and this helper when #1307 closes.
+ */
+function movedToPlugins(field: Omit<CheckboxField, "type">): CheckboxField {
+  return { ...field, type: "checkbox", admin: { ...field.admin, hidden: true } }
+}
+
 export const SiteSettings: GlobalConfig = {
   slug: "site-settings",
   label: "Settings",
@@ -51,7 +60,7 @@ export const SiteSettings: GlobalConfig = {
               "Interactive pages at /interactives/<slug>, their sitemap and the daily data sync.",
           },
         }),
-        experimentField({
+        movedToPlugins({
           name: "docs",
           label: "Help docs",
           defaultValue: false,
@@ -60,13 +69,13 @@ export const SiteSettings: GlobalConfig = {
               "The help docs at /docs, their sitemap, and their items in the notifications bell. Staff can write docs in the admin either way.",
           },
         }),
-        experimentField({
+        movedToPlugins({
           name: "notifications",
           label: "Notifications bell",
           defaultValue: false,
           admin: { description: "The bell beside the avatar in the admin header." },
         }),
-        experimentField({
+        movedToPlugins({
           name: "tours",
           label: "Guided tours",
           defaultValue: false,
@@ -75,22 +84,13 @@ export const SiteSettings: GlobalConfig = {
               "Guided tours of the admin, and the Show me buttons that start them in the bell and on help docs.",
           },
         }),
-        experimentField({
+        movedToPlugins({
           name: "sso",
           label: "Single sign-on",
           defaultValue: false,
           admin: {
             description:
               "“Sign in with Google” and “Sign in with Discord” on the admin's login page, for people who already have an account here. Each provider also needs its credentials (System → Integrations).",
-          },
-        }),
-        experimentField({
-          name: "comments",
-          label: "Comments",
-          defaultValue: false,
-          admin: {
-            description:
-              "Comments under articles, from readers who sign in with Google or Discord, and their moderation under Content. The providers need their credentials (System → Integrations).",
           },
         }),
         experimentField({

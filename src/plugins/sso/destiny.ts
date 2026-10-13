@@ -10,6 +10,19 @@ export const DESTINY_URLS = {
   userInfo: "https://www.destiny.gg/api/userinfo",
 } as const
 
+/** How long the callback waits on Destiny.gg before sending the user back to the login page. */
+export const DESTINY_TIMEOUT_MS = 10_000
+
+/** A GET to Destiny.gg, or null when it fails, times out or can't be reached. */
+async function getFromDestiny(url: URL): Promise<Response | null> {
+  try {
+    const response = await fetch(url, { signal: AbortSignal.timeout(DESTINY_TIMEOUT_MS) })
+    return response.ok ? response : null
+  } catch {
+    return null
+  }
+}
+
 /** What `/api/userinfo` returns. It has no email address. */
 export interface DestinyProfile {
   userId: number | string
@@ -106,8 +119,8 @@ export function destinyProvider(options: DestinyProviderOptions): OAuthProvider<
         redirect_uri: redirectURI,
         code_verifier: codeVerifier,
       }).toString()
-      const response = await fetch(url)
-      if (!response.ok) return null
+      const response = await getFromDestiny(url)
+      if (!response) return null
       // A refused exchange is still a 200, with `error` in the body.
       const body = (await response.json()) as {
         access_token?: string
@@ -132,8 +145,8 @@ export function destinyProvider(options: DestinyProviderOptions): OAuthProvider<
       if (!accessToken) return null
       const url = new URL(DESTINY_URLS.userInfo)
       url.searchParams.set("token", accessToken)
-      const response = await fetch(url)
-      if (!response.ok) return null
+      const response = await getFromDestiny(url)
+      if (!response) return null
       const data = readProfile(await response.json())
       if (!data) return null
       return {

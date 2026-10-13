@@ -12,6 +12,9 @@ vi.mock("next/headers", () => ({ draftMode: async () => ({ isEnabled: false }) }
 vi.mock("@/globals/SiteSettings/isExperimentEnabled", () => ({
   isExperimentEnabled: async () => true,
 }))
+vi.mock("@/globals/Plugins/isPluginEnabled", () => ({
+  isPluginEnabled: async () => true,
+}))
 
 import { DocView } from "../[slug]/DocView"
 import DocsHomePage, { generateMetadata } from "../page"

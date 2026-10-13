@@ -229,6 +229,7 @@ export interface Config {
     'site-settings': SiteSetting;
     integrations: IntegrationSettings;
     newsletter: Newsletter;
+    plugins: Plugin;
     'article-recommendations': ArticleRecommendation;
     'comment-settings': CommentSetting;
     'payload-jobs-stats': PayloadJobsStat;
@@ -239,6 +240,7 @@ export interface Config {
     'site-settings': SiteSettingsSelect<false> | SiteSettingsSelect<true>;
     integrations: IntegrationsSelect<false> | IntegrationsSelect<true>;
     newsletter: NewsletterSelect<false> | NewsletterSelect<true>;
+    plugins: PluginsSelect<false> | PluginsSelect<true>;
     'article-recommendations': ArticleRecommendationsSelect<false> | ArticleRecommendationsSelect<true>;
     'comment-settings': CommentSettingsSelect<false> | CommentSettingsSelect<true>;
     'payload-jobs-stats': PayloadJobsStatsSelect<false> | PayloadJobsStatsSelect<true>;
@@ -2744,10 +2746,6 @@ export interface SiteSetting {
      */
     sso?: boolean | null;
     /**
-     * Comments under articles, from readers who sign in with Google or Discord, and their moderation under Content. The providers need their credentials (System → Integrations).
-     */
-    comments?: boolean | null;
-    /**
      * The table of contents in an article's sidebar and its hero button, on articles with “Show table of contents” ticked.
      */
     tableOfContents?: boolean | null;
@@ -2817,6 +2815,40 @@ export interface IntegrationSettings {
  */
 export interface Newsletter {
   id: number;
+  updatedAt?: string | null;
+  createdAt?: string | null;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "plugins".
+ */
+export interface Plugin {
+  id: number;
+  /**
+   * Switch a plugin off here and it stops at once, without a deploy. Its data stays.
+   */
+  switches?: {
+    /**
+     * The help docs at /docs, their sitemap, and their items in the notifications bell. Staff can write docs in the admin either way.
+     */
+    docs?: boolean | null;
+    /**
+     * The bell beside the avatar in the admin header.
+     */
+    notifications?: boolean | null;
+    /**
+     * Guided tours of the admin, and the Show me buttons that start them in the bell and on help docs.
+     */
+    tours?: boolean | null;
+    /**
+     * “Sign in with Google”, “Sign in with Discord” and “Sign in with Destiny.gg” on the admin's login page, for people who already have an account here, the Connections tab that links them, and members' sign-ins on the site. Each provider also needs its credentials (System → Integrations).
+     */
+    sso?: boolean | null;
+    /**
+     * The Comments section under each article, and sign-ups: readers make an account by signing in to comment. Needs Single sign-on on too.
+     */
+    comments?: boolean | null;
+  };
   updatedAt?: string | null;
   createdAt?: string | null;
 }
@@ -2945,7 +2977,6 @@ export interface SiteSettingsSelect<T extends boolean = true> {
         notifications?: T;
         tours?: T;
         sso?: T;
-        comments?: T;
         tableOfContents?: T;
       };
   updatedAt?: T;
@@ -2996,6 +3027,24 @@ export interface IntegrationsSelect<T extends boolean = true> {
  * via the `definition` "newsletter_select".
  */
 export interface NewsletterSelect<T extends boolean = true> {
+  updatedAt?: T;
+  createdAt?: T;
+  globalType?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "plugins_select".
+ */
+export interface PluginsSelect<T extends boolean = true> {
+  switches?:
+    | T
+    | {
+        docs?: T;
+        notifications?: T;
+        tours?: T;
+        sso?: T;
+        comments?: T;
+      };
   updatedAt?: T;
   createdAt?: T;
   globalType?: T;

@@ -2,10 +2,10 @@ import type { PayloadRequest } from "payload"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { accountEndpoints, MAX_NAME_LENGTH, normalizeName } from "../endpoints/account"
-import { getSignedInUser } from "../session"
+import { signedInUser } from "../session"
 import type { ResolvedSsoConfig } from "../types"
 
-vi.mock("../session", () => ({ getSignedInUser: vi.fn() }))
+vi.mock("../session", () => ({ signedInUser: vi.fn() }))
 
 describe("normalizeName", () => {
   it("collapses spaces and drops control characters", () => {
@@ -54,7 +54,7 @@ describe("accountEndpoints", () => {
     vi.clearAllMocks()
     enabled.mockResolvedValue(true)
     signedIn.mockResolvedValue(member)
-    vi.mocked(getSignedInUser).mockImplementation(signedIn)
+    vi.mocked(signedInUser).mockImplementation(signedIn)
   })
 
   it("serves GET, PATCH and DELETE on /account", () => {

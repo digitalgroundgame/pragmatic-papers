@@ -2,7 +2,7 @@ import type { CollectionSlug, Endpoint, PayloadHandler, PayloadRequest } from "p
 
 import { ACCOUNT_ENDPOINT_PATH } from "../constants"
 import { isPlaceholderEmail } from "../placeholderEmail"
-import { getSignedInUser } from "../session"
+import { signedInUser } from "../session"
 import type { ResolvedSsoConfig } from "../types"
 
 /** The longest display name, in characters. */
@@ -50,7 +50,7 @@ export function normalizeName(
 export function accountEndpoints(config: ResolvedSsoConfig): Endpoint[] {
   async function signedIn(req: PayloadRequest) {
     if (!(await config.enabled({ payload: req.payload }))) return notFound()
-    return (await getSignedInUser(req, config)) ?? unauthorized()
+    return (await signedInUser(req, config)) ?? unauthorized()
   }
 
   const summary = (user: Record<string, unknown>): AccountSummary => ({

@@ -1,4 +1,4 @@
-import type { Experiment } from "@/globals/SiteSettings/isExperimentEnabled"
+import type { PluginSwitchName } from "@/globals/Plugins/isPluginEnabled"
 import { admin, editor } from "@/access/collections"
 import { isStaff } from "@/access/roles"
 import { revalidateRedirects } from "@/hooks/revalidateRedirects"
@@ -10,6 +10,7 @@ import type { Article, Interactive, Page, Topic, User, Volume } from "@/payload-
 import { getSiteURL } from "@/utilities/getURL"
 import { DEFAULT_DESCRIPTION } from "@/utilities/mergeOpenGraph"
 import { docPath } from "@/utilities/routes"
+import { describePlugin } from "@/utilities/registerPlugin"
 import { truncate } from "@/utilities/truncate"
 import { toRoman } from "@/utilities/toRoman"
 import { formBuilderPlugin } from "@payloadcms/plugin-form-builder"
@@ -30,14 +31,14 @@ import { s3Storage } from "@payloadcms/storage-s3"
 import { type Payload, type Plugin } from "payload"
 
 import { commentsPlugin } from "./comments"
-import { signUpProviders, ssoOptions } from "./signIn"
+import { commentsOn, signUpProviders, ssoOptions } from "./signIn"
 import { getSignedInUser, ssoPlugin } from "./sso"
 import { staffByDefault } from "./staffByDefault"
 
-// Reads the switch in Site Settings when called. Imported then, not here: the
-// Settings global reaches the Payload config, which imports this file.
-const experiment = (name: Experiment) => async (): Promise<boolean> =>
-  (await import("@/globals/SiteSettings/isExperimentEnabled")).isExperimentEnabled(name)
+// Reads the plugin's switch on System → Plugins when called. Imported then, not here: the
+// Plugins global reaches the Payload config, which imports this file.
+const pluginSwitch = (name: PluginSwitchName) => async (): Promise<boolean> =>
+  (await import("@/globals/Plugins/isPluginEnabled")).isPluginEnabled(name)
 
 type SeoDoc = Volume | Article | Page | Topic | Interactive
 
@@ -212,137 +213,201 @@ export const storageFileURL =
     return supabaseObjectURL({ supabaseUrl, bucket, prefix: prefix || defaultPrefix, filename })
   }
 
+/**
+ * The site's Payload plugins, in the order they run. Ours describe themselves for System →
+ * Plugins (`registerPlugin`); the packages don't yet, so they're described here (`describePlugin`).
+ */
 export const plugins: Plugin[] = [
-  searchPlugin({
-    collections: ["articles", "pages", "volumes", "topics"],
-    defaultPriorities: {
-      articles: 40,
-      volumes: 30,
-      pages: 20,
-      topics: 10,
-    },
-    beforeSync,
-    searchOverrides: {
-      labels: { singular: "Search Result", plural: "Search" },
-      admin: { group: "System" },
-      fields: ({ defaultFields }) => [
-        ...defaultFields,
-        { name: "excerpt", type: "text", admin: { readOnly: true } },
-        { name: "slug", type: "text", admin: { readOnly: true } },
-        { name: "authors", type: "text", admin: { readOnly: true } },
-        { name: "topics", type: "text", admin: { readOnly: true } },
-        { name: "image", type: "upload", relationTo: "media", admin: { readOnly: true } },
-        { name: "body", type: "textarea", admin: { readOnly: true, hidden: true } },
-      ],
-    },
-  }),
-  redirectsPlugin({
-    collections: ["pages", "volumes", "articles"],
-    overrides: {
-      // @ts-expect-error - This is a valid override, mapped fields don't resolve to the same type
-      fields: ({ defaultFields }) => {
-        return defaultFields.map((field) => {
-          if ("name" in field && field.name === "from") {
-            return {
-              ...field,
-              admin: {
-                description: "You will need to rebuild the website when changing this field.",
-              },
-            }
-          }
-          return field
-        })
+  describePlugin(
+    searchPlugin({
+      collections: ["articles", "pages", "volumes", "topics"],
+      defaultPriorities: {
+        articles: 40,
+        volumes: 30,
+        pages: 20,
+        topics: 10,
       },
-      hooks: {
-        afterChange: [revalidateRedirects],
+      beforeSync,
+      searchOverrides: {
+        labels: { singular: "Search Result", plural: "Search" },
+        admin: { group: "System" },
+        fields: ({ defaultFields }) => [
+          ...defaultFields,
+          { name: "excerpt", type: "text", admin: { readOnly: true } },
+          { name: "slug", type: "text", admin: { readOnly: true } },
+          { name: "authors", type: "text", admin: { readOnly: true } },
+          { name: "topics", type: "text", admin: { readOnly: true } },
+          { name: "image", type: "upload", relationTo: "media", admin: { readOnly: true } },
+          { name: "body", type: "textarea", admin: { readOnly: true, hidden: true } },
+        ],
       },
-      admin: {
-        hidden: true, // TODO: Setup redirects plugin
+    }),
+    {
+      slug: "plugin-search",
+      manifest: {
+        name: "Search",
+        source: "@payloadcms/plugin-search",
+        description:
+          "Keeps a search index of articles, pages, volumes and topics, which the site's search reads.",
       },
     },
-  }),
-  nestedDocsPlugin({
-    collections: ["categories"],
-    generateURL: (docs) => docs.reduce((url, doc) => `${url}/${doc.slug}`, ""),
-  }),
-  seo,
-  formBuilderPlugin({
-    fields: {
-      payment: false,
-    },
-    formOverrides: {
-      fields: ({ defaultFields }) => {
-        return defaultFields.map((field) => {
-          if ("name" in field && field.name === "confirmationMessage") {
-            return {
-              ...field,
-              editor: lexicalEditor({
-                features: ({ rootFeatures }) => {
-                  return [
-                    ...rootFeatures,
-                    FixedToolbarFeature(),
-                    HeadingFeature({ enabledHeadingSizes: ["h1", "h2", "h3", "h4"] }),
-                  ]
+  ),
+  describePlugin(
+    redirectsPlugin({
+      collections: ["pages", "volumes", "articles"],
+      overrides: {
+        // @ts-expect-error - This is a valid override, mapped fields don't resolve to the same type
+        fields: ({ defaultFields }) => {
+          return defaultFields.map((field) => {
+            if ("name" in field && field.name === "from") {
+              return {
+                ...field,
+                admin: {
+                  description: "You will need to rebuild the website when changing this field.",
                 },
-              }),
+              }
             }
-          }
-          return field
-        })
+            return field
+          })
+        },
+        hooks: {
+          afterChange: [revalidateRedirects],
+        },
+        admin: {
+          hidden: true, // TODO: Setup redirects plugin
+        },
       },
-      admin: {
-        hidden: true, // TODO: Setup form builder plugin
+    }),
+    {
+      slug: "plugin-redirects",
+      manifest: {
+        name: "Redirects",
+        source: "@payloadcms/plugin-redirects",
+        description:
+          "Redirects from old URLs to pages, volumes and articles. Hidden in the admin until it's set up.",
       },
     },
-    formSubmissionOverrides: {
-      // The plugin lets any logged-in user read every submission.
-      access: { read: editor },
-      admin: {
-        hidden: true, // TODO: Setup form builder plugin
+  ),
+  describePlugin(
+    nestedDocsPlugin({
+      collections: ["categories"],
+      generateURL: (docs) => docs.reduce((url, doc) => `${url}/${doc.slug}`, ""),
+    }),
+    {
+      slug: "plugin-nested-docs",
+      manifest: {
+        name: "Nested docs",
+        source: "@payloadcms/plugin-nested-docs",
+        description: "Parents and breadcrumb URLs for categories.",
       },
+    },
+  ),
+  describePlugin(seo, {
+    slug: "plugin-seo",
+    manifest: {
+      name: "SEO",
+      source: "@payloadcms/plugin-seo",
+      description:
+        "The Auto-generate buttons in the SEO tab of articles, pages, volumes, topics and interactives.",
     },
   }),
-  s3Storage({
-    // Enable S3 storage only when not using local storage
-    // For staging/preview: set USE_LOCAL_STORAGE=true to use local file system
-    // For production: set USE_LOCAL_STORAGE=false (or leave unset) to use S3
-    enabled: process.env.USE_LOCAL_STORAGE !== "true",
-    collections: {
-      media: {
-        disablePayloadAccessControl: true,
-        generateFileURL: storageFileURL("media"),
+  describePlugin(
+    formBuilderPlugin({
+      fields: {
+        payment: false,
       },
-      "map-assets": {
-        disablePayloadAccessControl: true,
-        prefix: "map-assets",
-        generateFileURL: storageFileURL("map-assets", "map-assets"),
+      formOverrides: {
+        fields: ({ defaultFields }) => {
+          return defaultFields.map((field) => {
+            if ("name" in field && field.name === "confirmationMessage") {
+              return {
+                ...field,
+                editor: lexicalEditor({
+                  features: ({ rootFeatures }) => {
+                    return [
+                      ...rootFeatures,
+                      FixedToolbarFeature(),
+                      HeadingFeature({ enabledHeadingSizes: ["h1", "h2", "h3", "h4"] }),
+                    ]
+                  },
+                }),
+              }
+            }
+            return field
+          })
+        },
+        admin: {
+          hidden: true, // TODO: Setup form builder plugin
+        },
+      },
+      formSubmissionOverrides: {
+        // The plugin lets any logged-in user read every submission.
+        access: { read: editor },
+        admin: {
+          hidden: true, // TODO: Setup form builder plugin
+        },
+      },
+    }),
+    {
+      slug: "plugin-form-builder",
+      manifest: {
+        name: "Form builder",
+        source: "@payloadcms/plugin-form-builder",
+        description: "Forms and their submissions. Hidden in the admin until it's set up.",
       },
     },
-    bucket: process.env.S3_BUCKET || "",
-    config: {
-      forcePathStyle: true,
-      credentials: {
-        accessKeyId: process.env.S3_ACCESS_KEY_ID || "",
-        secretAccessKey: process.env.S3_SECRET_ACCESS_KEY || "",
+  ),
+  describePlugin(
+    s3Storage({
+      // Enable S3 storage only when not using local storage
+      // For staging/preview: set USE_LOCAL_STORAGE=true to use local file system
+      // For production: set USE_LOCAL_STORAGE=false (or leave unset) to use S3
+      enabled: process.env.USE_LOCAL_STORAGE !== "true",
+      collections: {
+        media: {
+          disablePayloadAccessControl: true,
+          generateFileURL: storageFileURL("media"),
+        },
+        "map-assets": {
+          disablePayloadAccessControl: true,
+          prefix: "map-assets",
+          generateFileURL: storageFileURL("map-assets", "map-assets"),
+        },
       },
-      region: process.env.S3_REGION,
-      endpoint: process.env.S3_ENDPOINT || "",
+      bucket: process.env.S3_BUCKET || "",
+      config: {
+        forcePathStyle: true,
+        credentials: {
+          accessKeyId: process.env.S3_ACCESS_KEY_ID || "",
+          secretAccessKey: process.env.S3_SECRET_ACCESS_KEY || "",
+        },
+        region: process.env.S3_REGION,
+        endpoint: process.env.S3_ENDPOINT || "",
+      },
+      clientUploads: true,
+    }),
+    {
+      slug: "storage-s3",
+      manifest: {
+        name: "S3 storage",
+        source: "@payloadcms/storage-s3",
+        description:
+          "Keeps media and map uploads in the S3 bucket. Off where USE_LOCAL_STORAGE=true, which keeps them on disk.",
+      },
+      enabled: process.env.USE_LOCAL_STORAGE !== "true",
     },
-    clientUploads: true,
-  }),
-  docsPlugin(),
+  ),
+  docsPlugin({ enabled: pluginSwitch("docs") }),
   notificationsPlugin({
-    sources: [docsNotifications({ enabled: experiment("docs"), tours: experiment("tours") })],
-    enabled: experiment("notifications"),
+    sources: [docsNotifications({ enabled: pluginSwitch("docs"), tours: pluginSwitch("tours") })],
+    enabled: pluginSwitch("notifications"),
   }),
-  toursPlugin({ enabled: experiment("tours") }),
+  toursPlugin({ enabled: pluginSwitch("tours") }),
   ssoPlugin(ssoOptions),
   commentsPlugin({
-    // Read from the database on each request, like `sso`'s, so switching the experiment off
-    // stops posts at once.
-    enabled: async ({ payload }) =>
-      (await payload.findGlobal({ slug: "site-settings", depth: 0 })).experiments?.comments ===
-      true,
+    // Read from the database on each request, like `sso`'s, so switching either off stops
+    // posts at once.
+    enabled: commentsOn,
     // Members and staff alike: a member is signed in to the site but not to Payload.
     currentUser: (req) => getSignedInUser(req, ssoOptions),
     authorFields: ["name", "avatarUrl", "roles"],
@@ -359,5 +424,13 @@ export const plugins: Plugin[] = [
     admins: admin,
   }),
   // Last, so it sees every other plugin's collections.
-  staffByDefault,
+  describePlugin(staffByDefault, {
+    slug: "staff-by-default",
+    manifest: {
+      name: "Staff by default",
+      source: "src/plugins/staffByDefault.ts",
+      description:
+        "Gives every access rule a collection or plugin leaves unset to staff, where Payload's default is anyone signed in, so members never get more than readers.",
+    },
+  }),
 ]

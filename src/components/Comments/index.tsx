@@ -253,6 +253,11 @@ export const Comments: React.FC<CommentsProps> = ({ articleId, apiPath = "/api" 
             <SignIn providers={thread.providers} onSignIn={(p) => void signIn(p)} />
           )}
 
+          {thread.truncated ? (
+            <p className="text-muted-foreground text-sm">
+              Showing the newest comments. Older ones aren&apos;t shown here.
+            </p>
+          ) : null}
           {thread.comments.length === 0 ? (
             <p className="text-muted-foreground text-sm">No comments yet.</p>
           ) : (

@@ -4,7 +4,7 @@ import type { Endpoint, PayloadHandler, PayloadRequest } from "payload"
 import { configuredProviders, getAuth } from "../auth"
 import { LINKS_ENDPOINT_PATH, PROVIDER_LABELS, TABLES } from "../constants"
 import type { LinkForUserBody } from "../linking"
-import { getSignedInUser, type SignedInUser } from "../session"
+import { signedInUser, type SignedInUser } from "../session"
 import type { LinkedProvider, ResolvedSsoConfig, SsoProviderId } from "../types"
 
 const notFound = () => Response.json({ message: "Not Found" }, { status: 404 })
@@ -12,7 +12,7 @@ const notFound = () => Response.json({ message: "Not Found" }, { status: 404 })
 /**
  * The signed-in user's links to each configured provider: list them, connect one (which
  * returns the provider's URL to send them to) and disconnect one. Each acts on the signed-in
- * user (`getSignedInUser`): Payload's `req.user` after a password or provider login, or a
+ * user (`signedInUser`): Payload's `req.user` after a password or provider login, or a
  * member, whose provider session Payload doesn't accept.
  */
 export function linkEndpoints(config: ResolvedSsoConfig): Endpoint[] {
@@ -21,7 +21,7 @@ export function linkEndpoints(config: ResolvedSsoConfig): Endpoint[] {
     req: PayloadRequest,
   ): Promise<{ user: SignedInUser; provider: SsoProviderId | null } | Response> {
     if (!(await config.enabled({ payload: req.payload }))) return notFound()
-    const user = await getSignedInUser(req, config)
+    const user = await signedInUser(req, config)
     if (!user) return Response.json({ message: "Unauthorized" }, { status: 401 })
     const param = req.routeParams?.provider
     if (param === undefined) return { user, provider: null }

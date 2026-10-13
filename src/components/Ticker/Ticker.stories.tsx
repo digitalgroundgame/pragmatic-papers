@@ -3,6 +3,7 @@ import { expect, screen, userEvent, waitFor, within } from "storybook/test"
 
 import { liveBroadcast, tickerPosts, upcomingBroadcast } from "@/stories/fixtures/ticker"
 import { shortURL } from "./LinkIcon"
+import { TickerPlaceholder } from "./TickerLoader"
 import { TickerView } from "./TickerView"
 
 const meta = {
@@ -102,5 +103,28 @@ export const LinkTooltip: Story = {
     await waitFor(() => expect(screen.queryByText(filibuster)).not.toBeInTheDocument())
     await expect(link).toHaveAttribute("href", filibuster)
     await expect(link).toHaveAttribute("target", "_blank")
+  },
+}
+
+/**
+ * What a page shows while the ticker's feed loads: an empty strip exactly the ticker's size,
+ * so nothing below moves when the feed arrives.
+ */
+export const Loading: Story = {
+  args: { broadcast: null, posts: tickerPosts },
+  render: (args) => (
+    <div className="flex flex-col">
+      <TickerPlaceholder />
+      <TickerView {...args} />
+    </div>
+  ),
+  play: async ({ canvasElement }) => {
+    const placeholder = canvasElement.querySelector<HTMLElement>("[data-ticker-placeholder]")!
+    const ticker = within(canvasElement).getByRole("region", { name: "Live and latest" })
+    const box = (el: HTMLElement) => {
+      const style = getComputedStyle(el)
+      return [el.getBoundingClientRect().height, style.marginTop, style.marginBottom]
+    }
+    await expect(box(placeholder)).toEqual(box(ticker))
   },
 }

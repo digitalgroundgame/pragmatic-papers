@@ -8,17 +8,29 @@ import type { Payload } from "payload"
 
 import { SSO_PROVIDER_LABELS, type SsoPluginConfig, type SsoProviderId } from "./sso"
 
-const experimentOn = async (payload: Payload, name: "sso" | "comments") =>
-  (await payload.findGlobal({ slug: "site-settings", depth: 0 })).experiments?.[name] === true
+/**
+ * A plugin's switch on System → Plugins, read from the database on each request rather than
+ * through `isPluginEnabled`'s cache, so turning it off takes effect at once.
+ */
+const switchOn = async (payload: Payload, name: "sso" | "comments"): Promise<boolean> =>
+  (await payload.findGlobal({ slug: "plugins", depth: 0 })).switches?.[name] === true
+
+/**
+ * Whether comments are on: their switch, and single sign-on's, since readers have no other way
+ * to sign in. With SSO off, the comment box would offer buttons that lead nowhere.
+ */
+export const commentsOn = async (payload: Payload): Promise<boolean> => {
+  const { switches } = await payload.findGlobal({ slug: "plugins", depth: 0 })
+  return switches?.comments === true && switches.sso === true
+}
 
 /**
  * The sign-in plugin's options. The comments plugin and the account page read who is signed
  * in with them too (`getSignedInUser`), so they live here rather than inline in `plugins`.
  */
 export const ssoOptions: SsoPluginConfig = {
-  // The `sso` experiment, read from the database on each request rather than through
-  // `isExperimentEnabled`'s cache, so turning it off ends SSO sessions at once.
-  enabled: ({ payload }) => experimentOn(payload, "sso"),
+  // Turning it off ends SSO sessions at once.
+  enabled: (payload) => switchOn(payload, "sso"),
   providers: () => ({
     google: googleSignIn.credentials(),
     discord: discordSignIn.credentials(),
@@ -32,7 +44,7 @@ export const ssoOptions: SsoPluginConfig = {
   // Readers make an account by signing in to comment, so sign-ups open with comments. Each
   // is a member and nothing more; an admin gives anyone a staff role.
   signUp: {
-    enabled: ({ payload }) => experimentOn(payload, "comments"),
+    enabled: ({ payload }) => commentsOn(payload),
     // Members have no public page; the slug only has to be unique.
     columns: () => ({ slug: `member-${randomBytes(6).toString("hex")}` }),
     afterCreate: async ({ payload, userId }) => {

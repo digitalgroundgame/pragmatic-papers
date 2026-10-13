@@ -133,7 +133,7 @@ jobs:
       contents: read
       packages: read
     env:
-      # Copied into GHCR by postgres-image.yml, and pulled logged in (see the login step).
+      # Copied into GHCR by ci-images.yml, and pulled logged in (see the login step).
       TEST_DB_IMAGE: ghcr.io/digitalgroundgame/postgres:17-alpine
       SERVER_URL: http://localhost:8000
       PAYLOAD_SECRET: ci-payload-secret
@@ -330,7 +330,7 @@ jobs:
       contents: read
       packages: read
     env:
-      # Copied into GHCR by postgres-image.yml, and pulled logged in (see the login step).
+      # Copied into GHCR by ci-images.yml, and pulled logged in (see the login step).
       TEST_DB_IMAGE: ghcr.io/digitalgroundgame/postgres:17-alpine
       PAYLOAD_SECRET: ci-integration-secret
       USE_LOCAL_STORAGE: "true"

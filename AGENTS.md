@@ -55,7 +55,10 @@ processes they start.
   (`ghcr.io/digitalgroundgame/postgres:17-alpine`, set by `TEST_DB_IMAGE` and used by
   every Postgres service), logged in with the job's `GITHUB_TOKEN`, because GitHub's
   shared runners share their IPs and ran out of ECR Public's anonymous pulls too.
-  `.github/workflows/postgres-image.yml` refreshes that copy weekly.
+  `.github/workflows/ci-images.yml` refreshes that copy weekly, along with a GHCR copy of
+  the Node image the CI Dockerfile builds on (`ghcr.io/digitalgroundgame/node`), which
+  `build-app-image` pulls logged in, falling back to `mirror.gcr.io` (then ECR Public)
+  until the copy exists.
 - Integration and E2E start from a **pre-migrated snapshot image**
   (`pragmatic-papers-test-db:<hash>`, keyed on `src/migrations/**` and the Postgres image),
   so they skip `payload migrate` until a migration changes; a miss migrates once and commits

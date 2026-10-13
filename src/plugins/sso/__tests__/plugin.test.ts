@@ -25,7 +25,7 @@ const fieldNames = (collection: CollectionConfig) =>
   collection.fields.map((field) => ("name" in field ? field.name : null))
 
 describe("ssoPlugin", () => {
-  it("adds Better Auth's hidden columns and the Linked accounts panel to the users collection only", () => {
+  it("adds Better Auth's hidden columns and the Connections panel to the users collection only", () => {
     const config = apply(options)
     expect(fieldNames(usersOf(config))).toEqual([
       "name",
@@ -34,6 +34,67 @@ describe("ssoPlugin", () => {
       "linkedAccounts",
     ])
     expect(config.collections![1]).toBe(articles)
+  })
+
+  it("puts the Connections panel in a tab of its own, shown only when there's something to connect", () => {
+    const profile = { label: "Profile", fields: [{ name: "name", type: "text" as const }] }
+    const tabbed: CollectionConfig = {
+      ...users,
+      fields: [
+        { type: "tabs", tabs: [profile] },
+        { name: "roles", type: "text" },
+      ],
+    }
+    const config = ssoPlugin(options)({ collections: [tabbed] } as Config) as Config
+    const [tabsField, ...rest] = usersOf(config).fields
+    if (tabsField?.type !== "tabs") throw new Error("no tabs")
+
+    expect(rest.map((field) => ("name" in field ? field.name : null))).toEqual([
+      "roles",
+      "emailVerified",
+      "avatarUrl",
+      "ssoConnections",
+    ])
+    const [first, connections] = tabsField.tabs
+    expect(first).toBe(profile)
+    expect(connections).toMatchObject({
+      label: "Connections",
+      fields: [{ name: "linkedAccounts", type: "ui" }],
+    })
+
+    const condition = connections!.admin!.condition!
+    const as = (user: { id: number } | null, data: Record<string, unknown>) =>
+      condition(data, {}, { user, blockData: {}, operation: "update", path: [] } as never)
+    expect(as({ id: 1 }, { id: 1, ssoConnections: true })).toBe(true)
+    expect(as({ id: 1 }, { id: 1, ssoConnections: false })).toBe(false)
+    expect(as({ id: 1 }, { id: 2, ssoConnections: true })).toBe(false)
+    expect(as(null, { id: 1, ssoConnections: true })).toBe(false)
+  })
+
+  it("works out the Connections flag when the user's own record is read", async () => {
+    const tabbed: CollectionConfig = { ...users, fields: [{ type: "tabs", tabs: [] }] }
+    const run = async (pluginOptions: SsoPluginConfig, req: object, data: object) => {
+      const config = ssoPlugin(pluginOptions)({ collections: [tabbed] } as Config) as Config
+      const flag = usersOf(config).fields.find(
+        (field) => "name" in field && field.name === "ssoConnections",
+      )
+      if (!flag || !("hooks" in flag)) throw new Error("no flag")
+      return flag.hooks!.afterRead![0]!({ data, req } as never)
+    }
+    const configured = {
+      ...options,
+      providers: () => ({ discord: { clientId: "d", clientSecret: "d" } }),
+    }
+    const own = { user: { id: 1, collection: "users" }, payload: {} }
+
+    expect(await run(configured, own, { id: 1 })).toBe(true)
+    expect(await run({ ...configured, enabled: () => false }, own, { id: 1 })).toBe(false)
+    expect(await run(options, own, { id: 1 })).toBe(false)
+    expect(await run(configured, own, { id: 2 })).toBeUndefined()
+    expect(await run(configured, { user: null }, { id: 1 })).toBeUndefined()
+    expect(
+      await run(configured, { user: { id: 1, collection: "readers" } }, { id: 1 }),
+    ).toBeUndefined()
   })
 
   it("keeps Better Auth's columns out of reach of the admin and the API", () => {

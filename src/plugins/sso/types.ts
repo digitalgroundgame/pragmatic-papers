@@ -6,7 +6,7 @@ import type { Payload } from "payload"
  */
 export type SsoProviderId = "google" | "discord" | "destiny"
 
-/** A row of the Linked accounts panel: a configured provider, and whether it's linked. */
+/** A row of the Connections panel: a configured provider, and whether it's linked. */
 export interface LinkedProvider {
   id: SsoProviderId
   label: string

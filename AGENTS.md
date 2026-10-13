@@ -383,8 +383,8 @@ plugin and the account page read too.
   unverified. Linking Google or Discord later swaps it for the address that provider verified
   (`adoptVerifiedEmail`, from Better Auth's `validateUserInfo`), unless another user has it.
 - Any other provider login attaches to the user whose address the provider has verified.
-- Signed in, anyone can link more accounts: staff from **Linked accounts** on
-  `/admin/account`, members from `/account`. `/api/auth-links` (`endpoints/links.ts`) acts on
+- Signed in, anyone can link more accounts: staff from the **Connections** tab
+  of their record (`/admin/account`), members from `/account`. `/api/auth-links` (`endpoints/links.ts`) acts on
   the signed-in user and starts the OAuth through a server-only Better Auth endpoint
   (`linking.ts`). Disconnecting ends the user's other sessions; a member's last sign-in can't
   be disconnected. Destiny.gg's PKCE challenge isn't RFC 7636's, so it's a Better Auth plugin

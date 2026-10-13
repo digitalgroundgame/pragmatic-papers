@@ -7,6 +7,7 @@ import {
   destinyChallenge,
   destinyPlugin,
   destinyProvider,
+  readProfile,
   type DestinyProfile,
 } from "../destiny"
 
@@ -98,6 +99,34 @@ describe("destinyProvider", () => {
     ).toBeNull()
   })
 
+  it("treats an error response from the token endpoint as no tokens", async () => {
+    fetchMock.mockResolvedValue(new Response("down", { status: 502 }))
+    expect(
+      await provider.validateAuthorizationCode({ code: "c", codeVerifier: "v", redirectURI: "r" }),
+    ).toBeNull()
+  })
+
+  it("accepts a bare access token, with no expiry, refresh token or scope", async () => {
+    fetchMock.mockResolvedValue(Response.json({ access_token: "access" }))
+    expect(
+      await provider.validateAuthorizationCode({ code: "c", codeVerifier: "v", redirectURI: "r" }),
+    ).toEqual({
+      accessToken: "access",
+      refreshToken: undefined,
+      accessTokenExpiresAt: undefined,
+      scopes: [],
+      tokenType: undefined,
+    })
+  })
+
+  it("reads no profile without an access token, or when the profile request fails", async () => {
+    expect(await provider.getUserInfo({})).toBeNull()
+    expect(fetchMock).not.toHaveBeenCalled()
+
+    fetchMock.mockResolvedValue(new Response("down", { status: 500 }))
+    expect(await provider.getUserInfo({ accessToken: "access" })).toBeNull()
+  })
+
   it("exchanges nothing without a verifier", async () => {
     expect(await provider.validateAuthorizationCode({ code: "c", redirectURI: "r" })).toBeNull()
     expect(fetchMock).not.toHaveBeenCalled()
@@ -163,5 +192,45 @@ describe("destinyPlugin", () => {
       context: { socialProviders: { id: string }[] }
     }
     expect(result.context.socialProviders.map(({ id }) => id)).toEqual(["destiny", "google"])
+  })
+})
+
+describe("readProfile", () => {
+  it("reads the archived source's fields", () => {
+    expect(
+      readProfile({ userId: 42, username: "Someone", nick: "Someone2", roles: ["USER"] }),
+    ).toEqual({
+      userId: 42,
+      username: "Someone",
+      nick: "Someone2",
+    })
+  })
+
+  it("reads the usual OAuth spellings too, in case the live API differs", () => {
+    expect(readProfile({ sub: "42", preferred_username: "Someone" })).toEqual({
+      userId: "42",
+      username: "Someone",
+      nick: undefined,
+    })
+    expect(readProfile({ id: 42, nick: "Someone" })).toEqual({
+      userId: 42,
+      username: "Someone",
+      nick: "Someone",
+    })
+  })
+
+  it("ignores any email address it's sent", () => {
+    expect(
+      readProfile({ userId: 42, username: "Someone", email: "a@example.com" }),
+    ).not.toHaveProperty("email")
+  })
+
+  it("returns nothing for an error, or without an id or a name", () => {
+    expect(readProfile({ error: "token_expired" })).toBeNull()
+    expect(readProfile({ username: "Someone" })).toBeNull()
+    expect(readProfile({ userId: 42 })).toBeNull()
+    expect(readProfile({ userId: "", username: "Someone" })).toBeNull()
+    expect(readProfile(null)).toBeNull()
+    expect(readProfile("nope")).toBeNull()
   })
 })

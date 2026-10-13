@@ -53,4 +53,12 @@ describe("LinkedAccountsPanel", () => {
     renderPanel({ error })
     expect(screen.getByRole("alert")).toHaveTextContent(message)
   })
+
+  it("says so when there's nothing to connect", () => {
+    renderPanel({ providers: [] })
+    expect(screen.getByRole("region", { name: "Connections" })).toHaveTextContent(
+      "Signing in with another account isn't switched on here yet.",
+    )
+    expect(screen.queryByRole("list")).not.toBeInTheDocument()
+  })
 })

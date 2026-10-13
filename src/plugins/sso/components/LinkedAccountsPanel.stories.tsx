@@ -53,3 +53,13 @@ export const AlreadyLinked: Story = {
     )
   },
 }
+
+/** Single sign-on is off, or no provider is configured. */
+export const Unavailable: Story = {
+  args: { providers: [] },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByText(/isn't switched on here yet/)).toBeInTheDocument()
+    await expect(canvas.queryByRole("button")).not.toBeInTheDocument()
+  },
+}

@@ -3,10 +3,6 @@
   margin-block: 1.5rem;
 }
 
-.sso-links__heading {
-  margin: 0 0 0.25rem;
-}
-
 .sso-links__description {
   margin: 0 0 0.75rem;
   color: var(--theme-elevation-650, #575757);

@@ -8,7 +8,7 @@ export const DEFAULT_PAYLOAD_USER_COOKIE = "payload-token-sso"
 /** Where Better Auth's endpoints are mounted, under Payload's API route. */
 export const AUTH_ENDPOINT_PATH = "/auth"
 
-/** Where the Linked accounts panel reads and changes the signed-in user's links. */
+/** Where the Connections panel reads and changes the signed-in user's links. */
 export const LINKS_ENDPOINT_PATH = "/auth-links"
 
 /** Where the site's account page reads and changes the signed-in user, members included. */

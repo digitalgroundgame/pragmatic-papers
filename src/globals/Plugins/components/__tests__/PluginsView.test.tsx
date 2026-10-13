@@ -24,8 +24,9 @@ const payload = {
     collections: [{ slug: "search", labels: { plural: "Search" }, admin: {} }],
     globals: [],
     custom: {
-      installedPlugins: [
+      registeredPlugins: [
         {
+          slug: "plugin-search",
           name: "Search",
           source: "@payloadcms/plugin-search",
           description: "Keeps a search index.",

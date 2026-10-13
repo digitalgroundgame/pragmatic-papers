@@ -1,8 +1,7 @@
-import type { SanitizedConfig } from "payload"
+import type { Payload } from "payload"
 
 import type { User } from "@/payload-types"
-
-import { installedPlugins } from "../trackPlugins"
+import { type PluginManifest, registeredPlugins } from "@/utilities/registerPlugin"
 
 /** A link to an admin page, or `href: null` when that page is hidden from this user. */
 export interface PluginPage {
@@ -39,28 +38,33 @@ function isHidden(hidden: Hidden, user: User | null | undefined): boolean {
 }
 
 async function status(
-  enabled: boolean | (() => Promise<boolean>) | undefined,
+  enabled: PluginManifest["enabled"],
+  payload: Pick<Payload, "config">,
 ): Promise<PluginRow["status"]> {
   if (enabled === undefined) return "on"
   try {
-    return (typeof enabled === "function" ? await enabled() : enabled) ? "on" : "off"
+    return (typeof enabled === "function" ? await enabled(payload as Payload) : enabled)
+      ? "on"
+      : "off"
   } catch {
     return "unknown"
   }
 }
 
 /**
- * The installed plugins as System → Plugins lists them, in the order Payload runs them: each
- * one's switch read now, and the collections and globals it added linked beside its settings
- * pages, unless the admin hides them from `user`.
+ * The plugins that registered themselves, as System → Plugins lists them, in the order Payload
+ * runs them: each one's switch read now, and the collections and globals it added linked,
+ * unless the admin hides them from `user`. A plugin with a switch links to Settings →
+ * Experiments, where this site's switches are.
  */
 export async function loadPlugins(
-  config: Pick<SanitizedConfig, "collections" | "custom" | "globals" | "routes">,
+  payload: Pick<Payload, "config">,
   user: User | null | undefined,
 ): Promise<PluginRow[]> {
+  const { config } = payload
   const admin = config.routes.admin === "/" ? "" : config.routes.admin
   return Promise.all(
-    installedPlugins(config).map(async (plugin) => {
+    registeredPlugins(config).map(async (plugin) => {
       const collections = plugin.collections.flatMap((slug) => {
         const collection = config.collections.find((c) => c.slug === slug)
         if (!collection) return []
@@ -85,15 +89,15 @@ export async function loadPlugins(
           },
         ]
       })
-      const settings = (plugin.settings ?? []).map((link) => ({
-        label: link.label,
-        href: `${admin}${link.path}`,
-      }))
+      const settings =
+        typeof plugin.enabled === "function"
+          ? [{ label: "Settings → Experiments", href: `${admin}/globals/site-settings` }]
+          : []
       return {
         name: plugin.name,
         source: plugin.source,
         description: plugin.description,
-        status: await status(plugin.enabled),
+        status: await status(plugin.enabled, payload),
         pages: [...collections, ...globals, ...settings],
       } satisfies PluginRow
     }),

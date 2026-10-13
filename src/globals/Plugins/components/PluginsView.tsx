@@ -24,7 +24,7 @@ export async function PluginsView({
     <Gutter>
       {/* The edit view would set this breadcrumb; this page replaces it. */}
       <SetStepNav nav={[{ label: "Plugins" }]} />
-      <PluginsTable plugins={await loadPlugins(payload.config, user)} />
+      <PluginsTable plugins={await loadPlugins(payload, user)} />
     </Gutter>
   )
 }

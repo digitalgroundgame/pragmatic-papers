@@ -1,14 +1,16 @@
-import type { SanitizedConfig } from "payload"
+import type { Payload } from "payload"
 import { describe, expect, it } from "vitest"
 
 import type { User } from "@/payload-types"
 
-import type { InstalledPlugin } from "../../trackPlugins"
+import type { RegisteredPlugin } from "@/utilities/registerPlugin"
+
 import { loadPlugins } from "../load"
 
 const admin = { id: 1, roles: ["admin"] } as unknown as User
 
-const plugin = (overrides: Partial<InstalledPlugin>): InstalledPlugin => ({
+const plugin = (overrides: Partial<RegisteredPlugin>): RegisteredPlugin => ({
+  slug: "plugin",
   name: "Plugin",
   source: "@payloadcms/plugin",
   description: "Does a thing.",
@@ -17,34 +19,36 @@ const plugin = (overrides: Partial<InstalledPlugin>): InstalledPlugin => ({
   ...overrides,
 })
 
-const config = (installedPlugins: InstalledPlugin[], adminRoute = "/admin") =>
+const config = (registeredPlugins: RegisteredPlugin[], adminRoute = "/admin") =>
   ({
-    routes: { admin: adminRoute },
-    custom: { installedPlugins },
-    collections: [
-      { slug: "search", labels: { plural: "Search" }, admin: {} },
-      {
-        slug: "forms",
-        labels: { plural: { en: "Forms", de: "Formulare" } },
-        admin: { hidden: true },
-      },
-      {
-        slug: "docs",
-        labels: { plural: () => "Docs" },
-        admin: { hidden: ({ user }: { user: User | null }) => !user },
-      },
-    ],
-    globals: [{ slug: "site-settings", label: "Settings", admin: {} }],
-  }) as unknown as SanitizedConfig
+    config: {
+      routes: { admin: adminRoute },
+      custom: { registeredPlugins },
+      collections: [
+        { slug: "search", labels: { plural: "Search" }, admin: {} },
+        {
+          slug: "forms",
+          labels: { plural: { en: "Forms", de: "Formulare" } },
+          admin: { hidden: true },
+        },
+        {
+          slug: "docs",
+          labels: { plural: () => "Docs" },
+          admin: { hidden: ({ user }: { user: User | null }) => !user },
+        },
+      ],
+      globals: [{ slug: "site-settings", label: "Settings", admin: {} }],
+    },
+  }) as unknown as Pick<Payload, "config">
 
 describe("loadPlugins", () => {
-  it("links the collections and globals a plugin added, then its settings", async () => {
+  it("links the collections and globals a plugin added, then the switch it has", async () => {
     const [row] = await loadPlugins(
       config([
         plugin({
           collections: ["search", "forms"],
           globals: ["site-settings"],
-          settings: [{ label: "Settings → Experiments", path: "/globals/site-settings" }],
+          enabled: () => true,
         }),
       ]),
       admin,
@@ -77,6 +81,10 @@ describe("loadPlugins", () => {
         plugin({ name: "Env off", enabled: false }),
         plugin({ name: "Experiment on", enabled: async () => true }),
         plugin({
+          name: "Asks Payload",
+          enabled: (payload) => payload.config.routes.admin === "/admin",
+        }),
+        plugin({
           name: "Broken",
           enabled: async () => {
             throw new Error("database down")
@@ -89,6 +97,7 @@ describe("loadPlugins", () => {
       ["Always", "on"],
       ["Env off", "off"],
       ["Experiment on", "on"],
+      ["Asks Payload", "on"],
       ["Broken", "unknown"],
     ])
   })

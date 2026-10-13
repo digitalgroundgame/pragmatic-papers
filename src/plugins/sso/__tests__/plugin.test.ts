@@ -1,5 +1,7 @@
-import type { CollectionConfig, Config } from "payload"
-import { describe, expect, it } from "vitest"
+import type { CollectionConfig, Config, Payload } from "payload"
+import { describe, expect, it, vi } from "vitest"
+
+import { registeredPlugins } from "@/utilities/registerPlugin"
 
 import { ssoPlugin, type SsoPluginConfig } from ".."
 
@@ -95,5 +97,17 @@ describe("ssoPlugin", () => {
     const config = apply({ ...options, usersSlug: "articles" })
     expect(fieldNames(usersOf(config))).toEqual(["name"])
     expect(fieldNames(config.collections![1]!)).toEqual(["emailVerified", "avatarUrl"])
+  })
+
+  it("lists itself on System → Plugins, asking its own switch", async () => {
+    const payload = {} as Payload
+    const enabled = vi.fn(async () => true)
+    const [entry] = registeredPlugins(apply({ ...options, enabled }))
+    expect(entry).toMatchObject({ slug: "sso", name: "SSO" })
+    if (typeof entry?.enabled !== "function") throw new Error("no switch")
+    expect(await entry.enabled(payload)).toBe(true)
+    expect(enabled).toHaveBeenCalledWith({ payload })
+
+    expect(registeredPlugins(apply({ ...options, disabled: true }))[0]?.enabled).toBe(false)
   })
 })

@@ -278,6 +278,10 @@ A feature that could be published one day lives in `src/plugins/<name>/`, shaped
 Payload's own plugins so it can be lifted out without a rewrite:
 
 - `index.ts` exports `<name>Plugin(options): Plugin`, and nothing else the app needs.
+- The plugin is built with `registerPlugin(slug, manifest, ...)` (`@/utilities/registerPlugin`,
+  on Payload's `definePlugin`), so it carries Payload's `slug` and describes itself (name,
+  source, description, its `enabled` switch) for the admin's **System → Plugins** page. A
+  package that doesn't describe itself is wrapped where `src/plugins/index.ts` installs it.
 - `types.ts` holds `<Name>PluginConfig`. Options have defaults, and `disabled: true` leaves
   the schema in place (so migrations don't change) but turns the behavior off.
 - `collections/`, `hooks/`, `endpoints/` and `components/` as the plugin needs them. Admin

@@ -63,6 +63,8 @@ export function cloudflareWorker({
       }
 
       const target = new URL("/next/revalidate-all", base)
+      // A save, not a deploy: the Worker skips its deploy-time seeding.
+      target.searchParams.set("save", "1")
       if (paths.length <= MAX_PURGE_PATHS) {
         for (const path of paths) target.searchParams.append("path", path)
         if (shared) target.searchParams.set("shared", "1")

@@ -33,6 +33,7 @@ import { populateTableOfContentsAnchors, tableOfContentsField } from "@/componen
 import { footnotesArrayField } from "@/fields/footnotes"
 import { type Article } from "@/payload-types"
 import { generatePreviewPath } from "@/utilities/generatePreviewPath"
+import { rememberReadersCopy } from "@/utilities/readersCopy"
 
 import {
   MetaDescriptionField,
@@ -327,6 +328,7 @@ export const Articles: CollectionConfig = {
   ],
   hooks: {
     beforeChange: [
+      rememberReadersCopy,
       (args: Parameters<CollectionBeforeChangeHook<Article>>[0]): Partial<Article> | void => {
         const { req, operation, data } = args
         if (operation === "create") {

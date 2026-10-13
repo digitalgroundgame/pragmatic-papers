@@ -451,6 +451,10 @@ Coverage reporting is informational only — chore/docs PRs don't need special h
 - run linting and type-checks
 - run unit and integration tests as needed, _skip running e2e_.
 - touched a block or component? run `pnpm test:storybook`, and add or update its story.
+- does the change, or what you tell someone, depend on how Payload, Coolify, GitHub, Cloudflare or
+  Sentry behaves (an option, a setting, a permission, a sampling or cache rule)? Check it with the
+  **`upstream-docs`** skill or the package's source in `node_modules` first, even when the question
+  comes up partway through other work. Hosted settings aren't in `node_modules`; their docs are.
 
 ### Storybook
 

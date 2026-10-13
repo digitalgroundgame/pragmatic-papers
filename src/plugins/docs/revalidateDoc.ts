@@ -3,6 +3,7 @@ import type { CollectionAfterChangeHook, CollectionAfterDeleteHook } from "paylo
 
 import { purgeEdgeCache } from "@/hooks/purgeEdgeCache"
 import type { Doc } from "@/payload-types"
+import { readersChange } from "@/utilities/readersCopy"
 
 /** The cache tag on every published-docs read: the /docs pages and the help bell. */
 export const DOCS_CACHE_TAG = "docs"
@@ -19,19 +20,15 @@ const revalidate = (slug: string | null | undefined): void => {
   if (slug) revalidatePath(`/docs/${slug}`)
 }
 
-export const revalidateDoc: CollectionAfterChangeHook<Doc> = ({
-  doc,
-  previousDoc,
-  req: { payload, context },
-}) => {
-  if (context.disableRevalidate) return doc
-  if (doc._status === "published" || previousDoc?._status === "published") {
-    revalidate(doc.slug)
-    if (previousDoc?.slug && previousDoc.slug !== doc.slug) {
-      revalidatePath(`/docs/${previousDoc.slug}`)
-    }
-    purgeEdgeCache(payload.logger, `doc ${doc.slug}`, { paths: DOCS_PATHS })
-  }
+export const revalidateDoc: CollectionAfterChangeHook<Doc> = async (args) => {
+  const { doc, req } = args
+  if (req.context.disableRevalidate) return doc
+  const change = await readersChange(args)
+  if (!change) return doc
+  revalidate(doc.slug)
+  const { before } = change
+  if (before?.slug && before.slug !== doc.slug) revalidatePath(`/docs/${before.slug}`)
+  purgeEdgeCache(req.payload.logger, `doc ${doc.slug}`, { paths: DOCS_PATHS })
   return doc
 }
 

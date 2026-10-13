@@ -9,20 +9,30 @@ vi.mock("next/cache", () => ({ revalidatePath, revalidateTag }))
 vi.mock("@/hooks/purgeEdgeCache", () => ({ purgeEdgeCache }))
 
 import type { Doc } from "@/payload-types"
+import { draftsCollection, readersRow } from "@/utilities/__tests__/readersCopyHelpers"
 import { revalidateDoc, revalidateDocDelete } from "../revalidateDoc"
 
 type ChangeArgs = Parameters<typeof revalidateDoc>[0]
 type DeleteArgs = Parameters<typeof revalidateDocDelete>[0]
 
-const req = (context: Record<string, unknown> = {}) => ({ payload: { logger: {} }, context })
+const findByID = readersRow()
+const req = (context: Record<string, unknown> = {}) => ({
+  payload: { logger: {}, findByID },
+  context,
+})
 const change = (doc: Partial<Doc>, previousDoc?: Partial<Doc>, context = {}) =>
-  revalidateDoc({ doc, previousDoc, req: req(context) } as unknown as ChangeArgs)
+  revalidateDoc({
+    collection: draftsCollection("docs"),
+    doc: { id: 1, ...doc },
+    previousDoc: previousDoc && { id: 1, ...previousDoc },
+    req: req(context),
+  } as unknown as ChangeArgs)
 
 beforeEach(() => vi.clearAllMocks())
 
 describe("revalidateDoc", () => {
-  it("refreshes the index, the doc and the bell when a published doc is saved", () => {
-    change({ slug: "a", _status: "published" })
+  it("refreshes the index, the doc and the bell when a published doc is saved", async () => {
+    await change({ slug: "a", _status: "published" })
     expect(revalidateTag).toHaveBeenCalledWith("docs", "max")
     expect(revalidatePath).toHaveBeenCalledWith("/docs")
     expect(revalidatePath).toHaveBeenCalledWith("/docs/a")
@@ -31,8 +41,8 @@ describe("revalidateDoc", () => {
     })
   })
 
-  it("refreshes the old URL when a published doc's slug changes", () => {
-    change({ slug: "b", _status: "published" }, { slug: "a", _status: "published" })
+  it("refreshes the old URL when a published doc's slug changes", async () => {
+    await change({ slug: "b", _status: "published" }, { slug: "a", _status: "published" })
     expect(revalidatePath).toHaveBeenCalledWith("/docs/a")
     expect(revalidatePath).toHaveBeenCalledWith("/docs/b")
     expect(purgeEdgeCache).toHaveBeenCalledWith({}, "doc b", {
@@ -40,14 +50,21 @@ describe("revalidateDoc", () => {
     })
   })
 
-  it("refreshes when a doc is unpublished", () => {
-    change({ slug: "a", _status: "draft" }, { slug: "a", _status: "published" })
+  it("refreshes when a doc is unpublished", async () => {
+    await change({ slug: "a", _status: "draft" }, { slug: "a", _status: "published" })
     expect(revalidateTag).toHaveBeenCalled()
   })
 
-  it("leaves the cache alone for a draft readers never saw, or when told to", () => {
-    change({ slug: "a", _status: "draft" })
-    change({ slug: "a", _status: "published" }, undefined, { disableRevalidate: true })
+  it("leaves the cache alone for an autosave over a published doc", async () => {
+    findByID.mockResolvedValueOnce({ id: 1, slug: "a", _status: "published" })
+    await change({ slug: "a", _status: "draft" }, { slug: "a", _status: "published" })
+    expect(revalidateTag).not.toHaveBeenCalled()
+    expect(purgeEdgeCache).not.toHaveBeenCalled()
+  })
+
+  it("leaves the cache alone for a draft readers never saw, or when told to", async () => {
+    await change({ slug: "a", _status: "draft" })
+    await change({ slug: "a", _status: "published" }, undefined, { disableRevalidate: true })
     expect(revalidateTag).not.toHaveBeenCalled()
     expect(purgeEdgeCache).not.toHaveBeenCalled()
   })

@@ -100,6 +100,7 @@ describe("getAuth", () => {
       enabled: true,
       requireLocalEmailVerified: false,
       trustedProviders: ["destinygg"],
+      allowDifferentEmails: true,
     })
     expect(options.account?.encryptOAuthTokens).toBe(true)
     expect(options.advanced?.database).toEqual({ generateId: "serial" })
@@ -108,35 +109,25 @@ describe("getAuth", () => {
   it("registers Destiny.gg through a plugin, not as a built-in provider", async () => {
     const options = await optionsFor(config({ providers: () => ({ google, destinygg }) }))
     expect(Object.keys(options.socialProviders ?? {})).toEqual(["google"])
-    expect(options.plugins?.map(({ id }) => id)).toEqual(["destinygg"])
+    expect(options.plugins?.map(({ id }) => id)).toEqual(["payload-linking", "destinygg"])
   })
 
   it("registers no Destiny.gg plugin without its credentials", async () => {
     const options = await optionsFor(config({ providers: () => ({ google, destinygg: null }) }))
-    expect(options.plugins).toEqual([])
+    expect(options.plugins?.map(({ id }) => id)).toEqual(["payload-linking"])
   })
 })
 
 describe("destinyggEmail", () => {
   const profile = { userId: 42, username: "Someone" }
 
-  it("follows an account that's already linked, whatever it's called now", async () => {
-    const query = vi.fn().mockResolvedValueOnce({ rows: [{ email: "linked@example.com" }] })
+  it("is the address of the user the account is linked to, by its Destiny.gg id", async () => {
+    const query = vi.fn().mockResolvedValue({ rows: [{ email: "linked@example.com" }] })
     expect(await destinyggEmail({ query } as never, "users", profile)).toBe("linked@example.com")
-    expect(query).toHaveBeenCalledTimes(1)
     expect(query.mock.calls[0]?.[1]).toEqual(["42"])
   })
 
-  it("finds a first sign-in by the username on the record, case aside", async () => {
-    const query = vi
-      .fn()
-      .mockResolvedValueOnce({ rows: [] })
-      .mockResolvedValueOnce({ rows: [{ email: "named@example.com" }] })
-    expect(await destinyggEmail({ query } as never, "users", profile)).toBe("named@example.com")
-    expect(query.mock.calls[1]?.[1]).toEqual(["someone"])
-  })
-
-  it("finds nobody when neither matches", async () => {
+  it("is null for an account nobody has linked", async () => {
     const query = vi.fn().mockResolvedValue({ rows: [] })
     expect(await destinyggEmail({ query } as never, "users", profile)).toBeNull()
   })

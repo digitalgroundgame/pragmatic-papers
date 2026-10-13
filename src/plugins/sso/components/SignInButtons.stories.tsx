@@ -74,12 +74,12 @@ export const NoAccount: Story = {
   },
 }
 
-/** Back from Destiny.gg, which shares no address, with an account no user here names. */
+/** Back from Destiny.gg, which shares no address, with an account nobody here has linked. */
 export const NoLinkedAccount: Story = {
   parameters: { nextjs: { navigation: { query: { error: "email_not_found" } } } },
   play: async ({ canvasElement }) => {
     await expect(within(canvasElement).getByRole("alert")).toHaveTextContent(
-      "No account here is linked to that sign-in",
+      "That account isn't linked to anyone here",
     )
   },
 }

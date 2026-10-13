@@ -1,8 +1,8 @@
-import type { CollectionConfig, Plugin } from "payload"
+import type { CollectionConfig, Field, Plugin } from "payload"
 
 import { DEFAULT_COOKIE_NAME } from "./constants"
-import { destinyggUsernameField } from "./destinyggUsername"
 import { authEndpoints } from "./endpoints/auth"
+import { linkEndpoints } from "./endpoints/links"
 import { endSsoSession } from "./hooks/endSsoSession"
 import { ssoStrategy } from "./strategy"
 import type { ResolvedSsoConfig, SsoPluginConfig } from "./types"
@@ -11,6 +11,28 @@ export { DEFAULT_COOKIE_NAME as SSO_COOKIE_NAME } from "./constants"
 export { ssoAfterSchemaInit } from "./schema"
 export type { SsoPluginConfig, SsoProviderCredentials, SsoProviderId } from "./types"
 
+/** Columns Better Auth reads on the users table. */
+const betterAuthFields: Field[] = [
+  {
+    // Better Auth's record that a provider vouched for this address. Nothing in
+    // Payload sets or reads it, and the API never returns it: public authors' records
+    // are readable, and it would show who signs in with a provider.
+    name: "emailVerified",
+    type: "checkbox",
+    defaultValue: false,
+    access: { create: () => false, read: () => false, update: () => false },
+    admin: { hidden: true },
+  },
+  {
+    // Better Auth's `image`. Its user model reads the column, but only a user it
+    // created would have one written, and it creates none.
+    name: "avatarUrl",
+    type: "text",
+    access: { create: () => false, read: () => false, update: () => false },
+    admin: { hidden: true },
+  },
+]
+
 /**
  * Sign in to Payload with Google, Discord or Destiny.gg, through Better Auth.
  *
@@ -18,8 +40,9 @@ export type { SsoPluginConfig, SsoProviderCredentials, SsoProviderId } from "./t
  * three tables (`ssoAfterSchemaInit`, which goes in the database adapter's
  * `afterSchemaInit`). Payload keeps everything else: its users, their roles, and its own
  * email and password login, which stays as the way in when a provider is down. A provider
- * login never creates a user; it attaches to the one whose address it has verified, or, for
- * Destiny.gg, which shares no address, to the one whose record names that Destiny.gg account.
+ * login never creates a user; it attaches to the one whose address it has verified, or to
+ * the one who linked it from their account page (the only way for Destiny.gg, which shares
+ * no address).
  */
 export function ssoPlugin(options: SsoPluginConfig): Plugin {
   const sso: ResolvedSsoConfig = {
@@ -37,29 +60,18 @@ export function ssoPlugin(options: SsoPluginConfig): Plugin {
       const auth = typeof collection.auth === "object" ? collection.auth : {}
       return {
         ...collection,
-        fields: [
-          ...collection.fields,
-          {
-            // Better Auth's record that a provider vouched for this address. Nothing in
-            // Payload sets or reads it, and the API never returns it: public authors' records
-            // are readable, and it would show who signs in with a provider.
-            name: "emailVerified",
-            type: "checkbox",
-            defaultValue: false,
-            access: { create: () => false, read: () => false, update: () => false },
-            admin: { hidden: true },
-          },
-          {
-            // Better Auth's `image`. Its user model reads the column, but only a user it
-            // created would have one written, and it creates none.
-            name: "avatarUrl",
-            type: "text",
-            access: { create: () => false, read: () => false, update: () => false },
-            admin: { hidden: true },
-          },
-          destinyggUsernameField,
-        ],
+        fields: [...collection.fields, ...betterAuthFields],
         ...(!options.disabled && {
+          fields: [
+            ...collection.fields,
+            ...betterAuthFields,
+            {
+              // The Linked accounts panel, on the signed-in user's own account page.
+              name: "linkedAccounts",
+              type: "ui",
+              admin: { components: { Field: "@/plugins/sso/exports/client#LinkedAccounts" } },
+            },
+          ],
           auth: { ...auth, strategies: [...(auth.strategies ?? []), ssoStrategy(sso)] },
           hooks: {
             ...collection.hooks,
@@ -74,7 +86,7 @@ export function ssoPlugin(options: SsoPluginConfig): Plugin {
     return {
       ...config,
       collections,
-      endpoints: [...(config.endpoints ?? []), ...authEndpoints(sso)],
+      endpoints: [...(config.endpoints ?? []), ...authEndpoints(sso), ...linkEndpoints(sso)],
       admin: {
         ...config.admin,
         components: {

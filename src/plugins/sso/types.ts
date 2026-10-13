@@ -6,6 +6,13 @@ import type { Payload } from "payload"
  */
 export type SsoProviderId = "google" | "discord" | "destinygg"
 
+/** A row of the Linked accounts panel: a configured provider, and whether it's linked. */
+export interface LinkedProvider {
+  id: SsoProviderId
+  label: string
+  linked: boolean
+}
+
 /** An OAuth application's credentials, from the provider's developer console. */
 export interface SsoProviderCredentials {
   clientId: string

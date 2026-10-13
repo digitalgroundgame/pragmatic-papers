@@ -14,9 +14,9 @@ const ERRORS: Record<string, string> = {
     "No account here uses that address. Ask an admin to create one, then sign in again.",
   account_not_linked:
     "That provider hasn't verified your email address, so it can't be matched to your account.",
-  // Destiny.gg shares no address, so this is its "no account here".
+  // Destiny.gg shares no address: an account nobody has linked lands here.
   email_not_found:
-    "No account here is linked to that sign-in. Ask an admin to add it to your user, then sign in again.",
+    "That account isn't linked to anyone here. Sign in another way, then link it from your account page.",
 }
 
 const FALLBACK_ERROR = "Sign-in didn't complete. Try again, or use your email and password."

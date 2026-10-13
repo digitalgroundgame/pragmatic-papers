@@ -5,6 +5,9 @@ export const DEFAULT_COOKIE_NAME = "payload-token-sso"
 /** Where Better Auth's endpoints are mounted, under Payload's API route. */
 export const AUTH_ENDPOINT_PATH = "/auth"
 
+/** Where the Linked accounts panel reads and changes the signed-in user's links. */
+export const LINKS_ENDPOINT_PATH = "/auth-links"
+
 /** Better Auth's own tables. Each model's fields map to snake_case columns in `auth.ts`. */
 export const TABLES = {
   session: "auth_sessions",

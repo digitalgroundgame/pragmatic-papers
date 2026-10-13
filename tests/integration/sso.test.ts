@@ -134,14 +134,40 @@ async function signInWithDestinygg(profile: DestinyggProfile): Promise<Response>
   })
 }
 
-const setDestinyggUsername = (id: number, destinyggUsername: string | null) =>
-  payload.update({
-    collection: "users",
-    id,
-    data: { destinyggUsername },
-    overrideAccess: true,
-    context: { disableRevalidate: true },
+/** Payload's own cookie for `user`, from a password login. */
+async function passwordLogin(user: User): Promise<string> {
+  const response = await api("/users/login", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email: user.email, password: "test-password" }),
   })
+  expect(response.status).toBe(200)
+  return cookiesFrom(response)
+}
+
+/**
+ * Links a provider account from the signed-in user's account page: Connect, then back
+ * from the provider. `stub` answers the provider's requests as the account being linked.
+ */
+async function link(cookie: string, provider: string, stub: () => void): Promise<Response> {
+  stub()
+  const start = await api(`/auth-links/${provider}`, {
+    method: "POST",
+    headers: { Cookie: cookie },
+  })
+  expect(start.status).toBe(200)
+  const { url } = (await start.json()) as { url: string }
+  const state = new URL(url).searchParams.get("state")
+  return api(`/auth/callback/${provider}?code=test-code&state=${state}`, {
+    headers: { Cookie: cookiesFrom(start) },
+  })
+}
+
+const linkedProviders = async (cookie: string) => {
+  const response = await api("/auth-links", { headers: { Cookie: cookie } })
+  const { providers } = (await response.json()) as { providers: { id: string; linked: boolean }[] }
+  return Object.fromEntries(providers.map(({ id, linked }) => [id, linked]))
+}
 
 const me = async (cookie: string): Promise<User | null> => {
   const response = await api("/users/me", { headers: { Cookie: cookie } })
@@ -288,86 +314,116 @@ describe("single sign-on", () => {
   })
 })
 
-describe("signing in with Destiny.gg", () => {
-  // Destiny.gg shares no address, so an admin names the account on the user's record.
+describe("linking an account from the account page", () => {
   let nextId = 5000
-  const account = (username: string) => ({ userId: nextId++, username })
+  const destinygg = (username = `Someone${nextId}`) => ({ userId: nextId++, username })
 
-  it("signs in the user whose record names the account, whatever its case", async () => {
+  it("links Destiny.gg, which shares no address, and then signs in with it", async () => {
     const editor = await createUser("editor")
-    const profile = account(`Editor${nextId}`)
-    await setDestinyggUsername(editor.id, `@${profile.username}`)
+    const profile = destinygg()
 
+    const linked = await link(await passwordLogin(editor), "destinygg", () =>
+      stubDestinygg(profile),
+    )
+
+    expect(linked.headers.get("location")).toBe("/admin/account?linked=destinygg")
     const callback = await signInWithDestinygg(profile)
-
     expect(callback.headers.get("location")).toBe("/admin")
-    const user = await me(cookiesFrom(callback))
-    expect(user).toMatchObject({ id: editor.id, roles: ["editor"] })
-    expect(user?.destinyggUsername).toBe(profile.username.toLowerCase())
+    expect(await me(cookiesFrom(callback))).toMatchObject({ id: editor.id, roles: ["editor"] })
   })
 
-  it("sends an account nobody here names back to the login page, creating nobody", async () => {
-    const before = await payload.count({ collection: "users" })
-
-    const callback = await signInWithDestinygg(account("Stranger"))
-
-    expect(callback.headers.get("location")).toContain("/admin/login?error=email_not_found")
-    expect(cookiesFrom(callback)).not.toContain(`${SSO_COOKIE_NAME}=`)
-    expect((await payload.count({ collection: "users" })).totalDocs).toBe(before.totalDocs)
-  })
-
-  it("follows a linked account after a rename on Destiny.gg", async () => {
+  it("follows a linked Destiny.gg account after a rename", async () => {
     const writer = await createUser("writer")
-    const profile = account(`Writer${nextId}`)
-    await setDestinyggUsername(writer.id, profile.username)
-    await signInWithDestinygg(profile)
+    const profile = destinygg()
+    await link(await passwordLogin(writer), "destinygg", () => stubDestinygg(profile))
 
     const renamed = await signInWithDestinygg({ ...profile, username: "SomethingNew" })
 
     expect((await me(cookiesFrom(renamed)))?.id).toBe(writer.id)
   })
 
-  it("won't hand a name that changed hands to its new owner", async () => {
-    const writer = await createUser("writer")
-    const original = account(`Taken${nextId}`)
-    await setDestinyggUsername(writer.id, original.username)
-    await signInWithDestinygg(original)
+  it("sends a Destiny.gg account nobody linked back to the login page, creating nobody", async () => {
+    const before = await payload.count({ collection: "users" })
 
-    // Someone else now holds the name the record still shows.
-    const callback = await signInWithDestinygg(account(original.username))
+    const callback = await signInWithDestinygg(destinygg("Stranger"))
 
-    expect(callback.headers.get("location")).toContain("error=")
+    expect(callback.headers.get("location")).toContain("/admin/login?error=email_not_found")
     expect(cookiesFrom(callback)).not.toContain(`${SSO_COOKIE_NAME}=`)
+    expect((await payload.count({ collection: "users" })).totalDocs).toBe(before.totalDocs)
   })
 
-  it("stops once the username is cleared from the record", async () => {
+  it("links a Discord account whose address isn't the user's", async () => {
+    const writer = await createUser("writer")
+    const profile = { id: `${nextId++}`, email: `other-${nextId}@example.com`, verified: true }
+
+    await link(await passwordLogin(writer), "discord", () => stubDiscord(profile))
+
+    expect((await me(cookiesFrom(await signInWithDiscord(profile))))?.id).toBe(writer.id)
+  })
+
+  it("won't link an account that's someone else's", async () => {
+    const [first, second] = [await createUser("writer"), await createUser("writer")]
+    const profile = destinygg()
+    await link(await passwordLogin(first), "destinygg", () => stubDestinygg(profile))
+
+    const callback = await link(await passwordLogin(second), "destinygg", () =>
+      stubDestinygg(profile),
+    )
+
+    expect(callback.headers.get("location")).toContain(
+      "error=account_already_linked_to_different_user",
+    )
+    expect((await me(cookiesFrom(await signInWithDestinygg(profile))))?.id).toBe(first.id)
+  })
+
+  it("lists the configured providers and which are linked", async () => {
     const editor = await createUser("editor")
-    const profile = account(`Cleared${nextId}`)
-    await setDestinyggUsername(editor.id, profile.username)
-    await signInWithDestinygg(profile)
+    const cookie = await passwordLogin(editor)
+    await link(cookie, "destinygg", () => stubDestinygg(destinygg()))
 
-    await setDestinyggUsername(editor.id, "")
-
-    const callback = await signInWithDestinygg(profile)
-    expect(callback.headers.get("location")).toContain("error=")
-    expect(cookiesFrom(callback)).not.toContain(`${SSO_COOKIE_NAME}=`)
+    expect(await linkedProviders(cookie)).toEqual({ discord: false, destinygg: true })
   })
 
-  it("keeps the username off the public API", async () => {
-    const writer = await createUser("writer")
-    await setDestinyggUsername(writer.id, `Public${nextId}`)
-    await payload.update({
-      collection: "users",
-      id: writer.id,
-      data: { publicProfile: true },
-      overrideAccess: true,
-      context: { disableRevalidate: true },
+  it("disconnects an account, ending the sessions it signed in", async () => {
+    const editor = await createUser("editor")
+    const cookie = await passwordLogin(editor)
+    const profile = destinygg()
+    await link(cookie, "destinygg", () => stubDestinygg(profile))
+    const ssoCookie = cookiesFrom(await signInWithDestinygg(profile))
+    expect((await me(ssoCookie))?.id).toBe(editor.id)
+
+    const response = await api("/auth-links/destinygg", {
+      method: "DELETE",
+      headers: { Cookie: cookie },
     })
 
-    const response = await api(`/users/${writer.id}`)
-    const body = (await response.json()) as Record<string, unknown>
-
     expect(response.status).toBe(200)
-    expect(body).not.toHaveProperty("destinyggUsername")
+    expect(await linkedProviders(cookie)).toEqual({ discord: false, destinygg: false })
+    expect(await me(ssoCookie)).toBeNull()
+    expect(await me(cookie)).toMatchObject({ id: editor.id })
+    const again = await signInWithDestinygg(profile)
+    expect(again.headers.get("location")).toContain("error=email_not_found")
+  })
+
+  it("answers only a signed-in user, and only while the experiment is on", async () => {
+    expect((await api("/auth-links")).status).toBe(401)
+    expect((await api("/auth-links/destinygg", { method: "POST" })).status).toBe(401)
+
+    const cookie = await passwordLogin(await createUser("editor"))
+    expect(
+      (await api("/auth-links/google", { method: "POST", headers: { Cookie: cookie } })).status,
+    ).toBe(404)
+
+    await setExperiment(false)
+    expect((await api("/auth-links", { headers: { Cookie: cookie } })).status).toBe(404)
+  })
+
+  it("has no HTTP route to the link it starts for a user", async () => {
+    const response = await api("/auth/link-for-user", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ provider: "destinygg", userId: "1", email: "a@example.com" }),
+    })
+    expect(response.status).toBe(404)
   })
 })

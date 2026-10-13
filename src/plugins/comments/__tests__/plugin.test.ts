@@ -77,6 +77,14 @@ describe("commentsPlugin", () => {
     expect(config.globals![0]!.access?.read).toBe(options.moderators)
   })
 
+  it("adds a verified-email switch to the settings, off by default", () => {
+    const fields = apply(options).globals![0]!.fields
+    expect(fields.find((f) => "name" in f && f.name === "requireVerifiedEmail")).toMatchObject({
+      type: "checkbox",
+      defaultValue: false,
+    })
+  })
+
   it("serves the thread endpoints, and none when disabled", () => {
     const endpoints = (config: Config) =>
       (collection(config, "comments").endpoints || []).map(

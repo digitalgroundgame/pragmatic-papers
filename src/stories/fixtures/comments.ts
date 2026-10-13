@@ -42,7 +42,7 @@ export const threadComments: PublicComment[] = [
   },
 ]
 
-export const commentViewer: CommentViewer = { ...ada, locked: null }
+export const commentViewer: CommentViewer = { ...ada, locked: null, needsVerifiedEmail: false }
 
 export const commentThread = (overrides: Partial<CommentThread> = {}): CommentThread => ({
   comments: threadComments,

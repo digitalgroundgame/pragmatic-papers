@@ -35,6 +35,7 @@ export async function up({ db, payload, req }: MigrateUpArgs): Promise<void> {
   	"violation_window_days" numeric DEFAULT 30 NOT NULL,
   	"max_links" numeric DEFAULT 2 NOT NULL,
   	"block_duplicates" boolean DEFAULT true,
+  	"require_verified_email" boolean DEFAULT false,
   	"updated_at" timestamp(3) with time zone,
   	"created_at" timestamp(3) with time zone
   );

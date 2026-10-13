@@ -346,6 +346,8 @@ export const plugins: Plugin[] = [
     // Members and staff alike: a member is signed in to the site but not to Payload.
     currentUser: (req) => getSignedInUser(req, ssoOptions),
     authorFields: ["name", "avatarUrl", "roles"],
+    // Staff addresses are the ones an admin gave them.
+    isVerified: (author) => author.emailVerified === true || isStaff(author as unknown as User),
     describeAuthor: (author) => ({
       name: typeof author.name === "string" && author.name ? author.name : "Anonymous",
       image: typeof author.avatarUrl === "string" ? author.avatarUrl : null,

@@ -34,6 +34,8 @@ export interface CommentSettings {
   maxLinks: number
   /** Hold a comment its author already posted, word for word, in the past day. */
   blockDuplicates: boolean
+  /** Only authors `isVerified` accepts may comment. */
+  requireVerifiedEmail: boolean
 }
 
 /** What a check is handed about a comment about to be posted. */
@@ -85,6 +87,11 @@ export interface CommentsPluginConfig {
    * thread's `providers`. The site's own page starts the sign-in. Default none.
    */
   signInProviders?: () => SignInProvider[]
+  /**
+   * Whether an author's email address is verified, for the settings' `requireVerifiedEmail`.
+   * Default: their `emailVerified` is true.
+   */
+  isVerified?: (author: CommentAuthor) => boolean
   /** The site's public origin. Posts from any other origin are refused. */
   baseURL: () => string
   /** Who can see, hide, restore and delete comments, and see and reverse violations. */
@@ -126,6 +133,8 @@ export interface PublicComment {
 export interface CommentViewer extends AuthorDisplay {
   /** Why they can't comment right now, and until when (null: until a moderator lifts it). */
   locked: { until: string | null } | null
+  /** Commenting needs a verified email address, and theirs isn't. */
+  needsVerifiedEmail: boolean
 }
 
 /** `GET /api/comments/thread/:id`. */

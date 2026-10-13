@@ -17891,6 +17891,13 @@
           "notNull": false,
           "default": true
         },
+        "require_verified_email": {
+          "name": "require_verified_email",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": false
+        },
         "updated_at": {
           "name": "updated_at",
           "type": "timestamp(3) with time zone",
@@ -18721,6 +18728,6 @@
     "tables": {},
     "columns": {}
   },
-  "id": "6771a67e-ae5d-4725-9f45-3925d43b8583",
+  "id": "422bed0c-2723-4709-974d-059e91fc22c5",
   "prevId": "00000000-0000-0000-0000-000000000000"
 }

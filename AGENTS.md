@@ -420,6 +420,8 @@ or member, and staff get a badge.
   option). A failure saves the comment as `auto-hidden`, shown only to its author, and adds a
   violation. A moderator hiding a published comment adds one too; publishing a held or hidden
   one reverses it (`recordModeration`).
+- **Require a verified email address** (off by default) in Comment settings limits posting
+  to authors `isVerified` accepts: staff, or a provider-verified `emailVerified`.
 - **Violations** (`comment-violations`) lock commenting once the settings' threshold is active
   within its window, until enough age out or are reversed (`lockFor`); a `block` locks until
   it's reversed.

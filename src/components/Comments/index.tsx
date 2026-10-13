@@ -157,7 +157,7 @@ export const Comments: React.FC<CommentsProps> = ({ articleId, apiPath = "/api" 
   const viewer = thread?.viewer ?? null
   const reply: ReplyContext | null = thread
     ? {
-        canReply: Boolean(viewer && !viewer.locked),
+        canReply: Boolean(viewer && !viewer.locked && !viewer.needsVerifiedEmail),
         maxDepth: thread.maxDepth,
         maxLength: thread.maxLength,
         threadURL,
@@ -205,6 +205,15 @@ export const Comments: React.FC<CommentsProps> = ({ articleId, apiPath = "/api" 
             <div className="space-y-3">
               {viewer.locked ? (
                 <Locked until={viewer.locked.until} />
+              ) : viewer.needsVerifiedEmail ? (
+                <p className="text-muted-foreground text-sm" role="status">
+                  Commenting here needs a verified email address. Connect Google or Discord, which
+                  verify yours, from{" "}
+                  <Link href="/account" className="underline underline-offset-4">
+                    your account
+                  </Link>
+                  .
+                </p>
               ) : (
                 <CommentForm
                   threadURL={threadURL}

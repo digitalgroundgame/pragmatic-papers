@@ -9,6 +9,7 @@ export const DEFAULT_SETTINGS = {
   violationWindowDays: 30,
   maxLinks: 2,
   blockDuplicates: true,
+  requireVerifiedEmail: false,
 } as const
 
 /** A comment's status. Only `published` is shown to everyone. */

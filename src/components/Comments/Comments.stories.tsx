@@ -144,6 +144,16 @@ export const Blocked: Story = {
   },
 }
 
+export const NeedsVerifiedEmail: Story = {
+  beforeEach: serve(signedIn({ viewer: { ...commentViewer, needsVerifiedEmail: true } })),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(await canvas.findByText(/needs a verified email address/)).toBeInTheDocument()
+    await expect(canvas.queryByRole("textbox")).not.toBeInTheDocument()
+    await expect(canvas.queryByRole("button", { name: "Reply" })).not.toBeInTheDocument()
+  },
+}
+
 export const Empty: Story = {
   beforeEach: serve(commentThread({ comments: [] })),
   play: async ({ canvasElement }) => {

@@ -155,6 +155,7 @@ beforeEach(async () => {
     violationWindowDays: 30,
     maxLinks: 2,
     blockDuplicates: true,
+    requireVerifiedEmail: false,
   })
 })
 
@@ -195,6 +196,7 @@ describe("comments", () => {
       image: DEFAULT_AVATAR,
       badge: null,
       locked: null,
+      needsVerifiedEmail: false,
     })
     expect(own.providers).toEqual([])
   })
@@ -345,6 +347,30 @@ describe("comments", () => {
 
     expect((await thread(article, cookie)).viewer?.locked).toEqual({ until: null })
     expect((await post(article, cookie, "Hello")).status).toBe(403)
+  })
+
+  it("lets anyone signed in comment until the verified-email switch is on", async () => {
+    const profile = reader()
+    const cookie = await signIn(profile)
+    const author = await userByEmail(profile.email)
+    // An address no provider vouched for (a future Destiny.gg-only member, say).
+    const { pool } = payload.db as unknown as {
+      pool: { query: (sql: string, values: unknown[]) => Promise<unknown> }
+    }
+    await pool.query("update users set email_verified = false where id = $1", [author.id])
+
+    expect((await thread(article, cookie)).viewer?.needsVerifiedEmail).toBe(false)
+    await posted(article, cookie, "Before the switch")
+
+    await setSettings({ requireVerifiedEmail: true })
+    expect((await thread(article, cookie)).viewer?.needsVerifiedEmail).toBe(true)
+    vi.useFakeTimers({ now: Date.now() + 60_000, toFake: ["Date"] })
+    expect((await post(article, cookie, "After the switch")).status).toBe(403)
+
+    // A verified member still can.
+    const verified = await signIn(reader())
+    expect((await thread(article, verified)).viewer?.needsVerifiedEmail).toBe(false)
+    expect((await post(article, verified, "Verified")).status).toBe(201)
   })
 
   it("asks someone who isn't signed in to sign in, and refuses other sites", async () => {

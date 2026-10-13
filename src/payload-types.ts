@@ -2864,6 +2864,10 @@ export interface CommentSetting {
    * Hold a comment its author already posted, word for word, in the past day.
    */
   blockDuplicates?: boolean | null;
+  /**
+   * Off, anyone signed in can comment. On, only people whose sign-in provider verified their address can, and staff.
+   */
+  requireVerifiedEmail?: boolean | null;
   updatedAt?: string | null;
   createdAt?: string | null;
 }
@@ -3021,6 +3025,7 @@ export interface CommentSettingsSelect<T extends boolean = true> {
   violationWindowDays?: T;
   maxLinks?: T;
   blockDuplicates?: T;
+  requireVerifiedEmail?: T;
   updatedAt?: T;
   createdAt?: T;
   globalType?: T;

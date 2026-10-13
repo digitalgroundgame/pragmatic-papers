@@ -43,6 +43,7 @@ export function commentsPlugin(options: CommentsPluginConfig): Plugin {
     authorFields: ["name"],
     describeAuthor: defaultDescribeAuthor,
     checks: [],
+    isVerified: (author) => author.emailVerified === true,
     signInProviders: () => [],
     adminGroup: "Content",
     maxLength: 2000,

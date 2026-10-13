@@ -35,6 +35,10 @@ To stop someone at once, open **Content → Violations**, create one with their 
 
 To lift a violation early, open it and tick **Reversed**.
 
+## Require a verified email address
+
+Anyone signed in can comment. To limit comments to people whose email address is verified, an admin ticks **Require a verified email address to comment** in **Comment settings**. Google and Discord verify the addresses they share, and staff always count as verified. Anyone else sees a note asking them to connect one of those from /account.
+
 ## Reply depth
 
 Replies can nest five levels below a top-level comment. Admins change this in **Comment settings**. Lowering it never removes replies already posted; it only stops new ones past the limit, and the page says where replies stop.

@@ -80,6 +80,7 @@ export function threadEndpoints(config: ResolvedCommentsConfig): Endpoint[] {
       viewer = {
         ...config.describeAuthor(author),
         locked: await authorLock(req.payload, author.id, settings),
+        needsVerifiedEmail: settings.requireVerifiedEmail && !config.isVerified(author),
       }
     }
 
@@ -114,6 +115,12 @@ export function threadEndpoints(config: ResolvedCommentsConfig): Endpoint[] {
     if (lock) {
       return Response.json(
         { message: lockedMessage(lock.until), lockedUntil: lock.until },
+        { status: 403, headers: noStore },
+      )
+    }
+    if (settings.requireVerifiedEmail && !config.isVerified(author)) {
+      return Response.json(
+        { message: "Commenting here needs a verified email address." },
         { status: 403, headers: noStore },
       )
     }

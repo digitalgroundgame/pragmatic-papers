@@ -67,6 +67,16 @@ export function settingsGlobal(config: ResolvedCommentsConfig): GlobalConfig {
           description: "Hold a comment its author already posted, word for word, in the past day.",
         },
       },
+      {
+        name: "requireVerifiedEmail",
+        label: "Require a verified email address to comment",
+        type: "checkbox",
+        defaultValue: DEFAULT_SETTINGS.requireVerifiedEmail,
+        admin: {
+          description:
+            "Off, anyone signed in can comment. On, only people whose sign-in provider verified their address can, and staff.",
+        },
+      },
     ],
   }
 }
@@ -89,5 +99,6 @@ export async function readSettings(payload: Payload): Promise<CommentSettings> {
       typeof saved.blockDuplicates === "boolean"
         ? saved.blockDuplicates
         : DEFAULT_SETTINGS.blockDuplicates,
+    requireVerifiedEmail: saved.requireVerifiedEmail === true,
   }
 }

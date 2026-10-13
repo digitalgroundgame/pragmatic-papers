@@ -1,12 +1,18 @@
 import type { SsoProviderId } from "./types"
 
-export const DEFAULT_COOKIE_NAME = "payload-token-sso"
+export const DEFAULT_COOKIE_NAME = "pp-session"
+
+/** The cookie the cache rules look for: set beside the session for Payload's users only. */
+export const DEFAULT_PAYLOAD_USER_COOKIE = "payload-token-sso"
 
 /** Where Better Auth's endpoints are mounted, under Payload's API route. */
 export const AUTH_ENDPOINT_PATH = "/auth"
 
 /** Where the Connections panel reads and changes the signed-in user's links. */
 export const LINKS_ENDPOINT_PATH = "/auth-links"
+
+/** Where the site's account page reads and changes the signed-in user, members included. */
+export const ACCOUNT_ENDPOINT_PATH = "/account"
 
 /** Better Auth's own tables. Each model's fields map to snake_case columns in `auth.ts`. */
 export const TABLES = {

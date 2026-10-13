@@ -19,6 +19,10 @@ const enabled = vi.fn()
 const config = {
   enabled,
   usersSlug: "users",
+  cookieName: "pp-session",
+  accountPath: "/account",
+  // Staff: Payload's own user, whose links come back to the admin.
+  isPayloadUser: () => true,
   providers: () => ({
     discord: { clientId: "d", clientSecret: "d" },
     destiny: { clientId: "g", clientSecret: "g" },

@@ -88,7 +88,10 @@ describe("hooks that purge the edge", () => {
 
   it("purges for an author", async () => {
     await revalidateUser(
-      args({ doc: { id: 7, slug: "jane" }, previousDoc: { id: 7, slug: "jane" } }),
+      args({
+        doc: { id: 7, slug: "jane", roles: ["writer"] },
+        previousDoc: { id: 7, slug: "jane", roles: ["writer"] },
+      }),
     )
     expect(purgeEdgeCache).toHaveBeenCalledWith(payload.logger, "author jane", {
       paths: ["/contributors/jane", "/contributors"],

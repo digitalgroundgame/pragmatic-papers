@@ -184,6 +184,8 @@ export interface Config {
     forms: Form;
     'form-submissions': FormSubmission;
     docs: Doc;
+    comments: Comment;
+    'comment-violations': CommentViolation;
     'payload-kv': PayloadKv;
     'payload-jobs': PayloadJob;
     'payload-locked-documents': PayloadLockedDocument;
@@ -209,6 +211,8 @@ export interface Config {
     forms: FormsSelect<false> | FormsSelect<true>;
     'form-submissions': FormSubmissionsSelect<false> | FormSubmissionsSelect<true>;
     docs: DocsSelect<false> | DocsSelect<true>;
+    comments: CommentsSelect<false> | CommentsSelect<true>;
+    'comment-violations': CommentViolationsSelect<false> | CommentViolationsSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
     'payload-jobs': PayloadJobsSelect<false> | PayloadJobsSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
@@ -227,6 +231,7 @@ export interface Config {
     newsletter: Newsletter;
     plugins: Plugin;
     'article-recommendations': ArticleRecommendation;
+    'comment-settings': CommentSetting;
     'payload-jobs-stats': PayloadJobsStat;
   };
   globalsSelect: {
@@ -237,6 +242,7 @@ export interface Config {
     newsletter: NewsletterSelect<false> | NewsletterSelect<true>;
     plugins: PluginsSelect<false> | PluginsSelect<true>;
     'article-recommendations': ArticleRecommendationsSelect<false> | ArticleRecommendationsSelect<true>;
+    'comment-settings': CommentSettingsSelect<false> | CommentSettingsSelect<true>;
     'payload-jobs-stats': PayloadJobsStatsSelect<false> | PayloadJobsStatsSelect<true>;
   };
   locale: null;
@@ -1501,6 +1507,40 @@ export interface Doc {
   _status?: ('draft' | 'published') | null;
 }
 /**
+ * Hide a comment to take it off the page and count it against its author; replies to it stay. Publish a held or hidden one to restore it and reverse its violation. Deleting a comment deletes its replies too.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "comments".
+ */
+export interface Comment {
+  id: number;
+  body?: string | null;
+  target: number | Article;
+  author?: (number | null) | User;
+  parent?: (number | null) | Comment;
+  depth: number;
+  status: 'published' | 'auto-hidden' | 'hidden' | 'deleted';
+  moderationReason?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * Too many recent violations stop an account commenting (Comment settings says how many). Tick Reversed to lift one. Add a Block to stop someone at once, until it's reversed.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "comment-violations".
+ */
+export interface CommentViolation {
+  id: number;
+  author: number | User;
+  source: 'check' | 'moderator' | 'block';
+  reason: string;
+  comment?: (number | null) | Comment;
+  reversed?: boolean | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload-kv".
  */
@@ -1694,6 +1734,14 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'docs';
         value: number | Doc;
+      } | null)
+    | ({
+        relationTo: 'comments';
+        value: number | Comment;
+      } | null)
+    | ({
+        relationTo: 'comment-violations';
+        value: number | CommentViolation;
       } | null);
   globalSlug?: string | null;
   user: {
@@ -2522,6 +2570,34 @@ export interface DocsSelect<T extends boolean = true> {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "comments_select".
+ */
+export interface CommentsSelect<T extends boolean = true> {
+  body?: T;
+  target?: T;
+  author?: T;
+  parent?: T;
+  depth?: T;
+  status?: T;
+  moderationReason?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "comment-violations_select".
+ */
+export interface CommentViolationsSelect<T extends boolean = true> {
+  author?: T;
+  source?: T;
+  reason?: T;
+  comment?: T;
+  reversed?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload-kv_select".
  */
 export interface PayloadKvSelect<T extends boolean = true> {
@@ -2765,9 +2841,13 @@ export interface Plugin {
      */
     tours?: boolean | null;
     /**
-     * “Sign in with Google”, “Sign in with Discord” and “Sign in with Destiny.gg” on the admin's login page, for people who already have an account here, and the Connections tab that links them. Each provider also needs its credentials (System → Integrations).
+     * “Sign in with Google”, “Sign in with Discord” and “Sign in with Destiny.gg” on the admin's login page, for people who already have an account here, the Connections tab that links them, and members' sign-ins on the site. Each provider also needs its credentials (System → Integrations).
      */
     sso?: boolean | null;
+    /**
+     * The Comments section under each article, and sign-ups: readers make an account by signing in to comment. Needs Single sign-on on too.
+     */
+    comments?: boolean | null;
   };
   updatedAt?: string | null;
   createdAt?: string | null;
@@ -2792,6 +2872,36 @@ export interface ArticleRecommendation {
         id?: string | null;
       }[]
     | null;
+  updatedAt?: string | null;
+  createdAt?: string | null;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "comment-settings".
+ */
+export interface CommentSetting {
+  id: number;
+  /**
+   * How many levels of replies can sit below a top-level comment. 0 allows no replies. Lowering it never removes replies already posted; it only stops new ones past the limit.
+   */
+  maxDepth: number;
+  /**
+   * An account with this many active violations can't comment until enough of them expire or are reversed.
+   */
+  violationThreshold: number;
+  violationWindowDays: number;
+  /**
+   * A comment with more links than this is held for a moderator.
+   */
+  maxLinks: number;
+  /**
+   * Hold a comment its author already posted, word for word, in the past day.
+   */
+  blockDuplicates?: boolean | null;
+  /**
+   * Off, anyone signed in can comment. On, only people whose sign-in provider verified their address can, and staff.
+   */
+  requireVerifiedEmail?: boolean | null;
   updatedAt?: string | null;
   createdAt?: string | null;
 }
@@ -2933,6 +3043,7 @@ export interface PluginsSelect<T extends boolean = true> {
         notifications?: T;
         tours?: T;
         sso?: T;
+        comments?: T;
       };
   updatedAt?: T;
   createdAt?: T;
@@ -2951,6 +3062,21 @@ export interface ArticleRecommendationsSelect<T extends boolean = true> {
         engagementScore?: T;
         id?: T;
       };
+  updatedAt?: T;
+  createdAt?: T;
+  globalType?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "comment-settings_select".
+ */
+export interface CommentSettingsSelect<T extends boolean = true> {
+  maxDepth?: T;
+  violationThreshold?: T;
+  violationWindowDays?: T;
+  maxLinks?: T;
+  blockDuplicates?: T;
+  requireVerifiedEmail?: T;
   updatedAt?: T;
   createdAt?: T;
   globalType?: T;

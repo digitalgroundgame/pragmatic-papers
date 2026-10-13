@@ -29,6 +29,7 @@ describe("isEdgeCacheable", () => {
 
   it.each([
     ["Payload's login", { Cookie: "theme=dark; payload-token=abc" }],
+    ["staff's single sign-on", { Cookie: "pp-session=abc; payload-token-sso=1" }],
     ["draft mode", { Cookie: "__prerender_bypass=abc" }],
     ["an Authorization header", { Authorization: "Bearer secret" }],
     ["OpenNext's revalidation", { "x-prerender-revalidate": "id", "x-isr": "1" }],
@@ -44,6 +45,11 @@ describe("isEdgeCacheable", () => {
     expect(isEdgeCacheable(new Request(`${W}/feed`, { method: "POST" }))).toBe(false)
     expect(isEdgeCacheable(new Request(`${W}/admin`))).toBe(false)
     expect(isEdgeCacheable(new Request(`${W}/api/media/file/a.png`))).toBe(false)
+  })
+
+  it("caches pages for a signed-in member, whose session isn't personal to a page", () => {
+    const headers = { Cookie: "pp-session=abc" }
+    expect(isEdgeCacheable(new Request(`${W}/articles/a`, { headers }))).toBe(true)
   })
 
   it("doesn't mistake a cookie that only ends in a personal name", () => {

@@ -1,11 +1,12 @@
 import type { PluginSwitchName } from "@/globals/Plugins/isPluginEnabled"
+import { admin, editor } from "@/access/collections"
+import { isStaff } from "@/access/roles"
 import { revalidateRedirects } from "@/hooks/revalidateRedirects"
 import { docsPlugin } from "@/plugins/docs"
 import { docsNotifications } from "@/plugins/docs/notifications"
 import { notificationsPlugin } from "@/plugins/notifications"
 import { toursPlugin } from "@/plugins/tours"
-import { destinySignIn, discordSignIn, googleSignIn } from "@/integrations"
-import type { Article, Interactive, Page, Topic, Volume } from "@/payload-types"
+import type { Article, Interactive, Page, Topic, User, Volume } from "@/payload-types"
 import { getSiteURL } from "@/utilities/getURL"
 import { DEFAULT_DESCRIPTION } from "@/utilities/mergeOpenGraph"
 import { docPath } from "@/utilities/routes"
@@ -29,7 +30,10 @@ import { convertLexicalToPlaintext } from "@payloadcms/richtext-lexical/plaintex
 import { s3Storage } from "@payloadcms/storage-s3"
 import { type Payload, type Plugin } from "payload"
 
-import { ssoPlugin } from "./sso"
+import { commentsPlugin } from "./comments"
+import { commentsOn, signUpProviders, ssoOptions } from "./signIn"
+import { getSignedInUser, ssoPlugin } from "./sso"
+import { staffByDefault } from "./staffByDefault"
 
 // Reads the plugin's switch on System → Plugins when called. Imported then, not here: the
 // Plugins global reaches the Payload config, which imports this file.
@@ -337,6 +341,8 @@ export const plugins: Plugin[] = [
         },
       },
       formSubmissionOverrides: {
+        // The plugin lets any logged-in user read every submission.
+        access: { read: editor },
         admin: {
           hidden: true, // TODO: Setup form builder plugin
         },
@@ -397,21 +403,34 @@ export const plugins: Plugin[] = [
     enabled: pluginSwitch("notifications"),
   }),
   toursPlugin({ enabled: pluginSwitch("tours") }),
-  ssoPlugin({
-    // Its switch on System → Plugins, read from the database on each request rather than
-    // through `isPluginEnabled`'s cache, so turning it off ends SSO sessions at once.
-    enabled: async (payload) =>
-      (await payload.findGlobal({ slug: "plugins", depth: 0 })).switches?.sso === true,
-    providers: () => ({
-      google: googleSignIn.credentials(),
-      discord: discordSignIn.credentials(),
-      destiny: destinySignIn.credentials(),
+  ssoPlugin(ssoOptions),
+  commentsPlugin({
+    // Read from the database on each request, like `sso`'s, so switching either off stops
+    // posts at once.
+    enabled: commentsOn,
+    // Members and staff alike: a member is signed in to the site but not to Payload.
+    currentUser: (req) => getSignedInUser(req, ssoOptions),
+    authorFields: ["name", "avatarUrl", "roles"],
+    // Staff addresses are the ones an admin gave them.
+    isVerified: (author) => author.emailVerified === true || isStaff(author as unknown as User),
+    describeAuthor: (author) => ({
+      name: typeof author.name === "string" && author.name ? author.name : "Anonymous",
+      image: typeof author.avatarUrl === "string" ? author.avatarUrl : null,
+      badge: isStaff(author as unknown as User) ? "Staff" : null,
     }),
+    signInProviders: signUpProviders,
     baseURL: getSiteURL,
-    secret: () => process.env.PAYLOAD_SECRET || "",
-    // The Users collection's slug field (`src/fields/slug`), set by Payload on create.
-    requiredUserColumns: ["slug"],
-    // Staff stay signed in for a month after a provider sign-in.
-    sessionSeconds: 60 * 60 * 24 * 30,
+    moderators: editor,
+    admins: admin,
+  }),
+  // Last, so it sees every other plugin's collections.
+  describePlugin(staffByDefault, {
+    slug: "staff-by-default",
+    manifest: {
+      name: "Staff by default",
+      source: "src/plugins/staffByDefault.ts",
+      description:
+        "Gives every access rule a collection or plugin leaves unset to staff, where Payload's default is anyone signed in, so members never get more than readers.",
+    },
   }),
 ]

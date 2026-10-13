@@ -85,6 +85,64 @@ async function signInWithDiscord(profile: DiscordProfile): Promise<Response> {
   })
 }
 
+interface DestinyggProfile {
+  userId: number
+  username: string
+}
+
+function stubDestinygg(profile: DestinyggProfile) {
+  vi.stubGlobal("fetch", (input: RequestInfo | URL) => {
+    const url = String(input instanceof Request ? input.url : input)
+    if (url.startsWith("https://www.destiny.gg/oauth/token")) {
+      return Promise.resolve(
+        Response.json({
+          access_token: "access",
+          refresh_token: "refresh",
+          expires_in: 3600,
+          scope: "identify",
+          token_type: "bearer",
+        }),
+      )
+    }
+    if (url.startsWith("https://www.destiny.gg/api/userinfo")) {
+      return Promise.resolve(
+        Response.json({ ...profile, nick: profile.username, roles: ["USER"], features: [] }),
+      )
+    }
+    return Promise.reject(new Error(`unexpected request to ${url}`))
+  })
+}
+
+/** Starts a sign-in and comes back from Destiny.gg as `profile`. */
+async function signInWithDestinygg(profile: DestinyggProfile): Promise<Response> {
+  stubDestinygg(profile)
+  const start = await api("/auth/sign-in/social", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      provider: "destinygg",
+      callbackURL: "/admin",
+      errorCallbackURL: "/admin/login",
+    }),
+  })
+  expect(start.status).toBe(200)
+  const { url } = (await start.json()) as { url: string }
+  expect(url).toContain("https://www.destiny.gg/oauth/authorize?")
+  const state = new URL(url).searchParams.get("state")
+  return api(`/auth/callback/destinygg?code=test-code&state=${state}`, {
+    headers: { Cookie: cookiesFrom(start) },
+  })
+}
+
+const setDestinyggUsername = (id: number, destinyggUsername: string | null) =>
+  payload.update({
+    collection: "users",
+    id,
+    data: { destinyggUsername },
+    overrideAccess: true,
+    context: { disableRevalidate: true },
+  })
+
 const me = async (cookie: string): Promise<User | null> => {
   const response = await api("/users/me", { headers: { Cookie: cookie } })
   return ((await response.json()) as { user: User | null }).user
@@ -104,6 +162,8 @@ beforeAll(async () => {
 beforeEach(async () => {
   vi.stubEnv("DISCORD_CLIENT_ID", "discord-client")
   vi.stubEnv("DISCORD_CLIENT_SECRET", "discord-secret")
+  vi.stubEnv("DESTINYGG_CLIENT_ID", "dgg-client")
+  vi.stubEnv("DESTINYGG_CLIENT_SECRET", "dgg-secret")
   await setExperiment(true)
 })
 
@@ -225,5 +285,89 @@ describe("single sign-on", () => {
       })
       expect(response.status, path).toBe(404)
     }
+  })
+})
+
+describe("signing in with Destiny.gg", () => {
+  // Destiny.gg shares no address, so an admin names the account on the user's record.
+  let nextId = 5000
+  const account = (username: string) => ({ userId: nextId++, username })
+
+  it("signs in the user whose record names the account, whatever its case", async () => {
+    const editor = await createUser("editor")
+    const profile = account(`Editor${nextId}`)
+    await setDestinyggUsername(editor.id, `@${profile.username}`)
+
+    const callback = await signInWithDestinygg(profile)
+
+    expect(callback.headers.get("location")).toBe("/admin")
+    const user = await me(cookiesFrom(callback))
+    expect(user).toMatchObject({ id: editor.id, roles: ["editor"] })
+    expect(user?.destinyggUsername).toBe(profile.username.toLowerCase())
+  })
+
+  it("sends an account nobody here names back to the login page, creating nobody", async () => {
+    const before = await payload.count({ collection: "users" })
+
+    const callback = await signInWithDestinygg(account("Stranger"))
+
+    expect(callback.headers.get("location")).toContain("/admin/login?error=email_not_found")
+    expect(cookiesFrom(callback)).not.toContain(`${SSO_COOKIE_NAME}=`)
+    expect((await payload.count({ collection: "users" })).totalDocs).toBe(before.totalDocs)
+  })
+
+  it("follows a linked account after a rename on Destiny.gg", async () => {
+    const writer = await createUser("writer")
+    const profile = account(`Writer${nextId}`)
+    await setDestinyggUsername(writer.id, profile.username)
+    await signInWithDestinygg(profile)
+
+    const renamed = await signInWithDestinygg({ ...profile, username: "SomethingNew" })
+
+    expect((await me(cookiesFrom(renamed)))?.id).toBe(writer.id)
+  })
+
+  it("won't hand a name that changed hands to its new owner", async () => {
+    const writer = await createUser("writer")
+    const original = account(`Taken${nextId}`)
+    await setDestinyggUsername(writer.id, original.username)
+    await signInWithDestinygg(original)
+
+    // Someone else now holds the name the record still shows.
+    const callback = await signInWithDestinygg(account(original.username))
+
+    expect(callback.headers.get("location")).toContain("error=")
+    expect(cookiesFrom(callback)).not.toContain(`${SSO_COOKIE_NAME}=`)
+  })
+
+  it("stops once the username is cleared from the record", async () => {
+    const editor = await createUser("editor")
+    const profile = account(`Cleared${nextId}`)
+    await setDestinyggUsername(editor.id, profile.username)
+    await signInWithDestinygg(profile)
+
+    await setDestinyggUsername(editor.id, "")
+
+    const callback = await signInWithDestinygg(profile)
+    expect(callback.headers.get("location")).toContain("error=")
+    expect(cookiesFrom(callback)).not.toContain(`${SSO_COOKIE_NAME}=`)
+  })
+
+  it("keeps the username off the public API", async () => {
+    const writer = await createUser("writer")
+    await setDestinyggUsername(writer.id, `Public${nextId}`)
+    await payload.update({
+      collection: "users",
+      id: writer.id,
+      data: { publicProfile: true },
+      overrideAccess: true,
+      context: { disableRevalidate: true },
+    })
+
+    const response = await api(`/users/${writer.id}`)
+    const body = (await response.json()) as Record<string, unknown>
+
+    expect(response.status).toBe(200)
+    expect(body).not.toHaveProperty("destinyggUsername")
   })
 })

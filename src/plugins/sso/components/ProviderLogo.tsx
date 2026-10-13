@@ -34,5 +34,35 @@ const DiscordLogo: React.FC = () => (
   </svg>
 )
 
-export const ProviderLogo: React.FC<{ provider: SsoProviderId }> = ({ provider }) =>
-  provider === "google" ? <GoogleLogo /> : <DiscordLogo />
+/** Destiny.gg's icon, unmodified (`assets/web/img/dgg-icon.svg` in destinygg/website). */
+const DestinyggLogo: React.FC = () => (
+  <svg viewBox="0 0 265 265" aria-hidden="true" focusable="false">
+    <polygon
+      fill="#59aeea"
+      points="163.97 243.98 244.55 243.98 244.55 193.3 212.04 193.3 163.97 243.98"
+    />
+    <polygon
+      fill="#59aeea"
+      points="244.55 74.87 244.55 24.2 163.97 24.2 212.04 74.87 244.55 74.87"
+    />
+    <path
+      fill="#1A1A1A"
+      d="m0,0l0,264.65185l264.64799,0l0,-264.43211l-264.64799,-0.21974zm244.55112,243.97671l-80.58024,0l48.07751,-50.67974l32.50659,0l0,50.67974l-0.00386,0zm0,-169.10208l-32.50658,0l-48.07751,-50.67974l80.58024,0l0,50.67974l0.00385,0z"
+    />
+    <path
+      fill="#FFFFFF"
+      d="m22.09769,28.18882l0,211.97129l116.22877,0l49.35742,-51.89025l0,-109.49383l-49.33044,-50.58721l-116.25575,0zm68.77964,29.63064l17.36358,0l0,148.85101l-17.36358,0l0,-148.85101z"
+    />
+  </svg>
+)
+
+const LOGOS: Record<SsoProviderId, React.FC> = {
+  google: GoogleLogo,
+  discord: DiscordLogo,
+  destinygg: DestinyggLogo,
+}
+
+export const ProviderLogo: React.FC<{ provider: SsoProviderId }> = ({ provider }) => {
+  const Logo = LOGOS[provider]
+  return <Logo />
+}

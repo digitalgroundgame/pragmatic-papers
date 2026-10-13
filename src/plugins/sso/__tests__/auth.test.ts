@@ -2,7 +2,7 @@ import type { BetterAuthOptions } from "better-auth"
 import type { Payload } from "payload"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { configuredProviders, getAuth } from "../auth"
+import { configuredProviders, destinyggEmail, getAuth } from "../auth"
 import type { ResolvedSsoConfig } from "../types"
 
 const betterAuth = vi.fn((options: BetterAuthOptions) => ({ options }))
@@ -10,6 +10,7 @@ vi.mock("better-auth", () => ({ betterAuth }))
 
 const google = { clientId: "google-id", clientSecret: "google-secret" }
 const discord = { clientId: "discord-id", clientSecret: "discord-secret" }
+const destinygg = { clientId: "dgg-id", clientSecret: "dgg-secret" }
 
 const config = (overrides: Partial<ResolvedSsoConfig> = {}): ResolvedSsoConfig => ({
   enabled: () => true,
@@ -98,9 +99,46 @@ describe("getAuth", () => {
     expect(options.account?.accountLinking).toEqual({
       enabled: true,
       requireLocalEmailVerified: false,
+      trustedProviders: ["destinygg"],
     })
     expect(options.account?.encryptOAuthTokens).toBe(true)
     expect(options.advanced?.database).toEqual({ generateId: "serial" })
+  })
+
+  it("registers Destiny.gg through a plugin, not as a built-in provider", async () => {
+    const options = await optionsFor(config({ providers: () => ({ google, destinygg }) }))
+    expect(Object.keys(options.socialProviders ?? {})).toEqual(["google"])
+    expect(options.plugins?.map(({ id }) => id)).toEqual(["destinygg"])
+  })
+
+  it("registers no Destiny.gg plugin without its credentials", async () => {
+    const options = await optionsFor(config({ providers: () => ({ google, destinygg: null }) }))
+    expect(options.plugins).toEqual([])
+  })
+})
+
+describe("destinyggEmail", () => {
+  const profile = { userId: 42, username: "Someone" }
+
+  it("follows an account that's already linked, whatever it's called now", async () => {
+    const query = vi.fn().mockResolvedValueOnce({ rows: [{ email: "linked@example.com" }] })
+    expect(await destinyggEmail({ query } as never, "users", profile)).toBe("linked@example.com")
+    expect(query).toHaveBeenCalledTimes(1)
+    expect(query.mock.calls[0]?.[1]).toEqual(["42"])
+  })
+
+  it("finds a first sign-in by the username on the record, case aside", async () => {
+    const query = vi
+      .fn()
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [{ email: "named@example.com" }] })
+    expect(await destinyggEmail({ query } as never, "users", profile)).toBe("named@example.com")
+    expect(query.mock.calls[1]?.[1]).toEqual(["someone"])
+  })
+
+  it("finds nobody when neither matches", async () => {
+    const query = vi.fn().mockResolvedValue({ rows: [] })
+    expect(await destinyggEmail({ query } as never, "users", profile)).toBeNull()
   })
 })
 

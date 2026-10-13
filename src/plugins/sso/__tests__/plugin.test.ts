@@ -25,14 +25,19 @@ const fieldNames = (collection: CollectionConfig) =>
   collection.fields.map((field) => ("name" in field ? field.name : null))
 
 describe("ssoPlugin", () => {
-  it("adds Better Auth's hidden columns to the users collection only", () => {
+  it("adds Better Auth's hidden columns and the Destiny.gg username to the users collection only", () => {
     const config = apply(options)
-    expect(fieldNames(usersOf(config))).toEqual(["name", "emailVerified", "avatarUrl"])
+    expect(fieldNames(usersOf(config))).toEqual([
+      "name",
+      "emailVerified",
+      "avatarUrl",
+      "destinyggUsername",
+    ])
     expect(config.collections![1]).toBe(articles)
   })
 
-  it("keeps both columns out of reach of the admin and the API", () => {
-    for (const field of usersOf(apply(options)).fields.slice(1)) {
+  it("keeps Better Auth's columns out of reach of the admin and the API", () => {
+    for (const field of usersOf(apply(options)).fields.slice(1, 3)) {
       if (!("access" in field) || !field.access) throw new Error("no access")
       expect(field.access.create?.({} as never)).toBe(false)
       expect(field.access.read?.({} as never)).toBe(false)
@@ -84,7 +89,12 @@ describe("ssoPlugin", () => {
     const config = apply({ ...options, disabled: true })
     const collection = usersOf(config)
 
-    expect(fieldNames(collection)).toEqual(["name", "emailVerified", "avatarUrl"])
+    expect(fieldNames(collection)).toEqual([
+      "name",
+      "emailVerified",
+      "avatarUrl",
+      "destinyggUsername",
+    ])
     expect(collection.auth).toEqual(users.auth)
     expect(collection.hooks).toBe(users.hooks)
     expect(config.endpoints).toBeUndefined()
@@ -94,6 +104,10 @@ describe("ssoPlugin", () => {
   it("adds to the collection named by usersSlug", () => {
     const config = apply({ ...options, usersSlug: "articles" })
     expect(fieldNames(usersOf(config))).toEqual(["name"])
-    expect(fieldNames(config.collections![1]!)).toEqual(["emailVerified", "avatarUrl"])
+    expect(fieldNames(config.collections![1]!)).toEqual([
+      "emailVerified",
+      "avatarUrl",
+      "destinyggUsername",
+    ])
   })
 })

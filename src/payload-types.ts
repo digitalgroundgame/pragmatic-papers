@@ -562,6 +562,10 @@ export interface User {
   publicProfile?: boolean | null;
   emailVerified?: boolean | null;
   avatarUrl?: string | null;
+  /**
+   * Lets this person sign in with Destiny.gg. Their first sign-in links that account; after that a rename on Destiny.gg doesn't matter, and clearing this field stops it.
+   */
+  destinyggUsername?: string | null;
   updatedAt: string;
   createdAt: string;
   email: string;
@@ -2255,6 +2259,7 @@ export interface UsersSelect<T extends boolean = true> {
   publicProfile?: T;
   emailVerified?: T;
   avatarUrl?: T;
+  destinyggUsername?: T;
   updatedAt?: T;
   createdAt?: T;
   email?: T;

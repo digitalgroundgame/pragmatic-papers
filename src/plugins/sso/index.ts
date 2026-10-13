@@ -1,6 +1,7 @@
 import type { CollectionConfig, Plugin } from "payload"
 
 import { DEFAULT_COOKIE_NAME } from "./constants"
+import { destinyggUsernameField } from "./destinyggUsername"
 import { authEndpoints } from "./endpoints/auth"
 import { endSsoSession } from "./hooks/endSsoSession"
 import { ssoStrategy } from "./strategy"
@@ -11,13 +12,14 @@ export { ssoAfterSchemaInit } from "./schema"
 export type { SsoPluginConfig, SsoProviderCredentials, SsoProviderId } from "./types"
 
 /**
- * Sign in to Payload with Google or Discord, through Better Auth.
+ * Sign in to Payload with Google, Discord or Destiny.gg, through Better Auth.
  *
  * Better Auth runs the OAuth exchange and keeps its own sessions and linked accounts in
  * three tables (`ssoAfterSchemaInit`, which goes in the database adapter's
  * `afterSchemaInit`). Payload keeps everything else: its users, their roles, and its own
  * email and password login, which stays as the way in when a provider is down. A provider
- * login never creates a user; it attaches to the one whose address it has verified.
+ * login never creates a user; it attaches to the one whose address it has verified, or, for
+ * Destiny.gg, which shares no address, to the one whose record names that Destiny.gg account.
  */
 export function ssoPlugin(options: SsoPluginConfig): Plugin {
   const sso: ResolvedSsoConfig = {
@@ -55,6 +57,7 @@ export function ssoPlugin(options: SsoPluginConfig): Plugin {
             access: { create: () => false, read: () => false, update: () => false },
             admin: { hidden: true },
           },
+          destinyggUsernameField,
         ],
         ...(!options.disabled && {
           auth: { ...auth, strategies: [...(auth.strategies ?? []), ssoStrategy(sso)] },

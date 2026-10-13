@@ -3,15 +3,50 @@ import type { betterAuth as BetterAuth } from "better-auth"
 import type { Payload } from "payload"
 
 import { AUTH_ENDPOINT_PATH, DISABLED_PATHS, TABLES } from "./constants"
+import { destinyggPlugin, type DestinyggProfile } from "./destinygg"
+import { normalizeDestinyggUsername } from "./destinyggUsername"
 import type { ResolvedSsoConfig, SsoProviderId } from "./types"
+
+type Pool = PostgresAdapter["pool"]
+
+/**
+ * The address of the user a Destiny.gg account signs in as. Destiny.gg shares no address,
+ * so the user is found by the Destiny.gg username an admin put on their record instead.
+ */
+export async function destinyggEmail(
+  pool: Pool,
+  usersTable: string,
+  profile: DestinyggProfile,
+): Promise<string | null> {
+  // Once linked, the account follows its Destiny.gg id, so renaming on Destiny.gg doesn't
+  // lock anyone out. Clearing the username on the record does.
+  const linked = await pool.query<{ email: string }>(
+    `select u.email from "${TABLES.account}" a join "${usersTable}" u on u.id = a.user_id
+     where a.provider_id = 'destinygg' and a.account_id = $1 and u.destinygg_username is not null
+     limit 1`,
+    [String(profile.userId)],
+  )
+  if (linked.rows[0]) return linked.rows[0].email
+
+  // A first sign-in: the user whose record names this username, unless a Destiny.gg account
+  // is linked to them already, in which case the name has changed hands since.
+  const named = await pool.query<{ email: string }>(
+    `select u.email from "${usersTable}" u where u.destinygg_username = $1 and not exists (
+       select 1 from "${TABLES.account}" a where a.user_id = u.id and a.provider_id = 'destinygg'
+     ) limit 1`,
+    [normalizeDestinyggUsername(profile.username)],
+  )
+  return named.rows[0]?.email ?? null
+}
 
 function createAuth(betterAuth: typeof BetterAuth, payload: Payload, config: ResolvedSsoConfig) {
   const { pool } = payload.db as unknown as PostgresAdapter
   const baseURL = config.baseURL()
   const secure = baseURL.startsWith("https://")
 
+  const { destinygg, ...builtIn } = config.providers()
   const socialProviders = Object.fromEntries(
-    Object.entries(config.providers())
+    Object.entries(builtIn)
       .filter(([, credentials]) => credentials)
       .map(([id, credentials]) => [
         id,
@@ -31,6 +66,15 @@ function createAuth(betterAuth: typeof BetterAuth, payload: Payload, config: Res
     telemetry: { enabled: false },
     disabledPaths: DISABLED_PATHS,
     socialProviders,
+    // Destiny.gg isn't one of Better Auth's built-in providers.
+    plugins: destinygg
+      ? [
+          destinyggPlugin({
+            ...destinygg,
+            emailFor: (profile) => destinyggEmail(pool, config.usersSlug, profile),
+          }),
+        ]
+      : [],
     // Payload's users table, read for id, email and name. Better Auth's only write to it is
     // `email_verified`, when a provider vouches for the address.
     user: {
@@ -90,6 +134,9 @@ function createAuth(betterAuth: typeof BetterAuth, payload: Payload, config: Res
         // an admin creates users, so the local address is one an admin chose.
         enabled: true,
         requireLocalEmailVerified: false,
+        // Destiny.gg vouches for no address: the one it signs in with is the matched user's
+        // own (`destinyggEmail`), so it's trusted to link without one.
+        trustedProviders: ["destinygg"],
       },
     },
     verification: {

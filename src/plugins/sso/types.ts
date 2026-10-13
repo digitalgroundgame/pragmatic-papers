@@ -1,7 +1,10 @@
 import type { Payload } from "payload"
 
-/** A sign-in provider Better Auth has built in. */
-export type SsoProviderId = "google" | "discord"
+/**
+ * A sign-in provider: Google and Discord are built in to Better Auth, Destiny.gg is ours
+ * (`destinygg.ts`).
+ */
+export type SsoProviderId = "google" | "discord" | "destinygg"
 
 /** An OAuth application's credentials, from the provider's developer console. */
 export interface SsoProviderCredentials {

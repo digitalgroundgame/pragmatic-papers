@@ -7,7 +7,7 @@ import { cn } from "@/utilities/utils"
 
 import { LinkIcon, shortURL } from "./LinkIcon"
 import { formatStartsAt } from "./startsAt"
-import { TICKER_PAUSE_SCRIPT } from "./pause"
+import { bindPauseSwitch } from "./pause"
 import { LazyLinkTooltip } from "./LinkTooltip.lazy"
 import {
   excerpt,
@@ -84,9 +84,12 @@ function PauseSwitch({ live }: { live: boolean }): React.ReactNode {
         !live && "motion-reduce:hidden",
       )}
     >
-      <input type="checkbox" className="ticker-pause sr-only" aria-label="Pause ticker" />
-      {/* eslint-disable-next-line react/no-danger -- a constant, with nothing from the request in it */}
-      <script dangerouslySetInnerHTML={{ __html: TICKER_PAUSE_SCRIPT }} />
+      <input
+        ref={(input) => (input ? bindPauseSwitch(input) : undefined)}
+        type="checkbox"
+        className="ticker-pause sr-only"
+        aria-label="Pause ticker"
+      />
       <Pause aria-hidden="true" className="ticker-pause-icon size-3.5 fill-current" />
       <Play aria-hidden="true" className="ticker-play-icon size-3.5 fill-current" />
     </label>
@@ -167,8 +170,9 @@ function Broadcast({
 
 /**
  * The ticker: a YouTube broadcast pinned at the start while it's live (or about to be), then
- * our latest posts scrolling past. Server-rendered at a fixed height, and moved by CSS alone
- * (`.ticker-*` in `globals.css`), so it ships no JavaScript and shifts nothing as it loads.
+ * our latest posts scrolling past. Rendered in the browser by `TickerLoader`, into the room
+ * its placeholder kept, at a fixed height, and moved by CSS alone (`.ticker-*` in
+ * `globals.css`).
  * The scroll pauses on hover, on focus, with its pause switch, and stops for readers who ask
  * for reduced motion, leaving the posts to scroll by hand.
  *

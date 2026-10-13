@@ -1,15 +1,13 @@
 import { afterEach, describe, expect, it } from "vitest"
 
-import { TICKER_PAUSE_SCRIPT, TICKER_PAUSED_KEY } from "../pause"
+import { bindPauseSwitch, TICKER_PAUSED_KEY } from "../pause"
 
-/** The switch and its script as the page has them, with the script run as the parser would. */
+/** A pause switch, bound as the ticker binds it when it mounts. */
 function render(): HTMLInputElement {
   const input = document.createElement("input")
   input.type = "checkbox"
-  const script = document.createElement("script")
-  document.body.append(input, script)
-  Object.defineProperty(document, "currentScript", { value: script, configurable: true })
-  new Function(TICKER_PAUSE_SCRIPT)()
+  document.body.append(input)
+  bindPauseSwitch(input)
   return input
 }
 
@@ -18,7 +16,7 @@ afterEach(() => {
   localStorage.clear()
 })
 
-describe("the ticker's pause script", () => {
+describe("the ticker's pause switch", () => {
   it("leaves the ticker running for a reader who never paused it", () => {
     expect(render()).not.toBeChecked()
   })
@@ -36,15 +34,31 @@ describe("the ticker's pause script", () => {
     expect(localStorage.getItem(TICKER_PAUSED_KEY)).toBeNull()
   })
 
+  it("stops remembering once it's unbound", () => {
+    const input = document.createElement("input")
+    input.type = "checkbox"
+    document.body.append(input)
+    bindPauseSwitch(input)()
+    input.click()
+    expect(localStorage.getItem(TICKER_PAUSED_KEY)).toBeNull()
+  })
+
   it("does nothing when storage is blocked", () => {
-    const { getItem } = Storage.prototype
+    const { getItem, setItem } = Storage.prototype
     Storage.prototype.getItem = () => {
       throw new Error("SecurityError")
     }
+    Storage.prototype.setItem = () => {
+      throw new Error("SecurityError")
+    }
     try {
-      expect(render()).not.toBeChecked()
+      const input = render()
+      expect(input).not.toBeChecked()
+      input.click()
+      expect(input).toBeChecked()
     } finally {
       Storage.prototype.getItem = getItem
+      Storage.prototype.setItem = setItem
     }
   })
 })

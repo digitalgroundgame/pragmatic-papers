@@ -1,4 +1,4 @@
-import { isExperimentEnabled } from "@/globals/SiteSettings/isExperimentEnabled"
+import { isPluginEnabled } from "@/globals/Plugins/isPluginEnabled"
 import { queryPublishedDocs } from "@/plugins/docs/queries"
 import { WHATS_NEW_PATH } from "@/plugins/docs/sections"
 import { getSiteURL } from "@/utilities/getURL"
@@ -17,7 +17,7 @@ const DESCRIPTION = "Every Pragmatic Papers doc, newest first."
 export const dynamic = "force-dynamic"
 
 export async function generateMetadata(): Promise<Metadata> {
-  if (!(await isExperimentEnabled("docs"))) return {}
+  if (!(await isPluginEnabled("docs"))) return {}
   const canonicalUrl = `${getSiteURL()}${WHATS_NEW_PATH}`
   return {
     title: TITLE,
@@ -28,6 +28,6 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function WhatsNewPage(): Promise<React.ReactNode> {
-  if (!(await isExperimentEnabled("docs"))) notFound()
+  if (!(await isPluginEnabled("docs"))) notFound()
   return <WhatsNew docs={await queryPublishedDocs()} />
 }

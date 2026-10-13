@@ -15,6 +15,7 @@ import {
 import { ShareButtons } from "@/components/ShareButtons"
 import { LinkButton } from "@/components/ui/link-button"
 import { Separator } from "@/components/ui/separator"
+import { isPluginEnabled } from "@/globals/Plugins/isPluginEnabled"
 import { isExperimentEnabled } from "@/globals/SiteSettings/isExperimentEnabled"
 import { queryDocBySlug, queryPublishedDocs } from "@/plugins/docs/queries"
 import { adjacentDocs, docPath, groupDocsBySection, HOME_DOC_SLUG } from "@/plugins/docs/sections"
@@ -32,7 +33,7 @@ import { DocDates } from "./DocDates"
 
 /** A doc's title, summary, canonical URL and hero image for search and link previews. */
 export async function docMetadata(slug: string): Promise<Metadata | null> {
-  if (!(await isExperimentEnabled("docs"))) return null
+  if (!(await isPluginEnabled("docs"))) return null
   const doc = await queryDocBySlug(slug)
   if (!doc) return null
 
@@ -64,7 +65,7 @@ interface DocViewProps {
  * wiki: /docs/<slug>, and the home doc at /docs.
  */
 export async function DocView({ slug, fallback }: DocViewProps): Promise<React.ReactNode> {
-  if (!(await isExperimentEnabled("docs"))) notFound()
+  if (!(await isPluginEnabled("docs"))) notFound()
   const { isEnabled: draft } = await draftMode()
   const url = docPath(slug)
   const [doc, docs] = await Promise.all([queryDocBySlug(slug), queryPublishedDocs()])
@@ -76,7 +77,7 @@ export async function DocView({ slug, fallback }: DocViewProps): Promise<React.R
   const showTableOfContents =
     doc.showTableOfContents !== false && (await isExperimentEnabled("tableOfContents"))
 
-  const tour = (await isExperimentEnabled("tours")) ? findTour(doc.tour) : undefined
+  const tour = (await isPluginEnabled("tours")) ? findTour(doc.tour) : undefined
   const home = slug === HOME_DOC_SLUG
   const trail: Crumb[] = [
     { name: "Docs", path: "/docs" },

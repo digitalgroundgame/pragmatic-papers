@@ -117,6 +117,7 @@ processes they start.
 - **Header** (`slug: 'header'`) — nav items, action button (admins), and a **Ticker** tab: admins switch the ticker on, and while it's on editors see the posts its sources hold now, each with a Hide button that adds its link to the hidden posts (or paste a link). Editors can save the global, but every field except the hidden posts is admin-only. Which accounts the ticker reads is in **Integrations** (admin-only); revalidated via `revalidateHeader` hook
 - **Footer** (`slug: 'footer'`) — nav items; revalidated via `revalidateFooter` hook
 - **Settings** (`slug: 'site-settings'`, the `SiteSettings` global) — admin-only; its `experiments` group switches beta features on per environment; revalidated via `revalidateSiteSettings` hook
+- **Plugins** (`slug: 'plugins'`) — admin-only: the installed plugins (`registeredPlugins`), and the switches of those that offer one; revalidated via `revalidatePlugins` hook
 - **Newsletter** (`slug: 'newsletter'`) — admin-only, stores nothing: its page (`NewsletterView`, replacing the edit view) shows Listmonk's subscriber counts, newest signups and latest campaigns
 - Fetched via `getGlobal('header' | 'footer', depth)` from `@/data/globals`, which caches with `unstable_cache` under the tag `global_<slug>`
 
@@ -222,9 +223,9 @@ is published the bell offers it as **Show me** beside **Read more** (any
 `NotificationItem` can, with `showMe`), as does the doc's page. After changing a screen a tour points at, run
 the tour locally.
 
-The three plugins are experiments (`docs`, `notifications`, `tours` in Settings),
-switched from `src/plugins/index.ts` through each plugin's `enabled` option, so
-the plugins never read Settings themselves. With `docs` off, `/docs` pages 404,
+The three plugins are betas, each with its switch on **System → Plugins** (`isPluginEnabled`),
+passed from `src/plugins/index.ts` through each plugin's `enabled` option, so
+the plugins never read the switches themselves. With `docs` off, `/docs` pages 404,
 their sitemap is empty and the bell leaves docs out (a source's `enabled`); the Docs collection and the
 deploy's docs sync carry on, so docs are ready when it's switched on. With
 `notifications` off there's no bell; with `tours` off, `TourGate` doesn't mount
@@ -255,6 +256,11 @@ page listing articles, volumes or contributors, or every page when it passes nei
 revalidates. It then requests the same most-read pages through the Worker's URL in the background
 (`warmWorkerSoon`), since a Worker renders a page on a cold isolate in seconds.
 A new hook for content readers see should call it too.
+On a collection with drafts, a hook decides what a save changed with `readersChange`
+(`src/utilities/readersCopy.ts`, with `rememberReadersCopy` first in the collection's
+`beforeChange`), not `previousDoc`: Payload hands hooks the latest version, which is an
+autosaved draft once an editor types, so `previousDoc` makes an autosave look like an
+unpublish and hides a rename made in drafts.
 A deploy purges too: `start.sh` waits until the site's public URL is answered by the
 new container (`/next/purge-edge` names its `INSTANCE_ID`), so the old container can't
 refill the edge with the previous release's pages, then POSTs `/next/purge-edge`, which
@@ -277,9 +283,26 @@ find them cached. A warm-up failure only logs a warning. A deploy leaves the Wor
 A feature that could be published one day lives in `src/plugins/<name>/`, shaped like
 Payload's own plugins so it can be lifted out without a rewrite:
 
-- `index.ts` exports `<name>Plugin(options): Plugin`, and nothing else the app needs.
-- `types.ts` holds `<Name>PluginConfig`. Options have defaults, and `disabled: true` leaves
-  the schema in place (so migrations don't change) but turns the behavior off.
+- `index.ts` exports `<name>Plugin`, and nothing else the app needs. It's made with
+  `registerPlugin({ slug, order, manifest, plugin })` (`@/utilities/registerPlugin`): Payload's
+  `definePlugin` descriptor plus a `manifest` (name, source, description, `switch`), so
+  `<name>Plugin(options)` carries Payload's `slug` and `options`, and its `plugin` gets the
+  options and the other plugins (`plugins`). When Payload covers what the manifest does, drop
+  that key. The manifest is fixed facts about the plugin; what a site decides goes in options.
+  It lists the plugin on the admin's **System → Plugins** page. A package that doesn't describe
+  itself is wrapped with `describePlugin` where `src/plugins/index.ts` installs it.
+- Every plugin takes `enabled` (checked at runtime; `isPluginOn` reads it) and `disabled`
+  (`SitePluginOptions`). Switching a plugin off stops its behavior; its schema stays.
+- A plugin that checks `enabled` on each request offers a `switch` in its manifest:
+  `pluginSwitches` (`src/globals/Plugins/`) gives it a checkbox on System → Plugins named for
+  its slug (a camelCase one), `src/plugins/index.ts` passes `pluginSwitch("<slug>")` as its
+  `enabled`, and routes outside the plugin gate on `isPluginEnabled("<slug>")`. A beta's switch
+  starts off (`defaultValue: false`), which shows a **Beta** badge; when it graduates, flip the
+  default rather than deleting the switch. This replaces an experiment in Settings for a
+  feature that's a plugin; anything else stays an experiment.
+- `types.ts` holds `<Name>PluginConfig`, extending `SitePluginOptions`. Options have defaults,
+  and `disabled: true` leaves the schema in place (so migrations don't change) but turns the
+  behavior off.
 - `collections/`, `hooks/`, `endpoints/` and `components/` as the plugin needs them. Admin
   components are referenced by path through `exports/client.ts` and `exports/rsc.ts`, so
   the import map paths survive a move into a package.

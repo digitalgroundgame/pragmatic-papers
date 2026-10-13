@@ -6,8 +6,8 @@ const { queryPublishedDocs, experiment } = vi.hoisted(() => ({
   experiment: { enabled: true },
 }))
 vi.mock("@/plugins/docs/queries", () => ({ queryPublishedDocs }))
-vi.mock("@/globals/SiteSettings/isExperimentEnabled", () => ({
-  isExperimentEnabled: async () => experiment.enabled,
+vi.mock("@/globals/Plugins/isPluginEnabled", () => ({
+  isPluginEnabled: async () => experiment.enabled,
 }))
 
 import sitemap from "../sitemap"

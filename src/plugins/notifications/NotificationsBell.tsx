@@ -1,4 +1,5 @@
 import type { User } from "@/payload-types"
+import { isPluginOn } from "@/utilities/registerPlugin"
 import type { ServerProps } from "payload"
 import type React from "react"
 
@@ -17,7 +18,7 @@ const PER_TYPE = 8
 export async function NotificationsBell({ payload, user }: ServerProps): Promise<React.ReactNode> {
   if (!user) return null
   const options = payload.config.custom?.notifications as NotificationsOptions | undefined
-  if (options?.enabled && !(await options.enabled(payload))) return null
+  if (!(await isPluginOn(options?.enabled, payload))) return null
   const all = options?.sources ?? []
   const on = await Promise.all(all.map((source) => !source.enabled || source.enabled(payload)))
   const sources = all.filter((_, i) => on[i])

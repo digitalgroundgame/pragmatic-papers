@@ -16,6 +16,7 @@ import { hero } from "@/heros/config"
 import { populatePublishedAt } from "@/hooks/populatePublishedAt"
 import { revalidateNavLinks, revalidateNavLinksDelete } from "@/hooks/revalidateNavLinks"
 import { generatePreviewPath } from "@/utilities/generatePreviewPath"
+import { rememberReadersCopy } from "@/utilities/readersCopy"
 import { slugField } from "@/fields/slug"
 import { revalidateDelete, revalidatePage } from "./hooks/revalidatePage"
 
@@ -145,7 +146,7 @@ export const Pages: CollectionConfig<"pages"> = {
   ],
   hooks: {
     afterChange: [revalidatePage, revalidateNavLinks],
-    beforeChange: [populatePublishedAt],
+    beforeChange: [rememberReadersCopy, populatePublishedAt],
     afterDelete: [revalidateDelete, revalidateNavLinksDelete],
   },
   versions: {

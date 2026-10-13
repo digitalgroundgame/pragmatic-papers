@@ -1,4 +1,4 @@
-import type { Payload } from "payload"
+import type { SitePluginOptions } from "@/utilities/registerPlugin"
 
 /** One stop on a tour: a popover pointing at something on one admin page. */
 export interface TourStep {
@@ -33,7 +33,5 @@ export interface Tour {
   steps: TourStep[]
 }
 
-export interface ToursOptions {
-  /** Whether tours run, checked on each admin page (e.g. a beta switch). Always, when unset. */
-  enabled?: (payload: Payload) => boolean | Promise<boolean>
-}
+/** `enabled` is checked on each admin page (e.g. a beta switch). */
+export type ToursOptions = SitePluginOptions

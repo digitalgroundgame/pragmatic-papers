@@ -1,4 +1,6 @@
-import type { CollectionConfig, Condition, Field, Plugin, TabsField } from "payload"
+import type { CollectionConfig, Condition, Field, TabsField } from "payload"
+
+import { isPluginOn, registerPlugin } from "@/utilities/registerPlugin"
 
 import { configuredProviders } from "./auth"
 import { DEFAULT_COOKIE_NAME } from "./constants"
@@ -118,17 +120,30 @@ function withConnections(fields: Field[], sso: ResolvedSsoConfig): Field[] {
  * the one who linked it from their account page (the only way for Destiny.gg, which shares
  * no address).
  */
-export function ssoPlugin(options: SsoPluginConfig): Plugin {
-  const sso: ResolvedSsoConfig = {
-    enabled: () => true,
-    usersSlug: "users",
-    cookieName: DEFAULT_COOKIE_NAME,
-    sessionSeconds: 60 * 60 * 24 * 7,
-    requiredUserColumns: [],
-    ...options,
-  }
+export const ssoPlugin = registerPlugin<SsoPluginConfig>({
+  slug: "sso",
+  manifest: {
+    name: "SSO",
+    source: "src/plugins/sso",
+    description:
+      "Staff sign-in to the admin with Google, Discord or Destiny.gg, through Better Auth, and a Connections tab on the account page to link them. Email and password login stays on.",
+    switch: {
+      label: "Single sign-on",
+      description:
+        "“Sign in with Google”, “Sign in with Discord” and “Sign in with Destiny.gg” on the admin's login page, for people who already have an account here, and the Connections tab that links them. Each provider also needs its credentials (System → Integrations).",
+      defaultValue: false,
+    },
+  },
+  plugin: ({ config, plugins: _plugins, ...options }) => {
+    const sso: ResolvedSsoConfig = {
+      usersSlug: "users",
+      cookieName: DEFAULT_COOKIE_NAME,
+      sessionSeconds: 60 * 60 * 24 * 7,
+      requiredUserColumns: [],
+      ...options,
+      enabled: ({ payload }) => isPluginOn(options.enabled, payload),
+    }
 
-  return (config) => {
     const collections = (config.collections ?? []).map((collection): CollectionConfig => {
       if (collection.slug !== sso.usersSlug) return collection
       const auth = typeof collection.auth === "object" ? collection.auth : {}
@@ -163,5 +178,5 @@ export function ssoPlugin(options: SsoPluginConfig): Plugin {
         },
       },
     }
-  }
-}
+  },
+})

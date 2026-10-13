@@ -174,10 +174,10 @@ const me = async (cookie: string): Promise<User | null> => {
   return ((await response.json()) as { user: User | null }).user
 }
 
-const setExperiment = (sso: boolean) =>
+const setSwitch = (sso: boolean) =>
   payload.updateGlobal({
-    slug: "site-settings",
-    data: { experiments: { sso } },
+    slug: "plugins",
+    data: { switches: { sso } },
     context: { disableRevalidate: true },
   })
 
@@ -190,7 +190,7 @@ beforeEach(async () => {
   vi.stubEnv("DISCORD_CLIENT_SECRET", "discord-secret")
   vi.stubEnv("DESTINY_CLIENT_ID", "dgg-client")
   vi.stubEnv("DESTINY_CLIENT_SECRET", "dgg-secret")
-  await setExperiment(true)
+  await setSwitch(true)
 })
 
 afterEach(() => {
@@ -285,13 +285,13 @@ describe("single sign-on", () => {
     expect(await me(cookie)).toBeNull()
   })
 
-  it("is switched off with the experiment: no endpoints, and old sessions are ignored", async () => {
+  it("is switched off on System → Plugins: no endpoints, and old sessions are ignored", async () => {
     const editor = await createUser("editor")
     const cookie = cookiesFrom(
       await signInWithDiscord({ id: "1006", email: editor.email, verified: true }),
     )
 
-    await setExperiment(false)
+    await setSwitch(false)
 
     expect(await me(cookie)).toBeNull()
     const start = await api("/auth/sign-in/social", {
@@ -401,7 +401,7 @@ describe("linking an account from the account page", () => {
     expect(again.headers.get("location")).toContain("error=email_not_found")
   })
 
-  it("answers only a signed-in user, and only while the experiment is on", async () => {
+  it("answers only a signed-in user, and only while the switch is on", async () => {
     expect((await api("/auth-links")).status).toBe(401)
     expect((await api("/auth-links/destiny", { method: "POST" })).status).toBe(401)
 
@@ -410,7 +410,7 @@ describe("linking an account from the account page", () => {
       (await api("/auth-links/google", { method: "POST", headers: { Cookie: cookie } })).status,
     ).toBe(404)
 
-    await setExperiment(false)
+    await setSwitch(false)
     expect((await api("/auth-links", { headers: { Cookie: cookie } })).status).toBe(404)
   })
 
@@ -430,10 +430,10 @@ describe("linking an account from the account page", () => {
     expect(await flag(editor.id)).toBe(true)
     expect(await flag(other.id)).toBeUndefined()
 
-    await setExperiment(false)
+    await setSwitch(false)
     expect(await flag(editor.id)).toBe(false)
 
-    await setExperiment(true)
+    await setSwitch(true)
     vi.unstubAllEnvs()
     expect(await flag(editor.id)).toBe(false)
   })

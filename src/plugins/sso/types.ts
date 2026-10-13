@@ -1,5 +1,7 @@
 import type { Payload } from "payload"
 
+import type { PluginEnabled } from "@/utilities/registerPlugin"
+
 /**
  * A sign-in provider: Google and Discord are built in to Better Auth, Destiny.gg is ours
  * (`destiny.ts`).
@@ -30,7 +32,7 @@ export interface SsoPluginConfig {
    * flag takes effect without a restart. Off: the endpoints answer 404, no button is
    * rendered and a session cookie from before is ignored.
    */
-  enabled?: (args: { payload: Payload }) => boolean | Promise<boolean>
+  enabled?: PluginEnabled
   /**
    * The providers to offer, each with its credentials, or null while it isn't configured.
    * Read once, when the first request needs it.
@@ -57,4 +59,6 @@ export interface SsoPluginConfig {
   requiredUserColumns?: string[]
 }
 
-export type ResolvedSsoConfig = Required<Omit<SsoPluginConfig, "disabled">>
+export type ResolvedSsoConfig = Required<Omit<SsoPluginConfig, "disabled" | "enabled">> & {
+  enabled: (args: { payload: Payload }) => Promise<boolean>
+}

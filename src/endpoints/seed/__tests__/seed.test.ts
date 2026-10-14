@@ -71,6 +71,9 @@ function createRecordingPayload() {
       docs: docsIn(collection).filter((doc) => matches(doc, where)),
     })),
     findByID: vi.fn(async ({ collection, id }) => docsIn(collection).find((doc) => doc.id === id)),
+    count: vi.fn(async ({ collection, where }) => ({
+      totalDocs: docsIn(collection).filter((doc) => matches(doc, where)).length,
+    })),
     kv: { has: vi.fn(async () => false), set: vi.fn(async () => undefined) },
     logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
   }

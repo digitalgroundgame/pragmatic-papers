@@ -10,6 +10,7 @@ import type { Metadata } from "next"
 import React from "react"
 import { FEEDS } from "./feeds/feeds"
 import { fontVariables } from "./fonts"
+import { cornerAttributes } from "./cornerAttributes"
 import "./globals.css"
 
 export default async function RootLayout({
@@ -24,6 +25,7 @@ export default async function RootLayout({
       suppressHydrationWarning
       data-scroll-behavior="smooth"
       {...sentryHtmlAttributes()}
+      {...await cornerAttributes()}
     >
       <head>
         <AdminBarHint />

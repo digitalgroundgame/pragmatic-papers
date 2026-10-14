@@ -212,6 +212,14 @@
   --text-3xl--line-height: calc(2.25 / 2);
 }
 
+/* The squareCorners experiment (Settings → Experiments): every corner on the
+   public site goes square, whatever utility, component or inline style rounds it. */
+html[data-corners="square"] *,
+html[data-corners="square"] *::before,
+html[data-corners="square"] *::after {
+  border-radius: 0 !important;
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;

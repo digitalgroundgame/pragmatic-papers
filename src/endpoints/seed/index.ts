@@ -471,6 +471,7 @@ export const seed = async (
             experiments: {
               feed: true,
               interactives: true,
+              squareCorners: true,
               tableOfContents: true,
             },
           },

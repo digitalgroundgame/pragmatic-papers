@@ -2746,6 +2746,10 @@ export interface SiteSetting {
      */
     sso?: boolean | null;
     /**
+     * Square off every rounded corner on the public site (buttons, cards, images, badges), to match the logo.
+     */
+    squareCorners?: boolean | null;
+    /**
      * The table of contents in an article's sidebar and its hero button, on articles with “Show table of contents” ticked.
      */
     tableOfContents?: boolean | null;
@@ -2977,6 +2981,7 @@ export interface SiteSettingsSelect<T extends boolean = true> {
         notifications?: T;
         tours?: T;
         sso?: T;
+        squareCorners?: T;
         tableOfContents?: T;
       };
   updatedAt?: T;

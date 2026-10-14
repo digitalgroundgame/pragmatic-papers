@@ -94,6 +94,15 @@ export const SiteSettings: GlobalConfig = {
           },
         }),
         experimentField({
+          name: "squareCorners",
+          label: "Square corners",
+          defaultValue: false,
+          admin: {
+            description:
+              "Square off every rounded corner on the public site (buttons, cards, images, badges), to match the logo.",
+          },
+        }),
+        experimentField({
           name: "tableOfContents",
           label: "Article table of contents",
           // On by default, unlike the other experiments: readers get it unless

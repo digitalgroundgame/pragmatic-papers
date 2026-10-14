@@ -160,6 +160,11 @@ export const Loading: Story = {
     await expect(within(placeholder).getByText("Latest")).toBeVisible()
     await expect(label(placeholder)).toEqual(label(ticker))
 
+    // The posts fade in on opacity alone, which the compositor can run without repainting.
+    const posts = ticker.querySelector<HTMLElement>(".ticker-posts")!
+    const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches
+    await expect(getComputedStyle(posts).animationName).toBe(reduced ? "none" : "ticker-fade-in")
+
     // Each skeleton post is an icon and a line of words, centred in the strip as a post is.
     const skeletons = placeholder.querySelectorAll("[data-ticker-skeleton]")
     await expect(skeletons.length).toBeGreaterThan(0)

@@ -122,7 +122,7 @@ function Posts({ posts, beside }: { posts: TickerPost[]; beside: boolean }): Rea
     // They fade in over the placeholder's skeletons rather than appearing all at once.
     <div
       className={cn(
-        "animate-in fade-in-0 flex min-w-0 flex-1 items-center gap-2 duration-500 motion-reduce:animate-none",
+        "ticker-posts flex min-w-0 flex-1 items-center gap-2",
         beside && "max-sm:hidden",
       )}
     >

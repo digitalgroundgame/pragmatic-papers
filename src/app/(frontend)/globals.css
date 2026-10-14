@@ -476,8 +476,24 @@
   display: block;
 }
 
+/*
+  The posts fade in over the placeholder's skeletons. Opacity alone, so the
+  compositor runs it: tw-animate's fade-in also animates a transform and a blur
+  filter, which repaints the whole scrolling strip every frame and stutters.
+*/
+@keyframes ticker-fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+.ticker-posts {
+  animation: ticker-fade-in 300ms ease-out;
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .ticker-track {
+  .ticker-track,
+  .ticker-posts {
     animation: none;
   }
 }

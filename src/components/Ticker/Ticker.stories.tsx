@@ -130,9 +130,9 @@ export const LinkTooltip: Story = {
 }
 
 /**
- * What a page shows while the ticker's feed loads: the "Latest" label, sent with the page, and
- * skeleton posts, in a strip exactly the ticker's size, so nothing below moves and the label
- * stays put when the feed arrives.
+ * What a page shows while the ticker's feed loads: the "Latest" label, sent with the page, in a
+ * strip exactly the ticker's size, so nothing below moves and the label stays put when the
+ * posts fade in.
  */
 export const Loading: Story = {
   args: { broadcast: null, posts: tickerPosts },
@@ -164,10 +164,5 @@ export const Loading: Story = {
     const posts = ticker.querySelector<HTMLElement>(".ticker-posts")!
     const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches
     await expect(getComputedStyle(posts).animationName).toBe(reduced ? "none" : "ticker-fade-in")
-
-    // Each skeleton post is an icon and a line of words, centred in the strip as a post is.
-    const skeletons = placeholder.querySelectorAll("[data-ticker-skeleton]")
-    await expect(skeletons.length).toBeGreaterThan(0)
-    await expect(skeletons[0]!.querySelectorAll('[data-slot="skeleton"]')).toHaveLength(2)
   },
 }

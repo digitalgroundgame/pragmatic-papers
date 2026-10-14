@@ -119,7 +119,7 @@ function Posts({ posts, beside }: { posts: TickerPost[]; beside: boolean }): Rea
   return (
     // Beside a broadcast on a phone, there's room for one or the other, and the broadcast is
     // what a reader can't find elsewhere.
-    // They fade in over the placeholder's skeletons rather than appearing all at once.
+    // They fade in beside the placeholder's label rather than appearing all at once.
     <div
       className={cn(
         "ticker-posts flex min-w-0 flex-1 items-center gap-2",

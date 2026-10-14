@@ -56,14 +56,12 @@ describe("TickerLoader", () => {
     expect(container.querySelector("[data-ticker-placeholder]")).not.toBeInTheDocument()
   })
 
-  it("sends the label and skeletons in the server's HTML, before any feed is fetched", () => {
+  it("sends the label in the server's HTML, before any feed is fetched", () => {
     const html = renderToString(<TickerLoader />)
     document.body.innerHTML = html
     const placeholder = document.querySelector<HTMLElement>("[data-ticker-placeholder]")
     expect(placeholder).toHaveTextContent("Latest")
     expect(placeholder).toHaveAttribute("aria-hidden", "true")
-    expect(placeholder?.querySelectorAll("[data-ticker-skeleton]").length).toBeGreaterThan(0)
-    expect(placeholder?.querySelectorAll('[data-slot="skeleton"]').length).toBeGreaterThan(0)
     expect(fetchFeed).not.toHaveBeenCalled()
     document.body.innerHTML = ""
   })

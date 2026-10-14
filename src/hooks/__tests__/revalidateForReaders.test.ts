@@ -39,6 +39,13 @@ describe("revalidateForReaders", () => {
     expect(revalidatePath.mock.calls).toEqual([["/"]])
   })
 
+  it("leaves the home page alone when a shared save changed no page readers see", () => {
+    // A topic just created, which the seed does outside a request, where revalidatePath throws.
+    revalidateForReaders(logger, "topic t created", { shared: true })
+
+    expect(revalidatePath).not.toHaveBeenCalled()
+  })
+
   it("leaves the home page alone when the save shows on no shared page", () => {
     revalidateForReaders(logger, "page about", { paths: ["/about"] })
 

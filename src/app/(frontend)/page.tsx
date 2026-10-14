@@ -9,8 +9,9 @@ import { generateMeta } from "@/utilities/generateMeta"
 import { PageView } from "./[slug]/PageView"
 
 // The home page reads no `?p=`, so unlike `/[slug]` it's prerendered and served from the cache.
-// Saving the home page revalidates it, and so does a save to anything it can list (articles,
-// volumes, contributors, topics, media: `shared` in revalidateForReaders). The hour is a
+// Saving the home page revalidates it, and so does a save that changes a page it can list
+// from (an article, volume or contributor, or a topic or media they show: `shared` in
+// revalidateForReaders). The hour is a
 // backstop for what changes without a save, as on articles.
 export const revalidate = 3600
 

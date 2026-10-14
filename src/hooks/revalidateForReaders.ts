@@ -20,9 +20,9 @@ export interface ReadersRevalidation {
    */
   purgeOnly?: readonly (string | null | undefined)[]
   /**
-   * Also purge every page that lists articles, volumes or contributors on the Worker, and
-   * revalidate the home page, the one of them that's prerendered rather than rendered per
-   * request.
+   * Also purge every page that lists articles, volumes or contributors on the Worker. With
+   * `paths`, also revalidate the home page, the one of them that's prerendered rather than
+   * rendered per request.
    */
   shared?: boolean
 }
@@ -39,9 +39,11 @@ export function revalidateForReaders(
   reason: string,
   { paths = [], tags = [], purgeOnly = [], shared = false }: ReadersRevalidation,
 ): void {
-  const named = [...new Set([...paths, ...(shared ? [HOME] : [])])].filter(
-    (path): path is string => !!path,
-  )
+  const named = paths.filter((path): path is string => !!path)
+  // A save that changed a page readers see (an article, a volume, a contributor) can change
+  // what home lists. One that named none (a topic just created, media nothing shows) can't,
+  // and may run outside a request, where revalidatePath throws.
+  if (shared && named.length && !named.includes(HOME)) named.push(HOME)
   for (const path of named) {
     logger.info(`Revalidating ${path} (${reason})`)
     revalidatePath(path)

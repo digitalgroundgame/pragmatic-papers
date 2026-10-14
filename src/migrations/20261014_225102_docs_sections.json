@@ -18657,7 +18657,15 @@
     "public.enum_docs_section": {
       "name": "enum_docs_section",
       "schema": "public",
-      "values": ["getting-started", "writing", "blocks", "media", "pages", "moderation", "site"]
+      "values": [
+        "getting-started",
+        "articles",
+        "blocks",
+        "media",
+        "pages-and-volumes",
+        "moderation",
+        "site-settings"
+      ]
     },
     "public.enum_docs_status": {
       "name": "enum_docs_status",
@@ -18672,7 +18680,15 @@
     "public.enum__docs_v_version_section": {
       "name": "enum__docs_v_version_section",
       "schema": "public",
-      "values": ["getting-started", "writing", "blocks", "media", "pages", "moderation", "site"]
+      "values": [
+        "getting-started",
+        "articles",
+        "blocks",
+        "media",
+        "pages-and-volumes",
+        "moderation",
+        "site-settings"
+      ]
     },
     "public.enum__docs_v_version_status": {
       "name": "enum__docs_v_version_status",
@@ -18787,6 +18803,6 @@
     "tables": {},
     "columns": {}
   },
-  "id": "c62f07d7-ece3-475b-8838-9e61d0c6877d",
+  "id": "32aea354-f95d-4b84-a28d-3c71776af9c2",
   "prevId": "00000000-0000-0000-0000-000000000000"
 }

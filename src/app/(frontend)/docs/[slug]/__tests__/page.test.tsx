@@ -83,7 +83,7 @@ beforeEach(() => {
   draft.isEnabled = false
   for (const name of Object.keys(experiments)) delete experiments[name]
   queries.queryDocBySlug.mockResolvedValue(doc)
-  queries.queryPublishedDocs.mockResolvedValue([{ ...doc, section: "site" }])
+  queries.queryPublishedDocs.mockResolvedValue([{ ...doc, section: "site-settings" }])
 })
 afterEach(cleanup)
 
@@ -165,8 +165,13 @@ describe("DocPage", () => {
   it("ends with the previous and next docs in the sidebar's order, from Home", async () => {
     queries.queryPublishedDocs.mockResolvedValue([
       { slug: "home", title: "Docs home", navTitle: "Home", section: "getting-started" },
-      { ...doc, section: "site" },
-      { slug: "volumes", title: "Put together a volume", navTitle: "Volumes", section: "site" },
+      { ...doc, section: "site-settings" },
+      {
+        slug: "volumes",
+        title: "Put together a volume",
+        navTitle: "Volumes",
+        section: "site-settings",
+      },
     ])
     await renderPage()
     const pager = screen.getByRole("navigation", { name: "Previous and next docs" })
@@ -181,7 +186,11 @@ describe("DocPage", () => {
   })
 
   it("has no GitHub link, even on a doc seeded from the repo: editors change it here", async () => {
-    queries.queryDocBySlug.mockResolvedValue({ ...doc, section: "site", sourceHash: "abc" })
+    queries.queryDocBySlug.mockResolvedValue({
+      ...doc,
+      section: "site-settings",
+      sourceHash: "abc",
+    })
     await renderPage()
     expect(screen.queryByRole("link", { name: /GitHub/ })).not.toBeInTheDocument()
   })

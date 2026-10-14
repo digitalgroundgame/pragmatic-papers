@@ -44,7 +44,7 @@ const footnotes = {
   navTitle: "Footnotes",
   summary: "Cite your sources.",
   publishedAt: "2026-03-04T00:00:00.000Z",
-  section: "writing",
+  section: "articles",
 }
 
 // The page hands the home slug to DocView, an async component the test renders itself.

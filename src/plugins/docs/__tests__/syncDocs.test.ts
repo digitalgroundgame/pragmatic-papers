@@ -73,10 +73,10 @@ const fakePayload = ({
 
 beforeEach(async () => {
   dir = await mkdtemp(path.join(tmpdir(), "docs-"))
-  await mkdir(path.join(dir, "site"))
-  await writeFile(path.join(dir, "site", "experiments.md"), source)
-  await writeFile(path.join(dir, "site", "experiments-drawer.png"), image)
-  await writeFile(path.join(dir, "site", "experiments-hero.png"), hero)
+  await mkdir(path.join(dir, "site-settings"))
+  await writeFile(path.join(dir, "site-settings", "experiments.md"), source)
+  await writeFile(path.join(dir, "site-settings", "experiments-drawer.png"), image)
+  await writeFile(path.join(dir, "site-settings", "experiments-hero.png"), hero)
   // A folder without Markdown in it isn't a section.
   await mkdir(path.join(dir, "drafts"))
 })
@@ -109,7 +109,7 @@ describe("syncDocs", () => {
     expect(payload.kv.store.has("seeded:docs:experiments")).toBe(true)
     // Its revision counts as offered, with the version it was saved as.
     expect(payload.kv.store.get("offered:docs:experiments")).toMatchObject({
-      hash: hashRepoDoc("site", source, [hero, image]),
+      hash: hashRepoDoc("site-settings", source, [hero, image]),
       version: 11,
     })
 
@@ -133,13 +133,13 @@ describe("syncDocs", () => {
         draft: true,
         data: expect.objectContaining({
           slug: "experiments",
-          section: "site",
+          section: "site-settings",
           revisedAt: null,
           navTitle: null,
           _status: "draft",
           audience: [],
           showTableOfContents: true,
-          sourceHash: hashRepoDoc("site", source, [hero, image]),
+          sourceHash: hashRepoDoc("site-settings", source, [hero, image]),
           heroImage: 41,
           content: { root: { children: [{ type: "upload", value: 41 }] } },
         }),
@@ -188,7 +188,7 @@ describe("syncDocs", () => {
 
   it("creates a doc with no hero image", async () => {
     await writeFile(
-      path.join(dir, "site", "experiments.md"),
+      path.join(dir, "site-settings", "experiments.md"),
       source.replace("heroImage: experiments-hero.png\nheroAlt: Switches\n", ""),
     )
     const payload = fakePayload()
@@ -203,7 +203,7 @@ describe("syncDocs", () => {
 
   it("records a doc the site had before offers began as offered when it holds the repo's copy", async () => {
     const payload = fakePayload({
-      docs: [{ id: 3, sourceHash: hashRepoDoc("site", source, [hero, image]) }],
+      docs: [{ id: 3, sourceHash: hashRepoDoc("site-settings", source, [hero, image]) }],
     })
     await expect(syncDocs(payload, dir)).resolves.toEqual({
       created: [],
@@ -215,7 +215,7 @@ describe("syncDocs", () => {
     // Recorded, so it stays deleted if an editor deletes it.
     expect(payload.kv.store.has("seeded:docs:experiments")).toBe(true)
     expect(payload.kv.store.get("offered:docs:experiments")).toEqual({
-      hash: hashRepoDoc("site", source, [hero, image]),
+      hash: hashRepoDoc("site-settings", source, [hero, image]),
       at: expect.any(String),
     })
     expect(payload.create).not.toHaveBeenCalled()
@@ -232,7 +232,7 @@ describe("syncDocs", () => {
     expect((await syncDocs(payload, dir)).offered).toEqual(["experiments"])
     expect(payload.update).toHaveBeenCalledWith(expect.objectContaining({ id: 3, draft: true }))
     expect(payload.kv.store.get("offered:docs:experiments")).toEqual(
-      expect.objectContaining({ hash: hashRepoDoc("site", source, [hero, image]) }),
+      expect.objectContaining({ hash: hashRepoDoc("site-settings", source, [hero, image]) }),
     )
   })
 
@@ -251,7 +251,7 @@ describe("syncDocs", () => {
       docs: [{ id: 3 }],
       kv: [
         "seeded:docs:experiments",
-        ["offered:docs:experiments", { hash: hashRepoDoc("site", source, [hero, image]) }],
+        ["offered:docs:experiments", { hash: hashRepoDoc("site-settings", source, [hero, image]) }],
       ],
     })
     const result = await syncDocs(payload, dir)
@@ -282,7 +282,7 @@ describe("syncDocs", () => {
         context: { disableRevalidate: true },
         data: expect.objectContaining({
           _status: "draft",
-          sourceHash: hashRepoDoc("site", source, [hero, image]),
+          sourceHash: hashRepoDoc("site-settings", source, [hero, image]),
           heroImage: 41,
         }),
       }),
@@ -291,7 +291,7 @@ describe("syncDocs", () => {
     expect(payload.create).not.toHaveBeenCalledWith(expect.objectContaining({ collection: "docs" }))
     expect(payload.delete).not.toHaveBeenCalled()
     expect(payload.kv.store.get("offered:docs:experiments")).toMatchObject({
-      hash: hashRepoDoc("site", source, [hero, image]),
+      hash: hashRepoDoc("site-settings", source, [hero, image]),
       // The fake answers with the same latest version after the save.
       version: 20,
     })
@@ -311,7 +311,7 @@ describe("syncDocs", () => {
   })
 
   it("deletes nothing, even when the folder holds no docs", async () => {
-    await rm(path.join(dir, "site"), { recursive: true })
+    await rm(path.join(dir, "site-settings"), { recursive: true })
     const payload = fakePayload({ docs: [{ id: 7, slug: "old-name", sourceHash: "abc" }] })
     await expect(syncDocs(payload, dir)).resolves.toEqual({
       created: [],
@@ -398,9 +398,9 @@ describe("listDocFiles", () => {
     await expect(listDocFiles(dir)).resolves.toEqual([
       {
         slug: "experiments",
-        section: "site",
-        folder: path.join(dir, "site"),
-        file: path.join(dir, "site", "experiments.md"),
+        section: "site-settings",
+        folder: path.join(dir, "site-settings"),
+        file: path.join(dir, "site-settings", "experiments.md"),
       },
     ])
   })

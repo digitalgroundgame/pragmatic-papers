@@ -36,7 +36,7 @@ const docs = [
     title: "Footnotes",
     summary: "Cite your sources.",
     publishedAt: "2026-03-04T00:00:00.000Z",
-    section: "writing",
+    section: "articles",
   },
 ]
 
@@ -66,18 +66,14 @@ describe("WhatsNewPage", () => {
     const card = within(latest).getByRole("link", { name: /Find photos on Unsplash/ })
     expect(card).toHaveTextContent("Search Unsplash from Media.")
     expect(card.querySelector("img")).toHaveAttribute("src", "/hero-300x158.webp")
-    expect(
-      within(latest).queryByRole("region", { name: "Writing articles" }),
-    ).not.toBeInTheDocument()
+    expect(within(latest).queryByRole("region", { name: "Articles" })).not.toBeInTheDocument()
 
     const nav = screen.getByRole("navigation", { name: "Docs" })
     expect(within(nav).getByRole("link", { name: "What's new" })).toHaveAttribute(
       "aria-current",
       "page",
     )
-    expect(within(nav).getByRole("list", { name: "Writing articles" })).toHaveTextContent(
-      "Footnotes",
-    )
+    expect(within(nav).getByRole("list", { name: "Articles" })).toHaveTextContent("Footnotes")
   })
 
   it("says so when there are no docs", async () => {

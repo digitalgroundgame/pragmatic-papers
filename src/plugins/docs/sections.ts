@@ -13,15 +13,19 @@ export const DOC_AREAS = [
 
 export type DocArea = (typeof DOC_AREAS)[number]["value"]
 
-/** The sidebar's sections at /docs, in order, each in an area. Every doc sits in one. */
+/**
+ * The sidebar's sections at /docs, in order, each in an area. Every doc sits in one, and its
+ * value is both the doc's folder (`src/docs/<value>/`) and what the doc stores, so the label
+ * reads as the value does.
+ */
 export const DOC_SECTIONS = [
   { value: "getting-started", label: "Getting started", area: "writing" },
-  { value: "writing", label: "Writing articles", area: "writing" },
+  { value: "articles", label: "Articles", area: "writing" },
   { value: "blocks", label: "Blocks", area: "writing" },
-  { value: "media", label: "Photos and media", area: "writing" },
-  { value: "pages", label: "Pages and volumes", area: "editing" },
+  { value: "media", label: "Media", area: "writing" },
+  { value: "pages-and-volumes", label: "Pages and volumes", area: "editing" },
   { value: "moderation", label: "Moderation", area: "editing" },
-  { value: "site", label: "Site settings", area: "editing" },
+  { value: "site-settings", label: "Site settings", area: "editing" },
 ] as const satisfies readonly { value: string; label: string; area: DocArea }[]
 
 /**

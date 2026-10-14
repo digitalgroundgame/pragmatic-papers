@@ -10,14 +10,14 @@ const sections = groupDocsBySection([
   { slug: "home", title: "Pragmatic Papers docs", section: "getting-started" },
   { slug: "notifications", title: "What's new: the bell", section: "getting-started" },
   { slug: "writing-and-publishing", title: "Writing and publishing", section: "getting-started" },
-  { slug: "footnotes", title: "Footnotes", section: "writing" },
-  { slug: "topics", title: "Tag articles with topics", navTitle: "Topics", section: "writing" },
-  { slug: "seo-tab", title: "The SEO tab", section: "writing" },
+  { slug: "footnotes", title: "Footnotes", section: "articles" },
+  { slug: "topics", title: "Tag articles with topics", navTitle: "Topics", section: "articles" },
+  { slug: "seo-tab", title: "The SEO tab", section: "articles" },
   { slug: "timeline-block", title: "The Timeline block", section: "blocks" },
   { slug: "media-collage", title: "The Media Collage block", section: "blocks" },
   { slug: "unsplash-photos", title: "Find photos on Unsplash", section: "media" },
-  { slug: "volumes", title: "Put together a volume", section: "pages" },
-  { slug: "experiments", title: "Switch beta features on", section: "site" },
+  { slug: "volumes", title: "Put together a volume", section: "pages-and-volumes" },
+  { slug: "experiments", title: "Switch beta features on", section: "site-settings" },
 ])
 
 const meta = {
@@ -34,7 +34,7 @@ export const OnADoc: Story = {
   args: { current: "topics" },
   play: async ({ canvasElement }) => {
     const nav = within(canvasElement).getByRole("navigation", { name: "Docs" })
-    const writing = within(nav).getByRole("list", { name: "Writing articles" })
+    const writing = within(nav).getByRole("list", { name: "Articles" })
     await expect(within(writing).getByRole("link", { name: "Topics" })).toHaveAttribute(
       "aria-current",
       "page",
@@ -43,14 +43,14 @@ export const OnADoc: Story = {
       "aria-current",
     )
     // Its section's name reads as hovered; the others stay muted.
-    await expect(within(nav).getByText("Writing articles")).toHaveClass("text-foreground")
-    await expect(within(nav).getByText("Photos and media")).toHaveClass("text-muted-foreground")
+    await expect(within(nav).getByText("Articles")).toHaveClass("text-foreground")
+    await expect(within(nav).getByText("Media")).toHaveClass("text-muted-foreground")
     // Only the open doc's section starts open; the others unfold on a click.
     await expect(within(nav).queryByRole("link", { name: "Footnotes" })).toBeVisible()
     await expect(
       within(nav).queryByRole("link", { name: "Find photos on Unsplash" }),
     ).not.toBeVisible()
-    await userEvent.click(within(nav).getByText("Photos and media"))
+    await userEvent.click(within(nav).getByText("Media"))
     await expect(within(nav).getByRole("link", { name: "Find photos on Unsplash" })).toBeVisible()
   },
 }

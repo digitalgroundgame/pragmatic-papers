@@ -2,7 +2,13 @@ import { existsSync } from "node:fs"
 import { readdir, readFile } from "node:fs/promises"
 import path from "node:path"
 import type { Doc } from "@/payload-types"
-import { markSeeded, wasSeeded } from "@/utilities/seedOnce"
+import {
+  lastOffered,
+  markOffered,
+  markSeeded,
+  type OfferedRevision,
+  wasSeeded,
+} from "@/utilities/seedOnce"
 import type { Payload } from "payload"
 
 import { DOCS_SLUG } from "./collection"
@@ -74,10 +80,82 @@ const MIME_TYPES: Record<string, string> = {
 export interface SyncResult {
   /** Docs new to this site, created as drafts for an editor to publish. */
   created: string[]
-  /** Docs the site already has, left as they are: once seeded, a doc is the site's. */
+  /**
+   * Docs the site has whose repo copy changed since it was last offered, saved as a new draft
+   * version for an editor to publish, edit or discard. The published version is untouched.
+   */
+  offered: string[]
+  /**
+   * Docs whose repo copy changed, left alone because an editor has a draft of their own on top
+   * of the published version. Not recorded as offered, so a later deploy offers it once that
+   * draft is published or discarded.
+   */
+  skipped: string[]
+  /** Docs the site already has, with nothing new to offer. */
   existing: string[]
   /** Docs seeded here before and deleted since, which stay deleted. */
   deleted: string[]
+}
+
+/** What a sync does with one repo doc. */
+export type RepoDocAction =
+  /** The site has never had it: create it. */
+  | "create"
+  /** Seeded before and deleted since: leave it deleted. */
+  | "deleted"
+  /**
+   * The site has it but was never offered a revision (it predates offers): record the repo's
+   * hash as offered and offer nothing, so only later changes are offered.
+   */
+  | "baseline"
+  /** The repo's copy is the one last offered: nothing to do. */
+  | "unchanged"
+  /** The repo's copy changed: save it as a new draft version. */
+  | "offer"
+  /** The repo's copy changed, but an editor has a draft of their own: leave it for later. */
+  | "editorDraft"
+
+export interface RepoDocState {
+  /** Whether the site has a doc with this slug, draft or published. */
+  exists: boolean
+  /** Whether a deploy seeded it here, or found it here, before (`wasSeeded`). */
+  seeded: boolean
+  /** The revision last offered (`lastOffered`). */
+  offered: OfferedRevision | null
+  /** The doc's latest version, the one the admin opens. */
+  latest: LatestVersion | null
+  /** The hash of the repo's copy (`hashRepoDoc`). */
+  hash: string
+  localSeed: boolean
+}
+
+export interface LatestVersion {
+  id: number | string
+  status: "draft" | "published" | null
+}
+
+/**
+ * Decides what a sync does with one repo doc. Code never publishes, overwrites the published
+ * version or deletes: a change reaches a site that has the doc only as a new draft version, and
+ * only when the latest version isn't an editor's unpublished work. A latest draft is the
+ * deploy's own when it's the version the last offer saved, so a suggestion nobody has touched
+ * is superseded by a newer one rather than left waiting.
+ */
+export function planRepoDoc({
+  exists,
+  seeded,
+  offered,
+  latest,
+  hash,
+  localSeed,
+}: RepoDocState): RepoDocAction {
+  if (!exists) return seeded && !localSeed ? "deleted" : "create"
+  if (!offered) return "baseline"
+  if (offered.hash === hash) return "unchanged"
+  const editorsDraft =
+    latest?.status === "draft" &&
+    (offered.version === undefined || String(latest.id) !== String(offered.version))
+  return editorsDraft ? "editorDraft" : "offer"
 }
 
 export interface SyncOptions {
@@ -129,19 +207,37 @@ async function uploadOnce(
   return media.id
 }
 
+/** The doc's latest version, the one the admin opens, or null if it has none. */
+async function latestVersion(payload: Payload, id: number | string): Promise<LatestVersion | null> {
+  const { docs } = await payload.findVersions({
+    collection: DOCS_SLUG,
+    depth: 0,
+    limit: 1,
+    overrideAccess: true,
+    pagination: false,
+    sort: "-updatedAt",
+    // As Payload finds the version the admin opens (`getLatestCollectionVersion`).
+    where: { and: [{ parent: { equals: id } }, { latest: { equals: true } }] },
+  })
+  const version = docs[0]
+  return version ? { id: version.id, status: version.version._status ?? null } : null
+}
+
 /**
  * Seeds this site's database with each doc in `dir` it has never had, as a draft, with its
- * files uploaded to Media. Push only: a doc the site already has (by slug, draft or published,
- * seeded or written in the admin) is never overwritten, and nothing is ever deleted, so editors
- * own a doc from the moment it arrives. Each doc is recorded as seeded (`markSeeded`), so one an
- * editor deletes isn't seeded again.
+ * files uploaded to Media, and offers the repo's changes to a doc it has as a new draft
+ * version (`planRepoDoc` decides which). Code never publishes, never overwrites the published
+ * version and never deletes, so editors own a doc from the moment it arrives and decide what
+ * readers see. Each doc is recorded as seeded (`markSeeded`), so one an editor deletes isn't
+ * seeded again, and each revision as offered (`markOffered`), so one an editor discards isn't
+ * offered again.
  */
 export async function syncDocs(
   payload: Payload,
   dir = DOCS_DIR,
   { localSeed = false }: SyncOptions = {},
 ): Promise<SyncResult> {
-  const result: SyncResult = { created: [], existing: [], deleted: [] }
+  const result: SyncResult = { created: [], offered: [], skipped: [], existing: [], deleted: [] }
   if (!existsSync(dir)) {
     // A deploy without the folder (a runtime with no file system for it) would otherwise
     // look like one with nothing to sync.
@@ -163,14 +259,13 @@ export async function syncDocs(
       select: { slug: true },
       where: { slug: { equals: slug } },
     })
-    if (docs.length) {
+    const existing = docs[0]
+    if (existing && !seeded) {
       // Recorded too, so a doc the site had before seeding was recorded stays deleted once an
       // editor deletes it.
-      if (!seeded) await markSeeded(payload, DOCS_SLUG, slug)
-      result.existing.push(slug)
-      continue
+      await markSeeded(payload, DOCS_SLUG, slug)
     }
-    if (seeded && !localSeed) {
+    if (!existing && seeded && !localSeed) {
       result.deleted.push(slug)
       continue
     }
@@ -182,13 +277,41 @@ export async function syncDocs(
       imagesIn(body).map((image) => ({ $media: image.file, alt: image.alt })),
     ])
     const files = await Promise.all(refs.map((ref) => readFile(path.join(folder, ref.$media))))
+    const hash = hashRepoDoc(section, source, files)
+
+    const offered = existing ? await lastOffered(payload, DOCS_SLUG, slug) : null
+    const latest =
+      existing && offered && offered.hash !== hash
+        ? await latestVersion(payload, existing.id)
+        : null
+    const action = planRepoDoc({
+      exists: Boolean(existing),
+      seeded,
+      offered,
+      latest,
+      hash,
+      localSeed,
+    })
+    if (action === "baseline") await markOffered(payload, DOCS_SLUG, slug, hash)
+    if (action === "baseline" || action === "unchanged") {
+      result.existing.push(slug)
+      continue
+    }
+    if (action === "editorDraft") {
+      result.skipped.push(slug)
+      continue
+    }
+    if (action === "deleted") {
+      result.deleted.push(slug)
+      continue
+    }
 
     const ids = new Map<string, number | string>()
     for (const [i, ref] of refs.entries()) {
       ids.set(ref.$media, await uploadOnce(payload, ref.$media, files[i]!, ref))
     }
 
-    // Converted only for a doc it creates: a deploy reads every doc.
+    // Converted only for a doc it creates or offers: a deploy reads every doc.
     editorConfig ??= docsEditorConfig(payload.config)
     const { heroAlt, heroImage, ...rest } = meta
     const repoDoc: RepoDoc = {
@@ -197,6 +320,7 @@ export async function syncDocs(
       section,
       content: markdownToContent(slug, body, editorConfig),
     }
+    const publish = localSeed && action === "create"
     const data = {
       title: repoDoc.title,
       navTitle: repoDoc.navTitle ?? null,
@@ -210,18 +334,39 @@ export async function syncDocs(
       tour: repoDoc.tour ?? null,
       content: unpackMedia(repoDoc.content, ids) as never,
       slug,
-      sourceHash: hashRepoDoc(section, source, files),
-      _status: localSeed ? ("published" as const) : ("draft" as const),
+      sourceHash: hash,
+      _status: publish ? ("published" as const) : ("draft" as const),
     }
-    await payload.create({
-      collection: DOCS_SLUG,
-      data,
-      context,
-      draft: !localSeed,
-      overrideAccess: true,
-    })
-    await markSeeded(payload, DOCS_SLUG, slug)
-    result.created.push(slug)
+
+    let id: number | string
+    if (action === "offer") {
+      // Saved as a draft, it's a new version only: the published doc stays as it is, and the
+      // admin shows the doc as Changed, with the suggestion to compare in its Versions tab.
+      id = existing!.id
+      await payload.update({
+        collection: DOCS_SLUG,
+        id,
+        data,
+        context,
+        draft: true,
+        overrideAccess: true,
+      })
+      result.offered.push(slug)
+    } else {
+      id = (
+        await payload.create({
+          collection: DOCS_SLUG,
+          data,
+          context,
+          draft: !publish,
+          overrideAccess: true,
+        })
+      ).id
+      await markSeeded(payload, DOCS_SLUG, slug)
+      result.created.push(slug)
+    }
+    // The version just saved, so the next deploy knows a latest draft with this id is its own.
+    await markOffered(payload, DOCS_SLUG, slug, hash, (await latestVersion(payload, id))?.id)
   }
   return result
 }

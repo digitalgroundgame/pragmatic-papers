@@ -41,7 +41,8 @@ const ROLE_LABELS: Record<Role, string> = {
  * Help articles at /docs/<slug>, about what staff can do in the admin. Most arrive with a
  * release: each deploy adds the ones in src/docs/ its site doesn't have yet, as drafts for an
  * editor to publish (see `syncRepoDocs`). From then on the doc is the site's: editors change it
- * here, and the repo never overwrites it. Editors can also write one from scratch.
+ * here, and the repo only ever offers its changes as a new draft version. Editors can also
+ * write one from scratch.
  */
 export const Docs: CollectionConfig<"docs"> = {
   slug: DOCS_SLUG,
@@ -177,8 +178,8 @@ export const Docs: CollectionConfig<"docs"> = {
     // On by default: a doc is reference reading, skimmed for the one section a reader needs.
     tableOfContentsField({ defaultValue: true }),
     {
-      // Set by `syncDocs` on a doc it seeded from src/docs/: the hash of the files it was
-      // seeded from. Empty on docs written here.
+      // Set by `syncDocs` on a doc it seeded from src/docs/, or a draft it offered: the hash
+      // of the files it came from. Empty on docs written here.
       name: "sourceHash",
       type: "text",
       label: "From the repo",
@@ -187,7 +188,7 @@ export const Docs: CollectionConfig<"docs"> = {
         readOnly: true,
         condition: (data) => Boolean(data?.sourceHash),
         description:
-          "Seeded from src/docs/ by a deploy. Edits here are kept: the repo never overwrites a doc the site already has.",
+          "Seeded from src/docs/ by a deploy. Edits here are kept: when the repo's copy changes, a deploy saves it as a new draft for you to publish, edit or discard, and never changes the published doc.",
       },
     },
     slugField(),

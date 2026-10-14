@@ -1,7 +1,12 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite"
 import { expect, screen, userEvent, waitFor, within } from "storybook/test"
 
-import { liveBroadcast, tickerPosts, upcomingBroadcast } from "@/stories/fixtures/ticker"
+import {
+  fewTickerPosts,
+  liveBroadcast,
+  tickerPosts,
+  upcomingBroadcast,
+} from "@/stories/fixtures/ticker"
 import { shortURL } from "./LinkIcon"
 import { TickerPlaceholder } from "./TickerLoader"
 import { TickerView } from "./TickerView"
@@ -68,6 +73,24 @@ export const PostsOnly: Story = {
   args: { broadcast: null, posts: tickerPosts },
 }
 
+/**
+ * One short post: it goes round several times a pass, so the strip is full rather than one post
+ * crossing an empty band.
+ */
+export const FewPosts: Story = {
+  args: { broadcast: null, posts: fewTickerPosts },
+  play: async ({ canvasElement }) => {
+    const viewport = canvasElement.querySelector<HTMLElement>(".ticker-viewport")!
+    const pass = canvasElement.querySelector<HTMLElement>(".ticker-track > ul")!
+    await expect(pass.getBoundingClientRect().width).toBeGreaterThanOrEqual(
+      viewport.getBoundingClientRect().width,
+    )
+    // Still only one post for assistive tech.
+    const list = within(canvasElement).getByRole("list", { name: "Latest posts" })
+    await expect(within(list).getAllByRole("listitem")).toHaveLength(1)
+  },
+}
+
 /** On air with no posts to show: the broadcast takes the whole strip. */
 export const LiveOnly: Story = {
   args: { broadcast: liveBroadcast, posts: [] },
@@ -107,8 +130,9 @@ export const LinkTooltip: Story = {
 }
 
 /**
- * What a page shows while the ticker's feed loads: an empty strip exactly the ticker's size,
- * so nothing below moves when the feed arrives.
+ * What a page shows while the ticker's feed loads: the "Latest" label, sent with the page, in a
+ * strip exactly the ticker's size, so nothing below moves and the label stays put when the
+ * posts fade in.
  */
 export const Loading: Story = {
   args: { broadcast: null, posts: tickerPosts },
@@ -126,5 +150,19 @@ export const Loading: Story = {
       return [el.getBoundingClientRect().height, style.marginTop, style.marginBottom]
     }
     await expect(box(placeholder)).toEqual(box(ticker))
+
+    // The label is where the ticker's own is, so it doesn't jump when the posts arrive.
+    const label = (el: HTMLElement) => {
+      const span = within(el).getByText("Latest")
+      const rect = span.getBoundingClientRect()
+      return [rect.left, rect.width, rect.height, getComputedStyle(span).color]
+    }
+    await expect(within(placeholder).getByText("Latest")).toBeVisible()
+    await expect(label(placeholder)).toEqual(label(ticker))
+
+    // The posts fade in on opacity alone, which the compositor can run without repainting.
+    const posts = ticker.querySelector<HTMLElement>(".ticker-posts")!
+    const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches
+    await expect(getComputedStyle(posts).animationName).toBe(reduced ? "none" : "ticker-fade-in")
   },
 }

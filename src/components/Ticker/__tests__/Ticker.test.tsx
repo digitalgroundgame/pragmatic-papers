@@ -1,4 +1,5 @@
 import { render, screen } from "@testing-library/react"
+import { renderToString } from "react-dom/server"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { liveBroadcast, tickerPosts } from "@/stories/fixtures/ticker"
@@ -53,6 +54,16 @@ describe("TickerLoader", () => {
     expect(await screen.findByRole("region", { name: "Live and latest" })).toBeInTheDocument()
     expect(screen.getAllByRole("link")[0]).toHaveAttribute("href", liveBroadcast.url)
     expect(container.querySelector("[data-ticker-placeholder]")).not.toBeInTheDocument()
+  })
+
+  it("sends the label in the server's HTML, before any feed is fetched", () => {
+    const html = renderToString(<TickerLoader />)
+    document.body.innerHTML = html
+    const placeholder = document.querySelector<HTMLElement>("[data-ticker-placeholder]")
+    expect(placeholder).toHaveTextContent("Latest")
+    expect(placeholder).toHaveAttribute("aria-hidden", "true")
+    expect(fetchFeed).not.toHaveBeenCalled()
+    document.body.innerHTML = ""
   })
 
   it("takes the strip away when there's nothing to show", async () => {

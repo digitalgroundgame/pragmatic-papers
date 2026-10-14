@@ -11,6 +11,7 @@ import { bindPauseSwitch } from "./pause"
 import { LazyLinkTooltip } from "./LinkTooltip.lazy"
 import {
   excerpt,
+  loopRounds,
   postLinks,
   postText,
   tickerDuration,
@@ -27,11 +28,17 @@ const SOURCES: Record<TickerPostSource, { name: string; Icon: FC<SVGProps<SVGSVG
 
 function PostList({
   posts,
+  rounds,
   copy = false,
 }: {
   posts: TickerPost[]
+  /** How many times the posts go round in the list (`loopRounds`). */
+  rounds: number
   copy?: boolean
 }): React.ReactNode {
+  const items = Array.from({ length: rounds }, (_, round) =>
+    posts.map((post) => ({ post, round })),
+  ).flat()
   return (
     <ul
       aria-label={copy ? undefined : "Latest posts"}
@@ -39,11 +46,18 @@ function PostList({
       inert={copy || undefined}
       className={cn("flex shrink-0 items-center gap-6 pr-6", copy && "motion-reduce:hidden")}
     >
-      {posts.map((post) => {
+      {items.map(({ post, round }) => {
         const { name, Icon } = SOURCES[post.source]
         const links = postLinks(post)
+        // Repeats only fill the strip: hidden like the copy, and not drawn when nothing moves.
+        const filler = !copy && round > 0
         return (
-          <li key={post.id} className="flex shrink-0 items-center gap-6">
+          <li
+            key={`${post.id}:${round}`}
+            aria-hidden={filler || undefined}
+            inert={filler || undefined}
+            className={cn("flex shrink-0 items-center gap-6", filler && "motion-reduce:hidden")}
+          >
             <span aria-hidden="true" className="bg-brand size-1 rounded-full" />
             {/* The words link to the post, and each link in it is an icon beside them: an
                 anchor can't hold another, and a URL would take the line. */}
@@ -61,7 +75,11 @@ function PostList({
                 </span>
               </a>
               {links.map((url) =>
-                copy ? <LinkIcon key={url} url={url} /> : <LazyLinkTooltip key={url} url={url} />,
+                copy || filler ? (
+                  <LinkIcon key={url} url={url} />
+                ) : (
+                  <LazyLinkTooltip key={url} url={url} />
+                ),
               )}
             </span>
           </li>
@@ -97,20 +115,27 @@ function PauseSwitch({ live }: { live: boolean }): React.ReactNode {
 }
 
 function Posts({ posts, beside }: { posts: TickerPost[]; beside: boolean }): React.ReactNode {
+  const rounds = loopRounds(posts)
   return (
     // Beside a broadcast on a phone, there's room for one or the other, and the broadcast is
     // what a reader can't find elsewhere.
-    <div className={cn("flex min-w-0 flex-1 items-center gap-2", beside && "max-sm:hidden")}>
+    // They fade in beside the placeholder's label rather than appearing all at once.
+    <div
+      className={cn(
+        "ticker-posts flex min-w-0 flex-1 items-center gap-2",
+        beside && "max-sm:hidden",
+      )}
+    >
       <div className="ticker-viewport relative min-w-0 flex-1 overflow-hidden motion-reduce:overflow-x-auto">
         <div
           className="ticker-track flex w-max"
-          style={{ "--ticker-duration": `${tickerDuration(posts)}s` } as CSSProperties}
+          style={{ "--ticker-duration": `${tickerDuration(posts, rounds)}s` } as CSSProperties}
         >
-          <PostList posts={posts} />
+          <PostList posts={posts} rounds={rounds} />
           {/* The second copy is what makes the loop seamless: when the first has scrolled out,
               the track jumps back to where the second began. It is invisible to assistive
               tech and keyboards, and not drawn at all when the ticker doesn't move. */}
-          <PostList posts={posts} copy />
+          <PostList posts={posts} rounds={rounds} copy />
         </div>
       </div>
     </div>
@@ -118,7 +143,8 @@ function Posts({ posts, beside }: { posts: TickerPost[]; beside: boolean }): Rea
 }
 
 /** The ticker's label: what the strip is, set like a tile's kicker. */
-const LABEL = "text-brand-text shrink-0 font-serif text-xs font-bold tracking-wider uppercase"
+export const TICKER_LABEL =
+  "text-brand-text shrink-0 font-serif text-xs font-bold tracking-wider uppercase"
 
 function Broadcast({
   broadcast,
@@ -149,7 +175,7 @@ function Broadcast({
           Live
         </span>
       ) : (
-        <span className={LABEL}>Upcoming</span>
+        <span className={TICKER_LABEL}>Upcoming</span>
       )}
       <YoutubeIcon className="size-4 shrink-0" />
       <span className="truncate font-sans font-semibold group-hover:underline">
@@ -205,7 +231,7 @@ export function TickerView({
         {broadcast ? (
           <Broadcast broadcast={broadcast} pinned={posts.length > 0} now={now} />
         ) : (
-          <span className={LABEL}>Latest</span>
+          <span className={TICKER_LABEL}>Latest</span>
         )}
         {posts.length > 0 && <Posts posts={posts} beside={Boolean(broadcast)} />}
         {(posts.length > 0 || live) && <PauseSwitch live={live} />}

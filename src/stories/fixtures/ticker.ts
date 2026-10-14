@@ -49,3 +49,15 @@ export const tickerPosts: TickerPost[] = [
     createdAt: "2026-10-06T22:00:00Z",
   },
 ]
+
+/** A single short post: too few to fill the strip, so it goes round several times a pass. */
+export const fewTickerPosts: TickerPost[] = [
+  {
+    id: "bluesky:4",
+    source: "bluesky",
+    text: "Volume 13 is out.",
+    links: [],
+    url: "https://bsky.app/profile/thepragmaticpapers.bsky.social/post/4",
+    createdAt: "2026-10-08T16:00:00Z",
+  },
+]

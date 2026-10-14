@@ -456,6 +456,32 @@ or member, and staff get a badge.
   user empties their comments (status `deleted`, no author) so others' replies keep their place.
 - `tests/integration/comments.test.ts` signs readers up with Discord stubbed, and posts.
 
+### Achievements
+
+`src/plugins/achievements/` gives readers achievements, behind its switch on System → Plugins.
+The definitions and their rules are code (`ACHIEVEMENTS` in `registry.ts`); each may carry a
+`badge` (a label and a `priority`). The `achievements` collection (**Content → Achievements**,
+moderators; only admins delete) holds one row per user and achievement: an award, a revocation,
+or both.
+
+- **Account achievements** (Verified: `emailVerified`) are worked out from the user record on
+  each read and have no row until a moderator revokes one. **Awarded** ones (Early member) are a
+  row, written once. A row with `revoked` ticked suppresses either; it keeps who and when.
+  A row made in the admin must revoke: nothing is handed out by hand.
+- **Early member** goes to the first `earlyMemberLimit` (1000) accounts `isMember` accepts (the
+  `member` role, never staff), in sign-up order: a users `afterChange` hook awards it when an
+  account becomes a member. Revoked rows, and rows whose account was deleted (kept with no
+  user), still count, so nobody moves up. Members from before the plugin are backfilled once
+  per site by `/next/revalidate-all` (`backfillEarlyMembers`, recorded with `markSeeded`).
+  Early member is awarded even while the switch is off.
+- **Badges on comments**: the comments plugin's `authorBadges` option asks
+  `readerAchievements.badgesFor` once per thread; a badge `describeAuthor` gives (Staff) wins.
+  `/api/achievements/mine` lists the signed-in reader's for `/account`. Switched off, no
+  achievement shows anywhere.
+- The host's options (roles, access, the limit) are `achievementsOptions` in
+  `src/plugins/readerAchievements.ts`. `tests/integration/achievements.test.ts` covers the revoke
+  flow, access and the backfill.
+
 ### Integrations
 
 `src/integrations/` is where an outside service lives: a GitHub repository we

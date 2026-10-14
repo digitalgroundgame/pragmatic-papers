@@ -57,6 +57,7 @@ export const commentsPlugin = registerPlugin<CommentsPluginConfig>({
       authorsSlug: "users",
       authorFields: ["name"],
       describeAuthor: defaultDescribeAuthor,
+      authorBadges: async () => new Map(),
       checks: [],
       isVerified: (author) => author.emailVerified === true,
       signInProviders: () => [],

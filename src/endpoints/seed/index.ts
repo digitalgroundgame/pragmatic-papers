@@ -480,7 +480,14 @@ export const seed = async (
           slug: "plugins",
           context,
           data: {
-            switches: { docs: true, notifications: true, tours: true, sso: true, comments: true },
+            switches: {
+              docs: true,
+              notifications: true,
+              tours: true,
+              sso: true,
+              comments: true,
+              achievements: true,
+            },
           },
         })
       },

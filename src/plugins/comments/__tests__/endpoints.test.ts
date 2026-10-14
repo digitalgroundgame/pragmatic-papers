@@ -13,6 +13,7 @@ const enabled = vi.fn()
 const currentUser = vi.fn()
 const isVerified = vi.fn()
 const extraCheck = vi.fn()
+const authorBadges = vi.fn()
 
 const config = {
   enabled,
@@ -24,8 +25,9 @@ const config = {
   describeAuthor: (author: Record<string, unknown>) => ({
     name: String(author.name),
     image: null,
-    badge: null,
+    badge: author.staff ? "Staff" : null,
   }),
+  authorBadges,
   signInProviders: () => [{ id: "discord", label: "Discord" }],
   baseURL: () => site,
   checks: [extraCheck],
@@ -83,6 +85,7 @@ beforeEach(() => {
   currentUser.mockResolvedValue(ada)
   isVerified.mockReturnValue(true)
   extraCheck.mockResolvedValue({ ok: true })
+  authorBadges.mockResolvedValue(new Map())
   db = {
     settings: {},
     comments: [],
@@ -155,6 +158,48 @@ describe("GET /thread/:id", () => {
     })
     expect(body.providers).toEqual([])
     expect(body.maxDepth).toBe(2)
+  })
+})
+
+describe("badges from outside the plugin", () => {
+  const grace = { id: 8, name: "Grace", staff: true }
+  const comment = (id: number, author: object) => ({
+    id,
+    body: "Hi",
+    status: "published",
+    depth: 0,
+    parent: null,
+    createdAt: "2026-10-13T10:00:00.000Z",
+    author,
+  })
+
+  it("asks once for every author shown and the viewer, and shows each one's badge", async () => {
+    db.comments = [comment(2, grace), comment(1, ada)]
+    authorBadges.mockResolvedValue(
+      new Map([
+        ["7", "Early member"],
+        ["8", "Verified"],
+      ]),
+    )
+
+    const body = await json(await call(get))
+
+    expect(authorBadges).toHaveBeenCalledOnce()
+    expect(authorBadges.mock.calls[0]![0]).toEqual([ada, grace, ada])
+    const comments = body.comments as { author: { badge: string | null } }[]
+    // Staff wins over a badge from outside.
+    expect(comments.map((c) => c.author.badge)).toEqual(["Early member", "Staff"])
+    expect(body.viewer).toMatchObject({ badge: "Early member" })
+  })
+
+  it("shows the author's badge on the comment they just posted", async () => {
+    authorBadges.mockResolvedValue(new Map([["7", "Verified"]]))
+
+    const response = await call(post, { body: { body: "Hello" } })
+
+    expect(((await json(response)).comment as { author: object }).author).toMatchObject({
+      badge: "Verified",
+    })
   })
 })
 

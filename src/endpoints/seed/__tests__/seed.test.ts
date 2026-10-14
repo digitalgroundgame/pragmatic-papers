@@ -156,7 +156,14 @@ describe("seed", () => {
       (write) => write.op === "updateGlobal" && write.target === "plugins",
     )
     expect(plugins?.data).toEqual({
-      switches: { docs: true, notifications: true, tours: true, sso: true, comments: true },
+      switches: {
+        docs: true,
+        notifications: true,
+        tours: true,
+        sso: true,
+        comments: true,
+        achievements: true,
+      },
     })
   })
 

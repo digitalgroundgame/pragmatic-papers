@@ -1,18 +1,26 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-const { revalidatePath, revalidateTag, syncRepoDocs, createMissingStarterPages } = vi.hoisted(
-  () => ({
-    revalidatePath: vi.fn(),
-    revalidateTag: vi.fn(),
-    syncRepoDocs: vi.fn(),
-    createMissingStarterPages: vi.fn(),
-  }),
-)
-const payload = {}
+const {
+  revalidatePath,
+  revalidateTag,
+  syncRepoDocs,
+  createMissingStarterPages,
+  backfillEarlyMembers,
+} = vi.hoisted(() => ({
+  revalidatePath: vi.fn(),
+  revalidateTag: vi.fn(),
+  syncRepoDocs: vi.fn(),
+  createMissingStarterPages: vi.fn(),
+  backfillEarlyMembers: vi.fn(),
+}))
+const payload = { logger: { error: vi.fn() } }
 
 vi.mock("next/cache", () => ({ revalidatePath, revalidateTag }))
 vi.mock("@/plugins/docs/syncRepoDocs", () => ({ syncRepoDocs }))
 vi.mock("@/collections/Pages/starterPages", () => ({ createMissingStarterPages }))
+vi.mock("@/plugins/readerAchievements", () => ({
+  readerAchievements: { backfillEarlyMembers },
+}))
 vi.mock("@/data/payload", () => ({ getPayloadClient: async () => payload }))
 
 const { POST } = await import("../route")
@@ -29,6 +37,7 @@ describe("POST /next/revalidate-all", () => {
     vi.clearAllMocks()
     syncRepoDocs.mockResolvedValue({ created: ["a"], existing: ["b"], deleted: [] })
     createMissingStarterPages.mockResolvedValue(["feeds"])
+    backfillEarlyMembers.mockResolvedValue(3)
   })
 
   it("syncs the repo's docs and starter pages, then throws away every prerendered route", async () => {
@@ -39,7 +48,9 @@ describe("POST /next/revalidate-all", () => {
       revalidated: true,
       docs: { created: ["a"] },
       pages: { created: ["feeds"] },
+      achievements: { earlyMembers: 3 },
     })
+    expect(backfillEarlyMembers).toHaveBeenCalledExactlyOnceWith(payload)
     expect(syncRepoDocs).toHaveBeenCalledExactlyOnceWith(payload)
     expect(createMissingStarterPages).toHaveBeenCalledExactlyOnceWith(payload)
     expect(createMissingStarterPages.mock.invocationCallOrder[0]).toBeLessThan(
@@ -57,6 +68,7 @@ describe("POST /next/revalidate-all", () => {
     await expect(response.json()).resolves.toEqual({ revalidated: true })
     expect(syncRepoDocs).not.toHaveBeenCalled()
     expect(createMissingStarterPages).not.toHaveBeenCalled()
+    expect(backfillEarlyMembers).not.toHaveBeenCalled()
     expect(revalidatePath).toHaveBeenCalledExactlyOnceWith("/", "layout")
   })
 
@@ -93,7 +105,17 @@ describe("POST /next/revalidate-all", () => {
       revalidated: true,
       docs: null,
       pages: { created: ["feeds"] },
+      achievements: { earlyMembers: 3 },
     })
+    expect(revalidatePath).toHaveBeenCalledOnce()
+  })
+
+  it("still revalidates when the Early member backfill fails, and logs it", async () => {
+    backfillEarlyMembers.mockRejectedValue(new Error("down"))
+    const response = await POST(request("Bearer s3cret"))
+
+    await expect(response.json()).resolves.toMatchObject({ achievements: { earlyMembers: null } })
+    expect(payload.logger.error).toHaveBeenCalled()
     expect(revalidatePath).toHaveBeenCalledOnce()
   })
 

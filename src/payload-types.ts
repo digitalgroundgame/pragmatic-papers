@@ -186,6 +186,7 @@ export interface Config {
     docs: Doc;
     comments: Comment;
     'comment-violations': CommentViolation;
+    achievements: Achievement;
     'payload-kv': PayloadKv;
     'payload-jobs': PayloadJob;
     'payload-locked-documents': PayloadLockedDocument;
@@ -213,6 +214,7 @@ export interface Config {
     docs: DocsSelect<false> | DocsSelect<true>;
     comments: CommentsSelect<false> | CommentsSelect<true>;
     'comment-violations': CommentViolationsSelect<false> | CommentViolationsSelect<true>;
+    achievements: AchievementsSelect<false> | AchievementsSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
     'payload-jobs': PayloadJobsSelect<false> | PayloadJobsSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
@@ -1541,6 +1543,33 @@ export interface CommentViolation {
   createdAt: string;
 }
 /**
+ * Readers' achievements. To take one away, open the reader's row, tick Revoked and give a reason. Verified has no row until it's revoked: create one, choose the reader and Verified, and tick Revoked.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "achievements".
+ */
+export interface Achievement {
+  id: number;
+  /**
+   * Empty once the account is deleted: the row keeps its place in the count.
+   */
+  user?: (number | null) | User;
+  achievement: 'early-member' | 'verified';
+  /**
+   * When an awarded achievement was earned. Empty on a revocation of Verified.
+   */
+  earnedAt?: string | null;
+  /**
+   * Takes the achievement away. Untick it to give it back.
+   */
+  revoked?: boolean | null;
+  revokedReason?: string | null;
+  revokedAt?: string | null;
+  revokedBy?: (number | null) | User;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload-kv".
  */
@@ -1742,6 +1771,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'comment-violations';
         value: number | CommentViolation;
+      } | null)
+    | ({
+        relationTo: 'achievements';
+        value: number | Achievement;
       } | null);
   globalSlug?: string | null;
   user: {
@@ -2598,6 +2631,21 @@ export interface CommentViolationsSelect<T extends boolean = true> {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "achievements_select".
+ */
+export interface AchievementsSelect<T extends boolean = true> {
+  user?: T;
+  achievement?: T;
+  earnedAt?: T;
+  revoked?: T;
+  revokedReason?: T;
+  revokedAt?: T;
+  revokedBy?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload-kv_select".
  */
 export interface PayloadKvSelect<T extends boolean = true> {
@@ -2848,6 +2896,10 @@ export interface Plugin {
      * The Comments section under each article, and sign-ups: readers make an account by signing in to comment. Needs Single sign-on on too.
      */
     comments?: boolean | null;
+    /**
+     * Badges beside readers' names on comments, and achievements on their account page. Early member is still awarded while it's off.
+     */
+    achievements?: boolean | null;
   };
   updatedAt?: string | null;
   createdAt?: string | null;
@@ -3044,6 +3096,7 @@ export interface PluginsSelect<T extends boolean = true> {
         tours?: T;
         sso?: T;
         comments?: T;
+        achievements?: T;
       };
   updatedAt?: T;
   createdAt?: T;

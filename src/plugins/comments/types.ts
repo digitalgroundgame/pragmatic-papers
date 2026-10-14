@@ -85,6 +85,12 @@ export interface CommentsPluginConfig {
   /** How an author shows beside their comments. Default: their `name`, no picture or badge. */
   describeAuthor?: (author: CommentAuthor) => AuthorDisplay
   /**
+   * A badge for each author who has one from outside the plugin (readers' achievements), by author ID,
+   * asked once per request for every author shown. A badge `describeAuthor` gives (like
+   * Staff) wins. Default none.
+   */
+  authorBadges?: (authors: CommentAuthor[], req: PayloadRequest) => Promise<Map<string, string>>
+  /**
    * The ways to sign in that the comment box offers someone signed out, passed through as the
    * thread's `providers`. The site's own page starts the sign-in. Default none.
    */

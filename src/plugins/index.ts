@@ -30,7 +30,9 @@ import { convertLexicalToPlaintext } from "@payloadcms/richtext-lexical/plaintex
 import { s3Storage } from "@payloadcms/storage-s3"
 import { type Payload, type Plugin } from "payload"
 
+import { achievementsPlugin } from "./achievements"
 import { commentsPlugin } from "./comments"
+import { achievementsOptions, readerAchievements } from "./readerAchievements"
 import { commentsOn, signUpProviders, ssoOptions } from "./signIn"
 import { getSignedInUser, ssoPlugin } from "./sso"
 import { staffByDefault } from "./staffByDefault"
@@ -410,7 +412,8 @@ export const plugins: Plugin[] = [
     enabled: commentsOn,
     // Members and staff alike: a member is signed in to the site but not to Payload.
     currentUser: (req) => getSignedInUser(req, ssoOptions),
-    authorFields: ["name", "avatarUrl", "roles"],
+    // `emailVerified` and `roles` are what readers' achievements are worked out from.
+    authorFields: ["name", "avatarUrl", "roles", "emailVerified"],
     // Staff addresses are the ones an admin gave them.
     isVerified: (author) => author.emailVerified === true || isStaff(author as unknown as User),
     describeAuthor: (author) => ({
@@ -418,11 +421,14 @@ export const plugins: Plugin[] = [
       image: typeof author.avatarUrl === "string" ? author.avatarUrl : null,
       badge: isStaff(author as unknown as User) ? "Staff" : null,
     }),
+    // A reader's highest achievement badge, when Staff doesn't apply. None while achievements are off.
+    authorBadges: (authors, req) => readerAchievements.badgesFor(authors, req),
     signInProviders: signUpProviders,
     baseURL: getSiteURL,
     moderators: editor,
     admins: admin,
   }),
+  achievementsPlugin(achievementsOptions),
   // Last, so it sees every other plugin's collections.
   describePlugin(staffByDefault, {
     slug: "staff-by-default",

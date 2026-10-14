@@ -83,8 +83,9 @@ function documentPath(pathname: string): string | null {
 /**
  * The tag on every page that lists or shows articles, volumes and contributors: the home
  * page and other Pages, the indexes, topic and contributor pages, feeds, sitemaps and search.
- * They render per request on Coolify, so no save's hook names them, and a save to an article,
- * volume or contributor purges them all (`?shared`).
+ * Most render per request on Coolify, so no save's hook names them, and a save to an article,
+ * volume or contributor purges them all (`?shared`). The home page is prerendered, so such a
+ * save also names it (`revalidateForReaders`).
  */
 export const SHARED_TAG = "shared"
 

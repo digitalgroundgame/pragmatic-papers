@@ -10,6 +10,7 @@ vi.mock("@/data/payload", () => ({ getPayloadClient: async () => ({ find }) }))
 const routes = {
   articles: () => import("../articles/[slug]/page"),
   volumes: () => import("../volumes/[slug]/page"),
+  home: () => import("../page"),
   pages: () => import("../[slug]/page"),
   authors: () => import("../contributors/[slug]/page"),
   topics: () => import("../topics/[slug]/page"),
@@ -42,6 +43,15 @@ describe.each(["articles", "volumes"] as const)("/%s/[slug]", (route) => {
     find.mockResolvedValue({ docs: [] })
     const { generateStaticParams } = await routes[route]()
     await expect(generateStaticParams()).resolves.toEqual([])
+  })
+})
+
+describe("the home page", () => {
+  // It reads no ?p=, so it doesn't share the paginated pages' per-request rendering.
+  it("is prerendered and revalidated, never forced per request", async () => {
+    const page = await routes.home()
+    expect(page).not.toHaveProperty("dynamic")
+    expect(page).toHaveProperty("revalidate", 3600)
   })
 })
 

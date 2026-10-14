@@ -59,6 +59,19 @@ describe("revalidateMediaUsers", () => {
     })
   })
 
+  it("revalidates the prerendered home page when it alone shows the picture", async () => {
+    collectMediaReferences.mockResolvedValue([ref("pages", 1, "home")])
+
+    await save({ ...media, alt: "A wheat field" })
+
+    expect(revalidateForReaders).toHaveBeenCalledExactlyOnceWith(logger, "media 9", {
+      paths: ["/"],
+      purgeOnly: [],
+      tags: [],
+      shared: true,
+    })
+  })
+
   it("revalidates the volumes a contributor's articles are in when their picture changes", async () => {
     collectMediaReferences.mockResolvedValue([ref("users", 7)])
     find.mockImplementation(async ({ collection }: { collection: string }) => ({

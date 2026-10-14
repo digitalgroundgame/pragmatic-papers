@@ -107,8 +107,9 @@ export const LinkTooltip: Story = {
 }
 
 /**
- * What a page shows while the ticker's feed loads: an empty strip exactly the ticker's size,
- * so nothing below moves when the feed arrives.
+ * What a page shows while the ticker's feed loads: the "Latest" label, sent with the page, and
+ * skeleton posts, in a strip exactly the ticker's size, so nothing below moves and the label
+ * stays put when the feed arrives.
  */
 export const Loading: Story = {
   args: { broadcast: null, posts: tickerPosts },
@@ -126,5 +127,19 @@ export const Loading: Story = {
       return [el.getBoundingClientRect().height, style.marginTop, style.marginBottom]
     }
     await expect(box(placeholder)).toEqual(box(ticker))
+
+    // The label is where the ticker's own is, so it doesn't jump when the posts arrive.
+    const label = (el: HTMLElement) => {
+      const span = within(el).getByText("Latest")
+      const rect = span.getBoundingClientRect()
+      return [rect.left, rect.width, rect.height, getComputedStyle(span).color]
+    }
+    await expect(within(placeholder).getByText("Latest")).toBeVisible()
+    await expect(label(placeholder)).toEqual(label(ticker))
+
+    // Each skeleton post is an icon and a line of words, centred in the strip as a post is.
+    const skeletons = placeholder.querySelectorAll("[data-ticker-skeleton]")
+    await expect(skeletons.length).toBeGreaterThan(0)
+    await expect(skeletons[0]!.querySelectorAll('[data-slot="skeleton"]')).toHaveLength(2)
   },
 }

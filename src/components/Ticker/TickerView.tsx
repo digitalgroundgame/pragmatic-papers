@@ -100,7 +100,13 @@ function Posts({ posts, beside }: { posts: TickerPost[]; beside: boolean }): Rea
   return (
     // Beside a broadcast on a phone, there's room for one or the other, and the broadcast is
     // what a reader can't find elsewhere.
-    <div className={cn("flex min-w-0 flex-1 items-center gap-2", beside && "max-sm:hidden")}>
+    // They fade in over the placeholder's skeletons rather than appearing all at once.
+    <div
+      className={cn(
+        "animate-in fade-in-0 flex min-w-0 flex-1 items-center gap-2 duration-500 motion-reduce:animate-none",
+        beside && "max-sm:hidden",
+      )}
+    >
       <div className="ticker-viewport relative min-w-0 flex-1 overflow-hidden motion-reduce:overflow-x-auto">
         <div
           className="ticker-track flex w-max"
@@ -118,7 +124,8 @@ function Posts({ posts, beside }: { posts: TickerPost[]; beside: boolean }): Rea
 }
 
 /** The ticker's label: what the strip is, set like a tile's kicker. */
-const LABEL = "text-brand-text shrink-0 font-serif text-xs font-bold tracking-wider uppercase"
+export const TICKER_LABEL =
+  "text-brand-text shrink-0 font-serif text-xs font-bold tracking-wider uppercase"
 
 function Broadcast({
   broadcast,
@@ -149,7 +156,7 @@ function Broadcast({
           Live
         </span>
       ) : (
-        <span className={LABEL}>Upcoming</span>
+        <span className={TICKER_LABEL}>Upcoming</span>
       )}
       <YoutubeIcon className="size-4 shrink-0" />
       <span className="truncate font-sans font-semibold group-hover:underline">
@@ -205,7 +212,7 @@ export function TickerView({
         {broadcast ? (
           <Broadcast broadcast={broadcast} pinned={posts.length > 0} now={now} />
         ) : (
-          <span className={LABEL}>Latest</span>
+          <span className={TICKER_LABEL}>Latest</span>
         )}
         {posts.length > 0 && <Posts posts={posts} beside={Boolean(broadcast)} />}
         {(posts.length > 0 || live) && <PauseSwitch live={live} />}

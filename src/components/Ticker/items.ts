@@ -161,14 +161,37 @@ export function excerpt(text: string, max = MAX_POST_LENGTH): string {
 /** About how many characters wide a link icon and its gap are. */
 const LINK_WIDTH = 3
 
+/** About how many characters wide a post's dot, source icon and the gaps around them are. */
+const POST_CHROME_WIDTH = 13
+
+/**
+ * About how many characters wide one pass must be to fill the widest screens: 2,560 px of the
+ * posts' 14 px serif, at about 5.4 px a character. Narrower than that, the strip would show
+ * empty space before the loop came round.
+ */
+export const MIN_PASS_WIDTH = 480
+
+function postWidth(post: TickerPost): number {
+  return excerpt(postText(post)).length + postLinks(post).length * LINK_WIDTH
+}
+
+/**
+ * How many times the posts repeat in one pass. A few short posts would leave the strip half
+ * empty, the loop's second copy only appearing once the first has scrolled out, so they go
+ * round again until a pass is wide enough to fill the screen.
+ */
+export function loopRounds(posts: TickerPost[]): number {
+  const width = posts.reduce((sum, post) => sum + postWidth(post) + POST_CHROME_WIDTH, 0)
+  if (width === 0) return 1
+  return Math.max(1, Math.ceil(MIN_PASS_WIDTH / width))
+}
+
 /**
  * Seconds for one full pass, so the ticker moves at an easy reading pace however much is in
- * it: about 4.5 characters a second, never faster than a pass every 40 seconds.
+ * it: about 4.5 characters a second, never faster than a pass every 40 seconds. A pass holds
+ * the posts `rounds` times (`loopRounds`).
  */
-export function tickerDuration(posts: TickerPost[]): number {
-  const characters = posts.reduce(
-    (sum, post) => sum + excerpt(postText(post)).length + postLinks(post).length * LINK_WIDTH,
-    0,
-  )
+export function tickerDuration(posts: TickerPost[], rounds = 1): number {
+  const characters = posts.reduce((sum, post) => sum + postWidth(post), 0) * rounds
   return Math.max(40, Math.round(characters / 4.5))
 }

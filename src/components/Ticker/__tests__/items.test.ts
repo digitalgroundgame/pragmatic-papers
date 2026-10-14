@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest"
 
 import {
   excerpt,
+  loopRounds,
+  MIN_PASS_WIDTH,
   mergePosts,
   postKey,
   postLinks,
@@ -198,5 +200,41 @@ describe("withoutOwnLinks", () => {
   it("doesn't mistake a lookalike host for ours", () => {
     const lookalike = post("lookalike", "2026-10-08T07:00:00Z", "https://notpragmaticpapers.com/a")
     expect(withoutOwnLinks([lookalike])).toEqual([lookalike])
+  })
+})
+
+describe("loopRounds", () => {
+  it("goes round once when there's nothing to show", () => {
+    expect(loopRounds([])).toBe(1)
+  })
+
+  it("repeats a few short posts until a pass is wide enough to fill the screen", () => {
+    const short = [post("b1", "2026-10-07T10:00:00Z", "Volume 13 is out.")]
+    // 17 characters of words and 13 of dot, icon and gaps.
+    expect(loopRounds(short)).toBe(Math.ceil(MIN_PASS_WIDTH / (17 + 13)))
+  })
+
+  it("counts each link icon toward a post's width", () => {
+    const linked = [
+      post("b1", "2026-10-07T10:00:00Z", "Volume 13 is out.", [
+        { text: "a", url: "https://example.com/a" },
+        { text: "b", url: "https://example.com/b" },
+      ]),
+    ]
+    expect(loopRounds(linked)).toBe(Math.ceil(MIN_PASS_WIDTH / (17 + 2 * 3 + 13)))
+  })
+
+  it("leaves posts that already fill the screen going round once", () => {
+    const long = Array.from({ length: 4 }, (_, i) =>
+      post(`b${i}`, "2026-10-07T10:00:00Z", "word ".repeat(40)),
+    )
+    expect(loopRounds(long)).toBe(1)
+  })
+
+  it("slows nothing down: a pass's duration covers every round at the same pace", () => {
+    const posts = Array.from({ length: 2 }, (_, i) =>
+      post(`b${i}`, "2026-10-07T10:00:00Z", "x".repeat(100)),
+    )
+    expect(tickerDuration(posts, 3)).toBe(Math.round((3 * 200) / 4.5))
   })
 })

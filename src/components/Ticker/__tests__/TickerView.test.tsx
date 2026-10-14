@@ -1,7 +1,13 @@
 import { render, screen, within } from "@testing-library/react"
 import { describe, expect, it } from "vitest"
 
-import { liveBroadcast, tickerPosts, upcomingBroadcast } from "@/stories/fixtures/ticker"
+import {
+  fewTickerPosts,
+  liveBroadcast,
+  tickerPosts,
+  upcomingBroadcast,
+} from "@/stories/fixtures/ticker"
+import { loopRounds } from "../items"
 import { TICKER_PAUSED_KEY } from "../pause"
 import { TickerView } from "../TickerView"
 
@@ -23,6 +29,24 @@ describe("TickerView", () => {
     expect(links).toHaveLength(1 + tickerPosts.length + postLinks)
     expect(within(ticker).getByRole("list", { name: "Latest posts" })).toBeInTheDocument()
     expect(within(ticker).getByRole("checkbox", { name: "Pause ticker" })).not.toBeChecked()
+  })
+
+  it("repeats a few posts to fill the strip, announcing each one once", () => {
+    const rounds = loopRounds(fewTickerPosts)
+    expect(rounds).toBeGreaterThan(1)
+    render(<TickerView broadcast={null} posts={fewTickerPosts} />)
+
+    const list = screen.getByRole("list", { name: "Latest posts" })
+    expect(within(list).getAllByRole("listitem")).toHaveLength(fewTickerPosts.length)
+    expect(within(list).getAllByRole("link")).toHaveLength(fewTickerPosts.length)
+
+    const items = list.querySelectorAll("li")
+    expect(items).toHaveLength(rounds * fewTickerPosts.length)
+    for (const repeat of Array.from(items).slice(fewTickerPosts.length)) {
+      expect(repeat).toHaveAttribute("aria-hidden", "true")
+      expect(repeat).toHaveAttribute("inert")
+      expect(repeat).toHaveClass("motion-reduce:hidden")
+    }
   })
 
   it("names each post's source and opens it in a new tab", () => {

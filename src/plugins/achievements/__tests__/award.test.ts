@@ -2,10 +2,10 @@ import type { PayloadRequest } from "payload"
 import { describe, expect, it } from "vitest"
 
 import { resolveAchievementsConfig } from ".."
-import { awardEarlyMember, backfillEarlyMembers } from "../award"
-import { ACHIEVEMENTS_SLUG, AWARDING, EARLY_MEMBER } from "../constants"
-import { awardOnMembership, deleteUsersAchievements } from "../hooks/users"
-import type { AchievementsPluginConfig } from "../types"
+import { awardFirstMember, fillFirstMembers, seedAchievements } from "../award"
+import { ACHIEVEMENTS_SLUG, AWARDING, AWARDS_SLUG } from "../constants"
+import { awardOnMembership, deleteUsersAwards } from "../hooks/users"
+import type { AchievementDoc, AchievementsPluginConfig } from "../types"
 
 import { fakePayload } from "./fakePayload"
 
@@ -18,24 +18,27 @@ const options: AchievementsPluginConfig = {
 }
 const config = resolveAchievementsConfig(options)
 
+/** The fake's Early member: the first two members. */
+const early: AchievementDoc = { id: 1, name: "Early member", rule: "firstMembers", limit: 2 }
+
 const member = (id: number, day: number) => ({
   id,
   roles: ["member"],
   createdAt: `2026-10-${String(day).padStart(2, "0")}T00:00:00.000Z`,
 })
-const holders = (rows: Record<string, unknown>[]) =>
-  rows.filter((row) => row.achievement === EARLY_MEMBER).map((row) => row.user)
+const holders = (rows: Record<string, unknown>[], achievement = 1) =>
+  rows.filter((row) => row.achievement === achievement).map((row) => row.user)
 
-describe("awardEarlyMember", () => {
+describe("awardFirstMember", () => {
   it("awards until the limit, as the plugin's own write, once per account", async () => {
     const { payload, store } = fakePayload()
 
-    expect(await awardEarlyMember(payload, 1, config)).toBe(true)
-    expect(await awardEarlyMember(payload, 1, config)).toBe(false)
-    expect(await awardEarlyMember(payload, 2, config)).toBe(true)
-    expect(await awardEarlyMember(payload, 3, config)).toBe(false)
+    expect(await awardFirstMember(payload, early, 1)).toBe(true)
+    expect(await awardFirstMember(payload, early, 1)).toBe(false)
+    expect(await awardFirstMember(payload, early, 2)).toBe(true)
+    expect(await awardFirstMember(payload, early, 3)).toBe(false)
 
-    expect(holders(store[ACHIEVEMENTS_SLUG]!)).toEqual([1, 2])
+    expect(holders(store[AWARDS_SLUG]!)).toEqual([1, 2])
     expect(payload.create).toHaveBeenCalledWith(
       expect.objectContaining({ context: { [AWARDING]: true }, overrideAccess: true }),
     )
@@ -44,23 +47,26 @@ describe("awardEarlyMember", () => {
   it("counts revoked rows and rows whose account is gone, so nobody later moves up", async () => {
     const { payload } = fakePayload({
       rows: [
-        { id: 1, user: 1, achievement: EARLY_MEMBER, revoked: true },
-        { id: 2, user: null, achievement: EARLY_MEMBER },
+        { id: 1, user: 1, achievement: 1, revoked: true },
+        { id: 2, user: null, achievement: 1 },
       ],
     })
-    expect(await awardEarlyMember(payload, 3, config)).toBe(false)
+    expect(await awardFirstMember(payload, early, 3)).toBe(false)
   })
 
-  it("awards nothing when the plugin is disabled in code", async () => {
+  it("counts each achievement's awards apart", async () => {
+    const { payload } = fakePayload({ rows: [{ id: 1, user: 1, achievement: 5 }] })
+    expect(await awardFirstMember(payload, { ...early, limit: 1 }, 2)).toBe(true)
+  })
+
+  it("awards nothing without a limit", async () => {
     const { payload } = fakePayload()
-    const disabled = resolveAchievementsConfig({ ...options, disabled: true })
-    expect(await awardEarlyMember(payload, 1, disabled)).toBe(false)
-    expect(payload.create).not.toHaveBeenCalled()
+    expect(await awardFirstMember(payload, { ...early, limit: null }, 1)).toBe(false)
   })
 })
 
-describe("backfillEarlyMembers", () => {
-  it("awards existing members in sign-up order, skipping staff, then never again", async () => {
+describe("fillFirstMembers", () => {
+  it("awards existing members in sign-up order, skipping staff, and is safe to run again", async () => {
     const { payload, store } = fakePayload({
       users: [
         member(3, 3),
@@ -70,21 +76,64 @@ describe("backfillEarlyMembers", () => {
       ],
     })
 
-    expect(await backfillEarlyMembers(payload, config)).toBe(2)
-    expect(holders(store[ACHIEVEMENTS_SLUG]!)).toEqual([2, 3])
+    expect(await fillFirstMembers(payload, early, config)).toBe(2)
+    expect(holders(store[AWARDS_SLUG]!)).toEqual([2, 3])
+    expect(payload.logger.info).toHaveBeenCalledOnce()
+
+    expect(await fillFirstMembers(payload, early, config)).toBe(0)
+    expect(holders(store[AWARDS_SLUG]!)).toEqual([2, 3])
+  })
+
+  it("leaves room for members already awarded, and fills a raised limit", async () => {
+    const { payload, store } = fakePayload({
+      users: [member(1, 1), member(2, 2), member(3, 3)],
+      rows: [{ id: 1, user: 3, achievement: 1 }],
+    })
+    expect(await fillFirstMembers(payload, early, config)).toBe(1)
+    expect(holders(store[AWARDS_SLUG]!)).toEqual([3, 1])
+    expect(await fillFirstMembers(payload, { ...early, limit: 3 }, config)).toBe(1)
+    expect(holders(store[AWARDS_SLUG]!)).toEqual([3, 1, 2])
+  })
+
+  it("reads every page of users", async () => {
+    const users = Array.from({ length: 501 }, (_, i) => ({
+      id: i + 1,
+      roles: i === 500 ? ["member"] : ["editor"],
+      createdAt: `2026-01-01T00:00:${String(i).padStart(4, "0")}`,
+    }))
+    const { payload, store } = fakePayload({ users })
+    expect(await fillFirstMembers(payload, early, config)).toBe(1)
+    expect(holders(store[AWARDS_SLUG]!)).toEqual([501])
+  })
+
+  it("awards nothing without a limit", async () => {
+    const { payload } = fakePayload({ users: [member(1, 1)] })
+    expect(await fillFirstMembers(payload, { ...early, limit: null }, config)).toBe(0)
+    expect(payload.create).not.toHaveBeenCalled()
+  })
+})
+
+describe("seedAchievements", () => {
+  it("creates Verified and Early member once per site, and never again once deleted", async () => {
+    const { payload, store } = fakePayload({ achievements: [] })
+
+    expect(await seedAchievements(payload, config)).toEqual(["Early member", "Verified"])
+    expect(store[ACHIEVEMENTS_SLUG]).toEqual([
+      expect.objectContaining({ name: "Early member", rule: "firstMembers", limit: 2 }),
+      expect.objectContaining({ name: "Verified", rule: "verified", badge: true }),
+    ])
+    expect(store[ACHIEVEMENTS_SLUG]![0]).not.toHaveProperty("key")
 
     store[ACHIEVEMENTS_SLUG] = []
-    expect(await backfillEarlyMembers(payload, config)).toBeNull()
+    expect(await seedAchievements(payload, config)).toEqual([])
     expect(store[ACHIEVEMENTS_SLUG]).toEqual([])
   })
 
-  it("leaves room for members already awarded", async () => {
-    const { payload, store } = fakePayload({
-      users: [member(1, 1), member(2, 2), member(3, 3)],
-      rows: [{ id: 1, user: 3, achievement: EARLY_MEMBER }],
-    })
-    expect(await backfillEarlyMembers(payload, config)).toBe(1)
-    expect(holders(store[ACHIEVEMENTS_SLUG]!)).toEqual([3, 1])
+  it("creates nothing when the plugin is disabled in code", async () => {
+    const { payload } = fakePayload({ achievements: [] })
+    const disabled = resolveAchievementsConfig({ ...options, disabled: true })
+    expect(await seedAchievements(payload, disabled)).toEqual([])
+    expect(payload.create).not.toHaveBeenCalled()
   })
 })
 
@@ -97,11 +146,13 @@ describe("awardOnMembership", () => {
     previousDoc?: object,
   ) => hook({ doc, previousDoc, operation, req: { payload } as unknown as PayloadRequest } as never)
 
-  it("awards an account made as a member, or that just became one", async () => {
+  it("awards every first-members achievement to an account made as a member, or that just became one", async () => {
     const { payload, store } = fakePayload()
+    store[ACHIEVEMENTS_SLUG]!.push({ id: 5, name: "Founding", rule: "firstMembers", limit: 1 })
     await run(payload, member(1, 1), "create")
     await run(payload, member(2, 2), "update", { id: 2, roles: [] })
-    expect(holders(store[ACHIEVEMENTS_SLUG]!)).toEqual([1, 2])
+    expect(holders(store[AWARDS_SLUG]!)).toEqual([1, 2])
+    expect(holders(store[AWARDS_SLUG]!, 5)).toEqual([1])
   })
 
   it("leaves staff, and an edit to an account that was already a member", async () => {
@@ -120,19 +171,28 @@ describe("awardOnMembership", () => {
   })
 })
 
-describe("deleteUsersAchievements", () => {
-  it("deletes an account's rows but keeps its Early member row, without the account", async () => {
+describe("deleteUsersAwards", () => {
+  it("deletes an account's awards but keeps its first-members ones, without the account", async () => {
     const { payload, store } = fakePayload({
       rows: [
-        { id: 1, user: 1, achievement: EARLY_MEMBER },
-        { id: 2, user: 1, achievement: "verified", revoked: true },
-        { id: 3, user: 2, achievement: "verified", revoked: true },
+        { id: 1, user: 1, achievement: 1 },
+        { id: 2, user: 1, achievement: 2, revoked: true },
+        { id: 3, user: 2, achievement: 2, revoked: true },
       ],
     })
-    await deleteUsersAchievements({ id: 1, req: { payload } } as never)
-    expect(store[ACHIEVEMENTS_SLUG]).toEqual([
-      { id: 1, user: null, achievement: EARLY_MEMBER },
-      { id: 3, user: 2, achievement: "verified", revoked: true },
+    await deleteUsersAwards({ id: 1, req: { payload } } as never)
+    expect(store[AWARDS_SLUG]).toEqual([
+      { id: 1, user: null, achievement: 1 },
+      { id: 3, user: 2, achievement: 2, revoked: true },
     ])
+  })
+
+  it("deletes them all when no achievement goes to first members", async () => {
+    const { payload, store } = fakePayload({
+      achievements: [],
+      rows: [{ id: 1, user: 1, achievement: 7 }],
+    })
+    await deleteUsersAwards({ id: 1, req: { payload } } as never)
+    expect(store[AWARDS_SLUG]).toEqual([])
   })
 })

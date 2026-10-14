@@ -1,16 +1,32 @@
 import type { CollectionSlug, Payload, PayloadRequest } from "payload"
 
-import { ACHIEVEMENTS_SLUG } from "./constants"
+import { ACHIEVEMENTS_SLUG, AWARDS_SLUG } from "./constants"
 import { heldAchievements, rowUserId, topBadge } from "./evaluate"
-import { ACHIEVEMENTS } from "./registry"
 import type {
+  AchievementDoc,
   AchievementRow,
   AchievementUser,
   HeldAchievement,
   ResolvedAchievementsConfig,
 } from "./types"
 
-/** Every achievement row of these users, one query, grouped by user ID. */
+/** Every achievement editors have defined, in the order they gave them. */
+export async function loadAchievements(
+  payload: Payload,
+  req?: PayloadRequest,
+): Promise<AchievementDoc[]> {
+  const { docs } = await payload.find({
+    collection: ACHIEVEMENTS_SLUG as CollectionSlug,
+    sort: "_order",
+    depth: 0,
+    pagination: false,
+    overrideAccess: true,
+    req,
+  })
+  return docs as unknown as AchievementDoc[]
+}
+
+/** Every award of these users, one query, grouped by user ID. */
 async function rowsByUser(
   payload: Payload,
   ids: string[],
@@ -19,10 +35,9 @@ async function rowsByUser(
   const grouped = new Map<string, AchievementRow[]>()
   if (!ids.length) return grouped
   const { docs } = await payload.find({
-    collection: ACHIEVEMENTS_SLUG as CollectionSlug,
+    collection: AWARDS_SLUG as CollectionSlug,
     where: { user: { in: ids } },
     depth: 0,
-    limit: ids.length * ACHIEVEMENTS.length,
     pagination: false,
     select: { user: true, achievement: true, earnedAt: true, revoked: true },
     overrideAccess: true,
@@ -49,13 +64,17 @@ export async function achievementsFor(
   const result = new Map<string, HeldAchievement[]>()
   if (!users.length || !(await config.enabled(payload))) return result
   const unique = [...new Map(users.map((user) => [String(user.id), user])).values()]
-  const rows = await rowsByUser(
-    payload,
-    unique.map((user) => String(user.id)),
-    req,
-  )
+  const [achievements, rows] = await Promise.all([
+    loadAchievements(payload, req),
+    rowsByUser(
+      payload,
+      unique.map((user) => String(user.id)),
+      req,
+    ),
+  ])
   for (const user of unique) {
-    result.set(String(user.id), heldAchievements(user, rows.get(String(user.id)) ?? [], config))
+    const held = heldAchievements(user, rows.get(String(user.id)) ?? [], achievements, config)
+    result.set(String(user.id), held)
   }
   return result
 }

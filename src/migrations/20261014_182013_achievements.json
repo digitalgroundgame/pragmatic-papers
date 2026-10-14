@@ -14656,16 +14656,133 @@
           "primaryKey": true,
           "notNull": true
         },
+        "_order": {
+          "name": "_order",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "name": {
+          "name": "name",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "description": {
+          "name": "description",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "rule": {
+          "name": "rule",
+          "type": "enum_achievements_rule",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'manual'"
+        },
+        "limit": {
+          "name": "limit",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "badge": {
+          "name": "badge",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": true
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp(3) with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp(3) with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "achievements__order_idx": {
+          "name": "achievements__order_idx",
+          "columns": [
+            {
+              "expression": "_order",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "achievements_updated_at_idx": {
+          "name": "achievements_updated_at_idx",
+          "columns": [
+            {
+              "expression": "updated_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "achievements_created_at_idx": {
+          "name": "achievements_created_at_idx",
+          "columns": [
+            {
+              "expression": "created_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.awards": {
+      "name": "awards",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
         "user_id": {
           "name": "user_id",
           "type": "integer",
           "primaryKey": false,
           "notNull": false
         },
-        "achievement": {
-          "name": "achievement",
-          "type": "enum_achievements_achievement",
-          "typeSchema": "public",
+        "achievement_id": {
+          "name": "achievement_id",
+          "type": "integer",
           "primaryKey": false,
           "notNull": true
         },
@@ -14716,8 +14833,8 @@
         }
       },
       "indexes": {
-        "achievements_user_idx": {
-          "name": "achievements_user_idx",
+        "awards_user_idx": {
+          "name": "awards_user_idx",
           "columns": [
             {
               "expression": "user_id",
@@ -14731,11 +14848,11 @@
           "method": "btree",
           "with": {}
         },
-        "achievements_achievement_idx": {
-          "name": "achievements_achievement_idx",
+        "awards_achievement_idx": {
+          "name": "awards_achievement_idx",
           "columns": [
             {
-              "expression": "achievement",
+              "expression": "achievement_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -14746,8 +14863,8 @@
           "method": "btree",
           "with": {}
         },
-        "achievements_revoked_idx": {
-          "name": "achievements_revoked_idx",
+        "awards_revoked_idx": {
+          "name": "awards_revoked_idx",
           "columns": [
             {
               "expression": "revoked",
@@ -14761,8 +14878,8 @@
           "method": "btree",
           "with": {}
         },
-        "achievements_revoked_by_idx": {
-          "name": "achievements_revoked_by_idx",
+        "awards_revoked_by_idx": {
+          "name": "awards_revoked_by_idx",
           "columns": [
             {
               "expression": "revoked_by_id",
@@ -14776,8 +14893,8 @@
           "method": "btree",
           "with": {}
         },
-        "achievements_updated_at_idx": {
-          "name": "achievements_updated_at_idx",
+        "awards_updated_at_idx": {
+          "name": "awards_updated_at_idx",
           "columns": [
             {
               "expression": "updated_at",
@@ -14791,8 +14908,8 @@
           "method": "btree",
           "with": {}
         },
-        "achievements_created_at_idx": {
-          "name": "achievements_created_at_idx",
+        "awards_created_at_idx": {
+          "name": "awards_created_at_idx",
           "columns": [
             {
               "expression": "created_at",
@@ -14816,7 +14933,7 @@
               "nulls": "last"
             },
             {
-              "expression": "achievement",
+              "expression": "achievement_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -14829,18 +14946,27 @@
         }
       },
       "foreignKeys": {
-        "achievements_user_id_users_id_fk": {
-          "name": "achievements_user_id_users_id_fk",
-          "tableFrom": "achievements",
+        "awards_user_id_users_id_fk": {
+          "name": "awards_user_id_users_id_fk",
+          "tableFrom": "awards",
           "tableTo": "users",
           "columnsFrom": ["user_id"],
           "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         },
-        "achievements_revoked_by_id_users_id_fk": {
-          "name": "achievements_revoked_by_id_users_id_fk",
-          "tableFrom": "achievements",
+        "awards_achievement_id_achievements_id_fk": {
+          "name": "awards_achievement_id_achievements_id_fk",
+          "tableFrom": "awards",
+          "tableTo": "achievements",
+          "columnsFrom": ["achievement_id"],
+          "columnsTo": ["id"],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "awards_revoked_by_id_users_id_fk": {
+          "name": "awards_revoked_by_id_users_id_fk",
+          "tableFrom": "awards",
           "tableTo": "users",
           "columnsFrom": ["revoked_by_id"],
           "columnsTo": ["id"],
@@ -15489,6 +15615,12 @@
           "type": "integer",
           "primaryKey": false,
           "notNull": false
+        },
+        "awards_id": {
+          "name": "awards_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
         }
       },
       "indexes": {
@@ -15836,6 +15968,21 @@
           "concurrently": false,
           "method": "btree",
           "with": {}
+        },
+        "payload_locked_documents_rels_awards_id_idx": {
+          "name": "payload_locked_documents_rels_awards_id_idx",
+          "columns": [
+            {
+              "expression": "awards_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
         }
       },
       "foreignKeys": {
@@ -16024,6 +16171,15 @@
           "tableFrom": "payload_locked_documents_rels",
           "tableTo": "achievements",
           "columnsFrom": ["achievements_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "payload_locked_documents_rels_awards_fk": {
+          "name": "payload_locked_documents_rels_awards_fk",
+          "tableFrom": "payload_locked_documents_rels",
+          "tableTo": "awards",
+          "columnsFrom": ["awards_id"],
           "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
@@ -18934,10 +19090,10 @@
       "schema": "public",
       "values": ["check", "moderator", "block"]
     },
-    "public.enum_achievements_achievement": {
-      "name": "enum_achievements_achievement",
+    "public.enum_achievements_rule": {
+      "name": "enum_achievements_rule",
       "schema": "public",
-      "values": ["early-member", "verified"]
+      "values": ["manual", "firstMembers", "verified"]
     },
     "public.enum_payload_jobs_log_task_slug": {
       "name": "enum_payload_jobs_log_task_slug",
@@ -19037,6 +19193,6 @@
     "tables": {},
     "columns": {}
   },
-  "id": "9234e220-d311-46c9-b6a1-b3123d9b74f1",
+  "id": "aca6691e-8ac2-48ab-af86-c4db11c314a2",
   "prevId": "00000000-0000-0000-0000-000000000000"
 }

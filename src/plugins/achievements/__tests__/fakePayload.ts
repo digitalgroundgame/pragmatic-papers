@@ -1,7 +1,7 @@
 import type { Payload } from "payload"
 import { vi } from "vitest"
 
-import { ACHIEVEMENTS_SLUG } from "../constants"
+import { ACHIEVEMENTS_SLUG, AWARDS_SLUG } from "../constants"
 
 type Row = Record<string, unknown> & { id: number }
 type Where = Record<string, unknown>
@@ -11,17 +11,28 @@ function matches(doc: Record<string, unknown>, where: Where | undefined): boolea
   if (!where) return true
   return Object.entries(where).every(([key, condition]) => {
     if (key === "and") return (condition as Where[]).every((part) => matches(doc, part))
-    const value = doc[key]
-    const { equals, in: within, not_equals } = condition as Record<string, unknown>
-    if (equals !== undefined) return String(value) === String(equals)
-    if (within !== undefined) return (within as unknown[]).map(String).includes(String(value))
-    if (not_equals !== undefined) return String(value) !== String(not_equals)
+    const value = String(doc[key])
+    const { equals, in: within, not_in, not_equals } = condition as Record<string, unknown>
+    if (equals !== undefined) return value === String(equals)
+    if (within !== undefined) return (within as unknown[]).map(String).includes(value)
+    if (not_in !== undefined) return !(not_in as unknown[]).map(String).includes(value)
+    if (not_equals !== undefined) return value !== String(not_equals)
     return true
   })
 }
 
-function makeFake({ users = [] as Row[], rows = [] as Row[] } = {}) {
-  const store: Record<string, Row[]> = { users, [ACHIEVEMENTS_SLUG]: rows }
+/** Verified and Early member (first two members), as a site starts with them. */
+export const starter = (): Row[] => [
+  { id: 1, name: "Early member", rule: "firstMembers", limit: 2, badge: true, _order: "a1" },
+  { id: 2, name: "Verified", rule: "verified", badge: true, _order: "a2" },
+]
+
+function makeFake({ users = [] as Row[], rows = [] as Row[], achievements = starter() } = {}) {
+  const store: Record<string, Row[]> = {
+    users,
+    [AWARDS_SLUG]: rows,
+    [ACHIEVEMENTS_SLUG]: achievements,
+  }
   const kv = new Map<string, unknown>()
   let nextId = 1000
   const payload = {
@@ -37,20 +48,27 @@ function makeFake({ users = [] as Row[], rows = [] as Row[] } = {}) {
         sort,
         limit = 10,
         page = 1,
+        pagination = true,
       }: {
         collection: string
         where?: Where
         sort?: string
         limit?: number
         page?: number
+        pagination?: boolean
       }) => {
         let docs = (store[collection] ?? []).filter((doc) => matches(doc, where))
-        if (sort === "createdAt") {
-          docs = [...docs].sort((a, b) => String(a.createdAt).localeCompare(String(b.createdAt)))
+        if (sort) {
+          docs = [...docs].sort((a, b) => String(a[sort]).localeCompare(String(b[sort])))
         }
+        if (!pagination) return { docs, hasNextPage: false }
         const start = (page - 1) * limit
         return { docs: docs.slice(start, start + limit), hasNextPage: docs.length > start + limit }
       },
+    ),
+    findByID: vi.fn(
+      async ({ collection, id }: { collection: string; id: unknown }) =>
+        (store[collection] ?? []).find((doc) => String(doc.id) === String(id)) ?? null,
     ),
     count: vi.fn(async ({ collection, where }: { collection: string; where?: Where }) => ({
       totalDocs: (store[collection] ?? []).filter((doc) => matches(doc, where)).length,
@@ -74,7 +92,10 @@ function makeFake({ users = [] as Row[], rows = [] as Row[] } = {}) {
   return { payload: payload as unknown as Payload & typeof payload, store, kv }
 }
 
-/** An in-memory Payload holding users and achievement rows, for the plugin's own queries. */
+/**
+ * An in-memory Payload holding users, achievements (Verified and Early member unless given)
+ * and awards, for the plugin's own queries.
+ */
 export function fakePayload(
   seed: Parameters<typeof makeFake>[0] = {},
 ): ReturnType<typeof makeFake> {

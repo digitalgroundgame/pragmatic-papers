@@ -2,6 +2,7 @@ import { DELETE_MEDIA_IN_USE } from "@/collections/Media/hooks/protectPublishedM
 import { seedRandomRankings } from "@/jobs/updateRecommendations/logic"
 import type { Media, User } from "@/payload-types"
 import { syncDocs } from "@/plugins/docs/syncDocs"
+import { readerAchievements } from "@/plugins/readerAchievements"
 import { revalidatePath } from "next/cache"
 import type { Payload } from "payload"
 import { createArticle, getWriterOrThrow, validateWriters } from "./articles"
@@ -490,6 +491,13 @@ export const seed = async (
             },
           },
         })
+      },
+    },
+    {
+      name: "Creating achievements...",
+      fn: async () => {
+        // The ones a deploy creates once per site: Verified, and Early member.
+        await readerAchievements.seed(payload)
       },
     },
     {

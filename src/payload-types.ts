@@ -187,13 +187,18 @@ export interface Config {
     comments: Comment;
     'comment-violations': CommentViolation;
     achievements: Achievement;
+    awards: Award;
     'payload-kv': PayloadKv;
     'payload-jobs': PayloadJob;
     'payload-locked-documents': PayloadLockedDocument;
     'payload-preferences': PayloadPreference;
     'payload-migrations': PayloadMigration;
   };
-  collectionsJoins: {};
+  collectionsJoins: {
+    users: {
+      awards: 'awards';
+    };
+  };
   collectionsSelect: {
     articles: ArticlesSelect<false> | ArticlesSelect<true>;
     volumes: VolumesSelect<false> | VolumesSelect<true>;
@@ -215,6 +220,7 @@ export interface Config {
     comments: CommentsSelect<false> | CommentsSelect<true>;
     'comment-violations': CommentViolationsSelect<false> | CommentViolationsSelect<true>;
     achievements: AchievementsSelect<false> | AchievementsSelect<true>;
+    awards: AwardsSelect<false> | AwardsSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
     'payload-jobs': PayloadJobsSelect<false> | PayloadJobsSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
@@ -573,6 +579,14 @@ export interface User {
   emailVerified?: boolean | null;
   avatarUrl?: string | null;
   ssoConnections?: boolean | null;
+  /**
+   * Give an achievement that's given by hand with Add new, or open one to revoke it. Verified isn't listed until it's revoked: add a row for it with Revoked ticked.
+   */
+  awards?: {
+    docs?: (number | Award)[];
+    hasNextPage?: boolean;
+    totalDocs?: number;
+  };
   updatedAt: string;
   createdAt: string;
   email: string;
@@ -592,6 +606,57 @@ export interface User {
     | null;
   password?: string | null;
   collection: 'users';
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "awards".
+ */
+export interface Award {
+  id: number;
+  /**
+   * Empty once the account is deleted: the row keeps its place in the count.
+   */
+  user?: (number | null) | User;
+  achievement: number | Achievement;
+  /**
+   * When it was earned or given. Empty on a revocation of Verified.
+   */
+  earnedAt?: string | null;
+  /**
+   * Takes the achievement away. Untick it to give it back.
+   */
+  revoked?: boolean | null;
+  revokedReason?: string | null;
+  revokedAt?: string | null;
+  revokedBy?: (number | null) | User;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * Readers' achievements. Drag them into order: of the badges someone holds, the highest shows beside their name. Give or revoke one from a user's record.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "achievements".
+ */
+export interface Achievement {
+  id: number;
+  _order?: string | null;
+  name: string;
+  /**
+   * What it means, on the reader's account page.
+   */
+  description?: string | null;
+  /**
+   * Fixed once it's made. Given by hand: Moderators give it from a user's record. First members: The first readers to make an account, in sign-up order, up to the limit. Verified email: Readers whose sign-in provider verified their email address.
+   */
+  rule: 'manual' | 'firstMembers' | 'verified';
+  /**
+   * Raising it awards it to the next members in sign-up order; lowering it takes nothing away.
+   */
+  limit?: number | null;
+  badge?: boolean | null;
+  updatedAt: string;
+  createdAt: string;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -1543,33 +1608,6 @@ export interface CommentViolation {
   createdAt: string;
 }
 /**
- * Readers' achievements. To take one away, open the reader's row, tick Revoked and give a reason. Verified has no row until it's revoked: create one, choose the reader and Verified, and tick Revoked.
- *
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "achievements".
- */
-export interface Achievement {
-  id: number;
-  /**
-   * Empty once the account is deleted: the row keeps its place in the count.
-   */
-  user?: (number | null) | User;
-  achievement: 'early-member' | 'verified';
-  /**
-   * When an awarded achievement was earned. Empty on a revocation of Verified.
-   */
-  earnedAt?: string | null;
-  /**
-   * Takes the achievement away. Untick it to give it back.
-   */
-  revoked?: boolean | null;
-  revokedReason?: string | null;
-  revokedAt?: string | null;
-  revokedBy?: (number | null) | User;
-  updatedAt: string;
-  createdAt: string;
-}
-/**
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload-kv".
  */
@@ -1775,6 +1813,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'achievements';
         value: number | Achievement;
+      } | null)
+    | ({
+        relationTo: 'awards';
+        value: number | Award;
       } | null);
   globalSlug?: string | null;
   user: {
@@ -2340,6 +2382,7 @@ export interface UsersSelect<T extends boolean = true> {
   emailVerified?: T;
   avatarUrl?: T;
   ssoConnections?: T;
+  awards?: T;
   updatedAt?: T;
   createdAt?: T;
   email?: T;
@@ -2634,6 +2677,20 @@ export interface CommentViolationsSelect<T extends boolean = true> {
  * via the `definition` "achievements_select".
  */
 export interface AchievementsSelect<T extends boolean = true> {
+  _order?: T;
+  name?: T;
+  description?: T;
+  rule?: T;
+  limit?: T;
+  badge?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "awards_select".
+ */
+export interface AwardsSelect<T extends boolean = true> {
   user?: T;
   achievement?: T;
   earnedAt?: T;
@@ -2897,7 +2954,7 @@ export interface Plugin {
      */
     comments?: boolean | null;
     /**
-     * Badges beside readers' names on comments, and achievements on their account page. Early member is still awarded while it's off.
+     * Badges beside readers' names on comments, and achievements on their account page. First-members achievements are still awarded while it's off.
      */
     achievements?: boolean | null;
   };

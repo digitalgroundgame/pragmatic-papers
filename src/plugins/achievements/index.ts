@@ -2,18 +2,23 @@ import type { CollectionConfig, Payload, PayloadRequest } from "payload"
 
 import { isPluginOn, registerPlugin } from "@/utilities/registerPlugin"
 
-import { backfillEarlyMembers } from "./award"
-import { achievementsCollection } from "./collection"
+import { seedAchievements } from "./award"
+import { achievementsCollection, awardsCollection, awardsJoinField } from "./collection"
 import { DEFAULT_EARLY_MEMBER_LIMIT } from "./constants"
-import { awardOnMembership, deleteUsersAchievements } from "./hooks/users"
-import { badgeLabelsFor } from "./read"
-import type { AchievementUser, AchievementsPluginConfig, ResolvedAchievementsConfig } from "./types"
+import { awardOnMembership, deleteUsersAwards } from "./hooks/users"
+import { achievementsFor, badgeLabelsFor } from "./read"
+import type {
+  AchievementUser,
+  AchievementsPluginConfig,
+  HeldAchievement,
+  ResolvedAchievementsConfig,
+} from "./types"
 
-export { ACHIEVEMENTS } from "./registry"
+export { RULES } from "./rules"
 export type { MyAchievements } from "./endpoints/mine"
 export type {
-  AchievementBadge,
-  AchievementDefinition,
+  AchievementDoc,
+  AchievementRule,
   AchievementUser,
   AchievementsPluginConfig,
   HeldAchievement,
@@ -35,26 +40,30 @@ export const resolveAchievementsConfig = (
 
 /**
  * What the rest of the site asks the achievements plugin, with the options it was installed
- * with: the badge beside each name (for comments), and the one-time Early member backfill a
- * deploy runs.
+ * with: the badge beside each name (for comments), each user's achievements (for public
+ * pages), and the achievements a site starts with, which a deploy creates once.
  */
 export function achievementsReader(options: AchievementsPluginConfig): {
   badgesFor: (users: AchievementUser[], req: PayloadRequest) => Promise<Map<string, string>>
-  backfillEarlyMembers: (payload: Payload) => Promise<number | null>
+  heldBy: (payload: Payload, user: AchievementUser) => Promise<HeldAchievement[]>
+  seed: (payload: Payload) => Promise<string[]>
 } {
   const config = resolveAchievementsConfig(options)
   return {
     badgesFor: (users, req) => badgeLabelsFor(req.payload, users, config, req),
-    backfillEarlyMembers: (payload) => backfillEarlyMembers(payload, config),
+    heldBy: async (payload, user) =>
+      (await achievementsFor(payload, [user], config)).get(String(user.id)) ?? [],
+    seed: (payload) => seedAchievements(payload, config),
   }
 }
 
 /**
- * Readers' achievements: Verified, worked out from the account, and Early member, awarded to
- * the first member accounts as they're made. Each shows a badge beside the holder's name on
- * comments. Moderators revoke either in the admin, with a reason, and the row stays as a
- * record. Switched off, no achievement shows anywhere, but Early member is still awarded, so
- * the order holds when it's switched on.
+ * Readers' achievements, defined by editors in the admin, each earned by a rule in code: a fact
+ * about the account (Verified), being one of the first members (Early member), or given by
+ * hand. Each can show a badge beside the holder's name on comments. Moderators give and revoke
+ * them from a user's record, with a reason, and the row stays as a record. Switched off, no
+ * achievement shows anywhere, but first-members achievements are still awarded, so the order
+ * holds when it's switched on.
  */
 export const achievementsPlugin = registerPlugin<AchievementsPluginConfig>({
   slug: "achievements",
@@ -62,11 +71,11 @@ export const achievementsPlugin = registerPlugin<AchievementsPluginConfig>({
     name: "Achievements",
     source: "src/plugins/achievements",
     description:
-      "Readers' achievements, Verified and Early member, each with a badge beside their name on comments, and listed on their account page. Moderators revoke them in Content → Achievements.",
+      "Readers' achievements, defined by editors in Content → Achievements and earned by rules in code (Verified, Early member, or given by hand), with a badge beside their name on comments. Moderators give and revoke them from a user's record.",
     switch: {
       label: "Achievements",
       description:
-        "Badges beside readers' names on comments, and achievements on their account page. Early member is still awarded while it's off.",
+        "Badges beside readers' names on comments, and achievements on their account page. First-members achievements are still awarded while it's off.",
       defaultValue: false,
     },
   },
@@ -76,13 +85,21 @@ export const achievementsPlugin = registerPlugin<AchievementsPluginConfig>({
       if (existing.slug !== achievements.usersSlug || achievements.disabled) return existing
       return {
         ...existing,
+        fields: [...existing.fields, awardsJoinField(achievements)],
         hooks: {
           ...existing.hooks,
           afterChange: [...(existing.hooks?.afterChange ?? []), awardOnMembership(achievements)],
-          beforeDelete: [...(existing.hooks?.beforeDelete ?? []), deleteUsersAchievements],
+          beforeDelete: [...(existing.hooks?.beforeDelete ?? []), deleteUsersAwards],
         },
       }
     })
-    return { ...config, collections: [...collections, achievementsCollection(achievements)] }
+    return {
+      ...config,
+      collections: [
+        ...collections,
+        achievementsCollection(achievements),
+        awardsCollection(achievements),
+      ],
+    }
   },
 })

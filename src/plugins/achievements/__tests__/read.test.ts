@@ -2,7 +2,6 @@ import type { PayloadRequest } from "payload"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { achievementsReader, type AchievementsPluginConfig } from ".."
-import { EARLY_MEMBER } from "../constants"
 import { mineEndpoint } from "../endpoints/mine"
 import { resolveAchievementsConfig } from ".."
 
@@ -23,8 +22,8 @@ const ben = { id: 2, emailVerified: true }
 const cy = { id: 3, emailVerified: false }
 
 const rows = () => [
-  { id: 1, user: 1, achievement: EARLY_MEMBER, earnedAt: "2026-10-18T12:00:00.000Z" },
-  { id: 2, user: 2, achievement: "verified", revoked: true },
+  { id: 1, user: 1, achievement: 1, earnedAt: "2026-10-18T12:00:00.000Z" },
+  { id: 2, user: 2, achievement: 2, revoked: true },
 ]
 
 beforeEach(() => {
@@ -33,7 +32,7 @@ beforeEach(() => {
 })
 
 describe("achievementsReader().badgesFor", () => {
-  it("gives each user their highest badge, in one query, leaving out those with none", async () => {
+  it("gives each user their highest badge, in one query of awards, leaving out those with none", async () => {
     const { payload } = fakePayload({ rows: rows() })
     const req = { payload } as unknown as PayloadRequest
 
@@ -41,9 +40,12 @@ describe("achievementsReader().badgesFor", () => {
 
     // Ada: Early member beats Verified. Ben: Verified revoked. Cy: unverified.
     expect(labels).toEqual(new Map([["1", "Early member"]]))
-    expect(payload.find).toHaveBeenCalledOnce()
+    expect(payload.find).toHaveBeenCalledTimes(2)
     expect(payload.find).toHaveBeenCalledWith(
-      expect.objectContaining({ where: { user: { in: ["1", "2", "3"] } } }),
+      expect.objectContaining({ collection: "awards", where: { user: { in: ["1", "2", "3"] } } }),
+    )
+    expect(payload.find).toHaveBeenCalledWith(
+      expect.objectContaining({ collection: "achievements", sort: "_order" }),
     )
   })
 
@@ -81,10 +83,16 @@ describe("GET /api/achievements/mine", () => {
     expect(response.headers.get("Cache-Control")).toBe("private, no-store")
     expect(await response.json()).toEqual({
       achievements: [
-        expect.objectContaining({ key: EARLY_MEMBER, earnedAt: "2026-10-18T12:00:00.000Z" }),
-        expect.objectContaining({ key: "verified", earnedAt: null }),
+        expect.objectContaining({ key: "1", earnedAt: "2026-10-18T12:00:00.000Z" }),
+        expect.objectContaining({ key: "2", earnedAt: null }),
       ],
     })
+  })
+
+  it("answers 404 when the plugin is disabled in code", async () => {
+    const off = mineEndpoint(resolveAchievementsConfig({ ...options, disabled: true })).handler
+    const response = await off({ payload: fakePayload().payload } as unknown as PayloadRequest)
+    expect(response.status).toBe(404)
   })
 
   it("answers 401 for someone signed out, and 404 while switched off", async () => {
@@ -92,5 +100,18 @@ describe("GET /api/achievements/mine", () => {
     expect((await call(fakePayload().payload)).status).toBe(401)
     enabled.mockResolvedValue(false)
     expect((await call(fakePayload().payload)).status).toBe(404)
+  })
+})
+
+describe("achievementsReader().heldBy", () => {
+  it("lists one user's achievements, and none while switched off", async () => {
+    const { payload } = fakePayload({ rows: rows() })
+    const reader = achievementsReader(options)
+    expect((await reader.heldBy(payload, ada)).map(({ label }) => label)).toEqual([
+      "Early member",
+      "Verified",
+    ])
+    enabled.mockResolvedValue(false)
+    expect(await reader.heldBy(payload, ada)).toEqual([])
   })
 })

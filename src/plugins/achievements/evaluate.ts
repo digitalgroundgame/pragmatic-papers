@@ -1,49 +1,50 @@
-import { ACHIEVEMENTS } from "./registry"
+import { findRule } from "./rules"
 import type {
-  AchievementDefinition,
+  AchievementDoc,
   AchievementRow,
   AchievementUser,
   HeldAchievement,
   ResolvedAchievementsConfig,
 } from "./types"
 
-export const rowUserId = (row: AchievementRow): string | null =>
-  row.user === null || row.user === undefined
+/** The ID a relationship value points at, whether it's populated or not. */
+export const relationId = (value: AchievementRow["user"]): string | null =>
+  value === null || value === undefined
     ? null
-    : String(typeof row.user === "object" ? row.user.id : row.user)
+    : String(typeof value === "object" ? value.id : value)
 
-const priorityOf = (achievement: AchievementDefinition) =>
-  achievement.badge?.priority ?? Number.NEGATIVE_INFINITY
+export const rowUserId = (row: AchievementRow): string | null => relationId(row.user)
 
 /**
- * The achievements a user holds, those with the highest-priority badge first. `rows` are this
- * user's rows: an awarded achievement needs one that isn't revoked, and a revoked row takes
- * away one the account would otherwise have.
+ * The achievements a user holds, in the order editors gave them (`achievements`, sorted by
+ * `_order`): the first one with a badge is the one shown beside their name. `rows` are this
+ * user's awards: an awarded or hand-given achievement needs one that isn't revoked, and a
+ * revoked row takes away one the account would otherwise have. An achievement whose rule is no
+ * longer in the code is nobody's.
  */
 export function heldAchievements(
   user: AchievementUser,
   rows: AchievementRow[],
+  achievements: readonly AchievementDoc[],
   config: ResolvedAchievementsConfig,
-  achievements: readonly AchievementDefinition[] = ACHIEVEMENTS,
 ): HeldAchievement[] {
-  const rowFor = new Map(rows.map((row) => [row.achievement, row]))
+  const rowFor = new Map(rows.map((row) => [relationId(row.achievement), row]))
   return achievements
     .filter((achievement) => {
-      const row = rowFor.get(achievement.key)
-      if (row?.revoked) return false
-      return achievement.source === "awarded" ? !!row : (achievement.holds?.(user, config) ?? false)
+      const rule = findRule(achievement.rule)
+      const row = rowFor.get(String(achievement.id))
+      if (!rule || row?.revoked) return false
+      return rule.source === "account" ? (rule.holds?.(user, config) ?? false) : !!row
     })
-    .sort((a, b) => priorityOf(b) - priorityOf(a))
     .map((achievement) => ({
-      key: achievement.key,
-      label: achievement.label,
-      description: achievement.description,
-      badge: achievement.badge?.label ?? null,
-      earnedAt:
-        achievement.source === "awarded" ? (rowFor.get(achievement.key)?.earnedAt ?? null) : null,
+      key: String(achievement.id),
+      label: achievement.name,
+      description: achievement.description ?? "",
+      badge: achievement.badge ? achievement.name : null,
+      earnedAt: rowFor.get(String(achievement.id))?.earnedAt ?? null,
     }))
 }
 
-/** The one badge shown beside a user's name: the highest priority of those they hold, if any. */
+/** The one badge shown beside a user's name: the first of those they hold, if any. */
 export const topBadge = (held: HeldAchievement[]): string | null =>
   held.find((achievement) => achievement.badge)?.badge ?? null

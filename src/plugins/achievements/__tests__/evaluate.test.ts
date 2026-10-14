@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest"
 
 import { resolveAchievementsConfig } from ".."
-import { heldAchievements, topBadge } from "../evaluate"
-import type { AchievementDefinition, AchievementRow } from "../types"
+import { heldAchievements, relationId, topBadge } from "../evaluate"
+import type { AchievementDoc, AchievementRow } from "../types"
 
 const config = resolveAchievementsConfig({
   currentUser: async () => null,
@@ -11,8 +11,20 @@ const config = resolveAchievementsConfig({
   admins: () => true,
 })
 
+const early: AchievementDoc = {
+  id: 1,
+  name: "Early member",
+  description: "One of the first.",
+  rule: "firstMembers",
+  limit: 1000,
+  badge: true,
+}
+const verified: AchievementDoc = { id: 2, name: "Verified", rule: "verified", badge: true }
+const helper: AchievementDoc = { id: 3, name: "Helper", rule: "manual", badge: false }
+const achievements = [early, verified, helper]
+
 const reader = (fields: Record<string, unknown> = {}) => ({ id: 7, ...fields })
-const row = (achievement: string, fields: Partial<AchievementRow> = {}): AchievementRow => ({
+const row = (achievement: number, fields: Partial<AchievementRow> = {}): AchievementRow => ({
   user: 7,
   achievement,
   earnedAt: "2026-10-18T12:00:00.000Z",
@@ -20,69 +32,76 @@ const row = (achievement: string, fields: Partial<AchievementRow> = {}): Achieve
   ...fields,
 })
 const keys = (held: { key: string }[]) => held.map(({ key }) => key)
+const held = (user: Record<string, unknown>, rows: AchievementRow[], list = achievements) =>
+  heldAchievements(reader(user), rows, list, config)
 
 describe("heldAchievements", () => {
-  it("gives Verified to an account whose address is verified, with no row", () => {
-    expect(keys(heldAchievements(reader({ emailVerified: true }), [], config))).toEqual([
-      "verified",
+  it("works out an account achievement from the user, with no row", () => {
+    expect(keys(held({ emailVerified: true }, []))).toEqual(["2"])
+    expect(held({ emailVerified: true }, [])[0]).toEqual({
+      key: "2",
+      label: "Verified",
+      description: "",
+      badge: "Verified",
+      earnedAt: null,
+    })
+    expect(held({ emailVerified: false }, [])).toEqual([])
+  })
+
+  it("needs a row for an awarded or hand-given one", () => {
+    expect(keys(held({}, [row(1), row(3)]))).toEqual(["1", "3"])
+    expect(keys(held({}, []))).toEqual([])
+  })
+
+  it("lists them in the order editors gave the achievements, with when each was earned", () => {
+    const list = held({ emailVerified: true }, [row(3, { earnedAt: "then" }), row(1)])
+    expect(keys(list)).toEqual(["1", "2", "3"])
+    expect(list[0]).toMatchObject({ label: "Early member", description: "One of the first." })
+    expect(list[2]).toMatchObject({ badge: null, earnedAt: "then" })
+    expect(keys(held({ emailVerified: true }, [row(1)], [verified, early]))).toEqual(["2", "1"])
+  })
+
+  it("takes away any achievement with a revoked row", () => {
+    expect(held({ emailVerified: true }, [row(2, { revoked: true })])).toEqual([])
+    expect(held({}, [row(1, { revoked: true })])).toEqual([])
+  })
+
+  it("reads populated relationships too", () => {
+    expect(keys(held({}, [row(1, { achievement: { id: 1 } })]))).toEqual(["1"])
+  })
+
+  it("leaves out an achievement whose rule is no longer in the code", () => {
+    const gone: AchievementDoc = { id: 9, name: "Gone", rule: "removed" }
+    expect(held({}, [row(9)], [gone])).toEqual([])
+  })
+
+  it("uses the host's own idea of verified", () => {
+    const strict = resolveAchievementsConfig({
+      currentUser: async () => null,
+      isMember: () => true,
+      moderators: () => true,
+      admins: () => true,
+      isVerified: (user) => user.trusted === true,
+    })
+    expect(heldAchievements(reader({ emailVerified: true }), [], achievements, strict)).toEqual([])
+    expect(keys(heldAchievements(reader({ trusted: true }), [], achievements, strict))).toEqual([
+      "2",
     ])
-    expect(heldAchievements(reader({ emailVerified: false }), [], config)).toEqual([])
-    expect(heldAchievements(reader(), [], config)).toEqual([])
-  })
-
-  it("follows the address: Verified goes once it isn't verified, whatever rows say", () => {
-    expect(heldAchievements(reader({ emailVerified: false }), [row("verified")], config)).toEqual(
-      [],
-    )
-  })
-
-  it("gives Early member only to an account with a row for it, with when it was earned", () => {
-    expect(heldAchievements(reader(), [row("early-member")], config)).toEqual([
-      {
-        key: "early-member",
-        label: "Early member",
-        description: expect.any(String),
-        badge: "Early member",
-        earnedAt: "2026-10-18T12:00:00.000Z",
-      },
-    ])
-  })
-
-  it("takes away a revoked achievement, worked out from the account or awarded", () => {
-    const rows = [row("verified", { revoked: true }), row("early-member", { revoked: true })]
-    expect(heldAchievements(reader({ emailVerified: true }), rows, config)).toEqual([])
-  })
-
-  it("lists the one with the highest-priority badge first", () => {
-    const held = heldAchievements(reader({ emailVerified: true }), [row("early-member")], config)
-    expect(keys(held)).toEqual(["early-member", "verified"])
-    expect(held[1]).toMatchObject({ earnedAt: null })
-  })
-
-  it("lists an achievement without a badge last", () => {
-    const registry: AchievementDefinition[] = [
-      { key: "quiet", label: "Quiet", description: "", source: "awarded" },
-      {
-        key: "loud",
-        label: "Loud",
-        description: "",
-        source: "awarded",
-        badge: { label: "Loud", priority: 1 },
-      },
-    ]
-    const held = heldAchievements(reader(), [row("quiet"), row("loud")], config, registry)
-    expect(keys(held)).toEqual(["loud", "quiet"])
-    expect(topBadge(held)).toBe("Loud")
-    expect(topBadge(held.slice(1))).toBeNull()
   })
 })
 
 describe("topBadge", () => {
-  it("is the badge of the highest-priority achievement held, or null for none", () => {
-    expect(
-      topBadge(heldAchievements(reader({ emailVerified: true }), [row("early-member")], config)),
-    ).toBe("Early member")
-    expect(topBadge(heldAchievements(reader({ emailVerified: true }), [], config))).toBe("Verified")
+  it("is the first achievement held that has a badge", () => {
+    expect(topBadge(held({ emailVerified: true }, [row(1), row(3)]))).toBe("Early member")
+    expect(topBadge(held({}, [row(3)]))).toBeNull()
     expect(topBadge([])).toBeNull()
+  })
+})
+
+describe("relationId", () => {
+  it("reads an ID, populated or not, and null for none", () => {
+    expect(relationId(4)).toBe("4")
+    expect(relationId({ id: 4 })).toBe("4")
+    expect(relationId(null)).toBeNull()
   })
 })

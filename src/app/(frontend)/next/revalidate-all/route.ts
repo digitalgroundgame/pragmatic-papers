@@ -10,10 +10,9 @@ import { hasPayloadSecret } from "../bearer"
 /**
  * Run once each time a deploy goes live. Seeds the help docs in src/docs/ this deployment's
  * database doesn't have yet, as drafts (`syncRepoDocs`), creates any starter page the site
- * doesn't have yet as a draft for an editor to publish (`createMissingStarterPages`), awards
- * Early member to the members who signed up before achievements did, once per site
- * (`backfillEarlyMembers`), then
- * throws away every page and route Next.js
+ * doesn't have yet as a draft for an editor to publish (`createMissingStarterPages`), creates
+ * the achievements a site starts with, once per site (`readerAchievements.seed`; Early member
+ * goes to the members who signed up before it), then throws away every page and route Next.js
  * prerendered at build time, so each renders again from that database on its next request.
  *
  * An image built in CI is built against an empty database, so the
@@ -53,18 +52,16 @@ export async function POST(request: Request): Promise<Response> {
   const payload = await getPayloadClient()
   const docs = await syncRepoDocs(payload)
   const pages = await createMissingStarterPages(payload)
-  const earlyMembers = await readerAchievements
-    .backfillEarlyMembers(payload)
-    .catch((err: unknown) => {
-      payload.logger.error({ err }, "Backfilling Early member failed")
-      return null
-    })
+  const achievements = await readerAchievements.seed(payload).catch((err: unknown) => {
+    payload.logger.error({ err }, "Creating the starter achievements failed")
+    return null
+  })
   revalidatePath("/", "layout")
 
   return Response.json({
     revalidated: true,
     docs: docs && { created: docs.created },
     pages: { created: pages },
-    achievements: { earlyMembers },
+    achievements: { created: achievements },
   })
 }

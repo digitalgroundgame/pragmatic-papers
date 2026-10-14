@@ -6,13 +6,12 @@ import type { MyAchievements } from "@/plugins/achievements"
 import type { CommentThread, PublicComment } from "@/plugins/comments"
 import { readerAchievements } from "@/plugins/readerAchievements"
 import { getSiteURL } from "@/utilities/getURL"
-import type { Achievement, Article, User } from "@/payload-types"
+import type { Article, Award, User } from "@/payload-types"
 import { createArticle } from "./helpers/content"
 import { createUser, getPayload } from "./helpers/testUsers"
 
-// Readers sign up with Discord (stubbed), earn Early member and Verified, and comment; a
-// moderator revokes their achievements in the admin's collection, as the local API with
-// their user.
+// Readers sign up with Discord (stubbed), earn Early member and Verified, and comment; editors
+// define achievements, and a moderator gives and revokes them, as the local API with their user.
 
 vi.mock("next/headers", () => ({
   cookies: () => Promise.reject(new Error("no request scope")),
@@ -85,6 +84,9 @@ async function signUp(verified = true): Promise<{ cookie: string; user: User }> 
 let article: Article
 let editor: User
 let writer: User
+/** The seeded achievements' IDs. */
+let early: number
+let verified: number
 
 const setSwitches = (achievements: boolean) =>
   payload.updateGlobal({
@@ -123,17 +125,31 @@ const invalid = (message: RegExp) => ({
 const rowsOf = async (user: User) =>
   (
     await payload.find({
-      collection: "achievements",
+      collection: "awards",
       where: { user: { equals: user.id } },
+      depth: 0,
       overrideAccess: true,
     })
-  ).docs
+  ).docs as Award[]
+const achievementsOf = async (user: User) => (await rowsOf(user)).map((row) => row.achievement)
+
+const idOf = async (name: string) =>
+  (
+    await payload.find({
+      collection: "achievements",
+      where: { name: { equals: name } },
+      overrideAccess: true,
+    })
+  ).docs[0]!.id
 
 beforeAll(async () => {
   payload = await getPayload()
   writer = await createUser("writer")
   editor = await createUser("editor")
   article = await createArticle({ authors: [writer.id] })
+  await readerAchievements.seed(payload)
+  early = await idOf("Early member")
+  verified = await idOf("Verified")
 })
 
 beforeEach(async () => {
@@ -153,11 +169,11 @@ describe("achievements", () => {
   it("awards a new member Early member, and shows it on their comments and account", async () => {
     const { cookie, user } = await signUp()
 
-    expect((await rowsOf(user)).map((row) => row.achievement)).toEqual(["early-member"])
+    expect(await achievementsOf(user)).toEqual([early])
     expect(await badgeOnComment(cookie)).toBe("Early member")
     const { status, body } = await mine(cookie)
     expect(status).toBe(200)
-    expect(body.achievements.map((a) => a.key)).toEqual(["early-member", "verified"])
+    expect(body.achievements.map((a) => a.label)).toEqual(["Early member", "Verified"])
   })
 
   it("never awards staff Early member", async () => {
@@ -167,11 +183,11 @@ describe("achievements", () => {
 
   it("lets a moderator revoke one, with a reason, and give it back", async () => {
     const { cookie, user } = await signUp()
-    const [earlyMember] = (await rowsOf(user)) as Achievement[]
+    const [earlyMember] = await rowsOf(user)
 
     await expect(
       payload.update({
-        collection: "achievements",
+        collection: "awards",
         id: earlyMember!.id,
         data: { revoked: true },
         user: editor,
@@ -180,7 +196,7 @@ describe("achievements", () => {
     ).rejects.toThrow()
 
     const revoked = await payload.update({
-      collection: "achievements",
+      collection: "awards",
       id: earlyMember!.id,
       data: { revoked: true, revokedReason: "Ban evasion" },
       user: editor,
@@ -194,8 +210,8 @@ describe("achievements", () => {
 
     // Verified has no row: revoking it is a new one.
     await payload.create({
-      collection: "achievements",
-      data: { user: user.id, achievement: "verified", revoked: true, revokedReason: "Spam" },
+      collection: "awards",
+      data: { user: user.id, achievement: verified, revoked: true, revokedReason: "Spam" },
       user: editor,
       overrideAccess: false,
     })
@@ -203,7 +219,7 @@ describe("achievements", () => {
     expect((await mine(cookie)).body.achievements).toEqual([])
 
     await payload.update({
-      collection: "achievements",
+      collection: "awards",
       id: earlyMember!.id,
       data: { revoked: false },
       user: editor,
@@ -217,24 +233,24 @@ describe("achievements", () => {
 
     await expect(
       payload.create({
-        collection: "achievements",
-        data: { user: user.id, achievement: "verified", revoked: true, revokedReason: "No" },
+        collection: "awards",
+        data: { user: user.id, achievement: verified, revoked: true, revokedReason: "No" },
         user: writer,
         overrideAccess: false,
       }),
     ).rejects.toThrow()
     await expect(
       payload.create({
-        collection: "achievements",
-        data: { user: writer.id, achievement: "early-member", earnedAt: new Date().toISOString() },
+        collection: "awards",
+        data: { user: writer.id, achievement: early, earnedAt: new Date().toISOString() },
         user: editor,
         overrideAccess: false,
       }),
     ).rejects.toMatchObject(invalid(/earned, not given/))
     await expect(
       payload.create({
-        collection: "achievements",
-        data: { user: user.id, achievement: "early-member", revoked: true, revokedReason: "x" },
+        collection: "awards",
+        data: { user: user.id, achievement: early, revoked: true, revokedReason: "x" },
         user: editor,
         overrideAccess: false,
       }),
@@ -253,7 +269,7 @@ describe("achievements", () => {
     await setSwitches(false)
     const { cookie, user } = await signUp()
 
-    expect((await rowsOf(user)).map((row) => row.achievement)).toEqual(["early-member"])
+    expect(await achievementsOf(user)).toEqual([early])
     expect(await badgeOnComment(cookie)).toBeNull()
     expect((await mine(cookie)).status).toBe(404)
   })
@@ -261,32 +277,96 @@ describe("achievements", () => {
   it("keeps a deleted member's place, so nobody later moves up", async () => {
     const { user } = await signUp()
     const before = await payload.count({
-      collection: "achievements",
-      where: { achievement: { equals: "early-member" } },
+      collection: "awards",
+      where: { achievement: { equals: early } },
       overrideAccess: true,
     })
 
     await payload.delete({ collection: "users", id: user.id, overrideAccess: true })
 
     const after = await payload.count({
-      collection: "achievements",
-      where: { achievement: { equals: "early-member" } },
+      collection: "awards",
+      where: { achievement: { equals: early } },
       overrideAccess: true,
     })
     expect(after.totalDocs).toBe(before.totalDocs)
   })
 
-  it("backfills existing members once, in sign-up order", async () => {
-    // A member made before achievements, whose row the backfill hasn't written yet.
-    const { user } = await signUp()
-    await payload.delete({
+  it("lets editors define an achievement a moderator gives by hand, listed on the user's record", async () => {
+    const { cookie, user } = await signUp()
+    const helper = await payload.create({
       collection: "achievements",
-      where: { user: { equals: user.id } },
+      data: { name: "Helper", description: "Helped out.", rule: "manual", badge: true },
+      user: editor,
+      overrideAccess: false,
+    })
+    await expect(
+      payload.update({
+        collection: "achievements",
+        id: helper.id,
+        data: { name: "Helper" },
+        user: writer,
+        overrideAccess: false,
+      }),
+    ).rejects.toThrow()
+
+    const given = await payload.create({
+      collection: "awards",
+      data: { user: user.id, achievement: helper.id },
+      user: editor,
+      overrideAccess: false,
+    })
+    expect(given.earnedAt).toEqual(expect.any(String))
+    const labels = (await mine(cookie)).body.achievements.map((a) => a.label)
+    expect(labels).toEqual(["Early member", "Verified", "Helper"])
+
+    const record = await payload.findByID({
+      collection: "users",
+      id: user.id,
+      depth: 0,
+      user: editor,
+      overrideAccess: false,
+    })
+    expect(record.awards?.docs?.length).toBe(2)
+
+    // Deleting the achievement deletes its awards.
+    await payload.delete({ collection: "achievements", id: helper.id, overrideAccess: true })
+    expect(await achievementsOf(user)).toEqual([early])
+  })
+
+  it("awards a new first-members achievement to existing members, and more when its limit rises", async () => {
+    const { user } = await signUp()
+    const members = await payload.count({
+      collection: "users",
+      where: { roles: { contains: "member" } },
       overrideAccess: true,
     })
+    const founding = await payload.create({
+      collection: "achievements",
+      data: { name: "Founding reader", rule: "firstMembers", limit: 1, badge: false },
+      user: editor,
+      overrideAccess: false,
+    })
+    const holders = () =>
+      payload.count({
+        collection: "awards",
+        where: { achievement: { equals: founding.id } },
+        overrideAccess: true,
+      })
+    expect((await holders()).totalDocs).toBe(1)
 
-    expect(await readerAchievements.backfillEarlyMembers(payload)).toBeGreaterThanOrEqual(1)
-    expect((await rowsOf(user)).map((row) => row.achievement)).toEqual(["early-member"])
-    expect(await readerAchievements.backfillEarlyMembers(payload)).toBeNull()
+    await payload.update({
+      collection: "achievements",
+      id: founding.id,
+      data: { limit: members.totalDocs + 5 },
+      user: editor,
+      overrideAccess: false,
+    })
+    expect((await holders()).totalDocs).toBe(members.totalDocs)
+    expect(await achievementsOf(user)).toContain(founding.id)
+  })
+
+  it("creates the starter achievements once per site", async () => {
+    expect(await readerAchievements.seed(payload)).toEqual([])
   })
 })

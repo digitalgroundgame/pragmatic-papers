@@ -5,41 +5,55 @@ import type { SitePluginOptions } from "@/utilities/registerPlugin"
 /** A row of the users collection, as Payload returns it. */
 export type AchievementUser = Record<string, unknown> & { id: number | string }
 
-/** A short label shown beside a holder's name, like "Verified". */
-export interface AchievementBadge {
-  label: string
-  /** Of the badges someone holds, the highest priority is the one shown beside their name. */
-  priority: number
-}
-
-/** An achievement, as the registry (`ACHIEVEMENTS`) defines it. */
-export interface AchievementDefinition {
+/** How an achievement is earned, as `RULES` defines it. */
+export interface AchievementRule {
   key: string
-  /** Its name, in the admin and on the account page. */
+  /** Its name in the admin's rule picker. */
   label: string
-  /** What it means, on the account page. */
+  /** What it does, under the picker. */
   description: string
   /**
    * `account`: a fact about the account, worked out from the user record each time (`holds`).
    * `awarded`: earned once and kept as a row, so it never moves when other accounts change.
+   * `manual`: given by a moderator from the user's record.
    */
-  source: "account" | "awarded"
-  /** For an `account` achievement: whether this user has it, before any revocation. */
+  source: "account" | "awarded" | "manual"
+  /** For an `account` rule: whether this user has it, before any revocation. */
   holds?: (user: AchievementUser, config: ResolvedAchievementsConfig) => boolean
-  /** Shown beside the holder's name (on comments). Without one, it's listed but not shown there. */
-  badge?: AchievementBadge
 }
 
-/** A row of the achievements collection, as the plugin reads it. */
+/** An achievement an editor defined, a row of the achievements collection. */
+export interface AchievementDoc {
+  id: number | string
+  name: string
+  description?: string | null
+  /** The key of its rule in `RULES`. */
+  rule: string
+  /** For `firstMembers`: how many member accounts get it. */
+  limit?: number | null
+  /** Whether it shows beside the holder's name on comments. */
+  badge?: boolean | null
+}
+
+/** An achievement a site starts with (`starterAchievements`). */
+export type AchievementSeed = Omit<AchievementDoc, "id"> & {
+  /** Recorded with `markSeeded`, so one an editor deletes stays deleted. */
+  key: string
+}
+
+type RelationValue = number | string | { id: number | string } | null
+
+/** A row of the awards collection, as the plugin reads it. */
 export interface AchievementRow {
-  user: number | string | { id: number | string } | null
-  achievement: string
+  user: RelationValue
+  achievement: RelationValue
   earnedAt?: string | null
   revoked?: boolean | null
 }
 
 /** An achievement someone holds, as their account page lists it. */
 export interface HeldAchievement {
+  /** The achievement's ID. */
   key: string
   label: string
   description: string
@@ -61,13 +75,13 @@ export interface AchievementsPluginConfig extends SitePluginOptions {
   isVerified?: (user: AchievementUser) => boolean
   /** The user fields `isVerified` and `isMember` read, which callers must load. */
   userFields?: string[]
-  /** Whether an account counts towards Early member: readers, not staff. */
+  /** Whether an account counts towards a `firstMembers` achievement: readers, not staff. */
   isMember: (user: AchievementUser) => boolean
-  /** How many member accounts get Early member, in sign-up order. Default 1000. */
+  /** How many member accounts the seeded Early member goes to, in sign-up order. Default 1000. */
   earlyMemberLimit?: number
-  /** Who sees achievements in the admin and revokes them. */
+  /** Who defines achievements in the admin, and gives and revokes them. */
   moderators: Access
-  /** Who can delete an achievement row, which ends its history. */
+  /** Who can delete an achievement or an award, which ends its history. */
   admins: Access
   /** The admin sidebar group. Default `Content`. */
   adminGroup?: string

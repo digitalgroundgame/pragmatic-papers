@@ -1561,7 +1561,7 @@ export interface Doc {
    */
   showTableOfContents?: boolean | null;
   /**
-   * Seeded from src/docs/ by a deploy. Edits here are kept: the repo never overwrites a doc the site already has.
+   * Seeded from src/docs/ by a deploy. Edits here are kept: when the repo's copy changes, a deploy saves it as a new draft for you to publish, edit or discard, and never changes the published doc.
    */
   sourceHash?: string | null;
   /**

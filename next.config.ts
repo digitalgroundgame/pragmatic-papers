@@ -130,6 +130,9 @@ const nextConfig: NextConfig = {
       permanent: false,
       source: "/:path((?!ie-incompatible.html$).*)", // all pages except the incompatibility page
     },
+    // The page slugged `home` is the site root, which has a route of its own; `/home` would
+    // otherwise render it a second time, per request, through `/[slug]`.
+    { source: "/home", destination: "/", permanent: true },
     // The RSS feeds moved under the section they list, ending in `.xml` like
     // every other feed and sitemap. Permanent, so feed readers that
     // honour 301/308 update the URL they have stored.

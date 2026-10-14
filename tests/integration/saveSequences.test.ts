@@ -38,6 +38,8 @@ interface Subject {
   edit: Record<string, unknown>
   /** The path readers find a slug at. */
   path: (slug: string) => string
+  /** Whether the prerendered home page can list it, so publishing it revalidates `/`. */
+  onHome?: boolean
 }
 
 let payload: Payload
@@ -56,6 +58,7 @@ const SUBJECTS: Subject[] = [
     create: () => createArticle({ authors: [author] }),
     edit: { title: "Typed into" },
     path: (slug) => `/articles/${slug}`,
+    onHome: true,
   },
   {
     collection: "pages",
@@ -81,6 +84,7 @@ const SUBJECTS: Subject[] = [
     create: () => createVolume(),
     edit: { description: "Typed into" },
     path: (slug) => `/volumes/${slug}`,
+    onHome: true,
   },
   {
     collection: "docs",
@@ -125,6 +129,8 @@ describe.each(SUBJECTS)("an editor's session on $collection", (subject) => {
     await save({ ...subject.edit, _status: "published" }, false)
     expect(revalidatePath).toHaveBeenCalledWith(subject.path(slug))
     expect(purged()).toContain(subject.path(slug))
+    if (subject.onHome) expect(revalidatePath).toHaveBeenCalledWith("/")
+    else expect(revalidatePath).not.toHaveBeenCalledWith("/")
 
     // A slug changed in drafts moves nothing until it's published, then moves both URLs.
     clear()

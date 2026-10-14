@@ -7,8 +7,12 @@ import { docPath } from "@/utilities/routes"
 
 import { collectMediaReferences, type MediaReference } from "../references/collectMediaReferences"
 
-/** Collections whose pages Next caches (an hour, `revalidate = 3600`); the rest render per request. */
+/**
+ * Collections whose pages Next caches (an hour, `revalidate = 3600`); the rest render per
+ * request, except the home page (`HOME`), which is prerendered too.
+ */
 const CACHED_PAGES = new Set(["articles", "volumes"])
+const HOME = "/"
 
 async function find(
   payload: Payload,
@@ -54,7 +58,7 @@ async function pagesShowing(payload: Payload, references: MediaReference[]) {
     if (ref.collection === "articles") articleIds.push(ref.docId)
     if (!ref.docSlug) continue
     const path = docPath(ref.collection, ref.docSlug)
-    if (CACHED_PAGES.has(ref.collection)) paths.add(path)
+    if (CACHED_PAGES.has(ref.collection) || path === HOME) paths.add(path)
     else purgeOnly.add(path)
   }
 

@@ -8,20 +8,28 @@ import { syncRepoDocs } from "../syncRepoDocs"
 
 const logger = { info: vi.fn(), error: vi.fn() }
 const payload = { logger } as unknown as Payload
+const empty = { created: [], offered: [], skipped: [], existing: [], deleted: [] }
 
 beforeEach(() => {
   vi.clearAllMocks()
-  syncDocs.mockResolvedValue({ created: [], existing: ["a"], deleted: [] })
+  syncDocs.mockResolvedValue({ ...empty, existing: ["a"] })
 })
 afterEach(() => vi.unstubAllEnvs())
 
 describe("syncRepoDocs", () => {
   it("seeds the repo's new docs as drafts and logs them", async () => {
-    const result = { created: ["a"], existing: ["b"], deleted: [] }
+    const result = { ...empty, created: ["a"], existing: ["b"] }
     syncDocs.mockResolvedValue(result)
     await expect(syncRepoDocs(payload)).resolves.toEqual(result)
     expect(syncDocs).toHaveBeenCalledWith(payload)
     expect(logger.info).toHaveBeenCalledWith({ created: ["a"] }, expect.any(String))
+  })
+
+  it("logs the docs it offered changes to, and those an editor's draft held back", async () => {
+    syncDocs.mockResolvedValue({ ...empty, offered: ["a"], skipped: ["b"] })
+    await syncRepoDocs(payload)
+    expect(logger.info).toHaveBeenCalledWith({ offered: ["a"] }, expect.any(String))
+    expect(logger.info).toHaveBeenCalledWith({ skipped: ["b"] }, expect.any(String))
   })
 
   it("logs nothing when the site has every doc already", async () => {

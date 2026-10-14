@@ -28,7 +28,7 @@ describe("revalidateVolumes", () => {
       req: req(),
     } as never)
 
-    expect(paths()).toEqual(["/volumes/1", "/volumes/feed.xml"])
+    expect(paths()).toEqual(["/volumes/1", "/volumes/feed.xml", "/"])
     expect(revalidateTag).toHaveBeenCalledWith("volumes-sitemap", "max")
   })
 
@@ -40,13 +40,13 @@ describe("revalidateVolumes", () => {
       req: req(),
     } as never)
 
-    expect(paths()).toEqual(["/volumes/2", "/volumes/feed.xml"])
+    expect(paths()).toEqual(["/volumes/2", "/volumes/feed.xml", "/"])
   })
 
   it("refreshes the volume and the feed when deleted", () => {
     revalidateDelete({ doc: doc("3", "published"), req: req() } as never)
 
-    expect(paths()).toEqual(["/volumes/3", "/volumes/feed.xml"])
+    expect(paths()).toEqual(["/volumes/3", "/volumes/feed.xml", "/"])
   })
 
   it("does nothing when revalidation is disabled", async () => {

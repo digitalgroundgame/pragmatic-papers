@@ -18,8 +18,8 @@ vi.mock("@/endpoints/seed/home-static", () => ({ homeStatic: null }))
 // Children with their own tests render as markers: these tests are about the trail.
 vi.mock("@/heros/RenderHero", () => ({ RenderHero: () => null }))
 vi.mock("@/blocks/RenderBlocks", () => ({
-  RenderBlocks: ({ blocks }: { blocks: unknown }) => {
-    renderBlocks(blocks)
+  RenderBlocks: ({ blocks, ...props }: { blocks: unknown }) => {
+    renderBlocks(blocks, props)
     return null
   },
 }))
@@ -33,11 +33,12 @@ vi.mock("@/components/JsonLd", () => ({
 }))
 
 import Page from "../page"
+import HomePage from "../../page"
 
-const renderPage = async (slug?: string) =>
+const renderPage = async (slug: string) =>
   render(
     (await Page({
-      params: Promise.resolve(slug === undefined ? {} : { slug }),
+      params: Promise.resolve({ slug }),
       searchParams: Promise.resolve({}),
     })) as React.ReactElement,
   )
@@ -72,12 +73,6 @@ describe("CMS page trail", () => {
     expect(crumbs!.itemListElement.map(({ name }) => name)).toEqual(["Home", "About the Papers"])
     expect(crumbs!.itemListElement[1]!.item).toMatch(/\/about$/)
   })
-
-  it("shows no trail on the home page", async () => {
-    await renderPage()
-    expect(queryPageBySlug).toHaveBeenCalledWith("home")
-    expect(screen.queryByRole("navigation", { name: "breadcrumb" })).not.toBeInTheDocument()
-  })
 })
 
 describe("/feeds", () => {
@@ -98,7 +93,44 @@ describe("/feeds", () => {
     })
     await renderPage("feeds")
     expect(queryPageBySlug).toHaveBeenCalledWith("feeds")
-    expect(renderBlocks).toHaveBeenCalledWith(layout)
+    expect(renderBlocks).toHaveBeenCalledWith(layout, expect.anything())
     expect(screen.getByRole("navigation", { name: "breadcrumb" })).toHaveTextContent("Our feeds")
+  })
+})
+
+describe("the home page", () => {
+  const layout = [{ blockType: "volumeView", populateBy: "collection" }]
+
+  beforeEach(() => {
+    queryPageBySlug.mockResolvedValue({
+      slug: "home",
+      title: "Home",
+      hero: { type: "none" },
+      layout,
+    })
+  })
+
+  it("renders the page slugged home without reading ?p=, so its lists aren't paginated", async () => {
+    render((await HomePage()) as React.ReactElement)
+    expect(queryPageBySlug).toHaveBeenCalledWith("home")
+    expect(renderBlocks).toHaveBeenCalledWith(layout, { paginated: false })
+    expect(jsonLd).toHaveBeenCalledOnce()
+    expect(screen.queryByRole("navigation", { name: "breadcrumb" })).not.toBeInTheDocument()
+  })
+
+  it("keeps paginating volume lists on other pages", async () => {
+    queryPageBySlug.mockResolvedValue({
+      slug: "volumes",
+      title: "Volumes",
+      hero: { type: "none" },
+      layout,
+    })
+    render(
+      (await Page({
+        params: Promise.resolve({ slug: "volumes" }),
+        searchParams: Promise.resolve({ p: "2" }),
+      })) as React.ReactElement,
+    )
+    expect(renderBlocks).toHaveBeenCalledWith(layout, { pageNumber: 2 })
   })
 })

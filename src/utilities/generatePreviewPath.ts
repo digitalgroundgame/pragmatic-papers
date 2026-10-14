@@ -1,7 +1,7 @@
 // eslint-disable-next-line @typescript-eslint/consistent-type-imports
 import { PayloadRequest } from "payload"
 
-import { COLLECTION_PATHS, type RoutedCollection } from "./routes"
+import { docPath, type RoutedCollection } from "./routes"
 
 // eslint-disable-next-line @typescript-eslint/consistent-type-definitions
 type Props = {
@@ -22,7 +22,8 @@ export const generatePreviewPath = ({ collection, slug }: Props) => {
   const encodedParams = new URLSearchParams({
     slug: encodedSlug,
     collection,
-    path: `${COLLECTION_PATHS[collection]}/${encodedSlug}`,
+    // The home page previews at `/`, where it's served, rather than through `/home`'s redirect.
+    path: docPath(collection, encodedSlug),
     previewSecret: process.env.PREVIEW_SECRET || "",
   })
 

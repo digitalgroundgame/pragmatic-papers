@@ -37,7 +37,6 @@ const both = (url: string) => ({ canonical: url, og: url })
 
 const listing = (p?: string) => ({ searchParams: Promise.resolve(p === undefined ? {} : { p }) })
 const page = (slug: string, p?: string) => ({ params: Promise.resolve({ slug }), ...listing(p) })
-const home = (p?: string) => ({ params: Promise.resolve({}), ...listing(p) })
 
 beforeEach(() => {
   vi.stubEnv("SERVER_URL", SITE)
@@ -53,16 +52,27 @@ afterEach(() => {
 // Every page of a `?p=` listing is its own canonical: naming page 1 on page 2 would tell
 // Google to drop the articles that are only on page 2.
 describe("canonical URLs", () => {
-  it("puts the home page at the site root, and keeps a later page of its volume list", async () => {
-    const { generateMetadata } = await import("../[slug]/page")
+  it("puts the home page at the site root, which has no later pages", async () => {
+    const { generateMetadata } = await import("../page")
     queries.queryPageBySlug.mockResolvedValue({
       slug: "home",
       meta: {},
       layout: [{ blockType: "content" }, { blockType: "volumeView" }],
     })
 
-    expect(urls(await generateMetadata(home()))).toEqual(both(`${SITE}/`))
-    expect(urls(await generateMetadata(home("2")))).toEqual(both(`${SITE}/?p=2`))
+    expect(urls(await generateMetadata())).toEqual(both(`${SITE}/`))
+  })
+
+  it("keeps a later page of another page's volume list", async () => {
+    const { generateMetadata } = await import("../[slug]/page")
+    queries.queryPageBySlug.mockResolvedValue({
+      slug: "volumes",
+      meta: {},
+      layout: [{ blockType: "volumeView" }],
+    })
+
+    expect(urls(await generateMetadata(page("volumes")))).toEqual(both(`${SITE}/volumes`))
+    expect(urls(await generateMetadata(page("volumes", "2")))).toEqual(both(`${SITE}/volumes?p=2`))
   })
 
   it("ignores ?p= on a page with nothing to paginate", async () => {

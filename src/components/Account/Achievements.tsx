@@ -41,7 +41,8 @@ export const Achievements: React.FC<AchievementsProps> = ({ apiPath = "/api" }) 
       {held.length ? (
         <>
           <p className="text-muted-foreground text-sm">
-            The first shows as a badge beside your name on your comments.
+            The first with a badge shows beside your name on your comments, unless you&apos;re
+            staff.
           </p>
           <ul className="space-y-3">
             {held.map((achievement) => (

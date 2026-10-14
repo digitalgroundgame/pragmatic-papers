@@ -142,6 +142,17 @@ export async function seedAchievements(
   const created: string[] = []
   for (const { key, ...data } of starterAchievements(config)) {
     if (await wasSeeded(payload, ACHIEVEMENTS_SLUG, key)) continue
+    // Two deploys can seed the same database at once (the site's and the Worker's), so one
+    // already there by name and rule counts as seeded too.
+    const { totalDocs } = await payload.count({
+      collection: ACHIEVEMENTS_SLUG as CollectionSlug,
+      where: { and: [{ name: { equals: data.name } }, { rule: { equals: data.rule } }] },
+      overrideAccess: true,
+    })
+    if (totalDocs) {
+      await markSeeded(payload, ACHIEVEMENTS_SLUG, key)
+      continue
+    }
     await payload.create({
       collection: ACHIEVEMENTS_SLUG as CollectionSlug,
       data: data as never,

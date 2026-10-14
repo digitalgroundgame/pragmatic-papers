@@ -8,8 +8,8 @@ import type { AchievementUser, ResolvedAchievementsConfig } from "../types"
  * Awards each `firstMembers` achievement still under its limit when an account becomes a
  * member: made as one in the admin, or given the role by a sign-up (the sign-in library inserts
  * the row, then the site sets its role). An account that was already a member is left alone, so
- * an edit never awards one out of order. A failure is logged: it never stops the account being
- * saved.
+ * an edit never awards one out of order. A failure is logged rather than thrown, but the awards
+ * are written in the save's transaction, so a database error there still fails the save.
  */
 export const awardOnMembership =
   (config: ResolvedAchievementsConfig): CollectionAfterChangeHook =>

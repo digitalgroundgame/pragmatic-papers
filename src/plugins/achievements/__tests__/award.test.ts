@@ -129,6 +129,15 @@ describe("seedAchievements", () => {
     expect(store[ACHIEVEMENTS_SLUG]).toEqual([])
   })
 
+  it("takes one another deploy already created as seeded, rather than making a second", async () => {
+    const { payload, store, kv } = fakePayload()
+
+    expect(await seedAchievements(payload, config)).toEqual([])
+    expect(store[ACHIEVEMENTS_SLUG]).toHaveLength(2)
+    expect(payload.create).not.toHaveBeenCalled()
+    expect(kv.size).toBe(2)
+  })
+
   it("creates nothing when the plugin is disabled in code", async () => {
     const { payload } = fakePayload({ achievements: [] })
     const disabled = resolveAchievementsConfig({ ...options, disabled: true })

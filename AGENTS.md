@@ -177,8 +177,9 @@ discarded; a suggestion of the deploy's own that nobody has touched is supersede
 a newer one. Each revision offered is recorded (`markOffered`, beside `markSeeded`
 in `src/utilities/seedOnce.ts`) with the version it was saved as, so a discarded
 one isn't offered again. A doc that has no offer recorded (one seeded before
-offers began) records the repo's current hash as offered and gets nothing, so only
-later changes reach it. Each doc it seeds, or finds already there, is recorded in Payload's
+offers began) is offered the repo's copy when it differs from the `sourceHash` the
+doc was saved with; one an editor wrote, with no `sourceHash`, records the repo's
+current hash as offered and gets only later changes. Each doc it seeds, or finds already there, is recorded in Payload's
 key-value store (`markSeeded`, which other
 deploy-seeded content uses too), so one an editor deletes stays deleted and is never
 recreated (`DOCS_SYNC=false` turns the sync off, as the staging Worker does: it reads

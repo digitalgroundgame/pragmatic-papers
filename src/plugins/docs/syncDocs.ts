@@ -104,8 +104,8 @@ export type RepoDocAction =
   /** Seeded before and deleted since: leave it deleted. */
   | "deleted"
   /**
-   * The site has it but was never offered a revision (it predates offers): record the repo's
-   * hash as offered and offer nothing, so only later changes are offered.
+   * The site has it and was never offered a revision (it predates offers), and holds the repo's
+   * copy already or was written by an editor: record the repo's hash as offered.
    */
   | "baseline"
   /** The repo's copy is the one last offered: nothing to do. */
@@ -122,6 +122,8 @@ export interface RepoDocState {
   seeded: boolean
   /** The revision last offered (`lastOffered`). */
   offered: OfferedRevision | null
+  /** The `sourceHash` the site's doc was saved with, for a doc never offered a revision. */
+  sourceHash?: string | null
   /** The doc's latest version, the one the admin opens. */
   latest: LatestVersion | null
   /** The hash of the repo's copy (`hashRepoDoc`). */
@@ -145,16 +147,20 @@ export function planRepoDoc({
   exists,
   seeded,
   offered,
+  sourceHash,
   latest,
   hash,
   localSeed,
 }: RepoDocState): RepoDocAction {
   if (!exists) return seeded && !localSeed ? "deleted" : "create"
-  if (!offered) return "baseline"
-  if (offered.hash === hash) return "unchanged"
+  // A doc seeded before offers began has no offer recorded; the hash it was saved with says
+  // whether the repo has changed it since. Any draft it has then is an editor's. One an editor
+  // wrote here has no hash, and gets only later changes.
+  if (!offered && (!sourceHash || sourceHash === hash)) return "baseline"
+  if (offered?.hash === hash) return "unchanged"
   const editorsDraft =
     latest?.status === "draft" &&
-    (offered.version === undefined || String(latest.id) !== String(offered.version))
+    (offered?.version === undefined || String(latest.id) !== String(offered.version))
   return editorsDraft ? "editorDraft" : "offer"
 }
 
@@ -256,7 +262,7 @@ export async function syncDocs(
       limit: 1,
       overrideAccess: true,
       pagination: false,
-      select: { slug: true },
+      select: { slug: true, sourceHash: true },
       where: { slug: { equals: slug } },
     })
     const existing = docs[0]
@@ -280,14 +286,13 @@ export async function syncDocs(
     const hash = hashRepoDoc(section, source, files)
 
     const offered = existing ? await lastOffered(payload, DOCS_SLUG, slug) : null
-    const latest =
-      existing && offered && offered.hash !== hash
-        ? await latestVersion(payload, existing.id)
-        : null
+    const savedHash = offered ? offered.hash : (existing?.sourceHash ?? hash)
+    const latest = existing && savedHash !== hash ? await latestVersion(payload, existing.id) : null
     const action = planRepoDoc({
       exists: Boolean(existing),
       seeded,
       offered,
+      sourceHash: existing?.sourceHash,
       latest,
       hash,
       localSeed,

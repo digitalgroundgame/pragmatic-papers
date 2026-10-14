@@ -186,6 +186,26 @@ describe("syncDocs", () => {
     expect((await publishedDoc())?.summary).toBe("An editor's draft.")
   })
 
+  it("offers a doc seeded before offers began the change the repo made since", async () => {
+    // Without an offer recorded, any draft is taken for an editor's: publish the suggestion.
+    await payload.update({
+      collection: "docs",
+      id: (await findDoc())!.id,
+      data: { _status: "published" },
+      context: ctx,
+      overrideAccess: true,
+    })
+    await payload.kv.delete(`offered:docs:${SLUG}`)
+    // The repo's copy is the one the doc was saved with: nothing to offer.
+    expect((await syncDocs(payload, dir)).existing).toEqual([SLUG])
+
+    await payload.kv.delete(`offered:docs:${SLUG}`)
+    await setSummary("Changed before offers began.")
+    expect((await syncDocs(payload, dir)).offered).toEqual([SLUG])
+    expect((await findDoc())?.summary).toBe("Changed before offers began.")
+    expect((await publishedDoc())?.summary).toBe("Yet another summary.")
+  })
+
   it("reuses a PNG it uploaded, though Media stored it as WebP", async () => {
     const folder = path.join(dir, SECTION)
     const copy = `${SLUG}-hero-copy.png`

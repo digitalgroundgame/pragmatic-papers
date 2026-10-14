@@ -201,8 +201,10 @@ describe("syncDocs", () => {
     )
   })
 
-  it("records a doc the site had before offers began as offered at the repo's copy, offering nothing", async () => {
-    const payload = fakePayload({ docs: [{ id: 3, sourceHash: "old" }] })
+  it("records a doc the site had before offers began as offered when it holds the repo's copy", async () => {
+    const payload = fakePayload({
+      docs: [{ id: 3, sourceHash: hashRepoDoc("site", source, [hero, image]) }],
+    })
     await expect(syncDocs(payload, dir)).resolves.toEqual({
       created: [],
       offered: [],
@@ -219,6 +221,29 @@ describe("syncDocs", () => {
     expect(payload.create).not.toHaveBeenCalled()
     expect(payload.update).not.toHaveBeenCalled()
     expect(payload.delete).not.toHaveBeenCalled()
+  })
+
+  it("offers a doc the site had before offers began the change the repo made since", async () => {
+    const payload = fakePayload({
+      docs: [{ id: 3, sourceHash: "old" }],
+      versions: [{ id: 20, version: { _status: "published" } }],
+      kv: ["seeded:docs:experiments"],
+    })
+    expect((await syncDocs(payload, dir)).offered).toEqual(["experiments"])
+    expect(payload.update).toHaveBeenCalledWith(expect.objectContaining({ id: 3, draft: true }))
+    expect(payload.kv.store.get("offered:docs:experiments")).toEqual(
+      expect.objectContaining({ hash: hashRepoDoc("site", source, [hero, image]) }),
+    )
+  })
+
+  it("leaves an editor's draft of a doc the site had before offers began", async () => {
+    const payload = fakePayload({
+      docs: [{ id: 3, sourceHash: "old" }],
+      versions: [{ id: 20, version: { _status: "draft" } }],
+      kv: ["seeded:docs:experiments"],
+    })
+    expect((await syncDocs(payload, dir)).skipped).toEqual(["experiments"])
+    expect(payload.update).not.toHaveBeenCalled()
   })
 
   it("leaves a doc alone when the repo's copy is the one it was last offered", async () => {
@@ -323,9 +348,21 @@ describe("planRepoDoc", () => {
     expect(planRepoDoc(state({ exists: false, localSeed: true }))).toBe("create")
   })
 
-  it("records a baseline, offering nothing, for a doc never offered a revision", () => {
+  it("records a baseline for a doc never offered a revision that holds the repo's copy", () => {
+    expect(planRepoDoc(state({ offered: null, sourceHash: "new" }))).toBe("baseline")
+    expect(planRepoDoc(state({ offered: null, sourceHash: "new", seeded: false }))).toBe("baseline")
+  })
+
+  it("records a baseline for a doc an editor wrote, which has no source hash", () => {
     expect(planRepoDoc(state({ offered: null }))).toBe("baseline")
-    expect(planRepoDoc(state({ offered: null, seeded: false }))).toBe("baseline")
+    expect(planRepoDoc(state({ offered: null, sourceHash: null }))).toBe("baseline")
+  })
+
+  it("offers a change made before offers began to a doc never offered a revision", () => {
+    expect(planRepoDoc(state({ offered: null, sourceHash: "old" }))).toBe("offer")
+    expect(
+      planRepoDoc(state({ offered: null, sourceHash: "old", latest: { id: 4, status: "draft" } })),
+    ).toBe("editorDraft")
   })
 
   it("does nothing when the repo's copy is the one last offered, even once discarded", () => {

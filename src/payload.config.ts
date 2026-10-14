@@ -27,7 +27,11 @@ import { updateRecommendationsTask } from "@/jobs/updateRecommendations"
 import { plugins } from "@/plugins"
 import { searchVectorAfterSchemaInit } from "@/plugins/searchVector"
 import { ssoAfterSchemaInit } from "@/plugins/sso"
-import { sentryPayloadPlugin, skipPluginErrorsInPino } from "@/sentryPayload"
+import {
+  restorePayloadErrorNames,
+  sentryPayloadPlugin,
+  skipPluginErrorsInPino,
+} from "@/sentryPayload"
 import { getSiteURL } from "@/utilities/getURL"
 import { describePlugin } from "@/utilities/registerPlugin"
 import { migrations } from "@/migrations"
@@ -40,6 +44,8 @@ import { fileURLToPath } from "url"
 
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
+
+restorePayloadErrorNames()
 
 export default buildConfig({
   logger: {

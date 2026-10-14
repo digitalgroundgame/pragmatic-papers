@@ -67,8 +67,9 @@ const APP_CONTAINER = "pragmatic-papers-e2e-app"
 // What the server reads at runtime, passed through from this environment. DATABASE_URI
 // is passed separately, below.
 const APP_ENV = ["PAYLOAD_SECRET", "SERVER_URL", "USE_LOCAL_STORAGE", "MERCH_SITE_URL", "PORT"]
-// Where the seed wrote uploads, which the server has to serve from its own filesystem.
-const UPLOAD_DIRS = ["public/media", "public/map-assets"]
+// Where the seed wrote uploads (maps included, in public/media/map-assets), which the
+// server has to serve from its own filesystem.
+const UPLOAD_DIRS = ["public/media"]
 
 const docker = (...args) => execFileSync("docker", args, { stdio: "inherit" })
 

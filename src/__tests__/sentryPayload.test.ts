@@ -16,7 +16,12 @@ import {
 } from "payload"
 import { beforeAll, beforeEach, describe, expect, it } from "vitest"
 
-import { clientIp, sentryPayloadPlugin, skipPluginErrorsInPino } from "../sentryPayload"
+import {
+  clientIp,
+  restorePayloadErrorNames,
+  sentryPayloadPlugin,
+  skipPluginErrorsInPino,
+} from "../sentryPayload"
 
 // Payload's own pino, which isn't a dependency of ours.
 const pino = createRequire(import.meta.resolve("payload"))("pino") as (
@@ -152,5 +157,45 @@ describe("Payload errors in Sentry", () => {
       "Error",
       "QueryError",
     ])
+  })
+})
+
+describe("restorePayloadErrorNames", () => {
+  // What the production build makes of Payload's classes: same code, one-letter names.
+  function minified() {
+    const y = class extends ValidationError {}
+    const z = class extends Forbidden {}
+    Object.defineProperty(y, "name", { value: "y" })
+    Object.defineProperty(z, "name", { value: "z" })
+    return { y, z }
+  }
+
+  it("reports a minified ValidationError, which Payload can't tell apart", async () => {
+    const { y } = minified()
+
+    await routeError(new y({ errors: [{ message: "Invalid", path: "slug" }] }))
+
+    expect(events.map((event) => event.exception?.values?.[0]?.type)).toEqual(["y"])
+  })
+
+  it("gives minified classes their names back, so routine errors are logged at info", async () => {
+    const { y, z } = minified()
+
+    restorePayloadErrorNames({ ValidationError: y, Forbidden: z })
+    const error = new y({ errors: [{ message: "Invalid", path: "slug" }] })
+    await routeError(error)
+    await routeError(new z())
+
+    expect(error.name).toBe("ValidationError")
+    expect(error).toBeInstanceOf(ValidationError)
+    expect(events).toHaveLength(0)
+  })
+
+  it("leaves Payload's own classes as they are", () => {
+    restorePayloadErrorNames()
+
+    expect(new ValidationError({ errors: [] }).name).toBe("ValidationError")
+    expect(new NotFound().name).toBe("NotFound")
+    expect(new QueryError([]).name).toBe("QueryError")
   })
 })

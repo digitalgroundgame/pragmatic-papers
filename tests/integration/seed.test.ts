@@ -75,6 +75,7 @@ describe("seed outside Next.js", () => {
       tours: true,
       sso: true,
       comments: true,
+      achievements: true,
     })
   }, 300_000)
 

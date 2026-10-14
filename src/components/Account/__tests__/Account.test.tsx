@@ -181,12 +181,59 @@ describe("Account", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent("That didn't work. Try again.")
   })
 
-  it("leaves sign-ins out when they can't be read", async () => {
+  it("leaves sign-ins and achievements out when they can't be read", async () => {
     route({ "GET /api/account": () => Response.json(member) })
 
     render(<Account providers={providers} />)
     expect(await screen.findByRole("button", { name: "Delete account" })).toBeInTheDocument()
-    await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2))
+    // The account, then its achievements and sign-ins.
+    await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(3))
     expect(screen.queryByRole("heading", { name: "Sign-ins" })).not.toBeInTheDocument()
+    expect(screen.queryByRole("heading", { name: "Achievements" })).not.toBeInTheDocument()
+  })
+
+  it("lists a member's achievements, the one on their comments first", async () => {
+    route({
+      "GET /api/account": () => Response.json(member),
+      "GET /api/auth-links": () => Response.json({ providers: [] }),
+      "GET /api/achievements/mine": () =>
+        Response.json({
+          achievements: [
+            {
+              key: "early-member",
+              label: "Early member",
+              description: "First.",
+              badge: "Early member",
+              earnedAt: null,
+            },
+            {
+              key: "verified",
+              label: "Verified",
+              description: "Checked.",
+              badge: "Verified",
+              earnedAt: null,
+            },
+          ],
+        }),
+    })
+
+    render(<Account providers={providers} />)
+    expect(await screen.findByRole("heading", { name: "Achievements" })).toBeInTheDocument()
+    const items = screen.getAllByRole("listitem")
+    expect(items[0]).toHaveTextContent("Early member")
+    expect(items[1]).toHaveTextContent("Verified")
+  })
+
+  it("leaves achievements out while they're switched off", async () => {
+    route({
+      "GET /api/account": () => Response.json(member),
+      "GET /api/auth-links": () => Response.json({ providers: [] }),
+      "GET /api/achievements/mine": () => Response.json({}, { status: 404 }),
+    })
+
+    render(<Account providers={providers} />)
+    expect(await screen.findByRole("button", { name: "Delete account" })).toBeInTheDocument()
+    await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(3))
+    expect(screen.queryByRole("heading", { name: "Achievements" })).not.toBeInTheDocument()
   })
 })

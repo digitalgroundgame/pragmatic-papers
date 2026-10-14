@@ -29,6 +29,10 @@ describe.each(docs.map((doc) => [path.relative(DOCS_DIR, doc.file), doc] as cons
       expect(meta.navTitle!.length).toBeLessThanOrEqual(24)
     })
 
+    it("has a summary the Docs collection accepts", () => {
+      expect(meta.summary.length).toBeLessThanOrEqual(200)
+    })
+
     it.runIf(meta.tour !== undefined)("names a tour that exists", () => {
       expect(Object.keys(TOURS)).toContain(meta.tour)
     })

@@ -17,6 +17,7 @@ import { regenerateBlurHandler } from "./endpoints/regenerateBlur"
 import { detachHandler } from "./endpoints/detach"
 import { referencesHandler } from "./endpoints/references"
 import { generateBlurDataUrl } from "./hooks/generateBlurDataUrl"
+import { revalidateMediaUsers } from "./hooks/revalidateMediaUsers"
 import { attributeUnsplashPhoto } from "./hooks/attributeUnsplashPhoto"
 import { unsplashFileHandler, unsplashSearchHandler } from "./endpoints/unsplash"
 import { validateAlt } from "./validateAlt"
@@ -199,7 +200,7 @@ export const Media: CollectionConfig = {
       },
       generateBlurDataUrl,
     ],
-    afterChange: [grantPublicProfile<MediaType>((doc) => doc.narrator)],
+    afterChange: [grantPublicProfile<MediaType>((doc) => doc.narrator), revalidateMediaUsers],
   },
   upload: {
     admin: {

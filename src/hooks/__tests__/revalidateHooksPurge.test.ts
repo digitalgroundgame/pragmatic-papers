@@ -43,37 +43,61 @@ describe("hooks that purge the edge", () => {
       "a published page",
       () => revalidatePage(args({ doc: published("about"), previousDoc: draft("about") })),
       "page about",
-      { paths: ["/about", "/sitemap.xml"] },
+      {
+        paths: ["/about", "/sitemap.xml"],
+        shared: false,
+        revalidated: { paths: ["/about"], tags: ["pages-sitemap"] },
+      },
     ],
     [
       "an unpublished page",
       () => revalidatePage(args({ doc: draft("about"), previousDoc: published("about") })),
       "page about unpublished",
-      { paths: ["/about", "/sitemap.xml"] },
+      {
+        paths: ["/about", "/sitemap.xml"],
+        shared: false,
+        revalidated: { paths: ["/about"], tags: ["pages-sitemap"] },
+      },
     ],
     [
       "a deleted page",
       () => revalidatePageDelete(args({ doc: published("about") })),
       "page about deleted",
-      { paths: ["/about", "/sitemap.xml"] },
+      {
+        paths: ["/about", "/sitemap.xml"],
+        shared: false,
+        revalidated: { paths: ["/about"], tags: ["pages-sitemap"] },
+      },
     ],
     [
       "a published volume",
       () => revalidateVolume(args({ doc: published("vol-1"), previousDoc: draft("vol-1") })),
       "volume vol-1",
-      { paths: ["/volumes/vol-1", "/volumes/feed.xml"], shared: true },
+      {
+        paths: ["/volumes/vol-1", "/volumes/feed.xml"],
+        shared: true,
+        revalidated: { paths: ["/volumes/vol-1", "/volumes/feed.xml"], tags: ["volumes-sitemap"] },
+      },
     ],
     [
       "an unpublished volume",
       () => revalidateVolume(args({ doc: draft("vol-1"), previousDoc: published("vol-1") })),
       "volume vol-1 unpublished",
-      { paths: ["/volumes/vol-1", "/volumes/feed.xml"], shared: true },
+      {
+        paths: ["/volumes/vol-1", "/volumes/feed.xml"],
+        shared: true,
+        revalidated: { paths: ["/volumes/vol-1", "/volumes/feed.xml"], tags: ["volumes-sitemap"] },
+      },
     ],
     [
       "a deleted volume",
       () => revalidateVolumeDelete(args({ doc: published("vol-1") })),
       "volume vol-1 deleted",
-      { paths: ["/volumes/vol-1", "/volumes/feed.xml"], shared: true },
+      {
+        paths: ["/volumes/vol-1", "/volumes/feed.xml"],
+        shared: true,
+        revalidated: { paths: ["/volumes/vol-1", "/volumes/feed.xml"], tags: ["volumes-sitemap"] },
+      },
     ],
     ["a merch product", () => revalidateMerchProduct(args({ doc: {} })), "merch product changed"],
     [
@@ -96,6 +120,7 @@ describe("hooks that purge the edge", () => {
     expect(purgeEdgeCache).toHaveBeenCalledWith(payload.logger, "author jane", {
       paths: ["/contributors/jane", "/contributors"],
       shared: true,
+      revalidated: { paths: ["/contributors/jane", "/contributors"], tags: [] },
     })
   })
 

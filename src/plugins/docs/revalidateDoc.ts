@@ -1,7 +1,6 @@
-import { revalidatePath, revalidateTag } from "next/cache"
 import type { CollectionAfterChangeHook, CollectionAfterDeleteHook } from "payload"
 
-import { purgeEdgeCache } from "@/hooks/purgeEdgeCache"
+import { revalidateForReaders } from "@/hooks/revalidateForReaders"
 import type { Doc } from "@/payload-types"
 import { readersChange } from "@/utilities/readersCopy"
 
@@ -9,15 +8,19 @@ import { readersChange } from "@/utilities/readersCopy"
 export const DOCS_CACHE_TAG = "docs"
 
 /**
- * What the Worker purges for a doc save: every page under /docs, since each one's sidebar
- * and Previous and Next links read every published doc (the `docs` tag).
+ * A doc save revalidates /docs, its own pages and the `docs` tag, and the Worker purges every
+ * page under /docs (purging `/docs` takes them all), since each one's sidebar and Previous and
+ * Next links read every published doc.
  */
-const DOCS_PATHS = ["/docs"]
-
-const revalidate = (slug: string | null | undefined): void => {
-  revalidateTag(DOCS_CACHE_TAG, "max")
-  revalidatePath("/docs")
-  if (slug) revalidatePath(`/docs/${slug}`)
+const revalidate = (
+  logger: Parameters<typeof revalidateForReaders>[0],
+  reason: string,
+  slugs: (string | null | undefined)[],
+): void => {
+  revalidateForReaders(logger, reason, {
+    paths: ["/docs", ...slugs.filter(Boolean).map((slug) => `/docs/${slug}`)],
+    tags: [DOCS_CACHE_TAG],
+  })
 }
 
 export const revalidateDoc: CollectionAfterChangeHook<Doc> = async (args) => {
@@ -25,10 +28,9 @@ export const revalidateDoc: CollectionAfterChangeHook<Doc> = async (args) => {
   if (req.context.disableRevalidate) return doc
   const change = await readersChange(args)
   if (!change) return doc
-  revalidate(doc.slug)
   const { before } = change
-  if (before?.slug && before.slug !== doc.slug) revalidatePath(`/docs/${before.slug}`)
-  purgeEdgeCache(req.payload.logger, `doc ${doc.slug}`, { paths: DOCS_PATHS })
+  const renamed = before?.slug && before.slug !== doc.slug ? before.slug : null
+  revalidate(req.payload.logger, `doc ${doc.slug}`, [doc.slug, renamed])
   return doc
 }
 
@@ -37,7 +39,6 @@ export const revalidateDocDelete: CollectionAfterDeleteHook<Doc> = ({
   req: { payload, context },
 }) => {
   if (context.disableRevalidate) return doc
-  revalidate(doc?.slug)
-  purgeEdgeCache(payload.logger, `doc ${doc?.slug} deleted`, { paths: DOCS_PATHS })
+  revalidate(payload.logger, `doc ${doc?.slug} deleted`, [doc?.slug])
   return doc
 }

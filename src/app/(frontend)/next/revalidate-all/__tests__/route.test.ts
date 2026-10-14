@@ -1,13 +1,16 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-const { revalidatePath, syncRepoDocs, createMissingStarterPages } = vi.hoisted(() => ({
-  revalidatePath: vi.fn(),
-  syncRepoDocs: vi.fn(),
-  createMissingStarterPages: vi.fn(),
-}))
+const { revalidatePath, revalidateTag, syncRepoDocs, createMissingStarterPages } = vi.hoisted(
+  () => ({
+    revalidatePath: vi.fn(),
+    revalidateTag: vi.fn(),
+    syncRepoDocs: vi.fn(),
+    createMissingStarterPages: vi.fn(),
+  }),
+)
 const payload = {}
 
-vi.mock("next/cache", () => ({ revalidatePath }))
+vi.mock("next/cache", () => ({ revalidatePath, revalidateTag }))
 vi.mock("@/plugins/docs/syncRepoDocs", () => ({ syncRepoDocs }))
 vi.mock("@/collections/Pages/starterPages", () => ({ createMissingStarterPages }))
 vi.mock("@/data/payload", () => ({ getPayloadClient: async () => payload }))
@@ -55,6 +58,31 @@ describe("POST /next/revalidate-all", () => {
     expect(syncRepoDocs).not.toHaveBeenCalled()
     expect(createMissingStarterPages).not.toHaveBeenCalled()
     expect(revalidatePath).toHaveBeenCalledExactlyOnceWith("/", "layout")
+  })
+
+  it("revalidates only what a save names, as the save did at the origin", async () => {
+    const response = await POST(
+      request(
+        "Bearer s3cret",
+        "?save=1&path=/articles/a&next=1&next-path=/articles/a&next-path=evil&next-tag=articles-sitemap",
+      ),
+    )
+
+    await expect(response.json()).resolves.toEqual({
+      revalidated: true,
+      paths: ["/articles/a"],
+      tags: ["articles-sitemap"],
+    })
+    expect(revalidatePath).toHaveBeenCalledExactlyOnceWith("/articles/a")
+    expect(revalidateTag).toHaveBeenCalledExactlyOnceWith("articles-sitemap", "max")
+    expect(syncRepoDocs).not.toHaveBeenCalled()
+  })
+
+  it("revalidates nothing in Next's cache for a save that revalidated nothing there", async () => {
+    await POST(request("Bearer s3cret", "?save=1&path=/interactives/a&next=1"))
+
+    expect(revalidatePath).not.toHaveBeenCalled()
+    expect(revalidateTag).not.toHaveBeenCalled()
   })
 
   it("still revalidates when the docs sync fails", async () => {

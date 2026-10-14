@@ -45,6 +45,7 @@ describe("revalidateArticle", () => {
     expect(purgeEdgeCache).toHaveBeenCalledWith(payload.logger, "article new-piece", {
       paths: paths(),
       shared: true,
+      revalidated: { paths: paths(), tags: ["articles-sitemap"] },
     })
   })
 

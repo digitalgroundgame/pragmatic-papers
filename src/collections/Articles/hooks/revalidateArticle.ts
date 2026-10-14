@@ -1,8 +1,6 @@
 import type { CollectionAfterChangeHook, CollectionAfterDeleteHook, Payload } from "payload"
 
-import { revalidatePath, revalidateTag } from "next/cache"
-
-import { purgeEdgeCache } from "@/hooks/purgeEdgeCache"
+import { revalidateForReaders } from "@/hooks/revalidateForReaders"
 import type { Article } from "@/payload-types"
 import { readersChange, type ReadersCopy } from "@/utilities/readersCopy"
 
@@ -14,10 +12,6 @@ const revalidateDoc = async (givenDoc: ReadersCopy, payload: Payload) => {
     "/articles/substack.xml",
     `/articles/${givenDoc.slug}/substack.xml`,
   ]
-
-  payload.logger.info(`Revalidating article at path: ${path}`)
-  for (const changed of paths) revalidatePath(changed)
-  revalidateTag("articles-sitemap", "max")
 
   // Find and revalidate all volumes that reference this article
   const volumes = await payload.find({
@@ -33,15 +27,14 @@ const revalidateDoc = async (givenDoc: ReadersCopy, payload: Payload) => {
     depth: 0,
   })
 
-  volumes.docs.forEach((volume) => {
-    const volumePath = `/volumes/${volume.slug}`
-    payload.logger.info(`Revalidating volume at path: ${volumePath}`)
-    revalidatePath(volumePath)
-    paths.push(volumePath)
-  })
+  for (const volume of volumes.docs) paths.push(`/volumes/${volume.slug}`)
 
   // The sitemap and the listings render per request here; `shared` covers them on the Worker.
-  purgeEdgeCache(payload.logger, `article ${givenDoc.slug}`, { paths, shared: true })
+  revalidateForReaders(payload.logger, `article ${givenDoc.slug}`, {
+    paths,
+    tags: ["articles-sitemap"],
+    shared: true,
+  })
 }
 
 export const revalidateArticle: CollectionAfterChangeHook<Article> = async (args) => {

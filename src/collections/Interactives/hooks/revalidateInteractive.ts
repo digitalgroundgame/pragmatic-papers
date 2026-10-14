@@ -1,9 +1,7 @@
 import type { CollectionAfterChangeHook, CollectionAfterDeleteHook } from "payload"
 
-import { revalidateTag } from "next/cache"
-
 import { interactivePaths, interactiveTag } from "@/collections/InteractiveSnapshots/tag"
-import { purgeEdgeCache } from "@/hooks/purgeEdgeCache"
+import { revalidateForReaders } from "@/hooks/revalidateForReaders"
 import type { Interactive } from "@/payload-types"
 import { readersChange } from "@/utilities/readersCopy"
 
@@ -21,21 +19,17 @@ export const revalidateInteractive: CollectionAfterChangeHook<Interactive> = asy
   const { before, after } = change
   const { payload } = req
   if (after) {
-    payload.logger.info(`Revalidating interactive: ${doc.slug}`)
-    revalidateTag(interactiveTag(doc.id), "max")
-    revalidateTag("interactives-sitemap", "max")
-    purgeEdgeCache(payload.logger, `interactive ${doc.slug}`, {
-      paths: interactivePaths(doc.slug),
+    revalidateForReaders(payload.logger, `interactive ${doc.slug}`, {
+      tags: [interactiveTag(doc.id), "interactives-sitemap"],
+      purgeOnly: interactivePaths(doc.slug),
     })
   }
   // Unpublished, or the slug moved: the sitemap must stop naming it (or must name the new
   // slug instead).
   if (before?.slug && (!after || before.slug !== after.slug)) {
-    payload.logger.info(`Revalidating old interactive: ${before.slug}`)
-    revalidateTag(interactiveTag(doc.id), "max")
-    revalidateTag("interactives-sitemap", "max")
-    purgeEdgeCache(payload.logger, `interactive ${before.slug}`, {
-      paths: interactivePaths(before.slug),
+    revalidateForReaders(payload.logger, `interactive ${before.slug}`, {
+      tags: [interactiveTag(doc.id), "interactives-sitemap"],
+      purgeOnly: interactivePaths(before.slug),
     })
   }
   return doc
@@ -46,10 +40,9 @@ export const revalidateInteractiveDelete: CollectionAfterDeleteHook<Interactive>
   req: { payload, context },
 }) => {
   if (!context.disableRevalidate) {
-    revalidateTag(interactiveTag(doc.id), "max")
-    revalidateTag("interactives-sitemap", "max")
-    purgeEdgeCache(payload.logger, `interactive ${doc.slug} deleted`, {
-      paths: interactivePaths(doc.slug),
+    revalidateForReaders(payload.logger, `interactive ${doc.slug} deleted`, {
+      tags: [interactiveTag(doc.id), "interactives-sitemap"],
+      purgeOnly: interactivePaths(doc.slug),
     })
   }
   return doc

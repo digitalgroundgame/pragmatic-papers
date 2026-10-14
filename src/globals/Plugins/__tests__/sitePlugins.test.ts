@@ -28,6 +28,8 @@ describe("the site's plugins", () => {
       "Notifications",
       "Guided tours",
       "SSO",
+      "Comments",
+      "Staff by default",
     ])
     expect(listed.find((p) => p.slug === "plugin-search")?.collections).toEqual(["search"])
     expect(listed.find((p) => p.slug === "docs")?.collections).toEqual(["docs"])

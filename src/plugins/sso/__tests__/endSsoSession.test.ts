@@ -13,7 +13,10 @@ vi.mock("next/headers", () => ({ cookies: () => cookies() }))
 
 const signOut = vi.fn()
 const logger = { warn: vi.fn() }
-const config = { cookieName: "payload-token-sso" } as ResolvedSsoConfig
+const config = {
+  cookieName: "pp-session",
+  payloadUserCookie: "payload-token-sso",
+} as ResolvedSsoConfig
 
 const logout = (cookie?: string) =>
   endSsoSession(config)({
@@ -36,21 +39,19 @@ describe("endSsoSession", () => {
     expect(set).not.toHaveBeenCalled()
   })
 
-  it("deletes the session and clears its cookie", async () => {
-    await logout("payload-token-sso=abc")
+  it("deletes the session and clears its cookies", async () => {
+    await logout("pp-session=abc")
 
     expect(signOut).toHaveBeenCalledWith({ headers: expect.any(Headers) })
-    expect(set).toHaveBeenCalledWith(
-      "payload-token-sso",
-      "",
-      expect.objectContaining({ maxAge: 0 }),
-    )
+    for (const name of ["pp-session", "payload-token-sso"]) {
+      expect(set).toHaveBeenCalledWith(name, "", expect.objectContaining({ maxAge: 0 }))
+    }
   })
 
   it("still clears the cookie, and logs, when the session can't be deleted", async () => {
     signOut.mockRejectedValue(new Error("database is down"))
 
-    await logout("payload-token-sso=abc")
+    await logout("pp-session=abc")
 
     expect(logger.warn).toHaveBeenCalled()
     expect(set).toHaveBeenCalled()
@@ -58,7 +59,7 @@ describe("endSsoSession", () => {
 
   it("logs out through the Local API, where there's no cookie to clear", async () => {
     cookies.mockRejectedValue(new Error("no request scope"))
-    await expect(logout("payload-token-sso=abc")).resolves.toBeUndefined()
+    await expect(logout("pp-session=abc")).resolves.toBeUndefined()
     expect(signOut).toHaveBeenCalled()
   })
 })

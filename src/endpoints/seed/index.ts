@@ -479,7 +479,9 @@ export const seed = async (
         await payload.updateGlobal({
           slug: "plugins",
           context,
-          data: { switches: { docs: true, notifications: true, tours: true, sso: true } },
+          data: {
+            switches: { docs: true, notifications: true, tours: true, sso: true, comments: true },
+          },
         })
       },
     },

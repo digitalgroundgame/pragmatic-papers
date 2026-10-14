@@ -1,18 +1,31 @@
 import type { CollectionConfig, Condition, Field, TabsField } from "payload"
 
-import { isPluginOn, registerPlugin } from "@/utilities/registerPlugin"
+import { registerPlugin } from "@/utilities/registerPlugin"
 
 import { configuredProviders } from "./auth"
-import { DEFAULT_COOKIE_NAME } from "./constants"
+import { accountEndpoints } from "./endpoints/account"
 import { authEndpoints } from "./endpoints/auth"
 import { linkEndpoints } from "./endpoints/links"
 import { endSsoSession } from "./hooks/endSsoSession"
+import { onlyPayloadUsers } from "./hooks/onlyPayloadUsers"
+import { resolveSsoConfig } from "./session"
 import { ssoStrategy } from "./strategy"
 import type { ResolvedSsoConfig, SsoPluginConfig } from "./types"
 
-export { DEFAULT_COOKIE_NAME as SSO_COOKIE_NAME } from "./constants"
+export {
+  DEFAULT_COOKIE_NAME as SSO_COOKIE_NAME,
+  DEFAULT_PAYLOAD_USER_COOKIE as SSO_PAYLOAD_USER_COOKIE,
+  PROVIDER_LABELS as SSO_PROVIDER_LABELS,
+} from "./constants"
 export { ssoAfterSchemaInit } from "./schema"
-export type { SsoPluginConfig, SsoProviderCredentials, SsoProviderId } from "./types"
+export { getSignedInUser, type SignedInUser } from "./session"
+export { MAX_NAME_LENGTH, type AccountSummary } from "./endpoints/account"
+export type {
+  SsoPluginConfig,
+  SsoProviderCredentials,
+  SsoProviderId,
+  SsoSignUpConfig,
+} from "./types"
 
 /** Columns Better Auth reads on the users table. */
 const betterAuthFields: Field[] = [
@@ -116,9 +129,13 @@ function withConnections(fields: Field[], sso: ResolvedSsoConfig): Field[] {
  * three tables (`ssoAfterSchemaInit`, which goes in the database adapter's
  * `afterSchemaInit`). Payload keeps everything else: its users, their roles, and its own
  * email and password login, which stays as the way in when a provider is down. A provider
- * login never creates a user; it attaches to the one whose address it has verified, or to
- * the one who linked it from their account page (the only way for Destiny.gg, which shares
- * no address).
+ * login attaches to the user whose address it has verified, or to the one who linked it from
+ * their account page (the only way for Destiny.gg, which shares no address). It creates a
+ * user only when `signUp` is configured and the sign-in asks for one.
+ *
+ * Only users `isPayloadUser` accepts become Payload's `req.user`. Everyone else signed in
+ * (members) is anonymous to Payload, and the site's own features find them with
+ * `getSignedInUser`.
  */
 export const ssoPlugin = registerPlugin<SsoPluginConfig>({
   slug: "sso",
@@ -126,23 +143,16 @@ export const ssoPlugin = registerPlugin<SsoPluginConfig>({
     name: "SSO",
     source: "src/plugins/sso",
     description:
-      "Staff sign-in to the admin with Google, Discord or Destiny.gg, through Better Auth, and a Connections tab on the account page to link them. Email and password login stays on.",
+      "Sign-in with Google, Discord or Destiny.gg, through Better Auth: staff to the admin, with a Connections tab on their account, and members to the site, when sign-ups are open. Email and password login stays on.",
     switch: {
       label: "Single sign-on",
       description:
-        "“Sign in with Google”, “Sign in with Discord” and “Sign in with Destiny.gg” on the admin's login page, for people who already have an account here, and the Connections tab that links them. Each provider also needs its credentials (System → Integrations).",
+        "“Sign in with Google”, “Sign in with Discord” and “Sign in with Destiny.gg” on the admin's login page, for people who already have an account here, the Connections tab that links them, and members' sign-ins on the site. Each provider also needs its credentials (System → Integrations).",
       defaultValue: false,
     },
   },
   plugin: ({ config, plugins: _plugins, ...options }) => {
-    const sso: ResolvedSsoConfig = {
-      usersSlug: "users",
-      cookieName: DEFAULT_COOKIE_NAME,
-      sessionSeconds: 60 * 60 * 24 * 7,
-      requiredUserColumns: [],
-      ...options,
-      enabled: ({ payload }) => isPluginOn(options.enabled, payload),
-    }
+    const sso = resolveSsoConfig(options)
 
     const collections = (config.collections ?? []).map((collection): CollectionConfig => {
       if (collection.slug !== sso.usersSlug) return collection
@@ -155,6 +165,7 @@ export const ssoPlugin = registerPlugin<SsoPluginConfig>({
           auth: { ...auth, strategies: [...(auth.strategies ?? []), ssoStrategy(sso)] },
           hooks: {
             ...collection.hooks,
+            beforeLogin: [...(collection.hooks?.beforeLogin ?? []), onlyPayloadUsers(sso)],
             afterLogout: [...(collection.hooks?.afterLogout ?? []), endSsoSession(sso)],
           },
         }),
@@ -166,7 +177,12 @@ export const ssoPlugin = registerPlugin<SsoPluginConfig>({
     return {
       ...config,
       collections,
-      endpoints: [...(config.endpoints ?? []), ...authEndpoints(sso), ...linkEndpoints(sso)],
+      endpoints: [
+        ...(config.endpoints ?? []),
+        ...authEndpoints(sso),
+        ...linkEndpoints(sso),
+        ...accountEndpoints(sso),
+      ],
       admin: {
         ...config.admin,
         components: {

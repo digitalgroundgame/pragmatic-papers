@@ -2,7 +2,7 @@ import type { BetterAuthOptions } from "better-auth"
 import type { Payload } from "payload"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { configuredProviders, destinyEmail, getAuth } from "../auth"
+import { adoptVerifiedEmail, configuredProviders, destinyEmail, getAuth } from "../auth"
 import type { ResolvedSsoConfig } from "../types"
 
 const betterAuth = vi.fn((options: BetterAuthOptions) => ({ options }))
@@ -18,7 +18,10 @@ const config = (overrides: Partial<ResolvedSsoConfig> = {}): ResolvedSsoConfig =
   baseURL: () => "https://example.com",
   secret: () => "secret",
   usersSlug: "users",
-  cookieName: "payload-token-sso",
+  cookieName: "pp-session",
+  payloadUserCookie: "payload-token-sso",
+  isPayloadUser: () => true,
+  accountPath: "/account",
   sessionSeconds: 3600,
   requiredUserColumns: [],
   ...overrides,
@@ -27,6 +30,10 @@ const config = (overrides: Partial<ResolvedSsoConfig> = {}): ResolvedSsoConfig =
 const pool = { query: vi.fn() }
 const newPayload = () =>
   ({ db: { pool }, config: { routes: { api: "/api" } } }) as unknown as Payload
+
+/** A user as Better Auth hands it to the create hooks. */
+const newUser = (overrides: Record<string, unknown> = {}) =>
+  ({ id: "9", name: "Ada", email: "ada@example.com", emailVerified: true, ...overrides }) as never
 
 /** The options `getAuth` handed Better Auth for a fresh Payload instance. */
 async function optionsFor(sso: ResolvedSsoConfig): Promise<BetterAuthOptions> {
@@ -63,12 +70,66 @@ describe("getAuth", () => {
     expect(options.socialProviders).toEqual({ google: { ...google, disableSignUp: true } })
   })
 
-  it("refuses to create a user however it's asked", async () => {
+  it("refuses to create a user however it's asked, without sign-up", async () => {
     const options = await optionsFor(config())
-    expect(await options.databaseHooks?.user?.create?.before?.({} as never, null)).toBe(false)
+    expect(await options.databaseHooks?.user?.create?.before?.(newUser(), null)).toBe(false)
     expect(options.disabledPaths).toEqual(
       expect.arrayContaining(["/sign-up/email", "/update-user", "/delete-user"]),
     )
+  })
+
+  describe("with sign-up", () => {
+    const enabled = vi.fn()
+    const afterCreate = vi.fn()
+    const signUp = { enabled, afterCreate, columns: () => ({ slug: "member-abc" }) }
+
+    beforeEach(() => {
+      enabled.mockReset().mockResolvedValue(true)
+      afterCreate.mockReset()
+    })
+
+    it("lets a provider create a user only when the sign-in asks to", async () => {
+      const options = await optionsFor(config({ providers: () => ({ google }), signUp }))
+      expect(options.socialProviders).toEqual({
+        google: { ...google, disableImplicitSignUp: true },
+      })
+    })
+
+    it("writes the required columns in the same insert", async () => {
+      const options = await optionsFor(config({ signUp }))
+      expect(await options.databaseHooks?.user?.create?.before?.(newUser(), null)).toEqual({
+        data: expect.objectContaining({ email: "ada@example.com", slug: "member-abc" }),
+      })
+    })
+
+    it("refuses while sign-ups are closed", async () => {
+      enabled.mockResolvedValue(false)
+      const options = await optionsFor(config({ signUp }))
+      expect(await options.databaseHooks?.user?.create?.before?.(newUser(), null)).toBe(false)
+    })
+
+    it("refuses an address the provider hasn't verified", async () => {
+      const options = await optionsFor(config({ signUp }))
+      const before = options.databaseHooks?.user?.create?.before
+      expect(await before?.(newUser({ emailVerified: false }), null)).toBe(false)
+      expect(enabled).not.toHaveBeenCalled()
+    })
+
+    it("takes Destiny.gg's placeholder, from Destiny.gg's callback only", async () => {
+      const options = await optionsFor(config({ signUp }))
+      const before = options.databaseHooks?.user?.create?.before
+      const user = newUser({ email: "destiny-42@no-email.invalid", emailVerified: false })
+      expect(await before?.(user, { params: { id: "destiny" } } as never)).toEqual({
+        data: expect.objectContaining({ email: "destiny-42@no-email.invalid" }),
+      })
+      expect(await before?.(user, { params: { id: "discord" } } as never)).toBe(false)
+    })
+
+    it("hands the new user to Payload to finish", async () => {
+      const options = await optionsFor(config({ signUp }))
+      await options.databaseHooks?.user?.create?.after?.(newUser(), null)
+      expect(afterCreate).toHaveBeenCalledWith({ payload: expect.anything(), userId: "9" })
+    })
   })
 
   it("reads the users collection, and names its required columns without returning them", async () => {
@@ -109,12 +170,16 @@ describe("getAuth", () => {
   it("registers Destiny.gg through a plugin, not as a built-in provider", async () => {
     const options = await optionsFor(config({ providers: () => ({ google, destiny }) }))
     expect(Object.keys(options.socialProviders ?? {})).toEqual(["google"])
-    expect(options.plugins?.map(({ id }) => id)).toEqual(["payload-linking", "destiny"])
+    expect(options.plugins?.map(({ id }) => id)).toEqual([
+      "payload-linking",
+      "payload-user-cookie",
+      "destiny",
+    ])
   })
 
   it("registers no Destiny.gg plugin without its credentials", async () => {
     const options = await optionsFor(config({ providers: () => ({ google, destiny: null }) }))
-    expect(options.plugins?.map(({ id }) => id)).toEqual(["payload-linking"])
+    expect(options.plugins?.map(({ id }) => id)).toEqual(["payload-linking", "payload-user-cookie"])
   })
 })
 
@@ -130,6 +195,43 @@ describe("destinyEmail", () => {
   it("is null for an account nobody has linked", async () => {
     const query = vi.fn().mockResolvedValue({ rows: [] })
     expect(await destinyEmail({ query } as never, "users", profile)).toBeNull()
+  })
+})
+
+describe("adoptVerifiedEmail", () => {
+  beforeEach(() => pool.query.mockReset())
+
+  it("replaces only a placeholder, with an address nobody else has", async () => {
+    await adoptVerifiedEmail(pool as never, "users", "9", "Ada@Example.com")
+    const [sql, values] = pool.query.mock.calls[0]!
+    expect(sql).toContain("email like $3")
+    expect(sql).toContain("not exists")
+    expect(values).toEqual(["ada@example.com", 9, "%@no-email.invalid"])
+  })
+
+  it("never takes another placeholder", async () => {
+    await adoptVerifiedEmail(pool as never, "users", "9", "destiny-1@no-email.invalid")
+    expect(pool.query).not.toHaveBeenCalled()
+  })
+})
+
+describe("validateUserInfo", () => {
+  beforeEach(() => pool.query.mockReset())
+  const validate = async (action: string, user: Record<string, unknown>) =>
+    (await optionsFor(config())).user?.validateUserInfo?.(
+      { user, source: { action, method: "oauth", oauth: { providerId: "discord" } } } as never,
+      {} as never,
+    )
+
+  it("adopts the address a newly linked provider verified", async () => {
+    await validate("link-account", { id: "9", email: "ada@example.com", emailVerified: true })
+    expect(pool.query).toHaveBeenCalledOnce()
+  })
+
+  it("leaves sign-ins, and addresses nobody verified, alone", async () => {
+    await validate("sign-in", { id: "9", email: "ada@example.com", emailVerified: true })
+    await validate("link-account", { id: "9", email: "ada@example.com", emailVerified: false })
+    expect(pool.query).not.toHaveBeenCalled()
   })
 })
 

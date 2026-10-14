@@ -14,8 +14,9 @@ const logger = { error: vi.fn() }
 
 const config = {
   enabled,
-  cookieName: "payload-token-sso",
+  cookieName: "pp-session",
   usersSlug: "users",
+  isPayloadUser: (user: Record<string, unknown>) => (user.roles as string[]).includes("editor"),
 } as unknown as ResolvedSsoConfig
 
 const payload = { findByID, logger, db: { defaultIDType: "number" } } as unknown as Payload
@@ -34,13 +35,13 @@ beforeEach(() => {
 
 describe("hasSessionCookie", () => {
   it.each([
-    ["payload-token-sso=abc", true],
-    ["theme=dark; payload-token-sso=abc", true],
+    ["pp-session=abc", true],
+    ["theme=dark; pp-session=abc", true],
     ["payload-token=abc", false],
-    ["not-payload-token-sso=abc", false],
+    ["not-pp-session=abc", false],
     ["", false],
   ])("%j → %s", (cookie, expected) => {
-    expect(hasSessionCookie(new Headers({ cookie }), "payload-token-sso")).toBe(expected)
+    expect(hasSessionCookie(new Headers({ cookie }), "pp-session")).toBe(expected)
   })
 })
 
@@ -53,7 +54,7 @@ describe("ssoStrategy", () => {
 
   it("ignores the cookie while single sign-on is switched off", async () => {
     enabled.mockResolvedValue(false)
-    expect(await authenticate("payload-token-sso=abc")).toEqual({ user: null })
+    expect(await authenticate("pp-session=abc")).toEqual({ user: null })
     expect(getSession).not.toHaveBeenCalled()
   })
 
@@ -61,7 +62,7 @@ describe("ssoStrategy", () => {
     getSession.mockResolvedValue({ user: { id: "7" }, session: {} })
     findByID.mockResolvedValue({ id: 7, email: "editor@example.com", roles: ["editor"] })
 
-    const result = await authenticate("payload-token-sso=abc")
+    const result = await authenticate("pp-session=abc")
 
     expect(getSession).toHaveBeenCalledWith(
       expect.objectContaining({ query: { disableRefresh: true } }),
@@ -70,18 +71,24 @@ describe("ssoStrategy", () => {
     expect(result.user).toMatchObject({ id: 7, collection: "users", _strategy: "sso" })
   })
 
+  it("leaves a member anonymous to Payload", async () => {
+    getSession.mockResolvedValue({ user: { id: "8" }, session: {} })
+    findByID.mockResolvedValue({ id: 8, email: "member@example.com", roles: ["member"] })
+    expect(await authenticate("pp-session=abc")).toEqual({ user: null })
+  })
+
   it.each([
     ["the session has expired", null, { id: 7 }],
     ["the user has been deleted", { user: { id: "7" } }, null],
   ])("signs nobody in when %s", async (_name, session, user) => {
     getSession.mockResolvedValue(session)
     findByID.mockResolvedValue(user)
-    expect(await authenticate("payload-token-sso=abc")).toEqual({ user: null })
+    expect(await authenticate("pp-session=abc")).toEqual({ user: null })
   })
 
   it("signs nobody in, and logs, when the session can't be read", async () => {
     getSession.mockRejectedValue(new Error("database is down"))
-    expect(await authenticate("payload-token-sso=abc")).toEqual({ user: null })
+    expect(await authenticate("pp-session=abc")).toEqual({ user: null })
     expect(logger.error).toHaveBeenCalled()
   })
 })

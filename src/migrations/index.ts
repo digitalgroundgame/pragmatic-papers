@@ -63,6 +63,7 @@ import * as migration_20261011_100351_add_sso from "./20261011_100351_add_sso"
 import * as migration_20261012_001519_ticker_upcoming_hours from "./20261012_001519_ticker_upcoming_hours"
 import * as migration_20261012_011225_feeds_list_block from "./20261012_011225_feeds_list_block"
 import * as migration_20261013_045838_add_plugins_global from "./20261013_045838_add_plugins_global"
+import * as migration_20261013_220247_comments from "./20261013_220247_comments"
 
 export const migrations = [
   {
@@ -389,5 +390,10 @@ export const migrations = [
     up: migration_20261013_045838_add_plugins_global.up,
     down: migration_20261013_045838_add_plugins_global.down,
     name: "20261013_045838_add_plugins_global",
+  },
+  {
+    up: migration_20261013_220247_comments.up,
+    down: migration_20261013_220247_comments.down,
+    name: "20261013_220247_comments",
   },
 ]

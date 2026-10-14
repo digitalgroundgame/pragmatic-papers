@@ -1,7 +1,12 @@
 import type { User } from "@/payload-types"
 import type { CollectionAfterChangeHook } from "payload"
 
+import { isStaff } from "@/access/roles"
 import { revalidateForReaders } from "@/hooks/revalidateForReaders"
+
+/** Whether anything public shows this user: staff, or anyone with a public author page. */
+export const isOnPublicPages = (user: User | null | undefined): boolean =>
+  Boolean(user && (isStaff(user) || user.publicProfile))
 
 export const revalidateUser: CollectionAfterChangeHook<User> = async ({
   doc,
@@ -9,6 +14,8 @@ export const revalidateUser: CollectionAfterChangeHook<User> = async ({
   req: { payload, context },
 }) => {
   if (context.disableRevalidate) return doc
+  // A member (a commenter) has no page and is credited on none, before or after.
+  if (!isOnPublicPages(doc) && !isOnPublicPages(previousDoc)) return doc
 
   // Every path to revalidate here and purge on the Worker.
   const paths: string[] = []

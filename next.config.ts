@@ -240,9 +240,11 @@ const nextConfig: NextConfig = {
             key: "payload-token",
           },
           {
-            // The single sign-on session (src/plugins/sso), for an editor who signed in
-            // through a provider and so has no Payload token. Cloudflare's own rule
-            // (cloudflare/rulesets) matches it too: its name contains "payload-token".
+            // Set beside a single sign-on session for staff only (src/plugins/sso,
+            // `payloadUserCookie`), who signed in through a provider and so have no Payload
+            // token. Members' session cookie (`pp-session`) is left out, so they get cached
+            // pages like everyone else. Cloudflare's own rule (cloudflare/rulesets) matches
+            // it too: its name contains "payload-token".
             type: "cookie",
             key: "payload-token-sso",
           },

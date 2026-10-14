@@ -2,7 +2,7 @@ import config from "@payload-config"
 import { handleEndpoints, type Payload } from "payload"
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest"
 
-import { SSO_COOKIE_NAME } from "@/plugins/sso"
+import { SSO_COOKIE_NAME, SSO_PAYLOAD_USER_COOKIE, type AccountSummary } from "@/plugins/sso"
 import { getSiteURL } from "@/utilities/getURL"
 import type { User } from "@/payload-types"
 import { createUser, getPayload } from "./helpers/testUsers"
@@ -65,8 +65,14 @@ const api = (path: string, init: RequestInit = {}) =>
     }),
   })
 
-/** Starts a sign-in and comes back from Discord as `profile`. */
-async function signInWithDiscord(profile: DiscordProfile): Promise<Response> {
+/**
+ * Starts a sign-in and comes back from Discord as `profile`. `requestSignUp` is what the
+ * site's comment box and account page send, and the admin's login page doesn't.
+ */
+async function signInWithDiscord(
+  profile: DiscordProfile,
+  { requestSignUp = false } = {},
+): Promise<Response> {
   stubDiscord(profile)
   const start = await api("/auth/sign-in/social", {
     method: "POST",
@@ -75,6 +81,7 @@ async function signInWithDiscord(profile: DiscordProfile): Promise<Response> {
       provider: "discord",
       callbackURL: "/admin",
       errorCallbackURL: "/admin/login",
+      ...(requestSignUp && { requestSignUp: true }),
     }),
   })
   expect(start.status).toBe(200)
@@ -114,7 +121,10 @@ function stubDestiny(profile: DestinyProfile) {
 }
 
 /** Starts a sign-in and comes back from Destiny.gg as `profile`. */
-async function signInWithDestiny(profile: DestinyProfile): Promise<Response> {
+async function signInWithDestiny(
+  profile: DestinyProfile,
+  { requestSignUp = false } = {},
+): Promise<Response> {
   stubDestiny(profile)
   const start = await api("/auth/sign-in/social", {
     method: "POST",
@@ -123,6 +133,7 @@ async function signInWithDestiny(profile: DestinyProfile): Promise<Response> {
       provider: "destiny",
       callbackURL: "/admin",
       errorCallbackURL: "/admin/login",
+      ...(requestSignUp && { requestSignUp: true }),
     }),
   })
   expect(start.status).toBe(200)
@@ -174,10 +185,10 @@ const me = async (cookie: string): Promise<User | null> => {
   return ((await response.json()) as { user: User | null }).user
 }
 
-const setSwitch = (sso: boolean) =>
+const setSwitch = (sso: boolean, comments = false) =>
   payload.updateGlobal({
     slug: "plugins",
-    data: { switches: { sso } },
+    data: { switches: { sso, comments } },
     context: { disableRevalidate: true },
   })
 
@@ -208,6 +219,8 @@ describe("single sign-on", () => {
     expect(callback.headers.get("location")).toBe("/admin")
     const cookie = cookiesFrom(callback)
     expect(cookie).toContain(`${SSO_COOKIE_NAME}=`)
+    // Staff skip the edge cache, like a password login's `payload-token` does.
+    expect(cookie).toContain(`${SSO_PAYLOAD_USER_COOKIE}=1`)
 
     const user = await me(cookie)
     expect(user).toMatchObject({ id: editor.id, email: editor.email, roles: ["editor"] })
@@ -345,7 +358,7 @@ describe("linking an account from the account page", () => {
 
     const callback = await signInWithDestiny(destiny("Stranger"))
 
-    expect(callback.headers.get("location")).toContain("/admin/login?error=email_not_found")
+    expect(callback.headers.get("location")).toContain("/admin/login?error=signup_disabled")
     expect(cookiesFrom(callback)).not.toContain(`${SSO_COOKIE_NAME}=`)
     expect((await payload.count({ collection: "users" })).totalDocs).toBe(before.totalDocs)
   })
@@ -398,7 +411,7 @@ describe("linking an account from the account page", () => {
     expect(await me(ssoCookie)).toBeNull()
     expect(await me(cookie)).toMatchObject({ id: editor.id })
     const again = await signInWithDestiny(profile)
-    expect(again.headers.get("location")).toContain("error=email_not_found")
+    expect(again.headers.get("location")).toContain("error=signup_disabled")
   })
 
   it("answers only a signed-in user, and only while the switch is on", async () => {
@@ -445,5 +458,213 @@ describe("linking an account from the account page", () => {
       body: JSON.stringify({ provider: "destiny", userId: "1", email: "a@example.com" }),
     })
     expect(response.status).toBe(404)
+  })
+})
+
+describe("members", () => {
+  let nextId = 7000
+  const stranger = () => ({
+    id: String(nextId++),
+    email: `member-${crypto.randomUUID().slice(0, 8)}@example.com`,
+    verified: true,
+  })
+
+  /** Signs someone new up the way the comment box does, and returns their cookie. */
+  async function signUp(profile = stranger()): Promise<string> {
+    const callback = await signInWithDiscord(profile, { requestSignUp: true })
+    expect(callback.headers.get("location")).toBe("/admin")
+    return cookiesFrom(callback)
+  }
+
+  const account = (cookie: string, init: RequestInit = {}) =>
+    api("/account", { ...init, headers: { Cookie: cookie, ...init.headers } })
+
+  beforeEach(async () => {
+    // Sign-ups open with comments.
+    await setSwitch(true, true)
+  })
+
+  it("makes a member on a sign-up, who Payload treats as anonymous", async () => {
+    const profile = stranger()
+    const cookie = await signUp(profile)
+
+    const { docs } = await payload.find({
+      collection: "users",
+      where: { email: { equals: profile.email } },
+    })
+    expect(docs[0]).toMatchObject({ name: "Tester", roles: ["member"] })
+    expect(docs[0]?.slug).toMatch(/^member-[0-9a-f]{12}$/)
+
+    expect(cookie).toContain(`${SSO_COOKIE_NAME}=`)
+    expect(cookie).not.toContain(SSO_PAYLOAD_USER_COOKIE)
+    expect(await me(cookie)).toBeNull()
+    const redirect = await api("/redirects", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Cookie: cookie },
+      body: JSON.stringify({ from: "/a", to: { type: "custom", url: "https://evil.test" } }),
+    })
+    expect(redirect.status).toBe(403)
+
+    const summary = (await (await account(cookie)).json()) as AccountSummary
+    expect(summary).toEqual({ name: "Tester", email: profile.email, managedInAdmin: false })
+  })
+
+  it("makes nobody while comments are off, or from the admin's login page", async () => {
+    await setSwitch(true, false)
+    const closed = await signInWithDiscord(stranger(), { requestSignUp: true })
+    expect(closed.headers.get("location")).toContain("error=")
+
+    await setSwitch(true, true)
+    const admin = await signInWithDiscord(stranger())
+    expect(admin.headers.get("location")).toContain("error=signup_disabled")
+  })
+
+  it("makes nobody from an address the provider hasn't verified", async () => {
+    const profile = { ...stranger(), verified: false }
+    const callback = await signInWithDiscord(profile, { requestSignUp: true })
+
+    expect(callback.headers.get("location")).toContain("error=")
+    const found = await payload.count({
+      collection: "users",
+      where: { email: { equals: profile.email } },
+    })
+    expect(found.totalDocs).toBe(0)
+  })
+
+  it("refuses a member Payload's password login", async () => {
+    const profile = stranger()
+    await signUp(profile)
+    await payload.update({
+      collection: "users",
+      where: { email: { equals: profile.email } },
+      data: { password: "test-password" },
+    })
+
+    const response = await api("/users/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: profile.email, password: "test-password" }),
+    })
+    expect(response.status).toBe(401)
+  })
+
+  it("renames a member, from the site only", async () => {
+    const cookie = await signUp()
+
+    const renamed = await account(cookie, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: "  New   Name " }),
+    })
+    expect(renamed.status).toBe(200)
+    expect(((await renamed.json()) as AccountSummary).name).toBe("New Name")
+
+    const crossSite = await account(cookie, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", Origin: "https://evil.test" },
+      body: JSON.stringify({ name: "Evil" }),
+    })
+    expect(crossSite.status).toBe(403)
+    expect((await account("", { method: "PATCH" })).status).toBe(401)
+  })
+
+  it("keeps a member's last sign-in, and links another back to /account", async () => {
+    const cookie = await signUp()
+
+    const last = await api("/auth-links/discord", { method: "DELETE", headers: { Cookie: cookie } })
+    expect(last.status).toBe(409)
+
+    const linked = await link(cookie, "destiny", () =>
+      stubDestiny({ userId: nextId++, username: `Member${nextId}` }),
+    )
+    expect(linked.headers.get("location")).toBe("/account?linked=destiny")
+  })
+
+  it("signs someone new up with Destiny.gg, under a placeholder address", async () => {
+    const profile = { userId: nextId++, username: `Dgg${nextId}` }
+    const callback = await signInWithDestiny(profile, { requestSignUp: true })
+    expect(callback.headers.get("location")).toBe("/admin")
+    const cookie = cookiesFrom(callback)
+
+    const email = `destiny-${profile.userId}@no-email.invalid`
+    const { docs } = await payload.find({
+      collection: "users",
+      where: { email: { equals: email } },
+    })
+    expect(docs[0]).toMatchObject({ name: profile.username, roles: ["member"] })
+    expect(await me(cookie)).toBeNull()
+    const summary = (await (await account(cookie)).json()) as AccountSummary
+    expect(summary).toEqual({ name: profile.username, email: null, managedInAdmin: false })
+
+    // Signing in again finds the same member.
+    const again = await signInWithDestiny(profile)
+    expect(((await (await account(cookiesFrom(again))).json()) as AccountSummary).name).toBe(
+      profile.username,
+    )
+    expect(
+      (await payload.count({ collection: "users", where: { email: { equals: email } } })).totalDocs,
+    ).toBe(1)
+  })
+
+  it("swaps a Destiny.gg member's placeholder for the address Discord verified", async () => {
+    const profile = { userId: nextId++, username: `Dgg${nextId}` }
+    const cookie = cookiesFrom(await signInWithDestiny(profile, { requestSignUp: true }))
+    const placeholder = `destiny-${profile.userId}@no-email.invalid`
+    const emailOf = async () => ((await (await account(cookie)).json()) as AccountSummary).email
+
+    // An address Discord hasn't verified, or one another user has, is left alone.
+    const taken = await createUser("writer")
+    await link(cookie, "discord", () => stubDiscord({ ...stranger(), verified: false }))
+    await link(cookie, "discord", () =>
+      stubDiscord({ id: String(nextId++), email: taken.email, verified: true }),
+    )
+    expect(await emailOf()).toBeNull()
+
+    const discord = stranger()
+    const linked = await link(cookie, "discord", () => stubDiscord(discord))
+    expect(linked.headers.get("location")).toBe("/account?linked=discord")
+    expect(await emailOf()).toBe(discord.email)
+    const { pool } = payload.db as unknown as {
+      pool: {
+        query: (sql: string, values: unknown[]) => Promise<{ rows: { email_verified: boolean }[] }>
+      }
+    }
+    const verified = await pool.query("select email_verified from users where email = $1", [
+      discord.email,
+    ])
+    expect(verified.rows[0]?.email_verified).toBe(true)
+    expect(
+      (await payload.count({ collection: "users", where: { email: { equals: placeholder } } }))
+        .totalDocs,
+    ).toBe(0)
+
+    // Destiny.gg still signs them in, now under the real address.
+    const again = await signInWithDestiny(profile)
+    expect(await emailOf()).toBe(discord.email)
+    expect(cookiesFrom(again)).toContain(`${SSO_COOKIE_NAME}=`)
+  })
+
+  it("deletes a member's account, and signs them out", async () => {
+    const profile = stranger()
+    const cookie = await signUp(profile)
+
+    const response = await account(cookie, { method: "DELETE" })
+
+    expect(response.status).toBe(200)
+    expect(response.headers.getSetCookie().join()).toContain(`${SSO_COOKIE_NAME}=;`)
+    const found = await payload.count({
+      collection: "users",
+      where: { email: { equals: profile.email } },
+    })
+    expect(found.totalDocs).toBe(0)
+    expect((await account(cookie)).status).toBe(401)
+  })
+
+  it("leaves staff accounts to the admin", async () => {
+    const editor = await createUser("editor")
+    const cookie = await passwordLogin(editor)
+
+    expect(((await (await account(cookie)).json()) as AccountSummary).managedInAdmin).toBe(true)
+    expect((await account(cookie, { method: "DELETE" })).status).toBe(403)
   })
 })

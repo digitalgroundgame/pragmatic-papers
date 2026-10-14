@@ -1,6 +1,7 @@
 /* Admin panel styles: Payload's theme variables, not Tailwind (the admin doesn't load it).
    Payload swaps the variables for its dark theme, so the switch follows it. Scoped to
-   .experiment-switch so nothing reaches Payload's own fields. */
+   .experiment-switch (and System → Plugins' .plugin-switch, which reuses the switch) so nothing
+   reaches Payload's own fields. */
 .experiment-switch {
   margin-bottom: 1.5rem;
   color: var(--theme-text);
@@ -25,7 +26,7 @@
   line-height: 1.4;
 }
 
-.experiment-switch [data-slot="switch"] {
+:is(.experiment-switch, .plugin-switch) [data-slot="switch"] {
   position: relative;
   display: inline-flex;
   flex-shrink: 0;
@@ -41,21 +42,21 @@
   transition: background-color 150ms;
 }
 
-.experiment-switch [data-slot="switch"][data-checked] {
+:is(.experiment-switch, .plugin-switch) [data-slot="switch"][data-checked] {
   background: var(--theme-success-500);
 }
 
-.experiment-switch [data-slot="switch"]:focus-visible {
+:is(.experiment-switch, .plugin-switch) [data-slot="switch"]:focus-visible {
   outline: 2px solid var(--theme-elevation-800);
   outline-offset: 2px;
 }
 
-.experiment-switch [data-slot="switch"][data-disabled] {
+:is(.experiment-switch, .plugin-switch) [data-slot="switch"][data-disabled] {
   cursor: not-allowed;
   opacity: 0.5;
 }
 
-.experiment-switch [data-slot="switch-thumb"] {
+:is(.experiment-switch, .plugin-switch) [data-slot="switch-thumb"] {
   display: block;
   width: 1rem;
   height: 1rem;
@@ -68,14 +69,14 @@
   transition: translate 150ms;
 }
 
-.experiment-switch [data-slot="switch-thumb"][data-checked] {
+:is(.experiment-switch, .plugin-switch) [data-slot="switch-thumb"][data-checked] {
   /* The track's inner width (2.25rem - 4px of padding) minus the 1rem thumb. */
   translate: calc(1.25rem - 4px) 0;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .experiment-switch [data-slot="switch"],
-  .experiment-switch [data-slot="switch-thumb"] {
+  :is(.experiment-switch, .plugin-switch) [data-slot="switch"],
+  :is(.experiment-switch, .plugin-switch) [data-slot="switch-thumb"] {
     transition: none;
   }
 }

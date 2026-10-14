@@ -1,10 +1,18 @@
 import { render, screen } from "@testing-library/react"
 import type { UIFieldServerProps } from "payload"
-import { describe, expect, it } from "vitest"
+import { describe, expect, it, vi } from "vitest"
 
 import type { User } from "@/payload-types"
 
 import { PluginsField } from "../PluginsField"
+
+vi.mock("@payloadcms/ui", () => ({
+  useField: ({ path }: { path: string }) => ({
+    value: path === "switches.docs",
+    setValue: vi.fn(),
+    disabled: false,
+  }),
+}))
 
 const user = (roles: string[]) => ({ id: 1, roles }) as unknown as User
 const props = (u: User | null) =>
@@ -25,6 +33,16 @@ const props = (u: User | null) =>
               collections: ["search"],
               globals: [],
             },
+            {
+              slug: "docs",
+              name: "Help docs",
+              source: "src/plugins/docs",
+              description: "Help docs.",
+              collections: [],
+              globals: [],
+              switch: { label: "Help docs", description: "", defaultValue: false },
+              enabled: async () => true,
+            },
           ],
         },
       },
@@ -41,6 +59,18 @@ describe("PluginsField", () => {
       "href",
       "/admin/collections/search",
     )
+  })
+
+  it("puts each plugin's switch in its Status cell", async () => {
+    render(await PluginsField(props(user(["admin"]))))
+    expect(screen.getByRole("switch", { name: "Help docs" })).toBeChecked()
+    expect(screen.getByRole("switch", { name: "Help docs" })).not.toHaveAttribute(
+      "aria-disabled",
+      "true",
+    )
+    const fixed = screen.getByRole("switch", { name: "Search" })
+    expect(fixed).toBeChecked()
+    expect(fixed).toHaveAttribute("aria-disabled", "true")
   })
 
   it("renders nothing for anyone but admins", async () => {

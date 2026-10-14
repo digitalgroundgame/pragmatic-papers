@@ -39,3 +39,39 @@ export const Default: Story = {
     await expect(within(canvasElement).getAllByRole("link")).toHaveLength(2)
   },
 }
+
+// The article page sets its column with `mx-auto` inside a flex column, so the column
+// is as wide as its content's narrowest unbreakable run. A URL that only breaks under
+// `overflow-wrap: break-word` still counts as one run there and widens the page.
+export const LongLinkOnMobile: Story = {
+  args: {
+    footnotes: [
+      {
+        index: 1,
+        note: "Wikipedia, International Emergency Economic Powers Act",
+        attributionEnabled: true,
+        link: {
+          type: "custom",
+          url: "https://en.wikipedia.org/wiki/International_Emergency_Economic_Powers_Act_of_1977_and_its_amendments",
+        },
+      },
+    ],
+  },
+  decorators: [
+    (Story) => (
+      <div data-testid="page" className="flex w-[320px] flex-col">
+        <div data-testid="column" className="mx-auto max-w-2xl">
+          <Story />
+        </div>
+      </div>
+    ),
+  ],
+  play: async ({ canvasElement }) => {
+    const page = within(canvasElement).getByTestId("page")
+    const column = within(canvasElement).getByTestId("column")
+    await expect(column.getBoundingClientRect().width).toBeLessThanOrEqual(
+      page.getBoundingClientRect().width,
+    )
+    await expect(page.scrollWidth).toBeLessThanOrEqual(page.clientWidth)
+  },
+}

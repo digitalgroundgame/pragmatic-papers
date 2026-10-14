@@ -163,15 +163,26 @@ it shows beside it, each named for the doc (`<slug>-hero.webp`,
 `/next/revalidate-all` (which `start.sh` calls when a deploy goes live) seeds that
 site's database with each doc whose slug it doesn't have yet, as a **draft**,
 converting the Markdown with the docs editor and uploading its pictures to Media
-(`syncRepoDocs`). Seeding is push only: a doc the site already has, draft or
-published, is never overwritten, and nothing is ever deleted, so a doc belongs to
-the site's editors from the moment it arrives. A draft is on neither `/docs` nor
-the bell until an editor publishes it. To change a doc on a site that has it, edit
-it in that site's admin; changing its file only changes what a site without it
-gets. Each doc it seeds, or finds already there, is recorded in Payload's
-key-value store (`markSeeded` in `src/utilities/seedOnce.ts`, which other
-deploy-seeded content uses too), so one an editor deletes stays deleted
-(`DOCS_SYNC=false` turns the sync off, as the staging Worker does: it reads
+(`syncRepoDocs`). Code never publishes, overwrites the published version or deletes,
+so a doc belongs to the site's editors from the moment it arrives. A draft is on
+neither `/docs` nor the bell until an editor publishes it. When a doc's file changes
+(its content hash, which covers `revisedAt` and its pictures), a site that already
+has the doc gets the new copy as a **new draft version** (`payload.update` with
+`draft: true`, which writes a version and leaves the published doc alone): the admin
+shows the doc as Changed, and an editor compares it in the Versions tab, then
+publishes, edits or discards it (Revert to published). `planRepoDoc` (`syncDocs.ts`)
+decides. A doc whose latest version is an editor's own draft is skipped and logged,
+not recorded, so a later deploy offers the change once that draft is published or
+discarded; a suggestion of the deploy's own that nobody has touched is superseded by
+a newer one. Each revision offered is recorded (`markOffered`, beside `markSeeded`
+in `src/utilities/seedOnce.ts`) with the version it was saved as, so a discarded
+one isn't offered again. A doc that has no offer recorded (one seeded before
+offers began) is offered the repo's copy when it differs from the `sourceHash` the
+doc was saved with; one an editor wrote, with no `sourceHash`, records the repo's
+current hash as offered and gets only later changes. Each doc it seeds, or finds already there, is recorded in Payload's
+key-value store (`markSeeded`, which other
+deploy-seeded content uses too), so one an editor deletes stays deleted and is never
+recreated (`DOCS_SYNC=false` turns the sync off, as the staging Worker does: it reads
 staging's database and has no `src/docs/` of its own). `pnpm dev:db-seed` seeds
 them locally, published, deleted or not.
 

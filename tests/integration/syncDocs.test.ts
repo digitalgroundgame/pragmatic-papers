@@ -41,7 +41,7 @@ describe("syncDocs", () => {
   beforeAll(async () => {
     payload = await getPayload()
     for (const slug of [SLUG, "another", "and-another"])
-      await payload.kv.delete(`seeded:docs:${slug}`)
+      for (const key of ["seeded", "offered"]) await payload.kv.delete(`${key}:docs:${slug}`)
     dir = await mkdtemp(path.join(tmpdir(), "docs-"))
     await mkdir(path.join(dir, SECTION))
     for (const name of await readdir(path.join(DOCS_DIR, SECTION))) {
@@ -89,7 +89,23 @@ describe("syncDocs", () => {
     expect(docs).toHaveLength(0)
   })
 
-  it("lets editors change a seeded doc, and never overwrites it from the repo", async () => {
+  const publishedDoc = async () =>
+    (
+      await payload.find({
+        collection: "docs",
+        depth: 0,
+        overrideAccess: true,
+        where: { slug: { equals: SLUG } },
+      })
+    ).docs[0]
+
+  const setSummary = async (summary: string) => {
+    const file = path.join(dir, SECTION, `${SLUG}.md`)
+    const source = await readFile(file, "utf8")
+    await writeFile(file, source.replace(/^summary: .*$/m, `summary: ${summary}`))
+  }
+
+  it("offers the repo's change to a doc an editor published as a new draft, leaving the published doc as it is", async () => {
     const editor = await createUser("editor")
     const doc = await findDoc()
     const edited = await payload.update({
@@ -102,16 +118,92 @@ describe("syncDocs", () => {
     })
     expect(edited.summary).toBe("Edited in the admin.")
 
-    const file = path.join(dir, SECTION, `${SLUG}.md`)
-    const source = await readFile(file, "utf8")
-    await writeFile(file, source.replace(/^summary: .*$/m, "summary: A new summary."))
+    // Nothing changed in the repo: nothing to offer.
+    expect((await syncDocs(payload, dir)).existing).toEqual([SLUG])
 
+    await setSummary("A new summary.")
     const result = await syncDocs(payload, dir)
-    expect(result).toEqual({ created: [], existing: [SLUG], deleted: [] })
-    const after = await findDoc()
-    expect(after?.summary).toBe("Edited in the admin.")
-    expect(after?._status).toBe("published")
+    expect(result).toEqual({
+      created: [],
+      offered: [SLUG],
+      skipped: [],
+      existing: [],
+      deleted: [],
+    })
+    const published = await publishedDoc()
+    expect(published?.summary).toBe("Edited in the admin.")
+    expect(published?._status).toBe("published")
+    const draft = await findDoc()
+    expect(draft?.summary).toBe("A new summary.")
+    expect(draft?._status).toBe("draft")
     expect(await syncedMedia()).toHaveLength(2)
+
+    // Offered once: the next deploy leaves the suggestion (or its discarding) alone.
+    expect((await syncDocs(payload, dir)).existing).toEqual([SLUG])
+
+    // A newer change supersedes a suggestion nobody has touched, as another draft.
+    await setSummary("A newer summary.")
+    expect((await syncDocs(payload, dir)).offered).toEqual([SLUG])
+    expect((await findDoc())?.summary).toBe("A newer summary.")
+    expect((await publishedDoc())?.summary).toBe("Edited in the admin.")
+  })
+
+  it("leaves an editor's own draft alone, and offers the change once it's published", async () => {
+    const editor = await createUser("editor")
+    const doc = await findDoc()
+    await payload.update({
+      collection: "docs",
+      id: doc!.id,
+      data: { summary: "Published by an editor.", _status: "published" },
+      context: ctx,
+      overrideAccess: false,
+      user: editor,
+    })
+    await payload.update({
+      collection: "docs",
+      id: doc!.id,
+      data: { summary: "An editor's draft." },
+      draft: true,
+      context: ctx,
+      overrideAccess: false,
+      user: editor,
+    })
+
+    await setSummary("Yet another summary.")
+    expect((await syncDocs(payload, dir)).skipped).toEqual([SLUG])
+    expect((await findDoc())?.summary).toBe("An editor's draft.")
+
+    await payload.update({
+      collection: "docs",
+      id: doc!.id,
+      data: { _status: "published" },
+      context: ctx,
+      overrideAccess: false,
+      user: editor,
+    })
+    expect((await syncDocs(payload, dir)).offered).toEqual([SLUG])
+    expect((await findDoc())?.summary).toBe("Yet another summary.")
+    expect((await publishedDoc())?.summary).toBe("An editor's draft.")
+  })
+
+  it("offers a doc seeded before offers began the change the repo made since", async () => {
+    // Without an offer recorded, any draft is taken for an editor's: publish the suggestion.
+    await payload.update({
+      collection: "docs",
+      id: (await findDoc())!.id,
+      data: { _status: "published" },
+      context: ctx,
+      overrideAccess: true,
+    })
+    await payload.kv.delete(`offered:docs:${SLUG}`)
+    // The repo's copy is the one the doc was saved with: nothing to offer.
+    expect((await syncDocs(payload, dir)).existing).toEqual([SLUG])
+
+    await payload.kv.delete(`offered:docs:${SLUG}`)
+    await setSummary("Changed before offers began.")
+    expect((await syncDocs(payload, dir)).offered).toEqual([SLUG])
+    expect((await findDoc())?.summary).toBe("Changed before offers began.")
+    expect((await publishedDoc())?.summary).toBe("Yet another summary.")
   })
 
   it("reuses a PNG it uploaded, though Media stored it as WebP", async () => {
@@ -137,7 +229,13 @@ describe("syncDocs", () => {
       where: { slug: { equals: SLUG } },
     })
     const result = await syncDocs(payload, dir)
-    expect(result).toEqual({ created: [], existing: ["and-another", "another"], deleted: [SLUG] })
+    expect(result).toEqual({
+      created: [],
+      offered: [],
+      skipped: [],
+      existing: ["and-another", "another"],
+      deleted: [SLUG],
+    })
     expect(await findDoc()).toBeUndefined()
   })
 

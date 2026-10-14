@@ -3,7 +3,7 @@ title: Find what's new in the bell
 navTitle: The bell
 summary: The bell beside your avatar lists help docs for features you use, newest first. A dot marks what you haven't read yet.
 publishedAt: 2026-10-09
-revisedAt: 2026-10-12
+revisedAt: 2026-10-25
 heroImage: notifications-hero.webp
 heroAlt: The bell's What's new list with two help docs, one unread
 ---
@@ -28,4 +28,6 @@ What you've read and what you've turned off are saved to your account, so they f
 
 ## Publishing a release's docs
 
-Editors: a release that ships a help doc adds it under **Help → Docs** as a draft, and nobody is told until it's published. After a release, look there for drafts, read each one, change what you like, and publish it. The bell announces it then. The doc is yours from then on: later releases never change or delete it, and one you delete stays deleted.
+Editors: a release that ships a help doc adds it under **Help → Docs** as a draft, and nobody is told until it's published. After a release, look there for drafts, read each one, change what you like, and publish it. The bell announces it then. The doc is yours from then on: a release never publishes, overwrites or deletes it, and one you delete stays deleted.
+
+When a release changes a doc you already have, it saves the new copy as a draft on top of yours, and what readers see stays as it is. The doc shows as **Changed**: open its **Versions** tab to compare the suggestion with what's published, then publish it, edit it first, or discard it with **Revert to published**. A suggestion you discard isn't offered again. If you're partway through a draft of your own, the release leaves it alone, and a later one offers the change once you've published or discarded your draft.

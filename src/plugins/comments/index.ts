@@ -43,7 +43,7 @@ export const commentsPlugin = registerPlugin<CommentsPluginConfig>({
     name: "Comments",
     source: "src/plugins/comments",
     description:
-      "Comments under articles, with replies, checks that hold suspect comments back and violations that stop repeat offenders. Moderators work in Content → Comments; admins set the rules in Comment settings.",
+      "Comments under articles, with replies, checks that hold suspect comments back and violations that stop repeat offenders. Moderators work in Content → Comments and System → Violations; admins set the rules in System → Comment settings.",
     switch: {
       label: "Comments",
       description:
@@ -60,10 +60,15 @@ export const commentsPlugin = registerPlugin<CommentsPluginConfig>({
       checks: [],
       isVerified: (author) => author.emailVerified === true,
       signInProviders: () => [],
-      adminGroup: "Content",
       maxLength: 2000,
       cooldownSeconds: 20,
       ...options,
+      adminGroups: {
+        comments: "Content",
+        violations: "System",
+        settings: "System",
+        ...options.adminGroups,
+      },
       enabled: ({ payload }) => isPluginOn(options.enabled, payload),
     }
 

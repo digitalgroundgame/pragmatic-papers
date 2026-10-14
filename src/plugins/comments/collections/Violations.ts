@@ -13,7 +13,7 @@ export function violationsCollection(config: ResolvedCommentsConfig): Collection
     slug: VIOLATIONS_SLUG,
     labels: { singular: "Violation", plural: "Violations" },
     admin: {
-      group: config.adminGroup,
+      group: config.adminGroups.violations,
       useAsTitle: "reason",
       defaultColumns: ["author", "reason", "source", "reversed", "createdAt"],
       description:

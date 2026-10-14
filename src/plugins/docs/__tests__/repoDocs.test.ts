@@ -36,11 +36,12 @@ describe.each(docs.map((doc) => [path.relative(DOCS_DIR, doc.file), doc] as cons
 
     // Admin-only docs have no area of their own: one writers aren't told about is editing work.
     it.skipIf(slug === HOME_DOC_SLUG)(
-      "sits in Editing when it's only for editors or admins",
+      "sits in Editing when, and only when, it's only for editors or admins",
       () => {
         const area = DOC_SECTIONS.find((known) => known.value === section)?.area
         const forWriters = !meta.audience?.length || meta.audience.includes("writer")
-        expect(area).toBe(forWriters ? "writing" : "editing")
+        // A doc for everyone may sit in Reading or Writing; one writers aren't told about can't.
+        expect(area === "editing").toBe(!forWriters)
       },
     )
 

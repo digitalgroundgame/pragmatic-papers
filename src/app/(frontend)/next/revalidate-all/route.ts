@@ -27,6 +27,10 @@ import { hasPayloadSecret } from "../bearer"
  * what it revalidated (`?next`, with each `next-path` and `next-tag`) revalidates only those,
  * as the save did in Coolify's Next cache; any other throws away every page.
  *
+ * Seeding happens on the Coolify app's deploy only. A Worker that reads the same database sets
+ * `DEPLOY_SEED=false`, so its deploy only throws pages away: one seeder per database, or the
+ * two deploys could each create the same starter content at once.
+ *
  * Authenticated with `Authorization: Bearer <PAYLOAD_SECRET>`, which the
  * container already holds.
  */
@@ -46,6 +50,11 @@ export async function POST(request: Request): Promise<Response> {
     }
     revalidatePath("/", "layout")
     return Response.json({ revalidated: true })
+  }
+
+  if (process.env.DEPLOY_SEED === "false") {
+    revalidatePath("/", "layout")
+    return Response.json({ revalidated: true, seeded: false })
   }
 
   const payload = await getPayloadClient()

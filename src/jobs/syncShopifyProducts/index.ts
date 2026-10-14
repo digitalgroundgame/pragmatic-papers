@@ -8,6 +8,7 @@ import {
   fetchShopifyProducts,
   readShopifyEnv,
   storefrontEndpoint,
+  syncBlockedReason,
   syncProducts,
 } from "./logic"
 
@@ -25,6 +26,13 @@ import {
  * beat a button. The window this leaves is a product selling out between
  * runs, where the card shows an unsold badge for a few hours and the store
  * site corrects it on the click through.
+ *
+ * It only writes on a deployed site. `payload.config.ts` auto-runs the jobs queue every five
+ * minutes everywhere, `pnpm dev` and the test servers included, and a run replaces `merch`
+ * with the live catalogue, archiving every seeded product the store doesn't list. So a run
+ * is a logged no-op unless `BUILD_ENV` names a deploy (`syncBlockedReason`), and then
+ * unless the Shopify credentials are set: having the store token in a local `.env` isn't
+ * enough to sync there.
  */
 export const syncShopifyProductsTask: TaskConfig<"syncShopifyProducts"> = {
   slug: "syncShopifyProducts",
@@ -51,10 +59,17 @@ export const syncShopifyProductsTask: TaskConfig<"syncShopifyProducts"> = {
 
     log.info("[merch-sync] === starting Shopify product sync ===")
 
+    const blocked = syncBlockedReason()
+    if (blocked) {
+      log.warn(`[merch-sync] ${blocked} — skipping run`)
+      return { output: empty }
+    }
+
     const config = readShopifyEnv()
     if (!config) {
-      // Dev and CI have no store credentials. Skipping is the correct outcome
-      // there — seeded products stay put and the carousel keeps rendering.
+      // A deploy without store credentials (a preview, say). Skipping is the
+      // correct outcome — whatever rows it has stay put and the carousel keeps
+      // rendering.
       log.warn(
         "[merch-sync] SHOPIFY_STORE_DOMAIN / SHOPIFY_STOREFRONT_ACCESS_TOKEN / SHOPIFY_API_VERSION missing or unparseable — skipping run",
       )

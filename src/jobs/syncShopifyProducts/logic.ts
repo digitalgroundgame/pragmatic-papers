@@ -164,6 +164,24 @@ export function readShopifyEnv(): ShopifyConfig | null {
   return { domain: host, token, apiVersion }
 }
 
+/**
+ * Why the sync must not write here, or null on a deployed site.
+ *
+ * The sync overwrites `merch` with the live catalogue and archives every row the store
+ * doesn't list, so on a local database it would replace the seeded products. Missing
+ * credentials used to be the only thing stopping that, and a developer who copies the store
+ * token into `.env` (to try the Merch block against real data, say) shouldn't find their seed
+ * gone five minutes later. So the run also needs a deployed image: `BUILD_ENV` is baked into
+ * every image staging, production and the PR previews run (`production`, `staging`,
+ * `preview`), and is unset for `pnpm dev`, unit and integration tests, and `pnpm lighthouse`.
+ * E2E runs the PR's image but blanks it (`scripts/test-e2e.mjs`), so it is skipped there too.
+ * `NODE_ENV` can't draw this line: `next start` and every image run as `production`.
+ */
+export function syncBlockedReason(): string | null {
+  if (process.env.BUILD_ENV?.trim()) return null
+  return "BUILD_ENV is unset, so this isn't a deployed site — the sync only runs on staging, production and previews"
+}
+
 export function storefrontEndpoint({ domain, apiVersion }: ShopifyConfig): string {
   return new URL(`/api/${encodeURIComponent(apiVersion)}/graphql.json`, `https://${domain}`).href
 }

@@ -3,6 +3,7 @@ import type { CollectionConfig, FieldAccess, PayloadRequest } from "payload"
 import { admin } from "@/access/collections"
 import { isAdmin, isStaff } from "@/access/roles"
 import { integrationStatus, shopifyStore } from "@/integrations"
+import { syncBlockedReason } from "@/jobs/syncShopifyProducts/logic"
 import {
   revalidateMerchProduct,
   revalidateMerchProductDelete,
@@ -105,11 +106,13 @@ export const Merch: CollectionConfig = {
         }
         const job = await req.payload.jobs.queue({ task: "syncShopifyProducts", input: {} })
         const result = await req.payload.jobs.run({ queue: "default", limit: 1 })
-        // A run without credentials is a logged no-op, not a failure — say so,
-        // or the admin button reports success over an empty catalogue. The connection
-        // answers that, so this endpoint and a status view can never disagree.
+        // A run without credentials, or off a deployed site, is a logged no-op,
+        // not a failure — say so, or the admin button reports success over an
+        // empty catalogue. The connection answers the first, so this endpoint and
+        // a status view can never disagree; the job's own guard answers the second.
         const connection = integrationStatus(shopifyStore)
-        return Response.json({ jobId: job.id, configured: connection.configured, result })
+        const configured = connection.configured && syncBlockedReason() === null
+        return Response.json({ jobId: job.id, configured, result })
       },
     },
   ],

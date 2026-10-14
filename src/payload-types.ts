@@ -1480,7 +1480,7 @@ export interface Doc {
   /**
    * Where the doc sits in the sidebar at /docs.
    */
-  section: 'getting-started' | 'writing' | 'blocks' | 'media' | 'site';
+  section: 'getting-started' | 'writing' | 'blocks' | 'media' | 'pages' | 'moderation' | 'site';
   /**
    * Who the help bell tells. Empty means all staff; admins see every doc.
    */

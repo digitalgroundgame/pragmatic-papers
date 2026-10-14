@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from "@testing-library/react"
+import { cleanup, render, screen, within } from "@testing-library/react"
 import type React from "react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
@@ -70,7 +70,7 @@ describe("DocsHomePage", () => {
       "aria-current",
       "page",
     )
-    expect(nav).toHaveTextContent("Admin")
+    expect(within(nav).getByText("Writing")).toBeInTheDocument()
     expect(screen.getByRole("link", { name: /Next.*Footnotes/ })).toHaveAttribute(
       "href",
       "/docs/footnotes",

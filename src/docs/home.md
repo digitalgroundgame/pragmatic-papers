@@ -9,10 +9,11 @@ Pragmatic Papers publishes pragmatic, community-driven articles on news, politic
 
 ## How the docs are laid out
 
-The sidebar groups every doc under one of three areas:
+The sidebar groups every doc under one of four areas, by what you're doing:
 
-- **Admin** is for staff: writing and publishing articles, the blocks you can add to them, photos and media, and the pages and settings that run the site.
-- **Frontend** is for readers: what the site does for you as you read, like listening to an article with the audio player.
+- **Reading** is for readers: what the site does for you as you read, like listening to an article with the audio player.
+- **Writing** is for writers: writing and publishing articles, the blocks you can add to them, and photos and media.
+- **Editing** is for editors and admins: building pages, putting together volumes, moderating comments and the settings that run the site.
 - **Development** is for contributors: how the code is built, tested and released. For now that lives in the [GitHub wiki](https://github.com/digitalgroundgame/pragmatic-papers/wiki).
 
 An area shows up in the sidebar once it has docs.

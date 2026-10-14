@@ -16,6 +16,7 @@ const sections = groupDocsBySection([
   { slug: "timeline-block", title: "The Timeline block", section: "blocks" },
   { slug: "media-collage", title: "The Media Collage block", section: "blocks" },
   { slug: "unsplash-photos", title: "Find photos on Unsplash", section: "media" },
+  { slug: "volumes", title: "Put together a volume", section: "pages" },
   { slug: "experiments", title: "Switch beta features on", section: "site" },
 ])
 
@@ -65,7 +66,9 @@ export const OnHome: Story = {
     )
     await expect(within(nav).queryByRole("link", { name: "Pragmatic Papers docs" })).toBeNull()
     // Sections sit under their area; one with no docs yet isn't shown.
-    await expect(within(nav).getByText("Admin")).toBeVisible()
+    await expect(within(nav).getByText("Writing")).toBeVisible()
+    await expect(within(nav).getByText("Editing")).toBeVisible()
+    await expect(within(nav).queryByText("Reading")).toBeNull()
     await expect(within(nav).queryByText("Development")).toBeNull()
     await expect(within(nav).getByRole("link", { name: "Writing and publishing" })).toBeVisible()
     await expect(within(nav).queryByRole("link", { name: "Footnotes" })).not.toBeVisible()

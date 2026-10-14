@@ -1,11 +1,13 @@
 /**
- * The docs' main areas, in the sidebar's order: what staff do in the admin, what readers see on
- * the site, and how the code works (which the GitHub wiki holds for now). An area with no docs
- * yet is left out of the sidebar.
+ * The docs' main areas, in the sidebar's order, by what the reader is doing: reading the site,
+ * writing for it, editing it (pages, volumes, site settings and comments), and building it (which
+ * the GitHub wiki holds for now). Admin-only docs sit in whichever of these they're about. An area
+ * with no docs yet is left out of the sidebar.
  */
 export const DOC_AREAS = [
-  { value: "admin", label: "Admin" },
-  { value: "frontend", label: "Frontend" },
+  { value: "reading", label: "Reading" },
+  { value: "writing", label: "Writing" },
+  { value: "editing", label: "Editing" },
   { value: "development", label: "Development" },
 ] as const
 
@@ -13,11 +15,13 @@ export type DocArea = (typeof DOC_AREAS)[number]["value"]
 
 /** The sidebar's sections at /docs, in order, each in an area. Every doc sits in one. */
 export const DOC_SECTIONS = [
-  { value: "getting-started", label: "Getting started", area: "admin" },
-  { value: "writing", label: "Writing articles", area: "admin" },
-  { value: "blocks", label: "Blocks", area: "admin" },
-  { value: "media", label: "Photos and media", area: "admin" },
-  { value: "site", label: "Pages and the site", area: "admin" },
+  { value: "getting-started", label: "Getting started", area: "writing" },
+  { value: "writing", label: "Writing articles", area: "writing" },
+  { value: "blocks", label: "Blocks", area: "writing" },
+  { value: "media", label: "Photos and media", area: "writing" },
+  { value: "pages", label: "Pages and volumes", area: "editing" },
+  { value: "moderation", label: "Moderation", area: "editing" },
+  { value: "site", label: "Site settings", area: "editing" },
 ] as const satisfies readonly { value: string; label: string; area: DocArea }[]
 
 /**

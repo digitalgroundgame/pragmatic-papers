@@ -152,9 +152,14 @@ A release that changes what staff do in the admin ships a help doc in the same
 PR. Docs are the `docs` collection (`src/plugins/docs/`, the docs plugin),
 served at `/docs/<slug>`, so they can hold blocks and images like an article.
 `/docs` shows the home doc (`src/docs/home.md`), and `/docs/whats-new` lists every
-doc, newest first. The sidebar groups sections under three areas (`DOC_AREAS`):
-Admin for staff, Frontend for readers' features, and Development for contributors
-(the GitHub wiki, for now); an area shows once it has docs. Each doc ends with
+doc, newest first. The sidebar groups sections under four areas (`DOC_AREAS`), by
+what the reader is doing: Reading (readers' features), Writing (articles, blocks,
+media), Editing (pages, volumes, moderation, site settings) and Development
+(the GitHub wiki, for now); an area shows once it has docs. There's no Admin area:
+an admin-only doc goes where its subject does, and one whose `audience` leaves out
+writers sits in Editing (`repoDocs.test.ts` checks). Moving a doc to another
+section's folder changes its hash, so sites that have it are offered the move as a
+draft like any other change. Each doc ends with
 Previous and Next links in the sidebar's order. The ones a release ships live in
 the repo as Markdown, a folder per sidebar section (`DOC_SECTIONS` in
 `src/plugins/docs/sections.ts`): `src/docs/<section>/<slug>.md`, with the pictures

@@ -1,7 +1,7 @@
 ---
 title: Readers' achievements and badges
 navTitle: Achievements
-summary: Editors define readers' achievements, from Verified and Early member to ones given by hand, each with an optional badge beside the reader's name on comments. Moderators give and revoke them from a user's record.
+summary: Editors define readers' achievements, each with an optional badge on comments. Moderators give and revoke them from a user's record.
 publishedAt: 2026-10-18
 audience: [editor]
 ---

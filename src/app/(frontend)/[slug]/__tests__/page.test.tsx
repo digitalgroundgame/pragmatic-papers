@@ -35,10 +35,10 @@ vi.mock("@/components/JsonLd", () => ({
 import Page from "../page"
 import HomePage from "../../page"
 
-const renderPage = async (slug?: string) =>
+const renderPage = async (slug: string) =>
   render(
     (await Page({
-      params: Promise.resolve(slug === undefined ? {} : { slug }),
+      params: Promise.resolve({ slug }),
       searchParams: Promise.resolve({}),
     })) as React.ReactElement,
   )
@@ -72,12 +72,6 @@ describe("CMS page trail", () => {
     const [crumbs] = jsonLd.mock.calls[0]![0] as Crumbs[]
     expect(crumbs!.itemListElement.map(({ name }) => name)).toEqual(["Home", "About the Papers"])
     expect(crumbs!.itemListElement[1]!.item).toMatch(/\/about$/)
-  })
-
-  it("shows no trail on the home page", async () => {
-    await renderPage()
-    expect(queryPageBySlug).toHaveBeenCalledWith("home")
-    expect(screen.queryByRole("navigation", { name: "breadcrumb" })).not.toBeInTheDocument()
   })
 })
 
@@ -119,7 +113,8 @@ describe("the home page", () => {
   it("renders the page slugged home without reading ?p=, so its lists aren't paginated", async () => {
     render((await HomePage()) as React.ReactElement)
     expect(queryPageBySlug).toHaveBeenCalledWith("home")
-    expect(renderBlocks).toHaveBeenCalledWith(layout, { pageNumber: undefined, paginated: false })
+    expect(renderBlocks).toHaveBeenCalledWith(layout, { paginated: false })
+    expect(jsonLd).toHaveBeenCalledOnce()
     expect(screen.queryByRole("navigation", { name: "breadcrumb" })).not.toBeInTheDocument()
   })
 
@@ -136,6 +131,6 @@ describe("the home page", () => {
         searchParams: Promise.resolve({ p: "2" }),
       })) as React.ReactElement,
     )
-    expect(renderBlocks).toHaveBeenCalledWith(layout, { pageNumber: 2, paginated: true })
+    expect(renderBlocks).toHaveBeenCalledWith(layout, { pageNumber: 2 })
   })
 })

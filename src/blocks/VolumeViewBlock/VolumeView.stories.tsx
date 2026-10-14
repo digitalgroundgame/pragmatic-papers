@@ -63,6 +63,22 @@ export const SecondPage: Story = {
   },
 }
 
+/** On the home page, which is prerendered and can't read `?p=`: the newest volumes, no page links. */
+export const Unpaginated: Story = {
+  args: { populateBy: "collection", limit: 4, pageNumber: 2, paginated: false },
+  play: async ({ canvasElement }) => {
+    await expect(await listedVolumes(canvasElement)).toEqual([
+      "The Local Issue",
+      "Courts",
+      "Money",
+      "Maps",
+    ])
+    const canvas = within(canvasElement)
+    await expect(canvas.queryByText(/Showing/)).not.toBeInTheDocument()
+    await expect(canvas.queryByRole("navigation")).not.toBeInTheDocument()
+  },
+}
+
 export const Selected: Story = {
   args: {
     populateBy: "selection",

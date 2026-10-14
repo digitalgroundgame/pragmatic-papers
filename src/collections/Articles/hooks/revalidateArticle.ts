@@ -29,7 +29,8 @@ const revalidateDoc = async (givenDoc: ReadersCopy, payload: Payload) => {
 
   for (const volume of volumes.docs) paths.push(`/volumes/${volume.slug}`)
 
-  // The sitemap and the listings render per request here; `shared` covers them on the Worker.
+  // The sitemap and the listings render per request here; `shared` covers them on the Worker,
+  // and revalidates the home page, which is prerendered.
   revalidateForReaders(payload.logger, `article ${givenDoc.slug}`, {
     paths,
     tags: ["articles-sitemap"],

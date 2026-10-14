@@ -6,6 +6,9 @@ import { purgeEdgeCache } from "./purgeEdgeCache"
 
 type Logger = Payload["logger"]
 
+/** The home page's path: it can list anything a `shared` save changes. */
+const HOME = "/"
+
 export interface ReadersRevalidation {
   /** Paths to revalidate in Next's cache and purge from the edge. */
   paths?: readonly (string | null | undefined)[]
@@ -16,7 +19,11 @@ export interface ReadersRevalidation {
    * of them to revalidate (and `revalidatePath` on one that reads `draftMode()` throws).
    */
   purgeOnly?: readonly (string | null | undefined)[]
-  /** Also purge every page that lists articles, volumes or contributors on the Worker. */
+  /**
+   * Also purge every page that lists articles, volumes or contributors on the Worker, and
+   * revalidate the home page, the one of them that's prerendered rather than rendered per
+   * request.
+   */
   shared?: boolean
 }
 
@@ -32,7 +39,9 @@ export function revalidateForReaders(
   reason: string,
   { paths = [], tags = [], purgeOnly = [], shared = false }: ReadersRevalidation,
 ): void {
-  const named = paths.filter((path): path is string => !!path)
+  const named = [...new Set([...paths, ...(shared ? [HOME] : [])])].filter(
+    (path): path is string => !!path,
+  )
   for (const path of named) {
     logger.info(`Revalidating ${path} (${reason})`)
     revalidatePath(path)

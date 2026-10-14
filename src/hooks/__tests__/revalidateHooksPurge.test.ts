@@ -74,9 +74,12 @@ describe("hooks that purge the edge", () => {
       () => revalidateVolume(args({ doc: published("vol-1"), previousDoc: draft("vol-1") })),
       "volume vol-1",
       {
-        paths: ["/volumes/vol-1", "/volumes/feed.xml"],
+        paths: ["/volumes/vol-1", "/volumes/feed.xml", "/"],
         shared: true,
-        revalidated: { paths: ["/volumes/vol-1", "/volumes/feed.xml"], tags: ["volumes-sitemap"] },
+        revalidated: {
+          paths: ["/volumes/vol-1", "/volumes/feed.xml", "/"],
+          tags: ["volumes-sitemap"],
+        },
       },
     ],
     [
@@ -84,9 +87,12 @@ describe("hooks that purge the edge", () => {
       () => revalidateVolume(args({ doc: draft("vol-1"), previousDoc: published("vol-1") })),
       "volume vol-1 unpublished",
       {
-        paths: ["/volumes/vol-1", "/volumes/feed.xml"],
+        paths: ["/volumes/vol-1", "/volumes/feed.xml", "/"],
         shared: true,
-        revalidated: { paths: ["/volumes/vol-1", "/volumes/feed.xml"], tags: ["volumes-sitemap"] },
+        revalidated: {
+          paths: ["/volumes/vol-1", "/volumes/feed.xml", "/"],
+          tags: ["volumes-sitemap"],
+        },
       },
     ],
     [
@@ -94,9 +100,12 @@ describe("hooks that purge the edge", () => {
       () => revalidateVolumeDelete(args({ doc: published("vol-1") })),
       "volume vol-1 deleted",
       {
-        paths: ["/volumes/vol-1", "/volumes/feed.xml"],
+        paths: ["/volumes/vol-1", "/volumes/feed.xml", "/"],
         shared: true,
-        revalidated: { paths: ["/volumes/vol-1", "/volumes/feed.xml"], tags: ["volumes-sitemap"] },
+        revalidated: {
+          paths: ["/volumes/vol-1", "/volumes/feed.xml", "/"],
+          tags: ["volumes-sitemap"],
+        },
       },
     ],
     ["a merch product", () => revalidateMerchProduct(args({ doc: {} })), "merch product changed"],
@@ -118,9 +127,9 @@ describe("hooks that purge the edge", () => {
       }),
     )
     expect(purgeEdgeCache).toHaveBeenCalledWith(payload.logger, "author jane", {
-      paths: ["/contributors/jane", "/contributors"],
+      paths: ["/contributors/jane", "/contributors", "/"],
       shared: true,
-      revalidated: { paths: ["/contributors/jane", "/contributors"], tags: [] },
+      revalidated: { paths: ["/contributors/jane", "/contributors", "/"], tags: [] },
     })
   })
 

@@ -40,6 +40,7 @@ describe("revalidateArticle", () => {
       "/articles/substack.xml",
       "/articles/new-piece/substack.xml",
       "/volumes/volume-1",
+      "/",
     ])
     expect(revalidateTag).toHaveBeenCalledWith("articles-sitemap", "max")
     expect(purgeEdgeCache).toHaveBeenCalledWith(payload.logger, "article new-piece", {

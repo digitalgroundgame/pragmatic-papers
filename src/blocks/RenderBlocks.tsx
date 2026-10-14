@@ -19,9 +19,11 @@ import { getTurnstileSiteKey } from "@/integrations/cloudflare/turnstile"
 interface RenderBlocksProps {
   blocks: Page["layout"][number][]
   pageNumber?: number
+  /** False where `?p=` isn't read, so lists show their first page without page links. */
+  paginated?: boolean
 }
 
-export const RenderBlocks: React.FC<RenderBlocksProps> = ({ blocks, pageNumber }) => {
+export const RenderBlocks: React.FC<RenderBlocksProps> = ({ blocks, pageNumber, paginated }) => {
   return (
     <>
       {blocks.map((block, index) => {
@@ -51,7 +53,9 @@ export const RenderBlocks: React.FC<RenderBlocksProps> = ({ blocks, pageNumber }
         } else if (blockType === "timeline") {
           return <TimelineBlock key={key} {...block} />
         } else if (blockType == "volumeView") {
-          return <VolumeViewBlock key={key} {...block} pageNumber={pageNumber} />
+          return (
+            <VolumeViewBlock key={key} {...block} pageNumber={pageNumber} paginated={paginated} />
+          )
         }
         return null
       })}

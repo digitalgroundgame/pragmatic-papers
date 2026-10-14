@@ -24,13 +24,25 @@ describe("revalidateForReaders", () => {
       shared: true,
     })
 
-    expect(revalidatePath.mock.calls).toEqual([["/articles/a"], ["/volumes/1"]])
+    expect(revalidatePath.mock.calls).toEqual([["/articles/a"], ["/volumes/1"], ["/"]])
     expect(revalidateTag).toHaveBeenCalledExactlyOnceWith("articles-sitemap", "max")
     expect(purgeEdgeCache).toHaveBeenCalledExactlyOnceWith(logger, "article a", {
-      paths: ["/articles/a", "/volumes/1", "/topics/t", undefined],
+      paths: ["/articles/a", "/volumes/1", "/", "/topics/t", undefined],
       shared: true,
-      revalidated: { paths: ["/articles/a", "/volumes/1"], tags: ["articles-sitemap"] },
+      revalidated: { paths: ["/articles/a", "/volumes/1", "/"], tags: ["articles-sitemap"] },
     })
+  })
+
+  it("revalidates the prerendered home page once with the shared pages", () => {
+    revalidateForReaders(logger, "page home", { paths: ["/"], shared: true })
+
+    expect(revalidatePath.mock.calls).toEqual([["/"]])
+  })
+
+  it("leaves the home page alone when the save shows on no shared page", () => {
+    revalidateForReaders(logger, "page about", { paths: ["/about"] })
+
+    expect(revalidatePath.mock.calls).toEqual([["/about"]])
   })
 
   it("never calls revalidatePath on a page it only purges", () => {

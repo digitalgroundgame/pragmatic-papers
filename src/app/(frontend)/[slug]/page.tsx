@@ -4,19 +4,15 @@ import { PayloadRedirects } from "@/components/PayloadRedirects"
 import { homeStatic } from "@/endpoints/seed/home-static"
 import { queryPageBySlug } from "@/data/queries"
 import { draftMode } from "next/headers"
+import { getGlobal } from "@/data/globals"
 import type { RequiredDataFromCollectionSlug } from "payload"
 
-import { RenderBlocks } from "@/blocks/RenderBlocks"
-import { JsonLd } from "@/components/JsonLd"
-import { LivePreviewListener } from "@/components/LivePreviewListener"
-import { RenderHero } from "@/heros/RenderHero"
 import { generateMeta, paginatedPath } from "@/utilities/generateMeta"
-import { getGlobal } from "@/data/globals"
-import { buildBreadcrumbJsonLd, buildHomeJsonLd } from "@/utilities/structuredData"
-import { Breadcrumbs, type Crumb } from "@/components/Breadcrumbs"
+import { PageView } from "./PageView"
 
 // Paginated with `?p=`, which only a request carries, so this is rendered per request. That's
-// also why there's no generateStaticParams: a prerendered slug would never be served.
+// also why there's no generateStaticParams: a prerendered slug would never be served. The home
+// page has a route of its own (`../page.tsx`), prerendered, so it doesn't pay for this.
 export const dynamic = "force-dynamic"
 
 export async function generateMetadata({
@@ -50,7 +46,6 @@ export default async function Page({ params, searchParams }: Args): Promise<Reac
   const pageNumber = pageString ? Math.max(Number(pageString) || 1, 1) : undefined
   const url = `/${slug}${pageNumber ? `?p=${pageNumber}` : ""}`
   let page: RequiredDataFromCollectionSlug<"pages"> | null = await queryPageBySlug(slug)
-  const { socials } = await getGlobal("footer", 2)
 
   // Remove this code once your website is seeded
   if (!page && slug === "home") {
@@ -61,25 +56,15 @@ export default async function Page({ params, searchParams }: Args): Promise<Reac
     return <PayloadRedirects url={url} />
   }
 
-  const { hero, layout } = page
-
-  // Flat today. Once pages nest, this is nestedDocsTrail(page.breadcrumbs).
-  const trail: Crumb[] = slug === "home" ? [] : [{ name: page.title, path: `/${slug}` }]
-  const jsonLdData = slug === "home" ? buildHomeJsonLd(socials) : [buildBreadcrumbJsonLd(trail)]
+  const { socials } = await getGlobal("footer", 2)
   return (
-    <>
-      <Breadcrumbs items={trail} />
-      <article>
-        <JsonLd data={jsonLdData} />
-        {/* Allows redirects for valid pages too */}
-        <PayloadRedirects disableNotFound url={url} />
-
-        {draft && <LivePreviewListener />}
-
-        <RenderHero {...hero} />
-
-        <RenderBlocks blocks={layout} pageNumber={pageNumber} />
-      </article>
-    </>
+    <PageView
+      page={page}
+      slug={slug}
+      url={url}
+      draft={draft}
+      pageNumber={pageNumber}
+      socials={socials}
+    />
   )
 }

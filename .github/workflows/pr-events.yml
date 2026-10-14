@@ -7,7 +7,8 @@ name: PR events
 # this starts with workflow_dispatch:
 #
 #   - The "in review" label, or marking a PR that has it ready, runs
-#     claude-review.yml on the PR's branch (PRs into dev, not drafts).
+#     claude-review.yml on the PR's branch (PRs into dev, not drafts). On a
+#     draft, the label gets a comment saying the review waits until it's ready.
 #   - The "e2e" label runs the E2E suite on the PR, and "in review" runs
 #     Lighthouse, by starting playwright.yml on the PR's branch. Its runs on
 #     later pushes read the labels themselves.
@@ -110,6 +111,19 @@ jobs:
           gh api -X POST "repos/$GITHUB_REPOSITORY/statuses/$HEAD_SHA" \
             -f state=pending -f context="Claude review" -f description="Reviewing…" \
             -f target_url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/workflows/claude-review.yml" >/dev/null
+
+      # The step above skips drafts and runs when one is marked ready, so the
+      # label would otherwise seem to do nothing. One comment per label add:
+      # `labeled` fires once each time it's added.
+      - name: Say the Claude review waits for a draft
+        if: >-
+          env.SAME_REPO == 'true' &&
+          github.event.pull_request.base.ref == 'dev' &&
+          github.event.pull_request.draft &&
+          github.event.action == 'labeled' && github.event.label.name == 'in review'
+        run: |
+          gh pr comment "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" \
+            --body "The Claude review starts when this PR is marked ready for review."
 
       - name: Run E2E or Lighthouse on the PR
         if: >-

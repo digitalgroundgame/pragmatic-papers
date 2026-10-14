@@ -466,6 +466,40 @@ or member, and staff get a badge.
   user empties their comments (status `deleted`, no author) so others' replies keep their place.
 - `tests/integration/comments.test.ts` signs readers up with Discord stubbed, and posts.
 
+### Achievements
+
+`src/plugins/achievements/` gives readers achievements, behind its switch on System → Plugins.
+Editors define them in the `achievements` collection (**Content → Achievements**, orderable:
+name, description, `badge`, and the rule each is earned by). The rules are code (`RULES` in
+`rules.ts`); an editor picks one and fills in what it asks for (`limit`). The `awards`
+collection holds one row per user and achievement: an award, a revocation, or both. It's off
+the sidebar (`admin.group: false`): moderators reach it from the users collection's `awards`
+join field, on each user's record. Only admins delete either.
+
+- **Rules**: `account` ones (`verified`: `isVerified`) are worked out from the user record on
+  each read and have no row until a moderator revokes one; `awarded` ones (`firstMembers`) are a
+  row, written by the plugin; `manual` ones are a row a moderator adds from the user's record.
+  A row with `revoked` ticked suppresses any of them and keeps who and when. A row made in the
+  admin either gives a `manual` achievement or revokes one (`awardChanges`). An achievement's
+  rule is fixed once it's made.
+- **First members** go to the first `limit` accounts `isMember` accepts (the `member` role,
+  never staff), in sign-up order: a users `afterChange` hook awards each such achievement when an
+  account becomes a member, and saving the achievement (created, or its limit raised) fills it
+  from the members a site already has (`fillFirstMembers`). Revoked rows, and rows whose account
+  was deleted (kept with no user), still count, so nobody moves up. They're awarded even while
+  the switch is off.
+- **Starter achievements**: Early member (`earlyMemberLimit`, 1000) and Verified
+  (`starterAchievements`) are created once per site by `/next/revalidate-all` and the seed
+  (`readerAchievements.seed`, recorded with `markSeeded`), so one an editor deletes stays deleted.
+- **Badges on comments**: the comments plugin's `authorBadges` option asks
+  `readerAchievements.badgesFor` once per thread; the first achievement in the editors' order
+  with a badge shows, and a badge `describeAuthor` gives (Staff) wins.
+  `/api/achievements/mine` lists the signed-in reader's for `/account`. Switched off, no
+  achievement shows anywhere.
+- The host's options (roles, access, the starter limit) are `achievementsOptions` in
+  `src/plugins/readerAchievements.ts`. `tests/integration/achievements.test.ts` covers defining,
+  giving and revoking, access, and filling a first-members achievement.
+
 ### Integrations
 
 `src/integrations/` is where an outside service lives: a GitHub repository we

@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite"
 import { expect, spyOn, userEvent, within } from "storybook/test"
 
+import type { HeldAchievement } from "@/plugins/achievements"
 import type { AccountSummary } from "@/plugins/sso/endpoints/account"
 import type { LinkedProvider } from "@/plugins/sso/types"
 
@@ -18,12 +19,26 @@ const links: LinkedProvider[] = [
   { id: "destiny", label: "Destiny.gg", linked: false },
 ]
 
-/** Answers `/api/account` with `account` (401 when null) and `/api/auth-links` with `links`. */
+const achievements: HeldAchievement[] = [
+  {
+    key: "early-member",
+    label: "Early member",
+    description: "One of the first readers to make an account.",
+    badge: "Early member",
+    earnedAt: "2026-10-18T12:00:00.000Z",
+  },
+]
+
+/**
+ * Answers `/api/account` with `account` (401 when null), `/api/auth-links` with `links` and
+ * `/api/achievements/mine` with `achievements`.
+ */
 function serve(account: AccountSummary | null) {
   return () => {
     const fetchSpy = spyOn(window, "fetch").mockImplementation(async (input, init) => {
       const url = String(input)
       if (url.endsWith("/auth-links")) return Response.json({ providers: links })
+      if (url.endsWith("/achievements/mine")) return Response.json({ achievements })
       if (url.endsWith("/account") && init?.method === "PATCH") {
         const { name } = JSON.parse(String(init.body)) as { name: string }
         return Response.json({ ...member, name })
@@ -67,6 +82,9 @@ export const Member: Story = {
     await userEvent.type(name, "Ada L.")
     await userEvent.click(canvas.getByRole("button", { name: "Save" }))
     await expect(await canvas.findByText("Saved.")).toBeInTheDocument()
+
+    await expect(await canvas.findByRole("heading", { name: "Achievements" })).toBeInTheDocument()
+    await expect(canvas.getByText("Early member")).toBeInTheDocument()
 
     // Their only sign-in can't be disconnected.
     await expect(await canvas.findByRole("button", { name: "Disconnect Discord" })).toBeDisabled()

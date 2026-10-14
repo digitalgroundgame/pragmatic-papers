@@ -688,7 +688,7 @@ Staging's public site also runs as a Cloudflare Worker at `staging-worker.pragma
 `src/cloudflare/README.md`.
 
 Each database has one seeder: the deploy of the Coolify app that runs its migrations. Its
-`/next/revalidate-all` seeds what a deploy seeds (help docs, starter pages); the Worker reads
+`/next/revalidate-all` seeds what a deploy seeds (help docs, starter pages, starter achievements); the Worker reads
 the same database and sets `DEPLOY_SEED=false` (`wrangler.jsonc`), so its deploy only throws
 pages away. Two seeders could each create the same content at once. Deploy-seeded content
 added later goes through that route, so it follows the same switch.

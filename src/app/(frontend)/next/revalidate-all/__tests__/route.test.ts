@@ -71,6 +71,7 @@ describe("POST /next/revalidate-all", () => {
     await expect(response.json()).resolves.toEqual({ revalidated: true, seeded: false })
     expect(syncRepoDocs).not.toHaveBeenCalled()
     expect(createMissingStarterPages).not.toHaveBeenCalled()
+    expect(seedAchievements).not.toHaveBeenCalled()
     expect(revalidatePath).toHaveBeenCalledExactlyOnceWith("/", "layout")
   })
 

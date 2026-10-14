@@ -20,7 +20,11 @@ const FIXED = {
 } as const
 
 /** A switchable plugin's switch, bound to the form (`PluginSwitchField` in the admin). */
-export type SwitchFieldComponent = ComponentType<{ name: string; path: string }>
+export type SwitchFieldComponent = ComponentType<{
+  name: string
+  path: string
+  status: PluginRow["status"]
+}>
 
 function Status({
   plugin,
@@ -29,7 +33,8 @@ function Status({
   plugin: PluginRow
   SwitchField: SwitchFieldComponent
 }): React.ReactNode {
-  if (plugin.switchPath) return <SwitchField name={plugin.name} path={plugin.switchPath} />
+  if (plugin.switchPath)
+    return <SwitchField name={plugin.name} path={plugin.switchPath} status={plugin.status} />
   return (
     <span style={{ alignItems: "center", display: "inline-flex", gap: "0.5rem" }}>
       <PluginSwitch

@@ -488,6 +488,7 @@ USE_LOCAL_STORAGE=true
 **Requirements:**
 
 - Configure a persistent mount in Coolify at `/app/public/media` (staging bind-mounts `/data/coolify/applications/<its uuid>/public/media`; previews: see the preview image setup above)
+- That one mount keeps every upload: Maps (`map-assets`) are kept in its `map-assets/` folder. An upload collection whose `staticDir` is outside `public/media` loses its files on every redeploy
 - The app runs as uid `1001` (`nextjs`), so it must be able to write the mount's source folder. When Docker creates a missing bind source it makes it `root`-owned, and every upload fails; fix it with `chown 1001:1001 /data/coolify/applications/<uuid>/public/media`. `start.sh` warns at startup when the folder is missing, empty, or not writable.
 - Back up the media folder. It's the only copy of staging's uploads (see the preview mount's warning above).
 

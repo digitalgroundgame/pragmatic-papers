@@ -409,7 +409,7 @@ describe("start.sh", () => {
   // `media` lays out public/media with those files; `mediaMode` then sets its permissions.
   function start(name: string, env: Record<string, string>, media?: string[], mediaMode?: number) {
     const app = join(dir, "app")
-    mkdirSync(app)
+    mkdirSync(app, { recursive: true })
     if (media) {
       mkdirSync(join(app, "public", "media"), { recursive: true })
       for (const file of media) writeFileSync(join(app, "public", "media", file), file)
@@ -669,10 +669,9 @@ describe("start.sh", () => {
       expect(output).toContain("node started")
     })
 
-    it("copies staging's media without overwriting the preview's own", () => {
-      // The image's cp is BusyBox's: with -n it skips a source whose own destination
-      // exists. For `cp -Rn staging/. media/` that's media/. itself, so it copied
-      // nothing. Stand in for it: GNU cp recurses into the folder instead.
+    it("copies staging's media and maps without overwriting the preview's own", () => {
+      // The image's cp is BusyBox's, whose -n skips a whole folder once its destination
+      // exists. Stand in for it, so a script relying on -n to merge map-assets/ fails here.
       writeFileSync(
         join(dir, "bin", "cp"),
         `#!/bin/sh
@@ -689,21 +688,30 @@ exit $status
       )
       chmodSync(join(dir, "bin", "cp"), 0o755)
       const staging = join(dir, "staging-media")
-      mkdirSync(staging)
+      mkdirSync(join(staging, "map-assets"), { recursive: true })
       writeFileSync(join(staging, "new.webp"), "staging")
       writeFileSync(join(staging, "Screenshot at 5.49 PM.webp"), "staging")
       writeFileSync(join(staging, "same.webp"), "staging")
+      writeFileSync(join(staging, "map-assets", "districts.svg"), "staging")
+      writeFileSync(join(staging, "map-assets", "states.svg"), "staging")
+      const app = join(dir, "app")
+      // The preview already has the maps folder, with one of its own.
+      mkdirSync(join(app, "public", "media", "map-assets"), { recursive: true })
+      writeFileSync(join(app, "public", "media", "map-assets", "states.svg"), "preview")
       const { output } = start(
         "",
         { ...built, USE_LOCAL_STORAGE: "true", STAGING_MEDIA_DIR: staging },
         ["same.webp"],
       )
 
-      const media = join(dir, "app", "public", "media")
+      const media = join(app, "public", "media")
       expect(readFileSync(join(media, "new.webp"), "utf8")).toBe("staging")
       expect(readFileSync(join(media, "Screenshot at 5.49 PM.webp"), "utf8")).toBe("staging")
       expect(readFileSync(join(media, "same.webp"), "utf8")).toBe("same.webp")
-      expect(output).toContain("Media: copied 2, now 3 files")
+      expect(readFileSync(join(media, "map-assets", "districts.svg"), "utf8")).toBe("staging")
+      expect(readFileSync(join(media, "map-assets", "states.svg"), "utf8")).toBe("preview")
+      expect(output).toContain("Media: copied 3, now 5 files")
+      expect(output).not.toContain("WARNING")
       expect(output).not.toContain("public/media is empty")
     })
 

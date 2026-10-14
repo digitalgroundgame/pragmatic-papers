@@ -130,7 +130,9 @@ export const MapAssets: CollectionConfig = {
     beforeChange: [populateCreatedBy],
   },
   upload: {
-    staticDir: path.resolve(dirname, "../../../public/map-assets"),
+    // Inside public/media, the folder a deployment with local storage mounts to keep its
+    // uploads (dockerfiles/README.md); anywhere else, a redeploy loses them.
+    staticDir: path.resolve(dirname, "../../../public/media/map-assets"),
     mimeTypes: ["image/svg+xml"],
     disableLocalStorage: process.env.USE_LOCAL_STORAGE !== "true",
   },

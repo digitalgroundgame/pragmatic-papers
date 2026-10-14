@@ -4,7 +4,8 @@
 //
 // - The pino integration (sentry.server.config.ts) reports every `error`-level log line.
 //   Payload already logs the routine failures (`ValidationError`, `Forbidden`, `NotFound`,
-//   `Locked`, `MissingFile`) at `info`, so an error-level line is one worth looking at: a
+//   `Locked`, `MissingFile`) at `info`, by name, once `restorePayloadErrorNames` has
+//   given the production build's minified classes their names back, so an error-level line is one worth looking at: a
 //   `QueryError`, or a failure Payload logs and then recovers from, such as an invalid
 //   relationship filter on save. Tune a noisy class with `loggingLevels` in the Payload config.
 // - The Sentry plugin's `afterError` hook reports every error Payload answers with a 5xx,
@@ -17,7 +18,24 @@
 
 import { sentryPlugin } from "@payloadcms/plugin-sentry"
 import * as Sentry from "@sentry/nextjs"
-import type { Plugin } from "payload"
+import {
+  APIError,
+  AuthenticationError,
+  ErrorDeletingFile,
+  FileRetrievalError,
+  FileUploadError,
+  Forbidden,
+  InvalidFieldRelationship,
+  Locked,
+  LockedAuth,
+  MissingFile,
+  NotFound,
+  type Plugin,
+  QueryError,
+  UnauthorizedError,
+  UnverifiedEmail,
+  ValidationError,
+} from "payload"
 
 // The plugin's admin provider is a Sentry `ErrorBoundary` with no fallback, imported from
 // `@sentry/nextjs` at the top of the admin's bundle. The browser SDK loads lazily
@@ -130,5 +148,43 @@ export function skipPluginErrorsInPino(
     method.apply(this, args)
   } finally {
     Reflect.deleteProperty(err, SENTRY_CAPTURED)
+  }
+}
+
+// The errors Payload throws while answering a request, by the names it exports them under.
+const PAYLOAD_ERRORS = {
+  APIError,
+  AuthenticationError,
+  ErrorDeletingFile,
+  FileRetrievalError,
+  FileUploadError,
+  Forbidden,
+  InvalidFieldRelationship,
+  Locked,
+  LockedAuth,
+  MissingFile,
+  NotFound,
+  QueryError,
+  UnauthorizedError,
+  UnverifiedEmail,
+  ValidationError,
+}
+
+/**
+ * Gives Payload's error classes back the names the production build's minifier took from
+ * them. Payload names each error after its class (`this.name = this.constructor.name`), and
+ * picks the level it logs it at by that name (`loggingLevels`), so once `ValidationError` is
+ * minified to `y`, a rejected save is logged as an error rather than at `info`, and the pino
+ * integration reports it as `y: The following field is invalid: Slug`. A class's `name` is
+ * configurable, so setting it back before anything is thrown restores both. Run where the
+ * Payload config is built: each server bundle carries its own copy of Payload, and each one
+ * builds the config.
+ */
+export function restorePayloadErrorNames(
+  errors: Record<string, abstract new (...args: never[]) => Error> = PAYLOAD_ERRORS,
+): void {
+  for (const [name, error] of Object.entries(errors)) {
+    if (error.name !== name)
+      Object.defineProperty(error, "name", { configurable: true, value: name })
   }
 }

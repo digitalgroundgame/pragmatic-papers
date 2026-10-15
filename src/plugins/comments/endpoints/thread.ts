@@ -7,7 +7,14 @@ import { SKIP_MODERATION } from "../hooks/recordModeration"
 import { authorLock } from "../lock"
 import { readSettings } from "../settings"
 import { buildThread, type StoredComment } from "../thread"
-import type { CommentThread, CommentViewer, PublicComment, ResolvedCommentsConfig } from "../types"
+import type {
+  AuthorDisplay,
+  CommentAuthor,
+  CommentThread,
+  CommentViewer,
+  PublicComment,
+  ResolvedCommentsConfig,
+} from "../types"
 
 /** The most comments one thread reads: the newest, so a new comment always shows. */
 export const THREAD_LIMIT = 500
@@ -23,6 +30,22 @@ function parseId(req: PayloadRequest, raw: unknown): number | string | null {
   if (req.payload.db.defaultIDType !== "number") return raw
   const id = Number(raw)
   return Number.isSafeInteger(id) && id > 0 ? id : null
+}
+
+/**
+ * `describeAuthor`, with the badges `authorBadges` gives these authors, asked once. A badge
+ * `describeAuthor` gives itself (like Staff) wins.
+ */
+export async function describerFor(
+  config: ResolvedCommentsConfig,
+  authors: CommentAuthor[],
+  req: PayloadRequest,
+): Promise<(author: CommentAuthor) => AuthorDisplay> {
+  const badges = authors.length ? await config.authorBadges(authors, req) : new Map()
+  return (author) => {
+    const display = config.describeAuthor(author)
+    return display.badge ? display : { ...display, badge: badges.get(String(author.id)) ?? null }
+  }
 }
 
 /** Whether a cross-site page sent this. A browser always names the page's origin on a POST. */
@@ -75,10 +98,22 @@ export function threadEndpoints(config: ResolvedCommentsConfig): Endpoint[] {
       readSettings(req.payload),
     ])
 
+    const stored = (found.docs as unknown as StoredComment[]).reverse()
+    const describe = await describerFor(
+      config,
+      [
+        ...stored.flatMap((comment) =>
+          comment.author && typeof comment.author === "object" ? [comment.author] : [],
+        ),
+        ...(author ? [author] : []),
+      ],
+      req,
+    )
+
     let viewer: CommentViewer | null = null
     if (author) {
       viewer = {
-        ...config.describeAuthor(author),
+        ...describe(author),
         locked: await authorLock(req.payload, author.id, settings),
         needsVerifiedEmail: settings.requireVerifiedEmail && !config.isVerified(author),
       }
@@ -86,11 +121,7 @@ export function threadEndpoints(config: ResolvedCommentsConfig): Endpoint[] {
 
     const thread: CommentThread = {
       // Oldest first, as readers read them.
-      comments: buildThread(
-        (found.docs as unknown as StoredComment[]).reverse(),
-        author?.id ?? null,
-        config.describeAuthor,
-      ),
+      comments: buildThread(stored, author?.id ?? null, describe),
       viewer,
       providers: viewer ? [] : config.signInProviders(),
       maxDepth: settings.maxDepth,
@@ -235,9 +266,8 @@ export function threadEndpoints(config: ResolvedCommentsConfig): Endpoint[] {
       })
     }
 
-    const [comment] = buildThread([{ ...created, author }], author.id, config.describeAuthor) as [
-      PublicComment,
-    ]
+    const describe = await describerFor(config, [author], req)
+    const [comment] = buildThread([{ ...created, author }], author.id, describe) as [PublicComment]
     return Response.json(
       { comment, ...(!check.ok && { held: check.reason }) },
       { status: 201, headers: noStore },

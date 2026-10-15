@@ -71,6 +71,9 @@ function createRecordingPayload() {
       docs: docsIn(collection).filter((doc) => matches(doc, where)),
     })),
     findByID: vi.fn(async ({ collection, id }) => docsIn(collection).find((doc) => doc.id === id)),
+    count: vi.fn(async ({ collection, where }) => ({
+      totalDocs: docsIn(collection).filter((doc) => matches(doc, where)).length,
+    })),
     findVersions: vi.fn(async () => ({ docs: [] })),
     kv: {
       get: vi.fn(async () => null),
@@ -161,7 +164,14 @@ describe("seed", () => {
       (write) => write.op === "updateGlobal" && write.target === "plugins",
     )
     expect(plugins?.data).toEqual({
-      switches: { docs: true, notifications: true, tours: true, sso: true, comments: true },
+      switches: {
+        docs: true,
+        notifications: true,
+        tours: true,
+        sso: true,
+        comments: true,
+        achievements: true,
+      },
     })
   })
 
@@ -171,8 +181,8 @@ describe("seed", () => {
 
     await seed(payload, onProgress, { disableRevalidate: true })
 
-    expect(onProgress).toHaveBeenCalledWith("Clearing existing data...", 1, 14)
-    expect(onProgress).toHaveBeenLastCalledWith("Seeding article recommendations...", 14, 14)
+    expect(onProgress).toHaveBeenCalledWith("Clearing existing data...", 1, 15)
+    expect(onProgress).toHaveBeenLastCalledWith("Seeding article recommendations...", 15, 15)
   })
 
   it("names the step that failed", async () => {

@@ -16,7 +16,7 @@ export function commentsCollection(config: ResolvedCommentsConfig): CollectionCo
     slug: COMMENTS_SLUG,
     labels: { singular: "Comment", plural: "Comments" },
     admin: {
-      group: config.adminGroup,
+      group: config.adminGroups.comments,
       useAsTitle: "body",
       defaultColumns: ["body", "author", "target", "status", "createdAt"],
       description:

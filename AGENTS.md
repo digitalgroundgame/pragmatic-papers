@@ -315,6 +315,15 @@ Payload's own plugins so it can be lifted out without a rewrite:
   starts off (`defaultValue: false`), which shows a **Beta** badge; when it graduates, flip the
   default rather than deleting the switch. This replaces an experiment in Settings for a
   feature that's a plugin; anything else stays an experiment.
+- Settings an admin changes while the site runs (thresholds, limits, rules) go in the plugin's
+  own global, in the System group (the comments plugin's **Comment settings**), never as fields
+  on Settings or Plugins: a plugin can't depend on the host's globals, and a global of its own
+  gets its own access (moderators read Comment settings; Settings is admin-only) and its own save
+  hooks (saving Settings clears Next's whole cache and the edge). A plugin with nothing for an
+  admin to change has no global: what the site decides goes in options, and on or off is its
+  switch. Settings (`site-settings`) keeps the experiments and site-wide values no one feature
+  owns; a feature that already has a global (Header's ticker, Integrations) keeps its settings
+  there.
 - `types.ts` holds `<Name>PluginConfig`, extending `SitePluginOptions`. Options have defaults,
   and `disabled: true` leaves the schema in place (so migrations don't change) but turns the
   behavior off.

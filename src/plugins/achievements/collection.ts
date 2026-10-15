@@ -9,7 +9,7 @@ import {
   ValidationError,
 } from "payload"
 
-import { fillFirstMembers } from "./award"
+import { fillFirstMembers, markFilled } from "./award"
 import { ACHIEVEMENTS_SLUG, AWARDING, AWARDS_SLUG } from "./constants"
 import { mineEndpoint } from "./endpoints/mine"
 import { findRule, RULES } from "./rules"
@@ -30,6 +30,7 @@ export const fillOnSave =
     const raised =
       operation === "create" || (achievement.limit ?? 0) > ((previousDoc?.limit as number) ?? 0)
     if (raised) await fillFirstMembers(req.payload, achievement, config, req)
+    if (operation === "create") await markFilled(req.payload, achievement)
     return doc
   }
 

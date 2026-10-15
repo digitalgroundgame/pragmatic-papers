@@ -135,17 +135,21 @@ describe("seedAchievements", () => {
     expect(await seedAchievements(payload, config)).toEqual([])
     expect(store[ACHIEVEMENTS_SLUG]).toHaveLength(2)
     expect(payload.create).not.toHaveBeenCalled()
-    expect(kv.size).toBe(2)
+    expect([...kv.keys()]).toEqual([
+      "seeded:achievements:early-member",
+      "seeded:achievements:verified",
+      "seeded:awards:filled-1",
+    ])
   })
 
-  it("fills Early member on every run, for members an earlier fill missed", async () => {
+  it("fills an Early member that was never filled, once, so a deleted award stays deleted", async () => {
     const { payload, store } = fakePayload({ users: [member(1, 1), member(2, 2), member(3, 3)] })
     await seedAchievements(payload, config)
     expect(holders(store[AWARDS_SLUG]!)).toEqual([1, 2])
 
-    store[AWARDS_SLUG] = []
+    store[AWARDS_SLUG] = store[AWARDS_SLUG]!.filter((row) => row.user !== 1)
     expect(await seedAchievements(payload, config)).toEqual([])
-    expect(holders(store[AWARDS_SLUG]!)).toEqual([1, 2])
+    expect(holders(store[AWARDS_SLUG]!)).toEqual([2])
   })
 
   it("creates nothing when the plugin is disabled in code", async () => {

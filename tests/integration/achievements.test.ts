@@ -84,7 +84,7 @@ async function signUp(verified = true): Promise<{ cookie: string; user: User }> 
 let article: Article
 let editor: User
 let writer: User
-/** A member who signed up before the site had achievements. */
+/** A member who signed up before the site had achievements, after the staff. */
 let olderMember: User
 /** The seeded achievements' IDs. */
 let early: number
@@ -173,16 +173,24 @@ describe("achievements", () => {
     expect(await achievementsOf(olderMember)).toContain(early)
   })
 
-  it("gives it on the next deploy to a member the first fill missed", async () => {
-    await payload.delete({
-      collection: "awards",
-      where: { user: { equals: olderMember.id } },
-      overrideAccess: true,
-    })
+  it("fills it on the next deploy when its first fill missed members, and only then", async () => {
+    const deleteAward = () =>
+      payload.delete({
+        collection: "awards",
+        where: { user: { equals: olderMember.id } },
+        overrideAccess: true,
+      })
+    // As on a site whose Early member was made before fills were recorded.
+    await deleteAward()
+    await payload.kv.delete(`seeded:awards:filled-${early}`)
 
     await readerAchievements.seed(payload)
-
     expect(await achievementsOf(olderMember)).toEqual([early])
+
+    // An award an admin deletes stays deleted.
+    await deleteAward()
+    await readerAchievements.seed(payload)
+    expect(await achievementsOf(olderMember)).toEqual([])
   })
 
   it("awards a new member Early member, and shows it on their comments and account", async () => {
@@ -195,9 +203,10 @@ describe("achievements", () => {
     expect(body.achievements.map((a) => a.label)).toEqual(["Early member", "Verified"])
   })
 
-  it("never awards staff Early member", async () => {
+  it("awards staff Early member too, those already there and those made later", async () => {
+    expect(await achievementsOf(writer)).toEqual([early])
     const staff = await createUser(["editor"])
-    expect(await rowsOf(staff)).toEqual([])
+    expect(await achievementsOf(staff)).toEqual([early])
   })
 
   it("lets a moderator revoke one, with a reason, and give it back", async () => {
@@ -353,13 +362,9 @@ describe("achievements", () => {
     expect(await achievementsOf(user)).toEqual([early])
   })
 
-  it("awards a new first-members achievement to existing members, and more when its limit rises", async () => {
+  it("awards a new first-members achievement to existing accounts, and more when its limit rises", async () => {
     const { user } = await signUp()
-    const members = await payload.count({
-      collection: "users",
-      where: { roles: { contains: "member" } },
-      overrideAccess: true,
-    })
+    const accounts = await payload.count({ collection: "users", overrideAccess: true })
     const founding = await payload.create({
       collection: "achievements",
       data: { name: "Founding reader", rule: "firstMembers", limit: 1, badge: false },
@@ -377,11 +382,11 @@ describe("achievements", () => {
     await payload.update({
       collection: "achievements",
       id: founding.id,
-      data: { limit: members.totalDocs + 5 },
+      data: { limit: accounts.totalDocs + 5 },
       user: editor,
       overrideAccess: false,
     })
-    expect((await holders()).totalDocs).toBe(members.totalDocs)
+    expect((await holders()).totalDocs).toBe(accounts.totalDocs)
     expect(await achievementsOf(user)).toContain(founding.id)
   })
 

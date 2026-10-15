@@ -130,10 +130,21 @@ export async function fillFirstMembers(
 }
 
 /**
+ * Records that a `firstMembers` achievement has been filled from the site's existing members, so
+ * a deploy fills each one once (`seedAchievements`). Awards an admin deletes afterwards stay
+ * deleted.
+ */
+export const markFilled = (payload: Payload, achievement: AchievementDoc): Promise<void> =>
+  markSeeded(payload, AWARDS_SLUG, `filled-${achievement.id}`)
+
+const wasFilled = (payload: Payload, achievement: AchievementDoc): Promise<boolean> =>
+  wasSeeded(payload, AWARDS_SLUG, `filled-${achievement.id}`)
+
+/**
  * Creates the achievements a site starts with (`starterAchievements`), each once per site: one
- * an editor deletes stays deleted. Then fills every `firstMembers` achievement the site has
- * (`fillFirstMembers`), so members an earlier fill missed get theirs on the next deploy, whoever
- * created it. Returns the names it created.
+ * an editor deletes stays deleted. Then fills, once each, the `firstMembers` achievements that
+ * haven't been filled from the site's existing members: one made before fills were recorded, or
+ * by a deploy whose fill missed them. Returns the names it created.
  */
 export async function seedAchievements(
   payload: Payload,
@@ -163,7 +174,9 @@ export async function seedAchievements(
     created.push(data.name)
   }
   for (const achievement of await firstMembersAchievements(payload)) {
+    if (await wasFilled(payload, achievement)) continue
     await fillFirstMembers(payload, achievement, config)
+    await markFilled(payload, achievement)
   }
   return created
 }

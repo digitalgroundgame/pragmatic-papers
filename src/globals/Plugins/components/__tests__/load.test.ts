@@ -84,6 +84,23 @@ describe("loadPlugins", () => {
     ])
   })
 
+  it("points a switchable plugin at its checkbox, unless it's switched off in code", async () => {
+    const theSwitch = { label: "On", description: "", defaultValue: false }
+    const rows = await loadPlugins(
+      config([
+        plugin({ name: "Package" }),
+        plugin({ slug: "docs", name: "Docs", switch: theSwitch, enabled: async () => true }),
+        plugin({ slug: "tours", name: "Tours", switch: theSwitch, enabled: false }),
+      ]),
+      admin,
+    )
+    expect(rows.map((r) => [r.name, r.switchPath])).toEqual([
+      ["Package", null],
+      ["Docs", "switches.docs"],
+      ["Tours", null],
+    ])
+  })
+
   it("reads each plugin's switch now", async () => {
     const rows = await loadPlugins(
       config([

@@ -1,6 +1,8 @@
 import type { Payload } from "payload"
 
 import type { User } from "@/payload-types"
+import { SWITCHES_GROUP } from "../pluginSwitches"
+
 import { isPluginOn, type RegisteredPlugin, registeredPlugins } from "@/utilities/registerPlugin"
 
 /** A link to an admin page, or `href: null` when that page is hidden from this user. */
@@ -17,6 +19,11 @@ export interface PluginRow {
   status: "on" | "off" | "unknown"
   /** Its switch starts off: it's still being tried out. */
   beta: boolean
+  /**
+   * Where its switch sits in the Plugins global's form, or `null` when it has none (always on,
+   * or switched off in code).
+   */
+  switchPath: string | null
   pages: PluginPage[]
 }
 
@@ -93,6 +100,8 @@ export async function loadPlugins(
         description: plugin.description,
         status: await status(plugin.enabled, payload),
         beta: plugin.switch?.defaultValue === false,
+        switchPath:
+          plugin.switch && plugin.enabled !== false ? `${SWITCHES_GROUP}.${plugin.slug}` : null,
         pages: [...collections, ...globals],
       } satisfies PluginRow
     }),

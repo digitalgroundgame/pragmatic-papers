@@ -138,6 +138,16 @@ describe("seedAchievements", () => {
     expect(kv.size).toBe(2)
   })
 
+  it("fills Early member on every run, for members an earlier fill missed", async () => {
+    const { payload, store } = fakePayload({ users: [member(1, 1), member(2, 2), member(3, 3)] })
+    await seedAchievements(payload, config)
+    expect(holders(store[AWARDS_SLUG]!)).toEqual([1, 2])
+
+    store[AWARDS_SLUG] = []
+    expect(await seedAchievements(payload, config)).toEqual([])
+    expect(holders(store[AWARDS_SLUG]!)).toEqual([1, 2])
+  })
+
   it("creates nothing when the plugin is disabled in code", async () => {
     const { payload } = fakePayload({ achievements: [] })
     const disabled = resolveAchievementsConfig({ ...options, disabled: true })

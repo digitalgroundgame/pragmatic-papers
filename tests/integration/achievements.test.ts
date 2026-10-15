@@ -84,6 +84,8 @@ async function signUp(verified = true): Promise<{ cookie: string; user: User }> 
 let article: Article
 let editor: User
 let writer: User
+/** A member who signed up before the site had achievements. */
+let olderMember: User
 /** The seeded achievements' IDs. */
 let early: number
 let verified: number
@@ -147,6 +149,7 @@ beforeAll(async () => {
   writer = await createUser("writer")
   editor = await createUser("editor")
   article = await createArticle({ authors: [writer.id] })
+  olderMember = await createUser("member")
   await readerAchievements.seed(payload)
   early = await idOf("Early member")
   verified = await idOf("Verified")
@@ -166,6 +169,22 @@ afterEach(() => {
 })
 
 describe("achievements", () => {
+  it("gives Early member to members who signed up before the site had it", async () => {
+    expect(await achievementsOf(olderMember)).toContain(early)
+  })
+
+  it("gives it on the next deploy to a member the first fill missed", async () => {
+    await payload.delete({
+      collection: "awards",
+      where: { user: { equals: olderMember.id } },
+      overrideAccess: true,
+    })
+
+    await readerAchievements.seed(payload)
+
+    expect(await achievementsOf(olderMember)).toEqual([early])
+  })
+
   it("awards a new member Early member, and shows it on their comments and account", async () => {
     const { cookie, user } = await signUp()
 

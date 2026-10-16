@@ -29,7 +29,8 @@ how Payload, Next.js, GitHub Actions, Cloudflare or Sentry behave.
 ## Step 0 — Earlier reviews of this PR
 
 Look for an earlier summary with a `<!-- claude-review sha=<sha> ... -->`
-marker (`gh pr view <number> --comments`). If there is one, review what
+marker, or its visible `<sub>claude-review sha=<sha> ...</sub>` form
+(`gh pr view <number> --comments`). If there is one, review what
 changed since that sha (`git diff <sha>..HEAD`, or the PR diff when the
 branch was rebased) and say in the summary which commit the earlier review
 covered. Don't repeat findings it already made unless they are still
@@ -234,12 +235,6 @@ If invoked with `--comment <owner>/<repo>/pull/<number>`, post findings to
 that PR:
 
 - Post the top-level summary with `gh pr comment <owner>/<repo>/pull/<number> --body "<summary>"`.
-- In CI, the action also keeps a progress comment on the PR
-  (`mcp__github_comment__update_claude_comment`). Tick off progress in it
-  while you work, and end it with the verdict line and a link to the summary.
-  The summary itself still goes out with `gh pr comment`: the action strips
-  HTML comments from the progress comment, so the marker below can't live
-  there.
 - For findings tied to a specific file/line, use
   `mcp__github_inline_comment__create_inline_comment` so the comment is
   anchored to the code.
@@ -270,6 +265,26 @@ that PR:
 
 - If posting fails (e.g. permissions), print the full review to stdout so
   it's still visible in the Action run logs.
+
+## Progress-comment mode (claude-code-action)
+
+In CI, and when someone asks `@claude` for a review, the action keeps one
+progress comment on the PR (`mcp__github_comment__update_claude_comment`), and
+that comment is the review: tick off progress in it while you work, then make
+the summary its final body. Post no other top-level comment; inline findings
+still go through `mcp__github_inline_comment__create_inline_comment`.
+
+The action strips HTML comments from that comment, so the summary ends with
+the visible form of the marker instead, as its very last line (`<sha>` is the
+commit you were given, else the PR's head):
+
+```md
+<sub>claude-review sha=<sha> verdict=<pass|blocker></sub>
+```
+
+The action puts its own header above your body, which `review-ack.yml`
+allows. When the run asks for structured output, return the same verdict
+there.
 
 ## Leaving a pending review (`--pending` mode)
 

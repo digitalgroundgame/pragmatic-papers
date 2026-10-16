@@ -7,8 +7,8 @@ name: Claude Code
 # Claude sessions can't set each other off.
 #
 # "@claude review" on a PR follows the same code-review skill as
-# claude-review.yml, so its summary ends in the marker `/reviewed` and `LGTM`
-# need (review-ack.yml).
+# claude-review.yml, so its progress comment ends in the marker `/reviewed`
+# and `LGTM` need (review-ack.yml).
 on:
   issue_comment:
     types: [created]
@@ -63,5 +63,5 @@ jobs:
             actions: read
           claude_args: |
             --model opus
-            --allowedTools "mcp__github_inline_comment__create_inline_comment,Bash(gh pr comment:*),Bash(gh pr diff:*),Bash(gh pr view:*),Bash(git log:*),Bash(git show:*),Bash(git diff:*),Bash(git blame:*)"
-            --append-system-prompt "When asked to review a pull request, follow .claude/skills/code-review/SKILL.md in --comment mode for it, posting its summary, marker last, with gh pr comment (your progress comment strips the marker) and ending your progress comment with the verdict line and a link to it. Never post /reviewed or LGTM, and never approve: both stand for a person having read the change."
+            --allowedTools "mcp__github_inline_comment__create_inline_comment,Bash(gh pr diff:*),Bash(gh pr view:*),Bash(git log:*),Bash(git show:*),Bash(git diff:*),Bash(git blame:*)"
+            --append-system-prompt "When asked to review a pull request, follow .claude/skills/code-review/SKILL.md for it in its progress-comment mode: the summary is the final body of your progress comment, ending with its visible <sub>claude-review</sub> marker for the PR's head commit, and you post no other top-level comment. Never post /reviewed or LGTM, and never approve: both stand for a person having read the change."

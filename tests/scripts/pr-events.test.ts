@@ -6,7 +6,6 @@ import { describe, expect, it } from "vitest"
 
 const ROOT = resolve(__dirname, "../..")
 const WORKFLOW = ".github/workflows/pr-events.yml"
-const START = "Start a Claude review"
 const WAITS = "Say the Claude review waits for a draft"
 
 const lines = () => readFileSync(join(ROOT, WORKFLOW), "utf8").split("\n")
@@ -69,22 +68,21 @@ function runs(step: string, event: Event): boolean {
 }
 
 describe("pr-events.yml and the in review label", () => {
-  it("starts the review when the label is added to a ready PR, without the draft note", () => {
-    const event = { action: "labeled", label: "in review", draft: false }
-    expect(runs(START, event)).toBe(true)
-    expect(runs(WAITS, event)).toBe(false)
+  it("says nothing when the label is added to a ready PR", () => {
+    expect(runs(WAITS, { action: "labeled", label: "in review", draft: false })).toBe(false)
   })
 
-  it("says the review waits when the label is added to a draft, without starting it", () => {
-    const event = { action: "labeled", label: "in review", draft: true }
-    expect(runs(START, event)).toBe(false)
-    expect(runs(WAITS, event)).toBe(true)
+  it("says the review waits when the label is added to a draft", () => {
+    expect(runs(WAITS, { action: "labeled", label: "in review", draft: true })).toBe(true)
   })
 
-  it("starts the review, and says nothing, when a labelled draft is marked ready", () => {
+  it("says nothing when a labelled draft is marked ready", () => {
     const event = { action: "ready_for_review", draft: false, labels: ["in review"] }
-    expect(runs(START, event)).toBe(true)
     expect(runs(WAITS, event)).toBe(false)
+  })
+
+  it("no longer starts the review itself", () => {
+    expect(lines().join("\n")).not.toContain("claude-review.yml --repo")
   })
 
   it("says nothing on a draft's other events, or for other labels", () => {

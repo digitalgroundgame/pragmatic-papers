@@ -14,9 +14,6 @@
   "compatibility_date": "2026-09-30",
   "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
   "workers_dev": true,
-  // Each version's own URL, which skew protection (open-next.config.ts) sends a tab opened
-  // before a deploy to.
-  "preview_urls": true,
   // staging-worker.pragmaticpapers.com is a Custom Domain added in the dashboard (Settings,
   // Domains & Routes), so the deploy token needs no zone permissions. With no `routes`
   // here, `wrangler deploy` leaves it alone; listing one would replace the dashboard's.
@@ -32,10 +29,6 @@
   },
   "vars": {
     "BUILD_ENV": "staging",
-    // Skew protection builds each version's preview URL from these:
-    // <version>-<CF_WORKER_NAME>.<CF_PREVIEW_DOMAIN>.workers.dev.
-    "CF_WORKER_NAME": "pragmatic-papers-staging",
-    "CF_PREVIEW_DOMAIN": "digital-ground-game",
     "USE_LOCAL_STORAGE": "true",
     // The Worker reads staging's database, whose docs staging's own deploy syncs. It has no
     // src/docs/ to read, and its /next/revalidate-all also runs on every save (purgeEdgeCache).
@@ -81,15 +74,12 @@
       // No routes: production's hostname becomes a Custom Domain in the dashboard, as
       // staging-worker's is, when the Worker takes over from Coolify.
       "workers_dev": true,
-      "preview_urls": true,
       "observability": { "enabled": true },
       "exports": {
         "CachedSite": { "type": "worker", "cache": { "enabled": true } },
       },
       "vars": {
         "BUILD_ENV": "production",
-        "CF_WORKER_NAME": "pragmatic-papers-production",
-        "CF_PREVIEW_DOMAIN": "digital-ground-game",
         // Production's media is in S3 (Supabase Storage), linked by its public URL, which
         // the deploy passes in SUPABASE_URL and S3_BUCKET. The Worker never uploads, so it
         // has no S3 credentials.

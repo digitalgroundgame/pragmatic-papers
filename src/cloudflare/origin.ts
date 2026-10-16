@@ -5,9 +5,7 @@
  * - the admin panel and Payload's REST/GraphQL API, media files (`/api/media/file/…`)
  *   included;
  * - `/_next/static/…` files the Worker's assets don't have, which are the admin panel's
- *   (Cloudflare serves the Worker's own assets before the Worker runs). The Worker's pages
- *   ask for theirs with `?dpl=<deployment>`, so one an older deploy built stays with the
- *   Worker, whose skew protection fetches it from that version;
+ *   (Cloudflare serves the Worker's own assets before the Worker runs);
  * - the routes under `/next/` that act on the Coolify deployment (`ORIGIN_ROUTES`): its
  *   version and migrations, which the deploy workflows wait on, and the purge, warm-up
  *   and seed it runs;
@@ -29,7 +27,7 @@ export interface WorkerHandler<Env extends WorkerEnv = WorkerEnv> {
   fetch(request: Request, env: Env, ctx: unknown): Promise<Response>
 }
 
-const ORIGIN_PREFIXES = ["/admin/", "/api/"]
+const ORIGIN_PREFIXES = ["/admin/", "/api/", "/_next/static/"]
 
 /** The `/next/` routes that answer for Coolify, wherever the site's hostname points. */
 export const ORIGIN_ROUTES = [
@@ -42,9 +40,7 @@ export const ORIGIN_ROUTES = [
 
 /** Whether a request, by its path or URL, goes to the origin. */
 export function isOriginPath(target: string | URL): boolean {
-  const url = typeof target === "string" ? new URL(target, "http://worker") : target
-  const { pathname } = url
-  if (pathname.startsWith("/_next/static/")) return !url.searchParams.has("dpl")
+  const { pathname } = typeof target === "string" ? new URL(target, "http://worker") : target
   return (
     pathname === "/admin" ||
     ORIGIN_ROUTES.includes(pathname) ||

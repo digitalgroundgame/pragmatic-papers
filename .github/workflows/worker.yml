@@ -11,8 +11,7 @@
 # --------------------------------------------------
 # Both:
 #   - secret   CLOUDFLARE_WORKERS_TOKEN  Workers Scripts, Workers R2 Storage, D1 and
-#                                        Hyperdrive, all Edit; skew protection reads the
-#                                        Worker's versions with it too
+#                                        Hyperdrive, all Edit
 #   - secret   CLOUDFLARE_ACCOUNT_ID     shared with the Storybook deploy
 #   - secret   SENTRY_DSN                the DSN Coolify's apps report to; without it the
 #                                        Worker reports nothing
@@ -68,11 +67,6 @@ jobs:
       READY: ${{ secrets.CLOUDFLARE_WORKERS_TOKEN != '' && secrets.CLOUDFLARE_ACCOUNT_ID != '' && (github.ref_name == 'main' && (secrets.PRODUCTION_PAYLOAD_SECRET != '' && vars.PRODUCTION_ORIGIN_URL != '' && vars.WORKER_PRODUCTION_URL != '' && vars.PRODUCTION_SUPABASE_URL != '' && vars.PRODUCTION_S3_BUCKET != '') || github.ref_name == 'dev' && (secrets.STAGING_PAYLOAD_SECRET != '' && vars.SHOWCASE_STAGING_URL != '' && vars.WORKER_STAGING_URL != '')) }}
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_WORKERS_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-      # Skew protection (open-next.config.ts) lists the Worker's versions while deploying.
-      CF_WORKERS_SCRIPTS_API_TOKEN: ${{ secrets.CLOUDFLARE_WORKERS_TOKEN }}
-      CF_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-      # New on every run, re-runs included, as skew protection requires.
-      WORKER_DEPLOYMENT_ID: ${{ github.run_id }}-${{ github.run_attempt }}
       WRANGLER_SEND_METRICS: "false"
       SERVER_URL: ${{ github.ref_name == 'main' && vars.WORKER_PRODUCTION_URL || vars.WORKER_STAGING_URL }}
       ORIGIN_URL: ${{ github.ref_name == 'main' && vars.PRODUCTION_ORIGIN_URL || vars.SHOWCASE_STAGING_URL }}

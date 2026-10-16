@@ -106,10 +106,7 @@ The same steps, for production's database and hostname:
    add the new column in one release and drop the old one in the next.
 3. `opennextjs-cloudflare deploy` uploads the prerendered pages to R2, creates D1's table,
    and runs `wrangler deploy` with `SERVER_URL`, `ORIGIN_URL`, `SENTRY_RELEASE` and the
-   secrets (`PAYLOAD_SECRET`, `SENTRY_DSN`). For skew protection it first lists the
-   Worker's recent versions and records which deployment each served
-   (`CF_DEPLOYMENT_MAPPING`); every run has its own `deploymentId`
-   (`WORKER_DEPLOYMENT_ID`).
+   secrets (`PAYLOAD_SECRET`, `SENTRY_DSN`).
 4. `POST /next/revalidate-all` throws away the build's pages (it built from an empty
    database), so each renders from staging's data on its next request.
 5. `POST /next/warm-worker` on staging requests the most-read pages through the Worker's
@@ -184,11 +181,6 @@ In the repo now:
   `@sentry/nextjs` calls (`onRequestError`, Payload's plugin, `sentrySdk.ts`) reach it
   through `stubs/sentry.ts`, and the browser SDK reads its DSN from the page as on
   Coolify.
-- **Skew protection** (`skewProtection` in `open-next.config.ts`, experimental): a tab
-  opened before a deploy asks for its chunks with `?dpl=` and navigates with
-  `x-deployment-id`, and the Worker sends it to the version that built its page through
-  that version's preview URL. It's off on workers.dev, so staging-worker's Custom Domain
-  is where to see it.
 - **Production's Worker** and its deploy, and Coolify's `/next/` routes passed through.
 
 Still open:
@@ -198,6 +190,13 @@ Still open:
   every new isolate loads the whole bundle, the gateway's too, before it can answer from
   the cache. Coolify behind the zone cache answers its hits in ~65 ms, and its worst
   ~0.8 s.
+- **Skew protection** (`skewProtection` in `open-next.config.ts`, experimental) would send a
+  tab opened before a deploy to the version that built its page, which also avoids Next's
+  "router state header could not be parsed" error on stale tabs. It reaches that version
+  through its Version URL, and Cloudflare generates none for a Worker that implements a
+  Durable Object, as this one does (`DOQueueHandler`, OpenNext's revalidation queue). It
+  needs the queue in a Worker of its own, bound by `script_name`, or a queue that isn't a
+  Durable Object.
 - **The setup above** for production, then a stretch on workers.dev reading production's
   data before the hostname moves.
 - **Navigations from the edge cache.** The zone's Cache Rules don't apply to a Worker,

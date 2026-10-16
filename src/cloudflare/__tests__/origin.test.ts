@@ -36,11 +36,6 @@ describe("isOriginPath", () => {
     "/next/preview",
     "/next/versions",
   ])("serves %s from the Worker", (path) => expect(isOriginPath(path)).toBe(false))
-
-  it("keeps a file an earlier deploy of the Worker built, for skew protection to fetch", () => {
-    expect(isOriginPath("/_next/static/chunks/a.js?dpl=123-1")).toBe(false)
-    expect(isOriginPath(new URL("https://worker.example.dev/_next/static/a.css?dpl=1"))).toBe(false)
-  })
 })
 
 describe("toOrigin", () => {

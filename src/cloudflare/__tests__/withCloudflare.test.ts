@@ -1,6 +1,6 @@
 // @vitest-environment node
 import type { NextConfig } from "next"
-import { describe, expect, it, vi } from "vitest"
+import { describe, expect, it } from "vitest"
 
 import { WORKER_STUBS, withCloudflare } from "../withCloudflare"
 
@@ -41,16 +41,6 @@ describe("withCloudflare", () => {
   it("turns on client-side navigation, keeping the base env", () => {
     const withEnv = withCloudflare({ ...base, env: { KEPT: "yes" } })
     expect(withEnv.env).toEqual({ KEPT: "yes", NEXT_PUBLIC_CLIENT_NAVIGATION: "true" })
-  })
-
-  it("sets the deploy's deploymentId only when the workflow gives one", () => {
-    expect(config.deploymentId).toBeUndefined()
-    vi.stubEnv("WORKER_DEPLOYMENT_ID", "123-1")
-    try {
-      expect(withCloudflare(base).deploymentId).toBe("123-1")
-    } finally {
-      vi.unstubAllEnvs()
-    }
   })
 
   it("takes the stubbed packages off serverExternalPackages", () => {

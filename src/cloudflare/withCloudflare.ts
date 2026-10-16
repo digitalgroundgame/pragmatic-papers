@@ -28,12 +28,8 @@ const isStubbed = (external: unknown): boolean =>
   typeof external === "string" && (external === "drizzle-kit" || WORKER_STUBS.includes(external))
 
 export function withCloudflare(base: NextConfig): NextConfig {
-  const deploymentId = process.env.WORKER_DEPLOYMENT_ID
   return {
     ...base,
-    // Unique to each deploy, for skew protection (open-next.config.ts): Next adds it to
-    // every chunk URL (`?dpl=`) and navigation (`x-deployment-id`). The deploy workflow sets it.
-    ...(deploymentId && { deploymentId }),
     // Links navigate client-side with next/link (HoverPrefetchLink).
     env: { ...base.env, NEXT_PUBLIC_CLIENT_NAVIGATION: "true" },
     // In a Worker, pg connects through pg-cloudflare, which Next's trace (run under Node)

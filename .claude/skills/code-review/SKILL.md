@@ -234,6 +234,12 @@ If invoked with `--comment <owner>/<repo>/pull/<number>`, post findings to
 that PR:
 
 - Post the top-level summary with `gh pr comment <owner>/<repo>/pull/<number> --body "<summary>"`.
+- In CI, the action also keeps a progress comment on the PR
+  (`mcp__github_comment__update_claude_comment`). Tick off progress in it
+  while you work, and end it with the verdict line and a link to the summary.
+  The summary itself still goes out with `gh pr comment`: the action strips
+  HTML comments from the progress comment, so the marker below can't live
+  there.
 - For findings tied to a specific file/line, use
   `mcp__github_inline_comment__create_inline_comment` so the comment is
   anchored to the code.

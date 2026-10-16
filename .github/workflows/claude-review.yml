@@ -3,8 +3,8 @@ name: Claude Code Review
 # Reviews a PR into dev on its own when it goes from draft to ready for
 # review, and again whenever the "in review" label is added. Mentioning
 # @claude asks for one too (claude.yml). The action posts a progress comment
-# on the PR that it updates in place until the review is done
-# (`track_progress`), and the run's check is listed on the PR.
+# on the PR that it updates in place while it works (`track_progress`), then
+# posts the review's summary, and the run's check is listed on the PR.
 #
 # The review takes the "in review" label off when it's done, so adding it
 # again asks for another, and Lighthouse stops running on the pushes that
@@ -79,7 +79,18 @@ jobs:
           # count against that plan rather than an API key's credits.
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           track_progress: true
-          prompt: "/code-review --comment ${{ github.repository }}/pull/${{ env.PR_NUMBER }} --head ${{ env.HEAD_SHA }}"
+          # track_progress runs the action in tag mode, which reads `prompt` as
+          # instructions under its own (not as a slash command) and says its
+          # progress comment is the only output. That comment has HTML
+          # comments stripped, so the summary and its marker still go out
+          # with `gh pr comment`, which review-ack.yml and the verdict below
+          # look for.
+          prompt: |
+            Review this pull request by following .claude/skills/code-review/SKILL.md in
+            `--comment ${{ github.repository }}/pull/${{ env.PR_NUMBER }} --head ${{ env.HEAD_SHA }}` mode.
+            Post the summary with `gh pr comment`, as the skill says, ending with its
+            `<!-- claude-review sha=${{ env.HEAD_SHA }} verdict=... -->` marker. Use your progress
+            comment only for progress, and end it with the verdict line and a link to the summary.
           claude_args: |
             --model opus
             --allowedTools "mcp__github_inline_comment__create_inline_comment,Bash(gh pr comment:*),Bash(gh pr diff:*),Bash(gh pr view:*),Bash(git log:*),Bash(git show:*),Bash(git diff:*),Bash(git blame:*)"

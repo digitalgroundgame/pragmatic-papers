@@ -99,6 +99,16 @@ describe("claude-review.yml", () => {
   })
 })
 
+describe("the review summary beside the action's progress comment", () => {
+  it("posts the summary, marker last, with gh pr comment rather than in the progress comment", () => {
+    const workflow = read("claude-review.yml")
+    expect(workflow).toContain("following .claude/skills/code-review/SKILL.md")
+    expect(workflow).toContain("Post the summary with `gh pr comment`")
+    expect(workflow).toContain("<!-- claude-review sha=${{ env.HEAD_SHA }} verdict=... -->")
+    expect(workflow).toMatch(/--allowedTools "[^"]*Bash\(gh pr comment:\*\)/)
+  })
+})
+
 describe("claude.yml", () => {
   const condition = folded("claude.yml", /^ {4}if: >-$/)
 
@@ -142,6 +152,8 @@ describe("claude.yml", () => {
   })
 
   it("runs the same /code-review when asked for a review, so /reviewed counts it", () => {
-    expect(read("claude.yml")).toContain("run /code-review --comment")
+    expect(read("claude.yml")).toContain(
+      "follow .claude/skills/code-review/SKILL.md in --comment mode",
+    )
   })
 })

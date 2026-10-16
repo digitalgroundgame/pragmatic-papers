@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { SERVER_REFERENCE_ID_LENGTH } from "next/dist/shared/lib/server-reference-info"
 import { NextRequest } from "next/server"
-import { describe, expect, it } from "vitest"
+import { afterEach, describe, expect, it, vi } from "vitest"
 
 import { proxy } from "../proxy"
 
@@ -91,5 +91,32 @@ describe("proxy: multipart bodies without a boundary", () => {
         "x-middleware-next",
       ),
     ).toBe("1")
+  })
+})
+
+describe("proxy: search indexing", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs()
+  })
+
+  it("lets production's own hostname be indexed", () => {
+    vi.stubEnv("BUILD_ENV", "production")
+    expect(proxy(get("/articles/a")).headers.get("X-Robots-Tag")).toBeNull()
+  })
+
+  it("keeps staging and previews out of search indexes", () => {
+    vi.stubEnv("BUILD_ENV", "staging")
+    expect(proxy(get("/articles/a")).headers.get("X-Robots-Tag")).toBe("noindex, nofollow")
+  })
+
+  it("keeps a production Worker's workers.dev and preview addresses out", () => {
+    vi.stubEnv("BUILD_ENV", "production")
+    for (const host of [
+      "pragmatic-papers-production.digital-ground-game.workers.dev",
+      "abc123-pragmatic-papers-production.digital-ground-game.workers.dev",
+    ]) {
+      const response = proxy(new NextRequest(`https://${host}/articles/a`))
+      expect(response.headers.get("X-Robots-Tag")).toBe("noindex, nofollow")
+    }
   })
 })

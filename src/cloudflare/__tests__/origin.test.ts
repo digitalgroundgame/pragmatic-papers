@@ -14,15 +14,33 @@ import {
 const ORIGIN = "https://staging.example.com"
 
 describe("isOriginPath", () => {
-  it.each(["/admin", "/admin/collections/articles", "/api/media/file/a.png", "/_next/static/x.js"])(
-    "sends %s to the origin",
-    (path) => expect(isOriginPath(path)).toBe(true),
-  )
+  it.each([
+    "/admin",
+    "/admin/collections/articles",
+    "/api/media/file/a.png",
+    "/_next/static/x.js",
+    "/next/version",
+    "/next/migrations",
+    "/next/purge-edge",
+    "/next/warm-worker",
+    "/next/seed",
+  ])("sends %s to the origin", (path) => expect(isOriginPath(path)).toBe(true))
 
-  it.each(["/", "/articles/a", "/administrators", "/apis", "/_next/image", "/next/revalidate-all"])(
-    "serves %s from the Worker",
-    (path) => expect(isOriginPath(path)).toBe(false),
-  )
+  it.each([
+    "/",
+    "/articles/a",
+    "/administrators",
+    "/apis",
+    "/_next/image",
+    "/next/revalidate-all",
+    "/next/preview",
+    "/next/versions",
+  ])("serves %s from the Worker", (path) => expect(isOriginPath(path)).toBe(false))
+
+  it("keeps a file an earlier deploy of the Worker built, for skew protection to fetch", () => {
+    expect(isOriginPath("/_next/static/chunks/a.js?dpl=123-1")).toBe(false)
+    expect(isOriginPath(new URL("https://worker.example.dev/_next/static/a.css?dpl=1"))).toBe(false)
+  })
 })
 
 describe("toOrigin", () => {
@@ -70,6 +88,16 @@ describe("withOrigin", () => {
       {},
     )
     expect(await response.text()).toBe(`origin ${ORIGIN}/admin/login`)
+    expect(openNext.fetch).not.toHaveBeenCalled()
+  })
+
+  it("sends the deploy's purge to the Coolify deployment it names", async () => {
+    const response = await worker.fetch(
+      new Request("https://w.dev/next/purge-edge", { method: "POST" }),
+      env({ ORIGIN_URL: ORIGIN }),
+      {},
+    )
+    expect(await response.text()).toBe(`origin ${ORIGIN}/next/purge-edge`)
     expect(openNext.fetch).not.toHaveBeenCalled()
   })
 

@@ -26,6 +26,8 @@ import { queryArticleBySlug, queryVolumesForArticles } from "@/data/queries"
 import { isResolved } from "@/utilities/relationships"
 import { buildArticleJsonLd, buildBreadcrumbJsonLd } from "@/utilities/structuredData"
 
+import { isArticlePublished } from "./isArticlePublished"
+
 // Prerendered from generateStaticParams; a slug published since the build is rendered on its
 // first request and cached the same way. Saving the article or one of its authors revalidates it.
 // The hour is a backstop for what changes without either (a topic renamed, a volume it joined).
@@ -76,14 +78,17 @@ export default async function Article({ params: paramsPromise }: Args): Promise<
 
   const populatedAuthors = (authors || []).filter(isResolved<User>)
 
-  const [[volume], tableOfContentsEnabled, commentsSwitch, ssoSwitch] = await Promise.all([
-    queryVolumesForArticles([article.id]),
-    isExperimentEnabled("tableOfContents"),
-    isPluginEnabled("comments"),
-    // Readers sign in to comment, so comments need single sign-on on too.
-    isPluginEnabled("sso"),
-  ])
-  const commentsEnabled = commentsSwitch && ssoSwitch
+  const [[volume], tableOfContentsEnabled, commentsSwitch, ssoSwitch, published] =
+    await Promise.all([
+      queryVolumesForArticles([article.id]),
+      isExperimentEnabled("tableOfContents"),
+      isPluginEnabled("comments"),
+      // Readers sign in to comment, so comments need single sign-on on too.
+      isPluginEnabled("sso"),
+      // Preview stays on across pages, so it keeps comments wherever readers have them.
+      draft ? isArticlePublished(article.id) : true,
+    ])
+  const commentsEnabled = commentsSwitch && ssoSwitch && published
   const showTableOfContents = tableOfContentsEnabled && article.showTableOfContents === true
 
   return (
@@ -126,7 +131,7 @@ export default async function Article({ params: paramsPromise }: Args): Promise<
                 <Separator />
                 <TopicsList topics={topics} />
                 <AuthorList aria-label="Article Authors" authors={populatedAuthors} />
-                {commentsEnabled && !draft && <Comments articleId={article.id} />}
+                {commentsEnabled && <Comments articleId={article.id} />}
               </div>
             </div>
           </TableOfContentsProvider>

@@ -43,7 +43,7 @@ export const starterAchievements = (config: ResolvedAchievementsConfig): Achieve
   {
     key: "early-member",
     name: "Early member",
-    description: "One of the first readers to make an account.",
+    description: "One of the first people to make an account.",
     rule: "firstMembers",
     limit: config.earlyMemberLimit,
     badge: true,

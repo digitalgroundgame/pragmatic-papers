@@ -130,9 +130,21 @@ export async function fillFirstMembers(
 }
 
 /**
+ * Records that a `firstMembers` achievement has been filled from the site's existing members, so
+ * a deploy fills each one once (`seedAchievements`). Awards an admin deletes afterwards stay
+ * deleted.
+ */
+export const markFilled = (payload: Payload, achievement: AchievementDoc): Promise<void> =>
+  markSeeded(payload, AWARDS_SLUG, `filled-${achievement.id}`)
+
+const wasFilled = (payload: Payload, achievement: AchievementDoc): Promise<boolean> =>
+  wasSeeded(payload, AWARDS_SLUG, `filled-${achievement.id}`)
+
+/**
  * Creates the achievements a site starts with (`starterAchievements`), each once per site: one
- * an editor deletes stays deleted. Creating Early member awards it to the members the site
- * already has. Returns the names it created.
+ * an editor deletes stays deleted. Then fills, once each, the `firstMembers` achievements that
+ * haven't been filled from the site's existing members: one made before fills were recorded, or
+ * by a deploy whose fill missed them. Returns the names it created.
  */
 export async function seedAchievements(
   payload: Payload,
@@ -142,8 +154,8 @@ export async function seedAchievements(
   const created: string[] = []
   for (const { key, ...data } of starterAchievements(config)) {
     if (await wasSeeded(payload, ACHIEVEMENTS_SLUG, key)) continue
-    // Two deploys can seed the same database at once (the site's and the Worker's), so one
-    // already there by name and rule counts as seeded too.
+    // A site that already has one by name and rule (made before seeding was recorded) counts as
+    // seeded too. Only one deploy seeds each database, so nothing else races this.
     const { totalDocs } = await payload.count({
       collection: ACHIEVEMENTS_SLUG as CollectionSlug,
       where: { and: [{ name: { equals: data.name } }, { rule: { equals: data.rule } }] },
@@ -160,6 +172,11 @@ export async function seedAchievements(
     })
     await markSeeded(payload, ACHIEVEMENTS_SLUG, key)
     created.push(data.name)
+  }
+  for (const achievement of await firstMembersAchievements(payload)) {
+    if (await wasFilled(payload, achievement)) continue
+    await fillFirstMembers(payload, achievement, config)
+    await markFilled(payload, achievement)
   }
   return created
 }

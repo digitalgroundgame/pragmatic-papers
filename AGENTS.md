@@ -491,10 +491,11 @@ join field, on each user's record. Only admins delete either.
   A row with `revoked` ticked suppresses any of them and keeps who and when. A row made in the
   admin either gives a `manual` achievement or revokes one (`awardChanges`). An achievement's
   rule is fixed once it's made.
-- **First members** go to the first `limit` accounts `isMember` accepts (the `member` role,
-  never staff), in sign-up order: a users `afterChange` hook awards each such achievement when an
-  account becomes a member, and saving the achievement (created, or its limit raised) fills it
-  from the members a site already has (`fillFirstMembers`). Revoked rows, and rows whose account
+- **First members** go to the first `limit` accounts `isMember` accepts (members and staff), in
+  sign-up order: a users `afterChange` hook awards each such achievement when an account becomes
+  one, and saving the achievement (created, or its limit raised) fills it from the accounts a
+  site already has (`fillFirstMembers`). A deploy fills, once, any that was never filled
+  (`markFilled`), so an award an admin deletes stays deleted. Revoked rows, and rows whose account
   was deleted (kept with no user), still count, so nobody moves up. They're awarded even while
   the switch is off.
 - **Starter achievements**: Early member (`earlyMemberLimit`, 1000) and Verified

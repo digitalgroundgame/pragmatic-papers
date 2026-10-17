@@ -83,15 +83,16 @@ jobs:
           # track_progress runs the action in tag mode, which reads `prompt` as
           # instructions under its own (not as a slash command), and posts
           # through its progress comment, from which it strips HTML comments.
-          # So the summary is that comment's final body and ends with the
-          # visible <sub> marker, which review-ack.yml looks for. The verdict
-          # also comes back as structured output (--json-schema).
+          # So the summary is that comment's final body and ends with the marker
+          # as a link reference definition, which GitHub doesn't render and
+          # review-ack.yml looks for. The verdict also comes back as structured
+          # output (--json-schema).
           prompt: |
             Review this pull request by following .claude/skills/code-review/SKILL.md for
             ${{ github.repository }}/pull/${{ env.PR_NUMBER }} at ${{ env.HEAD_SHA }}, in its progress-comment mode:
-            the summary is the final body of your progress comment, ending with
-            `<sub>claude-review sha=${{ env.HEAD_SHA }} verdict=<pass|blocker></sub>`, and you post no
-            other top-level comment. Return the same verdict as your structured output.
+            the summary is the final body of your progress comment, ending with a blank line and then
+            `[claude-review]: #sha=${{ env.HEAD_SHA }}&verdict=<pass|blocker>` as its last line, and you
+            post no other top-level comment. Return the same verdict as your structured output.
           claude_args: |
             --model opus
             --allowedTools "mcp__github_inline_comment__create_inline_comment,Bash(gh pr diff:*),Bash(gh pr view:*),Bash(git log:*),Bash(git show:*),Bash(git diff:*),Bash(git blame:*)"
@@ -120,7 +121,8 @@ jobs:
         run: |
           marker=$(gh api --paginate "repos/$REPO/issues/$PR_NUMBER/comments" \
             --jq '.[] | select(.user.login == "claude[bot]") | .body' \
-            | grep -o "<sub>claude-review sha=$HEAD_SHA verdict=[a-z]*</sub>" | tail -n 1 || true)
+            | grep -oE "(<sub>claude-review sha=$HEAD_SHA verdict=[a-z]*</sub>|\[claude-review\]: #sha=$HEAD_SHA&verdict=[a-z]*)" \
+            | tail -n 1 || true)
           if [ -z "$marker" ]; then
             echo "::error::The review's comment doesn't end with the marker for $HEAD_SHA, so /reviewed can't count it. See the step above."
             exit 1

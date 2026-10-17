@@ -28,6 +28,7 @@ const request = (authorization?: string, query = ""): Request =>
 
 describe("POST /next/revalidate-all", () => {
   beforeEach(() => {
+    vi.unstubAllEnvs()
     vi.stubEnv("PAYLOAD_SECRET", "s3cret")
     vi.clearAllMocks()
     syncRepoDocs.mockResolvedValue({
@@ -61,6 +62,17 @@ describe("POST /next/revalidate-all", () => {
     expect(syncRepoDocs.mock.invocationCallOrder[0]).toBeLessThan(
       revalidatePath.mock.invocationCallOrder[0]!,
     )
+  })
+
+  it("only throws pages away where another deploy seeds the database", async () => {
+    vi.stubEnv("DEPLOY_SEED", "false")
+    const response = await POST(request("Bearer s3cret"))
+
+    await expect(response.json()).resolves.toEqual({ revalidated: true, seeded: false })
+    expect(syncRepoDocs).not.toHaveBeenCalled()
+    expect(createMissingStarterPages).not.toHaveBeenCalled()
+    expect(seedAchievements).not.toHaveBeenCalled()
+    expect(revalidatePath).toHaveBeenCalledExactlyOnceWith("/", "layout")
   })
 
   it("skips the deploy's seeding for a save", async () => {

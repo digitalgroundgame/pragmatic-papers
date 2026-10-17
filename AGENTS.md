@@ -182,8 +182,7 @@ doc was saved with; one an editor wrote, with no `sourceHash`, records the repo'
 current hash as offered and gets only later changes. Each doc it seeds, or finds already there, is recorded in Payload's
 key-value store (`markSeeded`, which other
 deploy-seeded content uses too), so one an editor deletes stays deleted and is never
-recreated (`DOCS_SYNC=false` turns the sync off, as the staging Worker does: it reads
-staging's database and has no `src/docs/` of its own). `pnpm dev:db-seed` seeds
+recreated (only the Coolify app's deploy seeds, see [Hosting](#hosting-coolify)). `pnpm dev:db-seed` seeds
 them locally, published, deleted or not.
 
 A doc's front matter (`src/plugins/docs/docFile.ts`) holds its `title`, a
@@ -696,6 +695,12 @@ Staging's public site also runs as a Cloudflare Worker at `staging-worker.pragma
 (OpenNext, reading staging's database through Hyperdrive), deployed on every push to `dev` by
 `.github/workflows/worker.yml`; setup and what's left before production are in
 `src/cloudflare/README.md`.
+
+Each database has one seeder: the deploy of the Coolify app that runs its migrations. Its
+`/next/revalidate-all` seeds what a deploy seeds (help docs, starter pages, starter achievements); the Worker reads
+the same database and sets `DEPLOY_SEED=false` (`wrangler.jsonc`), so its deploy only throws
+pages away. Two seeders could each create the same content at once. Deploy-seeded content
+added later goes through that route, so it follows the same switch.
 
 The zone's Cloudflare rules (Cache Rules today) are version-controlled in
 `cloudflare/rulesets/` and applied on release by `.github/workflows/cloudflare-rules.yml`;

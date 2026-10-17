@@ -12,7 +12,6 @@ import { type SyncResult, syncDocs } from "./syncDocs"
  * had.
  */
 export async function syncRepoDocs(payload: Payload): Promise<SyncResult | null> {
-  if (process.env.DOCS_SYNC === "false") return null
   try {
     const result = await syncDocs(payload)
     if (result.created.length) {

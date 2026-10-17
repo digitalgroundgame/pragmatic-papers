@@ -13,12 +13,12 @@ Readers earn **achievements**. One with a badge shows beside their name on their
 Open **Content → Achievements**. Every site starts with two, which you can rename, describe, reorder or delete like any other:
 
 - **Verified**: Google or Discord verified the reader's email address. It follows the address: a reader who connects Google or Discord gets it, and it goes if the address stops being verified.
-- **Early member**: one of the first 1,000 readers to make an account, in the order they signed up. Staff accounts don't count.
+- **Early member**: one of the first 1,000 accounts, readers and staff, in the order they were made.
 
 Click **Create new** to add one. Give it a name and a description (the account page shows both), then choose how it's earned in **Earned by**:
 
 - **Given by hand**: a moderator gives it to a reader from their record (see below).
-- **First members**: the first readers to make an account, up to **How many members**. Saving it awards it at once to the readers who already qualify, in sign-up order. Raising the number later awards it to the next ones; lowering it takes nothing away. It's kept from then on, and deleting an account never moves anyone else up.
+- **First members**: the first accounts made, readers and staff, up to **How many members**. Saving it awards it at once to the accounts that already qualify, in sign-up order. Raising the number later awards it to the next ones; lowering it takes nothing away. It's kept from then on, and deleting an account never moves anyone else up.
 - **Verified email**: worked out from the reader's account each time.
 
 **Earned by** can't be changed once the achievement is saved: make a new one instead.

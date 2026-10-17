@@ -1,9 +1,12 @@
 // The public site as a Cloudflare Worker, built by OpenNext (`pnpm build:worker`;
 // src/cloudflare/README.md). Starts from node_modules/@opennextjs/cloudflare/templates/wrangler.jsonc.
 //
-// This is staging's Worker, at staging-worker.pragmaticpapers.com and on workers.dev,
-// reading staging's database through Hyperdrive.
-// The deploy workflow (.github/workflows/worker.yml) passes SERVER_URL and ORIGIN_URL.
+// The top level is staging's Worker, at staging-worker.pragmaticpapers.com and on
+// workers.dev, reading staging's database through Hyperdrive. `env.production` is
+// production's, on production's database. Wrangler doesn't carry bindings or vars into an
+// environment, so it repeats them.
+// The deploy workflow (.github/workflows/worker.yml) passes SERVER_URL, ORIGIN_URL,
+// SENTRY_RELEASE and the secrets.
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "main": "src/cloudflare/worker.mjs",
@@ -25,10 +28,11 @@
     "binding": "ASSETS",
   },
   "vars": {
+    "BUILD_ENV": "staging",
     "USE_LOCAL_STORAGE": "true",
-    // The Worker reads staging's database, whose docs staging's own deploy syncs. It has no
-    // src/docs/ to read, and its /next/revalidate-all also runs on every save (purgeEdgeCache).
-    "DOCS_SYNC": "false",
+    // The Worker reads staging's database, which staging's own deploy seeds (help docs, starter
+    // pages, achievements): one seeder per database. It has no src/docs/ to read either.
+    "DEPLOY_SEED": "false",
   },
   "services": [
     {
@@ -63,5 +67,57 @@
   "migrations": [{ "tag": "v1", "new_sqlite_classes": ["DOQueueHandler"] }],
   "images": {
     "binding": "IMAGES",
+  },
+  "env": {
+    "production": {
+      "name": "pragmatic-papers-production",
+      // No routes: production's hostname becomes a Custom Domain in the dashboard, as
+      // staging-worker's is, when the Worker takes over from Coolify.
+      "workers_dev": true,
+      "observability": { "enabled": true },
+      "exports": {
+        "CachedSite": { "type": "worker", "cache": { "enabled": true } },
+      },
+      "vars": {
+        "BUILD_ENV": "production",
+        // Production's media is in S3 (Supabase Storage), linked by its public URL, which
+        // the deploy passes in SUPABASE_URL and S3_BUCKET. The Worker never uploads, so it
+        // has no S3 credentials.
+        "DOCS_SYNC": "false",
+      },
+      "services": [
+        {
+          "binding": "WORKER_SELF_REFERENCE",
+          "service": "pragmatic-papers-production",
+        },
+      ],
+      "r2_buckets": [
+        {
+          "binding": "NEXT_INC_CACHE_R2_BUCKET",
+          "bucket_name": "pragmatic-papers-production-cache",
+        },
+      ],
+      "d1_databases": [
+        {
+          "binding": "NEXT_TAG_CACHE_D1",
+          "database_name": "pragmatic-papers-production-tags",
+        },
+      ],
+      "hyperdrive": [
+        {
+          "binding": "HYPERDRIVE",
+          // pragmatic-papers-production: production's Supabase pooler. Not created yet; the
+          // deploy skips production until PRODUCTION_PAYLOAD_SECRET is set, which comes after.
+          "id": "00000000000000000000000000000000",
+        },
+      ],
+      "durable_objects": {
+        "bindings": [{ "name": "NEXT_CACHE_DO_QUEUE", "class_name": "DOQueueHandler" }],
+      },
+      "migrations": [{ "tag": "v1", "new_sqlite_classes": ["DOQueueHandler"] }],
+      "images": {
+        "binding": "IMAGES",
+      },
+    },
   },
 }

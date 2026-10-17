@@ -192,8 +192,7 @@ doc was saved with; one an editor wrote, with no `sourceHash`, records the repo'
 current hash as offered and gets only later changes. Each doc it seeds, or finds already there, is recorded in Payload's
 key-value store (`markSeeded`, which other
 deploy-seeded content uses too), so one an editor deletes stays deleted and is never
-recreated (`DOCS_SYNC=false` turns the sync off, as the staging Worker does: it reads
-staging's database and has no `src/docs/` of its own). `pnpm dev:db-seed` seeds
+recreated (only the Coolify app's deploy seeds, see [Hosting](#hosting-coolify)). `pnpm dev:db-seed` seeds
 them locally, published, deleted or not.
 
 A doc's front matter (`src/plugins/docs/docFile.ts`) holds its `title`, a
@@ -502,10 +501,11 @@ join field, on each user's record. Only admins delete either.
   A row with `revoked` ticked suppresses any of them and keeps who and when. A row made in the
   admin either gives a `manual` achievement or revokes one (`awardChanges`). An achievement's
   rule is fixed once it's made.
-- **First members** go to the first `limit` accounts `isMember` accepts (the `member` role,
-  never staff), in sign-up order: a users `afterChange` hook awards each such achievement when an
-  account becomes a member, and saving the achievement (created, or its limit raised) fills it
-  from the members a site already has (`fillFirstMembers`). Revoked rows, and rows whose account
+- **First members** go to the first `limit` accounts `isMember` accepts (members and staff), in
+  sign-up order: a users `afterChange` hook awards each such achievement when an account becomes
+  one, and saving the achievement (created, or its limit raised) fills it from the accounts a
+  site already has (`fillFirstMembers`). A deploy fills, once, any that was never filled
+  (`markFilled`), so an award an admin deletes stays deleted. Revoked rows, and rows whose account
   was deleted (kept with no user), still count, so nobody moves up. They're awarded even while
   the switch is off.
 - **Starter achievements**: Early member (`earlyMemberLimit`, 1000) and Verified
@@ -706,6 +706,12 @@ Staging's public site also runs as a Cloudflare Worker at `staging-worker.pragma
 (OpenNext, reading staging's database through Hyperdrive), deployed on every push to `dev` by
 `.github/workflows/worker.yml`; setup and what's left before production are in
 `src/cloudflare/README.md`.
+
+Each database has one seeder: the deploy of the Coolify app that runs its migrations. Its
+`/next/revalidate-all` seeds what a deploy seeds (help docs, starter pages, starter achievements); the Worker reads
+the same database and sets `DEPLOY_SEED=false` (`wrangler.jsonc`), so its deploy only throws
+pages away. Two seeders could each create the same content at once. Deploy-seeded content
+added later goes through that route, so it follows the same switch.
 
 The zone's Cloudflare rules (Cache Rules today) are version-controlled in
 `cloudflare/rulesets/` and applied on release by `.github/workflows/cloudflare-rules.yml`;

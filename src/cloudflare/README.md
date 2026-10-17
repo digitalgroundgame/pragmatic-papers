@@ -7,7 +7,7 @@ stay on Coolify. The point is client-side navigation: Next adds an `_rsc` value 
 navigation request that changes with the page it came from, so Cloudflare's zone cache
 stores every variation separately and almost every click misses. OpenNext keys its cache
 by route, so navigations from any page read the same entry. It needs Workers Paid: the
-Worker is ~4.4 MiB gzipped against a 10 MiB limit (3 MiB on Free). Open issue #916
+Worker is ~4.9 MiB gzipped against a 10 MiB limit (3 MiB on Free). Open issue #916
 tracks turning `next/link` back on.
 
 Nothing here changes the Coolify build: everything Worker-specific is behind
@@ -16,7 +16,10 @@ Nothing here changes the Coolify build: everything Worker-specific is behind
 Today it runs as **staging's Worker**, `pragmatic-papers-staging` at
 `staging-worker.pragmaticpapers.com` (a Custom Domain) and on workers.dev, reading
 staging's database through Hyperdrive, while staging itself keeps running on Coolify.
-`.github/workflows/worker.yml` deploys it on every push to `dev`.
+`.github/workflows/worker.yml` deploys it on every push to `dev`, and production's,
+`pragmatic-papers-production` (`env.production` in `wrangler.jsonc`), on every push to
+`main` once [its setup](#production) is done. Production's stays on workers.dev until
+`pragmaticpapers.com` is moved onto it.
 
 ## Cloudflare setup (once)
 
@@ -55,7 +58,40 @@ the R2 bucket and D1 database by name if they're missing. The rest is set up by 
    (`src/hooks/purgeEdgeCache.ts`). Without it, an edit to an article or volume shows on
    the Worker when its `revalidate` time (an hour) passes or the next deploy.
 
+7. **Sentry**: the repo secret `SENTRY_DSN`, the DSN Coolify's apps have. The deploy gives
+   it to the Worker as a secret, with `BUILD_ENV` and the commit as `SENTRY_RELEASE`;
+   without it the Worker reports nothing.
+
 Until all of them are set, the workflow skips itself.
+
+### Production
+
+The same steps, for production's database and hostname:
+
+1. **Hyperdrive** on production's Supabase database, with the connection string
+   Cloudflare's Supabase guide for Hyperdrive names (no tunnel: Supabase is public). Its
+   ID replaces the zeros in `env.production` in `wrangler.jsonc`. If it goes through the
+   pooler, count its connections against the pool size that production's Coolify app and
+   builds share.
+2. **Repo secret** `PRODUCTION_PAYLOAD_SECRET` (production's `PAYLOAD_SECRET`) and
+   **variables** `PRODUCTION_ORIGIN_URL` (production's Coolify URL),
+   `WORKER_PRODUCTION_URL` (the Worker's URL: its workers.dev address until it takes over),
+   and `PRODUCTION_SUPABASE_URL` and `PRODUCTION_S3_BUCKET` (production's `SUPABASE_URL` and
+   `S3_BUCKET`, which media links are built from; the Worker never uploads, so it has no S3
+   credentials).
+3. **Coolify production**: `WORKER_URL`, as for staging.
+4. **Taking over the hostname**, once it has served from workers.dev for a while:
+   - give Coolify's production app a hostname of its own (e.g.
+     `origin.pragmaticpapers.com`) beside `pragmaticpapers.com`, and set
+     `PRODUCTION_ORIGIN_URL` to it. The Worker sends the admin panel, the API and Coolify's
+     own `/next/` routes there (`ORIGIN_ROUTES` in `origin.ts`), so `start.sh`'s
+     `/next/purge-edge` and the deploy records' `/next/version` still reach Coolify;
+   - add `pragmaticpapers.com` (and `www`) as Custom Domains on
+     `pragmatic-papers-production`, which replaces their DNS records, and set
+     `WORKER_PRODUCTION_URL` to `https://pragmaticpapers.com`;
+   - the zone's Cache Rules (`cloudflare/rulesets/`) no longer apply to the site's pages,
+     which Workers Cache holds instead (`edgeCache.ts`). Moving the Custom Domain back to
+     Coolify's DNS record undoes it.
 
 ## Each deploy
 
@@ -69,7 +105,8 @@ Until all of them are set, the workflow skips itself.
    migration that drops or renames a column breaks both for that window, so split it:
    add the new column in one release and drop the old one in the next.
 3. `opennextjs-cloudflare deploy` uploads the prerendered pages to R2, creates D1's table,
-   and runs `wrangler deploy` with `SERVER_URL`, `ORIGIN_URL` and `PAYLOAD_SECRET`.
+   and runs `wrangler deploy` with `SERVER_URL`, `ORIGIN_URL`, `SENTRY_RELEASE` and the
+   secrets (`PAYLOAD_SECRET`, `SENTRY_DSN`).
 4. `POST /next/revalidate-all` throws away the build's pages (it built from an empty
    database), so each renders from staging's data on its next request.
 5. `POST /next/warm-worker` on staging requests the most-read pages through the Worker's
@@ -114,7 +151,8 @@ deployment.
 
 ## Measured
 
-- **Size** (`wrangler deploy --dry-run`): 20.7 MB raw, 4.43 MiB gzipped. Stubbing the
+- **Size** (`wrangler deploy --dry-run`): 22.4 MB raw, 4.88 MiB gzipped, of which
+  `@sentry/cloudflare` is ~0.45 MiB (4.43 MiB without it). Stubbing the
   server's Sentry SDK took it from 8.38 to 6.61 MiB, and passing the feed's server action
   down from its pages to 4.43 MiB: imported by a client component, an action is compiled
   in a layer of its own, with a second copy of everything it reaches, Payload's config
@@ -136,10 +174,31 @@ deployment.
 
 ## Before it can serve production
 
-- **Real latency and cold-start CPU**, measured on the staging Worker.
-- **Production's hostname** as a Custom Domain. Coolify then needs a hostname of its own
-  for `ORIGIN_URL`, and the deploy checks' `/next/version` and `/next/purge-edge` have to
-  reach Coolify.
+In the repo now:
+
+- **Error reporting**: both entrypoints run inside `@sentry/cloudflare`'s `withSentry`
+  (`sentry.ts`), errors only, tagged `runtime: worker`. The server code's
+  `@sentry/nextjs` calls (`onRequestError`, Payload's plugin, `sentrySdk.ts`) reach it
+  through `stubs/sentry.ts`, and the browser SDK reads its DSN from the page as on
+  Coolify.
+- **Production's Worker** and its deploy, and Coolify's `/next/` routes passed through.
+
+Still open:
+
+- **Cold isolates.** On staging-worker (2026-10-16), pages whose `revalidate` time had
+  passed waited 2.9–4.2 s, and 1 in 20 cache hits took 1.3–1.8 s instead of ~95 ms:
+  every new isolate loads the whole bundle, the gateway's too, before it can answer from
+  the cache. Coolify behind the zone cache answers its hits in ~65 ms, and its worst
+  ~0.8 s.
+- **Skew protection** (`skewProtection` in `open-next.config.ts`, experimental) would send a
+  tab opened before a deploy to the version that built its page, which also avoids Next's
+  "router state header could not be parsed" error on stale tabs. It reaches that version
+  through its Version URL, and Cloudflare generates none for a Worker that implements a
+  Durable Object, as this one does (`DOQueueHandler`, OpenNext's revalidation queue). It
+  needs the queue in a Worker of its own, bound by `script_name`, or a queue that isn't a
+  Durable Object.
+- **The setup above** for production, then a stretch on workers.dev reading production's
+  data before the hostname moves.
 - **Navigations from the edge cache.** The zone's Cache Rules don't apply to a Worker,
   so its edge cache is [Workers Cache](https://developers.cloudflare.com/workers/cache/)
   (`edgeCache.ts`), which holds full pages and images but not navigations: Next varies
@@ -147,10 +206,3 @@ deployment.
   R2 (~130 ms), and dynamic pages' navigations render each time. With caching on, every
   request is billed as a Worker request, static files included, and a request the gateway
   hands to `CachedSite` counts twice.
-- **Error reporting**: the Worker sends nothing to Sentry. That would be
-  `@sentry/cloudflare` around the fetch handler, with `SENTRY_DSN` as a secret, and the
-  browser SDK's DSN at build time.
-- **Skew protection** (`skewProtection` in `open-next.config.ts`, experimental): sends a
-  tab opened before a deploy to the version that built its page, which also avoids
-  Next's "router state header could not be parsed" error on stale tabs.
-- **Production**: a second Worker (a wrangler environment) on production's database.

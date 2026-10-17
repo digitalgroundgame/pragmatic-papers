@@ -165,7 +165,7 @@ async function purge(
 export function isEdgeCacheable(request: Request): boolean {
   if (request.method !== "GET" && request.method !== "HEAD") return false
   const url = new URL(request.url)
-  if (isOriginPath(url.pathname)) return false
+  if (isOriginPath(url)) return false
   const { headers } = request
   if (headers.has("RSC") || url.searchParams.has("_rsc")) return false
   const uncached = ["Authorization", "Upgrade", "x-prerender-revalidate", "Next-Action"]

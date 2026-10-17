@@ -44,10 +44,4 @@ describe("syncRepoDocs", () => {
     await expect(syncRepoDocs(payload)).resolves.toBeNull()
     expect(logger.error).toHaveBeenCalled()
   })
-
-  it("doesn't sync with DOCS_SYNC=false", async () => {
-    vi.stubEnv("DOCS_SYNC", "false")
-    await expect(syncRepoDocs(payload)).resolves.toBeNull()
-    expect(syncDocs).not.toHaveBeenCalled()
-  })
 })

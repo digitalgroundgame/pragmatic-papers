@@ -151,6 +151,15 @@ describe("DocPage", () => {
     ).toHaveAttribute("id", anchor)
   })
 
+  it("keeps the table of contents flush with the doc's text on narrow screens", async () => {
+    await renderPage()
+    // An article centers its open table of contents above the text; a doc sits beside the
+    // docs' sidebar, so a centered one would float away from the text's left edge.
+    const sidebar = screen.getByRole("complementary")
+    expect(sidebar).toHaveClass("toc-open:mx-0")
+    expect(sidebar).not.toHaveClass("toc-open:mx-auto")
+  })
+
   it.each([
     ["the doc turns it off", { ...doc, showTableOfContents: false }, true],
     ["the experiment is off", doc, false],

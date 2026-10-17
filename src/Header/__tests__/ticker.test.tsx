@@ -12,7 +12,7 @@ vi.mock("@/data/globals", () => ({
 
 const { Ticker } = await import("@/components/Ticker")
 const { MegaMenu } = await import("@/components/MegaMenu")
-const { Header } = await import("../Component")
+const { DefaultHeader: Header } = await import("../Component")
 
 type El = React.ReactElement<Record<string, unknown>>
 

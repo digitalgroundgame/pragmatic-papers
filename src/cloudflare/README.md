@@ -72,7 +72,11 @@ The same steps, for production's database and hostname:
    Supabase is public), with Supabase's Direct connection string
    (`db.<project-ref>.supabase.co:5432`), not a `pooler.supabase.com` one: Cloudflare's
    Supabase guide for Hyperdrive says so, since Hyperdrive pools connections itself. It's
-   `pragmatic-papers-production`, in `env.production` in `wrangler.jsonc`.
+   `pragmatic-papers-production`, in `env.production` in `wrangler.jsonc`. Direct
+   connections don't count against the pooler's pool size but against the database's own
+   limit (Micro: 60, of which the pooler may hold 40), and Hyperdrive opens up to about 100
+   on Workers Paid. So set its **Maximum connections** (the config's Settings, Origin
+   connection limit) to 10, and lower it if the pooler's size is raised.
 2. **Repo secret** `PRODUCTION_PAYLOAD_SECRET` (production's `PAYLOAD_SECRET`) and
    **variables** `PRODUCTION_ORIGIN_URL` (production's Coolify URL),
    `WORKER_PRODUCTION_URL` (the Worker's URL: its workers.dev address until it takes over),

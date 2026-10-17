@@ -74,9 +74,9 @@ The same steps, for production's database and hostname:
    Supabase guide for Hyperdrive says so, since Hyperdrive pools connections itself. It's
    `pragmatic-papers-production`, in `env.production` in `wrangler.jsonc`. Direct
    connections don't count against the pooler's pool size but against the database's own
-   limit (Micro: 60, of which the pooler may hold 40), and Hyperdrive opens up to about 100
-   on Workers Paid. So set its **Maximum connections** (the config's Settings, Origin
-   connection limit) to 10, and lower it if the pooler's size is raised.
+   limit (Micro: 60, of which the pooler may hold 40), and a new config's limit is 60
+   already. So set its **Maximum connections** (the config's Settings, Origin connection
+   limit) to 10, and lower it if the pooler's size is raised. Staging's is 10 too.
 2. **Repo secret** `PRODUCTION_PAYLOAD_SECRET` (production's `PAYLOAD_SECRET`) and
    **variables** `PRODUCTION_ORIGIN_URL` (production's Coolify URL),
    `WORKER_PRODUCTION_URL` (the Worker's URL: its workers.dev address until it takes over),

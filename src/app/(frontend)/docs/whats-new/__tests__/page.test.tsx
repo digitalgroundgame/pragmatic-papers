@@ -2,11 +2,14 @@ import { cleanup, render, screen, within } from "@testing-library/react"
 import type React from "react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
-const { queryPublishedDocs, experiment } = vi.hoisted(() => ({
+import { docSectionId, docSectionNodes } from "@/stories/fixtures/docSections"
+
+const { queryPublishedDocs, queryDocSections, experiment } = vi.hoisted(() => ({
   queryPublishedDocs: vi.fn(),
+  queryDocSections: vi.fn(),
   experiment: { enabled: true },
 }))
-vi.mock("@/plugins/docs/queries", () => ({ queryPublishedDocs }))
+vi.mock("@/plugins/docs/queries", () => ({ queryPublishedDocs, queryDocSections }))
 vi.mock("@/globals/Plugins/isPluginEnabled", () => ({
   isPluginEnabled: async () => experiment.enabled,
 }))
@@ -27,7 +30,7 @@ const docs = [
     title: "Find photos on Unsplash",
     summary: "Search Unsplash from Media.",
     publishedAt: "2026-10-18T00:00:00.000Z",
-    section: "media",
+    section: docSectionId("media"),
     heroImage: { url: "/hero.webp", sizes: { thumbnail: { url: "/hero-300x158.webp" } } },
   },
   {
@@ -36,11 +39,12 @@ const docs = [
     title: "Footnotes",
     summary: "Cite your sources.",
     publishedAt: "2026-03-04T00:00:00.000Z",
-    section: "writing",
+    section: docSectionId("articles"),
   },
 ]
 
 beforeEach(() => {
+  queryDocSections.mockResolvedValue(docSectionNodes)
   experiment.enabled = true
 })
 afterEach(cleanup)
@@ -66,18 +70,14 @@ describe("WhatsNewPage", () => {
     const card = within(latest).getByRole("link", { name: /Find photos on Unsplash/ })
     expect(card).toHaveTextContent("Search Unsplash from Media.")
     expect(card.querySelector("img")).toHaveAttribute("src", "/hero-300x158.webp")
-    expect(
-      within(latest).queryByRole("region", { name: "Writing articles" }),
-    ).not.toBeInTheDocument()
+    expect(within(latest).queryByRole("region", { name: "Articles" })).not.toBeInTheDocument()
 
     const nav = screen.getByRole("navigation", { name: "Docs" })
     expect(within(nav).getByRole("link", { name: "What's new" })).toHaveAttribute(
       "aria-current",
       "page",
     )
-    expect(within(nav).getByRole("list", { name: "Writing articles" })).toHaveTextContent(
-      "Footnotes",
-    )
+    expect(within(nav).getByRole("list", { name: "Articles" })).toHaveTextContent("Footnotes")
   })
 
   it("says so when there are no docs", async () => {

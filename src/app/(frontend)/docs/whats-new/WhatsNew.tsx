@@ -2,18 +2,26 @@ import type { Crumb } from "@/components/Breadcrumbs"
 import { DocsLayout } from "@/components/DocsNav"
 import { JsonLd } from "@/components/JsonLd"
 import { docThumbnail } from "@/plugins/docs/thumbnail"
-import type { queryPublishedDocs } from "@/plugins/docs/queries"
-import { groupDocsBySection, HOME_DOC_SLUG, WHATS_NEW_PATH } from "@/plugins/docs/sections"
+import type { queryDocSections, queryPublishedDocs } from "@/plugins/docs/queries"
+import { groupDocs, HOME_DOC_SLUG, WHATS_NEW_PATH } from "@/plugins/docs/sections"
 import { formatNotificationDate } from "@/plugins/notifications/unread"
 import { buildBreadcrumbJsonLd } from "@/utilities/structuredData"
 import { HoverPrefetchLink } from "@/components/Link/HoverPrefetchLink"
 import React from "react"
 
 export type WhatsNewDoc = Awaited<ReturnType<typeof queryPublishedDocs>>[number]
+export type WhatsNewSection = Awaited<ReturnType<typeof queryDocSections>>[number]
 
 /** /docs/whats-new: every doc, newest first, with its thumbnail and summary, beside the sidebar. */
-export function WhatsNew({ docs }: { docs: WhatsNewDoc[] }): React.ReactNode {
-  const sections = groupDocsBySection(docs)
+export function WhatsNew({
+  docs,
+  sections,
+}: {
+  docs: WhatsNewDoc[]
+  /** The sidebar's areas and sections (`queryDocSections`). */
+  sections: WhatsNewSection[]
+}): React.ReactNode {
+  const areas = groupDocs(docs, sections)
   const latest = docs.filter((doc) => doc.slug !== HOME_DOC_SLUG)
   const trail: Crumb[] = [
     { name: "Docs", path: "/docs" },
@@ -22,7 +30,7 @@ export function WhatsNew({ docs }: { docs: WhatsNewDoc[] }): React.ReactNode {
 
   return (
     <>
-      <DocsLayout sections={sections} current={WHATS_NEW_PATH} breadcrumbs={trail}>
+      <DocsLayout areas={areas} current={WHATS_NEW_PATH} breadcrumbs={trail}>
         <section aria-labelledby="docs-latest" className="space-y-6">
           <JsonLd data={[buildBreadcrumbJsonLd(trail)]} />
           <header className="space-y-3">

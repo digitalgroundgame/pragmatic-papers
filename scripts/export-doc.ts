@@ -11,7 +11,7 @@ import { formatDocFile } from "@/plugins/docs/docFile"
 import { contentToMarkdown, docsEditorConfig } from "@/plugins/docs/markdown"
 import { packMedia, type MediaRef } from "@/plugins/docs/repoDoc"
 import { HOME_DOC_SLUG } from "@/plugins/docs/sections"
-import { DOCS_DIR } from "@/plugins/docs/syncDocs"
+import { DOCS_DIR, readStarterSections, STARTER_SECTIONS_FILE } from "@/plugins/docs/syncDocs"
 
 /** Copies the original upload: from public/media with local storage, otherwise from its URL. */
 async function saveMediaFile(
@@ -34,7 +34,8 @@ async function saveMediaFile(
  * `pnpm docs:export <slug>`: writes a doc written in the admin into the repo, as
  * `src/docs/<section>/<slug>.md` with the files it shows beside it (each named for the doc, the
  * hero image `<slug>-hero`), so the release that ships the feature ships its doc to every site.
- * Reads the latest draft, from the database in `.env`. A doc in another section's folder is
+ * Reads the latest draft, from the database in `.env`. The folder is the doc's section's slug,
+ * which must be a section in `src/docs/sections.json`. A doc in another section's folder is
  * moved.
  */
 export async function main(slug: string | undefined): Promise<void> {
@@ -86,10 +87,21 @@ export async function main(slug: string | undefined): Promise<void> {
 
     // The home doc sits at the top of src/docs/, outside the sections.
     const home = slug === HOME_DOC_SLUG
-    const folder = home ? DOCS_DIR : path.join(DOCS_DIR, doc.section)
+    const section = typeof doc.section === "object" ? doc.section?.slug : null
+    if (!home) {
+      // Its folder is its section's slug, which a new site seeds from sections.json.
+      if (!section) throw new Error(`"${slug}" isn't in a section yet: pick one in the admin`)
+      const starter = await readStarterSections()
+      if (!starter.areas.some((area) => area.sections.some((known) => known.slug === section))) {
+        throw new Error(
+          `The section "${section}" isn't in src/docs/${STARTER_SECTIONS_FILE}: add it under its area first`,
+        )
+      }
+    }
+    const folder = home ? DOCS_DIR : path.join(DOCS_DIR, section!)
     await mkdir(folder, { recursive: true })
     for (const other of await readdir(DOCS_DIR, { withFileTypes: true })) {
-      if (other.isDirectory() && (home || other.name !== doc.section)) {
+      if (other.isDirectory() && (home || other.name !== section)) {
         await rm(path.join(DOCS_DIR, other.name, `${slug}.md`), { force: true })
       }
     }

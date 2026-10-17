@@ -2,8 +2,10 @@ import { cleanup, render, screen, within } from "@testing-library/react"
 import type React from "react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
+import { docSectionId, docSectionNodes } from "@/stories/fixtures/docSections"
+
 const { queries, draft, experiments } = vi.hoisted(() => ({
-  queries: { queryDocBySlug: vi.fn(), queryPublishedDocs: vi.fn() },
+  queries: { queryDocBySlug: vi.fn(), queryPublishedDocs: vi.fn(), queryDocSections: vi.fn() },
   draft: { isEnabled: false },
   experiments: {} as Record<string, boolean>,
 }))
@@ -80,10 +82,11 @@ const renderPage = async (slug?: string) => {
 
 beforeEach(() => {
   vi.clearAllMocks()
+  queries.queryDocSections.mockResolvedValue(docSectionNodes)
   draft.isEnabled = false
   for (const name of Object.keys(experiments)) delete experiments[name]
   queries.queryDocBySlug.mockResolvedValue(doc)
-  queries.queryPublishedDocs.mockResolvedValue([{ ...doc, section: "site" }])
+  queries.queryPublishedDocs.mockResolvedValue([{ ...doc, section: docSectionId("site-settings") }])
 })
 afterEach(cleanup)
 
@@ -164,9 +167,14 @@ describe("DocPage", () => {
 
   it("ends with the previous and next docs in the sidebar's order, from Home", async () => {
     queries.queryPublishedDocs.mockResolvedValue([
-      { slug: "home", title: "Docs home", navTitle: "Home", section: "getting-started" },
-      { ...doc, section: "site" },
-      { slug: "volumes", title: "Put together a volume", navTitle: "Volumes", section: "site" },
+      { slug: "home", title: "Docs home", navTitle: "Home", section: null },
+      { ...doc, section: docSectionId("site-settings") },
+      {
+        slug: "volumes",
+        title: "Put together a volume",
+        navTitle: "Volumes",
+        section: docSectionId("site-settings"),
+      },
     ])
     await renderPage()
     const pager = screen.getByRole("navigation", { name: "Previous and next docs" })
@@ -181,7 +189,11 @@ describe("DocPage", () => {
   })
 
   it("has no GitHub link, even on a doc seeded from the repo: editors change it here", async () => {
-    queries.queryDocBySlug.mockResolvedValue({ ...doc, section: "site", sourceHash: "abc" })
+    queries.queryDocBySlug.mockResolvedValue({
+      ...doc,
+      section: docSectionId("site-settings"),
+      sourceHash: "abc",
+    })
     await renderPage()
     expect(screen.queryByRole("link", { name: /GitHub/ })).not.toBeInTheDocument()
   })

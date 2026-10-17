@@ -1,28 +1,50 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite"
 import { expect, userEvent, within } from "storybook/test"
 
-import { groupDocsBySection } from "@/plugins/docs/sections"
+import { groupDocs } from "@/plugins/docs/sections"
+import { docSectionId, docSectionNodes } from "@/stories/fixtures/docSections"
 
 import { DocsLayout, DocsNav } from "."
 
-const sections = groupDocsBySection([
-  // Left out of its section: the sidebar links it as Home.
-  { slug: "home", title: "Pragmatic Papers docs", section: "getting-started" },
-  { slug: "notifications", title: "What's new: the bell", section: "getting-started" },
-  { slug: "writing-and-publishing", title: "Writing and publishing", section: "getting-started" },
-  { slug: "footnotes", title: "Footnotes", section: "writing" },
-  { slug: "topics", title: "Tag articles with topics", navTitle: "Topics", section: "writing" },
-  { slug: "seo-tab", title: "The SEO tab", section: "writing" },
-  { slug: "timeline-block", title: "The Timeline block", section: "blocks" },
-  { slug: "media-collage", title: "The Media Collage block", section: "blocks" },
-  { slug: "unsplash-photos", title: "Find photos on Unsplash", section: "media" },
-  { slug: "experiments", title: "Switch beta features on", section: "site" },
-])
+const areas = groupDocs(
+  [
+    // Left out of the sections: the sidebar links it as Home.
+    { slug: "home", title: "Pragmatic Papers docs", section: null },
+    {
+      slug: "notifications",
+      title: "What's new: the bell",
+      section: docSectionId("getting-started"),
+    },
+    {
+      slug: "writing-and-publishing",
+      title: "Writing and publishing",
+      section: docSectionId("getting-started"),
+    },
+    { slug: "footnotes", title: "Footnotes", section: docSectionId("articles") },
+    {
+      slug: "topics",
+      title: "Tag articles with topics",
+      navTitle: "Topics",
+      section: docSectionId("articles"),
+    },
+    { slug: "seo-tab", title: "The SEO tab", section: docSectionId("articles") },
+    { slug: "timeline-block", title: "The Timeline block", section: docSectionId("blocks") },
+    { slug: "media-collage", title: "The Media Collage block", section: docSectionId("blocks") },
+    { slug: "unsplash-photos", title: "Find photos on Unsplash", section: docSectionId("media") },
+    { slug: "volumes", title: "Put together a volume", section: docSectionId("pages-and-volumes") },
+    {
+      slug: "experiments",
+      title: "Switch beta features on",
+      section: docSectionId("site-settings"),
+    },
+  ],
+  docSectionNodes,
+)
 
 const meta = {
   title: "Components/DocsNav",
   component: DocsNav,
-  args: { sections },
+  args: { areas },
 } satisfies Meta<typeof DocsNav>
 
 export default meta
@@ -33,7 +55,7 @@ export const OnADoc: Story = {
   args: { current: "topics" },
   play: async ({ canvasElement }) => {
     const nav = within(canvasElement).getByRole("navigation", { name: "Docs" })
-    const writing = within(nav).getByRole("list", { name: "Writing articles" })
+    const writing = within(nav).getByRole("list", { name: "Articles" })
     await expect(within(writing).getByRole("link", { name: "Topics" })).toHaveAttribute(
       "aria-current",
       "page",
@@ -42,14 +64,14 @@ export const OnADoc: Story = {
       "aria-current",
     )
     // Its section's name reads as hovered; the others stay muted.
-    await expect(within(nav).getByText("Writing articles")).toHaveClass("text-foreground")
-    await expect(within(nav).getByText("Photos and media")).toHaveClass("text-muted-foreground")
+    await expect(within(nav).getByText("Articles")).toHaveClass("text-foreground")
+    await expect(within(nav).getByText("Media")).toHaveClass("text-muted-foreground")
     // Only the open doc's section starts open; the others unfold on a click.
     await expect(within(nav).queryByRole("link", { name: "Footnotes" })).toBeVisible()
     await expect(
       within(nav).queryByRole("link", { name: "Find photos on Unsplash" }),
     ).not.toBeVisible()
-    await userEvent.click(within(nav).getByText("Photos and media"))
+    await userEvent.click(within(nav).getByText("Media"))
     await expect(within(nav).getByRole("link", { name: "Find photos on Unsplash" })).toBeVisible()
   },
 }
@@ -65,7 +87,9 @@ export const OnHome: Story = {
     )
     await expect(within(nav).queryByRole("link", { name: "Pragmatic Papers docs" })).toBeNull()
     // Sections sit under their area; one with no docs yet isn't shown.
-    await expect(within(nav).getByText("Admin")).toBeVisible()
+    await expect(within(nav).getByText("Writing")).toBeVisible()
+    await expect(within(nav).getByText("Editing")).toBeVisible()
+    await expect(within(nav).queryByText("Reading")).toBeNull()
     await expect(within(nav).queryByText("Development")).toBeNull()
     await expect(within(nav).getByRole("link", { name: "Writing and publishing" })).toBeVisible()
     await expect(within(nav).queryByRole("link", { name: "Footnotes" })).not.toBeVisible()

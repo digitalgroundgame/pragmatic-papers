@@ -108,17 +108,28 @@ export interface CommentsPluginConfig {
   admins: Access
   /** More checks, run after the built-in ones (links and duplicates). */
   checks?: CommentCheck[]
-  /** The admin sidebar group. Default `Content`. */
-  adminGroup?: string
+  /**
+   * The admin sidebar group of each part. Defaults: comments in `Content`, beside what they're
+   * on; violations and the settings global in `System`, beside the site's other rules.
+   */
+  adminGroups?: Partial<CommentsAdminGroups>
   /** The longest comment, in characters. Default 2000. */
   maxLength?: number
   /** How long an author waits between two comments, in seconds. Default 20. */
   cooldownSeconds?: number
 }
 
+/** Where each part of the plugin sits in the admin sidebar. */
+export interface CommentsAdminGroups {
+  comments: string
+  violations: string
+  settings: string
+}
+
 export type ResolvedCommentsConfig = Required<
-  Omit<CommentsPluginConfig, "disabled" | "enabled">
+  Omit<CommentsPluginConfig, "disabled" | "enabled" | "adminGroups">
 > & {
+  adminGroups: CommentsAdminGroups
   enabled: (args: { payload: Payload }) => Promise<boolean>
 }
 

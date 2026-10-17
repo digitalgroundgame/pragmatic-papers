@@ -8,7 +8,7 @@ export function settingsGlobal(config: ResolvedCommentsConfig): GlobalConfig {
   return {
     slug: SETTINGS_SLUG,
     label: "Comment settings",
-    admin: { group: config.adminGroup },
+    admin: { group: config.adminGroups.settings },
     access: { read: config.moderators, update: config.admins },
     fields: [
       {

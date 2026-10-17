@@ -68,11 +68,15 @@ Until all of them are set, the workflow skips itself.
 
 The same steps, for production's database and hostname:
 
-1. **Hyperdrive** on production's Supabase database, with the connection string
-   Cloudflare's Supabase guide for Hyperdrive names (no tunnel: Supabase is public). Its
-   ID replaces the zeros in `env.production` in `wrangler.jsonc`. If it goes through the
-   pooler, count its connections against the pool size that production's Coolify app and
-   builds share.
+1. **Hyperdrive** on production's Supabase database, as a public database (no tunnel:
+   Supabase is public), with Supabase's Direct connection string
+   (`db.<project-ref>.supabase.co:5432`), not a `pooler.supabase.com` one: Cloudflare's
+   Supabase guide for Hyperdrive says so, since Hyperdrive pools connections itself. It's
+   `pragmatic-papers-production`, in `env.production` in `wrangler.jsonc`. Direct
+   connections don't count against the pooler's pool size but against the database's own
+   limit (Micro: 60, of which the pooler may hold 40), and a new config's limit is 60
+   already. So set its **Maximum connections** (the config's Settings, Origin connection
+   limit) to 10, and lower it if the pooler's size is raised. Staging's is 10 too.
 2. **Repo secret** `PRODUCTION_PAYLOAD_SECRET` (production's `PAYLOAD_SECRET`) and
    **variables** `PRODUCTION_ORIGIN_URL` (production's Coolify URL),
    `WORKER_PRODUCTION_URL` (the Worker's URL: its workers.dev address until it takes over),

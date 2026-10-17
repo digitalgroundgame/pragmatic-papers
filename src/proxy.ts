@@ -46,7 +46,9 @@ export function proxy(request: NextRequest): ReturnType<typeof NextResponse.next
   // verified — but is kept out of search indexes via noindex. Crawling is
   // intentionally left allowed (no robots.txt Disallow) so Google can actually
   // fetch the page, process, and then and honor the (new) noindex header.
-  if (process.env.BUILD_ENV !== "production") {
+  // A Cloudflare Worker's workers.dev and version preview addresses serve the same
+  // pages as its site, production's included, so they're kept out too.
+  if (process.env.BUILD_ENV !== "production" || request.nextUrl.hostname.endsWith(".workers.dev")) {
     response.headers.set("X-Robots-Tag", "noindex, nofollow")
   }
 

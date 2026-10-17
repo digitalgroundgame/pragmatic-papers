@@ -6,6 +6,9 @@
  *   included;
  * - `/_next/static/…` files the Worker's assets don't have, which are the admin panel's
  *   (Cloudflare serves the Worker's own assets before the Worker runs);
+ * - the routes under `/next/` that act on the Coolify deployment (`ORIGIN_ROUTES`): its
+ *   version and migrations, which the deploy workflows wait on, and the purge, warm-up
+ *   and seed it runs;
  * - next/image's reads of those media files, which OpenNext makes through the `ASSETS`
  *   binding rather than over HTTP.
  *
@@ -26,8 +29,23 @@ export interface WorkerHandler<Env extends WorkerEnv = WorkerEnv> {
 
 const ORIGIN_PREFIXES = ["/admin/", "/api/", "/_next/static/"]
 
-export function isOriginPath(pathname: string): boolean {
-  return pathname === "/admin" || ORIGIN_PREFIXES.some((prefix) => pathname.startsWith(prefix))
+/** The `/next/` routes that answer for Coolify, wherever the site's hostname points. */
+export const ORIGIN_ROUTES = [
+  "/next/version",
+  "/next/migrations",
+  "/next/purge-edge",
+  "/next/warm-worker",
+  "/next/seed",
+]
+
+/** Whether a request, by its path or URL, goes to the origin. */
+export function isOriginPath(target: string | URL): boolean {
+  const { pathname } = typeof target === "string" ? new URL(target, "http://worker") : target
+  return (
+    pathname === "/admin" ||
+    ORIGIN_ROUTES.includes(pathname) ||
+    ORIGIN_PREFIXES.some((prefix) => pathname.startsWith(prefix))
+  )
 }
 
 /** The same request, sent to the origin instead. Redirects come back to the browser. */
@@ -62,11 +80,12 @@ export function withOrigin<Env extends WorkerEnv>(handler: WorkerHandler<Env>): 
       // Payload reads it when its config first loads, on the isolate's first request.
       if (env.HYPERDRIVE) process.env.DATABASE_URI = env.HYPERDRIVE.connectionString
 
-      const { pathname } = new URL(request.url)
+      const url = new URL(request.url)
+      const { pathname } = url
       const origin = env.ORIGIN_URL
       if (!origin) return withImageCaching(pathname, await handler.fetch(request, env, ctx))
 
-      if (isOriginPath(pathname)) return fetch(toOrigin(request, origin))
+      if (isOriginPath(url)) return fetch(toOrigin(request, origin))
 
       const assets = env.ASSETS
       const response = await handler.fetch(
@@ -77,7 +96,7 @@ export function withOrigin<Env extends WorkerEnv>(handler: WorkerHandler<Env>): 
             // OpenNext's image handler passes a URL, not a Request.
             fetch: (input: Request | URL | string) => {
               const assetRequest = input instanceof Request ? input : new Request(input)
-              return isOriginPath(new URL(assetRequest.url).pathname)
+              return isOriginPath(new URL(assetRequest.url))
                 ? fetch(toOrigin(assetRequest, origin))
                 : assets.fetch(input)
             },

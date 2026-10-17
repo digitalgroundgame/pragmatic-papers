@@ -154,8 +154,8 @@ export async function seedAchievements(
   const created: string[] = []
   for (const { key, ...data } of starterAchievements(config)) {
     if (await wasSeeded(payload, ACHIEVEMENTS_SLUG, key)) continue
-    // Two deploys can seed the same database at once (the site's and the Worker's), so one
-    // already there by name and rule counts as seeded too.
+    // A site that already has one by name and rule (made before seeding was recorded) counts as
+    // seeded too. Only one deploy seeds each database, so nothing else races this.
     const { totalDocs } = await payload.count({
       collection: ACHIEVEMENTS_SLUG as CollectionSlug,
       where: { and: [{ name: { equals: data.name } }, { rule: { equals: data.rule } }] },

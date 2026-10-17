@@ -8,7 +8,7 @@ import { PLUGINS_SLUG } from "./pluginSwitches"
 /**
  * System → Plugins: every Payload plugin the config installs, ours in `src/plugins/` and the
  * packages alike, whether each is on here, and links to the admin pages that configure it.
- * Below the list, the switches of the plugins that offer one (`pluginSwitches` adds them).
+ * Each plugin that offers a switch has it in its Status cell (`pluginSwitches` adds them).
  * Admins only.
  */
 export const Plugins: GlobalConfig = {

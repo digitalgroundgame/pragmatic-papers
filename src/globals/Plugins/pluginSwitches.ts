@@ -5,9 +5,12 @@ import { registeredPlugins } from "@/utilities/registerPlugin"
 /** The Plugins global's slug, which holds the switches. */
 export const PLUGINS_SLUG = "plugins"
 
+/** The group in the Plugins global that holds a checkbox per switch, named for its plugin. */
+export const SWITCHES_GROUP = "switches"
+
 /**
  * Adds a switch to System → Plugins for every plugin whose manifest offers one, as a checkbox in
- * the global's `switches` group named for the plugin's slug. It runs after every other plugin
+ * the global's `switches` group named for the plugin's slug, which the plugins table shows. It runs after every other plugin
  * (`order`), once they've all registered, so no plugin is named here.
  */
 export const pluginSwitches = (): Plugin => {
@@ -23,13 +26,7 @@ export const pluginSwitches = (): Plugin => {
           type: "checkbox",
           label: registered.switch.label,
           defaultValue: registered.switch.defaultValue,
-          admin: {
-            description: registered.switch.description,
-            components: {
-              Field:
-                "@/globals/SiteSettings/components/ExperimentSwitchField#ExperimentSwitchField",
-            },
-          },
+          admin: { description: registered.switch.description },
         },
       ]
     })
@@ -43,11 +40,12 @@ export const pluginSwitches = (): Plugin => {
               fields: [
                 ...global.fields,
                 {
-                  name: "switches",
+                  name: SWITCHES_GROUP,
                   type: "group",
+                  // The plugins table shows each switch in its plugin's Status cell, so the
+                  // group renders nothing. Its checkboxes stay in the form and save with it.
                   admin: {
-                    description:
-                      "Switch a plugin off here and it stops at once, without a deploy. Its data stays.",
+                    components: { Field: "@/globals/Plugins/components/NoField#NoField" },
                   },
                   fields,
                 },

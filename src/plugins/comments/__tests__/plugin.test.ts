@@ -31,8 +31,8 @@ const field = (config: Config, slug: string, name: string) =>
   collection(config, slug).fields.find((f) => "name" in f && f.name === name)
 
 describe("commentsPlugin", () => {
-  it("adds comments, violations and the settings global, in the group it's given", () => {
-    const config = apply({ ...options, adminGroup: "Community" })
+  it("adds comments, violations and the settings global", () => {
+    const config = apply(options)
 
     expect(config.collections!.map(({ slug }) => slug)).toEqual([
       "articles",
@@ -42,9 +42,22 @@ describe("commentsPlugin", () => {
       "comment-violations",
     ])
     expect(config.globals!.map(({ slug }) => slug)).toEqual(["comment-settings"])
-    expect(collection(config, "comments").admin?.group).toBe("Community")
+  })
+
+  it("puts comments in Content, and violations and the settings in System", () => {
+    const config = apply(options)
+
+    expect(collection(config, "comments").admin?.group).toBe("Content")
+    expect(collection(config, "comment-violations").admin?.group).toBe("System")
+    expect(config.globals![0]!.admin?.group).toBe("System")
+  })
+
+  it("moves only the parts whose group it's given", () => {
+    const config = apply({ ...options, adminGroups: { violations: "Community" } })
+
+    expect(collection(config, "comments").admin?.group).toBe("Content")
     expect(collection(config, "comment-violations").admin?.group).toBe("Community")
-    expect(config.globals![0]!.admin?.group).toBe("Community")
+    expect(config.globals![0]!.admin?.group).toBe("System")
   })
 
   it("cleans up after an article and an author, after their own hooks", () => {

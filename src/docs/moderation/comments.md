@@ -29,19 +29,19 @@ Nobody can change what someone wrote: a comment is shown, held, hidden or delete
 
 ## When an account loses commenting
 
-An account with too many recent violations can't comment until enough of them expire or are reversed. The comment box tells them when they can comment again. Admins set how many violations, and how long each one lasts, in **Content → Comment settings**: three in 30 days to start.
+An account with too many recent violations can't comment until enough of them expire or are reversed. The comment box tells them when they can comment again. Admins set how many violations, and how long each one lasts, in **System → Comment settings**: three in 30 days to start.
 
-To stop someone at once, open **Content → Violations**, create one with their account as **Author** and **Block** as **Source**, and give a reason. A block lasts until someone ticks **Reversed** on it.
+To stop someone at once, open **System → Violations**, create one with their account as **Author** and **Block** as **Source**, and give a reason. A block lasts until someone ticks **Reversed** on it.
 
 To lift a violation early, open it and tick **Reversed**.
 
 ## Require a verified email address
 
-Anyone signed in can comment. To limit comments to people whose email address is verified, an admin ticks **Require a verified email address to comment** in **Comment settings**. Google and Discord verify the addresses they share, and staff always count as verified. Anyone else, including members who signed up with Destiny.gg and haven't connected either, sees a note asking them to connect one of those from /account.
+Anyone signed in can comment. To limit comments to people whose email address is verified, an admin ticks **Require a verified email address to comment** in **System → Comment settings**. Google and Discord verify the addresses they share, and staff always count as verified. Anyone else, including members who signed up with Destiny.gg and haven't connected either, sees a note asking them to connect one of those from /account.
 
 ## Reply depth
 
-Replies can nest five levels below a top-level comment. Admins change this in **Comment settings**. Lowering it never removes replies already posted; it only stops new ones past the limit, and the page says where replies stop.
+Replies can nest five levels below a top-level comment. Admins change this in **System → Comment settings**. Lowering it never removes replies already posted; it only stops new ones past the limit, and the page says where replies stop.
 
 ## Members' own accounts
 

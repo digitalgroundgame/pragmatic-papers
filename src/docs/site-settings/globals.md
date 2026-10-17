@@ -39,7 +39,7 @@ Admins only, under **System**:
 
 - **Site Settings** switches beta features on or off for this site. See [Switch beta features on per site in Site Settings](/docs/experiments).
 - **Integrations** chooses whose accounts the ticker shows: up to 5 YouTube channels (when two are live at once, the first listed wins), Bluesky accounts and X accounts. A table at the top shows which outside services are connected. Keys and passwords are never entered here; they're set where the site is hosted.
-- **Plugins** lists the plugins the admin runs, ours and Payload's, whether each is on here, and links to the pages that hold their collections. Plugins that are still being tried out carry a **Beta** badge. Below the list, the plugins that can be switched off have a switch each; saving takes effect without a redeploy. Plugins themselves are installed in code.
+- **Plugins** lists the plugins the admin runs, ours and Payload's, whether each is on here, and links to the pages that hold their collections. Plugins that are still being tried out carry a **Beta** badge. Each plugin's switch is in its **Status** column: flip it and save, and it takes effect without a redeploy. A plugin that can't be switched off shows its switch greyed out, on. Plugins themselves are installed in code.
 - **Article Recommendations** shows the articles ranked by readers' engagement. It updates itself; there's nothing to edit.
 
 ## Staging and the live site

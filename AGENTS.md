@@ -320,6 +320,15 @@ Payload's own plugins so it can be lifted out without a rewrite:
   starts off (`defaultValue: false`), which shows a **Beta** badge; when it graduates, flip the
   default rather than deleting the switch. This replaces an experiment in Settings for a
   feature that's a plugin; anything else stays an experiment.
+- Settings an admin changes while the site runs (thresholds, limits, rules) go in the plugin's
+  own global, in the System group (the comments plugin's **Comment settings**), never as fields
+  on Settings or Plugins: a plugin can't depend on the host's globals, and a global of its own
+  gets its own access (moderators read Comment settings; Settings is admin-only) and its own save
+  hooks (saving Settings clears Next's whole cache and the edge). A plugin with nothing for an
+  admin to change has no global: what the site decides goes in options, and on or off is its
+  switch. Settings (`site-settings`) keeps the experiments and site-wide values no one feature
+  owns; a feature that already has a global (Header's ticker, Integrations) keeps its settings
+  there.
 - `types.ts` holds `<Name>PluginConfig`, extending `SitePluginOptions`. Options have defaults,
   and `disabled: true` leaves the schema in place (so migrations don't change) but turns the
   behavior off.
@@ -731,9 +740,11 @@ PRs into `dev` need the **Review acknowledged** check (`review-ack.yml`) on
 their final commit. A person gives it one of two ways: approving the PR with a
 GitHub review, or replying `/reviewed` or `LGTM` (any case) after a Claude
 review is on the PR:
-CI's (`claude-review.yml`, run by adding the "in review" label, which the
-review removes when it's done, so adding it again asks for another) or one
-they posted with a local `/code-review --comment <pr>` (they need write access).
+CI's (`claude-review.yml`, which runs when a draft is marked ready for review
+and whenever the "in review" label is added, then removes the label, so adding
+it again asks for another; or a comment mentioning `@claude` asking for a review,
+`claude.yml`) or one they posted with a local `/code-review --comment <pr>` (they
+need write access).
 Fixes pushed after a review need a new approval or reply, not a new
 review. **Never post `/reviewed` or `LGTM` (or anything starting with either),
 and never submit an approving review** — not even when asked to get a PR mergeable. Both

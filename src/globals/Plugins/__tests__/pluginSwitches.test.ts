@@ -58,6 +58,11 @@ describe("pluginSwitches", () => {
     ])
   })
 
+  it("leaves showing the switches to the plugins table", async () => {
+    const group = switches(await run(base(), { docs: true }))
+    expect(group?.admin?.components?.Field).toBe("@/globals/Plugins/components/NoField#NoField")
+  })
+
   it("adds no group when no plugin offers a switch", async () => {
     expect(switches(await run(base(), { "plugin-seo": false }))).toBeUndefined()
   })

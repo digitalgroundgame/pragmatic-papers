@@ -130,10 +130,11 @@ export async function DocView({ slug, fallback }: DocViewProps): Promise<React.R
             className="xl:toc-open:gap-10 relative flex flex-col justify-between gap-3 xl:flex-row xl:gap-6"
           >
             {showTableOfContents && (
-              // Always shown, with no toggle: above the doc on narrow screens, and to its right
+              // Always shown, with no toggle: above the doc and flush with its text on narrow
+              // screens (not centered, as an article's is), and to its right
               // from xl, where the docs' sidebar leaves room for both. No heading: the nav's
               // label names it for screen readers.
-              <ArticleSidebar className="lg:static xl:sticky xl:top-[calc(var(--sticky-top)+1rem)] xl:order-last xl:max-w-56">
+              <ArticleSidebar className="toc-open:mx-0 lg:static xl:sticky xl:top-[calc(var(--sticky-top)+1rem)] xl:order-last xl:max-w-56">
                 <TableOfContents content={content} title="" />
               </ArticleSidebar>
             )}

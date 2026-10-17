@@ -16,7 +16,7 @@ vi.mock("@/data/globals", () => ({
     slug === "header" ? { navItems: [], actions: [] } : { socials: [] },
 }))
 
-const { Header } = await import("../Component")
+const { DefaultHeader: Header } = await import("../Component")
 
 /** Every element in the tree Header returns, without rendering its children. */
 function elements(node: React.ReactNode): React.ReactElement<Record<string, unknown>>[] {

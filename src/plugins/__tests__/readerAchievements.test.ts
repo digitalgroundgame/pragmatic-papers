@@ -20,11 +20,12 @@ describe("achievementsOptions", () => {
     expect(await achievementsOptions.currentUser({} as PayloadRequest)).toEqual({ id: 4 })
   })
 
-  it("counts readers towards first members, never staff", () => {
+  it("counts readers and staff towards first members, not an account with no role", () => {
     const { isMember } = achievementsOptions
     expect(isMember({ id: 1, roles: ["member"] })).toBe(true)
-    expect(isMember({ id: 2, roles: ["member", "editor"] })).toBe(false)
-    expect(isMember({ id: 3, roles: ["writer"] })).toBe(false)
+    expect(isMember({ id: 2, roles: ["member", "editor"] })).toBe(true)
+    expect(isMember({ id: 3, roles: ["writer"] })).toBe(true)
+    expect(isMember({ id: 4, roles: [] })).toBe(false)
   })
 
   it("takes a provider-verified address as verified", () => {

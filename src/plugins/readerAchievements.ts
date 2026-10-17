@@ -1,7 +1,7 @@
 import type { Payload } from "payload"
 
 import { admin, editor } from "@/access/collections"
-import { hasRole, isStaff } from "@/access/roles"
+import { hasRole, STAFF_ROLES } from "@/access/roles"
 import type { User } from "@/payload-types"
 
 import { type AchievementsPluginConfig, achievementsReader } from "./achievements"
@@ -21,11 +21,10 @@ export const achievementsOptions: AchievementsPluginConfig = {
   currentUser: (req) => getSignedInUser(req, ssoOptions),
   // The sso plugin's field: true once Google or Discord verified the address.
   isVerified: (user) => user.emailVerified === true,
-  // Readers only: a staff account never counts towards a first-members achievement.
-  isMember: (user) =>
-    hasRole(user as unknown as User, "member") && !isStaff(user as unknown as User),
+  // Every account counts towards a first-members achievement, readers and staff alike.
+  isMember: (user) => hasRole(user as unknown as User, ["member", ...STAFF_ROLES]),
   userFields: ["emailVerified", "roles"],
-  // The seeded Early member: the first 1000 member accounts, in sign-up order.
+  // The seeded Early member: the first 1000 accounts, in sign-up order.
   earlyMemberLimit: 1000,
   moderators: editor,
   admins: admin,

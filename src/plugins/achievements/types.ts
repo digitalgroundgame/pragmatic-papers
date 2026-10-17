@@ -75,7 +75,7 @@ export interface AchievementsPluginConfig extends SitePluginOptions {
   isVerified?: (user: AchievementUser) => boolean
   /** The user fields `isVerified` and `isMember` read, which callers must load. */
   userFields?: string[]
-  /** Whether an account counts towards a `firstMembers` achievement: readers, not staff. */
+  /** Whether an account counts towards a `firstMembers` achievement. */
   isMember: (user: AchievementUser) => boolean
   /** How many member accounts the seeded Early member goes to, in sign-up order. Default 1000. */
   earlyMemberLimit?: number

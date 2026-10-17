@@ -7,6 +7,7 @@ import { EndRule } from "@/blocks/SquiggleRule/EndRule"
 import { ArticleSidebar } from "@/components/ArticleSidebar"
 import { AuthorList } from "@/components/Authors/AuthorList"
 import { Comments } from "@/components/Comments"
+import { CommentsUnpublished } from "@/components/Comments/Unpublished"
 import { FootnoteList } from "@/components/FootnoteList"
 import { JsonLd } from "@/components/JsonLd"
 import { LivePreviewListener } from "@/components/LivePreviewListener"
@@ -88,7 +89,7 @@ export default async function Article({ params: paramsPromise }: Args): Promise<
       // Preview stays on across pages, so it keeps comments wherever readers have them.
       draft ? isArticlePublished(article.id) : true,
     ])
-  const commentsEnabled = commentsSwitch && ssoSwitch && published
+  const commentsEnabled = commentsSwitch && ssoSwitch
   const showTableOfContents = tableOfContentsEnabled && article.showTableOfContents === true
 
   return (
@@ -131,7 +132,8 @@ export default async function Article({ params: paramsPromise }: Args): Promise<
                 <Separator />
                 <TopicsList topics={topics} />
                 <AuthorList aria-label="Article Authors" authors={populatedAuthors} />
-                {commentsEnabled && <Comments articleId={article.id} />}
+                {commentsEnabled &&
+                  (published ? <Comments articleId={article.id} /> : <CommentsUnpublished />)}
               </div>
             </div>
           </TableOfContentsProvider>

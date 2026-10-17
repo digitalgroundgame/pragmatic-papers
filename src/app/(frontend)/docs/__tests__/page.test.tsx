@@ -2,8 +2,10 @@ import { cleanup, render, screen, within } from "@testing-library/react"
 import type React from "react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
+import { docSectionId, docSectionNodes } from "@/stories/fixtures/docSections"
+
 const { queries } = vi.hoisted(() => ({
-  queries: { queryDocBySlug: vi.fn(), queryPublishedDocs: vi.fn() },
+  queries: { queryDocBySlug: vi.fn(), queryPublishedDocs: vi.fn(), queryDocSections: vi.fn() },
 }))
 
 vi.mock("server-only", () => ({}))
@@ -26,7 +28,7 @@ const home = {
   navTitle: "Home",
   summary: "How Pragmatic Papers works.",
   publishedAt: "2026-10-10T00:00:00.000Z",
-  section: "getting-started",
+  section: null,
   content: {
     root: {
       type: "root",
@@ -44,7 +46,7 @@ const footnotes = {
   navTitle: "Footnotes",
   summary: "Cite your sources.",
   publishedAt: "2026-03-04T00:00:00.000Z",
-  section: "articles",
+  section: docSectionId("articles"),
 }
 
 // The page hands the home slug to DocView, an async component the test renders itself.
@@ -54,6 +56,7 @@ const renderPage = async () => {
 }
 
 beforeEach(() => {
+  queries.queryDocSections.mockResolvedValue(docSectionNodes)
   queries.queryDocBySlug.mockResolvedValue(home)
   queries.queryPublishedDocs.mockResolvedValue([home, footnotes])
 })

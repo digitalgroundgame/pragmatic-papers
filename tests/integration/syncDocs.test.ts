@@ -43,6 +43,7 @@ describe("syncDocs", () => {
     for (const slug of [SLUG, "another", "and-another"])
       for (const key of ["seeded", "offered"]) await payload.kv.delete(`${key}:docs:${slug}`)
     dir = await mkdtemp(path.join(tmpdir(), "docs-"))
+    await cp(path.join(DOCS_DIR, "sections.json"), path.join(dir, "sections.json"))
     await mkdir(path.join(dir, SECTION))
     for (const name of await readdir(path.join(DOCS_DIR, SECTION))) {
       if (name.startsWith(`${SLUG}.`) || name.startsWith(`${SLUG}-`)) {
@@ -67,6 +68,11 @@ describe("syncDocs", () => {
 
     const doc = await findDoc()
     expect(doc?._status).toBe("draft")
+    // In its folder's section, which the sync seeded under its area if the site hadn't one.
+    const section = doc?.section
+    expect(typeof section === "object" && section?.slug).toBe(SECTION)
+    const area = typeof section === "object" ? section?.parent : null
+    expect(typeof area === "object" && area?.parent).toBeFalsy()
     expect(doc?.publishedAt?.slice(0, 10)).toBe("2026-10-18")
 
     const media = await syncedMedia()
@@ -124,6 +130,7 @@ describe("syncDocs", () => {
     await setSummary("A new summary.")
     const result = await syncDocs(payload, dir)
     expect(result).toEqual({
+      sections: [],
       created: [],
       offered: [SLUG],
       skipped: [],
@@ -230,6 +237,7 @@ describe("syncDocs", () => {
     })
     const result = await syncDocs(payload, dir)
     expect(result).toEqual({
+      sections: [],
       created: [],
       offered: [],
       skipped: [],

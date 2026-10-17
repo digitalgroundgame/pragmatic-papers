@@ -16,7 +16,7 @@ The sidebar groups every doc under one of four areas, by what you're doing:
 - **Editing** is for editors and admins: building pages, putting together volumes, moderating comments and the settings that run the site.
 - **Development** is for contributors: how the code is built, tested and released. For now that lives in the [GitHub wiki](https://github.com/digitalgroundgame/pragmatic-papers/wiki).
 
-An area shows up in the sidebar once it has docs.
+An area shows up in the sidebar once it has docs. Editors can add, rename and reorder the areas and their sections in the admin, under **Help → Sections**.
 
 ## Finding your way
 

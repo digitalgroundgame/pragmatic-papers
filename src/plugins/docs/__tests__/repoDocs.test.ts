@@ -4,11 +4,12 @@ import path from "node:path"
 import { describe, expect, it } from "vitest"
 
 import { imagesIn, parseDocFile } from "../docFile"
-import { DOC_SECTIONS, HOME_DOC_SLUG } from "../sections"
-import { DOCS_DIR, listDocFiles } from "../syncDocs"
+import { HOME_DOC_SLUG } from "../sections"
+import { DOCS_DIR, listDocFiles, readStarterSections } from "../syncDocs"
 import { TOURS } from "@/plugins/tours"
 
 const docs = await listDocFiles()
+const starter = await readStarterSections()
 
 // A doc that fails here fails its deploy's sync instead, where nobody is watching.
 describe.each(docs.map((doc) => [path.relative(DOCS_DIR, doc.file), doc] as const))(
@@ -42,7 +43,9 @@ describe.each(docs.map((doc) => [path.relative(DOCS_DIR, doc.file), doc] as cons
     it.skipIf(slug === HOME_DOC_SLUG)(
       "sits in Editing when, and only when, it's only for editors or admins",
       () => {
-        const area = DOC_SECTIONS.find((known) => known.value === section)?.area
+        const area = starter.areas.find((known) =>
+          known.sections.some((other) => other.slug === section),
+        )?.slug
         const forWriters = !meta.audience?.length || meta.audience.includes("writer")
         // A doc for everyone may sit in Reading or Writing; one writers aren't told about can't.
         expect(area === "editing").toBe(!forWriters)

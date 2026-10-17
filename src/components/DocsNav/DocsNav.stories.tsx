@@ -1,29 +1,50 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite"
 import { expect, userEvent, within } from "storybook/test"
 
-import { groupDocsBySection } from "@/plugins/docs/sections"
+import { groupDocs } from "@/plugins/docs/sections"
+import { docSectionId, docSectionNodes } from "@/stories/fixtures/docSections"
 
 import { DocsLayout, DocsNav } from "."
 
-const sections = groupDocsBySection([
-  // Left out of its section: the sidebar links it as Home.
-  { slug: "home", title: "Pragmatic Papers docs", section: "getting-started" },
-  { slug: "notifications", title: "What's new: the bell", section: "getting-started" },
-  { slug: "writing-and-publishing", title: "Writing and publishing", section: "getting-started" },
-  { slug: "footnotes", title: "Footnotes", section: "articles" },
-  { slug: "topics", title: "Tag articles with topics", navTitle: "Topics", section: "articles" },
-  { slug: "seo-tab", title: "The SEO tab", section: "articles" },
-  { slug: "timeline-block", title: "The Timeline block", section: "blocks" },
-  { slug: "media-collage", title: "The Media Collage block", section: "blocks" },
-  { slug: "unsplash-photos", title: "Find photos on Unsplash", section: "media" },
-  { slug: "volumes", title: "Put together a volume", section: "pages-and-volumes" },
-  { slug: "experiments", title: "Switch beta features on", section: "site-settings" },
-])
+const areas = groupDocs(
+  [
+    // Left out of the sections: the sidebar links it as Home.
+    { slug: "home", title: "Pragmatic Papers docs", section: null },
+    {
+      slug: "notifications",
+      title: "What's new: the bell",
+      section: docSectionId("getting-started"),
+    },
+    {
+      slug: "writing-and-publishing",
+      title: "Writing and publishing",
+      section: docSectionId("getting-started"),
+    },
+    { slug: "footnotes", title: "Footnotes", section: docSectionId("articles") },
+    {
+      slug: "topics",
+      title: "Tag articles with topics",
+      navTitle: "Topics",
+      section: docSectionId("articles"),
+    },
+    { slug: "seo-tab", title: "The SEO tab", section: docSectionId("articles") },
+    { slug: "timeline-block", title: "The Timeline block", section: docSectionId("blocks") },
+    { slug: "media-collage", title: "The Media Collage block", section: docSectionId("blocks") },
+    { slug: "unsplash-photos", title: "Find photos on Unsplash", section: docSectionId("media") },
+    { slug: "volumes", title: "Put together a volume", section: docSectionId("pages-and-volumes") },
+    {
+      slug: "experiments",
+      title: "Switch beta features on",
+      section: docSectionId("site-settings"),
+    },
+  ],
+  docSectionNodes,
+)
 
 const meta = {
   title: "Components/DocsNav",
   component: DocsNav,
-  args: { sections },
+  args: { areas },
 } satisfies Meta<typeof DocsNav>
 
 export default meta

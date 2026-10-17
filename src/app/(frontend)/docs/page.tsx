@@ -1,5 +1,5 @@
 import { isPluginEnabled } from "@/globals/Plugins/isPluginEnabled"
-import { queryPublishedDocs } from "@/plugins/docs/queries"
+import { queryDocSections, queryPublishedDocs } from "@/plugins/docs/queries"
 import { HOME_DOC_SLUG } from "@/plugins/docs/sections"
 import type { Metadata } from "next"
 import React from "react"
@@ -18,5 +18,6 @@ export async function generateMetadata(): Promise<Metadata> {
 
 /** The docs' home: the home doc, or What's new on a site whose docs haven't synced it yet. */
 export default async function DocsHomePage(): Promise<React.ReactNode> {
-  return <DocView slug={HOME_DOC_SLUG} fallback={<WhatsNew docs={await queryPublishedDocs()} />} />
+  const [docs, sections] = await Promise.all([queryPublishedDocs(), queryDocSections()])
+  return <DocView slug={HOME_DOC_SLUG} fallback={<WhatsNew docs={docs} sections={sections} />} />
 }

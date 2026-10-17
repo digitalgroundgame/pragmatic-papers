@@ -152,19 +152,24 @@ A release that changes what staff do in the admin ships a help doc in the same
 PR. Docs are the `docs` collection (`src/plugins/docs/`, the docs plugin),
 served at `/docs/<slug>`, so they can hold blocks and images like an article.
 `/docs` shows the home doc (`src/docs/home.md`), and `/docs/whats-new` lists every
-doc, newest first. The sidebar groups sections under four areas (`DOC_AREAS`), by
-what the reader is doing: Reading (readers' features), Writing (articles, blocks,
-media), Editing (pages, volumes, moderation, site settings) and Development
-(the GitHub wiki, for now); an area shows once it has docs. There's no Admin area:
-an admin-only doc goes where its subject does, and one whose `audience` leaves out
-writers sits in Editing (`repoDocs.test.ts` checks). Moving a doc to another
-section's folder changes its hash, so sites that have it are offered the move as a
-draft like any other change. Each doc ends with
-Previous and Next links in the sidebar's order. The ones a release ships live in
-the repo as Markdown, a folder per sidebar section (`DOC_SECTIONS` in
-`src/plugins/docs/sections.ts`): `src/docs/<section>/<slug>.md`, with the pictures
-it shows beside it, each named for the doc (`<slug>-hero.webp`,
-`<slug>-drawer.webp`). Once per deploy,
+doc, newest first. The sidebar's areas and sections are content, not code: the
+`doc-sections` collection (**Help → Sections**), which editors rename, reorder (it's
+orderable) and add to. An area has no parent and a section's parent is an area (the
+nested docs plugin, which the docs plugin applies to it); each doc's `section` names one,
+and a doc without one sits under Other. Empty sections and areas stay out of the sidebar.
+A site starts with the ones in `src/docs/sections.json`, which a deploy seeds once each
+(`syncDocSections`, recorded with `markSeeded`, so one an editor deletes stays deleted):
+Reading (readers' features), Writing (articles, blocks, media), Editing (pages, volumes,
+moderation, site settings) and Development (the GitHub wiki, for now). There's no Admin
+area: an admin-only doc goes where its subject does, and one whose `audience` leaves out
+writers sits in Editing (`repoDocs.test.ts` checks). Each doc ends with Previous and Next
+links in the sidebar's order. The ones a release ships live in the repo as Markdown, a
+folder per section, named for its slug in `sections.json`:
+`src/docs/<section>/<slug>.md`, with the pictures it shows beside it, each named for the
+doc (`<slug>-hero.webp`, `<slug>-drawer.webp`). A new section a release needs goes in `sections.json` too.
+Moving a doc to another folder changes its hash, so sites that have it are offered the
+move as a draft like any other change; moving it in the admin is the site's own. Once per
+deploy,
 `/next/revalidate-all` (which `start.sh` calls when a deploy goes live) seeds that
 site's database with each doc whose slug it doesn't have yet, as a **draft**,
 converting the Markdown with the docs editor and uploading its pictures to Media

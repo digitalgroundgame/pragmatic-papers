@@ -2,11 +2,14 @@ import { cleanup, render, screen, within } from "@testing-library/react"
 import type React from "react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
-const { queryPublishedDocs, experiment } = vi.hoisted(() => ({
+import { docSectionId, docSectionNodes } from "@/stories/fixtures/docSections"
+
+const { queryPublishedDocs, queryDocSections, experiment } = vi.hoisted(() => ({
   queryPublishedDocs: vi.fn(),
+  queryDocSections: vi.fn(),
   experiment: { enabled: true },
 }))
-vi.mock("@/plugins/docs/queries", () => ({ queryPublishedDocs }))
+vi.mock("@/plugins/docs/queries", () => ({ queryPublishedDocs, queryDocSections }))
 vi.mock("@/globals/Plugins/isPluginEnabled", () => ({
   isPluginEnabled: async () => experiment.enabled,
 }))
@@ -27,7 +30,7 @@ const docs = [
     title: "Find photos on Unsplash",
     summary: "Search Unsplash from Media.",
     publishedAt: "2026-10-18T00:00:00.000Z",
-    section: "media",
+    section: docSectionId("media"),
     heroImage: { url: "/hero.webp", sizes: { thumbnail: { url: "/hero-300x158.webp" } } },
   },
   {
@@ -36,11 +39,12 @@ const docs = [
     title: "Footnotes",
     summary: "Cite your sources.",
     publishedAt: "2026-03-04T00:00:00.000Z",
-    section: "articles",
+    section: docSectionId("articles"),
   },
 ]
 
 beforeEach(() => {
+  queryDocSections.mockResolvedValue(docSectionNodes)
   experiment.enabled = true
 })
 afterEach(cleanup)

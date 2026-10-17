@@ -17,8 +17,8 @@ import { LinkButton } from "@/components/ui/link-button"
 import { Separator } from "@/components/ui/separator"
 import { isPluginEnabled } from "@/globals/Plugins/isPluginEnabled"
 import { isExperimentEnabled } from "@/globals/SiteSettings/isExperimentEnabled"
-import { queryDocBySlug, queryPublishedDocs } from "@/plugins/docs/queries"
-import { adjacentDocs, docPath, groupDocsBySection, HOME_DOC_SLUG } from "@/plugins/docs/sections"
+import { queryDocBySlug, queryDocSections, queryPublishedDocs } from "@/plugins/docs/queries"
+import { adjacentDocs, docPath, groupDocs, HOME_DOC_SLUG } from "@/plugins/docs/sections"
 import { findTour, tourHref } from "@/plugins/tours"
 import { getMediaUrl } from "@/utilities/getMediaUrl"
 import { getSiteURL } from "@/utilities/getURL"
@@ -68,7 +68,11 @@ export async function DocView({ slug, fallback }: DocViewProps): Promise<React.R
   if (!(await isPluginEnabled("docs"))) notFound()
   const { isEnabled: draft } = await draftMode()
   const url = docPath(slug)
-  const [doc, docs] = await Promise.all([queryDocBySlug(slug), queryPublishedDocs()])
+  const [doc, docs, sectionNodes] = await Promise.all([
+    queryDocBySlug(slug),
+    queryPublishedDocs(),
+    queryDocSections(),
+  ])
   if (!doc) return fallback ?? <PayloadRedirects url={url} />
 
   // Docs saved in the admin are stamped on save; stamping here too covers any synced before the
@@ -83,15 +87,15 @@ export async function DocView({ slug, fallback }: DocViewProps): Promise<React.R
     { name: "Docs", path: "/docs" },
     ...(home ? [] : [{ name: doc.title, path: url }]),
   ]
-  const sections = groupDocsBySection(docs)
+  const areas = groupDocs(docs, sectionNodes)
   const { previous, next } = adjacentDocs(
-    sections,
+    areas,
     slug,
     docs.find((item) => item.slug === HOME_DOC_SLUG),
   )
 
   return (
-    <DocsLayout sections={sections} current={slug} breadcrumbs={trail}>
+    <DocsLayout areas={areas} current={slug} breadcrumbs={trail}>
       <article className="min-w-0 space-y-6">
         <JsonLd data={[buildBreadcrumbJsonLd(trail)]} />
         {draft && <LivePreviewListener />}

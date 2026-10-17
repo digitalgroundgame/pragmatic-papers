@@ -24,6 +24,19 @@ vi.mock("@/plugins/docs/syncDocs", () => ({
   get DOCS_DIR() {
     return dir.docs
   },
+  STARTER_SECTIONS_FILE: "sections.json",
+  readStarterSections: async () => ({
+    areas: [
+      {
+        slug: "writing",
+        title: "Writing",
+        sections: [
+          { slug: "media", title: "Media" },
+          { slug: "site", title: "Site" },
+        ],
+      },
+    ],
+  }),
 }))
 
 const { main } = await import("../../scripts/export-doc")
@@ -40,7 +53,7 @@ const doc = {
   summary: "Search Unsplash.",
   publishedAt: "2026-10-18T00:00:00.000Z",
   heroImage: image,
-  section: "media",
+  section: { id: 3, slug: "media" },
   audience: [],
   showTableOfContents: true,
   content: { root: { children: [{ type: "upload", value: image }] } },
@@ -126,11 +139,18 @@ heroAlt: The search drawer
     expect(existsSync(path.join(dir.docs, "site/photos.md"))).toBe(false)
   })
 
+  it("refuses a doc in no section, or in one sections.json doesn't have", async () => {
+    find.mockResolvedValue({ docs: [{ ...doc, section: null }] })
+    await expect(main("photos")).rejects.toThrow(/isn't in a section yet/)
+    find.mockResolvedValue({ docs: [{ ...doc, section: { id: 4, slug: "mine" } }] })
+    await expect(main("photos")).rejects.toThrow(/"mine" isn't in src\/docs\/sections.json/)
+  })
+
   it("writes the home doc at the top of src/docs/, outside the sections", async () => {
     await mkdir(path.join(dir.docs, "getting-started"), { recursive: true })
     await writeFile(path.join(dir.docs, "getting-started/home.md"), "old")
     vi.stubGlobal("fetch", async () => new Response("bytes"))
-    find.mockResolvedValue({ docs: [{ ...doc, slug: "home", section: "getting-started" }] })
+    find.mockResolvedValue({ docs: [{ ...doc, slug: "home", section: null }] })
     await main("home")
     expect(await readFile(path.join(dir.docs, "home.md"), "utf8")).toContain("title:")
     expect(existsSync(path.join(dir.docs, "home-hero.webp"))).toBe(true)

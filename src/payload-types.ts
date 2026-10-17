@@ -183,6 +183,7 @@ export interface Config {
     redirects: Redirect;
     forms: Form;
     'form-submissions': FormSubmission;
+    'doc-sections': DocSection;
     docs: Doc;
     comments: Comment;
     'comment-violations': CommentViolation;
@@ -216,6 +217,7 @@ export interface Config {
     redirects: RedirectsSelect<false> | RedirectsSelect<true>;
     forms: FormsSelect<false> | FormsSelect<true>;
     'form-submissions': FormSubmissionsSelect<false> | FormSubmissionsSelect<true>;
+    'doc-sections': DocSectionsSelect<false> | DocSectionsSelect<true>;
     docs: DocsSelect<false> | DocsSelect<true>;
     comments: CommentsSelect<false> | CommentsSelect<true>;
     'comment-violations': CommentViolationsSelect<false> | CommentViolationsSelect<true>;
@@ -1503,6 +1505,36 @@ export interface FormSubmission {
   createdAt: string;
 }
 /**
+ * The docs sidebar's areas, and the sections under each. Drag them into the order the sidebar shows. Empty ones stay out of the sidebar.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "doc-sections".
+ */
+export interface DocSection {
+  id: number;
+  _order?: string | null;
+  title: string;
+  /**
+   * Leave empty to make this an area, a heading in the sidebar.
+   */
+  parent?: (number | null) | DocSection;
+  /**
+   * When enabled, the slug will auto-generate from the title field on save and autosave.
+   */
+  generateSlug?: boolean | null;
+  slug: string;
+  breadcrumbs?:
+    | {
+        doc?: (number | null) | DocSection;
+        url?: string | null;
+        label?: string | null;
+        id?: string | null;
+      }[]
+    | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "docs".
  */
@@ -1545,9 +1577,9 @@ export interface Doc {
    */
   revisedAt?: string | null;
   /**
-   * Where the doc sits in the sidebar at /docs.
+   * Where the doc sits in the sidebar at /docs. Left empty, it's under Other. Help → Sections lists them.
    */
-  section: 'getting-started' | 'articles' | 'blocks' | 'media' | 'pages-and-volumes' | 'moderation' | 'site-settings';
+  section?: (number | null) | DocSection;
   /**
    * Who the help bell tells. Empty means all staff; admins see every doc.
    */
@@ -1797,6 +1829,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'form-submissions';
         value: number | FormSubmission;
+      } | null)
+    | ({
+        relationTo: 'doc-sections';
+        value: number | DocSection;
       } | null)
     | ({
         relationTo: 'docs';
@@ -2623,6 +2659,27 @@ export interface FormSubmissionsSelect<T extends boolean = true> {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "doc-sections_select".
+ */
+export interface DocSectionsSelect<T extends boolean = true> {
+  _order?: T;
+  title?: T;
+  parent?: T;
+  generateSlug?: T;
+  slug?: T;
+  breadcrumbs?:
+    | T
+    | {
+        doc?: T;
+        url?: T;
+        label?: T;
+        id?: T;
+      };
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "docs_select".
  */
 export interface DocsSelect<T extends boolean = true> {
@@ -2929,9 +2986,6 @@ export interface Newsletter {
  */
 export interface Plugin {
   id: number;
-  /**
-   * Switch a plugin off here and it stops at once, without a deploy. Its data stays.
-   */
   switches?: {
     /**
      * The help docs at /docs, their sitemap, and their items in the notifications bell. Staff can write docs in the admin either way.

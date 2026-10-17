@@ -8,13 +8,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion"
-import {
-  docNavTitle,
-  type DocsSection,
-  groupSectionsByArea,
-  HOME_DOC_SLUG,
-  WHATS_NEW_PATH,
-} from "@/plugins/docs/sections"
+import { type DocsArea, docNavTitle, HOME_DOC_SLUG, WHATS_NEW_PATH } from "@/plugins/docs/sections"
 import { cn } from "@/utilities/utils"
 
 export { DocPager } from "./DocPager"
@@ -26,7 +20,8 @@ export interface DocsNavItem {
 }
 
 interface DocsNavProps {
-  sections: DocsSection<DocsNavItem>[]
+  /** The docs under their areas and sections (`groupDocs`). */
+  areas: DocsArea<DocsNavItem>[]
   /** The open page: a doc's slug, the home doc's, or What's new's path. */
   current?: string
   className?: string
@@ -60,12 +55,13 @@ function TopLink({
  * Home and What's new, then every doc under its area and section, like a wiki's sidebar; each
  * section folds.
  */
-export function DocsNav({ sections, current, className }: DocsNavProps): React.ReactNode {
+export function DocsNav({ areas, current, className }: DocsNavProps): React.ReactNode {
   // Only one section starts open: the open doc's, or the first elsewhere.
+  const sections = areas.flatMap((area) => area.sections)
   const currentSection = sections.find((section) =>
     section.docs.some((doc) => doc.slug === current),
-  )?.value
-  const openSection = currentSection ?? sections[0]?.value
+  )?.key
+  const openSection = currentSection ?? sections[0]?.key
   return (
     <nav aria-label="Docs" className={cn("font-sans", className)}>
       <TopLink href="/docs" active={current === HOME_DOC_SLUG}>
@@ -74,39 +70,35 @@ export function DocsNav({ sections, current, className }: DocsNavProps): React.R
       <TopLink href={WHATS_NEW_PATH} active={current === WHATS_NEW_PATH}>
         What&apos;s new
       </TopLink>
-      {groupSectionsByArea(sections).map((area) => (
-        <div key={area.value} className="mt-6">
-          <p id={`docs-nav-area-${area.value}`} className="text-foreground text-lg font-bold">
-            {area.label}
+      {areas.map((area) => (
+        <div key={area.key} className="mt-6">
+          <p id={`docs-nav-area-${area.key}`} className="text-foreground text-lg font-bold">
+            {area.title}
           </p>
           <Accordion
             multiple
             // Folded sections stay in the page, so find-in-page and search engines see every doc.
             hiddenUntilFound
             defaultValue={
-              area.sections.some((section) => section.value === openSection) ? [openSection] : []
+              area.sections.some((section) => section.key === openSection) ? [openSection] : []
             }
             className="mt-2"
           >
             {area.sections.map((section) => (
-              <AccordionItem
-                key={section.value}
-                value={section.value}
-                className="not-last:border-b-0"
-              >
+              <AccordionItem key={section.key} value={section.key} className="not-last:border-b-0">
                 <AccordionTrigger
-                  id={`docs-nav-${section.value}`}
+                  id={`docs-nav-${section.key}`}
                   className={cn(
                     "hover:text-foreground py-2 font-bold tracking-wider uppercase hover:no-underline",
                     // The open doc's section reads as hovered, so the reader sees where they are.
-                    section.value === currentSection ? "text-foreground" : "text-muted-foreground",
+                    section.key === currentSection ? "text-foreground" : "text-muted-foreground",
                   )}
                 >
-                  {section.label}
+                  {section.title}
                 </AccordionTrigger>
                 <AccordionContent className="pb-2 text-base [&_a]:no-underline">
                   <ul
-                    aria-labelledby={`docs-nav-${section.value}`}
+                    aria-labelledby={`docs-nav-${section.key}`}
                     className="border-border ml-0.5 border-l-2"
                   >
                     {section.docs.map((doc) => {

@@ -6,7 +6,14 @@ import type { Payload } from "payload"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { hashRepoDoc, mediaFilename } from "../repoDoc"
-import { listDocFiles, planRepoDoc, type RepoDocState, syncDocs } from "../syncDocs"
+import {
+  listDocFiles,
+  planRepoDoc,
+  type RepoDocState,
+  type StarterSections,
+  syncDocs,
+  syncDocSections,
+} from "../syncDocs"
 
 // The editor's own conversion is tested against the real config in markdown.test.ts.
 vi.mock("../markdown", () => ({
@@ -36,17 +43,39 @@ heroAlt: Switches
 
 let dir: string
 
+const starter: StarterSections = {
+  areas: [
+    {
+      slug: "editing",
+      title: "Editing",
+      sections: [
+        { slug: "site-settings", title: "Site settings" },
+        { slug: "blocks", title: "Blocks" },
+      ],
+    },
+  ],
+}
+
+/** The site's Sections, already seeded from `starter`. */
+const seededSections = [
+  { id: 7, slug: "editing" },
+  { id: 8, slug: "site-settings" },
+  { id: 9, slug: "blocks" },
+]
+
 /**
- * A Payload whose find answers from `docs` and `media`, whose findVersions answers with
+ * A Payload whose find answers from `docs`, `sections` and `media`, whose findVersions answers with
  * `versions` (newest first), whose key-value store holds `kv` (a key, or a key and its value),
  * and which records what was written.
  */
 const fakePayload = ({
   docs = [] as Record<string, unknown>[],
+  sections = seededSections as Record<string, unknown>[],
   media = [] as Record<string, unknown>[],
   versions = [] as { id: number; version: { _status: "draft" | "published" } }[],
   kv = [] as (string | [string, unknown])[],
 } = {}) => {
+  let nextSection = 0
   const store = new Map<string, unknown>(
     kv.map((entry) => (typeof entry === "string" ? [entry, { at: "then" }] : entry)),
   )
@@ -58,11 +87,11 @@ const fakePayload = ({
       set: vi.fn(async (key: string, value: unknown) => void store.set(key, value)),
     },
     find: vi.fn(async ({ collection }: { collection: string }) => ({
-      docs: collection === "media" ? media : docs,
+      docs: collection === "media" ? media : collection === "doc-sections" ? sections : docs,
     })),
     findVersions: vi.fn(async () => ({ docs: versions })),
     create: vi.fn(async ({ collection }: { collection: string }) => ({
-      id: collection === "media" ? 41 : 1,
+      id: collection === "media" ? 41 : collection === "doc-sections" ? 20 + nextSection++ : 1,
     })),
     update: vi.fn(async () => ({})),
     delete: vi.fn(async () => ({})),
@@ -73,6 +102,7 @@ const fakePayload = ({
 
 beforeEach(async () => {
   dir = await mkdtemp(path.join(tmpdir(), "docs-"))
+  await writeFile(path.join(dir, "sections.json"), JSON.stringify(starter))
   await mkdir(path.join(dir, "site-settings"))
   await writeFile(path.join(dir, "site-settings", "experiments.md"), source)
   await writeFile(path.join(dir, "site-settings", "experiments-drawer.png"), image)
@@ -87,6 +117,7 @@ describe("syncDocs", () => {
   it("warns and syncs nothing where the folder doesn't exist", async () => {
     const payload = fakePayload()
     await expect(syncDocs(payload, path.join(dir, "missing"))).resolves.toEqual({
+      sections: [],
       created: [],
       offered: [],
       skipped: [],
@@ -100,6 +131,7 @@ describe("syncDocs", () => {
   it("creates a new doc as a draft, with its files uploaded and their ids in place", async () => {
     const payload = fakePayload({ versions: [{ id: 11, version: { _status: "draft" } }] })
     await expect(syncDocs(payload, dir)).resolves.toEqual({
+      sections: [],
       created: ["experiments"],
       offered: [],
       skipped: [],
@@ -133,7 +165,8 @@ describe("syncDocs", () => {
         draft: true,
         data: expect.objectContaining({
           slug: "experiments",
-          section: "site-settings",
+          // The site's Site settings section.
+          section: 8,
           revisedAt: null,
           navTitle: null,
           _status: "draft",
@@ -150,6 +183,7 @@ describe("syncDocs", () => {
   it("leaves a doc it seeded before and an editor deleted since deleted", async () => {
     const payload = fakePayload({ kv: ["seeded:docs:experiments"] })
     await expect(syncDocs(payload, dir)).resolves.toEqual({
+      sections: [],
       created: [],
       offered: [],
       skipped: [],
@@ -206,6 +240,7 @@ describe("syncDocs", () => {
       docs: [{ id: 3, sourceHash: hashRepoDoc("site-settings", source, [hero, image]) }],
     })
     await expect(syncDocs(payload, dir)).resolves.toEqual({
+      sections: [],
       created: [],
       offered: [],
       skipped: [],
@@ -267,6 +302,7 @@ describe("syncDocs", () => {
       kv: ["seeded:docs:experiments", ["offered:docs:experiments", { hash: "old", version: 4 }]],
     })
     await expect(syncDocs(payload, dir)).resolves.toEqual({
+      sections: [],
       created: [],
       offered: ["experiments"],
       skipped: [],
@@ -314,6 +350,7 @@ describe("syncDocs", () => {
     await rm(path.join(dir, "site-settings"), { recursive: true })
     const payload = fakePayload({ docs: [{ id: 7, slug: "old-name", sourceHash: "abc" }] })
     await expect(syncDocs(payload, dir)).resolves.toEqual({
+      sections: [],
       created: [],
       offered: [],
       skipped: [],
@@ -321,6 +358,51 @@ describe("syncDocs", () => {
       deleted: [],
     })
     expect(payload.delete).not.toHaveBeenCalled()
+  })
+})
+
+describe("syncDocSections", () => {
+  const created = (payload: ReturnType<typeof fakePayload>) =>
+    payload.create.mock.calls.map(([args]) => (args as unknown as { data: unknown }).data)
+
+  it("seeds the starter areas and sections in order, each section under its area", async () => {
+    const payload = fakePayload({ sections: [] })
+    const ids = await syncDocSections(payload, starter)
+    expect(created(payload)).toEqual([
+      { title: "Editing", slug: "editing" },
+      { title: "Site settings", slug: "site-settings", parent: 20 },
+      { title: "Blocks", slug: "blocks", parent: 20 },
+    ])
+    expect([...ids]).toEqual([
+      ["editing", 20],
+      ["site-settings", 21],
+      ["blocks", 22],
+    ])
+    expect(payload.kv.store.has("seeded:doc-sections:blocks")).toBe(true)
+  })
+
+  it("leaves the ones the site has alone, recording them as seeded", async () => {
+    const payload = fakePayload({ sections: [...seededSections, { id: 30, slug: "mine" }] })
+    const ids = await syncDocSections(payload, starter)
+    expect(payload.create).not.toHaveBeenCalled()
+    expect(payload.kv.store.has("seeded:doc-sections:site-settings")).toBe(true)
+    // An editor's own section is there for the docs too.
+    expect(ids.get("mine")).toBe(30)
+  })
+
+  it("leaves one an editor deleted deleted, and the sections of a deleted area", async () => {
+    const payload = fakePayload({
+      sections: [],
+      kv: ["seeded:doc-sections:editing", "seeded:doc-sections:blocks"],
+    })
+    await syncDocSections(payload, starter)
+    expect(payload.create).not.toHaveBeenCalled()
+  })
+
+  it("seeds them all again for the local seed, which has just wiped them", async () => {
+    const payload = fakePayload({ sections: [], kv: ["seeded:doc-sections:editing"] })
+    await syncDocSections(payload, starter, { localSeed: true })
+    expect(payload.create).toHaveBeenCalledTimes(3)
   })
 })
 
@@ -405,11 +487,11 @@ describe("listDocFiles", () => {
     ])
   })
 
-  it("finds the home doc at the top, in the default section", async () => {
+  it("finds the home doc at the top, in no section", async () => {
     await writeFile(path.join(dir, "home.md"), source)
     await expect(listDocFiles(dir)).resolves.toContainEqual({
       slug: "home",
-      section: "getting-started",
+      section: null,
       folder: dir,
       file: path.join(dir, "home.md"),
     })
@@ -423,6 +505,12 @@ describe("listDocFiles", () => {
   it("refuses a folder that isn't a section", async () => {
     await writeFile(path.join(dir, "drafts", "idea.md"), source)
     await expect(listDocFiles(dir)).rejects.toThrow(/drafts\/ isn't a section/)
+  })
+
+  it("refuses a folder sections.json doesn't name", async () => {
+    await mkdir(path.join(dir, "media"))
+    await writeFile(path.join(dir, "media", "photos.md"), source)
+    await expect(listDocFiles(dir)).rejects.toThrow(/media\/ isn't a section/)
   })
 
   it("refuses two docs with one slug", async () => {

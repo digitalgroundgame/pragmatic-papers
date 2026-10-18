@@ -78,6 +78,35 @@ zero, one, or many:
   cross-draft-state) cached data?
 - **Auth/session/cookie logic** — `payload-token`, `__prerender_bypass`,
   Turnstile verification, anything in `src/access/`
+- **New inputs and the data they reach** — request bodies, query strings,
+  params, headers, cookies, webhook payloads, uploaded files and CMS content
+  that the change starts using. Look for:
+  - **Local API calls** (`payload.find`, `payload.update`, ...) acting for a
+    request without `overrideAccess: false` and `user`/`req`, which skip
+    every access rule, and drafts read without checking `draftMode()`.
+  - **Members treated as staff**: only staff become `req.user`
+    (`isPayloadUser`). Code that trusts a user id from the request, or reads
+    a member as `req.user`, crosses that line.
+  - **Endpoints** (plugin and collection `endpoints/`, route handlers under
+    `src/app/`) that don't check the caller themselves. The deploy routes
+    under `src/app/(frontend)/next/` (`migrations`, `purge-edge`,
+    `revalidate-all`, `warm-worker`) check `hasPayloadSecret` from
+    `bearer.ts`; the others check a Payload user.
+  - **Markup injection**: `dangerouslySetInnerHTML`, feed HTML that skips
+    `escapeHTML`, uploaded SVGs past the map sanitizer, and `href`s built
+    from CMS or user input (`javascript:` URLs). React escapes everything
+    else.
+  - **Per-user or draft data on a cached route**, which the edge and the
+    Worker then serve to every reader.
+  - **Secrets** logged, written to the database, or reaching the client
+    (`NEXT_PUBLIC_*`), and `${{ }}` holding PR titles, branch names or
+    comment text inside a workflow's `run:`.
+
+  Report a security finding only with a concrete path from an input an
+  attacker controls to the harm. Skip denial of service and rate limits,
+  missing hardening with no exploit, outdated dependencies, and anything
+  that needs control of environment variables.
+
 - **Dockerfiles / `dockerfiles/*`, `docker-compose.yml`, Coolify-specific env
   vars** (`COOLIFY_FQDN`, `BUILD_ENV`, `COPY_SOURCE_DATABASE`,
   `FORCE_DATABASE_COPY`) — build-time vs runtime behavior, what happens on

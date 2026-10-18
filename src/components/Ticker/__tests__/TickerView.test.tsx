@@ -9,12 +9,17 @@ import {
 } from "@/stories/fixtures/ticker"
 import { loopRounds } from "../items"
 import { TICKER_PAUSED_KEY } from "../pause"
-import { TickerView } from "../TickerView"
+import { TICKER_EMPTY, TickerView } from "../TickerView"
 
 describe("TickerView", () => {
-  it("renders nothing when there is nothing to show", () => {
-    const { container } = render(<TickerView broadcast={null} posts={[]} />)
-    expect(container).toBeEmptyDOMElement()
+  it("keeps its strip and says there's nothing new when there is nothing to show", () => {
+    render(<TickerView broadcast={null} posts={[]} />)
+    const ticker = screen.getByRole("region", { name: "Live and latest" })
+    expect(ticker).toHaveTextContent("Latest")
+    expect(ticker).toHaveTextContent(TICKER_EMPTY)
+    // Nothing scrolls, so there's nothing to pause, and it doesn't stick under the header.
+    expect(within(ticker).queryByRole("checkbox")).not.toBeInTheDocument()
+    expect(within(ticker).queryByRole("link")).not.toBeInTheDocument()
   })
 
   it("links the live broadcast first, then each post once for assistive tech", () => {

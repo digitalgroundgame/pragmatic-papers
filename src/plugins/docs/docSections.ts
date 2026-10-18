@@ -1,15 +1,38 @@
 import { editor } from "@/access/collections"
 import { slugField } from "@/fields/slug"
-import type {
-  CollectionAfterChangeHook,
-  CollectionAfterDeleteHook,
-  CollectionConfig,
-  Where,
+import {
+  APIError,
+  type CollectionAfterChangeHook,
+  type CollectionAfterDeleteHook,
+  type CollectionBeforeDeleteHook,
+  type CollectionConfig,
+  type Where,
 } from "payload"
 
 import { revalidateDocs } from "./revalidateDoc"
 
 export const DOC_SECTIONS_SLUG = "doc-sections"
+
+/**
+ * An area with sections in it can't be deleted: its sections would become areas, and their
+ * docs would drop to Other. An editor moves or deletes the sections first.
+ */
+export const keepNonEmptyAreas: CollectionBeforeDeleteHook = async ({ id, req }) => {
+  const { totalDocs } = await req.payload.count({
+    collection: DOC_SECTIONS_SLUG,
+    where: { parent: { equals: id } },
+    overrideAccess: true,
+    req,
+  })
+  if (totalDocs > 0) {
+    throw new APIError(
+      `This area still has ${totalDocs === 1 ? "a section" : `${totalDocs} sections`} in it. Move them to another area or delete them first.`,
+      400,
+      undefined,
+      true,
+    )
+  }
+}
 
 /**
  * The docs sidebar's areas and sections, which editors own: an area (Writing) has no parent,
@@ -59,6 +82,7 @@ export const DocSections: CollectionConfig = {
     slugField(),
   ],
   hooks: {
+    beforeDelete: [keepNonEmptyAreas],
     afterChange: [
       (({ doc, req }) => {
         if (!req.context.disableRevalidate) revalidateDocs(req.payload.logger, "doc sections")

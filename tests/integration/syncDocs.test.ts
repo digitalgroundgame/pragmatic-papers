@@ -266,4 +266,18 @@ describe("syncDocs", () => {
       where: { slug: { in: ["another", "and-another"] } },
     })
   })
+
+  it("won't delete an area that still has sections", async () => {
+    const { docs } = await payload.find({
+      collection: "doc-sections",
+      depth: 0,
+      overrideAccess: true,
+      where: { slug: { equals: SECTION } },
+    })
+    const area = docs[0]?.parent
+    expect(area).toBeTruthy()
+    await expect(
+      payload.delete({ collection: "doc-sections", id: area as number, overrideAccess: true }),
+    ).rejects.toThrow(/still has/)
+  })
 })

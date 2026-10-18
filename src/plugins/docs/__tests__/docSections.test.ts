@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 const { revalidateDocs } = vi.hoisted(() => ({ revalidateDocs: vi.fn() }))
 vi.mock("../revalidateDoc", () => ({ revalidateDocs }))
 
-import { DocSections } from "../docSections"
+import { DocSections, keepNonEmptyAreas } from "../docSections"
 
 const req = (roles?: string[], context: Record<string, unknown> = {}) =>
   ({
@@ -62,5 +62,28 @@ describe("DocSections hooks", () => {
     run(afterChange, { disableRevalidate: true })
     run(afterDelete, { disableRevalidate: true })
     expect(revalidateDocs).not.toHaveBeenCalled()
+  })
+})
+
+describe("keepNonEmptyAreas", () => {
+  const deleting = (totalDocs: number) => {
+    const count = vi.fn(async () => ({ totalDocs }))
+    const run = keepNonEmptyAreas({
+      id: 2,
+      req: { payload: { count } },
+    } as unknown as Parameters<typeof keepNonEmptyAreas>[0])
+    return { run, count }
+  }
+
+  it("refuses to delete an area that still has sections, so their docs keep their place", async () => {
+    const { run, count } = deleting(3)
+    await expect(run).rejects.toThrow(/still has 3 sections in it/)
+    expect(count).toHaveBeenCalledWith(
+      expect.objectContaining({ collection: "doc-sections", where: { parent: { equals: 2 } } }),
+    )
+  })
+
+  it("deletes a section, or an area with none left", async () => {
+    await expect(deleting(0).run).resolves.toBeUndefined()
   })
 })

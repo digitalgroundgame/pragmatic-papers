@@ -215,7 +215,8 @@ const context = { disableRevalidate: true }
 /**
  * Seeds the site's Sections with each starter area and section it has never had, in
  * `sections.json`'s order, which an editor can then change: rename, reorder, move or delete.
- * One an editor deleted stays deleted, and so do the sections of an area they deleted. Returns
+ * One an editor deleted stays deleted, and a section isn't seeded under an area they deleted
+ * (which they can do only once it has no sections; see `keepNonEmptyAreas`). Returns
  * the id of every section the site has, by slug, so each repo doc lands in its folder's.
  */
 export async function syncDocSections(

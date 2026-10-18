@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process"
-import { chmodSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs"
+import { chmodSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join, resolve } from "node:path"
 import { describe, expect, it } from "vitest"
@@ -268,59 +268,5 @@ describe("claude.yml", () => {
     expect(read("claude.yml")).toContain(
       "follow .claude/skills/code-review/SKILL.md for it in its progress-comment mode",
     )
-  })
-})
-
-describe("claude-security-review.yml", () => {
-  const workflow = () => read("claude-security-review.yml")
-
-  it("runs exactly when the Claude review does", () => {
-    const on = (file: string) => read(file).match(/\non:\n[\s\S]*?\n\n/)?.[0]
-    expect(on("claude-security-review.yml")).toBeDefined()
-    expect(on("claude-security-review.yml")).toBe(on("claude-review.yml"))
-    expect(folded("claude-security-review.yml", /^ {4}if: >-$/)).toBe(
-      folded("claude-review.yml", /^ {4}if: >-$/),
-    )
-  })
-
-  it("never lets another label's run cancel a review in progress, or share a group with the code review", () => {
-    const group = (file: string, event: { action: string; label?: string }) =>
-      folded(file, /^ {2}group: >-$/).replace(/\$\{\{([\s\S]*?)\}\}/g, (_, expression: string) =>
-        String(
-          evaluate(expression, {
-            run_id: "123",
-            event: {
-              action: event.action,
-              label: event.label === undefined ? undefined : { name: event.label },
-              pull_request: { number: 7 },
-            },
-          }),
-        ),
-      )
-    const file = "claude-security-review.yml"
-    expect(group(file, { action: "ready_for_review" })).toBe(
-      group(file, { action: "labeled", label: "in review" }),
-    )
-    expect(group(file, { action: "labeled", label: "e2e" })).not.toBe(
-      group(file, { action: "ready_for_review" }),
-    )
-    expect(group(file, { action: "ready_for_review" })).not.toBe(
-      group("claude-review.yml", { action: "ready_for_review" }),
-    )
-  })
-
-  it("reviews the PR's head on the subscription token, following the security-review skill", () => {
-    expect(workflow()).toContain("uses: anthropics/claude-code-action@v1")
-    expect(workflow()).toContain("claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}")
-    expect(workflow()).not.toContain("ANTHROPIC_API_KEY")
-    expect(workflow()).toContain("HEAD_SHA: ${{ github.event.pull_request.head.sha }}")
-    expect(workflow()).toContain("at ${{ env.HEAD_SHA }}")
-    expect(workflow()).not.toContain("${{ github.sha }}")
-    expect(workflow()).toContain(".claude/skills/security-review/SKILL.md")
-    expect(existsSync(join(ROOT, ".claude/skills/security-review/SKILL.md"))).toBe(true)
-  })
-
-  it("leaves the model to the action's default", () => {
-    expect(workflow()).not.toMatch(/--model\b/)
   })
 })

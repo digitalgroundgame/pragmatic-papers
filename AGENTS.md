@@ -747,9 +747,7 @@ it again asks for another; or a comment mentioning `@claude` asking for a review
 `claude.yml`) or one they posted with a local `/code-review --comment <pr>` (they
 need write access).
 Fixes pushed after a review need a new approval or reply, not a new
-review. The same two triggers run a security-only review
-(`claude-security-review.yml`, following `.claude/skills/security-review/`), which
-leaves its findings as inline comments and gates nothing. **Never post `/reviewed` or `LGTM` (or anything starting with either),
+review. **Never post `/reviewed` or `LGTM` (or anything starting with either),
 and never submit an approving review** — not even when asked to get a PR mergeable. Both
 record that a person read the change; say it's waiting on them instead.
 

@@ -23,6 +23,12 @@ const revalidate = (
   })
 }
 
+/** Revalidates every page under /docs: their sidebars read every doc and section. */
+export const revalidateDocs = (
+  logger: Parameters<typeof revalidateForReaders>[0],
+  reason: string,
+): void => revalidate(logger, reason, [])
+
 export const revalidateDoc: CollectionAfterChangeHook<Doc> = async (args) => {
   const { doc, req } = args
   if (req.context.disableRevalidate) return doc

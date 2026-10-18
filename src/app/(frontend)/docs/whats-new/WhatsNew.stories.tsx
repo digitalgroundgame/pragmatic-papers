@@ -1,9 +1,10 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite"
 import { expect, within } from "storybook/test"
 
+import { docSectionId, docSectionNodes } from "@/stories/fixtures/docSections"
 import { landscapeImage, squareImage, wideImage } from "@/stories/fixtures/media"
 
-import { WhatsNew, type WhatsNewDoc } from "./WhatsNew"
+import { WhatsNew, type WhatsNewDoc, type WhatsNewSection } from "./WhatsNew"
 
 const doc = (
   id: number,
@@ -13,7 +14,16 @@ const doc = (
   publishedAt: string,
   summary: string,
   heroImage = landscapeImage,
-) => ({ id, slug, title, section, publishedAt, summary, heroImage }) as WhatsNewDoc
+) =>
+  ({
+    id,
+    slug,
+    title,
+    section: docSectionId(section),
+    publishedAt,
+    summary,
+    heroImage,
+  }) as WhatsNewDoc
 
 // Newest first, as the query sorts them.
 const docs = [
@@ -30,7 +40,7 @@ const docs = [
     2,
     "table-of-contents",
     "Add a table of contents to an article",
-    "writing",
+    "articles",
     "2026-09-29",
     "Turn on a contents list built from the article's headings.",
   ),
@@ -55,7 +65,7 @@ const docs = [
     5,
     "topics",
     "Tag articles with topics",
-    "writing",
+    "articles",
     "2026-03-09",
     "Topics group articles by subject, each with its own page.",
   ),
@@ -63,7 +73,7 @@ const docs = [
     6,
     "volumes",
     "Put together a volume",
-    "site",
+    "pages-and-volumes",
     "2025-06-26",
     "Collect a week's articles under a numbered volume with an editor's note.",
     wideImage,
@@ -75,7 +85,7 @@ const meta = {
   title: "Pages/Docs/What's new",
   component: WhatsNew,
   parameters: { layout: "fullscreen" },
-  args: { docs },
+  args: { docs, sections: docSectionNodes as WhatsNewSection[] },
 } satisfies Meta<typeof WhatsNew>
 
 export default meta

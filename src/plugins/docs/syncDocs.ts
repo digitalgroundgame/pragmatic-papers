@@ -15,37 +15,71 @@ import { DOCS_SLUG } from "./collection"
 import { imagesIn, parseDocFile } from "./docFile"
 import { docsEditorConfig, markdownToContent } from "./markdown"
 import { hashRepoDoc, mediaFilename, mediaRefsIn, type RepoDoc, unpackMedia } from "./repoDoc"
-import { DEFAULT_DOC_SECTION, DOC_SECTIONS, type DocSection, HOME_DOC_SLUG } from "./sections"
+import { DOC_SECTIONS_SLUG } from "./docSections"
+import { HOME_DOC_SLUG } from "./sections"
 
 /**
  * Where the repo keeps its docs: a folder per section, holding `<slug>.md` and the files it
- * shows, and the home doc, `home.md`, at the top. The build traces it into the image.
+ * shows, the home doc, `home.md`, and the starter sections, `sections.json`, at the top. The
+ * build traces it into the image.
  */
 export const DOCS_DIR = path.resolve(process.cwd(), "src/docs")
 
+/**
+ * The areas and sections a site starts with, in the sidebar's order: `src/docs/sections.json`.
+ * A section's slug is its folder. Once a deploy has seeded them they're the site's, in Help →
+ * Sections.
+ */
+export interface StarterSections {
+  areas: {
+    slug: string
+    title: string
+    sections: { slug: string; title: string }[]
+  }[]
+}
+
+export const STARTER_SECTIONS_FILE = "sections.json"
+
+/** Reads `sections.json` in `dir`. Throws on a slug used twice. */
+export async function readStarterSections(dir = DOCS_DIR): Promise<StarterSections> {
+  const starter = JSON.parse(
+    await readFile(path.join(dir, STARTER_SECTIONS_FILE), "utf8"),
+  ) as StarterSections
+  const slugs = starter.areas.flatMap((area) => [
+    area.slug,
+    ...area.sections.map((section) => section.slug),
+  ])
+  const twice = slugs.find((slug, i) => slugs.indexOf(slug) !== i)
+  if (twice) throw new Error(`src/docs/${STARTER_SECTIONS_FILE} uses "${twice}" twice`)
+  return starter
+}
+
 export interface DocFileEntry {
   slug: string
-  section: DocSection
+  /** The slug of the section the doc's folder is for; null for the home doc. */
+  section: string | null
   /** The section's folder, where the doc's files are. */
   folder: string
   file: string
 }
 
 /**
- * Every `<section>/<slug>.md` in `dir`, and `home.md`, by slug. Throws on an unknown section, a
- * slug used twice, or another Markdown file outside a section.
+ * Every `<section>/<slug>.md` in `dir`, and `home.md`, by slug. Throws on a folder that isn't a
+ * section in `sections.json`, a slug used twice, or another Markdown file outside a section.
  */
 export async function listDocFiles(dir = DOCS_DIR): Promise<DocFileEntry[]> {
-  const sections = DOC_SECTIONS.map((section) => section.value as string)
+  const sections = (await readStarterSections(dir)).areas.flatMap((area) =>
+    area.sections.map((section) => section.slug),
+  )
   const found: DocFileEntry[] = []
   for (const entry of await readdir(dir, { withFileTypes: true })) {
     if (entry.isFile() && entry.name.endsWith(".md")) {
       if (entry.name !== `${HOME_DOC_SLUG}.md`) {
         throw new Error(`src/docs/${entry.name} should be in a section's folder`)
       }
-      // Kept in the default section, which the sidebar leaves it out of.
+      // In no section: the sidebar links it on its own, as Home.
       const file = path.join(dir, entry.name)
-      found.push({ slug: HOME_DOC_SLUG, section: DEFAULT_DOC_SECTION, folder: dir, file })
+      found.push({ slug: HOME_DOC_SLUG, section: null, folder: dir, file })
       continue
     }
     if (!entry.isDirectory()) continue
@@ -60,7 +94,7 @@ export async function listDocFiles(dir = DOCS_DIR): Promise<DocFileEntry[]> {
       const twin = found.find((doc) => doc.slug === slug)
       if (twin)
         throw new Error(`Two docs are called "${slug}": in ${twin.section}/ and ${entry.name}/`)
-      found.push({ slug, section: entry.name as DocSection, folder, file: path.join(folder, name) })
+      found.push({ slug, section: entry.name, folder, file: path.join(folder, name) })
     }
   }
   return found.sort((a, b) => a.slug.localeCompare(b.slug))
@@ -78,6 +112,8 @@ const MIME_TYPES: Record<string, string> = {
 }
 
 export interface SyncResult {
+  /** Starter areas and sections new to this site, created in Help → Sections. */
+  sections: string[]
   /** Docs new to this site, created as drafts for an editor to publish. */
   created: string[]
   /**
@@ -176,6 +212,63 @@ export interface SyncOptions {
 
 const context = { disableRevalidate: true }
 
+/**
+ * Seeds the site's Sections with each starter area and section it has never had, in
+ * `sections.json`'s order, which an editor can then change: rename, reorder, move or delete.
+ * One an editor deleted stays deleted, and a section isn't seeded under an area they deleted
+ * (which they can do only once it has no sections; see `keepNonEmptyAreas`). Returns
+ * the id of every section the site has, by slug, so each repo doc lands in its folder's.
+ */
+export async function syncDocSections(
+  payload: Payload,
+  starter: StarterSections,
+  { localSeed = false, created = [] }: { localSeed?: boolean; created?: string[] } = {},
+): Promise<Map<string, number>> {
+  const { docs: existing } = await payload.find({
+    collection: DOC_SECTIONS_SLUG,
+    depth: 0,
+    limit: 1000,
+    overrideAccess: true,
+    pagination: false,
+    select: { slug: true },
+  })
+  const ids = new Map<string, number>(
+    existing.flatMap((doc) => (doc.slug ? [[doc.slug, doc.id] as const] : [])),
+  )
+
+  const seedOnce = async (
+    slug: string,
+    data: { title: string; parent?: number },
+  ): Promise<void> => {
+    const seeded = await wasSeeded(payload, DOC_SECTIONS_SLUG, slug)
+    if (ids.has(slug)) {
+      if (!seeded) await markSeeded(payload, DOC_SECTIONS_SLUG, slug)
+      return
+    }
+    if (seeded && !localSeed) return
+    const doc = await payload.create({
+      collection: DOC_SECTIONS_SLUG,
+      // Sections have no drafts: an empty one stays out of the sidebar until a doc is in it.
+      data: { ...data, slug },
+      context,
+      overrideAccess: true,
+    })
+    ids.set(slug, doc.id)
+    await markSeeded(payload, DOC_SECTIONS_SLUG, slug)
+    created.push(slug)
+  }
+
+  for (const area of starter.areas) {
+    await seedOnce(area.slug, { title: area.title })
+    const parent = ids.get(area.slug)
+    if (parent === undefined) continue
+    for (const section of area.sections) {
+      await seedOnce(section.slug, { title: section.title, parent })
+    }
+  }
+  return ids
+}
+
 /** The Media id for a doc's file, uploading it the first time this content is seen. */
 async function uploadOnce(
   payload: Payload,
@@ -243,7 +336,14 @@ export async function syncDocs(
   dir = DOCS_DIR,
   { localSeed = false }: SyncOptions = {},
 ): Promise<SyncResult> {
-  const result: SyncResult = { created: [], offered: [], skipped: [], existing: [], deleted: [] }
+  const result: SyncResult = {
+    sections: [],
+    created: [],
+    offered: [],
+    skipped: [],
+    existing: [],
+    deleted: [],
+  }
   if (!existsSync(dir)) {
     // A deploy without the folder (a runtime with no file system for it) would otherwise
     // look like one with nothing to sync.
@@ -252,6 +352,10 @@ export async function syncDocs(
   }
 
   const entries = await listDocFiles(dir)
+  const sectionIds = await syncDocSections(payload, await readStarterSections(dir), {
+    localSeed,
+    created: result.sections,
+  })
   let editorConfig: ReturnType<typeof docsEditorConfig> | undefined
   for (const { slug, section, folder, file } of entries) {
     const seeded = await wasSeeded(payload, DOCS_SLUG, slug)
@@ -283,7 +387,7 @@ export async function syncDocs(
       imagesIn(body).map((image) => ({ $media: image.file, alt: image.alt })),
     ])
     const files = await Promise.all(refs.map((ref) => readFile(path.join(folder, ref.$media))))
-    const hash = hashRepoDoc(section, source, files)
+    const hash = hashRepoDoc(section ?? "", source, files)
 
     const offered = existing ? await lastOffered(payload, DOCS_SLUG, slug) : null
     const savedHash = offered ? offered.hash : (existing?.sourceHash ?? hash)
@@ -333,7 +437,8 @@ export async function syncDocs(
       publishedAt: repoDoc.publishedAt,
       revisedAt: repoDoc.revisedAt ?? null,
       heroImage: repoDoc.heroImage ? (unpackMedia(repoDoc.heroImage, ids) as number) : null,
-      section: repoDoc.section,
+      // A section an editor deleted, or renamed, leaves the doc under Other until they file it.
+      section: repoDoc.section ? (sectionIds.get(repoDoc.section) ?? null) : null,
       audience: (repoDoc.audience ?? []) as Doc["audience"],
       showTableOfContents: repoDoc.showTableOfContents ?? true,
       tour: repoDoc.tour ?? null,

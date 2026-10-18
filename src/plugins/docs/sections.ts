@@ -1,90 +1,106 @@
 /**
- * The docs' main areas, in the sidebar's order: what staff do in the admin, what readers see on
- * the site, and how the code works (which the GitHub wiki holds for now). An area with no docs
- * yet is left out of the sidebar.
- */
-export const DOC_AREAS = [
-  { value: "admin", label: "Admin" },
-  { value: "frontend", label: "Frontend" },
-  { value: "development", label: "Development" },
-] as const
-
-export type DocArea = (typeof DOC_AREAS)[number]["value"]
-
-/** The sidebar's sections at /docs, in order, each in an area. Every doc sits in one. */
-export const DOC_SECTIONS = [
-  { value: "getting-started", label: "Getting started", area: "admin" },
-  { value: "writing", label: "Writing articles", area: "admin" },
-  { value: "blocks", label: "Blocks", area: "admin" },
-  { value: "media", label: "Photos and media", area: "admin" },
-  { value: "site", label: "Pages and the site", area: "admin" },
-] as const satisfies readonly { value: string; label: string; area: DocArea }[]
-
-/**
  * The docs' home page, shown at /docs rather than in a section: what the project is and how
  * the docs are laid out. Its file is `src/docs/home.md`.
  */
 export const HOME_DOC_SLUG = "home"
 
-export type DocSection = (typeof DOC_SECTIONS)[number]["value"]
-
-export const DEFAULT_DOC_SECTION: DocSection = "getting-started"
+/**
+ * A row of the Doc sections collection, in the sidebar's order (`_order`). One with no parent
+ * is an area (Writing, Editing); one whose parent is an area is a section of it (Articles).
+ */
+export interface DocSectionNode {
+  id: number | string
+  title: string
+  slug?: string | null
+  parent?: number | string | { id: number | string } | null
+}
 
 export interface DocsSection<T> {
-  value: DocSection
-  label: string
-  area: DocArea
+  /** The section's slug, or its id when it has none: unique in the sidebar. */
+  key: string
+  title: string
   docs: T[]
 }
+
+export interface DocsArea<T> {
+  key: string
+  title: string
+  sections: DocsSection<T>[]
+}
+
+/** Where the sidebar lists docs with no section, or one it can't place, so none is lost. */
+export const UNSORTED_AREA = { key: "other", title: "Other" } as const
+export const UNSORTED_SECTION = { key: "unsorted", title: "Unsorted" } as const
 
 /** The name the sidebar shows for a doc: its short sidebar title, or its title. */
 export const docNavTitle = (doc: { navTitle?: string | null; title: string }): string =>
   doc.navTitle || doc.title
 
+const idOf = (value: DocSectionNode["parent"]): string | null =>
+  value === null || value === undefined
+    ? null
+    : String(typeof value === "object" ? value.id : value)
+
+const keyOf = (node: DocSectionNode): string => node.slug || String(node.id)
+
 /**
- * Docs under their sections, in the sidebar's order and by sidebar name within each; empty
- * sections are left out, and so is the home doc, which the sidebar links on its own.
+ * Docs under their areas and sections, in the order editors gave the sections and by sidebar
+ * name within each. Empty sections and areas are left out, and so is the home doc, which the
+ * sidebar links on its own. A doc with no section, or one filed under an area or a section
+ * that's gone, goes under Other, last.
  */
-export const groupDocsBySection = <
+export const groupDocs = <
   T extends {
     slug?: string | null
-    section?: string | null
+    section?: DocSectionNode["parent"]
     title: string
     navTitle?: string | null
   },
 >(
   docs: T[],
-): DocsSection<T>[] =>
-  DOC_SECTIONS.map(({ value, label, area }) => ({
-    value,
-    label,
-    area,
-    docs: docs
-      .filter((doc) => doc.slug !== HOME_DOC_SLUG)
-      .filter((doc) => (doc.section ?? DEFAULT_DOC_SECTION) === value)
-      .sort((a, b) => docNavTitle(a).localeCompare(docNavTitle(b))),
-  })).filter((section) => section.docs.length > 0)
+  nodes: DocSectionNode[],
+): DocsArea<T>[] => {
+  const listed = docs.filter((doc) => doc.slug !== HOME_DOC_SLUG)
+  const byName = (a: T, b: T) => docNavTitle(a).localeCompare(docNavTitle(b))
+  const placed = new Set<T>()
 
-/** Sections under their areas, in the sidebar's order; areas with no sections are left out. */
-export const groupSectionsByArea = <T>(
-  sections: DocsSection<T>[],
-): { value: DocArea; label: string; sections: DocsSection<T>[] }[] =>
-  DOC_AREAS.map(({ value, label }) => ({
-    value,
-    label,
-    sections: sections.filter((section) => section.area === value),
-  })).filter((area) => area.sections.length > 0)
+  const areas = nodes
+    .filter((node) => idOf(node.parent) === null)
+    .map((area) => ({
+      key: keyOf(area),
+      title: area.title,
+      sections: nodes
+        .filter((node) => idOf(node.parent) === String(area.id))
+        .map((section) => {
+          const sectionDocs = listed.filter((doc) => idOf(doc.section) === String(section.id))
+          sectionDocs.forEach((doc) => placed.add(doc))
+          return { key: keyOf(section), title: section.title, docs: sectionDocs.sort(byName) }
+        })
+        .filter((section) => section.docs.length > 0),
+    }))
+    .filter((area) => area.sections.length > 0)
+
+  const unsorted = listed.filter((doc) => !placed.has(doc)).sort(byName)
+  if (unsorted.length) {
+    areas.push({ ...UNSORTED_AREA, sections: [{ ...UNSORTED_SECTION, docs: unsorted }] })
+  }
+  return areas
+}
+
+/** Every doc the sidebar lists, in its order. */
+export const docsInOrder = <T>(areas: DocsArea<T>[]): T[] =>
+  areas.flatMap((area) => area.sections.flatMap((section) => section.docs))
 
 /**
  * The docs before and after one in the sidebar's order, across sections and areas, for a doc's
  * footer. The home doc, when given, comes first, as it heads the sidebar.
  */
 export const adjacentDocs = <T extends { slug?: string | null }>(
-  sections: DocsSection<T>[],
+  areas: DocsArea<T>[],
   slug: string,
   home?: T,
 ): { previous?: T; next?: T } => {
-  const docs = [...(home ? [home] : []), ...sections.flatMap((section) => section.docs)]
+  const docs = [...(home ? [home] : []), ...docsInOrder(areas)]
   const index = docs.findIndex((doc) => doc.slug === slug)
   if (index < 0) return {}
   return { previous: docs[index - 1], next: docs[index + 1] }

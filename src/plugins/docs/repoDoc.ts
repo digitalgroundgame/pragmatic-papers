@@ -2,8 +2,6 @@ import { createHash } from "node:crypto"
 
 import type { Role } from "@/access/roles"
 
-import type { DocSection } from "./sections"
-
 /**
  * A repo doc as the sync reads it from `src/docs/<section>/<slug>.md` (see `docFile.ts`), with
  * its body as rich text. Media ids differ from site to site, so wherever the doc uses media it
@@ -20,8 +18,8 @@ export interface RepoDoc {
   revisedAt?: string
   /** A file in the doc's folder: the bell's thumbnail and the link preview's image. */
   heroImage?: MediaRef
-  /** Where it sits in the sidebar at /docs. */
-  section: DocSection
+  /** The slug of the section it sits in at /docs (its folder); null for the home doc. */
+  section: string | null
   audience?: Role[]
   /** Left out means shown. */
   showTableOfContents?: boolean

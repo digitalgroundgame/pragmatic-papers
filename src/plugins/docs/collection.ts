@@ -24,7 +24,7 @@ import {
 import type { CollectionConfig } from "payload"
 
 import { revalidateDoc, revalidateDocDelete } from "./revalidateDoc"
-import { DEFAULT_DOC_SECTION, DOC_SECTIONS } from "./sections"
+import { DOC_SECTIONS_SLUG } from "./docSections"
 
 export const DOCS_SLUG = "docs"
 
@@ -146,13 +146,14 @@ export const Docs: CollectionConfig<"docs"> = {
     },
     {
       name: "section",
-      type: "select",
-      required: true,
-      defaultValue: DEFAULT_DOC_SECTION,
-      options: DOC_SECTIONS.map(({ value, label }) => ({ value, label })),
+      type: "relationship",
+      relationTo: DOC_SECTIONS_SLUG,
+      // A section, not an area: areas are the sidebar's headings.
+      filterOptions: { parent: { exists: true } },
       admin: {
         position: "sidebar",
-        description: "Where the doc sits in the sidebar at /docs.",
+        description:
+          "Where the doc sits in the sidebar at /docs. Left empty, it's under Other. Help → Sections lists them.",
       },
     },
     {

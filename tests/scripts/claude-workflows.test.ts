@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process"
-import { chmodSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs"
+import { chmodSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join, resolve } from "node:path"
 import { describe, expect, it } from "vitest"
@@ -309,26 +309,18 @@ describe("claude-security-review.yml", () => {
     )
   })
 
-  it("pins the action to a commit and reviews the PR's head on every run", () => {
-    expect(workflow()).toMatch(/uses: anthropics\/claude-code-security-review@[0-9a-f]{40}\b/)
-    expect(workflow()).toContain("ref: ${{ github.event.pull_request.head.sha }}")
-    expect(workflow()).toContain("run-every-commit: true")
+  it("reviews the PR's head on the subscription token, following the security-review skill", () => {
+    expect(workflow()).toContain("uses: anthropics/claude-code-action@v1")
+    expect(workflow()).toContain("claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}")
+    expect(workflow()).not.toContain("ANTHROPIC_API_KEY")
+    expect(workflow()).toContain("HEAD_SHA: ${{ github.event.pull_request.head.sha }}")
+    expect(workflow()).toContain("at ${{ env.HEAD_SHA }}")
+    expect(workflow()).not.toContain("${{ github.sha }}")
+    expect(workflow()).toContain(".claude/skills/security-review/SKILL.md")
+    expect(existsSync(join(ROOT, ".claude/skills/security-review/SKILL.md"))).toBe(true)
   })
 
-  it("gives the action a full model ID, which the API needs", () => {
-    expect(workflow()).toMatch(/claude-model: claude-[a-z]+-\d/)
-  })
-
-  it("only runs the review steps when the API key is set", () => {
-    const lines = workflow().split("\n")
-    const guarded = (step: string) => {
-      const at = lines.findIndex((line) => line.trim() === `- name: ${step}`)
-      expect(at, `no ${step} step`).toBeGreaterThan(-1)
-      return lines[at + 1]!.trim()
-    }
-    expect(workflow()).toContain("HAS_API_KEY: ${{ secrets.ANTHROPIC_API_KEY != '' }}")
-    expect(guarded("Checkout repository")).toBe("if: env.HAS_API_KEY == 'true'")
-    expect(guarded("Run Claude security review")).toBe("if: env.HAS_API_KEY == 'true'")
-    expect(guarded("Check for an API key")).toBe("if: env.HAS_API_KEY != 'true'")
+  it("leaves the model to the action's default", () => {
+    expect(workflow()).not.toMatch(/--model\b/)
   })
 })

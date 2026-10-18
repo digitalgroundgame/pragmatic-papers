@@ -1,24 +1,24 @@
 name: Claude Security Review
 
-# Anthropic's security review action
-# (https://github.com/anthropics/claude-code-security-review) reads a PR into
-# dev for vulnerabilities and leaves what it finds as one review of inline
-# comments, posted as github-actions[bot]. It runs when Claude Code Review
-# does (claude-review.yml): when a draft is marked ready for review, and
-# whenever the "in review" label is added. claude-review.yml takes the label
-# off when its review is done, so adding it again asks for both again. Drafts
-# never run it, and adding any other label leaves a skipped check.
+# A security-only review of a PR into dev, following
+# .claude/skills/security-review/SKILL.md (adapted from Claude Code's
+# /security-review). It runs when Claude Code Review does (claude-review.yml):
+# when a draft is marked ready for review, and whenever the "in review" label
+# is added. claude-review.yml takes the label off when its review is done, so
+# adding it again asks for both again. Drafts never run it, and adding any
+# other label leaves a skipped check.
 #
-# Informational only: it never fails the job on a finding, never approves, and
-# isn't a required check. A finding is a claim to verify like any other review
-# comment.
+# Findings are inline comments, and the action's progress comment holds the
+# summary. Informational only: it never fails on a finding, never approves,
+# and isn't a required check.
 #
-# The action calls the Anthropic API directly as well as Claude Code, so it
-# needs an API key (ANTHROPIC_API_KEY); the subscription token the code review
-# uses (CLAUDE_CODE_OAUTH_TOKEN) doesn't work here. Until the secret is set,
-# the job passes with a warning instead of reviewing.
+# It runs on the same subscription token as the code review
+# (CLAUDE_CODE_OAUTH_TOKEN), so it costs plan usage, not API credits.
+# Anthropic's claude-code-security-review action needs an API key, which is
+# why this uses claude-code-action instead.
 #
-# The action isn't released, so it's pinned to a commit of its main branch.
+# The action skips a run whose copy of this file differs from dev's, so a PR
+# that changes it gets no security review until it's merged.
 on:
   pull_request:
     types: [ready_for_review, labeled]
@@ -35,8 +35,7 @@ jobs:
   security-review:
     name: Claude security review
     runs-on: ubuntu-latest
-    # Forks get no secrets, and the action isn't hardened against prompt
-    # injection, so it only reads PRs from branches in this repository.
+    # Forks get no secrets.
     if: >-
       github.event.pull_request.base.ref == 'dev' &&
       github.event.pull_request.head.repo.full_name == github.repository &&
@@ -44,37 +43,36 @@ jobs:
         github.event.action == 'ready_for_review' ||
         github.event.action == 'labeled' && github.event.label.name == 'in review'
       )
-    timeout-minutes: 25
+    timeout-minutes: 20
     permissions:
       contents: read
       pull-requests: write
+      issues: write
+      id-token: write
+
     env:
-      HAS_API_KEY: ${{ secrets.ANTHROPIC_API_KEY != '' }}
+      PR_NUMBER: ${{ github.event.pull_request.number }}
+      # A pull_request run's github.sha is the merge commit GitHub makes with
+      # dev; the review is of the PR's own head.
+      HEAD_SHA: ${{ github.event.pull_request.head.sha }}
 
     steps:
-      - name: Check for an API key
-        if: env.HAS_API_KEY != 'true'
-        run: echo "::warning::ANTHROPIC_API_KEY isn't set, so there's no security review."
-
       - name: Checkout repository
-        if: env.HAS_API_KEY == 'true'
         uses: actions/checkout@v7
         with:
-          ref: ${{ github.event.pull_request.head.sha }}
-          fetch-depth: 2
+          ref: ${{ env.HEAD_SHA }}
+          fetch-depth: 0
 
       - name: Run Claude security review
-        if: env.HAS_API_KEY == 'true'
-        uses: anthropics/claude-code-security-review@0c6a49f1fa56a1d472575da86a94dbc1edb78eda # main, 2026-02-11
+        uses: anthropics/claude-code-action@v1
         with:
-          claude-api-key: ${{ secrets.ANTHROPIC_API_KEY }}
-          # The action's default is an old Opus. It passes this to the API as
-          # well as to Claude Code, so it must be a full model ID, not an alias.
-          claude-model: claude-opus-5-5
-          comment-pr: true
-          # By default the action reviews a PR only once, ever. Here a run is
-          # always asked for (the label), so every run reviews.
-          run-every-commit: true
-          # Generated: the schema snapshots dwarf the rest of a diff.
-          exclude-directories: src/migrations
-          claudecode-timeout: 20
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          track_progress: true
+          prompt: |
+            Review this pull request for security vulnerabilities by following
+            .claude/skills/security-review/SKILL.md for ${{ github.repository }}/pull/${{ env.PR_NUMBER }}
+            at ${{ env.HEAD_SHA }}, in CI mode: findings inline, the summary as the final body of
+            your progress comment, and no other top-level comment.
+          # The model is left to the action's default.
+          claude_args: |
+            --allowedTools "mcp__github_inline_comment__create_inline_comment,Bash(gh pr diff:*),Bash(gh pr view:*),Bash(git log:*),Bash(git show:*),Bash(git diff:*),Bash(git blame:*)"

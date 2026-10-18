@@ -747,7 +747,10 @@ it again asks for another; or a comment mentioning `@claude` asking for a review
 `claude.yml`) or one they posted with a local `/code-review --comment <pr>` (they
 need write access).
 Fixes pushed after a review need a new approval or reply, not a new
-review. **Never post `/reviewed` or `LGTM` (or anything starting with either),
+review. The same two triggers run Anthropic's security review
+(`claude-security-review.yml`), which leaves its findings as inline comments and
+gates nothing; it needs the `ANTHROPIC_API_KEY` secret and skips with a warning
+without it. **Never post `/reviewed` or `LGTM` (or anything starting with either),
 and never submit an approving review** — not even when asked to get a PR mergeable. Both
 record that a person read the change; say it's waiting on them instead.
 

@@ -270,3 +270,65 @@ describe("claude.yml", () => {
     )
   })
 })
+
+describe("claude-security-review.yml", () => {
+  const workflow = () => read("claude-security-review.yml")
+
+  it("runs exactly when the Claude review does", () => {
+    const on = (file: string) => read(file).match(/\non:\n[\s\S]*?\n\n/)?.[0]
+    expect(on("claude-security-review.yml")).toBeDefined()
+    expect(on("claude-security-review.yml")).toBe(on("claude-review.yml"))
+    expect(folded("claude-security-review.yml", /^ {4}if: >-$/)).toBe(
+      folded("claude-review.yml", /^ {4}if: >-$/),
+    )
+  })
+
+  it("never lets another label's run cancel a review in progress, or share a group with the code review", () => {
+    const group = (file: string, event: { action: string; label?: string }) =>
+      folded(file, /^ {2}group: >-$/).replace(/\$\{\{([\s\S]*?)\}\}/g, (_, expression: string) =>
+        String(
+          evaluate(expression, {
+            run_id: "123",
+            event: {
+              action: event.action,
+              label: event.label === undefined ? undefined : { name: event.label },
+              pull_request: { number: 7 },
+            },
+          }),
+        ),
+      )
+    const file = "claude-security-review.yml"
+    expect(group(file, { action: "ready_for_review" })).toBe(
+      group(file, { action: "labeled", label: "in review" }),
+    )
+    expect(group(file, { action: "labeled", label: "e2e" })).not.toBe(
+      group(file, { action: "ready_for_review" }),
+    )
+    expect(group(file, { action: "ready_for_review" })).not.toBe(
+      group("claude-review.yml", { action: "ready_for_review" }),
+    )
+  })
+
+  it("pins the action to a commit and reviews the PR's head on every run", () => {
+    expect(workflow()).toMatch(/uses: anthropics\/claude-code-security-review@[0-9a-f]{40}\b/)
+    expect(workflow()).toContain("ref: ${{ github.event.pull_request.head.sha }}")
+    expect(workflow()).toContain("run-every-commit: true")
+  })
+
+  it("gives the action a full model ID, which the API needs", () => {
+    expect(workflow()).toMatch(/claude-model: claude-[a-z]+-\d/)
+  })
+
+  it("only runs the review steps when the API key is set", () => {
+    const lines = workflow().split("\n")
+    const guarded = (step: string) => {
+      const at = lines.findIndex((line) => line.trim() === `- name: ${step}`)
+      expect(at, `no ${step} step`).toBeGreaterThan(-1)
+      return lines[at + 1]!.trim()
+    }
+    expect(workflow()).toContain("HAS_API_KEY: ${{ secrets.ANTHROPIC_API_KEY != '' }}")
+    expect(guarded("Checkout repository")).toBe("if: env.HAS_API_KEY == 'true'")
+    expect(guarded("Run Claude security review")).toBe("if: env.HAS_API_KEY == 'true'")
+    expect(guarded("Check for an API key")).toBe("if: env.HAS_API_KEY != 'true'")
+  })
+})

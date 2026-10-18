@@ -142,6 +142,9 @@ function Posts({ posts, beside }: { posts: TickerPost[]; beside: boolean }): Rea
   )
 }
 
+/** What the strip says when no channel is on air and no source has a post. */
+export const TICKER_EMPTY = "Nothing new right now"
+
 /** The ticker's label: what the strip is, set like a tile's kicker. */
 export const TICKER_LABEL =
   "text-brand-text shrink-0 font-serif text-xs font-bold tracking-wider uppercase"
@@ -205,6 +208,9 @@ function Broadcast({
  * While it scrolls, it sticks under the header on tablets and wider, and while one of our
  * channels is live it sticks on phones too. Pausing it is the reader's way to quiet the page: it
  * stops, scrolls away with the page, and stays that way on the next page (`pause.ts`).
+ *
+ * With nothing to show it keeps its strip and says so, rather than leaving: the placeholder
+ * held this room while the feed loaded, and taking it away would shift the page below.
  */
 export function TickerView({
   broadcast,
@@ -214,8 +220,6 @@ export function TickerView({
   /** What an upcoming broadcast's day is measured from; stories and tests pin it. */
   now?: Date
 }): React.ReactNode {
-  if (!broadcast && posts.length === 0) return null
-
   const live = broadcast?.status === "live"
   return (
     <section
@@ -234,6 +238,11 @@ export function TickerView({
           <span className={TICKER_LABEL}>Latest</span>
         )}
         {posts.length > 0 && <Posts posts={posts} beside={Boolean(broadcast)} />}
+        {!broadcast && posts.length === 0 && (
+          <p className="ticker-posts text-muted-foreground min-w-0 truncate font-serif">
+            {TICKER_EMPTY}
+          </p>
+        )}
         {(posts.length > 0 || live) && <PauseSwitch live={live} />}
       </div>
     </section>

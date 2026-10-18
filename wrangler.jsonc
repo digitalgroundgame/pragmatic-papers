@@ -108,9 +108,9 @@
       "hyperdrive": [
         {
           "binding": "HYPERDRIVE",
-          // pragmatic-papers-production: production's Supabase pooler. Not created yet; the
-          // deploy skips production until PRODUCTION_PAYLOAD_SECRET is set, which comes after.
-          "id": "00000000000000000000000000000000",
+          // pragmatic-papers-production: production's Supabase database, over its direct
+          // connection (Hyperdrive pools connections itself).
+          "id": "002fe0cae1144170b1008aa76fbe7dda",
         },
       ],
       "durable_objects": {

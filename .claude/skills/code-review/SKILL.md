@@ -29,7 +29,8 @@ how Payload, Next.js, GitHub Actions, Cloudflare or Sentry behave.
 ## Step 0 — Earlier reviews of this PR
 
 Look for an earlier summary with a `<!-- claude-review sha=<sha> ... -->`
-marker, or its visible `<sub>claude-review sha=<sha> ...</sub>` form
+marker, its `[claude-review]: #sha=<sha>&...` form, or an older visible
+`<sub>claude-review sha=<sha> ...</sub>` one
 (`gh pr view <number> --comments`). If there is one, review what
 changed since that sha (`git diff <sha>..HEAD`, or the PR diff when the
 branch was rebased) and say in the summary which commit the earlier review
@@ -272,8 +273,9 @@ that PR:
   through the marker below.
 - End the summary with a line asking a reader to reply `/reviewed` or `LGTM` once
   they have read the review, then this marker as the very last line. `<sha>`
-  is `--head <sha>` when given (CI passes the commit it checked out), else
-  the PR's head: `gh pr view <number> --repo <owner>/<repo> --json headRefOid -q .headRefOid`.
+  is the full 40-character hash: `--head <sha>` when given (CI passes the commit
+  it checked out), else the PR's head:
+  `gh pr view <number> --repo <owner>/<repo> --json headRefOid -q .headRefOid`.
 
   ```md
   <!-- claude-review sha=<sha> verdict=<pass|blocker> -->
@@ -304,11 +306,12 @@ the summary its final body. Post no other top-level comment; inline findings
 still go through `mcp__github_inline_comment__create_inline_comment`.
 
 The action strips HTML comments from that comment, so the summary ends with
-the visible form of the marker instead, as its very last line (`<sha>` is the
-commit you were given, else the PR's head):
+the marker as a Markdown link reference definition instead, which GitHub
+doesn't render: a blank line, then this as its very last line (`<sha>` is the
+full hash of the commit you were given, else of the PR's head):
 
 ```md
-<sub>claude-review sha=<sha> verdict=<pass|blocker></sub>
+[claude-review]: #sha=<sha>&verdict=<pass|blocker>
 ```
 
 The action puts its own header above your body, which `review-ack.yml`

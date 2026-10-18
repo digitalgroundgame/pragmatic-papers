@@ -87,9 +87,10 @@ zero, one, or many:
     (`isPayloadUser`). Code that trusts a user id from the request, or reads
     a member as `req.user`, crosses that line.
   - **Endpoints** (plugin and collection `endpoints/`, route handlers under
-    `src/app/`) that don't check the caller themselves; the deploy routes
-    under `src/app/(frontend)/next/` check a bearer secret through
-    `bearer.ts`.
+    `src/app/`) that don't check the caller themselves. The deploy routes
+    under `src/app/(frontend)/next/` (`migrations`, `purge-edge`,
+    `revalidate-all`, `warm-worker`) check `hasPayloadSecret` from
+    `bearer.ts`; the others check a Payload user.
   - **Markup injection**: `dangerouslySetInnerHTML`, feed HTML that skips
     `escapeHTML`, uploaded SVGs past the map sanitizer, and `href`s built
     from CMS or user input (`javascript:` URLs). React escapes everything

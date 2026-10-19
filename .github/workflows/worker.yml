@@ -214,3 +214,10 @@ jobs:
           kill "$tail_pid" || true
           echo "::group::Worker logs"; cat "$logs"; echo "::endgroup::"
           exit 1
+
+      # The gateway in front of the site (gateway.wrangler.jsonc), last, once the site
+      # whose entrypoints it binds to is live and re-rendered, so a failure here can't cut
+      # the site's deploy short. It has no secrets or variables of its own.
+      - name: Deploy the gateway
+        if: env.READY == 'true'
+        run: pnpm exec wrangler deploy --config gateway.wrangler.jsonc ${WRANGLER_ENV:+--env "$WRANGLER_ENV"}

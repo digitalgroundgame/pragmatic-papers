@@ -1,0 +1,33 @@
+// The gateway Worker (src/cloudflare/gateway.ts), in front of the site's Worker in
+// wrangler.jsonc: deployed after it by .github/workflows/worker.yml, which passes
+// `--env production` for production's, as for the site.
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "main": "src/cloudflare/gateway.ts",
+  "name": "pragmatic-papers-staging-gateway",
+  "compatibility_date": "2026-09-30",
+  "workers_dev": true,
+  "observability": { "enabled": true },
+  // The site's assets, so Cloudflare answers them before the gateway runs, as it does for the
+  // site. The build puts them here (`pnpm build:worker`).
+  "assets": { "directory": ".open-next/assets" },
+  "services": [
+    { "binding": "SITE", "service": "pragmatic-papers-staging" },
+    { "binding": "CACHED_SITE", "service": "pragmatic-papers-staging", "entrypoint": "CachedSite" },
+  ],
+  "env": {
+    "production": {
+      "name": "pragmatic-papers-production-gateway",
+      "workers_dev": true,
+      "observability": { "enabled": true },
+      "services": [
+        { "binding": "SITE", "service": "pragmatic-papers-production" },
+        {
+          "binding": "CACHED_SITE",
+          "service": "pragmatic-papers-production",
+          "entrypoint": "CachedSite",
+        },
+      ],
+    },
+  },
+}

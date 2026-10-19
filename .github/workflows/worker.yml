@@ -173,6 +173,12 @@ jobs:
             --secrets-file "$secrets" "${vars[@]}"
           rm "$secrets"
 
+      # The gateway in front of the site (gateway.wrangler.jsonc), after the site, whose
+      # entrypoints it binds to. It has no secrets or variables of its own.
+      - name: Deploy the gateway
+        if: env.READY == 'true'
+        run: pnpm exec wrangler deploy --config gateway.wrangler.jsonc ${WRANGLER_ENV:+--env "$WRANGLER_ENV"}
+
       - name: Re-render what the build prerendered
         if: env.READY == 'true'
         env:

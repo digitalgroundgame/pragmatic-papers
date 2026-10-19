@@ -3,9 +3,17 @@ import { expect, within } from "storybook/test"
 
 import { DocPager } from "./DocPager"
 
-const home = { slug: "home", title: "Pragmatic Papers docs", navTitle: "Home" }
-const footnotes = { slug: "footnotes", title: "Add footnotes as you type", navTitle: "Footnotes" }
-const topics = { slug: "topics", title: "Tag articles with topics", navTitle: "Topics" }
+const home = { href: "/docs", title: "Pragmatic Papers docs", navTitle: "Home" }
+const footnotes = {
+  href: "/docs/writing/articles/footnotes",
+  title: "Add footnotes as you type",
+  navTitle: "Footnotes",
+}
+const topics = {
+  href: "/docs/writing/articles/topics",
+  title: "Tag articles with topics",
+  navTitle: "Topics",
+}
 
 /** The previous and next docs at the foot of a doc, in the sidebar's order. */
 const meta = {
@@ -22,11 +30,11 @@ export const Both: Story = {
     const pager = within(canvasElement).getByRole("navigation", { name: "Previous and next docs" })
     await expect(within(pager).getByRole("link", { name: /Previous.*Footnotes/ })).toHaveAttribute(
       "href",
-      "/docs/footnotes",
+      "/docs/writing/articles/footnotes",
     )
     await expect(within(pager).getByRole("link", { name: /Next.*Topics/ })).toHaveAttribute(
       "href",
-      "/docs/topics",
+      "/docs/writing/articles/topics",
     )
   },
 }

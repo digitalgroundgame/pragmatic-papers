@@ -8,35 +8,22 @@ import { readersChange } from "@/utilities/readersCopy"
 export const DOCS_CACHE_TAG = "docs"
 
 /**
- * A doc save revalidates /docs, its own pages and the `docs` tag, and the Worker purges every
- * page under /docs (purging `/docs` takes them all), since each one's sidebar and Previous and
- * Next links read every published doc.
+ * Revalidates /docs and the `docs` tag, and the Worker purges every page under /docs (purging
+ * `/docs` takes them all): each page's sidebar and Previous and Next links read every published
+ * doc, and moving or renaming one changes the address of every doc under it.
  */
-const revalidate = (
-  logger: Parameters<typeof revalidateForReaders>[0],
-  reason: string,
-  slugs: (string | null | undefined)[],
-): void => {
-  revalidateForReaders(logger, reason, {
-    paths: ["/docs", ...slugs.filter(Boolean).map((slug) => `/docs/${slug}`)],
-    tags: [DOCS_CACHE_TAG],
-  })
-}
-
-/** Revalidates every page under /docs: their sidebars read every doc and section. */
 export const revalidateDocs = (
   logger: Parameters<typeof revalidateForReaders>[0],
   reason: string,
-): void => revalidate(logger, reason, [])
+): void => {
+  revalidateForReaders(logger, reason, { paths: ["/docs"], tags: [DOCS_CACHE_TAG] })
+}
 
 export const revalidateDoc: CollectionAfterChangeHook<Doc> = async (args) => {
   const { doc, req } = args
   if (req.context.disableRevalidate) return doc
-  const change = await readersChange(args)
-  if (!change) return doc
-  const { before } = change
-  const renamed = before?.slug && before.slug !== doc.slug ? before.slug : null
-  revalidate(req.payload.logger, `doc ${doc.slug}`, [doc.slug, renamed])
+  if (!(await readersChange(args))) return doc
+  revalidateDocs(req.payload.logger, `doc ${doc.slug}`)
   return doc
 }
 
@@ -44,7 +31,6 @@ export const revalidateDocDelete: CollectionAfterDeleteHook<Doc> = ({
   doc,
   req: { payload, context },
 }) => {
-  if (context.disableRevalidate) return doc
-  revalidate(payload.logger, `doc ${doc?.slug} deleted`, [doc?.slug])
+  if (!context.disableRevalidate) revalidateDocs(payload.logger, `doc ${doc?.slug} deleted`)
   return doc
 }

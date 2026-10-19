@@ -53,10 +53,7 @@ import * as migration_20261008_005532_add_media_unsplash_id from "./20261008_005
 import * as migration_20261009_022245_links_onto_link2 from "./20261009_022245_links_onto_link2"
 import * as migration_20261009_032243_hero_links_default_button from "./20261009_032243_hero_links_default_button"
 import * as migration_20261009_040730_add_ticker_and_integrations from "./20261009_040730_add_ticker_and_integrations"
-import * as migration_20261009_080507_add_docs from "./20261009_080507_add_docs"
 import * as migration_20261011_004029_add_newsletter_global from "./20261011_004029_add_newsletter_global"
-import * as migration_20261011_013150_add_docs_layout_fields from "./20261011_013150_add_docs_layout_fields"
-import * as migration_20261011_023346_add_docs_tour from "./20261011_023346_add_docs_tour"
 import * as migration_20261011_031222_ticker_on_header from "./20261011_031222_ticker_on_header"
 import * as migration_20261011_074819_add_docs_notifications_tours_experiments from "./20261011_074819_add_docs_notifications_tours_experiments"
 import * as migration_20261011_100351_add_sso from "./20261011_100351_add_sso"
@@ -65,7 +62,7 @@ import * as migration_20261012_011225_feeds_list_block from "./20261012_011225_f
 import * as migration_20261013_045838_add_plugins_global from "./20261013_045838_add_plugins_global"
 import * as migration_20261013_220247_comments from "./20261013_220247_comments"
 import * as migration_20261014_182013_achievements from "./20261014_182013_achievements"
-import * as migration_20261017_181523_docs_sections from "./20261017_181523_docs_sections"
+import * as migration_20261019_200023_docs from "./20261019_200023_docs"
 
 export const migrations = [
   {
@@ -344,24 +341,9 @@ export const migrations = [
     name: "20261009_040730_add_ticker_and_integrations",
   },
   {
-    up: migration_20261009_080507_add_docs.up,
-    down: migration_20261009_080507_add_docs.down,
-    name: "20261009_080507_add_docs",
-  },
-  {
     up: migration_20261011_004029_add_newsletter_global.up,
     down: migration_20261011_004029_add_newsletter_global.down,
     name: "20261011_004029_add_newsletter_global",
-  },
-  {
-    up: migration_20261011_013150_add_docs_layout_fields.up,
-    down: migration_20261011_013150_add_docs_layout_fields.down,
-    name: "20261011_013150_add_docs_layout_fields",
-  },
-  {
-    up: migration_20261011_023346_add_docs_tour.up,
-    down: migration_20261011_023346_add_docs_tour.down,
-    name: "20261011_023346_add_docs_tour",
   },
   {
     up: migration_20261011_031222_ticker_on_header.up,
@@ -404,8 +386,8 @@ export const migrations = [
     name: "20261014_182013_achievements",
   },
   {
-    up: migration_20261017_181523_docs_sections.up,
-    down: migration_20261017_181523_docs_sections.down,
-    name: "20261017_181523_docs_sections",
+    up: migration_20261019_200023_docs.up,
+    down: migration_20261019_200023_docs.down,
+    name: "20261019_200023_docs",
   },
 ]

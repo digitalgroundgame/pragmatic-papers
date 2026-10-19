@@ -48,6 +48,24 @@ describe("docsNotifications", () => {
     expect(items.map((item) => item.id)).not.toContain("home")
   })
 
+  it("leaves out the docs others sit under, and links each doc at its place in the tree", async () => {
+    queryPublishedDocs.mockResolvedValue([
+      { id: 10, slug: "writing", title: "Writing", summary: "w", publishedAt: "2026-10-25" },
+      {
+        id: 11,
+        slug: "footnotes",
+        title: "Footnotes",
+        summary: "f",
+        publishedAt: "2026-10-24",
+        parent: 10,
+      },
+    ])
+    const items = await docsNotifications().itemsFor({ payload, user: user(["writer"]) })
+    expect(items.map((item) => [item.id, item.href])).toEqual([
+      ["footnotes", "/docs/writing/footnotes"],
+    ])
+  })
+
   const source = docsNotifications()
   const titlesFor = async (roles: User["roles"]) =>
     (await source.itemsFor({ payload, user: user(roles) })).map((item) => item.title)

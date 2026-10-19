@@ -32,26 +32,16 @@ const change = (doc: Partial<Doc>, previousDoc?: Partial<Doc>, context = {}) =>
 beforeEach(() => vi.clearAllMocks())
 
 describe("revalidateDoc", () => {
-  it("refreshes the index, the doc and the bell when a published doc is saved", async () => {
+  // Every docs page reads the published tree from the `docs` tag, and the Worker keeps them
+  // all under /docs, so a save refreshes the lot: moving or renaming a doc moves those under it.
+  it("refreshes every docs page and the bell when a published doc is saved", async () => {
     await change({ slug: "a", _status: "published" })
     expect(revalidateTag).toHaveBeenCalledWith("docs", "max")
-    expect(revalidatePath).toHaveBeenCalledWith("/docs")
-    expect(revalidatePath).toHaveBeenCalledWith("/docs/a")
+    expect(revalidatePath).toHaveBeenCalledExactlyOnceWith("/docs")
     expect(purgeEdgeCache).toHaveBeenCalledExactlyOnceWith(logger, "doc a", {
-      paths: ["/docs", "/docs/a"],
+      paths: ["/docs"],
       shared: false,
-      revalidated: { paths: ["/docs", "/docs/a"], tags: ["docs"] },
-    })
-  })
-
-  it("refreshes the old URL when a published doc's slug changes", async () => {
-    await change({ slug: "b", _status: "published" }, { slug: "a", _status: "published" })
-    expect(revalidatePath).toHaveBeenCalledWith("/docs/a")
-    expect(revalidatePath).toHaveBeenCalledWith("/docs/b")
-    expect(purgeEdgeCache).toHaveBeenCalledWith(logger, "doc b", {
-      paths: ["/docs", "/docs/b", "/docs/a"],
-      shared: false,
-      revalidated: { paths: ["/docs", "/docs/b", "/docs/a"], tags: ["docs"] },
+      revalidated: { paths: ["/docs"], tags: ["docs"] },
     })
   })
 
@@ -76,13 +66,13 @@ describe("revalidateDoc", () => {
 })
 
 describe("revalidateDocDelete", () => {
-  it("refreshes the index and the deleted doc's page", () => {
+  it("refreshes every docs page", () => {
     revalidateDocDelete({ doc: { slug: "a" }, req: req() } as unknown as DeleteArgs)
-    expect(revalidatePath).toHaveBeenCalledWith("/docs/a")
+    expect(revalidatePath).toHaveBeenCalledWith("/docs")
     expect(purgeEdgeCache).toHaveBeenCalledExactlyOnceWith(logger, "doc a deleted", {
-      paths: ["/docs", "/docs/a"],
+      paths: ["/docs"],
       shared: false,
-      revalidated: { paths: ["/docs", "/docs/a"], tags: ["docs"] },
+      revalidated: { paths: ["/docs"], tags: ["docs"] },
     })
   })
 

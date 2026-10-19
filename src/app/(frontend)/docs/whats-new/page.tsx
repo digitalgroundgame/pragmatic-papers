@@ -1,5 +1,5 @@
 import { isPluginEnabled } from "@/globals/Plugins/isPluginEnabled"
-import { queryDocSections, queryPublishedDocs } from "@/plugins/docs/queries"
+import { queryPublishedDocs } from "@/plugins/docs/queries"
 import { WHATS_NEW_PATH } from "@/plugins/docs/sections"
 import { getSiteURL } from "@/utilities/getURL"
 import { mergeOpenGraph } from "@/utilities/mergeOpenGraph"
@@ -29,6 +29,5 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default async function WhatsNewPage(): Promise<React.ReactNode> {
   if (!(await isPluginEnabled("docs"))) notFound()
-  const [docs, sections] = await Promise.all([queryPublishedDocs(), queryDocSections()])
-  return <WhatsNew docs={docs} sections={sections} />
+  return <WhatsNew docs={await queryPublishedDocs()} />
 }

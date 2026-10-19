@@ -14,9 +14,6 @@ import { type SyncResult, syncDocs } from "./syncDocs"
 export async function syncRepoDocs(payload: Payload): Promise<SyncResult | null> {
   try {
     const result = await syncDocs(payload)
-    if (result.sections.length) {
-      payload.logger.info({ sections: result.sections }, "Seeded the docs' starter sections")
-    }
     if (result.created.length) {
       payload.logger.info({ created: result.created }, "Seeded help docs from the repo as drafts")
     }

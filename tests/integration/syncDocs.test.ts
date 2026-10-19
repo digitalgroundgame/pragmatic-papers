@@ -5,16 +5,32 @@ import path from "node:path"
 import { afterAll, beforeAll, describe, expect, it } from "vitest"
 import type { Payload } from "payload"
 
-import { DOCS_DIR, syncDocs } from "@/plugins/docs/syncDocs"
+import { DOCS_DIR } from "@/plugins/docs/repoDocFiles"
+import { syncDocs } from "@/plugins/docs/syncDocs"
 import { createUser, getPayload } from "./helpers/testUsers"
 
-// The repo's own doc with a picture in it, synced from a copy so the test can change it.
+// The repo's own doc with a picture in it, synced from a copy so the test can change it, in a
+// tree of its own: an area and a section, each a doc of its own.
 const SLUG = "unsplash-photos"
-const SECTION = "media"
+const SOURCE = "writing/media"
+const AREA = "sync-test-area"
+const SECTION = "sync-test-section"
+const PARENTS = [AREA, SECTION]
+
+type Result = Awaited<ReturnType<typeof syncDocs>>
+/** What a sync did to the test's own docs, leaving out its area and section. */
+const own = (result: Result): Result =>
+  Object.fromEntries(
+    Object.entries(result).map(([key, slugs]: [string, string[]]) => [
+      key,
+      slugs.filter((slug) => !PARENTS.includes(slug)),
+    ]),
+  ) as unknown as Result
 
 describe("syncDocs", () => {
   let payload: Payload
   let dir: string
+  let folder: string
   const ctx = { disableRevalidate: true }
 
   const findDoc = async () =>
@@ -40,39 +56,49 @@ describe("syncDocs", () => {
 
   beforeAll(async () => {
     payload = await getPayload()
-    for (const slug of [SLUG, "another", "and-another"])
+    for (const slug of [SLUG, "another", "and-another", ...PARENTS])
       for (const key of ["seeded", "offered"]) await payload.kv.delete(`${key}:docs:${slug}`)
     dir = await mkdtemp(path.join(tmpdir(), "docs-"))
-    await cp(path.join(DOCS_DIR, "sections.json"), path.join(dir, "sections.json"))
-    await mkdir(path.join(dir, SECTION))
-    for (const name of await readdir(path.join(DOCS_DIR, SECTION))) {
+    folder = path.join(dir, AREA, SECTION)
+    await mkdir(folder, { recursive: true })
+    const intro = (title: string) =>
+      `---\ntitle: ${title}\nsummary: The ${title.toLowerCase()}.\npublishedAt: 2026-10-25\n---\n\nIntro.\n`
+    await writeFile(path.join(dir, `${AREA}.md`), intro("Test area"))
+    await writeFile(path.join(dir, AREA, `${SECTION}.md`), intro("Test section"))
+    for (const name of await readdir(path.join(DOCS_DIR, SOURCE))) {
       if (name.startsWith(`${SLUG}.`) || name.startsWith(`${SLUG}-`)) {
-        await cp(path.join(DOCS_DIR, SECTION, name), path.join(dir, SECTION, name))
+        await cp(path.join(DOCS_DIR, SOURCE, name), path.join(folder, name))
       }
     }
     await payload.delete({
       collection: "docs",
       overrideAccess: true,
       context: ctx,
-      where: { slug: { equals: SLUG } },
+      where: { slug: { in: [SLUG, ...PARENTS] } },
     })
   })
 
   afterAll(async () => {
+    await payload.delete({
+      collection: "docs",
+      overrideAccess: true,
+      context: ctx,
+      where: { slug: { in: PARENTS } },
+    })
     await rm(dir, { recursive: true, force: true })
   })
 
   it("creates a new doc as a draft, with its pictures uploaded to Media", async () => {
     const result = await syncDocs(payload, dir)
-    expect(result.created).toEqual([SLUG])
+    // Its area and section first, so it's filed under the section.
+    expect(result.created).toEqual([AREA, SECTION, SLUG])
 
     const doc = await findDoc()
     expect(doc?._status).toBe("draft")
-    // In its folder's section, which the sync seeded under its area if the site hadn't one.
-    const section = doc?.section
+    const section = doc?.parent
     expect(typeof section === "object" && section?.slug).toBe(SECTION)
-    const area = typeof section === "object" ? section?.parent : null
-    expect(typeof area === "object" && area?.parent).toBeFalsy()
+    // Under the section, under the area.
+    expect(doc?.breadcrumbs?.at(-1)?.url).toBe(`/docs/${AREA}/${SECTION}/${SLUG}`)
     expect(doc?.publishedAt?.slice(0, 10)).toBe("2026-10-18")
 
     const media = await syncedMedia()
@@ -106,7 +132,7 @@ describe("syncDocs", () => {
     ).docs[0]
 
   const setSummary = async (summary: string) => {
-    const file = path.join(dir, SECTION, `${SLUG}.md`)
+    const file = path.join(folder, `${SLUG}.md`)
     const source = await readFile(file, "utf8")
     await writeFile(file, source.replace(/^summary: .*$/m, `summary: ${summary}`))
   }
@@ -125,12 +151,11 @@ describe("syncDocs", () => {
     expect(edited.summary).toBe("Edited in the admin.")
 
     // Nothing changed in the repo: nothing to offer.
-    expect((await syncDocs(payload, dir)).existing).toEqual([SLUG])
+    expect(own(await syncDocs(payload, dir)).existing).toEqual([SLUG])
 
     await setSummary("A new summary.")
-    const result = await syncDocs(payload, dir)
+    const result = own(await syncDocs(payload, dir))
     expect(result).toEqual({
-      sections: [],
       created: [],
       offered: [SLUG],
       skipped: [],
@@ -146,11 +171,11 @@ describe("syncDocs", () => {
     expect(await syncedMedia()).toHaveLength(2)
 
     // Offered once: the next deploy leaves the suggestion (or its discarding) alone.
-    expect((await syncDocs(payload, dir)).existing).toEqual([SLUG])
+    expect(own(await syncDocs(payload, dir)).existing).toEqual([SLUG])
 
     // A newer change supersedes a suggestion nobody has touched, as another draft.
     await setSummary("A newer summary.")
-    expect((await syncDocs(payload, dir)).offered).toEqual([SLUG])
+    expect(own(await syncDocs(payload, dir)).offered).toEqual([SLUG])
     expect((await findDoc())?.summary).toBe("A newer summary.")
     expect((await publishedDoc())?.summary).toBe("Edited in the admin.")
   })
@@ -177,7 +202,7 @@ describe("syncDocs", () => {
     })
 
     await setSummary("Yet another summary.")
-    expect((await syncDocs(payload, dir)).skipped).toEqual([SLUG])
+    expect(own(await syncDocs(payload, dir)).skipped).toEqual([SLUG])
     expect((await findDoc())?.summary).toBe("An editor's draft.")
 
     await payload.update({
@@ -188,7 +213,7 @@ describe("syncDocs", () => {
       overrideAccess: false,
       user: editor,
     })
-    expect((await syncDocs(payload, dir)).offered).toEqual([SLUG])
+    expect(own(await syncDocs(payload, dir)).offered).toEqual([SLUG])
     expect((await findDoc())?.summary).toBe("Yet another summary.")
     expect((await publishedDoc())?.summary).toBe("An editor's draft.")
   })
@@ -204,24 +229,23 @@ describe("syncDocs", () => {
     })
     await payload.kv.delete(`offered:docs:${SLUG}`)
     // The repo's copy is the one the doc was saved with: nothing to offer.
-    expect((await syncDocs(payload, dir)).existing).toEqual([SLUG])
+    expect(own(await syncDocs(payload, dir)).existing).toEqual([SLUG])
 
     await payload.kv.delete(`offered:docs:${SLUG}`)
     await setSummary("Changed before offers began.")
-    expect((await syncDocs(payload, dir)).offered).toEqual([SLUG])
+    expect(own(await syncDocs(payload, dir)).offered).toEqual([SLUG])
     expect((await findDoc())?.summary).toBe("Changed before offers began.")
     expect((await publishedDoc())?.summary).toBe("Yet another summary.")
   })
 
   it("reuses a PNG it uploaded, though Media stored it as WebP", async () => {
-    const folder = path.join(dir, SECTION)
     const copy = `${SLUG}-hero-copy.png`
     await cp(path.join(folder, `${SLUG}-hero.webp`), path.join(folder, copy))
-    const source = await readFile(path.join(DOCS_DIR, SECTION, `${SLUG}.md`), "utf8")
+    const source = await readFile(path.join(DOCS_DIR, SOURCE, `${SLUG}.md`), "utf8")
     const withPng = source.replace(/^heroImage: .*$/m, `heroImage: ${copy}`)
     await writeFile(path.join(folder, "another.md"), withPng)
     await writeFile(path.join(folder, "and-another.md"), withPng)
-    expect((await syncDocs(payload, dir)).created).toEqual(["and-another", "another"])
+    expect(own(await syncDocs(payload, dir)).created).toEqual(["and-another", "another"])
 
     const copies = (await syncedMedia()).filter((item) => item.filename?.includes("hero-copy"))
     expect(copies).toHaveLength(1)
@@ -235,9 +259,8 @@ describe("syncDocs", () => {
       context: ctx,
       where: { slug: { equals: SLUG } },
     })
-    const result = await syncDocs(payload, dir)
+    const result = own(await syncDocs(payload, dir))
     expect(result).toEqual({
-      sections: [],
       created: [],
       offered: [],
       skipped: [],
@@ -247,9 +270,42 @@ describe("syncDocs", () => {
     expect(await findDoc()).toBeUndefined()
   })
 
+  it("never moves a doc: an editor's place for it outlasts the repo's changes", async () => {
+    const editor = await createUser("editor")
+    const doc = (await payload
+      .find({
+        collection: "docs",
+        draft: true,
+        overrideAccess: true,
+        where: { slug: { equals: "and-another" } },
+      })
+      .then(({ docs }) => docs[0]))!
+    // Moved to the top of the tree, and published there.
+    await payload.update({
+      collection: "docs",
+      id: doc.id,
+      data: { parent: null, _status: "published" },
+      context: ctx,
+      overrideAccess: false,
+      user: editor,
+    })
+    const file = path.join(folder, "and-another.md")
+    const source = await readFile(file, "utf8")
+    await writeFile(file, source.replace(/^summary: .*$/m, "summary: Changed in the repo."))
+    expect(own(await syncDocs(payload, dir)).offered).toEqual(["and-another"])
+    const offered = await payload.findByID({
+      collection: "docs",
+      id: doc.id,
+      draft: true,
+      depth: 0,
+      overrideAccess: true,
+    })
+    expect(offered.summary).toBe("Changed in the repo.")
+    expect(offered.parent ?? null).toBeNull()
+  })
   it("deletes nothing when a doc's file is gone", async () => {
-    await rm(path.join(dir, SECTION, "another.md"))
-    const result = await syncDocs(payload, dir)
+    await rm(path.join(folder, "another.md"))
+    const result = own(await syncDocs(payload, dir))
     expect(result.existing).toEqual(["and-another"])
     const { docs } = await payload.find({
       collection: "docs",
@@ -265,19 +321,5 @@ describe("syncDocs", () => {
       context: ctx,
       where: { slug: { in: ["another", "and-another"] } },
     })
-  })
-
-  it("won't delete an area that still has sections", async () => {
-    const { docs } = await payload.find({
-      collection: "doc-sections",
-      depth: 0,
-      overrideAccess: true,
-      where: { slug: { equals: SECTION } },
-    })
-    const area = docs[0]?.parent
-    expect(area).toBeTruthy()
-    await expect(
-      payload.delete({ collection: "doc-sections", id: area as number, overrideAccess: true }),
-    ).rejects.toThrow(/still has/)
   })
 })

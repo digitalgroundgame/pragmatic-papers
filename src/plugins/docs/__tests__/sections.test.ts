@@ -1,37 +1,58 @@
 import { describe, expect, it } from "vitest"
 
-import { adjacentDocs, type DocSectionNode, groupDocs } from "../sections"
+import {
+  adjacentDocs,
+  docLineage,
+  docPaths,
+  docsInOrder,
+  docsTree,
+  type DocsNode,
+  docURL,
+  parentIds,
+  type TreeDoc,
+} from "../sections"
 
-// As the query returns them, in the order editors gave them: two areas, each with sections.
-const nodes: DocSectionNode[] = [
-  { id: 1, title: "Reading", slug: "reading" },
-  { id: 2, title: "Writing", slug: "writing" },
-  { id: 3, title: "Getting started", slug: "getting-started", parent: 2 },
-  { id: 4, title: "Articles", slug: "articles", parent: { id: 2 } },
-  { id: 5, title: "Editing", slug: "editing" },
-  { id: 6, title: "Site settings", slug: "site-settings", parent: 5 },
-  { id: 7, title: "Moderation", slug: "moderation", parent: 5 },
+// As the query returns them (newest first, so not in the tree's order): two areas, their
+// sections, and docs, with `_order` as editors dragged them.
+const docs: TreeDoc[] = [
+  { id: 11, slug: "footnotes", title: "Footnotes", parent: 4, _order: "a1" },
+  {
+    id: 12,
+    slug: "topics",
+    title: "Tag articles with topics",
+    navTitle: "Topics",
+    parent: 4,
+    _order: "a2",
+  },
+  { id: 13, slug: "notifications", title: "The bell", parent: { id: 3 } },
+  { id: 14, slug: "experiments", title: "Experiments", parent: 6 },
+  { id: 1, slug: "home", title: "Pragmatic Papers docs" },
+  { id: 2, slug: "writing", title: "Writing", parent: null, _order: "a0" },
+  { id: 3, slug: "getting-started", title: "Getting started", parent: 2, _order: "a0" },
+  { id: 4, slug: "articles", title: "Articles", parent: 2, _order: "a1" },
+  { id: 5, slug: "editing", title: "Editing", parent: null, _order: "a1" },
+  { id: 6, slug: "site-settings", title: "Site settings", parent: 5 },
 ]
 
-const outline = (areas: ReturnType<typeof groupDocs<{ title: string }>>) =>
-  areas.map((area) => [
-    area.title,
-    area.sections.map((section) => [section.title, section.docs.map((doc) => doc.title)]),
-  ])
+const outline = (nodes: DocsNode<TreeDoc>[]): unknown[] =>
+  nodes.map((node) =>
+    node.children.length ? [node.doc.title, outline(node.children)] : node.doc.title,
+  )
 
-describe("groupDocs", () => {
-  it("files docs under their areas and sections, in the editors' order, by sidebar name", () => {
-    const areas = groupDocs(
-      [
-        { title: "Tag articles with topics", navTitle: "Topics", section: 4 },
-        { title: "Experiments", section: 6 },
-        { title: "Footnotes", section: { id: 4 } },
-        { title: "Moderate comments", section: 7 },
-        { title: "The bell", section: 3 },
-      ],
-      nodes,
-    )
-    expect(outline(areas)).toEqual([
+describe("docURL", () => {
+  it("joins the slugs under /docs, with the home doc at /docs", () => {
+    expect(docURL(["writing", "articles", "footnotes"])).toBe("/docs/writing/articles/footnotes")
+    expect(docURL(["home"])).toBe("/docs")
+    expect(docURL([])).toBe("/docs")
+    expect(docURL(["writing", null, "footnotes"])).toBe("/docs/writing/footnotes")
+  })
+})
+
+describe("docsTree", () => {
+  const tree = docsTree(docs)
+
+  it("nests docs under their parents, in the editors' order, then by sidebar name", () => {
+    expect(outline(tree)).toEqual([
       [
         "Writing",
         [
@@ -39,59 +60,69 @@ describe("groupDocs", () => {
           ["Articles", ["Footnotes", "Tag articles with topics"]],
         ],
       ],
-      [
-        "Editing",
-        [
-          ["Site settings", ["Experiments"]],
-          ["Moderation", ["Moderate comments"]],
-        ],
-      ],
+      ["Editing", [["Site settings", ["Experiments"]]]],
     ])
-    expect(areas[0]!.sections[1]!.key).toBe("articles")
   })
 
-  it("lists docs with no section, or one it can't place, under Other, last", () => {
-    const areas = groupDocs(
-      [
-        { title: "Footnotes", section: 4 },
-        { title: "No section", section: null },
-        { title: "Under an area", section: 2 },
-        { title: "Section deleted", section: 99 },
-      ],
-      nodes,
-    )
-    expect(outline(areas)).toEqual([
-      ["Writing", [["Articles", ["Footnotes"]]]],
-      ["Other", [["Unsorted", ["No section", "Section deleted", "Under an area"]]]],
+  it("gives each doc the address its place in the tree makes", () => {
+    const paths = docPaths(tree)
+    expect(paths.get("footnotes")).toBe("/docs/writing/articles/footnotes")
+    expect(paths.get("writing")).toBe("/docs/writing")
+    expect(paths.get("home")).toBe("/docs")
+  })
+
+  it("puts a doc whose parent isn't published, or that loops, at the top", () => {
+    const loose = docsTree([
+      { id: 1, slug: "orphan", title: "Orphan", parent: 99 },
+      { id: 2, slug: "self", title: "Self", parent: 2 },
+      { id: 3, slug: "a", title: "A", parent: 4 },
+      { id: 4, slug: "b", title: "B", parent: 3 },
     ])
+    expect(docsInOrder(loose).map((node) => node.doc.slug)).toEqual(
+      expect.arrayContaining(["orphan", "self", "a", "b"]),
+    )
+    expect(loose.find((node) => node.doc.slug === "orphan")?.path).toBe("/docs/orphan")
+    expect(loose.find((node) => node.doc.slug === "self")?.path).toBe("/docs/self")
   })
 
   it("leaves out the home doc, which the sidebar links on its own", () => {
-    expect(groupDocs([{ slug: "home", title: "Home", section: null }], nodes)).toEqual([])
+    expect(docsTree([{ id: 1, slug: "home", title: "Home" }])).toEqual([])
+  })
+})
+
+describe("docLineage and parentIds", () => {
+  const tree = docsTree(docs)
+
+  it("finds a doc and its ancestors, top first", () => {
+    expect(docLineage(tree, "footnotes").map((node) => node.doc.slug)).toEqual([
+      "writing",
+      "articles",
+      "footnotes",
+    ])
+    expect(docLineage(tree, "draft")).toEqual([])
+  })
+
+  it("names the docs others sit under", () => {
+    expect([...parentIds(tree)].sort()).toEqual(["2", "3", "4", "5", "6"])
   })
 })
 
 describe("adjacentDocs", () => {
-  const areas = groupDocs(
-    [
-      { slug: "notifications", title: "The bell", section: 3 },
-      { slug: "footnotes", title: "Footnotes", section: 4 },
-      { slug: "experiments", title: "Experiments", section: 6 },
-    ],
-    nodes,
-  )
+  const tree = docsTree(docs)
+  const home = docs.find((doc) => doc.slug === "home")
   const slugs = (slug: string) => {
-    const { previous, next } = adjacentDocs(areas, slug)
+    const { previous, next } = adjacentDocs(tree, slug, home)
     return [previous?.slug, next?.slug]
   }
 
-  it("follows the sidebar's order across sections and areas", () => {
-    expect(slugs("footnotes")).toEqual(["notifications", "experiments"])
+  it("follows the sidebar's order, each doc before the ones under it", () => {
+    expect(slugs("articles")).toEqual(["notifications", "footnotes"])
+    expect(slugs("topics")).toEqual(["footnotes", "editing"])
   })
 
-  it("has no previous doc for the first, nor a next for the last", () => {
-    expect(slugs("notifications")).toEqual([undefined, "footnotes"])
-    expect(slugs("experiments")).toEqual(["footnotes", undefined])
+  it("starts at the home doc, and has no next for the last", () => {
+    expect(slugs("home")).toEqual([undefined, "writing"])
+    expect(slugs("experiments")).toEqual(["site-settings", undefined])
   })
 
   it("has neither for a doc the sidebar doesn't list", () => {

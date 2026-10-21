@@ -8,7 +8,7 @@ import { syncRepoDocs } from "../syncRepoDocs"
 
 const logger = { info: vi.fn(), error: vi.fn() }
 const payload = { logger } as unknown as Payload
-const empty = { sections: [], created: [], offered: [], skipped: [], existing: [], deleted: [] }
+const empty = { created: [], offered: [], skipped: [], existing: [], deleted: [] }
 
 beforeEach(() => {
   vi.clearAllMocks()
@@ -25,10 +25,9 @@ describe("syncRepoDocs", () => {
     expect(logger.info).toHaveBeenCalledWith({ created: ["a"] }, expect.any(String))
   })
 
-  it("logs the sections it seeded, the docs it offered changes to, and those an editor's draft held back", async () => {
-    syncDocs.mockResolvedValue({ ...empty, sections: ["c"], offered: ["a"], skipped: ["b"] })
+  it("logs the docs it offered changes to, and those an editor's draft held back", async () => {
+    syncDocs.mockResolvedValue({ ...empty, offered: ["a"], skipped: ["b"] })
     await syncRepoDocs(payload)
-    expect(logger.info).toHaveBeenCalledWith({ sections: ["c"] }, expect.any(String))
     expect(logger.info).toHaveBeenCalledWith({ offered: ["a"] }, expect.any(String))
     expect(logger.info).toHaveBeenCalledWith({ skipped: ["b"] }, expect.any(String))
   })

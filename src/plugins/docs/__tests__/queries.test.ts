@@ -21,7 +21,7 @@ vi.mock("react", async (importOriginal) => ({
   cache: <T>(fn: T) => fn,
 }))
 
-import { queryDocBySlug, queryDocSections, queryPublishedDocs } from "../queries"
+import { queryDocBySlug, queryPublishedDocs } from "../queries"
 
 const doc = { id: 1, slug: "unsplash-photos", title: "Unsplash photos" }
 
@@ -44,16 +44,6 @@ describe("queryPublishedDocs", () => {
       }),
     )
     expect(cached).toHaveBeenCalledWith(["docs-published"], ["docs"])
-  })
-})
-
-describe("queryDocSections", () => {
-  it("lists the sidebar's areas and sections in the editors' order, cleared with the docs", async () => {
-    await queryDocSections()
-    expect(find).toHaveBeenCalledWith(
-      expect.objectContaining({ collection: "doc-sections", sort: "_order" }),
-    )
-    expect(cached).toHaveBeenCalledWith(["doc-sections"], ["docs"])
   })
 })
 

@@ -21,4 +21,4 @@ Give the timeline an optional title, then add one row per event:
 
 Events appear in the order you enter them, not sorted by date, so add them in the order you want them read. Drag rows to reorder them.
 
-A picture used by a timeline on a published article is protected from deletion in Media (see [Why some media can't be deleted](/docs/media-references)).
+A picture used by a timeline on a published article is protected from deletion in Media (see [Why some media can't be deleted](/docs/writing/media/media-references)).

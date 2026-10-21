@@ -2,35 +2,39 @@ import type { Crumb } from "@/components/Breadcrumbs"
 import { DocsLayout } from "@/components/DocsNav"
 import { JsonLd } from "@/components/JsonLd"
 import { docThumbnail } from "@/plugins/docs/thumbnail"
-import type { queryDocSections, queryPublishedDocs } from "@/plugins/docs/queries"
-import { groupDocs, HOME_DOC_SLUG, WHATS_NEW_PATH } from "@/plugins/docs/sections"
+import type { queryPublishedDocs } from "@/plugins/docs/queries"
+import {
+  docPaths,
+  docsTree,
+  DOCS_PATH,
+  HOME_DOC_SLUG,
+  parentIds,
+  WHATS_NEW_PATH,
+} from "@/plugins/docs/sections"
 import { formatNotificationDate } from "@/plugins/notifications/unread"
 import { buildBreadcrumbJsonLd } from "@/utilities/structuredData"
 import { HoverPrefetchLink } from "@/components/Link/HoverPrefetchLink"
 import React from "react"
 
 export type WhatsNewDoc = Awaited<ReturnType<typeof queryPublishedDocs>>[number]
-export type WhatsNewSection = Awaited<ReturnType<typeof queryDocSections>>[number]
 
-/** /docs/whats-new: every doc, newest first, with its thumbnail and summary, beside the sidebar. */
-export function WhatsNew({
-  docs,
-  sections,
-}: {
-  docs: WhatsNewDoc[]
-  /** The sidebar's areas and sections (`queryDocSections`). */
-  sections: WhatsNewSection[]
-}): React.ReactNode {
-  const areas = groupDocs(docs, sections)
-  const latest = docs.filter((doc) => doc.slug !== HOME_DOC_SLUG)
+/**
+ * /docs/whats-new: every doc, newest first, with its thumbnail and summary, beside the sidebar.
+ * Areas and sections are left out: they introduce the docs under them rather than a feature.
+ */
+export function WhatsNew({ docs }: { docs: WhatsNewDoc[] }): React.ReactNode {
+  const tree = docsTree(docs)
+  const paths = docPaths(tree)
+  const parents = parentIds(tree)
+  const latest = docs.filter((doc) => doc.slug !== HOME_DOC_SLUG && !parents.has(String(doc.id)))
   const trail: Crumb[] = [
-    { name: "Docs", path: "/docs" },
+    { name: "Docs", path: DOCS_PATH },
     { name: "What's new", path: WHATS_NEW_PATH },
   ]
 
   return (
     <>
-      <DocsLayout areas={areas} current={WHATS_NEW_PATH} breadcrumbs={trail}>
+      <DocsLayout tree={tree} current={WHATS_NEW_PATH} breadcrumbs={trail}>
         <section aria-labelledby="docs-latest" className="space-y-6">
           <JsonLd data={[buildBreadcrumbJsonLd(trail)]} />
           <header className="space-y-3">
@@ -48,7 +52,7 @@ export function WhatsNew({
                 return (
                   <li key={doc.id} className="border-b py-6">
                     <HoverPrefetchLink
-                      href={`/docs/${doc.slug}`}
+                      href={paths.get(doc.slug) ?? `${DOCS_PATH}/${doc.slug}`}
                       className="group flex flex-col gap-4 sm:flex-row sm:items-start sm:gap-6"
                     >
                       {thumbnail && (

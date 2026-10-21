@@ -33,4 +33,4 @@ On the article's **Narration** tab, choose the recording in **Audio File** (it o
 - **Writers** can attach the recording to their article; an editor publishes it.
 - **Editors** can attach it and publish.
 
-A recording on a published article can't be deleted from Media until it's taken off the article (see [Why some media can't be deleted](/docs/media-references)).
+A recording on a published article can't be deleted from Media until it's taken off the article (see [Why some media can't be deleted](/docs/writing/media/media-references)).

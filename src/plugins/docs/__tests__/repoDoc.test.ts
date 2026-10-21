@@ -79,11 +79,11 @@ describe("media filenames", () => {
 })
 
 describe("hashRepoDoc", () => {
-  it("changes with the doc's file, its section or any picture", () => {
-    const base = hashRepoDoc("media", "---", [Buffer.from("a")])
-    expect(hashRepoDoc("media", "---", [Buffer.from("a")])).toBe(base)
-    expect(hashRepoDoc("site", "---", [Buffer.from("a")])).not.toBe(base)
-    expect(hashRepoDoc("media", "--- ", [Buffer.from("a")])).not.toBe(base)
-    expect(hashRepoDoc("media", "---", [Buffer.from("b")])).not.toBe(base)
+  // Where the doc sits isn't hashed: once a site has it, its place is the site's.
+  it("changes with the doc's file or any picture", () => {
+    const base = hashRepoDoc("---", [Buffer.from("a")])
+    expect(hashRepoDoc("---", [Buffer.from("a")])).toBe(base)
+    expect(hashRepoDoc("--- ", [Buffer.from("a")])).not.toBe(base)
+    expect(hashRepoDoc("---", [Buffer.from("b")])).not.toBe(base)
   })
 })

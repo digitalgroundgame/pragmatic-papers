@@ -2,13 +2,14 @@ import { ChevronLeft, ChevronRight } from "lucide-react"
 import { HoverPrefetchLink } from "@/components/Link/HoverPrefetchLink"
 import React from "react"
 
-import { docNavTitle, docPath } from "@/plugins/docs/sections"
+import { docNavTitle } from "@/plugins/docs/sections"
 import { cn } from "@/utilities/utils"
 
 interface PagerDoc {
-  slug?: string | null
   title: string
   navTitle?: string | null
+  /** Where the doc is read, at its place in the tree. */
+  href: string
 }
 
 interface DocPagerProps {
@@ -28,7 +29,7 @@ function PagerLink({
   const Icon = next ? ChevronRight : ChevronLeft
   return (
     <HoverPrefetchLink
-      href={docPath(doc.slug ?? "")}
+      href={doc.href}
       rel={direction === "next" ? "next" : "prev"}
       className={cn(
         "group hover:border-foreground/40 flex flex-col gap-1 rounded-md border p-4 no-underline transition-colors",

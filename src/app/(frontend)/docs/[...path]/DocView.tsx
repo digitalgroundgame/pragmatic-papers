@@ -198,7 +198,7 @@ export async function DocView({
               // some widths and not others), and otherwise above it, flush with its text rather
               // than centered as an article's is. No heading: the nav's label names it for
               // screen readers.
-              <ArticleSidebar className="toc-open:mx-0 lg:static @min-[58rem]:sticky @min-[58rem]:top-[calc(var(--sticky-top)+1rem)] @min-[58rem]:order-last @min-[58rem]:max-w-56">
+              <ArticleSidebar className="toc-open:mx-0 lg:static @min-[58rem]:sticky @min-[58rem]:top-[calc(var(--sticky-top)+2rem)] @min-[58rem]:order-last @min-[58rem]:max-w-56">
                 <TableOfContents content={content} title="" />
               </ArticleSidebar>
             )}

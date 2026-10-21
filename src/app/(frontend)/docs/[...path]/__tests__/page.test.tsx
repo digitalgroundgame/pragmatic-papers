@@ -219,6 +219,13 @@ describe("DocPage", () => {
     expect(sidebar).not.toHaveClass("toc-open:mx-auto")
   })
 
+  it("leaves room below the docs' minimal header, and keeps it when the sidebar sticks", async () => {
+    await renderPage()
+    const nav = screen.getByRole("navigation", { name: "Docs" })
+    expect(nav.parentElement).toHaveClass("pt-8")
+    expect(nav).toHaveClass("lg:top-[calc(var(--sticky-top)+2rem)]")
+  })
+
   it.each([
     ["the doc turns it off", { ...doc, showTableOfContents: false }, true],
     ["the experiment is off", doc, false],

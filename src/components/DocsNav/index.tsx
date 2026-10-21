@@ -240,7 +240,8 @@ export function DocsLayout({
   return (
     <div
       className={cn(
-        "mx-auto grid max-w-7xl gap-10 px-4 pb-16 lg:grid-cols-[15rem_minmax(0,1fr)]",
+        // Clear of the header: the docs' minimal one has no nav row below it to space the page.
+        "mx-auto grid max-w-7xl gap-10 px-4 pt-8 pb-16 lg:grid-cols-[15rem_minmax(0,1fr)]",
         // Docs are reference pages: their headings, the doc's own included, are in the body's
         // sans rather than the site's display face. It isn't condensed, so they're a size
         // smaller than the site's and bold to stand out from the text.
@@ -251,7 +252,7 @@ export function DocsLayout({
     >
       <DocsNav
         {...nav}
-        className="order-last border-t pt-6 lg:sticky lg:top-(--sticky-top) lg:order-first lg:max-h-[calc(100vh-var(--sticky-top))] lg:[scrollbar-width:thin] lg:[scrollbar-gutter:stable] lg:self-start lg:overflow-y-auto lg:border-t-0 lg:pt-0 lg:pr-4 lg:pb-4"
+        className="order-last border-t pt-6 lg:sticky lg:top-[calc(var(--sticky-top)+2rem)] lg:order-first lg:max-h-[calc(100vh-var(--sticky-top)-2rem)] lg:[scrollbar-width:thin] lg:[scrollbar-gutter:stable] lg:self-start lg:overflow-y-auto lg:border-t-0 lg:pt-0 lg:pr-4 lg:pb-4"
       />
       <div className="min-w-0">
         <Breadcrumbs items={breadcrumbs} className="mx-0 max-w-none px-0" />

@@ -1462,7 +1462,7 @@ export interface Search {
 export interface Redirect {
   id: number;
   /**
-   * You will need to rebuild the website when changing this field.
+   * The old path, starting with a slash, e.g. /articles/old-slug.
    */
   from: string;
   to?: {
@@ -1518,10 +1518,6 @@ export interface Doc {
    * One or two sentences. The help bell shows it under the title.
    */
   summary: string;
-  /**
-   * Shown above the doc's title, beside it in the help bell, and in link previews. Optional.
-   */
-  heroImage?: (number | null) | Media;
   content: {
     root: {
       type: string;
@@ -1538,6 +1534,10 @@ export interface Doc {
     [k: string]: unknown;
   };
   /**
+   * Shown above the doc's title, beside it in the help bell, and in link previews. Optional.
+   */
+  heroImage?: (number | null) | Media;
+  /**
    * The day the feature reaches the live site. Newest docs list first.
    */
   publishedAt: string;
@@ -1546,27 +1546,27 @@ export interface Doc {
    */
   revisedAt?: string | null;
   /**
-   * Who the help bell tells. Empty means all staff; admins see every doc.
-   */
-  audience?: ('admin' | 'chief-editor' | 'editor' | 'writer' | 'narrator')[] | null;
-  /**
-   * A guided tour of the feature, offered as Show me in the help bell and on the doc. One of: articles.
-   */
-  tour?: string | null;
-  /**
-   * Auto-generates a navigable list of headings (and any resolver-matched blocks). Readers see it only while the table of contents experiment is on in Settings.
-   */
-  showTableOfContents?: boolean | null;
-  /**
-   * Seeded from src/docs/ by a deploy. Edits here are kept: when the repo's copy changes, a deploy saves it as a new draft for you to publish, edit or discard, and never changes the published doc.
-   */
-  sourceHash?: string | null;
-  /**
    * When enabled, the slug will auto-generate from the title field on save and autosave.
    */
   generateSlug?: boolean | null;
   slug: string;
   parent?: (number | null) | Doc;
+  /**
+   * Who the help bell tells. Empty means all staff; admins see every doc.
+   */
+  audience?: ('admin' | 'chief-editor' | 'editor' | 'writer' | 'narrator')[] | null;
+  /**
+   * Auto-generates a navigable list of headings (and any resolver-matched blocks). Readers see it only while the table of contents experiment is on in Settings.
+   */
+  showTableOfContents?: boolean | null;
+  /**
+   * A guided tour of the feature, offered as Show me in the help bell and on the doc. One of: articles.
+   */
+  tour?: string | null;
+  /**
+   * Seeded from src/docs/ by a deploy. Edits here are kept: when the repo's copy changes, a deploy saves it as a new draft for you to publish, edit or discard, and never changes the published doc.
+   */
+  sourceHash?: string | null;
   breadcrumbs?:
     | {
         doc?: (number | null) | Doc;
@@ -2636,17 +2636,17 @@ export interface DocsSelect<T extends boolean = true> {
   title?: T;
   navTitle?: T;
   summary?: T;
-  heroImage?: T;
   content?: T;
+  heroImage?: T;
   publishedAt?: T;
   revisedAt?: T;
-  audience?: T;
-  tour?: T;
-  showTableOfContents?: T;
-  sourceHash?: T;
   generateSlug?: T;
   slug?: T;
   parent?: T;
+  audience?: T;
+  showTableOfContents?: T;
+  tour?: T;
+  sourceHash?: T;
   breadcrumbs?:
     | T
     | {

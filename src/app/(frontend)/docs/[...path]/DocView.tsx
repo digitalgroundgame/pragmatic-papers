@@ -155,7 +155,7 @@ export async function DocView({
 
   return (
     <DocsLayout tree={tree} current={slug} breadcrumbs={trail}>
-      <article className="min-w-0 space-y-6">
+      <article className="@container min-w-0 space-y-6">
         <JsonLd data={[buildBreadcrumbJsonLd(trail)]} />
         {draft && <LivePreviewListener />}
         <TableOfContentsProvider>
@@ -190,13 +190,15 @@ export async function DocView({
           </header>
           <div
             id="intro"
-            className="xl:toc-open:gap-10 relative flex flex-col justify-between gap-3 xl:flex-row xl:gap-6"
+            className="@min-[58rem]:toc-open:gap-10 relative flex flex-col justify-between gap-3 @min-[58rem]:flex-row @min-[58rem]:gap-6"
           >
             {showTableOfContents && (
-              // Always shown, with no toggle: above the doc on narrow screens, and to its right
-              // from xl, where the docs' sidebar leaves room for both. No heading: the nav's
-              // label names it for screen readers.
-              <ArticleSidebar className="lg:static xl:sticky xl:top-[calc(var(--sticky-top)+1rem)] xl:order-last xl:max-w-56">
+              // Always shown, with no toggle: to the doc's right whenever its column has room for
+              // both (a container query, since the docs' sidebar takes a share of the screen at
+              // some widths and not others), and otherwise above it, flush with its text rather
+              // than centered as an article's is. No heading: the nav's label names it for
+              // screen readers.
+              <ArticleSidebar className="toc-open:mx-0 lg:static @min-[58rem]:sticky @min-[58rem]:top-[calc(var(--sticky-top)+1rem)] @min-[58rem]:order-last @min-[58rem]:max-w-56">
                 <TableOfContents content={content} title="" />
               </ArticleSidebar>
             )}

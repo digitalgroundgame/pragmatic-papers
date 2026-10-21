@@ -78,7 +78,7 @@
     "@sentry/nextjs": "^11.0.0",
     "@wrksz/themes": "^2.0.3",
     "better-auth": "1.7.7",
-    "better-react-mathjax": "^3.0.2",
+    "better-react-mathjax": "^3.0.3",
     "class-variance-authority": "^0.7.1",
     "cn": "^0.4.0",
     "cross-env": "^10.1.0",

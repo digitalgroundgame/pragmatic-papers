@@ -24,14 +24,12 @@ function headingText(node: LexicalNode): string {
 }
 
 interface ArticleContentPageProps {
-  article: FeedArticle
   page: ArticlePageItem
   topInset: number
   isLast: boolean
 }
 
 export function ArticleContentPage({
-  article,
   page,
   topInset,
   isLast,
@@ -49,11 +47,7 @@ export function ArticleContentPage({
       >
         <div className="mx-auto w-full max-w-2xl px-5">
           <div className="feed-prose">
-            <RichText
-              data={makeRoot(page.nodes)}
-              enableGutter={false}
-              parentDoc={{ collection: "articles", id: article.id }}
-            />
+            <RichText data={makeRoot(page.nodes)} enableGutter={false} />
             {isLast && <SquiggleStatic size="small" />}
           </div>
         </div>
@@ -99,13 +93,7 @@ export function ArticleBlockPage({
         }}
       >
         <div className="feed-prose w-full max-w-3xl">
-          {feedBlock ?? (
-            <RichText
-              data={makeRoot([page.node])}
-              enableGutter={false}
-              parentDoc={{ collection: "articles", id: article.id }}
-            />
-          )}
+          {feedBlock ?? <RichText data={makeRoot([page.node])} enableGutter={false} />}
           {isLast && <SquiggleStatic size="small" />}
         </div>
       </div>

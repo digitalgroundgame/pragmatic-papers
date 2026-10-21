@@ -109,8 +109,7 @@ const nextConfig: NextConfig = {
       //
       // There is no per-action override for this in Next — `bodySizeLimit` is one number
       // for every Server Action in the app, so this also covers the feed's `loadFeedBatch`
-      // (`src/app/feed/actions.ts`), which anyone can call, and
-      // `SocialEmbed/hooks/revalidateSnapshot.ts`, which only server code calls.
+      // (`src/app/feed/actions.ts`), which anyone can call.
       // `loadFeedBatch` takes a single number, yet a caller can now make Next read and parse up
       // to 8 MB per request instead of 1 MB: low exposure, but wider than the one flow this was
       // raised for.

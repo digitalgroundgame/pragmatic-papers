@@ -8,17 +8,21 @@ import { isExperimentEnabled } from "@/globals/SiteSettings/isExperimentEnabled"
 import { HeaderLogo } from "@/Header/chrome"
 import { HeaderActions } from "@/Header/HeaderActions/Component"
 import { LazyMobileMenu } from "@/Header/MobileMenu/Component.lazy"
+import { MinimalHeader } from "@/Header/MinimalHeader"
 import { LazySettingsSheet } from "@/Header/SettingsSheet/Component.lazy"
+import { HeaderTemplateSwitch } from "@/Header/templates"
 import type { Footer, Header } from "@/payload-types"
 import { getGlobal } from "@/data/globals"
 import { Newspaper } from "lucide-react"
 import React from "react"
 import { HoverPrefetchLink } from "@/components/Link/HoverPrefetchLink"
 
-// The menus, sheets and mode toggles here render as their buttons and links, and load their
-// interactive parts when the reader first reaches for them (`LoadOnInteraction`), so none of
-// base-ui's dialogs and menus is in the JavaScript a page loads first.
-export async function Header(): Promise<React.JSX.Element> {
+/**
+ * The default template. Its menus, sheets and mode toggles render as their buttons and links,
+ * and load their interactive parts when the reader first reaches for them (`LoadOnInteraction`),
+ * so none of base-ui's dialogs and menus is in the JavaScript a page loads first.
+ */
+export async function DefaultHeader(): Promise<React.JSX.Element> {
   const [{ navItems, actions }, { socials }, feedEnabled]: [Header, Footer, boolean] =
     await Promise.all([getGlobal("header", 1), getGlobal("footer", 2), isExperimentEnabled("feed")])
 
@@ -65,5 +69,15 @@ export async function Header(): Promise<React.JSX.Element> {
           away with the page once paused. */}
       <Ticker />
     </>
+  )
+}
+
+/**
+ * The site's header, in the template the current route wears (`HEADER_TEMPLATES`): the default
+ * everywhere, the minimal one where a route asks for it.
+ */
+export function Header(): React.JSX.Element {
+  return (
+    <HeaderTemplateSwitch templates={{ default: <DefaultHeader />, minimal: <MinimalHeader /> }} />
   )
 }

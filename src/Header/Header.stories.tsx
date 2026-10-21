@@ -126,3 +126,30 @@ export const MegaMenuByKeyboard: Story = {
     await expect(live).toHaveFocus()
   },
 }
+
+/** The docs wear the minimal header: logo on the left, What's new and the theme toggle. */
+export const Docs: Story = {
+  parameters: { nextjs: { navigation: { pathname: "/docs/getting-started" } } },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(await canvas.findByRole("link", { name: "Link to Home" })).toHaveAttribute(
+      "href",
+      "/",
+    )
+    await expect(canvas.getByRole("link", { name: "Docs" })).toHaveAttribute("href", "/docs")
+    await expect(canvas.getByRole("link", { name: "What's new" })).toHaveAttribute(
+      "href",
+      "/docs/whats-new",
+    )
+    await expect(canvas.getByRole("button", { name: /theme/i })).toBeVisible()
+    // None of the site's own navigation, actions or menus.
+    await expect(canvas.queryByRole("navigation", { name: "Main" })).not.toBeInTheDocument()
+    await expect(canvas.queryByRole("link", { name: /Donate/ })).not.toBeInTheDocument()
+    await expect(canvas.queryByRole("button", { name: "Menu" })).not.toBeInTheDocument()
+  },
+}
+
+export const DocsMobile: Story = {
+  ...Docs,
+  globals: { viewport: { value: "mobile1", isRotated: false } },
+}

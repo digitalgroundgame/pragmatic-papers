@@ -11,7 +11,7 @@ interface FootnoteListProps {
 export const FootnoteList: React.FC<FootnoteListProps> = ({ footnotes }) => {
   if (!footnotes || !footnotes.length) return null
   return (
-    <section className="space-y-2">
+    <section className="space-y-3">
       <h2>Sources</h2>
       <ol className="list-inside list-decimal font-serif">
         {footnotes.map(({ index, note, attributionEnabled, link }) => {

@@ -4,19 +4,16 @@ import { draftMode } from "next/headers"
 import React from "react"
 
 import { EndRule } from "@/blocks/SquiggleRule/EndRule"
+import { ArticleFooter } from "@/components/ArticleFooter"
 import { ArticleSidebar } from "@/components/ArticleSidebar"
-import { AuthorList } from "@/components/Authors/AuthorList"
 import { Comments } from "@/components/Comments"
 import { CommentsUnpublished } from "@/components/Comments/Unpublished"
-import { FootnoteList } from "@/components/FootnoteList"
 import { JsonLd } from "@/components/JsonLd"
 import { LivePreviewListener } from "@/components/LivePreviewListener"
 import { PayloadRedirects } from "@/components/PayloadRedirects"
 import { RecommendedArticles } from "@/components/RecommendedArticles"
 import RichText from "@/components/RichText"
 import { TableOfContents, TableOfContentsProvider } from "@/components/TableOfContents"
-import { TopicsList } from "@/components/Topics/TopicsList"
-import { Separator } from "@/components/ui/separator"
 import { isPluginEnabled } from "@/globals/Plugins/isPluginEnabled"
 import { isExperimentEnabled } from "@/globals/SiteSettings/isExperimentEnabled"
 import { ArticleHero } from "@/heros/ArticleHero"
@@ -128,12 +125,10 @@ export default async function Article({ params: paramsPromise }: Args): Promise<
                   />
                 </MathJaxProvider>
                 <EndRule content={content} />
-                <FootnoteList footnotes={footnotes} />
-                <Separator />
-                <TopicsList topics={topics} />
-                <AuthorList aria-label="Article Authors" authors={populatedAuthors} />
-                {commentsEnabled &&
-                  (published ? <Comments articleId={article.id} /> : <CommentsUnpublished />)}
+                <ArticleFooter footnotes={footnotes} topics={topics} authors={populatedAuthors}>
+                  {commentsEnabled &&
+                    (published ? <Comments articleId={article.id} /> : <CommentsUnpublished />)}
+                </ArticleFooter>
               </div>
             </div>
           </TableOfContentsProvider>

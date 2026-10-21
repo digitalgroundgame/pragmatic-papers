@@ -178,7 +178,6 @@ export interface Config {
     merch: Merch;
     users: User;
     webhooks: Webhook;
-    'embed-snapshots': EmbedSnapshot;
     categories: Category;
     search: Search;
     redirects: Redirect;
@@ -212,7 +211,6 @@ export interface Config {
     merch: MerchSelect<false> | MerchSelect<true>;
     users: UsersSelect<false> | UsersSelect<true>;
     webhooks: WebhooksSelect<false> | WebhooksSelect<true>;
-    'embed-snapshots': EmbedSnapshotsSelect<false> | EmbedSnapshotsSelect<true>;
     categories: CategoriesSelect<false> | CategoriesSelect<true>;
     search: SearchSelect<false> | SearchSelect<true>;
     redirects: RedirectsSelect<false> | RedirectsSelect<true>;
@@ -265,7 +263,6 @@ export interface Config {
       updateRecommendations: TaskUpdateRecommendations;
       syncShopifyProducts: TaskSyncShopifyProducts;
       syncInteractiveData: TaskSyncInteractiveData;
-      refreshEmbedSnapshots: TaskRefreshEmbedSnapshots;
       schedulePublish: TaskSchedulePublish;
       inline: {
         input: unknown;
@@ -1399,38 +1396,6 @@ export interface Webhook {
   createdAt: string;
 }
 /**
- * Refreshed copies of the social posts articles embed. Written by a daily job.
- *
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "embed-snapshots".
- */
-export interface EmbedSnapshot {
-  id: number;
-  key: string;
-  url: string;
-  platform: 'bluesky' | 'reddit' | 'tiktok' | 'twitter' | 'youtube';
-  hideMedia?: boolean | null;
-  hideThread?: boolean | null;
-  snapshot?: SocialEmbedSnapshot;
-  updatedAt: string;
-  createdAt: string;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "SocialEmbedSnapshot".
- */
-export interface SocialEmbedSnapshot {
-  status?: ('ok' | 'not_found' | 'forbidden' | 'error' | 'timeout' | 'aborted' | 'invalid_oembed_response') | null;
-  fetchedAt?: string | null;
-  providerName?: string | null;
-  providerURL?: string | null;
-  authorName?: string | null;
-  authorURL?: string | null;
-  title?: string | null;
-  html?: string | null;
-  thumbnailURL?: string | null;
-}
-/**
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "categories".
  */
@@ -1497,7 +1462,7 @@ export interface Search {
 export interface Redirect {
   id: number;
   /**
-   * The old path, starting with a slash, e.g. /articles/old-slug.
+   * You will need to rebuild the website when changing this field.
    */
   from: string;
   to?: {
@@ -1718,12 +1683,7 @@ export interface PayloadJob {
         executedAt: string;
         completedAt: string;
         taskSlug:
-          | 'inline'
-          | 'updateRecommendations'
-          | 'syncShopifyProducts'
-          | 'syncInteractiveData'
-          | 'refreshEmbedSnapshots'
-          | 'schedulePublish';
+          'inline' | 'updateRecommendations' | 'syncShopifyProducts' | 'syncInteractiveData' | 'schedulePublish';
         taskID: string;
         input?:
           | {
@@ -1757,15 +1717,7 @@ export interface PayloadJob {
       }[]
     | null;
   taskSlug?:
-    | (
-        | 'inline'
-        | 'updateRecommendations'
-        | 'syncShopifyProducts'
-        | 'syncInteractiveData'
-        | 'refreshEmbedSnapshots'
-        | 'schedulePublish'
-      )
-    | null;
+    ('inline' | 'updateRecommendations' | 'syncShopifyProducts' | 'syncInteractiveData' | 'schedulePublish') | null;
   queue?: string | null;
   waitUntil?: string | null;
   processing?: boolean | null;
@@ -1831,10 +1783,6 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'webhooks';
         value: number | Webhook;
-      } | null)
-    | ({
-        relationTo: 'embed-snapshots';
-        value: number | EmbedSnapshot;
       } | null)
     | ({
         relationTo: 'categories';
@@ -2476,35 +2424,6 @@ export interface WebhooksSelect<T extends boolean = true> {
       };
   updatedAt?: T;
   createdAt?: T;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "embed-snapshots_select".
- */
-export interface EmbedSnapshotsSelect<T extends boolean = true> {
-  key?: T;
-  url?: T;
-  platform?: T;
-  hideMedia?: T;
-  hideThread?: T;
-  snapshot?: T | SocialEmbedSnapshotSelect<T>;
-  updatedAt?: T;
-  createdAt?: T;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "SocialEmbedSnapshot_select".
- */
-export interface SocialEmbedSnapshotSelect<T extends boolean = true> {
-  status?: T;
-  fetchedAt?: T;
-  providerName?: T;
-  providerURL?: T;
-  authorName?: T;
-  authorURL?: T;
-  title?: T;
-  html?: T;
-  thumbnailURL?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -3345,18 +3264,6 @@ export interface TaskSyncInteractiveData {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "TaskRefreshEmbedSnapshots".
- */
-export interface TaskRefreshEmbedSnapshots {
-  input?: unknown;
-  output: {
-    refreshed: number;
-    fresh: number;
-    failed: number;
-  };
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "TaskSchedulePublish".
  */
 export interface TaskSchedulePublish {
@@ -3530,6 +3437,21 @@ export interface SquiggleRuleBlock {
   id?: string | null;
   blockName?: string | null;
   blockType: 'squiggleRule';
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "SocialEmbedSnapshot".
+ */
+export interface SocialEmbedSnapshot {
+  status?: ('ok' | 'not_found' | 'forbidden' | 'error' | 'timeout' | 'aborted' | 'invalid_oembed_response') | null;
+  fetchedAt?: string | null;
+  providerName?: string | null;
+  providerURL?: string | null;
+  authorName?: string | null;
+  authorURL?: string | null;
+  title?: string | null;
+  html?: string | null;
+  thumbnailURL?: string | null;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema

@@ -4,30 +4,25 @@ import { RedditEmbedBlock } from "@/blocks/SocialEmbed/embeds/RedditEmbed"
 import { TikTokEmbedBlock } from "@/blocks/SocialEmbed/embeds/TikTokEmbed"
 import { TwitterEmbedBlock } from "@/blocks/SocialEmbed/embeds/TwitterEmbed"
 import { YouTubeEmbedBlock } from "@/blocks/SocialEmbed/embeds/YouTubeEmbed"
-import { findRefreshedSnapshot } from "@/blocks/SocialEmbed/helpers/refreshedSnapshot"
-import { newestSnapshot } from "@/blocks/SocialEmbed/helpers/snapshotFreshness"
 import type { SocialEmbedBlock as SocialEmbedBlockProps } from "@/payload-types"
 import React from "react"
 
 /**
- * Renders the newer of the snapshot saved with the article and the one the daily
- * `refreshEmbedSnapshots` job fetched since, so a post deleted after the article was published
- * stops loading the platform's script.
+ * Renders the snapshot saved with the article, however old. Rendering never writes: the
+ * snapshot is fetched when the article is saved (`fetchSnapshot`).
  */
-export async function SocialEmbedBlock(props: SocialEmbedBlockProps): Promise<React.ReactNode> {
-  const snapshot = newestSnapshot(props.snapshot, await findRefreshedSnapshot(props))
-
+export function SocialEmbedBlock(props: SocialEmbedBlockProps): React.ReactNode {
   switch (props.platform) {
     case "bluesky":
-      return <BlueskyEmbedBlock {...props} snapshot={snapshot} />
+      return <BlueskyEmbedBlock {...props} />
     case "reddit":
-      return <RedditEmbedBlock {...props} snapshot={snapshot} />
+      return <RedditEmbedBlock {...props} />
     case "tiktok":
-      return <TikTokEmbedBlock {...props} snapshot={snapshot} />
+      return <TikTokEmbedBlock {...props} />
     case "twitter":
-      return <TwitterEmbedBlock {...props} snapshot={snapshot} />
+      return <TwitterEmbedBlock {...props} />
     case "youtube":
-      return <YouTubeEmbedBlock {...props} snapshot={snapshot} />
+      return <YouTubeEmbedBlock {...props} />
     default:
       return (
         <EmbedError

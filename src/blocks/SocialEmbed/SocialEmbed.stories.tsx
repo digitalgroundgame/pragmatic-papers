@@ -1,14 +1,11 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite"
-import { expect, mocked, within } from "storybook/test"
+import { expect, within } from "storybook/test"
 
-import type { EmbedSnapshot, SocialEmbedSnapshot } from "@/payload-types"
-import { getPayloadClient } from "@/data/payload"
+import type { SocialEmbedSnapshot } from "@/payload-types"
 import { FeedHTML } from "@/stories/FeedHTML"
-import { createFakePayload } from "@/stories/fixtures/payload"
 import { socialEmbedBlock } from "@/stories/fixtures/blocks"
 
 import { SocialEmbedBlock } from "./Component"
-import { embedKey } from "./helpers/embedKey"
 import { socialEmbedToHTML } from "./converters"
 
 const fetchedAt = new Date().toISOString()
@@ -27,9 +24,6 @@ const meta = {
   title: "Blocks/SocialEmbed",
   component: SocialEmbedBlock,
   args: socialEmbedBlock,
-  beforeEach: () => {
-    mocked(getPayloadClient).mockResolvedValue(createFakePayload())
-  },
 } satisfies Meta<typeof SocialEmbedBlock>
 
 export default meta
@@ -79,42 +73,6 @@ export const Unavailable: Story = {
       "href",
       "https://www.youtube.com/watch?v=gone",
     )
-  },
-}
-
-const goneVideo = { platform: "youtube" as const, url: "https://www.youtube.com/watch?v=removed" }
-
-const goneVideoRefresh: EmbedSnapshot = {
-  id: 1,
-  key: embedKey(goneVideo),
-  ...goneVideo,
-  snapshot: { status: "not_found", fetchedAt: "2026-03-01T00:00:00.000Z" },
-  createdAt: "2026-03-01T00:00:00.000Z",
-  updatedAt: "2026-03-01T00:00:00.000Z",
-}
-
-/**
- * The article saved the video while it was up; the daily refresh since found it removed. The
- * page shows the refresh, without the article being rewritten.
- */
-export const RefreshedSnapshot: Story = {
-  args: {
-    ...goneVideo,
-    snapshot: snapshot({ status: "ok", html: youtubeHtml, fetchedAt: "2026-01-01T00:00:00.000Z" }),
-  },
-  beforeEach: () => {
-    mocked(getPayloadClient).mockResolvedValue(
-      createFakePayload({
-        collections: {
-          "embed-snapshots": [goneVideoRefresh],
-        },
-      }),
-    )
-  },
-  play: async ({ canvasElement }) => {
-    const alert = await within(canvasElement).findByRole("alert")
-    await expect(alert).toHaveTextContent("This video is unavailable.")
-    await expect(canvasElement.querySelector("iframe")).not.toBeInTheDocument()
   },
 }
 

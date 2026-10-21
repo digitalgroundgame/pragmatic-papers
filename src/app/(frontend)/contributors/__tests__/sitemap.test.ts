@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 const { find } = vi.hoisted(() => ({ find: vi.fn() }))
 vi.mock("@/data/payload", () => ({ getPayloadClient: async () => ({ find }) }))
 
+import { MAX_SITEMAP_ENTRIES } from "../../(sitemaps)/sitemaps"
 import sitemap from "../sitemap"
 
 const SITE_URL = "https://pragmaticpapers.com"
@@ -29,6 +30,14 @@ describe("/contributors/sitemap.xml", () => {
         },
         select: { slug: true, updatedAt: true },
       }),
+    )
+  })
+
+  it("asks for as many authors as fit beside the index page in one sitemap", async () => {
+    find.mockResolvedValue({ docs: [] })
+    await sitemap()
+    expect(find).toHaveBeenCalledWith(
+      expect.objectContaining({ limit: MAX_SITEMAP_ENTRIES - 1, pagination: false }),
     )
   })
 

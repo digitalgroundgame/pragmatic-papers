@@ -40,6 +40,8 @@ describe("queryPublishedDocs", () => {
         draft: false,
         overrideAccess: false,
         sort: "-publishedAt",
+        // Every doc: the tree is built from this list.
+        limit: 0,
         select: expect.not.objectContaining({ content: true }),
       }),
     )

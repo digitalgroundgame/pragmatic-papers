@@ -7,6 +7,9 @@ import { getSiteURL } from "@/utilities/getURL"
 // Google News reads only articles from the last two days, and asks that older ones leave the
 // news sitemap: https://developers.google.com/search/docs/crawling-indexing/sitemaps/news-sitemap
 const NEWS_WINDOW_MS = 2 * 24 * 60 * 60 * 1000
+// Google News reads at most 1,000 `news:news` entries from one sitemap (same page). Newest
+// first, so a busy two days keeps the latest.
+const MAX_NEWS_ENTRIES = 1000
 
 const getNewsSitemap = unstable_cache(
   async () => {
@@ -18,7 +21,7 @@ const getNewsSitemap = unstable_cache(
       overrideAccess: false,
       draft: false,
       depth: 0,
-      limit: 1000,
+      limit: MAX_NEWS_ENTRIES,
       pagination: false,
       sort: "-publishedAt",
       where: {

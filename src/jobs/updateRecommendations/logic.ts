@@ -233,7 +233,7 @@ export async function buildCandidatesFromDB(
   const articles = await payload.find({
     collection: "articles",
     draft: false,
-    limit: 1000,
+    limit: 0,
     pagination: false,
     overrideAccess: true,
     select: {
@@ -371,7 +371,7 @@ export async function seedRandomRankings(payload: Payload): Promise<number> {
   const articles = await payload.find({
     collection: "articles",
     draft: false,
-    limit: 1000,
+    limit: 0,
     pagination: false,
     overrideAccess: true,
     select: { slug: true, title: true },

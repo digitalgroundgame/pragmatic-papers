@@ -12,7 +12,9 @@ const findPublishedDocs = async () => {
     collection: DOCS_SLUG,
     depth: 1,
     draft: false,
-    limit: 1000,
+    // Every doc: the tree, the sidebar and the sitemap are built from this list. Payload applies
+    // `limit` even with `pagination: false`; 0 lifts it.
+    limit: 0,
     overrideAccess: false,
     pagination: false,
     sort: "-publishedAt",

@@ -1,10 +1,29 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite"
 import { expect, within } from "storybook/test"
 
+import { AuthorList } from "@/components/Authors/AuthorList"
 import { CommentsUnpublished } from "@/components/Comments/Unpublished"
+import { FootnoteList } from "@/components/FootnoteList"
+import { TopicsList } from "@/components/Topics/TopicsList"
+import { Separator } from "@/components/ui/separator"
+import type { FootnotesField } from "@/payload-types"
 import { authors, topics } from "@/stories/fixtures/docs"
 
 import { ArticleFooter } from "."
+
+const footnotes: FootnotesField = [
+  {
+    index: 1,
+    note: "Certified results, Jackson County Board of Election Commissioners.",
+    attributionEnabled: true,
+    link: { type: "custom", url: "https://example.com/results" },
+  },
+  {
+    index: 2,
+    note: "Turnout is ballots cast over registered voters on election day.",
+    attributionEnabled: false,
+  },
+]
 
 const meta = {
   title: "Components/ArticleFooter",
@@ -17,22 +36,17 @@ const meta = {
     ),
   ],
   args: {
-    footnotes: [
-      {
-        index: 1,
-        note: "Certified results, Jackson County Board of Election Commissioners.",
-        attributionEnabled: true,
-        link: { type: "custom", url: "https://example.com/results" },
-      },
-      {
-        index: 2,
-        note: "Turnout is ballots cast over registered voters on election day.",
-        attributionEnabled: false,
-      },
-    ],
-    topics,
-    authors: authors.slice(0, 2),
-    children: <CommentsUnpublished />,
+    children: (
+      <>
+        <FootnoteList footnotes={footnotes} />
+        <div className="space-y-4">
+          <Separator />
+          <TopicsList topics={topics} label="Topics:" />
+        </div>
+        <AuthorList aria-label="Article Authors" authors={authors.slice(0, 2)} />
+        <CommentsUnpublished />
+      </>
+    ),
   },
 } satisfies Meta<typeof ArticleFooter>
 
@@ -71,7 +85,19 @@ export const Default: Story = {
 
 /** Without sources or topics, the authors and comments keep their spacing. */
 export const AuthorsOnly: Story = {
-  args: { footnotes: [], topics: [] },
+  args: {
+    children: (
+      <>
+        <FootnoteList footnotes={[]} />
+        <div className="space-y-4">
+          <Separator />
+          <TopicsList topics={[]} label="Topics:" />
+        </div>
+        <AuthorList aria-label="Article Authors" authors={authors.slice(0, 2)} />
+        <CommentsUnpublished />
+      </>
+    ),
+  },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     await expect(canvas.queryByRole("heading", { name: "Sources" })).not.toBeInTheDocument()

@@ -51,8 +51,10 @@ export async function up({ db, payload, req }: MigrateUpArgs): Promise<void> {
   FROM "docs" "d" WHERE "_docs_v"."parent_id" = "d"."id";
 
   INSERT INTO "_docs_v" ("parent_id", "version_title", "version_slug", "version_generate_slug",
-    "version__order", "version_parent_id", "version_source_hash", "version__status", "latest", "autosave")
-  SELECT "id", "title", "slug", false, "_order", "parent_id", "source_hash", 'draft', true, false
+    "version__order", "version_parent_id", "version_source_hash", "version__status",
+    "version_created_at", "version_updated_at", "latest", "autosave")
+  SELECT "id", "title", "slug", false, "_order", "parent_id", "source_hash", 'draft',
+    "created_at", "updated_at", true, false
   FROM "docs" WHERE "source_hash" = 'doc-sections';
 
   INSERT INTO "payload_kv" ("key", "data")

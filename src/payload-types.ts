@@ -183,7 +183,6 @@ export interface Config {
     redirects: Redirect;
     forms: Form;
     'form-submissions': FormSubmission;
-    'doc-sections': DocSection;
     docs: Doc;
     comments: Comment;
     'comment-violations': CommentViolation;
@@ -217,7 +216,6 @@ export interface Config {
     redirects: RedirectsSelect<false> | RedirectsSelect<true>;
     forms: FormsSelect<false> | FormsSelect<true>;
     'form-submissions': FormSubmissionsSelect<false> | FormSubmissionsSelect<true>;
-    'doc-sections': DocSectionsSelect<false> | DocSectionsSelect<true>;
     docs: DocsSelect<false> | DocsSelect<true>;
     comments: CommentsSelect<false> | CommentsSelect<true>;
     'comment-violations': CommentViolationsSelect<false> | CommentViolationsSelect<true>;
@@ -1505,41 +1503,12 @@ export interface FormSubmission {
   createdAt: string;
 }
 /**
- * The docs sidebar's areas, and the sections under each. Drag them into the order the sidebar shows. Empty ones stay out of the sidebar.
- *
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "doc-sections".
- */
-export interface DocSection {
-  id: number;
-  _order?: string | null;
-  title: string;
-  /**
-   * Leave empty to make this an area, a heading in the sidebar.
-   */
-  parent?: (number | null) | DocSection;
-  /**
-   * When enabled, the slug will auto-generate from the title field on save and autosave.
-   */
-  generateSlug?: boolean | null;
-  slug: string;
-  breadcrumbs?:
-    | {
-        doc?: (number | null) | DocSection;
-        url?: string | null;
-        label?: string | null;
-        id?: string | null;
-      }[]
-    | null;
-  updatedAt: string;
-  createdAt: string;
-}
-/**
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "docs".
  */
 export interface Doc {
   id: number;
+  _order?: string | null;
   title: string;
   /**
    * A short name for the docs sidebar, like "Footnotes". Left empty, the sidebar shows the title.
@@ -1577,10 +1546,6 @@ export interface Doc {
    */
   revisedAt?: string | null;
   /**
-   * Where the doc sits in the sidebar at /docs. Left empty, it's under Other. Help → Sections lists them.
-   */
-  section?: (number | null) | DocSection;
-  /**
    * Who the help bell tells. Empty means all staff; admins see every doc.
    */
   audience?: ('admin' | 'chief-editor' | 'editor' | 'writer' | 'narrator')[] | null;
@@ -1601,6 +1566,15 @@ export interface Doc {
    */
   generateSlug?: boolean | null;
   slug: string;
+  parent?: (number | null) | Doc;
+  breadcrumbs?:
+    | {
+        doc?: (number | null) | Doc;
+        url?: string | null;
+        label?: string | null;
+        id?: string | null;
+      }[]
+    | null;
   updatedAt: string;
   createdAt: string;
   _status?: ('draft' | 'published') | null;
@@ -1829,10 +1803,6 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'form-submissions';
         value: number | FormSubmission;
-      } | null)
-    | ({
-        relationTo: 'doc-sections';
-        value: number | DocSection;
       } | null)
     | ({
         relationTo: 'docs';
@@ -2659,14 +2629,24 @@ export interface FormSubmissionsSelect<T extends boolean = true> {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "doc-sections_select".
+ * via the `definition` "docs_select".
  */
-export interface DocSectionsSelect<T extends boolean = true> {
+export interface DocsSelect<T extends boolean = true> {
   _order?: T;
   title?: T;
-  parent?: T;
+  navTitle?: T;
+  summary?: T;
+  heroImage?: T;
+  content?: T;
+  publishedAt?: T;
+  revisedAt?: T;
+  audience?: T;
+  tour?: T;
+  showTableOfContents?: T;
+  sourceHash?: T;
   generateSlug?: T;
   slug?: T;
+  parent?: T;
   breadcrumbs?:
     | T
     | {
@@ -2675,28 +2655,6 @@ export interface DocSectionsSelect<T extends boolean = true> {
         label?: T;
         id?: T;
       };
-  updatedAt?: T;
-  createdAt?: T;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "docs_select".
- */
-export interface DocsSelect<T extends boolean = true> {
-  title?: T;
-  navTitle?: T;
-  summary?: T;
-  heroImage?: T;
-  content?: T;
-  publishedAt?: T;
-  revisedAt?: T;
-  section?: T;
-  audience?: T;
-  tour?: T;
-  showTableOfContents?: T;
-  sourceHash?: T;
-  generateSlug?: T;
-  slug?: T;
   updatedAt?: T;
   createdAt?: T;
   _status?: T;

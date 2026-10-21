@@ -1,7 +1,7 @@
 import { type Role, STAFF_ROLES } from "@/access/roles"
 
 /**
- * A doc's file in the repo, `src/docs/<section>/<slug>.md`: front matter between `---` lines,
+ * A doc's file in the repo, `src/docs/<area>/<section>/<slug>.md`: front matter between `---` lines,
  * then the body in Markdown. Only a flat subset of YAML is read (one `key: value` per line, a
  * string optionally in JSON quotes, `[a, b]` for a list), so GitHub still shows it as a table.
  */
@@ -26,6 +26,12 @@ export interface DocFrontMatter {
   showTableOfContents?: boolean
   /** The key of the guided tour the doc's Show me starts (see `TOURS`). */
   tour?: string
+  /**
+   * Where a site that doesn't have the doc yet puts it among its siblings: lowest first, then
+   * by slug. Areas and sections give one; docs usually leave it out and sit after them by slug.
+   * Editors reorder by dragging once it's seeded.
+   */
+  order?: number
 }
 
 export interface DocFile {
@@ -44,6 +50,7 @@ const KEYS = [
   "audience",
   "showTableOfContents",
   "tour",
+  "order",
 ] as const satisfies (keyof DocFrontMatter)[]
 
 const REQUIRED = ["title", "summary", "publishedAt"] as const
@@ -98,7 +105,9 @@ export function parseDocFile(source: string, name: string): DocFile {
     if (!(KEYS as readonly string[]).includes(key)) {
       throw new Error(`${name}: unknown front matter key "${key}" (known: ${KEYS.join(", ")})`)
     }
-    meta[key] = parseValue(line.slice(colon + 1).trim())
+    const raw = line.slice(colon + 1).trim()
+    // Only `order` is a number: a title like 1984 stays text.
+    meta[key] = key === "order" && /^-?\d+$/.test(raw) ? Number(raw) : parseValue(raw)
   }
 
   for (const key of REQUIRED) {
@@ -123,6 +132,9 @@ export function parseDocFile(source: string, name: string): DocFile {
   if (meta.showTableOfContents !== undefined && typeof meta.showTableOfContents !== "boolean") {
     throw new Error(`${name}: "showTableOfContents" should be true or false`)
   }
+  if (meta.order !== undefined && !Number.isInteger(meta.order)) {
+    throw new Error(`${name}: "order" should be a whole number, e.g. 1`)
+  }
   if (meta.tour !== undefined && typeof meta.tour !== "string") {
     throw new Error(`${name}: "tour" should be a tour's key, e.g. articles`)
   }
@@ -131,9 +143,9 @@ export function parseDocFile(source: string, name: string): DocFile {
 }
 
 /** Quotes a string only where the flat YAML above would misread it. */
-const formatValue = (value: string | boolean | string[]): string => {
+const formatValue = (value: string | number | boolean | string[]): string => {
   if (Array.isArray(value)) return `[${value.join(", ")}]`
-  if (typeof value === "boolean") return String(value)
+  if (typeof value === "boolean" || typeof value === "number") return String(value)
   const plain =
     value === value.trim() &&
     !/^["'[\]{}>|*&!%@`#,?:-]/.test(value) &&

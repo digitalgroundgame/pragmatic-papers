@@ -89,13 +89,6 @@ export const seed = async (
         await payload.delete({ collection: "interactive-snapshots", context, where: {} })
         await payload.delete({ collection: "interactives", context, where: {} })
         await payload.delete({ collection: "docs", context, where: {} })
-        // Sections before their areas, which can't be deleted while they have any.
-        await payload.delete({
-          collection: "doc-sections",
-          context,
-          where: { parent: { exists: true } },
-        })
-        await payload.delete({ collection: "doc-sections", context, where: {} })
         // Last, once the content that uses it is gone. The flag also clears media
         // that content the seed doesn't own (a real user's profile image) still uses,
         // which the delete would otherwise skip without saying so.

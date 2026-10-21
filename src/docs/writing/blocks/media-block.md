@@ -8,7 +8,7 @@ heroAlt: A Media block showing a landscape image with its caption
 audience: [writer, editor]
 ---
 
-The **Media** block shows a single image or video. For several at once, use [Media Collage](/docs/media-collage).
+The **Media** block shows a single image or video. For several at once, use [Media Collage](/docs/writing/blocks/media-collage).
 
 ## Adding one
 
@@ -24,4 +24,4 @@ Insert **Media** (type `/media` in the editor) and choose a file, or upload a ne
 
 A photo's **Alt** text and **Caption** belong to the file in Media, not to the block, so every place it's used shows the same ones. Write alt text for someone who can't see the photo: what's in it and why it matters here.
 
-Need a photo? You can [search Unsplash](/docs/unsplash-photos) from any upload.
+Need a photo? You can [search Unsplash](/docs/writing/media/unsplash-photos) from any upload.

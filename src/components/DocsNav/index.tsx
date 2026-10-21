@@ -8,7 +8,14 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion"
-import { type DocsArea, docNavTitle, HOME_DOC_SLUG, WHATS_NEW_PATH } from "@/plugins/docs/sections"
+import {
+  docLineage,
+  docNavTitle,
+  type DocsNode,
+  DOCS_PATH,
+  HOME_DOC_SLUG,
+  WHATS_NEW_PATH,
+} from "@/plugins/docs/sections"
 import { cn } from "@/utilities/utils"
 
 export { DocPager } from "./DocPager"
@@ -20,22 +27,24 @@ export interface DocsNavItem {
 }
 
 interface DocsNavProps {
-  /** The docs under their areas and sections (`groupDocs`). */
-  areas: DocsArea<DocsNavItem>[]
+  /** The published docs as a tree (`docsTree`): areas, their sections, and their docs. */
+  tree: DocsNode<DocsNavItem>[]
   /** The open page: a doc's slug, the home doc's, or What's new's path. */
   current?: string
   className?: string
 }
 
-/** A link at the top of the sidebar, above the areas. */
+/** A link at the top of the sidebar, above the areas, or a doc at the top of the tree. */
 function TopLink({
   href,
   active,
   children,
+  className,
 }: {
   href: string
   active: boolean
   children: React.ReactNode
+  className?: string
 }): React.ReactNode {
   return (
     <HoverPrefetchLink
@@ -44,6 +53,7 @@ function TopLink({
       className={cn(
         "block py-1 font-bold no-underline underline-offset-4 hover:underline",
         active ? "text-foreground" : "text-muted-foreground hover:text-foreground",
+        className,
       )}
     >
       {children}
@@ -51,82 +61,162 @@ function TopLink({
   )
 }
 
+/** A section's docs, each indented under its own when docs nest deeper. */
+function DocLinks({
+  nodes,
+  current,
+  labelledBy,
+  overview,
+}: {
+  nodes: DocsNode<DocsNavItem>[]
+  current?: string
+  labelledBy?: string
+  /** The section's own page, linked first. */
+  overview?: DocsNode<DocsNavItem>
+}): React.ReactNode {
+  const link = (node: DocsNode<DocsNavItem>, label: React.ReactNode) => {
+    const active = node.doc.slug === current
+    return (
+      <HoverPrefetchLink
+        href={node.path}
+        aria-current={active ? "page" : undefined}
+        className={cn(
+          "-ml-0.5 block border-l-2 py-1.5 pl-3 leading-snug underline-offset-4 hover:underline",
+          active
+            ? "border-brand text-foreground font-bold"
+            : "text-foreground hover:text-foreground/80 border-transparent",
+        )}
+      >
+        {label}
+      </HoverPrefetchLink>
+    )
+  }
+  return (
+    <ul aria-labelledby={labelledBy} className="border-border ml-0.5 border-l-2">
+      {overview && <li>{link(overview, "Overview")}</li>}
+      {nodes.map((node) => (
+        <li key={node.path}>
+          {link(node, docNavTitle(node.doc))}
+          {node.children.length > 0 && (
+            <div className="pl-3">
+              <DocLinks nodes={node.children} current={current} />
+            </div>
+          )}
+        </li>
+      ))}
+    </ul>
+  )
+}
+
+/** An area: its name, linking to its page, over its sections, each of which folds. */
+function DocsArea({
+  area,
+  current,
+  openSection,
+}: {
+  area: DocsNode<DocsNavItem>
+  current?: string
+  openSection?: string
+}): React.ReactNode {
+  const key = area.doc.slug ?? area.path
+  const sections = area.children.filter((node) => node.children.length)
+  const docs = area.children.filter((node) => !node.children.length)
+  return (
+    <div className="mt-6">
+      <TopLink
+        href={area.path}
+        active={area.doc.slug === current}
+        className="text-foreground hover:text-foreground text-lg"
+      >
+        <span id={`docs-nav-area-${key}`}>{docNavTitle(area.doc)}</span>
+      </TopLink>
+      {docs.length > 0 && (
+        <div className="mt-2">
+          <DocLinks nodes={docs} current={current} labelledBy={`docs-nav-area-${key}`} />
+        </div>
+      )}
+      {sections.length > 0 && (
+        <Accordion
+          multiple
+          // Folded sections stay in the page, so find-in-page and search engines see every doc.
+          hiddenUntilFound
+          defaultValue={
+            openSection && sections.some((section) => section.path === openSection)
+              ? [openSection]
+              : []
+          }
+          className="mt-2"
+        >
+          {sections.map((section) => {
+            const id = `docs-nav-${section.doc.slug ?? section.path}`
+            const isCurrent = docLineage(section.children, current ?? "").length > 0
+            return (
+              <AccordionItem
+                key={section.path}
+                value={section.path}
+                className="not-last:border-b-0"
+              >
+                <AccordionTrigger
+                  id={id}
+                  className={cn(
+                    "hover:text-foreground py-2 font-bold tracking-wider uppercase hover:no-underline",
+                    // The open doc's section reads as hovered, so the reader sees where they are.
+                    isCurrent || section.doc.slug === current
+                      ? "text-foreground"
+                      : "text-muted-foreground",
+                  )}
+                >
+                  {docNavTitle(section.doc)}
+                </AccordionTrigger>
+                <AccordionContent className="pb-2 text-base [&_a]:no-underline">
+                  <DocLinks
+                    nodes={section.children}
+                    current={current}
+                    labelledBy={id}
+                    overview={section}
+                  />
+                </AccordionContent>
+              </AccordionItem>
+            )
+          })}
+        </Accordion>
+      )}
+    </div>
+  )
+}
+
 /**
- * Home and What's new, then every doc under its area and section, like a wiki's sidebar; each
- * section folds.
+ * Home and What's new, then the docs' tree, like a wiki's sidebar: each area's name links to its
+ * page, over its sections, which fold, each opening on its own page (Overview) and its docs. A
+ * doc at the top of the tree with nothing under it is a link of its own.
  */
-export function DocsNav({ areas, current, className }: DocsNavProps): React.ReactNode {
+export function DocsNav({ tree, current, className }: DocsNavProps): React.ReactNode {
   // Only one section starts open: the open doc's, or the first elsewhere.
-  const sections = areas.flatMap((area) => area.sections)
-  const currentSection = sections.find((section) =>
-    section.docs.some((doc) => doc.slug === current),
-  )?.key
-  const openSection = currentSection ?? sections[0]?.key
+  const sections = tree.flatMap((area) => area.children.filter((node) => node.children.length))
+  const lineage = current ? docLineage(tree, current) : []
+  const openSection = (lineage[1]?.children.length ? lineage[1] : sections[0])?.path
   return (
     <nav aria-label="Docs" className={cn("font-sans", className)}>
-      <TopLink href="/docs" active={current === HOME_DOC_SLUG}>
+      <TopLink href={DOCS_PATH} active={current === HOME_DOC_SLUG}>
         Home
       </TopLink>
       <TopLink href={WHATS_NEW_PATH} active={current === WHATS_NEW_PATH}>
         What&apos;s new
       </TopLink>
-      {areas.map((area) => (
-        <div key={area.key} className="mt-6">
-          <p id={`docs-nav-area-${area.key}`} className="text-foreground text-lg font-bold">
-            {area.title}
-          </p>
-          <Accordion
-            multiple
-            // Folded sections stay in the page, so find-in-page and search engines see every doc.
-            hiddenUntilFound
-            defaultValue={
-              area.sections.some((section) => section.key === openSection) ? [openSection] : []
-            }
-            className="mt-2"
+      {tree.map((node) =>
+        node.children.length ? (
+          <DocsArea key={node.path} area={node} current={current} openSection={openSection} />
+        ) : (
+          <TopLink
+            key={node.path}
+            href={node.path}
+            active={node.doc.slug === current}
+            className="mt-6"
           >
-            {area.sections.map((section) => (
-              <AccordionItem key={section.key} value={section.key} className="not-last:border-b-0">
-                <AccordionTrigger
-                  id={`docs-nav-${section.key}`}
-                  className={cn(
-                    "hover:text-foreground py-2 font-bold tracking-wider uppercase hover:no-underline",
-                    // The open doc's section reads as hovered, so the reader sees where they are.
-                    section.key === currentSection ? "text-foreground" : "text-muted-foreground",
-                  )}
-                >
-                  {section.title}
-                </AccordionTrigger>
-                <AccordionContent className="pb-2 text-base [&_a]:no-underline">
-                  <ul
-                    aria-labelledby={`docs-nav-${section.key}`}
-                    className="border-border ml-0.5 border-l-2"
-                  >
-                    {section.docs.map((doc) => {
-                      const active = doc.slug === current
-                      return (
-                        <li key={doc.slug}>
-                          <HoverPrefetchLink
-                            href={`/docs/${doc.slug}`}
-                            aria-current={active ? "page" : undefined}
-                            className={cn(
-                              "-ml-0.5 block border-l-2 py-1.5 pl-3 leading-snug underline-offset-4 hover:underline",
-                              active
-                                ? "border-brand text-foreground font-bold"
-                                : "text-foreground hover:text-foreground/80 border-transparent",
-                            )}
-                          >
-                            {docNavTitle(doc)}
-                          </HoverPrefetchLink>
-                        </li>
-                      )
-                    })}
-                  </ul>
-                </AccordionContent>
-              </AccordionItem>
-            ))}
-          </Accordion>
-        </div>
-      ))}
+            {docNavTitle(node.doc)}
+          </TopLink>
+        ),
+      )}
     </nav>
   )
 }

@@ -29,7 +29,7 @@ The link has to be a bsky.app or x.com post link; anything else is refused with 
 
 ## Choosing whose posts run
 
-Admins choose the YouTube channels, Bluesky accounts and X accounts in **System → Integrations**. See [Change the header, footer and other site-wide settings](/docs/globals).
+Admins choose the YouTube channels, Bluesky accounts and X accounts in **System → Integrations**. See [Change the header, footer and other site-wide settings](/docs/editing/site-settings/globals).
 
 ## Where it's switched on
 

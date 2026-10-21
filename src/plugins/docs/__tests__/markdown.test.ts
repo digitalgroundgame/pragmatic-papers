@@ -8,7 +8,7 @@ import { describe, expect, it } from "vitest"
 
 import { formatDocFile, parseDocFile } from "../docFile"
 import { contentToMarkdown, docsEditorConfig, markdownToContent } from "../markdown"
-import { DOCS_DIR, listDocFiles } from "../syncDocs"
+import { DOCS_DIR, listDocFiles } from "../repoDocFiles"
 
 const editorConfig = docsEditorConfig(await configPromise)
 const docs = await listDocFiles()

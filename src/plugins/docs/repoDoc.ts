@@ -3,9 +3,10 @@ import { createHash } from "node:crypto"
 import type { Role } from "@/access/roles"
 
 /**
- * A repo doc as the sync reads it from `src/docs/<section>/<slug>.md` (see `docFile.ts`), with
- * its body as rich text. Media ids differ from site to site, so wherever the doc uses media it
- * holds a `MediaRef` naming a file beside it; `syncDocs` uploads it and puts the id back.
+ * A repo doc as the sync reads it from `src/docs/<area>/<section>/<slug>.md` (see
+ * `docFile.ts`), with its body as rich text. Media ids differ from site to site, so wherever the
+ * doc uses media it holds a `MediaRef` naming a file beside it; `syncDocs` uploads it and puts
+ * the id back.
  */
 export interface RepoDoc {
   title: string
@@ -18,8 +19,8 @@ export interface RepoDoc {
   revisedAt?: string
   /** A file in the doc's folder: the bell's thumbnail and the link preview's image. */
   heroImage?: MediaRef
-  /** The slug of the section it sits in at /docs (its folder); null for the home doc. */
-  section: string | null
+  /** The slug of the doc it sits under (its folder's); null at the top. */
+  parent: string | null
   audience?: Role[]
   /** Left out means shown. */
   showTableOfContents?: boolean
@@ -80,7 +81,7 @@ export const mediaFilename = (file: string, bytes: Buffer): string =>
 
 /**
  * A file's name in the repo, beside `<slug>.md`: its Media filename without what
- * `mediaFilename` added, starting with the slug so docs sharing a section folder don't collide.
+ * `mediaFilename` added, starting with the slug so docs sharing a folder don't collide.
  */
 export const repoFilename = (slug: string, filename: string): string => {
   const file = filename.replace(new RegExp(`^docs-(?:${slug}-)?[0-9a-f]{8}-`), "")
@@ -130,11 +131,23 @@ export const unpackMedia = (content: unknown, ids: Map<string, number | string>)
   })
 
 /**
- * Changes when the doc's file, its section or any file it uses does, so an unchanged doc is
- * skipped.
+ * Changes when the doc's file or any file it uses does, so an unchanged doc is skipped. Where
+ * it sits isn't part of it: that's the site's once seeded, so moving a doc in the repo offers
+ * nothing.
  */
-export const hashRepoDoc = (section: string, source: string, files: Buffer[]): string => {
-  const hash = createHash("sha256").update(`${section}\n`).update(source)
+export const hashRepoDoc = (source: string, files: Buffer[]): string => {
+  const hash = createHash("sha256").update(source)
+  for (const file of files) hash.update(file)
+  return hash.digest("hex")
+}
+
+/**
+ * The hash a site saved for a doc before docs nested, when it also covered the section folder
+ * the doc sat in (now the doc it sits under; empty for the home doc). A doc saved with it holds
+ * this copy already, so the sync records the new hash rather than offering an unchanged doc.
+ */
+export const legacyRepoDocHash = (folder: string, source: string, files: Buffer[]): string => {
+  const hash = createHash("sha256").update(`${folder}\n`).update(source)
   for (const file of files) hash.update(file)
   return hash.digest("hex")
 }

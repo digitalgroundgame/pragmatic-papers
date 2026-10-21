@@ -31,7 +31,7 @@ There are two ways in:
 
 The block opens as a small form inside the text. Fill it in; it saves with the rest of the page. Collapse it with the arrow on its title bar to get it out of the way, or remove it from its menu.
 
-A few blocks are **inline**, so they sit inside a sentence: footnotes and inline math. Type `/` mid-sentence to find them, or see [Add footnotes as you type](/docs/footnotes).
+A few blocks are **inline**, so they sit inside a sentence: footnotes and inline math. Type `/` mid-sentence to find them, or see [Add footnotes as you type](/docs/writing/articles/footnotes).
 
 ## Moving things
 

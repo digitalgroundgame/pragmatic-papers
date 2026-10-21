@@ -15,11 +15,11 @@ A page under **Pages** has a **Hero** tab for the top of the page and a **Conten
 
 - **Content**: text in columns. Choose the block's **Width** (_Narrow_, _Wide_ or _Full_), then add columns and give each a **Size** (_One Third_, _Half_, _Two Thirds_ or _Full_). Columns can hold a Call to Action, Newsletter Signup or Merch block inside the text.
 - **Call to Action**: a short message with up to two buttons, for "Subscribe", "Donate" and the like.
-- **Media**: one photo or video ([more](/docs/media-block)).
+- **Media**: one photo or video ([more](/docs/writing/blocks/media-block)).
 - **Volume View**: a list of volumes. Add **Intro Content** above it, then either show the latest from the collection (set a **Limit**) or choose **Individual Selection** and pick them.
-- **Collection Grid**: articles and volumes in a designed arrangement ([more](/docs/collection-grid)).
-- **Timeline**: dated events ([more](/docs/timeline-block)).
-- **Merch**: products from the store ([more](/docs/merch-block)).
+- **Collection Grid**: articles and volumes in a designed arrangement ([more](/docs/editing/pages-and-volumes/collection-grid)).
+- **Timeline**: dated events ([more](/docs/writing/blocks/timeline-block)).
+- **Merch**: products from the store ([more](/docs/editing/pages-and-volumes/merch-block)).
 - **Feed list**: the site's RSS feeds or its sitemaps, each with its address. The links keep themselves up to date; you write only the heading and introduction. The **Feeds and sitemaps** page (`/feeds`, linked from the footer) is made of two of these, one for the feeds and one for the sitemaps.
 - **Contributors** and **Newsletter Signup** each have their own doc.
 

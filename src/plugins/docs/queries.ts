@@ -4,7 +4,6 @@ import { unstable_cache } from "next/cache"
 import { cache } from "react"
 
 import { DOCS_SLUG } from "./collection"
-import { DOC_SECTIONS_SLUG } from "./docSections"
 import { DOCS_CACHE_TAG } from "./revalidateDoc"
 
 const findPublishedDocs = async () => {
@@ -24,7 +23,8 @@ const findPublishedDocs = async () => {
       summary: true,
       publishedAt: true,
       updatedAt: true,
-      section: true,
+      parent: true,
+      _order: true,
       audience: true,
       heroImage: true,
       tour: true,
@@ -40,8 +40,6 @@ const findPublishedDocs = async () => {
         _objectKey: true,
         sizes: { thumbnail: true },
       },
-      // The sidebar files a doc by its section's id.
-      [DOC_SECTIONS_SLUG]: { slug: true },
     },
   })
   return docs
@@ -50,25 +48,6 @@ const findPublishedDocs = async () => {
 /** Every published doc, newest first, without its content: the /docs index, its sitemap and the bell (with each hero image's thumbnail). */
 export const queryPublishedDocs = (): ReturnType<typeof findPublishedDocs> =>
   unstable_cache(findPublishedDocs, ["docs-published"], {
-    tags: [DOCS_CACHE_TAG],
-  })()
-
-const findDocSections = async () => {
-  const payload = await getPayloadClient()
-  const { docs } = await payload.find({
-    collection: DOC_SECTIONS_SLUG,
-    depth: 0,
-    limit: 1000,
-    pagination: false,
-    sort: "_order",
-    select: { title: true, slug: true, parent: true },
-  })
-  return docs
-}
-
-/** The sidebar's areas and sections, in the order editors gave them (see `groupDocs`). */
-export const queryDocSections = (): ReturnType<typeof findDocSections> =>
-  unstable_cache(findDocSections, ["doc-sections"], {
     tags: [DOCS_CACHE_TAG],
   })()
 

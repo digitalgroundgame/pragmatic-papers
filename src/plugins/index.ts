@@ -1,7 +1,7 @@
 import type { PluginSwitchName } from "@/globals/Plugins/isPluginEnabled"
 import { admin, editor } from "@/access/collections"
-import { isStaff } from "@/access/roles"
-import { revalidateRedirects } from "@/hooks/revalidateRedirects"
+import { isAdmin, isStaff } from "@/access/roles"
+import { revalidateRedirects, revalidateRedirectsDelete } from "@/hooks/revalidateRedirects"
 import { docsPlugin } from "@/plugins/docs"
 import { docsNotifications } from "@/plugins/docs/notifications"
 import { notificationsPlugin } from "@/plugins/notifications"
@@ -265,18 +265,25 @@ export const plugins: Plugin[] = [
               return {
                 ...field,
                 admin: {
-                  description: "You will need to rebuild the website when changing this field.",
+                  description: "The old path, starting with a slash, e.g. /articles/old-slug.",
                 },
               }
             }
             return field
           })
         },
+        access: {
+          create: admin,
+          update: admin,
+          delete: admin,
+        },
         hooks: {
           afterChange: [revalidateRedirects],
+          afterDelete: [revalidateRedirectsDelete],
         },
         admin: {
-          hidden: true, // TODO: Setup redirects plugin
+          group: "Site",
+          hidden: ({ user }) => !isAdmin(user as User | null),
         },
       },
     }),
@@ -285,8 +292,7 @@ export const plugins: Plugin[] = [
       manifest: {
         name: "Redirects",
         source: "@payloadcms/plugin-redirects",
-        description:
-          "Redirects from old URLs to pages, volumes and articles. Hidden in the admin until it's set up.",
+        description: "Redirects from old URLs to pages, volumes and articles.",
       },
     },
   ),

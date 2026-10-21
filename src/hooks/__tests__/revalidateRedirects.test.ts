@@ -5,7 +5,7 @@ const mockPurgeEdgeCache = vi.fn()
 vi.mock("next/cache", () => ({ revalidateTag: mockRevalidateTag }))
 vi.mock("../purgeEdgeCache", () => ({ purgeEdgeCache: mockPurgeEdgeCache }))
 
-const { revalidateRedirects } = await import("../revalidateRedirects")
+const { revalidateRedirects, revalidateRedirectsDelete } = await import("../revalidateRedirects")
 
 const mockDoc = { id: 1, slug: "test-redirect" }
 
@@ -39,5 +39,19 @@ describe("revalidateRedirects", () => {
   it("always returns doc", () => {
     expect(revalidateRedirects(makeArgs(false))).toBe(mockDoc)
     expect(revalidateRedirects(makeArgs(true))).toBe(mockDoc)
+  })
+})
+
+describe("revalidateRedirectsDelete", () => {
+  it("clears the redirects cache and the edge when a redirect is deleted", () => {
+    expect(revalidateRedirectsDelete(makeArgs(false))).toBe(mockDoc)
+    expect(mockRevalidateTag).toHaveBeenCalledWith("redirects", "max")
+    expect(mockPurgeEdgeCache).toHaveBeenCalledWith(expect.anything(), "redirect deleted")
+  })
+
+  it("does nothing when disableRevalidate is true", () => {
+    expect(revalidateRedirectsDelete(makeArgs(true))).toBe(mockDoc)
+    expect(mockRevalidateTag).not.toHaveBeenCalled()
+    expect(mockPurgeEdgeCache).not.toHaveBeenCalled()
   })
 })

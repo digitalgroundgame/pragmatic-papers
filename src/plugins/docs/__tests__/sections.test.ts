@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest"
 
 import {
   adjacentDocs,
-  docAudiences,
   docLineage,
   docPaths,
   docsInOrder,
@@ -105,27 +104,6 @@ describe("docLineage and parentIds", () => {
 
   it("names the docs others sit under", () => {
     expect([...parentIds(tree)].sort()).toEqual(["2", "3", "4", "5", "6"])
-  })
-})
-
-describe("docAudiences", () => {
-  it("gives a doc without an audience the nearest one above it", () => {
-    const withAudiences = docs.map((doc) =>
-      doc.slug === "writing"
-        ? { ...doc, audience: ["writer", "editor"] }
-        : doc.slug === "editing"
-          ? { ...doc, audience: ["editor"] }
-          : doc.slug === "topics"
-            ? { ...doc, audience: ["admin"] }
-            : doc,
-    )
-    const audiences = docAudiences(docsTree(withAudiences))
-    // Footnotes sits two levels under Writing; Experiments under Editing's Site settings.
-    expect(audiences.get("11")).toEqual(["writer", "editor"])
-    expect(audiences.get("14")).toEqual(["editor"])
-    // Its own audience wins, and a doc with none above it is for all staff.
-    expect(audiences.get("12")).toEqual(["admin"])
-    expect(docAudiences(docsTree(docs)).get("11")).toEqual([])
   })
 })
 

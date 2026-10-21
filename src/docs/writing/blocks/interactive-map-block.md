@@ -5,6 +5,7 @@ summary: Upload a pre-projected SVG to Maps, then show it in an article with eac
 publishedAt: 2026-06-15
 heroImage: interactive-map-block-hero.webp
 heroAlt: An Interactive Map block shading Missouri's congressional districts
+audience: [writer, editor]
 ---
 
 The **Interactive Map** block shows one or more maps whose regions are shaded by a value, like an election margin, with a tooltip on each region. It needs a map drawing first.

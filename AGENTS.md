@@ -206,8 +206,7 @@ keeps it under `publishedAt`), `heroImage` and `heroAlt` (1200×630, the bell's
 thumbnail, the link preview's image and the banner above the doc's title; optional,
 but give a doc one where a picture helps) and, for a
 doc only some roles need, `audience` (e.g. `[editor]`; admins and chief editors
-see every doc; a doc without one takes the nearest audience above it, so an area sets
-it once for its docs, `docAudiences`), and `order`, its place among its siblings. `audience` only decides who the bell tells: every published doc
+see every doc), and `order`, its place among its siblings. `audience` only decides who the bell tells: every published doc
 is public at /docs, as the repo is. The body is Markdown the docs editor can
 hold (headings, lists, bold, italic, inline code, links), plus pictures on a
 line of their own, `![alt](<slug>-picture.webp)`, which become Media blocks.

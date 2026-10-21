@@ -98,29 +98,6 @@ describe("docsNotifications", () => {
     expect(await titlesFor(["chief-editor"])).toEqual(["For editors", "For all staff"])
   })
 
-  it("gives a doc without an audience the one its area or section has", async () => {
-    queryPublishedDocs.mockResolvedValue([
-      {
-        id: 10,
-        slug: "editing",
-        title: "Editing",
-        summary: "e",
-        publishedAt: "2026-10-25",
-        audience: ["editor"],
-      },
-      {
-        id: 11,
-        slug: "ticker",
-        title: "Ticker",
-        summary: "t",
-        publishedAt: "2026-10-24",
-        parent: 10,
-      },
-    ])
-    expect(await titlesFor(["writer"])).toEqual([])
-    expect(await titlesFor(["editor"])).toEqual(["Ticker"])
-  })
-
   it("offers a doc's tour as Show me, and leaves out a tour that doesn't exist", async () => {
     queryPublishedDocs.mockResolvedValue([
       { ...docs[2], tour: "articles" },

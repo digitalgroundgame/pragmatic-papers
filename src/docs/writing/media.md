@@ -2,7 +2,6 @@
 title: Media
 summary: Photos and other media, from Unsplash to your own uploads, and what's using each one.
 publishedAt: 2026-10-25
-audience: [writer, narrator, editor]
 order: 4
 ---
 

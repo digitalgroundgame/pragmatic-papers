@@ -155,8 +155,7 @@ export const Docs: CollectionConfig<"docs"> = {
       options: STAFF_ROLES.map((role) => ({ label: ROLE_LABELS[role], value: role })),
       admin: {
         position: "sidebar",
-        description:
-          "Who the help bell tells. Empty means the same as the doc it sits under, or all staff at the top; admins see every doc.",
+        description: "Who the help bell tells. Empty means all staff; admins see every doc.",
       },
     },
     {

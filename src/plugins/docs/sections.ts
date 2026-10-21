@@ -137,19 +137,3 @@ export const docPaths = <T extends TreeDoc>(nodes: DocsNode<T>[]): Map<string, s
 /** The ids of the docs other docs sit under: areas and sections, which introduce their docs. */
 export const parentIds = <T extends TreeDoc>(nodes: DocsNode<T>[]): Set<string> =>
   new Set(docsInOrder(nodes).flatMap((node) => (node.children.length ? [String(node.doc.id)] : [])))
-
-/**
- * Who each doc is for, by id: its own `audience`, or, when it has none, the nearest one above it
- * in the tree. An area sets it once for the docs under it, so moving a doc to another area
- * changes who the bell tells. Empty means all staff.
- */
-export const docAudiences = <T extends TreeDoc & { audience?: readonly string[] | null }>(
-  nodes: DocsNode<T>[],
-  inherited: readonly string[] = [],
-): Map<string, readonly string[]> =>
-  new Map(
-    nodes.flatMap((node) => {
-      const audience = node.doc.audience?.length ? node.doc.audience : inherited
-      return [[String(node.doc.id), audience] as const, ...docAudiences(node.children, audience)]
-    }),
-  )

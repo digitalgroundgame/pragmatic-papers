@@ -5,6 +5,7 @@ summary: Tick "Show table of contents" and the article gets a list of its sectio
 publishedAt: 2026-09-29
 heroImage: table-of-contents-hero.webp
 heroAlt: An article's table of contents listing its sections, a map, images and a table
+audience: [writer, editor]
 ---
 
 A long article reads better with a map. The table of contents lists the article's sections, links to each one, and underlines the one the reader is in.

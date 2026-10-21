@@ -5,6 +5,7 @@ summary: Topics group articles by subject. Each one gets its own page listing it
 publishedAt: 2026-03-09
 heroImage: topics-hero.webp
 heroAlt: "Three topic tags on an article: Elections, Housing and Courts"
+audience: [writer, editor]
 ---
 
 A topic is a subject that runs across articles, like elections or the courts. Tag an article with its topics and readers can follow a subject from one article to the next.

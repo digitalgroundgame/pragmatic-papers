@@ -5,6 +5,7 @@ summary: Writers draft their own articles and editors publish them. Your work sa
 publishedAt: 2025-07-01
 heroImage: writing-and-publishing-hero.webp
 heroAlt: An article title with its published and updated dates
+audience: [writer, editor]
 ---
 
 Every article starts as a draft. Readers only see it once it's published, and only editors can publish.

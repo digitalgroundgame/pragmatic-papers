@@ -5,6 +5,7 @@ summary: "The SEO tab decides how a page looks in Google and when it's shared: i
 publishedAt: 2025-06-20
 heroImage: seo-tab-hero.webp
 heroAlt: An article's Google result and its link preview card
+audience: [writer, editor]
 ---
 
 Articles, pages, volumes, topics and interactive pages each have an **SEO** tab next to **Content**. What you put there is what people see before they click: the title and description in a Google result, and the card that appears when someone shares the link on social media or in a message.

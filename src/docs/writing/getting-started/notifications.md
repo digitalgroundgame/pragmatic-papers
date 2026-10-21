@@ -6,7 +6,6 @@ publishedAt: 2026-10-09
 revisedAt: 2026-10-25
 heroImage: notifications-hero.webp
 heroAlt: The bell's What's new list with two help docs, one unread
-audience: [writer, narrator, editor]
 ---
 
 The bell in the top right of the admin, beside your avatar, is where new features are announced. Each one comes with a help doc, like this one, which reaches the bell once an editor publishes it.

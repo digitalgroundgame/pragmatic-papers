@@ -5,6 +5,7 @@ summary: A Banner sets a short note apart in a coloured box. The Code block show
 publishedAt: 2025-06-20
 heroImage: banners-and-code-hero.webp
 heroAlt: A Code block showing a TypeScript function with a Copy button
+audience: [writer, editor]
 ---
 
 ## Banner

@@ -3,29 +3,32 @@ import type React from "react"
 import { getRedirects } from "./getRedirects"
 import { isResolved } from "@/utilities/relationships"
 import { docPath } from "@/utilities/routes"
-import { notFound, redirect } from "next/navigation"
+import { notFound, permanentRedirect } from "next/navigation"
 
 interface Props {
   disableNotFound?: boolean
   url: string
 }
 
-/* This component helps us with SSR based dynamic redirects */
+/**
+ * Sends a request for `url` to wherever its redirect in the Redirects collection points.
+ * Redirects are permanent (308), so search engines move the old address's ranking to the
+ * new one.
+ */
 export const PayloadRedirects: React.FC<Props> = async ({ disableNotFound, url }) => {
   const redirects = await getRedirects()
 
-  // eslint-disable-next-line @typescript-eslint/no-shadow
   const redirectItem = redirects.find((redirect) => redirect.from === url)
 
   if (redirectItem) {
     if (redirectItem.to?.url) {
-      redirect(redirectItem.to.url)
+      permanentRedirect(redirectItem.to.url)
     }
 
     // The redirects are read at depth 1, so a reference arrives as the document.
     const reference = redirectItem.to?.reference
     if (reference && isResolved(reference.value) && reference.value.slug) {
-      redirect(docPath(reference.relationTo, reference.value.slug))
+      permanentRedirect(docPath(reference.relationTo, reference.value.slug))
     }
   }
 

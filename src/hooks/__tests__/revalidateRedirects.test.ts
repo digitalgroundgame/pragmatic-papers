@@ -1,17 +1,16 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-const mockRevalidateTag = vi.fn()
-const mockPurgeEdgeCache = vi.fn()
-vi.mock("next/cache", () => ({ revalidateTag: mockRevalidateTag }))
-vi.mock("../purgeEdgeCache", () => ({ purgeEdgeCache: mockPurgeEdgeCache }))
+const mockRevalidateForReaders = vi.fn()
+vi.mock("../revalidateForReaders", () => ({ revalidateForReaders: mockRevalidateForReaders }))
 
-const { revalidateRedirects } = await import("../revalidateRedirects")
+const { revalidateRedirects, revalidateRedirectsDelete } = await import("../revalidateRedirects")
 
-const mockDoc = { id: 1, slug: "test-redirect" }
+const mockDoc = { id: 1, from: "/articles/old" }
 
-const makeArgs = (disableRevalidate: boolean) =>
+const makeArgs = (disableRevalidate: boolean, previousDoc?: { from: string }) =>
   ({
     doc: mockDoc,
+    previousDoc,
     req: {
       payload: { logger: { info: vi.fn() } },
       context: { disableRevalidate },
@@ -19,25 +18,48 @@ const makeArgs = (disableRevalidate: boolean) =>
   }) as never
 
 beforeEach(() => {
-  mockRevalidateTag.mockClear()
-  mockPurgeEdgeCache.mockClear()
+  mockRevalidateForReaders.mockClear()
 })
 
 describe("revalidateRedirects", () => {
-  it("calls revalidateTag when disableRevalidate is false", () => {
-    revalidateRedirects(makeArgs(false))
-    expect(mockRevalidateTag).toHaveBeenCalledWith("redirects", "max")
-    expect(mockPurgeEdgeCache).toHaveBeenCalledWith(expect.anything(), "redirects changed")
+  it("clears the redirects tag and purges only the redirect's path", () => {
+    revalidateRedirects(makeArgs(false, { from: "/articles/old" }))
+    expect(mockRevalidateForReaders).toHaveBeenCalledWith(expect.anything(), "redirects changed", {
+      tags: ["redirects"],
+      purgeOnly: ["/articles/old", null],
+    })
   })
 
-  it("does not call revalidateTag when disableRevalidate is true", () => {
+  it("also purges the old path when the redirect's From URL changed", () => {
+    revalidateRedirects(makeArgs(false, { from: "/articles/older" }))
+    expect(mockRevalidateForReaders).toHaveBeenCalledWith(expect.anything(), "redirects changed", {
+      tags: ["redirects"],
+      purgeOnly: ["/articles/old", "/articles/older"],
+    })
+  })
+
+  it("does nothing when disableRevalidate is true", () => {
     revalidateRedirects(makeArgs(true))
-    expect(mockRevalidateTag).not.toHaveBeenCalled()
-    expect(mockPurgeEdgeCache).not.toHaveBeenCalled()
+    expect(mockRevalidateForReaders).not.toHaveBeenCalled()
   })
 
   it("always returns doc", () => {
     expect(revalidateRedirects(makeArgs(false))).toBe(mockDoc)
     expect(revalidateRedirects(makeArgs(true))).toBe(mockDoc)
+  })
+})
+
+describe("revalidateRedirectsDelete", () => {
+  it("clears the redirects tag and purges the deleted redirect's path", () => {
+    expect(revalidateRedirectsDelete(makeArgs(false))).toBe(mockDoc)
+    expect(mockRevalidateForReaders).toHaveBeenCalledWith(expect.anything(), "redirect deleted", {
+      tags: ["redirects"],
+      purgeOnly: ["/articles/old"],
+    })
+  })
+
+  it("does nothing when disableRevalidate is true", () => {
+    expect(revalidateRedirectsDelete(makeArgs(true))).toBe(mockDoc)
+    expect(mockRevalidateForReaders).not.toHaveBeenCalled()
   })
 })

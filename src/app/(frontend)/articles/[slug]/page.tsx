@@ -24,6 +24,7 @@ import { ArticleHero } from "@/heros/ArticleHero"
 import { MathJaxProvider } from "@/providers/MathJaxProvider"
 import { generateMeta } from "@/utilities/generateMeta"
 import { getPayloadClient } from "@/data/payload"
+import { PRERENDER_LIMIT } from "@/utilities/prerender"
 import { queryArticleBySlug, queryVolumesForArticles } from "@/data/queries"
 import { isResolved } from "@/utilities/relationships"
 import { buildArticleJsonLd, buildBreadcrumbJsonLd } from "@/utilities/structuredData"
@@ -40,9 +41,10 @@ export async function generateStaticParams(): Promise<{ slug: string | null | un
   const articles = await payload.find({
     collection: "articles",
     draft: false,
-    limit: 1000,
+    limit: PRERENDER_LIMIT,
     overrideAccess: false,
     pagination: false,
+    sort: "-publishedAt",
     select: {
       slug: true,
     },

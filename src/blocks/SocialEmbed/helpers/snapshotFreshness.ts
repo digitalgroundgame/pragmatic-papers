@@ -34,3 +34,16 @@ export function shouldRevalidate(
 ): boolean {
   return snapshot?.status === "ok" && isSnapshotExpired(snapshot, ttlMs)
 }
+
+/**
+ * The later of two snapshots of one embed, by `fetchedAt`: the copy saved in the article and
+ * the refreshed one in `embed-snapshots`. A snapshot with no date loses to one with a date.
+ */
+export function newestSnapshot(
+  a: SocialEmbedSnapshot | null | undefined,
+  b: SocialEmbedSnapshot | null | undefined,
+): SocialEmbedSnapshot | undefined {
+  if (!a) return b ?? undefined
+  if (!b) return a
+  return (getSnapshotFetchedAtMs(b) ?? -Infinity) > (getSnapshotFetchedAtMs(a) ?? -Infinity) ? b : a
+}

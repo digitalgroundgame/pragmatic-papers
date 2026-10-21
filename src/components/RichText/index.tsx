@@ -18,7 +18,6 @@ import {
   TwitterEmbedBlock,
   YouTubeEmbedBlock,
 } from "@/blocks/SocialEmbed"
-import type { ParentDocContext } from "@/blocks/SocialEmbed/types"
 import { SquiggleRuleBlock } from "@/blocks/SquiggleRule/Component"
 import { TimelineBlock } from "@/blocks/Timeline/Component"
 import { tableOfContentsConverter, withTableOfContentsAnchors } from "@/components/TableOfContents"
@@ -71,74 +70,72 @@ type NodeTypes =
     >
   | SerializedInlineBlockNode<MathBlockProps | FootnoteBlockProps>
 
-function createJsxConverters(parentDoc?: ParentDocContext): JSXConvertersFunction<NodeTypes> {
-  return ({ defaultConverters }) => ({
-    ...defaultConverters,
-    ...LinkJSXConverter({ internalDocToHref }),
-    // Payload's converter renders a plain <a>; links to this site navigate client-side.
-    link: ({ node, nodesToJSX }) => {
-      const href =
-        node.fields.linkType === "internal"
-          ? internalDocToHref({ linkNode: node })
-          : sanitizeUrl(node.fields.url ?? "")
-      return (
-        <HoverPrefetchLink
-          href={href}
-          {...(node.fields.newTab ? { rel: "noopener noreferrer", target: "_blank" } : {})}
-        >
-          {nodesToJSX({ nodes: node.children })}
-        </HoverPrefetchLink>
-      )
-    },
-    ...tableOfContentsConverter,
-    blocks: withTableOfContentsAnchors({
-      banner: ({ node }) => <BannerBlock className="col-start-2 mb-4" {...node.fields} />,
-      code: ({ node }) => <CodeBlock className="col-start-2" {...node.fields} />,
-      cta: ({ node }) => <CallToActionBlock {...node.fields} />,
-      displayMathBlock: ({ node }: { node: SerializedBlockNode<MathBlockProps> }) => (
-        <MathBlock {...node.fields} />
-      ),
-      interactiveMap: ({ node }) => <InteractiveMapBlock {...node.fields} />,
-      mediaBlock: ({ node }) => (
-        <LightboxMediaBlock containerClassName="-my-8" breakout {...node.fields} />
-      ),
-      mediaCollage: ({ node }) => <MediaCollageBlock {...node.fields} />,
-      merch: ({ node }: { node: SerializedBlockNode<MerchBlockProps> }) => (
-        <MerchBlock {...node.fields} enableGutter={false} />
-      ),
-      newsletterSignup: ({ node }) => (
-        <NewsletterSignupBlock {...node.fields} turnstileSiteKey={getTurnstileSiteKey()} />
-      ),
-      socialEmbed: ({ node }) => <SocialEmbedBlock {...node.fields} parentDoc={parentDoc} />,
-      squiggleRule: ({ node }) => <SquiggleRuleBlock className="col-start-2" {...node.fields} />,
-      timeline: ({ node }: { node: SerializedBlockNode<TimelineBlockProps> }) => (
-        <TimelineBlock className="col-start-2 my-8" {...node.fields} />
-      ),
-      // Legacy block types for backward compatibility with existing content
-      twitterEmbed: ({ node }: { node: SerializedBlockNode<SocialEmbedBlockProps> }) => (
-        <TwitterEmbedBlock {...node.fields} />
-      ),
-      youtubeEmbed: ({ node }: { node: SerializedBlockNode<SocialEmbedBlockProps> }) => (
-        <YouTubeEmbedBlock {...node.fields} />
-      ),
-      redditEmbed: ({ node }: { node: SerializedBlockNode<SocialEmbedBlockProps> }) => (
-        <RedditEmbedBlock {...node.fields} />
-      ),
-      blueSkyEmbed: ({ node }: { node: SerializedBlockNode<SocialEmbedBlockProps> }) => (
-        <BlueskyEmbedBlock {...node.fields} />
-      ),
-      tiktokEmbed: ({ node }: { node: SerializedBlockNode<SocialEmbedBlockProps> }) => (
-        <TikTokEmbedBlock {...node.fields} />
-      ),
-    }),
-    inlineBlocks: {
-      inlineMathBlock: ({ node }: { node: SerializedInlineBlockNode<MathBlockProps> }) => (
-        <MathBlock {...node.fields} />
-      ),
-      footnote: ({ node }) => <FootnoteBlock {...node.fields} />,
-    },
-  })
-}
+const jsxConverters: JSXConvertersFunction<NodeTypes> = ({ defaultConverters }) => ({
+  ...defaultConverters,
+  ...LinkJSXConverter({ internalDocToHref }),
+  // Payload's converter renders a plain <a>; links to this site navigate client-side.
+  link: ({ node, nodesToJSX }) => {
+    const href =
+      node.fields.linkType === "internal"
+        ? internalDocToHref({ linkNode: node })
+        : sanitizeUrl(node.fields.url ?? "")
+    return (
+      <HoverPrefetchLink
+        href={href}
+        {...(node.fields.newTab ? { rel: "noopener noreferrer", target: "_blank" } : {})}
+      >
+        {nodesToJSX({ nodes: node.children })}
+      </HoverPrefetchLink>
+    )
+  },
+  ...tableOfContentsConverter,
+  blocks: withTableOfContentsAnchors({
+    banner: ({ node }) => <BannerBlock className="col-start-2 mb-4" {...node.fields} />,
+    code: ({ node }) => <CodeBlock className="col-start-2" {...node.fields} />,
+    cta: ({ node }) => <CallToActionBlock {...node.fields} />,
+    displayMathBlock: ({ node }: { node: SerializedBlockNode<MathBlockProps> }) => (
+      <MathBlock {...node.fields} />
+    ),
+    interactiveMap: ({ node }) => <InteractiveMapBlock {...node.fields} />,
+    mediaBlock: ({ node }) => (
+      <LightboxMediaBlock containerClassName="-my-8" breakout {...node.fields} />
+    ),
+    mediaCollage: ({ node }) => <MediaCollageBlock {...node.fields} />,
+    merch: ({ node }: { node: SerializedBlockNode<MerchBlockProps> }) => (
+      <MerchBlock {...node.fields} enableGutter={false} />
+    ),
+    newsletterSignup: ({ node }) => (
+      <NewsletterSignupBlock {...node.fields} turnstileSiteKey={getTurnstileSiteKey()} />
+    ),
+    socialEmbed: ({ node }) => <SocialEmbedBlock {...node.fields} />,
+    squiggleRule: ({ node }) => <SquiggleRuleBlock className="col-start-2" {...node.fields} />,
+    timeline: ({ node }: { node: SerializedBlockNode<TimelineBlockProps> }) => (
+      <TimelineBlock className="col-start-2 my-8" {...node.fields} />
+    ),
+    // Legacy block types for backward compatibility with existing content
+    twitterEmbed: ({ node }: { node: SerializedBlockNode<SocialEmbedBlockProps> }) => (
+      <TwitterEmbedBlock {...node.fields} />
+    ),
+    youtubeEmbed: ({ node }: { node: SerializedBlockNode<SocialEmbedBlockProps> }) => (
+      <YouTubeEmbedBlock {...node.fields} />
+    ),
+    redditEmbed: ({ node }: { node: SerializedBlockNode<SocialEmbedBlockProps> }) => (
+      <RedditEmbedBlock {...node.fields} />
+    ),
+    blueSkyEmbed: ({ node }: { node: SerializedBlockNode<SocialEmbedBlockProps> }) => (
+      <BlueskyEmbedBlock {...node.fields} />
+    ),
+    tiktokEmbed: ({ node }: { node: SerializedBlockNode<SocialEmbedBlockProps> }) => (
+      <TikTokEmbedBlock {...node.fields} />
+    ),
+  }),
+  inlineBlocks: {
+    inlineMathBlock: ({ node }: { node: SerializedInlineBlockNode<MathBlockProps> }) => (
+      <MathBlock {...node.fields} />
+    ),
+    footnote: ({ node }) => <FootnoteBlock {...node.fields} />,
+  },
+})
 
 /**
  * Server-only: the converter map renders blocks that query Payload (Merch),
@@ -154,7 +151,6 @@ interface RichTextProps {
   data: DefaultTypedEditorState | null | undefined
   enableGutter?: boolean
   enableProse?: boolean
-  parentDoc?: ParentDocContext
 }
 
 export default function RichText({
@@ -162,7 +158,6 @@ export default function RichText({
   enableProse = true,
   enableGutter = true,
   data,
-  parentDoc,
 }: RichTextProps): React.ReactNode {
   if (!data) return null
 
@@ -174,7 +169,7 @@ export default function RichText({
         enableProse && "prose",
         className,
       )}
-      converters={createJsxConverters(parentDoc)}
+      converters={jsxConverters}
       data={data}
     />
   )

@@ -1,6 +1,8 @@
 import { derivePlatform } from "@/blocks/SocialEmbed/hooks/derivePlatform"
 import { fetchSnapshot } from "@/blocks/SocialEmbed/hooks/fetchSnapshot"
 import { validatePlatform } from "@/blocks/SocialEmbed/hooks/validatePlatform"
+import { snapshotFields } from "@/blocks/SocialEmbed/snapshotFields"
+import { SOCIAL_PLATFORMS } from "@/blocks/SocialEmbed/types"
 import type { Block } from "payload"
 
 export const SocialEmbed: Block = {
@@ -32,7 +34,7 @@ export const SocialEmbed: Block = {
       name: "platform",
       type: "select",
       interfaceName: "SocialPlatform",
-      options: ["bluesky", "reddit", "tiktok", "twitter", "youtube"],
+      options: [...SOCIAL_PLATFORMS],
       required: true,
       hasMany: false,
       validate: validatePlatform,
@@ -45,29 +47,7 @@ export const SocialEmbed: Block = {
       name: "snapshot",
       type: "group",
       interfaceName: "SocialEmbedSnapshot",
-      fields: [
-        {
-          name: "status",
-          type: "select",
-          options: [
-            "ok",
-            "not_found",
-            "forbidden",
-            "error",
-            "timeout",
-            "aborted",
-            "invalid_oembed_response",
-          ],
-        },
-        { name: "fetchedAt", type: "date", label: "Fetched At" },
-        { name: "providerName", type: "text", label: "Provider Name" },
-        { name: "providerURL", type: "text", label: "Provider URL" },
-        { name: "authorName", type: "text", label: "Author Name" },
-        { name: "authorURL", type: "text", label: "Author URL" },
-        { name: "title", type: "text", label: "Title" },
-        { name: "html", type: "text", label: "HTML" },
-        { name: "thumbnailURL", type: "text", label: "Thumbnail URL" },
-      ],
+      fields: snapshotFields,
       admin: {
         hidden: true,
         readOnly: true,

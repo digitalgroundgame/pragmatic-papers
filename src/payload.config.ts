@@ -11,6 +11,7 @@ import { Topics } from "@/collections/Topics"
 import { Users } from "@/collections/Users"
 import { Volumes } from "@/collections/Volumes"
 import { Webhooks } from "@/collections/Webhooks"
+import { EmbedSnapshots } from "@/collections/EmbedSnapshots"
 import { defaultLexical } from "@/fields/defaultLexical"
 import { Footer } from "@/Footer/config"
 import { ArticleRecommendations } from "@/globals/ArticleRecommendations/config"
@@ -21,6 +22,7 @@ import { pluginSwitches } from "@/globals/Plugins/pluginSwitches"
 import { SiteSettings } from "@/globals/SiteSettings/config"
 import { Header } from "@/Header/config"
 import { canRunJobs } from "@/jobs/access"
+import { refreshEmbedSnapshotsTask } from "@/jobs/refreshEmbedSnapshots"
 import { syncInteractiveDataTask } from "@/jobs/syncInteractiveData"
 import { syncShopifyProductsTask } from "@/jobs/syncShopifyProducts"
 import { updateRecommendationsTask } from "@/jobs/updateRecommendations"
@@ -173,6 +175,7 @@ export default buildConfig({
     Merch,
     Users,
     Webhooks,
+    EmbedSnapshots,
     Categories,
   ],
   cors: [getSiteURL()].filter(Boolean),
@@ -239,6 +242,11 @@ export default buildConfig({
       run: canRunJobs,
     },
     autoRun: [{ cron: "*/5 * * * *", queue: "default" }],
-    tasks: [updateRecommendationsTask, syncShopifyProductsTask, syncInteractiveDataTask],
+    tasks: [
+      updateRecommendationsTask,
+      syncShopifyProductsTask,
+      syncInteractiveDataTask,
+      refreshEmbedSnapshotsTask,
+    ],
   },
 })

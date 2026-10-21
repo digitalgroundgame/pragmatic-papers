@@ -4,27 +4,18 @@ import { RedditEmbedBlock } from "@/blocks/SocialEmbed/embeds/RedditEmbed"
 import { TikTokEmbedBlock } from "@/blocks/SocialEmbed/embeds/TikTokEmbed"
 import { TwitterEmbedBlock } from "@/blocks/SocialEmbed/embeds/TwitterEmbed"
 import { YouTubeEmbedBlock } from "@/blocks/SocialEmbed/embeds/YouTubeEmbed"
-import { shouldRevalidate } from "@/blocks/SocialEmbed/helpers/snapshotFreshness"
-import type { ParentDocContext } from "@/blocks/SocialEmbed/types"
+import { findRefreshedSnapshot } from "@/blocks/SocialEmbed/helpers/refreshedSnapshot"
+import { newestSnapshot } from "@/blocks/SocialEmbed/helpers/snapshotFreshness"
 import type { SocialEmbedBlock as SocialEmbedBlockProps } from "@/payload-types"
 import React from "react"
 
-export type SocialEmbedRenderProps = SocialEmbedBlockProps & {
-  parentDoc?: ParentDocContext
-}
-
-export async function SocialEmbedBlock(props: SocialEmbedRenderProps): Promise<React.ReactNode> {
-  let snapshot = props.snapshot
-  if (shouldRevalidate(props.snapshot) && props.parentDoc && props.id) {
-    const { revalidateSnapshot } = await import("@/blocks/SocialEmbed/hooks/revalidateSnapshot")
-    snapshot = await revalidateSnapshot({
-      parentDoc: props.parentDoc,
-      embedBlockId: props.id,
-      platform: props.platform,
-      url: props.url,
-      snapshot: props.snapshot,
-    })
-  }
+/**
+ * Renders the newer of the snapshot saved with the article and the one the daily
+ * `refreshEmbedSnapshots` job fetched since, so a post deleted after the article was published
+ * stops loading the platform's script.
+ */
+export async function SocialEmbedBlock(props: SocialEmbedBlockProps): Promise<React.ReactNode> {
+  const snapshot = newestSnapshot(props.snapshot, await findRefreshedSnapshot(props))
 
   switch (props.platform) {
     case "bluesky":

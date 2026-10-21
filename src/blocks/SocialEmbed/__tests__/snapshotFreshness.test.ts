@@ -2,6 +2,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import {
+  newestSnapshot,
   shouldEnhance,
   shouldRevalidate,
   SOCIAL_EMBED_SNAPSHOT_TTL_MS,
@@ -62,5 +63,31 @@ describe("shouldRevalidate", () => {
       shouldRevalidate({ status: "error", fetchedAt: ago(SOCIAL_EMBED_SNAPSHOT_TTL_MS * 2) }),
     ).toBe(false)
     expect(shouldRevalidate(null)).toBe(false)
+  })
+})
+
+describe("newestSnapshot", () => {
+  const saved = { status: "ok" as const, fetchedAt: ago(SOCIAL_EMBED_SNAPSHOT_TTL_MS * 2) }
+  const refreshed = { status: "not_found" as const, fetchedAt: ago(1000) }
+
+  it("picks the later fetch, whichever side it's on", () => {
+    expect(newestSnapshot(saved, refreshed)).toBe(refreshed)
+    expect(newestSnapshot(refreshed, saved)).toBe(refreshed)
+  })
+
+  it("keeps the first when both were fetched at the same time", () => {
+    const twin = { ...saved, status: "error" as const }
+    expect(newestSnapshot(saved, twin)).toBe(saved)
+  })
+
+  it("returns the one that exists", () => {
+    expect(newestSnapshot(saved, null)).toBe(saved)
+    expect(newestSnapshot(undefined, refreshed)).toBe(refreshed)
+    expect(newestSnapshot(null, null)).toBeUndefined()
+  })
+
+  it("prefers a dated snapshot over an undated one", () => {
+    expect(newestSnapshot({ status: "ok" }, saved)).toBe(saved)
+    expect(newestSnapshot(saved, { status: "ok", fetchedAt: "not a date" })).toBe(saved)
   })
 })

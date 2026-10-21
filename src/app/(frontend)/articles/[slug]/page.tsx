@@ -4,6 +4,7 @@ import { draftMode } from "next/headers"
 import React from "react"
 
 import { EndRule } from "@/blocks/SquiggleRule/EndRule"
+import { ArticleFooter } from "@/components/ArticleFooter"
 import { ArticleSidebar } from "@/components/ArticleSidebar"
 import { AuthorList } from "@/components/Authors/AuthorList"
 import { Comments } from "@/components/Comments"
@@ -128,12 +129,16 @@ export default async function Article({ params: paramsPromise }: Args): Promise<
                   />
                 </MathJaxProvider>
                 <EndRule content={content} />
-                <FootnoteList footnotes={footnotes} />
-                <Separator />
-                <TopicsList topics={topics} />
-                <AuthorList aria-label="Article Authors" authors={populatedAuthors} />
-                {commentsEnabled &&
-                  (published ? <Comments articleId={article.id} /> : <CommentsUnpublished />)}
+                <ArticleFooter>
+                  <FootnoteList footnotes={footnotes} />
+                  <div className="space-y-4">
+                    <Separator />
+                    <TopicsList topics={topics} label="Topics:" />
+                  </div>
+                  <AuthorList aria-label="Article Authors" authors={populatedAuthors} />
+                  {commentsEnabled &&
+                    (published ? <Comments articleId={article.id} /> : <CommentsUnpublished />)}
+                </ArticleFooter>
               </div>
             </div>
           </TableOfContentsProvider>

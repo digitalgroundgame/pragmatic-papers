@@ -172,7 +172,7 @@ export const Comments: React.FC<CommentsProps> = ({ articleId, apiPath = "/api" 
       aria-labelledby="comments-heading"
       className="scroll-mt-24 space-y-6"
     >
-      <h2 id="comments-heading" className="font-display text-2xl">
+      <h2 id="comments-heading">
         Comments
         {count > 0 ? (
           <>

@@ -6,7 +6,6 @@ publishedAt: 2025-06-20
 revisedAt: 2026-10-18
 heroImage: globals-hero.webp
 heroAlt: The site's menu, with its links and social icons
-audience: [admin, editor]
 ---
 
 Some things appear on every page rather than in one document: the header's menu, the footer, the ticker. Each has a single settings page in the admin's sidebar, under **Globals** or **System**. Saving one changes the whole site, usually within a minute.

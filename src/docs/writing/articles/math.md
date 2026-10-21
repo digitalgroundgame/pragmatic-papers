@@ -5,7 +5,6 @@ summary: Math is written in LaTeX, inline in a sentence or centred on its own li
 publishedAt: 2025-07-02
 heroImage: math-hero.webp
 heroAlt: A Math block showing the equation a squared plus b squared equals c squared
-audience: [writer, editor]
 ---
 
 Math is written in LaTeX. There are two blocks:

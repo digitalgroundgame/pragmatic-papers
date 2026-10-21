@@ -2,6 +2,7 @@
 title: Writing
 summary: For writers. Writing and publishing articles, the blocks you can add to them, and the photos and media they show.
 publishedAt: 2026-10-25
+audience: [writer, editor]
 order: 1
 ---
 

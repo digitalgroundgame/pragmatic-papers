@@ -5,7 +5,6 @@ summary: Paste a post's link into the Social Embed block. We keep a copy, so the
 publishedAt: 2026-03-03
 heroImage: social-embed-hero.webp
 heroAlt: A Social Embed block showing a quoted post
-audience: [writer, editor]
 ---
 
 The **Social Embed** block shows a post, video or thread from another platform right in the article, the way that platform displays it.

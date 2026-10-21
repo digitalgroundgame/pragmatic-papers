@@ -5,7 +5,6 @@ summary: The Media Collage block lays out a set of images or videos as a two-col
 publishedAt: 2026-03-08
 heroImage: media-collage-hero.webp
 heroAlt: A Media Collage block arranging several images
-audience: [writer, editor]
 ---
 
 When one picture isn't enough, the **Media Collage** block shows a set of them together. It's in the block menu of the article editor.

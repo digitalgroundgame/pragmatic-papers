@@ -5,7 +5,6 @@ summary: A vertical timeline of dated events, each with an optional picture and 
 publishedAt: 2026-04-25
 heroImage: timeline-block-hero.webp
 heroAlt: A Timeline block showing how a district map changed
-audience: [writer, editor]
 ---
 
 The **Timeline** block lays out events along a vertical line, alternating left and right. It's in the block menu of articles and pages.

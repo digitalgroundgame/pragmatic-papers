@@ -3,7 +3,6 @@ title: Readers' achievements and badges
 navTitle: Achievements
 summary: Editors define readers' achievements, each with an optional badge on comments. Moderators give and revoke them from a user's record.
 publishedAt: 2026-10-18
-audience: [editor]
 ---
 
 Readers earn **achievements**. One with a badge shows beside their name on their comments, and their account page at /account lists every achievement they hold.

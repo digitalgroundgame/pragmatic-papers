@@ -5,7 +5,6 @@ summary: The Media block puts one image or video from Media into an article or p
 publishedAt: 2025-06-20
 heroImage: media-block-hero.webp
 heroAlt: A Media block showing a landscape image with its caption
-audience: [writer, editor]
 ---
 
 The **Media** block shows a single image or video. For several at once, use [Media Collage](/docs/writing/blocks/media-collage).

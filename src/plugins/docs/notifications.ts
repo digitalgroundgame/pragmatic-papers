@@ -3,7 +3,14 @@ import { hasRoleOrAdmin, isStaff, type Role } from "@/access/roles"
 import type { NotificationSource } from "@/plugins/notifications"
 import { findTour, tourHref } from "@/plugins/tours"
 
-import { docPaths, docsTree, HOME_DOC_SLUG, parentIds, WHATS_NEW_PATH } from "./sections"
+import {
+  docAudiences,
+  docPaths,
+  docsTree,
+  HOME_DOC_SLUG,
+  parentIds,
+  WHATS_NEW_PATH,
+} from "./sections"
 import { docThumbnail } from "./thumbnail"
 
 type Switch = (payload: Payload) => boolean | Promise<boolean>
@@ -18,7 +25,8 @@ export interface DocsNotificationsOptions {
 /**
  * Help docs for the notifications bell, for staff only: every published doc whose audience
  * includes one of the user's roles (or that has none), newest first, dated by its
- * `publishedAt`, leaving out the docs' home page and the areas and sections other docs sit
+ * `publishedAt`. A doc without an audience of its own takes its area's or section's
+ * (`docAudiences`). It leaves out the docs' home page and the areas and sections other docs sit
  * under, which introduce docs rather than announce a feature. The list is the cached one What's
  * new reads. A doc with a tour offers it as Show me, while `tours` allows.
  */
@@ -42,9 +50,13 @@ export const docsNotifications = ({
     const tree = docsTree(docs)
     const paths = docPaths(tree)
     const parents = parentIds(tree)
+    const audiences = docAudiences(tree)
     return docs
       .filter((doc) => doc.slug !== HOME_DOC_SLUG && !parents.has(String(doc.id)))
-      .filter((doc) => !doc.audience?.length || hasRoleOrAdmin(user, doc.audience as Role[]))
+      .filter((doc) => {
+        const audience = audiences.get(String(doc.id)) ?? doc.audience ?? []
+        return !audience.length || hasRoleOrAdmin(user, audience as Role[])
+      })
       .map((doc) => ({
         id: doc.slug ?? String(doc.id),
         title: doc.title,

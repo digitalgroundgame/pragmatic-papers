@@ -5,7 +5,6 @@ summary: A volume collects published articles in the order you choose, with an e
 publishedAt: 2025-06-26
 heroImage: volumes-hero.webp
 heroAlt: A Volumes block listing volumes with their articles
-audience: [editor]
 ---
 
 A volume is an issue of Pragmatic Papers: a numbered set of articles with an editor's note. Editors, chief editors and admins build them.

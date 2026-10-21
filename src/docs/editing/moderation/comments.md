@@ -3,7 +3,6 @@ title: Moderate comments
 navTitle: Comments
 summary: Readers sign in with Google, Discord or Destiny.gg to comment and reply under articles. Checks hold suspect comments for you, and accounts that keep breaking the rules lose commenting for a while.
 publishedAt: 2026-10-18
-audience: [editor]
 ---
 
 Under each article, readers can comment and reply to each other. They sign in with Google, Discord or Destiny.gg, and their first sign-in makes them an account with the **Member** role. Destiny.gg doesn't share an email address, so an account made with it has none until its member connects Google or Discord, which adds the address that provider verified. Members can comment and manage their account at /account, and nothing else: they never see the admin. Staff comment with their own accounts, marked **Staff**.

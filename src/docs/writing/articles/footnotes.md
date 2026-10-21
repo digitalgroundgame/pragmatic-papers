@@ -5,7 +5,6 @@ summary: Type [^ your note ] to add a footnote where you are, or reuse one you'v
 publishedAt: 2026-04-27
 heroImage: footnotes-hero.webp
 heroAlt: A Sources list of numbered footnotes with links
-audience: [writer, editor]
 ---
 
 The quickest way to add a footnote is to type it where it belongs: `[^` then the note, then `]`. When you type the closing bracket it becomes a footnote.

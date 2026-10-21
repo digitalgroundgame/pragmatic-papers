@@ -5,6 +5,7 @@ summary: Show me walks you through a feature on the real screens, one step at a 
 publishedAt: 2026-10-18
 heroImage: guided-tours-hero.webp
 heroAlt: A help doc in the bell with two buttons, Show me and Read more
+audience: [writer, narrator, editor]
 tour: articles
 ---
 

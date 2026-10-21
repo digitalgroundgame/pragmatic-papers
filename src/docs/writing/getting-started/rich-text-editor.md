@@ -5,7 +5,6 @@ summary: Format as you type, add blocks from the slash menu or the + handle, and
 publishedAt: 2025-06-20
 heroImage: rich-text-editor-hero.webp
 heroAlt: Article text with a banner and an image block in the rich text
-audience: [writer, editor]
 ---
 
 Articles, volumes' editor's notes and these help docs are all written in the same editor. Everything you add is either text, which you format, or a **block**: a photo, a map, a timeline, a quote card and so on.

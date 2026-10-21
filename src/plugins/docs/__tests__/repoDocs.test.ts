@@ -26,6 +26,14 @@ const areaOf = (slug: string): string => {
   return parent ? areaOf(parent) : slug
 }
 
+/** Who a doc is for: its own audience, or the nearest one above it, as `docAudiences` reads it. */
+const audienceOf = (slug: string): readonly string[] => {
+  const doc = docs.find((entry) => entry.slug === slug)
+  if (!doc) return []
+  const { meta } = parseDocFile(readFileSync(doc.file, "utf8"), slug)
+  return meta.audience?.length ? meta.audience : doc.parent ? audienceOf(doc.parent) : []
+}
+
 // A doc that fails here fails its deploy's sync instead, where nobody is watching.
 describe.each(docs.map((doc) => [path.relative(DOCS_DIR, doc.file), doc] as const))(
   "src/docs/%s",
@@ -65,7 +73,8 @@ describe.each(docs.map((doc) => [path.relative(DOCS_DIR, doc.file), doc] as cons
       "sits in Editing when, and only when, it's only for editors or admins",
       () => {
         const area = areaOf(slug)
-        const forWriters = !meta.audience?.length || meta.audience.includes("writer")
+        const audience = audienceOf(slug)
+        const forWriters = !audience.length || audience.includes("writer")
         // A doc for everyone may sit in Reading or Writing; one writers aren't told about can't.
         expect(area === "editing").toBe(!forWriters)
       },

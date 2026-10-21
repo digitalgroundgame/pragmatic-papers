@@ -6,7 +6,6 @@ publishedAt: 2026-10-09
 revisedAt: 2026-10-18
 heroImage: ticker-hero.webp
 heroAlt: The ticker showing a live YouTube broadcast beside our latest posts
-audience: [editor]
 ---
 
 The ticker is the strip under the site's header. It shows readers what we're doing outside the site:

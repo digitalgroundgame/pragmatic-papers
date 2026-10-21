@@ -87,3 +87,12 @@ export const WithTableOfContents: Story = {
     await expect(button).toHaveAttribute("aria-expanded", "false")
   },
 }
+
+/** The page shows the button while comments are on; it jumps to the Comments heading below the article. */
+export const WithComments: Story = {
+  args: { showComments: true },
+  play: async ({ canvasElement }) => {
+    const link = within(canvasElement).getByRole("link", { name: "Comments" })
+    await expect(link).toHaveAttribute("href", "#comments")
+  },
+}

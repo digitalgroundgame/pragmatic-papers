@@ -165,6 +165,16 @@ describe("ArticleHero", () => {
     expect(screen.getByTestId("toc-button")).toBeInTheDocument()
   })
 
+  it("leaves the comments button out unless the page asks for it", () => {
+    render(<ArticleHero article={baseArticle} />)
+    expect(screen.queryByRole("link", { name: "Comments" })).not.toBeInTheDocument()
+  })
+
+  it("links the comments button to the Comments heading when the page asks for it", () => {
+    render(<ArticleHero article={baseArticle} showComments />)
+    expect(screen.getByRole("link", { name: "Comments" })).toHaveAttribute("href", "#comments")
+  })
+
   it("matches snapshot", () => {
     const { container } = render(<ArticleHero article={baseArticle} />)
     expect(container.firstChild).toMatchSnapshot()

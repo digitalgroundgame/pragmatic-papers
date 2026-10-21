@@ -1,5 +1,6 @@
 import React from "react"
 
+import { CommentsLink } from "@/components/Comments/CommentsLink"
 import { Byline } from "@/components/Authors/Byline"
 import { toBylineAuthor } from "@/components/Authors/BylineAuthor"
 import { ShareButtons } from "@/components/ShareButtons"
@@ -19,11 +20,14 @@ interface ArticleHeroProps {
    * depends on the `tableOfContents` experiment as well as the article's own setting.
    */
   showTableOfContents?: boolean
+  /** Whether to render the button that jumps to the comments, which the page renders only while comments are on. */
+  showComments?: boolean
 }
 
 export const ArticleHero: React.FC<ArticleHeroProps> = ({
   article,
   showTableOfContents = false,
+  showComments = false,
 }) => {
   const { publishedAt, updatedAt, title, heroImage, authors, narration, content } = article
 
@@ -47,6 +51,7 @@ export const ArticleHero: React.FC<ArticleHeroProps> = ({
         <div data-slot="article-meta-controls" className="flex grow items-center justify-end gap-1">
           <NarrationPlayer narration={narration} className="mr-auto shrink-0" />
           {showTableOfContents && <TableOfContentsButton content={content} />}
+          {showComments && <CommentsLink />}
           <ShareButtons url={`${getSiteURL()}/articles/${article.slug}`} title={article.title} />
         </div>
       </div>

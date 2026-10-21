@@ -10,6 +10,7 @@ import { populateTableOfContentsAnchors, tableOfContentsField } from "@/componen
 import { slugField } from "@/fields/slug"
 import { TOURS } from "@/plugins/tours"
 import { generatePreviewPath } from "@/utilities/generatePreviewPath"
+import { createParentField } from "@payloadcms/plugin-nested-docs"
 import {
   BlocksFeature,
   FixedToolbarFeature,
@@ -64,7 +65,7 @@ export const Docs: CollectionConfig<"docs"> = {
   admin: {
     group: "Help",
     useAsTitle: "title",
-    defaultColumns: ["title", "parent", "audience", "publishedAt", "updatedAt"],
+    defaultColumns: ["title", "navTitle", "parent", "audience", "updatedAt", "_status"],
     livePreview: {
       url: ({ data, req }) => generatePreviewPath({ slug: data?.slug, collection: DOCS_SLUG, req }),
     },
@@ -96,16 +97,6 @@ export const Docs: CollectionConfig<"docs"> = {
       },
     },
     {
-      name: "heroImage",
-      type: "upload",
-      relationTo: "media",
-      admin: {
-        position: "sidebar",
-        description:
-          "Shown above the doc's title, beside it in the help bell, and in link previews. Optional.",
-      },
-    },
-    {
       name: "content",
       type: "richText",
       required: true,
@@ -126,6 +117,17 @@ export const Docs: CollectionConfig<"docs"> = {
           OrderedListFeature(),
         ],
       }),
+    },
+    // The sidebar shows these in this order.
+    {
+      name: "heroImage",
+      type: "upload",
+      relationTo: "media",
+      admin: {
+        position: "sidebar",
+        description:
+          "Shown above the doc's title, beside it in the help bell, and in link previews. Optional.",
+      },
     },
     {
       name: "publishedAt",
@@ -148,6 +150,10 @@ export const Docs: CollectionConfig<"docs"> = {
           "The day the doc last changed in a way readers should know about, shown beside its date. The bell still lists it under the published date.",
       },
     },
+    slugField(),
+    // The nested docs plugin adds `parent` at the end; declaring it here puts it under the slug
+    // in the sidebar. The plugin finds it by name and adds its own filter.
+    createParentField(DOCS_SLUG),
     {
       name: "audience",
       type: "select",
@@ -158,6 +164,8 @@ export const Docs: CollectionConfig<"docs"> = {
         description: "Who the help bell tells. Empty means all staff; admins see every doc.",
       },
     },
+    // On by default: a doc is reference reading, skimmed for the one section a reader needs.
+    tableOfContentsField({ defaultValue: true }),
     {
       name: "tour",
       type: "text",
@@ -168,8 +176,6 @@ export const Docs: CollectionConfig<"docs"> = {
       validate: (value: string | null | undefined) =>
         !value || Object.hasOwn(TOURS, value) || `No tour is called "${value}".`,
     },
-    // On by default: a doc is reference reading, skimmed for the one section a reader needs.
-    tableOfContentsField({ defaultValue: true }),
     {
       // Set by `syncDocs` on a doc it seeded from src/docs/, or a draft it offered: the hash
       // of the files it came from. Empty on docs written here.
@@ -184,7 +190,6 @@ export const Docs: CollectionConfig<"docs"> = {
           "Seeded from src/docs/ by a deploy. Edits here are kept: when the repo's copy changes, a deploy saves it as a new draft for you to publish, edit or discard, and never changes the published doc.",
       },
     },
-    slugField(),
   ],
   hooks: {
     beforeChange: [rememberReadersCopy],

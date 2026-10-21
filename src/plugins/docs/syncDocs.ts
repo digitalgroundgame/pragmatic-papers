@@ -14,7 +14,14 @@ import type { Payload } from "payload"
 import { DOCS_SLUG } from "./collection"
 import { imagesIn, parseDocFile } from "./docFile"
 import { docsEditorConfig, markdownToContent } from "./markdown"
-import { hashRepoDoc, mediaFilename, mediaRefsIn, type RepoDoc, unpackMedia } from "./repoDoc"
+import {
+  hashRepoDoc,
+  legacyRepoDocHash,
+  mediaFilename,
+  mediaRefsIn,
+  type RepoDoc,
+  unpackMedia,
+} from "./repoDoc"
 import { DOCS_DIR, listDocFiles } from "./repoDocFiles"
 
 const MIME_TYPES: Record<string, string> = {
@@ -248,6 +255,15 @@ export async function syncDocs(
 
     const offered = existing ? await lastOffered(payload, DOCS_SLUG, slug) : null
     const savedHash = offered ? offered.hash : (existing?.sourceHash ?? hash)
+    if (
+      existing &&
+      savedHash !== hash &&
+      savedHash === legacyRepoDocHash(parent ?? "", source, files)
+    ) {
+      await markOffered(payload, DOCS_SLUG, slug, hash, offered?.version)
+      result.existing.push(slug)
+      continue
+    }
     const latest = existing && savedHash !== hash ? await latestVersion(payload, existing.id) : null
     const action = planRepoDoc({
       exists: Boolean(existing),

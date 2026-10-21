@@ -140,3 +140,14 @@ export const hashRepoDoc = (source: string, files: Buffer[]): string => {
   for (const file of files) hash.update(file)
   return hash.digest("hex")
 }
+
+/**
+ * The hash a site saved for a doc before docs nested, when it also covered the section folder
+ * the doc sat in (now the doc it sits under; empty for the home doc). A doc saved with it holds
+ * this copy already, so the sync records the new hash rather than offering an unchanged doc.
+ */
+export const legacyRepoDocHash = (folder: string, source: string, files: Buffer[]): string => {
+  const hash = createHash("sha256").update(`${folder}\n`).update(source)
+  for (const file of files) hash.update(file)
+  return hash.digest("hex")
+}

@@ -5,7 +5,7 @@ import path from "node:path"
 import type { Payload } from "payload"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
-import { hashRepoDoc, mediaFilename } from "../repoDoc"
+import { hashRepoDoc, legacyRepoDocHash, mediaFilename } from "../repoDoc"
 import { listDocFiles } from "../repoDocFiles"
 import { planRepoDoc, type RepoDocState, syncDocs } from "../syncDocs"
 
@@ -422,6 +422,47 @@ Intro.
     )
     const [[offer]] = payload.update.mock.calls as unknown as [[{ data: object }]]
     expect(offer.data).not.toHaveProperty("parent")
+  })
+
+  it("records the new hash for a doc saved with the hash that covered its section folder", async () => {
+    const legacy = legacyRepoDocHash("site-settings", source, [hero, image])
+    const payload = fakePayload({
+      docs: [
+        { id: 30, slug: "editing" },
+        { id: 31, slug: "site-settings" },
+        { id: 32, slug: "experiments", sourceHash: legacy },
+      ],
+      kv: [
+        "seeded:docs:editing",
+        "seeded:docs:site-settings",
+        "seeded:docs:experiments",
+        ["offered:docs:experiments", { hash: legacy, version: 4 }],
+      ],
+    })
+    const result = await syncDocs(payload, dir)
+    expect(result.offered).toEqual([])
+    expect(result.existing).toContain("experiments")
+    expect(payload.update).not.toHaveBeenCalled()
+    expect(payload.kv.store.get("offered:docs:experiments")).toEqual({
+      hash: hashRepoDoc(source, [hero, image]),
+      version: 4,
+      at: expect.any(String),
+    })
+  })
+
+  it("still offers a doc whose old hash covered another folder or another copy", async () => {
+    const payload = fakePayload({
+      docs: [{ id: 32, slug: "experiments" }],
+      versions: [{ id: 20, version: { _status: "published" } }],
+      kv: [
+        "seeded:docs:experiments",
+        [
+          "offered:docs:experiments",
+          { hash: legacyRepoDocHash("site-settings", `${source}Changed.\n`, [hero, image]) },
+        ],
+      ],
+    })
+    expect((await syncDocs(payload, dir)).offered).toEqual(["experiments"])
   })
 })
 

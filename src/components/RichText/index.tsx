@@ -70,7 +70,7 @@ type NodeTypes =
     >
   | SerializedInlineBlockNode<MathBlockProps | FootnoteBlockProps>
 
-const jsxConverters: JSXConvertersFunction<NodeTypes> = ({ defaultConverters }) => ({
+export const jsxConverters: JSXConvertersFunction<NodeTypes> = ({ defaultConverters }) => ({
   ...defaultConverters,
   ...LinkJSXConverter({ internalDocToHref }),
   // Payload's converter renders a plain <a>; links to this site navigate client-side.

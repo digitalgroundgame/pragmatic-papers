@@ -18,7 +18,7 @@ export function CommentsLink({ className }: { className?: string }): React.React
       data-slot="button"
       className={cn(buttonVariants({ variant: "ghost", size: "icon-lg" }), "shrink-0", className)}
     >
-      <MessageCircle aria-hidden="true" className="size-5" />
+      <MessageCircle aria-hidden="true" />
     </a>
   )
 }

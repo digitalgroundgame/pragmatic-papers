@@ -129,7 +129,7 @@ function TableOfContentsButton({
       className={className}
       {...props}
     >
-      <List aria-hidden="true" className="size-5" />
+      <List aria-hidden="true" />
     </Button>
   )
 }

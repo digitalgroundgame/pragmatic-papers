@@ -149,17 +149,29 @@ served stale). When the feature graduates, delete the checkbox and the checks.
 ### Help docs and notifications
 
 A release that changes what staff do in the admin ships a help doc in the same
-PR. Docs are the `docs` collection (`src/plugins/docs/`, the docs plugin),
-served at `/docs/<slug>`, so they can hold blocks and images like an article.
-`/docs` shows the home doc (`src/docs/home.md`), and `/docs/whats-new` lists every
-doc, newest first. The sidebar groups sections under three areas (`DOC_AREAS`):
-Admin for staff, Frontend for readers' features, and Development for contributors
-(the GitHub wiki, for now); an area shows once it has docs. Each doc ends with
-Previous and Next links in the sidebar's order. The ones a release ships live in
-the repo as Markdown, a folder per sidebar section (`DOC_SECTIONS` in
-`src/plugins/docs/sections.ts`): `src/docs/<section>/<slug>.md`, with the pictures
-it shows beside it, each named for the doc (`<slug>-hero.webp`,
-`<slug>-drawer.webp`). Once per deploy,
+PR. Docs are the `docs` collection (`src/plugins/docs/`, the docs plugin), so they
+can hold blocks and images like an article, and they nest in one tree (the nested
+docs plugin, which the docs plugin applies): an area like Writing has no parent, its
+sections sit under it, and their docs under them, so a doc is read at its place in
+the tree, `/docs/<area>/<section>/<slug>` (`docsTree` and `docPaths` in
+`src/plugins/docs/sections.ts`). Slugs stay unique across the docs, so the route
+reads the last segment and redirects (temporarily) any other path to the doc's
+place now. Editors own the tree: they move a doc by picking its parent, and drag siblings
+into order (the collection is orderable). `/docs` shows the home doc
+(`src/docs/home.md`), and `/docs/whats-new` lists every doc but the areas and
+sections, newest first; the bell leaves those out too. Each area and section is a
+doc of its own that introduces the docs under it, which its page lists. Writing
+(articles, blocks, media) and Editing (pages, volumes, moderation, site settings) are
+the areas today. There's no Admin area: an admin-only doc goes where its subject does,
+and one whose `audience` leaves out writers sits in Editing (`repoDocs.test.ts`
+checks). Each doc ends with Previous and Next links in the sidebar's order. The ones a
+release ships live in the repo as Markdown, with the folders mirroring the tree: each
+doc is `<slug>.md`, the docs under it are in a `<slug>/` folder beside it
+(`src/docs/writing/articles/footnotes.md`), and its pictures sit beside it, each
+named for the doc (`<slug>-hero.webp`, `<slug>-drawer.webp`). Siblings seed in their
+`order` (front matter), then by slug. A doc's place is the site's once it arrives: a
+deploy files a new doc under the doc its folder names, and never moves one, so moving
+a file only places the doc on sites that don't have it yet. Once per deploy,
 `/next/revalidate-all` (which `start.sh` calls when a deploy goes live) seeds that
 site's database with each doc whose slug it doesn't have yet, as a **draft**,
 converting the Markdown with the docs editor and uploading its pictures to Media
@@ -194,7 +206,7 @@ keeps it under `publishedAt`), `heroImage` and `heroAlt` (1200×630, the bell's
 thumbnail, the link preview's image and the banner above the doc's title; optional,
 but give a doc one where a picture helps) and, for a
 doc only some roles need, `audience` (e.g. `[editor]`; admins and chief editors
-see every doc). `audience` only decides who the bell tells: every published doc
+see every doc), and `order`, its place among its siblings. `audience` only decides who the bell tells: every published doc
 is public at /docs, as the repo is. The body is Markdown the docs editor can
 hold (headings, lists, bold, italic, inline code, links), plus pictures on a
 line of their own, `![alt](<slug>-picture.webp)`, which become Media blocks.
@@ -203,8 +215,8 @@ Link to other pages by URL. Other blocks can't be written in Markdown.
 doc.
 
 To write one in the local admin instead (**Help → Docs**), `pnpm docs:export
-<slug>` writes it into its section's folder, copying the pictures it uses beside
-it.
+<slug>` writes it into the folder its place in the tree names, copying the pictures
+it uses beside it.
 
 The bell lists each doc under its `publishedAt`, newest first.
 

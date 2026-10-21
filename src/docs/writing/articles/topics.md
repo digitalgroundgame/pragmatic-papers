@@ -28,7 +28,7 @@ Topics live in the admin under **Collections → Topics**. A topic has:
 - **Name**: required, and no two topics can share one.
 - **Description**: optional, shown on the topic's page.
 - **Slug**: the end of its address. It fills in from the name when you leave it blank.
-- An **SEO** tab, like an article's, for how its page appears in search and link previews. See [Fill in the SEO tab](/docs/seo-tab).
+- An **SEO** tab, like an article's, for how its page appears in search and link previews. See [Fill in the SEO tab](/docs/writing/articles/seo-tab).
 
 Topics have no drafts: saving publishes the change straight away.
 

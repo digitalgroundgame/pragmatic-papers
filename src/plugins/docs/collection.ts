@@ -24,7 +24,6 @@ import {
 import type { CollectionConfig } from "payload"
 
 import { revalidateDoc, revalidateDocDelete } from "./revalidateDoc"
-import { DEFAULT_DOC_SECTION, DOC_SECTIONS } from "./sections"
 
 export const DOCS_SLUG = "docs"
 
@@ -38,15 +37,20 @@ const ROLE_LABELS: Record<Role, string> = {
 }
 
 /**
- * Help articles at /docs/<slug>, about what staff can do in the admin. Most arrive with a
- * release: each deploy adds the ones in src/docs/ its site doesn't have yet, as drafts for an
- * editor to publish (see `syncRepoDocs`). From then on the doc is the site's: editors change it
- * here, and the repo only ever offers its changes as a new draft version. Editors can also
- * write one from scratch.
+ * Help articles at /docs, about how the site works. They nest (the nested docs plugin adds each
+ * one's `parent` and `breadcrumbs`): an area like Writing has no parent, its sections sit under
+ * it, and their docs under them, so a doc is read at `/docs/<area>/<section>/<slug>`. Editors
+ * drag docs into order among their siblings, and move one by picking its parent. Most arrive
+ * with a release: each deploy adds the ones in src/docs/ its site doesn't have yet, as drafts
+ * for an editor to publish (see `syncRepoDocs`). From then on the doc is the site's: editors
+ * change it here, and the repo only ever offers its changes as a new draft version. Editors can
+ * also write one from scratch.
  */
 export const Docs: CollectionConfig<"docs"> = {
   slug: DOCS_SLUG,
   labels: { singular: "Doc", plural: "Docs" },
+  // Dragged into order in the list: siblings sit in that order in the sidebar.
+  orderable: true,
   access: {
     create: editor,
     delete: editor,
@@ -60,7 +64,7 @@ export const Docs: CollectionConfig<"docs"> = {
   admin: {
     group: "Help",
     useAsTitle: "title",
-    defaultColumns: ["title", "section", "audience", "publishedAt", "updatedAt"],
+    defaultColumns: ["title", "parent", "audience", "publishedAt", "updatedAt"],
     livePreview: {
       url: ({ data, req }) => generatePreviewPath({ slug: data?.slug, collection: DOCS_SLUG, req }),
     },
@@ -142,17 +146,6 @@ export const Docs: CollectionConfig<"docs"> = {
         date: { pickerAppearance: "dayOnly", displayFormat: "MMMM d, yyyy" },
         description:
           "The day the doc last changed in a way readers should know about, shown beside its date. The bell still lists it under the published date.",
-      },
-    },
-    {
-      name: "section",
-      type: "select",
-      required: true,
-      defaultValue: DEFAULT_DOC_SECTION,
-      options: DOC_SECTIONS.map(({ value, label }) => ({ value, label })),
-      admin: {
-        position: "sidebar",
-        description: "Where the doc sits in the sidebar at /docs.",
       },
     },
     {

@@ -83,7 +83,9 @@
         // Production's media is in S3 (Supabase Storage), linked by its public URL, which
         // the deploy passes in SUPABASE_URL and S3_BUCKET. The Worker never uploads, so it
         // has no S3 credentials.
-        "DOCS_SYNC": "false",
+        // Production's Coolify deploy seeds its database; this Worker's never does. An
+        // environment doesn't inherit the top-level `vars`, so it needs its own copy.
+        "DEPLOY_SEED": "false",
       },
       "services": [
         {
@@ -106,9 +108,9 @@
       "hyperdrive": [
         {
           "binding": "HYPERDRIVE",
-          // pragmatic-papers-production: production's Supabase pooler. Not created yet; the
-          // deploy skips production until PRODUCTION_PAYLOAD_SECRET is set, which comes after.
-          "id": "00000000000000000000000000000000",
+          // pragmatic-papers-production: production's Supabase database, over its direct
+          // connection (Hyperdrive pools connections itself).
+          "id": "002fe0cae1144170b1008aa76fbe7dda",
         },
       ],
       "durable_objects": {

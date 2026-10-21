@@ -9,22 +9,23 @@ Pragmatic Papers publishes pragmatic, community-driven articles on news, politic
 
 ## How the docs are laid out
 
-The sidebar groups every doc under one of three areas:
+The sidebar lists every doc under the area it belongs to, by what you're doing:
 
-- **Admin** is for staff: writing and publishing articles, the blocks you can add to them, photos and media, and the pages and settings that run the site.
-- **Frontend** is for readers: what the site does for you as you read, like listening to an article with the audio player.
-- **Development** is for contributors: how the code is built, tested and released. For now that lives in the [GitHub wiki](https://github.com/digitalgroundgame/pragmatic-papers/wiki).
+- **Writing** is for writers: writing and publishing articles, the blocks you can add to them, and photos and media.
+- **Editing** is for editors and admins: building pages, putting together volumes, moderating comments and the settings that run the site.
 
-An area shows up in the sidebar once it has docs.
+Each area has sections, and each section has its docs. An area or a section is a doc too, with its own page that introduces what's in it. A doc's address follows where it sits, like `/docs/writing/articles/footnotes`.
+
+Editors keep the tree in the admin, under **Help → Docs**: drag docs into order, pick a doc's parent to move it, or add a new area or section as a doc with nothing above it. Moving a doc changes its address, and its old one keeps working.
 
 ## Finding your way
 
-- **The sidebar** lists every doc by section. Click a section's name to fold it.
+- **The sidebar** lists every doc by area and section. Click a section's name to fold it.
 - [**What's new**](/docs/whats-new) lists every doc, newest first, so you can see what's changed lately.
 - **Previous** and **Next**, at the foot of each doc, follow the sidebar's order, so you can read a section from start to finish.
 - **The table of contents** beside a long doc jumps to its sections.
 
-Staff also get new docs in the bell beside their avatar in the admin. See [Find what's new in the bell](/docs/notifications).
+Staff also get new docs in the bell beside their avatar in the admin. See [Find what's new in the bell](/docs/writing/getting-started/notifications).
 
 ## Where docs come from
 
@@ -32,4 +33,4 @@ Each release that changes what you can do ships a doc with it, written beside th
 
 ## Start here
 
-New to the admin? Start with [Who can write, publish and schedule an article](/docs/writing-and-publishing), then [Find your way around the rich text editor](/docs/rich-text-editor).
+New to the admin? Start with [Who can write, publish and schedule an article](/docs/writing/getting-started/writing-and-publishing), then [Find your way around the rich text editor](/docs/writing/getting-started/rich-text-editor).

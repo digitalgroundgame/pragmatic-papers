@@ -9,7 +9,7 @@ import {
 } from "@/stories/fixtures/ticker"
 import { shortURL } from "./LinkIcon"
 import { TickerPlaceholder } from "./TickerLoader"
-import { TickerView } from "./TickerView"
+import { TICKER_EMPTY, TickerView } from "./TickerView"
 
 const meta = {
   title: "Components/Ticker",
@@ -164,5 +164,31 @@ export const Loading: Story = {
     const posts = ticker.querySelector<HTMLElement>(".ticker-posts")!
     const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches
     await expect(getComputedStyle(posts).animationName).toBe(reduced ? "none" : "ticker-fade-in")
+  },
+}
+
+/**
+ * No channel on air and no posts: the strip stays, at the placeholder's size, and says so. Taking
+ * it away once the feed arrived would shift everything below it.
+ */
+export const Empty: Story = {
+  args: { broadcast: null, posts: [] },
+  render: (args) => (
+    <div className="flex flex-col">
+      <TickerPlaceholder />
+      <TickerView {...args} />
+    </div>
+  ),
+  play: async ({ canvasElement }) => {
+    const placeholder = canvasElement.querySelector<HTMLElement>("[data-ticker-placeholder]")!
+    const ticker = within(canvasElement).getByRole("region", { name: "Live and latest" })
+    const box = (el: HTMLElement) => {
+      const style = getComputedStyle(el)
+      return [el.getBoundingClientRect().height, style.marginTop, style.marginBottom]
+    }
+    await expect(box(placeholder)).toEqual(box(ticker))
+    // It fades in, as posts would.
+    await waitFor(() => expect(within(ticker).getByText(TICKER_EMPTY)).toBeVisible())
+    await expect(within(ticker).queryByRole("checkbox")).not.toBeInTheDocument()
   },
 }

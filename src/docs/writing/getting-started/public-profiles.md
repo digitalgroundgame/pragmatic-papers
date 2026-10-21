@@ -42,4 +42,4 @@ Everyone with a staff role (writer, narrator, editor, chief editor, admin) has a
 
 Admins and chief editors can tick or untick **Public author page** by hand, and they can edit anyone's profile. Everyone else can edit only their own.
 
-The [Contributors block](/docs/contributors-block) offers the same people: staff, and anyone with a public page.
+The [Contributors block](/docs/editing/pages-and-volumes/contributors-block) offers the same people: staff, and anyone with a public page.

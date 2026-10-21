@@ -1508,6 +1508,7 @@ export interface FormSubmission {
  */
 export interface Doc {
   id: number;
+  _order?: string | null;
   title: string;
   /**
    * A short name for the docs sidebar, like "Footnotes". Left empty, the sidebar shows the title.
@@ -1545,10 +1546,6 @@ export interface Doc {
    */
   revisedAt?: string | null;
   /**
-   * Where the doc sits in the sidebar at /docs.
-   */
-  section: 'getting-started' | 'writing' | 'blocks' | 'media' | 'site';
-  /**
    * Who the help bell tells. Empty means all staff; admins see every doc.
    */
   audience?: ('admin' | 'chief-editor' | 'editor' | 'writer' | 'narrator')[] | null;
@@ -1569,6 +1566,15 @@ export interface Doc {
    */
   generateSlug?: boolean | null;
   slug: string;
+  parent?: (number | null) | Doc;
+  breadcrumbs?:
+    | {
+        doc?: (number | null) | Doc;
+        url?: string | null;
+        label?: string | null;
+        id?: string | null;
+      }[]
+    | null;
   updatedAt: string;
   createdAt: string;
   _status?: ('draft' | 'published') | null;
@@ -2626,6 +2632,7 @@ export interface FormSubmissionsSelect<T extends boolean = true> {
  * via the `definition` "docs_select".
  */
 export interface DocsSelect<T extends boolean = true> {
+  _order?: T;
   title?: T;
   navTitle?: T;
   summary?: T;
@@ -2633,13 +2640,21 @@ export interface DocsSelect<T extends boolean = true> {
   content?: T;
   publishedAt?: T;
   revisedAt?: T;
-  section?: T;
   audience?: T;
   tour?: T;
   showTableOfContents?: T;
   sourceHash?: T;
   generateSlug?: T;
   slug?: T;
+  parent?: T;
+  breadcrumbs?:
+    | T
+    | {
+        doc?: T;
+        url?: T;
+        label?: T;
+        id?: T;
+      };
   updatedAt?: T;
   createdAt?: T;
   _status?: T;
@@ -2929,9 +2944,6 @@ export interface Newsletter {
  */
 export interface Plugin {
   id: number;
-  /**
-   * Switch a plugin off here and it stops at once, without a deploy. Its data stays.
-   */
   switches?: {
     /**
      * The help docs at /docs, their sitemap, and their items in the notifications bell. Staff can write docs in the admin either way.

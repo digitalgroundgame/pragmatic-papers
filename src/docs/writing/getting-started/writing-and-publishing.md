@@ -37,5 +37,5 @@ To publish later, an editor opens the menu beside **Publish changes** and picks 
 
 ## Around the article
 
-- **Content**, **SEO** and **Narration** are tabs at the top. See [Add a narration to an article](/docs/narration) for the last one.
+- **Content**, **SEO** and **Narration** are tabs at the top. See [Add a narration to an article](/docs/writing/articles/narration) for the last one.
 - The sidebar holds the hero image, slug, authors and topics. **Authors** offers writers, editors, chief editors and narrators.

@@ -17,6 +17,7 @@ vi.mock("../getTickerFeed", () => ({ getTickerFeed }))
 
 const { Ticker } = await import("..")
 const { TickerLoader, TICKER_FEED_PATH } = await import("../TickerLoader")
+const { TICKER_EMPTY } = await import("../TickerView")
 
 const fetchFeed = vi.fn()
 
@@ -66,21 +67,24 @@ describe("TickerLoader", () => {
     document.body.innerHTML = ""
   })
 
-  it("takes the strip away when there's nothing to show", async () => {
+  it("keeps the strip when there's nothing to show, so the page below doesn't move", async () => {
     fetchFeed.mockResolvedValue(Response.json({ broadcast: null, posts: [] }))
     const { container } = render(<TickerLoader />)
-    await vi.waitFor(() => expect(container).toBeEmptyDOMElement())
+    expect(await screen.findByText(TICKER_EMPTY)).toBeInTheDocument()
+    expect(container.querySelector("[data-ticker-placeholder]")).not.toBeInTheDocument()
   })
 
-  it("takes the strip away when the feed fails", async () => {
+  it("keeps the strip when the feed fails, so the page below doesn't move", async () => {
     fetchFeed.mockResolvedValue(new Response("", { status: 500 }))
     const { container } = render(<TickerLoader />)
-    await vi.waitFor(() => expect(container).toBeEmptyDOMElement())
+    expect(await screen.findByText(TICKER_EMPTY)).toBeInTheDocument()
+    expect(container.querySelector("[data-ticker-placeholder]")).not.toBeInTheDocument()
   })
 
-  it("takes the strip away when the request fails", async () => {
+  it("keeps the strip when the request fails, so the page below doesn't move", async () => {
     fetchFeed.mockRejectedValue(new TypeError("Failed to fetch"))
     const { container } = render(<TickerLoader />)
-    await vi.waitFor(() => expect(container).toBeEmptyDOMElement())
+    expect(await screen.findByText(TICKER_EMPTY)).toBeInTheDocument()
+    expect(container.querySelector("[data-ticker-placeholder]")).not.toBeInTheDocument()
   })
 })

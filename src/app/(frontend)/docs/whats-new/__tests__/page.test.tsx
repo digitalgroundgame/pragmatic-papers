@@ -2,6 +2,8 @@ import { cleanup, render, screen, within } from "@testing-library/react"
 import type React from "react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
+import { docParentId, docTreeParents } from "@/stories/fixtures/docsTree"
+
 const { queryPublishedDocs, experiment } = vi.hoisted(() => ({
   queryPublishedDocs: vi.fn(),
   experiment: { enabled: true },
@@ -22,22 +24,24 @@ const renderPage = async () => render((await WhatsNewPage()) as React.ReactEleme
 
 const docs = [
   {
-    id: 1,
+    id: 101,
     slug: "unsplash-photos",
     title: "Find photos on Unsplash",
     summary: "Search Unsplash from Media.",
     publishedAt: "2026-10-18T00:00:00.000Z",
-    section: "media",
+    parent: docParentId("media"),
     heroImage: { url: "/hero.webp", sizes: { thumbnail: { url: "/hero-300x158.webp" } } },
   },
   {
-    id: 2,
+    id: 102,
     slug: "footnotes",
     title: "Footnotes",
     summary: "Cite your sources.",
     publishedAt: "2026-03-04T00:00:00.000Z",
-    section: "writing",
+    parent: docParentId("articles"),
   },
+  // Areas and sections, which introduce docs rather than announce a feature.
+  ...docTreeParents,
 ]
 
 beforeEach(() => {
@@ -53,31 +57,28 @@ describe("WhatsNewPage", () => {
     const latest = screen.getByRole("region", { name: "What's new" })
     expect(within(latest).getByRole("link", { name: /Find photos on Unsplash/ })).toHaveAttribute(
       "href",
-      "/docs/unsplash-photos",
+      "/docs/writing/media/unsplash-photos",
     )
+    expect(within(latest).queryByRole("link", { name: /^Articles/ })).not.toBeInTheDocument()
     expect(within(latest).getByText("October 18, 2026")).toHaveAttribute("datetime", "2026-10-18")
     expect(screen.getByRole("navigation", { name: "breadcrumb" })).toHaveTextContent("Docs")
   })
 
-  it("shows each new doc's thumbnail and summary, and every doc by section in the sidebar", async () => {
+  it("shows each new doc's thumbnail and summary, and every doc in the sidebar's tree", async () => {
     queryPublishedDocs.mockResolvedValue(docs)
     await renderPage()
     const latest = screen.getByRole("region", { name: "What's new" })
     const card = within(latest).getByRole("link", { name: /Find photos on Unsplash/ })
     expect(card).toHaveTextContent("Search Unsplash from Media.")
     expect(card.querySelector("img")).toHaveAttribute("src", "/hero-300x158.webp")
-    expect(
-      within(latest).queryByRole("region", { name: "Writing articles" }),
-    ).not.toBeInTheDocument()
+    expect(within(latest).queryByRole("region", { name: "Articles" })).not.toBeInTheDocument()
 
     const nav = screen.getByRole("navigation", { name: "Docs" })
     expect(within(nav).getByRole("link", { name: "What's new" })).toHaveAttribute(
       "aria-current",
       "page",
     )
-    expect(within(nav).getByRole("list", { name: "Writing articles" })).toHaveTextContent(
-      "Footnotes",
-    )
+    expect(within(nav).getByRole("list", { name: "Articles" })).toHaveTextContent("Footnotes")
   })
 
   it("says so when there are no docs", async () => {

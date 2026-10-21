@@ -4,7 +4,7 @@ import { HOME_DOC_SLUG } from "@/plugins/docs/sections"
 import type { Metadata } from "next"
 import React from "react"
 
-import { DocView, docMetadata } from "./[slug]/DocView"
+import { DocView, docMetadata } from "./[...path]/DocView"
 import { WhatsNew } from "./whats-new/WhatsNew"
 
 // Rendered per request from the data cache, which saving a doc or a deploy's docs sync refreshes:

@@ -7,6 +7,7 @@ import { EndRule } from "@/blocks/SquiggleRule/EndRule"
 import { ArticleSidebar } from "@/components/ArticleSidebar"
 import { AuthorList } from "@/components/Authors/AuthorList"
 import { Comments } from "@/components/Comments"
+import { CommentsUnpublished } from "@/components/Comments/Unpublished"
 import { FootnoteList } from "@/components/FootnoteList"
 import { JsonLd } from "@/components/JsonLd"
 import { LivePreviewListener } from "@/components/LivePreviewListener"
@@ -25,6 +26,8 @@ import { getPayloadClient } from "@/data/payload"
 import { queryArticleBySlug, queryVolumesForArticles } from "@/data/queries"
 import { isResolved } from "@/utilities/relationships"
 import { buildArticleJsonLd, buildBreadcrumbJsonLd } from "@/utilities/structuredData"
+
+import { isArticlePublished } from "./isArticlePublished"
 
 // Prerendered from generateStaticParams; a slug published since the build is rendered on its
 // first request and cached the same way. Saving the article or one of its authors revalidates it.
@@ -76,13 +79,16 @@ export default async function Article({ params: paramsPromise }: Args): Promise<
 
   const populatedAuthors = (authors || []).filter(isResolved<User>)
 
-  const [[volume], tableOfContentsEnabled, commentsSwitch, ssoSwitch] = await Promise.all([
-    queryVolumesForArticles([article.id]),
-    isExperimentEnabled("tableOfContents"),
-    isPluginEnabled("comments"),
-    // Readers sign in to comment, so comments need single sign-on on too.
-    isPluginEnabled("sso"),
-  ])
+  const [[volume], tableOfContentsEnabled, commentsSwitch, ssoSwitch, published] =
+    await Promise.all([
+      queryVolumesForArticles([article.id]),
+      isExperimentEnabled("tableOfContents"),
+      isPluginEnabled("comments"),
+      // Readers sign in to comment, so comments need single sign-on on too.
+      isPluginEnabled("sso"),
+      // Preview stays on across pages, so it keeps comments wherever readers have them.
+      draft ? isArticlePublished(article.id) : true,
+    ])
   const commentsEnabled = commentsSwitch && ssoSwitch
   const showTableOfContents = tableOfContentsEnabled && article.showTableOfContents === true
 
@@ -126,7 +132,8 @@ export default async function Article({ params: paramsPromise }: Args): Promise<
                 <Separator />
                 <TopicsList topics={topics} />
                 <AuthorList aria-label="Article Authors" authors={populatedAuthors} />
-                {commentsEnabled && !draft && <Comments articleId={article.id} />}
+                {commentsEnabled &&
+                  (published ? <Comments articleId={article.id} /> : <CommentsUnpublished />)}
               </div>
             </div>
           </TableOfContentsProvider>

@@ -26,4 +26,4 @@ In both, clicking an image opens it full size.
 ## Good to know
 
 - Captions and alt text come from each item in Media, so set them there.
-- An image used in a collage on a published article can't be deleted from Media until it's taken out (see [Why some media can't be deleted](/docs/media-references)).
+- An image used in a collage on a published article can't be deleted from Media until it's taken out (see [Why some media can't be deleted](/docs/writing/media/media-references)).

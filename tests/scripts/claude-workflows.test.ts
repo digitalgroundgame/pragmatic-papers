@@ -128,13 +128,17 @@ describe("the review in the action's progress comment", () => {
     expect(workflow).toContain("following .claude/skills/code-review/SKILL.md")
     expect(workflow).toContain("the summary is the final body of your progress comment")
     expect(workflow).toContain(
-      "<sub>claude-review sha=${{ env.HEAD_SHA }} verdict=<pass|blocker></sub>",
+      "`[claude-review]: #sha=${{ env.HEAD_SHA }}&verdict=<pass|blocker>` as its last line",
     )
     expect(workflow).toContain("track_progress: true")
     expect(workflow).toContain("--json-schema")
   })
 
   it("is found by review-ack.yml under the action's header", () => {
+    expect(progressComment(`[claude-review]: #sha=${sha}&verdict=pass`)).toMatch(summary())
+  })
+
+  it("still finds an older progress comment's visible marker", () => {
     expect(progressComment(`<sub>claude-review sha=${sha} verdict=pass</sub>`)).toMatch(summary())
   })
 
@@ -146,14 +150,19 @@ describe("the review in the action's progress comment", () => {
     )
   })
 
+  it("counts a marker with an abbreviated hash", () => {
+    expect(progressComment("<sub>claude-review sha=5e402f7 verdict=pass</sub>")).toMatch(summary())
+    expect(progressComment("[claude-review]: #sha=5e402f7&verdict=pass")).toMatch(summary())
+  })
+
   it("doesn't count a comment that only quotes a marker", () => {
-    const quoted = `${progressComment(`<sub>claude-review sha=${sha} verdict=pass</sub>`)}\n\nMore text`
+    const quoted = `${progressComment(`[claude-review]: #sha=${sha}&verdict=pass`)}\n\nMore text`
     expect(quoted).not.toMatch(summary())
   })
 
   it("checks the verdict the way review-ack reads the marker", () => {
     const workflow = read("claude-review.yml")
-    expect(workflow).toContain('grep -o "<sub>claude-review sha=$HEAD_SHA verdict=[a-z]*</sub>"')
+    expect(workflow).toContain("\\[claude-review\\]: #sha=$HEAD_SHA&verdict=[a-z]*")
     expect(workflow).toContain("fromJSON(steps.review.outputs.structured_output).verdict")
   })
 })
@@ -199,8 +208,7 @@ describe("claude-review.yml's verdict check", () => {
     }
   }
 
-  const marker = (verdict: string, of = sha) =>
-    `<sub>claude-review sha=${of} verdict=${verdict}</sub>`
+  const marker = (verdict: string, of = sha) => `[claude-review]: #sha=${of}&verdict=${verdict}`
 
   it("passes when the structured verdict is pass and the comment carries this commit's marker", () => {
     expect(check([marker("pass")], "pass").status).toBe(0)
@@ -268,5 +276,6 @@ describe("claude.yml", () => {
     expect(read("claude.yml")).toContain(
       "follow .claude/skills/code-review/SKILL.md for it in its progress-comment mode",
     )
+    expect(read("claude.yml")).toContain("written as its full 40-character hash")
   })
 })

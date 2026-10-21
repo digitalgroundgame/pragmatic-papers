@@ -1,9 +1,14 @@
-import { cleanup, render, screen } from "@testing-library/react"
+import { cleanup, render, screen, within } from "@testing-library/react"
 import type React from "react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
+import { docParentId, docTreeParents } from "@/stories/fixtures/docsTree"
+
 const { queries } = vi.hoisted(() => ({
-  queries: { queryDocBySlug: vi.fn(), queryPublishedDocs: vi.fn() },
+  queries: {
+    queryDocBySlug: vi.fn(),
+    queryPublishedDocs: vi.fn(),
+  },
 }))
 
 vi.mock("server-only", () => ({}))
@@ -16,17 +21,16 @@ vi.mock("@/globals/Plugins/isPluginEnabled", () => ({
   isPluginEnabled: async () => true,
 }))
 
-import { DocView } from "../[slug]/DocView"
+import { DocView } from "../[...path]/DocView"
 import DocsHomePage, { generateMetadata } from "../page"
 
 const home = {
-  id: 1,
+  id: 100,
   slug: "home",
   title: "Pragmatic Papers docs",
   navTitle: "Home",
   summary: "How Pragmatic Papers works.",
   publishedAt: "2026-10-10T00:00:00.000Z",
-  section: "getting-started",
   content: {
     root: {
       type: "root",
@@ -38,13 +42,13 @@ const home = {
   },
 }
 const footnotes = {
-  id: 2,
+  id: 102,
   slug: "footnotes",
   title: "Add footnotes",
   navTitle: "Footnotes",
   summary: "Cite your sources.",
   publishedAt: "2026-03-04T00:00:00.000Z",
-  section: "writing",
+  parent: docParentId("articles"),
 }
 
 // The page hands the home slug to DocView, an async component the test renders itself.
@@ -55,7 +59,7 @@ const renderPage = async () => {
 
 beforeEach(() => {
   queries.queryDocBySlug.mockResolvedValue(home)
-  queries.queryPublishedDocs.mockResolvedValue([home, footnotes])
+  queries.queryPublishedDocs.mockResolvedValue([home, footnotes, ...docTreeParents])
 })
 afterEach(cleanup)
 
@@ -70,10 +74,14 @@ describe("DocsHomePage", () => {
       "aria-current",
       "page",
     )
-    expect(nav).toHaveTextContent("Admin")
-    expect(screen.getByRole("link", { name: /Next.*Footnotes/ })).toHaveAttribute(
+    expect(within(nav).getByRole("link", { name: "Footnotes" })).toHaveAttribute(
       "href",
-      "/docs/footnotes",
+      "/docs/writing/articles/footnotes",
+    )
+    // The first area follows Home.
+    expect(screen.getByRole("link", { name: /Next.*Writing/ })).toHaveAttribute(
+      "href",
+      "/docs/writing",
     )
   })
 

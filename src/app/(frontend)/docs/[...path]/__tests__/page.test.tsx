@@ -2,8 +2,13 @@ import { cleanup, render, screen, within } from "@testing-library/react"
 import type React from "react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
+import { docParentId, docTreeParents } from "@/stories/fixtures/docsTree"
+
 const { queries, draft, experiments } = vi.hoisted(() => ({
-  queries: { queryDocBySlug: vi.fn(), queryPublishedDocs: vi.fn() },
+  queries: {
+    queryDocBySlug: vi.fn(),
+    queryPublishedDocs: vi.fn(),
+  },
   draft: { isEnabled: false },
   experiments: {} as Record<string, boolean>,
 }))
@@ -23,6 +28,9 @@ vi.mock("@/components/PayloadRedirects", () => ({
 vi.mock("next/navigation", () => ({
   permanentRedirect: (url: string) => {
     throw new Error(`redirect:${url}`)
+  },
+  redirect: (url: string) => {
+    throw new Error(`moved:${url}`)
   },
   notFound: () => {
     throw new Error("notFound")
@@ -48,7 +56,7 @@ const paragraph = (text: string) => ({
 })
 
 const doc = {
-  id: 1,
+  id: 101,
   slug: "experiments",
   title: "Switch beta features on",
   summary: "Experiments, per site.",
@@ -71,27 +79,78 @@ const doc = {
   },
 }
 
-const args = (slug = "experiments") => ({ params: Promise.resolve({ slug }) })
-// The page hands its slug to DocView, an async component the test renders itself.
-const renderPage = async (slug?: string) => {
-  const page = (await DocPage(args(slug))) as React.ReactElement<{ slug: string }>
+const PATH = "/docs/editing/site-settings/experiments"
+const args = (path = PATH) => ({
+  params: Promise.resolve({ path: path.split("/").slice(2) }),
+})
+// The page hands its slug and path to DocView, an async component the test renders itself.
+const renderPage = async (path?: string) => {
+  const page = (await DocPage(args(path))) as React.ReactElement<
+    React.ComponentProps<typeof DocView>
+  >
   return render((await DocView(page.props)) as React.ReactElement)
 }
+const published = { ...doc, parent: docParentId("site-settings") }
 
 beforeEach(() => {
   vi.clearAllMocks()
   draft.isEnabled = false
   for (const name of Object.keys(experiments)) delete experiments[name]
   queries.queryDocBySlug.mockResolvedValue(doc)
-  queries.queryPublishedDocs.mockResolvedValue([{ ...doc, section: "site" }])
+  queries.queryPublishedDocs.mockResolvedValue([...docTreeParents, published])
 })
 afterEach(cleanup)
 
 describe("DocPage", () => {
   it("hands an unknown slug to the redirects", async () => {
     queries.queryDocBySlug.mockResolvedValue(null)
-    await renderPage("nope")
-    expect(screen.getByTestId("redirects")).toHaveAttribute("data-url", "/docs/nope")
+    await renderPage("/docs/editing/nope")
+    expect(screen.getByTestId("redirects")).toHaveAttribute("data-url", "/docs/editing/nope")
+  })
+
+  it("sends a doc asked for anywhere but its place in the tree there", async () => {
+    // Under no parent, and under another one, as before an editor moved it.
+    await expect(renderPage("/docs/experiments")).rejects.toThrow(`moved:${PATH}`)
+    await expect(renderPage("/docs/writing/experiments")).rejects.toThrow(`moved:${PATH}`)
+  })
+
+  it("leads the breadcrumbs through its area and section", async () => {
+    await renderPage()
+    const trail = screen.getByRole("navigation", { name: "breadcrumb" })
+    expect(within(trail).getByRole("link", { name: "Editing" })).toHaveAttribute(
+      "href",
+      "/docs/editing",
+    )
+    expect(within(trail).getByRole("link", { name: "Site settings" })).toHaveAttribute(
+      "href",
+      "/docs/editing/site-settings",
+    )
+  })
+
+  it("lists a section's docs on its page", async () => {
+    const section = docTreeParents.find((item) => item.slug === "site-settings")!
+    queries.queryDocBySlug.mockResolvedValue({ ...doc, ...section, content: doc.content })
+    await renderPage("/docs/editing/site-settings")
+    const list = screen.getByRole("region", { name: "In this section" })
+    expect(within(list).getByRole("link", { name: /Switch beta features on/ })).toHaveAttribute(
+      "href",
+      PATH,
+    )
+  })
+
+  it("previews a draft where it was opened, with the trail its own breadcrumbs give", async () => {
+    draft.isEnabled = true
+    queries.queryPublishedDocs.mockResolvedValue(docTreeParents)
+    queries.queryDocBySlug.mockResolvedValue({
+      ...doc,
+      breadcrumbs: [
+        { label: "Editing", url: "/docs/editing" },
+        { label: "Switch beta features on", url: "/docs/editing/experiments" },
+      ],
+    })
+    await renderPage("/docs/experiments")
+    const trail = screen.getByRole("navigation", { name: "breadcrumb" })
+    expect(within(trail).getByRole("link", { name: "Editing" })).toBeInTheDocument()
   })
 
   it("renders the doc with its hero, dek, date, breadcrumbs and share buttons", async () => {
@@ -171,32 +230,58 @@ describe("DocPage", () => {
     expect(screen.queryByRole("complementary")).not.toBeInTheDocument()
   })
 
-  it("ends with the previous and next docs in the sidebar's order, from Home", async () => {
+  it("ends with the previous and next docs in the sidebar's order", async () => {
     queries.queryPublishedDocs.mockResolvedValue([
-      { slug: "home", title: "Docs home", navTitle: "Home", section: "getting-started" },
-      { ...doc, section: "site" },
-      { slug: "volumes", title: "Put together a volume", navTitle: "Volumes", section: "site" },
+      { id: 100, slug: "home", title: "Docs home", navTitle: "Home" },
+      ...docTreeParents,
+      { ...published, _order: "b0" },
+      {
+        id: 102,
+        slug: "volumes",
+        title: "Put together a volume",
+        navTitle: "Volumes",
+        parent: docParentId("site-settings"),
+        _order: "b1",
+      },
     ])
     await renderPage()
+    const pager = screen.getByRole("navigation", { name: "Previous and next docs" })
+    expect(within(pager).getByRole("link", { name: /Previous.*Site settings/ })).toHaveAttribute(
+      "href",
+      "/docs/editing/site-settings",
+    )
+    expect(within(pager).getByRole("link", { name: /Next.*Volumes/ })).toHaveAttribute(
+      "href",
+      "/docs/editing/site-settings/volumes",
+    )
+  })
+
+  it("starts the pager at Home on the first doc", async () => {
+    queries.queryPublishedDocs.mockResolvedValue([
+      { id: 100, slug: "home", title: "Docs home", navTitle: "Home" },
+      ...docTreeParents,
+    ])
+    const writing = docTreeParents[0]!
+    queries.queryDocBySlug.mockResolvedValue({ ...doc, ...writing, content: doc.content })
+    await renderPage("/docs/writing")
     const pager = screen.getByRole("navigation", { name: "Previous and next docs" })
     expect(within(pager).getByRole("link", { name: /Previous.*Home/ })).toHaveAttribute(
       "href",
       "/docs",
     )
-    expect(within(pager).getByRole("link", { name: /Next.*Volumes/ })).toHaveAttribute(
-      "href",
-      "/docs/volumes",
-    )
   })
 
   it("has no GitHub link, even on a doc seeded from the repo: editors change it here", async () => {
-    queries.queryDocBySlug.mockResolvedValue({ ...doc, section: "site", sourceHash: "abc" })
+    queries.queryDocBySlug.mockResolvedValue({
+      ...published,
+      sourceHash: "abc",
+    })
     await renderPage()
     expect(screen.queryByRole("link", { name: /GitHub/ })).not.toBeInTheDocument()
   })
 
   it("sends /docs/home to /docs, where the home doc lives", async () => {
-    await expect(DocPage(args("home"))).rejects.toThrow("redirect:/docs")
+    await expect(DocPage(args("/docs/home"))).rejects.toThrow("redirect:/docs")
   })
 
   it("offers the doc's tour as Show me", async () => {
@@ -242,7 +327,7 @@ describe("generateMetadata", () => {
     const meta = await generateMetadata(args())
     expect(meta.title).toBe("Switch beta features on — Pragmatic Papers")
     expect(meta.description).toBe("Experiments, per site.")
-    expect(meta.alternates?.canonical).toMatch(/\/docs\/experiments$/)
+    expect(meta.alternates?.canonical).toMatch(/\/docs\/editing\/site-settings\/experiments$/)
   })
 
   it("is empty while the docs experiment is off", async () => {
@@ -252,6 +337,6 @@ describe("generateMetadata", () => {
 
   it("is empty for an unknown slug", async () => {
     queries.queryDocBySlug.mockResolvedValue(null)
-    await expect(generateMetadata(args("nope"))).resolves.toEqual({})
+    await expect(generateMetadata(args("/docs/nope"))).resolves.toEqual({})
   })
 })

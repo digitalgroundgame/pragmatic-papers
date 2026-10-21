@@ -8,6 +8,8 @@ import { TICKER_LABEL, TickerView } from "./TickerView"
 /** Where the ticker's feed is served (`src/app/(frontend)/api/ticker/route.ts`). */
 export const TICKER_FEED_PATH = "/api/ticker"
 
+const EMPTY_FEED: TickerFeed = { broadcast: null, posts: [] }
+
 /**
  * The ticker as the server sends it, before its feed arrives: the "Latest" label where the real
  * one sits, in a strip of the ticker's size, margins and borders, so nothing moves when the
@@ -26,7 +28,8 @@ export function TickerPlaceholder(): React.ReactNode {
 /**
  * The ticker, fetched once the page has loaded. Until it arrives, its placeholder holds its
  * place and shows its label, so the page below doesn't move when it lands.
- * A feed that fails or has nothing to show takes the strip away.
+ * A feed that fails or has nothing to show keeps the strip, saying there's nothing new: taking
+ * it away would move the page below, a layout shift on every page.
  */
 export function TickerLoader(): React.ReactNode {
   const [feed, setFeed] = useState<TickerFeed | "loading" | null>("loading")
@@ -43,6 +46,5 @@ export function TickerLoader(): React.ReactNode {
   }, [])
 
   if (feed === "loading") return <TickerPlaceholder />
-  if (!feed) return null
-  return <TickerView {...feed} />
+  return <TickerView {...(feed ?? EMPTY_FEED)} />
 }

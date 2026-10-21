@@ -21,18 +21,25 @@ beforeEach(() => {
 afterEach(() => vi.unstubAllEnvs())
 
 describe("/docs/sitemap.xml", () => {
-  it("lists every doc with a slug, the home doc at /docs, and What's new as fresh as the newest", async () => {
+  it("lists every doc at its place in the tree, the home doc at /docs, and What's new as fresh as the newest", async () => {
+    const doc = (id: number, slug: string | null, updatedAt: string, parent?: number) => ({
+      id,
+      slug,
+      title: slug ?? "Untitled",
+      parent,
+      updatedAt,
+    })
     queryPublishedDocs.mockResolvedValue([
-      { slug: "home", updatedAt: "2026-10-01T00:00:00.000Z" },
-      { slug: "experiments", updatedAt: "2026-10-02T00:00:00.000Z" },
-      { slug: null, updatedAt: "2026-10-05T00:00:00.000Z" },
-      { slug: "unsplash-photos", updatedAt: "2026-10-08T00:00:00.000Z" },
+      doc(1, "home", "2026-10-01T00:00:00.000Z"),
+      doc(2, "experiments", "2026-10-02T00:00:00.000Z", 4),
+      doc(3, null, "2026-10-05T00:00:00.000Z"),
+      doc(4, "editing", "2026-10-08T00:00:00.000Z"),
     ])
 
     expect(await sitemap()).toEqual([
       { url: `${SITE_URL}/docs`, lastModified: "2026-10-01T00:00:00.000Z" },
-      { url: `${SITE_URL}/docs/experiments`, lastModified: "2026-10-02T00:00:00.000Z" },
-      { url: `${SITE_URL}/docs/unsplash-photos`, lastModified: "2026-10-08T00:00:00.000Z" },
+      { url: `${SITE_URL}/docs/editing/experiments`, lastModified: "2026-10-02T00:00:00.000Z" },
+      { url: `${SITE_URL}/docs/editing`, lastModified: "2026-10-08T00:00:00.000Z" },
       { url: `${SITE_URL}/docs/whats-new`, lastModified: "2026-10-08T00:00:00.000Z" },
     ])
   })

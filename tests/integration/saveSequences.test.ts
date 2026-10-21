@@ -103,7 +103,8 @@ const SUBJECTS: Subject[] = [
         } as never,
       }),
     edit: { summary: "Typed into" },
-    path: (slug) => `/docs/${slug}`,
+    // Every docs page shows the whole tree, so a save refreshes them all under /docs.
+    path: () => "/docs",
   },
 ]
 

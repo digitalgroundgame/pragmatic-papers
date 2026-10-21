@@ -1,5 +1,5 @@
 import { existsSync } from "node:fs"
-import { readdir, readFile } from "node:fs/promises"
+import { readFile } from "node:fs/promises"
 import path from "node:path"
 import type { Doc } from "@/payload-types"
 import {
@@ -14,57 +14,15 @@ import type { Payload } from "payload"
 import { DOCS_SLUG } from "./collection"
 import { imagesIn, parseDocFile } from "./docFile"
 import { docsEditorConfig, markdownToContent } from "./markdown"
-import { hashRepoDoc, mediaFilename, mediaRefsIn, type RepoDoc, unpackMedia } from "./repoDoc"
-import { DEFAULT_DOC_SECTION, DOC_SECTIONS, type DocSection, HOME_DOC_SLUG } from "./sections"
-
-/**
- * Where the repo keeps its docs: a folder per section, holding `<slug>.md` and the files it
- * shows, and the home doc, `home.md`, at the top. The build traces it into the image.
- */
-export const DOCS_DIR = path.resolve(process.cwd(), "src/docs")
-
-export interface DocFileEntry {
-  slug: string
-  section: DocSection
-  /** The section's folder, where the doc's files are. */
-  folder: string
-  file: string
-}
-
-/**
- * Every `<section>/<slug>.md` in `dir`, and `home.md`, by slug. Throws on an unknown section, a
- * slug used twice, or another Markdown file outside a section.
- */
-export async function listDocFiles(dir = DOCS_DIR): Promise<DocFileEntry[]> {
-  const sections = DOC_SECTIONS.map((section) => section.value as string)
-  const found: DocFileEntry[] = []
-  for (const entry of await readdir(dir, { withFileTypes: true })) {
-    if (entry.isFile() && entry.name.endsWith(".md")) {
-      if (entry.name !== `${HOME_DOC_SLUG}.md`) {
-        throw new Error(`src/docs/${entry.name} should be in a section's folder`)
-      }
-      // Kept in the default section, which the sidebar leaves it out of.
-      const file = path.join(dir, entry.name)
-      found.push({ slug: HOME_DOC_SLUG, section: DEFAULT_DOC_SECTION, folder: dir, file })
-      continue
-    }
-    if (!entry.isDirectory()) continue
-    const folder = path.join(dir, entry.name)
-    const files = (await readdir(folder)).filter((name) => name.endsWith(".md"))
-    if (!files.length) continue
-    if (!sections.includes(entry.name)) {
-      throw new Error(`src/docs/${entry.name}/ isn't a section (known: ${sections.join(", ")})`)
-    }
-    for (const name of files) {
-      const slug = name.slice(0, -".md".length)
-      const twin = found.find((doc) => doc.slug === slug)
-      if (twin)
-        throw new Error(`Two docs are called "${slug}": in ${twin.section}/ and ${entry.name}/`)
-      found.push({ slug, section: entry.name as DocSection, folder, file: path.join(folder, name) })
-    }
-  }
-  return found.sort((a, b) => a.slug.localeCompare(b.slug))
-}
+import {
+  hashRepoDoc,
+  legacyRepoDocHash,
+  mediaFilename,
+  mediaRefsIn,
+  type RepoDoc,
+  unpackMedia,
+} from "./repoDoc"
+import { DOCS_DIR, listDocFiles } from "./repoDocFiles"
 
 const MIME_TYPES: Record<string, string> = {
   gif: "image/gif",
@@ -243,7 +201,13 @@ export async function syncDocs(
   dir = DOCS_DIR,
   { localSeed = false }: SyncOptions = {},
 ): Promise<SyncResult> {
-  const result: SyncResult = { created: [], offered: [], skipped: [], existing: [], deleted: [] }
+  const result: SyncResult = {
+    created: [],
+    offered: [],
+    skipped: [],
+    existing: [],
+    deleted: [],
+  }
   if (!existsSync(dir)) {
     // A deploy without the folder (a runtime with no file system for it) would otherwise
     // look like one with nothing to sync.
@@ -252,8 +216,11 @@ export async function syncDocs(
   }
 
   const entries = await listDocFiles(dir)
+  // Each doc the site has by slug, so a new doc is seeded under its folder's doc. Parents come
+  // first in `entries`, so one created here is in it by the time its docs are.
+  const ids = new Map<string, number | string>()
   let editorConfig: ReturnType<typeof docsEditorConfig> | undefined
-  for (const { slug, section, folder, file } of entries) {
+  for (const { slug, parent, folder, file } of entries) {
     const seeded = await wasSeeded(payload, DOCS_SLUG, slug)
     const { docs } = await payload.find({
       collection: DOCS_SLUG,
@@ -266,6 +233,7 @@ export async function syncDocs(
       where: { slug: { equals: slug } },
     })
     const existing = docs[0]
+    if (existing) ids.set(slug, existing.id)
     if (existing && !seeded) {
       // Recorded too, so a doc the site had before seeding was recorded stays deleted once an
       // editor deletes it.
@@ -283,10 +251,19 @@ export async function syncDocs(
       imagesIn(body).map((image) => ({ $media: image.file, alt: image.alt })),
     ])
     const files = await Promise.all(refs.map((ref) => readFile(path.join(folder, ref.$media))))
-    const hash = hashRepoDoc(section, source, files)
+    const hash = hashRepoDoc(source, files)
 
     const offered = existing ? await lastOffered(payload, DOCS_SLUG, slug) : null
     const savedHash = offered ? offered.hash : (existing?.sourceHash ?? hash)
+    if (
+      existing &&
+      savedHash !== hash &&
+      savedHash === legacyRepoDocHash(parent ?? "", source, files)
+    ) {
+      await markOffered(payload, DOCS_SLUG, slug, hash, offered?.version)
+      result.existing.push(slug)
+      continue
+    }
     const latest = existing && savedHash !== hash ? await latestVersion(payload, existing.id) : null
     const action = planRepoDoc({
       exists: Boolean(existing),
@@ -311,9 +288,9 @@ export async function syncDocs(
       continue
     }
 
-    const ids = new Map<string, number | string>()
+    const mediaIds = new Map<string, number | string>()
     for (const [i, ref] of refs.entries()) {
-      ids.set(ref.$media, await uploadOnce(payload, ref.$media, files[i]!, ref))
+      mediaIds.set(ref.$media, await uploadOnce(payload, ref.$media, files[i]!, ref))
     }
 
     // Converted only for a doc it creates or offers: a deploy reads every doc.
@@ -322,7 +299,7 @@ export async function syncDocs(
     const repoDoc: RepoDoc = {
       ...rest,
       ...(heroImage ? { heroImage: { $media: heroImage, alt: heroAlt } } : {}),
-      section,
+      parent,
       content: markdownToContent(slug, body, editorConfig),
     }
     const publish = localSeed && action === "create"
@@ -332,12 +309,11 @@ export async function syncDocs(
       summary: repoDoc.summary,
       publishedAt: repoDoc.publishedAt,
       revisedAt: repoDoc.revisedAt ?? null,
-      heroImage: repoDoc.heroImage ? (unpackMedia(repoDoc.heroImage, ids) as number) : null,
-      section: repoDoc.section,
+      heroImage: repoDoc.heroImage ? (unpackMedia(repoDoc.heroImage, mediaIds) as number) : null,
       audience: (repoDoc.audience ?? []) as Doc["audience"],
       showTableOfContents: repoDoc.showTableOfContents ?? true,
       tour: repoDoc.tour ?? null,
-      content: unpackMedia(repoDoc.content, ids) as never,
+      content: unpackMedia(repoDoc.content, mediaIds) as never,
       slug,
       sourceHash: hash,
       _status: publish ? ("published" as const) : ("draft" as const),
@@ -347,6 +323,7 @@ export async function syncDocs(
     if (action === "offer") {
       // Saved as a draft, it's a new version only: the published doc stays as it is, and the
       // admin shows the doc as Changed, with the suggestion to compare in its Versions tab.
+      // Where the doc sits is the site's: an editor may have moved it, so an offer leaves it.
       id = existing!.id
       await payload.update({
         collection: DOCS_SLUG,
@@ -358,15 +335,18 @@ export async function syncDocs(
       })
       result.offered.push(slug)
     } else {
+      // Under its folder's doc; at the top when the site has none (an editor deleted it).
+      const parentId = repoDoc.parent ? (ids.get(repoDoc.parent) ?? null) : null
       id = (
         await payload.create({
           collection: DOCS_SLUG,
-          data,
+          data: { ...data, parent: parentId as number | null },
           context,
           draft: !publish,
           overrideAccess: true,
         })
       ).id
+      ids.set(slug, id)
       await markSeeded(payload, DOCS_SLUG, slug)
       result.created.push(slug)
     }

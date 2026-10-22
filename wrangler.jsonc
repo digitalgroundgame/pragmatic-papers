@@ -14,6 +14,9 @@
   "compatibility_date": "2026-09-30",
   "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
   "workers_dev": true,
+  // Version URLs (<version>-<name>.<subdomain>.workers.dev), which skew protection sends
+  // tabs from an earlier deploy to.
+  "preview_urls": true,
   // staging-worker.pragmaticpapers.com is a Custom Domain added in the dashboard (Settings,
   // Domains & Routes), so the deploy token needs no zone permissions. With no `routes`
   // here, `wrangler deploy` leaves it alone; listing one would replace the dashboard's.
@@ -33,6 +36,9 @@
     // The Worker reads staging's database, which staging's own deploy seeds (help docs, starter
     // pages, achievements): one seeder per database. It has no src/docs/ to read either.
     "DEPLOY_SEED": "false",
+    // Skew protection builds an earlier version's URL from these (open-next.config.ts).
+    "CF_WORKER_NAME": "pragmatic-papers-staging",
+    "CF_PREVIEW_DOMAIN": "digital-ground-game",
   },
   "services": [
     {
@@ -61,10 +67,23 @@
       "id": "e9c93f410862461e8cb49911e75d0307",
     },
   ],
+  // OpenNext's revalidation queue lives in the queue Worker (queue.wrangler.jsonc), so this
+  // one implements no Durable Object and gets Version URLs, which skew protection needs.
   "durable_objects": {
-    "bindings": [{ "name": "NEXT_CACHE_DO_QUEUE", "class_name": "DOQueueHandler" }],
+    "bindings": [
+      {
+        "name": "NEXT_CACHE_DO_QUEUE",
+        "class_name": "DOQueueHandler",
+        "script_name": "pragmatic-papers-staging-queue",
+      },
+    ],
   },
-  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["DOQueueHandler"] }],
+  // v2 deletes the class this Worker held before the queue Worker took it over, and the
+  // queue it held (revalidations in flight; the next stale read queues them again).
+  "migrations": [
+    { "tag": "v1", "new_sqlite_classes": ["DOQueueHandler"] },
+    { "tag": "v2", "deleted_classes": ["DOQueueHandler"] },
+  ],
   "images": {
     "binding": "IMAGES",
   },
@@ -74,6 +93,7 @@
       // No routes: production's hostname becomes a Custom Domain in the dashboard, as
       // staging-worker's is, when the Worker takes over from Coolify.
       "workers_dev": true,
+      "preview_urls": true,
       "observability": { "enabled": true },
       "exports": {
         "CachedSite": { "type": "worker", "cache": { "enabled": true } },
@@ -86,6 +106,8 @@
         // Production's Coolify deploy seeds its database; this Worker's never does. An
         // environment doesn't inherit the top-level `vars`, so it needs its own copy.
         "DEPLOY_SEED": "false",
+        "CF_WORKER_NAME": "pragmatic-papers-production",
+        "CF_PREVIEW_DOMAIN": "digital-ground-game",
       },
       "services": [
         {
@@ -114,9 +136,18 @@
         },
       ],
       "durable_objects": {
-        "bindings": [{ "name": "NEXT_CACHE_DO_QUEUE", "class_name": "DOQueueHandler" }],
+        "bindings": [
+          {
+            "name": "NEXT_CACHE_DO_QUEUE",
+            "class_name": "DOQueueHandler",
+            "script_name": "pragmatic-papers-production-queue",
+          },
+        ],
       },
-      "migrations": [{ "tag": "v1", "new_sqlite_classes": ["DOQueueHandler"] }],
+      "migrations": [
+        { "tag": "v1", "new_sqlite_classes": ["DOQueueHandler"] },
+        { "tag": "v2", "deleted_classes": ["DOQueueHandler"] },
+      ],
       "images": {
         "binding": "IMAGES",
       },

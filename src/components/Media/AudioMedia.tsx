@@ -85,10 +85,10 @@ function PlayToggle({ isPlaying, label, variant, expanded, onToggle }: PlayToggl
       <Button
         variant="ghost"
         onClick={onToggle}
-        size="icon-sm"
+        size="icon-lg"
         aria-label={isPlaying ? "Pause" : "Play"}
       >
-        {isPlaying ? <Pause className="size-4.5" /> : <Play className="size-4.5" />}
+        {isPlaying ? <Pause /> : <Play />}
       </Button>
       {variant === "collapsible" && (
         <span aria-hidden className={audioLabelVariants({ variant, expanded })}>
@@ -238,9 +238,9 @@ function SettingsPanel({
       <PopoverTrigger
         aria-label="Player settings"
         className="text-muted-foreground hover:text-foreground shrink-0 transition-colors"
-        render={<Button variant="ghost" size="icon-sm" />}
+        render={<Button variant="ghost" size="icon-lg" />}
       >
-        <Settings className="size-4.5" />
+        <Settings />
       </PopoverTrigger>
       <PopoverContent
         align="end"

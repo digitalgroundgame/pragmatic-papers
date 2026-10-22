@@ -111,7 +111,11 @@ export default async function Article({ params: paramsPromise }: Args): Promise<
           {draft && <LivePreviewListener />}
 
           <TableOfContentsProvider>
-            <ArticleHero article={article} showTableOfContents={showTableOfContents} />
+            <ArticleHero
+              article={article}
+              showTableOfContents={showTableOfContents}
+              showComments={commentsEnabled}
+            />
             <div
               id="intro"
               className="lg:toc-open:gap-10 xl:toc-open:gap-20 relative flex flex-col justify-between gap-3 lg:flex-row lg:gap-6"

@@ -121,7 +121,7 @@ function TableOfContentsButton({
   return (
     <Button
       variant={isOpen ? "outline" : "ghost"}
-      size="icon-sm"
+      size="icon-lg"
       aria-controls={navId}
       aria-expanded={isOpen}
       aria-label={isOpen ? "Collapse table of contents" : "Expand table of contents"}

@@ -1,4 +1,4 @@
-import { isPublishedOrStaff, isCreatedByOrEditor, isDraftOrEditor } from "@/access/policies"
+import { canDeleteArticle, isDraftOrEditor, isPublishedOrStaff } from "@/access/policies"
 import { writerOrEditor } from "@/access/collections"
 import { editorFieldLevel, shownToEditors } from "@/access/fields"
 import { AUTHOR_ROLES } from "@/access/roles"
@@ -79,7 +79,7 @@ export const Articles: CollectionConfig = {
   slug: "articles",
   access: {
     create: writerOrEditor,
-    delete: isCreatedByOrEditor,
+    delete: canDeleteArticle,
     read: isPublishedOrStaff,
     update: isDraftOrEditor,
   },

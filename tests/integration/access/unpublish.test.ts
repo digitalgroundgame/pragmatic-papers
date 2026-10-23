@@ -108,3 +108,94 @@ describe("unpublishing an article", () => {
     expect(saved._status).toBe("draft")
   })
 })
+
+describe("restoring a draft version of a live article", () => {
+  /** A live article whose history holds an earlier draft version, and that version's id. */
+  async function liveWithDraftVersion(data: Partial<Article>) {
+    const draft = await payload.create({
+      collection: "articles",
+      overrideAccess: true,
+      draft: true,
+      context: ctx,
+      data: {
+        title: `Restorable ${Date.now()}`,
+        content: ARTICLE_CONTENT,
+        ...data,
+        _status: "draft",
+      } as unknown as Article,
+    })
+    await payload.update({
+      collection: "articles",
+      id: draft.id,
+      overrideAccess: true,
+      context: ctx,
+      data: { _status: "published" },
+    })
+    const { docs } = await payload.findVersions({
+      collection: "articles",
+      where: { parent: { equals: draft.id }, "version._status": { equals: "draft" } },
+      depth: 0,
+    })
+    return { id: draft.id, versionId: String(docs[0]!.id) }
+  }
+
+  function restore(user: User, versionId: string, draft?: boolean) {
+    return payload.restoreVersion({
+      collection: "articles",
+      id: versionId,
+      overrideAccess: false,
+      user,
+      draft,
+      // Payload marks the context it's given as restoring, so give it its own.
+      context: { ...ctx },
+    })
+  }
+
+  it("is refused to a writer credited on it", async () => {
+    const writer = await createUser("writer")
+    const { id, versionId } = await liveWithDraftVersion({ authors: [writer.id] })
+
+    await expect(restore(writer, versionId)).rejects.toThrow()
+    expect(await isLive(id)).toBe(true)
+  })
+
+  it("is allowed to an editor", async () => {
+    const editor = await createUser("editor")
+    const { id, versionId } = await liveWithDraftVersion({})
+
+    await restore(editor, versionId)
+    expect(await isLive(id)).toBe(false)
+  })
+})
+
+describe("deleting an article", () => {
+  function remove(user: User, id: number) {
+    return payload.delete({ collection: "articles", id, overrideAccess: false, user, context: ctx })
+  }
+
+  it("is refused to the writer who created it while it's live", async () => {
+    const writer = await createUser("writer")
+    const article = await liveArticle({ createdBy: writer.id })
+
+    await expect(remove(writer, article.id)).rejects.toThrow()
+    expect(await isLive(article.id)).toBe(true)
+  })
+
+  it("is allowed to the writer who created it once it isn't live", async () => {
+    const writer = await createUser("writer")
+    const editor = await createUser("editor")
+    const article = await liveArticle({ createdBy: writer.id })
+    await unpublish(editor, article.id)
+
+    const deleted = await remove(writer, article.id)
+    expect(deleted.id).toBe(article.id)
+  })
+
+  it("is allowed to an editor while it's live", async () => {
+    const editor = await createUser("editor")
+    const article = await liveArticle({})
+
+    const deleted = await remove(editor, article.id)
+    expect(deleted.id).toBe(article.id)
+  })
+})

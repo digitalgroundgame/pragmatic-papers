@@ -2,10 +2,11 @@ import { Forbidden, type CollectionBeforeOperationHook } from "payload"
 import { isEditor } from "@/access/roles"
 
 /**
- * Only editors take a live article down. A writer may save drafts of an article they
+ * Only editors unpublish a live article. A writer may save drafts of an article they
  * created or are credited on, which `isDraftOrEditor` allows, but an update that sets
  * `_status: "draft"` without saving a draft is an unpublish, and access can't tell the
  * two apart: both arrive as a draft status, and only the operation knows `draft`.
+ * Deleting is `delete` access, which still lets a writer delete an article they created.
  */
 export const keepWritersFromUnpublishing: CollectionBeforeOperationHook = async ({
   args,

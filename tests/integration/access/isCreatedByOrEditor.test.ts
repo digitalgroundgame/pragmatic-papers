@@ -205,6 +205,46 @@ describe("editor and writer access", () => {
       ).rejects.toThrow()
     })
 
+    it("allows a writer credited as an author to update a draft someone else created", async () => {
+      const [editor, writer] = await Promise.all([createUser("editor"), createUser("writer")])
+
+      const draft = await payload.create({
+        collection: "articles",
+        overrideAccess: false,
+        user: editor,
+        draft: true,
+        context: { disableRevalidate: true },
+        data: {
+          title: "Draft Credited Writer Rwtd - eos",
+          content: ARTICLE_CONTENT,
+          authors: [writer.id],
+          _status: "draft",
+        } as unknown as Article,
+      })
+
+      const updated = await payload.update({
+        collection: "articles",
+        id: draft.id,
+        overrideAccess: false,
+        user: writer,
+        draft: true,
+        context: { disableRevalidate: true },
+        data: { title: "Updated by Credited Writer", _status: "draft" },
+      })
+      expect(updated.title).toBe("Updated by Credited Writer")
+
+      await expect(
+        payload.update({
+          collection: "articles",
+          id: draft.id,
+          overrideAccess: false,
+          user: writer,
+          context: { disableRevalidate: true },
+          data: { _status: "published" },
+        }),
+      ).rejects.toThrow()
+    })
+
     it("denies narrator from updating any article", async () => {
       const narrator = await createUser("narrator")
 

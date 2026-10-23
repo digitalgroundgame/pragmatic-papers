@@ -1,4 +1,4 @@
-import type { FieldAccess } from "payload"
+import type { Condition, FieldAccess } from "payload"
 import { hasRoleOrAdmin, isAdmin, isEditor, isStaff } from "./roles"
 
 export const adminFieldLevel: FieldAccess = ({ req: { user } }) => {
@@ -7,6 +7,15 @@ export const adminFieldLevel: FieldAccess = ({ req: { user } }) => {
 
 export const editorFieldLevel: FieldAccess = ({ req: { user } }) => {
   return isEditor(user)
+}
+
+/**
+ * An `admin.condition` that shows a field only to editors and above. For a field
+ * whose `update` is `editorFieldLevel`, so writers aren't shown a setting they
+ * can't change. Readers of the API still get the value.
+ */
+export const shownToEditors: Condition = (_data, _siblingData, { user }) => {
+  return isEditor(user as Parameters<typeof isEditor>[0])
 }
 
 export const writerFieldLevel: FieldAccess = ({ req: { user } }) => {

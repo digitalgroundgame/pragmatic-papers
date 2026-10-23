@@ -65,6 +65,7 @@ runs:
         build-args: |
           DATABASE_URI=postgres://postgres:postgres@127.0.0.1:5432/build
           SOURCE_COMMIT=${{ inputs.source-commit }}
+          NODE_REGISTRY=mirror.gcr.io/library
         labels: |
           org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
           org.opencontainers.image.revision=${{ inputs.source-commit }}

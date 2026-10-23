@@ -6,9 +6,10 @@ import {
   writerOrEditorFieldLevel,
   selfOrAdminFieldLevel,
   staffOrSelfFieldLevel,
+  shownToEditors,
 } from "@/access/fields"
 import type { User } from "@/payload-types"
-import type { FieldAccess } from "payload"
+import type { Condition, FieldAccess } from "payload"
 
 const makeUser = (roleOrRoles?: string | string[] | null): User => {
   if (!roleOrRoles) return { roles: [] } as unknown as User
@@ -115,5 +116,22 @@ describe("staffOrSelfFieldLevel access helper", () => {
 
   it("denies anonymous users", () => {
     expect(staffOrSelfFieldLevel(makeFieldArgsWithId(null, 999))).toBe(false)
+  })
+})
+
+describe("shownToEditors condition", () => {
+  const shown = (user: User | null) =>
+    shownToEditors({}, {}, { user } as unknown as Parameters<Condition>[2])
+
+  it("shows the field to editors and above", () => {
+    expect(shown(makeUser("editor"))).toBe(true)
+    expect(shown(makeUser("chief-editor"))).toBe(true)
+    expect(shown(makeUser("admin"))).toBe(true)
+  })
+
+  it("hides it from writers, narrators and anyone signed out", () => {
+    expect(shown(makeUser("writer"))).toBe(false)
+    expect(shown(makeUser("narrator"))).toBe(false)
+    expect(shown(null)).toBe(false)
   })
 })

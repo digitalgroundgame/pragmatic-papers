@@ -1,4 +1,5 @@
 import type { Access, Where } from "payload"
+import { relationshipId } from "@/utilities/relationships"
 import { hasRoleOrAdmin, isAdmin, isEditor, isStaff, STAFF_ROLES } from "./roles"
 
 /**
@@ -70,11 +71,13 @@ export const isCreatedByOrEditor: Access = ({ req: { user } }) => {
 }
 
 /**
- * Editors and above may update any article. Writers may update their own
- * articles (regardless of status) but may not publish them. All other roles
- * (such as narrators and members) are implicitly denied update access.
+ * Editors and above may update any article. Writers may update the articles
+ * they created or are credited on as an author (regardless of status) but may
+ * not publish them. All other roles (such as narrators and members) are
+ * implicitly denied update access.
  */
-export const isDraftOrEditor: Access = ({ req: { user }, data }) => {
+export const isDraftOrEditor: Access = async ({ id, req, data }) => {
+  const { user } = req
   if (!user) {
     return false
   }
@@ -92,7 +95,33 @@ export const isDraftOrEditor: Access = ({ req: { user }, data }) => {
     return false
   }
 
-  return { createdBy: { equals: user.id } }
+  if (id === undefined) {
+    const ownOrCredited: Where = {
+      or: [{ createdBy: { equals: user.id } }, { authors: { in: [user.id] } }],
+    }
+    return ownOrCredited
+  }
+
+  // A draft save writes only a version, so authors credited after the article was
+  // first saved aren't on the document a `where` would be checked against. Read the
+  // latest version instead; never `data`, which is what the writer is sending.
+  const latest = await req.payload.findByID({
+    collection: "articles",
+    id,
+    depth: 0,
+    disableErrors: true,
+    draft: true,
+    overrideAccess: true,
+    req,
+    select: { authors: true, createdBy: true },
+  })
+  if (!latest) {
+    return false
+  }
+
+  return [latest.createdBy, ...(latest.authors ?? [])].some(
+    (person) => relationshipId(person) === user.id,
+  )
 }
 
 /** Allows staff to view all statuses, while restricting others to published items only. */

@@ -1,7 +1,7 @@
 import { beforeAll, describe, expect, it } from "vitest"
 import type { Payload } from "payload"
 import type { Article, Interactive, Page, Volume } from "@/payload-types"
-import { getPayload } from "./helpers/testUsers"
+import { createUser, getPayload } from "./helpers/testUsers"
 import { ARTICLE_CONTENT } from "./fixtures/content"
 
 // Payload 3.90.2 made slugField's generateSlug hook assign the slug after an
@@ -119,5 +119,65 @@ describe("slugField generation on create", () => {
     })
 
     expect(interactive.slug).toBe("slug-test-interactive")
+  })
+
+  // The admin's autosave creates an article on the first change, which can come
+  // before a title (a hero image, an author). Payload's own hook sets the slug on
+  // later saves too late for them, so without ours the draft kept an empty slug,
+  // and with it no Preview button.
+  it("fills an empty slug once a draft started without a title gets one", async () => {
+    const writer = await createUser("writer")
+    const started = await payload.create({
+      collection: "articles",
+      overrideAccess: false,
+      user: writer,
+      draft: true,
+      context: ctx,
+      data: { _status: "draft" } as unknown as Article,
+    })
+    expect(started.slug).toBeFalsy()
+
+    const latest = await payload.findByID({
+      collection: "articles",
+      id: started.id,
+      draft: true,
+      depth: 0,
+    })
+    const titled = await payload.update({
+      collection: "articles",
+      id: started.id,
+      overrideAccess: false,
+      user: writer,
+      draft: true,
+      autosave: true,
+      context: ctx,
+      data: { ...latest, title: "Slug Test Titled Later", _status: "draft" },
+    })
+
+    expect(titled.slug).toBe("slug-test-titled-later")
+  })
+
+  it("leaves a slug alone when the title changes", async () => {
+    const article = await payload.create({
+      collection: "articles",
+      overrideAccess: true,
+      context: ctx,
+      data: {
+        title: "Slug Test Before Rename",
+        content: ARTICLE_CONTENT,
+        _status: "published",
+      } as unknown as Article,
+    })
+
+    const renamed = await payload.update({
+      collection: "articles",
+      id: article.id,
+      overrideAccess: true,
+      draft: true,
+      context: ctx,
+      data: { title: "Slug Test After Rename", generateSlug: true, _status: "draft" },
+    })
+
+    expect(renamed.slug).toBe("slug-test-before-rename")
   })
 })

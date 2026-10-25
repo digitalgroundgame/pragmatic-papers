@@ -7,6 +7,7 @@ import { Code } from "@/blocks/Code/config"
 import { MediaBlock } from "@/blocks/MediaBlock/config"
 import { MediaCollageBlock } from "@/blocks/MediaCollageBlock/config"
 import { populateTableOfContentsAnchors, tableOfContentsField } from "@/components/TableOfContents"
+import { TableOfContentsLabelsFeature } from "@/components/TableOfContents/feature"
 import { slugField } from "@/fields/slug"
 import { TOURS } from "@/plugins/tours"
 import { generatePreviewPath } from "@/utilities/generatePreviewPath"
@@ -115,6 +116,7 @@ export const Docs: CollectionConfig<"docs"> = {
           InlineCodeFeature(),
           UnorderedListFeature(),
           OrderedListFeature(),
+          TableOfContentsLabelsFeature(),
         ],
       }),
     },

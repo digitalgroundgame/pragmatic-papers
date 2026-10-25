@@ -3,6 +3,7 @@ title: Add a table of contents to an article
 navTitle: Table of contents
 summary: Tick "Show table of contents" and the article gets a list of its sections, built from your headings, that follows the reader down the page.
 publishedAt: 2026-09-29
+revisedAt: 2026-11-01
 heroImage: table-of-contents-hero.webp
 heroAlt: An article's table of contents listing its sections, a map, images and a table
 audience: [writer, editor]
@@ -15,6 +16,12 @@ A long article reads better with a map. The table of contents lists the article'
 In the article's sidebar, tick **Show table of contents**. It's off until you do. A preview of the list appears under the checkbox and updates as you type.
 
 If the preview says _Add a heading to build the table of contents._, the article has nothing to list yet.
+
+## Give a heading a shorter label
+
+A heading like _Michigan Senate – Smith vs Jones_ reads well in the article but makes a long entry. In the preview, each heading is a box with the heading's words in grey. Type a shorter label there, like _Michigan Senate_, and the table of contents shows that instead. The heading in the article stays as you wrote it.
+
+Leave the box empty to list the heading's own words. The label stays with its heading when you reword or move the heading, and goes when you delete it.
 
 ## What goes in it
 
@@ -32,8 +39,8 @@ Each heading also gets a link icon on hover, so readers can copy a link straight
 ## Tips
 
 - **Use real headings**, from the editor's heading options, not bold text. Bold text isn't listed.
-- **Keep headings short.** They're the list's labels.
-- **Changing a heading changes its link.** A section's address comes from its words (_Turnout by county_ becomes `#turnout-by-county`), so links people have shared to it stop jumping there.
+- **Keep headings short**, or give long ones a label. They're the list's entries.
+- **Changing a heading changes its link.** A section's address comes from its label, or its words when it has none (_Turnout by county_ becomes `#turnout-by-county`), so links people have shared to it stop jumping there. Adding or changing a label changes the link too.
 - Two headings with the same words get `-2`, `-3` added to the second and third.
 
 Admins can switch the table of contents off for the whole site under **Site Settings → Experiments → Article table of contents**. It's on unless someone turns it off.

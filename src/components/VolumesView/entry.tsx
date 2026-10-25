@@ -5,8 +5,8 @@ import React from "react"
 import { HoverPrefetchLink } from "@/components/Link/HoverPrefetchLink"
 import { Separator } from "@/components/ui/separator"
 import { formatLongDate } from "@/utilities/formatDate"
-import { toRoman } from "@/utilities/toRoman"
 import { docPath } from "@/utilities/routes"
+import { toRoman } from "@/utilities/toRoman"
 
 // import { Media } from '@/components/Media'
 
@@ -33,7 +33,7 @@ export const Entry: React.FC<{
   return (
     <div className={cn("group space-y-3 overflow-hidden", className)}>
       {titleToUse && (
-        <h3 className="text-foreground hover:text-foreground/80">
+        <h3 className="text-foreground decoration-2 underline-offset-4 hover:underline focus-visible:underline">
           <HoverPrefetchLink href={href}>{titleToUse}</HoverPrefetchLink>
         </h3>
       )}

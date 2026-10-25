@@ -7,6 +7,12 @@ const dirname = path.dirname(fileURLToPath(import.meta.url))
 const payloadClient = path.resolve(dirname, "../src/data/payload.ts")
 const payloadClientMock = path.resolve(dirname, "../src/stories/mocks/payload.ts")
 
+function fileOf(id: string) {
+  return path.resolve(id.split("?")[0]!)
+}
+function sameFile(a: string, b: string) {
+  return path.relative(fileOf(a), fileOf(b)) === ""
+}
 /**
  * Every Payload query goes through getPayloadClient (`@/data/payload`); Storybook gets the
  * in-memory stand-in instead. Swapping it at resolve time, rather than with
@@ -18,9 +24,11 @@ function mockPayload(): Plugin {
     name: "storybook-mock-payload",
     enforce: "pre",
     async resolveId(source, importer, options) {
-      if (!source.endsWith("data/payload") || importer === payloadClientMock) return null
+      if (!source.endsWith("data/payload")) return null
+      if (importer && sameFile(importer, payloadClientMock)) return null
       const resolved = await this.resolve(source, importer, { ...options, skipSelf: true })
-      return resolved?.id === payloadClient ? payloadClientMock : null
+      if (!resolved || !sameFile(resolved.id, payloadClient)) return null
+      return payloadClientMock
     },
   }
 }

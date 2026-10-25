@@ -16,7 +16,7 @@ exports[`AuthorCard > renders minimal author with no bio, image, or affiliation 
       tabindex="-1"
     >
       <span
-        class="group/avatar after:border-border relative flex size-8 shrink-0 overflow-hidden rounded-full select-none after:absolute after:inset-0 after:rounded-full after:border after:mix-blend-darken data-[size=2xl]:size-32 data-[size=lg]:size-10 data-[size=md]:size-9 data-[size=sm]:size-6 data-[size=xl]:size-24 dark:after:mix-blend-lighten aspect-square border hover:opacity-80"
+        class="group/avatar after:border-border relative flex size-8 shrink-0 overflow-hidden rounded-full select-none after:absolute after:inset-0 after:rounded-full after:border after:mix-blend-darken data-[size=2xl]:size-32 data-[size=lg]:size-10 data-[size=md]:size-9 data-[size=sm]:size-6 data-[size=xl]:size-24 dark:after:mix-blend-lighten aspect-square border transition-[filter] duration-300 ease-out hover:brightness-[1.02] hover:contrast-[1.16] hover:saturate-[1.16]"
         data-size="xl"
         data-slot="avatar"
       >
@@ -41,7 +41,7 @@ exports[`AuthorCard > renders minimal author with no bio, image, or affiliation 
             class="text-pretty md:text-2xl"
           >
             <a
-              class="text-foreground hover:text-foreground/80"
+              class="text-foreground decoration-2 underline-offset-4 hover:underline focus-visible:underline"
               href="/contributors/alice-smith"
             >
               Alice Smith
@@ -73,7 +73,7 @@ exports[`AuthorCard > renders with affiliation and short biography 1`] = `
       tabindex="-1"
     >
       <span
-        class="group/avatar after:border-border relative flex size-8 shrink-0 overflow-hidden rounded-full select-none after:absolute after:inset-0 after:rounded-full after:border after:mix-blend-darken data-[size=2xl]:size-32 data-[size=lg]:size-10 data-[size=md]:size-9 data-[size=sm]:size-6 data-[size=xl]:size-24 dark:after:mix-blend-lighten aspect-square border hover:opacity-80"
+        class="group/avatar after:border-border relative flex size-8 shrink-0 overflow-hidden rounded-full select-none after:absolute after:inset-0 after:rounded-full after:border after:mix-blend-darken data-[size=2xl]:size-32 data-[size=lg]:size-10 data-[size=md]:size-9 data-[size=sm]:size-6 data-[size=xl]:size-24 dark:after:mix-blend-lighten aspect-square border transition-[filter] duration-300 ease-out hover:brightness-[1.02] hover:contrast-[1.16] hover:saturate-[1.16]"
         data-size="xl"
         data-slot="avatar"
       >
@@ -98,7 +98,7 @@ exports[`AuthorCard > renders with affiliation and short biography 1`] = `
             class="text-pretty md:text-2xl"
           >
             <a
-              class="text-foreground hover:text-foreground/80"
+              class="text-foreground decoration-2 underline-offset-4 hover:underline focus-visible:underline"
               href="/contributors/bob-jones"
             >
               Bob Jones
@@ -140,7 +140,7 @@ exports[`AuthorCard > renders with biography longer than 255 characters (truncat
       tabindex="-1"
     >
       <span
-        class="group/avatar after:border-border relative flex size-8 shrink-0 overflow-hidden rounded-full select-none after:absolute after:inset-0 after:rounded-full after:border after:mix-blend-darken data-[size=2xl]:size-32 data-[size=lg]:size-10 data-[size=md]:size-9 data-[size=sm]:size-6 data-[size=xl]:size-24 dark:after:mix-blend-lighten aspect-square border hover:opacity-80"
+        class="group/avatar after:border-border relative flex size-8 shrink-0 overflow-hidden rounded-full select-none after:absolute after:inset-0 after:rounded-full after:border after:mix-blend-darken data-[size=2xl]:size-32 data-[size=lg]:size-10 data-[size=md]:size-9 data-[size=sm]:size-6 data-[size=xl]:size-24 dark:after:mix-blend-lighten aspect-square border transition-[filter] duration-300 ease-out hover:brightness-[1.02] hover:contrast-[1.16] hover:saturate-[1.16]"
         data-size="xl"
         data-slot="avatar"
       >
@@ -165,7 +165,7 @@ exports[`AuthorCard > renders with biography longer than 255 characters (truncat
             class="text-pretty md:text-2xl"
           >
             <a
-              class="text-foreground hover:text-foreground/80"
+              class="text-foreground decoration-2 underline-offset-4 hover:underline focus-visible:underline"
               href="/contributors/carol-white"
             >
               Carol White
@@ -202,7 +202,7 @@ exports[`AuthorCard > renders with null name using fallback 1`] = `
       tabindex="-1"
     >
       <span
-        class="group/avatar after:border-border relative flex size-8 shrink-0 overflow-hidden rounded-full select-none after:absolute after:inset-0 after:rounded-full after:border after:mix-blend-darken data-[size=2xl]:size-32 data-[size=lg]:size-10 data-[size=md]:size-9 data-[size=sm]:size-6 data-[size=xl]:size-24 dark:after:mix-blend-lighten aspect-square border hover:opacity-80"
+        class="group/avatar after:border-border relative flex size-8 shrink-0 overflow-hidden rounded-full select-none after:absolute after:inset-0 after:rounded-full after:border after:mix-blend-darken data-[size=2xl]:size-32 data-[size=lg]:size-10 data-[size=md]:size-9 data-[size=sm]:size-6 data-[size=xl]:size-24 dark:after:mix-blend-lighten aspect-square border transition-[filter] duration-300 ease-out hover:brightness-[1.02] hover:contrast-[1.16] hover:saturate-[1.16]"
         data-size="xl"
         data-slot="avatar"
       >
@@ -227,7 +227,7 @@ exports[`AuthorCard > renders with null name using fallback 1`] = `
             class="text-pretty md:text-2xl"
           >
             <a
-              class="text-foreground hover:text-foreground/80"
+              class="text-foreground decoration-2 underline-offset-4 hover:underline focus-visible:underline"
               href="/contributors/alice-smith"
             />
           </h3>
@@ -257,7 +257,7 @@ exports[`AuthorCard > renders with profileImage as a numeric id 1`] = `
       tabindex="-1"
     >
       <span
-        class="group/avatar after:border-border relative flex size-8 shrink-0 overflow-hidden rounded-full select-none after:absolute after:inset-0 after:rounded-full after:border after:mix-blend-darken data-[size=2xl]:size-32 data-[size=lg]:size-10 data-[size=md]:size-9 data-[size=sm]:size-6 data-[size=xl]:size-24 dark:after:mix-blend-lighten aspect-square border hover:opacity-80"
+        class="group/avatar after:border-border relative flex size-8 shrink-0 overflow-hidden rounded-full select-none after:absolute after:inset-0 after:rounded-full after:border after:mix-blend-darken data-[size=2xl]:size-32 data-[size=lg]:size-10 data-[size=md]:size-9 data-[size=sm]:size-6 data-[size=xl]:size-24 dark:after:mix-blend-lighten aspect-square border transition-[filter] duration-300 ease-out hover:brightness-[1.02] hover:contrast-[1.16] hover:saturate-[1.16]"
         data-size="xl"
         data-slot="avatar"
       >
@@ -282,7 +282,7 @@ exports[`AuthorCard > renders with profileImage as a numeric id 1`] = `
             class="text-pretty md:text-2xl"
           >
             <a
-              class="text-foreground hover:text-foreground/80"
+              class="text-foreground decoration-2 underline-offset-4 hover:underline focus-visible:underline"
               href="/contributors/alice-smith"
             >
               Alice Smith
@@ -314,7 +314,7 @@ exports[`AuthorCard > renders with profileImage object containing a square URL 1
       tabindex="-1"
     >
       <span
-        class="group/avatar after:border-border relative flex size-8 shrink-0 overflow-hidden rounded-full select-none after:absolute after:inset-0 after:rounded-full after:border after:mix-blend-darken data-[size=2xl]:size-32 data-[size=lg]:size-10 data-[size=md]:size-9 data-[size=sm]:size-6 data-[size=xl]:size-24 dark:after:mix-blend-lighten aspect-square border hover:opacity-80"
+        class="group/avatar after:border-border relative flex size-8 shrink-0 overflow-hidden rounded-full select-none after:absolute after:inset-0 after:rounded-full after:border after:mix-blend-darken data-[size=2xl]:size-32 data-[size=lg]:size-10 data-[size=md]:size-9 data-[size=sm]:size-6 data-[size=xl]:size-24 dark:after:mix-blend-lighten aspect-square border transition-[filter] duration-300 ease-out hover:brightness-[1.02] hover:contrast-[1.16] hover:saturate-[1.16]"
         data-size="xl"
         data-slot="avatar"
       >
@@ -339,7 +339,7 @@ exports[`AuthorCard > renders with profileImage object containing a square URL 1
             class="text-pretty md:text-2xl"
           >
             <a
-              class="text-foreground hover:text-foreground/80"
+              class="text-foreground decoration-2 underline-offset-4 hover:underline focus-visible:underline"
               href="/contributors/alice-smith"
             >
               Alice Smith
@@ -371,7 +371,7 @@ exports[`AuthorCard > renders with profileImage object without a square URL 1`] 
       tabindex="-1"
     >
       <span
-        class="group/avatar after:border-border relative flex size-8 shrink-0 overflow-hidden rounded-full select-none after:absolute after:inset-0 after:rounded-full after:border after:mix-blend-darken data-[size=2xl]:size-32 data-[size=lg]:size-10 data-[size=md]:size-9 data-[size=sm]:size-6 data-[size=xl]:size-24 dark:after:mix-blend-lighten aspect-square border hover:opacity-80"
+        class="group/avatar after:border-border relative flex size-8 shrink-0 overflow-hidden rounded-full select-none after:absolute after:inset-0 after:rounded-full after:border after:mix-blend-darken data-[size=2xl]:size-32 data-[size=lg]:size-10 data-[size=md]:size-9 data-[size=sm]:size-6 data-[size=xl]:size-24 dark:after:mix-blend-lighten aspect-square border transition-[filter] duration-300 ease-out hover:brightness-[1.02] hover:contrast-[1.16] hover:saturate-[1.16]"
         data-size="xl"
         data-slot="avatar"
       >
@@ -396,7 +396,7 @@ exports[`AuthorCard > renders with profileImage object without a square URL 1`] 
             class="text-pretty md:text-2xl"
           >
             <a
-              class="text-foreground hover:text-foreground/80"
+              class="text-foreground decoration-2 underline-offset-4 hover:underline focus-visible:underline"
               href="/contributors/alice-smith"
             >
               Alice Smith

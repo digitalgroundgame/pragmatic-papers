@@ -1,13 +1,13 @@
 "use client"
 
 import type { RecommendedArticleCandidate } from "@/app/(frontend)/recommended-articles.json/route"
-import { sendGAEvent } from "@next/third-parties/google"
-import React, { useEffect, useState } from "react"
 import { HoverPrefetchLink } from "@/components/Link/HoverPrefetchLink"
 import { Media } from "@/components/Media"
-import { Skeleton } from "@/components/ui/skeleton"
 import { TimeAgo } from "@/components/TimeAgo"
+import { Skeleton } from "@/components/ui/skeleton"
 import { useInView } from "@/hooks/useInView"
+import { sendGAEvent } from "@next/third-parties/google"
+import React, { useEffect, useState } from "react"
 
 interface RecommendedArticlesProps {
   currentArticleSlug: string
@@ -108,12 +108,12 @@ export function RecommendedArticles({
                       media={article.metaImage}
                       variant="medium"
                       sizes="(min-width: 640px) 320px, 100vw"
-                      className="h-full w-full object-cover object-center group-hover:opacity-80"
+                      className="h-full w-full object-cover object-center transition-[filter] duration-300 ease-out hover:brightness-[1.02] hover:contrast-[1.16] hover:saturate-[1.16]"
                     />
                   </div>
                 )}
                 <div className="flex flex-col gap-2">
-                  <h3 className="text-foreground group-hover:text-foreground/80 md:text-2xl">
+                  <h3 className="text-foreground decoration-2 underline-offset-4 hover:underline focus-visible:underline md:text-2xl">
                     {article.title}
                   </h3>
                   {article.metaDescription && (

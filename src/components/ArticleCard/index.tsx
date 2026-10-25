@@ -3,8 +3,8 @@ import React from "react"
 
 import { HoverPrefetchLink } from "@/components/Link/HoverPrefetchLink"
 import { Media } from "@/components/Media"
-import { cn } from "@/utilities/utils"
 import { docPath } from "@/utilities/routes"
+import { cn } from "@/utilities/utils"
 
 export type CardPostData = Pick<Article, "slug" | "meta" | "title">
 
@@ -38,7 +38,11 @@ export const ArticleCard: React.FC<{
             preload={preload}
           />
         )}
-        {titleToUse && <h3 className="hover:text-foreground/80 md:text-2xl">{titleToUse}</h3>}
+        {titleToUse && (
+          <h3 className="decoration-2 underline-offset-4 hover:underline focus-visible:underline md:text-2xl">
+            {titleToUse}
+          </h3>
+        )}
         {description && <p className="text-foreground font-serif">{sanitizedDescription}</p>}
       </div>
     </HoverPrefetchLink>

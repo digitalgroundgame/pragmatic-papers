@@ -5,9 +5,9 @@ import { HoverPrefetchLink } from "@/components/Link/HoverPrefetchLink"
 import { isMedia, Media } from "@/components/Media"
 import type { ImageVariant } from "@/components/Media/CMSImage"
 import { TimeAgo } from "@/components/TimeAgo"
-import { cn } from "@/utilities/utils"
 import { isResolved } from "@/utilities/relationships"
 import { docPath } from "@/utilities/routes"
+import { cn } from "@/utilities/utils"
 
 export type ImagePosition = "above" | "below" | "left" | "right" | "none"
 
@@ -81,7 +81,7 @@ export const CollectionTile: React.FC<CollectionTileProps> = ({
         >
           <Media
             media={heroImage}
-            className="h-full w-full object-cover object-center hover:opacity-80"
+            className="h-full w-full object-cover object-center transition-[filter] duration-300 ease-out hover:brightness-[1.02] hover:contrast-[1.16] hover:saturate-[1.16]"
             variant={variant}
             sizes={sizes}
             preload={preload}
@@ -102,7 +102,7 @@ export const CollectionTile: React.FC<CollectionTileProps> = ({
         )}
 
         {/* Title — uses container queries to scale with available space */}
-        <h2 className="text-foreground hover:text-foreground/80 text-2xl text-balance @xs:text-2xl @sm:text-3xl @md:text-4xl @lg:text-5xl">
+        <h2 className="text-foreground text-2xl text-balance decoration-2 underline-offset-4 group-focus-visible:underline hover:underline @xs:text-2xl @sm:text-3xl @md:text-4xl @lg:text-5xl">
           {overrideTitle || title}
         </h2>
 

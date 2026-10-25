@@ -73,7 +73,7 @@ exports[`ArticleHero > joins three authors with commas and a closing ampersand 1
       class="align-middle"
     >
       <a
-        class="hover:underline"
+        class="pb-1 hover:underline focus-visible:underline"
         href="/contributors/alice-smith"
       >
         Alice Smith
@@ -84,7 +84,7 @@ exports[`ArticleHero > joins three authors with commas and a closing ampersand 1
         , 
       </span>
       <a
-        class="hover:underline"
+        class="pb-1 hover:underline focus-visible:underline"
         href="/contributors/bob-jones"
       >
         Bob Jones
@@ -95,7 +95,7 @@ exports[`ArticleHero > joins three authors with commas and a closing ampersand 1
          & 
       </span>
       <a
-        class="hover:underline"
+        class="pb-1 hover:underline focus-visible:underline"
         href="/contributors/carol-diaz"
       >
         Carol Diaz
@@ -316,7 +316,7 @@ exports[`ArticleHero > names every author, however many, with no remainder 1`] =
       class="align-middle"
     >
       <a
-        class="hover:underline"
+        class="pb-1 hover:underline focus-visible:underline"
         href="/contributors/alice-smith"
       >
         Alice Smith
@@ -327,7 +327,7 @@ exports[`ArticleHero > names every author, however many, with no remainder 1`] =
         , 
       </span>
       <a
-        class="hover:underline"
+        class="pb-1 hover:underline focus-visible:underline"
         href="/contributors/bob-jones"
       >
         Bob Jones
@@ -338,7 +338,7 @@ exports[`ArticleHero > names every author, however many, with no remainder 1`] =
         , 
       </span>
       <a
-        class="hover:underline"
+        class="pb-1 hover:underline focus-visible:underline"
         href="/contributors/carol-diaz"
       >
         Carol Diaz
@@ -349,7 +349,7 @@ exports[`ArticleHero > names every author, however many, with no remainder 1`] =
         , 
       </span>
       <a
-        class="hover:underline"
+        class="pb-1 hover:underline focus-visible:underline"
         href="/contributors/dan-reed"
       >
         Dan Reed
@@ -360,7 +360,7 @@ exports[`ArticleHero > names every author, however many, with no remainder 1`] =
         , 
       </span>
       <a
-        class="hover:underline"
+        class="pb-1 hover:underline focus-visible:underline"
         href="/contributors/erin-fox"
       >
         Erin Fox
@@ -371,7 +371,7 @@ exports[`ArticleHero > names every author, however many, with no remainder 1`] =
          & 
       </span>
       <a
-        class="hover:underline"
+        class="pb-1 hover:underline focus-visible:underline"
         href="/contributors/frank-ng"
       >
         Frank Ng
@@ -843,7 +843,7 @@ exports[`ArticleHero > renders with populated authors 1`] = `
       class="align-middle"
     >
       <a
-        class="hover:underline"
+        class="pb-1 hover:underline focus-visible:underline"
         href="/contributors/alice-smith"
       >
         Alice Smith
@@ -854,7 +854,7 @@ exports[`ArticleHero > renders with populated authors 1`] = `
          & 
       </span>
       <a
-        class="hover:underline"
+        class="pb-1 hover:underline focus-visible:underline"
         href="/contributors/bob-jones"
       >
         Bob Jones

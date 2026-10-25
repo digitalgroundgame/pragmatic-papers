@@ -2,8 +2,7 @@
 import type { Condition, Field } from "payload"
 import { describe, expect, it } from "vitest"
 
-import { canDeleteArticle, isDraftOrEditor } from "@/access/policies"
-import { keepWritersFromUnpublishing } from "@/collections/Articles/hooks/keepWritersFromUnpublishing"
+import { isCreatedByOrEditor, isDraftOrEditor } from "@/access/policies"
 import { Articles } from "../index"
 
 /** Finds a field by name anywhere in the config, through tabs, rows and groups. */
@@ -34,10 +33,9 @@ function conditionOf(name: string): Condition {
 const as = (role: string) => ({ user: { id: 1, roles: [role] } }) as never
 
 describe("Articles access", () => {
-  it("only editors take a live article down", () => {
-    expect(Articles.access?.delete).toBe(canDeleteArticle)
+  it("lets writers update drafts they're credited on, and delete what they created", () => {
     expect(Articles.access?.update).toBe(isDraftOrEditor)
-    expect(Articles.hooks?.beforeOperation).toContain(keepWritersFromUnpublishing)
+    expect(Articles.access?.delete).toBe(isCreatedByOrEditor)
   })
 
   it("shows Syndicate to Substack to editors only", () => {

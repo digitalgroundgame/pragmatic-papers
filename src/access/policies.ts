@@ -71,25 +71,6 @@ export const isCreatedByOrEditor: Access = ({ req: { user } }) => {
 }
 
 /**
- * Editors and above may delete any article. A writer may delete an article they created
- * while it isn't live: taking a live article down is an editor's call.
- */
-export const canDeleteArticle: Access = ({ req: { user } }) => {
-  if (!user) {
-    return false
-  }
-
-  if (isEditor(user)) {
-    return true
-  }
-
-  const ownAndNotLive: Where = {
-    and: [{ createdBy: { equals: user.id } }, { _status: { not_equals: "published" } }],
-  }
-  return ownAndNotLive
-}
-
-/**
  * Editors and above may update any article. Writers may update the articles
  * they created or are credited on as an author (regardless of status) but may
  * not publish them. All other roles (such as narrators and members) are

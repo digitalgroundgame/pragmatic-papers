@@ -130,6 +130,11 @@ describe("isDraftOrEditor policy", () => {
     expect(await isDraftOrEditor(args)).toBe(true)
   })
 
+  it("lets the creator in when the latest version has no authors field", async () => {
+    const { args } = forArticle(writer, { createdBy: 789, authors: null })
+    expect(await isDraftOrEditor(args)).toBe(true)
+  })
+
   it("keeps a writer out of an article that doesn't credit them, whatever they send", async () => {
     const { args } = forArticle(writer, { createdBy: 5, authors: [4] }, { authors: [789] })
     expect(await isDraftOrEditor(args)).toBe(false)

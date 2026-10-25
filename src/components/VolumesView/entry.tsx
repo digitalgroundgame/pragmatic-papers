@@ -33,7 +33,7 @@ export const Entry: React.FC<{
   return (
     <div className={cn("group space-y-3 overflow-hidden", className)}>
       {titleToUse && (
-        <h3 className="text-foreground decoration-2 underline-offset-4 hover:underline focus-visible:underline">
+        <h3 className="text-foreground decoration-2 underline-offset-4 hover:underline has-focus-visible:underline">
           <HoverPrefetchLink href={href}>{titleToUse}</HoverPrefetchLink>
         </h3>
       )}

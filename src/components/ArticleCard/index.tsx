@@ -27,19 +27,19 @@ export const ArticleCard: React.FC<{
   const href = docPath(relationTo, slug ?? "")
 
   return (
-    <HoverPrefetchLink href={href} className="block">
+    <HoverPrefetchLink href={href} className="group block">
       <div className={cn("space-y-3", className)}>
         {image && typeof image !== "string" && (
           <Media
             media={image}
             variant="square"
-            className="aspect-4/3 border object-cover"
+            className="aspect-4/3 border object-cover transition-[filter] duration-300 ease-out hover:brightness-[1.02] hover:contrast-[1.16] hover:saturate-[1.16]"
             sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, 352px"
             preload={preload}
           />
         )}
         {titleToUse && (
-          <h3 className="decoration-2 underline-offset-4 hover:underline focus-visible:underline md:text-2xl">
+          <h3 className="decoration-2 underline-offset-4 group-focus-visible:underline hover:underline md:text-2xl">
             {titleToUse}
           </h3>
         )}

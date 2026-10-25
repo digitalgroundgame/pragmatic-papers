@@ -113,7 +113,7 @@ export function RecommendedArticles({
                   </div>
                 )}
                 <div className="flex flex-col gap-2">
-                  <h3 className="text-foreground decoration-2 underline-offset-4 hover:underline focus-visible:underline md:text-2xl">
+                  <h3 className="text-foreground decoration-2 underline-offset-4 group-focus-visible:underline hover:underline md:text-2xl">
                     {article.title}
                   </h3>
                   {article.metaDescription && (

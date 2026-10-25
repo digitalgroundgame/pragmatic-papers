@@ -81,36 +81,57 @@ describe("TocLabelPlugin", () => {
   const renderPlugin = () =>
     render(<TocLabelPlugin anchorElem={document.body} clientProps={undefined} />)
 
+  const openBox = () => {
+    fireEvent.click(screen.getByRole("button", { name: /table of contents label/i }))
+    return screen.getByRole("textbox", { name: "In the table of contents" })
+  }
+
   it("shows nothing until the cursor is in a heading", () => {
     renderPlugin()
     selectIn(0)
-    expect(screen.queryByRole("textbox")).not.toBeInTheDocument()
+    expect(screen.queryByRole("button")).not.toBeInTheDocument()
   })
 
-  it("offers a label box under the heading, with the heading as its placeholder", () => {
+  it("shows only a small button in a heading, which opens the label box", () => {
     renderPlugin()
     selectIn(1)
 
+    const toggle = screen.getByRole("button", {
+      name: "Give this heading a shorter table of contents label",
+    })
+    expect(screen.queryByRole("textbox")).not.toBeInTheDocument()
+
+    fireEvent.click(toggle)
     const box = screen.getByRole("textbox", { name: "In the table of contents" })
+    expect(box).toHaveFocus()
     expect(box).toHaveValue("")
     expect(box).toHaveAttribute("placeholder", "Michigan Senate – Smith vs Jones")
   })
 
-  it("shows a heading's saved label, and follows the cursor to another heading", () => {
+  it("shows a heading's saved label on its button and in the box", () => {
     renderPlugin()
     selectIn(2)
-    expect(screen.getByRole("textbox")).toHaveValue("Votes")
+    const toggle = screen.getByRole("button", { name: "Table of contents label: Votes. Change it" })
+    expect(toggle).toHaveTextContent("Votes")
+    expect(openBox()).toHaveValue("Votes")
+  })
+
+  it("closes the box when the cursor moves to another heading", () => {
+    renderPlugin()
+    selectIn(2)
+    openBox()
+    act(() => screen.getByRole("textbox").blur())
 
     selectIn(1)
-    expect(screen.getByRole("textbox")).toHaveValue("")
+    expect(screen.queryByRole("textbox")).not.toBeInTheDocument()
+    expect(screen.getByRole("button")).toHaveAccessibleName(/Give this heading/)
   })
 
   it("writes what's typed onto the heading, keeping it while the writer types", async () => {
     renderPlugin()
     selectIn(1)
-    const box = screen.getByRole("textbox")
+    const box = openBox()
 
-    act(() => box.focus())
     fireEvent.change(box, { target: { value: "Michigan Senate" } })
     await act(() => new Promise((resolve) => setTimeout(resolve)))
 
@@ -118,19 +139,20 @@ describe("TocLabelPlugin", () => {
     expect(savedState(1)).toEqual({ tocLabel: "Michigan Senate" })
   })
 
-  it("hands the cursor back to the editor on Enter", () => {
+  it("closes the box and hands the cursor back to the editor on Enter", () => {
     const focus = vi.spyOn(mockEditor, "focus").mockImplementation(() => undefined)
     renderPlugin()
     selectIn(1)
 
-    fireEvent.keyDown(screen.getByRole("textbox"), { key: "Enter" })
+    fireEvent.keyDown(openBox(), { key: "Enter" })
     expect(focus).toHaveBeenCalled()
+    expect(screen.queryByRole("textbox")).not.toBeInTheDocument()
   })
 
   it("stays out of the way while the table of contents is off", () => {
     mockShow = false
     renderPlugin()
     selectIn(1)
-    expect(screen.queryByRole("textbox")).not.toBeInTheDocument()
+    expect(screen.queryByRole("button")).not.toBeInTheDocument()
   })
 })

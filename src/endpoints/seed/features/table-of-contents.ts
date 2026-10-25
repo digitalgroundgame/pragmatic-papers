@@ -192,7 +192,7 @@ export const createTableOfContentsArticle = async (
           "As you scroll, the entry for the section in view is underlined. Hover a heading to reveal its link icon and copy a link straight to it. The toggle in the hero collapses the list and gives the body back its width.",
         ),
         createParagraph(
-          "This heading is longer than its entry. Click into a heading in the editor and a box under it takes a shorter label: this one's label is Reading along, which the list shows and the heading's link is made from.",
+          "This heading is longer than its entry. Click into a heading in the editor, then the list icon at its end, and a box under it takes a shorter label: this one's label is Reading along, which the list shows and the heading's link is made from.",
         ),
         filler(),
         filler(),

@@ -19,7 +19,7 @@ If the preview says _Add a heading to build the table of contents._, the article
 
 ## Give a heading a shorter label
 
-A heading like _Michigan Senate – Smith vs Jones_ reads well in the article but makes a long entry. With **Show table of contents** ticked, click into the heading: a box labelled _In the table of contents_ appears under it, with the heading's words in grey. Type a shorter label there, like _Michigan Senate_, and the table of contents shows that instead. The heading in the article stays as you wrote it, and the preview in the sidebar shows the label. Press Enter to go back to writing.
+A heading like _Michigan Senate – Smith vs Jones_ reads well in the article but makes a long entry. With **Show table of contents** ticked, click into the heading and a small list icon appears at its right end. Click the icon, and a box labelled _In the table of contents_ opens under the heading, with the heading's words in grey. Type a shorter label there, like _Michigan Senate_, and the table of contents shows that instead. The heading in the article stays as you wrote it, and the icon and the preview in the sidebar show the label. Press Enter to go back to writing.
 
 Leave the box empty to list the heading's own words. The label stays with its heading when you reword or move the heading, and goes when you delete it.
 

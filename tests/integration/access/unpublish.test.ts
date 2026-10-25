@@ -1,4 +1,4 @@
-import type { Payload } from "payload"
+import { createLocalReq, Forbidden, restoreVersionOperation, type Payload } from "payload"
 import { beforeAll, describe, expect, it, vi } from "vitest"
 import type { Article, User } from "@/payload-types"
 import { ARTICLE_CONTENT } from "../fixtures/content"
@@ -50,7 +50,7 @@ describe("unpublishing an article", () => {
     const writer = await createUser("writer")
     const article = await liveArticle({ authors: [writer.id] })
 
-    await expect(unpublish(writer, article.id)).rejects.toThrow()
+    await expect(unpublish(writer, article.id)).rejects.toBeInstanceOf(Forbidden)
     expect(await isLive(article.id)).toBe(true)
   })
 
@@ -58,7 +58,7 @@ describe("unpublishing an article", () => {
     const writer = await createUser("writer")
     const article = await liveArticle({ createdBy: writer.id })
 
-    await expect(unpublish(writer, article.id)).rejects.toThrow()
+    await expect(unpublish(writer, article.id)).rejects.toBeInstanceOf(Forbidden)
     expect(await isLive(article.id)).toBe(true)
   })
 
@@ -131,23 +131,37 @@ describe("restoring a draft version of a live article", () => {
       context: ctx,
       data: { _status: "published" },
     })
-    const { docs } = await payload.findVersions({
-      collection: "articles",
-      where: { parent: { equals: draft.id }, "version._status": { equals: "draft" } },
-      depth: 0,
-    })
-    return { id: draft.id, versionId: String(docs[0]!.id) }
+    const versionOf = async (status: "draft" | "published") => {
+      const { docs } = await payload.findVersions({
+        collection: "articles",
+        where: { parent: { equals: draft.id }, "version._status": { equals: status } },
+        depth: 0,
+      })
+      return String(docs[0]!.id)
+    }
+    return {
+      id: draft.id,
+      versionId: await versionOf("draft"),
+      publishedVersionId: await versionOf("published"),
+    }
   }
 
-  function restore(user: User, versionId: string, draft?: boolean) {
-    return payload.restoreVersion({
-      collection: "articles",
+  /**
+   * What the admin's Restore button runs, through the operation its REST endpoint calls:
+   * the local `payload.restoreVersion` drops `draft`, so it can't restore as a draft.
+   */
+  async function restore(user: User, versionId: string, draft = false) {
+    // Payload marks the context it's given as restoring, so give it its own.
+    const req = await createLocalReq(
+      { user: { ...user, collection: "users" }, context: { ...ctx } },
+      payload,
+    )
+    return restoreVersionOperation({
+      collection: payload.collections.articles,
       id: versionId,
-      overrideAccess: false,
-      user,
       draft,
-      // Payload marks the context it's given as restoring, so give it its own.
-      context: { ...ctx },
+      overrideAccess: false,
+      req,
     })
   }
 
@@ -155,7 +169,23 @@ describe("restoring a draft version of a live article", () => {
     const writer = await createUser("writer")
     const { id, versionId } = await liveWithDraftVersion({ authors: [writer.id] })
 
-    await expect(restore(writer, versionId)).rejects.toThrow()
+    await expect(restore(writer, versionId)).rejects.toBeInstanceOf(Forbidden)
+    expect(await isLive(id)).toBe(true)
+  })
+
+  it("lets that writer restore it as a draft, leaving the article live", async () => {
+    const writer = await createUser("writer")
+    const { id, versionId } = await liveWithDraftVersion({ authors: [writer.id] })
+
+    await restore(writer, versionId, true)
+    expect(await isLive(id)).toBe(true)
+  })
+
+  it("refuses that writer a published version too, since restoring it publishes", async () => {
+    const writer = await createUser("writer")
+    const { id, publishedVersionId } = await liveWithDraftVersion({ authors: [writer.id] })
+
+    await expect(restore(writer, publishedVersionId)).rejects.toBeInstanceOf(Forbidden)
     expect(await isLive(id)).toBe(true)
   })
 
@@ -177,7 +207,7 @@ describe("deleting an article", () => {
     const writer = await createUser("writer")
     const article = await liveArticle({ createdBy: writer.id })
 
-    await expect(remove(writer, article.id)).rejects.toThrow()
+    await expect(remove(writer, article.id)).rejects.toBeInstanceOf(Forbidden)
     expect(await isLive(article.id)).toBe(true)
   })
 

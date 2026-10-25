@@ -91,7 +91,7 @@ describe("keepWritersFromUnpublishing on restoreVersion", () => {
     expect(findByID).toHaveBeenCalledWith(expect.objectContaining({ id: 1 }))
   })
 
-  it("lets a writer restore a published version", async () => {
+  it("leaves restoring a published version to access, which refuses writers a publish", async () => {
     const { req, findByID } = fakeReq({ version: { parent: 1, status: "published" } })
     const args = { id: "v1" }
     await expect(run("restoreVersion", args, req)).resolves.toBe(args)

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest"
 import {
+  canDeleteArticle,
   isSelfOrAdmin,
   isCreatedByOrEditor,
   isDraftOrEditor,
@@ -34,6 +35,25 @@ describe("isSelfOrAdmin policy", () => {
 
   it("denies anonymous users", () => {
     expect(isSelfOrAdmin(makeArgs(null))).toBe(false)
+  })
+})
+
+describe("canDeleteArticle policy", () => {
+  it("allows admins, chief-editors, and editors", () => {
+    expect(canDeleteArticle(makeArgs(makeUser("admin")))).toBe(true)
+    expect(canDeleteArticle(makeArgs(makeUser("chief-editor")))).toBe(true)
+    expect(canDeleteArticle(makeArgs(makeUser("editor")))).toBe(true)
+  })
+
+  it("restricts other users to articles they created that aren't live", () => {
+    const user = { id: 456, roles: ["writer"] } as unknown as User
+    expect(canDeleteArticle(makeArgs(user))).toEqual({
+      and: [{ createdBy: { equals: 456 } }, { _status: { not_equals: "published" } }],
+    })
+  })
+
+  it("denies anonymous users", () => {
+    expect(canDeleteArticle(makeArgs(null))).toBe(false)
   })
 })
 

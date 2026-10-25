@@ -27,6 +27,19 @@ describe("editorRegistry", () => {
     unregisterNext()
   })
 
+  it("hands the path back to the page's editor when a drawer's editor unregisters", () => {
+    const page = fakeEditor()
+    const drawer = fakeEditor()
+    const unregisterPage = registerEditor("content", page)
+    const unregisterDrawer = registerEditor("content", drawer)
+    expect(getRegisteredEditor("content")).toBe(drawer)
+
+    unregisterDrawer()
+    expect(getRegisteredEditor("content")).toBe(page)
+    unregisterPage()
+    expect(getRegisteredEditor("content")).toBeUndefined()
+  })
+
   it("re-renders a hook when an editor registers and unregisters", () => {
     const { result } = renderHook(() => useRegisteredEditor("body"))
     expect(result.current).toBeUndefined()

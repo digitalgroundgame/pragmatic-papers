@@ -1,12 +1,15 @@
 import {
-  $getRoot,
-  $isElementNode,
+  $getNodeByKey,
+  $getSelection,
+  $getState,
+  $isRangeSelection,
   $setState,
   createState,
   type LexicalEditor,
-  type LexicalNode,
+  SKIP_DOM_SELECTION_TAG,
 } from "@payloadcms/richtext-lexical/lexical"
 import { $isHeadingNode, type HeadingNode } from "@payloadcms/richtext-lexical/lexical/rich-text"
+import { $findMatchingParent } from "@payloadcms/richtext-lexical/lexical/utils"
 
 import { TOC_LABEL_KEY } from "./label"
 
@@ -15,24 +18,39 @@ export const tocLabelState = createState(TOC_LABEL_KEY, {
   parse: (value) => (typeof value === "string" ? value : ""),
 })
 
-function $headings(): HeadingNode[] {
-  const out: HeadingNode[] = []
-  const walk = (node: LexicalNode): void => {
-    if ($isHeadingNode(node)) out.push(node)
-    if ($isElementNode(node)) for (const child of node.getChildren()) walk(child)
+export interface SelectedHeading {
+  key: string
+  text: string
+  label: string
+}
+
+/** The heading the selection is in, if it's in one. Call inside a read or update. */
+export function $selectedHeading(): SelectedHeading | null {
+  const selection = $getSelection()
+  if (!$isRangeSelection(selection)) return null
+  const heading = $findMatchingParent(
+    selection.anchor.getNode(),
+    $isHeadingNode,
+  ) as HeadingNode | null
+  if (!heading) return null
+  return {
+    key: heading.getKey(),
+    text: heading.getTextContent().trim(),
+    label: $getState(heading, tocLabelState),
   }
-  walk($getRoot())
-  return out
 }
 
 /**
- * Sets the table of contents label of the `index`th heading in the document
- * (the order the saved JSON lists them in); an empty label goes back to the
- * heading's own text.
+ * Sets a heading's table of contents label; empty goes back to its own text.
+ * It leaves the page's selection alone, or the editor would take the focus
+ * back from the label box after the first keystroke.
  */
-export function setHeadingTocLabel(editor: LexicalEditor, index: number, label: string): void {
-  editor.update(() => {
-    const heading = $headings()[index]
-    if (heading) $setState(heading, tocLabelState, label)
-  })
+export function setHeadingTocLabel(editor: LexicalEditor, key: string, label: string): void {
+  editor.update(
+    () => {
+      const heading = $getNodeByKey(key)
+      if ($isHeadingNode(heading)) $setState(heading, tocLabelState, label)
+    },
+    { tag: SKIP_DOM_SELECTION_TAG },
+  )
 }

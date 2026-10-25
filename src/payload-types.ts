@@ -333,7 +333,7 @@ export interface Article {
   authors?: (number | User)[] | null;
   topics?: (number | Topic)[] | null;
   /**
-   * Auto-generates a navigable list of headings (and any resolver-matched blocks). Give a heading a shorter label in the list below. Readers see it only while the table of contents experiment is on in Settings.
+   * Auto-generates a navigable list of headings (and any resolver-matched blocks). Readers see it only while the table of contents experiment is on in Settings.
    */
   showTableOfContents?: boolean | null;
   /**
@@ -1556,7 +1556,7 @@ export interface Doc {
    */
   audience?: ('admin' | 'chief-editor' | 'editor' | 'writer' | 'narrator')[] | null;
   /**
-   * Auto-generates a navigable list of headings (and any resolver-matched blocks). Give a heading a shorter label in the list below. Readers see it only while the table of contents experiment is on in Settings.
+   * Auto-generates a navigable list of headings (and any resolver-matched blocks). Readers see it only while the table of contents experiment is on in Settings.
    */
   showTableOfContents?: boolean | null;
   /**

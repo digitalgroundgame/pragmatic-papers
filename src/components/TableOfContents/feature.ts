@@ -1,8 +1,8 @@
 import { createServerFeature } from "@payloadcms/richtext-lexical"
 
 /**
- * Lets the "Show table of contents" sidebar field set each heading's table of
- * contents label in this editor.
+ * A box under the heading the cursor is in, for a shorter label to list it by
+ * in the table of contents.
  */
 export const TableOfContentsLabelsFeature = createServerFeature({
   feature: {

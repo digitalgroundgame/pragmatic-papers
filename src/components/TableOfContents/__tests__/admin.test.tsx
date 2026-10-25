@@ -1,13 +1,9 @@
-import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react"
+import { cleanup, render, screen, within } from "@testing-library/react"
 import type { CheckboxFieldClientProps } from "payload"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { TableOfContentsCheckbox } from "../admin"
-import { registerEditor } from "../editorRegistry"
 import type { DefaultTypedEditorState } from "@payloadcms/richtext-lexical"
-import type { SerializedEditorState } from "@payloadcms/richtext-lexical/lexical"
-import { createHeadlessEditor } from "@payloadcms/richtext-lexical/lexical/headless"
-import { HeadingNode } from "@payloadcms/richtext-lexical/lexical/rich-text"
 
 let mockChecked = false
 let mockContent: DefaultTypedEditorState | undefined
@@ -25,30 +21,8 @@ function content(children: unknown[]): DefaultTypedEditorState {
   } as DefaultTypedEditorState
 }
 
-function heading(tag: string, text: string, tocLabel?: string) {
-  return {
-    type: "heading",
-    tag,
-    children: [{ type: "text", text, detail: 0, format: 0, mode: "normal", style: "", version: 1 }],
-    direction: null,
-    format: "",
-    indent: 0,
-    version: 1,
-    ...(tocLabel && { $: { tocLabel } }),
-  }
-}
-
-/** The editor the labels feature registers, holding the same content as the form. */
-function registerContentEditor(state: DefaultTypedEditorState) {
-  const editor = createHeadlessEditor({
-    nodes: [HeadingNode],
-    onError: (e) => {
-      throw e
-    },
-  })
-  editor.setEditorState(editor.parseEditorState(state as unknown as SerializedEditorState))
-  const unregister = registerEditor("content", editor)
-  return { editor, unregister }
+function heading(tag: string, text: string) {
+  return { type: "heading", tag, children: [{ type: "text", text }], version: 1 }
 }
 
 const props = { path: "showTableOfContents" } as CheckboxFieldClientProps
@@ -90,40 +64,14 @@ describe("TableOfContentsCheckbox", () => {
     expect(table).toHaveAttribute("title", "#table-1")
   })
 
-  it("shows the entries as text when the editor can't take labels", () => {
-    mockChecked = true
-    mockContent = content([heading("h2", "Overview", "Short")])
-    render(<TableOfContentsCheckbox {...props} />)
-
-    expect(screen.queryByRole("textbox")).not.toBeInTheDocument()
-    expect(screen.getByText("Short")).toHaveAttribute("title", "#short")
-  })
-
-  it("gives each heading a label box, with the heading as its placeholder", async () => {
+  it("previews a heading by its table of contents label", () => {
     mockChecked = true
     mockContent = content([
-      heading("h2", "Overview"),
-      heading("h3", "Michigan Senate – Smith vs Jones", "Michigan Senate"),
+      { ...heading("h2", "Michigan Senate – Smith vs Jones"), $: { tocLabel: "Michigan Senate" } },
     ])
-    const { editor, unregister } = registerContentEditor(mockContent)
     render(<TableOfContentsCheckbox {...props} />)
 
-    const overview = screen.getByRole("textbox", { name: "Table of contents label for “Overview”" })
-    expect(overview).toHaveValue("")
-    expect(overview).toHaveAttribute("placeholder", "Overview")
-    const senate = screen.getByRole("textbox", { name: /Michigan Senate – Smith vs Jones/ })
-    expect(senate).toHaveValue("Michigan Senate")
-    expect(senate.closest("span")).toHaveAttribute("title", "#michigan-senate")
-
-    fireEvent.focus(overview)
-    fireEvent.change(overview, { target: { value: "Intro to it" } })
-    await act(() => new Promise((resolve) => setTimeout(resolve)))
-    expect(overview).toHaveValue("Intro to it")
-    const [first] = editor.getEditorState().toJSON().root.children as { $?: unknown }[]
-    expect(first!.$).toEqual({ tocLabel: "Intro to it" })
-
-    act(unregister)
-    expect(screen.queryByRole("textbox")).not.toBeInTheDocument()
+    expect(screen.getByText("Michigan Senate")).toHaveAttribute("title", "#michigan-senate")
   })
 
   it("prompts for a heading when the editor has no entries", () => {

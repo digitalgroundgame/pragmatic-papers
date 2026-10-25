@@ -10,7 +10,7 @@ export const tableOfContentsField: TableOfContentsField = (options) => ({
   admin: {
     position: "sidebar",
     description:
-      "Auto-generates a navigable list of headings (and any resolver-matched blocks). Give a heading a shorter label in the list below. Readers see it only while the table of contents experiment is on in Settings.",
+      "Auto-generates a navigable list of headings (and any resolver-matched blocks). Readers see it only while the table of contents experiment is on in Settings.",
     ...options?.admin,
     components: {
       Field: "@/components/TableOfContents/admin#TableOfContentsCheckbox",

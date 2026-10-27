@@ -146,7 +146,7 @@ function TableOfContents({
   title = "Table of Contents",
 }: TableOfContentsProps): React.ReactNode {
   const { isOpen, navId } = useTableOfContents()
-  const activeAnchor = useActiveAnchor(entries, 120, isOpen)
+  const activeAnchor = useActiveAnchor(entries, isOpen)
   if (!entries.length) return null
   return (
     <nav

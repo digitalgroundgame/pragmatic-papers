@@ -145,3 +145,33 @@ export const WithoutHeadings: Story = {
     await expect(canvas.queryByRole("button")).not.toBeInTheDocument()
   },
 }
+
+const scrollPadding = () => parseFloat(getComputedStyle(document.documentElement).scrollPaddingTop)
+
+export const UnderTicker: Story = {
+  // A live ticker sticks under the header on every screen until it's paused. Its
+  // pause switch is what globals.css reads to move the page's scroll padding.
+  render: (args) => (
+    <TableOfContentsProvider>
+      <div className="ticker" data-live="">
+        <input type="checkbox" className="ticker-pause" aria-label="Pause the ticker" />
+      </div>
+      <div data-testid="ticker-height" style={{ height: "var(--ticker-height)" }} />
+      <div className="max-w-xs px-8 py-4">
+        <TableOfContents {...args} />
+      </div>
+    </TableOfContentsProvider>
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    const ticker = canvas.getByTestId("ticker-height").getBoundingClientRect().height
+    const sticking = scrollPadding()
+    // Anchor links stop below the header and the ticker, with room above the heading.
+    await expect(ticker).toBeGreaterThan(40)
+    await expect(sticking).toBeGreaterThan(ticker + 56)
+
+    // Paused, the ticker scrolls away, and links stop below the header alone.
+    await userEvent.click(canvas.getByRole("checkbox", { name: "Pause the ticker" }))
+    await expect(scrollPadding()).toBeCloseTo(sticking - ticker, 0)
+  },
+}

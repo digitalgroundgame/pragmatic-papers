@@ -41,11 +41,9 @@ const ROLE_LABELS: Record<Role, string> = {
  * Help articles at /docs, about how the site works. They nest (the nested docs plugin adds each
  * one's `parent` and `breadcrumbs`): an area like Writing has no parent, its sections sit under
  * it, and their docs under them, so a doc is read at `/docs/<area>/<section>/<slug>`. Editors
- * drag docs into order among their siblings, and move one by picking its parent. Most arrive
- * with a release: each deploy adds the ones in src/docs/ its site doesn't have yet, as drafts
- * for an editor to publish (see `syncRepoDocs`). From then on the doc is the site's: editors
- * change it here, and the repo only ever offers its changes as a new draft version. Editors can
- * also write one from scratch.
+ * drag docs into order among their siblings, and move one by picking its parent. Each site's
+ * editors write its docs here; deploys never add, change or delete one. The local seed loads
+ * the Markdown in src/docs/ (`loadRepoDocs`).
  */
 export const Docs: CollectionConfig<"docs"> = {
   slug: DOCS_SLUG,
@@ -177,8 +175,8 @@ export const Docs: CollectionConfig<"docs"> = {
         !value || Object.hasOwn(TOURS, value) || `No tour is called "${value}".`,
     },
     {
-      // Set by `syncDocs` on a doc it seeded from src/docs/: the hash of the files it came
-      // from. Empty on docs written here.
+      // The hash of the files in src/docs/ a deploy seeded the doc from, when deploys still
+      // seeded docs. Empty on docs written here.
       name: "sourceHash",
       type: "text",
       label: "From the repo",
@@ -187,7 +185,7 @@ export const Docs: CollectionConfig<"docs"> = {
         readOnly: true,
         condition: (data) => Boolean(data?.sourceHash),
         description:
-          "Seeded from src/docs/ by a deploy. The doc is yours: a later deploy never changes it, even when the repo's copy changes.",
+          "Seeded from src/docs/ by an earlier deploy. The doc is yours: deploys never change it.",
       },
     },
   ],

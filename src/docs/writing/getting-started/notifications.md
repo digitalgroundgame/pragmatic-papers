@@ -26,8 +26,6 @@ Click the gear in the bell's menu to choose what it tells you about. Untick **Do
 
 What you've read and what you've turned off are saved to your account, so they follow you to another computer.
 
-## Publishing a release's docs
+## Writing docs
 
-Editors: a release that ships a help doc adds it under **Help → Docs** as a draft, and nobody is told until it's published. After a release, look there for drafts, read each one, change what you like, and publish it. The bell announces it then. The doc is yours from then on: a release never publishes, overwrites or deletes it, and one you delete stays deleted.
-
-When a release changes a doc you already have, your doc stays exactly as you left it, drafts included.
+Editors write the docs under **Help → Docs**, and nobody is told about one until it's published. The bell announces it then. A release never adds, changes or deletes a doc, so what you publish is exactly what readers see.

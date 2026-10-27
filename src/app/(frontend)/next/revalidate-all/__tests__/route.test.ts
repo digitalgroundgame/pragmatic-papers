@@ -1,17 +1,16 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-const { revalidatePath, revalidateTag, syncRepoDocs, createMissingStarterPages, seedAchievements } =
-  vi.hoisted(() => ({
+const { revalidatePath, revalidateTag, createMissingStarterPages, seedAchievements } = vi.hoisted(
+  () => ({
     revalidatePath: vi.fn(),
     revalidateTag: vi.fn(),
-    syncRepoDocs: vi.fn(),
     createMissingStarterPages: vi.fn(),
     seedAchievements: vi.fn(),
-  }))
+  }),
+)
 const payload = { logger: { error: vi.fn() } }
 
 vi.mock("next/cache", () => ({ revalidatePath, revalidateTag }))
-vi.mock("@/plugins/docs/syncRepoDocs", () => ({ syncRepoDocs }))
 vi.mock("@/collections/Pages/starterPages", () => ({ createMissingStarterPages }))
 vi.mock("@/plugins/readerAchievements", () => ({
   readerAchievements: { seed: seedAchievements },
@@ -31,36 +30,25 @@ describe("POST /next/revalidate-all", () => {
     vi.unstubAllEnvs()
     vi.stubEnv("PAYLOAD_SECRET", "s3cret")
     vi.clearAllMocks()
-    syncRepoDocs.mockResolvedValue({
-      created: ["a"],
-      changed: ["c"],
-      existing: ["b"],
-      deleted: [],
-    })
     createMissingStarterPages.mockResolvedValue(["feeds"])
     seedAchievements.mockResolvedValue(["Early member"])
   })
 
-  it("syncs the repo's docs and starter pages, then throws away every prerendered route", async () => {
+  it("creates the starter pages and achievements, then throws away every prerendered route", async () => {
     const response = await POST(request("Bearer s3cret"))
 
     expect(response.status).toBe(200)
     await expect(response.json()).resolves.toEqual({
       revalidated: true,
-      docs: { created: ["a"], changed: ["c"] },
       pages: { created: ["feeds"] },
       achievements: { created: ["Early member"] },
     })
     expect(seedAchievements).toHaveBeenCalledExactlyOnceWith(payload)
-    expect(syncRepoDocs).toHaveBeenCalledExactlyOnceWith(payload)
     expect(createMissingStarterPages).toHaveBeenCalledExactlyOnceWith(payload)
     expect(createMissingStarterPages.mock.invocationCallOrder[0]).toBeLessThan(
       revalidatePath.mock.invocationCallOrder[0]!,
     )
     expect(revalidatePath).toHaveBeenCalledExactlyOnceWith("/", "layout")
-    expect(syncRepoDocs.mock.invocationCallOrder[0]).toBeLessThan(
-      revalidatePath.mock.invocationCallOrder[0]!,
-    )
   })
 
   it("only throws pages away where another deploy seeds the database", async () => {
@@ -68,7 +56,6 @@ describe("POST /next/revalidate-all", () => {
     const response = await POST(request("Bearer s3cret"))
 
     await expect(response.json()).resolves.toEqual({ revalidated: true, seeded: false })
-    expect(syncRepoDocs).not.toHaveBeenCalled()
     expect(createMissingStarterPages).not.toHaveBeenCalled()
     expect(seedAchievements).not.toHaveBeenCalled()
     expect(revalidatePath).toHaveBeenCalledExactlyOnceWith("/", "layout")
@@ -78,7 +65,6 @@ describe("POST /next/revalidate-all", () => {
     const response = await POST(request("Bearer s3cret", "?save=1&path=/articles/a"))
 
     await expect(response.json()).resolves.toEqual({ revalidated: true })
-    expect(syncRepoDocs).not.toHaveBeenCalled()
     expect(createMissingStarterPages).not.toHaveBeenCalled()
     expect(seedAchievements).not.toHaveBeenCalled()
     expect(revalidatePath).toHaveBeenCalledExactlyOnceWith("/", "layout")
@@ -99,7 +85,7 @@ describe("POST /next/revalidate-all", () => {
     })
     expect(revalidatePath).toHaveBeenCalledExactlyOnceWith("/articles/a")
     expect(revalidateTag).toHaveBeenCalledExactlyOnceWith("articles-sitemap", "max")
-    expect(syncRepoDocs).not.toHaveBeenCalled()
+    expect(createMissingStarterPages).not.toHaveBeenCalled()
   })
 
   it("revalidates nothing in Next's cache for a save that revalidated nothing there", async () => {
@@ -107,19 +93,6 @@ describe("POST /next/revalidate-all", () => {
 
     expect(revalidatePath).not.toHaveBeenCalled()
     expect(revalidateTag).not.toHaveBeenCalled()
-  })
-
-  it("still revalidates when the docs sync fails", async () => {
-    syncRepoDocs.mockResolvedValue(null)
-    const response = await POST(request("Bearer s3cret"))
-
-    await expect(response.json()).resolves.toEqual({
-      revalidated: true,
-      docs: null,
-      pages: { created: ["feeds"] },
-      achievements: { created: ["Early member"] },
-    })
-    expect(revalidatePath).toHaveBeenCalledOnce()
   })
 
   it("still revalidates when creating the starter achievements fails, and logs it", async () => {
@@ -140,7 +113,7 @@ describe("POST /next/revalidate-all", () => {
     const response = await POST(request(authorization))
 
     expect(response.status).toBe(401)
-    expect(syncRepoDocs).not.toHaveBeenCalled()
+    expect(createMissingStarterPages).not.toHaveBeenCalled()
     expect(revalidatePath).not.toHaveBeenCalled()
   })
 

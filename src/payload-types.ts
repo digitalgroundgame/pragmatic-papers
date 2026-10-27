@@ -1564,7 +1564,7 @@ export interface Doc {
    */
   tour?: string | null;
   /**
-   * Seeded from src/docs/ by a deploy. The doc is yours: a later deploy never changes it, even when the repo's copy changes.
+   * Seeded from src/docs/ by an earlier deploy. The doc is yours: deploys never change it.
    */
   sourceHash?: string | null;
   breadcrumbs?:

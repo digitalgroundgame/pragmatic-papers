@@ -29,7 +29,7 @@ interface LexicalRoot {
   root: LexicalNode & { children: LexicalNode[] }
 }
 
-/** The same id for the same picture in the same doc, so a sync writes the same content twice. */
+/** The same id for the same picture in the same doc, so a load writes the same content twice. */
 const blockId = (slug: string, index: number): string =>
   createHash("sha256").update(`${slug}:${index}`).digest("hex").slice(0, 24)
 
@@ -42,7 +42,7 @@ const mediaBlock = (slug: string, index: number, ref: MediaRef): LexicalNode => 
 
 /**
  * A doc's Markdown body as the docs editor's rich text. A picture on a line of its own becomes
- * a Media block holding a `MediaRef` to its file, which the sync uploads; the rest is Payload's
+ * a Media block holding a `MediaRef` to its file, which `loadRepoDocs` uploads; the rest is Payload's
  * Markdown import, so it reads what the editor's features can hold.
  */
 export function markdownToContent(

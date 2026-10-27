@@ -54,6 +54,14 @@ describe("unpublishing an article", () => {
     expect(await isLive(article.id)).toBe(true)
   })
 
+  it("is refused to a writer credited as an author", async () => {
+    const writer = await createUser("writer")
+    const article = await liveArticle({ authors: [writer.id] })
+
+    await expect(unpublish(writer, article.id)).rejects.toBeInstanceOf(Forbidden)
+    expect(await isLive(article.id)).toBe(true)
+  })
+
   it("still lets that writer save a draft of it, leaving it live", async () => {
     const writer = await createUser("writer")
     const article = await liveArticle({ createdBy: writer.id })

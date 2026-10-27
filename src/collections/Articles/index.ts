@@ -1,6 +1,6 @@
 import { canDeleteArticle, isDraftOrEditor, isPublishedOrStaff } from "@/access/policies"
 import { writerOrEditor } from "@/access/collections"
-import { editorFieldLevel } from "@/access/fields"
+import { editorFieldLevel, shownToEditors } from "@/access/fields"
 import { AUTHOR_ROLES } from "@/access/roles"
 import { Banner } from "@/blocks/Banner/config"
 import { Code } from "@/blocks/Code/config"
@@ -299,6 +299,7 @@ export const Articles: CollectionConfig = {
       },
       admin: {
         position: "sidebar",
+        condition: shownToEditors,
         description:
           "Adds the published article to the Substack import feed. Takes effect once the article is published.",
       },
@@ -308,7 +309,8 @@ export const Articles: CollectionConfig = {
       type: "ui",
       admin: {
         position: "sidebar",
-        condition: (data) => Boolean(data?.syndicateToSubstack),
+        condition: (data, siblingData, context) =>
+          Boolean(data?.syndicateToSubstack) && shownToEditors(data, siblingData, context),
         components: {
           Field: "@/collections/Articles/components/SubstackImportUrl#SubstackImportUrl",
         },
